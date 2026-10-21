@@ -38,8 +38,8 @@ Implementiert Step 5 des Orts-Vergleich-Wizards als Versand- und Aktivierungs-Ko
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `ChannelToggle.svelte` (`frontend/src/lib/components/trip-wizard/steps/ChannelToggle.svelte`) | intern | Wiederverwendbare Toggle-Komponente für E-Mail/Signal/Telegram — Cross-Folder-Import |
-| `maskPhone()` (`frontend/src/lib/components/trip-wizard/wizardHelpers.ts`) | intern | Maskiert Telefonnummern für Kontaktinfo-Anzeige im UI |
+| `ChannelToggle.svelte` (`frontend/src/lib/components/shared/ChannelToggle.svelte`) | intern | Wiederverwendbare Toggle-Komponente für E-Mail/Signal/Telegram — Cross-Folder-Import |
+| `maskPhone()` (`frontend/src/lib/components/shared/wizardHelpers.ts`) | intern | Maskiert Telefonnummern für Kontaktinfo-Anzeige im UI |
 | `compareWizardState.svelte.ts` (`frontend/src/lib/components/compare/compareWizardState.svelte.ts`) | intern | Zentraler Wizard-State; wird durch 10 neue Versand-Felder und Getter `canAdvanceStep5` erweitert |
 | `CompareWizard.svelte` (`frontend/src/lib/components/compare/CompareWizard.svelte`) | intern | Shell-Komponente, die Step 5 im Render-Switch einbindet und den Activate-Button steuert |
 | `getContext('compare-wizard-profile')` (SvelteKit Context API) | intern | Liefert Profil-Kontaktdaten (`mail_to`, `signal_phone`, `telegram_chat_id`) aus dem SSR-Loader |

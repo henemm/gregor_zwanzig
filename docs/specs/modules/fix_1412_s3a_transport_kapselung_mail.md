@@ -3,7 +3,7 @@ entity_id: fix_1412_s3a_transport_kapselung_mail
 type: module
 created: 2026-07-30
 updated: 2026-07-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [mail, egress, struktur-test, 1412]
 ---
@@ -70,7 +70,7 @@ Nutzerverhalten — sie ist reine Kapselung des bestehenden Transports.
 | `src/app/core.py` | DELETE | toter Sendeweg, nachweislich ohne Aufrufer außerhalb von `tests/test_core.py` |
 | `tests/test_core.py` | DELETE | einziger Aufrufer von `core.send_mail` |
 | `tests/tdd/test_egress_single_dial_point.py` | CREATE | AST-Struktur-Test, `smtplib`-Teil (S3b ergänzt später den `httpx`-Teil additiv) |
-| `docs/specs/modules/smtp_mailer.md` | MOVE → `docs/specs/_archive/modules/smtp_mailer.md` | Spec der gelöschten `core.py` |
+| `docs/specs/_archive/modules/smtp_mailer.md` | MOVE → `docs/specs/_archive/modules/smtp_mailer.md` | Spec der gelöschten `core.py` |
 | `docs/specs/modules/cli.md` | MODIFY | Abhängigkeitszeile `:31` (`send_mail` — E-Mail-Versand) entfernen, `cli.py` nutzt diesen Weg nicht |
 | `tests/INDEX.md` | MODIFY | Zeilen `:11` (Verweis auf `test_core.py`), `:28` (Beispielaufruf `pytest tests/test_core.py`) entfernen |
 
@@ -175,7 +175,7 @@ werden ersatzlos gelöscht.
 
 **Doku-Nachzug (zählt nicht auf das LoC-Budget):**
 
-- `docs/specs/modules/smtp_mailer.md` → `docs/specs/_archive/modules/smtp_mailer.md` (Spec der gelöschten `core.py`, Status bleibt „implemented" als historischer Stand, kein inhaltliches Update nötig).
+- `docs/specs/_archive/modules/smtp_mailer.md` → `docs/specs/_archive/modules/smtp_mailer.md` (Spec der gelöschten `core.py`, Status bleibt „implemented" als historischer Stand, kein inhaltliches Update nötig).
 - `docs/specs/modules/cli.md:31` — Abhängigkeitszeile `send_mail | function | E-Mail-Versand` entfernen (`cli.py` ruft diesen Weg tatsächlich nie).
 - `tests/INDEX.md:11,28` — Verweis auf `test_core.py` und den Beispielaufruf `pytest tests/test_core.py` entfernen.
 
@@ -371,7 +371,7 @@ bleibt:**
 **Müssen geändert/entfernt werden:**
 
 - `tests/test_core.py` — gelöscht (Prüfling entfällt).
-- `docs/specs/modules/smtp_mailer.md`, `docs/specs/modules/cli.md:31`,
+- `docs/specs/_archive/modules/smtp_mailer.md`, `docs/specs/modules/cli.md:31`,
   `tests/INDEX.md:11,28` — Doku-Nachzug, s. Implementation Details.
 
 **Neu:**

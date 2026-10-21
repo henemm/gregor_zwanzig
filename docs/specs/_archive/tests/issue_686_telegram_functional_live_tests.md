@@ -23,14 +23,14 @@ einen Staging-Test-User mit aktivem Trip sicher, (2) `send()` liefert die `messa
 (3) jeder der 7 Menü-Befehle erzeugt sinnvollen Inhalt, (4) jede Antwort wird real
 zugestellt + wieder gelöscht, (5) `/e2e-verify` blockt bei übersprungenem Telegram-Live-Test.
 
-Parent-Spec: `docs/specs/modules/issue_686_telegram_functional_live_tests.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_686_telegram_functional_live_tests.md` v1.0
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_issue_686_telegram_functional_live.py` (NEU — mock-frei)
   - `tests/tdd/_telegram_live_fixture.py` (NEU — Fixture-Helper)
-- **Spec:** `docs/specs/modules/issue_686_telegram_functional_live_tests.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/issue_686_telegram_functional_live_tests.md` v1.0
 
 ## Test Inventory
 

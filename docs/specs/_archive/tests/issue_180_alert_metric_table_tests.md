@@ -18,7 +18,7 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_180_alert_metric_table.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_180_alert_metric_table.md`.
 Da Issue #180 rein Frontend ist (Svelte-Komponenten, kein Python-Code),
 prüfen die Tests Datei-Existenz und Inhalts-Invarianten der Svelte-Dateien.
 

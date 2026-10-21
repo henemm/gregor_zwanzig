@@ -3,7 +3,7 @@ entity_id: feat_2184_s4_premium_sms_kommandoverarbeiter
 type: module
 created: 2026-09-07
 updated: 2026-09-08
-status: draft
+status: implemented
 version: "1.1"
 tags: [premium-sms, garmin-inreach, inbound, trip-command-processor, trip-selection, gewitter-herkunft, epic-2133]
 ---

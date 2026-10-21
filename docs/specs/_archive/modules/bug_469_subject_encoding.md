@@ -96,7 +96,7 @@ headers := []string{
 4. NICHT betroffen:
    - From/To-Header: aktuell nur reine Adressen ohne Display-Name, kein RFC-2047-Bedarf.
    - Body-Parts: Content-Type: text/plain|html; charset=UTF-8 ist bereits korrekt deklariert (8BITMIME-OK).
-   - src/outputs/email.py: Python email.mime.text setzt Subject automatisch RFC-konform.
+   - src/output/channels/email.py: Python email.mime.text setzt Subject automatisch RFC-konform.
    - internal/notify/mq.go: JSON-HTTP-Transport (Claude-MQ), kein SMTP.
 ```
 

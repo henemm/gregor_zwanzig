@@ -3,7 +3,7 @@ entity_id: forgot_reset_rate_limit
 type: bugfix
 created: 2026-05-04
 updated: 2026-05-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [security, bugfix, go-api, rate-limit, auth, issue-123, follow-up-117-119]
 ---

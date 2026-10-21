@@ -20,7 +20,7 @@ Das Aktivitätstyp-Dropdown in der Trips-Erstellung (`TripNewEditor`) soll auf d
 
 ## Source
 
-- **Files:** `frontend/src/lib/components/trip-new/TripNewEditor.svelte`, `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **Files:** `frontend/src/lib/components/trip-new/TripNewEditor.svelte`, `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **Schicht:** Frontend / User-UI (SvelteKit)
 
 ## Estimated Scope

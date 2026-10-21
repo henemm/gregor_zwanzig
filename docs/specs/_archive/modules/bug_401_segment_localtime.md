@@ -51,7 +51,7 @@ und bleiben korrekt.
 | `src/utils/timezone.py` | Upstream | `tz_for_coords`, `local_hour` — bereits in beiden Dateien verfügbar |
 | `src/app/models.py` | Constraint | `TripSegment.start_time/end_time: datetime` mit UTC-tzinfo |
 | `tests/tdd/test_issue_397_segment_timezone.py` | Referenz-Tests | Muster für UTC→CEST-Fixtures |
-| `docs/specs/modules/bug_397_segment_timezone_display.md` | Vorgänger | Anzeige-Konsistenz; dieser Fix macht Zeitfenster semantisch korrekt |
+| `docs/specs/_archive/modules/bug_397_segment_timezone_display.md` | Vorgänger | Anzeige-Konsistenz; dieser Fix macht Zeitfenster semantisch korrekt |
 
 ## Implementation Details
 

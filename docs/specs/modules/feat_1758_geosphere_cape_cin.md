@@ -1,6 +1,6 @@
 ---
 entity_id: feat_1758_geosphere_cape_cin
-status: draft
+status: implemented
 type: module
 created: 2026-08-18
 updated: 2026-08-18

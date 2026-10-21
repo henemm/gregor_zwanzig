@@ -3,7 +3,7 @@ entity_id: trip_alert
 type: module
 created: 2026-02-10
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "3.0"
 tags: [alert, trip, weather, change-detection, story3, fix-1916]
 workflow: fix-1916-alarm-vergleichsbasis

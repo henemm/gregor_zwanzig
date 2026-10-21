@@ -24,13 +24,13 @@ http.server-Socket erfasst), (2) fail-soft ohne Bot-Token, (3) ein echter
 Live-E2E gegen die Telegram-Bot-API (`setMyCommands`→`getMyCommands`, gated),
 (4) `prod_selftest.check_bot_menu` fängt eine Menü-Regression im Deploy-Gate.
 
-Parent-Spec: `docs/specs/modules/issue_671_bot_menu_autoset.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_671_bot_menu_autoset.md` v1.0
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_issue_671_bot_menu_autoset.py` (NEU — mock-frei)
-- **Spec:** `docs/specs/modules/issue_671_bot_menu_autoset.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/issue_671_bot_menu_autoset.md` v1.0
 
 ## Test Inventory
 

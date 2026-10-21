@@ -25,13 +25,13 @@ ausgehende Bot-API-Calls an einem echten lokalen `http.server`-Socket beobachtet
 Snapshot, echte User-Auflösung, echter Persistenz-Roundtrip (`enabled`-Toggle).
 **Keine Mocks der Logik unter Test.**
 
-Parent-Spec: `docs/specs/modules/bug_744_telegram_bare_keywords.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_744_telegram_bare_keywords.md` v1.0
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_issue_744_telegram_bare_keywords.py` (NEU — mock-frei)
-- **Spec:** `docs/specs/modules/bug_744_telegram_bare_keywords.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/bug_744_telegram_bare_keywords.md` v1.0
 
 ## Test Inventory
 

@@ -27,7 +27,7 @@ Unified configuration system that connects trip weather metric selection with em
   - `src/app/models.py` (MODIFY) - New DTOs
   - `src/app/trip.py` (MODIFY) - New field on Trip
   - `src/app/loader.py` (MODIFY) - Serialization + migration
-  - `src/formatters/trip_report.py` (MODIFY) - Consume unified config
+  - `src/output/renderers/trip_report.py` (MODIFY) - Consume unified config
   - `src/services/trip_report_scheduler.py` (MODIFY) - Pass config
   - `src/web/pages/weather_config.py` (MODIFY Phase 2) - API-aware UI
 
@@ -40,7 +40,7 @@ Unified configuration system that connects trip weather metric selection with em
 | `Trip` | Model | Trip dataclass with display_config field (src/app/trip.py) |
 | `ForecastDataPoint` | DTO | Weather data fields (src/app/models.py) |
 | `load_trip` / `save_trip` | Function | Trip persistence (src/app/loader.py) |
-| `TripReportFormatter` | Class | Email report generation (src/formatters/trip_report.py) |
+| `TripReportFormatter` | Class | Email report generation (src/output/renderers/trip_report.py) |
 | `TripReportSchedulerService` | Class | Report scheduling (src/services/trip_report_scheduler.py) |
 
 ### Downstream Dependencies (what USES us)
@@ -209,7 +209,7 @@ When loading a trip JSON:
 
 When saving: serialize `display_config` as new format. Old `weather_config` preserved if present.
 
-### Formatter Changes (`src/formatters/trip_report.py`)
+### Formatter Changes (`src/output/renderers/trip_report.py`)
 
 **Current flow:** `_dp_to_row()` checks `dc.show_temp_measured`, `dc.show_wind`, etc. (hardcoded booleans)
 
@@ -719,7 +719,7 @@ from app.models import UnifiedWeatherDisplayConfig, MetricConfig
 | 2 | `src/app/models.py` | MODIFY | ~50 |
 | 3 | `src/app/trip.py` | MODIFY | ~5 |
 | 4 | `src/app/loader.py` | MODIFY | ~50 |
-| 5 | `src/formatters/trip_report.py` | MODIFY | ~100 |
+| 5 | `src/output/renderers/trip_report.py` | MODIFY | ~100 |
 | 6 | `src/services/trip_report_scheduler.py` | MODIFY | ~15 |
 | 7 | `docs/specs/modules/weather_config.md` | REWRITE | ~200 |
 

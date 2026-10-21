@@ -3,7 +3,7 @@ entity_id: feat_1474_gewitter_befund_stufen
 type: feature
 created: 2026-08-03
 updated: 2026-08-03
-status: draft
+status: implemented
 version: "2.4"
 tags: [gewitter, alerts, meteofrance, cape, s3, issue-1419]
 ---
@@ -63,7 +63,7 @@ eine Design-/Produktentscheidung ist, keine technische.
 |---|---|---|
 | `docs/specs/modules/feat_1457_s2a_blitzdichte_meteofrance.md` | Vorgänger-Scheibe | liefert `lightning_density_per_km2_3h` regulär für FR/Korsika |
 | `docs/adr/0043-empfindlichkeitsstufe-als-niveau-statt-zweiter-alarm-typ.md` | bindende Vorgabe | Bounds-Tabelle ist skalenunabhängig formuliert („die höchste Stufe" bzw. „überhaupt steigt") — s. Abschnitt 2, KEIN wörtliches Zitat zur Stufenzahl beansprucht |
-| `docs/adr/0025-...md` | bindende Vorgabe | Sortier- und Render-Skala leben in `metric_format.py`; werden hier zum ersten Mal zahlenmäßig deckungsgleich (s. Abschnitt 1), bleiben aber zwei benannte Funktionen |
+| `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md` | bindende Vorgabe | Sortier- und Render-Skala leben in `metric_format.py`; werden hier zum ersten Mal zahlenmäßig deckungsgleich (s. Abschnitt 1), bleiben aber zwei benannte Funktionen |
 | `tests/tdd/test_alert_sensitivity_levels.py` | Regressions-Anker | bestehender Testsatz aus #1460 T1 (AC-4..AC-19) — muss nach dieser Scheibe **unverändert grün** bleiben (s. AC-2) |
 | `metric_catalog.py` Eintrag `cape` (`risk_thresholds`) | Quelle | liefert die CAPE-Schwelle 1000 J/kg — bereits produktentschieden, nicht neu erfunden |
 | `services.risk_engine.RiskEngine._check_thunder`, `trip_report.py::_RISK_LABELS` (Zeilen 734-745), `sms_trip.py::_SMS_RISK_LABELS` (Zeilen 104-114) | **im Scope** | bekommen je einen `LOW`-Zweig/-Eintrag, s. Abschnitt 4 und AC-12. Beide Konsumenten lesen `assessment.risks` direkt (nicht über `get_max_risk_level()`), deshalb ist die Erweiterung hier eindeutig wirksam |

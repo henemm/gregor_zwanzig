@@ -24,10 +24,10 @@ Baut auf dem funktionsfähigen `WeatherMetricsTab.svelte` (Phase 1, VERIFIED) au
 - `frontend/src/lib/components/trip-detail/MetricGroup.svelte`
 - `frontend/src/lib/components/trip-detail/MetricCheckbox.svelte`
 - `frontend/src/lib/components/trip-detail/TablePreview.svelte`
-- `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte`
+- `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte`
 
 **Frontend — geändert:**
-- `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - `frontend/src/lib/components/trip-detail/index.ts`
 - `frontend/src/lib/types.ts`
 

@@ -3,7 +3,7 @@ entity_id: feat_2280_handversand_endpoint
 type: module
 created: 2026-10-20
 updated: 2026-10-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [epic-2345, versand, trip, ortsvergleich, shared, fehlervokabular]
 issue: 2280

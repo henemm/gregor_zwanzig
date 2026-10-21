@@ -3,7 +3,7 @@ entity_id: feat_2261_sz8_messpunkt_position
 type: feature
 created: 2026-10-02
 updated: 2026-10-02
-status: draft
+status: implemented
 workflow: feat-2261-sz8-messpunkt-position
 version: "1.0"
 tags: [alarm, radar, nowcast, messpunkt, waechter, trip]

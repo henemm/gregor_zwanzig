@@ -3,7 +3,7 @@ entity_id: feat_1533_s4_generalprobe
 type: module
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, premium, garmin, seven-io, verification]
 ---

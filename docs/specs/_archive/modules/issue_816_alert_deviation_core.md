@@ -48,8 +48,8 @@ mobil-first, knapp und zeigt Vorher→Jetzt mit Segment-Zeit und km.
 | `src/services/weather_change_detection.py` — `WeatherChangeDetectionService` | upstream | Δ-Erkennung (symmetrisch, ohne `_detect_absolute_changes`) |
 | `src/app/metric_catalog.py` — `get_change_detection_map()` | upstream | Δ-Schwellen-Defaults für Slice 1 (Temp 5.0, Wind/Böen 20.0, Regen 10.0, Schneefallgrenze 20.0, Gewitter 1.0) |
 | `src/output/renderers/email/helpers.py` — `format_change_line`, `build_segment_label` | upstream | SSoT für Vorher→Jetzt-Zeile; `build_segment_label` wird um km erweitert |
-| `src/outputs/email.py` — `EmailOutput` | upstream | Knappen Alert-Versand |
-| `src/outputs/telegram.py` — `TelegramOutput` | upstream | Knappen Alert-Versand (Telegram-Kanal) |
+| `src/output/channels/email.py` — `EmailOutput` | upstream | Knappen Alert-Versand |
+| `src/output/channels/telegram.py` — `TelegramOutput` | upstream | Knappen Alert-Versand (Telegram-Kanal) |
 | `src/app/models.py` — `WeatherChange`, `TripSegment` | upstream | Change-DTO; `start_point.distance_from_start_km` für km-Angabe (#801) |
 | `src/services/trip_report_scheduler.py` — Briefing-Versand Z. 628–633 | downstream | Reset-Hook für `alert_state` beim Briefing |
 | `src/services/trip_alert.py` — `check_all_trips`, Scheduler-Cron 30 Min | downstream | Aufruf-Kontext |

@@ -3,7 +3,7 @@ entity_id: feat_1373_s2b_metrik_speicherformat
 type: module
 created: 2026-07-26
 updated: 2026-07-26
-status: draft
+status: implemented
 workflow: feat-1373-s2b-metrik-speicherformat
 version: "1.0"
 tags: [compare, metric-catalog, persistence, migration]

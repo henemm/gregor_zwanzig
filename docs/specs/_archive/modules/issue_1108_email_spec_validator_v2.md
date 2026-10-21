@@ -48,7 +48,7 @@ nie bestehbar (Dauer-Exit-1) und blockiert die E2E-Verifikation sowie den Prod-D
 |--------|------|---------|
 | `render_compare_html()` (`src/output/renderers/email/compare_html.py`) | intern | Quelle der Wahrheit für den v2-Vertrag — liefert Übersichtstabelle (Warn-Zeile zuerst) + Stundentabellen aller Orte, kein Score/Winner |
 | `CV2_METRICS` (`src/output/renderers/email/compare_html.py:70`) | intern | Metrik-Katalog der Übersichtstabelle; Zeilenanzahl variiert je nach `enabled_metrics`-Filter (#1104) — Validator darf keine feste Zeilenzahl verlangen |
-| `docs/specs/modules/issue_1110_compare_mail_v2.md` §2/§8 | intern | Vertragsbeschreibung (Übersichtstabelle, Warn-Zeile, Stundentabellen-Spalten, delegierte Validator-Anforderung) |
+| `docs/specs/_archive/modules/issue_1110_compare_mail_v2.md` §2/§8 | intern | Vertragsbeschreibung (Übersichtstabelle, Warn-Zeile, Stundentabellen-Spalten, delegierte Validator-Anforderung) |
 | `tests/tdd/test_issue_1110_compare_mail_v2.py::TestCompareMailV2Validator` | intern | Enthält den skip-markierten AC-9-Test (`test_ac9_…`), der in diesem Workflow entskippt wird |
 | Marker-Header `X-GZ-Mail-Type: compare` (`build_mime_message()`) | intern | Bleibt unverändertes Dispatch-Kriterium — dieses Issue ändert nichts am Dispatch, nur am Struktur-/Plausibilitätsvertrag |
 | Stalwart Test-Postfach (`gregor-test@henemm.com`, `GZ_TEST_IMAP_*`) | extern | E2E-Nachweis (AC-8) — echte zugestellte Mail, kein Mock |
@@ -180,5 +180,5 @@ Betroffene Kernfunktionen im heutigen (Alt-)Validator und was sich ändert:
 - 2026-07-08: Der hier beschriebene feste 8-Spalten-Vertrag der Stundentabelle wurde
   durch Issue #1106 (konfigurierbare Stundenverlauf-Metriken) auf eine
   Teilmenge-mit-Reihenfolge-Prüfung gegen eine 10-Spalten-Superset-Liste
-  umgestellt, siehe `docs/specs/modules/issue_1106_hourly_metrics_config.md`
+  umgestellt, siehe `docs/specs/_archive/modules/issue_1106_hourly_metrics_config.md`
   und `docs/reference/mail_validators.md` §1.

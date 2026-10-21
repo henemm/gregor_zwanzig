@@ -18,12 +18,12 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_816_alert_deviation_core.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`.
 Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 Mock-frei (CLAUDE.md): echter Dateisystem-State unter `data/users/<user_id>/`,
 echte Service-Aufrufe, echter Telegram-Socket-Sink, echtes `build_mime_message`-MIME.
 
-Parent-Spec: `docs/specs/modules/issue_816_alert_deviation_core.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_816_alert_deviation_core.md` v1.0
 
 ## Source
 

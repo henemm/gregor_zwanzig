@@ -3,7 +3,7 @@ entity_id: feat_1703_s8_compare_kanal_tabs
 type: feature
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, backend, compare, metrik-kaskade, adr-0050, adr-0053, issue-1703]
 ---

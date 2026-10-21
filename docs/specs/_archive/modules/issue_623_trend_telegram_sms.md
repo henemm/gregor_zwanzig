@@ -82,7 +82,7 @@ oben rechts ein rechtsbündiges Monospace-Kontext-Label `3-Tage-Trend` mit der S
 (`gesendet <Wochentag> · <HH:MM>` in der Trip-Zeitzone).
 
 **AC-6:** Given die toten Methoden `_render_html` und `_render_text` in
-`src/formatters/trip_report.py` (null Call-Sites), When die Konsolidierung abgeschlossen
+`src/output/renderers/trip_report.py` (null Call-Sites), When die Konsolidierung abgeschlossen
 ist, Then sind sie entfernt und die gesamte Testsuite bleibt grün.
 
 **AC-7:** Given ein Trip ohne Folge-Etappe (leerer/None-Trend), When ein Briefing für

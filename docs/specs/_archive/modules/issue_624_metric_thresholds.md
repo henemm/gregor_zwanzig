@@ -26,12 +26,12 @@ Token-Renderer). Die E-Mail-Tabelle (eigenes `display_thresholds`-Farbkonzept) b
 
 ## Source
 
-- **File (Python):** `src/app/models.py` (`MetricConfig`), `src/formatters/sms_trip.py`
-  (`format_sms`), `src/formatters/trip_report.py` (Aufrufer), `src/output/tokens/builder.py`
+- **File (Python):** `src/app/models.py` (`MetricConfig`), `src/output/renderers/sms_trip.py`
+  (`format_sms`), `src/output/renderers/trip_report.py` (Aufrufer), `src/output/tokens/builder.py`
   (`build_token_line`/`_mk_metric`/`DEFAULTS`), `src/app/loader.py` (Roundtrip)
 - **File (Go-API):** keine Struct-Änderung — Wert läuft durch `DisplayConfig
   map[string]interface{}` (additiver Map-Key je MetricConfig, Merge bleibt erhalten)
-- **File (Frontend):** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File (Frontend):** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
   (Schwellwert-Input pro threshold-fähiger Metrik), `frontend/src/lib/types.ts`
 - **Identifier:** `MetricConfig.sms_threshold`, `metric_id`→Symbol-Mapping `SMS_SYMBOL_BY_METRIC`,
   `build_token_line(..., thresholds=...)`
@@ -65,14 +65,14 @@ SMS_SYMBOL_BY_METRIC = {
     "wind": "W", "gust": "G",
 }
 
-# src/formatters/sms_trip.py — format_sms(..., thresholds: dict[str,float] | None = None)
+# src/output/renderers/sms_trip.py — format_sms(..., thresholds: dict[str,float] | None = None)
 # Map {symbol: wert} aus aktiven MetricConfig.sms_threshold ableiten und an
 # build_token_line weiterreichen.
 
 # src/output/tokens/builder.py — build_token_line(..., thresholds=None)
 # in _mk_metric: thr-Priorität = thresholds[symbol] -> spec.threshold -> DEFAULTS.get(symbol)
 
-# src/formatters/trip_report.py — beim SMS- und beim Telegram-Kurzform-Aufruf
+# src/output/renderers/trip_report.py — beim SMS- und beim Telegram-Kurzform-Aufruf
 # thresholds aus display_config.metrics ableiten und übergeben.
 ```
 

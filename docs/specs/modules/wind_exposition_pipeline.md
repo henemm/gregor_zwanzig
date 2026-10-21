@@ -26,8 +26,8 @@ drei koordinierte Aenderungen an Scheduler und Formattern.
 ## Source
 
 - **Geaendert:** `src/services/trip_report_scheduler.py` — berechnet kumulative Distanz und ruft `WindExpositionService` auf
-- **Geaendert:** `src/formatters/trip_report.py` — nimmt `exposed_sections` entgegen und reicht sie an `_determine_risk()` weiter
-- **Geaendert:** `src/formatters/sms_trip.py` — nimmt `exposed_sections` entgegen und reicht sie an `_detect_risk()` weiter
+- **Geaendert:** `src/output/renderers/trip_report.py` — nimmt `exposed_sections` entgegen und reicht sie an `_determine_risk()` weiter
+- **Geaendert:** `src/output/renderers/sms_trip.py` — nimmt `exposed_sections` entgegen und reicht sie an `_detect_risk()` weiter
 
 ## Dependencies
 
@@ -265,8 +265,8 @@ Trip mit Segment durch einen Gipfel auf 2400m, Wind 35 km/h:
 | Datei | Aenderung | Geschaetzte LoC |
 |-------|-----------|-----------------|
 | `src/services/trip_report_scheduler.py` | Kumulative Distanz + Exposition-Call + exposed_sections an format_email | ~15 |
-| `src/formatters/trip_report.py` | Signatur-Erweiterung + `self._exposed_sections` + an assess_segment | ~8 |
-| `src/formatters/sms_trip.py` | Signatur-Erweiterung + `self._exposed_sections` + an assess_segment | ~8 |
+| `src/output/renderers/trip_report.py` | Signatur-Erweiterung + `self._exposed_sections` + an assess_segment | ~8 |
+| `src/output/renderers/sms_trip.py` | Signatur-Erweiterung + `self._exposed_sections` + an assess_segment | ~8 |
 | `tests/integration/test_wind_exposition_pipeline.py` | NEU — Integration-Tests | ~60 |
 | **Total** | | **~91** |
 

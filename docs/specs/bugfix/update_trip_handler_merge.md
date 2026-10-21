@@ -3,7 +3,7 @@ entity_id: update_trip_handler_merge
 type: bugfix
 created: 2026-04-30
 updated: 2026-04-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [backend, go, api, bugfix, trip, persistence]
 ---

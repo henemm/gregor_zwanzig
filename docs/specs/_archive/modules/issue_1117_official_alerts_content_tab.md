@@ -22,7 +22,7 @@ Der bestehende Schalter „Amtliche Warnungen" (`trip.official_alerts_enabled`, 
 
 ## Source
 
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **Identifier:** neuer State `officialAlertsEnabled`, Funktionen `handleSave()`, `scheduleAutoSave()`, `handleDiscard()`, `snapshot()`
 - **File (Korrektur nach TDD-RED-Vorbereitung):** `frontend/src/lib/components/trip-detail/TripTabs.svelte`
 - **Identifier:** `handleValueChange()` — Flush-Guard-Bedingung erweitert

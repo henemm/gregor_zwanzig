@@ -1,3 +1,10 @@
+---
+entity_id: fix_1424_wertebereiche_startwerte
+type: module
+created: 2026-07-30
+status: implemented
+---
+
 # Fix #1424 — Ortsvergleich-Wertebereiche: Startwerte vollständig, ungeeignete Größen nicht mehr im Angebot
 
 - **Issue:** #1424 (Etappe S6 von #1372, Dach #1374)

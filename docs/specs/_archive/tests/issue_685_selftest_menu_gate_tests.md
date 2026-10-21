@@ -24,13 +24,13 @@ Subprozess reproduziert), (2) der Menü-Check meldet dann PASS statt SKIPPED,
 (3) bei Abweichung FAIL + korrekter Fazit-Text (F001), (4) fail-soft SKIPPED bei
 nicht-parsebarer Quelle.
 
-Parent-Spec: `docs/specs/modules/issue_685_selftest_menu_gate.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_685_selftest_menu_gate.md` v1.0
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_issue_685_selftest_menu_gate.py` (NEU — mock-frei)
-- **Spec:** `docs/specs/modules/issue_685_selftest_menu_gate.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/issue_685_selftest_menu_gate.md` v1.0
 
 ## Test Inventory
 

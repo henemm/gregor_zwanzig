@@ -48,7 +48,7 @@ tags: [bugfix, frontend, wizard, pill, color, accent, issue-482]
 |--------|------|---------|
 | `frontend/src/lib/components/atoms/Pill.svelte` | Atom-Komponente | Rendert die Pill; akzeptiert `tone`-Prop; kein Change nötig |
 | `frontend/src/app.css` | CSS-Token | Definiert `--g-accent: #c45a2a` (orange) und `--g-info: #2a6cb3` (blau); kein Change nötig |
-| `docs/specs/modules/issue_300_wizard_redesign.md` | Design-Spec | Legt orange als Akzentfarbe für Etappen-Elemente fest |
+| `docs/specs/_archive/modules/issue_300_wizard_redesign.md` | Design-Spec | Legt orange als Akzentfarbe für Etappen-Elemente fest |
 
 ## Implementation Details
 

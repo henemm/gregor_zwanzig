@@ -7,7 +7,7 @@ status: implemented
 
 # Tests: Issue #727 — /trips SSR 500 bei stages:null (null-safety)
 
-Spec: `docs/specs/modules/issue_727_trips_null_safety.md`
+Spec: `docs/specs/_archive/modules/issue_727_trips_null_safety.md`
 
 ## Test-Entities
 

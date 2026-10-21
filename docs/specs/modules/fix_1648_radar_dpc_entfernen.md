@@ -3,7 +3,7 @@ entity_id: fix_1648_radar_dpc_entfernen
 type: bugfix
 created: 2026-08-11
 updated: 2026-09-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, radar, nowcast, italy, issue-1648, cleanup, egress]
 ---

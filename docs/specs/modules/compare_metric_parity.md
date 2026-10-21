@@ -3,7 +3,7 @@ entity_id: compare_metric_parity
 type: module
 created: 2026-07-23
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.1"
 tags: [compare, email, renderer, frontend, bugfix, rework]
 workflow: fix-1335-compare-metric-parity

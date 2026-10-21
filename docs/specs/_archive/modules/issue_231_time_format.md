@@ -131,7 +131,7 @@ test('AC-1.5: toHHMMSS — unbekanntes Format wird durchgereicht (kein Crash)', 
 });
 ```
 
-Ausführung: `cd frontend && node --experimental-strip-types --test src/lib/utils/time.test.ts`
+Ausführung: `cd frontend && node --experimental-strip-types --test frontend/src/lib/utils/time.test.ts`
 
 ## Out-of-Scope
 

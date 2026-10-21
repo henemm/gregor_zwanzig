@@ -40,7 +40,7 @@ Behebt einen Bug in `src/providers/openmeteo.py`, durch den der `tenacity`-Retry
 | `tenacity` | library | Liefert `retry`, `retry_if_exception`, `stop_after_attempt`, `wait_exponential`, `before_sleep_log` — Retry-Mechanik selbst bleibt unveraendert, nur das Praedikat wird erweitert |
 | `docs/specs/modules/provider_openmeteo.md` | spec | Beschreibt das eigentlich vorgesehene Retry-Zielverhalten (Soll-Zustand vor diesem Bug) |
 | `docs/specs/modules/api_retry.md` | spec | Referenz-Retry-Pattern (GeoSphere-Provider), dort ohne dieses Wrap-Problem implementiert |
-| `docs/specs/modules/issue_1115_openmeteo_model_fallback.md` | spec | Referenziert #1128 explizit als bewusst ausgeklammerten Folgefehler; Modell-Fallback-Logik faengt `ProviderRequestError` *nach* dem (mit diesem Fix nun greifenden) Retry ab |
+| `docs/specs/_archive/modules/issue_1115_openmeteo_model_fallback.md` | spec | Referenziert #1128 explizit als bewusst ausgeklammerten Folgefehler; Modell-Fallback-Logik faengt `ProviderRequestError` *nach* dem (mit diesem Fix nun greifenden) Retry ab |
 
 ## Implementation Details
 

@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_393_cockpit_kacheln.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_393_cockpit_kacheln.md`.
 Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_393_cockpit_kacheln.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_393_cockpit_kacheln.md` v1.0
 
 ## Source
 
@@ -78,7 +78,7 @@ cd /home/hem/gregor_zwanzig && uv run pytest tests/tdd/test_briefing_log.py test
 cd /home/hem/gregor_zwanzig && go test ./internal/handler/ -run TestCockpit -v
 
 # Frontend RED-Phase
-cd /home/hem/gregor_zwanzig/frontend && node --experimental-strip-types --test src/lib/issue_393_cockpit_kacheln.test.ts
+cd /home/hem/gregor_zwanzig/frontend && node --experimental-strip-types --test frontend/src/lib/issue_393_cockpit_kacheln.test.ts
 ```
 
 ## Expected RED-State

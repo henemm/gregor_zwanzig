@@ -19,9 +19,9 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest fuer den expliziten Guard in `derive_horizon()` aus
-`docs/specs/bugfix/issue_351_derive_horizon_negative_delta.md`.
+`docs/specs/_archive/bugfix/issue_351_derive_horizon_negative_delta.md`.
 
-Parent-Spec: `docs/specs/bugfix/issue_351_derive_horizon_negative_delta.md` v1.0
+Parent-Spec: `docs/specs/_archive/bugfix/issue_351_derive_horizon_negative_delta.md` v1.0
 
 ## Source
 

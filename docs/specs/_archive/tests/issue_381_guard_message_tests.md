@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_381_guard_message.md`. Der Test prüft
+Test-Manifest für `docs/specs/_archive/modules/issue_381_guard_message.md`. Der Test prüft
 1:1 die Acceptance Criteria der Parent-Spec (AC-1 + AC-2).
 
-Parent-Spec: `docs/specs/modules/issue_381_guard_message.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_381_guard_message.md` v1.0
 
 ## Source
 

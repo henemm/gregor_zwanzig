@@ -20,7 +20,7 @@ tags: [bug, sms, thunder, telegram, email, sicherheitsrelevant]
 
 ## Purpose
 
-Diese Spec ERGÄNZT `docs/specs/bugfix/fix_1275_sms_th_mismatch.md` (Vormittags-Fix,
+Diese Spec ERGÄNZT `docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md` (Vormittags-Fix,
 `status: implemented`), behebt aber einen davon unabhängigen, tieferliegenden Defekt: Die
 SMS meldet für ihre eigene, berichtete Etappe `TH:-` (kein Gewitter), während die E-Mail
 derselben Etappe „Gewitter ab 08:00 · stärkste 08:00" zeigt — weil der `TH:`-Pfad in
@@ -77,7 +77,7 @@ dieselbe Etappe dieselbe Gewitter-Aussage treffen.
 | `tests/tdd/<verhaltensbenannt>.py` | CREATE | Repro-Test **durch `format_sms()`** mit echter `SegmentWeatherData`-Zeitreihe inkl. `dp.thunder_level` (Vorlage `tests/tdd/test_bug_874_th_plus_sms.py:45-98`, mock-frei). Plus: `TH+`-Stunde echt, Telegram-Konsistenz (gefenstert), Telegram-Schweigen bei Gewitter außerhalb der Wanderzeit. Kein Zeichenbudget-Test (E3). |
 | `docs/reference/sms_format.md:95-102` | MODIFY | Format-Vertrag: „heute/morgen" absolut → report-relativ (E1: TH:=berichtete Etappe, TH+:=danach). `L = low` streichen — `ThunderLevel` kennt kein LOW. |
 | `docs/project/known_issues.md:8-27` | MODIFY | BUG-1275: Status `RESOLVED` revidieren, fehlende Datenanbindung + Telegram-Divergenz als eigenständigen Defekt ergänzen. |
-| `docs/specs/bugfix/fix_1275_sms_th_mismatch.md` | MODIFY (Errata) | AC-2 + Dependencies-Zeile 54 behaupten einen nicht existenten Telegram-Konsumpfad über `notification_service.py:222`. Wird als Errata-Changelog-Eintrag DORT ergänzt, nicht neu geschrieben (siehe eigener Abschnitt unten). |
+| `docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md` | MODIFY (Errata) | AC-2 + Dependencies-Zeile 54 behaupten einen nicht existenten Telegram-Konsumpfad über `notification_service.py:222`. Wird als Errata-Changelog-Eintrag DORT ergänzt, nicht neu geschrieben (siehe eigener Abschnitt unten). |
 
 ## Implementation Details
 
@@ -230,7 +230,7 @@ Skala (Konsolidierung) + gleiche Fensterung (Fix 3) — kein neuer gemeinsamer R
 
 ## Errata zur Vormittags-Spec
 
-`docs/specs/bugfix/fix_1275_sms_th_mismatch.md` (Status `implemented`) enthält in AC-2 und
+`docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md` (Status `implemented`) enthält in AC-2 und
 in der Dependencies-Tabelle (Zeile 54) eine faktisch falsche Behauptung: Telegram konsumiere
 `thunder_forecast` über `notification_service.py:222`. Tatsächlich hat
 `render_telegram_bubbles()` (`narrow.py:359-371`) **kein** `thunder_forecast`-Argument, und

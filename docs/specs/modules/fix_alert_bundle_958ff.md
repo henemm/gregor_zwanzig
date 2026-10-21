@@ -46,7 +46,7 @@ wenn #958 zuerst implementiert wird.
 | #959 | `frontend/src/lib/components/alerts-tab/alertMetricTable.ts:279-300` | `CATALOG_TO_ALERT_METRICS` |
 | #933 | `frontend/src/lib/components/alerts-tab/alertMetricTable.ts:308-323` | `activeAlertableMetrics()` |
 | #921 | `tests/tdd/test_trip_alert_profile.py:122-166` | `test_ac2_trip_alert_render_with_wintersport_profile`, `test_ac2_trip_alert_render_with_wandern_profile` |
-| #921 | `src/formatters/trip_report.py:619-620` | toter `report_type='alert'`-Zweig |
+| #921 | `src/output/renderers/trip_report.py:619-620` | toter `report_type='alert'`-Zweig |
 | #980/#986 | `src/output/renderers/alert/render.py:281-317` | Multi-Datenblock (`render_email`, else-Zweig) |
 | #981 | `src/output/renderers/alert/render.py:195-203,277,342` | `render_subject()`, `render_email()`-Verdict, `render_telegram()`-Kopf |
 | #982 | `src/output/renderers/alert/render.py:24-27` | `_sorted()` |
@@ -214,7 +214,7 @@ AC-2-Tests (`test_ac2_trip_alert_render_with_wintersport_profile`,
 korrigiert (kein Assert auf `#4a7fb5`/`#3a7d44`/Eyebrow-Text) oder entfernt,
 falls sie inhaltlich nichts mehr beweisen, das nicht schon `test_ac1_*`
 (Zeile ~90-118, `render_deviation_alert`-Kompat-Pfad) abdeckt. Zusätzlich:
-`src/formatters/trip_report.py:619-620` — der `report_type='alert'`-Zweig hat
+`src/output/renderers/trip_report.py:619-620` — der `report_type='alert'`-Zweig hat
 seit #917 keinen produktiven Aufrufer mehr (Alert-Versand läuft über
 `output/renderers/alert/render.py`); toten Zweig entfernen, `update`-Pfad
 (Zeile 620, `rt = "update" if report_type == "alert" else report_type`)
@@ -392,7 +392,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
   falls sie keinen zusätzlichen Beweiswert mehr haben.
   - Test: `uv run pytest tests/tdd/test_trip_alert_profile.py` grün.
 
-- **AC-9 (#921):** Given `src/formatters/trip_report.py` nach der Bereinigung
+- **AC-9 (#921):** Given `src/output/renderers/trip_report.py` nach der Bereinigung
   / When nach `report_type='alert'`-Aufrufern im Produktivcode gesucht wird
   (`grep -rn "report_type=.alert" src/ api/ cmd/`) / Then existiert kein
   produktiver Aufrufer mehr, und `format_email(report_type='update', ...)`
@@ -558,7 +558,7 @@ Multi-Event-Nachrichten (#980/#981/#982), die Outlook-kompatiblen Tabellen-Rows
   echten Staging-Alert (Fake-Radar-Seam bzw. Preview-Payload).
 - `renderer_mail_gate.py` feuert NICHT für `src/output/renderers/alert/*`
   (nur `renderers/email/*`, `formatters/*`, `outputs/email.py`) — aber #921
-  fasst `src/formatters/trip_report.py` an, wodurch das Gate für DIESEN Teil
+  fasst `src/output/renderers/trip_report.py` an, wodurch das Gate für DIESEN Teil
   des Bündels doch greift: Modus-Matrix-Vertragstest
   (`tests/tdd/test_issue_811_mode_matrix.py`) + `briefing_mail_validator.py`
   werden vor dem Commit Pflicht.

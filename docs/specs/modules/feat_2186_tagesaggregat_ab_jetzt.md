@@ -3,7 +3,7 @@ entity_id: feat_2186_tagesaggregat_ab_jetzt
 type: module
 created: 2026-09-08
 updated: 2026-09-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [ad-hoc-abruf, timeline, tagesaggregat, telegram, email]
 ---

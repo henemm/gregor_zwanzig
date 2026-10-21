@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_401_segment_localtime.md` (kombiniert #400 + #401).
+Test-Manifest für `docs/specs/_archive/modules/bug_401_segment_localtime.md` (kombiniert #400 + #401).
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_401_segment_localtime.md` v1.1
+Parent-Spec: `docs/specs/_archive/modules/bug_401_segment_localtime.md` v1.1
 
 Source-Inspection-Ansatz (kein Mock): `trip_alert.py` und `trip_report_scheduler.py` haben
 viele Deps (SMTP, Provider). Geprüft wird der relevante Quelltext + eine echte CEST→UTC-Konvertierung.

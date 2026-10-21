@@ -16,7 +16,7 @@ tags: [frontend, cleanup, svelte, typescript, navigation, waypoint, deprecated]
 
 ## Purpose
 
-Bereinigt drei unabhängige Rest-Scope-Items aus dem #503/#518-Cleanup-Zyklus: (1) entfernt die toten `onConfirm`/`onReject`-Props aus `WaypointCard` und den zugehörigen `noop()`-Glue-Code in `EditStagesPanelNew`, (2) annotiert `Waypoint.suggested?` in `types.ts` als `@deprecated` ohne das Feld zu entfernen (da `stripSuggested()` es per Destructuring liest), und (3) legt eine kanonische Navigations-Dokumentation in `docs/architecture/navigation.md` an, die die `?tab=`-Konvention, valide Tab-Werte und die `goto`-Muster verbindlich festhält. Ziel ist ein widerspruchsfreier Codestand ohne tote Stubs und mit einer Single Source of Truth für URL-Navigation.
+Bereinigt drei unabhängige Rest-Scope-Items aus dem #503/#518-Cleanup-Zyklus: (1) entfernt die toten `onConfirm`/`onReject`-Props aus `WaypointCard` und den zugehörigen `noop()`-Glue-Code in `EditStagesPanelNew`, (2) annotiert `Waypoint.suggested?` in `types.ts` als `@deprecated` ohne das Feld zu entfernen (da `stripSuggested()` es per Destructuring liest), und (3) legt eine kanonische Navigations-Dokumentation in `docs/reference/navigation.md` an, die die `?tab=`-Konvention, valide Tab-Werte und die `goto`-Muster verbindlich festhält. Ziel ist ein widerspruchsfreier Codestand ohne tote Stubs und mit einer Single Source of Truth für URL-Navigation.
 
 ## Source
 
@@ -25,7 +25,7 @@ Bereinigt drei unabhängige Rest-Scope-Items aus dem #503/#518-Cleanup-Zyklus: (
   - `frontend/src/lib/components/edit/EditStagesPanelNew.svelte`
   - `frontend/src/lib/components/edit/issue_503_etappen_waypoints.test.ts`
   - `frontend/src/lib/types.ts`
-  - `docs/architecture/navigation.md` (neu anlegen)
+  - `docs/reference/navigation.md` (neu anlegen)
 - **Identifier:** `WaypointCard`, `EditStagesPanelNew`, `Waypoint`
 
 ## Estimated Scope
@@ -73,7 +73,7 @@ In `frontend/src/lib/types.ts`, Waypoint-Interface:
   ```
 - Das Feld MUSS erhalten bleiben — `stripSuggested()` in `waypointEditor.ts` nutzt `{ suggested: _suggested, ...rest } = w`
 
-### Item 5: docs/architecture/navigation.md — neu anlegen
+### Item 5: docs/reference/navigation.md — neu anlegen
 
 Verzeichnis `docs/architecture/` anlegen (existiert noch nicht) und `navigation.md` mit folgendem Inhalt erstellen:
 
@@ -91,7 +91,7 @@ Verzeichnis `docs/architecture/` anlegen (existiert noch nicht) und `navigation.
 ## Expected Behavior
 
 - **Input:** Kein Laufzeit-Input — reine Code-Bereinigung und neue Dokumentationsdatei
-- **Output:** `WaypointCard` ohne tote Props; `EditStagesPanelNew` ohne `noop`-Glue; `Waypoint.suggested` klar als deprecated gekennzeichnet; `docs/architecture/navigation.md` als lesbare Referenz vorhanden
+- **Output:** `WaypointCard` ohne tote Props; `EditStagesPanelNew` ohne `noop`-Glue; `Waypoint.suggested` klar als deprecated gekennzeichnet; `docs/reference/navigation.md` als lesbare Referenz vorhanden
 - **Side effects:** TypeScript-Build bleibt fehlerfrei; kein bestehendes Verhalten ändert sich; `stripSuggested()` funktioniert weiterhin unverändert
 
 ## Acceptance Criteria
@@ -105,7 +105,7 @@ Verzeichnis `docs/architecture/` anlegen (existiert noch nicht) und `navigation.
 - **AC-3:** Given `frontend/src/lib/types.ts` Waypoint-Interface, When der Quelltext analysiert wird, Then ist `suggested?: boolean` mit einem `@deprecated`-Kommentar versehen, und das Feld existiert weiterhin (nicht entfernt).
   - Test: (populated after /tdd-red)
 
-- **AC-4:** Given `docs/architecture/navigation.md`, When die Datei gelesen wird, Then enthält sie: (a) `?tab=` als kanonische URL-Konvention, (b) valide Tab-Werte für Trip-Detail, (c) das goto-Muster mit `replaceState/noScroll/keepFocus`, (d) die 301-Redirect-Konvention.
+- **AC-4:** Given `docs/reference/navigation.md`, When die Datei gelesen wird, Then enthält sie: (a) `?tab=` als kanonische URL-Konvention, (b) valide Tab-Werte für Trip-Detail, (c) das goto-Muster mit `replaceState/noScroll/keepFocus`, (d) die 301-Redirect-Konvention.
   - Test: (populated after /tdd-red)
 
 - **AC-5:** Given TypeScript-Build im frontend Verzeichnis (`npm run check`), When der Check läuft, Then keine TypeScript-Fehler durch die Änderungen an `types.ts` oder `WaypointCard`.

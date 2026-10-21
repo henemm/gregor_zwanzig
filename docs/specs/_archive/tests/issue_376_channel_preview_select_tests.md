@@ -18,13 +18,13 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_376_channel_preview_select.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_376_channel_preview_select.md`.
 Da Issue #376 rein Frontend ist (eine Svelte-Komponente, kein Python-Code), prüfen
 die Tests Inhalts-Invarianten der Svelte-Datei: Wegfall des nativen `<select>`,
 Import + Verwendung von `Select.svelte`, Erhalt des `data-testid` und des
 #272-iOS-Zoom-Guards sowie die app-weite #278-Regel (`rg '<select\b'`).
 
-Parent-Spec: `docs/specs/modules/issue_376_channel_preview_select.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_376_channel_preview_select.md` v1.0
 
 ## Source
 

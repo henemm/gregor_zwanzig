@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für den Fix aus `docs/specs/modules/bug_557_confidence_pct_min.md`.
+Test-Manifest für den Fix aus `docs/specs/_archive/modules/bug_557_confidence_pct_min.md`.
 Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_557_confidence_pct_min.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_557_confidence_pct_min.md` v1.0
 
 ## Source
 

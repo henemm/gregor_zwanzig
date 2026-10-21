@@ -3,7 +3,7 @@ entity_id: feat_2439_befehle_antwortzeit
 type: module
 created: 2026-10-18
 updated: 2026-10-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [inbound, befehle, antwortzeit, dwd, briefing, parallel, observability, 2439]
 ---

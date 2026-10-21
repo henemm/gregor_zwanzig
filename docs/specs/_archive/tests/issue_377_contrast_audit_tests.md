@@ -18,12 +18,12 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_377_contrast_audit.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_377_contrast_audit.md`.
 Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec. Keine Mocks —
 Python-Tests rechnen echte WCAG-Kontraste, node:test-Tests lesen die echten
 `.svelte`/`.css`-Quelldateien (Pattern wie `tokens-bridge.test.ts`).
 
-Parent-Spec: `docs/specs/modules/issue_377_contrast_audit.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_377_contrast_audit.md` v1.0
 
 ## Source
 

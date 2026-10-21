@@ -1,3 +1,10 @@
+---
+entity_id: feat_1481a_touched_tests_gate
+type: module
+created: 2026-08-03
+status: implemented
+---
+
 # Spec: Commit-Gate „Tests der berührten Dateien"
 
 - **Issue:** #1481 Scheibe A

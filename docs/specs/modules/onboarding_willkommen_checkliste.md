@@ -70,7 +70,7 @@ Ein neu eingeladener Nutzer soll vom ersten Login bis zum ersten planmäßig zug
 | `GET/PUT /api/auth/profile` | endpoint | Quelle und Ziel der Flags |
 | `POST /api/notify/test` → Python `send_test_message` | endpoint | Testmail; Fehler kommen als HTTP 200 mit `{"error": …}`, nur `status=="ok"` heißt gesendet |
 | `Settings.with_user_profile`, `force_test` (`src/app/config.py:400, :414, :444`) | function | Empfänger aus dem Profil; Testnutzer/Staging bleiben auf Stalwart |
-| Resend-Allowlist (`src/outputs/email.py:239-300`), ADR-0087 (Empfängerschutz), ADR-0066 (E-Mail-Bestätigung) | adr/module | Fremdadressen nur bestätigt und über Resend |
+| Resend-Allowlist (`src/output/channels/email.py:239-300`), ADR-0087 (Empfängerschutz), ADR-0066 (E-Mail-Bestätigung) | adr/module | Fremdadressen nur bestätigt und über Resend |
 | `trip_report_scheduler.py` (`angefordert`), `scheduler_dispatch_service.py` (`on_demand`, `send_result.sent`) | module | Unterscheidung planmäßig / angefordert |
 | `model.SmsAllowed(tier)`, `premium_sms_allowed` | function | Tarif-Hinweise (keine Profilfelder) |
 | `t(key)` / `de.json` (#2520, S1) | module | Einziger Ort für Texte |

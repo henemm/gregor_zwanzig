@@ -3,7 +3,7 @@ entity_id: fix_1458_messlatte_ersatz
 type: refactor
 created: 2026-08-18
 updated: 2026-08-18
-status: approved
+status: implemented
 version: "1.0"
 tags: [alerts, epic-1458, doku, issue-triage]
 ---

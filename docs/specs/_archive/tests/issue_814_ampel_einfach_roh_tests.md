@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_814_ampel_einfach_roh.md` v2.0.
+Test-Manifest für `docs/specs/_archive/modules/issue_814_ampel_einfach_roh.md` v2.0.
 Jeder pytest-/vitest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_814_ampel_einfach_roh.md` v2.0
+Parent-Spec: `docs/specs/_archive/modules/issue_814_ampel_einfach_roh.md` v2.0
 
 ## Source
 
@@ -71,7 +71,7 @@ uv run pytest tests/tdd/test_issue_811_mode_matrix.py \
              tests/tdd/test_issue_759_email_ampel.py -v
 
 # Frontend RED-Phase
-cd frontend && npx vitest run src/lib/components/trip-detail/metricsEditor.test.ts
+cd frontend && npx vitest run frontend/src/lib/components/trip-detail/metricsEditor.test.ts
 ```
 
 ## Changelog

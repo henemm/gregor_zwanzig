@@ -3,7 +3,7 @@ entity_id: feat_2050_s4c_ein_ereignis_ein_alarm
 type: feature
 created: 2026-08-23
 updated: 2026-08-23
-status: draft
+status: implemented
 workflow: feat-2050-s4c-ein-ereignis-ein-alarm
 version: "1.0"
 tags: [alarm, entdopplung, ereignis-identitaet, abweichung, nowcast]

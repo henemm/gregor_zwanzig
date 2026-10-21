@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die Implementierung aus
-`docs/specs/modules/issue_205_alert_rules.md`. Jeder pytest- bzw. Go-Test
+`docs/specs/_archive/modules/issue_205_alert_rules.md`. Jeder pytest- bzw. Go-Test
 mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_205_alert_rules.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_205_alert_rules.md` v1.0
 
 ## Source
 

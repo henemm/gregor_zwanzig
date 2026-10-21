@@ -24,7 +24,7 @@ Design-Vorlage widerspricht und funktional hinter dem Desktop-Editor zurückblei
 
 ## Source
 
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **Identifier:** `WeatherMetricsTab` (Mobil-Verhalten via `@media (max-width: 899px)` + Sheet-Trigger)
 - **SOLL-Quelle:** `claude-code-handoff/current/jsx/screen-trip-edit-v2-mobile.jsx` → `TM2_WetterTab`
 
@@ -38,7 +38,7 @@ Design-Vorlage widerspricht und funktional hinter dem Desktop-Editor zurückblei
 
 - `frontend/src/lib/components/mobile/Sheet.svelte` (Bottom-Sheet, #373)
 - `frontend/src/lib/components/trip-detail/WeatherV2MailPreview.svelte` (Kanal-Tabs Email/Telegram/SMS, Telegram-Overflow)
-- `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte` (Telegram-Schnittlinie `wm2-cut-line`)
+- `frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte` (Telegram-Schnittlinie `wm2-cut-line`)
 - `frontend/src/lib/components/trip-detail/metricsEditor.ts` (`CHANNEL_COL_BUDGET.telegram = 8`)
 
 ## Behavior

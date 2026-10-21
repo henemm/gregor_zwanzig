@@ -3,7 +3,7 @@ entity_id: bundle_791_847_844_alert_fixes
 type: bugfix
 created: 2026-06-21
 updated: 2026-06-21
-status: draft
+status: implemented
 workflow: bug-844-active-segment-filter
 ---
 

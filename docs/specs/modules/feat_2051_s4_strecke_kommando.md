@@ -3,7 +3,7 @@ entity_id: feat_2051_s4_strecke_kommando
 type: feature
 created: 2026-08-23
 updated: 2026-08-23
-status: draft
+status: implemented
 version: "1.3"
 tags: [alarm, nowcast, radar, ausdehnung, zone, kommando, inbound]
 ---

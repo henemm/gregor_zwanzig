@@ -11,7 +11,7 @@ tags: [alerts, compare, radar, nowcast, epic-1095]
 <!-- Issue #1041 — GESAMT-/REFERENZ-SPEC für den Backend-Radar-Alarm im Orts-Vergleich.
      Die Umsetzung ist geschnitten (PO-Entscheidung 2026-07-10, „erst der Mail-Baustein, dann der Alarm"):
        - Slice 1a (AKTIV): Mehrort-fähiger Onset-Alarm-Renderer + Bündel-Nachricht (E-Mail).
-         → docs/specs/modules/issue_1041_multi_location_onset_alert.md
+         → docs/specs/_archive/modules/issue_1041_multi_location_onset_alert.md
        - Slice 1b (FOLGE): CompareRadarAlertService + Konfig-Feld + Scheduler, nutzt den Baustein aus 1a.
        - Slice 2 (FOLGE): Frontend-Schalter im Compare-Editor.
      Dieses Dokument beschreibt das Gesamt-Backend-Design und dient 1b als Referenz. NICHT der aktive Freigabe-Gegenstand.

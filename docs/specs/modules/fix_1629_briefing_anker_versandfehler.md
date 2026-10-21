@@ -3,7 +3,7 @@ entity_id: fix_1629_briefing_anker_versandfehler
 type: bugfix
 created: 2026-08-09
 updated: 2026-08-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, briefing, dispatch, issue-1629, observability]
 ---

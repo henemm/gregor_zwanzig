@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_323_hex_fallbacks_cleanup.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_323_hex_fallbacks_cleanup.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_323_hex_fallbacks_cleanup.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_323_hex_fallbacks_cleanup.md` v1.0
 
 ## Source
 

@@ -3,7 +3,7 @@ entity_id: alert_config_gaps
 type: bugfix
 created: 2026-02-10
 updated: 2026-02-10
-status: done
+status: implemented
 version: "1.0"
 tags: [bugfix, story-3, feature-3.4, alert, config]
 ---
@@ -24,7 +24,7 @@ Behebt zwei Config-Lücken in Feature 3.4 (Alert bei Änderungen):
 
 ### Bug A: Englischer Alert-Subject
 
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **Identifier:** `TripReportFormatter._generate_subject()` (Zeile 101)
 - **Ist:** `"alert": "Weather Alert"`
 - **Soll:** `"alert": "WETTER-ÄNDERUNG"` (Story 3 Spec, Feature 3.4 Acceptance Criteria)
@@ -50,7 +50,7 @@ Behebt zwei Config-Lücken in Feature 3.4 (Alert bei Änderungen):
 ### Fix A: Subject deutsch (1 Zeile)
 
 ```python
-# src/formatters/trip_report.py, Zeile 98-102
+# src/output/renderers/trip_report.py, Zeile 98-102
 # ALT:
 type_label = {
     "morning": "Morning Report",

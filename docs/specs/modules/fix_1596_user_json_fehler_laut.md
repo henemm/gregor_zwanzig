@@ -3,7 +3,7 @@ entity_id: fix_1596_user_json_fehler_laut
 type: module
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, auth, tier-gating, mail, logging]
 ---

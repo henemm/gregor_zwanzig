@@ -3,7 +3,7 @@ entity_id: external_validator_auth_tests
 type: test
 created: 2026-05-03
 updated: 2026-05-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [validator, auth, tdd, tests]
 ---

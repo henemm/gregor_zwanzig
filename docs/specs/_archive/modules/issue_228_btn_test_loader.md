@@ -26,7 +26,7 @@ installiert), wurde erst durch Issue #225 (Vitest → node:test Migration)
 sichtbar.
 
 **Tech-Lead-Entscheidung:** Test-Code (230 Zeilen) in Archive-Block der
-Original-Spec `docs/specs/modules/issue_214_btn_feature_parity.md`
+Original-Spec `docs/specs/_archive/modules/issue_214_btn_feature_parity.md`
 verschieben. `Btn.test.ts` durch 3-Zeilen-Skip-Stub mit Verweis
 ersetzen. So bleibt der Test-Code als Doku erhalten und kann bei
 künftiger Vitest- oder Playwright-Component-Tests-Migration reaktiviert
@@ -40,13 +40,13 @@ LoC Code-Gerüst erzeugen ohne echten Mehrwert.
 ## Quelle / Source
 
 - `frontend/src/lib/components/ui/btn/Btn.test.ts` — durch Skip-Stub ersetzen (~230 LoC → ~12 LoC)
-- `docs/specs/modules/issue_214_btn_feature_parity.md` — Archive-Block am Ende anhängen
+- `docs/specs/_archive/modules/issue_214_btn_feature_parity.md` — Archive-Block am Ende anhängen
 
 ## Acceptance Criteria
 
-- **AC-1:** Given `Btn.test.ts` / When `cd frontend && node --experimental-strip-types --test src/lib/components/ui/btn/Btn.test.ts` läuft / Then liefert es Exit-Code 0 (kein `ERR_UNKNOWN_FILE_EXTENSION`, keine Failures); der einzige Test ist `test.skip(...)` mit Verweis auf #228
+- **AC-1:** Given `Btn.test.ts` / When `cd frontend && node --experimental-strip-types --test frontend/src/lib/components/ui/btn/Btn.test.ts` läuft / Then liefert es Exit-Code 0 (kein `ERR_UNKNOWN_FILE_EXTENSION`, keine Failures); der einzige Test ist `test.skip(...)` mit Verweis auf #228
 
-- **AC-2:** Given `docs/specs/modules/issue_214_btn_feature_parity.md` / When ein zukünftiger Entwickler die Btn-Tests reaktivieren will / Then findet er den vollständigen Original-Test-Code (~230 Zeilen) in einem Code-Block-Archiv am Ende der Spec, kopierfertig
+- **AC-2:** Given `docs/specs/_archive/modules/issue_214_btn_feature_parity.md` / When ein zukünftiger Entwickler die Btn-Tests reaktivieren will / Then findet er den vollständigen Original-Test-Code (~230 Zeilen) in einem Code-Block-Archiv am Ende der Spec, kopierfertig
 
 - **AC-3:** Given die Btn-Komponente selbst (`Btn.svelte`, `index.ts`) / When der Build läuft / Then sind sie UNVERÄNDERT — keine UI-Regression, kein Type-Change
 
@@ -62,7 +62,7 @@ LoC Code-Gerüst erzeugen ohne echten Mehrwert.
 //
 // Original-Test-Code (230 Zeilen, SSR-Renders aller 7 Variants x 8 Sizes,
 // href-Switch, disabled-State, ARIA-Pattern) ist archiviert in
-// docs/specs/modules/issue_214_btn_feature_parity.md (Archive-Block am Ende).
+// docs/specs/_archive/modules/issue_214_btn_feature_parity.md (Archive-Block am Ende).
 //
 // Reaktivierung moeglich bei kuenftiger Migration auf Vitest oder
 // Playwright Component Tests (eigener Issue).
@@ -96,7 +96,7 @@ für `node:test`. Vollständiger Code zur Reaktivierung:
 
 - **Node-Test:**
   ```bash
-  cd frontend && node --experimental-strip-types --test src/lib/components/ui/btn/Btn.test.ts
+  cd frontend && node --experimental-strip-types --test frontend/src/lib/components/ui/btn/Btn.test.ts
   ```
   Erwartung: Exit 0, "1 test, 0 pass, 0 fail, 1 skipped" oder ähnlich.
 - **svelte-check:** ≤ 24 Errors (Baseline).

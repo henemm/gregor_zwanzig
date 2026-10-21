@@ -1,3 +1,10 @@
+---
+entity_id: fix_1720_s1_playwright_selektoren
+type: fast
+created: 2026-08-14
+status: implemented
+---
+
 # Mini-Spec: Playwright-Selektoren des Trip-Ausblick-Klickpfads richtigstellen
 
 <!-- Nacharbeit zu #1720 Scheibe 1. Herkunft: Staging-Validator F001/F002 (beide LOW,

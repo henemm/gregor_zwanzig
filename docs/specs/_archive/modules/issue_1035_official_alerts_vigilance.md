@@ -17,7 +17,7 @@ tags: [compare, alerts, official-alerts, meteofrance]
 > (`/vigilance/public/bulletin?lat=&lon=`), die beide **nicht existieren** — real verifiziert
 > wurde stattdessen ein einfacher `apikey`-HTTP-Header gegen den nationalen Endpoint
 > `.../DPVigilance/v1/cartevigilance/encours`. Die verbindliche, implementierte Spec ist
-> **`docs/specs/modules/issue_1035_vigilance_source.md`**. Diese Datei bleibt nur als
+> **`docs/specs/_archive/modules/issue_1035_vigilance_source.md`**. Diese Datei bleibt nur als
 > Analyse-Historie erhalten, nicht als aktuelle Referenz.
 
 ## Approval

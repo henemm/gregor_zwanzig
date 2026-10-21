@@ -29,7 +29,7 @@ oben** umgebaut.
 - **File:** `src/output/renderers/email/plain.py`
 - **File:** `src/output/renderers/email/helpers.py`
 - **File:** `src/output/renderers/email/__init__.py`
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **File:** `src/services/day_comparison.py`
 - **Identifier:** `render_html`, `render_plain`, `render_day_comparison_html/plain`, `build_metrics_summary_pills`, `DayComparisonService`
 

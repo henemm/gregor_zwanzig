@@ -47,7 +47,7 @@ planen und sofort mit dem Wizard weiterarbeiten wollen.
 ## Verweis auf Master-Spec
 
 Diese Sub-Spec ist eine Detail-Spezifikation der approved Master-Spec
-[`docs/specs/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
+[`docs/specs/_archive/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
 
 - **§3.1 WizardState** — direkte Zuweisung `wizard.stages = [...]` (NICHT `addStage()`),
   `wizard.activity`, `wizard.name`, `wizard.shortcode`, `wizard.recomputeStageDates()`.

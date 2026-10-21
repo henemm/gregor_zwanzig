@@ -43,9 +43,9 @@ wird.
 - `src/app/models.py` — `MetricConfig`: `format_mode: Optional[str] = None` hinzufügen; `use_friendly_format` bleibt als `@deprecated` (~20 LoC)
 - `src/app/loader.py` — `_resolve_format_mode()`-Adapter; Schreib-Pfade schreiben beide Felder (~30 LoC)
 - `src/output/renderers/email/helpers.py` — `fmt_val()` auf `mode: str` umstellen; `build_format_modes()` statt `build_friendly_keys()`; neuer Simplified-Kürzel-Helfer (~60 LoC)
-- `src/formatters/trip_report.py` — `_build_friendly_keys()` durch Import aus `helpers.py` ersetzen (Vor-Commit); CAPE-Highlight und Wind-Direction-Merge auf `format_mode` umstellen (~30 LoC)
-- `src/formatters/compact_summary.py` — Adjektiv-Pfade an `format_mode` koppeln, Briefing-Texte bleiben unberührt (~20 LoC)
-- `src/formatters/sms_trip.py` — Token-Pfad auf `format_mode in {"symbol","scale"}` umstellen (~10 LoC)
+- `src/output/renderers/trip_report.py` — `_build_friendly_keys()` durch Import aus `helpers.py` ersetzen (Vor-Commit); CAPE-Highlight und Wind-Direction-Merge auf `format_mode` umstellen (~30 LoC)
+- `src/output/renderers/compact_summary.py` — Adjektiv-Pfade an `format_mode` koppeln, Briefing-Texte bleiben unberührt (~20 LoC)
+- `src/output/renderers/sms_trip.py` — Token-Pfad auf `format_mode in {"symbol","scale"}` umstellen (~10 LoC)
 - `src/services/weather_metrics.py` — `format_wind_strength(kmh)` und `format_precip_intensity(mm)` als neue Single-Source-Helfer extrahiert (~20 LoC)
 - `src/output/tokens/builder.py` + `src/output/tokens/dto.py` — Token-Builder-Adapter (~10 LoC)
 
@@ -69,8 +69,8 @@ wird.
 | `fmt_val()` (`src/output/renderers/email/helpers.py`) | Python-Backend | Zentraler Renderer; Verzweigung wechselt von `bool` zu `mode: str` |
 | `degrees_to_compass()` (`src/services/weather_metrics.py`) | Python-Backend | Kompass-Skala für `wind_direction`; bestehende Implementierung, bleibt als Baustein |
 | `get_weather_emoji()` (`src/services/weather_metrics.py`) | Python-Backend | Symbol-Quelle für `sunshine`; bestehende Implementierung, bleibt als Baustein |
-| `compact_summary._format_wind` / `._format_precipitation` (`src/formatters/compact_summary.py`) | Python-Backend | Quelle der Simplified-Adjektive; werden nach `weather_metrics.py` extrahiert (Single Source) |
-| `_build_friendly_keys` (`src/formatters/trip_report.py:640`) | Python-Backend | Duplikat von `helpers.py:505`; wird im Vor-Commit durch Import ersetzt |
+| `compact_summary._format_wind` / `._format_precipitation` (`src/output/renderers/compact_summary.py`) | Python-Backend | Quelle der Simplified-Adjektive; werden nach `weather_metrics.py` extrahiert (Single Source) |
+| `_build_friendly_keys` (`src/output/renderers/trip_report.py:640`) | Python-Backend | Duplikat von `helpers.py:505`; wird im Vor-Commit durch Import ersetzt |
 | `data_schema_backup.py` Hook | Python-Backend | Pre-Snapshot bei jedem Edit auf `src/app/models.py` (CLAUDE.md-Pflicht, Daten-Schema-Reworks) |
 | `/api/metrics` (`api/routers/config.py`) | Go/Python-API | Liefert pro Metrik `format_modes[]` und `default_format_mode`; Frontend liest daraus die erlaubten Optionen |
 | `Step3Weather.svelte` (`frontend/src/lib/components/trip-wizard/steps/`) | Frontend | Wizard-Dropdown; heute Mapping `mode !== 'raw'` → bool; muss auf `format_mode`-String umgestellt werden |

@@ -21,13 +21,13 @@ phase: phase5_tdd_red
 Test-Manifest für Bug #599.
 Prüft: Modul-Singleton in scheduler.py, Offset-Persistenz, Bot-Bestätigungsnachricht.
 
-Parent-Spec: `docs/specs/modules/bug599_telegram_persistent.md`.
+Parent-Spec: `docs/specs/_archive/modules/bug599_telegram_persistent.md`.
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_bug599_telegram_persistent.py` (NEU)
-- **Spec:** `docs/specs/modules/bug599_telegram_persistent.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/bug599_telegram_persistent.md` v1.0
 
 ## Test Inventory
 

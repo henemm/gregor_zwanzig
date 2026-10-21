@@ -265,7 +265,7 @@ hier nicht behobene Robustheits-Schwäche (siehe „Nicht Teil dieser Spec").
 | Verschlucktes „ok": `CompareDispatchStrategy` meldet `status:"ok"` auch bei vollständigem Fehlschlag, kein `failed`-Feld | eigenes Issue (Triage a, Querverweis #1207) |
 | `E2E_USER` vs. `GZ_E2E_USER` — zwei Variablennamen, `.env.test` toter Code | #1199 |
 | 9 Python-Tests mit Default auf Prod-Ports (`GO_BASE=localhost:8090`, `test_scheduler_triggers.py:14`) | #1196 |
-| `scheduler_dispatch_service.py:141` `data_root="data"` hartkodiert, ignoriert `GZ_DATA_DIR` | `docs/specs/modules/fix_1265_data_root_migration_services.md` (vierter Eintrag) |
+| `scheduler_dispatch_service.py:141` `data_root="data"` hartkodiert, ignoriert `GZ_DATA_DIR` | `docs/specs/_archive/modules/fix_1265_data_root_migration_services.md` (vierter Eintrag) |
 | 2s-Pause läuft auch bei Early-Return (`dispatch_orchestrator.py:179-185`) | #1199 |
 
 ## Deployment-Hinweis

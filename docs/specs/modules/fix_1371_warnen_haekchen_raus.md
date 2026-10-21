@@ -3,7 +3,7 @@ entity_id: fix_1371_warnen_haekchen_raus
 type: bugfix
 created: 2026-07-30
 updated: 2026-07-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, corridor-editor, alarme, compare, trip]
 ---

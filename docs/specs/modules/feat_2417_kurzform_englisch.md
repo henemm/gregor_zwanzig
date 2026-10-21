@@ -3,7 +3,7 @@ entity_id: feat_2417_kurzform_englisch
 type: module
 created: 2026-09-27
 updated: 2026-09-27
-status: draft
+status: implemented
 version: "1.1"
 tags: [befehle, kurzform, premium-sms, telegram, metrik-katalog, englisch]
 ---

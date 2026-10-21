@@ -49,9 +49,9 @@ Ergänzt den `WeatherMetricsTab.svelte` im Trip-Detail-Wetter-Tab um eine neue T
 
 - **File:** `frontend/src/lib/components/ui/horizon-chip/HorizonChip.svelte` (NEU)
 - **File:** `frontend/src/lib/components/trip-detail/MetricCheckbox.svelte` (modifiziert)
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` (modifiziert)
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` (modifiziert)
 - **File:** `frontend/src/lib/components/trip-detail/TablePreview.svelte` (modifiziert)
-- **File:** `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` (modifiziert)
+- **File:** `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` (modifiziert)
 - **File:** `frontend/src/lib/types.ts` (erweitert)
 - **File:** `frontend/src/lib/utils/horizonHelpers.ts` (NEU — `computeHorizonSummary()`)
 - **Identifier:** `HorizonChip`, `MetricCheckbox`, `WeatherMetricsTab`, `TablePreview`, `SavePresetDialog`, `computeHorizonSummary`
@@ -867,9 +867,9 @@ Reihenfolge der Buckets in der Zusammenfassungs-Zeile: alle-drei → heute+morge
 |------|----------|---------|
 | `frontend/src/lib/components/ui/horizon-chip/HorizonChip.svelte` | **NEU** — Brand-Atom mit `[data-slot]`-Pattern | Frontend |
 | `frontend/src/lib/components/trip-detail/MetricCheckbox.svelte` | Drei `HorizonChip` einfügen + Mobile-Grid-Layout (< 600 px) | Frontend |
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | `horizonsMap`-State + initMaps-Erweiterung + Save-Payload + Snapshot | Frontend |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | `horizonsMap`-State + initMaps-Erweiterung + Save-Payload + Snapshot | Frontend |
 | `frontend/src/lib/components/trip-detail/TablePreview.svelte` | Umbau auf drei Mini-Tabellen + Grid-Layout + Empty-State | Frontend |
-| `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` | „WIRD GESPEICHERT"-Box mit ZEITHORIZONTE-Zusammenfassung + Dot-Grid | Frontend |
+| `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` | „WIRD GESPEICHERT"-Box mit ZEITHORIZONTE-Zusammenfassung + Dot-Grid | Frontend |
 | `frontend/src/lib/types.ts` | `Horizons`-Type + `HORIZONS_ALL`-Const + `WeatherConfigMetric.horizons?` + `MetricPreset.metrics[]`-Schema | Frontend |
 | `frontend/src/lib/utils/horizonHelpers.ts` | **NEU** — `computeHorizonSummary()` + `dotsForHorizons()` | Frontend |
 | `frontend/src/lib/components/ui/horizon-chip/HorizonChip.test.ts` | **NEU** — Component-Tests (Vitest + @testing-library/svelte) | Frontend-Tests |

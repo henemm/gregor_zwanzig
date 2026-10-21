@@ -26,7 +26,7 @@ Ursache ist ein Wettlauf: Eine Unterkomponente normalisiert die Report-Konfigura
 ## Source
 
 **Zu ändern:**
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
   - **Identifier:** `scheduleAutoSave()` (Z. 447-457) — schedult ohne Bereitschaftsprüfung, baut den Payload sofort
   - **Identifier:** `buildWeatherPayload()` (Z. 400-417) — setzt den Key `metrics` bedingungslos
   - **Identifier:** `load()` (Z. 237-259) — `finally { loading = false }` auch im Fehlerfall

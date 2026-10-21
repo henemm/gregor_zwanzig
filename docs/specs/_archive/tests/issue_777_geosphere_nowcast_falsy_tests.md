@@ -4,7 +4,7 @@ type: tests
 created: 2026-06-12
 updated: 2026-06-12
 status: implemented
-spec: docs/specs/modules/issue_777_geosphere_nowcast_falsy.md
+spec: docs/specs/_archive/modules/issue_777_geosphere_nowcast_falsy.md
 issue: 777
 ---
 

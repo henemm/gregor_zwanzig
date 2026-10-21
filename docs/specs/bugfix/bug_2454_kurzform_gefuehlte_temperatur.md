@@ -3,7 +3,7 @@ entity_id: bug_2454_kurzform_gefuehlte_temperatur
 type: bugfix
 created: 2026-09-28
 updated: 2026-09-28
-status: draft
+status: implemented
 version: "1.0"
 workflow: "bug-2454-kurzform-gefuehlte-temperatur"
 tags: [editor, kurzform, sms, premium-sms, telegram, wind-chill, migration, codes]

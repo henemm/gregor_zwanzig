@@ -20,7 +20,7 @@ Implementiert den fehlenden SMS-Versandweg via seven.io REST-API als `SMSOutput`
 
 ## Source
 
-- **File:** `src/outputs/sms.py` (NEU)
+- **File:** `src/output/channels/sms.py` (NEU)
 - **Identifier:** `SMSOutput`
 
 ## Estimated Scope
@@ -42,7 +42,7 @@ Implementiert den fehlenden SMS-Versandweg via seven.io REST-API als `SMSOutput`
 
 ## Implementation Details
 
-### Klassen-Struktur (analog zu `src/outputs/telegram.py`)
+### Klassen-Struktur (analog zu `src/output/channels/telegram.py`)
 
 ```python
 class SMSOutput:
@@ -86,7 +86,7 @@ sms_gateway_url: str = "https://gateway.seven.io/api/sms"
 
 Der Default erspart eine manuelle Konfigurationseintrag für Standard-seven.io-Nutzer.
 
-### Export in `src/outputs/__init__.py`
+### Export in `src/output/channels/__init__.py`
 
 ```python
 from outputs.sms import SMSOutput

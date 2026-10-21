@@ -25,7 +25,7 @@ Definiert das gemeinsame Fundament fuer den vollstaendig neu gebauten Trip-Wizar
 ### Neu (NEU)
 
 - `frontend/src/lib/components/trip-wizard/wizardState.svelte.ts` — zentrale Svelte-5-Runes-State-Klasse fuer den 4-Schritt-Wizard
-- `frontend/src/lib/components/trip-wizard/wizardHelpers.ts` — `newId()`, `today()`, `addDays()`, `mapActivityToProfile()`, `formatStageNumber()`, `isPauseStage()`
+- `frontend/src/lib/components/shared/wizardHelpers.ts` — `newId()`, `today()`, `addDays()`, `mapActivityToProfile()`, `formatStageNumber()`, `isPauseStage()`
 - `frontend/src/lib/components/trip-wizard/TripWizardShell.svelte` — Shell-Komponente (Stepper + Step-Slot + Vor/Zurueck) — Detail in Sub-Spec zu #160
 - `frontend/src/lib/components/trip-wizard/Stepper.svelte` — generischer 4-Step-Stepper — Detail in Sub-Spec zu #160
 - `frontend/src/lib/components/trip-wizard/steps/Step1Profile.svelte` — Sub-Spec zu #161
@@ -34,12 +34,12 @@ Definiert das gemeinsame Fundament fuer den vollstaendig neu gebauten Trip-Wizar
 - `frontend/src/lib/components/trip-wizard/steps/Step4Briefings.svelte` — Sub-Spec zu #164
 - `frontend/src/lib/components/trip-wizard/templates/TemplatePicker.svelte` — Sub-Spec zu #165
 - Sub-Spec-Dateien (Stubs, jeweils mit Verweis auf diese Master-Spec):
-  - `docs/specs/modules/epic_136_step0_shell.md`
-  - `docs/specs/modules/epic_136_step1_profile.md`
-  - `docs/specs/modules/epic_136_step2_stages.md`
-  - `docs/specs/modules/epic_136_step3_waypoints.md`
-  - `docs/specs/modules/epic_136_step4_briefings.md`
-  - `docs/specs/modules/epic_136_step5_templates.md`
+  - `docs/specs/_archive/modules/epic_136_step0_shell.md`
+  - `docs/specs/_archive/modules/epic_136_step1_profile.md`
+  - `docs/specs/_archive/modules/epic_136_step2_stages.md`
+  - `docs/specs/_archive/modules/epic_136_step3_waypoints.md`
+  - `docs/specs/_archive/modules/epic_136_step4_briefings.md`
+  - `docs/specs/_archive/modules/epic_136_step5_templates.md`
 
 ### Edit (EDIT)
 

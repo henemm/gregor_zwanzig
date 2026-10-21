@@ -19,11 +19,11 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest fuer die vollstaendige Abruf-Erfassung aus
-`docs/specs/modules/issue_338_go_geosphere_counter.md`. Jeder Test mappt 1:1 auf
+`docs/specs/_archive/modules/issue_338_go_geosphere_counter.md`. Jeder Test mappt 1:1 auf
 ein Acceptance Criterion der Parent-Spec. Ergaenzt den Zaehler aus Commit
 bd8e1e2 um den Go-Provider und den Python-`GeoSphereProvider`.
 
-Parent-Spec: `docs/specs/modules/issue_338_go_geosphere_counter.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_338_go_geosphere_counter.md` v1.0
 
 ## Source
 

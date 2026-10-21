@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die Implementierung aus
-`docs/specs/modules/issue_181_alert_cooldown_quiet_hours.md`. Jeder pytest-Test
+`docs/specs/_archive/modules/issue_181_alert_cooldown_quiet_hours.md`. Jeder pytest-Test
 mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_181_alert_cooldown_quiet_hours.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_181_alert_cooldown_quiet_hours.md` v1.0
 
 ## Source
 

@@ -45,7 +45,7 @@ Beim Nachbohren trat ein **dritter, schwererer Befund** derselben Wurzel zutage,
 **Zu ändernde Flächen:**
 - **File:** `frontend/src/lib/components/compare/CompareEditor.svelte`
   - **Identifier:** Dirty-Sync-`$effect` (Z. ~237-243) — **(b):** das unbedingte `compareSaveCtl.setSaved()` (Z. ~240-241) bei dirty→clean umgehen; `setSaved` darf nur aus echtem PUT-Erfolg kommen. **(a):** Mount-Baseline `initial` (Z. ~163-205) vs. `channelLayouts`-Rewrite (Z. ~728-741) so korrigieren, dass die Mount-Kanonisierung keinen Diff erzeugt.
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
   - **Identifier:** reportConfig-Watch-`$effect` (Z. ~507-513) / Baseline `_lastReportConfigJson` (Z. ~506/270) — **(a):** Baseline auf die kanonisierte Editier-Form setzen, damit die Mount-Normalisierung kein „dirty" erzeugt.
 - **File:** `frontend/src/lib/components/trip-detail/BriefingScheduleTab.svelte`
   - **Identifier:** reportConfig-Watch-`$effect` (Z. ~56-70), der `saveController.doSave(...)` **ohne Gate** ruft — **(c):** hinter das Schreib-Gate `weatherSaveGate` (userTouched) legen.

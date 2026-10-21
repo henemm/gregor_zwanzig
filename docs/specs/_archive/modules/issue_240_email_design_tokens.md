@@ -73,7 +73,7 @@ Renderer-Fix repariert beides automatisch.
 Gespiegelt von frontend/src/app.css. Outlook ignoriert CSS-Variablen,
 deshalb werden Hex-Werte direkt verwendet, nicht als var(--g-...).
 
-SPEC: docs/specs/modules/issue_240_email_design_tokens.md
+SPEC: docs/specs/_archive/modules/issue_240_email_design_tokens.md
 QUELLE: docs/reference/design_system.md §1 + §2
 """
 

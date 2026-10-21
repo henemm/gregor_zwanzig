@@ -41,7 +41,7 @@ enthalten ist.
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `src/outputs/telegram.py::TelegramOutput.send()` | function | Bereits vorhandener `suppress_subject_line`-Parameter (Zeile 50-74) — wird für Fix #1 an der Call-Site in `trip_report_scheduler.py` aktiviert. |
+| `src/output/channels/telegram.py::TelegramOutput.send()` | function | Bereits vorhandener `suppress_subject_line`-Parameter (Zeile 50-74) — wird für Fix #1 an der Call-Site in `trip_report_scheduler.py` aktiviert. |
 | `src/output/subject.py::build_email_subject()` | function | Liefert `report.email_subject`, bereits geklammert (`[trip] stage — ...`) — Quelle des Header-Duplikats, wenn `telegram.py::send()` erneut klammert. |
 | `src/output/renderers/narrow.py::render_narrow()` | function | Erzeugt `report.telegram_text` mit eigenem Header (trip_name + report_type + Datum, Zeile 434-441) — macht den zusätzlichen `[subject]`-Header überflüssig. |
 | `src/output/renderers/email/helpers.py::fmt_val()` | function | Formatiert Zellwerte je Metrik/Modus (Zeile 447ff) — liefert für `cloud*` im Friendly-Modus reines Emoji, für `sunshine` im Roh-Modus bereits `"X h"` inkl. Einheit. Quelle des `val` in `_tg_extra_detail_line()`. |

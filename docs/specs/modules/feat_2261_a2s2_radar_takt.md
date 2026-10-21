@@ -3,7 +3,7 @@ entity_id: feat_2261_a2s2_radar_takt
 type: module
 created: 2026-10-05
 updated: 2026-10-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, scheduler, radar, latency, epic-2261, go-api, python-core]
 ---

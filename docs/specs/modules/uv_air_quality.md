@@ -3,7 +3,7 @@ entity_id: uv_air_quality
 type: module
 created: 2026-02-16
 updated: 2026-02-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [provider, weather, open-meteo, uv-index, air-quality, cams]
 ---

@@ -3,7 +3,7 @@ entity_id: fix_1594_alarm_vorlauf_sperre
 type: bugfix
 created: 2026-08-14
 updated: 2026-08-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, trip, compare, issue-1594]
 ---

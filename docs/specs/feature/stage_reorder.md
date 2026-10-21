@@ -3,7 +3,8 @@ entity_id: stage_reorder
 type: feature
 created: 2026-05-05
 updated: 2026-05-05
-status: draft
+status: superseded
+superseded_by: docs/adr/0024-ein-sortier-baustein-svelte-dnd-action.md
 version: "1.0"
 tags: [frontend, sveltekit, ui, etappen, issue-128]
 ---

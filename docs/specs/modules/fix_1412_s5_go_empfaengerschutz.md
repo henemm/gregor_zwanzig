@@ -3,7 +3,7 @@ entity_id: fix_1412_s5_go_empfaengerschutz
 type: bugfix
 created: 2026-10-14
 updated: 2026-10-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [mail, guard, parity, adr, 1412]
 ---

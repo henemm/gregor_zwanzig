@@ -3,7 +3,7 @@ entity_id: fix_1418_gewitter_risikopunkt
 type: bugfix
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, gewitter, ampel, issue-1418, epic-1419]
 ---

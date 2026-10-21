@@ -50,7 +50,7 @@ nutzerverständliche Fehleranzeige nach dem bereits im selben File vorhandenen
 | `frontend/src/routes/trips/[id]/+page.svelte` — `testBriefingStatus`/`testBriefingMessage` (Z.48–49, 227–231) | Internes Vorbild (bestehend, unverändert) | Liefert das Muster für sichtbaren Fehler-Span + 5xx/4xx-Übersetzung, das für `errorMsg` übernommen wird |
 | `PATCH /api/trips/{id}/state` (`internal/handler/trip.go:263`, `internal/router/router.go:135`) | Backend-Endpoint (unverändert) | Löst die PATCH-Fehler aus, die jetzt sichtbar gemacht werden |
 | `DELETE /api/trips/{id}` | Backend-Endpoint (unverändert) | Löst die DELETE-Fehler aus, die `handleDeleteConfirm` behandelt |
-| `docs/specs/modules/issue_302_trip_detail_page.md` | Spec (vorhanden) | Beschreibt Breadcrumb-Actions-Leiste, in der die neue Fehleranzeige platziert wird |
+| `docs/specs/_archive/modules/issue_302_trip_detail_page.md` | Spec (vorhanden) | Beschreibt Breadcrumb-Actions-Leiste, in der die neue Fehleranzeige platziert wird |
 
 ## Implementation Details
 

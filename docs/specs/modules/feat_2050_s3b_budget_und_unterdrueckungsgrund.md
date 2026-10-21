@@ -3,7 +3,7 @@ entity_id: feat_2050_s3b_budget_und_unterdrueckungsgrund
 type: feature
 created: 2026-08-22
 updated: 2026-08-22
-status: draft
+status: implemented
 workflow: feat-2050-s3b-budget-und-unterdrueckungsgrund
 version: "1.0"
 tags: [alarm, nowcast, tageslimit, protokoll, eskalation]

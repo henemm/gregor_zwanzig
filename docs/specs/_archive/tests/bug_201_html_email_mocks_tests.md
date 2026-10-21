@@ -22,13 +22,13 @@ Test-Manifest fuer den Mock-Removal-Refactor in `tests/tdd/test_html_email.py`.
 Jeder Eintrag mappt einen pytest-Funktionsnamen auf das in der Parent-Spec
 definierte Acceptance-Criterion (AC-1 bis AC-5).
 
-Parent-Spec: `docs/specs/bugfix/issue_201_html_email_mocks_removal.md`.
+Parent-Spec: `docs/specs/_archive/bugfix/issue_201_html_email_mocks_removal.md`.
 
 ## Source
 
 - **Files:**
   - `tests/refactor/test_issue_201_mocks_removed.py` (NEU — Refactor-Strukturpruefung)
-- **Spec:** `docs/specs/bugfix/issue_201_html_email_mocks_removal.md` v1.0
+- **Spec:** `docs/specs/_archive/bugfix/issue_201_html_email_mocks_removal.md` v1.0
 
 ## Test Inventory
 

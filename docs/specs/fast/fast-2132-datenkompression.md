@@ -1,3 +1,10 @@
+---
+entity_id: fast_2132_datenkompression
+type: fast
+created: 2026-09-08
+status: implemented
+---
+
 # Mini-Spec: #2132 Datenverbrauch messen + Kompression der Daten-Nachladungen einschalten
 
 ## Was ändert sich

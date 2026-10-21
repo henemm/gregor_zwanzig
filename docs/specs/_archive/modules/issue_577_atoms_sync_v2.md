@@ -183,4 +183,4 @@ Pattern wie #576). Test injiziert DOM-Elemente mit den Atom-Selectors und
 prüft den effektiven Computed-Style.
 
 Source: `tests/tdd/test_issue_577_atoms_values.py`.
-Test-Manifest: `docs/specs/tests/issue_577_atoms_values_tests.md`.
+Test-Manifest: `docs/specs/_archive/tests/issue_577_atoms_values_tests.md`.

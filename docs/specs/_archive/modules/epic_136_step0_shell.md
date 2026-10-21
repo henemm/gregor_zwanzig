@@ -47,7 +47,7 @@ Teil dieser Sub-Spec — sie werden in den Folge-Issues #161–#164 implementier
 ## Verweis auf Master-Spec
 
 Diese Sub-Spec ist eine Detail-Spezifikation der approved Master-Spec
-[`docs/specs/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
+[`docs/specs/_archive/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
 
 - **§1.4 Save-Pipeline** — `state.save()` wird in Step 4 vom Speichern-Button aufgerufen; Shell
   rendert nur den Button und liest `state.saveStatus` / `state.saveError`.
@@ -401,7 +401,7 @@ Loeschung erfolgt im Cleanup-Folge-Issue (Master-Spec §Delete).
 ### NICHT BERUEHRT (aus Master-Spec garantiert)
 
 - `frontend/src/lib/components/trip-wizard/wizardState.svelte.ts` (existiert, Schema unveraendert)
-- `frontend/src/lib/components/trip-wizard/wizardHelpers.ts` (existiert, kein Aufruf in Shell)
+- `frontend/src/lib/components/shared/wizardHelpers.ts` (existiert, kein Aufruf in Shell)
 - `frontend/src/lib/components/wizard/*` (alter Wizard, weiterhin im Edit-Pfad aktiv)
 - `internal/`, `src/`, `cmd/` (kein Backend-Touch)
 

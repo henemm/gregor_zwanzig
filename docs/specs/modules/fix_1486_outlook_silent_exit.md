@@ -3,7 +3,7 @@ entity_id: fix_1486_outlook_silent_exit
 type: module
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [trip-reports, email-rendering, telegram, outlook, logging, bugfix]
 extends: multi_day_trend, trip_report_scheduler, output_channel_renderers, warn_unavailable_hint

@@ -3,7 +3,7 @@ entity_id: alarm_protokoll_vorwarnzeit
 type: feature
 created: 2026-08-22
 updated: 2026-08-22
-status: approved
+status: implemented
 workflow: feat-2050-s6-protokoll-vorwarnzeit
 version: "1.0"
 tags: [alarm, protokoll, nachvollziehbarkeit]

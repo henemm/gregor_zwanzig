@@ -20,9 +20,9 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_432_step3_step5_polish.md`. Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-15). Reine Source-Inspection-Tests (`readFileSync`) — kein Svelte-Renderer, kein Mock. Konsistent mit dem etablierten Pattern aus Issues #429, #430+#431.
+Test-Manifest für `docs/specs/_archive/modules/issue_432_step3_step5_polish.md`. Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-15). Reine Source-Inspection-Tests (`readFileSync`) — kein Svelte-Renderer, kein Mock. Konsistent mit dem etablierten Pattern aus Issues #429, #430+#431.
 
-Parent-Spec: `docs/specs/modules/issue_432_step3_step5_polish.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_432_step3_step5_polish.md` v1.0
 
 ## Source
 

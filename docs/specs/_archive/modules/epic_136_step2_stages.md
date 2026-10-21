@@ -49,7 +49,7 @@ Master-Spec-Changelog), und der Shell-Refactor von #161 wird auf einen sauberen
 ## Verweis auf Master-Spec
 
 Diese Sub-Spec ist eine Detail-Spezifikation der approved Master-Spec
-[`docs/specs/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
+[`docs/specs/_archive/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
 
 - **§3.1 WizardState** — `stages`, `startDate` (gesetzt in Step 1), `addStage`, `addPauseStage`, `reorderStages`. Sub-Spec **erweitert** das Schema additiv um `canAdvanceStep2`, `canAdvanceCurrent`, `addPauseStageAt`, `deleteStage`, `recomputeStageDates` (Master-Spec-Changelog §12).
 - **§3.2 Pausentag-Konvention** — Stage mit `waypoints.length === 0` ist ein Pausentag. KEIN neues Modell-Feld. UI-Logik via `isPauseStage()`.
@@ -596,7 +596,7 @@ Andere Tests (AC#8 Step 4, AC#11 alle Containers): durchnavigieren mit `fillStep
 
 ### 12. Master-Spec-Changelog-Eintrag
 
-`docs/specs/modules/epic_136_trip_wizard.md` erhaelt einen neuen Changelog-Eintrag (kein Approval-Reset, weil rein additive `WizardState`-Erweiterungen):
+`docs/specs/_archive/modules/epic_136_trip_wizard.md` erhaelt einen neuen Changelog-Eintrag (kein Approval-Reset, weil rein additive `WizardState`-Erweiterungen):
 
 ```markdown
 - 2026-05-10: §3.1 erweitert um additive Methoden/Getter (Sub-Spec #162):
@@ -688,11 +688,11 @@ Andere Tests (AC#8 Step 4, AC#11 alle Containers): durchnavigieren mit `fillStep
 | `frontend/e2e/trip-wizard-shell.spec.ts` | AC#5a, AC#8, AC#11 migriert | ~10 |
 | `frontend/package.json` | `svelte-dnd-action`-Dependency | +1 |
 | `frontend/package-lock.json` | Lockfile-Update | (auto) |
-| `docs/specs/modules/epic_136_trip_wizard.md` | Master-Spec Changelog | +8 |
+| `docs/specs/_archive/modules/epic_136_trip_wizard.md` | Master-Spec Changelog | +8 |
 
 ### NICHT BERUEHRT
 
-- `frontend/src/lib/components/trip-wizard/wizardHelpers.ts` (alle benoetigten Helper sind da)
+- `frontend/src/lib/components/shared/wizardHelpers.ts` (alle benoetigten Helper sind da)
 - `frontend/src/lib/api.ts` (uploadGpx unveraendert)
 - `frontend/src/lib/utils/naturalSort.ts` (unveraendert)
 - `frontend/src/lib/components/trip-wizard/steps/Step1Profile.svelte` / `Step3Waypoints.svelte` / `Step4Briefings.svelte`

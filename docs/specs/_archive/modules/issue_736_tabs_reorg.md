@@ -23,7 +23,7 @@ Die zwei Reiter "Wetter-Metriken" und "Briefing-Zeitplan" im Trip-Editor haben k
 ## Source
 
 - **File:** `frontend/src/lib/components/trip-detail/TripTabs.svelte` — Tab-Labels ändern (`'Wetter-Metriken'` → `'Inhalt'`, `'Briefing-Zeitplan'` → `'Versand'`; value-Schlüssel `weather`/`briefings` bleiben unverändert)
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` — Abschnitt 04 "Kanäle" (`display_config.channels`-Toggle) entfernen; E-Mail-Inhalt-Karte hierher übernehmen
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` — Abschnitt 04 "Kanäle" (`display_config.channels`-Toggle) entfernen; E-Mail-Inhalt-Karte hierher übernehmen
 - **File:** `frontend/src/lib/components/trip-detail/BriefingScheduleTab.svelte` — E-Mail-Inhalt-Karte entfernen; `weatherChannels`-Prop entfällt (Kanal-Merge im Versand-Reiter reicht)
 - **File:** `frontend/src/lib/components/edit/EditReportConfigSection.svelte` — Kanal-Abschnitt zu einem zusammengeführten Abschnitt umbauen, der `display_config.channels` UND `report_config.send_*` gleichzeitig setzt; Abschnitt "SMS-Schwellwerte" → "Schwellwerte" umbenennen mit Hinweis "Gelten für E-Mail, Telegram und SMS"
 - **Identifier:** `WeatherMetricsTab`, `BriefingScheduleTab`, `EditReportConfigSection` (Svelte-Komponenten)
@@ -180,6 +180,6 @@ Beim Write-Back: `onTripUpdate` mit `display_config.channels` + `reportConfig`-b
 
 - 2026-06-11: Initial spec erstellt — Issue #736, Reiter-Reorganisation "Inhalt" vs. "Versand"
 - 2026-07-06: Fix #942 hat AC-2 (E-Mail-Inhalt-Karte im Inhalt-Reiter) versehentlich mit-entfernt
-  (siehe `docs/specs/fast/fix-942-inhalt-tab-doppel-ui.md`) — durch Fix #1047 wiederhergestellt
-  (`docs/specs/modules/fix_1047_mail_content_tab_restore.md`). AC-2 gilt seither wieder wie
+  (siehe `docs/specs/_archive/fast/fix-942-inhalt-tab-doppel-ui.md`) — durch Fix #1047 wiederhergestellt
+  (`docs/specs/_archive/modules/fix_1047_mail_content_tab_restore.md`). AC-2 gilt seither wieder wie
   ursprünglich spezifiziert.

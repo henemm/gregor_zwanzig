@@ -18,12 +18,12 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_332_approval_hook_session_id.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_332_approval_hook_session_id.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec und ruft
 den echten `workflow_state_updater.py`-Hook via `subprocess.run` mit isoliertem
 tmp-Repo auf. Keine Mocks.
 
-Parent-Spec: `docs/specs/modules/bug_332_approval_hook_session_id.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_332_approval_hook_session_id.md` v1.0
 
 ## Source
 

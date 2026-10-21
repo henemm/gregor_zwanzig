@@ -17,7 +17,7 @@ tags: [telegram, on-demand, fetch, snapshot, e2e, tdd]
 ## Purpose
 
 TDD-Test-Inventar für den on-demand Wetter-Fetch wenn kein Snapshot vorhanden ist.
-Modul-Spec: `docs/specs/modules/issue_697_telegram_on_demand_fetch.md`.
+Modul-Spec: `docs/specs/_archive/modules/issue_697_telegram_on_demand_fetch.md`.
 
 Alle Tests beweisen echtes Nutzerverhalten: kein Snapshot vorab anlegen,
 on-demand Fetch muss selbst funktionieren. Keine Mocks.

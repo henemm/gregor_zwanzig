@@ -94,7 +94,7 @@ def check(staged_files, commit_message, config) -> str | None:
 ## Acceptance Criteria
 
 - **AC-1:** Given ein echtes Git-Repo mit installiertem `adr_guard`, in dem eine Änderung an einer
-  Entscheidungsfläche (z. B. `src/outputs/telegram.py`) gestaged ist, kein `docs/adr/`-File mitliegt
+  Entscheidungsfläche (z. B. `src/output/channels/telegram.py`) gestaged ist, kein `docs/adr/`-File mitliegt
   und die Commit-Message keinen `[no-adr]`-Marker enthält / When ein `git commit` durch `bash_gate.py`
   geprüft wird / Then wird der Commit mit Exit 2 blockiert und die Meldung nennt die betroffene Datei
   sowie die zwei Auswege (ADR anlegen oder `[no-adr]`).

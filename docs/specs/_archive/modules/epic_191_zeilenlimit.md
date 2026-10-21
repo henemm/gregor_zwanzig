@@ -41,7 +41,7 @@ begründete Ausnahmen ohne Hook-Bypass.
 | `re` | stdlib | Exclude-Pattern gegen Dateipfade matchen |
 | `config_loader.load_config()` | bestehend | Konfiguration aus `openspec.yaml` laden |
 | `epic_191_state_migration` Spec (`docs/specs/modules/epic_191_state_migration.md`) | Vorgänger-Spec | Workflow A — Issue #192; Worktree-Routing, State-Schema, `set-field`-API |
-| `epic_191_logbuch_audit` Spec (`docs/specs/modules/epic_191_logbuch_audit.md`) | Vorgänger-Spec | Workflow B — Issue #193; Logbuch-Pflicht, `workflow.py status`-Output-Format |
+| `epic_191_logbuch_audit` Spec (`docs/specs/_archive/modules/epic_191_logbuch_audit.md`) | Vorgänger-Spec | Workflow B — Issue #193; Logbuch-Pflicht, `workflow.py status`-Output-Format |
 
 ## Implementation Details
 

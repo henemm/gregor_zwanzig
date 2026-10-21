@@ -23,7 +23,7 @@ tags: [frontend, sveltekit, weather-config, trip-detail, metrics, presets, epic-
 
 - **NEU:** `frontend/src/lib/components/trip-detail/PresetRow.svelte`
   — Eigenständige Svelte-Komponente, dargestellt als klickbare Zeile pro Preset
-- **MODIFY:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **MODIFY:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
   — Template-Dropdown entfernen, `<section class="presets-section">` mit PresetRow-Loop einbauen
 - **NEU:** `frontend/src/lib/components/trip-detail/PresetRow.test.ts`
   — Unit-Tests für PresetRow-Rendering und Interaktivität
@@ -250,7 +250,7 @@ Neue Testfälle in Playwright:
 | # | Datei | Schicht | Aktion | LoC (netto) |
 |---|-------|---------|--------|-------------|
 | 1 | `frontend/src/lib/components/trip-detail/PresetRow.svelte` | Frontend | NEU — Komponente mit Props, Markup, CSS | ~70 |
-| 2 | `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | Frontend | MODIFY — Dropdown entfernen, PresetRow-Sektion einbauen | ~25 |
+| 2 | `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | Frontend | MODIFY — Dropdown entfernen, PresetRow-Sektion einbauen | ~25 |
 | 3 | `frontend/src/lib/components/trip-detail/PresetRow.test.ts` | Frontend/Test | NEU — Unit-Tests | ~60 |
 | 4 | `frontend/e2e/epic-138-metriken-editor.spec.ts` | Frontend/Test | MODIFY — E2E-Tests ergänzen | ~80 |
 

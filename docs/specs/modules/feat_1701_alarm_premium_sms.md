@@ -3,7 +3,7 @@ entity_id: feat_1701_alarm_premium_sms
 type: module
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, premium, garmin, alarm, ortsvergleich, kanal-schwelle, alert-log]
 ---

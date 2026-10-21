@@ -107,7 +107,7 @@ Kein `window.*`/`document.*` ohne `browser`-Guard (Overlay-Komponenten). Unbekan
   für alle bestehenden Aufrufer) erhalten. `variant="embedded"` unterdrückt den
   Backdrop und hebt den Panel-Boden um die BottomNav-Höhe (64px) an — für
   dauerhaft eingebettete Sheets statt kurzzeitiger Modals. Details:
-  `docs/specs/modules/issue_951_profile_sheet_pointer.md`.
+  `docs/specs/_archive/modules/issue_951_profile_sheet_pointer.md`.
 
 ## Changelog
 

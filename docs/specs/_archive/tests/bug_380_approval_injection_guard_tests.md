@@ -18,12 +18,12 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_380_approval_injection_guard.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_380_approval_injection_guard.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec und ruft
 den echten `workflow_state_updater.py`-Hook via `subprocess.run` mit isoliertem
 tmp-Repo + echter Session-Registry auf. **Keine Mocks.**
 
-Parent-Spec: `docs/specs/modules/bug_380_approval_injection_guard.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_380_approval_injection_guard.md` v1.0
 
 ## Source
 

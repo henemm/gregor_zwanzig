@@ -3,7 +3,7 @@ entity_id: feat_1757_lpi_max_fusion
 type: feature
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, lpi, thunder-fusion, issue-1757, epic-1419]
 ---

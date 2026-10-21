@@ -18,7 +18,7 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_259_briefings_tab.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_259_briefings_tab.md`.
 Da Issue #259 rein Frontend ist (Svelte-Komponenten, kein Python-Code),
 prüfen die Tests Datei-Existenz und Inhalts-Invarianten der Svelte-Dateien.
 

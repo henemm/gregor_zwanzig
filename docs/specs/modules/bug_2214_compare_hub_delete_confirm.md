@@ -3,7 +3,7 @@ entity_id: bug_2214_compare_hub_delete_confirm
 type: module
 created: 2026-10-08
 updated: 2026-10-08
-status: approved
+status: implemented
 version: "1.0"
 tags: [compare, hub, delete, confirm-dialog, bug]
 ---

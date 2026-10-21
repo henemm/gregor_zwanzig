@@ -1,3 +1,10 @@
+---
+entity_id: fix_2000_kiritimati_fixture_datum
+type: fast
+created: 2026-08-20
+status: implemented
+---
+
 # Mini-Spec: Kiritimati-Fixture-Datum verschieben (#2000)
 
 ## Was ändert sich

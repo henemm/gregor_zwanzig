@@ -46,13 +46,13 @@ bedient — inklusive eines eingebauten Tastatur-Sortier-Pfads, der die bisherig
 | `flip` — `svelte/animate` | Svelte-Built-in | CSS-FLIP-Animation beim Umsortieren, `flipDurationMs: 200` (Konsistenz mit bestehenden `dndzone`-Nutzungen) |
 | `frontend/src/lib/components/trip-detail/BucketSection.svelte` | Svelte-Komponente (geändert) | Fläche 1: bereits `svelte-dnd-action`-basiert (Issue #433), wird auf `SortableList` umgestellt, bekommt zusätzlich einen sichtbaren Griff |
 | `frontend/src/lib/components/compare/CompareTabs.svelte` | Svelte-Komponente (geändert) | Fläche 2: Orte-Liste, bereits `svelte-dnd-action`-basiert, schreibt über `persistPickedIds` in die PUT-Queue |
-| `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte` | Svelte-Komponente (geändert) | Fläche 3: bisher handverdrahtetes HTML5-Drag-API (Issue #848), wird auf `SortableList` migriert — größter Technikwechsel |
+| `frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte` | Svelte-Komponente (geändert) | Fläche 3: bisher handverdrahtetes HTML5-Drag-API (Issue #848), wird auf `SortableList` migriert — größter Technikwechsel |
 | `frontend/src/lib/components/shared/OutputLayoutEditor.svelte` | Svelte-Komponente (geändert) | Fläche 4 (NEU): SMS-Zweig bekommt Ziehen, hatte bisher nur ▲/▼ |
 | `frontend/src/lib/components/trip-detail/ActiveMetricRow.svelte` | Svelte-Komponente (geändert) | ▲/▼-Buttons + `isFirst`/`isLast`/`onReorder`-Props entfallen |
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | Svelte-Komponente (geändert) | Consumer von `WeatherV2Reihenfolge`; `(fromId,toId)`-splice-Logik wird durch direkte `newOrder`-Übernahme ersetzt |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | Svelte-Komponente (geändert) | Consumer von `WeatherV2Reihenfolge`; `(fromId,toId)`-splice-Logik wird durch direkte `newOrder`-Übernahme ersetzt |
 | `frontend/src/lib/components/compare/CompareEditor.svelte` | Svelte-Komponente (unverändert, nur Konsument) | Einziger Konsument von `OutputLayoutEditor` — Vertrag (`onDndReorder`) bleibt kompatibel |
 | `frontend/src/lib/components/shared/layout-tab/LTCutLine.svelte` | Svelte-Komponente (unverändert, Referenz-Präzedenz) | Vorbild für die Extraktion eines geteilten Primitivs aus dupliziertem Markup (Issue #1232, Scheibe 3b) |
-| `docs/specs/modules/issue_433_layout_dnd.md` | Spec (ersetzt in Teilen) | AC-3 (▲/▼ bleiben) und AC-4 (SMS ohne DnD) werden durch diese Spec ungültig — s. „Ersetzt/Widerspricht" |
+| `docs/specs/_archive/modules/issue_433_layout_dnd.md` | Spec (ersetzt in Teilen) | AC-3 (▲/▼ bleiben) und AC-4 (SMS ohne DnD) werden durch diese Spec ungültig — s. „Ersetzt/Widerspricht" |
 
 ## Scope
 
@@ -66,8 +66,8 @@ bedient — inklusive eines eingebauten Tastatur-Sortier-Pfads, der die bisherig
 | `frontend/src/lib/components/trip-detail/BucketSection.svelte:41-111` | MODIFY | Bestehender `dndzone`-Block → `SortableList`. Telegram-Divider wandert als bedingtes Markup in den Item-Wrapper (Escape-Hatch). Testids `bucket-section-{bucket}`, `telegram-divider` bleiben erhalten. Bekommt zusätzlich einen sichtbaren `DragHandle` (bisher zog die ganze Zeile). |
 | `frontend/src/lib/components/trip-detail/ActiveMetricRow.svelte:81-99` | MODIFY | ▲/▼-Buttons (`metric-up-{id}`/`metric-down-{id}`) sowie `isFirst`/`isLast`/`onReorder`-Props entfallen ersatzlos. |
 | `frontend/src/lib/components/compare/CompareTabs.svelte:208-221,1001-1011` | MODIFY | Inline-`dndzone`-Nutzung → `SortableList`. Testid `hub-orte-row` + `data-loc-id` sowie der bestehende PUT-Persistenz-Vertrag bleiben erhalten. |
-| `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte` | MODIFY | Größtes Risiko: handverdrahtetes HTML5-Drag-API → `SortableList`. Cut-Line (`wm2-cut-line`) wandert in den Item-Wrapper. Testids `wm2-reihenfolge-row` + `data-metric-id` bleiben erhalten. Vertrag ändert sich von `onDndReorder(fromId, toId)` auf `onDndReorder(newOrder: string[])`. |
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte:395-406` | MODIFY | `(fromId,toId)`-splice/indexOf-Logik entfällt, Handler übernimmt `newOrder` direkt (Code wird kürzer). |
+| `frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte` | MODIFY | Größtes Risiko: handverdrahtetes HTML5-Drag-API → `SortableList`. Cut-Line (`wm2-cut-line`) wandert in den Item-Wrapper. Testids `wm2-reihenfolge-row` + `data-metric-id` bleiben erhalten. Vertrag ändert sich von `onDndReorder(fromId, toId)` auf `onDndReorder(newOrder: string[])`. |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte:395-406` | MODIFY | `(fromId,toId)`-splice/indexOf-Logik entfällt, Handler übernimmt `newOrder` direkt (Code wird kürzer). |
 | `frontend/e2e/layout-tab-route.spec.ts:153-216` | MODIFY | Zeile 160 nutzt Playwrights natives `dragTo()` (HTML5-`DataTransfer`) — bricht garantiert, da `dndzone` nur auf Pointer-Events reagiert. Umschreiben auf das bestehende Pointer-Muster `dragDndZoneItem` (`frontend/e2e/compare-hub-inline-edit.spec.ts:22-38`). |
 | `frontend/e2e/` (neue Datei, SMS-Reorder + Tastatur-Pfad) | CREATE | Für den SMS-Zweig existiert bisher kein Drag-Test (war bewusst ziehen-frei laut Alt-Spec #433 AC-4). Zusätzlich mindestens ein Tastatur-Sortier-Test (Tab → Space → Pfeiltaste → Space). |
 
@@ -118,7 +118,7 @@ liegen muss.
 
 ## Ersetzt/Widerspricht
 
-Diese Spec ersetzt Teile von `docs/specs/modules/issue_433_layout_dnd.md`:
+Diese Spec ersetzt Teile von `docs/specs/_archive/modules/issue_433_layout_dnd.md`:
 
 - **AC-3** („die ▲▼-Buttons sind weiterhin funktional und unverändert") wird
   **ungültig**. Ersatz ist nicht „nichts", sondern der eingebaute
@@ -233,5 +233,5 @@ Diese Spec ersetzt Teile von `docs/specs/modules/issue_433_layout_dnd.md`:
 ## Changelog
 
 - 2026-07-16: Initial spec erstellt für Issue #1272 (geteilter Sortier-Baustein).
-  Ersetzt AC-3/AC-4 aus `docs/specs/modules/issue_433_layout_dnd.md`. Umfang laut
+  Ersetzt AC-3/AC-4 aus `docs/specs/_archive/modules/issue_433_layout_dnd.md`. Umfang laut
   PO-Entscheidungen E1-E4 aus `docs/context/refactor-1272-drag-sort.md`.

@@ -38,7 +38,7 @@ aus Sub-Spec #163 §10).
 ## Source
 
 - **Komponente (EDIT, Stub fuellen):** `frontend/src/lib/components/trip-wizard/steps/Step4Briefings.svelte`
-- **Komponente (NEU):** `frontend/src/lib/components/trip-wizard/steps/ChannelToggle.svelte`
+- **Komponente (NEU):** `frontend/src/lib/components/shared/ChannelToggle.svelte`
 - **Komponente (NEU):** `frontend/src/lib/components/trip-wizard/steps/ReportRow.svelte`
 - **Komponente (NEU):** `frontend/src/lib/components/trip-wizard/steps/ThresholdRow.svelte`
 - **State-Erweiterung (EDIT):** `frontend/src/lib/components/trip-wizard/wizardState.svelte.ts`
@@ -50,7 +50,7 @@ aus Sub-Spec #163 §10).
 ## Verweis auf Master-Spec
 
 Diese Sub-Spec ist eine Detail-Spezifikation der approved Master-Spec
-[`docs/specs/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret
+[`docs/specs/_archive/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret
 konsumiert sie:
 
 - **§3.1 `BriefingConfig`-Interface + `defaultBriefingConfig`** — kanonisches
@@ -629,7 +629,7 @@ keine Aenderung.
 
 ### §12 Master-Spec-Changelog-Eintrag
 
-`docs/specs/modules/epic_136_trip_wizard.md` erhaelt einen neuen Changelog-Eintrag
+`docs/specs/_archive/modules/epic_136_trip_wizard.md` erhaelt einen neuen Changelog-Eintrag
 (kein Approval-Reset, weil rein additive Erweiterungen):
 
 ```markdown
@@ -704,7 +704,7 @@ keine Aenderung.
 
 | Datei | Zweck | LoC (Schaetzung) |
 |-------|-------|------------------|
-| `frontend/src/lib/components/trip-wizard/steps/ChannelToggle.svelte` | Generischer Channel-Toggle (Label, Checkbox, optional disabled + Hint) | ~40 |
+| `frontend/src/lib/components/shared/ChannelToggle.svelte` | Generischer Channel-Toggle (Label, Checkbox, optional disabled + Hint) | ~40 |
 | `frontend/src/lib/components/trip-wizard/steps/ReportRow.svelte` | Toggle + Zeit-Input fuer einen Report-Typ | ~50 |
 | `frontend/src/lib/components/trip-wizard/steps/ThresholdRow.svelte` | Label + Number-Input oder Select fuer Schwellwerte | ~50 |
 | `frontend/e2e/trip-wizard-step4.spec.ts` | E2E-Tests AC#1–#26 | ~180 |
@@ -718,7 +718,7 @@ keine Aenderung.
 | `frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts` | Neue Test-Cases fuer `canAdvanceStep4`, `canAdvanceCurrent` case 4, `toTripPayload()` mit Mapping (5 Cases) | +~60 |
 | `frontend/e2e/helpers.ts` | `fillStep4`-Helper + `Step4Input`-Typ; `fillStep3` Wartet-Kommentar aktualisieren | +~45 |
 | `frontend/e2e/trip-wizard-shell.spec.ts` | AC#8 und AC#11: `trip-wizard-step4-briefings` → `trip-wizard-step4-container` | +~3 |
-| `docs/specs/modules/epic_136_trip_wizard.md` | Master-Spec-Changelog-Eintrag | +~10 |
+| `docs/specs/_archive/modules/epic_136_trip_wizard.md` | Master-Spec-Changelog-Eintrag | +~10 |
 
 ### NICHT BERUEHRT
 
@@ -726,7 +726,7 @@ keine Aenderung.
 - `internal/model/trip.go` (kein Edit — `ReportConfig map[string]interface{}` nimmt neues Schema auf)
 - `internal/handler/trip.go` (kein Edit — `CreateTripHandler` nimmt `report_config` als freies Map)
 - `src/app/models.py` (kein Edit — `TripReportConfig` bleibt kanonisch fuer Scheduler/Alert)
-- `frontend/src/lib/components/trip-wizard/wizardHelpers.ts`
+- `frontend/src/lib/components/shared/wizardHelpers.ts`
 - `frontend/src/lib/components/trip-wizard/TripWizardShell.svelte`
 - `frontend/src/lib/components/trip-wizard/steps/Step1Profile.svelte`
 - `frontend/src/lib/components/trip-wizard/steps/Step2Stages.svelte`

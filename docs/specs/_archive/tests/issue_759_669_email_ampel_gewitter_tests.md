@@ -18,12 +18,12 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_759_669_email_ampel_gewitter.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_759_669_email_ampel_gewitter.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 Keine Mocks — reale Render-Aufrufe der E-Mail-Renderer mit konstruierten
 Wetterdaten; AC-11 ist die Staging-IMAP-Acceptance-Stage.
 
-Parent-Spec: `docs/specs/modules/issue_759_669_email_ampel_gewitter.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_759_669_email_ampel_gewitter.md` v1.0
 
 ## Source
 

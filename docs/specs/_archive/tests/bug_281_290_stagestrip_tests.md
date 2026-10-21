@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_281_290_stagestrip.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_281_290_stagestrip.md`.
 Statische Quelltextprüfungen für alle 6 Acceptance Criteria.
 
-Parent-Spec: `docs/specs/modules/bug_281_290_stagestrip.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_281_290_stagestrip.md` v1.0
 
 ## Source
 

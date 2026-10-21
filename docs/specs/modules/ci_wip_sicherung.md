@@ -3,7 +3,7 @@ entity_id: ci_wip_sicherung
 type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [ci, deploy, wip-safety]
 ---

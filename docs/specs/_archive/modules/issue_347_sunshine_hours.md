@@ -33,7 +33,7 @@ die angezeigte Größe in Trip-Summary und Ortsvergleich auf Sonnenstunden (h) s
 - **Datei:** `src/app/config.py` — Pydantic-`Settings`-Klasse (neue Felder)
 - **Datei:** `src/services/comparison_engine.py` — Aufrufe von `calculate_sunny_hours()` (Z. 141, 429)
 - **Datei:** `src/app/metric_catalog.py` — Metrik-Definition `sunshine` (Z. 268–276)
-- **Datei:** `src/formatters/trip_report.py` — Summary-Rendering Sonnenschein (Z. 686–696)
+- **Datei:** `src/output/renderers/trip_report.py` — Summary-Rendering Sonnenschein (Z. 686–696)
 - **Datei:** `tests/unit/test_weather_metrics_legacy.py` — bestehende Tests mit veralteter 0-h-Erwartung
 
 > **Schicht-Hinweis:** Alle Änderungen liegen ausschließlich im Python-Backend-Layer
@@ -50,7 +50,7 @@ die angezeigte Größe in Trip-Summary und Ortsvergleich auf Sonnenstunden (h) s
 | `src/services/comparison_engine.py` | Python-Service | Ruft `calculate_sunny_hours()` auf; erhält `settings`-Parameter weitergereicht |
 | `src/services/comparison_scoring.py` | Python-Service | Score-Boni für Sonnenstunden (≥7/≥5/≥3 h); Schwellen nach Fix auf Plausibilität zu prüfen |
 | `src/app/metric_catalog.py` | Python-Modul | Definiert Metrik `sunshine`; muss von DNI-Mittelwert auf Sonnenstunden-Float umgestellt werden |
-| `src/formatters/trip_report.py` | Python-Modul | Rendert Trip-Summary-Zeile „Sonnenschein"; muss `sunny_hours`-Float statt DNI-W/m² anzeigen |
+| `src/output/renderers/trip_report.py` | Python-Modul | Rendert Trip-Summary-Zeile „Sonnenschein"; muss `sunny_hours`-Float statt DNI-W/m² anzeigen |
 | `tests/unit/test_weather_metrics_legacy.py` | Test-Datei | Bestehende Tests mit 0-h-Erwartung; müssen an neues Verhalten angepasst werden |
 
 ## Implementation Details
@@ -127,7 +127,7 @@ Metrik-Definition von `dp_field="dni_wm2"` (W/m²-Aggregation) auf Sonnenstunden
 `default_aggregations` auf `("sum",)` statt `("avg",)` (Stundensumme ist sinnvoller als
 DNI-Mittelwert). DNI-W/m² bleibt intern als separates Feld erhalten (Emoji-Logik nutzt es).
 
-### 5. `src/formatters/trip_report.py` — Rendering Z. 686–696
+### 5. `src/output/renderers/trip_report.py` — Rendering Z. 686–696
 
 Summary-Zeile liest künftig `sunny_hours` (Float, h) statt `dni_wm2` (W/m²).
 Formatierung: `f"{val:.1f} h"` (z. B. `"3.5 h"`). Bestehende Emoji-Logik (DNI-basiert)
@@ -148,7 +148,7 @@ Neue Test-Fälle: DNI-Interpolation bei 45 % Bewölkung, Geosphere-Fallback, Kon
 | `src/app/config.py` | ~10 | ja |
 | `src/services/comparison_engine.py` | ~5 | ja |
 | `src/app/metric_catalog.py` | ~15 | ja |
-| `src/formatters/trip_report.py` | ~15 | ja |
+| `src/output/renderers/trip_report.py` | ~15 | ja |
 | `tests/unit/test_weather_metrics_legacy.py` | ~40 | ja |
 | **Gesamt (zählend)** | **~115** | **< 250 LoC-Limit** |
 

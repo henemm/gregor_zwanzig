@@ -3,7 +3,7 @@ entity_id: etappen_strip_sortable_list
 type: module
 created: 2026-10-06
 updated: 2026-10-06
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2288-etappen-dnd
 tags: [frontend, dnd, trip-editor, epic-2345, adr-0024]

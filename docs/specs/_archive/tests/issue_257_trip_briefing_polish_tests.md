@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_257_trip_briefing_mail_polish.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_257_trip_briefing_mail_polish.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_257_trip_briefing_mail_polish.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_257_trip_briefing_mail_polish.md` v1.0
 
 ## Source
 

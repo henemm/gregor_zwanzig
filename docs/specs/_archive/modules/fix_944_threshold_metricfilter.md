@@ -23,8 +23,8 @@ Zwei getrennte Bugs mit gemeinsamem Kern: nicht ausgewählte Metriken (z.B. Schn
 
 ## Source
 
-- **Frontend:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` (Zeilen 536–624)
-- **Backend (Adapter):** `src/formatters/trip_report.py` (Zeilen 198–212)
+- **Frontend:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` (Zeilen 536–624)
+- **Backend (Adapter):** `src/output/renderers/trip_report.py` (Zeilen 198–212)
 - **Backend (Builder):** `src/output/tokens/builder.py` (Zeilen 126–148, Funktion `_wintersport`)
 
 ## Estimated Scope

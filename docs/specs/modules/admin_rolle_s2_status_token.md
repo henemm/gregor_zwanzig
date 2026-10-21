@@ -3,7 +3,7 @@ entity_id: admin_rolle_s2_status_token
 type: module
 created: 2026-09-28
 updated: 2026-09-28
-status: draft
+status: implemented
 version: "1.0"
 tags: [admin, auth, scheduler, status, monitoring, epic-2138]
 ---

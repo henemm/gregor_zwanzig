@@ -140,7 +140,7 @@ def can_send_signal(self) -> bool:
     return bool(self.signal_phone and self.signal_api_key)
 ```
 
-### 3. OutputChannel Factory Erweiterung (src/outputs/base.py)
+### 3. OutputChannel Factory Erweiterung (src/output/channels/base.py)
 
 ```python
 # In get_channel() factory function
@@ -294,7 +294,7 @@ uv run pytest -m signal tests/e2e/test_signal_output.py -v
 | File | Action | LoC |
 |------|--------|-----|
 | `src/outputs/signal.py` | NEW | ~55 |
-| `src/outputs/base.py` | MODIFY | +3 |
+| `src/output/channels/base.py` | MODIFY | +3 |
 | `src/app/config.py` | MODIFY | +10 |
 | `src/app/models.py` | MODIFY | +2 |
 | `src/app/cli.py` | MODIFY | +1 |

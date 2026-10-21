@@ -52,7 +52,7 @@ Vorbild-Code (bereits korrekt, dient als Referenz beim Fix):
 | `tests/tdd/test_feature_574_segment_km_header.py` | Testdatei | 3 passed + 3 xfail (AC-2/AC-3-Tests), verifiziert am 2026-07-19; definiert das Soll exakt |
 | `tests/golden/email/regenerate.py` + 5 HTML-Golden-Fixtures | Tooling/Fixtures | Golden-Refreeze-Prozess aus #1306 frisch erprobt; Fixtures brechen erwartbar und werden einmalig regeneriert |
 | Renderer-Mail-Gate #811 (`renderer_mail_gate.py`) | Pre-Commit-Gate | `html.py` ist Gate-Datei — Commit blockiert ohne frischen `test_issue_811_mode_matrix` + `briefing_mail_validator`-Lauf |
-| `docs/specs/modules/issue_956_email_format.md` | Spec (superseded, s. ADR) | Schrieb das heutige `X.X km - Y.Y km`-Segment-Header-Format fest; wird durch diese Spec im Segment-Header-Punkt abgelöst (Datenmodell bleibt) |
+| `docs/specs/_archive/modules/issue_956_email_format.md` | Spec (superseded, s. ADR) | Schrieb das heutige `X.X km - Y.Y km`-Segment-Header-Format fest; wird durch diese Spec im Segment-Header-Punkt abgelöst (Datenmodell bleibt) |
 
 ## Estimated Scope
 
@@ -170,7 +170,7 @@ wird auf `"WETTER AM ZIEL"` korrigiert, unabhängig vom Feature #574 selbst.
   1. **#574-Format ersetzt bewusst das #956-Zwischenformat.** Das Segment-
      Header-Format `km X.X–Y.Y` (diese Spec) ersetzt das bisherige
      `X.X km - Y.Y km` (festgeschrieben in
-     `docs/specs/modules/issue_956_email_format.md`, dort als Zwischenstand
+     `docs/specs/_archive/modules/issue_956_email_format.md`, dort als Zwischenstand
      dokumentiert) — PO-Entscheid #1310. Das Datenmodell (kumulierte
      `distance_km`-Laufsumme aus #956 Teil B, `html.py:947-956`) bleibt
      unverändert; nur die Textdarstellung ändert sich. Diese Spec supersedet

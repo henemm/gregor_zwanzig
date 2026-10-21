@@ -61,7 +61,7 @@ Save implizit als akzeptiert, weil `toTripPayload()` das Flag sowieso strippt.
 ## Verweis auf Master-Spec
 
 Diese Sub-Spec ist eine Detail-Spezifikation der approved Master-Spec
-[`docs/specs/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret
+[`docs/specs/_archive/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret
 konsumiert sie:
 
 - **§3.4 Waypoint.suggested** — transientes Frontend-Flag (`boolean | undefined`),
@@ -436,7 +436,7 @@ AC#11 (Full-Navigation bis Step 4). Tests die nur Step 1+2 pruefen: keine Aender
 
 ### §12 Master-Spec-Changelog-Eintrag
 
-`docs/specs/modules/epic_136_trip_wizard.md` erhaelt einen neuen Changelog-Eintrag
+`docs/specs/_archive/modules/epic_136_trip_wizard.md` erhaelt einen neuen Changelog-Eintrag
 (kein Approval-Reset, weil rein additive Erweiterungen):
 
 ```markdown
@@ -521,12 +521,12 @@ AC#11 (Full-Navigation bis Step 4). Tests die nur Step 1+2 pruefen: keine Aender
 | `frontend/src/lib/components/trip-wizard/__tests__/wizardState.test.ts` | Neue Test-Cases fuer `addStage`-Patch, `confirmWaypoint`, `rejectWaypoint`, `canAdvanceStep3`, `canAdvanceCurrent` case 3 | +~50 |
 | `frontend/e2e/helpers.ts` | `fillStep3`-Helper + `Step3Input`-Typ | +~25 |
 | `frontend/e2e/trip-wizard-shell.spec.ts` | AC#5a, AC#8, AC#11: `fillStep3`-Aufruf zwischen Step 2 und Step 4 | +~10 |
-| `docs/specs/modules/epic_136_trip_wizard.md` | Master-Spec-Changelog-Eintrag | +~8 |
+| `docs/specs/_archive/modules/epic_136_trip_wizard.md` | Master-Spec-Changelog-Eintrag | +~8 |
 
 ### NICHT BERUEHRT
 
 - `frontend/src/lib/types.ts` (`Waypoint.suggested?` ist bereits da — kein Edit)
-- `frontend/src/lib/components/trip-wizard/wizardHelpers.ts` (alle benoetigten Helper vorhanden)
+- `frontend/src/lib/components/shared/wizardHelpers.ts` (alle benoetigten Helper vorhanden)
 - `frontend/src/lib/components/trip-wizard/TripWizardShell.svelte` (kein Edit — `canAdvanceCurrent` Switch-Update ist in `wizardState.svelte.ts`)
 - `frontend/src/lib/components/trip-wizard/steps/Step1Profile.svelte`
 - `frontend/src/lib/components/trip-wizard/steps/Step2Stages.svelte`

@@ -3,7 +3,7 @@ entity_id: fix_1708_a_trips_pfad_waechter
 type: module
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [guard, ratsche, persistenz, issue-1708]
 ---

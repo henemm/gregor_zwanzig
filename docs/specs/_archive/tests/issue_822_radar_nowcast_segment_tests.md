@@ -5,7 +5,7 @@ created: 2026-06-15
 updated: 2026-06-15
 status: implemented
 version: 1.0
-spec: docs/specs/modules/issue_822_radar_nowcast_segment.md
+spec: docs/specs/_archive/modules/issue_822_radar_nowcast_segment.md
 ---
 
 # Test-Manifest: #822 Radar-/Regen-Nowcast-Alert segmentbewusst machen

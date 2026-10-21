@@ -43,7 +43,7 @@ und per Schalter (`Switch`) an-/abschaltbar ist. Zusätzlich wird die Uhrzeit-An
 | `frontend/src/routes/trips/new/+page.server.ts` | Profil via `GET /api/auth/profile` (Session-Cookie) laden, an Page reichen |
 | `frontend/src/routes/trips/new/+page.svelte` | `data.profile` empfangen, via `setContext('trip-wizard-profile', …)` bereitstellen |
 | `frontend/src/lib/components/trip-wizard/steps/Step4Reports.svelte` | Neue Karte „DEINE KANÄLE" (Switch + Kontakt je Kanal); wiederholte `channelRow()`-Chips aus Abend/Morgen/Warnungen-Karten entfernen; `lang="de"` + breiteres Zeit-Feld |
-| `frontend/src/lib/components/trip-wizard/wizardHelpers.ts` *(oder lokal in Step4Reports)* | `maskPhone()`-Helfer für `+49 151 ••• 8847` |
+| `frontend/src/lib/components/shared/wizardHelpers.ts` *(oder lokal in Step4Reports)* | `maskPhone()`-Helfer für `+49 151 ••• 8847` |
 
 **Nicht geänderte Dateien (bewusst):**
 - `frontend/src/lib/components/trip-wizard/wizardState.svelte.ts` — Default `evening.time='18:00'` ist bereits

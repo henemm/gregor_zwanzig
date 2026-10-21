@@ -18,9 +18,9 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_434_per_report_layouts.md`. Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-7).
+Test-Manifest für `docs/specs/_archive/modules/issue_434_per_report_layouts.md`. Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-7).
 
-Parent-Spec: `docs/specs/modules/issue_434_per_report_layouts.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_434_per_report_layouts.md` v1.0
 
 ## Source
 

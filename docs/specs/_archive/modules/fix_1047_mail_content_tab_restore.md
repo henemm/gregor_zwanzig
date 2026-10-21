@@ -28,7 +28,7 @@ und migriert zwei dadurch veraltete E2E-Testdateien auf die tatsächliche Ziel-O
 
 - **File:** `frontend/src/lib/components/edit/EditReportConfigSection.svelte`
   **Identifier:** neue Prop `showSchedule`
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
   **Identifier:** Wiedereinbindung von `<EditReportConfigSection>`
 - **File:** `frontend/e2e/issue-619-mail-elements-ui.spec.ts`
   **Identifier:** `openReportsSection`, AC-1, AC-5 (Testmigration)
@@ -54,13 +54,13 @@ und migriert zwei dadurch veraltete E2E-Testdateien auf die tatsächliche Ziel-O
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `frontend/src/lib/components/edit/EditReportConfigSection.svelte` | Component | Enthält Mail-Inhalt-Karte + Zeitplan-Karten; braucht neue `showSchedule`-Prop |
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | Component | Reiter "Inhalt" (`?tab=weather`) — Ziel-Ort der Wiedereinbindung |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | Component | Reiter "Inhalt" (`?tab=weather`) — Ziel-Ort der Wiedereinbindung |
 | `frontend/src/lib/components/trip-detail/BriefingScheduleTab.svelte` | Component | Reiter "Versand" (`?tab=briefings`) — bleibt unverändert (`showMailContent={false}`) |
 | `frontend/src/lib/components/trip-detail/TripTabs.svelte` | Component | Tab-Dispatcher — keine Änderung nötig |
 | `frontend/e2e/issue-619-mail-elements-ui.spec.ts` | Test | Migration auf `?tab=weather` + korrekte Testids |
 | `frontend/e2e/issue-723-email-tab-eindampfen.spec.ts` | Test | Migration auf `?tab=weather` + korrekte Testids |
-| `docs/specs/modules/issue_736_tabs_reorg.md` | Spec (Referenz) | Ursprungsdesign: Mail-Inhalt-Karte gehört in den Inhalt-Reiter |
-| `docs/specs/fast/fix-942-inhalt-tab-doppel-ui.md` | Spec (Referenz) | Fix, der die Karte fälschlich komplett entfernt hat (Overreach) |
+| `docs/specs/_archive/modules/issue_736_tabs_reorg.md` | Spec (Referenz) | Ursprungsdesign: Mail-Inhalt-Karte gehört in den Inhalt-Reiter |
+| `docs/specs/_archive/fast/fix-942-inhalt-tab-doppel-ui.md` | Spec (Referenz) | Fix, der die Karte fälschlich komplett entfernt hat (Overreach) |
 
 ## Implementation Details
 

@@ -6,7 +6,7 @@ updated: 2026-05-31
 status: implemented
 version: "1.0"
 tags: [frontend, backend, preview, demo-mode, fixture, issue-483]
-parent_spec: docs/specs/modules/issue_189_preview_tab_integration.md
+parent_spec: docs/specs/_archive/modules/issue_189_preview_tab_integration.md
 ---
 
 # Issue #483 — Demo-Modus im Vorschau-Tab

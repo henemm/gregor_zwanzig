@@ -22,7 +22,7 @@ Drei Svelte-Komponenten in `frontend/src/lib/components/trip-detail/` definieren
 
 ## Source
 
-- **File:** `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` — lines 17–24 (lokale `interface MetricEntry` + `type MetricCatalog`)
+- **File:** `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` — lines 17–24 (lokale `interface MetricEntry` + `type MetricCatalog`)
 - **File:** `frontend/src/lib/components/trip-detail/TablePreview.svelte` — lines 12–19 (lokale `interface MetricEntry` + `type MetricCatalog`)
 - **File:** `frontend/src/lib/components/trip-detail/MetricCheckbox.svelte` — lines 13–20 (lokale `interface MetricEntry`)
 - **Reference (unverändert):** `frontend/src/lib/types.ts:131` — kanonische `export interface MetricEntry`-Definition (8 Felder)

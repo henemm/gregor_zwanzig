@@ -28,7 +28,7 @@ direkt sichtbar sind.
 
 ## Source
 
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **Identifier:** `handleSave()` (sendet aktuell kein `report_config`)
 - **File:** `frontend/src/lib/components/edit/EditReportConfigSection.svelte`
 - **Identifier:** Einklapp-Toggle `report-content-modules-toggle` + `contentModulesExpanded`-Block

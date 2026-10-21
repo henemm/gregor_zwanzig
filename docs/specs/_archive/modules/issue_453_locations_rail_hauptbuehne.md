@@ -327,7 +327,7 @@ test('GroupSection setzt draggable="true" auf li-Elementen', () => {
 
 - **Epic:** #438 — Orts-Vergleich
 - **Issue:** [#453 — Locations-Rail Hauptbuehne](https://github.com/henemm/gregor_zwanzig/issues/453)
-- **Vorgaenger-Spec:** `docs/specs/modules/issue_249_locations_rail.md` (bestehende Rail-Implementierung)
+- **Vorgaenger-Spec:** `docs/specs/_archive/modules/issue_249_locations_rail.md` (bestehende Rail-Implementierung)
 - **Stil-Referenz Spec:** `docs/specs/modules/issue_440_compare_wizard_shell_step1_step2.md`
 - **Design-System:** `docs/design-system/` (Tokens, Atoms, Screens)
 

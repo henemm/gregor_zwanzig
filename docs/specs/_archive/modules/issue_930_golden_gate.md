@@ -126,7 +126,7 @@ Drei Tests die Gate-Verhalten ohne pytest-Tricks nachweisen:
 ## Acceptance Criteria
 
 - **AC-1:** Given ein Commit der `src/output/renderers/email/*.py`, `src/formatters/*.py`
-  oder `src/outputs/email.py` staged / When mindestens ein Golden-Snapshot in
+  oder `src/output/channels/email.py` staged / When mindestens ein Golden-Snapshot in
   `tests/golden/email/` nicht mehr mit dem Renderer-Output übereinstimmt / Then blockiert
   `renderer_mail_gate.py` den Commit mit Exit 2 und gibt eine Anleitung aus, wie die
   Snapshots mit `regenerate.py` neu eingefroren werden.

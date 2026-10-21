@@ -46,7 +46,7 @@ Wenn Open-Meteo als Verteiler **komplett** ausfällt (alle abdeckenden Modelle i
 | `ForecastMeta.fallback_model`/`fallback_reason`/`fallback_metrics` (models.py) | field | existiert bereits (#1115), wird mit neuem `fallback_reason`-Wert wiederverwendet |
 | `_log_api_call` → `openmeteo_calls.jsonl` (openmeteo.py:501) | log | persistiert 5xx-Calls bereits vor dem Einhängepunkt; Grundlage für `provider_error_streak` (AC-6) |
 | `BriefingHealth()`/`provider_error_streak` (internal/scheduler/briefing_health.go) | signal | wird NICHT verändert; muss weiter gefüttert werden (AC-6) |
-| `docs/specs/modules/issue_1115_openmeteo_model_fallback.md` | spec | Fundament — Nicht-Kaschieren-Muster, dasselbe Einhängeprinzip |
+| `docs/specs/_archive/modules/issue_1115_openmeteo_model_fallback.md` | spec | Fundament — Nicht-Kaschieren-Muster, dasselbe Einhängeprinzip |
 
 ## Implementation Details
 

@@ -71,7 +71,7 @@ umstellen.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given die 3 Test-Dateien nach Refactor / When `cd frontend && node --experimental-strip-types --test src/lib/components/ui/btn/Btn.test.ts src/lib/utils/fullProfile.test.ts src/lib/utils/rightColumn.test.ts` läuft / Then **kein `ERR_MODULE_NOT_FOUND`**, alle Tests laufen.
+- **AC-1:** Given die 3 Test-Dateien nach Refactor / When `cd frontend && node --experimental-strip-types --test frontend/src/lib/components/ui/btn/Btn.test.ts frontend/src/lib/utils/fullProfile.test.ts frontend/src/lib/utils/rightColumn.test.ts` läuft / Then **kein `ERR_MODULE_NOT_FOUND`**, alle Tests laufen.
   - Test: (populated after /tdd-red)
 
 - **AC-2:** Given die 3 Test-Dateien nach Refactor / When `grep -n "from 'vitest'\|from \"vitest\"" frontend/src/` läuft / Then **0 Treffer**.
@@ -89,7 +89,7 @@ umstellen.
 
 ## Verification
 
-- **Direct:** `cd frontend && node --experimental-strip-types --test src/lib/components/ui/btn/Btn.test.ts src/lib/utils/fullProfile.test.ts src/lib/utils/rightColumn.test.ts` → exit 0, keine `ERR_MODULE_NOT_FOUND`
+- **Direct:** `cd frontend && node --experimental-strip-types --test frontend/src/lib/components/ui/btn/Btn.test.ts frontend/src/lib/utils/fullProfile.test.ts frontend/src/lib/utils/rightColumn.test.ts` → exit 0, keine `ERR_MODULE_NOT_FOUND`
 - **Grep:** `grep -rn "from 'vitest'\|from \"vitest\"" frontend/src/ --include='*.ts'` → 0 Treffer
 - **Konsistenz:** `grep -rn "from 'node:test'" frontend/src/ --include='*.test.ts' | wc -l` → ≥ 3 (vorher war es 0 für diese Dateien)
 

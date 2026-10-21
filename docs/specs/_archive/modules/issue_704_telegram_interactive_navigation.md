@@ -20,7 +20,7 @@ Drei Erweiterungen am Telegram-Bot, die den Weg zu stündlichen Wetterdaten und 
 
 ## Source
 
-- **Dateien:** `src/services/trip_command_processor.py`, `src/services/inbound_telegram_reader.py`, `src/outputs/telegram.py`
+- **Dateien:** `src/services/trip_command_processor.py`, `src/services/inbound_telegram_reader.py`, `src/output/channels/telegram.py`
 - **Schicht:** Python-Backend
 
 ## Estimated Scope
@@ -43,7 +43,7 @@ Drei Erweiterungen am Telegram-Bot, die den Weg zu stündlichen Wetterdaten und 
 `now` existiert als interner Befehl (`_VALID_COMMANDS`, `_show_now()`), ist aber nicht im Menü sichtbar und hat keinen Aktualisieren-Button.
 
 **Änderungen:**
-- `src/outputs/telegram.py`: `BOT_COMMANDS` + Eintrag `{"command": "now", "description": "🌂 Nowcast — Regen/Gewitter in den nächsten 2h"}`
+- `src/output/channels/telegram.py`: `BOT_COMMANDS` + Eintrag `{"command": "now", "description": "🌂 Nowcast — Regen/Gewitter in den nächsten 2h"}`
 - `src/services/inbound_telegram_reader.py`: `_SHORTCUT_MAP` + `/now` → `now`, `/n` → `now`; `_VALID_COMMANDS` + `"now"`; `_CALLBACK_QUERY_MAP` + `"now": "### now"`
 - `src/services/trip_command_processor.py`: `_show_now()` bekommt `reply_markup` mit Aktualisieren-Button `{"text": "🔄 Aktualisieren", "callback_data": "now"}`
 
@@ -115,7 +115,7 @@ Zeit  Temp    Wind    Regen  ⛈
 
 | Datei | Änderung |
 |-------|---------|
-| `src/outputs/telegram.py` | BOT_COMMANDS + `now` |
+| `src/output/channels/telegram.py` | BOT_COMMANDS + `now` |
 | `src/services/inbound_telegram_reader.py` | `_SHORTCUT_MAP` + `/now`/`/n`; `_VALID_COMMANDS` + `now`; `_CALLBACK_QUERY_MAP` + `now` + `dd_hours_*` |
 | `src/services/trip_command_processor.py` | `_show_now` reply_markup; `_handle_query` heute/morgen reply_markup; `_handle_hours_drilldown` neu; dispatch für `dd_hours_*` |
 

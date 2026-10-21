@@ -25,7 +25,7 @@ zwischen Tier 1/2/3, „Zurück" kehrt zurück), und jeder Klick wird via
 
 ## Source
 
-- **Files:** `src/services/inbound_telegram_reader.py`, `src/outputs/telegram.py`
+- **Files:** `src/services/inbound_telegram_reader.py`, `src/output/channels/telegram.py`
 - **Identifier:** `InboundTelegramReader._process_update` (callback-Zweig),
   `InboundTelegramReader._process_callback_query` (neu),
   `TelegramOutput.edit_message_text` (neu), `TelegramOutput.answer_callback_query` (neu)

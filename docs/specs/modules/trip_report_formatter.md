@@ -20,7 +20,7 @@ Formats trip segment weather data into HTML emails for automated trip weather re
 
 ## Source
 
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **Identifier:** `TripReportFormatter`
 - **Helper:** `src/formatters/trip_html_template.py` (HTML generation)
 

@@ -230,7 +230,7 @@ unabhängiger Fetch der tatsächlichen Folge-Etappe (`_convert_trip_to_segments`
     und `trip_report.py:189-201` übergibt auch keins. `request.thunder_forecast` fließt
     ausschließlich in `render_email()` (`trip_report.py:154`) und `format_sms()` (`:231`).
     Kein Test dieses Fixes erwähnt Telegram. Siehe Fund A in
-    `docs/specs/bugfix/fix_1275_sms_thunder_today.md`.
+    `docs/specs/_archive/bugfix/fix_1275_sms_thunder_today.md`.
   - **Dependencies-Tabelle, Zeile 54** (`src/services/notification_service.py:222` — „Telegram-Pfad
     über `request.thunder_forecast`") beschreibt einen Konsumpfad, den es zum Zeitpunkt dieser
     Spec **nicht gab**. Telegram berechnete sein Gewitter-Signal eigenständig aus

@@ -3,7 +3,7 @@ entity_id: go_location_write
 type: module
 created: 2026-04-13
 updated: 2026-04-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [migration, go, location, crud, write]
 ---

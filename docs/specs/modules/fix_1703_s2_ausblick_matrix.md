@@ -3,7 +3,7 @@ entity_id: fix_1703_s2_ausblick_matrix
 type: module
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [metrics, outlook, compare, matrix-test, epic-1703, aggregation]
 ---

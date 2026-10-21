@@ -10,7 +10,7 @@ tags: [sms, cleanup, tests]
 
 # Tests: #641 Toten SMS-Trend-Pfad entfernen
 
-Test-Spec zu `docs/specs/modules/issue_641_remove_dead_sms_trend.md`.
+Test-Spec zu `docs/specs/_archive/modules/issue_641_remove_dead_sms_trend.md`.
 Mock-frei, Laufzeit-Introspektion (kein Datei-Text-Scan).
 
 ## Test-Fälle

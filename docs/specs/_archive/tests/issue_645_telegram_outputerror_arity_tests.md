@@ -10,7 +10,7 @@ tags: [telegram, outputs, error-handling, tests]
 
 # Tests: #645 OutputError in telegram.py mit korrekter Arität
 
-Test-Spec zu `docs/specs/modules/bug_645_telegram_outputerror_arity.md`.
+Test-Spec zu `docs/specs/_archive/modules/bug_645_telegram_outputerror_arity.md`.
 Mock-frei: echter HTTP-Call gegen die Telegram-API mit ungültigem Bot-Token
 (reale HTTP-4xx-Antwort, faktisch 401 Unauthorized → realer Fehlerpfad).
 

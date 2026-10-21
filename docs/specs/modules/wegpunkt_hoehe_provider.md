@@ -3,7 +3,7 @@ entity_id: wegpunkt_hoehe_provider
 type: module
 created: 2026-08-20
 updated: 2026-08-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [provider, openmeteo, hoehe, trip, ortsvergleich, nowcast]
 ---

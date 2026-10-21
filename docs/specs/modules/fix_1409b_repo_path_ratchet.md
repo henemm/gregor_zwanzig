@@ -3,7 +3,7 @@ entity_id: fix_1409b_repo_path_ratchet
 type: bugfix
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, guard, worktree, ratchet, issue-1409]
 ---

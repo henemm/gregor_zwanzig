@@ -3,7 +3,7 @@ entity_id: alert_channel_new_default
 type: module
 created: 2026-10-06
 updated: 2026-10-06
-status: approved
+status: implemented
 version: "1.0"
 tags: [alerts, onboarding, trip, compare, issue-2518]
 ---

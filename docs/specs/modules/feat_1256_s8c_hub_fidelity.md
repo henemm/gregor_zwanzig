@@ -3,7 +3,7 @@ entity_id: feat_1256_s8c_hub_fidelity
 type: feature
 created: 2026-07-14
 updated: 2026-07-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, ui-fidelity, design-handoff-4, issue-1256]
 workflow: feat-1256-s8c-hub-fidelity

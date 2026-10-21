@@ -18,11 +18,11 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_833_mail_gate_structural.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_833_mail_gate_structural.md`.
 Jeder Test mappt auf ein Acceptance Criterion. Mock-frei: echte konstruierte
 MIME-/HTML-Artefakte mit den realen Renderer-Markern, echtes Gate-Verhalten.
 
-Parent-Spec: `docs/specs/modules/issue_833_mail_gate_structural.md`
+Parent-Spec: `docs/specs/_archive/modules/issue_833_mail_gate_structural.md`
 
 ## Source
 

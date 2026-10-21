@@ -3,7 +3,7 @@ entity_id: feat_1679_cin_paarung_cape_leiter
 type: feature
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, cape, cin, model-registry, thunder-fusion, issue-1679]
 ---

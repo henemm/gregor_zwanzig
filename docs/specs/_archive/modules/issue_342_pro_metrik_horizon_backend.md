@@ -82,7 +82,7 @@ Backend-Voraussetzung für die Pro-Metrik-Zeithorizont-Funktion aus Klammer-Epic
 - **Issue:** Die Normalisierungs-Logik konnte nicht unterscheiden, ob `horizons` im JSON-Payload fehlt oder explizit mit `{false,false,false}` gesetzt wurde.
 - **Fix:** Lokaler Decode-Struct mit `*Horizons` Pointer (nil = fehlt, non-nil = explizit gesetzt).
 - **Scope:** Nur Eingabe-Normalisierung, kein Modell-/Store-/Renderer-Change.
-- **Spec:** `docs/specs/modules/bug_349_horizons_zero_value.md`
+- **Spec:** `docs/specs/_archive/modules/bug_349_horizons_zero_value.md`
 
 ## Implementation Details
 

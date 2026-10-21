@@ -3,7 +3,7 @@ entity_id: fix_1633_datenwurzel_diagnose_journale
 type: module
 created: 2026-08-09
 updated: 2026-08-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [observability, data-root, diagnostics, adr-0018, regression]
 ---

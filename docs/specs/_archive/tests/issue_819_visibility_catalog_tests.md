@@ -19,11 +19,11 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die Katalog-Ehrlichkeits-Bereinigung aus
-`docs/specs/modules/issue_819_visibility_catalog_honesty.md`. Jeder pytest-Test mappt
+`docs/specs/_archive/modules/issue_819_visibility_catalog_honesty.md`. Jeder pytest-Test mappt
 1:1 auf ein Acceptance Criterion. AC-4 (Render-Inertness) wird durch den bestehenden
 mock-freien Matrix-Test abgedeckt, nicht dupliziert.
 
-Parent-Spec: `docs/specs/modules/issue_819_visibility_catalog_honesty.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_819_visibility_catalog_honesty.md` v1.0
 
 ## Source
 

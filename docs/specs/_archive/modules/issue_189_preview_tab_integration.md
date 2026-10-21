@@ -6,7 +6,7 @@ updated: 2026-05-17
 status: implemented
 version: "1.0"
 tags: [frontend, preview, trip-detail, epic-140]
-parent_spec: docs/specs/modules/epic_140_output_vorschau.md
+parent_spec: docs/specs/_archive/modules/epic_140_output_vorschau.md
 ---
 
 # Issue #189 — Vorschau-Integration in Trip-Übersicht

@@ -19,7 +19,7 @@ Wenn Resend.com nicht erreichbar ist, gehen Briefing- und Alert-Mails ersatzlos 
 
 ## Source
 
-- **File (Python):** `src/outputs/email.py`
+- **File (Python):** `src/output/channels/email.py`
 - **Identifier:** `class EmailOutput` / `def send()`
 - **File (Go):** `internal/mail/sender.go`
 - **Identifier:** `func SendWithFallback()`
@@ -36,7 +36,7 @@ Wenn Resend.com nicht erreichbar ist, gehen Briefing- und Alert-Mails ersatzlos 
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `src/outputs/email.py::EmailOutput` | module | Python-Hauptpfad, wird erweitert |
+| `src/output/channels/email.py::EmailOutput` | module | Python-Hauptpfad, wird erweitert |
 | `internal/mail/sender.go::Send` | function | Go-Basisfunktion, bleibt erhalten; neue Wrapper-Funktion daneben |
 | `internal/config/config.go::Config` | module | Aufnahme neuer Fallback-SMTP-Felder |
 | `internal/handler/auth.go` | handler | Ruft `mail.Send` auf — wird auf `SendWithFallback` umgestellt |
@@ -50,7 +50,7 @@ Wenn Resend.com nicht erreichbar ist, gehen Briefing- und Alert-Mails ersatzlos 
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `src/outputs/email.py` | MODIFY | Fallback-Block nach letztem Retry-Versuch (OSError / 4xx erschöpft) |
+| `src/output/channels/email.py` | MODIFY | Fallback-Block nach letztem Retry-Versuch (OSError / 4xx erschöpft) |
 | `internal/mail/sender.go` | MODIFY | Neue Funktion `SendWithFallback()` neben unverändertem `Send()` |
 | `internal/config/config.go` | MODIFY | Neue Felder `FallbackSMTPHost`, `FallbackSMTPUser`, `FallbackSMTPPass` |
 | `internal/handler/auth.go` | MODIFY | `mail.Send` → `mail.SendWithFallback`, Timeout 10 s → 20 s |
@@ -65,7 +65,7 @@ Wenn Resend.com nicht erreichbar ist, gehen Briefing- und Alert-Mails ersatzlos 
 
 ## Implementation Details
 
-### Python-Pfad (`src/outputs/email.py`)
+### Python-Pfad (`src/output/channels/email.py`)
 
 Nach dem letzten fehlgeschlagenen Retry-Versuch in `EmailOutput.send()` prüft der Code, ob Fallback-Credentials vorhanden sind. Auslöser für den Fallback: nur `OSError` (Netzwerkfehler) und SMTP 4xx-Temporärfehler nach Retry-Erschöpfung. Kein Fallback bei `SMTPAuthenticationError` (535) oder `SMTPResponseException` mit Code >= 500 — diese sind permanent.
 

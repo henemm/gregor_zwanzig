@@ -22,8 +22,8 @@ Test-Manifest für AC-1 von Issue #583 und AC-2 von Issue #611. Validiert dass d
 für den Validator-Account existiert, die richtigen 8 Trips schreibt, idempotent ist und
 archivierte Orts-Vergleiche (ComparePresets) mit `archived_at` + `location_ids` anlegt.
 
-Parent-Specs: `docs/specs/modules/issue_583_archiv_1to1.md`,
-`docs/specs/modules/issue_611_archiv_entruempeln.md`.
+Parent-Specs: `docs/specs/_archive/modules/issue_583_archiv_1to1.md`,
+`docs/specs/_archive/modules/issue_611_archiv_entruempeln.md`.
 
 ## Source
 

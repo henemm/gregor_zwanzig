@@ -3,7 +3,7 @@ entity_id: testkonto_profilfeld
 type: module
 created: 2026-09-17
 updated: 2026-09-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [testkonto, auth, scheduler, mail, epic-2138]
 ---

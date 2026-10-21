@@ -26,7 +26,7 @@ Nutzer die fehlende Konfiguration in einem Schritt nachholen kann.
 ## Source
 
 - **File:** `frontend/src/lib/components/trip-detail/WeatherV2Kanaele.svelte`
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **Identifier:** `WeatherV2Kanaele` (neues Prop `availability`), `WeatherMetricsTab` (Profil-Load + Prop-Weiterleitung)
 
 > Frontend-only. Go-API und Python-Backend sind nicht betroffen. Das Profil wird bereits

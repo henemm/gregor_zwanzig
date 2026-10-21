@@ -20,9 +20,9 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_430_431_wizard_layout_step.md`. Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-15). Tests sind reine Source-Inspection (`readFileSync`) und Pure-Logic — kein Svelte-Renderer, kein Mock.
+Test-Manifest für `docs/specs/_archive/modules/issue_430_431_wizard_layout_step.md`. Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-15). Tests sind reine Source-Inspection (`readFileSync`) und Pure-Logic — kein Svelte-Renderer, kein Mock.
 
-Parent-Spec: `docs/specs/modules/issue_430_431_wizard_layout_step.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_430_431_wizard_layout_step.md` v1.0
 
 ## Source
 

@@ -3,7 +3,7 @@ entity_id: feat_2051_s3_reichweite_und_guete
 type: feature
 created: 2026-08-22
 updated: 2026-08-22
-status: approved
+status: implemented
 version: "1.1"
 tags: [alarm, briefing, nowcast, radar, reichweite, guete]
 ---

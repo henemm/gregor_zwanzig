@@ -62,7 +62,7 @@ zusätzlich (separater, risikoarmer Nebenfix) das Ignorieren eines übergebenen
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `_e2e_paths.py` | module | Bestehender Shared-Helper (`write_last_gate_scope`, `read_last_gate_scope`), wird um optionales Scope-Feld + neue Lesefunktion ergänzt — Voraussetzung für den Cache in beiden Gate-Dateien |
-| `docs/specs/modules/issue_916_988_gate_scope_robustness.md` | spec | Direkter Vorläufer, führt den Marker-Mechanismus selbst ein; diese Spec ergänzt dessen "Known Limitations", ohne dessen AC-1..AC-6 zu brechen |
+| `docs/specs/_archive/modules/issue_916_988_gate_scope_robustness.md` | spec | Direkter Vorläufer, führt den Marker-Mechanismus selbst ein; diese Spec ergänzt dessen "Known Limitations", ohne dessen AC-1..AC-6 zu brechen |
 | `deploy-gregor-prod.sh` (henemm-infra) | script | Ruft `staging_gate.py --check` (Schritt 4) unmittelbar vor `prod_selftest.py` (Schritt 4b) auf — bestätigt den genauen Auslöse-Zeitpunkt des Bugs; wird selbst NICHT verändert |
 | `tests/tdd/test_issue_916_gate_scope_marker.py` | test | Bestehende AC-1..AC-4-Tests für den Marker-Mechanismus, MÜSSEN unverändert grün bleiben (Regressionsschutz) |
 | `tests/tdd/test_staging_gate.py` | test | Bestehende `write_verdict`/`gate_check`-Tests, MÜSSEN unverändert grün bleiben |
@@ -264,4 +264,4 @@ geschriebene Verhalten (Scope-String, Exit-Code, geparstes JSON-Feld).
   den Shared-Helper `_e2e_paths.cached_scope_for_sha()` konsolidiert und wird
   jetzt von beiden Gate-Skripten symmetrisch genutzt; docs-only-Werte gelten
   außerdem nicht mehr als Cache-Treffer für den Skip-Zweig. Details:
-  `docs/specs/modules/issue_1096_gate_scope_selfpoison.md`.
+  `docs/specs/_archive/modules/issue_1096_gate_scope_selfpoison.md`.

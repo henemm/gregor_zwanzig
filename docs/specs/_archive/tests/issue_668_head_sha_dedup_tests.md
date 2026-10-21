@@ -24,7 +24,7 @@ Subprozess-Zählung via PATH-Shim-`git`.
 ## Source
 
 - **File:** `tests/tdd/test_issue_668_head_sha_dedup.py`
-- **Spec:** `docs/specs/modules/issue_668_head_sha_dedup.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/issue_668_head_sha_dedup.md` v1.0
 
 ## Test Inventory
 

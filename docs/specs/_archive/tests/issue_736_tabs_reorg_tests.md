@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die Implementierung aus
-`docs/specs/modules/issue_736_tabs_reorg.md`. Alle Tests sind Playwright-E2E
+`docs/specs/_archive/modules/issue_736_tabs_reorg.md`. Alle Tests sind Playwright-E2E
 gegen Staging als eingeloggter Nutzer.
 
-Parent-Spec: `docs/specs/modules/issue_736_tabs_reorg.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_736_tabs_reorg.md` v1.0
 
 ## Source
 

@@ -3,7 +3,7 @@ entity_id: etappen_bauliche_aenderung_speichern
 type: module
 created: 2026-10-18
 updated: 2026-10-18
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2213-etappen-bauliche-aenderung-speichern
 tags: [frontend, trip-editor, auto-save, etappen, kaskade, datenverlust]

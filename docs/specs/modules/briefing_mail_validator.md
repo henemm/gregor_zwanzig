@@ -25,7 +25,7 @@ Plausibilität** (nicht bloß String-Presence). Schließt die Coverage-Lücke au
 ## Source
 
 - **File:** `.claude/hooks/briefing_mail_validator.py` (neu) — Validator (Vorbild: `email_spec_validator.py`)
-- **File:** `src/outputs/email.py` — `build_mime_message()` + `EmailOutput.send()` (Marker-Header, Python-Backend)
+- **File:** `src/output/channels/email.py` — `build_mime_message()` + `EmailOutput.send()` (Marker-Header, Python-Backend)
 - **File:** `src/services/trip_report_scheduler.py` — Briefing-Versand setzt `mail_type`/`mail_format`
 - **File:** `src/app/cli.py` — Orts-Vergleich-Versand setzt `mail_type="compare"`
 - **Identifier:** `build_mime_message`, `briefing_mail_validator.run_validation`
@@ -41,7 +41,7 @@ Plausibilität** (nicht bloß String-Presence). Schließt die Coverage-Lücke au
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `email_spec_validator.py` | Vorbild | IMAP-Fetch-Muster, Exit 0/1, YAML-Log (fail-soft) |
-| `build_mime_message` (`src/outputs/email.py`) | upstream | Setzt die Marker-Header (genutzt von beiden Mail-Typen) |
+| `build_mime_message` (`src/output/channels/email.py`) | upstream | Setzt die Marker-Header (genutzt von beiden Mail-Typen) |
 | Stalwart Test-Postfach (`GZ_IMAP_*`) | upstream | Quelle der echten zugestellten Mail (kein Mock) |
 
 ## Implementation Details

@@ -21,10 +21,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für den kanal-bewussten Renderer aus
-`docs/specs/modules/issue_360_signal_channel_renderer.md`. Jeder pytest-Test
+`docs/specs/_archive/modules/issue_360_signal_channel_renderer.md`. Jeder pytest-Test
 mappt 1:1 auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-8).
 
-Parent-Spec: `docs/specs/modules/issue_360_signal_channel_renderer.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_360_signal_channel_renderer.md` v1.0
 
 ## Source
 

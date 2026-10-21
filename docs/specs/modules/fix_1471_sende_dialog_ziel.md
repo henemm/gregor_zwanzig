@@ -3,7 +3,7 @@ entity_id: fix_1471_sende_dialog_ziel
 type: bugfix
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, versand, frontend]
 ---

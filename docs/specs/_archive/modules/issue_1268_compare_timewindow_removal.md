@@ -57,7 +57,7 @@ als bewusst in Kauf genommene Known Limitations (PO-Entscheid 2026-07-16, s.
 | `ComparisonEngine.run()` (`src/services/comparison_engine.py`) | function | Nimmt weiterhin `time_window`/`forecast_hours` als Parameter — Signatur bleibt unverändert, nur der Dispatch-Aufrufer ändert die übergebenen Werte |
 | `comparison_scoring.calculate_score()` (`src/services/comparison_scoring.py`) | function | Nutzt `window_hours` für den Sonnenanteil-Bonus (#366) — indirekt betroffen durch die neue Fensterbreite 24h |
 | `internal/handler/compare_preset.go` Read-Modify-Write (Z. 349-357) | Go handler | Bestandsschutz für `forecast_hours`/`hour_from`/`hour_to` bleibt unverändert — Frontend schickt die Felder künftig einfach nicht mehr mit |
-| `docs/specs/modules/issue_1256_compare_ui_rewire.md` | spec | Ursprüngliche (fehlinterpretierte) PO-Korrektur-Referenz — dieser Spec korrigiert/konkretisiert Constraint 2 |
+| `docs/specs/_archive/modules/issue_1256_compare_ui_rewire.md` | spec | Ursprüngliche (fehlinterpretierte) PO-Korrektur-Referenz — dieser Spec korrigiert/konkretisiert Constraint 2 |
 | `docs/context/fix-1268-compare-dead-timewindow-fields.md` | context | PO-Entscheid vom 2026-07-16, bindend für diese Spec |
 
 ## Scope

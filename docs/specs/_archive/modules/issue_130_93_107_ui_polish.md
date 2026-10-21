@@ -48,7 +48,7 @@ Drei unabhängige UI-Polishes werden gemeinsam umgesetzt, weil sie alle ausschli
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `src/services/trip_alert.py` | Python-Modul | Enthält `_send_alert()` — hier fehlt die `stage_name`-Übergabe an den Formatter |
-| `src/formatters/trip_report.py` | Python-Modul | `format_email()` akzeptiert bereits `stage_name: Optional[str] = None` — kein Änderungsbedarf |
+| `src/output/renderers/trip_report.py` | Python-Modul | `format_email()` akzeptiert bereits `stage_name: Optional[str] = None` — kein Änderungsbedarf |
 | `Trip.get_stage_for_date()` | Python-Methode | Liefert die passende Stage zum Alert-Datum — bereits vorhanden |
 | `frontend/src/lib/components/trip-wizard/TripWizardShell.svelte` | Svelte-Komponente | 4 Umlaut-Korrekturen: Wizard-Schrittnamen + Zurück-Button |
 | `frontend/src/lib/components/trip-wizard/steps/Step1Profile.svelte` | Svelte-Komponente | 1 Umlaut-Korrektur: Label "Aktivität" |

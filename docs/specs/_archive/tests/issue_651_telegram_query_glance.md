@@ -17,7 +17,7 @@ tags: [telegram, query, glance, epic-639, tdd]
 ## Purpose
 
 TDD-Test-Inventar für die lesenden Telegram-Abfrage-Befehle und die Tier-1-Glance.
-Modul-Spec: `docs/specs/modules/issue_651_telegram_query_glance.md`.
+Modul-Spec: `docs/specs/_archive/modules/issue_651_telegram_query_glance.md`.
 
 Alle Tests beweisen Nutzerverhalten über **echte Datei-I/O** (Trip + Snapshot über
 eine `tmp_path`-Umlenkung von `app.loader.get_data_dir`) — **keine** Mocks, keine

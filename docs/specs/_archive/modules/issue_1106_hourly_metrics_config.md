@@ -77,7 +77,7 @@ Frühstückstisch in Ruhe gelesen wird, nicht unter Zeitdruck unterwegs.
 | `src/output/renderers/comparison.py` | MODIFY | `render_compare_email()` erhält Parameter `hourly_metrics`, reicht ihn an `render_compare_html()` durch (analog `enabled_metrics`, Z.117-147) |
 | `src/services/scheduler_dispatch_service.py` | MODIFY | `display_config.get("hourly_metrics")` lesen (neben Z.251-270), via `resolve_hourly_metrics()` auflösen, an `render_compare_email()` durchreichen |
 | `.claude/hooks/email_spec_validator.py` | MODIFY | `_HOUR_COLUMNS_V2` (Z.126-127) wird kanonische Superset-Liste (10 Header inkl. "Zeit"); Exakt-Vergleich (Z.249-254) → Teilmengen-mit-Reihenfolge-Prüfung + Mindestspalten-Regel (≥2: "Zeit" + mind. 1 Wert-Spalte) |
-| `docs/specs/modules/issue_1108_email_spec_validator_v2.md` | MODIFY | Abschnitt zum `_HOUR_COLUMNS_V2`-Vertrag um Teilmengen-Semantik ergänzen |
+| `docs/specs/_archive/modules/issue_1108_email_spec_validator_v2.md` | MODIFY | Abschnitt zum `_HOUR_COLUMNS_V2`-Vertrag um Teilmengen-Semantik ergänzen |
 | `frontend/src/lib/components/compare/compareHourlyMetricDefs.ts` | CREATE | Katalog der 9 wählbaren Stundenverlauf-Metriken (Frontend-IDs + Label) für die Checkbox-UI |
 | `frontend/src/lib/components/compare/compareWizardState.svelte.ts` | MODIFY | Neues State-Feld `hourlyMetricKeys`, Load/Save analog `activeMetricKeys` |
 | `frontend/src/lib/components/compare/compareEditorSave.ts` | MODIFY | Neues Edit-Feld `hourlyMetricKeys?: string[]` → `displayConfig.hourly_metrics` im Save-Payload-Mapping |

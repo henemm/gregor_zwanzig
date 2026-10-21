@@ -3,7 +3,7 @@ entity_id: cloud_cover_simplification
 type: feature
 created: 2026-01-12
 updated: 2026-01-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [cloud, weather, simplification, ui]
 ---

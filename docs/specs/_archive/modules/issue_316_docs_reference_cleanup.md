@@ -38,7 +38,7 @@ tags: [docs, reference, frontend, cleanup, nicegui-removal]
 |--------|------|---------|
 | `frontend/src/lib/components/**` | Upstream / SSoT | Realer Komponenten-Baum — Quelle für das aktualisierte Inventar |
 | `frontend/src/routes/_cockpit/*`, `_home/*` | Upstream | Route-lokale Komponenten (Cockpit bereits dokumentiert; `_home`-Kacheln neu aufnehmen) |
-| `docs/specs/modules/issue_293_wordmark.md` | Referenz | Wordmark-Props (für AC-geforderte Props-Übersicht) |
+| `docs/specs/_archive/modules/issue_293_wordmark.md` | Referenz | Wordmark-Props (für AC-geforderte Props-Übersicht) |
 | `docs/reference/design_system.md`, `sveltekit_best_practices.md`, `docs/features/architecture.md` | Downstream | Verweisen auf `frontend_components.md` → Datei bleibt unter gleichem Pfad bestehen (kein Rename/Delete) |
 | Historische NiceGUI-Ära-Specs (`gpx_multi_import.md`, `report_config.md`, `safari_preventive_fix.md`, `gpx-upload-segment-planung.md`) | Bewusst unangetastet | Eingefrorene Records; ihr toter Link ist konsistent mit ihrer eigenen Obsoleszenz — Scope-Disziplin (separate Frage: Gesamt-Obsoleszenz des Safari-Standards) |
 

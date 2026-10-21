@@ -3,12 +3,14 @@ entity_id: wizard_save_redirect_fallback
 type: bugfix
 created: 2026-05-11
 updated: 2026-05-11
-status: approved
+status: deprecated
 version: "1.0"
 tags: [frontend, sveltekit, svelte5, bugfix, wizard, epic-136, issue-197]
 ---
 
 # WizardState Save — Redirect Fallback Fix
+
+> Abgelöst/entfernt durch ADR-0032 / #1301 — Multi-Step-Wizards und `CompareEditor.svelte` sind abgeschafft; diese Spec ist nur noch historisch.
 
 ## Approval
 

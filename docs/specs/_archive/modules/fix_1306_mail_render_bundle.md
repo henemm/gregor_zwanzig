@@ -47,8 +47,8 @@ Vorbild-Code (bereits korrekt, dient als Referenz beim Fix):
 | `src/output/renderers/email/profile_signature.py::profile_signature()` | Funktion (#241) | Liefert `accent_hex`/`icon`/`eyebrow` je `ActivityProfile`; wird in `render_html` bisher nie aufgerufen |
 | `src/output/renderers/email/plain.py::render_plain()` | Funktion | Bereits korrektes Vorbild für den Aufrufmuster in `render_html` |
 | `src/app/profile.py::ActivityProfile` | Enum | Eingabetyp `profile`-kwarg, bereits in `render_html`-Signatur (Z.784) vorhanden aber ungenutzt |
-| `docs/specs/modules/issue_241_email_profile_pipeline.md` | Spec (Referenz) | Ursprüngliche Design-Vorgabe: Profil-Marker (Akzentfarbe, Eyebrow, Icon) im Header, Approved 2026-05-17 |
-| `docs/specs/modules/issue_255_email_profil_signaturen.md` | Spec (Referenz) | Folge-Spec zu Header-Redesign (`class="header"` durch zweispaltigen Header ersetzt, #884/#890) — Grund, warum `test_ac4_255` einen toten Selektor prüft |
+| `docs/specs/_archive/modules/issue_241_email_profile_pipeline.md` | Spec (Referenz) | Ursprüngliche Design-Vorgabe: Profil-Marker (Akzentfarbe, Eyebrow, Icon) im Header, Approved 2026-05-17 |
+| `docs/specs/_archive/modules/issue_255_email_profil_signaturen.md` | Spec (Referenz) | Folge-Spec zu Header-Redesign (`class="header"` durch zweispaltigen Header ersetzt, #884/#890) — Grund, warum `test_ac4_255` einen toten Selektor prüft |
 | `tests/golden/email/regenerate.py` | Tooling | Erzeugt die 5 HTML-Golden-Fixtures neu; wird unverändert ausgeführt, Fixture-Aufruf für `arlberg-winter-morning` wird korrigiert |
 | Renderer-Mail-Gate #811 (`renderer_mail_gate.py`) | Pre-Commit-Gate | `html.py` ist Gate-Datei — Commit blockiert ohne frischen `test_issue_811_mode_matrix` + `briefing_mail_validator`-Lauf |
 | CLAUDE.md „Trip/Ortsvergleich-Code-Teilung" | Policy | Betrifft hier nicht direkt (reiner Trip-Renderer), aber `render_html` wird auch von Compare-Pfaden über gemeinsame Bausteine genutzt — keine Compare-eigene Änderung nötig |

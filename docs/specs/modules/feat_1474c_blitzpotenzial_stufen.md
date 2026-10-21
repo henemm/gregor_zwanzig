@@ -3,7 +3,7 @@ entity_id: feat_1474c_blitzpotenzial_stufen
 type: feature
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, dwd, lpi, s3, issue-1474, issue-1419]
 ---

@@ -36,7 +36,7 @@ Die Migration ist Teil von Epic #368 (Atomic-Design-Angleichung, Phase 2: Trip-D
 |--------|------|---------|
 | `frontend/src/lib/components/ui/pill/Pill.svelte` | Upstream-Atom | Rendert Status-Pill; nimmt `tone` und `data-outlined` entgegen |
 | `frontend/src/app.css` | Upstream | Definiert alle `--g-*` Token und `[data-outlined]`-Rules |
-| `docs/specs/modules/issue_302_trip_detail_page.md` | Referenz-Spec | Legt Trip-Detail-Design einschließlich Status-Badge-Semantik fest |
+| `docs/specs/_archive/modules/issue_302_trip_detail_page.md` | Referenz-Spec | Legt Trip-Detail-Design einschließlich Status-Badge-Semantik fest |
 | `claude-code-handoff/screenshots/soll-flow7B-trip-detail.png` | Design-Referenz | Visuelles Soll: active-Status als orange outlined Pill |
 | `frontend/src/lib/components/ui/pill/Pill.svelte` | Constraint | Keine neuen Tone-Aliase nötig — `accent` ist bereits definiert |
 

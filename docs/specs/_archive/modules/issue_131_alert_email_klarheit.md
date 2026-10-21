@@ -34,7 +34,7 @@ einheits-spezifische Zahlenformatierung mit DE-Locale ein.
 - **File:** `src/output/renderers/email/helpers.py` (neue SSoT-Funktion `format_change_line()` am Ende) — eine Renderfunktion für HTML und Plain
 - **File:** `src/output/renderers/email/html.py` (Z. 226-244) — nutzt `format_change_line()`
 - **File:** `src/output/renderers/email/plain.py` (Z. 143-152) — nutzt `format_change_line()`
-- **File:** `src/formatters/trip_report.py` (Z. 966-984 + Z. 1095-1104) — toter Renderer-Code entfernen
+- **File:** `src/output/renderers/trip_report.py` (Z. 966-984 + Z. 1095-1104) — toter Renderer-Code entfernen
 
 ## Dependencies
 
@@ -227,7 +227,7 @@ if changes:
 
 ### 7. Toter Code
 
-`src/formatters/trip_report.py` Z. 966-984 (HTML-Change-Block) und
+`src/output/renderers/trip_report.py` Z. 966-984 (HTML-Change-Block) und
 Z. 1095-1104 (Plain-Change-Block) werden ersatzlos entfernt — die
 Methode `format_email()` delegiert seit dem Renderer-Refactor auf
 `output/renderers/email/*` und erreicht diesen Code nicht mehr.
@@ -292,8 +292,8 @@ Methode `format_email()` delegiert seit dem Renderer-Refactor auf
   rendern dieselbe Information über `format_change_line()` (keine
   Format-Drift).
 
-- **AC-9:** Given die Datei `src/formatters/trip_report.py` /
-  When nach dem Refactor gegrept wird (`grep -n "Wetteränderungen" src/formatters/trip_report.py`) /
+- **AC-9:** Given die Datei `src/output/renderers/trip_report.py` /
+  When nach dem Refactor gegrept wird (`grep -n "Wetteränderungen" src/output/renderers/trip_report.py`) /
   Then findet sich kein Match mehr — der tote Change-Renderer-Block
   Z. 966-984 + Z. 1095-1104 ist entfernt.
 

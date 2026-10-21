@@ -67,7 +67,7 @@ Challenger-Verdict) — diese Spec baut direkt darauf auf.
 | `_get_active_trips()` (`trip_report_scheduler.py`) | function | Einziger Ort, an dem der neue Pause-Filter sitzen darf — NICHT `load_all_trips()` (sonst würden Alerts mit unterdrückt) |
 | `briefing_mail_validator.py` | tool | Projekt-Pflicht-Validator vor "E2E bestanden" für Trip-Briefing-Mails; finale Bestätigung von Gruppe B |
 | `data_schema_backup.py` | hook | Pre-Snapshot-Hook, wird durch die Änderung an `src/app/trip.py` automatisch ausgelöst (Schema-relevante Datei) |
-| `docs/specs/modules/epic_135_step2_trip_detail_actions.md:359` | spec | Dokumentiert die von Gruppe C geschlossene, bewusst zurückgestellte Lücke (Issue #153) |
+| `docs/specs/_archive/modules/epic_135_step2_trip_detail_actions.md:359` | spec | Dokumentiert die von Gruppe C geschlossene, bewusst zurückgestellte Lücke (Issue #153) |
 
 ## Implementation Details
 
@@ -221,7 +221,7 @@ Test-Versand soll immer funktionieren).
   ggf. zurückgestellt werden müssen, bis #997 unabhängig gefixt ist — #997 wird NICHT im Rahmen
   dieses Workflows selbst behoben.
 - **Gruppe C — keine Regression zu Issue #153:** Dies schließt eine in
-  `docs/specs/modules/epic_135_step2_trip_detail_actions.md:359` bereits dokumentierte, bewusst
+  `docs/specs/_archive/modules/epic_135_step2_trip_detail_actions.md:359` bereits dokumentierte, bewusst
   zurückgestellte Lücke ("Scheduler ignoriert pausierten Status... bewusst out of scope für
   Issue #153"). Kein Verhalten wird rückgängig gemacht, nur die dort angekündigte Folge-Arbeit
   nachgeholt.

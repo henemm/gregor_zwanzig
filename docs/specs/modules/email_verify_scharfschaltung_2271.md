@@ -3,7 +3,7 @@ entity_id: email_verify_scharfschaltung_2271
 type: module
 created: 2026-09-12
 updated: 2026-09-12
-status: draft
+status: implemented
 version: "1.0"
 tags: ["auth", "email-verification", "epic-2138"]
 ---

@@ -3,7 +3,7 @@ entity_id: adresswechsel_nach_bestaetigung
 type: module
 created: 2026-09-14
 updated: 2026-09-14
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2147-b2-adresse-nach-bestaetigung
 tags: [security, multi-user, auth, issue-2147, issue-2311, epic-2138]

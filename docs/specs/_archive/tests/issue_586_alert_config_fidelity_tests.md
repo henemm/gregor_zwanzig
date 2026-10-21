@@ -18,11 +18,11 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_586_alert_config_fidelity_gate.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_586_alert_config_fidelity_gate.md`.
 Behaviorale Pixel-Diff-Prüfung der Live-Alert-Config gegen die bindende JSX
 `screen-alert-config.jsx` (keine Mocks, keine String-Checks).
 
-Parent-Spec: `docs/specs/modules/issue_586_alert_config_fidelity_gate.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_586_alert_config_fidelity_gate.md` v1.0
 
 ## Source
 

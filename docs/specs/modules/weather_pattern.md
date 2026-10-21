@@ -35,7 +35,7 @@ Die Großwetterlage-Einschätzung beantwortet für einen Mehrtagswanderer (z.B. 
 - **Änderung:** `src/app/models.py` — neues Dataclass `StabilityResult` (frozen, 3 Felder)
 - **Änderung:** `src/providers/openmeteo.py` — neue Methode `_fetch_ensemble_with_z500(lat, lon) -> dict`
 - **Änderung:** `src/services/trip_report_scheduler.py` — `WeatherPatternService` aufrufen, Ergebnis an Formatter durchreichen
-- **Änderung:** `src/formatters/trip_report.py` — Parameter `stability_result: StabilityResult | None` aufnehmen, weiterreichen
+- **Änderung:** `src/output/renderers/trip_report.py` — Parameter `stability_result: StabilityResult | None` aufnehmen, weiterreichen
 - **Änderung:** `src/output/renderers/email/__init__.py` — Parameter `stability_result` aufnehmen, weiterreichen
 - **Änderung:** `src/output/renderers/email/html.py` — farbige WL-Box ganz oben rendern (vor Confidence-Hinweis)
 - **Änderung:** `src/output/renderers/email/plain.py` — WL-Textzeile ganz oben rendern

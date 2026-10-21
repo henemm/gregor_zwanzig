@@ -3,7 +3,7 @@ entity_id: feat_1441_s3_slf
 type: module
 created: 2026-10-17
 updated: 2026-10-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alert, avalanche, slf, schweiz, eaws, caaml, vier-kanaele, ortsvergleich, entwarnung, issue-1441]
 workflow: feat-1441-s3-slf

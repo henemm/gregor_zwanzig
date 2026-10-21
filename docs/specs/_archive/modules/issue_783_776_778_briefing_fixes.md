@@ -29,8 +29,8 @@ nicht mehr existierenden `blue`-Key und werden ersatzlos entfernt (#778).
 
 - **File:** `src/services/trip_report_scheduler.py` — `_convert_trip_to_segments` (Z.686–815), #783
 - **File:** `src/output/renderers/email/helpers.py` — `extract_hourly_rows` (Z.123–137), #783 Kontext
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` — `handleSave`, `isDirty` (Z.136, Z.334–360, Z.530), #776
-- **File:** `src/formatters/trip_report.py` — `_fmt_val` (~Z.691–810), `_render_html_table` (Z.928), `_render_text_table` (Z.953), `_format_daylight_html` (Z.833–886), `_format_daylight_plain` (Z.888–927), #778
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` — `handleSave`, `isDirty` (Z.136, Z.334–360, Z.530), #776
+- **File:** `src/output/renderers/trip_report.py` — `_fmt_val` (~Z.691–810), `_render_html_table` (Z.928), `_render_text_table` (Z.953), `_format_daylight_html` (Z.833–886), `_format_daylight_plain` (Z.888–927), #778
 
 ## Estimated Scope
 
@@ -128,7 +128,7 @@ vollständig erhalten. Kein Import-Change nötig.
 - **AC-4:** Given `report_config.show_metrics_summary = false` ist persistiert / When der Test-Briefing-Versand ausgelöst wird / Then enthält die zugestellte E-Mail keinen `== Metriken-Ueberblick ==`-Block — per IMAP-Abruf verifiziert (echter Render, kein Mock)
   - Test: `tests/tdd/test_issue_776_metrics_toggle.py::test_metrics_summary_toggle_persists_and_hides_section` — setzt `report_config.show_metrics_summary=False` via PUT, löst Test-Versand aus, holt Mail per IMAP, assertiert dass der Metriken-Überblick-Block abwesend ist (Acceptance-Stage, GZ_STAGING_E2E-gated)
 
-- **AC-5:** Given `src/formatters/trip_report.py` nach dem Entfernen der fünf toten Methoden / When `format_email(trip, report_config, weather_data)` mit einem realen Trip auf Staging aufgerufen wird / Then ist das Render-Ergebnis byte-identisch (oder inhaltsgleich) zum Ergebnis vor der Löschung — bewiesen durch einen echten `format_email`-Aufruf (kein Mock), der HTML- und Plaintext-Output erzeugt und auf Nicht-Leer sowie Abwesenheit von `AttributeError`/`KeyError` prüft
+- **AC-5:** Given `src/output/renderers/trip_report.py` nach dem Entfernen der fünf toten Methoden / When `format_email(trip, report_config, weather_data)` mit einem realen Trip auf Staging aufgerufen wird / Then ist das Render-Ergebnis byte-identisch (oder inhaltsgleich) zum Ergebnis vor der Löschung — bewiesen durch einen echten `format_email`-Aufruf (kein Mock), der HTML- und Plaintext-Output erzeugt und auf Nicht-Leer sowie Abwesenheit von `AttributeError`/`KeyError` prüft
   - Test: `tests/tdd/test_issue_778_dead_code.py` — `test_format_email_renders_after_dead_code_removal` ruft `format_email` mit echten Segment-Objekten auf und assertiert nicht-leeren HTML+Plain-Output ohne `AttributeError`/`KeyError`; `test_dead_formatter_methods_removed` assertiert (als `# doc-compliance-test`), dass die fünf toten Methoden-Namen nicht mehr in `trip_report.py` vorkommen
 
 ## Known Limitations

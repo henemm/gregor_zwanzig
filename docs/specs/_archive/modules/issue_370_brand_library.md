@@ -43,7 +43,7 @@ Legt das kanonische Brand-Verzeichnis `frontend/src/lib/brand/` mit 6 Svelte-5-K
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `issue_369_token_bridge` | Upstream-Issue (Spec: `docs/specs/modules/issue_369_token_bridge.md`) | **PFLICHT vor Merge von #370.** Liefert 9 fehlende Tokens: `--g-ink-2`, `--g-ink-3`, `--g-ink-4`, `--g-font-mono`, `--g-font-sans`, `--g-r-3`, `--g-r-pill`, `--g-rule`, `--g-accent-deep`. Ohne diese Bridge rendert BrandWordmark mit Fallback-Font und falscher Punktfarbe. |
+| `issue_369_token_bridge` | Upstream-Issue (Spec: `docs/specs/_archive/modules/issue_369_token_bridge.md`) | **PFLICHT vor Merge von #370.** Liefert 9 fehlende Tokens: `--g-ink-2`, `--g-ink-3`, `--g-ink-4`, `--g-font-mono`, `--g-font-sans`, `--g-r-3`, `--g-r-pill`, `--g-rule`, `--g-accent-deep`. Ohne diese Bridge rendert BrandWordmark mit Fallback-Font und falscher Punktfarbe. |
 | `brand-kit.jsx` | Designquelle (`docs/design-requests/issue_15_atomic_design/spec/brand-kit.jsx`) | Kanonische Geometrie, Props, Massangaben und SVG-Pfade. Hoechste Autoritat — bei Widerspruch gewinnt diese Datei. |
 | `body-15-atomic-design-library.md` | Master-Spec (`docs/design-requests/issue_15_atomic_design/spec/body-15-atomic-design-library.md`) | Migrations-Reihenfolge (Schritt 2), Constraints C1–C6, Test-Hooks, Edge Cases. |
 | `frontend/src/app.css` | CSS-Datei (vorhanden) | Token-Quelle nach Merge von #369; liefert alle `--g-*`-Variablen die Brand-Komponenten benoetigen. |

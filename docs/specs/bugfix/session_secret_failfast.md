@@ -3,7 +3,7 @@ entity_id: session_secret_failfast
 type: bugfix
 created: 2026-09-06
 updated: 2026-09-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [security, bugfix, auth, go-api, frontend, issue-2139]
 ---

@@ -3,7 +3,7 @@ entity_id: feat_1459_alert_protokoll
 type: module
 created: 2026-08-02
 updated: 2026-08-18
-status: draft
+status: implemented
 version: "1.7"
 tags: [alerts, logging, trips, compare, epic-1458]
 ---

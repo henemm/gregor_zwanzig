@@ -18,7 +18,7 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/bug_497_preview_content.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_497_preview_content.md`.
 Prüft zwei Bugs: SMS-Präfix-Kürzung (Bug 1) und fehlende Fixture-Felder (Bug 2).
 Kein Mocking — conftest.py setzt GZ_TEST_FIXTURE_DIR automatisch (FixtureProvider).
 

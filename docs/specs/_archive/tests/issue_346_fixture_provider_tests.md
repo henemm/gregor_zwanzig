@@ -19,12 +19,12 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für den Python-Fixture-Provider aus
-`docs/specs/modules/issue_346_fixture_provider_e2e.md`. Jeder Test mappt 1:1 auf
+`docs/specs/_archive/modules/issue_346_fixture_provider_e2e.md`. Jeder Test mappt 1:1 auf
 ein Acceptance Criterion der Parent-Spec. Geprüft werden Protocol-Erfüllung,
 Provider-Selektion via `GZ_TEST_FIXTURE_DIR`, Prod-Schutz, Offline-Fetch,
 Timestamp-Verankerung, der conftest-Mechanismus und der `live`-Marker-Opt-out.
 
-Parent-Spec: `docs/specs/modules/issue_346_fixture_provider_e2e.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_346_fixture_provider_e2e.md` v1.0
 
 ## Source
 

@@ -81,8 +81,8 @@ Prioritätskette — kein Flag, keine Migration, gilt sofort für alle Trips ink
 | `_format_hhmm()` (`src/core/naismith.py:66-72`) | function | Clamp auf `23:59` (Zeile 71) — Ursache der Mitternachts-Klemme, die nach diesem Fix erstmals erreichbar wird |
 | Self-Heal-Bedingung (`src/services/trip_segments.py:66-69`) | guard | Greift NUR wenn ALLE `arrival_calculated` einer Stage `None` sind — bei teilweise gefülltem Zustand (manche Wegpunkte haben einen Wert, andere nicht) greift kein Self-Heal, Kette muss auch dafür robust sein (AC-7) |
 | `data/users/henning/trips/74de939c.json` | Fixture/Referenz | Echter Bestandstrip als Abnahme-Referenz (start_time 14:00 vs. veraltete time_window 07:00) |
-| `docs/specs/modules/issue_995_mail_bugs_bundle.md` | spec | Gruppe A wird durch diese Spec vollständig ersetzt (Flag-Ansatz verworfen) |
-| `docs/specs/modules/issue_783_776_778_briefing_fixes.md` | spec | Dokumentiert die jetzt obsolete alte Kette `time_window > arrival_override > stage.start_time > arrival_calculated` |
+| `docs/specs/_archive/modules/issue_995_mail_bugs_bundle.md` | spec | Gruppe A wird durch diese Spec vollständig ersetzt (Flag-Ansatz verworfen) |
+| `docs/specs/_archive/modules/issue_783_776_778_briefing_fixes.md` | spec | Dokumentiert die jetzt obsolete alte Kette `time_window > arrival_override > stage.start_time > arrival_calculated` |
 
 ## Implementation Details
 

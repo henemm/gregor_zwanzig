@@ -3,7 +3,7 @@ entity_id: feat_1728_s2_editor
 type: module
 created: 2026-08-15
 updated: 2026-08-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [metrics, sms, editor, frontend, aggregation]
 ---

@@ -76,8 +76,8 @@ Post-Deploy-Selftest (`prod_selftest.py`) für einen Prod-Deploy läuft:
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `_e2e_paths.py` | module | Bestehender Shared-Helper (`cached_scope_for_sha`, `read_last_gate_scope`, `write_last_gate_scope`); wird um `_detect_scope_from_git_diff()` (Teil B) ergänzt |
-| `docs/specs/modules/issue_916_988_gate_scope_robustness.md` | spec | Erste Iteration: Marker-SHA als Diff-Basis (#916) |
-| `docs/specs/modules/issue_1084_gate_scope_cache.md` | spec | Zweite Iteration: Scope-Cache im Marker (#1084) |
+| `docs/specs/_archive/modules/issue_916_988_gate_scope_robustness.md` | spec | Erste Iteration: Marker-SHA als Diff-Basis (#916) |
+| `docs/specs/_archive/modules/issue_1084_gate_scope_cache.md` | spec | Zweite Iteration: Scope-Cache im Marker (#1084) |
 | `docs/context/fix-1096-gate-scope.md` | context | Dritte Iteration: symmetrischer Cache-Guard beider Gate-Dateien (#1096, `fab61d76`) — direkte Voraussetzung für Teil A dieser Spec |
 | `deploy-gregor-prod.sh` (henemm-infra) | script | Ruft `staging_gate.py --check --expected-commit` (Preflight) und danach `--check` (Post-Reset) auf; wird für Teil C um das Schreiben von `last_prod_deploy.json` ergänzt (separater Commit, MQ an `infra`) |
 | `tests/tdd/test_issue_916_gate_scope_marker.py` | test | Bestehende Marker-Tests, MÜSSEN unverändert grün bleiben |

@@ -7,7 +7,7 @@ status: implemented
 
 # Tests: Issue #701 — Alerts-Tab metrik-gekoppelt
 
-Spec: `docs/specs/modules/issue_701_alerts_metrik_sync.md`
+Spec: `docs/specs/_archive/modules/issue_701_alerts_metrik_sync.md`
 
 ## Test-Entities
 

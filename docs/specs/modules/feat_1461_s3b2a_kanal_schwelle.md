@@ -3,7 +3,7 @@ entity_id: feat_1461_s3b2a_kanal_schwelle
 type: feature
 created: 2026-08-05
 updated: 2026-08-05
-status: draft
+status: implemented
 version: "1.1"
 tags: [alerts, channels, threshold, trip, epic-1458, issue-1461, s3b2a]
 ---

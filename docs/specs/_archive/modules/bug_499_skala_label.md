@@ -27,7 +27,7 @@ unverändert (`friendlyMap`, `indicatorCapable` etc. — nur UI-Labels ändern s
 | `frontend/src/lib/components/trip-detail/ActiveMetricRow.svelte` | Z. 59 Button | `Skala` → `Einfach` |
 | `frontend/src/lib/components/WeatherConfigDialog.svelte` | Z. 15 | `scale: 'Skala'` → `scale: 'Einfach'` |
 | `frontend/src/lib/components/trip-wizard/steps/Step3Weather.svelte` | Z. 81 | `scale: 'Skala'` → `scale: 'Einfach'` |
-| `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` | Z. 171 | `als Skala` → `als Einfach` |
+| `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` | Z. 171 | `als Skala` → `als Einfach` |
 | `frontend/src/lib/components/trip-detail/TablePreview.svelte` | Z. 108 | `·skala` → `·einfach` |
 
 ## Acceptance Criteria

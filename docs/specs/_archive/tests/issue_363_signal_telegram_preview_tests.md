@@ -21,14 +21,14 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die Signal/Telegram-Vorschau aus
-`docs/specs/modules/issue_363_signal_telegram_preview.md`. Jeder pytest-Test
+`docs/specs/_archive/modules/issue_363_signal_telegram_preview.md`. Jeder pytest-Test
 mappt auf ein Acceptance Criterion (AC-1..AC-4 + Service-Ebene). AC-5 (Go-Proxy)
 und AC-6 (`buildPreviewUrl`) werden in dieser RED-Phase NICHT getestet — der
 Go-`PreviewProxyHandler` ist bereits channel-parametrisiert und `buildPreviewUrl`
 ist eine reine Typ-Erweiterung; beide würden vorab grün testen und gehören in
 die GREEN-Phase.
 
-Parent-Spec: `docs/specs/modules/issue_363_signal_telegram_preview.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_363_signal_telegram_preview.md` v1.0
 
 ## Source
 

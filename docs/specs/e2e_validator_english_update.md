@@ -3,12 +3,14 @@ entity_id: e2e_validator_english_update
 type: fix
 created: 2026-01-12
 updated: 2026-01-12
-status: draft
+status: deprecated
 version: "1.0"
 tags: [e2e, validator, i18n, testing]
 ---
 
 # E2E Validator English Update
+
+> Abgelöst/entfernt durch ADR-0001 / #129 — die NiceGUI-UI unter `src/web/` wurde am 2026-05-15 ersatzlos entfernt; diese Spec ist nur noch historisch.
 
 ## Approval
 

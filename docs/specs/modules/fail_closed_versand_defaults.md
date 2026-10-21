@@ -3,7 +3,7 @@ entity_id: fail_closed_versand_defaults
 type: module
 created: 2026-10-05
 updated: 2026-10-05
-status: approved
+status: implemented
 version: "1.0"
 tags: [bug, versand-zuverlaessigkeit, fail-closed, premium-sms, briefing-slots, epic-2505]
 ---

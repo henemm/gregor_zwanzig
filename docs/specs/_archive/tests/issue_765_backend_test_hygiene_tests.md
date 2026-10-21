@@ -18,11 +18,11 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_765_backend_test_hygiene.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_765_backend_test_hygiene.md`.
 Das Detektor-Gate prüft die Test-Artefakte selbst (Compliance-Test, kein
 Produkt-Verhalten) und verhindert Regress des Backend-Datei-Inhalt-Anti-Patterns.
 
-Parent-Spec: `docs/specs/modules/issue_765_backend_test_hygiene.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_765_backend_test_hygiene.md` v1.0
 
 ## Source
 

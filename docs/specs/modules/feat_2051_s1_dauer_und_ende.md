@@ -3,7 +3,7 @@ entity_id: feat_2051_s1_dauer_und_ende
 type: feature
 created: 2026-08-21
 updated: 2026-08-22
-status: approved
+status: implemented
 version: "1.1"
 tags: [alarm, briefing, nowcast, radar, dauer, ende]
 ---

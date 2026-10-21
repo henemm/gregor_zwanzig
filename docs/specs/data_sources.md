@@ -3,7 +3,7 @@ entity_id: data_sources
 type: reference
 created: 2025-12-31
 updated: 2025-12-31
-status: approved
+status: implemented
 version: "1.0"
 tags: [provider, api, data-governance]
 owner: henning

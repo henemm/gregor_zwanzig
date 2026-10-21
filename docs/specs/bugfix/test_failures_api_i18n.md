@@ -2,13 +2,15 @@
 entity_id: test_failures_api_i18n
 type: bugfix
 created: 2026-02-11
-status: draft
+status: deprecated
 version: "1.0"
 tags: [bugfix, api, i18n, tests]
 workflow: test-failures-api-i18n
 ---
 
 # Bugfix: Test Failures - API Mismatch & i18n
+
+> Abgelöst/entfernt durch ADR-0001 / #129 — die NiceGUI-UI unter `src/web/` wurde am 2026-05-15 ersatzlos entfernt; diese Spec ist nur noch historisch.
 
 - [ ] Approved for implementation
 

@@ -23,7 +23,7 @@ zugehörigen `data-slot`/`data-size`/`data-variant`-Attributen), liest den
 computed style und prüft gegen JSX-Vorgaben. Token-Vergleich für Eyebrow als
 Bonus-AC.
 
-Parent-Spec: `docs/specs/modules/issue_577_atoms_sync_v2.md`.
+Parent-Spec: `docs/specs/_archive/modules/issue_577_atoms_sync_v2.md`.
 
 ## Source
 

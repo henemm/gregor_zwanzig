@@ -3,7 +3,7 @@ entity_id: feat_2439_push_eingang_prod_scharf
 type: module
 created: 2026-10-20
 updated: 2026-10-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [befehle, push-eingang, webhook, seven-io, stalwart, prod-betrieb, live-tests, "#2439"]
 ---

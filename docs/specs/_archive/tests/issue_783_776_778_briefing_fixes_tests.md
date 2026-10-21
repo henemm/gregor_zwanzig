@@ -18,7 +18,7 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest fuer `docs/specs/modules/issue_783_776_778_briefing_fixes.md`.
+Test-Manifest fuer `docs/specs/_archive/modules/issue_783_776_778_briefing_fixes.md`.
 Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec. Keine Mocks —
 echte Modell-Objekte (#783), echter `format_email`-Aufruf (#778), Staging-IMAP
 und Playwright in der Acceptance-Stage (#776, #783-AC-2).

@@ -19,12 +19,12 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest fuer die isolierten clone-basierten Parallel-Workspaces aus
-`docs/specs/modules/issue_348_parallel_workspaces.md`. Jeder Test mappt 1:1 auf
+`docs/specs/_archive/modules/issue_348_parallel_workspaces.md`. Jeder Test mappt 1:1 auf
 ein Acceptance Criterion der Parent-Spec. KEINE Mocks — alle Workspace-Tests
 fuehren ECHTE git-Operationen in `tmp_path` aus (Quell-Repo via `git init`,
 Klon via `gz-workspace new`).
 
-Parent-Spec: `docs/specs/modules/issue_348_parallel_workspaces.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_348_parallel_workspaces.md` v1.0
 
 ## Source
 

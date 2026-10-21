@@ -19,12 +19,12 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für den Umbau auf **derive-on-write** aus
-`docs/specs/modules/issue_802_fahrrad_segment_zeit.md` v2.0. Mock-frei: echte
+`docs/specs/_archive/modules/issue_802_fahrrad_segment_zeit.md` v2.0. Mock-frei: echte
 `compute_stage_arrivals`, echter `save_trip`-Roundtrip auf Disk (tmp), echter Scheduler,
 echte Backfill-Migration. Cross-Language-Konsistenz (AC-3) wird über einen **fixen
 Wertekontrakt** geprüft, den Python- UND Go-Test gegen dieselben erwarteten Strings asserten.
 
-Parent-Spec: `docs/specs/modules/issue_802_fahrrad_segment_zeit.md` v2.0
+Parent-Spec: `docs/specs/_archive/modules/issue_802_fahrrad_segment_zeit.md` v2.0
 
 ## Source
 

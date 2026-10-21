@@ -5,7 +5,7 @@ created: 2026-06-12
 updated: 2026-06-12
 status: implemented
 version: 1.0
-spec: docs/specs/modules/issue_773_radar_alert_wiring.md
+spec: docs/specs/_archive/modules/issue_773_radar_alert_wiring.md
 ---
 
 # Test-Manifest: #773 Radar-Alert-Verdrahtung + echte Alert-E2E

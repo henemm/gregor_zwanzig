@@ -3,7 +3,7 @@ entity_id: feat_2181_s2c_gewitter_archiv_ablation
 type: feature
 created: 2026-09-08
 updated: 2026-09-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [analysis, gewitter, cape, ablation, khw, messwerkzeug]
 ---

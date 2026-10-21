@@ -19,7 +19,7 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für Issue #830. Jeder pytest-Test mappt auf ein Acceptance Criterion
-der Parent-Spec `docs/specs/modules/issue_830_radar_alert_validator.md`.
+der Parent-Spec `docs/specs/_archive/modules/issue_830_radar_alert_validator.md`.
 
 Mock-frei: Frame-Seam via `frame_source`-DI erlaubt (dokumentierter Seam). IMAP-Calls
 gegen echtes Stalwart-Postfach. Gate-Tests gegen echtes Temp-Git-Repo.

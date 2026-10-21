@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_753_746_test_hygiene_and_planner_checkpoint.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_753_746_test_hygiene_and_planner_checkpoint.md`.
 Alle Tests sind `# doc-compliance-test` (Workflow-Artefakte werden geprüft, kein Produktionscode).
 
-Parent-Spec: `docs/specs/modules/issue_753_746_test_hygiene_and_planner_checkpoint.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_753_746_test_hygiene_and_planner_checkpoint.md` v1.0
 
 ## Source
 

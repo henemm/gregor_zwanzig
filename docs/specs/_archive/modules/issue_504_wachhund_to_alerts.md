@@ -25,7 +25,7 @@ Der Begriff „Wachhund-Schwellen" war nie vom Product Owner beabsichtigt — er
 
 - **File:** `frontend/src/lib/components/trip-detail/TripOverview.svelte`
 - **File:** `frontend/src/lib/components/trip-detail/TripOverview.issue487.test.ts`
-- **Docs:** `docs/specs/modules/issue_487_trip_detail_overview_cards.md`
+- **Docs:** `docs/specs/_archive/modules/issue_487_trip_detail_overview_cards.md`
 - **Docs:** `docs/design-system/COPY.md`
 
 ## Estimated Scope
@@ -69,7 +69,7 @@ Test-Beschreibungen (keine Logik):
 
 ### Änderungen in Docs
 
-- `docs/specs/modules/issue_487_trip_detail_overview_cards.md`: `"Wachhund-Schwellen"` → `"Alarm-Schwellen"` (Titel, AC-3, Code-Beispiel, Sektionsüberschrift)
+- `docs/specs/_archive/modules/issue_487_trip_detail_overview_cards.md`: `"Wachhund-Schwellen"` → `"Alarm-Schwellen"` (Titel, AC-3, Code-Beispiel, Sektionsüberschrift)
 - `docs/design-system/COPY.md`: Sektionsname `"Verbotene Worte (Drift-Wachhund)"` → `"Verbotene Worte (Terminologie-Drift)"`
 
 ### Begründung für „Alarm-Schwellen"

@@ -1,3 +1,10 @@
+---
+entity_id: fix_1224_remove_daylight_toggle
+type: fast
+created: 2026-07-22
+status: implemented
+---
+
 # Mini-Spec: #1224 — toten „Tageslicht anzeigen"-Toggle entfernen
 
 - **Status:** Draft

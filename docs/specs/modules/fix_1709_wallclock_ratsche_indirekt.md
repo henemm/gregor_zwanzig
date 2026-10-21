@@ -3,7 +3,7 @@ entity_id: fix_1709_wallclock_ratsche_indirekt
 type: bugfix
 created: 2026-08-15
 updated: 2026-08-15
-status: draft
+status: implemented
 workflow: fix-1709-wallclock-ratsche-indirekt
 version: "1.0"
 tags: [issue-1709, tests, fixtures, ratsche, wanduhr, ci-ampel, freezegun]

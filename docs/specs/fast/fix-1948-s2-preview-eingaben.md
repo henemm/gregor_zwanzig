@@ -1,3 +1,10 @@
+---
+entity_id: fix_1948_s2_preview_eingaben
+type: fast
+created: 2026-08-18
+status: implemented
+---
+
 # Mini-Spec: fix-1948-s2-preview-eingaben
 
 Nachbesserung zu #1948 S2 (Staging-E2E BROKEN 2026-08-18) — behebt zugleich #1965.

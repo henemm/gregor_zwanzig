@@ -21,7 +21,7 @@ phase: phase5_tdd_red
 Test-Manifest für `tests/tdd/test_bug_600_tdd_verhaltenstest.py`.
 Mappt die drei Test-Funktionen auf die Acceptance Criteria der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_600_tdd_verhaltenstest.md`
+Parent-Spec: `docs/specs/_archive/modules/bug_600_tdd_verhaltenstest.md`
 
 ## Source
 

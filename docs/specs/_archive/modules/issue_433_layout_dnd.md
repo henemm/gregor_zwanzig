@@ -29,7 +29,7 @@ aus `Step2Stages.svelte` direkt übertragen wird.
 - **Dateien (geändert, Bottom-Up-Reihenfolge):**
   - `frontend/src/lib/components/trip-detail/BucketSection.svelte` — Hauptänderung: dndzone + dndItems-State
   - `frontend/src/lib/components/shared/OutputLayoutEditor.svelte` — Prop-Durchleitung `onDndReorder`
-  - `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` — Consumer-Handler `onDndReorder`
+  - `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` — Consumer-Handler `onDndReorder`
   - `frontend/src/lib/components/trip-wizard/steps/Step4Layout.svelte` — Consumer-Handler `handleDndReorder`
 
 ## Dependencies

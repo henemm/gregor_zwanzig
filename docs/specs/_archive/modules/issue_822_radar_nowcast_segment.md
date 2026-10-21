@@ -46,8 +46,8 @@ Ersetzt den Einzelpunkt-Check (`stage.waypoints[0]`) in `TripAlertService.check_
 | `src/output/renderers/email/helpers.py` — `build_segment_label(change_like, segments, *, tz)` | upstream | Erzeugt „Etappe N, km X–Y, HH:MM–HH:MM" (oder Fallback) |
 | `src/utils/timezone.py` — `tz_for_coords(lat, lon) -> ZoneInfo` | upstream | Trip-Zeitzone aus den Koordinaten des ersten Segment-Startpunkts |
 | `src/services/trip_alert.py` — `get_time_until_next_alert(trip.id)`, Throttle/Recording-Semantik (#773) | internal | Cooldown-Wert auslesen; Recording-Semantik bleibt unverändert |
-| `src/outputs/email.py` — `EmailOutput` | downstream | E-Mail-Versand |
-| `src/outputs/telegram.py` — `TelegramOutput` | downstream | Telegram-Versand |
+| `src/output/channels/email.py` — `EmailOutput` | downstream | E-Mail-Versand |
+| `src/output/channels/telegram.py` — `TelegramOutput` | downstream | Telegram-Versand |
 
 ## Implementation Details
 

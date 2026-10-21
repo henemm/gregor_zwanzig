@@ -1,3 +1,10 @@
+---
+entity_id: fix_1436_mobile_table_display
+type: fast
+created: 2026-08-02
+status: implemented
+---
+
 # Mini-Spec: fix-1436-mobile-table-display
 
 ## Was ändert sich

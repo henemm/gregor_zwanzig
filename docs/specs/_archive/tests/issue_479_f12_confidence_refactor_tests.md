@@ -18,12 +18,12 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_479_f12_confidence_refactor.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_479_f12_confidence_refactor.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion (AC-1 bis AC-10) der
 Parent-Spec. Keine Mocks — pure-funktionale Tests auf `compute_stability`,
 strukturelle Tests auf Klassen-Felder / Methoden-Signaturen.
 
-Parent-Spec: `docs/specs/modules/issue_479_f12_confidence_refactor.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_479_f12_confidence_refactor.md` v1.0
 
 ## Source
 

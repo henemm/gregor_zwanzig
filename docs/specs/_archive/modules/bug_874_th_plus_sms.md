@@ -26,7 +26,7 @@ beweisen — für Morgen- und Abendbriefing-Kontext.
 > Dicts in `trip_report_scheduler.py` wurde jedoch korrigiert — sie aggregiert
 > jetzt über alle Segmente der tatsächlichen Folge-Etappe statt nur die
 > Restdaten des letzten Segments von heute zu prüfen. Details:
-> `docs/specs/bugfix/fix_1275_sms_th_mismatch.md`.
+> `docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md`.
 
 ## Source
 
@@ -43,7 +43,7 @@ beweisen — für Morgen- und Abendbriefing-Kontext.
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `src/formatters/sms_trip.py` | MODIFY ggf. | Layer A: thunder_forecast → NormalizedForecast.days[1] |
+| `src/output/renderers/sms_trip.py` | MODIFY ggf. | Layer A: thunder_forecast → NormalizedForecast.days[1] |
 | `src/app/models.py` | READ | ThunderLevel, SegmentWeatherData |
 | `src/output/tokens/builder.py` | READ | Layer B (unverändert) |
 

@@ -22,7 +22,7 @@ authentifizierten Staging-Seite Test-DIVs mit `var(--g-r-3)`, `var(--g-r-4)`,
 `var(--g-info)`, liest den computed style. Prüft dass die Effektivwerte
 den JSX-Vorgaben entsprechen.
 
-Parent-Spec: `docs/specs/modules/issue_576_tokens_sync_v2.md`.
+Parent-Spec: `docs/specs/_archive/modules/issue_576_tokens_sync_v2.md`.
 
 ## Source
 

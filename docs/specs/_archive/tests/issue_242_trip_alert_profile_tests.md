@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_242_trip_alert_profile.md`. Jeder
+Test-Manifest für `docs/specs/_archive/modules/issue_242_trip_alert_profile.md`. Jeder
 pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_242_trip_alert_profile.md` v1.0.0
+Parent-Spec: `docs/specs/_archive/modules/issue_242_trip_alert_profile.md` v1.0.0
 
 ## Source
 

@@ -3,7 +3,7 @@ entity_id: fix_1369_inbound_telegram_poll_entfernen
 type: module
 created: 2026-10-12
 updated: 2026-10-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, telegram, egress, security, rueckbau]
 workflow: fix-1369-inbound-telegram-poll-entfernen

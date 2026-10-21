@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_226_dni_wmo_passthrough.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_226_dni_wmo_passthrough.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_226_dni_wmo_passthrough.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_226_dni_wmo_passthrough.md` v1.0
 
 ## Source
 

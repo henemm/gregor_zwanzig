@@ -3,7 +3,7 @@ entity_id: feat_1676_s2a_premium_sms_versand
 type: module
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, premium, garmin, seven-io, channel, dual-stack]
 ---

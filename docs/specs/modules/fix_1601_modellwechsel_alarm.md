@@ -3,7 +3,7 @@ entity_id: fix_1601_modellwechsel_alarm
 type: bugfix
 created: 2026-08-09
 updated: 2026-08-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [cape, alarme, delta, modellwechsel, issue-1601]
 ---

@@ -74,8 +74,8 @@ identisch, und die Tests werden auf ein hermetisches Temp-Repo umgestellt.
 |--------|------|---------|
 | `_e2e_paths.py::read_last_gate_scope_entry` | intern | Bestehende Lesefunktion für den vollen Marker-Eintrag — Basis für den neuen Shared-Helper |
 | `_e2e_paths.py::head_sha` | intern | Liefert den aktuellen HEAD-SHA für den Cache-Abgleich |
-| `docs/specs/modules/issue_1084_gate_scope_cache.md` | spec | Direkter Vorläufer — führt den Marker-Scope-Cache in `prod_selftest.py` ein; diese Spec spiegelt ihn nach `staging_gate.py` und konsolidiert die Duplikat-Logik |
-| `docs/specs/modules/issue_916_988_gate_scope_robustness.md` | spec | Ursprünglicher Marker-Mechanismus (Diff-Basis), bleibt als Fallback-Pfad unverändert bestehen |
+| `docs/specs/_archive/modules/issue_1084_gate_scope_cache.md` | spec | Direkter Vorläufer — führt den Marker-Scope-Cache in `prod_selftest.py` ein; diese Spec spiegelt ihn nach `staging_gate.py` und konsolidiert die Duplikat-Logik |
+| `docs/specs/_archive/modules/issue_916_988_gate_scope_robustness.md` | spec | Ursprünglicher Marker-Mechanismus (Diff-Basis), bleibt als Fallback-Pfad unverändert bestehen |
 | `tests/tdd/test_issue_916_gate_scope_marker.py::_setup_repo` | test-pattern | Vorbild für hermetisches Temp-Git-Repo, wird für die Migration von `TestGateCheckModeB` wiederverwendet |
 | `tests/tdd/test_issue_1084_gate_scope_cache.py` | test | Bestehende Cache-Tests für `prod_selftest.py` — müssen nach der Konsolidierung auf den Shared-Helper unverändert grün bleiben |
 | `deploy-gregor-prod.sh` (henemm-infra) | script | Ruft `staging_gate.py --check` ohne `--scope` auf — bleibt unverändert, profitiert aber von der Fix-Korrektheit bei Wiederholungsläufen |

@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest fuer die HorizonChip-UI-Erweiterung aus
-`docs/specs/modules/issue_343_horizon_chip_ui.md`. Jeder Test mappt 1:1 auf
+`docs/specs/_archive/modules/issue_343_horizon_chip_ui.md`. Jeder Test mappt 1:1 auf
 ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_343_horizon_chip_ui.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_343_horizon_chip_ui.md` v1.0
 
 ## Source
 
@@ -94,8 +94,8 @@ Playwright-E2E-Suite.
 ## Acceptance Criteria
 
 - **AC-T1:** Given die Test-Dateien existieren und Implementierung fehlt /
-  When `node --test src/lib/components/ui/horizon-chip/HorizonChip.test.ts
-  src/lib/utils/horizonHelpers.test.ts` laeuft /
+  When `node --test frontend/src/lib/components/ui/horizon-chip/HorizonChip.test.ts
+  frontend/src/lib/utils/horizonHelpers.test.ts` laeuft /
   Then schlagen alle 11 Vitest-/Node-Tests fehl (RED-Phase erfolgreich).
 
 - **AC-T2:** Given die E2E-Spec existiert und Implementierung fehlt /

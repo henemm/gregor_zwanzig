@@ -155,8 +155,8 @@ Wird umformuliert zu:
 ```python
 """Regression-Guard: Issue #258 Hook-Architektur (Fast-Path + cmd_cleanup).
 
-Spec:    docs/specs/modules/issue_258_hook_arch_fix.md (Original-Spec, #258)
-Update:  docs/specs/modules/bug_333_test_issue_258_obsolete.md (Test-Refresh, #333)
+Spec:    docs/specs/_archive/modules/issue_258_hook_arch_fix.md (Original-Spec, #258)
+Update:  docs/specs/_archive/modules/bug_333_test_issue_258_obsolete.md (Test-Refresh, #333)
 Issue:   https://github.com/henemm/gregor_zwanzig/issues/258
 
 Tests gegen 14 Acceptance Criteria, gruppiert in 4 Test-Klassen:

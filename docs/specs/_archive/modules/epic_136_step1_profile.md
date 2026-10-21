@@ -42,7 +42,7 @@ Weiter-Button, damit dieser disabled bleibt, solange Pflichtfelder leer sind.
 ## Verweis auf Master-Spec
 
 Diese Sub-Spec ist eine Detail-Spezifikation der approved Master-Spec
-[`docs/specs/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
+[`docs/specs/_archive/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
 
 - **§1.2 Datenmodell** — `ActivityType` (5 Werte), `Trip.shortcode?`, `Trip.activity?`.
 - **§1.3 Mapping** — `mapActivityToProfile()` wird in Step 1 NICHT direkt aufgerufen (Step 4-Concern), aber `state.activity` ist die Eingabe fuer das spaetere Mapping.
@@ -294,7 +294,7 @@ export async function fillStep1(page: Page, input: Step1Input): Promise<void> {
 
 ### 10. Master-Spec-Changelog-Eintrag
 
-`docs/specs/modules/epic_136_trip_wizard.md` erhaelt einen neuen Changelog-Eintrag (kein Approval-Reset, weil rein additive `$derived`-Erweiterung):
+`docs/specs/_archive/modules/epic_136_trip_wizard.md` erhaelt einen neuen Changelog-Eintrag (kein Approval-Reset, weil rein additive `$derived`-Erweiterung):
 
 ```markdown
 - 2026-05-10: §3.1 erweitert um additives Feld
@@ -363,11 +363,11 @@ export async function fillStep1(page: Page, input: Step1Input): Promise<void> {
 | `frontend/src/lib/components/trip-wizard/TripWizardShell.svelte` | Weiter-Button `disabled`-Prop ergaenzen (1-Zeilen-Edit) | +1 |
 | `frontend/e2e/trip-wizard-shell.spec.ts` | 5 Tests (AC#5, AC#5+#6, AC#5a, AC#8, AC#11) via `fillStep1`-Helper migrieren; AC#5a wechselt Semantik (`toBeDisabled` vor `fillStep1`) | ~30 |
 | `frontend/e2e/helpers.ts` | Optional: `fillStep1` und `Step1Input` exportieren (Wieder-Verwendung) | +25 |
-| `docs/specs/modules/epic_136_trip_wizard.md` | Changelog-Eintrag fuer `canAdvanceStep1` | +5 |
+| `docs/specs/_archive/modules/epic_136_trip_wizard.md` | Changelog-Eintrag fuer `canAdvanceStep1` | +5 |
 
 ### NICHT BERUEHRT
 
-- `frontend/src/lib/components/trip-wizard/wizardHelpers.ts` (Schema unveraendert; `mapActivityToProfile` erst in #164 wieder relevant)
+- `frontend/src/lib/components/shared/wizardHelpers.ts` (Schema unveraendert; `mapActivityToProfile` erst in #164 wieder relevant)
 - `frontend/src/routes/trips/new/+page.svelte` (Mount-Punkt unveraendert)
 - `frontend/src/lib/components/trip-wizard/Stepper.svelte` (pure presentational, keine Aenderung)
 - Andere `steps/Step{2,3,4}*.svelte` (Folge-Issues #162–#164)

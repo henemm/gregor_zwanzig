@@ -3,7 +3,7 @@ entity_id: egress_guard
 type: module
 created: 2026-07-21
 updated: 2026-07-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [egress, isolation, staging, security]
 workflow: feat-1337-egress-guard-core

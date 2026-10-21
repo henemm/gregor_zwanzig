@@ -103,7 +103,7 @@ Kein Backend, keine Daten-Schema-Berührung, keine geteilten Utils geändert.
 
 ## Related — Spec-Nachzug (Pflicht)
 
-`docs/specs/modules/issue_302_trip_detail_page.md` §163 + §313 ("Statuszeile
+`docs/specs/_archive/modules/issue_302_trip_detail_page.md` §163 + §313 ("Statuszeile
 'AKTIV · TAG N VON M'") erhält im selben Workflow eine additive #336-Korrektur-Notiz,
 damit Doku und Code nicht driften.
 

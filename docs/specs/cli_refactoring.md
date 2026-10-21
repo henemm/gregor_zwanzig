@@ -314,7 +314,7 @@ class ForecastService:
         return ts
 ```
 
-### 5.4 src/outputs/base.py (NEW)
+### 5.4 src/output/channels/base.py (NEW)
 
 ```python
 """Output channel protocol."""

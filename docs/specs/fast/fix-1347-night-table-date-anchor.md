@@ -1,3 +1,10 @@
+---
+entity_id: fix_1347_night_table_date_anchor
+type: fast
+created: 2026-07-22
+status: implemented
+---
+
 # Mini-Spec: #1347 — Nacht-Tabelle Datums-Anker kanonisch
 
 - **Status:** Draft

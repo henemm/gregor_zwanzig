@@ -3,7 +3,7 @@ entity_id: fix_1584c_compare_alarm_zeitfenster
 type: bugfix
 created: 2026-08-08
 updated: 2026-08-08
-status: draft
+status: implemented
 workflow: fix-1584c-compare-zeitfenster
 version: "1.0"
 tags: [issue-1584, compare, alerts, day-window, adr-0035, adr-0009]
@@ -369,7 +369,7 @@ Implementierung gleichermaßen grün bliebe, ist wertlos (s. Mutations-Block).
   `CompareLocationWeatherSource.fetch()`). Es entsteht kein neuer
   Zeitbegriff und kein neuer Auflöser — nur ein weiterer Aufrufer derselben,
   bereits etablierten Auflösung, analog zum Ziel-Segment-Konsumenten aus
-  #1584 (Trip-Scheibe). `docs/adr/0035-...md` bekommt einen kurzen
+  #1584 (Trip-Scheibe). `docs/adr/0035-ein-tagesfenster-fuer-trip-und-ortsvergleich.md` bekommt einen kurzen
   Ergänzungs-Absatz für diesen Konsumenten. Die 26h-Anker-Höchstalter-Regel
   stützt zusätzlich ADR-0009 (Alerts als Abweichungs-Wächter gegen den
   Briefing-Stand — ohne aktuellen Briefing-Stand gibt es keinen validen

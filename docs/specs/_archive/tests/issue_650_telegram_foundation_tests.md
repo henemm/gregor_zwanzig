@@ -10,7 +10,7 @@ tags: [telegram, outputs, inline-keyboard, bot-commands, tests, epic-639]
 
 # Tests: #650 Telegram-Foundation — Inline-Keyboards + persistentes Bot-Menü
 
-Test-Spec zu `docs/specs/modules/feature_650_telegram_inline_keyboards.md`.
+Test-Spec zu `docs/specs/_archive/modules/feature_650_telegram_inline_keyboards.md`.
 
 Mock-frei auf zwei Ebenen (KEIN `Mock()`/`patch()`/`MagicMock`):
 1. **Echte Telegram-Bot-API** — gated auf `GZ_TELEGRAM_BOT_TOKEN` + `GZ_TELEGRAM_TEST_CHAT_ID`;

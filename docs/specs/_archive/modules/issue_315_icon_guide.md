@@ -105,7 +105,7 @@ Faustformel: Ein Name, der als JavaScript-Bezeichner allein stehend wie eine Var
 **Wichtig:** Für Wetter-Icons (Sonne, Regen, Schnee, Gewitter usw.) ausschließlich
 `<WIcon kind="..." />` aus `$lib/components/ui/wicon` verwenden. Lucide-Wetter-Icons
 (`Cloud`, `Sun`, `CloudRain`, …) dürfen in der App-UI NICHT direkt importiert werden.
-WIcon ist in `docs/specs/modules/issue_322_wicon_komponente.md` spezifiziert.
+WIcon ist in `docs/specs/_archive/modules/issue_322_wicon_komponente.md` spezifiziert.
 
 Kreuzreferenz: AP-009 (Emojis als Icons verboten), AP-005 (kein Icon-Überfluss).
 ```

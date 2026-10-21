@@ -3,7 +3,7 @@ entity_id: fix_1661_anker_vom_falschen_tag
 type: bugfix
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 workflow: fix-1661-anker-vom-falschen-tag
 version: "1.0"
 tags: [alerts, trip, compare, day-window, anchor, issue-1661, observability]

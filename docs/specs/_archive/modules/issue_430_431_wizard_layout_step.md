@@ -40,7 +40,7 @@ damit teilen Wizard und Trip-Detail-Tab dieselbe Layout-Logik.
   - `frontend/src/lib/components/trip-wizard/stepperCompact.ts` (geändert)
   - `frontend/src/lib/components/trip-wizard/stepperState.ts` (geändert — Doc-Comment)
   - `frontend/src/lib/components/trip-wizard/TripWizardShell.svelte` (geändert)
-  - `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` (refactored zum Wrapper)
+  - `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` (refactored zum Wrapper)
 - **Dateien (neu):**
   - `frontend/src/lib/components/shared/OutputLayoutEditor.svelte` (NEU)
   - `frontend/src/lib/components/trip-wizard/steps/Step4Layout.svelte` (NEU)

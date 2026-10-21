@@ -18,11 +18,11 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_445_metric_entry_cleanup.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_445_metric_entry_cleanup.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec. Die Tests lesen
 die echten Svelte-Dateien (keine Mocks, statische Analyse).
 
-Parent-Spec: `docs/specs/modules/issue_445_metric_entry_cleanup.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_445_metric_entry_cleanup.md` v1.0
 
 ## Source
 

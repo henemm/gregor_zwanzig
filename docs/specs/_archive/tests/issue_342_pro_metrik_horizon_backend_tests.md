@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest fuer den Python-Renderer-Filter aus
-`docs/specs/modules/issue_342_pro_metrik_horizon_backend.md`. Jeder pytest-Test
+`docs/specs/_archive/modules/issue_342_pro_metrik_horizon_backend.md`. Jeder pytest-Test
 mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_342_pro_metrik_horizon_backend.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_342_pro_metrik_horizon_backend.md` v1.0
 
 ## Source
 

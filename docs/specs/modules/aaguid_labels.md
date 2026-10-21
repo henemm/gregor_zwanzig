@@ -3,7 +3,7 @@ entity_id: aaguid_labels
 type: module
 created: 2026-05-30
 updated: 2026-05-30
-status: active
+status: implemented
 version: "1.0"
 tags: [go, sveltekit, auth, webauthn, passkey, aaguid, ux]
 ---

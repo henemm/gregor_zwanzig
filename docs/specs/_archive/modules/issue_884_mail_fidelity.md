@@ -306,7 +306,7 @@ keine — reiner Renderer-Fidelity-Fix, keine neuen Architektur-Entscheidungen
 ## Was sich NICHT ändert
 
 - Kein neues Datenmodell-Feld (`thunder_sq_color` aus `format_trend_tokens()` reicht für Risk-Dot)
-- Keine Änderung an API-Schnittstellen (`/api/briefing`, `src/outputs/email.py`)
+- Keine Änderung an API-Schnittstellen (`/api/briefing`, `src/output/channels/email.py`)
 - Stirnlampe bleibt entfernt (PO-Entscheidung aus #790)
 - Tages-Summe wird nicht eingebaut (wurde aus aktuellem Cloud-Design entfernt)
 - `EmailMetricsSummary` wird nicht implementiert (JSX-only Opt-In, Briefing zeigt immer Quick-Take-Text)

@@ -3,7 +3,7 @@ entity_id: fix_1592_c2_cape_riskengine
 type: bugfix
 created: 2026-08-08
 updated: 2026-08-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, cape, risk-engine, model-registry, deckelung, issue-1592]
 ---

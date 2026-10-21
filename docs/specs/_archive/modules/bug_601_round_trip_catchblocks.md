@@ -26,7 +26,7 @@ Der `profil`-Bug in `compare_preset.go` wurde bereits durch #591 behoben.
 - **Frontend:** `frontend/src/lib/components/compare/compareWizardState.svelte.ts:131`
 - **Frontend:** `frontend/src/routes/trips/[id]/+page.svelte:110`
 - **Frontend:** `frontend/src/lib/components/compare/CompareTabs.svelte:42`
-- **Frontend:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte:232`
+- **Frontend:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte:232`
 - **Frontend:** `frontend/src/lib/components/trip-wizard/steps/Step3Weather.svelte:90`
 - **Backend:** `internal/handler/subscription.go` — `validateSubscription`
 - **Backend:** `internal/handler/location.go` — `validateLocation`

@@ -189,5 +189,5 @@ L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
   - `docs/features/architecture.md` — Section Frontend Dependencies + MapCanvas-Beschreibung
   - `docs/reference/frontend_components.md` — MapCanvas-Eintrag
   - `docs/reference/api_contract.md` — Changelog-Eintrag
-  - `docs/specs/modules/epic_137_wegpunkt_editor.md` — Status-Notiz hinzugefügt
+  - `docs/specs/_archive/modules/epic_137_wegpunkt_editor.md` — Status-Notiz hinzugefügt
 - 2026-05-31: Initial spec erstellt — Issue #495

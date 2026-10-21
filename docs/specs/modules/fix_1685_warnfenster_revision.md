@@ -3,7 +3,7 @@ entity_id: fix_1685_warnfenster_revision
 type: bugfix
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 workflow: fix-1685-warnfenster-revision
 ---
 

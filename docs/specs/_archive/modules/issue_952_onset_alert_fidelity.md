@@ -31,7 +31,7 @@ auslösbaren Pfad.
 ## Source
 
 - **File:** `src/output/renderers/alert/render.py` (Onset-Renderer),
-  `src/services/trip_alert.py` (`check_radar_alerts`), `src/outputs/telegram.py`
+  `src/services/trip_alert.py` (`check_radar_alerts`), `src/output/channels/telegram.py`
   (`TelegramOutput.send`), `api/routers/validator.py` (Alert-Preview #918)
 - **Identifier:** `_render_email_onset`, `_render_telegram_onset`, `_render_subject_onset`,
   `_render_sms_onset`, `render_email`, `render_telegram`, `TripAlertService.check_radar_alerts`,
@@ -120,7 +120,7 @@ Telegram/SMS — dort bleibt es bei den zwei/einer Vorlagen-Zeile(n)).
 
 Betrifft BEIDE Zweige (Onset UND Deviation, da beide `**` nutzen — render.py:99/257).
 
-- `TelegramOutput.send()` (`src/outputs/telegram.py:50-96`) stellt heute IMMER
+- `TelegramOutput.send()` (`src/output/channels/telegram.py:50-96`) stellt heute IMMER
   `[{subject}]\n\n` voran (Z.67) und sendet ohne `parse_mode` → `**` erscheint wörtlich.
   SOLL: zwei neue optionale Parameter mit Default = heutiges Verhalten:
   ```python

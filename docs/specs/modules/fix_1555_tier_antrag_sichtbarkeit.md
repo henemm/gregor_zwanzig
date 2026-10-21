@@ -3,7 +3,7 @@ entity_id: fix_1555_tier_antrag_sichtbarkeit
 type: bugfix
 created: 2026-08-07
 updated: 2026-08-07
-status: draft
+status: implemented
 workflow: fix-1555-tier-antrag-sichtbarkeit
 ---
 

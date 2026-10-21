@@ -38,8 +38,8 @@ Zwei Dateien (`SmsPhoneFrame.svelte` und `profileSignature.ts`) wurden beim AP-0
 |--------|------|---------|
 | `frontend/src/app.css` | Upstream | Definiert alle `--g-*` Token (Single Source of Truth); alle referenzierten Tokens bereits vorhanden |
 | `docs/design-system/ANTI-PATTERNS.md` | Referenz | Regel AP-007 mit Grep-Kommando |
-| `docs/specs/modules/issue_277_css_variable_fallbacks.md` | Referenz | Vorherige Bereinigung (26 Komponenten) — gleiche Ersetzungslogik |
-| `docs/specs/modules/issue_238_profile_signatures.md` | Abgelöst | AC-3/AC-5 forderten `accentFallback` mit Hex — Bug #323 hat Priorität |
+| `docs/specs/_archive/modules/issue_277_css_variable_fallbacks.md` | Referenz | Vorherige Bereinigung (26 Komponenten) — gleiche Ersetzungslogik |
+| `docs/specs/_archive/modules/issue_238_profile_signatures.md` | Abgelöst | AC-3/AC-5 forderten `accentFallback` mit Hex — Bug #323 hat Priorität |
 
 ## Implementation Details
 

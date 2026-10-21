@@ -19,12 +19,12 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest fuer die Naismith-Ankunftszeiten aus
-`docs/specs/modules/issue_296_be_naismith_arrival.md`. Jeder Test mappt 1:1 auf
+`docs/specs/_archive/modules/issue_296_be_naismith_arrival.md`. Jeder Test mappt 1:1 auf
 ein Acceptance Criterion der Parent-Spec. Go-Tests pruefen Formel + Berechnung +
 JSON-Marshalling + Roundtrip; Python-Tests pruefen Loader-Persistenz und
 Scheduler-Konsum.
 
-Parent-Spec: `docs/specs/modules/issue_296_be_naismith_arrival.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_296_be_naismith_arrival.md` v1.0
 
 ## Source
 

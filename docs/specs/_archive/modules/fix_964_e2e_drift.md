@@ -76,7 +76,7 @@ Die aktuelle Struktur:
 > **Überholt (2026-07-06):** Die beiden vorstehenden Zeilen zu `table-preview-day-{day}`
 > und `weather-metrics-tab-checkbox-{id}` stimmen nicht mehr — beide Selektoren sind
 > mittlerweile tot (Dead-Code-Testgruppen entfernt bzw. Selektor durch echten Klickpfad
-> ersetzt). Siehe `docs/specs/modules/fix_970_971_1011_e2e_ui_drift.md` (Bündel I,
+> ersetzt). Siehe `docs/specs/_archive/modules/fix_970_971_1011_e2e_ui_drift.md` (Bündel I,
 > #970/#971/#1011) für die aktuelle Migration.
 
 Save-Payload (`PUT /api/trips/{id}/weather-config`) hat weiterhin ein `bucket`-Feld pro Metrik

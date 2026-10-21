@@ -11,10 +11,10 @@ tags: [alerts, compare, radar, nowcast, epic-1095, issue-1041, slice-1b]
 <!-- Issue #1041 — Slice 1b von 3. Nutzt den in Slice 1a (bereits LIVE) gebauten
      Baustein `NotificationService.send_multi_location_radar_alert()` /
      `to_multi_location_onset_alert_message()`
-     (docs/specs/modules/issue_1041_multi_location_onset_alert.md) und verdrahtet ihn
+     (docs/specs/_archive/modules/issue_1041_multi_location_onset_alert.md) und verdrahtet ihn
      zu einem echten Compare-Radar-Alarm-Pfad: neuer CompareRadarAlertService,
      Preset-Konfig-Feld, Scheduler-Endpoint, Go-Cron. Gesamtdesign (Referenz):
-     docs/specs/modules/issue_1041_compare_radar_alert.md. Slice 2 (Frontend-Schalter)
+     docs/specs/_archive/modules/issue_1041_compare_radar_alert.md. Slice 2 (Frontend-Schalter)
      folgt als eigenes Issue, NICHT Teil dieser Spec. -->
 
 # Issue #1041 — Compare-Radar-Alarm-Service & Scheduler-Verdrahtung (Slice 1b/3)
@@ -67,7 +67,7 @@ Vergleichs-Briefing-Mail (PO-Scope-Pivot 2026-07-10,
      `NotificationService().send_multi_location_radar_alert(entities=[(name,
      NowcastResult), ...], effective_channels={"email"}, mail_sink=...)` —
      der bereits live gelieferte Slice-1a-Baustein
-     (`docs/specs/modules/issue_1041_multi_location_onset_alert.md`). Bei
+     (`docs/specs/_archive/modules/issue_1041_multi_location_onset_alert.md`). Bei
      GENAU EINEM getriggerten Ort fällt der Baustein automatisch auf das
      Einzel-Onset-Format zurück (1a AC-5).
   5. Dedup je getriggertem Ort über `AlertStateService`

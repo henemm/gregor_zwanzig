@@ -19,7 +19,7 @@ Behebt zwei gebündelte Frontend-Aufgaben: (1) Auf mobilen Viewports werden Metr
 
 ## Source
 
-- **File:** `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte`
+- **File:** `frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte`
 - **Identifier:** `.metric-label`, `.label-cell`, `.controls` (CSS-Klassen, Mobile-Override)
 - **File:** `.claude/hooks/design_fidelity_diff.py`
 - **Identifier:** `SCREEN_PRE_ACTIONS` (Dict, Einträge für `I-wizard-step2-etappen` und `I-wizard-step3-wegpunkte`)
@@ -92,7 +92,7 @@ Nach Eintrag: Pixel-Diffs gegen alle drei SOLL-PNGs laufen. Liegt ein Diff > 10 
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte` | MODIFY | `@media (max-width: 899px)` Block für `.metric-label`, `.label-cell`, `.controls` |
+| `frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte` | MODIFY | `@media (max-width: 899px)` Block für `.metric-label`, `.label-cell`, `.controls` |
 | `.claude/hooks/design_fidelity_diff.py` | MODIFY | Pre-Actions für `I-wizard-step2-etappen` und `I-wizard-step3-wegpunkte` in `SCREEN_PRE_ACTIONS` |
 | `frontend/src/lib/components/trip-new/TripNewEditor.svelte` | MODIFY (bedingt) | Nur bei Pixel-Diff > 10 % nach Fidelity-Lauf |
 

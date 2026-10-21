@@ -35,13 +35,13 @@ Zwei neue Svelte-5-UI-Primitive (`Checkbox.svelte`, `Select.svelte`) ersetzen al
 - `frontend/src/lib/components/edit/EditWeatherSection.svelte` — 1 Checkbox
 - `frontend/src/lib/components/edit/EditReportConfigSection.svelte` — 9 Checkboxen (Playwright-testids)
 - `frontend/src/lib/components/trip-wizard/steps/ReportRow.svelte` — 1 Checkbox
-- `frontend/src/lib/components/trip-wizard/steps/ChannelToggle.svelte` — 1 Checkbox
+- `frontend/src/lib/components/shared/ChannelToggle.svelte` — 1 Checkbox
 - `frontend/src/lib/components/compare/LocationsRail.svelte` — 4 Checkboxen (kein Label-Text)
 - `frontend/src/lib/components/alert-rules-editor/AlertRuleRow.svelte` — 2 Checkboxen
 - `frontend/src/lib/components/alerts-tab/AlertQuietHoursCard.svelte` — 1 Checkbox
 - `frontend/src/lib/components/SubscriptionForm.svelte` — 7 Checkboxen
 - `frontend/src/lib/components/WeatherConfigDialog.svelte` — 1 Checkbox
-- `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` — 1 Checkbox
+- `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` — 1 Checkbox
 
 **Migrierte Dateien (Selects — 10 Dateien):**
 - `frontend/src/routes/trips/+page.svelte` — 2 Selects

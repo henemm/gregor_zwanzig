@@ -3,7 +3,7 @@ entity_id: profile_mail_ratelimit
 type: bugfix
 created: 2026-09-22
 updated: 2026-09-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [security, bugfix, go-api, rate-limit, auth, mail-bombing, issue-2404]
 ---

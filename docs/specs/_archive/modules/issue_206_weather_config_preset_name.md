@@ -45,7 +45,7 @@ Hilfsfunktion `getActiveMetrics()` (`rightColumn.ts:41`) liest fälschlich aus
 - **MODIFY:** `frontend/src/lib/utils/rightColumn.ts`
   — `getPresetLabel()` bevorzugt `trip.display_config?.preset_name` vor Profile-Ableitung;
   `getActiveMetrics()` liest aus `trip.display_config?.metrics` (Bug-Fix: las bisher aus `trip.weather_config?.metrics`)
-- **MODIFY:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **MODIFY:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
   — `handleSave()` schickt `preset_name` mit; `initMaps()` stellt Template-Auswahl aus `preset_name` wieder her
 - **MODIFY:** `frontend/src/lib/utils/rightColumn.test.ts`
   — Test-Fixtures von `weather_config` auf `display_config` umbauen
@@ -147,7 +147,7 @@ export function getActiveMetrics(trip: Trip): WeatherConfigMetric[] {
 }
 ```
 
-### 5. `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+### 5. `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 
 **`initMaps()` — Template-Auswahl wiederherstellen:**
 
@@ -282,7 +282,7 @@ Bestehende Tests, die `trip.weather_config.metrics` als Quelle voraussetzen, wer
 | 2 | `src/app/loader.py` | Python | MODIFY — `_parse_display_config()` + `_trip_to_dict()` | ~6 |
 | 3 | `frontend/src/lib/types.ts` | Frontend | MODIFY — Interface `DisplayConfig`, `Trip.display_config` umstellen | ~8 |
 | 4 | `frontend/src/lib/utils/rightColumn.ts` | Frontend | MODIFY — `getPresetLabel()` + `getActiveMetrics()` Bug-Fix | ~12 |
-| 5 | `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | Frontend | MODIFY — `initMaps()` + `handleSave()` | ~10 |
+| 5 | `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | Frontend | MODIFY — `initMaps()` + `handleSave()` | ~10 |
 | 6 | `frontend/src/lib/utils/rightColumn.test.ts` | Frontend/Test | MODIFY — Fixtures + neue Tests | ~15 |
 
 **Gesamt:** ~53 LoC netto, 6 Dateien

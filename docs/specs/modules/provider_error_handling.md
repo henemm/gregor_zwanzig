@@ -38,7 +38,7 @@ Diese Spec behandelt die **Service-Layer-Ebene** oberhalb der Retry-Logik.
 | `src/services/segment_weather.py:125-130` | try/catch um `fetch_forecast()` |
 | `src/services/trip_report_scheduler.py:470-502` | Error-Tracking in `_fetch_weather()` |
 | `src/services/trip_report_scheduler.py:240-300` | Service-E-Mail bei SMS-only + Fehler |
-| `src/formatters/trip_report.py:98-108` | Error-Row Rendering in `_extract_hourly_rows()` |
+| `src/output/renderers/trip_report.py:98-108` | Error-Row Rendering in `_extract_hourly_rows()` |
 
 ## Dependencies
 

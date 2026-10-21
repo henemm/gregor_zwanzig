@@ -19,11 +19,11 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die echten Verhaltenstests aus
-`docs/specs/modules/issue_772_archive_stats_test.md`. Jeder Go-Test mappt 1:1 auf
+`docs/specs/_archive/modules/issue_772_archive_stats_test.md`. Jeder Go-Test mappt 1:1 auf
 ein Acceptance Criterion der Parent-Spec. Keine Mocks, kein Source-Grep — echte
 `store.Store`-Instanzen, echte JSON-Log-Dateien, echte Handler-Aufrufe.
 
-Parent-Spec: `docs/specs/modules/issue_772_archive_stats_test.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_772_archive_stats_test.md` v1.0
 
 ## Source
 

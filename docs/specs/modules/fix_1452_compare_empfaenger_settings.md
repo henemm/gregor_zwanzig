@@ -3,7 +3,7 @@ entity_id: fix_1452_compare_empfaenger_settings
 type: module
 created: 2026-08-02
 updated: 2026-08-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, alerts, notification, multi-user, cockpit]
 ---

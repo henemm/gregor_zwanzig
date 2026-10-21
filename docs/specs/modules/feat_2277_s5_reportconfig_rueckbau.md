@@ -3,7 +3,7 @@ entity_id: feat_2277_s5_reportconfig_rueckbau
 type: feature
 created: 2026-10-02
 updated: 2026-10-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [trip-new, trip-detail, mail-inhalt, shared, refactoring, rueckbau]
 ---
