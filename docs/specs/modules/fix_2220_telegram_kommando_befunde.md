@@ -305,7 +305,7 @@ Tier-Ergebnis.
   - Test: einen Tag ohne jede tragende Quelle durch alle drei Formatierer laufen lassen, den
     zurückgegebenen Text auf die bekannte Datenlücken-Formulierung prüfen.
 
-- **AC-7 (Regression):** Given ein Tag, dessen Anker-Punkte vollständig tragen, und ein
+- **AC-7:** (Regression) Given ein Tag, dessen Anker-Punkte vollständig tragen, und ein
   ebenfalls tragender datierter Snapshot desselben Tages / When die Timeline gerendert wird /
   Then bleibt der undatierte Anker maßgeblich (#1818 AC-4: Anker schlägt Snapshot) und kein
   Rückfall-Wegpunkt rutscht in den Nachbartag (#1818 F001).
@@ -320,7 +320,7 @@ Tier-Ergebnis.
     mit `caplog`/Log-Capture prüfen, dass genau eine Warnung mit `"whatsapp"` im Text erzeugt
     wurde.
 
-- **AC-9 (Falle):** Given `restrict_to_channel="sms"` bei einem Nutzer ohne SMS-Tier-
+- **AC-9:** (Falle) Given `restrict_to_channel="sms"` bei einem Nutzer ohne SMS-Tier-
   Berechtigung (`sms_allowed(user_id) == False`) / When die Kanal-Flags aufgelöst werden / Then
   wird **keine** Warnung protokolliert; das Ergebnis bleibt `(False, False, False, False)`, und
   `feat_2126` AC-5 (`tests/tdd/test_kanaltreue_adhoc_antwort.py:563`) bleibt unverändert grün.

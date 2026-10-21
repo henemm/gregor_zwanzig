@@ -150,7 +150,7 @@ fehlgeschlagene POST-Antwort die abgelehnte Anmeldung.
 
 ## Acceptance Criteria
 
-**AC-1: Frontend-Änderung ohne bestandenen Browserlauf bekommt kein Verdict**
+**AC-1:** Frontend-Änderung ohne bestandenen Browserlauf bekommt kein Verdict
 Given der auszuliefernde Änderungssatz hat den Scope `frontend-only`
 When `staging_gate.py --write-verdict "VERIFIED: …"` aufgerufen wird und der Browserlauf nicht
 bestanden wird
@@ -158,7 +158,7 @@ Then wird **keine** Attestations-Datei geschrieben und der Aufruf endet mit Exit
 - Test: `write_verdict()` mit Scope `frontend-only` und einem Browser-Gate, das Nicht-Bestehen
   meldet; danach gemessen, dass `.claude/e2e_verified/<sha>.json` **nicht** existiert.
 
-**AC-2: Ein Konsolenfehler beim Laden verweigert das Verdict**
+**AC-2:** Ein Konsolenfehler beim Laden verweigert das Verdict
 Given eine der geprüften Kernseiten wirft beim Laden einen JavaScript-Fehler oder eine
 Konsolenmeldung der Stufe `error`
 When der Browserlauf des Gates diese Seite lädt
@@ -167,7 +167,7 @@ kein Verdict.
 - Test: Seite mit provoziertem `pageerror` gegen eine lokal ausgelieferte Testseite; gemessen,
   dass das Gate Exit ≠ 0 liefert und der Fehlertext in der Meldung steht.
 
-**AC-3: Backend- und Doku-Änderungen bleiben unberührt**
+**AC-3:** Backend- und Doku-Änderungen bleiben unberührt
 Given der Änderungssatz hat den Scope `backend` oder `docs-only`
 When `--write-verdict` aufgerufen wird
 Then startet **kein** Browserlauf, und das Verdict wird geschrieben wie bisher.
@@ -176,13 +176,13 @@ Then startet **kein** Browserlauf, und das Verdict wird geschrieben wie bisher.
   trotzdem entsteht. Damit ist belegt, dass kein Browserlauf stattfand — ohne einen Aufruf-Zähler
   zu befragen, der nur eine Implementierungs-Annahme bewacht.
 
-**AC-4: `full-stack` zählt wie `frontend-only`**
+**AC-4:** `full-stack` zählt wie `frontend-only`
 Given der Änderungssatz berührt Frontend **und** Backend, Scope ist also `full-stack`
 When `--write-verdict` aufgerufen wird
 Then greift das Gate genauso wie bei `frontend-only`.
 - Test: derselbe Aufbau wie AC-1, nur mit Scope `full-stack`; gemessen, dass kein Verdict entsteht.
 
-**AC-5: Eine Frontend-Änderung mehrere Commits zurück wird trotzdem erkannt**
+**AC-5:** Eine Frontend-Änderung mehrere Commits zurück wird trotzdem erkannt
 Given seit dem letzten Gate-Lauf liegen mehrere Commits vor, die Frontend-Änderung liegt zwei
 Commits zurück, und der jüngste Commit ändert nur Dokumentation
 When `--write-verdict` aufgerufen wird
@@ -192,7 +192,7 @@ eigenen `HEAD~1`-Vergleichs.
   ist der Wächter gegen den Erbfehler des Telegram-Vorbilds** — ohne ihn wäre die Zusicherung
   „kein zweiter Diff" nur eine Behauptung.
 
-**AC-6: Nicht angemeldet erreichte Seite gilt als Nicht-Bestehen**
+**AC-6:** Nicht angemeldet erreichte Seite gilt als Nicht-Bestehen
 Given die Anmeldung an der Staging-Anwendung schlägt fehl, sodass die Kernseiten auf die
 Anmeldemaske zurückleiten
 When der Browserlauf läuft
@@ -202,14 +202,14 @@ Kernseite.
   Anmeldegrund nennt. Deckt die Falle aus #1307 ab, bei der ein Gate mit einem Foto der
   Anmeldemaske bestand.
 
-**AC-7: Sauberer Frontend-Änderungssatz läuft durch und hinterlässt eine Spur**
+**AC-7:** Sauberer Frontend-Änderungssatz läuft durch und hinterlässt eine Spur
 Given alle Kernseiten laden ohne Konsolenfehler
 When `--write-verdict "VERIFIED: …"` aufgerufen wird
 Then wird die Attestation geschrieben und enthält, welche Seiten geprüft wurden.
 - Test: Lauf gegen Staging; gemessen, dass die Attestation entsteht und die geprüften Seiten
   benennt.
 
-**AC-8: Fehlendes Nachweismittel blockiert, ein defektes Gate lässt durch**
+**AC-8:** Fehlendes Nachweismittel blockiert, ein defektes Gate lässt durch
 Given das Gate-Modul selbst lässt sich nicht laden (Import-/Syntaxfehler)
 When `--write-verdict` bei Frontend-Scope aufgerufen wird
 Then läuft der Aufruf mit einer Warnung durch — ein kaputtes Gate darf nie die Ursache sein, dass

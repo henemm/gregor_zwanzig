@@ -869,6 +869,10 @@ unberührt, der Mitschnitt ist durchgehend fail-soft.
 
 ## Scheduler-Läufe: Zeitlimit-Abbrüche und Laufdauer diagnostizieren (#1539 S0/S1a)
 
+- **Zuständigkeit:** Go löst aus (`internal/scheduler/scheduler.go`, einzige Zeitsteuerung, Status
+  in `gregor-api`), Python führt aus (`POST /api/scheduler/*`, Logs in `gregor-python`, kein eigener
+  Timer). Ein Job, der nicht *startet*, ist ein Go-Befund; einer, der startet und scheitert, meist
+  ein Python-Befund. Jobtabelle: `docs/features/architecture.md` → „Scheduler-Zuständigkeit“.
 - **Status:** `/api/scheduler/status` (Token-Header wie oben) zeigt je Job `last_run.duration_s` und
   bei Fan-out-Jobs den Block `deadline_aborts` (`total`, `last_at`, `last_skipped`, `counting_since`).
   Der Zähler liegt im Speicher und steht nach jedem Deploy/Neustart auf 0 (`counting_since`
@@ -882,7 +886,8 @@ unberührt, der Mitschnitt ist durchgehend fail-soft.
 
 ## Antwortzeit der Befehle diagnostizieren (#2439)
 
-- **Journal:** Jeder Befehl (E-Mail, Telegram, SMS, Premium-SMS) schreibt eine Zeile
+- **Journal:** Jeder Befehl (E-Mail, Telegram, Premium-SMS — normale SMS hat keinen Befehlseingang)
+  schreibt eine Zeile
   `befehl=… kanal=… trip=… dauer_ms=…` (ohne personenbezogene Inhalte). Auslesen:
   `journalctl -u gregor-python | grep "dauer_ms="` (Staging: `gregor-python-staging`, mit `sudo -n`).
   Der Briefing-Bau loggt zusätzlich Phasenzeiten, so lässt sich ein langsamer Schritt finden.

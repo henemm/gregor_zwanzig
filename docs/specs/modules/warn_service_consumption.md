@@ -275,7 +275,7 @@ echtes Warten.
 - **AC-10:** Given die bestehende MeteoAlarm-Testsuite (204-Fall, fail-soft ohne ENV, kaputtes Index-JSON, kaputtes CAP-XML, Fehler-Isolation der Registry) vor dieser Umstellung / When der Umbau auf `cached_fetch()` erfolgt / Then bleiben alle diese Tests unverändert grün, ohne Anpassung ihrer Assertions
   - Test: vollständiger Lauf von `test_meteoalarm_source.py` (bestehende Tests, unverändert)
 
-- **AC-11 (SHOULD, nur falls LoC-Rahmen reicht):** Given die vier übrigen Warn-Dienste (Vigilance/GeoSphere/MeteoForets/MassifClosure) nutzen ebenfalls `cached_fetch()` / When ihre bestehenden Testsuiten nach der Migration laufen / Then bleiben alle bestehenden Assertions grün UND ihre Erfolgs-TTL beträgt ebenfalls 1800s
+- **AC-11:** (SHOULD, nur falls LoC-Rahmen reicht) Given die vier übrigen Warn-Dienste (Vigilance/GeoSphere/MeteoForets/MassifClosure) nutzen ebenfalls `cached_fetch()` / When ihre bestehenden Testsuiten nach der Migration laufen / Then bleiben alle bestehenden Assertions grün UND ihre Erfolgs-TTL beträgt ebenfalls 1800s
   - Test: bestehende Suiten der vier Dienste (unverändert) + je ein neuer TTL-Wert-Test pro Dienst
 
 ## Known Limitations

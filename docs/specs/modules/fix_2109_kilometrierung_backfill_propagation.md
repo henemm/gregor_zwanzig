@@ -183,7 +183,7 @@ Erreichen dieser Zeile, da sie nur greift, wenn Zeile 1248 keine Etappe fand).
     zusätzlich wird nach einem `persist=False`-Aufruf geprüft, dass die Trip-Datei auf der Platte
     zeitlich unverändert bleibt (kein neuer `mtime`).
 
-- **AC-7 (Nachtrag, Adversary-Finding F001):** Given `_fetch_and_save_snapshot()`
+- **AC-7:** (Nachtrag, Adversary-Finding F001) Given `_fetch_and_save_snapshot()`
   (`trip_command_processor.py:359-360`, On-Demand-Query-Pfad z.B. Telegram „heute"/„morgen") ruft
   `scheduler._convert_trip_to_segments(trip, today)` und danach
   `scheduler._convert_trip_to_segments(trip, tomorrow)` auf, beide Etappen zuvor unvermessen /

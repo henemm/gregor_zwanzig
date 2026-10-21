@@ -220,7 +220,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
 
 ## Acceptance Criteria
 
-- **AC-1 (Schwelle = Reichweite der Quelle):** Given ein Trip mit Regenbeginn in 170 Minuten laut
+- **AC-1:** (Schwelle = Reichweite der Quelle) Given ein Trip mit Regenbeginn in 170 Minuten laut
   Radar-Quelle / When der Radar-Prüflauf läuft / Then wird ein Radar-Alarm versendet, und
   `radar_service.RADAR_ONSET_THRESHOLD_MIN` ist aus `NOWCAST_HORIZON_MIN` abgeleitet (keine zweite
   Zahl); Trip und Ortsvergleich lesen sie über die Modulreferenz, ein Drift zwischen beiden fällt
@@ -229,7 +229,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     `::test_schwelle_ist_abgeleitet_und_trip_und_vergleich_lesen_dieselbe` (Laufzeit-Drift-Probe:
     Modulwert patchen ⇒ beide Pfade folgen).
 
-- **AC-2 (Messpunkt-Offset entkoppelt):** Given die Schwelle steht auf 180 / When die Messpunkte
+- **AC-2:** (Messpunkt-Offset entkoppelt) Given die Schwelle steht auf 180 / When die Messpunkte
   eines Laufs bestimmt werden / Then liegt der erste Messpunkt unverändert bei `now + 27 Min`
   (`RADAR_MEASURE_OFFSET_MIN`), der Briefing-Offset (`NOWCAST_HORIZON_MIN // 2`, +90) bleibt davon
   verschieden, und die Konstante wird nicht aus der Schwelle berechnet.
@@ -238,7 +238,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     `test_jetzt_misst_am_aufenthaltsort.py`, `test_radar_alert_follows_ortstag.py`) zeigen auf die
     neue Konstante.
 
-- **AC-3 (Messort zur Ereigniszeit):** Given eine Etappe mit mehreren Messpunkten und Regen, der
+- **AC-3:** (Messort zur Ereigniszeit) Given eine Etappe mit mehreren Messpunkten und Regen, der
   an Punkt 3 erst beginnt, nachdem der Nutzer laut Zeitplan Punkt 3 längst verlassen hat
   (`now + onset_3 > p_4 + 30 Min`) / When der Prüflauf läuft / Then wird kein Alarm ausgelöst;
   beginnt derselbe Regen innerhalb des Aufenthaltsfensters (`now + onset_3 ≤ p_4 + 30 Min`) oder
@@ -250,7 +250,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     (echter `check_radar_alerts()`-Lauf über `AlarmPruefstrecke`, Fake-Radar je Punktindex; die
     Durchgangszeit-Funktion zusätzlich als reiner Test gegen die lineare Interpolation).
 
-- **AC-4 (nichts geht verloren, was heute auslöste):** Given beliebige Konstellationen, in denen
+- **AC-4:** (nichts geht verloren, was heute auslöste) Given beliebige Konstellationen, in denen
   der Alarm mit Schwelle 55 ausgelöst hätte (Onset ≤ 55 an einem Punkt) / When der Prüflauf mit der
   neuen Regel läuft / Then löst er ebenfalls aus (`E_k ≥ 57 > 55`), und Szenario 8
   (`test_alarm_szenario_messpunkt_position.py`) bleibt unverändert grün.
@@ -258,7 +258,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     (parametrisiert über Onset 8/23/38/53 und Punktindex 0..5, auch kurze Etappen mit kleinem
     `p_1 − p_0`), plus die unveränderten `test_alarm_szenario_*`-Wächter.
 
-- **AC-5 (vergleichbare Menge, Sperrzeit-Überholung):** Given ein Ereignis, das erstmals bei
+- **AC-5:** (vergleichbare Menge, Sperrzeit-Überholung) Given ein Ereignis, das erstmals bei
   Onset 170 gemeldet wurde (Menge im Mengenfenster ≈ 0), die Nutzer-Sperrzeit ist länger als 120
   Minuten, und zwei Läufe später liegt die Menge bei ≥ 2 mm bei nun kleinerem Onset / When der
   Prüflauf läuft / Then gibt es **keinen** Durchbruch als „Verschärfung" (Basis aus nicht
@@ -270,7 +270,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     `::test_vergleichbare_menge_ueberholt_weiter_die_sperrzeit`; `radar_overtakes_cooldown`
     selbst bleibt in `test_radar_cooldown_overtake.py` unverändert grün.
 
-- **AC-6 (Briefing-Abgleich, C-1):** Given ein Briefing kündigt Regen an (≥ 0,5 mm) / When ein
+- **AC-6:** (Briefing-Abgleich, C-1) Given ein Briefing kündigt Regen an (≥ 0,5 mm) / When ein
   Radar-Lauf den Regen bei Onset ≥ 60 sieht / Then wird der Alarm unterdrückt (nicht
   vergleichbare Menge überholt das Briefing nicht, Protokoll `briefing_announced`); sieht derselbe
   Lauf unangekündigten Regen, wird gemeldet; wird das angekündigte Ereignis später vergleichbar
@@ -280,7 +280,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     `::test_unangekuendigter_regen_frueh_wird_gemeldet`,
     `::test_spaeter_vergleichbar_ueberholt_wie_heute`, `::test_gewitter_durchbricht_ankuendigung`.
 
-- **AC-7 (Anzeige-Menge am Horizont):** Given ein Regenbeginn mit `onset + 60 > 180` (Onset > 120)
+- **AC-7:** (Anzeige-Menge am Horizont) Given ein Regenbeginn mit `onset + 60 > 180` (Onset > 120)
   / When der Alarm in allen Kanälen gerendert wird / Then enthält keiner der vier Kanäle eine
   Mengenangabe (keine falsch kleine Zahl), die Intensität bleibt; bei Onset ≤ 120 erscheint die
   Menge unverändert, und `window_precip_mm`/`max_rate_mm_h` ändern sich dadurch nicht.
@@ -289,7 +289,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     Wirkung: gerenderte Texte aller vier Kanäle ohne Mengentoken),
     `::test_menge_bleibt_bei_vollem_fenster`.
 
-- **AC-8 (ein Ereignis = ein Alarm über Segmentwechsel, C-2):** Given Erstsicht bei Onset 170 in
+- **AC-8:** (ein Ereignis = ein Alarm über Segmentwechsel, C-2) Given Erstsicht bei Onset 170 in
   Segment A, der Nutzer erreicht laut Zeitplan zur Ereigniszeit Segment B / When der nächste Lauf
   in Segment B das Ereignis erneut sieht / Then wird genau ein Alarm versendet (der zweite wird als
   `event_duplicate` unterdrückt, Identitäts-Gate-Semantik unverändert); eine echte Verschärfung
@@ -300,7 +300,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     `::test_ereignis_nach_letzter_etappe_bleibt_aktives_segment`; Szenario-Wächter
     `test_alarm_szenario_ein_ereignis_ein_alarm.py` und `…_laufendes_ereignis.py` bleiben grün.
 
-- **AC-9 (Texte: Uhrzeit statt Restminuten, B-2):** Given ein Alarm mit Onset 170 (und einer mit
+- **AC-9:** (Texte: Uhrzeit statt Restminuten, B-2) Given ein Alarm mit Onset 170 (und einer mit
   Onset 40, einer mit „läuft bereits") / When Betreff, E-Mail-Kopf und Telegram-Kopf gerendert
   werden / Then nennt der Kopf bei 170 die Uhrzeit mit Tagesbezug in der Form des SMS-Bausteins
   (z. B. „ab 14:10", über Mitternacht mit Tagesbezug), bei 40 weiter „in 40 Min", bei laufendem
@@ -310,7 +310,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     `::test_laeuft_bereits_unveraendert`; die Wächter `test_alert_onset_day_rollover.py` und
     `test_onset_wochentagskuerzel.py` bleiben (mit angepassten Literalen) grün.
 
-- **AC-10 (Kanalparität, alle vier gleichrangig):** Given ein Nutzer mit E-Mail, Telegram, SMS und
+- **AC-10:** (Kanalparität, alle vier gleichrangig) Given ein Nutzer mit E-Mail, Telegram, SMS und
   Premium-SMS und ein Alarm mit Onset 170 / When der Alarm versendet wird / Then erhalten alle vier
   Kanäle ihn mit demselben Inhalt (Beginn-Uhrzeit mit Tagesbezug, Intensität, Gütekennzeichnung
   „Ortsangabe ab HH:MM unscharf" bzw. SMS-`?`, keine Mengenangabe wegen AC-7); kein Kanal ersetzt
@@ -320,7 +320,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     reine String-Presence). Live: Staging-Lauf über den echten Kanal-Eingang;
     Premium-SMS-Empfang über die zweite seven.io-Nummer.
 
-- **AC-11 (Ortsvergleich erbt die Schwelle):** Given ein Ortsvergleich-Preset mit einem Ort, an dem
+- **AC-11:** (Ortsvergleich erbt die Schwelle) Given ein Ortsvergleich-Preset mit einem Ort, an dem
   der Regen erstmals bei Onset 170 gesehen wird / When der Ortsvergleich-Radar-Lauf mehrfach über
   die Cooldown-Dauer läuft / Then entsteht genau ein Ortsvergleich-Alarm (Cooldown 120 +
   Identität), und der Docstring `compare_radar_alert.py:6` nennt nicht mehr „≤ 20 Min", sondern die
@@ -330,7 +330,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     `::test_ortsvergleich_liest_schwelle_ueber_modulreferenz`; Docstring-Korrektur per
     Doku-Abnahme (`# doc-compliance-test`).
 
-- **AC-12 (jenseits des Horizonts / keine Frames kein Alarm):** Given Regenbeginn jenseits der
+- **AC-12:** (jenseits des Horizonts / keine Frames kein Alarm) Given Regenbeginn jenseits der
   180 Minuten (nur Frames bis 180 trocken, nasse Frames ab 195) oder eine Quelle ohne Frames
   (`data_unavailable`) / When der Prüflauf läuft / Then wird kein Alarm versendet, und der Lauf
   wird bei fehlenden Frames weiterhin als Quellenausfall protokolliert, nie als „ruhig". Dies
@@ -340,7 +340,7 @@ ADR-0021 regelt nur geteilten Code und Identitäts-Gate, dessen Semantik hier un
     `::test_ohne_frames_kein_alarm_aber_protokoll`; ersetzt
     `test_feature_656_radar_nowcast.py:250` und `test_radar_cooldown_overtake.py:1135`.
 
-- **AC-13 (Erledigt-Vermerke):** Given die Tabelle „Abgelöste Entscheidungen" / When die
+- **AC-13:** (Erledigt-Vermerke) Given die Tabelle „Abgelöste Entscheidungen" / When die
   Umsetzung abgeschlossen ist / Then tragen `fix_2009_nowcast_vorlauf.md` und
   `feat_2051_s3_reichweite_und_guete.md` (`:88`) einen Ablösungsvermerk mit Verweis auf diese
   Spec, und der Begründungskommentar `radar_service.py:113-129` nennt A-1 statt der 55-Begründung.

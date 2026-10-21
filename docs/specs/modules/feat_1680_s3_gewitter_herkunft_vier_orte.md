@@ -275,7 +275,7 @@ zwei Orte angewendet.
     ["cape"]` traegt; Assertion auf den Teilstring „· CAPE" in der
     zurueckgegebenen Zeile dieses Wegpunkts.
 
-- **AC-3 (abgeloeste Entscheidung):** Given die GLANCE-Antwort zeigt eine
+- **AC-3:** (abgeloeste Entscheidung) Given die GLANCE-Antwort zeigt eine
   Tages-Gewitterstufe, die ausschliesslich ueber eine Zutat zustande kommt,
   When der Nutzer GLANCE sendet, Then zeigt die Zeile „⛈ Gewitter: leicht ·
   CAPE" statt — wie bis einschliesslich Scheibe 2 — nur „⛈ Gewitter: leicht".
@@ -324,7 +324,7 @@ zwei Orte angewendet.
     nur Blitzpotenzial, beide auf derselben Hoechststufe; Assertion auf beide
     Labels in der GLANCE-Zeile.
 
-- **AC-8 (Kohaerenz Pille):** Given die Pille berechnet Stufe UND Herkunft aus
+- **AC-8:** (Kohaerenz Pille) Given die Pille berechnet Stufe UND Herkunft aus
   DERSELBEN Tagesfenster-Liste (kein zweiter, unabhaengiger Datenzugriff),
   When eine zusaetzliche Stunde AUSSERHALB dieses Fensters eine dritte,
   abweichende Zutat traegt, Then erscheint diese dritte Zutat NICHT in der
@@ -334,7 +334,7 @@ zwei Orte angewendet.
     dritte Zutat existiert nur ausserhalb der uebergebenen Liste); Assertion,
     dass der Pillentext nur Zutaten aus der uebergebenen Liste nennt.
 
-- **AC-9 (Kohaerenz Stundentabelle):** Given zwei benachbarte Stunden
+- **AC-9:** (Kohaerenz Stundentabelle) Given zwei benachbarte Stunden
   desselben Ortes tragen ihre jeweilige Stufe ueber verschiedene Zutaten, When
   die Stundentabelle gerendert wird, Then zeigt JEDE Stundenzeile
   ausschliesslich die Zutat(en) IHRES EIGENEN Datenpunkts — keine Vermischung
@@ -344,7 +344,7 @@ zwei Orte angewendet.
     Stunde A nur CAPE, Stunde B nur Blitzdichte); Assertion, dass Zeile A nur
     „CAPE" und Zeile B nur „Blitzdichte" zeigt, nie beide in derselben Zeile.
 
-- **AC-10 (Kohaerenz Timeline):** Given zwei Wegpunkte desselben Tages tragen
+- **AC-10:** (Kohaerenz Timeline) Given zwei Wegpunkte desselben Tages tragen
   ihre jeweilige Stufe ueber verschiedene Zutaten, When die Timeline gerendert
   wird, Then zeigt JEDE Wegpunkt-Zeile ausschliesslich die Zutat(en) IHRES
   EIGENEN Segment-Aggregats — keine Vermischung zwischen Wegpunkten.
@@ -352,7 +352,7 @@ zwei Orte angewendet.
     `thunder_level_max_signals` sich unterscheiden; Assertion, dass jede Zeile
     nur die Zutat(en) ihres eigenen Wegpunkts nennt.
 
-- **AC-11 (Kohaerenz GLANCE):** Given `_aggregate_day()` berechnet Stufe UND
+- **AC-11:** (Kohaerenz GLANCE) Given `_aggregate_day()` berechnet Stufe UND
   Herkunft von GLANCE aus derselben, nach `target_date` gefilterten
   Wegpunktliste, When ein Wegpunkt eines ANDEREN Kalendertags eine dritte,
   abweichende Zutat traegt, Then erscheint diese dritte Zutat NICHT in der
@@ -361,7 +361,7 @@ zwei Orte angewendet.
     eine dritte Zutat traegt; Assertion, dass die GLANCE-Zeile nur Zutaten von
     Wegpunkten DES Zieltags nennt.
 
-- **AC-12 (kein Leck aus der Stundentabelle in SMS und Telegram):** Given die
+- **AC-12:** (kein Leck aus der Stundentabelle in SMS und Telegram) Given die
   Ortsvergleich-Stundentabelle zeigt an einer Stunde **unterhalb** der
   Tages-Hoechststufe eine Zutat, die nur dort vorkommt, When derselbe Vergleich
   als SMS oder als Telegram-Nachricht gerendert wird, Then taucht diese Zutat
@@ -387,7 +387,7 @@ zwei Orte angewendet.
   in die Kurznachrichtenkanaele lecken. Der PO-Entscheid bleibt unveraendert —
   diese Berichtigung stellt die Spec auf ihn zurueck, statt ihn zu aendern.
 
-- **AC-13 (kein Leck Trip-SMS/Premium-SMS):** Given die Pille und die
+- **AC-13:** (kein Leck Trip-SMS/Premium-SMS) Given die Pille und die
   GLANCE-Zeile tragen Herkunftsangaben, die in `email_plain` landen, When der
   Trip-Bericht versendet wird, Then enthaelt weder `report.sms_text` noch —
   ueber den Rueckfallweg `sms_text or email_plain` — die tatsaechlich
@@ -400,7 +400,7 @@ zwei Orte angewendet.
     „CAPE" noch „Blitzpotenzial" noch „Blitzdichte" noch „Wettercode" enthaelt
     UND dass `report.sms_text` nicht-leer ist.
 
-- **AC-14 (S1-Uebersichtszeile bleibt unveraendert):** Given die
+- **AC-14:** (S1-Uebersichtszeile bleibt unveraendert) Given die
   Ortsvergleich-Uebersichtszeile (Tagesuebersicht, nicht die Stundentabelle)
   zeigte vor dieser Scheibe bereits eine Herkunft (Scheibe 1), When diese
   Scheibe ausgeliefert ist, Then bleibt der Text der Uebersichtszeile
@@ -412,7 +412,7 @@ zwei Orte angewendet.
   - Test: Golden-Text-Vergleich der Uebersichtszeile mit derselben Fixture wie
     ein Bestandstest aus Scheibe 1, vor und nach dieser Scheibe identisch.
 
-- **AC-15 (keine Aussage bleibt keine Aussage):** Given ein bereits
+- **AC-15:** (keine Aussage bleibt keine Aussage) Given ein bereits
   gespeicherter Wetter-Schnappschuss OHNE das Feld
   `thunder_level_max_signals` (Alt-Snapshot vor Scheibe 1/2) wird fuer die
   Kommando-Timeline geladen, When der Nutzer TODAY/TOMORROW sendet, Then zeigt
@@ -423,7 +423,7 @@ zwei Orte angewendet.
     aufgerufen; Assertion, dass die Stufe erscheint und kein „·" nach dem
     Stufenwort folgt.
 
-- **AC-16 (Zeichengleichheit ohne Herkunft):** Given eine Stunde bzw. ein Tag
+- **AC-16:** (Zeichengleichheit ohne Herkunft) Given eine Stunde bzw. ein Tag
   zeigt „kein" Gewitter (keine Zutat erreicht eine Stufe ueber NONE), When
   Pille, Timeline, GLANCE-Zeile und Stundentabelle gerendert werden, Then
   bleibt die Ausgabe an ALLEN VIER Orten zeichengleich zu vor dieser Scheibe —

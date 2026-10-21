@@ -152,7 +152,7 @@ Muster: Anreicherung, exakt wie `enrich_ensemble` bei Open-Meteo
   - Test: Für einen Ort in den Alpen wird nachgewiesen, dass kein Abruf ausgelöst wird —
     sonst entstehen sinnlose Abrufe außerhalb des Modellgebiets.
 
-- **AC-7 (nachgetragen 2026-08-02):** Given ein Ort in Frankreich oder auf Korsika und
+- **AC-7:** (nachgetragen 2026-08-02) Given ein Ort in Frankreich oder auf Korsika und
   eine **normal verfügbare Hauptquelle** / When eine Vorhersage über den **regulären**
   Weg abgerufen wird (`OpenMeteoProvider.fetch_forecast`, **kein** Ausfall) / Then trägt
   der Datenpunkt eine Blitzdichte.
@@ -161,7 +161,7 @@ Muster: Anreicherung, exakt wie `enrich_ensemble` bei Open-Meteo
     regulären Weg entfernt und nur in der Totalausfall-Weiche belassen, **muss** dieser
     Test rot werden.
 
-- **AC-8 (PO-Vorgabe 2026-08-02, „keine Einzellösungen"):** Given ein **zweiter**
+- **AC-8:** (PO-Vorgabe 2026-08-02, „keine Einzellösungen") Given ein **zweiter**
   Wetterdienst, der Gewittersignale liefern kann (S2b: DWD) / When er als zuständige
   Gewitterquelle für sein Gebiet eingetragen wird / Then wird er wirksam, **ohne dass
   der Anreicherungsweg angefasst werden muss** — es genügt, dass er das gemeinsame
@@ -192,7 +192,7 @@ Muster: Anreicherung, exakt wie `enrich_ensemble` bei Open-Meteo
     nur im Sonderfall", braucht sie ein AC über den **Aufrufweg**, nicht nur über das
     Verhalten der aufgerufenen Funktion.
 
-- **AC-9 (neu gefasst 2026-08-02 nach Adversary-Befund F002):** Given zwei nahe
+- **AC-9:** (neu gefasst 2026-08-02 nach Adversary-Befund F002) Given zwei nahe
   beieinander liegende Orte in Frankreich / When für **beide nacheinander** eine Vorhersage
   über den **regulären Weg** abgerufen wird / Then entstehen zusammen **nicht mehr** Abrufe
   als für einen einzigen Ort — **unabhängig davon, ob die Orte aus einem Trip oder einem
@@ -247,7 +247,7 @@ Muster: Anreicherung, exakt wie `enrich_ensemble` bei Open-Meteo
   - **Wirkung:** 8-Orte-Vergleich von 192 Abrufen / 64 s auf 24 Abrufe / ~9 s,
     Grenzkosten je weiterem Ort **null**.
 
-- **AC-10 (nachgetragen 2026-08-02):** Given ein Abrufzeitraum, der kürzer als 24 Stunden
+- **AC-10:** (nachgetragen 2026-08-02) Given ein Abrufzeitraum, der kürzer als 24 Stunden
   ist (der Ortsvergleich nutzt ein Ein-Stunden-Fenster) / When die Blitzdichte geholt wird /
   Then werden **nur die Stunden dieses Zeitraums** abgerufen.
   - Test: Ein Lauf mit Ein-Stunden-Fenster erzeugt deutlich weniger Abrufe als einer mit
@@ -257,7 +257,7 @@ Muster: Anreicherung, exakt wie `enrich_ensemble` bei Open-Meteo
     1-Stunden-Fenster, `compare_location_weather_source.py:44-45`) sind dadurch rund
     **13 von 24 Abrufen je Ort systematisch verworfene Arbeit**.
 
-- **AC-11 (nach Adversary-Befund F001):** Given mehrere Orte, die im selben Abfragefenster
+- **AC-11:** (nach Adversary-Befund F001) Given mehrere Orte, die im selben Abfragefenster
   liegen / When ihre Blitzdichte gelesen wird / Then bekommt **jeder Ort seinen eigenen
   Wert** — Orte an unterschiedlichen Stellen des Fensters dürfen **nicht** denselben Wert
   tragen.
@@ -276,7 +276,7 @@ Muster: Anreicherung, exakt wie `enrich_ensemble` bei Open-Meteo
   - **Zusatzbedingung:** Liegt ein Ort **außerhalb** des geladenen Fensters, wird sein Wert
     **verworfen** (`None`), nicht auf den Rand geklemmt.
 
-- **AC-12 (nach Adversary-Befund F005):** Given ein Ort, für den Grundvorhersage und
+- **AC-12:** (nach Adversary-Befund F005) Given ein Ort, für den Grundvorhersage und
   Gewitter aus **verschiedenen** Quellen kommen / When die Gewitter-Zuständigkeit bestimmt
   wird / Then entscheidet die **Gewitter**-Zuständigkeitstabelle
   (`thunder_routing.thunder_provider_for`), nicht die der Grundvorhersage

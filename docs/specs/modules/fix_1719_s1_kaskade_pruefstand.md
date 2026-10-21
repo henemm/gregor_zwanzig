@@ -186,7 +186,7 @@ AC-5/AC-7/AC-8/AC-12 als Zielmetrik ein.
 
 ## Acceptance Criteria
 
-- **AC-1 (ADR existiert und ist konsistent indiziert):** Given
+- **AC-1:** (ADR existiert und ist konsistent indiziert) Given
   `docs/adr/0050-metrik-kaskade-verfeinerung-nicht-ersetzung.md` enthält
   die fünf PO-Entscheidungspunkte aus dem Kontext-Dokument Abschnitt 6 /
   When `tests/test_adr_index_drift.py` gegen den aktualisierten
@@ -209,7 +209,7 @@ AC-5/AC-7/AC-8/AC-12 als Zielmetrik ein.
   - Test: Laden über den echten Loader, keine Assertion gegen den
     Renderpfad (der folgt in AC-6/AC-11).
 
-- **AC-3 (Anonymisierung ist geprüft, nicht nur behauptet):** Given die
+- **AC-3:** (Anonymisierung ist geprüft, nicht nur behauptet) Given die
   Fixture-Datei enthält AUSSCHLIESSLICH die Top-Level-Schlüssel `trip_id`,
   `metrics`, `channel_layouts` (der Schlüsselsatz, den
   `_parse_display_config()` liest) / When ein Test die Roh-JSON-Datei auf
@@ -294,14 +294,14 @@ AC-5/AC-7/AC-8/AC-12 als Zielmetrik ein.
     Verkürzung auf `[0]` (Vorbild: Bestandsfehler
     `_representative_symbol()` im Vorgänger-Wächter).
 
-- **AC-9 (volle Katalogbreite, 26 Einträge, nicht zwei):** Given die
+- **AC-9:** (volle Katalogbreite, 26 Einträge, nicht zwei) Given die
   Basis-Fixture / When `metrics` und `channel_layouts.sms` gezählt werden
   / Then führt jede Ebene 26 Einträge — exakt die im Kontext-Dokument
   gemessene Breite, keine auf zwei Metriken reduzierte Attrappe
   (Konstruktionsfehler #3 des Vorgängers).
   - Test: `len(...) == 26` auf beiden Ebenen der geladenen Fixture.
 
-- **AC-10 (keine künstlich aufgefüllten Wetterdaten):** Given
+- **AC-10:** (keine künstlich aufgefüllten Wetterdaten) Given
   `F.segment()`/`F.night_weather()` werden UNVERÄNDERT verwendet (keine
   `dataclasses.replace(..., snow_depth_cm=..., snowfall_limit_m=...,
   snow_new_sum_cm=...)`-Injektion wie in `_matrix_segment()`) / When der
@@ -331,7 +331,7 @@ AC-5/AC-7/AC-8/AC-12 als Zielmetrik ein.
     festhält, dass `dc.per_channel_layouts` keinen `"premium_sms"`-Schlüssel
     kennt, solange S2/S3 keinen einführen.
 
-- **AC-12 (Reihenfolge wird mitgeprüft, nicht nur die Menge):** Given zwei
+- **AC-12:** (Reihenfolge wird mitgeprüft, nicht nur die Menge) Given zwei
   Ein-Feld-Varianten der Basis-Fixture, die sich NUR in der `order` zweier
   bereits im SMS-Kanal-Layout aktiver, kollisionssicherer Metrik-IDs
   unterscheiden (A vor B bzw. B vor A) / When beide über den echten

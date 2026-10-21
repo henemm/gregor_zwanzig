@@ -170,7 +170,7 @@ verortet.
 
 ## Acceptance Criteria
 
-- **AC-1 (HTML — Fehlerfall):** Given ein Ort mit `LocationResult.error != None` / When
+- **AC-1:** (HTML — Fehlerfall) Given ein Ort mit `LocationResult.error != None` / When
   `render_compare_html()` den Ausblick-Block für diesen Ort rendert / Then erscheint der
   Zustandstext „Vorhersage derzeit nicht abrufbar." (Danger-Styling, analog #1486 `UNAVAILABLE`)
   statt eines leeren Strings, UND `comparison_engine.py::run()` erzeugt für diesen Ort GENAU EINEN
@@ -179,14 +179,14 @@ verortet.
     Exception wirft; prüfe den gerenderten HTML-Ausblick-Block auf den Zustandstext UND per
     `caplog` auf genau einen WARNING-Eintrag mit Ortsbezug.
 
-- **AC-2 (HTML — leeres `outlook_hourly_data`):** Given ein Ort mit erfolgreichem Fetch, aber
+- **AC-2:** (HTML — leeres `outlook_hourly_data`) Given ein Ort mit erfolgreichem Fetch, aber
   `outlook_hourly_data == []` (z.B. Vorhersagehorizont innerhalb der 96h-Fetch-Antwort ohne
   Datenpunkte in den drei Ausblickstagen) / When der HTML-Ausblick-Block gerendert wird / Then
   erscheint derselbe Zustandstext, UND ein WARNING-Log-Eintrag entsteht.
   - Test: Fixture mit `raw_data`, deren Zeitstempel alle innerhalb von `_last_detail_day` liegen
     (keine Tage danach); prüfe gerenderten HTML-Block auf Zustandstext UND `caplog` auf WARNING.
 
-- **AC-3 (HTML — leere `rows` trotz vorhandenem `outlook_hourly_data`):** Given ein Ort mit
+- **AC-3:** (HTML — leere `rows` trotz vorhandenem `outlook_hourly_data`) Given ein Ort mit
   nicht-leerem `outlook_hourly_data`, aber `_build_location_outlook_rows()` liefert eine leere
   Liste (z.B. durch eine leere `outlook_metrics`-Auswahl, Issue #1361/#1368-Pfad,
   `compare_html.py:1095-1096`) / When der HTML-Ausblick-Block gerendert wird / Then erscheint
@@ -198,7 +198,7 @@ verortet.
     Rückgabewert auf den Zustandstext UND per `caplog`, dass `comparison_engine` NICHT geloggt hat
     (dieser Testfall ruft `comparison_engine.run()` gar nicht auf).
 
-- **AC-4 (Klartext — dieselben zwei Ursachen, Fehlerfall ausgenommen):** Given ein Ort mit
+- **AC-4:** (Klartext — dieselben zwei Ursachen, Fehlerfall ausgenommen) Given ein Ort mit
   `loc_result.error is None`, aber leerem `outlook_hourly_data` ODER leeren `outlook_rows` nach
   Filterung / When `render_comparison_text()` den Klartext-Ausblick für diesen Ort rendert / Then
   erscheint der Zustandstext im Klartext-Ausblick-Abschnitt statt eines fehlenden Abschnitts, UND
@@ -207,7 +207,7 @@ verortet.
     und `outlook_hourly_data=[]` hat; prüft den Klartext-Body auf Vorhandensein des Ortsnamens UND
     des Zustandstexts.
 
-- **AC-5 (Normalfall unverändert — Regressionstest):** Given ein Ort mit erfolgreichem Fetch,
+- **AC-5:** (Normalfall unverändert — Regressionstest) Given ein Ort mit erfolgreichem Fetch,
   nicht-leerem `outlook_hourly_data` und nicht-leeren `rows` / When HTML UND Klartext gerendert
   werden / Then erscheint unverändert die Ausblick-Tabelle (kein neuer Zustandstext), UND es
   entsteht KEIN WARNING-Log-Eintrag für diesen Ort.
@@ -215,7 +215,7 @@ verortet.
     lassen; prüft Tabellen-Marker (z.B. `OUTLOOK_HEADING` im Output) UND per `caplog`, dass kein
     WARNING mit Ortsbezug für den Ausblick entsteht.
 
-- **AC-6 (kein Doppel-Logging):** Given ein Vergleichslauf mit einem Ort, dessen Fetch fehlschlägt
+- **AC-6:** (kein Doppel-Logging) Given ein Vergleichslauf mit einem Ort, dessen Fetch fehlschlägt
   / When `ComparisonEngine.run()` einmal aufgerufen und anschließend
   `render_compare_email()` (HTML + Klartext in einem Aufruf) auf dem Ergebnis ausgeführt wird /
   Then entsteht GENAU EIN WARNING-Log-Eintrag für diesen Ort — nicht zwei, obwohl beide Renderer
@@ -224,7 +224,7 @@ verortet.
     Lauf (`run()` gefolgt von `render_compare_email()`), Assertion `== 1`. Test hängt direkt an
     `comparison_engine.py`, nicht an den Renderern (Log entsteht dort, nicht in ihnen).
 
-- **AC-7 (Mehrort-Fall — keine falsche Ganz-Auslassung im HTML):** Given ein Vergleich mit 3 Orten:
+- **AC-7:** (Mehrort-Fall — keine falsche Ganz-Auslassung im HTML) Given ein Vergleich mit 3 Orten:
   Ort A (`FOUND`, Ausblick vorhanden), Ort B (`error != None`), Ort C (`error=None`, leeres
   `outlook_hourly_data`) / When `render_compare_html()` gerendert wird / Then erscheinen alle drei
   Orte mit ihrem jeweils korrekten Zustand (A: Tabelle, B und C: Zustandstext) — kein Ort

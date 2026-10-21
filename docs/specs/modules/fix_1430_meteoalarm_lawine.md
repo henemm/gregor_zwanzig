@@ -223,7 +223,7 @@ Token) verschiedene Dinge sind. Zaehlt nicht ins LoC-Limit.
     Aufruf der Antwort-Erzeugung aus `trip_command_processor` (Weg wie bestehender
     Kuerzel-Test), Assertion beider Eintraege.
 
-- **AC-11 (doc-compliance-test):** Given die aktualisierte `docs/reference/sms_format.md` /
+- **AC-11:** (doc-compliance-test) Given die aktualisierte `docs/reference/sms_format.md` /
   When die Warn-Kuerzel-Tabelle gelesen wird / Then enthaelt sie `avalanche | AW | Lawine` und
   die Abgrenzung zu `AV`.
   - Test: `# doc-compliance-test` in `tests/tdd/test_hazard_symbol_catalog_docs.py` —

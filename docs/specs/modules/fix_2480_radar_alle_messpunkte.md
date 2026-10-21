@@ -193,7 +193,7 @@ Ein neues ADR ist **nicht** nötig: ADR-0021/0046/0052/0056 legen die Punkt-0-Re
 
 ## Acceptance Criteria
 
-- **AC-1 (Regen weiter vorn löst Alarm aus):** Given ein Trip, dessen erster Messpunkt trocken
+- **AC-1:** (Regen weiter vorn löst Alarm aus) Given ein Trip, dessen erster Messpunkt trocken
   ist, während über einem Folgepunkt (z. B. Punkt 2, ca. km +4 auf der Strecke) Regen mit Beginn in
   höchstens 55 Minuten belegt ist, When der Radar-Prüflauf läuft, Then wird ein Radar-Alarm
   versendet; die Uhrzeit im Text ist der Regenbeginn an diesem Folgepunkt (gerechnet ab jetzt) und
@@ -201,7 +201,7 @@ Ein neues ADR ist **nicht** nötig: ADR-0021/0046/0052/0056 legen die Punkt-0-Re
   - Test: `test_folgepunkt_nass_loest_alarm_aus`; zusätzlich Gegenprobe gleicher Aufbau mit
     Beginn 60 Minuten ⇒ siehe AC-4.
 
-- **AC-2 (Regressionsschutz Punkt 0):** Given ein Trip, dessen erster Messpunkt selbst die
+- **AC-2:** (Regressionsschutz Punkt 0) Given ein Trip, dessen erster Messpunkt selbst die
   Auslöseregel erfüllt (und kein Folgepunkt früher beginnt), When der Prüflauf läuft, Then sind
   Versand, Textinhalt, Dringlichkeit, Vergleichsbasis und Protokolleinträge bitgleich zum Stand vor
   dieser Änderung.
@@ -209,7 +209,7 @@ Ein neues ADR ist **nicht** nötig: ADR-0021/0046/0052/0056 legen die Punkt-0-Re
     heutigen Stands; die bestehenden Radar-Tests in `test_alarm_szenario_*.py` und
     `test_regen_ausdehnung_textstellen.py` bleiben unverändert grün).
 
-- **AC-3 (ein maßgeblicher Punkt, keine Mischwerte):** Given mehrere Punkte erfüllen die
+- **AC-3:** (ein maßgeblicher Punkt, keine Mischwerte) Given mehrere Punkte erfüllen die
   Auslöseregel, When die Auswahl getroffen wird, Then ist genau ein Punkt maßgeblich: der mit dem
   frühesten Regenbeginn (laufender Regen = 0 Minuten), bei Gleichstand der mit der höheren
   Dringlichkeit, dann der mit dem kleineren Index; und Menge, Dringlichkeit, Gewitter-Kennzeichen,
@@ -220,12 +220,12 @@ Ein neues ADR ist **nicht** nötig: ADR-0021/0046/0052/0056 legen die Punkt-0-Re
     Folgepunkte mit bewusst unterschiedlichen Mengen/Dringlichkeiten; erwartet die Werte des
     gewählten Punkts, nicht deren Max/Min; Capture-ID hat die Koordinate des gewählten Punkts).
 
-- **AC-4 (nichts in Reichweite, kein Alarm):** Given alle Messpunkte sind trocken, oder der
+- **AC-4:** (nichts in Reichweite, kein Alarm) Given alle Messpunkte sind trocken, oder der
   früheste Regenbeginn aller Punkte liegt später als 55 Minuten, When der Prüflauf läuft, Then wird
   kein Alarm versendet.
   - Test: `test_alle_trocken_kein_alarm`, `test_beginn_ueber_55_min_an_allen_punkten_kein_alarm`.
 
-- **AC-5 (eigener Messpunkt ausgefallen, vorn Regen — Entscheid b):** Given der erste Messpunkt
+- **AC-5:** (eigener Messpunkt ausgefallen, vorn Regen — Entscheid b) Given der erste Messpunkt
   liefert keine Daten (`data_unavailable`) oder der Abruf wirft eine Ausnahme, und ein Folgepunkt
   belegt Regen mit Beginn in höchstens 55 Minuten, When der Prüflauf läuft, Then wird ein Alarm
   versendet; bei einer Ausnahme am ersten Punkt werden die Folgepunkte dafür trotzdem abgerufen.
@@ -234,19 +234,19 @@ Ein neues ADR ist **nicht** nötig: ADR-0021/0046/0052/0056 legen die Punkt-0-Re
     (`test_radar_messluecken_protokoll.py:595-625`) in genau diesem Teil. Die Positivkontrolle
     „derselbe Ausfall an Index 1 erzeugt `measurement_gaps`" bleibt erhalten.
 
-- **AC-6 (Ausfall ohne Regen bleibt sichtbar):** Given der erste Messpunkt ist ausgefallen
+- **AC-6:** (Ausfall ohne Regen bleibt sichtbar) Given der erste Messpunkt ist ausgefallen
   (Ausnahme oder `data_unavailable`) und alle Folgepunkte sind trocken oder ebenfalls ausgefallen,
   When der Prüflauf läuft, Then wird kein Alarm versendet und der Lauf wird weiterhin mit dem
   Grund `REASON_DATA_UNAVAILABLE` ins Alarmprotokoll geschrieben (nie als „ruhig" gewertet).
   - Test: `test_punkt0_ausfall_folgepunkte_trocken_kein_alarm_aber_protokoll`, parametrisiert wie AC-5.
 
-- **AC-7 (Budget-Druck unverändert):** Given der erste Messpunkt ist `throttled`, When der
+- **AC-7:** (Budget-Druck unverändert) Given der erste Messpunkt ist `throttled`, When der
   Prüflauf läuft, Then werden keine zusätzlichen Abrufe für Folgepunkte ausgelöst und kein Alarm
   versendet — wie vor dieser Änderung.
   - Test: `test_punkt0_throttled_kein_zusatzabruf_kein_alarm` (zählt die Abrufe über
     `recording_radar_service_type`).
 
-- **AC-8 (Sperren bleiben wirksam):** Given ein Alarm wurde bereits gesendet, When im nächsten
+- **AC-8:** (Sperren bleiben wirksam) Given ein Alarm wurde bereits gesendet, When im nächsten
   Lauf wieder ein Folgepunkt auslöst, Then greifen Sperrzeit, Tageslimit und Identitäts-Gate
   (#1467) unverändert: Es wird kein zweiter Alarm für dasselbe Ereignis versendet; eine echte
   Verschärfung (#2065) durchbricht die Sperrzeit weiterhin, und zwar mit der Menge des
@@ -254,7 +254,7 @@ Ein neues ADR ist **nicht** nötig: ADR-0021/0046/0052/0056 legen die Punkt-0-Re
   - Test: `test_sperrzeit_tageslimit_identitaet_wirken_mit_folgepunkt`,
     `test_verschaerfung_am_folgepunkt_durchbricht_sperrzeit`.
 
-- **AC-9 (Wechsel des Punkts ohne Verschärfung, Pflicht-Test):** Given der erste Lauf hat wegen
+- **AC-9:** (Wechsel des Punkts ohne Verschärfung, Pflicht-Test) Given der erste Lauf hat wegen
   Punkt 2 alarmiert, When im zweiten Lauf (innerhalb der Sperrzeit, gleiches Ereignis) wegen
   Messwert-Schwankung Punkt 3 statt Punkt 2 maßgeblich wird, ohne dass sich Menge oder
   Dringlichkeit verschärfen, Then wird kein zweiter Alarm versendet.
@@ -262,14 +262,14 @@ Ein neues ADR ist **nicht** nötig: ADR-0021/0046/0052/0056 legen die Punkt-0-Re
     Spec-Befund** (Stickiness wird dann in dieser Spec nachgezogen), kein Grund, den Test
     aufzuweichen.
 
-- **AC-10 (Alarmprotokoll nennt den auslösenden Punkt):** Given ein Alarm wurde durch einen
+- **AC-10:** (Alarmprotokoll nennt den auslösenden Punkt) Given ein Alarm wurde durch einen
   Folgepunkt ausgelöst, When der Alarmprotokolleintrag geschrieben wird, Then enthält er
   zusätzlich den km dieses Punkts entlang der Strecke; alle bisherigen Felder sind unverändert, und
   ein Eintrag ohne das Feld (Altbestand, Alarm durch Punkt 0 ohne Angabe) bleibt gültig und lesbar.
   - Test: `test_e1_protokoll_nennt_km_des_ausloesenden_punkts`,
     `test_e1_felder_rueckwaertskompatibel` (Altzeile ohne Feld wird gelesen).
 
-- **AC-11 (alle vier Kanäle, derselbe Pfad):** Given ein Alarm wird durch einen Folgepunkt
+- **AC-11:** (alle vier Kanäle, derselbe Pfad) Given ein Alarm wird durch einen Folgepunkt
   ausgelöst und der Nutzer hat Mail, Telegram, SMS und Premium-SMS konfiguriert, When der Alarm
   versendet wird, Then erhalten alle vier Kanäle den Alarm mit derselben Auslöseaussage (Beginn „ab
   HH:MM" des maßgeblichen Punkts, Zonen-Ort), und keiner der Texte liest sich als Aussage über den
@@ -278,13 +278,13 @@ Ein neues ADR ist **nicht** nötig: ADR-0021/0046/0052/0056 legen die Punkt-0-Re
     Kanäle; Inhaltsprüfung auf Beginn-Uhrzeit und Zonen-Suffix, keine reine String-Presence ohne
     Plausibilitätsbezug).
 
-- **AC-12 (Ortsvergleich unberührt):** Given der Ortsvergleich-Radar-Alarm, When diese Änderung
+- **AC-12:** (Ortsvergleich unberührt) Given der Ortsvergleich-Radar-Alarm, When diese Änderung
   geliefert ist, Then ist `compare_radar_alert.py` unverändert und seine Tests laufen unverändert
   grün.
   - Test: bestehende Compare-Radar-Tests; `git diff` zeigt keine Änderung an
     `src/services/compare_radar_alert.py`.
 
-- **AC-13 (Erledigt-Vermerke):** Given die in „Abgelöste Festlegungen" genannten Stellen, When
+- **AC-13:** (Erledigt-Vermerke) Given die in „Abgelöste Festlegungen" genannten Stellen, When
   diese Spec umgesetzt ist, Then tragen die fünf Specs (S4a, S4b, S2a Zeile 268, fix_2017 KL 9,
   Sz.8 AC-5) einen Erledigt-/Ablösungsvermerk mit Verweis auf #2480, und der Wächter in
   `test_radar_messluecken_protokoll.py` ist angepasst statt gelöscht.

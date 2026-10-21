@@ -300,21 +300,21 @@ umgestellt — die Zusicherung dahinter (Byte-Gleichheit / Regression) bleibt er
   - Test: Bündel-`AlertMessage` mit drei Ereignissen bauen, `render_sms()` aufrufen, Kopf
     und beide Token per Regex/Substring gegen das Golden-Beispiel aus dieser Spec prüfen.
 
-- **AC-9 (Regressionsschutz):** Given ein Ortsvergleich-Änderungsalarm mit
+- **AC-9:** (Regressionsschutz) Given ein Ortsvergleich-Änderungsalarm mit
   `location_positions` gesetzt / When `render_sms()` rendert / Then bleibt die Ausgabe
   **byte-identisch** zu heute — kein Kopf, Token-Format unverändert (kein Von-Wert, keine
   `>`-Notation) — die Positionszahl-Kodierung aus #1467 S2 AG3b bleibt unangetastet.
   - Test: `tests/tdd/test_alert_sms_location_positions.py::test_k1_*`/`test_k2_*`/`test_k3_*`/`test_k4_*`
     bleiben **unverändert** grün (keine Anpassung an diesen vier Tests).
 
-- **AC-10 (Regressionsschutz):** Given ein Ortsvergleich-Bündel-Radar-Alarm (zwei Orte,
+- **AC-10:** (Regressionsschutz) Given ein Ortsvergleich-Bündel-Radar-Alarm (zwei Orte,
   `OnsetEvent.location_label` gesetzt) / When `render_sms()` über `_render_sms_onset`
   rendert / Then bleibt die Ausgabe byte-identisch zu heute (`"Zermatt, Chamoni km0-0:
   R!8"`) — der Orts-Sammelname in `trip_short` ist kein Trip-Name und bleibt stehen.
   - Test: `tests/tdd/test_alert_sms_location_positions.py::test_regression_compare_radar_alert_sms_text_unchanged`
     bleibt unverändert grün.
 
-- **AC-11 (Regressionsschutz Betreff/Telegram):** Given eine Mehr-Ereignis-Nachricht mit
+- **AC-11:** (Regressionsschutz Betreff/Telegram) Given eine Mehr-Ereignis-Nachricht mit
   einer Nicht-Prozent-Metrik / When `render_subject()` und `render_telegram()` rendern /
   Then führen beide die Einheit am Wert (z. B. „80 km/h" statt „80"), Prozent-Metriken
   bleiben unverändert mit angehängtem `%`.

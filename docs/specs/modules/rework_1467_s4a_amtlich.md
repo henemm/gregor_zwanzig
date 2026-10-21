@@ -293,7 +293,7 @@ Tageszähler vorbelegen), nicht über „auf eine echte Warnung warten".
 
 **Der Kernfall: Trip-Cooldown-Lesen entfällt (E1)**
 
-- **AC-4 (Kernfall):** Given ein Trip, für den um Zeitpunkt T ein Änderungsalarm
+- **AC-4:** (Kernfall) Given ein Trip, für den um Zeitpunkt T ein Änderungsalarm
   zugestellt wurde (er hat den `ThrottleStore`-Scope `"trip"` für diesen Trip befüllt),
   When 15 Minuten später (T+15) eine amtliche Warnung für denselben Trip von GELB auf
   ORANGE eskaliert, Then wird die Eskalation zugestellt — vor dieser Scheibe wäre sie bis
@@ -305,7 +305,7 @@ Tageszähler vorbelegen), nicht über „auf eine echte Warnung warten".
   - Mutations-Gegenprobe (Pflicht): das Lesen von Scope `"trip"` im amtlichen Pfad wieder
     einbauen (Zeile `trip_alert.py:1494` reaktivieren) MUSS diesen Test rot machen.
 
-- **AC-5 (Gegenprobe zu AC-4, harmlose Richtung bleibt zu):** Given derselbe Trip, dessen
+- **AC-5:** (Gegenprobe zu AC-4, harmlose Richtung bleibt zu) Given derselbe Trip, dessen
   amtlicher Alarm aus AC-4 gerade erfolgreich zugestellt wurde, When man danach den
   Zustand des `ThrottleStore`-Scopes `"trip"` betrachtet, Then enthält er einen neuen
   Eintrag für diesen Trip — das Schreibverhalten des amtlichen Pfads ist unverändert
@@ -316,7 +316,7 @@ Tageszähler vorbelegen), nicht über „auf eine echte Warnung warten".
     denselben Trip simulieren, er bleibt unterdrückt (unverändert gegenüber vor der
     Scheibe).
 
-- **AC-6 (Regression, Änderungsalarm-Drosselung unverändert):** Given den
+- **AC-6:** (Regression, Änderungsalarm-Drosselung unverändert) Given den
   Änderungsalarm-Pfad selbst (`trip_alert.py:246`), When identische
   Drosselungs-Szenarien vor und nach dieser Scheibe durchlaufen werden, Then bleibt sein
   Zustellverhalten unverändert — diese Scheibe rührt nur den amtlichen Lesezugriff an,

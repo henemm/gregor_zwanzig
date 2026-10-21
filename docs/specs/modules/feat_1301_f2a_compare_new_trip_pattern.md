@@ -8,6 +8,8 @@ version: "1.0"
 tags: [epic-1301, epic-1273, compare, trip-new-pattern, progressive-editor]
 ---
 
+> Hinweis (Doku-Audit 2026-10-21): das unter „Architektur-Entscheidung (ADR)“ reservierte ADR-0029 „anlege-shell-je-domaene-eigen“ wurde nie angelegt; ADR-0029 ist heute [Open-Meteo als Standard-Provider](../../adr/0029-openmeteo-standard-provider.md). Es gilt die Trip/Ortsvergleich-Code-Teilungs-Regel aus `CLAUDE.md` (geteilte Bausteine, kein domänen-eigener Anlege-Editor).
+
 # Epic #1301 Scheibe F2a — `/compare/new` als Progressive-Tab-Editor nach Trip-Muster
 
 > **Teilweise ueberholt seit 2026-08-01 (Issue #1406 Scheibe B).** Der

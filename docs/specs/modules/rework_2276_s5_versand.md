@@ -266,7 +266,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
     überschreibt `send_sms` mit dem vor der Alarme-Änderung eingefrorenen
     `false`).
 
-- **AC-3 (Diff-basierter Rollback schützt Nachbar-Reiter):** Given ein
+- **AC-3:** (Diff-basierter Rollback schützt Nachbar-Reiter) Given ein
   Versand-PUT schlägt fehl, nachdem zwischenzeitlich eine
   Alarme-Kanal-Änderung an `sendTelegram` erfolgreich gespeichert wurde /
   When der Rollback ausgeführt wird / Then bleibt die erfolgreich
@@ -276,7 +276,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: unconditioned Full-Overwrite-Rollback statt
     diff-basiertem Rollback ⇒ Test rot.
 
-- **AC-4 (Reiterwechsel verliert nichts):** Given der Nutzer ändert eine
+- **AC-4:** (Reiterwechsel verliert nichts) Given der Nutzer ändert eine
   Versand-Einstellung und wechselt sofort, vor Ablauf der Debounce-Zeit, in
   den Alarme- oder Idealwerte-Reiter, wo er ebenfalls sofort eine Änderung
   vornimmt / When beide Änderungen abgeschlossen sind / Then sind beide
@@ -285,7 +285,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: `'versand'` nicht in
     `SELBST_SPEICHERNDE_VERGLEICH_REITER` aufnehmen ⇒ Test rot.
 
-- **AC-5 (Button-Klick „Bis auf Weiteres" bleibt wirksam ohne Wrapper):**
+- **AC-5:** (Button-Klick „Bis auf Weiteres" bleibt wirksam ohne Wrapper)
   Given der Nutzer klickt im Laufzeit-Control auf „Bis auf Weiteres"
   (löscht ein gesetztes Enddatum), ohne dass ein `change`- oder
   `focusout`-Ereignis ausgelöst wird / When die Änderung abgeschlossen ist /
@@ -296,7 +296,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: den reaktiven Effect so einschränken, dass er
     `endDate` nicht beobachtet ⇒ Test rot.
 
-- **AC-6 (Speicherkonflikt zeigt „Nochmal speichern"):** Given ein
+- **AC-6:** (Speicherkonflikt zeigt „Nochmal speichern") Given ein
   Versand-Speichervorgang schlägt mit einem Speicherkonflikt (412) fehl /
   When der Nutzer „Nochmal speichern" auslöst / Then wird die Änderung
   erneut gesendet, endet in „Gespeichert", der geänderte Stand bleibt
@@ -309,7 +309,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
     Versand-Speicherweg liegt).
   - Mutations-Gegenprobe: Rollback auch bei 412 auslösen ⇒ Test rot.
 
-- **AC-7 (Pausieren/Aktivieren flusht ausstehende Änderung):** Given der
+- **AC-7:** (Pausieren/Aktivieren flusht ausstehende Änderung) Given der
   Nutzer ändert eine Versand-Einstellung und pausiert/aktiviert den
   Ortsvergleich sofort danach (Aktivierungs-Karte oder Header-Kebab) / When
   der Vorgang abgeschlossen ist / Then ist die Änderung im gespeicherten
@@ -318,7 +318,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: den generischen `saveController.flush()`-Aufruf in
     `handleToggleActive` entfernen ⇒ Test rot.
 
-- **AC-8 (Kein Laufzeit-Import der alten Klebeschicht mehr):** Given der
+- **AC-8:** (Kein Laufzeit-Import der alten Klebeschicht mehr) Given der
   Versand-Speicherpfad ist umgestellt / When der Modulgraph geladen wird /
   Then lädt weder `VersandTab.svelte` noch `versandVergleichSpeicherung.ts`
   zur Laufzeit ein Modul aus `compareHubWizardBridge.ts` —
@@ -329,7 +329,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: `buildHubPutPayload`-Re-Import einfügen ⇒
     Ladegraph-Nachweis schlägt an, Test rot.
 
-- **AC-9 (Anlege-Seite unverändert):** Given der Nutzer legt einen neuen
+- **AC-9:** (Anlege-Seite unverändert) Given der Nutzer legt einen neuen
   Ortsvergleich an und bearbeitet den Versand-Reiter vor dem ersten
   Speichern / When er die Anlage abschließt / Then läuft der Speicherweg
   weiter ausschließlich über `wiz.saveNewPreset()` (POST), ohne
@@ -338,7 +338,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: Aktivierungs-Bedingung der neuen Orchestrierung
     entfernen ⇒ Anlege-Seite löst einen PUT aus ⇒ Test rot.
 
-- **AC-10 (Keepalive-Weiterreichung):** Given der Nutzer schließt den Tab
+- **AC-10:** (Keepalive-Weiterreichung) Given der Nutzer schließt den Tab
   unmittelbar nach einer Versand-Änderung / When der Browser Keepalive
   auslöst / Then wird der `init`-Parameter der SaveFn an den `api.put`-
   Aufruf durchgereicht, statt verworfen zu werden.
@@ -361,7 +361,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
     werden im Payload-Vergleich vermisst bzw. nullen sich im
     Round-Trip-Test).
 
-- **AC-12 (Trip-Seite unverändert):** Given ein Trip mit
+- **AC-12:** (Trip-Seite unverändert) Given ein Trip mit
   Versand-Konfiguration (Briefing-Kanäle/-Zeitplan) / When der Nutzer dort
   etwas ändert / Then läuft die Speicherung weiterhin über
   `scheduleAutoSave`/`scheduleReportConfigOnlySave`, unverändert durch den

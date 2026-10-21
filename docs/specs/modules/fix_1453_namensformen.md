@@ -252,7 +252,7 @@ Regel „Form folgt Platz", nicht widersprüchlich.
 
 ## Acceptance Criteria
 
-- **AC-1 (Nicht-Regression Stundentabelle):** Given ein Nutzer öffnet eine
+- **AC-1:** (Nicht-Regression Stundentabelle) Given ein Nutzer öffnet eine
   Vergleichs- oder Trip-Mail mit Stundentabelle / When er die
   Spaltenüberschriften ansieht / Then stehen dort weiterhin die englischen
   Kurzformen — unverändert bis auf die zwei in AC-2 genannten Spalten.
@@ -299,7 +299,7 @@ Regel „Form folgt Platz", nicht widersprüchlich.
   Stundentabelle. Die Regel dieser Spec entscheidet nach Platz, nicht nach
   Sprache, und der Fachbegriff geht in keiner der beiden Formen verloren.
 
-- **AC-6 (Pflicht-Prüfer):** Given eine zugestellte Vergleichs-Mail trägt die
+- **AC-6:** (Pflicht-Prüfer) Given eine zugestellte Vergleichs-Mail trägt die
   neuen deutschen Übersichtsnamen und die zwei umbenannten Stundenspalten /
   When `email_spec_validator.py` gegen diese Mail läuft / Then meldet er
   Exit 0; eine Mail mit einer **Stundenspalte** in alter oder erfundener Form
@@ -322,7 +322,7 @@ Regel „Form folgt Platz", nicht widersprüchlich.
   zu schließen ist eine eigene Änderung am Prüfer und **nicht** Teil dieser
   Lieferung.
 
-- **AC-7 (Konfiguration zeigt alle drei Formen):** Given ein Nutzer öffnet
+- **AC-7:** (Konfiguration zeigt alle drei Formen) Given ein Nutzer öffnet
   den Reiter „Wetter-Metriken" — im Trips-Editor oder in einer der drei
   Compare-Flächen (Übersicht, Stundenverlauf, Ausblick) / When er eine
   Wettergröße betrachtet / Then findet er zu dieser Größe alle drei
@@ -331,7 +331,7 @@ Regel „Form folgt Platz", nicht widersprüchlich.
   - Test: Struktur-/Component-Test je der vier Editoren, der das
     Vorhandensein aller drei Werte an mindestens einer Zeile nachweist.
 
-- **AC-8 (keine dritte Namenskopie):** Given die deutschen Übersichtsnamen
+- **AC-8:** (keine dritte Namenskopie) Given die deutschen Übersichtsnamen
   sind ausgeliefert / When ein Test prüft, woher eine Zeilenbeschriftung
   stammt / Then kommt sie nachweislich aus dem zentralen Register
   (`label_de` über `get_metric()`) — nicht aus einer separaten, getippten

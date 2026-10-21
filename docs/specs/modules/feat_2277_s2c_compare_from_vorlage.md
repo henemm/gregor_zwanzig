@@ -8,6 +8,8 @@ version: "1.0"
 tags: [compare-new, vorlage, from-param, hydration, multi-user]
 ---
 
+> Hinweis: baut auf Alt-Bestand `compareWizardState` (`frontend/src/lib/components/compare/compareWizardState.svelte.ts`) auf, der laut [ADR-0032](../../adr/0032-wizard-abschaffung-progressive-editoren.md)/CLAUDE.md entfällt.
+
 # `/compare/new?from=<id>` — Ortsvergleich als Vorlage (Issue #2277 Scheibe S2c)
 
 ## Approval

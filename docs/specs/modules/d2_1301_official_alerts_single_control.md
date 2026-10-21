@@ -131,7 +131,7 @@ Abschnitt mit der Amtliche-Warnungen-Checkbox nur für `context='route'` ein.
   Label „Amtliche Warnungen im Bericht" und schaltet weiterhin `official_alerts_enabled`.
   - Test: Rendering zeigt das Label; ein Klick schaltet den gebundenen Zustand.
 
-- **AC-6 (Erreichbarkeit Vergleich, Staging-Nachweis):** Given ein **bestehender** Ortsvergleich im
+- **AC-6:** (Erreichbarkeit Vergleich, Staging-Nachweis) Given ein **bestehender** Ortsvergleich im
   Hub / When der Nutzer den Tab „Wetter-Metriken" öffnet / Then ist der Schalter „Amtliche
   Warnungen im Bericht" sichtbar; ihn umzuschalten persistiert `official_alerts_enabled` (GET nach
   Speichern bestätigt den Wert).

@@ -311,7 +311,7 @@ ohnehin entstehenden Eintrags ändert sich.
   aus / When protokolliert wird / Then steht `"LOW"` im Eintrag.
   - Test: gleiches Muster mit `level=2`.
 
-- **AC-3 (konservative Fallback-Richtung, Nachbesserung Team-Lead-Review):** Given eine
+- **AC-3:** (konservative Fallback-Richtung, Nachbesserung Team-Lead-Review) Given eine
   amtliche Warnung mit einer Stufe außerhalb des bekannten Katalogs (`level=5`,
   fehlerhafte Provider-Daten) löst einen Standalone-Alarm aus / When protokolliert wird
   / Then steht `"HIGH"` im Eintrag, nicht `"LOW"` — dieselbe konservative
@@ -320,7 +320,7 @@ ohnehin entstehenden Eintrags ändert sich.
   falsch-niedriger verschluckt eine echte Warnung.
   - Test: `_send_official_alert_only()` mit `OfficialAlert(level=5, ...)`, Eintrag prüfen.
 
-- **AC-4 (LEVEL_LETTERS-Ableitung ist live, ersetzt frühere MIN_SMS_LEVEL-Fassung):**
+- **AC-4:** (LEVEL_LETTERS-Ableitung ist live, ersetzt frühere MIN_SMS_LEVEL-Fassung)
   Given `hazard_symbols.LEVEL_LETTERS[3]` wird testweise per Monkeypatch von `"M"` auf
   `"L"` gesetzt, eine amtliche Warnung der Stufe 3 (orange) liegt vor / When
   protokolliert wird / Then steht `"LOW"` statt `"MODERATE"` im Eintrag — der Beweis,
@@ -349,7 +349,7 @@ ohnehin entstehenden Eintrags ändert sich.
   - Test: ein konstruiertes `NowcastResult` mit `intensity_label="Leichter Regen"` als
     Eingangsdatum, Eintrag prüfen.
 
-- **AC-8 (E4, Δ-Wetter unverändert, Nachbesserung Team-Lead-Review):** Given eine
+- **AC-8:** (E4, Δ-Wetter unverändert, Nachbesserung Team-Lead-Review) Given eine
   Δ-Konstellation mit mindestens einer `ChangeSeverity.MAJOR`-Änderung / When der Alarm
   über `check_and_send_alerts()` protokolliert wird / Then steht `severity="HIGH"` im
   Eintrag; bei ausschließlich `MINOR`-Änderungen steht `"LOW"`, bei höchstens
@@ -362,7 +362,7 @@ ohnehin entstehenden Eintrags ändert sich.
     untauglich — dieser Zustand existiert danach nicht mehr, ein solcher Test kann nie
     rot werden.
 
-- **AC-9 (Case-Robustheit, Known-Bug der Ableitungsquelle):** Given zwei
+- **AC-9:** (Case-Robustheit, Known-Bug der Ableitungsquelle) Given zwei
   `NowcastResult`-Datensätze mit identischem fachlichem Inhalt, einer mit dem
   Original-Label aus `intensity_to_text()` („Mäßiger Regen"), einer mit der im
   Trip-Pfad üblichen Kleinschreibung des ersten Buchstabens („mäßiger Regen") / When
@@ -384,7 +384,7 @@ ohnehin entstehenden Eintrags ändert sich.
     `radar_service.intensity_to_text(5.0)` aufrufen (liefert jetzt „Kräftiger Regen"),
     das Ergebnis durch `urgency_from_radar()` schleusen, `"HIGH"` erwarten.
 
-- **AC-11 (E5, Trip-Bündelung Δ + amtlich):** Given ein Alarm-Lauf, in dem eine
+- **AC-11:** (E5, Trip-Bündelung Δ + amtlich) Given ein Alarm-Lauf, in dem eine
   MINOR-Δ-Änderung UND eine rote amtliche Warnung (`level=4`) im selben Durchlauf in
   EINE Nachricht gebündelt werden (`check_and_send_alerts(..., official_notices=...)`,
   Muster #1088) / When protokolliert wird / Then trägt der EINE entstehende Eintrag
@@ -394,7 +394,7 @@ ohnehin entstehenden Eintrags ändert sich.
     durch `check_and_send_alerts()` schleusen; genau ein neuer Eintrag entsteht, dessen
     `severity` `"HIGH"` ist.
 
-- **AC-12 (E5, Ortsvergleich-Radar, mehrere Orte):** Given ein Ortsvergleich-Radar-Alarm
+- **AC-12:** (E5, Ortsvergleich-Radar, mehrere Orte) Given ein Ortsvergleich-Radar-Alarm
   mit zwei getriggerten Orten, **beide nicht konvektiv**, einer mit leichtem und einer mit
   mäßigem Regen / When protokolliert wird / Then steht im EINEN Log-Eintrag
   `severity="MODERATE"` — die schärfste beteiligte Einstufung.
@@ -408,13 +408,13 @@ ohnehin entstehenden Eintrags ändert sich.
     **zusätzlicher** Regressionswächter erhalten, zählt aber nicht als Nachweis.
     (Muster: „prüft der Test, was er behauptet?" — vgl. #1457, #1435 E3a.)
 
-- **AC-13 (E5, Ortsvergleich amtlich, mehrere Warnungen):** Given ein
+- **AC-13:** (E5, Ortsvergleich amtlich, mehrere Warnungen) Given ein
   Ortsvergleich-amtlich-Alarm mit zwei getaggten Warnungen unterschiedlicher Orte,
   `level=2` (gelb) und `level=4` (rot) / When protokolliert wird / Then steht
   `severity="HIGH"` im EINEN Eintrag.
   - Test: zwei getaggte `OfficialAlert`-Objekte unterschiedlicher Stufe, Eintrag prüfen.
 
-- **AC-14 (E6, Verhaltensneutralität des Versands, Nachbesserung Team-Lead-Review):**
+- **AC-14:** (E6, Verhaltensneutralität des Versands, Nachbesserung Team-Lead-Review)
   Given eine Trip mit aktivem E-Mail- und Telegram-Kanal und einer Δ-Änderung, die einen
   Alarm auslöst / When der Alarm läuft / Then wird die E-Mail-Senke **genau einmal** und
   die Telegram-Senke **genau einmal** aufgerufen, die SMS-Senke **kein Mal**, und
@@ -428,7 +428,7 @@ ohnehin entstehenden Eintrags ändert sich.
     eines Vergleichs mit „dem Stand vor dieser Scheibe" — Letzterer ist nach dem Umbau
     nicht mehr herstellbar und könnte deshalb nie rot werden.
 
-- **AC-15 (E7, D4 — Eintragszahl und Ziel-Liste unverändert):** Given eine Trip hat vor
+- **AC-15:** (E7, D4 — Eintragszahl und Ziel-Liste unverändert) Given eine Trip hat vor
   dieser Scheibe N Einträge in `entries` / When zusätzlich ein amtlicher Alarm
   (`level=4`) protokolliert wird, der vor dieser Scheibe als `"MODERATE"` in `entries`
   gelandet wäre / Then liegt der neue Eintrag weiterhin in `entries` (nicht
@@ -438,7 +438,7 @@ ohnehin entstehenden Eintrags ändert sich.
   - Test: Eintragszähler beider Listen vor/nach dem Lauf, Prüfung dass der neue Eintrag
     in `entries` liegt.
 
-- **AC-16 (Mandantentrennung, zwei Nutzer):** Given zwei Nutzer A und B, jeweils mit
+- **AC-16:** (Mandantentrennung, zwei Nutzer) Given zwei Nutzer A und B, jeweils mit
   einer eigenen Trip und je einer roten amtlichen Warnung (`level=4`) im selben
   Testlauf, isoliert über `app.loader.get_data_dir` (kein gemeinsamer `data_dir`) / When
   beide Alarme protokolliert werden / Then trägt Nutzer As `alert_log.json` einen Eintrag

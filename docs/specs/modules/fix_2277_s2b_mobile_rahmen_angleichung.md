@@ -388,7 +388,7 @@ involvieren. `/compare/new` bleibt bei reinem `href` (kein Verhaltenswechsel dor
     Standard-Deklaration weglassen ⇒ Test wird rot (fehlende
     `mask-image`-Deklaration).
 
-- **AC-9 (Ein-Instanz-/Testid-Erhalt, Strukturwächter):** Given die vier
+- **AC-9:** (Ein-Instanz-/Testid-Erhalt, Strukturwächter) Given die vier
   bestehenden Testids `tn-mobile-appbar`, `tn-mobile-save`,
   `tn-desktop-breadcrumb`, `tn-mobile-tabbar` sind vertragliche Selektoren von
   `issue-661-trip-new-mobile.spec.ts` / When der Rahmen-Umbau (AC-3/AC-4/AC-8)

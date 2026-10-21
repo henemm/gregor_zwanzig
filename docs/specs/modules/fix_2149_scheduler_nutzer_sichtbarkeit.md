@@ -475,7 +475,7 @@ Kein Mock-Theater, keine Dateiinhalt-Prüfung als Verhaltensnachweis. Package
   - `users`-Aggregat wird für `trip_reports_hourly` (subs-Zweig) **und**
     `alert_checks` (Hauptzweig) geprüft — Regressionsschutz gegen die
     #1447-`overlap`-Falle, hier auf `users` übertragen.
-- **AC-8 (Regression):** bestehende Tests zu #1912
+- **AC-8:** (Regression) bestehende Tests zu #1912
   (`timeout_kein_ausfall_test.go`), #1447 S2a (`job_overlap_test.go`,
   `job_status_partial_test.go`) und #1346 (Alarm-Test in
   `scheduler_unify_test.go` bzw. verwandte Dateien) bleiben ohne inhaltliche

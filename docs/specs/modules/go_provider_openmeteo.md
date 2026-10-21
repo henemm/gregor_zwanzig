@@ -8,6 +8,8 @@ version: "1.0"
 tags: [migration, go, provider, weather, open-meteo, regional-models, bugfix]
 ---
 
+> Teilweise abgelöst durch [ADR-0004](../../adr/0004-signal-channel-removed.md) (2026-06-06): „SMS / Signal Channel Formatter“ (Non-Goals) — einen Signal-Kanal gibt es nicht mehr (#610).
+
 # M2: OpenMeteo Provider (Go native)
 
 ## Approval

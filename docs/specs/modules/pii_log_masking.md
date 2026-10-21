@@ -330,7 +330,7 @@ Limitations).
 
 ## Acceptance Criteria
 
-- **AC-1 (a):** Given ein Trip mit `mail_to = "gregor-test@henemm.com"` (bekannte
+- **AC-1:** (a) Given ein Trip mit `mail_to = "gregor-test@henemm.com"` (bekannte
   Ops-Adresse) / When das Briefing erfolgreich versendet wird / Then enthält
   sowohl die Erfolgszeile als auch der `briefing_log.json`-Eintrag die
   Adresse `gregor-test@henemm.com` unmaskiert im Klartext.
@@ -338,7 +338,7 @@ Limitations).
     `test_erfolgszeile_enthaelt_die_empfaengeradresse` (bestehend, #1847) —
     bleibt unter dieser Spec unverändert grün.
 
-- **AC-2 (b):** Given ein Trip mit `mail_to = "finder@example.org"` (echte,
+- **AC-2:** (b) Given ein Trip mit `mail_to = "finder@example.org"` (echte,
   unbekannte Fremdadresse) / When das Briefing erfolgreich versendet wird /
   Then enthält weder die Erfolgszeile noch der `briefing_log.json`-Eintrag
   die volle Adresse — beide zeigen `***@example.org`. Dasselbe gilt, wenn
@@ -351,7 +351,7 @@ Limitations).
     Bestandstest, nur `EMPFAENGER = "finder@example.org"`), plus ein
     Listen-Test mit gemischter Ops-/Fremdadresse.
 
-- **AC-3 (c):** Given ein Telegram-Sendefehler oder eine Registrierung mit
+- **AC-3:** (c) Given ein Telegram-Sendefehler oder eine Registrierung mit
   `chat_id = "123456789"` / When die entsprechende Fehler- bzw.
   Registrierungszeile protokolliert wird / Then enthält die Zeile nicht die
   volle `chat_id`, sondern nur die letzten drei Ziffern mit `…`-Präfix.
@@ -361,7 +361,7 @@ Limitations).
     künstlich fehlschlagenden/erfolgreichen Telegram-Antwort, kein Mock der
     Maskierungsfunktion selbst.
 
-- **AC-4 (d):** Given eine E-Mail von einer nicht autorisierten oder nicht
+- **AC-4:** (d) Given eine E-Mail von einer nicht autorisierten oder nicht
   verifizierten Absenderadresse / When `inbound_email_reader` die Nachricht
   verarbeitet und ablehnt / Then nennt die resultierende `warning`/`debug`-
   Zeile die Absenderadresse nur maskiert (`***@domain.tld`).
@@ -369,7 +369,7 @@ Limitations).
     für `inbound_email_reader._authorize()`/`_resolve_settings_for_sender()`
     mit einer echten Fremdadresse als Absender.
 
-- **AC-5 (e):** Given ein Magic-Link-Login-Versuch (SMTP nicht konfiguriert,
+- **AC-5:** (e) Given ein Magic-Link-Login-Versuch (SMTP nicht konfiguriert,
   Versand fehlgeschlagen, oder Versand-Timeout) / When `auth_magic.go` die
   jeweilige Zeile protokolliert / Then erscheint die E-Mail-Adresse nur als
   `***@domain.tld`.
@@ -379,7 +379,7 @@ Limitations).
     Abwesenheit der vollen Adresse in der Ausgabe nachweist, für mindestens
     den Zeitüberschreitungs- oder Fehlerfall (:109/:112).
 
-- **AC-6 (f):** Given der bestehende Code-Bestand nach Umsetzung dieser Spec /
+- **AC-6:** (f) Given der bestehende Code-Bestand nach Umsetzung dieser Spec /
   When der AST-Struktur-Wächter über `src/` läuft / Then meldet er keine
   Fundstelle. Given danach eine neue, unmaskierte `logger.*`-Zeile mit einem
   bare `chat_id`- oder `empfaenger`-Argument künstlich in einen isolierten
@@ -390,7 +390,7 @@ Limitations).
     gegen einen gepflanzten `tmp_path`-Baum, plus ein Ist-Stand-Test gegen
     `src/`).
 
-- **AC-7 (g):** Given `briefing_log.json`-Bestandsdateien mit Klartext-`mail_to`
+- **AC-7:** (g) Given `briefing_log.json`-Bestandsdateien mit Klartext-`mail_to`
   aus der Zeit vor dieser Spec / When `scripts/migrate_briefing_log_mail_to_mask.py`
   zuerst mit `--dry-run` und danach ohne `--dry-run` läuft / Then meldet der
   Dry-Run dieselbe Anzahl zu ändernder Einträge wie der echte Lauf tatsächlich

@@ -248,7 +248,7 @@ genau wie im Trip.
 
 ### Block A — `channel_active_metrics` je Kanal
 
-- **AC-1 (Kanal darf nur abwählen):** Given ein über den Loader geladenes Preset mit
+- **AC-1:** (Kanal darf nur abwählen) Given ein über den Loader geladenes Preset mit
   `display_config.active_metrics` (Grundauswahl aus mehreren Größen, darunter Temperatur, Wind und
   Böen) und `channel_active_metrics` mit einem SMS-Eintrag ohne Wind sowie einem Telegram-Eintrag,
   der zusätzlich eine Größe nennt, die nicht in der Grundauswahl steht / When
@@ -259,7 +259,7 @@ genau wie im Trip.
   - Test: `test_compare_einstellung_auslieferung_kette.py::test_kanal_darf_grundauswahl_nur_abwaehlen`;
     Erwartung aus rohem JSON und statischem Katalog, nicht aus `resolve_channel_enabled_metrics`.
 
-- **AC-2 (kein Eintrag folgt der Grundauswahl):** Given ein Altbestand-Preset ohne
+- **AC-2:** (kein Eintrag folgt der Grundauswahl) Given ein Altbestand-Preset ohne
   `channel_active_metrics` (Feld fehlt) und ein Preset, in dem nur der Kanal-Schlüssel `sms`
   fehlt / When das Briefing versendet wird / Then zeigt jeder Kanal ohne eigenen Eintrag die
   vollständige Grundauswahl, und die Kanaltexte sind identisch zu einem Preset, das dieselbe
@@ -268,7 +268,7 @@ genau wie im Trip.
   - Test: `..::test_fehlender_kanal_eintrag_folgt_der_grundauswahl` (Vergleichslauf mit explizitem
     Eintrag als Gegenprobe).
 
-- **AC-3 (leer heißt leer):** Given (a) ein Preset mit `channel_active_metrics.sms = []` bei
+- **AC-3:** (leer heißt leer) Given (a) ein Preset mit `channel_active_metrics.sms = []` bei
   nicht-leerer Grundauswahl und (b) ein Preset mit `active_metrics = []` und nicht-leeren
   Kanal-Einträgen / When das Briefing versendet wird / Then trägt im Fall (a) der SMS-Text keine
   einzige Metrik-Zelle, während E-Mail und Telegram die Grundauswahl zeigen, und im Fall (b) tragen
@@ -276,7 +276,7 @@ genau wie im Trip.
   Abbruch, kein Rückfall auf die Grundauswahl).
   - Test: `..::test_leere_auswahl_bleibt_leer_und_faellt_nicht_auf_grundauswahl_zurueck`.
 
-- **AC-4 (Reihenfolge aus der Kanal-Liste, Kappung trifft die hinteren):** Given ein Preset, in
+- **AC-4:** (Reihenfolge aus der Kanal-Liste, Kappung trifft die hinteren) Given ein Preset, in
   dem die Kanal-Liste für Telegram und SMS die Größen in anderer Reihenfolge nennt als die
   Grundauswahl, und ein zweites Preset, dessen Auswahl größer ist als die Telegram-Grenze von
   sieben Werten je Ort / When das Briefing versendet wird / Then erscheinen die Zellen im
@@ -285,14 +285,14 @@ genau wie im Trip.
   weist die verdrängten Größen aus.
   - Test: `..::test_reihenfolge_der_kanal_liste_bestimmt_zellen_und_kappung`.
 
-- **AC-5 (Kanal-Auswahl betrifft nur die Übersicht, nicht den Stundenverlauf):** Given ein Preset
+- **AC-5:** (Kanal-Auswahl betrifft nur die Übersicht, nicht den Stundenverlauf) Given ein Preset
   mit `channel_active_metrics.email` ohne eine Größe, die in `display_config.hourly_metrics`
   steht / When die E-Mail versendet wird / Then fehlt die Größe in der Übersichtstabelle, steht
   aber weiterhin im Stundenverlauf (`hourly_enabled` an); der Stundenverlauf folgt ausschließlich
   `hourly_metrics`.
   - Test: `..::test_kanalauswahl_aendert_den_stundenverlauf_nicht`.
 
-- **AC-6 (Premium-SMS = Inhalt der SMS):** Given ein Preset mit `send_premium_sms`, `alert_channels`
+- **AC-6:** (Premium-SMS = Inhalt der SMS) Given ein Preset mit `send_premium_sms`, `alert_channels`
   gesetzt und Premium-Tarif, einmal ohne und einmal mit einem Eintrag
   `channel_active_metrics["premium_sms"]`, der von `["sms"]` abweicht / When das Briefing
   versendet wird / Then ist der Premium-SMS-Text byte-identisch zum SMS-Text desselben Laufs, und
@@ -302,7 +302,7 @@ genau wie im Trip.
 
 ### Block B — Kanal an/aus × Tarif
 
-- **AC-7 (Kanalmatrix Briefing):** Given Presets mit allen Kombinationen aus `send_telegram`,
+- **AC-7:** (Kanalmatrix Briefing) Given Presets mit allen Kombinationen aus `send_telegram`,
   `send_sms`, `send_premium_sms` (Premium mit gesetztem `alert_channels`), den Tarifen `free`,
   `standard` und `premium` sowie Telegram/SMS global sendefähig bzw. nicht / When das Briefing
   versendet wird / Then wird genau die Kanalmenge bedient, die das Orakel aus rohem JSON, Tarif
@@ -311,19 +311,19 @@ genau wie im Trip.
   - Test: `..::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif` (parametrisiert;
     Erwartung `erreichbare_compare_kanaele` im Orakel).
 
-- **AC-8 (E-Mail immer an):** Given ein Preset, in dem alle `send_*`-Schalter fehlen oder falsch
+- **AC-8:** (E-Mail immer an) Given ein Preset, in dem alle `send_*`-Schalter fehlen oder falsch
   sind, auch mit einem Rohschlüssel `send_email: false` im JSON / When das Briefing versendet wird /
   Then geht die E-Mail hinaus und ist der einzige bediente Kanal (der Ortsvergleich speichert kein
   `send_email`, E-Mail bleibt immer aktiv).
   - Test: `..::test_email_ist_immer_aktiv_auch_bei_allen_schaltern_aus`.
 
-- **AC-9 (Premium-SMS ohne `alert_channels` ist kein Briefing-Kanal):** Given ein Preset mit
+- **AC-9:** (Premium-SMS ohne `alert_channels` ist kein Briefing-Kanal) Given ein Preset mit
   `send_premium_sms: true` und Premium-Tarif, einmal ohne den Schlüssel `alert_channels` und einmal
   mit `alert_channels` / When das Briefing versendet wird / Then bleibt Premium-SMS im ersten Fall
   aus (Altbestand: das Kennzeichen war eine Alarm-Absicht) und wird im zweiten Fall bedient.
   - Test: `..::test_premium_sms_ohne_alert_channels_ist_kein_briefing_kanal`.
 
-- **AC-10 (Tageslimit sperrt kanal- und nutzerbezogen, fail-soft):** Given zwei Nutzer mit
+- **AC-10:** (Tageslimit sperrt kanal- und nutzerbezogen, fail-soft) Given zwei Nutzer mit
   Premium-Tarif, bei Nutzer A ist das SMS-Tageslimit erschöpft, bei Nutzer B nicht / When beide
   Presets versendet werden / Then bekommt Nutzer A keine SMS und keine Premium-SMS (Sperrgrund im
   Ergebnis unter `blocked_channels`), seine E-Mail und sein Telegram gehen dennoch hinaus, und
@@ -332,7 +332,7 @@ genau wie im Trip.
 
 ### Block C — Slots morgen/abend
 
-- **AC-11 (Slot-Fälligkeit und Zieltag):** Given ein Preset mit `morning_enabled`, `morning_time`,
+- **AC-11:** (Slot-Fälligkeit und Zieltag) Given ein Preset mit `morning_enabled`, `morning_time`,
   `evening_enabled`, `evening_time` aus der Fixture-Datei und eine Ortszeit, die jeweils zur
   Morgen- bzw. Abend-Stunde passt / When `presets_due_for_hour` und danach
   `send_one_compare_preset` mit dem gelieferten Eintrag laufen / Then ist der Morgen-Slot mit
@@ -341,13 +341,13 @@ genau wie im Trip.
   zu seiner Stunde nichts fällig; sind beide aus, ist das Preset nie fällig.
   - Test: `..::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum`.
 
-- **AC-12 (Altbestand ohne Slot-Zeiten):** Given ein Preset ohne `morning_time`, einmal mit
+- **AC-12:** (Altbestand ohne Slot-Zeiten) Given ein Preset ohne `morning_time`, einmal mit
   `schedule: "daily_evening"` und einmal mit `schedule: "daily"` / When die Fälligkeit bestimmt
   wird / Then ist im ersten Fall nur der Abend-Slot (18:00) und im zweiten nur der Morgen-Slot
   (06:00) fällig.
   - Test: `..::test_altbestand_ohne_slot_zeiten_faellt_auf_schedule_zurueck`.
 
-- **AC-13 (Slot-Zeit im Ortstag, zwei Nutzer):** Given zwei Nutzer mit je einem Preset, dessen Orte
+- **AC-13:** (Slot-Zeit im Ortstag, zwei Nutzer) Given zwei Nutzer mit je einem Preset, dessen Orte
   in verschiedenen Zeitzonen liegen, und derselbe UTC-Zeitpunkt / When die Fälligkeit bestimmt
   wird / Then wird jedes Preset gegen die Ortszeit seines ersten auflösbaren Orts geprüft, und ein
   Preset des einen Nutzers beeinflusst die Fälligkeit des anderen nicht.
@@ -359,14 +359,14 @@ genau wie im Trip.
 `effective_alert_channels`; alle vier Kanäle gleichrangig. Testdatei
 `test_compare_alarm_einstellung_auslieferung_kette.py`.*
 
-- **AC-14 (Briefing- und Alarm-Kanäle sind getrennt):** Given ein Preset mit `send_telegram: true`,
+- **AC-14:** (Briefing- und Alarm-Kanäle sind getrennt) Given ein Preset mit `send_telegram: true`,
   aber `alert_channels.telegram: false`, und ein zweites mit umgekehrter Belegung / When das
   Briefing und danach ein Alarm ausgelöst werden / Then geht Telegram im ersten Preset nur beim
   Briefing hinaus und im zweiten nur beim Alarm; Änderungen an den Briefing-Schaltern verändern
   die Alarm-Kanäle nicht und umgekehrt.
   - Test: `..::test_briefing_und_alarm_kanaele_sind_unabhaengig`.
 
-- **AC-15 (Abweichungsalarm: Kanalmenge und Schwelle):** Given ein Preset mit `alert_channels`
+- **AC-15:** (Abweichungsalarm: Kanalmenge und Schwelle) Given ein Preset mit `alert_channels`
   (mehrere Kanäle an), `alert_channel_thresholds` mit einer Schwelle, die für genau einen Kanal
   eine Änderung unterdrückt, `alert_metric_channels` mit abweichender Kanal-Auswahl für eine
   Metrik und je Nutzer verschiedenem Tarif / When `CompareAlertService.check_all_compare_presets`
@@ -375,7 +375,7 @@ genau wie im Trip.
   geprüft), und die beiden Nutzer bekommen jeweils ihre eigene Menge.
   - Test: `test_compare_alarm_einstellung_auslieferung_kette.py::test_abweichungsalarm_kanalmenge_schwelle_und_tarif`.
 
-- **AC-16 (Radar-Alarm: Standard AUS, dann Kanalmenge und Schwelle):** Given ein Preset ohne
+- **AC-16:** (Radar-Alarm: Standard AUS, dann Kanalmenge und Schwelle) Given ein Preset ohne
   `radar_alert_enabled`, eines mit `radar_alert_enabled: true` und `alert_channels`, und eine
   Radar-Lage knapp unter bzw. knapp über der eingestellten Kanal-Schwelle / When
   `CompareRadarAlertService.check_all_compare_presets` läuft / Then bleibt das erste Preset ohne
@@ -384,7 +384,7 @@ genau wie im Trip.
   schweigt.
   - Test: `..::test_radar_alarm_standard_aus_und_kanalmenge_mit_schwelle`.
 
-- **AC-17 (Amtliche Warnung: Schalter-Vorrang und Kanalmenge):** Given Presets mit
+- **AC-17:** (Amtliche Warnung: Schalter-Vorrang und Kanalmenge) Given Presets mit
   (a) `official_warnings.enabled: true` und `official_alert_triggers_enabled: false`,
   (b) `official_warnings.enabled: false` und `official_alert_triggers_enabled: true`,
   (c) `official_warnings: {}` und `official_alert_triggers_enabled: false`,
@@ -396,27 +396,27 @@ genau wie im Trip.
   bewacht das.
   - Test: `..::test_amtliche_warnung_schalter_vorrang_und_kanalmenge`.
 
-- **AC-18 (Telegram-Kurzstil in allen drei Alarmpfaden):** Given ein Preset mit
+- **AC-18:** (Telegram-Kurzstil in allen drei Alarmpfaden) Given ein Preset mit
   `display_config.telegram_style: "kurzform"` und Telegram in `alert_channels` / When ein
   Abweichungs-, ein Radar- und ein amtlicher Alarm ausgelöst werden / Then ist der Telegram-Text
   in jedem der drei Pfade identisch zum SMS-Text desselben Alarms; mit `"rich"` bzw. fehlendem
   Schlüssel bleibt der ausführliche Telegram-Text.
   - Test: `..::test_alarme_honorieren_telegram_kurzstil`.
 
-- **AC-19 (Alarm-Mandantentrennung):** Given zwei Nutzer mit je einem Preset, aber
+- **AC-19:** (Alarm-Mandantentrennung) Given zwei Nutzer mit je einem Preset, aber
   unterschiedlichen `alert_channels`, Schwellen und Tarifen / When beide Alarmdienste je Nutzer
   laufen / Then erreicht jeden Nutzer ausschließlich der eigene Alarm über seine eigene
   Kanalmenge; kein Preset und kein Zähler eines Nutzers wirkt auf den anderen.
   - Test: `..::test_alarm_kette_trennt_zwei_nutzer`.
 
-- **AC-20 (Ruhezeit und Sperrzeit im Ortsvergleich-Alarm):** Given ein Preset mit
+- **AC-20:** (Ruhezeit und Sperrzeit im Ortsvergleich-Alarm) Given ein Preset mit
   `alert_quiet_from`/`alert_quiet_to` und `alert_cooldown_minutes` / When ein Abweichungsalarm
   innerhalb der Ruhezeit und ein zweiter innerhalb der Sperrzeit nach einem gesendeten Alarm
   ausgelöst wird / Then bleibt die Auslieferung in beiden Fällen aus und wird im Protokoll mit
   Grund vermerkt; außerhalb beider Fenster liefert derselbe Auslöser normal aus.
   - Test: `..::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm`.
 
-- **AC-21 (Fix: abgelaufener Ortsvergleich ist stumm — Briefing UND Alarme):** Given ein Preset mit
+- **AC-21:** (Fix: abgelaufener Ortsvergleich ist stumm — Briefing UND Alarme) Given ein Preset mit
   `end_date` in der Vergangenheit (Europe/Vienna) und aktivem Radar-, amtlichem und Abweichungsalarm /
   When die drei Alarmdienste und der Briefing-Lauf laufen / Then liefert keiner von ihnen über
   irgendeinen Kanal aus und verbraucht keinen State (Melde-Gedächtnis, Sperrzeit, Tageszähler);
@@ -430,14 +430,14 @@ genau wie im Trip.
   Zwei Nutzer: der abgelaufene Ortsvergleich des einen Nutzers berührt den aktiven des anderen nicht.
   - Test: `..::test_abgelaufener_ortsvergleich_ist_fuer_briefing_und_alle_alarme_stumm`.
 
-- **AC-22 (Alarm-Kanäle: Premium-SMS in jeder Art):** Given ein Preset mit Premium-Tarif und
+- **AC-22:** (Alarm-Kanäle: Premium-SMS in jeder Art) Given ein Preset mit Premium-Tarif und
   `alert_channels.premium_sms: true` / When Abweichungs-, Radar- und amtlicher Alarm ausgelöst
   werden / Then wird in allen drei Arten Premium-SMS bedient; bei Tarif `standard` in keiner.
   - Test: `..::test_premium_sms_ist_alarmkanal_in_allen_drei_arten_nur_im_premium_tarif`.
 
 ### Block E — `end_date`-Sentinel und Roundtrip von `display_config`
 
-- **AC-23 (Sentinel löscht das Enddatum auf beiden Schreibwegen):** Given zwei Nutzer mit je einem
+- **AC-23:** (Sentinel löscht das Enddatum auf beiden Schreibwegen) Given zwei Nutzer mit je einem
   Preset mit gesetztem `end_date` / When Nutzer A per `PUT /api/compare/presets/{id}` und
   Nutzer B per `PUT /api/briefings/{id}?kind=vergleich` das Feld mit `""` (Wert, den der Editor
   sendet) bzw. `null` überschreibt / Then fehlt der Schlüssel `end_date` in der jeweiligen Datei
@@ -447,14 +447,14 @@ genau wie im Trip.
     (ergänzt die vorhandenen Tests `compare_preset_test.go:934` und `:1047`, die nur den ersten
     Weg und einen Nutzer abdecken).
 
-- **AC-24 (Python liest „Feld fehlt" als unbegrenzt):** Given die von Go geschriebene Datei ohne
+- **AC-24:** (Python liest „Feld fehlt" als unbegrenzt) Given die von Go geschriebene Datei ohne
   `end_date` (Fixture) / When der Loader das Preset liest und `presets_due_for_hour` zur Slot-Stunde
   läuft / Then ist der geladene Wert `None` (geprüft mit `is None`, nicht wahrheitswertig), das
   Preset ist fällig, und ein Preset mit `end_date` von gestern (Ortstag) ist nicht fällig, eines
   mit `end_date` von heute ist fällig.
   - Test: `test_compare_einstellung_auslieferung_kette.py::test_fehlendes_end_date_heisst_unbegrenzt_und_grenztag_ist_faellig`.
 
-- **AC-25 (Roundtrip `display_config.channel_active_metrics` in Go):** Given ein Preset-Körper aus
+- **AC-25:** (Roundtrip `display_config.channel_active_metrics` in Go) Given ein Preset-Körper aus
   der geteilten Fixture mit `display_config.channel_active_metrics` (Einträge für `email`,
   `telegram`, `sms`, ein bewusst leerer Eintrag `[]`, ein fehlender Kanal, ein Fremdschlüssel
   `premium_sms`) / When er per PUT geschrieben und per GET sowie roh von der Platte gelesen wird /
@@ -464,7 +464,7 @@ genau wie im Trip.
   `display_config`-Ebene); zwei Nutzer sehen nie die Map des anderen.
   - Test: `compare_preset_kette_test.go::TestDisplayConfigChannelActiveMetricsRoundtripZweiNutzer`.
 
-- **AC-26 (Teil-Map ersetzt die Map — Wirkung wird festgehalten):** Given ein Preset mit Einträgen
+- **AC-26:** (Teil-Map ersetzt die Map — Wirkung wird festgehalten) Given ein Preset mit Einträgen
   für alle drei Kanäle / When ein PUT `channel_active_metrics` mit nur einem Kanal sendet / Then
   besteht die gespeicherte Map danach aus genau diesem Kanal (der Merge greift nur eine Ebene tief,
   `config_merge.go:18`), und der Python-Versand behandelt die fehlenden Kanäle als „folgt der
@@ -473,7 +473,7 @@ genau wie im Trip.
   hält dieses Verhalten fest, damit eine spätere Änderung am Merge bewusst geschieht.
   - Test: `compare_preset_kette_test.go::TestTeilMapChannelActiveMetricsErsetztDieMap`.
 
-- **AC-27 (Doku stimmt mit dem Handler überein):** Given `docs/reference/api_contract.md` / When der
+- **AC-27:** (Doku stimmt mit dem Handler überein) Given `docs/reference/api_contract.md` / When der
   Abschnitt zu `end_date` gelesen wird / Then beschreibt er den Lösch-Sentinel (`""` löscht,
   fehlendes Feld erhält, ungültiges Datum liefert 400) und enthält die Aussage „kann per PUT nicht
   auf nil zurückgesetzt werden (KL-7)" nicht mehr.
@@ -482,7 +482,7 @@ genau wie im Trip.
 
 ### Block F — Telegram-Kurzstil im Briefing (Fix)
 
-- **AC-28 (Fix: Kurzstil erreicht das Briefing):** Given zwei Nutzer mit je einem Preset mit
+- **AC-28:** (Fix: Kurzstil erreicht das Briefing) Given zwei Nutzer mit je einem Preset mit
   Telegram-Opt-in, Nutzer A mit `display_config.telegram_style: "kurzform"`, Nutzer B mit
   `"rich"` / When das Briefing beider Presets versendet wird / Then ist der Telegram-Text von
   Nutzer A byte-identisch zum SMS-Text desselben Laufs (ohne Knöpfe, `parse_mode=None`), und der
@@ -493,14 +493,14 @@ genau wie im Trip.
 
 ### Block G — Mail-Kennung und Beobachtbarkeit
 
-- **AC-29 (Kennung `compare` und Klartext an der Naht):** Given ein Briefing-Lauf über den
+- **AC-29:** (Kennung `compare` und Klartext an der Naht) Given ein Briefing-Lauf über den
   erweiterten Aufzeichner / When die E-Mail hinausgeht / Then trägt die aufgezeichnete Sendung
   `mail_type == "compare"` (nicht `trip-briefing`, nicht leer), einen nicht-leeren Klartext-Körper
   und das Kennzeichen `compare_hourly_enabled` passend zum Preset; die HTML-Fassung enthält die
   Vergleichsmatrix mit den Orten des Presets.
   - Test: `..::test_vergleichs_mail_traegt_kennung_compare_klartext_und_stundenkennzeichen`.
 
-- **AC-30 (Null-Sendungen sind nie grün):** Given ein Aufzeichner, der wegen nicht installiertem
+- **AC-30:** (Null-Sendungen sind nie grün) Given ein Aufzeichner, der wegen nicht installiertem
   Laufzeit-Patch keine Vergleichs-Mail sieht / When `vorbedingung_pruefen` für den E-Mail-Kanal
   läuft / Then schlägt sie mit einer Fehlermeldung fehl, statt eine leere Sendungsliste als
   bestanden zu werten; jeder Test dieser Spec ruft die Vorbedingung vor seinen Zusicherungen.

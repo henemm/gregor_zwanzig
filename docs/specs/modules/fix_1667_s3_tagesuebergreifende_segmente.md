@@ -222,7 +222,7 @@ yesterday)` wird nur aufgerufen, wenn heute kein aktives Segment liefert.
 
 ## Acceptance Criteria
 
-- **AC-1 (Vorrangkette — Koordinaten-Nachweis):** Given ein Trip mit zwei
+- **AC-1:** (Vorrangkette — Koordinaten-Nachweis) Given ein Trip mit zwei
   Etappen, bei dem zum Prüfzeitpunkt sowohl ein Segment der heutigen Etappe
   als auch das Ziel-Segment der gestrigen Etappe zeitlich aktiv wären (echte
   Überlappung) / When `check_radar_alerts()` läuft / Then erfolgt der
@@ -269,7 +269,7 @@ yesterday)` wird nur aufgerufen, wenn heute kein aktives Segment liefert.
     nur unter dem heutigen Datum; Assertion auf `check_radar_alerts()`
     Rückgabewert (Anzahl ausgelöster Alarme).
 
-- **AC-4 (Ein-Etappen-Trip nach Mitternacht — Kernmotivation):** Given ein
+- **AC-4:** (Ein-Etappen-Trip nach Mitternacht — Kernmotivation) Given ein
   Trip mit genau einer Etappe, deren Start bei ca. 22:00 Ortszeit liegt und
   deren kumulierte Naismith-Gehzeit über Mitternacht des Folgetags reicht
   (Modulo-Wrap aus S2) / When `check_radar_alerts()` zu einem Zeitpunkt nach
@@ -283,7 +283,7 @@ yesterday)` wird nur aufgerufen, wenn heute kein aktives Segment liefert.
     `freeze_time`-Zeitpunkte im selben Test (innerhalb/außerhalb des
     Ziel-Segment-Fensters), Assertion auf `frame_source.calls`.
 
-- **AC-5 (Rückwärts-Suche genau einen Tag — Negativtest):** Given ein Trip,
+- **AC-5:** (Rückwärts-Suche genau einen Tag — Negativtest) Given ein Trip,
   dessen letzte Etappe vor **zwei** Kalendertagen endete (eine echte Lücke
   von mindestens einem vollständigen dazwischenliegenden Tag ohne Etappe) /
   When `check_radar_alerts()` heute läuft / Then wird **kein** Nowcast-Abruf
@@ -292,7 +292,7 @@ yesterday)` wird nur aufgerufen, wenn heute kein aktives Segment liefert.
   - Test: neue Funktion, Trip mit `stage_date = heute - 2 Tage`, keine
     weitere Etappe; Assertion `frame_source.calls == []`.
 
-- **AC-6 (Bestandsschutz):** Given die zwölf #1584-Tests in
+- **AC-6:** (Bestandsschutz) Given die zwölf #1584-Tests in
   `tests/unit/test_alarm_zeitfenster_ziel.py` (insbesondere
   `test_mitternachtsfenster_22_2_klemmt_auf_mindestfenster`) und alle sieben
   bestehenden Tests in `tests/tdd/test_radar_alert_follows_ortstag.py` / When
