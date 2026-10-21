@@ -22,7 +22,7 @@ BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund statt weit
 git push -u origin HEAD:<themen-branch>
 gh pr create --fill
 # CI-Ampel abwarten: alle 6 Checks gruen auf dem letzten Stand, sonst erst fixen
-gh pr merge --merge
+gh pr merge --merge --delete-branch
 ```
 
 ⚠️ Vorher `git fetch origin` und rebasen. **Nie `git stash`** (geteilter Stapel ueber alle

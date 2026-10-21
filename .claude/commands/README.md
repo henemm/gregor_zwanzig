@@ -1,259 +1,35 @@
 # Commands Reference
 
-Available commands (skills) for Gregor Zwanziger project.
+Wegweiser, kein eigener Befehl. Maßgeblich für Ablauf und Freigabepunkte ist `CLAUDE.md`
+→ „Workflow"; Ist-Stand der Phasen: `docs/features/openspec_workflow.md`.
 
-## Command Categories
+## Herkunft der Befehle
 
-### Workflow Commands (Sequential)
+| Quelle | Befehle |
+|---|---|
+| Plugin **agent-os-openspec** (Phasen-Skills, nicht in diesem Ordner) | `/00-intake`, `/00-bug`, `/01-feature`, `/10-context`, `/20-analyse`, `/30-write-spec`, `/40-tdd-red`, `/50-implement`, `/60-validate`, Verwaltung `/80-workflow`, `/82-test`, `/90-retro`, `/99-reset` |
+| Dieser Ordner (projekteigen) | `/70-deploy` (ersetzt das generische Plugin-Template), `/e2e-verify`, `/next-ticket`, `/radar` |
 
-Phase-based workflow for feature development:
+Hooks und `workflow.py` liefert ebenfalls das Plugin (`/home/hem/agent-os-openspec/core/hooks/`);
+`.claude/hooks/` enthält nur projekteigene Gates und Validatoren.
 
-| Phase | Command | Purpose |
-|-------|---------|---------|
-| 0 | `/0-reset` | Reset workflow state |
-| 1 | `/1-context` | Gather context for feature |
-| 2 | `/2-analyse` | Analyze requirements |
-| 3 | `/3-write-spec` | Create specification |
-| 4 | User: "go" | Approve specification |
-| 5 | `/4-tdd-red` | Write failing tests (RED) |
-| 6 | `/5-implement` | Implement feature (GREEN) + User: "go" |
-| 6b | Adversary Dialog | QA-Agent tries to break implementation |
-| 7 | `/6-validate` | Validate implementation + Deploy (Step 5 inline) |
-| 8 | — | Deploy ist inline in `/6-validate` Step 5; eigener Deploy-Command entfaellt |
+## Phasen in Kurzform
 
-### Planning Commands (Phase 0)
+`/10-context` → `/20-analyse` → `/30-write-spec` (**einzige Freigabe: ACs auf Deutsch, per
+`AskUserQuestion`**) → `/40-tdd-red` → `/50-implement` (+ Adversary) → `/60-validate` →
+`/70-deploy` (PR mergen → `/e2e-verify` → Prod-Deploy → Selftest → Issue-Close, **ohne
+Freigabe-Halt**).
 
-High-level planning before workflow:
+## Agenten
 
-| Command | Purpose | Agent | Output |
-|---------|---------|-------|--------|
-| `/0-user-story` | Plan large user need | user-story-planner | Story doc + features in roadmap |
-| `/0-feature` | Plan single feature | feature-planner | Feature brief + roadmap entry |
-| `/0-bug` | Analyze bug | bug-intake | Bug report + analysis |
+Definitionen in `.claude/agents/*.md`; Modellzuordnung siehe `CLAUDE.md` → „Agenten-Modelle".
 
-### Utility Commands
+## Workflow-State
 
-| Command | Purpose |
-|---------|---------|
-| `/workflow` | Manage parallel workflows |
-| `/add-artifact` | Add test artifact |
-| `/radar` | PO-Dashboard "Werkstatt-Radar" aktualisieren (Backlog + echte Tab-Belegung → einfache Tab-Liste) |
-| `/diary` | Custom diary command |
+Pro Workflow `.claude/workflows/<name>.json` (laufend) bzw. `_archive/` (abgeschlossen).
+Aktiver Workflow ausschließlich über `export GZ_ACTIVE_WORKFLOW=<name>`.
 
-## Usage Patterns
+## Neuen Befehl anlegen
 
-### For New Large Feature (User Story)
-
-```bash
-# 1. Plan user story
-/0-user-story "Als Weitwanderer möchte ich SMS-Berichte..."
-
-# User story planner:
-# - Breaks down into features
-# - Adds all to roadmap
-# - Creates story doc
-
-# 2. Start with first P0 feature
-/0-feature "SMS Channel Integration"
-
-# Feature planner:
-# - Analyzes scope
-# - Creates feature brief
-# - Updates roadmap
-
-# 3. Follow workflow for feature
-/1-context          # Or /analyse
-/2-analyse          # Or let feature-planner do it
-/3-write-spec
-# User: "go"
-/4-tdd-red
-/5-implement
-/6-validate
-
-# 4. Repeat for next feature in story
-/0-feature "SMS Compact Formatter"
-# ... workflow ...
-```
-
-### For Single Feature
-
-```bash
-# 1. Plan feature
-/0-feature "HTML Tables in Email"
-
-# Feature planner:
-# - Analyzes scope
-# - Creates brief
-# - Updates roadmap
-
-# 2. Follow workflow
-/2-analyse
-/3-write-spec
-# User: "go"
-/4-tdd-red
-/5-implement
-/6-validate
-```
-
-### For Bug
-
-```bash
-# 1. Analyze bug
-/0-bug
-
-# Bug intake:
-# - Captures symptoms
-# - Finds root cause
-# - Documents
-
-# 2. Fix via workflow
-/analyse "Fix bug X"
-/write-spec
-# ... normal workflow ...
-```
-
-## Command → Agent Mapping
-
-| Command | Invokes Agent(s) | Location |
-|---------|------------------|----------|
-| `/0-feature` | feature-planner | `.claude/agents/0-feature-planner.md` |
-| `/0-user-story` | user-story-planner | `.claude/agents/0-user-story-planner.md` |
-| `/0-bug` | bug-intake | `.claude/agents/0-bug-intake.md` |
-| `/1-context` | - | Direct workflow phase |
-| `/2-analyse` | 3x Explore/haiku + Plan/sonnet | Parallel codebase research |
-| `/3-write-spec` | spec-writer/sonnet + spec-validator/haiku | `.claude/agents/spec-writer.md` |
-| `/5-implement` | Explore/haiku + general-purpose/sonnet + implementation-validator/sonnet | Context loading + parallel tests + adversary dialog |
-| `/6-validate` | 4x parallel agents + docs-updater/sonnet | `.claude/agents/docs-updater.md` (requires adversary verdict) |
-
-## Command Files Structure
-
-Each command file (`.claude/commands/[name].md`) contains:
-
-```markdown
-# [Command Name]
-
-[Brief description]
-
-## Purpose
-[What this command does]
-
-## Usage
-[How to use it]
-
-## Workflow
-[Steps the command follows]
-
-## Output
-[What the user gets]
-
-## Examples
-[Usage examples]
-```
-
-## Auto-Registration
-
-Commands are **automatically registered** as skills when:
-1. File created in `.claude/commands/[name].md`
-2. Claude Code CLI detects new command
-3. Skill available as `/[name]`
-
-**No manual registration needed!**
-
-## Creating New Command
-
-1. **Create command file:**
-   ```bash
-   .claude/commands/my-command.md
-   ```
-
-2. **Create agent file (if needed):**
-   ```bash
-   .claude/agents/my-agent.md
-   ```
-
-3. **Use command:**
-   ```bash
-   /my-command
-   ```
-
-## Workflow State
-
-Commands interact with workflow state:
-
-**File:** `.claude/workflow_state.json`
-
-**Managed by:** `workflow_state_multi.py`
-
-**Commands that update state:**
-- `/0-reset` - Reset to phase0_idle
-- `/1-context` - Advance to phase1_context
-- `/2-analyse` - Advance to phase2_analyse
-- `/3-write-spec` - Advance to phase3_spec
-- User "go" - Advance to phase4_approved
-- `/4-tdd-red` - Advance to phase5_tdd_red
-- `/5-implement` - Advance to phase6_implement → User "go" → phase6b_adversary
-- `/6-validate` - Advance to phase7_validate (requires adversary VERIFIED/AMBIGUOUS); Step 5 deployt inline → phase8_complete
-
-## Command Best Practices
-
-### For Planning Commands (feature, user-story)
-
-- Run BEFORE starting workflow
-- Creates roadmap entries
-- Documents scope and approach
-- Hands off to workflow
-
-### For Workflow Commands (analyse, write-spec, implement)
-
-- Run IN SEQUENCE (don't skip phases)
-- Each phase has specific purpose
-- Hooks enforce phase correctness
-- State tracked automatically
-
-### For Utility Commands (workflow, add-artifact)
-
-- Use as needed (not part of main flow)
-- Support parallel workflows
-- Manage test artifacts
-
-## Parallel Workflows
-
-Multiple features can be in progress:
-
-```bash
-# Start workflow 1
-/0-feature "Feature A"
-/analyse
-
-# Switch to workflow 2
-/workflow switch "Feature B"
-/0-feature "Feature B"
-/analyse
-
-# Check status
-/workflow list
-# → Feature A: Phase 2 (Analysis)
-# → Feature B: Phase 2 (Analysis)
-
-# Continue workflow 1
-/workflow switch "Feature A"
-/write-spec
-```
-
-## Command Documentation Updates
-
-When adding/modifying commands:
-
-1. Update this README
-2. Update command file itself
-3. Update agent file (if applicable)
-4. (frueher: ACTIVE-roadmap.md aktualisieren — entfaellt seit Issue #114)
-5. Test command workflow
-
-## References
-
-- Workflow State: `.claude/workflow_state.json`
-- Hooks: `.claude/hooks/`
-- Agents: `.claude/agents/`
-- Standards: `.claude/standards/`
-- Backlog: GitHub Issues (https://github.com/henemm/gregor_zwanzig/issues)
+`.claude/commands/<name>.md` anlegen — wird automatisch als `/<name>` registriert. Danach
+diese Tabelle oben ergänzen.
