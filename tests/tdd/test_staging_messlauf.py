@@ -247,8 +247,10 @@ class _Welt:
                  loeschen_scheitert=(), abbruch: _Abbruch | None = None, keine_antwort=(),
                  ohne_dauerzeile=(), telegram_still=(), telegram_verzoegerung_s=0.0,
                  ohne_cron=False, verifikationsmail_s=None, antwort_verzoegerung=None,
-                 email_zeile_bei_telegram=None):
+                 email_zeile_bei_telegram=None, verknuepfung_verzoegerung_s=0.0):
         self.uhr = _Uhr(start)
+        self.verknuepfung_verzoegerung_s = verknuepfung_verzoegerung_s  # telegram-status erst danach
+        self.verknuepft_ab: datetime | None = None
         self.antwort_verzoegerung = dict(antwort_verzoegerung or {})  # {("STATUS", 1): 300.0}
         self.email_zeile_bei_telegram = email_zeile_bei_telegram  # n: spaete kanal=email-Zeile
         self.keine_antwort = set(keine_antwort)      # {("STATUS", 2)}: n-te Mail dieses Befehls
@@ -544,6 +546,7 @@ class _Welt:
             tok = text.split(" ", 1)[1].strip()
             if self.link_kaputt != "token" and tok in self.tokens:
                 self.nutzer[self.tokens.pop(tok)]["chat_id"] = chat
+                self.verknuepft_ab = self.uhr.t + timedelta(seconds=self.verknuepfung_verzoegerung_s)
             return 200, {"status": "ok"}
         user = next((n for n, u in self.nutzer.items() if u.get("chat_id") == chat and chat), None)
         if user is None:
@@ -632,6 +635,8 @@ class _Welt:
                          "connected": bool(self.nutzer[user]["chat_id"]), "chat_id_suffix": ""}
         if method == "GET" and pfad == "/api/auth/telegram-status":
             cid = self.nutzer[user]["chat_id"]
+            if cid and self.verknuepft_ab is not None and self.uhr.t < self.verknuepft_ab:
+                cid = None                           # Verknuepfung noch nicht sichtbar
             return 200, {"connected": bool(cid), "chat_id_suffix": ("..." + cid[-3:]) if cid else ""}
         if method == "POST" and pfad == "/api/internal/telegram-connect":
             if not self.basis.startswith("http://127.0.0.1"):
@@ -642,6 +647,7 @@ class _Welt:
             if self.link_kaputt == "token" or tok not in self.tokens:
                 return 422, {"error": "token_invalid"}
             self.nutzer[self.tokens.pop(tok)]["chat_id"] = str(body.get("chat_id"))
+            self.verknuepft_ab = self.uhr.t + timedelta(seconds=self.verknuepfung_verzoegerung_s)
             return 200, {"status": "connected"}
         if method == "GET" and pfad == "/api/trips":
             return 200, {"trips": [copy.deepcopy(t) for i, t in self.trips.items()
@@ -1425,6 +1431,20 @@ def test_telegram_wartet_auf_verspaetete_dauerzeile(capsys):
         assert z <= p["t"], "naechstes Telegram-Kommando vor der Dauerzeile des vorigen gepostet"
 
 
+def test_telegram_wartet_ueber_die_messschwelle_hinaus(capsys):
+    """AC-16: eine Telegram-Dauerzeile, die erst ~100 s nach dem Update im Journal steht, liegt
+    jenseits der 60-s-Messschwelle -- der Treiber darf den langsamen Fall nicht selbst wegfiltern,
+    sondern muss warten und den Lauf vollstaendig (Exit 0, drei Env-Zeilen) abschliessen."""
+    welt, rc, out, err = _erfolgslauf(capsys, telegram_verzoegerung_s=100.0)
+    assert rc == 0, f"Dauerzeile nach ~100 s: Exit {rc}; stderr: {err[-800:]}"
+    assert len(_env_zeilen(out)) == 3, f"stdout ohne die drei Env-Zeilen: {out!r}"
+    posts = welt.kommando_posts()
+    zeilen = sorted(l["ts"] for l in _messlogik().dauerzeilen(welt.journal) if l["kanal"] == "telegram")
+    assert len(posts) == 15 and len(zeilen) == 15, f"{len(posts)} Updates, {len(zeilen)} Dauerzeilen"
+    abstand = [(z - p["t"]).total_seconds() for p, z in zip(posts, zeilen)]
+    assert all(90 <= a <= 120 for a in abstand), f"Dauerzeile nicht 90-120 s nach dem Update: {abstand}"
+
+
 def test_mail_antwort_kommt_nur_ueber_den_poll_ausloeser(capsys):
     """F004: ohne Cron-Takt verarbeitet nur der Poll-Ausloeser -- faellt er weg, keine Antwort."""
     welt, rc, out, err = _erfolgslauf(capsys, ohne_cron=True)
@@ -1509,3 +1529,35 @@ def test_mail_antwort_nach_mehr_als_360_sekunden_ist_befund(capsys):
     befund = _befund_zeilen(err)
     assert any("E-Mail status" in z and "Antwort" in z for z in befund), (
         f"Befund nennt E-Mail status nicht: {befund or err[-600:]}")
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 3 (Adversary F001 Paar-Frist, F002 Wartegrenze der Telegram-Verknuepfung)
+# ---------------------------------------------------------------------------
+
+def test_paar_antworten_nach_100_sekunden_werden_noch_angenommen(capsys):
+    """F001 (AC-7): beide Antworten des HEUTE-dann-HELP-Paars liegen erst ~100 s nach der
+    Verarbeitung im Postfach -- jenseits der 90-s-Paar-Messgrenze. Der Treiber wertet nicht aus,
+    er wartet bis zur Antwort-Wartegrenze und schliesst vollstaendig ab (Exit 0, drei Env-Zeilen).
+    Paar-HEUTE ist das 11. HEUTE (1 Probe-DE, 1 Probe-Korsika, 5 DE-Serie, 3 Korsika-Serie),
+    Paar-HELP das 6. HELP (5 Kurzbefehl-Serie)."""
+    welt, rc, out, err = _erfolgslauf(capsys, antwort_verzoegerung={("HEUTE", 11): 100.0,
+                                                                     ("HELP", 6): 100.0})
+    assert rc == 0, f"Paar-Antworten nach ~100 s: Exit {rc}; stderr: {err[-800:]}"
+    assert len(_env_zeilen(out)) == 3, f"stdout ohne die drei Env-Zeilen: {out!r}"
+    heute, hilfe = welt.wetter("de")[-1], _paar_help(welt)
+    for m in (heute, hilfe):
+        assert m["bereit"] is not None, f"{m['befehl']} des Paars nie verarbeitet"
+        assert (m["bereit"] - m["t"]).total_seconds() >= 100, (
+            f"Verzoegerung greift nicht am Paar ({m['befehl']}): Ersatzwelt-Nummerierung veraltet?")
+        assert m["abgeholt_seq"] is not None, f"Antwort auf {m['befehl']} des Paars nie abgeholt"
+
+
+def test_telegram_verknuepfung_nach_100_sekunden_wird_noch_abgewartet(capsys):
+    """F002: telegram-status meldet die Verbindung erst ~100 s nach ``/start TOKEN`` -- der
+    Treiber wartet bis zu seiner Wartegrenze (wie Mail, 360 s) und schliesst vollstaendig ab."""
+    welt, rc, out, err = _erfolgslauf(capsys, verknuepfung_verzoegerung_s=100.0)
+    assert rc == 0, f"Verknuepfung nach ~100 s: Exit {rc}; stderr: {err[-800:]}"
+    assert len(_env_zeilen(out)) == 3, f"stdout ohne die drei Env-Zeilen: {out!r}"
+    assert welt.verknuepft_ab is not None and (welt.verknuepft_ab - START).total_seconds() >= 100
+    assert len(welt.kommando_posts()) == 15, "Telegram-Serie nicht vollstaendig ausgeloest"

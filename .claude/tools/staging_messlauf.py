@@ -70,7 +70,7 @@ KORSIKA_ORT = (42.20, 9.05)                      # fr_direct
 KORSIKA_ABSTAND = timedelta(seconds=630)         # Meteo-France-Cache-TTL 600 + Reserve
 ANTWORT_WARTEN_S = 360
 TELEGRAM_TAKT_S = 3
-TELEGRAM_VERSUCHE = 20
+TELEGRAM_VERSUCHE = ANTWORT_WARTEN_S // TELEGRAM_TAKT_S  # Wartegrenze wie Mail, nie die Messschwelle
 WEBHOOK_PFAD = "/api/webhooks/telegram/messlauf"  # Pfadsegment wird nicht geprueft, nie das Secret
 
 
