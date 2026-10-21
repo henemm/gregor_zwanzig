@@ -51,3 +51,17 @@ Bei anderen Metriken sah das Label nur zufällig plausibel aus.
   inkompatibel — im Versandpfad seit #816 tot (`include_absolute=False`),
   siehe Folge-Issue aus Adversary-Finding F001. Vor einer Reaktivierung von
   Absolut-Regeln muss dieser Pfad einen eigenen Render-Vertrag bekommen.
+
+## Nachtrag 2026-10-21: Einstufung `≥`, Auslösung strikt `>`
+
+Renderer und Auslösung verwenden bewusst verschiedene Vergleiche:
+
+- **Einstufung „über Schwelle" im Renderer:** `over_thr()` vergleicht mit `≥`
+  (`abs(e.value_to - e.value_from) >= e.threshold`, `src/output/renderers/alert/model.py:298`).
+- **Auslösung eines Alarms:** für alle nicht-ordinalen Felder strikt `>`
+  (`triggered = abs(delta) > threshold`, `src/services/weather_change_detection.py:865`).
+
+Die Auslösung mit striktem `>` ist durch die PO-freigegebene Spec
+`docs/specs/modules/rework_1460_t1_relevanzfilter.md` AC-18 festgeschrieben: bei einer Änderung von
+exakt der Schwelle (Beispiel Böen, Δ = 20 km/h bei Schwelle 20) wird **kein** Alarm ausgelöst. Der
+Unterschied ist kein Fehler, sondern Ist-Stand; eine Angleichung braucht eine neue Spec.
