@@ -3,7 +3,7 @@ entity_id: issue_381_guard_message
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [hook, session-guard, dx]
 ---

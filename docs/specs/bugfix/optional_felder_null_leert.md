@@ -3,7 +3,7 @@ entity_id: optional_felder_null_leert
 type: bugfix
 created: 2026-10-03
 updated: 2026-10-03
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2211-optional-felder-null
 tags: [bugfix, go, frontend, trip, ortsvergleich, alarme, persistence, issue-2211]

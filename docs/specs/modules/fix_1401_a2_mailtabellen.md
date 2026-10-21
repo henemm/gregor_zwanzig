@@ -3,7 +3,7 @@ entity_id: fix_1401_a2_mailtabellen
 type: bugfix
 created: 2026-07-28
 updated: 2026-07-29
-status: draft
+status: implemented
 workflow: fix-1401-a2-mailtabellen
 version: "1.1"
 tags: [compare, metric-catalog, naming, mail-renderer, trip-compare-sharing]

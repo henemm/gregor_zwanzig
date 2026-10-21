@@ -3,7 +3,7 @@ entity_id: radar_nowcast_inca_fix
 type: module
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, weather, nowcast, inca, geosphere, austria, bugfix]
 ---

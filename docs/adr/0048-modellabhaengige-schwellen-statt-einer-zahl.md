@@ -1,6 +1,6 @@
 # ADR-0048: Modellabhängige Schwellen statt einer Zahl für alle Quellen
 
-- **Status:** Akzeptiert
+- **Status:** Akzeptiert — zwei Einzelsätze abgelöst durch ADR-0064 (2026-09-08) und ADR-0071 (2026-09-18), im Text markiert
 - **Datum:** 2026-08-08
 - **Bezug:** GitHub-Issue #1592, Spec `docs/specs/modules/fix_1592_s1_cape_modellschwelle.md`,
   Kontext `docs/context/fix-1592-cape-modellschwelle.md`, Epic #1419,

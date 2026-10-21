@@ -3,7 +3,7 @@ entity_id: epic_135_step3_trip_hero
 type: module
 created: 2026-05-12
 updated: 2026-05-12
-status: approved
+status: implemented
 version: "1.0"
 parent_spec: epic_135_trip_detail
 related: epic_135_step2_trip_detail_actions
@@ -36,7 +36,7 @@ Ersetzt den Placeholder „Inhalt folgt mit Issue #154" im Overview-Tab der Trip
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `frontend/src/lib/utils/tripStatus.ts` (`deriveTripStatus`, `TripStatus`) | bestehend (Step 2) | Liefert `'planned' \| 'active' \| 'paused' \| 'archived'` für alle Status-abhängigen Kachel-Texte — **erweitert durch `docs/specs/modules/fix_1271_status_zeitformat.md` (2026-07-16) um `draft`/`finished` (6 Zustände)** |
+| `frontend/src/lib/utils/tripStatus.ts` (`deriveTripStatus`, `TripStatus`) | bestehend (Step 2) | Liefert `'planned' \| 'active' \| 'paused' \| 'archived'` für alle Status-abhängigen Kachel-Texte — **erweitert durch `docs/specs/_archive/modules/fix_1271_status_zeitformat.md` (2026-07-16) um `draft`/`finished` (6 Zustände)** |
 | `frontend/src/lib/types.ts` (`Trip`) | bestehend (EDIT in Step 2) | Interface mit `name`, `stages`, `report_config`, `paused_at?`, `archived_at?` |
 | `frontend/src/lib/components/ui/eyebrow/` | bestehend | Eyebrow-Label-Pattern für Stat-Kachel-Beschriftungen |
 | `frontend/src/lib/components/ui/g-card/` | bestehend | Card-Container für Stat-Kacheln (optionale Nutzung für Kachel-Wrapping) |

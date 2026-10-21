@@ -1,7 +1,7 @@
 ---
 entity: issue_576_tokens_sync_v2
 type: feature
-status: draft
+status: implemented
 created: 2026-06-05
 issue: 576
 epic: 575

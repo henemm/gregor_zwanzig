@@ -3,7 +3,7 @@ entity_id: magic_link_adress_eindeutigkeit
 type: module
 created: 2026-09-13
 updated: 2026-09-13
-status: draft
+status: implemented
 version: "1.2"
 workflow: fix-2147-email-eindeutig
 tags: [security, multi-user, magic-link, auth, issue-2147, issue-2311, epic-2138]

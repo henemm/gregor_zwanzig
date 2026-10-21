@@ -3,7 +3,7 @@ entity_id: issue_624_metric_thresholds_tests
 type: tests
 created: 2026-06-06
 updated: 2026-06-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [output, sms, telegram, threshold, tdd]
 ---
@@ -14,7 +14,7 @@ tags: [output, sms, telegram, threshold, tdd]
 
 - [x] Approved (PO „go", 2026-06-06)
 
-MODUL-SPEC: `docs/specs/modules/issue_624_metric_thresholds.md`
+MODUL-SPEC: `docs/specs/_archive/modules/issue_624_metric_thresholds.md`
 
 Test-Datei: `tests/tdd/test_issue_624_metric_thresholds.py`. KEINE Mocks —
 echte `SegmentWeatherData`, echter `SMSTripFormatter.format_sms()`-Render,

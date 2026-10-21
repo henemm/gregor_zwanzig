@@ -23,7 +23,7 @@ Betreiber-Adresse zurück. Ein neu eingeladener Nutzer kann so seine Zustellung 
    leer ist. Es wird nie an die Betreiber-Adresse gesendet.
 4. Der Telegram-Zweig bleibt unverändert.
 
-## Folgen
+## Konsequenzen
 
 - Eine echte Mail pro Klick; `test_mail_sent_at` belegt Annahme, nicht Zustellung.
 - Abgelöst: AC-11-Satz „E-Mail-Zweig des Test-Knopfs bleibt unverändert (#198)" in

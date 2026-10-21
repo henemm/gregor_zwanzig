@@ -3,7 +3,7 @@ entity_id: fix_2229_premium_sms_kanallisten
 type: bugfix
 created: 2026-10-01
 updated: 2026-10-02
-status: draft
+status: implemented
 workflow: fix-2229-premium-sms-kanallisten-b
 tags: [premium-sms, kanaele, vierkanal-paritaet, adr-0049, ratsche, issue-2229, epic-1676]
 ---

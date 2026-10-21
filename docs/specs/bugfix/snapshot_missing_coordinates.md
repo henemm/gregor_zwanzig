@@ -3,7 +3,7 @@ entity_id: snapshot_missing_coordinates
 type: bugfix
 created: 2026-04-12
 updated: 2026-04-12
-status: resolved
+status: implemented
 version: "1.0"
 tags: [alert, snapshot, coordinates]
 ---
@@ -25,7 +25,7 @@ Zusaetzlich crasht der Formatter bei `int(None)` weil elevation_m=None.
 
 - **File:** `src/services/weather_snapshot.py`
 - **Identifier:** `WeatherSnapshotService.save()`, `_reconstruct_segment()`
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **Identifier:** Zeilen 354, 796, 797, 822, 1041, 1042, 1053
 
 ## Bug Details

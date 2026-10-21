@@ -3,7 +3,7 @@ entity_id: issue_334_triphero_cleanup_tests
 type: tests
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, cleanup, dead-code, frontend, trip-detail, issue-334]
 parent: issue_334_triphero_cleanup
@@ -18,12 +18,12 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_334_triphero_cleanup.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_334_triphero_cleanup.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec. Die
 Tests sind grep-/Datei-Existenz-basiert: vor dem Cleanup ROT (toter Code
 vorhanden), nach dem Cleanup GRÜN.
 
-Parent-Spec: `docs/specs/modules/issue_334_triphero_cleanup.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_334_triphero_cleanup.md` v1.0
 
 ## Source
 

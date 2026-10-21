@@ -3,7 +3,7 @@ entity_id: fix_1330_compact_summary_daywindow
 type: bugfix
 created: 2026-07-20
 updated: 2026-07-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [compact_summary, adr-0025, daywindow, issue-1330, epic-1319]
 ---

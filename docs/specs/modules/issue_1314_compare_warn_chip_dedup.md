@@ -3,7 +3,7 @@ entity_id: issue_1314_compare_warn_chip_dedup
 type: bugfix
 created: 2026-07-20
 updated: 2026-08-02
-status: draft
+status: implemented
 version: "1.1"
 tags: [compare, official-alerts, email, html-renderer]
 ---

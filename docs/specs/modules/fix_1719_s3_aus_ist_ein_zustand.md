@@ -3,7 +3,7 @@ entity_id: fix_1719_s3_aus_ist_ein_zustand
 type: module
 created: 2026-08-11
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, metrik-kaskade, editor, adr-0050, issue-1719]
 ---

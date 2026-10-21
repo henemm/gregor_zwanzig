@@ -3,7 +3,7 @@ entity_id: issue_1352_gpx_user_isolation
 type: bug
 created: 2026-07-24
 updated: 2026-07-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [gpx, mandantentrennung, security, cross-user]
 ---

@@ -3,7 +3,7 @@ entity_id: worktree_state_routing_tests
 type: tests
 created: 2026-05-02
 updated: 2026-05-02
-status: active
+status: implemented
 version: "1.0"
 tags: [tests, hooks, worktree]
 parent: worktree_state_routing

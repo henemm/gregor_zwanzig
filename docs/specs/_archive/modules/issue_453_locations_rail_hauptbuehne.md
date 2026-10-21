@@ -3,13 +3,16 @@ entity_id: issue_453_locations_rail_hauptbuehne
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: superseded
+superseded_by: "#1256"
 version: "1.0"
 issue: 453
 tags: [sveltekit, frontend, compare, locations, rail, drag-and-drop, epic-438]
 ---
 
 # Issue #453 — Locations-Rail Erweiterungen fuer die Compare-Hauptbuehne
+
+> Abgelöst durch #1256 (`LocationsRail.svelte` gelöscht, `ea7af5301`, 2026-07-13) und #2288 (`GroupSection.svelte` gelöscht).
 
 ## Approval
 
@@ -324,7 +327,7 @@ test('GroupSection setzt draggable="true" auf li-Elementen', () => {
 
 - **Epic:** #438 — Orts-Vergleich
 - **Issue:** [#453 — Locations-Rail Hauptbuehne](https://github.com/henemm/gregor_zwanzig/issues/453)
-- **Vorgaenger-Spec:** `docs/specs/modules/issue_249_locations_rail.md` (bestehende Rail-Implementierung)
+- **Vorgaenger-Spec:** `docs/specs/_archive/modules/issue_249_locations_rail.md` (bestehende Rail-Implementierung)
 - **Stil-Referenz Spec:** `docs/specs/modules/issue_440_compare_wizard_shell_step1_step2.md`
 - **Design-System:** `docs/design-system/` (Tokens, Atoms, Screens)
 

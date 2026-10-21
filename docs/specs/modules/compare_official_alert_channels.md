@@ -3,7 +3,7 @@ entity_id: compare_official_alert_channels
 type: bugfix
 created: 2026-07-23
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1332-compare-official-alerts
 tags: [compare, official-alerts, sms, telegram, renderer, adr-0025]

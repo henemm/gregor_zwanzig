@@ -3,7 +3,7 @@ entity_id: fix_1727_s5b_versandpfade_ortstag
 type: bugfix
 created: 2026-08-14
 updated: 2026-08-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [timezone, trip-report-scheduler, scheduler-dispatch-service, compare-preset, issue-1727, issue-1722, adr-0044, adr-0051]
 workflow: fix-1727-s5b-versandpfade

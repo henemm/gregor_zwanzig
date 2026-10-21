@@ -3,7 +3,7 @@ entity_id: feat_1678_lpi_eu_schwellenleiter
 type: feature
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, lpi, icon-eu, model-registry, thunder-fusion, issue-1678]
 ---

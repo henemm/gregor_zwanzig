@@ -1,3 +1,10 @@
+---
+entity_id: fix_1315_preview_night_block
+type: fast
+created: 2026-07-22
+status: implemented
+---
+
 # Mini-Spec: #1315 — Vorschau zeigt „Nacht am Ziel" (Vorschau = Versand)
 
 - **Status:** Draft

@@ -3,7 +3,7 @@ entity_id: fix_1677_sms_reihenfolge
 type: module
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [metrics, sms, telegram, tokens, briefing, ordering]
 ---

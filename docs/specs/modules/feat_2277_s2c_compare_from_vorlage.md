@@ -3,7 +3,7 @@ entity_id: feat_2277_s2c_compare_from_vorlage
 type: feature
 created: 2026-09-30
 updated: 2026-09-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare-new, vorlage, from-param, hydration, multi-user]
 ---

@@ -3,7 +3,7 @@ entity_id: bug_601_round_trip_catchblocks
 type: module
 created: 2026-06-04
 updated: 2026-06-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, frontend, backend, quality]
 ---
@@ -26,7 +26,7 @@ Der `profil`-Bug in `compare_preset.go` wurde bereits durch #591 behoben.
 - **Frontend:** `frontend/src/lib/components/compare/compareWizardState.svelte.ts:131`
 - **Frontend:** `frontend/src/routes/trips/[id]/+page.svelte:110`
 - **Frontend:** `frontend/src/lib/components/compare/CompareTabs.svelte:42`
-- **Frontend:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte:232`
+- **Frontend:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte:232`
 - **Frontend:** `frontend/src/lib/components/trip-wizard/steps/Step3Weather.svelte:90`
 - **Backend:** `internal/handler/subscription.go` — `validateSubscription`
 - **Backend:** `internal/handler/location.go` — `validateLocation`

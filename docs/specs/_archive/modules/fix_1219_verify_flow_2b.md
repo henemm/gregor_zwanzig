@@ -3,7 +3,7 @@ entity_id: fix_1219_verify_flow_2b
 type: feature
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, sveltekit, verification, double-opt-in, auth]
 workflow: 1219-verify-flow-2b

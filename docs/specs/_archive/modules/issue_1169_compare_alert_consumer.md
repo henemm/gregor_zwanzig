@@ -3,7 +3,7 @@ entity_id: compare_alert_consumer
 type: module
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, compare, epic-1095]
 ---

@@ -3,7 +3,7 @@ entity_id: bug_271_wizard_mobile_stepper
 type: bugfix
 created: 2026-05-21
 updated: 2026-05-21
-status: draft
+status: deprecated
 version: "1.0"
 tags: [bugfix, mobile, stepper, wizard, bottom-nav, safe-area, touch-target, frontend, issue-271]
 ---
@@ -11,6 +11,8 @@ tags: [bugfix, mobile, stepper, wizard, bottom-nav, safe-area, touch-target, fro
 <!-- Issue #271 — Bug: Trip-Wizard – Stepper und Labels klippen auf Mobile -->
 
 # Issue #271 — Bug-Fix: Trip-Wizard Stepper und Footer auf Mobile reparieren
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

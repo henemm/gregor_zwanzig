@@ -3,7 +3,7 @@ entity_id: fix_1465_zeitzonen_hausnorm
 type: bugfix
 created: 2026-08-03
 updated: 2026-08-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, timezone, drilldown, issue-1465, issue-1196]
 workflow: fix-1465-zeitzonen-hausnorm

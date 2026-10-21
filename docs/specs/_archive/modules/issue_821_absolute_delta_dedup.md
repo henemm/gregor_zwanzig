@@ -3,7 +3,7 @@ entity_id: issue_821_absolute_delta_dedup
 type: module
 created: 2026-06-15
 updated: 2026-06-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, weather-change-detection, bugfix, issue-816-interaction]
 ---

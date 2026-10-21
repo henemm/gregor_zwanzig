@@ -3,12 +3,15 @@ entity_id: issue_415_mobile_metrics_view
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: superseded
+superseded_by: "#618"
 version: "1.0"
 tags: [frontend, svelte, mobile, metrics, overlay, trip-detail, issue-415]
 ---
 
 # Issue #415 — Mobile Wetter-Metriken-Tab: Full-Screen-Overlay
+
+> Abgelöst durch #618 (`WeatherMetricsMobileView.svelte` ersetzt, `d0e819f37`, 2026-06-07).
 
 ## Approval
 
@@ -30,7 +33,7 @@ Overlay ersetzt ihn auf Small-Screens vollständig, ohne die Desktop-Ansicht zu 
 
 - **Files:**
   - `frontend/src/lib/components/trip-detail/WeatherMetricsMobileView.svelte` (NEU, ~225 LoC)
-  - `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` (EDIT, ~33 LoC Änderung)
+  - `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` (EDIT, ~33 LoC Änderung)
 
 ## Dependencies
 
@@ -38,7 +41,7 @@ Overlay ersetzt ihn auf Small-Screens vollständig, ohne die Desktop-Ansicht zu 
 |---|---|---|
 | `frontend/src/lib/components/mobile/MSwitch.svelte` | Svelte-Komponente (vorhanden) | iOS-Toggle pro Metrik-Zeile (Props: `checked`, `onchange`) |
 | `frontend/src/lib/components/mobile/MIcon.svelte` | Svelte-Komponente (vorhanden) | Chevron-Icons im Akkordeon-Header (`kind: 'chevron-down' \| 'chevron-up' \| 'back'`) |
-| `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` | Svelte-Komponente (vorhanden) | "Als eigen sp."-Dialog für eigene Preset-Benennung |
+| `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` | Svelte-Komponente (vorhanden) | "Als eigen sp."-Dialog für eigene Preset-Benennung |
 | `frontend/src/lib/components/trip-detail/metricsEditor.ts` | TypeScript-Utility (vorhanden) | `autoAssign()`, `CATEGORY_ORDER`, `CATEGORY_LABELS`, `move()`, Typ `Buckets` |
 
 ## Scope
@@ -290,12 +293,12 @@ Then bleibt der Desktop-Bucket-Editor vollständig unverändert; der Mobile-Trig
 | Datei | Änderung |
 |-------|---------|
 | `frontend/src/lib/components/trip-detail/WeatherMetricsMobileView.svelte` | NEU — Full-Screen-Overlay (~225 LoC) |
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | EDIT — Mobile-Trigger + Overlay-Mount + `showMobileView`-State (~33 LoC) |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | EDIT — Mobile-Trigger + Overlay-Mount + `showMobileView`-State (~33 LoC) |
 
 Nicht geändert (nur wiederverwendet):
 - `frontend/src/lib/components/mobile/MSwitch.svelte`
 - `frontend/src/lib/components/mobile/MIcon.svelte`
-- `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte`
+- `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte`
 - `frontend/src/lib/components/trip-detail/metricsEditor.ts`
 
 ## LoC Estimate

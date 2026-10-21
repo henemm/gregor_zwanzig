@@ -3,7 +3,7 @@ entity_id: mail_origin_footer
 type: module
 created: 2026-07-15
 updated: 2026-07-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, renderer, footer, mime, observability]
 ---

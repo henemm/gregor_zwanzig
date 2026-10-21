@@ -270,7 +270,7 @@ Test order: Safari (strictest) → Firefox → Chrome.
 
 ### E2E Test Suite
 
-**File:** `frontend/e2e/epic-134-cockpit.spec.ts`
+**File:** `frontend/e2e/epic-134-cockpit.spec.ts` — **existiert nicht mehr** (Audit 2026-10-21: keine `*cockpit*`-Spec unter `frontend/e2e/`); die folgende Abdeckungsliste ist historisch.
 
 **Coverage:** 24 E2E tests covering:
 
@@ -308,7 +308,9 @@ All 24 tests passing ✓
 
 ### Post-Push Validation
 
-After `git push origin main`:
+*Historisch (Stand 2026-05). Direkt-Push auf `main` ist seit 2026-08-05 abgeschafft — heute gilt der PR-Liefer-Workflow aus CLAUDE.md bzw. `docs/reference/operations_playbook.md` → „Liefer-Workflow".*
+
+After `git push origin main` (damals):
 
 1. Auto-deploy to staging (~5 min)
 2. Verify staging: `/` loads, active trip displays correctly

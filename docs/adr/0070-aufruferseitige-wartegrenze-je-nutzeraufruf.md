@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert (erweitert ADR-0038)
 - **Datum:** 2026-09-16
 - **Bezug:** GitHub-Issue #2149 Scheibe B, Spec `docs/specs/modules/fix_2149_scheduler_budget_teilb.md`
+- **Ergänzt durch:** [ADR-0082](0082-budget-je-alarmart-radar-im-5-minuten-takt.md) (ergänzt)
 
 ## Kontext
 

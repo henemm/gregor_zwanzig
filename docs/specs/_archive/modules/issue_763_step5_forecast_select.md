@@ -3,12 +3,14 @@ entity_id: issue_763_step5_forecast_select
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, compare, design-system, ios-zoom]
 ---
 
 # Step 5 Versand — Horizont-Auswahl auf Design-System-Select
+
+> Abgelöst/entfernt durch ADR-0032 / #1301 (Alt-Editor `CompareEditor.svelte` ersatzlos gelöscht, `db0ca26b8`, 2026-07-19) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

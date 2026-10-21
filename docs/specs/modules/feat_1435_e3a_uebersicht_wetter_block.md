@@ -3,7 +3,7 @@ entity_id: feat_1435_e3a_uebersicht_wetter_block
 type: feature
 created: 2026-08-01
 updated: 2026-08-01
-status: approved
+status: implemented
 version: "1.0"
 tags: [metric-catalog, trip-detail, overview, trip-compare-sharing, dead-code-removal]
 workflow: fix-1435-e3-namensfehler

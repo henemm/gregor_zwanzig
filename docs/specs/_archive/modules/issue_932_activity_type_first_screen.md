@@ -3,7 +3,7 @@ entity_id: issue_932_activity_type_first_screen
 type: module
 created: 2026-06-30
 updated: 2026-06-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip-new, ux]
 ---
@@ -20,7 +20,7 @@ Das Aktivitätstyp-Dropdown in der Trips-Erstellung (`TripNewEditor`) soll auf d
 
 ## Source
 
-- **Files:** `frontend/src/lib/components/trip-new/TripNewEditor.svelte`, `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **Files:** `frontend/src/lib/components/trip-new/TripNewEditor.svelte`, `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **Schicht:** Frontend / User-UI (SvelteKit)
 
 ## Estimated Scope

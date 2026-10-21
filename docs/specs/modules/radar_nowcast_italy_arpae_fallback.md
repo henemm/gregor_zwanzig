@@ -3,7 +3,8 @@ entity_id: radar_nowcast_italy_arpae_fallback
 type: module
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: superseded
+superseded_by: "#1648"
 version: "1.0"
 tags: [providers, alerts, weather, nowcast, italy, europe, arpae, fallback]
 ---

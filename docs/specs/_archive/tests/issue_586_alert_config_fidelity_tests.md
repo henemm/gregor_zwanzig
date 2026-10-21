@@ -3,7 +3,7 @@ entity_id: issue_586_alert_config_fidelity_tests
 type: tests
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, design-fidelity, alert-config, issue-586]
 parent: issue_586_alert_config_fidelity_gate
@@ -18,11 +18,11 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_586_alert_config_fidelity_gate.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_586_alert_config_fidelity_gate.md`.
 Behaviorale Pixel-Diff-Prüfung der Live-Alert-Config gegen die bindende JSX
 `screen-alert-config.jsx` (keine Mocks, keine String-Checks).
 
-Parent-Spec: `docs/specs/modules/issue_586_alert_config_fidelity_gate.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_586_alert_config_fidelity_gate.md` v1.0
 
 ## Source
 

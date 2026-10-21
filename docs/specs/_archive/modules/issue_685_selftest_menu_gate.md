@@ -3,7 +3,7 @@ entity_id: issue_685_selftest_menu_gate
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [prod-selftest, telegram, bot-menu, deploy-gate, bugfix, tooling]
 ---
@@ -31,7 +31,7 @@ diese Zeile, obwohl der Prod-Token lesbar und das Live-Menü korrekt war. Damit 
 die Schutzfunktion wirkungslos: fällt das Live-Menü künftig aus, schlägt das Gate
 trotzdem nicht an.
 
-**Fix:** `BOT_COMMANDS` dependency-frei laden — die Quelldatei `src/outputs/telegram.py`
+**Fix:** `BOT_COMMANDS` dependency-frei laden — die Quelldatei `src/output/channels/telegram.py`
 mit `ast` parsen und die Top-Level-Zuweisung `BOT_COMMANDS = [...]` per
 `ast.literal_eval` materialisieren. Kein Paket-Import, keine schweren Deps; der Check
 läuft damit in der echten Deploy-Umgebung (System-Python). Single Source of Truth
@@ -47,7 +47,7 @@ Verdict auf FAIL gesetzt hat).
   - `_load_bot_commands()` → AST-`literal_eval` statt Import.
   - `_render_full_report()` → Fazit-Text an Verdict koppeln (F001).
 - **File (Test, neu):** `tests/tdd/test_issue_685_selftest_menu_gate.py`
-- **Unter Test, nicht verändert:** `src/outputs/telegram.py` (`BOT_COMMANDS`-Literal).
+- **Unter Test, nicht verändert:** `src/output/channels/telegram.py` (`BOT_COMMANDS`-Literal).
 
 ## Estimated Scope
 
@@ -60,7 +60,7 @@ Verdict auf FAIL gesetzt hat).
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `.claude/hooks/prod_selftest.py` | Hook | Post-Deploy-Gate; enthält den Menü-Check |
-| `src/outputs/telegram.py` | Output | `BOT_COMMANDS`-Literal (Single Source) |
+| `src/output/channels/telegram.py` | Output | `BOT_COMMANDS`-Literal (Single Source) |
 
 ## Implementation Details
 

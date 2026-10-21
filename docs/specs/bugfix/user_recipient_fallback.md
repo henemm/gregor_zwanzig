@@ -3,7 +3,7 @@ entity_id: user_recipient_fallback
 type: bugfix
 created: 2026-09-08
 updated: 2026-09-08
-status: draft
+status: implemented
 version: "1.0"
 workflow: "fix-2144-mail-to-fallback"
 tags: [auth, multi-user, email, telegram, sms, recipient-fallback, cross-tenant]

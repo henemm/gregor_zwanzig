@@ -3,7 +3,7 @@ entity_id: issue_407_waypoint_editor_screen
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, svelte, edit, waypoints, desktop, mobile, issue-407]
 ---
@@ -48,7 +48,7 @@ Briefing-Konfiguration weiterhin über die Tabs der Trip-Detail-Seite erreichbar
 | `frontend/src/lib/components/ui/select/Select.svelte` | Design-System (vorhanden) | Stage-Auswahl-Dropdown im Mobile-Navigator |
 | `frontend/src/lib/utils/waypointEditor.ts` | Utility (vorhanden) | `stripSuggested(stages)` — entfernt suggested-Flag vor PUT |
 | `frontend/src/lib/utils/naismith.ts` | Utility (vorhanden) | `computeArrivalTimes(stage, startTime?)` — Ankunftszeiten für WaypointCard |
-| `frontend/src/lib/components/trip-wizard/wizardHelpers.ts` | Utility (vorhanden) | `isPauseStage(stage)` — Prüft ob Etappe ein Pausentag ist |
+| `frontend/src/lib/components/shared/wizardHelpers.ts` | Utility (vorhanden) | `isPauseStage(stage)` — Prüft ob Etappe ein Pausentag ist |
 | `frontend/src/lib/api.ts` | Utility (vorhanden) | `api.put('/api/trips/{id}', {...trip, stages})` — Read-Modify-Write Save |
 | `$app/navigation` (SvelteKit) | Framework | `goto('/trips')` nach Speichern/Abbrechen; `invalidateAll()` nach Save |
 | `frontend/src/lib/types.ts` | TypeScript | `Trip`, `Stage`, `Waypoint` — keine Änderung |

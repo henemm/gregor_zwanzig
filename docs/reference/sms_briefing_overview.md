@@ -33,7 +33,7 @@ Konkret muss der Wanderer allein aus der SMS beantworten können:
 3. **Was erwartet mich am Ziel — auch nach der Ankunft?** Am Lagerplatz oder an der Hütte ist der
    Wanderer am **exponiertesten** (Zelt, keine Fluchtmöglichkeit). Ein Abendgewitter nach Ankunft
    ist sicherheitsrelevanter als eines während des Gehens, weil er ihm nicht ausweichen kann.
-4. **Wie sehr kann ich mich darauf verlassen?** Vorhersage-Verlässlichkeit (`C`).
+4. **Wie sehr kann ich mich darauf verlassen?** Vorhersage-Verlässlichkeit — in der SMS **kein** Token mehr (`C+`/`C~`/`C?` gestrichen, #2233, `sms_format.md` v2.34); der Hinweis steht nur im E-Mail-Textblock (#710).
 5. **Was kommt morgen?** Grobe Vorschau (`TH+:`), um vorauszuplanen.
 
 **Leitsatz:** Die SMS beantwortet „Was erwartet mich wettermäßig, bis ich das nächste Briefing
@@ -44,10 +44,10 @@ der fachliche Grund hinter Issue #1317.
 
 ## 1. Aufbau einer Trip-SMS (Wander-Briefing)
 
-Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
+Feste Reihenfolge (POSITIONAL in `src/output/tokens/builder.py`, Vertrag `sms_format.md` §2; Stand 2026-10-21 — `C` entfallen #2233, `AV` nur noch im Warnblock #1441):
 
 ```
-{Name}: N L D FN FL FD R PR W G TH: TH+: C  VR:VT:  Z: M:  [SD NS24+ SL AV]  DBG
+{Name}: N L D FN FL FD TF R PR W G TH: TH+: [HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ]  VR:VT:  Z: MAX M:  [SD NS24+ SL]  DBG
 ```
 
 | Kürzel | Bedeutung | Wert-Format | Immer da? |
@@ -65,10 +65,11 @@ Feste Reihenfolge (POSITIONAL, `sms_format.md:44`):
 | `G` | Böen (km/h) | `G20@11(30@17)` / `G-` | ja |
 | `TH:` | Gewitter am **berichteten Tag** (Morgen-Briefing = heute, Abend-Briefing = morgen) | `TH:M@16(H@18)` / `TH:-` | ja |
 | `TH+:` | Gewitter am **Tag danach** (Morgen-Briefing → morgen, Abend-Briefing → übermorgen) | `TH+:M@14(H@17)` / `TH+:-` | ja |
-| `C` | Vorhersage-Verlässlichkeit | `C+` / `C~` / `C?` | nur wenn Provider Konfidenz liefert |
+| `TF` | Gefühlte Temperatur: Tiefstwert °C über das Tagesfenster | `TF2@6`, `TF-`, `TF?` | nur wenn „Gefühlte Temperatur“ (`wind_chill`) aktiviert ist (#2422 S6 B1); fällt beim Kürzen als erstes Komfort-Token |
+| `HU` … `FZ` | Weitere wählbare Wettergrößen (Luftfeuchte, Taupunkt, Windrichtung, CAPE, Niederschlagsart, Bewölkung gesamt/tief/mittel/hoch, Sicht, Sonnenstunden, UV, Luftdruck, Nullgradgrenze) | siehe `sms_format.md` | nur wenn im Trip aktiviert (#1660 B) |
 | `VR:` `VT:` | Amtliche Warnungen Frankreich (Starkregen / Gewitter) — seit #2417 (vorher `HR:`/`TH:`) | `VR:M@17VT:H@17` | nur FR-Provider |
 | `Z:` `M:` | Feuerzonen / gesperrte Masslive (Korsika) | `Z:HIGH208 M:24` | nur Korsika |
-| `SD NS24+ SL AV` | Wintersport (Schneehöhe, Neuschnee, Schneefallgrenze, Lawine) — Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL`; das fünfte Token `WC` (Wind Chill) ist mit Fix #1887 (2026-08-16) ersatzlos entfallen — es verdoppelte den Wert von `FK` | `SD180 …` | nur Wintersport-Profil |
+| `SD NS24+ SL` | Wintersport (Schneehöhe, Neuschnee, Schneefallgrenze; die Lawinenstufe `AV` kommt seit #1441 nur noch aus dem amtlichen Lagebericht im Warnblock) — Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL`; das fünfte Token `WC` (Wind Chill) ist mit Fix #1887 (2026-08-16) ersatzlos entfallen — es verdoppelte den Wert von `FK` (heute `FL`) | `SD180 …` | nur Wintersport-Profil |
 | `DBG[...]` | Debug (Provider, Konfidenz) | `DBG[MET MED]` | nur Testlauf |
 
 **Das Wert-Format `X@h(Y@h)` lesen als:** „Wert X ab Stunde h, Spitzenwert Y um Stunde h."

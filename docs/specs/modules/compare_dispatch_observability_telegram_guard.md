@@ -3,7 +3,7 @@ entity_id: compare_dispatch_observability_telegram_guard
 type: module
 created: 2026-07-18
 updated: 2026-07-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, dispatch, observability, telegram, guard, bugfix, issue-1290, issue-1288, epic-1301]
 ---

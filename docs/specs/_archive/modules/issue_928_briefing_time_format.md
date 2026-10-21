@@ -14,7 +14,7 @@ table cells (HH:00 instead of HH)". #838 stellte bewusst auf `HH:00` um, weil de
 `briefing_mail_validator` (seit #807, `_distinct_hours`) `HH:00` in den
 `<td data-label="Time">`-Zellen **verlangte**.
 
-Der Zeilenbauer ist **geteilt**: `src/formatters/trip_report.py` erzeugt die Row-Dicts
+Der Zeilenbauer ist **geteilt**: `src/output/renderers/trip_report.py` erzeugt die Row-Dicts
 (`_aggregate_night_block`, `_dp_to_row`) mit `"time"`-Zelle und gibt sie via
 `render_email()` an **beide** Renderer weiter — Plain (`plain.py`) und HTML (`html.py`).
 Deshalb erscheint `HH:00` in beiden Mail-Varianten.
@@ -56,7 +56,7 @@ die Golden-Dateien das `HH`-Format widerspiegeln.
 
 ## Betroffene Dateien
 
-- `src/formatters/trip_report.py` — `:02d}:00"` → `:02d}"` an zwei Stellen (Zeilen ~321, ~403)
+- `src/output/renderers/trip_report.py` — `:02d}:00"` → `:02d}"` an zwei Stellen (Zeilen ~321, ~403)
 - `.claude/hooks/briefing_mail_validator.py` — Zeit-Zellen-Prüfung akzeptiert `HH` statt `HH:00` zu erzwingen; Distinct-Hours-Logik bleibt
 - `tests/golden/email/*-plain.txt`, `tests/golden/email/*-html.txt` — neu erzeugt (Zeitspalte `HH`)
 - Validator-Fixture-Tests mit hartem `HH:00`: `tests/tdd/test_issue_733_briefing_mail_validator.py`, ggf. `tests/tdd/test_briefing_mail_inhalt.py` — auf `HH` angleichen bzw. beide Formate zulassen

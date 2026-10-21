@@ -3,12 +3,15 @@ entity_id: issue_88_report_config_dialog
 type: module
 created: 2026-05-15
 updated: 2026-05-15
-status: draft
+status: superseded
+superseded_by: "#2277"
 version: "1.0"
 tags: [frontend, sveltekit, trip-edit, report-config, ui-rework]
 ---
 
 # Issue #88 — Dialog "Report Konfiguration" optimieren
+
+> Abgelöst durch #2277 S5 (`EditReportConfigSection.svelte` rückgebaut, `cdb09d2b5`, 2026-10-02).
 
 ## Approval
 

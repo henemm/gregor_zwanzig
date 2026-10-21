@@ -3,7 +3,7 @@ entity_id: issue_749_day_comparison_renderer
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [renderer, email, html, plain-text, vortag-vergleich, day-comparison]
 ---

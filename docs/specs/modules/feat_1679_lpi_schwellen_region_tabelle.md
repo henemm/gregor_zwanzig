@@ -3,7 +3,7 @@ entity_id: feat_1679_lpi_schwellen_region_tabelle
 type: feature
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, lpi, model-registry, thunder-fusion, issue-1679]
 ---

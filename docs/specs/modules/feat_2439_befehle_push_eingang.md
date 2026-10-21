@@ -3,7 +3,7 @@ entity_id: feat_2439_befehle_push_eingang
 type: module
 created: 2026-10-13
 updated: 2026-10-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [inbound, premium-sms, email, webhook, scheduler, push, 2439]
 ---

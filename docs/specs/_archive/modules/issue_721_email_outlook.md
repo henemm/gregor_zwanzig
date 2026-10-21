@@ -3,7 +3,7 @@ entity_id: issue_721_email_outlook
 type: module
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, outlook, ausblick, confidence, stability, issue-709, issue-721]
 ---

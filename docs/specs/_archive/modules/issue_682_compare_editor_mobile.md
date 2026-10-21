@@ -3,12 +3,14 @@ entity_id: issue_682_compare_editor_mobile
 type: module
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, mobile, compare, editor, design-compliance, epic-677]
 ---
 
 # Compare-Editor Slice 5 — Mobile-Editor CEM_ (Create + Edit, ≤899px)
+
+> Abgelöst/entfernt durch ADR-0032 / #1301 (Alt-Editor `CompareEditor.svelte` ersatzlos gelöscht, `db0ca26b8`, 2026-07-19) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

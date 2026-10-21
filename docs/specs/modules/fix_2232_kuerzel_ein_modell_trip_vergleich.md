@@ -3,7 +3,7 @@ entity_id: fix_2232_kuerzel_ein_modell_trip_vergleich
 type: module
 created: 2026-09-09
 updated: 2026-09-09
-status: approved
+status: implemented
 version: "2.0"
 tags: [backend, frontend, metrik-kaskade, kuerzel, sms, compare, adr-0011, issue-2232]
 ---

@@ -3,7 +3,7 @@ entity_id: wind_exposition
 type: module
 created: 2026-02-18
 updated: 2026-02-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [risk, wind, gpx, elevation, exposition, service]
 ---
@@ -224,8 +224,8 @@ assessment = engine.assess_segment(segment, exposed_sections=exposed)
 | `src/services/risk_engine.py` | Rule 9 + `_check_wind_exposition()` | ~30 |
 | `src/app/models.py` | `ExposedSection` DTO + `WIND_EXPOSITION` RiskType | ~10 |
 | `src/app/metric_catalog.py` | `exposition_risk_thresholds` fuer wind/gust | ~5 |
-| `src/formatters/trip_report.py` | Risk-Labels fuer WIND_EXPOSITION | ~3 |
-| `src/formatters/sms_trip.py` | SMS-Labels fuer WIND_EXPOSITION | ~3 |
+| `src/output/renderers/trip_report.py` | Risk-Labels fuer WIND_EXPOSITION | ~3 |
+| `src/output/renderers/sms_trip.py` | SMS-Labels fuer WIND_EXPOSITION | ~3 |
 | `tests/integration/test_wind_exposition.py` | **NEU** — Tests | ~80 |
 | **Total** | | **~191** |
 

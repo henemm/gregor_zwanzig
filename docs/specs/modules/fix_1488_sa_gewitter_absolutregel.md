@@ -3,7 +3,7 @@ entity_id: fix_1488_sa_gewitter_absolutregel
 type: bugfix
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, alarm-regeln, trip-new, frontend]
 ---

@@ -3,7 +3,7 @@ entity_id: rework_2276_s6h_ac2_endbilanz
 type: refactor
 created: 2026-09-25
 updated: 2026-09-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, ratsche, ac2, endbilanz, epic-2276]
 ---

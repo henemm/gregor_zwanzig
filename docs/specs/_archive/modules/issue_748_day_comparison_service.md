@@ -3,7 +3,7 @@ entity_id: day_comparison_service
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: approved
+status: implemented
 version: "1.0"
 tags: [service, weather, comparison, vortag-vergleich]
 ---

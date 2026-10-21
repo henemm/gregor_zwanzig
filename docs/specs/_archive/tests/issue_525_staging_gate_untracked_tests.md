@@ -3,7 +3,7 @@ entity_id: issue_525_staging_gate_untracked_tests
 type: tests
 created: 2026-06-01
 updated: 2026-06-01
-status: active
+status: implemented
 version: "1.0"
 tags: [tests, staging-gate, git, e2e-verified, untracked, persistence, issue-525]
 parent: issue_525_staging_gate_untracked

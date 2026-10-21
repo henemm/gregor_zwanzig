@@ -3,7 +3,7 @@ entity_id: fix_1219_email_verify
 type: bugfix
 created: 2026-07-10
 updated: 2026-07-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [mail, security, resend, allowlist, verification]
 workflow: 1219-email-verify

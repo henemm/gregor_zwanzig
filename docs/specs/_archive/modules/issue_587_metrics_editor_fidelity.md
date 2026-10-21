@@ -24,8 +24,8 @@ Bringt den Metrics-Editor (Trip-Detail-Tab "Wetter-Metriken") in vollständige �
 
 ## Source
 
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` (modifiziert — `TablePreview` einbinden)
-- **File:** `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` (modifiziert — Custom-Overlay statt shadcn Dialog)
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` (modifiziert — `TablePreview` einbinden)
+- **File:** `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` (modifiziert — Custom-Overlay statt shadcn Dialog)
 - **File:** `frontend/src/lib/components/trip-detail/TablePreview.svelte` (modifiziert — Header-Stil-Audit gegen JSX)
 - **File:** `frontend/src/lib/components/trip-detail/ChannelPreviewBlock.svelte` (modifiziert — Style-Audit)
 - **File:** `frontend/src/lib/components/shared/OutputLayoutEditor.svelte` (modifiziert — Style-Audit)
@@ -44,8 +44,8 @@ Bringt den Metrics-Editor (Trip-Detail-Tab "Wetter-Metriken") in vollständige �
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `TablePreview.svelte` (`frontend/src/lib/components/trip-detail/TablePreview.svelte`) | Bestehende Komponente (aus #343) | Wird in `WeatherMetricsTab` unterhalb von BucketSection "Detail-Werte" eingebunden; empfängt `catalog`, `enabledMap`, `friendlyMap`, `horizonsMap`, `categoryOrder`, `indicatorCapable` |
-| `WeatherMetricsTab.svelte` (`frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`) | Eltern-Komponente | Übergabepunkt für `TablePreview`; liefert State und Props |
-| `SavePresetDialog.svelte` (`frontend/src/lib/components/trip-detail/SavePresetDialog.svelte`) | Modifizierte Komponente | Ersetzt shadcn `<Dialog>` durch custom Fixed-Overlay gemäß JSX-SOLL |
+| `WeatherMetricsTab.svelte` (`frontend/src/lib/components/shared/WeatherMetricsTab.svelte`) | Eltern-Komponente | Übergabepunkt für `TablePreview`; liefert State und Props |
+| `SavePresetDialog.svelte` (`frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte`) | Modifizierte Komponente | Ersetzt shadcn `<Dialog>` durch custom Fixed-Overlay gemäß JSX-SOLL |
 | `$lib/components/ui/dialog/index.js` (shadcn Dialog) | Zu entfernende Abhängigkeit | Wird aus `SavePresetDialog.svelte` herausgelöst; Import wird gelöscht |
 | `ChannelPreviewBlock.svelte` (`frontend/src/lib/components/trip-detail/ChannelPreviewBlock.svelte`) | Modifizierte Komponente | Style-Token-Audit gegen `screen-metrics-editor.jsx` und `screen-channel-preview-redesign.jsx` |
 | `OutputLayoutEditor.svelte` (`frontend/src/lib/components/shared/OutputLayoutEditor.svelte`) | Modifizierte Komponente | Style-Audit gegen JSX-Inline-Styles; wird nur angepasst falls Abweichungen gefunden |
@@ -209,8 +209,8 @@ Für jede der folgenden Dateien gilt: JSX-Referenz öffnen, relevante Inline-Sty
 
 | Pfad | Änderung | Schicht |
 |------|----------|---------|
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | `TablePreview` importieren und nach BucketSection "Detail-Werte" einbinden | Frontend |
-| `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` | shadcn `<Dialog>` durch Custom Fixed-Overlay ersetzen (exakt nach JSX-SOLL Z. 641–680); ZEITHORIZONTE-Block bleibt erhalten | Frontend |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | `TablePreview` importieren und nach BucketSection "Detail-Werte" einbinden | Frontend |
+| `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` | shadcn `<Dialog>` durch Custom Fixed-Overlay ersetzen (exakt nach JSX-SOLL Z. 641–680); ZEITHORIZONTE-Block bleibt erhalten | Frontend |
 | `frontend/src/lib/components/trip-detail/TablePreview.svelte` | Style-Audit: Sektion-Header, Caption-Stil gegen JSX-SOLL prüfen und ggf. korrigieren | Frontend |
 | `frontend/src/lib/components/trip-detail/ChannelPreviewBlock.svelte` | Style-Audit: Container-Padding, Kanal-Tab gegen `screen-channel-preview-redesign.jsx` prüfen | Frontend |
 | `frontend/src/lib/components/shared/OutputLayoutEditor.svelte` | Style-Audit: Section-Header-Abstände gegen `screen-metrics-editor.jsx` prüfen | Frontend |

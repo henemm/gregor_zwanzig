@@ -3,7 +3,7 @@ entity_id: issue_325_session_binding
 type: infra
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [workflow, hooks, session-binding, resolver, issue-325, issue-332, issue-258]
 ---

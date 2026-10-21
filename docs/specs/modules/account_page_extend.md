@@ -3,12 +3,14 @@ entity_id: account_page_extend
 type: module
 created: 2026-04-16
 updated: 2026-04-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [sveltekit, auth, account, signal, deletion, f72, f73]
 ---
 
 # F72/F73 — Account-Seite erweitern: Signal API Key + Account-Loeschung
+
+> Hinweis: Signal-Kanal entfernt durch ADR-0004 / #610 — alle Signal-Anteile dieser Spec sind gegenstandslos.
 
 ## Approval
 

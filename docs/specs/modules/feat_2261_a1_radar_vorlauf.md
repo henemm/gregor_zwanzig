@@ -3,7 +3,7 @@ entity_id: feat_2261_a1_radar_vorlauf
 type: feature
 created: 2026-10-03
 updated: 2026-10-03
-status: draft
+status: implemented
 workflow: feat-2261-a1-radar-vorlauf
 version: "1.0"
 tags: [alarm, radar, nowcast, vorlauf, schwelle, messort, vergleichbare-menge, trip, ortsvergleich]

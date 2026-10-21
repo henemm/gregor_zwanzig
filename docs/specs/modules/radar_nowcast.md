@@ -3,7 +3,7 @@ entity_id: radar_nowcast
 type: module
 created: 2026-06-07
 updated: 2026-09-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, alerts, weather, nowcast, radar]
 ---

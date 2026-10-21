@@ -3,7 +3,7 @@ entity_id: feat_2054_onset_wochentagskuerzel
 type: module
 created: 2026-08-22
 updated: 2026-08-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, sms, premium-sms, telegram, nowcast, onset, zeitangabe]
 ---

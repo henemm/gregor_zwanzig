@@ -3,7 +3,7 @@ entity_id: issue_1041c_radar_toggle_frontend
 type: module
 created: 2026-07-10
 updated: 2026-07-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, radar, alerts, frontend, issue-1041, slice-2]
 ---

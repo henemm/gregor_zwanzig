@@ -3,7 +3,7 @@ entity_id: issue_701_alerts_metrik_sync
 type: module
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, weather-config, backend, frontend, epic-700]
 ---

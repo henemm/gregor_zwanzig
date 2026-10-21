@@ -3,7 +3,7 @@ entity_id: fix_2217_stapellauf_abschotten
 type: module
 created: 2026-10-06
 updated: 2026-10-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, versand-zuverlaessigkeit, scheduler, alarmlauf, panic-schutz, epic-2505]
 ---

@@ -3,7 +3,7 @@ entity_id: official_alerts_massif_closure
 type: module
 created: 2026-07-06
 updated: 2026-07-07
-status: draft
+status: implemented
 version: "1.4"
 tags: [compare, alerts, official-alerts]
 ---

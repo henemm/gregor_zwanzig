@@ -3,7 +3,7 @@ entity_id: feat_1405_s4a_befehlsantwort_erfolg_wirkung
 type: module
 created: 2026-10-14
 updated: 2026-10-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [befehle, antwort, erfolg-heisst-wirkung, waechter, issue-1405, trip-command-processor]
 ---

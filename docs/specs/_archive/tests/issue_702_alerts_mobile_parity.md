@@ -2,12 +2,12 @@
 entity_id: issue_702_alerts_mobile_parity_tests
 type: tests
 created: 2026-06-10
-status: approved
+status: implemented
 ---
 
 # Tests: Issue #702 — Alerts-Tab Mobile-Parität TM2
 
-Spec: `docs/specs/modules/issue_702_alerts_mobile_parity.md`
+Spec: `docs/specs/_archive/modules/issue_702_alerts_mobile_parity.md`
 
 ## Test-Entities
 

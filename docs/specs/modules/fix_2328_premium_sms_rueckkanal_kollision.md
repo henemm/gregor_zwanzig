@@ -3,7 +3,7 @@ entity_id: fix_2328_premium_sms_rueckkanal_kollision
 type: module
 created: 2026-09-15
 updated: 2026-09-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, inbound, premium, garmin, security, cross-user-leak]
 ---

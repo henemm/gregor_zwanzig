@@ -25,13 +25,13 @@ an einem echten lokalen http.server-Socket beobachtet (Boundary-Capture via
 `TELEGRAM_API_BASE`); echter `TripCommandProcessor`, echter Trip + Snapshot, echte
 User-Auflösung. **Keine Mocks der Logik unter Test.**
 
-Parent-Spec: `docs/specs/modules/issue_672_telegram_e2e_pipeline.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_672_telegram_e2e_pipeline.md` v1.0
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_e2e_telegram_pipeline.py` (NEU — mock-frei)
-- **Spec:** `docs/specs/modules/issue_672_telegram_e2e_pipeline.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/issue_672_telegram_e2e_pipeline.md` v1.0
 
 ## Test Inventory
 

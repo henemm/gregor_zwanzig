@@ -3,7 +3,7 @@ entity_id: issue_180_alert_metric_table
 type: module
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, alerts, svelte, epic-139, issue-180]
 parent: epic-139-alert-konfigurator

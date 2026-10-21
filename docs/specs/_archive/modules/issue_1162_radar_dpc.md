@@ -3,7 +3,7 @@ entity_id: issue_1162_radar_dpc
 type: feature
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: deprecated
 version: "1.0"
 tags: [providers, alerts, weather, nowcast, radar, italy, dpc, protezione-civile]
 ---

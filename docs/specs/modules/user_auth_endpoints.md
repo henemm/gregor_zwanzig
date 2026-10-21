@@ -3,7 +3,7 @@ entity_id: user_auth_endpoints
 type: module
 created: 2026-04-15
 updated: 2026-04-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, multi-user, auth, bcrypt, session, register, login, f13]
 ---

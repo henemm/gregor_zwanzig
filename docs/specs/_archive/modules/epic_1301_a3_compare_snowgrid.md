@@ -3,7 +3,7 @@ entity_id: epic_1301_a3_compare_snowgrid
 type: module
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, trip, provider, snow, snowgrid, refactor, epic-1301]
 ---

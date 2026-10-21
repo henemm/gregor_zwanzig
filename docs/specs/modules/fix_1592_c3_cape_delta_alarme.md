@@ -3,7 +3,7 @@ entity_id: fix_1592_c3_cape_delta_alarme
 type: module
 created: 2026-08-08
 updated: 2026-08-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [cape, alarme, delta, modellschwelle, issue-1592]
 ---

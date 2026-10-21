@@ -5,10 +5,11 @@
 - **Bezug:** GitHub-Issue #1168 (Scheibe 1/3, Epic #1095), Spec
   `docs/specs/_archive/modules/issue_1168_alert_engine_extract.md`, Architektur-Gegenüberstellung
   `docs/context/feat-1095-compare-alerts.md` (Abschnitt „Architektur-Gegenüberstellung
-  Trip ↔ Compare"); verwandt [ADR-0011](0011-alert-render-single-backend-renderer.md)
+  Trip ↔ Compare"; Datei gelöscht mit #1340, Git-Historie); verwandt [ADR-0011](0011-alert-render-single-backend-renderer.md)
   (kanonischer Alert-Renderer), [ADR-0017](0017-output-paket-konsolidierung.md)
   (`NotificationService` als einziger Versand-Orchestrierer); Folge-Issues #1169
   (Scheibe 2 — Compare-Anbindung, live seit 2026-07-09), #1170 (Scheibe 3 — Config-UI, offen)
+- **Ergänzt durch:** [ADR-0086](0086-alarm-erfolg-heisst-zustellung.md) (setzt um)
 
 ## Kontext
 

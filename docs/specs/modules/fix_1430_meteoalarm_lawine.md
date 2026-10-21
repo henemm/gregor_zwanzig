@@ -3,7 +3,7 @@ entity_id: fix_1430_meteoalarm_lawine
 type: bugfix
 created: 2026-10-12
 updated: 2026-10-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [meteoalarm, official_alerts, avalanche, sms, telegram, premium-sms, email, hazard-symbols]
 workflow: fix-1430-lawinenwarnung-meteoalarm-typ9

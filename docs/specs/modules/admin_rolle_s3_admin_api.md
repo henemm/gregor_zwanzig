@@ -3,7 +3,7 @@ entity_id: admin_rolle_s3_admin_api
 type: module
 created: 2026-09-29
 updated: 2026-09-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [admin, auth, tier, kontosperre, scheduler, inbound, epic-2138]
 ---

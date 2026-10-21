@@ -3,7 +3,7 @@ entity_id: ssr_cache_headers_tests
 type: tests
 created: 2026-05-04
 updated: 2026-05-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, sveltekit, http-headers, safari, issue-125]
 ---

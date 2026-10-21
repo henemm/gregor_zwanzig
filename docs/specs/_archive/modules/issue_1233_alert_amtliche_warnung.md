@@ -3,7 +3,7 @@ entity_id: issue_1233_alert_amtliche_warnung
 type: module
 created: 2026-07-12
 updated: 2026-07-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, official-warning, compare, renderer, quiet-hours]
 ---

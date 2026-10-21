@@ -3,7 +3,7 @@ entity_id: feat_1728_s1_temp_aufloesung
 type: module
 created: 2026-08-14
 updated: 2026-08-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [metrics, sms, briefing, editor, aggregation]
 ---

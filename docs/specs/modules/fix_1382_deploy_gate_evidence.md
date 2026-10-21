@@ -3,7 +3,7 @@ entity_id: fix_1382_deploy_gate_evidence
 type: module
 created: 2026-07-25
 updated: 2026-07-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [gate, deploy, attestation, tooling]
 ---

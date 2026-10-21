@@ -3,7 +3,7 @@ entity_id: daywindow_gap_and_midnight_fix
 type: module
 created: 2026-07-21
 updated: 2026-07-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, kurzform, daywindow, segment-aggregation, bug, 1331, 1334]
 ---

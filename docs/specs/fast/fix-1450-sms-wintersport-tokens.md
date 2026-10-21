@@ -1,3 +1,10 @@
+---
+entity_id: fix_1450_sms_wintersport_tokens
+type: fast
+created: 2026-08-03
+status: implemented
+---
+
 # Mini-Spec: Wintersport-Werte in der Trip-Briefing-SMS anschließen (#1450)
 
 ## Was ändert sich

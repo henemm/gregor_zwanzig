@@ -1,6 +1,6 @@
 ---
 entity_id: feat_1457_s2b_gewitter_dwd_alpen
-status: draft
+status: implemented
 type: module
 created: 2026-08-03
 updated: 2026-08-03

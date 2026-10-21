@@ -3,7 +3,7 @@ entity_id: feat_2051_s2a_raeumliche_ausdehnung
 type: feature
 created: 2026-08-23
 updated: 2026-08-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, nowcast, radar, ausdehnung, zone]
 ---

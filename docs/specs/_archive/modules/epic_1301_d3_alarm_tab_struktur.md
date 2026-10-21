@@ -3,7 +3,7 @@ entity_id: epic_1301_d3_alarm_tab_struktur
 type: module
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, alarme-tab, epic-1301, issue-1292]
 ---

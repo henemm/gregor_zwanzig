@@ -3,7 +3,7 @@ entity_id: outlook_gehzeit_und_spanne
 type: bugfix
 created: 2026-08-20
 updated: 2026-08-20
-status: approved
+status: implemented
 version: "1.0"
 tags: [outlook, trip, compare, gehzeit, "#1848"]
 ---

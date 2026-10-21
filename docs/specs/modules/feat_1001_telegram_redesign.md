@@ -3,7 +3,7 @@ entity_id: feat_1001_telegram_redesign
 type: feature
 created: 2026-07-03
 updated: 2026-07-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, output, briefing, multi-bubble, inline-keyboard]
 ---
@@ -46,7 +46,7 @@ Darstellung zu sprengen.
   der Text-Befehls-Footer-Block (Zeile 531-536) und die `cmd_hint`-Zeile. Wiederverwendet:
   `_narrow_table()` (Zeile 115-151, bislang nur für den abgeschalteten Signal-Kanal
   aktiv), `_wrap()`, `_compact_label()`, `_tg_vortag_line()`.
-- **File:** `src/formatters/trip_report.py` (Zeile 182-253) — Verkabelung auf
+- **File:** `src/output/renderers/trip_report.py` (Zeile 182-253) — Verkabelung auf
   `render_telegram_bubbles()`, Entfernung des `telegram_kurzform`-Textanhang-Zweigs
   (Zeile 226-238).
 - **File:** `src/app/models.py` — `TripReport.telegram_text: Optional[str]` (Zeile 677)
@@ -194,7 +194,7 @@ for i, bubble_text in enumerate(report.telegram_bubbles):
 | File | Change Type | Description |
 |------|-------------|-------------|
 | `src/output/renderers/narrow.py` | MODIFY (Rewrite) | Neue Funktion `render_telegram_bubbles()`, `TelegramBubble`-Dataclass; Prosa-Pfad entfernt (`_tg_segment_line`, `_tg_extra_detail_line`, `_tg_day_footer`), `_narrow_table()` für Telegram reaktiviert |
-| `src/formatters/trip_report.py` | MODIFY | Verkabelung auf `render_telegram_bubbles()`; `telegram_kurzform`-Textanhang-Zweig entfernt |
+| `src/output/renderers/trip_report.py` | MODIFY | Verkabelung auf `render_telegram_bubbles()`; `telegram_kurzform`-Textanhang-Zweig entfernt |
 | `src/app/models.py` | MODIFY | `telegram_text` → `telegram_bubbles: list[str]` + neues Feld `telegram_actions_markup: Optional[dict]` (transient, kein Persistenz-Migrationsrisiko) |
 | `src/services/trip_report_scheduler.py` | MODIFY | Multi-Send-Schleife statt Single-Send; Abbruch-bei-Fehler-Politik |
 | `src/services/trip_command_processor.py` | MODIFY | Neue `act_*`-Callback-Definitionen + Inline-Keyboard-Aufbau für die Aktionen-Bubble |
@@ -211,7 +211,7 @@ für die Multi-Bubble-Darstellung zielt auf diese Komponente, nicht mehr auf die
 gelöschten Dateien; **Stand 2026-08-11: `WeatherV2MailPreview.svelte` ist mit #1719 S3
 ebenfalls ersatzlos entfernt — es gibt seither gar keine Kanal-Live-Vorschau mehr, auf
 die ein Folge-Ticket zielen könnte**), `internal/handler/preview_proxy.go` (Go, unverändert),
-`src/outputs/telegram.py` (Versand-Methode selbst bleibt unverändert),
+`src/output/channels/telegram.py` (Versand-Methode selbst bleibt unverändert),
 `src/services/trip_alert.py` (eigenständiger Alert-Versandpfad, nicht Briefing-Format).
 
 ## Expected Behavior

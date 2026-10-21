@@ -3,7 +3,7 @@ entity_id: rework_1917_s4b2_compare_entdopplung
 type: refactor
 created: 2026-08-18
 updated: 2026-08-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, compare, epic-1458, issue-1467, issue-1744, issue-1917, s4b, s4b-2, entdopplung]
 ---

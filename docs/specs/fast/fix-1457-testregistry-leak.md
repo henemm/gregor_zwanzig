@@ -1,3 +1,10 @@
+---
+entity_id: fix_1457_testregistry_leak
+type: fast
+created: 2026-08-03
+status: implemented
+---
+
 # Mini-Spec: Gewitter-Tests nehmen nachfolgenden Tests die echten Wetterquellen weg
 
 **Gefunden:** 2026-08-03 beim Ausliefern von #1457 S2a, vor dem Push.

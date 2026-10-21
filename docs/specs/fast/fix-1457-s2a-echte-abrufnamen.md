@@ -1,3 +1,10 @@
+---
+entity_id: fix_1457_s2a_echte_abrufnamen
+type: fast
+created: 2026-08-03
+status: implemented
+---
+
 # Mini-Spec: S2a fragt beim echten Dienst nach Namen, die es dort nicht gibt
 
 **Gefunden:** 2026-08-03 beim Auslieferungs-Nachweis. **PO-Entscheidung:** erst

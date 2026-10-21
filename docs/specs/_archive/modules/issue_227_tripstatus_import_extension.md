@@ -3,7 +3,7 @@ entity_id: issue_227_tripstatus_import_extension
 type: bugfix
 created: 2026-05-15
 updated: 2026-05-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, sveltekit, tests, bugfix, tech-debt]
 ---
@@ -27,7 +27,7 @@ tags: [frontend, sveltekit, tests, bugfix, tech-debt]
 
 ## Acceptance Criteria
 
-- **AC-1:** Given das Repo nach Fix / When `cd frontend && node --experimental-strip-types --test src/lib/utils/fullProfile.test.ts` läuft / Then **kein `ERR_MODULE_NOT_FOUND`**, alle Tests aus der Datei laufen und sind grün.
+- **AC-1:** Given das Repo nach Fix / When `cd frontend && node --experimental-strip-types --test frontend/src/lib/utils/fullProfile.test.ts` läuft / Then **kein `ERR_MODULE_NOT_FOUND`**, alle Tests aus der Datei laufen und sind grün.
   - Test: (populated after /tdd-red)
 
 - **AC-2:** Given das Repo nach Fix / When SvelteKit-Frontend gebaut wird (`npm run build` im `frontend/`-Verzeichnis) / Then **0 neue Build-Fehler oder Warnings** durch die geänderte Import-Zeile.
@@ -40,7 +40,7 @@ tags: [frontend, sveltekit, tests, bugfix, tech-debt]
 
 ## Verification
 
-- `cd frontend && node --experimental-strip-types --test src/lib/utils/fullProfile.test.ts` → exit 0, 27 tests pass
+- `cd frontend && node --experimental-strip-types --test frontend/src/lib/utils/fullProfile.test.ts` → exit 0, 27 tests pass
 - `cd frontend && npm run build` → erfolgreich
 - `grep -n "from './tripStatus'" frontend/src/lib/utils/fullProfile.ts` → 0 Treffer (Original-Pattern weg)
 - `grep -n "from './tripStatus.ts'" frontend/src/lib/utils/fullProfile.ts` → 1 Treffer

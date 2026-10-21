@@ -3,7 +3,7 @@ entity_id: issue_647_home_fidelity
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: active
+status: implemented
 version: "1.0"
 tags: [frontend, home, compare, design-compliance, rework]
 ---

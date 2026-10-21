@@ -24,8 +24,9 @@ Beide Hubs nutzen EINE gemeinsame Reiter-Tabelle: `frontend/src/lib/components/s
 | `versand` | Versand | |
 | `vorschau` | Vorschau | |
 
-Alte Kennungen (`overview`, `stages`, `weather`, `alerts`, `briefings`, `preview`, `idealwerte`, `layout` …) werden weiter
-angenommen und einmalig per `replaceState` auf die neue Kennung umgeschrieben. Unbekannte Werte fallen auf `uebersicht`
+Alte Kennungen (`overview`, `stages`, `weather`, `alerts`, `briefings`, `preview`, `idealwerte`, `layout`) werden weiter
+angenommen (Tabelle `LEGACY`; Achtung: `alerts` → `wertebereiche`, nicht `alarme`; `layout` → `wetter-metriken`; die kind-fremde
+Punkte-Kennung `etappen`/`orte` wird auf die eigene umgeschrieben) und einmalig per `replaceState` auf die neue Kennung umgeschrieben. Unbekannte Werte fallen auf `uebersicht`
 zurück. testids folgen den Kennungen, z. B. `trip-detail-tab-uebersicht`. Die Anlage-Editoren (`TripNewEditor`,
 `CompareNewEditor`) nutzen dieselben Kennungen. `compare/compareTabsResolve.ts` und `wertebereicheTabId()` sind entfallen.
 
@@ -39,9 +40,11 @@ void goto(`?tab=${value}`, { replaceState: true, noScroll: true, keepFocus: true
 - `noScroll: true` — Scroll-Position bleibt erhalten
 - `keepFocus: true` — Keyboard-Navigation bleibt intakt
 
-## 301-Redirect-Konvention
+## Redirect-Konvention (307)
 
-Veraltete Routen leiten mit HTTP 301 auf die kanonische URL um.
+Veraltete Routen leiten per `redirect(307, …)` auf die kanonische URL um (Ist-Stand im Code beider
+Beispielrouten; frühere Fassung dieses Dokuments nannte 301). Zweites Beispiel:
+`frontend/src/routes/compare/[id]/edit/+page.server.ts` → `/compare/[id]` (Epic #1273 S3, ohne `?tab=`-Durchreichung).
 
 **Referenzbeispiel:** `frontend/src/routes/trips/[id]/edit/+page.server.ts` redirectet auf `/trips/[id]` und reicht `?tab=` unverändert durch (Hub löst alte Kennungen selbst auf, #2287):
 
@@ -53,7 +56,7 @@ export const load = ({ params, url }) => {
 };
 ```
 
-Neue Routen-Aliase folgen demselben Muster: 301 auf die kanonische `?tab=`-URL.
+Neue Routen-Aliase folgen demselben Muster: 307 auf die kanonische `?tab=`-URL.
 
 ## Warum kein Hash?
 

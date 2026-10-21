@@ -3,12 +3,15 @@ entity_id: issue_376_channel_preview_select
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: superseded
+superseded_by: "#923"
 version: "1.0"
 tags: [frontend, bug, "#376", "#278", "#272", "#365"]
 ---
 
 # Issue #376 — ChannelPreviewBlock auf Select.svelte migrieren
+
+> Abgelöst durch #923b (`ChannelPreviewBlock.svelte` entfernt, `1f8f707dd`, 2026-08-06).
 
 ## Approval
 

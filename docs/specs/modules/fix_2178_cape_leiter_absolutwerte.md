@@ -3,7 +3,7 @@ entity_id: fix_2178_cape_leiter_absolutwerte
 type: fix
 created: 2026-09-16
 updated: 2026-09-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, cape, model-registry, issue-2178]
 ---

@@ -3,7 +3,7 @@ entity_id: fix_1308_dual_module_isolation
 type: module
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [import-convention, module-isolation, data-isolation, issue-1308, bugfix, rot-triage-bundle-3]
 ---

@@ -3,7 +3,7 @@ entity_id: fix_1719_s4_kuerzel_vereinheitlichung
 type: module
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [backend, frontend, metrik-kaskade, kuerzel, telegram, sms, issue-1719]
 ---

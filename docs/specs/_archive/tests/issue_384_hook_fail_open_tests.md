@@ -3,7 +3,7 @@ entity_id: issue_384_hook_fail_open_tests
 type: tests
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bug, workflow, hooks, fail-open, issue-384]
 parent: issue_384_hook_fail_open
@@ -18,14 +18,14 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_384_hook_fail_open.md`. Jeder Test
+Test-Manifest für `docs/specs/_archive/modules/issue_384_hook_fail_open.md`. Jeder Test
 liest die **echten** `${CLAUDE_PROJECT_DIR}`-Command-Strings aus
 `.claude/settings.json` und führt sie als echte Subprozesse aus, wobei
 `${CLAUDE_PROJECT_DIR}` auf eine isolierte tmp-Sandbox zeigt (An-/Abwesenheit
 der Hook-Datei wird gesteuert; Stub-Hooks `sys.exit(0/2)` ersetzen die echten
 Gates). **Keine Mocks.**
 
-Parent-Spec: `docs/specs/modules/issue_384_hook_fail_open.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_384_hook_fail_open.md` v1.0
 
 ## Source
 

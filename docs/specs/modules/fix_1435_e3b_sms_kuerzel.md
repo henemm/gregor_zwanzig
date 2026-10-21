@@ -3,7 +3,7 @@ entity_id: fix_1435_e3b_sms_kuerzel
 type: bugfix
 created: 2026-08-01
 updated: 2026-08-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-catalog, sms, trip, naming, register]
 workflow: fix-1435-e3b-sms-kuerzel

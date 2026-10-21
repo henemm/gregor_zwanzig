@@ -3,7 +3,7 @@ entity_id: feat_864_859_alert_presets
 type: feature
 created: 2026-06-23
 updated: 2026-06-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, frontend, backend, auto-save, per-metric, presets]
 ---

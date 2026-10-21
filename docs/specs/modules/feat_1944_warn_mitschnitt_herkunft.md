@@ -3,7 +3,7 @@ entity_id: feat_1944_warn_mitschnitt_herkunft
 type: feature
 created: 2026-08-18
 updated: 2026-08-18
-status: draft
+status: implemented
 workflow: feat-1944-warn-mitschnitt-luecken
 version: "1.0"
 tags: [alarm, observability, official_alerts]

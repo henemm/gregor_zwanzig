@@ -3,12 +3,14 @@ entity_id: issue_885_adr_enforcement
 type: module
 created: 2026-06-25
 updated: 2026-06-25
-status: draft
+status: deprecated
 version: "1.0"
 tags: [tooling, gate, adr, workflow]
 ---
 
 # ADR-Enforcement: Commit-Gate + Spec-Pflichtfeld
+
+> Abgelöst/entfernt durch ADR-0027 / #1197 (ADR-Commit-Guard entfernt, `1967d1a10`, 2026-07-16).
 
 ## Approval
 
@@ -92,7 +94,7 @@ def check(staged_files, commit_message, config) -> str | None:
 ## Acceptance Criteria
 
 - **AC-1:** Given ein echtes Git-Repo mit installiertem `adr_guard`, in dem eine Änderung an einer
-  Entscheidungsfläche (z. B. `src/outputs/telegram.py`) gestaged ist, kein `docs/adr/`-File mitliegt
+  Entscheidungsfläche (z. B. `src/output/channels/telegram.py`) gestaged ist, kein `docs/adr/`-File mitliegt
   und die Commit-Message keinen `[no-adr]`-Marker enthält / When ein `git commit` durch `bash_gate.py`
   geprüft wird / Then wird der Commit mit Exit 2 blockiert und die Meldung nennt die betroffene Datei
   sowie die zwei Auswege (ADR anlegen oder `[no-adr]`).

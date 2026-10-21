@@ -1,3 +1,11 @@
+---
+entity_id: favicon_einrichten
+type: module
+created: 2026-05-27
+status: superseded
+superseded_by: docs/specs/modules/brand_icon_silhouette.md
+---
+
 # Spec: Favicon einrichten
 
 **Issue:** (ohne Issue-Nr., direkter PO-Auftrag)

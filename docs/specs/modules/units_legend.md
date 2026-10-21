@@ -20,7 +20,7 @@ Kompakte Einheiten-Legende im E-Mail-Footer, damit der Leser weiss was die Spalt
 
 ## Source
 
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **Identifier:** `TripReportFormatter._render_html`, `_render_plain`, `_fmt_val`
 - **File:** `src/app/metric_catalog.py`
 - **Identifier:** `MetricDefinition` (neues Feld `display_unit`)

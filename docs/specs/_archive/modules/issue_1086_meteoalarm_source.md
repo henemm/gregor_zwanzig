@@ -3,7 +3,7 @@ entity_id: issue_1086_meteoalarm_source
 type: feature
 created: 2026-07-15
 updated: 2026-07-15
-status: draft
+status: implemented
 version: "1.0"
 workflow: feat-1086-meteoalarm-source
 tags: [compare, alerts, official-alerts, meteoalarm, austria, italy]

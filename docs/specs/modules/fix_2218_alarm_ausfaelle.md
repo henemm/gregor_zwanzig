@@ -3,7 +3,7 @@ entity_id: fix_2218_alarm_ausfaelle
 type: module
 created: 2026-10-08
 updated: 2026-10-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [observability, alerts, health, trip, compare]
 ---

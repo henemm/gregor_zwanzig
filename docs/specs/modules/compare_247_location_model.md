@@ -3,7 +3,7 @@ entity_id: compare_247_location_model
 type: module
 created: 2026-05-19
 updated: 2026-05-19
-status: draft
+status: implemented
 version: "1.0"
 issue: 247
 tags: [compare, go, location, model, crud]

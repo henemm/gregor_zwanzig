@@ -3,7 +3,7 @@ entity_id: feat_1301_f2b_editor_loeschung
 type: module
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, compare, cleanup, dead-code]
 ---

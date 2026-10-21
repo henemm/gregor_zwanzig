@@ -34,7 +34,7 @@ welchem Modell kommen, wird transparent im Footer dokumentiert.
 - **Identifier:** `OpenMeteoProvider.fetch_forecast()` (erweitert), `OpenMeteoProvider._find_fallback_model()`, `OpenMeteoProvider._merge_fallback()`
 - **File:** `src/app/models.py`
 - **Identifier:** `ForecastMeta` (erweitert um fallback_model, fallback_metrics)
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **Identifier:** Footer-Rendering in `_render_html()` und `_render_plain()`
 
 ## Dependencies

@@ -238,7 +238,7 @@ Modul-Docstring sind nachgezogen. Spec:
 - `CorridorEvent` (Wertebereichs-Alarm) bleibt unbewacht — toter Pfad:
   `evaluate_corridor_thresholds()` (`corridor_threshold.py:68`) hat keinen Aufrufer in
   `src/`/`api/`, und der produktive `_send_alert()` (`trip_alert.py:296`) übergibt
-  `corridor_hits` nicht.
+  `corridor_hits` nicht. **Nachtrag (Audit 2026-10-21):** Seit #2230 (`rework_2230_corridor_path_removal.md`) ist der tote Pfad ganz entfernt — `src/services/corridor_threshold.py`, `CorridorEvent` und `corridor_hits` existieren nicht mehr (Beleg: `tests/tdd/test_alert_ausgabe_nach_korridor_rueckbau.py::test_ac1_modul_corridor_threshold_ist_weg`).
 - `OnsetEvent` (Radar-Beginn) bleibt unbewacht — strukturell metrik-los: die
   Datenstruktur hat kein `metric_id`-Feld (`alert/model.py:30-46`), der Renderer
   verzweigt binär über `is_convective` mit festen Wörtern.

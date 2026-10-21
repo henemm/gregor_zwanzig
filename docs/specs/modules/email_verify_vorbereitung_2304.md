@@ -3,7 +3,7 @@ entity_id: email_verify_vorbereitung_2304
 type: module
 created: 2026-09-11
 updated: 2026-09-11
-status: draft
+status: implemented
 version: "1.0"
 tags: ["auth", "email-verification", "epic-2138"]
 ---

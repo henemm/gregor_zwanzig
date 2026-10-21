@@ -49,7 +49,7 @@ ist vom DNSSEC-Problem aus #876 nicht betroffen.
 
 - `src/app/config.py` — `Settings.for_testing()`, neue Felder `test_smtp_host`/`test_smtp_port`,
   Staging-Erzwingung in `with_user_profile()`.
-- `src/outputs/email.py` — Resend-Wächter (unverändert, bleibt als zweite Sicherung).
+- `src/output/channels/email.py` — Resend-Wächter (unverändert, bleibt als zweite Sicherung).
 - `.env` (Server/Staging) — `GZ_TEST_SMTP_HOST` setzen (Operations, nicht im Repo).
 - `tests/tdd/test_issue_879_*.py` — neue Tests.
 

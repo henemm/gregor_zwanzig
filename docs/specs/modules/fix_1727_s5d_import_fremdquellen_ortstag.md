@@ -3,7 +3,7 @@ entity_id: fix_1727_s5d_import_fremdquellen_ortstag
 type: bugfix
 created: 2026-08-15
 updated: 2026-08-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [timezone, gpx-import, official-alerts, massif-closure, meteo-forets, debug-router, issue-1727, issue-1722, adr-0044, adr-0051]
 workflow: fix-1727-s5d-import-fremdquellen

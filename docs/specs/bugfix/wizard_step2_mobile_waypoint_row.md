@@ -3,12 +3,14 @@ entity_id: wizard_step2_mobile_waypoint_row
 type: bugfix
 created: 2026-05-04
 updated: 2026-05-04
-status: draft
+status: deprecated
 version: "1.0"
 tags: [bugfix, frontend, mobile, responsive, svelte, tailwind, issue-106]
 ---
 
 # Bug #106 — Wegpunkt-Zeile auf Mobile zu eng
+
+> Abgelöst/entfernt durch ADR-0032 / #1301 — Multi-Step-Wizards und `CompareEditor.svelte` sind abgeschafft; diese Spec ist nur noch historisch.
 
 ## Approval
 

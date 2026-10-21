@@ -3,7 +3,7 @@ entity_id: issue_236_epic9_remaining_templates_tests
 type: tests
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, email, design-system, epic-236, service-error-mail, comparison-mail]
 parent: issue_236_epic9_remaining_templates
@@ -20,7 +20,7 @@ phase: phase5_tdd_red
 
 Test-Manifest für die verbleibenden E-Mail-Templates in EPIC 9 (Issue #236).
 Mappt pytest-Funktionsnamen auf die Acceptance-Criteria der Parent-Spec
-`docs/specs/modules/issue_236_epic9_remaining_templates.md`.
+`docs/specs/_archive/modules/issue_236_epic9_remaining_templates.md`.
 
 Zwei Bereiche:
 1. **Service-Error-Mail** — `build_service_error_email_html()` (neue Hilfsfunktion)
@@ -29,7 +29,7 @@ Zwei Bereiche:
 ## Source
 
 - **Test-Datei:** `tests/tdd/test_issue_236_remaining_templates.py`
-- **Parent-Spec:** `docs/specs/modules/issue_236_epic9_remaining_templates.md` v1.0
+- **Parent-Spec:** `docs/specs/_archive/modules/issue_236_epic9_remaining_templates.md` v1.0
 
 ## Test Inventory
 

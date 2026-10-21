@@ -3,7 +3,7 @@ entity_id: alarm_szenario_laufendes_ereignis
 type: bugfix
 created: 2026-08-22
 updated: 2026-08-22
-status: draft
+status: implemented
 workflow: fix-2050-s2b-laufendes-ereignis
 version: "1.0"
 tags: [alarm, radar, nowcast, rendering]

@@ -3,7 +3,7 @@ entity_id: feat_1256_s8d_mobile_editor_fidelity
 type: feature
 created: 2026-07-15
 updated: 2026-07-15
-status: draft
+status: deprecated
 version: "1.0"
 tags: [compare, ui-fidelity, design-handoff-4, issue-1256, mobile]
 workflow: feat-1256-s8d-mobile-editor-fidelity
@@ -23,6 +23,8 @@ workflow: feat-1256-s8d-mobile-editor-fidelity
      in jedem AC). -->
 
 # Issue #1256 — Scheibe S8d: Mobile-Editor-Fidelity (Restliste-Bündel R4 + C1)
+
+> Abgelöst/entfernt durch ADR-0032 / #1301 — Multi-Step-Wizards und `CompareEditor.svelte` sind abgeschafft; diese Spec ist nur noch historisch.
 
 ## Approval
 

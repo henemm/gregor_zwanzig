@@ -3,7 +3,7 @@ entity_id: issue_430_431_wizard_layout_step_tests
 type: tests
 created: 2026-05-28
 updated: 2026-05-28
-status: draft
+status: deprecated
 version: "1.0"
 tags: [tests, frontend, wizard, stepper, layout-editor, issue-430, issue-431, epic-428]
 parent: issue_430_431_wizard_layout_step
@@ -12,15 +12,17 @@ phase: phase5_tdd_red
 
 # Issue #430 + #431 — Wizard auf 5 Steps + Layout-Editor (Tests)
 
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
+
 ## Approval
 
 - [x] Approved
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_430_431_wizard_layout_step.md`. Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-15). Tests sind reine Source-Inspection (`readFileSync`) und Pure-Logic — kein Svelte-Renderer, kein Mock.
+Test-Manifest für `docs/specs/_archive/modules/issue_430_431_wizard_layout_step.md`. Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-15). Tests sind reine Source-Inspection (`readFileSync`) und Pure-Logic — kein Svelte-Renderer, kein Mock.
 
-Parent-Spec: `docs/specs/modules/issue_430_431_wizard_layout_step.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_430_431_wizard_layout_step.md` v1.0
 
 ## Source
 

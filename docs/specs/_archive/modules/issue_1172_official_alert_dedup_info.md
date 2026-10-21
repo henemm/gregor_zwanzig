@@ -3,7 +3,7 @@ entity_id: issue_1172_official_alert_dedup_info
 type: module
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, alerts, official-alerts, notification, dedup]
 ---

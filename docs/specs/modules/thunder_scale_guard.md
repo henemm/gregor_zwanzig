@@ -3,7 +3,7 @@ entity_id: thunder_scale_guard
 type: feature
 created: 2026-08-20
 updated: 2026-08-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, guard, ratchet, issue-1480, thunder-scale]
 ---

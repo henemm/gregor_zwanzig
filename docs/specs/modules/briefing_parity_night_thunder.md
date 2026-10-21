@@ -3,7 +3,7 @@ entity_id: briefing_parity_night_thunder
 type: module
 created: 2026-07-18
 updated: 2026-07-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [renderer, scheduler, briefing, mail, night-block, thunder-forecast]
 ---

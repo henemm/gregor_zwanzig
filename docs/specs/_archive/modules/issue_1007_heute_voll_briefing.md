@@ -3,7 +3,7 @@ entity_id: issue_1007_heute_voll_briefing
 type: feature
 created: 2026-07-04
 updated: 2026-07-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [inbound, briefing, telegram, email, commands]
 ---

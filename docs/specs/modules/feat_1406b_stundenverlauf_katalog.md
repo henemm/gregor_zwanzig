@@ -3,7 +3,7 @@ entity_id: feat_1406b_stundenverlauf_katalog
 type: feature
 created: 2026-08-01
 updated: 2026-08-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-catalog, compare, hourly, epic-1372, issue-1406, issue-1435]
 workflow: feat-1406b-stundenverlauf-katalog

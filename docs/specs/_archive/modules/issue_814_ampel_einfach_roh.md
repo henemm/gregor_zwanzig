@@ -3,7 +3,7 @@ entity_id: issue_814_ampel_einfach_roh
 type: module
 created: 2026-06-14
 updated: 2026-06-14
-status: approved
+status: implemented
 version: "2.0"
 tags: [email, renderer, ampel, format-mode, briefing, frontend, bugfix]
 ---

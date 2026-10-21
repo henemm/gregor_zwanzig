@@ -3,7 +3,7 @@ entity_id: issue_564_post_deploy_selftest
 type: module
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [workflow, hooks, deployment-pipeline, post-deploy, selftest, qa, gate, issue-564]
 ---

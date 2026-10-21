@@ -3,7 +3,7 @@ entity_id: compare_kanal_metriken
 type: bugfix
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, telegram, sms, kurzform, issue-1362, issue-1399, epic-1372]
 ---

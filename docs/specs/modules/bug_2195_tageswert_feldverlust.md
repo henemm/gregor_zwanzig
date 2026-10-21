@@ -3,7 +3,7 @@ entity_id: bug_2195_tageswert_feldverlust
 type: module
 created: 2026-09-14
 updated: 2026-09-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [tageswert, gewitter, hagel, aggregation, extended-metrics]
 ---

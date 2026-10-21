@@ -3,7 +3,7 @@ entity_id: telegram_chat_id_ownership
 type: module
 created: 2026-09-07
 updated: 2026-09-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [security, multi-user, telegram, issue-2141, epic-2138]
 ---
@@ -42,7 +42,7 @@ Konto gehören darf und bei Mehrdeutigkeit keine Zuordnung stattfindet. Es schli
 | `internal/model/test_user.go` → `IsTestUserID` | Go-Prädikat | Test-Nutzer von Eindeutigkeit und Mehrdeutigkeit ausnehmen |
 | `src/app/config.py` → `is_test_user_id` | Python-Prädikat | Dasselbe auf der Python-Seite |
 | `internal/store/user.go` → `ListUserIDs`, `LoadUser` | Store | Iteration über alle Nutzer (Vorbild `FindUserByEmail`) |
-| `docs/specs/modules/issue_1013_telegram_test_isolation.md` | Spec | Vorrang echter Nutzer vor Test-Nutzern darf nicht brechen |
+| `docs/specs/_archive/modules/issue_1013_telegram_test_isolation.md` | Spec | Vorrang echter Nutzer vor Test-Nutzern darf nicht brechen |
 | `internal/handler/localhost_guard.go` → `requireLocalOnly` | Guard | Schützt den Connect-Endpunkt bereits gegen externen Zugriff |
 
 ## Implementation Details

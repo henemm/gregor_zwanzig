@@ -3,7 +3,7 @@ entity_id: fix_1714_compare_alert_briefing_reset
 type: bugfix
 created: 2026-08-17
 updated: 2026-08-17
-status: draft
+status: implemented
 workflow: fix-1714-compare-alert-dedup
 ---
 

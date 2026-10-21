@@ -3,7 +3,7 @@ entity_id: issue_817_alerts_tab_delta
 type: module
 created: 2026-06-14
 updated: 2026-06-15
-status: approved
+status: implemented
 version: "1.2"
 tags: [alert, delta, alerts-tab, sync-alert-rules, migration, frontend, epic-813, slice-2]
 ---

@@ -3,7 +3,7 @@ entity_id: d2_1301_official_alerts_single_control
 type: module
 created: 2026-07-18
 updated: 2026-07-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, trip, alarme, ui, dataloss-fix]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_616_trip_editor_tabs
 type: module
 created: 2026-06-06
 updated: 2026-06-06
-status: draft
+status: implemented
 version: "2.0"
 tags: [frontend, trips, ia, rework, design-compliance]
 ---

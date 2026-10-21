@@ -3,7 +3,7 @@ entity_id: fix_1592_s1_cape_modellschwelle
 type: bugfix
 created: 2026-08-08
 updated: 2026-08-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, cape, model-registry, thunder-fusion, issue-1592]
 ---

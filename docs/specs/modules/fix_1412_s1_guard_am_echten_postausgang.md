@@ -3,7 +3,7 @@ entity_id: fix_1412_s1_guard_am_echten_postausgang
 type: bugfix
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [mail, empfaengerschutz, sicherheitspfad]
 ---

@@ -3,7 +3,7 @@ entity_id: bug_226_dni_wmo_passthrough_tests
 type: tests
 created: 2026-05-20
 updated: 2026-05-20
-status: complete
+status: implemented
 version: "1.0"
 tags: [tests, weather-metrics, segment-summary, dni, wmo-code, bug-226]
 parent: bug_226_dni_wmo_passthrough
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_226_dni_wmo_passthrough.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_226_dni_wmo_passthrough.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_226_dni_wmo_passthrough.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_226_dni_wmo_passthrough.md` v1.0
 
 ## Source
 

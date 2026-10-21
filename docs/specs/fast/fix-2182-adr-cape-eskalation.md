@@ -1,3 +1,10 @@
+---
+entity_id: fix_2182_adr_cape_eskalation
+type: fast
+created: 2026-09-18
+status: implemented
+---
+
 # Mini-Spec: ADR-0048-Bruch bereinigen (#2182)
 
 ## Ausgangslage (Recherche abgeschlossen)
@@ -16,7 +23,7 @@ Entscheidung wird nie still rückgängig gemacht").
 
 ## Was ändert sich
 
-- Neue ADR `docs/adr/00XX-cape-eskaliert-ueber-low-bei-schwacher-konvektionshemmung.md`,
+- Neue ADR `docs/adr/0071-cape-eskaliert-ueber-low-bei-schwacher-konvektionshemmung.md`,
   die die #1679-Entscheidung (CIN-Bänder bestimmen CAPE-Eskalation bis MED/HIGH) und die
   #2178-Nachschärfung (feste Absolutwerte 1000/2500 J/kg für med/high statt proportional
   hochgerechnet) als **Ist-Zustand** dokumentiert — löst den betroffenen Satz aus ADR-0048 ab.
@@ -34,7 +41,7 @@ Entscheidung wird nie still rückgängig gemacht").
 ## Manuelle Test-Schritte
 
 1. `docs/adr/README.md` öffnen — neuer Eintrag zeigt auf die neue ADR-Datei, Datei existiert.
-2. `docs/adr/0048-...md` öffnen — der Eskalations-Satz trägt jetzt einen Ablöse-Verweis.
+2. `docs/adr/0048-modellabhaengige-schwellen-statt-einer-zahl.md` öffnen — der Eskalations-Satz trägt jetzt einen Ablöse-Verweis.
 3. `python3 -m pytest tests/test_adr_index_drift.py` — grün (Index↔Datei-Konsistenz).
 
 ## Inline-Test (wird während Implementierung geprüft)

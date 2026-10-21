@@ -3,7 +3,7 @@ entity_id: command_set_merge
 type: module
 created: 2026-02-12
 updated: 2026-02-12
-status: active
+status: implemented
 version: "1.0"
 tags: [commands, agents, workflow, openspec, upstream, merge]
 ---

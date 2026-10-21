@@ -37,7 +37,7 @@ Implementiert einen neuen profil-bewussten HTML-E-Mail-Renderer für Compare-Erg
 | `ActivityProfile` (`src/app/models.py`) | intern | Enum-Werte WINTERSPORT / WANDERN / SUMMER_TREKKING / ALLGEMEIN; steuert CE_PROFILES-Mapping |
 | `WeatherMetricsService` (implizit via `hourly_data: List[ForecastDataPoint]`) | intern | Stundenwerte werden aus `LocationResult.hourly_data` entnommen; kein direkter Service-Import, Daten kommen per Parameter |
 | `render_comparison_text()` (`src/services/comparison_renderers.py`) | intern | Plain-Text-Renderer bleibt unverändert und wird weiterhin für den Plain-Text-Part der Versand-Mail genutzt |
-| `EmailOutput.send(subject, html, plain_text_body)` (`src/outputs/email.py`) | intern | Versandkanal; wird in `compare_subscription.py` mit dem neuen HTML aufgerufen |
+| `EmailOutput.send(subject, html, plain_text_body)` (`src/output/channels/email.py`) | intern | Versandkanal; wird in `compare_subscription.py` mit dem neuen HTML aufgerufen |
 | `html.py` (`src/output/renderers/email/html.py`) | intern | Strukturvorlage (334 Zeilen); Pattern für Inline-CSS, `@media`-Block, HourlyCell-Stil — wird nicht importiert, nur als Referenz genutzt |
 
 ## Implementation Details
@@ -220,4 +220,4 @@ LoC-Limit-Override vor Implementierungsstart setzen: `workflow.py set-field loc_
 ## Changelog
 
 - 2026-05-20: Initial spec — Issue #253. Neuer HTML-Renderer `compare_html.py` als Pure Function, Umkopplung in `compare_subscription.py`, fail-soft Heartbeat in `scheduler.py`, Unit + E2E Tests ohne Mocks. ~425 LoC, LoC-Override auf 450 erforderlich.
-- 2026-07-08: **Superseded** durch `docs/specs/modules/issue_1110_compare_mail_v2.md` (Issue #1110). Der hier spezifizierte Score/Winner-basierte Renderer wurde vollständig durch das v2-Layout (Übersichtstabelle Metriken×Orte ohne Score/Winner, Stundentabellen für alle Orte) abgelöst. Inhalt dieser Spec unverändert als historische Referenz belassen.
+- 2026-07-08: **Superseded** durch `docs/specs/_archive/modules/issue_1110_compare_mail_v2.md` (Issue #1110). Der hier spezifizierte Score/Winner-basierte Renderer wurde vollständig durch das v2-Layout (Übersichtstabelle Metriken×Orte ohne Score/Winner, Stundentabellen für alle Orte) abgelöst. Inhalt dieser Spec unverändert als historische Referenz belassen.

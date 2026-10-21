@@ -3,7 +3,7 @@ entity_id: onboarding_hilfe_2521
 type: module
 created: 2026-10-07
 updated: 2026-10-16
-status: draft
+status: implemented
 version: "1.1"
 tags: [frontend, go, python, onboarding, hilfe, tooltip, infobox, standardwerte, testmail, admin, i18n, textkatalog, issue-2521]
 ---

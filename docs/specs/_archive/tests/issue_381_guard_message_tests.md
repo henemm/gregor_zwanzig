@@ -3,7 +3,7 @@ entity_id: issue_381_guard_message_tests
 type: tests
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, hooks, infrastructure, session, worktree, dx]
 parent: issue_381_guard_message
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_381_guard_message.md`. Der Test prüft
+Test-Manifest für `docs/specs/_archive/modules/issue_381_guard_message.md`. Der Test prüft
 1:1 die Acceptance Criteria der Parent-Spec (AC-1 + AC-2).
 
-Parent-Spec: `docs/specs/modules/issue_381_guard_message.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_381_guard_message.md` v1.0
 
 ## Source
 

@@ -3,7 +3,7 @@ entity_id: epic_129a_1_compare_helpers_tests
 type: tests
 created: 2026-05-12
 updated: 2026-05-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, refactor, epic-129, services-extraction]
 parent: epic_129a_1_compare_helpers

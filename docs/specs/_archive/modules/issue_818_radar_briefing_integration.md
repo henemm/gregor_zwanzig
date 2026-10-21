@@ -3,7 +3,7 @@ entity_id: issue_818_radar_briefing_integration
 type: feature
 created: 2026-06-24
 updated: 2026-06-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, radar, nowcast, briefing-snapshot, alert-state, throttle-migration, doppel-alert, epic-813, slice-3]
 ---

@@ -3,7 +3,7 @@ entity_id: fix_2017_nowcast_messpunkt
 type: bugfix
 created: 2026-08-20
 updated: 2026-10-02
-status: approved
+status: implemented
 version: "1.0"
 tags: [alerts, radar, nowcast, trip, geometry]
 ---

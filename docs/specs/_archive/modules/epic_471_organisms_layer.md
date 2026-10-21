@@ -39,7 +39,7 @@ tags: [frontend, atomic-design, organisms, epic-471, issue-471]
 - `frontend/src/lib/components/trip-wizard/steps/Step4Briefings.svelte` (AlertRulesEditor-Import auf organisms/)
 - `frontend/src/lib/components/trip-detail/index.ts` (TripHeader-Export entfernen)
 - `frontend/src/lib/components/compare/steps/Step4Layout.svelte` (OutputLayoutEditor-Import auf organisms/, Issue #475)
-- `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` (OutputLayoutEditor-Import auf organisms/, Issue #475)
+- `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` (OutputLayoutEditor-Import auf organisms/, Issue #475)
 - `frontend/src/lib/components/trip-wizard/steps/Step4Layout.svelte` (OutputLayoutEditor-Import auf organisms/, Issue #475)
 
 > **Schicht-Hinweis:** Reine Frontend-Änderung (SvelteKit `frontend/src/lib/components/`). Keine Go/Python-Schicht betroffen.

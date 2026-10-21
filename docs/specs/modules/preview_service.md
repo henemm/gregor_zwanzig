@@ -3,7 +3,7 @@ entity_id: preview_service
 type: module
 created: 2026-05-11
 updated: 2026-07-11
-status: approved
+status: implemented
 version: "1.0"
 tags: [backend, preview, epic-140]
 ---

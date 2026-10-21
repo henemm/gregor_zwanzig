@@ -3,7 +3,7 @@ entity_id: issue_183_email_preview_header
 type: module
 created: 2026-05-11
 updated: 2026-05-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, email-preview, svelte, epic-140]
 ---

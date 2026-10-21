@@ -3,7 +3,7 @@ entity_id: fix_1667_s3_tagesuebergreifende_segmente
 type: bugfix
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 workflow: fix-1667-s3-tagesuebergreifende-segmente
 version: "1.0"
 tags: [issue-1667, radar-alert, nowcast, segmentauswahl, ortstag, midnight-wrap]

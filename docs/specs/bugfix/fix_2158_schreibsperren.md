@@ -3,7 +3,7 @@ entity_id: fix_2158_schreibsperren
 type: bugfix
 created: 2026-10-05
 updated: 2026-10-05
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2158-schreibsperren
 issue: 2158
@@ -52,7 +52,7 @@ Wenn Browser, Telegram-Kommando, Briefing-Lauf oder Alarmlauf gleichzeitig diese
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `docs/adr/0082-gemeinsame-schreibsperre-go-python.md` | CREATE | Gemeinsame Sperrdatei, Lock-Pfad, Reihenfolge, Fristen |
+| `docs/adr/0083-gemeinsame-schreibsperre-go-python.md` | CREATE | Gemeinsame Sperrdatei, Lock-Pfad, Reihenfolge, Fristen |
 | `docs/adr/0031-*.md`, `docs/adr/README.md` | MODIFY | Status "Abgelöst durch ADR-0082", Index konsistent |
 | `docs/adr/0036-*.md` | MODIFY | veraltete Zeilenbelege korrigieren |
 | `internal/store/briefing_lock.go` | MODIFY | nach Mutex `syscall.Flock(LOCK_EX|LOCK_NB)` + Poll, Frist ~5 s, `LockBriefingErr` |

@@ -3,7 +3,7 @@ entity_id: fix_1466_kern_suite_gruen
 type: bugfix
 created: 2026-08-02
 updated: 2026-08-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [kern-suite, resolution-loss-guard, success-status-guard, output-timezone-guard, roundtrip, issue-1466, issue-1196]
 workflow: fix-1466-kern-suite-gruen

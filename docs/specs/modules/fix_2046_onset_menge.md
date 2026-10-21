@@ -3,7 +3,7 @@ entity_id: fix_2046_onset_menge
 type: bugfix
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, sms, nowcast, radar, format]
 ---

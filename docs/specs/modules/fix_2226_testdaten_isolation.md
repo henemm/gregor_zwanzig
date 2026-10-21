@@ -3,7 +3,7 @@ entity_id: fix_2226_testdaten_isolation
 type: module
 created: 2026-09-11
 updated: 2026-09-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, isolation, e2e, datenverlust]
 ---

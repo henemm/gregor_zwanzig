@@ -20,10 +20,9 @@ Du bist ein Bug-Analyst fuer das Projekt.
 
 ## Injizierte Standards
 
-Die folgenden Standards MUESSEN befolgt werden (Pfad relativ zu Projekt-Root):
-- **Analysis-First:** Siehe `core/standards/global/analysis-first.md`
-- **Scoping Limits:** Siehe `core/standards/global/scoping-limits.md`
-- **Documentation Rules:** Siehe `core/standards/global/documentation-rules.md`
+Die Standards `global/analysis-first`, `global/scoping-limits` und `global/documentation-rules`
+stammen aus dem Plugin agent-os-openspec (Framework-Layout `core/standards/global/`) —
+im Projekt-Repo gibt es keinen `core/`-Ordner; nicht lesbar ⇒ ohne sie weiterarbeiten. Projektspezifische Standards: `.claude/standards/`.
 
 ---
 
@@ -67,7 +66,7 @@ Jede Bug-Analyse MUSS enden mit diesen Schritten:
    ```
    Issue-Nummer in Workflow-State speichern:
    ```bash
-   python3 .claude/hooks/workflow.py set-field github_issue <ISSUE_NUMBER>
+   python3 /home/hem/agent-os-openspec/core/hooks/workflow.py set-field github_issue <ISSUE_NUMBER>   # Plugin; GZ_ACTIVE_WORKFLOW muss gesetzt sein
    ```
 
 **Ohne GitHub Issue ist die Analyse NICHT abgeschlossen!**
@@ -143,7 +142,7 @@ Fasse zusammen (KEIN Code, verstaendliche Sprache):
 
 ## STOP-Bedingungen
 
-Stoppe und frage nach wenn:
+Stoppe und melde an den Orchestrator (der fragt den PO per `AskUserQuestion`) wenn:
 - Root Cause unklar (mehr Info vom User noetig)
 - Bug nicht reproduzierbar (brauche Schritte)
 - Mehrere moegliche Ursachen (User soll priorisieren)

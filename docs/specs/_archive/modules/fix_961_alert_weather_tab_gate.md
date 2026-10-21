@@ -3,7 +3,7 @@ entity_id: fix_961_alert_weather_tab_gate
 type: module
 created: 2026-07-01
 updated: 2026-07-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, bugfix, weather-tab, metric_alert_levels]
 ---
@@ -58,7 +58,7 @@ Vorfall Trip 74de939c, "Lottis Abschiedfahrradtour").
 | `TripAlertService._select_change_detector()` (`src/services/trip_alert.py:238-253`) | modify | Ruft `expand_per_metric_levels()` auf; reicht `trip.display_config` zusätzlich durch. |
 | `TripAlertService.check_all_trips()` (`src/services/trip_alert.py:255+`) | downstream | Realer Scheduler-Pfad (alle 30 Min) — nutzt `_select_change_detector()` transitiv für den Live-Alarmversand. Kein Code-Change hier nötig, aber Verhaltensänderung wirkt sich direkt aus. |
 | `AlertRule.suppressed_fields` (`src/app/models.py`) | modify | F004-Fix: feld-granulare Kollisions-Unterdrückung — markiert Summary-/Delta-Felder, die bereits von einer explizit gesetzten (Weather-Tab-aktiven) Metrik belegt sind, damit eine Backfill-Regel nur die verbleibenden, nicht-kollidierenden Felder scharf schaltet. Rein transient, nicht persistiert. |
-| Issue #946 (`docs/specs/modules/fix_946_alert_architecture.md`) | reference | `metric_alert_levels` bleibt Single Source of Truth für die *Konfiguration* — dieser Fix filtert/ergänzt nur zur Auswertungszeit, führt keine zweite Quelle ein. |
+| Issue #946 (`docs/specs/_archive/modules/fix_946_alert_architecture.md`) | reference | `metric_alert_levels` bleibt Single Source of Truth für die *Konfiguration* — dieser Fix filtert/ergänzt nur zur Auswertungszeit, führt keine zweite Quelle ein. |
 | Issue #864 / AC-1 (`docs/specs/modules/feat_864_859_alert_presets.md:302`) | reference | Projektions-Prinzip: "Alerts-Tab zeigt exakt die im Weather-Tab aktiven Metriken" — hier auf den Auswertungs-Pfad konsequent zu Ende geführt. |
 | Issue #959 | out-of-scope | Separates, bereits gemeldetes Problem: `freezing_level`-Wiring generell kaputt. NICHT Teil dieses Fixes — wird hier nur als Konsument des neuen Mappings berührt, nicht ursächlich gelöst. |
 

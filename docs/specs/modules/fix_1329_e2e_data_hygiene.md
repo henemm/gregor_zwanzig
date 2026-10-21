@@ -3,7 +3,7 @@ entity_id: fix_1329_e2e_data_hygiene
 type: module
 created: 2026-07-20
 updated: 2026-07-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [e2e, staging, cleanup, playwright]
 ---

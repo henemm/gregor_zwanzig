@@ -3,7 +3,7 @@ entity_id: issue_692_telegram_disabled_unconfigured
 type: module
 created: 2026-06-10
 updated: 2026-06-11
-status: complete
+status: implemented
 version: "1.0"
 tags: [frontend, ux, channels, weather-metrics-tab]
 ---
@@ -26,7 +26,7 @@ Nutzer die fehlende Konfiguration in einem Schritt nachholen kann.
 ## Source
 
 - **File:** `frontend/src/lib/components/trip-detail/WeatherV2Kanaele.svelte`
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **Identifier:** `WeatherV2Kanaele` (neues Prop `availability`), `WeatherMetricsTab` (Profil-Load + Prop-Weiterleitung)
 
 > Frontend-only. Go-API und Python-Backend sind nicht betroffen. Das Profil wird bereits

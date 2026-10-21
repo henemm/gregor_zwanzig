@@ -1,7 +1,7 @@
 ---
 issue: "#911 (follow-up)"
 workflow: fix-911-table-jsx
-status: approved
+status: implemented
 ---
 
 # Spec: fix-911-table-jsx — Tabellen nach JSX-Vorlage

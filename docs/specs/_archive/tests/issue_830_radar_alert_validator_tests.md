@@ -3,7 +3,7 @@ entity_id: issue_830_radar_alert_validator_tests
 type: tests
 created: 2026-06-15
 updated: 2026-06-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, radar, alert, validator, gate, staging, debug-endpoint, issue-830]
 parent: issue_830_radar_alert_validator
@@ -19,7 +19,7 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für Issue #830. Jeder pytest-Test mappt auf ein Acceptance Criterion
-der Parent-Spec `docs/specs/modules/issue_830_radar_alert_validator.md`.
+der Parent-Spec `docs/specs/_archive/modules/issue_830_radar_alert_validator.md`.
 
 Mock-frei: Frame-Seam via `frame_source`-DI erlaubt (dokumentierter Seam). IMAP-Calls
 gegen echtes Stalwart-Postfach. Gate-Tests gegen echtes Temp-Git-Repo.

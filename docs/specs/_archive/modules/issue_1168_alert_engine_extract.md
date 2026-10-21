@@ -3,7 +3,7 @@ entity_id: issue_1168_alert_engine_extract
 type: module
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, refactor, epic-1095, shared-service]
 ---

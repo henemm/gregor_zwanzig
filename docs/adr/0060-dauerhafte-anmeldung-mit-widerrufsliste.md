@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-09-05
 - **Bezug:** löst [ADR-0030](0030-session-auth-hmac-cookie.md) ab · `internal/middleware/auth.go`, `internal/store/sessions.go`, `frontend/src/lib/auth.ts`, `docs/reference/api_contract.md`, Issue #2129 (Scheibe 2 von #2127)
+- **Ergänzt durch:** [ADR-0062](0062-python-core-authentifiziert-gegenueber-go.md) (ergänzt), [ADR-0066](0066-login-erfordert-bestaetigte-email-adresse.md) (schreibt fort)
 
 ## Kontext
 

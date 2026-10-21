@@ -3,7 +3,7 @@ entity_id: issue_526_527_comparetabs_uebersicht_versand
 type: module
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, compare, svelte, ui, redesign, grid, card]
 ---

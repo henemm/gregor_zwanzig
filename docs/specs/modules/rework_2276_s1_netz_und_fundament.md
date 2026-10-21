@@ -3,7 +3,7 @@ entity_id: rework_2276_s1_netz_und_fundament
 type: refactor
 created: 2026-09-18
 updated: 2026-09-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, trips, etag, ci, testing]
 ---

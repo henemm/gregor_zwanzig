@@ -3,7 +3,7 @@ entity_id: trips_atomic_kebab
 type: module
 created: 2026-05-31
 updated: 2026-05-31
-status: completed
+status: implemented
 version: "1.0"
 tags: [frontend, atomic-design, svelte, trips, ux, kebab-menu]
 ---

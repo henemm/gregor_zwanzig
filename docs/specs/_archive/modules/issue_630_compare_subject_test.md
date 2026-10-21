@@ -3,12 +3,14 @@ entity_id: issue_630_compare_subject_test
 type: module
 created: 2026-06-06
 updated: 2026-06-06
-status: draft
+status: deprecated
 version: "1.0"
 tags: [tests, compare, email, subject, refactor]
 ---
 
 # #630 Compare-Betreff hermetisch testbar machen
+
+> Abgelöst/entfernt durch #1250 (Legacy-CompareSubscription-Stack stillgelegt, `ba6fe60d0`, 2026-07-13).
 
 ## Approval
 

@@ -3,7 +3,7 @@ entity_id: feat_1301_f2a_compare_new_trip_pattern
 type: feature
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [epic-1301, epic-1273, compare, trip-new-pattern, progressive-editor]
 ---

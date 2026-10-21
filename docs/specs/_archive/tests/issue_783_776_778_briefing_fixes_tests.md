@@ -3,7 +3,7 @@ entity_id: issue_783_776_778_briefing_fixes_tests
 type: tests
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, briefing, email, scheduler, frontend, tech-debt, issue-783, issue-776, issue-778]
 parent: issue_783_776_778_briefing_fixes
@@ -18,7 +18,7 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest fuer `docs/specs/modules/issue_783_776_778_briefing_fixes.md`.
+Test-Manifest fuer `docs/specs/_archive/modules/issue_783_776_778_briefing_fixes.md`.
 Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec. Keine Mocks —
 echte Modell-Objekte (#783), echter `format_email`-Aufruf (#778), Staging-IMAP
 und Playwright in der Acceptance-Stage (#776, #783-AC-2).

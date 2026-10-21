@@ -3,7 +3,7 @@ entity_id: fix_1662_versandfehler_nachliefern
 type: bugfix
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [briefing, dispatch, retry, issue-1662, observability]
 ---

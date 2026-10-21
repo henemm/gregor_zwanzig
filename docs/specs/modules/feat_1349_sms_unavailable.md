@@ -3,7 +3,7 @@ entity_id: feat_1349_sms_unavailable
 type: module
 created: 2026-07-23
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, official-alerts, unavailable, tokens, issue-1349, issue-1348]
 ---

@@ -3,7 +3,7 @@ entity_id: fix_1478_teil1_gate_fehlalarme
 type: module
 created: 2026-08-09
 updated: 2026-08-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [gates, tooling, issue-1478]
 ---

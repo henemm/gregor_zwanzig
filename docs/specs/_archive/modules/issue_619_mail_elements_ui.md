@@ -3,7 +3,7 @@ entity_id: issue_619_mail_elements_ui
 type: module
 created: 2026-06-06
 updated: 2026-06-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, editor, output, email]
 ---

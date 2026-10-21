@@ -3,7 +3,7 @@ entity_id: bug_328_savepreset_tokens
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, design-system, css, ap-007, ap-010, font-size, hex-color, issue-328]
 ---
@@ -27,7 +27,7 @@ Diese Zeile erhält stattdessen einen erklärenden Kommentar (AC-1-konform).
 
 ## Source
 
-- **File:** `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte`
+- **File:** `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte`
 - **Identifier:** `<style>` — Scoped-CSS-Regeln (Z. 175–230)
 
 ## Dependencies
@@ -35,13 +35,13 @@ Diese Zeile erhält stattdessen einen erklärenden Kommentar (AC-1-konform).
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `frontend/src/app.css` | CSS-Token-Quelle | Definiert `--g-text-*` (Z. 109–117), `--g-paper` (Z. 58), `--g-danger` (Z. 75) |
-| `docs/specs/modules/bug_272_ios_input_font_size.md` | Vorgänger-Spec | Hat die 16px-`@media`-Regel eingefügt (iOS-Zoom-Schutz) — darf nicht gebrochen werden |
+| `docs/specs/_archive/modules/bug_272_ios_input_font_size.md` | Vorgänger-Spec | Hat die 16px-`@media`-Regel eingefügt (iOS-Zoom-Schutz) — darf nicht gebrochen werden |
 
 ## Affected Files
 
 | Datei | Schicht |
 |-------|---------|
-| `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` | Frontend / User-UI |
+| `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` | Frontend / User-UI |
 
 ## Token-Referenz (app.css)
 

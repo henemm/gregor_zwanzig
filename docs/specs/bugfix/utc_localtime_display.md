@@ -4,7 +4,7 @@ type: bugfix
 created: 2026-03-03
 updated: 2026-03-03
 version: "1.0"
-status: draft
+status: implemented
 severity: HIGH
 tags: [trip-report, timezone, daylight, formatter, display]
 ---
@@ -68,9 +68,9 @@ User gibt "08:00" als Startzeit ein (meint Lokalzeit). Das wird als "08:00 UTC" 
 | Datei | Änderung |
 |-------|----------|
 | `pyproject.toml` | Dependency `timezonefinder` hinzufügen |
-| `src/formatters/trip_report.py` | `tz`-Parameter empfangen, ~25 Display-Stellen konvertieren |
-| `src/formatters/compact_summary.py` | `tz`-Parameter empfangen, 6 Display-Stellen konvertieren |
-| `src/formatters/sms_trip.py` | `tz`-Parameter empfangen, 1 Display-Stelle konvertieren |
+| `src/output/renderers/trip_report.py` | `tz`-Parameter empfangen, ~25 Display-Stellen konvertieren |
+| `src/output/renderers/compact_summary.py` | `tz`-Parameter empfangen, 6 Display-Stellen konvertieren |
+| `src/output/renderers/sms_trip.py` | `tz`-Parameter empfangen, 1 Display-Stelle konvertieren |
 | `src/services/trip_report_scheduler.py` | `trip_tz` berechnen, an Formatter durchreichen |
 
 ### NICHT geänderte Dateien

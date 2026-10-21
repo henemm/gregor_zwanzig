@@ -3,7 +3,7 @@ entity_id: fix_2047_s2_prod_gate
 type: module
 created: 2026-10-06
 updated: 2026-10-06
-status: approved
+status: implemented
 version: "1.0"
 tags: [ci, deploy, gate, staging]
 ---

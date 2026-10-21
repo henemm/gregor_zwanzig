@@ -3,7 +3,7 @@ entity_id: fix_1448_s2_dateisperren
 type: bugfix
 created: 2026-08-01
 updated: 2026-08-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [fcntl, dateisperre, alerts, zeitbudget]
 ---

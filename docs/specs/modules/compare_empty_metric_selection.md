@@ -3,7 +3,7 @@ entity_id: compare_empty_metric_selection
 type: bugfix
 created: 2026-07-26
 updated: 2026-07-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, shared, metrics, leerauswahl, bugfix]
 ---

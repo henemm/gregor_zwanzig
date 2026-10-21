@@ -3,7 +3,7 @@ entity_id: issue_766_smtp_retry_tests
 type: tests
 created: 2026-06-20
 updated: 2026-06-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, smtp, retry, rate-limit, issue-766]
 parent: issue_766_smtp_retry

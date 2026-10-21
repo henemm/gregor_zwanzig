@@ -3,7 +3,7 @@ entity_id: go_project_structure
 type: module
 created: 2026-04-12
 updated: 2026-04-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [migration, go, config, store]
 ---

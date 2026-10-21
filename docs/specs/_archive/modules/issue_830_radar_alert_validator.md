@@ -3,7 +3,7 @@ entity_id: issue_830_radar_alert_validator
 type: module
 created: 2026-06-15
 updated: 2026-06-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, gate, radar, alert, mail, validator, staging, debug-endpoint]
 ---
@@ -53,7 +53,7 @@ sein müssen.
 |--------|------|---------|
 | `src/services/trip_alert.py` — `check_radar_alerts()` | upstream (Refactor) | Radar-Alert-Body-Aufbau wird in `src/outputs/radar_alert.py` extrahiert; hier verbleiben nur Orchestrierung, Throttle, Versand |
 | `src/services/trip_alert.py` — `EmailOutput.send()` Aufruf (Z. 675) | upstream (Änderung) | muss `mail_type="radar-alert"` erhalten damit der Marker-Header `X-GZ-Mail-Type: radar-alert` gesetzt wird |
-| `src/outputs/email.py` — `EmailOutput` | upstream | Versand; `mail_type`-Parameter muss Header setzen analog zu `trip-briefing` |
+| `src/output/channels/email.py` — `EmailOutput` | upstream | Versand; `mail_type`-Parameter muss Header setzen analog zu `trip-briefing` |
 | `src/app/config.py` — `Settings` | upstream (Änderung) | neues Feld `env: str = "production"` liest `GZ_ENV`-ENV-Variable |
 | `src/services/trip_segments.py` — `convert_trip_to_segments()` | upstream | Segment-Ableitung im Trigger-Endpoint für ersten Trip des Users |
 | `src/services/radar_service.py` — `RadarNowcastService.get_nowcast()`, `format_now_text()`, `radar_alert_due()` | upstream | Nowcast-Abruf für Trigger-Endpoint (echter Code-Pfad, kein Mock) |

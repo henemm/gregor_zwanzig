@@ -3,7 +3,7 @@ entity_id: issue_1117_official_alerts_content_tab
 type: bugfix
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip-detail, official-alerts, content-tab]
 ---
@@ -22,7 +22,7 @@ Der bestehende Schalter „Amtliche Warnungen" (`trip.official_alerts_enabled`, 
 
 ## Source
 
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **Identifier:** neuer State `officialAlertsEnabled`, Funktionen `handleSave()`, `scheduleAutoSave()`, `handleDiscard()`, `snapshot()`
 - **File (Korrektur nach TDD-RED-Vorbereitung):** `frontend/src/lib/components/trip-detail/TripTabs.svelte`
 - **Identifier:** `handleValueChange()` — Flush-Guard-Bedingung erweitert

@@ -3,7 +3,7 @@ entity_id: feat_1273_s2_compare_hub_name_region_profil
 type: module
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, compare, hub, epic-1273, inline-edit]
 workflow: epic-1273-s2-hub-fields

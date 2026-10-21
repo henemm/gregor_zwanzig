@@ -3,7 +3,7 @@ entity_id: issue_520_organisms_barrel_completeness
 type: module
 created: 2026-06-01
 updated: 2026-06-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, atomic-design, organisms, issue-520, barrel]
 ---
@@ -41,7 +41,7 @@ Der Organisms-Barrel `frontend/src/lib/components/organisms/index.ts` exportiert
 | `frontend/src/lib/components/organisms/index.ts` | Zu ändernde Datei | Erhält 5 neue Re-Export-Zeilen |
 | `frontend/src/lib/components/organisms/organisms.test.ts` | Zu ändernde Datei | Erhält 5 neue Export-Existence-Tests |
 | `docs/design-system/COMPONENTS.md` | Zu ändernde Datei | Organisms-Tabelle (Zeilen 155–160) bekommt 5 neue Einträge |
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | Organism-Quelle | Physische Quelle, wird per Re-Export aufgenommen (kein Move) |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | Organism-Quelle | Physische Quelle, wird per Re-Export aufgenommen (kein Move) |
 | `frontend/src/lib/components/trip-detail/ChannelPreviewBlock.svelte` | Organism-Quelle (C2-Verstoß dokumentiert) | importiert `$lib/components/ui/card/index.js` — Verstoß bleibt unbehoben (Scope C3); nur Export-Existence getestet |
 | `frontend/src/lib/components/trip-detail/ChannelPreviewCard.svelte` | Organism-Quelle | Physische Quelle, wird per Re-Export aufgenommen |
 | `frontend/src/lib/components/trip-detail/MetricGroup.svelte` | Organism-Quelle | Physische Quelle, wird per Re-Export aufgenommen |

@@ -3,7 +3,7 @@ entity_id: issue_444_format_mode_consolidation
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [refactoring, output, backend, format_mode, deduplication]
 ---

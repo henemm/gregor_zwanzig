@@ -3,7 +3,8 @@ entity_id: safari_subscriptions_fix
 type: bugfix
 created: 2026-01-15
 updated: 2026-01-15
-status: superseded_by_safari_websocket_and_factory_fix
+status: superseded
+superseded_by: docs/specs/bugfix/safari_websocket_and_factory_fix.md
 version: "1.0"
 tags: [ui, bugfix, subscriptions, safari, nicegui, tdd]
 related_specs:
@@ -11,6 +12,8 @@ related_specs:
 ---
 
 # Safari Subscriptions Page Fix
+
+> Abgelöst/entfernt durch ADR-0001 / #129 — die NiceGUI-UI unter `src/web/` wurde am 2026-05-15 ersatzlos entfernt; diese Spec ist nur noch historisch.
 
 ## Approval
 

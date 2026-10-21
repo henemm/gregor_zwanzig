@@ -3,7 +3,7 @@ entity_id: feat_2050_s4b2_wortebene_kennzeichnung
 type: feature
 created: 2026-08-23
 updated: 2026-08-23
-status: draft
+status: implemented
 workflow: feat-2050-s4b2-wortebene-kennzeichnung
 version: "1.0"
 tags: [alarm, nowcast, radar, renderer, wortebene, kennzeichnung]

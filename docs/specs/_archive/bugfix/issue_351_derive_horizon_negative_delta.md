@@ -3,7 +3,7 @@ entity_id: issue_351_derive_horizon_negative_delta
 type: bugfix
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [backend, python, horizon-filter, derive-horizon, email-renderer, issue-351]
 ---
@@ -43,7 +43,7 @@ vergangene Etappen den Horizont-Filter nicht auslösen.
 |--------|------|---------|
 | `src/output/renderers/email/helpers.py` | Python-Modul (vorhanden) | Enthält `derive_horizon()`; hier wird der Guard eingefügt |
 | `tests/tdd/test_horizon_filter.py` | Pytest-Testdatei (vorhanden) | Bestehende Tests für delta=0/1/2/≥3; neuer Test für delta<0 wird ergänzt |
-| `docs/specs/modules/issue_342_pro_metrik_horizon_backend.md` | Spec (vorhanden) | Known-Limitation-Satz für vergangene Etappen wird nachgetragen |
+| `docs/specs/_archive/modules/issue_342_pro_metrik_horizon_backend.md` | Spec (vorhanden) | Known-Limitation-Satz für vergangene Etappen wird nachgetragen |
 
 ## Implementation Details
 
@@ -84,7 +84,7 @@ def test_derive_horizon_negative_delta():
     assert derive_horizon(report, date(2025, 12, 31)) is None  # delta = -130
 ```
 
-### 3. Known-Limitation-Satz in `docs/specs/modules/issue_342_pro_metrik_horizon_backend.md`
+### 3. Known-Limitation-Satz in `docs/specs/_archive/modules/issue_342_pro_metrik_horizon_backend.md`
 
 In der `Known Limitations`-Sektion wird folgender Satz ergänzt:
 
@@ -129,7 +129,7 @@ Then laufen alle bestehenden Tests plus der neue `test_derive_horizon_negative_d
 |-------|----------|
 | `src/output/renderers/email/helpers.py` | Expliziter `if delta < 0: return None`-Guard mit Kommentar vor den positiven Checks (~3 LoC) |
 | `tests/tdd/test_horizon_filter.py` | Neuer Test `test_derive_horizon_negative_delta` mit 3 Assertions (~6 LoC) |
-| `docs/specs/modules/issue_342_pro_metrik_horizon_backend.md` | Known-Limitation-Satz für vergangene Etappen (~4 LoC) |
+| `docs/specs/_archive/modules/issue_342_pro_metrik_horizon_backend.md` | Known-Limitation-Satz für vergangene Etappen (~4 LoC) |
 
 ## Known Limitations
 

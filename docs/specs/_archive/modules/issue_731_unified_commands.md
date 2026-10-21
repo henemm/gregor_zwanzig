@@ -3,7 +3,7 @@ entity_id: issue_731_unified_commands
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [commands, email, telegram, inbound, ux]
 ---
@@ -23,7 +23,7 @@ Die in der Briefing-E-Mail gelisteten „Antwort-Kommandos" stammen aus Abonnent
 - **File:** `src/services/trip_command_processor.py` — **Identifier:** `_BARE_KEYWORD_MAP`, `_VALID_COMMANDS`, `process`, `_show_help`, `_show_status`, neuer `_resume_trip`; Entfernen von `_apply_pause`/`_apply_skip`/`_show_config`-Routing
 - **File:** `src/output/renderers/email/html.py` — **Identifier:** `render_html` (Block „Antwort-Kommandos" + Footer-Zeile)
 - **File:** `src/output/renderers/email/plain.py` — **Identifier:** Plaintext-Kommando-Hinweis
-- **File:** `src/outputs/telegram.py` — **Identifier:** `BOT_COMMANDS`
+- **File:** `src/output/channels/telegram.py` — **Identifier:** `BOT_COMMANDS`
 - **File:** `src/services/inbound_telegram_reader.py` — **Identifier:** `_SHORTCUT_MAP`
 
 Schicht: **Python-Backend** (FastAPI Core + Renderer). Keine Frontend-/Go-Änderung.

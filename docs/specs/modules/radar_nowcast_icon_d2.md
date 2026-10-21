@@ -3,7 +3,7 @@ entity_id: radar_nowcast_icon_d2
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, alerts, weather, nowcast, icon-d2, central-europe, alps]
 ---

@@ -3,7 +3,7 @@ entity_id: fix_1412_s3b_telegram_sms_ausgang
 type: module
 created: 2026-10-06
 updated: 2026-10-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, sms, premium-sms, egress, struktur-test, 1412]
 workflow: fix-1412-s3b-telegram-sms-guard

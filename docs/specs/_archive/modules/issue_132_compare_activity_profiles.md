@@ -3,7 +3,7 @@ entity_id: issue_132_compare_activity_profiles
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, frontend, activity-profile, locations-rail, svelte]
 ---
@@ -261,5 +261,5 @@ Playwright-Spec mit mindestens diesen Test-Cases:
 
 ## Changelog
 
-- 2026-06-02: AC-6–9 in separatem Wizard-Issue #547 implementiert — dies Spec bleibt der Referenz-Status für die orphaned Compare-Screen-Komponenten (AC-1–5). Wizard-Implementierung siehe `docs/specs/modules/issue_547_auto_profile_preselect.md`.
+- 2026-06-02: AC-6–9 in separatem Wizard-Issue #547 implementiert — dies Spec bleibt der Referenz-Status für die orphaned Compare-Screen-Komponenten (AC-1–5). Wizard-Implementierung siehe `docs/specs/_archive/modules/issue_547_auto_profile_preselect.md`.
 - 2026-05-20: Initial spec erstellt (Issue #132 — Compare-Screen Aktivitätsprofil-Integration).

@@ -3,7 +3,7 @@ entity_id: fix_2464_brightsky_konvektions_sidecar
 type: module
 created: 2026-09-30
 updated: 2026-09-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [radar, nowcast, brightsky, radolan, konvektion, gewitter, hagel, cache, adr-0018]
 ---

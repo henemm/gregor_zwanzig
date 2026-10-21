@@ -3,7 +3,7 @@ entity_id: issue_259_briefings_tab_tests
 type: tests
 created: 2026-05-19
 updated: 2026-05-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, briefings, frontend, svelte, issue-259, epic-135]
 parent: issue_259_briefings_tab
@@ -18,7 +18,7 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_259_briefings_tab.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_259_briefings_tab.md`.
 Da Issue #259 rein Frontend ist (Svelte-Komponenten, kein Python-Code),
 prüfen die Tests Datei-Existenz und Inhalts-Invarianten der Svelte-Dateien.
 

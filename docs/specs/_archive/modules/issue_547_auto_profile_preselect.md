@@ -3,12 +3,14 @@ entity_id: issue_547_auto_profile_preselect
 type: module
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: deprecated
 version: "1.0"
 tags: [compare, frontend, wizard, activity-profile, auto-select, svelte]
 ---
 
 # Issue #547 — Auto-Profil-Vorauswahl im Compare-Wizard (AC-6–9)
+
+> Abgelöst/entfernt durch ADR-0032 / #683 (Compare-Wizard entfernt, `3bb5161a4`, 2026-06-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

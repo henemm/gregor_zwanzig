@@ -3,7 +3,7 @@ entity_id: issue_772_archive_stats_test_tests
 type: tests
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, go, archive-stats, coverage, multi-tenant, issue-772]
 parent: issue_772_archive_stats_test
@@ -19,11 +19,11 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die echten Verhaltenstests aus
-`docs/specs/modules/issue_772_archive_stats_test.md`. Jeder Go-Test mappt 1:1 auf
+`docs/specs/_archive/modules/issue_772_archive_stats_test.md`. Jeder Go-Test mappt 1:1 auf
 ein Acceptance Criterion der Parent-Spec. Keine Mocks, kein Source-Grep — echte
 `store.Store`-Instanzen, echte JSON-Log-Dateien, echte Handler-Aufrufe.
 
-Parent-Spec: `docs/specs/modules/issue_772_archive_stats_test.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_772_archive_stats_test.md` v1.0
 
 ## Source
 

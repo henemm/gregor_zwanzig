@@ -9,7 +9,7 @@ fehl.
 
 ## Ursache
 
-- `src/formatters/trip_report.py` — `format_email()` hat keinen `day_comparison`-Parameter mehr
+- `src/output/renderers/trip_report.py` — `format_email()` hat keinen `day_comparison`-Parameter mehr
 - `src/services/trip_report_scheduler.py:556` — übergibt `day_comparison=day_comparison`
 - `src/services/trip_report_scheduler.py:523-537` — berechnet `day_comparison`, das nirgends mehr verwendet wird (toter Code)
 

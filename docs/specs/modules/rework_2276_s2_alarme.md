@@ -3,7 +3,7 @@ entity_id: rework_2276_s2_alarme
 type: refactor
 created: 2026-09-19
 updated: 2026-09-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, trips, alarme, persistenz]
 ---
@@ -54,8 +54,8 @@ Go-API- und kein Python-Core-Code in dieser Scheibe.
 | `frontend/src/lib/components/shared/alarmeVergleichSpeicherung.ts` | CREATE | Neues Modul unter `shared/`. Übernimmt Snapshot/Diff/Rollback-Logik, die heute als `flushPendingAlarmSave` (`compareHubWizardBridge.ts:613-641`), `rollbackAlarmSnapshot` (`:662-690`) und Typ `AlarmSnapshot` (`:562`) in der Compare-Klebeschicht liegt, plus **eine** Funktion als alleinige Erzeugerin der Alarm-Teilnutzlast (`send_telegram`, `send_sms`, `send_premium_sms`, `alert_channel_thresholds`) — das ist die Nahtstelle, die #2293 austauschen wird, ohne den Rest des Moduls anzufassen |
 | `frontend/src/lib/components/compare/compareHubWizardBridge.ts:562-690` | MODIFY | `AlarmSnapshot`, `flushPendingAlarmSave`, `rollbackAlarmSnapshot` entfernen (verlagert nach `alarmeVergleichSpeicherung.ts`). **Ausdrücklich unverändert:** `hydrateAlarmFieldsFromPreset` (`:519-555`) bleibt hier — sie setzt neben Alarmfeldern auch `corridors`/`activeMetricKeys` für andere Reiter mit (Deep-Link #1320, Risk 10) und gehört nicht zum Alarm-Speicherpfad |
 | `frontend/src/lib/components/compare/CompareTabs.svelte` | MODIFY | Drei benannte Entfernungen (kein zusammenhängender Bereich): `currentAlarmSnapshot` (`:566-591`), `handleAlarmeCommit` (`:648-678`), Wrapper-`div` mit change/focusout/click-Handhabung (`:1445-1451`). **Ausdrücklich unverändert:** die Hydrations-`$effect` (`:604-622`) bleibt bestehen — sie speist `hydrateAlarmFieldsFromPreset` und wirkt über den Alarm-Reiter hinaus. Mount des `AlarmeTab` bekommt die neuen Props. `handleValueChange` (`:152-159`, heute kein `flush`) ruft beim Verlassen des Reiters `alarme` `saveController.flush()` (TripTabs-Muster). `handleToggleActive` (`:1014`) ruft `flush()` vorab |
-| `frontend/src/lib/components/compare/__tests__/compare_hub_alarme_bridge.test.ts` | MOVE → `frontend/src/lib/components/shared/__tests__/compare_hub_alarme_bridge.test.ts` | Import auf `alarmeVergleichSpeicherung.ts` umgehängt, Zusicherungen unverändert (Radar-Schalter im Body, No-Op-Fall) |
-| `frontend/src/lib/components/compare/__tests__/compare_alarme_channel_threshold_save.test.ts` | MOVE → `frontend/src/lib/components/shared/__tests__/compare_alarme_channel_threshold_save.test.ts` | Import umgehängt, Zusicherung (Kanal-Schwellen aller vier Kanäle) unverändert |
+| `frontend/src/lib/components/shared/__tests__/compare_hub_alarme_bridge.test.ts` | MOVE → `frontend/src/lib/components/shared/__tests__/compare_hub_alarme_bridge.test.ts` | Import auf `alarmeVergleichSpeicherung.ts` umgehängt, Zusicherungen unverändert (Radar-Schalter im Body, No-Op-Fall) |
+| `frontend/src/lib/components/shared/__tests__/compare_alarme_channel_threshold_save.test.ts` | MOVE → `frontend/src/lib/components/shared/__tests__/compare_alarme_channel_threshold_save.test.ts` | Import umgehängt, Zusicherung (Kanal-Schwellen aller vier Kanäle) unverändert |
 | `frontend/src/lib/components/shared/__tests__/telegram_kurzstil_shared_toggle.test.ts` | MODIFY | Kommentar-Referenz auf `flushPendingAlarmSave` folgt dem Modulumzug |
 | `frontend/e2e/feat-1745-a-alarm-premium-sms.spec.ts` | MODIFY | Kommentar-Referenz; die Datei läuft laut Kontextdokument (`## Existing Tests`, Stand `58eb84c4`) weiterhin außerhalb der CI-Ratsche, das ändert diese Scheibe nicht |
 | neue Unit-Tests (Orchestrierung, s. Test-Plan) | CREATE | Einmal-Speichern, Kein-Zurückschreiben, Lesen-bei-Ausführung, 412-Konflikt/Wiederholen, No-Op, Reiterwechsel-Flush, `init`-Weiterreichung |

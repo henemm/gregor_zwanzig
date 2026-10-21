@@ -3,7 +3,7 @@ entity_id: compare_konfliktschutz_teilfelder
 type: bugfix
 created: 2026-09-29
 updated: 2026-09-29
-status: draft
+status: implemented
 workflow: fix-2375-compare-konfliktschutz
 version: "1.1"
 tags: [compare, ortsvergleich, konfliktschutz, etag, if-match, teilfelder, "#2375", "#2381", "#2345"]

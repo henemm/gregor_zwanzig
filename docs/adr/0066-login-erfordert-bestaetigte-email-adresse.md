@@ -7,6 +7,7 @@
   schreibt [ADR-0060](0060-dauerhafte-anmeldung-mit-widerrufsliste.md) fort und nimmt die
   Zusage „alle sechs Anmeldewege stellen ein Merkmal aus" aus
   `docs/specs/modules/session_allowlist.md` (AC-13/AC-18) teilweise zurück.
+- **Ergänzt durch:** [ADR-0067](0067-adress-eindeutigkeit.md) (schreibt fort)
 
 ## Kontext
 

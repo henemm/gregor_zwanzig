@@ -3,7 +3,7 @@ entity_id: feat_1680_s5b_gewitter_herkunft_vorschau
 type: feature
 created: 2026-08-14
 updated: 2026-08-14
-status: approved
+status: implemented
 version: "1.1"
 tags: [thunder, trip, sms, outlook, adr-0007, adr-0025, issue-1680, issue-1419, issue-1196]
 ---

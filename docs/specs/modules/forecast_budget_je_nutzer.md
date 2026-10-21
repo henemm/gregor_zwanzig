@@ -3,7 +3,7 @@ entity_id: forecast_budget_je_nutzer
 type: module
 created: 2026-09-20
 updated: 2026-09-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [multi-user, forecast-budget, fairness, epic-2138]
 ---

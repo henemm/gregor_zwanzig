@@ -35,7 +35,9 @@ bzw. in den Specs unter `docs/specs/`.
 1. Nächste freie Nummer nehmen (vierstellig, fortlaufend).
 2. `_template.md` kopieren nach `NNNN-kurzer-titel.md`.
 3. Ausfüllen, Status auf **Akzeptiert** setzen, hier im Index eintragen.
-4. Wird eine Entscheidung später revidiert: das alte ADR **nicht löschen**, sondern Status auf
+4. Ergänzt oder schreibt ein neues ADR ein älteres fort, trägt das ältere eine Zeile
+   `- **Ergänzt durch:** ADR-XXXX (…)` im Kopf — Verweise laufen in beide Richtungen.
+5. Wird eine Entscheidung später revidiert: das alte ADR **nicht löschen**, sondern Status auf
    **Abgelöst durch ADR-XXXX** setzen und ein neues ADR schreiben. Die Historie bleibt damit
    nachvollziehbar.
 
@@ -50,13 +52,14 @@ bzw. in den Specs unter `docs/specs/`.
 - **Index-Drift-Test** (`tests/test_adr_index_drift.py`, `# doc-compliance-test`): erzwingt,
   dass jede ADR-Datei im Index steht und der Index-Status zur Status-Zeile der Datei passt —
   der Index ist vor #1343 zweimal nachweislich gedriftet (issue_1165, ADR-0002).
-- **Einstiegsfläche:** CLAUDE.md → „Architektur-Entscheidungen (ADRs)" verweist hierher.
+- **Einstiegsfläche:** CLAUDE.md → „Wichtige Referenzen" → Absatz **ADRs:** verweist hierher.
 
 ## Status-Werte
 
 - **Vorgeschlagen** — zur Diskussion, noch nicht verbindlich
 - **Akzeptiert** — gilt
 - **Abgelöst durch ADR-XXXX** — durch eine spätere Entscheidung ersetzt
+- **Teilweise abgelöst durch ADR-XXXX** — nur benannte Teile ersetzt, der Rest gilt (Teil in Klammern nennen)
 - **Zurückgezogen** — verworfen, ohne Ersatz
 
 ## Index
@@ -67,17 +70,17 @@ bzw. in den Specs unter `docs/specs/`.
 | [0002](0002-met-vs-mosmix-forecast-source.md) | Wetterquelle: MET Norway als Standard, MOSMIX nur als enge Ausnahme | Abgelöst durch ADR-0029 |
 | [0003](0003-multi-tenant-isolation.md) | Konsequente Mandantentrennung, kein `"default"`-Fallback | Akzeptiert |
 | [0004](0004-signal-channel-removed.md) | Signal als Briefing-Kanal entfernt | Akzeptiert |
-| [0005](0005-confidence-not-selectable-metric.md) | Confidence ist keine pro-Etappe wählbare Metrik | Akzeptiert |
-| [0006](0006-no-mocked-tests-e2e-staging.md) | Keine gemockten Tests; echte E2E-Verifikation gegen Staging | Akzeptiert |
+| [0005](0005-confidence-not-selectable-metric.md) | Confidence ist keine pro-Etappe wählbare Metrik | Teilweise abgelöst durch ADR-0093 (SMS-Token) |
+| [0006](0006-no-mocked-tests-e2e-staging.md) | Keine gemockten Tests; echte E2E-Verifikation gegen Staging | Teilweise abgelöst durch ADR-0094 (Punkt 1, Test-Schichten) |
 | [0007](0007-daten-statt-empfehlungen.md) | Daten statt Empfehlungen — keine paternalistische Bewertung | Akzeptiert |
 | [0008](0008-kontrast-vor-optik.md) | Lesbarkeit/Kontrast vor weicher Optik | Akzeptiert |
-| [0009](0009-alerts-als-abweichungs-waechter.md) | Alerts sind Abweichungs-Wächter, keine absoluten Schwellen | Teilweise abgelöst durch ADR-0056 |
+| [0009](0009-alerts-als-abweichungs-waechter.md) | Alerts sind Abweichungs-Wächter, keine absoluten Schwellen | Teilweise abgelöst durch ADR-0056, ADR-0096 (Ausnahme Radar-Alarm) |
 | [0010](0010-vorboten-metriken-kein-alert-ausloeser.md) | Vorboten-Metriken sind keine Alert-Auslöser | Akzeptiert |
 | [0011](0011-alert-render-single-backend-renderer.md) | Alert-Render-System — ein Backend-Renderer, Registry als Single Source | Akzeptiert |
 | [0012](0012-telegram-parse-mode-html.md) | Telegram-Formatierung — parse_mode=HTML statt Markdown/MarkdownV2 | Akzeptiert |
 | [0013](0013-alert-threshold-ist-delta-sensitivitaet.md) | Alert-Renderer: `threshold` ist immer Δ-Sensitivitätsschwelle, nie Absolutwert-Referenz | Akzeptiert |
 | [0014](0014-telegram-multi-bubble-format.md) | Telegram-Ausgabe: Multi-Bubble-Tabellenformat ersetzt Prosa | Akzeptiert |
-| [0015](0015-dual-stack-zielarchitektur.md) | Dual-Stack (Go + Python) als dauerhafte Zielarchitektur — präzisiert 0001 | Teilweise abgelöst durch 0062 (Regel 2, Auth-Teil) |
+| [0015](0015-dual-stack-zielarchitektur.md) | Dual-Stack (Go + Python) als dauerhafte Zielarchitektur — präzisiert 0001 | Teilweise abgelöst durch ADR-0062 (Regel 2, Auth-Teil) |
 | [0016](0016-amtliche-warnungen-additiver-typ.md) | Amtliche Warnungen als additiver externer Alert-Typ (Nachtrag im Index) | Akzeptiert |
 | [0017](0017-output-paket-konsolidierung.md) | Ein Output-Paket: `src/output/` mit `renderers/` + `channels/`; `formatters/`+`outputs/` aufgelöst | Akzeptiert |
 | [0018](0018-provider-fallback-ohne-kaschieren.md) | Modell-Fallback bei Wetter-Quell-Ausfall — mit Ausweichen, aber ohne Kaschieren | Akzeptiert |
@@ -88,34 +91,34 @@ bzw. in den Specs unter `docs/specs/`.
 | [0023](0023-briefing-subscription-shared-model.md) | Gemeinsames `BriefingSubscription`-Modell (`kind`-Diskriminator) + `briefings/`-Persistenz | Akzeptiert |
 | [0024](0024-ein-sortier-baustein-svelte-dnd-action.md) | Ein geteilter Sortier-Baustein auf svelte-dnd-action; Pfeil-Buttons weichen dem eingebauten Tastatur-Pfad | Akzeptiert |
 | [0025](0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md) | Eine Gewitter-Quelle für alle Briefing-Kanäle — gleiche Rohdaten, gleiche Fensterung, gleiche Skala | Akzeptiert |
-| 0026 | — (Nummer nie vergeben; Lücke dokumentiert 2026-07-22, kein Dokument) | — |
+| 0026 | — (kein Dokument; Lücke dokumentiert 2026-07-22. Die Nummer wurde 2026-07-16/17 von zwei Specs vorläufig reserviert — `docs/specs/modules/compare_weather_metrics_tab.md` und `docs/specs/modules/compare_location_summary.md` —, das ADR wurde aber nie angelegt) | — |
 | [0027](0027-adr-commit-guard-entfernt.md) | Lokales ADR-Commit-Gate (`adr_guard.py`) entfernt — tot seit Plugin-Migration, ADR-Praxis bleibt bestehen | Akzeptiert |
-| [0028](0028-e2e-prod-network-unreachable-admin-loses-never-delete.md) | Prod-Datenbaum wird für E2E netzwerkseitig unerreichbar; `admin` verliert den NEVER_DELETE-Schutz aus #1265 | Akzeptiert |
+| [0028](0028-e2e-prod-network-unreachable-admin-loses-never-delete.md) | Prod-Datenbaum wird für E2E netzwerkseitig unerreichbar; `admin` verliert den NEVER_DELETE-Schutz aus #1265 | Akzeptiert — Known Limitation abgelöst durch ADR-0072 |
 | [0029](0029-openmeteo-standard-provider.md) | Open-Meteo als Standard-Wetterdaten-Provider (löst 0002 ab) | Akzeptiert |
-| [0030](0030-session-auth-hmac-cookie.md) | Session-Auth über HMAC-signiertes Cookie (kein JWT, keine Session-Tabelle) | Abgelöst durch 0060 |
-| [0031](0031-persistenz-dateibasiert-data-users.md) | Dateibasierte JSON-Persistenz unter `data/users/{user_id}/` (keine Datenbank) | Abgelöst durch ADR-0083 |
+| [0030](0030-session-auth-hmac-cookie.md) | Session-Auth über HMAC-signiertes Cookie (kein JWT, keine Session-Tabelle) | Abgelöst durch ADR-0060 |
+| [0031](0031-persistenz-dateibasiert-data-users.md) | Dateibasierte JSON-Persistenz unter `data/users/{user_id}/` (keine Datenbank) | Teilweise abgelöst durch ADR-0083 (nur „Go einzige Schreib-Autorität") |
 | [0032](0032-wizard-abschaffung-progressive-editoren.md) | Multi-Step-Wizards abgeschafft — progressive Tab-Editoren mit Auto-Save | Akzeptiert |
 | [0033](0033-warn-karte-nur-betroffene-segmente.md) | Amtliche Warn-Karte zeigt nur betroffene Segmente, kein Vollrouten-Gitter (löst #1233/#1216 ab) | Akzeptiert |
 | [0034](0034-herkunftsfusszeile-reale-datenquelle.md) | Herkunfts-Fußzeile zeigt die reale Datenquelle statt Renderer-Pfad + Commit-Hash (löst #1241 ab) | Akzeptiert |
 | [0035](0035-ein-tagesfenster-fuer-trip-und-ortsvergleich.md) | Ein Tagesfenster für Trip und Ortsvergleich — wirksam auf Anzeige und Bewertung (nimmt #1268 für den Vergleich zurück) | Akzeptiert |
 | [0036](0036-nebenlaeufigkeitsschutz-inhalts-fingerabdruck.md) | Nebenläufigkeitsschutz über Inhalts-Fingerabdruck statt Versionsfeld (Issue #1395 S1/S2) | Akzeptiert |
-| [0037](0037-datengetriebener-ausblick-aus-metrik-katalog.md) | 3-Tages-Ausblick der Vergleichs-Mail datengetrieben aus dem Metrik-Katalog statt fester Sieben-Spalten-Liste (Issue #1361 Befund 2 + #1368, S3 Scheibe A von Epic #1372) | Akzeptiert |
+| [0037](0037-datengetriebener-ausblick-aus-metrik-katalog.md) | 3-Tages-Ausblick der Vergleichs-Mail datengetrieben aus dem Metrik-Katalog statt fester Sieben-Spalten-Liste (Issue #1361 Befund 2 + #1368, S3 Scheibe A von Epic #1372) | Akzeptiert — Punkt 2 abgelöst durch ADR-0055, Alternativen Punkt 3 durch ADR-0068 |
 | [0038](0038-zeitgrenze-je-nutzerlauf-unter-aufrufer-wartezeit.md) | Jeder wiederkehrende Job-Lauf bekommt eine Zeitgrenze unter der Wartezeit seines Aufrufers (Issue #1447) | Akzeptiert |
 | [0039](0039-amtliche-warnungen-aus-kontingentfreiem-feed.md) | Amtliche Warnungen kommen aus dem kontingentfreien MeteoAlarm-Feed statt aus der mengenbegrenzten EDR-Index-API (Issues #1445, #1397) | Akzeptiert |
-| [0040](0040-schwellen-alarm-additiver-alarm-typ.md) | Der nutzerkonfigurierte Schwellen-Alarm ist ein additiver zweiter Alarm-Typ neben dem Abweichungs-Wächter (Issue #1444) | Abgelöst durch 0043 |
+| [0040](0040-schwellen-alarm-additiver-alarm-typ.md) | Der nutzerkonfigurierte Schwellen-Alarm ist ein additiver zweiter Alarm-Typ neben dem Abweichungs-Wächter (Issue #1444) | Abgelöst durch ADR-0043 |
 | [0041](0041-zustaendigkeit-warn-quellen-drei-muster.md) | Zuständigkeit einer Warn-Quelle wird nach Art des Endpunkts bestimmt — drei Muster statt einheitlicher Geometrie (Issues #1397 Defekt 2, #1400, #1445) | Akzeptiert |
-| [0042](0042-namensform-folgt-der-platzgrenze.md) | Die Namensform einer Wettergröße folgt der Platzgrenze, nicht einer pauschalen Sprachpräferenz — Protokoll-Token nie übersetzen, Anzeige-Namen nach Platz (Issues #1453, #862/#849 bestätigt) | Akzeptiert |
+| [0042](0042-namensform-folgt-der-platzgrenze.md) | Die Namensform einer Wettergröße folgt der Platzgrenze, nicht einer pauschalen Sprachpräferenz — Protokoll-Token nie übersetzen, Anzeige-Namen nach Platz (Issues #1453, #862/#849 bestätigt) | Akzeptiert — Zeile „3-Tages-Ausblick" abgelöst durch ADR-0068 |
 | [0043](0043-empfindlichkeitsstufe-als-niveau-statt-zweiter-alarm-typ.md) | Die Empfindlichkeitsstufe ist der einzige Alarm-Regler — bei Gefahrenstufen-Größen wirkt sie über das erreichte Niveau (löst 0040 ab, Issue #1460) | Akzeptiert |
 | [0044](0044-kalendertage-folgen-der-ortszeit.md) | „Heute" und „morgen" bestimmen sich nach der Ortszeit der Tour, nicht nach Weltzeit — Dauern bleiben davon unberührt (ergänzt 0035, Issue #1470) | Akzeptiert |
 | [0045](0045-generiertes-eingebettetes-artefakt-fuer-cross-stack-abbildung.md) | Ein generiertes, kompilierzeit-eingebettetes Artefakt (`go:embed` + Erzeuger-Skript) löst Cross-Stack-Duplikate — nicht nur ein erweiterter Paritätstest (ergänzt 0015 Regel 3, Issue #1435 Etappe E5) | Akzeptiert |
-| [0046](0046-alarm-kanal-schwelle.md) | Kanal-Schwelle regelt AUF WELCHEM WEG eine Meldung ankommt — nicht OB (ergänzt 0043, Issue #1461 S3b-2a) | Akzeptiert |
+| [0046](0046-alarm-kanal-schwelle.md) | Kanal-Schwelle regelt AUF WELCHEM WEG eine Meldung ankommt — nicht OB (ergänzt 0043, Issue #1461 S3b-2a) | Teilweise abgelöst durch ADR-0095 (Kanalliste) |
 | [0047](0047-gewitter-vertretung-zwischen-direktquellen.md) | Gewitter-Vertretung zwischen Direktquellen bei echtem Dienstausfall — dehnt 0018 auf die Gewitter-Domäne aus, grenzt sich von 0025 ab (Issue #1492 Scheibe 2a) | Akzeptiert |
-| [0048](0048-modellabhaengige-schwellen-statt-einer-zahl.md) | Feste Schwellen werden nie über Modellgrenzen getragen — CAPE-Schwelle je Modell × Gebiet, geeicht am 95. Perzentil der Modellklimatologie (mind. 300 J/kg); unbekannte Herkunft heißt „keine Aussage" (Issue #1592 Scheiben B0+C0+C1) | Akzeptiert |
-| [0049](0049-premium-sms-vierter-kanal.md) | Premium-SMS (Garmin inReach) ist ein vierter, eigenständiger Kanal `premium_sms` — kein SMS-Sonderfall (schreibt 0004 fort, Issue #1676 S2a) | Akzeptiert |
+| [0048](0048-modellabhaengige-schwellen-statt-einer-zahl.md) | Feste Schwellen werden nie über Modellgrenzen getragen — CAPE-Schwelle je Modell × Gebiet, geeicht am 95. Perzentil der Modellklimatologie (mind. 300 J/kg); unbekannte Herkunft heißt „keine Aussage" (Issue #1592 Scheiben B0+C0+C1) | Akzeptiert — Einzelsätze abgelöst durch ADR-0064/ADR-0071 |
+| [0049](0049-premium-sms-vierter-kanal.md) | Premium-SMS (Garmin inReach) ist ein vierter, eigenständiger Kanal `premium_sms` — kein SMS-Sonderfall (schreibt 0004 fort, Issue #1676 S2a) | Teilweise abgelöst durch ADR-0095 (Begründung „ohne Netz“, „kein Alarm-Kanal“) |
 | [0050](0050-metrik-kaskade-verfeinerung-nicht-ersetzung.md) | Die Metrik-Kaskade ist eine Verfeinerung, nicht eine Ersetzung — die Grundauswahl ist das Maximum, Kanal-Ebenen dürfen nur abwählen (Issue #1719 S1) | Akzeptiert |
 | [0051](0051-drei-zeitbegriffe-zone-an-den-daten.md) | Drei Zeitbegriffe statt einem (Zeitpunkt / Kalenderzeit / Zone); die Zone gehört an die Daten, nicht an den Server; keine Umgebungsuhr — ordnet 0044 als Spezialfall ein, 0035 unberührt (Analyse `docs/analysis/zeitzonen-architektur-2026-08.md`) | Vorgeschlagen |
 | [0052](0052-warnmail-nowcast-bauform-eigener-klartext.md) | Amtliche Warn-Mail übernimmt die Nowcast-Datenzeilen-Bauform und bekommt einen eigenen Klartext-Teil (schreibt 0033 fort, Issue #1744 Scheibe A2) | Akzeptiert |
-| [0053](0053-compare-kanal-eigene-metrikauswahl-uebersicht.md) | Der Ortsvergleich bekommt kanal-eigene Metrikauswahl für die Übersichtstabelle zurück — ganze Kette statt Oberfläche allein (löst #1287/#1291/#1351 ab, schreibt 0050 fort, Issue #1703 Scheibe 8) | Teilweise abgelöst durch 0059 (Ausblick) |
+| [0053](0053-compare-kanal-eigene-metrikauswahl-uebersicht.md) | Der Ortsvergleich bekommt kanal-eigene Metrikauswahl für die Übersichtstabelle zurück — ganze Kette statt Oberfläche allein (löst #1287/#1291/#1351 ab, schreibt 0050 fort, Issue #1703 Scheibe 8) | Teilweise abgelöst durch ADR-0059 (Ausblick) |
 | [0054](0054-playwright-e2e-in-ci-ampel-positivliste.md) | Playwright-E2E-Klickpfade in die CI-Ampel — isolierter Stack, Positivliste statt Ausschlussliste (schreibt 0006/0028 fort, Issue #1771 Scheibe 2) | Akzeptiert |
 | [0055](0055-trip-ausblick-waehlbare-spalten.md) | Die 3-Tages-Vorschau des Trip-Briefings bekommt wählbare Spalten — global ohne Kanal-Ebene, an die Grundauswahl gebunden, EINE Auflösung statt drei (löst 0037 Punkt 2 ab, schreibt 0050 fort, Issue #1720 Scheibe 1) | Akzeptiert |
 | [0056](0056-rollierender-alarm-anker-statt-briefing-only-snapshot.md) | Der Δ-Vergleichsanker ist nicht mehr ausschließlich an einen erfolgreichen Briefing-Versand gebunden, sondern rollt zusätzlich bei jedem Alarmversand und bei Überschreiten einer Alterungs-Ceiling nach (löst Teil von 0009 ab, Issue #1916) | Akzeptiert |
@@ -155,3 +158,7 @@ bzw. in den Specs unter `docs/specs/`.
 | [0090](0090-entwarnung-amtlicher-warnungen.md) | Entwarnung bei amtlichen Warnungen für alle Quellen, vier Kanäle, beide Flächen: Pro-Quelle-Gesundheit vor dem Merge (Variante C), Abgleich über Identität + Gefahr + Überlappung am selben Ort, „beendet" erst nach zwei Läufen (Variante D), Dringlichkeit nach altem Wert, Senken/Tombstone nur nach Zustellung, Briefing senkt das Gedächtnis, planmäßiger Ablauf ist keine Entwarnung (ergänzt 0016/0043/0089, Issue #1441 Scheibe S2) | Akzeptiert |
 | [0091](0091-slf-eigene-lawinenquelle.md) | SLF (Schweiz) als eigene Lawinenquelle `SlfSource` (Registry-Name `slf_bulletin`) mit geteiltem CAAML-Modul `caaml.py`, weil „weiteres Land = Tabelleneintrag" (ADR-0089) für den SLF-Zuschnitt nicht trägt (ein Dokument für die ganze Schweiz, Höhe im Problem statt im Rating, kein Link-Feld, Leere = HTTP 200); gleiche Gefahrenart und Skala, Zuständigkeit per Polygon, Höhe nur bei Eindeutigkeit, Feinstufe nur in Langformen, mit einer Registrierungszeile abschaltbar (ergänzt 0089, Issue #1441 Scheibe S3) | Akzeptiert |
 | [0092](0092-nutzer-testmail-an-bestaetigte-profiladresse.md) | Nutzer-Testmail an die bestätigte Profiladresse über den echten Versandweg: echte Nutzer über die normale Kette (Resend, Allowlist), Testnutzer/Staging weiter Stalwart, Sperren im Dienst (leere/„default"-Kennung, fehlende `user.json`, unbestätigte oder leere Adresse), nie an die Betreiber-Adresse (löst die #198-Regel „Testmail nie über Resend" für echte Nutzer ab, Bezug ADR-0087, Issue #2521 S2) | Akzeptiert |
+| [0093](0093-confidence-token-in-sms-entfaellt.md) | Das Confidence-Token `C+`/`C~`/`C?` in SMS/Premium-SMS entfällt — nie im Builder erzeugt, PO-Entscheid 2026-09-08; Confidence nur noch E-Mail-Textblock + interne Aggregation (löst 0005 Punkt 2 ab, Issue #2233, rückwirkend dokumentiert) | Akzeptiert |
+| [0094](0094-zwei-test-schichten-kern-und-live-e2e.md) | Zwei Test-Schichten: deterministischer Kern (ohne Netz, aufgezeichnete Fixtures, Commit-Gate 100 % grün) + Live-E2E (Marker `live`/`email`/`staging`, nur `/e2e-verify`/Deploy); Mock-Theater-Verbot bleibt (löst 0006 Punkt 1 ab, Issue #1477, rückwirkend dokumentiert) | Akzeptiert |
+| [0095](0095-kanal-paritaet-jeder-kanal-jede-frage.md) | Kanal-Parität: vier gleichrangige Kanäle, jeder beantwortet jede Frage; Alarme aller Arten in Trip und Ortsvergleich über eine Auflösung auf allen vier Kanälen; Kanal-Schwelle bleibt und gilt für vier Kanäle (löst 0049-Begründung „ohne Netz“/„kein Alarm-Kanal“ und 0046-Kanalliste ab, Epic #2133, #1701/#2275/#1533, rückwirkend dokumentiert) | Akzeptiert |
+| [0096](0096-radar-onset-alarm-absolute-schwelle.md) | Der Radar-/Onset-Alarm ist ein eigener Alarm-Typ mit absoluter Auslösung (Beginn ≥ 0,1 mm/h innerhalb des 180-Min-Quellhorizonts oder laufend), im Trip mit Briefing-Abgleich (#883-Override, #2020-Überholung) — Ausnahme zu 0009:49 (Issues #656/#2009/#2261, rückwirkend dokumentiert) | Akzeptiert |

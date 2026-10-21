@@ -50,7 +50,10 @@ A failing smoke aborts before login — record as `BROKEN: staging unhealthy`.
 Use Playwright (Python) against staging:
 
 - Navigate to `$GZ_VALIDATION_URL/login`.
-- Fill `input[name="username"]` and `input[name="password"]` from env.
+- Fill `input[name="username"]` and `input[name="password"]` with the **app login of the
+  staging instance** (`GZ_AUTH_*` from `/home/hem/gregor_zwanzig_staging/.env`). `GZ_VALIDATOR_*`
+  from `.claude/validator.env` is only the nginx barrier — staging has its own password
+  (three credential sources: `docs/reference/gates_und_ratschen.md` → „Zugangsdaten").
 - Click `button[type="submit"]`.
 - Assert: response URL is NOT `/login` and `/api/auth/me` returns 200.
 

@@ -39,16 +39,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/nebenbefund_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/nebenbefund_gate.py\"; fi",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/broad_test_run_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/broad_test_run_gate.py\"; fi",
             "timeout": 10
           }
@@ -111,6 +101,16 @@
             "type": "command",
             "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/file_claim_gate.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/file_claim_gate.py\"; fi",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f \"${CLAUDE_PROJECT_DIR}/.claude/hooks/data_schema_backup.py\" ]; then python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/data_schema_backup.py\"; fi",
+            "timeout": 45
           }
         ]
       }

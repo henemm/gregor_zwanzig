@@ -3,7 +3,7 @@ entity_id: app_footer_rechtstexte
 type: module
 created: 2026-09-21
 updated: 2026-09-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, layout, footer, datenschutz, impressum, multi-user, epic-2138, issue-2268]
 ---

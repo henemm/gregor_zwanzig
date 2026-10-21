@@ -3,7 +3,7 @@ entity_id: bug_589_compare_breadcrumb_links
 type: bugfix
 created: 2026-06-04
 updated: 2026-06-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, compare, navigation, breadcrumb]
 ---

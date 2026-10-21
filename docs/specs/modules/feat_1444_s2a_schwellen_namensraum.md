@@ -3,7 +3,7 @@ entity_id: feat_1444_s2a_schwellen_namensraum
 type: module
 created: 2026-08-01
 updated: 2026-08-01
-status: draft
+status: implemented
 version: "1.1"
 tags: [alerts, trips, corridors, threshold, metric-catalog]
 ---

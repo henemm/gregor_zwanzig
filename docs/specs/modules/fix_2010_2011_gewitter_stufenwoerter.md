@@ -3,7 +3,7 @@ entity_id: fix_2010_2011_gewitter_stufenwoerter
 type: bugfix
 created: 2026-08-22
 updated: 2026-09-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, telegram, mail, ampel, renderer, issue-2010, issue-2011, issue-1480]
 ---

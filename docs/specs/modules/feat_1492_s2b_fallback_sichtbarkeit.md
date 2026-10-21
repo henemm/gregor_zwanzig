@@ -3,7 +3,7 @@ entity_id: feat_1492_s2b_fallback_sichtbarkeit
 type: module
 created: 2026-08-06
 updated: 2026-08-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, fallback, sichtbarkeit, email, telegram, s2b]
 workflow: feat-1492-s2b-fallback-sichtbarkeit

@@ -3,7 +3,7 @@ entity_id: issue_365_channel_preview_mobile
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: approved
+status: implemented
 version: "1.0"
 tags: [output, frontend, editor, preview, epic-331, issue-361]
 ---

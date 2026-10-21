@@ -1,3 +1,11 @@
+---
+entity_id: fix_1847_briefing_empfaenger_log
+type: fast
+created: 2026-08-15
+status: superseded
+superseded_by: docs/specs/modules/pii_log_masking.md
+---
+
 # Mini-Spec: Trip-Briefing protokolliert den E-Mail-Empfänger
 
 Issue: [#1847](https://github.com/henemm/gregor_zwanzig/issues/1847) · Fast Track

@@ -3,7 +3,7 @@ entity_id: bug_272_ios_input_font_size_tests
 type: tests
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, ios, safari, mobile, font-size, zoom, frontend, issue-272]
 parent: bug_272_ios_input_font_size
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_272_ios_input_font_size.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_272_ios_input_font_size.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_272_ios_input_font_size.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_272_ios_input_font_size.md` v1.0
 
 ## Source
 

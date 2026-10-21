@@ -3,7 +3,7 @@ entity_id: official_alert_dedup_timespan
 type: module
 created: 2026-07-15
 updated: 2026-07-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, dedup, bug, "1245"]
 ---

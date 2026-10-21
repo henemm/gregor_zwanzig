@@ -3,7 +3,7 @@ entity_id: dispatch_orchestrator
 type: module
 created: 2026-07-16
 updated: 2026-10-07
-status: draft
+status: implemented
 version: "1.1"
 tags: [dispatch, scheduler, trip, compare, refactor]
 ---

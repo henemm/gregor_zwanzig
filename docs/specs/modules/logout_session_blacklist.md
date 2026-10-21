@@ -4,6 +4,7 @@ type: module
 created: 2026-04-16
 updated: 2026-09-06
 status: superseded
+superseded_by: "docs/specs/modules/session_allowlist.md"
 version: "1.0"
 tags: [go, sveltekit, auth, logout, session, f15]
 ---

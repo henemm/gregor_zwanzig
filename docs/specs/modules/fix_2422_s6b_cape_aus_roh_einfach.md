@@ -3,7 +3,7 @@ entity_id: fix_2422_s6b_cape_aus_roh_einfach
 type: bugfix
 created: 2026-10-01
 updated: 2026-10-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, roh-einfach, cape, invariante, kanaele, fix]
 workflow: fix-2422-s6b-cape

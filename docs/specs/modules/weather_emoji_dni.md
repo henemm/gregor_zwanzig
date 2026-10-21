@@ -38,7 +38,7 @@ konfigurierbar ueber den MetricCatalog und die Wetter-Metriken-UI.
 | `src/providers/openmeteo.py` | `direct_normal_irradiance`, `is_day` zur hourly-Liste; `wmo_code` speichern statt verwerfen |
 | `src/services/weather_metrics.py` | Zentrale `get_weather_emoji()` + Hilfsfunktionen; Aggregation in `compute_basis_metrics()` und `aggregate_stage()` |
 | `src/app/metric_catalog.py` | Neue MetricDefinition `sunshine` (dp_field=`dni_wm2`, col_key=`sunshine`, default_enabled=True) |
-| `src/formatters/trip_report.py` | `_fmt_val()` Handler fuer key `"sunshine"` → `get_weather_emoji()`; hidden fields `_is_day`, `_dni_wm2`, `_wmo_code` im row dict |
+| `src/output/renderers/trip_report.py` | `_fmt_val()` Handler fuer key `"sunshine"` → `get_weather_emoji()`; hidden fields `_is_day`, `_dni_wm2`, `_wmo_code` im row dict |
 
 ### Bestehende Funktionen (werden konsolidiert)
 

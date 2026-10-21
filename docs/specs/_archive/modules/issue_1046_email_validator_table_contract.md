@@ -3,7 +3,7 @@ entity_id: issue_1046_email_validator_table_contract
 type: module
 created: 2026-07-06
 updated: 2026-07-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [validator, gate, bugfix, compare-mail, tooling]
 ---
@@ -59,7 +59,7 @@ die E2E-Verifikation von Epic #1033 (Amtliche Alerts).
 | Entity | Type | Purpose |
 |--------|------|---------|
 | CLAUDE.md Sektion "Mail-Validatoren & Renderer-Gate" | intern | Definiert diesen Validator als Pflicht-Gate vor jedem "E2E Test bestanden" für Compare-Mails (`X-GZ-Mail-Type: compare`) |
-| `docs/specs/modules/fix_997_validator_bundle.md` | intern | Stilvorbild — analoges Parsing-Problem im Briefing-Mail-Validator, dort per pro-Tabelle-Scoping gelöst |
+| `docs/specs/_archive/modules/fix_997_validator_bundle.md` | intern | Stilvorbild — analoges Parsing-Problem im Briefing-Mail-Validator, dort per pro-Tabelle-Scoping gelöst |
 | `render_compare_html()` (`src/output/renderers/email/compare_html.py`) | intern | Erzeugt die reale, zu validierende Mail-Struktur — bleibt unverändert |
 | Epic #1033 (#1035, #1036, #1037, #1040) | intern | Blockiert aktuell an diesem Validator-Fehlschlag — wird durch diesen Fix entsperrt |
 | `docs/reference/mail_validators.md` | intern | Referenzdokument für Validator-Dispatch, wird nicht Teil dieses Fixes, aber inhaltlich weiterhin gültig |

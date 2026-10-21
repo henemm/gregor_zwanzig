@@ -3,7 +3,7 @@ entity_id: issue_1069_tier_channel_gating
 type: module
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [tiers, channels, gating]
 ---

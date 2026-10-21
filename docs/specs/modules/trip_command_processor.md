@@ -3,7 +3,7 @@ entity_id: trip_command_processor
 type: module
 created: 2026-02-17
 updated: 2026-09-17
-status: draft
+status: implemented
 version: "2.2"
 tags: [f6, trip, command, rescheduling, channel-agnostic, compare]
 ---

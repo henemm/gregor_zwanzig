@@ -3,7 +3,7 @@ entity_id: fix_1307a_hook_fail_open
 type: module
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [hooks, gates, tooling, issue-1307, issue-384]
 ---

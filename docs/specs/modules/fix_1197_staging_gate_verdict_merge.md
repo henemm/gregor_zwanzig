@@ -1,3 +1,10 @@
+---
+entity_id: fix_1197_staging_gate_verdict_merge
+type: module
+created: 2026-07-16
+status: implemented
+---
+
 # Spec: staging_gate --write-verdict per-Workflow-Findings-Merge
 
 - **Issue:** #1197 (Sammel-Gate-Audit), Scheibe „staging_gate --write-verdict Blind-Overwrite"

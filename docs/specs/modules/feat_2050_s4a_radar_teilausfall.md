@@ -3,7 +3,7 @@ entity_id: feat_2050_s4a_radar_teilausfall
 type: feature
 created: 2026-08-23
 updated: 2026-08-23
-status: draft
+status: implemented
 workflow: feat-2050-s4a-radar-teilausfall
 version: "1.0"
 tags: [alarm, nowcast, radar, protokoll, ausfall]

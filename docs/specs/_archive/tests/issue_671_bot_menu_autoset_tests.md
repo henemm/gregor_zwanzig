@@ -3,7 +3,7 @@ entity_id: issue_671_bot_menu_autoset_tests
 type: tests
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, telegram, bot-menu, startup, e2e, issue-671]
 parent: issue_671_bot_menu_autoset
@@ -24,13 +24,13 @@ http.server-Socket erfasst), (2) fail-soft ohne Bot-Token, (3) ein echter
 Live-E2E gegen die Telegram-Bot-API (`setMyCommands`→`getMyCommands`, gated),
 (4) `prod_selftest.check_bot_menu` fängt eine Menü-Regression im Deploy-Gate.
 
-Parent-Spec: `docs/specs/modules/issue_671_bot_menu_autoset.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_671_bot_menu_autoset.md` v1.0
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_issue_671_bot_menu_autoset.py` (NEU — mock-frei)
-- **Spec:** `docs/specs/modules/issue_671_bot_menu_autoset.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/issue_671_bot_menu_autoset.md` v1.0
 
 ## Test Inventory
 

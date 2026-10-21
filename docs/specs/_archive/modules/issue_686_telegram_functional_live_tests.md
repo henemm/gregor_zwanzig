@@ -3,7 +3,7 @@ entity_id: issue_686_telegram_functional_live_tests
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, e2e, live-test, test-infrastructure, fixture, issue-686]
 ---
@@ -56,7 +56,7 @@ die Antworten inhaltlich prüft, danach aufräumt — und so verankert ist, dass
 - **File (neu, Fixture-Helper):** `tests/tdd/_telegram_live_fixture.py` — stellt
   idempotent Staging-Test-User + aktiven Trip sicher; liefert `(token, chat_id, user_id)`.
 - **File (neu, Harness):** `tests/tdd/test_issue_686_telegram_functional_live.py`
-- **File (Fix, klein):** `src/outputs/telegram.py` — `send()` gibt `message_id` zurück.
+- **File (Fix, klein):** `src/output/channels/telegram.py` — `send()` gibt `message_id` zurück.
 - **File (Verankerung):** `.claude/hooks/e2e_telegram_live.py` (neu, dependency-arm) +
   Aufruf in der `/e2e-verify`-Kette, sodass `SKIPPED` im Telegram-Scope als
   Nicht-bestanden gilt.
@@ -77,7 +77,7 @@ die Antworten inhaltlich prüft, danach aufräumt — und so verankert ist, dass
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `@GregorZwanzigStaging_bot` | extern | Live-Bot (Token in `gregor_zwanzig_staging/.env`) |
-| `src/outputs/telegram.py` | Output | `send`/`delete_message`, `BOT_COMMANDS` (7 Befehle) |
+| `src/output/channels/telegram.py` | Output | `send`/`delete_message`, `BOT_COMMANDS` (7 Befehle) |
 | `src/services/inbound_telegram_reader.py` | Service | echter Eintrittspunkt `_process_update` |
 | `src/services/trip_command_processor.py` | Service | erzeugt die Antwort (echte Wetterdaten) |
 | `src/app/loader.py` | Loader | `lookup_user_by_telegram_chat_id`, `load_all_trips` |

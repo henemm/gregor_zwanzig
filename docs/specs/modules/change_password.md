@@ -3,7 +3,7 @@ entity_id: change_password
 type: module
 created: 2026-04-16
 updated: 2026-04-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, sveltekit, auth, account, password, f71]
 ---

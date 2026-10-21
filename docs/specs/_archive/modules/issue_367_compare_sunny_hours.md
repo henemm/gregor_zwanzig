@@ -3,7 +3,7 @@ entity_id: issue_367_compare_sunny_hours
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: active
+status: implemented
 version: "1.0"
 tags: [compare-engine, go, sunny-hours, dni, wcag, unit-consistency, frontend, issue-367]
 ---

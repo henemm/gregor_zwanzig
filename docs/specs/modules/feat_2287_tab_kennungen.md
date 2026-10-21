@@ -3,7 +3,7 @@ entity_id: feat_2287_tab_kennungen
 type: feature
 created: 2026-10-05
 updated: 2026-10-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [trip-hub, compare-hub, reiter, kennungen, shared, paritaet, url, anlegen]
 workflow: feat-2287-tab-kennungen

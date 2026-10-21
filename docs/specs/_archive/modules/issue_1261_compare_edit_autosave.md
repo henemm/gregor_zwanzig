@@ -3,7 +3,7 @@ entity_id: issue_1261_compare_edit_autosave
 type: module
 created: 2026-07-15
 updated: 2026-07-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, trip, autosave, shared-components, bugfix, data-safety]
 ---
@@ -67,7 +67,7 @@ dieser Hotfix.
 - **File (b, Gesten-Gate-Vorbild, wiederverwendet):** `frontend/src/lib/components/trip-detail/weatherSaveGate.ts:39-43`
   (`weatherSaveGate({catalogLoaded, userTouched}) → 'save'|'skip'`, reine
   Funktion, context-agnostisch), Einhängung als Capture-Listener-Vorbild:
-  `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte:781-787`
+  `frontend/src/lib/components/shared/WeatherMetricsTab.svelte:781-787`
   (`onpointerdowncapture`/`onkeydowncapture`/`onchangecapture`/`oninputcapture`)
 - **File (Backend, unverändert):** `internal/handler/compare_preset.go:331-342`
   (Update-RMW), Router `PUT /api/compare/presets/{id}` — funktioniert bereits
@@ -106,10 +106,10 @@ dieser Hotfix.
 | `subscriptionHelpers.ts` (`compareActions`, `compareLifecycleActions`) | Frontend-Modul | Bestehende Aktions-Baupläne, Referenz für Kebab-Erweiterung Teil (a) |
 | `PUT /api/compare/presets/{id}` (`internal/handler/compare_preset.go`) | Go-API | Persistenz-Endpoint, existiert & funktioniert, unverändert |
 | `routes/trips/[id]/+page.svelte` (`beforeNavigate`-Flush, `createSaveStatus`) | Frontend-Referenz | Trip-Autosave-Fädelungsmuster als Vorbild (1:1-Spiegelung lt. PO) |
-| `docs/specs/modules/issue_1234_autosave_hydration_gate.md` | Spec-Referenz | Ursprungs-Spec des Gesten-Gate-Musters, Entscheidungstabelle wird übernommen |
+| `docs/specs/_archive/modules/issue_1234_autosave_hydration_gate.md` | Spec-Referenz | Ursprungs-Spec des Gesten-Gate-Musters, Entscheidungstabelle wird übernommen |
 | Issue #1230 (Konvergenz-Epic) | Programm | Zielbild volle Save-Wiring-Konvergenz (Ansatz B) — hier NICHT umgesetzt |
 | Issue #1258 (laufend, S5/S6) | Parallel-Workflow | Aktive Arbeit am selben `CompareEditor.svelte` — vor Implementierung erneut gegen `origin/main` prüfen |
-| `docs/specs/modules/issue_1256_compare_ui_rewire.md` (AC-23) | Spec-Referenz | Begründet, warum `compareLifecycleActions()` NICHT pauschal um `edit` erweitert werden darf (Mobile-Sheet-Regression) |
+| `docs/specs/_archive/modules/issue_1256_compare_ui_rewire.md` (AC-23) | Spec-Referenz | Begründet, warum `compareLifecycleActions()` NICHT pauschal um `edit` erweitert werden darf (Mobile-Sheet-Regression) |
 
 ## Implementation Details
 

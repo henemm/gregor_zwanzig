@@ -3,7 +3,7 @@ entity_id: issue_729_render_compact_empty_guard
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: approved
+status: implemented
 version: "1.0"
 tags: [bug, email, compact, renderer, defensive-guard, issue-729]
 ---

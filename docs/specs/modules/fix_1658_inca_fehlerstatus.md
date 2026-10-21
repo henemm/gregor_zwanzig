@@ -3,7 +3,7 @@ entity_id: fix_1658_inca_fehlerstatus
 type: module
 created: 2026-08-23
 updated: 2026-08-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [observability, providers, radar]
 ---

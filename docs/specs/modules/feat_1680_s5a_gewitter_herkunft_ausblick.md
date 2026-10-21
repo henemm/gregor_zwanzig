@@ -3,7 +3,7 @@ entity_id: feat_1680_s5a_gewitter_herkunft_ausblick
 type: feature
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 version: "1.1"
 tags: [thunder, trip, compare, telegram, outlook, adr-0007, adr-0025, issue-1680, issue-1419]
 ---

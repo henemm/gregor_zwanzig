@@ -3,7 +3,7 @@ entity_id: issue_201_html_email_mocks_removal
 type: bugfix
 created: 2026-05-12
 updated: 2026-05-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, tests, mock-removal, memory-violation, prep-for-129a3]
 ---

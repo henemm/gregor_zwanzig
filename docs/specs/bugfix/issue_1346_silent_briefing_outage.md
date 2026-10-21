@@ -3,7 +3,7 @@ entity_id: issue_1346_silent_briefing_outage
 type: module
 created: 2026-07-23
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [scheduler, monitoring, heartbeat, observability, go]
 ---

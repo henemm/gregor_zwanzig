@@ -3,7 +3,7 @@ entity_id: issue_181_alert_cooldown_quiet_tests
 type: tests
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, alerts, cooldown, quiet-hours, issue-181, epic-139]
 parent: issue_181_alert_cooldown_quiet_hours
@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die Implementierung aus
-`docs/specs/modules/issue_181_alert_cooldown_quiet_hours.md`. Jeder pytest-Test
+`docs/specs/_archive/modules/issue_181_alert_cooldown_quiet_hours.md`. Jeder pytest-Test
 mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_181_alert_cooldown_quiet_hours.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_181_alert_cooldown_quiet_hours.md` v1.0
 
 ## Source
 

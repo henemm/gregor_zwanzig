@@ -3,7 +3,7 @@ entity_id: issue_1229_monitor_hub
 type: feature
 created: 2026-07-13
 updated: 2026-07-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, hub, briefings, neutralisierung, frontend]
 workflow: feat-1229-monitor-hub
@@ -57,8 +57,8 @@ aufgeräumten Vorschau-Dispatcher ohne erreichbaren Rang/Score-Pfad.
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `docs/specs/modules/versand_tab_vergleich.md` (#1232, live) | module | Liefert die 5 Slot-Felder (`morning_enabled/morning_time/evening_enabled/evening_time/end_date`) am `ComparePreset`, auf denen `presetBriefingTimesLabel()` aufbaut |
-| `docs/specs/modules/issue_1231_korridor_editor.md` (#1231, live) | module | Editor-Tab-Struktur inkl. `?tab=`-Konvention (`compare/[id]/+page.svelte:32`), Vorbild für den Deep-Link-Fix in `CompareEditor.svelte` |
-| `docs/specs/modules/issue_517_compare_hub.md` | module | Grundlagen-Spec des 6-Tab-Hubs (Tab-Testids `compare-detail-tab-*`) |
+| `docs/specs/_archive/modules/issue_1231_korridor_editor.md` (#1231, live) | module | Editor-Tab-Struktur inkl. `?tab=`-Konvention (`compare/[id]/+page.svelte:32`), Vorbild für den Deep-Link-Fix in `CompareEditor.svelte` |
+| `docs/specs/_archive/modules/issue_517_compare_hub.md` | module | Grundlagen-Spec des 6-Tab-Hubs (Tab-Testids `compare-detail-tab-*`) |
 | `src/services/compare_slot_scheduler.py` | module | Backend-Versand ist bereits slot-basiert — keine Änderung nötig, aber Datenquelle der Zeiten |
 | Epic #1230 (Konvergenz Trips/Compare) | workflow | Phase 2 dieses Epics; Phase 3 (#1250, Datenmodell/`briefings[]`) folgt separat |
 

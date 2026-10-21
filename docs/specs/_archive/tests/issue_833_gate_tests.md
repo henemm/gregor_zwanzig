@@ -3,7 +3,7 @@ entity_id: issue_833_gate_tests
 type: tests
 created: 2026-06-22
 updated: 2026-06-22
-status: approved
+status: implemented
 version: "1.0"
 tags: [tests, mail, qa-gate, playwright, hooks, issue-833]
 parent: issue_833_mail_gate_structural
@@ -18,11 +18,11 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_833_mail_gate_structural.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_833_mail_gate_structural.md`.
 Jeder Test mappt auf ein Acceptance Criterion. Mock-frei: echte konstruierte
 MIME-/HTML-Artefakte mit den realen Renderer-Markern, echtes Gate-Verhalten.
 
-Parent-Spec: `docs/specs/modules/issue_833_mail_gate_structural.md`
+Parent-Spec: `docs/specs/_archive/modules/issue_833_mail_gate_structural.md`
 
 ## Source
 

@@ -5,6 +5,7 @@
 - **Bezug:** Ersetzt die #1233/#1216-Spec-Festlegung (nie als ADR dokumentiert).
   Bundle `bundle:G-mail-darstellung`, Issue #1326a. Spec:
   `docs/specs/modules/warnmail_official_alert_display.md` (AC-1).
+- **Ergänzt durch:** [ADR-0052](0052-warnmail-nowcast-bauform-eigener-klartext.md) (schreibt fort)
 
 ## Kontext
 

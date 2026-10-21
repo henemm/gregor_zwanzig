@@ -3,7 +3,7 @@ entity_id: issue_1214_metric_format_slice5
 type: module
 created: 2026-07-12
 updated: 2026-07-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-format, compare, telegram, konsolidierung, issue-1214]
 ---

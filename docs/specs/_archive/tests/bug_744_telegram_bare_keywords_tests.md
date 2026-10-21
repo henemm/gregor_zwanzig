@@ -3,7 +3,7 @@ entity_id: bug_744_telegram_bare_keywords_tests
 type: tests
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, telegram, bare-keywords, channel-consistency, issue-744]
 parent: bug_744_telegram_bare_keywords
@@ -25,13 +25,13 @@ ausgehende Bot-API-Calls an einem echten lokalen `http.server`-Socket beobachtet
 Snapshot, echte User-Auflösung, echter Persistenz-Roundtrip (`enabled`-Toggle).
 **Keine Mocks der Logik unter Test.**
 
-Parent-Spec: `docs/specs/modules/bug_744_telegram_bare_keywords.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_744_telegram_bare_keywords.md` v1.0
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_issue_744_telegram_bare_keywords.py` (NEU — mock-frei)
-- **Spec:** `docs/specs/modules/bug_744_telegram_bare_keywords.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/bug_744_telegram_bare_keywords.md` v1.0
 
 ## Test Inventory
 

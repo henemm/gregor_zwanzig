@@ -3,7 +3,7 @@ entity_id: fix_1871_radar_fixture_zeitfenster_klemmung
 type: bugfix
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [radar, test-fixture, zeitfenster, wanduhr]
 ---

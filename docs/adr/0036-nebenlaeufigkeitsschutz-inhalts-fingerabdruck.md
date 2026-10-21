@@ -4,6 +4,7 @@
 - **Datum:** 2026-07-27
 - **Bezug:** GitHub-Issue #1395 (Scheiben S1/S2), Spec
   `docs/specs/modules/issue_1395_s2_etag_ifmatch.md`
+- **Ergänzt durch:** [ADR-0083](0083-gemeinsame-schreibsperre-go-python.md) (ergänzt)
 
 ## Kontext
 

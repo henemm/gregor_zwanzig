@@ -3,7 +3,7 @@ entity_id: issue_898_901_mail_layout
 type: bugfix
 created: 2026-06-28
 updated: 2026-06-28
-status: draft
+status: implemented
 workflow: fix-898-899-900-mail-layout
 ---
 
@@ -35,9 +35,9 @@ Behebt vier gebündelte Layout-Defekte in der HTML-Briefing-E-Mail: fehlende Tab
 | `src/output/renderers/email/helpers.py` | module | `pill_html`, `build_metrics_summary_pills`, `build_confidence_hint` — nur Lesezugriff, keine Änderung |
 | `src/output/renderers/email/design_tokens.py` | module | Farb-Token `G_INK_FAINT` etc. — nur Lesezugriff |
 | `src/output/renderers/email/__init__.py` | module | `render_email()` — erhält neuen optionalen Parameter `trip_url` (#901) |
-| `src/formatters/trip_report.py` | module | `format_email()` — erhält neuen optionalen Parameter `trip_url` (#901) |
+| `src/output/renderers/trip_report.py` | module | `format_email()` — erhält neuen optionalen Parameter `trip_url` (#901) |
 | `src/services/trip_report_scheduler.py` | service | Konstruiert `trip_url` aus `trip.id` und übergibt ihn (#901) |
-| `src/formatters/compact_summary.py` | module | Erzeugt `compact_summary` mit Etappenname-Prefix — bleibt unverändert |
+| `src/output/renderers/compact_summary.py` | module | Erzeugt `compact_summary` mit Etappenname-Prefix — bleibt unverändert |
 | `tests/tdd/test_issue_811_mode_matrix.py` | test | Muss nach Renderer-Änderungen grün bleiben (Mail-Renderer-Commit-Gate) |
 
 ## Scope
@@ -48,7 +48,7 @@ Behebt vier gebündelte Layout-Defekte in der HTML-Briefing-E-Mail: fehlende Tab
 |------|-------------|-------------|
 | `src/output/renderers/email/html.py` | MODIFY | Alle vier Issues: vollständiges Tabellen-Gitter (Zeilen+Spalten+Header), Head-Sektion (Einzug, Schriftgröße, Prefix-Strip, Dreieck-Headline), Trend-Umbau (Labels weg, Chip-Format, Genauigkeits-Indikator pro Tag), Footer (Abmelden weg, Deep-Links, Segmente-Zelle ausrichten) |
 | `src/output/renderers/email/__init__.py` | MODIFY | `trip_url: Optional[str] = None` als optionalen Parameter zu `render_email()` hinzufügen und an `render_html()` weiterreichen |
-| `src/formatters/trip_report.py` | MODIFY | `trip_url: Optional[str] = None` zu `format_email()` hinzufügen |
+| `src/output/renderers/trip_report.py` | MODIFY | `trip_url: Optional[str] = None` zu `format_email()` hinzufügen |
 | `src/services/trip_report_scheduler.py` | MODIFY | `trip_url=f"https://gregor20.henemm.com/trips/{trip.id}"` konstruieren und übergeben |
 
 ### Estimated Changes

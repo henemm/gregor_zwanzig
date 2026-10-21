@@ -3,7 +3,7 @@ entity_id: epic_1273_s4c_e2e_migration
 type: feature
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [epic-1273, epic-1301, e2e, test-migration, compare]
 ---
@@ -43,8 +43,8 @@ Zwei Fälle waren zum Zeitpunkt der Analyse als UNSICHER markiert und werden hie
 | `frontend/src/lib/components/compare/compareTabsResolve.ts` | Produktivcode | `resolveCompareTab()` (Z. 25f.) — unbekannter/fehlender `?tab=`-Wert fällt auf `uebersicht` zurück |
 | `frontend/src/lib/components/shared/corridor-editor/CorridorEditor.svelte` + `corridorEditorState.ts` | Produktivcode | Geteilter Idealwerte-Editor; `corridor-editor-error` (Z. 208f.), `validateCorridorRows` (Z. 155-157: nur "mind. eine Grenze gesetzt"), `clampDragValue`/`clampBoundInput` (Z. 505-544) — Grundlage für die DELETE-Entscheidung zu issue-718 AC-1/AC-3 |
 | `frontend/e2e/compare-edit-redirect.spec.ts` | Test (unverändert, Vorbild) | URL-Pattern `new RegExp('/compare/${id}(\\?|$)')`, Z. 75 — Vorbild für alle URL-Fixes |
-| `docs/specs/modules/epic_1273_s4a_test_migration.md` | Spec (Vorbild) | Gleiche Scheibenart, Struktur- und Tonalitätsvorbild |
-| `docs/specs/modules/epic_1273_s4b_unit_test_migration.md` | Spec (Vorbild, abgeschlossen) | Vorausgehende Unit-Test-Migration, gleiche Serie |
+| `docs/specs/_archive/modules/epic_1273_s4a_test_migration.md` | Spec (Vorbild) | Gleiche Scheibenart, Struktur- und Tonalitätsvorbild |
+| `docs/specs/_archive/modules/epic_1273_s4b_unit_test_migration.md` | Spec (Vorbild, abgeschlossen) | Vorausgehende Unit-Test-Migration, gleiche Serie |
 
 ## Implementation Details
 

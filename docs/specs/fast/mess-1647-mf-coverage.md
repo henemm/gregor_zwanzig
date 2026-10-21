@@ -1,3 +1,10 @@
+---
+entity_id: mess_1647_mf_coverage
+type: fast
+created: 2026-09-09
+status: implemented
+---
+
 # Mini-Spec: #1647 Météo-France 401 — die Naht messen statt raten
 
 Erste Scheibe von Epic **#2257**. Beantwortet dessen „offene Klärung 1" und entscheidet damit

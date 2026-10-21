@@ -3,7 +3,7 @@ entity_id: bug_730_prod_selftest_invalidurl
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, infra, tooling, prod-selftest, deploy]
 ---

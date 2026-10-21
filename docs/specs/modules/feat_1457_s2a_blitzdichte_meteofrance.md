@@ -1,6 +1,6 @@
 ---
 entity_id: feat_1457_s2a_blitzdichte_meteofrance
-status: draft
+status: implemented
 type: module
 created: 2026-08-02
 updated: 2026-08-02

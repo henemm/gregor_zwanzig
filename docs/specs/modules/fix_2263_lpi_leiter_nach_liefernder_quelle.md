@@ -3,7 +3,7 @@ entity_id: fix_2263_lpi_leiter_nach_liefernder_quelle
 type: module
 created: 2026-09-09
 updated: 2026-09-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, thunder, lpi, fallback, vertretung, alarm]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_336_status_dedup
 type: module
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [sveltekit, frontend, trip-detail, design-compliance, ux]
 ---
@@ -103,7 +103,7 @@ Kein Backend, keine Daten-Schema-Berührung, keine geteilten Utils geändert.
 
 ## Related — Spec-Nachzug (Pflicht)
 
-`docs/specs/modules/issue_302_trip_detail_page.md` §163 + §313 ("Statuszeile
+`docs/specs/_archive/modules/issue_302_trip_detail_page.md` §163 + §313 ("Statuszeile
 'AKTIV · TAG N VON M'") erhält im selben Workflow eine additive #336-Korrektur-Notiz,
 damit Doku und Code nicht driften.
 

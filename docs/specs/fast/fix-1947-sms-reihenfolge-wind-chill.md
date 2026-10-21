@@ -1,3 +1,10 @@
+---
+entity_id: fix_1947_sms_reihenfolge_wind_chill
+type: fast
+created: 2026-08-18
+status: implemented
+---
+
 # Mini-Spec: SMS-Reihenfolge respektiert Nutzer-Position von "Gefühlte Temperatur" / "Temperatur"
 
 Issue: #1947

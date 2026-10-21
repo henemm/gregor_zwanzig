@@ -3,7 +3,7 @@ entity_id: feat_2420_befehle_anzeigen
 type: module
 created: 2026-10-19
 updated: 2026-10-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [befehle, hilfe, email, telegram, premium-sms, ortsvergleich, kanal-paritaet, epic-2506]
 ---

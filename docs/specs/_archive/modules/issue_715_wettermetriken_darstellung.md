@@ -3,7 +3,7 @@ entity_id: issue_715_wettermetriken_darstellung
 type: module
 created: 2026-06-10
 updated: 2026-06-10
-status: complete
+status: implemented
 version: "1.0"
 tags: [frontend, backend, weather-metrics, trip-editor, confidence, preview]
 ---

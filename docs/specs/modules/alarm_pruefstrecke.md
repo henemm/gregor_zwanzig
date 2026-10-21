@@ -3,7 +3,7 @@ entity_id: alarm_pruefstrecke
 type: feature
 created: 2026-08-21
 updated: 2026-08-21
-status: approved
+status: implemented
 workflow: feat-2050-s1-pruefstrecke
 version: "1.0"
 tags: [alarm, testing, harness]

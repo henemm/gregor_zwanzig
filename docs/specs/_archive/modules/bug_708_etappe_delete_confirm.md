@@ -3,7 +3,7 @@ entity_id: bug_708_etappe_delete_confirm
 type: module
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip-edit, trip-new, stages, ux, confirm]
 ---

@@ -1,6 +1,6 @@
 ---
 entity_id: feat_1531_s1_dwd_gewittergroessen
-status: draft
+status: implemented
 type: module
 created: 2026-08-08
 updated: 2026-08-08

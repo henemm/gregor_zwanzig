@@ -3,7 +3,7 @@ entity_id: fix_1435_e4_schwellwert_quelle
 type: bugfix
 created: 2026-08-06
 updated: 2026-08-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-catalog, alerts, cross-stack, codegen, drift-prevention]
 workflow: fix-1435-e4-schwellwert-quelle

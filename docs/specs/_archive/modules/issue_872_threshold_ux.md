@@ -3,7 +3,7 @@ entity_id: issue_872_threshold_ux
 type: feature
 created: 2026-06-23
 updated: 2026-06-23
-status: draft
+status: implemented
 workflow: feat-872-threshold-ux
 ---
 
@@ -19,7 +19,7 @@ Verbessert den Schwellwerte-Abschnitt im Inhalt-Reiter (WeatherMetricsTab) in vi
 
 ## Source
 
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **Identifier:** Schwellwerte-Card (Zeile 513–582)
 
 ## Dependencies
@@ -28,7 +28,7 @@ Verbessert den Schwellwerte-Abschnitt im Inhalt-Reiter (WeatherMetricsTab) in vi
 |--------|------|---------|
 | `frontend/src/lib/components/alerts-tab/AlertMetricLevelRow.svelte` | component | Vorlage für pro-Metrik Segmented-Control-Muster |
 | `src/output/tokens/builder.py` | module | Bereits korrekt (is_level=True, DEFAULTS["TH:"]=1.0) — kein Change nötig |
-| `src/formatters/sms_trip.py` | module | ✅ Bereits deployed: SMS_SYMBOL_BY_METRIC["thunder"] = "TH:" |
+| `src/output/renderers/sms_trip.py` | module | ✅ Bereits deployed: SMS_SYMBOL_BY_METRIC["thunder"] = "TH:" |
 | `src/services/trip_report_scheduler.py` | module | ✅ Bereits deployed: sms_threshold_thunder im Trend-Dict |
 | `frontend/e2e/issue-736-tabs-reorg.spec.ts` | test | Bestehende E2E-Assertions für Schwellwerte-Abschnitt |
 | `tests/tdd/test_issue_624_metric_thresholds.py` | test | ✅ Bereits grün: "thunder" in SMS_SYMBOL_BY_METRIC |
@@ -39,8 +39,8 @@ Verbessert den Schwellwerte-Abschnitt im Inhalt-Reiter (WeatherMetricsTab) in vi
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | MODIFY | Label-Fix Z.515, Beschreibungstext Z.516, SMS_THRESHOLD_METRIC_IDS Z.77 um 'thunder' erweitern, 4 Freitext-Inputs durch 5 ThresholdMetricRow-Komponenten ersetzen |
-| `frontend/src/lib/components/trip-detail/ThresholdMetricRow.svelte` | CREATE | Pro-Metrik Segmented-Control: [Metrik-Label] [Sensibel\|Standard\|Robust] [Wert] — analog zu AlertMetricLevelRow.svelte |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | MODIFY | Label-Fix Z.515, Beschreibungstext Z.516, SMS_THRESHOLD_METRIC_IDS Z.77 um 'thunder' erweitern, 4 Freitext-Inputs durch 5 ThresholdMetricRow-Komponenten ersetzen |
+| `frontend/src/lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte` | CREATE | Pro-Metrik Segmented-Control: [Metrik-Label] [Sensibel\|Standard\|Robust] [Wert] — analog zu AlertMetricLevelRow.svelte |
 | `frontend/e2e/issue-736-tabs-reorg.spec.ts` | MODIFY | Assertions für neues Label + Segmented-Controls statt Freitext-Inputs |
 
 ### Estimated Changes

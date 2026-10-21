@@ -205,6 +205,21 @@ erreichbar). IMAP-Fetch gegen dasselbe Test-Postfach, `GZ_TEST_IMAP_*` vor
 
 **Nur bei Exit 0** darfst du „E2E bestanden" für diesen Mailtyp sagen.
 
+## 5. `radar_alert_mail_validator.py` — Radar-/Nowcast-Alarm-Mail (seit #830)
+
+Kurzeintrag (Audit 2026-10-21 — bis dahin nur als Vorbild in §2/§4 erwähnt). Kanonischer
+Acceptance-Validator für die Radar-Alarm-Mail: holt die zuletzt zugestellte Mail aus dem
+Test-Postfach, dispatcht über `X-GZ-Mail-Type: radar-alert` (anderer Mailtyp ⇒ No-Op, Exit 0)
+und prüft Plausibilität (u. a. Beginn-Uhrzeit `HH:MM`, bekannte Intensitätsstufe aus
+`radar_service.py`). Exit `0` = bestanden/No-Op, `1` = Spec-Verletzung, `2` = technischer Fehler.
+Detailregeln stehen im Kopf von `.claude/hooks/radar_alert_mail_validator.py`.
+
+```bash
+uv run python3 .claude/hooks/radar_alert_mail_validator.py
+```
+
+**Nur bei Exit 0** darfst du „E2E bestanden" für diesen Mailtyp sagen.
+
 ## Strukturelle Render-Checks im briefing_mail_validator (Issue #833)
 
 Der Trip-Briefing-Validator prüft die `full`-Mail nicht mehr nur als MIME-String,

@@ -3,7 +3,7 @@ entity_id: fix_1660a_temp_trennung
 type: module
 created: 2026-08-09
 updated: 2026-08-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [metrics, sms, briefing, editor, aggregation]
 ---

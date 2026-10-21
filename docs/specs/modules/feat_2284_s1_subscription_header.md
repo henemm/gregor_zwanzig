@@ -3,7 +3,7 @@ entity_id: feat_2284_s1_subscription_header
 type: feature
 created: 2026-10-03
 updated: 2026-10-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare-hub, trip-hub, kopf, shared, refactoring, paritaet]
 ---

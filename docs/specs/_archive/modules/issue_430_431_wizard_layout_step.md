@@ -3,12 +3,14 @@ entity_id: issue_430_431_wizard_layout_step
 type: module
 created: 2026-05-28
 updated: 2026-05-28
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, wizard, svelte, stepper, layout-editor, issue-430, issue-431, epic-428]
 ---
 
 # Issue #430 + #431 — Wizard 4→5 Steps + OutputLayoutEditor + Step 4 Layout
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 
@@ -38,7 +40,7 @@ damit teilen Wizard und Trip-Detail-Tab dieselbe Layout-Logik.
   - `frontend/src/lib/components/trip-wizard/stepperCompact.ts` (geändert)
   - `frontend/src/lib/components/trip-wizard/stepperState.ts` (geändert — Doc-Comment)
   - `frontend/src/lib/components/trip-wizard/TripWizardShell.svelte` (geändert)
-  - `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` (refactored zum Wrapper)
+  - `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` (refactored zum Wrapper)
 - **Dateien (neu):**
   - `frontend/src/lib/components/shared/OutputLayoutEditor.svelte` (NEU)
   - `frontend/src/lib/components/trip-wizard/steps/Step4Layout.svelte` (NEU)

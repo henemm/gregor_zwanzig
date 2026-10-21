@@ -1,3 +1,10 @@
+---
+entity_id: briefing_grid_and_summary_consistency
+type: module
+created: 2026-07-22
+status: implemented
+---
+
 # Spec: CAPE-Ampel-Kalibrierung + Zusammenfassung↔Tabelle-Konsistenz
 
 - **Status:** Approved (PO-go 2026-07-22)

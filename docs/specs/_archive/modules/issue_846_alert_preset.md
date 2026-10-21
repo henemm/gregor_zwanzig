@@ -3,7 +3,7 @@ entity_id: issue_846_alert_preset
 type: feature
 created: 2026-06-22
 updated: 2026-06-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, preset, alerts-tab, ui, epic-813, slice-3, python, frontend, new-metrics]
 ---

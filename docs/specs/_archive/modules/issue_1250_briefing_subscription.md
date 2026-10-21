@@ -3,7 +3,7 @@ entity_id: issue_1250_briefing_subscription
 type: feature
 created: 2026-07-13
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [briefing-subscription, compare, trip, migration, epic-1230, convergence]
 workflow: feat-1250-briefing-subscription
@@ -55,8 +55,8 @@ bis Scheibe 5 die gemeinsame Persistenz (`briefings/<id>.json`) einführt.
 
 | Entity | Type | Purpose |
 |--------|------|---------|
-| `docs/specs/modules/issue_1231_korridor_editor.md` | Spec | Corridor-Modell + Migrationsmuster (Dry-Run/Backup/Idempotenz) als Vorbild für die BriefingSubscription-Migration |
-| `docs/specs/modules/issue_1229_monitor_hub.md` | Spec | Hub-Statusanzeige, konsumiert `paused_at`/Auto-Pause-Hinweis aus Scheibe 3 |
+| `docs/specs/_archive/modules/issue_1231_korridor_editor.md` | Spec | Corridor-Modell + Migrationsmuster (Dry-Run/Backup/Idempotenz) als Vorbild für die BriefingSubscription-Migration |
+| `docs/specs/_archive/modules/issue_1229_monitor_hub.md` | Spec | Hub-Statusanzeige, konsumiert `paused_at`/Auto-Pause-Hinweis aus Scheibe 3 |
 | `docs/reference/api_contract.md` | Referenz | SSoT DTOs — MUSS mit `/api/briefings*` (Scheibe 6) nachgezogen werden |
 | Issue #1131 | Issue | Legacy `CompareSubscription`-Stack, wird in Scheibe 0 stillgelegt |
 | Issue #1244 | Issue | `corridors:null` bricht Python-Loader — MUSS vor Scheibe 4/5 als eigener Bugfix-Workflow gelöst sein (Migration liest jeden Trip durch den Loader) |

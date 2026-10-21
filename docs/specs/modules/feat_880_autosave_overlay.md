@@ -3,7 +3,7 @@ entity_id: feat_880_autosave_overlay
 type: feature
 created: 2026-06-24
 updated: 2026-07-01
-status: approved
+status: implemented
 workflow: feat-880-overlay-tests
 ---
 

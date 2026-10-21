@@ -3,7 +3,7 @@ entity_id: fix_2302_s2_dwd_zeitbudget
 type: module
 created: 2026-09-12
 updated: 2026-09-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [provider, zeitbudget, deadline, retry, httpx, tenacity, dwd, icon-d2, icon-eu]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_205_followup_read_path
 type: module
 created: 2026-05-14
 updated: 2026-05-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, go, alert-rules, read-path, follow-up-205]
 ---

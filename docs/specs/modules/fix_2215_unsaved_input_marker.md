@@ -3,7 +3,7 @@ entity_id: fix_2215_unsaved_input_marker
 type: bugfix
 created: 2026-10-03
 updated: 2026-10-03
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2215-debounce-setdirty
 tags: [saveStatusStore, autosave, debounce, epic-2260, trip, ortsvergleich]

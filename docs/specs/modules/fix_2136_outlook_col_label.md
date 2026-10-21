@@ -3,7 +3,7 @@ entity_id: fix_2136_outlook_col_label
 type: feature
 created: 2026-09-15
 updated: 2026-09-15
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2136-outlook-col-label
 tags: [outlook, ausblick, mail, compare, metrik-katalog, col_label, adr-0068]

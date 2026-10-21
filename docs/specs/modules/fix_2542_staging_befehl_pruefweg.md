@@ -3,7 +3,7 @@ entity_id: fix_2542_staging_befehl_pruefweg
 type: module
 created: 2026-10-09
 updated: 2026-10-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, staging, befehle, email, e2e-verify, tests]
 ---

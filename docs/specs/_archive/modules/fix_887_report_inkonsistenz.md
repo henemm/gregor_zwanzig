@@ -35,7 +35,7 @@ aktivierten Metriken zeigt, die nicht bereits in der Kopfzeile stehen
 
 | Datei | Änderung |
 |---|---|
-| `src/formatters/sms_trip.py` | `_segments_to_normalized_forecast()`: `pop_hourly` aus `agg.pop_max_pct` befüllen |
+| `src/output/renderers/sms_trip.py` | `_segments_to_normalized_forecast()`: `pop_hourly` aus `agg.pop_max_pct` befüllen |
 | `src/output/renderers/narrow.py` | Nach `_tg_segment_line()`: config-gesteuerte Detail-Zeile einfügen |
 
 ## Format-Design

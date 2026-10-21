@@ -3,7 +3,7 @@ entity_id: fix_1667_s1_fixture_wanduhr
 type: bugfix
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 workflow: fix-1667-arrival-midnight-wrap
 version: "1.0"
 tags: [issue-1667, tests, fixtures, day-window, freezegun, radar-alerts]

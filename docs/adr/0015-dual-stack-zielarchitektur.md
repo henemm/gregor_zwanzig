@@ -5,6 +5,7 @@
 - **Bezug:** [ADR-0001](0001-go-sveltekit-migration.md) (präzisiert dessen Endzustand),
   `docs/project/architektur-roadmap-2026-07.md` (Entscheidung E-0),
   `docs/analysis/architektur-drift-2026-07-05.md` (Rev. 2, Abschnitt 5.1)
+- **Ergänzt durch:** [ADR-0045](0045-generiertes-eingebettetes-artefakt-fuer-cross-stack-abbildung.md) (ergänzt Regel 3), [ADR-0076](0076-go-dockt-ueber-internen-endpunkt-an-das-kontingent-gate-an.md) (löst die Spannung zur Dual-Stack-Zuständigkeit auf)
 
 ## Kontext
 

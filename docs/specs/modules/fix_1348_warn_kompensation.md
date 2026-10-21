@@ -3,7 +3,7 @@ entity_id: fix_1348_warn_kompensation
 type: module
 created: 2026-08-09
 updated: 2026-08-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, safety, issue-1348]
 ---
