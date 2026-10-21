@@ -419,7 +419,7 @@ sichtbar macht.
 
 ## Acceptance Criteria
 
-- **AC-1 (Wirkung — Koordinatennachweis, nicht Alarm-Zähler):** Given ein
+- **AC-1:** (Wirkung — Koordinatennachweis, nicht Alarm-Zähler) Given ein
   Trip mit Etappe in Pacific/Auckland und Ortsdatum D, die Uhr steht auf
   einen Zeitpunkt innerhalb des Etappenfensters, an dem das Serverdatum noch
   D-1 ist / When der Scheduler `check_radar_alerts` über alle Trips dieses
@@ -432,7 +432,7 @@ sichtbar macht.
     `test_starkregen_kurzfristhinweis.py::_install_fake_nowcast`); Assert
     protokollierte Koordinaten == Wegpunkt der D-Etappe.
 
-- **AC-2 (Bestandsschutz):** Given ein Trip auf Korsika (Europe/Paris,
+- **AC-2:** (Bestandsschutz) Given ein Trip auf Korsika (Europe/Paris,
   UTC+2) mit einer gewöhnlichen Tagesetappe 08:00–19:00 Ortszeit / When
   `check_radar_alerts` zu allen 24 vollen Stunden eines Tages läuft / Then
   ist außerhalb des Fensters 22:00–00:00 UTC die ausgewählte Etappe an jeder
@@ -442,7 +442,7 @@ sichtbar macht.
     unverändert gegenüber der alten `date.today()`-Formel als lokal
     hinterlegte Referenz.
 
-- **AC-3 (das ehrliche Fenster):** Given derselbe Korsika-Trip aus AC-2, der
+- **AC-3:** (das ehrliche Fenster) Given derselbe Korsika-Trip aus AC-2, der
   zusätzlich eine Etappe am Folgetag trägt / When die Uhr
   auf 22:30 UTC steht (= 00:30 Ortszeit des Folgetags) / Then wählt
   `check_radar_alerts` die Etappe des
@@ -451,7 +451,7 @@ sichtbar macht.
   - Test: `freeze_time("…T22:30:00Z")`, Assert gewähltes Segment gehört zur
     Folgetags-Etappe, Assert kein `continue` ohne jede Segmentwahl.
 
-- **AC-4 (Horizont-Guard, mit Gegenprobe im selben Test):** Given zwei
+- **AC-4:** (Horizont-Guard, mit Gegenprobe im selben Test) Given zwei
   ansonsten gleiche Läufe, bei denen das gewählte Segment einmal später als
   `NOWCAST_HORIZON_MIN` in der Zukunft beginnt und einmal innerhalb dieses
   Horizonts / When `check_radar_alerts` in beiden Läufen die Segmentwahl
@@ -464,7 +464,7 @@ sichtbar macht.
     — echte Funktions-Ersetzung mit Aufruf-Liste, Fern-Fall (>60 min) und
     Nah-Fall (≤60 min) im selben Test.
 
-- **AC-5 (kein neuer interner Bruch innerhalb von Kette A):** Given ein Trip,
+- **AC-5:** (kein neuer interner Bruch innerhalb von Kette A) Given ein Trip,
   dessen Ortstag D vom Serverdatum D-1 abweicht, und ein Wetter-Schnappschuss,
   der **ausschließlich** unter dem Ortstag D abgelegt ist und für die
   Einsetzstunde des gewählten Segments angekündigten, nicht-konvektiven Regen
@@ -490,7 +490,7 @@ sichtbar macht.
     ab (Koordinatennachweis). Die beiden gehören zusammen; keines von beiden
     genügt allein.
 
-- **AC-6 (Rückfallkette):** Given zwei Trips, von denen die eine keine
+- **AC-6:** (Rückfallkette) Given zwei Trips, von denen die eine keine
   Etappe am aufgelösten Tag hat, aber andere Etappen mit Wegpunkten trägt,
   und die andere überhaupt keine Etappe mit Wegpunkten besitzt / When
   `trip_local_today` für beide Trips die Zeitzone bestimmen muss, um daraus
@@ -501,7 +501,7 @@ sichtbar macht.
   - Test: `tests/unit/test_trip_local_today.py`, drei Fälle (Treffer,
     Rückfall 1, Rückfall 2) gegen `trip_day.trip_local_today`.
 
-- **AC-7 (Sommerzeit, ADR-0044-Pflicht):** Given eine europäische Zone an
+- **AC-7:** (Sommerzeit, ADR-0044-Pflicht) Given eine europäische Zone an
   beiden Umstellungstagen eines Jahres (Vorstellung und Rückstellung) / When
   `trip_local_today` für Zeitpunkte kurz vor und kurz nach der Umstellung
   ausgewertet wird / Then liefert sie an beiden Tagen den korrekten Ortstag —
@@ -510,7 +510,7 @@ sichtbar macht.
   - Test: `tests/unit/test_trip_local_today.py`, `freeze_time` auf beide
     Wechseltage 2026, Assert Ortstag korrekt vor/nach der Umstellungsstunde.
 
-- **AC-8 (keine vierte Kopie):** Given der Umbau ist abgeschlossen / When
+- **AC-8:** (keine vierte Kopie) Given der Umbau ist abgeschlossen / When
   `TripCommandProcessor` inspiziert wird / Then trägt die Klasse **nicht**
   mehr die Methoden `_trip_tz`/`_display_tz`/`_anchor_tz` als eigene
   Implementierung — sie ruft `trip_day` auf; im Repo existiert danach eine
@@ -521,7 +521,7 @@ sichtbar macht.
     (`tests/tdd/test_drilldown_day_window_local_date.py`) unverändert grün —
     Verhaltensnachweis, dass die Verschiebung nichts gebrochen hat.
 
-- **AC-9 (geteilte Testfixture bleibt synchron — „Zweiter Fund"):** Given
+- **AC-9:** (geteilte Testfixture bleibt synchron — „Zweiter Fund") Given
   `tests/helpers/arrival_window_fixtures.py::stage_date(lat, lon)` wird für
   eine Korsika-Koordinate und für eine UTC-neutrale Koordinate unter
   identischer gestellter Uhr in der 22:00–00:00-UTC-Randzeit aufgerufen /

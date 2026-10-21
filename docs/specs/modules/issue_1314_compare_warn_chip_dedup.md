@@ -151,7 +151,7 @@ existiert nur in `_render_warn_cell`).
     Rückgabe-String zählen (`result.count("Hitze")` bzw. `<div`-Vorkommen mit
     Text "Hitze") — muss 1 sein.
 
-- **AC-2 (Nicht-Regression):** Given zwei `extreme_heat`-Alerts mit
+- **AC-2:** (Nicht-Regression) Given zwei `extreme_heat`-Alerts mit
   UNTERSCHIEDLICHER Stufe (z. B. `level=2` und `level=3`) / When
   `_render_warn_cell` aufgerufen wird / Then bleiben BEIDE Chips sichtbar
   (unterschiedliche Hintergrundfarbe = unterschiedlicher visueller Inhalt,
@@ -160,13 +160,13 @@ existiert nur in `_render_warn_cell`).
     unterschiedliche `background:`-Werte tragen (aus `_ALERT_LEVEL_CELL[2]`
     vs. `_ALERT_LEVEL_CELL[3]`).
 
-- **AC-3 (Nicht-Regression):** Given zwei Alerts unterschiedlicher `hazard`
+- **AC-3:** (Nicht-Regression) Given zwei Alerts unterschiedlicher `hazard`
   (z. B. `extreme_heat` und `access_ban`) / When `_render_warn_cell` aufgerufen
   wird / Then bleiben beide Chips sichtbar ("Hitze" und "Zugang"), keine
   Kollaps-Logik greift zwischen unterschiedlichen Kürzel-Texten.
   - Test: Ergebnis enthält je einen Chip mit Text "Hitze" und "Zugang".
 
-- **AC-4 (Nicht-Regression):** Given dieselben zwei extreme_heat-Alerts wie in
+- **AC-4:** (Nicht-Regression) Given dieselben zwei extreme_heat-Alerts wie in
   AC-1 (gleiche Stufe, unterschiedliches Zeitfenster, gleiche Region) / When
   `render_official_alerts_html` (Pro-Ort-Streifen) statt `_render_warn_cell`
   auf dieselbe Alert-Liste angewendet wird / Then zeigt der Pro-Ort-Streifen
@@ -177,7 +177,7 @@ existiert nur in `_render_warn_cell`).
     aufrufen, Ergebnis enthält beide unterscheidenden Detail-Strings
     (z. B. beide `valid_from`-Zeitfenster oder beide `region_label`-Werte).
 
-- **AC-5 (Konsistenz-Check, dokumentiert):** Given der Klartext-Compare-Pfad
+- **AC-5:** (Konsistenz-Check, dokumentiert) Given der Klartext-Compare-Pfad
   (`comparison.py`, `render_official_alerts_plain`) rendert amtliche Warnungen
   als eine Zeile pro Alert mit ausgeschriebenem Detail (kein komprimierter
   Kürzel-Chip, keine Aufruf-Kette über `_render_warn_cell`) / When zwei
@@ -192,7 +192,7 @@ existiert nur in `_render_warn_cell`).
     dass beide Zeilen im Ergebnis vorkommen — belegt die Nicht-Betroffenheit
     explizit statt sie nur zu behaupten.
 
-- **AC-6 (#1451, Kernfall der Korrektur):** Given zwei `OfficialAlert`-Objekte
+- **AC-6:** (#1451, Kernfall der Korrektur) Given zwei `OfficialAlert`-Objekte
   mit `hazard="extreme_heat"`, gleichem `level=3`, aber **unterschiedlicher
   Regions-Identität** (`region="Haute-Corse"` vs. `region="Corse-du-Sud"`)
   für denselben Ort / When `_render_warn_cell` (über `_render_overview_row`)

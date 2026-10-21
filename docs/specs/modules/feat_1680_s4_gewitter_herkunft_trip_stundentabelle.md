@@ -280,7 +280,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
     Leiter traegt; Assertion auf den Teilstring „· CAPE" im zurueckgegebenen
     `email_plain`.
 
-- **AC-2 (Telegram-rich, s. "Am Code korrigiert" und "Berichtigung während GREEN"):** Given dieselbe Stunde wird als Telegram-Bubble gerendert,
+- **AC-2:** (Telegram-rich, s. "Am Code korrigiert" und "Berichtigung während GREEN") Given dieselbe Stunde wird als Telegram-Bubble gerendert,
   When `render_telegram_bubbles()` aufgerufen wird, Then enthaelt der
   Segment-Block der Bubble-Tabelle sowohl die Stufe ("hoch") als auch die
   Zutat ("CAPE") — strukturell geerbt ueber dieselbe
@@ -304,7 +304,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
     auf die Hoechststufe fuehren; Assertion auf beide Labels in dieser
     Reihenfolge im zurueckgegebenen Text.
 
-- **AC-4 (NONE ⇒ kein Zusatz, Pro-Stunde-Gegenprobe):** Given eine Stunde
+- **AC-4:** (NONE ⇒ kein Zusatz, Pro-Stunde-Gegenprobe) Given eine Stunde
   zeigt „kein" Gewitter (keine Zutat erreicht eine Stufe ueber NONE), When die
   Stundenzeile gerendert wird, Then bleibt sie zeichengleich zu vor dieser
   Scheibe — kein „·"-Zusatz, obwohl der Pro-Stunde-Durchgriff (D1) roh und
@@ -312,7 +312,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
   - Test: Fixture ohne jedes Gewittersignal; Assertion, dass der Zellentext
     keinen `·`-Zusatz nach dem Stufenwort traegt.
 
-- **AC-5 (Kohaerenz Pro-Stunde, keine Vermischung benachbarter Zeilen):**
+- **AC-5:** (Kohaerenz Pro-Stunde, keine Vermischung benachbarter Zeilen)
   Given zwei benachbarte Stunden desselben Segments tragen ihre jeweilige
   Stufe ueber verschiedene Zutaten, When die Stundentabelle gerendert wird,
   Then zeigt JEDE Zeile ausschliesslich die Zutat(en) IHRES EIGENEN
@@ -321,7 +321,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
     `thunder_level_signals` (Stunde A nur CAPE, Stunde B nur Blitzdichte);
     Assertion, dass Zeile A nur „CAPE" und Zeile B nur „Blitzdichte" zeigt.
 
-- **AC-6 (Nacht-Block: Vereinigung ueber mehrere Datenpunkte):** Given zwei
+- **AC-6:** (Nacht-Block: Vereinigung ueber mehrere Datenpunkte) Given zwei
   Datenpunkte desselben Nachtblocks erreichen die Blockhoechststufe ueber
   unterschiedliche Zutaten, When der Nacht-Block gerendert wird, Then nennt
   die Zeile BEIDE Zutaten — nicht nur die eines einzelnen `dp` des Blocks.
@@ -330,7 +330,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
     auf derselben Hoechststufe; Assertion auf beide Labels im gerenderten
     Zeilentext.
 
-- **AC-7 (Kohaerenz Nacht-Block, kein Leck unterhalb des Maximums):** Given
+- **AC-7:** (Kohaerenz Nacht-Block, kein Leck unterhalb des Maximums) Given
   im selben Nachtblock traegt ein dritter Datenpunkt eine Zutat, die NUR eine
   niedrigere Stufe erreicht als die Blockhoechststufe, When der Nacht-Block
   gerendert wird, Then erscheint diese dritte Zutat NICHT in der Zeile.
@@ -338,7 +338,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
     einer Zutat, ein dritter auf einer niedrigeren Stufe mit einer DRITTEN,
     exklusiven Zutat; Assertion, dass die dritte Zutat im Zeilentext fehlt.
 
-- **AC-8 (Nacht-Block NONE ⇒ kein Zusatz):** Given alle Datenpunkte eines
+- **AC-8:** (Nacht-Block NONE ⇒ kein Zusatz) Given alle Datenpunkte eines
   Nachtblocks zeigen „kein" Gewitter, When der Block gerendert wird, Then
   bleibt die Zeile zeichengleich zu vor dieser Scheibe — garantiert durch
   `union_of_max_carriers()` selbst (liefert `None` bei Hoechststufe `NONE`),
@@ -346,7 +346,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
   - Test: Fixture ohne jedes Gewittersignal im gesamten Block; Assertion,
     dass der Zeilentext keinen `·`-Zusatz traegt.
 
-- **AC-9 (Ampel-Kreis-Modus bleibt unveraendert — bewusste Scope-Grenze):**
+- **AC-9:** (Ampel-Kreis-Modus bleibt unveraendert — bewusste Scope-Grenze)
   Given die Gewitter-Spalte wird im HTML-Ampel-Kreis-Modus gerendert (nicht
   im Roh-/Klartext-Modus), When eine Stunde eine Herkunft haette, Then bleibt
   der gerenderte Kreis zeichengleich zu vor dieser Scheibe — kein Text, kein
@@ -357,7 +357,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
     der zurueckgegebene HTML-Schnipsel byteidentisch zu einer Bestandsfixture
     aus einer Zeit vor dieser Scheibe bleibt.
 
-- **AC-10 (Rueckwaertskompatibilitaet `fmt_val()` ohne Seitenkanal):** Given
+- **AC-10:** (Rueckwaertskompatibilitaet `fmt_val()` ohne Seitenkanal) Given
   ein Aufrufer ruft `fmt_val(key="thunder", ...)` OHNE `row` oder mit einem
   `row`-Dict ohne den Schluessel `_thunder_signals`, When die Zelle formatiert
   wird, Then bleibt die Ausgabe zeichengleich zum Verhalten vor dieser
@@ -367,7 +367,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
     Assertion auf Textgleichheit mit einer Bestandsfixture UND auf
     Fehlerfreiheit.
 
-- **AC-11 (Trip-SMS/Premium-SMS bleiben unberuehrt):** Given dieselbe Fixture
+- **AC-11:** (Trip-SMS/Premium-SMS bleiben unberuehrt) Given dieselbe Fixture
   wuerde in der Stundentabelle eine Herkunft zeigen, When der Trip-Bericht
   als SMS/Premium-SMS versendet wird, Then enthaelt weder `report.sms_text`
   noch — ueber den Rueckfallweg `sms_text or email_plain`
@@ -380,7 +380,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
     noch „Blitzpotenzial" noch „Blitzdichte" noch „Wettercode" enthaelt UND
     dass `report.sms_text` nicht-leer ist.
 
-- **AC-12 (Compare bleibt strukturell unberuehrt, s. "Am Code korrigiert"):**
+- **AC-12:** (Compare bleibt strukturell unberuehrt, s. "Am Code korrigiert")
   Given `fmt_val()` wird um den Seitenkanal `_thunder_signals` erweitert,
   When die Ortsvergleich-Stundentabelle (HTML `_render_hour_row()`/
   `_fmt_thunder()`, Klartext `render_comparison_text()`) gerendert wird, Then
@@ -393,7 +393,7 @@ zugehoerigen Mutationsproben nachgewiesen, nicht durch eine Pruefung im Code.
     Compare-Rendermodule importiert wird (Grep-basierte Struktur-Assertion,
     kein Verhaltens-Mock).
 
-- **AC-13 (Alt-Snapshot ohne Feld):** Given ein bereits gespeicherter
+- **AC-13:** (Alt-Snapshot ohne Feld) Given ein bereits gespeicherter
   Wetter-Schnappschuss OHNE das Feld `thunder_level_signals` (Alt-Snapshot
   vor Scheibe 1) wird fuer die Trip-Stundentabelle geladen, When die
   Vollmail gerendert wird, Then zeigt die Stundenzeile die Gewitterstufe

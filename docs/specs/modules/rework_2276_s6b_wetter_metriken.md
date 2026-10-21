@@ -186,7 +186,7 @@ Bauform grün.
 
 ## Acceptance Criteria
 
-- **AC-1 (Kind ist wertprop-rein):** Given `CompareHourlyLayoutControls.svelte`
+- **AC-1:** (Kind ist wertprop-rein) Given `CompareHourlyLayoutControls.svelte`
   hat heute 5 `wiz`-Zugriffsstellen (`:82`, `:97-98`, `:108`, `:176`, `:194`)
   und die tote Prop `onHourlyCommit` (`:59`) / When die Komponente auf reine
   Wertprops (`metricKeys`, `enabled`) + Rückrufe (`onMetricKeys`,
@@ -204,7 +204,7 @@ Bauform grün.
     weil der SSR-Harness (`generate: 'server'`, kein DOM) diesen Wirkort
     nie sieht.
 
-- **AC-2 (Verhaltensgleichheit im Browser):** Given vor der Umstellung
+- **AC-2:** (Verhaltensgleichheit im Browser) Given vor der Umstellung
   wirken Metrik-Auswahl/-Abwahl und Ein/Aus-Schalter im Stundenverlauf-Tab
   des Ortsvergleichs und werden gespeichert / When derselbe Ablauf nach der
   Umstellung im Browser gegen Staging durchgeführt wird / Then bleibt das
@@ -219,7 +219,7 @@ Bauform grün.
     Kern-Test bemerkt es, weil kein Kern-Test den Mount-Block im Browser
     ausführt.
 
-- **AC-3 (Mount-Block bleibt wächterkonform):** Given die zwei bestehenden
+- **AC-3:** (Mount-Block bleibt wächterkonform) Given die zwei bestehenden
   AST-Wächter `compare_hourly_layout_controls_structure.test.ts:458-474`
   (genau eine Einbettung + Attribut `compareCatalog`) und
   `weather_metrics_tab_compare_catalog_fetch.test.ts:196-210` (Attribut
@@ -233,7 +233,7 @@ Bauform grün.
     rot; eine zweite Einbettung von `CompareHourlyLayoutControls` einfügen
     ⇒ `compare_hourly_layout_controls_structure.test.ts` wird rot.
 
-- **AC-4 (Rückbau `:1273` zeilentreu):** Given
+- **AC-4:** (Rückbau `:1273` zeilentreu) Given
   `WeatherMetricsTab.svelte:1273` lautet heute
   `if (context !== 'vergleich' || !wiz || !vergleichSpeicherung) return;`,
   wobei `vergleichSpeicherung` ausschließlich über das durch AC-13 (S4)
@@ -253,7 +253,7 @@ Bauform grün.
     Stelle wirkt, an der sie greift (Speicherpfad), nicht dort, wo der
     Guard-Quelltext steht.
 
-- **AC-5 (Ratsche 68 → 67, bewusst gepflegt):** Given
+- **AC-5:** (Ratsche 68 → 67, bewusst gepflegt) Given
   `context_herkunft_zweige_eingefroren.test.ts` hält heute `EINGEFROREN` mit
   68 Einträgen, `EINGEFROREN_SOLL_ANZAHL = 68`, und
   `'WeatherMetricsTab.svelte:1273'` steht in der Liste (Zeile 101) / When der

@@ -455,7 +455,7 @@ Briefing-Seite (`send_premium_sms`/`effective_compare_briefing_channels`).
   Then wird er über keinen Kanal zugestellt (kein Fehler, keine Sperre beim
   Speichern) — identisches Verhalten zum Trip mit derselben Konfiguration.
 
-- **AC-13 (Live, Staging):** Given ein per API angelegter Test-Ortsvergleich
+- **AC-13:** (Live, Staging) Given ein per API angelegter Test-Ortsvergleich
   mit `alert_channels={email:false, telegram:true, sms:false,
   premium_sms:false}`, When über den Testeinspeisungs-Weg
   (`docs/specs/modules/alarm_testeinspeisung.md`) ein Abweichungsalarm
@@ -463,13 +463,13 @@ Briefing-Seite (`send_premium_sms`/`effective_compare_briefing_channels`).
   (`GZ_ENV=staging`) ein und das IMAP-Postfach `gregor-test@henemm.com`
   bleibt für diesen Alarm leer.
 
-- **AC-14 (Live, Staging):** Given derselbe Test-Ortsvergleich, When der
+- **AC-14:** (Live, Staging) Given derselbe Test-Ortsvergleich, When der
   Versand-Reiter-Premium-SMS-Schalter über die API gesetzt und danach erneut
   gelesen wird, Then ist `send_premium_sms` persistiert; When anschließend
   über die API der Alarme-Reiter-Premium-SMS-Kanal umgeschaltet wird, Then
   bleibt `send_premium_sms` beim erneuten Lesen unverändert.
 
-- **AC-15 (Altbestand-Bereinigung, Nachtrag):** Given ein
+- **AC-15:** (Altbestand-Bereinigung, Nachtrag) Given ein
   Ortsvergleich-Altbestand ohne `alert_channels` mit `send_premium_sms=true`,
   When die Briefing-Kanäle in Python aufgelöst werden (Zeitfenster vor jedem
   Go-Schreibzugriff auf dieses Preset) bzw. When das Preset über Go geladen
@@ -478,13 +478,13 @@ Briefing-Seite (`send_premium_sms`/`effective_compare_briefing_channels`).
   Go-Speichern) — aber weiterhin ein Alarm-Kanal
   (`alert_channels.premium_sms=true`).
 
-- **AC-16 (Gegenprobe, Nachtrag):** Given ein Ortsvergleich MIT gesetztem
+- **AC-16:** (Gegenprobe, Nachtrag) Given ein Ortsvergleich MIT gesetztem
   `alert_channels` und `send_premium_sms=true` (vom neuen Versand-Schalter
   gesetzt, Abschnitt 5), When Briefing-Kanäle aufgelöst bzw. das Preset
   geladen und gespeichert wird, Then bleibt Premium-SMS ein Briefing-Kanal —
   die Bereinigung greift ausschließlich bei fehlendem `alert_channels`.
 
-- **AC-17 (Mandanten-Test, Nachtrag):** Given zwei Nutzer mit je einem
+- **AC-17:** (Mandanten-Test, Nachtrag) Given zwei Nutzer mit je einem
   Ortsvergleich-Altbestand ohne `alert_channels` und `send_premium_sms=true`,
   When beide Presets geladen und gespeichert werden, Then wird bei jedem
   Nutzer nur sein eigenes Preset bereinigt (`send_premium_sms=false`,

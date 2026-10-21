@@ -244,7 +244,7 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
 
 ## Acceptance Criteria
 
-- **AC-1 (Tabelle + Lookup — zwei Einträge, FR bewusst ausgespart):** Given
+- **AC-1:** (Tabelle + Lookup — zwei Einträge, FR bewusst ausgespart) Given
   `model_registry.LPI_THRESHOLDS_JKG` nach dieser Änderung / When sie gegen die drei
   Regionsnamen aus `thunder_routing._REGIONS` (`"FR"`, `"DE_ALPEN"`, `"EU_REST"`) sowie `None`
   geprüft wird / Then trägt sie GENAU zwei Einträge (`"DE_ALPEN": (1.0, 30.0, 50.0)`,
@@ -287,7 +287,7 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
     Dictionary-Zuordnung — GENAU das vom PO in der Analyse benannte Risiko), läge 4.9 J/kg
     fälschlich bei `LOW` statt `NONE` (weil 4.9 ≥ 1.0) — der Test muss das fangen.
 
-- **AC-4 (unbekannte/fehlende Region — kein Signal, kein TypeError, kein stiller Fallback):**
+- **AC-4:** (unbekannte/fehlende Region — kein Signal, kein TypeError, kein stiller Fallback)
   Given `region=None` (z. B. weil die Koordinaten fehlen) ODER ein unbekannter Regionsname
   (z. B. `"XX"`) / When `lpi_thresholds_jkg(region)` aufgerufen wird / Then liefert sie `None`.
   Given ZUSÄTZLICH ein Aufruf von `thunder_level_from_signals()` mit
@@ -302,7 +302,7 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
     Fusion lieferte fälschlich `HIGH` statt `None` — der Test muss das fangen. Genau das ist der
     Fehler, den das keyword-only-ohne-Default-Muster strukturell verhindern soll.
 
-- **AC-5 (TypeError ohne die neuen Parameter — kein stiller Rückfall über die gesamte Kette):**
+- **AC-5:** (TypeError ohne die neuen Parameter — kein stiller Rückfall über die gesamte Kette)
   Given ein Aufruf von `thunder_level_from_signals()` OHNE die drei keyword-only Parameter
   `lpi_low_min`/`lpi_med_min`/`lpi_high_min` / When der Aufruf ausgeführt wird / Then bricht er
   mit `TypeError` — exakt das Muster von `cape_threshold_jkg` seit #1592 C1. Given ZUSÄTZLICH
@@ -315,7 +315,7 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
     Default `= None`, würde der jeweilige Aufruf klaglos durchlaufen (mit stillschweigend
     deaktiviertem LPI-Signal) statt zu brechen — der Test muss das fangen.
 
-- **AC-6 (FR-Gebiet bleibt vom LPI-Ladder-Umbau komplett unberührt):** Given ein Datenpunkt im
+- **AC-6:** (FR-Gebiet bleibt vom LPI-Ladder-Umbau komplett unberührt) Given ein Datenpunkt im
   FR-Gebiet (Blitzdichte-Pfad, AROME liefert kein LPI, `lightning_potential_jkg` bleibt
   strukturell `None`) mit gesetzter Blitzdichte / When die Fusion über den regulären
   Produktionspfad (`enrich_thunder()`) läuft / Then bleibt `dp.thunder_level` identisch zum

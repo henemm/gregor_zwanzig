@@ -278,7 +278,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     Golden-JSONs über `load_trip` und vergleicht die geladenen `channel_layouts` 1:1 mit dem
     jeweiligen JSON-Inhalt (direkter Attributvergleich, keine Produktfunktion als Vergleichsmaßstab).
 
-- **AC-2 (Bug-Nachweis aus Nutzersicht):** Given der Register-Eintrag für die Zelle
+- **AC-2:** (Bug-Nachweis aus Nutzersicht) Given der Register-Eintrag für die Zelle
   `wind_chill × Telegram-Kurzstil × erscheint` wird entfernt / When der Invarianten-Test auf Golden
   A läuft / Then wird GENAU diese eine Zelle rot — nicht ihre Reihenfolge- oder Roh/Einfach-Zelle
   (die entfallen laut Orakel-Regel bei einer im Text fehlenden Metrik), kein anderer Test, keine
@@ -288,7 +288,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     die Matrix für Golden A laufen und prüft `rote_zellen == {("wind_chill", "telegram_kurzform", "erscheint")}`
     (Mengengleichheit, nicht nur „enthält").
 
-- **AC-3 (Orakel-Unabhängigkeit):** Given die Orakel-Funktion nimmt ausschließlich das rohe
+- **AC-3:** (Orakel-Unabhängigkeit) Given die Orakel-Funktion nimmt ausschließlich das rohe
   `json.load`-Dict des Golden-Trip-JSON entgegen (kein geladenes `Trip`-Objekt, kein Import aus
   `src/app/models.py`) / When Mutation M1 (Sortkey in `_sorted_by_layout` invertiert) eingespielt
   wird / Then bleibt die von der Orakel-Funktion berechnete Erwartung unverändert, während sich der
@@ -297,7 +297,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     `_sorted_by_layout` nutzen, bliebe M1 grün, weil beide Seiten gleich falsch würden. Ergänzend
     Code-Review-Beleg: die Orakel-Funktion hat keinen `import`-Eintrag für `src.app.models`.
 
-- **AC-4 (Kürzel-Register nur zum Parsen):** Given eine im Kanal-Layout aktive Metrik ohne Eintrag
+- **AC-4:** (Kürzel-Register nur zum Parsen) Given eine im Kanal-Layout aktive Metrik ohne Eintrag
   in `SMS_SYMBOL_BY_METRIC`/`SMS_MULTI_SYMBOLS_BY_METRIC` / When ihre Erwartung gebildet wird /
   Then bleibt die Erwartung „aktiv laut Kanal-Layout" bestehen — eine tatsächliche Abwesenheit im
   gesendeten Text wird nur über einen begründeten Register-Eintrag akzeptiert, niemals dadurch,
@@ -306,7 +306,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     (kein Kürzel seit #1887 E6), dass die Orakel-Erwartung unabhängig vom Kürzel-Register „aktiv"
     bleibt und die Abweichung ausschließlich über den Register-Eintrag B1 toleriert wird.
 
-- **AC-5 (strukturelle Ausnahmen nur als Register-Eintrag oder Kernregel):** Given die
+- **AC-5:** (strukturelle Ausnahmen nur als Register-Eintrag oder Kernregel) Given die
   strukturellen Ausnahmen 160er-Budget/`DROP_ORDER`, Telegram-7er-Limit, `VISIBILITY_GATE_IDS` /
   When eine Golden-Variante eine dieser Ausnahmen auslöst (Metrik fällt dem Budget zum Opfer,
   wandert aus der Telegram-Tabelle in die Kurzübersicht, hat keine Stundenspalte) / Then wird die
@@ -318,7 +318,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     geführte strukturelle Ausnahme, dass die Orakel-Erwartung die betroffene Metrik weiterhin als
     „erscheint" führt, und dass die zugehörige Zelle ohne den Eintrag rot wird.
 
-- **AC-6 (Rückdreh-Gegenprobe):** Given das Ausnahme-Register wird auf eine leere Liste gesetzt /
+- **AC-6:** (Rückdreh-Gegenprobe) Given das Ausnahme-Register wird auf eine leere Liste gesetzt /
   When der Invarianten-Test läuft / Then wird er an GENAU den Zellen rot, die die Register-Einträge
   normalerweise abdecken — nicht mehr (kein unregistrierter Fehler) und nicht weniger (keine
   vakuum-grüne Ratsche); die Menge ist nicht leer.
@@ -326,7 +326,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     lokal durch `[]`, sammelt die roten Zellen über beide Goldens und vergleicht die Menge exakt
     (`==`, nicht „mindestens") mit der Zellmenge der Register-Einträge.
 
-- **AC-7 (veralteter Eintrag):** Given ein Register-Eintrag, dessen Zelle im tatsächlich
+- **AC-7:** (veralteter Eintrag) Given ein Register-Eintrag, dessen Zelle im tatsächlich
   gesendeten Text mit der Orakel-Erwartung übereinstimmt (Zustand „bereits gefixt") / When der Test
   läuft / Then wird dieser Eintrag als „veralteter Eintrag ohne Wirkung" rot gemeldet, statt
   stillschweigend grün durchgewunken zu werden — die Ratsche zieht nur Richtung Schließung.
@@ -336,7 +336,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     den echten gesendeten Text, nicht auf eine im Test veränderte Kürzel-Tabelle (die würde nur die
     Erwartungs-/Parserseite verschieben, nicht die Auslieferung).
 
-- **AC-8 (Eintrag ohne Begründung):** Given ein Register-Eintrag ohne `befund`- oder ohne
+- **AC-8:** (Eintrag ohne Begründung) Given ein Register-Eintrag ohne `befund`- oder ohne
   `grund`-Feld / When der Test das Register vor der Matrixprüfung validiert / Then schlägt der Test
   fehl, bevor die eigentliche Matrix überhaupt geprüft wird.
   - Test: `test_ac8_eintrag_ohne_begruendung_blockt_vor_der_matrix` fügt lokal einen Eintrag mit
@@ -344,7 +344,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     scheitert, bevor irgendeine Zelle geprüft wurde (Reihenfolge-Nachweis über einen Zähler/Spy, der
     erst nach erfolgreicher Validierung inkrementiert wird).
 
-- **AC-9 (Mutations-Pflichtfänge M1–M4, echte Kern-Prüfung, nicht nur Adversary):** Given je eine
+- **AC-9:** (Mutations-Pflichtfänge M1–M4, echte Kern-Prüfung, nicht nur Adversary) Given je eine
   der vier Mutationen — M1 (Sortkey in `_sorted_by_layout` invertiert), M2
   (`_clip_to_global_maximum`-Äquivalent lässt eine zusätzliche Metrik durch, die laut P2 geclippt
   werden müsste), M3 (`build_friendly_keys` liest die falsche `dc`), M4 (Formatter liest die
@@ -360,7 +360,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     CLAUDE.md) spielt zusätzlich echte String-Ersetzungen mit externer Sicherungskopie im
     Produktcode ein — dieser Kern-Test ist der wiederholbare, automatisierte Nachweis dafür.
 
-- **AC-10 (Register-Startbefüllung):** Given die durch die zwei Golden-Varianten tatsächlich
+- **AC-10:** (Register-Startbefüllung) Given die durch die zwei Golden-Varianten tatsächlich
   ausgelösten Befunde B1, B2, B3, B5 sowie etwaige ausgelöste strukturelle Ausnahmen (AC-5) / When
   Scheibe S1 abgeschlossen wird / Then hat jede daraus resultierende rote Zelle genau einen
   Register-Eintrag mit Befund-Referenz und Grund — und für B4/B6/B7/B8/B9 existiert laut
@@ -370,7 +370,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     „B4"/„B6"/„B7"/„B8"/„B9" existiert, (c) dass der volle Testlauf über beide Goldens mit diesem
     Register grün ist.
 
-- **AC-11 (Matrix-Abdeckung):** Given alle wählbaren Metriken (`selectable=true`, `confidence_pct`
+- **AC-11:** (Matrix-Abdeckung) Given alle wählbaren Metriken (`selectable=true`, `confidence_pct`
   ausgeschlossen per Issue #710) und die sechs Kanäle E-Mail html, E-Mail plain, Telegram rich,
   Telegram Kurzstil, SMS, Premium-SMS / When der Invarianten-Test über BEIDE Goldens läuft / Then
   hat jede Kombination aus Metrik × Kanal × Dimension (erscheint, Reihenfolge, Roh/Einfach), die in
@@ -380,7 +380,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     `selectable=true`, kreuzt mit den sechs Kanälen und den drei Dimensionen, und prüft für jede in
     einem der beiden Goldens erreichbare Zelle ein vorhandenes Ergebnis.
 
-- **AC-12 (synthetische Voll-Wetter-Fixture):** Given die bestehenden `openmeteo`-Fixtures haben
+- **AC-12:** (synthetische Voll-Wetter-Fixture) Given die bestehenden `openmeteo`-Fixtures haben
   Lücken (humidity, dewpoint, pressure, wind_chill_c, cloud_mid/high, precip_type, snow_new_24h) /
   When beide Goldens mit der neuen synthetischen Voll-Wetter-Fixture gerendert werden / Then
   entstehen keine roten Zellen wegen fehlender Rohdaten — jede verbleibende rote Zelle geht auf
@@ -389,7 +389,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     neuen Fixture und prüft, dass kein Ausgabetext einen Platzhalter für fehlende Rohdaten enthält
     (z. B. `None`/leer an einer Stelle, an der eine aktive Metrik einen Wert erwarten lässt).
 
-- **AC-13 (Naht nur am Transport):** Given `EmailOutput`/`SMSOutput`/`PremiumSmsOutput`/
+- **AC-13:** (Naht nur am Transport) Given `EmailOutput`/`SMSOutput`/`PremiumSmsOutput`/
   `TelegramOutput` werden per `monkeypatch.setattr` durch einen Aufzeichner ersetzt (Vorlage
   `test_kanaltreue_adhoc_antwort.py`, erweitert um `body`/`plain_text_body`/`parse_mode`) / When
   beide Goldens versendet werden / Then laufen Loader, Kaskade und Formatter unverändert echt — der
@@ -400,7 +400,7 @@ Das ist die einzige Änderung an bestehendem Testcode.
     nicht nur Metrik-Labels) enthält — ein vom Test selbst vorgegebener Text käme ohne echten
     Formatter-Lauf nicht zustande.
 
-- **AC-14 (Regel-Budget-Eintrag):** Given der neue Invarianten-Test führt ein neues Pflicht-Gate
+- **AC-14:** (Regel-Budget-Eintrag) Given der neue Invarianten-Test führt ein neues Pflicht-Gate
   (das Ausnahme-Register) ein / When Scheibe S1 abgeschlossen wird / Then trägt
   `docs/reference/gates_und_ratschen.md` in der Tabelle „Regel-Budget: Prüfdaten im Überblick"
   eine neue Zeile mit Prüfdatum 2026-12-25 und einem Fang-Beleg-Platzhalter für diese Ratsche.

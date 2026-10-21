@@ -284,7 +284,7 @@ Anlege-Mount wird stattdessen im Kern bewacht (siehe oben).
 
 ## Acceptance Criteria
 
-- **AC-1 (`AlarmeTab` ist im Vergleichs-Zweig wertprop-rein):** Given
+- **AC-1:** (`AlarmeTab` ist im Vergleichs-Zweig wertprop-rein) Given
   `AlarmeTab.svelte` liest/schreibt heute 13 Felder über `wiz` an den in der
   Analyse gemessenen Stellen (Lesen `:171,186,216,243,280,450,460,468,475`,
   Schreiben `:175,222,255-257,286-296,453,460,468,477`) / When der
@@ -301,7 +301,7 @@ Anlege-Mount wird stattdessen im Kern bewacht (siehe oben).
     Compile-Baum von `AlarmeTab.svelte`); die tatsächliche
     Verhaltensgleichheit ist nur im Browser messbar, siehe AC-2.
 
-- **AC-2 (Verhaltensgleichheit im Browser am Hub):** Given vor der Umstellung
+- **AC-2:** (Verhaltensgleichheit im Browser am Hub) Given vor der Umstellung
   wirken alle Alarm-Bedienelemente im Alarme-Reiter des Ortsvergleichs-Hubs
   (`/compare/[id]`) und werden über den einen bestehenden PUT gespeichert /
   When derselbe Ablauf nach der Umstellung im Browser gegen Staging
@@ -315,7 +315,7 @@ Anlege-Mount wird stattdessen im Kern bewacht (siehe oben).
     mit aktivem Speicherweg — nur hier ist Persistenz browserseitig
     beobachtbar.
 
-- **AC-3 (`/compare/new` behält seine Bedienelemente an beiden Mounts):**
+- **AC-3:** (`/compare/new` behält seine Bedienelemente an beiden Mounts)
   Given Mount (C) (Desktop, `CompareNewEditor.svelte:396`) und Mount (D)
   (Mobil, `:487`) übergeben heute `{wiz}` + `catalog` an `AlarmeTab` / When
   beide Mounts auf `{...alarmePropsAus(wiz)}` + `catalog` umgestellt werden /
@@ -351,7 +351,7 @@ Anlege-Mount wird stattdessen im Kern bewacht (siehe oben).
     geprüft wird und dort `vergleichSpeicherung` strukturell immer gesetzt
     ist.
 
-- **AC-5 (Klebeschicht bleibt ohne Laufzeit-Importeur, Saat + Gegenprobe):**
+- **AC-5:** (Klebeschicht bleibt ohne Laufzeit-Importeur, Saat + Gegenprobe)
   Given `alarme_tab_laedt_keine_compare_klebeschicht.test.ts` sät heute
   `wiz: wizStub()` als einzelne Prop und prüft den Ladegraphen von
   `AlarmeTab.svelte` gegen `compareHubWizardBridge.ts` / When die Saat auf die

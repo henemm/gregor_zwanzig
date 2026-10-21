@@ -85,7 +85,7 @@ Vollständige Messung: `docs/context/fix-1465-zeitzonen-hausnorm.md`.
   war falsch — s. AC-6 bis AC-8. Unangetastet bleibt allein die **Norm selbst**
   (`models.py`); der Fix findet an der anderen Grenze statt.
 
-- **AC-6 (der eigentliche Fehler):** Given ein Nutzer tippt im Telegram-Briefing auf
+- **AC-6:** (der eigentliche Fehler) Given ein Nutzer tippt im Telegram-Briefing auf
   „⛈ Gewitter" oder „⏱ Stunden" / When die Anfrage verarbeitet wird / Then bekommt er
   eine Antwort statt eines Absturzes — auch wenn der Zeitstempel der eingehenden
   Nachricht eine Zeitzone trägt und die Wetterdaten keine.
@@ -99,13 +99,13 @@ Vollständige Messung: `docs/context/fix-1465-zeitzonen-hausnorm.md`.
   `msg.received_at` immer zeitzonenbehaftet, und niemand normalisierte dazwischen.
   Der Fix zieht `from_time` an der Grenze von `drilldown()` auf dieselbe Norm.
 
-- **AC-7 (Ortszeit):** Given der Drilldown zeigt Stundenzeilen / When er sie beschriftet /
+- **AC-7:** (Ortszeit) Given der Drilldown zeigt Stundenzeilen / When er sie beschriftet /
   Then stehen dort die Uhrzeiten **am Ort der Trip**, nicht die der Serverzeitzone.
   - Test: Trip auf Korsika, Erwartung unabhängig aus dem zeitzonenbehafteten `now`
     gebildet. Zuvor deutete `pt.ts.astimezone()` einen zeitzonenlosen Zeitstempel als
     Prozess-Zeitzone — auf diesem UTC-Server unauffällig, auf jedem anderen Host falsch.
 
-- **AC-8 (der Wächter sieht wieder hin):** Given ein Eintrag der Scan-Liste des
+- **AC-8:** (der Wächter sieht wieder hin) Given ein Eintrag der Scan-Liste des
   Zeitzonen-Wächters zeigt auf einen Pfad, den es nicht gibt / When der Wächter läuft /
   Then schlägt er fehl, statt den Eintrag wortlos zu überspringen.
   - Test: `test_scan_list_paths_all_exist()`.

@@ -192,7 +192,7 @@ additiv um zwei Dinge, die S2a bewusst offen gelassen hat:
 
 ## Acceptance Criteria
 
-- **AC-1 (Wirkungs-Nachweis, Ende-zu-Ende):** Given eine Position am
+- **AC-1:** (Wirkungs-Nachweis, Ende-zu-Ende) Given eine Position am
   Karnischen Höhenweg (46,6 N / 12,9 O, Grenzgebiet AT/IT im
   ICON-D2-Zuständigkeitsgebiet) / When eine Vorhersage über den **regulären**
   Weg abgerufen wird (`OpenMeteoProvider.fetch_forecast`, funktionierende
@@ -243,7 +243,7 @@ additiv um zwei Dinge, die S2a bewusst offen gelassen hat:
     `tests/tdd/test_thunder_budget_and_failsoft.py`, Aufrufe zählen statt
     Laufzeit messen).
 
-- **AC-5 (generalisierter Fill-Wächter — der heikelste Punkt dieser Scheibe):**
+- **AC-5:** (generalisierter Fill-Wächter — der heikelste Punkt dieser Scheibe)
   Given eine Vorhersagereihe, die von einer vorangegangenen Anreicherung
   bereits Blitzpotenzial und/oder Hagel trägt / When `enrich_thunder` **ein
   zweites Mal** auf dieselbe Reihe aufgerufen wird / Then löst das **keinen**
@@ -255,7 +255,7 @@ additiv um zwei Dinge, die S2a bewusst offen gelassen hat:
     werden — dieses Feld wird von DWD nie gefüllt, der Wächter griffe für
     DWD-Orte dann nie.
 
-- **AC-6 (Namensfallen-AC, PFLICHT, Live-Schicht):** Given die im
+- **AC-6:** (Namensfallen-AC, PFLICHT, Live-Schicht) Given die im
   Produktivcode hinterlegten DWD-Parameternamen für Blitzpotenzial und Hagel
   (als Konstanten, nicht im Test wiederholt) / When gegen das echte
   DWD-Open-Data-Verzeichnis (`opendata.dwd.de`) geprüft wird / Then existiert
@@ -282,7 +282,7 @@ additiv um zwei Dinge, die S2a bewusst offen gelassen hat:
     (Anzahl Stunden) wird erst bei der Implementierung gegen echte
     ICON-D2-Verfügbarkeit gemessen, nicht geraten.
 
-- **AC-8 (Abgrenzung, keine Stufenbildung):** Given Blitzpotenzial und Hagel
+- **AC-8:** (Abgrenzung, keine Stufenbildung) Given Blitzpotenzial und Hagel
   sind für einen Datenpunkt gefüllt / When Ausgaben gerendert werden (SMS,
   Trip-Briefing, `thunder_level`-Berechnung) / Then bleiben diese Ausgaben
   **unverändert** gegenüber dem Stand ohne die neuen Felder — keine eigene

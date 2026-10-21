@@ -110,30 +110,30 @@ Der Sonderpfad wirkt für beide Alarmwege identisch, weil beide dieselbe
 
 ## Acceptance Criteria
 
-- **AC-1 (Modellwechsel unterdrückt):** Given ein CAPE-Δ-Vergleich, bei dem der Δ-Anker Modell
+- **AC-1:** (Modellwechsel unterdrückt) Given ein CAPE-Δ-Vergleich, bei dem der Δ-Anker Modell
   `meteofrance_arome` trägt und der frisch abgerufene Wert Modell `icon_d2`, mit einem Sprung
   weit über die für das frische Modell wirksame Schwelle / When `detect_changes()` diesen
   Vergleich auswertet / Then entsteht kein Änderungs-Alarm für `cape_max_jkg`, obwohl der
   Sprung nominell alarmwürdig wäre.
 
-- **AC-2 (Vergleichspunkt ohne Herkunft):** Given ein Δ-Anker mit `cape_model_id = None` (Stand
+- **AC-2:** (Vergleichspunkt ohne Herkunft) Given ein Δ-Anker mit `cape_model_id = None` (Stand
   vor #1592 C0 oder eine Etappe mit uneiniger Modellherkunft über ihre Segmente) und ein
   frischer Wert mit belegtem Modell, mit einem großen CAPE-Sprung / When `detect_changes()`
   diesen Vergleich auswertet / Then entsteht kein Änderungs-Alarm für `cape_max_jkg`, weil
   `None` als Abweichung zählt und Alt- und Neu-Seite nicht vergleichbar sind.
 
-- **AC-3 (Gegenprobe gleiches Modell — die wichtigste):** Given ein Δ-Anker und ein frischer
+- **AC-3:** (Gegenprobe gleiches Modell — die wichtigste) Given ein Δ-Anker und ein frischer
   Wert mit identischem, belegtem Modell (z.B. beide `icon_d2`), mit einem Sprung über der für
   dieses Modell wirksamen Schwelle / When `detect_changes()` diesen Vergleich auswertet / Then
   entsteht weiterhin ein Änderungs-Alarm für `cape_max_jkg` — der Guard darf den bestehenden,
   gewollten Alarmweg nicht mitunterdrücken.
 
-- **AC-4 (Normalfall):** Given ein Δ-Anker und ein frischer Wert mit identischem, belegtem
+- **AC-4:** (Normalfall) Given ein Δ-Anker und ein frischer Wert mit identischem, belegtem
   Modell, mit einem Sprung unter der wirksamen Schwelle / When `detect_changes()` diesen
   Vergleich auswertet / Then entsteht kein Änderungs-Alarm für `cape_max_jkg` — unverändert
   zum heutigen Verhalten, kein Nebeneffekt des neuen Guards.
 
-- **AC-5 (Wirkort statt Codeort):** Given dieselben zwei Situationen aus AC-1 (Modellwechsel)
+- **AC-5:** (Wirkort statt Codeort) Given dieselben zwei Situationen aus AC-1 (Modellwechsel)
   und AC-3 (gleiches Modell), aber aufgerufen über `DeviationAlertEngine.evaluate()`
   (`src/services/deviation_alert_engine.py:264`) statt direkt über `detect_changes()` / When
   die Auswertung läuft / Then bleibt `EvaluationResult.triggered` bei AC-1 `False` und bei AC-3
@@ -143,7 +143,7 @@ Der Sonderpfad wirkt für beide Alarmwege identisch, weil beide dieselbe
   würde den toten, seit #1168 unerreichbaren Pfad in `trip_alert.py:604-632` genauso grün
   zeigen wie den echten, ohne dass der Guard dort wirkt.
 
-- **AC-6 (Nachweis am laufenden System für den Ortsvergleich):** Given ein auf Staging frisch
+- **AC-6:** (Nachweis am laufenden System für den Ortsvergleich) Given ein auf Staging frisch
   ausgelöster Ortsvergleichs-Report für einen Ort mit bekanntem CAPE-Modell / When der Report
   läuft und der dabei geschriebene Compare-Vergleichspunkt geöffnet wird / Then enthält dessen
   gespeicherter Datensatz das Feld `cape_model_id` mit einem nicht-leeren Wert — bislang ist

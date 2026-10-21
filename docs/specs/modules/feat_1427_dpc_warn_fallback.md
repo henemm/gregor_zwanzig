@@ -270,44 +270,44 @@ Aufzeichnung mehr.
 
 ## Acceptance Criteria
 
-- **AC-1 (S1):** Given eine amtliche Warnung vor Überschwemmung erreicht das
+- **AC-1:** (S1) Given eine amtliche Warnung vor Überschwemmung erreicht das
   System (MeteoAlarm-Warnart `flooding` oder `rain-flood`, oder eine
   Hochwasser-/Erdrutschwarnung des italienischen Zivilschutzes), When daraus
   eine Warnung für den Nutzer entsteht, Then trägt sie die eigene Bezeichnung
   „Hochwasser/Erdrutsch" — statt wie bisher als „Regen" ausgegeben zu werden
   oder ganz zu verschwinden.
 
-- **AC-2 (S2):** Given der italienische Zivilschutz warnt für eine Zone in
+- **AC-2:** (S2) Given der italienische Zivilschutz warnt für eine Zone in
   Italien am Bezugstag (Gewitter oder Hochwasser/Erdrutsch), When der Nutzer
   ein Briefing für einen Ort in dieser Zone erhält, Then enthält das Briefing
   die entsprechende Warnung mit der zutreffenden Stufe — unabhängig davon, ob
   MeteoAlarm für denselben Ort ebenfalls erreichbar ist.
 
-- **AC-3 (S2, Tagesversatz):** Given das zum Abrufzeitpunkt neueste verfügbare
+- **AC-3:** (S2, Tagesversatz) Given das zum Abrufzeitpunkt neueste verfügbare
   DPC-Bulletin wurde am Vortag veröffentlicht (Alltagsfall am frühen Morgen, belegt
   30.07. 15:11 Uhr noch aktuell um 31.07. 04:57 UTC), When am Morgen ein Briefing
   für einen betroffenen italienischen Ort abgerufen wird, Then zeigt es die für
   HEUTE gültige Warnlage, nicht die Warnlage von gestern.
 
-- **AC-4 (S2, ADR-0034):** Given eine Warnung im Briefing stammt vom
+- **AC-4:** (S2, ADR-0034) Given eine Warnung im Briefing stammt vom
   italienischen Zivilschutz, When der Nutzer die Herkunftsangabe der Warnung
   sieht, Then weist sie die italienische Zivilschutzbehörde (Protezione
   Civile) als Quelle aus, nicht MeteoAlarm.
 
-- **AC-5 (S2, Fail-soft, ADR-0018):** Given das DPC-Bulletin weicht vom bekannten
+- **AC-5:** (S2, Fail-soft, ADR-0018) Given das DPC-Bulletin weicht vom bekannten
   Stufen-Freitext-Muster ab oder die abgerufene Datei ist beschädigt, When das
   Briefing für einen davon betroffenen Ort trotzdem gerendert wird, Then stürzt der
   Abruf nicht ab und behauptet nicht fälschlich eine Warnung — er verhält sich wie
   „keine Warnung von dieser Quelle erkannt"; ein dabei auftretender unbekannter
   Zonencode wird im Diagnose-Log sichtbar, statt kommentarlos zu verschwinden.
 
-- **AC-6 (S2, Gewitter-Überschneidung):** Given sowohl der italienische
+- **AC-6:** (S2, Gewitter-Überschneidung) Given sowohl der italienische
   Zivilschutz als auch MeteoAlarm melden für dieselbe Zone/denselben Zeitraum
   eine Gewitterwarnung, When der Nutzer sein Briefing für den betroffenen Ort
   erhält, Then enthält es genau EINE Gewitterkarte für dieses Ereignis — die
   mit der höheren Warnstufe —, nie zwei.
 
-- **AC-7 (S2, `unavailable` bleibt bestehen):** Given MeteoAlarm ist für einen
+- **AC-7:** (S2, `unavailable` bleibt bestehen) Given MeteoAlarm ist für einen
   Ort in Italien nicht abrufbar, der italienische Zivilschutz liefert aber
   erfolgreich Warnungen für denselben Ort, When der Nutzer sein Briefing
   erhält, Then steht dort weiterhin der Hinweis „amtliche Warnungen aktuell

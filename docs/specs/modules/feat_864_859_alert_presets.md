@@ -329,7 +329,7 @@ def expand_per_metric_levels(levels: dict[str, str]) -> list[AlertRule]:
 - **AC-10:** Given der Nutzer hat eine Metrik-Stufe geändert und der Auto-Save ist noch ausstehend (saveController.hasPending = true), When der Nutzer auf einen anderen Tab klickt, Then erscheint ein Bestätigungsdialog der vor dem Verlust ungespeicherter Änderungen warnt; bei Abbruch bleibt der Alerts-Tab aktiv.
   - Test: Playwright E2E — ändere eine Stufe, klicke sofort auf anderen Tab bevor Auto-Save abgeschlossen ist, prüfe dass dialog erscheint und bei Cancel der Alerts-Tab weiter sichtbar bleibt
 
-- **AC-11 (Backend):** Given ein Trip mit `display_config.metric_alert_levels: {'wind_gust': 'standard', 'precipitation_sum': 'off'}`, When der Alert-Scheduler via `trip_alert.py` die Alert-Regeln für diesen Trip lädt, Then enthält die zurückgegebene Regel-Liste eine Regel für `wind_gust` mit `threshold=20` (Standard-Delta), aber keine Regel für `precipitation_sum`.
+- **AC-11:** (Backend) Given ein Trip mit `display_config.metric_alert_levels: {'wind_gust': 'standard', 'precipitation_sum': 'off'}`, When der Alert-Scheduler via `trip_alert.py` die Alert-Regeln für diesen Trip lädt, Then enthält die zurückgegebene Regel-Liste eine Regel für `wind_gust` mit `threshold=20` (Standard-Delta), aber keine Regel für `precipitation_sum`.
   - Test: pytest Integrationstest — echter HTTP-POST auf Alert-Check-Endpoint oder direkter Aufruf von `get_alert_rules_for_trip()` mit präpariertem Trip-Objekt; prüfe Rückgabeliste ohne Mock
 
 ## Known Limitations

@@ -235,7 +235,7 @@ vier-stufigen, nutzersichtbaren Gewitterleiter mehr.
     Fixture zieht statt getrennter Einzeltests je Kanal, muss das fangen (sonst prüft ein
     grüner Einzeltest je Kanal nicht zwingend dieselbe übersehene Stelle).
 
-- **AC-2 (CAPE-Wert steht AN der LOW-Aussage, nicht nur potentiell in einer Nebenspalte):**
+- **AC-2:** (CAPE-Wert steht AN der LOW-Aussage, nicht nur potentiell in einer Nebenspalte)
   Given eine Stunde mit `ThunderLevel.LOW` und `cape_jkg=587` (Ø-Messwert, unterhalb der
   bestehenden 1 000-J/kg-Highlight-Schwelle) / When die LOW-Aussage in E-Mail (Highlight-Zeile
   bzw. Ausblick-Tagesfenster) oder Telegram-Fließtext gerendert wird / Then trägt GENAU dieser
@@ -275,7 +275,7 @@ vier-stufigen, nutzersichtbaren Gewitterleiter mehr.
     dann, wenn die Alarm-SMS-Legende rückfällig würde — genau der Fehler, den diese AC-Fassung
     durch die Bindung an das RICHTIGE Artefakt verhindert.
 
-- **AC-4 (Herkunftsabhängigkeit — keine pauschal falsche „nur Luftmasse"-Behauptung):** Given
+- **AC-4:** (Herkunftsabhängigkeit — keine pauschal falsche „nur Luftmasse"-Behauptung) Given
   `ThunderLevel.LOW` entsteht NICHT ausschließlich aus CAPE, sondern (auch) aus Wettercode,
   Blitzdichte oder Blitzpotenzial (`carriers` enthält mehr als nur `"cape"`) / When die
   LOW-Aussage in einem Kanal mit Herkunfts-Anzeige (E-Mail) gerendert wird / Then behauptet der
@@ -290,7 +290,7 @@ vier-stufigen, nutzersichtbaren Gewitterleiter mehr.
     Blitzdichte ohne jeden CAPE-Beitrag entstehen) — der Test muss den Unterschied zwischen
     beiden Fixtures fangen.
 
-- **AC-5 (Alarm-Presets bleiben unverändert funktionsfähig):** Given die drei Presets
+- **AC-5:** (Alarm-Presets bleiben unverändert funktionsfähig) Given die drei Presets
   `entspannt`/`standard`/`sensibel` und ein Übergang `kein→leicht` bzw. `leicht→kein` / When die
   Alarm-Auswertung (`_ordinal_change_triggers`, `ORDINAL_LEVEL_BOUNDS`) läuft / Then löst KEINES
   der drei Presets einen Sofortalarm für diesen Übergang aus — identisch zum Verhalten vor

@@ -300,6 +300,32 @@ def _maskiere_inplace(knoten, paare: list[tuple[str, str]], gefunden: set[str],
 _WERKZEUG = "?"
 
 
+def _env_rohwerte() -> list[tuple[str, str]]:
+    """Konservativer Notbehelf ohne Plugin-Erkennung (#1617): JEDER `.env`-Wert
+    ab 8 Zeichen gilt als Geheimnis — nur fuer die Notfallmeldung."""
+    env_datei = Path(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()) / ".env"
+    if not env_datei.is_file():
+        return []  # keine .env -> kein Geheimnis, das austreten koennte
+    paare: list[tuple[str, str]] = []
+    for zeile in env_datei.read_text(errors="replace").splitlines():
+        schluessel, _, wert = zeile.strip().partition("=")
+        wert = wert.strip().strip("'\"")
+        if not schluessel.startswith("#") and len(wert) >= 8:
+            paare.append((schluessel.strip(), wert))
+    return sorted(paare, key=lambda p: len(p[1]), reverse=True)
+
+
+def _werkzeug_maskiert() -> str:
+    """Werkzeugname fuer die Notfallmeldung — maskiert (#1617). Ist keine
+    Maskierung moeglich, wird der Name NICHT gezeigt."""
+    for quelle in (_geheimnisse, _env_rohwerte):
+        try:
+            return _ersetze(_WERKZEUG, quelle(), set())
+        except Exception:  # noqa: BLE001 — naechste Quelle, zuletzt "?"
+            continue
+    return "?"
+
+
 def _melde_abbruch(fehler: BaseException) -> None:
     """Fail-open bleibt — lautlos bleibt es nicht (Befund F005).
 
@@ -308,7 +334,7 @@ def _melde_abbruch(fehler: BaseException) -> None:
     TEXT einer Ausnahme kann Bruchstuecke der Nutzlast tragen, und ein Waechter, der beim
     Scheitern das Geheimnis in seine Fehlermeldung schreibt, waere die Luecke in Reinform.
     """
-    print(f"[secret_output_gate] Pruefung des Ergebnisses von {_WERKZEUG} NICHT abgeschlossen "
+    print(f"[secret_output_gate] Pruefung des Ergebnisses von {_werkzeug_maskiert()} NICHT abgeschlossen "
           f"({type(fehler).__name__}) — das Ergebnis ging UNVERAENDERT durch und kann "
           f"Zugangsdaten im Klartext enthalten.", file=sys.stderr)
 
@@ -347,7 +373,9 @@ def main() -> int:
         _maskiere_inplace(ersatz, paare, gefunden, notizen,
                           oberste_ebene=isinstance(ergebnis, dict))
 
-    werkzeug = _WERKZEUG
+    # #1617: auch der Werkzeugname laeuft durch die Maskierung, bevor er in
+    # eine Meldung gelangt (eigene Fundmenge — der Name ist kein Ergebnis-Fund).
+    werkzeug = _ersetze(_WERKZEUG, paare, set())
     if gefunden:
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PostToolUse",

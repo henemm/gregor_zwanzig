@@ -333,7 +333,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
   `!`-Warn-Block (die gelbe/grüne Warnung wird gefiltert, nicht angezeigt).
   - Test: Segment mit `OfficialAlert(hazard="rain", level=2, ...)`; Assertion `"!" not in sms`.
 
-- **AC-4 (Non-Regression, Golden):** Given ein Trip-Segment ohne amtliche Warnungen (leere
+- **AC-4:** (Non-Regression, Golden) Given ein Trip-Segment ohne amtliche Warnungen (leere
   `official_alerts`-Liste, wie bei allen bestehenden Golden-Fixtures) / When die SMS erzeugt
   wird / Then ist die erzeugte Token-Zeile **bit-identisch** zum bisherigen Verhalten (kein
   `!`, keine Längenänderung, keine Positionsverschiebung anderer Token).
@@ -342,7 +342,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     String-Gleichheits-Assertion auf mindestens einem bestehenden Golden-Fixture mit
     `official_alerts=[]`.
 
-- **AC-5 (alle 9 Hazards):** Given je eine amtliche Warnung der Stufe ORANGE für jeden der 9
+- **AC-5:** (alle 9 Hazards) Given je eine amtliche Warnung der Stufe ORANGE für jeden der 9
   `hazard`-Werte (`thunderstorm`, `rain`, `wind_gust`, `snow`, `black_ice`, `extreme_heat`,
   `extreme_cold`, `wildfire_risk`, `access_ban`), einzeln getestet / When die SMS erzeugt wird
   / Then erscheint jeweils das in Abschnitt 1 der Spec festgelegte Kürzel (`TH`, `HR`, `W`,
@@ -350,13 +350,13 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
   - Test: parametrisierter Test über die 9 Hazards, je ein Assertion-Paar (Kürzel enthalten,
     kein Nicht-ASCII-Zeichen im Ergebnis via `sms.isascii()` bzw. `fold_ascii`-Idempotenz).
 
-- **AC-6 (access_ban-Sonderfall):** Given eine amtliche Zugangssperre (`access_ban`, Stufe
+- **AC-6:** (access_ban-Sonderfall) Given eine amtliche Zugangssperre (`access_ban`, Stufe
   ROT) ohne gleichzeitige andere Warnung / When die SMS erzeugt wird / Then erscheint `CL` als
   bloßes Kürzel **ohne** Doppelpunkt und **ohne** Stufenbuchstaben (nicht `CL:H`).
   - Test: Segment mit `OfficialAlert(hazard="access_ban", level=4, ...)`; Assertion `"!CL"` in
     SMS und `"CL:"` NICHT in SMS.
 
-- **AC-7 (Truncation-Vorrang):** Given eine Token-Zeile, die mit aktivem Warn-Block ohne
+- **AC-7:** (Truncation-Vorrang) Given eine Token-Zeile, die mit aktivem Warn-Block ohne
   Kürzung > 160 Zeichen wäre (viele aktive Vorhersage-Metriken + ein Warn-Block) / When die SMS
   gerendert wird / Then bleibt der Warn-Block im Ergebnis erhalten, während `PR` (und bei Bedarf
   `D`/`N`) zuerst aus der Zeile entfernt werden, bis das 160-Zeichen-Budget eingehalten ist.
@@ -364,7 +364,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     thunder) plus einer amtlichen Warnung, `max_length=160`; Assertion, dass `!`-Block in der
     finalen Zeichenkette vorkommt und `len(sms) <= 160`, während mindestens `PR` fehlt.
 
-- **AC-8 (Telegram):** Given ein Segment mit einer amtlichen Warnung der Stufe ORANGE/ROT /
+- **AC-8:** (Telegram) Given ein Segment mit einer amtlichen Warnung der Stufe ORANGE/ROT /
   When das Telegram-Trip-Briefing gerendert wird / Then enthält eine der erzeugten Bubbles die
   amtliche Warnung ausgeschrieben (über `render_official_alert_telegram`, keine
   160-Zeichen-Kürzung, keine gelbe/grüne Warnung dabei).
@@ -373,7 +373,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     `_display_label`) enthält, und dass ein Fixture mit ausschließlich einer gelben Warnung
     KEINE entsprechende Bubble erzeugt.
 
-- **AC-9 (Konfigurationsoberfläche):** Given ein Trip-Editor mit dem Wetter-Metriken-Tab /
+- **AC-9:** (Konfigurationsoberfläche) Given ein Trip-Editor mit dem Wetter-Metriken-Tab /
   When der Nutzer den Schalter „Amtliche Warnungen im Bericht" betrachtet / Then zeigt die
   Legende alle 9 Kürzel mit Klartext-Bezeichnung, den `!`-Marker-Hinweis und die
   L/M/H-Stufenzuordnung (gelb/orange/rot), und die angezeigten Kürzel stimmen mit dem
@@ -383,7 +383,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     Legenden-Text aus dem DOM aus und vergleicht ihn gegen eine im selben Testlauf über die
     Backend-API abgerufene Katalog-Antwort (kein separat im Test hartkodiertes Kürzel-Set).
 
-- **AC-10 (SSOT-Dokumentation `sms_format.md`, doc-compliance-test):** Given die aktualisierte
+- **AC-10:** (SSOT-Dokumentation `sms_format.md`, doc-compliance-test) Given die aktualisierte
   `docs/reference/sms_format.md` / When die Datei gelesen wird / Then enthält sie den neuen
   `!`-Block-Abschnitt mit allen 9 Kürzeln, die Filterregel (Stufe ≥ orange) und einen
   aufgelösten (nicht mehr „⚠️ Provider TODO") Eintrag für die neue Warn-Block-Datenquelle in
@@ -392,7 +392,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     Kürzel-Strings, des `!`-Markers und der aufgelösten Provider-Zeile (ausdrücklich als
     Doku-Konformitätstest markiert, kein Verhaltensnachweis).
 
-- **AC-11 (#1220 Regression, Ankunftsstunde):** Given eine Etappe, deren Ankunft exakt in eine
+- **AC-11:** (#1220 Regression, Ankunftsstunde) Given eine Etappe, deren Ankunft exakt in eine
   Regenstunde fällt (Regen ausschließlich in der Ankunftsstunde, keine Stunde davor/danach über
   dem Schwellenwert) / When die Natursprache-Kurzzusammenfassung (`format_stage_summary`)
   erzeugt wird / Then benennt der Text den Regen (z. B. „leichter Regen…"), NICHT „trocken".
@@ -404,7 +404,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     #1146 in `compact_summary.py`/`day_window.py` nachzuziehen (dann ist die Spec um diesen
     Fix zu ergänzen, bevor sie als erfüllt gilt).
 
-- **AC-12 (Mehrbenutzer-Isolation):** Given zwei Nutzer mit je einem eigenen Trip, bei dem nur
+- **AC-12:** (Mehrbenutzer-Isolation) Given zwei Nutzer mit je einem eigenen Trip, bei dem nur
   der Trip von Nutzer A eine amtliche Warnung ≥ orange trägt / When für beide Nutzer die
   Trip-Briefing-SMS erzeugt wird / Then enthält nur die SMS von Nutzer A einen `!`-Block, die
   SMS von Nutzer B bleibt unverändert ohne Warn-Block — keine Vermischung der
@@ -413,7 +413,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     getrennte Trip-Objekte) werden nacheinander durch `format_sms()` geschickt; Assertion, dass
     nur die SMS von Nutzer A den `!`-Block enthält.
 
-- **AC-13 (Standalone-Warn-SMS nutzt die neuen Kürzel):** Given amtliche Warnungen der Typen
+- **AC-13:** (Standalone-Warn-SMS nutzt die neuen Kürzel) Given amtliche Warnungen der Typen
   Sturm (`wind_gust`), Hitze (`extreme_heat`), Starkregen (`rain`), Glatteis (`black_ice`),
   Zugangssperre (`access_ban`) und Waldbrand (`wildfire_risk`) / When die eigenständige
   amtliche-Warnung-SMS (`render_official_alert_sms`) für jeweils eine dieser Warnungen erzeugt
@@ -425,7 +425,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     Abwesenheit aller 6 alten Kürzel als eigenständige Zeichenketten (Wortgrenzen-sicher, um
     Teilstring-Zufallstreffer auszuschließen, z. B. `HZ` in einem Ortsnamen).
 
-- **AC-14 (Anti-Divergenz, beide SMS-Pfade liefern dasselbe Kürzel):** Given denselben
+- **AC-14:** (Anti-Divergenz, beide SMS-Pfade liefern dasselbe Kürzel) Given denselben
   `hazard`-Wert, einmal in einem Segment für die Trip-Briefing-SMS und einmal in einer Notice
   für die Standalone-Warn-SMS, für jeden der 9 Hazards einzeln / When beide SMS-Texte erzeugt
   werden / Then enthalten beide exakt dasselbe Kürzel für diesen Hazard (aus
@@ -436,7 +436,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     geprüft. Das ist die eigentliche Absicherung gegen erneutes Auseinanderlaufen der beiden
     Kataloge.
 
-- **AC-15 (Alt-Specs mitgezogen, doc-compliance-test):** Given die aktualisierten Dateien
+- **AC-15:** (Alt-Specs mitgezogen, doc-compliance-test) Given die aktualisierten Dateien
   `docs/specs/_archive/modules/issue_1216_official_alert_template.md` und `docs/specs/modules/
   fix_1249_sms_telegram_scope.md` / When die Dateien gelesen werden / Then enthält
   `issue_1216_official_alert_template.md` die neuen internationalen Kürzel in der
@@ -447,7 +447,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     einen Datei und auf einen „überholt"-Hinweis samt Verweis auf `sms_official_alert_tokens.md`
     in der anderen.
 
-- **AC-16 (unbekannte Gefahrenart geht nie verloren — Adversary F001, CRITICAL):** Given eine
+- **AC-16:** (unbekannte Gefahrenart geht nie verloren — Adversary F001, CRITICAL) Given eine
   amtliche Warnung der Stufe ORANGE oder ROT, deren `hazard`-Wert **nicht** im 9er-Katalog steht
   (z. B. ein neu hinzukommender Provider-Typ) / When die Trip-Briefing-SMS erzeugt wird / Then
   erscheint die Warnung dennoch im `!`-Block mit einem aus dem `hazard`-String abgeleiteten
@@ -461,7 +461,7 @@ betroffen — sie gilt unverändert weiter, da sie einen anderen Nachrichtentyp 
     („sichtbar vs. unsichtbar") und genau der Schaden, den der Purpose-Absatz verhindern will.
     Präzedenzfall: fehlendes `wildfire_risk`-Mapping → Produktionsbug #1239 F004.
 
-- **AC-17 (Rückfall-Kürzel kollidiert nie mit dem Katalog — Adversary F002, HIGH):** Given eine
+- **AC-17:** (Rückfall-Kürzel kollidiert nie mit dem Katalog — Adversary F002, HIGH) Given eine
   amtliche Warnung mit unbekanntem `hazard`, dessen Anfangsbuchstaben auf ein bereits vergebenes
   Katalog-Kürzel führen würden (z. B. `thunder_squall` → `TH`, `snow_drift` → `SN`) / When das
   Kürzel gebildet wird / Then unterscheidet sich das Ergebnis von **allen** 9 Katalog-Kürzeln

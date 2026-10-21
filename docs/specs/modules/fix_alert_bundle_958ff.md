@@ -321,7 +321,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
 
 ## Acceptance Criteria
 
-- **AC-1 (#958):** Given ein `AlertEvent` mit `value_from=2855, value_to=3285,
+- **AC-1:** (#958) Given ein `AlertEvent` mit `value_from=2855, value_to=3285,
   threshold=400, cmp="unter"` (Nullgradgrenze, realer Fall aus dem Bug-Report)
   / When `over_thr(e)` aufgerufen wird / Then liefert es `True`, weil
   `abs(3285-2855)=430 >= 400` — unabhängig von `cmp` und unabhängig davon, ob
@@ -330,7 +330,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
     erwarten; zusätzlich Gegenprobe mit `value_to=2855, value_from=3285`
     (fallende Richtung, gleicher Betrag) — ebenfalls `True`.
 
-- **AC-2 (#958):** Given dasselbe Event / When `render_email()` die
+- **AC-2:** (#958) Given dasselbe Event / When `render_email()` die
   Single-Metrik-Verdict-Pill und den Datenblock rendert / Then enthält der
   Verdict-Text „Änderung über deiner Alarm-Schwelle (400 m)" (nicht mehr
   „jetzt über Schwelle 400 m") und der Datenblock zeigt „Änderung über ✗" in
@@ -338,7 +338,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
   - Test: `render_email()` mit dem Bug-Report-Event aufrufen, exakten
     Teilstring in `html` und `plain` prüfen.
 
-- **AC-3 (#959):** Given ein Bestandstrip mit
+- **AC-3:** (#959) Given ein Bestandstrip mit
   `metric_alert_levels = {"snow_line": "standard"}` (kein `freezing_level`-Key)
   / When der Trip geladen wird / Then enthält `metric_alert_levels` nach dem
   Laden `freezing_level: "standard"` statt `snow_line`, alle anderen Felder
@@ -346,7 +346,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
   - Test: Echten Trip-JSON mit `snow_line`-Key in `data/users/<test-user>/`
     anlegen, über den Loader laden, `metric_alert_levels`-Inhalt prüfen.
 
-- **AC-4 (#959):** Given `weather_change_detection.py` nach der Änderung /
+- **AC-4:** (#959) Given `weather_change_detection.py` nach der Änderung /
   When ein Nutzer im Alerts-Tab „Nullgradgrenze" (`freezing_level`) auswählt
   und ein Δ von 430 m auf einem Segment auftritt / Then erzeugt der
   Change-Detector einen `WeatherChange`-Eintrag für `freezing_level_m` (nicht
@@ -355,7 +355,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
     einem echten Δ-Szenario aufrufen, Ergebnisliste auf den Change-Eintrag
     prüfen.
 
-- **AC-5 (#959):** Given das Alerts-Tab-Frontend nach der Konsolidierung /
+- **AC-5:** (#959) Given das Alerts-Tab-Frontend nach der Konsolidierung /
   When ein Nutzer die Metrik-Auswahl öffnet / Then erscheint nur noch
   „Nullgradgrenze" als wählbare Option für diese Wettergröße —
   „Schneefallgrenze" (`snow_line`) ist keine separat wählbare Alert-Metrik
@@ -364,7 +364,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
     auf Abwesenheit von „Schneefallgrenze" als Alert-Metrik prüfen (echter
     Klick-Pfad, kein DB-Read).
 
-- **AC-6 (#933):** Given ein Trip mit einer Teilmenge aktiver Wetter-Metriken,
+- **AC-6:** (#933) Given ein Trip mit einer Teilmenge aktiver Wetter-Metriken,
   die keiner der 14 `ALERTABLE_METRICS` zugeordnet ist (z. B. nur
   `visibility` deaktiviert alle anderen) / When der Alerts-Tab die
   Schwellwerte-Tabelle rendert / Then zeigt sie NUR die den aktiven
@@ -375,7 +375,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
     im Wizard/Editor gezielt reduzieren, Alerts-Tab öffnen, sichtbare
     Tabellen-Zeilen zählen (echter Klick-Pfad + UI-Zustand, nicht DB-Read).
 
-- **AC-7 (#933):** Given eine aktive, im Mapping vorhandene Wetter-Metrik
+- **AC-7:** (#933) Given eine aktive, im Mapping vorhandene Wetter-Metrik
   (z. B. `wind_gust`) / When der Alerts-Tab rendert / Then zeigt die Tabelle
   weiterhin genau die dieser Metrik zugeordneten Alert-Metriken (bestehendes
   Verhalten bleibt für den nicht-leeren, gemappten Fall erhalten —
@@ -383,7 +383,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
   - Test: Playwright — eine einzelne Wetter-Metrik aktivieren, Alerts-Tab
     öffnen, exakt die erwartete(n) Zeile(n) prüfen.
 
-- **AC-8 (#921):** Given die PO-Entscheidung „Alarm-Mail bewusst ohne
+- **AC-8:** (#921) Given die PO-Entscheidung „Alarm-Mail bewusst ohne
   Profilfarbe" (Issue-Kommentar 2026-06-30) / When
   `test_ac2_trip_alert_render_with_wintersport_profile` und
   `test_ac2_trip_alert_render_with_wandern_profile` ausgeführt werden / Then
@@ -392,7 +392,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
   falls sie keinen zusätzlichen Beweiswert mehr haben.
   - Test: `uv run pytest tests/tdd/test_trip_alert_profile.py` grün.
 
-- **AC-9 (#921):** Given `src/output/renderers/trip_report.py` nach der Bereinigung
+- **AC-9:** (#921) Given `src/output/renderers/trip_report.py` nach der Bereinigung
   / When nach `report_type='alert'`-Aufrufern im Produktivcode gesucht wird
   (`grep -rn "report_type=.alert" src/ api/ cmd/`) / Then existiert kein
   produktiver Aufrufer mehr, und `format_email(report_type='update', ...)`
@@ -401,7 +401,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
     belegt, dass der tote Zweig entfernt ist ohne den `update`-Pfad zu
     beeinflussen.
 
-- **AC-10 (#980):** Given eine Multi-Metrik-Alert-Nachricht mit einem
+- **AC-10:** (#980) Given eine Multi-Metrik-Alert-Nachricht mit einem
   unter-Schwelle-Event (z. B. `metric_id="rain_probability", value_from=70,
   value_to=90, threshold=95`) / When der E-Mail-Datenblock gerendert wird /
   Then zeigt die Zeile links `{Kürzel} · unter Schwelle` (OHNE Schwellen-Zahl,
@@ -410,7 +410,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
   - Test: `render_email()` mit dieser Fixture aufrufen, exakten Zeilen-Text
     in `html`/`plain` prüfen.
 
-- **AC-11 (#981):** Given eine Multi-Metrik-Nachricht mit 2 über- und 1
+- **AC-11:** (#981) Given eine Multi-Metrik-Nachricht mit 2 über- und 1
   unter-Schwelle-Event / When Betreff, E-Mail-Verdict-Pill und
   Telegram-Kopfzeile gerendert werden / Then zeigen alle drei „2 über
   Schwelle" (nicht 3), und das Top-3 im Betreff enthält NUR die 2
@@ -419,7 +419,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
     derselben Fixture aufrufen, Zähler und Top3-Inhalt in allen drei Outputs
     prüfen.
 
-- **AC-12 (#981, Randfall):** Given eine Multi-Metrik-Nachricht, in der ALLE
+- **AC-12:** (#981, Randfall) Given eine Multi-Metrik-Nachricht, in der ALLE
   Events unter Schwelle liegen (0 über-Schwelle-Events) / When Betreff,
   E-Mail-Verdict und Telegram-Kopf gerendert werden / Then lautet die
   Formulierung „N Änderungen seit dem Briefing" (N = Gesamtzahl) statt „0 über
@@ -427,7 +427,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
   - Test: Fixture mit ausschließlich unter-Schwelle-Events konstruieren, alle
     drei Renderer aufrufen, exakten Text prüfen.
 
-- **AC-13 (#982):** Given zwei unter-Schwelle-Events mit unterschiedlicher
+- **AC-13:** (#982) Given zwei unter-Schwelle-Events mit unterschiedlicher
   Distanz zur Schwelle (z. B. `severity=-0.3` und `severity=-0.8`) in
   derselben Nachricht / When `_sorted()` die gedämpfte Gruppe ordnet / Then
   erscheint das Event mit `severity=-0.8` VOR dem mit `severity=-0.3`
@@ -435,7 +435,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
   - Test: Fixture mit beiden Events konstruieren, `_sorted()` bzw. den
     gerenderten Output auf die Reihenfolge prüfen.
 
-- **AC-14 (#986):** Given ein Single- oder Multi-Metrik-Deviation-Datenblock
+- **AC-14:** (#986) Given ein Single- oder Multi-Metrik-Deviation-Datenblock
   / When das E-Mail-HTML gerendert wird / Then ist jede Datenblock-Zeile eine
   `<table>`-Row mit 2 `<td>`-Zellen (Label links, Wert rechtsbündig in
   `FONT_DATA`) statt zweier `<span>`s im selben `<div>`.
@@ -444,7 +444,7 @@ alle drei bauen aktuell dieselbe zwei-`<span>`-Struktur.
     zusätzlich Live-Screenshot-Beleg (Outlook-Renderpfad, analog #902) im
     Adversary-Dialog.
 
-- **AC-15 (#986):** Given den Onset-Datenblock (`_render_email_onset()`) /
+- **AC-15:** (#986) Given den Onset-Datenblock (`_render_email_onset()`) /
   When das HTML gerendert wird / Then folgt er derselben 2-Spalten-
   Tabellen-Row-Struktur wie AC-14 (konsistente Outlook-Kompatibilität über
   Deviation- UND Onset-Alerts).

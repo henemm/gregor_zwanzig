@@ -86,28 +86,28 @@ Pro Stage in `trip.stages`:
 
 ## Acceptance Criteria
 
-- **AC-1 (Response-Vertrag 1:1):** Given ein Trip mit gültigen Etappen und Wetterdaten / When der Endpoint mit korrektem `user_id` aufgerufen wird / Then liefert er HTTP 200 mit `{"results": {...}}`, wobei jedes Stage-Result die Felder `weather_summary` (`temp_min_c, temp_max_c, wind_max_kmh, precip_mm, wmo_code, is_day`) und `risk` trägt, und nullbare Felder explizit als `null` serialisiert sind.
+- **AC-1:** (Response-Vertrag 1:1) Given ein Trip mit gültigen Etappen und Wetterdaten / When der Endpoint mit korrektem `user_id` aufgerufen wird / Then liefert er HTTP 200 mit `{"results": {...}}`, wobei jedes Stage-Result die Felder `weather_summary` (`temp_min_c, temp_max_c, wind_max_kmh, precip_mm, wmo_code, is_day`) und `risk` trägt, und nullbare Felder explizit als `null` serialisiert sind.
   - Test: Kern-Test gegen Fixture-Provider prüft, dass die JSON-Struktur und alle Feldnamen exakt dem Go-Schema entsprechen (inkl. `null`-Serialisierung eines fehlenden Werts).
 
-- **AC-2 (Risiko = max über Segmente, Briefing-Parität):** Given eine Etappe, in der genau ein Segment ein HIGH-Risiko hat und die übrigen green sind / When der Endpoint die Etappe bewertet / Then ist `risk` der Etappe `"red"` (das Maximum), identisch zur Briefing-Bewertung derselben Segmente.
+- **AC-2:** (Risiko = max über Segmente, Briefing-Parität) Given eine Etappe, in der genau ein Segment ein HIGH-Risiko hat und die übrigen green sind / When der Endpoint die Etappe bewertet / Then ist `risk` der Etappe `"red"` (das Maximum), identisch zur Briefing-Bewertung derselben Segmente.
   - Test: Kern-Test mit aufgezeichneten Segment-Wetterdaten, in denen ein Segment HIGH auslöst; Ergebnis-Risk == `"red"`.
 
-- **AC-3 (Grenzwert 70,0 → gelb):** Given eine Etappe mit maximalem Wind/Böe von exakt 70,0 km/h und sonst harmlosen Werten / When der Endpoint sie bewertet / Then ist `risk` `"yellow"` (nicht `"red"`), weil die Python-Semantik `> high` verlangt.
+- **AC-3:** (Grenzwert 70,0 → gelb) Given eine Etappe mit maximalem Wind/Böe von exakt 70,0 km/h und sonst harmlosen Werten / When der Endpoint sie bewertet / Then ist `risk` `"yellow"` (nicht `"red"`), weil die Python-Semantik `> high` verlangt.
   - Test: Kern-Test mit Wind-Fixture exakt 70,0 km/h → Ergebnis `"yellow"`.
 
-- **AC-4 (Exposition greift, Regel 9):** Given eine Etappe mit einem exponierten Segment (Segment-Höhe ≥ Schwelle) und Wind zwischen der Expositions- und der Normal-Schwelle / When der Endpoint sie bewertet / Then wird das exponierte Segment höher eingestuft als es die alte Whole-Stage-Logik täte, und die Etappen-Kachel spiegelt das (z.B. `"yellow"`/`"red"` statt `"green"`).
+- **AC-4:** (Exposition greift, Regel 9) Given eine Etappe mit einem exponierten Segment (Segment-Höhe ≥ Schwelle) und Wind zwischen der Expositions- und der Normal-Schwelle / When der Endpoint sie bewertet / Then wird das exponierte Segment höher eingestuft als es die alte Whole-Stage-Logik täte, und die Etappen-Kachel spiegelt das (z.B. `"yellow"`/`"red"` statt `"green"`).
   - Test: Kern-Test mit exponiertem Segment + Wind im Expositions-Band; Ergebnis-Risk ist erhöht ggü. einem identischen nicht-exponierten Segment.
 
-- **AC-5 (Fail-soft pro Etappe):** Given ein Trip, bei dem eine Etappe kein Datum/keine Waypoints hat oder deren Wetter-Fetch scheitert / When der Endpoint läuft / Then ist deren Ergebnis `null`, ohne dass der gesamte Request scheitert (kein 5xx), und die übrigen Etappen liefern normale Ergebnisse.
+- **AC-5:** (Fail-soft pro Etappe) Given ein Trip, bei dem eine Etappe kein Datum/keine Waypoints hat oder deren Wetter-Fetch scheitert / When der Endpoint läuft / Then ist deren Ergebnis `null`, ohne dass der gesamte Request scheitert (kein 5xx), und die übrigen Etappen liefern normale Ergebnisse.
   - Test: Kern-Test mit einer defekten und einer gültigen Etappe → `results[defekt]==null`, `results[gültig]!=null`, HTTP 200.
 
-- **AC-6 (Leere Stage-ID übersprungen):** Given ein Trip mit einer Etappe ohne ID / When der Endpoint läuft / Then erscheint für diese Etappe **kein** Schlüssel in `results`.
+- **AC-6:** (Leere Stage-ID übersprungen) Given ein Trip mit einer Etappe ohne ID / When der Endpoint läuft / Then erscheint für diese Etappe **kein** Schlüssel in `results`.
   - Test: Kern-Test mit einer leeren Stage-ID → Schlüssel fehlt im Ergebnis.
 
-- **AC-7 (Fehlerfälle):** Given eine unbekannte `trip_id` bzw. ein interner Ladefehler / When der Endpoint aufgerufen wird / Then antwortet er mit HTTP 404 Body `{"error":"not_found"}` bzw. HTTP 500 Body `{"error":"store_error"}`.
+- **AC-7:** (Fehlerfälle) Given eine unbekannte `trip_id` bzw. ein interner Ladefehler / When der Endpoint aufgerufen wird / Then antwortet er mit HTTP 404 Body `{"error":"not_found"}` bzw. HTTP 500 Body `{"error":"store_error"}`.
   - Test: Kern-Test für unbekannte ID (404) und für einen simulierten Ladefehler (500) prüft Status + exakten Body.
 
-- **AC-8 (Nutzer-Isolation):** Given zwei verschiedene Nutzer A und B, jeder mit einem eigenen Trip gleicher ID-Kollision oder unterschiedlicher Trips / When der Endpoint mit `user_id=A` bzw. `user_id=B` aufgerufen wird / Then sieht A nur A's Trip-Daten und B nur B's — nie fällt der Endpoint auf `"default"` zurück.
+- **AC-8:** (Nutzer-Isolation) Given zwei verschiedene Nutzer A und B, jeder mit einem eigenen Trip gleicher ID-Kollision oder unterschiedlicher Trips / When der Endpoint mit `user_id=A` bzw. `user_id=B` aufgerufen wird / Then sieht A nur A's Trip-Daten und B nur B's — nie fällt der Endpoint auf `"default"` zurück.
   - Test: Kern-Test mit zwei Nutzern und je eigenem Trip; Cross-Zugriff liefert 404 bzw. die jeweils eigenen Daten, nie fremde.
 
 ## Known Limitations

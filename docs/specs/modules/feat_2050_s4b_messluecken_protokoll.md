@@ -316,7 +316,7 @@ Steuerungsidee mit mehr Indizes.
   geschriebene `entries`-Feld `measurement_gaps` — Zahl 1, km-Lage exakt der mittlere Punkt.
 - **AC-2:** alle Folgepunkte auf einen Lückenweg gestellt; `measurement_gaps.points_total=6`,
   `points_measured=1`, `gap_km` mit fünf Einträgen.
-- **AC-3 (Gegenprobe zu AC-2):** derselbe Aufbau, aber alle sechs Punkte liefern ein Ergebnis,
+- **AC-3:** (Gegenprobe zu AC-2) derselbe Aufbau, aber alle sechs Punkte liefern ein Ergebnis,
   nur einer ist real trocken/nass unterschiedlich — `points_total == points_measured`, leere
   `gap_km`.
 - **AC-4:** Kontroll-Lauf ganz ohne Ausfall — `measurement_gaps` ist trotzdem vorhanden, mit
@@ -324,10 +324,10 @@ Steuerungsidee mit mehr Indizes.
 - **AC-5/AC-6/AC-7:** drei getrennte Testfunktionen, je ein Lückenweg (Ausnahme via
   `ausnahme_index`, `throttled` via `trocken_felder`, `data_unavailable` via `trocken_felder`)
   an genau einem Folgepunkt.
-- **AC-8 (Positivkontrolle):** Ausfall am ersten Messpunkt (Ausnahme bzw.
+- **AC-8:** (Positivkontrolle) Ausfall am ersten Messpunkt (Ausnahme bzw.
   `data_unavailable=True`) — Nachweis, dass **keine** Ausdehnungs-Protokollzeile entsteht
   (kein `measurement_point`/`measurement_gaps`-Eintrag zu diesem Lauf).
-- **AC-9 (Fail-soft):** eine gezielt fehlerhafte Eingabe an die neue Ableitung (z. B. über
+- **AC-9:** (Fail-soft) eine gezielt fehlerhafte Eingabe an die neue Ableitung (z. B. über
   `monkeypatch` auf die Ableitungsfunktion selbst, nicht auf `_radar_e1_fields` als Ganzes) —
   der Alarm wird trotzdem versendet und protokolliert, nur ohne `measurement_gaps`.
 - **AC-10:** zwei Nutzer, je ein Lückenlauf im selben Testprozess — `read_undelivered()`/

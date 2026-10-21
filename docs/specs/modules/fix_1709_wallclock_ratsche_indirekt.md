@@ -148,13 +148,13 @@ oder nichts meldet. Das Ticket erlaubt den begründeten Ansatzwechsel ausdrückl
 
 ## Acceptance Criteria
 
-- **AC-1 (die neue Fundregel meldet das Anti-Muster):** Given eine Attrappen-Datei, die eine
+- **AC-1:** (die neue Fundregel meldet das Anti-Muster) Given eine Attrappen-Datei, die eine
   Etappe mit Wanduhr-Datum **ohne** Ankunftszeiten baut, keinen Härtungs-Helfer nutzt und
   `trip_alert` importiert / When `scan_indirekte_wanduhr_fixtures(tmp_path)` darüber läuft /
   Then meldet es genau diese Funktion mit Datei, Funktionsname und Zeile.
   - Test: `test_scanner_meldet_die_indirekte_variante` gegen eine echte Datei auf `tmp_path`.
 
-- **AC-2 (Gegenprobe — der Scanner schweigt bei jeder immunen Bauart, wichtigster AC):**
+- **AC-2:** (Gegenprobe — der Scanner schweigt bei jeder immunen Bauart, wichtigster AC)
   Given sieben Attrappen, die je **eines** der Fund-Merkmale nicht erfüllen — (a) nur **ein**
   Wegpunkt, (b) `arrival_calculated` gesetzt, (c) **`arrival_override`** gesetzt (bei
   `arrival_calculated = None`), (d) `stage.start_time` gesetzt, (e) `arrival_window_fixtures`
@@ -167,7 +167,7 @@ oder nichts meldet. Das Ticket erlaubt den begründeten Ansatzwechsel ausdrückl
     `arrival_override` in `_known_time_for_index` gewinnt. Eine Regel, die nur auf
     `arrival_calculated` schaut — wie der erste Entwurf dieser Spec —, meldet sie fälschlich.
 
-- **AC-3 (das Messwerkzeug erkennt eine bekannte Zeitabhängigkeit — Wirksamkeitsbeleg):**
+- **AC-3:** (das Messwerkzeug erkennt eine bekannte Zeitabhängigkeit — Wirksamkeitsbeleg)
   Given eine Attrappe, deren Testfall bei gestellter Uhr vor einer festgelegten Stunde grün und
   danach rot ist / When das Messwerkzeug sie zu beiden Uhrzeiten misst / Then meldet es genau
   diesen Testfall als Differenz, und bei zwei Uhrzeiten **derselben** Seite der Grenze meldet
@@ -176,7 +176,7 @@ oder nichts meldet. Das Ticket erlaubt den begründeten Ansatzwechsel ausdrückl
     das nie etwas findet, ist von einem sauberen Bestand nicht unterscheidbar — dieser AC ist
     der Unterschied zwischen „nichts gefunden" und „nichts da".
 
-- **AC-4 (frischer Prozess je Datenpunkt ist erzwungen, nicht empfohlen):** Given das
+- **AC-4:** (frischer Prozess je Datenpunkt ist erzwungen, nicht empfohlen) Given das
   Messwerkzeug / When es zwei Uhrzeiten misst / Then läuft jeder Datenpunkt in einem eigenen
   Betriebssystem-Prozess.
   - Test: ein Testfall lässt das Werkzeug zweimal dieselbe Attrappe messen und prüft, dass die
@@ -184,7 +184,7 @@ oder nichts meldet. Das Ticket erlaubt den begründeten Ansatzwechsel ausdrückl
     paarweise verschieden und vom Messprozess verschieden sind. Ein Kommentar „bitte frischen
     Prozess nehmen" wäre keine Zusicherung, sondern eine Bitte.
 
-- **AC-5 (der echte Testbaum erzeugt keinen Fehlalarm):** Given der Scanner läuft über den
+- **AC-5:** (der echte Testbaum erzeugt keinen Fehlalarm) Given der Scanner läuft über den
   echten Baum `tests/` / When die Fundmenge gebildet wird / Then ist sie leer oder vollständig
   durch `KNOWN_VIOLATIONS` gedeckt, **und** die Zahl der geprüften Kandidatenfunktionen ist
   ≥ 20.
@@ -192,7 +192,7 @@ oder nichts meldet. Das Ticket erlaubt den begründeten Ansatzwechsel ausdrückl
     Scan durch eine kaputte Kandidatensuche vorgetäuscht wird — ohne sie wäre der AC durch
     „finde gar nichts" trivial erfüllbar.
 
-- **AC-6 (Ausnahmeliste kann nur schrumpfen):** Given `KNOWN_VIOLATIONS` der neuen Regel /
+- **AC-6:** (Ausnahmeliste kann nur schrumpfen) Given `KNOWN_VIOLATIONS` der neuen Regel /
   When der Scanner über den echten Baum läuft / Then enthält die Liste keinen Eintrag, den der
   Scanner nicht mehr findet.
   - Test: `test_known_violations_der_neuen_regel_ohne_veraltete_eintraege`, Muster der
@@ -200,17 +200,17 @@ oder nichts meldet. Das Ticket erlaubt den begründeten Ansatzwechsel ausdrückl
     unbegründete Einträge kann sich eine Ausnahmeliste strukturell nicht selbst schützen —
     das bleibt review-pflichtig und wird hier nicht als gelöst behauptet.
 
-- **AC-7 (Nicht-Wirkung, Produktivcode unangetastet):** Given der vollständige Diff dieser
+- **AC-7:** (Nicht-Wirkung, Produktivcode unangetastet) Given der vollständige Diff dieser
   Scheibe / When `git diff --stat origin/main...HEAD -- src/ api/ internal/ frontend/ cmd/`
   läuft / Then ist die Ausgabe leer.
   - Test: struktureller Nachweis im PR, kein eigener Pytest-Test.
 
-- **AC-8 (Regel-Budget maschinell auffindbar):** Given die neue Regel / When die Datei nach dem
+- **AC-8:** (Regel-Budget maschinell auffindbar) Given die neue Regel / When die Datei nach dem
   Prüfdatum durchsucht wird / Then steht `2026-11-10` als Text in der Datei und als Konstante.
   - Test: `test_regel_budget_pruefdatum_der_neuen_regel_steht_als_text`, Muster der bestehenden
     Regel (Z. 663-672).
 
-- **AC-9 (die Ratsche läuft in der CI-Ampel):** Given `.github/ci_tdd_excludes.txt` nach dieser
+- **AC-9:** (die Ratsche läuft in der CI-Ampel) Given `.github/ci_tdd_excludes.txt` nach dieser
   Scheibe / When darin nach `test_fixture_wallclock_ratchet` und `test_wanduhr_matrix` gesucht
   wird / Then kommt keiner der beiden Namen vor.
   - Test: `test_neue_waechter_sind_nicht_von_der_ci_ausgenommen` — ein Wächter, der nicht läuft,
@@ -305,7 +305,7 @@ Betroffen: `test_alert_state_briefing_reset.py`, `test_alert_undelivered_hint.py
 
 **Zusätzliches Kriterium aus diesem Nachtrag:**
 
-- **AC-10 (die Ausnahmeliste der neuen Regel bleibt leer):** Given
+- **AC-10:** (die Ausnahmeliste der neuen Regel bleibt leer) Given
   `KNOWN_VIOLATIONS_INDIREKT` nach dieser Scheibe / When der Scanner über den echten Baum
   `tests/` läuft / Then ist die Liste leer **und** die Fundmenge leer — der Wächter ist ohne
   jede Ausnahme grün.

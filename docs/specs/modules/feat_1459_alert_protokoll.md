@@ -724,7 +724,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   leer, `reason` ist `"official_alert"`.
   - Test: `_send_official_alert_only()` mit einer `OfficialAlert(hazard="thunderstorm", ...)`.
 
-- **AC-5 (reihenfolge-unabhaengige Vorrangregel, O1-Nachbesserung):** Given die
+- **AC-5:** (reihenfolge-unabhaengige Vorrangregel, O1-Nachbesserung) Given die
   Registry-Reihenfolge von `temperature` und `temperature_cold` waere gegenueber der
   heutigen Reihenfolge in `_METRICS` vertauscht / When
   `metric_and_aggregation_for_field("temp_min_c")` aufgerufen wird / Then liefert die
@@ -737,7 +737,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     mit dem Aufruf ohne `_registry`-Override (heutige Reihenfolge) vergleichen — beide
     liefern `("temperature", "min")`.
 
-- **AC-6 (Ratchet gegen neue Mehrdeutigkeit, O1-Nachbesserung):** Given die vollstaendige
+- **AC-6:** (Ratchet gegen neue Mehrdeutigkeit, O1-Nachbesserung) Given die vollstaendige
   Registry `_METRICS` / When jedes Summary-Feld, das in mehr als einem Eintrag vorkommt,
   durch `metric_and_aggregation_for_field()` aufgeloest wird / Then liefert die Funktion
   fuer JEDES dieser Felder ein Ergebnis ungleich `None` (= genau ein `selectable=True`-
@@ -770,7 +770,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   - Test: `NotificationService` mit fehlschlagendem Telegram-Sink, erfolgreichem
     Mail-Sink; Log-Eintrag UND Ziel-Array pruefen.
 
-- **AC-10 (neu gefasst in v1.4, s. D4-Nachtrag):** Given ein Alarm-Versandversuch, bei dem
+- **AC-10:** (neu gefasst in v1.4, s. D4-Nachtrag) Given ein Alarm-Versandversuch, bei dem
   **kein Kanal eine funktionierende Konfiguration** hat (`NotificationResult.sent` ist
   False), obwohl `effective_channels` nicht leer ist / When protokolliert wird / Then
   landet GENAU EIN Eintrag in `alert_log.json["not_delivered"]` (NICHT in `entries`) mit
@@ -782,7 +782,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     vorher abbricht, auf Trip-Ebene aber abgeschaltet (kein Netz). `entries` unveraendert,
     `not_delivered` um einen Eintrag gewachsen.
 
-- **AC-15 (neu in v1.4):** Given ein Alarm, bei dem mindestens ein Kanal konfiguriert ist,
+- **AC-15:** (neu in v1.4) Given ein Alarm, bei dem mindestens ein Kanal konfiguriert ist,
   aber **kein einziger tatsaechlich zustellt** (beide Transporte scheitern) / When
   protokolliert wird / Then liegt der Eintrag in `entries` — Ist-Verhalten, die Zahl
   bleibt unveraendert — und traegt `channels_sent: []` sowie fuer jeden Kanal einen
@@ -792,7 +792,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   - Test: `NotificationService` mit werfendem `mail_sink` und scheiterndem Telegram-
     Transport; `entries` um einen Eintrag gewachsen, `not_delivered` leer.
 
-- **AC-11 (D4 — Anzeige-Unveraendertheit, PO-Kernforderung):** Given eine Trip hat vor
+- **AC-11:** (D4 — Anzeige-Unveraendertheit, PO-Kernforderung) Given eine Trip hat vor
   dieser Aenderung N erfolgreiche Alarm-Eintraege in `entries` / When zusaetzlich ein
   komplett fehlgeschlagener Versand fuer dieselbe Trip protokolliert wird / Then bleibt
   die Anzahl der `entries`-Eintraege dieser Trip bei N — der fehlgeschlagene Versand
@@ -813,7 +813,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     `CompareOfficialAlertService.check_all_compare_presets()` mit einem triggernden Preset;
     `alert_log.json["entries"]` vorher leer, danach 3 Eintraege mit `trip_id=""`.
 
-- **AC-13 (Mandantentrennung):** Given zwei verschiedene Nutzer (`user_id="alice"`,
+- **AC-13:** (Mandantentrennung) Given zwei verschiedene Nutzer (`user_id="alice"`,
   `user_id="bob"`) loesen je einen Alarm aus / When beide protokolliert werden / Then
   landet jeder Eintrag ausschliesslich in der `alert_log.json` seines eigenen Nutzers
   (`data/users/alice/alert_log.json` bzw. `.../bob/...`), niemals in der des jeweils
@@ -822,7 +822,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     parallel einen Alarm ausloesen lassen, beide Dateien lesen, Kreuz-Kontamination
     ausschliessen.
 
-- **AC-14 (Bestandsdaten):** Given eine bestehende `alert_log.json` mit einem
+- **AC-14:** (Bestandsdaten) Given eine bestehende `alert_log.json` mit einem
   Alt-Eintrag in `entries`, der ausschliesslich die vier heutigen Felder traegt (kein
   `metrics`, kein `hazards`, kein `reason`, keine Kanal-Listen, kein `not_delivered`-Key
   ueberhaupt vorhanden) / When ein neuer Eintrag angehaengt wird / Then bleibt der
@@ -832,7 +832,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     schreiben, `append_entry()` aufrufen, `json.loads()` auf Alt-Eintrag-Feldgleichheit +
     Eintragszahl pruefen.
 
-- **AC-16 (neu in v1.5, aus Adversary-Finding F001):** Given eine Trip hat **keinen**
+- **AC-16:** (neu in v1.5, aus Adversary-Finding F001) Given eine Trip hat **keinen**
   Kanal fuer Alarme eingeschaltet (`effective_channels` ist leer), es liegt aber ein
   ausloesender Befund vor / When der Protokoll-Aufruf erfolgt / Then entsteht **weder** in
   `entries` **noch** in `not_delivered` ein Eintrag — die Protokoll-Datei wird gar nicht
@@ -849,14 +849,14 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     bleiben, wenn die Lage die Schreibfunktion nie erreicht (Waechter-Falle #1435 E3a).
     Nachgewiesen rot bei entfernter Guard-Klausel, gruen mit ihr.
 
-- **AC-17 (neu in v1.6, #1954 — Wert der Vorhersage-Aenderung):** Given eine
+- **AC-17:** (neu in v1.6, #1954 — Wert der Vorhersage-Aenderung) Given eine
   Trip-Vorhersage-Aenderung am Boeen-Feld mit `old_value=20.0`, `new_value=60.0` / When der
   Eintrag geschrieben wird / Then enthaelt das zugehoerige `metrics`-Dict zusaetzlich
   `"value": 60.0` und `"previous_value": 20.0`.
   - Test: `WeatherChange(metric="gust_max_kmh", old_value=20.0, new_value=60.0, ...)` durch
     `check_and_send_alerts()` schleusen, den neuesten Eintrag pruefen.
 
-- **AC-18 (neu in v1.6, #1954 — Extremwert bei Mehrfachtreffer):** Given zwei
+- **AC-18:** (neu in v1.6, #1954 — Extremwert bei Mehrfachtreffer) Given zwei
   `WeatherChange`-Objekte fuer dieselbe Groesse in einem Lauf (`abs(delta)` unterschiedlich
   gross) / When protokolliert wird / Then entsteht **EIN** Register-Eintrag fuer diese
   Groesse, dessen `value`/`previous_value` von der `WeatherChange` mit dem groessten
@@ -865,7 +865,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     `register_pairs_from_changes()`/`check_and_send_alerts()` schleusen; Eintragszahl bleibt
     1 (AC-7 unveraendert), `value` entspricht dem groesseren `abs(delta)`.
 
-- **AC-19 (neu in v1.6, #1954 — Wert nicht Teil des Dedupe-Schluessels):** Given zwei
+- **AC-19:** (neu in v1.6, #1954 — Wert nicht Teil des Dedupe-Schluessels) Given zwei
   `WeatherChange`-Objekte derselben Groesse mit fast gleichem, aber nicht identischem Wert
   (z.B. `new_value=59.9` und `new_value=60.1`) / When protokolliert wird / Then bleibt es bei
   **EINEM** Register-Eintrag (kein Zerfall in zwei Eintraege durch Fliesskomma-Rauschen).
@@ -874,7 +874,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   - Test: `register_pairs_from_changes()` mit den beiden Szenarien aufrufen, Eintragszahl in
     `metrics` pruefen.
 
-- **AC-20 (neu in v1.6, #1954 — Nowcast bleibt ohne Wert):** Given ein Radar-Alarm mit
+- **AC-20:** (neu in v1.6, #1954 — Nowcast bleibt ohne Wert) Given ein Radar-Alarm mit
   `is_convective=True` / When protokolliert wird / Then enthaelt das zugehoerige
   `metrics`-Dict WEDER den Schluessel `value` NOCH `previous_value` — die Felder fehlen
   vollstaendig, sie sind nicht auf `0`/`null` gesetzt.
@@ -883,7 +883,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     dieselbe Naht nutzt bereits `tests/tdd/test_alert_log_metrics.py`), den Log-Eintrag auf
     Abwesenheit beider Schluessel pruefen (`"value" not in metrics_dict`).
 
-- **AC-21 (neu in v1.6, #1954 — Bestandsdaten ohne Wert bleiben lesbar):** Given eine
+- **AC-21:** (neu in v1.6, #1954 — Bestandsdaten ohne Wert bleiben lesbar) Given eine
   bestehende `alert_log.json` mit einem Alt-Eintrag, dessen `metrics`-Dicts nur
   `metric_id`/`aggregation` tragen (kein `value`, kein `previous_value`, Spec-Stand v1.5)
   / When ein neuer Eintrag angehaengt wird / Then bleibt der Alt-Eintrag byte-fuer-Feld
@@ -891,7 +891,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   - Test: Datei mit Alt-Eintrag im v1.5-Schema vorab schreiben, `append_entry()` aufrufen,
     `json.loads()` auf Alt-Eintrag-Feldgleichheit pruefen.
 
-- **AC-22 (neu in v1.6, #1954 — Leseseite bleibt zweigliedrig):** Given ein Alt- oder
+- **AC-22:** (neu in v1.6, #1954 — Leseseite bleibt zweigliedrig) Given ein Alt- oder
   Neu-Eintrag mit gesetztem `value`/`previous_value` in `alert_log.json` / When
   `undelivered_incidents()` ihn liest / Then bleibt `UndeliveredIncident.metrics` weiterhin
   `tuple[tuple[str, str], ...]` — die Wert-Felder werden NICHT extrahiert und erreichen den
@@ -900,14 +900,14 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     tragen; `UndeliveredIncident.metrics` bleibt ein reines `(metric_id, aggregation)`-Tupel
     ohne Wert-Anteil.
 
-- **AC-23 (neu in v1.6, #1954 — Unterdrueckte Meldung bleibt ohne Wert):** Given
+- **AC-23:** (neu in v1.6, #1954 — Unterdrueckte Meldung bleibt ohne Wert) Given
   `append_suppressed_entry()` wird fuer eine unterdrueckte Nowcast-Meldung aufgerufen / When
   der Eintrag geschrieben wird / Then bleibt `"metrics": []` — unveraendert gegenueber dem
   Bestand vor #1954.
   - Test: `append_suppressed_entry()` aufrufen, `metrics`-Feld des geschriebenen Eintrags auf
     leere Liste pruefen.
 
-- **AC-24 (neu in v1.6, #1954 — toter Korridor-Pfad traegt Wert ohne Vorwert):** Given ein
+- **AC-24:** (neu in v1.6, #1954 — toter Korridor-Pfad traegt Wert ohne Vorwert) Given ein
   `CorridorHit` mit `value=45.0` / When `register_pairs_from_corridor_hits()` protokolliert
   / Then enthaelt das zugehoerige `metrics`-Dict `"value": 45.0`, aber **keinen**
   `previous_value`-Schluessel (ein `CorridorHit` hat keinen Vorwert) und keinen

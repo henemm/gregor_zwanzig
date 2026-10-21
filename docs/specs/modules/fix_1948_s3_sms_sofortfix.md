@@ -15,6 +15,7 @@ tags: [alarm, sms, format]
 > „entfernen statt umformulieren"). Deren Notations-ACs (`@HH:MM`-Umformulierung
 > im Kopf) sind durch diese Spec vollständig überholt; die alte Spec-Datei ist
 > im Repo nicht mehr vorhanden.
+> **Verweisziel existiert nicht** (Doku-Audit 2026-10-21): `fix_1948_1939_alarm_sms_referenzzeitpunkt.md` wurde nie committet und ist auch in der Git-Historie nicht auffindbar; es gibt keinen Nachfolgenamen.
 
 ## Approval
 

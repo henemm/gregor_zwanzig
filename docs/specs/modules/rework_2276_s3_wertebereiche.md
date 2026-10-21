@@ -161,7 +161,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
 
 ## Acceptance Criteria
 
-- **AC-1 (Einmal speichern statt zweimal):** Given der Nutzer öffnet den
+- **AC-1:** (Einmal speichern statt zweimal) Given der Nutzer öffnet den
   Wertebereiche-Reiter eines Ortsvergleichs und ändert einen Wert (z. B.
   zieht einen Korridor-Regler) / When die Bedienung abgeschlossen ist /
   Then erscheint „Gespeichert" nach genau einem Speichervorgang, nicht nach
@@ -174,7 +174,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
     Wrapper-Pfad) einzeln wieder aktivieren ⇒ jeweils muss ein spezifischer
     Test (zweiter PUT gezählt) rot werden.
 
-- **AC-2 (Wrapper und Fenster-Loslassen-Handler sind entfernt):** Given der
+- **AC-2:** (Wrapper und Fenster-Loslassen-Handler sind entfernt) Given der
   Wertebereiche-Reiter ist umgestellt / When ein Nutzer die Maustaste
   außerhalb des Reiter-Bereichs loslässt, nachdem er dort einen Regler
   gezogen hat / Then wird die Änderung trotzdem gespeichert — aber über
@@ -201,7 +201,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: `metricAlertLevels` aus einer eingefrorenen
     `preset`-Kopie statt live aus `ws` befüllen ⇒ Test wird rot.
 
-- **AC-4 (Reiterwechsel Wertebereiche → Alarme verliert nichts):** Given
+- **AC-4:** (Reiterwechsel Wertebereiche → Alarme verliert nichts) Given
   der Nutzer ändert einen Wertebereich und wechselt sofort, vor Ablauf der
   Debounce-Zeit, in den Alarme-Reiter, wo er ebenfalls sofort einen
   Alarm-Wert ändert / When beide Änderungen abgeschlossen sind / Then sind
@@ -228,7 +228,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
     Nicht-412) ⇒ Test wird rot, weil die Änderung nach dem Konflikt
     verschwindet statt erhalten zu bleiben.
 
-- **AC-6 (Pausieren/Aktivieren flusht ausstehende Wertebereiche-Änderung):**
+- **AC-6:** (Pausieren/Aktivieren flusht ausstehende Wertebereiche-Änderung)
   Given der Nutzer ändert einen Wertebereich und pausiert/aktiviert den
   Ortsvergleich sofort danach, vor Ablauf der Debounce-Zeit / When der
   Pausier-/Aktivier-Vorgang abgeschlossen ist / Then ist die
@@ -240,7 +240,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: den vorab-`flush()`-Aufruf in
     `handleToggleActive()` entfernen ⇒ Test wird rot.
 
-- **AC-7 (Kein Laufzeit-Import der alten Klebeschicht mehr):** Given der
+- **AC-7:** (Kein Laufzeit-Import der alten Klebeschicht mehr) Given der
   Wertebereiche-Speicherpfad ist umgestellt / When der Modulgraph geladen
   wird / Then lädt `shared/corridor-editor/CorridorEditor.svelte` zur
   Laufzeit kein Modul aus `compareHubWizardBridge.ts` mehr — die Helfer
@@ -256,7 +256,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
     `flushPendingCorridorSave`-Fassung aus der Bridge-Datei einfügen ⇒ der
     Mock-Ladenachweis schlägt an, Test wird rot.
 
-- **AC-8 (`korridorCommit.ts` ist gefahrlos gelöscht):** Given
+- **AC-8:** (`korridorCommit.ts` ist gefahrlos gelöscht) Given
   `korridorCommit.ts` wird entfernt / When der Modulgraph des gesamten
   Frontends gebaut wird / Then gibt es keinen verbleibenden Importeur
   dieser Datei.
@@ -264,7 +264,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
     dem Löschen ausschließlich `CompareTabs.svelte` als Treffer; nach dem
     Löschen läuft `npm run build`/`svelte-check` ohne Fehler.
 
-- **AC-9 (Anlege-Seite unverändert):** Given der Nutzer legt einen neuen
+- **AC-9:** (Anlege-Seite unverändert) Given der Nutzer legt einen neuen
   Ortsvergleich an und bearbeitet den Wertebereiche-Reiter vor dem ersten
   Speichern / When er die Anlage abschließt / Then läuft der Speicherweg
   weiter ausschließlich über `wiz.saveNewPreset()` (POST), ohne
@@ -273,7 +273,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
     unverändert grün (Mount ohne `preset`/`saveController` bewirkt, dass
     der neue Zweig inaktiv bleibt).
 
-- **AC-10 (Keepalive-Weiterreichung bleibt erhalten):** Given der Nutzer
+- **AC-10:** (Keepalive-Weiterreichung bleibt erhalten) Given der Nutzer
   schließt den Tab unmittelbar nach einer Wertebereiche-Änderung / When der
   Browser den Entladen-Vorgang mit Keepalive auslöst / Then wird der
   `init`-Parameter der SaveFn an den `api.put`-Aufruf durchgereicht, statt
@@ -284,7 +284,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: `init` in der SaveFn ignorieren (fester
     `undefined`-Aufruf an `api.put`) ⇒ Test wird rot.
 
-- **AC-11 (Speichern der Wertebereiche verliert keine anderen Daten):**
+- **AC-11:** (Speichern der Wertebereiche verliert keine anderen Daten)
   Given ein Ortsvergleich mit Orten, Versandzeiten, Kanälen, Alarm-Schwellen
   und Anzeige-Einstellungen / When der Nutzer im Wertebereiche-Reiter einen
   Korridor ändert und die Änderung gespeichert ist / Then sind nach erneutem
@@ -297,7 +297,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: ein Bestandsfeld (z. B. `display_config.alert_channels`
     oder `schedule`) aus der Payload weglassen ⇒ Test wird rot.
 
-- **AC-12 (Trip-Seite des geteilten Wertebereiche-Editors unverändert):**
+- **AC-12:** (Trip-Seite des geteilten Wertebereiche-Editors unverändert)
   Given ein Trip mit Wertebereichen im Trip-Hub / When der Nutzer dort einen
   Korridor ändert / Then wird die Änderung wie bisher genau einmal über den
   Trip-Speicherweg gespeichert und erscheint nach erneutem Laden — der

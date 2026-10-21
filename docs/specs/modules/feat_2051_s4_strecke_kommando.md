@@ -638,7 +638,7 @@ _SHORTCUT_MAP = {..., "/strecke": "strecke"}
     Negativ-Prüfung gegen die bestehende Musterliste. Bewacht:
     `trip_command_processor.py` (beide neuen Renderer).
 
-- **AC-21 (E7):** Given 4 geplante Punkte bei km 0, 2, 4, 6 (dieselbe
+- **AC-21:** (E7) Given 4 geplante Punkte bei km 0, 2, 4, 6 (dieselbe
   illustrative Fixture-Wahl wie AC-19 — km 0 als erster Punkt des ersten
   Segments), von denen der LETZTE (km 6) eine Exception wirft, die übrigen
   drei (km 0, 2, 4) liefern Daten (mindestens einer nass, damit eine
@@ -652,7 +652,7 @@ _SHORTCUT_MAP = {..., "/strecke": "strecke"}
     tatsächlichen Ergebnissen gespeist, nicht aus der Planung). Bewacht:
     `trip_command_processor.py:_geprueft_spanne`.
 
-- **AC-22 (E7, Positivkontrolle):** Given zwei Fälle mit identischem
+- **AC-22:** (E7, Positivkontrolle) Given zwei Fälle mit identischem
   Trip-/Zeit-Aufbau bis auf einen Unterschied: (a) `distance_measured=False`
   bleibt nach dem Backfill-Versuch (AC-17-Konstellation, kein
   Nowcast-Abruf), (b) derselbe Aufbau, aber `distance_measured=True`
@@ -666,7 +666,7 @@ _SHORTCUT_MAP = {..., "/strecke": "strecke"}
     echte Weiche ist und nicht schlicht ein nirgends implementierter Text.
     Bewacht: `trip_command_processor.py:_show_strecke`.
 
-- **AC-23 (Zeitanker der Renderer, Nachtrag):** Given eine identische
+- **AC-23:** (Zeitanker der Renderer, Nachtrag) Given eine identische
   Zonen-Fixture (eine Zone mit `onset_minutes=30`, `event_end_minutes=90`)
   UND zwei verschiedene Ankerzeitpunkte `now_utc`: (a)
   `2026-08-23T12:00:00Z`, (b) `2026-08-23T12:47:00Z` (47 Minuten später) /

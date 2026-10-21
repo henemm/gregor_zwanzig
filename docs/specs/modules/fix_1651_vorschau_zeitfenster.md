@@ -320,7 +320,7 @@ entsteht kein neuer Abruf im Versand, nur eine Angleichung der Vorschau.
 
 ## Acceptance Criteria
 
-- **AC-1 (Kernszenario Morgen — das gemessene #1651-Szenario):** Given ein
+- **AC-1:** (Kernszenario Morgen — das gemessene #1651-Szenario) Given ein
   Trip mit Default-Tagesfenster (04–19 Uhr), am Folgetag kein Gewitter
   innerhalb dieses Fensters, aber ein Gewitter der Stufe „hoch" um 00:00 Uhr
   (dieselbe Stunde, die auch die Nacht-Tabelle derselben Mail zeigt) / When
@@ -338,7 +338,7 @@ entsteht kein neuer Abruf im Versand, nur eine Angleichung der Vorschau.
   „⚡ nachts hoch 00:00" (Klartext) statt der bisherigen Entwarnung „–"/„⚡–" —
   in beiden Mail-Teilen (HTML und Klartext) derselben Mail.~~
 
-- **AC-3 (Konsistenz mit der Nacht-Tabelle — zentrale #1498-Zusicherung):**
+- **AC-3:** (Konsistenz mit der Nacht-Tabelle — zentrale #1498-Zusicherung)
   Given ein Trip, dessen „Nacht am Ziel"-Tabelle für 00:00 des Folgetags ein
   Gewitter der Stufe „hoch" zeigt / When dieselbe Mail sowohl die
   Nacht-Tabelle als auch die neue Vorschau- bzw. Ausblick-Nacht-Angabe
@@ -346,7 +346,7 @@ entsteht kein neuer Abruf im Versand, nur eine Angleichung der Vorschau.
   Level — es entsteht keine widersprüchliche Aussage über dieselbe Stunde
   in derselben Mail.
 
-- **AC-4 (Tages- und Nachtgewitter gemeinsam):** Given ein Trip mit
+- **AC-4:** (Tages- und Nachtgewitter gemeinsam) Given ein Trip mit
   Gewitter der Stufe „hoch" ab 14:00 Uhr innerhalb des Fensters UND
   zusätzlich Gewitter der Stufe „mittel" um 22:00 Uhr außerhalb des
   Fensters am selben Tag / When die Trip-Mail erzeugt wird / Then nennt der
@@ -354,19 +354,19 @@ entsteht kein neuer Abruf im Versand, nur eine Angleichung der Vorschau.
   mittleres Gewitter ab 22:00" — die Tages-Aussage bleibt unverändert, die
   Nacht-Angabe wird angehängt und nennt ihre eigene Stufe.
 
-- **AC-5 (Keine Änderung ohne Nachtgewitter — Regressionsschutz):** Given
+- **AC-5:** (Keine Änderung ohne Nachtgewitter — Regressionsschutz) Given
   ein Trip ohne jedes Gewitter (weder im Fenster noch außerhalb) am
   Folgetag / When die Trip-Mail erzeugt wird / Then bleibt der Text „Kein
   Gewitter erwartet" unverändert, ohne angehängte Nacht-Angabe.
 
-- **AC-6 (Übernächster Tag ohne Nacht-Tabellen-Gegenquelle):** Given ein
+- **AC-6:** (Übernächster Tag ohne Nacht-Tabellen-Gegenquelle) Given ein
   Trip mit Gewitter außerhalb des Fensters am übernächsten Tag („+2", für
   den es keine „Nacht am Ziel"-Tabelle in derselben Mail gibt) / When die
   Trip-Mail erzeugt wird / Then erscheint die Nacht-Angabe für „+2"
   trotzdem, aus der für diesen Tag ohnehin bereits beschafften Zeitreihe —
   kein neuer Netzabruf.
 
-- **AC-7 (Mehrere Nachtstunden — früheste Stunde des Höchst-Levels):**
+- **AC-7:** (Mehrere Nachtstunden — früheste Stunde des Höchst-Levels)
   Given Gewitter der Stufe „mittel" um 02:00 Uhr UND der Stufe „hoch" um
   22:00 Uhr, beide außerhalb des Fensters am selben Tag / When der Satz
   gebaut wird / Then wird ausschließlich das höhere Level mit seiner
@@ -381,14 +381,14 @@ entsteht kein neuer Abruf im Versand, nur eine Angleichung der Vorschau.
   gegenüber dem Stand vor dieser Scheibe — es liest weiterhin
   ausschließlich `level`/`hour`, nie den Fließtext.
 
-- **AC-9 (Parität Vorschau-Endpunkt ↔ zugestellte Mail):** Given derselbe
+- **AC-9:** (Parität Vorschau-Endpunkt ↔ zugestellte Mail) Given derselbe
   Trip und derselbe Zieltag / When der Vorschau-Satz einmal über den
   Vorschau-Endpunkt (`preview_service.py`) und einmal über die tatsächlich
   zugestellte Trip-Mail erzeugt wird / Then ist der Satz an beiden Stellen
   zeichengleich, weil beide Wege dieselbe Scheduler-Methode durchlaufen und
   `night_weather` an beiden Stellen in derselben Reihenfolge vorliegt.
 
-- **AC-11 (Parität auch ohne Nacht-Tabelle — die Falle aus 5b):** Given ein
+- **AC-11:** (Parität auch ohne Nacht-Tabelle — die Falle aus 5b) Given ein
   Trip, dessen Gewitter-Metrik aktiv ist, der aber **keine** Nacht-Tabelle
   anzeigt (`show_night_block` aus, Nacht-Tiefsttemperatur nicht gewählt),
   und der am Folgetag ein Gewitter außerhalb des Tagesfensters hat / When

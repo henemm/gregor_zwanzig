@@ -325,7 +325,7 @@ messbar).
 
 ### Bein (a) — Python-Scheduler-Einstieg
 
-- **AC-1 (Abend aus ⇒ nur das Morgen-Briefing kommt an):** Given ein Trip, dessen Editor-Stand
+- **AC-1:** (Abend aus ⇒ nur das Morgen-Briefing kommt an) Given ein Trip, dessen Editor-Stand
   „Morgen aktiv" an und „Abend aktiv" aus ist (`enabled=true`, `morning_enabled=true`,
   `evening_enabled=false`), beide Zeiten in derselben Stunde, Etappen heute und morgen / When der
   reguläre Sammellauf `send_due_reports` zu dieser Stunde läuft / Then geht genau **ein** Briefing
@@ -333,13 +333,13 @@ messbar).
   - Test: `test_kanal_an_aus_kette.py::test_abend_aus_liefert_nur_morgen` — Aufzeichner zeigt genau eine
     Sendung; der Betreff/Berichtstyp ist Morgen; das Ergebnis ist `(1, 0)`. Rot vor dem Fix.
 
-- **AC-2 (Morgen aus ⇒ nur das Abend-Briefing kommt an):** Given derselbe Trip mit „Morgen aktiv" aus
+- **AC-2:** (Morgen aus ⇒ nur das Abend-Briefing kommt an) Given derselbe Trip mit „Morgen aktiv" aus
   und „Abend aktiv" an / When derselbe Lauf läuft / Then geht genau ein Briefing hinaus (Abend), kein
   Morgen-Briefing.
   - Test: `test_morgen_aus_liefert_nur_abend` (Umkehrung zu AC-1, damit eine einseitige Prüfung nicht
     besteht).
 
-- **AC-3 (Altdaten und Gesamtschalter):** Given (a) ein Trip mit `enabled=true` und **ohne**
+- **AC-3:** (Altdaten und Gesamtschalter) Given (a) ein Trip mit `enabled=true` und **ohne**
   Per-Slot-Schlüssel, (b) ein Trip mit `enabled=false` und ohne Per-Slot-Schlüssel, (c) ein Trip mit
   `enabled=false` aber `morning_enabled=true` und `evening_enabled=true` / When der Lauf zur
   Fälligkeit beider Slots läuft / Then liefert (a) beide Slots wie bisher, (b) keinen Slot, (c) keinen
@@ -348,13 +348,13 @@ messbar).
   - Test: `test_kanal_an_aus_kette.py::test_altdaten_und_gesamtschalter_folgen_der_regel`, parametrisiert
     über die Zeilen der geteilten Tabelle `tests/fixtures/report_config_slot_faelle.json` (Python-Bein).
 
-- **AC-4 (Randfall alle Slots aus trotz `enabled=true`):** Given ein Trip mit `enabled=true`,
+- **AC-4:** (Randfall alle Slots aus trotz `enabled=true`) Given ein Trip mit `enabled=true`,
   `morning_enabled=false`, `evening_enabled=false` (so speichert der Editor `enabled=false`; von Hand
   kann auch `enabled=true` stehen bleiben) / When der Lauf zu beiden Fälligkeiten läuft / Then geht
   **nichts** hinaus, in beiden Schreibweisen (`enabled=true` und `enabled=false`).
   - Test: `test_kanal_an_aus_kette.py::test_beide_slots_aus_liefert_nichts_in_beiden_schreibweisen`.
 
-- **AC-5 (Alarm-Vorlauf hält für ein abgeschaltetes Briefing nichts zurück):** Given ein Trip mit
+- **AC-5:** (Alarm-Vorlauf hält für ein abgeschaltetes Briefing nichts zurück) Given ein Trip mit
   „Abend aktiv" aus und „Morgen aktiv" an / When das Fälligkeits-Prädikat des Alarm-Vorlaufs
   (`trip_briefing_due_at`) für einen Zeitpunkt im Abend-Fenster bzw. im Morgen-Fenster gefragt wird /
   Then ist es im Abend-Fenster **nicht** fällig (der Alarm schweigt nicht für ein Briefing, das nie
@@ -364,7 +364,7 @@ messbar).
     `user_id`. Fängt die Entfernung der Prüfung dort, die `test_abend_aus_liefert_nur_morgen` **nicht**
     fangen kann (eigene Mutation M5).
 
-- **AC-6 (`skip_next` wird nicht von einem abgeschalteten Slot verbraucht):** Given ein Trip mit
+- **AC-6:** (`skip_next` wird nicht von einem abgeschalteten Slot verbraucht) Given ein Trip mit
   `skip_next=true` und „Abend aktiv" aus / When der Sammellauf zur Abend-Fälligkeit läuft und danach
   zur Morgen-Fälligkeit des nächsten Tages / Then ist `skip_next` nach dem Abend-Lauf **weiterhin
   gesetzt** (der abgeschaltete Slot hat den Wunsch nicht aufgebraucht), und das nächste aktive
@@ -373,12 +373,12 @@ messbar).
   nach dem echten Schreiber (`save_trip` aus dem `skip_next`-Read-Modify-Write).
   - Test: `test_kanal_an_aus_kette.py::test_skip_next_bleibt_bei_abgeschaltetem_slot_und_datei_bleibt_vollstaendig`.
 
-- **AC-7 (Pause und Trip-Pause):** Given ein Trip mit `paused_until` in der Zukunft, ein zweiter mit
+- **AC-7:** (Pause und Trip-Pause) Given ein Trip mit `paused_until` in der Zukunft, ein zweiter mit
   abgelaufenem `paused_until`, ein dritter mit gesetztem `paused_at` / When der Lauf zur Fälligkeit
   läuft / Then liefert der erste und der dritte nichts, der zweite normal.
   - Test: `test_kanal_an_aus_kette.py::test_pause_und_trip_pause_unterdruecken_den_versand`.
 
-- **AC-8 (Kanal-Matrix: genau die eingeschalteten Kanäle werden bedient):** Given ein Nutzer mit
+- **AC-8:** (Kanal-Matrix: genau die eingeschalteten Kanäle werden bedient) Given ein Nutzer mit
   Tier `premium` und ein Trip, bei dem jeweils **nur ein** Kanal (E-Mail, Telegram, SMS,
   Premium-SMS) eingeschaltet ist, sowie jeweils **alle bis auf einen** / When der reguläre Slot-Lauf
   läuft / Then bedient der Aufzeichner **exakt** die eingeschaltete Menge — jeder der vier Kanäle mit
@@ -387,7 +387,7 @@ messbar).
   - Test: `test_kanal_an_aus_kette.py::test_kanalmatrix_bedient_genau_die_eingeschalteten_kanaele`,
     parametrisiert über acht Kombinationen; Fehlermeldung nennt die Menge der bedienten Kanäle.
 
-- **AC-9 (alle vier aus ⇒ nichts geht hinaus, ehrlich verbucht):** Given ein Trip mit allen vier
+- **AC-9:** (alle vier aus ⇒ nichts geht hinaus, ehrlich verbucht) Given ein Trip mit allen vier
   Kanälen aus / When der Slot-Lauf läuft / Then geht keine Nachricht hinaus, der Slot wird mit dem
   Ausgang „no_channels" vermerkt (kein Fehler, kein erneuter Versuch im Nachhol-Fenster) und der Lauf
   meldet keinen Versandfehler.
@@ -395,28 +395,28 @@ messbar).
     Aufzeichner leer; Rückgabe des Einzel-Slot-Versands ist `no_channels`; ein zweiter Lauf in
     derselben Stunde sendet ebenfalls nichts.
 
-- **AC-10 (fehlende Schlüssel: dieselben Standardwerte wie der Editor):** Given (a) ein Trip, dem
+- **AC-10:** (fehlende Schlüssel: dieselben Standardwerte wie der Editor) Given (a) ein Trip, dem
   `send_email` in `report_config` fehlt, (b) einer, dem `send_telegram`, `send_sms`, `send_premium_sms`
   fehlen, (c) einer ganz ohne `report_config` / When der Slot-Lauf läuft / Then wird E-Mail bedient
   (Standard „an"), Telegram/SMS/Premium-SMS **nicht** (Standard „aus"), und (c) bekommt nur E-Mail —
   genau wie der Editor die Kanäle anzeigt (AC-25).
   - Test: `test_kanal_an_aus_kette.py::test_fehlende_kanal_schluessel_folgen_den_editor_defaults`.
 
-- **AC-11 (Berechtigung ≠ Einstellung):** Given ein Trip mit `send_sms=true` und `send_premium_sms=true`
+- **AC-11:** (Berechtigung ≠ Einstellung) Given ein Trip mit `send_sms=true` und `send_premium_sms=true`
   bei einem Nutzer mit Tier `free`, sowie bei Tier `standard` / When der Slot-Lauf läuft / Then wird bei
   `free` weder SMS noch Premium-SMS ausgeliefert; bei `standard` SMS, aber **nicht** Premium-SMS
   (eigenes Tier-Gate, ADR-0049). E-Mail und Telegram sind davon unberührt.
   - Test: `test_kanal_an_aus_kette.py::test_tier_gate_begrenzt_sms_und_premium_sms`, Erwartung aus
     `erreichbare_kanaele(..., tier=...)`.
 
-- **AC-12 (`email_format=compact` kommt als kompakte Mail an):** Given Golden D mit
+- **AC-12:** (`email_format=compact` kommt als kompakte Mail an) Given Golden D mit
   `email_format="compact"` und (Gegenprobe) dieselbe Fassung mit `"full"` / When der Slot-Lauf läuft /
   Then trägt die aufgezeichnete E-Mail bei `compact` den Marker `mail_format="compact"` und den
   kompakten Klartext-Aufbau (kein HTML-Stundentabellen-Körper), bei `full` `mail_format="full"` mit
   Stundentabellen; beide tragen `mail_type` für Trip-Briefing.
   - Test: `test_kanal_an_aus_kette.py::test_email_format_compact_und_full_kommen_wie_eingestellt_an`.
 
-- **AC-13 (Versandzeiten und Nachhol-Fenster im Editor-Format):** Given ein Trip mit Morgen 06:00:00 und
+- **AC-13:** (Versandzeiten und Nachhol-Fenster im Editor-Format) Given ein Trip mit Morgen 06:00:00 und
   Abend 20:00:00 (Editor-Format) in einer Ortszeit, die nicht UTC ist / When der Lauf um 05:59, 06:00,
   08:59, 09:00 Ortszeit (Morgen) bzw. 19:59, 20:00, 22:59 Ortszeit (Abend) läuft, und danach ein zweites
   Mal im selben Fenster / Then liefert nur die Ortszeit im Fenster `[Stunde, Stunde+3)` und **nie
@@ -424,13 +424,13 @@ messbar).
   - Test: `test_kanal_an_aus_kette.py::test_versandzeit_fenster_und_kein_doppelversand`, parametrisiert
     über die Ortsstunden; feste Bezugszeiten, nicht die Systemuhr.
 
-- **AC-14 (Zeitfeld mit Minuten aus Altdaten löst zur Stunde aus):** Given ein Trip, dessen
+- **AC-14:** (Zeitfeld mit Minuten aus Altdaten löst zur Stunde aus) Given ein Trip, dessen
   `morning_time` mit Minuten gespeichert ist (`"07:30:00"`, Altbestand oder direkter API-Weg) /
   When der Lauf um 07:00 Ortszeit läuft / Then wird das Morgen-Briefing zur Stunde 7 ausgeliefert, nicht
   erst „um halb acht" und nicht gar nicht (Python nimmt die Stunde).
   - Test: `test_kanal_an_aus_kette.py::test_zeitfeld_mit_minuten_loest_zur_stunde_aus`.
 
-- **AC-15 (globale `sms_threshold` wirkt in SMS, Kurzform und Premium-SMS):** Given Golden D mit
+- **AC-15:** (globale `sms_threshold` wirkt in SMS, Kurzform und Premium-SMS) Given Golden D mit
   globaler Regen-Schwelle 0,1 mm (Standardwert wäre 0,2) und einem Stundenwert von 0,15 mm / When der
   Slot-Lauf läuft / Then enthalten SMS, Telegram-Kurzform und Premium-SMS den Regen-Token; mit
   entfernter Schwelle (Standard 0,2) enthalten sie ihn **nicht**. Eine im Kanal-Layout stehende
@@ -438,7 +438,7 @@ messbar).
   - Test: `test_kanal_an_aus_kette.py::test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten`,
     Erwartung aus dem gespeicherten JSON; Gegenprobe ohne Schwelle im selben Test.
 
-- **AC-16 (Fix: Mail-Pillen folgen der eingestellten Schwelle auch bei eigenem E-Mail-Layout):**
+- **AC-16:** (Fix: Mail-Pillen folgen der eingestellten Schwelle auch bei eigenem E-Mail-Layout)
   Given Golden D (E-Mail hat ein eigenes Layout ohne `sms_threshold`, global 0,1 mm) und ein Stundenwert
   von 0,15 mm / When die E-Mail (HTML, Klartext und Kompaktform) gerendert und versendet wird / Then
   erscheint die Regen-Pille in **allen drei** Formen — wie in der SMS aus AC-15; ein Layout-Eintrag mit
@@ -447,7 +447,7 @@ messbar).
     `render_plain`, `render_compact` **und** der Weg durch `send_due_reports`; echte Stundenreihe, kein
     Mock). Rot vor dem Fix. Die Staging-Mail geht durch `briefing_mail_validator.py` (AC-26).
 
-- **AC-17 (`channel_layouts_per_report` gewinnt bis in den Text):** Given Golden D mit einem
+- **AC-17:** (`channel_layouts_per_report` gewinnt bis in den Text) Given Golden D mit einem
   Abend-`per_report`-Layout für E-Mail und SMS, das sich von `channel_layouts` unterscheidet, und ohne
   Morgen-`per_report`-Layout / When Abend- und Morgen-Briefing ausgeliefert werden / Then zeigt das
   Abend-Briefing in E-Mail, SMS, Premium-SMS und Kurzform die `per_report`-Auswahl und -Reihenfolge, das
@@ -458,7 +458,7 @@ messbar).
 
 ### Bein (b) — Go
 
-- **AC-18 (Go-PUT-Roundtrip der vollständigen `report_config`, zwei Nutzer):** Given zwei verschiedene
+- **AC-18:** (Go-PUT-Roundtrip der vollständigen `report_config`, zwei Nutzer) Given zwei verschiedene
   Nutzer A und B mit je einem Trip **gleicher Kennung** / When A per `PUT /api/trips/{id}` die
   vollständige `report_config` aus `report_config_nach_speichern_golden_d.json` (Kanäle, Zeiten,
   `email_format`, `enabled`, Per-Slot-Schalter, unbekannter Schlüssel) sendet und B eine andere
@@ -469,7 +469,7 @@ messbar).
   - Test: `internal/handler/report_config_roundtrip_test.go::TestReportConfigRoundtrip_ZweiNutzer`
     (echte `user_id` über `s.WithUser`, nie `"default"`).
 
-- **AC-19 (Go: Minuten-Kappung, Teil-PUT, `per_report` bleibt erhalten):** Given ein Trip mit
+- **AC-19:** (Go: Minuten-Kappung, Teil-PUT, `per_report` bleibt erhalten) Given ein Trip mit
   gespeichertem `channel_layouts_per_report` und einer `report_config` / When ein PUT nur
   `morning_time: "07:30:00"` in `report_config` sendet, danach ein zweiter PUT nur `display_config`
   mit `channel_layouts` (ohne `per_report`) / Then steht `morning_time` gekappt als `"07:00:00"` in
@@ -478,7 +478,7 @@ messbar).
   löscht ihn nicht; Verdikt 1).
   - Test: `internal/handler/report_config_roundtrip_test.go::TestReportConfigRoundtrip_KappungTeilPutUndPerReport`.
 
-- **AC-20 (Go: flache Trip-Felder folgen der einen Regel):** Given die Zeilen der geteilten Tabelle
+- **AC-20:** (Go: flache Trip-Felder folgen der einen Regel) Given die Zeilen der geteilten Tabelle
   `tests/fixtures/report_config_slot_faelle.json` (Datei per relativem Pfad gelesen) / When ein Trip mit
   der jeweiligen `report_config` geladen und gespeichert wird / Then stehen die abgeleiteten flachen
   Felder `morning_enabled`/`evening_enabled` des Trips exakt auf dem Tabellenwert; ohne `report_config`
@@ -488,7 +488,7 @@ messbar).
 
 ### Loader (Python-Persistenz)
 
-- **AC-21 (Loader liest und schreibt die Per-Slot-Schalter verlustfrei):** Given ein Trip-JSON mit
+- **AC-21:** (Loader liest und schreibt die Per-Slot-Schalter verlustfrei) Given ein Trip-JSON mit
   `report_config.morning_enabled=true` und `evening_enabled=false` sowie eines ohne diese Schlüssel /
   When beide über den echten `load_trip` geladen und über `save_trip` zurückgeschrieben werden / Then
   bleiben gesetzte Werte in der Datei genau erhalten, fehlende Schlüssel bleiben fehlend (kein
@@ -509,7 +509,7 @@ messbar).
   - Test: `report_config_serialisierung_golden.test.ts` (`node --test`), Payload-Funktion ist die
     **von den Komponenten tatsächlich benutzte** reine Funktion (kein Nachbau im Test).
 
-- **AC-23 (Fix: Trip-Übersicht zeigt den Slot-Zustand nach derselben Regel wie der Versand):**
+- **AC-23:** (Fix: Trip-Übersicht zeigt den Slot-Zustand nach derselben Regel wie der Versand)
   Given die Zeilen der geteilten Tabelle (Datei per relativem Pfad gelesen) / When die Trip-Übersicht
   (`getReportSchedule`, Cockpit-Helfer, Trip-Kachel, Startseite, `deriveNextSend`) einen Trip mit der
   jeweiligen `report_config` anzeigt / Then steht „Morgen"/„Abend" genau auf dem Tabellenwert — auch
@@ -518,7 +518,7 @@ messbar).
   - Test: `report_slot_aktiv.test.ts` — Helfer `reportSlotAktiv` **und** ein Leser-Test je Leser
     (`rightColumn.getReportSchedule`, `cockpitHelpers568`, `cockpitHelpers.deriveNextSend`).
 
-- **AC-24 (Fix: Editor-Startzustand folgt derselben Regel):** Given ein Trip mit `enabled=true`, ohne
+- **AC-24:** (Fix: Editor-Startzustand folgt derselben Regel) Given ein Trip mit `enabled=true`, ohne
   Per-Slot-Schlüssel und **ohne** Zeitfelder in `report_config` / When der Versand-Reiter geöffnet wird /
   Then zeigt er „Morgen aktiv" und „Abend aktiv" als angehakt (bisher „aus", obwohl das Briefing
   mit den Standardzeiten geliefert wurde); bei `enabled=false` zeigt er beide aus; mit Per-Slot-Schlüsseln
@@ -527,7 +527,7 @@ messbar).
     derselben reinen Funktion abgeleitet, die `VersandTab.svelte` und `EditReportConfigSection.svelte`
     aufrufen; die Verdrahtung beweist AC-26.
 
-- **AC-25 (Editor-Kanal-Defaults gleich Auslieferung):** Given `report_config` (a) ohne `send_email`,
+- **AC-25:** (Editor-Kanal-Defaults gleich Auslieferung) Given `report_config` (a) ohne `send_email`,
   (b) ohne `send_telegram`/`send_sms`/`send_premium_sms`, (c) ganz ohne `report_config` / When der
   Versand-Reiter serverseitig gerendert wird / Then ist E-Mail angehakt und die anderen drei nicht — das
   ist dieselbe Aussage wie AC-10 für die Auslieferung.
@@ -536,7 +536,7 @@ messbar).
 
 ### Bein (d) — Staging-E2E und Gesamtnachweis
 
-- **AC-26 (E2E: „Abend aus" im Editor ⇒ auf Staging kommt kein Abend-Briefing an):** Given ein Staging-
+- **AC-26:** (E2E: „Abend aus" im Editor ⇒ auf Staging kommt kein Abend-Briefing an) Given ein Staging-
   Testnutzer mit genau einem Trip (Etappen heute und morgen, Morgen- und Abend-Zeit in derselben
   Stunde, E-Mail-Kanal an) / When der Nutzer im echten Browser im Versand-Reiter „Abend aktiv"
   abhakt und speichert, `GET /api/trips/{id}` den Stand bestätigt (`evening_enabled=false`,
@@ -549,7 +549,7 @@ messbar).
     `uv run python3 .claude/hooks/briefing_mail_validator.py` gegen die zugestellte Staging-Mail. Ein
     einzelnes „keine Abend-Mail" ohne Morgen-Mail zählt **nicht** als Bestehen.
 
-- **AC-27 (Bewusste Ablösung der alten Ableitung, Kommentare bereinigt):** Given
+- **AC-27:** (Bewusste Ablösung der alten Ableitung, Kommentare bereinigt) Given
   `internal/store/trip_flat_fields_test.go:71-75` und `tests/test_trip_flat_fields_dual_read.py`
   schreiben die alte Regel „flache Felder = `enabled`" fest / When der Fix umgesetzt ist / Then werden
   diese Tests bewusst auf die neue Regel angepasst (nicht gelöscht, nicht unangepasst grün), und die
@@ -558,7 +558,7 @@ messbar).
   beiden Tests als Fall erhalten.
   - Test: die angepassten Bestandstests selbst; zusätzlich Diff-Nachweis in der Commit-Historie.
 
-- **AC-28 (Keine neuen Register-Einträge):** Given diese Scheibe / When in `/40`/`/50` eine weitere,
+- **AC-28:** (Keine neuen Register-Einträge) Given diese Scheibe / When in `/40`/`/50` eine weitere,
   bisher unbekannte Abweichung in dieser Kette auftritt / Then wird sie, wenn im Rahmen dieser Kette
   lösbar, produktiv gefixt; liegt sie außerhalb, stoppt der Entwickler und legt sie dem PO vor —
   **kein** befristeter Register-Eintrag. Nach S3 enthält das Ausnahme-Register weiterhin nur die

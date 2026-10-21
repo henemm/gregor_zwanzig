@@ -270,7 +270,7 @@ die ein Folge-Ticket zielen könnte**), `internal/handler/preview_proxy.go` (Go,
     Test-Settings-Instanz), Anzahl tatsächlich zugestellter Nachrichten + Log-Aufrufe
     zählen.
 
-- **AC-6 (Regression):** Given ein Nutzer sendet den Text-Befehl "report morning" /
+- **AC-6:** (Regression) Given ein Nutzer sendet den Text-Befehl "report morning" /
   When `TripCommandProcessor` ihn verarbeitet / Then liefert er inhaltlich dieselbe
   Antwort wie vor der Umstellung — der bestehende Text-Parser bleibt unverändert
   funktionsfähig.

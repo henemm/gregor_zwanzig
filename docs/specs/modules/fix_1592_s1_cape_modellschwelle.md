@@ -231,7 +231,7 @@ Parameter mehr, kein neuer Mechanismus — wie in der Analyse vorgezeichnet).
 
 **Fundament (B0 + C0)**
 
-- **AC-1 (Eichtabelle existiert, ist nachvollziehbar, respektiert die Untergrenze):** Given das
+- **AC-1:** (Eichtabelle existiert, ist nachvollziehbar, respektiert die Untergrenze) Given das
   neue Auswertungsskript wird gegen die Open-Meteo Historical Forecast API für eine
   Konvektionssaison (April–September) ausgeführt / When es für jedes verfügbare Modell ×
   Gebiet-Paar läuft / Then entsteht eine statische, versionierte Tabelle im Repo, deren Werte
@@ -249,7 +249,7 @@ Parameter mehr, kein neuer Mechanismus — wie in der Analyse vorgezeichnet).
     mit dem spezifizierten Zeitraum April–September landet gerade dieser Eintrag selbst auf 300
     (rohes P95 ≈ 280). Die Zusicherung gilt der **Regel**, nicht einem Zahlenpaar.
 
-- **AC-2 (normalisierte Herkunft landet additiv im Aggregat, alte Daten bleiben unberührt):**
+- **AC-2:** (normalisierte Herkunft landet additiv im Aggregat, alte Daten bleiben unberührt)
   Given eine reguläre Trip-Vorhersage für einen Ort im AROME-Gebiet (GR20/Korsika) / When das
   Tagesaggregat berechnet wird / Then trägt `SegmentWeatherSummary.cape_model_id` den
   normalisierten Schlüssel des tatsächlich liefernden Modells (z. B. `"meteofrance_arome"`),
@@ -267,7 +267,7 @@ Parameter mehr, kein neuer Mechanismus — wie in der Analyse vorgezeichnet).
   - Test: `summarize_points()` mit einer Punktliste, deren CAPE-Werte deutlich über jeder
     denkbaren Schwelle liegen, liefert trotzdem `cape_model_id is None`.
 
-- **AC-4 (das uneinheitliche Modell-Vokabular wird auf einen gemeinsamen Schlüssel gebündelt):**
+- **AC-4:** (das uneinheitliche Modell-Vokabular wird auf einen gemeinsamen Schlüssel gebündelt)
   Given die unterschiedlichen Roh-Bezeichnungen für dieselbe Modellwelt (`"icon_d2"` von
   Open-Meteo und `"ICON-D2"` vom DWD-Direktprovider; `"meteofrance_arome"`, `"AROME-HIGHRES"` und
   `"AROME"` für dieselbe AROME-Familie) / When `normalize_model_id()` aufgerufen wird / Then
@@ -290,7 +290,7 @@ Parameter mehr, kein neuer Mechanismus — wie in der Analyse vorgezeichnet).
     die feste 1000er-Katalogschwelle statt der kalibrierten Tabelle im Einsatz, liefert derselbe
     Aufruf `NONE` — der Test muss diesen Unterschied fangen.
 
-- **AC-6 (Gegenfall — unbekannte Herkunft liefert "keine Aussage", nicht "kein Gewitter"):**
+- **AC-6:** (Gegenfall — unbekannte Herkunft liefert "keine Aussage", nicht "kein Gewitter")
   Given ein Ort ohne Modell-Herkunft — entweder aus dem Ortsvergleich (`model="aggregate"`) oder
   nach einem Schnappschuss-Reload (`model="snapshot"`) — mit einem hohen CAPE-Wert, alle anderen
   Signale ebenfalls ohne Wert / When die Gewitterstufe fusioniert wird / Then liefert die Fusion
@@ -310,7 +310,7 @@ Parameter mehr, kein neuer Mechanismus — wie in der Analyse vorgezeichnet).
   - Test: Fusion mit ICON-D2- bzw. ICON-EU-Herkunft und einem CAPE-Wert oberhalb der für diese
     Kombination kalibrierten Schwelle liefert `LOW`.
 
-- **AC-8 (Deckelung bleibt bestehen, unabhängig von der Schwellenherkunft):** Given ein sehr
+- **AC-8:** (Deckelung bleibt bestehen, unabhängig von der Schwellenherkunft) Given ein sehr
   hoher CAPE-Wert weit über jeder denkbaren kalibrierten Schwelle, egal welches Modell / When die
   Fusion läuft / Then bleibt das Ergebnis bei "leicht" (`LOW`), eskaliert NIE auf "mittel"/"hoch"
   — dieselbe Deckelungs-Zusicherung wie in feat_1474 AC-6, jetzt mit variabler statt fester

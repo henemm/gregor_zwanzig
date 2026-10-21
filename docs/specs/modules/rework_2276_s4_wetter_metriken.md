@@ -177,7 +177,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
 
 ## Acceptance Criteria
 
-- **AC-1 (Ein PUT statt bis zu zwei):** Given der Nutzer öffnet den
+- **AC-1:** (Ein PUT statt bis zu zwei) Given der Nutzer öffnet den
   Wetter-Metriken-Reiter eines Ortsvergleichs und ändert eine Einstellung
   (z. B. eine Metrik-Checkbox) / When die Geste abgeschlossen ist / Then
   erscheint „Gespeichert" nach genau einem Speichervorgang — auch wenn
@@ -199,7 +199,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
     `schedule()`-Aufrufe aufteilen ⇒ die zuerst geplante Änderung geht
     verloren (Einzel-Slot-Überschreibung) ⇒ Test rot.
 
-- **AC-3 (Hydration vollständig vor der ersten Baseline):** Given die beiden
+- **AC-3:** (Hydration vollständig vor der ersten Baseline) Given die beiden
   Katalog-Ladevorgänge (Wetter-Metriken-Auswahl, Stundenverlauf/Ausblick)
   schließen zu unterschiedlichen Zeitpunkten ab / When der zweite abschließt
   / Then entsteht dadurch KEIN Speichervorgang ohne vorausgehende
@@ -221,7 +221,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: `activeMetricKeys` aus einer eingefrorenen
     `preset`-Kopie statt live aus `wiz` befüllen ⇒ Test rot.
 
-- **AC-5 (Drei bisher stille Gesten bleiben wirksam):** Given der Nutzer (a)
+- **AC-5:** (Drei bisher stille Gesten bleiben wirksam) Given der Nutzer (a)
   wechselt eine Metrik-Checkbox, (b) den Amtliche-Warnungen-Schalter, oder
   (c) das Tagesfenster Von/Bis, OHNE eine Ziehgeste zu verwenden / When die
   Änderung abgeschlossen ist / Then wird sie gespeichert — obwohl der
@@ -232,7 +232,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
     genau diese eine Geste entfernen ⇒ der zugehörige Test wird rot, die
     anderen beiden bleiben grün (Isolationsnachweis).
 
-- **AC-6 (Reiterwechsel verliert nichts):** Given der Nutzer ändert eine
+- **AC-6:** (Reiterwechsel verliert nichts) Given der Nutzer ändert eine
   Wetter-Metriken-Einstellung und wechselt sofort, vor Ablauf der
   Debounce-Zeit, in den Alarme- oder Idealwerte-Reiter, wo er ebenfalls
   sofort eine Änderung vornimmt / When beide Änderungen abgeschlossen sind /
@@ -241,7 +241,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: `'wetter-metriken'` nicht in
     `SELBST_SPEICHERNDE_VERGLEICH_REITER` aufnehmen ⇒ Test rot.
 
-- **AC-7 (Speicherkonflikt zeigt „Nochmal speichern"):** Given ein
+- **AC-7:** (Speicherkonflikt zeigt „Nochmal speichern") Given ein
   Wetter-Metriken/Layout-Speichervorgang schlägt mit einem Speicherkonflikt
   (412) fehl / When der Nutzer „Nochmal speichern" auslöst / Then wird die
   Änderung erneut gesendet, endet in „Gespeichert", der geänderte Stand
@@ -250,14 +250,14 @@ Kernel mergt `display_config` nur auf Ebene 1).
     E2E (neue Spec, echter 412 gegen Staging).
   - Mutations-Gegenprobe: Rollback auch bei 412 auslösen ⇒ Test rot.
 
-- **AC-8 (Pausieren/Aktivieren flusht ausstehende Änderung):** Given der
+- **AC-8:** (Pausieren/Aktivieren flusht ausstehende Änderung) Given der
   Nutzer ändert eine Wetter-Metriken/Layout-Einstellung und pausiert/
   aktiviert den Ortsvergleich sofort danach / When der Vorgang abgeschlossen
   ist / Then ist die Änderung im gespeicherten Stand enthalten.
   - Nachweisschicht: Kern (Unit-Test auf `handleToggleActive()`).
   - Mutations-Gegenprobe: den vorab-`flush()`-Aufruf entfernen ⇒ Test rot.
 
-- **AC-9 (Kein Laufzeit-Import der alten Klebeschicht mehr):** Given der
+- **AC-9:** (Kein Laufzeit-Import der alten Klebeschicht mehr) Given der
   Wetter-Metriken/Layout-Speicherpfad ist umgestellt / When der Modulgraph
   geladen wird / Then lädt weder `WeatherMetricsTab.svelte` noch
   `weatherMetricsCompareSave.ts` zur Laufzeit ein Modul aus
@@ -268,7 +268,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: `buildHubPutPayload`-Re-Import einfügen ⇒
     Ladegraph-Nachweis schlägt an, Test rot.
 
-- **AC-10 (Anlege-Seite unverändert):** Given der Nutzer legt einen neuen
+- **AC-10:** (Anlege-Seite unverändert) Given der Nutzer legt einen neuen
   Ortsvergleich an und bearbeitet den Wetter-Metriken-Reiter vor dem ersten
   Speichern / When er die Anlage abschließt / Then läuft der Speicherweg
   weiter ausschließlich über `wiz.saveNewPreset()` (POST), ohne
@@ -277,13 +277,13 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: Aktivierungs-Bedingung der neuen Orchestrierung
     entfernen ⇒ Anlege-Seite löst einen PUT aus ⇒ Test rot.
 
-- **AC-11 (Keepalive-Weiterreichung):** Given der Nutzer schließt den Tab
+- **AC-11:** (Keepalive-Weiterreichung) Given der Nutzer schließt den Tab
   unmittelbar nach einer Wetter-Metriken/Layout-Änderung / When der Browser
   Keepalive auslöst / Then wird `init` an den PUT durchgereicht.
   - Nachweisschicht: Kern (analog `trip_speicherung_reicht_keepalive_durch.test.ts`).
   - Mutations-Gegenprobe: `init` in der SaveFn ignorieren ⇒ Test rot.
 
-- **AC-12 (Speichern verliert keine anderen Daten):** Given ein
+- **AC-12:** (Speichern verliert keine anderen Daten) Given ein
   Ortsvergleich mit Orten, Versandzeiten, Kanälen, Alarm-Schwellen und
   Wertebereichen / When der Nutzer im Wetter-Metriken-Reiter etwas ändert
   und speichert / Then bleiben alle übrigen Einstellungen nach erneutem
@@ -293,7 +293,7 @@ Kernel mergt `display_config` nur auf Ebene 1).
   - Mutations-Gegenprobe: ein Bestandsfeld aus der Payload weglassen ⇒ Test
     rot.
 
-- **AC-13 (Trip-Seite unverändert):** Given ein Trip mit
+- **AC-13:** (Trip-Seite unverändert) Given ein Trip mit
   Wetter-Metriken-Konfiguration / When der Nutzer dort etwas ändert / Then
   läuft die Speicherung weiterhin über `scheduleAutoSave`/
   `scheduleReportConfigOnlySave`, unverändert durch den Umbau am

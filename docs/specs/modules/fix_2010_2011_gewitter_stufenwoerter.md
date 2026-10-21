@@ -123,7 +123,7 @@ ALTLASTEN-Bereinigung (test_thunder_scale_local_copy_guard.py):
 
 ## Acceptance Criteria
 
-- **AC-1 (#2010, Klartext-Pfad zeigt die vier korrekten Wörter):** Given die vier
+- **AC-1:** (#2010, Klartext-Pfad zeigt die vier korrekten Wörter) Given die vier
   Gewitterstufen NONE/LOW/MED/HIGH / When der Telegram-Klartext-Konsument (kein
   Emoji-Modus, z.B. E-Mail-Kanal-Antwort auf `dd_thunder_today`) für jede Stufe gerendert
   wird / Then zeigt er genau „kein"/„leicht"/„mittel"/„hoch" — nirgends „keins" oder
@@ -132,7 +132,7 @@ ALTLASTEN-Bereinigung (test_thunder_scale_local_copy_guard.py):
     Wortgleichheit prüfen und explizit die Abwesenheit von „keins"/„mäßig" im Antworttext
     nachweisen.
 
-- **AC-2 (#2010, Emoji-Pfad behält Symbol UND korrigiert das Wort):** Given dieselben vier
+- **AC-2:** (#2010, Emoji-Pfad behält Symbol UND korrigiert das Wort) Given dieselben vier
   Stufen / When derselbe Konsument im Emoji-Modus (Telegram-Kanal) rendert / Then enthält
   die Antwort weiterhin das passende Kreis-Emoji (⚪/🟢/🟡/🔴) UND das korrigierte Wort
   („mittel" statt „mäßig" bei MED), beides gemeinsam in derselben Zeile.
@@ -145,7 +145,7 @@ ALTLASTEN-Bereinigung (test_thunder_scale_local_copy_guard.py):
     Dieser AC-Wortlaut bleibt als historischer Stand stehen und wird NICHT nachträglich
     umgeschrieben — bei „Spec-Konformität herstellen" gilt die #2220-Fassung, nicht diese.
 
-- **AC-3 (#2010, Stundendrilldown ist ein unabhängiger zweiter Pfad):** Given eine
+- **AC-3:** (#2010, Stundendrilldown ist ein unabhängiger zweiter Pfad) Given eine
   Stundenübersicht-Anfrage (`dd_hours_today`/`dd_hours_tomorrow`) mit mindestens einer
   Stunde der Stufe MED / When `_handle_hours_drilldown` die Stundenzeilen baut / Then
   enthält die Zeile dieser Stunde „mittel" (Klartext) bzw. das gelb/orange Kreis-Emoji
@@ -155,7 +155,7 @@ ALTLASTEN-Bereinigung (test_thunder_scale_local_copy_guard.py):
   - Test: Stundendrilldown mit einer MED-Stunde rendern, Zeilentext auf „mittel"/korrektes
     Emoji prüfen, Abwesenheit von „mäßig" nachweisen.
 
-- **AC-4 (#2010, Ableitung statt Wert-Kopie — Regressionsschutz):** Given ein temporär
+- **AC-4:** (#2010, Ableitung statt Wert-Kopie — Regressionsschutz) Given ein temporär
   veränderter Wert für `THUNDER_LABEL_DE[ThunderLevel.MED]` (Test-lokal gesetzt, nicht die
   Produktionsquelle dauerhaft verändert) / When eine Telegram-Ausgabe für MED gerendert
   wird / Then folgt das angezeigte Wort dem veränderten Quellwert. Das beweist, dass
@@ -165,7 +165,7 @@ ALTLASTEN-Bereinigung (test_thunder_scale_local_copy_guard.py):
     `monkeypatch`), Telegram-Rendering für MED erneut aufrufen, geänderten Wert im
     Ergebnis nachweisen.
 
-- **AC-5 (#2011, Ampelübersetzung für alle vier Stufen abgeleitet statt kopiert):** Given
+- **AC-5:** (#2011, Ampelübersetzung für alle vier Stufen abgeleitet statt kopiert) Given
   die vier Gewitterstufen als String-/Enum-Rohwert in einer Stundentabellen-Zeile
   (`r["thunder"]`) / When `_thunder_risk_level()` bzw. `_row_risk()` für jede Stufe
   berechnet wird / Then liefert es „yellow" für LOW, „watch" für MED, „risk" für HIGH
@@ -177,7 +177,7 @@ ALTLASTEN-Bereinigung (test_thunder_scale_local_copy_guard.py):
     zum bisherigen Verhalten prüfen; zusätzlich `_THUNDER_AMPEL_BAND`-Eintrag für MED
     testlokal überschreiben und geänderte Ausgabe nachweisen.
 
-- **AC-6 (#2011, NONE liefert jetzt „ok" statt `None` — verhaltensneutral abgesichert):**
+- **AC-6:** (#2011, NONE liefert jetzt „ok" statt `None` — verhaltensneutral abgesichert)
   Given die Gewitterstufe NONE (als String „NONE" und als `ThunderLevel.NONE`) / When
   `_thunder_risk_level()` direkt aufgerufen wird / Then liefert die Funktion `"ok"` (nicht
   mehr `None`) — UND ein zweiter Test belegt, dass sowohl `_row_risk()` als auch die
@@ -200,7 +200,7 @@ ALTLASTEN-Bereinigung (test_thunder_scale_local_copy_guard.py):
     schicken, roten bzw. orangen Hintergrund nachweisen; Gegenprobe mit 0 liefert keinen
     Hintergrund.
 
-- **AC-8 (ALTLASTEN-Wächter schrumpft um genau die sechs sanierten Einträge):** Given die
+- **AC-8:** (ALTLASTEN-Wächter schrumpft um genau die sechs sanierten Einträge) Given die
   sechs benannten Altlasten-Einträge zu `html.py::_thunder_risk_level` (Regel B, Regel C)
   und `trip_command_processor.py::_THUNDER_LABEL`/`_MAP_EMOJI`/`_MAP_PLAIN`/
   `_handle_hours_drilldown` in `ALTLASTEN` / When der #1480-Wächter
@@ -214,7 +214,7 @@ ALTLASTEN-Bereinigung (test_thunder_scale_local_copy_guard.py):
     Tripel fehlen, drei bleiben), plus vollständiger, grüner Testlauf des gesamten
     Wächter-Moduls.
 
-- **AC-9 (Regel-C-Fundstelle wechselt von Altlast auf begründete Marker-Duldung):** Given
+- **AC-9:** (Regel-C-Fundstelle wechselt von Altlast auf begründete Marker-Duldung) Given
   der `# gz-thunder-scale: <Begründung>`-Marker-Mechanismus (Duldungsstufe 3 des
   #1480-Wächters, `docs/specs/modules/thunder_scale_guard.md`) / When der numerische
   Fallback-Zweig in `_thunder_risk_level()` nach dem Fix weiterhin sein eigenes

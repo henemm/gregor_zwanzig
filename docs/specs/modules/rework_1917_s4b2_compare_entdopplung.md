@@ -317,7 +317,7 @@ statt `trip_id`).
     mehr, Protokoll zeigt einen `not_delivered`-Eintrag mit
     `gate_reason=REASON_EVENT_DUPLICATE`.
 
-- **AC-7 (Gegenrichtung):** Given einen bereits registrierten amtlichen
+- **AC-7:** (Gegenrichtung) Given einen bereits registrierten amtlichen
   Warnungs-Eintrag derselben Klasse für einen Ort, When danach ein
   Radar-Nowcast mit überlappendem Zeitfenster für denselben Ort ausgelöst
   wird, Then wird der Nowcast unterdrückt — die Entdopplung wirkt
@@ -395,7 +395,7 @@ statt `trip_id`).
   - Test: analog AC-17 aus S4b-1, auf zwei verschiedene `tagged_alerts`-
     Paare übertragen.
 
-- **AC-14 (Mehrfach-Ort-pro-Alert):** Given EINEN amtlichen Alert, der ZWEI
+- **AC-14:** (Mehrfach-Ort-pro-Alert) Given EINEN amtlichen Alert, der ZWEI
   Compare-Orte betrifft (`(alert, [loc_a, loc_b])`), von denen an `loc_a`
   bereits ein passender Registereintrag existiert und an `loc_b` nicht,
   When `_check_one_preset()` diesen Alert prüft, Then wird die Warnung NUR

@@ -108,31 +108,31 @@ Bestätigte Plus-Adressen (`name+gz@gmail.com`) werden heute auf beiden Seiten g
 
 ## Acceptance Criteria
 
-- **AC-1 (D4):** Given eine bestätigte Adresse mit zwei „@"-Zeichen (z. B. `a@b@example.com`) / When ein Versand über den Go-Sendeweg an diese Adresse geprüft wird / Then bleibt sie blockiert — wie auf dem Python-Sendeweg schon heute.
+- **AC-1:** (D4) Given eine bestätigte Adresse mit zwei „@"-Zeichen (z. B. `a@b@example.com`) / When ein Versand über den Go-Sendeweg an diese Adresse geprüft wird / Then bleibt sie blockiert — wie auf dem Python-Sendeweg schon heute.
   - Test: Fall `D4` in `tests/fixtures/mail_recipient_parity/faelle.json` erfüllt `soll=block` ohne Ausnahme; Gegenprobe (Korrektur zurückgenommen) lässt genau diesen Fall im Go-Läufer namentlich rot werden.
 
-- **AC-2 (D3):** Given eine bestätigte Adresse auf einer Unterdomäne einer reservierten Testdomäne (z. B. `x@sub.example.com`) / When ein Versand über den Python-Sendeweg an diese Adresse geprüft wird / Then wird sie blockiert — wie auf dem Go-Sendeweg schon heute.
+- **AC-2:** (D3) Given eine bestätigte Adresse auf einer Unterdomäne einer reservierten Testdomäne (z. B. `x@sub.example.com`) / When ein Versand über den Python-Sendeweg an diese Adresse geprüft wird / Then wird sie blockiert — wie auf dem Go-Sendeweg schon heute.
   - Test: Fall `D3` erfüllt `soll=block` ohne Ausnahme; Gegenprobe lässt genau diesen Fall im Python-Läufer namentlich rot werden.
 
-- **AC-3 (D2):** Given eine bestätigte Adresse mit einem Anzeigenamen, der ein Komma enthält (z. B. `"Nachname, Vorname" <adresse>`) / When ein Versand über den Go-Sendeweg an diese Adresse geprüft wird / Then kommt die Post an — wie auf dem Python-Sendeweg schon heute.
+- **AC-3:** (D2) Given eine bestätigte Adresse mit einem Anzeigenamen, der ein Komma enthält (z. B. `"Nachname, Vorname" <adresse>`) / When ein Versand über den Go-Sendeweg an diese Adresse geprüft wird / Then kommt die Post an — wie auf dem Python-Sendeweg schon heute.
   - Test: Fall `D2` erfüllt `soll=allow` ohne Ausnahme; Gegenprobe lässt genau diesen Fall im Go-Läufer namentlich rot werden.
 
-- **AC-4 (N1):** Given eine bestätigte Adresse mit einem unsichtbaren Leerzeichen am Rand (Trailing-NBSP) / When ein Versand über den Python-Sendeweg an diese Adresse geprüft wird / Then kommt die Post an — wie auf dem Go-Sendeweg schon heute.
+- **AC-4:** (N1) Given eine bestätigte Adresse mit einem unsichtbaren Leerzeichen am Rand (Trailing-NBSP) / When ein Versand über den Python-Sendeweg an diese Adresse geprüft wird / Then kommt die Post an — wie auf dem Go-Sendeweg schon heute.
   - Test: Fall `N1` erfüllt `soll=allow` ohne Ausnahme; Gegenprobe lässt genau diesen Fall im Python-Läufer namentlich rot werden.
 
-- **AC-5 (D5):** Given ein Nutzer hat eine Adresse mit Pluszeichen bestätigt (z. B. `name+gz@gmail.com`) / When er selbst diese genaue Adresse als Empfänger nutzt, auf beiden Sendewegen geprüft / Then kommt die Post an.
+- **AC-5:** (D5) Given ein Nutzer hat eine Adresse mit Pluszeichen bestätigt (z. B. `name+gz@gmail.com`) / When er selbst diese genaue Adresse als Empfänger nutzt, auf beiden Sendewegen geprüft / Then kommt die Post an.
   - Test: Fall `D5` erfüllt `soll=allow` ohne Ausnahme auf beiden Seiten; Gegenprobe lässt genau diesen Fall in beiden Läufern namentlich rot werden.
 
-- **AC-6 (wichtigster Einzelpunkt — Variante C vollständig):** Given ein Nutzer hat eine bestimmte Plus-Adresse bestätigt (z. B. `name+gz@gmail.com`) / When jemand stattdessen die Basisadresse (`name@gmail.com`) oder einen anderen Zusatz derselben Basisadresse (`name+andere@gmail.com`) als Empfänger nutzt / Then bleibt der Versand dorthin blockiert — nur die exakt bestätigte Plus-Adresse erreicht den Nutzer, keine Nachbaradresse.
+- **AC-6:** (wichtigster Einzelpunkt — Variante C vollständig) Given ein Nutzer hat eine bestimmte Plus-Adresse bestätigt (z. B. `name+gz@gmail.com`) / When jemand stattdessen die Basisadresse (`name@gmail.com`) oder einen anderen Zusatz derselben Basisadresse (`name+andere@gmail.com`) als Empfänger nutzt / Then bleibt der Versand dorthin blockiert — nur die exakt bestätigte Plus-Adresse erreicht den Nutzer, keine Nachbaradresse.
   - Test: zwei neue Fälle in der Falltabelle (`plus-adresse-basis-bleibt-blockiert`, `plus-adresse-fremdzusatz-bleibt-blockiert`) erfüllen `soll=block` ohne Ausnahme, auf beiden Sendewegen.
 
-- **AC-7 (Gegenrichtung bleibt erhalten):** Given ein Nutzer hat seine Basisadresse bestätigt (z. B. `real@gmail.com`) / When er eine Plus-Variante davon als Empfänger nutzt (`real+tag@gmail.com`) / Then kommt die Post weiterhin an — unverändert gegenüber dem Stand vor dieser Scheibe.
+- **AC-7:** (Gegenrichtung bleibt erhalten) Given ein Nutzer hat seine Basisadresse bestätigt (z. B. `real@gmail.com`) / When er eine Plus-Variante davon als Empfänger nutzt (`real+tag@gmail.com`) / Then kommt die Post weiterhin an — unverändert gegenüber dem Stand vor dieser Scheibe.
   - Test: neuer Fall `plus-adresse-gegenrichtung-erreichbar` erfüllt `soll=allow` ohne Ausnahme, auf beiden Sendewegen; die bestehenden Regressionstests `recipient_guard_test.go:252` und `test_issue_1147_resend_recipient_invariant.py` (Fall F005e) bleiben unverändert grün.
 
-- **AC-8 (nur D1 bleibt übrig):** Given alle fünf Korrekturen dieser Scheibe sind umgesetzt / When das Prüfwerkzeug aus S2a läuft / Then enthält die Falltabelle genau eine gültige, unabgelaufene Ausnahme (D1, weiterhin blockiert bis S5) und `ausnahmen_hoechstzahl` steht auf 1.
+- **AC-8:** (nur D1 bleibt übrig) Given alle fünf Korrekturen dieser Scheibe sind umgesetzt / When das Prüfwerkzeug aus S2a läuft / Then enthält die Falltabelle genau eine gültige, unabgelaufene Ausnahme (D1, weiterhin blockiert bis S5) und `ausnahmen_hoechstzahl` steht auf 1.
   - Test: `test_ausnahmen_deckel_im_ausgelieferten_stand_nicht_ueberschritten` (Python) und sein Go-Pendant sind grün gegen die aktualisierte Falltabelle mit Deckel 1; die Falltabelle enthält keinen Ausnahme-Eintrag mehr für D2, D3, D4, D5 oder N1.
 
-- **AC-9 (kein heutiger Empfänger bleibt hängen):** Given ein Empfänger, der schon vor dieser Scheibe Post bekam (schlichte bestätigte Adresse, Fixture-Erreichbarkeits-Adresse, lokale Zustellung, Mehrfach-Adressen-Kontrollfälle) / When die fünf Korrekturen umgesetzt sind / Then bekommt dieser Empfänger weiterhin genauso Post wie zuvor.
+- **AC-9:** (kein heutiger Empfänger bleibt hängen) Given ein Empfänger, der schon vor dieser Scheibe Post bekam (schlichte bestätigte Adresse, Fixture-Erreichbarkeits-Adresse, lokale Zustellung, Mehrfach-Adressen-Kontrollfälle) / When die fünf Korrekturen umgesetzt sind / Then bekommt dieser Empfänger weiterhin genauso Post wie zuvor.
   - Test: alle bestehenden Kontrollfälle der Falltabelle (`schlichte-adresse`, `fixture-erreichbarkeit`, `leerer-empfaenger`, `N2a`, `N2b`, `N3`) bleiben in beiden Läufern unverändert grün; die bestehenden Bestandstests der sieben guard-nahen Python- und neun Go-Testdateien bleiben grün (einzige Ausnahme: der zu entfernende AC-10-Test).
 
 ## Known Limitations

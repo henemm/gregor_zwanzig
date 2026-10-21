@@ -167,14 +167,14 @@ unterschiedlichen Auswahl-Räume.
   - Test: Trip mit gesetzter Stufe für eine deaktivierte Größe; die berechnete
     Zeilenliste darf diese Größe nicht enthalten.
 
-- **AC-4 (Normalfall zu AC-3):** Given dieselbe Größe wird anschließend im Reiter
+- **AC-4:** (Normalfall zu AC-3) Given dieselbe Größe wird anschließend im Reiter
   *Wetter-Metriken* aktiviert und gespeichert / When der Nutzer danach den Reiter
   *Alarme* öffnet / Then erscheint die Zeile wieder — mit der zuvor gesetzten Stufe,
   nicht mit „standard" oder „aus".
   - Test: nach simuliertem Aktivieren prüfen, dass sowohl die Zeile erscheint als auch
     die vorher gespeicherte (nicht zurückgesetzte) Stufe angezeigt wird.
 
-- **AC-5 (Altbestands-Sonderfall, Falle 3 aus dem Kontext-Dokument):** Given ein Trip,
+- **AC-5:** (Altbestands-Sonderfall, Falle 3 aus dem Kontext-Dokument) Given ein Trip,
   dessen `display_config.metrics` leer oder nicht gesetzt ist (Wetter-Metriken-Reiter
   nie angefasst) / When der Nutzer den Reiter *Alarme* öffnet / Then zeigt der Reiter
   Zeilen für **alle** alarmfähigen Größen aus dem Register, nicht null.
@@ -182,7 +182,7 @@ unterschiedlichen Auswahl-Räume.
     vollständigen Katalog auswerten; die Zeilenanzahl muss der Anzahl alarmfähiger
     Register-Einträge entsprechen, nicht 0.
 
-- **AC-6 (Kein Datenverlust, Falle 4 aus dem Kontext-Dokument):** Given eine Größe mit
+- **AC-6:** (Kein Datenverlust, Falle 4 aus dem Kontext-Dokument) Given eine Größe mit
   gesetzter Empfindlichkeitsstufe wird im Reiter *Wetter-Metriken* deaktiviert und der
   Trip gespeichert / When die Größe später wieder aktiviert wird / Then zeigt ihre
   Zeile wieder die vor der Deaktivierung gesetzte Stufe — nicht „standard" und nicht
@@ -191,21 +191,21 @@ unterschiedlichen Auswahl-Räume.
     gehörende Schlüssel bleibt im gesendeten `metric_alert_levels`-Dict erhalten, wird
     nicht entfernt, obwohl seine Zeile nicht mehr angezeigt wird.
 
-- **AC-7 (Mehrfach-Identität):** Given ein Trip mit aktivierter Temperatur-Metrik /
+- **AC-7:** (Mehrfach-Identität) Given ein Trip mit aktivierter Temperatur-Metrik /
   When der Nutzer den Reiter *Alarme* öffnet / Then erscheinen alle drei zugehörigen
   Alarmzeilen (Minimum, Maximum, Änderungsrate) gleichzeitig, nicht nur eine.
   - Test: an einer Metrik mit bekannt mehreren Alarm-Identitäten (Temperatur:
     `temperature_min`, `temperature_max`, `temperature_change`) prüfen, dass alle drei
     in der berechneten Zeilenliste stehen.
 
-- **AC-8 (Stabile Reihenfolge):** Given ein Trip mit mehreren aktivierten alarmfähigen
+- **AC-8:** (Stabile Reihenfolge) Given ein Trip mit mehreren aktivierten alarmfähigen
   Größen / When der Reiter *Alarme* mehrfach hintereinander geöffnet wird — auch nach
   einem Speichervorgang, der die Auswahl nicht ändert / Then steht die Zeilenreihenfolge
   jedes Mal identisch.
   - Test: Zeilenliste zweimal aus identischem Trip-Zustand berechnen und auf exakt
     gleiche Reihenfolge (nicht nur gleiche Menge) prüfen.
 
-- **AC-9 (Deckungsgleichheit — die eigentliche Zusicherung dieser Scheibe):** Given ein
+- **AC-9:** (Deckungsgleichheit — die eigentliche Zusicherung dieser Scheibe) Given ein
   beliebiger Trip mit einer Wetter-Metriken-Auswahl / When der Reiter *Alarme* seine
   Zeilen berechnet / Then ist die Menge der angezeigten Alarm-Identitäten exakt
   identisch mit der Menge der Identitäten, die der Live-Alarm-Detektor für denselben
@@ -215,7 +215,7 @@ unterschiedlichen Auswahl-Räume.
     `deviation_alert_engine`) tatsächlich erzeugten Regel-Metriken gegenüberstellen und
     auf Mengengleichheit prüfen — kein indirekter Näherungsvergleich.
 
-- **AC-10 (Bestandsschutz):** Given ein Trip mit bereits sinnvoll gesetzten
+- **AC-10:** (Bestandsschutz) Given ein Trip mit bereits sinnvoll gesetzten
   Empfindlichkeitsstufen für seine aktivierten Größen / When die neue Ableitung
   ausgeliefert wird, ohne dass der Nutzer etwas ändert / Then bleiben alle zuvor
   gesetzten Stufen unverändert erhalten — nichts wird automatisch umgeschrieben oder

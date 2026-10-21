@@ -292,7 +292,7 @@ Schreibeffekt.
     Kanal-Dateien vor/nach dem Lauf vergleichen — keine wird neu
     geschrieben (Zeitstempel-Vergleich, kein Dateiinhalt-String-Check).
 
-- **AC-3 (Regressionsschutz #1629, Gegenprobe):** Given ein
+- **AC-3:** (Regressionsschutz #1629, Gegenprobe) Given ein
   Briefing-Lauf, bei dem auf keinem Kanal etwas zugestellt wird (z. B. der
   Versandaufruf wirft eine Ausnahme, `trip_report_scheduler.py:1543`,
   oder `result.sent == False` im regulären Pfad, `:1651`), When der

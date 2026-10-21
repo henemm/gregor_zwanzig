@@ -510,7 +510,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
 
 ## Acceptance Criteria
 
-- **AC-1 (Golden C in der Python-Matrix):** Given Golden C mit den Eigenschaften G1–G4 (kein
+- **AC-1:** (Golden C in der Python-Matrix) Given Golden C mit den Eigenschaften G1–G4 (kein
   eigenes SMS-/Telegram-Layout, umnummerierungs-sensitive globale Reihenfolge, `format_mode`
   gesetzt, per-Metrik `morning_enabled`/`evening_enabled` nicht-`null`) / When die S1-Invarianten-
   Matrix (`test_einstellung_gleich_auslieferung.py`) um Golden C erweitert läuft / Then wird Golden
@@ -520,7 +520,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
     `load_trip`, prüft für SMS, dass die Kaskadenquelle `global` ist (nicht `per_channel`), für
     E-Mail bleibt sie `per_channel`.
 
-- **AC-2 (Drift-Test der Erwartungsdateien):** Given eine eingefrorene Erwartungsdatei je Golden
+- **AC-2:** (Drift-Test der Erwartungsdateien) Given eine eingefrorene Erwartungsdatei je Golden
   (A, B, C) / When der Drift-Test läuft / Then stimmt jede Erwartungsdatei exakt mit dem
   aktuellen Ergebnis von `erwartete_kaskade` für das jeweilige Golden überein — jede unbemerkte
   Abweichung (z. B. durch eine spätere Orakel-Änderung) macht den Test rot.
@@ -528,7 +528,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
     test_erwartungsdateien_entsprechen_dem_aktuellen_orakel` vergleicht für A/B/C `json.load` der
     Erwartungsdatei mit einer frisch aufgerufenen `erwartete_kaskade`-Projektion, Mengengleichheit.
 
-- **AC-3 (TS-Anzeige = Erwartung je Kanal, alle drei Goldens, ohne Ausnahme):** Given die drei
+- **AC-3:** (TS-Anzeige = Erwartung je Kanal, alle drei Goldens, ohne Ausnahme) Given die drei
   Erwartungsdateien und die echten Helfer `channelOverrideFromMetrics`/
   `splitChannelMetricsForDisplay` / When die TS-Helferkette auf Golden A, B und C angewendet wird
   / Then stimmt für email, telegram und sms je Golden die berechnete Anzeige-Reihenfolge und
@@ -537,7 +537,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
   - Test: `weather-metrics-tab/__tests__/editor_anzeige_gleich_erwartung.test.ts`, `node --test`,
     parametrisiert über die drei Goldens × drei Kanäle.
 
-- **AC-4 (TS-Speichern ohne Änderung = eingefrorener Stand, inkl. aller Felder):** Given ein Golden
+- **AC-4:** (TS-Speichern ohne Änderung = eingefrorener Stand, inkl. aller Felder) Given ein Golden
   wird geladen, ohne dass der Nutzer etwas ändert / When `buildWeatherConfigMetrics` +
   `mergeAllChannelLayoutsForSave` die Speichern-Payload bauen und diese flach in den Ausgangsstand
   gemergt wird / Then stimmt der resultierende Stand strukturell mit der eingefrorenen
@@ -565,7 +565,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
     Ergebnismenge je Kanal auf exakte Gleichheit; für Golden C prüft ein eigener Fall explizit die
     SMS-Reihenfolge bei Kaskadenquelle `global` gegen `erwartung_golden_c.json`.
 
-- **AC-6 (TS: alle Kanäle im Speichern-Payload):** Given nur ein Kanal-Reiter (z. B. email) wurde
+- **AC-6:** (TS: alle Kanäle im Speichern-Payload) Given nur ein Kanal-Reiter (z. B. email) wurde
   im Editor geöffnet oder bearbeitet / When die Speichern-Payload gebaut wird
   (`mergeAllChannelLayoutsForSave`) / Then enthält `channel_layouts` weiterhin **alle** drei
   Kanäle (email/telegram/sms) mit ihrem jeweils zuletzt bekannten Stand — kein Kanal fehlt im
@@ -574,7 +574,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
     nach simuliertem Bearbeiten nur eines Kanals und prüft `Object.keys(channel_layouts)` enthält
     email, telegram, sms.
 
-- **AC-7 (TS: Feld-Erhalt ohne Ausnahme — K8-Fix):** Given ein per-Metrik-Eintrag in Golden C
+- **AC-7:** (TS: Feld-Erhalt ohne Ausnahme — K8-Fix) Given ein per-Metrik-Eintrag in Golden C
   trägt `morning_enabled=false`/`evening_enabled=false`/`format_mode` / When der Editor lädt und
   ohne Änderung speichert / Then bleiben diese Werte im gebauten Payload für **jede** betroffene
   Metrik unverändert erhalten — ohne Ausnahme, ohne Register-Eintrag; ein Test, der das Gate
@@ -584,7 +584,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
     `evening_enabled` und `format_mode` nach dem simulierten Speichern identisch zum
     Golden-C-Ausgangswert sind.
 
-- **AC-8 (Go: Roundtrip beider PUT-Pfade):** Given ein Golden-Body (A, B oder C) wird per PUT
+- **AC-8:** (Go: Roundtrip beider PUT-Pfade) Given ein Golden-Body (A, B oder C) wird per PUT
   gesendet / When abwechselnd `PUT /api/trips/{id}/weather-config` und `PUT /api/trips/{id}`
   verwendet werden, gefolgt von einem `GET` / Then ist der zurückgelesene Stand von
   `channel_layouts` und `display_config.metrics` exakt der gesendete, für **beide** Pfade
@@ -592,7 +592,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
   - Test: `internal/handler/weather_config_editor_roundtrip_test.go`, zwei Unterfälle je Pfad,
     Golden per `os.ReadFile` relativ zur Testdatei.
 
-- **AC-9 (Go: Cross-User-Isolation, Trip bleibt unverändert):** Given zwei verschiedene Nutzer A
+- **AC-9:** (Go: Cross-User-Isolation, Trip bleibt unverändert) Given zwei verschiedene Nutzer A
   und B mit je eigenem Trip / When Nutzer B versucht, über denselben Endpoint den Trip von Nutzer
   A zu lesen oder zu ändern / Then schlägt der Zugriff fehl (kein Cross-User-Datenleck) UND ein
   anschließendes `GET` durch Nutzer A zeigt, dass dessen Trip nach dem abgewiesenen Versuch
@@ -601,7 +601,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
     `s.WithUser` für beide Nutzer, prüft den Fehlerfall explizit und liest Nutzer As Trip danach
     erneut, um die Unverändertheit zu belegen.
 
-- **AC-10 (E2E: Anzeige = Erwartung im echten Browser, ohne Ausnahme):** Given ein aus Golden C
+- **AC-10:** (E2E: Anzeige = Erwartung im echten Browser, ohne Ausnahme) Given ein aus Golden C
   abgeleiteter Trip wurde über die Test-API angelegt / When der Editor im Browser (Staging)
   geöffnet und jeder Kanal-Reiter (email/telegram/sms) besucht wird / Then zeigt jeder Reiter die
   Auswahl/Reihenfolge aus der Anzeige-Erwartungsdatei — **ohne Ausnahme**, auch der SMS-Reiter bei
@@ -624,7 +624,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
   - Test: derselbe E2E-Spec, Folgeschritt nach AC-10, liest per API zurück und vergleicht die
     genannten Felder gegen `nach_speichern_golden_c.json`, inklusive der SMS-Reihenfolge.
 
-- **AC-12 (Umfang der Verhaltensänderung ist auf B9 und K8 begrenzt):** Given der gesamte
+- **AC-12:** (Umfang der Verhaltensänderung ist auf B9 und K8 begrenzt) Given der gesamte
   S2a-Umfang nach dem Umbau zu „Tests + Fix" / When alle neuen und bestehenden Tests laufen /
   Then ist die einzige von Nutzern beobachtbare Verhaltensänderung (a) die SMS-/Kurzform-/
   Premium-Reihenfolge bei Kaskadenquelle `global` folgt jetzt der Editor-Anzeige statt der festen
@@ -638,7 +638,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
     `per_channel`/`per_report`-Fälle) bleiben unverändert grün; ein vollständiger Testlauf zeigt
     keine weiteren, hier nicht benannten Regressionen.
 
-- **AC-13 (#1677-Byte-Identität bei `global` wird bewusst abgelöst):** Given
+- **AC-13:** (#1677-Byte-Identität bei `global` wird bewusst abgelöst) Given
   `fix_1677_sms_reihenfolge.md` AC-2 sichert bislang Byte-Identität der SMS-/Kurzform-Ausgabe bei
   Kaskadenquelle `global` zu (DEC-2-Aktivierungsgate) / When der B9-Fix (Entfernen des
   Aktivierungsgates in `trip_report.py:337–346`) umgesetzt ist / Then wird der zugehörige
@@ -651,7 +651,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
     umbenannter Nachfolgetest der bisherigen #1677-AC-2-Byte-Identitätsprüfung), plus
     Diff-Nachweis, dass die betroffenen Golden-Dateien bewusst geändert wurden (Commit-Historie).
 
-- **AC-14 (TS: Änderungsfälle 1–4, Anzeige UND Speichern = eingefrorener Stand):** Given die vier
+- **AC-14:** (TS: Änderungsfälle 1–4, Anzeige UND Speichern = eingefrorener Stand) Given die vier
   Änderungsfälle (Fall 1 Metrik abwählen, Fall 2 Reihenfolge tauschen, Fall 3 Roh/Einfach
   umschalten — alle auf Golden A; Fall 4 SMS-Reiter: erstmalige Bearbeitung, Metrik abwählen UND
   zwei Metriken tauschen — auf Golden C) mit ihren
@@ -663,7 +663,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
   - Test: `weather-metrics-tab/__tests__/editor_aenderung_gleich_erwartung.test.ts`, `node --test`,
     parametrisiert über die vier Fälle.
 
-- **AC-15 (Python: Änderung kommt an, wie eingestellt, ohne Ausnahme):** Given
+- **AC-15:** (Python: Änderung kommt an, wie eingestellt, ohne Ausnahme) Given
   `nach_aenderung_<fall>.json` (gespeicherter Stand nach der Änderung) und
   `nach_aenderung_<fall>_anzeige.json` (Editor-Anzeige nach derselben Änderung) je Fall / When
   `erwartete_kaskade` auf den gespeicherten Stand angewendet und mit der Anzeige-Projektion
@@ -674,7 +674,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
   - Test: `test_einstellung_gleich_auslieferung.py::
     test_ac15_aenderung_kommt_wie_eingestellt_an` (Python-Kern), parametrisiert über Fall 1–4.
 
-- **AC-16 (Python: Plausibilität — die Änderung hat tatsächlich gewirkt, alle vier Fälle):** Given
+- **AC-16:** (Python: Plausibilität — die Änderung hat tatsächlich gewirkt, alle vier Fälle) Given
   die vier Änderungsfälle / When die Projektion aus `nach_aenderung_<fall>.json` gegen die
   Projektion aus dem jeweiligen Original-Golden verglichen wird / Then unterscheiden sie sich
   GENAU um die eingestellte Änderung und sonst nirgends: Fall 1 — die abgewählte Metrik fehlt nur
@@ -687,7 +687,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
   - Test: `test_ac16_aenderung_hat_tatsaechlich_gewirkt`, parametrisiert über Fall 1–4, prüft
     je Fall die erwartete Differenz explizit (nicht bloß „ungleich").
 
-- **AC-17 (E2E: erstmalige SMS-Bearbeitung kommt an, wie eingestellt):** Given Golden C ist im
+- **AC-17:** (E2E: erstmalige SMS-Bearbeitung kommt an, wie eingestellt) Given Golden C ist im
   Browser (Staging) im SMS-Reiter geöffnet, der SMS-Reiter wurde bislang nie bearbeitet
   (Kaskadenquelle `global`, Fall 4) / When der Nutzer im SMS-Reiter eine Metrik abwählt UND zwei
   Metriken tauscht und danach speichert / Then liefert `GET /api/trips/{id}` auf den relevanten
@@ -701,7 +701,7 @@ SMS-Positions-Kaskade (nutzt `channel_active_metrics`), ist also von B9 nicht be
     Auslesen, liest per API zurück und vergleicht die genannten Felder gegen
     `nach_aenderung_fall4_sms_erstbearbeitung.json`.
 
-- **AC-18 (Keine neuen Register-Einträge):** Given die Umsetzung dieser Scheibe (B9-Fix, K8-Fix,
+- **AC-18:** (Keine neuen Register-Einträge) Given die Umsetzung dieser Scheibe (B9-Fix, K8-Fix,
   Änderungspfad) / When in `/40`/`/50` eine weitere, bisher unbekannte Abweichung innerhalb dieser
   Kette auftritt / Then wird sie, sofern im Rahmen dieser Kette lösbar, produktiv gefixt statt
   registriert — es wird **kein** neuer befristeter Register-Eintrag angelegt; liegt sie außerhalb

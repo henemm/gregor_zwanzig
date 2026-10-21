@@ -250,7 +250,7 @@ ohne Umstellung auf den neuen Loader (Umstellung optional, kein AC).
     Zusatzeintrag) und prüft Pool-Inhalt/-Reihenfolge (Component-Test, kein
     Dateiinhalt-Grep).
 
-- **AC-2 (Charakterisierung, Parität):** Given alle 25 Keys / When die aus dem
+- **AC-2:** (Charakterisierung, Parität) Given alle 25 Keys / When die aus dem
   Endpoint gebauten `CompareMetricDef`-Objekte (`buildCompareMetricDefs`) gegen eine
   aus dem heutigen `COMPARE_METRIC_DEFS`-Stand eingefrorene Fixture verglichen werden
   / Then stimmen `scale`/`step`/`kind`/`ordinalLabels`/`alarmCapable`/`defaultMin`/
@@ -271,7 +271,7 @@ ohne Umstellung auf den neuen Loader (Umstellung optional, kein AC).
     `notify` weiterhin ignorieren (bestehendes Verhalten, jetzt datengetrieben statt
     über die gelöschte FE-Liste `_COMPARE_ALARM_KEYS`).
 
-- **AC-4 (Async-Robustheit):** Given `GET /api/compare/metrics` schlägt fehl
+- **AC-4:** (Async-Robustheit) Given `GET /api/compare/metrics` schlägt fehl
   (Netzwerkfehler oder Non-2xx) / When der Schwellen-Editor geöffnet wird / Then zeigt
   er einen sichtbaren Fehlerzustand mit „Wiederholen"-Button — kein still leerer/
   kaputter Editor; reines Laden (Mount → Fetch-Resolve, ohne Nutzer-Interaktion) löst
@@ -282,7 +282,7 @@ ohne Umstellung auf den neuen Loader (Umstellung optional, kein AC).
     Zeilen; zweiter Test zählt PUT-/`ws`-Schreib-Aufrufe über den Ladezyklus vor jeder
     Nutzer-Geste (analog Teil-2-PUT-Count-Muster).
 
-- **AC-5 (Persistenz bitgleich):** Given identische Nutzereingaben (Zeilen, Von/Bis,
+- **AC-5:** (Persistenz bitgleich) Given identische Nutzereingaben (Zeilen, Von/Bis,
   notify/mark) / When `buildCompareCorridorSavePayload` aufgerufen wird / Then ist das
   Ergebnis (`corridors`/`ideal_ranges`/`active_metrics`/`metric_alert_levels`)
   bitidentisch zum Verhalten vor dieser Migration; ein bestehendes Preset lädt mit
@@ -293,7 +293,7 @@ ohne Umstellung auf den neuen Loader (Umstellung optional, kein AC).
     ruft `buildCompareCorridorSavePayload` mit denselben Fixture-Eingaben wie vor der
     Migration auf und vergleicht den Payload gegen die alte Erwartung.
 
-- **AC-6 (Profil-Feature unverändert):** Given der Compare-Create-Wizard (Fresh-Create,
+- **AC-6:** (Profil-Feature unverändert) Given der Compare-Create-Wizard (Fresh-Create,
   Profil-Prefill) / When ein Aktivitätsprofil gewählt wird / Then befüllt
   `buildComparePrefillRows` dieselben Zeilen mit denselben Idealwerten wie vor dem
   Umzug von `IDEAL_DEFAULTS`/`ProfileKey`/`PROFILE_METRICS_WITH_SCALES` nach
@@ -303,7 +303,7 @@ ohne Umstellung auf den neuen Loader (Umstellung optional, kein AC).
     zeigt weiterhin die korrekten Profil-Metrik-Labels (Regressionsschutz, bestehender
     Test/E2E unverändert grün).
 
-- **AC-7 (SSoT-Abschluss + Aufräumen):** Given die Migration ist abgeschlossen / When
+- **AC-7:** (SSoT-Abschluss + Aufräumen) Given die Migration ist abgeschlossen / When
   `compareMetricDefs.ts` gesucht wird / Then existiert die Datei nicht mehr; kein
   Import verweist mehr darauf; `CompareMatrix.svelte`/`HourlyMatrix.svelte` und ihr
   Dead-Code-Guard-Test sind gelöscht; `npm run check` (TypeScript) und der Frontend-Build

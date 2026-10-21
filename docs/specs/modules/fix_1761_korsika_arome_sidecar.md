@@ -213,7 +213,7 @@ ursprüngliche AC-1-Fassung noch nicht vorsah).
   - Test: DI-Ersatz von `_fetch_arome_france_hd` durch eine Funktion, die `[]` liefert; assert
     `source == "ARPAE-2I"`.
 
-- **AC-7 (Regressionsschutz):** Given die bestehenden `_ITALY_RADAR_LAT_MIN/_MAX/_LON_MIN/_MAX`-
+- **AC-7:** (Regressionsschutz) Given die bestehenden `_ITALY_RADAR_LAT_MIN/_MAX/_LON_MIN/_MAX`-
   Konstanten und `DpcSource.covers()` / When der Korsika-Fix eingebaut ist / Then bleibt
   `tests/tdd/test_dpc_official_alert_bbox.py` unverändert grün, insbesondere
   `DpcSource().covers(42.1244, 9.1339) is True` — die amtliche italienische Warnzuständigkeit

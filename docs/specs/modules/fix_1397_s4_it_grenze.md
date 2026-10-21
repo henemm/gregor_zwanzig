@@ -173,14 +173,14 @@ Limitation.
   - Test: `tests/tdd/test_meteoalarm_feed_italien.py` — realer AT-Grenzpunkt, geprüft wird der
     `unavailable`-Status des echten Ermittlungswegs, nicht ein Log-Text.
 
-- **AC-2 (Regressionsschutz Frankreich):** Given ein beobachteter Ort liegt in Frankreich nahe
+- **AC-2:** (Regressionsschutz Frankreich) Given ein beobachteter Ort liegt in Frankreich nahe
   der italienischen Grenze (wie bisher bereits korrekt behandelt) / When die amtlichen Warnungen
   ermittelt werden / Then bleibt dieser Ort weiterhin von der italienischen Quelle
   ausgeschlossen — keine Rückkehr des bereits einmal behobenen Fehlers.
   - Test: `tests/tdd/test_meteoalarm_feed_italien.py` — bestehender Fréjus-Regressionswächter
     bleibt unverändert grün.
 
-- **AC-3 (wichtigste Gegenprobe):** Given ein beobachteter Ort liegt tatsächlich in einer echten
+- **AC-3:** (wichtigste Gegenprobe) Given ein beobachteter Ort liegt tatsächlich in einer echten
   italienischen Warnzone, auch grenznah zu Österreich / When die amtlichen Warnungen ermittelt
   werden / Then bekommt dieser Ort weiterhin zuverlässig seine italienischen Warnungen — die
   Korrektur darf keinen bislang funktionierenden Ort verlieren.
@@ -203,7 +203,7 @@ Limitation.
   - Test: bestehender Malformations-/Fehlschlag-Test in `tests/tdd/test_meteoalarm_feed_italien.py`
     (Zeile ~900-913) bleibt unverändert grün.
 
-- **AC-6 (betrieblicher Nachweis):** Given der Stand ist ausgerollt und ein Beobachtungszyklus
+- **AC-6:** (betrieblicher Nachweis) Given der Stand ist ausgerollt und ein Beobachtungszyklus
   ist abgeschlossen / When der bestehende Betriebszustand zur italienischen Warnquelle betrachtet
   wird / Then hören die bisher fortlaufenden „Gebiet nicht zuordenbar"-Meldungen für Orte
   außerhalb Italiens auf, neu aufzutreten — der zugehörige Alarm wird nach Ablauf des

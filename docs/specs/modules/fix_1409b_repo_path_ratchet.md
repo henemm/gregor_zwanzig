@@ -261,7 +261,7 @@ lokalisierbar ist.
 
 Alle Läufe erfolgen über `uv run pytest tests/tdd/test_repo_path_hardcoding_ratchet.py -v` im Sitzungs-Worktree.
 
-- **AC-1 (volles Literal):**
+- **AC-1:** (volles Literal)
   - Input: temporäre synthetische Testdatei (in `tmp_path` bzw. als
     In-Memory-AST-Fixture innerhalb des Wächtertests selbst), die
     `Path("/home/hem/gregor_zwanzig/.claude/hooks/<eine-echte-getrackte-Datei>.py")`
@@ -272,14 +272,14 @@ Alle Läufe erfolgen über `uv run pytest tests/tdd/test_repo_path_hardcoding_ra
   - Erwarteter Output: Scan-Funktion meldet genau einen Fund mit
     korrekter Datei:Zeile-Angabe.
 
-- **AC-2 (Konstanten-Join):**
+- **AC-2:** (Konstanten-Join)
   - Input: Fixture mit `REPO = Path("/home/hem/gregor_zwanzig")` in Zeile
     N, `REPO / ".claude/hooks/<datei>.py"` in Zeile N+1.
   - Vorgehen: Scan-Funktion auf die Fixture anwenden.
   - Erwarteter Output: Fund an Zeile N+1 (dem Join), nicht an Zeile N
     (der Verzeichniskonstante selbst).
 
-- **AC-3 (Bestandsschutz):**
+- **AC-3:** (Bestandsschutz)
   - Input: unveränderter Stand von `tests/**/*.py`.
   - Vorgehen: `uv run pytest tests/tdd/test_repo_path_hardcoding_ratchet.py -v`
     gegen den echten Repo-Baum ausführen.
@@ -287,27 +287,27 @@ Alle Läufe erfolgen über `uv run pytest tests/tdd/test_repo_path_hardcoding_ra
     Erwähnung von `test_issue_348_parallel_workspaces.py`,
     `test_issue_1004_startzeit_ssot.py` oder einer `.env`/`REPO_DIR`-Stelle.
 
-- **AC-4 (Docstring-Ausschluss):**
+- **AC-4:** (Docstring-Ausschluss)
   - Input: Fixture mit `"""Siehe /home/hem/gregor_zwanzig/docs/x.md"""` als
     Docstring, kein Codeausdruck mit diesem Pfad.
   - Vorgehen: Scan-Funktion auf die Fixture anwenden.
   - Erwarteter Output: Kein Fund.
 
-- **AC-5 (Marker-Kommentar):**
+- **AC-5:** (Marker-Kommentar)
   - Input: zwei Fixtures — (a) Fund-Zeile mit
     `# gz-main-path: Zugangsdaten sollen aus der produktiven .env kommen`,
     (b) identische Fund-Zeile mit `# gz-main-path:` ohne folgenden Text.
   - Vorgehen: Scan-Funktion auf beide Fixtures anwenden.
   - Erwarteter Output: (a) kein Fund, (b) ein Fund.
 
-- **AC-6 (Prüfdatum auffindbar):**
+- **AC-6:** (Prüfdatum auffindbar)
   - Input: `tests/tdd/test_repo_path_hardcoding_ratchet.py`.
   - Vorgehen: `grep -n "2026-10-27" tests/tdd/test_repo_path_hardcoding_ratchet.py`
     ausführen.
   - Erwarteter Output: genau ein Treffer an der Konstantendefinition
     (analog `EXPIRY` in `test_naming_gate.py`).
 
-- **AC-7 (weitere Auflösungsformen):**
+- **AC-7:** (weitere Auflösungsformen)
   - Input: drei Fixtures — f-String
     (`f"{'/home/hem/gregor_zwanzig'}/.claude/hooks/<datei>.py"` bzw.
     gleichwertige Konstruktion), `+`-Verkettung

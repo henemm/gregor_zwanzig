@@ -948,8 +948,13 @@ def main() -> int:
         help="Workflow-Name für Artefakt-Pfad (Fallback: GZ_ACTIVE_WORKFLOW, dann 'unknown')",
     )
     args = parser.parse_args()
+    # Sammel #1197 (#1382 F003): ausdruecklich leerer --e2e-path= ist nicht
+    # "nicht angegeben" — fail-closed abbrechen statt Vorfahren-Suche.
+    if args.e2e_path is not None and not args.e2e_path.strip():
+        parser.error("--e2e-path ist ausdruecklich leer angegeben — Pfad fehlt (fail-closed)")
+    explicit_path = args.e2e_path is not None
 
-    e2e_path = Path(args.e2e_path) if args.e2e_path else _commit_e2e_path()
+    e2e_path = Path(args.e2e_path) if explicit_path else _commit_e2e_path()
 
     # Fix 5 (#1327/#1228): OPENSPEC_ACTIVE_WORKFLOW ist die primäre Quelle,
     # GZ_ACTIVE_WORKFLOW (Legacy-Fallback, analog prod_send_gate.py) greift
@@ -968,7 +973,7 @@ def main() -> int:
         )
         workflow = "unknown"
 
-    return run_selftest(e2e_path, workflow, explicit_path=bool(args.e2e_path))
+    return run_selftest(e2e_path, workflow, explicit_path=explicit_path)
 
 
 if __name__ == "__main__":

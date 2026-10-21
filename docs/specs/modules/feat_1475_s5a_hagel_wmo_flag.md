@@ -170,7 +170,7 @@ analog `confidence_pct`, Issue #710, s. AC-9).
 
 ## Acceptance Criteria
 
-- **AC-1 (Wirkungsnachweis Ende-zu-Ende, WMO 96/99 → ja):** Given ein
+- **AC-1:** (Wirkungsnachweis Ende-zu-Ende, WMO 96/99 → ja) Given ein
   Wetterpunkt mit WMO-Code 96 oder 99 im **regulären** Open-Meteo-Abrufpfad
   (`OpenMeteoProvider.fetch_forecast`, keine isolierte Methodenprüfung) /
   When eine Vorhersage gebaut und ein Trip-Briefing gerendert wird / Then
@@ -207,7 +207,7 @@ analog `confidence_pct`, Issue #710, s. AC-9).
     Wird `hail_flag` versehentlich als fünftes Signal in die Fusionsliste
     eingefügt, MUSS dieser Test rot werden.
 
-- **AC-4 (Tagesaggregation, Priorität ja>unbekannt>nein):** Given eine
+- **AC-4:** (Tagesaggregation, Priorität ja>unbekannt>nein) Given eine
   Etappe mit mehreren Stunden, davon mindestens einer mit `hail_flag=True`
   und den übrigen `None` / When der Tageswert aggregiert wird
   (`compute_basis_metrics`/`summarize_points`) / Then ist der
@@ -219,7 +219,7 @@ analog `confidence_pct`, Issue #710, s. AC-9).
     Reihenfolge/Kodierung falsch entscheiden — Test nutzt echte
     `Optional[bool]`-Werte, keine numerische Ersatzkodierung.
 
-- **AC-5 (E-Mail, rein deskriptiv, kein Rauschen bei unbekannt):** Given
+- **AC-5:** (E-Mail, rein deskriptiv, kein Rauschen bei unbekannt) Given
   eine Etappe mit Tages-`hail_flag=True` und eine zweite Etappe derselben
   Mail mit `hail_flag=None` / When die Trip-Mail gerendert wird (Klartext
   UND HTML) / Then zeigt NUR die erste Etappe einen zusätzlichen
@@ -230,7 +230,7 @@ analog `confidence_pct`, Issue #710, s. AC-9).
     den echten Mail-Validator-Pfad (`briefing_mail_validator.py`, echte
     zugestellte Staging-Mail), nicht nur ein isolierter Renderer-Aufruf.
 
-- **AC-6 (SMS, kein zusätzliches Rauschen):** Given eine Etappe mit
+- **AC-6:** (SMS, kein zusätzliches Rauschen) Given eine Etappe mit
   `hail_flag=True` und eine zweite mit `hail_flag=None` (bzw. später
   `False`) / When das SMS-Trip-Briefing gerendert wird / Then trägt NUR die
   True-Etappe eine zusätzliche Hagel-Kennzeichnung im Token-Block; die
@@ -240,7 +240,7 @@ analog `confidence_pct`, Issue #710, s. AC-9).
     `hail_flag=True`). Telegram-Kurzform wird als A/B-Pflichtprüfung gegen
     dieselben zwei Fixtures mitgeprüft (Telegram-Kurzform = SMS-Prüfweg).
 
-- **AC-7 (GEWITTER-Kommando, Telegram/Mail-Antwort, DRY):** Given ein
+- **AC-7:** (GEWITTER-Kommando, Telegram/Mail-Antwort, DRY) Given ein
   Nutzer sendet das Kommando `GEWITTER` an einem Tag mit aggregiertem
   `hail_flag=True` / When `_fmt_gewitter()` die Antwort baut / Then enthält
   die Antwort denselben Hagel-Hinweis-Text wie die E-Mail-Renderer — über
@@ -252,7 +252,7 @@ analog `confidence_pct`, Issue #710, s. AC-9).
     Kommando-Handler dieselbe Funktion importieren (kein Duplikat, #1481
     DRY-Pflicht).
 
-- **AC-8 (keine Handlungsempfehlung, ADR-0007):** Given jede der oben
+- **AC-8:** (keine Handlungsempfehlung, ADR-0007) Given jede der oben
   genannten Ausgaben (Mail, SMS, Telegram-Kommando) mit `hail_flag=True` /
   When der tatsächlich sichtbare Text geprüft wird / Then enthält er an
   keiner Stelle einen Ratschlags-/Imperativtext ("Schutz suchen",
@@ -262,7 +262,7 @@ analog `confidence_pct`, Issue #710, s. AC-9).
     einer festgelegten Verbotswortliste. Das ist ein Verhaltensnachweis am
     Renderer-Output, keine Ersatzprüfung an einer Quelldatei.
 
-- **AC-9 (kein Frontend/Editor, analog #710):** Given der Trip-Editor bzw.
+- **AC-9:** (kein Frontend/Editor, analog #710) Given der Trip-Editor bzw.
   die Metrik-Auswahl (`GET /api/metrics`) / When die verfügbaren wählbaren
   Metriken abgerufen werden / Then erscheint kein Hagel-Eintrag in der
   Liste — das Kennzeichen ist nicht wählbar, es erscheint ausschließlich
@@ -271,7 +271,7 @@ analog `confidence_pct`, Issue #710, s. AC-9).
     hagelbezogener `metric_id`. Ein Test, der eine wählbare
     Hagel-Metrik erwartet, MUSS fehlschlagen.
 
-- **AC-10 (Compare-API-Durchreichung, kein stiller Feldverlust):** Given
+- **AC-10:** (Compare-API-Durchreichung, kein stiller Feldverlust) Given
   ein Ortsvergleich mit stündlichen Daten, von denen ein Punkt
   `hail_flag=True` trägt / When `api/routers/compare.py` die Stundendaten
   nach JSON serialisiert / Then erscheint `hail_flag` im selben

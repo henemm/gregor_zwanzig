@@ -123,51 +123,51 @@ Pausentag-Heuristik (F3). Die Kaskaden-Rückfrage bleibt Inline-Banner (F2).
 
 ## Acceptance Criteria
 
-- **AC-1 (F1):** Given Mobile-Ansicht eines Trips mit ≥2 Etappen / When der
+- **AC-1:** (F1) Given Mobile-Ansicht eines Trips mit ≥2 Etappen / When der
   Nutzer das Datum der ersten Etappe tippt und ein neues Datum wählt / Then
   wird der Wochentag-Chip aktualisiert und der neue Stand gespeichert (nach
   Reload sichtbar), ohne die Karte auf-/zuzuklappen.
   - Test: E2E 390×844 — Datum ändern, Reload, Datum steht; `aria-expanded`
     der Karte unverändert.
 
-- **AC-2 (F2a):** Given dieselbe Situation, aber die geänderte Etappe hat
+- **AC-2:** (F2a) Given dieselbe Situation, aber die geänderte Etappe hat
   datierte Folge-Etappen / Then erscheint die Kaskaden-Rückfrage als
   Inline-Banner über der Liste („Sollen die N folgenden Etappen lückenlos
   anschließen?").
   - Test: E2E — Banner sichtbar, Speichern erst nach Antwort (ein PUT).
 
-- **AC-3 (F2b):** Given die sichtbare Kaskaden-Rückfrage / When der Nutzer
+- **AC-3:** (F2b) Given die sichtbare Kaskaden-Rückfrage / When der Nutzer
   „Lückenlos anschließen" wählt / Then erhalten alle Folge-Etappen
   lückenlose Daten (Anker+1, +2, …), ein Erfolgs-Banner zeigt Anzahl und
   Startdatum.
   - Test: E2E — Folgedaten geprüft (inkl. Pausentag rückt mit, Etappe ohne
     Datum verbraucht keinen Tag — #1393-Regeln unverändert).
 
-- **AC-4 (F2c):** Given die sichtbare Kaskaden-Rückfrage / When der Nutzer
+- **AC-4:** (F2c) Given die sichtbare Kaskaden-Rückfrage / When der Nutzer
   „Nur diese Etappe" wählt / Then ändert sich nur die auslösende Etappe;
   Folge-Etappen behalten ihre Daten.
   - Test: E2E — Folgedatum unverändert nach Reload.
 
-- **AC-5 (F4):** Given Mobile-Ansicht / When der Nutzer die Startzeit einer
+- **AC-5:** (F4) Given Mobile-Ansicht / When der Nutzer die Startzeit einer
   Etappe ändert / Then wird die neue Zeit gespeichert und die ETA-Zeilen
   der aufgeklappten Wegpunkte rechnen damit.
   - Test: E2E — Zeit ändern, Reload, Wert steht; Wegpunkt-ETA aktualisiert.
 
-- **AC-6 (F3a):** Given Mobile-Ansicht / When der Nutzer „+ Etappe →
+- **AC-6:** (F3a) Given Mobile-Ansicht / When der Nutzer „+ Etappe →
   Pausentag" wählt / Then entsteht eine Karte mit sichtbarem Titel
   „Pausentag", die als Pause gerendert wird (`data-pause`), und die
   Datumsbearbeitung funktioniert auch auf der Pausen-Karte.
   - Test: E2E — Karte `data-pause=true`, Datum editierbar, nach Reload
     identisch.
 
-- **AC-7 (F3b):** Given eine Desktop-Pause (`name: 'Pausentag'`, keine
+- **AC-7:** (F3b) Given eine Desktop-Pause (`name: 'Pausentag'`, keine
   Wegpunkte) im Bestand / Then erkennen `isPauseStage()` und das Panel sie
   konsistent als Pause (kein gemischtes Verhalten mehr zwischen
   Panel-Heuristik und `isPauseStage`).
   - Test: Unit `wizardHelpers.test.ts` — `Pausentag` → true; benannte
     Vorlagen-Etappe (`Zustieg`) → false (#559 unverändert).
 
-- **AC-8 (Desktop-Regression):** Given Desktop-Ansicht (≥900 px) / When der
+- **AC-8:** (Desktop-Regression) Given Desktop-Ansicht (≥900 px) / When der
   Nutzer den Etappen-Tab öffnet / Then ist die Darstellung zeichen-identisch
   zum Stand vor dieser Spec (EtappenStrip + Karten-Editor, Datumsfeld im
   aktiven Stage-Header).

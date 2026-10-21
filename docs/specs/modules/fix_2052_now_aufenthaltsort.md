@@ -161,14 +161,14 @@ Testdatei (nach Verhalten benannt, nicht nach Issue-Nummer):
 
 ## Acceptance Criteria
 
-- **AC-1 (Kern):** Given ein Trip mit einer heutigen Etappe, deren aktuelles Segment zum
+- **AC-1:** (Kern) Given ein Trip mit einer heutigen Etappe, deren aktuelles Segment zum
   Abfragezeitpunkt läuft / When `/jetzt` aufgerufen wird / Then wird der Nowcast an der über
   `resolve_current_segment(trip, now_utc, today)` und `position_at_time()` interpolierten
   Position abgefragt, nicht an `stage.waypoints[0]`.
   - Test: echter `_show_now`-Aufruf mit Zwei-Wegpunkt-Etappe, Assert auf die tatsächlich an
     `get_nowcast()` übergebenen Koordinaten (Aufzeichnungs-Subklasse, kein Mock).
 
-- **AC-2 (Zeitpunkt):** Given eine laufende Etappe / When `/jetzt` aufgerufen wird / Then ist der
+- **AC-2:** (Zeitpunkt) Given eine laufende Etappe / When `/jetzt` aufgerufen wird / Then ist der
   an `position_at_time()` übergebene Zielzeitpunkt `now_utc` selbst — nicht die Fenstermitte
   (`now_utc + RADAR_ONSET_THRESHOLD_MIN // 2` bzw. `+ NOWCAST_HORIZON_MIN // 2`), die Alarm- und
   Briefing-Pfad verwenden. `/jetzt` ist eine Sofortabfrage nach dem Ort, an dem der Nutzer
@@ -179,7 +179,7 @@ Testdatei (nach Verhalten benannt, nicht nach Issue-Nummer):
     `now_utc + Offset//2`; Assert, dass die tatsächlich abgefragten Koordinaten dem `now_utc`-Punkt
     entsprechen, nicht dem Fenstermitte-Punkt.
 
-- **AC-3 (Nicht-Trivialität / Gegenprobe):** Given eine Etappe, deren Zielwegpunkt verschoben
+- **AC-3:** (Nicht-Trivialität / Gegenprobe) Given eine Etappe, deren Zielwegpunkt verschoben
   wird / When `/jetzt` erneut aufgerufen wird / Then verschiebt sich der abgefragte Messpunkt
   mit — UND interpolierter Punkt und `waypoints[0]` unterscheiden sich messbar (Schwelle wie in
   `test_issue_822_radar_nowcast_segment.py:1176-1233`), sonst wäre AC-1 trivial erfüllbar.
@@ -187,7 +187,7 @@ Testdatei (nach Verhalten benannt, nicht nach Issue-Nummer):
     Koordinaten; zusätzlicher Assert, dass der interpolierte Punkt > 0.01° vom Startpunkt entfernt
     liegt.
 
-- **AC-4 (Höhe):** Given ein Segment mit unterschiedlicher Höhe an Start- und Endpunkt / When
+- **AC-4:** (Höhe) Given ein Segment mit unterschiedlicher Höhe an Start- und Endpunkt / When
   `/jetzt` aufgerufen wird / Then wird die Höhe des interpolierten Punktes mitgeführt und **an
   der Aufrufstelle** in `_show_now` auf ganze Meter normalisiert (`int(round(...))`, `None`
   bleibt `None`) — `get_nowcast` führt `elevation_m` roh im Cache-Schlüssel, `1000` vs. `1000.0`
@@ -195,7 +195,7 @@ Testdatei (nach Verhalten benannt, nicht nach Issue-Nummer):
   - Test: Assert auf den an `get_nowcast(elevation_m=...)` übergebenen Wert — ganzzahlig, gleich
     dem gerundeten interpolierten Höhenwert.
 
-- **AC-5 (Zeitzone):** Given eine laufende Etappe / When `/jetzt` aufgerufen wird / Then wird
+- **AC-5:** (Zeitzone) Given eine laufende Etappe / When `/jetzt` aufgerufen wird / Then wird
   `tz_for_coords()` auf die interpolierten Koordinaten angewandt, nicht mehr auf
   `waypoints[0]` — die Onset-Uhrzeit im Antworttext gilt für den Messpunkt.
   - Test: die an `tz_for_coords()` übergebenen Koordinaten aufzeichnen und gegen den
@@ -203,27 +203,27 @@ Testdatei (nach Verhalten benannt, nicht nach Issue-Nummer):
     Zeitzonengrenze ist als Nachweis NICHT nötig und wäre ein eigener Randfall, siehe
     Known Limitations.)
 
-- **AC-6 (Negativ):** Given ein `/jetzt`-Aufruf / When `get_nowcast()` aufgerufen wird / Then
+- **AC-6:** (Negativ) Given ein `/jetzt`-Aufruf / When `get_nowcast()` aufgerufen wird / Then
   bleibt `priority="user_briefing"` unverändert (#1329 C2) — eine Nutzeraktion wird nie
   gedrosselt.
   - Test: `tests/unit/test_radar_budget_and_priority.py::test_jetzt_command_uses_user_briefing_priority_explicitly`
     bleibt unverändert grün (Regressionsschutz, kein neuer Test nötig).
 
-- **AC-7 (Negativ):** Given ein `/jetzt`-Aufruf / When die Etappe für heute aufgelöst wird / Then
+- **AC-7:** (Negativ) Given ein `/jetzt`-Aufruf / When die Etappe für heute aufgelöst wird / Then
   bleibt die Ortstag-Auswahl unverändert (#1402, #1727 S5a, ADR-0044) — der Etappentag bestimmt
   weiterhin, **welche** Etappe gilt; geändert wird nur, **wo auf ihr** gemessen wird. Der
   bestehende Zwei-Zonen-Test muss unverändert grün bleiben.
   - Test: `tests/tdd/test_befehlspfade_folgen_ortszone.py::test_ac3_jetzt_nimmt_den_wegpunkt_der_ortstag_etappe`
     und `..._nicht_der_systemuhr[jetzt]` bleiben unverändert grün (Regressionsschutz).
 
-- **AC-8 (Vorschau, Bitgleichheit):** Given der Nutzer fragt `/jetzt` **vor** dem Start der
+- **AC-8:** (Vorschau, Bitgleichheit) Given der Nutzer fragt `/jetzt` **vor** dem Start der
   heutigen Etappe / When `resolve_current_segment()` Stufe 3 (Vorschau) greift / Then liefert
   `position_at_time()` den `start_point` — das Ergebnis ist **bitgleich** zum Verhalten vor
   dieser Änderung.
   - Test: `now_utc` vor dem ersten Segment des Tages, Assert auf Koordinaten-Identität mit
     `waypoints[0]` (nicht nur numerische Nähe).
 
-- **AC-9 (Randfall nach Tagesende):** Given `resolve_current_segment()` liefert `None` (der
+- **AC-9:** (Randfall nach Tagesende) Given `resolve_current_segment()` liefert `None` (der
   Nutzer fragt nach dem Ende des Tagesfensters, typisch nach 23:00 Ortszeit) / When `/jetzt`
   aufgerufen wird / Then wird am **letzten** Wegpunkt der heutigen Etappe gemessen
   (`stage.waypoints[-1]`), nicht am ersten. Begründung: `None` bedeutet in dieser Vorrangkette
@@ -232,7 +232,7 @@ Testdatei (nach Verhalten benannt, nicht nach Issue-Nummer):
   - Test: `now_utc` nach Ende des letzten Tagessegments (und nach dem Vortag), Assert auf
     Koordinaten-Identität mit `stage.waypoints[-1]`, nicht `waypoints[0]`.
 
-- **AC-10 (Fehlerpfad):** Given `position_at_time()` wirft wider Erwarten eine Exception / When
+- **AC-10:** (Fehlerpfad) Given `position_at_time()` wirft wider Erwarten eine Exception / When
   `/jetzt` aufgerufen wird / Then bekommt der Nutzer trotzdem eine Antwort (Rückfall auf
   `waypoints[0]`, das bisherige Verhalten), und der Fehler wird geloggt. Der `try` umschließt
   ausschließlich die Positionsbestimmung, nicht den Nowcast-Abruf — damit die Meldung
@@ -243,7 +243,7 @@ Testdatei (nach Verhalten benannt, nicht nach Issue-Nummer):
     `waypoints[0]`; separater Assert, dass ein `logger.error`-Aufruf erfolgte (Caplog), nicht der
     Text-Inhalt allein.
 
-- **AC-11 (Bestandsschutz):** Given ein Trip ohne heutige Etappe / When `/jetzt` aufgerufen
+- **AC-11:** (Bestandsschutz) Given ein Trip ohne heutige Etappe / When `/jetzt` aufgerufen
   wird / Then bleibt die bestehende Fehlerantwort („Keine heutige Etappe gefunden…",
   `success=False`) wortgleich erhalten. Im Erfolgsfall bleibt der `🔄 Aktualisieren`-Button mit
   `callback_data: "now"` unverändert erhalten — er hängt am Erfolgspfad, der Fehlerpfad trägt

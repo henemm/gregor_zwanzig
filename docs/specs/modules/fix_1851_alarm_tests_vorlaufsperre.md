@@ -178,7 +178,7 @@ Es gibt also keine unerklärte „Kippkante" mehr, die noch zu vermessen wäre.
 
 ## Acceptance Criteria
 
-- **AC-1 (alle Fälle wanduhrunabhängig grün):** Given die drei betroffenen
+- **AC-1:** (alle Fälle wanduhrunabhängig grün) Given die drei betroffenen
   Testfälle (`test_ac1_…`, `test_ac2a_…`, `test_ac3_…`) nach der
   Fixture-Änderung dieser Scheibe / When
   `uv run pytest tests/unit/test_alarm_zeitfenster_ziel.py -v --allow-hosts=127.0.0.1,::1 -p no:randomly`
@@ -191,7 +191,7 @@ Es gibt also keine unerklärte „Kippkante" mehr, die noch zu vermessen wäre.
     Nachweis — es gibt keine Kippkante mehr, die zu einer bestimmten Uhrzeit
     erneut prüfbar wäre.
 
-- **AC-2 (Gegenprobe — Sperre aktiv herstellen statt abwarten, wichtigster AC):**
+- **AC-2:** (Gegenprobe — Sperre aktiv herstellen statt abwarten, wichtigster AC)
   Given ein Testfall baut Variante A (`report_config.enabled=True`,
   `morning_time` auf die aktuelle Ortsstunde des Trips gesetzt — berechnet
   relativ zu `datetime.now()` im Testlauf, s. Implementation Details Punkt 3)
@@ -207,7 +207,7 @@ Es gibt also keine unerklärte „Kippkante" mehr, die noch zu vermessen wäre.
     Briefingzeit von Variante A wird aus der Ortsstunde zum Ausführungszeitpunkt
     selbst abgeleitet und ist damit bei jedem Lauf diskriminierend.
 
-- **AC-3 (Zusicherung aus #1584 bleibt inhaltlich erhalten):** Given die vier
+- **AC-3:** (Zusicherung aus #1584 bleibt inhaltlich erhalten) Given die vier
   Testfälle `test_ac1_…`, `test_ac2a_…`, `test_ac2b_…`, `test_ac3_…` nach
   dieser Scheibe / When sie ausgeführt werden / Then prüfen sie unverändert
   dieselbe fachliche Aussage wie in #1584 spezifiziert — Gewitter
@@ -218,7 +218,7 @@ Es gibt also keine unerklärte „Kippkante" mehr, die noch zu vermessen wäre.
     Scheibe (`git diff`); Assert die Assertions selbst (nicht nur die
     Fixture) sind unverändert bzw. semantisch gleichwertig.
 
-- **AC-4 (`test_ac2b` besteht aus dem richtigen Grund):** Given
+- **AC-4:** (`test_ac2b` besteht aus dem richtigen Grund) Given
   `test_ac2b_gewitter_1915_knapp_nach_fensterende_bleibt_aus` und
   `test_ac2a_gewitter_1845_knapp_vor_fensterende_wird_zugestellt` nutzen
   nach dieser Scheibe dieselbe gehärtete Fixture (`_trip()` mit
@@ -233,7 +233,7 @@ Es gibt also keine unerklärte „Kippkante" mehr, die noch zu vermessen wäre.
     müsste `test_ac2a_…` (das eine Mail erwartet) rot sein — sein Grün-Status
     ist der Beleg.
 
-- **AC-5 (Nicht-Wirkung, Produktivcode unangetastet):** Given der
+- **AC-5:** (Nicht-Wirkung, Produktivcode unangetastet) Given der
   vollständige Diff dieser Scheibe / When
   `git diff --stat origin/main...HEAD -- src/ api/ internal/ frontend/ cmd/`
   ausgeführt wird / Then ist die Ausgabe leer — die Scheibe belegt damit

@@ -374,7 +374,7 @@ Aufruf mit der jeweils richtigen Trip-ID-Variable steht.
 - **AC-2:** Given eine Trip wurde bereits geladen / When der Nutzer eine Aenderung an ihr speichert / Then traegt die Speicher-Anfrage automatisch den zuletzt bekannten Stand, ohne dass eine einzelne Editor-Komponente dafuer Code enthalten muss
   - Test: `test_put_attachesIfMatch_whenStampKnown`
 
-- **AC-3 (Kernfall):** Given der Wetter-Reiter loest beim Speichern zwei aufeinanderfolgende Schreibvorgaenge derselben Trip aus / When beide nacheinander abgeschickt werden / Then gelingen beide — der zweite verwendet automatisch den durch den ersten aktualisierten Stand
+- **AC-3:** (Kernfall) Given der Wetter-Reiter loest beim Speichern zwei aufeinanderfolgende Schreibvorgaenge derselben Trip aus / When beide nacheinander abgeschickt werden / Then gelingen beide — der zweite verwendet automatisch den durch den ersten aktualisierten Stand
   - Test: `test_weatherMetricsTab_sequentialDoublePut_bothSucceed`
 
 - **AC-4:** Given zwei Browser-Reiter oder -Fenster haben dieselbe Trip geladen / When beide unabhaengig voneinander speichern und die Aenderung des einen zuerst beim Server ankommt / Then wird der zeitlich zweite, jetzt veraltete Schreibvorgang abgelehnt statt die bereits gespeicherte Aenderung zu ueberschreiben

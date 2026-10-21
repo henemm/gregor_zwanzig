@@ -203,7 +203,7 @@ außer der einen `.jsonl`-Datei, kein neuer Endpunkt — Erweiterung des bestehe
     Lücke bleibt `streak_since` auf dem jüngeren Serienbeginn (Lücken-Logik wie
     `analyzeBriefingProviderErrors`).
 
-- **AC-9 (Wirkungs-AC, zwingend):** Given ein Morgen-Briefing, dessen Versand mit einer Ausnahme scheitert, When am selben Tag der Abweichungs-Alarm-Lauf für denselben Trip ausgeführt wird, Then findet dieser Lauf einen gültigen, heute datierten Wetter-Snapshot und führt die normale Abweichungsprüfung durch — er endet NICHT in der Warnung "No fresh weather data".
+- **AC-9:** (Wirkungs-AC, zwingend) Given ein Morgen-Briefing, dessen Versand mit einer Ausnahme scheitert, When am selben Tag der Abweichungs-Alarm-Lauf für denselben Trip ausgeführt wird, Then findet dieser Lauf einen gültigen, heute datierten Wetter-Snapshot und führt die normale Abweichungsprüfung durch — er endet NICHT in der Warnung "No fresh weather data".
   - Test: End-to-End innerhalb der Kern-Suite (kein echtes Netz): Morgen-Briefing mit
     garantiertem Versandfehler laufen lassen, danach `TripAlertService.check_and_send_alerts()`
     (bzw. den internen `_fetch_fresh_weather`/`_get_cached_weather`-Pfad) für denselben Trip und

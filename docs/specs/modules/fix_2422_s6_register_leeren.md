@@ -12,7 +12,7 @@ issues: ["#2422", "#2429"]
 
 # Fix #2422 (Scheibe S6): Ausnahme-Register „Einstellung ≠ Auslieferung" leeren (B1, B2, B3, B5)
 
-> **Abgelöst durch S6b** (`fix_2422_s6b_cape_aus_roh_einfach`): AC-6 und die cape-Teile von AC-7/AC-8 gelten nicht mehr; `cape` ist aus `SMS_FORMAT_MODE_METRIC_IDS` gestrichen.
+> **Teilweise abgelöst durch S6b** (`fix_2422_s6b_cape_aus_roh_einfach`, 2026-10-01): AC-6 und die cape-Teile von AC-7/AC-8 gelten nicht mehr; `cape` ist aus `SMS_FORMAT_MODE_METRIC_IDS` gestrichen.
 
 ## Approval
 
@@ -361,7 +361,7 @@ Metrik verdrängt (Kommentar `test_einstellung_gleich_auslieferung.py:~743-748` 
 
 ## Acceptance Criteria
 
-**AC-1 (B1, `TF` erscheint):** Given ein Trip mit aktiver „Gefühlte Temperatur" (`wind_chill`) im
+**AC-1:** (B1, `TF` erscheint) Given ein Trip mit aktiver „Gefühlte Temperatur" (`wind_chill`) im
 SMS-Kanal-Layout (Fall KHW 403, Position aus dem Layout) und Stundenwerten der gefühlten Temperatur im
 Tagesfenster, When das Briefing als SMS, Premium-SMS und Telegram-Kurzform gesendet wird, Then enthalten
 alle drei Texte genau **ein** Token `TF<Tiefstwert>@<Stunde>` (z. B. `TF-3@6`) an der Layout-Position von
@@ -371,14 +371,14 @@ plus 7 für `TF` = 64 Zeichen.
     Formatters); Orakel-Dimension „erscheint" für `wind_chill` in `sms`/`premium_sms`/`telegram_kurzform`
     grün ohne Register-Eintrag; der Wert ist das Minimum der Tagesfenster-Stundenwerte mit deren Stunde.
 
-**AC-2 (B1, Nullform/Lücke/Kürzung):** Given `wind_chill` aktiv, When (a) keine Stundenwerte vorliegen, (b)
+**AC-2:** (B1, Nullform/Lücke/Kürzung) Given `wind_chill` aktiv, When (a) keine Stundenwerte vorliegen, (b)
 eine Datenlücke im Fenster vorliegt, (c) das 160-Zeichen-Budget überschritten würde, Then erscheint (a)
 `TF-`, (b) `TF?`, und (c) fällt `TF` als **erstes** der Komfort-Zusatz-Token (vor `FN`/`FL`/`FD`, vor `PR`).
 `TF-` (Nullform) und `TF-3@6` (negativer Wert) werden vom Orakel-Parser unterschieden.
   - Test: Token-Builder-Test mit echten `DailyForecast`-Werten; Kürzungsreihenfolge an einer überlangen
     Konfiguration; Parser-Test beider Formen.
 
-**AC-3 (B1, `TF` und `FL` gleichzeitig; Abgrenzung):** Given ein Trip, in dem die Eltern-Metrik `wind_chill`
+**AC-3:** (B1, `TF` und `FL` gleichzeitig; Abgrenzung) Given ein Trip, in dem die Eltern-Metrik `wind_chill`
 **und** das Kind `wind_chill_day_low` (`FL`) aktiv sind, When das Briefing gesendet wird, Then erscheinen
 **beide** Token (`TF<°C>@<h>` aus dem Tagesfenster, `FL<°C>` aus dem Gehzeit-Fenster), keines wird
 unterdrückt; ist nur die Eltern-Metrik aktiv und die Kinder sind ausdrücklich abgewählt (Goldens a/b), erscheint
@@ -387,14 +387,14 @@ B1-alt (Kinder-Token statt `TF`) ist zur PO-Freigabe vorgelegt.
   - Test: zwei Konfigurationen (beide aktiv / Kinder abgewählt) gegen den echten Formatter; Fixture, in der
     Gehzeit- und Tagesfenster verschiedene Tiefstwerte liefern, damit `TF` ≠ `FL` messbar ist.
 
-**AC-4 (B1, `KÜRZEL`/`CODES` und Editor-Marken):** Given ein Trip, When der Nutzer `KÜRZEL` oder `CODES` per
+**AC-4:** (B1, `KÜRZEL`/`CODES` und Editor-Marken) Given ein Trip, When der Nutzer `KÜRZEL` oder `CODES` per
 Kanal-Eingang sendet und den Editor öffnet, Then nennt die Antwort für den Trip `TF` (gefühlt), die
 Editor-Kürzelmarken (`GET /api/sms-symbols`) führen `wind_chill` mit `TF`, und im **Ortsvergleich** bleibt
 die Vergleichs-SMS byte-identisch zum Stand vor S6.
   - Test: `trip_command_processor.codes_text(vergleich=False)` und Endpoint-Antwort;
     `tests/tdd/test_compare_sms_kuerzel.py` unverändert grün.
 
-**AC-5 (B2, Wolken Roh/Einfach):** Given eine SMS-Wolken-Metrik (`cloud_total`) mit Spitzenwert 70 % um
+**AC-5:** (B2, Wolken Roh/Einfach) Given eine SMS-Wolken-Metrik (`cloud_total`) mit Spitzenwert 70 % um
 4 Uhr, When `format_mode` „Roh" ist, Then lautet der Token `CT70@4`; When „Einfach", Then `CT:SCT@4`
 (Doppelpunkt im Kürzel nach der Konvention #1824 B). Die fünf Stufen sind `CLR` (≤10 %), `FEW` (≤30 %), `SCT`
 (≤70 %), `BKN` (≤90 %), `OVC` (>90 %); `CL`/`CM`/`CH` verhalten sich gleich. Ein 0-%-Wert bleibt wie in der
@@ -402,21 +402,21 @@ Roh-Form ohne Sample und ergibt `-`. **Vorschlag zur Freigabe.**
   - Test: Token-Builder-Test über alle Bandgrenzen (10/11, 30/31, 70/71, 90/91) beider Modi; Orakel erkennt
     Roh als „raw", Einfach als „friendly".
 
-**AC-6 (B2, CAPE Roh/Einfach):** Given `cape` im SMS-Layout mit Spitzenwert 900 J/kg um 14 Uhr, When „Roh",
+**AC-6:** (B2, CAPE Roh/Einfach) Given `cape` im SMS-Layout mit Spitzenwert 900 J/kg um 14 Uhr, When „Roh",
 Then `CP900@14`; When „Einfach", Then `CP:M@14`. Stufen aus dem E-Mail-Ampelband
 (`severity_for("cape")`, Schwellen 300/800/1500): grün → `-`, gelb → `L`, orange → `M`, rot → `H` (wie `TH:`:
 kein Signal = `-`). **Vorschlag zur Freigabe.**
   - Test: Bandgrenzen 299/300, 799/800, 1499/1500 in beiden Modi; die Voll-Wetter-Fixture liefert CAPE ≥ 300
     J/kg, damit „friendly" im Orakel geprüft wird und nicht auf dem ungeprüften `-` beruht.
 
-**AC-7 (B2, Kanalgleichheit):** Given dieselbe Stunde mit denselben Rohwerten, When E-Mail (Einfach) und
+**AC-7:** (B2, Kanalgleichheit) Given dieselbe Stunde mit denselben Rohwerten, When E-Mail (Einfach) und
 SMS (Einfach) gerendert werden, Then entspricht die SMS-Stufe der E-Mail-Klassifikation: Wolken aus den
 Bändern von `cloud_emoji`, CAPE aus `severity_for("cape")`, Gewitter (`TH:` `L`/`M`/`H`) aus
 `thunder_ampel_band`.
   - Test: parametrisiert über die Band-Mittelpunkte; Zuordnung E-Mail-Band ↔ SMS-Stufe aus den
     Quellfunktionen abgeleitet, nicht hart kopiert.
 
-**AC-8 (B2, Editor und Orakel lesen dieselbe Produktaussage; keine stille Oracle-Konstante):** Given der
+**AC-8:** (B2, Editor und Orakel lesen dieselbe Produktaussage; keine stille Oracle-Konstante) Given der
 SMS-Reiter des Trip-Editors, When der Nutzer die Metrikzeilen sieht, Then bietet er Roh/Einfach **nur** für
 Größen aus `SMS_FORMAT_MODE_METRIC_IDS` (`cloud_total`, `cloud_low`, `cloud_mid`, `cloud_high`, `cape`) an —
 nicht mehr für `thunder`, `wind_direction`, `sunshine`, `wind`, `gust`, `rain_probability`, `precipitation`;
@@ -430,7 +430,7 @@ wie Builder und Editor, `/api/metrics` Feld `sms_format_capable`).
     Orakel-Test, dass die Konstante nicht aus einer Test-Liste stammt. Mutation: Größe aus der Konstante
     streichen → Produkttest rot; `sunshine` in die Konstante nehmen, ohne Einfachform zu bauen → Produkttest rot.
 
-**AC-9 (B2, GSM-7 und Länge):** Given jede Roh/Einfach-Kombination der Golden-Layouts, When SMS,
+**AC-9:** (B2, GSM-7 und Länge) Given jede Roh/Einfach-Kombination der Golden-Layouts, When SMS,
 Premium-SMS und Telegram-Kurzform gebaut werden, Then besteht jedes Zeichen den GSM-7-Zeichensatz (kein
 Emoji, keine Umlaute im Token) und die SMS bleibt ≤ 160 Zeichen; die Golden-SMS
 `E1: W20@4 R2.0@4 PR60%@4 G45@4 TH:M@4 TH+:- CT70@4 SU16` (55 Zeichen) wächst durch Einfach-Stufe und `TF` auf
@@ -438,7 +438,7 @@ Emoji, keine Umlaute im Token) und die SMS bleibt ≤ 160 Zeichen; die Golden-SM
   - Test: `tests/tdd/test_trip_sms_gsm7_charset.py` um die Einfach-Modi erweitert; Längenmessung an den
     Golden-Texten.
 
-**AC-10 (B2, Bestandsnutzer, PO-Freigabe):** Given ein Bestandsnutzer, der `cloud_total` (oder `cape`)
+**AC-10:** (B2, Bestandsnutzer, PO-Freigabe) Given ein Bestandsnutzer, der `cloud_total` (oder `cape`)
 nie ausdrücklich auf „Roh" gestellt hat (Katalog-Default `symbol` = Einfach), When sein nächstes SMS-,
 Premium-SMS- oder Telegram-Kurzform-Briefing erzeugt wird, Then sieht er die Metrik als Stufe
 (`CT:SCT@4`) statt wie bisher als Zahl (`CT70@4`); wer „Roh" gewählt hat, sieht unverändert die Zahl. Für
@@ -448,26 +448,26 @@ freigegeben.
   - Test: Trip-JSON ohne `format_mode` (Katalog-Default) gegen Trip-JSON mit `format_mode: "raw"`; die
     eingefrorenen Erwartungen tragen im Docstring den Grund der Änderung.
 
-**AC-11 (B2, Vorschau):** Given ein Trip mit Roh/Einfach-Einstellungen, When die Editor-Vorschau
+**AC-11:** (B2, Vorschau) Given ein Trip mit Roh/Einfach-Einstellungen, When die Editor-Vorschau
 (`validator_render_service.build_sms_fidelity_specs`) und der echte Versand denselben Trip rendern, Then
 sind beide SMS-Texte zeichengleich.
   - Test: beide Wege am selben Golden-Trip, Textvergleich.
 
-**AC-12 (B3, jeder Kanal zeigt seine eigene Einstellung):** Given `cloud_total` im E-Mail-Layout „Roh" und
+**AC-12:** (B3, jeder Kanal zeigt seine eigene Einstellung) Given `cloud_total` im E-Mail-Layout „Roh" und
 im Telegram-Layout „Einfach" (und umgekehrt), When das Trip-Briefing per E-Mail und Telegram rich gesendet
 wird, Then zeigt die E-Mail ihre Wahl (Zahl bzw. Emoji), Telegram rich seine eigene (Emoji bzw. Zahl) —
 nie die Wahl des anderen Kanals.
   - Test: beide Richtungen in einer Testdatei; schließt die Telegram-Lücke aus #2429 in
     `test_issue_435_format_modes.py`-Umfeld; Orakel-Dimension „Modus" grün ohne Register-Eintrag.
 
-**AC-13 (B5, keine Geisterspalte):** Given ein Trip mit `wind_direction` im Skalenmodus zusammen mit
+**AC-13:** (B5, keine Geisterspalte) Given ein Trip mit `wind_direction` im Skalenmodus zusammen mit
 `wind` im Telegram-Layout, When Telegram rich gerendert wird, Then gibt es **keine** eigene Spalte `WD`,
 die Windzelle zeigt Wert und Richtung („20 W"), und die bisher wegen des 7er-Limits verdrängte Metrik
 rückt in die Tabelle nach; `demoted_count` zählt `wind_direction` nicht mit.
   - Test: `render_for_channel` und vollständiger Telegram-Render an golden_b; Ortsvergleich-Telegram
     unverändert (Wächter aus S5).
 
-**AC-14 (Register-Endzustand):** Given der Stand nach S6, When der Invarianten-Test läuft, Then enthält
+**AC-14:** (Register-Endzustand) Given der Stand nach S6, When der Invarianten-Test läuft, Then enthält
 `AUSNAHMEN` **ausschließlich** den `gust`-Eintrag (`befristet=False`, Telegram-7er-Limit); der
 Unbenutzt-Wächter (`test_ac6_ac7_…unbenutzten_eintraege`) und der Vakuum-Schutz (`test_ac5_…`) sind
 unverändert scharf. Damit das 7er-Limit real verdrängt, trägt das golden_b-Telegram-Layout eine weitere
@@ -475,7 +475,7 @@ aktive Metrik (Slot 8 ist danach wieder belegt und `gust` wird real verdrängt).
   - Test: Invarianten-Test grün; Mutations-Gegenprobe (Register-Eintrag löschen → `test_ac5_…` rot;
     Metrik aus golden_b entfernen → Unbenutzt-Wächter rot).
 
-**AC-15 (Kein stilles Einfrieren):** Given die geänderten Golden-Erwartungen (`erwartung_golden_*.json`),
+**AC-15:** (Kein stilles Einfrieren) Given die geänderten Golden-Erwartungen (`erwartung_golden_*.json`),
 When sie neu eingefroren werden, Then geschieht das ausdrücklich je Datei mit Begründung (`TF` neu, Wolken
 als Stufe, Telegram ohne `WD`); ein Drift-Test aus S2a bleibt scharf und wird nicht gelockert.
   - Test: Drift-Test grün; Rückdreh-Gegenprobe (Erwartung auf alten Stand → Test rot).

@@ -10,6 +10,8 @@ tags: [workflow, hooks, e2e, ci-cd, deployment-pipeline, staging, issue-339, iss
 
 <!-- Issue #339 — Schwere E2E-Verifikation vom Commit-Gate in die Post-Push-Staging-Phase verschieben -->
 
+> Teilweise abgelöst durch den Liefer-Workflow in `CLAUDE.md` (PR statt Direkt-Push): „nach `git push origin main`“ gilt nicht mehr — `main` ändert sich nur per Pull Request mit grüner CI-Ampel; `/e2e-verify` läuft nach Merge und Staging-Auto-Deploy.
+
 # Issue #339 — Verifikation zum richtigen Zeitpunkt (Commit-Stage vs. Acceptance-Stage)
 
 ## Approval

@@ -117,7 +117,7 @@ erreichbar war und Daten geliefert hat.
   - Test: `tests/test_provider_tz_normalization.py::test_ac1_*` — unverändert
     aus v1.0.
 
-- **AC-2 (ersetzt v1.0, echter Bug-Repro):** Given eine erfolgreiche
+- **AC-2:** (ersetzt v1.0, echter Bug-Repro) Given eine erfolgreiche
   Open-Meteo-Antwort mit naiven Datenpunkten (Fixture bzw. HTTP-Stub) und ein
   regulärer `TripSegment` mit aware UTC `start_time`/`end_time`, When
   `fetch_segment_weather` für dieses Segment läuft, Then liefert das Segment
@@ -146,7 +146,7 @@ erreichbar war und Daten geliefert hat.
   - Test: `tests/test_provider_tz_normalization.py::test_ac4_*` — unverändert
     aus v1.0.
 
-- **AC-5 (neu, Regressionsschutz Fallback):** Given ein Open-Meteo-
+- **AC-5:** (neu, Regressionsschutz Fallback) Given ein Open-Meteo-
   Totalausfall (503-Fixture) und eine aufgezeichnete GeoSphere-Antwort
   (`tests/fixtures/geosphere_nwp_innsbruck.json`, existiert bereits), When das
   Segment über den AT-Fallback geholt wird, Then liefert es vollständige
