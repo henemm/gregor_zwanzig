@@ -1,7 +1,7 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.35"
+version: "2.36"
 status: active
 created: 2025-12-27
 updated: 2026-10-21
@@ -354,6 +354,17 @@ Quelle des Flags: `src/output/tokens/dto.py` (`NormalizedForecast.official_alert
 ### 3.4e Telegram-Kurzform folgt der SMS-Auswahl (Issue #2455)
 
 Die Telegram-Kurzform (`telegram_style="kurzform"`, Schalter „Telegram im SMS-Kurzstil") sendet den `sms_text` und übernimmt damit die SMS-Auswahl (Metriken, Reihenfolge, Layout aus `channel_layouts.sms`, im Ortsvergleich `channel_active_metrics.sms`) 1:1. Das ist **gewolltes Verhalten** (PO-Entscheidung 2026-10-09), kein Defekt: eine abweichende Telegram-Auswahl bleibt bei Kurzform wirkungslos und gilt nur für das ausführliche Telegram (`rich`). Abgesichert durch `tests/tdd/test_telegram_kurzform_ignoriert_telegram_auswahl.py`; in der Oberfläche erklärt der Hinweis am Schalter die Regel. Spec: `docs/specs/modules/telegram_kurzform_sms_auswahl_2455.md`.
+
+### 3.4f Zeitspanne am Abweichungs-Alarm-Token (Issue #1737)
+
+Der Abweichungs-Alarm (Trip und Ortsvergleich; `alert/render.py::render_sms`) trägt am bestehenden Ereignis-Token die Zeitspanne der betroffenen Stunden als `HH-HH` (Ortszeit, z. B. `14-16`). Die Stufen-Tokens (z. B. `TH:M->H`) bleiben unverändert; die Spanne ist **additiv**.
+
+- **Bindestrich:** ASCII-Bindestrich `-`, nie Gedankenstrich — ein `–` kippt die SMS auf UCS-2 (70 Zeichen, #1796). Der Gedankenstrich in „betroffen HH:MM–HH:MM" gilt nur für E-Mail und Telegram.
+- **Keine Stundenzeilen:** SMS und Premium-SMS (gleicher Text, `premium_sms_format.md`) tragen nur die Spanne, keine Einzelwerte. Länge weiter ≤ 160 Zeichen.
+- **Ohne Stundenreihe** (kein Anker, keine frische Reihe) entfällt die Spanne, der Text ist byte-gleich zu vorher.
+- Auswahl der betroffenen Stunden (`src/output/renderers/alert/hours.py`): Metrik mit Stufe = Stufenwechsel, Metrik ohne Stufe = Stundendifferenz ≥ Alarmschwelle; Spanne = erste bis letzte betroffene Stunde. Nur Daten, keine Empfehlung.
+
+Spec: `docs/specs/modules/feat_1737_alarm_stundenzeilen.md`.
 
 ### 3.4b Confidence-Symbol `C` — entfallen (v2.34, Issue #2233)
 
@@ -745,6 +756,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.33 | 2026-10-01 | **Register leeren (Issue #2422 S6).** (B1) `TF` ist jetzt auch im **Trip** ein Token (Eltern-Metrik `wind_chill`): `TF<Tiefstwert °C>@<Stunde>` über das Tagesfenster, `TF-` ohne Stundenwerte, `TF?` bei Datenlücke; fällt beim Kürzen als allererstes Komfort-Token (`TF`, `FN`, `FL`, `FD`); `KÜRZEL`/`CODES` im Trip-Kontext nennen `TF` wieder (löst #2454 AC-6/AC-7 ab). (B2) Roh/Einfach je Metrik wirkt jetzt in SMS, Premium-SMS und Telegram-Kurzform für Wolken (`cloud_total`/`low`/`mid`/`high`): Einfach-Stufen identisch zu den E-Mail-Bändern (z. B. `CT:SCT@4` statt `CT70@4`); Quelle `SMS_FORMAT_MODE_METRIC_IDS`, Bestandsnutzer behalten den Default. (B3) Telegram rich nutzt seine eigene Roh/Einfach-Einstellung statt der E-Mail-Einstellung. (B5) Keine Windrichtungs-Geisterspalte in Telegram, wenn `wind_direction` mit Wind zusammengeführt ist. Spec: `docs/specs/modules/fix_2422_s6_register_leeren.md`. |
 | 2.34 | 2026-10-08 | **Confidence-Symbol `C+`/`C~`/`C?` gestrichen (Issue #2233, PO-Entscheid 2026-09-08).** Das Token war seit v2.1 spezifiziert, wurde aber nie erzeugt (`"C"` fehlt in `POSITIONAL`/`PRIORITY` von `src/output/tokens/builder.py`). §2-Zeile und §3.4b entfernt; keine Codeänderung. |
 | 2.35 | 2026-10-21 | Neuer §1a: Befehlseingang je Kanal (Ist-Stand) — normale SMS hat keinen Befehlseingang; Verweise auf `telegram_format.md` und `premium_sms_format.md`. Keine Formatänderung. |
+| 2.36 | 2026-10-21 | Neuer §3.4f: Abweichungs-Alarm-Token trägt die Zeitspanne `HH-HH` der betroffenen Stunden (ASCII-Bindestrich, GSM-7), Stufen-Tokens unverändert (Issue #1737). |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

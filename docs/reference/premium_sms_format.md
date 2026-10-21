@@ -48,6 +48,8 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 | Alarme (Änderung, Radar/Regen, amtlich, Entwarnung) | SMS-Alarmtext | `alert_channels.premium_sms`, Trip **und** Ortsvergleich, geteilte Auflösung `services/alert_channels.py` (ADR-0095) |
 | Befehlsantwort | `CommandResult.confirmation_body` | `send_command_reply_premium_sms` |
 
+**Änderungs-Alarm (#1737):** Der SMS-Alarmtext trägt am Ereignis-Token die Zeitspanne der betroffenen Stunden als `HH-HH` (ASCII-Bindestrich, GSM-7; Stufen-Tokens unverändert, ≤ 160 Zeichen). Stundenzeilen gibt es hier nicht; Vertrag in `sms_format.md` §3.4f.
+
 ## 4. Befehlseingang (Rückkanal)
 
 - **Weg:** Garmin-Gerät schreibt an die Dienstnummer → seven.io-Journal. `premium_sms_poll`

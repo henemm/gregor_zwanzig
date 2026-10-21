@@ -1,0 +1,322 @@
+{
+ "beschreibung": "A: Gewitter 12Z-14Z; B: Boeen 13Z; C: Stundenwerte weichen ab, aber KEIN Alarm",
+ "orte": [
+  {
+   "id": "alpe nord",
+   "name": "Alpe Nord",
+   "lat": 47.0,
+   "lon": 11.0,
+   "anchor": [
+    {
+     "ts": "2026-05-01T10:00:00+00:00",
+     "t2m_c": 11.0,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "NONE"
+    },
+    {
+     "ts": "2026-05-01T11:00:00+00:00",
+     "t2m_c": 11.5,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "NONE"
+    },
+    {
+     "ts": "2026-05-01T12:00:00+00:00",
+     "t2m_c": 12.0,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "HIGH"
+    },
+    {
+     "ts": "2026-05-01T13:00:00+00:00",
+     "t2m_c": 12.5,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "HIGH"
+    },
+    {
+     "ts": "2026-05-01T14:00:00+00:00",
+     "t2m_c": 13.0,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "MED"
+    },
+    {
+     "ts": "2026-05-01T15:00:00+00:00",
+     "t2m_c": 13.5,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "NONE"
+    },
+    {
+     "ts": "2026-05-01T16:00:00+00:00",
+     "t2m_c": 14.0,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "NONE"
+    }
+   ],
+   "fresh": [
+    {
+     "ts": "2026-05-01T10:00:00+00:00",
+     "t2m_c": 11.0,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "NONE"
+    },
+    {
+     "ts": "2026-05-01T11:00:00+00:00",
+     "t2m_c": 11.5,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "NONE"
+    },
+    {
+     "ts": "2026-05-01T12:00:00+00:00",
+     "t2m_c": 12.0,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "LOW"
+    },
+    {
+     "ts": "2026-05-01T13:00:00+00:00",
+     "t2m_c": 12.5,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "MED"
+    },
+    {
+     "ts": "2026-05-01T14:00:00+00:00",
+     "t2m_c": 13.0,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "NONE"
+    },
+    {
+     "ts": "2026-05-01T15:00:00+00:00",
+     "t2m_c": 13.5,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "NONE"
+    },
+    {
+     "ts": "2026-05-01T16:00:00+00:00",
+     "t2m_c": 14.0,
+     "wind10m_kmh": 12.0,
+     "thunder_level": "NONE"
+    }
+   ],
+   "change": {
+    "metric": "thunder_level_max",
+    "old_value": 3.0,
+    "new_value": 2.0,
+    "delta": -1.0,
+    "threshold": 1.0,
+    "direction": "decrease",
+    "segment_id": "1",
+    "occurred_at": "2026-05-01T13:00:00+00:00"
+   }
+  },
+  {
+   "id": "joch mitte",
+   "name": "Joch Mitte",
+   "lat": 47.1,
+   "lon": 11.1,
+   "anchor": [
+    {
+     "ts": "2026-05-01T10:00:00+00:00",
+     "t2m_c": 11.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T11:00:00+00:00",
+     "t2m_c": 11.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T12:00:00+00:00",
+     "t2m_c": 12.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T13:00:00+00:00",
+     "t2m_c": 12.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T14:00:00+00:00",
+     "t2m_c": 13.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T15:00:00+00:00",
+     "t2m_c": 13.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T16:00:00+00:00",
+     "t2m_c": 14.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    }
+   ],
+   "fresh": [
+    {
+     "ts": "2026-05-01T10:00:00+00:00",
+     "t2m_c": 11.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T11:00:00+00:00",
+     "t2m_c": 11.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T12:00:00+00:00",
+     "t2m_c": 12.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T13:00:00+00:00",
+     "t2m_c": 12.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 70.0
+    },
+    {
+     "ts": "2026-05-01T14:00:00+00:00",
+     "t2m_c": 13.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T15:00:00+00:00",
+     "t2m_c": 13.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T16:00:00+00:00",
+     "t2m_c": 14.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    }
+   ],
+   "change": {
+    "metric": "gust_max_kmh",
+    "old_value": 10.0,
+    "new_value": 70.0,
+    "delta": 60.0,
+    "threshold": 20.0,
+    "direction": "increase",
+    "segment_id": "1",
+    "occurred_at": "2026-05-01T13:00:00+00:00"
+   }
+  },
+  {
+   "id": "tal sued",
+   "name": "Tal Sued",
+   "lat": 47.2,
+   "lon": 11.2,
+   "anchor": [
+    {
+     "ts": "2026-05-01T10:00:00+00:00",
+     "t2m_c": 11.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T11:00:00+00:00",
+     "t2m_c": 11.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T12:00:00+00:00",
+     "t2m_c": 12.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T13:00:00+00:00",
+     "t2m_c": 12.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T14:00:00+00:00",
+     "t2m_c": 13.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T15:00:00+00:00",
+     "t2m_c": 13.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T16:00:00+00:00",
+     "t2m_c": 14.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    }
+   ],
+   "fresh": [
+    {
+     "ts": "2026-05-01T10:00:00+00:00",
+     "t2m_c": 11.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T11:00:00+00:00",
+     "t2m_c": 11.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 80.0
+    },
+    {
+     "ts": "2026-05-01T12:00:00+00:00",
+     "t2m_c": 12.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 80.0
+    },
+    {
+     "ts": "2026-05-01T13:00:00+00:00",
+     "t2m_c": 12.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 80.0
+    },
+    {
+     "ts": "2026-05-01T14:00:00+00:00",
+     "t2m_c": 13.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T15:00:00+00:00",
+     "t2m_c": 13.5,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    },
+    {
+     "ts": "2026-05-01T16:00:00+00:00",
+     "t2m_c": 14.0,
+     "wind10m_kmh": 12.0,
+     "gust_kmh": 10.0
+    }
+   ],
+   "change": null
+  }
+ ],
+ "fenster": {
+  "start": "2026-05-01T10:00:00+00:00",
+  "end": "2026-05-01T17:00:00+00:00"
+ },
+ "erwartet_utc_stunden": {
+  "Alpe Nord": [
+   12,
+   13,
+   14
+  ],
+  "Joch Mitte": [
+   13
+  ]
+ }
+}

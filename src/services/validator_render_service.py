@@ -97,6 +97,8 @@ def _stub_segment(seg_time: Any) -> SegmentWeatherData:
 def render_alert_preview(
     trip_obj: Trip,
     body: Any,
+    *,
+    user_id: Optional[str] = None,
 ) -> dict:
     """Render alert preview across all channels.
 
@@ -104,6 +106,11 @@ def render_alert_preview(
     Issue #1948 Scheibe S2: ``official`` (Zweig b) und ``nowcast_frames``
     (Zweig c) sind zwei weitere exklusive Payload-Typen neben ``onset``
     und ``changes`` — der Router garantiert bereits Vier-Wege-Exklusivitaet.
+
+    Issue #1737 (Spec v1.1 Schritt 8): ``user_id`` ist die ECHTE Nutzer-
+    Kennung des Auth-Kontexts. Nur mit ihr beschafft der ``changes``-Zweig
+    Anker und frische Reihe serverseitig (wie der Versand) und zeigt
+    Stundenzeilen; ``None`` = keine Stundenreihen (nie ``"default"``).
     """
     if getattr(body, "official", None):
         return _render_official_preview(trip_obj, body.official)
@@ -214,9 +221,8 @@ def render_alert_preview(
             )
             for c in body.changes
         ]
-        segments = [_stub_segment(st) for st in body.segment_times]
-        msg = to_alert_message(
-            changes, segments, trip_obj.name,
+        msg = _deviation_preview_message(
+            trip_obj, changes, body.segment_times, user_id=user_id,
             tz=alert_tz, stand_at=stand_at, now_utc=now_utc,
         )
 
@@ -231,6 +237,36 @@ def render_alert_preview(
         "telegram": telegram,
         "sms": sms,
     }
+
+
+def _deviation_preview_message(
+    trip_obj: Trip, changes: list, segment_times: list, *,
+    user_id: Optional[str], tz, stand_at: str, now_utc: datetime,
+) -> AlertMessage:
+    """Issue #1737: Abweichungs-Vorschau. Liegen Anker und frische Reihe des
+    Nutzers vor, laeuft die Projektion wie in ``send_deviation_alert`` (echte
+    Segmente, Anker, Anzeigemodus des Trips) -- die Stundenzeilen entstehen
+    nur aus diesen Reihen, die Ereignisse aus den synthetischen ``changes``.
+    Sonst die Platzhalter-Segmente wie bisher (ohne Stundenzeilen)."""
+    from services.alert_preview_hours import trip_preview_series
+    from services.notification_service import (
+        _alert_format_modes, _alert_indicator_keys,
+    )
+
+    anchor, fresh = (None, None)
+    if user_id:
+        anchor, fresh = trip_preview_series(trip_obj, user_id=user_id, now_utc=now_utc)
+    if not fresh:
+        return to_alert_message(
+            changes, [_stub_segment(st) for st in segment_times], trip_obj.name,
+            tz=tz, stand_at=stand_at, now_utc=now_utc,
+        )
+    return to_alert_message(
+        changes, fresh, trip_obj.name, tz=tz, stand_at=stand_at, now_utc=now_utc,
+        anchor_segments=anchor,
+        format_modes=_alert_format_modes(trip_obj.display_config),
+        indicator_keys=_alert_indicator_keys(trip_obj.display_config),
+    )
 
 
 def _parse_official_dt(value: "str | None") -> "datetime | None":

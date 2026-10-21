@@ -937,7 +937,7 @@ class TripAlertService:
         # configured channel was reachable (AC-1 symmetry with Telegram/Radar).
         notif_result = self._send_alert(
             trip, fresh_weather, to_report, official_notices=official_notices,
-            reference_at=reference_at,
+            reference_at=reference_at, anchor_weather=cached_weather,
         )
         # Issue #1459: Alarm-Protokoll VOR dem Zustellbarkeits-Guard — die
         # Funktion entscheidet selbst, ob der Eintrag nach `entries` (mindestens
@@ -1302,7 +1302,7 @@ class TripAlertService:
 
     def _get_cached_weather(
         self, trip: "Trip", *, tagesgleicher_anker_noetig: bool,
-        now_utc: Optional[datetime] = None,
+        now_utc: Optional[datetime] = None, nur_lesen: bool = False,
     ) -> Optional[List[SegmentWeatherData]]:
         """
         Get cached weather data for a trip from the weather snapshot.
@@ -1359,6 +1359,9 @@ class TripAlertService:
                 eine reine "wie spaet ist es"-Frage, kein Verhaltensschalter
                 (Begruendung: Spec-Abschnitt "Bewusste Abweichung vom
                 'kein Default'-Muster").
+            nur_lesen: Issue #1737 -- Alarm-Vorschau. Gleiche Quellenkette,
+                aber ohne Diagnose-Spur und Alarmprotokoll-Eintrag bei
+                fehlendem/verworfenem Anker (die Vorschau schreibt nichts).
 
         Returns:
             Cached weather data or None if not available/not trustworthy
@@ -1412,9 +1415,10 @@ class TripAlertService:
         # AC-13/AC-14 gelten fuer BEIDE Aufrufer: "gar kein Anker" laesst auch
         # die Geometrie-Auswertung leerlaufen.
         if not undated:
-            self._report_missing_anchor(
-                trip, today, protokollieren=tagesgleicher_anker_noetig,
-            )
+            if not nur_lesen:  # Issue #1737: die Vorschau schreibt nichts
+                self._report_missing_anchor(
+                    trip, today, protokollieren=tagesgleicher_anker_noetig,
+                )
             return None
         if not tagesgleicher_anker_noetig:
             # Amtliche Warnungen: Geometrie genuegt, s. Docstring.
@@ -1457,6 +1461,9 @@ class TripAlertService:
                 f"heute ist {today.isoformat()}"
             )
 
+        if nur_lesen:  # Issue #1737: Vorschau -- keine Diagnose-/Protokoll-Spur
+            logger.info("Vorschau: Alarm-Anker fuer Trip %s unbrauchbar (%s)", trip.id, reason)
+            return None
         logger.warning(
             "Alarm-Anker fuer Trip %s verworfen (%s) — %s. Kein Abweichungsalarm "
             "bis zum naechsten Briefing-Versand.", trip.id, reason, detail,
@@ -3020,9 +3027,13 @@ class TripAlertService:
         changes: List[WeatherChange],
         official_notices: Optional[list] = None,
         reference_at: Optional[str] = None,
+        anchor_weather: Optional[List[SegmentWeatherData]] = None,
     ) -> "NotificationResult":
         """
         Format and send alert via all configured effective channels.
+
+        Issue #1737: `anchor_weather` ist die ALTE Reihe (Anker) fuer die
+        Stundenzeilen des Alarms.
 
         Issue #1023: Rendering und Versand werden an den NotificationService
         delegiert; TripAlertService kennt keine Renderer-/Transport-Details mehr.
@@ -3071,6 +3082,7 @@ class TripAlertService:
             mail_sink=self._mail_sink,
             telegram_style=_trip_telegram_style(trip),
             reference_at=reference_at,
+            anchor_weather=anchor_weather,
         )
 
         if result.sent:

@@ -1,0 +1,163 @@
+{
+ "beschreibung": "pop_pct 20 -> 70 (12Z-14Z) und Boeen 10 -> 65 (13Z)",
+ "segment": {
+  "start": "2026-05-01T10:00:00+00:00",
+  "end": "2026-05-01T17:00:00+00:00",
+  "lat": 47.0,
+  "lon": 11.0
+ },
+ "anchor": [
+  {
+   "ts": "2026-05-01T10:00:00+00:00",
+   "t2m_c": 11.0,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T11:00:00+00:00",
+   "t2m_c": 11.5,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T12:00:00+00:00",
+   "t2m_c": 12.0,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T13:00:00+00:00",
+   "t2m_c": 12.5,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T14:00:00+00:00",
+   "t2m_c": 13.0,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T15:00:00+00:00",
+   "t2m_c": 13.5,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T16:00:00+00:00",
+   "t2m_c": 14.0,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T17:00:00+00:00",
+   "t2m_c": 14.5,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  }
+ ],
+ "fresh": [
+  {
+   "ts": "2026-05-01T10:00:00+00:00",
+   "t2m_c": 11.0,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T11:00:00+00:00",
+   "t2m_c": 11.5,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T12:00:00+00:00",
+   "t2m_c": 12.0,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 70,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T13:00:00+00:00",
+   "t2m_c": 12.5,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 70,
+   "gust_kmh": 65.0
+  },
+  {
+   "ts": "2026-05-01T14:00:00+00:00",
+   "t2m_c": 13.0,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 70,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T15:00:00+00:00",
+   "t2m_c": 13.5,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T16:00:00+00:00",
+   "t2m_c": 14.0,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  },
+  {
+   "ts": "2026-05-01T17:00:00+00:00",
+   "t2m_c": 14.5,
+   "wind10m_kmh": 12.0,
+   "precip_1h_mm": 0.0,
+   "pop_pct": 20,
+   "gust_kmh": 10.0
+  }
+ ],
+ "changes": [
+  {
+   "metric": "pop_max_pct",
+   "old_value": 20.0,
+   "new_value": 70.0,
+   "delta": 50.0,
+   "threshold": 20.0,
+   "direction": "increase",
+   "segment_id": "1",
+   "occurred_at": "2026-05-01T13:00:00+00:00"
+  },
+  {
+   "metric": "gust_max_kmh",
+   "old_value": 10.0,
+   "new_value": 65.0,
+   "delta": 55.0,
+   "threshold": 20.0,
+   "direction": "increase",
+   "segment_id": "1",
+   "occurred_at": "2026-05-01T13:00:00+00:00"
+  }
+ ]
+}

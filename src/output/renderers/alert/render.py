@@ -24,6 +24,7 @@ from .model import (
     AlertEvent, AlertMessage, OnsetEvent, OnsetShiftEvent,
     arrow, km_span, over_thr, severity, side_label,
 )
+from .hours import row_parts
 from .project import COMPARE_RADAR_SOURCE
 from .segments import _renderable_segment_ids, format_alert_location
 
@@ -1346,6 +1347,44 @@ def _with_origin(html: str, plain: str, mail_type: str, source: str) -> tuple[st
     return html, plain
 
 
+def _hour_lines(e: AlertEvent, modes: dict | None) -> list[str]:
+    """Issue #1737: Stundenzeilen `HH:MM | alt → neu` (Klartext/Telegram) plus
+    Hinweiszeile bei Kappung. Leer ohne Stundenreihe (Ausgabe unveraendert)."""
+    lines = [
+        f"{r.time} | " + " → ".join(row_parts(e, r, modes, html=False)) for r in e.hours
+    ]
+    if lines and e.hours_capped and e.hours_range:
+        lines.append(f"betroffen {e.hours_range[0]}–{e.hours_range[1]}")
+    return lines
+
+
+def _hours_html(
+    e: AlertEvent, modes: dict | None, indicators: frozenset = frozenset(),
+) -> str:
+    """Issue #1737: EIN eigener Zeilenblock je Ereignis (keine gemeinsame
+    Tabelle). EINFACH = CSS-Punkte aus `fmt_val`, nie Emoji (#2220)."""
+    if not e.hours:
+        return ""
+    td = f"padding:2px 12px 2px 0;font-family:{FONT_DATA};color:{G_INK};"
+    trs = []
+    for r in e.hours:
+        cell = " → ".join(
+            p if p.startswith("<span") else _esc(p)
+            for p in row_parts(e, r, modes, html=True, indicators=indicators)
+        )
+        trs.append(f"<tr><td style=\"{td}\">{_esc(r.time)}</td><td style=\"{td}\">{cell}</td></tr>")
+    if e.hours_capped and e.hours_range:
+        note = _esc(f"betroffen {e.hours_range[0]}–{e.hours_range[1]}")
+        trs.append(
+            f"<tr><td colspan=\"2\" style=\"padding:2px 0;font-family:{FONT_UI};"
+            f"color:{G_INK_MUTED};\">{note}</td></tr>"
+        )
+    return (
+        "<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" "
+        f"style=\"margin:4px 0 8px;\">{''.join(trs)}</table>"
+    )
+
+
 def render_email(msg: AlertMessage) -> tuple[str, str]:
     if msg.source is not None:
         html, plain = _render_email_onset(msg)
@@ -1375,6 +1414,7 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         )
         any_over = over_thr(e)
         plain_data = [f"{k}: {v}" for k, v in data_rows]
+        plain_data += _hour_lines(e, msg.format_modes.get("email"))  # Issue #1737
     else:
         # Issue #981: Zähler zählt nur über-Schwelle-Events; sind es null,
         # wechselt die Formulierung auf "N Änderungen seit dem Briefing".
@@ -1436,7 +1476,10 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
             else f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing · {km}"
         )
         any_over = over_count > 0
-        plain_data = [f"{k}: {v}" for k, v in data_rows]
+        plain_data = []
+        for e, (k, v) in zip(evs, data_rows):
+            plain_data.append(f"{k}: {v}")
+            plain_data += _hour_lines(e, msg.format_modes.get("email"))  # Issue #1737
 
     verdict_bg = G_DANGER if any_over else G_SUCCESS
     # Issue #1468 (PO-Entscheid): Beginn- UND Stufenaenderung werden beide
@@ -1454,10 +1497,12 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         for idx, (label, value) in enumerate(data_rows):
             value_color = G_INK if idx != 1 else threshold_status_color
             rows.append(_datarow_html(label, value, value_color, not rows))
+        rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset())))  # Issue #1737
     else:
         for e, (label, value) in zip(evs, data_rows):
             value_color = G_DANGER if over_thr(e) else G_INK_MUTED
             rows.append(_datarow_html(label, value, value_color, not rows))
+            rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset())))  # Issue #1737
     for oe in msg.onset_shift_events:
         rows.append(_datarow_html(
             f"{_label(oe)}-Beginn · {_onset_shift_where(oe)}",
@@ -1499,6 +1544,7 @@ def render_telegram(msg: AlertMessage) -> str:
         lines = [f"<b>{_esc(verdict)}</b>", _email_line(e), _where_when(e)]
         if e.remaining_mm is not None:
             lines += [f"{k}: {v}" for k, v in _precip_rows(e)]
+        lines += [_esc(ln) for ln in _hour_lines(e, msg.format_modes.get("telegram"))]  # Issue #1737
     else:
         # Issue #981: Kopfzeilen-Zähler nur über-Schwelle; null → Änderungs-Text.
         over_count = len([e for e in evs if over_thr(e)])
@@ -1521,6 +1567,11 @@ def render_telegram(msg: AlertMessage) -> str:
             for e in evs
         )
         lines = [f"<b>{_esc(verdict)}</b>", metric_line]
+        # Issue #1737: je Ereignis ein eigener Stundenblock unter seiner Kopfzeile.
+        for e in evs:
+            block = _hour_lines(e, msg.format_modes.get("telegram"))
+            if block:
+                lines += [_esc(_deviation_label(e)), *[_esc(ln) for ln in block]]
     # Issue #1468: Beginn-Verschiebungen desselben Laufs anhaengen -- eine
     # Nachricht, nicht zwei.
     lines += [_onset_shift_line(oe) for oe in msg.onset_shift_events]
@@ -1572,13 +1623,26 @@ def _sms_token(
         sign = "+" if e.value_to >= e.value_from else "-"
         tok = f"{sign}{_code(e)}{int(round(e.value_to))}"
     tok += _sms_hail_suffix(e)  # Issue #2205: vor `@HH`, Muster tokens.builder
-    if e.occurred_at:
+    span = ""
+    if e.hours_range:
+        first, last = e.hours_range[0][:2], e.hours_range[1][:2]
+        span = first + (f"-{last}" if last != first else "")
+    if span and not e.occurred_day_offset:
+        # Issue #1737: betroffene Stunden als Zeitspanne `@HH-HH` (ASCII, GSM-7
+        # #1796) statt der Einzelstunde.
+        tok = tok + f"@{span}"
+    elif e.occurred_at:
         # Issue #2020 Scheibe 2: liegt der Zeitpunkt an einem anderen Tag,
         # klebt das Wochentagskuerzel vor die Stunde (`@Do15`) -- dieselbe
         # Bestandsnotation wie die amtliche Warnung. Ein Zahlensuffix ist
         # verworfen: "-" ist in der Kurzform bereits dreifach belegt.
         tag = _sms_day_prefix(e.occurred_day_offset, e.occurred_weekday)
         tok = tok + f"@{tag}{e.occurred_at[:2]}"
+        # Issue #1737: an einem anderen Tag steht die Spanne NACH dem Tagesbezug-
+        # Token -- `@Do13-17` waere formgleich zur Fensterform der amtlichen
+        # Warnung (`Do12-22`, #2020 AC-14).
+        if span:
+            tok += f" {span}"
     pos = (location_positions or {}).get(e.location_label or "")
     return f"{pos}:{tok}" if pos else tok
 

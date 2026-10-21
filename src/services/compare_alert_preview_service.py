@@ -56,7 +56,10 @@ def render_compare_alert_preview(preset_id: str, *, user_id: str, body: dict) ->
     style = effective_compare_telegram_style(preset)
     kind = provided[0]
     if kind == "changes":
-        return _deviation(preset, body["changes"], all_locations, style)
+        return _deviation(
+            preset, body["changes"], all_locations, style,
+            preset_id=preset_id, user_id=user_id,
+        )
     if kind == "onsets":
         return _onset(preset, body["onsets"], all_locations, style)
     return _official(preset, body["official"], all_locations, style)
@@ -81,7 +84,22 @@ def _channels(msg, *, sms: str, bubbles: list[str]) -> dict:
     }
 
 
-def _deviation(preset: dict, changes: list[dict], all_locations: dict, style: str) -> dict:
+def _hour_inputs(preset: dict, preset_id: str, loc, user_id: str, deadline: float):
+    """(Frisch-Punkt, Anker-Punkt) eines Ortes (Issue #1737, Spec v1.1):
+    serverseitig aus Anker und frischem Abruf DIESES Nutzers -- nie aus dem
+    Anfrage-Inhalt. Ohne Anker/Abruf: der Ort selbst (wie bisher), kein Anker."""
+    from services.alert_preview_hours import compare_preview_point
+
+    fresh, anchor = compare_preview_point(
+        preset, preset_id, loc, user_id=user_id, deadline=deadline,
+    )
+    return (fresh, anchor) if fresh is not None else (loc, None)
+
+
+def _deviation(
+    preset: dict, changes: list[dict], all_locations: dict, style: str, *,
+    preset_id: str, user_id: str,
+) -> dict:
     from app.models import ChangeSeverity, WeatherChange
     from output.renderers.alert.project import to_multi_point_alert_message
     from output.renderers.alert.render import render_sms, render_telegram
@@ -97,18 +115,33 @@ def _deviation(preset: dict, changes: list[dict], all_locations: dict, style: st
             severity=ChangeSeverity(c["severity"]), direction=c["direction"],
         ))
     ordered = _ordered(location_ids, list(by_loc), all_locations)
-    groups = [(all_locations[lid].name, by_loc[lid], all_locations[lid]) for lid in ordered]
+    from services.alert_preview_hours import preview_deadline
+
+    deadline = preview_deadline()  # EIN Budget fuer alle Orte (seriell)
+    inputs = {
+        lid: _hour_inputs(preset, preset_id, all_locations[lid], user_id, deadline)
+        for lid in ordered
+    }
+    groups = [(all_locations[lid].name, by_loc[lid], inputs[lid][0]) for lid in ordered]
+    # Issue #1737: dieselben Stundenzeilen wie der Versand (Anker je Ortsname).
+    anchors = {
+        all_locations[lid].name: inputs[lid][1] for lid in ordered if inputs[lid][1]
+    }
     first = all_locations[ordered[0]]
     tz = tz_for_coords(first.lat, first.lon)
     stand_at = local_fmt(datetime.now(timezone.utc), tz)
-    msg = to_multi_point_alert_message(groups, tz=tz, stand_at=stand_at)
+    msg = to_multi_point_alert_message(
+        groups, tz=tz, stand_at=stand_at, anchor_points=anchors,
+    )
     positions = CompareAlertService._location_positions(location_ids, all_locations)
     sms = render_sms(msg, limit=_SMS_LIMIT, location_positions=positions)
     if style == "kurzform":
         bubbles = [sms]
     else:
         bubbles = [
-            render_telegram(to_multi_point_alert_message([g], tz=tz, stand_at=stand_at))
+            render_telegram(to_multi_point_alert_message(
+                [g], tz=tz, stand_at=stand_at, anchor_points=anchors,
+            ))
             for g in groups
         ]
     return _channels(msg, sms=sms, bubbles=bubbles)

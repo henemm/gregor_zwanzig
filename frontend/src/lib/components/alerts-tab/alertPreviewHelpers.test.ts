@@ -196,11 +196,14 @@ test('buildAlertPreviewPayload > delta-Regel: direction ist increase (AC-4)', ()
 
 // --- segment_id und segment_times ---
 
-test('buildAlertPreviewPayload > segment_id kommt aus stages[0].id', () => {
+// Issue #1737: Segment-Kennung des Tages (1..N), NIE die Etappen-Kennung --
+// sonst lehnt der Kern die Vorschau eines heute laufenden Trips mit 422 ab.
+test('buildAlertPreviewPayload > echte Etappen-Kennung T01 wird zu segment_id "1"', () => {
 	const rules = [makeRule()];
-	const stages = [makeStage('etappe-42')];
+	const stages = [makeStage('T01'), makeStage('T02')];
 	const payload = buildAlertPreviewPayload(rules, stages);
-	assert.equal(payload.changes[0].segment_id, 'etappe-42');
+	assert.equal(payload.changes[0].segment_id, '1');
+	assert.equal(payload.segment_times[0].segment_id, '1');
 });
 
 test('buildAlertPreviewPayload > segment_id Fallback auf "1" wenn stages leer', () => {

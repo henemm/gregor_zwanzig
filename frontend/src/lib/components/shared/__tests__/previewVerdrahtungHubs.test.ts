@@ -374,7 +374,8 @@ describe('F008: AlarmeTab im Trip — Karte mit kind=route und echter trip.id, l
 		assert.equal(url.pathname, '/api/briefings/trip-2283/alert-preview');
 		assert.equal(url.searchParams.get('kind'), 'route');
 		const koerper = JSON.parse(posts[0].body ?? '{}') as { changes: { segment_id?: string }[]; segment_times?: unknown[] };
-		assert.equal(koerper.changes[0]?.segment_id, 'S1');
+		// Issue #1737: Segment-Kennung des Tages, nicht die Etappen-Kennung (sonst 422 im Kern).
+		assert.equal(koerper.changes[0]?.segment_id, '1');
 		assert.ok(Array.isArray(koerper.segment_times), 'Trip-Koerper ohne segment_times');
 	});
 });

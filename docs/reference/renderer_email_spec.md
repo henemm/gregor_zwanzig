@@ -203,6 +203,22 @@ Im E-Mail-Body wird ein Klartext-Hinweis ausgegeben, wenn an mindestens einer St
 
 ---
 
+## Abweichungs-Alarm: Stundenzeilen (seit Issue #1737)
+
+Die Abweichungs-Alarm-Mail (Trip und Ortsvergleich; `src/output/renderers/alert/render.py::render_email`) zeigt unter der Kopfzeile **jedes Ereignisses** einen eigenen Block mit einer Tabellenzeile je betroffener Stunde: `HH:MM | alt → neu` (Ortszeit, `local_fmt`). Keine gemeinsame Tabelle über mehrere Ereignisse.
+
+- **Darstellung Trip:** wie das Briefing desselben Kanals und Trips — ROH = Stufenwort bzw. Wert, EINFACH = farbiger Punkt aus HTML/CSS (**keine Emojis**, #2220). Modus aus der Anzeige-Konfiguration des jeweiligen Nutzers.
+- **Darstellung Ortsvergleich:** Stundenwerte immer roh (wie die Stundentabelle der Vergleichs-Mail, PO-Entscheid 2026-10-21), Zeilen nur unter betroffenen Orten.
+- **Auswahl** (`alert/hours.py`): Metrik mit Stufe = Stufenwechsel; Metrik ohne Stufe = Stundendifferenz ≥ Alarmschwelle der Metrik; angezeigt wird der zusammenhängende Bereich erste bis letzte betroffene Stunde. Alt/neu werden per UTC-Zeitstempel gepaart.
+- **Kappung:** höchstens 6 Zeilen (die stärksten, in Zeitfolge) plus Hinweiszeile „betroffen HH:MM–HH:MM".
+- **Summen-Metriken** (z. B. Niederschlag): Summe bleibt in der Kopfzeile, die Zeilen zeigen Stundenwerte.
+- **Fallbacks:** ohne Anker nur der neue Wert (ohne „alt →"); ohne Stundenreihe byte-gleich zur Ausgabe vor #1737.
+- Nur Uhrzeiten und Werte, keine Empfehlung, keine berechnete Prozentangabe. Die Alarm-Mail trägt weiterhin den Marker-Header `X-GZ-Mail-Type: deviation-alert` (Trip und Ortsvergleich, `notification_service.py`).
+
+Spec: `docs/specs/modules/feat_1737_alarm_stundenzeilen.md`.
+
+---
+
 ## Marker Headers and Validation Routing (seit Issue #733)
 
 `build_mime_message()` in `src/output/channels/email.py` setzt optionale Marker-Header zur deterministischen Klassifikation:

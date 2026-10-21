@@ -4626,8 +4626,16 @@ Leerbefund statt Exception/HTTP 500.
   `changes` existiert nicht im Trip
 
 **Notes:**
-- Zustandslos wie `compare-email-preview`/`sms-fidelity-preview` — kein Wetterdaten-Fetch, kein
-  Versand, keine Persistenz.
+- Zustandslos wie `compare-email-preview`/`sms-fidelity-preview` — kein Versand, keine
+  Persistenz. Ausnahme Zweig `changes` (#1737): die Stundenzeilen entstehen nicht aus dem Body
+  (Kopfzeile/Ereignisse bleiben die synthetischen alt/neu-Werte), sondern der Server beschafft
+  Anker (alte Reihe) und frische Reihe selbst, **je Nutzer** über die echte `user_id` (nie
+  `"default"`, nie Anker eines fremden Nutzers) wie der Versand — Trip über `TripAlertService`,
+  Ortsvergleich über `CompareWeatherSnapshotService`/`CompareLocationWeatherSource`, geteilter
+  Helfer `src/services/alert_preview_hours.py`. Das ist ein lesender Frisch-Abruf, fail-soft:
+  ohne Anker nur der neue Wert, bei Fehler/Zeitüberschreitung oder ohne Reihe unverändert wie
+  vorher, nie ein Fehler. Das Frontend (`alertPreviewHelpers.ts`) sendet `segment_id: "1"`
+  (erstes Segment des Tages); die Etappen-Kennung (z. B. „T01") lehnt der Kern mit `422` ab.
 - **Entitäts-ID-Guard (Issue #2140 S2):** Verletzt `trip_id` `VALID_ENTITY_ID_RE`, behandelt
   `_load_trip_raw` das wie „nicht gefunden" und der Endpoint antwortet mit dem regulären `404`
   oben — bewusst **kein** eigener Statuscode, damit eine Ausbruchs-Kennung nicht von einem
