@@ -1,6 +1,6 @@
 """Staging-Messtreiber fuer die Befehls-Antwortzeit-Serien (#2439).
 
-Spec: docs/specs/modules/feat_2439_staging_messtreiber.md (AC-1 .. AC-16)
+Spec: docs/specs/modules/feat_2439_staging_messtreiber.md (AC-1 .. AC-20)
 
 Pruefling: ``.claude/tools/staging_messlauf.py`` -- aufgeloest RELATIV zu dieser
 Testdatei, geladen per ``importlib`` in JEDEM Test (fehlt das Werkzeug, scheitert
@@ -412,6 +412,9 @@ class _Welt:
         wp = trip["stages"][0]["waypoints"][0]
         return "korsika" if _routing().thunder_provider_for(wp["lat"], wp["lon"]) == "fr_direct" else "de"
 
+    def staging_egress_gesperrt(self) -> bool:
+        return self.basis.startswith("https://staging.gregor20.henemm.com")
+
     def _heute(self, t: datetime) -> date:
         return t.astimezone(WIEN).date()
 
@@ -464,7 +467,8 @@ class _Welt:
             if art == "de":
                 etappe = self._etappe_fuer({"stages": cmd["stufen"]}, befehl, cmd["t"])
                 wp = etappe["waypoints"][0] if etappe else {"lat": 0, "lon": 0}
-                schluessel = (round(wp["lat"], 1), round(wp["lon"], 1), befehl)
+                # Echter Cache haengt am ORT, nicht am Befehl: MORGEN am Ort von HEUTE ist warm.
+                schluessel = (round(wp["lat"], 1), round(wp["lon"], 1))
                 kalt = schluessel not in self.kalt_orte
                 self.kalt_orte.add(schluessel)
                 marker = "dwd_fenster"
@@ -476,9 +480,12 @@ class _Welt:
             if (art, nr) in self.warm:
                 kalt = False
             downloads = 415 if (kalt and art == "de") else (96 if kalt else 0)
-            self._log(beginn + timedelta(seconds=1),
-                      f"providers.x: {marker} fenster_s=4.20 downloads={downloads} "
-                      f"cache_treffer={0 if downloads else 415}")
+            if art == "korsika" and self.staging_egress_gesperrt():
+                pass   # egress_guard sperrt Meteo-France auf Staging: nie fr_direct_fenster (AC-19)
+            else:
+                self._log(beginn + timedelta(seconds=1),
+                          f"providers.x: {marker} fenster_s=4.20 downloads={downloads} "
+                          f"cache_treffer={0 if downloads else 415}")
         if (art, nr) not in self.ohne_dauerzeile:
             self._log(ende, f"services.trip_command_processor: befehl={befehl} kanal=email "
                             f"trip={cmd['trip_id'] or '-'} dauer_ms={int(dauer * 1000)}")
@@ -1561,3 +1568,114 @@ def test_telegram_verknuepfung_nach_100_sekunden_wird_noch_abgewartet(capsys):
     assert len(_env_zeilen(out)) == 3, f"stdout ohne die drei Env-Zeilen: {out!r}"
     assert welt.verknuepft_ab is not None and (welt.verknuepft_ab - START).total_seconds() >= 100
     assert len(welt.kommando_posts()) == 15, "Telegram-Serie nicht vollstaendig ausgeloest"
+
+
+# ---------------------------------------------------------------------------
+# AC-17 Probelauf misst kalt: Ortswechsel zwischen HEUTE und MORGEN (v1.1)
+# ---------------------------------------------------------------------------
+
+def _ort_von(lauf: dict, welt: _Welt) -> tuple:
+    w = _ort(lauf, welt)["waypoints"][0]
+    return (w["lat"], w["lon"])
+
+
+def test_probelauf_wechselt_den_ort_zwischen_heute_und_morgen_per_read_modify_write(capsys):
+    welt, rc, out, err = _erfolgslauf(capsys)
+    assert rc == 0, f"Exit {rc}; stderr: {err[-800:]}"
+    heute, morgen = welt.wetter("de")[:2]
+    assert (heute["befehl"], morgen["befehl"]) == ("HEUTE", "MORGEN")
+    de_id = welt.ids("de")[0]
+    zwischen = [p for p in welt.put_historie
+                if p["trip"] == de_id and heute["seq"] < p["seq"] < morgen["seq"]]
+    assert zwischen, "kein Ortswechsel (PUT) zwischen Probelauf-HEUTE und Probelauf-MORGEN"
+    gets = [a for a in welt.anfragen if a["method"] == "GET" and a["url"].endswith(f"/api/trips/{de_id}")
+            and heute["seq"] < a["seq"] < zwischen[0]["seq"]]
+    assert gets, "Probelauf-Ortswechsel ohne vorheriges GET (kein Read-Modify-Write)"
+    o_heute, o_morgen = _ort_von(heute, welt), _ort_von(morgen, welt)
+    assert _km(o_heute, o_morgen) >= 120, (
+        f"Probelauf-Orte {o_heute} und {o_morgen}: {_km(o_heute, o_morgen):.0f} km -- MORGEN "
+        "liest sonst den von HEUTE gewaermten Cache")
+    assert _routing().thunder_provider_for(*o_morgen) == "de_direct", "MORGEN-Ort ausserhalb des DWD-Gebiets"
+
+
+def test_probelauf_morgen_ort_wird_von_der_serie_nicht_wiederverwendet(capsys):
+    welt, rc, out, err = _erfolgslauf(capsys)
+    assert rc == 0, f"Exit {rc}; stderr: {err[-800:]}"
+    laeufe = welt.wetter("de")
+    o_morgen = _ort_von(laeufe[1], welt)
+    for l in laeufe[2:12]:
+        assert _km(o_morgen, _ort_von(l, welt)) >= 120, (
+            f"Serienlauf nutzt den Probelauf-MORGEN-Ort {o_morgen} erneut -- waere warm")
+
+
+# ---------------------------------------------------------------------------
+# AC-18 Standard-Basis ist die oeffentliche https-Staging-URL
+# ---------------------------------------------------------------------------
+
+def test_ohne_basis_env_laeuft_der_treiber_gegen_die_https_staging_url(capsys):
+    mod = _werkzeug()
+    welt = _Welt(basis="https://staging.gregor20.henemm.com")
+    rc = welt.lauf(mod, env=welt.env(GZ_STAGING_BASE_URL=None))
+    out, err = _ausgabe(capsys)
+    assert rc == 0, f"Exit {rc}; stderr: {err[-800:]}"
+    urls = [a["url"] for a in welt.anfragen if not a["url"].startswith(welt.kern)]
+    assert urls, "keine Go-API-Anfrage"
+    assert all(u.startswith("https://staging.gregor20.henemm.com/") for u in urls), (
+        f"Standardbasis nicht https-Staging: {sorted({u.split('/api')[0] for u in urls})}")
+
+
+# ---------------------------------------------------------------------------
+# AC-19 Korsika auf Staging: Ersatzquelle eu_direct, offen ausgewiesen
+# ---------------------------------------------------------------------------
+
+STAGING_URL = "https://staging.gregor20.henemm.com"
+
+
+def test_korsika_auf_staging_verlangt_keinen_fr_direct_kaltlauf_und_loest_die_serie_aus(capsys):
+    welt, rc, out, err = _erfolgslauf(capsys, basis=STAGING_URL)
+    assert rc == 0, f"Exit {rc}; stderr: {err[-800:]}"
+    assert not any("fr_direct_fenster" in t for _, t in welt.journal), "Ersatzwelt-Fehler: fr_direct auf Staging"
+    assert len(welt.wetter("korsika")) == 7, f"Korsika-Serie nicht ausgeloest: {len(welt.wetter('korsika'))}"
+    assert "eu_direct" in err and "rsatz" in err, (
+        "Ersatzquelle eu_direct nicht offen als Ersatz ausgewiesen (stderr)")
+    assert "GZ_STAGING_MESSLAUF_SEIT" in out
+
+
+def test_korsika_ohne_antwort_auf_staging_ist_trotzdem_befund(capsys):
+    welt, rc, out, err = _erfolgslauf(capsys, basis=STAGING_URL, ohne_dauerzeile={("korsika", 0)})
+    assert rc == 1, f"Exit {rc}, erwartet 1 (Korsika ohne Antwort)"
+    assert not [m for m in welt.mails() if m["befehl"] in ("HELP", "CODES", "STATUS")], "Serie trotz Befund"
+    assert welt.angelegt and not welt.eigene_reste(), f"nicht aufgeraeumt: {welt.eigene_reste()}"
+
+
+def test_warmer_de_probelauf_ist_auf_staging_weiter_befund(capsys):
+    welt, rc, out, err = _erfolgslauf(capsys, basis=STAGING_URL, warm={("de", 1)})
+    assert rc == 1, f"Exit {rc}, erwartet 1 (DE MORGEN warm)"
+    assert not welt.kommando_posts()
+
+
+def test_korsika_auf_lokaler_basis_verlangt_weiter_fr_direct(capsys):
+    welt, rc, out, err = _erfolgslauf(capsys, warm={("korsika", 0)})
+    assert rc == 1, f"Exit {rc}: lokal ist fr_direct nicht gesperrt, warmes Korsika bleibt Befund"
+
+
+# ---------------------------------------------------------------------------
+# AC-20 Modus "nur Probelauf" (Kern-Vertrag; der echte Lauf steht in tests/e2e)
+# ---------------------------------------------------------------------------
+
+def test_nur_probelauf_loest_nur_die_drei_probelaeufe_aus_und_raeumt_auf(capsys):
+    mod = _werkzeug()
+    welt = _Welt(basis=STAGING_URL)
+    rc = mod.main(
+        ["--nur-probelauf"], env=welt.env(), transport=welt.transport_fuer("nutzer"),
+        helfer_transport=welt.transport_fuer("helfer"), smtp_factory=welt.smtp_factory(),
+        imap_factory=welt.imap_factory(), journal_quelle=welt.journal_quelle,
+        uhr=welt.uhr.jetzt, schlaf=welt.uhr.schlaf)
+    out, err = _ausgabe(capsys)
+    assert rc == 0, f"Exit {rc}; stderr: {err[-800:]}"
+    assert len(welt.wetter("de")) == 2 and len(welt.wetter("korsika")) == 1, (
+        f"Probelauf-Umfang: DE {len(welt.wetter('de'))}, Korsika {len(welt.wetter('korsika'))}")
+    assert not [m for m in welt.mails() if m["befehl"] in ("HELP", "CODES", "STATUS")], "Kurzbefehle im Probemodus"
+    assert not welt.kommando_posts(), "Telegram-Serie im Probemodus"
+    assert welt.angelegt and not welt.eigene_reste(), f"Trips nicht aufgeraeumt: {welt.eigene_reste()}"
+    assert welt.registrierter_nutzer() in welt.geloeschte_nutzer, "Wegwerf-Nutzer nicht geloescht"
