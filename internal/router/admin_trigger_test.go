@@ -39,7 +39,7 @@ var triggerPfade = []string{
 	"/api/scheduler/radar-alert-checks",
 	"/api/scheduler/compare-alert-checks",
 	"/api/scheduler/compare-radar-alert-checks",
-	"/api/scheduler/compare-official-alert-checks",
+	// Fix #2286: compare-official-alert-checks entfallen (in compare-alert-checks aufgegangen).
 }
 
 // pythonZiel zaehlt die Aufrufe je Pfad und antwortet wie der Python-Core.

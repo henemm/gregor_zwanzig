@@ -601,7 +601,8 @@ def test_ac8_scheduler_endpoint_delegates():
         register_official_alert_source(_FakeOfficialAlertSource(LAT_A, LON_A, [_alert()]))
 
         client = TestClient(app)
-        resp = client.post(f"/api/scheduler/compare-official-alert-checks?user_id={uid}")
+        # Fix #2286: der amtliche Teil laeuft im gefalteten compare-alert-checks.
+        resp = client.post(f"/api/scheduler/compare-alert-checks?user_id={uid}")
         assert resp.status_code == 200, f"Endpoint fehlt/Fehler: {resp.status_code} {resp.text[:200]}"
         data = resp.json()
         # Delegation an den Service → numerische Alarm-Anzahl (hier 1).

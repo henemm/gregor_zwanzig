@@ -229,3 +229,38 @@ def test_both_subjobs_report_each_file_once_without_crash(mq_sink):
         "AC-6: jede Datei ueber beide Sub-Jobs genau einmal gemeldet, kam "
         f"{[m['subject'] for m in mq_sink]!r}"
     )
+
+
+def test_rewrite_keeps_unknown_fields_of_previous_state(mq_sink):
+    """Adversary F001 (Read-Modify-Write, CLAUDE.md "Daten-Schema-Reworks"):
+    GIVEN ein vorhandenes `diagnostics/corrupt_trips.json` mit Altfeldern UND
+    einem dem Scanner unbekannten Zusatzfeld (`future_field`) / WHEN der
+    Scanner laeuft / THEN bleibt das Zusatzfeld erhalten, die Altfelder sind
+    da (aktualisiert), `by_kind` ist geschrieben.
+
+    Waechter gegen das Entfernen des `**previous`-Merges ist ALLEIN die
+    `future_field`-Zusicherung: `notified` baut der Scanner ohnehin aus dem
+    Vorgaenger-Stand neu auf und bliebe auch ohne Merge erhalten."""
+    uid = "tdd-2286-merge"
+    _write_four_cases(uid)
+    diag = loader.get_data_dir(uid) / "diagnostics"
+    diag.mkdir(parents=True, exist_ok=True)
+    (diag / "corrupt_trips.json").write_text(json.dumps({
+        "notified": ["alt-datei.json"],
+        "last_skipped_count": 99,
+        "last_run": "2026-01-01T00:00:00+00:00",
+        "future_field": 42,
+    }), encoding="utf-8")
+
+    _scan(uid)
+    state = _state(uid)
+
+    assert state.get("future_field") == 42, (
+        f"Read-Modify-Write: unbekanntes Feld muss erhalten bleiben, kam {state!r}"
+    )
+    assert sorted(state["notified"]) == sorted(["alt-datei.json", FALL_A, FALL_B, FALL_C, FALL_D])
+    assert state["last_skipped_count"] == 4
+    assert state["last_run"] != "2026-01-01T00:00:00+00:00"
+    assert {k: state["by_kind"].get(k, 0) for k in ("trip", "vergleich", "unbekannt")} == {
+        "trip": 1, "vergleich": 2, "unbekannt": 1,
+    }

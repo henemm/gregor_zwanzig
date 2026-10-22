@@ -67,7 +67,7 @@ func TestBudgetsFor_RadarJobsHabenEigenesBudget(t *testing.T) {
 
 func TestBudgetsFor_AndereAlarmJobsUndBriefingUnveraendert(t *testing.T) {
 	sched := radarTaktTestScheduler(t)
-	for _, id := range []string{"alert_checks", "compare_alert_checks", "compare_official_alert_checks"} {
+	for _, id := range []string{"alert_checks", "compare_alert_checks"} {
 		wait, run, callCap := sched.budgetsFor(id)
 		if wait != 300*time.Second || run != 720*time.Second || callCap != 1800*time.Second {
 			t.Errorf("%s: erwartet unveraendert 300/720/1800 s, got %v/%v/%v", id, wait, run, callCap)

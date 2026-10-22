@@ -128,9 +128,12 @@ func (s *Scheduler) BriefingHealth() map[string]any {
 
 	var corruptTripsLastRunAt any
 	corruptTripsTotal := 0
+	// Fix #2286 AC-7: zusaetzlich nach Art aufgeschluesselt -- nur Zahlen.
+	corruptByKind := corruptBriefingsByKind{}
 	if s.store != nil {
-		total, lastRun := aggregateCorruptTrips(s.store.DataDir)
+		total, lastRun, byKind := aggregateCorruptTrips(s.store.DataDir)
 		corruptTripsTotal = total
+		corruptByKind = byKind
 		if lastRun != "" {
 			corruptTripsLastRunAt = lastRun
 		}
@@ -188,14 +191,20 @@ func (s *Scheduler) BriefingHealth() map[string]any {
 	}
 
 	return map[string]any{
-		"open_pending_briefings":                 openCount,
-		"degraded_segments_total":                degradedTotal,
-		"oldest_pending_age_hours":               oldestAgeHours,
-		"last_provider_error_at":                 lastProviderErrorAt,
-		"provider_error_streak_since":            providerErrorStreakSince,
-		"provider_errors_recent_count":           providerErrorsRecentCount,
-		"corrupt_trips_total":                    corruptTripsTotal,
-		"corrupt_trips_last_run_at":              corruptTripsLastRunAt,
+		"open_pending_briefings":       openCount,
+		"degraded_segments_total":      degradedTotal,
+		"oldest_pending_age_hours":     oldestAgeHours,
+		"last_provider_error_at":       lastProviderErrorAt,
+		"provider_error_streak_since":  providerErrorStreakSince,
+		"provider_errors_recent_count": providerErrorsRecentCount,
+		"corrupt_trips_total":          corruptTripsTotal,
+		"corrupt_trips_last_run_at":    corruptTripsLastRunAt,
+		"corrupt_briefings_total":      corruptByKind.Trip + corruptByKind.Vergleich + corruptByKind.Unbekannt,
+		"corrupt_briefings_by_kind": map[string]int{
+			"trip":      corruptByKind.Trip,
+			"vergleich": corruptByKind.Vergleich,
+			"unbekannt": corruptByKind.Unbekannt,
+		},
 		"briefing_dispatch_error_streak_since":   dispatchErrorStreakSince,
 		"briefing_dispatch_errors_recent_count":  dispatchErrorsRecentCount,
 		"alert_anchor_rejected_streak_since":     anchorRejectedStreakSince,
@@ -477,8 +486,17 @@ func analyzeBriefingDispatchErrors(dataDir string, now time.Time) (string, int) 
 // record_corrupt_trip_observability (Issue #1262). Only the fields needed for
 // the privacy-safe aggregate are decoded — never the "notified" filenames.
 type corruptTripsDiagnostics struct {
-	LastSkippedCount int    `json:"last_skipped_count"`
-	LastRun          string `json:"last_run"`
+	LastSkippedCount int                     `json:"last_skipped_count"`
+	LastRun          string                  `json:"last_run"`
+	ByKind           *corruptBriefingsByKind `json:"by_kind"`
+}
+
+// corruptBriefingsByKind is the per-kind breakdown written by the Python
+// scanner since Fix #2286 (trip / vergleich / unbekannt). Counts only.
+type corruptBriefingsByKind struct {
+	Trip      int `json:"trip"`
+	Vergleich int `json:"vergleich"`
+	Unbekannt int `json:"unbekannt"`
 }
 
 // aggregateCorruptTrips sums last_skipped_count across ALL users'
@@ -486,9 +504,14 @@ type corruptTripsDiagnostics struct {
 // recent last_run timestamp. Fail-soft: a missing or unparseable file is
 // skipped, never a panic. Privacy (#252): only counts and a timestamp are
 // read — never the per-file "notified" filenames or user_id.
-func aggregateCorruptTrips(dataDir string) (int, string) {
+//
+// Fix #2286 AC-7: additionally sums the per-kind breakdown "by_kind". Legacy
+// files without by_kind (or a by_kind summing to less than
+// last_skipped_count) count the remainder as "unbekannt".
+func aggregateCorruptTrips(dataDir string) (int, string, corruptBriefingsByKind) {
 	total := 0
 	lastRun := ""
+	byKind := corruptBriefingsByKind{}
 	matches, _ := filepath.Glob(filepath.Join(dataDir, "users", "*", "diagnostics", "corrupt_trips.json"))
 	for _, match := range matches {
 		data, err := os.ReadFile(match)
@@ -503,8 +526,18 @@ func aggregateCorruptTrips(dataDir string) (int, string) {
 		if entry.LastRun > lastRun {
 			lastRun = entry.LastRun
 		}
+		known := 0
+		if entry.ByKind != nil {
+			byKind.Trip += entry.ByKind.Trip
+			byKind.Vergleich += entry.ByKind.Vergleich
+			byKind.Unbekannt += entry.ByKind.Unbekannt
+			known = entry.ByKind.Trip + entry.ByKind.Vergleich + entry.ByKind.Unbekannt
+		}
+		if rest := entry.LastSkippedCount - known; rest > 0 {
+			byKind.Unbekannt += rest
+		}
 	}
-	return total, lastRun
+	return total, lastRun, byKind
 }
 
 // providerErrorStreakGapThreshold is the maximum gap between two consecutive
