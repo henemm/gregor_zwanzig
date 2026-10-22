@@ -34,7 +34,7 @@
 		<span
 			class="status-caption"
 			data-testid={statusTestid}
-			style="font-size: 10px; font-family: var(--g-font-mono); color: var(--g-ink-4); text-transform: uppercase; letter-spacing: 0.16em; flex-shrink: 0;"
+			style="font-size: 11px; font-family: var(--g-font-mono); color: var(--g-ink-4); text-transform: uppercase; letter-spacing: 0.16em; flex-shrink: 0;"
 			>· {statusLabel}</span
 		>
 	{/if}

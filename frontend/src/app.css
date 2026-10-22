@@ -621,9 +621,51 @@
   color: var(--g-ink-muted);
 }
 
-/* iOS Safari: font-size >= 16px auf Focus-Elementen, verhindert Auto-Zoom (#272) */
-@media (max-width: 767px) {
+/* iOS Safari: font-size >= 16px auf Focus-Elementen, verhindert Auto-Zoom (#272).
+   #2601: auch im Querformat (844px) und auf jedem Touch-Gerät, nicht nur < 768px. */
+@media (max-width: 899px), (pointer: coarse) {
   input, select, textarea {
     font-size: 16px;
   }
+}
+
+/* #2601 Mobile-UX — Erreichbarkeit auf Touch-Geräten.
+   - Native Häkchen/Radios: 20px Optik, das umschließende Label trägt 44px.
+   - .g-link-tap: Textlink mit unsichtbar vergrößerter Trefferfläche (Padding
+     + negativer Rand), Layout bleibt unverändert.
+   - Fixe Hinweise (iOS-Install, Passkey) reservieren am Scroll-Ende Platz,
+     sonst liegen Footer-Links darunter; im flachen Querformat (< 500px Höhe)
+     entfällt der iOS-Hinweis ganz, er nähme sonst ein Drittel der Fläche. */
+@media (max-width: 899px), (pointer: coarse) {
+  input[type="checkbox"], input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) {
+    min-height: 44px;
+  }
+  [data-slot="btn"][data-size="sm"] { min-height: 36px; }
+  /* Alle übrigen Knöpfe und Textfelder im Inhalt: mindestens 36/40px hoch.
+     Ausgenommen: Btn-Atom (eigene Größen), Schalter, Icon-Knöpfe. */
+  main button:not([data-slot="btn"]):not([role="switch"]):not([data-size^="icon"]) { min-height: 36px; }
+  main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  main select { min-height: 40px; }
+  [data-slot="segmented-item"] { min-height: 36px; }
+  [data-testid="switch"] { position: relative; }
+  [data-testid="switch"]::after { content: ""; position: absolute; inset: -12px -8px; }
+}
+.g-link-tap {
+  display: inline-block;
+  padding: 13px 12px;
+  margin: -13px -12px;
+}
+:root { --g-hint-h: 72px; }
+@media (max-width: 899px) {
+  body:has([data-testid="ios-install-hint"], [data-testid="passkey-angebot"]) .mobile-scroll-pad {
+    padding-bottom: calc(var(--g-nav-clearance) + var(--g-s-4) + var(--g-hint-h));
+  }
+}
+@media (max-height: 500px) {
+  [data-testid="ios-install-hint"] { display: none !important; }
 }

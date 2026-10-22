@@ -1140,15 +1140,15 @@
 				<div class="space-y-2 mb-4" data-testid="mengen-quote">
 					<div class="flex items-center justify-between text-sm">
 						<span>Aktive Trips</span>
-						<a href="/trips" class="font-medium hover:underline" data-testid="quota-trips">{formatQuotaUsage(countActive(data.trips), quota?.trips)}</a>
+						<a href="/trips" class="g-link-tap font-medium hover:underline" data-testid="quota-trips">{formatQuotaUsage(countActive(data.trips), quota?.trips)}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>Aktive Vergleiche</span>
-						<a href="/compare" class="font-medium hover:underline" data-testid="quota-compare-presets">{formatQuotaUsage(countActive(data.comparePresets), quota?.compare_presets)}</a>
+						<a href="/compare" class="g-link-tap font-medium hover:underline" data-testid="quota-compare-presets">{formatQuotaUsage(countActive(data.comparePresets), quota?.compare_presets)}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>Locations</span>
-						<a href="/locations" class="font-medium hover:underline" data-testid="quota-locations">{formatQuotaUsage(Array.isArray(data.locations) ? data.locations.length : 0, quota?.locations)}</a>
+						<a href="/locations" class="g-link-tap font-medium hover:underline" data-testid="quota-locations">{formatQuotaUsage(Array.isArray(data.locations) ? data.locations.length : 0, quota?.locations)}</a>
 					</div>
 				</div>
 

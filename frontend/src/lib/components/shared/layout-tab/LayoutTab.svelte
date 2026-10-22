@@ -86,7 +86,7 @@
 		gap: 10px;
 	}
 	.lt-eyebrow {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
