@@ -819,6 +819,29 @@ def _env_zeilen(out: str) -> dict:
     return dict(z.split("=", 1) for z in out.splitlines() if "=" in z)
 
 
+# Je Probelauf-Befund der EXAKTE Umfang bis zum Abbruch (Reihenfolge: Korsika HEUTE, DE HEUTE,
+# Ortswechsel, DE MORGEN). Schluessel = (art, n-ter Wetterlauf dieser Art) des Befunds.
+_PROBE_ABBRUCH = {("korsika", 0): {"de": 0, "put": 0},   # Korsika zuerst: noch nichts an DE
+                  ("de", 0): {"de": 1, "put": 0},        # HEUTE-Befund: sofort, KEIN Ortswechsel
+                  ("de", 1): {"de": 2, "put": 1}}        # MORGEN-Befund: nach dem einen Wechsel
+
+
+def _nur_probelauf_ortswechsel(welt, fall) -> None:
+    """AC-1/AC-17: nach einem Probelauf-Befund exakt der Umfang bis zum Befund -- nach HEUTE-DE
+    weder Ortswechsel noch MORGEN (Adversary F001), nach MORGEN-DE genau der EINE Wechsel."""
+    soll = _PROBE_ABBRUCH[fall]
+    puts, de_laeufe = welt.put_historie, welt.wetter("de")
+    assert len(de_laeufe) == soll["de"], (
+        f"Befund {fall}: {len(de_laeufe)} DE-Wetterlaeufe, erwartet genau {soll['de']}")
+    assert len(puts) == soll["put"], (
+        f"Befund {fall}: {len(puts)} Ortswechsel (PUT), erwartet genau {soll['put']}")
+    assert len(welt.wetter("korsika")) == 1, "Korsika-Probelauf nicht genau einmal"
+    if puts:
+        assert puts[0]["trip"] == welt.ids("de")[0], "Probelauf-Wechsel nicht am DE-Trip"
+        assert de_laeufe[0]["seq"] < puts[0]["seq"] < de_laeufe[1]["seq"], (
+            "Ortswechsel liegt nicht zwischen Probelauf-HEUTE und -MORGEN")
+
+
 # ---------------------------------------------------------------------------
 # AC-1 Probelauf
 # ---------------------------------------------------------------------------
@@ -833,7 +856,7 @@ def test_warmer_probelauf_bricht_mit_befund_ab_ohne_serie_und_raeumt_auf(capsys,
     assert not welt.kommando_posts(), "nach warmem Probelauf trotzdem Telegram-Serie gepostet"
     assert len(welt.wetter("de")) <= 2 and len(welt.wetter("korsika")) <= 1, (
         "nach warmem Probelauf weitere Wetterlaeufe (Serie) ausgeloest")
-    assert not welt.put_historie, "nach warmem Probelauf Ortswechsel der DE-Serie gestartet"
+    _nur_probelauf_ortswechsel(welt, warm)
     assert welt.angelegt and not welt.eigene_reste(), f"Trips nicht aufgeraeumt: {welt.eigene_reste()}"
     assert welt.registrierter_nutzer() in welt.geloeschte_nutzer, "Wegwerf-Nutzer nicht geloescht"
     assert "GZ_STAGING_MESSLAUF_SEIT" not in out, "Befund-Lauf meldet Env-Zeilen wie ein voller Lauf"
@@ -1251,6 +1274,20 @@ def test_staging_adressen_sind_erlaubt(capsys, basis):
     assert rc == 0, f"{basis}: Exit {rc}; stderr: {err[-800:]}"
 
 
+@pytest.mark.parametrize("basis", ["http://staging.gregor20.henemm.com",
+                                   "http://staging.gregor20.henemm.com/"])
+def test_staging_host_ohne_https_wird_vor_jeder_anfrage_abgelehnt(capsys, basis):
+    """Adversary F002 / AC-18: das Sitzungs-Cookie ist Secure -- ueber http kaeme es nie zurueck.
+    Der oeffentliche Staging-Host ist NUR per https erlaubt (lokal nur http://127.0.0.1:8091)."""
+    mod = _werkzeug()
+    welt = _Welt(basis=basis.rstrip("/"))
+    rc = welt.lauf(mod, env=welt.env(GZ_STAGING_BASE_URL=basis))
+    out, err = _ausgabe(capsys)
+    assert rc == 2, f"{basis}: Exit {rc}, erwartet 2 (http auf dem Staging-Host)"
+    assert err.strip() and not out, "Sperre ohne Meldung oder mit stdout-Ausgabe"
+    _keine_anfrage(welt)
+
+
 # ---------------------------------------------------------------------------
 # AC-14 / AC-15 Kontingent, nur eigene Trips
 # ---------------------------------------------------------------------------
@@ -1403,7 +1440,8 @@ def test_probelauf_ohne_dauerzeile_ist_befund(capsys, lauf):
     _befund_ohne_env(welt, rc, out)
     assert not [m for m in welt.mails() if m["befehl"] in ("HELP", "CODES", "STATUS")], (
         "Probelauf ohne Dauerzeile, trotzdem Kurzbefehle eingeliefert")
-    assert not welt.kommando_posts() and not welt.put_historie, "Serie trotz fehlender Dauerzeile"
+    assert not welt.kommando_posts(), "Serie trotz fehlender Dauerzeile"
+    _nur_probelauf_ortswechsel(welt, lauf)
 
 
 @pytest.mark.parametrize("befehl,n,wort", [("HEUTE", 1, "heute"), ("STATUS", 3, "status"),
@@ -1679,3 +1717,58 @@ def test_nur_probelauf_loest_nur_die_drei_probelaeufe_aus_und_raeumt_auf(capsys)
     assert not welt.kommando_posts(), "Telegram-Serie im Probemodus"
     assert welt.angelegt and not welt.eigene_reste(), f"Trips nicht aufgeraeumt: {welt.eigene_reste()}"
     assert welt.registrierter_nutzer() in welt.geloeschte_nutzer, "Wegwerf-Nutzer nicht geloescht"
+
+
+def _nur_probelauf(welt: _Welt, **kw):
+    """--nur-probelauf mit allen Raendern injiziert; ``laufzeit`` NICHT injiziert (Default greift)."""
+    mod = _werkzeug()
+    argumente = dict(env=welt.env(), transport=welt.transport_fuer("nutzer"),
+                     helfer_transport=welt.transport_fuer("helfer"), smtp_factory=welt.smtp_factory(),
+                     imap_factory=welt.imap_factory(), journal_quelle=welt.journal_quelle,
+                     uhr=welt.uhr.jetzt, schlaf=welt.uhr.schlaf)
+    argumente.update(kw)
+    return mod.main(["--nur-probelauf"], **argumente)
+
+
+@pytest.mark.parametrize("basis", [STAGING_URL, BASIS], ids=["staging", "lokal"])
+def test_nur_probelauf_verknuepft_kein_telegram_und_liefert_nur_drei_mails_ein(capsys, basis):
+    """Adversary F003 (k): im Probemodus weder Telegram-Link noch /start noch Webhook; genau die
+    drei Probe-Mails, nur der EINE Probelauf-Ortswechsel."""
+    welt = _Welt(basis=basis)
+    rc = _nur_probelauf(welt)
+    out, err = _ausgabe(capsys)
+    assert rc == 0, f"Exit {rc}; stderr: {err[-800:]}"
+    telegram = [a["url"] for a in welt.anfragen if "telegram" in a["url"]]
+    assert not telegram, f"Telegram-Anfragen im Probemodus: {telegram}"
+    assert not [e for e in welt.ereignisse if e["art"] == "webhook"], "Webhook-Update im Probemodus"
+    befehle = [(m["trip_art"], m["befehl"]) for m in welt.mails()]
+    assert befehle == [("korsika", "HEUTE"), ("de", "HEUTE"), ("de", "MORGEN")], (
+        f"Probemodus lieferte nicht genau die drei Probe-Mails ein: {befehle}")
+    assert len(welt.put_historie) == 1, f"{len(welt.put_historie)} PUT, erwartet nur den Probe-Wechsel"
+
+
+def test_nur_probelauf_schreibt_nichts_nach_stdout(capsys):
+    """Adversary F003 (h): stdout bleibt im Probemodus VOLLSTAENDIG leer -- auch keine Leerzeile;
+    ``eval "$(...)"`` darf nach einem Probelauf keine Env-Zeilen setzen."""
+    welt = _Welt(basis=STAGING_URL)
+    rc = _nur_probelauf(welt)
+    out, err = _ausgabe(capsys)
+    assert rc == 0, f"Exit {rc}; stderr: {err[-800:]}"
+    assert out == "", f"stdout im Probemodus nicht leer: {out!r}"
+    assert "Probelauf" in err, "Probemodus ohne Fortschrittsmeldung auf stderr"
+
+
+def test_nur_probelauf_nutzt_die_kurze_laufzeit_fuer_die_zeitfenster_sperre(capsys):
+    """Adversary F003 (i): 23:20 Wien -- Probelauf (30 min) endet 23:50 am selben Tag und darf
+    starten; der volle Lauf (2 h 15 min) ueberspannt Mitternacht und ist gesperrt (Exit 2)."""
+    start = datetime(2027, 7, 14, 23, 20, tzinfo=WIEN)
+    welt = _Welt(start=start, basis=STAGING_URL)
+    rc = _nur_probelauf(welt)
+    out, err = _ausgabe(capsys)
+    assert rc == 0, f"Probelauf 23:20: Exit {rc}, erwartet 0; stderr: {err[-800:]}"
+    assert len(welt.mails()) == 3, "Probelauf 23:20 hat nicht die drei Probe-Mails eingeliefert"
+    voll = _Welt(start=start, basis=STAGING_URL)
+    rc_voll = voll.lauf(_werkzeug())
+    out, err = _ausgabe(capsys)
+    assert rc_voll == 2, f"voller Lauf 23:20: Exit {rc_voll}, erwartet 2 (Tageswechsel)"
+    _keine_anfrage(voll)

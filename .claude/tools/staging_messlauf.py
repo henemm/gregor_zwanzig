@@ -10,10 +10,13 @@ Korsika, das HEUTE-dann-HELP-Paar. Der Treiber wertet NICHT aus (keine
 Schwellen, kein Urteil); er gibt nur die drei Env-Zeilen fuer den Test aus.
 
 Aufruf:  eval "$(python3 .claude/tools/staging_messlauf.py)"
+         python3 .claude/tools/staging_messlauf.py --nur-probelauf   (nur die drei Probelaeufe)
+Basis:   Standard https://staging.gregor20.henemm.com (Secure-Cookie). Korsika auf Staging nur
+         ueber die Ersatzquelle eu_direct (egress_guard sperrt Meteo-France), offen ausgewiesen.
 Exit:    0 = vollstaendig ausgeloest, 1 = Befund (Probelauf warm, Telegram nicht
          verknuepfbar, Antwort/Dauerzeile ausgeblieben, Abbruch, Aufraeumen gescheitert),
          2 = Umgebungsfehler/Sperre.
-stdout:  nur bei Exit 0 die drei Zeilen GZ_STAGING_MESSLAUF_SEIT/_TRIP_DE/_TRIP_KORSIKA;
+stdout:  nur bei Exit 0 eines vollen Laufs die drei Zeilen GZ_STAGING_MESSLAUF_SEIT/_TRIP_DE/_TRIP_KORSIKA;
          jeder Fortschritt geht nach stderr.
 """
 from __future__ import annotations
@@ -55,15 +58,17 @@ ml = _lade_modul("_gz_befehl_messlogik", "befehl_messlogik.py")
 STAGING_EINGANG = pw.STAGING_EINGANG
 CHAT_ID_PRAEFIX = "gzp-ungueltig-"
 GESCHAETZTE_LAUFZEIT = timedelta(hours=2, minutes=15)
+PROBE_LAUFZEIT = timedelta(minutes=30)
 WIEN = ZoneInfo("Europe/Vienna")
-STANDARD_BASIS = "http://127.0.0.1:8091"
+STANDARD_BASIS = "https://staging.gregor20.henemm.com"  # Secure-Cookie kommt nur ueber https (AC-18)
 STANDARD_KERN = "http://127.0.0.1:8001"
 STAGING_HOST = "staging.gregor20.henemm.com"
 PFLICHT = ("GZ_TEST_IMAP_USER", "GZ_TEST_IMAP_PASS", "GZ_CORE_SHARED_SECRET",
            "GZ_AUTH_USER", "GZ_AUTH_PASS", "TELEGRAM_WEBHOOK_SECRET")
 
 # Orte (lat, lon) im DWD-Fenstergebiet (thunder_routing: de_direct), paarweise >= 140 km.
-PROBE_ORT = (53.55, 10.00)                       # Hamburg (Probelauf, Basis des DE-Trips)
+PROBE_ORT = (53.55, 10.00)                       # Hamburg (Probelauf HEUTE, Basis des DE-Trips)
+PROBE_MORGEN_ORT = (51.23, 6.78)                 # Duesseldorf (Probelauf MORGEN, nicht in DE_ORTE)
 DE_ORTE = ((52.52, 13.40), (48.21, 16.37), (50.08, 14.44), (51.34, 12.37), (49.45, 11.08),
            (47.07, 15.44), (45.44, 12.33), (50.06, 19.94), (54.35, 18.65), (55.68, 12.57))
 KORSIKA_ORT = (42.20, 9.05)                      # fr_direct
@@ -206,6 +211,8 @@ class Lauf:
     angelegt: list = field(default_factory=list)
     update_id: int = field(default_factory=lambda: 10 ** 12 + secrets.randbelow(10 ** 11))
     letzte_korsika: datetime | None = None
+    korsika_ersatz: bool = False   # Staging: egress_guard sperrt Meteo-France -> eu_direct (AC-19)
+    nur_probelauf: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -352,25 +359,44 @@ def lege_trips_an(lauf: Lauf) -> None:
         _meldung(f"Trip angelegt: {trip['id']}")
 
 
-def probelauf(lauf: Lauf) -> None:
-    """Je 1x HEUTE/MORGEN DE und 1x HEUTE Korsika; warm (kein downloads>0) -> Befund."""
-    de, ko = lauf.trips["de"], lauf.trips["korsika"]
-    sende_mail(lauf, de, "heute")
-    sende_mail(lauf, de, "morgen")
-    sende_korsika(lauf, "heute")
+_KORSIKA_ERSATZ = ("Korsika auf Staging: Gewitterquelle eu_direct (Ersatz) - fr_direct ist durch "
+                   "egress_guard gesperrt; die Kaltmessung fr_direct ist Prod-Aufgabe")
+
+
+def _probe(lauf: Lauf, trip: dict, wort: str) -> None:
+    """EIN Probelauf, sofort geprueft: warm (kein downloads>0) oder ohne Dauerzeile -> Befund,
+    bevor irgendetwas weiter geaendert wird (AC-1)."""
+    if trip is lauf.trips["korsika"]:
+        sende_korsika(lauf, wort)
+    else:
+        sende_mail(lauf, trip, wort)
+    befehl = wort.upper()
     journal = lauf.journal(lauf.seit)
-    dauer = ml.dauerzeilen(journal)
-    warm = []
-    for trip, befehl, quelle in ((de, "HEUTE", "dwd_fenster"), (de, "MORGEN", "dwd_fenster"),
-                                 (ko, "HEUTE", "fr_direct_fenster")):
-        laeufe = [l for l in dauer if l["trip"] == trip["id"] and l["befehl"] == befehl
-                  and l["kanal"] == "email"]
-        if not laeufe or not ml.kalt_laeufe(laeufe, journal, quellen=(quelle,)):
-            warm.append(f"{befehl} {trip['id']}")
-    if warm:
-        raise Befund("Probelauf ohne Download-Beleg (warm oder keine Dauerzeile): "
-                     + ", ".join(warm) + " - keine Serie ausgeloest")
-    _meldung("Probelauf: alle drei Laeufe mit Downloads im Journal")
+    laeufe = [l for l in ml.dauerzeilen(journal) if l["trip"] == trip["id"]
+              and l["befehl"] == befehl and l["kanal"] == "email"]
+    if trip is lauf.trips["korsika"]:
+        if lauf.korsika_ersatz:  # AC-19: kein fr_direct-Kaltlauf verlangt, aber eine Dauerzeile
+            kalt = bool(laeufe)
+        else:
+            kalt = bool(laeufe) and ml.kalt_laeufe(laeufe, journal, quellen=("fr_direct_fenster",))
+    else:
+        kalt = bool(laeufe) and ml.kalt_laeufe(laeufe, journal, quellen=("dwd_fenster",))
+    if not kalt:
+        raise Befund(f"Probelauf ohne Download-Beleg (warm oder keine Dauerzeile): {befehl} "
+                     f"{trip['id']} - keine Serie ausgeloest")
+
+
+def probelauf(lauf: Lauf) -> None:
+    """1x HEUTE Korsika, dann HEUTE/MORGEN DE mit Ortswechsel dazwischen; jeder sofort geprueft."""
+    de, ko = lauf.trips["de"], lauf.trips["korsika"]
+    _probe(lauf, ko, "heute")
+    if lauf.korsika_ersatz:
+        _meldung(_KORSIKA_ERSATZ)
+    _probe(lauf, de, "heute")
+    setze_ort(lauf, PROBE_MORGEN_ORT)  # AC-17: MORGEN sonst aus dem von HEUTE gewaermten Cache
+    _probe(lauf, de, "morgen")
+    _meldung("Probelauf: DE HEUTE/MORGEN mit Downloads im Journal, Korsika "
+             + ("mit Antwort (Ersatzquelle eu_direct)" if lauf.korsika_ersatz else "mit Downloads"))
 
 
 def serien(lauf: Lauf) -> None:
@@ -387,7 +413,7 @@ def serien(lauf: Lauf) -> None:
     for i, ort in enumerate(DE_ORTE):
         setze_ort(lauf, ort)
         sende_mail(lauf, de, "heute" if i % 2 == 0 else "morgen")
-    _meldung("Korsika-Serie")
+    _meldung("Korsika-Serie" + (" - " + _KORSIKA_ERSATZ if lauf.korsika_ersatz else ""))
     for i in range(6):
         sende_korsika(lauf, "heute" if i % 2 == 0 else "morgen")
     _meldung("HEUTE-dann-HELP-Paar")
@@ -402,6 +428,10 @@ def ablauf(lauf: Lauf) -> list[str]:
     lauf.api.registriere(lauf.plus)
     _meldung(f"Wegwerf-Nutzer registriert: {lauf.api.nutzer_id}")
     lege_trips_an(lauf)
+    if lauf.nur_probelauf:
+        probelauf(lauf)
+        _meldung("Modus nur Probelauf: keine Serien, keine Env-Zeilen")
+        return []
     verknuepfe_telegram(lauf)
     probelauf(lauf)
     serien(lauf)
@@ -451,7 +481,7 @@ def fuehre_aus(lauf: Lauf) -> int:
         rest = raeume_auf(lauf)
     if rest:
         return max(rc, 1)
-    if rc == 0:
+    if rc == 0 and zeilen:
         print("\n".join(zeilen), flush=True)
     return rc
 
@@ -460,21 +490,27 @@ def main(argv=None, *, env=None, transport=None, helfer_transport=None, smtp_fac
          imap_factory=None, journal_quelle=None, uhr=None, schlaf=None, laufzeit=None) -> int:
     """Raender injizierbar (Kern-Tests); ohne Angaben echtes HTTP, SMTP, IMAP, journalctl."""
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.parse_args(argv)
+    p.add_argument("--nur-probelauf", action="store_true",
+                   help="nur die drei Probelaeufe (HEUTE/MORGEN DE, HEUTE Korsika), dann aufraeumen")
+    args = p.parse_args(argv)
     werte = lade_umgebung(env)
     uhr = uhr or (lambda: datetime.now(timezone.utc))
-    sperre = startpruefung(werte, uhr(), laufzeit or GESCHAETZTE_LAUFZEIT)
+    laufzeit = laufzeit or (PROBE_LAUFZEIT if args.nur_probelauf else GESCHAETZTE_LAUFZEIT)
+    sperre = startpruefung(werte, uhr(), laufzeit)
     if sperre:
         _meldung(sperre)
         return 2
-    api = MessApi(werte.get("GZ_STAGING_BASE_URL") or STANDARD_BASIS,
+    basis = werte.get("GZ_STAGING_BASE_URL") or STANDARD_BASIS
+    api = MessApi(basis,
                   werte.get("GZ_STAGING_CORE_URL") or STANDARD_KERN,
                   werte["GZ_CORE_SHARED_SECRET"], transport or pw.http_transport(),
                   helfer_transport=helfer_transport or pw.http_transport(),
                   helfer_zugang=(werte["GZ_AUTH_USER"], werte["GZ_AUTH_PASS"]))
     lauf = Lauf(api=api, tag=pw.baue_tag(), webhook_secret=werte["TELEGRAM_WEBHOOK_SECRET"],
                 smtp=smtp_factory or smtplib.SMTP, imap=imap_factory or pw._imap_factory(werte),
-                journal=journal_quelle or journal_staging, uhr=uhr, schlaf=schlaf or time.sleep)
+                journal=journal_quelle or journal_staging, uhr=uhr, schlaf=schlaf or time.sleep,
+                korsika_ersatz=(urlsplit(basis).hostname or "").lower() == STAGING_HOST,
+                nur_probelauf=args.nur_probelauf)
     return fuehre_aus(lauf)
 
 
