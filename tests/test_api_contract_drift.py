@@ -101,29 +101,28 @@ def _inventory_rows(text: str) -> dict[str, str]:
     return rows
 
 
-def test_inventory_lists_kind_neutral_preview_routes_and_drops_signal():
-    """AC-7 (Issue #2283 S1): GIVEN docs/reference/api_contract.md
-    WHEN das Endpunkt-Inventar gelesen wird
-    THEN stehen dort die kind-neutralen Routen `/api/briefings/{id}/preview`
-    und `/api/briefings/{id}/alert-preview` als eigene Zeilen, die Alt-Routen
-    sind als Delegates gekennzeichnet, und `/api/preview/{trip_id}/signal`
-    ist keine Inventarzeile mehr (Route entfernt, Signal app-weit weg #610)."""
+def test_inventory_lists_kind_neutral_alert_preview_and_drops_removed_previews():
+    """AC-7 (Issue #2283 S1), nachgezogen fuer #1743 AC-32: GIVEN
+    docs/reference/api_contract.md WHEN das Endpunkt-Inventar gelesen wird
+    THEN steht `/api/briefings/{id}/alert-preview` als eigene Zeile, die
+    Alt-Route `/api/trips/{id}/alert-preview` ist als Delegate gekennzeichnet,
+    und weder die entfernte Briefing-Vorschau `/api/briefings/{id}/preview`
+    (#1743) noch `/api/preview/{trip_id}/signal` (#610) ist eine Inventarzeile
+    oder wird von einer Inventarzeile referenziert."""
     rows = _inventory_rows(_contract_text())
 
-    missing = [p for p in ("/api/briefings/{id}/preview", "/api/briefings/{id}/alert-preview")
-               if p not in rows]
-    assert not missing, f"AC-7: Inventarzeilen fehlen: {missing}"
-
-    assert "/api/preview/{trip_id}/signal" not in rows, (
-        "AC-7: `/api/preview/{trip_id}/signal` steht noch als Inventarzeile: "
-        f"{rows.get('/api/preview/{trip_id}/signal')!r}"
+    assert "/api/briefings/{id}/alert-preview" in rows, (
+        "AC-7: Inventarzeile `/api/briefings/{id}/alert-preview` fehlt"
     )
 
-    legacy = [
-        "/api/preview/{trip_id}/email", "/api/preview/{trip_id}/sms",
-        "/api/preview/{trip_id}/telegram", "/api/preview/compare/{preset_id}",
-        "/api/trips/{id}/alert-preview",
-    ]
+    for removed in ("/api/briefings/{id}/preview", "/api/preview/{trip_id}/signal"):
+        referencing = [line for line in rows.values() if f"`{removed}`" in line]
+        assert not referencing, (
+            f"AC-32/AC-7: entfernte Route `{removed}` steht noch im Inventar:\n  "
+            + "\n  ".join(referencing)
+        )
+
+    legacy = ["/api/trips/{id}/alert-preview"]
     not_delegate = [p for p in legacy if "delegate" not in rows.get(p, "").lower()]
     assert not not_delegate, (
         f"AC-7: Alt-Routen ohne Delegate-Kennzeichnung im Inventar: {not_delegate}"

@@ -6,13 +6,17 @@
 //
 // RED-Erwartung: `../subscriptionTabs.ts` existiert noch nicht → ERR_MODULE_NOT_FOUND.
 //
+// #1743 (Spec feat_1743_reiter_aufraeumen AC-1..AC-5): fuenf Reiter — `versand` und
+// `vorschau` entfallen. Alt-Kennungen `versand`/`briefings` → `wetter-metriken` mit Anker
+// `versand`; `vorschau`/`preview` → `uebersicht`. Uebrige Alt-Kennungen unveraendert (AC-5).
+//
 // Ausfuehren:
 //   cd frontend && npm test -- src/lib/components/shared/__tests__/subscription_tabs_resolve.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { subscriptionTabs, resolveTab } from '../subscriptionTabs.ts';
+import { subscriptionTabs, resolveTab, bereinigteTabAdresse } from '../subscriptionTabs.ts';
 
 type Kind = 'trip' | 'vergleich';
 const KINDS: Kind[] = ['trip', 'vergleich'];
@@ -21,18 +25,18 @@ const KINDS: Kind[] = ['trip', 'vergleich'];
 const PUNKTE: Record<Kind, string> = { trip: 'etappen', vergleich: 'orte' };
 
 function neueKennungen(kind: Kind): string[] {
-	return ['uebersicht', PUNKTE[kind], 'wetter-metriken', 'wertebereiche', 'alarme', 'versand', 'vorschau'];
+	return ['uebersicht', PUNKTE[kind], 'wetter-metriken', 'wertebereiche', 'alarme'];
 }
 
-describe('subscriptionTabs(kind): Reihenfolge, Kennungen, Beschriftung (gleich wie vor #2287)', () => {
-	test('Trip: sieben Reiter in der Reihenfolge der Reiterleiste', () => {
+describe('subscriptionTabs(kind): Reihenfolge, Kennungen, Beschriftung (#1743: fuenf Reiter)', () => {
+	test('Trip: fuenf Reiter in der Reihenfolge der Reiterleiste (AC-1)', () => {
 		assert.deepEqual(
 			subscriptionTabs('trip').map((t) => t.id),
 			neueKennungen('trip')
 		);
 	});
 
-	test('Vergleich: sieben Reiter in der Reihenfolge der Reiterleiste', () => {
+	test('Vergleich: fuenf Reiter in der Reihenfolge der Reiterleiste (AC-2)', () => {
 		assert.deepEqual(
 			subscriptionTabs('vergleich').map((t) => t.id),
 			neueKennungen('vergleich')
@@ -42,11 +46,11 @@ describe('subscriptionTabs(kind): Reihenfolge, Kennungen, Beschriftung (gleich w
 	test('Beschriftung unveraendert (Trip „Etappen & Wegpunkte", Vergleich „Orte")', () => {
 		assert.deepEqual(
 			subscriptionTabs('trip').map((t) => t.label),
-			['Übersicht', 'Etappen & Wegpunkte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme', 'Versand', 'Vorschau']
+			['Übersicht', 'Etappen & Wegpunkte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme']
 		);
 		assert.deepEqual(
 			subscriptionTabs('vergleich').map((t) => t.label),
-			['Übersicht', 'Orte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme', 'Versand', 'Vorschau']
+			['Übersicht', 'Orte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme']
 		);
 	});
 
@@ -74,8 +78,10 @@ const ALT: Array<[string, (k: Kind) => string]> = [
 	['stages', (k) => PUNKTE[k]],
 	['weather', () => 'wetter-metriken'],
 	['alerts', () => 'wertebereiche'],
-	['briefings', () => 'versand'],
-	['preview', () => 'vorschau'],
+	['briefings', () => 'wetter-metriken'],
+	['versand', () => 'wetter-metriken'],
+	['preview', () => 'uebersicht'],
+	['vorschau', () => 'uebersicht'],
 	['idealwerte', () => 'wertebereiche'],
 	['layout', () => 'wetter-metriken']
 ];
@@ -96,6 +102,36 @@ describe('AC-1 / AC-2: Alt-Kennungen werden in BEIDEN Hubs auf den neuen Reiter 
 		assert.equal(resolveTab('trip', 'alerts').tab, 'wertebereiche');
 		assert.equal(resolveTab('vergleich', 'alerts').tab, 'wertebereiche');
 	});
+});
+
+/** #1743 AC-3/AC-4: Anker nur fuer die Versand-Alt-Kennungen. */
+const ANKER: Record<string, 'versand' | undefined> = { briefings: 'versand', versand: 'versand' };
+
+describe('#1743 AC-3/AC-4: Versand-Alt-Kennungen tragen den Anker `versand`, alle anderen keinen', () => {
+	for (const kind of KINDS) {
+		for (const [alt, ziel] of ALT) {
+			test(`resolveTab('${kind}', '${alt}').anchor === ${JSON.stringify(ANKER[alt])}`, () => {
+				const r = resolveTab(kind, alt) as { tab: string; anchor?: string };
+				assert.equal(r.tab, ziel(kind));
+				assert.equal(r.anchor, ANKER[alt]);
+			});
+		}
+		test(`${kind}: 'versand' und 'briefings' → exakt { wetter-metriken, legacy, known, anchor: versand }`, () => {
+			for (const alt of ['versand', 'briefings']) {
+				assert.deepEqual(resolveTab(kind, alt), {
+					tab: 'wetter-metriken',
+					legacy: true,
+					known: true,
+					anchor: 'versand'
+				});
+			}
+		});
+		test(`${kind}: 'vorschau' und 'preview' → exakt { uebersicht, legacy, known } (kein Anker)`, () => {
+			for (const alt of ['vorschau', 'preview']) {
+				assert.deepEqual(resolveTab(kind, alt), { tab: 'uebersicht', legacy: true, known: true });
+			}
+		});
+	}
 });
 
 describe('AC-5: kind-fremde Punkte-Kennung → eigener Punkte-Reiter', () => {
@@ -131,6 +167,28 @@ describe('Konsistenz: jedes Aufloesungsergebnis ist ein Reiter der eigenen Tabel
 			for (const roh of alle) {
 				assert.ok(gueltig.includes(resolveTab(kind, roh).tab), `${kind}/${roh} → ${resolveTab(kind, roh).tab}`);
 			}
+		});
+	}
+});
+
+describe('#1743 AC-3/AC-4: bereinigteTabAdresse schreibt Alt-Kennungen genau einmal auf die neue Adresse', () => {
+	const PFAD: Record<Kind, string> = { trip: '/trips/t-1', vergleich: '/compare/c-1' };
+	for (const kind of KINDS) {
+		for (const alt of ['versand', 'briefings']) {
+			test(`${kind}: ?tab=${alt} → ${PFAD[kind]}?tab=wetter-metriken#versand`, () => {
+				const href = `http://localhost${PFAD[kind]}?tab=${alt}`;
+				assert.equal(bereinigteTabAdresse(href, resolveTab(kind, alt)), `${PFAD[kind]}?tab=wetter-metriken#versand`);
+			});
+		}
+		for (const alt of ['vorschau', 'preview']) {
+			test(`${kind}: ?tab=${alt} → ${PFAD[kind]}?tab=uebersicht (ohne Hash)`, () => {
+				const href = `http://localhost${PFAD[kind]}?tab=${alt}`;
+				assert.equal(bereinigteTabAdresse(href, resolveTab(kind, alt)), `${PFAD[kind]}?tab=uebersicht`);
+			});
+		}
+		test(`${kind}: nach dem Umschreiben ist ?tab=wetter-metriken#versand neu — keine zweite Schreibung (keine Schleife)`, () => {
+			const href = `http://localhost${PFAD[kind]}?tab=wetter-metriken#versand`;
+			assert.equal(bereinigteTabAdresse(href, resolveTab(kind, 'wetter-metriken')), null);
 		});
 	}
 });

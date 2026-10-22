@@ -10,8 +10,10 @@
 // 'draft' | 'active' | 'paused' | 'archived' (Ausgabe von `subscriptionLifecycle`).
 //
 // Beschriftungen = die PO-freigegebenen AC-Texte (AC-1/AC-2/AC-12): Pausieren/Fortsetzen,
-// Senden, Vorschau, Alarme, Wetter-Metriken, Bearbeiten, Loeschen, Setup fortsetzen,
+// Senden, Alarme, Wetter-Metriken, Bearbeiten, Loeschen, Setup fortsetzen,
 // Archivieren/Reaktivieren.
+// #1743 (Spec feat_1743_reiter_aufraeumen AC-27): die Aktion „Vorschau" entfaellt ersatzlos;
+// die uebrigen Aktionen bleiben in Reihenfolge und Wirkung unveraendert.
 //
 // ANNAHMEN, die die Spec nicht ausdruecklich festlegt (im Handback gelistet):
 //   - Status 'archived' auf Liste/Mobil: Reaktivieren · Loeschen (Liste blendet Archiviertes
@@ -47,7 +49,6 @@ const LABEL: Record<string, string> = {
 	pause: 'Pausieren',
 	resume: 'Fortsetzen',
 	send: 'Senden',
-	preview: 'Vorschau',
 	alarms: 'Alarme',
 	weather: 'Wetter-Metriken',
 	edit: 'Bearbeiten',
@@ -57,8 +58,8 @@ const LABEL: Record<string, string> = {
 	'continue-setup': 'Setup fortsetzen'
 };
 
-const LISTE_AKTIV = ['pause', 'send', 'preview', 'alarms', 'weather', 'edit', 'delete'];
-const LISTE_PAUSIERT = ['resume', 'send', 'preview', 'alarms', 'weather', 'edit', 'delete'];
+const LISTE_AKTIV = ['pause', 'send', 'alarms', 'weather', 'edit', 'delete'];
+const LISTE_PAUSIERT = ['resume', 'send', 'alarms', 'weather', 'edit', 'delete'];
 
 /** DIE Erwartungstabelle: status -> Flaeche -> IDs in Reihenfolge. */
 const ERWARTET: Record<Status, Record<Surface, string[]>> = {

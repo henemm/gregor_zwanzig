@@ -23,13 +23,18 @@
 // RED HEUTE: der Trip heisst hinten „Briefing-Zeitplan · Alerts" (andere
 // Reihenfolge, andere Hinweise), der Fusszeilen-Hinweis fordert den „Zeitplan".
 //
+// Issue #1743 (feat_1743_reiter_aufraeumen, AC-17/AC-19): der Reiter „Versand" entfaellt auf beiden
+// Anlege-Seiten; gemeinsame Folge ab Wetter-Metriken ist Wetter-Metriken · Wertebereiche · Alarme.
+// Die Compare-Reiter werden jetzt per ECHTEM SSR-Rendering gelesen (Wizard-Kontext wie im
+// AC-12-Block unten) statt per Quelltext-Regex auf `TAB_DEFS` — die Liste ist kuenftig abgeleitet.
+//
 // Ausfuehren:
 //   cd frontend && npm test -- src/lib/components/shared/__tests__/anlege_reiterleiste_trip_vergleich_paritaet.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
 	renderTripNew,
 	desktopTabs,
@@ -45,21 +50,28 @@ interface ReiterDef {
 	lockHint: string | null;
 }
 
-/** Die Reiter-Definition `TAB_DEFS` aus CompareNewEditor.svelte als Eintraege. */
+const { render } = await import('svelte/server');
+const VergleichEditor = (await import(pathToFileURL(COMPARE_EDITOR).href)).default;
+
+/** Die Desktop-Reiter von /compare/new im Leerzustand (alle ausser „Vergleich" gesperrt),
+ *  gelesen aus dem ECHTEN SSR-Markup (`compare-editor-tab-<id>`, Lock-Hinweis im title). */
 function compareReiter(): ReiterDef[] {
-	const src = readFileSync(COMPARE_EDITOR, 'utf-8');
-	const block = /const TAB_DEFS\b[^=]*=\s*\[([\s\S]*?)\];/.exec(src);
-	assert.ok(block, 'Messaufbau kaputt: `const TAB_DEFS = [...]` in CompareNewEditor.svelte nicht gefunden.');
+	const wiz = { name: '', region: '', profile: 'wandern', pickedIds: [] as string[] };
+	const html = render(VergleichEditor, {
+		props: { stateOverride: { activeTab: 'vergleich', isMobileViewport: false } },
+		context: new Map([['compare-wizard-state', wiz]])
+	}).body;
 	const eintraege: ReiterDef[] = [];
-	const re = /\{\s*id:\s*'([^']+)',\s*label:\s*'([^']+)',\s*lockHint:\s*(null|'[^']*')\s*\}/g;
+	const re = /<button([^>]*\bdata-testid="compare-editor-tab-[a-z-]+"[^>]*)>([\s\S]*?)<\/button>/g;
 	let m: RegExpExecArray | null;
-	while ((m = re.exec(block![1]))) {
-		eintraege.push({ label: m[2], lockHint: m[3] === 'null' ? null : m[3].slice(1, -1) });
+	while ((m = re.exec(html))) {
+		const title = /\btitle="([^"]*)"/.exec(m[1])?.[1] ?? null;
+		const label = visibleText(m[2]).replace(/&amp;/g, '&').replace(/[⊘✓]/g, '').trim();
+		eintraege.push({ label, lockHint: title?.startsWith('Gesperrt — ') ? title.slice('Gesperrt — '.length) : null });
 	}
-	assert.equal(
-		eintraege.length,
-		6,
-		`Messaufbau kaputt: erwartet 6 Compare-Reiter (Vergleich, Orte, Wetter-Metriken, Wertebereiche, Alarme, Versand), gelesen ${eintraege.length}.`
+	assert.ok(
+		eintraege.length >= 5,
+		`Messaufbau kaputt: erwartet mind. 5 Compare-Reiter (Vergleich, Orte, Wetter-Metriken, Wertebereiche, Alarme), gelesen ${eintraege.length}.`
 	);
 	return eintraege;
 }
@@ -82,12 +94,12 @@ function abWetterMetriken(reiter: ReiterDef[]): ReiterDef[] {
 	return reiter.slice(i);
 }
 
-const GEMEINSAME_FOLGE = ['Wetter-Metriken', 'Wertebereiche', 'Alarme', 'Versand'];
+const GEMEINSAME_FOLGE = ['Wetter-Metriken', 'Wertebereiche', 'Alarme'];
 
 describe('AC-1: /trips/new — vollständige Reiterleiste', () => {
 	const ZIEL = ['Route', 'Etappen & GPX', 'Wegpunkte prüfen', ...GEMEINSAME_FOLGE];
 
-	test('Desktop: Route · Etappen & GPX · Wegpunkte prüfen · Wetter-Metriken · Wertebereiche · Alarme · Versand', () => {
+	test('Desktop: Route · Etappen & GPX · Wegpunkte prüfen · Wetter-Metriken · Wertebereiche · Alarme (kein Versand)', () => {
 		assert.deepEqual(
 			tripReiter().map((r) => r.label),
 			ZIEL,
@@ -97,33 +109,31 @@ describe('AC-1: /trips/new — vollständige Reiterleiste', () => {
 
 	test('Mobil (390 px-Zweig): dieselbe Folge', () => {
 		const html = renderTripNew({ activeTab: 'route', isMobileViewport: true });
-		assert.deepEqual(mobilTabLabels(html).slice(0, ZIEL.length), ZIEL, 'AC-1/AC-10 FAIL: Mobil-Reiterfolge stimmt nicht.');
+		assert.deepEqual(mobilTabLabels(html).slice(0, ZIEL.length + 1), ZIEL, 'AC-1/AC-10 FAIL: Mobil-Reiterfolge stimmt nicht (#1743: kein Reiter nach Alarme).');
 	});
 
 	test('„Briefing-Zeitplan" und „Alerts" kommen als Reiter nicht mehr vor (Desktop + Mobil)', () => {
 		const desktop = tripReiter().map((r) => r.label);
 		const mobil = mobilTabLabels(renderTripNew({ activeTab: 'route', isMobileViewport: true }));
-		for (const alt of ['Briefing-Zeitplan', 'Zeitplan', 'Alerts']) {
+		for (const alt of ['Briefing-Zeitplan', 'Zeitplan', 'Alerts', 'Versand']) {
 			assert.ok(!desktop.includes(alt), `AC-1 FAIL: Desktop-Reiter „${alt}" existiert noch.`);
 			assert.ok(!mobil.includes(alt), `AC-1 FAIL: Mobil-Reiter „${alt}" existiert noch.`);
 		}
 	});
 });
 
-describe('AC-2: Lock-Hinweise der Trip-Reiter Alarme und Versand', () => {
-	test('Alarme: „erst Wertebereiche öffnen"; Versand: „erst Alarme öffnen"', () => {
+describe('AC-2: Lock-Hinweis des Trip-Reiters Alarme; Versand ist kein Reiter mehr (#1743)', () => {
+	test('Alarme: „erst Wertebereiche öffnen"; kein Reiter „Versand"', () => {
 		const reiter = tripReiter();
 		const alarme = reiter.find((r) => r.label === 'Alarme');
-		const versand = reiter.find((r) => r.label === 'Versand');
 		assert.ok(alarme, 'AC-2 FAIL: kein Trip-Reiter „Alarme".');
-		assert.ok(versand, 'AC-2 FAIL: kein Trip-Reiter „Versand".');
 		assert.equal(alarme!.lockHint, 'erst Wertebereiche öffnen', 'AC-2 FAIL: falscher Lock-Hinweis am Reiter Alarme.');
-		assert.equal(versand!.lockHint, 'erst Alarme öffnen', 'AC-2 FAIL: falscher Lock-Hinweis am Reiter Versand.');
+		assert.ok(!reiter.some((r) => r.label === 'Versand'), '#1743 AC-19 FAIL: Trip-Reiter „Versand" existiert noch.');
 	});
 });
 
 describe('AC-3/AC-9: Parität Trip ↔ Ortsvergleich ab Wetter-Metriken', () => {
-	test('Compare-Referenz unverändert: Wetter-Metriken · Wertebereiche · Alarme · Versand (AC-9)', () => {
+	test('Compare-Referenz: Wetter-Metriken · Wertebereiche · Alarme (AC-9, #1743 ohne Versand)', () => {
 		assert.deepEqual(
 			abWetterMetriken(compareReiter()).map((r) => r.label),
 			GEMEINSAME_FOLGE,
@@ -151,28 +161,28 @@ describe('AC-3/AC-9: Parität Trip ↔ Ortsvergleich ab Wetter-Metriken', () => 
 		assert.deepEqual(
 			trip.slice(1).map((r) => [r.label, r.lockHint]),
 			vergleich.slice(1).map((r) => [r.label, r.lockHint]),
-			'AC-3 FAIL: Lock-Hinweise von Wertebereiche/Alarme/Versand weichen zwischen Trip und Ortsvergleich ab.'
+			'AC-3 FAIL: Lock-Hinweise von Wertebereiche/Alarme weichen zwischen Trip und Ortsvergleich ab.'
 		);
 	});
 });
 
 describe('AC-4: Fußzeilen-Hinweis und Fortschritt auf /trips/new', () => {
-	test('Desktop-Fußzeile fordert im Leerzustand den Versand, nicht den Zeitplan', () => {
+	test('Desktop-Fußzeile fordert im Leerzustand weder den Zeitplan noch einen Versand-Schritt (#1743)', () => {
 		const html = renderTripNew({ activeTab: 'route', isMobileViewport: false });
 		const text = visibleText(html);
-		assert.ok(
-			text.includes('Versand einrichten zum Speichern'),
-			'AC-4 FAIL: der Fußzeilen-Hinweis „Versand einrichten zum Speichern" fehlt.'
-		);
 		assert.ok(
 			!text.includes('Zeitplan einrichten zum Speichern'),
 			'AC-4 FAIL: der Fußzeilen-Hinweis fordert noch den Zeitplan.'
 		);
+		assert.ok(
+			!text.includes('Versand einrichten zum Speichern'),
+			'#1743 AC-19 FAIL: der Fußzeilen-Hinweis fordert noch den Versand-Schritt — Speichern haengt an Alarme.'
+		);
 	});
 
-	test('Mobil-Fortschritt bleibt „0/4" (vier Meilensteine)', () => {
+	test('Mobil-Fortschritt startet bei „0/N"', () => {
 		const html = renderTripNew({ activeTab: 'route', isMobileViewport: true });
-		assert.match(visibleText(html), /\b0\/4\b/, 'AC-4 FAIL: die mobile Fortschrittsanzeige steht nicht auf „/4".');
+		assert.match(visibleText(html), /\b0\/\d\b/, 'AC-4 FAIL: keine mobile Fortschrittsanzeige „0/N".');
 	});
 });
 
@@ -184,9 +194,7 @@ describe('AC-4: Fußzeilen-Hinweis und Fortschritt auf /trips/new', () => {
 // compare-new/__tests__/compare_new_lock_engine_wirkstelle.test.ts.
 describe('AC-12 (#2521 S3): Standardwerte-Knopf in beiden Anlege-Leisten', () => {
 	test('Trip-Footer und Ortsvergleich-Kopfzeile tragen den Knopf mit identischer Beschriftung', async () => {
-		const { pathToFileURL } = await import('node:url');
-		const { render } = await import('svelte/server');
-		const Vergleich = (await import(pathToFileURL(COMPARE_EDITOR).href)).default;
+		const Vergleich = VergleichEditor;
 		const wiz = { name: 'X', region: '', profile: 'wandern', pickedIds: ['loc0', 'loc1'] };
 		const vergleich = render(Vergleich, {
 			props: { stateOverride: { activeTab: 'vergleich', isMobileViewport: false } },

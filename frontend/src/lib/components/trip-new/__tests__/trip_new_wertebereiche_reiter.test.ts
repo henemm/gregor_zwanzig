@@ -31,18 +31,18 @@ const EDITOR = join(FRONTEND, 'src/lib/components/trip-new/TripNewEditor.svelte'
 // Issue #2277 S3 (Spec feat_2277_s3_reiter_angleichung_rueckbau.md, AC-1/AC-2):
 // die S2a-Folge „…, Wertebereiche, Briefing-Zeitplan, Alerts" ist abgeloest —
 // die letzten Reiter heissen jetzt wie beim Ortsvergleich „Alarme · Versand".
+// Issue #1743 (AC-17/AC-19): der Reiter „Versand" entfaellt — Alarme ist der letzte Reiter.
 const ERWARTETE_FOLGE = [
 	'Route',
 	'Etappen & GPX',
 	'Wegpunkte prüfen',
 	'Wetter-Metriken',
 	'Wertebereiche',
-	'Alarme',
-	'Versand'
+	'Alarme'
 ];
 
 describe('AC-1: Reiter „Wertebereiche" zwischen Wetter-Metriken und Alarme', () => {
-	test('Desktop: Reiterfolge …, Wetter-Metriken, Wertebereiche, Alarme, Versand', () => {
+	test('Desktop: Reiterfolge …, Wetter-Metriken, Wertebereiche, Alarme (kein Versand)', () => {
 		const html = renderTripNew({ activeTab: 'route', isMobileViewport: false });
 		const labels = desktopTabs(html).map((t) => t.label);
 		assert.ok(labels.length >= 6, `Messaufbau kaputt: nur ${labels.length} Desktop-Tabs gelesen.`);
@@ -52,13 +52,13 @@ describe('AC-1: Reiter „Wertebereiche" zwischen Wetter-Metriken und Alarme', (
 	test('Mobil: dieselbe Reiterfolge', () => {
 		const html = renderTripNew({ activeTab: 'route', isMobileViewport: true });
 		assert.deepEqual(
-			mobilTabLabels(html).slice(0, ERWARTETE_FOLGE.length),
+			mobilTabLabels(html).slice(0, ERWARTETE_FOLGE.length + 1),
 			ERWARTETE_FOLGE,
 			'AC-1 FAIL: Mobil-Reiterfolge stimmt nicht.'
 		);
 	});
 
-	test('Sperrhinweise: Wertebereiche → Wetter-Metriken, Alarme → Wertebereiche, Versand → Alarme', () => {
+	test('Sperrhinweise: Wertebereiche → Wetter-Metriken, Alarme → Wertebereiche; kein Reiter Versand', () => {
 		const html = renderTripNew({ activeTab: 'route', isMobileViewport: false });
 		const tabs = desktopTabs(html);
 		const wb = tabs.find((t) => t.label === 'Wertebereiche');
@@ -75,13 +75,7 @@ describe('AC-1: Reiter „Wertebereiche" zwischen Wetter-Metriken und Alarme', (
 			'Gesperrt — erst Wertebereiche öffnen',
 			'AC-2 FAIL: Alarme verweist nicht auf den Wertebereiche-Reiter als Vorstufe.'
 		);
-		const vs = tabs.find((t) => t.label === 'Versand');
-		assert.ok(vs, 'AC-1 FAIL: kein Desktop-Reiter „Versand".');
-		assert.equal(
-			vs!.title,
-			'Gesperrt — erst Alarme öffnen',
-			'AC-2 FAIL: Versand verweist nicht auf den Alarme-Reiter als Vorstufe.'
-		);
+		assert.ok(!tabs.some((t) => t.label === 'Versand'), '#1743 AC-19 FAIL: Desktop-Reiter „Versand" existiert noch.');
 	});
 });
 
@@ -129,7 +123,7 @@ describe('AC-2 (Verdrahtung): CorridorEditor-Rueckruf → CreateTripState → PO
 			saving: false,
 			savedTripId: null,
 			saveError: null,
-			activeTab: 'versand',
+			activeTab: 'alarme',
 			name: 'Karnischer Höhenweg',
 			region: '',
 			startDate: '2026-06-15',

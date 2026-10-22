@@ -29,6 +29,11 @@
 //   Infobox:  <aside data-testid="infobox-<reiter>-<route|vergleich>">  (kein <button> darin)
 //   Prop an den fuenf Organismen: `showInfobox` (boolean, Default false)
 //
+// Issue #1743 (feat_1743_reiter_aufraeumen, AC-19/AC-22): „Versand" ist kein Reiter mehr, sondern
+// der Abschnitt unten im Reiter Wetter-Metriken (geteilter Baustein WetterMetrikenVersandPanel).
+// Die Versand-Infobox steht beim Anlegen im Schritt Wetter-Metriken UEBER dem Versand-Inhalt
+// (nach dem Wetter-Metriken-Inhalt), im Bearbeiten-Hub nicht. Kein Versand-Besuchs-Flag mehr.
+//
 // Pfadregel #1409: alles relativ zu DIESER Datei.
 //
 // Ausfuehren:
@@ -52,11 +57,11 @@ import {
 	testids
 } from './infoboxSsr.ts';
 import { findeKomponenten, type Knoten } from './svelteInstanzPruefstand.ts';
-import { INFO_TEXTE, PFLICHTREITER, REITER_MIT_INFOBOX, type Kontext } from './infoboxTexte.ts';
+import { INFO_TEXTE, PFLICHTREITER, REITER_DES_ABSCHNITTS, REITER_MIT_INFOBOX, type Kontext } from './infoboxTexte.ts';
 
-const ALLE_FLAGS = { wtVisited: true, wbVisited: true, alVisited: true, vsVisited: true };
+const ALLE_FLAGS = { wtVisited: true, wbVisited: true, alVisited: true };
 const TRIP_BASIS = { name: 'Infobox-Trip', startDate: '2026-07-01', stageNames: ['E1'], ...ALLE_FLAGS };
-const VERGLEICH_FLAGS = { metrikenVisited: true, idealsVisited: true, alarmeVisited: true, versandVisited: true };
+const VERGLEICH_FLAGS = { metrikenVisited: true, idealsVisited: true, alarmeVisited: true };
 
 function infoboxIds(html: string): string[] {
 	return testids(html, 'infobox-');
@@ -87,7 +92,7 @@ describe('AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren
 		const ansicht = mobil ? 'Mobil' : 'Desktop';
 		for (const reiter of REITER_MIT_INFOBOX.route) {
 			test(`${ansicht}: Reiter ${reiter} trägt genau eine Infobox mit dem freigegebenen Text`, async () => {
-				const html = await renderTrip({ ...TRIP_BASIS, activeTab: reiter, isMobileViewport: mobil });
+				const html = await renderTrip({ ...TRIP_BASIS, activeTab: REITER_DES_ABSCHNITTS[reiter], isMobileViewport: mobil });
 				const id = `infobox-${reiter}-route`;
 				if (reiter === 'wegpunkte') {
 					// Messaufbau-Beleg: das Wegpunkte-Panel ist in dieser Ansicht wirklich gerendert
@@ -107,7 +112,7 @@ describe('AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren
 			});
 		}
 		test(`${ansicht}: Versand-Infobox des Trips nennt BEIDE Zeiten (07:00 und 18:00)`, async () => {
-			const html = await renderTrip({ ...TRIP_BASIS, activeTab: 'versand', isMobileViewport: mobil });
+			const html = await renderTrip({ ...TRIP_BASIS, activeTab: 'wetter-metriken', isMobileViewport: mobil });
 			const text = infoboxText(html, 'versand', 'route');
 			assert.match(text, /07:00/);
 			assert.match(text, /18:00/);
@@ -169,12 +174,12 @@ describe('AC-2/AC-3: /compare/new zeigt die Infobox (Wertebereiche, Versand), De
 			assert.equal(infoboxText(html, 'wertebereiche', 'vergleich'), erwartet('wertebereiche', 'vergleich'));
 		});
 
-		test(`${ansicht}: Versand — Infobox je Baum mit Vergleichs-Text (nur 07:00, kein 18:00)`, async () => {
-			const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'versand', isMobileViewport: mobil });
+		test(`${ansicht}: Versand-Abschnitt im Schritt Wetter-Metriken — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)`, async () => {
+			const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter-metriken', isMobileViewport: mobil });
 			const anzahl = tagsMitTestid(html, 'infobox-versand-vergleich').length;
-			// Der Versand-Reiter steht in .cm-desktop UND .cm-mobile — je Baum eine Infobox.
-			assert.equal(anzahl, tagsMitTestid(html, 'versand-tab').length, 'nicht jeder Versand-Reiter trägt eine Infobox');
-			assert.ok(anzahl >= 1, 'Versand-Reiter ohne Infobox');
+			// Je gerendertem Versand-Abschnitt genau eine Infobox.
+			assert.equal(anzahl, tagsMitTestid(html, 'versand-abschnitt').length, 'nicht jeder Versand-Abschnitt trägt eine Infobox');
+			assert.ok(anzahl >= 1, 'Versand-Abschnitt im Schritt Wetter-Metriken ohne Infobox');
 			for (let nr = 0; nr < anzahl; nr++) {
 				const text = infoboxText(html, 'versand', 'vergleich', nr);
 				assert.equal(text, erwartet('versand', 'vergleich'));
@@ -205,14 +210,42 @@ describe('AC-5: Ortsvergleich-Pflichtreiter Vergleich und Orte tragen keine Info
 				assert.deepEqual(infoboxIds(html), [], 'Pflichtreiter trägt eine Infobox');
 				assert.equal((html.match(/<aside\b/g) ?? []).length, 0, 'Pflichtreiter enthält ein <aside>');
 				// Positivkontrolle (macht den Fall ohne Implementierung rot): derselbe Editor MIT
-				// geoeffnetem Versand-Reiter zeigt eine Infobox — sonst waere „keine“ vakuum.
-				const versand = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'versand', isMobileViewport: mobil });
+				// geoeffnetem Wetter-Metriken-Schritt zeigt die Versand-Infobox — sonst waere „keine“ vakuum.
+				const versand = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter-metriken', isMobileViewport: mobil });
 				assert.ok(
 					tagsMitTestid(versand, 'infobox-versand-vergleich').length >= 1,
-					'Positivkontrolle: Versand-Reiter zeigt keine Infobox — Verdrahtung fehlt'
+					'Positivkontrolle: Wetter-Metriken-Schritt zeigt keine Versand-Infobox — Verdrahtung fehlt'
 				);
 			});
 		}
+	}
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #1743 AC-22: Versand-Infobox beim Anlegen UEBER dem Versand-Inhalt, unter dem
+// Wetter-Metriken-Inhalt — beide Anlege-Seiten, Desktop UND Mobil.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('#1743 AC-22: Anlegen — Versand-Infobox steht im Schritt Wetter-Metriken über dem Versand-Inhalt', () => {
+	function reihenfolge(html: string, kontext: Kontext): void {
+		const iWm = html.indexOf(`data-testid="infobox-wetter-metriken-${kontext}"`);
+		const iVi = html.indexOf(`data-testid="infobox-versand-${kontext}"`);
+		const iAb = html.indexOf('data-testid="versand-abschnitt"');
+		const iKanal = html.indexOf('data-testid="channel-email"');
+		assert.notEqual(iWm, -1, `Messaufbau: Wetter-Metriken-Infobox fehlt — gefunden: ${JSON.stringify(infoboxIds(html))}`);
+		assert.notEqual(iAb, -1, 'Versand-Abschnitt (data-testid="versand-abschnitt") fehlt im Schritt Wetter-Metriken');
+		assert.notEqual(iVi, -1, `Versand-Infobox fehlt im Schritt Wetter-Metriken — gefunden: ${JSON.stringify(infoboxIds(html))}`);
+		assert.notEqual(iKanal, -1, 'Versand-Kanalschalter (channel-email) fehlen im Schritt Wetter-Metriken');
+		assert.ok(iWm < iVi, 'Versand-Infobox steht vor dem Wetter-Metriken-Inhalt');
+		assert.ok(iVi < iKanal, 'Versand-Infobox steht nicht über dem Versand-Inhalt');
+	}
+	for (const mobil of [false, true]) {
+		const ansicht = mobil ? 'Mobil' : 'Desktop';
+		test(`${ansicht}: /trips/new`, async () => {
+			reihenfolge(await renderTrip({ ...TRIP_BASIS, activeTab: 'wetter-metriken', isMobileViewport: mobil }), 'route');
+		});
+		test(`${ansicht}: /compare/new`, async () => {
+			reihenfolge(await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter-metriken', isMobileViewport: mobil }), 'vergleich');
+		});
 	}
 });
 
@@ -370,7 +403,8 @@ describe('AC-6: Organismus OHNE showInfobox (Bearbeiten-Hub): keine Infobox, abe
 // Verdrahtung — Anlege-Editoren setzen `showInfobox` an JEDEM Organismus-Mount,
 // die Hubs und die Wertprop-Bündel setzen es NIE.
 // ─────────────────────────────────────────────────────────────────────────────
-const ORGANISMEN = ['WeatherMetricsTab', 'CorridorEditor', 'CorridorEditorMobile', 'AlarmeTab', 'VersandTab'];
+// #1743: der geteilte Panel-Baustein (Wetter-Metriken + Versand) zaehlt als Organismus-Mount.
+const ORGANISMEN = ['WeatherMetricsTab', 'CorridorEditor', 'CorridorEditorMobile', 'AlarmeTab', 'VersandTab', 'WetterMetrikenVersandPanel'];
 
 function mounts(datei: string): Record<string, Knoten[]> {
 	const quelle = readFileSync(datei, 'utf-8');
@@ -401,12 +435,13 @@ describe('Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true', 
 		[
 			'TripNewEditor',
 			join(COMPONENTS, 'trip-new/TripNewEditor.svelte'),
-			{ WeatherMetricsTab: 2, CorridorEditor: 2, CorridorEditorMobile: 0, AlarmeTab: 2, VersandTab: 2 }
+			// #1743: Wetter-Metriken und Versand nur noch ueber den geteilten Panel-Baustein (Desktop + Mobil).
+			{ WeatherMetricsTab: 0, CorridorEditor: 2, CorridorEditorMobile: 0, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 2 }
 		],
 		[
 			'CompareNewEditor',
 			join(COMPONENTS, 'compare-new/CompareNewEditor.svelte'),
-			{ WeatherMetricsTab: 2, CorridorEditor: 1, CorridorEditorMobile: 1, AlarmeTab: 2, VersandTab: 2 }
+			{ WeatherMetricsTab: 0, CorridorEditor: 1, CorridorEditorMobile: 1, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 2 }
 		]
 	];
 	for (const [name, datei, erwartetAnzahl] of EDITOREN) {
@@ -457,8 +492,13 @@ describe('AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen 
 			}
 			const gesamt = ORGANISMEN.reduce((s, o) => s + alle[o].length, 0);
 			assert.ok(gesamt >= 4, `${name}: nur ${gesamt} Organismus-Mounts gefunden — Messaufbau kaputt`);
-			for (const org of ['WeatherMetricsTab', 'AlarmeTab', 'VersandTab']) {
-				assert.ok(alle[org].length >= 1, `${name}: kein ${org}-Mount gefunden`);
+			assert.ok(alle.AlarmeTab.length >= 1, `${name}: kein AlarmeTab-Mount gefunden`);
+			// #1743: Wetter-Metriken/Versand duerfen auch ueber den geteilten Panel-Baustein kommen.
+			for (const org of ['WeatherMetricsTab', 'VersandTab']) {
+				assert.ok(
+					alle[org].length + alle.WetterMetrikenVersandPanel.length >= 1,
+					`${name}: kein ${org}- bzw. WetterMetrikenVersandPanel-Mount gefunden`
+				);
 			}
 			assert.ok(
 				alle.CorridorEditor.length + alle.CorridorEditorMobile.length >= 1,
@@ -501,6 +541,8 @@ describe('AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen 
 		// Gegenstueck (rot ohne Implementierung): der Anlege-Editor setzt das Prop AUSSERHALB der Bündel.
 		const editor = join(COMPONENTS, 'compare-new/CompareNewEditor.svelte');
 		const quelle = readFileSync(editor, 'utf-8');
-		assert.equal(showInfoboxWert(mounts(editor).VersandTab[0], quelle), 'true', 'Anlege-Editor setzt showInfobox nicht');
+		const panel = mounts(editor).WetterMetrikenVersandPanel[0];
+		assert.ok(panel, '#1743: CompareNewEditor mountet den geteilten WetterMetrikenVersandPanel nicht');
+		assert.equal(showInfoboxWert(panel, quelle), 'true', 'Anlege-Editor setzt showInfobox nicht');
 	});
 });

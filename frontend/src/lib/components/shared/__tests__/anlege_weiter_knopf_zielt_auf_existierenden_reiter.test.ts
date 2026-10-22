@@ -11,6 +11,10 @@
 // gesperrt und laesst den Reiter stehen. Trip: `switchTab` kennt kein Schloss — dort
 // faellt ein unbekanntes Ziel als aktiver Reiter ausserhalb von TAB_DEFS auf.
 //
+// Issue #1743 (feat_1743_reiter_aufraeumen, AC-17/AC-19): Ziel-Menge ist die Anlege-Kette laut Spec
+// (Literal, nicht mehr `u.TAB_DEFS` — die Liste wird kuenftig aus `anlegeKette` abgeleitet und kann
+// im Editor anders heissen). Kein Weiter-Knopf darf mehr auf `versand` zielen.
+//
 // Ausfuehren:
 //   cd frontend && npm test -- src/lib/components/shared/__tests__/anlege_weiter_knopf_zielt_auf_existierenden_reiter.test.ts
 
@@ -55,7 +59,9 @@ function attrText(k: Knoten, quelle: string, name: string): string | null {
 	return null;
 }
 
-const tabIds = (u: Knoten): string[] => (u.TAB_DEFS as Array<{ id: string }>).map((t) => t.id);
+// AC-17: die Anlege-Ketten je kind.
+const VERGLEICH_KETTE = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'];
+const TRIP_KETTE = ['route', 'etappen', 'wegpunkte', 'wetter-metriken', 'wertebereiche', 'alarme'];
 
 // ── Ortsvergleich-Anlegen ───────────────────────────────────────────────────────
 
@@ -70,8 +76,7 @@ async function vergleichEditor() {
 				activeTab: 'vergleich',
 				metrikenVisited: true,
 				idealsVisited: true,
-				alarmeVisited: true,
-				versandVisited: true
+				alarmeVisited: true
 			}
 		},
 		{ jsAlsTs: true }
@@ -79,22 +84,22 @@ async function vergleichEditor() {
 }
 
 describe('F002 Ortsvergleich-Anlegen: jeder Weiter-Knopf schaltet auf den Reiter seiner testid', () => {
-	test('Vorbedingung: echte Freischaltung gibt alle TAB_DEFS-Reiter frei', async () => {
+	test('Vorbedingung: echte Freischaltung gibt alle Reiter der Anlege-Kette frei, keinen versand', async () => {
 		const { u } = await vergleichEditor();
-		assert.deepEqual(tabIds(u), ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand']);
-		for (const id of tabIds(u)) assert.ok((u.unlocked as Set<string>).has(id), `'${id}' nicht freigeschaltet`);
+		for (const id of VERGLEICH_KETTE) assert.ok((u.unlocked as Set<string>).has(id), `'${id}' nicht freigeschaltet`);
+		assert.ok(!(u.unlocked as Set<string>).has('versand'), '#1743: versand ist kein Anlege-Schritt mehr');
 	});
 
-	test('compare-editor-continue-<id>: Klick → activeTab === <id> ∈ TAB_DEFS (insb. wertebereiche)', async () => {
+	test('compare-editor-continue-<id>: Klick → activeTab === <id> ∈ Anlege-Kette (insb. wertebereiche)', async () => {
 		const { u, ast, quelle } = await vergleichEditor();
 		const knoepfe = klickKnoten(ast)
 			.map((k) => ({ testid: attrText(k, quelle, 'data-testid'), onclick: attrText(k, quelle, 'onclick') }))
 			.filter((k) => k.testid?.startsWith('compare-editor-continue-'));
 		const ziele = knoepfe.map((k) => k.testid!.slice('compare-editor-continue-'.length));
-		assert.deepEqual(ziele, ['orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand'], 'Weiter-Knoepfe');
+		assert.deepEqual(ziele, ['orte', 'wetter-metriken', 'wertebereiche', 'alarme'], 'Weiter-Knoepfe (#1743: keiner auf versand)');
 		for (const { testid, onclick } of knoepfe) {
 			const ziel = testid!.slice('compare-editor-continue-'.length);
-			assert.ok(tabIds(u).includes(ziel), `testid ${testid} nennt keinen Reiter aus TAB_DEFS`);
+			assert.ok(VERGLEICH_KETTE.includes(ziel), `testid ${testid} nennt keinen Reiter der Anlege-Kette`);
 			u.activeTab = 'vergleich';
 			(werte(onclick!, u) as () => void)();
 			assert.equal(u.activeTab, ziel, `${testid} schaltet nicht auf '${ziel}' (Ziel veraltet/gesperrt?)`);
@@ -125,7 +130,7 @@ describe('F002 Trip-Anlegen: jeder Weiter-Knopf/-Handler zielt auf einen Reiter 
 		for (const x of ausdruecke) {
 			u.activeTab = 'route';
 			(werte(x, u) as () => void)();
-			assert.ok(tabIds(u).includes(u.activeTab), `${x} schaltet auf '${u.activeTab}' — kein Reiter aus TAB_DEFS`);
+			assert.ok(TRIP_KETTE.includes(u.activeTab), `${x} schaltet auf '${u.activeTab}' — kein Reiter der Anlege-Kette`);
 			const literal = /\(\s*'([a-z-]+)'\s*\)/.exec(x)?.[1];
 			if (literal) assert.equal(u.activeTab, literal, x);
 			else assert.notEqual(u.activeTab, 'route', `${x} schaltet nicht weiter`);
@@ -139,7 +144,7 @@ describe('F002 Trip-Anlegen: jeder Weiter-Knopf/-Handler zielt auf einen Reiter 
 		for (const f of fabriken) {
 			u.activeTab = 'route';
 			(u[f] as () => () => void)()();
-			assert.ok(tabIds(u).includes(u.activeTab), `${f} schaltet auf '${u.activeTab}' — kein Reiter aus TAB_DEFS`);
+			assert.ok(TRIP_KETTE.includes(u.activeTab), `${f} schaltet auf '${u.activeTab}' — kein Reiter der Anlege-Kette`);
 			assert.notEqual(u.activeTab, 'route', `${f} schaltet nicht weiter`);
 		}
 	});

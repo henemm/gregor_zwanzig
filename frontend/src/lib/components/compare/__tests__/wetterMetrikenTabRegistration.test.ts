@@ -71,10 +71,12 @@ describe('AC-1: COMPARE_TABS registriert den neuen Tab "Wetter-Metriken"', () =>
 	// bleiben unangetastet — nur EIN neuer Eintrag wird eingefuegt.
 	// Issue #1360: 'layout' ist aus dem Anker entfernt, der Reiter ist aufgeloest
 	// (Spec compare_layout_tab_dissolution, AC-1).
-	test('Regressions-Anker: alle 6 Bestands-Tabs sind weiterhin vorhanden', () => {
+	// #1743 (AC-2): Versand und Vorschau sind keine Reiter mehr — fuenf Reiter.
+	test('Regressions-Anker: genau die 5 Reiter Uebersicht · Orte · Wetter-Metriken · Wertebereiche · Alarme', () => {
 		const values = COMPARE_TABS.map((t) => t.value);
-		for (const v of ['uebersicht', 'orte', 'wertebereiche', 'alarme', 'versand', 'vorschau']) {
-			assert.ok(values.includes(v), `Regression: Bestands-Tab "${v}" fehlt in COMPARE_TABS`);
+		assert.deepEqual(values, ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']);
+		for (const v of ['versand', 'vorschau']) {
+			assert.ok(!values.includes(v), `#1743: "${v}" darf kein Reiter mehr sein`);
 		}
 	});
 });
