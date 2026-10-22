@@ -420,7 +420,9 @@ def test_ac2_weiter_ohne_namen_setzt_einzigen_vergleich_fort(monkeypatch, user_i
 
 @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
 @pytest.mark.parametrize("lage", ["trip_plus_vergleich", "zwei_vergleiche"])
-@pytest.mark.parametrize("befehl", ["pause", "weiter"])
+# #2282 S2 (PO-Entscheidung Variante B): report/heute/morgen ohne Namen
+# fragen bei Trip+Vergleich bzw. mehreren Vergleichen ebenso zurueck.
+@pytest.mark.parametrize("befehl", ["pause", "weiter", "report", "heute", "morgen"])
 def test_ac4_mehrdeutig_fragt_zurueck_ohne_wirkung(monkeypatch, user_ids, kanal, lage, befehl):
     uid = user_ids()
     _nutzer_mit_tier(uid)

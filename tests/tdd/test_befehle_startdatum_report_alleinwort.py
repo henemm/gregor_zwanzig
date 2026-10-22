@@ -42,8 +42,10 @@ from services.trip_selection import (
 
 from tests.tdd._befehl_e2e_fixtures import (
     ERGEBNIS_ANTWORT_TRIP,
+    ERGEBNIS_ANTWORT_VERGLEICH,
     ERGEBNIS_KEIN_AKTIVES_ZIEL,
     ERGEBNIS_KEIN_KANDIDAT,
+    ERGEBNIS_RUECKFRAGE,
     FEHLERTEXTE,
     SOLL_MATRIX_STARTDATUM_REPORT,
     BefehlNutzer,
@@ -348,19 +350,52 @@ def test_ac5_matrix_befehl_x_lage(monkeypatch, user_ids, befehl, lage, kanal):
         assert (KEIN_AKTIVES_ZIEL_TEXT in antwort) or (KEIN_AKTIVES_ZIEL_TEXT_EN in antwort), antwort
         assert briefings == 0, "Es darf nichts versendet werden"
         assert _presets_auf_platte(nutzer) == vorher_presets, "Es darf nichts geschrieben werden"
+    elif erwartet == ERGEBNIS_RUECKFRAGE:
+        # #2282 S2 Variante B: Trip+Vergleich bzw. mehrere Vergleiche ohne
+        # Namen -> Rueckfrage mit allen Kandidaten, ohne jede Wirkung.
+        kandidaten = ([nutzer.trip.name] if nutzer.trip else []) + [
+            p["name"] for p in nutzer.presets
+        ]
+        assert len(kandidaten) >= 2, kandidaten
+        for name in kandidaten:
+            # Premium-SMS kuerzt Namen GSM-7-/160-gerecht (Boden 4 Zeichen).
+            merkmal = name if kanal == "telegram" else name[:4]
+            assert merkmal in antwort, f"{lage}/{kanal}: Rueckfrage ohne {name!r}: {antwort!r}"
+        assert KEIN_AKTIVES_ZIEL_TEXT not in antwort and KEIN_AKTIVES_ZIEL_TEXT_EN not in antwort
+        assert briefings == 0, "Rueckfrage: es darf nichts versendet werden"
+        assert _presets_auf_platte(nutzer) == vorher_presets
+        if nutzer.trip:
+            assert _etappendaten(nutzer) == vorher_daten
+        if kanal == "premium_sms":
+            assert len(texte[-1]) <= 160, texte[-1]
+    elif erwartet == ERGEBNIS_ANTWORT_VERGLEICH:
+        # #2282 S2: der einzige Vergleich wird angesprochen -- nicht mehr der
+        # "kein aktiver Trip"-Hinweis und nicht die S1-Uebergangsantwort. Die
+        # Fixture-Orte (loc-a/loc-b) sind bewusst nicht aufloesbar; die echte
+        # Zustellung pruefen test_ortsvergleich_befehle_versand.py (AC-1/AC-11).
+        assert KEIN_AKTIVES_ZIEL_TEXT not in antwort and KEIN_AKTIVES_ZIEL_TEXT_EN not in antwort, antwort
+        assert KEIN_KANDIDAT_TEXT not in antwort and KEIN_KANDIDAT_TEXT_EN not in antwort, antwort
+        assert "web-app" not in antwort.lower() and "web app" not in antwort.lower(), antwort
+        assert briefings == 0, "kein Trip-Briefing beim Vergleich"
+        if kanal == "telegram":
+            assert nutzer.presets[0]["name"] in antwort, f"Antwort adressiert den Vergleich nicht: {antwort!r}"
     else:
         raise AssertionError(f"Unbekanntes Soll-Ergebnis {erwartet!r}")
     if kanal == "premium_sms":
         assert antwort.lower() != "", antwort
 
 
-@pytest.mark.parametrize("kanal,erwartung_startdatum,erwartung_report", [
+@pytest.mark.parametrize("kanal,erwartung_startdatum,uebergangsantwort", [
     ("telegram", "gibt es beim Ortsvergleich nicht", "Web-App"),
     ("premium_sms", "not available for location comparisons", "web app"),
 ])
-def test_ac5_vorangestellter_vergleichsname_lehnt_ab_bzw_gibt_uebergangsantwort(
-    monkeypatch, user_ids, kanal, erwartung_startdatum, erwartung_report,
+def test_ac5_vorangestellter_vergleichsname_lehnt_startdatum_ab_report_ohne_uebergangsantwort(
+    monkeypatch, user_ids, kanal, erwartung_startdatum, uebergangsantwort,
 ):
+    """#2282 S2: REPORT am benannten Vergleich gibt NICHT mehr die
+    S1-Uebergangsantwort ("bitte nutze die Web-App"), sondern geht in den
+    Vergleichsversand (hier: Fixture-Orte nicht aufloesbar -> kein Versand).
+    STARTDATUM bleibt abgelehnt."""
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_lage_an(user_ids, "L4")
     name = nutzer.presets[0]["name"]
@@ -370,7 +405,10 @@ def test_ac5_vorangestellter_vergleichsname_lehnt_ab_bzw_gibt_uebergangsantwort(
     report = "\n".join(_sende(kanal, recorder, nutzer, f"{name} report"))
 
     assert erwartung_startdatum in start, start
-    assert erwartung_report in report, report
+    assert report, "REPORT am Vergleich: keine Antwort"
+    assert uebergangsantwort not in report, (
+        f"#2282 S2: REPORT am Vergleich gibt noch die Uebergangsantwort: {report!r}"
+    )
     assert _briefings_an(recorder, nutzer) == 0
     assert _presets_auf_platte(nutzer) == vorher
 
