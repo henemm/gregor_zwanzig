@@ -3,7 +3,7 @@ entity_id: mobile_ux_audit_2601
 type: module
 created: 2026-10-22
 updated: 2026-10-22
-status: draft
+status: approved
 version: "1.0"
 tags: [mobile, ux, e2e, audit]
 ---
@@ -12,7 +12,7 @@ tags: [mobile, ux, e2e, audit]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO 2026-10-22: „direkt fixen ohne Freigabe")
 
 ## Purpose
 
