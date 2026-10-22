@@ -251,7 +251,6 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/preview/{trip_id}/telegram` | GET | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
 | `/api/scheduler/alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/scheduler/compare-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
-| `/api/scheduler/compare-official-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
 | `/api/scheduler/compare-radar-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
 | `/api/scheduler/inbound-commands` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/scheduler/radar-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
@@ -280,7 +279,8 @@ Router-Quelltext; davon 4 Pfade/4 Registrierungen nur bei `GZ_ENV=staging`, ohne
 hinzu, #2155 S3 die drei Pfade unter `/api/admin/users`; #2519 ergänzt `/api/admin/invites`,
 `/api/admin/invites/{id}/revoke` und `/api/auth/invite/check`; #2218 Scheibe C die vier
 Admin-Trigger `radar-alert-checks`, `compare-alert-checks`, `compare-radar-alert-checks`,
-`compare-official-alert-checks`. Die frühere Angabe „80 Pfade/100 Registrierungen" war
+`compare-official-alert-checks` (letzterer seit #2286 wieder entfernt — der amtliche Teil
+läuft in `compare-alert-checks` mit). Die frühere Angabe „80 Pfade/100 Registrierungen" war
 bereits vor #2218 veraltet.)
 
 ---
@@ -1600,7 +1600,7 @@ session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
 | jobs[].overlap | object \| null (Issue #1447 S2a) | Present **only** when at least one tick has been skipped since the last executed run of this job, because the previous run of the same job ID was still in progress (`sync.Mutex.TryLock()` in `recordRun`). Absent field means no overlap is occurring — never an error signal. |
 | jobs[].overlap.skipped_since_last_run | int | Number of consecutive ticks skipped since the last executed run; resets to 0 (and the `overlap` field disappears) the next time the job actually runs, regardless of outcome |
 | jobs[].overlap.last_skipped_at | datetime | ISO-8601 UTC timestamp of the most recently skipped tick |
-| jobs[].users | object \| absent (Issue #2149 Scheibe A) | Anonymous per-user aggregate, present **only** on the seven fan-out jobs that run via `runForAllUsers` (`trip_reports_hourly`, `alert_checks`, `radar_alert_checks`, `compare_alert_checks`, `compare_radar_alert_checks`, `compare_official_alert_checks`, `compare_presets_daily`). Absent on the three global jobs without user fan-out (`inbound_command_poll`, `data_write_selftest`, `premium_sms_poll`) — absent means "not applicable", not "all ok". Contains **only counts, never user IDs**. |
+| jobs[].users | object \| absent (Issue #2149 Scheibe A) | Anonymous per-user aggregate, present **only** on the six fan-out jobs that run via `runForAllUsers` (`trip_reports_hourly`, `alert_checks`, `radar_alert_checks`, `compare_alert_checks`, `compare_radar_alert_checks`, `compare_presets_daily`; `compare_official_alert_checks` was folded into `compare_alert_checks` by Issue #2286). Absent on the three global jobs without user fan-out (`inbound_command_poll`, `data_write_selftest`, `premium_sms_poll`) — absent means "not applicable", not "all ok". Contains **only counts, never user IDs**. |
 | jobs[].users.total | int | Number of users with a recorded state entry for this job |
 | jobs[].users.failing | int | Number of users with `ConsecutiveFailures >= 1` |
 | jobs[].users.partial | int | Number of users with `ConsecutivePartial >= 1` |
@@ -1615,6 +1615,8 @@ session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
 | briefing_health.alert_anchor_rejected_streak_since | string \| null (Issue #1661) | ISO-8601 UTC timestamp when the current unbroken series of **rejected deviation-alert anchors** started, or `null` if no streak is active. An anchor is rejected when it describes a different calendar day than today (`wrong_day`), is older than the 26 h fallback limit (`too_old`), or is missing entirely while the trip is already running (`missing`) — in each case the deviation guard has no valid comparison point and stays silent. Gap threshold: **60 minutes** (the alert check runs every 15 minutes, so an hour without a further rejection ends the series; the 26 h threshold used for briefings would keep the same fault invisible for days). |
 | briefing_health.alert_anchor_rejected_recent_count | int (Issue #1661) | Count of rejected deviation-alert anchors in the last 24 hours (recorded in `users/<uid>/diagnostics/alert_anchor_rejected.jsonl`). Only the timestamp is decoded on the Go side — neither the trip id nor the rejection reason leaves the Python core (#252). |
 | briefing_health.track_resolution_failure_streak_since | string \| null (Issue #2073 Scheibe 2) | ISO-8601 UTC timestamp when the current unbroken series of failed GPX track resolutions started, or `null` if no streak is active — exactly like the `provider_error_*`/`alert_anchor_rejected_*` neighbours above, so a monitor tests for `null`. (The Go helper `analyzeTrackResolutionFailures` returns the empty string internally for "no streak"; the handler does not put that into the response map, so the wire format carries `null` — measured on staging 2026-08-22 at `c38e35cc`.) A failure is written when `resolve_stage_track_km` finds no candidate within tolerance, finds several candidates that disagree on the distance, or the stage's already-stored distances turn out implausible (recorded in `users/<uid>/diagnostics/track_resolution_failures.jsonl`, written only on the dispatch path, not on preview). Gap threshold: **26 hours** — deliberately not the 60-minute threshold of the alert-anchor twin, because the Python writer damps its lines: resolution failures (`no_candidate_within_tolerance`, `ambiguous_result`) to at most one line per stage and process, so the next line only arrives with the following daily briefing/deploy cycle; `implausible_measurement` (since Issue #2218 C5-47) to at most one line per (user, trip, stage) and **12 hours** — 12 h < 26 h, so that streak never lapses while the stage stays implausible. The damping only starts after the line was actually written; if writing fails, the next run retries. A process restart allows at most one extra line per stage. |
+| briefing_health.corrupt_briefings_total | int (Issue #2286) | Sum of corrupt/unloadable files in all users' `briefings/` folders (trips **and** compare presets) from the last scanner run, summed over all users. Addition only — `corrupt_trips_total`/`corrupt_trips_last_run_at` stay unchanged. |
+| briefing_health.corrupt_briefings_by_kind | object (Issue #2286) | `{"trip": n, "vergleich": n, "unbekannt": n}` — breakdown of `corrupt_briefings_total` by kind. Unparseable files count as `vergleich` only if the raw text contains `"kind": "vergleich"`, else `unbekannt`; structurally broken compare presets count as `vergleich`. Legacy `corrupt_trips.json` without `by_kind` counts as `unbekannt`. **Only counts** — no user IDs, no filenames (#252). |
 | briefing_health.track_resolution_failures_recent_count | int (Issue #2073 Scheibe 2) | Count of failed track resolutions in the last 24 hours, summed over all users. Only the timestamp is decoded on the Go side — neither trip id, stage id, reason nor detail leaves the Python core (#252). |
 | enrichment_health | object (Issue #1581, ADR-0018, ADR-0047 Addendum) | Raw call outcomes for degradable **enrichment** paths (thunder direct sources, radar nowcast, SNOWGRID snow depth, since #2218 the alert-check weather fetch `alert_fetch` with per-unit `failed_units`, and since #2030 the forecast capture `forecast_capture` — a diagnostic path, not a provider fallback, but degradable in the same way) — a top-level sibling of `briefing_health`, never nested inside it, because an enrichment outage is explicitly not a briefing outage (`coreBriefingSources` stays unchanged). One key per path that has been called at least once; a path never called does not appear (no fabricated failure). No streak/threshold decision is made in Go — `check-gregor20.sh` forms `now − last_success_at` itself, exactly like `warn_service_health`. |
 | enrichment_health.\<path\>.last_attempt_at | string \| null | ISO-8601 UTC timestamp of the most recent call attempt for this path (`thunder`, `thunder_additive`, `radar_nowcast`, `snowgrid`, `forecast_capture`, `alert_fetch`), regardless of outcome — including `self_throttled`, so a growing gap to `last_success_at` is externally visible. |
@@ -1910,9 +1912,9 @@ completed fully or was cut off by that budget.
 > Kennung in `GZ_ADMIN_USER_IDS` steht; sonst 403 `{"error":"forbidden"}` (ohne
 > Sitzung weiterhin 401). Gilt ebenso für `POST /api/scheduler/inbound-commands`
 > und — seit Issue #2218 Scheibe C (C5-02a) — für die vier übrigen Alarm-Trigger
-> `POST /api/scheduler/radar-alert-checks`, `/compare-alert-checks`,
-> `/compare-radar-alert-checks` und `/compare-official-alert-checks` (Proxy an den
-> gleichnamigen Python-Pfad). Ein Admin-Trigger läuft über **alle** Nutzer und kann
+> `POST /api/scheduler/radar-alert-checks`, `/compare-alert-checks` und
+> `/compare-radar-alert-checks` (Proxy an den gleichnamigen Python-Pfad;
+> `/compare-official-alert-checks` ist seit Issue #2286 entfallen). Ein Admin-Trigger läuft über **alle** Nutzer und kann
 > echte Alarme versenden — auf Prod nicht als Test auslösen.
 > Der Cron-Scheduler ruft den Python-Core direkt und ist nicht betroffen.
 
@@ -1955,7 +1957,7 @@ completed fully or was cut off by that budget.
 | `duration_s` | float | Actual wall-clock runtime of this run |
 | `reason` | string | Present only when `status: "partial"` — currently always `"deadline"` |
 | `skipped_ids` | string[] | Trip-IDs, die der Lauf nicht mehr erreicht hat (Seit #2261 A-2 S1; `skipped` ist deren Anzahl). Leer bei vollem Lauf. |
-| `failed` | int | Trips, bei denen die Prüfung mit einer Ausnahme endete (Seit #2217; gilt auch für `radar-alert-checks`, `compare-radar-alert-checks`). Die Ausnahme reißt die folgenden Trips nicht mehr mit; sie wird mit Trip-/Preset-ID und Stacktrace geloggt (`report_unit_failure`, `src/services/alert_check_state.py`). `RadarDeadlineExceeded` bricht den Lauf weiterhin ab (`status: "partial"`). `compare-alert-checks` und `compare-official-alert-checks` melden `failed` ebenso. |
+| `failed` | int | Trips, bei denen die Prüfung mit einer Ausnahme endete (Seit #2217; gilt auch für `radar-alert-checks`, `compare-radar-alert-checks`). Die Ausnahme reißt die folgenden Trips nicht mehr mit; sie wird mit Trip-/Preset-ID und Stacktrace geloggt (`report_unit_failure`, `src/services/alert_check_state.py`). `RadarDeadlineExceeded` bricht den Lauf weiterhin ab (`status: "partial"`). `compare-alert-checks` meldet `failed` ebenso — seit Issue #2286 inklusive des amtlichen Teils (vormals eigener Endpoint `compare-official-alert-checks`, entfallen): beide Teile laufen nacheinander in je eigenem try-Block, `count`/`failed`/`duration_s` werden summiert, `checked` ist die Zahl geprüfter Presets (Maximum der Teile); wirft ein Teil, zählt das als `failed += 1`, der andere läuft trotzdem. |
 
 **Seit #2217 (2026-10-07):** Stapelläufe sind abgeschottet — Alarmläufe (Trip-Radar, `check_all_trips`, drei Ortsvergleich-Alarmläufe) und der Briefing-Sammellauf (Fälligkeits-/Filterprüfung Trip, Zonenbestimmung/Auto-Pause Ortsvergleich) zählen Ausnahmen einzelner Trips/Presets in `failed`, statt abzubrechen. Der Fairness-Stempel wird vor der Prüfung gesetzt; `skip_next` bleibt bei einer Ausnahme unverbraucht. Go-Scheduler: eine Panic in `recordRun`/`callUserWithBudget` wird als Fehler `panic in <jobID>` erfasst und der Job-Lock freigegeben.
 
@@ -2950,7 +2952,8 @@ aktualisiert `letzter_versand` und `top_ort_letzter_versand`.
 {
   "status": "ok",
   "count": 2,
-  "failed": 0
+  "failed": 0,
+  "duration_s": 3.412
 }
 ```
 
@@ -2960,7 +2963,8 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 {
   "status": "partial",
   "count": 1,
-  "failed": 1
+  "failed": 1,
+  "duration_s": 2.108
 }
 ```
 
@@ -2970,7 +2974,8 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 |-------|------|-------------|
 | status | enum | `"ok"` wenn alle fälligen Presets erfolgreich versendet wurden, `"partial"` sobald `failed > 0` (Issue #1290; HTTP bleibt in beiden Fällen 200) |
 | count | int | Anzahl erfolgreich versendeter fälliger Presets (Morgen- oder Abend-Slot), die zur geprüften Stunde fällig waren |
-| failed | int | Anzahl fälliger Presets, deren Versand fehlgeschlagen ist (Issue #1290; zuvor nur intern als `error_count` geloggt, jetzt Teil der Response) |
+| failed | int | Anzahl fälliger Presets, deren Versand fehlgeschlagen ist (Issue #1290; zuvor nur intern als `error_count` geloggt, jetzt Teil der Response). Seit Issue #2286 zählt auch ein Provider-Totalausfall (alle Orte ohne Wetterdaten ⇒ `no_weather`, keine Mail) als `failed`; eine kaputte Datei in `briefings/` wird übersprungen und zählt **nicht** als `failed`. |
+| duration_s | float | Laufdauer des Aufrufs in Sekunden (Issue #2286 — gleiche Feldmenge wie `/api/scheduler/trip-reports`) |
 
 **Internal Behavior (seit Issue #1232 Scheibe 2a):**
 

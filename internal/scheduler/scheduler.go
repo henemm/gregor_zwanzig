@@ -353,7 +353,6 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"*/15 * * * *", s.dataWriteSelftest, "data_write_selftest", "Data Write Selftest (every 15 min)", nil},
 		{"*/15 * * * *", s.compareAlertChecks, "compare_alert_checks", "Compare Alert Checks (every 15 min)", nil},
 		{"3-58/5 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (every 5 min, offset 3)", nil},
-		{"*/15 * * * *", s.compareOfficialAlertChecks, "compare_official_alert_checks", "Compare Official Alert Checks (every 15 min)", nil},
 		// Issue #1676 Scheibe S1: Premium-SMS-Rueckkanal — pollt das seven.io-
 		// Journal auf eingehende Garmin-Nachrichten (globaler Job, kein
 		// Nutzer-Fan-out, analog inboundCommands()).
@@ -780,20 +779,45 @@ func (s *Scheduler) briefingDispatch() {
 // darf eine fortlaufende Störung weder verdoppeln (error->partial->error)
 // noch die Recovery-Notiz verschlucken (error->partial->ok).
 func (s *Scheduler) tripReports() {
+	s.runWithJobFlank("trip_reports_hourly", "/api/scheduler/trip-reports", jobFlankTexts{
+		alertSubject:    "Trip-Briefing-Totalausfall (#1346)",
+		alertBody:       "Job trip_reports_hourly: Trip-Briefing-Versand fehlgeschlagen.\n%s",
+		recoverySubject: "Trip-Briefing wieder OK (#1346)",
+		recoveryBody:    "Job trip_reports_hourly: Trip-Briefing-Versand läuft wieder erfolgreich.",
+		logName:         "trip-reports",
+	})
+}
+
+// jobFlankTexts parametrisiert die Job-weite Flankenmeldung (Fix #2286):
+// alertBody ist ein Format-String mit genau einem %s fuer den Fehlertext.
+type jobFlankTexts struct {
+	alertSubject    string
+	alertBody       string
+	recoverySubject string
+	recoveryBody    string
+	logName         string
+}
+
+// runWithJobFlank fuehrt einen Fan-out-Job aus und meldet den Wechsel nach
+// "error" (MQ high) bzw. "error"->"ok" (MQ normal) Job-weit an infra.
+// Geteilt zwischen Trip- und Vergleichs-Versand (Fix #2286, Muster aus
+// #1346/#1912): der Vorzustand stammt aus lastHardStatus je jobID, ein
+// "partial"-Lauf ueberschreibt ihn nicht.
+func (s *Scheduler) runWithJobFlank(jobID, endpoint string, texts jobFlankTexts) {
 	s.mu.RLock()
-	prevHardStatus := s.lastHardStatus["trip_reports_hourly"]
+	prevHardStatus := s.lastHardStatus[jobID]
 	s.mu.RUnlock()
 
-	s.recordRun("trip_reports_hourly", func() error {
-		return s.runForAllUsers("trip_reports_hourly", "/api/scheduler/trip-reports")
+	s.recordRun(jobID, func() error {
+		return s.runForAllUsers(jobID, endpoint)
 	})
 
 	s.mu.Lock()
-	cur := s.lastRuns["trip_reports_hourly"]
+	cur := s.lastRuns[jobID]
 	if cur != nil && cur.Status != "partial" {
 		// "partial" bleibt bewusst aussen vor -- s. Dokumentation an
 		// lastHardStatus-Feld weiter oben.
-		s.lastHardStatus["trip_reports_hourly"] = cur.Status
+		s.lastHardStatus[jobID] = cur.Status
 	}
 	s.mu.Unlock()
 
@@ -802,17 +826,14 @@ func (s *Scheduler) tripReports() {
 	}
 	// ok→error (inkl. erster Lauf ohne Vorzustand) → Alarm high
 	if cur.Status == "error" && prevHardStatus != "error" {
-		subject := "Trip-Briefing-Totalausfall (#1346)"
-		body := fmt.Sprintf("Job trip_reports_hourly: Trip-Briefing-Versand fehlgeschlagen.\n%s", cur.Error)
-		if err := s.notifier("gregor", "infra", "high", subject, body); err != nil {
-			log.Printf("[scheduler] WARN: trip-reports alert notifier failed: %v", err)
+		body := fmt.Sprintf(texts.alertBody, cur.Error)
+		if err := s.notifier("gregor", "infra", "high", texts.alertSubject, body); err != nil {
+			log.Printf("[scheduler] WARN: %s alert notifier failed: %v", texts.logName, err)
 		}
 	} else if cur.Status == "ok" && prevHardStatus == "error" {
 		// error→ok: Recovery-Notiz
-		subject := "Trip-Briefing wieder OK (#1346)"
-		body := "Job trip_reports_hourly: Trip-Briefing-Versand läuft wieder erfolgreich."
-		if err := s.notifier("gregor", "infra", "normal", subject, body); err != nil {
-			log.Printf("[scheduler] WARN: trip-reports recovery notifier failed: %v", err)
+		if err := s.notifier("gregor", "infra", "normal", texts.recoverySubject, texts.recoveryBody); err != nil {
+			log.Printf("[scheduler] WARN: %s recovery notifier failed: %v", texts.logName, err)
 		}
 	}
 }
@@ -830,6 +851,9 @@ func (s *Scheduler) radarAlertChecks() {
 }
 
 // compareAlertChecks triggers Compare-Preset Deviation-Alert-Checks (Issue #1169).
+// Fix #2286: der Python-Endpoint prueft im selben Lauf auch die amtlichen
+// Warnungen (vormals eigener Job compare_official_alert_checks) -- Muster
+// Trip, dort laufen sie im alert_checks-Job mit.
 func (s *Scheduler) compareAlertChecks() {
 	s.recordRun("compare_alert_checks", func() error {
 		return s.runForAllUsers("compare_alert_checks", "/api/scheduler/compare-alert-checks")
@@ -841,15 +865,6 @@ func (s *Scheduler) compareAlertChecks() {
 func (s *Scheduler) compareRadarAlertChecks() {
 	s.recordRun("compare_radar_alert_checks", func() error {
 		return s.runForAllUsers("compare_radar_alert_checks", "/api/scheduler/compare-radar-alert-checks")
-	})
-}
-
-// compareOfficialAlertChecks triggers Compare-Preset Official-Alert-Checks
-// (Issue #1216 Slice 2b) — ruft den bestehenden Slice-2a-Endpoint alle 15 Min
-// fuer alle registrierten Nutzer auf.
-func (s *Scheduler) compareOfficialAlertChecks() {
-	s.recordRun("compare_official_alert_checks", func() error {
-		return s.runForAllUsers("compare_official_alert_checks", "/api/scheduler/compare-official-alert-checks")
 	})
 }
 
@@ -973,10 +988,17 @@ func (s *Scheduler) triggerPremiumSmsPollEndpointRes(res *pollResult) error {
 // comparePresetsDaily triggert den Ortsvergleich-Slot-Check. Der Heartbeat-
 // Ping wurde nach #1346 in briefingDispatch() konsolidiert (dort gated auf
 // BEIDE Teil-Jobs statt allein diesen).
+//
+// Fix #2286: Job-weite Flanke wie beim Trip (geteilter Helper
+// runWithJobFlank) -- Totalausfall/Recovery an infra, ohne Nutzerkennung.
 func (s *Scheduler) comparePresetsDaily() {
 	log.Println("[scheduler] Running compare presets daily...")
-	s.recordRun("compare_presets_daily", func() error {
-		return s.runForAllUsers("compare_presets_daily", "/api/scheduler/compare-presets-daily")
+	s.runWithJobFlank("compare_presets_daily", "/api/scheduler/compare-presets-daily", jobFlankTexts{
+		alertSubject:    "Vergleichs-Briefing-Totalausfall (#2286)",
+		alertBody:       "Job compare_presets_daily: Vergleichs-Briefing-Versand fehlgeschlagen.\n%s",
+		recoverySubject: "Vergleichs-Briefing wieder OK (#2286)",
+		recoveryBody:    "Job compare_presets_daily: Vergleichs-Briefing-Versand läuft wieder erfolgreich.",
+		logName:         "compare-presets",
 	})
 }
 

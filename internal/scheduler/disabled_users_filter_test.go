@@ -31,17 +31,17 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-// fanOutJobs sind die 7 Jobs, die ueber runForAllUsers je Nutzer ausliefern
+// fanOutJobs sind die 6 Jobs, die ueber runForAllUsers je Nutzer ausliefern
 // (scheduler.go: trip_reports_hourly, alert_checks, radar_alert_checks,
-// compare_alert_checks, compare_radar_alert_checks,
-// compare_official_alert_checks, compare_presets_daily).
+// compare_alert_checks, compare_radar_alert_checks, compare_presets_daily).
+// Fix #2286: compare_official_alert_checks ist in compare_alert_checks
+// aufgegangen und kein eigener Fan-out-Job mehr.
 var fanOutJobs = []struct{ jobID, path string }{
 	{"trip_reports_hourly", "/api/scheduler/trip-reports"},
 	{"alert_checks", "/api/scheduler/alert-checks"},
 	{"radar_alert_checks", "/api/scheduler/radar-alert-checks"},
 	{"compare_alert_checks", "/api/scheduler/compare-alert-checks"},
 	{"compare_radar_alert_checks", "/api/scheduler/compare-radar-alert-checks"},
-	{"compare_official_alert_checks", "/api/scheduler/compare-official-alert-checks"},
 	{"compare_presets_daily", "/api/scheduler/compare-presets-daily"},
 }
 
@@ -122,12 +122,12 @@ func logNenntSperre(logText, uid string) bool {
 	return false
 }
 
-// AC-11: gesperrtes Konto wird in allen 7 Fan-out-Jobs uebersprungen, das
-// aktive bedient; der Log nennt den Grund. Ein unlesbares Profil bleibt im
-// Lauf (fail-open, Regressionswaechter — heute schon gruen).
-func TestFanOut_SkipsDisabledAccount_InAllSevenJobs_LogsReason(t *testing.T) {
-	if len(fanOutJobs) != 7 {
-		t.Fatalf("AC-11 nennt 7 Fan-out-Jobs, abgedeckt sind %d", len(fanOutJobs))
+// AC-11: gesperrtes Konto wird in allen Fan-out-Jobs (seit Fix #2286: 6)
+// uebersprungen, das aktive bedient; der Log nennt den Grund. Ein unlesbares
+// Profil bleibt im Lauf (fail-open, Regressionswaechter — heute schon gruen).
+func TestFanOut_SkipsDisabledAccount_InAllFanOutJobs_LogsReason(t *testing.T) {
+	if len(fanOutJobs) != 6 {
+		t.Fatalf("AC-11 (nach Fix #2286) nennt 6 Fan-out-Jobs, abgedeckt sind %d", len(fanOutJobs))
 	}
 
 	// Gegenprobe (heute gruen): OHNE Flag wird derselbe Nutzer bedient — der

@@ -466,7 +466,7 @@ def test_ortsvergleich_radarlauf_kaputtes_preset_reisst_folgepreset_nicht_mit(mo
 
 
 def test_ortsvergleich_amtlich_kaputtes_preset_reisst_folgepreset_nicht_mit(monkeypatch):
-    """AC-3 (amtliche Warnungen, ``/compare-official-alert-checks``): erstes
+    """AC-3 (amtliche Warnungen, seit #2286 ueber ``/compare-alert-checks``): erstes
     Preset hat ein kaputtes ``official_warnings`` (String) -> das zweite
     bekommt seine Warnung, Antwort 200 mit ``failed == 1``.
 
@@ -478,7 +478,7 @@ def test_ortsvergleich_amtlich_kaputtes_preset_reisst_folgepreset_nicht_mit(monk
     mails: list = []
     _bind_compare_official(monkeypatch, mails)
 
-    resp = _post("compare-official-alert-checks", uid)
+    resp = _post("compare-alert-checks", uid)
     data = _json(resp)
 
     assert len(_mails_fuer(mails, uid)) == 1, (
@@ -650,7 +650,7 @@ def test_log_ortsvergleich_amtlich_nennt_preset_id_mit_stacktrace(monkeypatch, c
     ], warn_for=["p-a-kaputt-log", "p-b-heil"])
     _bind_compare_official(monkeypatch, [])
     with caplog.at_level(logging.ERROR):
-        _post("compare-official-alert-checks", uid)
+        _post("compare-alert-checks", uid)
     _assert_error_log_mit_stacktrace(caplog, "p-a-kaputt-log", "AttributeError")
 
 
@@ -748,8 +748,8 @@ def test_zwei_nutzer_ortsvergleich_fehler_nur_bei_a(monkeypatch, caplog):
     _bind_compare_official(monkeypatch, mails)
 
     with caplog.at_level(logging.ERROR):
-        resp_a = _post("compare-official-alert-checks", user_a)
-        resp_b = _post("compare-official-alert-checks", user_b)
+        resp_a = _post("compare-alert-checks", user_a)
+        resp_b = _post("compare-alert-checks", user_b)
     data_a, data_b = _json(resp_a), _json(resp_b)
 
     assert len(_mails_fuer(mails, user_a)) == 1, (
@@ -893,14 +893,18 @@ def test_ortsvergleich_abweichung_unlesbare_faelligkeit_sperrt_alarm_und_zaehlt_
     data = _json(resp)
 
     assert resp.status_code == 200, (resp.status_code, data)
-    assert data.get("failed") == 1, data
+    # Fix #2286 (AC-9): compare-alert-checks fuehrt Abweichungs- UND
+    # amtlichen Teil aus; beide scheitern an derselben Faelligkeitspruefung
+    # und zaehlen je einmal (summiertes failed).
+    assert data.get("failed") == 2, data
     assert len(_mails_fuer(mails, uid)) == 1, (
         f"Nur das gesunde Preset darf alarmieren: {[m[1] for m in mails]!r} {data!r}"
     )
 
 
 def test_ortsvergleich_amtlich_unlesbare_faelligkeit_sperrt_alarm_und_zaehlt_failed(monkeypatch):
-    """F005 (amtlicher Lauf): wie oben fuer ``/compare-official-alert-checks``."""
+    """F005 (amtlicher Lauf): wie oben; seit #2286 ueber ``/compare-alert-checks``
+    (vormals ``/compare-official-alert-checks``)."""
     uid = _uid("f005o")
     _official_presets(uid, [("p-a-kaputt", {}), ("p-b-heil", {})],
                       warn_for=["p-a-kaputt", "p-b-heil"])
@@ -908,11 +912,14 @@ def test_ortsvergleich_amtlich_unlesbare_faelligkeit_sperrt_alarm_und_zaehlt_fai
     mails: list = []
     _bind_compare_official(monkeypatch, mails)
 
-    resp = _post("compare-official-alert-checks", uid)
+    resp = _post("compare-alert-checks", uid)
     data = _json(resp)
 
     assert resp.status_code == 200, (resp.status_code, data)
-    assert data.get("failed") == 1, data
+    # Fix #2286 (AC-9): compare-alert-checks fuehrt Abweichungs- UND
+    # amtlichen Teil aus; beide scheitern an derselben Faelligkeitspruefung
+    # und zaehlen je einmal (summiertes failed).
+    assert data.get("failed") == 2, data
     assert len(_mails_fuer(mails, uid)) == 1, (
         f"Nur das gesunde Preset darf warnen: {[m[1] for m in mails]!r} {data!r}"
     )

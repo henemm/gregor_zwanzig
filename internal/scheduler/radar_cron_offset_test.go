@@ -52,12 +52,13 @@ func TestRadarJobsCronOffsetMinutes(t *testing.T) {
 		}
 	}
 
-	// Jobzahl bleibt: 9 Cron-Eintraege, 10 logische Jobs (briefing_dispatch = 2 Zeilen).
-	if n := len(sched.cron.Entries()); n != 9 {
-		t.Fatalf("erwartet 9 Cron-Eintraege, got %d", n)
+	// Jobzahl: 8 Cron-Eintraege, 9 logische Jobs (briefing_dispatch = 2 Zeilen);
+	// Fix #2286: compare_official_alert_checks ist in compare_alert_checks aufgegangen.
+	if n := len(sched.cron.Entries()); n != 8 {
+		t.Fatalf("erwartet 8 Cron-Eintraege, got %d", n)
 	}
-	if jobs, _ := sched.Status()["jobs"].([]map[string]any); len(jobs) != 10 {
-		t.Fatalf("erwartet 10 Jobs im Status, got %d", len(jobs))
+	if jobs, _ := sched.Status()["jobs"].([]map[string]any); len(jobs) != 9 {
+		t.Fatalf("erwartet 9 Jobs im Status, got %d", len(jobs))
 	}
 
 	// Gegenprobe (AC-1, F001-Haertung): ALLE fuenf laut Spec unveraenderten
@@ -77,11 +78,10 @@ func TestRadarJobsCronOffsetMinutes(t *testing.T) {
 	// Stunde, also Minute 0 (11:00 Uhr) -- eigene erwartete Minute je Job,
 	// nicht ein gemeinsamer Wert fuer alle.
 	untouchedExpectations := map[string]int{
-		"alert_checks":                  15,
-		"data_write_selftest":           15,
-		"compare_alert_checks":          15,
-		"compare_official_alert_checks": 15,
-		"briefing_dispatch":             0,
+		"alert_checks":         15,
+		"data_write_selftest":  15,
+		"compare_alert_checks": 15,
+		"briefing_dispatch":    0,
 	}
 	for id, wantMinute := range untouchedExpectations {
 		var schedule cronSchedule

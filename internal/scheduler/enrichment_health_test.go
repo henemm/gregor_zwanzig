@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -404,7 +405,8 @@ func TestStatusEnthaeltEnrichmentHealthAlsGeschwisterVonBriefingHealth(t *testin
 			t.Errorf("AC-7: briefing_health-Schluessel %q ist verschwunden", k)
 			continue
 		}
-		if got != want {
+		// Fix #2286: corrupt_briefings_by_kind ist ein Objekt -- DeepEqual statt !=.
+		if !reflect.DeepEqual(got, want) {
 			t.Errorf("AC-7: briefing_health[%q] hat sich geaendert: %#v statt %#v — das Anreicherungs-Journal darf den Briefing-Kanal nicht beruehren", k, got, want)
 		}
 	}

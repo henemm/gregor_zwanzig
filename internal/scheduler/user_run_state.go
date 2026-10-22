@@ -318,13 +318,12 @@ func (u *userRunState) Aggregate(jobID string) map[string]any {
 // Die drei globalen Jobs (inbound_command_poll, data_write_selftest,
 // premium_sms_poll) sind bewusst NICHT enthalten.
 var fanOutJobIDs = map[string]bool{
-	"trip_reports_hourly":           true,
-	"alert_checks":                  true,
-	"radar_alert_checks":            true,
-	"compare_alert_checks":          true,
-	"compare_radar_alert_checks":    true,
-	"compare_official_alert_checks": true,
-	"compare_presets_daily":         true,
+	"trip_reports_hourly":        true,
+	"alert_checks":               true,
+	"radar_alert_checks":         true,
+	"compare_alert_checks":       true,
+	"compare_radar_alert_checks": true,
+	"compare_presets_daily":      true,
 }
 
 // formatUserAlertBody baut den Nachrichtentext einer gebuendelten Alarm-/

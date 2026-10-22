@@ -29,7 +29,7 @@ var alarmTriggerPfade = []string{
 	"/api/scheduler/radar-alert-checks",
 	"/api/scheduler/compare-alert-checks",
 	"/api/scheduler/compare-radar-alert-checks",
-	"/api/scheduler/compare-official-alert-checks",
+	// Fix #2286: compare-official-alert-checks entfallen (in compare-alert-checks aufgegangen).
 }
 
 // AC-23: Admin erreicht auf jeder der vier Routen genau einmal den passenden

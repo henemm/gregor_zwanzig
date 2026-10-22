@@ -54,21 +54,20 @@ def _load_presets_for_dispatch(user_id: str, data_root: str) -> list | None:
     Faelligkeits-Liste.
     """
     # Issue #1250 Scheibe 7b: Existenz-Check gegen das briefings/-Verzeichnis
-    # (Cutover-Lesepfad), strict=True bewahrt die alte ERROR-Diagnose bei
-    # Korruption statt sie unter dem Skip-INFO-Log zu verstecken.
+    # (Cutover-Lesepfad).
     briefings_dir = Path(data_root) / "users" / user_id / "briefings"
     if not briefings_dir.exists():
         logger.info("No briefings/ dir for user %s — skipping", user_id)
         return None
 
-    try:
-        return [
-            compare_preset_to_dict(p)
-            for p in load_compare_presets(user_id=user_id, data_root=data_root, strict=True)
-        ]
-    except LoaderError as e:
-        logger.error("Failed to load compare presets for %s: %s", user_id, e)
-        return None
+    # Fix #2286 (AC-5): toleranter Lader -- eine kaputte Datei in briefings/
+    # (Trip oder Vergleich) wird mit WARNING uebersprungen statt alle
+    # Vergleiche des Nutzers stillzulegen; das zaehlt NICHT als failed
+    # (sichtbar ueber Korrupt-Zaehler + MQ). Paritaet zum Trip-Pfad.
+    return [
+        compare_preset_to_dict(p)
+        for p in load_compare_presets(user_id=user_id, data_root=data_root, strict=False)
+    ]
 
 
 def _auto_pause_expired_presets(
@@ -493,8 +492,10 @@ def send_one_compare_preset(
     — VOR Anker-Reset und Erfolgs-Status. ``mail_to`` ist nur Pflicht, wenn
     E-Mail wirksam ist: ohne ``mail_to`` faellt E-Mail aus der wirksamen Menge.
     ``weather_failure_as_outcome`` (nur Handversand): eine Ausnahme des
-    Wetterlaufs oder ein Fehler an JEDEM Ort wird zu ``no_weather``; ohne
-    Opt-in (Cron) bleibt das Bestandsverhalten unveraendert.
+    Wetterlaufs wird zu ``no_weather``; ohne Opt-in (Cron) propagiert sie.
+    Ein Fehler an JEDEM Ort ist seit #2286 (AC-4, ADR-0018) in BEIDEN Pfaden
+    ``no_weather`` -- keine Mail aus lauter Fehlerzellen, der Cron zaehlt den
+    Preset als ``failed``.
     """
     if (target_date is None) != (tage_ab_ortstag is None):
         raise ValueError(
@@ -602,9 +603,11 @@ def send_one_compare_preset(
         if not weather_failure_as_outcome:
             raise
         raise SendOutcomeError("no_weather") from exc
-    # Issue #2280 (AC-6, nur Handversand): kein einziger Ort mit Wetterdaten.
-    if (weather_failure_as_outcome and result.locations
-            and all(lr.error for lr in result.locations)):
+    # Issue #2280 (AC-6) / Fix #2286 (AC-4): kein einziger Ort mit
+    # Wetterdaten ⇒ no_weather -- im Handversand UND im Cron (ADR-0018:
+    # Fallback nicht kaschieren; sonst zaehlt eine Provider-Stoerung als
+    # "sent" und die Job-Flanke koennte nie feuern).
+    if result.locations and all(lr.error for lr in result.locations):
         raise SendOutcomeError("no_weather")
 
     top_ort = result.locations[0].location.name if result.locations else None

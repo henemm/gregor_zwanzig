@@ -93,8 +93,10 @@ def _pruefe_dauer(data: dict) -> None:
     assert data["duration_s"] >= 0
 
 
+# Fix #2286: /compare-official-alert-checks ist in /compare-alert-checks
+# aufgegangen -- die Route fuehrt beide Teile aus.
 @pytest.mark.parametrize(
-    "route", ["/api/scheduler/compare-alert-checks", "/api/scheduler/compare-official-alert-checks"],
+    "route", ["/api/scheduler/compare-alert-checks"],
 )
 def test_compare_alarmlauf_meldet_dauer_checked_und_loggt_einmal(client, caplog, route):
     """AC-6: Given ein Nutzer mit einem Vergleichs-Preset / When die Compare-
@@ -115,7 +117,10 @@ def test_compare_alarmlauf_meldet_dauer_checked_und_loggt_einmal(client, caplog,
     _pruefe_dauer(data)
     assert data.get("checked") == 1, f"Erwartet checked=1 (ein Preset), erhalten: {data!r}"
     zeilen = _laufzeilen(caplog, uid)
-    assert len(zeilen) == 1, f"Erwartet genau eine Laufzeile fuer {uid}, gefunden: {zeilen!r}"
+    # Fix #2286: je Teil (Abweichung, amtlich) genau eine Laufzeile.
+    assert len(zeilen) == 2, f"Erwartet je Teil eine Laufzeile fuer {uid}, gefunden: {zeilen!r}"
+    assert sum("compare_alert:" in z for z in zeilen) == 1, zeilen
+    assert sum("compare_official_alert:" in z for z in zeilen) == 1, zeilen
 
 
 def test_trip_briefing_lauf_meldet_dauer_und_loggt_einmal(client, caplog):

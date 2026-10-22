@@ -62,7 +62,7 @@ Das Backend besteht aus zwei klar getrennten Schichten (siehe `docs/adr/0015-dua
 
 **Go löst aus, Python führt aus.** Die einzige Zeitsteuerung ist der Go-Cron in
 `internal/scheduler/scheduler.go` (robfig/cron, Zone `cfg.SchedulerTimezone`, Jobtabelle
-`scheduler.go:333-361`, 9 Cron-Einträge / 10 Jobs). Der Python-Core hat **keinen eigenen Timer**
+`scheduler.go:341-360`, 8 Cron-Einträge / 9 Jobs). Der Python-Core hat **keinen eigenen Timer**
 (kein APScheduler o. ä.); er stellt je Job einen `POST /api/scheduler/<job>`-Endpunkt
 (`api/routers/scheduler.py`) und entscheidet dort selbst die **Fälligkeit** (welcher Trip/Vergleich
 in seiner Ortszeit jetzt dran ist: `trip_report_scheduler.py`, `compare_slot_scheduler.py`,
@@ -72,8 +72,7 @@ Idempotenz `briefing_slots.py`), rendert und versendet.
 |---|---|---|---|
 | `briefing_dispatch` → `trip_reports_hourly` + `compare_presets_daily` | `0 * * * *` | `/trip-reports`, `/compare-presets-daily` | je Nutzer (`runForAllUsers`) |
 | `alert_checks` | `*/15` | `/alert-checks` | je Nutzer |
-| `compare_alert_checks` | `*/15` | `/compare-alert-checks` | je Nutzer |
-| `compare_official_alert_checks` | `*/15` | `/compare-official-alert-checks` | je Nutzer |
+| `compare_alert_checks` | `*/15` | `/compare-alert-checks` (Abweichung + amtliche Warnungen, seit #2286) | je Nutzer |
 | `radar_alert_checks` | `3-58/5` | `/radar-alert-checks` | je Nutzer |
 | `compare_radar_alert_checks` | `3-58/5` | `/compare-radar-alert-checks` | je Nutzer |
 | `inbound_command_poll` | `*/5` + Push-Kick `/api/webhooks/mail/{secret}` | `/inbound-commands` (IMAP) | global |

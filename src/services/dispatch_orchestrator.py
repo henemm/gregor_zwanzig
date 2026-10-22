@@ -42,6 +42,12 @@ class TripDispatchStrategy:
     """
 
     inter_mail_delay: float = 2.0
+    # smtp_guard (Fix #2286, AC-11 -- Unterschied zu Compare bewusst): der
+    # Trip-Guard prueft die GLOBALE SMTP-Konfiguration; fehlt sie, ist das ein
+    # Deploy-Fehler, den /api/health und prod_selftest fangen -- daher (0, 0)
+    # statt failed, aber mit WARNING-Log (run_briefing_dispatch). "Kein SMTP
+    # => failed" wuerde CI ohne SMTP rot machen (test_dispatch_orchestrator).
+    # Compare zaehlt dagegen pro Preset (s. CompareDispatchStrategy).
     smtp_guard: bool = True
 
     def __init__(self, settings: Settings, user_id: str, data_root: str | None = None) -> None:
@@ -117,6 +123,11 @@ class CompareDispatchStrategy:
     """
 
     inter_mail_delay: float = 2.0
+    # smtp_guard (Fix #2286, AC-11 -- Unterschied zum Trip bewusst): Compare
+    # versendet pro Preset an die Empfaenger des Nutzers (Altverhalten #1207);
+    # ein Sendefehler zaehlt dort je Preset als failed. Ein globaler
+    # SMTP-Vorab-Guard wuerde das verdecken -- die globale SMTP-Konfiguration
+    # bewacht der Trip-Guard bzw. /api/health und prod_selftest.
     smtp_guard: bool = False
 
     def __init__(self, settings: Settings, user_id: str, data_root: str | None = None) -> None:
@@ -238,6 +249,11 @@ def run_briefing_dispatch(
     strategy = _STRATEGY[kind](settings, user_id, data_root)
 
     if strategy.smtp_guard and not settings.can_send_email():
+        # Fix #2286 (AC-11): weiterhin (0, 0), aber nicht mehr still.
+        logger.warning(
+            "%s-Versand fuer user_id=%s uebersprungen: SMTP-Konfiguration "
+            "unvollstaendig (smtp_guard)", kind, user_id,
+        )
         return strategy.empty_result()
 
     due = strategy.collect_due(now_utc)

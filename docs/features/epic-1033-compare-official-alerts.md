@@ -29,7 +29,8 @@ pro Orts-Vergleich ein-/ausschaltbar (Slice 5, #1040).
 Datenquellen einen eigenständigen **Alarm** (statt der reinen Anzeige hier) —
 E-Mail/Telegram/SMS bei Statuswechsel einer amtlichen Warnung. Slice 2a (Backend,
 live) + Slice 2b (Editor-Toggle „Amtliche-Warnungen-Alarm" + Go-Scheduler-Job
-`compare_official_alert_checks`, alle 15 Min, live 2026-07-11) sind getrennt vom
+`compare_official_alert_checks`, alle 15 Min, live 2026-07-11; **seit #2286
+entfallen** — amtliche Warnungen laufen im Job `compare_alert_checks`) sind getrennt vom
 hier dokumentierten Anzeige-Toggle `official_alerts_enabled` (Slice 5, #1040).
 
 ---
