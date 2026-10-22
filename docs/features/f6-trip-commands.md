@@ -262,14 +262,18 @@ Befehlsart (löst die vorherige pauschale Mehrdeutigkeits-Regel ab):
   (seit Issue #2417) ebenso sofort mit der Kürzel-Legende — beide ganz ohne
   Trip-/Vergleichs-Auflösung, auch wenn Trip und Ortsvergleiche gleichzeitig aktiv
   sind.
-- Alle übrigen Abfrage- und Verwaltungsbefehle (`HEUTE`, `MORGEN`, `JETZT`,
+- Alle übrigen Abfrage- und Verwaltungsbefehle (`HEUTE`, `MORGEN`, `REPORT`, `JETZT`,
   `GEWITTER`, `STRECKE`, `RUHETAG`, `STATUS`, `SKIP`, `STOP`, Wetter-Kürzel,
   Query-Keys) gehen bei einem aktiven Trip **immer direkt an diesen Trip** —
   unabhängig davon, wie viele Ortsvergleiche daneben aktiv sind, und **ohne**
   Rückfrage. Gibt es **keinen** aktiven Trip, aber ≥1 aktiven Ortsvergleich,
   antwortet Gregor mit „Kein aktiver Trip. Dieser Befehl gilt nur für Trips, nicht
   für Ortsvergleiche." — bewusst unterscheidbar vom Fall „gar nichts aktiv" unten.
-- Nur `PAUSE`/`WEITER` bleiben mehrdeutig (unverändert): Sind sowohl ein Trip als
+  **Ausnahme seit #2282 S2 (2026-10-22):** `REPORT`/`HEUTE`/`MORGEN` gelten auch am
+  Ortsvergleich (siehe Tabelle unten). Ohne Namen bei Trip **und** Vergleich fragt
+  Gregor deshalb zurück (wie `PAUSE`/`WEITER`); bei reinem Vergleichsnutzer wird der
+  Vergleich direkt angesprochen.
+- `PAUSE`/`WEITER` sind mehrdeutig (ebenso `REPORT`/`HEUTE`/`MORGEN` seit #2282 S2): Sind sowohl ein Trip als
   auch mindestens ein Ortsvergleich aktiv, oder mehrere Ortsvergleiche gleichzeitig,
   fragt Gregor zurück und zählt alle Kandidaten auf — es wird **kein** Befehl
   ausgeführt, bis mit vorangestelltem Namen geantwortet wird (z. B. `Zermatt
@@ -291,16 +295,17 @@ ebenfalls zurück, statt still den Trip zu bevorzugen.
 |--------|---------|
 | `PAUSE` | Pausiert den Ortsvergleich unbefristet (eine mitgegebene Dauer wie `PAUSE 2d` wird ignoriert) — Antwort: „... pausiert, bis du 'weiter' sendest." |
 | `WEITER` | Setzt einen pausierten Ortsvergleich fort — Antwort: „... wieder aktiv." War der Vergleich nicht pausiert: „... ist nicht pausiert." (keine Änderung) |
-| `HILFE` / `HELP` | Zeigt nur die am Ortsvergleich verfügbaren Befehle (`PAUSE`, `WEITER`/`RESUME`, `HILFE`/`HELP`, `KUERZEL`/`CODES`) — nicht die volle Trip-Befehlsliste |
+| `HILFE` / `HELP` | Zeigt nur die am Ortsvergleich verfügbaren Befehle (`HEUTE`, `MORGEN`, `REPORT`, `PAUSE`, `WEITER`/`RESUME`, `HILFE`/`HELP`, `KUERZEL`/`CODES`; der Befehlsblock der Vergleichs-Mail nennt HEUTE/MORGEN/REPORT ebenfalls) — nicht die volle Trip-Befehlsliste |
 | `KUERZEL` / `CODES` | Kürzel-Legende (seit Issue #2417) — wie am Trip; „TF" (gefühlte Temperatur) steht seit Issue #2422 S6 (2026-10-01) auch in der Trip-Antwort, weil der Trip das Token jetzt versendet (zuvor seit #2454 dort ausgeblendet) |
-| `REPORT`, `HEUTE`, `MORGEN` | Übergangsantwort: „... noch nicht verfügbar — bitte nutze die Web-App." (kein Versand) |
+| `REPORT` | Seit #2282 S2: liefert das Vergleichs-Briefing auf **allen aktivierten Kanälen** (Handversand `on_demand`; Δ-Anker und reguläres Briefing bleiben unberührt) |
+| `HEUTE`, `MORGEN` | Seit #2282 S2: Vergleichs-Briefing **nur auf dem Anfragekanal**. `MORGEN` = Ortstag+1 im Abend-Slot; Ortstag über `preset_ortstag` (`compare_slot_scheduler.py`) wie im Cron. Kanal-Auflösung geteilt mit dem Trip (`resolve_restricted_channel_flags`, `src/services/user_tier.py`); Premium-SMS am Anfragekanal nur mit Premium-Tarif, sonst „nicht erreichbar". Fehlertexte aus denselben Tabellen wie beim Trip (Label „Ortsvergleich"), neuer Code `invalid_preset` |
 | alle übrigen (`STRECKE`, `SKIP`, `RUHETAG`, `STARTDATUM`, `STOP`, `JETZT`/`NOW`, `STATUS`, `GEWITTER`, Drilldowns, Metrikwörter) | „'<befehl>' gibt es beim Ortsvergleich nicht." |
 
 **Bekannte Grenze:** Die Pause-Semantik am Ortsvergleich unterscheidet sich bewusst
 vom Trip — unbefristet bis `WEITER`, keine Dauer, kein `STOP`-Verweis. Der Wortlaut
 ist deshalb nicht identisch mit der Trip-`PAUSE`-Bestätigung.
 
-Spec: `docs/specs/modules/feat_2282_ortsvergleich_eingangskanaele.md`
+Spec: `docs/specs/modules/feat_2282_ortsvergleich_eingangskanaele.md`; `REPORT`/`HEUTE`/`MORGEN`: `docs/specs/modules/feat_2282_s2_ortsvergleich_befehle_versand.md`
 
 ---
 
