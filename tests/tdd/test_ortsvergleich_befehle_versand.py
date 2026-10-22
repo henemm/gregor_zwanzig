@@ -354,7 +354,8 @@ def test_ac5_heute_per_sms_bei_ausgeschoepftem_tageslimit_absage(mit):
     assert mit.kanaele == [], f"AC-5: Tageslimit erreicht -- kein Versand: {mit!r}"
     assert res.success is False
     text = _antworttext(res)
-    assert "Ortsvergleich" in text and UEBERGANGSANTWORT not in text, text
+    # SMS ist Kurzform-Kanal -> englische Antwort (#2417): Label "Comparison".
+    assert "Comparison" in text and UEBERGANGSANTWORT not in text, text
 
 
 # ═══════════════════════════ AC-6 ════════════════════════════════════════════
@@ -528,19 +529,48 @@ def test_ac8_report_fehlercode_eigener_text_mit_label_ortsvergleich(monkeypatch,
     assert UEBERGANGSANTWORT not in text and "Web-App" not in text, text
 
 
+#: heute/morgen laufen eingeschraenkt auf den Anfragekanal: ein leerer
+#: Kanalsatz ist dort ``channels_unreachable`` (AC-6) -- ``no_channels`` ist in
+#: diesem Pfad strukturell nicht erreichbar und deshalb nicht parametrisiert.
+_CODES_HEUTE_MORGEN = ["already_in_progress", "no_weather", "channels_unreachable",
+                       "invalid_preset"]
+#: Codes, deren BODY das Objekt nennt (``objekt``-Parameter der Trip-Tabelle).
+_CODES_MIT_OBJEKT_IM_BODY = {"channels_unreachable", "invalid_preset"}
+
+
 @pytest.mark.parametrize("befehl", ["heute", "morgen"])
-@pytest.mark.parametrize("code", ["already_in_progress", "no_weather", "invalid_preset"])
+@pytest.mark.parametrize("code", _CODES_HEUTE_MORGEN)
 def test_ac8_heute_morgen_fehlercode_mit_label_ortsvergleich(monkeypatch, mit, code, befehl):
     uid, preset = _szenario(code, monkeypatch, mit)
 
     res = _mit_lock(code, uid, preset, lambda: _befehl(uid, befehl))
 
     text = _antworttext(res)
+    body = res.confirmation_body
     assert res.success is False, text
     assert mit.kanaele == [], mit
     assert "Ortsvergleich" in text, f"AC-8 {befehl}/{code}: Label fehlt: {text!r}"
-    assert not re.search(r"\bTrip\b", text), text
+    # Der Betreff traegt das Label IMMER -- die Zusicherungen am BODY allein
+    # pruefen, dass der Code-Text aus der Vergleichs-Fassung der Tabelle kommt.
+    assert not re.search(r"\bTrip\b", body), f"AC-8 {befehl}/{code}: Trip im Body: {body!r}"
+    assert "Etappe" not in body, f"AC-8 {befehl}/{code}: Etappen-Text im Body: {body!r}"
+    if code in _CODES_MIT_OBJEKT_IM_BODY:
+        assert "Ortsvergleich" in body, f"AC-8 {befehl}/{code}: Label fehlt im Body: {body!r}"
     assert UEBERGANGSANTWORT not in text, text
+
+
+@pytest.mark.parametrize("befehl", ["heute", "morgen"])
+def test_ac8_heute_morgen_jeder_fehlercode_hat_einen_eigenen_body(monkeypatch, mit, befehl):
+    bodies: dict[str, str] = {}
+    for code in _CODES_HEUTE_MORGEN:
+        with monkeypatch.context() as mp:
+            uid, preset = _szenario(code, mp, mit)
+            res = _mit_lock(code, uid, preset, lambda: _befehl(uid, befehl))
+        bodies[code] = res.confirmation_body
+    assert len(set(bodies.values())) == len(_CODES_HEUTE_MORGEN), (
+        f"AC-8 {befehl}: Codes im Body nicht unterscheidbar: "
+        f"{json.dumps(bodies, ensure_ascii=False)}"
+    )
 
 
 def test_ac8_jeder_fehlercode_hat_einen_eigenen_text(monkeypatch, mit):

@@ -124,6 +124,21 @@ def due_or_raise(due: list) -> bool:
     return bool(due)
 
 
+def _preset_ortszeit(preset: dict, all_locations: dict, now_utc: datetime) -> datetime:
+    """Ortszeit des Presets (Zone seines ersten aufloesbaren Orts, #1726)."""
+    return local_dt(now_utc, first_resolvable_tz(
+        (all_locations.get(lid) for lid in preset.get("location_ids") or []),
+        context_label=preset.get("id", "?"),
+    ))
+
+
+def preset_ortstag(preset: dict, all_locations: dict, now_utc: datetime) -> date:
+    """Issue #2282 S2: Ortstag des Presets -- dieselbe Rechnung wie im Cron
+    (``presets_due_for_hour``), damit HEUTE/MORGEN per Befehl denselben Tag
+    treffen wie das planmaessige Briefing (ADR-0044/0051)."""
+    return _preset_ortszeit(preset, all_locations, now_utc).date()
+
+
 def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime) -> list:
     """Liefert je faelligem Preset ein `DuePreset`-Tripel
     `(preset, target_date, tage_ab_ortstag)`.
@@ -166,10 +181,7 @@ def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime) 
                 continue
 
             preset_id = preset.get("id", "?")
-            vor_ort = local_dt(now_utc, first_resolvable_tz(
-                (all_locations.get(lid) for lid in preset.get("location_ids") or []),
-                context_label=preset_id,
-            ))
+            vor_ort = _preset_ortszeit(preset, all_locations, now_utc)
             hour, today = vor_ort.hour, vor_ort.date()
 
             try:

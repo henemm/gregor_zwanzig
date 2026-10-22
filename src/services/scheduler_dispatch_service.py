@@ -35,7 +35,12 @@ from services.compare_alert_channels import (
     effective_compare_telegram_style,
 )
 
+from services.user_tier import resolve_restricted_channel_flags
+
 logger = logging.getLogger("scheduler.dispatch")
+
+#: Reihenfolge des Flag-Tupels aus ``resolve_restricted_channel_flags``.
+_FLAG_KANAELE = ("email", "sms", "premium_sms", "telegram")
 
 
 def _missing_location_ids(locations: list, location_ids: list[str]) -> list[str]:
@@ -467,6 +472,8 @@ def send_one_compare_preset(
     premium_sms_sink=None,
     *,
     weather_failure_as_outcome: bool = False,
+    restrict_to_channel: str | None = None,
+    orte_ohne_wetter: list | None = None,
 ) -> tuple:
     """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
 
@@ -496,6 +503,10 @@ def send_one_compare_preset(
     Ein Fehler an JEDEM Ort ist seit #2286 (AC-4, ADR-0018) in BEIDEN Pfaden
     ``no_weather`` -- keine Mail aus lauter Fehlerzellen, der Cron zaehlt den
     Preset als ``failed``.
+    Issue #2282 S2: ``restrict_to_channel`` (HEUTE/MORGEN per Befehl) bedient
+    NUR den Anfragekanal ueber die mit dem Trip geteilte Aufloesung; gesperrt
+    ⇒ ``channels_unreachable``. ``orte_ohne_wetter`` sammelt die Namen der
+    Orte ohne Wetterdaten (Teilausfall). ``None`` = bisheriges Verhalten.
     """
     if (target_date is None) != (tage_ab_ortstag is None):
         raise ValueError(
@@ -527,9 +538,16 @@ def send_one_compare_preset(
     # Issue #2280 (AC-7): mail_to nur Pflicht, wenn E-Mail wirksam ist — ohne
     # mail_to faellt E-Mail aus der wirksamen Menge (Kanal-Paritaet).
     default_to = getattr(settings, "mail_to", None)
-    effective_channels = set(_effective_compare_briefing_channels(preset, settings, user_id))
+    if restrict_to_channel is None:
+        effective_channels = set(_effective_compare_briefing_channels(preset, settings, user_id))
+    else:
+        flags = resolve_restricted_channel_flags(restrict_to_channel, user_id)
+        effective_channels = {k for k, an in zip(_FLAG_KANAELE, flags) if an}
     if not default_to:
         effective_channels.discard("email")
+    if not effective_channels and restrict_to_channel is not None:
+        # Anfragekanal per Tarif/Konto gesperrt (AC-6): nicht erreichbar.
+        raise SendOutcomeError("channels_unreachable")
     if not effective_channels:
         # Vor der Ortspruefung: die Reihenfolge der Fehlerpfade bleibt (#1727 AC-7).
         raise SendOutcomeError("no_channels", (
@@ -609,6 +627,8 @@ def send_one_compare_preset(
     # "sent" und die Job-Flanke koennte nie feuern).
     if result.locations and all(lr.error for lr in result.locations):
         raise SendOutcomeError("no_weather")
+    if orte_ohne_wetter is not None:
+        orte_ohne_wetter.extend(lr.location.name for lr in result.locations if lr.error)
 
     top_ort = result.locations[0].location.name if result.locations else None
 
@@ -798,6 +818,10 @@ def send_compare_preset(
     user_id: str,
     preset_id: str,
     data_root: str | None = None,
+    *,
+    restrict_to_channel: str | None = None,
+    target_date: date | None = None,
+    tage_ab_ortstag: int | None = None,
 ) -> dict:
     """Einzelversand fuer ein Compare-Preset — ignoriert schedule.
 
@@ -807,6 +831,10 @@ def send_compare_preset(
     Issue #1467 S2 AG5: Handversand ⇒ `on_demand=True` — weder Δ-Anker noch
     Melde-Gedaechtnis werden angefasst. Sonst verschoebe ein Handversand den
     Vergleichspunkt und der naechste echte Ausschlag ginge still verloren.
+
+    Issue #2282 S2: ``restrict_to_channel``/``target_date``/``tage_ab_ortstag``
+    reichen HEUTE/MORGEN per Befehl durch (``None`` = Web-Handversand
+    unveraendert); Orte ohne Wetterdaten stehen unter ``orte_ohne_wetter``.
     """
     if data_root is None:
         data_root = str(get_data_root())
@@ -827,11 +855,14 @@ def send_compare_preset(
     # beginnt mit "compare", enthaelt user_id (Mandantentrennung).
     if not try_acquire_send_lock("compare", user_id, preset_id):
         return {"status": "already_in_progress"}
+    ohne_wetter: list = []
     try:
         settings = Settings().with_user_profile(user_id)
         send_one_compare_preset(
             preset, settings, user_id, data_root, on_demand=True,
-            weather_failure_as_outcome=True,
+            weather_failure_as_outcome=True, target_date=target_date,
+            tage_ab_ortstag=tage_ab_ortstag, restrict_to_channel=restrict_to_channel,
+            orte_ohne_wetter=ohne_wetter,
         )
         outcome = "sent"
     except SendOutcomeError as e:
@@ -846,7 +877,8 @@ def send_compare_preset(
         load_all_locations(user_id=user_id), preset.get("location_ids") or []
     )
     return {"status": "ok" if outcome == "sent" else outcome,
-            **({"fehlende_orte": fehlende} if fehlende else {})}
+            **({"fehlende_orte": fehlende} if fehlende else {}),
+            **({"orte_ohne_wetter": ohne_wetter} if ohne_wetter else {})}
 
 
 def _write_compare_alert_snapshots(

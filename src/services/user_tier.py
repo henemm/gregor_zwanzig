@@ -98,3 +98,20 @@ def daily_alert_limit(user_id: str) -> int | None:
     user.json verhaelt sich wie fehlendes tier-Feld -> free-Default (Limit 2).
     """
     return {"free": 2, "standard": 4, "premium": None}.get(_tier(user_id), 2)
+
+
+def resolve_restricted_channel_flags(restrict: str, user_id: str) -> tuple[bool, bool, bool, bool]:
+    """Issue #2282 S2 (AC-7, ADR-0097): Kanal-Flags ``(email, sms,
+    premium_sms, telegram)`` fuer einen Ad-hoc-Abruf, der auf den
+    Anfragekanal beschraenkt ist -- EINE Fassung fuer Trip und Ortsvergleich.
+
+    Der Anfragekanal ist aktiv, auch wenn Trip/Preset ihn nicht aktiviert hat
+    (expliziter Nutzerwunsch); ueberschrieben wird die Einstellung, nicht die
+    Berechtigung: SMS haengt an ``sms_allowed``, Premium-SMS an
+    ``premium_sms_allowed`` (NICHT an ``sms_allowed``, ADR-0049)."""
+    return (
+        restrict == "email",
+        restrict == "sms" and sms_allowed(user_id),
+        restrict == "premium_sms" and premium_sms_allowed(user_id),
+        restrict == "telegram",
+    )
