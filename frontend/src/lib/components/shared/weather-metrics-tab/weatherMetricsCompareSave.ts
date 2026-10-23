@@ -524,13 +524,13 @@ export function erstelleWetterMetrikenVergleichSpeicherung(
 			if (JSON.stringify(current) === JSON.stringify(zuletztGespeichert)) {
 				if (eigenerVorgangAussteht) {
 					eigenerVorgangAussteht = false;
-					saveController.cancel();
+					saveController.cancel('wetter-metriken');
 					saveController.markPristine();
 				}
 				return;
 			}
 			eigenerVorgangAussteht = true;
-			saveController.schedule(saveFn);
+			saveController.schedule(saveFn, 700, 'wetter-metriken');
 		}
 	};
 }

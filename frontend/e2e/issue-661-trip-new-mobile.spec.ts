@@ -183,9 +183,9 @@ test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 			]);
 			await page.waitForTimeout(600);
 		}
-		// Issue #2277 S3: Kette Wetter-Metriken → Wertebereiche → Alarme → Versand;
-		// „Speichern" wird erst nach dem Besuch von Versand aktiv.
-		for (const reiter of ['Wetter-Metriken', 'Wertebereiche', 'Alarme', 'Versand']) {
+		// Issue #1743: Kette Wetter-Metriken → Wertebereiche → Alarme (kein Schritt Versand);
+		// „Speichern" wird nach dem Besuch von Alarme aktiv.
+		for (const reiter of ['Wetter-Metriken', 'Wertebereiche', 'Alarme']) {
 			await page.getByRole('tab', { name: new RegExp(reiter) }).click({ force: true });
 		}
 		// Positivkontrolle: `ready` ist erreicht — sonst gäbe es gar keinen Autosave zu vermeiden.

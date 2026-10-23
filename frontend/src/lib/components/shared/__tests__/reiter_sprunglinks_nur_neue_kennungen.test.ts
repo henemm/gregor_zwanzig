@@ -19,7 +19,7 @@
 // #1743 (Spec feat_1743_reiter_aufraeumen AC-23, AC-25, AC-27): `versand` und `vorschau` sind keine
 // Reiter mehr. Versand-Spruenge zielen auf `?tab=wetter-metriken#versand`, Vorschau-Ziele entfallen.
 // Die gueltigen Kennungen sind hier FEST eingesetzt (nicht aus subscriptionTabs abgeleitet), damit
-// die Erwartung nicht mit dem Pruefling wandert. Totcode-Dateien (PreviewCard, BriefingPreviewCard)
+// die Erwartung nicht mit dem Pruefling wandert. Die beiden Totcode-Vorschaukarten der Trip-Uebersicht
 // sind aus den Tabellen entfernt — sie entfallen (deadTripOverviewComponentsRemoved).
 //
 // Ausfuehren:

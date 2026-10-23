@@ -128,7 +128,7 @@ inaktiv: --g-paper-deep / --g-ink-3, mono --g-text-xs; aktiv: transluzent auf Ac
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein Deep-Link `?tab=alarme` (Trip) bzw. `?tab=vorschau`
+- **AC-1:** *(Beispiel `?tab=vorschau` abgelöst durch #1743: der Reiter entfällt, die Kennung löst auf `uebersicht` auf; die Band-Prüfung gilt sinngemäß für einen bestehenden Reiter)* Given ein Deep-Link `?tab=alarme` (Trip) bzw. `?tab=vorschau`
   (Compare) auf 390px / When die Seite geladen wird (keine User-Geste) /
   Then ist der aktive Tab vollständig im sichtbaren Band-Ausschnitt, mit
   12px Abstand zum linken Band-Rand (`scroll-padding-inline`).
@@ -200,6 +200,7 @@ inaktiv: --g-paper-deep / --g-ink-3, mono --g-text-xs; aktiv: transluzent auf Ac
 
 ## Changelog
 
+- 2026-10-22: AC-1-Beispiel `?tab=vorschau` durch #1743 abgelöst (Reiter entfällt, Kennung löst auf `uebersicht` auf).
 - 2026-10-03: Umsetzung abgeschlossen und validiert. Iteration 1 (5a94e9fc):
   MTabBar-Baustein + Katalog v1.5 (Band + Fade, scrollIntoView Mount/Wechsel,
   WAI-ARIA roving tabindex, 44px-Trigger, Badges neutral), TripTabs umgestellt,

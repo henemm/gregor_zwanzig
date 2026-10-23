@@ -214,13 +214,12 @@ test('AC-5 bei nur einem vorhandenen Ort bleibt der Reiter nach Orte gesperrt, O
 	assert.deepEqual(s.pickedIds, ['a']);
 	// Vorderteil wie in CompareNewEditor.svelte: Orte frei ab Namen, Metriken ab Name + >=2 Orten.
 	const offen: Set<string> = tailUnlocked(
-		{ metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' },
+		{ metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme' },
 		{
 			metrikenFrei: !!s.name.trim() && s.pickedIds.length >= 2,
 			metrikenVisited: false,
 			wertebereicheVisited: false,
-			alarmeVisited: false,
-			versandVisited: false
+			alarmeVisited: false
 		}
 	);
 	if (s.name.trim()) offen.add('orte');

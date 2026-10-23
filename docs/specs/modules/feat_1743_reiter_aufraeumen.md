@@ -47,8 +47,8 @@ gehört zu diesem Ticket nicht nur das Streichen von zwei Reitern, sondern:
 2. Unter den Wetter-Metriken folgt ein Abschnitt „Versand" (Zeiten, Kanäle; beim Ortsvergleich zusätzlich
    Pausieren/Aktivieren). „Zeitplan bearbeiten →" springt direkt dorthin.
 3. Die Aktionen „Vorschau" in Trip-/Ortsvergleich-Liste, Mobil-Menü, Cockpit („Vorschau prüfen →") und
-   Übersicht („Vorschau öffnen") sind weg. Die Mini-Vorschauen im Wetter-Metriken-Reiter (Chat-Blase, SMS-Rahmen)
-   und die Alarm-Vorschau im Reiter Alarme bleiben.
+   Übersicht („Vorschau öffnen") sind weg. Mini-Vorschauen (Chat-Blase, SMS-Rahmen, Kanal-Umschalter) gibt es
+   nicht mehr (PO-Entscheid 2026-10-22); es bleibt nur die Alarm-Vorschau im Reiter Alarme.
 4. Auf `/trips/new` und `/compare/new` gibt es keinen Schritt „Versand" mehr; sein Inhalt steht unten im Schritt
    „Wetter-Metriken". Fertig/Anlegen wird frei, sobald „Alarme" besucht ist.
 5. Alte Links (`?tab=versand`, `?tab=briefings`, `?tab=vorschau`, `?tab=preview`) funktionieren weiter und
@@ -67,8 +67,9 @@ gehört zu diesem Ticket nicht nur das Streichen von zwei Reitern, sondern:
 - **Python-Core:** `api/routers/preview.py`, `src/services/preview_service.py`.
 - **Kontext:** `docs/context/feat-1743-reiter-aufraeumen.md` (Analyse inkl. PO-Entscheide, verbindlich).
 
-> **Schicht:** Full-Stack. Frontend (SvelteKit) = Hauptlast; Go und Python nur Rückbau (Löschen) des einzigen
-> Vorschau-Endpoints. Es entstehen **keine neuen Endpoints** und keine neuen datenbewegenden Pfade.
+> **Schicht:** Full-Stack. Frontend (SvelteKit) = Hauptlast; Go und Python nur Rückbau (Löschen) der
+> Vorschau-Endpoints `GET /api/briefings/{id}/preview`, `GET /api/preview/{trip}/email|telegram` und
+> `POST /api/preview/compare/{id}` samt toter Vorschau-Hüllen; `GET /api/preview/{trip}/sms` bleibt. Es entstehen **keine neuen Endpoints** und keine neuen datenbewegenden Pfade.
 
 ### Trip/Ortsvergleich-Teilung (Pendant-Prüfung)
 
@@ -89,7 +90,7 @@ gehört zu diesem Ticket nicht nur das Streichen von zwei Reitern, sondern:
 - **LoC (produktiv):** grob +350 / −1100 (Löschanteil hoch: Vorschau-Reiter, Loader, Endpoint, Totcode,
   Dreifach-Liste). Das 250er-Limit wird überschritten; `loc_limit_override 500` ist gesetzt. Test- und
   Doku-Änderungen zählen nicht.
-- **Files:** ~30 produktiv (Frontend ~25, Go 3, Python 2), ~30 Unit-Tests, ~18 Playwright-Specs, 3 Python-Test-Dateien, ~6 Docs/Specs.
+- **Files:** ~30 produktiv (Frontend ~25, Go 3, Python 4), ~30 Unit-Tests, ~18 Playwright-Specs, 3 Python-Test-Dateien, ~6 Docs/Specs.
 - **Effort:** high. **Risiko:** MEDIUM-HIGH (stiller Datenverlust im Speicher-Slot, breite Test-Ratsche).
 - **Umsetzungsreihenfolge als Scheiben innerhalb EINES Workflows:**
   (S1) Speicher-Slot im Store + Tests;
@@ -107,7 +108,8 @@ gehört zu diesem Ticket nicht nur das Streichen von zwei Reitern, sondern:
 | `bereinigteTabAdresse`, `resolveTab` | Funktion | Alt-Kennungen und einmalige Adressbereinigung |
 | `anlegeLockEngine.ts` | Modul | Reiter-Sperre/Freischaltung der Anlege-Seiten |
 | `WeatherMetricsTab`, `VersandTab`, `BriefingScheduleTab` | Komponenten | geteilte Inhalte, werden komponiert |
-| `CompareChatBubble`, `SmsPhoneFrame`, `BriefingAlertPreviewHandler` | Komponenten/Handler | **bleiben** (Mini-Vorschau, Alarm-Vorschau) |
+| `BriefingAlertPreviewHandler` | Handler | **bleibt** (Alarm-Vorschau) |
+| `CompareChatBubble`, `CompareChannelSwitch`, `SmsPhoneFrame` | Komponenten | **entfallen** (PO-Entscheid 2026-10-22, F003); im Arbeitsbaum unter `frontend/src` keine Nutzung mehr (`grep -rn SmsPhoneFrame frontend/src` ohne Treffer) |
 | #1839 (Vorschau-502), #2243, #2347, #2345 | Tickets | #1839 wird gegenstandslos |
 
 ## Implementation Details
@@ -185,9 +187,12 @@ Entfallen: Hub-Panel `vorschau` (TripTabs, CompareTabs), `shared/PreviewTab.svel
 Aktion `preview` in `shared/subscriptionActions.ts` samt Einträgen in `routes/trips/+page.svelte`,
 `routes/compare/+page.svelte` und Mobil-ActionSheet, Cockpit „Vorschau prüfen →" (`routes/+page.svelte`),
 CompareTabs-Sprunglink, HubOverview „Vorschau öffnen", die Funktion für `GET /api/briefings/{id}/preview` in
-`lib/api.ts` (~295-310) samt Typen. **Bleiben:** `molecules/CompareChatBubble.svelte`
-(`POST /api/preview/compare/{id}`), `preview/SmsPhoneFrame.svelte` + `previewHelpers.ts`
-(`GET /api/preview/{trip}/{channel}`), Alarm-Vorschau (`POST /api/briefings/{id}/alert-preview`).
+`lib/api.ts` (~295-310) samt Typen. Nach PO-Entscheid 2026-10-22 (F003) entfallen außerdem die danach
+verwaisten Reste: `molecules/CompareChatBubble.svelte`, `molecules/CompareChannelSwitch.svelte` (samt
+Barrel-Export), `premiumSmsPreviewNote` in `compare/subscriptionHelpers.ts`, `langlaeufer.compareVorschau` +
+`ZEITLIMIT_COMPARE_VORSCHAU_MS` in `lib/api.ts`; `preview/SmsPhoneFrame.svelte`, `EmailIframe` und
+`previewHelpers.ts` hingen ausschließlich am Vorschau-Reiter und sind mit ihm entfallen. **Bleibt:** nur die
+Alarm-Vorschau (`POST /api/briefings/{id}/alert-preview`).
 
 ### 7. Vorschau-Rückbau — Backend
 
@@ -195,13 +200,26 @@ CompareTabs-Sprunglink, HubOverview „Vorschau öffnen", die Funktion für `GET
   `BriefingPreviewHandler` (`internal/handler/briefing_preview.go`) entfernen. `briefingPreviewTarget` **bleibt**
   (genutzt von `BriefingAlertPreviewHandler`). Tests `briefing_preview_test.go` (nur Vorschau-Teile),
   `internal/router/preview_proxy_targets_test.go`, `internal/router/testdata/python_preview_routes.json` nachziehen.
-- **Python:** Endpoint `@router.get("/api/briefings/{entity_id}/preview")` in `api/routers/preview.py:~155-195`
+- **Python:** Endpoint `@router.get("/api/briefings/{entity_id}/preview")` in `api/routers/preview.py` (Stand vor #1743: ~155-195)
   entfernen, `BRIEFING_KINDS` nur entfernen, wenn danach unbenutzt. `PreviewService.render_all_channels`
   (`src/services/preview_service.py:~424`) entfernen, sofern danach unreferenziert; Hilfsfunktionen
   `_email_html_of` (wird auch an anderer Stelle benutzt, Zeile ~370) und `_telegram_body_of` (~422) nur
   entfernen, wenn ebenfalls unreferenziert — vor dem Löschen per Suche belegen.
-  `ComparePreviewService.render_all_channels` **bleibt** (genutzt von `POST /api/preview/compare/{id}`).
-  `scripts/premium_sms_preflight_check.py` nutzt `PreviewService`: es darf davon nichts wegfallen.
+  Nach PO-Entscheid 2026-10-22 (F003) entfallen außerdem die Routen ohne Aufrufer
+  `POST /api/preview/compare/{id}`, `GET /api/preview/{trip}/email` und `GET /api/preview/{trip}/telegram`
+  (Go-Proxy und Python). **Bleibt:** `GET /api/preview/{trip}/sms` als Messweg der Staging-Specs
+  `metrik-abwahl-schreibt-alle-kanaele-durch` und `metrik-grundauswahl-schneidet-kanal` (SMS-Kurzform).
+  Zusätzlich entfallen die toten Vorschau-Hüllen ohne Produktiv-Aufrufer: `ComparePreviewService.render_email_preview`,
+  `.render_telegram_preview`, `.render_sms_preview`; `PreviewService.render_email_preview`, `.render_telegram_preview`;
+  ebenso der `call_log`-Marker `"render_email_preview"` in `src/providers/call_log.py`. **Bleibt:**
+  `PreviewService.render_sms_preview` (SMS-Route + Preflight-Skript), `ComparePreviewService.render_all_channels`
+  (Rechen-Naht der Paritätstests „Vorschau = Versand"), `_load_preset`, `order_locations_by_ids` und
+  `scripts/premium_sms_preflight_check.py` (unverändert); der Versand (`scheduler_dispatch_service`,
+  `trip_report_scheduler`) bleibt unberührt. Tests auf die entfernten Hüllen ziehen auf
+  `PreviewService._build_report` bzw. `ComparePreviewService.render_all_channels` um; Tests auf den
+  call_log-Marker nutzen `render_sms_preview` als Marker. Ratsche `internal/router/core_auth_sweep_test.go`:
+  gemessener Ist-Wert 24 → 21 (drei entfernte Go→Python-Proxies email/telegram/compare), Konstante
+  `minPythonCallsReached` nach der Konvention „Ist-Wert − 3" auf 18.
 - Einziger Aufrufer des Endpoints war `previewLoader.ts` (geprüft). Weitere Aufrufer wären in der
   Implementierung zu belegen; wird einer gefunden, bleibt der Endpoint und die Spec wird angepasst.
 - `docs/reference/api_contract.md` und `tests/test_api_contract_drift.py` nachziehen.
@@ -343,14 +361,14 @@ Pfade aus „Affected Files". Mutations-Gegenprobe pro Gruppe ist Pflicht (siehe
 - **AC-28:** Given die Übersicht (HubOverview) und das Cockpit, When sie gerendert werden, Then gibt es weder „Vorschau öffnen" noch „Vorschau prüfen →".
   - Test: Komponenten gemountet; Link-Texte und -Ziele.
 
-- **AC-29:** Given die verbleibenden Vorschau-Funktionen, When der Nutzer im Reiter Wetter-Metriken die Mini-Vorschauen (Chat-Blase, SMS-Rahmen) und im Reiter Alarme die Alarm-Vorschau nutzt, Then funktionieren sie unverändert (`POST /api/preview/compare/{id}`, `GET /api/preview/{trip}/{channel}`, `POST /api/briefings/{id}/alert-preview`).
-  - Test: bestehende Tests dieser Bausteine laufen unverändert grün; `previewVerdrahtungHubs.test` behält/verschiebt den Alarm-Vorschau-Teil.
+- **AC-29:** Given die Alarm-Vorschau im Reiter Alarme, When der Nutzer sie nutzt, Then funktioniert sie unverändert (`POST /api/briefings/{id}/alert-preview`); weitere Kanal-Vorschauen (Chat-Blase, SMS-Rahmen, Kanal-Umschalter) gibt es nach PO-Entscheid 2026-10-22 nicht mehr.
+  - Test: bestehende Tests der Alarm-Vorschau laufen unverändert grün; `previewVerdrahtungHubs.test` behält/verschiebt den Alarm-Vorschau-Teil; im Wetter-Metriken-Reiter gemountet gibt es keine Chat-Blase, keinen SMS-Rahmen und keinen Kanal-Umschalter.
 
 - **AC-30:** Given die Go-API, When `GET /api/briefings/{id}/preview` aufgerufen wird, Then antwortet sie mit 404 bzw. 405 (Route existiert nicht), während `POST /api/briefings/{id}/alert-preview` unverändert mit 200 antwortet.
   - Test: Go-Router-Test mit echtem Router; zwei Nutzer, Alarm-Vorschau für fremde ID bleibt abgewiesen (Mandantentrennung unverändert).
 
-- **AC-31:** Given der Python-Core, When `GET /api/briefings/{id}/preview` aufgerufen wird, Then antwortet er 404/405; `POST /api/preview/compare/{id}` funktioniert unverändert; `ComparePreviewService.render_all_channels` und `scripts/premium_sms_preflight_check.py` laufen unverändert.
-  - Test: FastAPI-Testclient; Import-/Aufruf-Test des Preflight-Skripts (`--collect-only`-sicher, ohne Versand).
+- **AC-31:** Given der Python-Core und die Go-API, When `GET /api/briefings/{id}/preview`, `GET /api/preview/{trip}/email`, `GET /api/preview/{trip}/telegram` oder `POST /api/preview/compare/{id}` aufgerufen wird, Then antworten sie 404/405; `GET /api/preview/{trip}/sms` antwortet weiterhin; die toten Hüllen `ComparePreviewService.render_email_preview`/`.render_telegram_preview`/`.render_sms_preview` und `PreviewService.render_email_preview`/`.render_telegram_preview` existieren nicht mehr; `PreviewService.render_sms_preview`, `ComparePreviewService.render_all_channels` und `scripts/premium_sms_preflight_check.py` laufen unverändert.
+  - Test: FastAPI-Testclient und Go-Router-Test mit echtem Router (404/405 bzw. SMS-Route 200); Import-/Aufruf-Test des Preflight-Skripts (`--collect-only`-sicher, ohne Versand); Paritätstests „Vorschau = Versand" laufen über `render_all_channels`.
 
 - **AC-32:** Given die Frontend-API und die Vertragsdokumentation, When der Rückbau abgeschlossen ist, Then gibt es keinen Client-Aufruf und keinen Vertragseintrag für den Vorschau-Endpoint mehr (`lib/api.ts`, `docs/reference/api_contract.md`, Drift-Test `test_api_contract_drift.py` grün).
   - Test: Drift-Test; Frontend-Typprüfung (`svelte-check`) ohne Rest-Verweise.
@@ -406,18 +424,22 @@ Pfade aus „Affected Files". Mutations-Gegenprobe pro Gruppe ist Pflicht (siehe
 - `internal/handler/briefing_preview_test.go` — MODIFY
 - `internal/router/preview_proxy_targets_test.go` — MODIFY
 - `internal/router/testdata/python_preview_routes.json` — MODIFY
+- `internal/router/core_auth_sweep_test.go` — MODIFY (F003: Ratsche `minPythonCallsReached` auf 18 = gemessener Ist-Wert 21 − 3)
 
 **Python:**
 
 - `api/routers/preview.py` — MODIFY (Endpoint, ggf. `BRIEFING_KINDS`)
-- `src/services/preview_service.py` — MODIFY (`render_all_channels`, ggf. Hilfsfunktionen)
+- `src/services/preview_service.py` — MODIFY (`render_all_channels`, ggf. Hilfsfunktionen; F003: `render_email_preview`/`render_telegram_preview` raus, `render_sms_preview` bleibt)
+- `src/services/compare_preview_service.py` — MODIFY (F003: `render_email_preview`/`render_telegram_preview`/`render_sms_preview` raus, `render_all_channels` bleibt)
+- `src/providers/call_log.py` — MODIFY (F003: Marker `"render_email_preview"` entfällt)
 
 **Tests (REPO-relativ):**
 
 - NEU: `frontend/src/lib/stores/__tests__/saveStatusStoreBesitzer.test.ts` (AC-12), `frontend/src/lib/components/shared/__tests__/wetter_metriken_versand_panel_speicherung.test.ts` (AC-10, 11, 13, 14, 15), `frontend/src/lib/components/shared/__tests__/reiterfolge_eine_quelle.test.ts` (AC-16 bis 18), `frontend/src/lib/components/shared/__tests__/wetter_metriken_versand_panel_paritaet.test.ts` (AC-8)
 - ANPASSEN (Reiter-Fixierungen auf fünf Reiter/neue Ziele): `subscription_tabs_resolve`, `hub_reiter_gemeinsame_aufloesung`, `reiter_sprunglinks_nur_neue_kennungen`, `wetterMetrikenTabRegistration`, `versand_panel_ohne_wrapper_div`, `issue_1273_s3_redirect_links`, `tripMehrreiterPruefstand`, `deadTripOverviewComponentsRemoved`, `aktionsmodell_seiten_bindung`, `alarme_vergleich_flush_beim_reiterwechsel`, `versand_vergleich_reiterwechsel_verliert_nichts`, `anlege_reiter_kennungen_gleich`, `anlege_reiterleiste_trip_vergleich_paritaet`, `anlege_weiter_knopf_zielt_auf_existierenden_reiter`, `anlege_lock_engine`, `compare_anlege_freischaltung`, `tripNewLogic.test`, `trip_new_reiterleiste_besuchs_flags`, `trip_new_zeitplan_tab_nutzt_geteilten_versand_baustein`, `trip_new_mail_inhalt_karte_genau_eine_instanz`, `trip_new_versandkanaele_unabhaengig_von_metriken`, `trip_new_wertebereiche_reiter`, `infobox_nur_beim_anlegen`, `infoboxTexte`, `standardwerte_knopf_geteilt`, `standardwerte_gate`, `begriff_erklaerung_infobox_bausteine`, `versand_tab_meldet_aenderungen_reaktiv`, `previewVerdrahtungHubs.test` (Alarm-Vorschau-Teil bleibt/zieht um), `apiZeitlimit.test.ts` (Abschnitt Briefing-Vorschau ~426-473 raus, Rest bleibt), `compareReiterAufbauPruefstand.ts`, `compare_reiter_nutzlast_nur_eigene_felder` — alle unter `frontend/src/lib/components/**/__tests__/` bzw. wo sie heute liegen (genaue Pfade per Suche in S2-S4).
+- Python-Tests, die die entfernten Hüllen (`render_email_preview`/`render_telegram_preview`/`render_sms_preview` von `ComparePreviewService`, `render_email_preview`/`render_telegram_preview` von `PreviewService`, call_log-Marker `"render_email_preview"`) nutzen — MODIFY (F003: umziehen auf `PreviewService._build_report` bzw. `ComparePreviewService.render_all_channels`; Marker-Tests nutzen `render_sms_preview`).
 - LÖSCHEN: `previewTab.test.ts`, `previewLoader.test.ts`, `compare_preview_channel_switch.test.ts` (nur der Briefing-Vorschau-Teil; übrige Fälle falls vorhanden bleiben).
-- Playwright ANPASSEN: `frontend/e2e/trip-detail-tabs.spec.ts`, `hub-reiter-alt-kennungen-umleitung.spec.ts`, `issue-616-trip-one-surface.spec.ts`, `versand-tab.spec.ts`, `versand-tab-vergleich.spec.ts`, `issue-758-save-indicator.spec.ts`, `versandzeit-stundenwahl.spec.ts`, `compare-hub-briefing-times.spec.ts`, `bug-626-compare-menu-actions.spec.ts`, `begriff-erklaerung.spec.ts`, `ausblick-einfach-wirkt.staging.spec.ts`, `kanal-grenzen-ortsvergleich.staging.spec.ts`, `trip-preview-thunder-origin.staging.spec.ts` (Briefing-Vorschau-Teile raus bzw. Spec löschen, wenn sie nur das prüft), `preview-tab-gleiche-anordnung.spec.ts` (LÖSCHEN, prüft den entfallenen Reiter), `email-preview-header.spec.ts` (prüfen).
+- Playwright ANPASSEN: `frontend/e2e/trip-detail-tabs.spec.ts`, `hub-reiter-alt-kennungen-umleitung.spec.ts`, `issue-616-trip-one-surface.spec.ts`, `versand-tab.spec.ts`, `versand-tab-vergleich.spec.ts`, `issue-758-save-indicator.spec.ts`, `versandzeit-stundenwahl.spec.ts`, `compare-hub-briefing-times.spec.ts`, `bug-626-compare-menu-actions.spec.ts`, `begriff-erklaerung.spec.ts`, `kanal-grenzen-ortsvergleich.staging.spec.ts` (Briefing-Vorschau-Teile raus); LÖSCHEN (prüften nur die entfallene Briefing-Vorschau): `ausblick-einfach-wirkt.staging.spec.ts`, `trip-preview-thunder-origin.staging.spec.ts`; `preview-tab-gleiche-anordnung.spec.ts` (LÖSCHEN, prüft den entfallenen Reiter), `email-preview-header.spec.ts` (prüfen).
 - LÖSCHEN Playwright: `frontend/e2e/issue-736-tabs-reorg.spec.ts` (widerspricht direkt: Kanal-Schalter NICHT in Wetter-Metriken).
 - `.github/ci_e2e_specs.txt` — MODIFY (gelöschte/umbenannte Specs)
 - Python: `tests/integration/test_briefing_preview_user_isolation.py`, `tests/integration/test_briefing_preview_bundle.py`, `tests/integration/test_briefing_preview_kind_und_demo.py` — LÖSCHEN bzw. auf verbleibendes Verhalten reduzieren; `tests/test_api_contract_drift.py` — MODIFY; `tests/tdd/test_issue_1069_tier_channel_gating.py` — PRÜFEN (`?tab=briefings` läuft über LEGACY weiter).
@@ -437,7 +459,7 @@ Pfade aus „Affected Files". Mutations-Gegenprobe pro Gruppe ist Pflicht (siehe
 4. **Panel-Parität** — Abschnittsfolge je context (AC-8).
 5. **Anlegen ohne Versand-Berührung** — POST-Körper enthält Standard-`schedule` bzw. Standard-Versandzeiten (AC-20/21). Ein Live-Nachweis gegen Staging (kein 400) ergänzt in der Live-Schicht.
 6. **Go-Router-Test** — `GET …/preview` nicht vorhanden; `POST …/alert-preview` unverändert; zwei Nutzer.
-7. **Python** — Endpoint weg, Compare-Vorschau unverändert, Preflight-Skript importierbar.
+7. **Python/Go** — Briefing-Vorschau- und Kanal-Vorschau-Endpoints weg (SMS-Vorschau bleibt), tote Vorschau-Hüllen weg, Paritätstests über `render_all_channels`, Preflight-Skript importierbar.
 
 **Angepasst:** Reiter-Fixierungen (~30 Unit-Tests, ~13 Playwright-Specs) auf die fünf Reiter und neue Sprungziele. Veraltetes Verhalten wird angepasst oder gelöscht, nie rot liegengelassen.
 
@@ -451,7 +473,7 @@ Pfade aus „Affected Files". Mutations-Gegenprobe pro Gruppe ist Pflicht (siehe
 
 ## Known Limitations
 
-- **Briefing-Vorschau je Kanal entfällt ersatzlos** (PO-Entscheid). Es gibt keinen Ort mehr, an dem das ganze Briefing vorab je Kanal gesehen werden kann; Mini-Vorschauen und Alarm-Vorschau bleiben. Eine Wiedereinführung müsste neu spezifiziert werden.
+- **Briefing-Vorschau je Kanal entfällt ersatzlos** (PO-Entscheid). Es gibt keinen Ort mehr, an dem das Briefing vorab je Kanal gesehen werden kann; es bleibt nur die Alarm-Vorschau im Reiter Alarme. Die früher hier genannten „Mini-Vorschauen" (Chat-Blase, SMS-Rahmen) existierten nur im Vorschau-Reiter und sind mit ihm samt Resten entfallen (F003, PO-Entscheid 2026-10-22). Eine Wiedereinführung müsste neu spezifiziert werden.
 - **#1839 (Vorschau-502 nach 30 s)** wird gegenstandslos und ist **nach Lieferung mit Verweis auf #1743 zu schließen** (nicht vorher; erst nach Prod-Deploy und Selftest Exit 0).
 - Der Reiter Wetter-Metriken wird länger (Versand unten angehängt); Orientierung über den Anker `#versand`.
 - Lesezeichen mit `?tab=versand|briefings` landen auf Wetter-Metriken (mit Sprung zum Versand) statt auf einem eigenen Reiter.
@@ -467,3 +489,5 @@ Pfade aus „Affected Files". Mutations-Gegenprobe pro Gruppe ist Pflicht (siehe
 ## Changelog
 
 - 2026-10-22: Initial spec created (Issue #1743; PO-Entscheide 2026-10-22: Vorschau entfällt ersatzlos, Versand unter Wetter-Metriken, Anlege-Seiten gleich, Reiterfolge eine Quelle).
+- 2026-10-22: F003: Mini-Vorschauen existierten nur im Vorschau-Reiter; PO-Entscheid: ersatzlos inkl. Reste. Entfallen zusätzlich `CompareChatBubble`, `CompareChannelSwitch`, `premiumSmsPreviewNote`, `langlaeufer.compareVorschau`/`ZEITLIMIT_COMPARE_VORSCHAU_MS` sowie im Backend `POST /api/preview/compare/{id}`, `GET /api/preview/{trip}/email|telegram`; `GET /api/preview/{trip}/sms` bleibt als Messweg der Staging-Specs, `ComparePreviewService`/`PreviewService` und `scripts/premium_sms_preflight_check.py` unverändert. Soll-Fassung AC-29: „Given die Alarm-Vorschau im Reiter Alarme, When der Nutzer sie nutzt, Then funktioniert sie unverändert (POST /api/briefings/{id}/alert-preview); weitere Kanal-Vorschauen gibt es nach PO-Entscheid 2026-10-22 nicht mehr." Soll-Fassung AC-31: `GET /api/briefings/{id}/preview`, `GET /api/preview/{trip}/email|telegram` und `POST /api/preview/compare/{id}` antworten 404/405; `GET /api/preview/{trip}/sms` bleibt als Messweg; `ComparePreviewService`/`PreviewService` und `scripts/premium_sms_preflight_check.py` laufen unverändert. (Beide AC-Texte selbst sind Spec-Freeze — Übernahme erst nach erneuter Freigabe.) F001: Panel-Tests „ändern und binnen 700 ms zurücksetzen" je Kontext und Abschnitt ergänzt.
+- 2026-10-22: Nachfreigabe F003: AC-29/AC-31, Dependencies, „Was der PO sieht" Punkt 3 auf PO-Entscheid nachgezogen; zusätzlich tote Vorschau-Hüllen (`ComparePreviewService.render_email_preview`/`.render_telegram_preview`/`.render_sms_preview`, `PreviewService.render_email_preview`/`.render_telegram_preview`) + call_log-Marker entfernt, Ratsche 18 (Ist-Wert 21 − 3). Die Übernahme der AC-Texte erfolgt damit jetzt.

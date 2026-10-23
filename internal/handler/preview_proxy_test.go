@@ -14,7 +14,7 @@ import (
 
 // startFakePreviewPython simulates the Python FastAPI backend for
 // GET /api/preview/{trip_id}/{channel}. The optional contentType parameter
-// allows overriding the default JSON response (for HTML iframe tests).
+// allows overriding the default JSON response.
 func startFakePreviewPython(t *testing.T, status int, body, contentType string) (*httptest.Server, *string) {
 	t.Helper()
 	var lastURL string
@@ -47,6 +47,11 @@ func dispatchPreviewWithChi(h http.HandlerFunc, channel, path, userID string) *h
 	return w
 }
 
+// Issue #1743: im Router ist nur noch der Kanal "sms" registriert
+// (email/telegram/compare entfallen, Nachweis in
+// internal/router/briefing_vorschau_route_entfernt_test.go). Die Tests hier
+// pruefen den generischen Proxy deshalb ueber den sms-Kanal.
+
 func TestPreviewProxyHandlerForwardsTripIDAndChannel(t *testing.T) {
 	py, lastURL := startFakePreviewPython(t, 200, `{"subject":"x","token_line":"y","char_count":1}`, "")
 
@@ -62,44 +67,47 @@ func TestPreviewProxyHandlerForwardsTripIDAndChannel(t *testing.T) {
 }
 
 func TestPreviewProxyHandlerForwardsTypeQueryParam(t *testing.T) {
-	py, lastURL := startFakePreviewPython(t, 200, `<html></html>`, "text/html")
+	py, lastURL := startFakePreviewPython(t, 200, `{"token_line":"y"}`, "")
 
-	h := PreviewProxyHandler(py.URL, "email")
-	w := dispatchPreviewWithChi(h, "email", "/api/preview/gr20/email?type=morning", "default")
+	h := PreviewProxyHandler(py.URL, "sms")
+	w := dispatchPreviewWithChi(h, "sms", "/api/preview/gr20/sms?type=evening", "default")
 
 	if w.Code != 200 {
 		t.Fatalf("expected 200, got %d", w.Code)
 	}
-	if !strings.Contains(*lastURL, "type=morning") {
-		t.Errorf("expected ?type=morning to be forwarded, got %q", *lastURL)
+	if !strings.Contains(*lastURL, "type=evening") {
+		t.Errorf("expected ?type=evening to be forwarded, got %q", *lastURL)
 	}
 }
 
 func TestPreviewProxyHandlerInjectsUserIDFromAuthContext(t *testing.T) {
-	py, lastURL := startFakePreviewPython(t, 200, `<html></html>`, "text/html")
+	py, lastURL := startFakePreviewPython(t, 200, `{"token_line":"y"}`, "")
 
-	h := PreviewProxyHandler(py.URL, "email")
-	dispatchPreviewWithChi(h, "email", "/api/preview/gr20/email?type=morning", "alice")
+	h := PreviewProxyHandler(py.URL, "sms")
+	dispatchPreviewWithChi(h, "sms", "/api/preview/gr20/sms?type=morning&user_id=mallory", "alice")
 
 	if !strings.Contains(*lastURL, "user_id=alice") {
 		t.Errorf("expected user_id=alice from auth context in upstream URL, got %q", *lastURL)
+	}
+	if strings.Contains(*lastURL, "mallory") {
+		t.Errorf("client-supplied user_id must be discarded, got %q", *lastURL)
 	}
 	if !strings.Contains(*lastURL, "type=morning") {
 		t.Errorf("expected original type=morning to remain alongside user_id, got %q", *lastURL)
 	}
 }
 
-func TestPreviewProxyHandlerForwardsHtmlContentType(t *testing.T) {
-	py, _ := startFakePreviewPython(t, 200, `<!doctype html><body>preview</body>`, "text/html; charset=utf-8")
+func TestPreviewProxyHandlerForwardsUpstreamContentType(t *testing.T) {
+	py, _ := startFakePreviewPython(t, 200, `{"token_line":"preview"}`, "application/json; charset=utf-8")
 
-	h := PreviewProxyHandler(py.URL, "email")
-	w := dispatchPreviewWithChi(h, "email", "/api/preview/gr20/email?type=morning", "default")
+	h := PreviewProxyHandler(py.URL, "sms")
+	w := dispatchPreviewWithChi(h, "sms", "/api/preview/gr20/sms", "default")
 
-	if got := w.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
-		t.Errorf("expected upstream text/html Content-Type to pass through, got %q", got)
+	if got := w.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
+		t.Errorf("expected upstream Content-Type to pass through, got %q", got)
 	}
 	if !strings.Contains(w.Body.String(), "preview") {
-		t.Errorf("expected HTML body to pass through, got %q", w.Body.String())
+		t.Errorf("expected body to pass through, got %q", w.Body.String())
 	}
 }
 
@@ -114,46 +122,13 @@ func TestPreviewProxyHandlerPropagates404(t *testing.T) {
 	}
 }
 
-// Issue #2283 AC-6: der Signal-Kanal ist seit #610 app-weit entfernt, der
-// Python-Core hat keinen /signal-Endpoint. Der fruehere Test
-// TestPreviewProxyHandlerForwardsSignalChannel (#363) erwartete das
-// Weiterleiten an /api/preview/{id}/signal und ist deshalb entfallen. Die
-// Entfernung ist nur am Router beobachtbar (PreviewProxyHandler nimmt jeden
-// Kanalnamen entgegen) — Nachweis: internal/router/preview_proxy_targets_test.go
-// (TestPreviewSignalRouteRemoved_404). Der Abgleich Alt-Route <-> Buendelaufruf
-// (AC-5) steht in briefing_preview_test.go (externes Testpaket, braucht den
-// echten Router).
-
-// Issue #363 (AC-5): Telegram wird über den generischen PreviewProxyHandler an
-// <python>/api/preview/{id}/telegram weitergeleitet, user_id aus dem
-// Auth-Context injiziert, Query verbatim durchgereicht.
-func TestPreviewProxyHandlerForwardsTelegramChannel(t *testing.T) {
-	py, lastURL := startFakePreviewPython(t, 200, `{"subject":"x","body":"y","char_count":1,"max_line_width":1}`, "")
-
-	h := PreviewProxyHandler(py.URL, "telegram")
-	w := dispatchPreviewWithChi(h, "telegram", "/api/preview/gr20/telegram?type=evening", "carol")
-
-	if w.Code != 200 {
-		t.Fatalf("expected 200, got %d (body=%q)", w.Code, w.Body.String())
-	}
-	if !strings.Contains(*lastURL, "/api/preview/gr20/telegram") {
-		t.Errorf("expected proxied URL to include trip_id and telegram channel, got %q", *lastURL)
-	}
-	if !strings.Contains(*lastURL, "user_id=carol") {
-		t.Errorf("expected user_id=carol injected from auth context, got %q", *lastURL)
-	}
-	if !strings.Contains(*lastURL, "type=evening") {
-		t.Errorf("expected type=evening forwarded verbatim, got %q", *lastURL)
-	}
-}
-
 func TestPreviewProxyHandlerHandlesUpstreamError(t *testing.T) {
 	// Closed server simulates connection-refused.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	srv.Close()
 
-	h := PreviewProxyHandler(srv.URL, "email")
-	w := dispatchPreviewWithChi(h, "email", "/api/preview/gr20/email?type=morning", "default")
+	h := PreviewProxyHandler(srv.URL, "sms")
+	w := dispatchPreviewWithChi(h, "sms", "/api/preview/gr20/sms?type=morning", "default")
 
 	if w.Code != http.StatusBadGateway {
 		t.Errorf("expected 502 on upstream connection error, got %d", w.Code)

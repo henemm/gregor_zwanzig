@@ -134,26 +134,19 @@ class _LangsameVorschau:
         self._gestartet.set()
         time.sleep(BLOCK_SEKUNDEN)
 
-    def render_email_preview(self, *args, **kwargs):  # noqa: ANN002, ANN003
+    def render_sms_preview(self, *args, **kwargs):  # noqa: ANN002, ANN003
         self._blockieren()
-        return "<html>fertig</html>"
-
-    def render_all_channels(self, *args, **kwargs):  # noqa: ANN002, ANN003
-        self._blockieren()
-        return {"subject": "s", "email_html": "<html/>", "telegram": "t",
-                "sms": "x", "sms_char_count": 1}
+        return "Betreff", "fertig"
 
 
+# Issue #1743: email/telegram- und Vergleichs-Vorschau sind entfernt; der
+# verbliebene Vorschau-Endpunkt ist GET /api/preview/{trip}/sms.
 @pytest.mark.parametrize(
     "pfad, methode, ersetztes_attribut",
     [
         pytest.param(
-            "/api/preview/beliebig/email", "GET", "_build_service",
+            "/api/preview/beliebig/sms", "GET", "_build_service",
             id="trip-vorschau",
-        ),
-        pytest.param(
-            "/api/preview/compare/preset-x", "POST", "ComparePreviewService",
-            id="vergleichs-vorschau",
         ),
     ],
 )

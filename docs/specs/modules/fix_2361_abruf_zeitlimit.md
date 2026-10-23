@@ -12,6 +12,9 @@ tags: [frontend, api-client, timeout, offline, etag]
 
 # Zeitlimit fuer den zentralen Browser-Abruf send()
 
+> **Teilweise abgelöst durch #1743 F003 (PO-Entscheid 2026-10-22):** das Budget der Compare-Vorschau
+> (`langlaeufer.compareVorschau`, `ZEITLIMIT_COMPARE_VORSCHAU_MS`, 70 s) ist mit der Vorschau entfallen.
+
 ## Approval
 
 - [ ] Approved

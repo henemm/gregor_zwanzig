@@ -138,7 +138,9 @@ test.describe('Issue #2276 S2: Reiter „Alarme" im Vergleich speichert selbst',
 	});
 
 	// AC-6 — fängt: sichereSelbstSpeichererVorReiterwechsel in handleValueChange
-	test('AC-6: Alarm ändern und sofort zu „Versand" wechseln → PUT ist beim Wechsel schon beantwortet', async ({
+	// Issue #1743: es gibt keinen Reiter „Versand" mehr — der Wechsel geht in den
+	// Reiter „Wetter-Metriken", der den Versand-Abschnitt traegt.
+	test('AC-6: Alarm ändern und sofort zu „Wetter-Metriken" wechseln → PUT ist beim Wechsel schon beantwortet', async ({
 		page
 	}) => {
 		const id = await legeVergleichAn(page);
@@ -147,8 +149,8 @@ test.describe('Issue #2276 S2: Reiter „Alarme" im Vergleich speichert selbst',
 
 		await radarSchalter(page).click();
 		// sofort, innerhalb des Entprell-Fensters (700 ms) den Reiter wechseln
-		await page.locator('[data-testid="compare-detail-tab-versand"]').click();
-		await expect(page.locator('[data-testid="compare-detail-panel-versand"]')).toBeVisible();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]').click();
+		await expect(page.locator('[data-testid="compare-detail-panel-wetter-metriken"]')).toBeVisible();
 
 		// Der Wechsel wird erst freigegeben, NACHDEM der Alarm-PUT beantwortet ist —
 		// ohne Flush käme der PUT erst nach Ablauf der Entprellung.

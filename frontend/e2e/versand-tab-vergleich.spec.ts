@@ -44,7 +44,11 @@ async function createPreset(
 async function openVersandTab(page: Page, id: string): Promise<void> {
 	await page.goto(`/compare/${id}`);
 	await page.waitForLoadState('networkidle');
-	await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
+	// Issue #1743: Versand-Inhalt steht im Reiter Wetter-Metriken (Abschnitt #versand).
+	await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
+	await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeVisible({
+		timeout: 10_000
+	});
 }
 
 test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor', () => {
@@ -129,9 +133,13 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		// Cooldown-Karte JETZT im Alarme-Tab (zog aus dem Versand-Tab zurück, S4/AC-18).
 		await expect(page.locator('[data-testid="alert-cooldown-card"]:visible').first()).toBeVisible();
 
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
+		// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken.
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
+		const versand = page.locator('[data-testid="versand-abschnitt"]:visible').first();
+		await expect(versand).toBeVisible({ timeout: 10_000 });
+		await expect(versand.locator('[data-testid="alert-cooldown-card"]')).toHaveCount(0);
+		await expect(versand.locator('[data-testid="alert-metric-level-table"]')).toHaveCount(0);
 		await expect(page.locator('[data-testid="alert-cooldown-card"]:visible')).toHaveCount(0);
-		await expect(page.locator('[data-testid="alert-metric-level-table"]:visible')).toHaveCount(0);
 	});
 
 	// ── AC-7: Kein Kanal aktiv → Warnbox statt Zeitplan-Karten ───────────────
@@ -172,9 +180,7 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 	test('AC-10: mobiler Viewport — Versand-Tab ohne horizontales Scrollen', async ({ page }) => {
 		const { id } = await createPreset(page);
 		await page.setViewportSize({ width: 390, height: 844 });
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
+		await openVersandTab(page, id);
 
 		await expect(page.locator('[data-testid="compare-step5-channel-email"]:visible').first()).toBeVisible({
 			timeout: 10_000
@@ -203,7 +209,7 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
 		await expect(morningTime()).toHaveValue('08:00', { timeout: 10_000 });
 
 		// Testdaten sauber: Ausgangswert wiederherstellen und speichern.
@@ -243,8 +249,8 @@ test.describe('Issue #1232 Scheibe 2b: VersandTab (vergleich) im Compare-Editor'
 		await d.locator('[data-testid="compare-editor-tab-wetter-metriken"]').click();
 		await d.locator('[data-testid="compare-editor-tab-wertebereiche"]').click();
 		// Layout-Schritt entfällt (Reiter per #1360 aufgelöst).
+		// Issue #1743: Alarme ist der letzte Schritt (Versand steht im Schritt Wetter-Metriken).
 		await d.locator('[data-testid="compare-editor-tab-alarme"]').click();
-		await d.locator('[data-testid="compare-editor-tab-versand"]').click();
 
 		const [request] = await Promise.all([
 			page.waitForRequest(

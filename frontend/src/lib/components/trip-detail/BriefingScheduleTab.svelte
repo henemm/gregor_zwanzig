@@ -98,7 +98,7 @@
 				if (weatherSaveGate({ catalogLoaded, userTouched }) === 'save') {
 					// Issue #1433: ueber den Controller (Debounce, Flush beim Verlassen,
 					// Konflikt-Liste) — wie die anderen Reiter.
-					saveController.schedule(buildSaveFn());
+					saveController.schedule(buildSaveFn(), 700, 'versand');
 				} else {
 					saveController.setUnsavedInput();
 				}

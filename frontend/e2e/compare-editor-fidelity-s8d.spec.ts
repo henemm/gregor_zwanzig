@@ -327,17 +327,12 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 			'true'
 		);
 
-		// Alarme-Tab -> "Versand einrichten →".
-		await expect(cta).toContainText('Versand einrichten →');
-		await cta.getByRole('button').click();
-		await expect(page.locator('[data-testid="cm-mobile-tab-versand"]:visible')).toHaveAttribute(
-			'data-active',
-			'true'
-		);
-
-		// AC-12 (Mobile-Shell S2): der Sticky-Footer bleibt auf Versand und traegt
-		// dort „Briefing aktivieren" — derselbe Baustein, den AC-15 prueft.
+		// Issue #1743: kein Schritt „Versand" mehr — Alarme ist der letzte Schritt,
+		// der Sticky-Footer traegt dort „Briefing aktivieren" (derselbe Baustein, den
+		// AC-15 prueft).
+		await expect(page.locator('[data-testid="cm-mobile-tab-versand"]')).toHaveCount(0);
 		await expect(page.getByTestId('cm-mobile-activate')).toBeVisible();
+		await expect(cta).not.toContainText('Versand einrichten →');
 	});
 });
 
@@ -403,15 +398,14 @@ test.describe('Issue #1256 S8d (AC-15): genau ein Kopf im mobilen Editor', () =>
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locA}"]`).click();
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locB}"]`).click();
 		await page.locator('button[aria-label="Schliessen"]:visible').click();
-		// Epic #1301 F2a: fünf Klicks für die 7-Tab-Kette ab Orte
-		// (orte → metriken → idealwerte → layout → alarme → versand).
+		// Issue #1743: drei Klicks ab Orte (orte → wetter-metriken → wertebereiche
+		// → alarme); Alarme ist der letzte Schritt, kein Versand-Schritt mehr.
 		await cta.getByRole('button').click();
-		await cta.getByRole('button').click();
-		await cta.getByRole('button').click();
+		await expect(page.getByTestId('cm-mobile-activate')).toHaveCount(0);
 		await cta.getByRole('button').click();
 		await cta.getByRole('button').click();
 
-		await expect(titel).toHaveText('Versand');
+		await expect(titel).toHaveText('Alarme');
 		const aktivieren = page.getByTestId('cm-mobile-activate');
 		await expect(aktivieren).toBeVisible();
 		await expect(aktivieren).toHaveText('Briefing aktivieren');
@@ -472,8 +466,9 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 
 	// Issue #1258 Scheibe S4 (E1/E2, AC-28): Layout fuehrt jetzt zu "alarme"
 	// (Testid compare-editor-continue-alarme), Alarme fuehrt zu "versand"
-	// (neuer CTA im Alarme-Fuß, testid compare-editor-continue-versand).
-	test('AC-17/AC-18: Wertebereiche → „Layout einrichten →" → Layout → „Alarme einrichten →" → Alarme → „Versand einrichten →"', async ({
+	// (frueher CTA im Alarme-Fuß, compare-editor-continue-versand — seit #1743
+	// entfallen: Alarme ist der letzte Schritt).
+	test('AC-17/AC-18: Wertebereiche → „Alarme einrichten →" → Alarme ist letzter Schritt, Aktivieren frei', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -499,10 +494,11 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await alarmeBtn.click();
 		await expect(page.getByTestId('compare-editor-tab-alarme')).toHaveAttribute('data-active', 'true');
 
-		const versandBtn = page.getByTestId('compare-editor-continue-versand');
-		await expect(versandBtn).toBeVisible();
-		await versandBtn.click();
-		await expect(page.getByTestId('compare-editor-tab-versand')).toHaveAttribute('data-active', 'true');
+		// Issue #1743: kein Versand-Schritt mehr — Alarme ist der letzte Schritt,
+		// danach ist „Briefing aktivieren" frei.
+		await expect(page.getByTestId('compare-editor-continue-versand')).toHaveCount(0);
+		await expect(page.getByTestId('compare-editor-tab-versand')).toHaveCount(0);
+		await expect(page.getByTestId('compare-editor-activate')).toBeEnabled();
 	});
 });
 

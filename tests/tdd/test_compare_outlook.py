@@ -307,7 +307,7 @@ def _dispatch_kwargs(preset, location, user_id, tmp_path):
 def _preview_kwargs(preset_id, user_id):
     from services.compare_preview_service import ComparePreviewService
     return _capture_render_compare_email_kwargs(
-        lambda: ComparePreviewService().render_email_preview(preset_id, user_id=user_id)
+        lambda: ComparePreviewService().render_all_channels(preset_id, user_id=user_id)
     )
 
 

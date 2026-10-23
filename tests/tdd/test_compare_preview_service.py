@@ -212,7 +212,8 @@ def _seed(user_id: str, locations: list[SavedLocation], preset: dict) -> None:
 
 def test_email_preview_shows_real_preset_locations_not_stub(compare_env, monkeypatch):
     """GIVEN ein Preset mit zwei echten Orten des Nutzers
-    WHEN ComparePreviewService.render_email_preview laeuft
+    WHEN ComparePreviewService.render_all_channels laeuft (E-Mail-Teil; die
+         Huelle render_email_preview ist mit #1743 entfallen)
     THEN enthaelt das HTML die echten Ortsnamen und keinen Stub-Ort.
 
     RED: services.compare_preview_service existiert nicht (ModuleNotFoundError).
@@ -229,9 +230,9 @@ def test_email_preview_shows_real_preset_locations_not_stub(compare_env, monkeyp
     _install_recording_engine(monkeypatch, calls)
     from services.compare_preview_service import ComparePreviewService
 
-    html = ComparePreviewService().render_email_preview(
+    html = ComparePreviewService().render_all_channels(
         "cp-1270-a", user_id=user_id, target_date=TARGET_DATE.isoformat()
-    )
+    )["email_html"]
 
     assert isinstance(html, str) and html.strip(), "Vorschau-HTML darf nicht leer sein"
     assert "Innsbruck" in html, "Der echte Preset-Ort 'Innsbruck' fehlt in der E-Mail-Vorschau"
@@ -268,7 +269,8 @@ def test_email_preview_shows_real_preset_locations_not_stub(compare_env, monkeyp
 
 def test_telegram_preview_renders_real_preset_locations(compare_env, monkeypatch):
     """GIVEN ein Preset mit Telegram-Opt-in und zwei echten Orten
-    WHEN ComparePreviewService.render_telegram_preview aufgerufen wird
+    WHEN ComparePreviewService.render_all_channels aufgerufen wird
+         (Telegram-Teil; die Huelle render_telegram_preview ist mit #1743 entfallen)
     THEN enthaelt der Text die Ortsnamen des Presets (kein Platzhalter).
 
     RED: services.compare_preview_service existiert nicht; eine
@@ -289,9 +291,9 @@ def test_telegram_preview_renders_real_preset_locations(compare_env, monkeypatch
     _install_recording_engine(monkeypatch, calls)
     from services.compare_preview_service import ComparePreviewService
 
-    payload = ComparePreviewService().render_telegram_preview(
+    payload = ComparePreviewService().render_all_channels(
         "cp-1270-b", user_id=user_id, target_date=TARGET_DATE.isoformat()
-    )
+    )["telegram"]
     text = _flatten_text(payload)
 
     assert text.strip(), "Telegram-Vorschau darf nicht leer sein"
@@ -496,9 +498,9 @@ def test_single_location_preset_previews_without_error(compare_env, monkeypatch)
     _install_recording_engine(monkeypatch, calls)
     from services.compare_preview_service import ComparePreviewService
 
-    html = ComparePreviewService().render_email_preview(
+    html = ComparePreviewService().render_all_channels(
         "cp-1270-d", user_id=user_id, target_date=TARGET_DATE.isoformat()
-    )
+    )["email_html"]
 
     assert isinstance(html, str) and html.strip(), (
         "Ein Ein-Ort-Vergleich muss eine normale Vorschau liefern — ein "

@@ -12,8 +12,8 @@
 	import { api } from '$lib/api.js';
 	import { Eyebrow, Btn, Input, TopoBg, PageHeader } from '$lib/components/atoms';
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
-	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
-	import VersandTab from '$lib/components/shared/VersandTab.svelte';
+	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
 	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
@@ -42,9 +42,11 @@
 		doneTabs,
 		stageDate,
 		progressCount,
+		PROGRESS_STEPS,
 		canSave,
 		buildCreateTripPayload,
 		ergaenzeStandardwerteReportConfig,
+		ergaenzeVersandStandard,
 	} from './tripNewLogic.ts';
 	import { canFinishMitStandardwerten } from '$lib/components/shared/anlegeLockEngine';
 	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
@@ -68,7 +70,6 @@
 		wtVisited?: boolean;
 		wbVisited?: boolean;
 		alVisited?: boolean;
-		vsVisited?: boolean;
 	}
 	let { stateOverride }: { stateOverride?: TripNewStateOverride } = $props();
 	// Einmal-Lesung beim Erzeugen (untrack, wie `profileOverride` in
@@ -76,16 +77,15 @@
 	// reaktiver Bezug.
 	const seed: TripNewStateOverride = untrack(() => stateOverride ?? {});
 
-	// ── Tab-Definitionen (1:1 TN_TAB_DEFS) ──────────────────────────────────
-	const TAB_DEFS: { id: TabId; label: string; lockHint: string | null; optional: boolean }[] = [
-		{ id: 'route',     label: 'Route',            lockHint: null,                             optional: false },
-		{ id: 'etappen',   label: 'Etappen & GPX',    lockHint: 'erst Trip-Name + Startdatum',    optional: false },
-		{ id: 'wegpunkte', label: 'Wegpunkte prüfen', lockHint: 'erst alle GPX hochladen',        optional: true  },
-		{ id: 'wetter-metriken',  label: 'Wetter-Metriken',  lockHint: 'erst alle GPX hochladen',        optional: false },
-		{ id: 'wertebereiche', label: 'Wertebereiche', lockHint: 'erst Wetter-Metriken öffnen',   optional: false },
-		{ id: 'alarme',    label: 'Alarme',           lockHint: 'erst Wertebereiche öffnen',      optional: false },
-		{ id: 'versand',   label: 'Versand',          lockHint: 'erst Alarme öffnen',             optional: false },
-	];
+	// ── Tab-Definitionen — Issue #1743: aus der EINEN Reiter-Definition
+	// (`subscriptionTabs.anlegeKette`), keine Zweitliste. Versand ist kein Schritt
+	// mehr, sondern der Abschnitt unten im Schritt Wetter-Metriken.
+	const TAB_DEFS = anlegeKette('trip').map((t) => ({
+		id: t.id as TabId,
+		label: t.label,
+		lockHint: t.lockHint ?? null,
+		optional: t.optional ?? false,
+	}));
 
 	// ── Lokaler Anlege-State ──────────────────────────────────────────────────
 	let name = $state(seed.name ?? '');
@@ -131,7 +131,6 @@
 	let wtVisited = $state(seed.wtVisited ?? false);
 	let wbVisited = $state(seed.wbVisited ?? false);
 	let alVisited = $state(seed.alVisited ?? false);
-	let vsVisited = $state(seed.vsVisited ?? false);
 
 	let activeTab = $state<TabId>(seed.activeTab ?? 'route');
 
@@ -174,8 +173,8 @@
 
 	// ── Abgeleitete Zustandsgrößen ────────────────────────────────────────────
 	const etDone = $derived(stages.length > 0 && stages.every(s => s.gpx !== null));
-	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited));
-	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited));
+	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited));
+	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited));
 	const ready = $derived(canSave(done));
 	// #2521 S3: eigenes Gate des Standardwerte-Knopfs (Bestandsknopf bleibt an `ready`).
 	const standardwerteFrei = $derived(canFinishMitStandardwerten({
@@ -268,7 +267,6 @@
 		if (id === 'wetter-metriken') wtVisited = true;
 		if (id === 'wertebereiche') wbVisited = true;
 		if (id === 'alarme') alVisited = true;
-		if (id === 'versand') vsVisited = true;
 	}
 
 	// ── Stage-Brücke: lokaler Create-State ⇄ EditStagesPanelNew (Issue #658) ──
@@ -454,7 +452,9 @@
 				stages: stages.map(s => ({ id: s.id, name: s.name, waypoints: s.waypoints })),
 				weatherMetrics,
 				channels,
-				reportConfig: mitStandardwerten ? ergaenzeStandardwerteReportConfig(reportConfig) : reportConfig,
+				// #1743 AC-21: Standard-Versandeinstellungen entstehen im Speicherweg,
+				// auch wenn der Versand-Abschnitt nie beruehrt wurde.
+				reportConfig: mitStandardwerten ? ergaenzeStandardwerteReportConfig(reportConfig) : ergaenzeVersandStandard(reportConfig),
 				alarm,
 				corridors,
 				activity: selectedActivity,
@@ -547,12 +547,12 @@
 			<!-- Fortschrittsbalken (TN_Progress) -->
 			<div style="display: flex; align-items: center; gap: 10px; margin-top: 7px;">
 				<div style="display: flex; gap: 3px;">
-					{#each ['route', 'etappen', 'wetter-metriken', 'versand'] as step}
-						<div style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
+					{#each PROGRESS_STEPS as step}
+						<div style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 					{/each}
 				</div>
 				<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.04em;">
-					{progressN === 0 ? 'Noch nichts eingerichtet' : `${progressN} / 4 Abschnitte eingerichtet`}
+					{progressN === 0 ? 'Noch nichts eingerichtet' : `${progressN} / ${PROGRESS_STEPS.length} Abschnitte eingerichtet`}
 				</span>
 			</div>
 		</div>
@@ -560,11 +560,11 @@
 		<!-- Mobile Fortschrittsbalken (TNM_Progress, Issue #661) -->
 		<div class="tn-mobile tn-mobile-flex" style="align-items: center; gap: 8px; padding: 8px 16px 0;">
 			<div style="display: flex; gap: 3px; flex: 1;">
-				{#each ['route', 'etappen', 'wetter-metriken', 'versand'] as step}
-					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
+				{#each PROGRESS_STEPS as step}
+					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 				{/each}
 			</div>
-			<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/4</span>
+			<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/{PROGRESS_STEPS.length}</span>
 		</div>
 
 		<!-- Tab-Bar (Desktop only, TN_TabBar) -->
@@ -893,22 +893,6 @@
 				</div>
 			</div>
 
-		{:else if activeTab === 'versand'}
-			<!-- Zeitplan-Tab — Issue #1738: Kanäle + Zeitplan + Laufzeit kommen aus
-			     dem geteilten VersandTab (context="route", Teilungsregel/Epic #1230).
-			     MailInhaltCard bleibt nur noch für die Mail-Inhalt-Karte
-			     (showChannels/showSchedule=false, Muster WeatherMetricsTab.svelte).
-			     Damit hängt kein Versandkanal mehr an der Wetter-Metrik-Auswahl.
-			     Das isMobileViewport-Gate hält — wie bei WeatherMetricsTab unten —
-			     nur EINE Instanz im DOM: zwei gleichzeitig gemountete Instanzen
-			     halten je einen eigenen Schnappschuss von report_config und
-			     überschreiben sich gegenseitig (Last-Write-Wins, Fix-Loop 4). -->
-			{#if !isMobileViewport}
-			<div style="padding: 32px 40px 60px; max-width: 720px;">
-				<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} showInfobox={true} />
-				<MailInhaltCard bind:reportConfig />
-			</div>
-			{/if}
 		{/if}
 
 		<!-- Wetter-Tab: reuse WeatherMetricsTab im createMode -->
@@ -926,7 +910,14 @@
 		     bestehen (Resize-Grenzfall: Tab kann kurzzeitig neu mounten). -->
 		{#if !isMobileViewport}
 		<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
-			<WeatherMetricsTab trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+			<!-- Issue #1743: geteilter Baustein „Wetter-Metriken + Versand" (createMode,
+			     kein PUT). Der Versand-Abschnitt haelt den report_config-Blob per
+			     bind:reportConfig; die Mail-Inhalt-Karte folgt darunter (im createMode
+			     blendet WeatherMetricsTab sie aus). -->
+			<WetterMetrikenVersandPanel context="route" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
+			<div style="padding: 0 40px 60px; max-width: 720px;">
+				<MailInhaltCard bind:reportConfig />
+			</div>
 		</div>
 		{/if}
 
@@ -968,7 +959,6 @@
 		<EditorStickyFooter context="route" navClearance={false} testid="tn-desktop-footer">
 			<div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
 				{#if !ready}
-					<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">Versand einrichten zum Speichern</span>
 					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="trip-new-standardwerte-btn" />
 				{/if}
 				<button type="button" onclick={onSave} disabled={!ready || saving}
@@ -1186,15 +1176,6 @@
 					</div>
 				</div>
 
-			{:else if activeTab === 'versand'}
-				<!-- Mobile Zeitplan-Tab: Wrapper mit mobilem Padding.
-				     Issue #1738 — geteilter VersandTab, XOR zum Desktop-Mount oben. -->
-				{#if isMobileViewport}
-				<div style="padding: 16px 16px 60px;">
-					<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} showInfobox={true} />
-					<MailInhaltCard bind:reportConfig />
-				</div>
-				{/if}
 			{/if}
 
 			<!-- Mobile Wetter-Tab: WeatherMetricsTab (bereits mobil, #618) -->
@@ -1204,7 +1185,11 @@
 			     isMobileViewport-Gate nur EINE Instanz im DOM (Desktop XOR Mobile). -->
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
-				<WeatherMetricsTab trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+				<!-- Issue #1743: geteilter Baustein, XOR zum Desktop-Mount oben. -->
+				<WetterMetrikenVersandPanel context="route" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
+				<div style="padding: 0 16px 60px;">
+					<MailInhaltCard bind:reportConfig />
+				</div>
 			</div>
 			{/if}
 

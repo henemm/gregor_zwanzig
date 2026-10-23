@@ -122,8 +122,9 @@ describe('AC-12/AC-5: Platzierung Ortsvergleich (/compare/new)', () => {
 		['vergleich', {}],
 		['orte', {}],
 		['wetter-metriken', { metrikenVisited: true }],
-		['wertebereiche', { metrikenVisited: true, idealsVisited: true }],
-		['alarme', { metrikenVisited: true, idealsVisited: true, alarmeVisited: true }]
+		['wertebereiche', { metrikenVisited: true, idealsVisited: true }]
+		// #1743: „Alarme" ist der letzte Schritt — mit seinem Besuch wird Aktivieren frei
+		// und der Standardwerte-Knopf entfaellt (AC-5 unten, nie beide gleichzeitig).
 	];
 	for (const [reiter, flags] of reiterVorVersand) {
 		test(`mobil, Reiter „${reiter}": Knopf in der unteren Leiste (nicht nur auf dem letzten Reiter)`, async () => {

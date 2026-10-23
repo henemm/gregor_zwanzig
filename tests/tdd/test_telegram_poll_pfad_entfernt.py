@@ -29,8 +29,9 @@ def test_endpoint_inbound_telegram_existiert_nicht(monkeypatch):
 
     # Route-Inventar: kein Telegram-Pfad unter einem anderen Namen. Erlaubt
     # sind nur der Webhook-Eingang (Go leitet /api/webhooks/telegram/{secret}
-    # intern hierhin) und die Kanal-Vorschau.
-    erlaubt = {"/api/internal/telegram-webhook", "/api/preview/{trip_id}/telegram"}
+    # intern hierhin). Die Kanal-Vorschau /api/preview/{trip_id}/telegram ist
+    # mit #1743 entfallen.
+    erlaubt = {"/api/internal/telegram-webhook"}
     telegram_routen = {p for p in paths if "telegram" in p.lower()}
     assert telegram_routen <= erlaubt, (
         f"Unerwartete Telegram-Route(n): {sorted(telegram_routen - erlaubt)}"

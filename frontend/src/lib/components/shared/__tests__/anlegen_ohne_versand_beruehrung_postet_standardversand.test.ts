@@ -68,8 +68,10 @@ describe('AC-19/AC-21: /trips/new — Anlegen nach Alarme, ohne den Versand-Absc
 		const rc = gepostet[0].report_config as Knoten | undefined;
 		assert.ok(rc, `#1743 AC-21 FAIL: POST ohne report_config — die Standard-Versandzeiten fehlen. Körper: ${JSON.stringify(gepostet[0]).slice(0, 300)}`);
 		const standard = ladeReportZustand(undefined);
+		// Zeiten reisen im Wire-Format HH:MM:SS (baueReportConfigPayload, wie der Hub-Speicherweg).
+		const wert = (feld: string) => (feld.endsWith('_time') && typeof rc![feld] === 'string' ? (rc![feld] as string).slice(0, 5) : rc![feld]);
 		for (const feld of ['morning_enabled', 'morning_time', 'evening_enabled', 'evening_time', 'send_email'] as const) {
-			assert.equal(rc![feld], standard[feld], `#1743 AC-21 FAIL: report_config.${feld} = ${JSON.stringify(rc![feld])}, Standard ${JSON.stringify(standard[feld])}`);
+			assert.equal(wert(feld), standard[feld],`#1743 AC-21 FAIL: report_config.${feld} = ${JSON.stringify(rc![feld])}, Standard ${JSON.stringify(standard[feld])}`);
 		}
 	});
 });
@@ -123,10 +125,13 @@ describe('AC-19/AC-20: /compare/new — Aktivieren nach Alarme, ohne den Versand
 		const { frei, gepostet } = await vergleichAnlegen({ metrikenVisited: true, idealsVisited: true, alarmeVisited: true });
 		assert.equal(frei, true, '#1743 AC-19 FAIL: „Briefing aktivieren" ist nach dem Alarme-Besuch noch gesperrt.');
 		assert.equal(gepostet.length, 1, '#1743 AC-20 FAIL: kein POST /api/compare/presets');
+		// Gueltig ist, was der Go-Handler annimmt (internal/handler/compare_preset.go:
+		// "daily"|"weekly"|"manual"); der Wizard-Standard 'daily_morning' reist als 'daily'
+		// (compareEditorSave.buildNewComparePresetPayload).
 		assert.ok(
-			['daily_morning', 'daily_evening', 'weekly'].includes(gepostet[0].schedule as string),
+			['daily', 'weekly', 'manual'].includes(gepostet[0].schedule as string),
 			`#1743 AC-20 FAIL: POST ohne gültiges schedule (Server antwortet 400): ${JSON.stringify(gepostet[0].schedule)}`
 		);
-		assert.equal(gepostet[0].schedule, 'daily_morning', '#1743 AC-20 FAIL: nicht der Standard-schedule');
+		assert.equal(gepostet[0].schedule, 'daily', '#1743 AC-20 FAIL: nicht der Standard-schedule');
 	});
 });

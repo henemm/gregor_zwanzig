@@ -92,7 +92,7 @@ describe('AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren
 		const ansicht = mobil ? 'Mobil' : 'Desktop';
 		for (const reiter of REITER_MIT_INFOBOX.route) {
 			test(`${ansicht}: Reiter ${reiter} trägt genau eine Infobox mit dem freigegebenen Text`, async () => {
-				const html = await renderTrip({ ...TRIP_BASIS, activeTab: REITER_DES_ABSCHNITTS[reiter], isMobileViewport: mobil });
+				const html = await renderTrip({ ...TRIP_BASIS, activeTab: (REITER_DES_ABSCHNITTS as Record<string, string>)[reiter], isMobileViewport: mobil });
 				const id = `infobox-${reiter}-route`;
 				if (reiter === 'wegpunkte') {
 					// Messaufbau-Beleg: das Wegpunkte-Panel ist in dieser Ansicht wirklich gerendert
@@ -230,7 +230,8 @@ describe('#1743 AC-22: Anlegen — Versand-Infobox steht im Schritt Wetter-Metri
 		const iWm = html.indexOf(`data-testid="infobox-wetter-metriken-${kontext}"`);
 		const iVi = html.indexOf(`data-testid="infobox-versand-${kontext}"`);
 		const iAb = html.indexOf('data-testid="versand-abschnitt"');
-		const iKanal = html.indexOf('data-testid="channel-email"');
+		// Vergleichs-Zweig des VersandTab traegt die Kennung `compare-step5-channel-email`.
+		const iKanal = html.search(kontext === 'vergleich' ? /data-testid="compare-step5-channel-email"/ : /data-testid="channel-email"/);
 		assert.notEqual(iWm, -1, `Messaufbau: Wetter-Metriken-Infobox fehlt — gefunden: ${JSON.stringify(infoboxIds(html))}`);
 		assert.notEqual(iAb, -1, 'Versand-Abschnitt (data-testid="versand-abschnitt") fehlt im Schritt Wetter-Metriken');
 		assert.notEqual(iVi, -1, `Versand-Infobox fehlt im Schritt Wetter-Metriken — gefunden: ${JSON.stringify(infoboxIds(html))}`);

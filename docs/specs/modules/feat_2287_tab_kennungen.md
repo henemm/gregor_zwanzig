@@ -220,7 +220,7 @@ Auflösung dort übernimmt der Hub, eine Änderung ist nicht nötig (durch Test 
   - Test: Hub-Pfad-Test je Hub (AC-12) bzw. Playwright: nach `goto(?tab=alerts)` ist `page.url()` `…tab=wertebereiche`
     und `history.length` unverändert gegenüber dem Direktaufruf.
 
-- **AC-4:** Given beliebiger Hub (Trip oder Vergleich) / When die URL `?tab=` eine der neuen Kennungen enthält
+- **AC-4:** *(abgelöst durch #1743: Reiter „Vorschau" entfällt, `?tab=vorschau` löst auf `uebersicht` auf; Reiter „Versand" entfällt, `?tab=versand` löst auf `wetter-metriken#versand` auf)* Given beliebiger Hub (Trip oder Vergleich) / When die URL `?tab=` eine der neuen Kennungen enthält
   (`uebersicht`, `etappen`|`orte`, `wetter-metriken`, `wertebereiche`, `alarme`, `versand`, `vorschau`) /
   Then öffnet sich in beiden Hubs genau der gleichnamige Reiter ohne URL-Umschreibung — insbesondere öffnet
   `?tab=versand` in Trip und Vergleich den Versand-Reiter.
@@ -251,7 +251,7 @@ Auflösung dort übernimmt der Hub, eine Änderung ist nicht nötig (durch Test 
   - Test: Unit auf die Liste inkl. Flush-Verhalten des generischen Guards mit `wertebereiche`; Mutation
     (`wertebereiche` zurück auf `idealwerte`) muss genau diesen Test rot machen.
 
-- **AC-9:** Given der Nutzer ist in einem Hub und klickt einen Sprunglink (HubOverview-Karten, BriefingPreviewCard,
+- **AC-9:** *(abgelöst durch #1743: Sprunglinks auf `?tab=vorschau` entfallen, Sprunglinks auf `?tab=versand` zielen auf `?tab=wetter-metriken#versand`)* Given der Nutzer ist in einem Hub und klickt einen Sprunglink (HubOverview-Karten, BriefingPreviewCard,
   AlertsPreviewCard, PreviewCard, AlertPreviewCard, VersandTab-`onJump`, `handleValueChange` im Vergleich,
   Vergleich-Detailseite nach „Übernehmen" (`tabNachUebernahme`) / `?tab=vorschau` / `?tab=versand`) / When der
   Link ausgelöst wird / Then öffnet sich der erwartete Reiter, und die dabei erzeugte URL enthält ausschließlich
@@ -358,4 +358,5 @@ Auflösung dort übernimmt der Hub, eine Änderung ist nicht nötig (durch Test 
 
 ## Changelog
 
+- 2026-10-22: AC-4 und AC-9 als abgelöst durch #1743 markiert (Reiter Vorschau entfällt, Reiter Versand ist Abschnitt unter Wetter-Metriken, Anker `#versand`).
 - 2026-10-05: Initial spec created (v1.0) — Issue #2287, Epic #2345 Etappe P2.

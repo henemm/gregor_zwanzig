@@ -4450,8 +4450,10 @@ def test_ac_s7_5b_vorschau_zeigt_dieselbe_reihenfolge_wie_der_versand(
 ):
     """AC-S7-5 (zweiter Leser derselben Optionen): die Vorschau MUSS je Kanal
     dieselbe Reihenfolge zeigen wie der Versand -- sonst verspricht der Editor
-    eine andere Zeilenfolge, als ankommt. Deckt die uebrigen fuenf der acht
-    Aufrufstellen (`compare_preview_service.py`)."""
+    eine andere Zeilenfolge, als ankommt. Deckt die uebrigen drei der sechs
+    Aufrufstellen (`compare_preview_service.py`: `render_all_channels` fuer
+    Telegram/SMS und `_render_email`; die Einzel-Huellen sind mit #1743
+    entfallen)."""
     from app.loader import get_data_dir, save_location
     from services.compare_preview_service import ComparePreviewService
     from tests.helpers.compare_briefings import write_compare_briefings
@@ -4464,14 +4466,6 @@ def test_ac_s7_5b_vorschau_zeigt_dieselbe_reihenfolge_wie_der_versand(
     payload = service.render_all_channels("cp-s7-preview", **args)
     for kanal, key in (("email", "email_html"), ("telegram", "telegram"), ("sms", "sms")):
         _s7_pruefe_kanal_reihenfolge(kanal, payload[key], f"Vorschau[{key}]")
-    _s7_pruefe_kanal_reihenfolge(
-        "telegram", service.render_telegram_preview("cp-s7-preview", **args),
-        "Vorschau render_telegram_preview",
-    )
-    _s7_pruefe_kanal_reihenfolge(
-        "sms", service.render_sms_preview("cp-s7-preview", **args),
-        "Vorschau render_sms_preview",
-    )
 
 
 def test_ac_s7_5c_telegram_vergleich_faengt_praefix_kollision():

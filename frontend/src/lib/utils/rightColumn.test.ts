@@ -5,7 +5,7 @@
 // Feature #1435 Etappe E3a: `getDefaultMetricsForProfile`, `getActiveMetrics`
 // und `prettyLabel` wurden entfernt — ihr einziger Aufrufer war die seit
 // Issue #487 tote rechte Vorschau-Karte. `getReportSchedule`/`getActivePreset`/
-// `getPresetLabel` bleiben produktiv (TripHeader.svelte, BriefingPreviewCard.svelte,
+// `getPresetLabel` bleiben produktiv (TripHeader.svelte,
 // TripEditView.svelte) und sind hier unveraendert.
 //
 // Ausfuehrung:

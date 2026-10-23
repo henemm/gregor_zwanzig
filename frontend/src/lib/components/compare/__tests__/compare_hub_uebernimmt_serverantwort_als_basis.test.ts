@@ -116,7 +116,8 @@ describe('#2375 AC-10: erfolgreiche PUT-Antwort wird Basis fuer die naechste Nut
 	// Attribut-Ausdruck der ECHTEN Einbettung wird gegen dieselbe Umgebung `u`
 	// ausgewertet (Zuweisung an `currentPreset` landet in `u`) und dann so
 	// aufgerufen, wie es der Reiter nach seinem erfolgreichen PUT tut.
-	for (const komponente of ['AlarmeTab', 'VersandTab']) {
+	// #1743: der Versand-Inhalt haengt im geteilten Baustein; der Hub reicht onCompareUpdate dort ein.
+	for (const komponente of ['AlarmeTab', 'WetterMetrikenVersandPanel']) {
 		test(`${komponente}-Einbettung: onCompareUpdate uebernimmt die Serverantwort als Basis`, async () => {
 			const { u, wizardState, ast, quelle } = await hub(serverstand());
 			const einbettungen = findeKomponenten(ast, komponente);

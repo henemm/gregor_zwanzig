@@ -205,7 +205,7 @@ describe('AC-2: langsame Antwort innerhalb des Budgets', () => {
 describe('AC-3: eigenes Budget je Aufruf (`zeitlimitMs`)', () => {
 	const faelle: Array<[string, (a: ZeitlimitApi, o: Optionen) => Promise<unknown>]> = [
 		['get', (a, o) => a.get('/api/compare/presets', o)],
-		['post', (a, o) => a.post('/api/preview/compare/cp-1', {}, o)],
+		['post', (a, o) => a.post('/api/notify/test', { channel: 'telegram' }, o)],
 		['put', (a, o) => a.put('/api/locations/l-1', { name: 'X' }, o)],
 		['patch', (a, o) => a.patch('/api/locations/l-1', { name: 'X' }, o)],
 		['del', (a, o) => a.del('/api/locations/l-1', o)]
@@ -337,7 +337,6 @@ describe('AC-7: PUT im Zeitlimit, Server hat ihn trotzdem angenommen', () => {
 // bei Ablauf: TimeoutError. Fehlt das Budget, greift der (gesenkte) Default und
 // der Abruf scheitert schon beim ersten Vorruecken.
 type Langlaeufer = {
-	compareVorschau: (presetId: string) => Promise<unknown>;
 	testNachricht: (channel: string) => Promise<unknown>;
 	alarmVorschau: (tripId: string, payload: unknown) => Promise<unknown>;
 };
@@ -384,11 +383,10 @@ describe('F002: Langlaeufer tragen ihr eigenes Budget (gestellte Uhr)', () => {
 		return l!;
 	}
 
-	test('Compare-Vorschau: 70 s (Go-Proxy 60 s), POST /api/preview/compare/{id}', FRIST, async () => {
-		const aufrufe = await pruefeBudgetGrenze(() => langlaeufer().compareVorschau('cp-1'), 70_000);
-		assert.equal(aufrufe.length, 1);
-		assert.equal(aufrufe[0].path, '/api/preview/compare/cp-1');
-		assert.equal(aufrufe[0].init?.method, 'POST');
+	// #1743 F003: Compare-Vorschau (POST /api/preview/compare/{id}) entfiel ersatzlos.
+	test('Compare-Vorschau ist entfernt: kein `compareVorschau`, kein ZEITLIMIT_COMPARE_VORSCHAU_MS', () => {
+		assert.equal('compareVorschau' in langlaeufer(), false);
+		assert.equal('ZEITLIMIT_COMPARE_VORSCHAU_MS' in (modul as Record<string, unknown>), false);
 	});
 
 	test('Test-Versand: 130 s (Go-Proxy 120 s), POST /api/notify/test {channel}', FRIST, async () => {
@@ -417,66 +415,24 @@ describe('F002: Langlaeufer tragen ihr eigenes Budget (gestellte Uhr)', () => {
 	});
 });
 
-// ── Issue #2283 (AC-15, AC-21): kind-neutrale Vorschau-Abrufe ──────────────
-// Spec: docs/specs/modules/shared_preview_tab.md. Zielschnittstelle (neu, von
-// diesen Tests festgelegt) — BENANNTE Exporte von `api.ts` (nicht in
-// `langlaeufer`: dort heisst `alarmVorschau(tripId, payload)` schon anders und
-// bleibt fuer den Alt-Weg unveraendert, s. F002 oben):
-//   * `briefingVorschau(kind, id, options?)` → GET
-//     /api/briefings/{id}/preview?kind=route|vergleich[&type&date&demo=1]
-//     (type/date/demo NUR bei kind=route); Budget vergleich 70 s
-//     (= ZEITLIMIT_COMPARE_VORSCHAU_MS, Go 60 s), route
-//     `ZEITLIMIT_TRIP_VORSCHAU_MS` (Go 30 s ⇒ ueber 30 s, unter 70 s)
+// ── Issue #2283 (AC-21): kind-neutrale Alarm-Vorschau ──────────────────────
+// BENANNTER Export von `api.ts` (nicht in `langlaeufer`: dort heisst
+// `alarmVorschau(tripId, payload)` schon anders, s. F002 oben):
 //   * `alarmVorschau(kind, id, payload)` → POST
 //     /api/briefings/{id}/alert-preview?kind=route|vergleich, JSON-Koerper =
 //     payload, Budget 40 s (= ZEITLIMIT_ALARM_VORSCHAU_MS, unveraendert)
-// RED HEUTE: keiner der Exporte existiert.
+// Die Briefing-Vorschau (GET /api/briefings/{id}/preview) entfiel mit #1743.
 type KindAbrufe = {
-	briefingVorschau?: (kind: string, id: string, options?: Record<string, unknown>) => Promise<unknown>;
 	alarmVorschau?: (kind: string, id: string, payload: unknown) => Promise<unknown>;
-	ZEITLIMIT_TRIP_VORSCHAU_MS?: number;
 };
 
-describe('#2283: briefingVorschau / alarmVorschau (kind-neutral, gestellte Uhr)', () => {
-	function abrufe(): Required<Pick<KindAbrufe, 'briefingVorschau' | 'alarmVorschau'>> {
+describe('#2283: alarmVorschau (kind-neutral, gestellte Uhr)', () => {
+	function abrufe(): Required<Pick<KindAbrufe, 'alarmVorschau'>> {
 		const m = modul as unknown as KindAbrufe;
-		assert.equal(typeof m.briefingVorschau, 'function', 'api.ts muss `briefingVorschau(kind, id, options?)` exportieren');
 		assert.equal(typeof m.alarmVorschau, 'function', 'api.ts muss `alarmVorschau(kind, id, payload)` exportieren');
-		return m as Required<Pick<KindAbrufe, 'briefingVorschau' | 'alarmVorschau'>>;
+		return m as Required<Pick<KindAbrufe, 'alarmVorschau'>>;
 	}
 	const q = (url: string) => new URL(url, 'http://localhost');
-
-	test('Vergleichs-Vorschau: 70 s, GET /api/briefings/{id}/preview?kind=vergleich ohne Trip-Optionen', FRIST, async () => {
-		const aufrufe = await pruefeBudgetGrenze(
-			() => abrufe().briefingVorschau('vergleich', 'cp-1', { type: 'evening', demo: true, date: '2026-10-20' }),
-			70_000
-		);
-		assert.equal(aufrufe.length, 1);
-		const u = q(aufrufe[0].path);
-		assert.equal(u.pathname, '/api/briefings/cp-1/preview');
-		assert.deepEqual([...u.searchParams.entries()], [['kind', 'vergleich']]);
-		assert.equal(String(aufrufe[0].init?.method ?? 'GET').toUpperCase(), 'GET');
-	});
-
-	test('Trip-Vorschau: kuerzeres eigenes Budget ZEITLIMIT_TRIP_VORSCHAU_MS, Optionen als Query', FRIST, async () => {
-		const budget = (modul as unknown as KindAbrufe).ZEITLIMIT_TRIP_VORSCHAU_MS;
-		assert.equal(typeof budget, 'number', 'api.ts muss `ZEITLIMIT_TRIP_VORSCHAU_MS` exportieren');
-		assert.ok(
-			budget! > 30_000 && budget! < 70_000,
-			`Trip-Budget ${budget} muss ueber dem Go-Limit (30 s) und unter dem Vergleich (70 s) liegen`
-		);
-		const aufrufe = await pruefeBudgetGrenze(
-			() => abrufe().briefingVorschau('route', 't-1', { type: 'morning', demo: true, date: '2026-10-20' }),
-			budget!
-		);
-		const u = q(aufrufe[0].path);
-		assert.equal(u.pathname, '/api/briefings/t-1/preview');
-		assert.equal(u.searchParams.get('kind'), 'route');
-		assert.equal(u.searchParams.get('type'), 'morning');
-		assert.equal(u.searchParams.get('demo'), '1');
-		assert.equal(u.searchParams.get('date'), '2026-10-20');
-		assert.equal(u.searchParams.has('user_id'), false, 'das Frontend haengt nie selbst eine user_id an (ADR-0003)');
-	});
 
 	for (const kind of ['vergleich', 'route']) {
 		test(`Alarm-Vorschau ${kind}: 40 s, POST /api/briefings/{id}/alert-preview?kind=${kind}`, FRIST, async () => {

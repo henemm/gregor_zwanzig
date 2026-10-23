@@ -992,8 +992,9 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			await page.unroute(`**/api/trips/${id}`);
 
 			// Versand-Aenderung (Muster Spec 616): Chip steht danach weiter auf idle.
-			await page.goto(`/trips/${id}?tab=versand`);
-			const morning = page.getByTestId('report-morning-time');
+			// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken.
+			await page.goto(`/trips/${id}?tab=wetter-metriken#versand`);
+			const morning = page.getByTestId('versand-abschnitt').getByTestId('report-morning-time');
 			await expect(morning).toBeVisible({ timeout: 10_000 });
 			// Erst auf den echten PUT warten — nach dem Seitenwechsel steht der Chip
 			// ohnehin auf idle, die Pruefung waere sonst vor dem Speichern erfuellt.

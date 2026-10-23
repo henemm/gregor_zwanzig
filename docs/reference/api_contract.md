@@ -219,7 +219,6 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/briefings/{id}` | DELETE, GET, PUT |
 | `/api/briefings/{id}/alert-preview` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; kind-neutrale Alarm-Vorschau, Section 20 (#2283 S4)
 | `/api/briefings/{id}/briefing-history` | GET | — `?kind=route\|vergleich` Pflicht (400 bei fehlendem/ungültigem kind oder ungültiger ID), 401 ohne Nutzer, unbekannte ID 200 `[]`; kind-neutrales Versand-Log, Section 21 (#2281)
-| `/api/briefings/{id}/preview` | GET | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; EIN Abruf, alle Kanäle, Section 20 (#2283 S1)
 | `/api/briefings/{id}/send` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), Trip optional `&report_type=morning\|evening` (Default `morning`), ungültige ID 400 `validation_error`, fremde ID 404; einheitlicher Handversand, Section 10.1 (#2280)
 | `/api/cockpit/status` | GET |
 | `/api/compare` | GET |
@@ -245,10 +244,7 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/metric-presets/{id}` | DELETE, PATCH |
 | `/api/metrics` | GET |
 | `/api/notify/test` | POST |
-| `/api/preview/compare/{preset_id}` | POST | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
-| `/api/preview/{trip_id}/email` | GET | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
-| `/api/preview/{trip_id}/sms` | GET | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
-| `/api/preview/{trip_id}/telegram` | GET | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
+| `/api/preview/{trip_id}/sms` | GET | — Trip-Vorschau SMS-Kurzform; Proxy-Logik `forwardPreview`, Section 20 (email/telegram/compare entfallen, #1743)
 | `/api/scheduler/alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/scheduler/compare-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
 | `/api/scheduler/compare-radar-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
@@ -896,7 +892,7 @@ Heute existieren zwei getrennte Domänenobjekte:
 
 | Domäne | Pfad-Prefix | Handler | Persistenz |
 |---|---|---|---|
-| **Compare-Presets** (Orts-Vergleich) | `/api/compare/presets` (CRUD, `PATCH …/{id}/state`, `POST …/{id}/send`), Vorschau: `POST /api/preview/compare/{preset_id}` | `internal/handler/compare_preset.go` | `data/users/{userID}/briefings/` (kind=vergleich) |
+| **Compare-Presets** (Orts-Vergleich) | `/api/compare/presets` (CRUD, `PATCH …/{id}/state`, `POST …/{id}/send`), Alarm-Vorschau: `POST /api/briefings/{id}/alert-preview?kind=vergleich` | `internal/handler/compare_preset.go` | `data/users/{userID}/briefings/` (kind=vergleich) |
 | **Briefing-Subscriptions** (Trip-Briefing-Abos, ADR-0023) | `/api/briefings` | `internal/handler/briefing_subscription.go` | `data/users/{userID}/briefings/` |
 
 Feld-Definitionen und Validierungsregeln: massgeblich sind die Go-Structs in
@@ -2629,7 +2625,7 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 | POST | `/api/compare/presets` | 201 / 400 | Create new preset; ID auto-generated, user_id from auth context |
 | PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 | Update preset (user_id, created_at preserved from stored record) |
 | DELETE | `/api/compare/presets/{id}` | 204 / 404 | Delete preset |
-| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 / 409 / 422 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'`. **Fehlende Orte (#2216):** sind alle Orte des Ortsvergleichs geloescht, antwortet der Versand (und `POST /api/preview/compare/{preset_id}`) mit **422** und der Meldung „Ortsvergleich '<id>' verweist auf gelöschte Orte. Ersetze die Orte im Ortsvergleich." (bewusst nicht 409). Fehlt nur ein Teil, laeuft der Versand mit den uebrigen Orten und die 200-Antwort traegt zusaetzlich `fehlende_orte` (Liste der nicht aufloesbaren Ort-IDs; leer/fehlend wenn nichts fehlt); der Scheduler-Lauf loggt eine Warnung, der Compare-Hub zeigt nach dem Test-Versand einen Hinweis. 409 = für diesen Ortsvergleich läuft bereits ein Versand (geteiltes Lock-Register `src/services/send_lock.py`, Schlüssel enthält `user_id`; Issue #2124). Der Go-Proxy reicht den Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht), Timeout 300 s (vorher 120 s) |
+| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 / 409 / 422 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'`. **Fehlende Orte (#2216):** sind alle Orte des Ortsvergleichs geloescht, antwortet der Versand mit **422** und der Meldung „Ortsvergleich '<id>' verweist auf gelöschte Orte. Ersetze die Orte im Ortsvergleich." (bewusst nicht 409). Fehlt nur ein Teil, laeuft der Versand mit den uebrigen Orten und die 200-Antwort traegt zusaetzlich `fehlende_orte` (Liste der nicht aufloesbaren Ort-IDs; leer/fehlend wenn nichts fehlt); der Scheduler-Lauf loggt eine Warnung, der Compare-Hub zeigt nach dem Test-Versand einen Hinweis. 409 = für diesen Ortsvergleich läuft bereits ein Versand (geteiltes Lock-Register `src/services/send_lock.py`, Schlüssel enthält `user_id`; Issue #2124). Der Go-Proxy reicht den Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht), Timeout 300 s (vorher 120 s) |
 
 ### Validation Rules (POST/PUT)
 
@@ -4152,50 +4148,34 @@ type WebAuthnCredential struct {
 
 ---
 
-## 20) Preview Endpoints (Issue #189, #483, #1270)
+## 20) Preview Endpoints (Issue #189, #483, #1743)
 
-Provides preview rendering of trip reports in Email, SMS, or Telegram formats (Signal wurde app-weit entfernt, Issue #610). Supports both live weather and fixture-based demo mode. Seit Issue #1270 zusätzlich: EIN Compare-Preview-Endpoint, der alle Kanäle eines Orts-Vergleich-Presets in einer Antwort liefert (s. `POST /api/preview/compare/{preset_id}` unten).
+Seit Issue #1743 (PO-Entscheid 22.10.2026: die Briefing-Vorschau je Kanal entfällt
+ersatzlos) gibt es nur noch die **Alarm-Vorschau** und die **SMS-Kurzform-Vorschau**
+eines Trips. Letztere bleibt, weil die Staging-Specs
+`frontend/e2e/metrik-abwahl-schreibt-alle-kanaele-durch.staging.spec.ts` und
+`frontend/e2e/metrik-grundauswahl-schneidet-kanal.staging.spec.ts` damit die
+zugestellte SMS-Kurzform messen.
 
-**Handler:** `api/routers/preview.py` | **Routing:** `internal/router/router.go` (Trip-Routen), `internal/router/router.go:161-167` (Compare-Proxy)
+**Handler:** `api/routers/preview.py` (SMS), `api/routers/validator.py` (Alarm) | **Routing:** `internal/router/router.go`
 
-### GET /api/briefings/{id}/preview (Issue #2283 S1)
+Entfernt (Router 404/405, Python-Core wird nicht erreicht):
 
-Kind-neutrale Vorschau — **ein** Abruf liefert alle Kanäle, für beide kinds in
-derselben Form. Go-Handler `internal/handler/briefing_preview.go::BriefingPreviewHandler`
-prüft `kind` (fehlt/falsch → 400 `{"error":"kind_required"}`) und die ID
-(`store.ValidEntityID` verletzt → 400 `{"error":"validation_error"}`, Python wird
-nicht erreicht), verwirft einen Client-`user_id` und injiziert die Kennung aus
-der Anmeldung (ADR-0003). Proxy-Ziel: Python `GET /api/briefings/{id}/preview`
-(`api/routers/preview.py::preview_briefing`). Zeitlimit Go 30 s (`route`) bzw.
-60 s (`vergleich`).
-
-**Query Parameters:** `kind` (Pflicht, `route|vergleich`); nur bei `kind=route`:
-`type` (`morning|evening`), `date`, `demo` (wie `/email`). Bei `vergleich` gilt nur
-`date`.
-
-**Response 200:**
-
-```json
-{
-  "subject": "...",
-  "email_html": "<html>...</html>",
-  "sms": {"text": "...", "char_count": 137},
-  "telegram": {"body": "...", "bubbles": ["..."]}
-}
-```
-
-`telegram.bubbles` nur bei `kind=route` (#1001). Inhalt je Kanal identisch zu den
-Alt-Routen (`route`: `/email`, `/sms` `token_line`, `/telegram`; `vergleich`:
-`POST /api/preview/compare/{preset_id}`). Fremde ID → 404 (user-scoped Loader).
-Die Alt-Routen bleiben als **Delegates** über dieselbe Proxy-Logik
-(`forwardPreview` in `internal/handler/preview_proxy.go`).
-`GET /api/preview/{trip_id}/signal` ist entfernt (404, #2283 AC-6).
+- `GET /api/briefings/{id}/preview` (#2283 S1) — mit #1743 entfallen (Reiter „Vorschau" abgebaut).
+- `GET /api/preview/{trip_id}/email`, `GET /api/preview/{trip_id}/telegram` und
+  `POST /api/preview/compare/{preset_id}` (#1270) — mit #1743 entfallen, kein Aufrufer mehr.
+  Die Dienste `PreviewService` und `ComparePreviewService` bleiben (Render-Pfad der
+  Paritätstests, `scripts/premium_sms_preflight_check.py`, Alarm-Vorschau).
+- `GET /api/preview/{trip_id}/signal` (404, #2283 AC-6).
 
 ### POST /api/briefings/{id}/alert-preview (Issue #2283 S4)
 
-Kind-neutrale Alarm-Vorschau. Go-Prüfungen wie oben (400 `kind_required`,
-400 `validation_error`, Client-`user_id` verworfen), Körper unverändert durch,
-Zeitlimit 30 s. Proxy-Ziel: Python `POST /api/briefings/{id}/alert-preview`
+Kind-neutrale Alarm-Vorschau. Go-Handler
+`internal/handler/briefing_preview.go::BriefingAlertPreviewHandler` prüft `kind`
+(fehlt/falsch → 400 `{"error":"kind_required"}`) und die ID (`store.ValidEntityID`
+verletzt → 400 `{"error":"validation_error"}`, Python wird nicht erreicht), verwirft
+einen Client-`user_id` und injiziert die Kennung aus der Anmeldung (ADR-0003).
+Körper unverändert durch, Zeitlimit 30 s (`forwardPreview`). Proxy-Ziel: Python `POST /api/briefings/{id}/alert-preview`
 (`api/routers/validator.py::briefing_alert_preview`).
 
 - `kind=route`: Body und Antwort exakt wie `POST /api/trips/{id}/alert-preview`
@@ -4211,9 +4191,12 @@ Zeitlimit 30 s. Proxy-Ziel: Python `POST /api/briefings/{id}/alert-preview`
   (kein SMS-Kontingent, kein Versand). Ort nicht im Vergleich/Body ungültig → 422,
   fremder Vergleich → 404.
 
-### GET /api/preview/{trip_id}/email
+### GET /api/preview/{trip_id}/sms
 
-Render trip report preview in HTML format (Email).
+SMS-Kurzform-Vorschau eines Trips (`PreviewService.render_sms_preview`, derselbe
+Renderpfad wie der Versand). Go-Proxy `internal/handler/preview_proxy.go::PreviewProxyHandler`
+(`forwardPreview`, Zeitlimit 30 s; Client-`user_id` wird verworfen, die Kennung aus der
+Anmeldung injiziert, ADR-0003).
 
 **Query Parameters:**
 
@@ -4225,15 +4208,14 @@ Render trip report preview in HTML format (Email).
 
 **Response 200:**
 
-```
-Content-Type: text/html
-<html>...</html>  <!-- Full HTML rendered trip report -->
+```json
+{"subject": "...", "token_line": "...", "char_count": 137}
 ```
 
 **Example:**
 ```
-GET /api/preview/gr20/email?type=morning&date=2026-05-31&demo=1
-GET /api/preview/gr20/email?type=evening
+GET /api/preview/gr20/sms?type=morning&date=2026-05-31&demo=1
+GET /api/preview/gr20/sms?type=evening
 ```
 
 **Error Responses:**
@@ -4253,133 +4235,10 @@ GET /api/preview/gr20/email?type=evening
 - If weather fetch fails with `demo=false`, the endpoint returns 503; with `demo=true`, it returns 400 if fixtures are unavailable
 - Demo mode is ideal for testing preview rendering on past trips (where live weather is unavailable)
 
-### GET /api/preview/{trip_id}/sms
-
-Render trip report preview as SMS text (≤160 characters per message).
-
-**Query Parameters:** Same as `/email` (type, date, demo)
-
-**Response 200:**
-
-```
-Content-Type: text/plain
-Grüße! Morgen: 18°C, Wind 22 km/h, Regenwahrscheinlichkeit 20%.
-```
-
-**Error Responses:** Same as `/email`
-
-### GET /api/preview/{trip_id}/telegram
-
-Render trip report preview for Telegram channel. Seit Issue #1001 rendert das Backend
-das Briefing als mehrere einzelne Nachrichten ("Bubbles": Kopf, Kurzübersicht, je
-Segment, Ziel, optional Ausblick, Aktionen) statt einer einzelnen Prosa-Nachricht —
-siehe `docs/adr/0014-telegram-multi-bubble-format.md`.
-
-**Query Parameters:** Same as `/email` (type, date, demo)
-
-**Response 200:**
-
-```json
-{
-  "subject": "...",
-  "body": "<alle Bubbles, verbunden mit \"\\n\\n---\\n\\n\">",
-  "char_count": 0,
-  "max_line_width": 0,
-  "bubbles": ["<Bubble 1: Kopf>", "<Bubble 2: Kurzübersicht>", "..."]
-}
-```
-
-`bubbles` ist additiv seit #1001 (AC-7) — `body` bleibt aus Rückwärtskompatibilität
-erhalten und ist die mit `"\n\n---\n\n"` verbundene Kette aller Bubbles. Das dazugehörige
-`reply_markup` (Inline-Keyboard der Aktionen-Bubble) ist im Preview-JSON **nicht**
-enthalten; es wird ausschließlich beim tatsächlichen Versand über
-`TripReport.telegram_actions_markup` an die letzte Nachricht angehängt.
-
-**Error Responses:** Same as `/email`
-
 **Notes:**
 
-- All preview endpoints are **read-only** and do not send messages or modify state
-- Preview rendering uses the same Report Formatter and Channel Renderers as the scheduler (integrity guarantee)
-- Frontend may call multiple preview endpoints (e.g., email + SMS) to render side-by-side tabs
-
-### POST /api/preview/compare/{preset_id}
-
-Render **alle** Kanäle der Vorschau eines Orts-Vergleich-Presets in **einer**
-Antwort (Issue #1270, ADR-0011-Muster — Erweiterung des bestehenden
-`alert-preview`-Musters). Bewusste Abweichung von der Trip-Preview-Routenform
-oben (eine `GET`-Route je Kanal): ADR-0011 verlangt „die fertig gerenderten
-Kanäle über EINEN Backend-Endpunkt"; die Trip-Preview-Routen entstanden vor
-ADR-0011 (2026-06-29) und wurden nicht rückwirkend migriert (Nebenbefund,
-#1199).
-
-**Handler:** `api/routers/preview.py::preview_compare` — ruft
-`src/services/compare_preview_service.py::ComparePreviewService.render_all_channels`
-| **Go-Proxy:** `internal/handler/preview_proxy.go::ComparePreviewProxyHandler`
-(`router.go:167`)
-
-**Path Parameters:**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| preset_id | string | Compare-Preset-ID |
-
-**Query Parameters:**
-
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| user_id | string | yes | Session-User; vom Go-Proxy aus dem Auth-Kontext injiziert — ein client-seitig mitgeschickter Wert wird verworfen (Anti-Spoofing, ADR-0003) |
-| date | string | no | Ziel-Datum ISO-8601 (`YYYY-MM-DD`), Default: heute |
-
-Kein Request-Body erforderlich — der Go-Proxy leitet den Body zwar durch, der
-Python-Handler liest ihn nicht.
-
-**Response 200:**
-
-```json
-{
-  "subject": "...",
-  "email_html": "<html>...</html>",
-  "telegram": "...",
-  "sms": "...",
-  "sms_char_count": 137
-}
-```
-
-| Feld | Type | Description |
-|------|------|-------------|
-| subject | string | Betreffzeile (`build_compare_preset_subject`) |
-| email_html | string | Vollständiges HTML der E-Mail-Vorschau (`render_compare_email`) |
-| telegram | string | Fertiger Telegram-Nachrichtentext (`render_compare_telegram`) — kein Score/Rang (#1110) |
-| sms | string | Budgetierte SMS-Zeile (`render_compare_sms`, Budget über `CHANNEL_LIMITS`, #360) |
-| sms_char_count | integer | `len(sms)` |
-
-**Error Responses:**
-
-| Status | Scenario |
-|--------|----------|
-| 404 | Preset für diese `user_id` nicht gefunden — auch bei einem Preset, das einem anderen Nutzer gehört (Multi-User-Isolation, AC-6) |
-| 422 | fehlende/leere `user_id` (kein `"default"`-Fallback, ADR-0003) · Preset ohne konfigurierte Orte · konfigurierte Orte nicht auflösbar (gelöschte Location-Referenz) · ungültiges `date`-Format |
-| 503 | Wetter-Provider nicht erreichbar (`ComparisonEngine.run()` scheitert) |
-
-Der Router mappt `FileNotFoundError`/`LookupError` → 404, `ValueError` → 422,
-`RuntimeError` → 503; `detail` enthält den Ausnahme-Text (kein fester
-Error-Code wie bei den älteren Trip-Preview-Routen).
-
-**Notes:**
-
-- Read-only wie die anderen Preview-Endpoints — kein Versand, kein
-  Logbuch-Eintrag.
-- `ComparisonEngine.run()` läuft genau **einmal** je Aufruf; alle drei
-  Kanäle sitzen auf demselben `ComparisonResult` (AC-7) — ein Kanalwechsel
-  im Vorschau-Tab löst **keinen** weiteren Request aus, daher kein Cache
-  nötig.
-- Ersetzt fachlich den Validator-Stub
-  `POST /api/_validator/compare-email-preview` (#464) als Datenquelle für
-  die UI-Vorschau (Stub rendert einen hartcodierten Ort). Der Stub selbst
-  bleibt unverändert bestehen — er gehört dem externen Validator.
-- Details, Architektur-Begründung (ADR-0011) und AC-Mapping:
-  `docs/specs/modules/compare_channel_preview_dispatch.md`.
+- Read-only: kein Versand, kein Zustandswechsel.
+- Rendering über denselben Report-Formatter und dieselben Kanal-Renderer wie der Scheduler.
 
 ---
 

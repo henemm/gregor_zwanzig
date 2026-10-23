@@ -24,7 +24,7 @@ package router
 //       Abbild der gebauten App.
 //
 // RED heute: /signal ist registriert und zielt auf eine Python-Route, die es
-// nicht gibt; /api/briefings/{id}/preview und /alert-preview fehlen.
+// nicht gibt; /api/briefings/{id}/alert-preview fehlt.
 
 import (
 	"bytes"
@@ -221,12 +221,8 @@ func TestPreviewProxyRoutesHavePythonTarget(t *testing.T) {
 
 	// Geltungsbereich + Nicht-Vakuitaet: diese Routen MUESSEN im Router stehen.
 	pflicht := []goRoute{
-		{"GET", "/api/preview/{trip_id}/email"},
 		{"GET", "/api/preview/{trip_id}/sms"},
-		{"GET", "/api/preview/{trip_id}/telegram"},
-		{"POST", "/api/preview/compare/{preset_id}"},
 		{"POST", "/api/trips/{id}/alert-preview"},
-		{"GET", "/api/briefings/{id}/preview"},
 		{"POST", "/api/briefings/{id}/alert-preview"},
 	}
 	for _, p := range pflicht {

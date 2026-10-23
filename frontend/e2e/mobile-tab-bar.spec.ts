@@ -46,8 +46,9 @@ test('Mobile: Tab-Wechsel auf letzten Tab positioniert ihn sichtbar', async ({ p
 	// Transport: Klick per dispatchEvent — Playwrights Actionability-Scroll
 	// kämpft mit Scroll-Snap + Fade-Maske des Bands. Was hier bewiesen wird,
 	// ist das Verhalten NACH dem Wechsel, nicht der Klick-Transport selbst.
-	await page.getByTestId('trip-detail-tab-vorschau').dispatchEvent('click');
-	await expect(page.getByTestId('trip-detail-tab-vorschau')).toHaveAttribute('aria-selected', 'true');
+	// Issue #1743: letzter Reiter ist jetzt `alarme` (Versand/Vorschau entfallen).
+	await page.getByTestId('trip-detail-tab-alarme').dispatchEvent('click');
+	await expect(page.getByTestId('trip-detail-tab-alarme')).toHaveAttribute('aria-selected', 'true');
 	await expectActiveTabVisible(page);
 });
 

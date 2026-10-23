@@ -266,6 +266,33 @@ describe('context route (Trip-Hub): Wetter-Metriken und Versand an einem Control
 		assert.equal(p.a.ctl.state, 'idle');
 		assert.ok(p.a.ctl.savedAt instanceof Date);
 	});
+
+	// Adversary F001 (Gegenstueck zum Vergleich): Zuruecksetzen binnen 700 ms darf den
+	// ausstehenden Slot des ANDEREN Besitzers nicht mitnehmen; Endstand = zurueckgesetzter Wert.
+	test('F001 Versand: aendern und binnen 700 ms zuruecksetzen ⇒ Wetter-Slot gesendet, Versandzeit unveraendert', async () => {
+		const p = await panel();
+		p.metrikAendern();
+		p.versandzeitAendern();
+		p.versand.aendern({ morning_time: '07:00:00' });
+		await leeren(p.a.ctl);
+		assert.equal(dcStand().telegram_kurzform, true, 'der Wetter-Slot des anderen Besitzers kam nicht an');
+		assert.equal(rcStand().morning_time, '07:00:00', 'die zurueckgenommene Versandzeit steht auf dem Server');
+		assert.equal(p.a.ctl.hasPending, false);
+		assert.equal(p.a.ctl.state, 'idle');
+	});
+
+	test('F001 Wetter: aendern und binnen 700 ms zuruecksetzen ⇒ Versand-Slot gesendet, Metrik unveraendert', async () => {
+		const p = await panel();
+		p.versandzeitAendern();
+		p.metrikAendern();
+		p.wm.inst.u.telegramKurzform = false;
+		p.wm.metrikenSpeichern();
+		await leeren(p.a.ctl);
+		assert.equal(rcStand().morning_time, VERSANDZEIT, 'der Versand-Slot des anderen Besitzers kam nicht an');
+		assert.equal(dcStand().telegram_kurzform, false, 'die zurueckgenommene Metrik steht auf dem Server');
+		assert.equal(p.a.ctl.hasPending, false);
+		assert.equal(p.a.ctl.state, 'idle');
+	});
 });
 
 // ─────────────────────────── context = vergleich (Ortsvergleich-Hub) ───────────────────────────
@@ -329,6 +356,16 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 			},
 			versandzeitAendern() {
 				vb.setMorgenZeit('07:15');
+				versand.aenderungMelden();
+			},
+			/** dieselbe Metrik-Geste noch einmal ⇒ Stand wieder gleich der Basis */
+			metrikZuruecksetzen() {
+				wb.toggleMetric(NEUE_METRIK);
+				wetter.aenderungMelden();
+			},
+			/** Versandzeit zurueck auf den Ausgangswert der Basis (06:30) */
+			versandzeitZuruecksetzen() {
+				vb.setMorgenZeit('06:30');
 				versand.aenderungMelden();
 			}
 		};
@@ -429,5 +466,54 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 		assert.ok(String(server.stand(ID).morning_time).startsWith('07:15'), 'Messaufbau: der zweite Schreiber war erfolgreich');
 		assert.equal(p.ctl.state, 'error', 'der Fehlschlag des Wetter-Schreibers wurde vom Versand-Erfolg ueberdeckt');
 		assert.equal(p.ctl.savedAt, null);
+	});
+
+	// Adversary F001: der Besitzer beim Verwerfen wirkt am AUFRUFER. Ohne Besitzer
+	// (`cancel()`) laesst der Controller den eigenen Slot stehen — er gilt weiter als
+	// ausstehend (`hasPending`), obwohl der Nutzer seine Aenderung zurueckgenommen hat.
+	test('F001 Versand: aendern und binnen 700 ms zuruecksetzen ⇒ eigener Slot verworfen, Wetter-Slot trotzdem gesendet', async () => {
+		const p = panel();
+		p.metrikAendern(); // Besitzer „wetter-metriken" steht aus
+		p.versandzeitAendern(); // Besitzer „versand" — sendet den Wetter-Slot zuerst
+		p.versandzeitZuruecksetzen();
+		assert.equal(p.ctl.hasPending, false, 'der zurueckgenommene Versand-Slot steht noch aus (cancel ohne Besitzer?)');
+		await leeren(p.ctl);
+		assert.ok(aktiveMetriken(server.stand(ID)).includes(NEUE_METRIK), 'der Wetter-Slot des anderen Besitzers kam nicht an');
+		assert.ok(String(server.stand(ID).morning_time).startsWith('06:30'), 'die zurueckgenommene Versandzeit wurde gespeichert');
+		assert.ok(
+			!puts().some((x) => String((x.anfrage as Record<string, unknown>)?.morning_time ?? '').startsWith('07:15')),
+			'ein PUT traegt die zurueckgenommene Versandzeit'
+		);
+		assert.equal(p.ctl.state, 'idle');
+	});
+
+	test('F001 Wetter: aendern und binnen 700 ms zuruecksetzen ⇒ eigener Slot verworfen, Versand-Slot trotzdem gesendet', async () => {
+		const p = panel();
+		p.versandzeitAendern(); // Besitzer „versand" steht aus
+		p.metrikAendern(); // Besitzer „wetter-metriken" — sendet den Versand-Slot zuerst
+		p.metrikZuruecksetzen();
+		assert.equal(p.ctl.hasPending, false, 'der zurueckgenommene Wetter-Slot steht noch aus (cancel ohne Besitzer?)');
+		await leeren(p.ctl);
+		assert.ok(String(server.stand(ID).morning_time).startsWith('07:15'), 'der Versand-Slot des anderen Besitzers kam nicht an');
+		assert.ok(!aktiveMetriken(server.stand(ID)).includes(NEUE_METRIK), 'die zurueckgenommene Metrik wurde gespeichert');
+		assert.ok(
+			!puts().some((x) => aktiveMetriken(x.anfrage).includes(NEUE_METRIK)),
+			'ein PUT traegt die zurueckgenommene Metrik'
+		);
+		assert.equal(p.ctl.state, 'idle');
+	});
+
+	test('F001 ohne fremden Slot: aendern und zuruecksetzen ⇒ nichts aussteht, kein PUT, Anzeige idle', async () => {
+		const p = panel();
+		p.versandzeitAendern();
+		p.versandzeitZuruecksetzen();
+		assert.equal(p.ctl.hasPending, false, 'Versand: zurueckgenommener Slot steht noch aus');
+		p.metrikAendern();
+		p.metrikZuruecksetzen();
+		assert.equal(p.ctl.hasPending, false, 'Wetter: zurueckgenommener Slot steht noch aus');
+		assert.equal(p.ctl.state, 'idle');
+		await tick(800);
+		assert.equal(puts().length, 0, 'nach dem Zuruecksetzen wurde trotzdem gespeichert');
+		assert.equal(p.ctl.savedAt, null, 'ein folgenloser Speichervorgang meldet „Gespeichert"');
 	});
 });

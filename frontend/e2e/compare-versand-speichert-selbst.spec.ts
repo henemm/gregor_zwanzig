@@ -107,11 +107,13 @@ function zaehlePuts(page: Page, id: string): { puts: Request[]; beantwortet: Req
 	return { puts, beantwortet };
 }
 
+// Issue #1743: kein eigener Reiter „Versand" mehr — der Versand-Inhalt steht
+// im Reiter „Wetter-Metriken" im Abschnitt `#versand` (versand-abschnitt).
 async function oeffneVersand(page: Page, id: string) {
-	await page.goto(`/compare/${id}?tab=versand`);
+	await page.goto(`/compare/${id}?tab=wetter-metriken#versand`);
 	await page.waitForLoadState('networkidle');
-	await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
-	const tab = page.locator('[data-testid="versand-tab"]:visible');
+	await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
+	const tab = page.locator('[data-testid="versand-abschnitt"] [data-testid="versand-tab"]:visible');
 	await expect(tab).toBeVisible({ timeout: 10_000 });
 	await expect(tab.locator('[data-testid="report-morning-time"]')).toBeVisible({ timeout: 10_000 });
 	return tab;
@@ -184,7 +186,7 @@ test.describe('Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert sel
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 		await expect(
 			page.locator('[data-testid="compare-versand-enddate-open"]:visible')
 		).toHaveAttribute('aria-selected', 'true', { timeout: 10_000 });

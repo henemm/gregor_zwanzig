@@ -124,7 +124,8 @@
 	const setupStepsTrip = $derived(nextPlanned ? setupStepTrip(nextPlanned) : []);
 	const setupStepsCompare = $derived(firstIncomplete ? setupStepCompare(firstIncomplete) : []);
 
-	const TRIP_TAB_MAP = ['etappen', 'etappen', 'wetter-metriken', 'versand', 'versand'];
+	// Issue #1743: der Versand steht unten im Reiter Wetter-Metriken (Anker #versand).
+	const TRIP_TAB_MAP = ['etappen', 'etappen', 'wetter-metriken', 'wetter-metriken#versand', 'wetter-metriken#versand'];
 
 	function buildTripCtaHref(): string {
 		if (!nextPlanned) return '/trips/new';
@@ -360,13 +361,7 @@
 								glyph="clock"
 								label="Briefing-Zeitplan"
 								sub="→ Briefing-Zeitplan"
-								href="/trips/{hero.id}?tab=versand"
-							/>
-							<QuickAction
-								glyph="eye"
-								label="Vorschau prüfen"
-								sub="→ Vorschau"
-								href="/trips/{hero.id}?tab=vorschau"
+								href="/trips/{hero.id}?tab=wetter-metriken#versand"
 							/>
 							<QuickAction
 								glyph="send"
@@ -629,13 +624,7 @@
 								glyph="clock"
 								label="Briefing-Zeitplan"
 								sub="→ Zeitplan & Kanäle"
-								href="/compare/{compareHero.id}?tab=versand"
-							/>
-							<QuickAction
-								glyph="eye"
-								label="Vorschau prüfen"
-								sub="→ Vorschau"
-								href="/compare/{compareHero.id}?tab=vorschau"
+								href="/compare/{compareHero.id}?tab=wetter-metriken#versand"
 							/>
 							<QuickAction
 								glyph="send"
@@ -785,12 +774,6 @@
 						label="Neuer Orts-Vergleich"
 						sub="Wizard · 5 Schritte"
 						href="/compare/new"
-					/>
-					<QuickAction
-						glyph="eye"
-						label="Test-Briefing prüfen"
-						sub="Vorschau · alle Kanäle"
-						href="/trips"
 					/>
 				</div>
 			</div>
@@ -970,7 +953,7 @@
 	}
 	.quick-create-grid {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(2, 1fr);
 		gap: 14px;
 	}
 	.archive-grid {

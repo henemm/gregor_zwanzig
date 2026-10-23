@@ -8,7 +8,7 @@ Naehte wie AC-11: Anker im nutzergebundenen Speicher, frische Reihe ueber ``GZ_T
 """
 from __future__ import annotations
 
-from tests.integration.test_briefing_preview_bundle import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
 from tests.tdd.test_alert_hour_rows import (
     TRIP_STURM, _cell, _plant, _rows, _trip_anker_schreiben, _trip_body, _trip_versand,
 )

@@ -115,7 +115,15 @@ def test_inventory_lists_kind_neutral_alert_preview_and_drops_removed_previews()
         "AC-7: Inventarzeile `/api/briefings/{id}/alert-preview` fehlt"
     )
 
-    for removed in ("/api/briefings/{id}/preview", "/api/preview/{trip_id}/signal"):
+    removed_routes = (
+        "/api/briefings/{id}/preview",
+        "/api/preview/{trip_id}/signal",
+        # #1743 (PO-Entscheid 22.10.2026): Kanal-Vorschauen ohne Aufrufer.
+        "/api/preview/{trip_id}/email",
+        "/api/preview/{trip_id}/telegram",
+        "/api/preview/compare/{preset_id}",
+    )
+    for removed in removed_routes:
         referencing = [line for line in rows.values() if f"`{removed}`" in line]
         assert not referencing, (
             f"AC-32/AC-7: entfernte Route `{removed}` steht noch im Inventar:\n  "

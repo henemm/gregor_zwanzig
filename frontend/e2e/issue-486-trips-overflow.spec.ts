@@ -99,9 +99,9 @@ test.describe('Issue #486 — Desktop Trips-Zeile: Overflow-Menü statt Icon-Ges
 		const menu = page.locator('[role="menu"]').first();
 		await expect(menu).toBeVisible({ timeout: 3_000 });
 
+		// Issue #1743: Aktion „Vorschau" entfaellt.
 		for (const label of [
 			'Senden',
-			'Vorschau',
 			'Alarme',
 			'Wetter-Metriken',
 			'Bearbeiten',
@@ -109,6 +109,7 @@ test.describe('Issue #486 — Desktop Trips-Zeile: Overflow-Menü statt Icon-Ges
 		]) {
 			await expect(menu.getByText(label, { exact: true })).toBeVisible();
 		}
+		await expect(menu.getByText('Vorschau', { exact: true })).toHaveCount(0);
 		await expect(menu.getByText('Alert-Konfiguration')).toHaveCount(0);
 	});
 

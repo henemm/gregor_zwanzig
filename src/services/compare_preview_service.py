@@ -10,8 +10,9 @@ Persistenz. Ersetzt fachlich den Validator-Stub
 (`validator_render_service.render_compare_email_preview`, hartcodierter Ort
 "Vorschau-Ort"), der unveraendert dem externen Validator gehoert (#464).
 
-Konventions-Paritaet statt Klassen-Paritaet zu `PreviewService` (Trip): gleiche
-Methodennamen, eigene Klasse (dokumentierte Ausnahme von der
+Eigene Klasse statt Klassen-Paritaet zu `PreviewService` (Trip); die
+Einzel-Kanal-Huellen sind mit #1743 (AC-31) entfallen, einziger oeffentlicher
+Einstieg ist `render_all_channels` (dokumentierte Ausnahme von der
 Trip/Compare-Teilungs-Invariante, s. Spec "Architektur-Entscheidung"). Geteilt
 wird die Infrastruktur: `resolve_compare_render_options` (#1209, Metrik-Filter),
 `CHANNEL_LIMITS` (#360, Kanal-Budget), Neutralitaets-Vertrag der Renderer (#1110).
@@ -40,7 +41,7 @@ class ComparePreviewService:
     """Rendert Vorschau-Payloads eines Compare-Presets ohne Versand."""
 
     # ------------------------------------------------------------------
-    # Oeffentliche API (Methodennamen-Paritaet zu PreviewService)
+    # Oeffentliche API
     # ------------------------------------------------------------------
 
     def render_all_channels(
@@ -52,8 +53,8 @@ class ComparePreviewService:
     ) -> dict:
         """Sammel-Einstieg (ADR-0011): EIN Engine-Lauf JE ORT (seit #1765 B1
         gleichzeitig statt nacheinander), ALLE Kanaele fertig gerendert in EINER
-        Antwort — der Kanalwechsel im Vorschau-Tab braucht damit keinen weiteren
-        Request (AC-7).
+        Antwort (AC-7). Seit #1743 Render-Pfad der Paritaetstests; die
+        HTTP-Route ist entfallen.
         """
         from output.renderers.comparison import render_compare_sms, render_compare_telegram
         from services.scheduler_dispatch_service import build_compare_preset_subject
@@ -78,51 +79,6 @@ class ComparePreviewService:
             "sms": sms,
             "sms_char_count": len(sms),
         }
-
-    def render_email_preview(
-        self,
-        preset_id: str,
-        *,
-        user_id: str,
-        target_date: str | date | None = None,
-    ) -> str:
-        """E-Mail-Vorschau (HTML) aus den echten Preset-Orten (AC-1)."""
-        ctx = self._prepare(preset_id, user_id=user_id, target_date=target_date)
-        html_body, _text_body = self._render_email(ctx)
-        return html_body
-
-    def render_telegram_preview(
-        self,
-        preset_id: str,
-        *,
-        user_id: str,
-        target_date: str | date | None = None,
-    ) -> str:
-        """Telegram-Vorschau (fertiger Nachrichtentext, AC-2)."""
-        from output.renderers.comparison import render_compare_telegram
-
-        ctx = self._prepare(preset_id, user_id=user_id, target_date=target_date)
-        return render_compare_telegram(
-            ctx["result"],
-            enabled_metrics=ctx["opts"].enabled_metrics_by_channel["telegram"],
-            preset_name=ctx["name"],
-        )
-
-    def render_sms_preview(
-        self,
-        preset_id: str,
-        *,
-        user_id: str,
-        target_date: str | date | None = None,
-    ) -> str:
-        """SMS-Vorschau (fertige, budgetierte Zeile, AC-2)."""
-        from output.renderers.comparison import render_compare_sms
-
-        ctx = self._prepare(preset_id, user_id=user_id, target_date=target_date)
-        return render_compare_sms(
-            ctx["result"],
-            enabled_metrics=ctx["opts"].enabled_metrics_by_channel["sms"],
-        )
 
     # ------------------------------------------------------------------
     # Interna

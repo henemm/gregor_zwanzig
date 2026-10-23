@@ -3,7 +3,8 @@
 // Spec: docs/specs/modules/feat_2277_s4_anlege_lockengine.md
 //
 // DOM-frei, keine Svelte-Imports, rein. Der Kern kennt nur die gemeinsame
-// Schwanz-Kette Wetter-Metriken -> Wertebereiche -> Alarme -> Versand. Das
+// Schwanz-Kette Wetter-Metriken -> Wertebereiche -> Alarme (#1743: kein
+// Versand-Schritt mehr — Versand steht unten im Schritt Wetter-Metriken). Das
 // Vorderteil (Trip: Name/Startdatum/Etappen; Ortsvergleich: Name/Orte) bleibt
 // kind-eigen und wird als Wahrheitswert `metrikenFrei` uebergeben. Die Besuchs-
 // Flags werden vom Editor beim Reiterwechsel gesetzt und nie zurueckgesetzt.
@@ -13,7 +14,6 @@ export interface TailIds<T extends string = string> {
 	metriken: T;
 	wertebereiche: T;
 	alarme: T;
-	versand: T;
 }
 
 export interface TailProgress {
@@ -22,7 +22,6 @@ export interface TailProgress {
 	metrikenVisited: boolean;
 	wertebereicheVisited: boolean;
 	alarmeVisited: boolean;
-	versandVisited: boolean;
 }
 
 /**
@@ -36,7 +35,6 @@ export function tailUnlocked<T extends string>(ids: TailIds<T>, p: TailProgress)
 	s.add(ids.metriken);
 	if (p.metrikenVisited) s.add(ids.wertebereiche);
 	if (p.wertebereicheVisited) s.add(ids.alarme);
-	if (p.alarmeVisited) s.add(ids.versand);
 	return s;
 }
 
@@ -46,13 +44,12 @@ export function tailDone<T extends string>(ids: TailIds<T>, p: TailProgress): Se
 	if (p.metrikenVisited) s.add(ids.metriken);
 	if (p.wertebereicheVisited) s.add(ids.wertebereiche);
 	if (p.alarmeVisited) s.add(ids.alarme);
-	if (p.versandVisited) s.add(ids.versand);
 	return s;
 }
 
-/** Anlegen/Aktivieren erst nach Besuch von Versand. */
-export function canFinish(done: Set<string>, versandId: string = 'versand'): boolean {
-	return done.has(versandId);
+/** Anlegen/Aktivieren erst nach Besuch von Alarme (#1743, letzter Schritt der Kette). */
+export function canFinish(done: Set<string>, letzterId: string = 'alarme'): boolean {
+	return done.has(letzterId);
 }
 
 /**

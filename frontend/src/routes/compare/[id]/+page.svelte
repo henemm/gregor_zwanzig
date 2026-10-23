@@ -385,7 +385,7 @@
 		     mt-[25px] = Eyebrow (9px) + gap-4 (16px): Knopf steht auf Höhe der Namenszeile. -->
 		<div class="flex items-center mt-[25px] desktop:mt-0" style="gap: 8px; flex-shrink: 0">
 			{#if status === 'draft'}
-				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" onclick={() => { window.location.href = `?tab=versand`; }}>Setup abschließen</Btn>
+				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" onclick={() => { window.location.href = `?tab=wetter-metriken#versand`; }}>Setup abschließen</Btn>
 			{:else}
 				<!-- Senden ist der Primaerknopf und oeffnet den Sende-Dialog (AC-3/AC-12) -->
 				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" data-testid="subscription-hub-send" onclick={() => (sendDialogOpen = true)} disabled={isSending || lifecycle === 'archived'}>

@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/feat_1743_reiter_aufraeumen.md
-spec_sha256: 2a459c8e20c5bd41bef9fb858e8fbf9f477e29732d41212fcc363116ab913810
-spec_frozen_sha256: 8e3b90e5db7e737dde155b98c573072ab34f8c81ab37de8c3b3fd2c4b13fa05d
+spec_sha256: de22491139529246a513d890a3b2c4477da7b2744a718bb8227caf8cb9103d42
+spec_frozen_sha256: 5aa0ad2daca2a3ae4abca5b01ae4dd08e5fc99b9e862a7a964d023c83eba17d5
 ---
 
 # PO-Briefing: feat-1743-reiter-aufraeumen
@@ -12,21 +12,22 @@ spec_frozen_sha256: 8e3b90e5db7e737dde155b98c573072ab34f8c81ab37de8c3b3fd2c4b13f
 
 ## Was gebaut wird
 
-Trip- und Ortsvergleich-Seiten haben fünf statt sieben Reiter; Versand steht unten bei Wetter-Metriken, die Briefing-Vorschau entfällt.
+Trip und Ortsvergleich bekommen je fünf Reiter; Versand steht unter Wetter-Metriken, die Briefing-Vorschau entfällt ersatzlos.
 
 ## Definition of Done
 
-Beide Detailseiten und beide Anlege-Seiten zeigen fünf Reiter, Versand-Einstellungen liegen unten bei Wetter-Metriken, alte Links führen dorthin, Speichern verliert nichts.
+Beide Detailseiten und beide Anlegeseiten zeigen fünf Reiter, Versand unten bei Wetter-Metriken, keine Vorschau außer Alarm-Vorschau; zwei schnelle Änderungen gehen nie verloren.
 
 ## Wie geprüft wird
 
-Tests prüfen Reiter, alte Links, gleichzeitiges Speichern und Anlegen; ob die Wetter-Metriken-Seite durch den Anhang noch übersichtlich bleibt, prüft kein Test.
+Tests prüfen Reiter, Alt-Links, gleichzeitiges Speichern und entfernte Schnittstellen; Anlegen ohne Versand-Berührung wird zusätzlich live auf Staging nachgewiesen.
 
 ## Kritische Anmerkungen
 
-- Briefing-Vorschau je Kanal entfällt ersatzlos: Vorab sieht niemand mehr das ganze Briefing, nur Mini-Vorschauen und Alarm-Vorschau bleiben.
-- Zusätzlich zum Ticket: Speicher-Fehler wird mitbehoben und Vorschau-Schnittstelle im Server gelöscht; breiter Umbau, mittleres bis hohes Risiko.
+- Zwei Staging-Prüfungen werden gelöscht; deren Abdeckung gilt danach als verloren (Buchung in #1196).
+- Zusatzumfang: drei weitere Server-Schnittstellen, Vorschau-Bausteine und tote Python-Hüllen entfallen; Briefing je Kanal nirgends mehr vorab sehbar.
+- Alte Versand-Links landen auf Wetter-Metriken.
 
 ## Freigabe-Frage
 
-Soll die Briefing-Vorschau je Kanal ersatzlos entfallen, obwohl Nutzer das Briefing dann nirgends mehr vorab sehen können?
+Gibst du frei, dass die Briefing-Vorschau samt allen Resten und drei Server-Schnittstellen entfällt und zwei Staging-Prüfungen gelöscht werden?

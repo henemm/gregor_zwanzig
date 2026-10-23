@@ -61,7 +61,7 @@ export const REITER_MIT_INFOBOX: Record<Kontext, string[]> = {
 };
 
 /** Issue #1743 (AC-19/AC-22): der Reiter, in dem der Infobox-Schluessel beim Anlegen offen ist.
- *  Der Typ `InfoboxAbschnitt` (vormals `InfoboxReiter`) wird hier bewusst referenziert — svelte-check
+ *  Der Typ `InfoboxAbschnitt` (nach der Umbenennung) wird hier bewusst referenziert — svelte-check
  *  bewacht damit die Umbenennung (AC-22). */
 export const REITER_DES_ABSCHNITTS: Record<InfoboxAbschnitt, string> = {
 	'wetter-metriken': 'wetter-metriken',

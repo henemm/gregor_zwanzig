@@ -35,8 +35,8 @@ tauglich, unterwegs steuerbar (Inbound-Kommandos), kontextbezogen (Profil).
 
 - **Trip-Briefings:** Abend-/Morgen-Briefings pro Etappe (E-Mail full/compact,
   Telegram-Bubbles, SMS ≤160 Zeichen, seit #1676 S2a zusätzlich Premium-SMS
-  für Garmin-inReach-Nutzer mit Premium-Tier; Oberflächen-Schalter im Versand-/Alarme-Reiter
-  seit #1745/#2293), Zeitpläne pro
+  für Garmin-inReach-Nutzer mit Premium-Tier; Oberflächen-Schalter im Versand-Abschnitt (unter
+  Wetter-Metriken, seit #1743) bzw. Alarme-Reiter seit #1745/#2293), Zeitpläne pro
   Nutzer.
 - **Orts-Vergleich:** Vergleichsmatrix über ≥2 Orte mit Idealbereichen,
   Winner-Logik, eigenem Mail-Template, Zeitplan-Versand.

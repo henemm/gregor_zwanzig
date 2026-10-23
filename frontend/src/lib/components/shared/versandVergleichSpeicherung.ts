@@ -316,13 +316,13 @@ export function erstelleVersandVergleichSpeicherung(
 			if (JSON.stringify(current) === JSON.stringify(zuletztGespeichert)) {
 				if (eigenerVorgangAussteht) {
 					eigenerVorgangAussteht = false;
-					saveController.cancel();
+					saveController.cancel('versand');
 					saveController.markPristine();
 				}
 				return;
 			}
 			eigenerVorgangAussteht = true;
-			saveController.schedule(saveFn);
+			saveController.schedule(saveFn, 700, 'versand');
 		}
 	};
 }

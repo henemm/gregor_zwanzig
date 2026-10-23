@@ -54,11 +54,8 @@ async function openNewTripZeitplan(page: Page) {
 	}
 
 	await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-	// Issue #2277 S3: Versand ist erst nach Besuch von „Alarme" freigeschaltet
-	// (Sperrkette Wetter-Metriken → Wertebereiche → Alarme → Versand).
-	await tabbar.getByRole('tab', { name: /Wertebereiche/ }).click({ force: true });
-	await tabbar.getByRole('tab', { name: /Alarme/ }).click({ force: true });
-	await tabbar.getByRole('tab', { name: /Versand/ }).click({ force: true });
+	// Issue #1743: kein Schritt Versand mehr — die Mail-Inhalt-Karte steht im
+	// Schritt Wetter-Metriken (oben aktiviert).
 
 	// Harter Surface-Check: die Mail-Inhalt-Karte MUSS sichtbar sein — sonst prüfen
 	// wir versehentlich einen leeren DOM und count()==0 wäre bedeutungslos.
