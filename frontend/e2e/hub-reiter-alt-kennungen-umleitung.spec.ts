@@ -157,6 +157,64 @@ test.describe('Vergleich-Hub: Alt-Kennungen werden umgeleitet und die URL berein
 	});
 });
 
+// Issue #1743 (docs/specs/modules/feat_1743_reiter_aufraeumen.md): die Reiter
+// „Versand" und „Vorschau" sind aufgeloest. Alt-Links fuehren an den neuen Ort:
+// ?tab=versand|briefings → ?tab=wetter-metriken#versand (Abschnitt im Blick),
+// ?tab=vorschau|preview → ?tab=uebersicht.
+const HUBS = [
+	{
+		art: 'Trip',
+		pfad: async (page: Page) => `/trips/${(await neuerTrip(page)).id}`,
+		prefix: 'trip-detail'
+	},
+	{
+		art: 'Vergleich',
+		pfad: async (page: Page) => `/compare/${await neuerVergleich(page)}`,
+		prefix: 'compare-detail'
+	}
+] as const;
+
+for (const hub of HUBS) {
+	test.describe(`#1743 ${hub.art}-Hub: Alt-Links auf Versand/Vorschau`, () => {
+		for (const alt of ['versand', 'briefings']) {
+			test(`?tab=${alt} → ?tab=wetter-metriken#versand, Versand-Abschnitt im Blick`, async ({ page }) => {
+				await page.setViewportSize({ width: 1280, height: 900 });
+				const pfad = await hub.pfad(page);
+				await page.goto(`${pfad}?tab=${alt}`);
+
+				await expect(
+					page.locator(`[data-testid="${hub.prefix}-panel-wetter-metriken"]:visible`).first()
+				).toBeVisible({ timeout: 15_000 });
+				await expect(
+					page.locator(`[data-testid="${hub.prefix}-tab-wetter-metriken"]:visible`).first()
+				).toHaveAttribute('aria-selected', 'true');
+				await expect
+					.poll(() => {
+						const u = new URL(page.url());
+						return `${u.searchParams.get('tab')}${u.hash}`;
+					})
+					.toBe('wetter-metriken#versand');
+				const abschnitt = page.locator('[data-testid="versand-abschnitt"]:visible').first();
+				await expect(abschnitt).toBeVisible({ timeout: 15_000 });
+				await expect(abschnitt).toBeInViewport({ timeout: 15_000 });
+				await expect(page.locator(`[data-testid="${hub.prefix}-panel-uebersicht"]`)).toHaveCount(0);
+			});
+		}
+
+		for (const alt of ['vorschau', 'preview']) {
+			test(`?tab=${alt} → ?tab=uebersicht`, async ({ page }) => {
+				const pfad = await hub.pfad(page);
+				await page.goto(`${pfad}?tab=${alt}`);
+
+				await expect(
+					page.locator(`[data-testid="${hub.prefix}-panel-uebersicht"]:visible`).first()
+				).toBeVisible({ timeout: 15_000 });
+				await expect.poll(() => tabParam(page)).toBe('uebersicht');
+			});
+		}
+	});
+}
+
 test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 	test('Trip-Liste (Handy): „Wetter-Metriken" öffnet den Reiter Wetter-Metriken', async ({ page }) => {
 		const { id } = await neuerTrip(page);
@@ -171,7 +229,10 @@ test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 		await expect(page.getByTestId('trip-detail-panel-wetter-metriken')).toBeVisible({ timeout: 15_000 });
 	});
 
-	test('Startseite (Vergleich-Modus): „Vorschau prüfen" öffnet die Vorschau, nicht die Übersicht', async ({
+	// Issue #1743: die Schnellaktion „Vorschau prüfen" ist entfallen (kein Reiter
+	// Vorschau mehr). Die Zusicherung „Schnellaktion öffnet ihr Ziel, nicht die
+	// Übersicht" bleibt — am „Briefing-Zeitplan" → Wetter-Metriken, Abschnitt #versand.
+	test('Startseite (Vergleich-Modus): „Briefing-Zeitplan" öffnet den Versand-Abschnitt, nicht die Übersicht', async ({
 		page,
 		browser
 	}) => {
@@ -209,14 +270,17 @@ test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 			const presetId = ((await preset.json()) as { id: string }).id;
 
 			await gast.goto('/');
-			await gast.locator('a:visible', { hasText: 'Vorschau prüfen' }).first().click();
+			await gast.locator('a:visible', { hasText: 'Briefing-Zeitplan' }).first().click();
 
-			await expect(gast).toHaveURL(new RegExp(`/compare/${presetId}\\?tab=vorschau$`), {
+			await expect(gast).toHaveURL(new RegExp(`/compare/${presetId}\\?tab=wetter-metriken#versand$`), {
 				timeout: 15_000
 			});
 			await expect(
-				gast.locator('[data-testid="compare-detail-panel-vorschau"]:visible').first()
+				gast.locator('[data-testid="compare-detail-panel-wetter-metriken"]:visible').first()
 			).toBeVisible({ timeout: 15_000 });
+			await expect(gast.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeInViewport({
+				timeout: 15_000
+			});
 			await expect(gast.locator('[data-testid="compare-detail-panel-uebersicht"]')).toHaveCount(0);
 		} finally {
 			if (angelegt) {
@@ -228,9 +292,10 @@ test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 });
 
 test.describe('AC-14: Handy-Reiterleiste in beiden Hubs gleich', () => {
-	const SCHWANZ = ['wetter-metriken', 'wertebereiche', 'alarme', 'versand', 'vorschau'];
+	// Issue #1743: fuenf Reiter — kein `versand`/`vorschau` mehr.
+	const SCHWANZ = ['wetter-metriken', 'wertebereiche', 'alarme'];
 
-	test('Trip: Reihenfolge uebersicht · etappen · … · vorschau, Antippen öffnet Wertebereiche', async ({
+	test('Trip: Reihenfolge uebersicht · etappen · … · alarme, Antippen öffnet Wertebereiche', async ({
 		page
 	}) => {
 		const { id } = await neuerTrip(page);
@@ -247,7 +312,7 @@ test.describe('AC-14: Handy-Reiterleiste in beiden Hubs gleich', () => {
 		await expect.poll(() => tabParam(page)).toBe('wertebereiche');
 	});
 
-	test('Vergleich: Reihenfolge uebersicht · orte · … · vorschau, Antippen öffnet Wertebereiche', async ({
+	test('Vergleich: Reihenfolge uebersicht · orte · … · alarme, Antippen öffnet Wertebereiche', async ({
 		page
 	}) => {
 		const id = await neuerVergleich(page);

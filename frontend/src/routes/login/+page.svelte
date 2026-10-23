@@ -294,13 +294,13 @@
 		{/if}
 
 		<div class="desktop:order-3 space-y-2">
-			<a href="/register" class="block text-center text-sm text-muted-foreground hover:underline">
+			<a href="/register" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
 				Noch kein Konto? Konto erstellen
 			</a>
-			<a href="/forgot-password" class="block text-center text-sm text-muted-foreground hover:underline">
+			<a href="/forgot-password" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
 				Passwort vergessen?
 			</a>
-			<a href="/magic-link" class="block text-center text-sm text-muted-foreground hover:underline">
+			<a href="/magic-link" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
 				Mit E-Mail-Code anmelden
 			</a>
 		</div>

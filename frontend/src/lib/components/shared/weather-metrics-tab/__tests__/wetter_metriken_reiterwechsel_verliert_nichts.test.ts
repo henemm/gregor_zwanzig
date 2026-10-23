@@ -112,7 +112,11 @@ describe('AC-6: Reiterwechsel „wetter-metriken" → „alarme" im Entprell-Fen
 		assert.equal(ctl.state, 'idle');
 	});
 
-	test('Gegenprobe (warum der Guard nötig ist): OHNE Flush verdrängt der Alarm-Vorgang den Wetter-Metriken-Vorgang vom einen Platz', async () => {
+	// Issue #1743 (Besitzer-Schlüssel im saveController): früher verdrängte hier der
+	// Alarm-Vorgang den Wetter-Metriken-Vorgang vom einen Platz. Seit #1743 sendet
+	// `schedule()` einen belegten Platz eines FREMDEN Besitzers zuerst — auch OHNE
+	// Flush beim Reiterwechsel kommen beide Änderungen an (zweites Sicherheitsnetz).
+	test('#1743: auch OHNE Flush beim Wechsel verdrängt der Alarm-Vorgang den Wetter-Metriken-Vorgang nicht mehr', async () => {
 		const { ws, ctl, wetterMetriken, alarme, bedienung } = hub();
 
 		bedienung.toggleMetric('gust_max_kmh');
@@ -120,12 +124,17 @@ describe('AC-6: Reiterwechsel „wetter-metriken" → „alarme" im Entprell-Fen
 		ws.radarAlertEnabled = true;
 		alarme.aenderungMelden();
 		await ctl.flush();
+		const laufend = ctl.laufendeSpeicherung;
+		if (laufend) await laufend;
+		await new Promise((r) => setTimeout(r, 20));
 
-		assert.equal(puts().length, 1, 'der zweite schedule() überschreibt den ersten — nur ein PUT');
+		assert.equal(puts().length, 2, 'der fremde Platz muss zuerst gesendet werden — zwei PUTs');
+		const stand = server.stand(PRESET_ID);
 		assert.ok(
-			!(dc(server.stand(PRESET_ID)).active_metrics as string[]).includes('gust_max_kmh'),
-			'ohne Guard geht die Wetter-Metriken-Änderung verloren — genau das verhindert der Flush beim Wechsel'
+			(dc(stand).active_metrics as string[]).includes('gust_max_kmh'),
+			'die Wetter-Metriken-Änderung darf vom Alarm-Vorgang nicht verdrängt werden'
 		);
+		assert.equal(stand.radar_alert_enabled, true);
 	});
 
 	test('kein echter Wechsel (gleicher Reiter) → nichts wird vorzeitig gesendet', async () => {

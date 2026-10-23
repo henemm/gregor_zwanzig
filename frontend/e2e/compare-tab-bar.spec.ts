@@ -78,8 +78,18 @@ test.afterEach(async ({ page }) => {
 // Mobile (<900px): aktiver Tab immer sichtbar + A11y + 44px
 // =============================================================================
 
-test('Mobile Compare: Deep-Link ?tab=versand positioniert aktiven Tab sichtbar', async ({ page }) => {
+// Issue #1743: letzter Reiter ist seither "alarme" (Versand/Vorschau keine Reiter mehr).
+test('Mobile Compare: Deep-Link ?tab=alarme positioniert aktiven Tab sichtbar', async ({ page }) => {
+	await openCompare(page, presetId, 390, 844, 'alarme');
+	await expect(page.getByTestId('compare-detail-tab-alarme')).toHaveAttribute('aria-selected', 'true');
+	await expectActiveTabVisible(page);
+});
+
+// Issue #1743: Alt-Link ?tab=versand landet im Reiter Wetter-Metriken (#versand).
+test('Mobile Compare: Alt-Link ?tab=versand landet aktiv und sichtbar auf Wetter-Metriken', async ({ page }) => {
 	await openCompare(page, presetId, 390, 844, 'versand');
+	await expect(page.getByTestId('compare-detail-tab-wetter-metriken')).toHaveAttribute('aria-selected', 'true');
+	await expect(page).toHaveURL(/[?&]tab=wetter-metriken#versand$/);
 	await expectActiveTabVisible(page);
 });
 
@@ -88,7 +98,8 @@ test('Mobile Compare: A11y — tablist/tab, aria-selected, roving tabindex, Pfei
 
 	const tablist = page.getByRole('tablist');
 	await expect(tablist).toBeVisible();
-	expect(await tablist.getByRole('tab').count()).toBe(7);
+	// Issue #1743: fuenf Reiter (kein Versand/Vorschau).
+	expect(await tablist.getByRole('tab').count()).toBe(5);
 
 	await expect(page.getByTestId('compare-detail-tab-uebersicht')).toHaveAttribute('aria-selected', 'true');
 	await expect(page.getByTestId('compare-detail-tab-uebersicht')).toHaveAttribute('tabindex', '0');
@@ -104,8 +115,8 @@ test('Mobile Compare: Trigger >= 44px, Orte-Badge mit korrekter Zahl', async ({ 
 	await openCompare(page, presetId, 390, 844, 'uebersicht');
 
 	const tabs = page.getByRole('tablist').getByRole('tab');
-	expect(await tabs.count()).toBe(7);
-	for (let i = 0; i < 7; i++) {
+	expect(await tabs.count()).toBe(5);
+	for (let i = 0; i < 5; i++) {
 		const box = await tabs.nth(i).boundingBox();
 		expect(box!.height).toBeGreaterThanOrEqual(44);
 	}
@@ -124,8 +135,8 @@ test('Desktop Compare: Leiste ohne Band-Scroll, neutraler Badge, Optik unveraend
 	await openCompare(page, presetId, 1280, 900, 'uebersicht');
 
 	const tabs = page.getByRole('tablist').getByRole('tab');
-	expect(await tabs.count()).toBe(7);
-	for (let i = 0; i < 7; i++) {
+	expect(await tabs.count()).toBe(5);
+	for (let i = 0; i < 5; i++) {
 		const box = await tabs.nth(i).boundingBox();
 		expect(box!.x + box!.width).toBeLessThanOrEqual(1280);
 	}

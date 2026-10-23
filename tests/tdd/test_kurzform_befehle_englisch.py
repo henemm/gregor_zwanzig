@@ -88,12 +88,17 @@ HELP_WORTLAUT = (
     "Send a code (e.g. R) for its values."
 )
 
-#: Spec v1.1 "Verbindlicher Wortlaut (Ortsvergleich, Kurzform-Kanal)".
+#: Spec v1.1 "Verbindlicher Wortlaut (Ortsvergleich, Kurzform-Kanal)";
+#: #2282 S2 (AC-11): TODAY/TOMORROW/REPORT mit eigener Vergleichs-Wirkung,
+#: Gesamttext <= 160 Zeichen (eine Premium-SMS).
 HELP_WORTLAUT_ORTSVERGLEICH = (
     "Commands (German works too):\n"
+    "TODAY - today\n"
+    "TOMORROW - tomorrow\n"
     "PAUSE - no briefings until RESUME\n"
     "RESUME - restart briefings\n"
-    "CODES - code meanings"
+    "CODES - code meanings\n"
+    "REPORT - all"
 )
 
 #: #2422 S6 (B1) loest #2454 AC-6 ab -- TF steht wieder im Trip-CODES-Wortlaut.
@@ -682,6 +687,11 @@ def test_help_kurzform_ortsvergleich_ist_der_freigegebene_wortlaut(monkeypatch, 
         f"\n--- versendet ---\n{text}"
     )
     wirkung = _wirkung_je_englischem_wort()
+    # #2282 S2: am Vergleich gilt eine gesetzte Vergleichs-Wirkung.
+    wirkung.update({
+        (spec_feld(s, "wort_en") or "").upper(): spec_feld(s, "wirkung_en_vergleich")
+        for s in _command_specs() if spec_feld(s, "wirkung_en_vergleich")
+    })
     erlaubt = {
         (spec_feld(s, "wort_en") or "").upper() for s in _command_specs()
         if "vergleich" in spec_feld(s, "kinds")
@@ -729,13 +739,14 @@ def test_kurzhilfe_traegt_startdate_und_report_innerhalb_des_segmentbudgets(monk
     assert len(text) <= 459, f"AC-9: {len(text)} Zeichen > 459:\n{text}"
     assert sms_segments(text) <= 3, f"AC-9: {sms_segments(text)} Segmente:\n{text}"
 
-    # Vergleichs-Kurzhilfe unveraendert (beide Befehle gelten nur fuer Trips).
+    # Vergleichs-Kurzhilfe: ohne STARTDATE (nur Trip); REPORT gilt seit
+    # #2282 S2 auch am Vergleich. Budget: EINE Premium-SMS (<= 160 Zeichen).
     vergleich = lege_lage_an(user_ids, "L4")
     name = vergleich.presets[0]["name"]
     text_v = _sende("premium_sms", basis_settings(), recorder, vergleich, f"{name} help")
-    assert len(text_v) == 111, f"AC-9: Vergleichs-Kurzhilfe hat {len(text_v)} statt 111 Zeichen"
-    assert "STARTDATE" not in text_v and "REPORT" not in text_v, (
-        f"AC-9: die Vergleichs-Kurzhilfe bietet Trip-Befehle an:\n{text_v}"
+    assert len(text_v) <= 160, f"AC-9: Vergleichs-Kurzhilfe hat {len(text_v)} > 160 Zeichen"
+    assert "STARTDATE" not in text_v and "REPORT" in text_v, (
+        f"AC-9: Vergleichs-Kurzhilfe mit STARTDATE oder ohne REPORT:\n{text_v}"
     )
 
 

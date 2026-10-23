@@ -248,12 +248,13 @@ export function corridorZustandsBruecke(
  *  Controllers speichern (Design Punkt 4). Issue #2276 S4: 'wetter-metriken'
  *  ergaenzt (kombinierte Wetter-Metriken/Layout-Orchestrierung); S5: 'versand'
  *  (Versand-Reiter speichert seit dem Wegfall des Wrapper-Divs selbst). Issue #2287:
- *  Wertebereiche heisst jetzt in beiden Hubs `wertebereiche` (vormals `idealwerte`). */
+ *  Wertebereiche heisst jetzt in beiden Hubs `wertebereiche` (vormals `idealwerte`).
+ *  Issue #1743: `versand` ist kein Reiter mehr — der Versand-Abschnitt gehoert zum
+ *  Reiter `wetter-metriken` (beide Besitzer werden beim Verlassen gesendet). */
 export const SELBST_SPEICHERNDE_VERGLEICH_REITER: readonly string[] = [
 	'alarme',
 	'wertebereiche',
-	'wetter-metriken',
-	'versand'
+	'wetter-metriken'
 ];
 
 /**

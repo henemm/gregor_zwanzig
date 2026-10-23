@@ -207,7 +207,8 @@ test.describe('#2124 Ortsvergleich — geteilter Laufzustand', () => {
 		const { presetId, locIds } = await seedPreset(page);
 		const halter = await versandHalten(page, `**/api/briefings/${presetId}/send*`);
 		try {
-			await page.goto(`/compare/${presetId}?tab=versand`);
+			// Issue #1743: kein Reiter `versand` mehr — Versand-Abschnitt in Wetter-Metriken.
+			await page.goto(`/compare/${presetId}?tab=wetter-metriken#versand`);
 
 			await compareHubSenden(page);
 			await expect.poll(() => halter.requests.length).toBe(1);

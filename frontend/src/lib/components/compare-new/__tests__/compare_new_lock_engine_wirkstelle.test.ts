@@ -70,35 +70,38 @@ describe('AC-6: Vorderteil an der Reiterleiste', () => {
 	test('Name, 2 Orte: Metriken frei', () => assert.equal(locked(html({ name: 'X', picked: 2 }), 'wetter-metriken'), false));
 });
 
+// #1743: kein Reiter „Versand" mehr — die Kette endet bei Alarme; Aktivieren und
+// voller Zaehler haengen am Alarme-Besuch (5 Schritte). Ein Versand-Flag im Seed
+// (Altbestand) bleibt wirkungslos.
 describe('AC-1/AC-7: Schwanz-Kette an der Reiterleiste (Besuchs-Flags über stateOverride)', () => {
 	const base = { name: 'X', picked: 2 };
-	test('nichts besucht: Wertebereiche, Alarme, Versand gesperrt', () => {
+	test('nichts besucht: Wertebereiche, Alarme gesperrt', () => {
 		const h = html(base);
-		for (const t of ['wertebereiche', 'alarme', 'versand']) assert.equal(locked(h, t), true, t);
+		for (const t of ['wertebereiche', 'alarme']) assert.equal(locked(h, t), true, t);
 	});
 	test('Metriken besucht: nur Wertebereiche frei', () => {
 		const h = html({ ...base, metriken: true });
 		assert.equal(locked(h, 'wertebereiche'), false);
 		assert.equal(locked(h, 'alarme'), true);
-		assert.equal(locked(h, 'versand'), true);
 	});
-	test('Wertebereiche besucht: Alarme frei, Versand gesperrt', () => {
+	test('Wertebereiche besucht: Alarme frei', () => {
 		const h = html({ ...base, metriken: true, ideals: true });
 		assert.equal(locked(h, 'alarme'), false);
-		assert.equal(locked(h, 'versand'), true);
 	});
-	test('Alarme besucht: Versand frei', () => {
-		assert.equal(locked(html({ ...base, metriken: true, ideals: true, alarme: true }), 'versand'), false);
+	test('#1743: kein Reiter versand im Dokument', () => {
+		const h = html({ ...base, metriken: true, ideals: true, alarme: true });
+		assert.ok(!/data-testid="compare-editor-tab-versand"/.test(h), 'Reiter versand existiert noch');
 	});
 });
 
 describe('AC-3: Aktivieren-Knopf', () => {
-	const alles = { name: 'X', picked: 2, metriken: true, ideals: true, alarme: true };
-	test('vor Versand-Besuch deaktiviert', () => assert.equal(activateDisabled(html(alles)), true));
-	test('nach Versand-Besuch aktiv', () => assert.equal(activateDisabled(html({ ...alles, versand: true })), false));
+	const bisWertebereiche = { name: 'X', picked: 2, metriken: true, ideals: true };
+	test('vor Alarme-Besuch deaktiviert', () => assert.equal(activateDisabled(html(bisWertebereiche)), true));
+	test('nach Alarme-Besuch aktiv (#1743)', () => assert.equal(activateDisabled(html({ ...bisWertebereiche, alarme: true })), false));
+	test('ein Versand-Flag allein schaltet nichts frei', () => assert.equal(activateDisabled(html({ ...bisWertebereiche, versand: true })), true));
 });
 
-// ── Zaehler-Anzeige (Hero "n / 6 Abschnitte eingerichtet" + Mobile "n/6") ──────
+// ── Zaehler-Anzeige (Hero "n / 5 Abschnitte eingerichtet" + Mobile "n/5", #1743) ──
 function counter(h: string): { desktop: string; mobile: string } {
 	const d = h.match(/data-testid="compare-editor-progress"[\s\S]*?<span class="mono"[^>]*>\s*([^<]*?)\s*<\/span>/);
 	const m = h.match(/data-testid="cm-mobile-progress"[\s\S]*?<span class="mono"[^>]*>\s*([^<]*?)\s*<\/span>\s*<\/div>/);
@@ -107,24 +110,28 @@ function counter(h: string): { desktop: string; mobile: string } {
 }
 
 describe('Zaehler am Editor (F002): Deckel und Schrittliste', () => {
-	test('nichts eingerichtet: "Noch nichts eingerichtet", mobil 0/6', () => {
+	test('nichts eingerichtet: "Noch nichts eingerichtet", mobil 0/5', () => {
 		const c = counter(html({}));
 		assert.equal(c.desktop, 'Noch nichts eingerichtet');
-		assert.equal(c.mobile, '0/6');
+		assert.equal(c.mobile, '0/5');
 	});
-	test('Name + 2 Orte: 2 / 6 (Vergleich + Orte)', () => {
+	test('Name + 2 Orte: 2 / 5 (Vergleich + Orte)', () => {
 		const c = counter(html({ name: 'X', picked: 2 }));
-		assert.equal(c.desktop, '2 / 6 Abschnitte eingerichtet');
-		assert.equal(c.mobile, '2/6');
+		assert.equal(c.desktop, '2 / 5 Abschnitte eingerichtet');
+		assert.equal(c.mobile, '2/5');
 	});
-	test('alle Flags gesetzt: genau 6 / 6 (Deckel 6, idealwerte zaehlt mit)', () => {
+	test('alle Flags gesetzt: genau 5 / 5 (Deckel 5, Versand-Flag zaehlt nicht)', () => {
 		const c = counter(html({ name: 'X', picked: 2, metriken: true, ideals: true, alarme: true, versand: true }));
-		assert.equal(c.desktop, '6 / 6 Abschnitte eingerichtet');
-		assert.equal(c.mobile, '6/6');
+		assert.equal(c.desktop, '5 / 5 Abschnitte eingerichtet');
+		assert.equal(c.mobile, '5/5');
 	});
-	test('Wertebereiche-Besuch allein erhoeht den Zaehler (5 / 6 ohne Versand)', () => {
+	test('bis Alarme besucht: Zaehler voll (5 / 5) — voll genau dann, wenn Aktivieren frei', () => {
 		const c = counter(html({ name: 'X', picked: 2, metriken: true, ideals: true, alarme: true }));
-		assert.equal(c.desktop, '5 / 6 Abschnitte eingerichtet');
+		assert.equal(c.desktop, '5 / 5 Abschnitte eingerichtet');
+	});
+	test('Wertebereiche-Besuch allein erhoeht den Zaehler (4 / 5 ohne Alarme)', () => {
+		const c = counter(html({ name: 'X', picked: 2, metriken: true, ideals: true }));
+		assert.equal(c.desktop, '4 / 5 Abschnitte eingerichtet');
 	});
 });
 
@@ -135,13 +142,8 @@ describe('F003: konjunktive Kette bei uebersprungenem Flag (Compare-Semantik wie
 		assert.equal(locked(h, 'wertebereiche'), true);
 		assert.equal(locked(h, 'alarme'), true);
 	});
-	test('Alarme-Flag ohne Ideal-Flag: Versand gesperrt', () => {
+	test('Alarme-Flag ohne Ideal-Flag: Alarme gesperrt', () => {
 		const h = html({ ...base, metriken: true, alarme: true });
 		assert.equal(locked(h, 'alarme'), true);
-		assert.equal(locked(h, 'versand'), true);
-	});
-	test('Versand-Flag ohne Vorgaenger: Versand-Reiter bleibt gesperrt', () => {
-		const h = html({ ...base, versand: true });
-		assert.equal(locked(h, 'versand'), true);
 	});
 });

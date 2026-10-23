@@ -113,9 +113,9 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		const locB = await createLocation(page, `E2E-S7 Kanal-Ort-B ${suffix}`, 47.2, 11.3);
 		const id = await createPresetWithLocations(page, `E2E-S7 Kanal ${suffix}`, [locA, locB]);
 
-		await page.goto(`/compare/${id}?tab=versand`);
+		await page.goto(`/compare/${id}?tab=wetter-metriken#versand`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 
 		const versandTab = page.locator('[data-testid="versand-tab"]:visible');
 		await expect(versandTab).toBeVisible({ timeout: 10_000 });
@@ -141,7 +141,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 		const reloadedCheckbox = page
 			.locator('[data-testid="compare-step5-channel-telegram"]:visible')
 			.locator('input[type="checkbox"]');
@@ -155,9 +155,9 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		const locB = await createLocation(page, `E2E-S7 Zeit-Ort-B ${suffix}`, 47.0, 10.8);
 		const id = await createPresetWithLocations(page, `E2E-S7 Zeit ${suffix}`, [locA, locB]);
 
-		await page.goto(`/compare/${id}?tab=versand`);
+		await page.goto(`/compare/${id}?tab=wetter-metriken#versand`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 
 		const urlBefore = page.url();
 		expect(urlBefore).not.toMatch(/\/edit/);
@@ -181,7 +181,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 		const reloadedInput = page.locator('[data-testid="report-morning-time"]:visible');
 		await expect(reloadedInput).toHaveValue('09:00', { timeout: 10_000 });
 	});
@@ -193,9 +193,9 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		const locB = await createLocation(page, `E2E-S7 Aktiv-Ort-B ${suffix}`, 47.4, 11.1);
 		const id = await createPresetWithLocations(page, `E2E-S7 Aktivierung ${suffix}`, [locA, locB]);
 
-		await page.goto(`/compare/${id}?tab=versand`);
+		await page.goto(`/compare/${id}?tab=wetter-metriken#versand`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 
 		const card = page.locator('[data-testid="compare-hub-activation-card"]:visible');
 		await expect(card).toBeVisible({ timeout: 10_000 });
@@ -245,9 +245,9 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 			end_date: '2027-01-15'
 		});
 
-		await page.goto(`/compare/${id}?tab=versand`);
+		await page.goto(`/compare/${id}?tab=wetter-metriken#versand`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 
 		const dateBtn = page.locator('[data-testid="compare-versand-enddate-date"]:visible');
 		await expect(dateBtn).toBeVisible({ timeout: 10_000 });
@@ -269,7 +269,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 		const reloadedOpenBtn = page.locator('[data-testid="compare-versand-enddate-open"]:visible');
 		await expect(reloadedOpenBtn).toHaveAttribute('aria-selected', 'true', { timeout: 10_000 });
 		await expect(page.locator('.vt-laufzeit-hint:visible')).toContainText('ohne Enddatum');
@@ -282,9 +282,9 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		const locB = await createLocation(page, `E2E-S7 F002-Ort-B ${suffix}`, 46.85, 10.55);
 		const id = await createPresetWithLocations(page, `E2E-S7 F002 ${suffix}`, [locA, locB]);
 
-		await page.goto(`/compare/${id}?tab=versand`);
+		await page.goto(`/compare/${id}?tab=wetter-metriken#versand`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 
 		const timeInput = page.locator('[data-testid="report-morning-time"]:visible');
 		await expect(timeInput).toBeVisible({ timeout: 10_000 });
@@ -301,7 +301,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 		const reloadedInput = page.locator('[data-testid="report-morning-time"]:visible');
 		await expect(reloadedInput).toHaveValue('10:00', { timeout: 10_000 });
 		const reloadedCta = page.locator('[data-testid="compare-hub-activation-cta"]:visible');
@@ -319,9 +319,9 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		const locB = await createLocation(page, `E2E-S7 F004-Ort-B ${suffix}`, 46.65, 10.25);
 		const id = await createPresetWithLocations(page, `E2E-S7 F004 ${suffix}`, [locA, locB]);
 
-		await page.goto(`/compare/${id}?tab=versand`);
+		await page.goto(`/compare/${id}?tab=wetter-metriken#versand`);
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 
 		const timeInput = page.locator('[data-testid="report-morning-time"]:visible');
 		await expect(timeInput).toBeVisible({ timeout: 10_000 });
@@ -354,7 +354,7 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').click();
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
 		const reloadedInput = page.locator('[data-testid="report-morning-time"]:visible');
 		await expect(reloadedInput).toHaveValue('11:00', { timeout: 10_000 });
 		const reloadedCta = page.locator('[data-testid="compare-hub-activation-cta"]:visible');
@@ -368,35 +368,8 @@ test.describe('Issue #1256 Scheibe 7: Hub-Versand-Tab (AC-35/36/37/17/18/19)', (
 		await expect(reloadedCta).toHaveText('Pausieren', { timeout: 10_000 });
 	});
 
-	// ── AC-19 Regression: Vorschau-Tab Desktop/iPhone-Umschalter ────────────────
-	test('AC-19: Vorschau-Tab Desktop-Inbox/iPhone-Mail-Umschalter bleibt funktionsfähig', async ({ page }) => {
-		const suffix = Date.now();
-		const locA = await createLocation(page, `E2E-S7 Vorschau-Ort-A ${suffix}`, 47.5, 10.3);
-		const locB = await createLocation(page, `E2E-S7 Vorschau-Ort-B ${suffix}`, 47.55, 10.35);
-		const id = await createPresetWithLocations(page, `E2E-S7 Vorschau ${suffix}`, [locA, locB]);
-
-		await page.goto(`/compare/${id}?tab=vorschau`);
-		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-vorschau"]:visible').click();
-
-		const panel = page.locator('[data-testid="compare-detail-panel-vorschau"]:visible');
-		await expect(panel).toBeVisible({ timeout: 10_000 });
-
-		// Issue #2283: der geteilte Vorschau-Reiter fuehrt den Desktop/Mobil-
-		// Umschalter (testids preview-email-view-*); die gewaehlte Ansicht steht
-		// am E-Mail-Rahmen (data-email-view).
-		const mobilBtn = panel.getByTestId('preview-email-view-mobile');
-		const desktopBtn = panel.getByTestId('preview-email-view-desktop');
-		await expect(mobilBtn).toBeVisible({ timeout: 10_000 });
-		await expect(desktopBtn).toBeVisible({ timeout: 10_000 });
-		const rahmen = panel.getByTestId('email-iframe-wrapper');
-
-		await mobilBtn.click();
-		await expect(rahmen).toHaveAttribute('data-email-view', 'mobile', { timeout: 5_000 });
-
-		await desktopBtn.click();
-		await expect(rahmen).toHaveAttribute('data-email-view', 'desktop', { timeout: 5_000 });
-	});
+	// AC-19 (Vorschau-Tab Desktop/iPhone-Umschalter) entfaellt mit dem
+	// Vorschau-Reiter (Issue #1743, Briefing-Vorschau ersatzlos zurueckgebaut).
 });
 
 // ── Issue #2283 AC-13 (docs/specs/modules/shared_preview_tab.md) ────────────
@@ -413,7 +386,7 @@ test.describe('Issue #2283 AC-13: Senden nur im Hub-Kopf (Desktop)', () => {
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	test('Versand- und Vorschau-Reiter ohne Test-Senden; Hub-Kopf sendet an die konfigurierten Empfaenger', async ({
+	test('Versand-Abschnitt ohne Test-Senden; Hub-Kopf sendet an die konfigurierten Empfaenger', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -427,15 +400,14 @@ test.describe('Issue #2283 AC-13: Senden nur im Hub-Kopf (Desktop)', () => {
 			await route.fulfill({ status: 200, json: { status: 'queued' } });
 		});
 
-		for (const reiter of ['versand', 'vorschau']) {
-			await page.goto(`/compare/${id}?tab=${reiter}`);
-			await page.waitForLoadState('networkidle');
-			await page.locator(`[data-testid="compare-detail-tab-${reiter}"]:visible`).click();
-			const panel = page.locator(`[data-testid="compare-detail-panel-${reiter}"]:visible`);
-			await expect(panel).toBeVisible({ timeout: 10_000 });
-			await expect(panel.locator('[data-testid="compare-hub-activation-testsend"]')).toHaveCount(0);
-			await expect(panel.getByRole('button', { name: /Test-Briefing/ })).toHaveCount(0);
-		}
+		// Issue #1743: Versand steht im Reiter Wetter-Metriken (#versand); der
+		// Vorschau-Reiter ist ersatzlos entfallen.
+		await page.goto(`/compare/${id}?tab=wetter-metriken#versand`);
+		await page.waitForLoadState('networkidle');
+		const panel = page.locator('[data-testid="versand-abschnitt"]:visible');
+		await expect(panel).toBeVisible({ timeout: 10_000 });
+		await expect(panel.locator('[data-testid="compare-hub-activation-testsend"]')).toHaveCount(0);
+		await expect(panel.getByRole('button', { name: /Test-Briefing/ })).toHaveCount(0);
 
 		const kopfSenden = page.locator('[data-testid="subscription-hub-send"]:visible');
 		await expect(kopfSenden).toBeVisible();

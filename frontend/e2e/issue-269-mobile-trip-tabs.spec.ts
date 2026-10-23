@@ -61,7 +61,8 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const tabs = ['uebersicht', 'etappen', 'wetter-metriken', 'versand', 'wertebereiche', 'vorschau'];
+		// Issue #1743: 5 Reiter, versand/vorschau entfallen.
+		const tabs = ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'];
 		for (const tab of tabs) {
 			const trigger = page.getByTestId(`trip-detail-tab-${tab}`);
 			// Im DOM vorhanden
@@ -83,7 +84,7 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const tabs = ['uebersicht', 'etappen', 'wetter-metriken', 'versand', 'wertebereiche', 'vorschau'];
+		const tabs = ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'];
 		for (const tab of tabs) {
 			const trigger = page.getByTestId(`trip-detail-tab-${tab}`);
 			const whiteSpace = await trigger.evaluate((el) => getComputedStyle(el).whiteSpace);

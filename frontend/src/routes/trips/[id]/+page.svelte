@@ -299,7 +299,7 @@
 	<TopoBg opacity={0.14} />
 	<div class="breadcrumb-bar" data-testid="trip-detail-breadcrumb-bar">
 		<div class="mono breadcrumb-path" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em;">
-			<a href="/trips" style="opacity: 0.6; color: inherit; text-decoration: none;">Trips</a>
+			<a href="/trips" class="g-link-tap" style="opacity: 0.6; color: inherit; text-decoration: none;">Trips</a>
 			<span style="margin: 0 8px;">/</span>
 			<span style="color: var(--g-ink);">{trip.shortcode ?? trip.name}</span>
 		</div>

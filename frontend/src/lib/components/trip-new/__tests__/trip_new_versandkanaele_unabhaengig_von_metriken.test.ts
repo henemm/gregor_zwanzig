@@ -41,12 +41,13 @@ const KANAL_TESTIDS = ['channel-email', 'channel-telegram', 'channel-sms', 'chan
 /** /trips/new mit offenem Zeitplan-Tab, breite Ansicht. */
 function zeitplan(channels: WetterKanaele, reportConfig?: Record<string, unknown>): string {
 	const html = renderTripNew({
-		activeTab: 'versand',
+		// #1743: der Versand-Inhalt steht unten im Schritt Wetter-Metriken (kein Reiter „Versand" mehr).
+		activeTab: 'wetter-metriken',
 		isMobileViewport: false,
 		channels,
 		reportConfig
 	});
-	assertTabOffen(html, 'versand');
+	assertTabOffen(html, 'wetter-metriken');
 	return html;
 }
 

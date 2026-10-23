@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Issue #517 — CompareTabs: 6-Tab-Orchestrator für /compare/[id] Detail-Seite.
 	//
-	// Tabs: Übersicht · Orte · Wertebereiche · Layout · Versand · Vorschau
+	// Tabs (#1743): Übersicht · Orte · Wetter-Metriken (mit Versand-Abschnitt #versand) · Wertebereiche · Alarme
 	// Issue #1231, Slice 6 (Begriffs-Konsistenz): Label „Idealwerte" -> „Wertebereiche",
 	// Issue #2287: Kennung jetzt `wertebereiche` (gemeinsam mit dem Trip-Hub). Reine Lesenansicht, keine
 	// funktionale CorridorEditor-Migration hier (bleibt späterer Scope).
@@ -12,10 +12,9 @@
 	// Spec: docs/specs/modules/issue_517_compare_hub.md
 
 	import { Dot, Pill, Btn, Eyebrow, Card, SectionH } from '$lib/components/atoms';
-	// Issue #2283: geteilter Vorschau-Reiter (gleiche Anordnung wie im Trip-Hub).
-	import PreviewTab from '$lib/components/shared/PreviewTab.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
-	import VersandTab from '$lib/components/shared/VersandTab.svelte';
+	// Issue #1743: Wetter-Metriken und Versand in EINEM geteilten Baustein (Anker #versand).
+	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
 	import BriefingHistory from '$lib/components/shared/BriefingHistory.svelte';
 	// SaveStatus-Typ/Helper (der Chip selbst kommt seit #2284 S2 vom SubscriptionHeader).
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -27,7 +26,6 @@
 		formatLastSent,
 		formatNextSend,
 		channelNamesLabel,
-		presetChannels,
 		presetProfileLabel,
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
@@ -51,8 +49,7 @@
 	import { versandPropsAus } from './versandPropsAus.ts';
 	import { wetterMetrikenPropsAus } from './wetterMetrikenPropsAus.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
-	// vergleich-Kontext) — analog Alarme-/Versand-Bridge oben.
-	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
+	// vergleich-Kontext) — seit #1743 ueber WetterMetrikenVersandPanel eingebettet.
 	import {
 		hydrateWeatherMetricsFromPreset,
 		hydrateChannelActiveMetricsFromPreset,
@@ -95,7 +92,7 @@
 	import { hydrateVersandFieldsFromPreset } from '../shared/versandVergleichSpeicherung.ts';
 	import { sichereSelbstSpeichererVorReiterwechsel } from '../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
 	import { groupLocations } from './locationHelpers.js';
-	import { subscriptionTabs, resolveTab, bereinigteTabAdresse } from '../shared/subscriptionTabs.ts';
+	import { subscriptionTabs, resolveTab, bereinigteTabAdresse, versandSprungStart } from '../shared/subscriptionTabs.ts';
 	import MTabBar from '$lib/components/mobile/MTabBar.svelte';
 
 	interface Props {
@@ -134,9 +131,17 @@
 	// svelte-ignore state_referenced_locally -- bewusst nur der Startwert; spaetere
 	// initialTab-Aenderungen setzt der $effect unten.
 	let activeTab = $state<string>(resolveTab('vergleich', initialTab).tab);
+	// Issue #1743: jede Erhoehung laesst den Baustein zum Versand-Abschnitt scrollen
+	// (der Baustein mountet erst nach der Versand-Hydration, s. Template). Startwert aus
+	// der Alt-Kennung; ein direkter Link mit `#versand` liest der Baustein beim Mount.
+	// svelte-ignore state_referenced_locally -- bewusst nur der Startwert.
+	// Startwert auch aus einem direkten Link mit `#versand`; jeder Reiterwechsel ohne
+	// Anker setzt ihn auf 0 — ein spaeterer Remount des Bausteins scrollt nicht.
+	let versandSprung = $state(versandSprungStart(resolveTab('vergleich', initialTab)));
 	// E4: Alt-/kind-fremde Kennung → Adresszeile EINMAL per replaceState auf die neue
 	// Kennung; unbekannte Kennung → Parameter `tab` entfernt. Keine Schleife: danach
 	// ist die Kennung neu, und history.replaceState aendert `initialTab` nicht.
+	// Issue #1743: `versand`/`briefings` → `?tab=wetter-metriken#versand`.
 	$effect(() => {
 		const r = resolveTab('vergleich', initialTab);
 		activeTab = r.tab;
@@ -168,15 +173,18 @@
 		return () => mq.removeEventListener('change', onChange);
 	});
 
-	async function handleValueChange(value: string): Promise<void> {
+	async function handleValueChange(value: string, anchor: 'versand' | null = null): Promise<void> {
 		// Issue #2276 S2/S3 (TripTabs-Muster): eine ausstehende Aenderung eines
 		// selbst speichernden Reiters (Alarme, Wertebereiche) vor dem Verlassen
 		// senden — beide teilen den EINEN Speicher-Platz des Controllers.
 		await sichereSelbstSpeichererVorReiterwechsel(activeTab, value, saveController);
 		activeTab = value;
+		versandSprung = anchor === 'versand' ? versandSprung + 1 : 0;
 		if (typeof window !== 'undefined') {
 			const url = new URL(window.location.href);
 			url.searchParams.set('tab', value);
+			// #1743: Sprungziel als Hash; ein Reiterwechsel ohne Anker verwirft den alten.
+			url.hash = anchor ?? '';
 			history.replaceState(history.state, '', url.toString());
 		}
 	}
@@ -411,14 +419,15 @@
 	}
 
 	// Issue #1256 Scheibe 7 (AC-35/36): eingebetteter VersandTab (context="vergleich")
-	// im Versand-Tab — gleicher `wizardState`/gleiche `currentPreset`-Baseline wie
-	// die Nachbar-Reiter. Seit #2276 S5 speichert der Reiter selbst (Baseline +
-	// Diff-Gate in shared/versandVergleichSpeicherung.ts); hier bleibt nur die
-	// Hydration, die `wizardState` VOR dem Mount befuellt.
+	// — gleicher `wizardState`/gleiche `currentPreset`-Baseline wie die Nachbar-Reiter.
+	// Seit #2276 S5 speichert der Abschnitt selbst (Baseline + Diff-Gate in
+	// shared/versandVergleichSpeicherung.ts); hier bleibt nur die Hydration, die
+	// `wizardState` VOR dem Mount befuellt. Issue #1743: der Versand-Abschnitt steht
+	// unten im Reiter Wetter-Metriken — die Hydration haengt an diesem Reiter.
 	let versandHydrated = $state(false);
 
 	$effect(() => {
-		if (activeTab !== 'versand' || versandHydrated) return;
+		if (activeTab !== 'wetter-metriken' || versandHydrated) return;
 		// F005-Muster: aus currentPreset hydrieren, damit ein vorheriger
 		// Orte-/Idealwerte-Edit in derselben Sitzung nicht ueberschrieben wird.
 		const hydrated = hydrateVersandFieldsFromPreset(currentPreset);
@@ -581,13 +590,6 @@
 	// behaupteten eine Orts-Kappung je Kanal ("Telegram · max 8"), die es im
 	// Ortsvergleich nicht gibt (AC-4).
 
-	// ── Vorschau-Tab (Issue #514, #582, #2283) ──────────────────────────────────
-	// Issue #2283: Zustand, Abruf und Markup liegen im geteilten PreviewTab
-	// (shared/previewLoader.ts) — hier nur die Kanal-Liste aus der Preset-
-	// Konfiguration (#1256 S8b AC-2), auf Kleinschreib-Keys projiziert.
-	// Test-Senden gibt es nur noch im Hub-Kopf (Aktionsmodell #2278).
-	const previewConfiguredChannels = $derived(presetChannels(preset).map((c) => c.toLowerCase()));
-
 	// Issue #527/#558 + #631 — Pause/Aktivieren mit Schedule-Gedächtnis (persistiert).
 	// previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
 	let previousSchedule = $state<string>(
@@ -744,7 +746,7 @@
 					<div style="padding: 18px 24px; display: flex; align-items: center; gap: 40px; flex-wrap: wrap">
 						<!-- Status -->
 						<div>
-							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Status</div>
+							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Status</div>
 							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">
 								{#if status === 'active'}
 									<span style="display: inline-flex; align-items: center; gap: 7px"><Dot tone="good" size={7}/> Läuft automatisch</span>
@@ -757,22 +759,22 @@
 						</div>
 						<!-- Nächster Versand -->
 						<div>
-							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Nächster Versand</div>
+							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Nächster Versand</div>
 							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{formatNextSend(nextSend)}</div>
 						</div>
 						<!-- Briefings -->
 						<div>
-							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Briefings</div>
+							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Briefings</div>
 							<div data-testid="compare-detail-stat-briefings" style="font-size: 14px; color: var(--g-ink); font-weight: 500">{presetBriefingTimesLabel(preset)}</div>
 						</div>
 						<!-- Zuletzt raus -->
 						<div>
-							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Zuletzt raus</div>
+							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Zuletzt raus</div>
 							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{formatLastSent(preset.letzter_versand)}</div>
 						</div>
 						<!-- Kanäle — Issue #1256 Scheibe 3 AC-6: Namen statt Anzahl (Soll: screen-compare-detail.jsx:147-150) -->
 						<div>
-							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Kanäle</div>
+							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Kanäle</div>
 							<div data-testid="compare-detail-stat-kanaele" style="font-size: 14px; color: var(--g-ink); font-weight: 500">
 								{#if channelsLabel === '—'}
 									—
@@ -816,7 +818,7 @@
 						</button>
 						<!-- Issue #1360: Übersichts-Zeile "Layout" entfaellt — sie sprang auf
 						     den aufgeloesten Reiter und behauptete eine Orts-Kappung je Kanal. -->
-						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('versand')}>
+						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('wetter-metriken', 'versand')}>
 							<span class="hub-summary-row-body">
 								<span class="hub-summary-row-eyebrow">Versand</span>
 								<span class="hub-summary-row-title">{status === 'draft' ? 'Nicht geplant' : presetBriefingTimesLabel(preset)}</span>
@@ -855,11 +857,11 @@
 					<Card padding={20} style="display: flex; flex-direction: column">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
 							<Eyebrow>Versand</Eyebrow>
-							<button data-testid="compare-hub-versand-edit" onclick={() => handleValueChange('versand')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+							<button data-testid="compare-hub-versand-edit" onclick={() => handleValueChange('wetter-metriken', 'versand')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
 						<!-- Issue #1256 S8c (AC-5): Draft-Sonderfall (Soll: jsx:175-177). -->
 						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{status === 'draft' ? 'Noch nicht geplant' : presetBriefingTimesLabel(preset)}</div>
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{status === 'draft' ? 'Briefing-Uhrzeiten im Tab Versand festlegen.' : versandSummaryText}</div>
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{status === 'draft' ? 'Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen.' : versandSummaryText}</div>
 					</Card>
 				</div>
 				{/if}
@@ -867,14 +869,8 @@
 				<!-- Issue #2281: Versand-Historie, geteilter Baustein mit dem Trip-Hub
 				     (mobil und Desktop). -->
 				<BriefingHistory id={preset.id} kind="vergleich" />
-
-				<!-- Verifikations-Hinweis -->
-				<div style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--g-card); border: 1px solid var(--g-rule); border-left: 3px solid var(--g-accent); border-radius: var(--g-r-3)">
-					<div style="font-size: 13px; color: var(--g-ink-2); flex: 1; line-height: 1.5">
-						Gelesen wird das Briefing unterwegs im Postfach — nicht hier. Der Tab <strong>Vorschau</strong> dient nur zum Prüfen der Konfiguration.
-					</div>
-					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('vorschau')}>Vorschau prüfen →</Btn>
-				</div>
+				<!-- Issue #1743: Verifikations-Hinweis mit „Vorschau prüfen →" entfaellt
+				     (Briefing-Vorschau ersatzlos zurueckgebaut, PO-Entscheid 2026-10-22). -->
 			</div>
 		</div>
 	{/if}
@@ -953,21 +949,28 @@
 
 	{#if activeTab === 'wetter-metriken'}
 		<div class="tab-panel" data-testid="compare-detail-panel-wetter-metriken">
-			{#if wetterMetrikenLayoutHydrationBereit}
+			{#if wetterMetrikenLayoutHydrationBereit && versandHydrated}
 				<!-- Issue #2276 S4: der Reiter speichert selbst (saveController,
 				     Hub-Queue, Basis-Rueckmeldung, EINE kombinierte Wetter-Metriken/
 				     Layout-Orchestrierung in WeatherMetricsTab.svelte) — kein Wrapper
 				     und keine getrennten Commit-Funktionen mehr. Gemountet wird ERST,
 				     wenn BEIDE Domaenen hydriert sind (wetterMetrikenLayoutHydrationBereit,
 				     AC-3), damit die Orchestrierung gegen eine vollstaendige Baseline
-				     entsteht. -->
-				<WeatherMetricsTab
+				     entsteht.
+				     Issue #1743: geteilter Baustein mit Versand-Abschnitt (#versand) samt
+				     Aktivierungs-Karte; er mountet zusaetzlich erst nach der Versand-
+				     Hydration (versandHydrated) — nie mit Platzhalterwerten (AC-9). -->
+				<WetterMetrikenVersandPanel
 					context="vergleich"
 					{...wetterMetrikenPropsAus(wizardState)}
+					versand={versandPropsAus(wizardState)}
+					vergleichTelegramStyle={wizardState.telegramStyle ?? 'rich'}
+					activation={hubActivationCard}
 					preset={currentPreset}
 					{saveController}
 					enqueueHubWrite={reiheHubSchreibvorgangEin}
 					onCompareUpdate={uebernehmeHubAntwort}
+					{versandSprung}
 				/>
 			{/if}
 		</div>
@@ -1018,29 +1021,8 @@
 		</div>
 	{/if}
 
-	{#if activeTab === 'versand'}
-		<div class="tab-panel" data-testid="compare-detail-panel-versand">
-			{#if versandHydrated}
-				<!-- Issue #2276 S5: der Reiter speichert selbst (saveController,
-				     Hub-Queue, Basis-Rueckmeldung) — kein Wrapper mehr. Der
-				     reaktive $effect in VersandTab.svelte beobachtet alle 10
-				     Versandfelder und ersetzt damit auch das historische
-				     Wrapper-`onclick` fuer „Bis auf Weiteres" (F001). -->
-				<VersandTab
-					context="vergleich"
-					{...versandPropsAus(wizardState)}
-					vergleichTelegramStyle={wizardState.telegramStyle ?? 'rich'}
-					activation={hubActivationCard}
-					preset={currentPreset}
-					{saveController}
-					enqueueHubWrite={(fn) => hubPutQueue.enqueue(fn)}
-					onCompareUpdate={(updated) => {
-						currentPreset = updated;
-					}}
-				/>
-			{/if}
-		</div>
-	{/if}
+	<!-- Issue #1743: das eigene Versand-Panel entfaellt — der Versand-Abschnitt steht
+	     im Reiter Wetter-Metriken (WetterMetrikenVersandPanel oben). -->
 
 	{#snippet hubActivationCard()}
 		{@const banner = hubActivationBanner(status)}
@@ -1061,26 +1043,6 @@
 			</Btn>
 		</Card>
 	{/snippet}
-
-	{#if activeTab === 'vorschau'}
-		<div data-testid="compare-detail-panel-vorschau">
-			{#if preset.location_ids.length === 0}
-				<div style="padding: 32px; text-align: center; color: var(--g-ink-3); font-size: 13px">
-					Noch keine Orte konfiguriert — Tab <strong>Orte</strong> besuchen um Kandidaten hinzuzufügen.
-				</div>
-			{:else}
-				<!-- #2283: anderer Vergleich (gleiche Seite, andere ID) ⇒ neuer Lader, neuer Abruf. -->
-				{#key preset.id}
-					<PreviewTab
-						context="vergleich"
-						id={preset.id}
-						premiumSms={preset.send_premium_sms === true}
-						configuredChannels={previewConfiguredChannels}
-					/>
-				{/key}
-			{/if}
-		</div>
-	{/if}
 
 	</div>
 </div>
@@ -1167,7 +1129,7 @@
 	}
 	.hub-add-group-header {
 		font-family: var(--g-font-mono);
-		font-size: 10px;
+		font-size: 11px;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--g-ink-3);
@@ -1199,7 +1161,7 @@
 		gap: 12px;
 	}
 	.hub-mobile-stat-label {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		letter-spacing: 0.16em;
 		text-transform: uppercase;
@@ -1264,7 +1226,7 @@
 	.hub-summary-row-eyebrow {
 		display: block;
 		font-family: var(--g-font-mono);
-		font-size: 9px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		letter-spacing: 0.12em;
 		text-transform: uppercase;

@@ -10,25 +10,40 @@ Begründung: SvelteKit-SSR liest `#fragment` nicht aus — Query-Parameter sind 
 
 ## Valide Tab-Werte — Trip-Detail und Ortsvergleich-Detail (#2287)
 
-Beide Hubs nutzen EINE gemeinsame Reiter-Tabelle: `frontend/src/lib/components/shared/subscriptionTabs.ts`
-(`subscriptionTabs(kind)`, `resolveTab(kind, raw)`, `bereinigteTabAdresse()`, Tabelle `LEGACY`).
+Beide Hubs nutzen EINE gemeinsame Reiter-Definition: `frontend/src/lib/components/shared/subscriptionTabs.ts`
+(`REITER_DEFINITION`, `subscriptionTabs(kind)` für die Hub-Leiste, `anlegeKette(kind)` für die Anlege-Seiten,
+`resolveTab(kind, raw)`, `bereinigteTabAdresse()`, Tabelle `LEGACY`). Es gibt keine zweite Reiterliste.
 
 | Wert | Label | Hinweis |
 |------|-------|---------|
 | `uebersicht` | Übersicht | |
 | `etappen` | Etappen & Wegpunkte | nur Trip |
 | `orte` | Orte | nur Ortsvergleich |
-| `wetter-metriken` | Wetter-Metriken | |
+| `wetter-metriken` | Wetter-Metriken | enthält unten den Abschnitt Versand (Anker `#versand`) |
 | `wertebereiche` | Wertebereiche | |
 | `alarme` | Alarme | |
-| `versand` | Versand | |
-| `vorschau` | Vorschau | |
 
-Alte Kennungen (`overview`, `stages`, `weather`, `alerts`, `briefings`, `preview`, `idealwerte`, `layout`) werden weiter
-angenommen (Tabelle `LEGACY`; Achtung: `alerts` → `wertebereiche`, nicht `alarme`; `layout` → `wetter-metriken`; die kind-fremde
-Punkte-Kennung `etappen`/`orte` wird auf die eigene umgeschrieben) und einmalig per `replaceState` auf die neue Kennung umgeschrieben. Unbekannte Werte fallen auf `uebersicht`
+Seit #1743 gibt es **fünf Reiter** (Trip und Ortsvergleich, gleiche Reihenfolge). Die Reiter „Versand" und „Vorschau" sind entfallen:
+
+- **Versand** ist ein Abschnitt unter dem Reiter Wetter-Metriken (Anker `#versand`, Baustein
+  `shared/WetterMetrikenVersandPanel.svelte`, `context="route"|"vergleich"`). Beim Ortsvergleich steht dort zusätzlich die
+  Aktivierungs-Karte (Pausieren/Aktivieren).
+- **Vorschau** entfällt ersatzlos (samt Endpoint `GET /api/briefings/{id}/preview` und den verwaisten Resten
+  `CompareChatBubble`/`CompareChannelSwitch`, PO-Entscheid 2026-10-22). Es bleibt nur die Alarm-Vorschau im Reiter
+  Alarme (`POST /api/briefings/{id}/alert-preview`); weitere Kanal-Vorschauen gibt es in der Oberfläche nicht mehr.
+
+Alte Kennungen (`overview`, `stages`, `weather`, `alerts`, `briefings`, `preview`, `versand`, `vorschau`, `idealwerte`, `layout`)
+werden weiter angenommen (Tabelle `LEGACY`; Achtung: `alerts` → `wertebereiche`, nicht `alarme`; `layout` → `wetter-metriken`;
+die kind-fremde Punkte-Kennung `etappen`/`orte` wird auf die eigene umgeschrieben). Konkret:
+
+- `versand`, `briefings` → `wetter-metriken` mit Anker `#versand` (`?tab=wetter-metriken#versand`)
+- `vorschau`, `preview` → `uebersicht`
+
+Die Adresse wird einmalig per `replaceState` auf die neue Kennung umgeschrieben. Unbekannte Werte fallen auf `uebersicht`
 zurück. testids folgen den Kennungen, z. B. `trip-detail-tab-uebersicht`. Die Anlage-Editoren (`TripNewEditor`,
-`CompareNewEditor`) nutzen dieselben Kennungen. `compare/compareTabsResolve.ts` und `wertebereicheTabId()` sind entfallen.
+`CompareNewEditor`) nutzen dieselben Kennungen; ihre Kette hat keinen Schritt „Versand" mehr (Versand steht unten im
+Schritt Wetter-Metriken, „Fertig/Anlegen" wird nach dem Besuch von „Alarme" freigeschaltet). `compare/compareTabsResolve.ts`
+und `wertebereicheTabId()` sind entfallen.
 
 ## goto-Muster (kanonisch)
 

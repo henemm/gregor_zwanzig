@@ -3,10 +3,9 @@ docs/specs/modules/fix_2140_entitaets_id_pfadsperre.md AC-9.
 
 Vier Routen laden eine Trip-ID roh in einen Dateipfad (Guard fehlt noch in
 preview_service.py/validator.py):
-- GET  /api/preview/{trip_id}/email
 - GET  /api/preview/{trip_id}/sms
-- GET  /api/preview/{trip_id}/telegram
 - POST /api/trips/{trip_id}/alert-preview
+(email/telegram-Vorschau mit #1743 entfernt)
 
 Getestet wird ueber den ECHTEN HTTP-Stack (FastAPI TestClient), nicht als
 Unit-Test der internen Funktion — die AC beschreibt Draht-Verhalten.
@@ -107,7 +106,8 @@ def _relpath_attack_id(victim_dir: Path, victim_trip_id: str, attacker_id: str) 
     return os.path.relpath(victim_dir / victim_trip_id, start=attacker_dir)
 
 
-PREVIEW_PATHS = ["email", "sms", "telegram"]
+# Issue #1743: email/telegram-Vorschau entfernt; /sms bleibt.
+PREVIEW_PATHS = ["sms"]
 
 
 def test_preview_routes_reject_relpath_traversal_trip_id_AC9(client, victim_trip):
@@ -170,7 +170,7 @@ def test_preview_and_alert_preview_reject_encoded_and_dotsegment_ids_AC9(client,
 
     for trip_id in reachable_but_invalid + blocked_by_router:
         r = client.get(
-            f"/api/preview/{trip_id}/email",
+            f"/api/preview/{trip_id}/sms",
             params={"user_id": "attacker", "demo": True},
         )
         assert r.status_code != 200, (

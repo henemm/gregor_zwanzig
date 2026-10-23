@@ -31,10 +31,10 @@ function ausstehend(): { ctl: ReturnType<typeof createController>; laeufe: () =>
 }
 
 describe('AC-8: SELBST_SPEICHERNDE_VERGLEICH_REITER mit den neuen Kennungen', () => {
-	test('enthaelt genau wertebereiche, alarme, wetter-metriken, versand', () => {
+	// #1743: kein Reiter `versand` mehr — der Versand-Abschnitt gehoert zu `wetter-metriken`.
+	test('enthaelt genau wertebereiche, alarme, wetter-metriken (#1743: ohne versand)', () => {
 		assert.deepEqual([...SELBST_SPEICHERNDE_VERGLEICH_REITER].sort(), [
 			'alarme',
-			'versand',
 			'wertebereiche',
 			'wetter-metriken'
 		]);

@@ -266,14 +266,10 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/_validator/sms-fidelity-preview", handler.SmsFidelityPreviewProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/trips/{id}/send", handler.SendTripReportProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/trips/{id}/alert-preview", handler.AlertPreviewProxyHandler(deps.Config.PythonCoreURL))
-	// Issue #140 / #189: Output-Vorschau Email + SMS
-	r.Get("/api/preview/{trip_id}/email", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "email"))
+	// Issue #140 / #189: SMS-Kurzform-Vorschau. Issue #1743: email/telegram und
+	// POST /api/preview/compare/{id} entfallen mit der Briefing-Vorschau; /sms
+	// bleibt, weil Staging-Specs damit die zugestellte SMS-Kurzform messen.
 	r.Get("/api/preview/{trip_id}/sms", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "sms"))
-	// Issue #363: Telegram-Vorschau (kanal-bewusster Narrow-Renderer #360).
-	// Issue #2283 AC-6: /signal entfernt (Signal app-weit weg seit #610).
-	r.Get("/api/preview/{trip_id}/telegram", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "telegram"))
-	// Issue #1270: Orts-Vergleich-Vorschau — EIN Abruf, ALLE Kanäle (ADR-0011).
-	r.Post("/api/preview/compare/{preset_id}", handler.ComparePreviewProxyHandler(deps.Config.PythonCoreURL))
 	// Epic #138 Issue #177: User-MetricPresets (+ #342 PATCH Read-Modify-Write)
 	r.Get("/api/metric-presets", handler.ListMetricPresetsHandler(deps.Store))
 	r.Post("/api/metric-presets", handler.CreateMetricPresetHandler(deps.Store))
@@ -294,9 +290,9 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/briefings", handler.CreateBriefingHandler(deps.Store))
 	r.Put("/api/briefings/{id}", handler.UpdateBriefingHandler(deps.Store))
 	r.Delete("/api/briefings/{id}", handler.DeleteBriefingHandler(deps.Store))
-	// Issue #2283: kind-neutrale Vorschau + Alarm-Vorschau (Alt-Routen oben als Delegates).
+	// Issue #2283: kind-neutrale Alarm-Vorschau (Alt-Route oben als Delegate).
+	// Die kind-neutrale Briefing-Vorschau ist mit #1743 entfallen.
 	r.Get("/api/briefings/{id}/briefing-history", handler.BriefingHistoryHandler(deps.Store))
-	r.Get("/api/briefings/{id}/preview", handler.BriefingPreviewHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/briefings/{id}/alert-preview", handler.BriefingAlertPreviewHandler(deps.Config.PythonCoreURL))
 	// Issue #2280: kind-neutraler Handversand (Alt-Routen oben sind Delegates).
 	r.Post("/api/briefings/{id}/send", handler.BriefingSendHandler(deps.Config.PythonCoreURL))
@@ -341,7 +337,6 @@ func New(deps Deps) chi.Router {
 	r.With(requireAdmin).Post("/api/scheduler/radar-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/radar-alert-checks"))
 	r.With(requireAdmin).Post("/api/scheduler/compare-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/compare-alert-checks"))
 	r.With(requireAdmin).Post("/api/scheduler/compare-radar-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/compare-radar-alert-checks"))
-	r.With(requireAdmin).Post("/api/scheduler/compare-official-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/compare-official-alert-checks"))
 
 	return r
 }

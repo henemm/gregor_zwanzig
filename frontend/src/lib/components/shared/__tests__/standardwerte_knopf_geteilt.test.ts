@@ -122,19 +122,21 @@ describe('AC-12/AC-5: Platzierung Ortsvergleich (/compare/new)', () => {
 		['vergleich', {}],
 		['orte', {}],
 		['wetter-metriken', { metrikenVisited: true }],
-		['wertebereiche', { metrikenVisited: true, idealsVisited: true }],
-		['alarme', { metrikenVisited: true, idealsVisited: true, alarmeVisited: true }]
+		['wertebereiche', { metrikenVisited: true, idealsVisited: true }]
+		// #1743: „Alarme" ist der letzte Schritt — mit seinem Besuch wird Aktivieren frei
+		// und der Standardwerte-Knopf entfaellt (AC-5 unten, nie beide gleichzeitig).
 	];
 	for (const [reiter, flags] of reiterVorVersand) {
-		test(`mobil, Reiter „${reiter}": Knopf in der unteren Leiste (nicht nur auf Versand)`, async () => {
+		test(`mobil, Reiter „${reiter}": Knopf in der unteren Leiste (nicht nur auf dem letzten Reiter)`, async () => {
 			const html = await renderVergleichNeu({ activeTab: reiter, isMobileViewport: true, ...flags });
 			assert.ok(innen(html, 'cm-mobile-cta').includes('data-testid="cm-mobile-standardwerte"'), `cm-mobile-standardwerte fehlt auf Reiter ${reiter}`);
 		});
 	}
+	// #1743: der Reiter „versand" entfaellt — „Alarme" ist der letzte Schritt.
 	test('AC-5: alle Reiter besucht (Aktivieren frei) => Standardwerte-Knopf nicht mehr da', async () => {
-		const alle = { metrikenVisited: true, idealsVisited: true, alarmeVisited: true, versandVisited: true };
-		const d = await renderVergleichNeu({ activeTab: 'versand', isMobileViewport: false, ...alle });
-		const m = await renderVergleichNeu({ activeTab: 'versand', isMobileViewport: true, ...alle });
+		const alle = { metrikenVisited: true, idealsVisited: true, alarmeVisited: true };
+		const d = await renderVergleichNeu({ activeTab: 'alarme', isMobileViewport: false, ...alle });
+		const m = await renderVergleichNeu({ activeTab: 'alarme', isMobileViewport: true, ...alle });
 		assert.ok(!d.includes('compare-editor-standardwerte') && !m.includes('cm-mobile-standardwerte'));
 	});
 });

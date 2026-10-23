@@ -153,9 +153,9 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await expect(page).toHaveURL(new RegExp(`/compare/${id}(\\?|$)`), { timeout: 10_000 });
 	});
 
-	// ── AC-4: Vorschau → /compare/{id}?tab=vorschau ──────────────────────────
+	// ── AC-4 (Issue #1743): Aktion "Vorschau" entfaellt ersatzlos ─────────────
 
-	test('AC-4: "Vorschau" navigiert zu ?tab=vorschau', async ({ page }) => {
+	test('AC-4 (#1743): Listen-Kebab bietet KEINE Aktion "Vorschau" mehr', async ({ page }) => {
 		const tile = page.locator('[data-testid^="compare-tile-"]:visible').first();
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 
@@ -163,13 +163,10 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		await kebab.click();
 		await page.waitForTimeout(500);
 
-		// Klick auf "Vorschau" (Issue #2278: Beschriftung der einen Aktionsquelle)
-		const previewItem = page.getByRole('menuitem', { name: 'Vorschau', exact: true });
-		await expect(previewItem).toBeVisible();
-		await previewItem.click();
-
-		// Prüfe URL enthält ?tab=vorschau
-		await expect(page).toHaveURL(/\?tab=vorschau/, { timeout: 10_000 });
+		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).toBeVisible();
+		// Issue #1743: Briefing-Vorschau zurueckgebaut — kein Menuepunkt "Vorschau".
+		await expect(page.getByRole('menuitem', { name: 'Vorschau', exact: true })).toHaveCount(0);
+		await page.keyboard.press('Escape');
 	});
 
 	// ── AC-2: Aktiver Vergleich pausieren → schedule='manual' ────────────────
@@ -336,7 +333,8 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 	//
 	// #1256 S1: Archivieren aus Listen-Kebab entfernt (Soll molecules.jsx:1018-1027);
 	// Hub-Lifecycle folgt in S3. Listen-Kebab active/paused = genau
-	// [Pausieren|Aktivieren, Briefing jetzt senden, Vorschau öffnen, Bearbeiten, Löschen].
+	// [Pausieren|Aktivieren, Briefing jetzt senden, Bearbeiten, Löschen] (+ Alarme,
+	// Wetter-Metriken seit #2278; „Vorschau" seit #1743 entfallen).
 
 	test('AC-7 (korrigiert #1256 S1): Listen-Kebab zeigt genau 5 Aktionen ohne Archivieren', async ({
 		page
@@ -351,7 +349,7 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		// Pflicht-Aktionen: Löschen und Bearbeiten müssen weiterhin vorhanden sein.
 		await expect(page.getByRole('menuitem', { name: 'Löschen' })).toBeVisible();
 		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).toBeVisible();
-		await expect(page.getByRole('menuitem', { name: 'Vorschau', exact: true })).toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Vorschau', exact: true })).toHaveCount(0);
 		await expect(page.getByRole('menuitem', { name: 'Senden', exact: true })).toBeVisible();
 		await expect(page.getByRole('menuitem', { name: 'Alarme', exact: true })).toBeVisible();
 		await expect(page.getByRole('menuitem', { name: 'Wetter-Metriken', exact: true })).toBeVisible();
@@ -362,10 +360,10 @@ test.describe('Bug #626: Compare Listen-Menü-Aktionen (#626)', () => {
 		// #1256 S1: "Archivieren" darf im Listen-Kebab NICHT mehr vorkommen.
 		await expect(page.getByRole('menuitem', { name: 'Archivieren' })).not.toBeVisible();
 
-		// Exakt 7 Menüeinträge insgesamt (Issue #2278: Pausieren/Fortsetzen, Senden, Vorschau, Alarme,
-		// Wetter-Metriken, Bearbeiten, Löschen — kein Archivieren).
+		// Exakt 6 Menüeinträge insgesamt (Issue #2278/#1743: Pausieren/Fortsetzen, Senden, Alarme,
+		// Wetter-Metriken, Bearbeiten, Löschen — kein Archivieren, keine Vorschau).
 		const menuItems = page.getByRole('menuitem');
-		await expect(menuItems).toHaveCount(7);
+		await expect(menuItems).toHaveCount(6);
 
 		// Schließe Menü per Escape
 		await page.keyboard.press('Escape');

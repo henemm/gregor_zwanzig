@@ -301,33 +301,17 @@ def test_preview_signal_endpoint_returns_404(preview_client):
     )
 
 
-def test_preview_telegram_endpoint_still_exists(preview_client):
+def test_preview_sms_endpoint_still_exists(preview_client):
     """
-    AC-5 (Regressionsschutz): /api/preview/{trip_id}/telegram bleibt erreichbar.
-
-    Erlaubte Status: 200, 404 (Trip nicht gefunden), 422, 503 — aber NICHT 405 (Method Not Allowed).
+    AC-5 (Regressionsschutz): /api/preview/{trip_id}/sms bleibt erreichbar.
+    Issue #1743: telegram/email sind entfernt; /sms ist der verbliebene
+    Kanal-Vorschau-Endpunkt. Die Antwort muss aus dem Handler kommen
+    (422 ohne user_id), nicht vom Router.
     """
-    resp = preview_client.get(
-        "/api/preview/gr221-mallorca/telegram",
-        params={"user_id": "default", "demo": "true"},
-    )
-    # Route muss existieren — 405 wäre ein Zeichen dass sie verschwunden ist
-    assert resp.status_code != 405, (
-        "GET /api/preview/gr221-mallorca/telegram antwortete 405 — "
-        "Telegram-Route darf nicht entfernt worden sein"
-    )
-
-
-def test_preview_email_endpoint_still_exists(preview_client):
-    """
-    AC-5 (Regressionsschutz): /api/preview/{trip_id}/email bleibt erreichbar.
-    """
-    resp = preview_client.get(
-        "/api/preview/gr221-mallorca/email",
-        params={"user_id": "default", "demo": "true"},
-    )
-    assert resp.status_code != 405, (
-        "GET /api/preview/gr221-mallorca/email antwortete 405 — Route darf nicht fehlen"
+    resp = preview_client.get("/api/preview/gr221-mallorca/sms")
+    assert resp.status_code == 422, (
+        f"GET /api/preview/gr221-mallorca/sms ohne user_id antwortete {resp.status_code} "
+        "statt 422 — Route darf nicht fehlen"
     )
 
 

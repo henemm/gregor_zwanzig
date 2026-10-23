@@ -328,10 +328,13 @@ def load_compare_presets(
 
     `strict=True` (Adversary-Fix F001/F002): eine korrupte Datei wirft
     `LoaderError` mit der Original-Parse-Fehlermeldung statt fail-soft zu
-    ueberspringen. Noetig fuer `send_compare_preset` (Einzelversand, #627) und
-    `run_compare_presets_daily`, die die urspruengliche Fehlerdiagnose
-    (HTTP-404-Detail bzw. ERROR-Log) bewahren; die 3 Alert-Services bleiben
-    beim partial-toleranten Default.
+    ueberspringen. Noetig fuer `send_compare_preset` (Einzelversand, #627),
+    der die urspruengliche Fehlerdiagnose (HTTP-404-Detail) bewahrt; die
+    Alert-Services und seit Fix #2286 (AC-5) auch der Cron-Dispatch
+    (`run_compare_presets_daily`) nutzen den partial-toleranten Default.
+    Fix #2286: im toleranten Modus wird auch ein lesbares, aber strukturell
+    kaputtes Vergleichs-Preset (``compare_preset_from_dict`` wirft) mit
+    WARNING uebersprungen statt den ganzen Lauf zu kippen.
     """
     if data_root is None:
         data_root = get_data_root()
@@ -356,7 +359,12 @@ def load_compare_presets(
         # Issue #1981: Alt-Vokabular nur im Speicher normalisieren (raw + Feld).
         if "display_config" in data:
             data = {**data, "display_config": _migrate_preset_display_config(data["display_config"])}
-        presets.append(compare_preset_from_dict(data))
+        try:
+            presets.append(compare_preset_from_dict(data))
+        except Exception as e:
+            if strict:
+                raise
+            logger.warning("Skipping corrupt briefing %s for %s: %s", path.name, user_id, e)
     return presets
 
 

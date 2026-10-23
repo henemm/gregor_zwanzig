@@ -131,8 +131,10 @@ describe('AC-14/AC-6: SubscriptionActionSheet — dasselbe Blatt, Aktionen aus d
 	test('"Senden" und "Alarme" sind im Blatt enthalten (AC-2/AC-14)', async () => {
 		const Sheet = await laden('mobile/SubscriptionActionSheet.svelte');
 		const h = html(Sheet, { open: true, onClose: () => {}, onAction: () => {}, kind: 'vergleich', status: 'active', name: 'X' });
-		for (const id of ['send', 'preview', 'alarms', 'weather', 'edit', 'pause', 'delete'])
+		for (const id of ['send', 'alarms', 'weather', 'edit', 'pause', 'delete'])
 			assert.match(h, new RegExp(`subscription-action-${id}"`), `Aktion ${id} fehlt im Blatt`);
+		// #1743 AC-27: die Aktion „Vorschau" entfaellt mit dem Vorschau-Reiter.
+		assert.doesNotMatch(h, /subscription-action-preview"/, 'Aktion preview steht noch im Blatt');
 	});
 });
 

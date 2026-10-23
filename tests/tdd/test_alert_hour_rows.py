@@ -109,7 +109,7 @@ from app.models import (
     WeatherChange,
 )
 from services.weather_snapshot import _deserialize_timeseries
-from tests.integration.test_briefing_preview_bundle import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "alert_hour_rows"
 TZ = ZoneInfo("Europe/Vienna")

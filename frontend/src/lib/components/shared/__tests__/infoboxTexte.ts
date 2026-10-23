@@ -5,6 +5,8 @@
 // pruefen — sonst bestaetigt sich der Katalog selbst. Aendert jemand einen Text
 // in de.json, wird der Test rot, bis die Freigabe nachgezogen ist.
 
+import type { InfoboxAbschnitt } from '../infoboxKeys.ts';
+
 export type Kontext = 'route' | 'vergleich';
 
 /** `info.<reiter>.<kontext>` -> freigegebener Text. */
@@ -50,10 +52,23 @@ export const ARIA_WORT: Record<Begriff, RegExp> = {
 	cooldown: /Cooldown/
 };
 
-/** Die Reiter MIT Infobox je Kontext (Pflichtreiter bewusst nicht dabei). */
+/** Die Infobox-Schluessel je Kontext (Pflichtreiter bewusst nicht dabei). Seit #1743 ist
+ *  `versand` kein Reiter mehr, sondern ein ABSCHNITT im Reiter Wetter-Metriken — der Schluessel
+ *  bleibt; in welchem Reiter er steht, sagt `REITER_DES_ABSCHNITTS`. */
 export const REITER_MIT_INFOBOX: Record<Kontext, string[]> = {
 	route: ['wetter-metriken', 'wertebereiche', 'alarme', 'versand', 'wegpunkte'],
 	vergleich: ['wetter-metriken', 'wertebereiche', 'alarme', 'versand']
+};
+
+/** Issue #1743 (AC-19/AC-22): der Reiter, in dem der Infobox-Schluessel beim Anlegen offen ist.
+ *  Der Typ `InfoboxAbschnitt` (nach der Umbenennung) wird hier bewusst referenziert — svelte-check
+ *  bewacht damit die Umbenennung (AC-22). */
+export const REITER_DES_ABSCHNITTS: Record<InfoboxAbschnitt, string> = {
+	'wetter-metriken': 'wetter-metriken',
+	wertebereiche: 'wertebereiche',
+	alarme: 'alarme',
+	versand: 'wetter-metriken',
+	wegpunkte: 'wegpunkte'
 };
 
 export const PFLICHTREITER: Record<Kontext, string[]> = {

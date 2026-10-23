@@ -422,7 +422,6 @@ func TestBudgetDefaults_MatchSpec(t *testing.T) {
 		{"compare_radar_alert_checks", 240 * time.Second, 270 * time.Second, 600 * time.Second},
 		{"alert_checks", 300 * time.Second, 720 * time.Second, 1800 * time.Second},
 		{"compare_alert_checks", 300 * time.Second, 720 * time.Second, 1800 * time.Second},
-		{"compare_official_alert_checks", 300 * time.Second, 720 * time.Second, 1800 * time.Second},
 		{"trip_reports_hourly", 600 * time.Second, 1440 * time.Second, 0},
 		{"compare_presets_daily", 600 * time.Second, 1440 * time.Second, 0},
 	}

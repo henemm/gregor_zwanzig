@@ -91,7 +91,7 @@ Divergenzen bleiben strikt in der Strategie gekapselt:
 | Feld/Methode | Trip (`route`) | Compare (`vergleich`) |
 |---|---|---|
 | `inter_mail_delay` | 2.0s | 0 |
-| `smtp_guard` | True, `(0,0)`-Early-Return | False (per-Preset) |
+| `smtp_guard` | True, `(0,0)`-Early-Return + WARNING-Log (#2286) | False (per-Preset, Sendefehler ⇒ `failed`) |
 | `pre_pass` | Catch-up-Marker-Verarbeitung | Auto-Pause-Loop |
 | `collect_due` | Morgen/Abend-Sammlung | `presets_due_for_hour` |
 | `dispatch_one` | delegiert an `NotificationService` (E-Mail+SMS+Telegram) | delegiert an `EmailOutput` direkt (E-Mail-only) |
@@ -342,3 +342,17 @@ Bestehende Kern-Tests, die ohne Anpassung grün bleiben müssen (Sicherheitsnetz
   `is_test_mode=True` und chat_id ≠ konfigurierter `telegram_test_chat_id`);
   `send_compare_report` re-raised `OutputConfigError` aus dem Telegram-Zweig
   gezielt (Interlock), transiente Fehler bleiben fail-soft.
+- 2026-10-21: Fix #2286 (`docs/specs/modules/fix_2286_compare_betrieb_health.md`).
+  **smtp_guard-Begründung (AC-11):** der Unterschied bleibt bewusst. Der Trip-Guard prüft die
+  **globale** SMTP-Konfiguration — fehlt sie, ist das ein Deploy-Fehler, den `/api/health` und
+  `prod_selftest` fangen; er liefert weiterhin `(0,0)`, schreibt aber jetzt ein WARNING-Log statt
+  still zu bleiben. Compare zählt pro Preset (Altverhalten #1207) und versendet an die Empfänger
+  des Nutzers; Sendefehler zählen dort als `failed`. „Kein SMTP ⇒ failed" würde CI ohne SMTP rot
+  machen. Die Begründung steht als Kommentar an beiden Strategien.
+  **Cron-`no_weather`-Regel (AC-4):** `send_one_compare_preset` wendet die Regel „alle Orte ohne
+  Wetterdaten ⇒ `no_weather`" jetzt auch im Cron an (vorher nur Handversand,
+  `weather_failure_as_outcome`): keine Mail aus lauter Fehlerzellen, der Preset zählt als `failed`
+  (ADR-0018). `weather_failure_as_outcome` steuert nur noch, ob eine **Ausnahme** des Wetterlaufs
+  zu `no_weather` wird. **Toleranter Lader (AC-5):** der Compare-Dispatch lädt mit
+  `load_compare_presets(strict=False)` — eine kaputte Datei in `briefings/` wird mit WARNING
+  übersprungen und zählt nicht als `failed`.

@@ -304,7 +304,7 @@
 		margin-left: 4px;
 	}
 	.hint-right {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		margin-left: auto;
 	}
@@ -356,7 +356,7 @@
 		flex-shrink: 1;
 	}
 	.metric-unit {
-		font-size: 10.5px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		margin-left: 6px;
 		white-space: nowrap;
@@ -364,7 +364,7 @@
 	/* Issue #1401: Auswertung — eigenes Element, gleiches Badge-Muster wie
 	   col-badge, aber ohne Mono (deutscher Fliesstext, kein Kuerzel). */
 	.aggregation-badge {
-		font-size: 10.5px;
+		font-size: 11px;
 		color: var(--g-ink-3);
 		background: var(--g-paper);
 		border: 1px solid var(--g-rule-soft);
@@ -382,7 +382,7 @@
 	   Umbruch, und den Marken fehlte `flex-shrink: 0`. */
 	.col-badge,
 	.kurzform-badge {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-3);
 		background: var(--g-paper);
 		border: 1px solid var(--g-rule-soft);

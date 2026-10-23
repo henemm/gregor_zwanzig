@@ -10,6 +10,9 @@ tags: [premium-sms, kanaele, vierkanal-paritaet, adr-0049, ratsche, issue-2229, 
 
 # Fix #2229: Vier-Kanal-Parität — Dreier-Kanallisten ohne `premium_sms`
 
+> **AC-3 abgelöst durch #1743 F003 (PO-Entscheid 2026-10-22):** die Vergleichs-Vorschau samt
+> `CompareChannelSwitch` und `premiumSmsPreviewNote` ist ersatzlos entfallen.
+
 ## Approval
 
 - [ ] Approved

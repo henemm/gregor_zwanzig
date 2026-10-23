@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from tests.integration.test_briefing_preview_bundle import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
 from tests.tdd.test_alert_hour_rows import _trip_body
 from tests.tdd.test_alert_preview_real_stage_ids import _trip_mit_echter_etappe
 

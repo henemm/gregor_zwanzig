@@ -9,9 +9,11 @@ SPEC: docs/specs/modules/trip_report_scheduler.md v1.0
 from __future__ import annotations
 
 import dataclasses
+import inspect
 import json
 import logging
 import os
+import re
 import threading
 import time as time_module
 from datetime import date, datetime, time, timedelta, timezone
@@ -45,7 +47,9 @@ from services.alert_check_state import report_unit_failure
 from services.briefing_slots import BriefingSlotStore
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
-from services.user_tier import premium_sms_allowed, sms_allowed
+from services.user_tier import (
+    premium_sms_allowed, resolve_restricted_channel_flags, sms_allowed,
+)
 from utils.geo import haversine_km
 from utils.timezone import local_dt, tz_for_coords
 
@@ -437,7 +441,19 @@ class CorruptTripObservability:
     newly_notified: List[str]
 
 
-def _mq_notify_infra(filename: str, detail: str) -> None:
+#: MQ-Betreff je Art einer kaputten Briefing-Datei (Fix #2286 AC-6).
+_CORRUPT_SUBJECT_BY_KIND = {
+    "trip": "Kaputter Trip",
+    "vergleich": "Kaputter Vergleich",
+    "unbekannt": "Kaputte Briefing-Datei",
+}
+
+#: Rohtext-Heuristik fuer unparsbare Dateien (Fix #2286): nur ein explizites
+#: ``"kind": "vergleich"`` gilt als Vergleich, sonst ehrlich "unbekannt".
+_RAW_KIND_VERGLEICH = re.compile(r'"kind"\s*:\s*"vergleich"')
+
+
+def _mq_notify_infra(filename: str, detail: str, kind: str = "trip") -> None:
     """Produktions-``notify``: sendet genau EINE MQ-Meldung (Prioritaet
     ``high``) an Instanz ``infra`` ueber den etablierten claude-mq-Helper
     (``src.lib.mq_notify.send_mq``, gleiches Ziel wie
@@ -447,11 +463,63 @@ def _mq_notify_infra(filename: str, detail: str) -> None:
     — hier keine Geschaeftslogik-Mocks. Fail-soft bereits in ``send_mq``
     eingebaut: ohne ``CLAUDE_MQ_SECRET`` (z.B. lokale Testlaeufe) wird
     still uebersprungen, ein Versandfehler wird nur geloggt — der Zaehler
-    bleibt in jedem Fall sichtbar (kein Crash des Scheduler-Laufs)."""
+    bleibt in jedem Fall sichtbar (kein Crash des Scheduler-Laufs).
+
+    Fix #2286 (AC-6): der Betreff richtet sich nach der Art der Datei
+    (``trip``/``vergleich``/``unbekannt``)."""
     from lib.mq_notify import send_mq
 
-    subject = f"Kaputter Trip beim Laden uebersprungen: {filename}"
+    prefix = _CORRUPT_SUBJECT_BY_KIND.get(kind, _CORRUPT_SUBJECT_BY_KIND["unbekannt"])
+    subject = f"{prefix} beim Laden uebersprungen: {filename}"
     send_mq("gregor", "infra", "high", subject, detail)
+
+
+def _notify_accepts_kind(notify: callable) -> bool:
+    """True, wenn der Callback die Art als ``kind`` annimmt. Aeltere
+    Callbacks mit Vertrag ``notify(filename, detail)`` (Issue #1262) bleiben
+    gueltig und werden ohne Art aufgerufen."""
+    try:
+        params = inspect.signature(notify).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    return any(
+        p.name == "kind" or p.kind is inspect.Parameter.VAR_KEYWORD for p in params
+    )
+
+
+def _classify_corrupt_briefing(path: Path) -> Optional[Tuple[str, str]]:
+    """Prueft eine Datei in ``briefings/`` (Fix #2286 AC-6). Liefert
+    ``(art, detail)`` fuer eine kaputte Datei, sonst ``None``.
+
+    - unparsbar: Rohtext-Heuristik -> ``vergleich`` oder ``unbekannt``
+    - parsbares Vergleichs-Preset: Strukturpruefung per
+      ``compare_preset_from_dict`` (wie der Lader) -> ``vergleich``
+    - alles andere ueber den echten Trip-Lader ``load_trip`` -> ``trip``
+    """
+    from app.loader import _migrate_preset_display_config, compare_preset_from_dict, load_trip
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception as exc:  # noqa: BLE001 — unlesbar zaehlt
+        return "unbekannt", str(exc)
+    try:
+        raw = json.loads(text)
+    except Exception as exc:  # noqa: BLE001 — unparsbar zaehlt
+        return ("vergleich" if _RAW_KIND_VERGLEICH.search(text) else "unbekannt"), str(exc)
+    if isinstance(raw, dict) and raw.get("kind") == "vergleich":
+        try:
+            data = raw
+            if "display_config" in data:
+                data = {**data, "display_config": _migrate_preset_display_config(data["display_config"])}
+            compare_preset_from_dict(data)
+        except Exception as exc:  # noqa: BLE001 — jede Strukturursache zaehlt
+            return "vergleich", str(exc)
+        return None
+    try:
+        load_trip(raw)
+    except Exception as exc:  # noqa: BLE001 — jede Ladefehlerursache zaehlt
+        return "trip", str(exc)
+    return None
 
 
 def record_corrupt_trip_observability(
@@ -466,53 +534,68 @@ def record_corrupt_trip_observability(
     EINMAL aufgerufen (Dedup-Schluessel = Dateiname, persistent ueber Laeufe).
     Der Dedup-Zustand und der letzte Zaehler landen als Diagnostics-Datei unter
     ``get_data_dir(user_id)/diagnostics`` (Status-Sichtbarkeit).
+
+    Fix #2286 (AC-6): klassifiziert jede kaputte Datei als ``trip``,
+    ``vergleich`` oder ``unbekannt`` (inkl. strukturell kaputter
+    Vergleichs-Presets), schreibt zusaetzlich ``by_kind`` und reicht die Art
+    als ``kind`` an Callbacks durch, die sie annehmen (MQ-Betreff je Art).
     """
-    from app.loader import get_briefings_dir, get_data_dir, load_trip
+    from app.loader import get_briefings_dir, get_data_dir
 
     briefings_dir = get_briefings_dir(user_id)
-    corrupt: List[Tuple[str, str]] = []
+    corrupt: List[Tuple[str, str, str]] = []
     if briefings_dir.exists():
         for path in sorted(briefings_dir.glob("*.json")):
-            try:
-                raw = json.loads(path.read_text(encoding="utf-8"))
-                if isinstance(raw, dict) and raw.get("kind") == "vergleich":
-                    continue
-                load_trip(raw)
-            except Exception as exc:  # noqa: BLE001 — jede Ladefehlerursache zaehlt
-                corrupt.append((path.name, str(exc)))
+            befund = _classify_corrupt_briefing(path)
+            if befund is not None:
+                kind, detail = befund
+                corrupt.append((path.name, detail, kind))
 
     diag_dir = get_data_dir(user_id) / "diagnostics"
     state_path = diag_dir / "corrupt_trips.json"
-    already: set[str] = set()
+    previous: dict = {}
     if state_path.exists():
         try:
-            already = set(json.loads(state_path.read_text(encoding="utf-8")).get("notified", []))
+            loaded = json.loads(state_path.read_text(encoding="utf-8"))
+            previous = loaded if isinstance(loaded, dict) else {}
         except (json.JSONDecodeError, OSError):
-            already = set()
+            previous = {}
+    already: set[str] = set(previous.get("notified", []) or [])
 
+    with_kind = notify is not None and _notify_accepts_kind(notify)
     newly: List[str] = []
-    for filename, detail in corrupt:
+    for filename, detail, kind in corrupt:
         if filename in already:
             continue
         already.add(filename)
         newly.append(filename)
         if notify is not None:
-            notify(filename, detail)
+            if with_kind:
+                notify(filename, detail, kind=kind)
+            else:
+                notify(filename, detail)
+
+    by_kind = {"trip": 0, "vergleich": 0, "unbekannt": 0}
+    for _, _, kind in corrupt:
+        by_kind[kind] += 1
 
     diag_dir.mkdir(parents=True, exist_ok=True)
     # Adversary F001: atomarer Schreib (tmp + os.replace) statt write_text —
     # ein Absturz mitten im Schreiben (Restart/Deploy/OOM) darf das
     # Dedup-Gedaechtnis nicht zerstoeren, sonst meldet der naechste Tick ALLE
     # zuvor gemeldeten kaputten Trips erneut per MQ.
+    # Fix #2286: Read-Modify-Write mit Merge -- unbekannte Felder bleiben.
     _write_pending_data(state_path, {
+        **previous,
         "notified": sorted(already),
         "last_skipped_count": len(corrupt),
         "last_run": datetime.now(timezone.utc).isoformat(),
+        "by_kind": by_kind,
     })
 
     return CorruptTripObservability(
         skipped_count=len(corrupt),
-        corrupt_files=[name for name, _ in corrupt],
+        corrupt_files=[name for name, _, _ in corrupt],
         newly_notified=newly,
     )
 
@@ -2075,12 +2158,8 @@ class TripReportSchedulerService:
                 logger.warning(
                     "Unbekannter Kanalname in restrict_to_channel: %r", restrict_to_channel
                 )
-            return (
-                restrict_to_channel == "email",
-                restrict_to_channel == "sms" and sms_allowed(user_id),
-                restrict_to_channel == "premium_sms" and premium_sms_allowed(user_id),
-                restrict_to_channel == "telegram",
-            )
+            # Issue #2282 S2 (AC-7): geteilt mit dem Ortsvergleich.
+            return resolve_restricted_channel_flags(restrict_to_channel, user_id)
 
         send_email = not config or config.send_email
         send_sms = config is not None and config.send_sms and sms_allowed(user_id)

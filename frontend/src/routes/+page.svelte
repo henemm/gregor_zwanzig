@@ -124,7 +124,8 @@
 	const setupStepsTrip = $derived(nextPlanned ? setupStepTrip(nextPlanned) : []);
 	const setupStepsCompare = $derived(firstIncomplete ? setupStepCompare(firstIncomplete) : []);
 
-	const TRIP_TAB_MAP = ['etappen', 'etappen', 'wetter-metriken', 'versand', 'versand'];
+	// Issue #1743: der Versand steht unten im Reiter Wetter-Metriken (Anker #versand).
+	const TRIP_TAB_MAP = ['etappen', 'etappen', 'wetter-metriken', 'wetter-metriken#versand', 'wetter-metriken#versand'];
 
 	function buildTripCtaHref(): string {
 		if (!nextPlanned) return '/trips/new';
@@ -177,7 +178,7 @@
 	     Balken auf jedem Screen. Desktop traegt sie in der Sidebar. -->
 	<div class="desktop:hidden" data-testid="home-wordmark-row" style="display: flex; align-items: center; justify-content: space-between; height: 24px; margin: var(--g-s-2) 0 var(--g-s-5);">
 		<Wordmark size="sm" />
-		<span class="mono" data-testid="home-datum" style="font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g-ink-3);">{heuteKurz}</span>
+		<span class="mono" data-testid="home-datum" style="font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g-ink-3);">{heuteKurz}</span>
 	</div>
 	<!-- Topbar — AC-7: kein sub-Text, beide Buttons ghost -->
 	<PageHeader
@@ -238,6 +239,7 @@
 							<!-- Titel (34px, fontWeight 600) als Link -->
 							<a
 								href="/trips/{hero.id}?tab=uebersicht"
+								class="g-link-tap"
 								style:display="block"
 								style:font-size="34px"
 								style:font-weight="600"
@@ -327,6 +329,7 @@
 							</div>
 							<a
 								href="/trips/{hero.id}?tab=uebersicht"
+								class="g-link-tap"
 								style:font-size="12px"
 								style:color="var(--g-ink-3)"
 								style:text-decoration="none"
@@ -358,13 +361,7 @@
 								glyph="clock"
 								label="Briefing-Zeitplan"
 								sub="→ Briefing-Zeitplan"
-								href="/trips/{hero.id}?tab=versand"
-							/>
-							<QuickAction
-								glyph="eye"
-								label="Vorschau prüfen"
-								sub="→ Vorschau"
-								href="/trips/{hero.id}?tab=vorschau"
+								href="/trips/{hero.id}?tab=wetter-metriken#versand"
 							/>
 							<QuickAction
 								glyph="send"
@@ -430,6 +427,7 @@
 							</div>
 							<a
 								href="/trips/{hero.id}?tab=wertebereiche"
+								class="g-link-tap"
 								style:font-size="12px"
 								style:color="var(--g-ink-3)"
 								style:text-decoration="none"
@@ -533,7 +531,7 @@
 								>
 									<div
 										style:font-family="var(--g-font-mono)"
-										style:font-size="10px"
+										style:font-size="11px"
 										style:color="var(--g-ink-3)"
 										style:text-transform="uppercase"
 										style:letter-spacing="0.1em"
@@ -554,7 +552,7 @@
 								>
 									<div
 										style:font-family="var(--g-font-mono)"
-										style:font-size="10px"
+										style:font-size="11px"
 										style:color="var(--g-ink-3)"
 										style:text-transform="uppercase"
 										style:letter-spacing="0.1em"
@@ -626,13 +624,7 @@
 								glyph="clock"
 								label="Briefing-Zeitplan"
 								sub="→ Zeitplan & Kanäle"
-								href="/compare/{compareHero.id}?tab=versand"
-							/>
-							<QuickAction
-								glyph="eye"
-								label="Vorschau prüfen"
-								sub="→ Vorschau"
-								href="/compare/{compareHero.id}?tab=vorschau"
+								href="/compare/{compareHero.id}?tab=wetter-metriken#versand"
 							/>
 							<QuickAction
 								glyph="send"
@@ -783,12 +775,6 @@
 						sub="Wizard · 5 Schritte"
 						href="/compare/new"
 					/>
-					<QuickAction
-						glyph="eye"
-						label="Test-Briefing prüfen"
-						sub="Vorschau · alle Kanäle"
-						href="/trips"
-					/>
 				</div>
 			</div>
 
@@ -832,6 +818,7 @@
 					</div>
 					<a
 						href="/compare"
+						class="g-link-tap"
 						style:font-size="12px"
 						style:color="var(--g-ink-3)"
 						style:text-decoration="none"
@@ -966,7 +953,7 @@
 	}
 	.quick-create-grid {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: repeat(2, 1fr);
 		gap: 14px;
 	}
 	.archive-grid {

@@ -6,7 +6,9 @@
 // Ziel-Oberfläche (migriert durch Fix #1047, docs/specs/modules/fix_1047_mail_content_tab_restore.md):
 // Trip-Detail-Seite /trips/[id]?tab=wetter-metriken, Reiter "Wetter-Metriken" (= "Inhalt",
 // MailInhaltCard.svelte eingebunden über WeatherMetricsTab.svelte). Der
-// Reiter "Briefing-Zeitplan" (?tab=versand) zeigt die Karte seit #736 bewusst NICHT
+// (Seit #1743 gibt es keinen eigenen Versand-Reiter mehr; der Versand-Abschnitt
+// `#versand` steht im Reiter Wetter-Metriken und enthaelt die Karte NICHT.)
+// Der fruehere Reiter "Briefing-Zeitplan" (?tab=versand) zeigte die Karte seit #736 bewusst NICHT
 // mehr (Kanal-/Zeitplan-Reiter); zwischenzeitlich (#942) fehlte sie versehentlich auch
 // im Wetter-Metriken-Reiter — Fix #1047 stellt sie dort wieder her.
 //
@@ -114,7 +116,9 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 	});
 
 	// ── Fix #1047 AC-2: Zeitplan-Karten NICHT im Wetter-Metriken-Reiter (#942-Regressionsschutz) ──
-	test('Fix #1047 AC-2: Morgen-/Abend-Report-Zeitplan im Wetter-Metriken-Reiter nicht sichtbar', async ({
+	// Issue #1743: der Zeitplan steht jetzt im Reiter Wetter-Metriken — aber
+	// AUSSCHLIESSLICH im Versand-Abschnitt (#versand), nicht im Metriken-Teil.
+	test('Fix #1047 AC-2 / #1743: Morgen-/Abend-Zeitplan nur im Versand-Abschnitt des Wetter-Metriken-Reiters', async ({
 		page,
 		request
 	}) => {
@@ -123,26 +127,33 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		try {
 			await openReportsSection(page, id);
 
-			await expect(page.locator('[data-testid="morning-master-switch"]')).toHaveCount(0);
-			await expect(page.locator('[data-testid="evening-master-switch"]')).toHaveCount(0);
+			const abschnitt = page.getByTestId('versand-abschnitt');
+			await expect(abschnitt.locator('[data-testid="morning-master-switch"]')).toHaveCount(1);
+			await expect(abschnitt.locator('[data-testid="evening-master-switch"]')).toHaveCount(1);
+			await expect(page.locator('[data-testid="morning-master-switch"]')).toHaveCount(1);
+			await expect(page.locator('[data-testid="evening-master-switch"]')).toHaveCount(1);
 		} finally {
 			await deleteTrip(request, id);
 		}
 	});
 
 	// ── Fix #1047 AC-3: Mail-Inhalt-Karte bleibt im Versand-Reiter unsichtbar (unverändert) ──
-	test('Fix #1047 AC-3: E-Mail-Inhalt-Karte auf ?tab=versand weiterhin nicht im DOM', async ({
+	// Issue #1743: kein Reiter `versand` mehr — die Karte steht nur EINMAL im Reiter,
+	// und zwar nicht im Versand-Abschnitt.
+	test('Fix #1047 AC-3 / #1743: E-Mail-Inhalt-Karte nicht im Versand-Abschnitt (keine Dopplung)', async ({
 		page,
 		request
 	}) => {
 		const id = tripId('fix1047-ac3');
 		await createTrip(request, id);
 		try {
-			await page.goto(`/trips/${id}?tab=versand`);
-			// Kanal-Checkbox ist im Versand-Reiter unconditional gerendert (Ready-Marker,
+			await page.goto(`/trips/${id}?tab=wetter-metriken#versand`);
+			const abschnitt = page.getByTestId('versand-abschnitt');
+			// Kanal-Checkbox ist im Versand-Abschnitt unconditional gerendert (Ready-Marker,
 			// da die Live-Route immer per Auto-Save läuft — kein Save-Button vorhanden).
-			await page.locator('[data-testid="channel-email"]').waitFor({ state: 'visible' });
-			await expect(page.locator('[data-testid="report-mail-content"]')).toHaveCount(0);
+			await abschnitt.locator('[data-testid="channel-email"]').waitFor({ state: 'visible' });
+			await expect(abschnitt.locator('[data-testid="report-mail-content"]')).toHaveCount(0);
+			await expect(page.locator('[data-testid="report-mail-content"]')).toHaveCount(1);
 		} finally {
 			await deleteTrip(request, id);
 		}

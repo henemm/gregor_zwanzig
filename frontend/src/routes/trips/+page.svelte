@@ -105,7 +105,6 @@
 		if (key === 'pause') void togglePause(t, true);
 		else if (key === 'resume') void togglePause(t, false);
 		else if (key === 'send') sendTarget = t;
-		else if (key === 'preview') goto(`/trips/${t.id}?tab=vorschau`);
 		else if (key === 'alarms') goto(`/trips/${t.id}?tab=alarme`);
 		else if (key === 'weather') goto(`/trips/${t.id}?tab=wetter-metriken`);
 		else if (key === 'edit') goto(`/trips/${t.id}`);
@@ -167,7 +166,7 @@
 		<div>
 			<Eyebrow>WORKSPACE · TRIPS</Eyebrow>
 			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px;">Trips</h1>
-			<p class="text-sm text-muted-foreground mt-1">Alle aktiven, geplanten und abgeschlossenen Mehrtages-Trips. Pro Trip kannst du Alerts justieren, ein Briefing direkt schicken oder die Email-Vorschau öffnen.</p>
+			<p class="text-sm text-muted-foreground mt-1">Alle aktiven, geplanten und abgeschlossenen Mehrtages-Trips. Pro Trip kannst du Alerts justieren oder ein Briefing direkt schicken.</p>
 		</div>
 		<Btn variant="accent" onclick={() => goto('/trips/new')}>+ Neuer Trip</Btn>
 	</div>

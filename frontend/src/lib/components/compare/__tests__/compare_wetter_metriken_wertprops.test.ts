@@ -395,7 +395,8 @@ function streuung(einbettung: Knoten, quelle: string): { ausdruck: string; zusta
 function einbettungen(datei: string): { quelle: string; treffer: Knoten[] } {
 	const quelle = readFileSync(datei, 'utf-8');
 	const ast: Knoten = parse(quelle, { modern: true });
-	return { quelle, treffer: findeKomponenten(ast, 'WeatherMetricsTab') };
+	// #1743: Hub und Anlege-Seite mounten den geteilten Baustein (streut an WeatherMetricsTab).
+	return { quelle, treffer: findeKomponenten(ast, 'WetterMetrikenVersandPanel') };
 }
 
 /** Eine vollstaendig besetzte, unterscheidbare Quelle (alle zehn Felder). */

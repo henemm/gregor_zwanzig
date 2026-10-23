@@ -34,8 +34,9 @@ import {
 const DESKTOP = { width: 1280, height: 900 };
 const MOBILE = { width: 375, height: 812 };
 const GPX = path.resolve('./e2e/fixtures/test-trip.gpx');
-const TRIP_KETTE = [/Wetter/, /Wertebereiche/, /Alarme/, /Versand/];
-const VERGLEICH_KETTE = ['wetter-metriken', 'wertebereiche', 'alarme', 'versand'] as const;
+// Issue #1743: kein Anlege-Schritt Versand mehr (Abschnitt im Schritt Wetter-Metriken).
+const TRIP_KETTE = [/Wetter/, /Wertebereiche/, /Alarme/];
+const VERGLEICH_KETTE = ['wetter-metriken', 'wertebereiche', 'alarme'] as const;
 
 test.beforeEach(async ({ page }) => {
 	await login(page);

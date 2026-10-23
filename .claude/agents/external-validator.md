@@ -57,8 +57,9 @@ AMBIGUOUS gehst — sie machen interne Logik prüfbar:
   Zeitzone benutzt (`src/services/validator_render_service.py:56,147`, Issue **#2069**). Ein
   solches Merkmal fehlt in der Antwort **immer**, unabhängig davon, ob die Implementierung stimmt.
   Wer daraus auf einen Fehler schließt, schreibt ein falsches BROKEN (passiert bei #2036).
-  Gegenprobe für segmentbezogene Merkmale: die Briefing-Vorschau
-  `GET /api/preview/{id}/telegram` bekommt die echten Segmente.
+  Gegenprobe für segmentbezogene Merkmale: die SMS-Vorschau
+  `GET /api/preview/{id}/sms` bekommt die echten Segmente (die Telegram-/E-Mail-Vorschau-Routen
+  sind seit #1743 entfernt).
 
   **Wertebereiche** (falscher Wert → HTTP 500 ohne Stacktrace, sieht aus wie ein defekter
   Endpoint): `severity` nur `minor|moderate|major`, `direction` nur `increase|decrease`.

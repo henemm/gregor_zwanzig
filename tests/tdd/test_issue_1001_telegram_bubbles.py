@@ -26,9 +26,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
+from tests.helpers.trip_vorschau_bericht import trip_telegram
 from tests.tdd._telegram_live_fixture import live_telegram_enabled
 
 # ---------------------------------------------------------------------------
@@ -491,65 +490,30 @@ class TestAC4CallbackPauseRoundtrip:
 
 
 # ===========================================================================
-# AC-7: GET /api/preview/{trip}/telegram liefert zusätzlich bubbles: list[str]
-# neben dem bestehenden body-Feld (additiv, rückwärtskompatibel).
+# AC-7: die Telegram-Vorschau liefert bubbles: list[str] neben body. Die
+# HTTP-Route GET /api/preview/{trip}/telegram und die Huelle
+# PreviewService.render_telegram_preview sind mit #1743 entfallen; geprueft
+# wird der bleibende Render-Pfad _build_report -> telegram_bubbles.
 # ===========================================================================
 
 _AC7_TRIP_ID = "gr221-mallorca"
-
-
-@pytest.fixture
-def _ac7_client():
-    from api.routers import preview
-    app = FastAPI()
-    app.include_router(preview.router)
-    return TestClient(app)
 
 
 @pytest.mark.real_data_root
 class TestAC7PreviewEndpointBubbles:
     """Issue #1133: liest das echte, committete Trip-Fixture data/users/default/
     trips/gr221-mallorca.json über PreviewService -- per tests/conftest.py nach
-    briefings/ gespiegelt (get_trips_dir() ist seit #1708 Scheibe B2 entfernter
-    Altbestand und lag hier nie im Lesepfad; PreviewService liest ohnehin aus
-    briefings/), kein Test-User — bewusstes Opt-out aus der autouse-Isolation."""
+    briefings/ gespiegelt, kein Test-User — bewusstes Opt-out aus der
+    autouse-Isolation."""
 
-    def test_telegram_preview_endpoint_returns_bubbles_alongside_body(self, _ac7_client):
-        resp = _ac7_client.get(
-            f"/api/preview/{_AC7_TRIP_ID}/telegram",
-            params={"type": "evening", "user_id": "default"},
-        )
-        assert resp.status_code in (200, 503), (
-            f"Erwarte 200 oder 503, bekam {resp.status_code}: {resp.text[:200]}"
-        )
-        if resp.status_code != 200:
-            pytest.skip("Wetter-API nicht erreichbar (503)")
-
-        data = resp.json()
-        assert "body" in data and isinstance(data["body"], str) and data["body"], (
-            "Rückwärtskompatibles 'body'-Feld fehlt oder ist leer"
-        )
-        assert "bubbles" in data, (
-            "AC-7: Antwort muss zusätzlich 'bubbles': list[str] enthalten"
-        )
-        bubbles = data["bubbles"]
-        assert isinstance(bubbles, list) and bubbles, f"'bubbles' muss eine nicht-leere Liste sein: {bubbles!r}"
-        for b in bubbles:
-            assert isinstance(b, str) and b
-        for b in bubbles:
-            assert b in data["body"], (
-                f"'body' muss die getrennt verbundenen Bubbles enthalten — "
-                f"Bubble fehlt im body: {b[:60]!r}"
-            )
-
-    def test_preview_service_render_telegram_preview_returns_bubbles(self):
+    def test_preview_render_path_returns_telegram_bubbles(self):
         from app.config import Settings
         from services.preview_service import PreviewService
 
         service = PreviewService(Settings())
         try:
-            subject, body, bubbles = service.render_telegram_preview(
-                _AC7_TRIP_ID, user_id="default", report_type="evening",
+            subject, body, bubbles = trip_telegram(
+                service, _AC7_TRIP_ID, user_id="default", report_type="evening",
             )
         except RuntimeError:
             pytest.skip("Wetter-API nicht erreichbar")

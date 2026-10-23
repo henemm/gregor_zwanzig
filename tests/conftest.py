@@ -756,3 +756,60 @@ def _gestellte_wanduhr():
 
     with freeze_time(anker, tick=True):
         yield
+
+# ---------------------------------------------------------------------------
+# CI-Rot 2026-10-22, Familie A: freezegun-Stapel nach jedem Test pruefen
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _freezegun_stapel_waechter(request):
+    """Ein Test darf den globalen freezegun-Stapel nicht tiefer hinterlassen,
+    als er ihn vorgefunden hat.
+
+    Warum: ``freeze_time().start()`` legt den Zeitpunkt auf den Stapel, BEVOR
+    es die Module patcht. Faellt eine Ausnahme mitten in diese Schleife (im CI
+    das SIGALRM von pytest-timeout), laeuft kein ``stop()`` -- und jeder
+    spaetere ``freeze_time`` haelt sich fuer verschachtelt und patcht nichts
+    mehr: bereits geladene Testmodule lesen fortan die echte Wanduhr. So
+    wurden am 2026-10-22 (run 39747019320) aus EINEM Timeout 136 Folge-
+    Fehlschlaege. Mechanik und Rueckbau: ``tests/helpers/freezegun_stapel.py``.
+
+    Der Lauf wird repariert UND laut (Warnung mit Test-Kennung) -- der
+    verursachende Test ist ohnehin rot; die Folgetests sollen es nicht sein.
+    """
+    import warnings
+
+    from tests.helpers.freezegun_stapel import reparieren, tiefe
+
+    vorher = tiefe()
+    yield
+    nachher = tiefe()
+    if nachher != vorher:
+        reparieren(vorher)
+        warnings.warn(
+            f"freezegun-Stapel nach {request.node.nodeid} bei Tiefe {nachher} "
+            f"statt {vorher} (unterbrochener freeze_time-Start, z. B. durch "
+            f"pytest-timeout) -- auf {vorher} repariert, damit die Folgetests "
+            f"eine gestellte Uhr behalten.",
+            RuntimeWarning,
+            stacklevel=1,
+        )
+
+
+# ---------------------------------------------------------------------------
+# CI-Rot 2026-10-22, Familie B: Stub-Server der AlarmPruefstrecke beenden
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _pruefstrecken_server_beenden():
+    """Nach jedem Test alle Stub-Server der ``AlarmPruefstrecke`` herunterfahren.
+
+    Ohne diese Abschaltung ueberlebten die ``serve_forever``-Threads den Test
+    (CI-Thread-Dump: >= 56 lebende Stubs) und brachten als Leerlauf-Dreher den
+    GIL-gebundenen Rest des Laufs in die 30-s-Schranke von pytest-timeout.
+    Der Helfer wird NICHT importiert, solange ihn kein Test geladen hat --
+    sonst zahlte jeder der ~16.000 Tests seinen Import."""
+    yield
+    modul = sys.modules.get("tests.helpers.alarm_pruefstrecke")
+    if modul is not None:
+        modul.offene_server_beenden()

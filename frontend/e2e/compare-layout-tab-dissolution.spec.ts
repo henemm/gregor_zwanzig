@@ -61,19 +61,18 @@ const EXPECTED_HUB_TABS = [
 	'Orte',
 	'Wetter-Metriken',
 	'Wertebereiche',
-	'Alarme',
-	'Versand',
-	'Vorschau'
+	'Alarme'
 ];
+// Issue #1743: Versand/Vorschau sind keine Reiter mehr (Versand-Abschnitt im
+// Reiter Wetter-Metriken, Vorschau ersatzlos zurueckgebaut).
 
-/** Reiter der Anlege-Seite nach der Auflösung (kein „Vorschau", kein „Layout"). */
+/** Reiter der Anlege-Seite nach der Auflösung (kein „Vorschau", kein „Layout", kein „Versand" #1743). */
 const EXPECTED_NEW_TABS = [
 	'Vergleich',
 	'Orte',
 	'Wetter-Metriken',
 	'Wertebereiche',
-	'Alarme',
-	'Versand'
+	'Alarme'
 ];
 
 /**
@@ -288,7 +287,8 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 		await openHub(page, id);
 
 		const collected: string[] = [];
-		for (const tab of ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand']) {
+		// Issue #1743: der Versand-Inhalt steht im Panel wetter-metriken (#versand).
+		for (const tab of ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']) {
 			await page.locator(`[data-testid="compare-detail-tab-${tab}"]:visible`).first().click();
 			const panel = page.locator(`[data-testid="compare-detail-panel-${tab}"]:visible`).first();
 			await expect(panel).toBeVisible({ timeout: 10_000 });
@@ -390,8 +390,8 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 		await newToggle.click();
 
 		await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
+		// Issue #1743: Alarme ist der letzte Schritt (kein Versand-Schritt mehr).
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
 
 		const [response] = await Promise.all([
 			page.waitForResponse(

@@ -14,7 +14,7 @@ from __future__ import annotations
 import dataclasses
 from datetime import datetime, timedelta, timezone
 
-from tests.integration.test_briefing_preview_bundle import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
 from tests.tdd.test_alert_hour_rows import CMP_STURM, _cmp_orte, _cmp_welt, _plant, _trip_welt
 
 

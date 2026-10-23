@@ -90,7 +90,7 @@ def test_vorschau_alle_orte_geloescht_klarer_grund():
     pid = _preset(uid, [GELOESCHT])
 
     with pytest.raises(ValueError) as exc:
-        ComparePreviewService().render_email_preview(pid, user_id=uid)
+        ComparePreviewService().render_all_channels(pid, user_id=uid)
 
     assert "verweist auf gelöschte Orte" in str(exc.value)
     assert "Ersetze die Orte" in str(exc.value)

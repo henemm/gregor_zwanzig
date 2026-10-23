@@ -818,7 +818,7 @@ def test_f002_vorschaudienst_zeigt_die_umschaltung_in_der_erzeugten_mail(
     write_compare_briefings(get_data_dir(user_id), [preset])
 
     html, _text = _erzeugte_vergleichsmail(
-        lambda: ComparePreviewService().render_email_preview(
+        lambda: ComparePreviewService().render_all_channels(
             preset["id"], user_id=user_id),
     )
     zelle = _boeen_zelle_aus_dienst_mail(html)

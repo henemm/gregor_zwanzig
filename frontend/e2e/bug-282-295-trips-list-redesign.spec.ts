@@ -102,10 +102,9 @@ test.describe('Bug #282 + #295 — Trips-Liste Redesign', () => {
 		await expect(kebabBtn).toBeVisible({ timeout: 5000 });
 		await kebabBtn.click();
 
-		// Alle 6 Items prüfen
+		// Issue #1743: Aktion „Vorschau" entfaellt — 5 Items.
 		for (const label of [
 			'Senden',
-			'Vorschau',
 			'Alarme',
 			'Wetter-Metriken',
 			'Bearbeiten',

@@ -87,25 +87,25 @@ describe('S6h AC-2-Endbilanz: Spec-Tabelle deckt die Ratsche restlos ab', () => 
 		assert.ok(existsSync(RATSCHE), `Ratsche nicht gefunden (aufgeloest: ${RATSCHE})`);
 	});
 
-	test('aus der Ratsche extrahiert: genau 46 Eintraege (Positiv-Kontrolle des Regex)', () => {
+	test('aus der Ratsche extrahiert: genau 47 Eintraege (Positiv-Kontrolle des Regex)', () => {
 		const ratsche = extrahiereRatschenListe();
 		assert.strictEqual(
 			ratsche.length,
-			46, // #2287: alarmeTabSections.ts:42 (wertebereicheTabId) gestrichen
-			`Extraktion aus EINGEFROREN lieferte ${ratsche.length} statt 46 Eintraege`
+			47, // #2287: alarmeTabSections.ts:42 gestrichen; #1743: WetterMetrikenVersandPanel.svelte:66 neu
+			`Extraktion aus EINGEFROREN lieferte ${ratsche.length} statt 47 Eintraege`
 		);
 		assert.strictEqual(new Set(ratsche).size, ratsche.length, 'EINGEFROREN enthaelt Duplikate');
 	});
 
-	test('aus der Spec extrahiert: FACHLICH 27, DARSTELLUNG 5, HERKUNFT 14, Summe 46', () => {
+	test('aus der Spec extrahiert: FACHLICH 27, DARSTELLUNG 5, HERKUNFT 15, Summe 47', () => {
 		const spec = leseSpec();
 		const fachlich = extrahiereSpecKategorie(spec, 'FACHLICH');
 		const darstellung = extrahiereSpecKategorie(spec, 'DARSTELLUNG');
 		const herkunft = extrahiereSpecKategorie(spec, 'HERKUNFT');
 		assert.strictEqual(fachlich.length, 27, 'FACHLICH-Tabelle hat nicht 27 Eintraege');
 		assert.strictEqual(darstellung.length, 5, 'DARSTELLUNG-Tabelle hat nicht 5 Eintraege');
-		assert.strictEqual(herkunft.length, 14, 'HERKUNFT-Tabelle hat nicht 14 Eintraege');
-		assert.strictEqual(fachlich.length + darstellung.length + herkunft.length, 46);
+		assert.strictEqual(herkunft.length, 15, 'HERKUNFT-Tabelle hat nicht 15 Eintraege (#1743: +WetterMetrikenVersandPanel.svelte:66)');
+		assert.strictEqual(fachlich.length + darstellung.length + herkunft.length, 47);
 	});
 
 	test('jeder Spec-Eintrag steht genau einmal (keine Duplikate, keine Kategorie-Ueberschneidung)', () => {

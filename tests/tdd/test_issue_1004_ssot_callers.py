@@ -2,9 +2,10 @@
 
 Die vier SSoT-Aufrufer von ``convert_trip_to_segments()``:
 1. Scheduler-Briefing   — ``trip_report_scheduler.py:434`` (Wrapper)
-2. Trip-Detail-Vorschau — ``preview_service.py:96`` → ``render_email_preview``
+2. Trip-Detail-Vorschau — ``PreviewService._build_report`` → E-Mail-HTML
+   (seit #1743 ohne die Huelle ``render_email_preview``)
 3. Telegram-Segmentabruf — ``trip_command_processor.py:212`` (Wrapper-Aufruf)
-   + ``render_telegram_preview`` (#1001-Bubbles, voller Renderpfad)
+   + ``_build_report`` → ``telegram_bubbles`` (#1001-Bubbles, voller Renderpfad)
 4. Alert-Segmentfenster — ``convert_trip_to_segments(trip, _TARGET)`` direkt,
    wie die erste Stufe von ``resolve_current_segment`` (``trip_segments.py:377``)
    sie fuer den heutigen Tag aufruft. Seit Issue #1667 S3 ruft
@@ -32,6 +33,8 @@ from datetime import date, time, timedelta
 from app.loader import load_all_trips, save_trip
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 from utils.timezone import tz_for_coords
+
+from tests.helpers.trip_vorschau_bericht import trip_email_html, trip_telegram
 
 _USER = "tdd-1004-ac3"
 _TRIP_ID = "tdd-1004-ac3-trip"
@@ -92,8 +95,8 @@ def test_ac3_alle_vier_produkt_pfade_konsistent():
 
     # --- Pfad 2: Trip-Detail-Vorschau (voller E-Mail-Renderpfad) ---
     ps = PreviewService()
-    html = ps.render_email_preview(
-        _TRIP_ID, user_id=_USER, report_type="morning",
+    html = trip_email_html(
+        ps, _TRIP_ID, user_id=_USER, report_type="morning",
         target_date=_TARGET.isoformat(), demo=True,
     )
     assert _OLD_IMPORT not in html, (
@@ -112,8 +115,8 @@ def test_ac3_alle_vier_produkt_pfade_konsistent():
     assert tg_segments, "Telegram-Pfad: Segmentliste leer"
     observed["telegram"] = _local_hhmm(tg_segments[0])
 
-    _subject, tg_body, _bubbles = ps.render_telegram_preview(
-        _TRIP_ID, user_id=_USER, report_type="morning",
+    _subject, tg_body, _bubbles = trip_telegram(
+        ps, _TRIP_ID, user_id=_USER, report_type="morning",
         target_date=_TARGET.isoformat(), demo=True,
     )
     assert _OLD_IMPORT not in tg_body, (

@@ -189,7 +189,7 @@
 		color: var(--g-ink-2);
 	}
 	.acp-counter {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-3);
 		letter-spacing: 0.03em;
 	}
@@ -217,7 +217,7 @@
 		border-bottom: none;
 	}
 	.acp-kind {
-		font-size: 10px;
+		font-size: 11px;
 		width: 60px;
 		flex-shrink: 0;
 		text-transform: uppercase;
@@ -236,7 +236,7 @@
 		text-overflow: ellipsis;
 	}
 	.acp-sub {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		margin-top: 2px;
 	}
@@ -247,8 +247,9 @@
 		margin-top: 3px;
 	}
 	.acp-threshold-btn {
-		font-size: 10px;
-		padding: 2px 7px;
+		font-size: 11px;
+		min-height: 32px; /* #2601: Tap-Ziel statt 21px */
+		padding: 2px 10px;
 		border: 1px solid var(--g-rule-soft);
 		border-radius: 999px;
 		background: transparent;

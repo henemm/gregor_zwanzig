@@ -121,17 +121,41 @@ def trigger_alert_checks(user_id: str = Query(...)):
 
 @router.post("/compare-alert-checks")
 def trigger_compare_alert_checks(user_id: str = Query(...)):
-    """Trigger Compare-Preset Deviation-Alert-Checks (Issue #1169, Epic #1095)."""
-    from services.compare_alert import CompareAlertService
+    """Trigger Compare-Preset Deviation-Alert-Checks (Issue #1169, Epic #1095)
+    UND amtliche Warnungen (vormals eigener Endpoint
+    ``/compare-official-alert-checks``, Issue #1216 Slice 2a).
 
-    service = CompareAlertService(user_id=user_id)
-    count = service.check_all_compare_presets()
+    Fix #2286 (AC-9): Muster Trip -- dort laufen amtliche Warnungen im
+    ``alert-checks``-Lauf mit. Beide Teile laufen nacheinander, JEDER in
+    eigenem try-Block (Fehlerisolation): wirft einer, laeuft der andere
+    trotzdem, und der Fehler zaehlt als ``failed``. ``count``/``failed``/
+    ``duration_s`` werden summiert; ``checked`` ist die Zahl gepruefter
+    Presets (beide Teile pruefen dieselben Presets -> Maximum, nicht Summe).
+    """
+    from services.compare_alert import CompareAlertService
+    from services.compare_official_alert import CompareOfficialAlertService
+
+    count = failed = checked = 0
+    duration_s = 0.0
+    for name, service_cls in (
+        ("compare_alert", CompareAlertService),
+        ("compare_official_alert", CompareOfficialAlertService),
+    ):
+        try:
+            service = service_cls(user_id=user_id)
+            count += service.check_all_compare_presets()
+            failed += service.last_failed_count
+            checked = max(checked, service.last_checked_count)
+            duration_s += service.last_duration_s
+        except Exception:
+            logger.exception(f"{name}: Lauf fuer user_id={user_id} abgebrochen")
+            failed += 1
     return {
         "status": "ok",
         "count": count,
-        "failed": service.last_failed_count,
-        "checked": service.last_checked_count,
-        "duration_s": round(service.last_duration_s, 3),
+        "failed": failed,
+        "checked": checked,
+        "duration_s": round(duration_s, 3),
     }
 
 
@@ -176,22 +200,6 @@ def trigger_compare_radar_alert_checks(user_id: str):
         "compare_radar_alert",
         user_id,
     )
-
-
-@router.post("/compare-official-alert-checks")
-def trigger_compare_official_alert_checks(user_id: str = Query(...)):
-    """Trigger Compare-Preset Official-Alert-Standalone-Checks (Issue #1216 Slice 2a)."""
-    from services.compare_official_alert import CompareOfficialAlertService
-
-    service = CompareOfficialAlertService(user_id=user_id)
-    count = service.check_all_compare_presets()
-    return {
-        "status": "ok",
-        "count": count,
-        "failed": service.last_failed_count,
-        "checked": service.last_checked_count,
-        "duration_s": round(service.last_duration_s, 3),
-    }
 
 
 @router.post("/inbound-commands")
@@ -271,9 +279,12 @@ def trigger_compare_presets_daily(hour: Optional[int] = None, user_id: str = Que
     externe Monitoring einen 100%-Ausfall (Prod-Journal 2026-07-16:
     133/133) von einem leeren Lauf unterscheiden kann.
     """
+    # Fix #2286 (AC-8): gleiche Feldmenge wie /trip-reports inkl. duration_s.
+    started_at = time.monotonic()
     sent, failed = run_compare_presets_daily(user_id, hour=hour)
+    duration_s = round(time.monotonic() - started_at, 3)
     status = "partial" if failed > 0 else "ok"
-    return {"status": status, "count": sent, "failed": failed}
+    return {"status": status, "count": sent, "failed": failed, "duration_s": duration_s}
 
 
 @router.post("/trips/{trip_id}/send")

@@ -86,7 +86,8 @@ test.describe('Issue #268: Mobile Card-Stack für Trips-Liste', () => {
 
 		// Issue #2278: Aktionen aus der einen Quelle subscriptionActions (Status aktiv/pausiert, Flaeche mobil).
 		await expect(sheet.getByTestId('subscription-action-send')).toHaveText('Senden');
-		await expect(sheet.getByTestId('subscription-action-preview')).toHaveText('Vorschau');
+		// Issue #1743: Aktion „Vorschau" entfaellt.
+		await expect(sheet.getByTestId('subscription-action-preview')).toHaveCount(0);
 		await expect(sheet.getByTestId('subscription-action-alarms')).toHaveText('Alarme');
 		await expect(sheet.getByTestId('subscription-action-weather')).toHaveText('Wetter-Metriken');
 		await expect(sheet.getByTestId('subscription-action-edit')).toHaveText('Bearbeiten');

@@ -13,23 +13,7 @@
   },
   {
     "method": "GET",
-    "path": "/api/briefings/{entity_id}/preview"
-  },
-  {
-    "method": "POST",
-    "path": "/api/preview/compare/{preset_id}"
-  },
-  {
-    "method": "GET",
-    "path": "/api/preview/{trip_id}/email"
-  },
-  {
-    "method": "GET",
     "path": "/api/preview/{trip_id}/sms"
-  },
-  {
-    "method": "GET",
-    "path": "/api/preview/{trip_id}/telegram"
   },
   {
     "method": "POST",

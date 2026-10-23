@@ -1016,7 +1016,7 @@
 			payload,
 			() => buildTripReportBody(),
 			nachWetterSpeicherung, 'wetter-metriken'
-		));
+		), 700, 'wetter-metriken');
 	}
 
 	// Issue #1361/#1372 S1b (Staging-Fund AC-5): das Tagesfenster ist reine
@@ -1037,7 +1037,7 @@
 		// #2317 Baustein 1: `init` (keepalive beim Entladen) erreicht den PUT.
 		saveController.schedule(baueTripSpeicherung<Trip>(
 			api, trip!.id, () => buildTripReportBody(), nachWetterSpeicherung, 'wetter-report'
-		));
+		), 700, 'wetter-metriken-report-config');
 	}
 
 	/** Nebeneffekte nach erfolgreichem Auto-Save (beide Speicherpfade oben). */
@@ -1508,8 +1508,8 @@
 			     Telegram 7 Spalten, SMS Zeichen) und Scheibe 8 Fix A/B
 			     (hasLabelColumn/smsCharLimit vom Aufrufer) gegenstandslos: die
 			     Kappungs-Aussage nennt hier gemessene Vergleichs-Grenzen (SMS
-			     153 Zeichen, Telegram 7 Metrik-Zeilen). Die Mail-VORSCHAU bleibt
-			     draussen (Hub-Reiter "Vorschau", Server-Render) — der Organism
+			     153 Zeichen, Telegram 7 Metrik-Zeilen). Eine Mail-VORSCHAU gibt es
+			     hier nicht (der Hub-Reiter "Vorschau" entfiel mit #1743) — der Organism
 			     ist seit #1719 S3 eine reine Ein-Spalten-Huelle. -->
 			{#if sections.includes('reihenfolge')}
 			<LayoutTab

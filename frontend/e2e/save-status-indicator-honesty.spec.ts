@@ -100,8 +100,9 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 		const puts = collectTripPuts(page, id);
 		try {
 			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-versand').click();
-			await expect(page.getByTestId('versand-tab')).toBeVisible();
+			// Issue #1743: Versand-Abschnitt lebt im Reiter Wetter-Metriken.
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+			await expect(page.getByTestId('versand-abschnitt').getByTestId('versand-tab')).toBeVisible();
 
 			await page.waitForTimeout(3_000);
 			await page.getByTestId('trip-detail-tab-etappen').click();
@@ -176,9 +177,12 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 				'AC-1: Layout-Tab öffnen ohne Eingabe darf nicht "Nicht gespeichert" zeigen'
 			).toHaveAttribute('data-state', 'idle');
 
-			await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
+			// Issue #1743: Versand-Abschnitt im selben Reiter — Reiter verlassen und
+			// erneut öffnen, dann den Versand-Abschnitt prüfen (Remount ohne Eingabe).
+			await page.locator('[data-testid="compare-detail-tab-uebersicht"]:visible').first().click();
+			await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
 			await expect(
-				page.locator('[data-testid="report-morning-time"]:visible').first()
+				page.locator('[data-testid="versand-abschnitt"] [data-testid="report-morning-time"]:visible').first()
 			).toBeVisible({ timeout: 10_000 });
 			await page.waitForTimeout(2_000);
 			await expect(

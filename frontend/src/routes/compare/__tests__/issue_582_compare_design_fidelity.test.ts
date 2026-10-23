@@ -181,13 +181,16 @@ describe('AC-5: Compare-Hub — Tab-Buttons mit Underline statt Segmented', () =
 // ═══════════════════════════════════════════════════════════════════
 
 describe('AC-6: Übersicht-Tab — Monitoring-Streifen + SummaryCard-Grid', () => {
-	test('AC-6a: Verifikations-Hinweis hat border-left mit g-accent', () => {
+	// #1743 (AC-28): der Verifikations-Hinweis mit „Vorschau prüfen →" entfaellt samt
+	// Vorschau-Reiter; Zusicherung jetzt: kein Hinweis-Streifen mit Vorschau-Sprung mehr.
+	test('AC-6a (#1743): kein Verifikations-Hinweis mit Vorschau-Sprung mehr', () => {
 		const src = readFileSync(COMPARE_TABS, 'utf-8');
-		assert.match(
+		assert.doesNotMatch(
 			src,
-			/border-left.*3px.*g-accent|borderLeft.*3px.*g-accent/,
-			'Verifikations-Hinweis braucht border-left: 3px solid var(--g-accent) — Übersicht- und Vorschau-Tab'
+			/border-left:\s*3px solid var\(--g-accent\)/,
+			'Verifikations-Hinweis-Streifen (border-left 3px g-accent) steht noch im Hub'
 		);
+		assert.doesNotMatch(src, />\s*Vorschau prüfen/, 'Knopf „Vorschau prüfen" steht noch im Hub');
 	});
 
 	test('AC-6b: Übersicht-Tab hat SummaryCard mit "Bearbeiten →" Link', () => {
@@ -209,7 +212,6 @@ describe('AC-6: Übersicht-Tab — Monitoring-Streifen + SummaryCard-Grid', () =
 	});
 });
 
-// AC-7 (Email-View-Toggle im Vorschau-Tab) entfaellt mit #2283: der Vorschau-
-// Reiter ist der geteilte shared/PreviewTab — Desktop/Mobil-Umschalter bewacht
-// shared/__tests__/previewTab.test.ts per Rendern (preview-email-view-*).
+// AC-7 (Email-View-Toggle im Vorschau-Tab) entfaellt: der Vorschau-Reiter
+// entfiel mit #1743 ersatzlos.
 

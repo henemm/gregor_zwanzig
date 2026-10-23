@@ -1,5 +1,5 @@
 # doc-compliance-test
-"""AST-Inventar: ALLE Testaufrufe der 40 betroffenen Funktionen/Konstruktoren/
+"""AST-Inventar: ALLE Testaufrufe der 38 (urspruenglich 40) betroffenen Funktionen/Konstruktoren/
 ``InboundMessage`` reichen ``user_id`` explizit durch -- kein Testaufruf darf
 sich mehr auf den (in Scheibe C entfernten) Signatur-Default verlassen
 (#2151 Scheibe C, Migration Item 5).
@@ -7,13 +7,13 @@ sich mehr auf den (in Scheibe C entfernten) Signatur-Default verlassen
 Spec: docs/specs/modules/fix_2151_default_fallbacks_scheibe_c.md (Test 13,
 AC-10)
 
-Quelle der 40 Ziele: ``_MIGRATIONSZIELE`` unten -- eine EIGENE, eingefrorene
+Quelle der Ziele (urspruenglich 40, seit #1743 38): ``_MIGRATIONSZIELE`` unten -- eine EIGENE, eingefrorene
 Kopie der urspruenglichen ``_SRC_BESTAND``-Liste aus
 ``tests/test_user_id_default_guard.py`` (Stand vor der Scheibe-C-Leerung,
 ``git show HEAD:tests/test_user_id_default_guard.py``). Bewusst KEIN Import
 von dort: ``_SRC_BESTAND`` wird im Zuge dieser Scheibe auf ``frozenset()``
 geleert (das ist ihr Ziel-Endzustand), waehrend dieser Migrations-Nachweis
-weiterhin gegen die vollen 40 urspruenglichen Ziele pruefen muss -- sonst waere
+weiterhin gegen die urspruenglichen Ziele pruefen muss -- sonst waere
 dieser Test vakuum-gruen (leeres Register, 0 Funde IMMER, unabhaengig vom
 Testbestand). Fuer jedes Ziel wird die POSITION des
 ``user_id``-Parameters aus der ECHTEN Signatur bestimmt (``inspect``, kein
@@ -23,8 +23,8 @@ gesucht (``inspect.signature(Klasse)`` laesst ``self`` bereits weg), ein
 Methoden-Eintrag (``Klasse.methode``) an einem Attribut-Aufruf ``*.methode(...)``
 (Klassen-Aufloesung ist wie bei den Sammlern in ``test_user_id_default_guard.py``
 bewusst NICHT generisch -- reine Namens-Uebereinstimmung, keine Typ-Inferenz).
-Ist ``user_id`` in der Signatur ``KEYWORD_ONLY`` (z. B. die drei
-``PreviewService.render_*_preview``-Methoden), zaehlt ausschliesslich das
+Ist ``user_id`` in der Signatur ``KEYWORD_ONLY`` (z. B.
+``PreviewService.render_sms_preview``), zaehlt ausschliesslich das
 Keyword-Argument als Beleg.
 
 Ein Aufruf gilt als GEDECKT, wenn er ``user_id=...`` als Keyword traegt ODER
@@ -60,7 +60,10 @@ _SELBST = Path(__file__).resolve()
 _MARKER = "type: ignore[call-arg]"
 
 # Eingefrorene Kopie von ``_SRC_BESTAND`` (Stand vor der Scheibe-C-Leerung in
-# tests/test_user_id_default_guard.py, ``git show HEAD:...``) -- 40 Eintraege.
+# tests/test_user_id_default_guard.py, ``git show HEAD:...``) -- urspruenglich
+# 40 Eintraege, seit #1743 38: ``PreviewService.render_email_preview`` und
+# ``.render_telegram_preview`` existieren nicht mehr (Vorschau-Rueckbau AC-31),
+# ihre Signatur ist also nicht mehr aufloesbar.
 # Darf sich NICHT mit der schrumpfenden Ratsche dort mitbewegen (siehe
 # Modul-Docstring); dieser Migrations-Nachweis braucht die urspruengliche,
 # vollstaendige Zielmenge dauerhaft.
@@ -85,9 +88,7 @@ _MIGRATIONSZIELE: frozenset[tuple[str, str]] = frozenset({
     ("src/services/inbound_telegram_reader.py", "InboundTelegramReader._find_active_trip"),
     ("src/services/notification_service.py", "NotificationService.__init__"),
     ("src/services/preview_service.py", "PreviewService._load_trip"),
-    ("src/services/preview_service.py", "PreviewService.render_email_preview"),
     ("src/services/preview_service.py", "PreviewService.render_sms_preview"),
-    ("src/services/preview_service.py", "PreviewService.render_telegram_preview"),
     ("src/services/scheduler_dispatch_service.py", "run_compare_presets_daily"),
     ("src/services/trip_alert.py", "TripAlertService.__init__"),
     ("src/services/trip_command_processor.py", "InboundMessage.user_id"),
@@ -209,7 +210,7 @@ def _sammle_verstoesse() -> list[str]:
 
 
 def test_ac10_alle_testaufrufe_reichen_user_id_explizit_durch():
-    """AC-10 / Test 13: kein Aufruf einer der 40 betroffenen Funktionen/
+    """AC-10 / Test 13: kein Aufruf einer der 38 betroffenen Funktionen/
     Konstruktoren/``InboundMessage`` unter ``tests/**/*.py`` (auch
     ``live``-/``email``-markierte Dateien) laesst ``user_id`` weg.
 

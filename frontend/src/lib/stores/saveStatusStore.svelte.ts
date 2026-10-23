@@ -65,6 +65,12 @@ export class SaveStatus {
 	// Debounce-Internals
 	private _timer: ReturnType<typeof setTimeout> | null = null;
 	private _pendingFn: SaveFn | null = null;
+	// Issue #1743: Besitzer des Pending-Slots (`undefined` = unbekannt; Testinstanzen
+	// ohne Konstruktor lesen das Feld ebenfalls als leer).
+	private _pendingOwner?: string;
+	// Issue #1743 (AC-15): Besitzer, deren LETZTER Speicherversuch gescheitert ist.
+	// Ein Erfolg eines ANDEREN Besitzers darf diesen Fehlschlag nicht ueberdecken.
+	private _fehlerBesitzer?: Set<string>;
 	// Bug #1389: der gerade im Netz laufende Speichervorgang. `cancel()` kann ihn
 	// nicht mehr stoppen — der Merker dient `cancel()`s Guard als Grundlage, damit
 	// dort nichts zurückgesetzt wird, solange ein Request noch unterwegs ist.
@@ -150,6 +156,17 @@ export class SaveStatus {
 
 	setSaved(): void {
 		if (this._imKonflikt) return;
+		// Issue #1743 (AC-15): eine Seite, ein Zustand — „Gespeichert" erst, wenn kein
+		// Schreiber mehr gescheitert ist und keiner mehr aussteht.
+		if (this._fehlerBesitzer && this._fehlerBesitzer.size > 0 && this._unresolvedError) {
+			this.state = 'error';
+			this.error = this._unresolvedError;
+			return;
+		}
+		if (this._pendingFn) {
+			this.state = 'saving';
+			return;
+		}
 		this.error = null;
 		// Erst ein ECHTER Erfolg loescht den offenen Fehlschlag (s. markPristine).
 		this._unresolvedError = null;
@@ -219,22 +236,25 @@ export class SaveStatus {
 		this._unresolvedError = msg;
 	}
 
-	async doSave(saveFn: SaveFn, init?: RequestInit): Promise<void> {
+	async doSave(saveFn: SaveFn, init?: RequestInit, owner?: string): Promise<void> {
 		this._pendingFn = null;
+		this._pendingOwner = undefined;
 		this._timer = null;
 		this.setSaving();
-		const run = this._ausfuehren(saveFn, init);
+		const run = this._ausfuehren(saveFn, init, false, owner);
 		this._inflight = run;
 		await run;
 		if (this._inflight === run) this._inflight = null;
 	}
 
-	private async _ausfuehren(saveFn: SaveFn, init?: RequestInit, imRetry = false): Promise<void> {
+	private async _ausfuehren(saveFn: SaveFn, init?: RequestInit, imRetry = false, owner?: string): Promise<void> {
 		try {
 			await saveFn(init);
 			this._erledigt(saveFn);
+			this._besitzerErfolg(owner);
 			this.setSaved();
 		} catch (e) {
+			if (owner !== undefined) (this._fehlerBesitzer ??= new Set()).add(owner);
 			// Issue #1395 S4: nur ein echter Nebenlaeufigkeits-Konflikt auf einer
 			// bekannten Trip bekommt den eigenen Zustand mit Wiederholen-Knopf.
 			if ((e as ApiError)?.status === 412 && this._tripId) {
@@ -283,6 +303,14 @@ export class SaveStatus {
 			loescheKonflikt(this._tripId);
 			this.state = 'idle';
 		}
+	}
+
+	/** Issue #1743: der Erfolg eines Besitzers hebt nur SEINEN Fehlschlag auf; ohne Besitzer
+	 *  (Altaufrufer) gilt wie bisher: ein Erfolg loescht alle bekannten Fehlschlaege. */
+	private _besitzerErfolg(owner?: string): void {
+		if (!this._fehlerBesitzer) return;
+		if (owner === undefined) this._fehlerBesitzer.clear();
+		else this._fehlerBesitzer.delete(owner);
 	}
 
 	/** Eintrag in die deduplizierte Liste (ein Eintrag je Reiter, der neueste Rumpf gewinnt). */
@@ -383,12 +411,21 @@ export class SaveStatus {
 	/** Schedule a debounced save (700ms default). Calling again cancels previous timer.
 	 *  SOFORT setSaving() — damit der Indikator nie "idle" (Gespeichert ✓) zeigt,
 	 *  während eine ungespeicherte Änderung im Debounce-Fenster wartet (AC-1). */
-	schedule(saveFn: SaveFn, ms = 700): void {
+	schedule(saveFn: SaveFn, ms = 700, owner?: string): void {
 		this._offenerZwischenstand = false; // #2215: neue gueltige Eingabe ueberholt den Zwischenstand
+		// Issue #1743 (AC-10/11/14): ein belegter Slot eines FREMDEN Besitzers wird zuerst
+		// gesendet statt still verdraengt; gleicher Besitzer ersetzt (Entprellung).
+		// `doSave` leert den Slot synchron; die PUT-Reihenfolge serialisieren
+		// `hubPutQueue`/`enqueueTripWrite` (If-Match unveraendert).
+		if (this._pendingFn && this._pendingOwner !== owner) {
+			if (this._timer) clearTimeout(this._timer);
+			void this.doSave(this._pendingFn, undefined, this._pendingOwner);
+		}
 		this.setSaving(); // bei offenem Konflikt ein No-op (#1433)
 		this._pendingFn = saveFn;
-		if (this._timer !== null) clearTimeout(this._timer);
-		this._timer = setTimeout(() => { void this.doSave(saveFn); }, ms);
+		this._pendingOwner = owner;
+		if (this._timer) clearTimeout(this._timer);
+		this._timer = setTimeout(() => { void this.doSave(saveFn, undefined, owner); }, ms);
 	}
 
 	/** Flush any pending debounced save immediately. Returns a promise that resolves when done.
@@ -400,7 +437,7 @@ export class SaveStatus {
 		if (this._pendingFn !== null) {
 			if (this._timer !== null) clearTimeout(this._timer);
 			const fn = this._pendingFn;
-			await this.doSave(fn, init);
+			await this.doSave(fn, init, this._pendingOwner);
 		}
 	}
 
@@ -417,6 +454,7 @@ export class SaveStatus {
 		if (this._timer !== null) clearTimeout(this._timer);
 		this._timer = null;
 		this._pendingFn = saveFn;
+		this._pendingOwner = undefined;
 		this.setDirty();
 	}
 
@@ -449,13 +487,17 @@ export class SaveStatus {
 	 * Riegel `_inflight === null` wahrt die Regel oben: läuft ein echter Request
 	 * im Netz, wird hier nichts zurückgesetzt.
 	 */
-	cancel(): void {
+	cancel(owner?: string): void {
+		// Issue #1743 (AC-12): nur den Slot DIESES Besitzers verwerfen; ohne Argument nur
+		// einen Slot ohne bekannten Besitzer (Altaufrufer anderer Reiter).
+		if (this._pendingFn && this._pendingOwner !== owner) return;
 		this._offenerZwischenstand = false; // #2215
 		const hadPendingTimer = this._timer !== null;
 		const hadDeferred = !hadPendingTimer && this._pendingFn !== null;
 		if (this._timer !== null) clearTimeout(this._timer);
 		this._timer = null;
 		this._pendingFn = null;
+		this._pendingOwner = undefined;
 		const resettable = hadPendingTimer || (hadDeferred && this._inflight === null);
 		if (resettable && (this.state === 'saving' || this.state === 'dirty')) {
 			this.state = 'idle';

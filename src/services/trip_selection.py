@@ -66,9 +66,10 @@ _LABEL_EN = {"route": "Trip", "vergleich": "comparison"}
 # Shortcut-Aufloesung). "hilfe" braucht keine Zielaufloesung (ziellos, sofort
 # beantwortet); "columns" ebenso (nur ueber den Telegram-Callback "act_columns"
 # erreichbar, kein Bare-Text-Pendant). "pause"/"weiter" bleiben die einzige
-# verbleibende Mehrdeutigkeits-Lage aus #2282 AC-4.
+# verbleibende Mehrdeutigkeits-Lage aus #2282 AC-4. #2282 S2 (PO-Variante B):
+# report/heute/morgen kommen dazu -- Trip + Vergleich ohne Namen ⇒ Rueckfrage.
 ZIELLOS_SCHLUESSEL = frozenset({"hilfe", "columns", "kuerzel"})  # #2417 AC-3
-_BEIDE_KINDS_ONLY_SCHLUESSEL = frozenset({"pause", "weiter"})
+_BEIDE_KINDS_ONLY_SCHLUESSEL = frozenset({"pause", "weiter", "report", "heute", "morgen"})
 
 
 def pick_active_trip(trips: list["Trip"], now_utc: datetime) -> "Trip | None":

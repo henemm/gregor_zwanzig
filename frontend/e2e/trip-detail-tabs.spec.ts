@@ -10,13 +10,12 @@ const TABS = [
 	{ value: 'etappen', label: 'Etappen & Wegpunkte' },
 	{ value: 'wetter-metriken', label: 'Wetter-Metriken' },
 	{ value: 'wertebereiche', label: 'Wertebereiche' },
-	{ value: 'alarme', label: 'Alarme' },
-	{ value: 'versand', label: 'Versand' },
-	{ value: 'vorschau', label: 'Vorschau' }
+	{ value: 'alarme', label: 'Alarme' }
 ];
+// Issue #1743: Reiter `versand`/`vorschau` entfallen (Versand lebt in Wetter-Metriken).
 
 test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
-	test('AC-1: 7 Tabs in fester Reihenfolge sichtbar', async ({ page }) => {
+	test('AC-1: 5 Tabs in fester Reihenfolge sichtbar, kein Versand/Vorschau', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const list = page.getByTestId('trip-detail-tab-list');
 		await expect(list).toBeVisible();
@@ -25,6 +24,8 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 			await expect(trigger).toBeVisible();
 			await expect(trigger).toContainText(tab.label);
 		}
+		await expect(page.getByTestId('trip-detail-tab-versand')).toHaveCount(0);
+		await expect(page.getByTestId('trip-detail-tab-vorschau')).toHaveCount(0);
 	});
 
 	test('AC-2: ohne URL-Hash → Übersicht ist aktiv', async ({ page }) => {

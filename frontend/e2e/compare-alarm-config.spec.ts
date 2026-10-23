@@ -76,8 +76,12 @@ test.describe('Issue #1170: Compare-Editor Tab „Alarme" (Desktop)', () => {
 		await expect(page.locator('[data-testid="alert-cooldown-input"]').first()).toBeVisible();
 		await expect(page.locator('[data-testid="alert-quiet-hours-card"]').first()).toBeVisible();
 
-		// Versand-Tab enthaelt die Alert-Zustellung nicht mehr (AC-18).
-		await page.locator('[data-testid="compare-detail-tab-versand"]').click();
+		// Versand-Abschnitt enthaelt die Alert-Zustellung nicht (AC-18). Issue #1743:
+		// Versand liegt im Reiter Wetter-Metriken (Abschnitt #versand).
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
+		await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeVisible({
+			timeout: 10_000
+		});
 		await expect(page.locator('[data-testid="alert-cooldown-card"]')).toHaveCount(0);
 	});
 

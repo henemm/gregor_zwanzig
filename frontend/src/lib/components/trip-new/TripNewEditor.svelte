@@ -12,8 +12,8 @@
 	import { api } from '$lib/api.js';
 	import { Eyebrow, Btn, Input, TopoBg, PageHeader } from '$lib/components/atoms';
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
-	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
-	import VersandTab from '$lib/components/shared/VersandTab.svelte';
+	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
 	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
@@ -42,9 +42,11 @@
 		doneTabs,
 		stageDate,
 		progressCount,
+		PROGRESS_STEPS,
 		canSave,
 		buildCreateTripPayload,
 		ergaenzeStandardwerteReportConfig,
+		ergaenzeVersandStandard,
 	} from './tripNewLogic.ts';
 	import { canFinishMitStandardwerten } from '$lib/components/shared/anlegeLockEngine';
 	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
@@ -68,7 +70,6 @@
 		wtVisited?: boolean;
 		wbVisited?: boolean;
 		alVisited?: boolean;
-		vsVisited?: boolean;
 	}
 	let { stateOverride }: { stateOverride?: TripNewStateOverride } = $props();
 	// Einmal-Lesung beim Erzeugen (untrack, wie `profileOverride` in
@@ -76,16 +77,15 @@
 	// reaktiver Bezug.
 	const seed: TripNewStateOverride = untrack(() => stateOverride ?? {});
 
-	// ── Tab-Definitionen (1:1 TN_TAB_DEFS) ──────────────────────────────────
-	const TAB_DEFS: { id: TabId; label: string; lockHint: string | null; optional: boolean }[] = [
-		{ id: 'route',     label: 'Route',            lockHint: null,                             optional: false },
-		{ id: 'etappen',   label: 'Etappen & GPX',    lockHint: 'erst Trip-Name + Startdatum',    optional: false },
-		{ id: 'wegpunkte', label: 'Wegpunkte prüfen', lockHint: 'erst alle GPX hochladen',        optional: true  },
-		{ id: 'wetter-metriken',  label: 'Wetter-Metriken',  lockHint: 'erst alle GPX hochladen',        optional: false },
-		{ id: 'wertebereiche', label: 'Wertebereiche', lockHint: 'erst Wetter-Metriken öffnen',   optional: false },
-		{ id: 'alarme',    label: 'Alarme',           lockHint: 'erst Wertebereiche öffnen',      optional: false },
-		{ id: 'versand',   label: 'Versand',          lockHint: 'erst Alarme öffnen',             optional: false },
-	];
+	// ── Tab-Definitionen — Issue #1743: aus der EINEN Reiter-Definition
+	// (`subscriptionTabs.anlegeKette`), keine Zweitliste. Versand ist kein Schritt
+	// mehr, sondern der Abschnitt unten im Schritt Wetter-Metriken.
+	const TAB_DEFS = anlegeKette('trip').map((t) => ({
+		id: t.id as TabId,
+		label: t.label,
+		lockHint: t.lockHint ?? null,
+		optional: t.optional ?? false,
+	}));
 
 	// ── Lokaler Anlege-State ──────────────────────────────────────────────────
 	let name = $state(seed.name ?? '');
@@ -131,7 +131,6 @@
 	let wtVisited = $state(seed.wtVisited ?? false);
 	let wbVisited = $state(seed.wbVisited ?? false);
 	let alVisited = $state(seed.alVisited ?? false);
-	let vsVisited = $state(seed.vsVisited ?? false);
 
 	let activeTab = $state<TabId>(seed.activeTab ?? 'route');
 
@@ -174,8 +173,8 @@
 
 	// ── Abgeleitete Zustandsgrößen ────────────────────────────────────────────
 	const etDone = $derived(stages.length > 0 && stages.every(s => s.gpx !== null));
-	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited));
-	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited));
+	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited));
+	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited));
 	const ready = $derived(canSave(done));
 	// #2521 S3: eigenes Gate des Standardwerte-Knopfs (Bestandsknopf bleibt an `ready`).
 	const standardwerteFrei = $derived(canFinishMitStandardwerten({
@@ -268,7 +267,6 @@
 		if (id === 'wetter-metriken') wtVisited = true;
 		if (id === 'wertebereiche') wbVisited = true;
 		if (id === 'alarme') alVisited = true;
-		if (id === 'versand') vsVisited = true;
 	}
 
 	// ── Stage-Brücke: lokaler Create-State ⇄ EditStagesPanelNew (Issue #658) ──
@@ -454,7 +452,9 @@
 				stages: stages.map(s => ({ id: s.id, name: s.name, waypoints: s.waypoints })),
 				weatherMetrics,
 				channels,
-				reportConfig: mitStandardwerten ? ergaenzeStandardwerteReportConfig(reportConfig) : reportConfig,
+				// #1743 AC-21: Standard-Versandeinstellungen entstehen im Speicherweg,
+				// auch wenn der Versand-Abschnitt nie beruehrt wurde.
+				reportConfig: mitStandardwerten ? ergaenzeStandardwerteReportConfig(reportConfig) : ergaenzeVersandStandard(reportConfig),
 				alarm,
 				corridors,
 				activity: selectedActivity,
@@ -547,12 +547,12 @@
 			<!-- Fortschrittsbalken (TN_Progress) -->
 			<div style="display: flex; align-items: center; gap: 10px; margin-top: 7px;">
 				<div style="display: flex; gap: 3px;">
-					{#each ['route', 'etappen', 'wetter-metriken', 'versand'] as step}
-						<div style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
+					{#each PROGRESS_STEPS as step}
+						<div style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 					{/each}
 				</div>
-				<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4); letter-spacing: 0.04em;">
-					{progressN === 0 ? 'Noch nichts eingerichtet' : `${progressN} / 4 Abschnitte eingerichtet`}
+				<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.04em;">
+					{progressN === 0 ? 'Noch nichts eingerichtet' : `${progressN} / ${PROGRESS_STEPS.length} Abschnitte eingerichtet`}
 				</span>
 			</div>
 		</div>
@@ -560,11 +560,11 @@
 		<!-- Mobile Fortschrittsbalken (TNM_Progress, Issue #661) -->
 		<div class="tn-mobile tn-mobile-flex" style="align-items: center; gap: 8px; padding: 8px 16px 0;">
 			<div style="display: flex; gap: 3px; flex: 1;">
-				{#each ['route', 'etappen', 'wetter-metriken', 'versand'] as step}
-					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
+				{#each PROGRESS_STEPS as step}
+					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 				{/each}
 			</div>
-			<span class="mono" style="font-size: 10px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/4</span>
+			<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/{PROGRESS_STEPS.length}</span>
 		</div>
 
 		<!-- Tab-Bar (Desktop only, TN_TabBar) -->
@@ -583,13 +583,13 @@
 					style="padding: 12px 16px; cursor: {isOpen ? 'pointer' : 'not-allowed'}; font-size: 13px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; display: flex; align-items: center; gap: 5px; white-space: nowrap; opacity: {isOpen ? 1 : 0.34}; transition: opacity 250ms, color 200ms; transform: {flashTab === t.id ? 'translateX(2px)' : 'none'}; user-select: none;">
 					{t.label}
 					{#if t.optional && isOpen}
-						<span class="mono" style="font-size: 9px; font-weight: 600; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.10); color: var(--g-accent-deep); text-transform: uppercase;">optional</span>
+						<span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.10); color: var(--g-accent-deep); text-transform: uppercase;">optional</span>
 					{/if}
 					{#if isDone}
-						<span style="font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 3px; background: rgba(61,107,58,0.12); color: var(--g-good); font-family: var(--g-font-mono);">✓</span>
+						<span style="font-size: 11px; font-weight: 700; padding: 2px 5px; border-radius: 3px; background: rgba(61,107,58,0.12); color: var(--g-good); font-family: var(--g-font-mono);">✓</span>
 					{/if}
 					{#if !isOpen}
-						<span style="font-size: 10px; color: var(--g-ink-4); font-family: var(--g-font-mono); opacity: 0.7;">⊘</span>
+						<span style="font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); opacity: 0.7;">⊘</span>
 					{/if}
 				</div>
 			{/each}
@@ -609,10 +609,10 @@
 					style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {isOpen ? 'pointer' : 'default'}; font-size: 14px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {isOpen ? 1 : 0.35};">
 					{t.label}
 					{#if t.optional && isOpen}
-						<span class="mono" style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">opt</span>
+						<span class="mono" style="font-size: 11px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">opt</span>
 					{/if}
 					{#if !isOpen}
-						<span class="mono" style="font-size: 10px; opacity: 0.8;">⊘</span>
+						<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>
 					{/if}
 				</button>
 			{/each}
@@ -651,7 +651,7 @@
 					<div style="margin-bottom: 18px;">
 						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
 							Region
-							<span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional · max 50</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional · max 50</span>
 						</label>
 						<input type="text" value={region} oninput={makeRegionHandler()}
 							placeholder="z.B. Karnische Alpen"
@@ -678,7 +678,7 @@
 					<div style="margin-bottom: 18px;">
 						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
 							Aktivitätstyp
-							<span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional</span>
 						</label>
 						<Select data-testid="activity-dropdown"
 							value={selectedActivity ?? ''}
@@ -738,7 +738,7 @@
 								{gpxCount} / {stages.length} GPX geladen
 							</span>
 							{#if startDate}
-								<span class="mono" style="font-size: 10px; color: var(--g-ink-4);">
+								<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">
 									Start: {stageDate(startDate, 0)?.replace(/\.$/, '')}
 								</span>
 							{/if}
@@ -748,7 +748,7 @@
 					<!-- Spaltenheader -->
 					<div style="display: grid; grid-template-columns: 36px 1fr 60px minmax(170px, 200px) 28px; gap: 10px; padding: 0 14px 5px;">
 						{#each ['', 'Etappenname', 'Datum', 'GPX-Datei', ''] as h}
-							<span class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; text-transform: uppercase;">{h}</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.06em; text-transform: uppercase;">{h}</span>
 						{/each}
 					</div>
 
@@ -758,7 +758,7 @@
 							{@const hasGpx = s.gpx !== null}
 							<div style="display: grid; grid-template-columns: 36px 1fr 60px minmax(170px, 200px) 28px; gap: 10px; align-items: center; padding: 8px 14px; background: var(--g-card); border: 1px solid {hasGpx ? 'rgba(61,107,58,0.2)' : 'var(--g-rule)'}; border-radius: var(--g-r-2); transition: border-color 200ms;">
 								<!-- T-Badge -->
-								<span class="mono" style="font-size: 10px; font-weight: 700; text-align: center; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 4px; border-radius: 999px;">
+								<span class="mono" style="font-size: 11px; font-weight: 700; text-align: center; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 4px; border-radius: 999px;">
 									T{String(idx + 1).padStart(2, '0')}
 								</span>
 
@@ -779,8 +779,8 @@
 											<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5.5 4,8 8.5,2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
 										</span>
 										<div style="flex: 1; min-width: 0;">
-											<div class="mono" style="font-size: 10px; font-weight: 600; color: var(--g-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{s.gpx.file}</div>
-											<div class="mono" style="font-size: 9.5px; color: var(--g-ink-3);">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
+											<div class="mono" style="font-size: 11px; font-weight: 600; color: var(--g-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{s.gpx.file}</div>
+											<div class="mono" style="font-size: 11px; color: var(--g-ink-3);">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
 										</div>
 										<button type="button" onclick={makeGpxRemoveHandler(s.id)} title="GPX entfernen"
 											style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 13px; padding: 1px 3px; line-height: 1; flex-shrink: 0;">×</button>
@@ -790,7 +790,7 @@
 										<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-4)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
 											<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
 										</svg>
-										<span class="mono" style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--g-ink-4); white-space: nowrap;">GPX hochladen</span>
+										<span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--g-ink-4); white-space: nowrap;">GPX hochladen</span>
 										<input type="file" accept=".gpx" style="display: none;" onchange={makeGpxUploadHandler(idx, s.id)} />
 									</label>
 								{/if}
@@ -893,22 +893,6 @@
 				</div>
 			</div>
 
-		{:else if activeTab === 'versand'}
-			<!-- Zeitplan-Tab — Issue #1738: Kanäle + Zeitplan + Laufzeit kommen aus
-			     dem geteilten VersandTab (context="route", Teilungsregel/Epic #1230).
-			     MailInhaltCard bleibt nur noch für die Mail-Inhalt-Karte
-			     (showChannels/showSchedule=false, Muster WeatherMetricsTab.svelte).
-			     Damit hängt kein Versandkanal mehr an der Wetter-Metrik-Auswahl.
-			     Das isMobileViewport-Gate hält — wie bei WeatherMetricsTab unten —
-			     nur EINE Instanz im DOM: zwei gleichzeitig gemountete Instanzen
-			     halten je einen eigenen Schnappschuss von report_config und
-			     überschreiben sich gegenseitig (Last-Write-Wins, Fix-Loop 4). -->
-			{#if !isMobileViewport}
-			<div style="padding: 32px 40px 60px; max-width: 720px;">
-				<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} showInfobox={true} />
-				<MailInhaltCard bind:reportConfig />
-			</div>
-			{/if}
 		{/if}
 
 		<!-- Wetter-Tab: reuse WeatherMetricsTab im createMode -->
@@ -926,7 +910,14 @@
 		     bestehen (Resize-Grenzfall: Tab kann kurzzeitig neu mounten). -->
 		{#if !isMobileViewport}
 		<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
-			<WeatherMetricsTab trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+			<!-- Issue #1743: geteilter Baustein „Wetter-Metriken + Versand" (createMode,
+			     kein PUT). Der Versand-Abschnitt haelt den report_config-Blob per
+			     bind:reportConfig; die Mail-Inhalt-Karte folgt darunter (im createMode
+			     blendet WeatherMetricsTab sie aus). -->
+			<WetterMetrikenVersandPanel context="route" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
+			<div style="padding: 0 40px 60px; max-width: 720px;">
+				<MailInhaltCard bind:reportConfig />
+			</div>
 		</div>
 		{/if}
 
@@ -968,7 +959,6 @@
 		<EditorStickyFooter context="route" navClearance={false} testid="tn-desktop-footer">
 			<div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
 				{#if !ready}
-					<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4);">Versand einrichten zum Speichern</span>
 					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="trip-new-standardwerte-btn" />
 				{/if}
 				<button type="button" onclick={onSave} disabled={!ready || saving}
@@ -1066,7 +1056,7 @@
 							<div data-testid="tn-mobile-stage-card" style="background: var(--g-card); border: 1px solid {s.gpx ? 'rgba(61,107,58,0.2)' : 'var(--g-rule)'}; border-radius: var(--g-r-3); overflow: hidden; transition: border-color 200ms;">
 								<!-- Header-Zeile -->
 								<div style="display: flex; align-items: center; padding: 11px 14px 7px; gap: 10px;">
-									<span class="mono" style="font-size: 10px; font-weight: 700; flex-shrink: 0; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 6px; border-radius: 999px;">
+									<span class="mono" style="font-size: 11px; font-weight: 700; flex-shrink: 0; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 6px; border-radius: 999px;">
 										T{String(idx + 1).padStart(2, '0')}
 									</span>
 									<button type="button" data-testid="tn-mobile-stage-name"
@@ -1095,7 +1085,7 @@
 											</div>
 											<div style="flex: 1; min-width: 0;">
 												<div class="mono" style="font-size: 12px; font-weight: 600; color: var(--g-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{s.gpx.file}</div>
-												<div class="mono" style="font-size: 10.5px; color: var(--g-ink-3); margin-top: 1px;">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
+												<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 1px;">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
 											</div>
 											<button type="button" onclick={makeGpxRemoveHandler(s.id)}
 												style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 18px; padding: 4px 6px; line-height: 1; min-height: 44px; flex-shrink: 0;">×</button>
@@ -1174,7 +1164,7 @@
 					<!-- Issue #2521 S1 (AC-4): Infobox oben im optionalen Reiter. -->
 					{#if isMobileViewport}<div style="padding: 12px 16px 0;"><Infobox reiter="wegpunkte" context="route" /></div>{/if}
 					<div style="padding: 12px 16px; background: var(--g-accent-tint); border-bottom: 1px solid var(--g-accent-rule);">
-						<div class="mono" style="font-size: 10.5px; color: var(--g-accent-deep); line-height: 1.55;">
+						<div class="mono" style="font-size: 11px; color: var(--g-accent-deep); line-height: 1.55;">
 							Wegpunkte automatisch berechnet. Namen anpassen oder überspringen.
 						</div>
 					</div>
@@ -1186,15 +1176,6 @@
 					</div>
 				</div>
 
-			{:else if activeTab === 'versand'}
-				<!-- Mobile Zeitplan-Tab: Wrapper mit mobilem Padding.
-				     Issue #1738 — geteilter VersandTab, XOR zum Desktop-Mount oben. -->
-				{#if isMobileViewport}
-				<div style="padding: 16px 16px 60px;">
-					<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} showInfobox={true} />
-					<MailInhaltCard bind:reportConfig />
-				</div>
-				{/if}
 			{/if}
 
 			<!-- Mobile Wetter-Tab: WeatherMetricsTab (bereits mobil, #618) -->
@@ -1204,7 +1185,11 @@
 			     isMobileViewport-Gate nur EINE Instanz im DOM (Desktop XOR Mobile). -->
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
-				<WeatherMetricsTab trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+				<!-- Issue #1743: geteilter Baustein, XOR zum Desktop-Mount oben. -->
+				<WetterMetrikenVersandPanel context="route" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
+				<div style="padding: 0 16px 60px;">
+					<MailInhaltCard bind:reportConfig />
+				</div>
 			</div>
 			{/if}
 

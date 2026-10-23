@@ -180,6 +180,8 @@ PO-freigegeben 2026-07-28, Änderungsbudget 2800).
 """
 from __future__ import annotations
 
+import functools as _functools
+
 import ast
 from collections import Counter
 from collections.abc import Iterable
@@ -1412,6 +1414,18 @@ def _find_violations(path: Path) -> dict[str, str]:
 
 
 def _all_violations() -> dict[str, str]:
+    """Gecachter Mantel um ``_all_violations_berechnen()`` -- Kopie je Aufruf.
+
+    CI-Rot 2026-10-22 (Familie B): der Scan der Produktionsflaeche ist pro
+    Lauf deterministisch (dieselben Dateien, dasselbe Ergebnis), wurde aber von
+    jedem Test dieser Datei neu gerechnet. Einmal rechnen, allen liefern;
+    die synthetischen Wirkungsnachweise gehen weiter ueber ``_find_violations(path)``
+    und sind davon unberuehrt."""
+    return dict(_all_violations_berechnen())
+
+
+@_functools.cache
+def _all_violations_berechnen() -> dict[str, str]:
     """Alle fünf Detektoren über die gesamte Scanfläche, zu EINEM Dict vereint.
 
     GREEN muss liefern:
@@ -1530,9 +1544,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     ),
     # B4/B5 entfernt (#2261 A-2 S2) — die Radar-Endpunkte leiten den Status
     # jetzt aus AlertCheckRunResult.hit_deadline ab (_radar_run_response).
-    "api/routers/scheduler.py::trigger_compare_official_alert_checks::0": (
-        "B6 (#1405) — trigger_compare_official_alert_checks: dito."
-    ),
+    # B6 entfernt (#2286) — Endpoint /compare-official-alert-checks geloescht,
+    # der amtliche Teil laeuft in trigger_compare_alert_checks (B3) mit.
     "api/routers/scheduler.py::trigger_inbound::0": (
         "B7 (#1405) — trigger_inbound: dito; der 'skipped'-Zweig ist korrekt."
     ),
@@ -1712,8 +1725,7 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     "api/routers/scheduler.py::trigger_compare_alert_checks": 1,
     # B4/B5 entfernt (#2261 A-2 S2) — Radar-Endpunkte leiten den Status aus
     # AlertCheckRunResult.hit_deadline ab, der Scanner findet dort nichts mehr.
-    # B6 — dito (Compare-Amtlich)
-    "api/routers/scheduler.py::trigger_compare_official_alert_checks": 1,
+    # B6 entfernt (#2286) — Endpoint geloescht, in B3 aufgegangen.
     # B7 — dito (Inbound E-Mail)
     "api/routers/scheduler.py::trigger_inbound": 1,
     # B8 entfernt (#1369) — Endpoint /inbound-telegram samt Poll-Pfad geloescht.
@@ -1821,14 +1833,16 @@ def test_scanner_finds_every_spec_listed_finding():
     # -> 19 Schlüssel, Summe 22.
     # #1405 S4a: minus B18 (zehn Funktionsschluessel, 13 Treffer) -> 9 / 9.
     # #2280 S1 (AC-11): minus B12 (send_compare_preset) -> 8 / 8.
-    assert len(SPEC_LISTED_FINDINGS) == 8 and sum(SPEC_LISTED_FINDINGS.values()) == 8, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 8 "
-        "Funktionsschlüssel, Summe 8 — Version 1.2 minus B13, #1407, minus "
+    # #2286 (AC-9): minus B6 (Endpoint compare-official-alert-checks
+    # geloescht, in B3 aufgegangen) -> 7 / 7.
+    assert len(SPEC_LISTED_FINDINGS) == 7 and sum(SPEC_LISTED_FINDINGS.values()) == 7, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 7 "
+        "Funktionsschlüssel, Summe 7 — Version 1.2 minus B13, #1407, minus "
         "B2, #1447, minus B14b (drei Schlüssel), #1459, plus zweimal +1 fuer "
         "den vierten Kanal Premium-SMS, #1701 D7, minus B4/B5, #2261 A-2 S2, "
         "minus B9/B10/B11/B11b/B11c, #2217, minus B1/B14a/B14c/B15/B16, "
         "#1405 S1 ADR-0086, minus B8/B20, #1369 Poll-Pfad geloescht, minus B18 (zehn "
-        "Schluessel, 13 Treffer), #1405 S4a, minus B12, #2280 S1). Ist: "
+        "Schluessel, 13 Treffer), #1405 S4a, minus B12, #2280 S1, minus B6, #2286). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )

@@ -349,26 +349,6 @@ class PreviewService:
             night_weather=night_weather,
         )
 
-    def render_email_preview(
-        self,
-        trip_id: str,
-        *,
-        user_id: str,
-        report_type: str = "morning",
-        target_date: str | None = None,
-        demo: bool = False,
-    ) -> str:
-        """Rendert die Email-HTML-Vorschau identisch zur echten Mail."""
-        if report_type not in VALID_REPORT_TYPES:
-            raise ValueError(f"Ungültiger report_type '{report_type}'")
-        trip = self._load_trip(trip_id, user_id)
-        now_utc = datetime.now(timezone.utc)
-        target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
-        report, _segments, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, now_utc=now_utc, demo=demo, user_id=user_id,
-        )
-        return _email_html_of(report)
-
     def render_sms_preview(
         self,
         trip_id: str,
@@ -395,62 +375,6 @@ class PreviewService:
         # der #944-korrekte Versandtext (inkl. disabled_specs-Filterung).
         return report.email_subject, report.sms_text
 
-    def render_telegram_preview(
-        self,
-        trip_id: str,
-        *,
-        user_id: str,
-        report_type: str = "morning",
-        target_date: str | None = None,
-        demo: bool = False,
-    ) -> tuple[str, str, list[str]]:
-        """Rendert die Telegram-Vorschau via #1001-Multi-Bubble-Renderer (kein Versand).
-
-        Returns: (email_subject, body, bubbles). ``body`` ist die mit einem
-        Trennzeichen verbundene Kette aller Bubbles (Rueckwaertskompatibilitaet
-        fuer bestehende Konsumenten des einzelnen Body-Strings, AC-7).
-        """
-        if report_type not in VALID_REPORT_TYPES:
-            raise ValueError(f"Ungültiger report_type '{report_type}'")
-        trip = self._load_trip(trip_id, user_id)
-        now_utc = datetime.now(timezone.utc)
-        target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
-        report, _segments, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, now_utc=now_utc, demo=demo, user_id=user_id,
-        )
-        bubbles = report.telegram_bubbles or []
-        return report.email_subject, _telegram_body_of(bubbles), bubbles
-
-    def render_all_channels(
-        self,
-        trip_id: str,
-        *,
-        user_id: str,
-        report_type: str = "morning",
-        target_date: str | None = None,
-        demo: bool = False,
-    ) -> dict:
-        """Issue #2283 S1 (AC-1): EIN Report-Bau, ALLE Kanaele — dieselbe
-        Antwortform wie der Orts-Vergleich (`/api/briefings/{id}/preview`).
-        Je Kanal dieselbe Ableitung wie die Einzel-Methoden oben; der
-        Wetterabruf laeuft nur einmal statt je Kanal.
-        """
-        if report_type not in VALID_REPORT_TYPES:
-            raise ValueError(f"Ungültiger report_type '{report_type}'")
-        trip = self._load_trip(trip_id, user_id)
-        now_utc = datetime.now(timezone.utc)
-        target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
-        report, _segments, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, now_utc=now_utc, demo=demo, user_id=user_id,
-        )
-        bubbles = report.telegram_bubbles or []
-        return {
-            "subject": report.email_subject,
-            "email_html": _email_html_of(report),
-            "sms": {"text": report.sms_text, "char_count": len(report.sms_text)},
-            "telegram": {"body": _telegram_body_of(bubbles), "bubbles": bubbles},
-        }
-
 
 def _email_html_of(report) -> str:
     """E-Mail-HTML der Vorschau; Issue #722: compact format — wrap plain text
@@ -459,8 +383,3 @@ def _email_html_of(report) -> str:
         import html as _html
         return f"<pre style='font-family:monospace;white-space:pre-wrap;font-size:13px'>{_html.escape(report.email_plain)}</pre>"
     return report.email_html
-
-
-def _telegram_body_of(bubbles: list[str]) -> str:
-    """Kette aller Bubbles (Rueckwaertskompatibilitaet, #1001 AC-7)."""
-    return "\n\n---\n\n".join(bubbles)

@@ -278,18 +278,6 @@ export function presetChannels(preset: ComparePreset): string[] {
 }
 
 /**
- * Issue #2229 (AC-3): Hinweis neben dem SMS-Reiter der Vergleichs-Vorschau.
- * Premium-SMS hat keinen eigenen Inhalt (sie sendet den SMS-Text, ADR-0049),
- * deshalb kein vierter Reiter, sondern dieser Hinweis — nur beim SMS-Reiter und
- * nur bei eingeschalteter Premium-SMS, sonst leer.
- */
-export function premiumSmsPreviewNote(preset: ComparePreset, channel: string): string {
-	return channel === 'sms' && preset.send_premium_sms === true
-		? 'Premium-SMS versendet denselben Text'
-		: '';
-}
-
-/**
  * ComparePreset → Kanal-NAMEN statt Kanal-Anzahl ("Email · Telegram"),
  * Soll `screen-compare-detail.jsx:147-150`. Dünner Wrapper um presetChannels()
  * (Code-Teilungs-Invariante — keine neue Datenherleitung, nur Formatierung

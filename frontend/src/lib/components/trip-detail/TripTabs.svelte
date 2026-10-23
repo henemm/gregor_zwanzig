@@ -3,20 +3,18 @@
 	import { goto } from '$app/navigation';
 	import MTabBar from '$lib/components/mobile/MTabBar.svelte';
 	import HubOverview from './HubOverview.svelte';
-	import BriefingScheduleTab from './BriefingScheduleTab.svelte';
 	import AlarmeScheduleTab from './AlarmeScheduleTab.svelte';
-	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
+	// Issue #1743: Wetter-Metriken und Versand in EINEM geteilten Baustein (Anker #versand).
+	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
 	// Issue #1231: CorridorEditor(Mobile) ersetzt AlertsTab auf Desktop + Mobile.
 	// Import von AlertsTab entfernt (Slice 5) — Datei bleibt vorerst bestehen
 	// (Aufraeumen inkl. AlertMetricLevelTable/-Row ist Slice-6-Thema, s. Spec).
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
-	// Issue #2283: geteilter Vorschau-Reiter (gleiche Anordnung wie im Ortsvergleich).
-	import PreviewTab from '$lib/components/shared/PreviewTab.svelte';
 	import type { Trip, Stage } from '$lib/types';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
-	import { subscriptionTabs, resolveTab, bereinigteTabAdresse } from '../shared/subscriptionTabs.ts';
+	import { subscriptionTabs, resolveTab, bereinigteTabAdresse, versandSprungStart } from '../shared/subscriptionTabs.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 
 	// Issue #2287: Badge-Schluessel = Reiter-Kennungen (gemeinsame Tabelle).
@@ -24,10 +22,8 @@
 		uebersicht?: number;
 		etappen?: number;
 		'wetter-metriken'?: number;
-		versand?: number;
 		wertebereiche?: number;
 		alarme?: number;
-		vorschau?: number;
 	}
 
 	interface Props {
@@ -63,9 +59,7 @@
 		wertebereiche: badgesProp.wertebereiche ?? (trip?.alert_rules ?? []).filter((r) => r.enabled).length,
 		uebersicht: badgesProp.uebersicht,
 		'wetter-metriken': badgesProp['wetter-metriken'],
-		versand: badgesProp.versand,
-		alarme: badgesProp.alarme,
-		vorschau: badgesProp.vorschau
+		alarme: badgesProp.alarme
 	});
 
 	// Issue #529 — Kanonische Tab-Namen aus nav-map.jsx (Single Source of Truth):
@@ -102,20 +96,17 @@
 	// und synchronisiert bei späteren initialTab-Prop-Änderungen
 	// (z.B. hash-only navigation ohne Re-Mount).
 	let activeTab = $state<string>('uebersicht');
-	// Issue #483: der Vorschau-Reiter startet im Demo-Modus — der Standard
-	// liegt seit #2283 im geteilten Lader (shared/previewLoader.ts).
-	// Konfigurierte Briefing-Kanaele fuer die Kanal-Markierung im Vorschau-Reiter.
-	const previewChannels = $derived(
-		[
-			trip?.report_config?.send_email !== false ? 'email' : null,
-			trip?.report_config?.send_sms === true ? 'sms' : null,
-			trip?.report_config?.send_telegram === true ? 'telegram' : null
-		].filter((c): c is string => c !== null)
-	);
+	// Issue #1743: jede Erhoehung laesst den Baustein zum Versand-Abschnitt scrollen.
+	// Startwert aus der Alt-Kennung (`versand`/`briefings` tragen den Anker) oder aus
+	// einem direkten Link mit `#versand` (beim Laden gelesen). Jeder Reiterwechsel ohne
+	// Anker setzt ihn auf 0 — ein spaeterer Remount des Bausteins scrollt nicht.
+	// svelte-ignore state_referenced_locally -- bewusst nur der Startwert.
+	let versandSprung = $state(versandSprungStart(resolveTab('trip', initialTab)));
 
 	// Issue #2287 (E4): Alt-/kind-fremde Kennung → Adresszeile EINMAL per replaceState
 	// auf die neue Kennung; unbekannte Kennung → Parameter `tab` entfernt. Danach ist
 	// die Kennung neu → kein erneutes Umschreiben (keine Schleife).
+	// Issue #1743: `versand`/`briefings` → `?tab=wetter-metriken#versand`.
 	$effect(() => {
 		const r = resolveTab('trip', initialTab);
 		activeTab = r.tab;
@@ -135,7 +126,7 @@
 		return () => mq.removeEventListener('change', onChange);
 	});
 
-	async function handleValueChange(value: string): Promise<void> {
+	async function handleValueChange(value: string, anchor: 'versand' | null = null): Promise<void> {
 		// Issue #953: Ausstehenden Alerts-Auto-Save vor dem Tab-Wechsel flushen,
 		// statt einen irreführenden „Änderungen gehen verloren"-Dialog zu zeigen
 		// (die Änderung wird ohnehin gespeichert). onTripUpdate synchronisiert
@@ -162,18 +153,23 @@
 		// hing hier allein am `beforeNavigate`-Haken der Seite, also implizit.
 		// Explizit ist besser: die Asymmetrie wäre genau die Abhängigkeit, die
 		// beim nächsten Framework-Update still kippt.
+		// Issue #1743: kein eigener Reiter `versand` mehr — der Versand-Abschnitt gehoert
+		// zu `wetter-metriken`; ein Fremd-Besitzer-Slot wurde schon beim schedule()
+		// gesendet, der Flush hier sendet den verbliebenen (beide Besitzer).
 		if (
-			(activeTab === 'wertebereiche' || activeTab === 'wetter-metriken' || activeTab === 'versand' || activeTab === 'alarme' || activeTab === 'etappen') &&
+			(activeTab === 'wertebereiche' || activeTab === 'wetter-metriken' || activeTab === 'alarme' || activeTab === 'etappen') &&
 			value !== activeTab &&
 			saveController?.hasPending
 		) {
 			await saveController.flush();
 		}
 		activeTab = value;
+		versandSprung = anchor === 'versand' ? versandSprung + 1 : 0;
 		// Issue #516: kanonisches URL-Modell — ?tab=<value> statt #hash.
 		// replaceState verhindert History-Spam; noScroll + keepFocus erhalten
-		// die Keyboard-Navigation und Scroll-Position.
-		void goto(`?tab=${value}`, { replaceState: true, noScroll: true, keepFocus: true });
+		// die Keyboard-Navigation und Scroll-Position. #1743: Sprungziel als Hash.
+		const hash = anchor ? `#${anchor}` : '';
+		void goto(`?tab=${value}${hash}`, { replaceState: true, noScroll: true, keepFocus: true });
 	}
 </script>
 
@@ -198,7 +194,7 @@
 						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} />
 					{/if}
 				{:else if tab.value === 'wetter-metriken' && trip}
-					<WeatherMetricsTab {trip} {onTripUpdate} {saveController} />
+					<WetterMetrikenVersandPanel context="route" {trip} {onTripUpdate} {saveController} onJump={handleValueChange} {versandSprung} />
 				{:else if tab.value === 'wertebereiche' && trip}
 					{#if isMobileViewport}
 						<CorridorEditorMobile context="route" {trip} {onTripUpdate} {saveController} />
@@ -207,18 +203,6 @@
 					{/if}
 				{:else if tab.value === 'alarme' && trip}
 					<AlarmeScheduleTab {trip} {onTripUpdate} {saveController} {metricsCatalog} />
-				{:else if tab.value === 'versand' && trip}
-					<BriefingScheduleTab {trip} {onTripUpdate} {saveController} onJump={handleValueChange} />
-				{:else if tab.value === 'vorschau' && trip}
-					<!-- #2283: neuer Trip (gleiche Seite, andere ID) ⇒ neuer Lader, neuer Abruf. -->
-					{#key trip.id}
-						<PreviewTab
-							context="route"
-							id={trip.id}
-							premiumSms={trip.report_config?.send_premium_sms === true}
-							configuredChannels={previewChannels}
-						/>
-					{/key}
 				{:else}
 					<p class="p-4 text-sm">{PLACEHOLDERS[tab.value]}</p>
 				{/if}

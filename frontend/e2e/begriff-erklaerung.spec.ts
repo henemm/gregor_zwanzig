@@ -58,17 +58,18 @@ function konsolenFehler(page: Page): string[] {
 	return fehler;
 }
 
-type TripReiter = 'route' | 'etappen' | 'wegpunkte' | 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand';
+// Issue #1743: kein Anlege-Schritt `versand` mehr — der Versand-Abschnitt (samt
+// Infobox `versand`) steht unten im Schritt `wetter-metriken`.
+type TripReiter = 'route' | 'etappen' | 'wegpunkte' | 'wetter-metriken' | 'wertebereiche' | 'alarme';
 const TRIP_TAB_NAME: Record<TripReiter, RegExp> = {
 	route: /Route/,
 	etappen: /Etappen/,
 	wegpunkte: /Wegpunkte/,
 	'wetter-metriken': /Wetter/,
 	wertebereiche: /Wertebereiche/,
-	alarme: /Alarme/,
-	versand: /Versand/
+	alarme: /Alarme/
 };
-const TRIP_KETTE: TripReiter[] = ['wetter-metriken', 'wertebereiche', 'alarme', 'versand'];
+const TRIP_KETTE: TripReiter[] = ['wetter-metriken', 'wertebereiche', 'alarme'];
 
 function tripTab(page: Page, mobil: boolean, reiter: TripReiter): Locator {
 	const leiste = mobil ? page.getByTestId('tn-mobile-tabbar') : page.locator('.tn-desktop');
@@ -122,8 +123,8 @@ async function tripBis(page: Page, mobil: boolean, ziel: TripReiter): Promise<vo
 	}
 }
 
-type VergleichReiter = 'vergleich' | 'orte' | 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand';
-const VERGLEICH_KETTE: VergleichReiter[] = ['wetter-metriken', 'wertebereiche', 'alarme', 'versand'];
+type VergleichReiter = 'vergleich' | 'orte' | 'wetter-metriken' | 'wertebereiche' | 'alarme';
+const VERGLEICH_KETTE: VergleichReiter[] = ['wetter-metriken', 'wertebereiche', 'alarme'];
 
 function vergleichTab(page: Page, mobil: boolean, reiter: VergleichReiter): Locator {
 	const id = mobil ? `cm-mobile-tab-${reiter}` : `compare-editor-tab-${reiter}`;
@@ -249,7 +250,9 @@ for (const mobil of [false, true]) {
 				await wechsleTripReiter(page, mobil, reiter);
 				await pruefeInfobox(page, reiter, 'route');
 			}
-			// Versand: beim Trip BEIDE Zeiten.
+			// Versand (#1743: Abschnitt im Schritt Wetter-Metriken): beim Trip BEIDE Zeiten.
+			await wechsleTripReiter(page, mobil, 'wetter-metriken');
+			await pruefeInfobox(page, 'versand', 'route');
 			await expect(infobox(page, 'versand', 'route')).toContainText('07:00');
 			await expect(infobox(page, 'versand', 'route')).toContainText('18:00');
 		});
@@ -270,10 +273,11 @@ test.describe('/compare/new (Desktop): Infobox je Reiter', () => {
 			await vergleichTab(page, false, reiter).click();
 			await pruefeInfobox(page, reiter, 'vergleich');
 		}
-		// Ortsvergleich-Versand: nur Morgen 07:00, kein Abend-Slot.
+		// Ortsvergleich-Versand (#1743: Abschnitt im Schritt Wetter-Metriken): nur Morgen 07:00, kein Abend-Slot.
+		await vergleichTab(page, false, 'wetter-metriken').click();
+		await pruefeInfobox(page, 'versand', 'vergleich');
 		await expect(infobox(page, 'versand', 'vergleich')).toContainText('07:00');
 		await expect(infobox(page, 'versand', 'vergleich')).not.toContainText('18:00');
-		await vergleichTab(page, false, 'wetter-metriken').click();
 		await expect(infobox(page, 'wetter-metriken', 'vergleich')).toContainText('3-Tages-Ausblick');
 	});
 });
@@ -404,7 +408,7 @@ for (const mobil of [false, true]) {
 	test(`AC-16 /compare/new (${ansicht}): alle Reiter, Sprechblasen öffnen und schließen — keine Konsolenfehler`, async ({ page }) => {
 		const fehler = konsolenFehler(page);
 		let geoeffnet = 0;
-		await vergleichBis(page, false, 'versand');
+		await vergleichBis(page, false, 'alarme');
 		if (mobil) await page.setViewportSize(MOBILE);
 		for (const reiter of VERGLEICH_KETTE) {
 			await vergleichTab(page, mobil, reiter).click();

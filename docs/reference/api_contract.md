@@ -219,7 +219,6 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/briefings/{id}` | DELETE, GET, PUT |
 | `/api/briefings/{id}/alert-preview` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; kind-neutrale Alarm-Vorschau, Section 20 (#2283 S4)
 | `/api/briefings/{id}/briefing-history` | GET | — `?kind=route\|vergleich` Pflicht (400 bei fehlendem/ungültigem kind oder ungültiger ID), 401 ohne Nutzer, unbekannte ID 200 `[]`; kind-neutrales Versand-Log, Section 21 (#2281)
-| `/api/briefings/{id}/preview` | GET | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; EIN Abruf, alle Kanäle, Section 20 (#2283 S1)
 | `/api/briefings/{id}/send` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), Trip optional `&report_type=morning\|evening` (Default `morning`), ungültige ID 400 `validation_error`, fremde ID 404; einheitlicher Handversand, Section 10.1 (#2280)
 | `/api/cockpit/status` | GET |
 | `/api/compare` | GET |
@@ -245,13 +244,9 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/metric-presets/{id}` | DELETE, PATCH |
 | `/api/metrics` | GET |
 | `/api/notify/test` | POST |
-| `/api/preview/compare/{preset_id}` | POST | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
-| `/api/preview/{trip_id}/email` | GET | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
-| `/api/preview/{trip_id}/sms` | GET | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
-| `/api/preview/{trip_id}/telegram` | GET | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/preview` (#2283)
+| `/api/preview/{trip_id}/sms` | GET | — Trip-Vorschau SMS-Kurzform; Proxy-Logik `forwardPreview`, Section 20 (email/telegram/compare entfallen, #1743)
 | `/api/scheduler/alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/scheduler/compare-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
-| `/api/scheduler/compare-official-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
 | `/api/scheduler/compare-radar-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
 | `/api/scheduler/inbound-commands` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/scheduler/radar-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
@@ -280,7 +275,8 @@ Router-Quelltext; davon 4 Pfade/4 Registrierungen nur bei `GZ_ENV=staging`, ohne
 hinzu, #2155 S3 die drei Pfade unter `/api/admin/users`; #2519 ergänzt `/api/admin/invites`,
 `/api/admin/invites/{id}/revoke` und `/api/auth/invite/check`; #2218 Scheibe C die vier
 Admin-Trigger `radar-alert-checks`, `compare-alert-checks`, `compare-radar-alert-checks`,
-`compare-official-alert-checks`. Die frühere Angabe „80 Pfade/100 Registrierungen" war
+`compare-official-alert-checks` (letzterer seit #2286 wieder entfernt — der amtliche Teil
+läuft in `compare-alert-checks` mit). Die frühere Angabe „80 Pfade/100 Registrierungen" war
 bereits vor #2218 veraltet.)
 
 ---
@@ -896,7 +892,7 @@ Heute existieren zwei getrennte Domänenobjekte:
 
 | Domäne | Pfad-Prefix | Handler | Persistenz |
 |---|---|---|---|
-| **Compare-Presets** (Orts-Vergleich) | `/api/compare/presets` (CRUD, `PATCH …/{id}/state`, `POST …/{id}/send`), Vorschau: `POST /api/preview/compare/{preset_id}` | `internal/handler/compare_preset.go` | `data/users/{userID}/briefings/` (kind=vergleich) |
+| **Compare-Presets** (Orts-Vergleich) | `/api/compare/presets` (CRUD, `PATCH …/{id}/state`, `POST …/{id}/send`), Alarm-Vorschau: `POST /api/briefings/{id}/alert-preview?kind=vergleich` | `internal/handler/compare_preset.go` | `data/users/{userID}/briefings/` (kind=vergleich) |
 | **Briefing-Subscriptions** (Trip-Briefing-Abos, ADR-0023) | `/api/briefings` | `internal/handler/briefing_subscription.go` | `data/users/{userID}/briefings/` |
 
 Feld-Definitionen und Validierungsregeln: massgeblich sind die Go-Structs in
@@ -1600,7 +1596,7 @@ session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
 | jobs[].overlap | object \| null (Issue #1447 S2a) | Present **only** when at least one tick has been skipped since the last executed run of this job, because the previous run of the same job ID was still in progress (`sync.Mutex.TryLock()` in `recordRun`). Absent field means no overlap is occurring — never an error signal. |
 | jobs[].overlap.skipped_since_last_run | int | Number of consecutive ticks skipped since the last executed run; resets to 0 (and the `overlap` field disappears) the next time the job actually runs, regardless of outcome |
 | jobs[].overlap.last_skipped_at | datetime | ISO-8601 UTC timestamp of the most recently skipped tick |
-| jobs[].users | object \| absent (Issue #2149 Scheibe A) | Anonymous per-user aggregate, present **only** on the seven fan-out jobs that run via `runForAllUsers` (`trip_reports_hourly`, `alert_checks`, `radar_alert_checks`, `compare_alert_checks`, `compare_radar_alert_checks`, `compare_official_alert_checks`, `compare_presets_daily`). Absent on the three global jobs without user fan-out (`inbound_command_poll`, `data_write_selftest`, `premium_sms_poll`) — absent means "not applicable", not "all ok". Contains **only counts, never user IDs**. |
+| jobs[].users | object \| absent (Issue #2149 Scheibe A) | Anonymous per-user aggregate, present **only** on the six fan-out jobs that run via `runForAllUsers` (`trip_reports_hourly`, `alert_checks`, `radar_alert_checks`, `compare_alert_checks`, `compare_radar_alert_checks`, `compare_presets_daily`; `compare_official_alert_checks` was folded into `compare_alert_checks` by Issue #2286). Absent on the three global jobs without user fan-out (`inbound_command_poll`, `data_write_selftest`, `premium_sms_poll`) — absent means "not applicable", not "all ok". Contains **only counts, never user IDs**. |
 | jobs[].users.total | int | Number of users with a recorded state entry for this job |
 | jobs[].users.failing | int | Number of users with `ConsecutiveFailures >= 1` |
 | jobs[].users.partial | int | Number of users with `ConsecutivePartial >= 1` |
@@ -1615,6 +1611,8 @@ session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
 | briefing_health.alert_anchor_rejected_streak_since | string \| null (Issue #1661) | ISO-8601 UTC timestamp when the current unbroken series of **rejected deviation-alert anchors** started, or `null` if no streak is active. An anchor is rejected when it describes a different calendar day than today (`wrong_day`), is older than the 26 h fallback limit (`too_old`), or is missing entirely while the trip is already running (`missing`) — in each case the deviation guard has no valid comparison point and stays silent. Gap threshold: **60 minutes** (the alert check runs every 15 minutes, so an hour without a further rejection ends the series; the 26 h threshold used for briefings would keep the same fault invisible for days). |
 | briefing_health.alert_anchor_rejected_recent_count | int (Issue #1661) | Count of rejected deviation-alert anchors in the last 24 hours (recorded in `users/<uid>/diagnostics/alert_anchor_rejected.jsonl`). Only the timestamp is decoded on the Go side — neither the trip id nor the rejection reason leaves the Python core (#252). |
 | briefing_health.track_resolution_failure_streak_since | string \| null (Issue #2073 Scheibe 2) | ISO-8601 UTC timestamp when the current unbroken series of failed GPX track resolutions started, or `null` if no streak is active — exactly like the `provider_error_*`/`alert_anchor_rejected_*` neighbours above, so a monitor tests for `null`. (The Go helper `analyzeTrackResolutionFailures` returns the empty string internally for "no streak"; the handler does not put that into the response map, so the wire format carries `null` — measured on staging 2026-08-22 at `c38e35cc`.) A failure is written when `resolve_stage_track_km` finds no candidate within tolerance, finds several candidates that disagree on the distance, or the stage's already-stored distances turn out implausible (recorded in `users/<uid>/diagnostics/track_resolution_failures.jsonl`, written only on the dispatch path, not on preview). Gap threshold: **26 hours** — deliberately not the 60-minute threshold of the alert-anchor twin, because the Python writer damps its lines: resolution failures (`no_candidate_within_tolerance`, `ambiguous_result`) to at most one line per stage and process, so the next line only arrives with the following daily briefing/deploy cycle; `implausible_measurement` (since Issue #2218 C5-47) to at most one line per (user, trip, stage) and **12 hours** — 12 h < 26 h, so that streak never lapses while the stage stays implausible. The damping only starts after the line was actually written; if writing fails, the next run retries. A process restart allows at most one extra line per stage. |
+| briefing_health.corrupt_briefings_total | int (Issue #2286) | Sum of corrupt/unloadable files in all users' `briefings/` folders (trips **and** compare presets) from the last scanner run, summed over all users. Addition only — `corrupt_trips_total`/`corrupt_trips_last_run_at` stay unchanged. |
+| briefing_health.corrupt_briefings_by_kind | object (Issue #2286) | `{"trip": n, "vergleich": n, "unbekannt": n}` — breakdown of `corrupt_briefings_total` by kind. Unparseable files count as `vergleich` only if the raw text contains `"kind": "vergleich"`, else `unbekannt`; structurally broken compare presets count as `vergleich`. Legacy `corrupt_trips.json` without `by_kind` counts as `unbekannt`. **Only counts** — no user IDs, no filenames (#252). |
 | briefing_health.track_resolution_failures_recent_count | int (Issue #2073 Scheibe 2) | Count of failed track resolutions in the last 24 hours, summed over all users. Only the timestamp is decoded on the Go side — neither trip id, stage id, reason nor detail leaves the Python core (#252). |
 | enrichment_health | object (Issue #1581, ADR-0018, ADR-0047 Addendum) | Raw call outcomes for degradable **enrichment** paths (thunder direct sources, radar nowcast, SNOWGRID snow depth, since #2218 the alert-check weather fetch `alert_fetch` with per-unit `failed_units`, and since #2030 the forecast capture `forecast_capture` — a diagnostic path, not a provider fallback, but degradable in the same way) — a top-level sibling of `briefing_health`, never nested inside it, because an enrichment outage is explicitly not a briefing outage (`coreBriefingSources` stays unchanged). One key per path that has been called at least once; a path never called does not appear (no fabricated failure). No streak/threshold decision is made in Go — `check-gregor20.sh` forms `now − last_success_at` itself, exactly like `warn_service_health`. |
 | enrichment_health.\<path\>.last_attempt_at | string \| null | ISO-8601 UTC timestamp of the most recent call attempt for this path (`thunder`, `thunder_additive`, `radar_nowcast`, `snowgrid`, `forecast_capture`, `alert_fetch`), regardless of outcome — including `self_throttled`, so a growing gap to `last_success_at` is externally visible. |
@@ -1910,9 +1908,9 @@ completed fully or was cut off by that budget.
 > Kennung in `GZ_ADMIN_USER_IDS` steht; sonst 403 `{"error":"forbidden"}` (ohne
 > Sitzung weiterhin 401). Gilt ebenso für `POST /api/scheduler/inbound-commands`
 > und — seit Issue #2218 Scheibe C (C5-02a) — für die vier übrigen Alarm-Trigger
-> `POST /api/scheduler/radar-alert-checks`, `/compare-alert-checks`,
-> `/compare-radar-alert-checks` und `/compare-official-alert-checks` (Proxy an den
-> gleichnamigen Python-Pfad). Ein Admin-Trigger läuft über **alle** Nutzer und kann
+> `POST /api/scheduler/radar-alert-checks`, `/compare-alert-checks` und
+> `/compare-radar-alert-checks` (Proxy an den gleichnamigen Python-Pfad;
+> `/compare-official-alert-checks` ist seit Issue #2286 entfallen). Ein Admin-Trigger läuft über **alle** Nutzer und kann
 > echte Alarme versenden — auf Prod nicht als Test auslösen.
 > Der Cron-Scheduler ruft den Python-Core direkt und ist nicht betroffen.
 
@@ -1955,7 +1953,7 @@ completed fully or was cut off by that budget.
 | `duration_s` | float | Actual wall-clock runtime of this run |
 | `reason` | string | Present only when `status: "partial"` — currently always `"deadline"` |
 | `skipped_ids` | string[] | Trip-IDs, die der Lauf nicht mehr erreicht hat (Seit #2261 A-2 S1; `skipped` ist deren Anzahl). Leer bei vollem Lauf. |
-| `failed` | int | Trips, bei denen die Prüfung mit einer Ausnahme endete (Seit #2217; gilt auch für `radar-alert-checks`, `compare-radar-alert-checks`). Die Ausnahme reißt die folgenden Trips nicht mehr mit; sie wird mit Trip-/Preset-ID und Stacktrace geloggt (`report_unit_failure`, `src/services/alert_check_state.py`). `RadarDeadlineExceeded` bricht den Lauf weiterhin ab (`status: "partial"`). `compare-alert-checks` und `compare-official-alert-checks` melden `failed` ebenso. |
+| `failed` | int | Trips, bei denen die Prüfung mit einer Ausnahme endete (Seit #2217; gilt auch für `radar-alert-checks`, `compare-radar-alert-checks`). Die Ausnahme reißt die folgenden Trips nicht mehr mit; sie wird mit Trip-/Preset-ID und Stacktrace geloggt (`report_unit_failure`, `src/services/alert_check_state.py`). `RadarDeadlineExceeded` bricht den Lauf weiterhin ab (`status: "partial"`). `compare-alert-checks` meldet `failed` ebenso — seit Issue #2286 inklusive des amtlichen Teils (vormals eigener Endpoint `compare-official-alert-checks`, entfallen): beide Teile laufen nacheinander in je eigenem try-Block, `count`/`failed`/`duration_s` werden summiert, `checked` ist die Zahl geprüfter Presets (Maximum der Teile); wirft ein Teil, zählt das als `failed += 1`, der andere läuft trotzdem. |
 
 **Seit #2217 (2026-10-07):** Stapelläufe sind abgeschottet — Alarmläufe (Trip-Radar, `check_all_trips`, drei Ortsvergleich-Alarmläufe) und der Briefing-Sammellauf (Fälligkeits-/Filterprüfung Trip, Zonenbestimmung/Auto-Pause Ortsvergleich) zählen Ausnahmen einzelner Trips/Presets in `failed`, statt abzubrechen. Der Fairness-Stempel wird vor der Prüfung gesetzt; `skip_next` bleibt bei einer Ausnahme unverbraucht. Go-Scheduler: eine Panic in `recordRun`/`callUserWithBudget` wird als Fehler `panic in <jobID>` erfasst und der Job-Lock freigegeben.
 
@@ -2627,7 +2625,7 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 | POST | `/api/compare/presets` | 201 / 400 | Create new preset; ID auto-generated, user_id from auth context |
 | PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 | Update preset (user_id, created_at preserved from stored record) |
 | DELETE | `/api/compare/presets/{id}` | 204 / 404 | Delete preset |
-| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 / 409 / 422 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'`. **Fehlende Orte (#2216):** sind alle Orte des Ortsvergleichs geloescht, antwortet der Versand (und `POST /api/preview/compare/{preset_id}`) mit **422** und der Meldung „Ortsvergleich '<id>' verweist auf gelöschte Orte. Ersetze die Orte im Ortsvergleich." (bewusst nicht 409). Fehlt nur ein Teil, laeuft der Versand mit den uebrigen Orten und die 200-Antwort traegt zusaetzlich `fehlende_orte` (Liste der nicht aufloesbaren Ort-IDs; leer/fehlend wenn nichts fehlt); der Scheduler-Lauf loggt eine Warnung, der Compare-Hub zeigt nach dem Test-Versand einen Hinweis. 409 = für diesen Ortsvergleich läuft bereits ein Versand (geteiltes Lock-Register `src/services/send_lock.py`, Schlüssel enthält `user_id`; Issue #2124). Der Go-Proxy reicht den Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht), Timeout 300 s (vorher 120 s) |
+| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 / 409 / 422 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'`. **Fehlende Orte (#2216):** sind alle Orte des Ortsvergleichs geloescht, antwortet der Versand mit **422** und der Meldung „Ortsvergleich '<id>' verweist auf gelöschte Orte. Ersetze die Orte im Ortsvergleich." (bewusst nicht 409). Fehlt nur ein Teil, laeuft der Versand mit den uebrigen Orten und die 200-Antwort traegt zusaetzlich `fehlende_orte` (Liste der nicht aufloesbaren Ort-IDs; leer/fehlend wenn nichts fehlt); der Scheduler-Lauf loggt eine Warnung, der Compare-Hub zeigt nach dem Test-Versand einen Hinweis. 409 = für diesen Ortsvergleich läuft bereits ein Versand (geteiltes Lock-Register `src/services/send_lock.py`, Schlüssel enthält `user_id`; Issue #2124). Der Go-Proxy reicht den Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht), Timeout 300 s (vorher 120 s) |
 
 ### Validation Rules (POST/PUT)
 
@@ -2950,7 +2948,8 @@ aktualisiert `letzter_versand` und `top_ort_letzter_versand`.
 {
   "status": "ok",
   "count": 2,
-  "failed": 0
+  "failed": 0,
+  "duration_s": 3.412
 }
 ```
 
@@ -2960,7 +2959,8 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 {
   "status": "partial",
   "count": 1,
-  "failed": 1
+  "failed": 1,
+  "duration_s": 2.108
 }
 ```
 
@@ -2970,7 +2970,8 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 |-------|------|-------------|
 | status | enum | `"ok"` wenn alle fälligen Presets erfolgreich versendet wurden, `"partial"` sobald `failed > 0` (Issue #1290; HTTP bleibt in beiden Fällen 200) |
 | count | int | Anzahl erfolgreich versendeter fälliger Presets (Morgen- oder Abend-Slot), die zur geprüften Stunde fällig waren |
-| failed | int | Anzahl fälliger Presets, deren Versand fehlgeschlagen ist (Issue #1290; zuvor nur intern als `error_count` geloggt, jetzt Teil der Response) |
+| failed | int | Anzahl fälliger Presets, deren Versand fehlgeschlagen ist (Issue #1290; zuvor nur intern als `error_count` geloggt, jetzt Teil der Response). Seit Issue #2286 zählt auch ein Provider-Totalausfall (alle Orte ohne Wetterdaten ⇒ `no_weather`, keine Mail) als `failed`; eine kaputte Datei in `briefings/` wird übersprungen und zählt **nicht** als `failed`. |
+| duration_s | float | Laufdauer des Aufrufs in Sekunden (Issue #2286 — gleiche Feldmenge wie `/api/scheduler/trip-reports`) |
 
 **Internal Behavior (seit Issue #1232 Scheibe 2a):**
 
@@ -4147,50 +4148,34 @@ type WebAuthnCredential struct {
 
 ---
 
-## 20) Preview Endpoints (Issue #189, #483, #1270)
+## 20) Preview Endpoints (Issue #189, #483, #1743)
 
-Provides preview rendering of trip reports in Email, SMS, or Telegram formats (Signal wurde app-weit entfernt, Issue #610). Supports both live weather and fixture-based demo mode. Seit Issue #1270 zusätzlich: EIN Compare-Preview-Endpoint, der alle Kanäle eines Orts-Vergleich-Presets in einer Antwort liefert (s. `POST /api/preview/compare/{preset_id}` unten).
+Seit Issue #1743 (PO-Entscheid 22.10.2026: die Briefing-Vorschau je Kanal entfällt
+ersatzlos) gibt es nur noch die **Alarm-Vorschau** und die **SMS-Kurzform-Vorschau**
+eines Trips. Letztere bleibt, weil die Staging-Specs
+`frontend/e2e/metrik-abwahl-schreibt-alle-kanaele-durch.staging.spec.ts` und
+`frontend/e2e/metrik-grundauswahl-schneidet-kanal.staging.spec.ts` damit die
+zugestellte SMS-Kurzform messen.
 
-**Handler:** `api/routers/preview.py` | **Routing:** `internal/router/router.go` (Trip-Routen), `internal/router/router.go:161-167` (Compare-Proxy)
+**Handler:** `api/routers/preview.py` (SMS), `api/routers/validator.py` (Alarm) | **Routing:** `internal/router/router.go`
 
-### GET /api/briefings/{id}/preview (Issue #2283 S1)
+Entfernt (Router 404/405, Python-Core wird nicht erreicht):
 
-Kind-neutrale Vorschau — **ein** Abruf liefert alle Kanäle, für beide kinds in
-derselben Form. Go-Handler `internal/handler/briefing_preview.go::BriefingPreviewHandler`
-prüft `kind` (fehlt/falsch → 400 `{"error":"kind_required"}`) und die ID
-(`store.ValidEntityID` verletzt → 400 `{"error":"validation_error"}`, Python wird
-nicht erreicht), verwirft einen Client-`user_id` und injiziert die Kennung aus
-der Anmeldung (ADR-0003). Proxy-Ziel: Python `GET /api/briefings/{id}/preview`
-(`api/routers/preview.py::preview_briefing`). Zeitlimit Go 30 s (`route`) bzw.
-60 s (`vergleich`).
-
-**Query Parameters:** `kind` (Pflicht, `route|vergleich`); nur bei `kind=route`:
-`type` (`morning|evening`), `date`, `demo` (wie `/email`). Bei `vergleich` gilt nur
-`date`.
-
-**Response 200:**
-
-```json
-{
-  "subject": "...",
-  "email_html": "<html>...</html>",
-  "sms": {"text": "...", "char_count": 137},
-  "telegram": {"body": "...", "bubbles": ["..."]}
-}
-```
-
-`telegram.bubbles` nur bei `kind=route` (#1001). Inhalt je Kanal identisch zu den
-Alt-Routen (`route`: `/email`, `/sms` `token_line`, `/telegram`; `vergleich`:
-`POST /api/preview/compare/{preset_id}`). Fremde ID → 404 (user-scoped Loader).
-Die Alt-Routen bleiben als **Delegates** über dieselbe Proxy-Logik
-(`forwardPreview` in `internal/handler/preview_proxy.go`).
-`GET /api/preview/{trip_id}/signal` ist entfernt (404, #2283 AC-6).
+- `GET /api/briefings/{id}/preview` (#2283 S1) — mit #1743 entfallen (Reiter „Vorschau" abgebaut).
+- `GET /api/preview/{trip_id}/email`, `GET /api/preview/{trip_id}/telegram` und
+  `POST /api/preview/compare/{preset_id}` (#1270) — mit #1743 entfallen, kein Aufrufer mehr.
+  Die Dienste `PreviewService` und `ComparePreviewService` bleiben (Render-Pfad der
+  Paritätstests, `scripts/premium_sms_preflight_check.py`, Alarm-Vorschau).
+- `GET /api/preview/{trip_id}/signal` (404, #2283 AC-6).
 
 ### POST /api/briefings/{id}/alert-preview (Issue #2283 S4)
 
-Kind-neutrale Alarm-Vorschau. Go-Prüfungen wie oben (400 `kind_required`,
-400 `validation_error`, Client-`user_id` verworfen), Körper unverändert durch,
-Zeitlimit 30 s. Proxy-Ziel: Python `POST /api/briefings/{id}/alert-preview`
+Kind-neutrale Alarm-Vorschau. Go-Handler
+`internal/handler/briefing_preview.go::BriefingAlertPreviewHandler` prüft `kind`
+(fehlt/falsch → 400 `{"error":"kind_required"}`) und die ID (`store.ValidEntityID`
+verletzt → 400 `{"error":"validation_error"}`, Python wird nicht erreicht), verwirft
+einen Client-`user_id` und injiziert die Kennung aus der Anmeldung (ADR-0003).
+Körper unverändert durch, Zeitlimit 30 s (`forwardPreview`). Proxy-Ziel: Python `POST /api/briefings/{id}/alert-preview`
 (`api/routers/validator.py::briefing_alert_preview`).
 
 - `kind=route`: Body und Antwort exakt wie `POST /api/trips/{id}/alert-preview`
@@ -4206,9 +4191,12 @@ Zeitlimit 30 s. Proxy-Ziel: Python `POST /api/briefings/{id}/alert-preview`
   (kein SMS-Kontingent, kein Versand). Ort nicht im Vergleich/Body ungültig → 422,
   fremder Vergleich → 404.
 
-### GET /api/preview/{trip_id}/email
+### GET /api/preview/{trip_id}/sms
 
-Render trip report preview in HTML format (Email).
+SMS-Kurzform-Vorschau eines Trips (`PreviewService.render_sms_preview`, derselbe
+Renderpfad wie der Versand). Go-Proxy `internal/handler/preview_proxy.go::PreviewProxyHandler`
+(`forwardPreview`, Zeitlimit 30 s; Client-`user_id` wird verworfen, die Kennung aus der
+Anmeldung injiziert, ADR-0003).
 
 **Query Parameters:**
 
@@ -4220,15 +4208,14 @@ Render trip report preview in HTML format (Email).
 
 **Response 200:**
 
-```
-Content-Type: text/html
-<html>...</html>  <!-- Full HTML rendered trip report -->
+```json
+{"subject": "...", "token_line": "...", "char_count": 137}
 ```
 
 **Example:**
 ```
-GET /api/preview/gr20/email?type=morning&date=2026-05-31&demo=1
-GET /api/preview/gr20/email?type=evening
+GET /api/preview/gr20/sms?type=morning&date=2026-05-31&demo=1
+GET /api/preview/gr20/sms?type=evening
 ```
 
 **Error Responses:**
@@ -4248,133 +4235,10 @@ GET /api/preview/gr20/email?type=evening
 - If weather fetch fails with `demo=false`, the endpoint returns 503; with `demo=true`, it returns 400 if fixtures are unavailable
 - Demo mode is ideal for testing preview rendering on past trips (where live weather is unavailable)
 
-### GET /api/preview/{trip_id}/sms
-
-Render trip report preview as SMS text (≤160 characters per message).
-
-**Query Parameters:** Same as `/email` (type, date, demo)
-
-**Response 200:**
-
-```
-Content-Type: text/plain
-Grüße! Morgen: 18°C, Wind 22 km/h, Regenwahrscheinlichkeit 20%.
-```
-
-**Error Responses:** Same as `/email`
-
-### GET /api/preview/{trip_id}/telegram
-
-Render trip report preview for Telegram channel. Seit Issue #1001 rendert das Backend
-das Briefing als mehrere einzelne Nachrichten ("Bubbles": Kopf, Kurzübersicht, je
-Segment, Ziel, optional Ausblick, Aktionen) statt einer einzelnen Prosa-Nachricht —
-siehe `docs/adr/0014-telegram-multi-bubble-format.md`.
-
-**Query Parameters:** Same as `/email` (type, date, demo)
-
-**Response 200:**
-
-```json
-{
-  "subject": "...",
-  "body": "<alle Bubbles, verbunden mit \"\\n\\n---\\n\\n\">",
-  "char_count": 0,
-  "max_line_width": 0,
-  "bubbles": ["<Bubble 1: Kopf>", "<Bubble 2: Kurzübersicht>", "..."]
-}
-```
-
-`bubbles` ist additiv seit #1001 (AC-7) — `body` bleibt aus Rückwärtskompatibilität
-erhalten und ist die mit `"\n\n---\n\n"` verbundene Kette aller Bubbles. Das dazugehörige
-`reply_markup` (Inline-Keyboard der Aktionen-Bubble) ist im Preview-JSON **nicht**
-enthalten; es wird ausschließlich beim tatsächlichen Versand über
-`TripReport.telegram_actions_markup` an die letzte Nachricht angehängt.
-
-**Error Responses:** Same as `/email`
-
 **Notes:**
 
-- All preview endpoints are **read-only** and do not send messages or modify state
-- Preview rendering uses the same Report Formatter and Channel Renderers as the scheduler (integrity guarantee)
-- Frontend may call multiple preview endpoints (e.g., email + SMS) to render side-by-side tabs
-
-### POST /api/preview/compare/{preset_id}
-
-Render **alle** Kanäle der Vorschau eines Orts-Vergleich-Presets in **einer**
-Antwort (Issue #1270, ADR-0011-Muster — Erweiterung des bestehenden
-`alert-preview`-Musters). Bewusste Abweichung von der Trip-Preview-Routenform
-oben (eine `GET`-Route je Kanal): ADR-0011 verlangt „die fertig gerenderten
-Kanäle über EINEN Backend-Endpunkt"; die Trip-Preview-Routen entstanden vor
-ADR-0011 (2026-06-29) und wurden nicht rückwirkend migriert (Nebenbefund,
-#1199).
-
-**Handler:** `api/routers/preview.py::preview_compare` — ruft
-`src/services/compare_preview_service.py::ComparePreviewService.render_all_channels`
-| **Go-Proxy:** `internal/handler/preview_proxy.go::ComparePreviewProxyHandler`
-(`router.go:167`)
-
-**Path Parameters:**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| preset_id | string | Compare-Preset-ID |
-
-**Query Parameters:**
-
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| user_id | string | yes | Session-User; vom Go-Proxy aus dem Auth-Kontext injiziert — ein client-seitig mitgeschickter Wert wird verworfen (Anti-Spoofing, ADR-0003) |
-| date | string | no | Ziel-Datum ISO-8601 (`YYYY-MM-DD`), Default: heute |
-
-Kein Request-Body erforderlich — der Go-Proxy leitet den Body zwar durch, der
-Python-Handler liest ihn nicht.
-
-**Response 200:**
-
-```json
-{
-  "subject": "...",
-  "email_html": "<html>...</html>",
-  "telegram": "...",
-  "sms": "...",
-  "sms_char_count": 137
-}
-```
-
-| Feld | Type | Description |
-|------|------|-------------|
-| subject | string | Betreffzeile (`build_compare_preset_subject`) |
-| email_html | string | Vollständiges HTML der E-Mail-Vorschau (`render_compare_email`) |
-| telegram | string | Fertiger Telegram-Nachrichtentext (`render_compare_telegram`) — kein Score/Rang (#1110) |
-| sms | string | Budgetierte SMS-Zeile (`render_compare_sms`, Budget über `CHANNEL_LIMITS`, #360) |
-| sms_char_count | integer | `len(sms)` |
-
-**Error Responses:**
-
-| Status | Scenario |
-|--------|----------|
-| 404 | Preset für diese `user_id` nicht gefunden — auch bei einem Preset, das einem anderen Nutzer gehört (Multi-User-Isolation, AC-6) |
-| 422 | fehlende/leere `user_id` (kein `"default"`-Fallback, ADR-0003) · Preset ohne konfigurierte Orte · konfigurierte Orte nicht auflösbar (gelöschte Location-Referenz) · ungültiges `date`-Format |
-| 503 | Wetter-Provider nicht erreichbar (`ComparisonEngine.run()` scheitert) |
-
-Der Router mappt `FileNotFoundError`/`LookupError` → 404, `ValueError` → 422,
-`RuntimeError` → 503; `detail` enthält den Ausnahme-Text (kein fester
-Error-Code wie bei den älteren Trip-Preview-Routen).
-
-**Notes:**
-
-- Read-only wie die anderen Preview-Endpoints — kein Versand, kein
-  Logbuch-Eintrag.
-- `ComparisonEngine.run()` läuft genau **einmal** je Aufruf; alle drei
-  Kanäle sitzen auf demselben `ComparisonResult` (AC-7) — ein Kanalwechsel
-  im Vorschau-Tab löst **keinen** weiteren Request aus, daher kein Cache
-  nötig.
-- Ersetzt fachlich den Validator-Stub
-  `POST /api/_validator/compare-email-preview` (#464) als Datenquelle für
-  die UI-Vorschau (Stub rendert einen hartcodierten Ort). Der Stub selbst
-  bleibt unverändert bestehen — er gehört dem externen Validator.
-- Details, Architektur-Begründung (ADR-0011) und AC-Mapping:
-  `docs/specs/modules/compare_channel_preview_dispatch.md`.
+- Read-only: kein Versand, kein Zustandswechsel.
+- Rendering über denselben Report-Formatter und dieselben Kanal-Renderer wie der Scheduler.
 
 ---
 

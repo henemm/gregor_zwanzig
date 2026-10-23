@@ -448,19 +448,20 @@ def test_cron_ohne_opt_in_engine_ausfall_ueberall_wirft_originalfehler(mit, monk
     assert not mit.kanaele, mit
 
 
-def test_cron_ohne_opt_in_alle_orte_mit_fehler_wird_wie_bisher_zugestellt(mit, anker, monkeypatch):
+def test_cron_ohne_opt_in_alle_orte_mit_fehler_wird_nicht_zugestellt(mit, anker, monkeypatch):
     """Given jeder Ort liefert ``LocationResult(error=...)`` / When der Cron-
-    Wrapper laeuft / Then Bestandsverhalten: E-Mail geht hinaus, der Lauf gilt
-    als versendet, Erfolgs-Status wird gespeichert (kein no_weather-Abbruch)."""
+    Wrapper laeuft / Then seit Fix #2286 (AC-4, ADR-0018) wie beim Handversand:
+    keine Mail aus lauter Fehlerzellen, der Lauf gilt als NICHT versendet,
+    kein Erfolgs-Status (vormals Bestandsverhalten "zugestellt")."""
     uid = nutzer_anlegen()
     pid = _vergleich(uid, "vgl-adv1-fehlerorte")
     hv.wetter_fehlt_je_ort(monkeypatch)
 
     ergebnis = _cron(uid, pid)
 
-    assert ergebnis is True, "Cron ohne Opt-in: Bestandsverhalten 'zugestellt' erwartet"
-    assert mit.kanaele == ["email"], mit
-    assert hv.letzter_versand(uid, pid), "Erfolgs-Status wie vor #2280 erwartet"
+    assert ergebnis is False, "Cron: Provider-Totalausfall darf nicht als zugestellt gelten (#2286)"
+    assert mit.kanaele == [], mit
+    assert not hv.letzter_versand(uid, pid), "kein Erfolgs-Status bei no_weather (#2286)"
 
 
 # --- Fix-Loop 1 F-ADV6 (a): Cron-Vergleich ohne Zustellung hinterlaesst Spur --
