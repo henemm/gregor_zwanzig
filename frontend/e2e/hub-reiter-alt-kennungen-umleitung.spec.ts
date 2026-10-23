@@ -263,7 +263,21 @@ for (const hub of HUBS) {
 
 test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 	test('Trip-Liste (Handy): „Wetter-Metriken" öffnet den Reiter Wetter-Metriken', async ({ page }) => {
-		const { id } = await neuerTrip(page);
+		// Datierte Etappe Pflicht: ein Trip ohne Etappen ist seit #2278 ein Entwurf, dessen
+		// Menü nur „Setup fortsetzen"/„Löschen" anbietet (subscriptionActions.ts, draft).
+		const heute = new Date().toISOString().slice(0, 10);
+		const tripId = `e2e-gz-trip-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+		const { id } = await createTestTrip(page.request, {
+			id: tripId,
+			stages: [
+				{
+					id: `${tripId}-s1`,
+					name: 'Etappe 1',
+					date: heute,
+					waypoints: [{ id: `${tripId}-w1`, name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 }]
+				}
+			]
+		});
 		await page.setViewportSize(HANDY);
 		await page.goto('/trips');
 
