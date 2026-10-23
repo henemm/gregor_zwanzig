@@ -700,3 +700,496 @@ def test_ac13_unerwartete_stoerung_landet_im_aeusseren_netz(tmp_path):
     assert any(w in _text(r) for w in ("stoer", "stör", "ungeprueft", "ungeprüft",
                                        "nicht messbar", "unbekannt")), (
         f"Auch die unerwartete Stoerung muss sichtbar werden. Ausgabe: {_text(r)!r}")
+
+
+# =========================================================================================
+# Erweiterte Reichweite: Namenspendants ausserhalb der Ordner-Erkennung
+# Spec: docs/specs/modules/feat_2346_cockpit_paritaet.md, Abschnitt „S1 — Pendant-Sperre
+# erweitern", AC-2/5/6/7/8.
+#
+# ⚠️ Alle Pfade dieses Blocks liegen bewusst AUSSERHALB von `FE_BEREICHE` und
+# `src/output/renderers` — die alte Ordner-Erkennung faengt sie nicht. Ein Exit 2 hier kann
+# also nur von der neuen Namens-Erkennung kommen, ein Exit 0 nicht von einer alten Ausnahme.
+# =========================================================================================
+
+MOL = f"{FE}/molecules"
+ORG = f"{FE}/organisms"
+ROUTES = "frontend/src/routes"
+SERVICES = "src/services"
+HANDLER = "internal/handler"
+
+_INHALT = {".svelte": SVELTE, ".ts": "export const wert = 1;\n",
+           ".py": '"""Modul."""\nWERT = 1\n', ".go": "package handler\n"}
+_KOPF = {".svelte": "<!-- {} -->\n", ".ts": "// {}\n", ".py": "# {}\n", ".go": "// {}\n"}
+
+
+def _endung(pfad: str) -> str:
+    return "." + pfad.rsplit(".", 1)[-1]
+
+
+def _inhalt(pfad: str, kopfzeile: str | None = None) -> str:
+    """Lauffaehiger Dateiinhalt passend zur Endung, optional mit Kopfzeile."""
+    rumpf = _INHALT[_endung(pfad)]
+    return (_KOPF[_endung(pfad)].format(kopfzeile) + rumpf) if kopfzeile else rumpf
+
+
+# (Kennung, vorhandene Datei = Partner, neue Datei). Deckt alle Namensmuster der Spec ab:
+# Praefix CamelCase in beiden Richtungen, Suffix, snake_case (Praefix und Suffix), neutraler
+# Partner fuer BEIDE Seiten, lowerCamel und alle vier Wurzeln.
+_NAMENSPAARE = [
+    ("praefix_compare_neben_trip", f"{MOL}/TripWetterband.svelte", f"{MOL}/CompareWetterband.svelte"),
+    ("praefix_trip_neben_compare", f"{MOL}/CompareWetterband.svelte", f"{MOL}/TripWetterband.svelte"),
+    ("suffix_compare_neben_trip", f"{ORG}/WetterbandTrip.svelte", f"{ORG}/WetterbandCompare.svelte"),
+    ("snake_compare_neben_trip", f"{SERVICES}/trip_wetterlage.py", f"{SERVICES}/compare_wetterlage.py"),
+    ("snake_suffix", f"{SERVICES}/wetterlage_trip.py", f"{SERVICES}/wetterlage_compare.py"),
+    ("neutral_compare", f"{MOL}/Wetterband.svelte", f"{MOL}/CompareWetterband.svelte"),
+    ("neutral_trip_in_routes", f"{ROUTES}/_home/Wetterband.svelte", f"{ROUTES}/_home/TripWetterband.svelte"),
+    ("neutral_snake", f"{SERVICES}/wetterlage.py", f"{SERVICES}/compare_wetterlage.py"),
+    ("go_handler", f"{HANDLER}/vorschau.go", f"{HANDLER}/compare_vorschau.go"),
+    ("lower_camel_ts", f"{ORG}/kanalRaster.ts", f"{ORG}/compareKanalRaster.ts"),
+]
+_IDS = [k for k, _, _ in _NAMENSPAARE]
+
+
+def _partner_genannt(r: subprocess.CompletedProcess, partner: str) -> None:
+    """Der Partner muss mit vollem Pfad in der Meldung stehen.
+
+    ⚠️ Nur den Dateinamen zu suchen waere vakuum: `Wetterband.svelte` steckt als Teilstring in
+    `CompareWetterband.svelte`, `wetterlage.py` in `compare_wetterlage.py` — die Meldung
+    naennte dann scheinbar den Partner, obwohl sie nur die neue Datei nennt.
+    """
+    assert partner in r.stderr, f"Meldung nennt den Partner {partner!r} nicht:\n{r.stderr}"
+
+
+@pytest.mark.parametrize("_kennung, partner, neu", _NAMENSPAARE, ids=_IDS)
+def test_namenspendant_neuanlage_ohne_begruendung_blockiert_und_nennt_partner(
+        tmp_path, _kennung, partner, neu):
+    """AC-2: Neue einseitige Datei neben vorhandenem Partner -> Exit 2, Partner genannt."""
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
+    _neu(repo, neu, _inhalt(neu))
+    r = _hook(repo)
+    _blockiert(r, neu, f"Namenspendant zu {partner}")
+    _partner_genannt(r, partner)
+
+
+@pytest.mark.parametrize("_kennung, partner, neu", _NAMENSPAARE, ids=_IDS)
+def test_namenspendant_mit_begruendungszeile_laeuft_durch(tmp_path, _kennung, partner, neu):
+    """AC-2, Ausweg: gueltige `gz-eigenstaendig:`-Kopfzeile -> Exit 0.
+
+    Robustheitswaechter (heute schon gruen): Gegenstueck ist der Blockade-Test oben mit
+    denselben Pfaden.
+    """
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
+    _neu(repo, neu, _inhalt(neu, BEGRUENDUNG))
+    _durchlaeuft(_hook(repo), "Begruendungszeile ist der vorgesehene Ausweg")
+
+
+def test_namenspendant_zu_kurze_begruendung_blockiert(tmp_path):
+    """AC-2: Die Kopfzeile braucht >= 15 sinnvolle Zeichen — sonst bleibt es bei Exit 2."""
+    partner, neu = f"{MOL}/Wetterband.svelte", f"{MOL}/CompareWetterband.svelte"
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
+    _neu(repo, neu, _inhalt(neu, "gz-eigenstaendig: kurz"))
+    _blockiert(_hook(repo), neu, "Begruendung unter 15 Zeichen")
+
+
+def test_namenspendant_meldung_nennt_beide_auswege(tmp_path):
+    """Spec S1: Die Meldung nennt Partner UND beide Auswege (shared/neutral bzw. Kopfzeile)."""
+    partner, neu = f"{SERVICES}/wetterlage.py", f"{SERVICES}/compare_wetterlage.py"
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
+    _neu(repo, neu, _inhalt(neu))
+    r = _hook(repo)
+    _blockiert(r, neu, "Namenspendant")
+    assert "shared" in r.stderr, "Ausweg 'geteilt ablegen' fehlt:\n" + r.stderr
+    assert "neutral" in _text(r), "Ausweg 'neutral benennen' fehlt:\n" + r.stderr
+    assert "gz-eigenstaendig:" in r.stderr, "Ausweg 'Begruendungszeile' fehlt:\n" + r.stderr
+
+
+def test_namenspendant_partner_im_selben_aenderungssatz_blockiert(tmp_path):
+    """Spec S1: Partner zaehlt auch, wenn er im laufenden Aenderungssatz neu hinzukommt."""
+    repo = _wegwerf_repo(tmp_path)
+    (repo / MOL).mkdir(parents=True, exist_ok=True)
+    (repo / f"{MOL}/Wetterband.svelte").write_text(SVELTE)
+    _neu(repo, f"{MOL}/CompareWetterband.svelte")
+    r = _hook(repo)
+    _blockiert(r, f"{MOL}/CompareWetterband.svelte", "Partner im selben Commit")
+    _partner_genannt(r, f"{MOL}/Wetterband.svelte")
+
+
+def test_namenspendant_partner_in_anderem_ordner_blockiert(tmp_path):
+    """Spec S1: Partner wird „im Repo" gesucht, nicht nur im selben Ordner."""
+    partner, neu = f"{MOL}/Wetterband.svelte", f"{ROUTES}/_home/CompareWetterband.svelte"
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu)
+    r = _hook(repo)
+    _blockiert(r, neu, "Partner in anderem Ordner der Reichweite")
+    _partner_genannt(r, partner)
+
+
+@pytest.mark.parametrize("bestand", [
+    {f"{MOL}/CompareWetterband.svelte": SVELTE},
+    {f"{MOL}/TripWetterband.svelte": SVELTE},
+    {f"{MOL}/CompareWetterband.svelte": SVELTE, f"{MOL}/TripWetterband.svelte": SVELTE},
+    {f"{SERVICES}/compare_wetterlage.py": '"""m."""\n'},
+], ids=["neben_compare", "neben_trip", "neben_beiden", "snake_neben_compare"])
+def test_neue_neutrale_datei_neben_einseitiger_loest_nichts_aus(tmp_path, bestand):
+    """AC-2, Gegenprobe: neues neutrales `Foo` neben `CompareFoo`/`TripFoo` ist Konvergenz.
+
+    Robustheitswaechter (heute gruen): verhindert, dass die Erkennung symmetrisch auf
+    jede Namensgleichheit anschlaegt.
+    """
+    repo = _wegwerf_repo(tmp_path, bestand=bestand)
+    neu = (f"{SERVICES}/wetterlage.py" if any(p.endswith(".py") for p in bestand)
+           else f"{MOL}/Wetterband.svelte")
+    _neu(repo, neu, _inhalt(neu))
+    _durchlaeuft(_hook(repo), "neutrale Datei ist die gewuenschte Konvergenz")
+
+
+def test_namenspendant_andere_endung_ist_kein_partner(tmp_path):
+    """Spec S1: Partner nur bei GLEICHER Endung. Gegenstueck: `neutral_compare` oben."""
+    repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Wetterband.ts": _inhalt("x.ts")})
+    _neu(repo, f"{MOL}/CompareWetterband.svelte")
+    _durchlaeuft(_hook(repo), "`.ts` ist kein Partner fuer `.svelte`")
+
+
+def test_aenderung_bestehender_einseitiger_datei_neben_partner_bleibt_frei(tmp_path):
+    """Spec S1: Nur Neuanlagen. Eine Aenderung an `CompareFoo` neben `Foo` loest nichts aus."""
+    neu = f"{MOL}/CompareWetterband.svelte"
+    repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Wetterband.svelte": SVELTE, neu: SVELTE})
+    (repo / neu).write_text(SVELTE + "<p>geaendert</p>\n")
+    _git(repo, "add", "-A")
+    _durchlaeuft(_hook(repo), "Aenderung einer Bestandsdatei ist keine Neuanlage")
+
+
+def test_namenspendant_echte_umbenennung_bleibt_frei(tmp_path):
+    """Spec S1: Umbenennung >= 95 % ist keine Neuanlage — auch nicht AUSSERHALB der Bereiche.
+
+    ⚠️ Ausserhalb von `FE_BEREICHE` landet heute jede Umbenennung in `neuzugaenge` und
+    entkommt nur, weil `_bereich` None liefert. Eine naive Namens-Erkennung auf derselben
+    Liste wuerde diesen Fall blockieren.
+    """
+    repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Wetterband.svelte": SVELTE,
+                                            f"{MOL}/Altband.svelte": _ALT_LANG})
+    _git(repo, "mv", f"{MOL}/Altband.svelte", f"{MOL}/CompareWetterband.svelte")
+    _durchlaeuft(_hook(repo), "R100-Umbenennung ist kein neues Bauteil")
+
+
+def test_namenspendant_umbenennung_mit_umschrieb_blockiert(tmp_path):
+    """Spec S1: Umbenennung unter 95 % zaehlt als Neuanlage. Gegenstueck zum Test oben."""
+    repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Wetterband.svelte": SVELTE,
+                                            f"{MOL}/Altband.svelte": _ALT_LANG})
+    _umbenennen(repo, f"{MOL}/Altband.svelte", f"{MOL}/CompareWetterband.svelte", _NEU_LANG)
+    r = _hook(repo)
+    _blockiert(r, f"{MOL}/CompareWetterband.svelte", "stark umgeschriebene Umbenennung")
+    _partner_genannt(r, f"{MOL}/Wetterband.svelte")
+
+
+# ------------------------------------------------------------------- AC-6: Sonderfaelle
+
+@pytest.mark.parametrize("partner, neu", [
+    (f"{MOL}/Wetterband.ts", f"{MOL}/CompareWetterband.test.ts"),
+    (f"{MOL}/Wetterband.ts", f"{MOL}/CompareWetterband.spec.ts"),
+    (f"{MOL}/Wetterband.ts", f"{MOL}/__tests__/CompareWetterband.ts"),
+    (f"{SERVICES}/wetterlage.py", f"{SERVICES}/tests/compare_wetterlage.py"),
+], ids=["test_ts", "spec_ts", "__tests__", "tests_ordner"])
+def test_namenspendant_testdatei_laeuft_durch(tmp_path, partner, neu):
+    """AC-6: Testdateien loesen nie aus. Robustheitswaechter; Gegenprobe direkt darunter."""
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
+    _neu(repo, neu, _inhalt(neu))
+    _durchlaeuft(_hook(repo), "Testdatei")
+
+
+def test_namenspendant_gegenprobe_gleiche_datei_ohne_testendung_blockiert(tmp_path):
+    """AC-6, Gegenprobe: `CompareFoo.ts` neben `Foo.ts` (ohne Testendung) -> Exit 2."""
+    partner, neu = f"{MOL}/Wetterband.ts", f"{MOL}/CompareWetterband.ts"
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
+    _neu(repo, neu, _inhalt(neu))
+    r = _hook(repo)
+    _blockiert(r, neu, "dieselbe Datei ohne Testendung")
+    _partner_genannt(r, partner)
+
+
+@pytest.mark.parametrize("partner, neu", [
+    (f"{MOL}/Trip.svelte", f"{MOL}/Compare.svelte"),
+    (f"{SERVICES}/trip.py", f"{SERVICES}/compare.py"),
+], ids=["svelte", "snake"])
+def test_leerer_kernname_loest_nichts_aus(tmp_path, partner, neu):
+    """AC-6: `Compare.svelte` neben `Trip.svelte` — leerer Kernname ist kein Pendant.
+
+    Der Partner liegt bewusst vor: ohne ihn waere der Test auch bei einer Erkennung gruen,
+    die leere Kernnamen faelschlich vergleicht.
+    """
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
+    _neu(repo, neu, _inhalt(neu))
+    _durchlaeuft(_hook(repo), "leerer Kernname")
+
+
+@pytest.mark.parametrize("partner, neu", [
+    ("frontend/src/lib/utils/Wetterband.ts", "frontend/src/lib/utils/CompareWetterband.ts"),
+    ("src/app/wetterlage.py", "src/app/compare_wetterlage.py"),
+    ("internal/store/vorschau.go", "internal/store/compare_vorschau.go"),
+], ids=["fe_utils", "src_app", "internal_store"])
+def test_namenspendant_ausserhalb_der_vier_wurzeln_loest_nichts_aus(tmp_path, partner, neu):
+    """AC-6: ausserhalb der vier Wurzeln -> Exit 0.
+
+    Gegenproben mit denselben Namen INNERHALB der Wurzeln: `lower_camel_ts`/`neutral_snake`/
+    `go_handler` in `test_namenspendant_neuanlage_ohne_begruendung_blockiert_und_nennt_partner`.
+    """
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
+    _neu(repo, neu, _inhalt(neu))
+    _durchlaeuft(_hook(repo), "ausserhalb der Reichweite")
+
+
+# ----------------------------------------------------- AC-7: Stoerung blockiert nie
+
+_NAMENS_AUSLOESER = (f"{MOL}/Wetterband.svelte", f"{MOL}/CompareWetterband.svelte")
+_STOERWORTE = ("stoer", "stör", "ungeprueft", "ungeprüft", "nicht messbar", "unbekannt",
+               "ungueltig", "ungültig")
+
+
+def _gate_mit_kaputter_namenspendant(tmp_path: Path) -> Path:
+    """Kopie, in der `_namenspendant()` bei jedem Aufruf eine Ausnahme wirft.
+
+    Die Neudefinition steht direkt vor `if __name__ == "__main__":` und gewinnt damit zur
+    Laufzeit — unabhaengig von der echten Signatur. ⚠️ Vorbedingung: Die Funktion muss im
+    Original existieren. Sonst ueberschriebe die Kopie eine Funktion, die niemand aufruft,
+    und der Test „Ordner-Erkennung blockiert weiter" waere fuer immer gruen.
+    """
+    spec = _gz_ilu.spec_from_file_location("_pendant_gate_namenspendant_sonde", GATE)
+    modul = _gz_ilu.module_from_spec(spec)
+    spec.loader.exec_module(modul)
+    assert callable(getattr(modul, "_namenspendant", None)), (
+        "`_namenspendant()` fehlt im Waechter (Spec #2346 S1) — Namens-Erkennung nicht da")
+    return _gate_kopie_mit_ersetzung(
+        tmp_path, "kaputte_namenspendant",
+        alt='\nif __name__ == "__main__":',
+        neu="\ndef _namenspendant(*_a, **_k):\n"
+            "    raise RuntimeError('kuenstliche Stoerung in _namenspendant')\n\n\n"
+            'if __name__ == "__main__":')
+
+
+def test_stoerung_in_namenspendant_laesst_durch_und_meldet(tmp_path):
+    """AC-7: Ausnahme in `_namenspendant()` -> Exit 0 mit Hinweis auf stderr."""
+    partner, neu = _NAMENS_AUSLOESER
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu)
+    r = _hook(repo, gate=_gate_mit_kaputter_namenspendant(tmp_path))
+    _durchlaeuft(r, "Stoerung der Namens-Erkennung ist kein Befund")
+    assert any(w in _text(r) for w in _STOERWORTE), f"Stoerung nicht gemeldet: {_text(r)!r}"
+
+
+def test_stoerung_in_namenspendant_laesst_ordner_erkennung_weiter_blockieren(tmp_path):
+    """AC-7: Die Stoerung darf die alte Ordner-Erkennung NICHT mitreissen.
+
+    ⚠️ Ohne diesen Fall waere „Exit 0 bei Stoerung" auch durch das aeussere Netz erfuellt —
+    das liesse dann aber auch den echten Ordner-Befund `compare/Ortsliste.svelte` durch.
+    """
+    partner, neu = _NAMENS_AUSLOESER
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu)
+    _neu(repo, f"{FE}/compare/Ortsliste.svelte")
+    r = _hook(repo, gate=_gate_mit_kaputter_namenspendant(tmp_path))
+    _blockiert(r, "Ortsliste.svelte", "Ordner-Erkennung trotz gestoerter Namens-Erkennung")
+
+
+def test_fehlendes_werkzeug_mit_namenspendant_laesst_durch(tmp_path):
+    """AC-7: ohne `hook_utils` auch bei vorliegendem Namenspendant Exit 0. Robustheitswaechter."""
+    partner, neu = _NAMENS_AUSLOESER
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu)
+    ohne = _gate_kopie_mit_ersetzung(tmp_path, "ohne_werkzeug_namen", mit_werkzeug=False)
+    leer = tmp_path / "leeres_zuhause_namen"
+    leer.mkdir()
+    r = _hook(repo, gate=ohne, umgebung={"PATH": os.environ.get("PATH", ""), "HOME": str(leer)})
+    _durchlaeuft(r, "fehlendes Werkzeug-Paket")
+    assert any(w in _text(r) for w in _STOERWORTE), f"Stoerung nicht gemeldet: {_text(r)!r}"
+
+
+def test_kein_git_mit_namenspendant_laesst_durch(tmp_path):
+    """AC-7: ohne `git` auch bei vorliegendem Namenspendant Exit 0. Robustheitswaechter."""
+    partner, neu = _NAMENS_AUSLOESER
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu)
+    r = _hook(repo, umgebung={"PATH": "", "HOME": os.environ.get("HOME", "/tmp")})
+    _durchlaeuft(r, "kein git")
+    assert any(w in _text(r) for w in _STOERWORTE), f"Stoerung nicht gemeldet: {_text(r)!r}"
+
+
+def test_ungueltige_eingabe_laesst_durch_mit_hinweis(tmp_path):
+    """AC-7: ungueltige Eingabe -> Exit 0 MIT Hinweis auf stderr (heute: still)."""
+    partner, neu = _NAMENS_AUSLOESER
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu)
+    r = subprocess.run([sys.executable, str(GATE)], input="{kein json", cwd=str(repo),
+                       capture_output=True, text=True, timeout=120)
+    _durchlaeuft(r, "ungueltige Eingabe")
+    assert any(w in _text(r) for w in _STOERWORTE), (
+        f"AC-7 verlangt einen Hinweis auf stderr auch bei ungueltiger Eingabe: {_text(r)!r}")
+
+
+# ------------------------------------------------------------ AC-8: Pruefdatum 2027-01-21
+
+def _gate_am_tag(tmp_path: Path, tag: str) -> Path:
+    """Kopie, die `date.today()` durch einen festen Tag ersetzt — PRUEFDATUM bleibt ECHT.
+
+    Bewusst NICHT `_gate_kopie(ersatzdatum)`: der schreibt PRUEFDATUM selbst um und koennte
+    damit nie pruefen, welches Datum im Waechter steht.
+    """
+    return _gate_kopie_mit_ersetzung(tmp_path, f"tag_{tag.replace(', ', '_')}",
+                                     alt="date.today()", neu=f"date({tag})")
+
+
+def test_pruefdatum_letzter_gueltiger_tag_blockiert(tmp_path):
+    """AC-8: Am 2027-01-21 ist das Gate noch scharf (Ordner-Ausloeser -> Exit 2)."""
+    repo = _wegwerf_repo(tmp_path)
+    _neu(repo, f"{FE}/compare/Ortsliste.svelte")
+    r = _hook(repo, gate=_gate_am_tag(tmp_path, "2027, 1, 21"))
+    _blockiert(r, "Ortsliste.svelte", "letzter Tag vor Ablauf des Pruefdatums 2027-01-21")
+
+
+def test_pruefdatum_tag_danach_schaltet_ab_und_nennt_datum(tmp_path):
+    """AC-8: Am 2027-01-22 schaltet sich das Gate ab und nennt das Pruefdatum 2027-01-21."""
+    repo = _wegwerf_repo(tmp_path)
+    _neu(repo, f"{FE}/compare/Ortsliste.svelte")
+    r = _hook(repo, gate=_gate_am_tag(tmp_path, "2027, 1, 22"))
+    _durchlaeuft(r, "nach Ablauf des Pruefdatums")
+    assert "2027-01-21" in r.stderr, f"Meldung muss das Pruefdatum nennen:\n{r.stderr}"
+
+
+def test_pruefdatum_konstante_lautet_2027_01_21():
+    """AC-8: `PRUEFDATUM` im Waechter lautet 2027-01-21."""
+    from datetime import date
+    spec = _gz_ilu.spec_from_file_location("_pendant_gate_pruefdatum", GATE)
+    modul = _gz_ilu.module_from_spec(spec)
+    spec.loader.exec_module(modul)
+    assert modul.PRUEFDATUM == date(2027, 1, 21), modul.PRUEFDATUM
+
+
+# doc-compliance-test — die folgenden zwei Tests lesen ausschliesslich die Doku
+# docs/reference/gates_und_ratschen.md (AC-8 verlangt Doku-Zeilen), keinen Quelltext.
+_GATES_DOKU = REPO / "docs" / "reference" / "gates_und_ratschen.md"
+
+
+def _doku_abschnitt_pendant_sperre() -> str:
+    text = _GATES_DOKU.read_text()
+    treffer = re.search(r"^## Pendant-Sperre.*?(?=^## )", text, flags=re.M | re.S)
+    assert treffer, "Abschnitt „## Pendant-Sperre“ fehlt in gates_und_ratschen.md"
+    return treffer.group(0)
+
+
+def test_doku_abschnitt_pendant_sperre_nennt_reichweite_ausnahmeliste_und_beleg():
+    """AC-8: Abschnitt nennt Reichweite, Ausnahmeliste, Verlaengerung und Beleg."""
+    abschnitt = _doku_abschnitt_pendant_sperre()
+    for wurzel in ("frontend/src/routes", "src/services", "internal/handler"):
+        assert wurzel in abschnitt, f"Reichweite {wurzel!r} fehlt im Abschnitt"
+    assert "BEKANNTE_PAARE" in abschnitt, "Ausnahmeliste `BEKANNTE_PAARE` fehlt"
+    assert "verlängert 2026-10-23, PO" in abschnitt, "Verlaengerungsvermerk fehlt"
+    assert "#2346" in abschnitt, "Verweis auf Spec #2346 fehlt"
+    assert "2027-01-21" in abschnitt, "neues Pruefdatum fehlt im Abschnitt"
+    assert re.search(r"(\b7\b|sieben)[^\n]{0,80}au(ß|ss)erhalb", abschnitt), (
+        "Beleg „7 Paare ausserhalb der alten Reichweite“ fehlt")
+
+
+def test_doku_pruefdaten_tabelle_traegt_2027_01_21_mit_beleg():
+    """AC-8: Zeile „Pendant-Sperre" der Pruefdaten-Tabelle: neues Datum, Vermerk, Beleg."""
+    zeilen = [z for z in _GATES_DOKU.read_text().splitlines() if z.startswith("| Pendant-Sperre")]
+    assert len(zeilen) == 1, f"genau eine Tabellenzeile erwartet, gefunden: {zeilen}"
+    spalten = [s.strip() for s in zeilen[0].strip("|").split("|")]
+    assert "2027-01-21" in spalten[1], spalten
+    assert "2026-11-03" not in spalten[1], spalten
+    assert "verlängert 2026-10-23, PO" in zeilen[0] and "#2346" in zeilen[0], zeilen[0]
+    assert spalten[2] not in ("", "—", "-"), f"Fang-Beleg fehlt weiterhin: {spalten}"
+
+
+# ------------------------------------------- AC-5: Bestand ohne Fehlalarm (Wegwerf-Repo)
+
+# (einseitige Datei, Partner) — die sieben Bestandspaare ausserhalb der alten Reichweite,
+# genau die Eintraege von `BEKANNTE_PAARE` (Spec #2346 S1). Die Verhaltenstests nehmen nur
+# Paare, deren Dateien es im echten Repo noch gibt — loescht S2/S3 ein Paar, faellt es hier
+# von selbst heraus (AC-3: Streichen bleibt gruen).
+_BESTANDSPAARE = [
+    (f"{ORG}/HomeHeroCompare.svelte", f"{ORG}/HomeHeroTrip.svelte"),
+    (f"{ROUTES}/_home/CompareKachel.svelte", f"{ROUTES}/_home/TripKachel.svelte"),
+    (f"{SERVICES}/compare_alert.py", f"{SERVICES}/trip_alert.py"),
+    (f"{SERVICES}/compare_alert_channels.py", f"{SERVICES}/alert_channels.py"),
+    (f"{SERVICES}/compare_preview_service.py", f"{SERVICES}/preview_service.py"),
+    (f"{SERVICES}/compare_weather_snapshot.py", f"{SERVICES}/weather_snapshot.py"),
+    (f"{FE}/shared/weather-metrics-tab/compareChannelMetricLayouts.ts",
+     f"{FE}/shared/weather-metrics-tab/channelMetricLayouts.ts"),
+]
+# Paare/Dateien, die die alte Ordner-Erkennung bereits kennt, plus die geteilte Datei.
+_BESTAND_UEBRIGE = [
+    f"{FE}/compare/CompareTabs.svelte", f"{FE}/trip-detail/TripTabs.svelte",
+    f"{FE}/compare-new/CompareNewEditor.svelte", f"{FE}/trip-new/TripNewEditor.svelte",
+    f"{FE}/shared/CompareOutlookLayoutControls.svelte",
+]
+_ALLE_BESTAND = [p for paar in _BESTANDSPAARE for p in paar] + _BESTAND_UEBRIGE
+
+
+def _lebende_bestandspaare() -> list[tuple[str, str]]:
+    """Bestandspaare, deren beide Dateien im echten Repo noch existieren."""
+    paare = [paar for paar in _BESTANDSPAARE if all((REPO / p).is_file() for p in paar)]
+    if not paare:
+        pytest.skip("Alle Bestandspaare aufgeloest — nichts mehr auszunehmen")
+    return paare
+
+
+def _bestandsinhalt(pfad: str) -> str:
+    """Eindeutiger, laengerer Inhalt je Datei — damit git Umbenennungen nicht verwechselt."""
+    kommentar = "#" if pfad.endswith(".py") else "//"
+    return "".join(f"{kommentar} Bestand {pfad} Zeile {i}\n" for i in range(12))
+
+
+def test_bestand_aenderung_loest_keinen_fehlalarm_aus(tmp_path):
+    """AC-5: Aenderung aller Bestandsdateien -> Exit 0. Robustheitswaechter."""
+    repo = _wegwerf_repo(tmp_path, bestand={p: _bestandsinhalt(p) for p in _ALLE_BESTAND})
+    for p in _ALLE_BESTAND:
+        (repo / p).write_text(_bestandsinhalt(p) + "// geaendert\n")
+    _git(repo, "add", "-A")
+    _durchlaeuft(_hook(repo), "Aenderung von Bestandsdateien")
+
+
+def test_bestand_verschiebung_loest_keinen_fehlalarm_aus(tmp_path):
+    """AC-5: Verschieben aller Bestandsdateien (R100) -> Exit 0. Robustheitswaechter."""
+    repo = _wegwerf_repo(tmp_path, bestand={p: _bestandsinhalt(p) for p in _ALLE_BESTAND})
+    for p in _ALLE_BESTAND:
+        ordner, name = p.rsplit("/", 1)
+        (repo / ordner / "verschoben").mkdir(exist_ok=True)
+        _git(repo, "mv", p, f"{ordner}/verschoben/{name}")
+    _durchlaeuft(_hook(repo), "Verschiebung mit unveraendertem Inhalt")
+
+
+@pytest.mark.parametrize("richtung", ["einseitig_neu", "partner_neu"])
+def test_bestandspaar_mitglied_mitfuehren_loest_keinen_fehlalarm_aus(tmp_path, richtung):
+    """AC-5: Ein Bestandspaar-Mitglied kommt im Commit (wieder) hinzu -> Exit 0.
+
+    Genau dieser Fall wird nur von `BEKANNTE_PAARE` ausgenommen: Fehlt die Liste oder greift
+    sie nicht, meldet die Namens-Erkennung jedes dieser Paare. Robustheitswaechter heute;
+    Gegenprobe `test_bestand_gegenprobe_unbekanntes_paar_blockiert_selektiv`.
+
+    ⚠️ Wird ein Eintrag aus `BEKANNTE_PAARE` gestrichen, dessen Dateien es noch gibt, wird
+    dieser Test absichtlich rot: das waere ein echter Fehlalarm nach AC-5.
+    """
+    paare = _lebende_bestandspaare()
+    vorhanden = [paar[1] if richtung == "einseitig_neu" else paar[0] for paar in paare]
+    neu = [paar[0] if richtung == "einseitig_neu" else paar[1] for paar in paare]
+    repo = _wegwerf_repo(tmp_path, bestand={p: _bestandsinhalt(p) for p in vorhanden})
+    for p in neu:
+        _neu(repo, p, _bestandsinhalt(p))
+    _durchlaeuft(_hook(repo), "gelistete Bestandspaare sind ausgenommen")
+
+
+def test_bestand_gegenprobe_unbekanntes_paar_blockiert_selektiv(tmp_path):
+    """AC-5, Gegenprobe: Dieselbe Lage plus ein NICHT gelistetes Paar -> Exit 2, nur dieses.
+
+    Beweist, dass die Ausnahme selektiv wirkt und die Namens-Erkennung in dieser Lage aktiv ist.
+    """
+    paare = _lebende_bestandspaare()
+    vorhanden = [paar[1] for paar in paare] + [f"{SERVICES}/routenlage.py"]
+    repo = _wegwerf_repo(tmp_path, bestand={p: _bestandsinhalt(p) for p in vorhanden})
+    for p, _ in paare:
+        _neu(repo, p, _bestandsinhalt(p))
+    _neu(repo, f"{SERVICES}/compare_routenlage.py", _bestandsinhalt("compare_routenlage.py"))
+    r = _hook(repo)
+    _blockiert(r, f"{SERVICES}/compare_routenlage.py", "nicht gelistetes Namenspaar")
+    for p, _ in paare:
+        assert p not in r.stderr, f"Gelistetes Bestandspaar {p!r} faelschlich gemeldet:\n{r.stderr}"
