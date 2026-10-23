@@ -114,7 +114,7 @@ Bau-Reihenfolge.
 - **AC-1:** Given ein aktiver Trip in der Desktop-Trip-Liste / When der Nutzer das Zeilenmenü öffnet / Then enthält es „Pausieren" an erster Stelle, in derselben Beschriftung und Reihenfolge wie beim Ortsvergleich, und die Wahl pausiert den Trip (Status „pausiert").
   - Test: `frontend/e2e/trips-list-aktionen.spec.ts` (Playwright, Desktop) + Unit `routes/trips/__tests__/trip_list_pause.test.ts`.
 
-- **AC-2:** Given die mobile Vergleichs-Liste / When der Nutzer das Menü einer Karte öffnet / Then sind Pausieren/Fortsetzen · Senden · Vorschau · Alarme · Wetter-Metriken · Bearbeiten · Löschen erreichbar (Entwurf: Setup fortsetzen · Löschen), und die Liste bietet Filter-Pillen Alle/Aktiv/Geplant/Pausiert/Fertig wie beim Trip.
+- **AC-2:** *(Teil „Vorschau" abgelöst durch #1743: die Aktion Vorschau entfällt ersatzlos; die übrigen Aktionen bleiben)* Given die mobile Vergleichs-Liste / When der Nutzer das Menü einer Karte öffnet / Then sind Pausieren/Fortsetzen · Senden · Vorschau · Alarme · Wetter-Metriken · Bearbeiten · Löschen erreichbar (Entwurf: Setup fortsetzen · Löschen), und die Liste bietet Filter-Pillen Alle/Aktiv/Geplant/Pausiert/Fertig wie beim Trip.
   - Test: `routes/compare/__tests__/compare_list_mobile_aktionen.test.ts` + `frontend/e2e/aktionsmodell-durchklick.spec.ts` (Mobil-Viewport).
 
 - **AC-3:** Given „Senden" aus Trip-Liste, Trip-Hub, Compare-Liste oder Compare-Hub (Desktop und Mobil) / When der Dialog erscheint / Then nennt er das echte Versandziel (E-Mail-Adresse bzw. Chat, auch Premium-SMS) aus `sendTargetLabel`, der Bestätigen-Knopf ist gesperrt, wenn kein Kanal liefern kann, und es wird erst nach Bestätigung gesendet.
@@ -213,4 +213,5 @@ Bündelt die `Test:`-Zeilen der ACs. Frontend-Unit über `node --test`, Playwrig
 
 ## Changelog
 
+- 2026-10-22: AC-2 (Teil „Vorschau") durch #1743 abgelöst: Aktion Vorschau entfällt ersatzlos.
 - 2026-10-17: Initial spec created (#2278)

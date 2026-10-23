@@ -1,6 +1,6 @@
 // ltIdealRange.ts — Issue #1232 Scheibe 3a Fix-Runde (Adversary F003).
 //
-// Die Grünfärbung in LTComparePreview MUSS die echten nutzerdefinierten
+// Die Grünfärbung der Orts-Vergleich-Vorschau MUSS die echten nutzerdefinierten
 // Idealbereiche (wizard.idealRanges, Step 3 des Compare-Wizards) lesen statt
 // fester Demo-Schwellen — Expected Behavior + Out-of-Scope der Spec sagen das
 // explizit ("nur die bestehenden ideal_ranges werden in der Vorschau

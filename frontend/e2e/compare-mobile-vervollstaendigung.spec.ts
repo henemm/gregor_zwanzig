@@ -184,9 +184,10 @@ test.describe('Issue #1256 Scheibe 8 (AC-22): mobiler Hub — geteilte CompareTa
 	// Fix-Loop 1 (Fresh-Eyes-Fund, blockierend): die Tab-Leiste war mobil NICHT
 	// scrollbar — "Versand"/"Vorschau" waren auf 390px unerreichbar
 	// (Inline-Edit-Paritäts-Verletzung). Wächter-Test (S5-Lehre: neue Mechanik
-	// braucht sofort einen eigenen Wächter): erreicht den letzten Tab
-	// ("Vorschau") per Wisch-Äquivalent (scrollIntoViewIfNeeded) + echtem Klick.
-	test('AC-22 Fix-Loop 1: letzter Tab ("Vorschau") ist per Wisch + Klick erreichbar (Tab-Leiste scrollbar)', async ({
+	// braucht sofort einen eigenen Wächter): erreicht den letzten Tab per
+	// Wisch-Äquivalent (scrollIntoViewIfNeeded) + echtem Klick. Issue #1743:
+	// letzter Tab ist seither "Alarme" (Versand/Vorschau keine Reiter mehr).
+	test('AC-22 Fix-Loop 1: letzter Tab ("Alarme") ist per Wisch + Klick erreichbar (Tab-Leiste scrollbar)', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -201,17 +202,18 @@ test.describe('Issue #1256 Scheibe 8 (AC-22): mobiler Hub — geteilte CompareTa
 			timeout: 10_000
 		});
 
-		const vorschauTab = page.locator('[data-testid="compare-detail-tab-vorschau"]');
-		// Vor dem Scrollen liegt der letzte Tab außerhalb des sichtbaren
-		// 390px-Ausschnitts der Tab-Leiste — scrollIntoViewIfNeeded() ist das
-		// Playwright-Äquivalent zum Nutzer-Wisch (horizontales Scrollen).
-		await vorschauTab.scrollIntoViewIfNeeded();
-		await expect(vorschauTab).toBeInViewport({ timeout: 5_000 });
-		await vorschauTab.click();
+		const letzterTab = page.locator('[data-testid="compare-detail-tab-alarme"]:visible');
+		// Liegt der letzte Tab außerhalb des sichtbaren 390px-Ausschnitts der
+		// Tab-Leiste, ist scrollIntoViewIfNeeded() das Playwright-Äquivalent zum
+		// Nutzer-Wisch (horizontales Scrollen).
+		await letzterTab.scrollIntoViewIfNeeded();
+		await expect(letzterTab).toBeInViewport({ timeout: 5_000 });
+		await letzterTab.click();
 
-		await expect(page.locator('[data-testid="compare-detail-panel-vorschau"]')).toBeVisible({
+		await expect(page.locator('[data-testid="compare-detail-panel-alarme"]:visible')).toBeVisible({
 			timeout: 10_000
 		});
+		await expect(page.locator('[data-testid="compare-detail-tab-vorschau"]')).toHaveCount(0);
 	});
 });
 
@@ -303,52 +305,8 @@ test.describe('Issue #1256 Scheibe 8 (AC-24): mobiler Editor — Lock-Toast + fl
 	});
 });
 
-// ── Issue #1256 Scheibe 8b (Rest-Inventur R1, AC-1): Hub-Vorschau-Kanal-
-// Umschalter — war ein No-Op (onchange statt onChange, Svelte-5-Props
-// case-sensitiv). Desktop-Viewport reicht laut Spec (Bug ist viewport-
-// unabhängig). Nur lesend — kein Schreibpfad betroffen.
-test.describe('Issue #1256 Scheibe 8b: Hub-Vorschau-Kanal-Umschalter (AC-1)', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1280, height: 900 });
-	});
-
-	test('AC-1: Klick auf "SMS" wechselt sichtbar den Vorschau-Kanal, Klick zurück auf "Email" zeigt wieder den E-Mail-Zweig', async ({
-		page
-	}) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8b Ort ${suffix}`, 47.22, 11.12);
-		const name = `E2E S8b Kanalwechsel ${suffix}`;
-		// createPresetWithLocation setzt nur `empfaenger: ['urlauber@example.com']`
-		// (E-Mail) — SMS ist für dieses Preset NICHT konfiguriert, deckt also
-		// zugleich den "Kanal nicht konfiguriert"-Hinweis (AC-3) mit ab.
-		const id = await createPresetWithLocation(page, name, 'daily', locId);
-
-		await page.goto(`/compare/${id}?tab=vorschau`);
-		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-vorschau"]:visible').click();
-
-		const panel = page.locator('[data-testid="compare-detail-panel-vorschau"]:visible');
-		await expect(panel).toBeVisible({ timeout: 10_000 });
-
-		const smsBtn = panel.getByRole('button', { name: 'SMS' });
-		await expect(smsBtn).toBeVisible({ timeout: 10_000 });
-		await smsBtn.click();
-
-		// Issue #2283: geteilter Vorschau-Reiter — SMS im Telefonrahmen.
-		await expect(panel.locator('[data-testid="sms-phone-wrapper"]')).toBeVisible({ timeout: 90_000 });
-		// AC-3: SMS ist unkonfiguriert, der Umschalter zeigt den Hinweis daneben.
-		await expect(panel.locator('[data-testid="preview-channel-not-configured"]')).toBeVisible({
-			timeout: 5_000
-		});
-
-		const emailBtn = panel.getByRole('button', { name: /^(E-Mail|Email)/ });
-		await emailBtn.click();
-
-		await expect(panel.locator('[data-testid="sms-phone-wrapper"]')).toHaveCount(0);
-		await expect(panel.locator('[data-testid="preview-channel-not-configured"]')).toHaveCount(0);
-		await expect(panel.locator('[data-testid="email-iframe"]')).toBeVisible({ timeout: 15_000 });
-	});
-});
+// Issue #1256 Scheibe 8b (Hub-Vorschau-Kanal-Umschalter) entfaellt mit dem
+// Vorschau-Reiter (Issue #1743, Briefing-Vorschau ersatzlos zurueckgebaut).
 
 // ── Issue #2283 AC-13 (docs/specs/modules/shared_preview_tab.md): mobil ─────
 // Senden nur ueber den Hub-Kopf (#2278, mobil seit #2580 sichtbar). Das alte
@@ -360,7 +318,7 @@ test.describe('Issue #2283 AC-13: Senden nur im Hub-Kopf (mobil)', () => {
 		await page.setViewportSize({ width: 390, height: 844 });
 	});
 
-	test('mobil: Versand-/Vorschau-Reiter ohne Test-Senden, Hub-Kopf-Senden erreichbar und sendet', async ({ page }) => {
+	test('mobil: Versand-Abschnitt ohne Test-Senden, Hub-Kopf-Senden erreichbar und sendet', async ({ page }) => {
 		const suffix = Date.now();
 		const locId = await createLocation(page, `E2E 2283 Mobil-Senden ${suffix}`, 47.22, 11.12);
 		const id = await createPresetWithLocation(page, `E2E 2283 Mobil-Senden ${suffix}`, 'daily', locId);
@@ -371,14 +329,15 @@ test.describe('Issue #2283 AC-13: Senden nur im Hub-Kopf (mobil)', () => {
 			await route.fulfill({ status: 200, json: { status: 'queued' } });
 		});
 
-		for (const reiter of ['versand', 'vorschau']) {
-			await page.goto(`/compare/${id}?tab=${reiter}`);
-			await page.waitForLoadState('networkidle');
-			const panel = page.locator(`[data-testid="compare-detail-panel-${reiter}"]:visible`);
-			await expect(panel).toBeVisible({ timeout: 10_000 });
-			await expect(panel.locator('[data-testid="compare-hub-activation-testsend"]')).toHaveCount(0);
-			await expect(panel.getByRole('button', { name: /Test-Briefing/ })).toHaveCount(0);
-		}
+		// Issue #1743: Versand steht im Reiter Wetter-Metriken (#versand); der
+		// Vorschau-Reiter ist ersatzlos entfallen.
+		// Ohne `#versand`-Anker: der Sprung scrollte den Hub-Kopf aus dem Viewport.
+		await page.goto(`/compare/${id}?tab=wetter-metriken`);
+		await page.waitForLoadState('networkidle');
+		const panel = page.locator('[data-testid="versand-abschnitt"]:visible');
+		await expect(panel).toBeVisible({ timeout: 10_000 });
+		await expect(panel.locator('[data-testid="compare-hub-activation-testsend"]')).toHaveCount(0);
+		await expect(panel.getByRole('button', { name: /Test-Briefing/ })).toHaveCount(0);
 
 		const kopfSenden = page.locator('[data-testid="subscription-hub-send"]:visible');
 		await expect(kopfSenden).toBeInViewport();

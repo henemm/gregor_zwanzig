@@ -76,9 +76,11 @@ describe('Kern: canFinishMitStandardwerten — Wahrheitstabelle (AC-1..AC-5)', (
 	test('AC-5: Bestandsknopf frei => Standardwerte-Knopf nicht aktiv (nie beide gleichzeitig)', () => {
 		assert.equal(gateDa()({ pflichtErfuellt: true, defaultsBereit: true, bestandFrei: true }), false);
 	});
-	test('Bestandsgate canFinish bleibt unveraendert (nur Versand-Besuch zaehlt)', () => {
-		assert.equal(engine.canFinish(new Set(['wetter-metriken', 'wertebereiche', 'alarme'])), false);
-		assert.equal(engine.canFinish(new Set(['versand'])), true);
+	// #1743 AC-19: der Schritt „Versand" entfaellt — Fertig/Anlegen wird mit dem Besuch von
+	// „Alarme" (letzter Schritt) frei, nicht frueher.
+	test('Bestandsgate canFinish: nur der Alarme-Besuch zaehlt (#1743, vormals Versand)', () => {
+		assert.equal(engine.canFinish(new Set(['wetter-metriken', 'wertebereiche'])), false);
+		assert.equal(engine.canFinish(new Set(['alarme'])), true);
 	});
 });
 

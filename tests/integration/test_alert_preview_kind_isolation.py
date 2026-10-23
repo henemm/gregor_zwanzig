@@ -33,10 +33,10 @@ from fastapi.testclient import TestClient
 
 from app.user import SavedLocation
 
-from tests.integration.test_briefing_preview_bundle import (
-    _seed_trip,
+from tests.helpers.vorschau_umgebung import (
     env,  # noqa: F401  (pytest-Fixture, isolierter Daten-Root)
     seed_compare,
+    seed_trip,
 )
 
 TRIP_ALERT_BODY = {
@@ -120,8 +120,8 @@ def test_route_alert_preview_is_delegate_of_trip_alert_preview(two_users, client
 
     RED: neue Route fehlt → 404."""
     user_a, user_b = two_users
-    _seed_trip(user_a, "trip-a", "AlarmTripAnna")
-    _seed_trip(user_b, "trip-b", "AlarmTripBertGeheim")
+    seed_trip(user_a, "trip-a", "AlarmTripAnna")
+    seed_trip(user_b, "trip-b", "AlarmTripBertGeheim")
 
     def _legacy():
         resp = client.post(
@@ -164,7 +164,7 @@ def test_alert_preview_rejects_missing_or_unknown_kind(two_users, client, kind):
 
     RED: Route fehlt → die Gegenprobe mit kind=route liefert 404."""
     user_a, _ = two_users
-    _seed_trip(user_a, "trip-a", "AlarmTripAnna")
+    seed_trip(user_a, "trip-a", "AlarmTripAnna")
 
     ok = _post(client, "trip-a", "route", user_a, TRIP_ALERT_BODY)
     assert ok.status_code == 200, f"Gegenprobe kind=route: {ok.status_code} {ok.text[:200]}"

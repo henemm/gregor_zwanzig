@@ -62,16 +62,15 @@ type CompareNewProgress = {
 	metrikenVisited: boolean;
 	idealsVisited: boolean;
 	alarmeVisited: boolean;
-	versandVisited: boolean;
 };
-const COMPARE_TAIL: TailIds = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' };
-const COMPARE_STEPS = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand'];
+// #1743: kein Schritt „Versand" mehr (Versand-Abschnitt unten im Schritt Wetter-Metriken).
+const COMPARE_TAIL: TailIds = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme' };
+const COMPARE_STEPS = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'];
 const tailOf = (p: CompareNewProgress) => ({
 	metrikenFrei: !!p.name.trim() && p.pickedCount >= 2,
 	metrikenVisited: p.metrikenVisited,
 	wertebereicheVisited: p.idealsVisited,
-	alarmeVisited: p.alarmeVisited,
-	versandVisited: p.versandVisited
+	alarmeVisited: p.alarmeVisited
 });
 const unlockedTabs = (p: CompareNewProgress) => tailUnlocked(COMPARE_TAIL, tailOf(p));
 const doneTabs = (p: CompareNewProgress) => tailDone(COMPARE_TAIL, tailOf(p));
@@ -81,6 +80,7 @@ const HUB = join(here, '..', 'CompareTabs.svelte');
 const NEW_EDITOR = join(here, '..', '..', 'compare-new', 'CompareNewEditor.svelte');
 const METRICS_TAB = join(here, '..', '..', 'shared', 'WeatherMetricsTab.svelte');
 
+const PANEL = join(here, '..', '..', 'shared', 'WetterMetrikenVersandPanel.svelte');
 function ast(file: string): unknown {
 	return parse(readFileSync(file, 'utf-8'), { modern: true });
 }
@@ -189,14 +189,14 @@ function renderedTexts(subtree: unknown): string[] {
 // ── AC-1: sieben Reiter, kein „Layout" ──────────────────────────────────────
 
 describe('AC-1: Reiterleiste des Ortsvergleichs', () => {
-	test('genau sieben Reiter, keiner heißt „Layout"', async () => {
+	test('genau fünf Reiter (#1743), keiner heißt „Layout"', async () => {
 		const { COMPARE_TABS, COMPARE_TAB_VALUES } = await geteilt();
 		assert.deepEqual(
 			COMPARE_TABS.map((t) => t.label),
-			['Übersicht', 'Orte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme', 'Versand', 'Vorschau'],
-			'Soll aus Spec § Expected Behavior'
+			['Übersicht', 'Orte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme'],
+			'Soll aus Spec § Expected Behavior (#1743: Versand/Vorschau entfallen)'
 		);
-		assert.equal(COMPARE_TABS.length, 7);
+		assert.equal(COMPARE_TABS.length, 5);
 		assert.ok(!COMPARE_TAB_VALUES.includes('layout'), "'layout' darf kein gültiger Reiter mehr sein");
 	});
 
@@ -290,11 +290,17 @@ describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
 		);
 
 		// Und die Steuerung muss innerhalb dieses Panels tatsächlich gemountet
-		// werden — über den geteilten WeatherMetricsTab.
+		// werden — #1743: über den geteilten Baustein WetterMetrikenVersandPanel, der
+		// genau einen WeatherMetricsTab mountet.
 		assert.equal(
-			findComponents(panel, 'WeatherMetricsTab').length,
+			findComponents(panel, 'WetterMetrikenVersandPanel').length,
 			1,
-			'Das Panel mountet den geteilten WeatherMetricsTab (context="vergleich")'
+			'Das Panel mountet den geteilten Baustein WetterMetrikenVersandPanel (context="vergleich")'
+		);
+		assert.equal(
+			findComponents(ast(PANEL), 'WeatherMetricsTab').length,
+			1,
+			'Der Baustein mountet genau einen geteilten WeatherMetricsTab'
 		);
 	});
 });
@@ -337,7 +343,7 @@ describe('AC-6: Anlege-Seite (/compare/new)', () => {
 		);
 	});
 
-	test('sechs Reiter — und der Alarme-Reiter ist erreichbar', () => {
+	test('fünf Schritte (#1743) — und der Alarme-Reiter ist erreichbar', () => {
 		// Die eigentliche Gefahr: die Lock-Kette verlangte den Besuch des
 		// Layout-Reiters, den es nicht mehr gibt → Alarme (und damit Versand und
 		// „Briefing aktivieren") wären unerreichbar.
@@ -346,8 +352,7 @@ describe('AC-6: Anlege-Seite (/compare/new)', () => {
 			pickedCount: 2,
 			metrikenVisited: true,
 			idealsVisited: true,
-			alarmeVisited: false,
-			versandVisited: false
+			alarmeVisited: false
 		};
 		const unlocked = unlockedTabs(progress);
 		assert.ok(
@@ -359,12 +364,12 @@ describe('AC-6: Anlege-Seite (/compare/new)', () => {
 
 		const allVisited: CompareNewProgress = {
 			...progress,
-			alarmeVisited: true,
-			versandVisited: true
+			alarmeVisited: true
 		};
 		const done = doneTabs(allVisited);
-		assert.ok(done.has('versand'), 'Versand muss erreichbar und abschließbar sein');
-		assert.equal(progressCount(new Set([...done, 'vergleich', 'orte']), COMPARE_STEPS), 6, 'Fortschrittszähler jetzt 6 statt 7');
+		assert.ok(done.has('alarme'), 'Alarme (letzter Schritt) muss erreichbar und abschließbar sein');
+		assert.ok(!(done as Set<string>).has('versand'), '#1743: Versand ist kein Schritt mehr');
+		assert.equal(progressCount(new Set([...done, 'vergleich', 'orte']), COMPARE_STEPS), 5, 'Fortschrittszähler jetzt 5 (#1743)');
 	});
 
 	test('kein Lock-Hinweis verweist mehr auf den Layout-Reiter', () => {

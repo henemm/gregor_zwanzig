@@ -255,7 +255,9 @@ def test_ac2_trend_path_sets_source_trend(tmp_path, monkeypatch):
 def test_ac2_preview_path_sets_source_vorschau(tmp_path, monkeypatch):
     """
     AC-2 (Vorschau, F002-Fix): Ein Abruf aus dem echten Vorschau-Pfad
-    PreviewService.render_email_preview liefert source == "vorschau"
+    PreviewService.render_sms_preview liefert source == "vorschau"
+    (seit #1743 der einzige verbleibende Vorschau-Marker; die E-Mail-Huelle
+    ist entfallen)
     (NICHT "briefing"), obwohl intern _fetch_weather laeuft.
 
     #1708 B1: die Trip-Fixture wird selbst in der isolierten Datenwurzel
@@ -290,10 +292,10 @@ def test_ac2_preview_path_sets_source_vorschau(tmp_path, monkeypatch):
     from services.preview_service import PreviewService
 
     svc = PreviewService()
-    # render_email_preview schluckt API-Fehler nicht zwingend; 429 ist erlaubt,
+    # render_sms_preview schluckt API-Fehler nicht zwingend; 429 ist erlaubt,
     # die Quelle wird trotzdem korrekt aufgeloest.
     try:
-        svc.render_email_preview(trip_id, user_id=user_id, report_type="morning")
+        svc.render_sms_preview(trip_id, user_id=user_id, report_type="morning")
     except Exception:
         pass
 
@@ -301,7 +303,7 @@ def test_ac2_preview_path_sets_source_vorschau(tmp_path, monkeypatch):
     sources = {e["source"] for e in entries}
     assert entries, "Vorschau-Pfad haette mindestens einen Abruf protokollieren muessen"
     assert "vorschau" in sources, (
-        f"Erwartete source 'vorschau' aus render_email_preview, sah: {sources}"
+        f"Erwartete source 'vorschau' aus render_sms_preview, sah: {sources}"
     )
     assert "briefing" not in sources, (
         f"source 'briefing' darf im Vorschau-Pfad NICHT auftauchen (F002), sah: {sources}"

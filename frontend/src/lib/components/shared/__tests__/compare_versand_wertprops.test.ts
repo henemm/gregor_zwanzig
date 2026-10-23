@@ -462,8 +462,11 @@ function streuung(
 	quelle: string
 ): { ausdruck: string; zustand: string } | null {
 	for (const a of (einbettung.attributes ?? []) as Knoten[]) {
-		if (a.type !== 'SpreadAttribute') continue;
-		const e = a.expression as Knoten;
+		// #1743: am geteilten Baustein reist das Buendel als Prop `versand={versandPropsAus(x)}`
+		// (der Baustein streut es an den EINEN VersandTab im Abschnitt #versand).
+		const istProp = a.type === 'Attribute' && a.name === 'versand' && (a.value as Knoten)?.type === 'ExpressionTag';
+		if (a.type !== 'SpreadAttribute' && !istProp) continue;
+		const e = (istProp ? (a.value as Knoten).expression : a.expression) as Knoten;
 		if (e?.type !== 'CallExpression') continue;
 		const callee = e.callee as Knoten;
 		if (callee?.type !== 'Identifier' || callee.name !== 'versandPropsAus') continue;
@@ -477,7 +480,8 @@ function streuung(
 function einbettungen(datei: string): { quelle: string; treffer: Knoten[] } {
 	const quelle = readFileSync(datei, 'utf-8');
 	const ast: Knoten = parse(quelle, { modern: true });
-	return { quelle, treffer: findeKomponenten(ast, 'VersandTab') };
+	// #1743: Hub und Anlege-Seite mounten den geteilten Baustein statt VersandTab direkt.
+	return { quelle, treffer: findeKomponenten(ast, 'WetterMetrikenVersandPanel') };
 }
 
 /** Ein vollstaendig besetzter Wizard-Zustand (alle elf Versandfelder). */

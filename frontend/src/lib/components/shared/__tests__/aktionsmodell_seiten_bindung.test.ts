@@ -50,7 +50,7 @@ describe('F006: Dispatch der Listen — Aktion -> Zweig -> Wirkung', () => {
 			pause: `void ${toggle}(${v}, true)`,
 			resume: `void ${toggle}(${v}, false)`,
 			send: `sendTarget = ${v}`,
-			preview: ende('vorschau'),
+			// #1743 AC-27: die Aktion „Vorschau" entfaellt (kein Zweig 'preview' mehr)
 			alarms: ende('alarme'),
 			weather: ende('wetter-metriken'),
 			edit: basis,
@@ -65,6 +65,9 @@ describe('F006: Dispatch der Listen — Aktion -> Zweig -> Wirkung', () => {
 		test(`${name}: jede Aktion faellt in ihren Zweig mit der richtigen Wirkung`, () => {
 			for (const [id, erwartet] of Object.entries(tabelle(art)))
 				assert.deepEqual(zweig(funktion(ast, fn), 'key', id), [erwartet], `${name}: ${id}`);
+		});
+		test(`#1743 AC-27: ${name} hat keinen Zweig 'preview' mehr`, () => {
+			assert.deepEqual(zweig(funktion(ast, fn), 'key', 'preview'), [], `${name}: Vorschau-Zweig existiert noch`);
 		});
 	}
 	test('Trip-Hub: pausieren/fortsetzen schreiben den richtigen Zielzustand; Archivieren fragt, Loeschen fragt', () => {

@@ -192,7 +192,8 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		const tabList = page.getByTestId('trip-detail-tab-list');
 		await expect(tabList).toBeVisible();
 
-		for (const tab of ['uebersicht', 'etappen', 'wetter-metriken', 'versand', 'wertebereiche', 'vorschau']) {
+		// Issue #1743: 5 Reiter, versand/vorschau entfallen.
+		for (const tab of ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme']) {
 			const trigger = page.getByTestId(`trip-detail-tab-${tab}`);
 			await expect(trigger).toBeVisible();
 		}

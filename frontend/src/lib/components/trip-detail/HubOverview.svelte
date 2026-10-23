@@ -15,7 +15,8 @@
 
 	interface Props {
 		trip: Trip;
-		onJump?: (tab: string) => void;
+		/** #1743: optionaler Anker im Ziel-Reiter (Versand-Abschnitt unter Wetter-Metriken). */
+		onJump?: (tab: string, anchor?: 'versand') => void;
 		metricsCatalog?: MetricCatalog | null;
 	}
 	let { trip, onJump, metricsCatalog = null }: Props = $props();
@@ -38,9 +39,11 @@
 		});
 	});
 
-	function makeJumpHandler(tab: string) {
+	// Kein `anchor?:` — die SSR-Pruefstaende strippen optionale Parameter nicht.
+	function makeJumpHandler(tab: string, anchor: 'versand' | null = null) {
 		return function doJump() {
-			onJump?.(tab);
+			if (anchor) onJump?.(tab, anchor);
+			else onJump?.(tab);
 		};
 	}
 
@@ -113,7 +116,7 @@
 			<ReportLine kind="evening" time="18:00" channels={['email']} active />
 			<ReportLine kind="alert" time="bei Δ" channels={['telegram']} active alert />
 			<div style="margin-top: 12px;">
-				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('versand')}>Zeitplan bearbeiten →</Btn>
+				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken', 'versand')}>Zeitplan bearbeiten →</Btn>
 			</div>
 		</Card>
 
@@ -124,12 +127,6 @@
 			<Eyebrow style="margin-bottom: 10px;">Alerts (letzte 7 Tage)</Eyebrow>
 			<p style="font-size: 13px; color: var(--g-ink-2); margin: 0 0 12px;">Keine aktuellen Alerts.</p>
 			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wertebereiche')}>Alle Alerts →</Btn>
-		</Card>
-
-		<Card padding={18} style="background: var(--g-card-alt);">
-			<Eyebrow style="margin-bottom: 10px;">Vorschau</Eyebrow>
-			<p style="font-size: 13px; color: var(--g-ink-2); margin: 0 0 12px;">Wie sieht das nächste Briefing aus?</p>
-			<Btn variant="primary" size="sm" onclick={makeJumpHandler('vorschau')}>Vorschau öffnen</Btn>
 		</Card>
 	</div>
 </div>

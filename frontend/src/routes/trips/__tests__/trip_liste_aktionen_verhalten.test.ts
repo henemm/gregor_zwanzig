@@ -155,9 +155,8 @@ describe('F016 Trip-Liste: Pausieren/Fortsetzen/Senden/Loeschen wirken', () => {
 
 	test('Navigationsaktionen fuehren auf den Hub bzw. den Reiter', async () => {
 		const { gotos, aktion } = await tripsSeite();
-		for (const id of ['preview', 'alarms', 'weather', 'edit']) aktion(id);
+		for (const id of ['alarms', 'weather', 'edit']) aktion(id);
 		assert.deepEqual(gotos, [
-			'/trips/t1?tab=vorschau',
 			'/trips/t1?tab=alarme',
 			'/trips/t1?tab=wetter-metriken',
 			'/trips/t1'

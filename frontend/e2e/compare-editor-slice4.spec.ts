@@ -30,8 +30,8 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// ── AC-8: „Briefing aktivieren" disabled bis Versand-Tab besucht ───────────
-	test('AC-8: "Briefing aktivieren" ist disabled bis Versand-Tab besucht', async ({ page }) => {
+	// ── AC-8: „Briefing aktivieren" disabled bis Alarme besucht (#1743) ─────────
+	test('AC-8: "Briefing aktivieren" ist disabled bis Alarme besucht', async ({ page }) => {
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
 
@@ -45,7 +45,7 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 
 		const hint = page
 			.locator('[data-testid="compare-editor"]')
-			.getByText('Versand einrichten zum Aktivieren');
+			.getByText('Alarme einrichten zum Aktivieren');
 		await expect(hint).toBeVisible();
 	});
 
@@ -108,8 +108,8 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 		await expect(hourlyToggle).toBeVisible({ timeout: 8_000 });
 		await hourlyToggle.click();
 
+		// Issue #1743: Alarme ist der letzte Schritt (kein Versand-Schritt mehr).
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
 
 		// Genau EIN POST; Response liefert die neue Preset-ID für den Roundtrip.
 		const [response] = await Promise.all([
@@ -174,7 +174,6 @@ test.describe('F2a: /compare/new Aktivieren-Gate + Create-POST', () => {
 		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
 		await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
 
 		// Alle Create-POSTs mitzählen (nicht nur den ersten abwarten).
 		let postCount = 0;

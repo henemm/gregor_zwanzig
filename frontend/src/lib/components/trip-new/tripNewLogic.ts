@@ -20,14 +20,15 @@ import { ladeMailZustand } from '../shared/mailInhaltZustand.ts';
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
-export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand';
+export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'wetter-metriken' | 'wertebereiche' | 'alarme';
 
 // ── Freischalt-Logik (TN_unlocked) ──────────────────────────────────────────
-// Issue #2277 S2a: neuer Parameter `wbVisited` (Wertebereiche besucht) an
-// Position 5 — die Kette laeuft jetzt ueber Wetter-Metriken -> Wertebereiche
-// -> Alarme -> Versand (geteilter Kern `shared/anlegeLockEngine.ts`, #2277 S4).
+// Issue #2277 S2a: Parameter `wbVisited` (Wertebereiche besucht) an Position 5 —
+// die Kette laeuft ueber Wetter-Metriken -> Wertebereiche -> Alarme (geteilter
+// Kern `shared/anlegeLockEngine.ts`, #2277 S4). #1743: kein Versand-Schritt mehr
+// (Versand steht unten im Schritt Wetter-Metriken), daher 6 Parameter.
 
-const TAIL: TailIds<TabId> = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' };
+const TAIL: TailIds<TabId> = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme' };
 
 export function unlockedTabs(
 	name: string,
@@ -35,19 +36,17 @@ export function unlockedTabs(
 	etDone: boolean,
 	wtVisited: boolean,
 	wbVisited: boolean,
-	alVisited: boolean,
-	vsVisited: boolean
+	alVisited: boolean
 ): Set<TabId> {
 	const s = new Set<TabId>(['route']);
 	if (name.trim() && startDate) s.add('etappen');
 	if (etDone) s.add('wegpunkte');
-	// Trip-Semantik (bit-gleich zu vorher): nur `metriken` haengt an etDone, die
-	// uebrigen Schwanz-Reiter ausschliesslich an den Besuchs-Flags. Der Kern sperrt
-	// bei fehlendem Vorderteil den ganzen Schwanz — daher mit metrikenFrei=true
-	// aufrufen und `metriken` hier selbst an etDone binden.
+	// Trip-Semantik: nur `metriken` haengt an etDone, die uebrigen Schwanz-Reiter
+	// ausschliesslich an den Besuchs-Flags. Der Kern sperrt bei fehlendem Vorderteil
+	// den ganzen Schwanz — daher mit metrikenFrei=true aufrufen und `metriken` hier
+	// selbst an etDone binden.
 	const tail = tailUnlocked(TAIL, {
-		metrikenFrei: true, metrikenVisited: wtVisited, wertebereicheVisited: wbVisited,
-		alarmeVisited: alVisited, versandVisited: vsVisited,
+		metrikenFrei: true, metrikenVisited: wtVisited, wertebereicheVisited: wbVisited, alarmeVisited: alVisited,
 	});
 	if (!etDone) tail.delete('wetter-metriken');
 	for (const t of tail) s.add(t);
@@ -62,15 +61,13 @@ export function doneTabs(
 	etDone: boolean,
 	wtVisited: boolean,
 	wbVisited: boolean,
-	alVisited: boolean,
-	vsVisited: boolean
+	alVisited: boolean
 ): Set<TabId> {
 	const s = new Set<TabId>();
 	if (name.trim() && startDate) s.add('route');
 	if (etDone) s.add('etappen');
 	for (const t of tailDone(TAIL, {
-		metrikenFrei: etDone, metrikenVisited: wtVisited, wertebereicheVisited: wbVisited,
-		alarmeVisited: alVisited, versandVisited: vsVisited,
+		metrikenFrei: etDone, metrikenVisited: wtVisited, wertebereicheVisited: wbVisited, alarmeVisited: alVisited,
 	})) s.add(t);
 	return s;
 }
@@ -90,14 +87,18 @@ export function stageDate(startDate: string, offset: number): string | null {
 
 // ── Fortschrittsbalken (TN_Progress) ────────────────────────────────────────
 
+// #1743: Meilensteine ohne Versand — voll genau dann, wenn Speichern frei wird
+// (Alarme besucht). Die Fortschrittsbalken des Editors lesen DIESE Liste.
+export const PROGRESS_STEPS: readonly TabId[] = ['route', 'etappen', 'wetter-metriken', 'alarme'];
+
 export function progressCount(done: Set<TabId>): number {
-	return kernProgressCount(done, ['route', 'etappen', 'wetter-metriken', 'versand']);
+	return kernProgressCount(done, PROGRESS_STEPS);
 }
 
 // ── Speichern-Gate ────────────────────────────────────────────────────────────
 
 export function canSave(done: Set<TabId>): boolean {
-	return canFinish(done, 'versand');
+	return canFinish(done);
 }
 
 // ── State + Payload-Builder ──────────────────────────────────────────────────
@@ -258,6 +259,16 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 	return trip;
 }
 
+// ── Standard-Versandeinstellungen im Speicherweg (Issue #1743, AC-21) ───────
+// Der Versand-Abschnitt ist kein Pflichtschritt mehr; die Standard-Versandzeiten
+// (morning/evening_time, *_enabled, send_*) entstehen deshalb beim POST, nicht
+// per Mount-Effekt. Gesetzte Werte gewinnen (`ladeReportZustand` liest den Blob),
+// unbekannte Bestandsfelder bleiben erhalten. Rein: die Eingabe bleibt unveraendert.
+export function ergaenzeVersandStandard(rc: ReportConfig | undefined): ReportConfig {
+	const basis = { ...((rc ?? {}) as Record<string, unknown>) };
+	return baueReportConfigPayload({ snapshot: basis, live: basis, zustand: ladeReportZustand(basis) }) as ReportConfig;
+}
+
 // ── „Mit Standardwerten speichern" (Issue #2521 S3, AC-6) ───────────────────
 // Ergaenzt report_config um die Felder, die sonst erst Versand-Reiter und
 // Mail-Inhalt-Karte beim Oeffnen schreiben — mit DENSELBEN reinen Bausteinen
@@ -267,11 +278,7 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 // wie beim Durchklicken `[]`. Rein: die Eingabe wird nicht veraendert.
 export function ergaenzeStandardwerteReportConfig(rc: ReportConfig | undefined): ReportConfig {
 	const basis = { ...((rc ?? {}) as Record<string, unknown>) };
-	const nachVersand = baueReportConfigPayload({
-		snapshot: basis,
-		live: basis,
-		zustand: ladeReportZustand(basis)
-	});
+	const nachVersand = ergaenzeVersandStandard(rc) as Record<string, unknown>;
 	const mail = ladeMailZustand(nachVersand);
 	return baueReportConfigPayload({
 		snapshot: basis,

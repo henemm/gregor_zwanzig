@@ -98,11 +98,14 @@ test.describe('#529 Trip-Detail · Kanonische Tab-Namen (nav-map.jsx)', () => {
 
 	// Fix-Loop 2026-07-13 (F001): Label seit #736/Slice 6 "Versand" (nicht mehr
 	// "Briefing-Zeitplan" — das war der Zwischenstand vor #736).
-	test('AC-1b: Tab "briefings" heißt "Versand" (nicht "Reports & Kanäle")', async ({
+	// Issue #1743: kein Reiter "Versand" mehr — der Versand ist ein Abschnitt im
+	// Reiter Wetter-Metriken; auch der Alt-Name "Reports & Kanäle" bleibt weg.
+	test('AC-1b: kein Reiter "Versand" / "Reports & Kanäle" mehr (#1743)', async ({
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByRole('tab', { name: 'Versand' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Wetter-Metriken' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Versand' })).toHaveCount(0);
 		await expect(page.getByRole('tab', { name: 'Reports & Kanäle' })).not.toBeVisible();
 	});
 

@@ -1,8 +1,8 @@
 """Kanal-eigene Uebersichts-Metriken erreichen die GERENDERTE Ausgabe (#1703 S8).
 
 Waechter fuer Mutation M2 (Spec `feat_1703_s8_compare_kanal_tabs.md`): werden die
-acht kanalweisen Aufrufstellen in `scheduler_dispatch_service.py` (3) und
-`compare_preview_service.py` (5) wieder mit der GEMEINSAMEN `opts.enabled_metrics`
+sechs kanalweisen Aufrufstellen in `scheduler_dispatch_service.py` (3) und
+`compare_preview_service.py` (3; seit #1743 ohne die Einzel-Huellen) wieder mit der GEMEINSAMEN `opts.enabled_metrics`
 gefuettert, zeigen alle drei Kanaele dasselbe — genau die Attrappe, die
 2026-07-18 (#1287/#1291) zum Rueckbau gefuehrt hat. Ein Nachweis auf
 `CompareRenderOptions` faengt das NICHT: dort ist die Mechanik korrekt, die
@@ -149,7 +149,8 @@ def test_dispatch_delivers_a_different_metric_set_per_channel(env, tmp_path):
 def test_preview_shows_the_same_per_channel_selection_as_the_dispatch(env):
     """Zweiter Leser derselben Optionen: die Vorschau MUSS je Kanal dasselbe
     zeigen wie der Versand — sonst verspricht der Editor etwas anderes, als
-    ankommt. Deckt die uebrigen fuenf Aufrufstellen (Spec Abschnitt 2)."""
+    ankommt. Deckt die uebrigen drei Aufrufstellen (Spec Abschnitt 2; seit #1743
+    alle ueber ``render_all_channels``)."""
     from app.loader import get_data_dir, save_location
     from services.compare_preview_service import ComparePreviewService
 
@@ -161,7 +162,3 @@ def test_preview_shows_the_same_per_channel_selection_as_the_dispatch(env):
     payload = service.render_all_channels("cp-s8-preview", **args)
     for channel, key in (("email", "email_html"), ("telegram", "telegram"), ("sms", "sms")):
         _assert_channel(channel, payload[key], f"Vorschau render_all_channels[{key}]")
-    _assert_channel("telegram", service.render_telegram_preview("cp-s8-preview", **args),
-                    "Vorschau render_telegram_preview")
-    _assert_channel("sms", service.render_sms_preview("cp-s8-preview", **args),
-                    "Vorschau render_sms_preview")

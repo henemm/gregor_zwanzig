@@ -8,10 +8,10 @@
 import type { MessageKey } from '$lib/i18n';
 
 export type InfoboxKontext = 'route' | 'vergleich';
-export type InfoboxReiter = 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand' | 'wegpunkte';
+export type InfoboxAbschnitt = 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand' | 'wegpunkte';
 export type Begriff = 'wertebereiche' | 'kanal_schwelle' | 'cape' | 'cooldown';
 
-const INFOBOX_KEYS: Record<InfoboxKontext, Partial<Record<InfoboxReiter, MessageKey>>> = {
+const INFOBOX_KEYS: Record<InfoboxKontext, Partial<Record<InfoboxAbschnitt, MessageKey>>> = {
 	route: {
 		'wetter-metriken': 'info.wetter-metriken.route',
 		wertebereiche: 'info.wertebereiche.route',
@@ -28,7 +28,7 @@ const INFOBOX_KEYS: Record<InfoboxKontext, Partial<Record<InfoboxReiter, Message
 };
 
 /** Katalogschluessel der Infobox fuer Kontext und Reiter (undefined = keine Infobox). */
-export function infoboxKey(context: InfoboxKontext, reiter: InfoboxReiter): MessageKey | undefined {
+export function infoboxKey(context: InfoboxKontext, reiter: InfoboxAbschnitt): MessageKey | undefined {
 	return INFOBOX_KEYS[context]?.[reiter];
 }
 

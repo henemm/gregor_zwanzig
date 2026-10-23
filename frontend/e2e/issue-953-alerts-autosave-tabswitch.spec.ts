@@ -85,7 +85,8 @@ test.describe('issue_953 — Wertebereiche-Einstellung überlebt Tab-Klick', () 
 
 		// Echter Nutzer-Pfad: Tab-BUTTON klicken (nicht goto/Reload — der Bug tritt
 		// nur beim Klick-Pfad auf).
-		await page.getByTestId('trip-detail-tab-vorschau').click();
+		// Issue #1743: Reiter `vorschau` entfaellt — Wechsel auf `alarme`.
+		await page.getByTestId('trip-detail-tab-alarme').click();
 		await page.getByTestId('trip-detail-tab-wertebereiche').click();
 
 		// HAUPT-ASSERTION: Der Toggle zeigt weiterhin "an".

@@ -139,9 +139,9 @@ def test_preset_of_user_a_is_not_resolvable_under_user_b(two_users, monkeypatch)
     from services.compare_preview_service import ComparePreviewService
 
     with pytest.raises(Exception) as exc:
-        result = ComparePreviewService().render_email_preview(
+        result = ComparePreviewService().render_all_channels(
             preset_id, user_id=user_b, target_date=TARGET_DATE.isoformat()
-        )
+        )["email_html"]
         pytest.fail(
             "AC-6/ADR-0003: Nutzer B konnte die Vorschau des Presets von Nutzer A "
             f"abrufen (Cross-User-Datenleck). Rueckgabe: {str(result)[:300]!r}"
@@ -170,9 +170,9 @@ def test_owner_can_preview_own_preset(two_users, monkeypatch):
     _install_recording_engine(monkeypatch, calls)
     from services.compare_preview_service import ComparePreviewService
 
-    html = ComparePreviewService().render_email_preview(
+    html = ComparePreviewService().render_all_channels(
         preset_id, user_id=user_a, target_date=TARGET_DATE.isoformat()
-    )
+    )["email_html"]
 
     assert isinstance(html, str) and "Innsbruck" in html, (
         "Der Eigentuemer muss seine eigene Vorschau bekommen, war aber: "

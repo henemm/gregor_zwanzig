@@ -1,9 +1,11 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-09-28 (Issue #2293 Scheibe S2, Epic #1374/#2345 — Ortsvergleich bekommt
+**Updated:** 2026-10-22 (Issue #1743 — Hub-Reiter auf fünf verkürzt: Reiter „Versand" entfällt, Versand ist
+Abschnitt unter Wetter-Metriken (Anker `#versand`); Reiter „Vorschau" und Endpoint `GET /api/briefings/{id}/preview`
+entfallen ersatzlos; Details `docs/reference/navigation.md`). Vorheriger Stand 2026-09-28 (Issue #2293 Scheibe S2, Epic #1374/#2345 — Ortsvergleich bekommt
 ein eigenes, persistiertes `alert_channels`-Objekt für den Alarm-Versand, entkoppelt von
 den Briefing-Flags `send_telegram`/`send_sms`/`send_premium_sms`; neuer eigener
-Premium-SMS-Schalter im Versand-Reiter des Ortsvergleichs, löst die stille Kopplung
+Premium-SMS-Schalter im Versand-Abschnitt des Ortsvergleichs, löst die stille Kopplung
 „Alarm-Premium-SMS-Klick schaltet Briefing-Premium-SMS mit" (#2448) auf; Alt-Bestand ohne
 `alert_channels` wird beim Laden in-memory materialisiert (kein Write-Back), ein Legacy
 `send_premium_sms=true` wird dabei als Alarm-Absicht gedeutet und das Briefing-Flag beim
@@ -33,7 +35,7 @@ Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und 
 - **Frontend:** SvelteKit Web-UI für Trip-Management, Konfiguration und Orts-Vergleiche
 - **Channels:** E-Mail (SMTP), Telegram, SMS (seven.io), Premium-SMS (seven.io, Garmin
   inReach) — als **Versandkanal** seit Issue #1676 S2a im Trip-Briefing UND seit #2275
-  (Backend) bzw. #2293 S2 (eigener Versand-Reiter-Schalter) im Ortsvergleich-Briefing
+  (Backend) bzw. #2293 S2 (eigener Schalter im Versand-Abschnitt) im Ortsvergleich-Briefing
   verdrahtet — zwei getrennte Felder (`Trip.report_config.send_premium_sms`,
   `ComparePreset.SendPremiumSms`); als **Alarm-Kanal** seit #1701 (Backend) und #1745
   Scheibe A (Oberfläche, Alarme-Reiter) in **beiden** Flächen verdrahtet — Trip UND
@@ -152,7 +154,7 @@ Die folgenden Komponenten leben im Python-Core:
    - **Premium-SMS** (`src/output/channels/premium_sms.py`, `PremiumSmsOutput`,
      `name == "premium_sms"`, seit Issue #1676 S2a) – als **Versandkanal** im
      **Trip-Briefing** (seit #1676 S2a) UND im **Ortsvergleich-Briefing** (Backend seit
-     #2275, eigener Versand-Reiter-Schalter seit #2293 S2) verdrahtet — getrennte Felder,
+     #2275, eigener Schalter im Versand-Abschnitt seit #2293 S2) verdrahtet — getrennte Felder,
      kein gemeinsamer Schalter. Als **Alarm-Kanal** seit #1701 (Backend) für Gewitter-,
      Änderungs- und amtliche Alarme verdrahtet, in Trip **und** Ortsvergleich;
      seit #1752 (Scheibe B) gilt das auch für **Regen-/Radar-Alarme** — sie lösen ihre Kanäle
@@ -165,7 +167,7 @@ Die folgenden Komponenten leben im Python-Core:
      ausschließlich Tier `premium`). Teilt sich mit `SMSOutput` die Basisklasse
      `SevenIoChannelBase` (Sicherheitssperren + HTTP-Transport genau einmal statt zweimal).
      Kein eigener Render-Pfad — Text kommt unverändert aus `report.sms_text`. Frontend-Schalter
-     im Versand-Reiter seit #1717 S3 (Trip) bzw. #2293 S2 (Ortsvergleich, eigener Schalter,
+     im Versand-Abschnitt unter Wetter-Metriken (seit #1743; vormals Reiter Versand; #1717 S3 Trip, #2293 S2 Ortsvergleich, eigener Schalter,
      löst #2448 ab), im Alarme-Reiter (Trip UND Ortsvergleich) seit #1745 Scheibe A. Details:
      ADR-0049, `docs/specs/modules/feat_1676_s2a_premium_sms_versand.md`,
      `docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md`.
@@ -393,7 +395,7 @@ Trip-Briefing-only. Details:
 🔴 **Nachtrag 2 (2026-09-28, Issue #2293 Scheibe S2 — aktueller Stand; der Versand-Satz im
 Nachtrag oben ist damit überholt):** Der
 Versand-Pfad ist seit **#2275** (Backend) und **#2293 S2** (eigener Schalter im
-Versand-Reiter des Ortsvergleichs, löst #2448 ab) **kein** Trip-Briefing-only mehr —
+Versand-Abschnitt des Ortsvergleichs unter Wetter-Metriken, löst #2448 ab) **kein** Trip-Briefing-only mehr —
 Premium-SMS ist jetzt Versandkanal in **beiden** Flächen, über getrennte, nicht mehr
 gekoppelte Felder: `ComparePreset.SendPremiumSms` (Briefing) und
 `ComparePreset.AlertChannels.PremiumSms` (Alarm, identischer Typ wie beim Trip). Vor
@@ -1205,11 +1207,9 @@ Ein gemeinsames Aktionsmodell für Liste, Detail-Hub und Mobil (Spec: `docs/spec
 | `/api/locations` | GET/POST | Location library (for compare) |
 | `/api/compare/presets` | GET/POST | Compare-Presets (Orts-Vergleich) |
 | `/api/compare/presets/{id}` | GET/PUT/DELETE | Einzelnes Compare-Preset (`PATCH …/state`, `POST …/send`) |
-| `/api/briefings/{id}/preview?kind=route\|vergleich` | GET | Vorschau aller Kanäle in einer Antwort, geteilter Vorschau-Reiter `shared/PreviewTab.svelte` (#2283) |
 | `/api/briefings/{id}/alert-preview?kind=route\|vergleich` | POST | Alarm-Vorschau Trip und Ortsvergleich (#2283) |
-| `/api/preview/compare/{preset_id}` | POST | Alt-Route, Delegate auf die Bündel-Vorschau (#1270, #2283) |
 | `/api/briefings` | GET | Briefing-Subscriptions (Trip-Briefing-Abos, ADR-0023) |
-| `/api/preview/{id}/email\|sms\|telegram` | GET | Alt-Routen, Delegates (demo mode optional); `/signal` entfernt (#2283) |
+| `/api/preview/{id}/sms` | GET | SMS-Kurzform-Vorschau (demo mode optional); email/telegram/compare entfallen (#1743), `/signal` entfernt (#2283) |
 | `/api/account` | GET/PUT | User account |
 | `/api/scheduler/status` | GET | Job status monitoring |
 

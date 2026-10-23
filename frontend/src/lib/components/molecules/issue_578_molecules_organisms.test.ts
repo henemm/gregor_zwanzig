@@ -249,52 +249,9 @@ describe('AC-8: ScoreToggle — neues Molecule', () => {
 	});
 });
 
-describe('AC-9: CompareChannelSwitch — neues Molecule', () => {
-	test('CompareChannelSwitch.svelte existiert in molecules/', () => {
-		assert.ok(
-			hasMol('CompareChannelSwitch.svelte'),
-			'molecules/CompareChannelSwitch.svelte fehlt — noch nicht implementiert'
-		);
-	});
-	test('CompareChannelSwitch aktiver Kanal: card + shadow-1', () => {
-		const src = readMol('CompareChannelSwitch.svelte');
-		assert.ok(/g-shadow-1/.test(src), 'CompareChannelSwitch: --g-shadow-1 für aktiven Kanal fehlt');
-		assert.ok(/g-card/.test(src), 'CompareChannelSwitch: --g-card für aktiven Kanal fehlt');
-	});
-	// #610: signal entfernt — CompareChannelSwitch zeigt nur noch 3 Kanäle
-	test('CompareChannelSwitch rendert Email, Telegram, SMS (kein Signal, #610)', () => {
-		const src = readMol('CompareChannelSwitch.svelte');
-		for (const ch of ['email', 'telegram', 'sms']) {
-			assert.ok(src.includes(ch), `CompareChannelSwitch: Kanal "${ch}" fehlt`);
-		}
-		assert.ok(!src.includes("'signal'") && !src.includes('"signal"'), 'CompareChannelSwitch darf nach #610 kein Signal mehr enthalten');
-	});
-	test('CompareChannelSwitch in molecules/index.ts exportiert', () => {
-		const idx = readMol('index.ts');
-		assert.ok(
-			/CompareChannelSwitch/.test(idx),
-			'molecules/index.ts: CompareChannelSwitch nicht exportiert'
-		);
-	});
-});
-
-describe('AC-10–13: Compare-Briefing-Vorschau-Molecules', () => {
-	// Issue #2283 AC-14: ComparePreviewMissing, CompareBriefingPreview und
-	// CompareSmsPreview sind entfernt (siehe Block „#2283 AC-14" unten) — hier
-	// bleibt nur der weiterlebende, kontextneutrale Baustein CompareChatBubble.
-	test('CompareChatBubble.svelte existiert in molecules/', () => {
-		assert.ok(hasMol('CompareChatBubble.svelte'), 'molecules/CompareChatBubble.svelte fehlt');
-	});
-
-	test('AC-11: CompareChatBubble hat Telegram-Farben (#610: Signal-Farben entfernt)', () => {
-		const src = readMol('CompareChatBubble.svelte');
-		assert.ok(/#17212b/.test(src), 'CompareChatBubble: Telegram-Backdrop #17212b fehlt');
-		assert.ok(/#5ea9dd/.test(src), 'CompareChatBubble: Telegram-Accent #5ea9dd fehlt');
-	});
-	// AC-12 (CompareSmsPreview 153 Zeichen) und AC-13 (ComparePreviewMissing
-	// dashed) entfallen mit #2283 AC-14: beide Bausteine sind ersatzlos entfernt,
-	// die SMS-Vorschau laeuft in beiden Hubs ueber preview/SmsPhoneFrame.
-});
+// AC-9 (CompareChannelSwitch) und AC-10–13 (Compare-Briefing-Vorschau-Molecules)
+// entfallen: die Briefing-Vorschau ist ersatzlos entfernt (#2283 AC-14, #1743 F003,
+// PO-Entscheid 2026-10-22). Die Abwesenheit prueft der Block „#2283 AC-14" unten.
 
 // ════════════════ Issue #2283 AC-14 — tote/ersetzte Vorschau-Molecules entfernt ════════════════
 //
@@ -306,8 +263,15 @@ describe('AC-10–13: Compare-Briefing-Vorschau-Molecules', () => {
 // RED HEUTE: der Barrel exportiert alle drei noch, die Dateien laden noch.
 describe('#2283 AC-14: CompareBriefingPreview, ComparePreviewMissing, CompareSmsPreview entfernt', () => {
 	const FRONTEND = join(componentsRoot, '../../..');
-	const ENTFERNT = ['CompareBriefingPreview', 'ComparePreviewMissing', 'CompareSmsPreview'];
-	const BLEIBEN = ['CompareChannelSwitch', 'CompareChatBubble'];
+	// #1743 F003 (PO-Entscheid 2026-10-22): auch CompareChannelSwitch und
+	// CompareChatBubble entfallen — die Briefing-Vorschau ist ersatzlos weg.
+	const ENTFERNT = [
+		'CompareBriefingPreview',
+		'ComparePreviewMissing',
+		'CompareSmsPreview',
+		'CompareChannelSwitch',
+		'CompareChatBubble'
+	];
 
 	let registriert = false;
 	async function barrel(): Promise<Record<string, unknown>> {
@@ -327,7 +291,7 @@ describe('#2283 AC-14: CompareBriefingPreview, ComparePreviewMissing, CompareSms
 			assert.equal(
 				name in mod,
 				false,
-				`molecules/index.ts exportiert ${name} noch — AC-14: der Baustein ist durch shared/PreviewTab ersetzt bzw. tot (#1270) und faellt samt Barrel-Eintrag`
+				`molecules/index.ts exportiert ${name} noch — AC-14: der Baustein ist entfallen bzw. tot (#1270) und faellt samt Barrel-Eintrag`
 			);
 		});
 		test(`${name}.svelte laesst sich nicht mehr laden`, async () => {
@@ -337,13 +301,6 @@ describe('#2283 AC-14: CompareBriefingPreview, ComparePreviewMissing, CompareSms
 				(e: { code?: string }) => e.code === 'ERR_MODULE_NOT_FOUND',
 				`molecules/${name}.svelte ist noch vorhanden — AC-14 verlangt die Entfernung`
 			);
-		});
-	}
-
-	for (const name of BLEIBEN) {
-		test(`${name} lebt als kontextneutraler Baustein weiter (Barrel-Export bleibt)`, async () => {
-			const mod = await barrel();
-			assert.equal(typeof mod[name], 'function', `molecules/index.ts muss ${name} weiter exportieren (AC-14)`);
 		});
 	}
 });
@@ -481,10 +438,9 @@ describe('AC-20: molecules/index.ts — alle neuen Molecules exportiert', () => 
 		// 'StageCascadeNotice' entfällt seit #1375 (tote Zweitfassung, s.o.)
 		'HorizonChips',
 		'ScoreToggle',
-		'CompareChannelSwitch',
-		'CompareChatBubble',
 		// CompareBriefingPreview, CompareSmsPreview, ComparePreviewMissing entfallen
-		// mit #2283 AC-14 (Gegenprobe: Block „#2283 AC-14" oben).
+		// mit #2283 AC-14, CompareChannelSwitch und CompareChatBubble mit #1743 F003
+		// (Gegenprobe: Block „#2283 AC-14" oben).
 	];
 
 	for (const name of ALL_NEW_MOLECULES) {

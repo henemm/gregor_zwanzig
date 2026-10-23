@@ -74,7 +74,7 @@ from app.user import SavedLocation
 from tests.helpers.compare_briefings import write_compare_briefings
 from tests.helpers.nutzer_tier import nutzer_mit_tier
 from tests.helpers.telegram_empfaenger import profil_chat
-from tests.integration.test_briefing_preview_bundle import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
 
 PRESET_ID = "cp-2283-alarm"
 PRESET_NAME = "Alarm-Vergleich 2283"

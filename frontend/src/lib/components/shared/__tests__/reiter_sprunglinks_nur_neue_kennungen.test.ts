@@ -16,6 +16,12 @@
 // Nur im Browser messbar (Playwright, /e2e-verify): dass der Klick auf die Schnellaktion
 // den Reiter wirklich oeffnet (AC-10 „landet im richtigen Reiter").
 //
+// #1743 (Spec feat_1743_reiter_aufraeumen AC-23, AC-25, AC-27): `versand` und `vorschau` sind keine
+// Reiter mehr. Versand-Spruenge zielen auf `?tab=wetter-metriken#versand`, Vorschau-Ziele entfallen.
+// Die gueltigen Kennungen sind hier FEST eingesetzt (nicht aus subscriptionTabs abgeleitet), damit
+// die Erwartung nicht mit dem Pruefling wandert. Die beiden Totcode-Vorschaukarten der Trip-Uebersicht
+// sind aus den Tabellen entfernt — sie entfallen (deadTripOverviewComponentsRemoved).
+//
 // Ausfuehren:
 //   cd frontend && npm test -- src/lib/components/shared/__tests__/reiter_sprunglinks_nur_neue_kennungen.test.ts
 
@@ -27,7 +33,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { umgebungFuer, type Knoten } from './svelteInstanzPruefstand.ts';
-import { subscriptionTabs } from '../subscriptionTabs.ts';
+import { resolveTab } from '../subscriptionTabs.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../..');
@@ -37,8 +43,9 @@ register(
 	pathToFileURL(FRONTEND + '/').href
 );
 
-const TRIP_IDS = subscriptionTabs('trip').map((t) => t.id);
-const VERGLEICH_IDS = subscriptionTabs('vergleich').map((t) => t.id);
+// #1743: fuenf Reiter je Hub — fest eingesetzt.
+const TRIP_IDS = ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'];
+const VERGLEICH_IDS = ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'];
 
 const datei = (rel: string) => join(SRC, rel);
 const tabAus = (url: string): string | null => new URL(url, 'http://localhost/x').searchParams.get('tab');
@@ -60,13 +67,15 @@ function gotoRekorder(): { ziele: string[]; goto: (u: string) => Promise<void> }
 describe('AC-10 (Verhalten): Home-Schnellaktion „Trip einrichten" fuehrt in neue Kennungen', () => {
 	const schritte = (offen: number) => [0, 1, 2, 3, 4].map((i) => ({ label: `s${i}`, done: i !== offen }));
 
-	for (const [offen, erwartet] of [
-		[1, 'etappen'],
-		[2, 'wetter-metriken'],
-		[3, 'versand'],
-		[4, 'versand']
-	] as Array<[number, string]>) {
-		test(`erster offener Schritt ${offen} → ?tab=${erwartet}`, async () => {
+	// #1743 AC-23: Layout (3) und Reports (4) liegen unter Wetter-Metriken; der Versand-Schritt
+	// (Reports) springt per Anker zum Versand-Abschnitt.
+	for (const [offen, erwartet, anker] of [
+		[1, 'etappen', ''],
+		[2, 'wetter-metriken', ''],
+		[3, 'wetter-metriken', null],
+		[4, 'wetter-metriken', '#versand']
+	] as Array<[number, string, string | null]>) {
+		test(`erster offener Schritt ${offen} → ?tab=${erwartet}${anker ?? ''} (loest ohne Legacy auf)`, async () => {
 			const { u } = await umgebungFuer(datei('routes/+page.svelte'), {
 				nextPlanned: { id: 'khw' },
 				setupStepsTrip: schritte(offen)
@@ -74,6 +83,9 @@ describe('AC-10 (Verhalten): Home-Schnellaktion „Trip einrichten" fuehrt in ne
 			const href = (u.buildTripCtaHref as () => string)();
 			assert.equal(href.startsWith('/trips/khw?tab='), true, href);
 			assert.equal(tabAus(href), erwartet);
+			assert.equal(resolveTab('trip', tabAus(href)).legacy, false, `${href}: Kennung laeuft ueber den Legacy-Umweg`);
+			// null = Anker fuer diesen Schritt nicht festgelegt
+			if (anker !== null) assert.equal(new URL(href, 'http://localhost').hash, anker, href);
 		});
 	}
 
@@ -86,9 +98,15 @@ describe('AC-10 (Verhalten): Home-Schnellaktion „Trip einrichten" fuehrt in ne
 	});
 });
 
-describe('AC-10 (Verhalten): Trip-Liste — „Vorschau" und „Wetter" (Bestandsfehler #weather)', () => {
+describe('AC-10 (Verhalten): Trip-Liste — „Wetter" (Bestandsfehler #weather); #1743: keine Vorschau', () => {
+	test("#1743 AC-27: onTripAction('preview') navigiert nirgendwohin (Aktion entfaellt)", async () => {
+		const rek = gotoRekorder();
+		const { u } = await umgebungFuer(datei('routes/trips/+page.svelte'), { goto: rek.goto }, { jsAlsTs: true });
+		(u.onTripAction as (k: string, r: unknown) => void)('preview', { id: 'khw' });
+		assert.deepEqual(rek.ziele, [], 'die Vorschau-Aktion darf kein Ziel mehr ansteuern');
+	});
+
 	for (const [key, erwartet] of [
-		['preview', 'vorschau'],
 		['weather', 'wetter-metriken']
 	] as Array<[string, string]>) {
 		test(`onTripAction('${key}') → /trips/<id>?tab=${erwartet}, kein Hash`, async () => {
@@ -155,14 +173,13 @@ function erzeugteKennungen(rel: string): string[] {
 	return treffer;
 }
 
-const ALT = ['overview', 'stages', 'weather', 'alerts', 'briefings', 'preview', 'idealwerte', 'layout'];
+// #1743: 'versand' und 'vorschau' sind seither ebenfalls Alt-Kennungen.
+const ALT = ['overview', 'stages', 'weather', 'alerts', 'briefings', 'preview', 'idealwerte', 'layout', 'versand', 'vorschau'];
 
 // doc-compliance-test: hartkodierte href-/Handler-Literale haben keinen Funktionsaufruf.
 describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Trip-Sprunglinks nur mit neuen Trip-Kennungen', () => {
 	const ERWARTET: Record<string, string[]> = {
-		'lib/components/trip-detail/BriefingPreviewCard.svelte': ['versand'],
 		'lib/components/trip-detail/AlertsPreviewCard.svelte': ['wertebereiche'],
-		'lib/components/trip-detail/PreviewCard.svelte': ['vorschau', 'vorschau'],
 		'lib/components/alerts-tab/AlertPreviewCard.svelte': ['wetter-metriken']
 	};
 	for (const [rel, erwartet] of Object.entries(ERWARTET)) {
@@ -173,11 +190,12 @@ describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Trip-Sprunglinks n
 		});
 	}
 
-	test('HubOverview: fuenf Sprungkarten, alle mit neuer Trip-Kennung (Etappen, Wetter-Metriken, Versand, Vorschau enthalten)', () => {
+	// #1743 AC-25/AC-28: kein Sprung auf 'versand'/'vorschau' mehr; der Zeitplan-Sprung samt Anker
+	// wird als Verhalten in versand_sprung_auf_wetter_metriken.test.ts gemessen.
+	test('HubOverview: Sprungkarten nur mit neuen Trip-Kennungen (Etappen, Wetter-Metriken, Wertebereiche) — keine Versand/Vorschau', () => {
 		const k = erzeugteKennungen('lib/components/trip-detail/HubOverview.svelte');
-		assert.equal(k.length, 5, JSON.stringify(k));
 		for (const id of k) assert.ok(TRIP_IDS.includes(id), `Kennung '${id}' ist keine neue Trip-Kennung`);
-		for (const pflicht of ['etappen', 'wetter-metriken', 'versand', 'vorschau']) {
+		for (const pflicht of ['etappen', 'wetter-metriken', 'wertebereiche']) {
 			assert.ok(k.includes(pflicht), `HubOverview springt nicht mehr auf '${pflicht}'`);
 		}
 	});
@@ -196,14 +214,17 @@ describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Vergleich-Sprungli
 		});
 	}
 
-	// Issue #2278 AC-12: das Hub-Menue ist reiner Lebenszyklus (kein "Vorschau"); die Vorschau-
-	// Weiterleitung steht jetzt im Listenmenue, "Setup abschliessen" bleibt im Hub.
-	test('Vergleich-Detailseite: ?tab=versand (Setup abschliessen) bleibt; Vorschau/Alarme/Wetter-Metriken springt die Liste an', () => {
+	// Issue #2278 AC-12: das Hub-Menue ist reiner Lebenszyklus; "Setup abschliessen" bleibt im Hub.
+	// #1743 AC-24/AC-27: "Setup abschliessen" zielt auf wetter-metriken (#versand, Verhalten in
+	// versand_sprung_auf_wetter_metriken.test.ts); die Liste kennt keine Vorschau mehr.
+	test('Vergleich-Detailseite: Setup abschliessen → wetter-metriken; Liste springt Alarme/Wetter-Metriken an, keine Vorschau', () => {
 		const hub = erzeugteKennungen('routes/compare/[id]/+page.svelte');
-		assert.ok(hub.includes('versand'), JSON.stringify(hub));
+		assert.ok(hub.includes('wetter-metriken'), JSON.stringify(hub));
+		assert.ok(!hub.includes('versand'), JSON.stringify(hub));
 		const liste = erzeugteKennungen('routes/compare/+page.svelte');
-		for (const id of ['vorschau', 'alarme', 'wetter-metriken'])
+		for (const id of ['alarme', 'wetter-metriken'])
 			assert.ok(liste.includes(id), `Vergleich-Liste springt nicht auf '${id}': ${JSON.stringify(liste)}`);
+		assert.ok(!liste.includes('vorschau'), `Vergleich-Liste springt noch auf 'vorschau': ${JSON.stringify(liste)}`);
 	});
 
 	test('CompareTabs: „Bearbeiten →"-Sprung auf Wertebereiche nutzt die Kennung wertebereiche', () => {
@@ -220,14 +241,14 @@ describe('AC-10 (Quelltext-Scan, doc-compliance-test): Home-Schnellaktionen', ()
 		const q = ohneKommentare(HOME);
 		const trip = [...q.matchAll(/\/trips\/[^"'`\s]*\?tab=([a-z-]+)/g)].map((m) => m[1]);
 		const vergleich = [...q.matchAll(/\/compare\/[^"'`\s]*\?tab=([a-z-]+)/g)].map((m) => m[1]);
-		assert.ok(trip.length >= 5 && vergleich.length >= 3, `Messaufbau kaputt: trip=${trip.length} vergleich=${vergleich.length}`);
+		assert.ok(trip.length >= 5 && vergleich.length >= 2, `Messaufbau kaputt: trip=${trip.length} vergleich=${vergleich.length}`);
 		for (const id of trip) assert.ok(TRIP_IDS.includes(id), `Home: '${id}' ist keine Trip-Kennung`);
 		for (const id of vergleich) assert.ok(VERGLEICH_IDS.includes(id), `Home: '${id}' ist keine Vergleich-Kennung`);
 	});
 
-	test('Bestandsfehler: Vergleich-Schnellaktion „Vorschau" zeigt auf ?tab=vorschau (nicht ?tab=preview)', () => {
+	// #1743 AC-23: die Vorschau-Schnellaktion entfaellt (Nachweis: versand_sprung_auf_wetter_metriken.test.ts).
+	test('Bestandsfehler: keine Vergleich-Schnellaktion auf ?tab=preview', () => {
 		const q = ohneKommentare(HOME);
-		assert.ok(/\/compare\/\{compareHero\.id\}\?tab=vorschau/.test(q), 'Vergleich-Vorschau-Link fehlt');
 		assert.ok(!/\/compare\/[^"'`\s]*\?tab=preview/.test(q), 'Alt-Kennung preview fuer den Vergleich');
 	});
 });
@@ -242,9 +263,7 @@ describe('AC-10 / AC-15 (Quelltext-Scan, doc-compliance-test): kein Alt-Literal,
 		'lib/components/edit/WeatherSummaryCard.svelte',
 		'lib/components/shared/VersandTab.svelte',
 		'lib/components/trip-detail/HubOverview.svelte',
-		'lib/components/trip-detail/BriefingPreviewCard.svelte',
 		'lib/components/trip-detail/AlertsPreviewCard.svelte',
-		'lib/components/trip-detail/PreviewCard.svelte',
 		'lib/components/alerts-tab/AlertPreviewCard.svelte'
 	];
 	for (const rel of DATEIEN) {

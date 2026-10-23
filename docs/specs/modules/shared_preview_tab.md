@@ -12,6 +12,13 @@ workflow: feat-2283-vorschau-baustein
 
 # Geteilter Vorschau-Baustein Trip und Ortsvergleich
 
+> **Abgelöst durch #1743 (2026-10-22, PO-Entscheid):** Der Reiter „Vorschau" ist ersatzlos entfallen. `shared/PreviewTab.svelte`
+> und der Endpoint `GET /api/briefings/{id}/preview` (Go + Python) sind zurückgebaut. Nach PO-Entscheid 2026-10-22 (F003)
+> entfallen auch die verwaisten Reste (`CompareChatBubble`, `CompareChannelSwitch`, `SmsPhoneFrame`, `EmailIframe`) und die
+> Routen `POST /api/preview/compare/{id}`, `GET /api/preview/{trip}/email|telegram`. Es bleibt nur die Alarm-Vorschau im
+> Reiter Alarme (`POST /api/briefings/{id}/alert-preview`); `GET /api/preview/{trip}/sms` bleibt allein als Messweg der
+> Staging-Specs. Die ACs dieser Spec bleiben als Historie stehen.
+
 ## Approval
 
 - [ ] Approved
@@ -118,11 +125,11 @@ Trip-Hub und Ortsvergleich-Hub bekommen **einen** gemeinsamen Vorschau-Reiter (`
 
 ### S2 — Geteilter Reiter im Trip-Hub
 
-- **AC-8:** Given der Trip-Hub, Reiter „Vorschau" / When der Nutzer ihn öffnet / Then sieht er einen Kanalumschalter E-Mail · SMS · Telegram; bei SMS den Text im Telefonrahmen; bei E-Mail eine Ansicht Desktop/Mobil; bei Telegram eine Chat-Blase; und den Premium-SMS-Hinweis (`premiumSmsPreviewNote`).
+- **AC-8:** *(abgelöst durch #1743: der Reiter „Vorschau" entfällt; Mini-Vorschauen bleiben im Reiter Wetter-Metriken)* Given der Trip-Hub, Reiter „Vorschau" / When der Nutzer ihn öffnet / Then sieht er einen Kanalumschalter E-Mail · SMS · Telegram; bei SMS den Text im Telefonrahmen; bei E-Mail eine Ansicht Desktop/Mobil; bei Telegram eine Chat-Blase; und den Premium-SMS-Hinweis (`premiumSmsPreviewNote`).
   - Test (Kern, node --test mit SSR-Harness für `PreviewTab context="route"`; Live: Playwright gegen Staging). Datei: `frontend/src/lib/components/shared/__tests__/previewTab.test.ts`, `frontend/e2e/preview-tab-gleiche-anordnung.spec.ts`.
   - Scheibe: S2
 
-- **AC-9:** Given der geöffnete Vorschau-Reiter in einem der beiden Hubs / When er geöffnet wird / Then wird die Vorschau mit genau **einem** Abruf geladen (kein Laden vor dem Öffnen des Reiters), und When der Nutzer den Kanal wechselt oder zwischen Desktop und Mobil umschaltet / Then entsteht kein neuer Abruf.
+- **AC-9:** *(abgelöst durch #1743: der Reiter „Vorschau" entfällt, kein Briefing-Vorschau-Abruf mehr)* Given der geöffnete Vorschau-Reiter in einem der beiden Hubs / When er geöffnet wird / Then wird die Vorschau mit genau **einem** Abruf geladen (kein Laden vor dem Öffnen des Reiters), und When der Nutzer den Kanal wechselt oder zwischen Desktop und Mobil umschaltet / Then entsteht kein neuer Abruf.
   - Test (Kern, node --test: Zähler am Lader; Live: Playwright zählt Netzwerkaufrufe an `/api/briefings/*/preview`). Datei: `frontend/src/lib/components/shared/__tests__/previewLoader.test.ts`, `frontend/e2e/langlaeufer-zeitbudget-wirkort.spec.ts` (migriert).
   - Scheibe: S2
 
@@ -219,5 +226,6 @@ Mutations-Gegenprobe (Pflicht in `/50`): Vorschau-Weg vom Versand-Projektionsauf
 
 ## Changelog
 
+- 2026-10-22: Spec durch #1743 abgelöst (Reiter Vorschau entfällt ersatzlos, Endpoint `GET /api/briefings/{id}/preview` zurückgebaut); AC-8 und AC-9 als abgelöst markiert, Kopf-Hinweis ergänzt.
 - 2026-10-19: Initiale Spec (Issue #2283, Epic #2345 P3), 21 ACs in 5 Scheiben
 - 2026-10-19: Umsetzung dokumentiert (zusätzliche Dateien, Begründung Pendant-Sperre, AC-6-Abbild, Known Limitation Entwarnung); ACs unverändert

@@ -111,14 +111,15 @@ function aufbau() {
 }
 
 describe('AC-6: Reiterwechsel weg von „alarme" sendet die ausstehende Alarm-Änderung vorher', () => {
-	test('Änderung im Debounce-Fenster, Wechsel zu „versand" → PUT abgeschlossen, bevor der Wechsel freigegeben wird', async () => {
+	// #1743: Ziel „versand" ist kein Reiter mehr → „wetter-metriken"
+	test('Änderung im Debounce-Fenster, Wechsel zu „wetter-metriken" → PUT abgeschlossen, bevor der Wechsel freigegeben wird', async () => {
 		const { wiz, ctl, speicherung } = aufbau();
 		wiz.radarAlertEnabled = true;
 		speicherung.aenderungMelden();
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Änderung wartet im Debounce-Fenster');
 		assert.equal(puts().length, 0, 'Vorbedingung: noch nichts gesendet');
 
-		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'versand', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'wetter-metriken', ctl);
 
 		assert.equal(puts().length, 1, 'die Alarm-Änderung muss vor dem Reiterwechsel gesendet werden');
 		assert.equal(puts()[0].status, 200, 'der PUT muss abgeschlossen sein, bevor der Wechsel weiterläuft');
@@ -144,7 +145,7 @@ describe('AC-6: Reiterwechsel weg von „alarme" sendet die ausstehende Alarm-Ä
 	});
 
 	test('ohne Controller (Anlege-Seite) → kein Fehler, kein PUT', async () => {
-		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'versand', undefined);
+		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'wetter-metriken', undefined);
 		assert.equal(puts().length, 0);
 	});
 });

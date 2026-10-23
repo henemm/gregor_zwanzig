@@ -14,7 +14,6 @@ export type SubscriptionActionId =
 	| 'pause'
 	| 'resume'
 	| 'send'
-	| 'preview'
 	| 'alarms'
 	| 'weather'
 	| 'edit'
@@ -33,7 +32,6 @@ const A: Record<SubscriptionActionId, SubscriptionAction> = {
 	pause: { id: 'pause', label: 'Pausieren' },
 	resume: { id: 'resume', label: 'Fortsetzen' },
 	send: { id: 'send', label: 'Senden' },
-	preview: { id: 'preview', label: 'Vorschau' },
 	alarms: { id: 'alarms', label: 'Alarme' },
 	weather: { id: 'weather', label: 'Wetter-Metriken' },
 	edit: { id: 'edit', label: 'Bearbeiten' },
@@ -64,11 +62,11 @@ export function subscriptionActions(
 		case 'paused':
 			return hub
 				? ids('resume', 'archive', 'delete')
-				: ids('resume', 'send', 'preview', 'alarms', 'weather', 'edit', 'delete');
+				: ids('resume', 'send', 'alarms', 'weather', 'edit', 'delete');
 		default:
 			return hub
 				? ids('pause', 'archive', 'delete')
-				: ids('pause', 'send', 'preview', 'alarms', 'weather', 'edit', 'delete');
+				: ids('pause', 'send', 'alarms', 'weather', 'edit', 'delete');
 	}
 }
 

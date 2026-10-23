@@ -263,7 +263,7 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 		await (await thresholdBtnIn(desktop, 'telegram', 'HIGH')).click();
 		await expect(await thresholdBtnIn(desktop, 'telegram', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
 
-		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
+		// Issue #1743: Alarme ist der letzte Schritt — Aktivieren direkt von hier.
 
 		const [postRes] = await Promise.all([
 			page.waitForResponse(

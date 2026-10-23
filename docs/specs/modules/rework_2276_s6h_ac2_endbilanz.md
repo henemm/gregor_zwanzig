@@ -98,7 +98,7 @@ Diese Scheibe:
   Zählbefehl) und prüft, dass die drei Kategorie-Summen 27/6/14 ergeben.
   Verhindert, dass diese Dokumentation und die Ratsche künftig auseinanderlaufen.
 
-## Anhang: AC-2-Endbilanz — alle 46 Ratschen-Einträge (Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`)
+## Anhang: AC-2-Endbilanz — alle 47 Ratschen-Einträge (Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`)
 
 ### FACHLICH (27 — echter Sachunterschied, bleibt dauerhaft)
 
@@ -142,7 +142,7 @@ Diese Scheibe:
 | `versand-tab/VTSchedulePlan.svelte:83` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |
 | `alarme-tab/alarmeTabSections.ts:38` | nur Überschrifttext |
 
-### HERKUNFT (14 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)
+### HERKUNFT (15 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)
 
 | Datei:Zeile | Warum es (noch) eine HERKUNFT-Verzweigung ist | Warum sie bleibt |
 |---|---|---|
@@ -160,6 +160,7 @@ Diese Scheibe:
 | `WeatherMetricsTab.svelte:596` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
 | `WeatherMetricsTab.svelte:625` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
 | `WeatherMetricsTab.svelte:638` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
+| `WetterMetrikenVersandPanel.svelte:66` | #1743: Versand-Inhalt nach Herkunft — Trip-Hub über `BriefingScheduleTab`, Vergleich und Trip-Anlegen über den EINEN `VersandTab` | ersetzt die Direkt-Mounts in TripTabs/CompareTabs/Anlege-Seiten |
 
 **Summe:** 27 FACHLICH + 5 DARSTELLUNG + 14 HERKUNFT = **46**, deckungsgleich
 mit `EINGEFROREN_SOLL_ANZAHL`.

@@ -18,16 +18,18 @@ import {
 	progressCount,
 } from '../anlegeLockEngine.ts';
 
-// Feature #2287: beide Anlege-Seiten fuehren dieselben Kennungen (wetter-metriken, wertebereiche, alarme, versand).
-const TRIP = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' } as const;
-const COMPARE = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand' } as const;
+// Feature #2287: beide Anlege-Seiten fuehren dieselben Kennungen (wetter-metriken, wertebereiche, alarme).
+// Issue #1743 (Spec feat_1743_reiter_aufraeumen, Abschnitt 9, AC-19): der Schritt „Versand" entfaellt —
+// TailIds ohne `versand`, die Kette endet bei Alarme, `canFinish` gilt fuer `alarme`.
+const TRIP = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme' } as const;
+const COMPARE = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme' } as const;
 
-function p(over: Partial<{ metrikenFrei: boolean; metrikenVisited: boolean; wertebereicheVisited: boolean; alarmeVisited: boolean; versandVisited: boolean }> = {}) {
-	return { metrikenFrei: true, metrikenVisited: false, wertebereicheVisited: false, alarmeVisited: false, versandVisited: false, ...over };
+function p(over: Partial<{ metrikenFrei: boolean; metrikenVisited: boolean; wertebereicheVisited: boolean; alarmeVisited: boolean }> = {}) {
+	return { metrikenFrei: true, metrikenVisited: false, wertebereicheVisited: false, alarmeVisited: false, ...over };
 }
 const sorted = (s: Set<string>) => [...s].sort();
 
-describe('AC-1: Schwanz-Kette Metriken → Wertebereiche → Alarme → Versand', () => {
+describe('AC-1: Schwanz-Kette Metriken → Wertebereiche → Alarme (#1743: kein Versand-Schritt)', () => {
 	test('Vorderteil nicht erfüllt: gesamter Schwanz gesperrt', () => {
 		assert.deepEqual(sorted(tailUnlocked(TRIP, p({ metrikenFrei: false, metrikenVisited: true, wertebereicheVisited: true, alarmeVisited: true }))), []);
 	});
@@ -42,23 +44,22 @@ describe('AC-1: Schwanz-Kette Metriken → Wertebereiche → Alarme → Versand'
 		assert.ok(!u.has('alarme'));
 		assert.ok(tailUnlocked(TRIP, p({ metrikenVisited: true, wertebereicheVisited: true })).has('alarme'));
 	});
-	test('Versand erst nach Besuch Alarme (nicht schon nach Wertebereiche)', () => {
-		const u = tailUnlocked(TRIP, p({ metrikenVisited: true, wertebereicheVisited: true }));
-		assert.ok(!u.has('versand'));
-		assert.ok(tailUnlocked(TRIP, p({ metrikenVisited: true, wertebereicheVisited: true, alarmeVisited: true })).has('versand'));
+	test('#1743: nach Besuch Alarme wird KEIN Versand-Reiter freigeschaltet (Kette endet bei Alarme)', () => {
+		const u = tailUnlocked(TRIP, p({ metrikenVisited: true, wertebereicheVisited: true, alarmeVisited: true })) as Set<string>;
+		assert.ok(!u.has('versand'), `versand noch Teil der Kette: ${sorted(u).join(',')}`);
 	});
 	test('Compare-IDs: identisch zu Trip (Feature #2287), Kette identisch', () => {
 		const u = tailUnlocked(COMPARE, p({ metrikenVisited: true, wertebereicheVisited: true, alarmeVisited: true }));
-		assert.deepEqual(sorted(u), ['alarme', 'versand', 'wertebereiche', 'wetter-metriken']);
+		assert.deepEqual(sorted(u), ['alarme', 'wertebereiche', 'wetter-metriken']);
 	});
-	test('Kette über alle 16 Besuchs-Kombinationen gegen die Referenzformel', () => {
-		for (let m = 0; m < 16; m++) {
-			const f = { metrikenFrei: true, metrikenVisited: !!(m & 1), wertebereicheVisited: !!(m & 2), alarmeVisited: !!(m & 4), versandVisited: !!(m & 8) };
-			const u = tailUnlocked(TRIP, f);
+	test('Kette über alle 8 Besuchs-Kombinationen gegen die Referenzformel', () => {
+		for (let m = 0; m < 8; m++) {
+			const f = { metrikenFrei: true, metrikenVisited: !!(m & 1), wertebereicheVisited: !!(m & 2), alarmeVisited: !!(m & 4) };
+			const u = tailUnlocked(TRIP, f) as Set<string>;
 			assert.equal(u.has('wetter-metriken'), true);
 			assert.equal(u.has('wertebereiche'), f.metrikenVisited);
 			assert.equal(u.has('alarme'), f.wertebereicheVisited);
-			assert.equal(u.has('versand'), f.alarmeVisited);
+			assert.equal(u.has('versand'), false);
 		}
 	});
 });
@@ -83,26 +84,29 @@ describe('AC-7: erledigt = Besuchs-Flag, monoton und rein', () => {
 	});
 });
 
-describe('AC-3: canFinish', () => {
-	test('erst mit Versand erledigt', () => {
-		assert.equal(canFinish(new Set(['route', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'])), false);
-		assert.equal(canFinish(new Set(['versand'])), true);
+describe('AC-3 / #1743 AC-19: canFinish — frei, sobald Alarme besucht ist (nicht früher)', () => {
+	test('Alarme erledigt → frei (ohne Versand)', () => {
+		assert.equal(canFinish(new Set(['route', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'])), true);
+		assert.equal(canFinish(new Set(['alarme'])), true);
 	});
-	test('Alarme allein genügt nicht', () => {
-		assert.equal(canFinish(new Set(['alarme'])), false);
+	test('Wertebereiche erledigt, Alarme nicht → gesperrt', () => {
+		assert.equal(canFinish(new Set(['route', 'etappen', 'wetter-metriken', 'wertebereiche'])), false);
+	});
+	test('ein Versand-Besuch allein schaltet nichts frei', () => {
+		assert.equal(canFinish(new Set(['versand'])), false);
 	});
 });
 
 describe('AC-4/AC-5: progressCount(done, steps)', () => {
-	test('Trip-Schritte: Wertebereiche und Alarme zählen nicht mit, Maximum 4', () => {
-		const steps = ['route', 'etappen', 'wetter-metriken', 'versand'];
+	test('zählt nur die übergebenen Schritte (Fremd-Einträge zählen nicht)', () => {
+		const steps = ['route', 'etappen', 'wetter-metriken', 'alarme'];
 		assert.equal(progressCount(new Set(['route', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand']), steps), 4);
-		assert.equal(progressCount(new Set(['wertebereiche', 'alarme']), steps), 0);
-		assert.equal(progressCount(new Set(['route', 'versand']), steps), 2);
+		assert.equal(progressCount(new Set(['wertebereiche', 'versand']), steps), 0);
+		assert.equal(progressCount(new Set(['route', 'alarme']), steps), 2);
 	});
-	test('Compare: alle sechs Reiter ⇒ 6, weniger ⇒ genau deren Anzahl', () => {
-		const steps = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand'];
-		assert.equal(progressCount(new Set(steps), steps), 6);
+	test('Compare (#1743): alle fünf Reiter ⇒ 5, weniger ⇒ genau deren Anzahl', () => {
+		const steps = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'];
+		assert.equal(progressCount(new Set(steps), steps), 5);
 		assert.equal(progressCount(new Set(['vergleich', 'orte', 'wetter-metriken']), steps), 3);
 		assert.equal(progressCount(new Set(), steps), 0);
 	});

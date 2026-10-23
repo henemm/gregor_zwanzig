@@ -40,8 +40,7 @@ export { default as CompareStatusRow } from './CompareStatusRow.svelte';
 // produktiv lebt sie inline in edit/EditStagesPanelNew.svelte).
 export { default as HorizonChips }          from './HorizonChips.svelte';
 export { default as ScoreToggle }           from './ScoreToggle.svelte';
-export { default as CompareChannelSwitch }  from './CompareChannelSwitch.svelte';
-export { default as CompareChatBubble }     from './CompareChatBubble.svelte';
 // #2283 AC-14: ComparePreviewMissing, CompareSmsPreview, CompareBriefingPreview
-// entfernt — die Vorschau beider Hubs laeuft ueber shared/PreviewTab.
+// entfernt (Hub-Vorschau-Reiter entfiel mit #1743). #1743 F003 (PO-Entscheid
+// 2026-10-22): auch CompareChannelSwitch und CompareChatBubble entfallen ersatzlos.
 

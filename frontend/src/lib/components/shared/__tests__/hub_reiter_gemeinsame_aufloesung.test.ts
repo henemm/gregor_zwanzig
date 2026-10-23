@@ -145,8 +145,10 @@ for (const kind of ['trip', 'vergleich'] as Kind[]) {
 			['idealwerte', 'wertebereiche'],
 			['weather', 'wetter-metriken'],
 			['layout', 'wetter-metriken'],
-			['briefings', 'versand'],
-			['preview', 'vorschau'],
+			['briefings', 'wetter-metriken'],
+			['versand', 'wetter-metriken'],
+			['preview', 'uebersicht'],
+			['vorschau', 'uebersicht'],
 			['overview', 'uebersicht'],
 			['stages', kind === 'trip' ? 'etappen' : 'orte'],
 			// AC-5: kind-fremde Punkte-Kennung
@@ -168,6 +170,14 @@ for (const kind of ['trip', 'vergleich'] as Kind[]) {
 				);
 				assert.equal(schreibungen[0].replace, true, 'ein zusaetzlicher Verlaufseintrag waere ein Befund (AC-3)');
 				assert.equal(tabAusUrl(schreibungen[0].url), neu);
+				// #1743 AC-3/AC-4: Versand-Alt-Kennungen springen per Hash zum Versand-Abschnitt,
+				// alle anderen tragen keinen Hash.
+				const hash = new URL(schreibungen[0].url, 'http://localhost/x').hash;
+				assert.equal(
+					hash,
+					alt === 'versand' || alt === 'briefings' ? '#versand' : '',
+					`Adresszeile ${schreibungen[0].url}: falscher Anker`
+				);
 			});
 		}
 
@@ -202,6 +212,27 @@ for (const kind of ['trip', 'vergleich'] as Kind[]) {
 	});
 
 	describe(`AC-14: ${hub} reicht die Reiterleisten-Items (MTabBar, Handy wie Desktop) aus subscriptionTabs('${kind}')`, () => {
+		test('#1743 AC-1/AC-2: genau fuenf Reiter in fester Reihenfolge — ohne Versand und Vorschau', async () => {
+			const { u } = await hubOeffnen(kind, null);
+			const praefix = kind === 'trip' ? 'trip-detail-tab-' : 'compare-detail-tab-';
+			const items = Object.values(u).find(
+				(v) =>
+					Array.isArray(v) &&
+					v.length > 0 &&
+					v.every((i) => i && typeof i.testid === 'string' && i.testid.startsWith(praefix))
+			) as Array<{ value: string; label: string; testid: string }> | undefined;
+			assert.ok(Array.isArray(items), 'Item-Liste der Reiterleiste nicht auswertbar');
+			// fest eingesetzt (nicht aus subscriptionTabs abgeleitet) — sonst wanderte die Erwartung mit
+			assert.deepEqual(
+				items.map((i) => i.label),
+				['Übersicht', kind === 'trip' ? 'Etappen & Wegpunkte' : 'Orte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme']
+			);
+			assert.deepEqual(
+				items.map((i) => i.value),
+				['uebersicht', kind === 'trip' ? 'etappen' : 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']
+			);
+		});
+
 		test('Items: gleiche Kennungen, Reihenfolge und Beschriftung wie die gemeinsame Tabelle', async () => {
 			const { u } = await hubOeffnen(kind, null);
 			const praefix = kind === 'trip' ? 'trip-detail-tab-' : 'compare-detail-tab-';
@@ -240,7 +271,7 @@ function ausstehend(): { ctl: ReturnType<typeof createController>; laeufe: () =>
 }
 
 describe('AC-7: Trip-Hub — Reiterwechsel aus einem selbst speichernden Reiter flusht (neue Kennungen)', () => {
-	for (const reiter of ['wertebereiche', 'wetter-metriken', 'versand', 'alarme', 'etappen']) {
+	for (const reiter of ['wertebereiche', 'wetter-metriken', 'alarme', 'etappen']) {
 		test(`Wechsel aus '${reiter}' mit hasPending → Speicherung laeuft VOR dem Wechsel`, async () => {
 			const { ctl, laeufe } = ausstehend();
 			const { u } = await hubOeffnen('trip', reiter, { saveController: ctl });
@@ -256,7 +287,7 @@ describe('AC-7: Trip-Hub — Reiterwechsel aus einem selbst speichernden Reiter 
 	test("Wechsel aus der Uebersicht flusht NICHT (Gegenprobe: Guard ist nicht auf alles offen)", async () => {
 		const { ctl, laeufe } = ausstehend();
 		const { u } = await hubOeffnen('trip', 'uebersicht', { saveController: ctl });
-		await (u.handleValueChange as (v: string) => Promise<void>)('versand');
+		await (u.handleValueChange as (v: string) => Promise<void>)('wetter-metriken');
 		assert.equal(laeufe(), 0);
 		ctl.cancel?.();
 	});
@@ -271,7 +302,7 @@ describe('AC-7: Trip-Hub — Reiterwechsel aus einem selbst speichernden Reiter 
 });
 
 describe('AC-8: Vergleich-Hub — Flush-Guard mit wertebereiche (nicht mehr idealwerte)', () => {
-	for (const reiter of ['wertebereiche', 'wetter-metriken', 'versand', 'alarme']) {
+	for (const reiter of ['wertebereiche', 'wetter-metriken', 'alarme']) {
 		test(`Wechsel aus '${reiter}' mit ausstehender Speicherung → Flush`, async () => {
 			const { ctl, laeufe } = ausstehend();
 			const { u } = await hubOeffnen('vergleich', reiter, { saveController: ctl });
@@ -291,15 +322,59 @@ describe('AC-8: Vergleich-Hub — Flush-Guard mit wertebereiche (nicht mehr idea
 	});
 });
 
+// ── #1743 AC-26: Wechsel weg von `wetter-metriken` sendet die Slots BEIDER Besitzer ──
+//
+// Seit #1743 liegen Wetter-Metriken und Versand im selben Panel und speichern ueber zwei
+// Besitzer-Schluessel ('wetter-metriken', 'versand') in denselben saveController. Ein
+// fremder `schedule` flusht den belegten Slot sofort (Spec 5.); beim Reiterwechsel muss der
+// verbliebene Slot gesendet sein, BEVOR der neue Reiter erscheint. Gemessen am echten
+// Hub-Handler mit echtem Controller. Heute (ohne Besitzer) ersetzt der zweite `schedule`
+// den ersten still → ein Speicherlauf fehlt.
+
+for (const kind of ['trip', 'vergleich'] as Kind[]) {
+	const hub = kind === 'trip' ? 'TripTabs' : 'CompareTabs';
+	describe(`#1743 AC-26: ${hub} — Wechsel weg von wetter-metriken sendet beide Besitzer`, () => {
+		test('Wetter-Metrik und Versandzeit im Entprellfenster, dann Reiterwechsel → beide Speicherlaeufe vor dem Wechsel', async () => {
+			const ctl = createController('hub-zwei-besitzer');
+			const gelaufen: Array<{ owner: string; reiter: unknown }> = [];
+			// dritter Parameter `owner` laut red-schnittstellen.md (heute ignoriert)
+			const plane = (fn: () => Promise<void>, ms: number, owner: string): void =>
+				(ctl.schedule as (fn: () => Promise<void>, ms?: number, owner?: string) => void).call(ctl, fn, ms, owner);
+			let hubU: Knoten | null = null;
+			plane(async () => {
+				gelaufen.push({ owner: 'wetter-metriken', reiter: hubU?.activeTab });
+			}, 60_000, 'wetter-metriken');
+			plane(async () => {
+				gelaufen.push({ owner: 'versand', reiter: hubU?.activeTab });
+			}, 60_000, 'versand');
+			const { u } = await hubOeffnen(kind, 'wetter-metriken', { saveController: ctl });
+			hubU = u;
+			assert.equal(u.activeTab, 'wetter-metriken', 'Vorbedingung: Hub steht im Reiter wetter-metriken');
+			await (u.handleValueChange as (v: string) => Promise<void>)('uebersicht');
+			assert.deepEqual(
+				gelaufen.map((g) => g.owner).sort(),
+				['versand', 'wetter-metriken'],
+				`beide Besitzer muessen gesendet sein, gelaufen: ${JSON.stringify(gelaufen)} (zweiter schedule hat den ersten still ersetzt?)`
+			);
+			for (const g of gelaufen) {
+				assert.notEqual(g.reiter, 'uebersicht', `Slot '${g.owner}' lief erst NACH dem Reiterwechsel`);
+			}
+			assert.equal(u.activeTab, 'uebersicht');
+			ctl.cancel?.();
+		});
+	});
+}
+
 // ── Panel-Weichen: kein Alt-Literal mehr im Rahmen ──────────────────────────────
 
 // doc-compliance-test: das Panel-Rendering ist ohne DOM nicht ausfuehrbar; hier wird
 // nur belegt, dass die Panel-Weichen die neue Kennung verwenden (die echte
 // Messung des gerenderten testid `…-panel-wertebereiche` ist Playwright, AC-12/AC-15).
 describe('Panel-Weichen nutzen die neuen Kennungen (doc-compliance-test)', () => {
-	test("TripTabs: Panel-Weiche kennt 'wertebereiche'/'versand'/'etappen'/'wetter-metriken'/'uebersicht'/'vorschau' — kein 'alerts'/'briefings'/'stages'/'weather'/'overview'/'preview'", () => {
+	test("TripTabs: Panel-Weiche kennt 'wertebereiche'/'etappen'/'wetter-metriken'/'uebersicht' — kein 'alerts'/'briefings'/'stages'/'weather'/'overview'/'preview'", () => {
 		const q = readFileSync(TRIP_HUB, 'utf-8');
-		for (const neu of ['wertebereiche', 'versand', 'etappen', 'wetter-metriken', 'uebersicht', 'vorschau']) {
+		// #1743: 'versand'/'vorschau' sind keine Reiter mehr (nur Pflichtliste gekuerzt, keine neuen Quelltext-Verbote).
+		for (const neu of ['wertebereiche', 'etappen', 'wetter-metriken', 'uebersicht']) {
 			assert.ok(q.includes(`tab.value === '${neu}'`), `Panel-Weiche fuer '${neu}' fehlt`);
 		}
 		for (const alt of ['alerts', 'briefings', 'stages', 'weather', 'overview', 'preview']) {

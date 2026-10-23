@@ -283,19 +283,16 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Desktop (AC-25–
 		await idealwerteTab.click();
 		await expect(idealwerteTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 
-		// Issue #1258 Scheibe S4 (E1/E2, AC-28): "alarme" ist reguläre Station
-		// vor "versand" — "versand" bleibt ohne Alarme-Besuch gesperrt. Der
-		// frühere Layout-Schritt entfällt (Reiter per #1360 aufgelöst, Kette
-		// seither wertebereiche → alarme → versand).
+		// Issue #1258 Scheibe S4 (E1/E2, AC-28): "alarme" ist reguläre Station.
+		// Issue #1743: kein Schritt "versand" mehr — Alarme ist der letzte
+		// Schritt, sein Besuch schaltet "Briefing aktivieren" frei.
+		const activateBtn = page.locator('[data-testid="compare-editor-activate"]:visible');
+		await expect(activateBtn).toBeDisabled();
 		const alarmeTab = page.locator('[data-testid="compare-editor-tab-alarme"]:visible');
 		await alarmeTab.click();
 		await expect(alarmeTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
+		await expect(page.locator('[data-testid="compare-editor-tab-versand"]')).toHaveCount(0);
 
-		const versandTab = page.locator('[data-testid="compare-editor-tab-versand"]:visible');
-		await versandTab.click();
-		await expect(versandTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
-
-		const activateBtn = page.locator('[data-testid="compare-editor-activate"]:visible');
 		await expect(activateBtn).toBeEnabled({ timeout: 10_000 });
 		await activateBtn.click();
 

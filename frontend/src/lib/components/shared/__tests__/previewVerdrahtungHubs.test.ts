@@ -1,19 +1,21 @@
-// Issue #2283 Fix-Loop (Adversary F001–F004, F006b): die Vorschau-Zusicherungen
-// werden dort geprueft, wo sie WIRKEN — an der Verdrahtung in den Hubs
-// (TripTabs, CompareTabs, AlarmeTab) und am Einhaengepunkt des Reiters —, nicht
-// nur am Baustein.
-// Spec: docs/specs/modules/shared_preview_tab.md (AC-8, AC-9, AC-12, AC-15, AC-20).
+// Issue #2283 Fix-Loop (Adversary F003, F006b, F008, F009): die Alarm-Vorschau-Zusicherungen
+// werden dort geprueft, wo sie WIRKEN — an der Verdrahtung im Alarme-Reiter (AlarmeTab →
+// AlertPreviewCard) —, nicht nur am Baustein.
+// Spec: docs/specs/modules/shared_preview_tab.md (AC-20).
+//
+// #1743 (Spec feat_1743_reiter_aufraeumen AC-28, AC-29, AC-33): der Hub-Reiter „Vorschau"
+// (PreviewTab, previewLoader) entfaellt ersatzlos. Die Briefing-Vorschau-Faelle F001, F002,
+// F004 und „Telegram-Blasen" (renderten den entfallenden PreviewTab) sind entfernt. Der
+// Alarm-Vorschau-Teil (POST /api/briefings/{id}/alert-preview) BLEIBT unveraendert
+// (AC-29, Regressionswaechter). Neu: kein Hub bettet einen Vorschau-Reiter mehr ein.
 //
 // Testart (Kern, kein Netz): Die Suite ist SSR-only, onMount und Klicks laufen
 // dort nie. Deshalb zweierlei, beides am ECHTEN Code:
-//   * svelteInstanzPruefstand: wertet das Instanz-Skript des Hubs mit gesaeten
-//     Props aus und liest die Attribut-Ausdruecke der ECHTEN Einbettung
-//     (<PreviewTab …>, <AlertPreviewCard …>, {#key …}). Der Einhaengepunkt
-//     (`onMount(...)` in PreviewTab) und der Abruf der Karte (`loadPreview`)
-//     werden gegen den echten Lader / das echte api.ts ausgefuehrt; gezaehlt
-//     wird am Netz-Ausgang `globalThis.fetch`.
-//   * svelte/server: die so gewonnenen Props speisen den echten PreviewTab bzw.
-//     AlarmeTab — geprueft wird das gerenderte Ergebnis.
+//   * svelteInstanzPruefstand: wertet das Instanz-Skript mit gesaeten Props aus und liest
+//     die Attribut-Ausdruecke der ECHTEN Einbettung (<AlertPreviewCard …>). Der Abruf der
+//     Karte (`loadPreview`) wird gegen das echte api.ts ausgefuehrt; gezaehlt wird am
+//     Netz-Ausgang `globalThis.fetch`.
+//   * svelte/server: der echte AlarmeTab wird gerendert — geprueft wird das Ergebnis.
 //
 // Ausfuehren:
 //   cd frontend && npm test -- src/lib/components/shared/__tests__/previewVerdrahtungHubs.test.ts
@@ -31,7 +33,6 @@ import { vollerVergleich } from './goMergeServerPruefstand.ts';
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../..');
 const basis = pathToFileURL(FRONTEND + '/').href;
-const PREVIEW_TAB = join(HIER, '..', 'PreviewTab.svelte');
 const TRIP_HUB = join(HIER, '..', '..', 'trip-detail', 'TripTabs.svelte');
 const VERGLEICH_HUB = join(HIER, '..', '..', 'compare', 'CompareTabs.svelte');
 const ALARME_TAB = join(HIER, '..', 'AlarmeTab.svelte');
@@ -43,19 +44,8 @@ register(pathToFileURL(join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, basis)
 register(pathToFileURL(join(HIER, 'svelteTsModulHook.mjs')).href, basis);
 
 const { render } = await import('svelte/server');
-const { createPreviewLoader } = await import('../previewLoader.ts');
 const { alarmePropsAus } = await import('../../compare/alarmePropsAus.ts');
-const PreviewTab = (await import(pathToFileURL(PREVIEW_TAB).href)).default;
 const AlarmeTab = (await import(pathToFileURL(ALARME_TAB).href)).default;
-
-const BUENDEL = {
-	subject: '[KHW 403] Morgen',
-	email_html: '<html><body><p>Etappe 3</p></body></html>',
-	sms: { text: 'KHW_03: N3 D11 W35 G52', char_count: 22 },
-	telegram: { body: 'Etappe 3 — Wind 35 km/h' }
-};
-
-let buendel: Record<string, unknown> = BUENDEL;
 
 type Aufruf = { url: string; method: string; body: string | null };
 let aufrufe: Aufruf[] = [];
@@ -75,9 +65,8 @@ before(() => {
 	(globalThis as Knoten).fetch = (input: unknown, init?: RequestInit) => {
 		const url = String(input);
 		aufrufe.push({ url, method: String(init?.method ?? 'GET'), body: (init?.body as string) ?? null });
-		const daten = url.includes('/alert-preview') ? alarmAntwort : buendel;
 		return Promise.resolve(
-			new Response(JSON.stringify(daten), { status: 200, headers: { 'Content-Type': 'application/json' } })
+			new Response(JSON.stringify(alarmAntwort), { status: 200, headers: { 'Content-Type': 'application/json' } })
 		);
 	};
 });
@@ -86,25 +75,7 @@ after(() => {
 	(globalThis as Knoten).window = alt.window;
 });
 
-const flush = () => new Promise((r) => setImmediate(r));
 const tid = (t: string) => `data-testid="${t}"`;
-const vorschauAbrufe = () => aufrufe.filter((a) => /\/api\/briefings\/[^/]+\/preview/.test(a.url));
-
-/** Die EINE Einbettung `name` im Markup samt ihrer umschliessenden Bloecke. */
-function einbettungMitVorfahren(ast: Knoten, name: string): { knoten: Knoten; vorfahren: Knoten[] } {
-	const treffer: { knoten: Knoten; vorfahren: Knoten[] }[] = [];
-	function lauf(n: unknown, kette: Knoten[]): void {
-		if (n === null || typeof n !== 'object') return;
-		if (Array.isArray(n)) return n.forEach((k) => lauf(k, kette));
-		const k = n as Knoten;
-		if (k.type === 'Component' && k.name === name) treffer.push({ knoten: k, vorfahren: kette });
-		const weiter = typeof k.type === 'string' ? [...kette, k] : kette;
-		for (const key of Object.keys(k)) if (key !== 'parent' && key !== 'loc') lauf(k[key], weiter);
-	}
-	lauf(ast.fragment, []);
-	assert.equal(treffer.length, 1, `erwartet genau eine <${name}>-Einbettung, gefunden ${treffer.length}`);
-	return treffer[0];
-}
 
 /** Wert eines Attributs an einer Einbettung: Ausdruck ausgewertet, statischer Text als String. */
 function attribut(einbettung: Knoten, quelle: string, name: string, u: Knoten): unknown {
@@ -116,7 +87,7 @@ function attribut(einbettung: Knoten, quelle: string, name: string, u: Knoten): 
 	return teile.map((t) => (t.type === 'Text' ? t.data : werte(ohneTypen(quelle, t.expression), u))).join('');
 }
 
-/** Alle Props einer Einbettung, ausgewertet gegen die Hub-Umgebung. */
+/** Alle Props einer Einbettung, ausgewertet gegen die Umgebung. */
 function propsVon(einbettung: Knoten, quelle: string, u: Knoten): Record<string, unknown> {
 	const p: Record<string, unknown> = {};
 	for (const a of (einbettung.attributes ?? []) as Knoten[]) {
@@ -125,137 +96,17 @@ function propsVon(einbettung: Knoten, quelle: string, u: Knoten): Record<string,
 	return p;
 }
 
-/** Die `onMount(...)`-Rueckrufe eines Instanz-Skripts, gegen `u` registriert (nicht ausgefuehrt). */
-function onMountVon(ast: Knoten, quelle: string, u: Knoten): Array<() => unknown> {
-	const gesammelt: Array<() => unknown> = [];
-	u.onMount = (fn: () => unknown) => gesammelt.push(fn);
-	for (const stmt of (ast.instance?.content?.body as Knoten[]) ?? []) {
-		const c = stmt.type === 'ExpressionStatement' ? (stmt.expression as Knoten) : null;
-		if (c?.type === 'CallExpression' && c.callee?.type === 'Identifier' && c.callee.name === 'onMount') {
-			werte(ohneTypen(quelle, c), u);
-		}
-	}
-	assert.ok(gesammelt.length > 0, 'Messaufbau: PreviewTab registriert keinen onMount-Rueckruf');
-	return gesammelt;
-}
-
-/** Echter Lader, geladen, Kanal gewaehlt — fuer das SSR-Rendern des echten PreviewTab. */
-async function geladen(kind: 'route' | 'vergleich', channel: string) {
-	const l = createPreviewLoader({ kind, id: kind === 'route' ? 't-1' : 'cp-1' });
-	await l.load();
-	l.setChannel(channel as 'sms');
-	return l;
-}
-
-function trip(id: string, rc: Record<string, unknown>): Knoten {
-	return { id, name: 'KHW 403', stages: [], alert_rules: [], display_config: {}, report_config: rc };
-}
-
-async function tripHub(t: Knoten) {
-	const saat = { trip: t, initialTab: 'vorschau', badges: {}, goto: () => Promise.resolve(), page: { url: new URL('http://localhost/trips/x') } };
-	const { ast, quelle, u } = await umgebungFuer(TRIP_HUB, saat, { jsAlsTs: true });
-	return { ast, quelle, u };
-}
-
-async function vergleichHub(preset: Knoten) {
-	const saat = { preset, locations: [], orteCount: 3, initialTab: 'vorschau', goto: () => Promise.resolve(), page: { url: new URL('http://localhost/compare/x') } };
-	const { ast, quelle, u } = await umgebungFuer(VERGLEICH_HUB, saat, { jsAlsTs: true });
-	return { ast, quelle, u };
-}
-
-// ── F001 / AC-9: genau EIN Abruf beim Einhaengen, keiner vorher ──────────────
-describe('F001 (AC-9): PreviewTab laedt beim Einhaengen genau einmal — am echten onMount', () => {
-	for (const kind of ['route', 'vergleich'] as const) {
-		test(`${kind}: Instanz anlegen ruft nichts ab, onMount ruft genau einmal ab, der Zustand kommt an`, async () => {
-			aufrufe = [];
-			const saat = { context: kind, id: `e-${kind}`, loaderProp: undefined, premiumSms: false, untrack: (f: () => unknown) => f() };
-			const { ast, quelle, u } = await umgebungFuer(PREVIEW_TAB, saat, { jsAlsTs: true });
-			assert.equal(typeof u.loader?.load, 'function', 'Messaufbau: PreviewTab legt keinen Lader an');
-			const mounts = onMountVon(ast, quelle, u);
-			await flush();
-			assert.equal(vorschauAbrufe().length, 0, 'schon das Anlegen des Reiters hat abgerufen (AC-9: kein Laden vor dem Oeffnen)');
-			const abbau = mounts.map((fn) => fn());
-			await flush();
-			await flush();
-			assert.equal(vorschauAbrufe().length, 1, `onMount muss genau EINEN Abruf ausloesen, waren ${vorschauAbrufe().length}`);
-			assert.equal(new URL(vorschauAbrufe()[0].url, 'http://l').searchParams.get('kind'), kind);
-			assert.equal(u.s.status, 'ready', 'der Reiter sieht den geladenen Zustand nicht (subscribe fehlt)');
-			for (const ab of abbau) if (typeof ab === 'function') ab();
+// ── #1743 AC-28/AC-33: kein Hub bettet den Briefing-Vorschau-Reiter mehr ein ──
+describe('#1743: Trip- und Vergleichs-Hub betten keinen Vorschau-Reiter (PreviewTab) mehr ein', () => {
+	for (const [hub, datei, saat] of [
+		['TripTabs', TRIP_HUB, { trip: { id: 't-1', stages: [], report_config: {}, display_config: {} }, badges: {} }],
+		['CompareTabs', VERGLEICH_HUB, { preset: vollerVergleich('cp-1'), locations: [], orteCount: 3 }]
+	] as const) {
+		test(`${hub}: keine <PreviewTab>-Einbettung`, async () => {
+			const { ast } = await umgebungFuer(datei, { ...saat }, { jsAlsTs: true });
+			assert.equal(findeKomponenten(ast, 'PreviewTab').length, 0, `${hub} bettet den entfallenen Vorschau-Reiter noch ein`);
 		});
 	}
-});
-
-// ── F002 / AC-15: SMS-Budget je Kontext ─────────────────────────────────────
-describe('F002: SMS-Zeichenbudget — Vergleich 153, Trip 160', () => {
-	for (const [kind, budget] of [['vergleich', 153], ['route', 160]] as const) {
-		test(`${kind}: Zaehler zeigt „N/${budget}"`, async () => {
-			const html = render(PreviewTab, { props: { context: kind, id: 'x', loader: await geladen(kind, 'sms') } }).body;
-			const m = html.match(/data-testid="sms-char-count"[^>]*>([^<]*)</);
-			assert.ok(m, 'sms-char-count fehlt');
-			assert.equal(m![1].trim(), `${BUENDEL.sms.char_count}/${budget}`);
-		});
-	}
-});
-
-// ── F004: Verdrahtung der Hubs (Premium-SMS, Kanalliste, {#key}) ────────────
-async function vorschauProps(hub: 'trip' | 'vergleich', eintrag: Knoten) {
-	const { ast, quelle, u } = hub === 'trip' ? await tripHub(eintrag) : await vergleichHub(eintrag);
-	const { knoten, vorfahren } = einbettungMitVorfahren(ast, 'PreviewTab');
-	const key = [...vorfahren].reverse().find((v) => v.type === 'KeyBlock');
-	return { props: propsVon(knoten, quelle, u), key: key ? werte(ohneTypen(quelle, key.expression), u) : undefined };
-}
-
-async function renderMit(props: Record<string, unknown>, channel: string): Promise<string> {
-	const kind = props.context as 'route' | 'vergleich';
-	return render(PreviewTab, { props: { ...props, loader: await geladen(kind, channel) } }).body;
-}
-
-const PREMIUM_HINWEIS = tid('compare-preview-premium-sms-note');
-const NICHT_KONFIGURIERT = tid('preview-channel-not-configured');
-
-describe('F004: TripTabs reicht Premium-SMS und Kanaele aus report_config an den Vorschau-Reiter', () => {
-	for (const an of [true, false]) {
-		test(`send_premium_sms=${an} ⇒ Premium-SMS-Hinweis ${an ? 'sichtbar' : 'weg'}`, async () => {
-			const { props } = await vorschauProps('trip', trip('t-1', { send_sms: true, send_premium_sms: an }));
-			assert.equal(props.context, 'route');
-			const html = await renderMit(props, 'sms');
-			assert.equal(html.includes(PREMIUM_HINWEIS), an);
-		});
-		test(`send_telegram=${an} ⇒ Telegram ${an ? 'konfiguriert' : 'als nicht konfiguriert markiert'}`, async () => {
-			const { props } = await vorschauProps('trip', trip('t-1', { send_telegram: an }));
-			const html = await renderMit(props, 'telegram');
-			assert.equal(html.includes(NICHT_KONFIGURIERT), !an);
-		});
-	}
-	test('{#key}: der Reiter haengt an der Trip-ID (andere ID ⇒ neue Instanz ⇒ neuer Lader)', async () => {
-		const a = await vorschauProps('trip', trip('t-a', {}));
-		const b = await vorschauProps('trip', trip('t-b', {}));
-		assert.equal(a.key, 't-a', 'PreviewTab steht nicht unter {#key trip.id}');
-		assert.equal(b.key, 't-b');
-		assert.equal(a.props.id, 't-a');
-	});
-});
-
-describe('F004: CompareTabs reicht Premium-SMS und Kanaele aus dem Vergleich an den Vorschau-Reiter', () => {
-	for (const an of [true, false]) {
-		test(`send_premium_sms=${an} ⇒ Premium-SMS-Hinweis ${an ? 'sichtbar' : 'weg'}`, async () => {
-			const { props } = await vorschauProps('vergleich', { ...vollerVergleich('cp-1'), send_sms: true, send_premium_sms: an });
-			assert.equal(props.context, 'vergleich');
-			const html = await renderMit(props, 'sms');
-			assert.equal(html.includes(PREMIUM_HINWEIS), an);
-		});
-		test(`send_telegram=${an} ⇒ Telegram ${an ? 'konfiguriert' : 'als nicht konfiguriert markiert'}`, async () => {
-			const { props } = await vorschauProps('vergleich', { ...vollerVergleich('cp-1'), send_telegram: an });
-			const html = await renderMit(props, 'telegram');
-			assert.equal(html.includes(NICHT_KONFIGURIERT), !an);
-		});
-	}
-	test('{#key}: der Reiter haengt an der Vergleichs-ID', async () => {
-		const a = await vorschauProps('vergleich', vollerVergleich('cp-a'));
-		const b = await vorschauProps('vergleich', vollerVergleich('cp-b'));
-		assert.equal(a.key, 'cp-a', 'PreviewTab steht nicht unter {#key preset.id}');
-		assert.equal(b.key, 'cp-b');
-	});
 });
 
 // ── F003 / AC-20: AlarmeTab(vergleich) → AlertPreviewCard → abgeschickter Koerper ─
@@ -388,26 +239,5 @@ describe('F009: Alarm-Vorschau ohne gespeicherten Eintrag', () => {
 		const html = render(AlarmeTab, { props: saat }).body;
 		assert.ok(html.includes(tid('alert-preview-unsaved')), 'Hinweis alert-preview-unsaved fehlt');
 		assert.equal(html.includes(tid('alert-preview-load-btn')), false, 'ohne ID darf kein Abruf ausloesbar sein');
-	});
-});
-
-// ── Telegram-Blasen: bubbles = mehrere Nachrichten = mehrere Blasen ────────
-describe('Telegram-Vorschau: je Nachricht eine Chat-Blase', () => {
-	async function blasen(telegram: Record<string, unknown>): Promise<string[]> {
-		buendel = { ...BUENDEL, telegram };
-		try {
-			const html = render(PreviewTab, { props: { context: 'route', id: 'x', loader: await geladen('route', 'telegram') } }).body;
-			return [...html.matchAll(/data-testid="compare-preview-telegram-text"[^>]*>([^<]*)</g)].map((m) => m[1]);
-		} finally {
-			buendel = BUENDEL;
-		}
-	}
-
-	test('bubbles [a, b] ⇒ zwei Blasen mit genau diesen Texten', async () => {
-		assert.deepEqual(await blasen({ body: 'a\n---\nb', bubbles: ['a', 'b'] }), ['a', 'b']);
-	});
-
-	test('ohne bubbles ⇒ eine Blase mit body', async () => {
-		assert.deepEqual(await blasen({ body: 'nur eine' }), ['nur eine']);
 	});
 });

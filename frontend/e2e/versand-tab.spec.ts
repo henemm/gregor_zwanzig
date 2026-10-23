@@ -75,9 +75,15 @@ async function openTripOverview(page: Page, id: string): Promise<void> {
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();
 }
 
+// Issue #1743: kein eigener Reiter „Versand" mehr — der Versand-Inhalt steht
+// im Reiter „Wetter-Metriken" im Abschnitt `#versand` (versand-abschnitt).
 async function clickVersandTab(page: Page): Promise<void> {
-	await page.getByTestId('trip-detail-tab-versand').first().click();
-	await expect(page.getByTestId('trip-detail-panel-versand')).toBeVisible();
+	await page.getByTestId('trip-detail-tab-wetter-metriken').first().click();
+	await expect(versandPanel(page)).toBeVisible();
+}
+
+function versandPanel(page: Page) {
+	return page.getByTestId('trip-detail-panel-wetter-metriken').getByTestId('versand-abschnitt');
 }
 
 async function clickAlertsTab(page: Page): Promise<void> {
@@ -122,7 +128,7 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickVersandTab(page);
 
-		const panel = page.getByTestId('trip-detail-panel-versand');
+		const panel = versandPanel(page);
 		await expect(panel.getByText('Etappen öffnen →')).toBeVisible();
 	});
 
@@ -132,7 +138,7 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickVersandTab(page);
 
-		const panel = page.getByTestId('trip-detail-panel-versand');
+		const panel = versandPanel(page);
 		await expect(panel.getByTestId('channel-email').locator(':visible').first()).toBeVisible();
 		await expect(panel.getByTestId('morning-master-switch').locator(':visible').first()).toBeVisible();
 		await expect(panel.getByTestId('report-morning-time')).toBeVisible();
@@ -157,7 +163,7 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickVersandTab(page);
 
-		const panel = page.getByTestId('trip-detail-panel-versand');
+		const panel = versandPanel(page);
 		await expect(panel.getByTestId('alert-cooldown-card')).toHaveCount(0);
 		await expect(panel.getByTestId('alerts-tab-official-alerts-toggle')).toHaveCount(0);
 	});
@@ -168,7 +174,7 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickVersandTab(page);
 
-		await page.getByTestId('trip-detail-panel-versand').getByText('Etappen öffnen →').click();
+		await versandPanel(page).getByText('Etappen öffnen →').click();
 		await expect(page.getByTestId('trip-detail-tab-etappen')).toHaveAttribute('data-state', 'active');
 		await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible();
 	});

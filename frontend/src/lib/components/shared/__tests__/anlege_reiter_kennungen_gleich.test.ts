@@ -4,6 +4,9 @@
 // `etappen` bzw. `orte`); `tailUnlocked` bekommt in beiden Seiten identische `TailIds`.
 //
 // Spec: docs/specs/modules/feat_2287_tab_kennungen.md — E6, AC-13
+// Issue #1743 (feat_1743_reiter_aufraeumen, AC-17/AC-19): der Schritt „versand" entfaellt —
+// Schwanz-Kette ist jetzt wetter-metriken · wertebereiche · alarme. `unlockedTabs`/`doneTabs`
+// werden ohne Versand-Flag aufgerufen (6 Argumente).
 //
 // Messweise:
 //   - Trip: die ECHTEN Funktionen `unlockedTabs`/`doneTabs` (tripNewLogic.ts) mit allen
@@ -33,7 +36,7 @@ register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, p
 const { render } = await import('svelte/server');
 const Editor = (await import(pathToFileURL(path.join(HERE, '../../compare-new/CompareNewEditor.svelte')).href)).default;
 
-const SCHWANZ = ['wetter-metriken', 'wertebereiche', 'alarme', 'versand'];
+const SCHWANZ = ['wetter-metriken', 'wertebereiche', 'alarme'];
 const ALT_ANLEGE = ['metriken', 'idealwerte'];
 
 function vergleichHtml(activeTab: string, alleFlags: boolean): string {
@@ -45,8 +48,7 @@ function vergleichHtml(activeTab: string, alleFlags: boolean): string {
 				isMobileViewport: false,
 				metrikenVisited: alleFlags,
 				idealsVisited: alleFlags,
-				alarmeVisited: alleFlags,
-				versandVisited: alleFlags
+				alarmeVisited: alleFlags
 			}
 		},
 		context: new Map([['compare-wizard-state', wiz]])
@@ -58,36 +60,36 @@ function vergleichReiterIds(html: string): string[] {
 }
 
 describe('AC-13 Trip-Anlegen: Schwanz-Kette traegt die gemeinsamen Kennungen', () => {
-	test('alle Besuchs-Flags: freigeschaltet sind wetter-metriken, wertebereiche, alarme, versand', () => {
-		const u = unlockedTabs('GR20', '2026-07-01', true, true, true, true, true) as Set<string>;
+	test('alle Besuchs-Flags: freigeschaltet sind wetter-metriken, wertebereiche, alarme — kein versand', () => {
+		const u = unlockedTabs('GR20', '2026-07-01', true, true, true, true) as Set<string>;
 		for (const id of SCHWANZ) assert.ok(u.has(id), `'${id}' nicht freigeschaltet: ${[...u].join(',')}`);
-		for (const alt of ALT_ANLEGE) assert.ok(!u.has(alt), `Alt-Kennung '${alt}' im Trip-Anlegen`);
+		for (const alt of [...ALT_ANLEGE, 'versand']) assert.ok(!u.has(alt), `Kennung '${alt}' im Trip-Anlegen`);
 	});
 
-	test('Freischalt-Reihenfolge unveraendert: Wertebereiche erst nach Wetter-Metriken, Alarme nach Wertebereichen, Versand nach Alarmen', () => {
+	test('Freischalt-Reihenfolge unveraendert: Wertebereiche erst nach Wetter-Metriken, Alarme nach Wertebereichen', () => {
 		const frei = (wt: boolean, wb: boolean, al: boolean) =>
-			unlockedTabs('GR20', '2026-07-01', true, wt, wb, al, false) as Set<string>;
+			unlockedTabs('GR20', '2026-07-01', true, wt, wb, al) as Set<string>;
 		assert.equal(frei(false, false, false).has('wertebereiche'), false);
 		assert.equal(frei(true, false, false).has('wertebereiche'), true);
 		assert.equal(frei(true, false, false).has('alarme'), false);
 		assert.equal(frei(true, true, false).has('alarme'), true);
-		assert.equal(frei(true, true, false).has('versand'), false);
-		assert.equal(frei(true, true, true).has('versand'), true);
+		assert.equal(frei(true, true, true).has('versand'), false);
 	});
 
 	test('erledigt-Menge benutzt dieselben Kennungen', () => {
-		const d = doneTabs('GR20', '2026-07-01', true, true, true, true, true) as Set<string>;
-		for (const id of ['wetter-metriken', 'alarme', 'versand']) assert.ok(d.has(id), `'${id}' nicht erledigt`);
+		const d = doneTabs('GR20', '2026-07-01', true, true, true, true) as Set<string>;
+		for (const id of ['wetter-metriken', 'alarme']) assert.ok(d.has(id), `'${id}' nicht erledigt`);
+		assert.ok(!d.has('versand'), 'versand ist kein Schritt mehr');
 	});
 
 	test('Punkte-Reiter heisst etappen; wegpunkte bleibt kind-eigen', () => {
-		const u = unlockedTabs('GR20', '2026-07-01', true, false, false, false, false) as Set<string>;
+		const u = unlockedTabs('GR20', '2026-07-01', true, false, false, false) as Set<string>;
 		assert.ok(u.has('etappen') && u.has('wegpunkte') && u.has('route'));
 	});
 });
 
 describe('AC-13 Vergleich-Anlegen: Reiterleiste traegt dieselben Kennungen (gerenderte testids)', () => {
-	test('Reiter: vergleich, orte, wetter-metriken, wertebereiche, alarme, versand — keine Alt-Kennung', () => {
+	test('Reiter: vergleich, orte, wetter-metriken, wertebereiche, alarme — kein versand, keine Alt-Kennung', () => {
 		const ids = vergleichReiterIds(vergleichHtml('vergleich', true));
 		assert.deepEqual(ids, ['vergleich', 'orte', ...SCHWANZ]);
 	});
@@ -117,7 +119,7 @@ describe('AC-13 Vergleich-Anlegen: Reiterleiste traegt dieselben Kennungen (gere
 
 describe('AC-13 Paritaet: beide Seiten fuehren dieselben Schwanz-Kennungen', () => {
 	test('Trip-Freischaltmenge ∩ Schwanz == Vergleich-Reiterleiste ∩ Schwanz', () => {
-		const trip = [...(unlockedTabs('GR20', '2026-07-01', true, true, true, true, true) as Set<string>)]
+		const trip = [...(unlockedTabs('GR20', '2026-07-01', true, true, true, true) as Set<string>)]
 			.filter((i) => SCHWANZ.includes(i))
 			.sort();
 		const vergleich = vergleichReiterIds(vergleichHtml('vergleich', true)).filter((i) => SCHWANZ.includes(i)).sort();

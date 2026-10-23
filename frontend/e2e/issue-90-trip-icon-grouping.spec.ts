@@ -75,7 +75,8 @@ test.describe('Bug #295 — Trips-Liste: Primary-Button + Kebab (Ablösung Issue
 
 		// #2278: EINE Aktionsquelle (subscriptionActions, Fläche "list"). Für einen aktiven/pausierten
 		// Trip: Pausieren|Fortsetzen · Senden · Vorschau · Alarme · Wetter-Metriken · Bearbeiten · Löschen.
-		const expectedItems = ['Senden', 'Vorschau', 'Alarme', 'Wetter-Metriken', 'Bearbeiten', 'Löschen'];
+		// Issue #1743: Aktion „Vorschau" entfaellt.
+		const expectedItems = ['Senden', 'Alarme', 'Wetter-Metriken', 'Bearbeiten', 'Löschen'];
 		for (const item of expectedItems) {
 			await expect(page.getByRole('menuitem', { name: item, exact: true }).first()).toBeVisible({
 				timeout: 3000,

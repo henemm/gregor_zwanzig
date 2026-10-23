@@ -88,11 +88,15 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 
 	// Fix-Loop 2026-07-13 (F004): Label seit #736/Slice 6 "Versand" (nicht mehr
 	// "Briefing-Zeitplan" — das war der Zwischenstand vor #736).
-	test('AC-3c: Tab "briefings" heißt "Versand" (nicht "Reports & Kanäle")', async ({ page }) => {
+	// Issue #1743: kein eigener Reiter "Versand" mehr — der Versand-Abschnitt steht im
+	// Reiter Wetter-Metriken (Sprungziel #versand).
+	test('AC-3c: Versand steht als Abschnitt im Reiter Wetter-Metriken, kein eigener Reiter', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const briefingsTab = page.getByTestId('trip-detail-tab-versand');
-		await expect(briefingsTab).toContainText('Versand');
-		await expect(briefingsTab).not.toContainText('Reports & Kanäle');
+		await expect(page.getByTestId('trip-detail-tab-versand')).toHaveCount(0);
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+		const abschnitt = page.getByTestId('trip-detail-panel-wetter-metriken').getByTestId('versand-abschnitt');
+		await expect(abschnitt).toBeVisible();
+		await expect(abschnitt).not.toContainText('Reports & Kanäle');
 	});
 
 	// Issue #1231 Slice 6: alerts-Label erneut umbenannt ("Alerts" -> "Wertebereiche").

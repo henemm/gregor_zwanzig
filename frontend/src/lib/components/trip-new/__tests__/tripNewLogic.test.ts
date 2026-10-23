@@ -21,6 +21,7 @@ import {
 	canSave,
 	buildCreateTripPayload,
 	type CreateTripState,
+	type TabId,
 } from '../tripNewLogic.ts';
 // TDD RED — Issue #2277 Scheibe S1: initialCreateTripAlarmState()/applyAlarm*()
 // existieren in tripNewLogic.ts noch nicht. Namespace-Import statt Named-Import
@@ -48,51 +49,50 @@ import {
 // Issue #2277 Scheibe S3 (Spec feat_2277_s3_reiter_angleichung_rueckbau.md,
 // AC-2/AC-4): die Kette laeuft jetzt wie beim Ortsvergleich
 // (geteilter Kern `shared/anlegeLockEngine.ts`) ueber Wertebereiche -> Alarme -> Versand. Signatur:
-//   unlockedTabs/doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited)
+//   unlockedTabs/doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited)
 // `alVisited` = Reiter Alarme besucht, `vsVisited` = Reiter Versand besucht.
 // Tab-IDs `alarme`/`versand` ersetzen `alerts`/`zeitplan` (gleich wie CompareNewEditor).
+//
+// Issue #1743 (feat_1743_reiter_aufraeumen, AC-17/AC-19): der Schritt „Versand" entfaellt. Die Kette
+// endet bei Alarme; Aufrufe ohne Versand-Flag: unlockedTabs/doneTabs(name, startDate, etDone,
+// wtVisited, wbVisited, alVisited). Speichern ist frei, sobald Alarme besucht ist.
 
 describe('AC-2/3: unlockedTabs — progressive Freischaltung', () => {
 	test('Leerzustand: nur Route offen', () => {
-		const u = unlockedTabs('', '', false, false, false, false, false);
+		const u = unlockedTabs('', '', false, false, false, false);
 		assert.deepEqual([...u].sort(), ['route']);
 	});
 
 	test('Name + Startdatum → Etappen schaltet frei', () => {
-		const u = unlockedTabs('GR20', '2026-06-15', false, false, false, false, false);
+		const u = unlockedTabs('GR20', '2026-06-15', false, false, false, false);
 		assert.ok(u.has('etappen'), 'Etappen muss frei sein');
 		assert.ok(!u.has('wetter-metriken'), 'Wetter noch gesperrt');
 	});
 
 	test('Name ohne Startdatum schaltet Etappen NICHT frei', () => {
-		const u = unlockedTabs('GR20', '', false, false, false, false, false);
+		const u = unlockedTabs('GR20', '', false, false, false, false);
 		assert.ok(!u.has('etappen'));
 	});
 
 	test('etDone → Wegpunkte UND Wetter schalten gleichzeitig frei', () => {
-		const u = unlockedTabs('GR20', '2026-06-15', true, false, false, false, false);
+		const u = unlockedTabs('GR20', '2026-06-15', true, false, false, false);
 		assert.ok(u.has('wegpunkte'), 'Wegpunkte frei');
 		assert.ok(u.has('wetter-metriken'), 'Wetter frei');
 		assert.ok(!u.has('alarme'), 'Alarme noch gesperrt');
-		assert.ok(!u.has('versand'), 'Versand noch gesperrt');
 	});
 
-	test('AC-2: Wertebereiche besucht → Alarme frei, Versand bleibt GESPERRT', () => {
-		const u = unlockedTabs('GR20', '2026-06-15', true, true, true, false, false);
+	test('AC-2: Wertebereiche besucht → Alarme frei', () => {
+		const u = unlockedTabs('GR20', '2026-06-15', true, true, true, false);
 		assert.ok(u.has('alarme'), 'AC-2 FAIL: Alarme muss nach Besuch von Wertebereiche frei sein.');
-		assert.ok(
-			!u.has('versand'),
-			'AC-2 FAIL: Versand ist schon nach Wertebereiche frei — er muss an den Besuch von Alarme gekoppelt sein.'
-		);
 	});
 
-	test('AC-2: Alarme besucht → Versand frei', () => {
-		const u = unlockedTabs('GR20', '2026-06-15', true, true, true, true, false);
-		assert.ok(u.has('versand'), 'AC-2 FAIL: Versand muss nach Besuch von Alarme frei sein.');
+	test('#1743 AC-19: Alarme besucht → es wird KEIN Versand-Schritt freigeschaltet', () => {
+		const u = unlockedTabs('GR20', '2026-06-15', true, true, true, true) as Set<string>;
+		assert.ok(!u.has('versand'), `#1743 FAIL: Versand ist noch ein Anlege-Schritt: ${[...u].join(', ')}`);
 	});
 
 	test('AC-1: die alten IDs zeitplan/alerts kommen in der Kette nicht mehr vor', () => {
-		const ids = [...unlockedTabs('GR20', '2026-06-15', true, true, true, true, true)] as string[];
+		const ids = [...unlockedTabs('GR20', '2026-06-15', true, true, true, true)] as string[];
 		assert.ok(!ids.includes('zeitplan'), `AC-1 FAIL: alte Tab-ID "zeitplan" noch freigeschaltet: ${ids.join(', ')}`);
 		assert.ok(!ids.includes('alerts'), `AC-1 FAIL: alte Tab-ID "alerts" noch freigeschaltet: ${ids.join(', ')}`);
 	});
@@ -102,39 +102,47 @@ describe('AC-2/3: unlockedTabs — progressive Freischaltung', () => {
 
 describe('doneTabs — Done-Zustand', () => {
 	test('Name+Datum → route done; etDone → etappen done', () => {
-		const d = doneTabs('GR20', '2026-06-15', true, false, false, false, false);
+		const d = doneTabs('GR20', '2026-06-15', true, false, false, false);
 		assert.ok(d.has('route'));
 		assert.ok(d.has('etappen'));
 		assert.ok(!d.has('wetter-metriken'));
 	});
 
-	test('wtVisited → metriken; alVisited → alarme; vsVisited → versand done', () => {
-		const d = doneTabs('GR20', '2026-06-15', true, true, true, true, true);
+	test('wtVisited → metriken; alVisited → alarme done', () => {
+		const d = doneTabs('GR20', '2026-06-15', true, true, true, true);
 		assert.ok(d.has('wetter-metriken'));
 		assert.ok(d.has('alarme'));
-		assert.ok(d.has('versand'));
 	});
 
-	test('Alarme besucht, Versand nicht → versand NICHT done', () => {
-		const d = doneTabs('GR20', '2026-06-15', true, true, true, true, false);
-		assert.ok(d.has('alarme'));
+	test('#1743: versand ist nie Teil der erledigt-Menge', () => {
+		const d = doneTabs('GR20', '2026-06-15', true, true, true, true) as Set<string>;
 		assert.ok(!d.has('versand'));
 	});
 });
 
 // ── AC-1 (#622) / AC-4 (#2277 S3): Fortschrittsbalken — 4 Pflicht-Abschnitte ─
 
-describe('AC-4: progressCount — bleibt „/4" mit Meilenstein Versand', () => {
-	test('alle Reiter besucht → 4 (Alarme zählt NICHT als eigener Meilenstein)', () => {
-		const done = doneTabs('GR20', '2026-06-15', true, true, true, true, true);
-		assert.equal(progressCount(done), 4, 'AC-4 FAIL: Fortschritt muss bei „/4" bleiben.');
+// #1743 AC-19: der Zaehler zaehlt keinen Versand-Schritt. Der Nenner ist nicht festgelegt; gemessen
+// wird die Invariante: Maximum = Zaehlerstand bei ALLEN Anlege-Schritten erledigt; `versand` traegt
+// nichts bei; voll genau dann, wenn Speichern frei wird (nach Alarme).
+const ALLE_SCHRITTE = new Set(['route', 'etappen', 'wegpunkte', 'wetter-metriken', 'wertebereiche', 'alarme']) as Set<TabId>;
+
+describe('AC-4 / #1743 AC-19: progressCount — ohne Versand-Schritt', () => {
+	test('versand traegt nichts zum Zaehler bei', () => {
+		const mitVersand = new Set([...ALLE_SCHRITTE, 'versand']) as Set<TabId>;
+		assert.equal(progressCount(mitVersand), progressCount(ALLE_SCHRITTE), '#1743 FAIL: versand zaehlt als Meilenstein.');
 	});
-	test('Versand nicht besucht → 3 (Versand ist der vierte Meilenstein)', () => {
-		const done = doneTabs('GR20', '2026-06-15', true, true, true, true, false);
-		assert.equal(progressCount(done), 3, 'AC-4 FAIL: der vierte Meilenstein muss Versand sein.');
+	test('alle Schritte bis Alarme besucht → Zaehler voll', () => {
+		const done = doneTabs('GR20', '2026-06-15', true, true, true, true);
+		assert.equal(progressCount(done), progressCount(ALLE_SCHRITTE), '#1743 FAIL: Zaehler nach Alarme-Besuch nicht voll.');
+	});
+	test('Alarme nicht besucht → Zaehler nicht voll (voll genau dann, wenn Speichern frei wird)', () => {
+		const done = doneTabs('GR20', '2026-06-15', true, true, true, false);
+		assert.ok(progressCount(done) < progressCount(ALLE_SCHRITTE), 'Zaehler schon vor Alarme voll.');
+		assert.equal(canSave(done), false);
 	});
 	test('Leerzustand = 0', () => {
-		assert.equal(progressCount(doneTabs('', '', false, false, false, false, false)), 0);
+		assert.equal(progressCount(doneTabs('', '', false, false, false, false)), 0);
 	});
 });
 
@@ -157,19 +165,16 @@ describe('AC-4: stageDate — Startdatum + Index-Tage', () => {
 
 // ── AC-7: Speichern (canSave + buildCreateTripPayload) ──────────────────────
 
-describe('AC-4 (#2277 S3): canSave — erst nach Versand-Besuch', () => {
+describe('AC-4 (#2277 S3) / #1743 AC-19: canSave — frei, sobald Alarme besucht ist', () => {
 	test('Wertebereiche besucht, Alarme nicht → false', () => {
-		assert.equal(canSave(doneTabs('GR20', '2026-06-15', true, true, true, false, false)), false);
+		assert.equal(canSave(doneTabs('GR20', '2026-06-15', true, true, true, false)), false);
 	});
-	test('Alarme besucht, Versand nicht → false', () => {
+	test('Alarme besucht (kein Versand-Schritt) → true', () => {
 		assert.equal(
-			canSave(doneTabs('GR20', '2026-06-15', true, true, true, true, false)),
-			false,
-			'AC-4 FAIL: „Anlegen" ist schon nach Alarme aktiv — es muss an den Besuch von Versand gekoppelt sein.'
+			canSave(doneTabs('GR20', '2026-06-15', true, true, true, true)),
+			true,
+			'#1743 AC-19 FAIL: „Anlegen" ist nach dem Alarme-Besuch noch gesperrt.'
 		);
-	});
-	test('Versand besucht → true', () => {
-		assert.equal(canSave(doneTabs('GR20', '2026-06-15', true, true, true, true, true)), true);
 	});
 });
 
@@ -346,7 +351,7 @@ describe('AC-5 Zusatz: official_warnings/Cooldown/Stille-Stunden landen im Paylo
 // ═══════════════════════════════════════════════════════════════════════════
 // Issue #2277 Scheibe S2a — Reiter „Wertebereiche" in /trips/new
 // Spec: docs/specs/modules/fix_2277_s2a_wertebereiche_trip_anlegen.md
-// Signatur seit #2277 S3: unlockedTabs/doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited, vsVisited)
+// Signatur seit #1743: unlockedTabs/doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited)
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Issue #2277 S3: die S2a-Kette „Wertebereiche → Zeitplan" ist abgeloest
@@ -354,12 +359,12 @@ describe('AC-5 Zusatz: official_warnings/Cooldown/Stille-Stunden landen im Paylo
 // Wertebereiche folgt jetzt Alarme. Die Wertebereiche-Zusicherungen selbst bleiben.
 describe('AC-1 (S2a, Kette nach S3): Wetter-Metriken → Wertebereiche → Alarme', () => {
 	test('etDone, Wetter noch nicht besucht → Wertebereiche gesperrt', () => {
-		const u = unlockedTabs('GR20', '2026-06-15', true, false, false, false, false);
+		const u = unlockedTabs('GR20', '2026-06-15', true, false, false, false);
 		assert.ok(!u.has('wertebereiche' as never), 'Wertebereiche darf vor dem Wetter-Besuch nicht frei sein');
 	});
 
 	test('Wetter besucht → Wertebereiche frei, Alarme NOCH gesperrt', () => {
-		const u = unlockedTabs('GR20', '2026-06-15', true, true, false, false, false);
+		const u = unlockedTabs('GR20', '2026-06-15', true, true, false, false);
 		assert.ok(u.has('wertebereiche' as never), 'AC-1 FAIL: Wertebereiche nach Wetter-Besuch nicht frei');
 		assert.ok(
 			!u.has('alarme'),
@@ -367,22 +372,22 @@ describe('AC-1 (S2a, Kette nach S3): Wetter-Metriken → Wertebereiche → Alarm
 		);
 	});
 
-	test('Wertebereiche besucht → Alarme frei, Versand noch gesperrt', () => {
-		const u = unlockedTabs('GR20', '2026-06-15', true, true, true, false, false);
+	test('Wertebereiche besucht → Alarme frei', () => {
+		const u = unlockedTabs('GR20', '2026-06-15', true, true, true, false);
 		assert.ok(u.has('alarme'), 'AC-1 FAIL: Alarme nach Wertebereiche-Besuch nicht frei');
-		assert.ok(!u.has('versand'), 'Versand erst nach Alarme-Besuch');
 	});
 
 	test('doneTabs markiert wertebereiche erst bei wbVisited', () => {
-		assert.ok(!doneTabs('GR20', '2026-06-15', true, true, false, false, false).has('wertebereiche' as never));
+		assert.ok(!doneTabs('GR20', '2026-06-15', true, true, false, false).has('wertebereiche' as never));
 		assert.ok(
-			doneTabs('GR20', '2026-06-15', true, true, true, false, false).has('wertebereiche' as never),
+			doneTabs('GR20', '2026-06-15', true, true, true, false).has('wertebereiche' as never),
 			'AC-1 FAIL: doneTabs markiert den besuchten Wertebereiche-Reiter nicht als erledigt'
 		);
 	});
 
-	test('progressCount bleibt bei 4 Segmenten (Wertebereiche ist kein eigenes Segment)', () => {
-		assert.equal(progressCount(doneTabs('GR20', '2026-06-15', true, true, true, true, true)), 4);
+	test('progressCount: Wertebereiche ist kein eigenes Segment', () => {
+		const ohneWb = new Set([...ALLE_SCHRITTE].filter((t) => t !== 'wertebereiche')) as Set<TabId>;
+		assert.equal(progressCount(ohneWb), progressCount(ALLE_SCHRITTE));
 	});
 });
 

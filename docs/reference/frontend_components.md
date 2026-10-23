@@ -40,7 +40,7 @@ frontend/src/lib/components/
 ├── edit/                 # Trip-Bearbeitungs-Sektionen
 ├── organisms/            # Barrel: lib/components/organisms/index.ts (Exporte = Wahrheit)
 ├── atoms/ · molecules/ · mobile/  # Atomic-Design-Bibliothek (Epic #368, s.u.)
-└── alerts-tab/ · briefings-tab/ · preview/ · email-preview/
+└── alerts-tab/ · briefings-tab/ · email-preview/  # preview/ (SmsPhoneFrame, EmailIframe) entfiel mit #1743
 ```
 
 **Wizards existieren nicht mehr.** `trip-wizard/` und `CompareWizard.svelte` wurden

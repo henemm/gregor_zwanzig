@@ -51,11 +51,14 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 		await request.delete(`/api/trips/${TRIP_ID}`);
 	});
 
-	test('AC-1/AC-2: Stunden-Auswahl im Versand-Reiter uebersteht Speichern + Reload', async ({
+	// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken (?tab=wetter-metriken#versand).
+	test('AC-1/AC-2: Stunden-Auswahl im Versand-Abschnitt uebersteht Speichern + Reload', async ({
 		page
 	}) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=versand`);
-		const morning = page.locator('[data-testid="report-morning-time"]:visible').first();
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken#versand`);
+		const morning = page
+			.locator('[data-testid="versand-abschnitt"] [data-testid="report-morning-time"]:visible')
+			.first();
 		await expect(morning).toBeVisible({ timeout: 15_000 });
 
 		// AC-1: genau die 24 vollen Stunden, kein Eintrag mit Minuten.
@@ -86,8 +89,10 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 	test('Bug #1379: die Oberflaeche nimmt keine Uhrzeit an, die sie danach still aendert', async ({
 		page
 	}) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=versand`);
-		const morning = page.locator('[data-testid="report-morning-time"]:visible').first();
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken#versand`);
+		const morning = page
+			.locator('[data-testid="versand-abschnitt"] [data-testid="report-morning-time"]:visible')
+			.first();
 		await expect(morning).toBeVisible({ timeout: 15_000 });
 
 		const istEingabefeld = await morning.evaluate((el) => el.tagName.toLowerCase() === 'input');
@@ -135,13 +140,11 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 		}
 
 		await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-		// Issue #2277 S3: Versand ist erst nach Besuch von „Alarme" freigeschaltet
-		// (Sperrkette Wetter-Metriken → Wertebereiche → Alarme → Versand).
-		await tabbar.getByRole('tab', { name: /Wertebereiche/ }).click({ force: true });
-		await tabbar.getByRole('tab', { name: /Alarme/ }).click({ force: true });
-		await tabbar.getByRole('tab', { name: /Versand/ }).click({ force: true });
-
-		const morning = page.locator('.tn-mobile [data-testid="report-morning-time"]').first();
+		// Issue #1743: kein Schritt Versand mehr — Versand-Abschnitt unten im
+		// Schritt Wetter-Metriken (oben aktiviert).
+		const morning = page
+			.locator('.tn-mobile [data-testid="versand-abschnitt"] [data-testid="report-morning-time"]')
+			.first();
 		await expect(morning).toBeVisible({ timeout: 15_000 });
 		const values = await optionValues(morning);
 		expect(values.length).toBe(24);

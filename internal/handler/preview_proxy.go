@@ -10,13 +10,10 @@ import (
 	"github.com/henemm/gregor-api/internal/middleware"
 )
 
-// Issue #2283 S1 (AC-5): Zeitgrenzen der Vorschau-Proxys. Trip-Vorschau und
-// Alarm-Vorschau 30 s (Wetter-Fetch), Orts-Vergleich 60 s (Wetter fuer jeden
-// Ort des Presets, gleiches Budget wie CompareProxyHandler).
-const (
-	previewProxyTimeout        = 30 * time.Second
-	comparePreviewProxyTimeout = 60 * time.Second
-)
+// Issue #2283 S1 (AC-5): Zeitgrenze der Vorschau-Proxys. Trip-Vorschau und
+// Alarm-Vorschau 30 s (Wetter-Fetch). Die Orts-Vergleich-Vorschau (60 s) ist
+// mit #1743 entfallen.
+const previewProxyTimeout = 30 * time.Second
 
 // forwardPreview ist die EINE Proxy-Behandlung aller Vorschau-Routen (Issue
 // #2283 AC-5): Alt-Routen und kind-neutrale Briefing-Routen laufen beide hier
@@ -65,30 +62,10 @@ func forwardPreview(w http.ResponseWriter, r *http.Request, method, path string,
 	io.Copy(w, resp.Body)
 }
 
-// ComparePreviewProxyHandler proxies POST /api/preview/compare/{preset_id} to
-// the Python core. Preset ID via chi.URLParam; the client-supplied user_id is
-// discarded and the authenticated user_id from the auth context is injected
-// instead (anti-spoofing, ADR-0003 — never "default"). The Python route is
-// user-scoped, a foreign preset is therefore not resolvable (404, AC-6).
-//
-// One call returns ALL channels ({subject, email_html, telegram, sms,
-// sms_char_count}) from a single ComparisonEngine run (ADR-0011) — the channel
-// switch in the preview tab needs no further request (AC-7).
-// Timeout 60s: the comparison fetches weather for every location of the preset
-// (same budget as CompareProxyHandler).
-//
-// Issue #2283 AC-5: Alt-Route, Delegate auf forwardPreview.
-//
-// Spec: docs/specs/modules/compare_channel_preview_dispatch.md (Issue #1270).
-func ComparePreviewProxyHandler(pythonURL string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		presetID := chi.URLParam(r, "preset_id")
-		forwardPreview(w, r, http.MethodPost, pythonURL+"/api/preview/compare/"+presetID, comparePreviewProxyTimeout)
-	}
-}
-
 // PreviewProxyHandler proxies GET /api/preview/{trip_id}/{channel} to the
-// Python core (channel ∈ {"email", "sms", "telegram"}). Trip ID via chi.URLParam,
+// Python core. Issue #1743: nur noch channel "sms" ist registriert (Messweg der
+// Staging-Specs metrik-*-kanal*.staging.spec.ts); email/telegram/compare sind
+// mit der Briefing-Vorschau entfallen. Trip ID via chi.URLParam,
 // user_id from auth context appended to query. Original query params
 // (type, date) are forwarded verbatim. Timeout 30s wegen Wetter-Fetch.
 //

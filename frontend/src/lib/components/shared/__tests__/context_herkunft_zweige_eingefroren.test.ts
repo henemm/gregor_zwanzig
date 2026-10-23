@@ -272,6 +272,11 @@ const EINGEFROREN: readonly string[] = [
 	'weather-metrics-tab/weatherMetricsTabSections.ts:72',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:73',
 	'weather-metrics-tab/weatherMetricsCompareSave.ts:561',
+	// Issue #1743: der geteilte Baustein „Wetter-Metriken + Versand" waehlt den
+	// Versand-Inhalt nach Herkunft — Trip-Hub ueber BriefingScheduleTab (route ohne
+	// createMode), Vergleich und Trip-Anlegen ueber den EINEN VersandTab. Diese Weiche
+	// ersetzt die bisherigen Direkt-Mounts in TripTabs/CompareTabs/den Anlege-Seiten.
+	'WetterMetrikenVersandPanel.svelte:66',
 ];
 
 /** Erwartete Laenge als zweite, unabhaengige Schranke gegen ein
@@ -279,7 +284,9 @@ const EINGEFROREN: readonly string[] = [
 // Issue #2287 (AC-11): `alarme-tab/alarmeTabSections.ts:42` (`wertebereicheTabId`,
 // Verzweigung nach context) BEWUSST gestrichen — die Funktion entfaellt, beide Hubs
 // springen mit derselben Kennung `wertebereiche`. Soll 47 → 46.
-const EINGEFROREN_SOLL_ANZAHL = 46;
+// Issue #1743: `WetterMetrikenVersandPanel.svelte:66` nachgetragen (neue Herkunfts-
+// Weiche des geteilten Bausteins). Soll 46 → 47.
+const EINGEFROREN_SOLL_ANZAHL = 47;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.

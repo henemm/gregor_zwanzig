@@ -47,7 +47,8 @@
 	} from '$lib/components/shared/anlegeLockEngine';
 	import Step2Orte from '$lib/components/compare/steps/Step2Orte.svelte';
 	import { groupLocations } from '$lib/components/compare/locationHelpers';
-	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
+	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
@@ -64,18 +65,18 @@
 		loadCompareMetricCatalog
 	} from '$lib/components/shared/corridor-editor/compareMetricCatalogLoader';
 	import type { CompareSelectionEntry } from '$lib/components/shared/weather-metrics-tab/compareMetricSelection';
-	import VersandTab from '$lib/components/shared/VersandTab.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
 	import { PageHeader } from '$lib/components/atoms';
 
-	type CompareNewTabId = 'vergleich' | 'orte' | 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand';
+	// Issue #1743: kein Schritt „Versand" mehr — der Versand-Abschnitt steht unten im
+	// Schritt Wetter-Metriken (geteilter Baustein WetterMetrikenVersandPanel).
+	type CompareNewTabId = 'vergleich' | 'orte' | 'wetter-metriken' | 'wertebereiche' | 'alarme';
 	const TAIL: TailIds<CompareNewTabId> = {
-		metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme', versand: 'versand'
+		metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme'
 	};
-	const PROGRESS_STEPS: CompareNewTabId[] = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme', 'versand'];
 
 	// Test-Seam (#2277 S4, Muster TripNewEditor `stateOverride`): Startwerte fuer
 	// Reiter/Viewport/Besuchs-Flags. Ohne Uebergabe unveraendertes Verhalten.
@@ -85,7 +86,6 @@
 		metrikenVisited?: boolean;
 		idealsVisited?: boolean;
 		alarmeVisited?: boolean;
-		versandVisited?: boolean;
 	}
 	interface Props {
 		locations?: Location[];
@@ -128,26 +128,20 @@
 		void ladeStandardwerteKatalog();
 	});
 
-	// ── Tab-Definitionen (6 Tabs, Spec-Tabelle) ───────────────────────────────
-	// Issue #1360 (Scheibe S1a von Epic #1372): der Reiter 'layout' ist aufgeloest,
-	// die Stundenverlauf-Steuerung liegt im Reiter 'wetter-metriken' (via
-	// WeatherMetricsTab, Abschnitt 'stundenverlauf'). Der Hinweis des
-	// Alarme-Reiters MUSS mit umgehaengt werden — er verwies auf einen Reiter,
-	// den es nicht mehr gibt, und haette den Alarme-Reiter unerreichbar gemacht.
-	const TAB_DEFS: { id: CompareNewTabId; label: string; lockHint: string | null }[] = [
-		{ id: 'vergleich', label: 'Vergleich', lockHint: null },
-		{ id: 'orte', label: 'Orte', lockHint: 'erst Vergleich benennen' },
-		{ id: 'wetter-metriken', label: 'Wetter-Metriken', lockHint: 'erst mind. 2 Orte auswählen' },
-		{ id: 'wertebereiche', label: 'Wertebereiche', lockHint: 'erst Wetter-Metriken öffnen' },
-		{ id: 'alarme', label: 'Alarme', lockHint: 'erst Wertebereiche öffnen' },
-		{ id: 'versand', label: 'Versand', lockHint: 'erst Alarme öffnen' }
-	];
+	// ── Tab-Definitionen — Issue #1743: aus der EINEN Reiter-Definition
+	// (`subscriptionTabs.anlegeKette`), keine Zweitliste. Fortschritt zaehlt
+	// dieselben Schritte (5 Segmente).
+	const TAB_DEFS: { id: CompareNewTabId; label: string; lockHint: string | null }[] = anlegeKette('vergleich').map((t) => ({
+		id: t.id as CompareNewTabId,
+		label: t.label,
+		lockHint: t.lockHint ?? null
+	}));
+	const PROGRESS_STEPS: CompareNewTabId[] = TAB_DEFS.map((t) => t.id);
 
 	// ── Visited-Flags (Tab-Besuch → nächster Tab frei; nie zurückgesetzt) ──────
 	let metrikenVisited = $state(seed.metrikenVisited ?? false);
 	let idealsVisited = $state(seed.idealsVisited ?? false);
 	let alarmeVisited = $state(seed.alarmeVisited ?? false);
-	let versandVisited = $state(seed.versandVisited ?? false);
 
 	let activeTab = $state<CompareNewTabId>(seed.activeTab ?? 'vergleich');
 
@@ -171,8 +165,7 @@
 		metrikenFrei: nameOk && orteOk,
 		metrikenVisited,
 		wertebereicheVisited: idealsVisited,
-		alarmeVisited,
-		versandVisited
+		alarmeVisited
 	});
 	// ... und kumulativ (fuer "freigeschaltet"): Ortsvergleich-Semantik ist eine
 	// konjunktive Kette (Wertebereiche braucht Metriken-Besuch, alarme zusaetzlich
@@ -180,8 +173,7 @@
 	const tailPChain = $derived({
 		...tailP,
 		wertebereicheVisited: metrikenVisited && idealsVisited,
-		alarmeVisited: metrikenVisited && idealsVisited && alarmeVisited,
-		versandVisited: metrikenVisited && idealsVisited && alarmeVisited && versandVisited
+		alarmeVisited: metrikenVisited && idealsVisited && alarmeVisited
 	});
 	const unlocked = $derived.by(() => {
 		const s = tailUnlocked(TAIL, tailPChain);
@@ -195,8 +187,8 @@
 		if (orteOk) s.add('orte');
 		return s;
 	});
-	// Zaehler gedeckelt bei 6 (Issue #1360), bit-gleich zu vorher min(done.size, 6).
-	const doneCount = $derived(Math.min(progressCount(done, PROGRESS_STEPS), 6));
+	// Zaehler gedeckelt bei der Schrittzahl (#1743: 5 Schritte).
+	const doneCount = $derived(Math.min(progressCount(done, PROGRESS_STEPS), PROGRESS_STEPS.length));
 	const canActivateNow = $derived(canFinish(done));
 	const standardwerteFrei = $derived(canFinishMitStandardwerten({
 		pflichtErfuellt: nameOk && orteOk,
@@ -239,7 +231,6 @@
 		if (id === 'wetter-metriken') metrikenVisited = true;
 		if (id === 'wertebereiche') idealsVisited = true;
 		if (id === 'alarme') alarmeVisited = true;
-		if (id === 'versand') versandVisited = true;
 	}
 	function makeTabHandler(id: CompareNewTabId) {
 		return () => switchTab(id);
@@ -326,7 +317,7 @@
 	}
 	function handleMobileNext() {
 		const idx = TAB_DEFS.findIndex((t) => t.id === activeTab);
-		if (activeTab === 'versand') {
+		if (activeTab === 'alarme') {
 			handleActivate();
 		} else if (idx >= 0 && idx < TAB_DEFS.length - 1) {
 			switchTab(TAB_DEFS[idx + 1].id);
@@ -344,14 +335,14 @@
 {#snippet versandActivationBanner()}
 	<div
 		data-testid="compare-step5-activation-banner"
-		data-ready={versandVisited ? 'true' : 'false'}
+		data-ready={canActivateNow ? 'true' : 'false'}
 		class="rounded-md p-4 text-white text-sm"
-		style:background={versandVisited ? 'var(--g-good)' : 'var(--g-ink)'}
+		style:background={canActivateNow ? 'var(--g-good)' : 'var(--g-ink)'}
 	>
 		<div class="mono" style:font-size="11px" style:letter-spacing="0.12em" style:text-transform="uppercase" style:color="rgba(255,255,255,0.55)" style:margin-bottom="4px">Bereit zum Aktivieren</div>
 		<div style:font-size="15px" style:font-weight="600">„{wiz.name || 'Neuer Vergleich'}" · {wiz.pickedIds?.length ?? 0} Orte</div>
 		<div style:font-size="12.5px" style:color="rgba(255,255,255,0.75)" style:margin-top="4px" style:line-height="1.5">
-			{#if versandVisited}Versand konfiguriert — klicke „Briefing aktivieren".{:else}Versand einrichten zum Aktivieren.{/if}
+			{#if canActivateNow}Bereit — klicke „Briefing aktivieren".{:else}Alarme einrichten zum Aktivieren.{/if}
 		</div>
 	</div>
 {/snippet}
@@ -369,7 +360,7 @@
 			</div>
 			<div style:display="flex" style:gap="8px" style:align-items="center">
 				{#if !canActivateNow}
-					<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">Versand einrichten zum Aktivieren</span>
+					<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">Alarme einrichten zum Aktivieren</span>
 					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="compare-editor-standardwerte" />
 				{/if}
 				<Btn variant="ghost" size="sm" href="/compare">Abbrechen</Btn>
@@ -481,7 +472,10 @@
 		</div>
 	{:else if activeTab === 'wetter-metriken'}
 		{#if !isMobileViewport}
-			<WeatherMetricsTab context="vergleich" {...wetterMetrikenPropsAus(wiz)} showInfobox={true} />
+			<!-- Issue #1743: geteilter Baustein „Wetter-Metriken + Versand"; ohne
+			     preset/saveController/enqueueHubWrite — gespeichert wird erst per
+			     wiz.saveNewPreset() (ein POST). -->
+			<WetterMetrikenVersandPanel context="vergleich" {...wetterMetrikenPropsAus(wiz)} versand={versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1040px">
 			<div class="ce-cta-row">
@@ -501,13 +495,6 @@
 		{#if alarmeHydrated}
 			<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalog} showInfobox={true} />
 		{/if}
-		<div class="ce-cta-foot" style:max-width="1100px">
-			<div class="ce-cta-row">
-				<Btn data-testid="compare-editor-continue-versand" variant="accent" size="md" onclick={makeContinueHandler('versand')}>Versand einrichten →</Btn>
-			</div>
-		</div>
-	{:else if activeTab === 'versand'}
-		<VersandTab context="vergleich" {...versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
 	{/if}
 </div><!-- /.cm-desktop -->
 
@@ -582,7 +569,7 @@
 			<Step2Orte {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
 		{:else if activeTab === 'wetter-metriken'}
 			{#if isMobileViewport}
-				<WeatherMetricsTab context="vergleich" {...wetterMetrikenPropsAus(wiz)} showInfobox={true} />
+				<WetterMetrikenVersandPanel context="vergleich" {...wetterMetrikenPropsAus(wiz)} versand={versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
 			{/if}
 		{:else if activeTab === 'wertebereiche'}
 			{#if isMobileViewport}
@@ -592,21 +579,19 @@
 			{#if alarmeHydrated}
 				<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalog} showInfobox={true} />
 			{/if}
-		{:else if activeTab === 'versand'}
-			<VersandTab context="vergleich" {...versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
 		{/if}
 	</div>
 
-	<!-- Sticky-Footer (geteilter Baustein): Weiter-Aktion des Reiters, auf
-	     Versand „Briefing aktivieren" (Mobile-Shell S2, vorher App-Leiste). -->
+	<!-- Sticky-Footer (geteilter Baustein): Weiter-Aktion des Reiters, im letzten
+	     Schritt Alarme „Briefing aktivieren" (#1743; Mobile-Shell S2). -->
 	<EditorStickyFooter context="vergleich" testid="cm-mobile-cta" navClearance={false}>
 			{#if !canActivateNow}
 				<div style="display: flex; justify-content: center; margin-bottom: 8px;">
 					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="cm-mobile-standardwerte" />
 				</div>
 			{/if}
-			{#if activeTab === 'versand'}
-				<MBtn block variant={canActivateNow ? 'primary' : 'quiet'} size="xl" disabled={!canActivateNow || activating} onclick={handleActivate} testid="cm-mobile-activate">{activating ? 'Speichere…' : canActivateNow ? 'Briefing aktivieren' : 'Versand einrichten zum Aktivieren'}</MBtn>
+			{#if activeTab === 'alarme'}
+				<MBtn block variant={canActivateNow ? 'primary' : 'quiet'} size="xl" disabled={!canActivateNow || activating} onclick={handleActivate} testid="cm-mobile-activate">{activating ? 'Speichere…' : canActivateNow ? 'Briefing aktivieren' : 'Alarme einrichten zum Aktivieren'}</MBtn>
 			{:else if activeTab === 'vergleich'}
 				<MBtn block variant={canContinue ? 'primary' : 'quiet'} size="xl" disabled={!canContinue} onclick={handleMobileNext}>{canContinue ? 'Orte hinzufügen →' : 'Name eingeben'}</MBtn>
 			{:else if activeTab === 'orte'}
@@ -616,8 +601,6 @@
 				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Wertebereiche festlegen →</MBtn>
 			{:else if activeTab === 'wertebereiche'}
 				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Alarme einrichten →</MBtn>
-			{:else if activeTab === 'alarme'}
-				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Versand einrichten →</MBtn>
 			{/if}
 	</EditorStickyFooter>
 </div><!-- /.cm-mobile -->

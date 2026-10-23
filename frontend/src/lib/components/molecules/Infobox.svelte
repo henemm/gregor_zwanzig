@@ -5,10 +5,10 @@
 	// der Lookup-Map (shared/infoboxKeys.ts), keine Kontext-Verzweigung.
 	// Spec: docs/specs/modules/begriff_erklaerung_infobox.md (Entscheidung 1-3).
 	import { t } from '$lib/i18n';
-	import { infoboxKey, type InfoboxKontext, type InfoboxReiter } from '$lib/components/shared/infoboxKeys';
+	import { infoboxKey, type InfoboxKontext, type InfoboxAbschnitt } from '$lib/components/shared/infoboxKeys';
 
 	interface Props {
-		reiter: InfoboxReiter;
+		reiter: InfoboxAbschnitt;
 		context: InfoboxKontext;
 	}
 

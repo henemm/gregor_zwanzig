@@ -261,8 +261,6 @@ export const api = {
  * Puffer, damit der Server zuerst antwortet. Aendert sich ein Server-Limit,
  * muss das Budget hier mitwandern.
  */
-/** Compare-Vorschau: Go-Proxy begrenzt auf 60 s. */
-export const ZEITLIMIT_COMPARE_VORSCHAU_MS = 70_000;
 /** Test-Versand (notify/test): Go-Proxy begrenzt auf 120 s (internal/handler/notify.go). */
 export const ZEITLIMIT_TEST_NACHRICHT_MS = 130_000;
 /** Alarm-Vorschau: Go-Proxy begrenzt auf ca. 30 s. */
@@ -276,39 +274,16 @@ export const ZEITLIMIT_ALARM_VORSCHAU_MS = 40_000;
 export const ZEITLIMIT_ORT_AUFLOESEN_MS = 40_000;
 
 /** #2361: die Langlaeufer-Abrufe — jeder traegt sein eigenes Budget. */
+// #1743 F003: `compareVorschau` (POST /api/preview/compare/{id}) entfiel mit der
+// Briefing-Vorschau (PO-Entscheid 2026-10-22).
 export const langlaeufer = {
-	compareVorschau: <T>(presetId: string) =>
-		api.post<T>(`/api/preview/compare/${presetId}`, {}, { zeitlimitMs: ZEITLIMIT_COMPARE_VORSCHAU_MS }),
 	testNachricht: <T>(channel: string) =>
 		api.post<T>('/api/notify/test', { channel }, { zeitlimitMs: ZEITLIMIT_TEST_NACHRICHT_MS }),
 	alarmVorschau: <T>(tripId: string, payload: unknown) =>
 		api.post<T>(`/api/trips/${tripId}/alert-preview`, payload, { zeitlimitMs: ZEITLIMIT_ALARM_VORSCHAU_MS })
 };
 
-/** #2283: Trip-Vorschau (Buendel), Go-Proxy begrenzt auf 30 s. */
-export const ZEITLIMIT_TRIP_VORSCHAU_MS = 40_000;
-
 export type BriefingKind = 'route' | 'vergleich';
-
-/**
- * #2283: kind-neutrale Vorschau — EIN Abruf fuer alle Kanaele
- * (GET /api/briefings/{id}/preview?kind=…). `type`/`date`/`demo` gelten nur im
- * Trip; der Vergleich kennt einen festen Berichtstyp und keine Demo-Daten.
- */
-export function briefingVorschau<T>(
-	kind: BriefingKind,
-	id: string,
-	options: { type?: string; date?: string; demo?: boolean } = {}
-): Promise<T> {
-	const qs = new URLSearchParams({ kind });
-	if (kind === 'route') {
-		if (options.type) qs.set('type', options.type);
-		if (options.date) qs.set('date', options.date);
-		if (options.demo) qs.set('demo', '1');
-	}
-	const zeitlimitMs = kind === 'route' ? ZEITLIMIT_TRIP_VORSCHAU_MS : ZEITLIMIT_COMPARE_VORSCHAU_MS;
-	return api.get<T>(`/api/briefings/${encodeURIComponent(id)}/preview?${qs}`, { zeitlimitMs });
-}
 
 /** #2283: kind-neutrale Alarm-Vorschau (POST /api/briefings/{id}/alert-preview?kind=…), 40 s. */
 export function alarmVorschau<T>(kind: BriefingKind, id: string, payload: unknown): Promise<T> {

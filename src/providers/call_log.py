@@ -42,7 +42,6 @@ def diagnostics_path() -> Path:
 # "vergleich"/"briefing"-Frames im Stack überdeckt werden.
 _CALL_SOURCE_MARKERS: List[Tuple[str, str]] = [
     ("_fetch_openmeteo_clouds", "geosphere_clouds"),
-    ("render_email_preview", "vorschau"),
     ("render_sms_preview", "vorschau"),
     ("_fetch_fresh_weather", "alarm"),
     ("_build_stage_trend", "trend"),
@@ -58,7 +57,7 @@ _CALL_SOURCE_MARKERS: List[Tuple[str, str]] = [
 # Issue #1765 Scheibe B1: ausdruecklich gesetzte Quelle des AKTUELLEN
 # Verarbeitungspfads. Die Marker-Liste oben liest den Aufruf-Stapel des
 # AUSFUEHRENDEN Threads -- wandert die Arbeit in einen eigenen Thread
-# (ThreadPoolExecutor), taucht dort keiner der 11 Marker mehr auf und das
+# (ThreadPoolExecutor), taucht dort keiner der 10 Marker mehr auf und das
 # Journal bucht faelschlich "unbekannt" (belegt: 7,4 % der Eintraege).
 # ``ContextVar`` isoliert korrekt ueber Threads/Tasks (Vorbild:
 # official_alerts/warn_egress.py:55-57): ein neuer Thread startet mit leerem
@@ -89,7 +88,7 @@ def resolve_call_source() -> str:
 
     Issue #1765 B1: Ein ausdruecklich gesetzter Override (``override_call_source``)
     geht VOR -- er ist die einzige Quelle, die einen Threadwechsel ueberlebt.
-    Ohne Override bleibt es unveraendert bei den 11 Namens-Markern.
+    Ohne Override bleibt es unveraendert bei den 10 Namens-Markern.
     """
     override = _call_source_override.get()
     if override is not None:

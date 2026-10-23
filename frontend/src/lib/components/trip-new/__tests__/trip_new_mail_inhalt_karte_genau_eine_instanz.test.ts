@@ -42,8 +42,9 @@ const EDITOR = path.join(HERE, '..', 'TripNewEditor.svelte');
 const ALLE_AN = { email: true, telegram: true, sms: true };
 
 function versand(isMobileViewport: boolean, reportConfig?: Record<string, unknown>): string {
-	const html = renderTripNew({ activeTab: 'versand', isMobileViewport, channels: ALLE_AN, reportConfig });
-	assertTabOffen(html, 'versand');
+	// #1743: der Versand-Inhalt steht unten im Schritt Wetter-Metriken (kein Reiter „Versand" mehr).
+	const html = renderTripNew({ activeTab: 'wetter-metriken', isMobileViewport, channels: ALLE_AN, reportConfig });
+	assertTabOffen(html, 'wetter-metriken');
 	return html;
 }
 

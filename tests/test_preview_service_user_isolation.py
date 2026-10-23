@@ -42,6 +42,8 @@ from services import track_resolution
 from services.preview_service import PreviewService
 from services.track_resolution import resolve_stage_track_km
 
+from tests.helpers.trip_vorschau_bericht import trip_email_html, trip_telegram
+
 _FIXTURE_ROOT = (
     Path(__file__).resolve().parent / "fixtures" / "data_root" / "users" / "default"
 )
@@ -159,8 +161,8 @@ def test_ac1_telegram_vorschau_misst_mit_dem_gpx_des_anfragenden_nutzers():
     heute = _heute_utc()
     trip, eigen_km, fremd_km = _zwei_konten_mit_verschiedenen_tracks("nutzer-a", heute)
 
-    _subject, _body, bubbles = PreviewService().render_telegram_preview(
-        trip.id, user_id="nutzer-a", report_type="morning",
+    _subject, _body, bubbles = trip_telegram(
+        PreviewService(), trip.id, user_id="nutzer-a", report_type="morning",
         target_date=heute.isoformat(), demo=True,
     )
 
@@ -180,8 +182,8 @@ def test_ac1_email_vorschau_misst_mit_dem_gpx_des_anfragenden_nutzers():
     heute = _heute_utc()
     trip, eigen_km, fremd_km = _zwei_konten_mit_verschiedenen_tracks("nutzer-a", heute)
 
-    html = PreviewService().render_email_preview(
-        trip.id, user_id="nutzer-a", report_type="morning",
+    html = trip_email_html(
+        PreviewService(), trip.id, user_id="nutzer-a", report_type="morning",
         target_date=heute.isoformat(), demo=True,
     )
 
@@ -230,8 +232,8 @@ def test_ac2_vorschau_ohne_konto_default_liefert_die_daten_des_angefragten_nutze
         f"{sms_subject!r} / {sms_text!r}"
     )
 
-    _subject, _body, bubbles = service.render_telegram_preview(
-        trip.id, user_id="nutzer-b", report_type="morning",
+    _subject, _body, bubbles = trip_telegram(
+        service, trip.id, user_id="nutzer-b", report_type="morning",
         target_date=heute.isoformat(), demo=True,
     )
     gezeigt = _seg1_endkm_telegram(bubbles)

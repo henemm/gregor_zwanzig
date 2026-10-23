@@ -50,7 +50,13 @@ const (
 	// installiert? Fake nicht erreichbar?) — NICHT die Konstante senken.
 	// Der Abstand von 3 zum Ist-Wert deckt das Entfernen einzelner
 	// Python-Routen ab, ohne einen Einbruch der Groessenordnung zu verpassen.
-	minPythonCallsReached = 24
+	//
+	// Issue #1743: Ist-Wert neu 21 — die Briefing-Vorschau (GET
+	// /api/briefings/{id}/preview) sowie GET /api/preview/{trip}/email,
+	// GET /api/preview/{trip}/telegram und POST /api/preview/compare/{id} sind
+	// als Go->Python-Proxys bewusst entfernt (gemessen 24 -> 21 durch die
+	// letzten drei). Abstand 3 beibehalten.
+	minPythonCallsReached = 18
 )
 
 // routeParamRe ersetzt chi-Platzhalter wie {id} oder {waypointId} durch einen

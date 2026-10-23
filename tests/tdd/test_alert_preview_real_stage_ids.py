@@ -16,7 +16,7 @@ from datetime import timedelta
 import pytest
 from fastapi import HTTPException
 
-from tests.integration.test_briefing_preview_bundle import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
 from tests.tdd.test_alert_hour_rows import (
     TRIP_ID, TRIP_LAT, TRIP_LON, TRIP_STURM, _erwartete_zeilen, _plant, _rows,
     _trip_anker_schreiben, _trip_body, _trip_versand,

@@ -85,7 +85,6 @@ describe('AC-16 (Compare-Liste): jede Aktion der Tabelle erreicht eine Wirkung',
 		['alarms', 'goto'],
 		['weather', 'goto'],
 		['edit', 'goto'],
-		['preview', 'goto'],
 		['continue-setup', 'goto']
 	];
 	for (const surface of ['rowActions-Dispatch (Desktop)', 'Blatt-Dispatch (Mobil)']) {

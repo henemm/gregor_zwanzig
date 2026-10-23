@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from datetime import datetime, timezone
 
-from tests.integration.test_briefing_preview_bundle import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
 from tests.tdd.test_alert_hour_rows import _cmp_orte, _cmp_welt, _trip_welt
 
 LANGSAM_S = 1.5
