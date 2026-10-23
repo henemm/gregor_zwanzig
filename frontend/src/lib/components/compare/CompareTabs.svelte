@@ -24,12 +24,13 @@
 		deriveStatusWithScheduleOverride,
 		presetBriefingTimesLabel,
 		formatLastSent,
-		formatNextSend,
 		channelNamesLabel,
 		presetProfileLabel,
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
-	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
+	// Issue #1969 (AC-23/AC-24): nächster Versand = Backend-Wert, keine eigene Rechnung.
+	import { formatNextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
+	import { erstelleNaechstesBriefingLader } from '../shared/versand-tab/naechstesBriefingLader.svelte.ts';
 	import type { ComparePreset, Location, Group } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { onMount } from 'svelte';
@@ -202,11 +203,16 @@
 	// Issue #1229 Fix-Loop 1 (F001/F002): "Nächster Versand" aus dem berechneten
 	// Zeitstempel ableiten statt aus dem Rhythmus-Label (presetScheduleLabel enthält
 	// einen rohen hour_from–hour_to-Bereich, den AC-4 im Versand-Tab verbietet).
-	// Muster identisch zu CompareStatusRow.svelte.
-	const now = new Date();
-	const nextSend = $derived(deriveNextSend(preset, now));
+	// Issue #1969 (AC-23/AC-24): Backend-Wert aus GET /api/next-briefings statt
+	// deriveNextSend. Neu geladen nach jedem erfolgreichen Speichern des Hubs
+	// (`savedAt`, auch Pausieren/Aktivieren); Laufnummer gegen veraltete Antworten.
+	const naechstesBriefing = erstelleNaechstesBriefingLader(
+		() => ({ context: 'vergleich', id: preset?.id, neuLaden: saveController?.savedAt }),
+		(p) => api.get(p)
+	);
+	const nextSendText = $derived(formatNextBriefing(naechstesBriefing.wert, 'vergleich'));
 	const versandSummaryText = $derived(
-		`Briefings ${presetBriefingTimesLabel(preset)} · nächster Versand ${formatNextSend(nextSend)}.`
+		`Briefings ${presetBriefingTimesLabel(preset)} · nächster Versand ${nextSendText}.`
 	);
 
 	// Issue #1256 Scheibe 3 AC-6: Kanal-Namen statt Kanal-Anzahl in der
@@ -724,7 +730,7 @@
 						</Card>
 						<Card padding={14}>
 							<div class="hub-mobile-stat-label">Nächster Versand</div>
-							<div class="hub-mobile-stat-value">{formatNextSend(nextSend)}</div>
+							<div class="hub-mobile-stat-value">{nextSendText}</div>
 						</Card>
 						<Card padding={14}>
 							<div class="hub-mobile-stat-label">Zuletzt raus</div>
@@ -760,7 +766,7 @@
 						<!-- Nächster Versand -->
 						<div>
 							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Nächster Versand</div>
-							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{formatNextSend(nextSend)}</div>
+							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{nextSendText}</div>
 						</div>
 						<!-- Briefings -->
 						<div>

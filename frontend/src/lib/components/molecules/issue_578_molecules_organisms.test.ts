@@ -307,11 +307,14 @@ describe('#2283 AC-14: CompareBriefingPreview, ComparePreviewMissing, CompareSms
 
 // ════════════════ BLOCK C — Neue Organisms ════════════════
 
-const HOME_ORGANISMS = ['HomeHeroTrip', 'HomeHeroCompare', 'OutboxCard', 'AlertsCard'];
+// Issue #1969 (AC-25): HomeHeroCompare ist gelöscht (kein Importeur; die
+// Startseite rendert ihren Vergleichs-Hero inline in routes/+page.svelte) —
+// AC-15 hat damit keinen Prüfling mehr.
+const HOME_ORGANISMS = ['HomeHeroTrip', 'OutboxCard', 'AlertsCard'];
 const METRICS_ORGANISMS = ['PresetRail', 'MetricOffShelf', 'MetricsEditorContextBar'];
 
 describe('AC-14/15: Home-Hero-Organisms', () => {
-	for (const name of ['HomeHeroTrip', 'HomeHeroCompare']) {
+	for (const name of ['HomeHeroTrip']) {
 		test(`${name}.svelte existiert in organisms/`, () => {
 			assert.ok(
 				hasOrg(`${name}.svelte`),
@@ -339,21 +342,6 @@ describe('AC-14/15: Home-Hero-Organisms', () => {
 		const src = readOrg('HomeHeroTrip.svelte');
 		assert.ok(/Pill/.test(src), 'HomeHeroTrip: Pills-Atom fehlt');
 		assert.ok(/Live/.test(src), 'HomeHeroTrip: "Live · Tag X von Y" fehlt');
-	});
-
-	test('AC-15: HomeHeroCompare hat 2-Spalten-Stat-Grid', () => {
-		const src = readOrg('HomeHeroCompare.svelte');
-		assert.ok(/grid-template-columns.*1fr.*1fr|repeat\(2/.test(src), 'HomeHeroCompare: 2-Spalten-Grid fehlt');
-		assert.ok(/Zeitplan/.test(src), 'HomeHeroCompare: "Zeitplan"-Stat fehlt');
-		assert.ok(/Nächster Versand/.test(src), 'HomeHeroCompare: "Nächster Versand"-Stat fehlt');
-	});
-
-	test('AC-15: HomeHeroCompare border-left: 3px solid var(--g-accent)', () => {
-		const src = readOrg('HomeHeroCompare.svelte');
-		assert.ok(
-			/3px solid var\(--g-accent\)/.test(src),
-			'HomeHeroCompare: border-left: 3px solid var(--g-accent) fehlt'
-		);
 	});
 });
 

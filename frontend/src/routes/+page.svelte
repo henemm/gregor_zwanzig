@@ -12,8 +12,7 @@
 		CompareStatusRow
 	} from '$lib/components/molecules';
 	import {
-		deriveStatusFromPreset,
-		formatNextSend
+		deriveStatusFromPreset
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { tripStatus, activeOrNextTrip, todayStageIndex } from '$lib/utils/tripStatus.js';
 	import {
@@ -30,10 +29,11 @@
 		nextPlannedTrip,
 		firstIncompleteCompare,
 		liveTrip,
-		deriveNextSend,
 		// Issue #1268 (AC-10): geteilte Slot-Aufloesung — NICHT nachbauen.
 		primarySendSlot
 	} from '$lib/utils/cockpitHelpers568.js';
+	// Issue #1969 (AC-23/AC-24): nächster Versand = Backend-Wert (+page.server.ts).
+	import { formatNextBriefing, type NextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
 	import Startseite from './_start/Startseite.svelte';
 	import TripKachel from './_home/TripKachel.svelte';
 	import CompareKachel from './_home/CompareKachel.svelte';
@@ -53,6 +53,13 @@
 
 	const now = new Date();
 	const trips = $derived((data.trips ?? []) as Trip[]);
+	// Issue #1969: { trips: {id: NB}, compare: {id: NB} } oder null (fail-soft ⇒ „—").
+	const nextBriefings = $derived(
+		(data as { nextBriefings?: { trips: Record<string, NextBriefing>; compare: Record<string, NextBriefing> } | null })
+			.nextBriefings ?? null
+	);
+	const compareNb = (id: string | undefined): NextBriefing | null =>
+		(id && nextBriefings?.compare?.[id]) || null;
 	const presets = $derived((data.presets ?? []) as ComparePreset[]);
 	const activePresets = $derived(
 		presets.filter((p) => deriveStatusFromPreset(p) === 'active')
@@ -141,7 +148,9 @@
 
 	// --- Rechte Spalte / Archiv ---------------------------------------------
 	const briefings = $derived(
-		hero ? plannedBriefings(hero.report_config, cockpitStatus?.briefings, hero.id) : []
+		hero
+			? plannedBriefings(hero.report_config, cockpitStatus?.briefings, hero.id, nextBriefings?.trips?.[hero.id] ?? null)
+			: []
 	);
 	const heroAlerts = $derived(alertsForTrip(cockpitStatus?.alerts, hero?.id));
 	const archive = $derived(archivedTrips(trips, now, 4));
@@ -541,7 +550,7 @@
 										{compareHero.schedule === 'daily' ? 'täglich' : compareHero.schedule === 'weekly' ? 'wöchentlich' : 'manuell'}
 										<!-- Issue #1268 (AC-10): echte Versandzeit aus dem Slot statt hour_from
 										     (zeigte bei neu angelegten Vergleichen "· 00:00"). -->
-										{#if compareHero.schedule !== 'manual' && primarySendSlot(compareHero)} · {String(primarySendSlot(compareHero)!.hour).padStart(2,'0')}:{String(primarySendSlot(compareHero)!.minute).padStart(2,'0')}{/if}
+										{#if compareHero.schedule !== 'manual' && primarySendSlot(compareHero)} · {String(primarySendSlot(compareHero)!.hour).padStart(2,'0')}:00{/if}
 									</div>
 								</div>
 								<div
@@ -558,7 +567,7 @@
 										style:letter-spacing="0.1em"
 										style:margin-bottom="5px"
 									>Nächster Versand</div>
-									<div style:font-size="15px" style:font-weight="600">{formatNextSend(deriveNextSend(compareHero, now))}</div>
+									<div style:font-size="15px" style:font-weight="600">{formatNextBriefing(compareNb(compareHero.id), 'vergleich')}</div>
 								</div>
 							</div>
 						</div>
@@ -660,14 +669,14 @@
 							</div>
 							<Pill tone="good">Alle Kanäle ok</Pill>
 						</div>
-						{#if homeCompareTimeline(compareHero, now).length > 0}
+						{#if homeCompareTimeline(compareHero, compareNb(compareHero.id)).length > 0}
 							<div
 								style:display="flex"
 								style:flex-direction="column"
 								style:gap="8px"
 								style:margin-top="8px"
 							>
-								{#each homeCompareTimeline(compareHero, now) as r, i (i)}
+								{#each homeCompareTimeline(compareHero, compareNb(compareHero.id)) as r, i (i)}
 									<BriefingTimelineRow report={r} />
 								{/each}
 							</div>
@@ -827,7 +836,7 @@
 				</div>
 				<div>
 					{#each alsoWatched as preset (preset.id)}
-						<CompareStatusRow {preset} />
+						<CompareStatusRow {preset} nextBriefing={compareNb(preset.id)} />
 					{/each}
 				</div>
 			</Card>

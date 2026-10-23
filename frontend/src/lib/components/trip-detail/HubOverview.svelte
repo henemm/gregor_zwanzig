@@ -12,14 +12,40 @@
 	// eigener Fetch, kein $effect (AC-5, Fehlerklasse #1320).
 	import { resolveTripMetricsOverviewState } from '$lib/components/shared/trip-metrics/tripActiveMetricNames';
 	import type { MetricCatalog } from './metricsEditor.ts';
+	// Issue #1969 (AC-20): Karte „Briefings laufen" mit echten Zeiten statt 06:00/18:00.
+	import { api } from '$lib/api.js';
+	import { reportSlotAktiv } from '$lib/utils/reportSlotAktiv';
+	import { erstelleNaechstesBriefingLader } from '../shared/versand-tab/naechstesBriefingLader.svelte.ts';
+	import type { NextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
 
 	interface Props {
 		trip: Trip;
 		/** #1743: optionaler Anker im Ziel-Reiter (Versand-Abschnitt unter Wetter-Metriken). */
 		onJump?: (tab: string, anchor?: 'versand') => void;
 		metricsCatalog?: MetricCatalog | null;
+		/** #1969: Backend-Wert (GET /api/next-briefings?trip_id=). Fehlt er, laedt die Karte ihn selbst. */
+		nextBriefing?: NextBriefing | null;
 	}
-	let { trip, onJump, metricsCatalog = null }: Props = $props();
+	let { trip, onJump, metricsCatalog = null, nextBriefing }: Props = $props();
+
+	// Issue #1969: client-seitig nachladen, falls der Wert nicht hereingereicht wird
+	// (geteilter Lader; SSR zeigt die Stunden ohne Zonenkuerzel).
+	const naechstesBriefing = erstelleNaechstesBriefingLader(
+		() => ({ context: 'route', id: trip?.id, extern: nextBriefing }),
+		(p) => api.get(p)
+	);
+	const briefing = $derived(naechstesBriefing.wert);
+
+	/** Slot-Stunde als „HH:00" (Versand nutzt nur die Stunde, Default 7/18 wie der Scheduler)
+	 *  plus Zonenkuerzel aus dem Backend-Wert — nie aus der Browser-Zone. */
+	function slotZeit(raw: string | undefined, standardStunde: number): string {
+		const m = /^(\d{1,2}):/.exec(raw ?? '');
+		const stunde = m ? Number(m[1]) : standardStunde;
+		const hh = `${String(stunde).padStart(2, '0')}:00`;
+		return briefing?.at && briefing.tz_abbr ? `${hh} (${briefing.tz_abbr})` : hh;
+	}
+	const morgenZeit = $derived(slotZeit(trip.report_config?.morning_time, 7));
+	const abendZeit = $derived(slotZeit(trip.report_config?.evening_time, 18));
 
 	const metricsState = $derived(
 		metricsCatalog ? resolveTripMetricsOverviewState(trip.display_config?.metrics, metricsCatalog) : null
@@ -112,8 +138,8 @@
 
 		<Card padding={18}>
 			<Eyebrow style="margin-bottom: 10px;">Briefings laufen</Eyebrow>
-			<ReportLine kind="morning" time="06:00" channels={['email', 'telegram']} active />
-			<ReportLine kind="evening" time="18:00" channels={['email']} active />
+			<ReportLine kind="morning" time={morgenZeit} channels={['email', 'telegram']} active={reportSlotAktiv(trip.report_config, 'morning')} />
+			<ReportLine kind="evening" time={abendZeit} channels={['email']} active={reportSlotAktiv(trip.report_config, 'evening')} />
 			<ReportLine kind="alert" time="bei Δ" channels={['telegram']} active alert />
 			<div style="margin-top: 12px;">
 				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken', 'versand')}>Zeitplan bearbeiten →</Btn>

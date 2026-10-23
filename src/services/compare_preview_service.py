@@ -153,8 +153,9 @@ class ComparePreviewService:
             hourly_metrics=opts.hourly_metrics,
             hourly_enabled=opts.hourly_enabled,
             preset_name=ctx["name"],
-            preset_schedule=preset.get("schedule"),
-            preset_weekday=preset.get("weekday"),
+            # Issue #1969 (AC-26): das ganze Preset -- der Fuss nennt den echten
+            # naechsten Termin aus der zentralen Ableitung.
+            preset=preset,
             corridors=opts.corridors,
             outlook_enabled=opts.outlook_enabled,
             outlook_metrics=opts.outlook_metrics,

@@ -662,20 +662,13 @@ def test_ac5_footer_naechster_versand_weekly_folgt_der_kopfzeilen_zone():
           dem der ORTSTAG (21.08., ein Freitag) bereits einen Tag vor dem
           Servertag (20.08., Donnerstag) liegt,
     WHEN  ``render_compare_email`` den Footer "Naechster Versand" berechnet,
-    THEN  zeigt der Footer den 28.08.2026 -- den naechsten Freitag AB dem
-          ORTSTAG (21.08. IST bereits Freitag, also faellt der naive
-          "0 Tage"-Fall auf den `or 7`-Zweig, naechster Freitag = 28.08.).
+    THEN  zeigt der Footer "21.08.2026 06:00 NZST" -- der Ortstag (21.08.)
+          IST der Versandtag, es ist 02:00 Ortszeit, der Slot 06:00 (Alt-
+          Preset-Rueckfall) steht heute noch an.
 
-    Vor dem Fix rechnet ``_compute_next_send`` mit ``date.today()``
-    (Servertag 20.08., ein Donnerstag): naechster Freitag = 21.08. -- ein
-    ANDERES Datum als der korrekte 28.08., weil der Wochentag-Modulo-7-Wert
-    fuer Donnerstag->Freitag (1 Tag) vom Freitag->Freitag-Fall (7 Tage,
-    `or 7`-Zweig) abweicht. Genau dieser Weekday-Randfall macht die beiden
-    Zeitbasen sichtbar unterscheidbar (bei den meisten anderen Wochentagen
-    wuerde ein Ein-Tages-Versatz im Modulo-7 wieder herausfallen -- gemessen,
-    nicht vermutet).
-
-    RED heute: fachlich rot -- der Footer zeigt den Servertag-Wert.
+    Seit #1969 (AC-26/AC-27) nennt der Fuss Datum, Slot-Uhrzeit und Kuerzel
+    aus der zentralen Ableitung. Eine Rechnung auf dem Servertag (20.08.,
+    Donnerstag) oder in UTC (20.08. 18:00) ist im Fuss sichtbar falsch.
     """
     from output.renderers.comparison import render_compare_email
 
@@ -691,17 +684,35 @@ def test_ac5_footer_naechster_versand_weekly_folgt_der_kopfzeilen_zone():
         ergebnis = _footer_ergebnis(D21)
         html_body, _text = render_compare_email(
             ergebnis, preset_name="Footer-Test-Weekly",
-            preset_schedule="weekly", preset_weekday=4,
+            preset=_footer_preset(schedule="weekly", weekday=4),
         )
 
-    erwartet = "28.08.2026"
-    falsch_server = "21.08.2026"
-    assert erwartet in html_body, (
-        f"AC-5 (weekly): Footer zeigt nicht {erwartet!r} (naechster Freitag ab "
-        f"dem ORTSTAG {D21}, Wochentag 4). Enthaelt stattdessen "
-        f"{falsch_server!r}: {falsch_server in html_body} -- das waere der "
-        "Servertag-Wert (date.today() statt header_tz)."
+    _pruefe_footer_in_ortszone(html_body, "weekly")
+
+
+def _footer_preset(**overrides) -> dict:
+    """Alt-Preset ohne Slot-Felder (Rueckfall Morgen 06:00) am Neuseeland-Ort."""
+    preset = {"id": "footer-preset", "name": "Footer-Test",
+              "location_ids": ["footer-nz"], "weekday": None}
+    preset.update(overrides)
+    return preset
+
+
+def _pruefe_footer_in_ortszone(html_body: str, fall: str) -> None:
+    """#1969 (AC-27): der Fuss nennt den naechsten Termin in der ORTSZONE mit
+    Kuerzel -- 21.08. 06:00 NZST (heute, Ortstag Freitag). Die UTC-Fassung
+    desselben Termins (20.08. 18:00 UTC) darf dort NICHT stehen, ebenso wenig
+    ein auf dem Servertag (20.08.) gerechnetes Datum."""
+    start = html_body.find("Nächster Versand")
+    assert start >= 0, "Fuss-Abschnitt 'Nächster Versand' fehlt"
+    fuss = html_body[start:html_body.find("</td>", start)]
+    erwartet = "21.08.2026 06:00 NZST"
+    assert erwartet in fuss, (
+        f"AC-5 ({fall}): Fuss nennt nicht {erwartet!r} (naechster Slot am ORTSTAG "
+        f"{D21} in Ortszeit mit Kuerzel): {fuss!r}"
     )
+    assert "18:00" not in fuss, f"AC-5 ({fall}): Fuss nennt die UTC-Uhrzeit: {fuss!r}"
+    assert "20.08.2026" not in fuss, f"AC-5 ({fall}): Fuss nennt den Servertag: {fuss!r}"
 
 
 def test_ac5_footer_naechster_versand_daily_folgt_der_kopfzeilen_zone():
@@ -709,11 +720,8 @@ def test_ac5_footer_naechster_versand_daily_folgt_der_kopfzeilen_zone():
 
     GIVEN dieselbe Lage wie oben, aber ein ``daily``-Abo,
     WHEN  ``render_compare_email`` den Footer berechnet,
-    THEN  zeigt der Footer den 22.08.2026 -- den Ortstag (21.08.) plus 1 Tag.
-
-    Vor dem Fix: Servertag (20.08.) + 1 Tag = 21.08. -- ein anderes Datum.
-
-    RED heute: fachlich rot.
+    THEN  zeigt der Footer "21.08.2026 06:00 NZST" -- der naechste Slot am
+          Ortstag (seit #1969 kein pauschales "morgen" mehr).
     """
     from output.renderers.comparison import render_compare_email
 
@@ -721,16 +729,11 @@ def test_ac5_footer_naechster_versand_daily_folgt_der_kopfzeilen_zone():
         _anker(MITTAGS_UTC, WELLINGTON_ZONE, D21)
         _uhr_eingefroren(MITTAGS_UTC)
         servertag = date.today()
+        assert servertag == D20, f"Testaufbau: Servertag {servertag} != {D20}"
         ergebnis = _footer_ergebnis(D21)
         html_body, _text = render_compare_email(
             ergebnis, preset_name="Footer-Test-Daily",
-            preset_schedule="daily", preset_weekday=None,
+            preset=_footer_preset(schedule="daily"),
         )
 
-    erwartet = "22.08.2026"
-    falsch_server = "21.08.2026"
-    assert erwartet in html_body, (
-        f"AC-5 (daily): Footer zeigt nicht {erwartet!r} (Ortstag {D21} + 1 Tag). "
-        f"Enthaelt stattdessen {falsch_server!r}: {falsch_server in html_body} -- "
-        f"das waere der Servertag ({servertag}) + 1 Tag."
-    )
+    _pruefe_footer_in_ortszone(html_body, "daily")

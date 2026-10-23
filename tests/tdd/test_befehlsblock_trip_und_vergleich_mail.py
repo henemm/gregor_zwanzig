@@ -97,7 +97,8 @@ def _compare_html() -> str:
     from output.renderers.email.compare_html import render_compare_html
 
     return render_compare_html(
-        _compare_result(), preset_name="Mein Vergleich", preset_schedule="daily",
+        _compare_result(), preset_name="Mein Vergleich",
+        preset={"schedule": "daily", "location_ids": ["innsbruck", "frejus"]},
     )
 
 

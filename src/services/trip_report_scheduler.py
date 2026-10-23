@@ -313,46 +313,82 @@ def trip_briefing_due_at(
     """
     from services.trip_day import trip_local_now
 
-    if trip.paused_at is not None:
+    if trip_pausiert(trip, moment):
         return False
+    vor_ort = trip_local_now(trip, moment)
+    store = BriefingSlotStore(user_id)
+    return any(
+        _slot_faellig_vor_ort(trip, report_type, vor_ort, store)
+        for report_type in ("morning", "evening")
+    )
+
+
+def trip_pausiert(trip: "Trip", moment: datetime) -> bool:
+    """Pause-Teil des Aktiv-Filters (#1969 AC-11): ``paused_at`` gesetzt oder
+    ``paused_until`` liegt nach ``moment``. EINE Fassung fuer Sammellauf,
+    Faelligkeits-Praedikat und Anzeige „Naechstes Briefing"."""
+    if trip.paused_at is not None:
+        return True
     rc = trip.report_config
     if rc is not None and rc.paused_until is not None:
         pu = rc.paused_until
         if pu.tzinfo is None:
             pu = pu.replace(tzinfo=timezone.utc)
         if moment < pu:
-            return False
-
-    vor_ort = trip_local_now(trip, moment)
-    store = BriefingSlotStore(user_id)
-    for report_type, zieltag in (
-        ("morning", vor_ort.date()),
-        ("evening", vor_ort.date() + timedelta(days=1)),
-    ):
-        # Issue #2422 S3 (AC-5): Slot-genau, dieselbe Regel wie der Versand
-        # -- sonst schwiege der Alarm fuer ein abgeschaltetes Briefing.
-        if not slot_aktiv(rc, report_type):
-            continue
-        if trip.get_stage_for_date(zieltag) is None:
-            continue
-        stunde = _slot_stunde(trip, report_type)
-        if not stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN:
-            continue
-        # Der Vermerk beendet das Nachhol-Fenster, sobald das Briefing raus
-        # ist — sonst schwiege der Alarm bis zu drei Stunden nach einem
-        # bereits zugestellten Briefing. Nach einem GESCHEITERTEN Versand
-        # traegt er nicht (reserve-then-release, `:565-571`); dort endet die
-        # Sperre ueber den Briefing-Anker (`check_briefing_imminent`, R6).
-        # Issue #1897: `is_recorded` heisst ABGESCHLOSSEN. Ein Vermerk ohne
-        # Ausgang (hart beendeter Prozess) beendet das Fenster NICHT mehr --
-        # solange nichts rausging, muss die Alarm-Sperre halten, unabhaengig
-        # vom Alter des Vermerks.
-        if store.is_recorded(
-            trip.id, report_type, vor_ort.date(), zone=vor_ort.tzinfo,
-        ):
-            continue
-        return True
+            return True
     return False
+
+
+def trip_slot_aktiv_am_ortstag(trip: "Trip", report_type: str, ortstag: date) -> bool:
+    """Slot-Teil des Aktiv-Filters (#1969 AC-11): Slot eingeschaltet
+    (Issue #2422 S3: Gesamtschalter UND Einzel-Slot) und Etappe am Zieltag
+    (morning = Ortstag, evening = Ortstag+1)."""
+    if not slot_aktiv(trip.report_config, report_type):
+        return False
+    zieltag = ortstag if report_type == "morning" else ortstag + timedelta(days=1)
+    return trip.get_stage_for_date(zieltag) is not None
+
+
+def nachhol_fenster_offen(trip: "Trip", report_type: str, vor_ort: datetime) -> bool:
+    """Faelligkeits-Fenster (Issue #1725): ``stunde <= ortsstunde < stunde +
+    NACHHOL_FENSTER_STUNDEN`` — EINE Fassung fuer Sammellauf und Praedikat."""
+    stunde = _slot_stunde(trip, report_type)
+    return stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN
+
+
+def _slot_faellig_vor_ort(
+    trip: "Trip", report_type: str, vor_ort: datetime, store: BriefingSlotStore,
+) -> bool:
+    """Ein Slot, bereits aufgeloeste Ortszeit, Pause schon geprueft."""
+    if not trip_slot_aktiv_am_ortstag(trip, report_type, vor_ort.date()):
+        return False
+    if not nachhol_fenster_offen(trip, report_type, vor_ort):
+        return False
+    # Der Vermerk beendet das Nachhol-Fenster, sobald das Briefing raus
+    # ist — sonst schwiege der Alarm bis zu drei Stunden nach einem
+    # bereits zugestellten Briefing. Nach einem GESCHEITERTEN Versand
+    # traegt er nicht (reserve-then-release, `:565-571`); dort endet die
+    # Sperre ueber den Briefing-Anker (`check_briefing_imminent`, R6).
+    # Issue #1897: `is_recorded` heisst ABGESCHLOSSEN. Ein Vermerk ohne
+    # Ausgang (hart beendeter Prozess) beendet das Fenster NICHT mehr --
+    # solange nichts rausging, muss die Alarm-Sperre halten, unabhaengig
+    # vom Alter des Vermerks.
+    return not store.is_recorded(
+        trip.id, report_type, vor_ort.date(), zone=vor_ort.tzinfo,
+    )
+
+
+def trip_slot_due(
+    trip: "Trip", report_type: str, moment: datetime, *, store: BriefingSlotStore,
+) -> bool:
+    """Das freie Faelligkeits-Praedikat JE SLOT (#1969 AC-11) — dieselbe Regel
+    wie :func:`trip_briefing_due_at` (das ist ``any`` ueber beide Slots), aber
+    mit Antwort, WELCHER Slot faellig ist. Seiteneffektfrei."""
+    from services.trip_day import trip_local_now
+
+    if trip_pausiert(trip, moment):
+        return False
+    return _slot_faellig_vor_ort(trip, report_type, trip_local_now(trip, moment), store)
 
 
 def _trend_note(thunder: str, precip_mm: float, wind_kmh: int) -> str | None:
@@ -804,15 +840,13 @@ class TripReportSchedulerService:
         store = BriefingSlotStore(self._user_id)
         store.repair_if_corrupt(moment=now_utc)  # #2231: VOR der Schleife
         due: List[Tuple["Trip", str, date]] = []
-        for report_type, slot_stunde in (
-            ("morning", self._get_morning_hour),
-            ("evening", self._get_evening_hour),
-        ):
+        for report_type in ("morning", "evening"):
             for trip in self._get_active_trips(report_type, now_utc):
                 try:
                     vor_ort = trip_local_now(trip, now_utc)
-                    stunde = slot_stunde(trip)
-                    if not stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN:
+                    # Issue #1969 (AC-11): dieselbe Fensterregel wie das freie
+                    # Praedikat (`trip_slot_due`) und die Anzeige.
+                    if not nachhol_fenster_offen(trip, report_type, vor_ort):
                         continue
                     ortstag = vor_ort.date()
                     # Issue #1897: hier zaehlt „wird jetzt ein Versand
@@ -1182,28 +1216,20 @@ class TripReportSchedulerService:
         active = []
         for trip in all_trips:
             try:
-                target_date = self._get_target_date(report_type, trip, now_utc)
-                if trip.get_stage_for_date(target_date) is None:
+                # Issue #1969 (AC-11): Etappe am Zieltag + Slot-Schalter und Pause
+                # stehen in den freien Funktionen, die auch trip_briefing_due_at
+                # und die Anzeige „Naechstes Briefing" rufen. Ortstag des Laufs
+                # wie bisher ueber `_get_target_date` (morning-Zieltag = Ortstag).
+                ortstag = self._get_target_date("morning", trip, now_utc)
+                if not trip_slot_aktiv_am_ortstag(trip, report_type, ortstag):
                     continue
                 # Issue #995: Trip-Detail-Pause-Button (Go-Feld paused_at) unterdrückt
                 # den automatischen Versand. NUR hier — NICHT in load_all_trips(),
                 # sonst würde der Alert-Dispatch (trip_alert.py) fälschlich mit
                 # unterdrückt. Manueller Test-Versand (send_test_report) umgeht diese
                 # Funktion ohnehin und bleibt unberührt.
-                if trip.paused_at is not None:
+                if trip_pausiert(trip, now_utc):
                     continue
-                rc = trip.report_config
-                # Issue #2422 S3: Slot-genau statt nur `enabled` -- dieselbe Regel
-                # wie trip_briefing_due_at und die flache Ableitung im Loader.
-                if not slot_aktiv(rc, report_type):
-                    continue
-                if rc is not None and rc.paused_until is not None:
-                    # Ensure tz-aware comparison
-                    pu = rc.paused_until
-                    if pu.tzinfo is None:
-                        pu = pu.replace(tzinfo=timezone.utc)
-                    if now_utc < pu:
-                        continue
                 # Issue #2422 S3 (AC-6): `skip_next` wird NICHT mehr hier verbraucht
                 # (das geschah bei jedem Stundenlauf, unabhaengig von der
                 # Faelligkeit), sondern erst vom tatsaechlich faelligen Slot, s.

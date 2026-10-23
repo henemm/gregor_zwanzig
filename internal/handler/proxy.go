@@ -235,6 +235,44 @@ func StagesWeatherProxyHandler(pythonURL string) http.HandlerFunc {
 	}
 }
 
+// NextBriefingsProxyHandler proxies GET /api/next-briefings to the Python core
+// (GET /api/_internal/next-briefings). Issue #1969: user_id comes ONLY from the
+// auth context (appendUserID overwrites a client-supplied user_id); the
+// optional ?trip_id= / ?preset_id= filters pass through. Without auth context
+// the request is rejected with 401 BEFORE any upstream call — appendUserID
+// would otherwise forward the client query unchanged (never "default").
+// Spec: docs/specs/modules/feat_1969_naechstes_briefing.md
+func NextBriefingsProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		uid := middleware.UserIDFromContext(r.Context())
+		if uid == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error":"unauthorized"}`))
+			return
+		}
+		url := pythonURL + "/api/_internal/next-briefings?" + appendUserID(r.URL.RawQuery, uid)
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Get(url)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "application/json"
+		}
+		w.Header().Set("Content-Type", ct)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}
+
 // ValidatorFormatMetricProxyHandler proxies GET /api/_validator/format-metric.
 // Pure-function endpoint — no user_id injection needed, query string is passed
 // through verbatim. Cookie-auth via global AuthMiddleware remains required.

@@ -17,7 +17,7 @@
 	import VTBriefingChannels from './versand-tab/VTBriefingChannels.svelte';
 	import VTSchedulePlan from './versand-tab/VTSchedulePlan.svelte';
 	import VTLaufzeitRoute from './versand-tab/VTLaufzeitRoute.svelte';
-	import VTLaufzeitVergleich from './versand-tab/VTLaufzeitVergleich.svelte'; import Infobox from '$lib/components/molecules/Infobox.svelte';
+	import VTLaufzeitVergleich from './versand-tab/VTLaufzeitVergleich.svelte'; import Infobox from '$lib/components/molecules/Infobox.svelte'; import VTNextBriefing from './versand-tab/VTNextBriefing.svelte'; // #1969: geteilter Baustein, laedt selbst
 	// Issue #1738 Fix-Loop 1 (F001/F002): die Read-Modify-Write-Regel des
 	// report_config-Blobs steht als reine, pruefbare Funktion neben beiden
 	// Schreibern statt zweimal im jeweiligen Effect-Rumpf.
@@ -400,7 +400,7 @@
 			onTrendMorningToggle={makeToggleHandler((v) => (multi_day_trend_morning = v))}
 			onTrendEveningToggle={makeToggleHandler((v) => (multi_day_trend_evening = v))}
 		/>
-
+		<VTNextBriefing {context} id={saveController ? trip?.id : undefined} reloadKey={saveController?.savedAt} />
 		<VTLaufzeitRoute {tripEnd} onOpenStages={handleOpenStages} />
 	</div>
 {:else if context === 'vergleich'}
@@ -435,7 +435,7 @@
 			onMorningTime={makeTimeHandler((v) => onMorningTimeChange?.(v))}
 			onEveningTime={makeTimeHandler((v) => onEveningTimeChange?.(v))}
 		/>
-
+		<VTNextBriefing {context} id={preset?.id} reloadKey={saveController?.savedAt} />
 		<VTLaufzeitVergleich value={endDate ?? null} onChange={(v) => onEndDateChange?.(v)} />
 
 		<!-- Issue #1258 Scheibe S4 (E5, AC-18): die Alert-Zustellungs-Sektion

@@ -234,47 +234,7 @@ export function primarySendSlot(preset: ComparePreset): SlotTime | null {
 	return slots.reduce((a, b) => (a.hour * 60 + a.minute <= b.hour * 60 + b.minute ? a : b));
 }
 
-/**
- * Berechnet den naechsten Versand-Zeitstempel aus den echten Versand-Slots.
- * - 'daily': naechster bevorstehender aktiver Slot (heute, sonst morgen)
- * - 'weekly': naechster passender Wochentag (preset.weekday, 0=Montag) zur Slot-Zeit
- * - 'manual': null
- * - kein aktiver Slot: null
- *
- * Issue #1268 (AC-9): liest NICHT mehr `hour_from` — das war der Start des
- * Bewertungs-Zeitfensters, nicht die Versandzeit (Anzeige log: 09:00 statt
- * 07:00). Versand-Wahrheit sind `morning_time`/`evening_time` (types.ts:304).
- */
-export function deriveNextSend(preset: ComparePreset, now: Date): Date | null {
-	if (!preset || preset.schedule === 'manual') return null;
-	const slots = resolvePresetSlots(preset);
-	if (slots.length === 0) return null;
-
-	const at = (dayOffset: number, slot: SlotTime): Date =>
-		new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, slot.hour, slot.minute, 0, 0);
-
-	const earliest = (candidates: Date[]): Date =>
-		candidates.reduce((a, b) => (a <= b ? a : b));
-
-	if (preset.schedule === 'daily' || (preset.schedule as string) === 'daily_evening') {
-		// Heute, sofern der Slot noch bevorsteht — sonst derselbe Slot morgen.
-		return earliest(slots.map((s) => (now < at(0, s) ? at(0, s) : at(1, s))));
-	}
-
-	if (preset.schedule === 'weekly') {
-		const targetWeekday = preset.weekday; // 0=Montag
-		if (targetWeekday == null) return null;
-		// JS: 0=Sonntag, 1=Montag... convert: preset 0=Mon → JS 1=Mon
-		const jsWeekday = (targetWeekday + 1) % 7;
-		const daysUntil = (jsWeekday - now.getDay() + 7) % 7;
-		return earliest(
-			slots.map((s) =>
-				// Am Zieltag selbst zaehlt nur ein noch bevorstehender Slot,
-				// sonst erst in einer Woche.
-				daysUntil === 0 && now >= at(0, s) ? at(7, s) : at(daysUntil, s)
-			)
-		);
-	}
-
-	return null;
-}
+// Issue #1969 (AC-24): `deriveNextSend` ist entfernt — den naechsten Versand
+// rechnet ausschliesslich das Backend (GET /api/next-briefings, Anzeige ueber
+// shared/versand-tab/nextBriefingText.ts). `resolvePresetSlots`/`primarySendSlot`
+// bleiben: sie tragen das Zeitplan-Label (`presetTileScheduleLabel`, Startseite).

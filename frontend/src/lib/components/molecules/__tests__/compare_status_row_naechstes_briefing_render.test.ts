@@ -33,7 +33,9 @@ const CompareStatusRow = (await import(pathToFileURL(path.join(FRONTEND, 'src/li
 
 const PRESET = {
 	id: 'cp-1969',
-	name: 'Vergleich 07:30',
+	// GREEN-Korrektur: der Name darf keine Uhrzeit tragen — die Zeile rendert ihn
+	// sichtbar, die Zeit-Zusicherungen unten prüfen den ganzen Zeilentext.
+	name: 'Vergleich Halbstunde',
 	location_ids: ['l1', 'l2'],
 	schedule: 'daily',
 	morning_enabled: true,

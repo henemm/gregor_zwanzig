@@ -17,6 +17,7 @@
 // damit im Worktree auch die Worktree-Kopie geprueft wird.
 
 import { readFileSync, existsSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { compile, compileModule } from 'svelte/compiler';
 
@@ -47,6 +48,14 @@ export async function resolve(specifier, context, nextResolve) {
 }
 
 export async function load(url, context, nextLoad) {
+	// #1969: eigene Runen-Module `*.svelte.ts` (Typen entfernen, dann serverseitig
+	// uebersetzen — dieselbe Behandlung wie shared/__tests__/svelteTsModulHook.mjs).
+	if (url.startsWith('file:') && !url.includes('/node_modules/') && url.endsWith('.svelte.ts')) {
+		const file = fileURLToPath(url);
+		const js = stripTypeScriptTypes(readFileSync(file, 'utf-8'), { mode: 'strip' });
+		const out = compileModule(js, { generate: 'server', filename: file.replace(/\.ts$/, '.js') });
+		return { format: 'module', shortCircuit: true, source: out.js.code };
+	}
 	if (url.startsWith('file:') && url.includes('/node_modules/') && url.endsWith('.svelte.js')) {
 		const file = fileURLToPath(url);
 		const { js } = compileModule(readFileSync(file, 'utf-8'), { generate: 'server', filename: file });
