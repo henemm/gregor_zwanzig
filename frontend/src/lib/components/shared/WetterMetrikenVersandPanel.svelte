@@ -9,7 +9,7 @@
 	// report_config-Speicherweg); Vergleich und Trip-Anlegen (`createMode`): der
 	// EINE `VersandTab` im Abschnitt (Anlegen haelt den Blob per `bind:reportConfig`,
 	// kein PUT — persistiert wird erst beim POST der Anlege-Seite).
-	import { tick } from 'svelte';
+	import { versandSprungNachTick } from './versandSprungNachfuehren.ts';
 	import type { ComponentProps, Snippet } from 'svelte';
 	import type { ReportConfig } from '$lib/types';
 	import WeatherMetricsTab from './WeatherMetricsTab.svelte';
@@ -52,11 +52,11 @@
 	// im Vergleich erst nach der Versand-Hydration — keine Platzhalterwerte im Blick).
 	// Massgeblich ist allein der Zaehler des Hubs (nicht die Adresszeile, die im
 	// Trip-Hub wegen des asynchronen goto hinterherhinkt); ohne Sprung (0) scrollt
-	// auch ein Remount nicht.
+	// auch ein Remount nicht. Nachgefuehrt bis zur Nutzer-Absicht (#1743 F002).
 	$effect(() => {
 		if (versandSprung <= 0 || !abschnitt) return;
 		const ziel = abschnitt;
-		void tick().then(() => ziel.scrollIntoView?.({ block: 'start' }));
+		return versandSprungNachTick(ziel);
 	});
 </script>
 

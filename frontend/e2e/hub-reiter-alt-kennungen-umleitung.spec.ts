@@ -174,12 +174,56 @@ const HUBS = [
 	}
 ] as const;
 
+// #1743 F002: Der Wetter-Metriken-Inhalt OBERHALB des Versand-Abschnitts lädt nach
+// dem ersten Sprung nach und schob den Abschnitt aus dem Blick. Ein einmaliges
+// toBeInViewport greift im kurzen Fenster davor (falsches Grün) — darum werden die
+// Katalog-Abrufe künstlich verzögert (Rennen erzwungen, unabhängig von der
+// Ladegeschwindigkeit) und erst der ENDZUSTAND geprüft.
+const KATALOG = /\/api\/(metrics|sms-symbols|templates|metric-presets)$/;
+const KATALOG_VERZUG_MS = 1_500;
+
+async function katalogVerzoegern(page: Page): Promise<void> {
+	await page.route(
+		(url) => KATALOG.test(url.pathname),
+		async (route) => {
+			await new Promise((r) => setTimeout(r, KATALOG_VERZUG_MS));
+			await route.continue();
+		}
+	);
+}
+
+/** Anker: /api/sms-symbols lädt in beiden Kontexten (Trip über load(), Vergleich
+ *  über den eigenen Effekt in WeatherMetricsTab.svelte). */
+function katalogGeladen(page: Page) {
+	return page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/api/sms-symbols'), {
+		timeout: 20_000
+	});
+}
+
+/** Wartet, bis die top-Position des Elements ~2 s (8 × 250 ms) unverändert ist. */
+async function positionStabil(locator: ReturnType<Page['locator']>): Promise<void> {
+	let proben: number[] = [];
+	await expect
+		.poll(
+			async () => {
+				const top = await locator.evaluate((el) => Math.round(el.getBoundingClientRect().top));
+				proben = [...proben, top].slice(-8);
+				return proben.length === 8 && Math.max(...proben) - Math.min(...proben) <= 2;
+			},
+			{ message: 'Versand-Abschnitt kommt nicht zur Ruhe', intervals: [250], timeout: 20_000 }
+		)
+		.toBe(true);
+}
+
 for (const hub of HUBS) {
 	test.describe(`#1743 ${hub.art}-Hub: Alt-Links auf Versand/Vorschau`, () => {
+		for (const vp of [{ width: 1280, height: 900 }, HANDY])
 		for (const alt of ['versand', 'briefings']) {
-			test(`?tab=${alt} → ?tab=wetter-metriken#versand, Versand-Abschnitt im Blick`, async ({ page }) => {
-				await page.setViewportSize({ width: 1280, height: 900 });
+			test(`?tab=${alt} → ?tab=wetter-metriken#versand, Versand-Abschnitt bleibt im Blick (${vp.width}x${vp.height})`, async ({ page }) => {
+				await page.setViewportSize(vp);
 				const pfad = await hub.pfad(page);
+				await katalogVerzoegern(page);
+				const geladen = katalogGeladen(page);
 				await page.goto(`${pfad}?tab=${alt}`);
 
 				await expect(
@@ -196,7 +240,9 @@ for (const hub of HUBS) {
 					.toBe('wetter-metriken#versand');
 				const abschnitt = page.locator('[data-testid="versand-abschnitt"]:visible').first();
 				await expect(abschnitt).toBeVisible({ timeout: 15_000 });
-				await expect(abschnitt).toBeInViewport({ timeout: 15_000 });
+				await geladen;
+				await positionStabil(abschnitt);
+				await expect(abschnitt).toBeInViewport({ timeout: 1_000 });
 				await expect(page.locator(`[data-testid="${hub.prefix}-panel-uebersicht"]`)).toHaveCount(0);
 			});
 		}
@@ -270,6 +316,9 @@ test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 			const presetId = ((await preset.json()) as { id: string }).id;
 
 			await gast.goto('/');
+			// #1743 F002: Endzustand prüfen, Nachladen oberhalb erzwingen (s. katalogVerzoegern).
+			await katalogVerzoegern(gast);
+			const geladen = katalogGeladen(gast);
 			await gast.locator('a:visible', { hasText: 'Briefing-Zeitplan' }).first().click();
 
 			await expect(gast).toHaveURL(new RegExp(`/compare/${presetId}\\?tab=wetter-metriken#versand$`), {
@@ -278,9 +327,11 @@ test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 			await expect(
 				gast.locator('[data-testid="compare-detail-panel-wetter-metriken"]:visible').first()
 			).toBeVisible({ timeout: 15_000 });
-			await expect(gast.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeInViewport({
-				timeout: 15_000
-			});
+			const abschnitt = gast.locator('[data-testid="versand-abschnitt"]:visible').first();
+			await expect(abschnitt).toBeVisible({ timeout: 15_000 });
+			await geladen;
+			await positionStabil(abschnitt);
+			await expect(abschnitt).toBeInViewport({ timeout: 1_000 });
 			await expect(gast.locator('[data-testid="compare-detail-panel-uebersicht"]')).toHaveCount(0);
 		} finally {
 			if (angelegt) {
