@@ -351,8 +351,15 @@ class TestCorridorScoreIndependence:
 # HIGH). Nur der HTML-Teil aendert sich (Farbe steckt nur im HTML); der
 # Klartext-Teil bleibt byte-identisch (alte Summe unveraendert gueltig).
 # Alte HTML-Summe: 2ea4e178…, neue: 68b9c7d4….
-_COMPARE_HTML_SHA256_BEFORE = "645479b71c9b3fa4b2e3de0f42c6640fc6f04a8cf5b185d0d0a731eabfc3735b"
-_COMPARE_TEXT_SHA256_BEFORE = "e517e744390f0bfbd32f89407756de18a0038861f13008e90b8cca3ca438d621"
+#
+# #2282 S2 (2026-10-22): erneut fortgeschrieben, wieder AUSDRUECKLICH. Der
+# Befehlsblock der Vergleichs-Mail nennt jetzt HEUTE/MORGEN/REPORT mit
+# Vergleichs-Wortlaut (Spec AC-11). NACHGEMESSEN per Vorher/Nachher-Render
+# gegen die Merge-Base e03dfc844: Klartext und HTML unterscheiden sich
+# ausschliesslich in diesen drei Befehlszeilen (plus Zeilenumbruch der
+# Befehlstabelle). Alte Summen: HTML 645479b7…, Klartext e517e744….
+_COMPARE_HTML_SHA256_BEFORE = "9d48487f21ad339c450c2cb13e20a52af8d5643ee530f09904611103bd00f7d9"
+_COMPARE_TEXT_SHA256_BEFORE = "62a49aa2f71fed25b23edbbad637fa299a381df80a5d2e34d68ca2fa509e50ab"
 
 
 def _byte_identity_fixture():

@@ -71,8 +71,13 @@ _REPRAESENTANT_WORT = {
         if klasse == KLASSE_ROUTE_ONLY
     )[0],
     KLASSE_METRIK_QUERY: sorted(_QUERY_KEYS)[0],
-    KLASSE_BEIDE_KINDS: sorted(_beide_kinds_reader_woerter())[0],
+    # #2282 S2: fest "pause" -- seit Variante B stehen auch heute/morgen/
+    # report in der `_BEIDE_KINDS`-Zeile, ``sorted()[0]`` waere dann "heute"
+    # (braucht Wetter/Trip-Etappen und misst die Zeile nicht mehr sauber).
+    # Deren Verhalten pruefen test_ortsvergleich_befehle_versand.py (AC-10/11).
+    KLASSE_BEIDE_KINDS: "pause",
 }
+assert _REPRAESENTANT_WORT[KLASSE_BEIDE_KINDS] in _beide_kinds_reader_woerter()
 
 
 # ---------------------------------------------------------------------------

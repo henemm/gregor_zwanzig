@@ -40,11 +40,13 @@ TRIP_ZEILEN = (
     "STATUS", "PAUSE [2d / 12h]", "SKIP", "STOP", "WEITER", "HILFE", "KUERZEL",
     "STARTDATUM JJJJ-MM-TT", "REPORT [morning / evening]",
 )
-VERGLEICH_ZEILEN = ("PAUSE", "WEITER", "HILFE", "KUERZEL")
+#: #2282 S2 (AC-11): HEUTE/MORGEN/REPORT wirken auch am Ortsvergleich.
+VERGLEICH_ZEILEN = ("HEUTE", "MORGEN", "PAUSE", "WEITER", "HILFE", "KUERZEL", "REPORT")
 NUR_TRIP_WOERTER = (
-    "STARTDATUM", "REPORT", "HEUTE", "MORGEN", "JETZT", "GEWITTER", "STRECKE",
-    "RUHETAG", "STATUS", "SKIP", "STOP",
+    "STARTDATUM", "JETZT", "GEWITTER", "STRECKE", "RUHETAG", "STATUS", "SKIP", "STOP",
 )
+#: Trip-Wortlaut, der im Vergleichs-Block nichts verloren hat (#2282 S2).
+NUR_TRIP_WORTLAUT = ("Etappe", "[morning / evening]")
 
 
 # ---------------------------------------------------------------------------
@@ -179,13 +181,15 @@ def test_ac8_trip_html_und_klartext_tragen_dieselbe_befehlsmenge():
 # AC-10: Ortsvergleich HTML
 # ---------------------------------------------------------------------------
 
-def test_ac10_vergleich_html_hat_genau_die_vier_befehle():
+def test_ac10_vergleich_html_hat_genau_die_vergleichs_befehle():
     text = _html_block(_compare_html())
     woerter = _woerter(text)
     for form in VERGLEICH_ZEILEN:
         assert form in text, f"Vergleichs-Block ohne {form!r}: {text!r}"
     for verboten in NUR_TRIP_WOERTER:
         assert verboten not in woerter, f"Vergleichs-Block fuehrt Trip-Befehl {verboten!r}: {text!r}"
+    for wortlaut in NUR_TRIP_WORTLAUT:
+        assert wortlaut not in text, f"Vergleichs-Block mit Trip-Wortlaut {wortlaut!r}: {text!r}"
     # PAUSE ohne Dauer (Vergleiche pausieren unbefristet, AC-29 #2417).
     assert "2d" not in text and "12h" not in text, text
     assert HINWEIS in text
@@ -251,11 +255,12 @@ def test_ac12_baustein_liefert_trip_und_vergleichs_block():
     plain_vgl = command_block.render_commands_plain("vergleich")
     assert KOPF_PLAIN in plain_trip and KOPF_PLAIN in plain_vgl
     assert len([z for z in plain_trip.splitlines() if z.startswith("  ")]) == 15
-    assert len([z for z in plain_vgl.splitlines() if z.startswith("  ")]) == 4
+    assert len([z for z in plain_vgl.splitlines() if z.startswith("  ")]) == len(VERGLEICH_ZEILEN)
     html_trip = _entmarkup(command_block.render_commands_html("route"))
     html_vgl = _entmarkup(command_block.render_commands_html("vergleich"))
     assert "STARTDATUM JJJJ-MM-TT" in html_trip and "REPORT [morning / evening]" in html_trip
-    assert "STARTDATUM" not in html_vgl and "REPORT" not in html_vgl
+    assert "STARTDATUM" not in html_vgl and "REPORT" in html_vgl
+    assert "[morning / evening]" not in html_vgl and "Etappe" not in html_vgl
 
 
 def test_ac12_aenderung_an_command_specs_aendert_trip_und_vergleich_gleichzeitig(monkeypatch):

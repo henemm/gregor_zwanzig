@@ -1366,17 +1366,33 @@ ZIELLOSE_CALLBACKS = frozenset({"act_help", "act_columns"})
 #: ``_COMMAND_SPECS`` stehen und alle sechs Lagen je Kanal durchlaufen.
 EIGENE_E2E_BEFEHLE = frozenset({"startdatum", "report"})
 
+#: #2282 S2 (PO-Entscheidung 2026-10-22, Variante B "immer nachfragen"):
+#: ``report``/``heute``/``morgen`` adressieren ohne Namen wie ``pause``/
+#: ``weiter`` Trip UND Ortsvergleich (Rueckfrage bei Trip+Vergleich, der
+#: einzige Vergleich bei "nur Vergleich"). Sie gehoeren deshalb NICHT mehr in
+#: die Trip-only-Parametrisierungen (AC-1/AC-4 der #2417-Matrix). Bewusst HART
+#: aus der Spec abgeschrieben, nicht aus ``_COMMAND_SPECS``-kinds abgeleitet --
+#: sonst folgte die Erwartung still dem, was das Produkt gerade tut. Die neuen
+#: Erwartungen pruefen ``test_ortsvergleich_befehle_versand.py`` (AC-10/AC-11)
+#: und ``test_eingangsauswahl_trip_und_vergleich.py::test_ac4_...``.
+S2_BEIDE_KINDS_BEFEHLE = frozenset({"report", "heute", "morgen"})
+
 #: #2420 AC-5: Soll-Ergebnis je Befehl x Lage. Bewusst ein eigenes Woerterbuch
 #: (NICHT in ``SOLL_MATRIX``: dessen Struktur ist auf die vier Klassen
 #: festgenagelt, ``test_soll_matrix_deckt_alle_klassen_und_lagen_ab``). Aus der
 #: freigegebenen Spec abgeschrieben (gleiche Werte wie die route_only-Zeile).
 SOLL_MATRIX_STARTDATUM_REPORT: dict[str, dict[str, str]] = {
-    befehl: {
+    "startdatum": {
         "L1": ERGEBNIS_KEIN_KANDIDAT, "L2": ERGEBNIS_ANTWORT_TRIP,
         "L3": ERGEBNIS_ANTWORT_TRIP, "L4": ERGEBNIS_KEIN_AKTIVES_ZIEL,
         "L5": ERGEBNIS_KEIN_AKTIVES_ZIEL, "L6": ERGEBNIS_ANTWORT_TRIP,
-    }
-    for befehl in ("startdatum", "report")
+    },
+    # #2282 S2 Variante B: REPORT folgt der `_BEIDE_KINDS`-Zeile (wie PAUSE).
+    "report": {
+        "L1": ERGEBNIS_KEIN_KANDIDAT, "L2": ERGEBNIS_ANTWORT_TRIP,
+        "L3": ERGEBNIS_RUECKFRAGE, "L4": ERGEBNIS_ANTWORT_VERGLEICH,
+        "L5": ERGEBNIS_RUECKFRAGE, "L6": ERGEBNIS_ANTWORT_TRIP,
+    },
 }
 
 
@@ -1469,8 +1485,10 @@ def angebotene_route_only_und_metrik_faelle() -> list[str]:
     handgetippte Liste."""
     from app.metric_catalog import metric_command_words
 
-    faelle = sorted(_route_only_reader_woerter() - EIGENE_E2E_BEFEHLE)
-    faelle += sorted(_QUERY_KEYS)
+    faelle = sorted(
+        _route_only_reader_woerter() - EIGENE_E2E_BEFEHLE - S2_BEIDE_KINDS_BEFEHLE
+    )
+    faelle += sorted(set(_QUERY_KEYS) - S2_BEIDE_KINDS_BEFEHLE)
     faelle += sorted(metric_command_words())
     return faelle
 
@@ -1503,8 +1521,10 @@ def tippbare_route_only_und_metrik_woerter() -> list[tuple[str, str]]:
         (spec_feld(s, "wort"), KLASSE_ROUTE_ONLY) for s in _COMMAND_SPECS
         if spec_feld(s, "kinds") == _ROUTE_ONLY
         and spec_feld(s, "wort") not in EIGENE_E2E_BEFEHLE
+        and spec_feld(s, "wort") not in S2_BEIDE_KINDS_BEFEHLE
     ]
-    faelle += [(wort, KLASSE_METRIK_QUERY) for wort in sorted(_QUERY_KEYS)]
+    faelle += [(wort, KLASSE_METRIK_QUERY)
+               for wort in sorted(set(_QUERY_KEYS) - S2_BEIDE_KINDS_BEFEHLE)]
     faelle += [(wort, KLASSE_METRIK_QUERY) for wort in sorted(metric_command_words())]
     return faelle
 

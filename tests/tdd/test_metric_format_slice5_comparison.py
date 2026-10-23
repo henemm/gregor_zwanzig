@@ -124,10 +124,14 @@ GOLDEN = (
     "Rain% = Regenwahrscheinlichkeit · Visib = Sichtweite\n"
     "\n"
     "── Antwort-Kommandos ──\n"  # #2420: geteilter Befehlsblock
+    # #2282 S2: HEUTE/MORGEN/REPORT am Vergleich, eigener Wortlaut.
+    "  HEUTE                – Vergleich für heute jetzt senden\n"
+    "  MORGEN               – Vergleich für morgen jetzt senden\n"
     "  PAUSE                – Briefings für Dauer unterbrechen\n"
     "  WEITER               – Briefings reaktivieren\n"
     "  HILFE                – Diese Hilfe anzeigen (auch HELP)\n"
     "  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)\n"
+    "  REPORT               – Vergleich jetzt an alle Kanäle senden\n"
     "\n"
     "---\n"
     "Gregor Zwanzig"

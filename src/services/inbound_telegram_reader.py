@@ -61,6 +61,7 @@ def _bare_public_host(settings: Settings) -> str | None:
 # das, was der Prozessor ausfuehrt (Steuerbefehle) plus die lesenden
 # Abfrage-Schluessel, die er selbst als `### query: <key>` kodiert.
 _VALID_COMMANDS = _PROCESSOR_COMMANDS | _QUERY_KEYS
+_VERGLEICH_LADE_KEYS = frozenset({"report", "heute", "morgen"})  # #2282 S2
 
 _SHORTCUT_MAP = {
     "/s": "glance",
@@ -351,7 +352,13 @@ class InboundTelegramReader:
         Rueckfrage) — auch dort waere die Lade-Nachricht irrefuehrend, ein
         reiner ``resolved_kind`` -Vergleich saehe das nicht.
         """
-        if key in _QUERY_KEYS and ladehinweis_erlaubt:
+        # #2282 S2 (AC-14): am Ortsvergleich laden report/heute/morgen echtes
+        # Wetter -- dort ebenfalls Ladehinweis (Trip-report bleibt ohne).
+        if inbound.resolved_kind == "vergleich":
+            ladehinweis_erlaubt = key in _VERGLEICH_LADE_KEYS
+        elif key not in _QUERY_KEYS:
+            ladehinweis_erlaubt = False
+        if ladehinweis_erlaubt:
             # Loading-Message senden, dann Wetterdaten on-demand holen,
             # dann in-place ersetzen (AC-4)
             # #2417 AC-4/AC-19: die Sprache ist bereits ermittelt

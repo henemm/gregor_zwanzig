@@ -253,13 +253,18 @@ class _Befehl(NamedTuple):
     kinds: frozenset
     arg_en: str = ""
     wirkung_en_vergleich: str = ""
+    #: #2282 S2: Beschreibung am Ortsvergleich (Hilfe, Mail-Befehlsblock);
+    #: gesetzt ⇒ dort auch ohne Argumentform.
+    beschreibung_de_vergleich: str = ""
 
 
 _COMMAND_SPECS: tuple[_Befehl, ...] = (
     _Befehl("heute", "today", "", "Wetter der heutigen Etappe",
-            "today's stage weather", _ROUTE_ONLY),
+            "today's stage weather", _BEIDE_KINDS, "", "today",
+            "Vergleich für heute jetzt senden"),
     _Befehl("morgen", "tomorrow", "", "Wetter der morgigen Etappe",
-            "tomorrow's stage weather", _ROUTE_ONLY),
+            "tomorrow's stage weather", _BEIDE_KINDS, "", "tomorrow",
+            "Vergleich für morgen jetzt senden"),
     _Befehl("jetzt", "now", "", "Nowcast Regen/Gewitter nächste ~2h (auch NOW)",
             "rain/storm next 2h", _ROUTE_ONLY),
     _Befehl("gewitter", "storms", "", "Gewittergefahr heutige Etappe",
@@ -287,7 +292,8 @@ _COMMAND_SPECS: tuple[_Befehl, ...] = (
             "move start", _ROUTE_ONLY, "date"),
     _Befehl("report", "report", "[morning / evening]",
             "Briefing jetzt senden (Standard: morning)",
-            "send now", _ROUTE_ONLY, "evening"),
+            "send now", _BEIDE_KINDS, "evening", "all",
+            "Vergleich jetzt an alle Kanäle senden"),
 )
 
 # #2417 AC-2: die englischen Woerter wirken wie ihr deutsches Pendant --
@@ -306,9 +312,11 @@ def command_rows(kind: str = "route") -> list[tuple[str, str]]:
     danebengeschriebene Kopien (Mutations-Gegenprobe AC-10).
     """
     # Ortsvergleich pausiert unbefristet (AC-29 #2417): PAUSE ohne Dauer.
+    # #2282 S2: REPORT/HEUTE/MORGEN mit eigenem Vergleichs-Wortlaut, ohne Argument.
+    vergleich = kind == "vergleich"
     return [
-        (f"{s.wort.upper()} {'' if (kind == 'vergleich' and s.wort == 'pause') else s.arg}".strip(),
-         s.beschreibung_de)
+        (f"{s.wort.upper()} {'' if vergleich and (s.wort == 'pause' or s.beschreibung_de_vergleich) else s.arg}".strip(),
+         (s.beschreibung_de_vergleich if vergleich else "") or s.beschreibung_de)
         for s in _COMMAND_SPECS if kind in s.kinds
     ]
 
@@ -878,26 +886,29 @@ def _erstes_wort(body: str) -> Optional[str]:
 
 _ON_DEMAND_FAILURE_EN = {
     "no_weather": "{label} ({d}): weather data not available right now - please try again later.",
-    "no_channels": "No channels active for this trip - briefing not sent. "
-                   "Turn channels on in the trip editor.",
-    "channels_unreachable": "Channel configured for this trip but not reachable "
+    "no_channels": "No channels active for this {o} - briefing not sent. "
+                   "Turn channels on in the {o} editor.",
+    "channels_unreachable": "Channel configured for this {o} but not reachable "
                             "- briefing not sent. Check the connection.",
     "already_in_progress": "{label} ({d}): already being sent - please wait a moment.",
     "no_stage": "{label} ({d}): no stage planned",
+    "invalid_preset": "{label} ({d}): comparison not loadable or its places were deleted.",
 }
 
 
 def _on_demand_failure_body(outcome: str, label: str, target_date: date,
-                            en: bool = False) -> str:
+                            en: bool = False, objekt: str = "Trip") -> str:
     """Formatiert den Antworttext für einen nicht-erfolgreichen On-Demand-Versand.
 
     outcome: "no_stage" | "no_weather" | "no_channels" | "channels_unreachable"
     | "already_in_progress" (alles außer "sent"). ``en``: #2417 Abschnitt H.
+    ``objekt`` (#2282 S2): "Trip" oder "Ortsvergleich" — dieselbe Tabelle.
     """
     human_date = f"{target_date:%d.%m.%Y}"
     if en:
         vorlage = _ON_DEMAND_FAILURE_EN.get(outcome, _ON_DEMAND_FAILURE_EN["no_stage"])
-        return vorlage.format(label=label, d=human_date)
+        o = "trip" if objekt == "Trip" else "comparison"
+        return vorlage.format(label=label, d=human_date, o=o)
     if outcome == "no_weather":
         return (
             f"{label} ({human_date}): Wetterdaten aktuell nicht verfügbar — "
@@ -905,8 +916,8 @@ def _on_demand_failure_body(outcome: str, label: str, target_date: date,
         )
     if outcome == "no_channels":
         return (
-            "Keine Versandkanäle für diesen Trip aktiv — Briefing nicht "
-            "gesendet. Kanäle im Trip-Editor aktivieren."
+            f"Keine Versandkanäle für diesen {objekt} aktiv — Briefing nicht "
+            f"gesendet. Kanäle im {objekt}-Editor aktivieren."
         )
     # Issue #1403 AC-4: Versandweg konfiguriert, aber technisch nicht
     # erreichbar (z.B. Telegram ohne gültige Bot-Verbindung) — eigene
@@ -914,13 +925,16 @@ def _on_demand_failure_body(outcome: str, label: str, target_date: date,
     # verwechseln lässt.
     if outcome == "channels_unreachable":
         return (
-            "Versandweg für diesen Trip konfiguriert, aber nicht erreichbar "
+            f"Versandweg für diesen {objekt} konfiguriert, aber nicht erreichbar "
             "— Briefing nicht gesendet. Verbindung prüfen."
         )
     # Issue #1756 AC-9: Kollisionsfall (Lock belegt) darf nicht mit "keine
     # Etappe" verwechselt werden.
     if outcome == "already_in_progress":
         return f"{label} ({human_date}): Versand läuft bereits — bitte kurz warten."
+    if outcome == "invalid_preset":
+        return (f"{label} ({human_date}): Ortsvergleich nicht ladbar oder Orte "
+                "gelöscht — Orte im Ortsvergleich prüfen.")
     # "no_stage" (Default/Fallback)
     return f"{label} ({human_date}): Keine Etappe geplant"
 
@@ -1358,9 +1372,9 @@ class TripCommandProcessor:
     def _dispatch_compare(
         self, msg: InboundMessage, preset_id: str, name: str,
     ) -> CommandResult:
-        """Vergleichs-Dispatch-Weiche (Abschnitt 5): deckt nur
-        pause/weiter/hilfe ab, alle anderen Befehle bekommen eine feste
-        Ablehnungs-/Uebergangsantwort aus ``_COMMAND_SPECS``."""
+        """Vergleichs-Dispatch-Weiche (Abschnitt 5): pause/weiter/hilfe/
+        kuerzel und seit #2282 S2 report/heute/morgen (Versand); alle anderen
+        Befehle bekommen eine feste Ablehnungsantwort aus ``_COMMAND_SPECS``."""
         key, value = self._parse_command(msg.body)
         # Adversary F001 (#2282 Fix-Loop 1): Telegram kodiert JEDEN Query-Key
         # (heute/morgen/glance/heute_gewitter/timeline_heute/timeline_morgen)
@@ -1376,7 +1390,7 @@ class TripCommandProcessor:
         if key == "kuerzel":
             return self._show_codes(kind="vergleich")
         if key in ("report", "heute", "morgen"):
-            return self._compare_transitional(name)
+            return self._compare_versand(msg, key, preset_id, name)
         if key == "pause":
             return self._apply_compare_pause(preset_id, msg.user_id, name, bool(value))
         if key == "weiter":
@@ -1413,20 +1427,57 @@ class TripCommandProcessor:
             confirmation_body=codes_text(self._en, vergleich=(kind == "vergleich")),
         )
 
-    def _compare_transitional(self, name: str) -> CommandResult:
-        """report/heute/morgen am Vergleich (AC-11) — Übergangsantwort, kein
-        Versand (S2 baut ``restrict_to_channel`` in ``send_compare_report``)."""
+    def _compare_ortstag(self, preset_id: str, msg: InboundMessage) -> date:
+        """Ortstag des Presets zum Eingangszeitpunkt (dieselbe Rechnung wie
+        der Cron, ``preset_ortstag``). Unbekanntes Preset ⇒ ``KeyError``."""
+        from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
+        from services.compare_slot_scheduler import preset_ortstag
+
+        preset = next((p for p in load_compare_presets(msg.user_id) if p.id == preset_id), None)
+        if preset is None:
+            raise KeyError(preset_id)
+        orte = {o.id: o for o in load_all_locations(user_id=msg.user_id)}
+        return preset_ortstag(compare_preset_to_dict(preset), orte, msg.received_at)
+
+    def _compare_versand(
+        self, msg: InboundMessage, key: str, preset_id: str, name: str,
+    ) -> CommandResult:
+        """report/heute/morgen am Vergleich (#2282 S2): EIN Pfad ueber den
+        Handversand ``send_compare_preset`` (Send-Lock "compare", on_demand).
+        ``report`` mehrkanalig mit Zieltag heute; ``heute``/``morgen`` nur auf
+        dem Anfragekanal, Zieltag = Ortstag des Presets + Versatz (ADR-0051).
+        Antworttexte aus denselben Tabellen wie beim Trip, Label Ortsvergleich."""
+        from services.scheduler_dispatch_service import send_compare_preset
+
+        zieltag = msg.received_at.date()
+        kw: dict = {}
+        try:
+            if key != "report":
+                versatz = 0 if key == "heute" else 1
+                zieltag = self._compare_ortstag(preset_id, msg) + timedelta(days=versatz)
+                kw = dict(restrict_to_channel=msg.channel, target_date=zieltag,
+                          tage_ab_ortstag=versatz)
+            erg = send_compare_preset(msg.user_id, preset_id, **kw)
+        except (KeyError, ValueError):
+            erg = {"status": "invalid_preset"}
+        outcome = "sent" if erg["status"] == "ok" else erg["status"]
+        if key == "report":
+            titel = (self._t("Report gesendet", "Report sent") if outcome == "sent"
+                     else self._t("Report nicht gesendet", "Report not sent"))
+            body = self._report_reply_body(outcome, "morning")
+        else:
+            titel = self._t(key.title(), "Today" if key == "heute" else "Tomorrow")
+            body = (self._t(f"{titel}-Briefing wird gesendet.", f"{titel} briefing is being sent.")
+                    if outcome == "sent" else _on_demand_failure_body(
+                        outcome, titel, zieltag, en=self._en, objekt="Ortsvergleich"))
+        fehlend = [*erg.get("fehlende_orte", []), *erg.get("orte_ohne_wetter", [])]
+        if fehlend:
+            body += "\n" + self._t("Ohne Daten: ", "No data: ") + ", ".join(fehlend)
         return CommandResult(
-            success=False, command="report",
-            confirmation_subject=self._t(
-                f"[{name}] Noch nicht verfügbar", f"[{name}] Not available yet"),
-            confirmation_body=self._t(
-                "Report/Heute/Morgen sind für Ortsvergleiche per Nachricht "
-                "noch nicht verfügbar — bitte nutze die Web-App.",
-                "Report/Today/Tomorrow are not available for location "
-                "comparisons by message yet - please use the web app.",
-            ),
-            trip_name=name,
+            success=outcome == "sent", command=key,
+            confirmation_subject=f"[{name}] {self._t('Ortsvergleich', 'Comparison')} {titel}",
+            confirmation_body=body, trip_name=name,
+            suppress_email_reply=outcome == "sent" and key != "report",
         )
 
     def _compare_unavailable(self, befehl: str, name: str) -> CommandResult:
@@ -2665,6 +2716,9 @@ class TripCommandProcessor:
             "already_in_progress": (
                 f"{typ} Report nicht gesendet: ein Versand laeuft bereits.",
                 f"{typ} report not sent: a delivery is already in progress."),
+            "invalid_preset": (
+                f"{typ} Report nicht gesendet: Ortsvergleich nicht ladbar oder Orte geloescht.",
+                f"{typ} report not sent: comparison not loadable or its places were deleted."),
         }
         de, en = texte.get(outcome, (
             f"{typ} Report nicht gesendet: interner Fehler beim Ausloesen.",

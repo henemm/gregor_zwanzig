@@ -152,11 +152,15 @@ def test_stop_beschreibung_nennt_abbruch_in_quelle_und_katalog():
     assert not [b for b, _ in command_rows() if b.split()[0] in ("ABBRUCH", "COLUMNS")]
 
 
-def test_ortsvergleich_liste_hat_genau_vier_befehle_ohne_pause_dauer():
-    """AC-10: die Vergleichs-Liste ist command_rows('vergleich')."""
+def test_ortsvergleich_liste_hat_die_vergleichs_befehle_ohne_pause_dauer_und_ohne_etappe():
+    """AC-10 / #2282 S2: die Vergleichs-Liste ist command_rows('vergleich') --
+    HEUTE/MORGEN/REPORT mit eigenem Vergleichs-Wortlaut, ohne Argumentform."""
     rows = command_rows("vergleich")
-    assert [b for b, _ in rows] == ["PAUSE", "WEITER", "HILFE", "KUERZEL"], rows
+    assert [b for b, _ in rows] == [
+        "HEUTE", "MORGEN", "PAUSE", "WEITER", "HILFE", "KUERZEL", "REPORT",
+    ], rows
     assert all(beschreibung for _, beschreibung in rows)
+    assert not [b for b, t in rows if "Etappe" in t or "morning" in t], rows
 
 
 def test_bot_commands_enthalten_startdatum_startdate_report_und_halten_bot_api_regeln():

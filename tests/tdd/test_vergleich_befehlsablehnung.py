@@ -139,14 +139,23 @@ def test_ac11_drilldown_am_vergleich_wird_abgelehnt(uid, versand):
 
 
 @pytest.mark.parametrize("befehl", ["report", "heute", "morgen"])
-def test_ac11_report_heute_morgen_uebergangsantwort_ohne_versand(uid, versand, befehl):
+def test_ac11_report_heute_morgen_ohne_uebergangsantwort(uid, versand, befehl):
+    """#2282 S2 dreht S1-AC-11 um: report/heute/morgen am Vergleich gehen in
+    den Vergleichsversand statt in die Uebergangsantwort. Die Orte dieses
+    Presets (loc-a/loc-b) existieren nicht -- der Versand endet deshalb im
+    benannten Fehlercode (invalid_preset) mit Label „Ortsvergleich", ohne
+    Transport. Die echte Zustellung pruefen
+    test_ortsvergleich_befehle_versand.py (AC-1 bis AC-6)."""
     _preset(uid)
     vorher = _dateien(uid)
     res = _send(uid, befehl)
-    assert NICHT_VERFUEGBAR in res.confirmation_body, res.confirmation_body
-    assert "Web-App" in res.confirmation_body
+    text = f"{res.confirmation_subject}\n{res.confirmation_body}"
+    assert NICHT_VERFUEGBAR not in text, text
+    assert "Web-App" not in text, text
+    assert "Ortsvergleich" in text, text
+    assert res.success is False
     assert _dateien(uid) == vorher
-    assert versand == [], f"es darf kein Briefing versendet werden: {versand}"
+    assert versand == [], f"ohne aufloesbare Orte darf nichts hinausgehen: {versand}"
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +168,7 @@ def _befehlszeilen(text: str) -> set[str]:
     return {z.strip().split()[0] for z in block.splitlines() if z.startswith("  ") and z.strip()}
 
 
-def test_ac12_hilfe_am_vergleich_nur_pause_weiter_hilfe(uid):
+def test_ac12_hilfe_am_vergleich_pause_weiter_report_heute_morgen_hilfe(uid):
     _preset(uid)
     today = date.today()
     trip = Trip(
@@ -174,7 +183,10 @@ def test_ac12_hilfe_am_vergleich_nur_pause_weiter_hilfe(uid):
     trip_hilfe = _befehlszeilen(_send(uid, "hilfe", name="Korsika").confirmation_body)
 
     # #2417 AC-3: KUERZEL ist auch beim Ortsvergleich erlaubt.
-    assert vergleich == {"PAUSE", "WEITER", "HILFE", "KUERZEL"}, vergleich
+    # #2282 S2 AC-11: REPORT/HEUTE/MORGEN wirken jetzt auch am Vergleich.
+    assert vergleich == {
+        "PAUSE", "WEITER", "HILFE", "KUERZEL", "REPORT", "HEUTE", "MORGEN",
+    }, vergleich
     assert vergleich < trip_hilfe
     assert {"RUHETAG", "SKIP", "STRECKE"} <= trip_hilfe
 
@@ -204,6 +216,16 @@ def _via_telegram(monkeypatch, user_id: str, text: str) -> list[str]:
         "services.notification_service.TelegramOutput.send",
         lambda self, subject, body, **kw: sent.append(body) or 1,
     )
+    # #2282 S2: der Ladehinweis wird am Vergleich per edit ersetzt -- auch
+    # diese Antwort mitschreiben (kein Netz).
+    monkeypatch.setattr(
+        "services.notification_service.TelegramOutput.edit_message_text",
+        lambda self, chat_id, message_id, text, **kw: sent.append(text),
+    )
+    monkeypatch.setattr(
+        "services.notification_service.TelegramOutput.delete_message",
+        lambda self, chat_id, message_id: None,
+    )
     settings = Settings(telegram_bot_token="fake:token", telegram_chat_id="12345")
     update = {
         "update_id": 1,
@@ -217,7 +239,7 @@ def _via_telegram(monkeypatch, user_id: str, text: str) -> list[str]:
     return sent
 
 
-@pytest.mark.parametrize("befehl", ["heute", "glance", "gewitter"])
+@pytest.mark.parametrize("befehl", ["glance", "gewitter"])
 def test_f001_telegram_query_key_gegen_vergleich_zeigt_ac11_text_ohne_ladehinweis(
     monkeypatch, uid, befehl,
 ):
@@ -248,6 +270,23 @@ def test_f001_telegram_query_key_gegen_vergleich_zeigt_ac11_text_ohne_ladehinwei
     assert _dateien(uid) == vorher
 
 
+def test_s2_telegram_heute_gegen_einzigen_vergleich_zeigt_ladehinweis(monkeypatch, uid):
+    """#2282 S2 (Variante B, AC-11/AC-14): "heute" ohne Namen bei genau
+    einem Vergleich und keinem Trip spricht den Vergleich an -- mit
+    Ladehinweis zuerst, ohne den "kein aktiver Trip"-Text und ohne das
+    falsche Wort "query". (Vorher Teil der Parametrisierung oben.)"""
+    from services.trip_selection import KEIN_AKTIVES_ZIEL_TEXT
+
+    _preset(uid)
+
+    sent = _via_telegram(monkeypatch, uid, "heute")
+
+    assert sent and "⏳" in sent[0], f"Ladehinweis zuerst erwartet: {sent!r}"
+    assert all(KEIN_AKTIVES_ZIEL_TEXT not in t for t in sent), sent
+    assert all("query" not in t.lower() for t in sent), sent
+    assert all(NICHT_VERFUEGBAR not in t for t in sent), sent
+
+
 # ---------------------------------------------------------------------------
 # Adversary F001-Nachtrag (#2282 Fix-Loop 2): dieselbe Ladehinweis-Luecke
 # auch beim vorangestellten NAMEN (nicht nur bei der aktiven Auswahl ohne
@@ -255,12 +294,12 @@ def test_f001_telegram_query_key_gegen_vergleich_zeigt_ac11_text_ohne_ladehinwei
 # muss es VOR der Lade-Entscheidung nutzen, ohne eine zweite Suche.
 # ---------------------------------------------------------------------------
 
-def test_f001_namenspraefix_vergleich_unterdrueckt_ladehinweis(monkeypatch, uid):
-    """Adversary F001-Nachtrag: Trip "Korsika" UND Vergleich "Alpenblick"
-    sind beide aktiv. "alpenblick heute" adressiert per Namen eindeutig den
-    Vergleich -- die Antwort muss die AC-11-Uebergangsantwort sein, OHNE
-    vorherige "⏳ Wetter wird geladen..."-Nachricht (der Vergleich bekommt
-    ohnehin nur die synchrone Ablehnung, nie einen Wetterabruf)."""
+def test_s2_namenspraefix_vergleich_zeigt_ladehinweis(monkeypatch, uid):
+    """#2282 S2 AC-14 (dreht den F001-Nachtrag um): Trip "Korsika" UND
+    Vergleich "Alpenblick" sind beide aktiv. "alpenblick heute" adressiert
+    per Namen eindeutig den Vergleich -- der laedt jetzt echtes Wetter,
+    deshalb kommt ZUERST "⏳ Wetter wird geladen...", und die
+    S1-Uebergangsantwort erscheint nicht mehr."""
     today = date.today()
     trip = Trip(
         id="t-korsika-f001b", name="Korsika",
@@ -273,10 +312,9 @@ def test_f001_namenspraefix_vergleich_unterdrueckt_ladehinweis(monkeypatch, uid)
 
     sent = _via_telegram(monkeypatch, uid, "alpenblick heute")
 
-    assert len(sent) == 1, f"genau eine Antwort erwartet, gesehen: {sent!r}"
-    assert "⏳" not in sent[0], f"keine Lade-Nachricht am Vergleich erwartet: {sent[0]!r}"
-    assert NICHT_VERFUEGBAR in sent[0], sent[0]
-    assert "Web-App" in sent[0]
+    assert sent and "⏳" in sent[0], f"Lade-Nachricht am Vergleich erwartet: {sent!r}"
+    assert all(NICHT_VERFUEGBAR not in t and "Web-App" not in t for t in sent), sent
+    assert all("Mehrdeutig" not in t for t in sent), sent
 
 
 def test_f001_namenspraefix_trip_zeigt_ladehinweis_weiterhin(monkeypatch, uid):

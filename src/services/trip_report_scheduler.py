@@ -47,7 +47,9 @@ from services.alert_check_state import report_unit_failure
 from services.briefing_slots import BriefingSlotStore
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest
-from services.user_tier import premium_sms_allowed, sms_allowed
+from services.user_tier import (
+    premium_sms_allowed, resolve_restricted_channel_flags, sms_allowed,
+)
 from utils.geo import haversine_km
 from utils.timezone import local_dt, tz_for_coords
 
@@ -2156,12 +2158,8 @@ class TripReportSchedulerService:
                 logger.warning(
                     "Unbekannter Kanalname in restrict_to_channel: %r", restrict_to_channel
                 )
-            return (
-                restrict_to_channel == "email",
-                restrict_to_channel == "sms" and sms_allowed(user_id),
-                restrict_to_channel == "premium_sms" and premium_sms_allowed(user_id),
-                restrict_to_channel == "telegram",
-            )
+            # Issue #2282 S2 (AC-7): geteilt mit dem Ortsvergleich.
+            return resolve_restricted_channel_flags(restrict_to_channel, user_id)
 
         send_email = not config or config.send_email
         send_sms = config is not None and config.send_sms and sms_allowed(user_id)
