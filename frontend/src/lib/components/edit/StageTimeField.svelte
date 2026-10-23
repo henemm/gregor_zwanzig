@@ -54,7 +54,7 @@
 
 	.label {
 		font-family: var(--g-font-data);
-		font-size: 10px;
+		font-size: 11px;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 		color: var(--g-ink-muted);
@@ -85,5 +85,15 @@
 
 	.box.inline {
 		min-width: 0;
+	}
+
+	/* #2601: Touch — kein iOS-Auto-Zoom (16px), Trefferhöhe >= 36px */
+	@media (max-width: 899px), (pointer: coarse) {
+		.box {
+			min-height: 36px;
+		}
+		.box input[type='time'] {
+			font-size: 16px;
+		}
 	}
 </style>

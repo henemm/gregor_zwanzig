@@ -67,7 +67,7 @@
 	}
 	.kachel__type {
 		font-family: var(--g-font-data);
-		font-size: 10px;
+		font-size: 11px;
 		letter-spacing: 0.14em;
 		text-transform: uppercase;
 		color: var(--g-ink-muted);
@@ -77,7 +77,7 @@
 		align-items: center;
 		gap: var(--g-s-1);
 		font-family: var(--g-font-data);
-		font-size: 9px;
+		font-size: 11px;
 		letter-spacing: 0.16em;
 		text-transform: uppercase;
 	}

@@ -149,7 +149,7 @@
 				>
 					{c.label}
 					<span
-						style="font-size:10px;padding:1px 6px;border-radius:8px;background:{active
+						style="font-size:11px;padding:1px 6px;border-radius:8px;background:{active
 							? 'rgba(255,255,255,0.18)'
 							: 'var(--g-paper-deep)'};color:{active ? 'var(--g-paper)' : 'var(--g-ink-3)'}"
 						>{c.n}</span

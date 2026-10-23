@@ -145,7 +145,7 @@
 			<div style:display="flex" style:align-items="center" style:gap="7px" style:margin-top="3px">
 				<span
 					style:font-family="var(--g-font-mono)"
-					style:font-size="9.5px"
+					style:font-size="11px"
 					style:color="var(--g-ink-4)"
 					style:text-transform="uppercase"
 					style:letter-spacing="0.14em"
@@ -221,7 +221,7 @@
 					<span
 						style:font-family="var(--g-font-mono)"
 						style:padding="2px 7px"
-						style:font-size={dense ? '9.5px' : '10px'}
+						style:font-size="11px"
 						style:letter-spacing="0.04em"
 						style:border="1px solid var(--g-rule)"
 						style:border-radius="var(--g-r-pill)"

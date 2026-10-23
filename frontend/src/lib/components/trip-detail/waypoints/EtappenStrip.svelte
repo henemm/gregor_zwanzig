@@ -91,7 +91,7 @@
 					onclick={makePauseInsertHandler(i)}
 				>
 					{#if hoverGap === i}
-						<span style="padding:3px 8px; font-size:9px; font-weight:600; background:var(--g-accent); color:#fff; border-radius:10px; letter-spacing:0.06em; text-transform:uppercase; font-family:var(--g-font-mono);">+ Pause</span>
+						<span style="padding:3px 8px; font-size: 11px; font-weight:600; background:var(--g-accent); color:#fff; border-radius:10px; letter-spacing:0.06em; text-transform:uppercase; font-family:var(--g-font-mono);">+ Pause</span>
 					{:else}
 						<span style="width:1px; height:24px; background:var(--g-rule); display:block;"></span>
 					{/if}
@@ -109,10 +109,10 @@
 >
 	<!-- Eyebrow-Header mit Zähler -->
 	<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
-		<span style="font-size:10px; font-family:var(--g-font-mono); font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--g-ink-4);">
+		<span style="font-size: 11px; font-family:var(--g-font-mono); font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--g-ink-4);">
 			ETAPPEN · DRAG ZUM SORTIEREN · + PAUSE ZWISCHEN
 		</span>
-		<span style="font-size:10px; font-family:var(--g-font-mono); color:var(--g-ink-4); letter-spacing:0.06em;">
+		<span style="font-size: 11px; font-family:var(--g-font-mono); color:var(--g-ink-4); letter-spacing:0.06em;">
 			{gpxCount} GPX · {pauseCount} Pause
 		</span>
 	</div>

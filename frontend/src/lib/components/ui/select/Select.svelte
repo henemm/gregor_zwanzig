@@ -62,9 +62,9 @@
     color: var(--g-ink-muted);
     pointer-events: none;
   }
-  @media (max-width: 767px) {
+  @media (max-width: 899px), (pointer: coarse) {
     .gz-select select {
-      font-size: 16px; /* iOS zoom guard (#272, #382) */
+      font-size: 16px; /* iOS zoom guard (#272, #382); #2601: auch Querformat/Touch */
     }
   }
 </style>

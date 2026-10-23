@@ -118,7 +118,7 @@
 					{:else}
 						{#each cell.pills as pill (pill)}
 							<span
-								style="font-family: var(--g-font-mono); padding: 2px 7px; font-size: 10px; letter-spacing: 0.04em; border: 1px solid var(--g-rule); border-radius: var(--g-r-pill); background: var(--g-card-alt); color: var(--g-ink-2);"
+								style="font-family: var(--g-font-mono); padding: 2px 7px; font-size: 11px; letter-spacing: 0.04em; border: 1px solid var(--g-rule); border-radius: var(--g-r-pill); background: var(--g-card-alt); color: var(--g-ink-2);"
 								>{pill}</span
 							>
 						{/each}

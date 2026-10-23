@@ -177,7 +177,7 @@
 	     Balken auf jedem Screen. Desktop traegt sie in der Sidebar. -->
 	<div class="desktop:hidden" data-testid="home-wordmark-row" style="display: flex; align-items: center; justify-content: space-between; height: 24px; margin: var(--g-s-2) 0 var(--g-s-5);">
 		<Wordmark size="sm" />
-		<span class="mono" data-testid="home-datum" style="font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g-ink-3);">{heuteKurz}</span>
+		<span class="mono" data-testid="home-datum" style="font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g-ink-3);">{heuteKurz}</span>
 	</div>
 	<!-- Topbar — AC-7: kein sub-Text, beide Buttons ghost -->
 	<PageHeader
@@ -238,6 +238,7 @@
 							<!-- Titel (34px, fontWeight 600) als Link -->
 							<a
 								href="/trips/{hero.id}?tab=uebersicht"
+								class="g-link-tap"
 								style:display="block"
 								style:font-size="34px"
 								style:font-weight="600"
@@ -327,6 +328,7 @@
 							</div>
 							<a
 								href="/trips/{hero.id}?tab=uebersicht"
+								class="g-link-tap"
 								style:font-size="12px"
 								style:color="var(--g-ink-3)"
 								style:text-decoration="none"
@@ -430,6 +432,7 @@
 							</div>
 							<a
 								href="/trips/{hero.id}?tab=wertebereiche"
+								class="g-link-tap"
 								style:font-size="12px"
 								style:color="var(--g-ink-3)"
 								style:text-decoration="none"
@@ -533,7 +536,7 @@
 								>
 									<div
 										style:font-family="var(--g-font-mono)"
-										style:font-size="10px"
+										style:font-size="11px"
 										style:color="var(--g-ink-3)"
 										style:text-transform="uppercase"
 										style:letter-spacing="0.1em"
@@ -554,7 +557,7 @@
 								>
 									<div
 										style:font-family="var(--g-font-mono)"
-										style:font-size="10px"
+										style:font-size="11px"
 										style:color="var(--g-ink-3)"
 										style:text-transform="uppercase"
 										style:letter-spacing="0.1em"
@@ -832,6 +835,7 @@
 					</div>
 					<a
 						href="/compare"
+						class="g-link-tap"
 						style:font-size="12px"
 						style:color="var(--g-ink-3)"
 						style:text-decoration="none"

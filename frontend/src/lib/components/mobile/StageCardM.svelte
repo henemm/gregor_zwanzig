@@ -158,6 +158,7 @@
 	}
 	.top {
 		display: flex;
+		flex-wrap: wrap; /* #2601: Datum + Zeit brechen auf 390px um statt zu überlaufen */
 		align-items: baseline;
 		gap: var(--g-s-2);
 	}
@@ -174,10 +175,10 @@
 		color: var(--g-ink-4);
 	}
 	.date-edit {
-		flex-shrink: 0;
 		min-width: 0;
 		display: inline-flex;
-		align-items: baseline;
+		flex-wrap: wrap;
+		align-items: center;
 		gap: var(--g-s-2);
 	}
 	.title {

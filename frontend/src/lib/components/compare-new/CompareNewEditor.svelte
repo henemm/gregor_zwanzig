@@ -348,7 +348,7 @@
 		class="rounded-md p-4 text-white text-sm"
 		style:background={versandVisited ? 'var(--g-good)' : 'var(--g-ink)'}
 	>
-		<div class="mono" style:font-size="10px" style:letter-spacing="0.12em" style:text-transform="uppercase" style:color="rgba(255,255,255,0.55)" style:margin-bottom="4px">Bereit zum Aktivieren</div>
+		<div class="mono" style:font-size="11px" style:letter-spacing="0.12em" style:text-transform="uppercase" style:color="rgba(255,255,255,0.55)" style:margin-bottom="4px">Bereit zum Aktivieren</div>
 		<div style:font-size="15px" style:font-weight="600">„{wiz.name || 'Neuer Vergleich'}" · {wiz.pickedIds?.length ?? 0} Orte</div>
 		<div style:font-size="12.5px" style:color="rgba(255,255,255,0.75)" style:margin-top="4px" style:line-height="1.5">
 			{#if versandVisited}Versand konfiguriert — klicke „Briefing aktivieren".{:else}Versand einrichten zum Aktivieren.{/if}
@@ -369,7 +369,7 @@
 			</div>
 			<div style:display="flex" style:gap="8px" style:align-items="center">
 				{#if !canActivateNow}
-					<span class="mono" style:font-size="10.5px" style:color="var(--g-ink-4)">Versand einrichten zum Aktivieren</span>
+					<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">Versand einrichten zum Aktivieren</span>
 					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="compare-editor-standardwerte" />
 				{/if}
 				<Btn variant="ghost" size="sm" href="/compare">Abbrechen</Btn>
@@ -396,7 +396,7 @@
 						<div data-testid="compare-editor-progress-segment" style:width="24px" style:height="3px" style:border-radius="2px" style:background={done.has(t.id) ? 'var(--g-accent)' : 'var(--g-rule)'} style:transition="background 350ms"></div>
 					{/each}
 				</div>
-				<span class="mono" style:font-size="10.5px" style:color="var(--g-ink-4)" style:letter-spacing="0.04em">
+				<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)" style:letter-spacing="0.04em">
 					{doneCount === 0 ? 'Noch nichts eingerichtet' : `${doneCount} / ${TAB_DEFS.length} Abschnitte eingerichtet`}
 				</span>
 			</div>
@@ -425,10 +425,10 @@
 				>
 					{t.label}
 					{#if isDone}
-						<span class="mono" style:font-size="10px" style:font-weight="700" style:padding="2px 5px" style:border-radius="3px" style:background="rgba(61,107,58,0.12)" style:color="var(--g-good)">✓</span>
+						<span class="mono" style:font-size="11px" style:font-weight="700" style:padding="2px 5px" style:border-radius="3px" style:background="rgba(61,107,58,0.12)" style:color="var(--g-good)">✓</span>
 					{/if}
 					{#if !open}
-						<span class="mono" style:font-size="10px" style:color="var(--g-ink-4)" style:opacity="0.7">⊘</span>
+						<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)" style:opacity="0.7">⊘</span>
 					{/if}
 				</button>
 			{/each}
@@ -528,7 +528,7 @@
 				<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(t.id) ? 'var(--g-accent)' : (t.id === activeTab ? 'var(--g-accent-soft,#bcd)' : 'var(--g-rule)')}; transition: background 350ms;"></div>
 			{/each}
 		</div>
-		<span class="mono" style="font-size: 10px; color: var(--g-ink-4); flex-shrink: 0;">{doneCount}/{TAB_DEFS.length}</span>
+		<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;">{doneCount}/{TAB_DEFS.length}</span>
 	</div>
 
 	<!-- Scrollbare Tab-Bar -->
@@ -539,7 +539,7 @@
 			<button type="button" data-testid="cm-mobile-tab-{t.id}" data-active={on ? 'true' : 'false'} data-locked={open ? 'false' : 'true'} onclick={() => handleMobileTabClick(t.id)}
 				style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {on ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {open ? 'pointer' : 'default'}; font-size: 14px; font-weight: {on ? 600 : 500}; color: {on ? 'var(--g-ink)' : open ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {open ? 1 : 0.35};">
 				{t.label}
-				{#if !open}<span class="mono" style="font-size: 10px; opacity: 0.8;">⊘</span>{/if}
+				{#if !open}<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>{/if}
 			</button>
 		{/each}
 	</div>
@@ -548,17 +548,17 @@
 	<div style="flex: 1; overflow-y: auto; padding: 16px;">
 		{#if activeTab === 'vergleich'}
 			<div style="margin-bottom: 14px;">
-				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">Name des Vergleichs</div>
+				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">Name des Vergleichs</div>
 				<input data-testid="compare-editor-name-mobile" type="text" maxlength="80" placeholder="z.B. Skitouren Hochkönig" bind:value={wiz.name}
 					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
 			</div>
 			<div style="margin-bottom: 14px;">
-				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">Region <span style="font-weight:400; text-transform:none;">(optional)</span></div>
+				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">Region <span style="font-weight:400; text-transform:none;">(optional)</span></div>
 				<input type="text" maxlength="60" placeholder="z.B. Hochkönig · Salzburger Land" bind:value={wiz.region}
 					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
 			</div>
 			<div>
-				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px;">Aktivitätsprofil</div>
+				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px;">Aktivitätsprofil</div>
 				<div style="display: flex; flex-direction: column; gap: 8px;">
 					{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
 						{@const sel = wiz.activityProfile === opt.value}
@@ -626,7 +626,7 @@
 <Sheet open={mobileLibraryOpen} snap="full" title="Ort wählen" onClose={() => { mobileLibraryOpen = false; }}>
 	{#each mobileLibraryGroups as [groupName, groupLocs] (groupName)}
 		<div style="margin-bottom: 8px;">
-			<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; padding: 8px 0 4px; font-weight: 600;">{groupName} · {groupLocs.length}</div>
+			<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; padding: 8px 0 4px; font-weight: 600;">{groupName} · {groupLocs.length}</div>
 			{#each groupLocs as loc (loc.id)}
 				{@const on = wiz.pickedIds.includes(loc.id)}
 				<button type="button" data-testid="compare-step2-mobile-lib-check-{loc.id}"
@@ -637,7 +637,7 @@
 					</span>
 					<div style="flex: 1; min-width: 0;">
 						<div style="font-size: 14px; font-weight: {on ? 600 : 500}; color: {on ? 'var(--g-accent-deep)' : 'var(--g-ink)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{loc.name}</div>
-						{#if loc.region}<div class="mono" style="font-size: 10.5px; color: var(--g-ink-3); margin-top: 1px;">{loc.region}</div>{/if}
+						{#if loc.region}<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 1px;">{loc.region}</div>{/if}
 					</div>
 				</button>
 			{/each}

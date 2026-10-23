@@ -87,7 +87,7 @@
 		gap: 7px;
 	}
 	.cat-label {
-		font-size: 9.5px;
+		font-size: 11px;
 		color: var(--g-ink-3);
 		font-weight: 600;
 		letter-spacing: 0.1em;
@@ -129,7 +129,7 @@
 		border-color: var(--g-accent);
 	}
 	.check-mark {
-		font-size: 9px;
+		font-size: 11px;
 		opacity: 0.7;
 	}
 	.hint {

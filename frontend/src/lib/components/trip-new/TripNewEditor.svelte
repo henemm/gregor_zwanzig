@@ -551,7 +551,7 @@
 						<div style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 					{/each}
 				</div>
-				<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4); letter-spacing: 0.04em;">
+				<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.04em;">
 					{progressN === 0 ? 'Noch nichts eingerichtet' : `${progressN} / 4 Abschnitte eingerichtet`}
 				</span>
 			</div>
@@ -564,7 +564,7 @@
 					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 				{/each}
 			</div>
-			<span class="mono" style="font-size: 10px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/4</span>
+			<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/4</span>
 		</div>
 
 		<!-- Tab-Bar (Desktop only, TN_TabBar) -->
@@ -583,13 +583,13 @@
 					style="padding: 12px 16px; cursor: {isOpen ? 'pointer' : 'not-allowed'}; font-size: 13px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; display: flex; align-items: center; gap: 5px; white-space: nowrap; opacity: {isOpen ? 1 : 0.34}; transition: opacity 250ms, color 200ms; transform: {flashTab === t.id ? 'translateX(2px)' : 'none'}; user-select: none;">
 					{t.label}
 					{#if t.optional && isOpen}
-						<span class="mono" style="font-size: 9px; font-weight: 600; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.10); color: var(--g-accent-deep); text-transform: uppercase;">optional</span>
+						<span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.10); color: var(--g-accent-deep); text-transform: uppercase;">optional</span>
 					{/if}
 					{#if isDone}
-						<span style="font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 3px; background: rgba(61,107,58,0.12); color: var(--g-good); font-family: var(--g-font-mono);">✓</span>
+						<span style="font-size: 11px; font-weight: 700; padding: 2px 5px; border-radius: 3px; background: rgba(61,107,58,0.12); color: var(--g-good); font-family: var(--g-font-mono);">✓</span>
 					{/if}
 					{#if !isOpen}
-						<span style="font-size: 10px; color: var(--g-ink-4); font-family: var(--g-font-mono); opacity: 0.7;">⊘</span>
+						<span style="font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); opacity: 0.7;">⊘</span>
 					{/if}
 				</div>
 			{/each}
@@ -609,10 +609,10 @@
 					style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {isOpen ? 'pointer' : 'default'}; font-size: 14px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {isOpen ? 1 : 0.35};">
 					{t.label}
 					{#if t.optional && isOpen}
-						<span class="mono" style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">opt</span>
+						<span class="mono" style="font-size: 11px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">opt</span>
 					{/if}
 					{#if !isOpen}
-						<span class="mono" style="font-size: 10px; opacity: 0.8;">⊘</span>
+						<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>
 					{/if}
 				</button>
 			{/each}
@@ -651,7 +651,7 @@
 					<div style="margin-bottom: 18px;">
 						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
 							Region
-							<span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional · max 50</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional · max 50</span>
 						</label>
 						<input type="text" value={region} oninput={makeRegionHandler()}
 							placeholder="z.B. Karnische Alpen"
@@ -678,7 +678,7 @@
 					<div style="margin-bottom: 18px;">
 						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
 							Aktivitätstyp
-							<span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional</span>
 						</label>
 						<Select data-testid="activity-dropdown"
 							value={selectedActivity ?? ''}
@@ -738,7 +738,7 @@
 								{gpxCount} / {stages.length} GPX geladen
 							</span>
 							{#if startDate}
-								<span class="mono" style="font-size: 10px; color: var(--g-ink-4);">
+								<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">
 									Start: {stageDate(startDate, 0)?.replace(/\.$/, '')}
 								</span>
 							{/if}
@@ -748,7 +748,7 @@
 					<!-- Spaltenheader -->
 					<div style="display: grid; grid-template-columns: 36px 1fr 60px minmax(170px, 200px) 28px; gap: 10px; padding: 0 14px 5px;">
 						{#each ['', 'Etappenname', 'Datum', 'GPX-Datei', ''] as h}
-							<span class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; text-transform: uppercase;">{h}</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.06em; text-transform: uppercase;">{h}</span>
 						{/each}
 					</div>
 
@@ -758,7 +758,7 @@
 							{@const hasGpx = s.gpx !== null}
 							<div style="display: grid; grid-template-columns: 36px 1fr 60px minmax(170px, 200px) 28px; gap: 10px; align-items: center; padding: 8px 14px; background: var(--g-card); border: 1px solid {hasGpx ? 'rgba(61,107,58,0.2)' : 'var(--g-rule)'}; border-radius: var(--g-r-2); transition: border-color 200ms;">
 								<!-- T-Badge -->
-								<span class="mono" style="font-size: 10px; font-weight: 700; text-align: center; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 4px; border-radius: 999px;">
+								<span class="mono" style="font-size: 11px; font-weight: 700; text-align: center; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 4px; border-radius: 999px;">
 									T{String(idx + 1).padStart(2, '0')}
 								</span>
 
@@ -779,8 +779,8 @@
 											<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5.5 4,8 8.5,2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
 										</span>
 										<div style="flex: 1; min-width: 0;">
-											<div class="mono" style="font-size: 10px; font-weight: 600; color: var(--g-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{s.gpx.file}</div>
-											<div class="mono" style="font-size: 9.5px; color: var(--g-ink-3);">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
+											<div class="mono" style="font-size: 11px; font-weight: 600; color: var(--g-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{s.gpx.file}</div>
+											<div class="mono" style="font-size: 11px; color: var(--g-ink-3);">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
 										</div>
 										<button type="button" onclick={makeGpxRemoveHandler(s.id)} title="GPX entfernen"
 											style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 13px; padding: 1px 3px; line-height: 1; flex-shrink: 0;">×</button>
@@ -790,7 +790,7 @@
 										<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-4)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
 											<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
 										</svg>
-										<span class="mono" style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--g-ink-4); white-space: nowrap;">GPX hochladen</span>
+										<span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--g-ink-4); white-space: nowrap;">GPX hochladen</span>
 										<input type="file" accept=".gpx" style="display: none;" onchange={makeGpxUploadHandler(idx, s.id)} />
 									</label>
 								{/if}
@@ -968,7 +968,7 @@
 		<EditorStickyFooter context="route" navClearance={false} testid="tn-desktop-footer">
 			<div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
 				{#if !ready}
-					<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4);">Versand einrichten zum Speichern</span>
+					<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">Versand einrichten zum Speichern</span>
 					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="trip-new-standardwerte-btn" />
 				{/if}
 				<button type="button" onclick={onSave} disabled={!ready || saving}
@@ -1066,7 +1066,7 @@
 							<div data-testid="tn-mobile-stage-card" style="background: var(--g-card); border: 1px solid {s.gpx ? 'rgba(61,107,58,0.2)' : 'var(--g-rule)'}; border-radius: var(--g-r-3); overflow: hidden; transition: border-color 200ms;">
 								<!-- Header-Zeile -->
 								<div style="display: flex; align-items: center; padding: 11px 14px 7px; gap: 10px;">
-									<span class="mono" style="font-size: 10px; font-weight: 700; flex-shrink: 0; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 6px; border-radius: 999px;">
+									<span class="mono" style="font-size: 11px; font-weight: 700; flex-shrink: 0; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 6px; border-radius: 999px;">
 										T{String(idx + 1).padStart(2, '0')}
 									</span>
 									<button type="button" data-testid="tn-mobile-stage-name"
@@ -1095,7 +1095,7 @@
 											</div>
 											<div style="flex: 1; min-width: 0;">
 												<div class="mono" style="font-size: 12px; font-weight: 600; color: var(--g-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{s.gpx.file}</div>
-												<div class="mono" style="font-size: 10.5px; color: var(--g-ink-3); margin-top: 1px;">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
+												<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 1px;">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
 											</div>
 											<button type="button" onclick={makeGpxRemoveHandler(s.id)}
 												style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 18px; padding: 4px 6px; line-height: 1; min-height: 44px; flex-shrink: 0;">×</button>
@@ -1174,7 +1174,7 @@
 					<!-- Issue #2521 S1 (AC-4): Infobox oben im optionalen Reiter. -->
 					{#if isMobileViewport}<div style="padding: 12px 16px 0;"><Infobox reiter="wegpunkte" context="route" /></div>{/if}
 					<div style="padding: 12px 16px; background: var(--g-accent-tint); border-bottom: 1px solid var(--g-accent-rule);">
-						<div class="mono" style="font-size: 10.5px; color: var(--g-accent-deep); line-height: 1.55;">
+						<div class="mono" style="font-size: 11px; color: var(--g-accent-deep); line-height: 1.55;">
 							Wegpunkte automatisch berechnet. Namen anpassen oder überspringen.
 						</div>
 					</div>

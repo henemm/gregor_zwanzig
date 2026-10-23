@@ -91,7 +91,7 @@
 		color: var(--g-ink);
 	}
 	.lt-ch-badge {
-		font-size: 10.5px;
+		font-size: 11px;
 		font-weight: 600;
 		color: var(--g-ink-4);
 	}
@@ -99,7 +99,7 @@
 		color: var(--g-accent-deep);
 	}
 	.lt-ch-overflow {
-		font-size: 9.5px;
+		font-size: 11px;
 		font-weight: 600;
 		padding: 1px 5px;
 		border-radius: 999px;

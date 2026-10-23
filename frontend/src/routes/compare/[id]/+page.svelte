@@ -363,7 +363,7 @@
 		>
 			{#snippet eyebrow()}
 				<!-- Issue #1256 S8c (AC-12): Eyebrow nur mobil. -->
-				<span class="mono block desktop:hidden" style="font-size: 9px; color: var(--g-ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;">Orts-Vergleich · Hub</span>
+				<span class="mono block desktop:hidden" style="font-size: 11px; color: var(--g-ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;">Orts-Vergleich · Hub</span>
 			{/snippet}
 			{#snippet badges()}
 				<span class="flex-shrink-0"><CompareStatusPill {status} /></span>
