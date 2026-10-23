@@ -72,6 +72,8 @@ Spec: ``docs/specs/modules/waechter_1405_stille_aufloesung.md``.
 """
 from __future__ import annotations
 
+import functools as _functools
+
 import ast
 from collections import Counter
 from pathlib import Path
@@ -601,6 +603,18 @@ def _find_violations(path: Path) -> dict[str, str]:
 
 
 def _all_violations() -> dict[str, str]:
+    """Gecachter Mantel um ``_all_violations_berechnen()`` -- Kopie je Aufruf.
+
+    CI-Rot 2026-10-22 (Familie B): der Scan der Produktionsflaeche ist pro
+    Lauf deterministisch (dieselben Dateien, dasselbe Ergebnis), wurde aber von
+    jedem Test dieser Datei neu gerechnet. Einmal rechnen, allen liefern;
+    die synthetischen Wirkungsnachweise gehen weiter ueber ``_find_violations(path)``
+    und sind davon unberuehrt."""
+    return dict(_all_violations_berechnen())
+
+
+@_functools.cache
+def _all_violations_berechnen() -> dict[str, str]:
     """``_find_violations()`` über die gesamte Scanfläche, zu EINEM Dict vereint."""
     violations: dict[str, str] = {}
     for path in _scan_files():
