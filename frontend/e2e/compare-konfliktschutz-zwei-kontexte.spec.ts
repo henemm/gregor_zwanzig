@@ -3,7 +3,8 @@
 //
 // Spec: docs/specs/bugfix/compare_konfliktschutz_teilfelder.md
 //   Test 9  / AC-1..AC-4 — A ändert den Namen, B speichert danach je Reiter
-//             (Alarme, Wertebereiche, Versand, Wetter-Metriken, Orte): der
+//             (Alarme, Wertebereiche, Versand [seit #1743 Abschnitt im
+//             Reiter Wetter-Metriken], Wetter-Metriken, Orte): der
 //             erste PUT von B trägt If-Match aus dem Seitenaufbau, der Server
 //             antwortet 412, nach „Nochmal speichern" stehen Name von A UND
 //             Änderung von B auf dem Server.
@@ -172,8 +173,10 @@ const REITER_FAELLE: ReiterFall[] = [
 			expect((s.corridors as unknown[]).length, 'Wertebereiche-Änderung von B fehlt auf dem Server').toBe(2)
 	},
 	{
+		// #1743: kein eigener Reiter mehr — Versand ist der Abschnitt `#versand`
+		// unten im Reiter „Wetter-Metriken" (geteilter WetterMetrikenVersandPanel).
 		reiter: 'Versand',
-		tab: 'versand',
+		tab: 'wetter-metriken',
 		bereit: async (p) => {
 			await expect(p.locator('[data-testid="versand-tab"]:visible [data-testid="report-morning-time"]')).toBeVisible({
 				timeout: 10_000
