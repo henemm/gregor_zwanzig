@@ -22,6 +22,7 @@ from tests.helpers.telegram_empfaenger import antwort_im_update
 # ---------------------------------------------------------------------------
 
 TEST_USER_ID = "tg-live-e2e"
+TEST_TRIP_NAME = "TG Live E2E Test"
 
 # Fester Pfad bewusst (#1409, Klasse B): die Staging-Installation liegt ausserhalb
 # dieses Repos und existiert je Host genau einmal.
@@ -380,6 +381,15 @@ def ensure_test_user_has_active_compare(chat_id: str, data_dir: str = "data") ->
 _ON_DEMAND_COMMANDS = ("heute", "morgen")
 
 
+def _befehlstext(cmd: str) -> str:
+    """Telegram-Text fuer ``cmd``. #2282 S2 (AC-10, PO-Variante B): bei Trip UND
+    Ortsvergleich fragt ``heute``/``morgen`` ohne Namen zurueck -- der
+    Live-Nutzer hat beides (AC-24), also nennen die Trip-Befehle den Trip."""
+    if cmd in _ON_DEMAND_COMMANDS:
+        return f"{TEST_TRIP_NAME} {cmd}"
+    return f"/{cmd}"
+
+
 def run_command_through_pipeline(
     command: str,
     chat_id: str,
@@ -423,7 +433,7 @@ def run_command_through_pipeline(
     _ensure_paced_telegram_post()
     settings = Settings()
     cmd = command.lstrip("/")
-    cmd_text = f"/{cmd}"
+    cmd_text = _befehlstext(cmd)
 
     captured: list = []
     original_process = tcp_mod.TripCommandProcessor.process
@@ -504,7 +514,7 @@ def deliver_and_cleanup(
     settings = Settings()
 
     # Echtes Update-Dict wie Telegram es senden würde (message-Typ)
-    cmd_text = f"/{command}" if not command.startswith("/") else command
+    cmd_text = _befehlstext(command.lstrip("/"))
     update = {
         "update_id": 1,
         "message": {
@@ -675,7 +685,7 @@ def _create_active_trip(user_id: str, data_dir: str) -> None:
     trip_id = "tg-live-e2e-trip"
     trip_data = {
         "id": trip_id,
-        "name": "TG Live E2E Test",
+        "name": TEST_TRIP_NAME,
         "stages": [
             {
                 "id": "s1",

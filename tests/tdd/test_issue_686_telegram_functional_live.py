@@ -21,6 +21,7 @@ import json
 import os
 import socketserver
 import threading
+import time
 from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
@@ -498,3 +499,68 @@ def test_ac24_hilfe_bei_trip_und_vergleich_antwortet_sofort_live():
     )
     fehlend = [s.wort for s in _COMMAND_SPECS if s.wort.upper() not in body.upper()]
     assert not fehlend, f"B1: Befehlsuebersicht nennt nicht alle Befehle, fehlen: {fehlend}"
+
+
+@pytest.mark.real_data_root
+@pytest.mark.timeout(60)
+@pytest.mark.skipif(
+    not live_telegram_enabled(),
+    reason="GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)",
+)
+def test_heute_ohne_namen_bei_trip_und_vergleich_fragt_live_zurueck():
+    """
+    GIVEN: der Live-Testnutzer mit aktivem Trip UND aktivem Ortsvergleich
+    WHEN: 'heute' ohne Namen ueber den echten `_process_update`-Pfad kommt
+    THEN: genau eine Rueckfrage nennt beide Kandidaten, es entsteht kein
+          Briefing-Versand (#2282 S2 AC-10, PO-Variante B).
+    """
+    from app.config import Settings
+    from services.inbound_telegram_reader import InboundTelegramReader
+    from services.notification_service import NotificationService
+    from tests.tdd._telegram_live_fixture import (
+        _COMPARE_FIXTURE_NAME,
+        TEST_TRIP_NAME,
+        TEST_USER_ID,
+        _ensure_paced_telegram_post,
+        ensure_test_user_has_active_compare,
+        ensure_test_user_with_active_trip,
+    )
+
+    chat_id = os.environ["GZ_TELEGRAM_TEST_CHAT_ID"]
+    ensure_test_user_with_active_trip(chat_id=chat_id)
+    ensure_test_user_has_active_compare(chat_id=chat_id)
+    _ensure_paced_telegram_post()
+    log_path = Path(f"data/users/{TEST_USER_ID}/briefing_log.json")
+    log_vorher = log_path.read_text() if log_path.exists() else ""
+
+    texte: list = []
+    original = NotificationService.send_telegram_message
+
+    def _aufzeichnen(self, *args, **kwargs):
+        texte.append(kwargs.get("body", ""))
+        return original(self, *args, **kwargs)
+
+    NotificationService.send_telegram_message = _aufzeichnen
+    settings = Settings()
+    reader = InboundTelegramReader()
+    try:
+        reader._process_update({
+            "update_id": 1,
+            "message": {
+                "message_id": 1,
+                "from": {"id": int(chat_id), "is_bot": False, "first_name": "Test"},
+                "chat": {"id": int(chat_id), "type": "private"},
+                "date": int(time.time()),
+                "text": "heute",
+            },
+        }, settings)
+    finally:
+        NotificationService.send_telegram_message = original
+        out = antwort_im_update(settings, str(chat_id))
+        for mid in reader.sent_message_ids:
+            out.delete_message(chat_id=chat_id, message_id=mid)
+
+    assert len(texte) == 1, f"AC-10: genau EINE Rueckfrage erwartet: {texte!r}"
+    assert TEST_TRIP_NAME in texte[0] and _COMPARE_FIXTURE_NAME in texte[0], texte[0]
+    assert (log_path.read_text() if log_path.exists() else "") == log_vorher, (
+        "AC-10: Rueckfrage darf keinen Briefing-Versand ausloesen")
