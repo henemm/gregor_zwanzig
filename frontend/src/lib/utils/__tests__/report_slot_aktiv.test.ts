@@ -17,7 +17,6 @@
 //        - getReportSchedule        (utils/rightColumn.ts)
 //        - setupStepTrip            (utils/cockpitHelpers568.ts, Schritt "Reports")
 //        - plannedBriefings         (routes/_home/cockpitHelpers.ts)
-//        - TripKachel.svelte        (SSR-Render, "Reports ✓")
 //      HINWEIS Spec-Zeilenverweis: die Spec nennt "deriveNextSend" in
 //      cockpitHelpers.ts:151 — dort steht `plannedBriefings`. `deriveNextSend`
 //      und `setupStepCompare` (cockpitHelpers568.ts:113/247) nehmen ein
@@ -175,26 +174,7 @@ describe('AC-23 Naht 2c — plannedBriefings (Startseite, routes/_home/cockpitHe
 	}
 });
 
-describe('AC-23 Naht 2d — TripKachel.svelte (SSR): "Reports ✓"', () => {
-	for (const f of FAELLE) {
-		test(`TripKachel — ${f.name}`, async () => {
-			const { render } = await import('svelte/server');
-			const TripKachel = (
-				await import(
-					pathToFileURL(path.join(FRONTEND, 'src/routes/_home/TripKachel.svelte')).href
-				)
-			).default;
-			const html = render(TripKachel, { props: { trip: tripOf(f) } }).body;
-			const erwartet = f.slot_morning || f.slot_evening;
-			assert.equal(
-				html.includes('Reports ✓'),
-				erwartet,
-				`Kachel-Hinweis "Reports ✓" fuer ${JSON.stringify(f.report_config)}: erwartet ${erwartet} ` +
-					'(TripKachel.svelte:39 liest truthy morning_enabled/evening_enabled)'
-			);
-		});
-	}
-});
+// Naht 2d (TripKachel "Reports ✓") entfaellt: TripKachel ist durch SubscriptionKachel ersetzt (#2346 S2).
 
 describe('AC-23 Naht 2e — heroKanaele (Startseite, Kanal-Dots des Hero-Trips)', () => {
 	// Fix-Loop 1 (Adversary F003): +page.svelte leitet die Dots aus diesem Helfer ab.

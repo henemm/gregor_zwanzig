@@ -120,7 +120,11 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 - `SubscriptionCard` wird in den Nur-Vergleich-Zweigen kind-neutral: Kanäle, Zeitplan-Zeile und Fußzeile (letzter/nächster Versand) erscheinen für beide kinds, in derselben Anordnung. Für den Trip kommen die Kanäle aus den `report_config`-Flags (E-Mail, Telegram, SMS, Premium-SMS) über `heroKanaele`/`reportChannels`, **nie** aus `empfaenger` (#1452).
 - `SubscriptionKachel.svelte` (neu, `routes/_home/`) ist der **eine** Baustein für `activePresets` und `otherTrips`; `TripKachel` und `CompareKachel` entfallen. Props `nextSend` und `lastSent` sind nullable und kind-neutral; eine eigene Fälligkeitsrechnung im Frontend gibt es nicht, `deriveNextSend` bleibt unberührt.
 - **Sichtbare Änderung der Vergleichs-Kachel (bewusst, PO-bekannt):** Die compact-Kachel zeigt künftig für **beide** kinds Kanäle sowie letzten und nächsten Versand. Die Vergleichs-Kachel ändert damit ihr Aussehen (heute: Kanäle nur nicht-compact).
-- Tote Bausteine werden gelöscht: `HomeHeroTrip`, `HomeHeroCompare` (inkl. Barrel-Einträge `organisms/index.ts:29-30`), `CompareIdealRow`. Zugehörige Tests, die nur deren Existenz prüfen, entfallen.
+- Tote Bausteine werden gelöscht: `HomeHeroTrip`, `HomeHeroCompare` (inkl. Barrel-Eintrag `organisms/index.ts:29`), `CompareIdealRow`. Zugehörige Tests, die nur deren Existenz prüfen, entfallen.
+- **Kanäle als Prop (S2-Zuschnitt, /20-analyse):** `SubscriptionCard` bekommt `channels?` als Prop, statt sie intern aus `presetChannels` abzuleiten; Trip-Kanäle liefert die Kachel über `reportChannels(report_config)`, Vergleichs-Kanäle weiter über `presetChannels`. `kachelActions.compareKachelActions` wird kind-neutral umbenannt.
+- **Testkennung:** `data-testid="trip-card"` der alten Trip-Kachel wird **nicht** übernommen. Der Baustein trägt `subscription-card-{id}` und `data-kind`. Die veralteten Specs `startseite.spec.ts` und `issue-294-home-kachel.spec.ts` (nicht in `ci_e2e_specs.txt`) werden minimal auf `[data-testid^="subscription-card-"][data-kind="trip"]` umgestellt. Die `/trips`-Liste mit eigenem `trip-card` bleibt unberührt.
+- **Link-Verhalten:** Die alte Trip-Kachel war ein echter Link (`<a href>`). Damit Mittel-/Rechtsklick erhalten bleibt, trägt `SubscriptionCard` den Namen optional als `<a href>` (Prop `href`); der Karten-Klick bleibt `goto`. Beide kinds bekommen den Link.
+- **Nächster Versand schon in S2:** `nextBriefings` (#1969) ist in `+page.svelte` bereits geladen; `nextSend` wird per `formatNextBriefing` für Trip und Vergleich schon in S2 gespeist (bei `at === null` der Grund `reason`). `lastSent` kommt beim Vergleich aus `letzter_versand`, beim Trip bleibt es „—" bis S4.
 - Zwischenstand bis S4: Solange S4 nicht geliefert ist, zeigt die Kachel für Werte ohne Datenquelle den ehrlichen Leerzustand („—"). Das ist eine Lieferreihenfolge, **keine** Ausnahme von AC-1; das Ticket bleibt bis S4 offen.
 
 ### S3 — Hero, `shared/`
@@ -192,6 +196,12 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 **AC-16** (S2): Given eine Vergleichs-Kachel auf der Startseite / When sie nach S2 gerendert wird / Then zeigt sie in der compact-Darstellung zusätzlich Kanäle sowie letzten und nächsten Versand (bewusste sichtbare Änderung) und behält ihre Aktion „Bearbeiten" sowie `data-testid="subscription-card-{id}"`.
   - Test: `subscription_card.test.ts` (SSR-Render compact, kind `vergleich`).
 
+**AC-17** (S2): Given die Startseite mit einem Trip und einem Orts-Vergleich / When die Kacheln gerendert werden / Then tragen beide `data-testid="subscription-card-{id}"` und `data-kind` (`trip` bzw. `vergleich`), der Name ist ein echter Link auf den jeweiligen Hub (Mittel-/Rechtsklick funktioniert), und ein Klick auf die Karte führt weiter zum Hub.
+  - Test: `node --test` SSR-Render beider kinds (Link-Ziel und Kennung); die zwei veralteten Playwright-Specs werden auf die neue Kennung umgestellt.
+
+**AC-18** (S2): Given ein Trip und ein Vergleich, für die `GET /api/next-briefings` einen nächsten Versand liefert, bei einem weiteren Eintrag mit `at === null` und `reason` / When die Startseite gerendert wird / Then zeigt jede Kachel den nächsten Versand aus dieser Antwort (ohne eigene Fälligkeitsrechnung), bei `at === null` den Grund, und der letzte Versand des Trips zeigt „—" bis S4.
+  - Test: `node --test` auf das Mapping Antwort → Props (inkl. `null`-Fall) und SSR-Render beider kinds.
+
 ## Test Plan (Kern deterministisch, keine Mocks)
 
 - **pytest (Gate):** Wegwerf-Git-Repos wie in `tests/tdd/test_pendant_gate.py` — echter Hook-Aufruf per Subprozess mit `tool_input.command`, geprüft wird Exit-Code und Meldung. Dateien: `tests/tdd/test_pendant_gate.py` (erweitert), `tests/tdd/test_pendant_gate_bekannte_paare.py` (neu). Benennung nach Verhalten, nicht nach Issue-Nummer.
@@ -227,3 +237,4 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 - 2026-10-23: Initial spec created (Scheiben S1–S4, Ticket-Korrekturen, Befund Stundenverlauf-Steuerung, Abstimmung mit #1969)
 - 2026-10-24: Bestandsaufmaß korrigiert: 8 statt 7 Namenspaare (trip_forecast.py/forecast.py, Adversary F003); nachgezogen in S1-Aufzählung, Schrumpf-Test-Absatz, Prüfdatum-Absatz und `- Test:`-Zeile unter AC-3 (F012). AC-5/AC-8-Texte unverändert (Spec-Freeze)
 - 2026-10-24, /60-validate: HomeHeroCompare/HomeHeroTrip schon in S1 aus BEKANNTE_PAARE gestrichen (Datei durch #1969 gelöscht), für S2 entfällt dieser Schritt
+- 2026-10-24, /30-write-spec S2: Zuschnitt aus /20-analyse ergänzt (Kanäle als Prop, Testkennung `subscription-card-{id}`, Link-Verhalten, `nextSend` schon in S2); neue ACs AC-17 und AC-18. S2-Freigabe: AC-1 (Teil S2), AC-9, AC-10, AC-16, AC-17, AC-18
