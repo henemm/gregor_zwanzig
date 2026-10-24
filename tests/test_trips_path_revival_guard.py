@@ -116,6 +116,12 @@ API_IDENTIFIER_EXEMPTIONS: dict[str, str] = {
         "Mengen-Quote (API-Bezeichner), kein Pfad -- Spec "
         "docs/specs/modules/mengen_quoten_je_tier.md"
     ),
+    "api/routers/internal.py::next_briefings::0": (
+        "#1969: \"trips\" ist der Antwortschluessel von GET "
+        "/api/_internal/next-briefings, den der Go-Proxy und das Frontend als "
+        "`trips` lesen (API-Bezeichner), kein Pfad -- Spec "
+        "docs/specs/modules/feat_1969_naechstes_briefing.md"
+    ),
 }
 
 _TRIPS_SEGMENT_RE = re.compile(r"(?:^|/|\*/)trips(?:/|$)")
