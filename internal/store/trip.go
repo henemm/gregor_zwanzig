@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -10,6 +11,33 @@ import (
 
 	"github.com/henemm/gregor-api/internal/model"
 )
+
+// ErrKindConflict: die Kennung ist im gemeinsamen Kennungsraum briefings/
+// (ADR-0023) bereits von einer Ressource der ANDEREN Art belegt (Issue #2359).
+// SaveTrip/SaveComparePreset liefern ihn, statt die fremde Datei zu
+// ueberschreiben (stiller Datenverlust).
+var ErrKindConflict = errors.New("kennung von anderer art belegt")
+
+// idBelegtDurchFremdeArt prueft, ob briefings/<id>.json einer anderen Art
+// gehoert. vergleich=true: Aufrufer will einen Ortsvergleich schreiben ⇒
+// jede gueltige Datei mit kind!="vergleich" (inkl. "" = Alt-Trip) ist fremd.
+// vergleich=false: Aufrufer will einen Trip schreiben ⇒ nur kind=="vergleich"
+// ist fremd. Fehlende, unlesbare, leere oder korrupte Datei ⇒ nicht belegt
+// (fail-open, wie DeleteComparePreset). Laeuft unter dem Briefing-Lock des
+// Aufrufers, Pruefung + Schreiben sind damit atomar.
+func (s *Store) idBelegtDurchFremdeArt(id string, vergleich bool) bool {
+	data, err := os.ReadFile(filepath.Join(s.briefingsDir(), id+".json"))
+	if err != nil {
+		return false
+	}
+	var probe struct {
+		Kind string `json:"kind"`
+	}
+	if json.Unmarshal(data, &probe) != nil {
+		return false
+	}
+	return (probe.Kind == "vergleich") != vergleich
+}
 
 // normalizeTrip coerces nil slice fields (Corridors, Stages, per-stage
 // Waypoints, AlertRules) to empty slices in place. Single source of truth
@@ -252,6 +280,10 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 	// fremden Kontos (briefingsDir liegt zwei Ebenen unter data/users/).
 	if !ValidEntityID(trip.ID) {
 		return ErrInvalidEntityID
+	}
+	// Issue #2359: nie einen Ortsvergleich gleicher Kennung ueberschreiben.
+	if s.idBelegtDurchFremdeArt(trip.ID, false) {
+		return ErrKindConflict
 	}
 	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
 	// trips/<id>.json wird NICHT mehr angefasst (Rollback-Faehigkeit, AC-26).

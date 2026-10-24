@@ -80,7 +80,9 @@ func validateComparePresetEndDate(value *string) error {
 	return nil
 }
 
-func newComparePresetID() string {
+// newComparePresetID ist Paket-Variable als Test-Naht (Issue #2359 AC-8);
+// Produktverhalten unveraendert.
+var newComparePresetID = func() string {
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {
 		return "cp-" + time.Now().UTC().Format("20060102150405.000000000")
@@ -282,7 +284,7 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// briefings/<id>.json schreiben (SaveComparePreset setzt kind=vergleich),
 		// kein Laden+Zurueckschreiben des ganzen Arrays mehr.
 		if err := s.SaveComparePreset(preset); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			writeSaveError(w, err)
 			return
 		}
 		writeJSON(w, http.StatusCreated, preset)
@@ -434,7 +436,7 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// Issue #1250 Scheibe 7b: nur die eigene Datei zurueckschreiben
 		// (per-Datei-Save), nicht das ganze Array.
 		if err := s.SaveComparePreset(updated); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			writeSaveError(w, err)
 			return
 		}
 		// Issue #1395 S6: Stempel des soeben geschriebenen Standes — ohne ihn
@@ -556,7 +558,7 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 
 		// Issue #1250 Scheibe 7b: nur die geaenderte Datei zurueckschreiben.
 		if err := s.SaveComparePreset(presets[idx]); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			writeSaveError(w, err)
 			return
 		}
 		writeJSON(w, http.StatusOK, presets[idx])

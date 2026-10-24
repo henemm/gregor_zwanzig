@@ -1263,6 +1263,14 @@ Bei `start_time = "08:00"`, `activity = "fahrrad_20"` und 20 km kumulierter Dist
 
 ---
 
+### POST /api/trips — Kennungs-Konflikt (Issue #2359)
+
+Trips und Ortsvergleiche teilen einen Kennungsraum (`briefings/<id>.json`, ADR-0023). Ist eine Kennung bereits durch einen Ortsvergleich des Nutzers belegt, wird die Anlage abgelehnt. Die Prüfung läuft **vor** der Trip-Quota (#2482). Upsert der eigenen Art bleibt `201`.
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 409 | `{"error":"id_conflict","detail":"Ein Ortsvergleich trägt bereits diese Kennung — bitte anderen Namen wählen."}` | Kennung gehört einem Ortsvergleich desselben Nutzers (auch bei Rennen zwischen Prüfung und Schreiben, Store-Sentinel `ErrKindConflict`) |
+
 ## 11) Weather Config Endpoints (M5c)
 
 Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen und Schreiben des `display_config`-Subfelds auf Trip- und Location-Entitaeten ohne Uebertragung des gesamten Objekts. Alle Config-schreibenden Endpoints (Trip, Location, ComparePreset) mergen feldweise ueber den gemeinsamen `mergeConfigMap`-Helfer (`internal/handler/config_merge.go`, #1159) — Teil-Updates loeschen keine anderen `display_config`-Keys mehr. Der fruehere Subscription-Endpoint wurde mit #1250 Scheibe 0 entfernt.
@@ -2623,10 +2631,16 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 |--------|------|--------|-------------|
 | GET | `/api/compare/presets` | 200 | List all presets for authenticated user ([] if none) |
 | GET | `/api/compare/presets/{id}` | 200 / 404 | Get single preset by ID (for detail-page view, Issue #491) |
-| POST | `/api/compare/presets` | 201 / 400 | Create new preset; ID auto-generated, user_id from auth context |
-| PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 | Update preset (user_id, created_at preserved from stored record) |
+| POST | `/api/compare/presets` | 201 / 400 / 409 | Create new preset; ID auto-generated, user_id from auth context; 409 = `id_conflict`, s. u. (Issue #2359) |
+| PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 / 409 | Update preset (user_id, created_at preserved from stored record); 409 = `id_conflict`, s. u. (Issue #2359) |
 | DELETE | `/api/compare/presets/{id}` | 204 / 404 | Delete preset |
 | POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 / 409 / 422 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'`. **Fehlende Orte (#2216):** sind alle Orte des Ortsvergleichs geloescht, antwortet der Versand mit **422** und der Meldung „Ortsvergleich '<id>' verweist auf gelöschte Orte. Ersetze die Orte im Ortsvergleich." (bewusst nicht 409). Fehlt nur ein Teil, laeuft der Versand mit den uebrigen Orten und die 200-Antwort traegt zusaetzlich `fehlende_orte` (Liste der nicht aufloesbaren Ort-IDs; leer/fehlend wenn nichts fehlt); der Scheduler-Lauf loggt eine Warnung, der Compare-Hub zeigt nach dem Test-Versand einen Hinweis. 409 = für diesen Ortsvergleich läuft bereits ein Versand (geteiltes Lock-Register `src/services/send_lock.py`, Schlüssel enthält `user_id`; Issue #2124). Der Go-Proxy reicht den Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht), Timeout 300 s (vorher 120 s) |
+
+**Kennungs-Konflikt `id_conflict` (Issue #2359, POST und PUT):** Die Kennung ist bereits durch einen Trip belegt (gemeinsamer Kennungsraum, ADR-0023). Store-Sentinel `ErrKindConflict` wird über `writeSaveError` abgebildet:
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 409 | `{"error":"id_conflict","detail":"Diese Kennung ist bereits durch einen Trip oder Ortsvergleich belegt — bitte anderen Namen wählen."}` | `SaveComparePreset` trifft auf eine Datei fremder Art (statt 500 `store_error`) |
 
 ### Validation Rules (POST/PUT)
 
@@ -4807,6 +4821,7 @@ Funktion in `src/`/`api/` keinen Aufrufer — schreibend ist allein die Go-API.
 
 ## Changelog
 
+- 2026-10-24: Issue #2359 — Kennungsraum Trip/Ortsvergleich: `POST /api/trips` (neuer Abschnitt „Kennungs-Konflikt“) sowie Compare-Preset POST/PUT antworten bei belegter Kennung mit 409 `id_conflict` (statt 500 `store_error`).
 - 2026-10-21: Doku-Drift (kein Code) — Profil-DTO um `email_verified`, `sms_verified`, `pending_sms_to`,
   `telegram_chat_id` ergänzt; neuer Unterabschnitt „SMS-Nummer-Verifikation“ (#2406); `User`-Struct-Block
   auf Struct-Wahrheit inkl. `SmsVerificationCode`/`PremiumSmsLinkCode`; Forecast-Zusatzfelder

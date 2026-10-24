@@ -248,6 +248,10 @@ func (s *Store) SaveComparePreset(p model.ComparePreset) error {
 	if !ValidEntityID(p.ID) {
 		return ErrInvalidEntityID
 	}
+	// Issue #2359: nie einen Trip gleicher Kennung ueberschreiben.
+	if s.idBelegtDurchFremdeArt(p.ID, true) {
+		return ErrKindConflict
+	}
 	dir := s.briefingsDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
