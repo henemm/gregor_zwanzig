@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -159,6 +160,20 @@ func ensureStageIDs(stages []model.Stage) []model.Stage {
 	return stages
 }
 
+// writeSaveError bildet Save-Fehler von SaveTrip/SaveComparePreset EINHEITLICH
+// ab (Issue #2359): store.ErrKindConflict (Kennung von der anderen Art belegt)
+// ⇒ 409 id_conflict mit deutscher Meldung, jeder andere Fehler ⇒ 500.
+func writeSaveError(w http.ResponseWriter, err error) {
+	if errors.Is(err, store.ErrKindConflict) {
+		writeJSON(w, http.StatusConflict, map[string]string{
+			"error":  "id_conflict",
+			"detail": "Diese Kennung ist bereits durch einen Trip oder Ortsvergleich belegt — bitte anderen Namen wählen.",
+		})
+		return
+	}
+	writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+}
+
 func CreateTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
@@ -222,6 +237,22 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		// Trip reaktiviert (fachlich ein Wiederherstellen, AC-9). Das reine
 		// Ueberschreiben bleibt frei (AC-6).
 		reaktiviert := vorhanden != nil && vorhanden.ArchivedAt != nil && trip.ArchivedAt == nil
+		// Issue #2359: Kennung von einem Ortsvergleich belegt ⇒ 409, VOR der
+		// Quota-Pruefung (sonst maskiert eine Quota-Ablehnung den Konflikt).
+		if vorhanden == nil {
+			belegt, err := s.LoadComparePreset(trip.ID)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+				return
+			}
+			if belegt != nil {
+				writeJSON(w, http.StatusConflict, map[string]string{
+					"error":  "id_conflict",
+					"detail": "Ein Ortsvergleich trägt bereits diese Kennung — bitte anderen Namen wählen.",
+				})
+				return
+			}
+		}
 		if (vorhanden == nil || reaktiviert) && !quotaAllows(w, r, s, quotaTrips) {
 			return
 		}
@@ -233,9 +264,7 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		defer unlockB()
 
 		if err := s.SaveTrip(&trip); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			writeSaveError(w, err)
 			return
 		}
 

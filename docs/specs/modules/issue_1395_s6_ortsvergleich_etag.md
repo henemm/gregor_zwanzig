@@ -229,9 +229,17 @@ const RESOURCE_PATH_RE =
 liefert `match[1] ?? match[2]`, decodiert wie bisher. Der Rest des Moduls
 (`knownEtags`, `writeQueues`, `etagVersions`, `enqueueTripWrite`, ...) bleibt
 unveraendert — er behandelt die ID bereits als opaken String, keine
-Trip-spezifische Logik darin. ID-Kollision zwischen Trip- und Preset-IDs ist
-durch das `cp-`-Praefix der Preset-IDs ausgeschlossen (verifiziert:
-`newComparePresetID()`, `compare_preset.go:80-86`).
+Trip-spezifische Logik darin. ~~ID-Kollision zwischen Trip- und Preset-IDs ist
+durch das `cp-`-Praefix der Preset-IDs ausgeschlossen.~~
+
+> **Korrektur (Issue #2359, 2026-10-24):** Das `cp-`-Praefix
+> (`newComparePresetID()`) tragen nur NEU erzeugte Ortsvergleiche;
+> Alt-Ortsvergleiche tragen Slug-Kennungen ohne Praefix (z. B.
+> `zillertal-t-glich`), und `POST /api/trips` uebernahm die Kennung aus dem
+> Rumpf. Eine Kollision war damit moeglich (stilles Ueberschreiben eines
+> Ortsvergleichs). Der Schutz ist der Server-Waechter aus #2359
+> (`Store.SaveTrip`/`SaveComparePreset` -> `ErrKindConflict`, 409
+> `id_conflict`; Spec `id_eindeutigkeit_trip_vergleich_2359.md`).
 
 ### Frontend — `fakeTripServer.ts` (Testdoppel)
 

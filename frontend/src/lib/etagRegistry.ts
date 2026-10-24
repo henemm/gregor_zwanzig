@@ -70,11 +70,17 @@ export function etagVersion(tripId: string): number {
  * Issue #2276 S1 (Korrektur einer falschen Zusicherung): das Praefix `cp-`
  * (`newComparePresetID()`) tragen NUR NEU erzeugte Presets. Alt-Ortsvergleiche
  * im Bestand tragen Slug-Kennungen ohne Praefix (gemessen 2026-09-18:
- * `zillertal-t-glich`). Eine Verwechslung mit einer Trip-Kennung ist damit
- * NICHT ausgeschlossen: traegen eine Trip und ein Ortsvergleich dieselbe
- * Kennung, ueberschreiben sich ihre Stempel gegenseitig. Der Sachverhalt ist
- * als eigener Befund gebucht; ihn hier zu beheben ist nicht Teil von S1.
- * Konsequenz fuer Aufrufer: die Ressourcenart NIE aus der Kennung ableiten,
+ * `zillertal-t-glich`). Das Praefix allein schliesst eine Verwechslung mit
+ * einer Trip-Kennung also NICHT aus.
+ *
+ * Issue #2359: die Eindeutigkeit einer Kennung ueber BEIDE Arten erzwingt der
+ * Server (Wächter in `Store.SaveTrip`/`SaveComparePreset` -> `ErrKindConflict`,
+ * `POST /api/trips` -> 409 `id_conflict`; bewacht durch
+ * `internal/store/id_eindeutigkeit_test.go` und
+ * `internal/handler/id_eindeutigkeit_test.go`). Es gibt also nie einen Trip
+ * und einen Ortsvergleich mit derselben Kennung — EIN Schluesselraum genuegt,
+ * die Registry wird bewusst NICHT nach Art geschluesselt.
+ * Konsequenz fuer Aufrufer bleibt: die Ressourcenart NIE aus der Kennung ableiten,
  * immer uebergeben (s. `refreshResourceEtag` in `api.ts`).
  */
 const RESOURCE_PATH_RE =
