@@ -47,9 +47,6 @@ const { homeCompareTimeline } = await import('../../../../routes/_home/cockpitHe
 const CompareStatusRow = (
 	await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/molecules/CompareStatusRow.svelte')).href)
 ).default;
-const HomeHeroCompare = (
-	await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/organisms/HomeHeroCompare.svelte')).href)
-).default;
 
 const ADRESSE = 'henning@henemm.com';
 
@@ -154,9 +151,17 @@ describe('AC-8: Cockpit-Kanal-Chips zeigen Kanal-Label statt Rohadressen', () =>
 			send_telegram: true,
 			letzter_versand: '2026-07-30T07:00:00Z'
 		} as Partial<ComparePreset>);
-		const rows = homeCompareTimeline(preset, new Date('2026-07-31T06:00:00Z'));
+		// Issue #1969: zweiter Parameter ist der Backend-Wert statt `now`.
+		const rows = homeCompareTimeline(preset, {
+			at: '2026-07-31T07:00:00+02:00',
+			local_date: '2026-07-31',
+			local_time: '07:00',
+			tz: 'Europe/Paris',
+			tz_abbr: 'CEST',
+			slot: 'morning'
+		});
 
-		assert.ok(rows.length > 0, 'Timeline muss mindestens eine Zeile liefern');
+		assert.equal(rows.length, 2, 'Timeline muss Zuletzt- und Nächster-Zeile liefern');
 		for (const row of rows) {
 			assert.deepEqual(
 				[...(row.channels ?? [])].sort(),
@@ -168,45 +173,8 @@ describe('AC-8: Cockpit-Kanal-Chips zeigen Kanal-Label statt Rohadressen', () =>
 });
 
 // ─── AC-9 ────────────────────────────────────────────────────────────────────
-
-describe('AC-9: HomeHeroCompare nutzt ausschliesslich preset.channels', () => {
-	test('channels=undefined + gefuelltes empfaenger → keine Kanal-Eintraege', () => {
-		const text = visibleText(
-			render(HomeHeroCompare, {
-				props: {
-					preset: {
-						id: 'cmp-1452',
-						name: 'Testvergleich Korsika',
-						location_ids: ['loc-1'],
-						empfaenger: [ADRESSE, 'zweite@example.com'],
-						display_config: {}
-					}
-				}
-			}).body
-		);
-
-		assert.ok(
-			!text.includes(ADRESSE) && !text.includes('zweite@example.com'),
-			`AC-9: Ohne preset.channels darf NICHT auf empfaenger zurueckgefallen werden — gerendert: "${text}"`
-		);
-	});
-
-	test('channels gesetzt → genau diese Kanaele erscheinen (Gegenprobe)', () => {
-		const text = visibleText(
-			render(HomeHeroCompare, {
-				props: {
-					preset: {
-						id: 'cmp-1452',
-						name: 'Testvergleich Korsika',
-						location_ids: ['loc-1'],
-						empfaenger: [ADRESSE],
-						channels: ['Email', 'Telegram'],
-						display_config: {}
-					}
-				}
-			}).body
-		);
-		assert.ok(text.includes('Email') && text.includes('Telegram'), `erwartet Email+Telegram — "${text}"`);
-		assert.ok(!text.includes(ADRESSE), `Adresse darf nie erscheinen — "${text}"`);
-	});
-});
+// Issue #1969 (AC-25): HomeHeroCompare.svelte hatte keinen Importeur (nur den
+// Barrel-Export) und ist gelöscht — die Zusicherung „kein Rückfall auf
+// empfaenger" hatte damit keinen erreichbaren Prüfling mehr. Für die echten
+// Startseiten-Konsumenten bewachen sie AC-8 oben (CompareStatusRow,
+// homeCompareTimeline).

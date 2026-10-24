@@ -12,6 +12,7 @@ bucht im Erfolgsfall in den Tageszaehler (ADR-0076). Alle Routen dieses
 Moduls liegen hinter ``X-GZ-Core-Auth`` (ADR-0062, Middleware in
 ``api/main.py``).
 """
+import logging
 import math
 import os
 from datetime import datetime, timedelta, timezone
@@ -204,6 +205,54 @@ def sms_daily_usage(user_id: str = Query(...)):
     """Tageskontingent-Anzeige fuer /account (S4b, Issue #2412). `user_id` ohne
     Default -- ein Ersatzwert wie "default" zeigte ein fremdes Konto."""
     return sms_daily_limit.get_daily_usage(user_id, datetime.now(timezone.utc))
+
+
+@router.get("/api/_internal/next-briefings")
+def next_briefings(
+    user_id: str = Query(..., min_length=1),
+    trip_id: str | None = Query(None),
+    preset_id: str | None = Query(None),
+):
+    """Naechstes Briefing je Trip und Ortsvergleich DIESES Nutzers (#1969).
+
+    Rein lesend, nichts wird persistiert (ADR-0051 Regel 1). Geladen wird
+    ausschliesslich aus dem Verzeichnis von ``user_id`` (kein ``"default"``) —
+    eine fremde ``trip_id``/``preset_id`` findet dort nichts und fehlt
+    deshalb in der Antwort. Bewusst keine geschlossene Schluesselmenge oben
+    (#2346 ergaenzt ``last_briefing``).
+    """
+    from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
+    from services.briefing_slots import BriefingSlotStore
+    from services.next_briefing import next_compare_briefing, next_trip_briefing
+
+    jetzt = datetime.now(timezone.utc)
+    nur_trip, nur_preset = trip_id is not None, preset_id is not None
+    trips: dict = {}
+    compare: dict = {}
+    if not nur_preset:
+        store = BriefingSlotStore(user_id)
+        for trip in load_all_trips(user_id):
+            if nur_trip and trip.id != trip_id:
+                continue
+            _je_objekt(trips, trip.id, lambda: next_trip_briefing(trip, jetzt, store))
+    if not nur_trip:
+        orte = {loc.id: loc for loc in load_all_locations(user_id)}
+        for preset in load_compare_presets(user_id=user_id, strict=False):
+            if nur_preset and preset.id != preset_id:
+                continue
+            _je_objekt(compare, preset.id, lambda: next_compare_briefing(
+                compare_preset_to_dict(preset), orte, jetzt,
+            ))
+    return {"trips": trips, "compare": compare}
+
+
+def _je_objekt(ziel: dict, objekt_id: str, ableitung) -> None:
+    """Ein Objekt, dessen Ableitung scheitert, fehlt in der Antwort (Frontend
+    zeigt „—", AC-19) — es reisst die Antwort fuer die uebrigen nicht mit."""
+    try:
+        ziel[objekt_id] = ableitung()
+    except Exception:
+        logging.getLogger(__name__).exception("next-briefings: Ableitung fuer %s gescheitert", objekt_id)
 
 
 class _SeedDailyUsage(BaseModel):

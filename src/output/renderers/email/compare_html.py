@@ -21,7 +21,7 @@ SPEC: docs/specs/modules/issue_1110_compare_mail_v2.md
 from __future__ import annotations
 
 import html as _html
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -1498,34 +1498,29 @@ def _render_legend(
     )
 
 
-def _compute_next_send(schedule, weekday, tz) -> Optional[str]:
-    """Known Limitation (SPEC): liefert None (-> '—'), wenn schedule nicht
-    ermittelbar ist.
-
-    Issue #1727 S5c (ADR-0044): ``today`` kommt aus ``tz`` (bereits von
-    ``render_compare_html`` aufgeloestes ``header_tz``) statt aus der
-    zonenlosen ``date.today()``-Serveruhr — dieselbe Zeitbasis wie die
-    Kopfzeile derselben Mail.
+def _compute_next_send(preset: Optional[dict], locations_by_id: dict) -> Optional[str]:
+    """Issue #1969 (AC-26/AC-27): KEINE eigene Rechnung mehr — die zentrale
+    Ableitung ``next_compare_briefing`` mit ``strict_after=True`` (der gerade
+    laufende Versand zaehlt nicht als naechster). Slots, Wochentag, ``end_date``
+    und Pause wirken; Datum/Uhrzeit/Kuerzel in der Ortszone (fix_1727_s5c AC-5).
+    ``None`` (-> '—'), wenn nichts mehr ansteht oder kein Preset bekannt ist.
     """
-    if not schedule:
+    if not preset:
         return None
-    today = local_dt(datetime.now(timezone.utc), tz).date()
-    schedule_str = str(schedule).lower()
-    if "weekly" in schedule_str and weekday is not None:
-        try:
-            target_wd = int(weekday)
-        except (TypeError, ValueError):
-            return None
-        days_ahead = (target_wd - today.weekday()) % 7 or 7
-        return (today + timedelta(days=days_ahead)).strftime("%d.%m.%Y")
-    if "daily" in schedule_str:
-        return (today + timedelta(days=1)).strftime("%d.%m.%Y")
-    return None
+    from services.next_briefing import next_compare_briefing
+
+    nb = next_compare_briefing(
+        preset, locations_by_id, datetime.now(timezone.utc), strict_after=True,
+    )
+    if nb.get("at") is None:
+        return None
+    tag = date.fromisoformat(nb["local_date"])
+    return f'{tag.strftime("%d.%m.%Y")} {nb["local_time"]} {nb["tz_abbr"]}'
 
 
-def _render_abo_footer(preset_name, preset_schedule, preset_weekday, location_count: int, sig, tz) -> str:
+def _render_abo_footer(preset_name, preset, locations_by_id: dict, location_count: int, sig) -> str:
     name = _html.escape(preset_name) if preset_name else "Ortsvergleich"
-    next_send = _compute_next_send(preset_schedule, preset_weekday, tz) or "—"
+    next_send = _compute_next_send(preset, locations_by_id) or "—"
     return (
         f'<div style="padding:20px 24px;background:{G_PAPER};border-top:1px solid #e6e1d3;">'
         f'<table style="width:100%;border-collapse:collapse;"><tr>'
@@ -1601,13 +1596,12 @@ def render_compare_html(
     hourly_metrics: list[str] | None = None,
     hourly_enabled: bool = True,
     preset_name: Optional[str] = None,
-    preset_schedule: Optional[str] = None,
-    preset_weekday: Optional[int] = None,
     corridors: list[Corridor] | None = None,
     outlook_enabled: bool = False,
     outlook_metrics: list[dict] | None = None,
     outlook_metric_formats: dict[str, bool] | None = None,
     undelivered: list | None = None,
+    preset: Optional[dict] = None,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
 
@@ -1638,8 +1632,10 @@ def render_compare_html(
             gerendert wird. Default ``True`` (rueckwaertskompatibel,
             identisch zum Verhalten vor diesem Slice).
         preset_name: Name des Compare-Presets fuer den Abo-Footer.
-        preset_schedule: Schedule-Wert (z.B. "daily"/"weekly") fuer "Naechster Versand".
-        preset_weekday: Wochentag-Index (0=Mo) fuer weekly-Schedules.
+        preset: Issue #1969 -- das rohe Preset-Dict; der Fuss "Naechster
+            Versand" nennt daraus den echten Termin (Slots, Wochentag,
+            ``end_date``, Pause). Fehlt es, steht dort "—". Die frueheren
+            Parameter ``preset_schedule``/``preset_weekday`` sind entfallen.
         corridors: Issue #1231, Slice 7 -- Corridor-Liste des Presets. Zellen,
             deren Wert bei einem `mark=True`-Corridor innerhalb dessen `range`
             liegt (`corridor_inside()`, C5), erhalten zusaetzlich
@@ -1745,7 +1741,10 @@ def render_compare_html(
         hourly_metrics, hourly_enabled, outlook_metrics, outlook_enabled,
     )
     abo_html = _render_abo_footer(
-        preset_name, preset_schedule, preset_weekday, len(locations), sig, header_tz,
+        preset_name,
+        preset,
+        {lr.location.id: lr.location for lr in locations},
+        len(locations), sig,
     )
     from output.renderers.email.command_block import render_commands_html
     commands_html = render_commands_html("vergleich")

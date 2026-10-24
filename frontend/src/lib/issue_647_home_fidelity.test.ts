@@ -3,7 +3,7 @@
 // Spec: docs/specs/modules/issue_647_home_fidelity.md
 //
 // Verhaltenstests (kein Mock, kein Dateiinhalt-Check) gegen die NEUE Pure-Function
-// `homeCompareTimeline(preset, now)` in routes/_home/cockpitHelpers.ts. Sie baut die
+// `homeCompareTimeline(preset, nextBriefing)` (#1969; vorher `now`) in routes/_home/cockpitHelpers.ts. Sie baut die
 // Versand-Timeline (Zuletzt/Nächster) für die Compare-Outbox aus echten DTO-Feldern.
 //
 // RED vor Implementierung: Funktion fehlt → Import/Aufruf schlägt fehl.
@@ -34,11 +34,21 @@ function makeCompare(overrides: Partial<ComparePreset> = {}): ComparePreset {
 
 // ─── AC-1: Preset MIT letzter_versand → zwei Zeilen (Zuletzt sent + Nächster planned) ──
 
+// Issue #1969: der nächste Termin kommt als Backend-Wert (GET /api/next-briefings)
+// statt aus einer Frontend-Rechnung mit `now`.
+const NB_HEUTE_06 = {
+	at: '2026-06-05T06:00:00+02:00',
+	local_date: '2026-06-05',
+	local_time: '06:00',
+	tz: 'Europe/Paris',
+	tz_abbr: 'CEST',
+	slot: 'morning' as const
+};
+
 test('AC-1: homeCompareTimeline liefert Zuletzt+Nächster wenn letzter_versand gesetzt ist', () => {
-	const now = new Date('2026-06-05T04:00:00'); // vor 06:00 → Nächster heute
 	const preset = makeCompare({ letzter_versand: '2026-06-04T06:00:00Z' });
 
-	const rows = homeCompareTimeline(preset, now);
+	const rows = homeCompareTimeline(preset, NB_HEUTE_06);
 
 	assert.strictEqual(rows.length, 2, 'muss genau zwei Zeilen liefern');
 
@@ -62,10 +72,9 @@ test('AC-1: homeCompareTimeline liefert Zuletzt+Nächster wenn letzter_versand g
 // ─── AC-2: Preset OHNE letzter_versand → keine Zuletzt-Zeile, keine Fake-Daten ─────────
 
 test('AC-2: homeCompareTimeline erfindet keine Zuletzt-Zeile wenn nie gesendet wurde', () => {
-	const now = new Date('2026-06-05T04:00:00');
 	const preset = makeCompare({ letzter_versand: undefined });
 
-	const rows = homeCompareTimeline(preset, now);
+	const rows = homeCompareTimeline(preset, NB_HEUTE_06);
 
 	assert.ok(
 		rows.every((r) => r.status !== 'sent'),
@@ -75,9 +84,9 @@ test('AC-2: homeCompareTimeline erfindet keine Zuletzt-Zeile wenn nie gesendet w
 		rows.every((r) => !r.when.startsWith('Zuletzt')),
 		'keine "Zuletzt"-Zeile ohne letzter_versand'
 	);
-	// Es bleibt mindestens die "Nächster"-Zeile (daily → berechenbar).
+	// Es bleibt mindestens die "Nächster"-Zeile (Backend meldet einen Termin).
 	assert.ok(
 		rows.some((r) => r.when.startsWith('Nächster · ') && r.status === 'planned'),
-		'Nächster-Zeile aus deriveNextSend bleibt erhalten'
+		'Nächster-Zeile aus dem Backend-Wert bleibt erhalten'
 	);
 });

@@ -430,13 +430,12 @@ def render_compare_email(
     hourly_metrics: set | None = None,
     hourly_enabled: bool = True,
     preset_name: Optional[str] = None,
-    preset_schedule: Optional[str] = None,
-    preset_weekday: Optional[int] = None,
     corridors: list[Corridor] | None = None,
     outlook_enabled: bool = False,
     outlook_metrics: list[dict] | None = None,
     outlook_metric_formats: dict[str, bool] | None = None,
     undelivered: list | None = None,
+    preset: Optional[dict] = None,
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
@@ -467,14 +466,14 @@ def render_compare_email(
         hourly_metrics=hourly_metrics,
         hourly_enabled=hourly_enabled,
         preset_name=preset_name,
-        preset_schedule=preset_schedule,
-        preset_weekday=preset_weekday,
         corridors=corridors,
         outlook_enabled=outlook_enabled,
         outlook_metrics=outlook_metrics,
         outlook_metric_formats=outlook_metric_formats,
         # Issue #1461 S3b-1: geteilter Hinweis-Baustein, derselbe wie im Trip.
         undelivered=undelivered,
+        # Issue #1969 (AC-26): das rohe Preset fuer den Fuss "Naechster Versand".
+        preset=preset,
     )
     text_body = render_comparison_text(
         result, profile=profile, enabled_metrics=enabled_metrics,

@@ -14,10 +14,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-	liveTrip,
-	deriveNextSend,
-} from './utils/cockpitHelpers568.ts';
+import { liveTrip } from './utils/cockpitHelpers568.ts';
+import { homeCompareTimeline } from '../routes/_home/cockpitHelpers.ts';
 
 import type { Trip, ComparePreset } from './types.ts';
 
@@ -84,29 +82,38 @@ test('AC-1b: liveTrip gibt null für leere Trip-Liste zurück', () => {
 	assert.strictEqual(result, null, 'liveTrip muss null für leere Liste zurückgeben');
 });
 
-// ─── AC-4: deriveNextSend() ───────────────────────────────────────────────────
+// ─── AC-4: Nächster Versand (seit #1969 Backend-Wert statt deriveNextSend) ────
+// Welcher Termin der nächste ist (heute vs. morgen, manual), entscheidet die
+// Backend-Ableitung (tests/tdd/test_next_briefing.py). Hier bewacht: die
+// Startseiten-Zeile zeigt genau diesen Termin — Tag aus local_date, Stunde aus
+// local_time — und bei manual keinen.
 
-test('AC-4: deriveNextSend daily — gibt heute 06:00 zurück wenn es 04:00 ist (Versand noch nicht erreicht)', () => {
-	const now = new Date('2026-06-05T04:00:00');
-	const preset = makeCompare({ schedule: 'daily', hour_from: 6 });
-	const result = deriveNextSend(preset, now);
-	assert.ok(result !== null, 'deriveNextSend muss einen Timestamp zurückgeben');
-	assert.strictEqual(result!.getDate(), now.getDate(), 'Datum muss heute sein');
-	assert.strictEqual(result!.getHours(), 6, 'Stunde muss 6 sein');
+const nb = (local_date: string, local_time: string) => ({
+	at: `${local_date}T${local_time}:00+02:00`,
+	local_date,
+	local_time,
+	tz: 'Europe/Paris',
+	tz_abbr: 'CEST',
+	slot: 'morning'
+});
+const naechsteZeile = (preset: ComparePreset, wert: unknown) =>
+	homeCompareTimeline(preset, wert as never).find((r) => r.when.startsWith('Nächster · '));
+
+test('AC-4: daily — Backend meldet heute 06:00 → Zeile zeigt Fr 06:00', () => {
+	const preset = makeCompare({ schedule: 'daily', morning_time: '06:00:00' });
+	const zeile = naechsteZeile(preset, nb('2026-06-05', '06:00'));
+	assert.ok(zeile, 'Nächster-Zeile fehlt');
+	assert.ok(zeile!.when.includes('Fr 06:00 (CEST)'), zeile!.when);
+	assert.strictEqual(zeile!.status, 'planned');
 });
 
-test('AC-4b: deriveNextSend daily — gibt morgen 06:00 zurück wenn es bereits 07:00 ist', () => {
-	const now = new Date('2026-06-05T07:00:00');
-	const preset = makeCompare({ schedule: 'daily', hour_from: 6 });
-	const result = deriveNextSend(preset, now);
-	assert.ok(result !== null, 'deriveNextSend muss einen Timestamp zurückgeben');
-	assert.strictEqual(result!.getDate(), now.getDate() + 1, 'Datum muss morgen sein');
-	assert.strictEqual(result!.getHours(), 6, 'Stunde muss 6 sein');
+test('AC-4b: daily — Backend meldet morgen 06:00 → Zeile zeigt Sa 06:00', () => {
+	const preset = makeCompare({ schedule: 'daily', morning_time: '06:00:00' });
+	const zeile = naechsteZeile(preset, nb('2026-06-06', '06:00'));
+	assert.ok(zeile!.when.includes('Sa 06:00 (CEST)'), zeile!.when);
 });
 
-test('AC-4c: deriveNextSend manual — gibt null zurück', () => {
-	const now = new Date('2026-06-05T04:00:00');
+test('AC-4c: manual — Backend meldet keinen Termin → keine Nächster-Zeile', () => {
 	const preset = makeCompare({ schedule: 'manual' });
-	const result = deriveNextSend(preset, now);
-	assert.strictEqual(result, null, 'deriveNextSend muss null für manual-Schedule zurückgeben');
+	assert.strictEqual(naechsteZeile(preset, { at: null, reason: 'manual' }), undefined);
 });

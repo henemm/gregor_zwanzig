@@ -247,6 +247,8 @@ func New(deps Deps) chi.Router {
 	r.Patch("/api/trips/{id}/waypoints/{waypointId}/confirm", handler.ConfirmWaypointHandler(deps.Store))
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(deps.Store))
 	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherProxyHandler(deps.Config.PythonCoreURL))
+	// Issue #1969: naechstes Briefing je Trip/Ortsvergleich (Python-Ableitung).
+	r.Get("/api/next-briefings", handler.NextBriefingsProxyHandler(deps.Config.PythonCoreURL))
 	r.Get("/api/trips/{id}/briefing-history", handler.TripBriefingHistoryHandler(deps.Store))
 	r.Get("/api/trips/{id}/weather-config", handler.GetTripWeatherConfigHandler(deps.Store))
 	r.Put("/api/trips/{id}/weather-config", handler.PutTripWeatherConfigHandler(deps.Store))
