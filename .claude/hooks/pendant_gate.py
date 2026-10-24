@@ -72,7 +72,8 @@ NAMENS_TEST_ENDUNGEN = TEST_ENDUNGEN + ("_test.go",)
 # Bestandspaare bei Einfuehrung (Aufmass 2026-10-23). DARF NUR SCHRUMPFEN — Schrumpf-Test:
 # tests/tdd/test_pendant_gate_bekannte_paare.py.
 BEKANNTE_PAARE = (
-    (f"{FE}/organisms/HomeHeroCompare.svelte", f"{FE}/organisms/HomeHeroTrip.svelte"),
+    # Paar HomeHeroCompare/HomeHeroTrip gestrichen 2026-10-24: HomeHeroCompare.svelte durch
+    # #1969 geloescht (Liste darf nur schrumpfen).
     ("frontend/src/routes/_home/CompareKachel.svelte",
      "frontend/src/routes/_home/TripKachel.svelte"),
     ("src/services/compare_alert.py", "src/services/trip_alert.py"),

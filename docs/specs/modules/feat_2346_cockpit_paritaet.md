@@ -226,3 +226,4 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 
 - 2026-10-23: Initial spec created (Scheiben S1–S4, Ticket-Korrekturen, Befund Stundenverlauf-Steuerung, Abstimmung mit #1969)
 - 2026-10-24: Bestandsaufmaß korrigiert: 8 statt 7 Namenspaare (trip_forecast.py/forecast.py, Adversary F003); nachgezogen in S1-Aufzählung, Schrumpf-Test-Absatz, Prüfdatum-Absatz und `- Test:`-Zeile unter AC-3 (F012). AC-5/AC-8-Texte unverändert (Spec-Freeze)
+- 2026-10-24, /60-validate: HomeHeroCompare/HomeHeroTrip schon in S1 aus BEKANNTE_PAARE gestrichen (Datei durch #1969 gelöscht), für S2 entfällt dieser Schritt
