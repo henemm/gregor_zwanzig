@@ -2,7 +2,7 @@
 entity_id: feat_2439_befehle_antwortzeit
 type: module
 created: 2026-10-18
-updated: 2026-10-18
+updated: 2026-10-22
 status: implemented
 version: "1.0"
 tags: [inbound, befehle, antwortzeit, dwd, briefing, parallel, observability, 2439]
@@ -33,7 +33,7 @@ Befehle ohne Wetterabruf (`HELP`, `CODES`, `STATUS`) sollen in unter 30 Sekunden
 
 | # | Entscheidung | Begründung |
 |---|---|---|
-| 1 | **Zielgröße.** Messintervall = Eingang beim Python-Core (Webhook-/Poll-Übernahme bzw. Telegram-Webhook) bis Übergabe der Antwort an den Versand-Provider; Satelliten-/Garmin-Laufzeit liegt außerhalb. Befehle ohne Wetterabruf: **jeder** Lauf < 30 s. `HEUTE`/`MORGEN` kalt auf Staging über echten Eingang, ≥ 5 Läufe: **jeder** Lauf < 60 s (harte Obergrenze) **und** Median < 45 s. Verbindlich für die DE/Alpen-Route (`de_direct` + `geosphere`) und für Korsika (`fr_direct`, Obergrenze < 60 s, AC-5). Gilt auf allen drei Befehlseingängen (E-Mail, Telegram, Premium-SMS). | PO-Vorschlag übernommen. Der DWD-Abruf schwankt 6-30 s; ein Median allein ließe Ausreißer zu, eine Obergrenze allein wäre bei Schwankung flackrig — beides zusammen ist ehrlich und prüfbar. |
+| 1 | **Zielgröße.** Messintervall = Eingang beim Python-Core (Webhook-/Poll-Übernahme bzw. Telegram-Webhook) bis Übergabe der Antwort an den Versand-Provider; Satelliten-/Garmin-Laufzeit liegt außerhalb. Befehle ohne Wetterabruf: **jeder** Lauf < 30 s. `HEUTE`/`MORGEN` kalt auf Staging über echten Eingang, ≥ 5 Läufe: **jeder** Lauf < 60 s (harte Obergrenze) **und** Median < 45 s. Verbindlich für die DE/Alpen-Route (`de_direct` + `geosphere`) und für Korsika (`fr_direct`, Obergrenze < 60 s, AC-5; Messort Produktion). Gilt auf allen drei Befehlseingängen (E-Mail, Telegram, Premium-SMS). | PO-Vorschlag übernommen. Der DWD-Abruf schwankt 6-30 s; ein Median allein ließe Ausreißer zu, eine Obergrenze allein wäre bei Schwankung flackrig — beides zusammen ist ehrlich und prüfbar. |
 | 2 | **Beobachtbarkeit zuerst (S0).** Dauer je Befehl (Befehl, Kanal, Trip-ID, ms; keine personenbezogenen Inhalte) + Phasenzeiten im On-Demand-Bau + DWD-Fensterzeit/Downloads/Cache-Treffer als Journal-Zeile. | Heute gibt es im Befehlspfad keine Laufzeitmessung. Ohne sie ist die Zielgröße nicht prüfbar; die Zielgrößen-ACs werden aus dieser Zeile gemessen. |
 | 3 | **S1: DWD-Tagesfenster vorwärmen.** Alle für den Bericht nötigen Tagesfenster (Zieltag, Nacht, +1, +2) werden **vor** dem Hauptabruf mit Pool 2 gleichzeitig geladen, das Ergebnis wird verworfen, der Hauptabruf trifft den Cache. Einbau im geteilten Briefing-Bau (nützt auch dem geplanten Versand; inhaltsneutral; Pool 2 begrenzt die DWD-Last). | Messung 18.10. (Probelauf, 4 Kalendertage): seriell Median 12,0 s, 2 Tage parallel 9,3 s, 4 parallel 8,5 s. Jeder Lauf lädt dieselben 272 Dateien/170,6 MB — Parallelität spart also keine Downloads, nur Wartezeit-Überlappung (~20-30 %); mehr als 2 gleichzeitig bringt wegen Bandbreite nichts. Daher Pool 2. |
 | 4 | **S2: Segmentschleife parallel — fester Umfang.** `_fetch_weather` nutzt `services/parallel_fetch.fetch_ordered` (Semaphore je Provider, Reihenfolge erhalten, Retry/Backoff je Segment erhalten). | S1 allein spart laut Messung nur ~20-30 % der DWD-Zeit; Staging steht heute bei 57,8 s, das Ziel wäre damit nicht sicher. Hinweis: Läuft der Aufruf aus einem Worker-Thread, arbeitet `fetch_ordered` inline seriell (Docstring) — das ist beim Einbau zu beachten, damit der Parallelgewinn nicht stillschweigend ausbleibt. |
@@ -112,8 +112,8 @@ Cache
 - **AC-4:** Given ein Trip auf der DE/Alpen-Route (DWD + GeoSphere) und ein kalter Zustand (neuer Prozess bzw. erster Abruf des Kalendertags: die DWD-Fenster werden vor dem Lauf durch Neustart von `gregor-python-staging` bzw. einen Trip mit noch nie abgerufenem Datum herbeigeführt), When `HEUTE` und `MORGEN` je mindestens 5-mal auf Staging über den echten Eingang gesendet werden (jeder der drei Eingänge E-Mail, Telegram, Premium-SMS mindestens einmal darunter), Then liegt **jeder einzelne** Lauf unter 60 Sekunden **und** der Median unter 45 Sekunden.
   - Test: Live-Test fährt ≥ 5 kalte Läufe je Befehl, liest die Dauer-Zeilen (AC-1), prüft max < 60 s und Median < 45 s und gibt alle Einzelwerte aus. Ausgangswert zum Vergleich: 57,8 s (Messung 18.10.).
 
-- **AC-5:** Given ein Trip auf der Korsika-Route (`fr_direct`, Météo-France), When `HEUTE` und `MORGEN` kalt je mindestens 3-mal auf Staging über den echten Eingang gesendet werden, Then gilt dieselbe Zielgröße wie in AC-4: jeder Lauf unter 60 Sekunden.
-  - Test: Live-Test mit Korsika-Trip, liest die Dauer-Zeilen (AC-1), prüft max < 60 s und gibt alle Einzelwerte aus. Verfehlt die Route das Ziel, ist das ein Befund in diesem Ticket (Abrufpfad `fr_direct` beschleunigen), keine Ausnahme.
+- **AC-5:** Given ein Trip auf der Korsika-Route (`fr_direct`, Météo-France), When `HEUTE` und `MORGEN` kalt je mindestens 3-mal über den echten Eingang gesendet werden, Then gilt dieselbe Zielgröße wie in AC-4: jeder Lauf unter 60 Sekunden — **gemessen auf Produktion**, weil `public-api.meteofrance.fr` auf Staging durch `egress_guard` gesperrt ist (#1337/#1348) und `fr_direct` dort nie kalt läuft. Auf Staging gilt stattdessen: die Befehle liefern eine Antwort, und die Dauerzeile weist die Gewitterquelle offen als Ersatz `eu_direct` aus; der Live-Test meldet `fr_direct` dort als `NOT_MEASURABLE_ON_STAGING` mit Verweis auf den Prod-Messweg (`.claude/tools/befehl_antwortzeit.py`) — nie als bestanden.
+  - Test: Staging-Live-Test prüft Antwort vorhanden und Quelle `eu_direct` ehrlich ausgewiesen, ohne `fr_direct`-Kaltlauf zu verlangen. Prod-Messung (≥ 3 Läufe je Befehl, jeder < 60 s) mit dem Prod-Lese-Werkzeug, Einzelwerte im Issue-Beleg. Verfehlt die Route das Ziel, ist das ein Befund in diesem Ticket (Abrufpfad `fr_direct` beschleunigen), keine Ausnahme. Die Sperre selbst wird nicht gelockert (bräuchte ein ADR).
 
 - **AC-6:** Given ein Bericht braucht mehrere DWD-Tagesfenster (Zieltag, Nacht, +1, +2), When das Vorwärmen läuft, Then werden höchstens 2 Fenster gleichzeitig geladen und die Gesamtzeit liegt nahe der Zeit des langsamsten Fensters statt der Summe aller.
   - Test: Kern-Test mit lokalem HTTP-Server, der jede Datei künstlich verzögert und die gleichzeitigen Verbindungen zählt: Spitze der gleichzeitigen Fenster = 2; Gesamtzeit < 0,75 × Summe der Einzelzeiten. Kein `patch()`/Mock.
@@ -169,7 +169,7 @@ Geplante Tests, nach Verhalten benannt, kein Mock-Theater:
 
 ## Known Limitations
 
-- **Korsika (`fr_direct`):** vor der Spec nicht gemessen (Zugangsdaten im Mess-Harness nicht verfügbar). Die Zielgröße gilt trotzdem verbindlich (AC-5); die erste Messung erfolgt auf Staging. Das Vorwärmen (S1) betrifft nur DWD; Korsika profitiert vor allem von der parallelen Segmentschleife (S2).
+- **Korsika (`fr_direct`):** vor der Spec nicht gemessen (Zugangsdaten im Mess-Harness nicht verfügbar). Die Zielgröße gilt trotzdem verbindlich (AC-5); die erste Messung erfolgt auf Produktion (Staging sperrt Météo-France, siehe AC-5). Das Vorwärmen (S1) betrifft nur DWD; Korsika profitiert vor allem von der parallelen Segmentschleife (S2).
 - **DWD-Schwankung:** ein Tagesfenster braucht 6-30 s auch nach den Maßnahmen; daher harte Obergrenze plus Median über mindestens 5 Läufe.
 - **Parallelität spart keine Downloads**, nur Wartezeit (~20-30 %); mehr als 2 gleichzeitige Fenster bringt wegen Bandbreite nichts.
 - **Prod evtl. schneller als Staging:** der dauerhaft laufende Prozess und der 15-Minuten-Alarmzyklus halten Fenster eventuell warm; nicht gemessen, daher gilt die Zielgröße zunächst nur für Staging kalt.
@@ -185,3 +185,4 @@ Geplante Tests, nach Verhalten benannt, kein Mock-Theater:
 - 2026-10-18: Initial spec created (v1.0) — schließt #2439 komplett ab (Zielgröße, Beobachtbarkeit, Vorwärmen, parallele Segmentschleife, Cache 2048, Teil-a-Betriebs-Rest)
 - 2026-10-18: v1.1 — Zielgrößen gelten ausdrücklich auf allen drei Befehlseingängen inkl. Premium-SMS (AC-3/AC-4) und verbindlich auch für Korsika (AC-5), statt dort nur zu berichten
 - 2026-10-19: Nachtrag Implementation Details — drei Eingangs-Reader als Mess-Startpunkt, Ort der AC-16-Umsetzung in henemm-infra (keine AC-Änderung)
+- 2026-10-22: AC-5 — Korsika-Kaltmessung `fr_direct` von Staging nach Produktion verlegt (Staging-Egress-Sperre Météo-France strukturell); Staging misst nur die Ersatzquelle `eu_direct` und kennzeichnet das offen. Zielgröße unverändert (< 60 s).
