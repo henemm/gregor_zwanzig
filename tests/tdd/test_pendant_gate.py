@@ -1122,7 +1122,6 @@ def test_doku_pruefdaten_tabelle_traegt_2027_01_21_mit_beleg():
 # von selbst heraus (AC-3: Streichen bleibt gruen).
 _BESTANDSPAARE = [
     (f"{ORG}/HomeHeroCompare.svelte", f"{ORG}/HomeHeroTrip.svelte"),
-    (f"{ROUTES}/_home/CompareKachel.svelte", f"{ROUTES}/_home/TripKachel.svelte"),
     (f"{SERVICES}/compare_alert.py", f"{SERVICES}/trip_alert.py"),
     (f"{SERVICES}/compare_alert_channels.py", f"{SERVICES}/alert_channels.py"),
     (f"{SERVICES}/compare_preview_service.py", f"{SERVICES}/preview_service.py"),

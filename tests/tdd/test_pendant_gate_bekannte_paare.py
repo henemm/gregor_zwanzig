@@ -37,8 +37,6 @@ FE = "frontend/src/lib/components"
 # hinzufuegen (die Korrektur vom 24.10. ist ein Messfehler des Aufmasses, kein neues Paar).
 EINGEFROREN: frozenset[frozenset[str]] = frozenset({
     frozenset({f"{FE}/organisms/HomeHeroCompare.svelte", f"{FE}/organisms/HomeHeroTrip.svelte"}),
-    frozenset({"frontend/src/routes/_home/CompareKachel.svelte",
-               "frontend/src/routes/_home/TripKachel.svelte"}),
     frozenset({"src/services/compare_alert.py", "src/services/trip_alert.py"}),
     frozenset({"src/services/compare_alert_channels.py", "src/services/alert_channels.py"}),
     frozenset({"src/services/compare_preview_service.py", "src/services/preview_service.py"}),
