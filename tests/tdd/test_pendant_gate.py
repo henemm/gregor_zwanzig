@@ -761,6 +761,18 @@ def _partner_genannt(r: subprocess.CompletedProcess, partner: str) -> None:
     assert partner in r.stderr, f"Meldung nennt den Partner {partner!r} nicht:\n{r.stderr}"
 
 
+def _durchlaeuft_sauber(r: subprocess.CompletedProcess, warum: str) -> None:
+    """Exit 0 UND kein Stoerungshinweis (Adversary F004).
+
+    ⚠️ Exit 0 allein beweist bei der Namens-Erkennung nichts: Ein im eigenen try/except
+    verschluckter Fehler (z. B. KeyError) laesst ebenfalls durch — „sauber" waere dann nur
+    ein verschluckter Absturz.
+    """
+    _durchlaeuft(r, warum)
+    assert not any(w in _text(r) for w in _STOERWORTE), (
+        f"Durchlass nur wegen einer Stoerung ({warum}):\n{r.stderr}")
+
+
 @pytest.mark.parametrize("_kennung, partner, neu", _NAMENSPAARE, ids=_IDS)
 def test_namenspendant_neuanlage_ohne_begruendung_blockiert_und_nennt_partner(
         tmp_path, _kennung, partner, neu):
@@ -781,7 +793,7 @@ def test_namenspendant_mit_begruendungszeile_laeuft_durch(tmp_path, _kennung, pa
     """
     repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
     _neu(repo, neu, _inhalt(neu, BEGRUENDUNG))
-    _durchlaeuft(_hook(repo), "Begruendungszeile ist der vorgesehene Ausweg")
+    _durchlaeuft_sauber(_hook(repo), "Begruendungszeile ist der vorgesehene Ausweg")
 
 
 def test_namenspendant_zu_kurze_begruendung_blockiert(tmp_path):
@@ -841,14 +853,14 @@ def test_neue_neutrale_datei_neben_einseitiger_loest_nichts_aus(tmp_path, bestan
     neu = (f"{SERVICES}/wetterlage.py" if any(p.endswith(".py") for p in bestand)
            else f"{MOL}/Wetterband.svelte")
     _neu(repo, neu, _inhalt(neu))
-    _durchlaeuft(_hook(repo), "neutrale Datei ist die gewuenschte Konvergenz")
+    _durchlaeuft_sauber(_hook(repo), "neutrale Datei ist die gewuenschte Konvergenz")
 
 
 def test_namenspendant_andere_endung_ist_kein_partner(tmp_path):
     """Spec S1: Partner nur bei GLEICHER Endung. Gegenstueck: `neutral_compare` oben."""
     repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Wetterband.ts": _inhalt("x.ts")})
     _neu(repo, f"{MOL}/CompareWetterband.svelte")
-    _durchlaeuft(_hook(repo), "`.ts` ist kein Partner fuer `.svelte`")
+    _durchlaeuft_sauber(_hook(repo), "`.ts` ist kein Partner fuer `.svelte`")
 
 
 def test_aenderung_bestehender_einseitiger_datei_neben_partner_bleibt_frei(tmp_path):
@@ -857,7 +869,7 @@ def test_aenderung_bestehender_einseitiger_datei_neben_partner_bleibt_frei(tmp_p
     repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Wetterband.svelte": SVELTE, neu: SVELTE})
     (repo / neu).write_text(SVELTE + "<p>geaendert</p>\n")
     _git(repo, "add", "-A")
-    _durchlaeuft(_hook(repo), "Aenderung einer Bestandsdatei ist keine Neuanlage")
+    _durchlaeuft_sauber(_hook(repo), "Aenderung einer Bestandsdatei ist keine Neuanlage")
 
 
 def test_namenspendant_echte_umbenennung_bleibt_frei(tmp_path):
@@ -870,7 +882,7 @@ def test_namenspendant_echte_umbenennung_bleibt_frei(tmp_path):
     repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Wetterband.svelte": SVELTE,
                                             f"{MOL}/Altband.svelte": _ALT_LANG})
     _git(repo, "mv", f"{MOL}/Altband.svelte", f"{MOL}/CompareWetterband.svelte")
-    _durchlaeuft(_hook(repo), "R100-Umbenennung ist kein neues Bauteil")
+    _durchlaeuft_sauber(_hook(repo), "R100-Umbenennung ist kein neues Bauteil")
 
 
 def test_namenspendant_umbenennung_mit_umschrieb_blockiert(tmp_path):
@@ -895,7 +907,7 @@ def test_namenspendant_testdatei_laeuft_durch(tmp_path, partner, neu):
     """AC-6: Testdateien loesen nie aus. Robustheitswaechter; Gegenprobe direkt darunter."""
     repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
     _neu(repo, neu, _inhalt(neu))
-    _durchlaeuft(_hook(repo), "Testdatei")
+    _durchlaeuft_sauber(_hook(repo), "Testdatei")
 
 
 def test_namenspendant_gegenprobe_gleiche_datei_ohne_testendung_blockiert(tmp_path):
@@ -920,7 +932,7 @@ def test_leerer_kernname_loest_nichts_aus(tmp_path, partner, neu):
     """
     repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
     _neu(repo, neu, _inhalt(neu))
-    _durchlaeuft(_hook(repo), "leerer Kernname")
+    _durchlaeuft_sauber(_hook(repo), "leerer Kernname")
 
 
 @pytest.mark.parametrize("partner, neu", [
@@ -936,7 +948,7 @@ def test_namenspendant_ausserhalb_der_vier_wurzeln_loest_nichts_aus(tmp_path, pa
     """
     repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
     _neu(repo, neu, _inhalt(neu))
-    _durchlaeuft(_hook(repo), "ausserhalb der Reichweite")
+    _durchlaeuft_sauber(_hook(repo), "ausserhalb der Reichweite")
 
 
 # ----------------------------------------------------- AC-7: Stoerung blockiert nie
@@ -1085,8 +1097,9 @@ def test_doku_abschnitt_pendant_sperre_nennt_reichweite_ausnahmeliste_und_beleg(
     assert "verlängert 2026-10-23, PO" in abschnitt, "Verlaengerungsvermerk fehlt"
     assert "#2346" in abschnitt, "Verweis auf Spec #2346 fehlt"
     assert "2027-01-21" in abschnitt, "neues Pruefdatum fehlt im Abschnitt"
-    assert re.search(r"(\b7\b|sieben)[^\n]{0,80}au(ß|ss)erhalb", abschnitt), (
-        "Beleg „7 Paare ausserhalb der alten Reichweite“ fehlt")
+    # Korrigiert 2026-10-24 auf den nachgemessenen Stand (Adversary F003): 8 statt 7 Paare.
+    assert re.search(r"(\b8\b|acht)[^\n]{0,80}au(ß|ss)erhalb", abschnitt), (
+        "Beleg „8 Paare ausserhalb der alten Reichweite“ fehlt")
 
 
 def test_doku_pruefdaten_tabelle_traegt_2027_01_21_mit_beleg():
@@ -1102,7 +1115,8 @@ def test_doku_pruefdaten_tabelle_traegt_2027_01_21_mit_beleg():
 
 # ------------------------------------------- AC-5: Bestand ohne Fehlalarm (Wegwerf-Repo)
 
-# (einseitige Datei, Partner) — die sieben Bestandspaare ausserhalb der alten Reichweite,
+# (einseitige Datei, Partner) — die acht Bestandspaare ausserhalb der alten Reichweite
+# (das achte, trip_forecast/forecast, nachgemessen 2026-10-24, Adversary F003),
 # genau die Eintraege von `BEKANNTE_PAARE` (Spec #2346 S1). Die Verhaltenstests nehmen nur
 # Paare, deren Dateien es im echten Repo noch gibt — loescht S2/S3 ein Paar, faellt es hier
 # von selbst heraus (AC-3: Streichen bleibt gruen).
@@ -1115,6 +1129,7 @@ _BESTANDSPAARE = [
     (f"{SERVICES}/compare_weather_snapshot.py", f"{SERVICES}/weather_snapshot.py"),
     (f"{FE}/shared/weather-metrics-tab/compareChannelMetricLayouts.ts",
      f"{FE}/shared/weather-metrics-tab/channelMetricLayouts.ts"),
+    (f"{SERVICES}/trip_forecast.py", f"{SERVICES}/forecast.py"),
 ]
 # Paare/Dateien, die die alte Ordner-Erkennung bereits kennt, plus die geteilte Datei.
 _BESTAND_UEBRIGE = [
@@ -1145,7 +1160,7 @@ def test_bestand_aenderung_loest_keinen_fehlalarm_aus(tmp_path):
     for p in _ALLE_BESTAND:
         (repo / p).write_text(_bestandsinhalt(p) + "// geaendert\n")
     _git(repo, "add", "-A")
-    _durchlaeuft(_hook(repo), "Aenderung von Bestandsdateien")
+    _durchlaeuft_sauber(_hook(repo), "Aenderung von Bestandsdateien")
 
 
 def test_bestand_verschiebung_loest_keinen_fehlalarm_aus(tmp_path):
@@ -1155,7 +1170,7 @@ def test_bestand_verschiebung_loest_keinen_fehlalarm_aus(tmp_path):
         ordner, name = p.rsplit("/", 1)
         (repo / ordner / "verschoben").mkdir(exist_ok=True)
         _git(repo, "mv", p, f"{ordner}/verschoben/{name}")
-    _durchlaeuft(_hook(repo), "Verschiebung mit unveraendertem Inhalt")
+    _durchlaeuft_sauber(_hook(repo), "Verschiebung mit unveraendertem Inhalt")
 
 
 @pytest.mark.parametrize("richtung", ["einseitig_neu", "partner_neu"])
@@ -1175,7 +1190,7 @@ def test_bestandspaar_mitglied_mitfuehren_loest_keinen_fehlalarm_aus(tmp_path, r
     repo = _wegwerf_repo(tmp_path, bestand={p: _bestandsinhalt(p) for p in vorhanden})
     for p in neu:
         _neu(repo, p, _bestandsinhalt(p))
-    _durchlaeuft(_hook(repo), "gelistete Bestandspaare sind ausgenommen")
+    _durchlaeuft_sauber(_hook(repo), "gelistete Bestandspaare sind ausgenommen")
 
 
 def test_bestand_gegenprobe_unbekanntes_paar_blockiert_selektiv(tmp_path):
@@ -1193,3 +1208,267 @@ def test_bestand_gegenprobe_unbekanntes_paar_blockiert_selektiv(tmp_path):
     _blockiert(r, f"{SERVICES}/compare_routenlage.py", "nicht gelistetes Namenspaar")
     for p, _ in paare:
         assert p not in r.stderr, f"Gelistetes Bestandspaar {p!r} faelschlich gemeldet:\n{r.stderr}"
+
+
+# ----------------------------------------------- Fix-Loop 1 (Adversary-Funde F001-F007)
+
+@pytest.mark.parametrize("nachbar, neu", [
+    (f"{MOL}/Hoehenprofil.svelte", f"{MOL}/CompareWetterband.svelte"),
+    (f"{MOL}/TripHoehenprofil.svelte", f"{MOL}/CompareWetterband.svelte"),
+    (f"{SERVICES}/routenlage.py", f"{SERVICES}/compare_wetterlage.py"),
+], ids=["neutral_unverwandt", "gegenseite_unverwandt", "snake_unverwandt"])
+def test_namenspendant_unverwandter_nachbar_gleicher_endung_loest_nichts_aus(
+        tmp_path, nachbar, neu):
+    """F001: Nur der gleiche KERNNAME macht ein Paar — nicht Endung und Wurzel allein.
+
+    Gegenstueck: `test_namenspendant_neuanlage_ohne_begruendung_blockiert_und_nennt_partner`.
+    Ohne diesen Fall waere „Kernname nicht verglichen" (Dauer-Fehlalarm) unbemerkt.
+    """
+    repo = _wegwerf_repo(tmp_path, bestand={nachbar: _inhalt(nachbar)})
+    _neu(repo, neu, _inhalt(neu))
+    _durchlaeuft_sauber(_hook(repo), "unverwandter Nachbar ist kein Partner")
+
+
+def test_namenspendant_partner_derselben_seite_ist_kein_pendant(tmp_path):
+    """F004: `CompareFoo` neben `CompareFoo` (anderer Ordner) ist keine Trip/Compare-Doppelung."""
+    nachbar, neu = f"{MOL}/CompareWetterband.svelte", f"{ORG}/CompareWetterband.svelte"
+    repo = _wegwerf_repo(tmp_path, bestand={nachbar: SVELTE})
+    _neu(repo, neu)
+    _durchlaeuft_sauber(_hook(repo), "Partner derselben Seite")
+
+
+def test_namenspendant_testdatei_neben_testdatei_laeuft_durch(tmp_path):
+    """F005: `CompareFoo.test.ts` neben `Foo.test.ts` — gleiche Endungs-Partition.
+
+    Hier rettet NUR der Testdatei-Ausschluss: die Endung `test.ts` ist auf beiden Seiten gleich.
+    """
+    partner, neu = f"{MOL}/Wetterband.test.ts", f"{MOL}/CompareWetterband.test.ts"
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt("x.ts")})
+    _neu(repo, neu, _inhalt("x.ts"))
+    _durchlaeuft_sauber(_hook(repo), "Testdatei neben Testdatei")
+
+
+def test_namenspendant_umlaut_im_namen_blockiert(tmp_path):
+    """F007: git quotet Umlaut-Pfade standardmaessig — das darf nicht still durchlassen."""
+    partner, neu = f"{MOL}/Übersicht.svelte", f"{MOL}/CompareÜbersicht.svelte"
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu)
+    r = _hook(repo)
+    _blockiert(r, neu, "Umlaut im Dateinamen")
+    _partner_genannt(r, partner)
+
+
+def test_ordner_erkennung_umlaut_im_namen_blockiert(tmp_path):
+    """F007, Nebenwirkung des Fixes: auch die Ordner-Erkennung sieht Umlaut-Pfade jetzt."""
+    repo = _wegwerf_repo(tmp_path)
+    _neu(repo, f"{FE}/compare/Übersicht.svelte")
+    _blockiert(_hook(repo), "Übersicht.svelte", "Umlaut im einseitigen Bereich")
+
+
+def test_ordner_pfad_mit_namenspendant_ergibt_genau_einen_meldungsblock(tmp_path):
+    """F002 (a): Pfade der Ordner-Bereiche meldet nur die Ordner-Erkennung — keine Doppelung."""
+    repo = _wegwerf_repo(tmp_path, bestand={f"{FE}/trip-detail/TripWetterband.svelte": SVELTE})
+    _neu(repo, f"{FE}/compare/CompareWetterband.svelte")
+    r = _hook(repo)
+    _blockiert(r, "CompareWetterband.svelte", "Ordner-Erkennung")
+    assert r.stderr.count("PENDANT-SPERRE") == 1, f"Doppelte Meldung:\n{r.stderr}"
+
+
+def test_mischfall_ordner_und_namens_treffer_zeigt_beide_bloecke(tmp_path):
+    """F002 (b): Ordner-Treffer + Namens-Treffer im selben Commit -> beide Meldungen."""
+    repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Wetterband.svelte": SVELTE})
+    _neu(repo, f"{FE}/compare/Ortsliste.svelte")
+    _neu(repo, f"{MOL}/CompareWetterband.svelte")
+    r = _hook(repo)
+    _blockiert(r, "Ortsliste.svelte", "Ordner-Treffer im Mischfall")
+    _blockiert(r, f"{MOL}/CompareWetterband.svelte", "Namens-Treffer im Mischfall")
+    _partner_genannt(r, f"{MOL}/Wetterband.svelte")
+    assert "#1481 B" in r.stderr and "#2346" in r.stderr, f"Ein Block fehlt:\n{r.stderr}"
+
+
+# 40 Zeilen; die Neufassung behaelt 28 und ersetzt 12 — git meldet das als R0xx um 70 %.
+_MITTEL_NEU = ('<script lang="ts">\n'
+               + "".join(f"  const w{i} = {i};\n" for i in range(28))
+               + "".join(f"  let anders{i} = 'neu {i}';\n" for i in range(12))
+               + "</script>\n")
+
+
+def test_namenspendant_umbenennung_um_70_prozent_blockiert(tmp_path):
+    """F002 (c): Umbenennung zwischen git-Schwelle (50 %) und 95 % zaehlt als Neuanlage."""
+    repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Wetterband.svelte": SVELTE,
+                                            f"{MOL}/Altband.svelte": _ALT_LANG})
+    _umbenennen(repo, f"{MOL}/Altband.svelte", f"{MOL}/CompareWetterband.svelte", _MITTEL_NEU)
+    status = [s for s in _status(repo) if s.startswith("R")]
+    assert status and 50 <= int(status[0][1:]) < 95, f"Vorbedingung R50-R94 verfehlt: {status}"
+    r = _hook(repo)
+    _blockiert(r, f"{MOL}/CompareWetterband.svelte", "Umbenennung um 70 %")
+    _partner_genannt(r, f"{MOL}/Wetterband.svelte")
+
+
+@pytest.mark.parametrize("nachbar, neu", [
+    (f"{MOL}/Index.svelte", f"{MOL}/CompareUVIndex.svelte"),
+    (f"{MOL}/Wetter.svelte", f"{MOL}/CompareWetter2.svelte"),
+    ("src/servicesalt/wetterlage.py", "src/servicesalt/compare_wetterlage.py"),
+    ("src/app/wetterlage.py", f"{SERVICES}/compare_wetterlage.py"),
+], ids=["akronym", "ziffer", "wurzel_nur_als_praefix", "partner_ausser_reichweite"])
+def test_namenspendant_randfaelle_loesen_nichts_aus(tmp_path, nachbar, neu):
+    """F006: Akronym und Ziffer gehoeren zum Kernnamen; Wurzel heisst Ordner, nicht Praefix;
+    ein Partner ausserhalb der Reichweite zaehlt nicht."""
+    repo = _wegwerf_repo(tmp_path, bestand={nachbar: _inhalt(nachbar)})
+    _neu(repo, neu, _inhalt(neu))
+    _durchlaeuft_sauber(_hook(repo), "Randfall")
+
+
+# ----------------------------------------------- Fix-Loop 2 (Adversary-Funde F009-F015)
+
+def _hundert(geaendert: int) -> str:
+    """100 Zeilen, davon die letzten `geaendert` ersetzt. Gemessen (git -M): 4 -> R096, 6 -> R094."""
+    return ('<script lang="ts">\n'
+            + "".join(f"  const w{i} = {i};\n" for i in range(100 - geaendert))
+            + "".join(f"  let x{i} = {i};\n" for i in range(geaendert)) + "</script>\n")
+
+
+def _umbenennung_neben_partner(tmp_path: Path, geaendert: int) -> tuple[Path, int]:
+    neu = f"{MOL}/CompareWetterband.svelte"
+    repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Wetterband.svelte": SVELTE,
+                                            f"{MOL}/Altband.svelte": _hundert(0)})
+    _umbenennen(repo, f"{MOL}/Altband.svelte", neu, _hundert(geaendert))
+    status = [s for s in _status(repo) if s.startswith("R")]
+    assert status, f"git meldet keine Umbenennung: {_status(repo)}"
+    return repo, int(status[0][1:])
+
+
+def test_umbenennung_knapp_ueber_95_prozent_bleibt_frei(tmp_path):
+    """F010: R96 (kleine Aenderung beim Verschieben) gilt als echte Umbenennung -> Exit 0.
+
+    Pinnt `ECHTE_UMBENENNUNG` nach oben: jede Grenze > 96 macht diesen Test rot.
+    """
+    repo, aehnlichkeit = _umbenennung_neben_partner(tmp_path, 4)
+    assert 96 <= aehnlichkeit <= 99, f"Vorbedingung R96-R99 verfehlt: R{aehnlichkeit}"
+    _durchlaeuft_sauber(_hook(repo), f"Umbenennung R{aehnlichkeit}")
+
+
+def test_umbenennung_genau_95_prozent_bleibt_frei(tmp_path):
+    """F016: R095 liegt AUF der Grenze und gilt noch als echte Umbenennung -> Exit 0."""
+    repo, aehnlichkeit = _umbenennung_neben_partner(tmp_path, 5)
+    assert aehnlichkeit == 95, f"Vorbedingung R095 verfehlt: R{aehnlichkeit}"
+    _durchlaeuft_sauber(_hook(repo), "Umbenennung R095")
+
+
+def test_ordner_umbenennung_genau_95_prozent_bleibt_frei(tmp_path):
+    """F016: dieselbe Grenze in der Ordner-Erkennung — R095 auf derselben Seite -> Exit 0."""
+    repo = _wegwerf_repo(tmp_path, bestand={f"{FE}/compare/Alt.svelte": _hundert(0)})
+    _umbenennen(repo, f"{FE}/compare/Alt.svelte", f"{FE}/compare/Neu.svelte", _hundert(5))
+    status = [s for s in _status(repo) if s.startswith("R")]
+    assert status == ["R095"], f"Vorbedingung R095 verfehlt: {_status(repo)}"
+    _durchlaeuft_sauber(_hook(repo), "Ordner-Umbenennung R095")
+
+
+@pytest.mark.parametrize("nachbar, neu", [
+    (f"{MOL}/CardList.svelte", f"{MOL}/CompareCard.svelte"),
+    (f"{MOL}/Card.svelte", f"{MOL}/CompareCardList.svelte"),
+], ids=["kern_ist_teil_des_nachbarn", "nachbar_ist_teil_des_kerns"])
+def test_namenspendant_teilstring_des_kernnamens_ist_kein_partner(tmp_path, nachbar, neu):
+    """F017: Der Kernname muss GLEICH sein, Enthaltensein in eine Richtung genuegt nicht."""
+    repo = _wegwerf_repo(tmp_path, bestand={nachbar: SVELTE})
+    _neu(repo, neu)
+    _durchlaeuft_sauber(_hook(repo), "Teilstring ist kein Paar")
+
+
+def test_umbenennung_knapp_unter_95_prozent_blockiert(tmp_path):
+    """F010: R94 zaehlt als Neuanlage -> Exit 2. Pinnt die Grenze nach unten (<= 94 rot)."""
+    repo, aehnlichkeit = _umbenennung_neben_partner(tmp_path, 6)
+    assert 90 <= aehnlichkeit <= 94, f"Vorbedingung R90-R94 verfehlt: R{aehnlichkeit}"
+    r = _hook(repo)
+    _blockiert(r, f"{MOL}/CompareWetterband.svelte", f"Umbenennung R{aehnlichkeit}")
+    _partner_genannt(r, f"{MOL}/Wetterband.svelte")
+
+
+@pytest.mark.parametrize("partner, neu", [
+    (f"{HANDLER}/state_test.go", f"{HANDLER}/compare_state_test.go"),
+    (f"{SERVICES}/test_wetterlage.py", f"{SERVICES}/test_wetterlage_compare.py"),
+], ids=["go_test", "pytest_konvention"])
+def test_namenspendant_go_und_pytest_testdateien_laufen_durch(tmp_path, partner, neu):
+    """F009: `*_test.go` und `test_*.py` sind Testdateien. Gegenprobe: `go_handler` oben."""
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
+    _neu(repo, neu, _inhalt(neu))
+    _durchlaeuft_sauber(_hook(repo), "Testdatei nach Go-/pytest-Konvention")
+
+
+def test_stoerung_vormerk_stand_nicht_lesbar_laesst_durch_und_meldet(tmp_path):
+    """F015: kaputter Index -> `git diff --cached` scheitert -> Exit 0 mit Stoerungshinweis."""
+    partner, neu = _NAMENS_AUSLOESER
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu)
+    (repo / ".git" / "index").write_bytes(b"kein git-index")
+    r = _hook(repo)
+    _durchlaeuft(r, "Vormerk-Stand nicht lesbar")
+    assert "vormerk-stand nicht lesbar" in _text(r), f"Stoerung nicht gemeldet: {_text(r)!r}"
+
+
+@pytest.mark.parametrize("grund, blockiert", [
+    ("abcdefghijklmn", True),     # 14 sinnvolle Zeichen
+    ("abcdefghijklmno", False),   # 15
+], ids=["14_zeichen", "15_zeichen"])
+def test_namenspendant_begruendung_grenze_15_zeichen(tmp_path, grund, blockiert):
+    """F011: genau 15 sinnvolle Zeichen genuegen, 14 nicht."""
+    partner, neu = _NAMENS_AUSLOESER
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu, _inhalt(neu, f"gz-eigenstaendig: {grund}"))
+    r = _hook(repo)
+    if blockiert:
+        _blockiert(r, neu, "14 Zeichen")
+    else:
+        _durchlaeuft_sauber(r, "15 Zeichen")
+
+
+@pytest.mark.parametrize("zeile, blockiert", [(20, False), (21, True)], ids=["zeile_20", "zeile_21"])
+def test_namenspendant_begruendung_grenze_kopfzeilen(tmp_path, zeile, blockiert):
+    """F011: Kopfzeile in Zeile 20 zaehlt, in Zeile 21 nicht."""
+    partner, neu = _NAMENS_AUSLOESER
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    inhalt = "".join(f"<!-- z{i} -->\n" for i in range(1, zeile)) + f"<!-- {BEGRUENDUNG} -->\n"
+    _neu(repo, neu, inhalt)
+    r = _hook(repo)
+    if blockiert:
+        _blockiert(r, neu, "Begruendung in Zeile 21")
+    else:
+        _durchlaeuft_sauber(r, "Begruendung in Zeile 20")
+
+
+def test_namenspendant_marker_gross_kleinschreibung_egal(tmp_path):
+    """F011: Der Marker wird ohne Ruecksicht auf Gross-/Kleinschreibung erkannt (`.lower()`)."""
+    partner, neu = _NAMENS_AUSLOESER
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu, _inhalt(neu, BEGRUENDUNG.replace("gz-eigenstaendig:", "GZ-Eigenstaendig:")))
+    _durchlaeuft_sauber(_hook(repo), "Marker in Grossschreibung")
+
+
+def test_namenspendant_akzent_gehoert_zum_kernnamen(tmp_path):
+    """F014: `CompareÉtat` neben `Tat` ist kein Paar — das É gehoert zum Kernnamen."""
+    repo = _wegwerf_repo(tmp_path, bestand={f"{MOL}/Tat.svelte": SVELTE})
+    _neu(repo, f"{MOL}/CompareÉtat.svelte")
+    _durchlaeuft_sauber(_hook(repo), "Akzentbuchstabe im Kernnamen")
+
+
+@pytest.mark.parametrize("partner, neu", [
+    (f"{MOL}/WetterUV.svelte", f"{MOL}/WetterUVCompare.svelte"),
+    (f"{SERVICES}/wetter2.py", f"{SERVICES}/wetter2compare.py"),
+], ids=["akronym_vor_suffix", "ziffer_vor_suffix"])
+def test_namenspendant_suffix_nach_akronym_oder_ziffer_blockiert(tmp_path, partner, neu):
+    """F006/F014: Wortgrenze auch zwischen Akronym bzw. Ziffer und `Compare`-Suffix."""
+    repo = _wegwerf_repo(tmp_path, bestand={partner: _inhalt(partner)})
+    _neu(repo, neu, _inhalt(neu))
+    r = _hook(repo)
+    _blockiert(r, neu, "Suffix nach Akronym/Ziffer")
+    _partner_genannt(r, partner)
+
+
+def test_namenspendant_akzent_gegenprobe_blockiert(tmp_path):
+    """F014, Gegenprobe: `CompareÉtat` neben `État` ist ein Paar -> Exit 2."""
+    partner, neu = f"{MOL}/État.svelte", f"{MOL}/CompareÉtat.svelte"
+    repo = _wegwerf_repo(tmp_path, bestand={partner: SVELTE})
+    _neu(repo, neu)
+    r = _hook(repo)
+    _blockiert(r, neu, "Akzent-Paar")
+    _partner_genannt(r, partner)

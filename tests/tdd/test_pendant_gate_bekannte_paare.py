@@ -8,7 +8,7 @@ schon gab. Die Liste DARF NUR SCHRUMPFEN:
 
   (a) jede Datei jedes Eintrags existiert noch — ein veralteter Eintrag wird rot und zwingt
       zum Streichen (S2 streicht die HomeHero*- und Kachel-Paare mit dem Loeschen der Dateien);
-  (b) die Liste ist Teilmenge der unten EINGEFRORENEN sieben Paare — ein neuer Eintrag ist ein
+  (b) die Liste ist Teilmenge der unten EINGEFRORENEN acht Paare — ein neuer Eintrag ist ein
       Befund, kein Schleichweg.
 
 Vertrag zur Form: `BEKANNTE_PAARE` ist ein Iterable von Zweiergruppen (Tupel/Liste/frozenset)
@@ -32,8 +32,9 @@ GATE = REPO / ".claude" / "hooks" / "pendant_gate.py"
 
 FE = "frontend/src/lib/components"
 
-# Eingefroren am 2026-10-23 (Aufmass Spec #2346): die sieben Bestandspaare ausserhalb der
-# alten Reichweite. DARF NUR SCHRUMPFEN — nie hier etwas hinzufuegen.
+# Eingefroren am 2026-10-23 (Aufmass Spec #2346), korrigiert 2026-10-24 (Adversary F003): die
+# acht Bestandspaare ausserhalb der alten Reichweite. DARF NUR SCHRUMPFEN — nie hier etwas
+# hinzufuegen (die Korrektur vom 24.10. ist ein Messfehler des Aufmasses, kein neues Paar).
 EINGEFROREN: frozenset[frozenset[str]] = frozenset({
     frozenset({f"{FE}/organisms/HomeHeroCompare.svelte", f"{FE}/organisms/HomeHeroTrip.svelte"}),
     frozenset({"frontend/src/routes/_home/CompareKachel.svelte",
@@ -44,6 +45,9 @@ EINGEFROREN: frozenset[frozenset[str]] = frozenset({
     frozenset({"src/services/compare_weather_snapshot.py", "src/services/weather_snapshot.py"}),
     frozenset({f"{FE}/shared/weather-metrics-tab/compareChannelMetricLayouts.ts",
                f"{FE}/shared/weather-metrics-tab/channelMetricLayouts.ts"}),
+    # nachgemessen 2026-10-24 (Adversary F003, Sweep mit dem Hook-eigenen Matcher ueber alle
+    # git ls-files): das achte Paar, beim Aufmass vom 2026-10-23 uebersehen.
+    frozenset({"src/services/trip_forecast.py", "src/services/forecast.py"}),
 })
 
 

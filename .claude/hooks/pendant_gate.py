@@ -31,7 +31,8 @@ from datetime import date
 from pathlib import Path
 
 # Regel-Budget: ohne belegten Fang bis hierhin -> Rueckbau (Gate-Audit #1197).
-PRUEFDATUM = date(2026, 11, 3)
+# Verlaengert 2026-10-23, PO (Spec #2346): Erweiterung um die Namens-Erkennung.
+PRUEFDATUM = date(2027, 1, 21)
 
 MARKER = "gz-eigenstaendig:"
 KOPF_ZEILEN = 20
@@ -61,6 +62,28 @@ FE_BEREICHE = {
 }
 GEGENSEITE = {"compare": "trip", "trip": "compare"}
 TEST_ENDUNGEN = (".test.ts", ".spec.ts", ".test.js", ".spec.js")
+
+# Spec #2346 S1: Namens-Erkennung NEBEN der Ordner-Erkennung, in diesen vier Wurzeln.
+NAMENS_WURZELN = (f"{FE}/", "frontend/src/routes/", "src/services/", "internal/handler/")
+NAMENS_ENDUNGEN = ("svelte", "ts", "py", "go")
+# F009: Go-Tests (`*_test.go`) gehoeren zur Testdatei-Ausnahme der Namens-Erkennung; die
+# Ordner-Erkennung kennt keine Go-Pfade und bleibt unveraendert.
+NAMENS_TEST_ENDUNGEN = TEST_ENDUNGEN + ("_test.go",)
+# Bestandspaare bei Einfuehrung (Aufmass 2026-10-23). DARF NUR SCHRUMPFEN — Schrumpf-Test:
+# tests/tdd/test_pendant_gate_bekannte_paare.py.
+BEKANNTE_PAARE = (
+    (f"{FE}/organisms/HomeHeroCompare.svelte", f"{FE}/organisms/HomeHeroTrip.svelte"),
+    ("frontend/src/routes/_home/CompareKachel.svelte",
+     "frontend/src/routes/_home/TripKachel.svelte"),
+    ("src/services/compare_alert.py", "src/services/trip_alert.py"),
+    ("src/services/compare_alert_channels.py", "src/services/alert_channels.py"),
+    ("src/services/compare_preview_service.py", "src/services/preview_service.py"),
+    ("src/services/compare_weather_snapshot.py", "src/services/weather_snapshot.py"),
+    (f"{FE}/shared/weather-metrics-tab/compareChannelMetricLayouts.ts",
+     f"{FE}/shared/weather-metrics-tab/channelMetricLayouts.ts"),
+    # nachgemessen 2026-10-24 (Adversary F003): achtes Paar
+    ("src/services/trip_forecast.py", "src/services/forecast.py"),
+)
 
 # Issue #1431: Commit-Erkennung ueber die Aufrufform, nicht ueber den Wortlaut.
 #
@@ -207,12 +230,114 @@ def _gegenstueck(wurzel: Path, pfad: str, seite: str, praefix: str) -> str | Non
     return None
 
 
+# ------------------------------------------------------- Namens-Erkennung (Spec #2346 S1)
+
+def _camel(teil: str) -> list[str]:
+    """`CompareUVIndex2` -> ['Compare', 'UV', 'Index', '2'] — Unicode-faehig (F014)."""
+    woerter, wort = [], ""
+    for i, c in enumerate(teil):
+        vor = teil[i - 1] if i else ""
+        nach = teil[i + 1] if i + 1 < len(teil) else ""
+        grenze = wort and (
+            (c.isupper() and (vor.islower() or vor.isdigit()))
+            or (c.isupper() and vor.isupper() and nach.islower())
+            or (c.isdigit() != vor.isdigit()))
+        if grenze:
+            woerter.append(wort)
+            wort = ""
+        wort += c
+    return woerter + ([wort] if wort else [])
+
+
+def _woerter(stamm: str) -> list[str]:
+    """`CompareFoo`, `compareFoo`, `compare_foo` -> ['compare', 'foo'] (klein)."""
+    return [w.lower() for teil in re.split(r"[\W_]+", stamm) for w in _camel(teil)]
+
+
+def _zerlege(pfad: str) -> tuple[str | None, str, str] | None:
+    """(Seite oder None fuer neutral, Kernname, Endung) — None, wenn ohne Endung."""
+    stamm, punkt, endung = pfad.rsplit("/", 1)[-1].partition(".")
+    if not punkt:
+        return None
+    w = _woerter(stamm)
+    if w and w[0] in GEGENSEITE:
+        return w[0], "".join(w[1:]), endung
+    if w and w[-1] in GEGENSEITE:
+        return w[-1], "".join(w[:-1]), endung
+    return None, "".join(w), endung
+
+
+def _in_namens_reichweite(pfad: str) -> bool:
+    """Vier Wurzeln, vier Endungen, keine Testdateien (AC-6; Go/pytest-Konvention: F009)."""
+    name = pfad.rsplit("/", 1)[-1]
+    if pfad.endswith(NAMENS_TEST_ENDUNGEN) or (name.startswith("test_")
+                                               and name.endswith(".py")):
+        return False
+    teile = pfad.split("/")
+    if "tests" in teile or "__tests__" in teile:
+        return False
+    return pfad.startswith(NAMENS_WURZELN) and pfad.rsplit(".", 1)[-1] in NAMENS_ENDUNGEN
+
+
+def _namenspendant(wurzel: Path, pfad: str, bestand: list[str]) -> str | None:
+    """Partner einer neuen einseitigen Datei (Gegenseite oder neutral) — oder None.
+
+    Nur eine NEUE Compare-/Trip-Datei loest aus; ein neues neutrales `Foo` neben
+    `CompareFoo` ist die gewuenschte Konvergenz. Bestandspaare: `BEKANNTE_PAARE`.
+    """
+    if not _in_namens_reichweite(pfad) or any(pfad in paar for paar in BEKANNTE_PAARE):
+        return None
+    zerlegt = _zerlege(pfad)
+    if not zerlegt or zerlegt[0] is None or not zerlegt[1]:
+        return None
+    seite, kern, endung = zerlegt
+    for kandidat in sorted(bestand):
+        if kandidat == pfad or not _in_namens_reichweite(kandidat):
+            continue
+        k = _zerlege(kandidat)
+        if k and k[1] == kern and k[2] == endung and k[0] in (None, GEGENSEITE[seite]):
+            return None if _begruendet(wurzel, pfad) else kandidat
+    return None
+
+
+def _namens_befunde(wurzel: Path, kandidaten: list[str]) -> list[tuple[str, str]]:
+    """`git ls-files` enthaelt auch die vorgemerkten Neuanlagen des laufenden Commits."""
+    if not kandidaten:
+        return []
+    # F007: ohne core.quotePath=false stuenden Umlaut-Pfade in Anfuehrungszeichen.
+    bestand = _lauf(["git", "-c", "core.quotePath=false", "ls-files"],
+                    wurzel).stdout.splitlines()
+    befunde = []
+    for pfad in kandidaten:
+        partner = _namenspendant(wurzel, pfad, bestand)
+        if partner:
+            befunde.append((pfad, partner))
+    return befunde
+
+
+def _namens_meldung(befunde: list[tuple[str, str]]) -> list[str]:
+    zeilen = ["PENDANT-SPERRE (#2346) — neue einseitige Datei mit Namenspendant:"]
+    for pfad, partner in befunde:
+        zeilen += [f"   {pfad}", f"      Partner: {partner}"]
+    return zeilen + [
+        "",
+        "Zwei Wege durch:",
+        f"   1. Einen geteilten Baustein daraus machen: nach {FE}/shared/ legen bzw. "
+        "neutral benennen (ohne Compare/Trip im Namen).",
+        f"   2. Begruendungszeile in die ersten {KOPF_ZEILEN} Zeilen setzen:",
+        "      gz-eigenstaendig: <fachlicher Grund, mindestens 15 sinnvolle Zeichen>",
+        "",
+    ]
+
+
 # --------------------------------------------------------------------------- Hauptlauf
 
 def main() -> int:
     try:
         eingabe = json.loads(sys.stdin.read() or "{}")
     except Exception:  # noqa: BLE001
+        print("[pendant_gate] gestoert: ungueltige Eingabe — Commit ungeprueft "
+              "durchgelassen.", file=sys.stderr)
         return 0
     befehl = (eingabe.get("tool_input") or {}).get("command", "")
     if WERKZEUG_FEHLT:  # F001: ohne Werkzeug wird nicht geraten, sondern gesagt
@@ -251,13 +376,20 @@ def main() -> int:
     # nur MEHR zufaellige Umbenennungs-Meldungen — und die gleichseitige Ausnahme haengt
     # jetzt ohnehin an der gemeldeten Aehnlichkeit statt am blossen Vorliegen einer
     # Umbenennung. Gemessen: unverwandte Paare erreichen 25-61 %, echte Umbenennungen 95 %+.
-    r = _lauf(["git", "diff", "--cached", "--name-status", "-M"], wurzel)
+    # F007 (#2346): ohne core.quotePath=false meldet git Umlaut-Pfade gequotet
+    # ("frontend/...\303\234...") — weder Ordner- noch Namens-Erkennung erkennen sie dann.
+    r = _lauf(["git", "-c", "core.quotePath=false", "diff", "--cached", "--name-status", "-M"],
+              wurzel)
     if r.returncode != 0:
         print(f"[pendant_gate] gestoert: Vormerk-Stand nicht lesbar "
               f"({r.stderr.strip()[:120]}) — Commit ungeprueft.", file=sys.stderr)
         return 0
 
     neuzugaenge: list[str] = []
+    # Spec #2346 S1: eigene Liste fuer die Namens-Erkennung — Neuanlagen und Umbenennungen
+    # unter ECHTE_UMBENENNUNG, unabhaengig von der Seite (ausserhalb der Bereiche landet
+    # sonst auch jede R100-Umbenennung in `neuzugaenge`).
+    namens_kandidaten: list[str] = []
     for zeile in r.stdout.splitlines():
         teile = zeile.split("\t")
         if len(teile) < 2 or not teile[0]:
@@ -275,12 +407,15 @@ def main() -> int:
             # gleich. Die Ausnahme greift deshalb nur bei praktisch unveraendertem Inhalt.
             ziffern = teile[0][1:]
             aehnlichkeit = int(ziffern) if ziffern.isdigit() else 0
+            if aehnlichkeit < ECHTE_UMBENENNUNG:
+                namens_kandidaten.append(neu)
             if (neue_seite and alte_seite and alte_seite[0] == neue_seite[0]
                     and aehnlichkeit >= ECHTE_UMBENENNUNG):
                 continue
             neuzugaenge.append(neu)
         elif teile[0].startswith("A"):
             neuzugaenge.append(teile[1])
+            namens_kandidaten.append(teile[1])
 
     befunde: list[tuple[str, str, str | None]] = []
     for pfad in neuzugaenge:
@@ -292,10 +427,25 @@ def main() -> int:
             continue
         befunde.append((pfad, bereich, _gegenstueck(wurzel, pfad, seite, praefix)))
 
-    if not befunde:
-        return 0
+    # AC-7: Eine Stoerung der Namens-Erkennung darf die Ordner-Erkennung nicht mitreissen.
+    # Pfade der Ordner-Bereiche prueft die Ordner-Erkennung — keine Doppelmeldung.
+    try:
+        namens = _namens_befunde(wurzel, [p for p in namens_kandidaten if _bereich(p) is None])
+    except Exception as e:  # noqa: BLE001
+        print(f"[pendant_gate] Namens-Erkennung gestoert ({e}) — Namenspendants "
+              "ungeprueft.", file=sys.stderr)
+        namens = []
 
-    meldung = ["PENDANT-SPERRE (#1481 B) — neue Datei im einseitigen Bereich:"]
+    if not befunde and not namens:
+        return 0
+    if not befunde:
+        print("\n".join(_namens_meldung(namens) + [
+            f"CLAUDE.md -> Trip/Ortsvergleich-Code-Teilung. Pruefdatum dieses Gates: "
+            f"{PRUEFDATUM.isoformat()}."]), file=sys.stderr)
+        return 2
+
+    meldung = (_namens_meldung(namens) if namens else []) + [
+        "PENDANT-SPERRE (#1481 B) — neue Datei im einseitigen Bereich:"]
     for pfad, bereich, gegen in befunde:
         meldung.append(f"   {pfad}   [Bereich: {bereich}]")
         if gegen:
