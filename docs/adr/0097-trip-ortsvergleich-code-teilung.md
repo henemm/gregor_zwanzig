@@ -27,7 +27,10 @@ als Text in CLAUDE.md. #1170 ist das in CLAUDE.md benannte Anti-Pattern dafür.
 5. **Durchsetzung:** Die Pendant-Sperre blockiert jeden Commit, der eine neu angelegte Datei in
    einem einseitigen Bereich enthält (`components/{compare,compare-new,trip-detail,trip-new}/**`,
    `src/output/renderers/**/{compare_*,trip_*}.py`), solange die Datei keine Kopfzeile
-   `gz-eigenstaendig: <Grund>` trägt. Bei jeder Editor-/Detail-Arbeit ist „hätte das ein geteilter
+   `gz-eigenstaendig: <Grund>` trägt. Seit 2026-10-23 (#2346 S1) erkennt sie zusätzlich
+   Namenspendants (`Compare*`/`Trip*`/neutral, `compare_*`/`trip_*`) in vier weiteren Wurzeln
+   (u. a. `frontend/src/routes`, `src/services`, `internal/handler`); Bestandspaare stehen in der nur
+   schrumpfenden Ausnahmeliste `BEKANNTE_PAARE`. Bei jeder Editor-/Detail-Arbeit ist „hätte das ein geteilter
    Baustein sein müssen?" ein expliziter Adversary-/Review-Punkt.
 
 ## Verworfene Alternativen
@@ -41,8 +44,8 @@ als Text in CLAUDE.md. #1170 ist das in CLAUDE.md benannte Anti-Pattern dafür.
 - **Positiv:** Eine Änderung an Wertebereichen/Versand/Alarmen wirkt in beiden Flächen; weniger
   Drift zwischen Trip und Ortsvergleich.
 - **Negativ / Preis:** Geteilte Bausteine brauchen den `context`-Parameter und werden komplexer.
-  Die Sperre hat bewusste Grenzen: keine Go-Seite, unpräfigierte Gegenstücke (z. B.
-  `email/html.py`) sind unerkennbar, die Begründung wird nur auf Länge geprüft, Bestand ist
+  Die Sperre hat bewusste Grenzen: unpräfigierte Gegenstücke (z. B.
+  `email/html.py`) sind unerkennbar (Namenspendants erst seit #2346 S1, Go nur unter `internal/handler`), die Begründung wird nur auf Länge geprüft, Bestand ist
   ausgenommen (`gates_und_ratschen.md` §„Pendant-Sperre").
-- **Folgepflichten:** Die Sperre trägt Prüfdatum 2026-11-03 (Regel-Budget, ADR-0100) — ohne
+- **Folgepflichten:** Die Sperre trägt Prüfdatum 2027-01-21 (verlängert 2026-10-23, vorher 2026-11-03; Regel-Budget, ADR-0100) — ohne
   belegten Fang Rückbau der Mechanik, nicht der Regel.

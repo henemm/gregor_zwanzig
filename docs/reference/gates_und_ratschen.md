@@ -107,10 +107,41 @@ Renderer **ohne** `compare_`/`trip_`-Präfix ablegen — **oder** eine Kopfzeile
 `gz-eigenstaendig: <fachlicher Grund>` in die ersten 20 Zeilen setzen (mind. 15 sinnvolle Zeichen).
 **Der Ausweg verhindert nichts — er macht die Entscheidung im Änderungssatz zitierbar.**
 
-**Bewusste Grenzen** (Spec `docs/specs/modules/feat_1481b_pendant_gate.md`): keine Go-Seite,
-unpräfigierte Trip-Gegenstücke wie `email/html.py` sind unerkennbar, die Begründung wird auf Länge
-geprüft (nicht auf Substanz), und ein Commit in ein **anderes** Verzeichnis wird nicht geprüft.
-Ausgenommen: Testdateien und der gesamte Bestand — nur Neuanlagen greifen. Prüfdatum 2026-11-03.
+**Namens-Erkennung (Spec #2346 S1, seit 2026-10-23):** Daneben prüft `_namenspendant()` Neuanlagen
+(`A`, Umbenennung unter 95 % Ähnlichkeit) unter `frontend/src/lib/components/**`,
+`frontend/src/routes/**`, `src/services/**` und `internal/handler/**` (Endungen `.svelte`, `.ts`,
+`.py`, `.go`). Steht `compare`/`trip` am Anfang oder Ende des Dateinamens (CamelCase, lowerCamel,
+snake_case), ist der Rest der Kernname; existiert im Repo (inkl. laufendem Änderungssatz) eine Datei
+gleicher Endung mit dem Gegen-Präfix/-Suffix oder neutral mit dem Kernnamen, blockiert der Commit und
+die Meldung nennt den Partner. Ein neues **neutrales** `Foo` neben `CompareFoo`/`TripFoo` ist
+Konvergenz und löst nichts aus. Gleiche Auswege wie oben (nach `shared/` bzw. neutral benennen
+**oder** `gz-eigenstaendig:`). Eine Störung der Namens-Erkennung lässt durch und meldet sich, ohne
+die Ordner-Erkennung mitzureißen.
+
+**Ausnahmeliste `BEKANNTE_PAARE`:** die Bestandspaare bei Einführung, fest im Hook. Sie darf nur
+schrumpfen (Schrumpf-Test `tests/tdd/test_pendant_gate_bekannte_paare.py`); S2 streicht die
+HomeHero*- und Kachel-Paare mit dem Löschen der Dateien.
+
+**Beleg:** 8 Paare außerhalb der alten Reichweite (Aufmaß 2026-10-23, nachgemessen Adversary F003),
+die die Ordner-Erkennung nicht fangen konnte.
+Das erste Aufmaß hatte 7 Paare außerhalb gezählt; `trip_forecast.py`/`forecast.py` war übersehen.
+
+**Umlaut-Pfade (F007, 2026-10-24):** Der Wächter liest den Vormerk-Stand mit
+`core.quotePath=false`. Vorher meldete git Umlaut-Pfade in Anführungszeichen, und **beide**
+Erkennungen ließen sie still durch — auch die Ordner-Erkennung ist dadurch strenger geworden
+(z. B. `compare/Übersicht.svelte` blockiert jetzt).
+
+**Bewusste Grenzen** (Specs `docs/specs/modules/feat_1481b_pendant_gate.md`,
+`docs/specs/modules/feat_2346_cockpit_paritaet.md`): ein neues `CompareFoo` **ohne** vorhandenen
+Partner wird nicht erkannt; ähnliche, aber nicht namensgleiche Paare (z. B.
+`compare_slot_scheduler.py`/`trip_report_scheduler.py`) bleiben unerkennbar; die Begründung wird auf
+Länge geprüft (nicht auf Substanz), und ein Commit in ein **anderes** Verzeichnis wird nicht geprüft.
+Eine reine Umbenennung (≥ 95 % Ähnlichkeit) einer neutralen Datei in einen Compare-/Trip-Namen neben
+vorhandenem Partner (`Foo.svelte` → `CompareFoo.svelte` neben `TripFoo.svelte`) wird nicht erkannt
+(Adversary F008, spec-konform).
+Ausgenommen: Testdateien (Namens-Erkennung zusätzlich `*_test.go` und `test_*.py`) und der gesamte
+Bestand — nur Neuanlagen greifen.
+Prüfdatum 2027-01-21 (verlängert 2026-10-23, PO (Spec #2346); vorher 2026-11-03).
 
 ## Commit-Gate „Tests der berührten Dateien" (#1481 A, seit 2026-08-04)
 
@@ -450,7 +481,7 @@ Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mai
 | Mutations-Gegenprobe | 2026-11-01 | #1448 (2 von 3 Scheiben), #1457 (6 Findings) |
 | Breiter Testlauf gesperrt | 2026-11-01 | #1477 (echter Telegram-Versand an Prod-Chat) |
 | CI-Ampel (eingeführt mit 5 Checks; seit #1771 S2 sechs, s. eigene Zeile `e2e`) | 2026-11-02 | 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196) |
-| Pendant-Sperre (#1481 B) | 2026-11-03 | — |
+| Pendant-Sperre (#1481 B, erweitert #2346) | 2027-01-21 (verlängert 2026-10-23, PO (Spec #2346)) | 8 Paare außerhalb der alten Reichweite (Aufmaß 2026-10-23, nachgemessen Adversary F003; Spec #2346) |
 | Touched-Tests-Gate (#1481 A) | 2026-11-03 | — |
 | Testnamens-Gate | 2027-01-19 (verlängert 2026-10-21, PO) | — |
 | Test-Pfadregel-Ratsche (#1409) | 2026-10-27 | — |
