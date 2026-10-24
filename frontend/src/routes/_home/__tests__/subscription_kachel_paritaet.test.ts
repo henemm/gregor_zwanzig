@@ -96,6 +96,17 @@ describe('AC-1/AC-16: beide kinds — dieselben Felder, dieselbe Reihenfolge, au
 		assert.match(h, /data-testid="subscription-card-cmp-1"/);
 	});
 
+	test('M18: Entwurf zeigt "letzter Versand" nur, wenn der Aufrufer Versandwerte liefert', async () => {
+		const Card = await laden(path.join(ORGANISMS, 'SubscriptionCard.svelte'));
+		const ENTWURF = { ...PRESET, location_ids: [] };
+		const mit = html(Card, { kind: 'vergleich', sub: ENTWURF, now: JETZT, lastSent: 'gestern', nextSend: null });
+		assert.match(mit, /data-status="draft"/, 'Messaufbau: kein Entwurf');
+		assert.ok(feldNamen(mit).includes('last-sent'), 'Entwurf mit geliefertem Versand: Feld fehlt');
+		const ohne = html(Card, { kind: 'vergleich', sub: ENTWURF, now: JETZT });
+		assert.ok(!feldNamen(ohne).includes('last-sent'), 'Entwurf ohne Versandwerte: Feld erscheint');
+		assert.ok(feldNamen(html(Card, { kind: 'vergleich', sub: PRESET, now: JETZT })).includes('last-sent'), 'aktiver Vergleich ohne Werte: Feld fehlt');
+	});
+
 	test('fehlende Werte zeigen den ehrlichen Leerzustand "—", nie leere Felder', async () => {
 		const Kachel = await laden(path.join(HOME, 'SubscriptionKachel.svelte'));
 		for (const [kind, sub] of [['trip', TRIP], ['vergleich', PRESET]] as const) {
@@ -162,6 +173,23 @@ describe('AC-18: naechster/letzter Versand aus der Backend-Antwort, ohne eigene 
 		const mit = kachelVersand('vergleich', { ...PRESET, letzter_versand: new Date().toISOString() }, NB);
 		assert.equal(mit.lastSent, 'heute');
 		assert.equal(kachelVersand('vergleich', { ...PRESET, letzter_versand: undefined }, NB).lastSent, null);
+	});
+
+	test('F002: beendeter Trip zeigt "Trip beendet", nicht den Vergleichs-Wortlaut', async () => {
+		const { kachelVersand } = await modul(path.join(HOME, 'kachelVersand.ts'));
+		assert.equal(kachelVersand('trip', TRIP, { at: null, reason: 'ended' }).nextSend, 'Trip beendet');
+	});
+
+	test('F001: kachelNextBriefing waehlt die Map je kind (gleiche ID in beiden Maps)', async () => {
+		const { kachelNextBriefing } = await modul(path.join(HOME, 'kachelVersand.ts'));
+		const T = { ...NB, local_time: '08:00' };
+		const C = { ...NB, local_time: '09:00' };
+		const nbs = { trips: { x: T }, compare: { x: C } };
+		assert.equal(kachelNextBriefing('trip', 'x', nbs), T);
+		assert.equal(kachelNextBriefing('vergleich', 'x', nbs), C);
+		assert.equal(kachelNextBriefing('trip', 'fehlt', nbs), null);
+		assert.equal(kachelNextBriefing('vergleich', 'x', null), null);
+		assert.equal(kachelNextBriefing('trip', undefined, nbs), null);
 	});
 
 	test('Kachel rendert den gemappten Wert (Verdrahtung Mapping -> Anzeige)', async () => {

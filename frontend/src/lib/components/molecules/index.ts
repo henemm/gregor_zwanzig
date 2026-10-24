@@ -26,7 +26,6 @@ export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 // (CompareTile/CompareKebab entfallen mit #2278: SubscriptionCard/SubscriptionKebab.)
 export { default as CompareStatusPill } from '../compare/CompareStatusPill.svelte';
 export { default as CompareLocationRow } from './CompareLocationRow.svelte';
-export { default as CompareIdealRow } from './CompareIdealRow.svelte';
 
 // Issue #568 — Startseite-Cockpit-Molecules (Spec: docs/specs/modules/issue_568_home_redesign.md).
 export { default as QuickAction } from './QuickAction.svelte';

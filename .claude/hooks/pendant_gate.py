@@ -74,8 +74,8 @@ NAMENS_TEST_ENDUNGEN = TEST_ENDUNGEN + ("_test.go",)
 BEKANNTE_PAARE = (
     # Paar HomeHeroCompare/HomeHeroTrip gestrichen 2026-10-24: HomeHeroCompare.svelte durch
     # #1969 geloescht (Liste darf nur schrumpfen).
-    ("frontend/src/routes/_home/CompareKachel.svelte",
-     "frontend/src/routes/_home/TripKachel.svelte"),
+    # Paar CompareKachel/TripKachel gestrichen 2026-10-24 (#2346 S2): beide durch
+    # SubscriptionKachel ersetzt.
     ("src/services/compare_alert.py", "src/services/trip_alert.py"),
     ("src/services/compare_alert_channels.py", "src/services/alert_channels.py"),
     ("src/services/compare_preview_service.py", "src/services/preview_service.py"),

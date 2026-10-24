@@ -7,7 +7,7 @@
 // getrieben, damit sie nicht unbemerkt auseinanderlaufen.
 //
 // Aufrufer: die Leser der Trip-Uebersicht (rightColumn, cockpitHelpers568,
-// _home/cockpitHelpers, TripKachel, Startseite) und der Editor-Startzustand
+// _home/cockpitHelpers, Startseite) und der Editor-Startzustand
 // (reportConfigPayload.ts -> VersandTab).
 //
 // Pure Funktion, kein Netz-/DOM-Zugriff — node:testbar.

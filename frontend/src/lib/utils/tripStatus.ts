@@ -35,7 +35,7 @@ export function deriveTripStatus(trip: Trip, now: Date): TripStatus {
 
 // ---------------------------------------------------------------------------
 // Issue #386 — Startseite-Cockpit (Epic #368 Phase 2). Deutschsprachige
-// Status-Variante + Hero-Selektion. Aus _home/TripKachel.svelte extrahiert,
+// Status-Variante + Hero-Selektion. Aus der frueheren Trip-Kachel extrahiert,
 // damit Kachel und Cockpit dieselbe Quelle teilen.
 // Spec: docs/specs/modules/screen_home_migration.md
 // ---------------------------------------------------------------------------

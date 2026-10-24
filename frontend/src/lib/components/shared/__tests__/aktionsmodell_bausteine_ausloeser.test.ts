@@ -76,22 +76,29 @@ describe('F003/F010: Radiowahl -> onConfirm -> Request', () => {
 });
 
 describe('F012/AC-15: Startseiten-Kachel', () => {
-	const kachel = lade('routes/_home/CompareKachel.svelte');
+	// #2346 S2: EINE Kachel fuer Trip und Ortsvergleich (ersetzt CompareKachel/TripKachel).
+	const kachel = lade('routes/_home/SubscriptionKachel.svelte');
 	const karte = komponenten(kachel, 'SubscriptionCard')[0];
 
-	test('die Startseite uebergibt der Kachel genau die Prop, die sie liest (sub)', () => {
-		const home = komponenten(lade('routes/+page.svelte'), 'CompareKachel');
-		assert.ok(home.length >= 1);
+	test('die Startseite uebergibt der Kachel genau die Props, die sie liest (beide kinds)', () => {
+		const home = komponenten(lade('routes/+page.svelte'), 'SubscriptionKachel');
+		assert.equal(home.length, 2, 'je eine Einbindung fuer Vergleich und Trip');
 		const props = collect(kachel.instance, (n) => n.type === 'VariableDeclarator' && n.init?.callee?.name === '$props').flatMap((d) =>
 			d.id.properties.map((p: any) => p.key.name)
 		);
-		for (const k of home) {
-			assert.deepEqual(k.attributes.map((a: any) => a.name), props);
-			assert.equal(attrKurz(k, 'sub'), 'preset');
-		}
+		for (const k of home) assert.deepEqual(k.attributes.map((a: any) => a.name), props);
+		assert.deepEqual(home.map((k) => attrKurz(k, 'sub')).sort(), ['preset', 'trip']);
 	});
-	test('Klick und "Bearbeiten" navigieren auf den Hub des Vergleichs', () => {
-		assert.equal(attrKurz(karte, 'onclick'), '() => goto("/compare/" + sub.id)');
-		assert.deepEqual(zweig(attrAusdruck(karte, 'onAction'), 'id', 'edit'), ['goto("/compare/" + sub.id)']);
+	test('F003: Klick auf den Namens-Link stoppt die Propagation (keine zusaetzliche Karten-Navigation)', () => {
+		const card = lade('lib/components/organisms/SubscriptionCard.svelte');
+		const link = collect(card.fragment, (n) => n.type === 'RegularElement' && n.name === 'a');
+		assert.equal(link.length, 1, 'genau ein Namens-Link');
+		assert.equal(attrKurz(link[0], 'href'), 'href');
+		assert.equal(attrKurz(link[0], 'onclick'), '(e) => e.stopPropagation()');
+	});
+	test('Klick und "Bearbeiten" navigieren auf den Hub (Trip bzw. Vergleich)', () => {
+		assert.equal(attrKurz(karte, 'onclick'), '() => goto(hub)');
+		assert.deepEqual(zweig(attrAusdruck(karte, 'onAction'), 'id', 'edit'), ['goto(hub)']);
+		// Das Ziel `hub` je kind prueft das SSR-Rendering (subscription_kachel_paritaet.test.ts, AC-17).
 	});
 });

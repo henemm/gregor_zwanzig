@@ -5,6 +5,7 @@
 	//   subscriptionActions(kind, Lebenszyklus, 'list').
 	// - dense + onAction: Menue-Knopf (oeffnet im Elternteil das Aktionsblatt); nicht-dense: Kebab.
 	// - Wurzel data-testid="subscription-card-{id}", data-kind, data-status (Lebenszyklus).
+	// - Issue #2346 S2: Felder data-field="status|channels|next-send|last-sent" kind-neutral (auch compact).
 
 	import type { ComparePreset, Trip } from '$lib/types.js';
 	import {
@@ -31,6 +32,12 @@
 		onAction?: (id: string) => void;
 		actions?: Array<{ id: string; label: string; danger?: boolean }>;
 		class?: string;
+		// Issue #2346 S2: kind-neutrale Felder, vom Aufrufer geliefert (Startseiten-Kachel).
+		// Nicht gesetzt (undefined) => bisheriges Verhalten (Listen); null => ehrlicher Leerzustand "—".
+		channels?: string[];
+		nextSend?: string | null;
+		lastSent?: string | null;
+		href?: string;
 	}
 
 	let {
@@ -43,7 +50,11 @@
 		onclick,
 		onAction,
 		actions: actionsProp,
-		class: className = ''
+		class: className = '',
+		channels: channelsProp,
+		nextSend,
+		lastSent,
+		href
 	}: Props = $props();
 
 	const status = $derived(subscriptionLifecycle(kind, sub, now));
@@ -76,10 +87,21 @@
 		const profil = presetProfileLabel(preset.profil);
 		return presetLocationsLabel(preset) + (profil ? ` · ${profil}` : '');
 	});
-	const channels = $derived(kind === 'vergleich' ? presetChannels(preset) : []);
+	// Issue #2346 S2: Felder erscheinen, wenn ihre Daten vorliegen — nicht nach kind. Geliefert vom
+	// Aufrufer (Kachel, beide kinds, auch compact) oder aus der eingebauten Quelle des Vergleichs
+	// (presetChannels, letzter_versand, Zeitplan) wie bisher in den Listen.
+	const channels = $derived(
+		channelsProp ?? (kind === 'vergleich' && !compact ? presetChannels(preset) : null)
+	);
+	const versandGeliefert = $derived(nextSend !== undefined || lastSent !== undefined);
+	const zeigeFusszeile = $derived(versandGeliefert || kind === 'vergleich');
 	const scheduleText = $derived(kind === 'vergleich' ? presetTileScheduleLabel(preset) : '');
 	const lastSentText = $derived(
-		kind === 'vergleich' ? relativeLastSent(preset.letzter_versand) : relativeLastSent(undefined)
+		lastSent !== undefined
+			? lastSent
+			: kind === 'vergleich'
+				? relativeLastSent(preset.letzter_versand) || null
+				: null
 	);
 
 	let hover = $state(false);
@@ -140,10 +162,23 @@
 				style:white-space="nowrap"
 				style:overflow="hidden"
 				style:text-overflow="ellipsis"
-			>{sub.name || '(ohne Namen)'}</div>
+			>
+				{#if href}
+					<!-- #2346 AC-17: echter Link (Mittel-/Rechtsklick); Karten-Klick bleibt goto. -->
+					<a
+						{href}
+						onclick={(e) => e.stopPropagation()}
+						style:color="inherit"
+						style:text-decoration="none">{sub.name || '(ohne Namen)'}</a
+					>
+				{:else}
+					{sub.name || '(ohne Namen)'}
+				{/if}
+			</div>
 
 			<div style:display="flex" style:align-items="center" style:gap="7px" style:margin-top="3px">
 				<span
+					data-field="status"
 					style:font-family="var(--g-font-mono)"
 					style:font-size="11px"
 					style:color="var(--g-ink-4)"
@@ -204,8 +239,9 @@
 		style:padding-left="17px"
 	>{metaText}</div>
 
-	{#if !compact && kind === 'vergleich'}
+	{#if channels}
 		<div
+			data-field="channels"
 			style:display="flex"
 			style:flex-wrap="wrap"
 			style:gap={dense ? '4px' : '5px'}
@@ -219,6 +255,7 @@
 			{:else}
 				{#each channels as ch (ch)}
 					<span
+						data-channel={ch}
 						style:font-family="var(--g-font-mono)"
 						style:padding="2px 7px"
 						style:font-size="11px"
@@ -233,21 +270,33 @@
 		</div>
 	{/if}
 
-	{#if kind === 'vergleich'}
+	{#if zeigeFusszeile}
 		<div
 			style:display="flex"
 			style:align-items="center"
 			style:justify-content="space-between"
+			style:flex-wrap="wrap"
 			style:gap="8px"
 			style:padding-left="17px"
 			style:padding-top="11px"
 			style:border-top="1px dashed var(--g-rule-soft)"
 		>
-			<span style:font-family="var(--g-font-mono)" style:font-size="11px" style:color="var(--g-ink-3)" style:letter-spacing="0.02em"
-				>{draft ? 'Setup unvollständig' : scheduleText}</span
-			>
-			{#if !draft}
+			{#if draft || scheduleText}
+				<span style:font-family="var(--g-font-mono)" style:font-size="11px" style:color="var(--g-ink-3)" style:letter-spacing="0.02em"
+					>{draft ? 'Setup unvollständig' : scheduleText}</span
+				>
+			{/if}
+			{#if nextSend !== undefined}
 				<span
+					data-field="next-send"
+					style:font-size="11px"
+					style:color="var(--g-ink-2)"
+					style:flex-shrink="0">nächster {nextSend ?? '—'}</span
+				>
+			{/if}
+			{#if !draft || versandGeliefert}
+				<span
+					data-field="last-sent"
 					style:display="inline-flex"
 					style:align-items="center"
 					style:gap="6px"

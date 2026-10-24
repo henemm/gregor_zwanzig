@@ -1,7 +1,7 @@
 // Issue #1969 Fix-Loop 1 (Adversary F002) — Startseite: der nächste Versand
 // kommt aus GET /api/next-briefings (Loader) und erscheint dort, wo er WIRKT:
 // Trip-Hero „Was geht raus", Vergleichs-Hero (Stat + Timeline) und die Zeile
-// „Außerdem beobachtet" (CompareStatusRow).
+// „Außerdem beobachtet" (seit #2346 S2 die gemeinsame SubscriptionKachel).
 // Spec: docs/specs/modules/feat_1969_naechstes_briefing.md (AC-23)
 //
 // (d) echter Loader (+page.server.ts) mit aufzeichnendem fetch-Stub;
@@ -83,7 +83,7 @@ function heuteTrip() {
 }
 
 describe('(e) Startseite zeigt den Wert aus data.nextBriefings', () => {
-	test('Trip-Hero „Was geht raus" + „Außerdem beobachtet" (CompareStatusRow)', () => {
+	test('Trip-Hero „Was geht raus" + „Außerdem beobachtet" (Vergleichs-Kachel, #2346 S2)', () => {
 		const html = renderStartseite({
 			trips: [heuteTrip()],
 			presets: [aktiverVergleich('p1')],
@@ -92,7 +92,7 @@ describe('(e) Startseite zeigt den Wert aus data.nextBriefings', () => {
 		const t = sichtbar(html);
 		assert.ok(t.includes('Was geht raus'), 'Messaufbau: Trip-Hero fehlt');
 		assert.ok(t.includes('08:00 (CEST)'), `Trip-Wert aus dem Backend fehlt: ${t}`);
-		assert.ok(t.includes('Do 07:00 (CEST)'), `CompareStatusRow zeigt den Backend-Wert nicht: ${t}`);
+		assert.ok(t.includes('Do 07:00 (CEST)'), `Vergleichs-Kachel zeigt den Backend-Wert nicht: ${t}`);
 	});
 
 	test('Vergleichs-Hero: Stat „Nächster Versand" und Timeline „Nächster · …"', () => {

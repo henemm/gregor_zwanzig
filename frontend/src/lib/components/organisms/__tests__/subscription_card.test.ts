@@ -10,7 +10,7 @@
 //   organisms/SubscriptionCard.svelte   Props: kind ('trip'|'vergleich'), sub, now?, dense?, compact?,
 //                                        onclick?, onAction?(id), actions? (explizite Aktionsliste fuers Kebab
 //                                        der NICHT-dichten Karte; Default = subscriptionActions(kind,status,'list');
-//                                        die Startseiten-Kachel uebergibt compareKachelActions(), AC-15)
+//                                        die Startseiten-Kachel uebergibt kachelActions(), AC-15, #2346)
 //     -> Wurzel data-testid="subscription-card-{id}", data-kind, data-status (Lebenszyklus:
 //        draft|active|paused|archived — dieselbe Ableitung wie subscriptionLifecycle), Name im Text;
 //        dense + onAction: Menue-Knopf data-testid="subscription-card-menu-{id}" (aria-label "Weitere Aktionen").

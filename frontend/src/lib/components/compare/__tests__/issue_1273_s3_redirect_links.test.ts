@@ -25,7 +25,8 @@ import { join, dirname } from 'node:path';
 // __tests__ → compare → components → lib → src
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 
-const COMPARE_KACHEL = join(SRC, 'routes', '_home', 'CompareKachel.svelte');
+// #2346 S2: CompareKachel ist durch die gemeinsame SubscriptionKachel ersetzt.
+const COMPARE_KACHEL = join(SRC, 'routes', '_home', 'SubscriptionKachel.svelte');
 const COMPARE_LIST = join(SRC, 'routes', 'compare', '+page.svelte');
 const HOME = join(SRC, 'routes', '+page.svelte');
 const HUB = join(SRC, 'routes', 'compare', '[id]', '+page.svelte');
@@ -34,12 +35,12 @@ const read = (p: string) => readFileSync(p, 'utf8');
 
 // ── AC-2: 7 externe Linkziele zeigen nicht mehr auf /edit ─────────────────────
 
-describe('AC-2: Home-Kachel-Kebab (CompareKachel.svelte) zielt auf den Hub, nicht /edit', () => {
-	test('kein "sub.id + \'/edit\'"-Ziel mehr', () => {
+describe('AC-2: Home-Kachel-Kebab (SubscriptionKachel.svelte) zielt auf den Hub, nicht /edit', () => {
+	test('kein "\'/edit\'"-Ziel mehr', () => {
 		const src = read(COMPARE_KACHEL);
 		assert.ok(
-			!src.includes("sub.id + '/edit'"),
-			'CompareKachel.svelte darf nicht mehr auf /compare/{id}/edit navigieren — Ziel ist der Hub'
+			!src.includes("'/edit'"),
+			'SubscriptionKachel.svelte darf nicht mehr auf /compare/{id}/edit navigieren — Ziel ist der Hub'
 		);
 	});
 });

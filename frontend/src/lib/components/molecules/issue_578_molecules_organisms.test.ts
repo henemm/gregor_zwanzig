@@ -310,40 +310,10 @@ describe('#2283 AC-14: CompareBriefingPreview, ComparePreviewMissing, CompareSms
 // Issue #1969 (AC-25): HomeHeroCompare ist gelöscht (kein Importeur; die
 // Startseite rendert ihren Vergleichs-Hero inline in routes/+page.svelte) —
 // AC-15 hat damit keinen Prüfling mehr.
-const HOME_ORGANISMS = ['HomeHeroTrip', 'OutboxCard', 'AlertsCard'];
+// Issue #2346 S2 (AC-10): HomeHeroTrip ist ebenfalls gelöscht (kein Importeur) —
+// AC-14 hat damit keinen Prüfling mehr; der Hero folgt in S3 als ein `HomeHero`.
+const HOME_ORGANISMS = ['OutboxCard', 'AlertsCard'];
 const METRICS_ORGANISMS = ['PresetRail', 'MetricOffShelf', 'MetricsEditorContextBar'];
-
-describe('AC-14/15: Home-Hero-Organisms', () => {
-	for (const name of ['HomeHeroTrip']) {
-		test(`${name}.svelte existiert in organisms/`, () => {
-			assert.ok(
-				hasOrg(`${name}.svelte`),
-				`organisms/${name}.svelte fehlt — noch nicht implementiert`
-			);
-		});
-	}
-
-	test('AC-14: HomeHeroTrip hat border-left: 3px solid var(--g-accent)', () => {
-		const src = readOrg('HomeHeroTrip.svelte');
-		assert.ok(
-			/3px solid var\(--g-accent\)/.test(src),
-			'HomeHeroTrip: border-left: 3px solid var(--g-accent) fehlt'
-		);
-	});
-
-	test('AC-14: HomeHeroTrip Footer-Leiste mit card-alt + Kanal-Dots + Trip-öffnen-Link', () => {
-		const src = readOrg('HomeHeroTrip.svelte');
-		assert.ok(/g-card-alt/.test(src), 'HomeHeroTrip: Footer card-alt fehlt');
-		assert.ok(/Trip öffnen/.test(src), 'HomeHeroTrip: "Trip öffnen →"-Link fehlt');
-		assert.ok(/Kanäle|Eyebrow/.test(src), 'HomeHeroTrip: Kanal-Eyebrow in Footer fehlt');
-	});
-
-	test('AC-14: HomeHeroTrip Pills-Reihe zuerst', () => {
-		const src = readOrg('HomeHeroTrip.svelte');
-		assert.ok(/Pill/.test(src), 'HomeHeroTrip: Pills-Atom fehlt');
-		assert.ok(/Live/.test(src), 'HomeHeroTrip: "Live · Tag X von Y" fehlt');
-	});
-});
 
 describe('AC-16/17: OutboxCard + AlertsCard', () => {
 	test('AC-16: OutboxCard.svelte existiert in organisms/', () => {

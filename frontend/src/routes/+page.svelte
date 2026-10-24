@@ -8,8 +8,7 @@
 	import {
 		BriefingTimelineRow,
 		QuickAction,
-		SetupResumeCard,
-		CompareStatusRow
+		SetupResumeCard
 	} from '$lib/components/molecules';
 	import {
 		deriveStatusFromPreset
@@ -35,8 +34,9 @@
 	// Issue #1969 (AC-23/AC-24): nächster Versand = Backend-Wert (+page.server.ts).
 	import { formatNextBriefing, type NextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
 	import Startseite from './_start/Startseite.svelte';
-	import TripKachel from './_home/TripKachel.svelte';
-	import CompareKachel from './_home/CompareKachel.svelte';
+	// Issue #2346 S2: EINE Startseiten-Kachel fuer Trip und Ortsvergleich.
+	import SubscriptionKachel from './_home/SubscriptionKachel.svelte';
+	import { kachelVersand, kachelNextBriefing } from './_home/kachelVersand.js';
 	import EmptyKachel from './_home/EmptyKachel.svelte';
 	import StartklarCheckliste from './_home/StartklarCheckliste.svelte';
 	import { buildCompareCtaHref } from './_home/compareCta.js';
@@ -786,23 +786,6 @@
 					/>
 				</div>
 			</div>
-
-			<!-- Laufende Orts-Vergleiche (falls vorhanden) -->
-			{#if activePresets.length > 0}
-				<div style:margin-bottom="36px">
-					<SectionH
-						eyebrow="Läuft automatisch"
-						title="Laufende Orts-Vergleiche"
-						kicker="Vergleiche laufen unabhängig von Trips weiter — Briefing kommt in die Kanäle"
-						right={compareAllLink}
-					/>
-					<div class="kachel-grid-3">
-						{#each activePresets as preset (preset.id)}
-							<CompareKachel sub={preset} />
-						{/each}
-					</div>
-				</div>
-			{/if}
 		{/if}
 
 		<!-- AC-5/V5: "Außerdem beobachtet" in Card mit Titel + Link -->
@@ -834,9 +817,11 @@
 						style:font-family="var(--g-font-mono)"
 					>Alle Vergleiche →</a>
 				</div>
-				<div>
+				<!-- Issue #2346 S2: Vergleiche als dieselbe Startseiten-Kachel wie Trips. -->
+				<div class="kachel-grid" style:margin-top="12px">
 					{#each alsoWatched as preset (preset.id)}
-						<CompareStatusRow {preset} nextBriefing={compareNb(preset.id)} />
+						{@const v = kachelVersand('vergleich', preset, kachelNextBriefing('vergleich', preset.id, nextBriefings))}
+						<SubscriptionKachel kind="vergleich" sub={preset} nextSend={v.nextSend} lastSent={v.lastSent} />
 					{/each}
 				</div>
 			</Card>
@@ -847,7 +832,8 @@
 			<section style:margin-bottom="32px">
 				<div class="kachel-grid">
 					{#each otherTrips as trip (trip.id)}
-						<TripKachel {trip} />
+						{@const v = kachelVersand('trip', trip, kachelNextBriefing('trip', trip.id, nextBriefings))}
+						<SubscriptionKachel kind="trip" sub={trip} nextSend={v.nextSend} lastSent={v.lastSent} />
 					{/each}
 				</div>
 			</section>
@@ -936,10 +922,6 @@
 	</a>
 {/snippet}
 
-{#snippet compareAllLink()}
-	<Btn href="/compare" variant="quiet" size="sm">Alle anzeigen</Btn>
-{/snippet}
-
 
 {/if}
 
@@ -975,11 +957,6 @@
 		grid-template-columns: 1fr;
 		gap: 0.75rem;
 	}
-	.kachel-grid-3 {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 16px;
-	}
 	@media (max-width: 899px) {
 		.cockpit-hero {
 			grid-template-columns: 1fr;
@@ -993,9 +970,6 @@
 		.archive-grid {
 			grid-template-columns: repeat(2, 1fr);
 		}
-		.kachel-grid-3 {
-			grid-template-columns: 1fr 1fr;
-		}
 	}
 	.page-root {
 		padding: 0 0 80px;
@@ -1006,9 +980,6 @@
 			padding-bottom: 120px;
 		}
 		.quick-create-grid {
-			grid-template-columns: 1fr;
-		}
-		.kachel-grid-3 {
 			grid-template-columns: 1fr;
 		}
 	}
