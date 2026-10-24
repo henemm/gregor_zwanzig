@@ -864,7 +864,7 @@ Frontend components follow Atomic Design principles with 3 explicit layers:
 
 **Organism Barrel** (`components/organisms/index.ts`):
 Re-exportiert die Organisms (aktuell 19, u. a. `TripHeader`,
-`OutputLayoutEditor`, `WeatherMetricsTab`, `ListTable*`, `HomeHeroTrip/Compare`,
+`OutputLayoutEditor`, `WeatherMetricsTab`, `ListTable*`, `SubscriptionCard`,
 `OutboxCard`, `AlertsCard`, `PresetRail`). Die Datei selbst ist die Wahrheit —
 Exporte hier nicht duplizieren.
 
