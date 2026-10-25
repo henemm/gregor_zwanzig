@@ -14,8 +14,12 @@ import pytest
 from app.config import Settings
 from output.channels.base import ChannelBlockedError
 from output.channels.premium_sms import PremiumSmsOutput
+from tests.helpers.sms_empfaenger import (
+    mit_profil_rueckadresse, premium_ausgang, profil_rueckadresse,
+)
 
 STALE = "premium_sms_reply_address_stale"
+KUNDE = "kunde-rueckadresse"
 
 
 class _Stub:
@@ -58,11 +62,16 @@ def _settings(port: int, reply_at: datetime) -> Settings:
     })
 
 
+def _ausgang(settings: Settings) -> PremiumSmsOutput:
+    """#1412 S4b: die Rueckadresse liest die Fabrik aus ``user.json`` -- die
+    Werte aus den Settings werden dorthin uebertragen."""
+    return premium_ausgang(settings, mit_profil_rueckadresse(KUNDE, settings))
+
+
 def test_future_reply_at_blocks_without_gateway_call(stub):
     now = datetime.now(timezone.utc)
-    ch = PremiumSmsOutput(_settings(stub.port, now + timedelta(days=1)))
     with pytest.raises(ChannelBlockedError) as exc:
-        ch.send("s", "Wetter")
+        _ausgang(_settings(stub.port, now + timedelta(days=1))).send("s", "Wetter")
     assert exc.value.reason_code == STALE
     assert "Zukunft" in str(exc.value)
     assert stub.posts == []
@@ -70,25 +79,26 @@ def test_future_reply_at_blocks_without_gateway_call(stub):
 
 def test_naive_future_reply_at_blocks(stub):
     naive = (datetime.now(timezone.utc) + timedelta(days=1)).replace(tzinfo=None)
-    ch = PremiumSmsOutput(_settings(stub.port, naive))
+    # Zeitstempel ohne Zeitzone, so wie er in user.json stehen kann.
+    profil_rueckadresse(KUNDE, "+4915799912345", gelernt_vor=None,
+                        premium_sms_reply_at=naive.isoformat())
     with pytest.raises(ChannelBlockedError) as exc:
-        ch.send("s", "Wetter")
+        premium_ausgang(_settings(stub.port, naive), KUNDE).send("s", "Wetter")
     assert exc.value.reason_code == STALE
     assert stub.posts == []
 
 
 def test_past_reply_at_still_sends(stub):
     now = datetime.now(timezone.utc)
-    ch = PremiumSmsOutput(_settings(stub.port, now - timedelta(days=1)))
+    ch = _ausgang(_settings(stub.port, now - timedelta(days=1)))
     ch.send("s", "Wetter")
     assert len(stub.posts) == 1
 
 
 def test_old_reply_at_still_blocks_with_ttl_text(stub):
     now = datetime.now(timezone.utc)
-    ch = PremiumSmsOutput(_settings(stub.port, now - timedelta(days=31)))
     with pytest.raises(ChannelBlockedError) as exc:
-        ch.send("s", "Wetter")
+        _ausgang(_settings(stub.port, now - timedelta(days=31))).send("s", "Wetter")
     assert exc.value.reason_code == STALE
     assert "Zukunft" not in str(exc.value)
     assert stub.posts == []

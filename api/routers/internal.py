@@ -22,7 +22,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.config import Settings
-from output.channels.base import OutputConfigError, OutputError
+from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
+from output.channels.recipient import SmsRecipient
 from output.channels.sms import SMSOutput
 
 # Issue #1308: Frueher gab es hier ein echtes Modul-Duplikat -- der
@@ -179,21 +180,26 @@ def send_sms_verification_code(req: SmsVerificationCodeRequest):
     Go erzeugt und prueft den Code, Python bleibt der einzige seven.io-Transport
     (ADR-0062/ADR-0076); ein zweiter Client in Go waere die Abweichung.
 
-    Die Zielnummer kommt aus dem AUFRUF, nicht aus dem Profil: bei einer
-    ausstehenden Nummer (``pending_sms_to``) steht sie noch gar nicht als
-    ``sms_to`` in ``user.json``, und die Fail-closed-Sperre in
-    ``with_user_profile`` wuerde sie ohnehin verwerfen. Das
-    ``model_copy``-Override setzt sie deshalb NACH dem Profil-Aufbau — die
-    ``is_test_user``/``env == "staging"``-Sandbox-Weiche greift davor und bleibt
-    damit vollstaendig erhalten.
+    Issue #1412 S4b: ``req.to`` ist keine freie Eingabe mehr. Der Empfaenger
+    ``SmsRecipient.verification`` bindet ihn an die zu beweisende Nummer aus
+    der frischen ``user.json`` (``pending_sms_to`` sonst ``sms_to``, Go schreibt
+    sie vor diesem Aufruf), der Kanal verlangt strikt E.164. Die
+    ``is_test_user``/``env == "staging"``-Sandbox-Weiche aus
+    ``with_user_profile`` bleibt erhalten.
     """
-    settings = Settings().with_user_profile(req.user_id).model_copy(
-        update={"sms_to": req.to}
-    )
-    if not settings.can_send_sms():
+    settings = Settings().with_user_profile(req.user_id)
+    if not (settings.sms_gateway_url and settings.seven_api_key):
         return JSONResponse(status_code=422, content={"error": "sms_not_configured"})
     try:
-        SMSOutput(settings).send("", f"Dein Gregor20-Bestaetigungscode: {req.code}")
+        recipient = SmsRecipient.verification(req.user_id, req.to)
+        SMSOutput(settings, recipient=recipient).send(
+            "", f"Dein Gregor20-Bestaetigungscode: {req.code}",
+        )
+    except ChannelBlockedError as e:
+        return JSONResponse(
+            status_code=403,
+            content={"error": "sms_recipient_blocked", "reason_code": e.reason_code},
+        )
     except (OutputConfigError, OutputError):
         # Der Code bleibt in Go gueltig — der Nutzer kann "erneut senden".
         return JSONResponse(status_code=502, content={"error": "sms_send_failed"})

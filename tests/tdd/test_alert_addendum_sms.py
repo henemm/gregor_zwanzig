@@ -451,7 +451,11 @@ def test_ac_b6_premium_sms_traegt_dasselbe_praefix_wie_die_sms(seven_io_stub):
     RED heute: ``RadarAlertRequest`` kennt ``addendum_reference`` nicht
     (``TypeError``)."""
     settings = _sms_and_premium_settings(seven_io_stub.port)
-    svc = NotificationService(settings, nutzer_mit_tier(fresh_uid("2018-b6"), "premium"))
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4b
+
+    svc = NotificationService(
+        settings, mit_profil_kanaele(nutzer_mit_tier(fresh_uid("2018-b6"), "premium"), settings),
+    )
     trip = make_trip("trip-2018-b6")
 
     svc.send_radar_alert(

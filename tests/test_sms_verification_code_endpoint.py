@@ -96,15 +96,25 @@ def test_endpunkt_versendet_code_an_die_uebergebene_nummer(client, transport):
 
 
 def test_endpunkt_adressiert_nie_die_im_profil_gespeicherte_fremde_nummer(client, transport):
-    """Gegenprobe zur Mandantentrennung: ein im Profil stehendes `sms_to` darf
-    den uebergebenen Wert nicht ueberschreiben."""
+    """Gegenprobe zur Mandantentrennung, seit #1412 S4b an der Profilbindung:
+    die uebergebene Nummer muss die zu beweisende Nummer des Profils sein
+    (``pending_sms_to`` vor ``sms_to``). Eine andere Nummer -- auch neben einer
+    bestaetigten -- wird geblockt, ohne seven.io-Aufruf; die ausstehende geht
+    raus, nie die bereits bestaetigte."""
     _profil("intsms2", sms_to="+499999999999", sms_verified_number="+499999999999")
 
     antwort = client.post(PFAD, json={"user_id": "intsms2", "to": ZIEL, "code": CODE})
+    assert antwort.status_code == 403, f"bekommen {antwort.status_code}: {antwort.text}"
+    assert transport == [], f"S4b: Code an eine nicht gebundene Nummer: {transport}"
+
+    _profil(
+        "intsms2", sms_to="+499999999999", sms_verified_number="+499999999999",
+        pending_sms_to=ZIEL,
+    )
+    antwort = client.post(PFAD, json={"user_id": "intsms2", "to": ZIEL, "code": CODE})
     assert antwort.status_code == 200, f"bekommen {antwort.status_code}: {antwort.text}"
-    assert transport[0]["data"]["to"] == ZIEL, (
-        "§8: model_copy(update={'sms_to': req.to}) muss die Zielnummer bestimmen, "
-        f"gesendet an {transport[0]['data']['to']!r}"
+    assert [a["data"]["to"] for a in transport] == [ZIEL], (
+        f"S4b: der Code muss an die ausstehende Nummer gehen, gesendet an {transport!r}"
     )
 
 

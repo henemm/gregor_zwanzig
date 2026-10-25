@@ -155,7 +155,12 @@ def _write_profile(
     """
     path = get_data_dir(user_id)
     path.mkdir(parents=True, exist_ok=True)
-    profile: dict = {"id": user_id, "tier": tier}
+    # #1412 S4b: der normale SMS-Kanal sendet nur an die BESTAETIGTE
+    # Profilnummer -- CONFIG_SMS_TO steht deshalb bestaetigt im Profil.
+    profile: dict = {
+        "id": user_id, "tier": tier,
+        "sms_to": CONFIG_SMS_TO, "sms_verified_number": CONFIG_SMS_TO,
+    }
     if reply_to is not None:
         stamp = datetime.now(timezone.utc) - reply_age
         profile["premium_sms_reply_to"] = reply_to
@@ -772,12 +777,14 @@ def _block_case(user_id: str, stub: _SevenIoStub, *, reply_to, reply_age) -> tup
     Aufrufer fragen muss, der auch Ausnahmen ohne Kurzschluessel faengt.
     """
     from output.channels.base import OutputConfigError
-    from output.channels.premium_sms import PremiumSmsOutput
+
+    from tests.helpers.sms_empfaenger import premium_ausgang
 
     _write_profile(user_id, tier="premium", reply_to=reply_to, reply_age=reply_age)
     settings = _stub_settings(stub.port, user_id)
+    # #1412 S4b: die Rueckadresse prueft die Profil-Fabrik des Kanals.
     with pytest.raises(OutputConfigError) as caught:
-        PremiumSmsOutput(settings).send(subject="egal", body="egal")
+        premium_ausgang(settings, user_id).send(subject="egal", body="egal")
     code = getattr(caught.value, "reason_code", None)
     assert isinstance(code, str) and code.strip(), (
         f"Die Sperre traegt keinen maschinenlesbaren Grund (reason_code={code!r}) "
@@ -789,28 +796,27 @@ def _block_case(user_id: str, stub: _SevenIoStub, *, reply_to, reply_age) -> tup
 
 def test_channel_name_premium_sms_resolves_to_the_premium_channel(stub) -> None:
     """Given der Kanalname ``premium_sms`` wird ueber die zentrale Kanal-Fabrik
-    aufgeloest (der Weg der CLI, ``get_channel``) / When ohne gelernte
-    Rueckadresse gesendet wird / Then blockt derselbe Fail-Closed-Grund wie beim
-    direkt gebauten Kanal, und es geht KEIN POST hinaus.
+    aufgeloest (der Weg der CLI, ``get_channel``) / When gesendet werden soll
+    / Then lehnt die Fabrik mit einer Meldung ab, die den Premium-Kanal nennt,
+    und es geht KEIN POST hinaus.
 
-    Gemessen wird das Verhalten, nicht der Typ: waere der Name dort auf den
-    normalen SMS-Kanal verdrahtet, ginge hier eine kostenpflichtige SMS an
-    ``sms_to`` ab — mit falschem Absender und falschem Empfaenger — statt zu
-    blocken. Die Registrierung war bis hierhin von keinem Test beruehrt.
+    Issue #1412 S4b (AC-12): die CLI hat keinen belegten Empfaenger, die
+    globale ``.env`` ist keine Empfaengerquelle -- frueher lieferte die Fabrik
+    einen Kanal, der erst beim Senden blockte. Gemessen wird weiter, dass der
+    Name nicht auf den normalen SMS-Kanal verdrahtet ist (sonst ginge eine
+    kostenpflichtige SMS an ``sms_to``).
     """
     from output.channels.base import OutputConfigError, get_channel
 
     user_id = "tdd-1676-factory"
-    _write_profile(user_id, tier="premium", reply_to=None)
+    _write_profile(user_id, tier="premium", reply_to=LEARNED_REPLY_TO)
     settings = _stub_settings(stub.port, user_id)
 
     with pytest.raises(OutputConfigError) as caught:
         get_channel("premium_sms", settings).send(subject="egal", body="egal")
 
-    assert getattr(caught.value, "reason_code", None) == EXPECTED_CODE_NO_REPLY, (
-        f"Kanalname 'premium_sms' fuehrt nicht auf den Premium-Kanal: der "
-        f"Abbruch traegt {getattr(caught.value, 'reason_code', None)!r} statt "
-        f"{EXPECTED_CODE_NO_REPLY!r}."
+    assert caught.value.channel == "premium_sms", (
+        f"Kanalname 'premium_sms' fuehrt nicht auf den Premium-Kanal: {caught.value!r}"
     )
     assert stub.received == [], (
         f"Trotz fehlender Rueckadresse ging ein POST hinaus: {stub.received!r}"

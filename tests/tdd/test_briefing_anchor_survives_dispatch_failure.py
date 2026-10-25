@@ -85,7 +85,7 @@ from app.trip import Stage, Trip, Waypoint
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 from tests.helpers.ortstag import ortstag
-from tests.helpers.telegram_empfaenger import mit_profil_chat
+from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
 
 # Pfadregel #1409: Pruefling relativ zur Testdatei aufloesen, nie ueber einen
 # festen Hauptrepo-Pfad — sonst pruefte dieser Test aus dem Worktree die
@@ -272,7 +272,7 @@ def _run_failing_briefing(user_id: str, trip: Trip, *, gust: float = 25.0,
     from output.channels.base import OutputConfigError
 
     scheduler = _fixture_scheduler(gust)(
-        settings=_settings_email_broken(), user_id=mit_profil_chat(user_id, _settings_email_broken()),
+        settings=_settings_email_broken(), user_id=mit_profil_kanaele(user_id, _settings_email_broken()),
     )
     with pytest.raises(OutputConfigError) as excinfo:
         scheduler._send_trip_report_outcome(
@@ -353,8 +353,8 @@ def test_ac3_versandfehler_zaehlt_weiterhin_als_fehlschlag_und_wird_protokollier
     trip = _trip(f"trip-1629-ac3-{uuid.uuid4().hex[:6]}")
     settings = _settings_email_broken()
 
-    strategy = TripDispatchStrategy(settings=settings, user_id=mit_profil_chat(uid, settings))
-    strategy._service = _fixture_scheduler(25.0)(settings=settings, user_id=mit_profil_chat(uid, settings))
+    strategy = TripDispatchStrategy(settings=settings, user_id=mit_profil_kanaele(uid, settings))
+    strategy._service = _fixture_scheduler(25.0)(settings=settings, user_id=mit_profil_kanaele(uid, settings))
 
     with caplog.at_level(logging.ERROR, logger="dispatch_orchestrator"):
         # Issue #1725: `collect_due` liefert (trip, report_type, ORTSTAG) —
@@ -418,7 +418,7 @@ def test_ac4_versandfehler_setzt_melde_gedaechtnis_wie_ein_unerreichbarer_kanal_
     )
     AlertStateService(user_id=uid_b).save(trip_b.id, dict(vorher))
     outcome_b = _fixture_scheduler(25.0)(
-        settings=settings_email_and_failing_telegram(), user_id=mit_profil_chat(uid_b, settings_email_and_failing_telegram()),
+        settings=settings_email_and_failing_telegram(), user_id=mit_profil_kanaele(uid_b, settings_email_and_failing_telegram()),
     )._send_trip_report_outcome(trip_b, "morning", on_demand=False)
     assert outcome_b == "channels_unreachable", (
         "Vorbedingung: der Vergleichslauf muss ehrlich als nicht zugestellt "
@@ -579,7 +579,7 @@ def test_ac6_versandfehler_vermerkt_amtliche_warnung_nicht_als_gemeldet(monkeypa
                 telegram_test_bot_token="", telegram_test_chat_id="",
                 sms_gateway_url="", seven_api_key="", sms_to="",
             ),
-            user_id=mit_profil_chat(uid_ok, Settings(
+            user_id=mit_profil_kanaele(uid_ok, Settings(
                 smtp_host="dummy.invalid", smtp_user="dummy", smtp_pass="dummy",
                 mail_to="dummy@example.com",
                 telegram_bot_token="", telegram_chat_id="",
@@ -767,7 +767,7 @@ def test_ac9_alarm_lauf_desselben_tages_prueft_nach_gescheitertem_briefing_regul
     monkeypatch.setattr(sw_mod, "SegmentWeatherService", _FixedSegmentWeatherService)
     meldungen: list = []
     alert_svc = TripAlertService(
-        settings=_settings_mail_sink(), user_id=mit_profil_chat(uid, _settings_mail_sink()),
+        settings=_settings_mail_sink(), user_id=mit_profil_kanaele(uid, _settings_mail_sink()),
         mail_sink=lambda subject, body: meldungen.append(subject),
     )
 
@@ -825,7 +825,7 @@ def test_ac10_fehler_vor_dem_versand_schreibt_keinen_anker():
             raise RuntimeError("Wetterabruf gescheitert (#1629 AC-10)")
 
     scheduler = _BrokenWeatherScheduler(
-        settings=_settings_email_broken(), user_id=mit_profil_chat(uid, _settings_email_broken()),
+        settings=_settings_email_broken(), user_id=mit_profil_kanaele(uid, _settings_email_broken()),
     )
     with pytest.raises(RuntimeError):
         scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
@@ -1035,8 +1035,8 @@ def _strategy(user_id: str, settings: Settings, *, gust: float = 25.0):
     Kompositionsnaht (Haus-Muster, s. AC-3 oben)."""
     from services.dispatch_orchestrator import TripDispatchStrategy
 
-    strategy = TripDispatchStrategy(settings=settings, user_id=mit_profil_chat(user_id, settings))
-    strategy._service = _fixture_scheduler(gust)(settings=settings, user_id=mit_profil_chat(user_id, settings))
+    strategy = TripDispatchStrategy(settings=settings, user_id=mit_profil_kanaele(user_id, settings))
+    strategy._service = _fixture_scheduler(gust)(settings=settings, user_id=mit_profil_kanaele(user_id, settings))
     return strategy
 
 
@@ -1356,7 +1356,7 @@ def test_email_fehler_reisst_sms_und_telegram_nicht_mehr_mit(monkeypatch):
 
     sms_out, telegram_out = _recording_sms_and_telegram(monkeypatch)
     scheduler = _fixture_scheduler(25.0)(
-        settings=_settings_email_broken_sms_telegram_scharf(), user_id=mit_profil_chat(uid, _settings_email_broken_sms_telegram_scharf()),
+        settings=_settings_email_broken_sms_telegram_scharf(), user_id=mit_profil_kanaele(uid, _settings_email_broken_sms_telegram_scharf()),
     )
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
@@ -1405,7 +1405,7 @@ def test_unerwartete_telegram_stoerung_bricht_den_versandlauf_nicht_ab(monkeypat
     )
     settings = Settings(**{**_DUMMY_EMAIL_FIELDS, **_TELEGRAM_FIELDS})
     assert settings.can_send_email() and settings.can_send_telegram()
-    scheduler = _fixture_scheduler(25.0)(settings=settings, user_id=mit_profil_chat(uid, settings))
+    scheduler = _fixture_scheduler(25.0)(settings=settings, user_id=mit_profil_kanaele(uid, settings))
 
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
@@ -1458,7 +1458,7 @@ def test_wetterfehler_vermerk_behaelt_die_segment_schnittmengen_regel(monkeypatc
             ]
 
     settings = _settings_email_ok()
-    scheduler = _AllSegmentsFailing(settings=settings, user_id=mit_profil_chat(uid, settings))
+    scheduler = _AllSegmentsFailing(settings=settings, user_id=mit_profil_kanaele(uid, settings))
     segment_ids = [
         str(s.segment_id) for s in scheduler._convert_trip_to_segments(trip, ortstag(LAT, LON))
     ]
@@ -1568,7 +1568,7 @@ def test_gescheiterte_email_neben_gelungener_sms_bleibt_in_der_diagnose(monkeypa
 
     sms_out, _ = _recording_sms_and_telegram(monkeypatch)
     scheduler = _fixture_scheduler(25.0)(
-        settings=_settings_email_broken_sms_telegram_scharf(), user_id=mit_profil_chat(uid, _settings_email_broken_sms_telegram_scharf()),
+        settings=_settings_email_broken_sms_telegram_scharf(), user_id=mit_profil_kanaele(uid, _settings_email_broken_sms_telegram_scharf()),
     )
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
@@ -1645,7 +1645,7 @@ def test_sms_only_ohne_zustellung_wird_zur_nachlieferung_vorgemerkt():
                  send_email=False, send_sms=True)
 
     scheduler = _fixture_scheduler(25.0)(
-        settings=_settings_nur_sms_scharf(), user_id=mit_profil_chat(uid, _settings_nur_sms_scharf()),
+        settings=_settings_nur_sms_scharf(), user_id=mit_profil_kanaele(uid, _settings_nur_sms_scharf()),
     )
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
@@ -1694,7 +1694,7 @@ def test_telegram_only_ohne_zustellung_wird_vorgemerkt_und_bleibt_unerreichbar(
     settings = Settings(**{**_BROKEN_EMAIL_FIELDS, **_TELEGRAM_FIELDS})
     assert settings.can_send_telegram() is True
     assert settings.can_send_email() is False and settings.can_send_sms() is False
-    scheduler = _fixture_scheduler(25.0)(settings=settings, user_id=mit_profil_chat(uid, settings))
+    scheduler = _fixture_scheduler(25.0)(settings=settings, user_id=mit_profil_kanaele(uid, settings))
 
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
@@ -1734,7 +1734,7 @@ def test_trip_ganz_ohne_kanal_wird_nicht_zur_nachlieferung_vorgemerkt():
                     trip.report_config.send_telegram)), "Vorbedingung: kein Kanal"
 
     scheduler = _fixture_scheduler(25.0)(
-        settings=_settings_email_broken(), user_id=mit_profil_chat(uid, _settings_email_broken()),
+        settings=_settings_email_broken(), user_id=mit_profil_kanaele(uid, _settings_email_broken()),
     )
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 

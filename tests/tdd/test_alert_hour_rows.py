@@ -368,12 +368,12 @@ def _trip(uid: str, email_mode: str, telegram_mode: str):
 def _send_trip(monkeypatch, fx: dict, *, email_mode: str, telegram_mode: str,
                channels: set[str], prefix: str = "svc"):
     from services.notification_service import NotificationService
-    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
 
     mit = aufzeichner_installieren(monkeypatch)
     settings = _settings()
-    uid = mit_profil_chat(_user(prefix), settings)
+    uid = mit_profil_kanaele(_user(prefix), settings)
     svc = NotificationService(settings, uid)
     svc.send_deviation_alert(
         trip=_trip(uid, email_mode, telegram_mode),
@@ -565,13 +565,13 @@ def test_ac4_sms_und_premium_sms_ueberlauf_ueber_den_versandweg(monkeypatch):
     """AC-4 (Versandweg): derselbe Ueberlauf durch ``send_deviation_alert`` -- SMS UND
     Premium-SMS <= 140 mit Kuerzungs-Suffix, nur ganze Tokens."""
     from services.notification_service import NotificationService
-    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
 
     changes, frisch, anker = _ueberlauf_eingaben()
     mit = aufzeichner_installieren(monkeypatch)
     settings = _settings()
-    uid = mit_profil_chat(_user("smsvoll"), settings)
+    uid = mit_profil_kanaele(_user("smsvoll"), settings)
     NotificationService(settings, uid).send_deviation_alert(
         trip=_trip(uid, "raw", "raw"), weather=frisch, changes=changes,
         effective_channels={"sms", "premium_sms"}, anchor_weather=anker,
@@ -600,7 +600,7 @@ def test_ac5_ortsvergleich_stundenzeilen_nur_bei_betroffenen_orten_ueber_den_ver
     bekommt keine. Gemessen an Mail UND an den Telegram-Blasen JE ORT (die Aufspaltung
     projiziert jeden Ort einzeln neu -- der Anker muss dort mitreisen)."""
     from services.notification_service import NotificationService
-    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
 
     fx = _load("ortsvergleich_drei_orte.json")
@@ -609,7 +609,7 @@ def test_ac5_ortsvergleich_stundenzeilen_nur_bei_betroffenen_orten_ueber_den_ver
 
     mit = aufzeichner_installieren(monkeypatch)
     settings = _settings()
-    uid = mit_profil_chat(_user("cmp"), settings)
+    uid = mit_profil_kanaele(_user("cmp"), settings)
     mails: list[str] = []
     NotificationService(settings, uid).send_multi_location_deviation_alert(
         entities=[(n, [fresh[n]], changes[n]) for n in ("Alpe Nord", "Joch Mitte")],
@@ -672,12 +672,12 @@ def _compare_lauf(monkeypatch, uid: str, orte: list[dict], *, preset_id: str,
     from services.compare_weather_snapshot import CompareWeatherSnapshotService
     from services.point_weather import PointWeatherData
     from tests.helpers.compare_briefings import write_compare_briefings
-    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
 
     mit = aufzeichner_installieren(monkeypatch)
     settings = _settings()
-    mit_profil_chat(uid, settings)
+    mit_profil_kanaele(uid, settings)
     ids = {o["name"]: f"loc-1737-{k}-{uuid.uuid4().hex[:5]}" for k, o in enumerate(orte)}
     for o in orte:
         save_location(SavedLocation(id=ids[o["name"]], name=o["name"], lat=o["lat"],
@@ -753,14 +753,14 @@ def test_ac5_ortsvergleich_ignoriert_trip_anzeige_konfiguration(monkeypatch):
     import inspect
 
     from services.notification_service import NotificationService
-    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
 
     fx = _load("ortsvergleich_drei_orte.json")
     anchors, fresh, changes = _compare_inputs(fx)
     mit = aufzeichner_installieren(monkeypatch)
     settings = _settings()
-    uid = mit_profil_chat(_user("cmp5k"), settings)
+    uid = mit_profil_kanaele(_user("cmp5k"), settings)
     cfg = _trip(uid, "symbol", "symbol").display_config
     params = inspect.signature(NotificationService.send_multi_location_deviation_alert).parameters
     extra = {"display_config": cfg} if "display_config" in params else {}
@@ -1165,7 +1165,7 @@ def _trip_versand(monkeypatch, uid: str, trip) -> tuple[list[str], list[str]]:
     from services.notification_service import NotificationService
     from services.trip_alert import TripAlertService
     from tests.helpers.alert_log_fixtures import settings_email_only
-    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
 
     svc = TripAlertService(settings=settings_email_only(), user_id=uid)
@@ -1176,7 +1176,7 @@ def _trip_versand(monkeypatch, uid: str, trip) -> tuple[list[str], list[str]]:
     assert frisch and frisch[0].timeseries, "Vorbedingung: Frisch-Abruf ueber die Fixture-Naht"
     mit = aufzeichner_installieren(monkeypatch)
     settings = _settings()
-    mit_profil_chat(uid, settings)
+    mit_profil_kanaele(uid, settings)
     change = WeatherChange(
         metric="gust_max_kmh", old_value=10.0, new_value=90.0, delta=80.0, threshold=20.0,
         severity=ChangeSeverity.MAJOR, direction="increase", segment_id="1",
@@ -1344,7 +1344,7 @@ def _cmp_versand(monkeypatch, uid: str, preset: dict) -> tuple[list[str], list[l
     from services.compare_location_weather_source import CompareLocationWeatherSource
     from services.compare_weather_snapshot import CompareWeatherSnapshotService
     from services.notification_service import NotificationService
-    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
     from tests.tdd.test_alert_preview_compare_paritaet import LOCATIONS, PRESET_ID
 
@@ -1363,7 +1363,7 @@ def _cmp_versand(monkeypatch, uid: str, preset: dict) -> tuple[list[str], list[l
         anchors[loc.name] = geladen[0]
     mit = aufzeichner_installieren(monkeypatch)
     settings = _settings()
-    mit_profil_chat(uid, settings)
+    mit_profil_kanaele(uid, settings)
     mails: list[str] = []
     positions = CompareAlertService._location_positions(
         preset["location_ids"], {loc.id: loc for loc in LOCATIONS})
@@ -1643,7 +1643,7 @@ def test_ac2_boeen_einfach_ueber_use_friendly_format_zeigt_punkte_im_alarm(monke
     -> Zahlen."""
     from app.trip import Stage, Trip, Waypoint
     from services.notification_service import NotificationService
-    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
 
     fx = _load("boeen_stufe_statt_schwelle.json")
@@ -1651,7 +1651,7 @@ def test_ac2_boeen_einfach_ueber_use_friendly_format_zeigt_punkte_im_alarm(monke
     def lauf(friendly: bool):
         mit = aufzeichner_installieren(monkeypatch)
         settings = _settings()
-        uid = mit_profil_chat(_user("gust"), settings)
+        uid = mit_profil_kanaele(_user("gust"), settings)
         tid = f"trip-1737-{uuid.uuid4().hex[:6]}"
         stage = Stage(
             id="T1", name="Tag 1", date=datetime(2026, 5, 1).date(),
@@ -1818,7 +1818,7 @@ def test_f004_kanaltrennung_mail_und_telegram_folgen_je_ihrem_eigenen_modus_bei_
     Modus des EIGENEN Kanals folgen, in beide Richtungen."""
     from app.trip import Stage, Trip, Waypoint
     from services.notification_service import NotificationService
-    from tests.helpers.telegram_empfaenger import mit_profil_chat
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
 
     fx = _load("boeen_stufe_statt_schwelle.json")
@@ -1826,7 +1826,7 @@ def test_f004_kanaltrennung_mail_und_telegram_folgen_je_ihrem_eigenen_modus_bei_
     def lauf(email_mode: str, telegram_mode: str):
         mit = aufzeichner_installieren(monkeypatch)
         settings = _settings()
-        uid = mit_profil_chat(_user("f004"), settings)
+        uid = mit_profil_kanaele(_user("f004"), settings)
         tid = f"trip-1737-{uuid.uuid4().hex[:6]}"
         stage = Stage(
             id="T1", name="Tag 1", date=datetime(2026, 5, 1).date(),

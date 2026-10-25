@@ -15,7 +15,7 @@ import output.channels.telegram as tg_module
 from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 from services.notification_service import NotificationService
 from tests.helpers.nutzer_tier import nutzer_mit_tier
-from tests.helpers.telegram_empfaenger import mit_profil_chat
+from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
 from tests.helpers.transport_mitschrift import Kanalmitschrift, aufzeichner_installieren
 from tests.tdd._compare_kette_fixtures import engine_naht, fixture_dict, transport_einrichten
 from tests.tdd.test_compare_alarm_einstellung_auslieferung_kette import _lauf, _nutzer
@@ -42,7 +42,7 @@ def _trip_alarm(monkeypatch, uid: str, telegram_ids: list[str]) -> tuple[str, st
         monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg.base_url)
         settings = _settings(sms_port=sms.port)
         # #1412 S4a: Telegram-Empfaenger kommt aus dem Profil-Chat des Nutzers.
-        svc = NotificationService(settings=settings, user_id=mit_profil_chat(nutzer_mit_tier(uid), settings))
+        svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(nutzer_mit_tier(uid), settings))
         trip = _mit_telegram_auswahl(_make_trip("kurzform", send_sms=True), telegram_ids)
         svc.send_deviation_alert(
             trip=trip, weather=[_make_segment_data()], changes=[_make_change()],

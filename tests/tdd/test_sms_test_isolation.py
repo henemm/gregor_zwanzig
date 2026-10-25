@@ -40,7 +40,11 @@ import pytest
 
 from app.config import Settings
 from output.channels.base import OutputConfigError
-from output.channels.sms import SMSOutput
+from tests.helpers.sms_empfaenger import sms_ausgang
+
+# Issue #1412 S4b: der Ausgang braucht einen belegten Empfaenger -- die
+# Nummer aus den Settings steht als bestaetigte Nummer im Profil dieses Kunden.
+SMS_KUNDE = "kunde-sandbox"
 
 
 class AssertedNetworkTouch(Exception):
@@ -98,7 +102,7 @@ def test_guard_blocks_mismatched_key_before_transport(monkeypatch):
         seven_api_key="prod-configured-key",
         seven_sandbox_key="sandbox-key-abc",
     )
-    output = SMSOutput(settings)
+    output = sms_ausgang(settings, SMS_KUNDE, settings.sms_to)
 
     with pytest.raises(OutputConfigError):
         output.send("Betreff", "Testtext")
@@ -130,7 +134,7 @@ def test_guard_fails_closed_without_sandbox_key(monkeypatch):
         # seven_sandbox_key bewusst NICHT gesetzt — Default None (Feld
         # existiert noch nicht, siehe Modul-Docstring).
     )
-    output = SMSOutput(settings)
+    output = sms_ausgang(settings, SMS_KUNDE, settings.sms_to)
 
     with pytest.raises(OutputConfigError):
         output.send("Betreff", "Testtext")
@@ -171,7 +175,7 @@ def test_guard_passes_through_matching_sandbox_key(monkeypatch):
         "nicht bzw. traegt nicht den Sandbox-Key"
     )
 
-    output = SMSOutput(settings)
+    output = sms_ausgang(settings, SMS_KUNDE, settings.sms_to)
 
     with pytest.raises(AssertedNetworkTouch):
         output.send("Betreff", "Testtext")
@@ -249,7 +253,7 @@ def test_guard_is_noop_in_production_mode(monkeypatch):
     monkeypatch.setattr(httpx, "post", _make_sentinel(calls))
 
     settings = _sms_settings(is_test_mode=False, seven_api_key="prod-configured-key")
-    output = SMSOutput(settings)
+    output = sms_ausgang(settings, SMS_KUNDE, settings.sms_to)
 
     assert hasattr(output, "_guard_test_mode_sandbox_key"), (
         "AC-5-Vorbedingung: SMSOutput._guard_test_mode_sandbox_key existiert "

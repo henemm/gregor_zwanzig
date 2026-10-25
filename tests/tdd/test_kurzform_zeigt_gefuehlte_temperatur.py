@@ -47,6 +47,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from app.config import Settings  # noqa: E402
 from app.loader import _parse_display_config, get_data_dir  # noqa: E402
 from output.channels.premium_sms import PremiumSmsOutput  # noqa: E402
+from output.channels.recipient import PremiumSmsRecipient  # noqa: E402
 from output.renderers.trip_report import TripReportFormatter  # noqa: E402
 
 from tests.tdd import _min_temp_felt_fixtures as F  # noqa: E402
@@ -243,7 +244,10 @@ def test_ac13_premium_sms_wire_text_matches_sms_text_and_contains_fd_fl(stub):
     report = _report_for(_clean_wind_chill_layout())
     assert F.sms_token_value(report.sms_text, "FD") is not None, "Vorbedingung: Report traegt FD."
 
-    PremiumSmsOutput(settings).send(subject="", body=report.sms_text)
+    # #1412 S4b: Empfaenger aus der Profil-Fabrik (Rueckadresse aus user.json).
+    PremiumSmsOutput(
+        settings, recipient=PremiumSmsRecipient.for_user(user_id, settings),
+    ).send(subject="", body=report.sms_text)
 
     assert stub.received, "AC-13: Premium-SMS hat den lokalen Stub nicht erreicht."
     gesendeter_text = stub.received[-1]["text"]

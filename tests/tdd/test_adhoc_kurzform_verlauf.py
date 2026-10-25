@@ -60,6 +60,7 @@ from services.notification_service import NotificationService
 from services.trip_command_processor import TripCommandProcessor, _metric_formatter
 from services.weather_extractor import DrilldownPoint, DrilldownResult
 from services.weather_snapshot import WeatherSnapshotService
+from tests.helpers.sms_empfaenger import profil_rueckadresse
 from tests.helpers.adhoc_metrik_fixtures import (
     TRIP_TZ,
     katalog_eintrag_ersetzt,
@@ -98,6 +99,8 @@ def _nutzer_mit_tier(uid: str, tier: str = "premium") -> None:
     d = get_data_dir(uid)
     d.mkdir(parents=True, exist_ok=True)
     (d / "user.json").write_text(json.dumps({"id": uid, "tier": tier}))
+    # #1412 S4b: die Antwort geht an die gelernte Rueckadresse aus user.json.
+    profil_rueckadresse(uid, "4915799912345")
 
 
 def _pt(stunde: int, wert, *, tag: int = TAG) -> DrilldownPoint:

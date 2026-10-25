@@ -87,6 +87,14 @@ def _stub_settings(port: int) -> Settings:
     })
 
 
+def _stub_ausgang(port: int) -> SMSOutput:
+    """#1412 S4b: Ziel ist die bestaetigte Profilnummer (frisch aus user.json)."""
+    from tests.helpers.sms_empfaenger import sms_ausgang
+
+    settings = _stub_settings(port)
+    return sms_ausgang(settings, "kunde-936", settings.sms_to)
+
+
 def _token_line_with_km_stage():
     """Synthetischer NormalizedForecast mit Stage-Name der km enthält."""
     today = DailyForecast(
@@ -124,7 +132,7 @@ def test_sms_send_appears_in_stub():
         token_line = _token_line_with_km_stage()
         expected = render_sms(token_line)
 
-        SMSOutput(_stub_settings(stub.port)).send("", expected)
+        _stub_ausgang(stub.port).send("", expected)
 
         text = stub.last_text()
         assert text is not None, (
@@ -154,7 +162,7 @@ def test_sms_text_length():
         token_line = _token_line_with_km_stage()
         expected = render_sms(token_line)
 
-        SMSOutput(_stub_settings(stub.port)).send("", expected)
+        _stub_ausgang(stub.port).send("", expected)
 
         text = stub.last_text()
         assert text is not None, "Stub hat keinen POST empfangen"
@@ -181,7 +189,7 @@ def test_sms_stage_name_no_parens():
         token_line = _token_line_with_km_stage()
         expected = render_sms(token_line)
 
-        SMSOutput(_stub_settings(stub.port)).send("", expected)
+        _stub_ausgang(stub.port).send("", expected)
 
         text = stub.last_text()
         assert text is not None, "Stub hat keinen POST empfangen"
@@ -210,7 +218,7 @@ def test_sms_km_format():
         token_line = _token_line_with_km_stage()
         expected = render_sms(token_line)
 
-        SMSOutput(_stub_settings(stub.port)).send("", expected)
+        _stub_ausgang(stub.port).send("", expected)
 
         text = stub.last_text()
         assert text is not None, "Stub hat keinen POST empfangen"
@@ -238,7 +246,7 @@ def test_sms_send_does_not_transform_text():
         token_line = _token_line_with_km_stage()
         expected = render_sms(token_line)
 
-        SMSOutput(_stub_settings(stub.port)).send("", expected)
+        _stub_ausgang(stub.port).send("", expected)
 
         text = stub.last_text()
         assert text is not None, "Stub hat keinen POST empfangen"
@@ -327,7 +335,7 @@ def test_sms_morning_report_km_format():
         token_line = _token_line_with_km_stage_morning()
         expected = render_sms(token_line)
 
-        SMSOutput(_stub_settings(stub.port)).send("", expected)
+        _stub_ausgang(stub.port).send("", expected)
 
         text = stub.last_text_matching("km0-11:")
         assert text is not None, (

@@ -174,7 +174,11 @@ def _via_premium_sms(monkeypatch, user_id: str, text: str):
     sent: list[str] = []
     from output.channels.premium_sms import PremiumSmsOutput
 
-    monkeypatch.setattr(PremiumSmsOutput, "__init__", lambda self, settings: None)
+    from tests.helpers.sms_empfaenger import profil_rueckadresse
+
+    # #1412 S4b: Antwort an die gelernte Rueckadresse aus user.json.
+    profil_rueckadresse(user_id, "+491701234567")
+    monkeypatch.setattr(PremiumSmsOutput, "__init__", lambda self, settings, recipient=None: None)
     monkeypatch.setattr(
         PremiumSmsOutput, "send",
         lambda self, subject, body, **kw: sent.append(body),

@@ -120,14 +120,14 @@ def get_channel(name: str, settings: "Settings") -> OutputChannel:
         return ConsoleOutput()
     elif name == "email":
         return EmailOutput(settings)
-    elif name == "sms":
-        from output.channels.sms import SMSOutput
-        return SMSOutput(settings)
-    elif name == "premium_sms":
-        # Issue #1676 S2a (ADR-0049): vierter Kanal, damit die CLI ihn
-        # genauso ansprechen kann wie die drei bestehenden.
-        from output.channels.premium_sms import PremiumSmsOutput
-        return PremiumSmsOutput(settings)
+    elif name in ("sms", "premium_sms"):
+        # Issue #1412 S4b: SMS/Premium-SMS brauchen einen belegten Empfaenger
+        # (Nummer bzw. Rueckadresse eines Nutzers) -- die globale .env ist keine.
+        raise OutputConfigError(
+            name,
+            f"{name} ist in der Debug-CLI nicht verfuegbar: Versand nur an die "
+            "belegte Nummer eines Nutzers (Issue #1412).",
+        )
     elif name == "telegram":
         # Issue #1412 S4a: Telegram braucht einen belegten Empfaenger (Nutzer-
         # Profil oder Absender eines Updates) -- die Debug-CLI hat keinen.
