@@ -27,6 +27,7 @@ from pathlib import Path
 
 from app.origin_guard import running_origin
 from output.channels.base import ChannelBlockedError
+from output.channels.recipient import PremiumSmsRecipient
 from output.channels.seven_io_base import SevenIoChannelBase
 
 #: Unsere feste seven.io-Dienstnummer. Kanal-Eigenschaft, keine Einstellung.
@@ -53,6 +54,10 @@ class PremiumSmsOutput(SevenIoChannelBase):
     """Sendet das Trip-Briefing als Premium-SMS an das Garmin-Geraet."""
 
     CHANNEL_NAME = "premium_sms"
+    # Issue #1412 S4b: Empfaenger nur als `PremiumSmsRecipient` (Rueckadresse
+    # aus user.json); ohne ihn der bestehende Code, damit die Alarm-Buchung greift.
+    RECIPIENT_TYPE = PremiumSmsRecipient
+    NO_RECIPIENT_REASON = BLOCK_REASON_NO_REPLY_ADDRESS
 
     def _origin(self) -> str:
         """Herkunft DIESES Moduls — siehe `SevenIoChannelBase._origin`."""
@@ -61,46 +66,44 @@ class PremiumSmsOutput(SevenIoChannelBase):
     def _resolve_sender(self) -> str:
         return PREMIUM_SMS_SENDER
 
-    def _resolve_recipient(self) -> str:
-        """Die gelernte Rueckadresse — oder ein benannter Abbruch.
 
-        Beide Faelle sind erst zur Sendezeit final bekannt und deshalb hier
-        geprueft, nicht am Aufrufort (Spec D3). Jeder Abbruch traegt seinen
-        Kurzschluessel mit, damit ein Aufrufer die zwei Faelle ohne
-        Textvergleich unterscheiden kann.
-        """
-        reply_to = self._settings.premium_sms_reply_to
-        reply_at = self._settings.premium_sms_reply_at
-        if not reply_to or reply_at is None:
-            raise ChannelBlockedError(
-                self.name,
-                "keine gelernte Rueckadresse vorhanden — das Geraet hat sich "
-                "noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist "
-                "kein Empfaenger bekannt.",
-                reason_code=BLOCK_REASON_NO_REPLY_ADDRESS,
-            )
-        age = _now() - _as_aware(reply_at)
-        if age < timedelta(0):
-            # #2231: Zeitstempel in der Zukunft (Uhrfehler, kaputte user.json) —
-            # die Verfallsfrist griffe nie. Ungueltig ⇒ sperren, nicht freigeben.
-            raise ChannelBlockedError(
-                self.name,
-                "Zeitstempel der Rueckadresse liegt in der Zukunft "
-                f"({reply_at.isoformat()}) — ungueltig, Versand abgebrochen, "
-                "bis sich das Geraet wieder meldet.",
-                reason_code=BLOCK_REASON_REPLY_ADDRESS_STALE,
-            )
-        if age > PREMIUM_SMS_REPLY_TTL:
-            raise ChannelBlockedError(
-                self.name,
-                "gelernte Rueckadresse ist veraltet: zuletzt vor "
-                f"{age.days} Tagen gelernt, erlaubt sind "
-                f"{PREMIUM_SMS_REPLY_TTL.days} Tage. Garmin kann die Nummer "
-                "inzwischen einem fremden Geraet zugeteilt haben — Versand "
-                "abgebrochen, bis sich das Geraet wieder meldet.",
-                reason_code=BLOCK_REASON_REPLY_ADDRESS_STALE,
-            )
-        return reply_to
+def check_reply_address(reply_to, reply_at) -> None:
+    """Die gelernte Rueckadresse — oder ein benannter Abbruch.
+
+    Issue #1412 S4b: aufgerufen von ``PremiumSmsRecipient.for_user`` mit den
+    frisch aus ``user.json`` gelesenen Werten (nie aus den Settings). Jeder
+    Abbruch traegt seinen Kurzschluessel mit, damit ein Aufrufer die zwei
+    Faelle ohne Textvergleich unterscheiden kann.
+    """
+    if not reply_to or reply_at is None:
+        raise ChannelBlockedError(
+            "premium_sms",
+            "keine gelernte Rueckadresse vorhanden — das Geraet hat sich "
+            "noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist "
+            "kein Empfaenger bekannt.",
+            reason_code=BLOCK_REASON_NO_REPLY_ADDRESS,
+        )
+    age = _now() - _as_aware(reply_at)
+    if age < timedelta(0):
+        # #2231: Zeitstempel in der Zukunft (Uhrfehler, kaputte user.json) —
+        # die Verfallsfrist griffe nie. Ungueltig ⇒ sperren, nicht freigeben.
+        raise ChannelBlockedError(
+            "premium_sms",
+            "Zeitstempel der Rueckadresse liegt in der Zukunft "
+            f"({reply_at.isoformat()}) — ungueltig, Versand abgebrochen, "
+            "bis sich das Geraet wieder meldet.",
+            reason_code=BLOCK_REASON_REPLY_ADDRESS_STALE,
+        )
+    if age > PREMIUM_SMS_REPLY_TTL:
+        raise ChannelBlockedError(
+            "premium_sms",
+            "gelernte Rueckadresse ist veraltet: zuletzt vor "
+            f"{age.days} Tagen gelernt, erlaubt sind "
+            f"{PREMIUM_SMS_REPLY_TTL.days} Tage. Garmin kann die Nummer "
+            "inzwischen einem fremden Geraet zugeteilt haben — Versand "
+            "abgebrochen, bis sich das Geraet wieder meldet.",
+            reason_code=BLOCK_REASON_REPLY_ADDRESS_STALE,
+        )
 
 
 def _now() -> datetime:

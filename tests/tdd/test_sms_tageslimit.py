@@ -140,15 +140,15 @@ def _aufzeichner_installieren(monkeypatch) -> Mitschrift:
                  mail_type=None, mail_format=None, compare_hourly_enabled=None):
             _buchen("email", subject)
 
-    class _SmsAufzeichner:
-        def __init__(self, settings) -> None:
+    class _SmsAufzeichner:  # #1412 S4b: Empfaenger kommt als recipient=
+        def __init__(self, settings, recipient=None) -> None:
             self._s = settings
 
         def send(self, subject, body) -> None:
             _buchen("sms", subject)
 
     class _PremiumSmsAufzeichner:
-        def __init__(self, settings) -> None:
+        def __init__(self, settings, recipient=None) -> None:
             self._s = settings
 
         def send(self, subject, body) -> None:
@@ -206,6 +206,12 @@ def _nutzer_anlegen(uid: str, tier: str) -> None:
         "id": uid, "tier": tier,
         # #1412 S4a: Telegram-Empfaenger kommt aus dem Profil, nicht der ENV.
         "telegram_chat_id": numerische_chat_id(uid),
+        # #1412 S4b: dasselbe fuer SMS (bestaetigte Nummer) und Premium-SMS
+        # (frisch gelernte Rueckadresse).
+        "sms_to": _TRANSPORT_ENV["GZ_SMS_TO"],
+        "sms_verified_number": _TRANSPORT_ENV["GZ_SMS_TO"],
+        "premium_sms_reply_to": "4915799912345",
+        "premium_sms_reply_at": datetime.now(timezone.utc).isoformat(),
     }))
 
 

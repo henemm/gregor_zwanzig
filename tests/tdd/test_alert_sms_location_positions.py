@@ -116,6 +116,7 @@ from services.radar_service import NowcastResult
 
 from tests.helpers.compare_briefings import write_compare_briefings
 from tests.helpers.nutzer_tier import nutzer_mit_tier
+from tests.helpers.sms_empfaenger import profil_sms
 import pytest
 
 # Issue #2241: der modulweite `live`-Marker (vormals hier) war falsch belegt --
@@ -398,6 +399,7 @@ def test_k1_bundled_two_location_sms_carries_only_the_values_no_head():
         user_dir = get_data_dir(uid)
         user_dir.mkdir(parents=True, exist_ok=True)
         (user_dir / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        profil_sms(uid, "+49000000000")  # #1412 S4b: bestaetigte Profilnummer
 
         save_location(
             SavedLocation(id="loc-graz", name="Graz", lat=47.07, lon=15.44, elevation_m=353),
@@ -568,6 +570,7 @@ def test_k2_single_location_sms_carries_no_location_name():
         user_dir = get_data_dir(uid)
         user_dir.mkdir(parents=True, exist_ok=True)
         (user_dir / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        profil_sms(uid, "+49000000000")  # #1412 S4b: bestaetigte Profilnummer
 
         save_location(
             SavedLocation(id="loc-graz", name="Graz", lat=47.07, lon=15.44, elevation_m=353),
@@ -662,6 +665,7 @@ def test_k3_position_numbers_come_from_configured_list_not_from_hit_order():
         user_dir = get_data_dir(uid)
         user_dir.mkdir(parents=True, exist_ok=True)
         (user_dir / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        profil_sms(uid, "+49000000000")  # #1412 S4b: bestaetigte Profilnummer
 
         # Die Orte werden ABSICHTLICH in einer anderen Reihenfolge angelegt,
         # als sie im Preset stehen: die Anlege-/Ladereihenfolge darf die
@@ -806,6 +810,7 @@ def test_k4_deleted_location_lets_the_following_positions_move_up():
         user_dir = get_data_dir(uid)
         user_dir.mkdir(parents=True, exist_ok=True)
         (user_dir / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        profil_sms(uid, "+49000000000")  # #1412 S4b: bestaetigte Profilnummer
 
         save_location(
             SavedLocation(id="loc-bruck", name="Bruck", lat=47.41, lon=15.27, elevation_m=482),
@@ -945,7 +950,9 @@ def _isolierter_standard_nutzer(monkeypatch, tmp_path, uid: str) -> str:
     from app import loader
 
     monkeypatch.setattr(loader, "_DATA_ROOT", str(tmp_path))
-    return nutzer_mit_tier(uid)
+    nutzer_mit_tier(uid)
+    profil_sms(uid, "+49000000000")  # #1412 S4b: bestaetigte Profilnummer
+    return uid
 
 
 def test_regression_trip_deviation_alert_sms_text_unchanged(monkeypatch, tmp_path):

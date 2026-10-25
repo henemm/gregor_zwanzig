@@ -119,7 +119,9 @@ def clean_user_dirs():
 def _write_user_json(user_id: str, tier: str | None) -> None:
     path = get_data_dir(user_id)
     path.mkdir(parents=True, exist_ok=True)
-    data = {"id": user_id}
+    # #1412 S4b: SMS geht nur an die BESTAETIGTE Profilnummer -- dieselbe
+    # Nummer, die _stub_settings in sms_to setzt.
+    data = {"id": user_id, "sms_to": "+49000000000", "sms_verified_number": "+49000000000"}
     if tier is not None:
         data["tier"] = tier
     (path / "user.json").write_text(json.dumps(data))

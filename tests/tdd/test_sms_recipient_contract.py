@@ -53,7 +53,6 @@ from output.channels import sms as sms_mod  # noqa: E402
 from output.channels.base import (  # noqa: E402
     ChannelBlockedError,
     OutputConfigError,
-    OutputError,
 )
 from output.channels.premium_sms import (  # noqa: E402
     BLOCK_REASON_NO_REPLY_ADDRESS,
@@ -922,8 +921,11 @@ def test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab(sink, kanal):
     from output.channels.base import get_channel
 
     settings = _mit_rueck(_settings(), RUECK_SETTINGS)
-    with pytest.raises((ChannelBlockedError, OutputConfigError, OutputError, ValueError)) as exc:
-        get_channel(kanal, settings).send("GZ Report", "Text")
+    # Fix-Loop 1 (F004): verengt -- die Ablehnung kommt schon beim ANFORDERN
+    # als OutputConfigError des Kanals, nicht erst ein Block beim Senden.
+    with pytest.raises(OutputConfigError) as exc:
+        get_channel(kanal, settings)
+    assert exc.value.channel == kanal, f"AC-12: falscher Kanal: {exc.value!r}"
     erwartet = "sms" if kanal == "sms" else "premium"
     assert erwartet in str(exc.value).lower(), f"AC-12: Meldung unklar: {exc.value!r}"
     assert sink.calls == [], f"AC-12: kein HTTP-Versuch erlaubt, gesehen {sink.calls!r}"
@@ -1029,3 +1031,119 @@ def test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz(sink, kanal):
     _kein_daten_hinweis(settings, KUNDE_B, kanal)
     assert sink.calls == [], f"AC-14 ({kanal}): Block erwartet, gesehen {sink.calls!r}"
     assert _verbraucht(KUNDE_B, kanal) == vorher, f"AC-14 ({kanal}): Drosselplatz verbraucht"
+
+
+# ═══════════════════ Fix-Loop 1 (Adversary F001-F004) ════════════════════════
+
+
+@pytest.mark.parametrize(
+    ("aufrufer", "kanal"),
+    [(a, k) for a in _AUFRUFER for k in ("sms", "premium_sms")]
+    + [("befehlsantwort", "premium_sms")],  # Befehlsantwort gibt es nur per Premium-SMS
+)
+def test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab(
+    sink, aufrufer, kanal,
+):
+    """F001 (Kernregel/Aufrufer-Tabelle "im try nach _sms_gate_reserve"):
+    Given Nutzer B mit Tarif, aber unbestaetigter Nummer und ohne
+    Rueckadresse; die Settings tragen trotzdem eine Nummer bzw. frische
+    Rueckadresse / When JEDER produktive Aufrufer (inkl. Befehlsantwort) nur
+    an SMS bzw. Premium-SMS ausloest / Then kein HTTP-Versuch, der
+    Tageszaehler bleibt unveraendert (Reservierung freigegeben) und der
+    Aufruf laeuft ohne Ausnahme weiter."""
+    from services.notification_service import NotificationService
+    from services.trip_command_processor import CommandResult
+
+    uid = f"kunde-f001-{uuid.uuid4().hex[:6]}"
+    profil_sms(uid, NUMMER_B, bestaetigt=False)
+    profil_rueckadresse(uid, None, gelernt_vor=None)
+    settings = _mit_rueck(_settings(sms_to=NUMMER_B), RUECK_SETTINGS)
+    vorher = _verbraucht(uid, kanal)
+    dienst = NotificationService(settings, uid)
+
+    if aufrufer == "befehlsantwort":
+        dienst.send_command_reply_premium_sms(
+            CommandResult(success=True, command="hilfe",
+                          confirmation_subject="Hilfe", confirmation_body="Text"),
+            settings,
+        )
+    else:
+        _aufrufer_ausloesen(aufrufer, dienst, uid, kanal)
+
+    assert sink.calls == [], f"F001 ({aufrufer}, {kanal}): Block erwartet, gesehen {sink.calls!r}"
+    assert _verbraucht(uid, kanal) == vorher, (
+        f"F001 ({aufrufer}, {kanal}): Block hat einen Tageslimit-Platz verbraucht"
+    )
+
+
+def _ziffern(text: str) -> str:
+    return "".join(c for c in text if c.isdigit())
+
+
+def test_f002_logs_nennen_die_nutzer_id_nie_die_nummer(sink, caplog):
+    """F002 (Side effects der Spec): Given Versand an bestaetigte Nummer bzw.
+    frische Rueckadresse sowie Block-Faelle (kein Empfaenger, unbestaetigt,
+    abweichendes Ziel) / When protokolliert wird / Then steht weder die
+    Nummer noch ihre Ziffernfolge in irgendeinem Logeintrag, und der
+    Erfolgslog nennt die Nutzer-ID."""
+    import logging
+
+    caplog.set_level(logging.DEBUG)
+    settings = _settings()
+    sms_ausgang(settings, KUNDE_A, NUMMER_A).send("", "Text")
+    premium_ausgang(settings, KUNDE_B, RUECK_B).send("", "Text")
+    erfolg = [r.getMessage() for r in caplog.records if "gesendet" in r.getMessage()]
+    assert any(KUNDE_A in m for m in erfolg) and any(KUNDE_B in m for m in erfolg), (
+        f"F002: Erfolgslog muss die Nutzer-ID nennen: {erfolg!r}"
+    )
+
+    with pytest.raises(ChannelBlockedError):
+        SMSOutput(settings).send("", "Text")
+    profil_sms("kunde-f002", NUMMER_B, bestaetigt=False)
+    with pytest.raises(ChannelBlockedError):
+        sms_ausgang(settings, "kunde-f002").send("", "Text")
+    with pytest.raises(ChannelBlockedError):
+        sms_ausgang(settings, KUNDE_A)._post(GATEWAY, PROD_KEY, {"to": NUMMER_B, "text": "x"})
+
+    assert len(sink.calls) == 2
+    for record in caplog.records:
+        nachricht = _ziffern(record.getMessage())
+        for nummer in (NUMMER_A, NUMMER_B, RUECK_B):
+            assert _ziffern(nummer) not in nachricht, (
+                f"F002: Telefonnummer im Log: {record.getMessage()!r}"
+            )
+
+
+def test_f003_empfaenger_sind_nur_ueber_die_fabriken_erzeugbar():
+    """F003: Given die Empfaenger-Typen / When jemand sie direkt (ohne
+    Fabrik-Schluessel) konstruiert / Then wirft die Konstruktion."""
+    from output.channels.recipient import PremiumSmsRecipient, RecipientPurpose, SmsRecipient
+
+    for typ, zweck in (
+        (SmsRecipient, RecipientPurpose.user_profile),
+        (SmsRecipient, RecipientPurpose.verification),
+        (PremiumSmsRecipient, RecipientPurpose.user_profile),
+    ):
+        with pytest.raises(TypeError):
+            typ(NUMMER_A, zweck, KUNDE_A)
+        with pytest.raises(TypeError):
+            typ(NUMMER_A, zweck, KUNDE_A, object())
+
+
+@pytest.mark.parametrize(
+    ("alter", "blockt"),
+    [(timedelta(days=29), False), (timedelta(days=30, hours=1), True)],
+)
+def test_f004_frist_der_rueckadresse_ist_genau_30_tage(sink, alter, blockt):
+    """F004 (Kernregel 4, TTL 30 Tage): Given eine Rueckadresse, 29 Tage bzw.
+    30 Tage + 1 Stunde alt / When gesendet wird / Then geht die 29-Tage-
+    Adresse raus, die aeltere blockt mit ``premium_sms_reply_address_stale``."""
+    profil_rueckadresse(KUNDE_B, RUECK_B, gelernt_vor=alter)
+    if blockt:
+        with pytest.raises(ChannelBlockedError) as exc:
+            premium_ausgang(_settings(), KUNDE_B).send("", "Text")
+        assert exc.value.reason_code == BLOCK_REASON_REPLY_ADDRESS_STALE
+        assert sink.calls == []
+    else:
+        premium_ausgang(_settings(), KUNDE_B).send("", "Text")
+        assert sink.ziele() == [RUECK_B]

@@ -417,14 +417,16 @@ class Settings(BaseSettings):
         # Issue #1265: get_data_dir() statt hartkodiertem "data/users/..." --
         # respektiert die pytest-Isolation (tests/conftest.py, #1133), sonst
         # liest dieser Read-Pfad am isolierten Test-User vorbei.
+        # Issue #1412 S4b: ohne lesbares Profil keine SMS-Nummer -- sonst bliebe
+        # die globale GZ_SMS_TO-Betreibernummer stehen (Cross-Tenant).
         profile_path = get_data_dir(user_id) / "user.json"
         if not profile_path.exists():
-            return base
+            return base.model_copy(update={"sms_to": None})
 
         try:
             profile = json.loads(profile_path.read_text())
         except (json.JSONDecodeError, OSError):
-            return base
+            return base.model_copy(update={"sms_to": None})
 
         # Issue #2144: immer explizit setzen (auch auf None), statt nur bei
         # vorhandenem Profilwert zu ueberschreiben -- sonst bleibt bei einem

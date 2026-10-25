@@ -82,19 +82,21 @@ def aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
                     mail_type=mail_type, mail_format=mail_format,
                     compare_hourly_enabled=compare_hourly_enabled)
 
+    # #1412 S4b: Ziel ist der belegte Empfaenger (bestaetigte Nummer bzw.
+    # gelernte Rueckadresse aus user.json), nicht settings.
     class _SmsAufzeichner:
-        def __init__(self, settings) -> None:
-            self._s = settings
+        def __init__(self, settings, recipient=None) -> None:
+            self._ziel = recipient.number if recipient else None
 
         def send(self, subject, body) -> None:
-            _buchen("sms", self._s.sms_to, subject, body=body)
+            _buchen("sms", self._ziel, subject, body=body)
 
     class _PremiumSmsAufzeichner:
-        def __init__(self, settings) -> None:
-            self._s = settings
+        def __init__(self, settings, recipient=None) -> None:
+            self._ziel = recipient.number if recipient else None
 
         def send(self, subject, body) -> None:
-            _buchen("premium_sms", self._s.premium_sms_reply_to, subject, body=body)
+            _buchen("premium_sms", self._ziel, subject, body=body)
 
     class _TelegramAufzeichner:
         def __init__(self, settings, recipient=None) -> None:

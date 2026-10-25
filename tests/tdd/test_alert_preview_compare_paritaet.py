@@ -226,6 +226,10 @@ class _Wire:
         profil_chat(user_id, chat)  # TelegramRecipient.for_user liest user.json
         # SMS-Tageslimit (#2412): ohne Tarif gilt "free" (Cap 0) -> gesperrt.
         nutzer_mit_tier(user_id, "premium")
+        # #1412 S4b: SMS nur an die bestaetigte Profilnummer.
+        from tests.helpers.sms_empfaenger import profil_sms
+
+        profil_sms(user_id, "+49000000000")
         return Settings().model_copy(update={
             "smtp_host": "smtp.test.invalid", "smtp_user": "t@test.invalid",
             "smtp_pass": "x", "mail_to": "to@test.invalid",

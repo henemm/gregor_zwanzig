@@ -100,6 +100,18 @@ def mit_profil_rueckadresse(user_id: str, settings) -> str:
     return user_id
 
 
+def mit_profil_kanaele(user_id: str, settings) -> str:
+    """Migrationshilfe #1412 S4a+S4b in einem: Telegram-Chat, SMS-Nummer und
+    Premium-Rueckadresse, die ein Test bisher nur in den Settings setzte,
+    wandern ins Profil (dort lesen die Empfaenger-Fabriken). Gibt ``user_id``
+    zurueck -- Ersatz fuer ``mit_profil_chat(uid, settings)``."""
+    from tests.helpers.telegram_empfaenger import mit_profil_chat
+
+    mit_profil_chat(user_id, settings)
+    mit_profil_sms(user_id, settings)
+    return mit_profil_rueckadresse(user_id, settings)
+
+
 def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
     """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
     vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil

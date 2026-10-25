@@ -46,7 +46,7 @@ from tests.helpers.nowcast_gate_fixtures import (
     TRIP_ZONE, clean_uid, fresh_uid, frozen_active_window, make_trip,
     quiet_window_elsewhere, radar_service, reset_radar_cache,
 )
-from tests.helpers.telegram_empfaenger import mit_profil_chat
+from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
 
 SMS_TO = "+49000000000"
 PREMIUM_REPLY_TO = "+4915799912345"
@@ -236,7 +236,7 @@ def test_ac7_sms_premium_sms_und_telegram_kurzstil_zeigen_dieselbe_menge(
     clean_uid(uid)
     try:
         settings = _drei_kanal_settings(seven_io_stub.port)
-        svc = NotificationService(settings, mit_profil_chat(nutzer_mit_tier(uid, "premium"), settings))
+        svc = NotificationService(settings, mit_profil_kanaele(nutzer_mit_tier(uid, "premium"), settings))
 
         svc.send_radar_alert(
             trip=make_trip("trip-2046-ac7"),
@@ -462,7 +462,7 @@ def _kurznachricht_vom_echten_trip_pfad(frames, telegram_stub, monkeypatch, suff
 
             svc = TripAlertService(
                 settings=_telegram_kurzform_settings(), throttle_hours=0,
-                user_id=mit_profil_chat(uid, _telegram_kurzform_settings()), radar_service=radar_service(frames),
+                user_id=mit_profil_kanaele(uid, _telegram_kurzform_settings()), radar_service=radar_service(frames),
             )
 
             sent = svc.check_radar_alerts()
