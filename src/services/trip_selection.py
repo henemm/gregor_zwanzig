@@ -34,6 +34,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from services.compare_alert_guard import is_silenced
 from services.trip_day import trip_local_today
 from utils.ascii_fold import fold_ascii
 
@@ -70,6 +71,8 @@ _LABEL_EN = {"route": "Trip", "vergleich": "comparison"}
 # report/heute/morgen kommen dazu -- Trip + Vergleich ohne Namen ⇒ Rueckfrage.
 ZIELLOS_SCHLUESSEL = frozenset({"hilfe", "columns", "kuerzel"})  # #2417 AC-3
 _BEIDE_KINDS_ONLY_SCHLUESSEL = frozenset({"pause", "weiter", "report", "heute", "morgen"})
+# Bug #2615: Wetterbefehle blenden pausierte Vergleiche aus, pause/weiter NICHT.
+_PAUSIERTE_AUSBLENDEN_SCHLUESSEL = frozenset({"report", "heute", "morgen"})
 
 
 def pick_active_trip(trips: list["Trip"], now_utc: datetime) -> "Trip | None":
@@ -179,14 +182,27 @@ def _rueckfrage_text(kandidaten: list[tuple[str, str]], channel: str,
     if channel != "premium_sms":
         return _rueckfrage_mit_laenge(kandidaten, None, en)
 
+    en = True  # Premium-SMS ist immer englisch (wie resolve_active_target)
     sicher = [(k, _gsm7_sicher(n)) for k, n in kandidaten]
     laengen = [len(n) for _, n in sicher if n]
     max_laenge = max(laengen, default=4)
-    for laenge in range(max_laenge, 3, -1):
+    eindeutig = [lg for lg in range(max_laenge, 3, -1) if _namen_eindeutig(sicher, lg)]
+    for laenge in eindeutig:
         text = _rueckfrage_mit_laenge(sicher, laenge, en)
         if len(text) <= 160:
             return text
-    return _rueckfrage_mit_laenge(sicher, 4, en)
+    # Bug #2615 (AC-7): Eindeutigkeit hat Vorrang vor 160 Zeichen -- dann die
+    # kuerzeste eindeutige Laenge; identische Namen: bisherige Kuerzung.
+    return _rueckfrage_mit_laenge(sicher, eindeutig[-1] if eindeutig else 4, en)
+
+
+def _namen_eindeutig(kandidaten: list[tuple[str, str]], laenge: int) -> bool:
+    """Bug #2615 (AC-7): gekuerzte (bereits gefaltete) Namen paarweise
+    verschieden, verglichen wie der Antwort-Parser (``_norm``)."""
+    from services.trip_command_processor import _norm
+
+    gekuerzt = [_norm(n[:laenge]) for _, n in kandidaten]
+    return len(set(gekuerzt)) == len(gekuerzt)
 
 
 def _rueckfrage_mit_laenge(kandidaten: list[tuple[str, str]], laenge: int | None,
@@ -204,7 +220,7 @@ def _rueckfrage_mit_laenge(kandidaten: list[tuple[str, str]], laenge: int | None
 
 def resolve_active_target(
     trips: "list[Trip]", presets: list[dict], now_utc: datetime, *, channel: str,
-    englisch: bool = False,
+    englisch: bool = False, pausierte_ausblenden: bool = False,
 ) -> ZielErgebnis:
     """Kind-neutrale Auswahl UND alle drei Ergebnistexte in einer Funktion
     (Issue #2282 Abschnitt 1). Laedt selbst nichts — ``trips``/``presets``
@@ -221,6 +237,12 @@ def resolve_active_target(
     trip = pick_active_trip(trips, now_utc)
     heute = now_utc.date()
     vergleiche = [p for p in presets if _vergleich_ist_aktiv(p, heute)]
+    if pausierte_ausblenden:
+        # Bug #2615 (AC-1/3/4): Pausierte nur ausblenden, wenn danach noch ein
+        # Ziel (aktiver Vergleich oder Trip) bleibt -- sonst bisheriges Verhalten.
+        aktive = [p for p in vergleiche if not is_silenced(p)]
+        if aktive or trip:
+            vergleiche = aktive
 
     if trip and not vergleiche:
         return ZielErgebnis(kind="route", target=trip, text=None)
@@ -289,7 +311,9 @@ def resolve_command_target(
     trip_und_vergleich.py) statt nur ueber die beiden heutigen Aufrufer.
     """
     if key in _BEIDE_KINDS_ONLY_SCHLUESSEL:
-        return resolve_active_target(trips, presets, now_utc, channel=channel,
-                                     englisch=englisch)
+        return resolve_active_target(
+            trips, presets, now_utc, channel=channel, englisch=englisch,
+            pausierte_ausblenden=key in _PAUSIERTE_AUSBLENDEN_SCHLUESSEL,
+        )
     return resolve_trip_only_target(trips, presets, now_utc, channel=channel,
                                     englisch=englisch)
