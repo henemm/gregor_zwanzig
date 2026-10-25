@@ -1,10 +1,11 @@
 <script lang="ts">
-	// CompareOutlookLayoutControls — geteilte 3-Tages-Ausblick-Steuerung des
-	// Ortsvergleichs (Toggle + Metrik-Auswahl + Reihenfolge).
-	// Issue #1361 Befund 2 / #1368, S3 Scheibe A von Epic #1372.
+	// OutlookLayoutControls — geteilte 3-Tages-Ausblick-Steuerung von
+	// Ortsvergleich und Trip (Toggle + Metrik-Auswahl + Reihenfolge).
+	// Issue #1361 Befund 2 / #1368, S3 Scheibe A von Epic #1372; geteilt seit
+	// #1720 S1, Name ohne Compare-Praefix seit #2346 S3.
 	// Spec: docs/specs/modules/issue_1361_1368_ausblick_konfigurierbar.md
 	//
-	// Struktureller Zwilling zu CompareHourlyLayoutControls.svelte (Toggle +
+	// Struktureller Zwilling zu compare/CompareHourlyLayoutControls.svelte (Toggle +
 	// Liste + geteilter WeatherV2Reihenfolge-Baustein, ADR-0024). Der Metrik-
 	// Pool ist hier aber DERSELBE Katalog wie bei den Uebersichts-Groessen
 	// (GET /api/compare/metrics) — der Ausblick liest seine Tageswerte aus

@@ -46,8 +46,8 @@ import { parse } from 'svelte/compiler';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SHARED_FILE = join(here, '..', 'WeatherMetricsTab.svelte');
-const OUTLOOK_FILE = join(here, '..', 'CompareOutlookLayoutControls.svelte');
-const HOURLY_FILE = join(here, '..', 'CompareHourlyLayoutControls.svelte');
+const OUTLOOK_FILE = join(here, '..', 'OutlookLayoutControls.svelte');
+const HOURLY_FILE = join(here, '..', '..', 'compare', 'CompareHourlyLayoutControls.svelte');
 
 function findAttr(node: any, name: string): any {
 	return (node?.attributes ?? []).find((a: any) => a.type === 'Attribute' && a.name === name);

@@ -335,7 +335,7 @@ function layoutKontext(eltern: Knoten[]): string | null {
 const imKontext = (wert: string) => (eltern: Knoten[]) => layoutKontext(eltern) === wert;
 
 /** Fuer Dateien, die nur EINE Einbettung tragen (gemessen: je eine in
- *  CompareHourlyLayoutControls.svelte und CompareOutlookLayoutControls.svelte,
+ *  compare/CompareHourlyLayoutControls.svelte und OutlookLayoutControls.svelte,
  *  beide ohne `LayoutTab`-Huelle). */
 const dieEinzige = () => true;
 
@@ -416,8 +416,8 @@ describe('AC-6: der Trips-Editor speist die Kurzform-Marke aus /api/sms-symbols'
 // Merkmals: Kommentar ueber layoutKontext().
 const VERGLEICHSFLAECHEN = [
 	['Vergleichs-Uebersicht', 'WeatherMetricsTab.svelte', imKontext('vergleich')],
-	['Vergleichs-Stundenverlauf', 'CompareHourlyLayoutControls.svelte', dieEinzige],
-	['Vergleichs-Ausblick', 'CompareOutlookLayoutControls.svelte', dieEinzige]
+	['Vergleichs-Stundenverlauf', '../compare/CompareHourlyLayoutControls.svelte', dieEinzige],
+	['Vergleichs-Ausblick', 'OutlookLayoutControls.svelte', dieEinzige]
 ] as const;
 
 describe('AC-7: die drei Vergleichs-Editoren tragen ebenfalls beide Marken', () => {

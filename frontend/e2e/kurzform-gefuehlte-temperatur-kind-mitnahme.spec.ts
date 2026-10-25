@@ -317,7 +317,7 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 			await page.getByTestId('channel-tab-sms').click();
 
 			// Scoping auf die Kanal-Reihenfolge-Karte (#2049): die "3-Tages-
-			// Vorschau" (CompareOutlookLayoutControls) nutzt denselben geteilten
+			// Vorschau" (OutlookLayoutControls) nutzt denselben geteilten
 			// WeatherV2Reihenfolge-Baustein mit identischen Testids fuer ihre
 			// EIGENE Aus-Gruppe -- ohne Scoping ein strict-mode violation-Risiko.
 			const kanalReihenfolge = page.getByTestId('weather-metrics-kanal-reihenfolge');

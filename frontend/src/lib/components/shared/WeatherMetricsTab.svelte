@@ -115,8 +115,8 @@
 	import { weatherMetricsTabSections, type WeatherMetricsContext } from './weather-metrics-tab/weatherMetricsTabSections.ts';
 	// Issue #1360: geteilte Stundenverlauf-Steuerung (Hub + Anlege-Seite),
 	// unveraendert uebernommen aus dem aufgeloesten Layout-Reiter.
-	import CompareHourlyLayoutControls from '$lib/components/shared/CompareHourlyLayoutControls.svelte';
-	import CompareOutlookLayoutControls from '$lib/components/shared/CompareOutlookLayoutControls.svelte';
+	import CompareHourlyLayoutControls from '$lib/components/compare/CompareHourlyLayoutControls.svelte';
+	import OutlookLayoutControls from '$lib/components/shared/OutlookLayoutControls.svelte';
 	// Issue #1361/#1372 S1b: geteiltes Tagesfenster (Trip UND Vergleich),
 	// zieht beim Trip aus dem Versand-Reiter hierher (VersandTab/VTSchedulePlan).
 	import DayWindowCard from './weather-metrics-tab/DayWindowCard.svelte';
@@ -1274,7 +1274,7 @@
 	// Issue #2049: Roh/Einfach der Ortsvergleichs-Vorschau — derselbe
 	// Speicherweg wie die Auswahl darueber, persistiert vom Commit-Wrapper in
 	// CompareTabs. Read-Modify-Write passiert bereits in
-	// CompareOutlookLayoutControls; hier kommt die fertige Zuordnung an.
+	// OutlookLayoutControls; hier kommt die fertige Zuordnung an.
 	function onCompareOutlookMetricFormats(formats: Record<string, boolean>) {
 		onOutlookMetricFormatsChange?.(formats);
 	}
@@ -1613,7 +1613,7 @@
 				<!-- Issue #1848 A3 (AC-2/AC-6): die Ortsvergleich-eigene
 				     Grundauswahl — DIESELBE Quelle wie die Uebersichts-Kopplung
 				     der Kanal-Reiter (`materializedActiveMetricKeys`, :1083). -->
-				<CompareOutlookLayoutControls
+				<OutlookLayoutControls
 					metricKeys={outlookMetricKeys}
 					catalog={compareCatalog}
 					grundauswahl={materializedActiveMetricKeys}
@@ -2010,7 +2010,7 @@
 					     dieselbe Bedienflaeche wie im Ortsvergleich (:1441),
 					     nur der Speicherweg unterscheidet sich (hier
 					     Trip-Auto-Save, dort der wiz-State + Commit-Wrapper). -->
-					<CompareOutlookLayoutControls
+					<OutlookLayoutControls
 						metricKeys={outlookMetricKeysRoute}
 						catalog={compareCatalog}
 						grundauswahl={buckets.primary}

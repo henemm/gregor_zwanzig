@@ -120,7 +120,11 @@ die Ordner-Erkennung mitzureißen.
 
 **Ausnahmeliste `BEKANNTE_PAARE`:** die Bestandspaare bei Einführung, fest im Hook. Sie darf nur
 schrumpfen (Schrumpf-Test `tests/tdd/test_pendant_gate_bekannte_paare.py`); S2 streicht die
-HomeHero*- und Kachel-Paare mit dem Löschen der Dateien.
+HomeHero*- und Kachel-Paare mit dem Löschen der Dateien. S3 hat nichts mehr zu streichen: es
+ersetzt die Inline-Heros durch das neutrale `routes/_home/HomeHero.svelte`, benennt
+`shared/CompareOutlookLayoutControls` neutral in `shared/OutlookLayoutControls` um und verschiebt
+die compare-eigene Stundenverlauf-Steuerung nach `compare/CompareHourlyLayoutControls.svelte`
+(mit `gz-eigenstaendig:`-Kopfzeile) — `shared/` enthält keine `Compare*`-Komponente mehr.
 
 **Beleg:** 8 Paare außerhalb der alten Reichweite (Aufmaß 2026-10-23, nachgemessen Adversary F003),
 die die Ordner-Erkennung nicht fangen konnte.

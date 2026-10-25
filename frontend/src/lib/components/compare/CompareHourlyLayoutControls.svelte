@@ -1,5 +1,7 @@
 <script lang="ts">
-	// CompareHourlyLayoutControls — geteilte Stundenverlauf-Steuerung des
+	// gz-eigenstaendig: Anhängsel der transponierten Vergleichsübersicht, Trip hat die Stundentabelle als Haupttabelle
+	// (Issue #2346 S3, Spec feat_2346_cockpit_paritaet.md „Befund Stundenverlauf-Steuerung").
+	// CompareHourlyLayoutControls — Stundenverlauf-Steuerung des
 	// Ortsvergleich-Layout-Tabs (Toggle + Metrik-Auswahl + Reihenfolge). Epic
 	// #1301 Scheibe F2a; Reihenfolge-Block Issue #1361 Befund 4/5 (S1-Rest von
 	// Epic #1372).
@@ -17,7 +19,7 @@
 	//
 	// Issue #2276 S6b: reine WERTPROPS statt `CompareWizardState`-Bindung —
 	// dasselbe Muster, das der strukturelle Zwilling
-	// CompareOutlookLayoutControls seit #1720 S1 fuehrt. Die Flaeche haelt
+	// OutlookLayoutControls seit #1720 S1 fuehrt. Die Flaeche haelt
 	// keinen Zustand und kennt kein Zustandsobjekt mehr: sie bekommt die
 	// Auswahl (`metricKeys`) und den Schalterstand (`enabled`) gereicht und
 	// MELDET Aenderungen nach oben (`onMetricKeys`, `onEnabledChange`). Der
@@ -30,18 +32,18 @@
 
 	import { SectionH, Card } from '$lib/components/atoms';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
-	import WeatherV2Reihenfolge from './weather-metrics-tab/WeatherV2Reihenfolge.svelte';
-	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts';
-	import { kuerzelMarken, markenKennung } from './weather-metrics-tab/kuerzelMarken.ts';
-	import type { CompareAggregationGroup } from './weather-metrics-tab/compareAggregationGrouping.ts';
-	import type { CompareSelectionEntry } from './weather-metrics-tab/compareMetricSelection.ts';
+	import WeatherV2Reihenfolge from '../shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte';
+	import { groupCompareCatalog } from '../shared/weather-metrics-tab/compareAggregationGrouping.ts';
+	import { kuerzelMarken, markenKennung } from '../shared/weather-metrics-tab/kuerzelMarken.ts';
+	import type { CompareAggregationGroup } from '../shared/weather-metrics-tab/compareAggregationGrouping.ts';
+	import type { CompareSelectionEntry } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
 	import type { MetricEntry } from '../trip-detail/metricsEditor.ts';
 	import {
 		materializeHourlyMetricKeys,
 		applyHourlyMetricToggleFromState,
 		orderableHourlyMetricKeys,
 		applyHourlyReorder
-	} from '../compare/compareHourlyMetricDefs.ts';
+	} from './compareHourlyMetricDefs.ts';
 
 	interface Props {
 		/** `null` = nie eingestellt (Katalog-Vorgabe), `[]` = bewusst leer. */
@@ -59,7 +61,7 @@
 		// Endpoint bewusst NICHT selbst: zwei Ladewege waeren zwei Quellen.
 		smsSymbols?: Record<string, string[]>;
 		/** Ein/Aus-Schalter — Kunstgriff „Prop da -> Bedienelement da"
-		 *  (Vorbild CompareOutlookLayoutControls, #1720 S1 AC-13): OHNE
+		 *  (Vorbild OutlookLayoutControls, #1720 S1 AC-13): OHNE
 		 *  `onEnabledChange` erscheint KEIN Schalter. Eine Flaeche, die den
 		 *  Zustand nicht melden kann, darf ihn auch nicht anbieten. */
 		enabled?: boolean;

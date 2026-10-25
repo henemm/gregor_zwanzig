@@ -43,8 +43,13 @@ describe('AC-23/AC-24: Startseite (routes/+page.svelte) liest den Backend-Wert',
 	test('keine eigene Rechnung: deriveNextSend wird nicht aufgerufen', () => {
 		assert.equal(aufrufe(ast, 'deriveNextSend').length, 0, 'Startseite rechnet noch selbst (deriveNextSend)');
 	});
-	test('Hero „Nächster Versand" über formatNextBriefing', () => {
-		assert.ok(aufrufe(ast, 'formatNextBriefing').length >= 1, 'formatNextBriefing wird auf der Startseite nicht verwendet');
+	// Issue #2346 S3: der Hero formatiert nicht mehr selbst, sondern bekommt homeHeroProps(kind, sub,
+	// nextBriefings) gereicht (-> kachelVersand -> formatNextBriefing; Verhalten bewacht
+	// routes/_home/__tests__/home_hero_verdrahtung.test.ts). Hier: beide Heros reichen den Backend-Wert.
+	test('Hero „Nächster Versand" aus dem Backend-Wert (homeHeroProps mit nextBriefings)', () => {
+		const args = aufrufArgumente(ast, 'homeHeroProps');
+		assert.equal(args.length, 2, `Trip- und Vergleichs-Hero erwartet: ${JSON.stringify(args)}`);
+		for (const a of args) assert.equal(a[2], 'nextBriefings', `homeHeroProps(${a.join(', ')}) bekommt nicht den Backend-Wert`);
 	});
 	test('homeCompareTimeline bekommt den Backend-Wert, nicht die Browser-Uhr `now`', () => {
 		const args = aufrufArgumente(ast, 'homeCompareTimeline');

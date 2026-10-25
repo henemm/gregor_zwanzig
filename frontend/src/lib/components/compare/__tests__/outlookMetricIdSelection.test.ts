@@ -12,7 +12,7 @@
 // 🔴 Warum das hier ohne Komponenten-Harness geprueft wird: das Projekt hat
 // keine Svelte-Testinfrastruktur (kein @testing-library/svelte, kein jsdom;
 // `npm test` ist der eingebaute node:test-Runner). Geprueft werden deshalb
-// genau die Funktionen, die `CompareOutlookLayoutControls.svelte` tatsaechlich
+// genau die Funktionen, die `OutlookLayoutControls.svelte` tatsaechlich
 // aufruft — und diese Komponente ist die EINZIGE Ausblick-Bedienflaeche:
 // `WeatherMetricsTab.svelte` mountet sie zweimal (`:1400` Ortsvergleich,
 // `:1783` Trip). Was fuer diese Funktionen gilt, gilt damit fuer beide

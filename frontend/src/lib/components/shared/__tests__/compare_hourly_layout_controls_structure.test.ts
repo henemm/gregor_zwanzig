@@ -37,7 +37,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const COMPONENT = join(here, '..', 'CompareHourlyLayoutControls.svelte');
+const COMPONENT = join(here, '..', '..', 'compare', 'CompareHourlyLayoutControls.svelte');
 const OVERVIEW_COMPONENT = join(here, '..', 'WeatherMetricsTab.svelte');
 
 function parseComponent(path: string): any {
