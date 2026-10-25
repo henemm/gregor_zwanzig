@@ -1,0 +1,327 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/intake-2439
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 20 items
+
+tests/test_befehl_antwortzeit_zielpruefung.py FFFFFFFFFFFFFFFFFFFF       [100%]
+
+=================================== FAILURES ===================================
+__________________ test_grenzen_im_werkzeug_sind_unveraendert __________________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+
+    def test_grenzen_im_werkzeug_sind_unveraendert(werkzeug):
+>       assert werkzeug.GRENZE_MIT_WETTER_MS == 60_000
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'GRENZE_MIT_WETTER_MS'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:99: AttributeError
+________ test_fr_direct_download_im_befehlsfenster_ist_quelle_fr_direct ________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+
+    def test_fr_direct_download_im_befehlsfenster_ist_quelle_fr_direct(werkzeug, dauer, journal):
+>       heute = _quellen(werkzeug, dauer, journal, "kors-gut", "HEUTE")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_befehl_antwortzeit_zielpruefung.py:108: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+trip = 'kors-gut', befehl = 'HEUTE'
+
+    def _quellen(werkzeug, dauer, journal, trip, befehl=None):
+>       laeufe = werkzeug.kaltheit_je_lauf(dauer, journal, trip=trip)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'kaltheit_je_lauf'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:79: AttributeError
+__________________ test_dwd_fenster_zaehlt_nie_als_fr_direct ___________________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+
+    def test_dwd_fenster_zaehlt_nie_als_fr_direct(werkzeug, dauer, journal):
+>       assert _quellen(werkzeug, dauer, journal, "de-1") == [("MORGEN", 20000, "dwd")]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_befehl_antwortzeit_zielpruefung.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+trip = 'de-1', befehl = None
+
+    def _quellen(werkzeug, dauer, journal, trip, befehl=None):
+>       laeufe = werkzeug.kaltheit_je_lauf(dauer, journal, trip=trip)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'kaltheit_je_lauf'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:79: AttributeError
+_____________ test_downloads_null_und_fenster_ausserhalb_sind_warm _____________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+
+    def test_downloads_null_und_fenster_ausserhalb_sind_warm(werkzeug, dauer, journal):
+>       heute = _quellen(werkzeug, dauer, journal, "kors-gut", "HEUTE")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_befehl_antwortzeit_zielpruefung.py:118: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+trip = 'kors-gut', befehl = 'HEUTE'
+
+    def _quellen(werkzeug, dauer, journal, trip, befehl=None):
+>       laeufe = werkzeug.kaltheit_je_lauf(dauer, journal, trip=trip)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'kaltheit_je_lauf'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:79: AttributeError
+_____________________ test_lauf_ohne_fensterzeile_ist_warm _____________________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+
+    def test_lauf_ohne_fensterzeile_ist_warm(werkzeug, dauer, journal):
+>       assert ("HEUTE", 10000, "warm") in _quellen(werkzeug, dauer, journal, "kors-duenn")
+                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_befehl_antwortzeit_zielpruefung.py:125: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+trip = 'kors-duenn', befehl = None
+
+    def _quellen(werkzeug, dauer, journal, trip, befehl=None):
+>       laeufe = werkzeug.kaltheit_je_lauf(dauer, journal, trip=trip)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'kaltheit_je_lauf'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:79: AttributeError
+______________ test_trip_filter_laesst_nur_laeufe_dieses_trips_zu ______________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+
+    def test_trip_filter_laesst_nur_laeufe_dieses_trips_zu(werkzeug, dauer, journal):
+>       laeufe = werkzeug.kaltheit_je_lauf(dauer, journal, trip="kors-gut")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'kaltheit_je_lauf'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:131: AttributeError
+______________ test_fremd_trip_mit_70s_macht_test_trip_nicht_rot _______________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+
+    def test_fremd_trip_mit_70s_macht_test_trip_nicht_rot(werkzeug, dauer, journal):
+>       nur_test = werkzeug.pruefe_ziel(werkzeug.kaltheit_je_lauf(dauer, journal, trip="kors-gut"))
+                   ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'pruefe_ziel'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:136: AttributeError
+_______ test_fixture_kors_gut_je_befehl_bestanden_und_nur_kalte_zaehlen ________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+dauer = [{'befehl': 'HEUTE', 'kanal': 'email', 'ms': 40000, 'trip': 'kors-gut', ...}, {'befehl': 'HEUTE', 'kanal': 'sms', 'ms'... 41000, 'trip': 'kors-gut', ...}, {'befehl': 'MORGEN', 'kanal': 'telegram', 'ms': 44000, 'trip': 'kors-gut', ...}, ...]
+journal = [(datetime.datetime(2026, 10, 26, 9, 0, 20, 123000, tzinfo=datetime.timezone.utc), 'Rennwienix uv[5001]: 2026-10-26 09...x uv[5001]: 2026-10-26 09:20:30,123 INFO befehl_dauer: befehl=HEUTE kanal=telegram trip=kors-gut dauer_ms=30000'), ...]
+
+    def test_fixture_kors_gut_je_befehl_bestanden_und_nur_kalte_zaehlen(werkzeug, dauer, journal):
+>       erg = werkzeug.pruefe_ziel(werkzeug.kaltheit_je_lauf(dauer, journal, trip="kors-gut"))
+              ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'pruefe_ziel'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:145: AttributeError
+______________________ test_einzellauf_grenze_ist_strikt _______________________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+
+    def test_einzellauf_grenze_ist_strikt(werkzeug):
+>       ok = werkzeug.pruefe_ziel([_lauf("HEUTE", ms, "fr_direct") for ms in (40000, 44000, 59999)])
+             ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'pruefe_ziel'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:154: AttributeError
+________________________ test_median_grenze_ist_strikt _________________________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+
+    def test_median_grenze_ist_strikt(werkzeug):
+>       ok = werkzeug.pruefe_ziel([_lauf("MORGEN", 44999, "fr_direct") for _ in range(3)])
+             ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'pruefe_ziel'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:161: AttributeError
+________ test_zu_wenige_kalte_laeufe_sind_nicht_belegt_statt_bestanden _________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+
+    def test_zu_wenige_kalte_laeufe_sind_nicht_belegt_statt_bestanden(werkzeug):
+>       erg = werkzeug.pruefe_ziel([_lauf("HEUTE", 40000, "fr_direct"), _lauf("HEUTE", 41000, "fr_direct")])
+              ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'pruefe_ziel'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:168: AttributeError
+__ test_warme_laeufe_zaehlen_weder_fuer_die_mindestzahl_noch_gegen_die_grenze __
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+
+    def test_warme_laeufe_zaehlen_weder_fuer_die_mindestzahl_noch_gegen_die_grenze(werkzeug):
+        kalt = [_lauf("HEUTE", ms, "fr_direct") for ms in (40000, 41000, 42000)]
+        warm = [_lauf("HEUTE", 20000 + i, "warm") for i in range(5)]
+>       erg = werkzeug.pruefe_ziel(kalt + warm)
+              ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'pruefe_ziel'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:175: AttributeError
+_____________________ test_dwd_braucht_fuenf_kalte_laeufe ______________________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+
+    def test_dwd_braucht_fuenf_kalte_laeufe(werkzeug):
+>       vier = werkzeug.pruefe_ziel([_lauf("HEUTE", 30000 + i, "dwd") for i in range(4)])
+               ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'pruefe_ziel'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:187: AttributeError
+__________________ test_verfehlt_hat_vorrang_vor_nicht_belegt __________________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+
+    def test_verfehlt_hat_vorrang_vor_nicht_belegt(werkzeug):
+>       erg = werkzeug.pruefe_ziel([_lauf("HEUTE", 61000, "fr_direct"), _lauf("HEUTE", 40000, "fr_direct")])
+              ^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'pruefe_ziel'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:194: AttributeError
+____________________ test_exitcode_funktion_vier_ausgaenge _____________________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+
+    def test_exitcode_funktion_vier_ausgaenge(werkzeug):
+        b = {"status": "bestanden"}
+        v = {"status": "verfehlt"}
+        n = {"status": "nicht belegt"}
+>       assert werkzeug.ziel_exitcode([b, b]) == 0
+               ^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'befehl_antwortzeit' has no attribute 'ziel_exitcode'
+
+tests/test_befehl_antwortzeit_zielpruefung.py:204: AttributeError
+__ test_main_mit_ziel_liefert_exitcode_und_einzelwerte[kors-gut-0-bestanden] ___
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+capsys = <_pytest.capture.CaptureFixture object at 0x73e44b66a3c0>
+trip = 'kors-gut', erwartet = 0, wort = 'bestanden'
+
+    @pytest.mark.parametrize("trip, erwartet, wort", [
+        ("kors-gut", 0, "bestanden"),
+        ("kors-lahm", 1, "verfehlt"),
+        ("kors-duenn", 2, "nicht belegt"),
+    ])
+    def test_main_mit_ziel_liefert_exitcode_und_einzelwerte(werkzeug, capsys, trip, erwartet, wort):
+>       rc = werkzeug.main(["--since", "2026-10-26", "--trip", trip, "--ziel",
+                            "--journal-datei", str(_LOG)])
+E       TypeError: main() takes 0 positional arguments but 1 was given
+
+tests/test_befehl_antwortzeit_zielpruefung.py:217: TypeError
+__ test_main_mit_ziel_liefert_exitcode_und_einzelwerte[kors-lahm-1-verfehlt] ___
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+capsys = <_pytest.capture.CaptureFixture object at 0x73e44b669b80>
+trip = 'kors-lahm', erwartet = 1, wort = 'verfehlt'
+
+    @pytest.mark.parametrize("trip, erwartet, wort", [
+        ("kors-gut", 0, "bestanden"),
+        ("kors-lahm", 1, "verfehlt"),
+        ("kors-duenn", 2, "nicht belegt"),
+    ])
+    def test_main_mit_ziel_liefert_exitcode_und_einzelwerte(werkzeug, capsys, trip, erwartet, wort):
+>       rc = werkzeug.main(["--since", "2026-10-26", "--trip", trip, "--ziel",
+                            "--journal-datei", str(_LOG)])
+E       TypeError: main() takes 0 positional arguments but 1 was given
+
+tests/test_befehl_antwortzeit_zielpruefung.py:217: TypeError
+_ test_main_mit_ziel_liefert_exitcode_und_einzelwerte[kors-duenn-2-nicht belegt] _
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+capsys = <_pytest.capture.CaptureFixture object at 0x73e44b66a810>
+trip = 'kors-duenn', erwartet = 2, wort = 'nicht belegt'
+
+    @pytest.mark.parametrize("trip, erwartet, wort", [
+        ("kors-gut", 0, "bestanden"),
+        ("kors-lahm", 1, "verfehlt"),
+        ("kors-duenn", 2, "nicht belegt"),
+    ])
+    def test_main_mit_ziel_liefert_exitcode_und_einzelwerte(werkzeug, capsys, trip, erwartet, wort):
+>       rc = werkzeug.main(["--since", "2026-10-26", "--trip", trip, "--ziel",
+                            "--journal-datei", str(_LOG)])
+E       TypeError: main() takes 0 positional arguments but 1 was given
+
+tests/test_befehl_antwortzeit_zielpruefung.py:217: TypeError
+____________ test_main_ohne_ziel_bleibt_exit_0_auch_bei_verfehlung _____________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+capsys = <_pytest.capture.CaptureFixture object at 0x73e44b636030>
+
+    def test_main_ohne_ziel_bleibt_exit_0_auch_bei_verfehlung(werkzeug, capsys):
+>       rc = werkzeug.main(["--since", "2026-10-26", "--trip", "kors-lahm",
+                            "--journal-datei", str(_LOG)])
+E       TypeError: main() takes 0 positional arguments but 1 was given
+
+tests/test_befehl_antwortzeit_zielpruefung.py:227: TypeError
+____________ test_main_schreibt_nichts_und_gibt_keine_rufnummer_aus ____________
+
+werkzeug = <module 'befehl_antwortzeit' from '/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/.claude/tools/befehl_antwortzeit.py'>
+capsys = <_pytest.capture.CaptureFixture object at 0x73e44b6371a0>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-3321/test_main_schreibt_nichts_und_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x73e44b635850>
+
+    def test_main_schreibt_nichts_und_gibt_keine_rufnummer_aus(werkzeug, capsys, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+>       werkzeug.main(["--since", "2026-10-26", "--ziel", "--journal-datei", str(_LOG)])
+E       TypeError: main() takes 0 positional arguments but 1 was given
+
+/home/hem/gregor_zwanzig/.claude/worktrees/intake-2439/tests/test_befehl_antwortzeit_zielpruefung.py:235: TypeError
+=========================== short test summary info ============================
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_grenzen_im_werkzeug_sind_unveraendert
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_fr_direct_download_im_befehlsfenster_ist_quelle_fr_direct
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_dwd_fenster_zaehlt_nie_als_fr_direct
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_downloads_null_und_fenster_ausserhalb_sind_warm
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_lauf_ohne_fensterzeile_ist_warm
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_trip_filter_laesst_nur_laeufe_dieses_trips_zu
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_fremd_trip_mit_70s_macht_test_trip_nicht_rot
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_fixture_kors_gut_je_befehl_bestanden_und_nur_kalte_zaehlen
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_einzellauf_grenze_ist_strikt
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_median_grenze_ist_strikt
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_zu_wenige_kalte_laeufe_sind_nicht_belegt_statt_bestanden
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_warme_laeufe_zaehlen_weder_fuer_die_mindestzahl_noch_gegen_die_grenze
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_dwd_braucht_fuenf_kalte_laeufe
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_verfehlt_hat_vorrang_vor_nicht_belegt
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_exitcode_funktion_vier_ausgaenge
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_main_mit_ziel_liefert_exitcode_und_einzelwerte[kors-gut-0-bestanden]
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_main_mit_ziel_liefert_exitcode_und_einzelwerte[kors-lahm-1-verfehlt]
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_main_mit_ziel_liefert_exitcode_und_einzelwerte[kors-duenn-2-nicht belegt]
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_main_ohne_ziel_bleibt_exit_0_auch_bei_verfehlung
+FAILED tests/test_befehl_antwortzeit_zielpruefung.py::test_main_schreibt_nichts_und_gibt_keine_rufnummer_aus
+============================== 20 failed in 0.61s ==============================
