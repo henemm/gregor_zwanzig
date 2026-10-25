@@ -32,7 +32,7 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 | | SMS (`sms`) | Premium-SMS (`premium_sms`) |
 |---|---|---|
 | Absender | konfigurierbar (`sms_from`) | **fest** Dienstnummer `4916092172595` (`PREMIUM_SMS_SENDER`) |
-| Empfänger | `sms_to`, nur wenn bewiesen (`sms_verified_number`, #2406) | **ausschließlich die gelernte Rückadresse** `premium_sms_reply_to`; `sms_to` wird nie gelesen |
+| Empfänger | `sms_to`, nur wenn bewiesen (`sms_verified_number`, #2406); `SmsRecipient.for_user` liest frisch aus `user.json`, nie `GZ_SMS_TO` (#1412 S4b) | **ausschließlich die gelernte Rückadresse** `premium_sms_reply_to` (`PremiumSmsRecipient.for_user`, #1412 S4b); `sms_to` wird nie gelesen |
 | Fehlt das Ziel | Kanal gilt als nicht konfiguriert | **fail-closed mit Grund** (`ChannelBlockedError` → `blocked_channels`): `premium_sms_no_reply_address`, `premium_sms_reply_address_stale` (älter 30 Tage oder Zeitstempel in der Zukunft) |
 | Tarif | `standard` + `premium` | **nur `premium`** (eigenes Gate `premium_sms_allowed`) |
 | Tageskontingent | Zähler `sms` | eigener Zähler `premium_sms`; Befehlsantworten dürfen eine Reply-Reserve über dem Grundlimit nutzen (`purpose="reply"`, #2412) |
