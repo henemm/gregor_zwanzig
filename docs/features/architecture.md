@@ -319,6 +319,23 @@ Rückfall auf den globalen `.env`-Chat:
 
 Spec: `docs/specs/modules/fix_1412_s4a_empfaengervertrag_telegram.md`.
 
+### SMS-/Premium-SMS-Empfängervertrag (Issue #1412, Scheibe S4b)
+
+Analog zu Telegram gehen SMS und Premium-SMS nur noch an eine **belegte Nummer**
+(`src/output/channels/recipient.py`); `settings.sms_to` / `GZ_SMS_TO` werden nie gelesen
+(`Settings.with_user_profile` setzt `sms_to=None`):
+- `SmsRecipient.for_user(user_id, settings)`: bestätigte Nummer frisch aus `user.json`
+  (`sms_verified_number == sms_to`, #2406).
+- `SmsRecipient.verification(...)`: Bestätigungscode nur an `pending_sms_to` bzw. `sms_to` (E.164).
+- `PremiumSmsRecipient.for_user(...)`: gelernte Rückadresse `premium_sms_reply_to`.
+- Prüfung vor jedem Draht in `SevenIoChannelBase.send` (`seven_io_base.py`), Reihenfolge:
+  Empfänger → Code-Herkunft → Testmodus-Sandbox → `_post` mit Payload-Abgleich.
+- Block-Codes: `sms_no_recipient`, `sms_verification_number_not_bound` sowie die bestehenden
+  `premium_sms_*`-Codes; 0 HTTP-Calls.
+- `get_channel('sms'|'premium_sms')` wirft `OutputConfigError` — Zugriff nur über die Nutzer-Fabrik.
+
+Spec: `docs/specs/modules/fix_1412_s4b_empfaengervertrag_sms.md`.
+
 ### Premium-SMS-Rückkanal (Issue #1676, Scheibe S1 — Rückadresse lernen)
 
 **Komponente:** `src/services/inbound_sms_reader.py` (`InboundSmsReader.poll_and_process()`),
