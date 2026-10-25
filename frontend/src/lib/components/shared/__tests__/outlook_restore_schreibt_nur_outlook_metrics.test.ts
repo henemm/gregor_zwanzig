@@ -42,7 +42,7 @@ import { toggleCompareMetricKey } from '../weather-metrics-tab/compareMetricOrde
 import { splitChannelMetricsForDisplay } from '../weather-metrics-tab/channelMetricLayouts.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const OUTLOOK_COMPONENT = join(here, '..', 'CompareOutlookLayoutControls.svelte');
+const OUTLOOK_COMPONENT = join(here, '..', 'OutlookLayoutControls.svelte');
 
 /** Die Grundauswahl einer Flaeche, wie sie als Prop hereinkommt. */
 const GRUNDAUSWAHL = ['temperature', 'precipitation', 'wind', 'gust', 'thunder'];

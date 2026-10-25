@@ -51,7 +51,7 @@ import {
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const SHARED = join(HIER, '..');
-const KIND = join(SHARED, 'CompareHourlyLayoutControls.svelte');
+const KIND = join(SHARED, '..', 'compare', 'CompareHourlyLayoutControls.svelte');
 const TAB = join(SHARED, 'WeatherMetricsTab.svelte');
 // Issue #2276 S6g: WeatherMetricsTab bekommt im Vergleich Wertprops aus dem
 // Buendel `compare/wetterMetrikenPropsAus.ts` statt `wiz`. Dynamisch geladen,
@@ -271,7 +271,7 @@ describe('AC-1: CompareHourlyLayoutControls leitet alles aus Wertprops her', () 
 
 	test('der Schalter wird nur gerendert, wenn `onEnabledChange` uebergeben wird', async () => {
 		// Strukturelle Zusicherung (Kunstgriff „Prop da -> Bedienelement da",
-		// Vorbild CompareOutlookLayoutControls.svelte:211-227). Der SSR-Harness
+		// Vorbild OutlookLayoutControls.svelte:211-227). Der SSR-Harness
 		// kennt kein DOM; der sichtbare Beleg ist AC-2 im Browser.
 		const { ast, quelle } = await umgebungFuer(KIND, saatKind());
 		let gefunden: string | null = null;

@@ -138,8 +138,8 @@ describe('#2438 Kanal-Abwahl-Hinweis', () => {
 
 // ── Verdrahtung: Opt-in `showAbwahlHinweis` nur an den Kanal-Block-Einbettungen ──
 const SHARED_FILE = join(here, '..', 'WeatherMetricsTab.svelte');
-const OUTLOOK_FILE = join(here, '..', 'CompareOutlookLayoutControls.svelte');
-const HOURLY_FILE = join(here, '..', 'CompareHourlyLayoutControls.svelte');
+const OUTLOOK_FILE = join(here, '..', 'OutlookLayoutControls.svelte');
+const HOURLY_FILE = join(here, '..', '..', 'compare', 'CompareHourlyLayoutControls.svelte');
 
 function findAttr(node: any, name: string): any {
 	return (node?.attributes ?? []).find((a: any) => a.type === 'Attribute' && a.name === name);
@@ -201,7 +201,7 @@ describe('#2438 Verdrahtung: showAbwahlHinweis nur im Kanal-Block', () => {
 	});
 
 	for (const [label, file] of [
-		['CompareOutlookLayoutControls', OUTLOOK_FILE],
+		['OutlookLayoutControls', OUTLOOK_FILE],
 		['CompareHourlyLayoutControls', HOURLY_FILE]
 	] as [string, string][]) {
 		test(`AC-3: ${label} trägt showAbwahlHinweis NICHT`, () => {

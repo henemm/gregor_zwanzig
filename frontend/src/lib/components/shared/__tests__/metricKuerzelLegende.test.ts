@@ -1072,8 +1072,8 @@ const EINBETTUNGEN = [
 		})
 	},
 	{
-		name: 'Ausblick (CompareOutlookLayoutControls)',
-		datei: () => join(SHARED, 'CompareOutlookLayoutControls.svelte'),
+		name: 'Ausblick (OutlookLayoutControls)',
+		datei: () => join(SHARED, 'OutlookLayoutControls.svelte'),
 		waehle: () => true,
 		// #1848 A3: der Ausblick erbt die Grundauswahl seiner Flaeche und
 		// bekommt sie als Prop (`grundauswahl`). Ohne Saat waere sie im
@@ -1093,7 +1093,7 @@ const EINBETTUNGEN = [
 	},
 	{
 		name: 'Stundenverlauf (CompareHourlyLayoutControls)',
-		datei: () => join(SHARED, 'CompareHourlyLayoutControls.svelte'),
+		datei: () => join(SHARED, '..', 'compare', 'CompareHourlyLayoutControls.svelte'),
 		waehle: () => true,
 		// #2232: s. Ausblick oben — Marken als Prop, nicht selbst geladen.
 		// #2276 S6b: die Flaeche arbeitet auf Wertprops statt auf `wiz` —

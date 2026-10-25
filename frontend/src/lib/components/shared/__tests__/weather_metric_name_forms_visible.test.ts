@@ -14,8 +14,8 @@
 // Die vier Editoren:
 //   1. Trips-Editor            WeatherMetricsTab.svelte (context="route")
 //   2. Compare-Uebersicht       WeatherMetricsTab.svelte (context="vergleich")
-//   3. Compare-Stundenverlauf   CompareHourlyLayoutControls.svelte
-//   4. Compare-Ausblick         CompareOutlookLayoutControls.svelte
+//   3. Compare-Stundenverlauf   compare/CompareHourlyLayoutControls.svelte
+//   4. Compare-Ausblick         OutlookLayoutControls.svelte
 //
 // DIE DARSTELLUNGSFORM IST BEWUSST OFFEN (Spec, Implementation Details 5):
 // Zeile je Groesse ODER ausklappbare Legende am Ende des Reiters — das
@@ -72,8 +72,8 @@ const KURZFORM_QUELLEN = ['sms_code', 'kuerzelById', 'sms_symbols'];
 const EDITOREN: { name: string; datei: string }[] = [
 	{ name: 'Trips-Editor (context="route")', datei: 'WeatherMetricsTab.svelte' },
 	{ name: 'Compare-Uebersicht (context="vergleich")', datei: 'WeatherMetricsTab.svelte' },
-	{ name: 'Compare-Stundenverlauf', datei: 'CompareHourlyLayoutControls.svelte' },
-	{ name: 'Compare-Ausblick', datei: 'CompareOutlookLayoutControls.svelte' }
+	{ name: 'Compare-Stundenverlauf', datei: '../compare/CompareHourlyLayoutControls.svelte' },
+	{ name: 'Compare-Ausblick', datei: 'OutlookLayoutControls.svelte' }
 ];
 
 function parseComponent(path: string): any {
@@ -169,8 +169,8 @@ describe('AC-7: jeder der vier Editoren zeigt alle drei Namensformen', () => {
 // Ohne diesen zweiten Teil genuegte ein `{m.sms_code}` im Markup, das immer
 // leer bliebe: die drei Compare-Editoren bauen ihre Metrik-Eintraege heute
 // von Hand aus wenigen Feldern zusammen (WeatherMetricsTab.svelte:822-831,
-// CompareHourlyLayoutControls.svelte:116-124,
-// CompareOutlookLayoutControls.svelte:65-73) — dort fehlt die Datengrundlage,
+// compare/CompareHourlyLayoutControls.svelte:116-124,
+// OutlookLayoutControls.svelte:65-73) — dort fehlt die Datengrundlage,
 // nicht nur die Anzeige.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -194,8 +194,8 @@ function eintragsLiterale(ast: any): any[] {
 describe('AC-7: die Metrik-Eintraege der Compare-Editoren fuehren alle drei Formen', () => {
 	for (const datei of [
 		'WeatherMetricsTab.svelte',
-		'CompareHourlyLayoutControls.svelte',
-		'CompareOutlookLayoutControls.svelte'
+		'../compare/CompareHourlyLayoutControls.svelte',
+		'OutlookLayoutControls.svelte'
 	]) {
 		test(`${datei}: jedes gebaute Metrik-Objekt traegt Kurzform und SMS-Kuerzel`, () => {
 			const ast = parseComponent(join(SHARED, datei));

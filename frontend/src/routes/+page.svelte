@@ -16,7 +16,6 @@
 	import { tripStatus, activeOrNextTrip, todayStageIndex } from '$lib/utils/tripStatus.js';
 	import {
 		plannedBriefings,
-		heroKanaele,
 		archivedTrips,
 		homeCompareTimeline,
 		alertsForTrip
@@ -32,11 +31,15 @@
 		primarySendSlot
 	} from '$lib/utils/cockpitHelpers568.js';
 	// Issue #1969 (AC-23/AC-24): nächster Versand = Backend-Wert (+page.server.ts).
-	import { formatNextBriefing, type NextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
+	// Hero und Kacheln formatieren ihn in _home/ (homeHeroProps bzw. kachelVersand -> formatNextBriefing).
+	import type { NextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
 	import Startseite from './_start/Startseite.svelte';
 	// Issue #2346 S2: EINE Startseiten-Kachel fuer Trip und Ortsvergleich.
 	import SubscriptionKachel from './_home/SubscriptionKachel.svelte';
 	import { kachelVersand, kachelNextBriefing } from './_home/kachelVersand.js';
+	// Issue #2346 S3: EIN Startseiten-Hero fuer Trip und Ortsvergleich.
+	import HomeHero from './_home/HomeHero.svelte';
+	import { homeHeroProps } from './_home/homeHeroProps.js';
 	import EmptyKachel from './_home/EmptyKachel.svelte';
 	import StartklarCheckliste from './_home/StartklarCheckliste.svelte';
 	import { buildCompareCtaHref } from './_home/compareCta.js';
@@ -158,11 +161,6 @@
 	// AC-9: fertig-Trips aus otherTrips ausschließen
 	const otherTrips = $derived(trips.filter((t) => t.id !== hero?.id && tripStatus(t, now) !== 'fertig'));
 
-	// Aktive Kanäle aus report_config — für die Kanal-Gesundheits-Dots.
-	// Issue #2422 S3: reiner Helfer (Slot-Regel wie der Versand, alle vier
-	// Kanaele) — node:testbar in report_slot_aktiv.test.ts.
-	const heroChannels = $derived(hero ? heroKanaele(hero.report_config) : ([] as string[]));
-
 	// Datum-Range für den Fortschrittsbalken
 	const heroDateRange = $derived.by(() => {
 		if (!hero) return '';
@@ -224,55 +222,17 @@
 
 		<!-- Zustand A: aktiver Trip-Hero + Schnellaktionen in linker Spalte -->
 		{#if hero && heroIsActive}
-			<!-- AC-1/AC-3: 2-Spalten-Grid, align-items:start -->
-			<div class="cockpit-hero" style:margin-bottom="36px">
-
-				<!-- Linke Spalte: Hero-Karte + Schnellaktionen vertikal -->
-				<div style:display="flex" style:flex-direction="column" style:gap="20px">
-
-					<!-- AC-2/V2+V3: Hero-Karte — Reihenfolge: Pills → Titel → Region → Progress → Footer -->
-					<Card padding={0} style="overflow: hidden; border-left: 3px solid var(--g-accent)">
-						<div style:padding="22px 26px">
-							<!-- Pills-Zeile -->
+			<!-- #2346 S3: ein HomeHero fuer beide kinds (2-Spalten-Grid, rechte Spalte als aside) -->
+				<!-- Kanaele (Flags, Slot-Regel #2422), naechster Versand (Backend), Link: homeHeroProps -->
+				<HomeHero {...homeHeroProps('trip', hero, nextBriefings)}>
+					{#snippet pills()}
+						<Pill tone="accent"><Dot tone="bad" size={6} /> Live · Tag {dayX} von {dayY}</Pill>
+						<Pill tone="ghost">Sommer-Trekking</Pill>
+					{/snippet}
+					{#snippet details()}
+						<!-- Fortschrittsbalken mit Label "Tag x / y" + Datum-Range (volle Breite) -->
+						<div style:grid-column="1 / -1">
 							<div
-								style:display="flex"
-								style:align-items="center"
-								style:gap="10px"
-								style:margin-bottom="12px"
-								style:flex-wrap="wrap"
-							>
-								<Pill tone="accent"><Dot tone="bad" size={6} /> Live · Tag {dayX} von {dayY}</Pill>
-								<Pill tone="ghost">Sommer-Trekking</Pill>
-							</div>
-
-							<!-- Titel (34px, fontWeight 600) als Link -->
-							<a
-								href="/trips/{hero.id}?tab=uebersicht"
-								class="g-link-tap"
-								style:display="block"
-								style:font-size="34px"
-								style:font-weight="600"
-								style:letter-spacing="-0.02em"
-								style:line-height="1.05"
-								style:margin-bottom="6px"
-								style:color="var(--g-ink)"
-								style:text-decoration="none"
-							>{hero.name}</a>
-
-							<!-- Region-Untertitel (15px, ink-2) -->
-							{#if hero.region}
-								<div
-									style:font-size="15px"
-									style:color="var(--g-ink-2)"
-									style:margin-bottom="20px"
-								>{hero.region}</div>
-							{:else}
-								<div style:margin-bottom="20px"></div>
-							{/if}
-
-							<!-- Fortschrittsbalken mit Label "Tag x / y" + Datum-Range -->
-							<div>
-								<div
 									style:display="flex"
 									style:justify-content="space-between"
 									style:align-items="baseline"
@@ -306,82 +266,35 @@
 									></div>
 								</div>
 							</div>
-						</div>
-
-						<!-- Footer-Leiste: card-alt, borderTop, Eyebrow "Kanäle" + "Trip öffnen →" -->
-						<div
-							style:border-top="1px solid var(--g-rule-soft)"
-							style:padding="14px 26px"
-							style:background="var(--g-card-alt)"
-							style:display="flex"
-							style:align-items="center"
-							style:justify-content="space-between"
-							style:gap="16px"
-							style:flex-wrap="wrap"
-						>
-							<div style:display="flex" style:align-items="center" style:gap="16px">
-								<Eyebrow>Kanäle</Eyebrow>
-								<div style:display="flex" style:gap="14px">
-									{#each heroChannels as ch (ch)}
-										<span
-											style:display="inline-flex"
-											style:align-items="center"
-											style:gap="6px"
-											style:font-size="12px"
-											style:color="var(--g-ink-2)"
-										>
-											<Dot tone="good" size={7} />
-											<span style:font-family="var(--g-font-mono)" style:text-transform="capitalize">{ch}</span>
-										</span>
-									{/each}
-								</div>
-							</div>
-							<a
-								href="/trips/{hero.id}?tab=uebersicht"
-								class="g-link-tap"
-								style:font-size="12px"
-								style:color="var(--g-ink-3)"
-								style:text-decoration="none"
-								style:font-family="var(--g-font-mono)"
-							>Trip öffnen →</a>
-						</div>
-					</Card>
-
-					<!-- AC-3/V13: Schnellaktionen vertikal in linker Spalte -->
-					<div>
-						<div style:margin-bottom="12px">
-							<Eyebrow style="margin-bottom: 4px">Schnell eingreifen</Eyebrow>
-							<div style:font-size="17px" style:font-weight="600">Schnellaktionen</div>
-						</div>
-						<div style:display="flex" style:flex-direction="column" style:gap="10px">
-							<QuickAction
-								glyph="pause"
-								label="Pausentag einplanen"
-								sub="→ Etappen & Wegpunkte"
-								href="/trips/{hero.id}?tab=etappen"
-							/>
-							<QuickAction
-								glyph="metrics"
-								label="Wetter-Metriken ändern"
-								sub="→ Wetter-Metriken"
-								href="/trips/{hero.id}?tab=wetter-metriken"
-							/>
-							<QuickAction
-								glyph="clock"
-								label="Briefing-Zeitplan"
-								sub="→ Briefing-Zeitplan"
-								href="/trips/{hero.id}?tab=wetter-metriken#versand"
-							/>
-							<QuickAction
-								glyph="send"
-								label="Test-Briefing schicken"
-								sub="→ An deine eigenen Kanäle"
-								href="/trips/{hero.id}?action=test-send"
-							/>
-						</div>
-					</div>
-				</div>
-
+					{/snippet}
+					{#snippet actions()}
+						<!-- AC-3/V13: Schnellaktionen vertikal in linker Spalte -->
+						<QuickAction
+							glyph="pause"
+							label="Pausentag einplanen"
+							sub="→ Etappen & Wegpunkte"
+							href="/trips/{hero.id}?tab=etappen"
+						/>
+						<QuickAction
+							glyph="metrics"
+							label="Wetter-Metriken ändern"
+							sub="→ Wetter-Metriken"
+							href="/trips/{hero.id}?tab=wetter-metriken"
+						/>
+						<QuickAction
+							glyph="clock"
+							label="Briefing-Zeitplan"
+							sub="→ Briefing-Zeitplan"
+							href="/trips/{hero.id}?tab=wetter-metriken#versand"
+						/>
+						<QuickAction
+							glyph="send"
+							label="Test-Briefing schicken"
+							sub="→ An deine eigenen Kanäle"
+							href="/trips/{hero.id}?action=test-send"
+						/>
+					{/snippet}
+					{#snippet aside()}
 				<!-- Rechte Spalte: Outbox + Alerts -->
 				<div style:display="flex" style:flex-direction="column" style:gap="16px">
 					<!-- Outbox -->
@@ -489,162 +402,73 @@
 						{/if}
 					</Card>
 				</div>
-			</div>
+					{/snippet}
+				</HomeHero>
 		{/if}
 
 		<!-- Zustand C: Compare-Hero (kein aktiver Trip, aber aktive Vergleiche) -->
 		{#if mode === 'compare' && compareHero}
-			<div class="cockpit-hero" style:margin-bottom="36px">
-				<!-- Linke Spalte: Compare-Hero + Schnellaktionen vertikal -->
-				<div style:display="flex" style:flex-direction="column" style:gap="20px">
-					<Card padding={0} style="overflow: hidden; border-left: 3px solid var(--g-accent)">
-						<div style:padding="22px 26px">
-							<!-- Pills-Zeile -->
-							<div
-								style:display="flex"
-								style:align-items="center"
-								style:gap="10px"
-								style:margin-bottom="12px"
-								style:flex-wrap="wrap"
-							>
-								<Pill tone="accent"><Dot tone="good" size={6} /> Aktiv · läuft automatisch</Pill>
-								{#if (compareHero.display_config as Record<string,unknown> | undefined)?.profile_label}
-									<Pill tone="ghost">{(compareHero.display_config as Record<string,unknown>).profile_label as string}</Pill>
-								{/if}
-							</div>
+			<!-- #2346 S3: derselbe HomeHero wie der Trip -->
 
-							<!-- Titel -->
-							<div
-								style:font-size="34px"
-								style:font-weight="600"
-								style:letter-spacing="-0.02em"
-								style:line-height="1.05"
-								style:margin-bottom="6px"
-							>{compareHero.name}</div>
-
-							<!-- Region / Orte-Info -->
-							<div style:font-size="15px" style:color="var(--g-ink-2)" style:margin-bottom="20px">
-								{#if (compareHero.display_config as Record<string,unknown> | undefined)?.region}
-									{(compareHero.display_config as Record<string,unknown>).region as string} ·
-								{/if}
-								{compareHero.location_ids.length} Orte verglichen
-							</div>
-
-							<!-- Zeitplan + Nächster Versand -->
-							<div style:display="grid" style:grid-template-columns="1fr 1fr" style:gap="14px">
-								<div
-									style:padding="12px 14px"
-									style:border="1px solid var(--g-rule-soft)"
-									style:border-radius="var(--g-r-2)"
-									style:background="var(--g-paper-deep)"
-								>
-									<div
-										style:font-family="var(--g-font-mono)"
-										style:font-size="11px"
-										style:color="var(--g-ink-3)"
-										style:text-transform="uppercase"
-										style:letter-spacing="0.1em"
-										style:margin-bottom="5px"
-									>Zeitplan</div>
-									<div style:font-size="15px" style:font-weight="600">
-										{compareHero.schedule === 'daily' ? 'täglich' : compareHero.schedule === 'weekly' ? 'wöchentlich' : 'manuell'}
-										<!-- Issue #1268 (AC-10): echte Versandzeit aus dem Slot statt hour_from
-										     (zeigte bei neu angelegten Vergleichen "· 00:00"). -->
-										{#if compareHero.schedule !== 'manual' && primarySendSlot(compareHero)} · {String(primarySendSlot(compareHero)!.hour).padStart(2,'0')}:00{/if}
-									</div>
-								</div>
-								<div
-									style:padding="12px 14px"
-									style:border="1px solid var(--g-rule-soft)"
-									style:border-radius="var(--g-r-2)"
-									style:background="var(--g-paper-deep)"
-								>
-									<div
-										style:font-family="var(--g-font-mono)"
-										style:font-size="11px"
-										style:color="var(--g-ink-3)"
-										style:text-transform="uppercase"
-										style:letter-spacing="0.1em"
-										style:margin-bottom="5px"
-									>Nächster Versand</div>
-									<div style:font-size="15px" style:font-weight="600">{formatNextBriefing(compareNb(compareHero.id), 'vergleich')}</div>
-								</div>
-							</div>
-						</div>
-
-						<!-- Footer-Leiste: card-alt, borderTop -->
+				<!-- Kanaele aus den Flags, nie aus empfaenger (#1452): homeHeroProps -->
+				<HomeHero {...homeHeroProps('vergleich', compareHero, nextBriefings)}>
+					{#snippet pills()}
+						<Pill tone="accent"><Dot tone="good" size={6} /> Aktiv · läuft automatisch</Pill>
+						{#if (compareHero.display_config as Record<string,unknown> | undefined)?.profile_label}
+							<Pill tone="ghost">{(compareHero.display_config as Record<string,unknown>).profile_label as string}</Pill>
+						{/if}
+					{/snippet}
+					{#snippet details()}
+						<!-- Zeitplan (neben dem Naechsten Versand) -->
 						<div
-							style:border-top="1px solid var(--g-rule-soft)"
-							style:padding="14px 26px"
-							style:background="var(--g-card-alt)"
-							style:display="flex"
-							style:align-items="center"
-							style:justify-content="space-between"
-							style:gap="16px"
-							style:flex-wrap="wrap"
+							style:padding="12px 14px"
+							style:border="1px solid var(--g-rule-soft)"
+							style:border-radius="var(--g-r-2)"
+							style:background="var(--g-paper-deep)"
 						>
-							<div style:display="flex" style:align-items="center" style:gap="16px">
-								<Eyebrow>Kanäle</Eyebrow>
-								<div style:display="flex" style:gap="14px">
-									{#each compareHero.empfaenger as emp (emp)}
-										<span
-											style:display="inline-flex"
-											style:align-items="center"
-											style:gap="6px"
-											style:font-size="12px"
-											style:color="var(--g-ink-2)"
-										>
-											<Dot tone="good" size={7} />
-											<span style:font-family="var(--g-font-mono)" style:text-transform="capitalize">{emp}</span>
-										</span>
-									{/each}
-								</div>
-							</div>
-							<a
-								href="/compare/{compareHero.id}"
-								style:font-size="12px"
-								style:color="var(--g-ink-3)"
-								style:text-decoration="none"
+							<div
 								style:font-family="var(--g-font-mono)"
-							>Vergleich öffnen →</a>
+								style:font-size="11px"
+								style:color="var(--g-ink-3)"
+								style:text-transform="uppercase"
+								style:letter-spacing="0.1em"
+								style:margin-bottom="5px"
+							>Zeitplan</div>
+							<div style:font-size="15px" style:font-weight="600">
+								{compareHero.schedule === 'daily' ? 'täglich' : compareHero.schedule === 'weekly' ? 'wöchentlich' : 'manuell'}
+								<!-- Issue #1268 (AC-10): echte Versandzeit aus dem Slot statt hour_from
+								     (zeigte bei neu angelegten Vergleichen "· 00:00"). -->
+								{#if compareHero.schedule !== 'manual' && primarySendSlot(compareHero)} · {String(primarySendSlot(compareHero)!.hour).padStart(2,'0')}:00{/if}
+							</div>
 						</div>
-					</Card>
-
-					<!-- Schnellaktionen vertikal in linker Spalte (Compare-Modus) -->
-					<div>
-						<div style:margin-bottom="12px">
-							<Eyebrow style="margin-bottom: 4px">Schnell eingreifen</Eyebrow>
-							<div style:font-size="17px" style:font-weight="600">Schnellaktionen</div>
-						</div>
-						<div style:display="flex" style:flex-direction="column" style:gap="10px">
-							<QuickAction
-								glyph="route"
-								label="Orte bearbeiten"
-								sub="→ Verglichene Orte"
-								href="/compare/{compareHero.id}"
-							/>
-							<QuickAction
-								glyph="metrics"
-								label="Ideal-Werte ändern"
-								sub="→ Ideal-Profil"
-								href="/compare/{compareHero.id}?tab=wertebereiche"
-							/>
-							<QuickAction
-								glyph="clock"
-								label="Briefing-Zeitplan"
-								sub="→ Zeitplan & Kanäle"
-								href="/compare/{compareHero.id}?tab=wetter-metriken#versand"
-							/>
-							<QuickAction
-								glyph="send"
-								label="Test-Vergleich schicken"
-								sub="→ An deine eigenen Kanäle"
-								href="/compare/{compareHero.id}?action=test-send"
-							/>
-						</div>
-					</div>
-				</div>
-
+					{/snippet}
+					{#snippet actions()}
+						<QuickAction
+							glyph="route"
+							label="Orte bearbeiten"
+							sub="→ Verglichene Orte"
+							href="/compare/{compareHero.id}"
+						/>
+						<QuickAction
+							glyph="metrics"
+							label="Ideal-Werte ändern"
+							sub="→ Ideal-Profil"
+							href="/compare/{compareHero.id}?tab=wertebereiche"
+						/>
+						<QuickAction
+							glyph="clock"
+							label="Briefing-Zeitplan"
+							sub="→ Zeitplan & Kanäle"
+							href="/compare/{compareHero.id}?tab=wetter-metriken#versand"
+						/>
+						<QuickAction
+							glyph="send"
+							label="Test-Vergleich schicken"
+							sub="→ An deine eigenen Kanäle"
+							href="/compare/{compareHero.id}?action=test-send"
+						/>
+					{/snippet}
+					{#snippet aside()}
 				<!-- Rechte Spalte: Outbox + Alerts -->
 				<div style:display="flex" style:flex-direction="column" style:gap="16px">
 					<Card padding={20}>
@@ -710,7 +534,8 @@
 						</div>
 					</Card>
 				</div>
-			</div>
+					{/snippet}
+				</HomeHero>
 		{/if}
 
 		<!-- Zustand B: Planungs-/Leerzustand (kein aktiver Trip, keine aktiven Vergleiche) -->
@@ -926,17 +751,7 @@
 {/if}
 
 <style>
-	.cockpit-hero {
-		display: grid;
-		grid-template-columns: 1.4fr 1fr;
-		gap: 24px;
-		align-items: start;
-	}
-	/* Grid-Items dürfen unter ihre Min-Content-Breite schrumpfen — sonst
-	   sprengen nowrap-Zeilen (Datum, Compare-Rows) den Viewport auf Mobile. */
-	.cockpit-hero > :global(*) {
-		min-width: 0;
-	}
+	/* .cockpit-hero (Hero-Raster) lebt seit #2346 S3 in _home/HomeHero.svelte. */
 	.setup-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
@@ -958,9 +773,6 @@
 		gap: 0.75rem;
 	}
 	@media (max-width: 899px) {
-		.cockpit-hero {
-			grid-template-columns: 1fr;
-		}
 		.setup-grid {
 			grid-template-columns: 1fr;
 		}

@@ -132,7 +132,14 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 - Die beiden Inline-Heros in `+page.svelte` werden zu **einem** `HomeHero` mit Prop `kind` (Felder und Reihenfolge identisch, nur die kind-eigenen Inhalte — Etappen vs. Orte — unterscheiden sich).
 - `+page.svelte:580` (`compareHero.empfaenger` als Kanäle) wird auf die Kanal-Flags umgestellt (#1452-Verstoß).
 - `shared/CompareOutlookLayoutControls` → `shared/OutlookLayoutControls` (reine Umbenennung, Verhalten unverändert); `CompareHourlyLayoutControls` → `compare/` (siehe Befund oben).
-- Erledigte Einträge aus `BEKANNTE_PAARE` und dessen eingefrorener Test-Menge streichen; Doku-Nachzug in `gates_und_ratschen.md`.
+- **Zuschnitt aus /20-analyse (S3):**
+  - `HomeHero.svelte` (neu, `routes/_home/`) trägt den gemeinsamen Rahmen (Karte mit Akzentkante, Pills-Zeile, Titel, Meta-Zeile, Nächster-Versand-Block, Kanalzeile, Schnellaktionen). Kind-eigene Inhalte (Trip: Etappen-Fortschritt, Datumsbereich, Alarm-Liste; Vergleich: Orte-Zahl, Zeitplan, Timeline) kommen als Snippet-Props — **keine** zweite Struktur über `{#if kind}` im Baustein (Muster `SubscriptionKachel`).
+  - Kanäle als Prop `channels`: Trip weiter `heroKanaele(report_config)` (Slot-Regel, #2422-abgesichert, unverändert), Vergleich `presetChannels(preset)` (Flags, E-Mail ohne Opt-out). Bei leerer Liste zeigt die Kanalzeile „—".
+  - Die Fundstelle des #1452-Verstoßes ist `+page.svelte:589` (`compareHero.empfaenger`), nicht :580.
+  - `BEKANNTE_PAARE` ist für S3 nichts mehr zu streichen: die HomeHero*- und Kachel-Paare sind bereits in #1969/S2 gestrichen (`pendant_gate.py:75-78`). Es bleibt nur der Nachweis durch den Schrumpf-Test (AC-3).
+  - `weatherMetricsTabSections.ts` liegt unter `shared/weather-metrics-tab/`.
+  - LoC-Schätzung S3 korrigiert: brutto ca. +350/−450, weil die kind-eigenen Inhalte in den Baustein umziehen statt zu entfallen ⇒ `loc_limit_override 500`.
+- Doku-Nachzug in `gates_und_ratschen.md` und `api_contract.md` (nennt die Controls).
 
 ### S4 — `last_briefing` (nach #1969 S1)
 
@@ -148,58 +155,58 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 
 ## Acceptance Criteria
 
-**AC-1** (S2 + S4, ungeteilt, vollständig mit S4): Given ein angemeldeter Nutzer mit einem Trip und einem Orts-Vergleich auf der Startseite / When die Startseite gerendert wird / Then zeigen beide Kacheln die Felder Status, nächster Versand, letzter Versand und Kanäle in derselben Reihenfolge und Anordnung aus **demselben** Baustein, und nächster/letzter Versand stammen für beide kinds aus `GET /api/next-briefings` (`next`/`last`), ohne eigene Fälligkeitsrechnung im Frontend.
+- **AC-1 (S2 + S4, ungeteilt, vollständig mit S4):** Given ein angemeldeter Nutzer mit einem Trip und einem Orts-Vergleich auf der Startseite / When die Startseite gerendert wird / Then zeigen beide Kacheln die Felder Status, nächster Versand, letzter Versand und Kanäle in derselben Reihenfolge und Anordnung aus **demselben** Baustein, und nächster/letzter Versand stammen für beide kinds aus `GET /api/next-briefings` (`next`/`last`), ohne eigene Fälligkeitsrechnung im Frontend.
   - Test: `node --test` rendert den Kachel-Baustein per SSR einmal mit `kind="trip"` und einmal mit `kind="vergleich"` und vergleicht die Reihenfolge der Felder; Fresh-Eyes-Screenshot-Paar Trip-/Vergleichs-Kachel auf Staging (die Home-E2E-Specs sind veraltet, eigene Staging-Messung).
 
-**AC-2** (S1): Given ein Wegwerf-Repo, in dem `molecules/Foo.svelte` oder `molecules/TripFoo.svelte` bereits existiert / When ein Commit `molecules/CompareFoo.svelte` ohne `gz-eigenstaendig:`-Kopfzeile neu anlegt / Then gibt `pendant_gate.py` Exit 2 und nennt den Partner; mit gültiger Kopfzeile (≥15 Zeichen) Exit 0.
+- **AC-2 (S1):** Given ein Wegwerf-Repo, in dem `molecules/Foo.svelte` oder `molecules/TripFoo.svelte` bereits existiert / When ein Commit `molecules/CompareFoo.svelte` ohne `gz-eigenstaendig:`-Kopfzeile neu anlegt / Then gibt `pendant_gate.py` Exit 2 und nennt den Partner; mit gültiger Kopfzeile (≥15 Zeichen) Exit 0.
   - Test: `tests/tdd/test_pendant_gate.py`, Wegwerf-Repos wie bestehende Fälle, je ein Fall pro Muster (`Compare*`/`Trip*`, `*Compare`/`*Trip`, `compare_*`/`trip_*`, neutral für `CompareFoo` **und** `TripFoo`) in den vier Wurzeln; Gegenprobe: neues neutrales `Foo` neben bestehendem `CompareFoo` ⇒ Exit 0.
 
-**AC-3** (S1, mit S2/S3 fortlaufend): Given die Ausnahmeliste `BEKANNTE_PAARE` / When ein Eintrag gestrichen wird / Then bleiben die Tests grün; When ein Eintrag hinzugefügt wird oder eine Datei eines Eintrags nicht mehr existiert / Then wird der Schrumpf-Test rot.
+- **AC-3 (S1, mit S2/S3 fortlaufend):** Given die Ausnahmeliste `BEKANNTE_PAARE` / When ein Eintrag gestrichen wird / Then bleiben die Tests grün; When ein Eintrag hinzugefügt wird oder eine Datei eines Eintrags nicht mehr existiert / Then wird der Schrumpf-Test rot.
   - Test: `tests/tdd/test_pendant_gate_bekannte_paare.py` prüft (a) jeder Eintrag existiert, (b) Liste ⊆ eingefrorene Menge der acht Paare.
 
-**AC-4** (S3): Given der Stand nach S3 / When `frontend/src/lib/components/shared/` auf Komponentendateien mit `Compare`-Präfix geprüft wird / Then gibt es keine einzige; `OutlookLayoutControls` liegt in `shared/`, `CompareHourlyLayoutControls` in `compare/` mit der Kopfzeile `gz-eigenstaendig:` und fachlicher Begründung.
+- **AC-4 (S3):** Given der Stand nach S3 / When `frontend/src/lib/components/shared/` auf Komponentendateien mit `Compare`-Präfix geprüft wird / Then gibt es keine einzige; `OutlookLayoutControls` liegt in `shared/`, `CompareHourlyLayoutControls` in `compare/` mit der Kopfzeile `gz-eigenstaendig:` und fachlicher Begründung.
   - Test: Verzeichnisprüfung per Dateisystem-Listing (Strukturaussage, kein Verhaltensnachweis); zusätzlich die umgezogenen Tests (`outlook_erbt_grundauswahl_structure`, Stundenverlauf-Tests) grün gegen die neuen Pfade, und Trip- wie Vergleichs-Editor binden `OutlookLayoutControls` weiterhin ein.
 
-**AC-5** (S1): Given der heutige Bestand (alle sieben Bestandspaare außerhalb der alten Reichweite plus `CompareTabs`/`TripTabs`, `CompareNewEditor`/`TripNewEditor`, `CompareOutlookLayoutControls`) / When Commits diese Dateien ändern, verschieben (Umbenennung ≥95 %) oder ein Bestandspaar-Mitglied unverändert mitführen / Then löst `pendant_gate.py` keinen Fehlalarm aus (Exit 0).
+- **AC-5 (S1):** Given der heutige Bestand (alle sieben Bestandspaare außerhalb der alten Reichweite plus `CompareTabs`/`TripTabs`, `CompareNewEditor`/`TripNewEditor`, `CompareOutlookLayoutControls`) / When Commits diese Dateien ändern, verschieben (Umbenennung ≥95 %) oder ein Bestandspaar-Mitglied unverändert mitführen / Then löst `pendant_gate.py` keinen Fehlalarm aus (Exit 0).
   - Test: Wegwerf-Repo mit allen Bestandspaaren; Änderungs-, Umbenennungs- und Mitführ-Commit je Paar ⇒ Exit 0.
 
-**AC-6** (S1): Given Sonderfälle / When ein Commit legt an: eine Testdatei `CompareFoo.test.ts` neben `Foo.ts`; ein leerer Kernname `Compare.svelte`; eine Datei außerhalb der vier Wurzeln / Then Exit 0.
+- **AC-6 (S1):** Given Sonderfälle / When ein Commit legt an: eine Testdatei `CompareFoo.test.ts` neben `Foo.ts`; ein leerer Kernname `Compare.svelte`; eine Datei außerhalb der vier Wurzeln / Then Exit 0.
   - Test: `tests/tdd/test_pendant_gate.py`, drei Fälle.
 
-**AC-7** (S1): Given eine Störung im Gate (Werkzeug `hook_utils` fehlt, `git` nicht auffindbar, Ausnahme in `_namenspendant()`, ungültige Eingabe) / When ein Commit geprüft wird / Then ist der Exit-Code 0 mit Hinweis auf stderr, und die bestehende Ordner-Erkennung blockiert weiterhin, wenn ihr Auslöser vorliegt.
+- **AC-7 (S1):** Given eine Störung im Gate (Werkzeug `hook_utils` fehlt, `git` nicht auffindbar, Ausnahme in `_namenspendant()`, ungültige Eingabe) / When ein Commit geprüft wird / Then ist der Exit-Code 0 mit Hinweis auf stderr, und die bestehende Ordner-Erkennung blockiert weiterhin, wenn ihr Auslöser vorliegt.
   - Test: `tests/tdd/test_pendant_gate.py`, Störung der Namens-Erkennung erzwungen durch ein Wegwerf-Repo mit nicht lesbarer Datei bzw. unlesbarem Dateinamen — Exit 0.
 
-**AC-8** (S1): Given die Pendant-Sperre mit erweiterter Reichweite / When `PRUEFDATUM` und die Doku gelesen werden / Then lautet das Prüfdatum 2027-01-21, und `docs/reference/gates_und_ratschen.md` nennt Reichweite, Ausnahmeliste, die Verlängerung („verlängert 2026-10-23, PO, Spec #2346") und den Beleg (7 Paare außerhalb der alten Reichweite) in Abschnitt „Pendant-Sperre" und in der Prüfdaten-Tabelle.
+- **AC-8 (S1):** Given die Pendant-Sperre mit erweiterter Reichweite / When `PRUEFDATUM` und die Doku gelesen werden / Then lautet das Prüfdatum 2027-01-21, und `docs/reference/gates_und_ratschen.md` nennt Reichweite, Ausnahmeliste, die Verlängerung („verlängert 2026-10-23, PO, Spec #2346") und den Beleg (7 Paare außerhalb der alten Reichweite) in Abschnitt „Pendant-Sperre" und in der Prüfdaten-Tabelle.
   - Test: Gate-Verhalten **am** Prüfdatum 2027-01-21 blockiert noch, am 2027-01-22 nicht (Datum über die bestehende Test-Uhr-Mechanik des Gate-Tests gesetzt); Doku-Zeilen als `# doc-compliance-test`.
 
-**AC-9** (S2): Given ein Trip, dessen `report_config` nur E-Mail aktiviert hat, dessen `empfaenger` aber auch eine Telegram-Kennung enthält / When die Startseiten-Kachel gerendert wird / Then zeigt sie ausschließlich E-Mail als Kanal; die Kanalliste entsteht aus den Flags (E-Mail, Telegram, SMS, Premium-SMS), nie aus `empfaenger`.
+- **AC-9 (S2):** Given ein Trip, dessen `report_config` nur E-Mail aktiviert hat, dessen `empfaenger` aber auch eine Telegram-Kennung enthält / When die Startseiten-Kachel gerendert wird / Then zeigt sie ausschließlich E-Mail als Kanal; die Kanalliste entsteht aus den Flags (E-Mail, Telegram, SMS, Premium-SMS), nie aus `empfaenger`.
   - Test: `node --test`, SSR-Render des Bausteins mit solchem Trip; Gegenprobe mit allen vier Flags ⇒ vier Kanäle.
 
-**AC-10** (S2): Given der Stand nach S2 / When `HomeHeroTrip`, `HomeHeroCompare`, `CompareIdealRow`, `TripKachel`, `CompareKachel` und ihre Barrel-Einträge gesucht werden / Then existieren sie nicht mehr, und kein Import verweist darauf; `svelte-check` und `frontend-test` sind grün.
+- **AC-10 (S2):** Given der Stand nach S2 / When `HomeHeroTrip`, `HomeHeroCompare`, `CompareIdealRow`, `TripKachel`, `CompareKachel` und ihre Barrel-Einträge gesucht werden / Then existieren sie nicht mehr, und kein Import verweist darauf; `svelte-check` und `frontend-test` sind grün.
   - Test: Frontend-Testlauf und `svelte-check` (ungültige Importe wären ein Fehler); Schrumpf-Test (AC-3) erzwingt das Streichen der beiden Paare aus `BEKANNTE_PAARE`.
 
-**AC-11** (S3): Given der Stand nach S3 / When `+page.svelte` gerendert wird (Trip-Hero und Vergleichs-Hero) / Then stammen beide aus **einem** `HomeHero`-Baustein mit `kind`; `+page.svelte` enthält keine zweite inline Hero-Fläche mehr.
+- **AC-11 (S3):** Given der Stand nach S3 / When `+page.svelte` gerendert wird (Trip-Hero und Vergleichs-Hero) / Then stammen beide aus **einem** `HomeHero`-Baustein mit `kind`; `+page.svelte` enthält keine zweite inline Hero-Fläche mehr.
   - Test: `node --test` SSR-Render von `HomeHero` mit beiden kinds (gleiche Felderfolge); Staging-Screenshot beider Heros im Fresh-Eyes-Paar.
 
-**AC-12** (S3): Given ein Vergleichs-Hero, dessen `empfaenger` einen Kanal enthält, dessen Flag aber aus ist / When der Hero gerendert wird / Then zeigt er die Kanäle aus den Flags, nicht aus `empfaenger` (#1452-Verstoß `+page.svelte:580` behoben).
+- **AC-12 (S3):** Given ein Vergleichs-Hero, dessen `empfaenger` einen Kanal enthält, dessen Flag aber aus ist / When der Hero gerendert wird / Then zeigt er die Kanäle aus den Flags, nicht aus `empfaenger` (#1452-Verstoß `+page.svelte:580` behoben).
   - Test: `node --test` mit solchem Vergleich; rot vor, grün nach der Änderung.
 
-**AC-13** (S4): Given ein Nutzer mit Trips und Orts-Vergleichen, die im Briefing-Log (#2281) Einträge haben / When `GET /api/next-briefings` aufgerufen wird / Then enthält die Antwort je Trip und je Vergleich ein `last_briefing` (Zeitpunkt des letzten tatsächlich versendeten Briefings, `null` wenn nie), abgeleitet in Python aus dem Briefing-Log, ohne zusätzliche Persistenz.
+- **AC-13 (S4):** Given ein Nutzer mit Trips und Orts-Vergleichen, die im Briefing-Log (#2281) Einträge haben / When `GET /api/next-briefings` aufgerufen wird / Then enthält die Antwort je Trip und je Vergleich ein `last_briefing` (Zeitpunkt des letzten tatsächlich versendeten Briefings, `null` wenn nie), abgeleitet in Python aus dem Briefing-Log, ohne zusätzliche Persistenz.
   - Test: pytest gegen den Python-Endpunkt mit echten Briefing-Log-Einträgen (aufgezeichnete Fixture), Go-Proxy-Test, dass die Antwort unverändert durchgereicht wird.
 
-**AC-14** (S4): Given zwei verschiedene Nutzer A und B mit je eigenen Trips und Vergleichen sowie eigenen Briefing-Log-Einträgen / When A `GET /api/next-briefings` aufruft (Auth-Kontext von A) / Then enthält die Antwort ausschließlich A-Einträge — keine IDs, Zeitpunkte oder Kanäle von B —, und `user_id` stammt aus dem Auth-Kontext, nie aus `"default"`.
+- **AC-14 (S4):** Given zwei verschiedene Nutzer A und B mit je eigenen Trips und Vergleichen sowie eigenen Briefing-Log-Einträgen / When A `GET /api/next-briefings` aufruft (Auth-Kontext von A) / Then enthält die Antwort ausschließlich A-Einträge — keine IDs, Zeitpunkte oder Kanäle von B —, und `user_id` stammt aus dem Auth-Kontext, nie aus `"default"`.
   - Test: pytest und Go-Test mit zwei Nutzern (Mandantentrennung, Pflicht laut CLAUDE.md); Gegenprobe: gleiche IDs bei beiden Nutzern liefern je eigene Werte.
 
-**AC-15** (S4): Given die Startseite nach S4 / When sie für einen Trip mit versendetem Briefing gestern geladen wird / Then zeigt die Trip-Kachel den letzten Versand (nicht „—") und den nächsten Versand aus `next`, und bei `next.at === null` den Grund (`reason`) statt eines erfundenen Zeitpunkts; ein einziger Sammelaufruf (kein Aufruf je Kachel) lädt die Daten.
+- **AC-15 (S4):** Given die Startseite nach S4 / When sie für einen Trip mit versendetem Briefing gestern geladen wird / Then zeigt die Trip-Kachel den letzten Versand (nicht „—") und den nächsten Versand aus `next`, und bei `next.at === null` den Grund (`reason`) statt eines erfundenen Zeitpunkts; ein einziger Sammelaufruf (kein Aufruf je Kachel) lädt die Daten.
   - Test: `node --test` auf Mapping Antwort → Props (inkl. `null`-Fall); Staging-Messung mit Wegwerf-Nutzer (Trip + Vergleich) und Screenshot-Paar.
 
-**AC-16** (S2): Given eine Vergleichs-Kachel auf der Startseite / When sie nach S2 gerendert wird / Then zeigt sie in der compact-Darstellung zusätzlich Kanäle sowie letzten und nächsten Versand (bewusste sichtbare Änderung) und behält ihre Aktion „Bearbeiten" sowie `data-testid="subscription-card-{id}"`.
+- **AC-16 (S2):** Given eine Vergleichs-Kachel auf der Startseite / When sie nach S2 gerendert wird / Then zeigt sie in der compact-Darstellung zusätzlich Kanäle sowie letzten und nächsten Versand (bewusste sichtbare Änderung) und behält ihre Aktion „Bearbeiten" sowie `data-testid="subscription-card-{id}"`.
   - Test: `subscription_card.test.ts` (SSR-Render compact, kind `vergleich`).
 
-**AC-17** (S2): Given die Startseite mit einem Trip und einem Orts-Vergleich / When die Kacheln gerendert werden / Then tragen beide `data-testid="subscription-card-{id}"` und `data-kind` (`trip` bzw. `vergleich`), der Name ist ein echter Link auf den jeweiligen Hub (Mittel-/Rechtsklick funktioniert), und ein Klick auf die Karte führt weiter zum Hub.
+- **AC-17 (S2):** Given die Startseite mit einem Trip und einem Orts-Vergleich / When die Kacheln gerendert werden / Then tragen beide `data-testid="subscription-card-{id}"` und `data-kind` (`trip` bzw. `vergleich`), der Name ist ein echter Link auf den jeweiligen Hub (Mittel-/Rechtsklick funktioniert), und ein Klick auf die Karte führt weiter zum Hub.
   - Test: `node --test` SSR-Render beider kinds (Link-Ziel und Kennung); die zwei veralteten Playwright-Specs werden auf die neue Kennung umgestellt.
 
-**AC-18** (S2): Given ein Trip und ein Vergleich, für die `GET /api/next-briefings` einen nächsten Versand liefert, bei einem weiteren Eintrag mit `at === null` und `reason` / When die Startseite gerendert wird / Then zeigt jede Kachel den nächsten Versand aus dieser Antwort (ohne eigene Fälligkeitsrechnung), bei `at === null` den Grund, und der letzte Versand des Trips zeigt „—" bis S4.
+- **AC-18 (S2):** Given ein Trip und ein Vergleich, für die `GET /api/next-briefings` einen nächsten Versand liefert, bei einem weiteren Eintrag mit `at === null` und `reason` / When die Startseite gerendert wird / Then zeigt jede Kachel den nächsten Versand aus dieser Antwort (ohne eigene Fälligkeitsrechnung), bei `at === null` den Grund, und der letzte Versand des Trips zeigt „—" bis S4.
   - Test: `node --test` auf das Mapping Antwort → Props (inkl. `null`-Fall) und SSR-Render beider kinds.
 
 ## Test Plan (Kern deterministisch, keine Mocks)
@@ -238,3 +245,4 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 - 2026-10-24: Bestandsaufmaß korrigiert: 8 statt 7 Namenspaare (trip_forecast.py/forecast.py, Adversary F003); nachgezogen in S1-Aufzählung, Schrumpf-Test-Absatz, Prüfdatum-Absatz und `- Test:`-Zeile unter AC-3 (F012). AC-5/AC-8-Texte unverändert (Spec-Freeze)
 - 2026-10-24, /60-validate: HomeHeroCompare/HomeHeroTrip schon in S1 aus BEKANNTE_PAARE gestrichen (Datei durch #1969 gelöscht), für S2 entfällt dieser Schritt
 - 2026-10-24, /30-write-spec S2: Zuschnitt aus /20-analyse ergänzt (Kanäle als Prop, Testkennung `subscription-card-{id}`, Link-Verhalten, `nextSend` schon in S2); neue ACs AC-17 und AC-18. S2-Freigabe: AC-1 (Teil S2), AC-9, AC-10, AC-16, AC-17, AC-18
+- 2026-10-25, /30-write-spec S3: Zuschnitt aus /20-analyse ergänzt (HomeHero mit Snippets, Kanäle als Prop, Fundstelle :589, BEKANNTE_PAARE-Punkt erledigt, LoC angehoben). ACs AC-4/11/12 inhaltlich unverändert. S3-Freigabe: AC-4, AC-11, AC-12

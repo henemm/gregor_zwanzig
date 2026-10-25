@@ -5,7 +5,7 @@
 // -----
 // Die 68er/67er-Ratsche (`context_herkunft_zweige_eingefroren.test.ts`) misst
 // NUR `frontend/src/lib/components/shared/`. Der lebende Praezedenzfall der
-// Umstellung (#1720 S1, CompareOutlookLayoutControls) hat dabei nachweislich
+// Umstellung (#1720 S1, heute OutlookLayoutControls) hat dabei nachweislich
 // `wiz`-Zugriffe ins ELTERNTEIL verschoben — dorthin, wo jene Ratsche nicht
 // hinsieht. Eine Umstellung koennte also eine HERKUNFT-Verzweigung aus
 // `shared/` heraus- und in `compare/`/`compare-new/` hineinschieben, und die

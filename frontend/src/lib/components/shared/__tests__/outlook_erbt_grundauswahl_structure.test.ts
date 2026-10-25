@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const OUTLOOK_COMPONENT = join(here, '..', 'CompareOutlookLayoutControls.svelte');
+const OUTLOOK_COMPONENT = join(here, '..', 'OutlookLayoutControls.svelte');
 const WEATHER_METRICS_TAB = join(here, '..', 'WeatherMetricsTab.svelte');
 
 function parseComponent(path: string): any {
@@ -109,7 +109,7 @@ function instanceBody(ast: any): any[] {
 // AC-1: keine zweite Kaestchenliste mehr im Ausblick-Auswahl-Block
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('AC-1 [#1848 A3]: CompareOutlookLayoutControls.svelte zeigt keine eigene Metrik-Kaestchenliste mehr', () => {
+describe('AC-1 [#1848 A3]: OutlookLayoutControls.svelte zeigt keine eigene Metrik-Kaestchenliste mehr', () => {
 	test('kein <input type="checkbox"> mehr im Template — sichtbar bleibt ausschliesslich die Reihenfolge-Liste', () => {
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const checkboxInputs = findElementsNamed(ast.fragment, 'input').filter((el) =>
@@ -118,7 +118,7 @@ describe('AC-1 [#1848 A3]: CompareOutlookLayoutControls.svelte zeigt keine eigen
 		assert.equal(
 			checkboxInputs.length,
 			0,
-			`AC-1 FAIL (RED): CompareOutlookLayoutControls.svelte enthaelt noch ${checkboxInputs.length} ` +
+			`AC-1 FAIL (RED): OutlookLayoutControls.svelte enthaelt noch ${checkboxInputs.length} ` +
 				'checkbox-<input>-Elemente (die Metrik-Auswahlliste, heute :167-182). Nach Block A der Spec ' +
 				'entfaellt die zweite Kaestchenliste ersatzlos — abgewaehlt wird ausschliesslich ueber den ' +
 				'"Aus"-Knopf der Reihenfolge-Liste (WeatherV2Reihenfolge), exakt wie bei E-Mail/Telegram/SMS.'
@@ -157,34 +157,34 @@ describe('AC-1 [#1848 A3]: CompareOutlookLayoutControls.svelte zeigt keine eigen
 // Grundauswahl durch — keine einseitige Verdrahtung.
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('AC-2 [#1848 A3]: beide Mountpunkte (Trip UND Ortsvergleich) reichen ihre Grundauswahl an CompareOutlookLayoutControls durch', () => {
-	test('WeatherMetricsTab.svelte mountet CompareOutlookLayoutControls genau zweimal, BEIDE mit einer `grundauswahl`-Prop', () => {
+describe('AC-2 [#1848 A3]: beide Mountpunkte (Trip UND Ortsvergleich) reichen ihre Grundauswahl an OutlookLayoutControls durch', () => {
+	test('WeatherMetricsTab.svelte mountet OutlookLayoutControls genau zweimal, BEIDE mit einer `grundauswahl`-Prop', () => {
 		// Technical Approach der Spec ("Teil (a) — Liste begrenzen"): EINE Prop
 		// `grundauswahl: string[] | null`, zwei Mountpunkte (Ortsvergleich
 		// `:1403`, Trip `:1786`) — die Fallunterscheidung liegt allein im
 		// uebergebenen Wert, nicht im Bauteil. M-6: wird die Prop nur an EINEM
 		// Mount gesetzt, bleibt die andere Flaeche ungeschnitten.
 		const ast = parseComponent(WEATHER_METRICS_TAB);
-		const mounts = findComponentsNamed(ast.fragment, 'CompareOutlookLayoutControls');
+		const mounts = findComponentsNamed(ast.fragment, 'OutlookLayoutControls');
 		assert.equal(
 			mounts.length,
 			2,
-			`Erwartet genau zwei CompareOutlookLayoutControls-Mounts (Ortsvergleich + Trip), gefunden ${mounts.length}.`
+			`Erwartet genau zwei OutlookLayoutControls-Mounts (Ortsvergleich + Trip), gefunden ${mounts.length}.`
 		);
 		const ohneGrundauswahl = mounts.filter((m) => !findAttr(m, 'grundauswahl'));
 		assert.equal(
 			ohneGrundauswahl.length,
 			0,
 			`AC-2 FAIL (RED): ${ohneGrundauswahl.length} von ${mounts.length} Mountpunkten uebergeben keine ` +
-				'`grundauswahl`-Prop an CompareOutlookLayoutControls — ohne sie bleibt Teil (a) an dieser ' +
+				'`grundauswahl`-Prop an OutlookLayoutControls — ohne sie bleibt Teil (a) an dieser ' +
 				'Flaeche wirkungslos (M-6: "Grundauswahl-Prop nur am Trip-Mount, nicht am Ortsvergleich-Mount").'
 		);
 	});
 
 	test('der Ortsvergleich-Mount referenziert die COMPARE-Grundauswahl (materializedActiveMetricKeys), der Trip-Mount die TRIP-Grundauswahl (buckets.primary)', () => {
 		const ast = parseComponent(WEATHER_METRICS_TAB);
-		const mounts = findComponentsNamed(ast.fragment, 'CompareOutlookLayoutControls');
-		assert.ok(mounts.length >= 1, 'Vorbedingung: kein CompareOutlookLayoutControls-Mount gefunden.');
+		const mounts = findComponentsNamed(ast.fragment, 'OutlookLayoutControls');
+		assert.ok(mounts.length >= 1, 'Vorbedingung: kein OutlookLayoutControls-Mount gefunden.');
 
 		const referenziertCompareGrundauswahl = mounts.some((m) =>
 			attributeReferencesIdentifier(findAttr(m, 'grundauswahl'), 'materializedActiveMetricKeys')
@@ -212,7 +212,7 @@ describe('AC-2 [#1848 A3]: beide Mountpunkte (Trip UND Ortsvergleich) reichen ih
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('AC-12 [#1848 A3]: die "Aus"-Berechnung des Ausblicks ruft splitChannelMetricsForDisplay()', () => {
-	test('CompareOutlookLayoutControls.svelte importiert splitChannelMetricsForDisplay aus channelMetricLayouts.ts', () => {
+	test('OutlookLayoutControls.svelte importiert splitChannelMetricsForDisplay aus channelMetricLayouts.ts', () => {
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const imports = instanceBody(ast).filter((stmt) => stmt.type === 'ImportDeclaration');
 		const hit = imports.some(
