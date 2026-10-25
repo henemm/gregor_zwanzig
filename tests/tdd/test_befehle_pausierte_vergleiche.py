@@ -209,7 +209,7 @@ def _angezeigte_namen(text: str) -> list[str]:
     import re
 
     rumpf = text.split(": ", 1)[1].rsplit(". ", 1)[0]
-    return [m.group(1).strip() for m in re.finditer(r"(?:^|, )(.+?) \((?:comparison|route)\)", rumpf)]
+    return [m.group(1).strip() for m in re.finditer(r"(?:^|, )(.+?) \((?:comparison|route|Trip)\)", rumpf)]
 
 
 def test_ac7_gekuerzte_namen_sind_paarweise_verschieden_und_passen_in_160():
@@ -363,9 +363,89 @@ def test_ac9_pausen_eines_nutzers_beeinflussen_den_anderen_nicht(monkeypatch, us
         _preset(ub, f"B-Pause-{i}", paused_at="2026-10-01T08:00:00Z", schedule="manual")
 
     sent_a, calls_a = _via_premium_sms(monkeypatch, ua, "heute")
+    calls_a = list(calls_a)
     sent_b, calls_b = _via_premium_sms(monkeypatch, ub, "heute")
 
     assert calls_a == [] and sent_a and "Ambiguous" in sent_a[0], sent_a
     assert all("B-" not in s for s in sent_a)
     assert len(calls_b) == 1, f"B muss eindeutig auf B-Aktiv zeigen: {sent_b!r}"
     assert not any("Ambiguous" in s for s in sent_b)
+
+
+# ---------------------------------------------------------------------------
+# Adversary-Nachträge (Fix-Loop 1): Kürzung, Trip-Vorrang, gefalteter Treffer
+# ---------------------------------------------------------------------------
+
+def test_ac7_kuerzung_bleibt_eindeutig_wenn_160_zeichen_nicht_reichen():
+    """F001: Acht Namen mit gleichem Anfang ``Zillertal `` passen selbst auf
+    vier Zeichen gekürzt nicht in 160 Zeichen. Eindeutigkeit hat Vorrang:
+    jeder angezeigte Name muss sich (gefaltet) von allen anderen unterscheiden,
+    sonst kann der Nutzer mit keinem davon antworten."""
+    from services.trip_command_processor import _norm_gefaltet
+    from services.trip_selection import _rueckfrage_text
+
+    namen_voll = [
+        "Zillertal Nord", "Zillertal Süd", "Zillertal Ost", "Zillertal West",
+        "Zillertal Mitte", "Zillertal Höhe", "Zillertal Ährental", "Zillertal Ötz",
+    ]
+    text = _rueckfrage_text([("vergleich", n) for n in namen_voll], "premium_sms")
+    namen = _angezeigte_namen(text)
+    assert len(namen) == 8, text
+    gefaltet = [_norm_gefaltet(n) for n in namen]
+    assert len(set(gefaltet)) == 8, f"gekürzte Namen kollidieren: {text!r}"
+    assert all(len(n) >= 4 for n in namen), text
+    # Jeder angezeigte Name muss genau einen Kandidaten bezeichnen.
+    for kurz in gefaltet:
+        passt = [n for n in namen_voll if _norm_gefaltet(n).startswith(kurz)]
+        assert len(passt) == 1, (kurz, passt, text)
+
+
+@pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+def test_ac8_exakter_trip_name_schlaegt_vergleichs_praefix_im_eingang(
+    monkeypatch, user_ids, kanal,
+):
+    """F002: Trip ``Korsika`` + Ortsvergleich ``Korsika Nordkueste``. Der
+    Befehl ``Korsika pause`` meint exakt den Trip -- das Vergleichs-Präfix
+    darf keine Mehrdeutigkeits-Rückfrage auslösen und nichts pausieren."""
+    uid = user_ids()
+    _nutzer_mit_tier(uid)
+    _trip(uid, "Korsika", start_offset_days=-1)
+    vergleich = _preset(uid, "Korsika Nordkueste")
+
+    sent, calls = _ZIELLOSE_KANAELE[kanal](monkeypatch, uid, "Korsika pause")
+
+    assert len(calls) == 1, f"process() muss laufen, Antworten: {sent!r}"
+    assert not any("Mehrdeutig" in s or "Ambiguous" in s for s in sent), sent
+    assert _read(uid, vergleich["id"])["schedule"] == "daily", (
+        "Vergleich wurde statt des Trips pausiert"
+    )
+
+
+def test_ac8_exakter_trip_name_resolve_vergleich_bleibt_im_trip_pfad(user_ids):
+    """F002 auf Ebene ``_resolve_vergleich``: exakter Trip-Treffer ⇒ ``None``
+    (Trip-Pfad läuft weiter), keine Rückfrage."""
+    from services.trip_command_processor import InboundMessage, TripCommandProcessor
+
+    uid = user_ids()
+    _trip(uid, "Korsika", start_offset_days=-1)
+    _preset(uid, "Korsika Nordkueste")
+    msg = InboundMessage(
+        trip_name="Korsika", body="### pause", sender="test", channel="telegram",
+        received_at=_now(), user_id=uid,
+    )
+    assert TripCommandProcessor()._resolve_vergleich(msg) is None
+
+
+def test_ac8_gefalteter_exakter_vergleichsname_schlaegt_laengeren_praefix(user_ids):
+    """F003: Vergleiche ``Zürich`` und ``Zürich Nord``. Die gefaltete Antwort
+    ``Zuerich`` (so zeigt die Premium-SMS-Rückfrage den Namen) trifft exakt
+    ``Zürich`` -- nicht mehrdeutig, obwohl sie auch Präfix von ``Zürich Nord``
+    ist."""
+    from services.trip_command_processor import TripCommandProcessor
+
+    uid = user_ids()
+    ziel = _preset(uid, "Zürich")
+    _preset(uid, "Zürich Nord")
+    treffer = TripCommandProcessor()._find_compare_preset("Zuerich", uid)
+    assert treffer is not None, "gefalteter exakter Name wurde als mehrdeutig verworfen"
+    assert treffer["id"] == ziel["id"]

@@ -142,6 +142,32 @@ def match_leading_name(
         if gefaltet and _rest_ist_gueltiger_befehl(rest):
             kind, ziel = gefaltet[0] if len(gefaltet) == 1 else (None, None)
             return prefix, rest, kind, ziel
+    return _praefix_treffer(raw_words, kandidaten, max_len)
+
+
+_MIN_PRAEFIX = 4
+
+
+def _ist_praefix(name: str, fold_p: str) -> bool:
+    """Bug #2615 (AC-8): gefalteter Eingabename (>= 4 Zeichen) ist Praefix
+    des gefalteten Kandidaten-Namens (gekuerzte Premium-SMS-Rueckfrage)."""
+    return len(fold_p) >= _MIN_PRAEFIX and _norm_gefaltet(name).startswith(fold_p)
+
+
+def _praefix_treffer(
+    raw_words: list[str], kandidaten: list[tuple[str, str, object]], max_len: int,
+) -> tuple[str, str, str | None, object] | None:
+    """Bug #2615 (AC-8): LETZTER Fallback nach exakt/gefaltet ueber alle
+    Wortzahlen -- eindeutiges Praefix mit gueltigem Befehls-Rest. Mehrere
+    Treffer sind mehrdeutig (``kind``/``ziel`` ``None``), nie der erste."""
+    for wortzahl in range(min(max_len, len(raw_words)), 0, -1):
+        prefix = " ".join(raw_words[:wortzahl])
+        rest = " ".join(raw_words[wortzahl:])
+        fold_p = _norm_gefaltet(prefix)
+        treffer = [(k, obj) for k, n, obj in kandidaten if _ist_praefix(n, fold_p)]
+        if treffer and _rest_ist_gueltiger_befehl(rest):
+            kind, ziel = treffer[0] if len(treffer) == 1 else (None, None)
+            return prefix, rest, kind, ziel
     return None
 
 
@@ -1322,7 +1348,9 @@ class TripCommandProcessor:
     # Ortsvergleich — Issue #2282 Scheibe S1
     # -----------------------------------------------------------------------
 
-    def _find_compare_preset(self, name: str, user_id: str) -> Optional[dict]:
+    def _find_compare_preset(
+        self, name: str, user_id: str, *, mit_praefix: bool = True,
+    ) -> Optional[dict]:
         """Toleranter Namensvergleich ueber die Ortsvergleiche des Mandanten
         (Pendant zu ``_find_trip``, Abschnitt 4)."""
         from app.loader import compare_preset_to_dict, load_compare_presets
@@ -1337,6 +1365,12 @@ class TripCommandProcessor:
         treffer = [p for p in presets if _norm_gefaltet(p.name) == fold_q]
         if len(treffer) == 1:
             return compare_preset_to_dict(treffer[0])
+        # Bug #2615 (AC-8): eindeutiges Praefix als LETZTER Fallback.
+        if not mit_praefix:
+            return None
+        treffer = [p for p in presets if _ist_praefix(p.name, fold_q)]
+        if len(treffer) == 1:
+            return compare_preset_to_dict(treffer[0])
         return None
 
     def _resolve_vergleich(self, msg: InboundMessage) -> Optional[CommandResult]:
@@ -1347,7 +1381,10 @@ class TripCommandProcessor:
             return self._dispatch_compare(msg, msg.resolved_preset_id, msg.trip_name)
 
         trip_treffer = self._find_trip(msg.trip_name, msg.user_id)
-        preset_treffer = self._find_compare_preset(msg.trip_name, msg.user_id)
+        # Bug #2615: exakter Trip-Treffer schlaegt ein Vergleichs-Praefix.
+        preset_treffer = self._find_compare_preset(
+            msg.trip_name, msg.user_id, mit_praefix=trip_treffer is None,
+        )
 
         if trip_treffer and preset_treffer:
             # AC-7: Namensgleichheit -> Rueckfrage statt stiller Trip-Wahl.
