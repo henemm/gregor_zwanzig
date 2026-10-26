@@ -34,10 +34,9 @@ MIN_BEGRUENDUNG = 15
 KOPF_ZEILEN = 30
 PRUEFDATUM = date(2027, 1, 24)
 
-# Explizite Altlastliste (nur Dateinamen). Am ENDSTAND von S1 gemessen
-# (2026-10-26: 46 x Regel 1, 2 x Regel 2); darf nur schrumpfen (S4 leert sie).
+# Explizite Altlastliste (nur Dateinamen). Am ENDSTAND von S2 gemessen
+# (2026-10-26: 39 x Regel 1, 2 x Regel 2); darf nur schrumpfen (S4 leert sie).
 ALTLAST: frozenset[str] = frozenset({
-    "bug-626-compare-menu-actions.spec.ts",
     "compare-active-metrics-format.staging.spec.ts",
     "compare-alarm-config.spec.ts",
     "compare-alarme-speichert-selbst.spec.ts",
@@ -55,22 +54,16 @@ ALTLAST: frozenset[str] = frozenset({
     "compare-hub-briefing-times.spec.ts",
     "compare-hub-fidelity-s8c.spec.ts",
     "compare-hub-inline-edit.spec.ts",
-    "compare-hub-kopf-einmal.spec.ts",
-    "compare-hub-name-region-profil.spec.ts",
-    "compare-hub-save-chip.spec.ts",
     "compare-hub-versand-inline.spec.ts",
     "compare-konfliktschutz-zwei-kontexte.spec.ts",
     "compare-layout-tab-dissolution.spec.ts",
     "compare-legacy-fields-survive-save.spec.ts",
     "compare-metric-order.spec.ts",
-    "compare-mobile-vervollstaendigung.spec.ts",
     "compare-neu-kanal-anlegen.staging.spec.ts",
     "compare-new-vorlage.spec.ts",
     "compare-outlook-metric-selection.staging.spec.ts",
     "compare-radar-toggle.spec.ts",
-    "compare-send-dialog-target.staging.spec.ts",
     "compare-stundenverlauf-wertprops.spec.ts",
-    "compare-tab-bar.spec.ts",
     "compare-uebersicht-kanal-bedienung.staging.spec.ts",
     "compare-uebersicht-kanal-persistenz.staging.spec.ts",
     "compare-versand-speichert-selbst.spec.ts",
@@ -89,7 +82,7 @@ ALTLAST: frozenset[str] = frozenset({
 })
 # Literal, NICHT len(ALTLAST) -- sonst waechst die Obergrenze mit jedem neuen
 # Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken.
-ALTLAST_MAX = 48
+ALTLAST_MAX = 41
 
 _SCHLEIFE_RE = re.compile(
     r"\bHUB_KINDS\b"
