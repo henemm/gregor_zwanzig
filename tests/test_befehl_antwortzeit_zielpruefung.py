@@ -235,3 +235,90 @@ def test_main_schreibt_nichts_und_gibt_keine_rufnummer_aus(werkzeug, capsys, tmp
     werkzeug.main(["--since", "2026-10-26", "--ziel", "--journal-datei", str(_LOG)])
     assert list(tmp_path.iterdir()) == []
     assert "+49" not in capsys.readouterr().out
+
+
+# --- Adversary-Nachtrag: Luecken, die keine Mutation sichtbar machte -------------------------
+
+_T0 = datetime(2026, 10, 27, 8, 0, tzinfo=timezone.utc)
+
+
+def _jzeile(ts: datetime, text: str) -> str:
+    """Journalzeile im Format ``journalctl -o short-iso-precise`` wie in der Fixture."""
+    return (f"{ts.isoformat(timespec='microseconds')} Rennwienix uv[5002]: "
+            f"{ts:%Y-%m-%d %H:%M:%S},123 INFO {text}")
+
+
+def _kalter_lauf(minute: int, befehl: str, kanal: str, ms: int, trip: str = "t-inline",
+                 fenster: tuple[str, ...] = ("fr_direct_fenster",)) -> list[str]:
+    """Ein Lauf (Ende = Start + ms) mit Fensterzeile(n) downloads>0 IM Befehlsfenster."""
+    start = _T0 + timedelta(minutes=minute)
+    zeilen = [_jzeile(start + timedelta(seconds=5 + i),
+                      f"{'dwd' if f.startswith('dwd') else 'meteofrance'}: {f} fenster_s=9.50 "
+                      f"downloads=3 cache_treffer=12")
+              for i, f in enumerate(fenster)]
+    zeilen.append(_jzeile(start + timedelta(milliseconds=ms),
+                          f"befehl_dauer: befehl={befehl} kanal={kanal} trip={trip} dauer_ms={ms}"))
+    return zeilen
+
+
+def _journal_datei(tmp_path, zeilen: list[str]) -> str:
+    pfad = tmp_path / "journal.log"
+    pfad.write_text("\n".join(zeilen) + "\n", "utf-8")
+    return str(pfad)
+
+
+def test_f001_nur_heute_kalt_bestanden_und_morgen_fehlt_ist_nicht_belegt(werkzeug):
+    erg = werkzeug.pruefe_ziel([_lauf("HEUTE", ms, "fr_direct") for ms in (30000, 35000, 40000)])
+    assert _gruppe(erg, "HEUTE", "fr_direct")["status"] == "bestanden"
+    morgen = _gruppe(erg, "MORGEN", "fr_direct")
+    assert morgen["status"] == "nicht belegt" and morgen["anzahl"] == 0
+    assert werkzeug.ziel_exitcode(erg) == 2  # nie 0, obwohl HEUTE allein bestanden waere
+
+
+def test_f002_kanal_beschraenkt_die_zielpruefung(werkzeug, capsys, tmp_path):
+    zeilen = []
+    for i, (befehl, ms) in enumerate([("HEUTE", 30000), ("HEUTE", 31000), ("HEUTE", 32000),
+                                      ("MORGEN", 33000), ("MORGEN", 34000), ("MORGEN", 35000)]):
+        zeilen += _kalter_lauf(10 * i, befehl, "email", ms)
+    zeilen += _kalter_lauf(70, "HEUTE", "telegram", 70000)  # nur telegram verfehlt
+    datei = _journal_datei(tmp_path, zeilen)
+    rc_email = werkzeug.main(["--since", "2026-10-27", "--kanal", "email", "--ziel",
+                              "--journal-datei", datei])
+    rc_telegram = werkzeug.main(["--since", "2026-10-27", "--kanal", "telegram", "--ziel",
+                                 "--journal-datei", datei])
+    rc_alle = werkzeug.main(["--since", "2026-10-27", "--ziel", "--journal-datei", datei])
+    capsys.readouterr()
+    assert rc_email == 0      # der 70-s-Telegram-Lauf zaehlt fuer --kanal email nicht
+    assert rc_telegram == 1   # 70 000 ms >= 60 000 ms
+    assert rc_alle == 1       # ohne --kanal zaehlt alles
+
+
+def test_f003_fr_direct_hat_vorrang_vor_dwd_im_selben_fenster(werkzeug, ml):
+    journal = ml.lese_journal(_kalter_lauf(
+        0, "HEUTE", "email", 30000, fenster=("dwd_fenster", "fr_direct_fenster")))
+    laeufe = werkzeug.kaltheit_je_lauf(ml.dauerzeilen(journal), journal)
+    assert [(l["befehl"], l["quelle"]) for l in laeufe] == [("HEUTE", "fr_direct")]
+    journal_umgekehrt = ml.lese_journal(_kalter_lauf(
+        0, "HEUTE", "email", 30000, fenster=("fr_direct_fenster", "dwd_fenster")))
+    laeufe2 = werkzeug.kaltheit_je_lauf(ml.dauerzeilen(journal_umgekehrt), journal_umgekehrt)
+    assert [l["quelle"] for l in laeufe2] == ["fr_direct"]
+
+
+def test_f004_kanalfilter_der_laeufe_ausgabe(werkzeug, capsys):
+    werkzeug.main(["--since", "2026-10-26", "--trip", "kors-gut", "--kanal", "premium_sms",
+                   "--journal-datei", str(_LOG)])
+    ausgabe = capsys.readouterr().out
+    assert " sms trip=kors-gut 50000 ms" in ausgabe  # SMS zaehlt zur Gruppe premium_sms
+    assert " email trip=" not in ausgabe and " telegram trip=" not in ausgabe
+    assert "+49" not in ausgabe
+
+
+def test_f004_ziel_ausgabe_nennt_kanalverteilung_der_kalten_laeufe(werkzeug, capsys):
+    werkzeug.main(["--since", "2026-10-26", "--trip", "kors-gut", "--ziel",
+                   "--journal-datei", str(_LOG)])
+    ausgabe = capsys.readouterr().out
+    ziel_teil = ausgabe.split("== Zielgroessen-Pruefung", 1)[1]
+    heute = next(z for z in ziel_teil.splitlines() if z.startswith("HEUTE quelle=fr_direct"))
+    # nur die drei kalten HEUTE-Laeufe (warmer 90-s- und Vorfenster-Lauf zaehlen nicht)
+    assert "kanaele={'email': 1, 'sms': 1, 'telegram': 1}" in heute
+    assert "+49" not in ausgabe

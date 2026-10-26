@@ -87,7 +87,9 @@ Scheibe A2 -- befehl_antwortzeit.py (weiterhin nur lesend)
   --trip <id>: filtert Dauerzeilen auf diese Trip-ID (Mandanten-/Test-Trip-Eingrenzung).
   --ziel: Zielgroessen-Pruefung nur fuer HEUTE und MORGEN und nur fuer KALTE Laeufe,
     getrennt je (Befehl, Quelle):
-      verfehlt     : irgendein kalter Lauf >= 60 000 ms ODER Median >= 45 000 ms
+      verfehlt     : irgendein kalter Lauf >= 60 000 ms ODER (ab Mindestzahl kalter Laeufe)
+                     Median >= 45 000 ms -- unter der Mindestzahl sagt ein Median nichts aus,
+                     dort gilt "nicht belegt" (Test-Vertrag Fixture kors-duenn)
       nicht belegt : weniger als die Mindestzahl kalter Laeufe
                      (fr_direct/Korsika: 3 -- Haupt-Spec AC-5; dwd/DE: 5 -- Haupt-Spec AC-4)
       bestanden    : sonst
@@ -152,7 +154,7 @@ Scheibe B -- Prod-Nachweis (kein Code), Protokoll
 - **AC-4:** Given Dauerzeilen mehrerer Trips, Befehle und Kanäle, When das Werkzeug mit `--trip <id>` aufgerufen wird, Then erscheinen und zählen ausschließlich Läufe dieser Trip-ID; Läufe anderer Trips, auch mit identischem Befehl und Zeitfenster, fließen weder in die Ausgabe noch in die Zielgrößen-Prüfung ein.
   - Test: Kern-Test mit zwei Trips (Test-Trip und Fremd-Trip) in derselben Fixture: Mit `--trip` des Test-Trips hat die Prüfung nur dessen Läufe; ein Fremd-Trip mit 70-s-Lauf macht die Prüfung des Test-Trips nicht rot. Mutationsprobe: Filter entfernen → Test rot.
 
-- **AC-5:** Given kalte HEUTE-/MORGEN-Läufe mit Quelle `fr_direct`, When die Zielgrößen-Prüfung (`--ziel`) läuft, Then lautet das Ergebnis je Befehl `bestanden`, wenn mindestens 3 kalte Läufe vorliegen, jeder Lauf unter 60 000 ms liegt und der Median unter 45 000 ms; `verfehlt`, sobald ein kalter Lauf 60 000 ms oder mehr hat oder der Median 45 000 ms oder mehr; `nicht belegt`, wenn weniger als 3 kalte Läufe vorliegen — warme Läufe zählen nicht mit.
+- **AC-5:** Given kalte HEUTE-/MORGEN-Läufe mit Quelle `fr_direct`, When die Zielgrößen-Prüfung (`--ziel`) läuft, Then lautet das Ergebnis je Befehl `bestanden`, wenn mindestens 3 kalte Läufe vorliegen, jeder Lauf unter 60 000 ms liegt und der Median unter 45 000 ms; `verfehlt`, sobald ein kalter Lauf 60 000 ms oder mehr hat oder (ab 3 kalten Läufen) der Median 45 000 ms oder mehr; `nicht belegt`, wenn weniger als 3 kalte Läufe vorliegen und kein Einzellauf die 60 s erreicht — warme Läufe zählen nicht mit.
   - Test: Kern-Test mit Fixture-Grenzfällen: 59 999 ms bestanden / 60 000 ms verfehlt; drei Läufe mit Median genau 45 000 ms → verfehlt, mit 44 999 ms → bestanden; nur 2 kalte Läufe → `nicht belegt` (nicht bestanden); 3 kalte + 5 warme Läufe zählen als 3; ein warmer 90-s-Lauf macht die Prüfung nicht rot. Mutationen (Grenze `<` → `<=`, Mindestzahl 3 → 2, warme Läufe mitzählen) lassen jeweils mindestens einen Test rot werden.
 
 - **AC-6:** Given eine Prod-Auswertung mit `--ziel`, When das Werkzeug endet, Then ist der Exit-Code 0 nur, wenn jede geprüfte Gruppe `bestanden` ist; bei mindestens einer Gruppe `verfehlt` ist der Exit-Code 1, bei keiner `verfehlt` aber mindestens einer `nicht belegt` ist er 2; ohne `--ziel` bleibt der Exit-Code 0 wie bisher, und das Werkzeug löst weiterhin keinen Befehl aus und schreibt nichts.
@@ -183,4 +185,5 @@ Scheibe B -- Prod-Nachweis (kein Code), Protokoll
 
 ## Changelog
 
+- 2026-10-26: AC-5 und A2 klargestellt: Median-Grenze (45 s) gilt erst ab der Mindestzahl kalter Läufe; darunter „nicht belegt“, sofern kein Einzellauf 60 s erreicht (Adversary-Finding F005, Test-Vertrag Fixture kors-duenn).
 - 2026-10-25: Initial spec created (Delta zu `feat_2439_befehle_antwortzeit` AC-5: Staging-Test angleichen, Prod-Werkzeug um Kaltheit/Quelle/`--trip`/Zielgrößen-Prüfung erweitern, Prod-Nachweis-Protokoll)

@@ -281,24 +281,33 @@ def test_ac4_wetterbefehle_kalt_auf_de_route_max_unter_60s_und_median_unter_45s(
 
 @pytest.mark.parametrize("befehl", ["HEUTE", "MORGEN"])
 def test_ac5_wetterbefehle_kalt_auf_korsika_route_jeder_lauf_unter_60s(befehl):
-    """AC-5: Korsika-Trip (`fr_direct`), >= 3 kalte Laeufe je Befehl, jeder < 60 s."""
+    """AC-5 auf Staging (Delta-Spec feat_2439_prod_antwortzeit_nachweis AC-1): Antwort fuer den
+    Korsika-Trip vorhanden, kein `fr_direct`-Download im Befehlsfenster (egress_guard sperrt
+    Meteo-France, Ersatzquelle eu_direct). Der `fr_direct`-Kaltlauf (>= 3 kalte Laeufe, jeder
+    < 60 s) ist auf Staging NOT_MEASURABLE -- Prod-Messweg .claude/tools/befehl_antwortzeit.py."""
     trip = os.environ.get("GZ_STAGING_TRIP_KORSIKA", "")
     assert trip, "GZ_STAGING_TRIP_KORSIKA fehlt (Befund der Testumgebung): Korsika-Trip-ID"
     seit = _messlauf_seit()
     alle = _auswahl(_dauerzeilen(seit, trip=trip), befehl)
-    laeufe = ml.kalt_laeufe(alle, _journal("gregor-python-staging", seit),
-                            quellen=("fr_direct_fenster",))
-    werte = [l["ms"] for l in laeufe]
-    print(f"AC-5 {befehl} Korsika: kalte Einzelwerte (ms) = {werte}; alle = {[l['ms'] for l in alle]}")
-    assert len(werte) >= MIN_LAEUFE_KORSIKA, (
-        f"AC-5: nicht belegt -- nur {len(werte)} KALTE {befehl}-Laeufe (fr_direct_fenster "
-        f"downloads>0) von {len(alle)} Laeufen fuer den Korsika-Trip, erwartet >= "
-        f"{MIN_LAEUFE_KORSIKA}"
+    print(f"AC-5 {befehl} Korsika: Laeufe (kanal, ms) = {[(l['kanal'], l['ms']) for l in alle]}")
+    assert alle, (
+        f"AC-5: keine Antwort -- keine Dauerzeile {befehl} fuer den Korsika-Trip {trip} seit "
+        f"{seit} (Antwort nicht an den Versand-Provider uebergeben oder Treiber hat nicht "
+        f"ausgeloest)"
     )
-    assert max(werte) < GRENZE_MIT_WETTER_MS, (
-        f"AC-5: {befehl} Korsika, Einzelwerte {werte} ms: Maximum {max(werte)} ms >= "
-        f"{GRENZE_MIT_WETTER_MS} ms -- Befund in diesem Ticket (Abrufpfad fr_direct "
-        f"beschleunigen), keine Ausnahme"
+    fr_kalt = ml.kalt_laeufe(alle, _journal("gregor-python-staging", seit),
+                             quellen=("fr_direct_fenster",))
+    assert not fr_kalt, (
+        f"AC-5: Befund -- fr_direct-Download (fr_direct_fenster downloads>0) im Befehlsfenster "
+        f"auf Staging bei {[l['ms'] for l in fr_kalt]} ms: die egress_guard-Sperre fuer "
+        f"Meteo-France ist wirkungslos"
+    )
+    print(f"AC-5 {befehl} Korsika: Quelle eu_direct (Ersatz, egress_guard sperrt Meteo-France)")
+    pytest.skip(
+        f"NOT_MEASURABLE_ON_STAGING: public-api.meteofrance.fr ist auf Staging durch "
+        f"egress_guard gesperrt -- fr_direct-Kaltlauf (>= {MIN_LAEUFE_KORSIKA} kalte Laeufe, "
+        f"jeder < {GRENZE_MIT_WETTER_MS} ms) nur auf Prod messbar -- Prod-Messweg: "
+        f".claude/tools/befehl_antwortzeit.py --trip <id> --ziel"
     )
 
 
