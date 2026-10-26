@@ -34,10 +34,62 @@ MIN_BEGRUENDUNG = 15
 KOPF_ZEILEN = 30
 PRUEFDATUM = date(2027, 1, 24)
 
-# Explizite Altlastliste (nur Dateinamen). Wird am ENDSTAND von S1 gemessen und
-# gefuellt; darf danach nur schrumpfen (S4 leert sie).
-ALTLAST: frozenset[str] = frozenset()
-ALTLAST_MAX = len(ALTLAST)
+# Explizite Altlastliste (nur Dateinamen). Am ENDSTAND von S1 gemessen
+# (2026-10-26: 46 x Regel 1, 2 x Regel 2); darf nur schrumpfen (S4 leert sie).
+ALTLAST: frozenset[str] = frozenset({
+    "bug-626-compare-menu-actions.spec.ts",
+    "compare-active-metrics-format.staging.spec.ts",
+    "compare-alarm-config.spec.ts",
+    "compare-alarme-speichert-selbst.spec.ts",
+    "compare-alarme-wertprops.spec.ts",
+    "compare-detail-edit-entry.spec.ts",
+    "compare-edit-redirect.spec.ts",
+    "compare-editor-autosave-user-isolation.spec.ts",
+    "compare-editor-autosave.spec.ts",
+    "compare-editor-fidelity-s8d.spec.ts",
+    "compare-editor-slice1.spec.ts",
+    "compare-editor-slice3.spec.ts",
+    "compare-editor-slice4.spec.ts",
+    "compare-flow-navigation.spec.ts",
+    "compare-hourly-metric-order.spec.ts",
+    "compare-hub-briefing-times.spec.ts",
+    "compare-hub-fidelity-s8c.spec.ts",
+    "compare-hub-inline-edit.spec.ts",
+    "compare-hub-kopf-einmal.spec.ts",
+    "compare-hub-name-region-profil.spec.ts",
+    "compare-hub-save-chip.spec.ts",
+    "compare-hub-versand-inline.spec.ts",
+    "compare-konfliktschutz-zwei-kontexte.spec.ts",
+    "compare-layout-tab-dissolution.spec.ts",
+    "compare-legacy-fields-survive-save.spec.ts",
+    "compare-metric-order.spec.ts",
+    "compare-mobile-vervollstaendigung.spec.ts",
+    "compare-neu-kanal-anlegen.staging.spec.ts",
+    "compare-new-vorlage.spec.ts",
+    "compare-outlook-metric-selection.staging.spec.ts",
+    "compare-radar-toggle.spec.ts",
+    "compare-send-dialog-target.staging.spec.ts",
+    "compare-stundenverlauf-wertprops.spec.ts",
+    "compare-tab-bar.spec.ts",
+    "compare-uebersicht-kanal-bedienung.staging.spec.ts",
+    "compare-uebersicht-kanal-persistenz.staging.spec.ts",
+    "compare-versand-speichert-selbst.spec.ts",
+    "compare-wertebereiche-speichert-selbst.spec.ts",
+    "compare-wertebereiche-wertprops.spec.ts",
+    "compare-wetter-metriken-speichert-selbst.spec.ts",
+    "feat-1461-s3b2b-compare-kanal-schwelle.spec.ts",
+    "fix-1350-compare-metric-select.staging.spec.ts",
+    "fix-1350t3-compare-threshold-source.staging.spec.ts",
+    "issue-1080-compare-new-url.spec.ts",
+    "issue-1093-compare-layout-crash.spec.ts",
+    "issue-682-compare-editor-mobile.spec.ts",
+    # Regel 2 (Compare-Hub-Reiter ohne Trip-Gegenstueck, Umgehung per Dateiname)
+    "kanal-grenzen-ortsvergleich.staging.spec.ts",
+    "versand-tab-vergleich.spec.ts",
+})
+# Literal, NICHT len(ALTLAST) -- sonst waechst die Obergrenze mit jedem neuen
+# Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken.
+ALTLAST_MAX = 48
 
 _SCHLEIFE_RE = re.compile(
     r"\bHUB_KINDS\b"
@@ -144,9 +196,17 @@ def test_kurzer_marker_ist_auch_mit_schleife_rot():
 
 
 def test_marker_hinter_zeile_30_zaehlt_nicht():
-    inhalt = "\n" * KOPF_ZEILEN + KOPF_OK
+    # Literal 30 statt KOPF_ZEILEN -- sonst wuerde eine Aufweitung der Konstante
+    # den Selbsttest mitziehen und gruen bleiben (Adversary F003).
+    assert KOPF_ZEILEN == 30, "Kopf = erste 30 Zeilen (Muster pendant_gate.py)"
+    inhalt = "\n" * 30 + KOPF_OK  # Marker in Zeile 31
     befunde = pruefe_compare_specs({"compare-neu.spec.ts": inhalt}, frozenset())
     assert len(befunde) == 1 and "Regel 1" in befunde[0]
+
+
+def test_marker_in_zeile_30_zaehlt_noch():
+    inhalt = "\n" * 29 + KOPF_OK  # Marker in Zeile 30
+    assert pruefe_compare_specs({"compare-neu.spec.ts": inhalt}, frozenset()) == []
 
 
 def test_umgehung_per_dateiname_ist_rot():

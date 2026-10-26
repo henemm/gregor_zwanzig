@@ -13,7 +13,8 @@
 //
 // Erwartung exakt 404: beide Update-Handler laden über den nutzergebundenen
 // Store, finden das fremde Objekt nicht und antworten `404 not_found` vor
-// If-Match-Prüfung und Rumpf-Dekodierung (nicht 403, nicht 200).
+// If-Match-Prüfung und Rumpf-Dekodierung (nicht 403, nicht 200). „Unverändert"
+// wird über Name und ETag des Eigentümer-GET belegt.
 
 import { test, expect, type APIRequestContext, type BrowserContext } from '@playwright/test';
 import { HUB_KINDS, hubApiPath, registriereBestaetigtenZweitnutzer, seedHub, type HubKind, type SeededHub } from './helpers';
@@ -69,7 +70,9 @@ for (const kind of HUB_KINDS) {
 
 		const nachher = await eigentuemerStand(ctxA.request, pfad);
 		expect(nachher.body.name, 'Name des Eigentümers unverändert').toBe(vorher.body.name);
+		// Unverändert-Nachweis über Name + ETag (ein `updated_at` führt das Modell
+		// nicht — ein Vergleich darauf wäre undefined === undefined).
+		expect(nachher.etag, 'Nachher-GET des Eigentümers liefert einen ETag').toBeTruthy();
 		expect(nachher.etag, 'ETag des Eigentümers unverändert').toBe(vorher.etag);
-		expect(nachher.body.updated_at, 'updated_at des Eigentümers unverändert').toEqual(vorher.body.updated_at);
 	});
 }

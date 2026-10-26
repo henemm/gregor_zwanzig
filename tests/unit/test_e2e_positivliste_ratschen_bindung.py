@@ -95,6 +95,21 @@ def test_positivliste_enthaelt_mandantentrennungs_spec(spec):
         f"{spec} fehlt auf der Positivliste ({len(gelistet)} Eintraege) -- "
         f"gemessen gruen, aber ungelistet bewacht die Mandantentrennung niemand.")
 
+def test_jeder_positivlisten_eintrag_existiert():
+    """AC-4 (#2347 S1, Adversary F004): Existenzpruefung fuer ALLE Eintraege.
+
+    GIVEN die Positivliste (Pfade relativ zu `frontend/`, wie im CI-Job)
+    WHEN jeder `e2e/...`-Eintrag gegen den Worktree-Stand geprueft wird
+    THEN existiert jede Datei -- eine Umbenennung/Loeschung ohne Listenpflege
+         (z. B. compare-cross-user-write-block -> hub-cross-user-write-block)
+         ist schon im Kern-Lauf rot, nicht erst im `e2e`-Job.
+    """
+    eintraege = _liste_zeilen(POSITIVLISTE.read_text(encoding="utf-8"))
+    assert len(eintraege) >= 10, f"Positivliste nicht gefunden/leer: {POSITIVLISTE}"
+    fehlend = [e for e in eintraege if not (REPO / PLAYWRIGHT_CWD / e).is_file()]
+    assert not fehlend, (
+        "Positivlisten-Eintraege ohne Datei unter frontend/:\n  " + "\n  ".join(fehlend))
+
 def test_kein_spec_schreibt_in_den_versionierten_baum():
     """AC-5/AC-7: kein Schreibziel liegt in einem von Git gefuehrten Ordner.
 

@@ -4,7 +4,9 @@
 // Sammel-Ereignissen (`onchange`/`onfocusout`/`onclick`). Nachweis am Wirkort.
 //
 // Spec: docs/specs/modules/rework_2276_s5_versand.md
-//   AC-1 (Speicherweg über den Controller, genau ein PUT), AC-4 (Reiterwechsel
+//   AC-1 → seit #2347 S1 (Epic #2345, Etappe P6) in hub-versand-autosave-chip.spec.ts
+//   (eine Zusicherung für Trip- UND Vergleichs-Hub); hier verbleiben bis S3:
+//   AC-4 (Reiterwechsel
 //   verliert nichts), AC-5 („Bis auf Weiteres" ohne change-/focusout-Ereignis),
 //   AC-6 (412 → „Nochmal speichern"), AC-7 (Pausieren flusht die ausstehende
 //   Änderung), AC-11 (übrige Einstellungen bleiben unverändert)
@@ -131,32 +133,8 @@ test.describe('Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert sel
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// AC-1 — fängt: der reaktive $effect fehlt oder die Props am Mount fehlen
-	// ⇒ gar kein PUT; oder der Wrapper-Div ist zusätzlich aktiv ⇒ mehr als ein PUT.
-	test('AC-1: Morgen-Uhrzeit ändern → genau EIN PUT über den Controller, danach „Gespeichert"', async ({
-		page
-	}) => {
-		const id = await legeVergleichAn(page);
-		const { puts, beantwortet } = zaehlePuts(page, id);
-		const tab = await oeffneVersand(page, id);
-		expect(puts.length, 'Vorbedingung: das Öffnen des Reiters speichert nichts').toBe(0);
-
-		await tab.locator('[data-testid="report-morning-time"]').selectOption('08:00');
-
-		// Der Zustandsweg idle → saving → saved wird am Controller im Kern-Test
-		// geprüft (versand_vergleich_speichert_selbst.test.ts); hier zählt der
-		// Endzustand — ein Durchgangszustand wäre eine Flake-Quelle in einer
-		// geratschten Spec.
-		await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
-		await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-		await expect(anzeige(page)).toContainText('Gespeichert');
-		// kurze Nachfrist: ein zweiter, verspäteter PUT wäre jetzt sichtbar
-		await page.waitForTimeout(1_200);
-
-		expect(puts.length, 'eine Geste im Versand-Reiter darf nur EINEN PUT auslösen').toBe(1);
-		const stand = await serverStand(page, id);
-		expect(stand.morning_time).toBe('08:00:00');
-	});
+	// AC-1 (genau EIN PUT, „Gespeichert", Server-Stand 08:00) ist seit #2347 S1
+	// in hub-versand-autosave-chip.spec.ts (Fall `vergleich`, Schleife über beide Hubs).
 
 	// AC-5 — fängt: der Wegfall des Wrapper-`onclick` ohne Ersatz. „Bis auf
 	// Weiteres" ist ein reiner Button-Klick ohne change-/focusout-Ereignis.

@@ -8,9 +8,10 @@
 // und den Versand-Anhang aus AC-11 (Trip) in trip-hub-kopf-region-aktivitaet.spec.ts
 // (Fall `route`). Zusätzlich neu für beide: der Wert überlebt das Neuladen.
 //
-// Kein `waitForTimeout`: „genau ein PUT" wird mit `page.reload()` als Schranke
-// geprüft — der Request-Listener der Seite überlebt das Neuladen, ein verspäteter
-// zweiter PUT derselben Geste wäre bis dahin abgeschickt.
+// Kein fester Schlaf: „genau ein PUT" wird per `expect.poll` als Stabilitäts-
+// fenster geprüft (PUT-Zahl bleibt 1,5 s lang bei 1), und zwar VOR dem Neuladen —
+// `page.reload()` allein ist keine Schranke, es bräche einen verzögerten zweiten
+// PUT ab (Adversary F001, #2347 S1).
 //
 // Läuft im isolierten CI-Stack (frontend/e2e/ci-stack.sh) bzw. gegen Staging,
 // Anmeldung über den storageState aus global.setup.ts (Admin-Sitzung).
@@ -71,11 +72,28 @@ for (const kind of HUB_KINDS) {
 			const stand = (await res.json()) as Record<string, unknown>;
 			expect(String(HUB_SEL[kind].morningTime(stand)), 'gespeicherter Stand trägt 08:00').toMatch(/^08:00/);
 
-			// Schranke für einen verspäteten zweiten PUT derselben Geste (kein Schlaf).
+			// Genau EIN PUT: die Zahl muss über ein Fenster von 1,5 s stabil bei 1
+			// bleiben (≥ alte 1,2-s-Nachfrist), BEVOR neu geladen wird — ein Neuladen
+			// bräche einen verzögerten zweiten PUT ab und verdeckte ihn.
+			let seit = 0;
+			await expect
+				.poll(
+					() => {
+						if (puts.length !== 1) {
+							seit = 0;
+							return puts.length;
+						}
+						seit ||= Date.now();
+						return Date.now() - seit >= 1_500 ? 'stabil' : 1;
+					},
+					{ message: 'eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen', timeout: 6_000, intervals: [200] }
+				)
+				.toBe('stabil');
+
 			await page.reload();
 			await expect(uhrzeit).toBeVisible({ timeout: 10_000 });
 			await expect(uhrzeit, 'Wert überlebt das Neuladen').toHaveValue('08:00');
-			expect(puts.length, 'eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen').toBe(1);
+			expect(puts.length, 'das Neuladen löst keinen weiteren PUT aus').toBe(1);
 		} finally {
 			await hub.aufraeumen();
 		}

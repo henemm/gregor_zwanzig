@@ -1,0 +1,194 @@
+# #2347 S1 — GREEN-Nachweis (2026-10-26, Worktree 2346-s2, Workflow feat-2347-paritaets-e2e)
+#
+# Lokaler isolierter CI-Stack (frontend/e2e/ci-stack.sh) auf freien Ports Go 8097 / Python 8007,
+# Stack-Zustand im Session-Scratchpad; Playwright mit CI=1, GZ_E2E_API_PROXY_TARGET und
+# GZ_API_BASE = http://localhost:8097, GZ_REPO_ENV_FILE=<leer>, GZ_TEST_FIXTURE_DIR=fixtures/openmeteo,
+# playwright/.auth/admin.json vor jedem Lauf geloescht. Kein Zugriff auf Staging oder Prod.
+
+## 1) pytest -v -rA (Kern-Schicht)
+
+$ uv run pytest -v -rA tests/unit/test_e2e_positivliste_ratschen_bindung.py tests/unit/test_e2e_compare_paritaet_waechter.py
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/2346-s2
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 32 items
+
+=========================== short test summary info ============================
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/hub-cross-user-write-block.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/compare-editor-autosave-user-isolation.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_jeder_positivlisten_eintrag_existiert
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_kein_spec_schreibt_in_den_versionierten_baum
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_filter_c_kriterium_ist_geeicht
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[36-38-True-nennt0]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[40-38-True-nennt1]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[38-38-False-nennt2]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[3-3-False-nennt3]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[5-3-True-nennt4]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[None-38-True-nennt5]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_echte_ci_yml_und_positivliste_sind_exakt_gebunden
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_hat_keine_unbegruendete_compare_only_spec
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_waechst_nicht_ueber_den_einfuehrungsstand
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_ist_nicht_leer
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[altmuster]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[hub_kinds]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_neue_compare_spec_ohne_kopf_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_mit_zu_kurzer_begruendung_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_kurzer_marker_ist_auch_mit_schleife_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_hinter_zeile_30_zaehlt_nicht
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_in_zeile_30_zaehlt_noch
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_umgehung_per_dateiname_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trips_url]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trip_tab]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[schleife]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_spec_ohne_compare_bezug_ist_nicht_betroffen
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_deckt_verstoss
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_toter_altlast_eintrag_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_konformer_altlast_eintrag_ist_rot
+============================== 32 passed in 0.98s ==============================
+
+(Stand nach Fix-Runde 1: +test_jeder_positivlisten_eintrag_existiert (F004),
++test_marker_in_zeile_30_zaehlt_noch (F003), ALTLAST_MAX = 48 als Literal (F002).)
+
+## 2) Playwright — die vier angefassten Specs (--reporter=list, unveraenderte Ausgabe ohne [WebServer]-Zeilen)
+
+$ npx playwright test --reporter=list e2e/hub-cross-user-write-block.spec.ts e2e/hub-versand-autosave-chip.spec.ts e2e/compare-versand-speichert-selbst.spec.ts e2e/trip-hub-kopf-region-aktivitaet.spec.ts
+
+Running 42 tests using 1 worker
+
+  ✓   1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (872ms)
+  ✓   2 [tests] › e2e/compare-versand-speichert-selbst.spec.ts:141:2 › Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert selbst › AC-5: „Bis auf Weiteres" (reiner Klick) → Enddatum gelöscht und gespeichert (3.0s)
+  ✓   3 [tests] › e2e/compare-versand-speichert-selbst.spec.ts:175:2 › Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert selbst › AC-4: Uhrzeit ändern, sofort zu „Alarme", dort Radar an → BEIDE Änderungen gespeichert (2.2s)
+  ✓   4 [tests] › e2e/compare-versand-speichert-selbst.spec.ts:205:2 › Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert selbst › AC-6: fremde Änderung dazwischen → „Nochmal speichern" → gespeichert, Wert bleibt sichtbar (3.1s)
+  ✓   5 [tests] › e2e/compare-versand-speichert-selbst.spec.ts:248:2 › Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert selbst › AC-7: Uhrzeit ändern und sofort pausieren → die Änderung ist im gespeicherten Stand (1.3s)
+  ✓   6 [tests] › e2e/compare-versand-speichert-selbst.spec.ts:274:2 › Issue #2276 S5: Reiter „Versand" im Ortsvergleich speichert selbst › AC-11: Uhrzeit ändern → alle übrigen Einstellungen bleiben nach dem Neuladen unverändert (2.4s)
+  ✓   7 [tests] › e2e/hub-cross-user-write-block.spec.ts:57:2 › AC-2 (route): Nutzer B schreibt per PUT auf das Objekt von A ⇒ 404, Stand von A unverändert (17ms)
+  ✓   8 [tests] › e2e/hub-cross-user-write-block.spec.ts:57:2 › AC-2 (vergleich): Nutzer B schreibt per PUT auf das Objekt von A ⇒ 404, Stand von A unverändert (16ms)
+  ✓   9 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (1.8s)
+  ✓  10 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (1.9s)
+  ✓  11 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:254:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-1: Name im Kopf aendern → sofort in trip-detail-h1 (Praefix bleibt) + nach Reload persistent (774ms)
+  ✓  12 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:288:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-2: Region per Stift aendern → eigene Zeile unter dem Namen, persistent, Eyebrow nur Datum (814ms)
+  ✓  13 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:332:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-3 (Trip): Region leeren → „—" im Kopf, nach Reload „—", Trip-Liste blendet Region aus, Feld leer (929ms)
+  ✓  14 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:392:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-3 (Vergleich): Region leeren → derselbe Platzhalter „—" im Vergleich-Kopf, Feld leer (706ms)
+  ✓  15 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:425:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4: 8 Aktivitaets-Kacheln im Kopf, Trekking gewaehlt, kein edit-activity-dropdown; Skitour persistent (1.2s)
+  ✓  16 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:464:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4: Trip ohne gespeicherte Aktivitaet zeigt alle 8 Kacheln ungewaehlt (412ms)
+  ✓  17 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:478:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4 (Trip, Handy 375): genau ein Knopf „Trekking", keine sichtbare Kachel; Auswahl → Skitour sofort + persistent (895ms)
+  ✓  18 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:527:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4 (Trip, Handy 375): ohne gespeicherte Aktivitaet zeigt der Knopf „Aktivität wählen" (403ms)
+  ✓  19 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:542:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4 (Vergleich, Handy 375): Knopf mit gewaehltem Profil, keine sichtbare Kachel; Auswahl → Wandern persistent (705ms)
+  ✓  20 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:585:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4 (Vergleich, Desktop 1280): 4 Kacheln sichtbar, Knopf im Markup aber unsichtbar (355ms)
+  ✓  21 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:601:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-5: Aktivitaet im Kopf wechseln → Ankunftszeiten im Etappen-Reiter aendern sich ohne Neuladen/Reiterwechsel (581ms)
+  ✓  22 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:638:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-6: jeder Kopf-PUT traegt genau EINEN Schluessel; alle uebrigen Felder bleiben unveraendert (1.0s)
+  ✓  23 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:705:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-8 (Name): PUT 500 → Fehlermeldung role=alert, Eingabe bleibt offen mit Wert, Server unveraendert (514ms)
+  ✓  24 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:730:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-8 (Region): PUT 500 → Fehlermeldung role=alert, Eingabe bleibt offen mit Wert, Server unveraendert (546ms)
+  ✓  25 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:754:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-8 (Aktivitaet): PUT 500 → Fehlermeldung role=alert, bisherige Kachel bleibt einzige Auswahl (435ms)
+  ✓  26 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:777:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-8 (Aktivitaet, Handy 375): Knopf-Wahl mit PUT 500 → Fehlermeldung role=alert, Knopftext unveraendert (563ms)
+  ✓  27 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:809:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-9: 412 bei Name/Region/Aktivitaet → je ein Konflikt-Eintrag, „Nochmal speichern" sendet je nur das Eigenfeld, Reiter bleiben (1.3s)
+  ✓  28 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:922:4 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-10 (Trip, Desktop 1280): genau ein save-indicator im DOM, position fixed, unten rechts (411ms)
+  ✓  29 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:922:4 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-10 (Vergleich, Desktop 1280): genau ein save-indicator im DOM, position fixed, unten rechts (394ms)
+  ✓  30 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:922:4 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-10 (Trip, Mobil 375): genau ein save-indicator im DOM, position fixed, unten rechts (458ms)
+  ✓  31 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:922:4 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-10 (Vergleich, Mobil 375): genau ein save-indicator im DOM, position fixed, unten rechts (456ms)
+  ✓  32 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:974:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-11 (Trip): Region speichern → Chip saving ⇒ idle „Gespeichert HH:MM" (1.4s)
+  ✓  33 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1000:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-11 (Vergleich): Profil-Kachel → Chip saving ⇒ idle „Gespeichert HH:MM" am selben Controller (1.5s)
+  ✓  34 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1023:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-12: offline sind Region-Stift und alle Aktivitaets-Kacheln gesperrt (569ms)
+  ✓  35 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1055:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-12 (Handy 375): offline ist der Aktivitaets-Knopf gesperrt, Tippen oeffnet die Auswahl nicht (526ms)
+[AC-13 Messung 375x667 langer Name] Liste oben=455.5px (Basis vor S2 472px, Grenze 474px) · Navigation oben=597px · Kopf(header.trip-header)=313.5px · scrollY=0
+[AC-13 Tippflaechen (vorab) 375x667 langer Name] trip-profil-knopf=97x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=64x60
+[AC-13 Tippflaechen 375x667 langer Name] trip-profil-knopf=97x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=64x60
+  ✓  36 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1134:3 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-13 (375x667 langer Name): Oberkante der Etappen-Liste ≤ 474 px (vor S2 472), Liste ueber der Navigation, Kopf ohne Querscrollen, Tippflaechen ≥ 44 px (794ms)
+[AC-13 Messung 390x700 E2E Kurz] Liste oben=455.5px (Basis vor S2 472px, Grenze 474px) · Navigation oben=630px · Kopf(header.trip-header)=313.5px · scrollY=0
+[AC-13 Tippflaechen (vorab) 390x700 E2E Kurz] trip-profil-knopf=142x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=64x60
+[AC-13 Tippflaechen 390x700 E2E Kurz] trip-profil-knopf=142x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=64x60
+  ✓  37 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1134:3 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-13 (390x700 E2E Kurz): Oberkante der Etappen-Liste ≤ 474 px (vor S2 472), Liste ueber der Navigation, Kopf ohne Querscrollen, Tippflaechen ≥ 44 px (737ms)
+[AC-13 Messung 390x844 GR20] Liste oben=455.5px (Basis vor S2 472px, Grenze 474px) · Navigation oben=774px · Kopf(header.trip-header)=313.5px · scrollY=0
+[AC-13 Tippflaechen (vorab) 390x844 GR20] trip-profil-knopf=142x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=64x60
+[AC-13 Tippflaechen 390x844 GR20] trip-profil-knopf=142x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=64x60
+  ✓  38 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1134:3 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-13 (390x844 GR20): Oberkante der Etappen-Liste ≤ 474 px (vor S2 472), Liste ueber der Navigation, Kopf ohne Querscrollen, Tippflaechen ≥ 44 px (749ms)
+[AC-18 Trip mobil] font-size=20px · Hoehe=30px · text-overflow=ellipsis · white-space=nowrap · Titel scrollWidth=1168/clientWidth=211 · Seite scrollWidth=375/innerWidth=375
+  ✓  39 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1288:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Trip, Handy 375x667): Titel 20 px, einzeilig, Ellipsis, kein Seitenueberlauf (402ms)
+[AC-18 Vergleich mobil] font-size=20px · Hoehe=30px · text-overflow=ellipsis · white-space=nowrap · Titel scrollWidth=1118/clientWidth=66 · Seite scrollWidth=375/innerWidth=375
+  ✓  40 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1303:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Vergleich, Handy 375x667): Titel 20 px, einzeilig, Ellipsis, kein Seitenueberlauf (430ms)
+[AC-18 Trip Desktop] font-size=38px · Hoehe=41.8px · text-overflow=ellipsis · white-space=normal · Titel scrollWidth=447/clientWidth=447 · Seite scrollWidth=1280/innerWidth=1280 · Basis vor S2 38px
+  ✓  41 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1323:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Trip, Desktop 1280x900): Titelgroesse unveraendert gegenueber vor S2 (457ms)
+[AC-18 Vergleich Desktop] font-size=30px · Hoehe=33px · text-overflow=ellipsis · white-space=normal · Titel scrollWidth=392/clientWidth=392 · Seite scrollWidth=1280/innerWidth=1280 · Basis vor S2 30px
+  ✓  42 [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1336:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Vergleich, Desktop 1280x900): Titelgroesse unveraendert gegenueber vor S2 (468ms)
+
+  42 passed (59.3s)
+
+## 2b) Fix-Runde 1 — beide hub-*-Specs nach F001 (Stabilitaetsfenster) und F005 (ETag statt updated_at), unmutiert
+
+$ npx playwright test --reporter=list e2e/hub-cross-user-write-block.spec.ts e2e/hub-versand-autosave-chip.spec.ts
+Running 5 tests using 1 worker
+
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (740ms)
+  ✓  2 [tests] › e2e/hub-cross-user-write-block.spec.ts:58:2 › AC-2 (route): Nutzer B schreibt per PUT auf das Objekt von A ⇒ 404, Stand von A unverändert (40ms)
+  ✓  3 [tests] › e2e/hub-cross-user-write-block.spec.ts:58:2 › AC-2 (vergleich): Nutzer B schreibt per PUT auf das Objekt von A ⇒ 404, Stand von A unverändert (38ms)
+  ✓  4 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (3.4s)
+  ✓  5 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (11.1s)
+
+  5 passed (34.8s)
+
+## 2c) Mutationslaeufe Fix-Runde 1
+
+### F001 — verzoegerter zweiter PUT in frontend/src/lib/api.ts (`api.put` plant per setTimeout
+### denselben PUT nochmals ein). Sicherung per cp in den Scratchpad, Ersetzung per Edit, danach
+### zurueckkopiert; `git diff --stat frontend/src` danach leer.
+
+400 ms:
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (1.2s)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (7.7s)
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (16.1s)
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: "stabil"
+    Received: 2
+    (je kind identisch, Call Log: Timeout 6000ms exceeded while waiting on the predicate, Zeile 79)
+  2 failed
+  1 passed (46.8s)
+
+800 ms:
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (711ms)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (7.7s)
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (9.9s)
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: "stabil"
+    Received: 2
+  2 failed
+  1 passed (38.9s)
+
+### F002 — Umgehung: neue frontend/e2e/compare-zzz.spec.ts ohne Kopf + ALTLAST-Eintrag dazu
+$ uv run pytest -v -rA tests/unit/test_e2e_compare_paritaet_waechter.py
+E       AssertionError: ALTLAST hat 49 Eintraege, erlaubt sind hoechstens 48 -- neue Compare-only-Specs brauchen eine kind-Schleife oder einen Kopf
+FAILED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_waechst_nicht_ueber_den_einfuehrungsstand
+========================= 1 failed, 19 passed in 0.45s =========================
+(Probedatei geloescht, Testdatei aus Sicherungskopie zurueckgeholt; danach wieder gruen.)
+
+## 3) Filter B — Zielverbund (Positivliste ohne bug-703, 63 Dateien), 3x, Stack je Lauf neu + frische Daten
+##    (gefahren VOR Fix-Runde 1; die Fixes aendern keine Fallzahl, nur Zusicherungen in den hub-*-Specs,
+##     deren Nachlauf steht in 2b)
+
+$ npx playwright test --list <63 Hauptlauf-Dateien>
+Total: 369 tests in 64 files
+
+$ npx playwright test --reporter=line <63 Hauptlauf-Dateien>   # letzte Zeile je Lauf, ANSI-Codes entfernt
+Lauf 1:  369 passed (7.1m)
+Lauf 2:  369 passed (6.8m)
+Lauf 3:  369 passed (6.9m)
+
+## 4) Filter A
+
+$ grep -c "waitForTimeout\|\.skip(\|test\.fixme\|describe\.skip" hub-versand-autosave-chip.spec.ts hub-cross-user-write-block.spec.ts compare-versand-speichert-selbst.spec.ts trip-hub-kopf-region-aktivitaet.spec.ts
+hub-cross-user-write-block.spec.ts:0
+compare-versand-speichert-selbst.spec.ts:0
+hub-versand-autosave-chip.spec.ts:0
+trip-hub-kopf-region-aktivitaet.spec.ts:0
+
+## 5) Ratsche
+
+grep -c '^e2e/' .github/ci_e2e_specs.txt  → 64  (= E2E_MIN_SPECS)
+E2E_MIN_EXECUTED_HAUPT                    → 369 (gemessen, s. 3)
+ALTLAST                                   → 48 Eintraege (46 x Regel 1, 2 x Regel 2), ALTLAST_MAX = 48

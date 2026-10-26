@@ -971,7 +971,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 	}
 
 	// ─── AC-11 ───────────────────────────────────────────────────────────────
-	test('AC-11 (Trip): Region speichern → Chip saving ⇒ idle „Gespeichert HH:MM"; nach Versand-Aenderung weiter idle', async ({
+	test('AC-11 (Trip): Region speichern → Chip saving ⇒ idle „Gespeichert HH:MM"', async ({
 		page
 	}) => {
 		test.setTimeout(90_000);
@@ -990,21 +990,8 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			await expect(saveIndicator(page)).toContainText('Gespeichert');
 			await expect(saveIndicator(page).locator('.save-time')).toHaveText(/^\d{2}:\d{2}$/);
 			await page.unroute(`**/api/trips/${id}`);
-
-			// Versand-Aenderung (Muster Spec 616): Chip steht danach weiter auf idle.
-			// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken.
-			await page.goto(`/trips/${id}?tab=wetter-metriken#versand`);
-			const morning = page.getByTestId('versand-abschnitt').getByTestId('report-morning-time');
-			await expect(morning).toBeVisible({ timeout: 10_000 });
-			// Erst auf den echten PUT warten — nach dem Seitenwechsel steht der Chip
-			// ohnehin auf idle, die Pruefung waere sonst vor dem Speichern erfuellt.
-			const versandPut = page.waitForResponse(
-				(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${id}`
-			);
-			await morning.selectOption('05:00');
-			expect((await versandPut).ok(), 'Versand-PUT muss gelingen').toBeTruthy();
-			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-			await expect(page.locator('[data-testid="save-indicator"]')).toHaveCount(1);
+			// Der fruehere Versand-Anhang (Uhrzeit aendern → PUT ok → Chip idle) steht
+			// seit #2347 S1 in hub-versand-autosave-chip.spec.ts (Fall `route`).
 		} finally {
 			await deleteTrip(page, id);
 		}

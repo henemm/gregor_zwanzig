@@ -63,7 +63,9 @@
 # ist die eine Positivliste, an der Ratsche und E2E_MIN_SPECS haengen.
 #
 # Aufnahme 2026-08-14 (#1771 S3, Filter B im ZIELVERBUND belegt, nicht im
-# 51er-Kandidatenverbund): compare-cross-user-write-block.spec.ts und
+# 51er-Kandidatenverbund): compare-cross-user-write-block.spec.ts (seit
+# #2347 S1 umbenannt/erweitert zu hub-cross-user-write-block.spec.ts, Trip +
+# Vergleich, weiterhin genau EIN Zweit-Login) und
 # compare-editor-autosave-user-isolation.spec.ts -- die einzige Klasse im
 # Korpus, die die CLAUDE.md-Pflicht "jeder datenbewegende Endpoint mit ZWEI
 # Nutzern" belegt. Beide brauchen einen eigenen Zweit-Login und waren genau
@@ -309,6 +311,21 @@
 #             DEM PR (RED-Stand: rot erwartet, GREEN-Stand: gruen).
 #   Filter C: kein `page.screenshot({path: ...})` in der Datei.
 #
+# Aufnahme 2026-10-26 (#2347 S1, Epic #2345 Etappe P6, Paritaets-E2E):
+# hub-versand-autosave-chip.spec.ts (AC-1: Versand-Uhrzeit → genau ein PUT,
+# geteilter Speicher-Chip, ueberlebt Neuladen — je kind) und
+# hub-cross-user-write-block.spec.ts (AC-2: fremder PUT → 404 fuer Trip UND
+# Vergleich; ersetzt compare-cross-user-write-block.spec.ts, weiterhin genau
+# EIN Zweit-Login). AC-1 aus compare-versand-speichert-selbst und der
+# Versand-Anhang aus trip-hub-kopf-region-aktivitaet AC-11 sind dorthin gewandert.
+#   Filter A: keine Treffer fuer waitForTimeout/test.skip/test.fixme/
+#             describe.skip in beiden Dateien und den zwei angefassten
+#             Bestandsdateien (grep leer, auch im Kopfkommentar).
+#   Filter B: 3x im ZIELVERBUND gruen (Positivliste ohne bug-703, lokaler
+#             CI-Stack mit frischem Stack + frischer admin.json je Lauf):
+#             369 passed / 369 in allen drei Laeufen (2026-10-26).
+#   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
@@ -317,7 +334,6 @@ e2e/bug-703-login-ratelimit.spec.ts
 e2e/bug-708-stage-delete-confirm.spec.ts
 e2e/compare-alarme-speichert-selbst.spec.ts
 e2e/compare-alarme-wertprops.spec.ts
-e2e/compare-cross-user-write-block.spec.ts
 e2e/compare-detail-edit-entry.spec.ts
 e2e/compare-editor-autosave-user-isolation.spec.ts
 e2e/compare-editor-slice1.spec.ts
@@ -338,6 +354,8 @@ e2e/email-preview-header.spec.ts
 e2e/epic-138-block-b.spec.ts
 e2e/font-weights.spec.ts
 e2e/gewitter-absolutregel-gesperrt.spec.ts
+e2e/hub-cross-user-write-block.spec.ts
+e2e/hub-versand-autosave-chip.spec.ts
 e2e/issue-1059-trip-resume-error-feedback.spec.ts
 e2e/issue-1071-tier-change-request.spec.ts
 e2e/issue-1093-unit.spec.ts

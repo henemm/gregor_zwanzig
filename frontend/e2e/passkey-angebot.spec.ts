@@ -36,7 +36,7 @@
 //    Marker), leerer Geraetespeicher, derselbe Nutzer ohne Passkey. Nur der
 //    serverseitig gemerkte Vermerk darf das Banner dort unterdruecken.
 //    `browser.newContext({ storageState: undefined })` — das `undefined` ist
-//    Pflicht (Muster compare-cross-user-write-block.spec.ts:43-65): ohne es
+//    Pflicht (Muster hub-cross-user-write-block.spec.ts, beforeAll): ohne es
 //    erbt der Kontext die Projekt-Default-storageState (admin.json) und waere
 //    bereits als fremder Nutzer angemeldet. Ohne die Neuanmeldung in B faehrt
 //    der Test in einem Kontext ohne Marker — dann fehlte das Banner auch bei

@@ -205,7 +205,7 @@ nur mit Begründung im PR.
 ### e2e-Ratsche (umgekehrte Richtung)
 `.github/ci_e2e_specs.txt` ist eine **Positivliste** und darf nur WACHSEN — eine Ausschlussliste würde
 eine grüne Grundmenge voraussetzen, die eine Stichprobenmessung (30,6 % rot) widerlegt hat.
-Stand nach #1771 S3 (2026-08-14): 45 Dateien / 224 Testfälle; **Stand 2026-10-21 laut `.github/workflows/ci.yml`: `E2E_MIN_SPECS: 63` Dateien, `E2E_MIN_EXECUTED_HAUPT: 368` Testfälle** (dort ist jeder Zuwachs einzeln kommentiert).
+Stand nach #1771 S3 (2026-08-14): 45 Dateien / 224 Testfälle; **Stand 2026-10-26 (#2347 S1) laut `.github/workflows/ci.yml`: `E2E_MIN_SPECS: 64` Dateien, `E2E_MIN_EXECUTED_HAUPT: 369` Testfälle** (dort ist jeder Zuwachs einzeln kommentiert).
 
 Aufnahme nur nach **Filter A** (strukturell) + **Filter B** (3× hintereinander grün) + **Filter C**
 (die Datei darf beim Laufen keine *versionierte* Datei verändern — 3 Specs schrieben Screenshots ohne
@@ -232,6 +232,30 @@ Einzelfallarbeit. **Diese Messung nicht wiederholen.**
 
 Specs: `fix_1771_s2_playwright_ci_ampel.md` (Lane), `fix_1771_s3_e2e_listen_wachstum.md` (Wachstum,
 Verfahren, Abbruchgrenze).
+
+### Compare-Paritäts-Wächter (#2347 S1, seit 2026-10-26)
+
+`tests/unit/test_e2e_compare_paritaet_waechter.py` (Kern-Schicht, liest nur `frontend/e2e/*.spec.ts`)
+setzt die Trip/Ortsvergleich-Teilung für E2E-Specs durch, die die Pendant-Sperre nicht erfasst:
+
+- **Regel 1:** jede `*compare*.spec.ts` hat eine kind-Schleife (`HUB_KINDS` aus `frontend/e2e/helpers.ts`
+  bzw. das Altmuster `for (const … of ['Trip', 'Vergleich'])`) oder in den ersten 30 Zeilen einen Kopf
+  `gz-eigenstaendig: <Begründung, mind. 15 Zeichen>` (Themen laut Epic #2345: Orte-Tab, transponierte
+  Übersicht, Compare-Mail; andere Gründe zulässig, aber begründet).
+- **Regel 2 (gegen Umgehung per Dateiname):** jede andere Spec, die `compare-detail-tab` ansteuert und
+  weder `trip-detail-tab` noch `/trips/` noch eine kind-Schleife noch einen Kopf enthält, ist ein Verstoß.
+- **Ratschenmodus:** Altbestand steht als explizite Dateinamensliste `ALTLAST` (bei Einführung 48:
+  46 × Regel 1, 2 × Regel 2), `ALTLAST_MAX` = Einführungsstand. Rot bei neuem Verstoß außerhalb der
+  Liste, bei totem oder inzwischen konformem Eintrag („Eintrag entfernen") und bei Wachstum über
+  `ALTLAST_MAX`. Fällt eine Spec weg (z. B. Löschscheibe #2243), muss ihr Eintrag im selben PR raus.
+  #2347 S2–S4 leeren die Liste.
+
+Neue Paritäts-Specs nutzen die dünnen Helfer `HubKind`/`HUB_KINDS`/`seedHub`/`openHub`/`hubApiPath`
+(`frontend/e2e/helpers.ts`); Selektor-Unterschiede stehen als `HUB_SEL[kind]` im Spec, nicht im Helfer.
+Bekannte Grenze: der Wächter erkennt die Schleife am Textmuster, nicht ob sie fachlich beide kinds prüft.
+
+*Regel-Budget: Prüfdatum 2027-01-24, siehe Tabelle unten. Spec:
+`docs/specs/modules/feat_2347_s1_paritaets_e2e.md`.*
 
 ### Dritter Playwright-Lauf: PWA-Strecke (`--project=pwa`, ab #2128)
 
@@ -504,6 +528,7 @@ Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mai
 | ADR-0049-Kanallisten-Ratsche `tests/test_adr0049_kanalliste_ratsche.py` — Dreier-Kanalliste ohne `premium_sms` nur mit Marke `ADR-0049` (#2229) | 2026-12-30 | — (bei Einführung 8 bewusst dreistellige Listen markiert; echter Fang offen) |
 | Trip-Schema-Drift-Gate `trip_schema_drift` — Test-Paar `tests/test_trip_schema_drift.py` + `internal/model/trip_schema_drift_test.go`, Allowlist `send_premium_sms`/`trip` (#2058) | 2027-01-03 | `suggestion_reason` nur in Python (Go-Editor-Save verwarf es still), bei Einführung geschlossen |
 | Egress-Struktur-Wächter `tests/tdd/test_egress_single_dial_point.py` — `smtplib` (#1412 S3a) und `httpx`-POST (#1412 S3b) nur an den erlaubten Ausgängen (`TelegramOutput._post`, `SevenIoChannelBase._post`), Deckel 3 localhost-Ausnahmen | 2027-01-04 | `seven_io_base.py:171` (`httpx.post` direkt in `SevenIoChannelBase.send`) bei Einführung gefangen und in `_post` verlegt |
+| Compare-Paritäts-Wächter `tests/unit/test_e2e_compare_paritaet_waechter.py` — jede `*compare*.spec.ts` bzw. Compare-Hub-Spec ohne Trip-Gegenstück braucht kind-Schleife oder `gz-eigenstaendig:`-Kopf; Altlastliste nur schrumpfend (#2347 S1, Epic #2345 P6) | 2027-01-24 | Regel 2 fand bei Einführung 2 Specs außerhalb der Compare-Dateinamen (`kanal-grenzen-ortsvergleich.staging.spec.ts`, `versand-tab-vergleich.spec.ts`); fehlende Trip-Cross-User-Schreibprüfung (geschlossen durch `hub-cross-user-write-block.spec.ts`) |
 
 **Weitere Prüfdaten, die nur im Code stehen** (Abgleich 2026-10-21 per
 `grep -rn "Prüfdatum\|Pruefdatum" tests .claude/hooks`; Fang-Beleg hier nicht erhoben):
