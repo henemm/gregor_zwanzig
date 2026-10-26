@@ -585,3 +585,91 @@ export async function createTestTrip(request: APIRequestContext, opts: TestTripO
 	registerForCleanup('trip', body.id);
 	return { id: body.id, name: body.name };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #2347 S1 (Epic #2345, Etappe P6): kind-Helfer für Paritäts-Specs —
+// EINE Spec prüft dieselbe Zusicherung für Trip- und Vergleichs-Hub per
+// Schleife über HUB_KINDS. Bewusst dünn: keine Assertions, Selektor-
+// Unterschiede stehen als HUB_SEL[kind] im jeweiligen Spec.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** = `context`-Parameter der geteilten Bausteine. */
+export type HubKind = 'route' | 'vergleich';
+export const HUB_KINDS: readonly HubKind[] = ['route', 'vergleich'];
+
+export interface SeededHub {
+	kind: HubKind;
+	id: string;
+	aufraeumen(): Promise<void>;
+}
+
+export const hubApiPath = (kind: HubKind, id: string): string =>
+	kind === 'route' ? `/api/trips/${id}` : `/api/compare/presets/${id}`;
+
+const hubWp = (id: string, lat: number, elevation_m: number) => ({ id, name: id, lat, lon: 9.0, elevation_m });
+
+function seedRumpf(kind: HubKind, suffix: string): Record<string, unknown> {
+	if (kind === 'route') {
+		return {
+			id: `e2e-gz-hub-${suffix}`,
+			name: `${E2E_TEST_PREFIX}Hub-Trip-${suffix}`,
+			stages: [
+				{ id: 's1', name: 'Tag 1', date: '2027-08-01', waypoints: [hubWp('a', 42.0, 800), hubWp('b', 42.04, 1200)] }
+			],
+			report_config: {
+				enabled: true,
+				morning_enabled: true,
+				evening_enabled: false,
+				morning_time: '06:00:00',
+				evening_time: '18:00:00'
+			}
+		};
+	}
+	return {
+		name: `${E2E_TEST_PREFIX}Hub-Vergleich-${suffix}`,
+		// Seed-Orte aus global.setup.ts
+		location_ids: ['e2e-loc-innsbruck', 'e2e-loc-stubai'],
+		schedule: 'daily',
+		profil: 'wandern',
+		hour_from: 7,
+		hour_to: 16,
+		empfaenger: ['hub-paritaet@example.com'],
+		morning_enabled: true,
+		morning_time: '06:00:00',
+		evening_enabled: false,
+		evening_time: '18:00:00'
+	};
+}
+
+/** Legt Trip bzw. Vergleich per REST an (Präfix E2E-GZ-, Versand 06:00); wirft bei !ok. */
+export async function seedHub(
+	request: APIRequestContext,
+	kind: HubKind,
+	opts: { extra?: Record<string, unknown> } = {}
+): Promise<SeededHub> {
+	const sammel = kind === 'route' ? '/api/trips' : '/api/compare/presets';
+	const res = await request.post(sammel, { data: { ...seedRumpf(kind, uniqueSuffix()), ...opts.extra } });
+	if (!res.ok()) {
+		throw new Error(`seedHub(${kind}) fehlgeschlagen: HTTP ${res.status()} — ${await res.text()}`);
+	}
+	const { id } = (await res.json()) as { id: string };
+	return { kind, id, aufraeumen: () => deleteById(request, kind === 'route' ? 'trip' : 'preset', id) };
+}
+
+/** Öffnet den Hub (+ ?tab=…, #hash) und wartet nur auf die sichtbare Reiterleiste. */
+export async function openHub(
+	page: Page,
+	kind: HubKind,
+	id: string,
+	opts: { tab?: string; hash?: string } = {}
+): Promise<void> {
+	const basis = kind === 'route' ? `/trips/${id}` : `/compare/${id}`;
+	await page.goto(`${basis}${opts.tab ? `?tab=${opts.tab}` : ''}${opts.hash ? `#${opts.hash}` : ''}`);
+	const prefix = kind === 'route' ? 'trip-detail-tab' : 'compare-detail-tab';
+	const reiter = page
+		.locator(opts.tab ? `[data-testid="${prefix}-${opts.tab}"]:visible` : `[data-testid^="${prefix}-"]:visible`)
+		.first();
+	await reiter.waitFor({ state: 'visible', timeout: 15_000 });
+	// Vergleich: Reiter zusätzlich anklicken (doppelte Knoten, Muster oeffneVersand).
+	if (kind === 'vergleich' && opts.tab) await reiter.click();
+}
