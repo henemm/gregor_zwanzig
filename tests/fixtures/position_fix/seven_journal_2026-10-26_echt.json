@@ -1,0 +1,23 @@
+{
+ "_quelle": "Echte Garmin-inReach-Nachrichten des PO vom 26.10.2026 (Issue #2327). Texte WOERTLICH, inklusive der zwei Leerzeichen vor der Klammer. Nummern anonymisiert wie in tests/fixtures/befehl_antwortzeit/ (+49000SERVICE = Dienstnummer, +49000ABSENDER = Garmin-Absender); id und timestamp (seven.io: Europe/Berlin ohne Zone) sind Platzhalter in Journal-Form, nicht mitgeschnitten.",
+ "inbound": [
+  {
+   "id": "5600102",
+   "from": "+49000ABSENDER",
+   "to": "+49000SERVICE",
+   "text": "so morgen  inreachlink.com/gGF87yQgGC0h_fnW_2_ngUA  (46.6124, 12.8676)",
+   "timestamp": "2026-10-26 08:50:00",
+   "reply_to_message_id": null,
+   "price": 0.01
+  },
+  {
+   "id": "5600101",
+   "from": "+49000ABSENDER",
+   "to": "+49000SERVICE",
+   "text": "Heute inreachlink.com/gS5ySf-2sYCWmJQksXnjeHw  (46.6370, 12.7678)",
+   "timestamp": "2026-10-26 08:45:00",
+   "reply_to_message_id": null,
+   "price": 0.01
+  }
+ ]
+}

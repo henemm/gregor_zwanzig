@@ -1,0 +1,41 @@
+{
+ "_quelle": "Abgeleitete Varianten der echten PO-Nachricht vom 26.10.2026 (Issue #2327): gleicher Link und gleiches Koordinatenformat, nur Befehlsteil bzw. Klammerinhalt veraendert. Form wie tests/fixtures/befehl_antwortzeit/seven_journal_*.json.",
+ "inbound": [
+  {
+   "id": "5600201",
+   "from": "+49000ABSENDER",
+   "to": "+49000SERVICE",
+   "text": "inreachlink.com/gS5ySf-2sYCWmJQksXnjeHw  (46.6370, 12.7678)",
+   "timestamp": "2026-10-26 08:45:00",
+   "reply_to_message_id": null,
+   "price": 0.01
+  },
+  {
+   "id": "5600202",
+   "from": "+49000ABSENDER",
+   "to": "+49000SERVICE",
+   "text": "Heute inreachlink.com/gS5ySf-2sYCWmJQksXnjeHw  (abc, def)",
+   "timestamp": "2026-10-26 08:45:00",
+   "reply_to_message_id": null,
+   "price": 0.01
+  },
+  {
+   "id": "5600203",
+   "from": "+49000ABSENDER",
+   "to": "+49000SERVICE",
+   "text": "Jetzt inreachlink.com/gS5ySf-2sYCWmJQksXnjeHw  (46.6370, 12.7678)",
+   "timestamp": "2026-10-26 08:45:00",
+   "reply_to_message_id": null,
+   "price": 0.01
+  },
+  {
+   "id": "5600204",
+   "from": "+49000ABSENDER",
+   "to": "+49000SERVICE",
+   "text": "Strecke inreachlink.com/gS5ySf-2sYCWmJQksXnjeHw  (46.6370, 12.7678)",
+   "timestamp": "2026-10-26 08:45:00",
+   "reply_to_message_id": null,
+   "price": 0.01
+  }
+ ]
+}
