@@ -5,11 +5,12 @@
 // AC-4 (LM-1..LM-8) und AC-5 (LM-9, LM-10).
 //
 // Ersetzt (Zuordnung Zeilen 24-30, 35, 39, 53-55):
-//   bug-626-compare-menu-actions.spec.ts (AC-1..AC-7; Titel „5 Aktionen" war
+//   die entfernte Compare-Listenmenü-Altdatei (AC-1..AC-7; Titel „5 Aktionen" war
 //   veraltet, es gelten 6; alle zwölf festen Schlaf-Pausen durch Ereignis-Warten
 //   ersetzt; `.first()`-Kachel durch Eigen-Seed je kind ersetzt; UI-Login entfällt),
-//   trips-list-aktionen.spec.ts (Pausieren/Fortsetzen, Menü-Reihenfolge, Archiv),
-//   compare-mobile-vervollstaendigung.spec.ts (:100 Karte/Aktionsblatt, :225 ⋯-Blatt).
+//   die entfernte Trip-Listen-Aktionen-Spec (Pausieren/Fortsetzen, Reihenfolge,
+//   Archiv) und die mobilen Fälle der entfernten Compare-Sammelspec (Karte/
+//   Aktionsblatt, ⋯-Blatt).
 //
 // Kein fester Schlaf: gewartet wird auf den Schreibaufruf (waitForRequest/
 // waitForResponse), auf sichtbare Zustände und auf Zähler (toHaveCount/toHaveText).
@@ -172,7 +173,7 @@ test.describe('Listen-Menü (Desktop 1280)', () => {
 				const antwort = await schreibt;
 				expect(antwort.ok(), `Statuswechsel HTTP ${antwort.status()}`).toBeTruthy();
 				// Der Rumpf trägt den Zielzustand (kein Umschalten). Kind-Zweig nur für die
-				// Rumpf-Form: Trip PATCH {paused:true} (trips-list-aktionen), Vergleich
+				// Rumpf-Form: Trip PATCH {paused:true} (Altfall Zuordnung Zeile 53), Vergleich
 				// Teil-PUT mit schedule 'manual' (statusZielNutzlast, #2375).
 				const rumpf = antwort.request().postDataJSON() as Record<string, unknown>;
 				if (kind === 'route') expect(rumpf).toEqual({ paused: true });

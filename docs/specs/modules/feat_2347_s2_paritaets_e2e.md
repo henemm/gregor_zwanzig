@@ -4,7 +4,7 @@ type: feature
 created: 2026-10-26
 updated: 2026-10-26
 status: draft
-version: "1.0"
+version: "1.1"
 workflow: feat-2347-s2-s4-paritaets-e2e
 tags: [epic-2345, etappe-p6, ratsche, e2e, playwright, trip-compare-teilung, mandantentrennung]
 ---
@@ -196,6 +196,12 @@ Die sieben Einträge `bug-626-compare-menu-actions.spec.ts`, `compare-hub-kopf-e
 - **geändert:** `trip-hub-kopf-region-aktivitaet.spec.ts` — AC-11 (Trip) und AC-11 (Vergleich) entfallen (→ SC-5, SC-6); Kopfkommentar aktualisieren; alles andere unverändert.
 - **unverändert:** `issue-758`, `feat-880`, `issue-268`, `trips-list-send`.
 
+### Produktdatei (AC-13, in /50 nachgetragen)
+
+- `frontend/src/lib/components/shared/etappenSpeicherstand.ts` — CREATE: `erstelleEtappenStand` (zuletzt vom Server bestätigter Etappen-Stand; `autoSaveClient` mit Rollback bei Nicht-412 außerhalb von „Nochmal speichern", `direktClient` ohne Rollback).
+- `frontend/src/lib/components/edit/EditStagesPanelNew.svelte` — MODIFY: Auto-Save über `autoSaveClient`, Kaskaden-PUT und `save()` über `direktClient`. Anlass: SC-4 (route), siehe Changelog.
+- `frontend/src/lib/components/trip-detail/__tests__/etappen_rollback_auf_bestaetigten_stand.test.ts` — CREATE (node:test).
+
 ## Expected Behavior
 
 - **Input:** CI-Lauf `e2e` gegen den isolierten Stack; Unit-Lauf des Wächters; manueller Staging-Lauf für `hub-send-dialog-target.staging`.
@@ -386,3 +392,10 @@ Alle weiteren ALTLAST-Dateien (41 nach S2): Alarme/Wertebereiche/Wetter-Metriken
 ## Changelog
 
 - 2026-10-26: Erstfassung S2 (Entwurf).
+- 2026-10-26 (/50): **AC-13-Produktfix** — SC-4 (route) war rot: nach PUT-500 blieb das Etappen-Datum auf dem Versuchswert stehen (kein sichtbares Zurücksetzen), der Vergleich setzt dagegen zurück (`CompareTabs.svelte` `persistPickedIds`). `EditStagesPanelNew.svelte` merkt sich jetzt den zuletzt vom Server bestätigten Etappen-Stand und stellt ihn bei Nicht-412-Fehlern außerhalb von „Nochmal speichern" wieder her (Rollback am PUT-Client, Muster `*VergleichSpeicherung`). Test unverändert streng. Der Verdacht „Datum + blur löst keinen PUT aus" (issue-758) ist widerlegt: SC-2 (route) ist grün.
+- 2026-10-26 (/50): **KA-5** — „Senden" ist ohne bestätigte Konto-Adresse gesperrt, der CI-Admin hat keine. KA-5 läuft deshalb über die bestehende Fixture `testMitZustellbaremZiel` (bestätigter Zweitnutzer je Worker, Admin unberührt; Vergleich mit zwei eigenen Wegwerf-Orten). Zusicherungen unverändert.
+- 2026-10-26 (/50): **KA-8** — Ein von einem Vergleich referenzierter Ort ist seit #2216 nicht löschbar (409 `location_in_use`). Der Zustand „gespeicherte ID ohne aufgelösten Ort" wird stattdessen mit einer nie existierenden eigenen ID geseedet (Vergleich speichert `location_ids` ungeprüft), Messaufbau prüft `GET /api/locations/<id>` = 404. Zusicherungen unverändert.
+- 2026-10-26 (/50): **AC-7/SD-Abweichung** — Die Sperre von „Senden" hängt am **Konto** (keine/unbestätigte Adresse, `sendTargetLabel.ts`), nicht am Objekt; ein Eigen-Seed „ohne Ziel" ist per Objekt nicht herstellbar (E-Mail geht immer an die Konto-Adresse). SD prüft die Konto-Vorbedingung per `GET /api/auth/profile` als harte Vorbedingung und braucht ein Konto ohne zustellbare Adresse (z. B. Wegwerf-Nutzer); Eigen-Seed je kind bleibt für die Datenunabhängigkeit.
+- 2026-10-26 (/50 Fix-Loop 1): Rückfall-Merker und Rollback-Entscheidung liegen svelte-frei in `frontend/src/lib/components/shared/etappenSpeicherstand.ts` (Auto-Save mit Rollback, Kaskade/manuelles Speichern bestätigen nur); `EditStagesPanelNew.svelte` verdrahtet an drei Stellen. Abgesichert durch `trip-detail/__tests__/etappen_rollback_auf_bestaetigten_stand.test.ts` (echtes Instanz-Skript, echter Speicher-Regler). **Klärung:** Das Kaskaden-Sofortschreiben bekommt bewusst KEINEN Rollback — es hat seinen eigenen Fehlerweg (issue-498 AC-32, #1393 R4).
+- 2026-10-26 (/50 Fix-Loop 1): SD läuft gegen Staging als Wegwerf-Nutzer (`gregor-test+sd…@henemm.com`, über den Staging-Testweg bestätigt, danach beide Adressfelder geleert; `afterAll` löscht das Konto) — das Validatorkonto hat eine bestätigte Adresse und bleibt unberührt.
+- 2026-10-26 (/50): AC-24-Deckung aus `compare-mobile-vervollstaendigung` in `issue-682` AC-2 ergänzt (Toast-Text, kein Reiterwechsel, CTA sichtbar), bevor die Alt-Datei fiel. Zusätzliche Kommentar-Verweise (`1273-s3`, `metrik-grundauswahl…config`, `1256-s8c`) mitgezogen.

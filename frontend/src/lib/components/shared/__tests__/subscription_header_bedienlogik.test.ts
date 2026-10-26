@@ -7,7 +7,7 @@
 // der ECHTE Funktionskörper des Instanz-Skripts (start/cancel/save) gegen
 // gesäte Props (svelteInstanzPruefstand.ts) und der ECHTE Attribut-Ausdruck
 // im Markup, ausgewertet gegen dieselbe Umgebung — kein Mock, kein Datei-Grep.
-// Klickverhalten im Browser bewacht frontend/e2e/compare-hub-kopf-einmal.spec.ts.
+// Klickverhalten im Browser bewacht frontend/e2e/hub-kopf-aufbau.spec.ts.
 //
 // Ausführen:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \

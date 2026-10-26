@@ -3,7 +3,7 @@
 // Schleife über HUB_KINDS. Bleibt Staging-Spec, steht NICHT in der Ratsche.
 //
 // Spec: docs/specs/modules/feat_2347_s2_paritaets_e2e.md § „hub-send-dialog-target.staging.spec.ts (SD)", AC-7.
-// Ersetzt: compare-send-dialog-target.staging.spec.ts (Issue #1471; Zuordnung Zeilen 42-43).
+// Ersetzt die frühere Compare-only-Staging-Spec aus Issue #1471 (Zuordnung Zeilen 42-43).
 // Änderungen gegenüber der Vorlage: Eigen-Seed je kind statt `.first()` irgendeines
 // Staging-Eintrags; Bildschirmfotos und Konsolen-Ausgaben entfallen (keine Zusicherungen);
 // die feste 1,5-s-Pause durch ein `expect.poll`-Stabilitätsfenster ersetzt.
@@ -11,20 +11,41 @@
 // Wovon die Sperre abhängt (sendTargetLabel.ts): E-Mail ist immer Teil des Versands;
 // „Senden" ist nur gesperrt, wenn das KONTO keine bzw. keine bestätigte Adresse hat.
 // Der Eigen-Seed (keine Empfänger, keine Zusatzkanäle) kann das Ziel also nicht
-// unzustellbar machen — das Staging-Konto muss es sein. Das prüft eine harte
-// Vorbedingung über GET /api/auth/profile (kein skip).
+// unzustellbar machen — das Konto muss es sein: das Setup legt einen bestätigten
+// Wegwerf-Nutzer an und leert dessen Adressen. Das prüft eine harte Vorbedingung
+// über GET /api/auth/profile (kein skip); afterAll löscht das Konto wieder.
 //
 // Kein echter Versand: jeder Sende-Abruf wird per page.route abgefangen und
 // abgebrochen (zählt zugleich) — selbst wenn die Sperre bräche, ginge nichts hinaus.
 //
 // Ausführen (gegen Staging, aus frontend/, NACH Push+Staging-Deploy):
-//   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
+//   GZ_VALIDATOR_USER/GZ_VALIDATOR_PASS (nginx) und GZ_AUTH_USER/GZ_AUTH_PASS (App)
+//   aus der Staging-Umgebung exportieren (nie im Klartext ausgeben), dann:
 //   npx playwright test --config=playwright.hub-send-dialog-target.staging.config.ts
 
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { HUB_KINDS, HUB_SEL, createTestLocation, seedHub, type HubKind, type SeededHub } from './helpers';
 
 test.use({ viewport: { width: 1280, height: 900 } });
+// Ein Wegwerf-Konto für die ganze Datei (Setup) ⇒ ein Worker, Löschen erst am Ende.
+test.describe.configure({ mode: 'serial' });
+
+// Wegwerf-Konto aus hub-send-dialog-target.staging.setup.ts wieder löschen (samt Daten).
+const WEGWERF_DATEI = fileURLToPath(new URL('./playwright/.auth/staging-1471.wegwerf.json', import.meta.url));
+test.afterAll(async ({ browser }, testInfo) => {
+	if (!existsSync(WEGWERF_DATEI)) return;
+	const { kennwort } = JSON.parse(readFileSync(WEGWERF_DATEI, 'utf8')) as { kennwort: string };
+	const ctx = await browser.newContext({ ...testInfo.project.use });
+	try {
+		const res = await ctx.request.post('/api/auth/account/delete', { data: { password: kennwort } });
+		expect(res.ok(), `Wegwerf-Konto löschen HTTP ${res.status()}`).toBeTruthy();
+		rmSync(WEGWERF_DATEI, { force: true });
+	} finally {
+		await ctx.close();
+	}
+});
 
 interface Seed {
 	hub: SeededHub;

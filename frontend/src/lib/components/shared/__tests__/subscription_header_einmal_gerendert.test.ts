@@ -7,7 +7,7 @@
 // darf diese Doppelung nicht in sich hineintragen: jede Kopf-testid kommt im
 // SSR-Output GENAU EINMAL vor (Mutationsgegenprobe (d) auf Baustein-Ebene).
 // Die Doppelung auf SEITEN-Ebene bewacht die E2E
-// frontend/e2e/compare-hub-kopf-einmal.spec.ts (Zählung ohne `:visible`).
+// frontend/e2e/hub-kopf-aufbau.spec.ts (Zählung ohne `:visible`).
 //
 // Grenze: SSR startet im Anzeigemodus (kein Klick, kein Edit-State). Die
 // Bearbeiten-testids (`-name-edit`, `-name-save`, …) sind hier nicht im DOM;

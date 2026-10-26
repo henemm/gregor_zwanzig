@@ -6,10 +6,9 @@
 // Spec: docs/specs/modules/feat_2347_s2_paritaets_e2e.md § „Neue Specs“ (KB-1..KB-10), AC-2, AC-11
 //
 // Ersetzt (Zuordnungstabelle Zeilen 6-12, 15-17, 50-52):
-//   compare-hub-name-region-profil.spec.ts  AC-1..AC-7   → KB-1..KB-7
-//   compare-hub-kopf-einmal.spec.ts         AC-2 (Mobil) → KB-6, AC-3 → KB-4, AC-5 → KB-8
-//   issue-724-trip-name-save-error.spec.ts  AC-1..AC-3   → KB-7, KB-9, KB-10
-// Der feste 2-s-Schlaf aus compare-hub-name-region-profil:240 ist durch ein
+//   Fälle zweier entfernter Compare-Kopf-Altdateien und der entfernten
+//   Trip-Spec zum Namens-Speicherfehler (Ratschen-Zeile entfällt).
+// Der feste 2-s-Schlaf des Altfalls (Zuordnung Zeile 10) ist durch ein
 // `expect.poll`-Stabilitätsfenster auf den Server-Stand ersetzt.
 //
 // Kind-Unterschiede stehen ausschließlich als Selektor-/Feldpfad-Daten in

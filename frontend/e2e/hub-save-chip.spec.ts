@@ -6,13 +6,13 @@
 // Spec: docs/specs/modules/feat_2347_s2_paritaets_e2e.md § AC-6 (SC-1..SC-6)
 //
 // Ersetzt (Zuordnungstabelle Zeilen 31-34, 56-57):
-//   - compare-hub-save-chip.spec.ts (AC-1 :81, AC-2 :100, AC-3 :136, AC-4 :191)
+//   - die vier Fälle der entfernten Compare-Chip-Altdatei (AC-1..AC-4)
 //   - trip-hub-kopf-region-aktivitaet.spec.ts AC-11 (Trip) :974 → SC-5,
 //     AC-11 (Vergleich) :1000 → SC-6
 //   Trip-Auslöser nach Vorbild issue-758-save-indicator.spec.ts AC-1 (bleibt bestehen).
 //
 // Kein fester Schlaf: „null PUTs" (SC-3) wird per `expect.poll` als Stabilitäts-
-// fenster geprüft (statt des festen 2-s-Schlafs aus compare-hub-save-chip :173).
+// fenster geprüft (statt des festen 2-s-Schlafs des Altfalls, Zuordnung Zeile 33).
 // Der Zwischenzustand `saving` wird über eine verzögerte PUT-Antwort (route-Handler,
 // 800 ms) beobachtbar gemacht — Muster AC-11 aus trip-hub-kopf-region-aktivitaet.
 // Anmeldung über den storageState aus global.setup.ts (Admin-Sitzung).

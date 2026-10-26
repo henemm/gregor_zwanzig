@@ -42,6 +42,9 @@
 // MTabBar (im Fall AC-10 mobil). Die v1.2-Faelle Pillen-Topmost, /trips/new und
 // Kartenhoehe 126 px sowie der alte AC-13-Kartenfall entfallen.
 //
+// #2347 S2: die beiden AC-11-Chip-Faelle sind je kind nach hub-save-chip.spec.ts
+// (SC-5/SC-6) gewandert und hier entfernt.
+//
 // Ausfuehren (CI-Stack): cd frontend && npx playwright test \
 //   e2e/trip-hub-kopf-region-aktivitaet.spec.ts --project=tests
 
@@ -163,16 +166,6 @@ async function failPuts(page: Page, urlPattern: string, status: number, body: Re
 	});
 }
 
-/** Verzoegert PUTs, damit der Zwischenzustand `saving` beobachtbar wird. */
-async function delayPuts(page: Page, urlPattern: string, ms: number) {
-	await page.route(urlPattern, async (route) => {
-		if (route.request().method() === 'PUT') {
-			await new Promise((r) => setTimeout(r, ms));
-		}
-		await route.continue();
-	});
-}
-
 function selectedTiles(page: Page) {
 	return page.locator('[data-testid^="trip-profil-option-"][data-selected="true"]');
 }
@@ -199,7 +192,7 @@ async function tippflaeche44(page: Page, testid: string | ReturnType<Page['getBy
 	return b!;
 }
 
-// ─── Ortsvergleich-Wegwerfdaten (Muster compare-hub-name-region-profil) ───
+// ─── Ortsvergleich-Wegwerfdaten (Muster hub-kopf-bearbeiten) ───
 interface SeededPreset {
 	presetId: string;
 	locIds: string[];
@@ -970,54 +963,8 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		}
 	}
 
-	// ─── AC-11 ───────────────────────────────────────────────────────────────
-	test('AC-11 (Trip): Region speichern → Chip saving ⇒ idle „Gespeichert HH:MM"', async ({
-		page
-	}) => {
-		test.setTimeout(90_000);
-		await page.setViewportSize(DESKTOP);
-		const id = await seedTrip(page, 'ac11');
-		try {
-			await openTripHub(page, id);
-			await delayPuts(page, `**/api/trips/${id}`, 800);
-
-			await page.getByTestId('trip-region-edit-toggle').click();
-			await page.getByTestId('trip-region-edit').fill('AC-11 Region');
-			await page.getByTestId('trip-region-save').click();
-
-			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'saving', { timeout: 5_000 });
-			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-			await expect(saveIndicator(page)).toContainText('Gespeichert');
-			await expect(saveIndicator(page).locator('.save-time')).toHaveText(/^\d{2}:\d{2}$/);
-			await page.unroute(`**/api/trips/${id}`);
-			// Der fruehere Versand-Anhang (Uhrzeit aendern → PUT ok → Chip idle) steht
-			// seit #2347 S1 in hub-versand-autosave-chip.spec.ts (Fall `route`).
-		} finally {
-			await deleteTrip(page, id);
-		}
-	});
-
-	test('AC-11 (Vergleich): Profil-Kachel → Chip saving ⇒ idle „Gespeichert HH:MM" am selben Controller', async ({
-		page
-	}) => {
-		await page.setViewportSize(DESKTOP);
-		const seeded = await seedPreset(page);
-		try {
-			await openCompareHub(page, seeded.presetId);
-			const muster = `**/api/compare/presets/${seeded.presetId}`;
-			await delayPuts(page, muster, 800);
-
-			await page.getByTestId('compare-hub-profil-option-wandern').click();
-
-			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'saving', { timeout: 5_000 });
-			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-			await expect(saveIndicator(page)).toContainText('Gespeichert');
-			await expect(saveIndicator(page).locator('.save-time')).toHaveText(/^\d{2}:\d{2}$/);
-			await expect(page.locator('[data-testid="save-indicator"]')).toHaveCount(1);
-		} finally {
-			await cleanupPreset(page, seeded);
-		}
-	});
+	// AC-11 (Trip: Region → Chip; Vergleich: Profil-Kachel → Chip) steht seit
+	// #2347 S2 je kind in hub-save-chip.spec.ts (SC-5, SC-6).
 
 	// ─── AC-12 ───────────────────────────────────────────────────────────────
 	test('AC-12: offline sind Region-Stift und alle Aktivitaets-Kacheln gesperrt', async ({ page, context }) => {

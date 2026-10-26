@@ -4,10 +4,9 @@
 //
 // Spec: docs/specs/modules/feat_2347_s2_paritaets_e2e.md § „Neue Specs“ (KA-1..KA-9), AC-3, AC-11
 //
-// Ersetzt (Zuordnungstabelle Zeilen 13-14, 18-23, 41):
-//   compare-hub-kopf-einmal.spec.ts  AC-8 Desktop/Mobil → KA-1/KA-2, AC-10 → KA-3,
-//     Bedienung (Desktop) → KA-4, AC-9 Mobil/Desktop → KA-6/KA-7, F007 → KA-8/KA-9
-//   compare-mobile-vervollstaendigung.spec.ts  #2283 AC-13 (Senden nur im Hub-Kopf) → KA-5
+// Ersetzt Fälle zweier entfernter Compare-Altdateien (Kopf-Markup/-Bedienung und
+// #2283 AC-13 „Senden nur im Hub-Kopf"); Zuordnung alt → neu: Spec-Tabelle Zeilen
+// 13-14, 18-23, 41.
 //
 // KA-6..KA-9 laufen NUR für `vergleich`: Eyebrow „Orts-Vergleich · Hub“,
 // Breadcrumb „ORTS-VERGLEICHE / Hub“ und die Orte-Anzahl sind Rahmen des
@@ -30,13 +29,14 @@ import {
 	hubApiPath,
 	openHub,
 	seedHub,
+	testMitZustellbaremZiel,
 	type HubKind,
 	type SeededHub
 } from './helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 const MOBIL = { width: 375, height: 812 };
-// Viewport des Altfalls #2283 AC-13 (compare-mobile-vervollstaendigung:318).
+// Viewport des Altfalls #2283 AC-13 (Spec-Zuordnung Zeile 41).
 const MOBIL_SENDEN = { width: 390, height: 844 };
 
 // Wertevorrat des Profils je kind (Selektor-Unterschied): Trip `activity`
@@ -308,12 +308,22 @@ for (const kind of HUB_KINDS) {
 }
 
 // ─── KA-5 ──────────────────────────────────────────────────────────────────
+// Vorbedingung „zustellbares Ziel": der Sende-Dialog sperrt „Senden" ohne
+// bestätigte Konto-Adresse (sendTargetLabel.ts), der Env-Admin des CI-Stacks
+// hat keine. Deshalb läuft KA-5 als bestätigter Zweitnutzer
+// (testMitZustellbaremZiel, helpers.ts) — der Admin bleibt unberührt.
 for (const kind of HUB_KINDS) {
-	test(`KA-5 (${kind}): Mobil — Versand-Abschnitt ohne Test-Senden, Hub-Kopf-„Senden“ öffnet den Dialog und löst genau EINEN Sende-Abruf aus`, async ({
+	testMitZustellbaremZiel(`KA-5 (${kind}): Mobil — Versand-Abschnitt ohne Test-Senden, Hub-Kopf-„Senden“ öffnet den Dialog und löst genau EINEN Sende-Abruf aus`, async ({
 		page
 	}) => {
 		await page.setViewportSize(MOBIL_SENDEN);
-		const hub = await seedKopf(page, kind);
+		// Seed-Besonderheit (kind-Zweig nur für den Seed): die e2e-loc-* aus
+		// global.setup.ts gehören dem Admin — der Zweitnutzer bekommt eigene Orte.
+		const orte =
+			kind === 'vergleich'
+				? [await createTestLocation(page.request, { name: 'KA5-A' }), await createTestLocation(page.request, { name: 'KA5-B' })]
+				: [];
+		const hub = await seedKopf(page, kind, orte.length ? { location_ids: orte.map((o) => o.id) } : {});
 		try {
 			// Jeder Sende-Abruf (gleich welche ID/Query) wird abgefangen und selbst
 			// beantwortet — kein echter Versand. Gezählt wird gesamt UND der erwartete.
@@ -356,6 +366,7 @@ for (const kind of HUB_KINDS) {
 			expect(sende[0], `KA-5: Sende-Abruf geht an diesen ${kind}`).toMatch(erwartet);
 		} finally {
 			await hub.aufraeumen();
+			for (const o of orte) await page.request.delete(`/api/locations/${o.id}`).catch(() => {});
 		}
 	});
 }
@@ -401,14 +412,16 @@ test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 	test('KA-8 (vergleich): Orte-Anzahl — Desktop zählt gespeicherte IDs, Mobil aufgelöste Orte (Singular)', async ({
 		page
 	}) => {
-		// Eigener Wegwerf-Ort statt eines Seed-Orts aus global.setup.ts (die
-		// e2e-loc-* braucht jede andere Spec): ein Ort bleibt, der eigene wird gelöscht.
-		const ort = await createTestLocation(page.request, { name: 'Hub-Kopf-Orte-Anzahl' });
+		// Zustand „gespeicherte ID ohne aufgelösten Ort": Ein vom Vergleich
+		// referenzierter Ort lässt sich seit #2216 nicht mehr löschen (409
+		// location_in_use). Der Vergleich speichert location_ids ungeprüft —
+		// deshalb eine eigene, nie existierende ID (kein Ort eines anderen Nutzers).
+		const geisterOrt = `e2e-gz-geist-${Date.now()}`;
 		let hub: SeededHub | null = null;
 		try {
-			hub = await seedKopf(page, kind, { location_ids: ['e2e-loc-innsbruck', ort.id] });
-			const del = await page.request.delete(`/api/locations/${ort.id}`);
-			expect(del.ok(), `Ort-Löschen fehlgeschlagen: ${del.status()}`).toBeTruthy();
+			hub = await seedKopf(page, kind, { location_ids: ['e2e-loc-innsbruck', geisterOrt] });
+			const ort = await page.request.get(`/api/locations/${geisterOrt}`);
+			expect(ort.status(), 'Messaufbau: die zweite ID ist nicht auflösbar').toBe(404);
 			expect(
 				((await holeStand(page, kind, hub.id)).location_ids as string[]).length,
 				'Messaufbau: der Vergleich behält beide IDs'
@@ -430,7 +443,6 @@ test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 			}
 		} finally {
 			await hub?.aufraeumen();
-			await page.request.delete(`/api/locations/${ort.id}`).catch(() => {});
 		}
 	});
 

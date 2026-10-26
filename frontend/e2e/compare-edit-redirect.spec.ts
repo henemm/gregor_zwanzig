@@ -12,7 +12,7 @@
 // Hub-Tab-Leiste. Beide Assertions schlagen deshalb jetzt fehl. Das ist die
 // ehrliche, erwartete RED-Ursache (Route noch nicht als Redirect verdrahtet),
 // KEIN Login-Fehler. Echter Server-Round-Trip gegen Staging, kein Mock.
-// Vorbild: compare-hub-name-region-profil.spec.ts (S2).
+// Vorbild: hub-kopf-bearbeiten.spec.ts (#2347 S2).
 //
 // Ausführen (Staging):
 //   set -a; source /home/hem/gregor_zwanzig/.env

@@ -26,6 +26,7 @@
 	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
 	import { baueTripSpeicherung } from '$lib/components/shared/tripSpeicherung';
+	import { erstelleEtappenStand } from '$lib/components/shared/etappenSpeicherstand';
 	import { isPauseStage } from '$lib/components/shared/wizardHelpers';
 	import { merkeNutzlast } from '$lib/stores/nutzlastStand';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -116,7 +117,7 @@
 		saving = true;
 		saveError = null;
 		try {
-			const updatedTrip = await api.put<Trip>(`/api/trips/${tripId}`, { stages: payload });
+			const updatedTrip = await etappenStand.direktClient.put<Trip>(`/api/trips/${tripId}`, { stages: payload });
 			saveSuccess = true;
 			setTimeout(() => { saveSuccess = false; }, 3000);
 			onTripUpdate?.(updatedTrip);
@@ -140,10 +141,22 @@
 	// und drehte ein inzwischen bestätigtes Kaskadenergebnis wieder zurück.
 	// Änderung liegt komplett in dieser Funktion; der Speicher-Regler
 	// (`SaveStatus`) bleibt unangetastet, andere Nutzer sind nicht betroffen.
+	// #2347 S2 (AC-6/AC-13): scheitert ein Auto-Save, fallen die Etappen sichtbar auf den
+	// zuletzt vom Server BESTAETIGTEN Stand zurueck. Merker + Rollback-Entscheidung liegen
+	// svelte-frei in etappenSpeicherstand.ts (node:test); hier nur die Verdrahtung.
+	const etappenStand = erstelleEtappenStand<Stage>({
+		start: stages ?? [],
+		client: api,
+		imWiederholen: () => saveController?.imWiederholen ?? false,
+		zuruecksetzen: (stand) => {
+			stages = stand;
+			if (!stages.some((s) => s.id === activeStageId)) activeStageId = stages[0]?.id ?? '';
+		}
+	});
 	function buildStagesSave(): SaveFn {
 		// Rumpf als Funktion: `stages` wird erst beim Ausloesen gelesen (R6-F001).
 		return baueTripSpeicherung<Trip>(
-			api, tripId!, () => ({ stages }), (updatedTrip) => onTripUpdate?.(updatedTrip), 'etappen'
+			etappenStand.autoSaveClient, tripId!, () => ({ stages }), (updatedTrip) => onTripUpdate?.(updatedTrip), 'etappen'
 		);
 	}
 	function scheduleSave(): void {
@@ -377,7 +390,8 @@
 				const ctrl = new AbortController();
 				const capTimer = setTimeout(() => ctrl.abort(), CASCADE_WRITE_TIMEOUT_MS);
 				try {
-					const updatedTrip = await api.put<Trip>(
+					// #2347 S2: direktClient merkt den bestaetigten Stand (Kaskade OHNE Rollback, #1393 R4).
+					const updatedTrip = await etappenStand.direktClient.put<Trip>(
 						`/api/trips/${tripId!}`,
 						{ stages: withTargets(stages) },
 						{ signal: ctrl.signal },

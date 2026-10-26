@@ -118,16 +118,14 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		const toast = page.getByRole('status');
 		await expect(toast).toBeVisible();
 
-		// Kein Tab-Wechsel: "Vergleich"-Tab-Inhalt noch aktiv (Namens-Eingabe sichtbar)
-		// Das mobile Vergleich-Tab zeigt ein Namensfeld
-		const vergleichContent = page.getByTestId('cm-mobile-tab-vergleich');
-		const vergleichAttr = await vergleichContent.getAttribute('data-active');
-		// Wenn kein data-active, prüfen wir indirekt: compare-editor-name im
-		// Desktop-Block ist display:none, mobile-name-field sollte sichtbar sein.
-		// Wir prüfen nur, dass der Toast da ist und der Tab NICHT gewechselt hat
-		// (Orte-Tab hätte einen Picked-Counter o.ä. — aber da kein Mobile-Markup
-		// existiert, schlägt dieser Test RED).
-		expect(toast).toBeTruthy();
+		// #2347 S2: Zusicherungen aus AC-24 der entfernten mobilen Compare-Sammelspec
+		// übernommen (Datei entfällt) — Toast-Text, kein Tab-Wechsel, CTA bleibt.
+		await expect(page.locator('[role="status"]:visible')).toContainText('erst Vergleich benennen');
+		await expect(page.locator('[data-testid="cm-mobile-tab-vergleich"]:visible')).toHaveAttribute(
+			'data-active',
+			'true'
+		);
+		await expect(page.locator('[data-testid="cm-mobile-cta"]:visible')).toBeVisible();
 
 		// Kein horizontaler Overflow
 		const overflow = await page.evaluate(

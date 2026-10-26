@@ -338,10 +338,15 @@
 # stand in der Liste) sowie mobile-tab-bar, trips-list-aktionen und
 # issue-724-trip-name-save-error (Listenzeile entfernt, Faelle -> KB-7/9/10).
 #   Filter A: kein waitForTimeout/test.skip/test.fixme/describe.skip/__dirname
-#             in den fuenf Dateien (grep leer am RED-Stand; am Endstand in
-#             /50 erneut geprueft).
-#   Filter B: wird in /50 gemessen (3x im ZIELVERBUND, Positivliste ohne
-#             bug-703, frischer Stack + frische admin.json je Lauf).
+#             in den fuenf Dateien (grep leer am RED-Stand und am Endstand
+#             in /50, 2026-10-26).
+#   Filter B: 3x im ZIELVERBUND (Positivliste ohne bug-703, 67 Dateien,
+#             frischer Stack + frische admin.json je Lauf), 2026-10-26: die
+#             fuenf Dateien 3/3 gruen (87/87 je Lauf); Gesamtlauf 451/451,
+#             451/451, 450/451 -- der eine Rote ist der vorbestehende
+#             Drag-Flake compare-hub-inline-edit AC-14/AC-15 (Reihenfolge nach
+#             Drag unveraendert; isoliert mit --repeat-each reproduzierbar
+#             wechselhaft, von S2 nicht beruehrt).
 #   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
 #
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen

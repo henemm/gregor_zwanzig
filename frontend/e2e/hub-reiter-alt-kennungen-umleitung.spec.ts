@@ -63,7 +63,7 @@ function tabParam(page: Page): string | null {
 
 /** Kennungen der Handy-Reiterleiste in DOM-Reihenfolge, Präfix abgeschnitten. */
 async function mobileReiter(page: Page, prefix: string): Promise<string[]> {
-	// getByRole überspringt verborgene Elemente (Muster mobile-tab-bar/compare-tab-bar).
+	// getByRole überspringt verborgene Elemente (Muster hub-tab-bar).
 	const tabs = page.getByRole('tablist').getByRole('tab');
 	const ids: string[] = [];
 	for (let i = 0; i < (await tabs.count()); i++) {
@@ -371,7 +371,7 @@ test.describe('AC-14: Handy-Reiterleiste in beiden Hubs gleich', () => {
 		expect(await mobileReiter(page, 'trip-detail-tab-')).toEqual(['uebersicht', 'etappen', ...SCHWANZ]);
 
 		// dispatchEvent statt click: Scroll-Snap + Fade-Maske des Bands stören
-		// Playwrights Actionability-Scroll (Muster mobile-tab-bar.spec.ts).
+		// Playwrights Actionability-Scroll (Muster der früheren Trip-Reiterleisten-Spec, heute hub-tab-bar.spec.ts).
 		await page.getByTestId('trip-detail-tab-wertebereiche').dispatchEvent('click');
 		await expect(page.getByTestId('trip-detail-panel-wertebereiche')).toBeVisible();
 		await expect.poll(() => tabParam(page)).toBe('wertebereiche');

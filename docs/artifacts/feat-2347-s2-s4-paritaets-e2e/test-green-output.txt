@@ -1,0 +1,110 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/2346-s2
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 32 items
+
+tests/unit/test_e2e_compare_paritaet_waechter.py ....................    [ 62%]
+tests/unit/test_e2e_positivliste_ratschen_bindung.py ............        [100%]
+
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_hat_keine_unbegruendete_compare_only_spec
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_waechst_nicht_ueber_den_einfuehrungsstand
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_ist_nicht_leer
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[altmuster]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[hub_kinds]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_neue_compare_spec_ohne_kopf_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_mit_zu_kurzer_begruendung_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_kurzer_marker_ist_auch_mit_schleife_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_hinter_zeile_30_zaehlt_nicht
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_in_zeile_30_zaehlt_noch
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_umgehung_per_dateiname_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trips_url]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trip_tab]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[schleife]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_spec_ohne_compare_bezug_ist_nicht_betroffen
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_deckt_verstoss
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_toter_altlast_eintrag_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_konformer_altlast_eintrag_ist_rot
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/hub-cross-user-write-block.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/compare-editor-autosave-user-isolation.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_jeder_positivlisten_eintrag_existiert
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_kein_spec_schreibt_in_den_versionierten_baum
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_filter_c_kriterium_ist_geeicht
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[36-38-True-nennt0]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[40-38-True-nennt1]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[38-38-False-nennt2]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[3-3-False-nennt3]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[5-3-True-nennt4]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[None-38-True-nennt5]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_echte_ci_yml_und_positivliste_sind_exakt_gebunden
+============================== 32 passed in 0.96s ==============================
+=== Playwright-Reporter filterb-1.json: expected=451 unexpected=0 flaky=0 skipped=0 duration_ms=462871
+  hub-tab-bar.spec.ts: passed=19 failed=0 timedOut=0 skipped=0
+  hub-kopf-bearbeiten.spec.ts: passed=20 failed=0 timedOut=0 skipped=0
+  hub-kopf-aufbau.spec.ts: passed=16 failed=0 timedOut=0 skipped=0
+  hub-list-menu.spec.ts: passed=20 failed=0 timedOut=0 skipped=0
+  hub-save-chip.spec.ts: passed=12 failed=0 timedOut=0 skipped=0
+=== Playwright-Reporter filterb-2.json: expected=451 unexpected=0 flaky=0 skipped=0 duration_ms=479462
+  hub-tab-bar.spec.ts: passed=19 failed=0 timedOut=0 skipped=0
+  hub-kopf-bearbeiten.spec.ts: passed=20 failed=0 timedOut=0 skipped=0
+  hub-kopf-aufbau.spec.ts: passed=16 failed=0 timedOut=0 skipped=0
+  hub-list-menu.spec.ts: passed=20 failed=0 timedOut=0 skipped=0
+  hub-save-chip.spec.ts: passed=12 failed=0 timedOut=0 skipped=0
+=== Playwright-Reporter filterb-3.json: expected=450 unexpected=1 flaky=0 skipped=0 duration_ms=466585
+  hub-tab-bar.spec.ts: passed=19 failed=0 timedOut=0 skipped=0
+  hub-kopf-bearbeiten.spec.ts: passed=20 failed=0 timedOut=0 skipped=0
+  hub-kopf-aufbau.spec.ts: passed=16 failed=0 timedOut=0 skipped=0
+  hub-list-menu.spec.ts: passed=20 failed=0 timedOut=0 skipped=0
+  hub-save-chip.spec.ts: passed=12 failed=0 timedOut=0 skipped=0
+  ROT: compare-hub-inline-edit.spec.ts :: AC-14/AC-15: Ort per Drag umsortieren löst PUT mit neuer location_ids-Reihenfolge aus, überlebt Reload :: failed
+E2E-GATE GRUEN (filterb-1.json): expected=451 >= E2E_MIN_EXECUTED=451, keine Roten, keine Skips.
+E2E-GATE GRUEN (filterb-2.json): expected=451 >= E2E_MIN_EXECUTED=451, keine Roten, keine Skips.
+E2E-GATE ROT (filterb-3.json):
+  - 1 unerwartete (rote) Testfaelle (unexpected != 0).
+  - nur 450 von mindestens 451 ausgefuehrten Testfaellen (expected < E2E_MIN_EXECUTED).
+Zahlen: expected=450 unexpected=1 skipped=0 E2E_MIN_EXECUTED=451
+
+=== Fix-Loop 1 (F001) — Mutations-Gegenprobe, 2026-10-26 ===
+Prüfling: frontend/src/lib/components/shared/etappenSpeicherstand.ts + Verdrahtung in EditStagesPanelNew.svelte
+Test: frontend/src/lib/components/trip-detail/__tests__/etappen_rollback_auf_bestaetigten_stand.test.ts (6 Fälle)
+Verfahren: String-Ersetzung per Edit, Sicherungskopie im Scratchpad, Rückkopie + cmp (identisch) nach jeder Mutation.
+  m14  412-Klausel entfernt (Modul autoSavePut)                  → rot: (a) 412 ⇒ kein Rueckfall, (b) Wiederholen 500     [4 pass / 2 fail]
+  m15  imWiederholen-Klausel entfernt (Modul autoSavePut)         → rot: (b) scheitert „Nochmal speichern" erneut          [5 pass / 1 fail]
+  m16  Merker im Erfolgsweg entfernt (Modul direktPut)            → rot: (c) zweiter Auto-Save 500, (d) Kaskade, (d) save  [3 pass / 3 fail]
+  m16b Auto-Save-Verdrahtung api statt autoSaveClient (Komponente) → rot: (c), (d) Kaskade, (d) save                        [3 pass / 3 fail]
+  m20  Kaskaden-PUT api.put statt direktClient (Komponente)       → rot: (d) Kaskaden-Erfolg bestaetigt den Stand          [5 pass / 1 fail]
+  m21  save() api.put statt direktClient (Komponente)             → rot: (d) manuelles Speichern bestaetigt den Stand      [5 pass / 1 fail]
+Nach Rückkopie: 6/6 grün; node-Kern (edit/*, trip-detail/__tests__, shared/__tests__, lib/__tests__): 1825 pass / 0 fail.
+# Subtest: \#2347 S2: Etappen-Auto-Save scheitert ⇒ Rueckfall auf den zuletzt bestaetigten Stand
+    ok 1 - (c) erster Auto-Save ok, zweiter 500 ⇒ Etappen zeigen den ERSTEN gespeicherten Stand, nicht den Oeffnungsstand
+    ok 2 - (a) 412 ⇒ KEIN Rueckfall; „Nochmal speichern" sendet die Eingabe des Nutzers
+    ok 3 - (b) scheitert „Nochmal speichern" erneut (500) ⇒ KEIN Rueckfall, die Eingabe bleibt fuer den naechsten Versuch
+    ok 4 - (d) Kaskaden-Erfolg bestaetigt den Stand: ein danach scheiternder Auto-Save faellt auf das Kaskaden-Ergebnis zurueck
+    ok 5 - (d) manuelles Speichern (ohne Speicher-Regler) bestaetigt den Stand
+    ok 6 - Gegenprobe: ohne Fehler kein Rueckfall, Auto-Save bleibt bei der Eingabe
+ok 1 - \#2347 S2: Etappen-Auto-Save scheitert ⇒ Rueckfall auf den zuletzt bestaetigten Stand
+# tests 6
+# suites 1
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4168.59419
+=== Fix-Loop 1: E2E auf frischem Build (hub-save-chip, issue-498, mobile-stage-date-edit, speicherung-ueberlebt-neuladen, compare-konfliktschutz-zwei-kontexte, trip-hub-kopf-region-aktivitaet) ===
+{'startTime': '2026-10-26T22:31:29.413Z', 'duration': 154250.294, 'expected': 104, 'skipped': 0, 'unexpected': 0, 'flaky': 0}
+=== Fix-Loop 1 (F005): SD gegen Staging (playwright.hub-send-dialog-target.staging.config.ts, Wegwerf-Nutzer) ===
+  ✓  1 [setup] › e2e/hub-send-dialog-target.staging.setup.ts:20:1 › authenticate via API (staging) — hub_send_dialog_target (713ms)
+  ✓  2 [tests] › e2e/hub-send-dialog-target.staging.spec.ts:151:2 › SD-1 (route): Lösch-Dialog behält eigenen Text; Sende-Dialog nennt das echte Ziel, „Senden" gesperrt, erzwungener Klick sendet nicht (2.8s)
+  ✓  3 [tests] › e2e/hub-send-dialog-target.staging.spec.ts:151:2 › SD-1 (vergleich): Lösch-Dialog behält eigenen Text; Sende-Dialog nennt das echte Ziel, „Senden" gesperrt, erzwungener Klick sendet nicht (2.3s)
+  ✓  4 [tests] › e2e/hub-send-dialog-target.staging.spec.ts:192:2 › SD-2 (route): Stress — zweimal Menü → Senden → Abbrechen, dann fünf erzwungene Klicks auf den gesperrten Knopf ⇒ kein Sende-Abruf, Dialog stabil (2.6s)
+  ✓  5 [tests] › e2e/hub-send-dialog-target.staging.spec.ts:192:2 › SD-2 (vergleich): Stress — zweimal Menü → Senden → Abbrechen, dann fünf erzwungene Klicks auf den gesperrten Knopf ⇒ kein Sende-Abruf, Dialog stabil (2.6s)
+  5 passed (12.9s)

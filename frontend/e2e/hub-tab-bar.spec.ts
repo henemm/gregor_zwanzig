@@ -3,12 +3,10 @@
 //
 // Spec: docs/specs/modules/feat_2347_s2_paritaets_e2e.md § AC-1 (HT-1..HT-10)
 //
-// Ersetzt (Zuordnungstabelle Zeilen 1-5, 36-38, 44-49):
-//   - compare-tab-bar.spec.ts (alle 5 Fälle, :82, :89, :96, :114, :134)
-//   - mobile-tab-bar.spec.ts (alle 6 Fälle, :39, :44, :55, :77, :89, :100;
-//     veraltet mit 7 Reitern — korrekt sind 5, Befund 2)
-//   - compare-mobile-vervollstaendigung.spec.ts AC-22 (:129 → HT-10, :157 → HT-9,
-//     :190 → HT-3)
+// Ersetzt die Reiterleisten-Fälle einer entfernten Compare-Altdatei, der entfernten
+// Trip-Reiterleisten-Spec (veraltet mit 7 Reitern — korrekt sind 5, Befund 2) und
+// AC-22 der entfernten mobilen Compare-Sammelspec; Zuordnung alt → neu:
+// Spec-Tabelle Zeilen 1-5, 36-38, 44-49.
 //
 // Kind-eigene Zweige NUR dort, wo die Spec sie ausweist: HT-8 (Optik-Werte je Art)
 // und HT-10 (Übersicht-Inhalt des Ortsvergleichs). Selektor-Unterschiede kommen
@@ -205,13 +203,13 @@ for (const kind of HUB_KINDS) {
 			// kind-Zweig (Spec HT-8): Optik-Werte sind nicht Gegenstand der Teilung —
 			// sie bleiben je Art exakt wie in den Alt-Specs.
 			if (kind === 'vergleich') {
-				// compare-tab-bar :134 — neutraler Badge (--g-paper-deep), 13-px-Trigger.
+				// Altfall Zuordnung Zeile 5 — neutraler Badge (--g-paper-deep), 13-px-Trigger.
 				const badge = reiter(page, kind, sel.punkteReiter).locator('[data-slot="segmented-badge"]');
 				await expect(badge).toBeVisible();
 				expect(await badge.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(236, 234, 217)');
 				expect(await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).fontSize)).toBe('13px');
 			} else {
-				// mobile-tab-bar :100 — Unterline-Optik: aktiver Reiter transparent.
+				// Altfall Zuordnung Zeile 49 — Unterline-Optik: aktiver Reiter transparent.
 				expect(
 					await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).backgroundColor)
 				).toBe('rgba(0, 0, 0, 0)');
@@ -245,7 +243,7 @@ for (const kind of HUB_KINDS) {
 
 // HT-10 läuft NUR für den Ortsvergleich (Spec HT-10, compare-eigen): der Inhalt der
 // Übersicht ist kind-eigen — der Trip zeigt dort das Trip-Cockpit (HubOverview),
-// der Vergleich das 4-Kennzahlen-Raster. Ersetzt compare-mobile-vervollstaendigung :129.
+// der Vergleich das 4-Kennzahlen-Raster. Altfall Zuordnung Zeile 36.
 test('HT-10 (vergleich): Mobil — Übersicht zeigt genau 4 Stat-Karten im 2×2-Raster, kein „Briefings"-Stat', async ({
 	page
 }) => {
