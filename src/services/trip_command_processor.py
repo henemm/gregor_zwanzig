@@ -3091,7 +3091,7 @@ class TripCommandProcessor:
         if resolved is not None:
             active, segment_date = resolved
             try:
-                pos = position_at_time(trip, active, segment_date, now_utc)
+                pos = position_at_time(trip, active, segment_date, now_utc, user_id=user_id)
             except Exception as e:
                 logger.error(
                     "Jetzt-Befehl: Positionsbestimmung fuer Trip %s "
@@ -3258,7 +3258,9 @@ class TripCommandProcessor:
                 )
             points = points_from_km(trip, active, segment_date, start_km)
         else:
-            points = points_along_remaining_route(trip, active, segment_date, now_utc)
+            points = points_along_remaining_route(
+                trip, active, segment_date, now_utc, user_id=user_id,
+            )
 
         # E1: erster Punkt user_briefing (nie gedrosselt), Folgepunkte
         # polling + fail-soft (Muster trip_alert.py:1748-1770).

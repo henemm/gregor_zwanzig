@@ -2381,7 +2381,7 @@ class TripReportSchedulerService:
         # Weg (`return None`), aber eine unterscheidbare Meldung — sonst
         # firmierte ein Positionsfehler als fehlgeschlagener Abruf.
         try:
-            _pos = position_at_time(trip, active, _seg_date, _at)
+            _pos = position_at_time(trip, active, _seg_date, _at, user_id=self._user_id)
         except Exception as e:
             logger.warning(
                 "Starkregen-Kurzfristhinweis: Positionsbestimmung fuer %s "

@@ -29,6 +29,34 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return _EARTH_KM * c
 
 
+def point_to_segment_m(
+    lat: float, lon: float,
+    a_lat: float, a_lon: float, b_lat: float, b_lon: float,
+) -> tuple[float, float]:
+    """Abstand eines Punkts zur Strecke A-B in Metern und Streckenanteil
+    ``frac`` (0 = A, 1 = B) des Lotfusspunkts (Issue #2327).
+
+    Lokale Equirectangular-Projektion um die Breite des Punkts -- auf
+    Etappen-Massstab (wenige km) liegt der Fehler weit unter einem Meter.
+    Gemessen wird zur STRECKE, nicht zum naechsten Endpunkt: ein Punkt mitten
+    auf einem langen Abschnitt hat 0 m Abstand, egal wie weit A und B weg sind.
+    """
+    rad = math.pi / 180.0
+    r_m = _EARTH_KM * 1000.0
+    k = math.cos(lat * rad)
+
+    def _xy(p_lat: float, p_lon: float) -> tuple[float, float]:
+        return ((p_lon - lon) * rad * k * r_m, (p_lat - lat) * rad * r_m)
+
+    ax, ay = _xy(a_lat, a_lon)
+    bx, by = _xy(b_lat, b_lon)
+    dx, dy = bx - ax, by - ay
+    len2 = dx * dx + dy * dy
+    frac = 0.0 if len2 <= 0.0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / len2))
+    fx, fy = ax + frac * dx, ay + frac * dy
+    return math.hypot(fx, fy), frac
+
+
 def degrees_to_compass(
     degrees: int | float | None,
     *,

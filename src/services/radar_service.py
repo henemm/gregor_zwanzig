@@ -154,8 +154,9 @@ RADAR_MEASURE_OFFSET_MIN = 27
 
 # Issue #2261 (A-1, R3): Toleranz des Aufenthaltsfensters eines Messpunkts.
 # Regen an Punkt k ist nur faellig, solange er beginnt, bevor der Nutzer laut
-# Zeitplan den Folgepunkt plus diese Toleranz erreicht hat (Planposition,
-# kein GPS — wer schneller/langsamer geht, verschiebt sich dagegen).
+# Zeitplan den Folgepunkt plus diese Toleranz erreicht hat (Planposition bzw.
+# gemeldeter GPS-Fix, nach Plan-Tempo fortgeschrieben — wer schneller/langsamer
+# geht, verschiebt sich dagegen).
 RADAR_PASSAGE_TOLERANCE_MIN = 30
 
 # Issue #1461 S3a: benannte Intensitaets-Label-Konstanten statt Inline-Strings

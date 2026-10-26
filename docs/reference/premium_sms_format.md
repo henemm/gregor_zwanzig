@@ -64,6 +64,22 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 - **Befehl:** Text vor `inreachlink.com` (ohne Code) → `TripCommandProcessor`
   (`channel="premium_sms"`); ohne Namen wird das Ziel (Trip/Vergleich) aufgelöst, mehrdeutig →
   Hinweisantwort. Antwort per Premium-SMS an die gelernte Rückadresse.
+- **Koordinaten (#2327, ADR-0102):** Garmin hängt hinter den Link die Position an, z. B.
+  `Heute inreachlink.com/gS5ySf-2sYCWmJQksXnjeHw  (46.6370, 12.7678)`. `extract_position` liest
+  die **letzte** Klammer `(<lat>, <lon>)` mit Dezimalpunkt (tolerant gegen Leerzeichen, negative
+  Werte, andere Nachkommastellen; Unsinn oder `|lat| > 90` / `|lon| > 180` → kein Fix). Der
+  Befehlstext vor dem Link bleibt unverändert. Erst **nach** der Zuordnung durch Go und **vor** der
+  Befehlsantwort ruft `_verarbeite_befehl` `record_position_fix` (`src/services/position_fix.py`):
+  liegt der Punkt höchstens **100 m** neben der Strecke der Heute-Etappe **genau eines** Trips des
+  Nutzers (Abstand zur Strecke, nicht zum Trackpunkt), wird der Lotfußpunkt in
+  `data/users/<user_id>/position_fix.json` gespeichert (Read-Modify-Write, ein älterer
+  Journal-Zeitstempel ersetzt keinen jüngeren). Wirkung: die Positionsquelle
+  (`trip_segments.position_at_time` / `points_with_passage_times`, Keyword `user_id`) rechnet ab
+  dem Fix statt ab der Planposition — zum Meldezeitpunkt am Fix selbst, danach nach Plan-Tempo
+  seit der Meldung fortgeschrieben (begrenzt auf das Etappenende; nach Ankunft oder am Folgetag
+  wieder Planposition) — für Briefing, Alarm, Radar und Befehle in
+  allen vier Kanälen gleich. Eine **reine Positions-SMS** (kein Befehlstext) nimmt den Fix auf und
+  wird **nicht** beantwortet.
 
 ## 5. Quelle im Code
 

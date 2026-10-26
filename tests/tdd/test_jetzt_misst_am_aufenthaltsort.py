@@ -528,7 +528,7 @@ def test_ac10_fehlgeschlagene_positionsbestimmung_faellt_zurueck_und_loggt(
 
     aufrufe: list = []
 
-    def _wirft(trip, active, segment_date, at):
+    def _wirft(trip, active, segment_date, at, **_kw):
         aufrufe.append(at)
         raise RuntimeError("Positionsbestimmung kaputt (Testfall AC-10)")
 

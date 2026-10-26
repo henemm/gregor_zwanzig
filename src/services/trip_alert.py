@@ -2203,7 +2203,7 @@ class TripAlertService:
                     # Issue #2261 (A-1, R3): dieselben Punkte, je Punkt mit der
                     # Durchgangszeit laut Zeitplan (Messort zur Ereigniszeit).
                     _punkte_mit_zeit = trip_segments_mod.points_with_passage_times(
-                        trip, active, segment_date, _at,
+                        trip, active, segment_date, _at, user_id=self._user_id,
                     )
                     _punkte = [_p for _p, _t in _punkte_mit_zeit]
                     _fenster_ende = aufenthaltsfenster_min(

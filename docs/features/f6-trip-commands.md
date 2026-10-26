@@ -146,7 +146,8 @@ Issue #2184). Seit Issue #2417 steht `/strecke` auch im Telegram-Bot-Menü (Deta
 `docs/features/architecture.md`, Abschnitt Telegram-Bot-Menü) — davor musste es
 getippt werden.
 
-**Ohne Argument:** Ausgangspunkt ist die aktuelle Planposition.
+**Ohne Argument:** Ausgangspunkt ist die aktuelle Position — ein gültiger GPS-Fix aus
+Premium-SMS (ADR-0102, seit 2026-10-26), sonst die Planposition.
 
 **Mit Argument** (`STRECKE 5` bzw. `/strecke 5`): Ausgangspunkt ist der selbst genannte
 km-Stand, bezogen auf die stage-kumulative Kilometrierung des aktiven Segments.
