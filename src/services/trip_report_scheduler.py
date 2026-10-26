@@ -670,7 +670,8 @@ class TripReportSchedulerService:
 
     Example:
         >>> service = TripReportSchedulerService()
-        >>> service.send_reports("morning")  # Send reports for today's trips
+        >>> service = TripReportSchedulerService(user_id="u1")
+        >>> sent, failed = service.send_due_reports(datetime.now(timezone.utc))
     """
 
     # Issue #2217: Trips, deren Faelligkeits-/Filterpruefung im letzten
@@ -697,44 +698,13 @@ class TripReportSchedulerService:
         # dem Konstruieren auf False -- eine Vorschau darf den Trip-Bestand
         # nicht als Seiteneffekt veraendern (AC-7 Nebenpfad).
         self.persist_backfill: bool = True
-
-    def send_reports(self, report_type: str) -> int:
-        """
-        Send reports for all active trips.
-
-        Args:
-            report_type: "morning" or "evening"
-
-        Returns:
-            Number of reports successfully sent
-        """
-        if not self._settings.can_send_email():
-            logger.error("SMTP not configured, cannot send trip reports")
-            return 0
-
-        # Issue #1724 AC-9: EIN "Jetzt" fuer den ganzen Lauf -- kein Trip
-        # darf eine andere Sekunde sehen als der naechste.
-        now_utc = datetime.now(timezone.utc)
-        active_trips = [
-            t for t in self._get_active_trips(report_type, now_utc)
-            if not self._skip_next_verbrauchen(t)
-        ]
-        logger.info(f"Found {len(active_trips)} active trips for {report_type} reports")
-
-        sent_count = 0
-        for i, trip in enumerate(active_trips):
-            try:
-                self._send_trip_report(trip, report_type)
-                sent_count += 1
-                # Issue #766: 2s Pause zwischen aufeinanderfolgenden Mails
-                # (nicht nach der letzten), um SMTP-Rate-Limits zu vermeiden.
-                if i < len(active_trips) - 1:
-                    time_module.sleep(INTER_MAIL_DELAY_SECONDS)
-            except Exception as e:
-                logger.error(f"Failed to send report for trip {trip.id}: {e}")
-
-        logger.info(f"Sent {sent_count}/{len(active_trips)} {report_type} reports")
-        return sent_count
+        # Issue #1405 S4b (B21): gescheiterte Begleit-Hinweise (Telegram
+        # "unvollstaendig", Service-Fehlermail) bei zugestelltem Briefing.
+        # `notice_failed` zaehlt im Lauf (Reset in `_collect_due_trips`),
+        # `last_notice_failed` erhaelt die aufrufende Instanz nach
+        # `send_due_reports` (Router -> notice_failed, status "partial").
+        self.notice_failed = 0
+        self.last_notice_failed = 0
 
     def send_due_reports(self, now_utc: datetime) -> Tuple[int, int]:
         """
@@ -784,8 +754,10 @@ class TripReportSchedulerService:
 
         from services.dispatch_orchestrator import run_briefing_dispatch
 
+        self.last_notice_failed = 0  # Issue #1405 S4b: Reset je Lauf
         return run_briefing_dispatch(
             "route", self._user_id, now_utc, settings=self._settings,
+            notice_sink=self,
         )
 
     def _collect_due_trips(self, now_utc: datetime) -> List[Tuple["Trip", str, date]]:
@@ -837,6 +809,7 @@ class TripReportSchedulerService:
         from services.trip_day import trip_local_now
 
         self.collect_failed = 0
+        self.notice_failed = 0  # Issue #1405 S4b: Reset je Sammellauf
         store = BriefingSlotStore(self._user_id)
         store.repair_if_corrupt(moment=now_utc)  # #2231: VOR der Schleife
         due: List[Tuple["Trip", str, date]] = []
@@ -937,7 +910,9 @@ class TripReportSchedulerService:
             return outcome if isinstance(outcome, str) and outcome else "unknown"
         return outcome
 
-    def _process_pending_markers(self, now_utc: datetime, due_trip_ids_now: set) -> int:
+    def _process_pending_markers(
+        self, now_utc: datetime, due_trip_ids_now: set,
+    ) -> Tuple[int, int]:
         """Issue #1012 (b2): Verarbeitet offene Nachliefer-Marker VOR den
         regulären Slots. Für jeden Marker:
         - Trip regulär JETZT fällig (beliebiger report_type) -> Marker
@@ -954,15 +929,20 @@ class TripReportSchedulerService:
         für ihn übersprungen (`failed_segment_ids` ist per Definition leer).
 
         Returns:
-            Anzahl erfolgreich nachgelieferter Briefings (zählt als 'sent').
+            ``(delivered, failed)`` — erfolgreich nachgelieferte Briefings
+            (zählen als 'sent') und gescheiterte Nachlieferungen
+            (``no_weather``/``channels_unreachable``, Issue #1405 S4b).
+            ``no_channels``/``no_stage`` und ein weiter gestörter Wetterdienst
+            ohne Versand (Lärmschutz #1012) zählen weder noch.
         """
         path = get_data_dir(self._user_id) / "pending_briefings.json"
         entries = _load_pending_entries(path).get("entries", [])
         if not entries:
-            return 0
+            return 0, 0
 
         all_trips = {t.id: t for t in load_all_trips(user_id=self._user_id)}
         delivered = 0
+        failed = 0
 
         for entry in entries:
             trip_id = entry.get("trip_id")
@@ -1026,8 +1006,13 @@ class TripReportSchedulerService:
                 outcome = self._send_trip_report_outcome(
                     trip, report_type, catchup_prefix=prefix,
                 )
+                # Issue #1405 S4b (#8): Einordnung wie `dispatch_one` -- sent
+                # zaehlt, no_channels/no_stage sind neutral, der Rest
+                # (no_weather, channels_unreachable) ist ein verpasstes Briefing.
                 if outcome == "sent":
                     delivered += 1
+                elif outcome not in ("no_channels", "no_stage"):
+                    failed += 1
                 continue
 
             segment_weather = self._fetch_weather(segments)
@@ -1065,8 +1050,10 @@ class TripReportSchedulerService:
             )
             if outcome == "sent":
                 delivered += 1
+            elif outcome not in ("no_channels", "no_stage"):
+                failed += 1
 
-        return delivered
+        return delivered, failed
 
     def _write_pending_marker(
         self,
@@ -1509,7 +1496,7 @@ class TripReportSchedulerService:
         Generate and send report for a single trip — legacy bool wrapper.
 
         Issue #1007 Adversary-Fix F001: die öffentlichen Aufrufer
-        (send_test_report, send_reports, send_reports_for_hour) behalten ihre
+        (send_test_report, send_reports_for_hour) behalten ihre
         EXAKTE bool-Semantik von vorher (True auch bei "no_channels" —
         pre-existing Verhalten, nicht Teil dieses Issues). Die Outcome-
         Unterscheidung steckt in _send_trip_report_outcome().
@@ -2009,6 +1996,12 @@ class TripReportSchedulerService:
             raise
         uhr.wechsel("rest")
         errors = request.failed_segments
+        # Issue #1405 S4b (B21): ein gescheiterter Begleit-Hinweis (Telegram
+        # "unvollstaendig", Service-Fehlermail) bei ZUGESTELLTEM Briefing ist
+        # kein verpasstes Briefing -- er zaehlt als `notice_failed` des Laufs
+        # (status "partial"), nicht als `failed` (ADR-0086).
+        if result.sent:
+            self.notice_failed += len(result.notice_failures)
 
         # Issue #1439 AC-6: ein erfolgreich versendeter Kurzfristhinweis
         # schreibt denselben Radar-Cooldown, den ein echter Radar-Alert nach

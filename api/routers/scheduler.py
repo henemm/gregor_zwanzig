@@ -83,13 +83,19 @@ def trigger_trip_reports(at: Optional[str] = None, user_id: str = Query(...)):
     # damit das externe Monitoring 452-Rate-Limit-Ausfälle erkennen kann.
     started_at = time.monotonic()
     sent, failed = service.send_due_reports(now_utc)
+    # Issue #1405 S4b (B21): gescheiterte Begleit-Hinweise bei zugestelltem
+    # Briefing -> "partial", aber NICHT failed (kein verpasstes Briefing).
+    notice_failed = service.last_notice_failed
     duration_s = round(time.monotonic() - started_at, 3)
     logger.info(
         f"trip_reports: Lauf beendet nach {duration_s:.3f}s fuer "
-        f"user_id={user_id} (sent={sent} failed={failed})"
+        f"user_id={user_id} (sent={sent} failed={failed} notice_failed={notice_failed})"
     )
-    status = "partial" if failed > 0 else "ok"
-    return {"status": status, "count": sent, "failed": failed, "duration_s": duration_s}
+    status = "partial" if failed > 0 or notice_failed > 0 else "ok"
+    return {
+        "status": status, "count": sent, "failed": failed,
+        "notice_failed": notice_failed, "duration_s": duration_s,
+    }
 
 
 @router.post("/alert-checks")
@@ -131,29 +137,38 @@ def trigger_compare_alert_checks(user_id: str = Query(...)):
     trotzdem, und der Fehler zaehlt als ``failed``. ``count``/``failed``/
     ``duration_s`` werden summiert; ``checked`` ist die Zahl gepruefter
     Presets (beide Teile pruefen dieselben Presets -> Maximum, nicht Summe).
+
+    Issue #1405 S4b: ``status`` folgt dem Zaehler (``failed > 0`` oder
+    ``notice_failed > 0`` -> ``"partial"``, Muster ``trigger_trip_reports``).
+    ``notice_failed`` zaehlt gescheiterte "unvollstaendig"-Hinweise bei
+    zugestelltem Abweichungsalarm (nur der Abweichungsteil sendet sie).
     """
     from services.compare_alert import CompareAlertService
     from services.compare_official_alert import CompareOfficialAlertService
 
-    count = failed = checked = 0
+    count = failed = checked = notice_failed = 0
     duration_s = 0.0
-    for name, service_cls in (
-        ("compare_alert", CompareAlertService),
-        ("compare_official_alert", CompareOfficialAlertService),
+    for name, service_cls, sendet_hinweise in (
+        ("compare_alert", CompareAlertService, True),
+        ("compare_official_alert", CompareOfficialAlertService, False),
     ):
         try:
             service = service_cls(user_id=user_id)
             count += service.check_all_compare_presets()
             failed += service.last_failed_count
+            if sendet_hinweise:
+                notice_failed += service.last_notice_failed
             checked = max(checked, service.last_checked_count)
             duration_s += service.last_duration_s
         except Exception:
             logger.exception(f"{name}: Lauf fuer user_id={user_id} abgebrochen")
             failed += 1
+    status = "partial" if failed > 0 or notice_failed > 0 else "ok"
     return {
-        "status": "ok",
+        "status": status,
         "count": count,
         "failed": failed,
+        "notice_failed": notice_failed,
         "checked": checked,
         "duration_s": round(duration_s, 3),
     }
@@ -219,8 +234,13 @@ def trigger_inbound():
             return {"status": "busy"}
         reader = InboundEmailReader()
         count = reader.poll_and_process(settings)
+    # Issue #1405 S4b: nicht erreichbares Postfach / gescheiterte Verarbeitung /
+    # nicht zugestellte Antwort -> failed + status "partial" (Muster
+    # trigger_inbound_sms); Go wertet beides im Laufstatus aus.
+    failed = reader.last_failed_count
+    status = "partial" if failed > 0 else "ok"
     # Issue #2439: "processed" steuert den Nachversuch des Push-Weckrufs in Go.
-    return {"status": "ok", "count": count, "processed": count}
+    return {"status": status, "count": count, "processed": count, "failed": failed}
 
 
 @router.post("/inbound-sms")

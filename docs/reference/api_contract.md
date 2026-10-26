@@ -1492,6 +1492,20 @@ invalid ⇒ 403; missing env ⇒ 503 (fail-closed). Python `/api/scheduler/inbou
 `/inbound-commands` hold a flock and answer `{"status":"busy"}` on a parallel run. Cron `*/5`
 remains the fallback.
 
+**Response of `POST /api/scheduler/inbound-commands` (since #1405 S4b):**
+
+```json
+{"status": "partial", "count": 1, "processed": 1, "failed": 1}
+```
+
+`status` is `"ok"` (`failed == 0`), `"partial"` (`failed > 0`), `"busy"` (flock held) or
+`"skipped"` (no IMAP credentials, `reason: "imap_not_configured"`). `failed` counts an
+unreachable mailbox (IMAP login/network error), a command mail whose processing failed and a
+command reply that could not be delivered (the mail is marked seen regardless — no retry).
+Go evaluates it for `inbound_command_poll` like `premium_sms_poll`: `failed > 0` ⇒
+`last_run.status = "error"`, `partial` without `failed` ⇒ `"partial"`. The push-kick retry
+still depends only on `processed`/`busy`.
+
 **Auth (since #2155 S2, ADR-0079):** requires header `X-GZ-Status-Token` matching the
 configured `GZ_STATUS_TOKEN` (machine secret for the external monitor
 `check-gregor20.sh`, constant-time comparison, both sides sha256-hashed first). A
@@ -1840,6 +1854,18 @@ Enqueues immediate trip report (morning/evening/alert) generation and send for a
 | 400 | `{"error":"no_active_trip"}` | No trip with today's stage found |
 | 503 | `{"error":"scheduler_unavailable"}` | Scheduler not available |
 
+**Python-Core response (Cron path, `POST /api/scheduler/trip-reports?user_id=…`, since #766/#1405 S4b):**
+
+```json
+{"status": "partial", "count": 1, "failed": 0, "notice_failed": 1, "duration_s": 0.42}
+```
+
+`failed` = missed briefings (incl. failed catch-up deliveries, #1405 S4b). `notice_failed` =
+failed companion notices (Telegram "Briefing unvollständig", service error mail for SMS-only
+trips) while the briefing itself **was delivered** — not counted as `failed`, `failed_channels`
+untouched (ADR-0086). `status` is `"partial"` when `failed > 0` or `notice_failed > 0`; Go books
+`failed > 0` as `error`, otherwise `partial` as `last_run.status = "partial"`.
+
 ---
 
 ## 14.5) Manual Test-Briefing Send Endpoint (Issue #695, Bug #716)
@@ -1963,6 +1989,9 @@ completed fully or was cut off by that budget.
 | `reason` | string | Present only when `status: "partial"` — currently always `"deadline"` |
 | `skipped_ids` | string[] | Trip-IDs, die der Lauf nicht mehr erreicht hat (Seit #2261 A-2 S1; `skipped` ist deren Anzahl). Leer bei vollem Lauf. |
 | `failed` | int | Trips, bei denen die Prüfung mit einer Ausnahme endete (Seit #2217; gilt auch für `radar-alert-checks`, `compare-radar-alert-checks`). Die Ausnahme reißt die folgenden Trips nicht mehr mit; sie wird mit Trip-/Preset-ID und Stacktrace geloggt (`report_unit_failure`, `src/services/alert_check_state.py`). `RadarDeadlineExceeded` bricht den Lauf weiterhin ab (`status: "partial"`). `compare-alert-checks` meldet `failed` ebenso — seit Issue #2286 inklusive des amtlichen Teils (vormals eigener Endpoint `compare-official-alert-checks`, entfallen): beide Teile laufen nacheinander in je eigenem try-Block, `count`/`failed`/`duration_s` werden summiert, `checked` ist die Zahl geprüfter Presets (Maximum der Teile); wirft ein Teil, zählt das als `failed += 1`, der andere läuft trotzdem. |
+| `notice_failed` | int | Seit #1405 S4b, **nur `compare-alert-checks`**: gescheiterte Begleit-Hinweise („Alarm unvollständig" per Telegram) bei **zugestelltem** Ortsvergleich-Änderungsalarm — nur dieser Alarm fächert Telegram in mehrere Sprechblasen auf; `alert-checks`, `radar-alert-checks` und `compare-radar-alert-checks` senden genau eine Nachricht und tragen das Feld nicht. Getrennt von `failed`: `failed_channels`, Retry-Backoff und Throttle bleiben unberührt (ADR-0086). `notice_failed > 0` ⇒ `status: "partial"` (ohne `reason`); Go verbucht das als `last_run.status = "partial"`, nicht als `error`. |
+
+**Seit #1405 S4b (2026-10-26):** `compare-alert-checks` meldet bei `failed > 0` den `status: "partial"` (vorher fest `"ok"`); ebenso bei `notice_failed > 0`. Go wertet `failed > 0` als `error`, `partial` ohne `failed` als `partial`.
 
 **Seit #2217 (2026-10-07):** Stapelläufe sind abgeschottet — Alarmläufe (Trip-Radar, `check_all_trips`, drei Ortsvergleich-Alarmläufe) und der Briefing-Sammellauf (Fälligkeits-/Filterprüfung Trip, Zonenbestimmung/Auto-Pause Ortsvergleich) zählen Ausnahmen einzelner Trips/Presets in `failed`, statt abzubrechen. Der Fairness-Stempel wird vor der Prüfung gesetzt; `skip_next` bleibt bei einer Ausnahme unverbraucht. Go-Scheduler: eine Panic in `recordRun`/`callUserWithBudget` wird als Fehler `panic in <jobID>` erfasst und der Job-Lock freigegeben.
 

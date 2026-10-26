@@ -57,10 +57,10 @@ trip_report_scheduler.py (NEU)
     |
     +-- TripReportSchedulerService
             |
-            +-- send_reports(report_type: str)
+            +-- send_due_reports(now_utc) → (sent, failed)   (via run_briefing_dispatch)
             |       |
-            |       +-- load_all_trips()
-            |       +-- for each trip:
+            |       +-- _collect_due_trips(now_utc) / _process_pending_markers(...)
+            |       +-- for each due trip:
             |               +-- convert_trip_to_segments(trip) → TripSegment[]
             |               +-- fetch_segment_weather(segment) → SegmentWeatherData[]
             |               +-- TripReportFormatter.format_email(...) → TripReport
@@ -150,7 +150,7 @@ def _get_active_trips(self, report_type: str, now_utc: datetime) -> List["Trip"]
 
 > **Nachzug (2026-09-09, #2236 C4-44):** Bis v1.0 zeigte diese Skizze `_get_active_trips(report_type)`
 > mit `date.today()` — seit #1724 (`fix_1724_faelligkeit_in_der_ortszone.md`) traegt die Funktion den
-> Pflichtparameter `now_utc`, und `send_reports()` bildet **ein** `now_utc` fuer den ganzen Lauf
+> Pflichtparameter `now_utc`, und der Sammellauf (`send_due_reports(now_utc)`) bildet **ein** `now_utc` fuer den ganzen Lauf
 > (AC-9), damit kein Trip eine andere Sekunde sieht als der naechste. `_send_trip_report` selbst
 > bekommt **kein** `now_utc`; seine heutige Signatur ist
 > `_send_trip_report(trip, report_type, allow_test_fallback=False, on_demand=False, angefordert=False) -> bool`
@@ -198,20 +198,17 @@ def init_scheduler() -> None:
     _scheduler.start()
 
 
-def run_morning_trip_reports() -> None:
-    """Run morning trip reports for all active trips."""
+def run_trip_reports(user_id: str) -> None:
+    """Stuendlicher Lauf (heute: Go-Cron -> POST /api/scheduler/trip-reports)."""
     from services.trip_report_scheduler import TripReportSchedulerService
-    logger.info("Running morning trip reports...")
-    service = TripReportSchedulerService()
-    service.send_reports("morning")
-
-
-def run_evening_trip_reports() -> None:
-    """Run evening trip reports for all active trips."""
-    from services.trip_report_scheduler import TripReportSchedulerService
-    logger.info("Running evening trip reports...")
-    service.send_reports("evening")
+    service = TripReportSchedulerService(user_id=user_id)
+    sent, failed = service.send_due_reports(datetime.now(timezone.utc))
 ```
+
+> **Nachzug (2026-10-26, #1405 S4b):** Die fruehere Sammelmethode je Berichtstyp
+> (`report_type`-Parameter) war seit #1724 ohne Produktionsaufrufer und ist geloescht. Einziger Sammellauf ist
+> `send_due_reports(now_utc) -> (sent, failed)`; gescheiterte Begleit-Hinweise stehen danach in
+> `last_notice_failed` (Router-Feld `notice_failed`, `status: "partial"`).
 
 ### 4. Service Implementation
 
@@ -231,28 +228,12 @@ class TripReportSchedulerService:
         self._formatter = TripReportFormatter()
         self._email_output = EmailOutput(self._settings)
 
-    def send_reports(self, report_type: str) -> None:
+    def send_due_reports(self, now_utc: datetime) -> tuple[int, int]:
+        """Sammellauf: faellige Slots + offene Nachliefer-Vermerke versenden.
+
+        Delegiert an `run_briefing_dispatch("route", ...)` (#1207); liefert
+        `(sent, failed)`. Ein `now_utc` fuer den ganzen Lauf (#1724 AC-9).
         """
-        Send reports for all active trips.
-
-        Args:
-            report_type: "morning" or "evening"
-        """
-        if not self._settings.can_send_email():
-            logger.error("SMTP not configured, cannot send trip reports")
-            return
-
-        # Issue #1724 AC-9: EIN "Jetzt" fuer den ganzen Lauf -- kein Trip
-        # darf eine andere Sekunde sehen als der naechste.
-        now_utc = datetime.now(timezone.utc)
-        active_trips = self._get_active_trips(report_type, now_utc)
-        logger.info(f"Found {len(active_trips)} active trips for {report_type} reports")
-
-        for trip in active_trips:
-            try:
-                self._send_trip_report(trip, report_type)
-            except Exception as e:
-                logger.error(f"Failed to send report for trip {trip.id}: {e}")
 
     def _send_trip_report(
         self, trip: Trip, report_type: str,
@@ -342,7 +323,7 @@ Summary: Max 20C, Max Wind 30km/h, Total 7.0mm
 def test_send_morning_report_real_email():
     """E2E: Generate and send real trip report via SMTP."""
     # 1. Create test trip with today's date
-    # 2. Call service.send_reports("morning")
+    # 2. Call service.send_due_reports(now_utc) zur Morgen-Stunde des Trips
     # 3. Verify email via IMAP
     # 4. Check email content with email_spec_validator
 
@@ -384,6 +365,8 @@ except Exception as e:
 Fehler bei einem Trip blockieren NICHT die anderen Trips.
 
 ## Changelog
+
+- 2026-10-26: v1.2 - #1405 S4b: toter Code `send_reports(report_type)` geloescht (kein Produktionsaufrufer); Skizzen auf `send_due_reports(now_utc)` umgestellt; `_process_pending_markers` liefert `(delivered, failed)`, Begleit-Hinweis-Fehlschlaege als `notice_failed`
 
 - 2026-09-09: v1.1 - Nachzug #2236 (C4-44): `_get_active_trips(report_type, now_utc)` und Ein-`now_utc`-pro-Lauf in `send_reports()` seit #1724; reale Signatur von `_send_trip_report` dokumentiert
 - 2026-02-16: Updated with error handling (WEATHER-04) - handles error segments and sends service emails

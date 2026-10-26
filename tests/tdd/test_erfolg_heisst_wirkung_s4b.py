@@ -699,35 +699,11 @@ def test_ac27_ortsvergleich_hinweiszaehler_je_nutzer_und_lauf(rig, monkeypatch):
     assert body_a2.get("notice_failed", _FEHLT) == 0, f"AC-27: Uebertrag in Folgelauf: {body_a2!r}"
 
 
-@pytest.mark.parametrize("router", [
-    "trigger_alert_checks", "trigger_radar_alert_checks", "trigger_compare_radar_alert_checks",
-])
-def test_ac25_alarm_router_antwort_traegt_notice_failed(router, monkeypatch):
-    """AC-25 (``/alert-checks``, ``/radar-alert-checks``,
-    ``/compare-radar-alert-checks``): die Antwort traegt ``notice_failed``
-    (ohne Fehlschlag ``0``) und ``status == "ok"``.
-
-    Spec-Luecke (im Bericht gemeldet): nur der Ortsvergleich-Aenderungsalarm
-    faechert Telegram in mehrere Sprechblasen auf
-    (``send_multi_location_deviation_alert`` -> ``telegram_groups``); NUR dort
-    wird ``_send_telegram_incomplete_hint`` im Alarmpfad gerufen
-    (``notification_service.py:2130``). Trip-Abweichung, Trip-Radar und
-    Ortsvergleich-Radar senden genau EINE Telegram-Nachricht -- der Fall
-    "Teil-Nachricht kommt an, Hinweis scheitert" ist dort mit dem heutigen
-    Produktcode nicht herstellbar. Gemessen wird deshalb nur das Antwortfeld.
-
-    RED heute: ``notice_failed`` fehlt in der Antwort."""
-    import api.routers.scheduler as router_mod
-
-    install_transport_fakes(monkeypatch)  # hermetische Settings, kein Versand moeglich
-    uid = _alarm_uid(f"ac25-{router}")
-
-    body = getattr(router_mod, router)(user_id=uid)
-
-    assert body.get("status") == "ok", body
-    assert body.get("notice_failed", _FEHLT) == 0, (
-        f"AC-25: {router} muss notice_failed melden (0 ohne Fehlschlag): {body!r}"
-    )
+# AC-25 gilt nach PO-Spec-Korrektur nur fuer ``/compare-alert-checks``: nur der
+# Ortsvergleich-Aenderungsalarm faechert Telegram in mehrere Sprechblasen auf
+# und kann einen "unvollstaendig"-Hinweis senden. Trip-Abweichung, Trip-Radar
+# und Ortsvergleich-Radar senden genau EINE Telegram-Nachricht -- dort gibt es
+# kein ``notice_failed``.
 
 
 @pytest.mark.parametrize("hinweis_scheitert,erwartet", [(True, ["telegram_incomplete_hint"]), (False, [])])
@@ -1144,6 +1120,421 @@ def test_ac27_briefing_hinweiszaehler_je_nutzer_und_lauf(monkeypatch):
     assert body_a.get("notice_failed", _FEHLT) != _FEHLT and body_a["notice_failed"] >= 1, body_a
     assert body_b.get("notice_failed", _FEHLT) == 0, f"AC-27: Fehler von A in B gebucht: {body_b!r}"
     assert body_a2.get("notice_failed", _FEHLT) == 0, f"AC-27: Uebertrag in Folgelauf: {body_a2!r}"
+
+
+# ════════════ Fix-Loop 1 (Adversary BROKEN): F001-F006, Reset-Gegenproben ════════════
+
+
+class _Sink:
+    """Aufrufende Instanz fuer ``run_briefing_dispatch(..., notice_sink=)``."""
+
+    last_notice_failed = _FEHLT
+
+
+def test_fl1_sms_only_ohne_mailversand_ist_kein_hinweis_fehlschlag(monkeypatch):
+    """Fix-Loop 1 (F001, Spec B21 "nicht erforderlich", analog AC-4): GIVEN ein
+    SMS-only-Trip mit Segmentausfall, dessen Settings KEINEN Mailversand
+    einrichten (``can_send_email()`` falsch) / WHEN der Briefing-Lauf endet /
+    THEN wird keine Service-Fehlermail versucht, ``notice_failed == 0`` und die
+    Bilanz ist ``(1, 0)`` -- sonst stuende jeder SMS-only-Nutzer ohne SMTP
+    dauerhaft auf ``partial``.
+
+    Eingang: echter ``run_briefing_dispatch`` (der Router-Weg bricht ohne SMTP
+    schon am ``smtp_guard`` ab); die Lauf-Settings bestehen den Guard, der
+    Versanddienst des Nutzers hat keinen SMTP-Host."""
+    versand = _Versand(monkeypatch)
+    versand.mail_scheitert = lambda subject: True  # ein Versuch scheiterte
+    uid, trip = _briefing_lage("fl1-ohne-smtp", send_email=False, send_sms=True, wegpunkte=3)
+    ohne_smtp = _briefing_settings().model_copy(update={"smtp_host": ""})
+    assert not ohne_smtp.can_send_email() and ohne_smtp.can_send_sms()
+    _scheduler_verdrahten(monkeypatch, ohne_smtp, {uid: "teil_fehlt"})
+    _vermerk(uid, trip)
+    sink = _Sink()
+
+    from services.dispatch_orchestrator import run_briefing_dispatch
+
+    bilanz = run_briefing_dispatch(
+        "route", uid, datetime.now(timezone.utc), settings=_briefing_settings(),
+        notice_sink=sink,
+    )
+
+    assert len(versand.sms) == 1, f"Messaufbau: die SMS fehlt: {bilanz!r}"
+    assert not any("Wetterdaten nicht verfuegbar" in s for s in versand.mail_versuche), (
+        f"F001: ohne Mailversand darf keine Fehlermail versucht werden: {versand.mail_versuche!r}"
+    )
+    assert bilanz == (1, 0), bilanz
+    assert sink.last_notice_failed == 0, (
+        f"F001: kein Versuch = kein Hinweis-Fehlschlag, notice_failed={sink.last_notice_failed!r}"
+    )
+
+
+def test_fl1_f003_briefing_zaehler_reset_auf_derselben_strategie(monkeypatch):
+    """F003 (AC-27, Reset ``_collect_due_trips``): GIVEN DIESELBE
+    ``TripDispatchStrategy`` (damit derselbe Dienst) fuer zwei Laeufe, erst mit
+    gescheitertem Hinweis, dann ohne / WHEN der zweite Lauf ``collect_due`` +
+    ``pre_pass`` durchlaeuft (Reihenfolge wie ``run_briefing_dispatch``) /
+    THEN ist ``notice_failed`` im zweiten Lauf 0 (kein Uebertrag)."""
+    from services.dispatch_orchestrator import TripDispatchStrategy
+
+    versand = _Versand(monkeypatch)
+    uid, trip = _briefing_lage("fl1-f003-trip", send_email=True, send_telegram=True)
+    _scheduler_verdrahten(monkeypatch, _briefing_settings(), {uid: "ok"})
+    strategie = TripDispatchStrategy(_briefing_settings(), uid)
+
+    def _lauf() -> int:
+        jetzt = datetime.now(timezone.utc)
+        strategie.pre_pass(jetzt, strategie.collect_due(jetzt))
+        return strategie.notice_failed
+
+    _vermerk(uid, trip)
+    versand.telegram_scheitert = True
+    erster = _lauf()
+    versand.telegram_scheitert = False
+    _vermerk(uid, trip)
+    zweiter = _lauf()
+
+    assert len(versand.mails) == 2, f"Messaufbau: zwei Nachlieferungen erwartet: {versand.mails!r}"
+    assert erster >= 1, f"Messaufbau: der erste Lauf muss den Hinweis-Fehlschlag zaehlen: {erster!r}"
+    assert zweiter == 0, f"F003: Hinweiszaehler traegt in den naechsten Lauf: {zweiter!r}"
+
+
+def test_fl1_f003_briefing_last_notice_failed_reset_bei_guard_abbruch(monkeypatch):
+    """F003 (Reset ``send_due_reports``): GIVEN DERSELBE Dienst, Lauf 1 mit
+    gescheitertem Hinweis (``last_notice_failed >= 1``), danach ist der
+    Mailversand des Dienstes nicht mehr eingerichtet / WHEN Lauf 2 am
+    ``smtp_guard`` endet (kein Versand, keine Zuweisung durch den Lauf) / THEN
+    meldet der Dienst ``last_notice_failed == 0`` -- kein Wert aus Lauf 1."""
+    import services.trip_report_scheduler as trs
+
+    versand = _Versand(monkeypatch)
+    uid, trip = _briefing_lage("fl1-f003-guard", send_email=True, send_telegram=True)
+    _scheduler_verdrahten(monkeypatch, _briefing_settings(), {uid: "ok"})
+    dienst = trs.TripReportSchedulerService(user_id=uid)
+    _vermerk(uid, trip)
+    versand.telegram_scheitert = True
+
+    dienst.send_due_reports(datetime.now(timezone.utc))
+    erster = dienst.last_notice_failed
+    # Konfigurationswechsel zwischen den Laeufen: SMTP nicht mehr eingerichtet.
+    dienst._settings = dienst._settings.model_copy(update={"smtp_host": ""})
+    bilanz = dienst.send_due_reports(datetime.now(timezone.utc))
+
+    assert erster >= 1, f"Messaufbau: Lauf 1 muss den Hinweis-Fehlschlag melden: {erster!r}"
+    assert bilanz == (0, 0), f"Messaufbau: Lauf 2 muss am smtp_guard enden: {bilanz!r}"
+    assert dienst.last_notice_failed == 0, (
+        f"F003: last_notice_failed traegt in den naechsten Lauf: {dienst.last_notice_failed!r}"
+    )
+
+
+def test_fl1_f003_mail_leser_reset_auf_derselben_instanz(monkeypatch):
+    """F003 (Reset ``poll_and_process``): GIVEN DERSELBE ``InboundEmailReader``,
+    Lauf 1 scheitert am Postfach (``last_failed_count == 1``) / WHEN Lauf 2 ohne
+    Zugangsdaten frueh endet / THEN ``last_failed_count == 0``."""
+    from services.inbound_email_reader import InboundEmailReader
+
+    postfach = _Postfach(fehler=OSError("Network is unreachable (tdd-1405-s4b F003)"))
+    _inbound_umgebung(monkeypatch, postfach)
+    leser = InboundEmailReader()
+
+    leser.poll_and_process(basis_settings())
+    erster = leser.last_failed_count
+    leser.poll_and_process(basis_settings(imap_user="", imap_pass="", smtp_user="", smtp_pass=""))
+
+    assert postfach.verbindungen == 1, "Messaufbau: Lauf 2 darf keine Verbindung aufbauen"
+    assert erster == 1, f"Messaufbau: Lauf 1 muss den Netzfehler zaehlen: {erster!r}"
+    assert leser.last_failed_count == 0, (
+        f"F003: last_failed_count traegt in den naechsten Lauf: {leser.last_failed_count!r}"
+    )
+
+
+def test_fl1_f003_vergleichs_hinweiszaehler_reset_auf_derselben_instanz(rig, monkeypatch):
+    """F003 (Reset ``_check_all_counted``): GIVEN DERSELBE ``CompareAlertService``,
+    Lauf 1 mit gescheitertem Hinweis / WHEN Lauf 2 (61 min spaeter) ohne
+    Telegram-Stoerung laeuft / THEN ``last_notice_failed == 0``."""
+    import services.compare_alert as ca
+    from freezegun import freeze_time
+
+    from tests.helpers.briefing_imminent_fixtures import nur_diese_warnquelle
+    from tests.tdd.test_alarm_totalausfall_wird_wiederholt import (
+        _AlleOrteWarnquelle, _T0, _caches_leeren,
+    )
+
+    uid = _alarm_uid("fl1-f003-vergleich")
+    lage = _vergleich_lage(rig, uid, ("telegram",))
+    _vergleich_verdrahten(monkeypatch, {uid: lage.settings}, _beide_orte_boeen())
+    dienst = ca.CompareAlertService(user_id=uid)
+    rig.zaehler_leeren()
+    rig.telegram_fehler_bei = {2, 3}
+
+    _caches_leeren()
+    with freeze_time(_T0), nur_diese_warnquelle(_AlleOrteWarnquelle([])):
+        dienst.check_all_compare_presets()
+    erster = dienst.last_notice_failed
+    rig.telegram_fehler_bei = None
+    _caches_leeren()
+    with freeze_time(_T0 + timedelta(minutes=61)), nur_diese_warnquelle(_AlleOrteWarnquelle([])):
+        dienst.check_all_compare_presets()
+
+    assert erster >= 1, f"Messaufbau: Lauf 1 muss den Hinweis-Fehlschlag zaehlen: {erster!r}"
+    assert dienst.last_notice_failed == 0, (
+        f"F003: last_notice_failed traegt in den naechsten Lauf: {dienst.last_notice_failed!r}"
+    )
+
+
+def test_fl1_f004_daten_nachlieferung_mit_gescheitertem_versand_zaehlt_failed(monkeypatch):
+    """F004 (AC-12, zweite Sendestelle): GIVEN ein Wetterfehler-Vermerk (kein
+    Versandfehler-Vermerk), dessen zuvor fehlende Abschnitte jetzt Daten
+    liefern; der einzige Kanal (Telegram) scheitert / WHEN der Lauf endet /
+    THEN Bilanz ``(0, 1)`` -- die gescheiterte Daten-Nachlieferung ist sichtbar."""
+    versand = _Versand(monkeypatch)
+    versand.telegram_scheitert = True
+    uid, trip = _briefing_lage("fl1-f004", send_email=False, send_telegram=True)
+    _scheduler_verdrahten(monkeypatch, _briefing_settings(), {uid: "ok"})
+    _vermerk(uid, trip, reason=None, segment_ids=["seg-frueher-ohne-daten"])
+
+    bilanz = _bilanz(uid)
+
+    assert versand.telegram_versuche, "Messaufbau: die Daten-Nachlieferung wurde nicht versucht"
+    assert not any(v.get("failed_segment_ids") == ["seg-frueher-ohne-daten"] for v in _vermerke(uid)), (
+        "Messaufbau: der Wetterfehler-Vermerk muss vor dem Versand entfernt sein"
+    )
+    assert bilanz == (0, 1), f"F004: gescheiterte Daten-Nachlieferung: Bilanz {bilanz!r}"
+
+
+def test_fl1_f005_briefing_nichts_zugestellt_ist_failed_nicht_notice(monkeypatch):
+    """F005 (Briefing): GIVEN Telegram ist der einzige Kanal, ALLE Teile und der
+    Hinweis scheitern / WHEN ``/api/scheduler/trip-reports`` endet / THEN
+    ``failed == 1`` und ``notice_failed == 0`` -- ohne Zustellung ist der
+    Hinweis kein eigener Fehlschlag (B21: gilt nur bei zugestelltem Briefing)."""
+    versand = _Versand(monkeypatch)
+    versand.telegram_scheitert = True
+    uid, trip = _briefing_lage("fl1-f005-briefing", send_email=False, send_telegram=True)
+    _scheduler_verdrahten(monkeypatch, _briefing_settings(), {uid: "ok"})
+    _vermerk(uid, trip)
+
+    body = _trip_reports(uid)
+
+    assert len(versand.telegram_versuche) >= 2, (
+        f"Messaufbau: Teile + Hinweis erwartet: {versand.telegram_versuche!r}"
+    )
+    assert body.get("count") == 0 and body.get("failed") == 1, body
+    assert body.get("notice_failed") == 0, f"F005: nichts zugestellt -> kein notice_failed: {body!r}"
+    assert body.get("status") == "partial", body
+
+
+def test_fl1_f005_ortsvergleich_nichts_zugestellt_ist_kein_notice(rig, monkeypatch):
+    """F005 (``/compare-alert-checks``): GIVEN Telegram ist der einzige Kanal,
+    BEIDE Sprechblasen und der Hinweis scheitern / WHEN der Lauf endet / THEN
+    ``notice_failed == 0`` (nichts zugestellt), ``count == 0``; der
+    Transportfehler landet wie bisher im Protokoll/Backoff (ADR-0086).
+
+    Hinweis zum Bericht: ``failed`` zaehlt hier Presets, deren Pruefung
+    WARF -- ein Transportfehler ist kein solcher Fall und bleibt ``0``; das
+    ist Bestandsverhalten (#2217), nicht Teil dieser Scheibe."""
+    from tests.helpers.kanal_fake_transporte import wiederholungs_eintraege
+
+    uid = _alarm_uid("fl1-f005-vergleich")
+    lage = _vergleich_lage(rig, uid, ("telegram",))
+    _vergleich_verdrahten(monkeypatch, {uid: lage.settings}, _beide_orte_boeen())
+    rig.zaehler_leeren()
+    rig.telegram_fehler_bei = {1, 2, 3}
+
+    from tests.tdd.test_alarm_totalausfall_wird_wiederholt import _T0
+
+    body = _compare_router_lauf(uid, _T0)
+
+    assert rig.anzahl_versuche("telegram") == 3 and rig.anzahl_angenommen("telegram") == 0, rig
+    assert wiederholungs_eintraege(uid), "Messaufbau: der Transportfehler muss Backoff setzen"
+    assert body.get("count") == 0, body
+    assert body.get("notice_failed") == 0, f"F005: nichts zugestellt -> kein notice_failed: {body!r}"
+
+
+class _FetchBrichtPostfach(_Postfach):
+    """IMAP-Gegenstelle, deren ``FETCH`` fuer EINE Nachricht scheitert
+    (Server-Fehler mitten im Lauf) -- trifft den Fehler-Handler der
+    Mail-Schleife, nicht den des Verbindungsaufbaus."""
+
+    kaputt_uid = b"1"
+
+    def __call__(self, host, port=None, *a, **kw):
+        self.verbindungen += 1
+        postfach = self
+
+        class _Verb(_Verbindung):
+            def fetch(self, uid, spec):
+                if uid == postfach.kaputt_uid:
+                    raise imaplib.IMAP4.abort("FETCH abgebrochen (tdd-1405-s4b F006)")
+                return super().fetch(uid, spec)
+
+        return _Verb(self)
+
+
+def test_fl1_f006a_fehler_einer_mail_in_der_schleife_zaehlt(monkeypatch, user_ids):
+    """F006a (Fehler-Handler der Mail-Schleife): GIVEN zwei Befehlsmails, das
+    Abholen der ersten scheitert am Server / WHEN der Lauf endet / THEN
+    ``last_failed_count == 1``, die zweite Mail ist regulaer verarbeitet
+    (``processed == 1``, Antwort zugestellt)."""
+    postfach = _FetchBrichtPostfach()
+    draht = _inbound_umgebung(monkeypatch, postfach)
+    a = lege_lage_an(user_ids, "L2")
+    b = lege_lage_an(user_ids, "L2")
+    postfach.neue_mail(_befehlsmail(a))
+    postfach.neue_mail(_befehlsmail(b))
+
+    processed, failed = _poll()
+
+    assert len(draht.an(b.mail_to)) == 1, "Messaufbau: die zweite Mail muss beantwortet sein"
+    assert processed == 1, processed
+    assert failed == 1, f"F006a: Fehler beim Abholen einer Mail muss zaehlen: {failed!r}"
+
+
+def test_fl1_f006b_nicht_zugestellte_antwort_bleibt_processed(monkeypatch, user_ids):
+    """F006b: GIVEN eine regulaere Befehlsmail, deren Antwort der SMTP-Draht
+    ablehnt / WHEN ``POST /api/scheduler/inbound-commands`` laeuft / THEN
+    ``processed == 1`` (der Befehl IST verarbeitet -- der Push-Nachversuch
+    haengt an ``processed``), ``failed == 1``, ``status == "partial"``."""
+    from api.routers.scheduler import trigger_inbound
+
+    postfach = _Postfach()
+    draht = _inbound_umgebung(monkeypatch, postfach)
+    nutzer = lege_lage_an(user_ids, "L2")
+    draht.abgelehnt.add(nutzer.mail_to.lower())
+    postfach.neue_mail(_befehlsmail(nutzer))
+
+    body = trigger_inbound()
+
+    assert len(draht.versuche) == 1, f"Messaufbau: {draht.versuche!r}"
+    assert body.get("processed") == 1 and body.get("count") == 1, (
+        f"F006b: der verarbeitete Befehl muss als processed zaehlen: {body!r}"
+    )
+    assert body.get("failed") == 1 and body.get("status") == "partial", body
+
+
+# ═══════════ Fix-Loop 2 (Adversary BROKEN Runde 2): F001-F004 Gegenproben ═══════════
+
+
+@pytest.mark.parametrize("ausgang", ["no_channels", "no_stage"])
+def test_fl2_f001_daten_nachlieferung_neutraler_ausgang_zaehlt_nicht(monkeypatch, caplog, ausgang):
+    """F001 (AC-12, ZWEITE Sendestelle in ``_process_pending_markers``): GIVEN
+    ein Wetterfehler-Vermerk (kein Versandfehler-Vermerk), dessen zuvor
+    fehlende Abschnitte jetzt Daten liefern; der Versand endet ``no_channels``
+    (kein Kanal) bzw. ``no_stage`` (Abend-Vermerk, Etappe nur heute) / WHEN
+    der Lauf endet / THEN Bilanz ``(0, 0)`` -- neutrale Ausgaenge zaehlen
+    weder als sent noch als failed. Die Protokollzeile belegt, dass der
+    Ausgang im VERSAND entstand (nicht im frueheren ``if not segments``)."""
+    lage, _wetter_modus, report_type, erwartet = _NACHLIEFER_AUSGAENGE[ausgang]
+    versand = _Versand(monkeypatch)
+    uid, trip = _briefing_lage(f"fl2-f001-{ausgang}", **lage)
+    _scheduler_verdrahten(monkeypatch, _briefing_settings(), {uid: "ok"})
+    _vermerk(uid, trip, report_type=report_type, reason=None,
+             segment_ids=["seg-frueher-ohne-daten"])
+
+    with caplog.at_level("INFO"):
+        bilanz = _bilanz(uid)
+
+    zeilen = [r.getMessage() for r in caplog.records]
+    assert any(_AUSGANG_LOGZEILE[ausgang] in z and (trip.id in z or trip.name in z)
+               for z in zeilen), f"Messaufbau: der Ausgang {ausgang!r} ist im Versand nicht entstanden"
+    assert versand.mails == [] and versand.telegram_versuche == [], "Messaufbau: Versand trotz neutralem Ausgang"
+    assert not any(v.get("failed_segment_ids") == ["seg-frueher-ohne-daten"] for v in _vermerke(uid)), (
+        "Messaufbau: der Wetterfehler-Vermerk muss vor dem Versand entfernt sein (kein attempts-Zweig)"
+    )
+    assert erwartet == (0, 0)
+    assert bilanz == (0, 0), f"F001 ({ausgang}): neutraler Ausgang der Daten-Nachlieferung: {bilanz!r}"
+
+
+def test_fl2_f002_erfolgreicher_befehl_ohne_mailversand_zaehlt_nicht(monkeypatch, user_ids):
+    """F002 (Normalpfad der Befehlsverarbeitung, analog AC-4
+    ``kein_versand_eingerichtet``): GIVEN eine regulaere, ERFOLGREICHE
+    Befehlsmail, die Settings richten keinen Mailversand ein
+    (``can_send_email()`` falsch) / WHEN der Lauf endet / THEN kein
+    Antwortversuch, ``processed == 1``, ``last_failed_count == 0`` -- kein
+    Versuch ist kein Fehler."""
+    postfach = _Postfach()
+    draht = _inbound_umgebung(monkeypatch, postfach)
+    nutzer = lege_lage_an(user_ids, "L2")
+    postfach.neue_mail(_befehlsmail(nutzer))
+
+    processed, failed = _poll(basis_settings(smtp_host=""))
+
+    assert draht.versuche == [], f"Messaufbau: ohne Mailversand kein Versuch: {draht.versuche!r}"
+    assert postfach.gelesen == set(postfach.mails)
+    assert processed == 1, f"Messaufbau: der Befehl muss im Normalpfad verarbeitet sein: {processed!r}"
+    assert failed == 0, f"F002: kein Versuch = kein Fehler, last_failed_count={failed!r}"
+
+
+def test_fl2_f002_unterdrueckte_antwort_zaehlt_nicht(monkeypatch, user_ids):
+    """F002 (``suppress_email_reply``): GIVEN eine Befehlsmail ``heute``, deren
+    Antwort das volle Briefing selbst IST (#1007, keine Doppel-Mail) / WHEN
+    der Lauf endet / THEN genau EINE Einlieferung (das Briefing, keine
+    Befehlsantwort), ``processed == 1``, ``last_failed_count == 0``."""
+    postfach = _Postfach()
+    draht = _inbound_umgebung(monkeypatch, postfach)
+    nutzer = lege_lage_an(user_ids, "L2")
+    postfach.neue_mail(_befehlsmail(nutzer, befehl="heute"))
+
+    processed, failed = _poll()
+
+    assert len(draht.zugestellt) == 1, (
+        f"Messaufbau: genau das On-Demand-Briefing erwartet: {[v['an'] for v in draht.versuche]!r}"
+    )
+    assert not any("Briefing wird gesendet" in v["roh"] for v in draht.versuche), (
+        "Messaufbau: die Befehlsantwort darf nicht verschickt werden (suppress_email_reply)"
+    )
+    assert processed == 1, processed
+    assert failed == 0, f"F002: unterdrueckte Antwort ist kein Fehler, last_failed_count={failed!r}"
+
+
+def test_fl2_f003_frischer_dienst_auf_dem_on_demand_pfad_zaehlt_hinweis(monkeypatch):
+    """F003 (Konstruktor-Reset ``notice_failed``): GIVEN ein FRISCH gebauter
+    Dienst ohne vorherigen Sammellauf (kein ``_collect_due_trips``-Reset) /
+    WHEN er ein On-Demand-Briefing zustellt (E-Mail), dessen Telegram-Teile
+    und Hinweis scheitern / THEN ``outcome == "sent"`` und
+    ``notice_failed == 1`` -- der Zaehler ist ab Konstruktion definiert."""
+    import services.trip_report_scheduler as trs
+
+    versand = _Versand(monkeypatch)
+    uid, trip = _briefing_lage("fl2-f003", send_email=True, send_telegram=True)
+    _scheduler_verdrahten(monkeypatch, _briefing_settings(), {uid: "ok"})
+    versand.telegram_scheitert = True
+    dienst = trs.TripReportSchedulerService(user_id=uid)
+
+    ergebnis = dienst.send_on_demand_report(trip, "morning")
+
+    assert ergebnis.outcome == "sent", f"Messaufbau: das Briefing muss zugestellt sein: {ergebnis!r}"
+    assert len(versand.mails) == 1 and len(versand.telegram_versuche) >= 2, (
+        f"Messaufbau: E-Mail zugestellt, Telegram-Teile + Hinweis versucht: {versand.telegram_versuche!r}"
+    )
+    assert dienst.notice_failed == 1, f"F003: notice_failed={dienst.notice_failed!r}, erwartet 1"
+
+
+def test_fl2_f004_ortsvergleich_kanalausfall_und_hinweisfehler_zaehlt_notice(rig, monkeypatch):
+    """F004 (``/compare-alert-checks``): GIVEN ein Ortsvergleich-Alarm an
+    E-Mail + Telegram; E-Mail faellt aus (``failed_channels`` nicht leer),
+    Telegram-Blase 1 kommt an, Blase 2 und der Hinweis scheitern / WHEN der
+    Lauf endet / THEN ``notice_failed >= 1`` -- der Hinweis-Fehlschlag zaehlt
+    auch neben einem ausgefallenen Kanal, denn zugestellt ist der Alarm."""
+    from tests.tdd.test_alarm_totalausfall_wird_wiederholt import _T0
+
+    uid = _alarm_uid("fl2-f004")
+    lage = _vergleich_lage(rig, uid, ("email", "telegram"))
+    _vergleich_verdrahten(monkeypatch, {uid: lage.settings}, _beide_orte_boeen())
+    rig.zaehler_leeren()
+    rig.modus["email"] = "fehler"
+    rig.telegram_fehler_bei = {2, 3}
+
+    body = _compare_router_lauf(uid, _T0)
+
+    assert rig.anzahl_versuche("email") >= 1 and rig.anzahl_angenommen("email") == 0, rig
+    assert rig.anzahl_versuche("telegram") == 3 and rig.anzahl_angenommen("telegram") == 1, rig
+    protokoll = _alarm_protokoll_kern(uid)
+    assert any({"channel": "email", "reason": "delivery_failed"} in (e.get("channels_not_sent") or [])
+               for e in protokoll), (
+        f"Messaufbau: der E-Mail-Ausfall muss als nicht gesendet protokolliert sein: {protokoll!r}"
+    )
+    assert body.get("notice_failed", _FEHLT) != _FEHLT and body["notice_failed"] >= 1, (
+        f"F004: Hinweis-Fehlschlag neben Kanalausfall muss zaehlen: {body!r}"
+    )
 
 
 # ═══════════════════════════ D. Toter Code (AC-16) ═══════════════════════════

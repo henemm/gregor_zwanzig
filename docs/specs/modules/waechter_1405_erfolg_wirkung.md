@@ -839,3 +839,18 @@ B15–B17-Aufnahme trotz totem Code).
   genehmigte Ausnahmen (Ausnahmeliste 3 → 6). Zentraler Fang in
   `TripCommandProcessor.process()`: Programmfehler im Handler liefert eine
   Fehlerantwort statt Schweigen.
+- 2026-10-26 (Nachzug Issue #1405 Scheibe S4b,
+  `fix_1405_s4b_erfolg_heisst_wirkung.md`): die letzten Funde ausserhalb der
+  Befehlsverarbeitung repariert, `KNOWN_VIOLATIONS` 8 → 0
+  (`SPEC_LISTED_FINDINGS` 7 → 0, Sonderpruefung `inbound_expected` entfernt).
+  B3 `trigger_compare_alert_checks` und B7 `trigger_inbound`: Status aus dem
+  Zaehler (`partial` bei `failed > 0`), Go wertet `inbound_command_poll` aus;
+  B19 `poll_and_process`: IMAP-/Netz-/Verarbeitungs-/Antwortfehler zaehlen in
+  `last_failed_count`; B21: Hinweis, Service-Fehlermail und Befehlsantwort
+  liefern `bool`, Hinweis-Fehlschlaege als `NotificationResult.notice_failures`
+  → `notice_failed` (`partial`, nicht `failed`, ADR-0086); B17 `send_reports`
+  geloescht; `_process_pending_markers` liefert `(delivered, failed)`.
+  Waechter-Korrektur Klasse 2: ein Zaehler im `else`/`elif` eines `if`, dessen
+  Rumpf einen gemeldeten Geschwister-Erfolgszaehler erhoeht, gilt als
+  Gegenzaehler (Fehlausgangs-Zweig, wie der Docstring schon versprach); ein
+  beliebiges `else: failed += 1` genuegt nicht.

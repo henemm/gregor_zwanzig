@@ -73,7 +73,16 @@ class TripDispatchStrategy:
         # regulaeren faelligen Slots abarbeiten (AC-6/AC-7).
         # Issue #1725: `collect_due` liefert (trip, report_type, ortstag).
         due_trip_ids_now = {trip.id for trip, _, _ in due}
-        self._sent += self._service._process_pending_markers(now_utc, due_trip_ids_now)
+        # Issue #1405 S4b (#8): gescheiterte Nachlieferungen zaehlen als failed.
+        delivered, failed = self._service._process_pending_markers(now_utc, due_trip_ids_now)
+        self._sent += delivered
+        self._failed += failed
+
+    @property
+    def notice_failed(self) -> int:
+        """Issue #1405 S4b (B21): gescheiterte Begleit-Hinweise dieses Laufs
+        (Zaehler am je Lauf neu gebauten Dienst, Reset im Sammellauf)."""
+        return self._service.notice_failed
 
     def dispatch_one(self, item, now_utc: "datetime") -> None:
         trip, report_type, local_day = item
@@ -225,8 +234,13 @@ _STRATEGY = {
 def run_briefing_dispatch(
     kind: str, user_id: str, now_utc: "datetime", data_root: str | None = None,
     settings: Settings | None = None,
+    notice_sink: object | None = None,
 ):
     """Gemeinsamer Versand-Einstieg fuer Trip (`route`) und Vergleich (`vergleich`).
+
+    Issue #1405 S4b: ``notice_sink`` (nur ``kind="route"``) bekommt nach dem
+    Lauf ``last_notice_failed`` = gescheiterte Begleit-Hinweise; der
+    Tupelvertrag ``(sent, failed)`` bleibt unveraendert.
 
     Kapselt das geteilte Skelett: Settings-Laden, Strategie-Aufloesung,
     kind-Hook `pre_pass`, Faelligkeitssammlung `collect_due`, Schleife mit
@@ -267,4 +281,6 @@ def run_briefing_dispatch(
         if i < len(due) - 1:
             time_module.sleep(strategy.inter_mail_delay)
 
+    if notice_sink is not None:
+        notice_sink.last_notice_failed = strategy.notice_failed
     return strategy.result()

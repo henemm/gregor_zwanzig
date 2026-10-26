@@ -573,11 +573,23 @@ def _failure_counter_names(scope: ast.AST) -> set[str]:
     ``except``, ``failed`` im ``return``. Die Attrappe aus AC-8 hat genau das
     nicht: ``failed = 0``, ins Tupel geschrieben, nie erhöht. Am Rückgabetyp
     ist sie von der Hausnorm nicht zu unterscheiden — an dieser Menge schon.
+
+    **Fehlausgangs-Zweig (#1405 S4b, AC-17):** zusätzlich zählt ein Name, der
+    im ``else``/``elif`` eines ``if`` hochgezählt wird, dessen Rumpf einen
+    GESCHWISTER-Erfolgszähler erhöht — einen Zähler desselben Funktionsraums,
+    der in die Rückgabe fließt (``if ok: sent += 1`` / ``else: failed += 1``).
+    Ein beliebiges ``else: failed += 1`` genügt NICHT: ohne gemeldeten
+    Erfolgszähler im ``if``-Rumpf ist ``failed`` kein Gegenstück.
     """
     names: set[str] = set()
+    returned = _returned_names(scope)
     for node in _walk_local(*scope.body):
         for handler in getattr(node, "handlers", []) or []:
             names |= _incremented_names(*handler.body)
+        if isinstance(node, ast.If) and node.orelse:
+            siblings = _incremented_names(*node.body) & returned
+            if siblings:
+                names |= _incremented_names(*node.orelse) - siblings
     return names
 
 
@@ -1512,21 +1524,13 @@ def _finding_location_counts(found: dict[str, str]) -> dict[str, int]:
 # meldet die Zeile des `return`, Klasse 2 die der Iteration, Klasse 3 und 4
 # die der `def`-Anweisung (die Spec-Tabelle nennt teils die `def`-Zeile).
 #
-# 42 Einträge für 34 Funktionsschlüssel — gegenüber der Spec-Erwartung (33
-# Schlüssel, 40 Treffer, plus Webhook-Ack in INTENTIONAL_CONSTANT_SUCCESS) zwei
-# von Hand nachgelesene Zuwächse mit je derselben Mechanik wie eine belegte
-# Fundstelle (Begründung steht beim jeweiligen Eintrag). Keine Verbreiterung
-# der Signatur; die Bestandsaufnahme war unvollständig wie in Hälfte A.
-# (B13 mit #1407, B2 mit #1447 und B14b — drei Schlüssel — mit #1459 aus der
-# Restliste entfernt: alle Funde wurden repariert (B13 geloescht, B2 leitet
-# den Status jetzt ab, B14b liefert und verwertet jetzt `bool`) — der
-# Scanner findet dort nichts mehr, die Ratsche ist entsprechend kleiner.
-# B14b mit #1459 aus SPEC_LISTED_FINDINGS entfernt (drei Schlüssel, Soll 36/43
-# -> 33/40): _dispatch_compare_official_{email,telegram,sms} liefern jetzt
-# `bool` statt gar keinen Rückgabewert, und send_compare_official_alert()
-# WERTET ihn aus — er füllt `failed_channels`. Vorher wurde das `False`
-# weggeworfen, ein gescheiterter Ortsvergleich-Versand galt als Erfolg; genau
-# das war der Mangel. Der Scanner findet dort nichts mehr.)
+# Ist-Stand (#1405 S4b): die Restliste ist LEER — 0 Einträge, 0
+# Funktionsschlüssel. Alle Funde der Bestandsaufnahme B1–B21 sind repariert
+# oder als toter Code gelöscht; die letzten 8 Einträge fielen mit S4b
+# (8 -> 0). Je Fund steht der Entfernungsnachweis als Kommentar im Rumpf
+# unten. Frühere Zählstände dieser Liste sind Geschichte und gelten nicht
+# mehr. Die Ratsche kann jetzt nur noch durch einen NEUEN Fund rot werden
+# (test_no_unlisted_success_status_findings).
 # ---------------------------------------------------------------------------
 KNOWN_VIOLATIONS: dict[str, str] = {
     # --- B3–B8: sieben Trigger-Endpunkte, ein Muster. Fällt der Service für
@@ -1539,16 +1543,14 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # aus AlertCheckRunResult.hit_deadline ab (status="partial" bei
     # Zeitobergrenze, sonst "ok") statt ihn fest zu setzen — der Scanner
     # findet an dieser Stelle nichts mehr, der Eintrag entfaellt mit ihr.
-    "api/routers/scheduler.py::trigger_compare_alert_checks::0": (
-        "B3 (#1405) — trigger_compare_alert_checks: dito (Deviation)."
-    ),
+    # B3 entfernt (#1405 S4b) — trigger_compare_alert_checks leitet den
+    # Status aus failed/notice_failed ab ("partial" statt fest "ok").
     # B4/B5 entfernt (#2261 A-2 S2) — die Radar-Endpunkte leiten den Status
     # jetzt aus AlertCheckRunResult.hit_deadline ab (_radar_run_response).
     # B6 entfernt (#2286) — Endpoint /compare-official-alert-checks geloescht,
     # der amtliche Teil laeuft in trigger_compare_alert_checks (B3) mit.
-    "api/routers/scheduler.py::trigger_inbound::0": (
-        "B7 (#1405) — trigger_inbound: dito; der 'skipped'-Zweig ist korrekt."
-    ),
+    # B7 entfernt (#1405 S4b) — trigger_inbound meldet failed (aus
+    # reader.last_failed_count) und leitet den Status daraus ab.
     # B8 entfernt (#1369) — Endpoint /inbound-telegram samt Poll-Pfad geloescht.
     # --- B13 entfernt (#1407): die Funktion war toter Code (Legacy-Pfad
     # #1131) und wurde ersatzlos geloescht statt angeschlossen — der Scanner
@@ -1557,17 +1559,14 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # "sent" jetzt aus outcome == "sent" ab — der Scanner findet dort nichts mehr.
     # B11/B11b/B11c entfernt (#2217) — die drei Compare-Alarmprüfer zählen
     # gescheiterte Presets jetzt in `failed` (Gegenzähler je Einheit).
-    # --- B19/B20: die beiden Inbound-Reader. In Spec-Version 1.1 fälschlich
-    # als "kein Fund" geführt (E4).
-    "src/services/inbound_email_reader.py::poll_and_process::0": (
-        "B19 (#1405) — poll_and_process: processed hoch, except nur logger.error."
-    ),
+    # --- B19 entfernt (#1405 S4b): der IMAP-Durchgang (_poll_inbox) zaehlt
+    # Verarbeitungs-, Antwort- und IMAP-/Netzfehler in `failed`, das ueber
+    # last_failed_count beim Router ankommt.
     # B20 entfernt (#1369) — Telegram-poll_and_process geloescht.
-    # --- B21: Klasse 4 im Versandkontext, bei der E2-Verifikation gefunden.
-    # Strukturell nicht von B14b zu unterscheiden.
-    "src/services/notification_service.py::_send_telegram_incomplete_hint::0": (
-        "B21 (#1405) — _send_telegram_incomplete_hint: TelegramOutput, kein Signal."
-    ),
+    # --- B21 entfernt (#1405 S4b): _send_telegram_incomplete_hint,
+    # send_command_reply_email und _send_service_error_email liefern `bool`;
+    # die Aufrufer werten es aus (NotificationResult.notice_failures ->
+    # notice_failed bzw. failed des Posteingang-Laufs).
     # --- B14a entfernt (#1405 S1, ADR-0086): send_official_alert trägt
     # sent_channels erst NACH erfolgreichem Send ein (im try), den Versuch in
     # attempted_channels NACH dem try/except — kein Marker mehr vor der Tat.
@@ -1595,12 +1594,6 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # --- B14c entfernt (#1405 S1, ADR-0086): _dispatch_alert_message, gleiche
     # Reparatur wie send_official_alert (sent_channels im try nach dem Send,
     # attempted_channels nach dem try/except).
-    "src/services/notification_service.py::send_command_reply_email::0": (
-        "B21 (#1405) — send_command_reply_email: EmailOutput, keine Rückmeldung."
-    ),
-    "src/services/notification_service.py::_send_service_error_email::0": (
-        "B21 (#1405) — _send_service_error_email: EmailOutput, nacktes return (S-9)."
-    ),
     # --- B12 entfernt (#2280 S1, Spec feat_2280_handversand_endpoint AC-11):
     # send_compare_preset leitet "status" aus dem echten Versand-Ausgang ab.
     # B9/B10 entfernt (#2217) — die beiden Trip-Alarmprüfer zählen gescheiterte
@@ -1611,18 +1604,11 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # Wetterabruf -> `success` und Text am selben Befund), 3 reine Text-
     # Antworten (_show_help, _show_help_for_kind, _show_status) als genehmigte
     # Ausnahmen in INTENTIONAL_CONSTANT_SUCCESS gefuehrt.
-    # --- B17 + der eine neue Fundort: beide zählen ohne Gegenzähler.
-    "src/services/trip_report_scheduler.py::send_reports::0": (
-        "B17 (#1405) — send_reports: sent_count ohne Gegenzähler, return int."
-    ),
-    "src/services/trip_report_scheduler.py::_process_pending_markers::0": (
-        "NEU (#1405, beim Bau des Wächters nachgelesen) — "
-        "_process_pending_markers: delivered += 1 nur bei outcome == 'sent', "
-        "kein Gegenzähler, return delivered. Der Wert fließt in "
-        "dispatch_orchestrator.pre_pass direkt in den sent-Tally — eine "
-        "gescheiterte Nachlieferung ist dort von einer nicht fälligen nicht "
-        "zu unterscheiden. Gleiche Mechanik wie B17."
-    ),
+    # --- B17 entfernt (#1405 S4b): send_reports war toter Code und wurde
+    # geloescht (Praezedenz B13/#1407).
+    # _process_pending_markers entfernt (#1405 S4b): liefert (delivered,
+    # failed), Einordnung wie dispatch_one; pre_pass bucht beide Werte.
+    # Damit ist die Restliste leer (S4b: 8 -> 0).
 }
 
 
@@ -1721,13 +1707,11 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # B2 entfernt (#1447 S1) — trigger_alert_checks leitet den Status jetzt
     # aus AlertCheckRunResult.hit_deadline ab, der Scanner findet dort nichts
     # mehr.
-    # B3 — dito (Compare-Deviation)
-    "api/routers/scheduler.py::trigger_compare_alert_checks": 1,
+    # B3 entfernt (#1405 S4b) — Status aus failed/notice_failed abgeleitet.
     # B4/B5 entfernt (#2261 A-2 S2) — Radar-Endpunkte leiten den Status aus
     # AlertCheckRunResult.hit_deadline ab, der Scanner findet dort nichts mehr.
     # B6 entfernt (#2286) — Endpoint geloescht, in B3 aufgegangen.
-    # B7 — dito (Inbound E-Mail)
-    "api/routers/scheduler.py::trigger_inbound": 1,
+    # B7 entfernt (#1405 S4b) — trigger_inbound meldet failed + Status.
     # B8 entfernt (#1369) — Endpoint /inbound-telegram samt Poll-Pfad geloescht.
     # B9/B10/B11/B11b/B11c entfernt (#2217) — Trip- und Compare-Alarmprüfer
     # schotten jede Einheit ab und zählen Ausfälle in `failed`.
@@ -1751,36 +1735,17 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # B15/B16 entfernt (#1405 S1, ADR-0086) — _trigger_report wertet
     # send_test_report_outcome aus, _trigger_on_demand leitet success aus
     # outcome ab; der Scanner findet dort nichts mehr.
-    # B17 — toter Code, sent_count ohne Gegenzähler, return int
-    "src/services/trip_report_scheduler.py::send_reports": 1,
+    # B17 entfernt (#1405 S4b) — toter Code geloescht.
     # --- B18 entfernt (#1405 S4a): alle zehn Trip-Funktionsschluessel (13
     # Treffer) in trip_command_processor.py sind repariert bzw. (Klasse C)
     # als genehmigte Ausnahme gefuehrt, der Scanner meldet dort nichts
     # Offenes mehr. AC-17-Prueffolge unten laeuft ueber die uebrigen Schluessel.
-    # --- B19/B20 (NEU Version 1.2, E4): die beiden Inbound-Reader --------
-    # In Version 1.1 fälschlich als "kein Fund, bereits erfolgsbereinigt"
-    # geführt. "processed zählt nur tatsächlich Verarbeitetes" ist fachlich
-    # richtig, aber KEIN strukturelles Ausschlusskriterium für Klasse 2 —
-    # beiden fehlt der Gegenzähler für den Fehlerfall (AC-18).
-    # B19 — for uid in uids: processed += self._process_single(...),
-    # except Exception: logger.error(...), return processed
-    "src/services/inbound_email_reader.py::poll_and_process": 1,
+    # --- B19 entfernt (#1405 S4b): der IMAP-Durchgang zaehlt Fehlschlaege
+    # in `failed` (except-Handler) und meldet sie ueber last_failed_count.
     # B20 entfernt (#1369) — Telegram-poll_and_process geloescht.
-    # --- B21 (NEU Version 1.2): Klasse 4 im Versandkontext ---------------
-    # Bei der Verifikation der E2-Einschränkung gefunden: strukturell nicht
-    # von B14b zu unterscheiden (try/except, Logger-only-Handler, kein
-    # return mit Wert, Kanal-Ausgabeaufruf im eigenen Rumpf). SECHS statt
-    # der erwarteten drei Klasse-4-Treffer — aufgenommen statt durch eine
-    # Verengung zur Zahlenkosmetik wegdefiniert.
-    # B21 — ruft TelegramOutput(...).send(...), keine Rückmeldung an
-    # send_trip_report
-    "src/services/notification_service.py::_send_telegram_incomplete_hint": 1,
-    # B21 — ruft EmailOutput(...).send(...), keine Rückmeldung an den
-    # Inbound-Reader
-    "src/services/notification_service.py::send_command_reply_email": 1,
-    # B21 — ruft EmailOutput(...).send(...) nach einem is_sms_only-Vorspann
-    # mit nacktem return (zählt nach S-9 NICHT als Rückmeldung)
-    "src/services/notification_service.py::_send_service_error_email": 1,
+    # --- B21 entfernt (#1405 S4b): _send_telegram_incomplete_hint,
+    # send_command_reply_email, _send_service_error_email liefern `bool`,
+    # die Aufrufer werten es aus.
 }
 
 
@@ -1835,14 +1800,16 @@ def test_scanner_finds_every_spec_listed_finding():
     # #2280 S1 (AC-11): minus B12 (send_compare_preset) -> 8 / 8.
     # #2286 (AC-9): minus B6 (Endpoint compare-official-alert-checks
     # geloescht, in B3 aufgegangen) -> 7 / 7.
-    assert len(SPEC_LISTED_FINDINGS) == 7 and sum(SPEC_LISTED_FINDINGS.values()) == 7, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 7 "
-        "Funktionsschlüssel, Summe 7 — Version 1.2 minus B13, #1407, minus "
+    # #1405 S4b: minus B3, B7, B17, B19, B21 (drei Schluessel) -> 0 / 0.
+    assert len(SPEC_LISTED_FINDINGS) == 0 and sum(SPEC_LISTED_FINDINGS.values()) == 0, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 0 "
+        "Funktionsschlüssel, Summe 0 — Version 1.2 minus B13, #1407, minus "
         "B2, #1447, minus B14b (drei Schlüssel), #1459, plus zweimal +1 fuer "
         "den vierten Kanal Premium-SMS, #1701 D7, minus B4/B5, #2261 A-2 S2, "
         "minus B9/B10/B11/B11b/B11c, #2217, minus B1/B14a/B14c/B15/B16, "
         "#1405 S1 ADR-0086, minus B8/B20, #1369 Poll-Pfad geloescht, minus B18 (zehn "
-        "Schluessel, 13 Treffer), #1405 S4a, minus B12, #2280 S1, minus B6, #2286). Ist: "
+        "Schluessel, 13 Treffer), #1405 S4a, minus B12, #2280 S1, minus B6, #2286, "
+        "minus B3/B7/B17/B19/B21, #1405 S4b). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )
@@ -1886,22 +1853,10 @@ def test_scanner_finds_every_spec_listed_finding():
         f"behandelt (S-8). Code reference: {b18_missing}"
     )
 
-    # --- AC-18: B19 (E-Mail-Reader) als Klasse-2-Fund. B20 (Telegram-
-    # poll_and_process) entfiel mit dem Poll-Pfad (#1369).
-    inbound_expected = [
-        "src/services/inbound_email_reader.py::poll_and_process",
-    ]
-    inbound_missing = sorted(
-        location for location in inbound_expected if hit_counts.get(location, 0) < 1
-    )
-    assert not inbound_missing, (
-        "AC-18: die beiden Inbound-Reader werden nicht als Klasse-2-Fund "
-        "erkannt. Sie waren in Spec-Version 1.1 fälschlich als 'kein Fund' "
-        "geführt — 'processed zählt nur tatsächlich Verarbeitetes' ist "
-        "fachlich richtig, aber kein strukturelles Ausschlusskriterium: "
-        "beiden fehlt der Gegenzähler für den Fehlerfall, der except-Zweig "
-        f"ruft nur logger.error(...). Code reference: {inbound_missing}"
-    )
+    # --- AC-18 (B19/B20, Inbound-Reader) entfaellt (#1405 S4b): B20 ging mit
+    # dem Poll-Pfad (#1369), B19 ist repariert — der IMAP-Durchgang hat jetzt
+    # einen Gegenzaehler. Die Erkennungsfaehigkeit fuer dieses Muster bewachen
+    # die synthetischen Klasse-2-Wirkungsnachweise.
 
 
 def test_no_unlisted_success_status_findings():

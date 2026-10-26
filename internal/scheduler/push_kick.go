@@ -60,7 +60,7 @@ func (s *Scheduler) pollRun(jobID string, res *pollResult) error {
 	if jobID == JobPremiumSMSPoll {
 		return s.triggerPremiumSmsPollEndpointRes(res)
 	}
-	return s.triggerGlobalEndpointRes("/api/scheduler/inbound-commands", res)
+	return s.triggerInboundCommandsEndpointRes(res)
 }
 
 func isPollJob(jobID string) bool {

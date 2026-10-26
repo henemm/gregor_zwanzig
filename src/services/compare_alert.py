@@ -162,6 +162,9 @@ class CompareAlertService:
 
     # Issue #2217: Zahl der im letzten Lauf gescheiterten Presets (Router -> failed).
     last_failed_count: int = 0
+    # Issue #1405 S4b (B21): gescheiterte "unvollstaendig"-Hinweise bei
+    # zugestelltem Alarm im letzten Lauf (Router -> notice_failed, partial).
+    last_notice_failed: int = 0
     # Issue #1539 S0: Messung des letzten Laufs (Router -> checked/duration_s).
     last_checked_count: int = 0
     last_duration_s: float = 0.0
@@ -202,6 +205,7 @@ class CompareAlertService:
             dieser Lauf intern erzeugt hat.
         """
         failed = 0
+        self.last_notice_failed = 0  # Issue #1405 S4b: Reset je Lauf
         presets = self._load_presets()
         self.last_checked_count = len(presets)
         if not presets:
@@ -460,6 +464,10 @@ class CompareAlertService:
                 },
             )
             delivered_all |= set(notif_result.delivered_channels)
+            # Issue #1405 S4b (B21): Hinweis-Fehlschlag bei zugestelltem Alarm
+            # -> notice_failed des Laufs; Backoff/Protokoll bleiben unberuehrt.
+            if notif_result.delivered_channels:
+                self.last_notice_failed += len(notif_result.notice_failures)
             reachable_all |= set(notif_result.attempted_channels)
             blocked_reason_codes_all.update(notif_result.blocked_reason_codes)
             outcomes.append(notif_result.delivery_outcome)

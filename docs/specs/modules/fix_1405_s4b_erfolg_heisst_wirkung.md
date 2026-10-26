@@ -4,7 +4,7 @@ type: module
 created: 2026-10-26
 updated: 2026-10-26
 status: draft
-version: "1.0"
+version: "1.1"
 tags: [erfolg-heisst-wirkung, waechter, issue-1405, scheduler, inbound, briefing, notification-service]
 ---
 
@@ -33,7 +33,7 @@ macht den Fehler dort sichtbar, wo er wirkt, und leert die Liste der bekannten V
 | 1 | Ortsvergleich-Alarmlauf (`trigger_compare_alert_checks`) | Fehler werden gezählt, Status steht fest auf "ok" | Status "partial", sobald ein Fehler gezählt wurde |
 | 2 | Befehls-Posteingang-Lauf (`trigger_inbound`) | Status fest "ok" | meldet `failed` + Status; Go-Laufstatus wertet es aus |
 | 3 | Posteingang lesen (`poll_and_process`) | Verarbeitungs-, Versand- und IMAP-Fehler nur im Log | zählt sie als Fehler des Laufs |
-| 4 | Telegram-Hinweis "Briefing unvollständig" (Briefing- UND Alarm-Pfad) | Fehlschlag nur im Log | Fehlschlag steht als `notice_failed` in der Antwort des Laufs, Status `partial` (nicht `failed`) |
+| 4 | Telegram-Hinweis "Briefing unvollständig" (Briefing-Pfad und Ortsvergleich-Änderungsalarm) | Fehlschlag nur im Log | Fehlschlag steht als `notice_failed` in der Antwort des Laufs (`/trip-reports`, `/compare-alert-checks`), Status `partial` (nicht `failed`) |
 | 5 | Befehlsantwort per E-Mail (`send_command_reply_email`) | nicht zugestellte Antwort unbemerkt | meldet Zustellung; Nicht-Zustellung zählt als Fehler des Posteingang-Laufs |
 | 6 | Service-Fehlermail für SMS-only-Trips | Fehlschlag nur im Log | Fehlschlag steht als `notice_failed` in der Antwort des Laufs, Status `partial` (nicht `failed`) |
 | 7 | `send_reports` (toter Code, kein Aufrufer) | Zähler ohne Gegenzähler | wird gelöscht |
@@ -54,8 +54,7 @@ Zahlen (`failed`) und Status (`partial`) ergänzt.
   `src/services/notification_service.py` (#4, #5, #6, Feld `notice_failures` in `NotificationResult`),
   `src/services/trip_report_scheduler.py` (#7 löschen, #8, Leser des Feldes, Zähler `notice_failed`),
   `src/services/dispatch_orchestrator.py` (`TripDispatchStrategy`: Bilanz + `notice_failed`),
-  Alarm-Leser: `src/services/trip_alert.py` (`AlertCheckRunResult.notice_failed`, Aufrufer :2849 Radar, :3076 Abweichung),
-  `src/services/compare_alert.py` (:444), `src/services/compare_radar_alert.py` (:423)
+  Alarm-Leser (nur noch einer): `src/services/compare_alert.py` (:444, `CompareAlertService.last_notice_failed`)
 - **Files (Go):** `internal/scheduler/push_kick.go` (`pollRun`), `internal/scheduler/scheduler.go`
   (neuer Auswerte-Pfad für `/api/scheduler/inbound-commands`, Spiegel von `triggerPremiumSmsPollEndpointRes`)
 - **Files (Wächter/Tests):** `tests/test_success_status_guard.py` (Wächter-Korrektur Klasse 2 + Ratsche),
@@ -67,16 +66,16 @@ Zahlen (`failed`) und Status (`partial`) ergänzt.
 - **Identifier:** `trigger_compare_alert_checks`, `trigger_inbound`, `InboundEmailReader.poll_and_process`,
   `_process_single`, `last_failed_count`, `_send_telegram_incomplete_hint`, `_send_service_error_email`,
   `send_command_reply_email`, `NotificationResult.notice_failures`, `TripReportSchedulerService.notice_failed`,
-  `_process_pending_markers`, `TripDispatchStrategy.pre_pass/result`, `pollRun`
+  `CompareAlertService.last_notice_failed`, `_process_pending_markers`, `TripDispatchStrategy.pre_pass/result`, `pollRun`
 - **Nicht im Umfang:** die 22 Funde des Auflösungs-Wächters (`test_resolution_loss_guard.py`) und S3 —
   eigene Folgescheiben im selben Ticket #1405 (nicht abgespalten, nur andere Scheiben).
 
 ## Estimated Scope
 
-- **Effort:** high (27 ACs, Python + Go, vier Alarm-Router zusätzlich zum Briefing-Lauf).
-- **LoC produktiv:** ca. +300 / −80 (Python ~9 Dateien inkl. Alarm-Leser, Go 2 Dateien; Tests zählen
-  nicht). Das liegt über 250 → `workflow.py set-field loc_limit_override 500` ist vorab einzuplanen
-  (erwarteter Schritt, **nicht abspalten** — die 8 Funde
+- **Effort:** high (27 ACs, Python + Go, Ortsvergleich-Änderungsalarm zusätzlich zum Briefing-Lauf).
+- **LoC produktiv:** ca. +250 / −80 (Python ~7 Dateien inkl. Alarm-Leser, Go 2 Dateien; Tests zählen
+  nicht). Das liegt voraussichtlich über 250 → `workflow.py set-field loc_limit_override 500` ist vorab
+  einzuplanen (erwarteter Schritt, **nicht abspalten** — die 8 Funde
   gehören zusammen, sonst verrutschen die Anker der Ratsche).
 - **Risiko:** MITTEL. Versandpfade selbst bleiben unverändert; neu ist die Wirkung auf Statusseite und
   Monitoring (siehe Risiken).
@@ -121,7 +120,10 @@ Versuch = kein Fehler. Eine Mail, die ohne Befehl/Trip-Klammer verworfen wird, i
 
 **4. B21 — `_send_telegram_incomplete_hint`, `_send_service_error_email`, `send_command_reply_email`:**
 alle drei liefern `bool` (`True` = zugestellt bzw. nicht erforderlich, `False` = Versuch gescheitert;
-Ausnahme wird weiter gefangen, aber nicht mehr verschluckt).
+Ausnahme wird weiter gefangen, aber nicht mehr verschluckt). **Nicht erforderlich** gilt auch für
+`_send_service_error_email`: ist der Trip SMS-only und kein Mailversand eingerichtet (`can_send_email()`
+falsch), gibt es keinen Versuch und die Funktion liefert `True` (Fix-Loop 1, B21 „nicht erforderlich“,
+analog AC-4); `False` steht nur für einen tatsächlich gescheiterten Versuch.
 
 **B21 — Endstatus ehrlich festgelegt (Abwägung):** Go wertet in `triggerEndpointForUser`
 (`scheduler.go:1176-1180`) **jedes** `failed>0` als `error`; für `trip_reports_hourly` und
@@ -147,34 +149,38 @@ zugestellt ist; ist nichts zugestellt, greift wie bisher der Fehlerpfad (`failed
   `service.last_notice_failed`, Mechanik freie Wahl, Muster `last_failed_count`). **Wirkstelle:**
   `trigger_trip_reports` (`api/routers/scheduler.py:81-92`): `status = "partial"` bei
   `failed > 0 or notice_failed > 0`, die Antwort enthält `notice_failed`.
-- **Alarm-Pfad (`_dispatch_alert_message`, Hinweis :2130):** dasselbe Feld wird im Ergebnis gesetzt.
-  **Leser** sind die Aufrufer der vier Alarm-Sendewege: `trip_alert.py:3076` (`send_deviation_alert`)
-  und `:2849` (`send_radar_alert`), `compare_alert.py:444` (`send_multi_location_deviation_alert`),
-  `compare_radar_alert.py:423` (`send_multi_location_radar_alert`). Jeder zählt
-  `len(result.notice_failures)` in einen Lauf-Zähler (Muster #2217/`failed`):
-  `AlertCheckRunResult.notice_failed` (Trip/Radar) bzw. `last_notice_failed` (Compare, analog
-  `last_failed_count`). **Wirkstelle:** die Router `/alert-checks`, `/radar-alert-checks`,
-  `/compare-alert-checks`, `/compare-radar-alert-checks` (`api/routers/scheduler.py`,
-  `_radar_run_response`): die Antwort enthält `notice_failed`, `status="partial"` bei
-  `notice_failed > 0` (auch ohne `reason`; Go-Zweig wie oben). **Abwägung analog zum Briefing:** der
-  Alarm ist zugestellt (mindestens eine Teil-Nachricht kam an, sonst `RuntimeError` → Transportfehler),
-  nur der Hinweis fehlt; `error` wäre ein Fehlalarm, `ok` eine Lüge. Throttle, Backoff und
-  `failed_channels` bleiben unverändert. Ein bloßes zusätzliches Log ist ausdrücklich **keine**
-  Verwertung (der Hinweis loggt heute schon `logger.error`, `notification_service.py:950`).
+- **Alarm-Pfad — reduziert auf den Ortsvergleich-Änderungsalarm (PO-Entscheid 2026-10-26):** Den
+  Hinweis „Briefing unvollständig“ und damit `NotificationResult.notice_failures` kann im Alarm-Pfad nur
+  `send_multi_location_deviation_alert` erzeugen (Telegram-Auffächerung je Ort,
+  `notification_service.py:2098-2158`). Trip-Abweichungsalarm, Trip-Radaralarm und Ortsvergleich-Radaralarm
+  senden genau **eine** Telegram-Nachricht: sie kommt an oder scheitert komplett, dann greift der
+  Transportfehlerweg (`RuntimeError`, `failed`). Dort entsteht kein Hinweis, ein Zähler wäre immer 0 und
+  damit ein Leser ohne Wirkung. Deshalb entfallen die Leser in `trip_alert.py` (:2849/:3076) und
+  `compare_radar_alert.py` (:423) sowie das Feld `notice_failed` an `/alert-checks`,
+  `/radar-alert-checks` und `/compare-radar-alert-checks`; diese beiden Dateien und die drei Router
+  bleiben unverändert (Stand `origin/main`). **Einziger Alarm-Leser:**
+  `compare_alert.py:444` (`send_multi_location_deviation_alert`) zählt `len(result.notice_failures)` in
+  `CompareAlertService.last_notice_failed` (Muster `last_failed_count`). **Wirkstelle:** der Router
+  `/compare-alert-checks` (`api/routers/scheduler.py`): die Antwort enthält `notice_failed`,
+  `status="partial"` bei `notice_failed > 0` (Go-Zweig wie oben). **Abwägung analog zum Briefing:** der
+  Alarm ist zugestellt (mindestens eine Teil-Nachricht kam an, sonst Transportfehler), nur der Hinweis
+  fehlt; `error` wäre ein Fehlalarm, `ok` eine Lüge. Throttle, Backoff und `failed_channels` bleiben
+  unverändert. Ein bloßes zusätzliches Log ist ausdrücklich **keine** Verwertung (der Hinweis loggt heute
+  schon `logger.error`, `notification_service.py:950`).
 - **Mandantentrennung des Zählers (Codelesen):** Die Zähler hängen an Instanzen, die **je Anfrage/Lauf
   und je Nutzer neu gebaut** werden: `send_due_reports` delegiert an `run_briefing_dispatch`, das je
   Aufruf eine **neue** `TripDispatchStrategy` mit **neuem** `TripReportSchedulerService(user_id=...)`
-  erzeugt (`dispatch_orchestrator.py:56`); die Router bauen `TripReportSchedulerService(user_id=user_id)`,
-  `TripAlertService(user_id=user_id)`, `CompareAlertService(user_id=user_id)` je Anfrage; Go ruft je
+  erzeugt (`dispatch_orchestrator.py:56`); die Router bauen `TripReportSchedulerService(user_id=user_id)`
+  und `CompareAlertService(user_id=user_id)` je Anfrage; Go ruft je
   Nutzer einzeln auf (`triggerEndpointForUser`). Es gibt keine zwischen Nutzern oder Läufen geteilte
   Instanz. Zurückgesetzt wird beim Anlegen der Instanz (Default 0) und zusätzlich zu Beginn des
-  Sammellaufs in `_collect_due_trips` (Muster `collect_failed`, `trip_report_scheduler.py:839`); die
-  Alarm-Zähler setzen am Anfang von `check_all_trips`/`_check_all_counted` auf 0 zurück. Kein
+  Sammellaufs in `_collect_due_trips` (Muster `collect_failed`, `trip_report_scheduler.py:839`);
+  `CompareAlertService.last_notice_failed` setzt am Anfang des Alarmlaufs auf 0 zurück. Kein
   `"default"`-Fallback.
 
 **5. #7:** `send_reports` wird gelöscht (kein Produktionsaufrufer; Präzedenz B13/#1407). Mitziehen:
 `tests/e2e/test_e2e_story3_reports.py:455-464`, Zähl-Anker `tests/tdd/test_pytest_collection_and_timeout_safety.py:171`
-(live-Tests 13 → 12), `tests/tdd/test_issue_339_verify_timing.py:133`, Docstring `:673`,
+(Anker bleibt bei 13, siehe AC-16), `tests/tdd/test_issue_339_verify_timing.py:133`, Docstring `:673`,
 `docs/specs/modules/trip_report_scheduler.md`.
 
 **6. #8:** `_process_pending_markers -> tuple[int, int]` (`delivered`, `failed`), ausgewertet an beiden
@@ -234,10 +240,10 @@ Umbenennung; `failed_channels`/`delivery_outcome` für Hinweis-Fehlschläge zwec
 - **AC-9:** Given ein Telegram-Briefing, bei dem mindestens eine Teil-Nachricht scheitert und danach auch der Hinweis "Briefing unvollständig" nicht zugestellt wird, während das Briefing selbst (mindestens ein Kanal) zugestellt ist / When der Briefing-Lauf endet / Then meldet die Antwort von `/api/scheduler/trip-reports` `status == "partial"`, `notice_failed >= 1` und `failed == 0`, und `/api/scheduler/status` zeigt für `trip_reports_hourly` nach dem Go-Durchlauf `last_run.status == "partial"` (nicht `"ok"`, nicht `"error"`); `failed_channels` des Versandergebnisses bleibt **leer** und `delivery_outcome == "delivered"` (ADR-0086).
   - Test: echter Lauf über den Router mit Telegram-Fake (Teil-Nachricht und Hinweis scheitern); danach Go-Scheduler gegen diesen Router bzw. dessen aufgezeichnete Antwort und Prüfung des echten Werts `last_run.status` in `/api/scheduler/status`. Nicht nur der Python-Zähler wird geprüft.
 
-- **AC-10:** Given ein Trip, der nur per SMS versendet wird, mit gescheiterten Wetter-Segmenten, und die Service-Fehlermail kann nicht zugestellt werden, während die SMS selbst zugestellt wurde / When der Briefing-Lauf endet / Then gilt dasselbe wie AC-9 (`partial`, `notice_failed >= 1`, `failed == 0`, `last_run.status == "partial"`, `failed_channels` leer). Ist der Trip nicht SMS-only oder die Fehlermail zugestellt, bleibt es bei `ok` und `notice_failed == 0`.
-  - Test: drei Fälle (SMS-only + Mail scheitert / SMS-only + Mail ok / E-Mail-Trip), über den Router und den echten Statuswert.
+- **AC-10:** Given ein Trip, der nur per SMS versendet wird, mit gescheiterten Wetter-Segmenten, und die Service-Fehlermail kann nicht zugestellt werden, während die SMS selbst zugestellt wurde / When der Briefing-Lauf endet / Then gilt dasselbe wie AC-9 (`partial`, `notice_failed >= 1`, `failed == 0`, `last_run.status == "partial"`, `failed_channels` leer). Ist der Trip nicht SMS-only, die Fehlermail zugestellt oder für den SMS-only-Trip gar kein Mailversand eingerichtet (`can_send_email()` falsch, kein Versuch = „nicht erforderlich“, `_send_service_error_email` liefert `True`), bleibt es bei `ok` und `notice_failed == 0`.
+  - Test: vier Fälle (SMS-only + Mail scheitert / SMS-only + Mail ok / SMS-only ohne eingerichteten Mailversand / E-Mail-Trip), über den Router und den echten Statuswert.
 
-- **AC-11:** Given das neue Feld `notice_failures` in `NotificationResult` / When der Adversary prüft, wer es liest / Then wird es in beiden Pfaden gelesen und wirkt im Lauf-Status: Briefing-Pfad durch `_send_trip_report_outcome` → `trigger_trip_reports`; Alarm-Pfad durch die vier Aufrufer (siehe Implementation) → Router (AC-25). Ein Feld ohne Leser oder ein Leser, der nur loggt, ist verboten.
+- **AC-11:** Given das neue Feld `notice_failures` in `NotificationResult` / When der Adversary prüft, wer es liest / Then wird es von genau den Pfaden gelesen, die es erzeugen können, und wirkt im Lauf-Status: Briefing-Pfad durch `_send_trip_report_outcome` → `trigger_trip_reports`; Alarm-Pfad nur durch `compare_alert.py:444` (`send_multi_location_deviation_alert`) → `/compare-alert-checks` (AC-25). Für Trip-Abweichungsalarm, Trip-Radaralarm und Ortsvergleich-Radaralarm gibt es bewusst weder Leser noch Feld `notice_failed` (Einzelnachricht, siehe Implementation Details 4). Ein Feld ohne Leser oder ein Leser, der nur loggt, ist verboten.
   - Test: Mutation (Leser auskommentieren) macht AC-9/AC-10/AC-25 rot; Mutation `failed_channels += notice` macht AC-9/AC-25 rot (Prüfung `failed_channels == []`, `delivery_outcome` unverändert).
 
 - **AC-12:** Given ein offener Nachliefer-Vermerk (Marker) und die Nachlieferung scheitert beim Versand (`no_weather` oder `channels_unreachable`) / When der Briefing-Lauf (`pre_pass`) endet / Then steht der Fehlschlag in `failed` der Lauf-Bilanz (Status `partial`); eine gelungene Nachlieferung (`sent`) zählt als `sent`; `no_channels`/`no_stage` zählen **weder** als gesendet noch als Fehler.
@@ -254,8 +260,8 @@ Umbenennung; `failed_channels`/`delivery_outcome` für Hinweis-Fehlschläge zwec
 
 ### D. Toter Code (#7)
 
-- **AC-16:** Given `TripReportSchedulerService.send_reports` (kein Produktionsaufrufer) / When die Scheibe fertig ist / Then ist die Methode gelöscht, nichts im Produktionscode, in Doku oder Tests verweist noch darauf, und der Zähl-Anker der Live-Tests (`test_pytest_collection_and_timeout_safety.py`) steht auf 12 (statt 13), `test_issue_339_verify_timing.py` und `docs/specs/modules/trip_report_scheduler.md` sind nachgezogen.
-  - Test: Suche nach `send_reports(` (außer `send_reports_for_hour`-Namensfamilie) ohne Treffer; die genannten Tests grün.
+- **AC-16:** Given `TripReportSchedulerService.send_reports` (kein Produktionsaufrufer) / When die Scheibe fertig ist / Then ist die Methode gelöscht, nichts im Produktionscode, in Doku oder Tests verweist noch darauf, und der Zähl-Anker der Live-Tests (`test_pytest_collection_and_timeout_safety.py`) bleibt bei **13**. Grund: Der gelöschte Test war `email+live` markiert und zählte im Standardlauf nie mit; nur die Zählung mit `-m live` sinkt von 3 auf 2. Gemessen ist 13. `test_issue_339_verify_timing.py` und `docs/specs/modules/trip_report_scheduler.md` sind nachgezogen.
+  - Test: Suche nach `send_reports(` (außer `send_reports_for_hour`-Namensfamilie) ohne Treffer; die genannten Tests grün; Anker-Test unverändert bei 13, Zählung mit `-m live` bei 2.
 
 ### E. Wächter-Korrektur Klasse 2 (Geschwister-Erfolgszähler)
 
@@ -273,13 +279,13 @@ Umbenennung; `failed_channels`/`delivery_outcome` für Hinweis-Fehlschläge zwec
 - **AC-20:** Given die Reparaturen der 8 Stellen / When der Adversary sie prüft / Then ist keine davon Gaming: kein künstliches `try/except`, kein Rückgabefeld/Bool ohne Leser beim Aufrufer, kein `getattr(..., 0)`-Stillrückfall im Produkt (insbesondere nicht für `last_failed_count`), kein Statuswert aus konstanter Variable.
   - Test: Diff-Prüfung; Mutationen aus AC-21 beweisen, dass Prüfungen an der Aufrufer-Verwertung wirken.
 
-- **AC-21:** Given die Verhaltenstests dieser Scheibe / When der Adversary gezielt verfälscht (a) `status` wieder fest `"ok"` in #1 und #2, (b) den Fehlerzähler im inneren Handler von `_process_single_inner` entfernen, (c) den Fehlerzähler im IMAP-/OSError-Handler entfernen, (d) `send_command_reply_email` wieder `None` liefern lassen bzw. das Bool beim Aufrufer ignorieren, (e) den Leser von `notice_failures` entfernen (Briefing UND je einen der vier Alarm-Aufrufer), (f) Hinweis-Fehlschlag in `failed_channels` eintragen oder als `failed` statt `notice_failed` zählen, (e2) Reset des Zählers entfernen bzw. Zähler zwischen Nutzern teilen, (g) in #8 den Fehlerzähler entfernen oder `no_stage`/`no_channels` als failed zählen, (h) im Go-Pfad `Failed>0` nicht auswerten / `kickRound` auf `Failed` koppeln / einen `getattr(...,0)`-Rückfall einbauen / Nutzer-A-Fehler in Nutzer-B-Bilanz buchen / `send_reports` nicht löschen / den Wächter-Fix auf jedes `else` erweitern / (i) `INTENTIONAL_CONSTANT_SUCCESS` erweitern / Then wird je Verfälschung mindestens ein **Verhaltenstest** rot, der an der Verwertung misst (Antwort, Bilanz, Go-Laufstatus), nicht nur der Wächter-Scanner.
+- **AC-21:** Given die Verhaltenstests dieser Scheibe / When der Adversary gezielt verfälscht (a) `status` wieder fest `"ok"` in #1 und #2, (b) den Fehlerzähler im inneren Handler von `_process_single_inner` entfernen, (c) den Fehlerzähler im IMAP-/OSError-Handler entfernen, (d) `send_command_reply_email` wieder `None` liefern lassen bzw. das Bool beim Aufrufer ignorieren, (e) den Leser von `notice_failures` entfernen (im Briefing-Pfad `_send_trip_report_outcome` UND im Ortsvergleich-Änderungsalarm `compare_alert.py:444`), (f) Hinweis-Fehlschlag in `failed_channels` eintragen oder als `failed` statt `notice_failed` zählen, (e2) Reset des Zählers entfernen bzw. Zähler zwischen Nutzern teilen (Briefing-Zähler und `CompareAlertService.last_notice_failed`), (g) in #8 den Fehlerzähler entfernen oder `no_stage`/`no_channels` als failed zählen, (h) im Go-Pfad `Failed>0` nicht auswerten / `kickRound` auf `Failed` koppeln / einen `getattr(...,0)`-Rückfall einbauen / Nutzer-A-Fehler in Nutzer-B-Bilanz buchen / `send_reports` nicht löschen / den Wächter-Fix auf jedes `else` erweitern / (i) `INTENTIONAL_CONSTANT_SUCCESS` erweitern / Then wird je Verfälschung mindestens ein **Verhaltenstest** rot, der an der Verwertung misst (Antwort, Bilanz, Go-Laufstatus), nicht nur der Wächter-Scanner.
   - Test: Mutation per String-Ersetzung mit externer Sicherungskopie (nie `git checkout/stash/reset`); gemeldet wird, **welcher** Test rot wurde; bleibt eine Verfälschung grün, ist das ein Finding.
 
 - **AC-22:** Given die neuen Verhaltenstests / When sie laufen / Then gehen sie durch die **echten Eingänge** (Router-Aufrufe `/api/scheduler/*`, `run_briefing_dispatch`, `InboundEmailReader.poll_and_process`, Go-Scheduler-Pfad) mit Fakes nur an den Außengrenzen (IMAP, SMTP, Telegram); kein `patch()`, das nur die eigene Annahme zurückspiegelt.
   - Test: `tests/tdd/test_erfolg_heisst_wirkung_s4b.py`, Kernschicht ohne Netz; Go-Test `internal/scheduler/`.
 
-- **AC-23:** Given die geänderten Alt-Tests und Fakes (siehe Liste unten) / When die Scheibe fertig ist / Then sind genau diese bewusst angepasst (Fake `send_command_reply_email` liefert `True`; Staging-Fake bekommt `last_failed_count`; Erwartung `_process_single` als Tupel; Erwartung `_process_pending_markers` als Tupel; `send_reports`-Test entfernt) und keine weitere Erwartung wurde still verändert; alle sind grün.
+- **AC-23:** Given die geänderten Alt-Tests und Fakes (siehe Liste unten) / When die Scheibe fertig ist / Then sind genau diese bewusst angepasst (Fake `send_command_reply_email` liefert `True`; Staging-Fake bekommt `last_failed_count`; Erwartung `_process_single` als Tupel; `"notice_failed": 0` in den erwarteten Antworten von `tests/test_dispatch_status_delivery.py`; `send_reports`-Test entfernt) und keine weitere Erwartung wurde still verändert; alle sind grün.
   - Test: Liste im Commit dokumentiert; Kerntests der betroffenen Dateien komplett grün.
 
 - **AC-24:** Given die Doku / When die Scheibe fertig ist / Then dokumentiert `docs/reference/api_contract.md` `partial`/`failed` für `compare-alert-checks` und die Antwortform von `/inbound-commands` (`status`, `count`, `processed`, `failed`), `docs/specs/modules/trip_report_scheduler.md` ist ohne `send_reports`, und das Changelog in `docs/specs/modules/waechter_1405_erfolg_wirkung.md` führt S4b (8 → 0).
@@ -287,14 +293,14 @@ Umbenennung; `failed_channels`/`delivery_outcome` für Hinweis-Fehlschläge zwec
 
 ### G. Alarm-Pfad, Endstatus und Mandantentrennung der Zähler
 
-- **AC-25:** Given ein Alarm (Abweichung oder Radar, Trip oder Ortsvergleich) wird über Telegram in mehreren Teil-Nachrichten gesendet, mindestens eine Teil-Nachricht kommt an, mindestens eine scheitert, und der Hinweis "Briefing unvollständig" scheitert ebenfalls / When der Alarmlauf endet / Then meldet die Antwort des Laufs (`/alert-checks`, `/radar-alert-checks`, `/compare-alert-checks`, `/compare-radar-alert-checks`) `notice_failed >= 1`, `status == "partial"` und `failed == 0`, und `/api/scheduler/status` zeigt für den Job `last_run.status == "partial"`; `failed_channels`, Retry-Backoff und Throttle des Alarms sind **identisch** zum Lauf mit zugestelltem Hinweis (ADR-0086), und es entsteht kein zusätzlicher Versand.
-  - Test: je ein Fall pro Router (vier), echter Alarmlauf mit Telegram-Fake; Vergleich `delivery_outcome`/Backoff-Eintrag mit dem Lauf ohne Hinweis-Fehlschlag; echter Statuswert im Go-Test.
+- **AC-25:** Given ein Ortsvergleich-Änderungsalarm wird über Telegram je Ort in mehreren Teil-Nachrichten gesendet, mindestens eine Teil-Nachricht kommt an, mindestens eine scheitert, und der Hinweis "Briefing unvollständig" scheitert ebenfalls / When der Alarmlauf endet / Then meldet die Antwort von `/compare-alert-checks` `notice_failed >= 1`, `status == "partial"` und `failed == 0`, und `/api/scheduler/status` zeigt für den Job `last_run.status == "partial"`; `failed_channels`, Retry-Backoff und Throttle des Alarms sind **identisch** zum Lauf mit zugestelltem Hinweis (ADR-0086), und es entsteht kein zusätzlicher Versand. Die Router `/alert-checks`, `/radar-alert-checks` und `/compare-radar-alert-checks` bleiben unverändert und führen kein Feld `notice_failed`.
+  - Test: ein Fall für `/compare-alert-checks`, echter Alarmlauf mit Telegram-Fake; Vergleich `delivery_outcome`/Backoff-Eintrag mit dem Lauf ohne Hinweis-Fehlschlag; echter Statuswert im Go-Test.
 
 - **AC-26:** Given Go `triggerEndpointForUser` und eine Antwort `{"status":"partial","notice_failed":1,"failed":0}` / When der Scheduler sie auswertet / Then steht `last_run.status == "partial"` (nicht `"error"`, nicht `"ok"`); bei `{"failed":1,...}` weiterhin `"error"`; bei `{"status":"ok","notice_failed":0}` `"ok"`. Offen festgehalten: das Monitoring (`check-gregor20.sh`) alarmiert `partial` **nicht**; der Hinweis-Fehlschlag ist im Status sichtbar, löst aber keinen Alarm aus (gewollt, siehe Abwägung).
   - Test: Go-Test mit Fake-Server (drei Antworten); im Fan-out zwei Nutzer, einer `partial`, einer `ok` → Job `partial`; einer `partial`, einer `error` → Job `error`.
 
-- **AC-27:** Given die Zähler `notice_failed`/`last_notice_failed` in Dienst-Instanzen / When zwei Nutzer nacheinander bzw. zwei Läufe desselben Nutzers laufen / Then enthält der Zähler jedes Laufs nur Fehlschläge **dieses** Nutzers und **dieses** Laufs (Instanz je Lauf neu, Reset bei Lauf-/Sammelstart); es gibt keine zwischen Nutzern geteilte Instanz und keinen `"default"`-Fallback.
-  - Test: Zwei-Nutzer-Test (A: Hinweis scheitert, B: regulär) über Router/`run_briefing_dispatch` und je einen Alarm-Router: A `notice_failed >= 1`, B `0`; zweiter Lauf von A nach behobenem Fehler: `0` (kein Übertrag).
+- **AC-27:** Given die Zähler `notice_failed` (Briefing) und `last_notice_failed` (Ortsvergleich-Änderungsalarm) in Dienst-Instanzen / When zwei Nutzer nacheinander bzw. zwei Läufe desselben Nutzers laufen / Then enthält der Zähler jedes Laufs nur Fehlschläge **dieses** Nutzers und **dieses** Laufs (Instanz je Lauf neu, Reset bei Lauf-/Sammelstart); es gibt keine zwischen Nutzern geteilte Instanz und keinen `"default"`-Fallback.
+  - Test: Zwei-Nutzer-Test (A: Hinweis scheitert, B: regulär) über Router/`run_briefing_dispatch` und `/compare-alert-checks`: A `notice_failed >= 1`, B `0`; zweiter Lauf von A nach behobenem Fehler: `0` (kein Übertrag).
 
 ## Geänderte Alt-Tests und Fakes (bewusst, benannt)
 
@@ -309,10 +315,12 @@ Umbenennung; `failed_channels`/`delivery_outcome` für Hinweis-Fehlschläge zwec
   `tests/test_scheduler_run_duration_reporting.py:116`, `tests/test_issue_1169_compare_alert_consumer.py:816`,
   `tests/test_alarmlauf_einheit_abschottung.py`
 - B21: `tests/tdd/test_telegram_recipient_contract.py:815-831` (Hinweis-Bool), `tests/unit/test_provider_error_handling.py:210-220` (Fehlermail-Bool)
-- #8: `tests/test_briefing_anchor_survives_dispatch_failure.py:1469`, `tests/test_issue_1012_no_data_guard.py:458-610`,
-  `tests/test_dispatch_orchestrator.py:346` (Rückgabe als Tupel)
-- #7: `tests/e2e/test_e2e_story3_reports.py:455-464`, `tests/tdd/test_pytest_collection_and_timeout_safety.py:171`,
-  `tests/tdd/test_issue_339_verify_timing.py:133`
+- Briefing-Antwort: `tests/test_dispatch_status_delivery.py` (erwartete Antworten bekommen `"notice_failed": 0`)
+- #8: keine Änderung nötig an `tests/test_dispatch_orchestrator.py`, `tests/test_issue_1012_no_data_guard.py`
+  und `tests/test_briefing_anchor_survives_dispatch_failure.py`, weil sie den Rückgabewert von
+  `_process_pending_markers` nicht lesen; sie bleiben unverändert und müssen grün bleiben
+- #7: `tests/e2e/test_e2e_story3_reports.py:455-464`, `tests/tdd/test_pytest_collection_and_timeout_safety.py:171`
+  (Anker bleibt 13, Kommentar/Zählung nachgezogen), `tests/tdd/test_issue_339_verify_timing.py:133`
 
 Die genaue Treffermenge wird in `/40` per Suche ermittelt und im Commit genannt.
 
@@ -349,3 +357,4 @@ Die genaue Treffermenge wird in `/40` per Suche ermittelt und im Commit genannt.
 ## Changelog
 
 - 2026-10-26: v1.0 — erste Fassung (spec-writer), Grundlage `docs/context/fix-1405-s4b-erfolg-heisst-wirkung.md`.
+- 2026-10-26: v1.1 — PO-Korrektur nach Adversary BROKEN (F001/F002/F007): Alarm-Pfad für `notice_failed` auf den Ortsvergleich-Änderungsalarm (`/compare-alert-checks`, `CompareAlertService.last_notice_failed`) reduziert, weil nur dort ein Teilausfall mit Hinweis entstehen kann (Trip-Abweichung, Trip-Radar und Ortsvergleich-Radar senden eine Einzelnachricht; Leser in `trip_alert.py`/`compare_radar_alert.py` und Feld an `/alert-checks`, `/radar-alert-checks`, `/compare-radar-alert-checks` entfallen, diese Dateien und Router bleiben auf Stand `origin/main`, der Test `test_ac25_alarm_router_antwort_traegt_notice_failed` entfällt ersatzlos); AC-16 Zählanker bleibt bei 13 (gelöschter Test war `email+live`, nur `-m live` 3 → 2); `_send_service_error_email` liefert `True`, wenn bei SMS-only-Trip kein Mailversand eingerichtet ist (AC-10, Implementation Details 4); Alt-Tests: `test_dispatch_status_delivery.py` erwartet `"notice_failed": 0`, drei #8-Alt-Tests unverändert. Betroffen: Purpose #4, Source, Estimated Scope, Implementation Details 4/5, AC-10, AC-11, AC-16, AC-21, AC-23, AC-25, AC-27, Alt-Test-Liste.
