@@ -828,10 +828,12 @@ def test_fneu1_unvollstaendig_hinweis_geht_an_den_profil_chat(sink):
 
     _profil("nutzer-b", telegram_chat_id=CHAT_B)
     dienst = NotificationService(settings=_settings(), user_id="nutzer-b")
-    dienst._send_telegram_incomplete_hint(SimpleNamespace(email_subject="Briefing"), 2)
+    zugestellt = dienst._send_telegram_incomplete_hint(SimpleNamespace(email_subject="Briefing"), 2)
 
     assert len(sink.calls) == 1 and sink.calls[0]["url"].endswith("/sendMessage"), sink.calls
     assert sink.chats() == [CHAT_B], f"F-NEU-1: gesehen {sink.chats()!r}"
+    # #1405 S4b AC-23 (B21): der Hinweis meldet seine Zustellung als bool.
+    assert zugestellt is True, f"Hinweis zugestellt, Rueckgabe {zugestellt!r}"
 
 
 def test_fneu2_keine_daten_hinweis_geht_per_telegram_an_den_profil_chat(sink):

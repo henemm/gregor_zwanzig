@@ -127,6 +127,7 @@ class _RecordingNotificationService(NotificationService):
 
     def send_command_reply_email(self, result, settings):
         self.replies.append(result)
+        return True  # #1405 S4b AC-23: Vertrag "-> bool" (zugestellt)
 
 
 @pytest.fixture
@@ -157,7 +158,8 @@ def _run(sender: str, trip_name: str):
 
 
 def _assert_dropped_silently(label: str, result, imap, notifications) -> None:
-    assert result == 0, f"AC-14 ({label}): Mail wurde verarbeitet (return={result})"
+    # #1405 S4b AC-23: ``_process_single`` liefert (processed, failed).
+    assert result == (0, 0), f"AC-14 ({label}): Mail wurde verarbeitet (return={result})"
     assert not _CountingProcessor.calls, (
         f"AC-14 ({label}): TripCommandProcessor.process wurde aufgerufen: "
         f"{[c.user_id for c in _CountingProcessor.calls]}"

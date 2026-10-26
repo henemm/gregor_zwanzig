@@ -61,7 +61,8 @@ def test_hilfe_per_email_reines_text_plain(monkeypatch, user_ids):
     ergebnis = sende_email(settings, nutzer, "hilfe", form="plain")
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert ergebnis == 1, "Die Mail wurde nicht als Befehl verarbeitet."
+    # #1405 S4b AC-23: ``_process_single`` liefert (processed, failed).
+    assert ergebnis == (1, 0), "Die Mail wurde nicht als Befehl verarbeitet."
     assert recorder.emails, f"Es wurde keine Antwortmail versendet: {recorder.emails!r}"
     gesendet = recorder.emails[-1]
     msg = email_lib.message_from_string(gesendet["raw"])

@@ -2783,6 +2783,99 @@ def test_scanner_ignores_house_norm_sent_failed_tuple_in_synthetic_file(tmp_path
     )
 
 
+def test_scanner_accepts_sibling_else_failure_counter_in_synthetic_file(tmp_path):
+    """#1405 S4b AC-17 (positiv): ein Gegenzähler im FEHLAUSGANGS-Zweig zählt.
+
+    Die Funktion zählt Erfolge im ``if``-Rumpf (``sent += 1``) und Fehlschläge
+    im zugehörigen ``else`` (``failed += 1``), beide fließen in die Rückgabe —
+    ganz ohne ``try/except``. Das ist die Hausnorm in ihrer zweiten Form, die
+    der Docstring von ``_find_partial_success_blind_violations`` verspricht
+    („``except``-Handler oder Fehlausgangs-Zweig"). Kein Fund.
+
+    RED heute: ``_failure_counter_names`` liest nur ``except``-Handler — der
+    Wächter meldet seine eigene Norm als Verstoß (Wächterfehler, Spec
+    Abschnitt 0: korrigieren, nicht umgehen; kein künstliches ``try/except``).
+    """
+    good_file = tmp_path / "synthetic_sibling_else_counter.py"
+    good_file.write_text(
+        "def deliver_all(service, items):\n"
+        "    sent = 0\n"
+        "    failed = 0\n"
+        "    for item in items:\n"
+        "        if service.deliver(item):\n"
+        "            sent += 1\n"
+        "        else:\n"
+        "            failed += 1\n"
+        "    return sent, failed\n",
+        encoding="utf-8",
+    )
+    found = _find_violations(good_file)
+    assert not found, (
+        "AC-17: ein Fehlerzähler im else-Zweig neben einem Geschwister-"
+        "Erfolgszähler (beide im Rückgabewert) ist ein echter Gegenzähler — "
+        f"fälschlich als teilerfolg-blind gezählt: {found}"
+    )
+
+
+def test_scanner_rejects_else_counter_without_sibling_success_counter(tmp_path):
+    """#1405 S4b AC-17 (negativ): ein beliebiges ``else: failed += 1`` genügt NICHT.
+
+    Zwei Nachbauten, beide MÜSSEN Klasse-2-Funde bleiben (Mutation „Wächter-Fix
+    auf jedes ``else`` verallgemeinern" macht diesen Test rot):
+
+    1. Der ``if``-Rumpf erhöht GAR keinen Zähler; der Erfolgszähler wächst
+       bedingungslos nach dem ``if`` — ``failed`` ist kein Gegenstück zu
+       ``sent``, ``sent`` zählt auch die Fehlschläge mit.
+    2. Der ``if``-Rumpf erhöht einen Zähler, der NICHT zurückgegeben wird
+       (``seen``) — kein Geschwister-Erfolgszähler im Sinne der Korrektur.
+
+    Die AC-8-Attrappe (``failed = 0``, nie erhöht) bleibt ein Fund — bewacht
+    von ``test_scanner_detects_tuple_shaped_decoy_without_real_failure_counter``.
+    In RED erwartet grün (Wächter gegen Überverallgemeinerung).
+    """
+    ohne_zaehler = tmp_path / "synthetic_else_without_sibling.py"
+    ohne_zaehler.write_text(
+        "import logging\n"
+        "\n"
+        "logger = logging.getLogger(__name__)\n"
+        "\n"
+        "\n"
+        "def deliver_all(service, items):\n"
+        "    sent = 0\n"
+        "    failed = 0\n"
+        "    for item in items:\n"
+        "        if service.deliver(item):\n"
+        "            logger.info('delivered %s', item)\n"
+        "        else:\n"
+        "            failed += 1\n"
+        "        sent += 1\n"
+        "    return sent, failed\n",
+        encoding="utf-8",
+    )
+    nicht_gemeldet = tmp_path / "synthetic_else_with_unreturned_sibling.py"
+    nicht_gemeldet.write_text(
+        "def deliver_all(service, items):\n"
+        "    sent = 0\n"
+        "    failed = 0\n"
+        "    seen = 0\n"
+        "    for item in items:\n"
+        "        if service.deliver(item):\n"
+        "            seen += 1\n"
+        "        else:\n"
+        "            failed += 1\n"
+        "        sent += 1\n"
+        "    return sent, failed\n",
+        encoding="utf-8",
+    )
+    for datei in (ohne_zaehler, nicht_gemeldet):
+        found = _find_violations(datei)
+        assert any(loc.endswith("::deliver_all") for loc in _finding_locations(found)), (
+            f"AC-17: {datei.name}: ein else-Zähler OHNE Geschwister-Erfolgszähler im "
+            f"if-Rumpf ist kein Gegenzähler und muss Fund bleiben: {found}"
+        )
+        assert all(kind.startswith(KIND_PARTIAL_SUCCESS_BLIND) for kind in found.values()), found
+
+
 # ---------------------------------------------------------------------------
 # AC-10 und AC-11: Wirkungsnachweise Klasse 3 (Heartbeat ohne Wirkung)
 # ---------------------------------------------------------------------------

@@ -1249,8 +1249,9 @@ MAIL_FORMEN: dict[str, Callable[[str, str, str], bytes]] = {
 def sende_email(settings: Settings, nutzer: BefehlNutzer, body: str, *,
                  form: str = "plain", trip_name: str | None = None) -> int:
     """Eine Befehlsmail durch den ECHTEN ``_process_single``-Pfad mit
-    Fake-IMAP. Gibt den Rueckgabewert von ``_process_single`` zurueck (1 =
-    verarbeitet). ``form`` in ``MAIL_FORMEN`` (``plain``/
+    Fake-IMAP. Gibt den Rueckgabewert von ``_process_single`` zurueck -- seit
+    #1405 S4b das Paar ``(processed, failed)``, ``(1, 0)`` = verarbeitet und
+    beantwortet. ``form`` in ``MAIL_FORMEN`` (``plain``/
     ``alternative_beide``/``apple_html``)."""
     from services.inbound_email_reader import InboundEmailReader
 

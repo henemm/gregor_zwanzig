@@ -378,7 +378,8 @@ def test_ac1_hilfe_per_email_listet_startdatum_report_und_abbruch_alias(monkeypa
     verarbeitet = sende_email(basis_settings(), nutzer, "hilfe")
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert verarbeitet == 1 and recorder.emails, "Keine Antwortmail auf HILFE."
+    # #1405 S4b AC-23: ``_process_single`` liefert (processed, failed).
+    assert verarbeitet == (1, 0) and recorder.emails, "Keine Antwortmail auf HILFE."
     zeilen = _hilfezeilen(_email_antworttext(recorder.emails[-1]))
     for kopf in _NEUE_LANGHILFE_ZEILEN:
         assert any(z.startswith(kopf) for z in zeilen), f"HILFE-Mail ohne {kopf!r}: {zeilen!r}"

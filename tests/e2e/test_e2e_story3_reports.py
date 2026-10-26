@@ -433,9 +433,10 @@ class TestSchedulerIntegration:
     """Test the scheduler service with a real trip.
 
     Scheibe 2c (#1211) Feinschnitt: die Klasse trug bislang einen kompletten
-    `@pytest.mark.email`, obwohl nur test_scheduler_send_reports wirklich
-    dialt (_get_active_trips() liest ausschliesslich lokale Trip-Dateien,
-    kein Netzcall). Marker daher method-genau statt klassenweit."""
+    `@pytest.mark.email`, obwohl nur der (seit #1405 S4b entfernte)
+    Versandtest wirklich dialte (_get_active_trips() liest ausschliesslich
+    lokale Trip-Dateien, kein Netzcall). Marker daher method-genau statt
+    klassenweit."""
 
     def test_scheduler_finds_active_trip(self, test_trip):
         """Scheduler identifies test trip as active for today (morning)."""
@@ -450,15 +451,7 @@ class TestSchedulerIntegration:
             f"Test trip not found in active trips: {active_ids}"
         )
 
-    @pytest.mark.email
-    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
-    def test_scheduler_send_reports(self, test_trip, settings):
-        """Scheduler sends report for test trip (full E2E)."""
-        if not settings.can_send_email():
-            pytest.skip("SMTP not configured")
-
-        from services.trip_report_scheduler import TripReportSchedulerService
-        service = TripReportSchedulerService(settings, user_id="default")
-
-        sent = service.send_reports("morning")
-        assert sent >= 1, f"Expected at least 1 report sent, got {sent}"
+    # #1405 S4b (AC-16/AC-23): ``test_scheduler_send_reports`` entfernt --
+    # ``TripReportSchedulerService.send_reports`` war toter Code ohne
+    # Produktionsaufrufer und ist geloescht. Der stuendliche Versand laeuft
+    # ueber ``send_due_reports`` -> ``run_briefing_dispatch``.

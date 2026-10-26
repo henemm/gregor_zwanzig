@@ -531,7 +531,8 @@ class _Welt:
             self.uhr.t = max(self.uhr.t, ende)   # synchroner Lauf (F6)
             n += 1
         self._ereignis("poll_ende", start_seq=e["seq"])
-        return 200, {"status": "ok", "count": n, "processed": n}
+        # #1405 S4b AC-23: der Python-Core meldet den Fehlerzaehler des Laufs mit.
+        return 200, {"status": "ok", "count": n, "processed": n, "failed": 0}
 
     def _webhook(self, headers, body) -> tuple[int, dict]:
         kopf = {k.lower(): v for k, v in headers.items()}

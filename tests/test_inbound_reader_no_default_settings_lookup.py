@@ -126,8 +126,9 @@ class _RecordingNotificationService:
     def __init__(self) -> None:
         self.replies: list[tuple[str | None, object]] = []
 
-    def send_command_reply_email(self, result, settings) -> None:
+    def send_command_reply_email(self, result, settings) -> bool:
         self.replies.append((settings.mail_to, result))
+        return True  # #1405 S4b AC-23: Vertrag "-> bool" (zugestellt)
 
 
 def test_ac6_email_reader_loest_default_nie_fuer_ein_nicht_angefragtes_konto(monkeypatch):
