@@ -30,9 +30,16 @@ VERTRAG: wie ``tests/unit/test_position_fix_snapping.py`` (Kopf) --
 ``_verarbeite_befehl`` NACH der Zuordnung und VOR der Befehlsantwort
 aufgenommen (sonst misst ``jetzt`` nicht am Fix).
 
-RED-GRUND: kein Fix wird gespeichert (``position_fix.json`` fehlt), eine
-reine Positions-SMS wird heute als unbekannter Befehl BEANTWORTET, und
-``jetzt`` misst an der Planposition.
+FORTSCHREIBUNG (Spec AC-4, Changelog 26.10.): der Fix friert die Position
+nicht ein. Die Befehls-/Briefingpfade fragen IMMER nach der Meldung ab
+(``Jetzt``/``Strecke`` zur Poll-Zeit 09:00, Heute-Briefing zur Fenstermitte
+10:30), die Journal-Eintraege sind 08:45 gemeldet -- Soll ist deshalb Fix +
+Planfortschritt seit dem Journal-Zeitstempel
+(``position_fix_fixtures.fortgeschrieben``). Tests, die nur Speicherung bzw.
+Reihenfolge pruefen (AC-11, AC-6), fragen zum Meldezeitpunkt ab.
+
+RED-GRUND (26.10.): ``Jetzt``, ``Strecke`` und das Heute-Briefing messen am
+eingefrorenen Fix statt an Fix + Planfortschritt.
 
 BESTANDSSCHUTZ (heute schon gruen und so gewollt):
 ``test_ac2_unsinn_klammer_wird_normal_beantwortet`` (Antwort identisch zur
@@ -44,7 +51,9 @@ from __future__ import annotations
 
 import copy
 import json
+from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 from freezegun import freeze_time
@@ -59,10 +68,12 @@ from tests.helpers.position_fix_fixtures import (
     abstand_m,
     alle_fix_dateien,
     fix_datei,
+    fortgeschrieben,
     gpx_schreiben,
     heute_track_punkte,
     lade_trip,
     ortszeit,
+    toleranz_fortschreibung,
     trip_schreiben,
 )
 from tests.tdd._befehl_e2e_fixtures import (
@@ -86,6 +97,28 @@ def _journal_eintrag(datei: str, eintrag_id: str) -> dict:
 
 _ECHT = "seven_journal_2026-10-26_echt.json"
 _VARIANTEN = "seven_journal_2026-10-26_varianten.json"
+
+
+def _gemeldet(datei: str, eintrag_id: str) -> datetime:
+    """Meldezeitpunkt (``observed_at``) eines Fixture-Eintrags: der
+    Journal-Zeitstempel, seven.io-Form Europe/Berlin ohne Zone -- aus der
+    Fixture gelesen, nicht hart kodiert."""
+    roh = _journal_eintrag(datei, eintrag_id)["timestamp"]
+    return (
+        datetime.strptime(roh, "%Y-%m-%d %H:%M:%S")
+        .replace(tzinfo=ZoneInfo("Europe/Berlin"))
+        .astimezone(timezone.utc)
+    )
+
+
+def _soll_nach_meldung(datei: str, eintrag_id: str, at: datetime):
+    """Fix + Planfortschritt vom Journal-Zeitstempel bis ``at``; Testaufbau:
+    deutlich (> 300 m) vom eingefrorenen Fix entfernt."""
+    soll = fortgeschrieben(ECHT_HEUTE_KOORD[0], _gemeldet(datei, eintrag_id), at)
+    assert abstand_m(soll, ECHT_HEUTE_KOORD) > 300.0, (
+        f"Testaufbau: Soll {soll} vom eingefrorenen Fix nicht unterscheidbar"
+    )
+    return soll
 
 
 class _Nutzer:
@@ -127,11 +160,11 @@ def _gelernt(recorder, nutzer: _Nutzer) -> None:
     )
 
 
-def _position(nutzer: _Nutzer):
+def _position(nutzer: _Nutzer, at=_JETZT):
     trip = lade_trip(nutzer.user_id, nutzer.trip_id)
-    with freeze_time(_JETZT):
-        active, seg_date = resolve_current_segment(trip, _JETZT, _JETZT.astimezone(ZONE).date())
-        return position_at_time(trip, active, seg_date, _JETZT, user_id=nutzer.user_id)
+    with freeze_time(at):
+        active, seg_date = resolve_current_segment(trip, at, at.astimezone(ZONE).date())
+        return position_at_time(trip, active, seg_date, at, user_id=nutzer.user_id)
 
 
 @pytest.fixture
@@ -172,7 +205,8 @@ def test_ac11_heute_mit_koordinaten_wird_beantwortet_und_fix_gespeichert(lauf, u
     assert recorder.premium_sms_out, "AC-11: die Heute-Antwort wurde nicht gesendet"
     assert all(s["to"] == nutzer.reply_to for s in recorder.premium_sms_out)
     assert fix_datei(nutzer.user_id).exists(), "AC-11: der Fix wurde nicht gespeichert"
-    assert abstand_m(_position(nutzer), ECHT_HEUTE_KOORD) <= _SNAP_TOL_M
+    # Abfrage zum Meldezeitpunkt (Journal-Zeitstempel): dort IST die Position der Fix.
+    assert abstand_m(_position(nutzer, _gemeldet(_ECHT, "5600101")), ECHT_HEUTE_KOORD) <= _SNAP_TOL_M
 
 
 def test_ac11_koordinaten_ausserhalb_100m_beantwortet_aber_nicht_gespeichert(lauf, user_ids):
@@ -239,6 +273,61 @@ def test_ac9_unbekannte_nummer_schreibt_keine_datei(lauf, user_ids):
     assert alle_fix_dateien(get_data_root()) == [fix_datei(nutzer.user_id)]
 
 
+# ══════════════════════════════════ AC-6 (Eingang) ════════════════════════
+
+_FIX_HINTEN = (46.6100, 12.7678)  # km ~1,1 -- auf der Route, hinter ECHT_HEUTE_KOORD
+
+
+def _positions_eintrag(eintrag_id: str, koord, zeitstempel: str) -> dict:
+    """Reine Positions-SMS nach dem Muster von 5600201 (keine Antwort)."""
+    eintrag = _journal_eintrag(_VARIANTEN, "5600201")
+    eintrag.update(
+        id=eintrag_id, timestamp=zeitstempel,
+        text=f"inreachlink.com/gS5ySf-2sYCWmJQksXnjeHw  ({koord[0]:.4f}, {koord[1]:.4f})",
+    )
+    return eintrag
+
+
+def _poll_um(recorder, settings, jetzt) -> None:
+    from services.inbound_sms_reader import InboundSmsReader
+
+    with freeze_time(jetzt):
+        InboundSmsReader().poll_and_process(settings)
+    recorder.pruefe_keine_unbekannten_aufrufe()
+
+
+def test_ac6_nachgelieferter_aelterer_journal_eintrag_ueberschreibt_juengeren_nicht(lauf, user_ids):
+    """Adversary F002: zwei Journal-Eintraege in umgekehrter Reihenfolge
+    nachgeliefert -- der zuerst verarbeitete traegt den JUENGEREN
+    Journal-Zeitstempel (09:30), der danach verarbeitete den AELTEREN (09:00).
+    Massgeblich ist der Journal-Zeitstempel, nicht die Verarbeitungszeit:
+    zwei Polls zu verschiedenen Uhrzeiten, damit ein Rueckfall auf "jetzt"
+    den aelteren Eintrag gewinnen liesse."""
+    recorder, settings = lauf
+    nutzer = _Nutzer(user_ids())
+
+    _einspielen(recorder, nutzer, _positions_eintrag("5600401", _FIX_HINTEN, "2026-10-26 09:30:00"))
+    _poll_um(recorder, settings, ortszeit(9, 40))
+    assert fix_datei(nutzer.user_id).exists(), "Testaufbau: der juengere Fix wurde nicht gespeichert"
+    stand = fix_datei(nutzer.user_id).read_bytes()
+
+    _einspielen(recorder, nutzer, _positions_eintrag("5600402", ECHT_HEUTE_KOORD, "2026-10-26 09:00:00"))
+    _poll_um(recorder, settings, ortszeit(9, 45))
+
+    gelernt = [a for a in recorder.premium_sms_learn_aufrufe if a.get("from") == nutzer.reply_to]
+    assert len(gelernt) == 2, f"Testaufbau: beide Eintraege muessen verarbeitet werden: {gelernt}"
+    assert recorder.premium_sms_out == []
+    assert fix_datei(nutzer.user_id).read_bytes() == stand, (
+        "AC-6: ein spaeter nachgelieferter, AELTERER Journal-Eintrag hat den juengeren Fix ersetzt"
+    )
+    trip = lade_trip(nutzer.user_id, nutzer.trip_id)
+    abfrage = ortszeit(9, 30)  # Meldezeitpunkt des juengeren (geltenden) Fixes
+    with freeze_time(abfrage):
+        active, seg_date = resolve_current_segment(trip, abfrage, abfrage.astimezone(ZONE).date())
+        pos = position_at_time(trip, active, seg_date, abfrage, user_id=nutzer.user_id)
+    assert abstand_m(pos, _FIX_HINTEN) <= _SNAP_TOL_M
+
+
 # ══════════════════════════════════ AC-4 (Befehl) ═════════════════════════
 
 
@@ -263,16 +352,19 @@ def _aufzeichnender_radar_typ(calls: list):
     return _Aufzeichnend
 
 
-def test_ac4_jetzt_mit_koordinaten_misst_am_fix(lauf, user_ids, monkeypatch):
+def test_ac4_jetzt_mit_koordinaten_misst_an_der_fortgeschriebenen_position(lauf, user_ids, monkeypatch):
     """Befehlspfad: ``Jetzt`` + Koordinaten in EINER Nachricht -- der Fix wird
-    vor der Antwort aufgenommen, der Nowcast laeuft am gesnappten Fix statt an
-    der Planposition (~2,7 km weiter suedlich)."""
+    vor der Antwort aufgenommen. ``Jetzt`` misst zur Poll-Zeit 09:00, der
+    Journal-Eintrag ist 08:45 gemeldet: Soll ist Fix + 15 min Plan-Tempo
+    (~350 m strecken-weiter), weder der eingefrorene Fix noch die
+    Planposition (~3 km weiter suedlich)."""
     recorder, settings = lauf
     nutzer = _Nutzer(user_ids())
+    soll = _soll_nach_meldung(_VARIANTEN, "5600203", _JETZT)
     plan = position_at_time(
         *_aktiv(nutzer), _JETZT,
     )
-    assert abstand_m(plan, ECHT_HEUTE_KOORD) > 1000.0, "Testaufbau: Plan muss deutlich daneben liegen"
+    assert abstand_m(plan, soll) > 1000.0, "Testaufbau: Plan muss deutlich daneben liegen"
     calls: list = []
     monkeypatch.setattr("services.radar_service.RadarNowcastService", _aufzeichnender_radar_typ(calls))
 
@@ -282,19 +374,23 @@ def test_ac4_jetzt_mit_koordinaten_misst_am_fix(lauf, user_ids, monkeypatch):
     _gelernt(recorder, nutzer)
     assert recorder.premium_sms_out, "Testaufbau: Jetzt-Antwort fehlt"
     assert calls, "Testaufbau: Jetzt hat keinen Nowcast abgerufen"
-    assert abstand_m((calls[0]["lat"], calls[0]["lon"]), ECHT_HEUTE_KOORD) <= _SNAP_TOL_M, (
-        f"AC-4: Jetzt misst an {calls[0]} statt am Fix {ECHT_HEUTE_KOORD} (Plan: {plan})"
+    ist = (calls[0]["lat"], calls[0]["lon"])
+    assert abstand_m(ist, soll) <= toleranz_fortschreibung(soll, ECHT_HEUTE_KOORD), (
+        f"AC-4: Jetzt misst an {calls[0]} statt an Fix + Planfortschritt {soll} -- "
+        f"{abstand_m(ist, ECHT_HEUTE_KOORD):.0f} m vom Fix (0 m = eingefroren; Plan: {plan})"
     )
 
 
-def test_ac4_strecke_mit_koordinaten_misst_ab_dem_fix(lauf, user_ids, monkeypatch):
+def test_ac4_strecke_mit_koordinaten_misst_ab_der_fortgeschriebenen_position(lauf, user_ids, monkeypatch):
     """Befehlspfad ``strecke`` (``points_along_remaining_route``): der erste
-    Messpunkt liegt am gesnappten Fix, alle Folgepunkte noerdlich davon
-    (Richtung Ziel) -- keiner mehr an der Planposition."""
+    Messpunkt liegt am Fix + Planfortschritt seit der Meldung (08:45 -> 09:00),
+    alle Folgepunkte noerdlich davon (Richtung Ziel) -- keiner mehr an der
+    Planposition oder hinter der fortgeschriebenen Position."""
     recorder, settings = lauf
     nutzer = _Nutzer(user_ids())
+    soll = _soll_nach_meldung(_VARIANTEN, "5600204", _JETZT)
     plan = position_at_time(*_aktiv(nutzer), _JETZT)
-    assert abstand_m(plan, ECHT_HEUTE_KOORD) > 1000.0, "Testaufbau: Plan muss deutlich daneben liegen"
+    assert abstand_m(plan, soll) > 1000.0, "Testaufbau: Plan muss deutlich daneben liegen"
     calls: list = []
     monkeypatch.setattr("services.radar_service.RadarNowcastService", _aufzeichnender_radar_typ(calls))
 
@@ -304,29 +400,37 @@ def test_ac4_strecke_mit_koordinaten_misst_ab_dem_fix(lauf, user_ids, monkeypatc
     _gelernt(recorder, nutzer)
     assert recorder.premium_sms_out, "Testaufbau: Strecke-Antwort fehlt"
     assert calls, "Testaufbau: Strecke hat keinen Nowcast abgerufen"
-    assert abstand_m((calls[0]["lat"], calls[0]["lon"]), ECHT_HEUTE_KOORD) <= _SNAP_TOL_M, (
-        f"AC-4: Strecke misst zuerst an {calls[0]} statt am Fix {ECHT_HEUTE_KOORD} (Plan: {plan})"
+    ist = (calls[0]["lat"], calls[0]["lon"])
+    tol_m = toleranz_fortschreibung(soll, ECHT_HEUTE_KOORD)
+    assert abstand_m(ist, soll) <= tol_m, (
+        f"AC-4: Strecke misst zuerst an {calls[0]} statt an Fix + Planfortschritt {soll} -- "
+        f"{abstand_m(ist, ECHT_HEUTE_KOORD):.0f} m vom Fix (0 m = eingefroren; Plan: {plan})"
     )
-    assert all(c["lat"] >= ECHT_HEUTE_KOORD[0] - 1e-6 for c in calls), (
-        f"AC-4: Strecke misst hinter dem Fix: {calls}"
+    tol_grad = tol_m / 111_195.0  # Meridian: ~111,195 km je Grad Breite
+    assert all(c["lat"] >= soll[0] - tol_grad for c in calls), (
+        f"AC-4: Strecke misst hinter der fortgeschriebenen Position {soll}: {calls}"
     )
 
 
-def test_ac4_heute_briefing_starkregen_hinweis_misst_am_fix(lauf, user_ids, monkeypatch):
+def test_ac4_heute_briefing_starkregen_hinweis_misst_an_der_fortgeschriebenen_position(
+    lauf, user_ids, monkeypatch,
+):
     """Briefingpfad: das per ``Heute`` ausgeloeste Briefing ruft fuer den
     Starkregen-Kurzfristhinweis (``trip_report_scheduler._build_starkregen_hint``,
-    ``position_at_time`` zur Fenstermitte) EINEN Nowcast ab -- gemessen 26.10.
-    an der Planposition (46.63125). Mit Fix muss er am Fix liegen."""
+    ``position_at_time`` zur Fenstermitte ``jetzt + NOWCAST_HORIZON_MIN // 2``)
+    EINEN Nowcast ab -- gemessen 26.10. an der Planposition (46.63125). Mit
+    Fix (gemeldet 08:45) liegt er am Fix + Planfortschritt bis zur
+    Fenstermitte (10:30, ~2,4 km strecken-weiter als der Fix)."""
     from datetime import timedelta
 
     from services import radar_service as radar_service_mod
 
     recorder, settings = lauf
     nutzer = _Nutzer(user_ids())
-    plan = position_at_time(
-        *_aktiv(nutzer), _JETZT + timedelta(minutes=radar_service_mod.NOWCAST_HORIZON_MIN // 2),
-    )
-    assert abstand_m(plan, ECHT_HEUTE_KOORD) > 300.0, "Testaufbau: Plan muss messbar daneben liegen"
+    fenstermitte = _JETZT + timedelta(minutes=radar_service_mod.NOWCAST_HORIZON_MIN // 2)
+    soll = _soll_nach_meldung(_ECHT, "5600101", fenstermitte)
+    plan = position_at_time(*_aktiv(nutzer), fenstermitte)
+    assert abstand_m(plan, soll) > 300.0, "Testaufbau: Plan muss messbar daneben liegen"
     calls: list = []
     monkeypatch.setattr("services.radar_service.RadarNowcastService", _aufzeichnender_radar_typ(calls))
 
@@ -335,8 +439,10 @@ def test_ac4_heute_briefing_starkregen_hinweis_misst_am_fix(lauf, user_ids, monk
 
     _gelernt(recorder, nutzer)
     assert calls, "Testaufbau: das Heute-Briefing hat keinen Nowcast abgerufen"
-    assert abstand_m((calls[0]["lat"], calls[0]["lon"]), ECHT_HEUTE_KOORD) <= _SNAP_TOL_M, (
-        f"AC-4: Briefing-Hinweis misst an {calls[0]} statt am Fix {ECHT_HEUTE_KOORD} (Plan: {plan})"
+    ist = (calls[0]["lat"], calls[0]["lon"])
+    assert abstand_m(ist, soll) <= toleranz_fortschreibung(soll, ECHT_HEUTE_KOORD), (
+        f"AC-4: Briefing-Hinweis misst an {calls[0]} statt an Fix + Planfortschritt {soll} -- "
+        f"{abstand_m(ist, ECHT_HEUTE_KOORD):.0f} m vom Fix (0 m = eingefroren; Plan: {plan})"
     )
 
 

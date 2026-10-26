@@ -605,6 +605,11 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        am Horizont abgeschnittenem Fenster; der Alarmkopf nennt bei Beginn > 60 Min die Uhrzeit
        statt „in N Min" (alle vier Kanäle + Ortsvergleich). Spec:
        `docs/specs/modules/feat_2261_a1_radar_vorlauf.md`
+     - **Positionsquelle mit GPS-Fix (Issue #2327, ADR-0102, 2026-10-26):** `position_at_time` und
+       `points_with_passage_times` starten bei einem plausiblen Positions-Fix (höchstens 100 m neben
+       der Heute-Etappe, aus einer Premium-SMS mit Koordinaten) und schreiben ihn nach Plan-Tempo bis
+       Etappenende fort; danach bzw. am Folgetag gilt wieder die Planposition. Gespeichert je Nutzer in
+       `data/users/<user_id>/position_fix.json`. Ohne `user_id` unverändert.
      - `tz_for_coords(lat, lon)` bestimmt Tour-Zeitzone; `format_now_text(result, tz=tz)` gibt Onset-Zeit in Tour-TZ aus
      - `build_segment_label()` erzeugt „Etappe N, km X–Y" mit echten Strecken-Kilometern
    - **Kanonischer Render-Pfad (Issue #919):** `check_radar_alerts` konstruiert `AlertMessage(OnsetEvent(...))` und leitet durch dieselben vier Renderer wie der Abweichungs-Alert:

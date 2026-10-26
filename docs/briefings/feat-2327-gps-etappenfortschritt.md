@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/feat_2327_gps_etappenfortschritt.md
-spec_sha256: 19437f81edbb5f582e18383b284e7a6359799834de0b24793e7fe63d4e973691
-spec_frozen_sha256: e892c0ee73e254e86ed05d4c605e0e15386a4e6f94396dc64f8cf4f5c60f73ca
+spec_sha256: 0e1d80857757e1eaeeb842172d95204495e6c184458e407c3aad15a671ce4a2a
+spec_frozen_sha256: 420b5ab7af266416b011fe1f8d4cf672b1c870669f2c2a7aa24bfa058c1bebca
 ---
 
 # PO-Briefing: feat-2327-gps-etappenfortschritt
@@ -12,22 +12,22 @@ spec_frozen_sha256: e892c0ee73e254e86ed05d4c605e0e15386a4e6f94396dc64f8cf4f5c60f
 
 ## Was gebaut wird
 
-Meldet eine Garmin-Nachricht Koordinaten nahe der Route, rechnen Wetter-Prognosen und Alarme in allen vier Kanälen ab dieser Position.
+Meldet eine Garmin-Nachricht Koordinaten auf der Trip-Route, rechnen Prognosen und Alarme in allen vier Kanälen von dort weiter.
 
 ## Definition of Done
 
-Eine Nachricht mit Koordinaten höchstens 100 m neben dem Trip verschiebt die Prognosen; weiter entfernte Koordinaten ändern nichts.
+Koordinaten höchstens 100 m neben der heutigen Etappe verschieben Prognosen und Alarme; weiter entfernte Koordinaten ändern nichts.
 
 ## Wie geprüft wird
 
-Tests mit den zwei echten Nachrichten prüfen 99/101-Meter-Grenze, Ablauf und Nutzertrennung, nicht aber echte Mail-Zustellung.
+Tests mit den zwei echten Nachrichten prüfen 100-Meter-Grenze, Weiterwandern, Ablauf und Nutzertrennung, nicht aber echte Zustellung.
 
 ## Kritische Anmerkungen
 
-- Gültigkeitsdauer, stille Positions-Nachrichten und Mehrdeutigkeit hat der Tech Lead festgelegt, nicht Sie.
-- Etappen ohne GPX-Datei bleiben wirkungslos; dort wird kein Fix übernommen.
-- Gleiches Verhalten in allen vier Kanälen ist nur indirekt getestet.
+- Issue #2327 war nicht lesbar; Deckung der Anfrage ungeprüft.
+- Position wandert nach Plan-Tempo weiter; Gültigkeit, stille Nachrichten, Mehrdeutigkeit hat der Tech Lead festgelegt.
+- Etappen ohne GPX bleiben wirkungslos; Kanalgleichheit nur indirekt getestet.
 
 ## Freigabe-Frage
 
-Soll die GPS-Position die Planposition ersetzen, mit den genannten Festlegungen?
+Soll die gemeldete Position die Planposition ersetzen und ab Meldezeit nach Plan-Tempo weiterwandern, mit den genannten Festlegungen?

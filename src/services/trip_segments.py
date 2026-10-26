@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import app.day_window as day_window
 from app.day_window import resolve_configured_window
 from app.models import GPXPoint, TripSegment
-from utils.geo import haversine_km
+from utils.geo import haversine_km, point_to_segment_m
 from utils.timezone import local_dt, to_utc, tz_for_coords
 
 if TYPE_CHECKING:
@@ -558,8 +558,112 @@ def _interpolate_point(seg: TripSegment, at: datetime) -> GPXPoint:
     )
 
 
+def _fix_points(
+    trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+    user_id: Optional[str],
+) -> Optional[List[Tuple[GPXPoint, datetime]]]:
+    """Punkte ab einem gueltigen GPS-Fix (Issue #2327, ADR-0102) -- oder
+    ``None``, dann gilt unveraendert die Planposition.
+
+    Gueltig nur mit ``user_id`` (nie nutzeruebergreifend), fuer denselben
+    Trip und dasselbe Etappen-Datum und solange die Etappe laeuft -- auch
+    in einer geplanten Rast (Segment ohne Strecke). Erst nach Ankunft
+    (Ziel-Segment) oder am Folgetag faellt die Quelle auf die Planposition
+    zurueck (Spec AC-5).
+
+    Der Fix friert die Position NICHT ein (Spec AC-4, Changelog 26.10.): bei
+    ``at <= observed_at`` ist der erste Punkt der gesnappte Fix selbst,
+    danach wandert er nach Plan-Tempo weiter (``_fix_fortschreiben``) und
+    endet spaetestens am Etappenende. Die Folgepunkte laufen wie bei
+    ``points_from_km()`` ab dieser Position entlang der Reststrecke; ihre
+    Durchgangszeiten sind die Planzeiten, um denselben Versatz verschoben.
+    """
+    if not user_id or not isinstance(active.segment_id, int):
+        return None
+    from services.position_fix import load_position_fix
+
+    fix = load_position_fix(user_id, getattr(trip, "id", None), segment_date)
+    if fix is None:
+        return None
+    bewegt = [
+        s for s in convert_trip_to_segments(trip, segment_date)
+        if isinstance(s.segment_id, int) and s.distance_km > 0.0
+    ]
+    treffer = _fix_auf_segment(fix, bewegt)
+    if treffer is None:
+        return None
+    seg, frac = treffer
+    vorlauf = _seit_meldung(fix, at)
+    if vorlauf > timedelta(0):
+        seg, frac = _fix_fortschreiben(bewegt, seg, frac, vorlauf)
+        start = _lerp_point(seg.start_point, seg.end_point, frac)
+    else:
+        auf_linie = _lerp_point(seg.start_point, seg.end_point, frac)
+        start = GPXPoint(
+            lat=fix["lat"], lon=fix["lon"], elevation_m=auf_linie.elevation_m,
+            distance_from_start_km=auf_linie.distance_from_start_km,
+        )
+    rest_km = (1.0 - frac) * seg.distance_km
+    if rest_km < RADAR_ZONE_POINT_SPACING_KM:
+        return [(start, at)]
+    anzahl = min(RADAR_ZONE_MAX_POINTS, int(rest_km // RADAR_ZONE_POINT_SPACING_KM) + 1)
+    # Plan-Restzeit ab der Position (Planzeit, nicht Wanduhr), auf ``at`` verschoben.
+    restzeit = (1.0 - frac) * (seg.end_time - seg.start_time)
+    ergebnis = [(start, at)]
+    for i in range(1, anzahl):
+        anteil = (i * RADAR_ZONE_POINT_SPACING_KM) / rest_km
+        ergebnis.append((_lerp_point(start, seg.end_point, anteil), at + anteil * restzeit))
+    return ergebnis
+
+
+def _fix_auf_segment(
+    fix: dict, bewegt: List[TripSegment],
+) -> Optional[Tuple[TripSegment, float]]:
+    """Bewegtes Segment, dessen Strecke dem Fix am naechsten liegt, und der
+    Streckenanteil ``frac`` des Lotfusspunkts darauf (Issue #2327)."""
+    best = None
+    for seg in bewegt:
+        d_m, frac = point_to_segment_m(
+            fix["lat"], fix["lon"], seg.start_point.lat, seg.start_point.lon,
+            seg.end_point.lat, seg.end_point.lon,
+        )
+        if best is None or d_m < best[0]:
+            best = (d_m, frac, seg)
+    return None if best is None else (best[2], best[1])
+
+
+def _seit_meldung(fix: dict, at: datetime) -> timedelta:
+    """Zeit zwischen Meldung (``observed_at`` des Fixes) und ``at``; nie
+    negativ -- vor dem Meldezeitpunkt wird nicht rueckwaerts gerechnet.
+    Unlesbarer Zeitstempel -> 0 (der Fix gilt dann unveraendert)."""
+    try:
+        gemeldet = datetime.fromisoformat(str(fix.get("observed_at")))
+        return max(at - gemeldet, timedelta(0))
+    except (TypeError, ValueError):
+        return timedelta(0)
+
+
+def _fix_fortschreiben(
+    bewegt: List[TripSegment], seg: TripSegment, frac: float, vorlauf: timedelta,
+) -> Tuple[TripSegment, float]:
+    """Fix-Position um ``vorlauf`` Plan-Tempo entlang der Strecke weiterschieben
+    (Issue #2327, AC-4): der Fix entspricht der Planzeit ``seg.start_time +
+    frac * Segmentdauer``; von dort laeuft die Planzeit um ``vorlauf`` weiter
+    -- dieselbe Segment-Zeitgeometrie wie ``_interpolate_point()``, kein
+    zweites Zeitmodell, keine km-Skala. Begrenzt auf das Etappenende (Ende
+    des letzten bewegten Segments des Etappen-Datums)."""
+    planzeit = seg.start_time + frac * (seg.end_time - seg.start_time) + vorlauf
+    for kandidat in bewegt:
+        if planzeit <= kandidat.end_time:
+            span_s = (kandidat.end_time - kandidat.start_time).total_seconds()
+            p = 0.0 if span_s <= 0 else (planzeit - kandidat.start_time).total_seconds() / span_s
+            return kandidat, max(0.0, min(1.0, p))
+    return bewegt[-1], 1.0
+
+
 def position_at_time(
     trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+    *, user_id: Optional[str] = None,
 ) -> GPXPoint:
     """Interpolierte Position innerhalb/nach dem aktiven Segment zum Zeitpunkt `at`.
 
@@ -577,7 +681,16 @@ def position_at_time(
 
     Die Hoehe wird roh interpoliert (keine Rundung) — die Normalisierung auf
     ganze Meter fuer ``get_nowcast(elevation_m=...)`` wohnt an der Aufrufstelle.
+
+    Issue #2327 (ADR-0102): mit ``user_id`` und gueltigem GPS-Fix ist das
+    Ergebnis der gesnappte Fix, ab dem Meldezeitpunkt nach Plan-Tempo
+    fortgeschrieben und auf das Etappenende begrenzt (``_fix_points``);
+    ohne ``user_id`` bleibt alles bit-identisch zum Stand davor.
     """
+    fix_punkte = _fix_points(trip, active, segment_date, at, user_id)
+    if fix_punkte is not None:
+        return fix_punkte[0][0]
+
     # 1. Ortsfestes Ziel-Segment: dort bewegt sich der Wanderer nicht.
     if not isinstance(active.segment_id, int) or active.distance_km == 0.0:
         return active.start_point
@@ -682,6 +795,7 @@ def _remaining_km(active: TripSegment, at: datetime) -> float:
 
 def points_along_remaining_route(
     trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+    *, user_id: Optional[str] = None,
 ) -> List[GPXPoint]:
     """Bis zu ``RADAR_ZONE_MAX_POINTS`` Punkte im Abstand
     ``RADAR_ZONE_POINT_SPACING_KM`` entlang der Reststrecke der AKTIVEN Etappe
@@ -701,11 +815,14 @@ def points_along_remaining_route(
     Issue #2261: duenne Huelle um ``points_with_passage_times()`` — EINE
     Geometrie, keine zweite Kopie, die abdriften koennte.
     """
-    return [p for p, _t in points_with_passage_times(trip, active, segment_date, at)]
+    return [
+        p for p, _t in points_with_passage_times(trip, active, segment_date, at, user_id=user_id)
+    ]
 
 
 def points_with_passage_times(
     trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+    *, user_id: Optional[str] = None,
 ) -> List[Tuple[GPXPoint, datetime]]:
     """Dieselben Punkte wie ``points_along_remaining_route()``, je Punkt mit
     der Durchgangszeit laut Zeitplan (Issue #2261 A-1, R3 — Messort zur
@@ -714,9 +831,16 @@ def points_with_passage_times(
     Annahme wie ``_remaining_km()``: lineare Zeitinterpolation ueber den
     Streckenanteil. ``t0 = max(at, active.start_time)``, ``p_k = t0 +
     Anteil_k * (active.end_time - t0)`` mit ``Anteil_k = k * Punktabstand /
-    Reststrecke`` (0 fuer den ersten Punkt). Planposition ist die legitime
-    Positionsquelle — es gibt kein GPS.
+    Reststrecke`` (0 fuer den ersten Punkt). Quelle ist die Planposition --
+    AUSSER ein plausibler GPS-Fix aus einer Premium-SMS liegt fuer diesen
+    Nutzer, Trip und dieses Etappen-Datum vor (Issue #2327, ADR-0102): dann
+    beginnen die Punkte am gesnappten Fix, ab dem Meldezeitpunkt nach
+    Plan-Tempo fortgeschrieben und auf das Etappenende begrenzt
+    (``_fix_points``).
     """
+    fix_punkte = _fix_points(trip, active, segment_date, at, user_id)
+    if fix_punkte is not None:
+        return fix_punkte
     start = position_at_time(trip, active, segment_date, at)
     t0 = max(at, active.start_time)
     rest_km = _remaining_km(active, at)

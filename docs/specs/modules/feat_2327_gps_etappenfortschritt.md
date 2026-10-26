@@ -158,9 +158,12 @@ Fortschritts-km, Trip-ID, Etappen-Datum und Zeitstempel wird eine Zeile je Nutze
 ein juengerer gespeicherter Fix wird von einem aelteren nicht ersetzt (Entscheidung 3).
 
 **Wirkung.** `position_at_time` und `points_with_passage_times` pruefen zuerst, ob fuer diesen
-Trip und dieses Etappen-Datum ein gueltiger Fix vorliegt (Entscheidung 1); dann ist der erste Punkt
-der gesnappte Fix, die Folgepunkte laufen wie bei `points_from_km` ab Fortschritts-km entlang der
-Reststrecke. Ohne Fix ist das Ergebnis bit-identisch zum Stand vor dieser Scheibe.
+Trip und dieses Etappen-Datum ein gueltiger Fix vorliegt (Entscheidung 1); dann gilt der gesnappte
+Fix als Startpunkt zum Meldezeitpunkt `observed_at`. Fuer den Abfragezeitpunkt `at` wandert die
+Position nach Plan-Tempo entlang der Strecke weiter (Fix-Position plus Planfortschritt zwischen
+`observed_at` und `at`, begrenzt auf das Etappenende); bei `at <= observed_at` ist der erste
+Punkt der Fix selbst. Die Folgepunkte laufen wie bei `points_from_km` entlang der Reststrecke ab
+dieser fortgeschriebenen Position. Ohne Fix ist das Ergebnis bit-identisch zum Stand vor dieser Scheibe.
 
 ## Expected Behavior
 
@@ -182,7 +185,7 @@ Reststrecke. Ohne Fix ist das Ergebnis bit-identisch zum Stand vor dieser Scheib
 - **AC-3:** Given eine Heute-Etappe mit langem Streckenabschnitt zwischen zwei Trackpunkten / When ein Punkt 99 m neben dem Abschnitt gemeldet wird und ein zweiter Punkt 101 m daneben / Then wird der 99-m-Punkt als Fortschritt uebernommen und der 101-m-Punkt verworfen (und geloggt); der Abstand wird zur Strecke gemessen, nicht zum naechsten Trackpunkt.
   - Test: `test_position_fix_snapping.py` mit synthetischem Track und Punkten bei 99 m / 101 m; ein dritter Punkt mitten auf dem Abschnitt, weit von beiden Trackpunkten, wird akzeptiert.
 
-- **AC-4:** Given ein gueltiger Fix fuer die Heute-Etappe / When Briefing, Alarm-Messpunkt, Radar und Befehl die Position abrufen / Then liegt der erste Messpunkt am gesnappten Fix und die Folgepunkte laufen von dort entlang der Reststrecke, nicht ab der Planposition.
+- **AC-4:** Given ein gueltiger Fix fuer die Heute-Etappe / When Briefing, Alarm-Messpunkt, Radar und Befehl die Position abrufen / Then liegt der erste Messpunkt bei Abfrage zum Meldezeitpunkt am gesnappten Fix; bei spaeterer Abfrage ist er um den Planfortschritt seit der Meldung (Plan-Tempo, begrenzt auf das Etappenende) entlang der Strecke weitergewandert. Die Folgepunkte laufen von dort entlang der Reststrecke, nicht ab der Planposition.
   - Test: Echter Trip, gestellte Uhr, Planposition und Fix liegen deutlich auseinander; geprueft werden die Koordinaten, die `position_at_time` und `points_with_passage_times` liefern, sowie die Argumente des Nowcast-Abrufs im echten `check_radar_alerts()`.
 
 - **AC-5:** Given ein Fix vom Etappentag / When die Etappe endet oder der Tag wechselt / Then faellt die Positionsquelle auf die Planposition zurueck, ohne dass der alte Fix die naechste Etappe beeinflusst.
@@ -214,6 +217,9 @@ Reststrecke. Ohne Fix ist das Ergebnis bit-identisch zum Stand vor dieser Scheib
 - Die 100-m-Grenze ist eine feste Konstante; GPS-Ungenauigkeit im Gelaende wird nicht modelliert.
 - Wer die Route verlaesst (Abstecher > 100 m), bleibt bis zum naechsten plausiblen Fix auf der letzten Position bzw. der Planposition.
 - Etappen ohne Nutzer-GPX (nur Wegpunkte) haben keinen Track zum Snappen; dort wird kein Fix uebernommen.
+- Das Etappenwetter im Briefing-Hauptteil (Stundentabellen) arbeitet etappenbasiert ueber die Segment-Startpunkte und liest die Positionsquelle nicht; im Briefing wirkt der Fix nur ueber den Heute-Starkregen-Hinweis (`trip_report_scheduler.py`). Das war schon vor dieser Scheibe so und ist keine Regression.
+- Direkt nach der Meldung kann die Position um bis zu 100 m springen (Fix liegt auf dem GPX-Track, die Fortschreibung rechnet auf der Linie zwischen den Wegpunkten). Die Folgepunkte enden am Ende des aktuellen Segments (Bestand).
+- AC-8 ist ueber die zentrale Positionsquelle belegt (alle Kanaele lesen dieselbe Quelle); ein eigener Test je Kanal-Renderer existiert nicht. Die Zeitzone des Journal-Zeitstempels (Europe/Berlin) ist nur gegen die Fixture-Werte abgesichert.
 
 ## Nicht Ziel
 
@@ -234,4 +240,5 @@ Reststrecke. Ohne Fix ist das Ergebnis bit-identisch zum Stand vor dieser Scheib
 
 ## Changelog
 
+- 2026-10-26: AC-4 und "Wirkung" geaendert (PO-Entscheid nach Adversary-Finding F006): der Fix friert die Position nicht ein, sondern schreibt sie ab `observed_at` nach Plan-Tempo fort; bei Abfrage zum Meldezeitpunkt ist die Position der Fix. AC-3/5/6/7/8/9 inhaltlich unveraendert.
 - 2026-10-26: Initial spec created (Issue #2327, aus `docs/context/feat-2327-gps-etappenfortschritt.md`; Koordinatenformat durch zwei echte Nachrichten belegt; Detailentscheidungen als Tech-Lead-Festlegung).

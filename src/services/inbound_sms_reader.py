@@ -46,6 +46,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -122,6 +123,36 @@ def split_link_code(text: str) -> tuple[str, str]:
     if teile and _LINK_CODE_PATTERN.match(teile[0]):
         return teile[0].upper(), (teile[1].strip() if len(teile) > 1 else "")
     return "", befehl
+
+
+_POSITION_PATTERN = re.compile(r"\(\s*([-+]?\d+\.\d+)\s*,\s*([-+]?\d+\.\d+)\s*\)")
+
+
+def extract_position(text: str) -> tuple[float, float] | None:
+    """Koordinaten ``(lat, lon)`` aus einer Garmin-Nachricht (Issue #2327).
+
+    Steht neben :func:`split_link_code`, zerlegt aber NICHT den Befehlstext:
+    gelesen wird die LETZTE Klammer ``(<Zahl>, <Zahl>)`` mit Dezimalpunkt.
+    Ohne Klammer, mit Unsinn darin oder ausserhalb ``|lat| <= 90`` /
+    ``|lon| <= 180`` -> ``None``; der Befehl laeuft dann unveraendert weiter.
+    """
+    treffer = _POSITION_PATTERN.findall(text or "")
+    if not treffer:
+        return None
+    lat, lon = (float(v) for v in treffer[-1])
+    if abs(lat) > 90.0 or abs(lon) > 180.0:
+        return None
+    return lat, lon
+
+
+def _journal_time(message: dict) -> datetime:
+    """Zeitstempel des Journal-Eintrags (seven.io: Europe/Berlin ohne Zone),
+    sonst der Verarbeitungszeitpunkt (Spec "Offene Punkte", #2327)."""
+    try:
+        naiv = datetime.strptime(str(message.get("timestamp")), "%Y-%m-%d %H:%M:%S")
+        return naiv.replace(tzinfo=ZoneInfo("Europe/Berlin")).astimezone(timezone.utc)
+    except (TypeError, ValueError):
+        return datetime.now(timezone.utc)
 
 
 def _origin() -> str:
@@ -281,7 +312,10 @@ class InboundSmsReader:
                     # "ok" auf "partial" (AC-6).
                     try:
                         with befehl_messung("premium_sms"):
-                            self._verarbeite_befehl(settings, text, sender, response)
+                            self._verarbeite_befehl(
+                                settings, text, sender, response,
+                                observed_at=_journal_time(message),
+                            )
                     except Exception as e:
                         logger.warning(
                             "Premium-SMS-Kommandoverarbeitung fehlgeschlagen "
@@ -315,6 +349,7 @@ class InboundSmsReader:
 
     def _verarbeite_befehl(
         self, settings: Settings, text: str, sender: str, response,
+        *, observed_at: datetime | None = None,
     ) -> None:
         """Issue #2184 (Epic #2133 S4): den Befehlstext einer Garmin-Nachricht
         verarbeiten und die Antwort per Premium-SMS zurueckschicken.
@@ -339,6 +374,13 @@ class InboundSmsReader:
         # Befehl (AC-12).
         _, befehl = split_link_code(text)
         now_utc = datetime.now(timezone.utc)
+        # Issue #2327 (ADR-0102): Koordinaten erst NACH der Zuordnung und VOR
+        # der Befehlsantwort aufnehmen -- sonst misst z.B. "Jetzt" nicht am Fix.
+        position = extract_position(text)
+        if position is not None:
+            self._nimm_fix_auf(user_id, position, observed_at or now_utc, sender)
+            if not befehl:
+                return  # reine Positions-SMS: keine bezahlte Antwort (Entscheidung 2)
         user_settings = settings.with_user_profile(user_id)
 
         # Issue #2282 Abschnitt 2/4: Satelliten-Text traegt normalerweise
@@ -413,6 +455,19 @@ class InboundSmsReader:
             NotificationService(
                 user_settings, user_id=user_id,
             ).send_command_reply_premium_sms(result, user_settings)
+
+    @staticmethod
+    def _nimm_fix_auf(user_id: str, position, observed_at: datetime, sender: str) -> None:
+        """Fix aufnehmen, fail-soft: ein Fehler kostet nie die Befehlsantwort."""
+        from services.position_fix import record_position_fix
+
+        try:
+            record_position_fix(user_id, position[0], position[1], observed_at)
+        except Exception as e:
+            logger.warning(
+                "GPS-Fix fuer maskierte Nummer %s nicht aufgenommen: %s",
+                _mask(sender), e,
+            )
 
     def _fetch_journal(self, api_key: str) -> list[dict] | None:
         """GET journal/inbound. None bei Fehler (fail-soft, Schritt 5)."""
