@@ -105,7 +105,6 @@ from output.renderers.alert.model import AlertEvent, AlertMessage, side_label
 from output.renderers.alert.render import (
     _HANDLED_UNITS, render_email, render_sms, render_subject, render_telegram,
 )
-from output.channels.premium_sms import PremiumSmsOutput
 from output.renderers.channel_layout import (
     CHANNEL_LIMITS, VISIBILITY_GATE_IDS, render_for_channel,
 )

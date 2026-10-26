@@ -161,7 +161,10 @@ def frisches_profil(*, tier: str = "premium") -> str:
         "sms_to": "+490000000009", "sms_verified_number": "+490000000009",
         "sms_verified_at": "2026-01-01T00:00:00Z",
         "premium_sms_reply_to": "+490000000008",
-        "premium_sms_reply_at": datetime.now(timezone.utc).isoformat(),
+        # 5 Minuten zurueck: Tests frieren die Uhr oft auf die volle Minute
+        # (Sekunden abgeschnitten) -- ein sekundengenaues "jetzt" laege dann
+        # in der Zukunft und wird vom Produkt zu Recht abgewiesen (#2231).
+        "premium_sms_reply_at": (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(),
     }))
     return uid
 
