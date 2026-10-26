@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 
 UTC = ZoneInfo("UTC")
 
+# seven.io liefert Journal-Zeitstempel in Berliner Ortszeit ohne Zone (Eingangs-
+# Eigenschaft des Anbieters, keine Ausgabezone; #2327).
+SEVEN_IO_JOURNAL_TZ = ZoneInfo("Europe/Berlin")
+
 _tf_instance = None
 _tf_lock = Lock()
 

@@ -27,7 +27,7 @@ from typing import Dict, List, Optional
 
 from app.loader import get_data_dir, load_all_trips
 from utils.geo import point_to_segment_m
-from utils.timezone import tz_for_coords
+from utils.timezone import local_dt, tz_for_coords
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def _heute_etappe(trip, observed_at: datetime):
         wps = stage.waypoints or []
         if len(wps) < 2:
             continue
-        ortstag = observed_at.astimezone(tz_for_coords(wps[0].lat, wps[0].lon)).date()
+        ortstag = local_dt(observed_at, tz_for_coords(wps[0].lat, wps[0].lon)).date()
         if stage.date == ortstag:
             return stage
     return None

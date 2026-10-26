@@ -46,7 +46,6 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -58,6 +57,7 @@ from app.loader import (
     load_compare_presets,
 )
 from app.origin_guard import classify_origin
+from utils.timezone import SEVEN_IO_JOURNAL_TZ, to_utc
 from services.notification_service import NotificationService
 from services.trip_command_processor import (
     CommandResult,
@@ -150,7 +150,7 @@ def _journal_time(message: dict) -> datetime:
     sonst der Verarbeitungszeitpunkt (Spec "Offene Punkte", #2327)."""
     try:
         naiv = datetime.strptime(str(message.get("timestamp")), "%Y-%m-%d %H:%M:%S")
-        return naiv.replace(tzinfo=ZoneInfo("Europe/Berlin")).astimezone(timezone.utc)
+        return to_utc(naiv.replace(tzinfo=SEVEN_IO_JOURNAL_TZ))
     except (TypeError, ValueError):
         return datetime.now(timezone.utc)
 
