@@ -7,7 +7,7 @@ Der "ab jetzt"-Clamp aus AC-31 (``TripReportSchedulerService.
 _send_trip_report_outcome``, Zweig ``elif on_demand and report_type ==
 "morning":``) ist an ``on_demand=True`` gebunden. Dieses Flag setzt
 AUSSCHLIESSLICH ``send_on_demand_report()`` -- jeder andere Aufrufer
-(regulaerer Cron-Versand ``send_reports``/``send_due_reports``, Catchup-
+(regulaerer Cron-Versand ``send_due_reports``, Catchup-
 Nachlieferung ``_process_pending_markers``, Test-Versand-Knopf
 ``send_test_report``) laesst ``on_demand`` auf seinem Default ``False``.
 
