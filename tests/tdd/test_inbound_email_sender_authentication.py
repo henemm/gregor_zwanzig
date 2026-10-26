@@ -172,6 +172,7 @@ class _RecordingNotificationService(NotificationService):
 
     def send_command_reply_email(self, result, settings):
         self.replies.append(result)
+        return True  # #1405 S4b AC-23: Vertrag "-> bool" (zugestellt)
 
 
 def _run_process_single(reader: InboundEmailReader, settings: Settings, msg) -> int:
@@ -218,7 +219,7 @@ def test_ac1_spoofed_sender_without_spf_dkim_pass_is_rejected(tmp_path, monkeypa
     result = _run_process_single(reader, settings, msg)
 
     after = _trip_file_bytes(victim, "t-victim")
-    assert result == 0, f"#2143 AC-1: gespoofte Mail wurde verarbeitet (return={result})"
+    assert result == (0, 0), f"#2143 AC-1: gespoofte Mail wurde verarbeitet (return={result})"  # #1405 S4b AC-23
     assert after == before, "#2143 AC-1: Trip von 'victim' wurde durch gespoofte Mail veraendert"
     assert not _RecordingProcessor.calls, "#2143 AC-1: TripCommandProcessor wurde trotz Spoof aufgerufen"
     assert not reader._notification_service.replies, "#2143 AC-1: Reply wurde trotz Spoof gesendet"
@@ -250,7 +251,7 @@ def test_ac2_command_from_user_a_never_touches_user_b_trip(tmp_path, monkeypatch
     result = _run_process_single(reader, settings, msg)
 
     after_b = _trip_file_bytes("userb", "t-b")
-    assert result == 1, f"#2143 AC-2: legitimes Kommando von A wurde nicht verarbeitet (return={result})"
+    assert result == (1, 0), f"#2143 AC-2: legitimes Kommando von A wurde nicht verarbeitet (return={result})"  # #1405 S4b AC-23
     assert after_b == before_b, "#2143 AC-2: Trip von Nutzer B wurde durch Kommando von A veraendert"
     assert len(_RecordingProcessor.calls) == 1
     assert _RecordingProcessor.calls[0].user_id == "usera", (
@@ -282,7 +283,7 @@ def test_ac3_unverified_profile_is_rejected_despite_valid_spf_dkim(tmp_path, mon
     msg = _msg(addr, "UnverifiedTrip", body="status", auth_header=AR_PASS)
     result = _run_process_single(reader, settings, msg)
 
-    assert result == 0, f"#2143 AC-3: unverifizierter Absender wurde verarbeitet (return={result})"
+    assert result == (0, 0), f"#2143 AC-3: unverifizierter Absender wurde verarbeitet (return={result})"  # #1405 S4b AC-23
     assert not _RecordingProcessor.calls, "#2143 AC-3: Processor wurde trotz fehlender Verifizierung aufgerufen"
     assert not reader._notification_service.replies, "#2143 AC-3: Reply trotz fehlender Verifizierung gesendet"
 
@@ -344,7 +345,7 @@ def test_ac4_default_gate_is_the_sole_blocker_when_base_settings_are_otherwise_v
     msg = _msg(shared_addr, "FrankTrip", body="status", auth_header=AR_PASS)
     result = _run_process_single(reader, settings, msg)
 
-    assert result == 0, (
+    assert result == (0, 0), (  # #1405 S4b AC-23: (processed, failed)
         f"#2143 F001: bei mehrdeutigem mail_to muss der 'default'-Gate blocken, "
         f"selbst wenn die Basis-Settings fuer sich genommen bereits gueltig "
         f"waeren (return={result})"
@@ -372,7 +373,7 @@ def test_ac4_ambiguous_sender_rejected_end_to_end(tmp_path, monkeypatch):
     msg = _msg(shared_addr, "CarolTrip", body="status", auth_header=AR_PASS)
     result = _run_process_single(reader, settings, msg)
 
-    assert result == 0, f"#2143 AC-4: mehrdeutiger Absender wurde verarbeitet (return={result})"
+    assert result == (0, 0), f"#2143 AC-4: mehrdeutiger Absender wurde verarbeitet (return={result})"  # #1405 S4b AC-23
     assert not _RecordingProcessor.calls
     assert not reader._notification_service.replies, (
         "#2143 AC-4: Reply an mehrdeutigen Absender gesendet -- Adress-Leak"
@@ -401,7 +402,7 @@ def test_ac6_valid_verified_sender_with_spf_dkim_pass_is_processed(tmp_path, mon
     msg = _msg(addr, "EveTrip", body="status", auth_header=AR_PASS)
     result = _run_process_single(reader, settings, msg)
 
-    assert result == 1, f"#2143 AC-6: gueltiger Absender wurde NICHT verarbeitet (return={result})"
+    assert result == (1, 0), f"#2143 AC-6: gueltiger Absender wurde NICHT verarbeitet (return={result})"  # #1405 S4b AC-23
     assert len(_RecordingProcessor.calls) == 1
     assert len(reader._notification_service.replies) == 1
     assert reader._notification_service.replies[0].trip_name == "EveTrip"

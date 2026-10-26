@@ -127,6 +127,8 @@ class InboundEmailReader:
 
     def __init__(self) -> None:
         self._notification_service: NotificationService | None = None
+        # Issue #1405 S4b: Fehlschlaege des letzten Laufs (Router -> failed).
+        self.last_failed_count = 0
 
     def _ensure_notification_service(self, settings: Settings) -> None:
         """#2151 Scheibe C: den Versanddienst erst mit den vorliegenden
@@ -140,14 +142,28 @@ class InboundEmailReader:
         """
         Read UNSEEN emails, process commands, send confirmations.
         Returns: number of processed commands.
+
+        Issue #1405 S4b: die Fehlschlaege des Laufs (nicht erreichbares
+        Postfach, gescheiterte Verarbeitung, nicht zugestellte Befehlsantwort)
+        stehen danach in ``self.last_failed_count`` (Muster
+        ``InboundSmsReader``); der Router meldet sie als ``failed``. Fehlende
+        Zugangsdaten sind kein Fehler.
         """
+        self.last_failed_count = 0
         imap_user = settings.imap_user or settings.smtp_user
         imap_pass = settings.imap_pass or settings.smtp_pass
         if not imap_user or not imap_pass:
             return 0
 
+        processed, self.last_failed_count = self._poll_inbox(settings, imap_user, imap_pass)
+        return processed
+
+    def _poll_inbox(
+        self, settings: Settings, imap_user: str, imap_pass: str,
+    ) -> tuple[int, int]:
+        """Ein IMAP-Durchgang; liefert ``(processed, failed)``."""
         imap = None
-        processed = 0
+        processed = failed = 0
         try:
             imap_host = settings.imap_host or settings.smtp_host
             imap_port = settings.imap_port
@@ -165,29 +181,36 @@ class InboundEmailReader:
 
             for uid in uids:
                 try:
-                    processed += self._process_single(imap, uid, settings)
+                    done, gescheitert = self._process_single(imap, uid, settings)
+                    processed += done
+                    failed += gescheitert
                 except Exception as e:
                     logger.error(f"Error processing email uid={uid}: {e}")
+                    failed += 1
         except imaplib.IMAP4.error as e:
             logger.error(f"IMAP error: {e}")
+            failed += 1
         except OSError as e:
             logger.error(f"Network error: {e}")
+            failed += 1
         finally:
             if imap:
                 try:
                     imap.logout()
                 except Exception:
                     pass
-        return processed
+        return processed, failed
 
     def _process_single(
         self,
         imap: imaplib.IMAP4_SSL,
         uid: bytes,
         settings: Settings,
-    ) -> int:
-        """Process one email. Returns 1 if command processed, else 0.
-        #2439: umspannt die Verarbeitung mit der Befehls-Messung (Dauer-Zeile)."""
+    ) -> tuple[int, int]:
+        """Process one email. Returns ``(processed, failed)`` -- je 0 oder 1.
+        #2439: umspannt die Verarbeitung mit der Befehls-Messung (Dauer-Zeile).
+        Issue #1405 S4b: ``failed`` = Verarbeitung gescheitert oder
+        Befehlsantwort nicht zugestellt (die Mail ist trotzdem gelesen)."""
         with befehl_messung("email"):
             return self._process_single_inner(imap, uid, settings)
 
@@ -196,7 +219,7 @@ class InboundEmailReader:
         imap: imaplib.IMAP4_SSL,
         uid: bytes,
         settings: Settings,
-    ) -> int:
+    ) -> tuple[int, int]:
         self._ensure_notification_service(settings)
         _, msg_data = imap.fetch(uid, "(RFC822)")
         msg = email.message_from_bytes(msg_data[0][1])
@@ -207,16 +230,16 @@ class InboundEmailReader:
         if _user_id is None:
             logger.warning(f"Unresolved/ambiguous sender: {mask_addr_for_pii_log(from_addr)!r}")
             imap.store(uid, "+FLAGS", "\\Seen")
-            return 0
+            return 0, 0
         from app.loader import is_user_disabled
         if is_user_disabled(_user_id):
             # Issue #2155 S3 (AC-13): gesperrtes Konto -- stumm verwerfen.
             logger.warning(f"Konto gesperrt (disabled), Mail verworfen: {mask_addr_for_pii_log(from_addr)!r}")
             imap.store(uid, "+FLAGS", "\\Seen")
-            return 0
+            return 0, 0
         if not self._authorize(from_addr, user_settings, msg):
             imap.store(uid, "+FLAGS", "\\Seen")
-            return 0
+            return 0, 0
 
         # 2. Extract trip name from Subject — error reply if missing
         subject = msg.get("Subject", "")
@@ -224,7 +247,7 @@ class InboundEmailReader:
         if not trip_name:
             logger.debug(f"Ignoring email without trip brackets: {subject!r}")
             imap.store(uid, "+FLAGS", "\\Seen")
-            return 0
+            return 0, 0
 
         # 3. Find trip — error reply if not found
         trip_id = self._find_trip_id(trip_name, _user_id)
@@ -239,10 +262,15 @@ class InboundEmailReader:
                 ),
                 trip_name=trip_name,
             )
+            # Issue #1405 S4b: nicht zugestellte Antwort = Fehler des Laufs;
+            # kein Versand eingerichtet = kein Versuch = kein Fehler.
+            zugestellt = True
             if user_settings.can_send_email():
-                self._notification_service.send_command_reply_email(result, user_settings)
+                zugestellt = self._notification_service.send_command_reply_email(
+                    result, user_settings,
+                )
             imap.store(uid, "+FLAGS", "\\Seen")
-            return 0
+            return 0, 0 if zugestellt else 1
 
         # 4. Extract body
         body = self._extract_plain_body(msg)
@@ -263,12 +291,17 @@ class InboundEmailReader:
         try:
             processor = TripCommandProcessor()
             result = processor.process(inbound)
+            zugestellt = True
             if user_settings.can_send_email() and not result.suppress_email_reply:
-                self._notification_service.send_command_reply_email(result, user_settings)
-            return 1
+                zugestellt = self._notification_service.send_command_reply_email(
+                    result, user_settings,
+                )
+            # Issue #1405 S4b: der Befehl ist verarbeitet; eine nicht
+            # zugestellte Antwort zaehlt zusaetzlich als Fehler des Laufs.
+            return 1, 0 if zugestellt else 1
         except Exception:
             logger.exception(f"Fehler bei Verarbeitung/Versand fuer trip_id={trip_id!r}")
-            return 0
+            return 0, 1
         finally:
             imap.store(uid, "+FLAGS", "\\Seen")
 

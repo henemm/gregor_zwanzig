@@ -932,9 +932,9 @@ func (s *Scheduler) premiumSmsPoll() {
 // triggerPremiumSmsPollEndpoint ruft POST /api/scheduler/inbound-sms auf und
 // wertet den Antwortkoerper wie triggerEndpointForUser() aus: failed > 0 ist
 // ein harter Fehler, status == "partial" (ohne failed) ein Teilerfolg.
-// Lokal fuer diesen Job -- triggerGlobalEndpoint() bleibt unveraendert, weil
-// inbound_command_poll und weitere Jobs daran haengen, die dieses Verhalten
-// nicht wollen.
+// Lokal fuer die Poll-Jobs (seit #1405 S4b auch inbound_command_poll, siehe
+// triggerInboundCommandsEndpointRes) -- triggerGlobalEndpoint() bleibt fuer
+// weitere Jobs unveraendert, die dieses Verhalten nicht wollen.
 func (s *Scheduler) triggerPremiumSmsPollEndpoint() error {
 	return s.triggerPremiumSmsPollEndpointRes(nil)
 }
@@ -942,7 +942,23 @@ func (s *Scheduler) triggerPremiumSmsPollEndpoint() error {
 // triggerPremiumSmsPollEndpointRes wie triggerPremiumSmsPollEndpoint; res
 // (optional) nimmt `processed`/busy auf (Issue #2439).
 func (s *Scheduler) triggerPremiumSmsPollEndpointRes(res *pollResult) error {
-	url := s.pythonURL + "/api/scheduler/inbound-sms"
+	return s.triggerCountedPollEndpointRes("/api/scheduler/inbound-sms", "learn call(s)", res)
+}
+
+// triggerInboundCommandsEndpointRes ruft POST /api/scheduler/inbound-commands
+// auf und wertet failed/partial aus wie der Premium-SMS-Poll (#1405 S4b):
+// ein nicht erreichbares Postfach oder eine nicht zugestellte Befehlsantwort
+// steht damit in last_run.status. Nachversuche (kickRound) haengen weiter nur
+// an processed/busy (res).
+func (s *Scheduler) triggerInboundCommandsEndpointRes(res *pollResult) error {
+	return s.triggerCountedPollEndpointRes("/api/scheduler/inbound-commands", "command mail(s)", res)
+}
+
+// triggerCountedPollEndpointRes ist die gemeinsame Auswertung beider
+// Poll-Endpunkte: failed > 0 ist ein harter Fehler, status == "partial"
+// (ohne failed) ein Teilerfolg; res (optional) nimmt processed/busy auf.
+func (s *Scheduler) triggerCountedPollEndpointRes(path, what string, res *pollResult) error {
+	url := s.pythonURL + path
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
 		// Issue #1912: Timeout-Klassifikation gilt fuer den geteilten Client
@@ -950,7 +966,7 @@ func (s *Scheduler) triggerPremiumSmsPollEndpointRes(res *pollResult) error {
 		// Client") — nicht nur fuer triggerEndpointForUser().
 		if isTimeoutTransportError(err) {
 			return &partialRunError{
-				msg:     fmt.Sprintf("/api/scheduler/inbound-sms timed out: %v", err),
+				msg:     fmt.Sprintf("%s timed out: %v", path, err),
 				wrapped: err,
 			}
 		}
@@ -968,20 +984,19 @@ func (s *Scheduler) triggerPremiumSmsPollEndpointRes(res *pollResult) error {
 		fillPollResult(res, parsed)
 		if parsed.Failed > 0 {
 			return fmt.Errorf(
-				"/api/scheduler/inbound-sms reported %d failed learn call(s) "+
-					"(status=%s, count=%d): %s",
-				parsed.Failed, parsed.Status, parsed.Count, string(body),
+				"%s reported %d failed %s (status=%s, count=%d): %s",
+				path, parsed.Failed, what, parsed.Status, parsed.Count, string(body),
 			)
 		}
 		if parsed.Status == "partial" {
 			return &partialRunError{msg: fmt.Sprintf(
-				"/api/scheduler/inbound-sms reported partial status (count=%d): %s",
-				parsed.Count, string(body),
+				"%s reported partial status (count=%d): %s",
+				path, parsed.Count, string(body),
 			)}
 		}
 	}
 
-	log.Printf("[scheduler] /api/scheduler/inbound-sms → %d", resp.StatusCode)
+	log.Printf("[scheduler] %s → %d", path, resp.StatusCode)
 	return nil
 }
 

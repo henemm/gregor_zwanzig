@@ -169,7 +169,9 @@ def test_ac2_unbekannter_absender_erhaelt_ueberhaupt_keine_antwort(monkeypatch):
 
     verarbeitet = reader._process_single(imap, b"1", settings)
 
-    assert verarbeitet == 0, (
+    # #1405 S4b AC-23: ``_process_single`` liefert (processed, failed); eine
+    # verworfene Mail ist kein Fehler.
+    assert verarbeitet == (0, 0), (
         f"Vorbedingung: ein unbekannter Absender darf keinen Befehl "
         f"verarbeitet bekommen, erhalten {verarbeitet!r}"
     )
@@ -236,7 +238,8 @@ def test_ac3_bekannter_absender_mit_existierendem_trip_erhaelt_sehr_wohl_eine_an
 
     verarbeitet = reader._process_single(imap, b"1", settings)
 
-    assert verarbeitet == 1, (
+    # #1405 S4b AC-23: ``_process_single`` liefert (processed, failed).
+    assert verarbeitet == (1, 0), (
         f"Vorbedingung: ein bekannter Absender mit existierendem Trip muss "
         f"verarbeitet werden, erhalten {verarbeitet!r}"
     )

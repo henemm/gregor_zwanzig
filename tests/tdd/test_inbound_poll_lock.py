@@ -102,8 +102,21 @@ def _mail_reader_aufzeichnen(monkeypatch, **kw) -> _ReaderAufrufe:
     from services import inbound_email_reader
 
     rec = _ReaderAufrufe(**kw)
-    monkeypatch.setattr(inbound_email_reader.InboundEmailReader, "poll_and_process", rec)
+    monkeypatch.setattr(
+        inbound_email_reader.InboundEmailReader, "poll_and_process", _mit_laufzaehler(rec),
+    )
     return rec
+
+
+def _mit_laufzaehler(aufzeichner):
+    """#1405 S4b AC-23: der Router liest ``reader.last_failed_count`` direkt
+    (kein ``getattr(..., 0)``-Rueckfall im Produkt) -- der Fake des Mail-Lesers
+    setzt den Laufzaehler deshalb selbst, wie es ``poll_and_process`` tut."""
+    def _poll(self, *a, **kw):
+        self.last_failed_count = 0
+        return aufzeichner(*a, **kw)
+
+    return _poll
 
 
 def _sms_reader_aufzeichnen(monkeypatch, **kw) -> _ReaderAufrufe:
@@ -371,7 +384,9 @@ def test_f002_inbound_commands_zwei_gleichzeitige_aufrufe_zweiter_ist_busy(monke
 
     install_transport_fakes(monkeypatch)
     reader = _BlockierenderReader()
-    monkeypatch.setattr(inbound_email_reader.InboundEmailReader, "poll_and_process", reader)
+    monkeypatch.setattr(
+        inbound_email_reader.InboundEmailReader, "poll_and_process", _mit_laufzaehler(reader),
+    )
 
     erster, zweiter = _zwei_gleichzeitige_aufrufe(scheduler.trigger_inbound, reader)
 

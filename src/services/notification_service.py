@@ -168,6 +168,12 @@ class NotificationResult:
     # Issue #1441 S2: Kanaele, deren Nachricht die Entwarnung TATSAECHLICH
     # enthielt (SMS-Kuerzung kann sie verdraengen, AC-12).
     allclear_channels: list[str] = field(default_factory=list)
+    # Issue #1405 S4b (B21): gescheiterte Begleit-Hinweise bei ZUGESTELLTEM
+    # Versand ("telegram_incomplete_hint", "service_error_email"). Bewusst
+    # getrennt von `failed_channels` (ADR-0086: Backoff/Throttle/
+    # `delivery_outcome` bleiben unberuehrt); die Laeufe zaehlen es als
+    # `notice_failed` und melden status "partial".
+    notice_failures: list[str] = field(default_factory=list)
 
     @property
     def delivered_channels(self) -> list[str]:
@@ -770,6 +776,9 @@ class NotificationService:
         sent_channels: list[str] = []
         blocked_channels: dict[str, str] = {}
         blocked_reason_codes: dict[str, str] = {}
+        # Issue #1405 S4b (B21): gescheiterte Begleit-Hinweise, getrennt von
+        # der Zustellbilanz (ADR-0086).
+        notice_failures: list[str] = []
 
         # E-Mail — Issue #1662 (Punkt 8): Zustellbilanz statt Kanalreihenfolge.
         # Bisher war E-Mail der einzige Kanal ohne `try`; ein SMTP-/Guard-Fehler
@@ -894,16 +903,17 @@ class NotificationService:
                         )
                         telegram_fully_sent = False
                         failed_bubbles += 1
-                if failed_bubbles:
-                    self._send_telegram_incomplete_hint(report, failed_bubbles)
+                if failed_bubbles and not self._send_telegram_incomplete_hint(
+                        report, failed_bubbles):
+                    notice_failures.append("telegram_incomplete_hint")
                 if telegram_fully_sent:
                     # Nur bei vollstaendiger Zustellung — das Briefing-Log darf
                     # nicht behaupten, Telegram sei komplett zugestellt worden.
                     sent_channels.append("telegram")
 
         # WEATHER-04: Service-E-Mail bei SMS-only + Fehler
-        if request.failed_segments:
-            self._send_service_error_email(request)
+        if request.failed_segments and not self._send_service_error_email(request):
+            notice_failures.append("service_error_email")
 
         # Issue #1662 (Punkt 8) — tragende Invariante: nach oben durchgereicht
         # wird ein Versandfehler genau dann, wenn NICHTS zugestellt wurde. Dann
@@ -930,13 +940,16 @@ class NotificationService:
             no_channel_configured=no_channel_configured,
             blocked_channels=blocked_channels,
             blocked_reason_codes=blocked_reason_codes,
+            notice_failures=notice_failures,
         )
 
-    def _send_telegram_incomplete_hint(self, report, missing_count: int) -> None:
+    def _send_telegram_incomplete_hint(self, report, missing_count: int) -> bool:
         """Sichtbarer „Briefing unvollstaendig"-Hinweis (Issue #1370).
 
-        fail-soft: scheitert auch dieser Hinweis, wird das nur protokolliert —
-        er darf den Versandlauf nie mit einer Ausnahme abbrechen.
+        fail-soft: scheitert auch dieser Hinweis, bricht er den Versandlauf nie
+        mit einer Ausnahme ab. Issue #1405 S4b: liefert ``True`` bei
+        Zustellung, ``False`` bei gescheitertem Versuch — der Aufrufer traegt
+        das in ``NotificationResult.notice_failures`` ein.
         """
         from output.renderers.narrow import render_telegram_incomplete_hint
 
@@ -949,6 +962,8 @@ class NotificationService:
             )
         except Exception as e:  # noqa: BLE001 — fail-soft, siehe Docstring
             logger.error(f"Telegram incomplete-briefing hint failed: {e}")
+            return False
+        return True
 
     def send_no_data_hint(
         self,
@@ -2021,6 +2036,9 @@ class NotificationService:
         # `telegram_groups` (unveraendertes Verhalten). Nur der Fan-out-Zweig
         # unten setzt ihn bei einer Teilzustellung auf False (AC-25c).
         telegram_fully_sent = True
+        # Issue #1405 S4b (B21): gescheiterter Teilzustellungs-Hinweis, NICHT
+        # in `failed_channels` (ADR-0086: Backoff/Throttle unberuehrt).
+        notice_failures: list[str] = []
 
         def _log_error(channel: str, e: Exception) -> None:
             failed_channels.append(channel)  # Issue #1459: Alarm-Protokoll
@@ -2124,12 +2142,12 @@ class NotificationService:
                             )
                             telegram_fully_sent = False
                             failed_count += 1
-                    if failed_count:
+                    if failed_count and not self._send_telegram_incomplete_hint(
+                            SimpleNamespace(email_subject=subject), failed_count):
                         # #1370-Muster: Teilzustellung wird gemeldet statt
-                        # still verschluckt.
-                        self._send_telegram_incomplete_hint(
-                            SimpleNamespace(email_subject=subject), failed_count,
-                        )
+                        # still verschluckt; scheitert der Hinweis selbst,
+                        # steht das im Ergebnis (#1405 S4b).
+                        notice_failures.append("telegram_incomplete_hint")
                     # Issue #1405 S1 (AC-6): mindestens eine Blase angekommen
                     # = Kanal zugestellt (keine Wiederholung, keine Dubletten);
                     # die Teilzustellung zeigt `telegram_fully_sent`. Scheitern
@@ -2195,6 +2213,7 @@ class NotificationService:
             telegram_fully_sent=telegram_fully_sent,
             blocked_channels=blocked_channels,
             blocked_reason_codes=blocked_reason_codes,
+            notice_failures=notice_failures,
         )
 
     # ------------------------------------------------------------------
@@ -2203,8 +2222,12 @@ class NotificationService:
 
     def send_command_reply_email(
         self, result: CommandResult, settings: Settings,
-    ) -> None:
-        """Sendet eine Command-Bestätigung per E-Mail."""
+    ) -> bool:
+        """Sendet eine Command-Bestätigung per E-Mail.
+
+        Issue #1405 S4b: ``True`` = zugestellt, ``False`` = Versand gescheitert
+        (der Posteingang-Lauf zaehlt das als Fehler).
+        """
         try:
             EmailOutput(settings).send(
                 subject=result.confirmation_subject,
@@ -2214,6 +2237,8 @@ class NotificationService:
             logger.info(f"Confirmation sent: {result.confirmation_subject}")
         except Exception as e:
             logger.error(f"Failed to send confirmation: {e}")
+            return False
+        return True
 
     def send_command_reply_premium_sms(
         self, result: CommandResult, settings: Settings,
@@ -2408,12 +2433,17 @@ class NotificationService:
                 mail_format="compact",
             )
 
-    def _send_service_error_email(self, request: TripReportRequest) -> None:
-        """Service-E-Mail bei Provider-Fehler für SMS-only Trips."""
+    def _send_service_error_email(self, request: TripReportRequest) -> bool:
+        """Service-E-Mail bei Provider-Fehler für SMS-only Trips.
+
+        Issue #1405 S4b: ``True`` = zugestellt oder nicht erforderlich (kein
+        SMS-only-Trip bzw. kein Mailversand eingerichtet -- kein Versuch, wie
+        bei der Befehlsantwort), ``False`` = Versand gescheitert.
+        """
         config = request.report_config
         is_sms_only = config and config.send_sms and not config.send_email
-        if not is_sms_only:
-            return
+        if not is_sms_only or not self._settings.can_send_email():
+            return True
         error_lines = "\n".join(
             f"  - Segment {e.segment.segment_id}: {e.error_message}"
             for e in request.failed_segments
@@ -2430,3 +2460,5 @@ class NotificationService:
             logger.info(f"Service error email sent for {request.trip.name}")
         except Exception as e:
             logger.error(f"Failed to send service error email: {e}")
+            return False
+        return True

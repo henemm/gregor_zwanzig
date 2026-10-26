@@ -129,9 +129,13 @@ class TestE2EVerifyCommand:
         )
 
     def test_e2e_verify_no_bulk_send(self, e2e_verify_text):
-        """AC-2/AC-3: kein Versand ueber alle Trips (send_reports/send_report)."""
-        assert "send_reports(" not in e2e_verify_text, (
-            "e2e-verify.md darf send_reports( (alle Trips) nicht enthalten"
+        """AC-2/AC-3: kein Versand ueber alle Trips (send_due_reports/send_report).
+
+        #1405 S4b: ``send_reports`` ist geloescht; der Sammelversand ueber alle
+        faelligen Trips heisst ``send_due_reports`` -- die Sperre zielt jetzt
+        auf diesen Namen."""
+        assert "send_due_reports(" not in e2e_verify_text, (
+            "e2e-verify.md darf send_due_reports( (alle Trips) nicht enthalten"
         )
         assert "send_report(" not in e2e_verify_text, (
             "e2e-verify.md darf send_report( nicht enthalten"

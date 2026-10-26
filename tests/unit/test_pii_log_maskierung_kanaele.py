@@ -223,7 +223,7 @@ def test_ac_d_unaufgeloester_absender_erscheint_nur_maskiert(caplog):
     with caplog.at_level(logging.DEBUG):
         verarbeitet = InboundEmailReader()._process_single(postfach, b"1", settings)
 
-    assert verarbeitet == 0
+    assert verarbeitet == (0, 0)  # #1405 S4b AC-23: (processed, failed)
     assert postfach.flags == [(b"1", "+FLAGS", "\\Seen")]
     _pruefe_absenderzeile(caplog, "Unresolved/ambiguous sender")
 

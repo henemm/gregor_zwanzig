@@ -215,7 +215,7 @@ def test_apple_mail_nur_html_wird_erkannt(monkeypatch, user_ids):
     ergebnis = sende_email(settings, nutzer, "Hilfe", form="apple_html")
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert ergebnis == 1, "Die Mail wurde nicht als Befehl verarbeitet."
+    assert ergebnis == (1, 0), "Die Mail wurde nicht als Befehl verarbeitet."  # #1405 S4b AC-23
     assert recorder.emails, f"Es wurde keine Antwortmail versendet: {recorder.emails!r}"
     text = _gesendeter_email_text(recorder.emails[-1])
     _assert_frei_von_fehlertexten(text, kontext="AC-6 apple_html/hilfe")
@@ -246,7 +246,7 @@ def test_jeder_befehl_in_allen_mailformen(monkeypatch, user_ids, spec, form):
     ergebnis = sende_email(settings, nutzer, body, form=form)
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert ergebnis == 1, f"Mail mit Befehl {wort!r} (Form {form!r}) nicht verarbeitet."
+    assert ergebnis == (1, 0), f"Mail mit Befehl {wort!r} (Form {form!r}) nicht verarbeitet."  # #1405 S4b AC-23
     assert recorder.emails, f"Keine Antwortmail fuer {wort!r}/{form!r}: {recorder.emails!r}"
     text = _gesendeter_email_text(recorder.emails[-1])
     _assert_frei_von_fehlertexten(text, kontext=f"AC-7 {wort!r}/{form!r}")
@@ -277,7 +277,7 @@ def test_alternative_beide_bevorzugt_text_plain_bei_unterschiedlichen_befehlen(
     ergebnis = _sende_rohe_mail(settings, raw)
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert ergebnis == 1, "Die Mail wurde nicht als Befehl verarbeitet."
+    assert ergebnis == (1, 0), "Die Mail wurde nicht als Befehl verarbeitet."  # #1405 S4b AC-23
     assert recorder.emails, f"Es wurde keine Antwortmail versendet: {recorder.emails!r}"
     text = _gesendeter_email_text(recorder.emails[-1])
     _assert_frei_von_fehlertexten(text, kontext="AC-7 Regressionsschutz plain/html")
@@ -315,7 +315,7 @@ def test_apple_mail_ignoriert_befehlswort_in_zitat_und_signatur(monkeypatch, use
     ergebnis = _sende_rohe_mail(settings, raw)
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert ergebnis == 1, "Die Mail wurde nicht als Befehl verarbeitet."
+    assert ergebnis == (1, 0), "Die Mail wurde nicht als Befehl verarbeitet."  # #1405 S4b AC-23
     assert recorder.emails, f"Es wurde keine Antwortmail versendet: {recorder.emails!r}"
     text = _gesendeter_email_text(recorder.emails[-1])
     _assert_frei_von_fehlertexten(text, kontext="AC-19 Zitat/Signatur")
@@ -351,7 +351,7 @@ def test_gmail_html_ignoriert_zitiertes_fremdes_befehlswort_in_leerer_antwort(mo
     ergebnis = _sende_rohe_mail(settings, raw)
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert ergebnis == 1, "Die Mail wurde nicht verarbeitet."
+    assert ergebnis == (1, 0), "Die Mail wurde nicht verarbeitet."  # #1405 S4b AC-23
     assert recorder.emails, f"Es wurde keine Antwortmail versendet: {recorder.emails!r}"
     text = _gesendeter_email_text(recorder.emails[-1])
     text_klein = text.lower()
@@ -388,7 +388,7 @@ def test_mutierende_befehle_schreiben_read_modify_write_auf_platte(monkeypatch, 
 
     def _sende(body: str) -> None:
         ergebnis = sende_email(settings, nutzer, body, form="plain")
-        assert ergebnis == 1, f"Mail mit Befehl {body!r} nicht verarbeitet."
+        assert ergebnis == (1, 0), f"Mail mit Befehl {body!r} nicht verarbeitet."  # #1405 S4b AC-23
 
     # 1) STOP -- nur `enabled` aendert sich
     _sende("stop")
@@ -455,7 +455,7 @@ def test_mandantentrennung_und_alleiniger_versand(monkeypatch, user_ids):
     ergebnis = sende_email(settings, nutzer_a, "status", form="plain")
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert ergebnis == 1, "Die Mail wurde nicht als Befehl verarbeitet."
+    assert ergebnis == (1, 0), "Die Mail wurde nicht als Befehl verarbeitet."  # #1405 S4b AC-23
     assert len(recorder.emails) == 1, (
         f"Erwartet genau EINEN Versand, tatsaechlich: {recorder.emails!r}"
     )

@@ -60,7 +60,7 @@ def _antwort_auf_vergleichs_mail(monkeypatch, user_ids, befehl: str):
     ergebnis = sende_email(basis_settings(), nutzer, befehl, trip_name=preset["name"])
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert ergebnis == 1, f"Antwort {befehl!r} auf die Vergleichs-Mail nicht verarbeitet"
+    assert ergebnis == (1, 0), f"Antwort {befehl!r} auf die Vergleichs-Mail nicht verarbeitet"  # #1405 S4b AC-23
     antworten = [_text(e) for e in recorder.emails if nutzer.mail_to in e["to"]]
     assert antworten, f"Auf {befehl!r} wurde nichts an den Absender versendet"
     return recorder, nutzer, preset, antworten[-1]
@@ -109,7 +109,7 @@ def test_ac13_weiter_reaktiviert_einen_pausierten_ortsvergleich(monkeypatch, use
     ergebnis = sende_email(settings, nutzer, "WEITER", trip_name=preset["name"])
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert ergebnis == 1
+    assert ergebnis == (1, 0)  # #1405 S4b AC-23: (processed, failed)
     antwort = _text(recorder.emails[-1]) if len(recorder.emails) > vorher else ""
     assert antwort, "Auf WEITER wurde nichts versendet"
     for fehler in FEHLERTEXTE:
@@ -147,7 +147,7 @@ def test_s2_report_heute_als_mail_antwort_versenden_den_vergleich(monkeypatch, u
 
     ergebnis = sende_email(basis_settings(), nutzer, befehl, trip_name=preset["name"])
 
-    assert ergebnis == 1, f"{befehl!r} auf die Vergleichs-Mail nicht verarbeitet"
+    assert ergebnis == (1, 0), f"{befehl!r} auf die Vergleichs-Mail nicht verarbeitet"  # #1405 S4b AC-23
     an_nutzer = [e for e in recorder.emails if nutzer.mail_to in e["to"]]
     vergleich = [e for e in an_nutzer if "X-GZ-Mail-Type: compare" in e["raw"]]
     assert len(vergleich) == 1, f"{befehl!r}: genau EINE Vergleichs-Mail erwartet: {len(an_nutzer)}"

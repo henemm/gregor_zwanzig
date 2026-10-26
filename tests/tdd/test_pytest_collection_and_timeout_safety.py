@@ -168,7 +168,11 @@ _C2_SPLIT_FILES = (
     # 5 statt 7: zwei weitere fail-soft/vakuum-Tests nach Adversary-F001 live-markiert (Orchestrierer-Freigabe Fix-Loop 1, 2026-07-18)
     ("tests/unit/test_metric_availability_probe.py", 5, "live"),
     ("tests/unit/test_uv_air_quality.py", 1, "live"),
-    ("tests/e2e/test_e2e_story3_reports.py", 13, "live"),  # 13 statt 14: test_scheduler_send_reports dialt real (fail-soft schluckt Netzfehler -- Live-Log-Beweis), bleibt email+live (Praezisierung der Probe, 2026-07-18)
+    # 13 statt 14 (2026-07-18): der live-Versandtest blieb email+live. #1405 S4b:
+    # dieser Test (test_scheduler_send_reports) ist mit send_reports entfallen;
+    # er war live-markiert und zaehlte NICHT zum Standardlauf -- gemessen
+    # 2026-10-26: Standardlauf 13 (unveraendert), `-m live` 3 -> 2.
+    ("tests/e2e/test_e2e_story3_reports.py", 13, "live"),
     ("tests/tdd/test_go_api_setup.py", 5, "live"),
     ("tests/tdd/test_snowgrid.py", 1, "live"),
     ("tests/tdd/test_issue_338_go_geosphere_counter.py", 2, "live"),

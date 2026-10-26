@@ -221,7 +221,8 @@ def test_ac13_email_gesperrter_absender_wird_stumm_verworfen(email_mitschrift, c
     # Positivkontrolle: aktiver Absender wird normal bedient.
     imap_a = _FakeImap(_raw_mail(from_addr="aktiv@example.invalid",
                                  subject=f"[{trip_aktiv.name}] Status", body="status"))
-    assert InboundEmailReader()._process_single(imap_a, b"1", settings) == 1, (
+    # #1405 S4b AC-23: ``_process_single`` liefert (processed, failed).
+    assert InboundEmailReader()._process_single(imap_a, b"1", settings) == (1, 0), (
         "Positivkontrolle: der aktive Absender muss verarbeitet werden"
     )
     assert [m["empfaenger"] for m in email_mitschrift] == ["aktiv@example.invalid"], (
@@ -239,7 +240,7 @@ def test_ac13_email_gesperrter_absender_wird_stumm_verworfen(email_mitschrift, c
                                  subject=f"[{trip_bruno.name}] Status", body="status"))
     verarbeitet = InboundEmailReader()._process_single(imap_b, b"2", settings)
 
-    assert verarbeitet == 0, (
+    assert verarbeitet == (0, 0), (  # #1405 S4b AC-23: verworfen ist kein Fehler
         f"AC-13: fuer ein gesperrtes Konto darf kein Befehl verarbeitet werden, "
         f"Rueckgabe {verarbeitet!r}"
     )

@@ -436,7 +436,9 @@ def test_ortsvergleich_abweichungslauf_kaputtes_preset_reisst_folgepreset_nicht_
     assert resp.status_code == 200, (resp.status_code, data)
     assert data.get("failed") == 1, f"Antwort muss failed == 1 tragen: {data!r}"
     assert data.get("count") == 1, data
-    assert data.get("status") != "partial", data
+    # #1405 S4b AC-1/AC-23: ``compare-alert-checks`` meldet bei failed > 0
+    # ``partial`` (vorher fest "ok" -- genau der Fund B3).
+    assert data.get("status") == "partial", data
 
 
 def test_ortsvergleich_radarlauf_kaputtes_preset_reisst_folgepreset_nicht_mit(monkeypatch):
@@ -488,7 +490,8 @@ def test_ortsvergleich_amtlich_kaputtes_preset_reisst_folgepreset_nicht_mit(monk
     assert resp.status_code == 200, (resp.status_code, data)
     assert data.get("failed") == 1, f"Antwort muss failed == 1 tragen: {data!r}"
     assert data.get("count") == 1, data
-    assert data.get("status") != "partial", data
+    # #1405 S4b AC-1/AC-23: ``compare-alert-checks`` meldet bei failed > 0 ``partial``.
+    assert data.get("status") == "partial", data
 
 
 # ===========================================================================

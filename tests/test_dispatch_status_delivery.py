@@ -70,28 +70,30 @@ def _lauf(client, user: str, ausgang) -> dict:
 
 def test_ac6_channels_unreachable_meldet_partial(client):
     assert _lauf(client, "u2218-unreach", "channels_unreachable") == {
-        "status": "partial", "count": 0, "failed": 1,
+        "status": "partial", "count": 0, "failed": 1, "notice_failed": 0,
     }
 
 
 @pytest.mark.parametrize("ausgang", ["no_weather", "weird_new_outcome", None])
 def test_ac7_no_weather_und_unbekannt_zaehlen_als_failed(client, ausgang):
     user = f"u2218-ac7-{ausgang}"
-    assert _lauf(client, user, ausgang) == {"status": "partial", "count": 0, "failed": 1}
+    assert _lauf(client, user, ausgang) == {
+        "status": "partial", "count": 0, "failed": 1, "notice_failed": 0,
+    }
 
 
 @pytest.mark.parametrize("ausgang", ["no_channels", "no_stage"])
 def test_ac8_leerlaeufe_sind_neutral(client, ausgang):
     assert _lauf(client, f"u2218-ac8-{ausgang}", ausgang) == {
-        "status": "ok", "count": 0, "failed": 0,
+        "status": "ok", "count": 0, "failed": 0, "notice_failed": 0,
     }
 
 
 def test_ac9_zwei_nutzer_werden_getrennt_bewertet(client):
     a = _lauf(client, "u2218-nutzer-a", "sent")
     b = _lauf(client, "u2218-nutzer-b", "channels_unreachable")
-    assert a == {"status": "ok", "count": 1, "failed": 0}
-    assert b == {"status": "partial", "count": 0, "failed": 1}
+    assert a == {"status": "ok", "count": 1, "failed": 0, "notice_failed": 0}
+    assert b == {"status": "partial", "count": 0, "failed": 1, "notice_failed": 0}
 
 
 def test_f001_bereits_vermerkter_slot_ist_kein_versandversuch(client, monkeypatch):
@@ -126,12 +128,12 @@ def test_f001_bereits_vermerkter_slot_ist_kein_versandversuch(client, monkeypatc
     body = r.json()
     dauer = body.pop("duration_s")
     assert isinstance(dauer, (int, float)) and dauer >= 0
-    assert body == {"status": "ok", "count": 0, "failed": 0}
+    assert body == {"status": "ok", "count": 0, "failed": 0, "notice_failed": 0}
     assert _AUFRUFE == [], "Naht wurde aufgerufen: kein Leerlauf erzeugt"
 
 
 def test_f002_werfende_naht_zaehlt_als_failed(client):
     assert _lauf(client, "u2218-f002-wirft", RuntimeError("boom")) == {
-        "status": "partial", "count": 0, "failed": 1,
+        "status": "partial", "count": 0, "failed": 1, "notice_failed": 0,
     }
     assert _AUFRUFE == ["u2218-f002-wirft"]
