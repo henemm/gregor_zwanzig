@@ -168,11 +168,12 @@ describe('AC-18: naechster/letzter Versand aus der Backend-Antwort, ohne eigene 
 		assert.equal(kachelVersand('trip', TRIP, null).nextSend, '—');
 	});
 
-	test('Vergleich: letzter Versand aus letzter_versand; ohne Wert null', async () => {
+	test('Vergleich: letzter Versand aus last_briefing der Antwort (S4); letzter_versand ist keine Quelle mehr', async () => {
 		const { kachelVersand } = await modul(path.join(HOME, 'kachelVersand.ts'));
-		const mit = kachelVersand('vergleich', { ...PRESET, letzter_versand: new Date().toISOString() }, NB);
+		const mit = kachelVersand('vergleich', PRESET, { ...NB, last_briefing: new Date().toISOString() });
 		assert.equal(mit.lastSent, 'heute');
-		assert.equal(kachelVersand('vergleich', { ...PRESET, letzter_versand: undefined }, NB).lastSent, null);
+		assert.equal(kachelVersand('vergleich', PRESET, { ...NB, last_briefing: null }).lastSent, null);
+		assert.equal(kachelVersand('vergleich', PRESET, NB).lastSent, null);
 	});
 
 	test('F002: beendeter Trip zeigt "Trip beendet", nicht den Vergleichs-Wortlaut', async () => {

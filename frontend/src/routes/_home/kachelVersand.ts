@@ -1,7 +1,7 @@
 // Issue #2346 S2 (AC-18) — Versand-Werte der Startseiten-Kachel (beide kinds).
 // Keine eigene Faelligkeitsrechnung: der naechste Versand kommt ausschliesslich aus der
 // Backend-Antwort GET /api/next-briefings (#1969) ueber formatNextBriefing (at===null => Grund,
-// fehlende Antwort => "—"). Letzter Versand: Vergleich aus `letzter_versand`, Trip null bis S4.
+// fehlende Antwort => "—"). Letzter Versand (S4): fuer beide kinds aus `last_briefing` derselben Antwort.
 // Pure Funktion, relative Importe — node:testbar.
 
 import type { ComparePreset, Trip } from '../../lib/types.ts';
@@ -27,6 +27,7 @@ export function kachelVersand(
 	nb: NextBriefing | null | undefined
 ): { nextSend: string; lastSent: string | null } {
 	const nextSend = formatNextBriefing(nb, kind === 'trip' ? 'route' : 'vergleich');
-	const lastSent = kind === 'vergleich' ? relativeLastSent((sub as ComparePreset).letzter_versand) || null : null;
+	// #2346 S4: beide kinds aus derselben Quelle (last_briefing der Sammelantwort).
+	const lastSent = relativeLastSent(nb?.last_briefing ?? undefined) || null;
 	return { nextSend, lastSent };
 }

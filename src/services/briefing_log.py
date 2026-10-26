@@ -75,6 +75,46 @@ def append_briefing_log(
         )
 
 
+def letzte_briefings(user_id: str) -> dict[tuple[str, str], str]:
+    """Juengstes ``sent_at`` je ``(entity_type, entity_id)`` aus dem Log von ``user_id``.
+
+    Issue #2346 S4. Rein lesend: fehlende oder defekte Datei ergibt ``{}``, sie wird
+    weder geschrieben noch beiseitegelegt. Jeder Eintrag zaehlt (auch Handversand
+    ``on_demand``). Alt-Eintraege ohne ``entity_*`` gelten wie in Go als
+    ``("trip", trip_id)``. Unlesbare Zeitpunkte werden uebersprungen.
+    """
+    if not user_id:
+        return {}
+    path = get_data_dir(user_id) / BRIEFING_LOG_FILENAME
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    eintraege = data.get("entries") if isinstance(data, dict) else None
+    if not isinstance(eintraege, list):
+        return {}
+    ergebnis: dict[tuple[str, str], tuple[datetime, str]] = {}
+    for e in eintraege:
+        if not isinstance(e, dict):
+            continue
+        art = e.get("entity_type") or "trip"
+        kennung = e.get("entity_id") or e.get("trip_id")
+        sent_at = e.get("sent_at")
+        if not kennung or not isinstance(sent_at, str):
+            continue
+        try:
+            zeit = datetime.fromisoformat(sent_at)
+        except ValueError:
+            continue
+        if zeit.tzinfo is None:
+            zeit = zeit.replace(tzinfo=timezone.utc)
+        schluessel = (str(art), str(kennung))
+        bisher = ergebnis.get(schluessel)
+        if bisher is None or zeit > bisher[0]:
+            ergebnis[schluessel] = (zeit, sent_at)
+    return {k: v[1] for k, v in ergebnis.items()}
+
+
 def _append(user_id: str, eintrag: dict) -> None:
     path = get_data_dir(user_id) / BRIEFING_LOG_FILENAME
     path.parent.mkdir(parents=True, exist_ok=True)

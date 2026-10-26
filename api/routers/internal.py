@@ -243,7 +243,23 @@ def next_briefings(
             _je_objekt(compare, preset.id, lambda: next_compare_briefing(
                 compare_preset_to_dict(preset), orte, jetzt,
             ))
+    _letzte_einfuegen(user_id, trips, compare)
     return {"trips": trips, "compare": compare}
+
+
+def _letzte_einfuegen(user_id: str, trips: dict, compare: dict) -> None:
+    """#2346 S4: ``last_briefing`` (ISO oder ``None``) je Objekt aus dem Briefing-Log
+    DIESES Nutzers — einmal je Anfrage gelesen, fail-soft (dann ``None``)."""
+    try:
+        from services.briefing_log import letzte_briefings
+        letzte = letzte_briefings(user_id)
+    except Exception:
+        logging.getLogger(__name__).exception("next-briefings: Briefing-Log nicht lesbar")
+        letzte = {}
+    for art, ziel in (("trip", trips), ("compare", compare)):
+        for objekt_id, nb in ziel.items():
+            if isinstance(nb, dict):
+                nb["last_briefing"] = letzte.get((art, objekt_id))
 
 
 def _je_objekt(ziel: dict, objekt_id: str, ableitung) -> None:

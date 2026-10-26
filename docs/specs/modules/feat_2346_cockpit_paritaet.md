@@ -2,7 +2,7 @@
 entity_id: feat_2346_cockpit_paritaet
 type: feature
 created: 2026-10-23
-updated: 2026-10-23
+updated: 2026-10-26
 status: draft
 version: "1.0"
 workflow: feature-2346-cockpit-paritaet
@@ -56,7 +56,7 @@ Frage: Hat der Trip-Zweig von `WeatherMetricsTab.svelte` eine Stunden-Layout-Ste
 | `organisms/SubscriptionCard.svelte` (#2278) | module | bereits geteilte Karte `kind: 'trip'\|'vergleich'`, Basis des neuen Kachel-Bausteins |
 | `shared/subscriptionActions.ts`, `_home/kachelActions.ts` (#2278) | module | Aktionsmodell; Startseiten-Kachel zeigt nur „Bearbeiten" |
 | `src/services/briefing_log.py`, `GET /api/briefings/{id}/briefing-history` (#2281) | module | kind-neutrale Versand-Historie, Quelle für `last_briefing` |
-| #1969 `GET /api/next-briefings` (Sitzung d6) | endpoint, **vorläufig** | liefert `{trips:{<id>:NextBriefing}, compare:{<id>:NextBriefing}}`, `NextBriefing {at\|null, local_date, local_time, tz, tz_abbr, slot, skipped?, reason?}`. Feldnamen/Format werden erst mit Freigabe der #1969-Spec verbindlich; d6 meldet sie. **S4 beginnt erst nach Merge von #1969 S1.** |
+| #1969 `GET /api/next-briefings` (Sitzung d6) | endpoint, **live seit 24.10., Feldnamen verbindlich** | liefert `{trips:{<id>:NextBriefing}, compare:{<id>:NextBriefing}}`, `NextBriefing {at\|null, local_date, local_time, tz, tz_abbr, slot, skipped?, reason?}`. Feldnamen/Format werden erst mit Freigabe der #1969-Spec verbindlich; d6 meldet sie. **S4 beginnt erst nach Merge von #1969 S1.** |
 | `internal/handler/` (Go-Proxy), `api/routers/` (Python) | module | Auth-Kontext `user_id`, Mandantentrennung für den Endpunkt |
 | `.claude/hooks/hook_utils.is_git_subcommand`, `tests/tdd/test_pendant_gate.py` | module | Commit-Erkennung und Gate-Testmuster (Wegwerf-Repos) |
 | `docs/specs/modules/feat_1481b_pendant_gate.md` | spec | Vorgänger-Spec des Gates (Aufmaß-Messreihe, 95-%-Grenze) |
@@ -86,7 +86,11 @@ Frage: Hat der Trip-Zweig von `WeatherMetricsTab.svelte` eine Stunden-Layout-Ste
 | `frontend/src/lib/components/shared/CompareHourlyLayoutControls.svelte` | MOVE | S3 | → `compare/CompareHourlyLayoutControls.svelte` mit `gz-eigenstaendig:`-Kopfzeile; ca. 9 Testdateien + Import `WeatherMetricsTab.svelte:118` nachziehen; Kommentar `weatherMetricsTabSections.ts:45-47` ersetzen |
 | `.claude/hooks/pendant_gate.py` (`BEKANNTE_PAARE`), Test | MODIFY | S2/S3 | erledigte Paare (HomeHero*, Kachel) streichen, sobald die Dateien weg sind |
 | `frontend/src/routes/+page.server.ts` | MODIFY | S4 | lädt `GET /api/next-briefings` zusätzlich (ein Sammelaufruf, kein N+1) |
-| `src/services/` (Python-Ableitung `last_briefing` aus Briefing-Log #2281), `api/routers/` (Endpunkt-Erweiterung), `internal/handler/` (Go-Proxy-Durchreichung) | MODIFY/CREATE | S4 | `last_briefing` je Trip und Vergleich im #1969-Endpunkt |
+| `src/services/briefing_log.py` | MODIFY | S4 | neuer lesender Helfer `letzte_briefings(user_id)` (Ableitung aus Briefing-Log #2281) |
+| `api/routers/internal.py` | MODIFY | S4 | `next_briefings`: `last_briefing` je Trip und Vergleich, Log einmal je Anfrage |
+| `internal/handler/proxy.go` | keine Änderung | S4 | Go-Proxy reicht unverändert durch; nur Durchreich-Test mit zwei Nutzern |
+| `frontend/src/routes/_home/kachelVersand.ts` | MODIFY | S4 | `lastSent` für beide kinds aus `last_briefing` |
+| `frontend/src/lib/components/shared/versand-tab/nextBriefingText.ts` | MODIFY | S4 | Typ `NextBriefing` um `last_briefing` |
 | `frontend/src/lib/types.ts` | MODIFY | S4 | Typ `NextBriefing`/`LastBriefing`, Antwortform des Endpunkts |
 
 ### Estimated Changes (je Scheibe)
@@ -96,7 +100,7 @@ Frage: Hat der Trip-Zweig von `WeatherMetricsTab.svelte` eine Stunden-Layout-Ste
 | S1 | Pendant-Sperre (zuerst — **muss vor 2026-11-03 auf `main`**) | ca. +250/-10 |
 | S2 | gemeinsame Startseiten-Kachel, Kanäle aus Flags, tote Bausteine löschen | ca. +250/-220 |
 | S3 | `HomeHero kind`, #1452-Fix, Rename/Move `shared/Compare*`, Ausnahmeliste kürzen | ca. +100/-200 (überwiegend Umbenennung/Verschiebung) |
-| S4 | `last_briefing` + Verdrahtung next/last (nach #1969 S1) | ca. +150/-0 |
+| S4 | `last_briefing` + Verdrahtung next/last | ca. +120/-10 (ohne Tests) |
 
 ## Implementation Details
 
@@ -145,7 +149,14 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 
 - Der #1969-Endpunkt `GET /api/next-briefings` (Go-Proxy, `user_id` aus dem Auth-Kontext, optionale Filter `?trip_id=`/`?preset_id=`) wird um `last_briefing` je Trip und Vergleich ergänzt. Die Ableitung passiert in **Python** aus dem Briefing-Log (#2281, `entity_id`/`entity_type`), **nicht persistiert** (keine Schemaänderung; falls doch persistiert würde, gelten Read-Modify-Write und `data_schema_backup`).
 - `+page.server.ts` lädt den Endpunkt zusätzlich zu den bestehenden drei Aufrufen, in **einem** Sammelaufruf; die Kachel nimmt `nextSend`/`lastSent` als Props. Damit ist AC-1 vollständig.
-- **Abhängigkeit:** Feldnamen und Format von #1969 sind vorläufig; S4 beginnt erst, wenn #1969 S1 in `main` ist und d6 das endgültige Format gemeldet hat. Wird die Antwort dann anders benannt, passt S4 nur Typ und Mapping an.
+- **Abhängigkeit erledigt:** #1969 ist seit 24.10. live; Feldnamen sind verbindlich (`{trips:{<id>:NextBriefing}, compare:{<id>:NextBriefing}}`, `NextBriefing` bekommt zusätzlich `last_briefing`).
+- **Zuschnitt aus /20-analyse (2026-10-26):**
+  - `src/services/briefing_log.py`: neuer rein lesender Helfer `letzte_briefings(user_id)` → `{(entity_type, entity_id): sent_at_iso}` (maximales `sent_at`). Alt-Einträge ohne `entity_id`/`entity_type` gelten als `entity_id := trip_id`, `entity_type := "trip"` (Spiegel der Go-Leseregel in `briefing_history.go`). Fehlende oder defekte Datei ⇒ leer, nie schreiben, nie beiseitelegen.
+  - **„Tatsächlich versendet" = jeder Logeintrag**, auch Handversand (`on_demand`) — er wurde zugestellt. Alarme stehen im Alarm-Log und zählen nicht.
+  - `api/routers/internal.py` (`next_briefings`): Log **einmal je Anfrage** lesen, `last_briefing` (ISO-Zeitpunkt oder `null`) in jede Trip-/Vergleichs-Antwort einfügen; fail-soft (kein 500). `user_id` aus dem Auth-Kontext, Log nur aus `get_data_dir(user_id)`.
+  - Go-Proxy `NextBriefingsProxyHandler` reicht unverändert durch (kein Go-Code, nur ein Durchreich-Test mit zwei Nutzern).
+  - Frontend: `_home/kachelVersand.ts` setzt `lastSent` für **beide** kinds aus `nb.last_briefing` via `relativeLastSent`; `letzter_versand` entfällt als Parallelquelle. Typ `NextBriefing` (`nextBriefingText.ts`) um `last_briefing?: string | null`.
+  - Geschätzt ca. +120/−10 ohne Tests.
 
 ## Expected Behavior
 
@@ -221,7 +232,7 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 
 - Die Namens-Erkennung kennt nur Paare mit **bereits vorhandenem** Partner und reine Namensähnlichkeit; ca. 8 ähnliche, nicht namensgleiche Paare (z. B. `compare_slot_scheduler.py`/`trip_report_scheduler.py`, `compare_preset.go`/`trip.go`) bleiben unerkannt. Die Ausnahmeliste nennt nur die 7 namensgleichen Bestandspaare.
 - Die Begründung in `gz-eigenstaendig:` wird auf Länge geprüft, nicht auf Substanz (wie bisher).
-- #1969-Feldnamen sind vorläufig; S4 wartet auf #1969 S1 und kann sich um Typ/Mapping anpassen.
+- Handversand zählt als letzter Versand; Alarme nicht (eigener Alarm-Log).
 - `deriveNextSend` (Frontend), `_compute_next_send` und die feste HubOverview-Zeit werden von #1969 abgelöst, nicht hier.
 - Die Anlege-Seite/Editoren, Trip-Liste und Compare-Liste bleiben unberührt (dort läuft `SubscriptionCard` bereits kind-neutral).
 
@@ -235,7 +246,7 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 - [ ] S1: Pendant-Sperre mit Namensmuster-Erkennung, `BEKANNTE_PAARE` und Prüfdatum 2027-01-21 vor 2026-11-03 auf `main`; AC-2/3/5/6/7/8 grün; `gates_und_ratschen.md` nachgezogen
 - [ ] S2: Gemeinsame Startseiten-Kachel live; AC-9/10/16 grün; Fresh-Eyes-Screenshot-Paar Trip-/Vergleichs-Kachel auf Staging
 - [ ] S3: `HomeHero` mit `kind`, #1452-Fix, `shared/` ohne `Compare*`-Komponenten; AC-4/11/12 grün; erledigte Einträge aus `BEKANNTE_PAARE` gestrichen
-- [ ] S4 (nach #1969 S1): `last_briefing` im #1969-Endpunkt, Kachel verdrahtet; AC-1/13/14/15 grün inkl. Test mit zwei Nutzern
+- [ ] S4: `last_briefing` im #1969-Endpunkt, Kachel verdrahtet; AC-1/13/14/15 grün inkl. Test mit zwei Nutzern
 - [ ] Je Scheibe: CI-Ampel (6 Checks) grün, Staging verifiziert, Prod-Deploy + Selftest Exit 0
 - [ ] Issue #2346 erst nach S4 geschlossen
 
@@ -246,3 +257,4 @@ Die bestehende Ordner-Erkennung (`FE_BEREICHE`, Renderer-Pfade, `_gegenstueck`) 
 - 2026-10-24, /60-validate: HomeHeroCompare/HomeHeroTrip schon in S1 aus BEKANNTE_PAARE gestrichen (Datei durch #1969 gelöscht), für S2 entfällt dieser Schritt
 - 2026-10-24, /30-write-spec S2: Zuschnitt aus /20-analyse ergänzt (Kanäle als Prop, Testkennung `subscription-card-{id}`, Link-Verhalten, `nextSend` schon in S2); neue ACs AC-17 und AC-18. S2-Freigabe: AC-1 (Teil S2), AC-9, AC-10, AC-16, AC-17, AC-18
 - 2026-10-25, /30-write-spec S3: Zuschnitt aus /20-analyse ergänzt (HomeHero mit Snippets, Kanäle als Prop, Fundstelle :589, BEKANNTE_PAARE-Punkt erledigt, LoC angehoben). ACs AC-4/11/12 inhaltlich unverändert. S3-Freigabe: AC-4, AC-11, AC-12
+- 2026-10-26, /30-write-spec S4: Zuschnitt aus /20-analyse ergänzt (Lese-Helfer `letzte_briefings`, Alt-Eintrag-Regel, Handversand zählt, #1969 verbindlich). ACs AC-1/13/14/15 inhaltlich unverändert. S4-Freigabe: AC-1 (vollständig), AC-13, AC-14, AC-15
