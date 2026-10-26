@@ -48,7 +48,7 @@ from app.trip import Stage, Trip, Waypoint
 from services.official_alerts import OfficialAlert
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
-from tests.helpers.telegram_empfaenger import mit_profil_chat
+from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
 
 # Feste seven.io-Dienstnummer (S2a, ADR-0049) -- der Premium-Absender.
 PREMIUM_SMS_SENDER = "4916092172595"
@@ -356,7 +356,7 @@ def test_radar_alert_reaches_premium_sms_when_no_other_channel_configured(monkey
         assert not settings.can_send_sms(), "Testvoraussetzung: SMS unerreichbar"
 
         svc = TripAlertService(
-            settings=settings, user_id=mit_profil_chat(uid, settings), throttle_hours=0,
+            settings=settings, user_id=mit_profil_kanaele(uid, settings), throttle_hours=0,
             radar_service=RadarNowcastService(frame_source=_light_wet_frames),
             mail_sink=lambda subject, body: None,
         )
@@ -400,7 +400,7 @@ def test_deviation_alert_reaches_premium_sms_when_opted_in():
     stub = _SevenIoStub()
     try:
         svc = TripAlertService(
-            settings=_settings(stub.port, uid), user_id=mit_profil_chat(uid, _settings(stub.port, uid)), throttle_hours=0,
+            settings=_settings(stub.port, uid), user_id=mit_profil_kanaele(uid, _settings(stub.port, uid)), throttle_hours=0,
             mail_sink=lambda subject, body: None,
         )
         result = svc._send_alert(trip, [_weather_segment(1)], [_change()])
@@ -443,7 +443,7 @@ def test_radar_alert_reaches_premium_sms_when_opted_in(monkeypatch):
     stub = _SevenIoStub()
     try:
         svc = TripAlertService(
-            settings=_settings(stub.port, uid), user_id=mit_profil_chat(uid, _settings(stub.port, uid)), throttle_hours=0,
+            settings=_settings(stub.port, uid), user_id=mit_profil_kanaele(uid, _settings(stub.port, uid)), throttle_hours=0,
             radar_service=RadarNowcastService(frame_source=_light_wet_frames),
             mail_sink=lambda subject, body: None,
         )
@@ -488,7 +488,7 @@ def test_legacy_trip_inherits_premium_sms_from_briefing_config():
     stub = _SevenIoStub()
     try:
         svc = TripAlertService(
-            settings=_settings(stub.port, uid), user_id=mit_profil_chat(uid, _settings(stub.port, uid)), throttle_hours=0,
+            settings=_settings(stub.port, uid), user_id=mit_profil_kanaele(uid, _settings(stub.port, uid)), throttle_hours=0,
             mail_sink=lambda subject, body: None,
         )
         briefing_channels = svc._briefing_channels(trip.report_config)
@@ -529,7 +529,7 @@ def test_official_trip_alert_reaches_premium_sms():
 
     stub = _SevenIoStub()
     try:
-        svc = NotificationService(settings=_settings(stub.port, uid), user_id=mit_profil_chat(uid, _settings(stub.port, uid)))
+        svc = NotificationService(settings=_settings(stub.port, uid), user_id=mit_profil_kanaele(uid, _settings(stub.port, uid)))
         result = svc.send_official_alert(
             trip=trip, notices=[(_official_alert(), ["1"])],
             effective_channels={"email", "premium_sms"},
@@ -596,7 +596,7 @@ def test_standard_tier_never_reaches_premium_sms_via_alerts(monkeypatch):
                 alert_channels={"premium_sms": True},
             )
             TripAlertService(
-                settings=current_settings, user_id=mit_profil_chat(user_id, current_settings), throttle_hours=0,
+                settings=current_settings, user_id=mit_profil_kanaele(user_id, current_settings), throttle_hours=0,
                 mail_sink=lambda subject, body: None,
             )._send_alert(trip_dev, [_weather_segment(1)], [_change()])
 
@@ -605,7 +605,7 @@ def test_standard_tier_never_reaches_premium_sms_via_alerts(monkeypatch):
                 alert_channels={"premium_sms": True},
             )
             TripAlertService(
-                settings=current_settings, user_id=mit_profil_chat(user_id, current_settings), throttle_hours=0,
+                settings=current_settings, user_id=mit_profil_kanaele(user_id, current_settings), throttle_hours=0,
                 mail_sink=lambda subject, body: None,
             )._send_official_alert_only(trip_off, [(_official_alert(), ["1"])])
     finally:
@@ -673,14 +673,14 @@ def test_standard_tier_never_reaches_premium_sms_via_radar_path(monkeypatch):
     stub = _SevenIoStub()
     try:
         svc = TripAlertService(
-            settings=_settings(stub.port, uid), user_id=mit_profil_chat(uid, _settings(stub.port, uid)), throttle_hours=0,
+            settings=_settings(stub.port, uid), user_id=mit_profil_kanaele(uid, _settings(stub.port, uid)), throttle_hours=0,
             radar_service=RadarNowcastService(frame_source=_light_wet_frames),
             mail_sink=lambda subject, body: None,
         )
         svc.check_radar_alerts()
 
         svc_control = TripAlertService(
-            settings=_settings(stub.port, uid_control), user_id=mit_profil_chat(uid_control, _settings(stub.port, uid_control)), throttle_hours=0,
+            settings=_settings(stub.port, uid_control), user_id=mit_profil_kanaele(uid_control, _settings(stub.port, uid_control)), throttle_hours=0,
             radar_service=RadarNowcastService(frame_source=_light_wet_frames),
             mail_sink=lambda subject, body: None,
         )
@@ -737,7 +737,7 @@ def test_failed_premium_sms_does_not_abort_remaining_channels(monkeypatch):
     try:
         _pin_telegram_stub(monkeypatch, tg_stub)
         settings = _settings(stub.port, uid, telegram_port=tg_stub.port)
-        svc = NotificationService(settings=settings, user_id=mit_profil_chat(uid, settings))
+        svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(uid, settings))
         trip = _base_trip(f"trip-ac6-{uuid.uuid4().hex[:6]}")
         mails: list[tuple[str, str]] = []
 
@@ -833,7 +833,7 @@ def test_deviation_alarm_run_logs_specific_premium_sms_block_reason():
 
     mails: list = []
     svc = TripAlertService(
-        settings=_settings_email_and_premium_sms(uid), user_id=mit_profil_chat(uid, _settings_email_and_premium_sms(uid)), throttle_hours=0,
+        settings=_settings_email_and_premium_sms(uid), user_id=mit_profil_kanaele(uid, _settings_email_and_premium_sms(uid)), throttle_hours=0,
         mail_sink=lambda subject, body: mails.append((subject, body)),
     )
     sent = svc.check_and_send_alerts(
@@ -874,7 +874,7 @@ def test_radar_alarm_run_logs_specific_premium_sms_block_reason(monkeypatch):
     monkeypatch.setattr(loader, "load_all_trips", lambda **kw: [trip])
 
     svc = TripAlertService(
-        settings=_settings_email_and_premium_sms(uid), user_id=mit_profil_chat(uid, _settings_email_and_premium_sms(uid)), throttle_hours=0,
+        settings=_settings_email_and_premium_sms(uid), user_id=mit_profil_kanaele(uid, _settings_email_and_premium_sms(uid)), throttle_hours=0,
         radar_service=RadarNowcastService(frame_source=_light_wet_frames),
         mail_sink=lambda subject, body: None,
     )

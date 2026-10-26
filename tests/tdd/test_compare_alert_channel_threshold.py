@@ -115,7 +115,7 @@ from tests.tdd.test_compare_radar_alert import (
     _wet_frame,
     _write_preset_file,
 )
-from tests.helpers.telegram_empfaenger import mit_profil_chat
+from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
 
 # (#1595) Die frühere Konstante DATA_ROOT ist entfallen — die Presets legt
 # ``_write_preset_file`` aus test_compare_radar_alert.py ab, das die Wurzel
@@ -543,7 +543,7 @@ def test_ac4_erhoehte_schwelle_blockt_amtliche_warnung_geringer_dringlichkeit(
         mail_calls: list[str] = []
         tg_calls: list[str] = []
         svc = CompareOfficialAlertService(
-            settings=_official_settings_all_channels(), user_id=mit_profil_chat(uid, _official_settings_all_channels()),
+            settings=_official_settings_all_channels(), user_id=mit_profil_kanaele(uid, _official_settings_all_channels()),
             mail_sink=lambda subject, body: mail_calls.append(body),
             telegram_sink=lambda text: tg_calls.append(text),
         )
@@ -618,7 +618,7 @@ def test_ac5_regenradar_erreicht_jetzt_auch_telegram_und_sms(monkeypatch):
 
         mails: list[tuple[str, str]] = []
         svc = CompareRadarAlertService(
-            settings=_settings_sms_capable(sms_stub.port), user_id=mit_profil_chat(uid, _settings_sms_capable(sms_stub.port)),
+            settings=_settings_sms_capable(sms_stub.port), user_id=mit_profil_kanaele(uid, _settings_sms_capable(sms_stub.port)),
             radar_service=radar_service,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
@@ -680,7 +680,7 @@ def test_ac6_erhoehte_schwelle_blockt_regenradar_alarm_auf_diesem_kanal(monkeypa
 
         mails: list[tuple[str, str]] = []
         svc = CompareRadarAlertService(
-            settings=_settings_sms_capable(sms_stub.port), user_id=mit_profil_chat(uid, _settings_sms_capable(sms_stub.port)),
+            settings=_settings_sms_capable(sms_stub.port), user_id=mit_profil_kanaele(uid, _settings_sms_capable(sms_stub.port)),
             radar_service=radar_service,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
@@ -842,7 +842,7 @@ def test_ac7b_official_alle_kanaele_unter_schwelle_landet_im_protokoll_und_brief
         mail_calls: list[str] = []
         tg_calls: list[str] = []
         svc = CompareOfficialAlertService(
-            settings=_official_settings_all_channels(), user_id=mit_profil_chat(uid, _official_settings_all_channels()),
+            settings=_official_settings_all_channels(), user_id=mit_profil_kanaele(uid, _official_settings_all_channels()),
             mail_sink=lambda subject, body: mail_calls.append(body),
             telegram_sink=lambda text: tg_calls.append(text),
         )
@@ -935,7 +935,7 @@ def test_ac7c_radar_alle_kanaele_unter_schwelle_landet_im_protokoll_und_briefing
 
         mails: list[tuple[str, str]] = []
         svc = CompareRadarAlertService(
-            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()),
+            settings=_settings_email_and_telegram(), user_id=mit_profil_kanaele(uid, _settings_email_and_telegram()),
             radar_service=radar_service,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
@@ -1303,7 +1303,7 @@ def test_ac16_ortsvergleich_schwellen_beeinflussen_trip_alarmpfad_nicht(monkeypa
         )
         mails: list[tuple[str, str]] = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_kanaele(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         result = svc._send_alert(trip, [weather(1)], [change])
@@ -1419,7 +1419,7 @@ def test_ac18_alarmversand_bei_gelber_warnung_unveraendert_von_ac17():
         mail_calls: list[str] = []
         tg_calls: list[str] = []
         svc = CompareOfficialAlertService(
-            settings=_official_settings_all_channels(), user_id=mit_profil_chat(uid, _official_settings_all_channels()),
+            settings=_official_settings_all_channels(), user_id=mit_profil_kanaele(uid, _official_settings_all_channels()),
             mail_sink=lambda subject, body: mail_calls.append(body),
             telegram_sink=lambda text: tg_calls.append(text),
         )

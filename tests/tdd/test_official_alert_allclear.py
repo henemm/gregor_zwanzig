@@ -327,6 +327,7 @@ def test_ac8c_tagesfenster_ende_im_ortsvergleich_ist_keine_entwarnung(monkeypatc
     """
     from datetime import datetime, timezone
 
+    from tests.helpers.sms_empfaenger import profil_rueckadresse
     from tests.tdd._compare_kette_fixtures import preset_ablegen
     from tests.tdd._official_alert_allclear_fixtures import IBK, compare_entity
 
@@ -335,6 +336,9 @@ def test_ac8c_tagesfenster_ende_im_ortsvergleich_ist_keine_entwarnung(monkeypatc
         monkeypatch, morning_time="14:00:00", evening_time="20:00:00",
         day_window_start_hour=4, day_window_end_hour=21,
     )
+    # Feste Uhr in der Vergangenheit: die Rueckadresse relativ zu t0 lernen,
+    # sonst laege sie "in der Zukunft" und Premium-SMS waere gesperrt (#2231).
+    profil_rueckadresse(uid, "+490000000008", gelernt_am=t0 - timedelta(minutes=5))
     x = Warnquelle("quelle-x", nur_bei=IBK)
     von, bis = t0 + timedelta(hours=12), t0 + timedelta(hours=17)  # 20:00-01:00 Ortszeit
     x.alerts = [warnung(4, quelle=x, von=von, bis=bis)]
@@ -342,6 +346,7 @@ def test_ac8c_tagesfenster_ende_im_ortsvergleich_ist_keine_entwarnung(monkeypatc
         compare_lauf(uid, t0)
         erst = _snap(mit)
         assert erst.sendungen("email"), f"Vorbedingung: Erstwarnung kam an: {erst!r}"
+        assert erst.sendungen("premium_sms"), f"Vorbedingung: Premium-SMS offen: {erst!r}"
         preset_ablegen(uid, {**preset, "day_window_end_hour": 12})
         compare_lauf(uid, t0 + timedelta(minutes=15))
         eins = _snap(mit)

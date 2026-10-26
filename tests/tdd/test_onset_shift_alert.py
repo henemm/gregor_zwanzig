@@ -696,6 +696,7 @@ def _premium_settings(port: int) -> Settings:
 
 def _pruefe_vier_kanaele(flaeche: str, texte: dict[str, str], stub) -> None:
     from output.channels.premium_sms import PremiumSmsOutput
+    from output.channels.recipient import PremiumSmsRecipient
 
     for kanal in ("email_html", "email_plain", "telegram"):
         text = texte[kanal]
@@ -716,7 +717,14 @@ def _pruefe_vier_kanaele(flaeche: str, texte: dict[str, str], stub) -> None:
         f"nicht.\n{texte['sms']}"
     )
 
-    PremiumSmsOutput(_premium_settings(stub.port)).send("Alarm", texte["sms"])
+    # #1412 S4b: Empfaenger = gelernte Rueckadresse aus dem Profil.
+    from tests.helpers.sms_empfaenger import mit_profil_rueckadresse
+
+    settings = _premium_settings(stub.port)
+    uid = mit_profil_rueckadresse(f"kunde-onset-{flaeche}", settings)
+    PremiumSmsOutput(
+        settings, recipient=PremiumSmsRecipient.for_user(uid, settings),
+    ).send("Alarm", texte["sms"])
     assert len(stub.received) == 1, (
         f"AC-9 ({flaeche}/premium_sms): erwartet GENAU EINEN Versand, "
         f"bekommen: {stub.received!r}"

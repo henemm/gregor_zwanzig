@@ -39,22 +39,25 @@ class TestGetChannelSms:
 
     def test_get_channel_sms_no_import_error(self):
         """
-        GIVEN: channel="sms" und vollständige Config
+        GIVEN: channel="sms" und vollständige Config (globale .env-Nummer)
         WHEN: get_channel("sms", settings) aufgerufen wird
-        THEN: Kein ModuleNotFoundError — SMSOutput wird erfolgreich importiert
+        THEN: Issue #1412 S4b (AC-12): klare Ablehnung statt eines Ausgangs,
+        der still an settings.sms_to sendet -- die .env ist keine
+        Empfaengerquelle. (Frueher: Kanal wurde geliefert.)
         """
         settings = _settings_with_sms()
-        channel = get_channel("sms", settings)
-        assert channel is not None
+        with pytest.raises(OutputConfigError, match="sms"):
+            get_channel("sms", settings)
 
     def test_get_channel_sms_implements_protocol(self):
         """
-        GIVEN: channel="sms" und vollständige Config
-        WHEN: get_channel("sms", settings) aufgerufen wird
-        THEN: Das Objekt implementiert das OutputChannel-Protocol (name + send)
+        GIVEN: ein SMSOutput mit belegtem Empfaenger (Issue #1412 S4b)
+        WHEN: das Objekt geprueft wird
+        THEN: Es implementiert das OutputChannel-Protocol (name + send)
         """
-        settings = _settings_with_sms()
-        channel = get_channel("sms", settings)
+        from tests.helpers.sms_empfaenger import sms_ausgang
+
+        channel = sms_ausgang(_settings_with_sms(), "kunde-608", "+49000000000")
         assert isinstance(channel, OutputChannel)
 
     def test_sms_channel_name(self):
@@ -116,9 +119,9 @@ class TestSmsErrorHandling:
 
         Kein Mock — seven.io liefert echten Fehler bei ungültigem Key.
         """
-        from output.channels.sms import SMSOutput
+        from tests.helpers.sms_empfaenger import sms_ausgang
         settings = _settings_with_sms(seven_api_key="invalid-fake-key-for-test")
-        output = SMSOutput(settings)
+        output = sms_ausgang(settings, "kunde-608", settings.sms_to)
         with pytest.raises(OutputError):
             output.send("test", "Gregor Zwanzig Test")
 
@@ -151,9 +154,10 @@ class TestSmsLiveDelivery:
         WHEN: send() mit gültigem ≤160-Zeichen-Text aufgerufen wird
         THEN: seven.io antwortet HTTP 200 + Body "100" (kein Exception)
         """
-        from output.channels.sms import SMSOutput
+        from tests.helpers.sms_empfaenger import mit_profil_sms, sms_ausgang
         settings = self._require_live_credentials()
-        output = SMSOutput(settings)
+        # Issue #1412 S4b: Ziel nur als bestaetigte Profilnummer, nie settings.sms_to.
+        output = sms_ausgang(settings, mit_profil_sms("kunde-608-live", settings))
         # Kein Exception = Erfolg (seven.io hat "100" zurückgegeben)
         output.send("GZ Test", "Gregor Zwanzig SMS-Test #608 — bitte ignorieren")
 
@@ -165,8 +169,8 @@ class TestSmsLiveDelivery:
         WHEN: send() aufgerufen wird
         THEN: Kein Exception — seven.io wählt Standard-Absender
         """
-        from output.channels.sms import SMSOutput
+        from tests.helpers.sms_empfaenger import mit_profil_sms, sms_ausgang
         settings = self._require_live_credentials()
         settings_no_from = settings.model_copy(update={"sms_from": None})
-        output = SMSOutput(settings_no_from)
+        output = sms_ausgang(settings_no_from, mit_profil_sms("kunde-608-live", settings))
         output.send("GZ Test", "Gregor Zwanzig Test ohne Absender #608")

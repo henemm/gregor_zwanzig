@@ -105,7 +105,6 @@ from output.renderers.alert.model import AlertEvent, AlertMessage, side_label
 from output.renderers.alert.render import (
     _HANDLED_UNITS, render_email, render_sms, render_subject, render_telegram,
 )
-from output.channels.premium_sms import PremiumSmsOutput
 from output.renderers.channel_layout import (
     CHANNEL_LIMITS, VISIBILITY_GATE_IDS, render_for_channel,
 )
@@ -1709,7 +1708,11 @@ def test_kaskade_s2_ac11_premium_sms_forwards_the_cut_sms_text(
     settings = _prod_style_premium_sms_settings(
         premium_sms_stub.port, seven_sandbox_key="sandbox-key",
     )
-    PremiumSmsOutput(settings).send("Betreff", report.sms_text)
+    # #1412 S4b: Empfaenger = gelernte Rueckadresse aus dem Profil.
+    from tests.helpers.sms_empfaenger import mit_profil_rueckadresse, premium_ausgang
+
+    uid = mit_profil_rueckadresse("kunde-kaskade", settings)
+    premium_ausgang(settings, uid).send("Betreff", report.sms_text)
 
     assert len(premium_sms_stub.received) == 1, (
         f"Erwartet genau EINEN POST, bekommen: {premium_sms_stub.received!r}"

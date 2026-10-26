@@ -39,7 +39,7 @@ import pytest
 from app.config import Settings
 from app.loader import get_data_dir
 from output.channels.base import ChannelBlockedError
-from output.channels.sms import SMSOutput
+from tests.helpers.sms_empfaenger import sms_ausgang
 
 NUMMER_EIGEN = "+491511111111"
 NUMMER_FREMD = "+491512222222"
@@ -145,9 +145,9 @@ def test_ac1b_versandpfad_blockt_unbestaetigte_nummer(transport):
         "ac1b", sms_to=NUMMER_EIGEN, sms_verified_number=NUMMER_FREMD,
         sms_verified_at="2026-09-01T10:00:00Z",
     )
-    kanal = SMSOutput(_settings().with_user_profile("ac1b"))
+    # #1412 S4b: Empfaenger aus der Profil-Fabrik (blockt dort schon).
     with pytest.raises(ChannelBlockedError) as fehler:
-        kanal.send("", "Testnachricht")
+        sms_ausgang(_settings().with_user_profile("ac1b"), "ac1b").send("", "Testnachricht")
     assert getattr(fehler.value, "reason_code", "") == "sms_no_recipient", (
         "AC-1: der Versand muss am fehlenden Empfaenger blocken (sms_no_recipient), "
         f"bekommen {getattr(fehler.value, 'reason_code', None)!r}"
@@ -164,7 +164,7 @@ def test_ac1b_versandpfad_laesst_bestaetigte_nummer_durch(transport):
         "ac1bb", sms_to=NUMMER_EIGEN, sms_verified_number=NUMMER_EIGEN,
         sms_verified_at="2026-09-01T10:00:00Z",
     )
-    kanal = SMSOutput(_settings().with_user_profile("ac1bb"))
+    kanal = sms_ausgang(_settings().with_user_profile("ac1bb"), "ac1bb")
     with pytest.raises(AssertedNetworkTouch):
         kanal.send("", "Testnachricht")
     assert transport, "AC-1 Kontrollfall: die bestaetigte Nummer muss den Transport erreichen"
@@ -188,7 +188,7 @@ def test_ac8_fremde_nummer_bleibt_fuer_das_fremde_konto_gesperrt(transport):
         f"AC-8: B's Konto darf die fremde Nummer nicht adressieren, bekommen {b.sms_to!r}"
     )
     with pytest.raises(ChannelBlockedError):
-        SMSOutput(b).send("", "Aus B's Konto")
+        sms_ausgang(b, "ac8b").send("", "Aus B's Konto")
     assert transport == [], f"AC-8: aus B's Konto darf nichts versandt werden, Aufrufe: {transport}"
 
     a = _settings().with_user_profile("ac8a")

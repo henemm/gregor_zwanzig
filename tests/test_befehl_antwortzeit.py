@@ -1105,7 +1105,8 @@ def test_f002_premium_sms_rueckfrage_schreibt_genau_eine_zeile(
     install_transport_fakes(monkeypatch)
     nutzer = lege_lage_an(user_ids, "L5")
     gesendet: list = []
-    monkeypatch.setattr(PremiumSmsOutput, "__init__", lambda self, settings: None)
+    # #1412 S4b: der Empfaenger kommt als recipient= (Rueckadresse aus user.json).
+    monkeypatch.setattr(PremiumSmsOutput, "__init__", lambda self, settings, recipient=None: None)
     monkeypatch.setattr(PremiumSmsOutput, "send",
                         lambda self, subject, body, **kw: gesendet.append(body))
 

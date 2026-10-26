@@ -33,7 +33,7 @@ from output.channels.email import EmailOutput
 from output.channels.premium_sms import PremiumSmsOutput
 from output.channels.seven_io_base import mask_number
 from output.channels.sms import SMSOutput
-from output.channels.recipient import TelegramRecipient
+from output.channels.recipient import PremiumSmsRecipient, SmsRecipient, TelegramRecipient
 from output.channels.telegram import TelegramOutput
 from services import sms_daily_limit
 from services.trip_command_processor import CommandResult
@@ -635,6 +635,20 @@ class NotificationService:
         -- nur zulaessig als Absender des laufenden Webhook-Updates."""
         return TelegramOutput(settings, recipient=TelegramRecipient.inbound_reply(chat_id))
 
+    def _sms_output(self) -> SMSOutput:
+        """Issue #1412 S4b: SMS an die bestaetigte Profilnummer (frisch aus
+        ``user.json``), nie an ``settings.sms_to``. Aufruf IM ``try`` nach der
+        Tageslimit-Reservierung -- ein Block gibt sie dort wieder frei."""
+        recipient = SmsRecipient.for_user(self._require_user(), self._settings)
+        return SMSOutput(self._settings, recipient=recipient)
+
+    def _premium_sms_output(self, settings: Optional[Settings] = None) -> PremiumSmsOutput:
+        """Issue #1412 S4b: Premium-SMS an die gelernte Rueckadresse aus
+        ``user.json`` (auch fuer Befehlsantworten), nie aus den Settings."""
+        settings = settings if settings is not None else self._settings
+        recipient = PremiumSmsRecipient.for_user(self._require_user(), settings)
+        return PremiumSmsOutput(settings, recipient=recipient)
+
     def _sms_gate_reserve(
         self, kind: str, purpose: str, now: datetime,
         blocked_channels: dict[str, str], blocked_reason_codes: dict[str, str],
@@ -795,7 +809,7 @@ class NotificationService:
                 "sms", "briefing", now_sms, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    SMSOutput(self._settings).send(
+                    self._sms_output().send(
                         subject=report.email_subject,
                         body=report.sms_text or report.email_plain,
                     )
@@ -818,7 +832,7 @@ class NotificationService:
                 "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    PremiumSmsOutput(self._settings).send(
+                    self._premium_sms_output().send(
                         subject=report.email_subject,
                         body=report.sms_text or report.email_plain,
                     )
@@ -976,7 +990,7 @@ class NotificationService:
                 "sms", "briefing", now_sms, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    SMSOutput(self._settings).send(subject=subject, body=text)
+                    self._sms_output().send(subject=subject, body=text)
                     sent_channels.append("sms")
                 except Exception as e:
                     sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
@@ -988,7 +1002,7 @@ class NotificationService:
                 "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    PremiumSmsOutput(self._settings).send(subject=subject, body=text)
+                    self._premium_sms_output().send(subject=subject, body=text)
                     sent_channels.append("premium_sms")
                 except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
                     sms_daily_limit.release_reservation(
@@ -1386,7 +1400,7 @@ class NotificationService:
                     if sms_sink is not None:
                         sms_sink(sms_body)
                     else:
-                        SMSOutput(self._settings).send(subject="", body=sms_body)
+                        self._sms_output().send(subject="", body=sms_body)
                     sent_channels.append("sms")
                 except Exception as e:
                     sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
@@ -1404,7 +1418,7 @@ class NotificationService:
                 "premium_sms", "alert", now_premium, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    PremiumSmsOutput(self._settings).send(subject="", body=sms_body)
+                    self._premium_sms_output().send(subject="", body=sms_body)
                     sent_channels.append("premium_sms")
                 except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
                     sms_daily_limit.release_reservation(
@@ -1519,7 +1533,7 @@ class NotificationService:
                     if sms_sink is not None:
                         sms_sink(sms_text)
                     else:
-                        SMSOutput(self._settings).send(subject="", body=sms_text)
+                        self._sms_output().send(subject="", body=sms_text)
                     sent_channels.append("sms")
                 except Exception as e:
                     sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
@@ -1537,7 +1551,7 @@ class NotificationService:
                     if premium_sms_sink is not None:
                         premium_sms_sink(sms_text)
                     else:
-                        PremiumSmsOutput(self._settings).send(subject="", body=sms_text)
+                        self._premium_sms_output().send(subject="", body=sms_text)
                     sent_channels.append("premium_sms")
                 except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
                     sms_daily_limit.release_reservation(
@@ -1759,7 +1773,7 @@ class NotificationService:
             if sms_sink is not None:
                 sms_sink(sms_text)
             else:
-                SMSOutput(self._settings).send(subject="", body=sms_text)
+                self._sms_output().send(subject="", body=sms_text)
         except Exception as e:
             sms_daily_limit.release_reservation(self._require_user(), "sms", now)
             logger.error(f"Compare official alert sms failed for {preset_name}: {e}")
@@ -1789,7 +1803,7 @@ class NotificationService:
             premium_text, _ = render_official_alert_sms_with_allclears(
                 dto_notices, ac_notices or [], tz=alert_tz,
             )
-            PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
+            self._premium_sms_output().send(subject="", body=premium_text)
         except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
             sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)
             blocked_channels["premium_sms"] = str(e)
@@ -2143,7 +2157,7 @@ class NotificationService:
                 "sms", "alert", now_sms, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    SMSOutput(self._settings).send(subject=subject, body=sms_body)
+                    self._sms_output().send(subject=subject, body=sms_body)
                     sent_channels.append("sms")
                 except Exception as e:
                     sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
@@ -2153,7 +2167,7 @@ class NotificationService:
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # vorgeschaltete can_send_*()-Bereitschaftsfrage (D2): die
         # Sendebereitschaft entscheidet ausschliesslich
-        # `PremiumSmsOutput._resolve_recipient()` zur Sendezeit; eine
+        # `PremiumSmsRecipient.for_user()` zur Sendezeit (#1412 S4b); eine
         # bewusste Sperre (keine/veraltete Rueckadresse) landet in
         # `blocked_channels`/`blocked_reason_codes` statt in
         # `failed_channels` — sie ist kein Transportfehler.
@@ -2163,7 +2177,7 @@ class NotificationService:
                 "premium_sms", "alert", now_premium, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    PremiumSmsOutput(self._settings).send(subject=subject, body=sms_body)
+                    self._premium_sms_output().send(subject=subject, body=sms_body)
                     sent_channels.append("premium_sms")
                 except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
                     sms_daily_limit.release_reservation(
@@ -2216,7 +2230,7 @@ class NotificationService:
             logger.error("Premium-SMS confirmation blocked: SMS-Tageslimit erreicht")
             return
         try:
-            PremiumSmsOutput(settings).send(
+            self._premium_sms_output(settings).send(
                 subject=result.confirmation_subject,
                 body=result.confirmation_body,
             )

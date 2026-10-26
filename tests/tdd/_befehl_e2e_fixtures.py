@@ -1032,6 +1032,9 @@ def _schreibe_user_json(user_id: str, *, mail_to: str, telegram_chat_id: str,
         "telegram_chat_id": telegram_chat_id,
         "premium_sms_reply_to": premium_sms_reply_to,
         "premium_sms_reply_at": datetime.now(timezone.utc).isoformat(),
+        # #1412 S4b: SMS nur an die BESTAETIGTE Profilnummer.
+        "sms_to": _TRANSPORT_ENV_DEFAULTS["sms_to"],
+        "sms_verified_number": _TRANSPORT_ENV_DEFAULTS["sms_to"],
     }), encoding="utf-8")
 
 
