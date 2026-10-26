@@ -22,6 +22,8 @@ export interface NextBriefing {
 	overdue?: boolean;
 	reason?: NextBriefingReason;
 	paused_until?: string;
+	/** #2346 S4: Zeitpunkt des letzten versendeten Briefings (Briefing-Log), `null` = nie. */
+	last_briefing?: string | null;
 }
 
 const WOCHENTAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
