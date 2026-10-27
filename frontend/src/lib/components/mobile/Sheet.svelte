@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	export type SheetSnap = 'full' | 'half' | 'peek' | 'collapsed';
+	export type SheetSnap = 'full' | 'half' | 'peek' | 'collapsed' | 'auto';
 </script>
 
 <script lang="ts">
@@ -41,7 +41,9 @@
 	// Issue #1158 — collapsed ist eine feste Pixel-Hoehe (nicht prozentual wie
 	// die anderen drei Stufen), sonst waere "eingeklappt" auf grossen Displays
 	// immer noch zu hoch.
-	const heights = { full: '84%', half: '55%', peek: '32%', collapsed: '56px' } as const;
+	// Mobile-Shell S2 — `auto`: das Sheet ist so hoch wie sein Inhalt (Deckel
+	// 84 %), fuer kurze Menues wie das Konto-Sheet statt einer festen Stufe.
+	const heights = { full: '84%', half: '55%', peek: '32%', collapsed: '56px', auto: 'auto' } as const;
 	const height = $derived(heights[snap] ?? heights.full);
 
 	$effect(() => {
@@ -74,6 +76,7 @@
 		style:right="0"
 		style:bottom="0"
 		style:height={height}
+		style:max-height={snap === 'auto' ? '84%' : undefined}
 		style:background="var(--g-card)"
 		style:z-index="61"
 		style:border-top-left-radius="18px"

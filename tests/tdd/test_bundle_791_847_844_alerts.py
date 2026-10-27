@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from app.config import Settings
 from app.models import (
     ChangeSeverity,
     GPXPoint,
@@ -215,9 +216,17 @@ def test_ac1_radar_alert_onset_in_local_time():
         def mail_sink(subject: str, body: str) -> None:
             captured.append({"subject": subject, "body": body})
 
+        # #1196 Klasse C (Vorbild Batch 4, test_feature_656_radar_nowcast):
+        # ohne Settings ist can_send_email() nur mit Host-.env True -- auf dem
+        # CI-Runner lief check_radar_alerts in "No channel configured"
+        # (captured leer). Dummy-SMTP, Versand faengt mail_sink.
         svc = TripAlertService(
             throttle_hours=0,
             user_id=uid,
+            settings=Settings(
+                smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                mail_to="empfaenger@example.com",
+            ),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=mail_sink,
         )

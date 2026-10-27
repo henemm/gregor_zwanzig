@@ -1,6 +1,8 @@
 # Decision Matrix — Wetterdaten-Provider (Ist-Stand)
 
-> Stand: 2026-08-02. Ersetzt das MET/MOSMIX-Auswahlmodell der MVP-Ära
+> Stand: 2026-08-02, Registry-Abgleich mit `src/providers/base.py::_load_providers()` am 2026-10-21
+> (registriert: `geosphere`, `openmeteo`, `brightsky`, `at_direct`, `fr_direct`, `de_direct`, `eu_direct`;
+> `fixture` ist kein Registry-Name, sondern ein Umleitungszweig in `get_provider()`). Ersetzt das MET/MOSMIX-Auswahlmodell der MVP-Ära
 > (historisch: ADR-0002, superseded). Quelle der Wahrheit für Details ist der
 > Code — dieses Dokument beschreibt nur die Auswahllogik und wo sie liegt.
 
@@ -22,10 +24,11 @@ Wetterdaten über `get_provider("openmeteo")` — Registry in
 | Name | Zweck |
 |---|---|
 | `geosphere` | GeoSphere Austria (Direktanbindung, AT-Fallback-Basis) |
-| `fr_direct` | Météo-France AROME-WCS (Direktanbindung, FR-Fallback, #1143) — liefert seit #1457 S2a zusätzlich zu Temperatur/Wind/Niederschlag die erwartete Blitzdichte (`lightning_density_per_km2_3h`, nur Frankreich/Korsika; eigenes Feld, nicht mit dem DWD-Blitzpotenzial vermischt); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
+| `at_direct` | Dünner Adapter `GeoSphereDirectProvider` (`src/providers/regional_stubs.py`, #1142) über `geosphere` — AT-Stufe der Cross-Provider-Kette, ruft **ohne** Open-Meteo-Wolkenanreicherung ab |
+| `fr_direct` | Météo-France AROME-WCS (Direktanbindung, FR-Fallback, #1143) — liefert seit #1457 S2a zusätzlich zu Temperatur/Wind/Niederschlag die erwartete Blitzdichte (`lightning_density_per_km2_3h`, nur Frankreich/Korsika; eigenes Feld, nicht mit dem DWD-Blitzpotenzial vermischt); seit #1507 S5c zusätzlich einen Hagel-Rohwert (`hail_potential_mf`, Coverage `HAIL__GROUND_OR_WATER_SURFACE`, Massenanteil `kg kg-1`; eigenes Feld, nicht mit `hail_potential_grau_gsp` (DWD) vermischt, **kein** Einfluss auf `hail_flag`); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
 | `de_direct` | DWD ICON-D2 Open Data (GRIB2-Direktanbindung, DE-Fallback, #1144) — liefert seit #1457 S2b zusätzlich zu Temperatur/Wind/Niederschlag Blitzpotenzial und Hagel-Potenzial (`lightning_potential_lpi_jkg` und `hail_potential_grau_gsp`, nur Deutschland/Alpen/Österreich; eigene Felder, nicht mit der Météo-France Blitzdichte vermischt); seit #1531 zusätzlich sieben Gewitter-**Roh**größen ohne Einstufung (`supercell_index_sdi2_1s`, `convective_inhibition_jkg`, `cape_ml_jkg`, `lightning_potential_max_lpi_jkg`, `updraft_helicity_max_m2s2`/`_med_m2s2`/`_low_m2s2` — Details `docs/reference/api_contract.md`); Gewitter-Zuständigkeit läuft über eine eigene Tabelle, s. u. |
 | `eu_direct` | DWD ICON-EU Open Data (GRIB2-Direktanbindung, ~6,5 km Maschenweite, `src/providers/dwd_eu.py`) — **nur** Gewittersignale, kein `fetch_forecast`. Liefert seit #1457 S2c Blitzpotenzial (`lightning_potential_lpi_jkg`, externer Abrufname `lpi_con_max`) als Lückenfüller für alle europäischen Orte außerhalb von FR/Korsika (`fr_direct`) und DE/Alpen/Österreich (`de_direct`); kein Hagel-Signal (ICON-EU liefert kein Pendant zu `grau_gsp`, beabsichtigt). Seit #1531 zusätzlich `cape_ml_jkg` und `convective_inhibition_jkg` (Rohgrößen, keine Einstufung); `cape_con` wird providerintern mitabgerufen, bekommt aber bewusst **kein** eigenes Modellfeld. Gewitter-Zuständigkeit läuft über die eigene Tabelle, s. u. — Catch-all, letzte Zeile. |
-| `brightsky` | DWD-Daten via BrightSky — genutzt im Radar-Pfad (`src/services/radar_service.py`) |
+| `brightsky` | DWD-Daten via BrightSky — genutzt im Radar-Pfad (`src/services/radar_service.py`); liefert nur Niederschlag, die Konvektion (Gewitter/Hagel) kommt seit #2464 aus einem Open-Meteo-Sidecar (ICON-D2, Code 95/96/99), bei Sidecar-Ausfall `convective_checked=False` (ADR-0018) |
 | ~~`radar_dpc`~~ | **Seit #1648 ersatzlos entfernt** (2026-08-11). Der Radar-Nowcast Italien lief über die Protezione Civile und lieferte strukturell immer nur eine Vergangenheits-Momentaufnahme, die `_derive_result` nie ins Nowcast-Fenster ließ. Der Italien-Zweig läuft jetzt direkt auf ARPAE ICON-2I (Open-Meteo, kein eigener Provider). **Nicht zu verwechseln** mit der amtlichen DPC-Warnquelle `DpcSource` (`src/services/official_alerts/dpc.py`, Issue #1427) — die bleibt unverändert in Betrieb und war nie Teil dieser Tabelle (s.u.). |
 | `fixture` | Offline-Testmodus: aktiv wenn `GZ_TEST_FIXTURE_DIR` gesetzt (#346) — bedient `openmeteo`-Anfragen aus versionierten Fixtures |
 
@@ -36,10 +39,13 @@ Direktanbieter `de_direct` (DWD-GRIB2), `eu_direct` (DWD-EU), `geosphere` (Zeitr
 Regelbetrieb nur Gewitter-/Schneesignale liefern, keine Temperatur; die Asymmetrie greift nur beim
 in ADR-0018 bereits abgesicherten Cross-Provider-Totalausfall.
 
-Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm, DPC, Vigilance,
-Météo des forêts, Massiv-Sperren) sind **nicht** Teil dieser Tabelle — sie sind kein
-Wetter-Provider im Sinne von `get_provider()`, sondern ein eigenständiges,
-länderneutrales Warnungs-System. Details: `docs/features/epic-1073-alerts-at-it.md`.
+Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm (IT/AT/DE),
+DPC, Vigilance, Météo des forêts, Massiv-Sperren, Lawinen-Lagebericht avalanche.report
+(EAWS-Stufen 1–5, #1441, ADR-0089), SLF-Lawinenlagebericht Schweiz (`slf_bulletin`,
+aws.slf.ch/CAAML, #1441 S3, ADR-0091)) sind **nicht** Teil dieser Tabelle —
+sie sind kein Wetter-Provider im Sinne von `get_provider()`, sondern ein eigenständiges,
+länderneutrales Warnungs-System. Details: `docs/features/epic-1073-alerts-at-it.md`
+(AT/IT) sowie Issue #1681 (DE, `docs/specs/modules/feat_1681_meteoalarm_de.md`).
 
 ## 🔴 Abrufnamen IMMER gegen das Angebot des Dienstes prüfen (Lehre aus #1457, 2026-08-03)
 
@@ -64,6 +70,14 @@ Dieselbe Prüfung hat nebenbei geklärt, dass Hagel regulär verfügbar ist
 (`HAIL__GROUND_OR_WATER_SURFACE`, `GRAUPEL__GROUND_OR_WATER_SURFACE`) — die als
 ungeklärt geführte Kurzform `DIAG_GRELE` existiert dort ebenfalls nicht (#1475).
 
+**`HAIL__GROUND_OR_WATER_SURFACE` (Météo-France WCS, #1507 S5c): VERIFIZIERT.**
+Live-Test `tests/tdd/test_hail_coverage_name_live.py` gegen die echte
+`GetCapabilities`-Antwort bestanden (2026-09-20); `DescribeCoverage` bestätigt
+`<ows:Title>Total hail precipitation</ows:Title>`, uom `kg kg-1` (Massenanteil).
+**Bewusst NICHT** `GRAUPEL__GROUND_OR_WATER_SURFACE` verwendet — der Dienst führt
+diesen Namen ebenfalls, aber als `Total graupel precipitation`, eine andere
+Niederschlagsform.
+
 Für Météo-France erledigt das ab jetzt automatisch der Live-Test
 `tests/tdd/test_thunder_coverage_name_live.py` (Marker `live`): Er liest den Namen
 **aus dem Produktivcode** und prüft ihn gegen `GetCapabilities`. **S2b braucht ein
@@ -85,10 +99,26 @@ das schärfste vorhandene Ergebnis (`max_thunder()`).
 | **DWD-Blitzpotenzial** `lightning_potential_lpi_jkg` — **DE_ALPEN (ICON-D2)** | **≥ 1** | **≥ 30** | **≥ 50** | DE/Alpen/AT (`de_direct`) | ✅ **geeicht seit #1679** (Muster analog ADR-0048): `LPI_THRESHOLDS_JKG["DE_ALPEN"]` in `src/app/model_registry.py` — Bína et al., Atmospheric Research 2022 / ASR Copernicus 2022 (COSMO-D2, dieselbe Modellfamilie wie ICON-D2): „skilful forecast … for LPI thresholds 30, 40 and 50 J/kg", Nachweisschwelle 1 J/kg. Alle drei Werte belegt |
 | **DWD-Blitzpotenzial** `lightning_potential_lpi_jkg` — **EU_REST (ICON-EU)** | **≥ 5** | **≥ 20** | **≥ 50** | Rest-Europa (`eu_direct`) | ⚠️ **Interim seit #1474c, durch #1679 bewusst unverändert**: `LPI_THRESHOLDS_JKG["EU_REST"]`. 5 J/kg = betrieblicher DWD-Schwellenwert (Blitz-ja/nein), 50 J/kg = oberes Ende der publizierten Verifikationsspanne (~90 % Blitzwahrscheinlichkeit) — [ASR 19, 29 (2022)](https://asr.copernicus.org/articles/19/29/2022/), [DWD ICON-Bericht 2022/10](https://www.dwd.de/EN/ourservices/reports_on_icon/pdf_einzelbaende/2022_10.pdf). 🔴 20 J/kg ("leicht"→"mittel") weiterhin NICHT publiziert, interpoliert (PO-freigegeben 2026-08-04) — eigene Eichung erst mit #1678 |
 
+✅ **Die LPI-Leiter folgt seit #2263 der liefernden Quelle, nicht dem Gebiet der Koordinate
+(ADR-0065).** Die Spalte „Gebiet" oben beschreibt nur den Normalfall ohne Vertretung. Springt bei
+Ausfall der Primärquelle die benannte Vertretung ein (`de_direct → eu_direct`, `fr_direct →
+eu_direct`, ADR-0047), wird ihr Wert gegen die für SIE kalibrierte Leiter bewertet — nicht gegen
+die Leiter des ursprünglich zuständigen Gebiets. `app.model_registry.lpi_schluessel_fuer_quelle()`
+übersetzt die tatsächlich liefernde Quelle in den Tabellenschlüssel (`de_direct`→`DE_ALPEN`,
+`eu_direct`→`EU_REST`, `fr_direct`→kein Schlüssel). Vorher verpuffte das Vertretungssignal für
+FR/Korsika vollständig und wurde für DE_ALPEN fälschlich zu HIGH statt MED eskaliert.
+
 🔴 **CAPE deckelt bei „leicht" und eskaliert nie.** Es misst *verfügbare Energie*, kein
 Ereignis — ohne Auslöser passiert trotz hoher Werte nichts. „mittel"/„hoch" bleiben
 Signalen vorbehalten, die tatsächliche Blitzaktivität vorhersagen. CAPE ist zugleich die
 einzige Größe, die „leicht" **außerhalb Frankreichs** überhaupt erreichbar macht.
+
+🔴 **Seit ADR-0064 (#2176) verlässt „leicht" die nutzersichtbare Gewitterleiter.** In keinem
+Kanal erscheint für `LOW` noch eine Gewitter-Ereignisbehauptung; statt „Gewitter möglich"
+steht eine Luftmassen-Aussage mit dem CAPE-Wert (außer bei Blitzdichte-/Blitzpotenzial-/
+Wettercode-Anteil, dann bleibt der tatsächliche Signal-Träger sichtbar). Die vierstufige
+Leiter `kein/möglich/wahrscheinlich/akut` beginnt seither bei `MED`. Das Enum `ThunderLevel`
+und die Fusionslogik dieses Abschnitts sind davon unberührt — reine Darstellungsänderung.
 
 🔴 **Die CAPE-Schwelle ist modellabhängig — eine Zahl für alle Quellen war ein Fehler
 (#1592, ADR-0048).** CAPE ist ein modellabhängiges Konstrukt, kein Messwert: ICON liefert
@@ -135,8 +165,11 @@ Gewitter-Einstufung im Provider bauen.**
 Wettercode/Blitzpotenzial dockt Hagel **nicht** als fünfte Zeile an diese Tabelle an —
 es ist ein eigenständiges, rein deskriptives Kennzeichen (`hail_flag: Optional[bool]`,
 `True`=ja/`None`=unbekannt) neben `thunder_level`, nicht Teil von `max_thunder()`. S5a
-liest ausschließlich den bereits vorhandenen `wmo_code` (96/99 → `True`). Details, inkl.
-der beiden noch offenen Folgescheiben S5b (DWD `grau_gsp`) und S5c (Météo-France):
+liest ausschließlich den bereits vorhandenen `wmo_code` (96/99 → `True`). **S5c
+(Météo-France, `hail_potential_mf`) ist seit #1507 LIVE** — ebenfalls ein reiner,
+unverbundener Rohwert ohne Kombination mit `hail_flag` (Known Limitation, s.
+`docs/specs/modules/feat_1507_s5c_hagel_mf_fr.md`). Offen bleibt nur noch S5b (DWD
+`grau_gsp`, `status:deferred`, #1506). Details:
 `docs/specs/modules/feat_1475_s5a_hagel_wmo_flag.md`.
 
 **`None` ≠ `NONE`:** Liegt **kein** Signal vor, liefert die Fusion `None` („keine
@@ -150,9 +183,13 @@ Gewitter erwartet"). Kanonische Quellen sind ausschließlich `thunder_ordinal()`
 `thunder_label_value()` und `THUNDER_LABEL_DE` (`output/metric_format.py`), für den
 Ortsvergleich-Editor `compare_metric_catalog.py::ordinalLabels`. Wächter dagegen: #1480.
 
-**Zweite Achse, vorbereitet:** `thunder_probability_pct` (Wahrscheinlichkeit, 0–100 %)
-liegt im Datenmodell, ist aber von **keiner** Quelle befüllt — kein Dienst liefert sie
-fertig, ableitbar allein aus dem Open-Meteo-Ensemble (#1419 S6, Kontingent #1329).
+**Zweite Achse, seit #1983 intern befüllt, weiterhin kein Nutzer-Renderer:**
+`thunder_probability_pct` (0–100 %) liegt im Datenmodell und wird im Trip-Briefing-Pfad seit
+Issue #1983 (2026-09-19, ADR-0073) aus dem Open-Meteo-Ensemble befüllt (Anteil der Member mit
+Gewittercode). Sie erscheint aber **weiterhin in keiner Ausgabe als Zahl** — der Wert wirkt nur
+als fünftes Fusionssignal `modelllauf` auf `thunder_level` (≥ 60 % hebt, < 10 % dämpft die
+übrigen vier Signale um eine Stufe). Details: ADR-0073, Spec
+`docs/specs/modules/feat_1983_gewitter_modelllauf_mehrheit.md`.
 
 ## Gewitter-Zuständigkeit: eigene Tabelle, getrennt von der Grundvorhersage (#1457 S2a)
 
@@ -161,7 +198,7 @@ Seit #1457 S2a gibt es **zwei** Zuständigkeitstabellen, und das ist Absicht:
 | Tabelle | Zweck | Datei |
 |---|---|---|
 | `region_routing.direct_provider_for` | Zuständigkeit für die **Grundvorhersage** (Temperatur/Wind/Schnee) im Cross-Provider-Fallback | `src/providers/region_routing.py` |
-| `thunder_routing.thunder_provider_for` | Zuständigkeit für **Gewittersignale** (`lightning_density_per_km2_3h`, `lightning_potential_lpi_jkg`, `hail_potential_grau_gsp`) | `src/providers/thunder_routing.py` |
+| `thunder_routing.thunder_provider_for` | Zuständigkeit für **Gewittersignale** (`lightning_density_per_km2_3h`, `lightning_potential_lpi_jkg`, `hail_potential_grau_gsp`, `hail_potential_mf`) | `src/providers/thunder_routing.py` |
 
 Grund für die Trennung: Die Zuständigkeit ist **größenabhängig** — ein Dienst
 kann für Temperatur/Wind/Schnee die beste Quelle sein und trotzdem kein
@@ -262,7 +299,9 @@ externe, zyklische Lastspitze bei Open-Meteo, kein Zählartefakt. Als
 Betriebsmaßnahme laufen die beiden Radar-Cron-Jobs (`radar_alert_checks`,
 `compare_radar_alert_checks`, `internal/scheduler/scheduler.go`) seither auf
 `7,22,37,52 * * * *` statt `*/15 * * * *` — versetzt zu den gemessenen
-Spitzenminuten. Alle übrigen Scheduler-Jobs bleiben unverändert. **Der
+Spitzenminuten. **Seit #2261 A-2 S2 (ADR-0082):** Takt 5 Minuten,
+`3-58/5 * * * *` (Minuten 3, 8, … 58, 3 Minuten Abstand zu :00/:30) mit
+Radar-Budget 240/270/600 s. Alle übrigen Scheduler-Jobs bleiben unverändert. **Der
 Versatz umgeht die Lastspitze, er behebt sie nicht** — die Restfehlerquote
 (~3 %) bleibt bestehen; dafür sorgt `NowcastResult.data_unavailable`
 (`src/services/radar_service.py`), das einen echten Abruf-Fehlschlag von
@@ -284,15 +323,19 @@ jeder weitere Ort darin wird daraus bedient — ein 8-Orte-Vergleich sinkt von
 Gebiets; verstreute Nutzer (Korsika, Pyrenäen, Alpen gleichzeitig) addieren
 sich weiterhin gebietsweise.
 
-**Zwei bekannte Lücken, noch nicht gebaut (Folge-Scheibe):**
+**Zwei bekannte Lücken:**
 - Der Zwischenspeicher bündelt **gleichzeitige** Abrufe nicht — zwei Threads,
   die dieselbe Kachel anfordern, laden beide. Heute folgenlos, weil alle
   Aufrufer (Trip wie Ortsvergleich) sequentiell laufen; wird relevant, sobald
-  der Alarm-Lauf parallelisiert wird.
-- Es fehlt eine **aktive Drosselung**, die Abrufe je Minute zählt und wartet
-  (Muster: `telegram.py` Sende-Drossel), statt auf Einhaltung zu hoffen —
-  sonst erscheinen HTTP-429-Abweisungen im Betrieb als „keine Gewitterdaten
-  verfügbar".
+  der Alarm-Lauf parallelisiert wird. Noch nicht gebaut.
+- Es fehlt weiterhin eine **aktive Drosselung**, die Abrufe je Minute zählt
+  und wartet (Muster: `telegram.py` Sende-Drossel), statt auf Einhaltung zu
+  hoffen. **Behoben ist nur die Sichtbarkeit (#1993, 2026-09-16):** ein HTTP
+  429 auf einen Blitzdichte-Abruf erzeugt jetzt eine eigene Log-Meldung
+  („gedrosselt (429) — Meteo-France-Limit erreicht", `meteofrance.py`) statt
+  der generischen „nicht abrufbar" — im Betrieb von echtem Datenausfall
+  unterscheidbar. Der Abruf wird dabei weiterhin nicht wiederholt und nicht
+  aktiv gedrosselt.
 
 ## Historie
 

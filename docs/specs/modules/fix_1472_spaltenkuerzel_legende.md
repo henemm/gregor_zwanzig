@@ -3,7 +3,7 @@ entity_id: fix_1472_spaltenkuerzel_legende
 type: bugfix
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [reports, compare, email, adr-0042]
 ---
@@ -173,7 +173,7 @@ und `Niederschlag` besteht nie eine Präfix-Beziehung). Verworfen zugunsten der 
   - Test: vier Renderläufe mit identischer Eingabe, Textfragmente paarweise vergleichen
     (A/B-Vergleich der Ausgaben, nicht Vergleich der aufgerufenen Funktionsnamen).
 
-- **AC-8 (ergänzt 2026-08-04 nach dem RED-Lauf):** Given eine Metrik-Auswahl mit **zwei
+- **AC-8:** (ergänzt 2026-08-04 nach dem RED-Lauf) Given eine Metrik-Auswahl mit **zwei
   Auswertungen derselben Größe** (z. B. Temperatur Maximum **und** Minimum), sodass der
   Spaltenkopf den Auswertungs-Zusatz trägt (`Temp max` / `Temp min`) / When die Legende gerendert
   wird / Then nennt sie **exakt diese** Kürzel (`Temp max = Temperatur Maximum`) — nicht die

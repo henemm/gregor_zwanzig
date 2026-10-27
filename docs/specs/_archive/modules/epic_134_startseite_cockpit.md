@@ -3,7 +3,7 @@ entity_id: epic_134_startseite_cockpit
 type: module
 created: 2026-05-09
 updated: 2026-05-09
-status: active
+status: implemented
 version: "1.0"
 tags: [sveltekit, frontend, dashboard, cockpit, epic-134, svelte5-runes, scheduler, forecast]
 ---

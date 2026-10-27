@@ -3,7 +3,7 @@ entity_id: fix_2042_gehzeit_wegstrecke
 type: module
 created: 2026-08-22
 updated: 2026-08-22
-status: approved
+status: implemented
 version: "1.0"
 tags: [naismith, gehzeit, wegstrecke, khw]
 ---

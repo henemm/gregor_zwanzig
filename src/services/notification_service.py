@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
@@ -28,12 +28,16 @@ from output.renderers.email.compact import _ascii as _ascii_hint
 from output.renderers.email.design_tokens import (
     FONT_UI, G_ACCENT, G_DANGER, G_INK, G_PAPER, G_SURFACE_1, WEB_FONT_LINK,
 )
-from output.channels.base import OutputConfigError
+from output.channels.base import ChannelBlockedError, OutputConfigError
 from output.channels.email import EmailOutput
 from output.channels.premium_sms import PremiumSmsOutput
+from output.channels.seven_io_base import mask_number
 from output.channels.sms import SMSOutput
+from output.channels.recipient import PremiumSmsRecipient, SmsRecipient, TelegramRecipient
 from output.channels.telegram import TelegramOutput
+from services import sms_daily_limit
 from services.trip_command_processor import CommandResult
+from services.trip_day import trip_local_today
 from utils.timezone import local_dt, local_fmt
 
 if TYPE_CHECKING:
@@ -53,6 +57,14 @@ if TYPE_CHECKING:
     from services.report_config_resolver import ReportRenderOptions
 
 logger = logging.getLogger(__name__)
+
+#: Issue #2422 S4 (Fix #1088): kurzer SMS-Hinweistext, wenn eine gebündelte
+#: Abweichungs-/Radar-Alarm-Mail einen eingebetteten amtlichen Zusatzblock
+#: trägt — die SMS bekommt statt des kompletten Zusatzblocks nur diesen
+#: knappen Hinweis (Zeichen-Budget SMS). Vertrag geteilt mit
+#: `tests/tdd/test_alarm_sms_paritaet_amtlicher_zusatz.py::_AMTL_HINWEIS_TOKEN`.
+_AMTL_HINWEIS_SMS_TOKEN = "+ amtl. Warnung s. E-Mail/Telegram"
+_AMTL_HINWEIS_SMS_SUFFIX = " " + _AMTL_HINWEIS_SMS_TOKEN
 
 
 @dataclass
@@ -130,10 +142,9 @@ class NotificationResult:
     telegram_fully_sent: bool = True
     no_channel_configured: bool = False
     error: str | None = None
-    # Issue #1459: `sent_channels` bedeutet "Kanal wurde betreten" (Best-Effort,
-    # Anti-Pattern #656) -- ein gescheiterter Transport bleibt darin stehen.
-    # `failed_channels` haelt zusaetzlich fest, welche davon technisch NICHT
-    # angekommen sind, ohne diese bewusste Semantik zu veraendern.
+    # Issue #1405 S1 (ADR-0086, loest #684 AC-3 ab): `sent_channels` heisst
+    # in allen Pfaden "zugestellt"; "betreten" steht in `attempted_channels`.
+    # `failed_channels` haelt fest, welche Kanaele technisch scheiterten.
     failed_channels: list[str] = field(default_factory=list)
     # Issue #1676 S2a (Spec D4): Kanal -> Grund, warum NICHTS hinausging.
     # `failed_channels` haelt gescheiterte Transporte fest; hier steht der
@@ -149,11 +160,40 @@ class NotificationResult:
     # oder Programmfehler. Genau diese Unterscheidung ist am Prosatext allein
     # nicht moeglich — ein Absturztext sieht dort aus wie eine Sperrmeldung.
     blocked_reason_codes: dict[str, str] = field(default_factory=dict)
+    # Issue #1405 S1 (ADR-0086): Kanaele, die BETRETEN wurden (Gate bestanden,
+    # Versand versucht) -- unabhaengig vom Ausgang. Speist im Alarmpfad
+    # `reachable_channels` (Cockpit-Zahl, #1459 AC-11); `sent_channels`
+    # heisst seither in allen Pfaden "zugestellt".
+    attempted_channels: list[str] = field(default_factory=list)
+    # Issue #1441 S2: Kanaele, deren Nachricht die Entwarnung TATSAECHLICH
+    # enthielt (SMS-Kuerzung kann sie verdraengen, AC-12).
+    allclear_channels: list[str] = field(default_factory=list)
+    # Issue #1405 S4b (B21): gescheiterte Begleit-Hinweise bei ZUGESTELLTEM
+    # Versand ("telegram_incomplete_hint", "service_error_email"). Bewusst
+    # getrennt von `failed_channels` (ADR-0086: Backoff/Throttle/
+    # `delivery_outcome` bleiben unberuehrt); die Laeufe zaehlen es als
+    # `notice_failed` und melden status "partial".
+    notice_failures: list[str] = field(default_factory=list)
 
     @property
     def delivered_channels(self) -> list[str]:
         """Kanaele, die den Versand ohne Fehler abgeschlossen haben."""
         return [c for c in self.sent_channels if c not in self.failed_channels]
+
+    @property
+    def delivery_outcome(self) -> str:
+        """Issue #1405 S1 (ADR-0086): abgeleiteter Ausgang, nie gesetzt.
+
+        Sperre = Key in `blocked_reason_codes`; Transportfehler = Key in
+        `failed_channels` OHNE Sperr-Code (Premium-SMS-Transportfehler steht
+        zusaetzlich in `blocked_channels`, aber ohne Code)."""
+        if self.delivered_channels:
+            return "delivered"
+        if any(c not in self.blocked_reason_codes for c in self.failed_channels):
+            return "transport_failed"
+        if self.blocked_reason_codes:
+            return "blocked_only"
+        return "no_channel"
 
 
 def _record_block_reason_code(
@@ -256,6 +296,32 @@ class RadarAlertRequest:
     # Beginn noch Ende liegen jenseits der Grenze".
     location_sharpness_limit_time: str | None = None
     location_sharpness_limit_day_offset: int = 0
+    # Issue #2036/#2051 S2a: stammen `km_from`/`km_to` aus echter GPX-
+    # Wegstrecke (`TripSegment.distance_measured`)? Der Trip-Onset-Pfad hat
+    # das Flag bis S2a NIE gesetzt -- ohne es bliebe die Ausdehnung auf JEDER
+    # Etappe stumm, auch auf den vermessenen.
+    km_measured: bool = False
+    # Issue #2051 S2a: die Nass-Zonen der Reststrecke, gebildet aus der
+    # Mehrpunkt-Abfrage (`rain_extent.derive_rain_zones`). Additiv, Default
+    # leer -> ohne sie bleibt der Versand byte-identisch.
+    rain_zones: tuple = ()
+    # Issue #2050 S4b-2: hat die Gewitterpruefung stattgefunden
+    # (`NowcastResult.convective_checked`)? Reist bis in den Renderer, weil
+    # dort der Text entsteht, der "geprueft, kein Gewitter" von "nicht
+    # geprueft" unterscheidet. Default `True` -- ein `False`-Default
+    # beschriftete jede Bestandslage faelschlich als ungeprueft.
+    convective_checked: bool = True
+    # Issue #2050 S4b-2: km-Lage der ausgefallenen Messpunkte der
+    # Ausdehnungs-Messung (`_messluecken_felder`, dieselbe Buchfuehrung wie im
+    # Alarmprotokoll seit S4b). Additiv, Default leer -> ohne sie bleibt der
+    # Versand byte-identisch.
+    gap_km: tuple = ()
+    # Issue #2122: additiv, optional. Das Datum, dem das gemeldete Segment
+    # ENTSTAMMT (`_resolve_alert_segment()` in `trip_alert.py`) -- NICHT
+    # zwingend `today` (Nachtsegment kann der Vortag sein, AC-6). Der
+    # Trip-Radar-Pfad setzt es immer; der Ortsvergleich-Radar-Pfad baut kein
+    # `RadarAlertRequest` und laesst es damit implizit `None`.
+    segment_date: date | None = None
 
 
 def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
@@ -362,6 +428,24 @@ def compute_has_gap(
     return not expected.issubset(rendered)
 
 
+def _stage_number_for_date(trip: "Trip", d: "date | None") -> int | None:
+    """Issue #2122: 1-basierte chronologische Etappen-Position DIESES Datums
+    -- dieselbe Zahl, die `Trip.numbered_stage_label()` im Briefing zeigt
+    (Position in `sorted(trip.stages, key=lambda s: s.date)`, aufgeloest ueber
+    `Trip.get_stage_for_date()`). `None` ohne auflösbares Datum/Etappe (AC-8/
+    AC-9) -- der Renderer laesst das Praefix dann ersatzlos weg."""
+    if d is None:
+        return None
+    stage = trip.get_stage_for_date(d)
+    if stage is None:
+        return None
+    ordered = sorted(trip.stages, key=lambda s: s.date)
+    try:
+        return ordered.index(stage) + 1
+    except ValueError:
+        return None
+
+
 def _measured_event_km(alert_msg) -> dict:
     """Gemessene km-Spanne je Segment-Kennung aus den bereits projizierten
     Alarm-Ereignissen (Issue #2036). Quelle fuer den EINGEBETTETEN amtlichen
@@ -378,23 +462,218 @@ def _measured_event_km(alert_msg) -> dict:
     return result
 
 
+def _official_allclear_source_label(dto_notices: list, ac_notices: list) -> str:
+    """Issue #1441 S2: Quelle einer reinen Entwarnung aus dem Gedaechtnis."""
+    from output.renderers.alert.official_alerts import official_alert_source_label
+
+    if dto_notices or not ac_notices:
+        return _official_source_label_for(dto_notices)
+    return ", ".join(dict.fromkeys(official_alert_source_label(n.source) for n in ac_notices))
+
+
+def _official_subject(dto_notices: list, ac_notices: list, *, prefix: str, tz) -> str:
+    """Issue #1441 S2: Warnung zuerst, dann "+ Entwarnung …"."""
+    from output.renderers.alert.official_alerts import (
+        render_official_alert_subject, render_official_allclear_subject_part,
+    )
+
+    if not ac_notices:
+        return render_official_alert_subject(dto_notices, prefix=prefix, tz=tz)
+    part = render_official_allclear_subject_part(ac_notices)
+    if dto_notices:
+        return f"{render_official_alert_subject(dto_notices, prefix=prefix, tz=tz)} + {part}"
+    scopes = {n.scope_label for n in ac_notices}
+    scope = next(iter(scopes)) if len(scopes) == 1 else "mehrere Orte"
+    return f"[{prefix}] {scope} · {part}"
+
+
+def _official_mail_bodies(
+    dto_notices: list, ac_notices: list, *, source_label: str, source_url, stand_at: str,
+    tz, context_label: str,
+) -> tuple[str, str]:
+    """Issue #1441 S2: (HTML, Klartext) -- Entwarnungs-Abschnitt nach den Warnungen."""
+    from output.renderers.alert import official_alerts as oa
+
+    if not dto_notices:
+        kw = dict(stand_at=stand_at, source_label=source_label, context_label=context_label)
+        return (oa.render_official_allclear_mail_html(ac_notices, **kw),
+                oa.render_official_allclear_mail_plain(ac_notices, **kw))
+    html = oa.render_warn_block(
+        dto_notices, variant="standalone", source_label=source_label,
+        source_url=source_url, stand_at=stand_at, tz=tz, context_label=context_label,
+        allclear_html=oa.render_official_allclear_html(ac_notices),
+    )
+    plain = oa.render_official_alert_mail_plain(
+        dto_notices, source_label=source_label, stand_at=stand_at,
+        tz=tz, context_label=context_label, source_url=source_url,
+        allclear_lines=oa.render_official_allclear_plain(ac_notices),
+    )
+    return html, plain
+
+
+def _official_telegram_rich(dto_notices: list, ac_notices: list, *, prefix: str,
+                            source_label: str, tz) -> str:
+    from output.renderers.alert.official_alerts import (
+        render_official_alert_telegram, render_official_allclear_telegram,
+    )
+
+    if not dto_notices:
+        return render_official_allclear_telegram(ac_notices, prefix=prefix)
+    text = render_official_alert_telegram(dto_notices, prefix=prefix, source_label=source_label, tz=tz)
+    return f"{text}\n\n{render_official_allclear_telegram(ac_notices)}" if ac_notices else text
+
+
+def _compare_allclear_channels(ac_notices: list, dto_notices: list, telegram_style: str,
+                               alert_tz) -> list[str]:
+    """Issue #1441 S2: Kanaele, deren Ortsvergleich-Nachricht die Entwarnung traegt."""
+    from output.renderers.alert.official_alerts import render_official_alert_sms_with_allclears
+
+    if not ac_notices:
+        return []
+    _text, in_sms = render_official_alert_sms_with_allclears(dto_notices, ac_notices, tz=alert_tz)
+    channels = ["email"]
+    if telegram_style != "kurzform" or in_sms:
+        channels.append("telegram")
+    return channels + (["sms", "premium_sms"] if in_sms else [])
+
+
 def _official_source_url_for(dto_notices: list) -> str | None:
     """Quelle-Link der führenden (höchststufigen) Warnung (Issue #1216 F002).
-    Für variant="standalone" derzeit ungenutzt (der Thin-Wrapper reicht 1:1 an
-    render_official_alert_html durch), aber spec-konform mitgereicht."""
+    Issue #1441 (CC BY 4.0): auch die eigenstaendige Warn-Mail zeigt ihn
+    (HTML-Fusszeile + Klartext)."""
     if not dto_notices:
         return None
     leading = max(dto_notices, key=lambda n: n.alert.level)
     return getattr(leading.alert, "url", None)
 
 
+def _alert_format_modes(display_config) -> dict[str, dict[str, str]]:
+    """Issue #1737: Kanal -> {col_key: Anzeigemodus} aus der Anzeige-
+    Konfiguration DES jeweiligen Trips bzw. Vergleichs (Kanal-Kaskade
+    `get_metrics_for_channel`, ADR-0050) -- dieselbe Aufloesung wie das
+    Briefing. Ohne Konfiguration leer (= ROH). Nie aus einem anderen Nutzer."""
+    if display_config is None:
+        return {}
+    from app.metric_catalog import get_metric
+    from output.renderers.email.helpers import _effective_format_mode
+
+    out: dict[str, dict[str, str]] = {}
+    unknown: list[str] = []
+    for channel in ("email", "telegram"):
+        modes: dict[str, str] = {}
+        for report_type in ("morning", "evening"):
+            for mc in display_config.get_metrics_for_channel(channel, report_type):
+                try:
+                    col = get_metric(mc.metric_id).col_key
+                except KeyError:
+                    unknown.append(mc.metric_id)
+                    continue
+                modes.setdefault(col, _effective_format_mode(mc))
+        out[channel] = modes
+    if unknown:
+        logger.warning(
+            "_alert_format_modes: Metriken %s ohne Katalog-Eintrag -- ihre "
+            "Stundenzeilen erscheinen ROH statt im Anzeigemodus (vgl. #1737)",
+            sorted(set(unknown)),
+        )
+    return out
+
+
+def _alert_indicator_keys(display_config) -> dict[str, frozenset[str]]:
+    """Issue #1737: Kanal -> col_keys mit Ampel-Punkt im HTML -- wie
+    `build_html_indicator_keys` des Briefings, aber ueber die Kanal-Kaskade
+    DES jeweiligen Trips ("Einfach" ist dort `use_friendly_format`)."""
+    if display_config is None:
+        return {}
+    from app.metric_catalog import get_metric
+    from output.renderers.email.helpers import _AMPEL_CAPABLE_METRIC_IDS
+
+    out: dict[str, frozenset[str]] = {}
+    for channel in ("email", "telegram"):
+        keys: set[str] = set()
+        for report_type in ("morning", "evening"):
+            for mc in display_config.get_metrics_for_channel(channel, report_type):
+                if mc.metric_id in _AMPEL_CAPABLE_METRIC_IDS and getattr(
+                    mc, "use_friendly_format", True,
+                ):
+                    keys.add(get_metric(mc.metric_id).col_key)
+        out[channel] = frozenset(keys)
+    return out
+
+
 class NotificationService:
     """Wählt Renderer und Transporte für Trip-Briefings und Service-Hinweise."""
 
-    def __init__(self, settings: Optional[Settings] = None, user_id: str = "default") -> None:
+    def __init__(
+        self, settings: Optional[Settings] = None, user_id: Optional[str] = None,
+    ) -> None:
+        # #2151 Scheibe C (ADR-0003): kein stiller Rueckfall auf das Konto
+        # "default". Ohne settings UND ohne user_id gibt es kein Profil, das
+        # geladen werden duerfte; mit settings allein ist der Dienst fuer die
+        # Versandwege nutzbar, jede Operation mit Nutzerbezug scheitert aber
+        # in _require_user() (Vorbild Go `requireUser`, Scheibe B).
+        if settings is None and not user_id:
+            raise ValueError(
+                "NotificationService: weder settings noch user_id angegeben (#2151)"
+            )
         self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._formatter = TripReportFormatter()
         self._user_id = user_id
+
+    def _require_user(self) -> str:
+        """Nutzerkennung fuer nutzerbezogene Datenzugriffe -- fail-closed."""
+        if not self._user_id:
+            raise ValueError(
+                "NotificationService: Operation braucht user_id, der Dienst "
+                "wurde ohne Nutzerkennung konstruiert (#2151)"
+            )
+        return self._user_id
+
+    def _telegram_output(self) -> TelegramOutput:
+        """Issue #1412 S4a: Telegram-Ausgang an den Profil-Chat des Nutzers
+        (frisch aus ``user.json``), nie an ``settings.telegram_chat_id``."""
+        recipient = TelegramRecipient.for_user(self._require_user(), self._settings)
+        return TelegramOutput(self._settings, recipient=recipient)
+
+    @staticmethod
+    def _telegram_reply(settings: Settings, chat_id) -> TelegramOutput:
+        """Issue #1412 S4a (R7): Antwort geht an die uebergebene ``chat_id``
+        -- nur zulaessig als Absender des laufenden Webhook-Updates."""
+        return TelegramOutput(settings, recipient=TelegramRecipient.inbound_reply(chat_id))
+
+    def _sms_output(self) -> SMSOutput:
+        """Issue #1412 S4b: SMS an die bestaetigte Profilnummer (frisch aus
+        ``user.json``), nie an ``settings.sms_to``. Aufruf IM ``try`` nach der
+        Tageslimit-Reservierung -- ein Block gibt sie dort wieder frei."""
+        recipient = SmsRecipient.for_user(self._require_user(), self._settings)
+        return SMSOutput(self._settings, recipient=recipient)
+
+    def _premium_sms_output(self, settings: Optional[Settings] = None) -> PremiumSmsOutput:
+        """Issue #1412 S4b: Premium-SMS an die gelernte Rueckadresse aus
+        ``user.json`` (auch fuer Befehlsantworten), nie aus den Settings."""
+        settings = settings if settings is not None else self._settings
+        recipient = PremiumSmsRecipient.for_user(self._require_user(), settings)
+        return PremiumSmsOutput(settings, recipient=recipient)
+
+    def _sms_gate_reserve(
+        self, kind: str, purpose: str, now: datetime,
+        blocked_channels: dict[str, str], blocked_reason_codes: dict[str, str],
+    ) -> bool:
+        """Issue #2412 S4a: Tageslimit-Gate vor jedem SMS-/Premium-SMS-Versand.
+
+        Duenner Wrapper -- die 12 Sendestellen bleiben unkonsolidiert (Spec),
+        nur die Gate-Pruefung selbst ist geteilt. `True` = reserviert, der
+        Aufrufer darf senden. `False` = Sperre, `blocked_channels`/
+        `blocked_reason_codes` wurden befuellt -- kein Versand, kein
+        `sent_channels.append`.
+        """
+        try:
+            sms_daily_limit.check_and_reserve(self._require_user(), kind, purpose, now)
+        except ChannelBlockedError as e:
+            blocked_channels[kind] = str(e)
+            _record_block_reason_code(blocked_reason_codes, kind, e)
+            return False
+        return True
 
     # ------------------------------------------------------------------
     # Öffentliche API
@@ -425,7 +704,7 @@ class NotificationService:
         from services.alert_briefing_anchor import undelivered_since_last_briefing
 
         undelivered = undelivered_since_last_briefing(
-            user_id=self._user_id, entity_id=request.trip.id, entity_type="trip",
+            user_id=self._require_user(), entity_id=request.trip.id, entity_type="trip",
         )
 
         # Issue #1439: Starkregen-Kurzfristhinweis — der Scheduler liefert nur
@@ -497,6 +776,9 @@ class NotificationService:
         sent_channels: list[str] = []
         blocked_channels: dict[str, str] = {}
         blocked_reason_codes: dict[str, str] = {}
+        # Issue #1405 S4b (B21): gescheiterte Begleit-Hinweise, getrennt von
+        # der Zustellbilanz (ADR-0086).
+        notice_failures: list[str] = []
 
         # E-Mail — Issue #1662 (Punkt 8): Zustellbilanz statt Kanalreihenfolge.
         # Bisher war E-Mail der einzige Kanal ohne `try`; ein SMTP-/Guard-Fehler
@@ -531,14 +813,19 @@ class NotificationService:
         # Weg fuer mehr Inhalt, nicht fuer einen neuen.
         telegram_fully_sent = True
         if request.send_sms and self._settings.can_send_sms():
-            try:
-                SMSOutput(self._settings).send(
-                    subject=report.email_subject,
-                    body=report.sms_text or report.email_plain,
-                )
-                sent_channels.append("sms")
-            except Exception as e:
-                logger.error(f"SMS send failed for {request.trip.name}: {e}")
+            now_sms = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "sms", "briefing", now_sms, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    self._sms_output().send(
+                        subject=report.email_subject,
+                        body=report.sms_text or report.email_plain,
+                    )
+                    sent_channels.append("sms")
+                except Exception as e:
+                    sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
+                    logger.error(f"SMS send failed for {request.trip.name}: {e}")
 
         # Premium-SMS (Garmin inReach, Issue #1676 S2a, ADR-0049).
         # Bewusst OHNE vorgeschaltete `can_send_*`-Bedingung: ob eine gelernte
@@ -549,18 +836,25 @@ class NotificationService:
         # Zum Rueckfall `sms_text or email_plain` s. den Hinweis beim
         # SMS-Block oben (Issue #1680 S2, Herkunft gehoert hier nicht hin).
         if request.send_premium_sms:
-            try:
-                PremiumSmsOutput(self._settings).send(
-                    subject=report.email_subject,
-                    body=report.sms_text or report.email_plain,
-                )
-                sent_channels.append("premium_sms")
-            except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
-                blocked_channels["premium_sms"] = str(e)
-                _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
-                logger.error(
-                    f"Premium-SMS nicht versendet für {request.trip.name}: {e}"
-                )
+            now_premium = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    self._premium_sms_output().send(
+                        subject=report.email_subject,
+                        body=report.sms_text or report.email_plain,
+                    )
+                    sent_channels.append("premium_sms")
+                except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                    sms_daily_limit.release_reservation(
+                        self._require_user(), "premium_sms", now_premium,
+                    )
+                    blocked_channels["premium_sms"] = str(e)
+                    _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                    logger.error(
+                        f"Premium-SMS nicht versendet für {request.trip.name}: {e}"
+                    )
 
         # Telegram
         if request.send_telegram and self._settings.can_send_telegram():
@@ -571,7 +865,7 @@ class NotificationService:
                 # ohne Bubbles/Inline-Knöpfe, parse_mode=None (Text ist nicht
                 # HTML-escaped).
                 try:
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=report.email_subject,
                         body=report.sms_text or report.email_plain,
                         parse_mode=None,
@@ -593,7 +887,7 @@ class NotificationService:
                 for i, bubble_text in enumerate(bubbles):
                     markup = report.telegram_actions_markup if i == len(bubbles) - 1 else None
                     try:
-                        TelegramOutput(self._settings).send(
+                        self._telegram_output().send(
                             subject=report.email_subject,
                             body=bubble_text,
                             reply_markup=markup,
@@ -609,16 +903,17 @@ class NotificationService:
                         )
                         telegram_fully_sent = False
                         failed_bubbles += 1
-                if failed_bubbles:
-                    self._send_telegram_incomplete_hint(report, failed_bubbles)
+                if failed_bubbles and not self._send_telegram_incomplete_hint(
+                        report, failed_bubbles):
+                    notice_failures.append("telegram_incomplete_hint")
                 if telegram_fully_sent:
                     # Nur bei vollstaendiger Zustellung — das Briefing-Log darf
                     # nicht behaupten, Telegram sei komplett zugestellt worden.
                     sent_channels.append("telegram")
 
         # WEATHER-04: Service-E-Mail bei SMS-only + Fehler
-        if request.failed_segments:
-            self._send_service_error_email(request)
+        if request.failed_segments and not self._send_service_error_email(request):
+            notice_failures.append("service_error_email")
 
         # Issue #1662 (Punkt 8) — tragende Invariante: nach oben durchgereicht
         # wird ein Versandfehler genau dann, wenn NICHTS zugestellt wurde. Dann
@@ -634,7 +929,7 @@ class NotificationService:
             from services.alert_briefing_anchor import record_briefing_dispatch_failure
 
             record_briefing_dispatch_failure(
-                user_id=self._user_id, kind="route",
+                user_id=self._require_user(), kind="route",
                 entity_id=request.trip.id, error=email_error,
             )
 
@@ -645,18 +940,21 @@ class NotificationService:
             no_channel_configured=no_channel_configured,
             blocked_channels=blocked_channels,
             blocked_reason_codes=blocked_reason_codes,
+            notice_failures=notice_failures,
         )
 
-    def _send_telegram_incomplete_hint(self, report, missing_count: int) -> None:
+    def _send_telegram_incomplete_hint(self, report, missing_count: int) -> bool:
         """Sichtbarer „Briefing unvollstaendig"-Hinweis (Issue #1370).
 
-        fail-soft: scheitert auch dieser Hinweis, wird das nur protokolliert —
-        er darf den Versandlauf nie mit einer Ausnahme abbrechen.
+        fail-soft: scheitert auch dieser Hinweis, bricht er den Versandlauf nie
+        mit einer Ausnahme ab. Issue #1405 S4b: liefert ``True`` bei
+        Zustellung, ``False`` bei gescheitertem Versuch — der Aufrufer traegt
+        das in ``NotificationResult.notice_failures`` ein.
         """
         from output.renderers.narrow import render_telegram_incomplete_hint
 
         try:
-            TelegramOutput(self._settings).send(
+            self._telegram_output().send(
                 subject=report.email_subject,
                 body=render_telegram_incomplete_hint(missing_count),
                 parse_mode="HTML",
@@ -664,6 +962,8 @@ class NotificationService:
             )
         except Exception as e:  # noqa: BLE001 — fail-soft, siehe Docstring
             logger.error(f"Telegram incomplete-briefing hint failed: {e}")
+            return False
+        return True
 
     def send_no_data_hint(
         self,
@@ -700,24 +1000,36 @@ class NotificationService:
                 logger.error(f"No-data hint email failed for {trip.name}: {e}")
 
         if send_sms and self._settings.can_send_sms():
-            try:
-                SMSOutput(self._settings).send(subject=subject, body=text)
-                sent_channels.append("sms")
-            except Exception as e:
-                logger.error(f"No-data hint SMS failed for {trip.name}: {e}")
+            now_sms = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "sms", "briefing", now_sms, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    self._sms_output().send(subject=subject, body=text)
+                    sent_channels.append("sms")
+                except Exception as e:
+                    sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
+                    logger.error(f"No-data hint SMS failed for {trip.name}: {e}")
 
         if send_premium_sms:
-            try:
-                PremiumSmsOutput(self._settings).send(subject=subject, body=text)
-                sent_channels.append("premium_sms")
-            except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
-                blocked_channels["premium_sms"] = str(e)
-                _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
-                logger.error(f"No-data hint Premium-SMS blockiert für {trip.name}: {e}")
+            now_premium = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    self._premium_sms_output().send(subject=subject, body=text)
+                    sent_channels.append("premium_sms")
+                except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                    sms_daily_limit.release_reservation(
+                        self._require_user(), "premium_sms", now_premium,
+                    )
+                    blocked_channels["premium_sms"] = str(e)
+                    _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                    logger.error(f"No-data hint Premium-SMS blockiert für {trip.name}: {e}")
 
         if send_telegram and self._settings.can_send_telegram():
             try:
-                TelegramOutput(self._settings).send(subject=subject, body=text)
+                self._telegram_output().send(subject=subject, body=text)
                 sent_channels.append("telegram")
             except Exception as e:
                 logger.error(f"No-data hint Telegram failed for {trip.name}: {e}")
@@ -738,15 +1050,18 @@ class NotificationService:
         official_notices: Optional[list] = None,
         mail_sink: Optional[object] = None,
         telegram_style: str = "rich",
-        corridor_hits: Optional[list] = None,
         reference_at: Optional[str] = None,
+        anchor_weather: Optional[list["SegmentWeatherData"]] = None,
     ) -> NotificationResult:
         """Wetter-Änderungs-Alert: rendern und über konfigurierte Kanäle versenden.
 
+        Issue #1737: `anchor_weather` ist die ALTE Reihe (Anker, Quelle des
+        Vergleichs) -- aus ihr und `weather` entstehen die Stundenzeilen; der
+        Anzeigemodus je Kanal kommt aus `trip.display_config`.
+
         Issue #1023: Der AlertService kennt keine Renderer-/Transport-Details mehr.
         Issue #1088: optionale amtliche Warnungen werden in dieselbe Nachricht
-        gebündelt (kein zweiter Versand). Issue #1444 S1: `corridor_hits`
-        (Schwellen-Treffer) buendeln sich genauso in dieselbe Nachricht.
+        gebündelt (kein zweiter Versand).
         Issue #1916: `reference_at` ist der bereits formatierte Referenz-
         Zeitpunkt der tatsaechlich verglichenen Vergleichsbasis (Aufrufer:
         `TripAlertService`) -- additiv, `None` laesst den Footer unveraendert.
@@ -762,10 +1077,22 @@ class NotificationService:
         # nennen als die Restmengen-Rechnung.
         now_utc = datetime.now(timezone.utc)
         stand_at = local_fmt(now_utc, alert_tz)
+        # Issue #2122 (AC-1): der Abweichungs-Alarm ist STRIKT "heute" (der
+        # einzige Anker-Kandidat, `trip_alert._kanal_anker_kandidat` verwirft
+        # jeden mit abweichendem `target_date`) -- kein Rueckgriff auf
+        # `_resolve_alert_segment` noetig. "Heute" ist der ORTSTAG der Tour
+        # (Adversary F001, ADR-0044) -- NICHT die Server-/Weltzeit-Wanduhr:
+        # `date.today()` waere um Mitternacht ein `ambient_clock`-Rueckfall
+        # (Issue #1402) und koennte bei einer Tour ausserhalb der Serverzone
+        # die falsche Etappe treffen.
+        stage_number = _stage_number_for_date(trip, trip_local_today(trip, now_utc))
         alert_msg = to_alert_message(
             changes, weather, trip.name, tz=alert_tz, stand_at=stand_at,
-            corridor_hits=corridor_hits, reference_at=reference_at,
-            now_utc=now_utc,
+            reference_at=reference_at,
+            now_utc=now_utc, stage_number=stage_number,
+            anchor_segments=anchor_weather,
+            format_modes=_alert_format_modes(trip.display_config),
+            indicator_keys=_alert_indicator_keys(trip.display_config),
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
@@ -809,6 +1136,7 @@ class NotificationService:
         location_positions: Optional[dict[str, int]] = None,
         telegram_style: str = "rich",
         reference_at: Optional[str] = None,
+        anchor_points: Optional[dict] = None,
     ) -> NotificationResult:
         """Gebündelter Deviation-Alert-Versand für MEHRERE gleichzeitig
         betroffene Orte EINES Compare-Presets (Issue #1170, Adversary F001).
@@ -832,6 +1160,11 @@ class NotificationService:
 
         Issue #1916: `reference_at` ist additiv, analog `send_deviation_alert()`
         — kein bestehender Aufrufer setzt ihn, Verhalten bleibt unveraendert.
+
+        Issue #1737: `anchor_points` (`{Ortsname: PointWeatherData}`, ALTE Reihe
+        je Ort) speist die Stundenzeilen (additiv). Die Stundenwerte sind
+        IMMER roh wie die Stundentabelle der Vergleichs-Mail (PO 2026-10-21,
+        AC-5) -- der Ortsvergleich kennt keine Roh/Einfach-Wahl dafuer.
         """
         from utils.timezone import tz_for_coords
 
@@ -844,6 +1177,7 @@ class NotificationService:
         ]
         alert_msg = to_multi_point_alert_message(
             groups, tz=alert_tz, stand_at=stand_at, reference_at=reference_at,
+            anchor_points=anchor_points,
         )
         target_name = ", ".join(name for name, _points, _changes in entities)
         # Issue #1467 S2 AG3a: NUR dieser Aufrufer (Ortsvergleich-
@@ -863,6 +1197,7 @@ class NotificationService:
             telegram_style=telegram_style,
             telegram_groups=groups,
             sms_location_positions=location_positions,
+            anchor_points=anchor_points,
         )
 
     def send_multi_location_radar_alert(
@@ -944,18 +1279,21 @@ class NotificationService:
         sms_sink: Optional[object] = None,
         telegram_style: str = "rich",
         segment_km: Optional[dict] = None,
+        allclears: Optional[list] = None,
     ) -> NotificationResult:
         """Standalone amtlicher Alert ohne Wetter-Delta (Issue #1088; Format-
         Fidelity zur Design-Vorlage in Issue #1216).
+
+        Issue #1441 S2: `allclears` (Entwarnungen) stehen in DERSELBEN Nachricht
+        nach den Warnungen; `allclear_channels` meldet, wo sie enthalten waren.
 
         Baut aus den rohen `(OfficialAlert, segment_ids)`-Paaren die
         kontext-agnostischen `OfficialAlertNotice`-DTOs und rendert Betreff,
         HTML-Body, Telegram- und SMS-Text ueber die vier Vorlagen-Renderer.
         """
         from output.renderers.alert.official_alerts import (
-            build_official_alert_notices, render_official_alert_mail_plain,
-            render_official_alert_sms, render_official_alert_subject,
-            render_official_alert_telegram, render_warn_block,
+            build_official_alert_notices, build_official_allclear_notices,
+            render_official_alert_sms_with_allclears,
         )
         from utils.timezone import tz_for_coords
 
@@ -965,44 +1303,75 @@ class NotificationService:
             if first_wp is not None
             else ZoneInfo("UTC")
         )
+        # Issue #2122 (AC-5, Adversary F001/F002): das Datum des TATSAECHLICH
+        # verwendeten rollierenden Ankers -- dieselbe Kanal-Reihenfolge
+        # (`sorted`) wie der lenient Anker-Rueckfall in
+        # `trip_alert._resolve_current_weather` (erster Treffer gewinnt,
+        # keine Alterspruefung dort -- der reicht dort NUR die Routen-
+        # Geometrie weiter, die altersunabhaengig gueltig bleibt). Die
+        # Etappen-NUMMER haengt dagegen sehr wohl vom Tag ab: ein mehrere
+        # Tage alter, fuer die Geometrie noch brauchbarer Anker wuerde sonst
+        # eine FALSCHE Etappe behaupten (F002, reproduziert: S1 statt S3).
+        # Deshalb zaehlt der Anker hier NUR, wenn sein Datum mit dem
+        # ORTSTAG der Tour (F001, ADR-0044 -- NICHT `date.today()`)
+        # uebereinstimmt; sonst `stage_number=None` (kein Praefix) statt
+        # eine geratene Zahl -- dieselbe Linie wie AC-8.
+        from services.weather_snapshot import WeatherSnapshotService
+
+        now_utc = datetime.now(timezone.utc)
+        local_today = trip_local_today(trip, now_utc)
+        snap_svc = WeatherSnapshotService(user_id=self._require_user())
+        anchor_date = None
+        for channel in sorted(effective_channels):
+            anchor_date = snap_svc.alarm_anchor_target_date(trip.id, channel)
+            if anchor_date is not None:
+                break
+        stage_number = (
+            _stage_number_for_date(trip, local_today)
+            if anchor_date == local_today else None
+        )
         # Issue #2036: gemessene km-Spannen mitgeben -- ohne sie bleibt die
         # amtliche Warnung byte-identisch bei der Segment-Sprache.
         dto_notices = build_official_alert_notices(
-            trip, notices, segment_km=segment_km,
+            trip, notices, segment_km=segment_km, stage_number=stage_number,
         )
-        source_label = _official_source_label_for(dto_notices)
+        ac_notices = build_official_allclear_notices(allclears or [])
+        source_label = _official_allclear_source_label(dto_notices, ac_notices)
         source_url = _official_source_url_for(dto_notices)
         # #1233 Nebenbefund AC-12: Betreff und Body MUESSEN dieselbe tz-aware
         # Quelle nutzen (sonst Wochentags-Divergenz Betreff vs. Body).
-        subject = render_official_alert_subject(dto_notices, prefix=trip.name, tz=alert_tz)
+        subject = _official_subject(dto_notices, ac_notices, prefix=trip.name, tz=alert_tz)
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
-        # Issue #1216 F002: geteilter Baustein statt Direktaufruf. variant=
-        # "standalone" reicht 1:1 an render_official_alert_html durch (byte-
-        # identischer Output, Fidelity-Bestandsschutz #952/#957).
-        html = render_warn_block(
-            dto_notices, variant="standalone", source_label=source_label,
-            source_url=source_url, stand_at=stand_at, tz=alert_tz,
-            context_label=trip.name,
+        # Issue #1216 F002 / #1744 A2 (AC-13): geteilter Baustein (variant=
+        # "standalone") plus eigens gebauter Klartext aus denselben Datenzeilen.
+        html, plain = _official_mail_bodies(
+            dto_notices, ac_notices, source_label=source_label, source_url=source_url,
+            stand_at=stand_at, tz=alert_tz, context_label=trip.name,
         )
-        # Issue #1744 A2 (AC-13): eigens gebauter Klartext-Teil aus denselben
-        # Datenzeilen wie das HTML -- ohne ihn strippt `build_mime_message` die
-        # Tags aus dem HTML und der Klartext-Leser bekommt Zeilensalat.
-        plain = render_official_alert_mail_plain(
-            dto_notices, source_label=source_label, stand_at=stand_at,
-            tz=alert_tz, context_label=trip.name,
+        telegram_text = _official_telegram_rich(
+            dto_notices, ac_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
         )
-        telegram_text = render_official_alert_telegram(
-            dto_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
+        sms_body, sms_has_allclear = render_official_alert_sms_with_allclears(
+            dto_notices, ac_notices, tz=alert_tz,
         )
+        allclear_channels: list[str] = []
+        if ac_notices:
+            allclear_channels.append("email")
+            if telegram_style != "kurzform" or sms_has_allclear:
+                allclear_channels.append("telegram")
+            if sms_has_allclear:
+                allclear_channels.extend(["sms", "premium_sms"])
 
+        # Issue #1405 S1 (ADR-0086): `sent_channels` = zugestellt (append IM
+        # try NACH dem Send), `attempted_channels` = betreten (NACH dem try).
         sent_channels: list[str] = []
+        attempted_channels: list[str] = []
         failed_channels: list[str] = []  # Issue #1459: Alarm-Protokoll
         # Issue #1701 (S2b, D5): analog `_dispatch_alert_message`.
         blocked_channels: dict[str, str] = {}
         blocked_reason_codes: dict[str, str] = {}
 
         if "email" in effective_channels and self._settings.can_send_email():
-            sent_channels.append("email")
             try:
                 if mail_sink is not None:
                     mail_sink(subject=subject, body=html)
@@ -1011,62 +1380,78 @@ class NotificationService:
                         subject=subject, body=html, html=True,
                         plain_text_body=plain, mail_type="official-alert",
                     )
+                sent_channels.append("email")
             except Exception as e:
                 failed_channels.append("email")
                 logger.error(f"Official alert email failed for {trip.name}: {e}")
+            attempted_channels.append("email")
 
         if "telegram" in effective_channels and self._settings.can_send_telegram():
-            sent_channels.append("telegram")
             try:
                 # Issue #1260 S3: Kurzstil sendet den SMS-Text (Plaintext,
                 # parse_mode=None) statt der reichen Telegram-Warnvorlage.
                 if telegram_style == "kurzform":
-                    kurz_body = render_official_alert_sms(dto_notices, tz=alert_tz)
-                    TelegramOutput(self._settings).send(
-                        subject=subject, body=kurz_body,
+                    self._telegram_output().send(
+                        subject=subject, body=sms_body,
                         parse_mode=None, suppress_subject_line=True,
                     )
                 else:
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject, body=telegram_text,
                         parse_mode="HTML", suppress_subject_line=True,
                     )
+                sent_channels.append("telegram")
             except Exception as e:
                 failed_channels.append("telegram")
                 logger.error(f"Official alert telegram failed for {trip.name}: {e}")
+            attempted_channels.append("telegram")
 
         if "sms" in effective_channels and self._settings.can_send_sms():
-            sent_channels.append("sms")
-            try:
-                sms_text = render_official_alert_sms(dto_notices, tz=alert_tz)
-                if sms_sink is not None:
-                    sms_sink(sms_text)
-                else:
-                    SMSOutput(self._settings).send(subject="", body=sms_text)
-            except Exception as e:
-                failed_channels.append("sms")
-                logger.error(f"Official alert sms failed for {trip.name}: {e}")
+            now_sms = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "sms", "alert", now_sms, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    if sms_sink is not None:
+                        sms_sink(sms_body)
+                    else:
+                        self._sms_output().send(subject="", body=sms_body)
+                    sent_channels.append("sms")
+                except Exception as e:
+                    sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
+                    failed_channels.append("sms")
+                    logger.error(f"Official alert sms failed for {trip.name}: {e}")
+                attempted_channels.append("sms")
 
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # can_send_*()-Bereitschaftsfrage (D2), Sperrgrund geht nach
         # `blocked_channels`/`blocked_reason_codes` statt `failed_channels`
         # (kein Transportfehler, s. `_dispatch_alert_message`).
         if "premium_sms" in effective_channels:
-            sent_channels.append("premium_sms")
-            try:
-                premium_text = render_official_alert_sms(dto_notices, tz=alert_tz)
-                PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
-            except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
-                blocked_channels["premium_sms"] = str(e)
-                _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
-                failed_channels.append("premium_sms")
-                logger.error(f"Official alert premium-sms failed for {trip.name}: {e}")
+            now_premium = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "premium_sms", "alert", now_premium, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    self._premium_sms_output().send(subject="", body=sms_body)
+                    sent_channels.append("premium_sms")
+                except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                    sms_daily_limit.release_reservation(
+                        self._require_user(), "premium_sms", now_premium,
+                    )
+                    blocked_channels["premium_sms"] = str(e)
+                    _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                    failed_channels.append("premium_sms")
+                    logger.error(f"Official alert premium-sms failed for {trip.name}: {e}")
+                attempted_channels.append("premium_sms")
 
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
+            attempted_channels=attempted_channels,
             failed_channels=failed_channels,
             blocked_channels=blocked_channels,
             blocked_reason_codes=blocked_reason_codes,
+            allclear_channels=allclear_channels,
         )
 
     # TODO(#1207): wird durch den Versand-Orchestrator generalisiert
@@ -1084,6 +1469,7 @@ class NotificationService:
         mail_sink: Optional[object] = None,
         sms_sink: Optional[object] = None,
         telegram_sink: Optional[object] = None,
+        premium_sms_sink: Optional[object] = None,
     ) -> NotificationResult:
         """Versendet ein Vergleichs-Briefing ueber die aufgeloesten Kanaele
         (Issue #1270, Scheibe S5).
@@ -1110,6 +1496,11 @@ class NotificationService:
         (Vorbild `send_multi_location_official_alert`) — kein Netz, kein SMTP.
         """
         sent_channels: list[str] = []
+        # Issue #2412 S4a: existierten vorher nicht in dieser Methode (Spec:
+        # "send_compare_report (neue Ergebnisfelder)").
+        blocked_channels: dict[str, str] = {}
+        blocked_reason_codes: dict[str, str] = {}
+        failed_channels: list[str] = []  # Issue #2275
 
         if "email" in effective_channels:
             if mail_sink is not None:
@@ -1135,7 +1526,7 @@ class NotificationService:
                 if telegram_sink is not None:
                     telegram_sink(telegram_text)
                 else:
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject,
                         body=telegram_text,
                         parse_mode=None,
@@ -1149,16 +1540,54 @@ class NotificationService:
                 logger.error(f"Compare report telegram failed for {subject!r}: {e}")
 
         if "sms" in effective_channels and self._settings.can_send_sms():
-            try:
-                if sms_sink is not None:
-                    sms_sink(sms_text)
-                else:
-                    SMSOutput(self._settings).send(subject="", body=sms_text)
-                sent_channels.append("sms")
-            except Exception as e:
-                logger.error(f"Compare report sms failed for {subject!r}: {e}")
+            now_sms = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "sms", "briefing", now_sms, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    if sms_sink is not None:
+                        sms_sink(sms_text)
+                    else:
+                        self._sms_output().send(subject="", body=sms_text)
+                    sent_channels.append("sms")
+                except Exception as e:
+                    sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
+                    logger.error(f"Compare report sms failed for {subject!r}: {e}")
 
-        return NotificationResult(sent=bool(sent_channels), sent_channels=sent_channels)
+        # Premium-SMS (Issue #2275, ADR-0049): kein `can_send_*` davor — die
+        # Freigabe steckt im Aufloeser, Rueckadresse/Frist prueft der Kanal.
+        # Fail-soft: Fehler wird gebucht, E-Mail-Erfolg bleibt gueltig.
+        if "premium_sms" in effective_channels:
+            now_premium = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    if premium_sms_sink is not None:
+                        premium_sms_sink(sms_text)
+                    else:
+                        self._premium_sms_output().send(subject="", body=sms_text)
+                    sent_channels.append("premium_sms")
+                except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                    sms_daily_limit.release_reservation(
+                        self._require_user(), "premium_sms", now_premium,
+                    )
+                    blocked_channels["premium_sms"] = str(e)
+                    _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                    # AC-2: auch ein Transportfehler traegt einen Code (der
+                    # Ortsvergleich hat keinen Nachhol-Weg, der Fehlschlag muss
+                    # maschinenlesbar sein); Sperrgruende behalten ihren Code.
+                    blocked_reason_codes.setdefault("premium_sms", "premium_sms_send_failed")
+                    failed_channels.append("premium_sms")
+                    logger.error(f"Compare report premium_sms failed for {subject!r}: {e}")
+
+        return NotificationResult(
+            sent=bool(sent_channels), sent_channels=sent_channels,
+            # Issue #2280: Paritaet zum Trip — kein wirksamer Kanal.
+            no_channel_configured=not effective_channels,
+            failed_channels=failed_channels,
+            blocked_channels=blocked_channels, blocked_reason_codes=blocked_reason_codes,
+        )
 
     def send_multi_location_official_alert(
         self,
@@ -1171,6 +1600,7 @@ class NotificationService:
         mail_sink: Optional[object] = None,
         sms_sink: Optional[object] = None,
         telegram_sink: Optional[object] = None,
+        allclears: Optional[list] = None,
     ) -> NotificationResult:
         """Gebündelter Standalone-Alarm für amtliche Warnungen im Ortsvergleich
         (Issue #1216 Slice 2a) — Orts-Scope-Pendant zu `send_official_alert()`
@@ -1191,8 +1621,7 @@ class NotificationService:
         statt einer eigenen `tz_for_coords()`-Direktkopie.
         """
         from output.renderers.alert.official_alerts import (
-            build_compare_official_alert_notices, render_official_alert_mail_plain,
-            render_official_alert_subject, render_warn_block,
+            build_compare_official_alert_notices, build_official_allclear_notices,
         )
         from utils.timezone import resolve_location_tz
 
@@ -1201,7 +1630,9 @@ class NotificationService:
         dto_notices = build_compare_official_alert_notices(
             all_location_ids, id_to_name, tagged_alerts,
         )
-        if not dto_notices:
+        # Issue #1441 S2: Entwarnungen (Orts-IDs -> Namen) in derselben Nachricht.
+        ac_notices = build_official_allclear_notices(allclears or [], id_to_name)
+        if not dto_notices and not ac_notices:
             return NotificationResult(sent=False, sent_channels=[])
 
         first_loc = locations[0] if locations else None
@@ -1210,69 +1641,63 @@ class NotificationService:
             if first_loc is not None
             else ZoneInfo("UTC")
         )
-        source_label = _official_source_label_for(dto_notices)
+        source_label = _official_allclear_source_label(dto_notices, ac_notices)
         source_url = _official_source_url_for(dto_notices)
         # #1233 Nebenbefund AC-12: Betreff und Body MUESSEN dieselbe tz-aware
         # Quelle nutzen (sonst Wochentags-Divergenz Betreff vs. Body).
-        subject = render_official_alert_subject(dto_notices, prefix=preset_name, tz=alert_tz)
+        subject = _official_subject(dto_notices, ac_notices, prefix=preset_name, tz=alert_tz)
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
-        # Issue #1216 F002: geteilter Baustein (variant="standalone") statt
-        # Direktaufruf; Thin-Wrapper -> byte-identischer HTML-Output.
-        html = render_warn_block(
-            dto_notices, variant="standalone", source_label=source_label,
-            source_url=source_url, stand_at=stand_at, tz=alert_tz,
-            context_label="Ortsvergleich",
-        )
-        # Issue #1744 A2 (AC-13): derselbe Mailtyp, derselbe Klartext-Bau wie im
-        # Trip-Pfad -- sonst haetten die zwei Flaechen desselben Mailtyps
-        # wieder zwei verschiedene Klartexte.
-        plain = render_official_alert_mail_plain(
-            dto_notices, source_label=source_label, stand_at=stand_at,
-            tz=alert_tz, context_label="Ortsvergleich",
+        # Issue #1216 F002 / #1744 A2 (AC-13): derselbe Baustein und derselbe
+        # Klartext-Bau wie im Trip-Pfad.
+        html, plain = _official_mail_bodies(
+            dto_notices, ac_notices, source_label=source_label, source_url=source_url,
+            stand_at=stand_at, tz=alert_tz, context_label="Ortsvergleich",
         )
 
-        sent_channels: list[str] = []
-        failed_channels: list[str] = []  # Issue #1459: Alarm-Protokoll
         # Issue #1701 (S2b, D5): analog `_dispatch_alert_message`.
         blocked_channels: dict[str, str] = {}
         blocked_reason_codes: dict[str, str] = {}
+        # Issue #1405 S1 (ADR-0086): Helfer liefern `True` = zugestellt. Ein
+        # `False` MIT Sperr-Code ist eine bewusste Sperre, kein Transport-
+        # fehler. `attempted_channels` fuehrt -- wie frueher `sent_channels`
+        # -- jeden betretenen Kanal, auch den gesperrten (Cockpit-Zahl).
+        versuche: list[tuple[str, bool]] = []
         if "email" in effective_channels and self._settings.can_send_email():
-            if not self._dispatch_compare_official_email(
+            versuche.append(("email", self._dispatch_compare_official_email(
                 preset_name, subject, html, mail_sink, plain=plain,
-            ):
-                failed_channels.append("email")
-            sent_channels.append("email")
+            )))
         if "telegram" in effective_channels and self._settings.can_send_telegram():
-            if not self._dispatch_compare_official_telegram(
+            versuche.append(("telegram", self._dispatch_compare_official_telegram(
                 preset_name, subject, dto_notices, source_label, alert_tz, telegram_sink,
-                telegram_style=telegram_style,
-            ):
-                failed_channels.append("telegram")
-            sent_channels.append("telegram")
+                telegram_style=telegram_style, ac_notices=ac_notices,
+            )))
         if "sms" in effective_channels and self._settings.can_send_sms():
-            if not self._dispatch_compare_official_sms(
-                preset_name, dto_notices, alert_tz, sms_sink
-            ):
-                failed_channels.append("sms")
-            sent_channels.append("sms")
+            versuche.append(("sms", self._dispatch_compare_official_sms(
+                preset_name, dto_notices, alert_tz, sms_sink,
+                blocked_channels, blocked_reason_codes, ac_notices=ac_notices,
+            )))
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # can_send_*()-Bereitschaftsfrage (D2), Sperrgrund geht nach
         # `blocked_channels`/`blocked_reason_codes` statt `failed_channels`.
-        # Append NACH dem Helfer-Aufruf (wie bei email/telegram/sms in dieser
-        # Funktion) — der Erfolgsmarker steht erst, nachdem die Tat versucht
-        # wurde, nicht davor (Klasse 1c, s. `test_success_status_guard.py`).
         if "premium_sms" in effective_channels:
-            if not self._dispatch_compare_official_premium_sms(
+            versuche.append(("premium_sms", self._dispatch_compare_official_premium_sms(
                 preset_name, dto_notices, alert_tz, blocked_channels, blocked_reason_codes,
-            ):
-                failed_channels.append("premium_sms")
-            sent_channels.append("premium_sms")
+                ac_notices=ac_notices,
+            )))
 
+        sent_channels = [c for c, ok in versuche if ok]
+        failed_channels = [  # Issue #1459: Alarm-Protokoll
+            c for c, ok in versuche if not ok and c not in blocked_reason_codes
+        ]
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
+            attempted_channels=[c for c, _ok in versuche],
             failed_channels=failed_channels,
             blocked_channels=blocked_channels,
             blocked_reason_codes=blocked_reason_codes,
+            allclear_channels=_compare_allclear_channels(
+                ac_notices, dto_notices, telegram_style, alert_tz,
+            ),
         )
 
     def _dispatch_compare_official_email(
@@ -1296,11 +1721,11 @@ class NotificationService:
     def _dispatch_compare_official_telegram(
         self, preset_name: str, subject: str, dto_notices: list, source_label: str,
         alert_tz: ZoneInfo, telegram_sink: Optional[object],
-        telegram_style: str = "rich",
+        telegram_style: str = "rich", ac_notices: Optional[list] = None,
     ) -> bool:
         """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief."""
         from output.renderers.alert.official_alerts import (
-            render_official_alert_sms, render_official_alert_telegram,
+            render_official_alert_sms_with_allclears,
         )
 
         try:
@@ -1308,22 +1733,25 @@ class NotificationService:
             # parse_mode=None, keine Inline-Knöpfe) statt der reichen Compare-
             # Warnvorlage. Default "rich" bleibt unverändert.
             if telegram_style == "kurzform":
-                kurz_body = render_official_alert_sms(dto_notices, tz=alert_tz)
+                kurz_body, _ = render_official_alert_sms_with_allclears(
+                    dto_notices, ac_notices or [], tz=alert_tz,
+                )
                 if telegram_sink is not None:
                     telegram_sink(kurz_body)
                 else:
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject, body=kurz_body,
                         parse_mode=None, suppress_subject_line=True,
                     )
                 return True
-            telegram_text = render_official_alert_telegram(
-                dto_notices, prefix=preset_name, source_label=source_label, tz=alert_tz,
+            telegram_text = _official_telegram_rich(
+                dto_notices, ac_notices or [], prefix=preset_name,
+                source_label=source_label, tz=alert_tz,
             )
             if telegram_sink is not None:
                 telegram_sink(telegram_text)
             else:
-                TelegramOutput(self._settings).send(
+                self._telegram_output().send(
                     subject=subject, body=telegram_text,
                     parse_mode="HTML", suppress_subject_line=True,
                 )
@@ -1335,17 +1763,34 @@ class NotificationService:
     def _dispatch_compare_official_sms(
         self, preset_name: str, dto_notices: list, alert_tz: ZoneInfo,
         sms_sink: Optional[object],
+        blocked_channels: Optional[dict[str, str]] = None,
+        blocked_reason_codes: Optional[dict[str, str]] = None,
+        ac_notices: Optional[list] = None,
     ) -> bool:
-        """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief."""
-        from output.renderers.alert.official_alerts import render_official_alert_sms
+        """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief.
 
+        Issue #2412 S4a: `False` auch bei Tageslimit-Sperre (kein
+        Transportversuch) — `blocked_channels`/`blocked_reason_codes` werden
+        dann befuellt (analog `_dispatch_compare_official_premium_sms`)."""
+        from output.renderers.alert.official_alerts import (
+            render_official_alert_sms_with_allclears,
+        )
+
+        _blocked = blocked_channels if blocked_channels is not None else {}
+        _codes = blocked_reason_codes if blocked_reason_codes is not None else {}
+        now = datetime.now(timezone.utc)
+        if not self._sms_gate_reserve("sms", "alert", now, _blocked, _codes):
+            return False
         try:
-            sms_text = render_official_alert_sms(dto_notices, tz=alert_tz)
+            sms_text, _ = render_official_alert_sms_with_allclears(
+                dto_notices, ac_notices or [], tz=alert_tz,
+            )
             if sms_sink is not None:
                 sms_sink(sms_text)
             else:
-                SMSOutput(self._settings).send(subject="", body=sms_text)
+                self._sms_output().send(subject="", body=sms_text)
         except Exception as e:
+            sms_daily_limit.release_reservation(self._require_user(), "sms", now)
             logger.error(f"Compare official alert sms failed for {preset_name}: {e}")
             return False
         return True
@@ -1353,18 +1798,29 @@ class NotificationService:
     def _dispatch_compare_official_premium_sms(
         self, preset_name: str, dto_notices: list, alert_tz: ZoneInfo,
         blocked_channels: dict[str, str], blocked_reason_codes: dict[str, str],
+        ac_notices: Optional[list] = None,
     ) -> bool:
         """Issue #1701 (S2b, Vorbild `_dispatch_compare_official_sms`):
         `True`, wenn der Transport ohne Fehler durchlief. Eine bewusste
-        Sperre (keine/veraltete Rueckadresse) landet zusaetzlich in
-        `blocked_channels`/`blocked_reason_codes` (D5) — kein
-        Transportfehler."""
-        from output.renderers.alert.official_alerts import render_official_alert_sms
+        Sperre (keine/veraltete Rueckadresse ODER Issue #2412 S4a
+        Tageslimit) landet zusaetzlich in `blocked_channels`/
+        `blocked_reason_codes` (D5) — kein Transportfehler."""
+        from output.renderers.alert.official_alerts import (
+            render_official_alert_sms_with_allclears,
+        )
 
+        now = datetime.now(timezone.utc)
+        if not self._sms_gate_reserve(
+            "premium_sms", "alert", now, blocked_channels, blocked_reason_codes,
+        ):
+            return False
         try:
-            premium_text = render_official_alert_sms(dto_notices, tz=alert_tz)
-            PremiumSmsOutput(self._settings).send(subject="", body=premium_text)
+            premium_text, _ = render_official_alert_sms_with_allclears(
+                dto_notices, ac_notices or [], tz=alert_tz,
+            )
+            self._premium_sms_output().send(subject="", body=premium_text)
         except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+            sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)
             blocked_channels["premium_sms"] = str(e)
             _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
             logger.error(f"Compare official alert premium-sms failed for {preset_name}: {e}")
@@ -1383,6 +1839,11 @@ class NotificationService:
         telegram_style: str = "rich",
     ) -> NotificationResult:
         """Radar-Onset-Alert: rendern und über konfigurierte Kanäle versenden."""
+        # Issue #2122 (AC-2/AC-6): das Datum, dem das gemeldete Segment
+        # ENTSTAMMT (`request.segment_date`) -- NICHT `today`, ein
+        # Nachtsegment kann der Vortag sein. Ortsvergleich-Radar baut kein
+        # `RadarAlertRequest` -> `segment_date` bleibt `None` -> keine Etappe.
+        stage_number = _stage_number_for_date(trip, request.segment_date)
         onset_event = OnsetEvent(
             # Issue #2050 S2b: ohne kuenftigen Beginn traegt `onset_minutes`
             # `None` -- der Renderer-Vertrag verlangt eine Zahl, liest sie im
@@ -1410,6 +1871,17 @@ class NotificationService:
             source_reach_day_offset=request.source_reach_day_offset,
             location_sharpness_limit_time=request.location_sharpness_limit_time,
             location_sharpness_limit_day_offset=request.location_sharpness_limit_day_offset,
+            # Issue #2051 S2a: Ausdehnung und die Echtheitspruefung der
+            # km-Zahlen reisen GEMEINSAM -- die Zonen ohne `km_measured`
+            # blieben im Text stumm, das Flag ohne Zonen wirkungslos.
+            km_measured=request.km_measured,
+            rain_zones=tuple(request.rain_zones),
+            # Issue #2050 S4b-2: die ausgefallene Gewitterpruefung und die
+            # Messluecken der Ausdehnung -- beide rein beschreibend, sie
+            # aendern nur den Text (Kennzeichnung), nicht die Entscheidung.
+            convective_checked=request.convective_checked,
+            gap_km=tuple(request.gap_km),
+            stage_number=stage_number,  # Issue #2122
         )
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.
@@ -1447,6 +1919,7 @@ class NotificationService:
         telegram_style: str = "rich",
         telegram_groups: Optional[list[tuple[str, list, object]]] = None,
         sms_location_positions: Optional[dict[str, int]] = None,
+        anchor_points: Optional[dict] = None,
     ) -> NotificationResult:
         """Versendet eine kanonische AlertMessage über die konfigurierten Kanäle.
 
@@ -1467,9 +1940,17 @@ class NotificationService:
         Nachricht (PO-Entscheidung 2026-08-04) — die Ortsnummern ergeben nur
         im gemeinsamen Text Sinn.
 
-        Issue #1088: liegen `official_notices` vor, wird ein Text-Block an
-        html/plain/telegram_body angehängt — SMS bewusst OHNE Zusatz
-        (Nicht-Parität, analog Slice-3-AC-6).
+        Issue #1088 / #2422 S4 (Fix): liegen `official_notices` vor, wird ein
+        Text-Block an html/plain/telegram_body angehängt UND `sms_body` bekommt
+        mindestens den kurzen Hinweistext `_AMTL_HINWEIS_SMS_TOKEN` angehängt
+        (Epic #2133: „jeder Kanal muss jede Frage beantworten können" — ein
+        sang- und klangloses Weglassen ist keine akzeptable Abweichung mehr).
+        Das Limit wird VOR dem Rendern um die Hinweislänge reduziert (gleiches
+        Muster wie der `addendum`-Zweig in `render_sms()`), damit das
+        140-Zeichen-Alarm-SMS-Limit auch mit Hinweis nie überschritten wird.
+        `sms_body` wird auch für Telegram-Kurzform und Premium-SMS
+        wiederverwendet — beide bekommen den Hinweis dann ebenfalls (im
+        Sinne der Kanal-Parität kein Fehlverhalten).
 
         Issue #1467 S2 AG3a: `telegram_groups` (`list[(location_name,
         changes, point)]`) ist ein NEUER, defaultierter Parameter —
@@ -1487,9 +1968,18 @@ class NotificationService:
         subject = render_alert_subject(alert_msg)
         html, plain = render_alert_email(alert_msg)
         telegram_body = render_alert_telegram(alert_msg)
+        # Issue #2422 S4 (Fix #1088): liegt ein amtlicher Zusatzblock vor,
+        # wird das SMS-Limit VOR dem Rendern um die Hinweislänge reduziert,
+        # damit der angehängte Hinweistext das 140-Zeichen-Limit nicht
+        # sprengt (gleiches Muster wie der `addendum`-Zweig in `render_sms`).
+        sms_limit = 140
+        if official_notices:
+            sms_limit -= len(_AMTL_HINWEIS_SMS_SUFFIX)
         sms_body = render_alert_sms(
-            alert_msg, location_positions=sms_location_positions,
+            alert_msg, limit=sms_limit, location_positions=sms_location_positions,
         )
+        if official_notices:
+            sms_body += _AMTL_HINWEIS_SMS_SUFFIX
 
         if official_notices:
             from output.renderers.alert.official_alerts import (
@@ -1531,7 +2021,10 @@ class NotificationService:
             plain += "\n\n" + extra_text
             telegram_body += "\n\n" + extra_text
 
+        # Issue #1405 S1 (ADR-0086): `sent_channels` = zugestellt (append IM
+        # try NACH dem Send), `attempted_channels` = betreten (NACH dem try).
         sent_channels: list[str] = []
+        attempted_channels: list[str] = []
         failed_channels: list[str] = []
         # Issue #1701 (S2b, D5): Kanal -> Grund, warum Premium-SMS NICHT
         # zugestellt wurde (bewusste Sperre, nicht Transportfehler) — an den
@@ -1543,6 +2036,9 @@ class NotificationService:
         # `telegram_groups` (unveraendertes Verhalten). Nur der Fan-out-Zweig
         # unten setzt ihn bei einer Teilzustellung auf False (AC-25c).
         telegram_fully_sent = True
+        # Issue #1405 S4b (B21): gescheiterter Teilzustellungs-Hinweis, NICHT
+        # in `failed_channels` (ADR-0086: Backoff/Throttle unberuehrt).
+        notice_failures: list[str] = []
 
         def _log_error(channel: str, e: Exception) -> None:
             failed_channels.append(channel)  # Issue #1459: Alarm-Protokoll
@@ -1561,10 +2057,9 @@ class NotificationService:
             else:
                 logger.error(f"{label} alert failed for {target_name}: {e}")
 
-        # E-Mail: Kanal gilt als betreten, wenn er konfiguriert ist — auch wenn
-        # der Best-Effort-Versand fehlschlägt (Issue #684 AC-3, Anti-Pattern #656).
+        # E-Mail: zugestellt erst nach fehlerfreiem Send (ADR-0086 loest
+        # #684 AC-3 ab); betreten ist der Kanal in jedem Fall.
         if "email" in effective_channels and self._settings.can_send_email():
-            sent_channels.append("email")
             try:
                 if mail_sink is not None:
                     mail_sink(subject=subject, body=plain)
@@ -1575,12 +2070,13 @@ class NotificationService:
                         plain_text_body=plain,
                         mail_type=mail_type,
                     )
+                sent_channels.append("email")
             except Exception as e:
                 _log_error("email", e)
+            attempted_channels.append("email")
 
         # Telegram
         if "telegram" in effective_channels and self._settings.can_send_telegram():
-            sent_channels.append("telegram")
             try:
                 if telegram_style == "kurzform":
                     # Issue #1467 S2, Korrektur K-6 (PO-Entscheidung
@@ -1593,7 +2089,7 @@ class NotificationService:
                     # je Ort aufgeteilt waeren die Ortsnummern sinnlos. Die
                     # beiden anderen Kurzstil-Pfade (Trip-Alarm, amtlicher
                     # Ortsvergleich-Alarm) senden ebenfalls genau eine.
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject,
                         body=sms_body,
                         parse_mode=None,
@@ -1627,9 +2123,13 @@ class NotificationService:
                         try:
                             single_msg = to_multi_point_alert_message(
                                 [group], tz=alert_tz, stand_at=alert_msg.stand_at,
+                                # Issue #1737: der Anker reist je Ort mit.
+                                anchor_points=anchor_points,
+                                format_modes=alert_msg.format_modes,
+                                indicator_keys=alert_msg.indicator_keys,
                             )
                             single_body = render_alert_telegram(single_msg)
-                            TelegramOutput(self._settings).send(
+                            self._telegram_output().send(
                                 subject=subject,
                                 body=single_body,
                                 parse_mode="HTML",
@@ -1642,53 +2142,78 @@ class NotificationService:
                             )
                             telegram_fully_sent = False
                             failed_count += 1
-                    if failed_count:
-                        failed_channels.append("telegram")
+                    if failed_count and not self._send_telegram_incomplete_hint(
+                            SimpleNamespace(email_subject=subject), failed_count):
                         # #1370-Muster: Teilzustellung wird gemeldet statt
-                        # still verschluckt.
-                        self._send_telegram_incomplete_hint(
-                            SimpleNamespace(email_subject=subject), failed_count,
+                        # still verschluckt; scheitert der Hinweis selbst,
+                        # steht das im Ergebnis (#1405 S4b).
+                        notice_failures.append("telegram_incomplete_hint")
+                    # Issue #1405 S1 (AC-6): mindestens eine Blase angekommen
+                    # = Kanal zugestellt (keine Wiederholung, keine Dubletten);
+                    # die Teilzustellung zeigt `telegram_fully_sent`. Scheitern
+                    # ALLE Blasen, ist das ein Transportfehler.
+                    if failed_count == len(telegram_groups):
+                        raise RuntimeError(
+                            f"alle {failed_count} Telegram-Sprechblasen gescheitert"
                         )
                 else:
-                    TelegramOutput(self._settings).send(
+                    self._telegram_output().send(
                         subject=subject,
                         body=telegram_body,
                         parse_mode="HTML",
                         suppress_subject_line=True,
                     )
+                sent_channels.append("telegram")
             except Exception as e:
                 _log_error("telegram", e)
+            attempted_channels.append("telegram")
 
         # SMS
         if "sms" in effective_channels and self._settings.can_send_sms():
-            sent_channels.append("sms")
-            try:
-                SMSOutput(self._settings).send(subject=subject, body=sms_body)
-            except Exception as e:
-                _log_error("sms", e)
+            now_sms = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "sms", "alert", now_sms, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    self._sms_output().send(subject=subject, body=sms_body)
+                    sent_channels.append("sms")
+                except Exception as e:
+                    sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
+                    _log_error("sms", e)
+                attempted_channels.append("sms")
 
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # vorgeschaltete can_send_*()-Bereitschaftsfrage (D2): die
         # Sendebereitschaft entscheidet ausschliesslich
-        # `PremiumSmsOutput._resolve_recipient()` zur Sendezeit; eine
+        # `PremiumSmsRecipient.for_user()` zur Sendezeit (#1412 S4b); eine
         # bewusste Sperre (keine/veraltete Rueckadresse) landet in
         # `blocked_channels`/`blocked_reason_codes` statt in
         # `failed_channels` — sie ist kein Transportfehler.
         if "premium_sms" in effective_channels:
-            sent_channels.append("premium_sms")
-            try:
-                PremiumSmsOutput(self._settings).send(subject=subject, body=sms_body)
-            except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
-                blocked_channels["premium_sms"] = str(e)
-                _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
-                _log_error("premium_sms", e)
+            now_premium = datetime.now(timezone.utc)
+            if self._sms_gate_reserve(
+                "premium_sms", "alert", now_premium, blocked_channels, blocked_reason_codes,
+            ):
+                try:
+                    self._premium_sms_output().send(subject=subject, body=sms_body)
+                    sent_channels.append("premium_sms")
+                except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
+                    sms_daily_limit.release_reservation(
+                        self._require_user(), "premium_sms", now_premium,
+                    )
+                    blocked_channels["premium_sms"] = str(e)
+                    _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
+                    _log_error("premium_sms", e)
+                attempted_channels.append("premium_sms")
 
         return NotificationResult(
             sent=bool(sent_channels), sent_channels=sent_channels,
+            attempted_channels=attempted_channels,
             failed_channels=failed_channels,
             telegram_fully_sent=telegram_fully_sent,
             blocked_channels=blocked_channels,
             blocked_reason_codes=blocked_reason_codes,
+            notice_failures=notice_failures,
         )
 
     # ------------------------------------------------------------------
@@ -1697,8 +2222,12 @@ class NotificationService:
 
     def send_command_reply_email(
         self, result: CommandResult, settings: Settings,
-    ) -> None:
-        """Sendet eine Command-Bestätigung per E-Mail."""
+    ) -> bool:
+        """Sendet eine Command-Bestätigung per E-Mail.
+
+        Issue #1405 S4b: ``True`` = zugestellt, ``False`` = Versand gescheitert
+        (der Posteingang-Lauf zaehlt das als Fehler).
+        """
         try:
             EmailOutput(settings).send(
                 subject=result.confirmation_subject,
@@ -1708,6 +2237,32 @@ class NotificationService:
             logger.info(f"Confirmation sent: {result.confirmation_subject}")
         except Exception as e:
             logger.error(f"Failed to send confirmation: {e}")
+            return False
+        return True
+
+    def send_command_reply_premium_sms(
+        self, result: CommandResult, settings: Settings,
+    ) -> None:
+        """Sendet eine Command-Bestätigung per Premium-SMS (Issue #2184).
+
+        Issue #2412 S4a: `purpose="reply"` -- Garmin-Antworten duerfen die
+        Reply-Reserve ueber dem Premium-SMS-Grundlimit ausschoepfen. Kein
+        `NotificationResult` an dieser Stelle (`-> None`); eine Sperre bleibt
+        nur ueber die Aufzeichner-/Transport-Beobachtung sichtbar (Spec).
+        """
+        now = datetime.now(timezone.utc)
+        if not self._sms_gate_reserve("premium_sms", "reply", now, {}, {}):
+            logger.error("Premium-SMS confirmation blocked: SMS-Tageslimit erreicht")
+            return
+        try:
+            self._premium_sms_output(settings).send(
+                subject=result.confirmation_subject,
+                body=result.confirmation_body,
+            )
+            logger.info(f"Premium-SMS confirmation sent: {result.confirmation_subject}")
+        except Exception as e:
+            sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)
+            logger.error(f"Failed to send premium-sms confirmation: {e}")
 
     def send_command_reply_telegram(
         self,
@@ -1723,9 +2278,9 @@ class NotificationService:
             }
             if result.reply_markup is not None:
                 kwargs["reply_markup"] = result.reply_markup
-            return TelegramOutput(settings).send(**kwargs)
+            return self._telegram_reply(settings, chat_id).send(**kwargs)
         except Exception as e:
-            logger.error(f"Telegram command reply failed for {chat_id}: {e}")
+            logger.error(f"Telegram command reply failed for {mask_number(chat_id)}: {e}")
             return None
 
     def send_telegram_message(
@@ -1742,9 +2297,9 @@ class NotificationService:
             kwargs = {"subject": subject, "body": body}
             if reply_markup is not None:
                 kwargs["reply_markup"] = reply_markup
-            return TelegramOutput(settings).send(**kwargs)
+            return self._telegram_reply(settings, chat_id).send(**kwargs)
         except Exception as e:
-            logger.error(f"Telegram message failed for {chat_id}: {e}")
+            logger.error(f"Telegram message failed for {mask_number(chat_id)}: {e}")
             return None
 
     def edit_telegram_message_text(
@@ -1757,9 +2312,8 @@ class NotificationService:
         reply_markup: dict | None = None,
     ) -> bool:
         """Editiert eine vorhandene Telegram-Nachricht in-place."""
-        from output.channels.telegram import TelegramOutput
         try:
-            TelegramOutput(settings).edit_message_text(
+            self._telegram_reply(settings, chat_id).edit_message_text(
                 chat_id,
                 message_id,
                 text,
@@ -1767,7 +2321,7 @@ class NotificationService:
             )
             return True
         except Exception as e:
-            logger.error(f"Telegram edit_message_text failed for {chat_id}/{message_id}: {e}")
+            logger.error(f"Telegram edit_message_text failed for {mask_number(chat_id)}/{message_id}: {e}")
             return False
 
     def delete_telegram_message(
@@ -1778,12 +2332,11 @@ class NotificationService:
         settings: Settings,
     ) -> bool:
         """Löscht eine Telegram-Nachricht."""
-        from output.channels.telegram import TelegramOutput
         try:
-            TelegramOutput(settings).delete_message(chat_id, message_id)
+            self._telegram_reply(settings, chat_id).delete_message(chat_id, message_id)
             return True
         except Exception as e:
-            logger.error(f"Telegram delete_message failed for {chat_id}/{message_id}: {e}")
+            logger.error(f"Telegram delete_message failed for {mask_number(chat_id)}/{message_id}: {e}")
             return False
 
     def answer_telegram_callback_query(
@@ -1798,7 +2351,7 @@ class NotificationService:
             TelegramOutput(settings).answer_callback_query(callback_query_id)
             return True
         except Exception as e:
-            logger.error(f"Telegram answer_callback_query failed for {callback_query_id}: {e}")
+            logger.error(f"Telegram answer_callback_query failed for {mask_number(callback_query_id)}: {e}")
             return False
 
     # ------------------------------------------------------------------
@@ -1880,12 +2433,17 @@ class NotificationService:
                 mail_format="compact",
             )
 
-    def _send_service_error_email(self, request: TripReportRequest) -> None:
-        """Service-E-Mail bei Provider-Fehler für SMS-only Trips."""
+    def _send_service_error_email(self, request: TripReportRequest) -> bool:
+        """Service-E-Mail bei Provider-Fehler für SMS-only Trips.
+
+        Issue #1405 S4b: ``True`` = zugestellt oder nicht erforderlich (kein
+        SMS-only-Trip bzw. kein Mailversand eingerichtet -- kein Versuch, wie
+        bei der Befehlsantwort), ``False`` = Versand gescheitert.
+        """
         config = request.report_config
         is_sms_only = config and config.send_sms and not config.send_email
-        if not is_sms_only:
-            return
+        if not is_sms_only or not self._settings.can_send_email():
+            return True
         error_lines = "\n".join(
             f"  - Segment {e.segment.segment_id}: {e.error_message}"
             for e in request.failed_segments
@@ -1902,3 +2460,5 @@ class NotificationService:
             logger.info(f"Service error email sent for {request.trip.name}")
         except Exception as e:
             logger.error(f"Failed to send service error email: {e}")
+            return False
+        return True

@@ -33,6 +33,7 @@
 	// Vergleich: zusaetzlich Stundenverlauf), und deren Marken blieben
 	// unerklaert. Hier ist „Marke ohne Erklaerung" baulich unmoeglich statt nur
 	// getestet: jeder Block bringt seine Legende mit.
+	import { ltKanalAbwahlHinweisText } from '../layout-tab/ltChannels.ts';
 	import { buildKuerzelLegende } from './kuerzelLegende.ts';
 
 	interface Props {
@@ -50,10 +51,12 @@
 		 *  etwas anderes als "nicht übergeben" (kein Default-Wert hier). */
 		offColumns?: string[];
 		onRestore?: (id: string) => void;
+		/** Issue #2438: Opt-in. Abwahl-Hinweis nur in Kanal-Bloecken. */
+		showAbwahlHinweis?: boolean;
 		/** Issue #1719 S4: ALLE Kürzel, die der Kanal DIESER Fläche für eine
 		 *  Größe sendet (metric_id -> Kürzel-Liste). Die Quelle richtet sich
 		 *  nach der Fläche und wird deshalb von der Einbettung geliefert, nicht
-		 *  hier bestimmt: der Touren-Editor reicht `/api/sms-symbols` durch
+		 *  hier bestimmt: der Trips-Editor reicht `/api/sms-symbols` durch
 		 *  (Mehrfach-Token `FK FD WC`, Grammatikformen), die drei
 		 *  Vergleichs-Editoren das Register-Kürzel `sms_code` — die
 		 *  Vergleichs-SMS rendert aus `get_sms_code()` (comparison.py). Eine
@@ -73,7 +76,7 @@
 
 	let {
 		primaryColumns, metricById, friendlyMap, activeChannel, highlight, onRemove, onDndReorder, onMode,
-		offColumns, onRestore, kuerzelById, modeCapable = indicatorCapable,
+		offColumns, onRestore, showAbwahlHinweis = false, kuerzelById, modeCapable = indicatorCapable,
 	}: Props = $props();
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
@@ -218,6 +221,9 @@
 					</div>
 				</div>
 			{/each}
+			{#if showAbwahlHinweis}
+				<p class="aus-hinweis" data-testid="wm2-aus-hinweis">{ltKanalAbwahlHinweisText()}</p>
+			{/if}
 		</div>
 	{/if}
 	<!-- Issue #1888 (E6 Scheibe B): Legende zu den Marken DIESES Blocks. Sie
@@ -298,7 +304,7 @@
 		margin-left: 4px;
 	}
 	.hint-right {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		margin-left: auto;
 	}
@@ -350,7 +356,7 @@
 		flex-shrink: 1;
 	}
 	.metric-unit {
-		font-size: 10.5px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		margin-left: 6px;
 		white-space: nowrap;
@@ -358,7 +364,7 @@
 	/* Issue #1401: Auswertung — eigenes Element, gleiches Badge-Muster wie
 	   col-badge, aber ohne Mono (deutscher Fliesstext, kein Kuerzel). */
 	.aggregation-badge {
-		font-size: 10.5px;
+		font-size: 11px;
 		color: var(--g-ink-3);
 		background: var(--g-paper);
 		border: 1px solid var(--g-rule-soft);
@@ -376,7 +382,7 @@
 	   Umbruch, und den Marken fehlte `flex-shrink: 0`. */
 	.col-badge,
 	.kurzform-badge {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-3);
 		background: var(--g-paper);
 		border: 1px solid var(--g-rule-soft);
@@ -437,6 +443,15 @@
 		font-weight: 600;
 		color: var(--g-ink-3);
 	}
+	/* Issue #2438: Regel-Hinweis; --g-ink-muted (6,91:1), nie --g-ink-4. */
+	.aus-hinweis {
+		margin: 0;
+		padding: 6px 16px 12px;
+		font-size: 12.5px;
+		line-height: 1.4;
+		color: var(--g-ink-muted);
+		overflow-wrap: anywhere;
+	}
 	.row.aus-row {
 		grid-template-columns: 1fr auto;
 		cursor: default;
@@ -480,10 +495,24 @@
 			overflow-wrap: normal;
 			max-width: 100%;
 		}
+		/* Issue #1791: Ziehzeile unter 900px zweizeilig -- Zeile 1 Position,
+		   Griff, Name+Marken (volle Breite fuer die Textspalte), Zeile 2 die
+		   Bedienelemente rechtsbuendig. Aus-Zeilen bleiben unberuehrt. */
+		.row:not(.aus-row) {
+			grid-template-columns: 28px 16px 1fr;
+		}
+		.row:not(.aus-row) .label-cell {
+			grid-column: 3;
+		}
+		.row:not(.aus-row) .controls {
+			grid-column: 1 / -1;
+			grid-row: 2;
+		}
 		.controls {
-			flex-direction: column;
-			align-items: flex-end;
-			gap: 4px;
+			flex-direction: row;
+			flex-wrap: wrap;
+			justify-content: flex-end;
+			gap: 4px 8px;
 		}
 	}
 </style>

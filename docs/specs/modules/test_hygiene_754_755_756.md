@@ -3,7 +3,7 @@ entity_id: test_hygiene_754_755_756
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, hygiene, telegram, e2e, cleanup]
 ---

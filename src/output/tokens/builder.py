@@ -10,9 +10,10 @@ from output.tokens.dto import (
     DailyForecast, MetricSpec, NormalizedForecast, ReportType,
     Token, TokenLine,
 )
+from output.tokens.hazard_symbols import alert_entry_token_parts
 from output.tokens.metrics import (
     render_temperature, render_threshold_peak_value, render_int,
-    render_inverse_min_value,
+    render_inverse_min_value, STUFEN_FN,
 )
 
 FORECAST_TH = "TH:"
@@ -26,8 +27,10 @@ FORECAST_THP = "TH+:"
 # amtlichen Warn-Katalogs (`tokens/hazard_symbols.py`).
 # Issue #1475 Nachbesserung AC-1: umbenannt `+HG` -> `+HL` (Konsistenz-Fix).
 FORECAST_TH_HAIL_SUFFIX = "+HL"
-VIGI_TH = "TH:"
-VIGI_HR = "HR:"
+# Issue #2417 AC-27: Meteo-France-Risiko VR:/VT: statt HR:/TH: -- 'TH:' ist
+# das Gewitter-Kuerzel der Vorhersage, 'HR' war die Starkregen-Warnung.
+VIGI_TH = "VT:"
+VIGI_HR = "VR:"
 
 # sms_format.md §1/§3.1: stage_name max 10 chars, Umlaut-/Akzent-Faltung vor
 # Truncation, via die geteilte Quelle fold_ascii() (#1253).
@@ -51,15 +54,18 @@ PRIORITY = {
     # amtliche Schneewarnung (hazard_symbols.py).
     # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
     # nachweislich 'FK') -- kein Eintrag mehr.
-    "DBG": 1, "AV": 2, "SL": 2, "NS24+": 2, "SD": 2,
+    "DBG": 1, "SL": 2, "NS24+": 2, "SD": 2,
     "Z:": 3, "MAX": 3, "M:": 3, "PR": 5,
     # Issue #1410: das gefuehlte Trio rangiert unter PR (5) -- es faellt aber
     # ohnehin schon im dedizierten Schritt in render.py::_truncate(), bevor der
     # Last-Resort-Pfad greift. Der Eintrag ist Pflicht, weil build_token_line()
     # `PRIORITY[sym]` ungeschuetzt liest.
     "FD": 4, "FL": 4, "FN": 4,
+    # Issue #2422 S6 (B1): 'TF' (Stundenwert der gefuehlten Temperatur) rangiert
+    # wie das gefuehlte Trio und faellt in render.py::_truncate() als Erstes.
+    "TF": 4,
     "D": 6, "N": 6, "L": 6, "R": 7,
-    "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, FORECAST_TH: 10,
+    "W": 8, "G": 8, FORECAST_THP: 9, VIGI_HR: 10, VIGI_TH: 10, FORECAST_TH: 10,
     # Issue #1660 Scheibe B: 14 waehlbare Metriken ohne bisherigen SMS-Token,
     # gleiche Prioritaetsstufe wie die Wintersport-Token (DEC-4). Pflicht,
     # weil `PRIORITY[sym]` an mehreren Stellen ungeschuetzt gelesen wird.
@@ -95,6 +101,8 @@ POSITIONAL = [
     # N<->FN, K<->FK, D<->FD), dann die uebrigen Vorhersage-Token unveraendert.
     ("N", "forecast"), ("L", "forecast"), ("D", "forecast"),
     ("FN", "forecast"), ("FL", "forecast"), ("FD", "forecast"),
+    # Issue #2422 S6 (B1): Stundenwert der gefuehlten Temperatur (Klasse (b)).
+    ("TF", "forecast"),
     ("R", "forecast"),
     ("PR", "forecast"), ("W", "forecast"), ("G", "forecast"),
     (FORECAST_TH, "forecast"), (FORECAST_THP, "forecast"),
@@ -110,7 +118,10 @@ POSITIONAL = [
     # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
     # nachweislich 'FK') -- kein Eintrag mehr.
     ("SD", "wintersport"), ("NS24+", "wintersport"),
-    ("SL", "wintersport"), ("AV", "wintersport"),
+    # Issue #1441: 'AV' ist kein Wintersport-Baustein mehr -- die Lawinenstufe
+    # kommt ausschliesslich aus dem amtlichen Lagebericht im Warnblock
+    # (hazard_symbols `avalanche_bulletin`), nie ein zweites Mal von hier.
+    ("SL", "wintersport"),
     (UNAVAILABLE_SYMBOL, "unavailable"),
     ("DBG", "debug"),
 ]
@@ -118,6 +129,32 @@ POS_INDEX = {key: i for i, key in enumerate(POSITIONAL)}
 # §2: der Warn-Block steht nach dem Vigilance-Block, vor Fire/Wintersport/DBG.
 OFFICIAL_ALERT_POS = POS_INDEX[(VIGI_TH, "vigilance")] + 0.5
 STD_SYMBOLS = {s for s, _ in POSITIONAL}
+
+# Issue #2417 AC-23: EINZIGE Definitionsstelle der Bedeutung der Bausteine
+# ohne Katalog-Eintrag (Wetter-Kuerzel wie SD/C stehen im Metrik-Katalog,
+# DBG erscheint nie beim Nutzer). CODES (en) und KUERZEL (de) lesen hier.
+BAUSTEIN_BEDEUTUNG_EN: dict[str, str] = {
+    "Z:": "fire zones", "MAX": "top level",
+    "M:": "massifs", VIGI_HR: "MF rain risk",
+    VIGI_TH: "MF storm risk", UNAVAILABLE_SYMBOL: "no data",
+}
+BAUSTEIN_BEDEUTUNG_DE: dict[str, str] = {
+    "Z:": "Brandzonen", "MAX": "Höchststufe",
+    "M:": "Massive", VIGI_HR: "Météo-France-Risiko Regen",
+    VIGI_TH: "Météo-France-Risiko Gewitter", UNAVAILABLE_SYMBOL: "keine Warndaten",
+}
+# Formatzeichen der Kurzform-Grammatik (sms_format.md): Beispiel -> Bedeutung.
+# Etappen-Praefix, Stunden-Marker '@', Spitze '(...)', Bereich '/',
+# Hagel-Suffix (FORECAST_TH_HAIL_SUFFIX), Null-Form '-', Luecken-Marker '?'.
+FORMAT_BEDEUTUNG_EN: dict[str, str] = {
+    "E4": "stage 4", "23@5": "over limit from 5h", "(24@7)": "peak",
+    "D13/27": "min/max", FORECAST_TH_HAIL_SUFFIX: "hail", "-": "none", "?": "no data",
+}
+FORMAT_BEDEUTUNG_DE: dict[str, str] = {
+    "E4": "Etappe 4", "23@5": "über der Schwelle ab 5 Uhr", "(24@7)": "Spitze",
+    "D13/27": "Tiefst/Höchst", FORECAST_TH_HAIL_SUFFIX: "Hagel", "-": "nichts",
+    "?": "keine Daten",
+}
 
 # Issue #1677 DEC-4/Known Limitation 2: nur diese beiden Kategorien gehoeren
 # zur waehlbaren Metrik-Kaskade und duerfen ueber MetricSpec.position sortiert
@@ -171,12 +208,17 @@ def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
                has_gap: bool = False, value_suffix: str = "") -> Optional[Token]:
     if not _visible(spec, rt):
         return None
-    if spec and _spec_uses_friendly_token(spec) and spec.friendly_label:
+    stufe_fn = (STUFEN_FN.get(symbol)
+                if spec and _spec_uses_friendly_token(spec) else None)
+    if stufe_fn is None and spec and _spec_uses_friendly_token(spec) and spec.friendly_label:
         value = f"\x00{spec.friendly_label}"
     else:
         thr = spec.threshold if (spec and spec.threshold is not None) \
             else DEFAULTS.get(symbol)
-        value = render_threshold_peak_value(symbol, samples, thr, is_level=is_level)
+        # Issue #2422 S6 (B2): Einfach = GSM-7-Stufe (``CT:SCT@4``) statt des
+        # Emoji-Labels -- nur fuer Groessen mit SMS-Einfachform (STUFEN_FN).
+        value = render_threshold_peak_value(
+            symbol, samples, thr, is_level=is_level, stufe_fn=stufe_fn)
         # Issue #1328 (verschaerft 2026-07-20, PO-Entscheidung): jede
         # Entwarnung "-" wird bei einer Datenluecke im Fenster zu "?"
         # ("unbekannt"), unabhaengig davon, ob unterschwellige Stichproben
@@ -229,13 +271,12 @@ def _official_alerts(fc: NormalizedForecast) -> list[Token]:
     """Issue #1318: Warn-Block-Token aus den bereits gefilterten und sortierten
     `(Kuerzel, Stufenbuchstabe, Stunde)`-Tripeln. Der `!`-Marker selbst gehoert
     dem Renderer (genau einmal vor dem ersten Token des Blocks)."""
+    # Issue #1441: Grammatik (blank / `AV4` / `TS:H@14`) aus EINEM geteilten
+    # Helfer -- dieselbe Quelle wie die Ortsvergleich-SMS.
     out: list[Token] = []
     for symbol, level, hour in fc.official_alerts:
-        if not level:
-            out.append(Token(symbol, "", "official_alert", OFFICIAL_ALERT_PRIORITY))
-            continue
-        value = level if hour is None else f"{level}@{hour}"
-        out.append(Token(f"{symbol}:", value, "official_alert", OFFICIAL_ALERT_PRIORITY))
+        sym, value = alert_entry_token_parts(symbol, level, hour)
+        out.append(Token(sym, value, "official_alert", OFFICIAL_ALERT_PRIORITY))
     return out
 
 
@@ -273,7 +314,8 @@ def _wintersport(day: DailyForecast, by_sym: dict[str, MetricSpec],
         ("SD", day.snow_depth_cm),
         ("NS24+", day.snow_new_24h_cm),
         ("SL", day.snowfall_limit_m),
-        ("AV", float(day.avalanche_level) if day.avalanche_level is not None else None),
+        # Issue #1441 (AC-21): kein 'AV' mehr -- die Lawinenstufe steht genau
+        # einmal im Warnblock (`_official_alerts`, Lagebericht).
         # Fix #1887 E6 Scheibe A: 'WC'-Paar entfaellt ERSATZLOS (verdoppelte
         # nachweislich 'FK', identisches Feld/Fenster/Aggregation).
     ]
@@ -396,8 +438,13 @@ def build_token_line(
         # den Hagel-Suffix, und nur bei bestaetigtem Hagel ("ja").
         suffix = (FORECAST_TH_HAIL_SUFFIX
                   if sym == FORECAST_TH and today.hail_flag is True else "")
+        # Issue #1794: PR kennt zusaetzlich einen metrik-lokalen Fehlbestand
+        # (Fensterpunkte vorhanden, `pop_pct` durchgaengig None) — dort waere
+        # "-" eine falsche Entwarnung. Alle anderen Kuerzel bleiben allein am
+        # segmentweiten `has_data_gap`.
+        gap = today.has_data_gap or (sym == "PR" and today.pop_all_missing)
         tok = _mk_metric(sym, samples, spec, report_type, is_lvl,
-                          has_gap=today.has_data_gap, value_suffix=suffix)
+                          has_gap=gap, value_suffix=suffix)
         if tok:
             tokens.append(tok)
 
@@ -421,12 +468,20 @@ def build_token_line(
             tokens.append(tok)
 
     # Issue #1660 Scheibe B, Klasse (b) Invers-Min — VS/NL (Tages-Tiefstwert).
+    # Issue #2422 S6 (B1): 'TF' -- Tiefstwert der gefuehlten Temperatur im
+    # Tagesfenster mit Uhrzeit (Eltern-Metrik wind_chill), neben den
+    # Gehzeit-Tagesauswertungen FL/FD/FN.
     for sym, samples, unit_factor, decimals in (
         ("VS", today.visibility_hourly, 0.001, 1),
         ("FZ", today.freezing_level_hourly, 1.0, 0),
+        ("TF", today.wind_chill_hourly, 1.0, 0),
     ):
         spec = by_sym.get(sym)
         if spec is None and not samples:
+            continue
+        # 'TF' nie ohne MetricSpec (needs_spec-Muster der gefuehlten Token): der
+        # Direktaufruf ohne Trip-Kontext darf es nicht aus Rohdaten erzeugen.
+        if sym == "TF" and spec is None:
             continue
         tok = _mk_inverse_min_metric(sym, samples, spec, report_type,
                                       has_gap=today.has_data_gap,

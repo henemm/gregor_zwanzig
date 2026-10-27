@@ -3,7 +3,7 @@ entity_id: briefing_mail_inhalt
 type: module
 created: 2026-06-13
 updated: 2026-06-13
-status: live
+status: implemented
 version: "1.1"
 tags: [email, renderer, briefing, mobile, subject, vortag-vergleich, day-comparison]
 ---
@@ -30,7 +30,7 @@ und Reiter et al. SUMTIME content-selection) wird die Zeile inhaltlich relevant.
 ## Source
 
 - **File:** `src/output/renderers/email/html.py` (CSS-Block, Inline-Display-Attribute)
-- **File:** `src/formatters/trip_report.py` (D/W/G-Token-Bau)
+- **File:** `src/output/renderers/trip_report.py` (D/W/G-Token-Bau)
 - **File:** `src/services/day_comparison.py` (`DayComparisonEntry`, `compare()`, `summarize_day_comparison()`)
 - **File:** `src/output/renderers/email/html.py:572` und `plain.py:130` (selected_metrics-Durchreichung)
 - **File:** `docs/specs/modules/output_subject_filter.md` (D/W/G-Whitelist als abgelöst markieren)
@@ -59,7 +59,7 @@ und Reiter et al. SUMTIME content-selection) wird die Zeile inhaltlich relevant.
 
 ```
 AC-2 zuerst (kleinste Änderung, kein HTML-Risiko):
-  src/formatters/trip_report.py:486-496 — D/W/G-Token-Bau entfernen.
+  src/output/renderers/trip_report.py:486-496 — D/W/G-Token-Bau entfernen.
   Einziger Aufrufer ist trip_report.py:160-167 (übergibt tokens=[]).
   subject.py:102-116 behandelt leere Liste bereits korrekt (kein trailing "—").
   docs/specs/modules/output_subject_filter.md — D/W/G-Whitelist-Bullet als abgelöst markieren.

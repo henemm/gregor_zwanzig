@@ -1,0 +1,601 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/intake-2439
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 38 items
+
+tests/tdd/test_befehle_pausierte_vergleiche.py FFFFFFFFFFFF..FFFFFF..FF. [ 65%]
+.FF.FF...F.FF                                                            [100%]
+
+=================================== FAILURES ===================================
+__ test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[telegram-heute] __
+
+schluessel = 'heute', kanal = 'telegram'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig(schluessel, kanal):
+        from services.trip_selection import resolve_command_target
+    
+        presets = _eins_aktiv_fuenf_pausiert()
+        erg = resolve_command_target(schluessel, [], presets, _now(), channel=kanal)
+>       assert erg.kind == "vergleich", f"Rückfrage statt Ziel: {erg.text!r}"
+E       AssertionError: Rückfrage statt Ziel: "Mehrdeutig: Aktiv-Runde (Vergleich), Pausiert-0 (Vergleich), Pausiert-1 (Vergleich), Pausiert-2 (Vergleich), Pausiert-3 (Vergleich), Pausiert-4 (Vergleich). Mit Namen antworten, z.B. 'Aktiv-Runde pause'."
+E       assert None == 'vergleich'
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Mehrdeutig: Aktiv-Runde (Vergleich), Pausiert-0 (Vergleich), Pausiert-1 (Ve...ausiert-2 (Vergleich), Pausiert-3 (Vergleich), Pausiert-4 (Vergleich). Mit Namen antworten, z.B. 'Aktiv-Runde pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:79: AssertionError
+_ test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[telegram-morgen] __
+
+schluessel = 'morgen', kanal = 'telegram'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig(schluessel, kanal):
+        from services.trip_selection import resolve_command_target
+    
+        presets = _eins_aktiv_fuenf_pausiert()
+        erg = resolve_command_target(schluessel, [], presets, _now(), channel=kanal)
+>       assert erg.kind == "vergleich", f"Rückfrage statt Ziel: {erg.text!r}"
+E       AssertionError: Rückfrage statt Ziel: "Mehrdeutig: Aktiv-Runde (Vergleich), Pausiert-0 (Vergleich), Pausiert-1 (Vergleich), Pausiert-2 (Vergleich), Pausiert-3 (Vergleich), Pausiert-4 (Vergleich). Mit Namen antworten, z.B. 'Aktiv-Runde pause'."
+E       assert None == 'vergleich'
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Mehrdeutig: Aktiv-Runde (Vergleich), Pausiert-0 (Vergleich), Pausiert-1 (Ve...ausiert-2 (Vergleich), Pausiert-3 (Vergleich), Pausiert-4 (Vergleich). Mit Namen antworten, z.B. 'Aktiv-Runde pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:79: AssertionError
+_ test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[telegram-report] __
+
+schluessel = 'report', kanal = 'telegram'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig(schluessel, kanal):
+        from services.trip_selection import resolve_command_target
+    
+        presets = _eins_aktiv_fuenf_pausiert()
+        erg = resolve_command_target(schluessel, [], presets, _now(), channel=kanal)
+>       assert erg.kind == "vergleich", f"Rückfrage statt Ziel: {erg.text!r}"
+E       AssertionError: Rückfrage statt Ziel: "Mehrdeutig: Aktiv-Runde (Vergleich), Pausiert-0 (Vergleich), Pausiert-1 (Vergleich), Pausiert-2 (Vergleich), Pausiert-3 (Vergleich), Pausiert-4 (Vergleich). Mit Namen antworten, z.B. 'Aktiv-Runde pause'."
+E       assert None == 'vergleich'
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Mehrdeutig: Aktiv-Runde (Vergleich), Pausiert-0 (Vergleich), Pausiert-1 (Ve...ausiert-2 (Vergleich), Pausiert-3 (Vergleich), Pausiert-4 (Vergleich). Mit Namen antworten, z.B. 'Aktiv-Runde pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:79: AssertionError
+_ test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[premium_sms-heute] _
+
+schluessel = 'heute', kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig(schluessel, kanal):
+        from services.trip_selection import resolve_command_target
+    
+        presets = _eins_aktiv_fuenf_pausiert()
+        erg = resolve_command_target(schluessel, [], presets, _now(), channel=kanal)
+>       assert erg.kind == "vergleich", f"Rückfrage statt Ziel: {erg.text!r}"
+E       AssertionError: Rückfrage statt Ziel: "Ambiguous: Akti (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison). Reply with name, e.g. 'Akti pause'."
+E       assert None == 'vergleich'
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Ambiguous: Akti (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison). Reply with name, e.g. 'Akti pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:79: AssertionError
+_ test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[premium_sms-morgen] _
+
+schluessel = 'morgen', kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig(schluessel, kanal):
+        from services.trip_selection import resolve_command_target
+    
+        presets = _eins_aktiv_fuenf_pausiert()
+        erg = resolve_command_target(schluessel, [], presets, _now(), channel=kanal)
+>       assert erg.kind == "vergleich", f"Rückfrage statt Ziel: {erg.text!r}"
+E       AssertionError: Rückfrage statt Ziel: "Ambiguous: Akti (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison). Reply with name, e.g. 'Akti pause'."
+E       assert None == 'vergleich'
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Ambiguous: Akti (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison). Reply with name, e.g. 'Akti pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:79: AssertionError
+_ test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[premium_sms-report] _
+
+schluessel = 'report', kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig(schluessel, kanal):
+        from services.trip_selection import resolve_command_target
+    
+        presets = _eins_aktiv_fuenf_pausiert()
+        erg = resolve_command_target(schluessel, [], presets, _now(), channel=kanal)
+>       assert erg.kind == "vergleich", f"Rückfrage statt Ziel: {erg.text!r}"
+E       AssertionError: Rückfrage statt Ziel: "Ambiguous: Akti (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison). Reply with name, e.g. 'Akti pause'."
+E       assert None == 'vergleich'
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Ambiguous: Akti (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison). Reply with name, e.g. 'Akti pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:79: AssertionError
+____ test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[telegram-heute] _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797ad06fab10>
+user_ids = <function user_ids.<locals>._new at 0x797acfa685e0>, befehl = 'heute'
+kanal = 'telegram'
+
+    @pytest.mark.parametrize("befehl", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach(monkeypatch, user_ids, befehl, kanal):
+        uid = user_ids()
+        _nutzer_mit_tier(uid)
+        _preset(uid, "Aktiv-Runde")
+        for i in range(5):
+            _preset(uid, f"Pausiert-{i}", paused_at="2026-10-01T08:00:00Z", schedule="manual")
+    
+        sent, calls = _ZIELLOSE_KANAELE[kanal](monkeypatch, uid, befehl)
+    
+>       assert len(calls) == 1, f"process() muss laufen, Antworten: {sent!r}"
+E       AssertionError: process() muss laufen, Antworten: ["Mehrdeutig: Pausiert-3 (Vergleich), Pausiert-2 (Vergleich), Aktiv-Runde (Vergleich), Pausiert-0 (Vergleich), Pausiert-1 (Vergleich), Pausiert-4 (Vergleich). Mit Namen antworten, z.B. 'Pausiert-3 pause'."]
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:95: AssertionError
+____ test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[telegram-morgen] ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797ad06c28d0>
+user_ids = <function user_ids.<locals>._new at 0x797acf760900>
+befehl = 'morgen', kanal = 'telegram'
+
+    @pytest.mark.parametrize("befehl", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach(monkeypatch, user_ids, befehl, kanal):
+        uid = user_ids()
+        _nutzer_mit_tier(uid)
+        _preset(uid, "Aktiv-Runde")
+        for i in range(5):
+            _preset(uid, f"Pausiert-{i}", paused_at="2026-10-01T08:00:00Z", schedule="manual")
+    
+        sent, calls = _ZIELLOSE_KANAELE[kanal](monkeypatch, uid, befehl)
+    
+>       assert len(calls) == 1, f"process() muss laufen, Antworten: {sent!r}"
+E       AssertionError: process() muss laufen, Antworten: ["Mehrdeutig: Pausiert-1 (Vergleich), Aktiv-Runde (Vergleich), Pausiert-3 (Vergleich), Pausiert-4 (Vergleich), Pausiert-2 (Vergleich), Pausiert-0 (Vergleich). Mit Namen antworten, z.B. 'Pausiert-1 pause'."]
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:95: AssertionError
+____ test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[telegram-report] ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797ad06c05c0>
+user_ids = <function user_ids.<locals>._new at 0x797acf761a80>
+befehl = 'report', kanal = 'telegram'
+
+    @pytest.mark.parametrize("befehl", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach(monkeypatch, user_ids, befehl, kanal):
+        uid = user_ids()
+        _nutzer_mit_tier(uid)
+        _preset(uid, "Aktiv-Runde")
+        for i in range(5):
+            _preset(uid, f"Pausiert-{i}", paused_at="2026-10-01T08:00:00Z", schedule="manual")
+    
+        sent, calls = _ZIELLOSE_KANAELE[kanal](monkeypatch, uid, befehl)
+    
+>       assert len(calls) == 1, f"process() muss laufen, Antworten: {sent!r}"
+E       AssertionError: process() muss laufen, Antworten: ["Ambiguous: Pausiert-4 (comparison), Pausiert-3 (comparison), Pausiert-0 (comparison), Pausiert-2 (comparison), Pausiert-1 (comparison), Aktiv-Runde (comparison). Reply with name, e.g. 'Pausiert-4 pause'."]
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:95: AssertionError
+___ test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[premium_sms-heute] ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797ad06c0cb0>
+user_ids = <function user_ids.<locals>._new at 0x797acf7605e0>, befehl = 'heute'
+kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("befehl", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach(monkeypatch, user_ids, befehl, kanal):
+        uid = user_ids()
+        _nutzer_mit_tier(uid)
+        _preset(uid, "Aktiv-Runde")
+        for i in range(5):
+            _preset(uid, f"Pausiert-{i}", paused_at="2026-10-01T08:00:00Z", schedule="manual")
+    
+        sent, calls = _ZIELLOSE_KANAELE[kanal](monkeypatch, uid, befehl)
+    
+>       assert len(calls) == 1, f"process() muss laufen, Antworten: {sent!r}"
+E       AssertionError: process() muss laufen, Antworten: ["Ambiguous: Paus (comparison), Paus (comparison), Paus (comparison), Akti (comparison), Paus (comparison), Paus (comparison). Reply with name, e.g. 'Paus pause'."]
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:95: AssertionError
+__ test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[premium_sms-morgen] ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797ad06cbb90>
+user_ids = <function user_ids.<locals>._new at 0x797acf761800>
+befehl = 'morgen', kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("befehl", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach(monkeypatch, user_ids, befehl, kanal):
+        uid = user_ids()
+        _nutzer_mit_tier(uid)
+        _preset(uid, "Aktiv-Runde")
+        for i in range(5):
+            _preset(uid, f"Pausiert-{i}", paused_at="2026-10-01T08:00:00Z", schedule="manual")
+    
+        sent, calls = _ZIELLOSE_KANAELE[kanal](monkeypatch, uid, befehl)
+    
+>       assert len(calls) == 1, f"process() muss laufen, Antworten: {sent!r}"
+E       AssertionError: process() muss laufen, Antworten: ["Ambiguous: Paus (comparison), Paus (comparison), Paus (comparison), Akti (comparison), Paus (comparison), Paus (comparison). Reply with name, e.g. 'Paus pause'."]
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:95: AssertionError
+__ test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[premium_sms-report] ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797ad06c3230>
+user_ids = <function user_ids.<locals>._new at 0x797acf7622a0>
+befehl = 'report', kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("befehl", ["heute", "morgen", "report"])
+    @pytest.mark.parametrize("kanal", ["telegram", "premium_sms"])
+    def test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach(monkeypatch, user_ids, befehl, kanal):
+        uid = user_ids()
+        _nutzer_mit_tier(uid)
+        _preset(uid, "Aktiv-Runde")
+        for i in range(5):
+            _preset(uid, f"Pausiert-{i}", paused_at="2026-10-01T08:00:00Z", schedule="manual")
+    
+        sent, calls = _ZIELLOSE_KANAELE[kanal](monkeypatch, uid, befehl)
+    
+>       assert len(calls) == 1, f"process() muss laufen, Antworten: {sent!r}"
+E       AssertionError: process() muss laufen, Antworten: ["Ambiguous: Paus (comparison), Akti (comparison), Paus (comparison), Paus (comparison), Paus (comparison), Paus (comparison). Reply with name, e.g. 'Paus pause'."]
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:95: AssertionError
+__________ test_ac3_trip_plus_nur_pausierte_ist_eindeutig_trip[heute] __________
+
+schluessel = 'heute'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    def test_ac3_trip_plus_nur_pausierte_ist_eindeutig_trip(schluessel):
+        from services.trip_selection import resolve_command_target
+    
+        trip = _trip_obj("Korsika", 0)
+        presets = [_preset_dict(f"P{i}", paused_at="2026-10-01T08:00:00Z") for i in range(3)]
+        erg = resolve_command_target(schluessel, [trip], presets, _now(), channel="telegram")
+>       assert erg.kind == "route" and erg.target is trip, erg.text
+E       AssertionError: Mehrdeutig: Korsika (Trip), P0 (Vergleich), P1 (Vergleich), P2 (Vergleich). Mit Namen antworten, z.B. 'Korsika pause'.
+E       assert (None == 'route')
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Mehrdeutig: Korsika (Trip), P0 (Vergleich), P1 (Vergleich), P2 (Vergleich). Mit Namen antworten, z.B. 'Korsika pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:125: AssertionError
+_________ test_ac3_trip_plus_nur_pausierte_ist_eindeutig_trip[morgen] __________
+
+schluessel = 'morgen'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    def test_ac3_trip_plus_nur_pausierte_ist_eindeutig_trip(schluessel):
+        from services.trip_selection import resolve_command_target
+    
+        trip = _trip_obj("Korsika", 0)
+        presets = [_preset_dict(f"P{i}", paused_at="2026-10-01T08:00:00Z") for i in range(3)]
+        erg = resolve_command_target(schluessel, [trip], presets, _now(), channel="telegram")
+>       assert erg.kind == "route" and erg.target is trip, erg.text
+E       AssertionError: Mehrdeutig: Korsika (Trip), P0 (Vergleich), P1 (Vergleich), P2 (Vergleich). Mit Namen antworten, z.B. 'Korsika pause'.
+E       assert (None == 'route')
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Mehrdeutig: Korsika (Trip), P0 (Vergleich), P1 (Vergleich), P2 (Vergleich). Mit Namen antworten, z.B. 'Korsika pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:125: AssertionError
+_________ test_ac3_trip_plus_nur_pausierte_ist_eindeutig_trip[report] __________
+
+schluessel = 'report'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    def test_ac3_trip_plus_nur_pausierte_ist_eindeutig_trip(schluessel):
+        from services.trip_selection import resolve_command_target
+    
+        trip = _trip_obj("Korsika", 0)
+        presets = [_preset_dict(f"P{i}", paused_at="2026-10-01T08:00:00Z") for i in range(3)]
+        erg = resolve_command_target(schluessel, [trip], presets, _now(), channel="telegram")
+>       assert erg.kind == "route" and erg.target is trip, erg.text
+E       AssertionError: Mehrdeutig: Korsika (Trip), P0 (Vergleich), P1 (Vergleich), P2 (Vergleich). Mit Namen antworten, z.B. 'Korsika pause'.
+E       assert (None == 'route')
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Mehrdeutig: Korsika (Trip), P0 (Vergleich), P1 (Vergleich), P2 (Vergleich). Mit Namen antworten, z.B. 'Korsika pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:125: AssertionError
+________ test_ac3_trip_plus_aktiver_vergleich_fragt_weiter_nach[heute] _________
+
+schluessel = 'heute'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    def test_ac3_trip_plus_aktiver_vergleich_fragt_weiter_nach(schluessel):
+        from services.trip_selection import resolve_command_target
+    
+        trip = _trip_obj("Korsika", 0)
+        presets = [_preset_dict("Aktiv"), _preset_dict("P1", paused_at="2026-10-01T08:00:00Z")]
+        erg = resolve_command_target(schluessel, [trip], presets, _now(), channel="telegram")
+        assert erg.kind is None and erg.text
+        assert "Korsika" in erg.text and "Aktiv" in erg.text
+>       assert "P1" not in erg.text, "Pausierte erscheinen nicht in der Liste"
+E       AssertionError: Pausierte erscheinen nicht in der Liste
+E       assert 'P1' not in "Mehrdeutig:...sika pause'."
+E         
+E         'P1' is contained here:
+E           rgleich), P1 (Vergleich). Mit Namen antworten, z.B. 'Korsika pause'.
+E         ?           ++
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:137: AssertionError
+________ test_ac3_trip_plus_aktiver_vergleich_fragt_weiter_nach[morgen] ________
+
+schluessel = 'morgen'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    def test_ac3_trip_plus_aktiver_vergleich_fragt_weiter_nach(schluessel):
+        from services.trip_selection import resolve_command_target
+    
+        trip = _trip_obj("Korsika", 0)
+        presets = [_preset_dict("Aktiv"), _preset_dict("P1", paused_at="2026-10-01T08:00:00Z")]
+        erg = resolve_command_target(schluessel, [trip], presets, _now(), channel="telegram")
+        assert erg.kind is None and erg.text
+        assert "Korsika" in erg.text and "Aktiv" in erg.text
+>       assert "P1" not in erg.text, "Pausierte erscheinen nicht in der Liste"
+E       AssertionError: Pausierte erscheinen nicht in der Liste
+E       assert 'P1' not in "Mehrdeutig:...sika pause'."
+E         
+E         'P1' is contained here:
+E           rgleich), P1 (Vergleich). Mit Namen antworten, z.B. 'Korsika pause'.
+E         ?           ++
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:137: AssertionError
+________ test_ac3_trip_plus_aktiver_vergleich_fragt_weiter_nach[report] ________
+
+schluessel = 'report'
+
+    @pytest.mark.parametrize("schluessel", ["heute", "morgen", "report"])
+    def test_ac3_trip_plus_aktiver_vergleich_fragt_weiter_nach(schluessel):
+        from services.trip_selection import resolve_command_target
+    
+        trip = _trip_obj("Korsika", 0)
+        presets = [_preset_dict("Aktiv"), _preset_dict("P1", paused_at="2026-10-01T08:00:00Z")]
+        erg = resolve_command_target(schluessel, [trip], presets, _now(), channel="telegram")
+        assert erg.kind is None and erg.text
+        assert "Korsika" in erg.text and "Aktiv" in erg.text
+>       assert "P1" not in erg.text, "Pausierte erscheinen nicht in der Liste"
+E       AssertionError: Pausierte erscheinen nicht in der Liste
+E       assert 'P1' not in "Mehrdeutig:...sika pause'."
+E         
+E         'P1' is contained here:
+E           rgleich), P1 (Vergleich). Mit Namen antworten, z.B. 'Korsika pause'.
+E         ?           ++
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:137: AssertionError
+___ test_ac5_beide_pausen_varianten_werden_bei_heute_ausgeblendet[pausiert0] ___
+
+pausiert = {'paused_at': '2026-10-01T08:00:00Z'}
+
+    @pytest.mark.parametrize("pausiert", [
+        {"paused_at": "2026-10-01T08:00:00Z"},
+        {"schedule": "manual"},
+    ])
+    def test_ac5_beide_pausen_varianten_werden_bei_heute_ausgeblendet(pausiert):
+        from services.trip_selection import resolve_command_target
+    
+        presets = [
+            _preset_dict("Aktiv"),
+            _preset_dict("Pause", **pausiert),
+            _preset_dict("Archiv", archived_at="2026-09-01T08:00:00Z"),
+        ]
+        erg = resolve_command_target("heute", [], presets, _now(), channel="telegram")
+>       assert erg.kind == "vergleich" and erg.target["name"] == "Aktiv", erg.text
+E       AssertionError: Mehrdeutig: Aktiv (Vergleich), Pause (Vergleich). Mit Namen antworten, z.B. 'Aktiv pause'.
+E       assert (None == 'vergleich')
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Mehrdeutig: Aktiv (Vergleich), Pause (Vergleich). Mit Namen antworten, z.B. 'Aktiv pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:179: AssertionError
+___ test_ac5_beide_pausen_varianten_werden_bei_heute_ausgeblendet[pausiert1] ___
+
+pausiert = {'schedule': 'manual'}
+
+    @pytest.mark.parametrize("pausiert", [
+        {"paused_at": "2026-10-01T08:00:00Z"},
+        {"schedule": "manual"},
+    ])
+    def test_ac5_beide_pausen_varianten_werden_bei_heute_ausgeblendet(pausiert):
+        from services.trip_selection import resolve_command_target
+    
+        presets = [
+            _preset_dict("Aktiv"),
+            _preset_dict("Pause", **pausiert),
+            _preset_dict("Archiv", archived_at="2026-09-01T08:00:00Z"),
+        ]
+        erg = resolve_command_target("heute", [], presets, _now(), channel="telegram")
+>       assert erg.kind == "vergleich" and erg.target["name"] == "Aktiv", erg.text
+E       AssertionError: Mehrdeutig: Aktiv (Vergleich), Pause (Vergleich). Mit Namen antworten, z.B. 'Aktiv pause'.
+E       assert (None == 'vergleich')
+E        +  where None = ZielErgebnis(kind=None, target=None, text="Mehrdeutig: Aktiv (Vergleich), Pause (Vergleich). Mit Namen antworten, z.B. 'Aktiv pause'.").kind
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:179: AssertionError
+____ test_ac7_gekuerzte_namen_sind_paarweise_verschieden_und_passen_in_160 _____
+
+    def test_ac7_gekuerzte_namen_sind_paarweise_verschieden_und_passen_in_160():
+        from services.trip_selection import _rueckfrage_text
+    
+        kandidaten = [
+            ("vergleich", "Alpenrunde Nord"),
+            ("vergleich", "Alpenrunde Süd"),
+            ("vergleich", "Brenner"),
+            ("vergleich", "Chiemsee"),
+        ]
+        text = _rueckfrage_text(kandidaten, "premium_sms")
+        namen = _angezeigte_namen(text)
+>       assert len(namen) == 4, text
+E       AssertionError: Mehrdeutig: Alpenrunde Nor (Vergleich), Alpenrunde Sue (Vergleich), Brenner (Vergleich), Chiemsee (Vergleich). Mit Namen antworten, z.B. 'Alpenrunde Nor pause'.
+E       assert 0 == 4
+E        +  where 0 = len([])
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:226: AssertionError
+_____________ test_ac7_gleiche_vier_zeichen_anfaenge_mit_umlauten ______________
+
+    def test_ac7_gleiche_vier_zeichen_anfaenge_mit_umlauten():
+        from services.trip_selection import _rueckfrage_text
+    
+        kandidaten = [
+            ("vergleich", "Zillertal Nord"),
+            ("vergleich", "Zillertal Süd"),
+            ("vergleich", "Zillergrund"),
+        ]
+        text = _rueckfrage_text(kandidaten, "premium_sms")
+        namen = _angezeigte_namen(text)
+>       assert len(namen) == 3, text
+E       AssertionError: Mehrdeutig: Zillertal Nord (Vergleich), Zillertal Sued (Vergleich), Zillergrund (Vergleich). Mit Namen antworten, z.B. 'Zillertal Nord pause'.
+E       assert 0 == 3
+E        +  where 0 = len([])
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:242: AssertionError
+____________ test_ac8_match_leading_name_eindeutiges_praefix_trifft ____________
+
+    def test_ac8_match_leading_name_eindeutiges_praefix_trifft():
+        from services.trip_command_processor import match_leading_name
+    
+        presets = [_preset_dict("München Nord"), _preset_dict("Hamburg Hafen")]
+        treffer = match_leading_name("Muen pause", [], presets)
+>       assert treffer is not None, "gekürzter Rückfrage-Name wird nicht gefunden"
+E       AssertionError: gekürzter Rückfrage-Name wird nicht gefunden
+E       assert None is not None
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:265: AssertionError
+________ test_ac8_match_leading_name_mehrdeutiges_praefix_waehlt_keinen ________
+
+    def test_ac8_match_leading_name_mehrdeutiges_praefix_waehlt_keinen():
+        from services.trip_command_processor import match_leading_name
+    
+        presets = [_preset_dict("München Nord"), _preset_dict("München Süd")]
+        treffer = match_leading_name("Muen pause", [], presets)
+>       assert treffer is not None
+E       assert None is not None
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:276: AssertionError
+_____________________ test_ac8_find_compare_preset_praefix _____________________
+
+user_ids = <function user_ids.<locals>._new at 0x797ac2551080>
+
+    def test_ac8_find_compare_preset_praefix(user_ids):
+        from services.trip_command_processor import TripCommandProcessor
+    
+        uid = user_ids()
+        p = _preset(uid, "München Nord")
+        _preset(uid, "Hamburg Hafen")
+        proc = TripCommandProcessor()
+>       assert (proc._find_compare_preset("Muen", uid) or {}).get("id") == p["id"]
+E       AssertionError: assert None == 'cmp-af7044e9'
+E        +  where None = <built-in method get of dict object at 0x797acc94c5c0>('id')
+E        +    where <built-in method get of dict object at 0x797acc94c5c0> = (None or {}).get
+E        +      where None = _find_compare_preset('Muen', 'tdd-2615-6310d265')
+E        +        where _find_compare_preset = <services.trip_command_processor.TripCommandProcessor object at 0x797acc958b00>._find_compare_preset
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:309: AssertionError
+___ test_ac8_roundtrip_rueckfrage_dann_gekuerzte_antwort_pausiert_richtigen ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797acc958620>
+user_ids = <function user_ids.<locals>._new at 0x797ac2551a80>
+
+    def test_ac8_roundtrip_rueckfrage_dann_gekuerzte_antwort_pausiert_richtigen(
+        monkeypatch, user_ids,
+    ):
+        """Bug aus Nutzersicht: Premium-SMS-Rückfrage kürzt auf 4 Zeichen, die
+        Antwort mit genau diesem Namen muss den richtigen Vergleich pausieren."""
+        uid = user_ids()
+        _nutzer_mit_tier(uid)
+        _trip(uid, "Korsika", start_offset_days=-1)
+        ziel = _preset(uid, "Hamburg Hafenrunde Nordseekueste")
+        andere = _preset(uid, "München Nord Isarauen Wanderung")
+        for i in range(3):
+            _preset(uid, f"Zusatzvergleich Nummer {i} lang", paused_at="2026-10-01T08:00:00Z",
+                    schedule="manual")
+    
+        sent1, calls1 = _via_premium_sms(monkeypatch, uid, "pause")
+        assert calls1 == [] and len(sent1) == 1
+        text = sent1[0]
+        namen = _angezeigte_namen(text)
+        kurz = next(n for n in namen if n.lower().startswith("hamb"))
+        assert len(kurz) < len("Hamburg Hafenrunde Nordseekueste"), (
+            f"Testvoraussetzung: Name muss gekürzt sein: {text!r}"
+        )
+    
+        _via_premium_sms(monkeypatch, uid, f"{kurz} pause")
+    
+>       assert _read(uid, ziel["id"])["schedule"] == "manual", f"Antwort auf {text!r} löste nichts auf"
+E       AssertionError: Antwort auf "Ambiguous: Kors (Trip), Zusa (comparison), Hamb (comparison), Zusa (comparison), Zusa (comparison), Muen (comparison). Reply with name, e.g. 'Kors pause'." löste nichts auf
+E       assert 'daily' == 'manual'
+E         
+E         - manual
+E         + daily
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:347: AssertionError
+_________ test_ac9_pausen_eines_nutzers_beeinflussen_den_anderen_nicht _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797acc9581a0>
+user_ids = <function user_ids.<locals>._new at 0x797ac2552e80>
+
+    def test_ac9_pausen_eines_nutzers_beeinflussen_den_anderen_nicht(monkeypatch, user_ids):
+        ua, ub = user_ids(), user_ids()
+        _nutzer_mit_tier(ua)
+        _nutzer_mit_tier(ub)
+        for i in range(3):
+            _preset(ua, f"A-Pause-{i}", paused_at="2026-10-01T08:00:00Z", schedule="manual")
+        _preset(ub, "B-Aktiv")
+        for i in range(2):
+            _preset(ub, f"B-Pause-{i}", paused_at="2026-10-01T08:00:00Z", schedule="manual")
+    
+        sent_a, calls_a = _via_premium_sms(monkeypatch, ua, "heute")
+        sent_b, calls_b = _via_premium_sms(monkeypatch, ub, "heute")
+    
+        assert calls_a == [] and sent_a and "Ambiguous" in sent_a[0], sent_a
+        assert all("B-" not in s for s in sent_a)
+>       assert len(calls_b) == 1, f"B muss eindeutig auf B-Aktiv zeigen: {sent_b!r}"
+E       AssertionError: B muss eindeutig auf B-Aktiv zeigen: ["Ambiguous: B-Aktiv (comparison), B-Pause-0 (comparison), B-Pause-1 (comparison). Reply with name, e.g. 'B-Aktiv pause'."]
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/tdd/test_befehle_pausierte_vergleiche.py:370: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac2_pause_weiter_nennen_alle_sechs_vergleiche[pause]
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac2_pause_weiter_nennen_alle_sechs_vergleiche[weiter]
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac4_ein_pausierter_vergleich_bleibt_eindeutig
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac4_mehrere_pausierte_fragen_mit_allen_namen_nach
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac5_archivierter_ist_nie_adressierbar
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac6_resolve_active_target_ohne_parameter_zaehlt_pausierte_mit
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac7_telegram_bleibt_bei_vollen_namen
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac8_match_leading_name_praefix_unter_vier_zeichen_loest_nichts_auf
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac8_match_leading_name_exakt_schlaegt_praefix
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac8_praefix_braucht_gueltigen_befehl_im_rest
+PASSED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac8_find_compare_preset_mehrdeutiges_praefix_ist_none
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[telegram-heute]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[telegram-morgen]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[telegram-report]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[premium_sms-heute]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[premium_sms-morgen]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_aktiver_vergleich_wird_trotz_pausierter_eindeutig[premium_sms-report]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[telegram-heute]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[telegram-morgen]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[telegram-report]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[premium_sms-heute]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[premium_sms-morgen]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac1_befehl_ueber_echten_eingang_fragt_nicht_nach[premium_sms-report]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac3_trip_plus_nur_pausierte_ist_eindeutig_trip[heute]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac3_trip_plus_nur_pausierte_ist_eindeutig_trip[morgen]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac3_trip_plus_nur_pausierte_ist_eindeutig_trip[report]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac3_trip_plus_aktiver_vergleich_fragt_weiter_nach[heute]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac3_trip_plus_aktiver_vergleich_fragt_weiter_nach[morgen]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac3_trip_plus_aktiver_vergleich_fragt_weiter_nach[report]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac5_beide_pausen_varianten_werden_bei_heute_ausgeblendet[pausiert0]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac5_beide_pausen_varianten_werden_bei_heute_ausgeblendet[pausiert1]
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac7_gekuerzte_namen_sind_paarweise_verschieden_und_passen_in_160
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac7_gleiche_vier_zeichen_anfaenge_mit_umlauten
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac8_match_leading_name_eindeutiges_praefix_trifft
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac8_match_leading_name_mehrdeutiges_praefix_waehlt_keinen
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac8_find_compare_preset_praefix
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac8_roundtrip_rueckfrage_dann_gekuerzte_antwort_pausiert_richtigen
+FAILED tests/tdd/test_befehle_pausierte_vergleiche.py::test_ac9_pausen_eines_nutzers_beeinflussen_den_anderen_nicht
+======================== 27 failed, 11 passed in 2.97s =========================

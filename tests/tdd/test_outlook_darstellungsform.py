@@ -133,9 +133,15 @@ def test_ac5_wind_boeen_zeigt_dieselbe_wortstufe_in_allen_vier_ausgaben():
         "HTML-Mail: Der 3-Tages-Ausblick fehlt vollstaendig -- die "
         f"Kennungsauswahl {AUSWAHL!r} kam nicht an (AC-5)."
     )
-    assert kopf == ["Tag", "Böen"], (
-        f"HTML-Mail: Kopfzeile {kopf!r} -- erwartet 'Tag'+'Böen' aus der "
-        f"Auswahl {AUSWAHL!r}."
+    # #2098: hinter der Auswahl steht die fest angehaengte ACC-Zusatzspalte.
+    # #2136/ADR-0068: Kopfzeile traegt seither `col_label` ("Gust") statt des
+    # deutschen Langnamens ("Böen") -- abgeleitet, keine zweite Namensliste.
+    from app.metric_catalog import get_metric
+
+    erwartet_label = get_metric("gust").col_label
+    assert kopf == ["Tag", erwartet_label, "ACC"], (
+        f"HTML-Mail: Kopfzeile {kopf!r} -- erwartet 'Tag'+{erwartet_label!r} "
+        f"aus der Auswahl {AUSWAHL!r} plus der festen ACC-Spalte."
     )
 
     html_zelle = zeilen[0][1] if len(zeilen[0]) > 1 else ""
@@ -553,7 +559,13 @@ def _compare_mail(formats):
 
 
 def _compare_outlook_zelle(html: str) -> str:
-    """Die eine Wert-Zelle der ersten Ausblick-Tagesszeile (Spalte 2 = Böen)."""
+    """Die eine Wert-Zelle der ersten Ausblick-Tagesszeile (Spalte 2 = Böen).
+
+    #2136/ADR-0068: die Kopfzeile traegt seither `MetricDefinition.col_label`
+    ("Gust") statt des deutschen Compare-Katalog-Langnamens ("Böen") --
+    abgeleitet statt getippt, damit dieser Test nicht selbst zur zweiten
+    Namensliste wird."""
+    from app.metric_catalog import get_metric
     from tests.tdd.test_compare_outlook_metric_selection import (
         _body_rows, _headers, _outlook_tables,
     )
@@ -564,9 +576,10 @@ def _compare_outlook_zelle(html: str) -> str:
         "prueft dieser Test nichts."
     )
     kopf = _headers(tabellen[0])
-    assert kopf == ["Tag", "Böen"], (
-        f"Kopfzeile {kopf!r} -- erwartet 'Tag'+'Böen' aus der Auswahl "
-        f"{_COMPARE_AUSWAHL!r}."
+    erwartet_label = get_metric("gust").col_label
+    assert kopf == ["Tag", erwartet_label], (
+        f"Kopfzeile {kopf!r} -- erwartet 'Tag'+{erwartet_label!r} aus der "
+        f"Auswahl {_COMPARE_AUSWAHL!r}."
     )
     zeilen = _body_rows(tabellen[0])
     assert zeilen and len(zeilen[0]) > 1, (
@@ -762,6 +775,8 @@ def _dienst_preset(preset_id: str, loc_id: str, formats):
 
 
 def _boeen_zelle_aus_dienst_mail(html: str) -> str:
+    """#2136/ADR-0068: Kopfzeile traegt `col_label` ("Gust"), abgeleitet."""
+    from app.metric_catalog import get_metric
     from tests.tdd.test_compare_outlook_metric_selection import (
         _body_rows, _headers, _outlook_tables,
     )
@@ -772,9 +787,10 @@ def _boeen_zelle_aus_dienst_mail(html: str) -> str:
         "sie prueft dieser Test nichts (Fehlerklasse 'gestubbte Naht')."
     )
     kopf = _headers(tabellen[0])
-    assert kopf == ["Tag", "Böen"], (
-        f"Kopfzeile {kopf!r} -- erwartet 'Tag'+'Böen'; die Ausblick-Auswahl "
-        "des Presets kam im Dienst nicht an."
+    erwartet_label = get_metric("gust").col_label
+    assert kopf == ["Tag", erwartet_label], (
+        f"Kopfzeile {kopf!r} -- erwartet 'Tag'+{erwartet_label!r}; die "
+        "Ausblick-Auswahl des Presets kam im Dienst nicht an."
     )
     zeilen = _body_rows(tabellen[0])
     assert zeilen and len(zeilen[0]) > 1, f"Keine Datenzeile: {zeilen!r}"
@@ -802,7 +818,7 @@ def test_f002_vorschaudienst_zeigt_die_umschaltung_in_der_erzeugten_mail(
     write_compare_briefings(get_data_dir(user_id), [preset])
 
     html, _text = _erzeugte_vergleichsmail(
-        lambda: ComparePreviewService().render_email_preview(
+        lambda: ComparePreviewService().render_all_channels(
             preset["id"], user_id=user_id),
     )
     zelle = _boeen_zelle_aus_dienst_mail(html)

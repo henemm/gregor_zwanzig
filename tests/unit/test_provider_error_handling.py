@@ -184,7 +184,7 @@ class TestSchedulerErrorTracking:
         """_fetch_weather must return error-flagged data for failed segments, not skip them."""
         from services.trip_report_scheduler import TripReportSchedulerService
 
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         segments = [_make_segment(1), _make_segment(2), _make_segment(3)]
 
         # Normal fetch — all should succeed with real API
@@ -216,7 +216,7 @@ class TestServiceEmailMethod:
         """TripReportSchedulerService must NOT have _send_service_error_email (Issue #1022)."""
         from services.trip_report_scheduler import TripReportSchedulerService
 
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         assert not hasattr(service, "_send_service_error_email")
 
     def test_scheduler_fills_failed_segments_into_request(self) -> None:
@@ -227,7 +227,7 @@ class TestServiceEmailMethod:
         from services.notification_service import NotificationService, TripReportRequest
         from services.trip_report_scheduler import TripReportSchedulerService
 
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         captured: list[TripReportRequest] = []
 
         def _capture_send(request: TripReportRequest) -> MagicMock:

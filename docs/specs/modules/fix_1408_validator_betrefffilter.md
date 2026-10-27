@@ -3,7 +3,7 @@ entity_id: fix_1408_validator_betrefffilter
 type: bugfix
 created: 2026-07-28
 updated: 2026-07-28
-status: draft
+status: implemented
 workflow: fix-1408-validator-betrefffilter
 version: "1.0"
 tags: [compare, mail-validator, gate, imap, staleness-guard, e2e-verify]

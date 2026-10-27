@@ -42,9 +42,9 @@ const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'report_config'] as const;
 // Heimat der Stundenverlauf-Steuerung — der Reiter "Layout" des Ortsvergleichs
 // ist aufgeloest. Position: NACH 'reihenfolge', VOR 'official_alerts' (erst
 // welche Tageswerte und in welcher Folge, dann der Stundenverlauf).
-// Geteilt vorbereitet, in dieser Scheibe aber NUR im Vergleich aktiv: der Trip
-// hat heute keine Stundenverlauf-Steuerung, sie nachzuruesten ist nicht Teil
-// dieser Scheibe (Spec § Known Limitations).
+// NUR im Vergleich, fachlich entschieden (#2346 S3, Spec „Befund Stundenverlauf-Steuerung"): Anhaengsel
+// der transponierten Vergleichsuebersicht (eigene Auswahl, `hourly_enabled`, Reihenfolge); beim Trip
+// IST die Mail-Haupttabelle die Stundentabelle, ihre Spalten steuert die normale Metrik-Auswahl.
 const COMPARE_ONLY_SECTIONS = ['stundenverlauf'] as const;
 
 // Issue #1361 Befund 2/#1368 (S3 Scheibe A von Epic #1372): 'ausblick' ist die

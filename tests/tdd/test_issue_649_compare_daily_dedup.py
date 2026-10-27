@@ -39,6 +39,7 @@ mehr — er ist in `test_compare_preset_slot_dispatch.py` eigens geprueft.
 """
 from tests.helpers.compare_briefings import write_compare_briefings
 from tests.helpers.compare_slot_time import utc_slot_for_manual_hour
+import json
 import logging
 import uuid
 
@@ -55,6 +56,21 @@ def _write_presets(data_root, user_id, presets):
     user_dir = data_root / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
     write_compare_briefings(user_dir, presets)
+
+
+def _write_recipient_profile(user_id, mail_to="empfaenger@example.com"):
+    """#1196 Klasse C: Empfaenger ueber das Nutzerprofil setzen statt aus der
+    Host-.env erben. `Settings().with_user_profile()` liest user.json ueber
+    get_data_dir() (isolierter Root, #1133/#1265) — sowohl der direkt
+    aufgerufene Helper als auch die Daily-Loop (`run_briefing_dispatch`) laden
+    ihre Settings genau so. Ohne mail_to bricht der Helper VOR dem Orte-
+    Resolve mit "kein Empfaenger" ab und der hier gepruefte
+    "nicht aufloesbar"-Pfad wird nie erreicht (CI-Runner ohne .env)."""
+    from app.loader import get_data_dir
+
+    p = get_data_dir(user_id) / "user.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps({"mail_to": mail_to}), encoding="utf-8")
 
 
 def _daily_preset(preset_id="cp-649", location_ids=("loc-missing",), schedule="daily"):
@@ -96,6 +112,7 @@ class TestComparePresetsDailyDedup:
         user_id = _fresh_user()
         preset = _daily_preset()
         _write_presets(tmp_path, user_id, [preset])
+        _write_recipient_profile(user_id)
 
         settings = Settings().with_user_profile(user_id)
 

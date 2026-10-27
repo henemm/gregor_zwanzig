@@ -626,7 +626,7 @@ class TestMultiDayTrendReportsPersistence:
             with open(path, "w") as f:
                 json.dump(data, f, indent=2)
 
-            loaded = load_trip(path)
+            loaded = load_trip(path, user_id="default")
             assert loaded.display_config is not None
             assert loaded.display_config.multi_day_trend_reports == ["morning", "evening"], \
                 "multi_day_trend_reports should persist through save/load"
@@ -653,6 +653,6 @@ class TestMultiDayTrendReportsPersistence:
             path = Path(tmpdir) / "migrate-test.json"
             with open(path, "w") as f:
                 json.dump(old_json, f)
-            loaded = load_trip(path)
+            loaded = load_trip(path, user_id="default")
             assert loaded.display_config.multi_day_trend_reports == [], \
                 "Old show_multi_day_trend=False should migrate to empty list"

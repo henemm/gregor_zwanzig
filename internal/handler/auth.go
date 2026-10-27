@@ -5,8 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -25,9 +28,22 @@ type authRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Email    string `json:"email"`
+	// Issue #2152: optionales Testkonto-Flag bei der Anlage (Projekt-Testkonten
+	// wie validator-issue110); wird persistiert, sonst bleibt es abwesend.
+	IsTestUser bool `json:"is_test_user,omitempty"`
+	// Issue #2519: optionaler Einladungs-Token (Admin-Einladungslink).
+	Invite string `json:"invite,omitempty"`
 }
 
+// RegisterHandler: offene Registrierung ohne Einladungslinks (Bestandsweg).
 func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.HandlerFunc {
+	return RegisterHandlerWithInvites(s, bcryptCost, cfg, nil)
+}
+
+// RegisterHandlerWithInvites loest zusaetzlich Admin-Einladungen ein (Issue
+// #2519, ADR-0084). Ohne invite-Feld ist das Verhalten identisch zur offenen
+// Registrierung; mit ungueltigem Token gibt es 400 invite_invalid und KEIN Konto.
+func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Config, invites *store.InviteStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req authRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -71,7 +87,7 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 		// überhaupt greifen. Leeres Feld → generischer "validation failed"; Feld
 		// ohne "@" → eigener Fehlercode "invalid_email", damit das Frontend gezielt
 		// mappen kann. Formatprüfung minimal (strings.Contains) — Precedent aus
-		// PasskeyRegisterPublicBeginHandler, keine Uniqueness-Prüfung (Spec).
+		// PasskeyRegisterPublicBeginHandler.
 		if req.Email == "" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)
@@ -93,13 +109,75 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 			return
 		}
 
+		// Issue #2147 Scheibe B1: Adress-Eindeutigkeit unter Lock — zwei
+		// gleichzeitige Registrierungen (oder Registrierung/Profil-Update) auf
+		// dieselbe Adresse duerfen zusammen nur genau ein Konto ergeben (AC-13).
+		normalizedEmail := store.NormalizeEmailAddress(req.Email)
+		unlock := store.LockEmailAddress(normalizedEmail)
+		defer unlock()
+
+		taken, err := s.IsAddressTakenByOtherAccount(normalizedEmail, "")
+		if err != nil {
+			log.Printf("register: address uniqueness check failed: %v", err)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"internal error"}`))
+			return
+		}
+		if taken {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(409)
+			w.Write([]byte(`{"error":"email_taken"}`))
+			return
+		}
+
 		user := model.User{
 			ID:           req.Username,
 			PasswordHash: string(hash),
-			Email:        req.Email,
+			Email:        normalizedEmail,
+			MailTo:       normalizedEmail,
 			CreatedAt:    time.Now(),
+			IsTestUser:   req.IsTestUser,
 		}
+
+		// Issue #2519: Einladung erst NACH allen Validierungen reservieren (ein
+		// Tippfehler verbrennt sie nicht), aber VOR SaveUser (sonst Race: zwei
+		// Konten). Ein Fehlschlag danach rollt die Reservierung zurueck.
+		var redeemed *model.Invite
+		if req.Invite != "" {
+			var ok bool
+			var inv model.Invite
+			var rerr error
+			if invites != nil {
+				inv, ok, rerr = invites.Redeem(req.Invite, req.Username)
+			}
+			if rerr != nil {
+				log.Printf("register: invite redeem failed: %v", rerr)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(500)
+				w.Write([]byte(`{"error":"store_error"}`))
+				return
+			}
+			if !ok {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"invite_invalid"}`))
+				return
+			}
+			redeemed = &inv
+			user.Tier = inv.Tier
+			log.Printf("register: invite %s redeemed by %s", inv.ID, req.Username)
+		}
+		rollbackInvite := func() {
+			if redeemed != nil {
+				if err := invites.Rollback(redeemed.ID); err != nil {
+					log.Printf("register: invite %s rollback failed: %v", redeemed.ID, err)
+				}
+			}
+		}
+		model.MarkOnboardingPending(&user)
 		if err := s.SaveUser(user); err != nil {
+			rollbackInvite()
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
@@ -119,13 +197,117 @@ func RegisterHandler(s *store.Store, bcryptCost int, cfg config.Config) http.Han
 	}
 }
 
-func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
+// hasVerifiedEmail liest den Bestaetigungsstand IMMER frisch von der Platte
+// (Issue #2271). Das ist kein Zierrat: selfHealEmailVerification schreibt per
+// SaveUser (auth.go:812) und laesst die Struct des Aufrufers unberuehrt — ein
+// Praedikat auf einer mitgereichten model.User saehe den im selben Request
+// geheilten Stand nicht und sperrte genau das Konto aus, das sich gerade heilt.
+//
+// Zweiter Rueckgabewert: false, wenn der Nutzer gar nicht lesbar war. Dann ist
+// "nicht bestaetigt" die falsche Aussage — der Aufrufer quittiert mit 500.
+func hasVerifiedEmail(s *store.Store, userId string) (verified bool, readable bool) {
+	user, err := s.LoadUser(userId)
+	if err != nil {
+		log.Printf("email verify gate: user.json unreadable for %s: %v", userId, err)
+		return false, false
+	}
+	if user == nil {
+		return false, true
+	}
+	return user.EmailVerifiedAt != nil, true
+}
+
+// issueSession ist der Weg fuer ANMELDUNGEN (Issue #2271): erst das
+// Bestaetigungs-Gate, dann die Ausstellung. Bewusst OHNE Parameter der
+// Aufrufer — ein Flag koennte ein kuenftiger siebter Anmeldeweg vergessen oder
+// als Abkuerzung setzen; das Gate liegt deshalb unumgehbar hier.
+//
+// Liefert false, wenn bereits geantwortet wurde (Gate oder Fehlerfall).
+func issueSession(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret, publicHost string) bool {
+	verified, readable := hasVerifiedEmail(s, userId)
+	if !readable {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"internal error"}`))
+		return false
+	}
+	if !verified {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte(`{"error":"email_not_verified"}`))
+		return false
+	}
+	return issueSessionWithoutVerificationGate(w, r, s, userId, secret, publicHost)
+}
+
+// issueSessionWithoutVerificationGate mintet eine Anmelde-Kennung, traegt sie
+// in die Gaesteliste des Nutzers ein und setzt das Anmelde-Cookie (Issue
+// #2129). EINE Stelle fuer alle Anmeldewege: wird eine davon vergessen, sperrt
+// dieser Weg alle seine Nutzer aus, weil ihr Merkmal zwar wohlgeformt, aber
+// nicht gelistet waere.
+//
+// Diese Variante laesst das Bestaetigungs-Gate aus und hat genau EINEN
+// legitimen Aufrufer: ChangePasswordHandler (Issue #2271). Wer gerade seine
+// E-Mail-Adresse geaendert hat, steht auf EmailVerifiedAt == nil (auth.go:708/713)
+// — liefe das Gate dort mit, koennte er sein Passwort nicht mehr aendern und
+// verloere im selben Zug seine Sitzung. Der sprechende Name macht die Ausnahme
+// sichtbar; ein Parameter an issueSession haette sie unsichtbar gemacht.
+//
+// Liefert false, wenn bereits geantwortet wurde (Fehlerfall).
+func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret, publicHost string) bool {
+	// Issue #2155 S3 (ADR-0080): gesperrte Konten bekommen keine Sitzung.
+	// Ladefehler => fail-closed. Nach der Credential-Pruefung, damit ein
+	// falsches Passwort weiter 401 liefert (kein Existenz-Leak).
+	if u, err := s.LoadUser(userId); err != nil {
+		log.Printf("session issue: load user failed for %s: %v", userId, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"store_error"}`))
+		return false
+	} else if u != nil && u.Disabled {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(403)
+		w.Write([]byte(`{"error":"account_disabled"}`))
+		return false
+	}
+	sessionId, err := middleware.NewSessionID()
+	if err != nil {
+		log.Printf("session issue: id generation failed for %s: %v", userId, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"internal error"}`))
+		return false
+	}
+	if err := s.AddSession(userId, sessionId); err != nil {
+		log.Printf("session issue: allowlist write failed for %s: %v", userId, err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"store_error"}`))
+		return false
+	}
+	middleware.SetSessionCookie(w, r, middleware.SignSessionWithID(userId, sessionId, secret), publicHost)
+	return true
+}
+
+func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req authRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"invalid request"}`))
+			return
+		}
+
+		// Issue #2140: pfadunsichere Kennung wird abgewiesen, BEVOR sie in den
+		// Pfadbau geht — und zwar mit exakt der Antwort des "Nutzer unbekannt"-
+		// Zweigs unten, damit die Route nicht verraet, welche Kennungen
+		// syntaktisch auffallen.
+		if !store.ValidUserID(req.Username) {
+			log.Printf("login: rejected path-unsafe user id %q", req.Username)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(401)
+			w.Write([]byte(`{"error":"invalid credentials"}`))
 			return
 		}
 
@@ -151,52 +333,106 @@ func LoginHandler(s *store.Store, secret string) http.HandlerFunc {
 			return
 		}
 
-		token := middleware.SignSession(req.Username, secret)
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400,
-			Secure:   secure,
-		})
+		if !issueSession(w, r, s, req.Username, secret, publicHost) {
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"id": req.Username})
 	}
 }
 
-func DeleteAccountHandler(s *store.Store) http.HandlerFunc {
+// DeleteAccountHandler: POST /api/auth/account/delete mit Body
+// {password?, code?} (Issue #2160, ADR-0081). Ohne frischen Nachweis wird
+// nichts veraendert; mit Nachweis raeumt deleteAccountCascade alle Reste.
+func DeleteAccountHandler(s *store.Store, ts *TelegramTokenStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
+		var req struct {
+			Password string `json:"password"`
+			Code     string `json:"code"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req) // leerer/kaputter Body = kein Nachweis
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			writeJSONError(w, http.StatusNotFound, "not_found")
 			return
 		}
-
-		if err := s.DeleteUser(userId); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+		if req.Password == "" && req.Code == "" {
+			writeJSONError(w, http.StatusBadRequest, "reauth_required")
 			return
 		}
-
-		// Blacklist session + clear cookie (like logout)
-		cookie, err := r.Cookie("gz_session")
-		if err == nil && cookie.Value != "" {
-			middleware.BlacklistSession(cookie.Value)
+		var verbraucht *deleteCodeEntry
+		if req.Password != "" {
+			// Passwortweg beruehrt den Lösch-Code nie (auch nicht den Zaehler).
+			if user.PasswordHash == "" ||
+				bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
+				writeJSONError(w, http.StatusForbidden, "wrong_password")
+				return
+			}
+		} else {
+			e, ok := consumeDeleteCode(userId, req.Code, time.Now())
+			if !ok {
+				writeJSONError(w, http.StatusForbidden, "invalid_code")
+				return
+			}
+			verbraucht = e
 		}
-		http.SetCookie(w, &http.Cookie{
-			Name: "gz_session", Value: "", Path: "/", HttpOnly: true, MaxAge: -1,
-		})
-
+		if err := deleteAccountCascade(s, ts, user); err != nil {
+			// AC-13: wiederholbar — auch mit demselben Lösch-Code.
+			if verbraucht != nil {
+				restoreDeleteCode(userId, verbraucht)
+			}
+			log.Printf("account delete: %s nicht geloescht: %v", userId, err)
+			writeJSONError(w, http.StatusInternalServerError, "internal")
+			return
+		}
+		// Die Gaesteliste liegt IM Nutzerordner und ist mit DeleteUser bereits
+		// verschwunden — jedes Merkmal dieses Kontos ist damit dauerhaft
+		// ungueltig, auch nach einem Dienst-Neustart (Issue #2129 AC-16).
+		middleware.ClearSessionCookie(w)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"deleted"}`))
+	}
+}
+
+// deleteAccountCascade raeumt alle Reste des Nutzers (Issue #2160): Telegram-
+// Tokens (persistiert), Login-OTPs seiner Adressen, Lösch-Code, Nutzerordner.
+// Serialisiert gegen Telegram-Connect ueber telegramConnectMu. Scheitert die
+// Token-Persistierung, bleibt der Ordner und die Löschung ist wiederholbar.
+func deleteAccountCascade(s *store.Store, ts *TelegramTokenStore, user *model.User) error {
+	telegramConnectMu.Lock()
+	defer telegramConnectMu.Unlock()
+	if ts != nil {
+		if err := ts.RemoveByUser(user.ID); err != nil {
+			return err
+		}
+	}
+	removeLoginOTPs(user.Email, user.MailTo, user.PendingContactAddress)
+	deleteCodeStore.Delete(user.ID)
+	return s.DeleteUser(user.ID)
+}
+
+// sendResetMailFn ist ein Test-Seam (Issue #2152 Fix-Loop 1, AC-6) analog zu
+// sendVerificationMailFn: package-private Funktionsvariable statt eines
+// direkten mail.SendWithFallback-Aufrufs im Passwort-Reset-Versand, damit
+// Tests die vom Testkonto-Profilfeld gesteuerte SMTP-Weiche (Gmail vs.
+// Resend) AM WIRKORT beobachten können — an der gewählten Konfiguration
+// selbst statt an einem Log-Wortlaut. Produktionsverhalten unverändert,
+// Default ist mail.SendWithFallback selbst.
+var sendResetMailFn = mail.SendWithFallback
+
+// resetHostClass reduziert den Primär-Host für die Block-Logzeile des
+// Passwort-Resets (Issue #1412 S5, AC-7) auf resend/lokal/andere.
+func resetHostClass(host string) string {
+	h := strings.ToLower(host)
+	switch {
+	case strings.Contains(h, "resend"):
+		return "resend"
+	case h == "mail.henemm.com" || h == "localhost" || h == "127.0.0.1":
+		return "lokal"
+	default:
+		return "andere"
 	}
 }
 
@@ -214,6 +450,15 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 
 		// Always return 200 (no user enumeration)
 		w.Header().Set("Content-Type", "application/json")
+
+		// Issue #2140: identischer Antwortpfad wie der "user == nil"-Zweig
+		// unten — der Enumerationsschutz dieser Route darf durch die neue
+		// Ablehnung keinen unterscheidbaren Fall bekommen.
+		if !store.ValidUserID(req.Username) {
+			log.Printf("password reset: rejected path-unsafe user id %q", req.Username)
+			w.Write([]byte(`{"status":"ok"}`))
+			return
+		}
 
 		user, _ := s.LoadUser(req.Username)
 		if user == nil {
@@ -256,8 +501,9 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 		}
 
 		// Select SMTP config: test users → Gmail, normal users → Resend (cfg.SMTP*)
+		// — entschieden ueber das geladene Profil (Issue #2152), nicht den Namen.
 		var mailCfg mail.MailConfig
-		if mail.IsTestUser(req.Username) {
+		if mail.IsTestUser(user) {
 			if cfg.GoogleSMTPHost == "" {
 				log.Printf("password reset: Google SMTP not configured, mail not sent for test user %s", req.Username)
 				w.Write([]byte(`{"status":"ok"}`))
@@ -290,10 +536,16 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 		}
 		go func(to string, msg mail.Mail, c, fb mail.MailConfig, username string) {
 			done := make(chan error, 1)
-			go func() { done <- mail.SendWithFallback(c, fb, to, msg) }()
+			go func() { done <- sendResetMailFn(c, fb, to, msg) }()
 			select {
 			case err := <-done:
-				if err != nil {
+				// Issue #1412 S5 (AC-7): Empfängerschutz-Block bekommt EINE
+				// eigene Markerzeile -- ohne Empfänger, ohne Benutzername, ohne
+				// err (enthält maskierte Domains). Antwort bleibt "ok".
+				if errors.Is(err, mail.ErrGuardBlocked) {
+					log.Printf("password reset: Empfängerschutz hat Versand blockiert "+
+						"(Host-Klasse %s, kein Fallback)", resetHostClass(c.Host))
+				} else if err != nil {
 					log.Printf("password reset: mail send failed for %s: %v", username, err)
 				}
 			case <-time.After(20 * time.Second):
@@ -324,6 +576,15 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		if len(req.NewPassword) < 8 {
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"validation failed"}`))
+			return
+		}
+
+		// Issue #2140: vor dem ersten Store-Zugriff, Antwort identisch zum
+		// "Token fehlt/passt nicht"-Zweig direkt darunter.
+		if !store.ValidUserID(req.Username) {
+			log.Printf("password reset confirm: rejected path-unsafe user id %q", req.Username)
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid token"}`))
 			return
 		}
 
@@ -368,6 +629,13 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			return
 		}
 
+		// Issue #2129 AC-9: Wer sein Passwort zuruecksetzt, WEIL es abgegriffen
+		// wurde, muss den Angreifer damit hinauswerfen — also alle Anmeldungen
+		// widerrufen, nicht nur das Passwort tauschen.
+		if err := s.ClearSessions(req.Username); err != nil {
+			log.Printf("password reset: allowlist clear failed for %s: %v", req.Username, err)
+		}
+
 		s.DeleteResetToken(req.Username)
 
 		w.Write([]byte(`{"status":"ok"}`))
@@ -392,6 +660,15 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		// Issue #2140: vor dem ersten Store-Zugriff, Antwort identisch zum
+		// "Token fehlt/passt nicht"-Zweig direkt darunter.
+		if !store.ValidUserID(req.User) {
+			log.Printf("email verification: rejected path-unsafe user id %q", req.User)
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid token"}`))
+			return
+		}
+
 		vt, err := s.LoadVerificationToken(req.User)
 		if err != nil || vt == nil {
 			w.WriteHeader(400)
@@ -404,9 +681,28 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		if err := bcrypt.CompareHashAndPassword([]byte(vt.TokenHash), []byte(req.Token)); err != nil {
+			// Issue #2147 Scheibe B2 (AC-3): es gibt nur EIN Token je Konto —
+			// ein zweiter Adresswechsel ueberschreibt das erste, dessen Hash
+			// passt danach nicht mehr. Steht eine Aenderung aus, ist genau das
+			// der Fall "ersetzter Link" und wird wie ein abgelaufener Link
+			// beantwortet; ohne ausstehende Aenderung bleibt es "invalid token".
+			if u, lerr := s.LoadUser(req.User); lerr == nil && u != nil && u.PendingContactAddress != "" {
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"token expired"}`))
+				return
+			}
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"invalid token"}`))
 			return
+		}
+
+		// Adressgebundenes Token (B2 §2): unter der Adresssperre frisch laden,
+		// damit Belegt-Pruefung und Uebernahme nicht mit einem gleichzeitigen
+		// Profil-Update/einer Registrierung auf dieselbe Adresse verzahnen.
+		address := store.NormalizeEmailAddress(vt.Address)
+		if address != "" {
+			unlock := store.LockEmailAddress(address)
+			defer unlock()
 		}
 
 		user, err := s.LoadUser(req.User) // RMW: vollständiges Objekt laden
@@ -415,6 +711,71 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			w.Write([]byte(`{"error":"invalid token"}`))
 			return
 		}
+
+		pending := store.NormalizeEmailAddress(user.PendingContactAddress)
+		switch {
+		case address == "" && pending != "":
+			// Alt-Token (ohne Adresse) gegen ein Konto mit ausstehender
+			// Aenderung: kann nach dem Deploy nicht neu entstehen, defensiv
+			// ungueltig (B2 §2 Punkt 1).
+			w.WriteHeader(400)
+			w.Write([]byte(`{"error":"invalid token"}`))
+			return
+		case address != "" && pending == "":
+			// Adressgebundenes Token ohne ausstehende Aenderung (Erst-
+			// bestaetigung): nur die aktuell wirksame Adresse ist beweisbar.
+			if address != store.EffectiveContactAddress(user) {
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"token expired"}`))
+				return
+			}
+		case address != "" && pending != "":
+			if address != pending {
+				// Ein neuerer Wechsel hat die Aenderung ersetzt (AC-3).
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"token expired"}`))
+				return
+			}
+			taken, terr := s.IsAddressTakenByOtherAccount(pending, req.User)
+			if terr != nil {
+				log.Printf("email verification: address uniqueness check failed: %v", terr)
+				w.WriteHeader(500)
+				w.Write([]byte(`{"error":"internal error"}`))
+				return
+			}
+			if taken {
+				// Zwischenzeitlich an ein anderes Konto vergeben (AC-8/AC-9):
+				// nichts uebernehmen, ausstehende Aenderung + Token verwerfen.
+				user.PendingContactAddress = ""
+				user.PendingContactField = ""
+				if err := s.SaveUser(*user); err != nil {
+					w.WriteHeader(500)
+					w.Write([]byte(`{"error":"store_error"}`))
+					return
+				}
+				s.DeleteVerificationToken(req.User)
+				w.WriteHeader(409)
+				w.Write([]byte(`{"error":"address_taken"}`))
+				return
+			}
+			switch user.PendingContactField {
+			case "mail_to":
+				if pending == store.NormalizeEmailAddress(user.Email) {
+					user.MailTo = "" // "mail_to leeren"-Sonderfall (B2 §1/AC-4)
+				} else {
+					user.MailTo = pending
+				}
+			case "email":
+				user.Email = pending
+			default:
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"invalid token"}`))
+				return
+			}
+			user.PendingContactAddress = ""
+			user.PendingContactField = ""
+		}
+
 		now := time.Now().UTC()
 		user.EmailVerifiedAt = &now
 		if err := s.SaveUser(*user); err != nil {
@@ -428,22 +789,53 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
-func LogoutHandler() http.HandlerFunc {
+// LogoutHandler meldet GENAU DIESES Geraet ab: der Eintrag der Anmelde-Kennung
+// verlaesst die Gaesteliste des Nutzers. Weil das dateibasiert geschieht, wirkt
+// der Widerruf auch nach einem Dienst-Neustart (Issue #2129 AC-4); die
+// bisherige prozesslokale Sperrliste ist damit abgeloest.
+//
+// Der Endpunkt ist oeffentlich (kein Auth-Kontext), die Nutzerkennung kommt
+// deshalb aus dem geprueften Merkmal selbst — nie aus einem Standardwert.
+func LogoutHandler(s *store.Store, secret string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("gz_session")
 		if err == nil && cookie.Value != "" {
-			middleware.BlacklistSession(cookie.Value)
+			if userId, sessionId, ok := middleware.SessionFromCookie(cookie.Value, secret); ok {
+				if err := s.RemoveSession(userId, sessionId); err != nil {
+					log.Printf("logout: allowlist removal failed for %s: %v", userId, err)
+				}
+			}
 		}
 
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    "",
-			Path:     "/",
-			HttpOnly: true,
-			MaxAge:   -1,
-		})
+		middleware.ClearSessionCookie(w)
 
 		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	}
+}
+
+// LogoutAllHandler meldet den Nutzer auf ALLEN Geraeten ab: die Gaesteliste
+// wird geleert (Issue #2129 AC-6). Authentifiziert — die Nutzerkennung kommt
+// aus dem geprueften Merkmal, nie aus einem Standardwert, sonst waere es ein
+// Widerruf auf fremden Konten.
+func LogoutAllHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := middleware.UserIDFromContext(r.Context())
+		w.Header().Set("Content-Type", "application/json")
+		if userId == "" {
+			w.WriteHeader(401)
+			w.Write([]byte(`{"error":"unauthorized"}`))
+			return
+		}
+
+		if err := s.ClearSessions(userId); err != nil {
+			log.Printf("logout-all: allowlist clear failed for %s: %v", userId, err)
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+
+		middleware.ClearSessionCookie(w)
 		w.Write([]byte(`{"status":"ok"}`))
 	}
 }
@@ -466,6 +858,8 @@ type profileResponse struct {
 	// Antrag vorliegt (omitempty bzw. nil-Pointer).
 	RequestedTier string     `json:"requested_tier,omitempty"`
 	RequestedAt   *time.Time `json:"requested_at,omitempty"`
+	// Issue #2436 — Betreiber benachrichtigt (nur bei Erfolg gesetzt).
+	RequestedNotifiedAt *time.Time `json:"requested_notified_at,omitempty"`
 	// Issue #1717 S3 — Premium-SMS (Garmin inReach) in der Oberflaeche. REIN
 	// LESEND: die Rueckadresse lernt ausschliesslich der interne Rueckkanal
 	// (S1), UpdateProfileHandler nimmt die Felder nicht entgegen (AC-7).
@@ -482,10 +876,52 @@ type profileResponse struct {
 	PremiumSmsReplyState string `json:"premium_sms_reply_state"`
 	// Eigenes Tarif-Gate (nur premium), NICHT von SmsAllowed abgeleitet —
 	// Muster SmsAllowed. Immer vorhanden.
-	PremiumSmsAllowed bool                  `json:"premium_sms_allowed"`
-	CreatedAt         string                `json:"created_at"`
-	HasPasskey        bool                  `json:"has_passkey"`
-	Passkeys          []passkeyProfileEntry `json:"passkeys,omitempty"`
+	PremiumSmsAllowed bool   `json:"premium_sms_allowed"`
+	CreatedAt         string `json:"created_at"`
+	HasPasskey        bool   `json:"has_passkey"`
+	// Issue #2160 — Konto hat ein Passwort (nie der Hash). Immer vorhanden
+	// (Muster HasPasskey): der Löschen-Dialog entscheidet daran, ob er ein
+	// Passwortfeld zeigt.
+	HasPassword bool                  `json:"has_password"`
+	Passkeys    []passkeyProfileEntry `json:"passkeys,omitempty"`
+	// Issue #2248 — Abweisung des Passkey-Angebots. Immer vorhanden (Muster
+	// HasPasskey): die Oberflaeche entscheidet an diesem Wert und darf nicht
+	// zwischen "false" und "Feld fehlt" unterscheiden muessen.
+	PasskeyPromptDismissed bool `json:"passkey_prompt_dismissed"`
+	// Issue #2521 S2 — Onboarding. Die drei Bools immer (kein "Feld fehlt"),
+	// Zeitstempel nur wenn vorhanden. first_briefing_at setzt GET
+	// (aus first_briefing.json), nie user.json.
+	OnboardingPending   bool   `json:"onboarding_pending"`
+	OnboardingDismissed bool   `json:"onboarding_dismissed"`
+	ChecklistDismissed  bool   `json:"checklist_dismissed"`
+	TestMailSentAt      string `json:"test_mail_sent_at,omitempty"`
+	FirstBriefingAt     string `json:"first_briefing_at,omitempty"`
+	// Issue #2147 Scheibe B2 — ausstehende (noch nicht bestaetigte) neue
+	// Kontaktadresse. Fehlt, solange nichts aussteht; mail_to/email zeigen
+	// bis zur Bestaetigung die alten, wirksamen Werte.
+	PendingContactAddress string `json:"pending_contact_address,omitempty"`
+	// Issue #2406 — SMS-Nummer-Verifikation. SmsVerified ist abgeleitet
+	// (bewiesene Nummer == wirksame Nummer) und IMMER vorhanden, kein
+	// omitempty: die Oberflaeche entscheidet an diesem Wert und darf "false"
+	// nicht von "Feld fehlt" unterscheiden muessen (Muster SmsAllowed).
+	SmsVerified  bool   `json:"sms_verified"`
+	PendingSmsTo string `json:"pending_sms_to,omitempty"`
+	// Issue #2155 S1 (ADR-0078) — abgeleitete Rolle "admin"|"user", NIE aus
+	// user.json oder Nutzereingabe: "admin" genau dann, wenn die Kennung in
+	// GZ_ADMIN_USER_IDS steht. GET /api/auth/profile setzt sie immer; Antworten
+	// ohne Admin-Menge (PUT, SMS-Bestaetigung) lassen sie weg statt zu raten.
+	Role string `json:"role,omitempty"`
+	// Issue #2482 — Mengengrenzen je Ressource; null = unbegrenzt
+	// (Admin/Ausnahme-Konto). Wie Role nur in GET /api/auth/profile gesetzt.
+	Quota *profileQuota `json:"quota,omitempty"`
+}
+
+// profileRole leitet die Rolle aus der Admin-Menge ab (Issue #2155 S1).
+func profileRole(userID string, admins map[string]struct{}) string {
+	if _, ok := admins[userID]; ok && userID != "" {
+		return "admin"
+	}
+	return "user"
 }
 
 // passkeyProfileEntry exposes a registered Passkey to the client WITHOUT the
@@ -496,6 +932,13 @@ type passkeyProfileEntry struct {
 	AuthenticatorName string `json:"authenticator_name,omitempty"`
 	CreatedAt         string `json:"created_at"`
 	LastUsedAt        string `json:"last_used_at,omitempty"`
+}
+
+func formatTimePtr(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format(time.RFC3339)
 }
 
 func toProfileResponse(u *model.User) profileResponse {
@@ -518,17 +961,18 @@ func toProfileResponse(u *model.User) profileResponse {
 	// Issue #1555: eine Quelle für alle Leser — model.EffectiveTier().
 	tier := model.EffectiveTier(u.Tier)
 	return profileResponse{
-		ID:             u.ID,
-		Email:          u.Email,
-		DisplayName:    u.DisplayName,
-		MailTo:         u.MailTo,
-		SmsTo:          u.SmsTo,
-		TelegramChatID: u.TelegramChatID,
-		Tier:           tier,
-		SmsAllowed:     model.SmsAllowed(tier),
-		EmailVerified:  u.EmailVerifiedAt != nil,
-		RequestedTier:  u.RequestedTier,
-		RequestedAt:    u.RequestedAt,
+		ID:                  u.ID,
+		Email:               u.Email,
+		DisplayName:         u.DisplayName,
+		MailTo:              u.MailTo,
+		SmsTo:               u.SmsTo,
+		TelegramChatID:      u.TelegramChatID,
+		Tier:                tier,
+		SmsAllowed:          model.SmsAllowed(tier),
+		EmailVerified:       u.EmailVerifiedAt != nil,
+		RequestedTier:       u.RequestedTier,
+		RequestedAt:         u.RequestedAt,
+		RequestedNotifiedAt: u.RequestedNotifiedAt,
 		// Issue #1717 S3: Rohwerte durchgereicht, Zustand + Tarif-Gate abgeleitet.
 		PremiumSmsReplyTo:    u.PremiumSmsReplyTo,
 		PremiumSmsReplyAt:    u.PremiumSmsReplyAt,
@@ -536,11 +980,25 @@ func toProfileResponse(u *model.User) profileResponse {
 		PremiumSmsAllowed:    model.PremiumSmsAllowed(tier),
 		CreatedAt:            u.CreatedAt.Format(time.RFC3339),
 		HasPasskey:           len(u.PasskeyCredentials) > 0,
+		HasPassword:          u.PasswordHash != "",
 		Passkeys:             passkeys,
+		// Issue #2248: auf diesem Weg erfaehrt die Oberflaeche die Abweisung
+		// beim naechsten Laden.
+		PasskeyPromptDismissed: u.PasskeyPromptDismissed,
+		OnboardingPending:      u.OnboardingPending,
+		OnboardingDismissed:    u.OnboardingDismissed,
+		ChecklistDismissed:     u.ChecklistDismissed,
+		TestMailSentAt:         formatTimePtr(u.TestMailSentAt),
+		PendingContactAddress:  u.PendingContactAddress,
+		// Issue #2406: dieselbe Frage wie die Sperre in config.py stellt —
+		// eine Quelle (smsVerifiziert), damit Anzeige und Wirkung nicht
+		// auseinanderlaufen koennen.
+		SmsVerified:  smsVerifiziert(u),
+		PendingSmsTo: u.PendingSmsTo,
 	}
 }
 
-func GetProfileHandler(s *store.Store) http.HandlerFunc {
+func GetProfileHandler(s *store.Store, admins map[string]struct{}) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
@@ -551,12 +1009,37 @@ func GetProfileHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		resp := toProfileResponse(user)
+		resp.Role = profileRole(userId, admins)
+		resp.FirstBriefingAt = s.LoadFirstBriefingAt(userId)
+		// Issue #2482: dieselbe Quelle wie die Pruefung (userQuota). Bei einem
+		// Ladefehler fehlt das Feld, statt faelschlich free auszuweisen.
+		if q, qerr := userQuota(r.Context(), s, userId); qerr == nil {
+			resp.Quota = toProfileQuota(q)
+		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(toProfileResponse(user))
+		json.NewEncoder(w).Encode(resp)
 	}
 }
 
-func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
+// profileUpdateBeforeFreshReload ist eine Test-Naht (Issue #2147 Scheibe B1,
+// spiegelt magicLinkBeforeTakeoverReload aus auth_magic.go): im Normalbetrieb
+// nil und damit wirkungslos. Tests koennen sie setzen, um unmittelbar VOR dem
+// erneuten Laden des eigenen Kontos (innerhalb der Adress-Sperre) eine
+// Zwischenzeit-Aenderung einzuspielen.
+var profileUpdateBeforeFreshReload func(userID string)
+
+// profileUpdateAfterFirstAddressLock ist eine Test-Naht (Issue #2147 Scheibe
+// B1, F008-Fix): im Normalbetrieb nil und damit wirkungslos. Sie feuert
+// unmittelbar NACHDEM die erste Adresssperre der Sperrmenge genommen wurde
+// und BEVOR eine etwaige zweite genommen wird — genau die Stelle, an der die
+// Sortierung von addrs (sort.Strings) die Verklemmungsgefahr bei zwei
+// gleichzeitigen Anfragen mit ueberlappender Adressmenge abwendet. Tests
+// koennen hier eine Barriere setzen, die beide Anfragen erst gemeinsam
+// weiterlaufen laesst.
+var profileUpdateAfterFirstAddressLock func(userID string)
+
+func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFloodLimiter, smsLimiter *MailFloodLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
@@ -573,6 +1056,13 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 			MailTo         *string `json:"mail_to"`
 			SmsTo          *string `json:"sms_to"`
 			TelegramChatID *string `json:"telegram_chat_id"`
+			// Issue #2248 — Pointer (Muster DisplayName): nur ein mitgeschickter
+			// Wert wird uebernommen, ein fehlendes Feld laesst die Abweisung
+			// unberuehrt.
+			PasskeyPromptDismissed *bool `json:"passkey_prompt_dismissed"`
+			// Issue #2521 S2 — Dismiss-Flags (nur diese zwei, nie pending/Zeitstempel).
+			OnboardingDismissed *bool `json:"onboarding_dismissed"`
+			ChecklistDismissed  *bool `json:"checklist_dismissed"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -581,41 +1071,324 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 			return
 		}
 
+		if update.OnboardingDismissed != nil || update.ChecklistDismissed != nil {
+			if update.Email == nil && update.DisplayName == nil && update.MailTo == nil &&
+				update.SmsTo == nil && update.TelegramChatID == nil && update.PasskeyPromptDismissed == nil {
+				// Nur Dismiss-Flags: Merge-Setter statt SaveUser (Fremdfelder bleiben).
+				if err := s.SetUserOnboardingFlags(userId, update.OnboardingDismissed, update.ChecklistDismissed); err != nil {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(500)
+					w.Write([]byte(`{"error":"store_error"}`))
+					return
+				}
+				if fresh, err := s.LoadUser(userId); err == nil && fresh != nil {
+					user = fresh
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(toProfileResponse(user))
+				return
+			}
+		}
+		// Gemischter PUT: Flags am geladenen Objekt, SaveUser unten. Wird nach
+		// jedem frischen Laden (TOCTOU-Absicherung) erneut angewendet.
+		applyDismissFlags := func() {
+			if update.OnboardingDismissed != nil {
+				user.OnboardingDismissed = *update.OnboardingDismissed
+			}
+			if update.ChecklistDismissed != nil {
+				user.ChecklistDismissed = *update.ChecklistDismissed
+			}
+		}
+		applyDismissFlags()
+
+		// Display-Name-Format-Pruefung VOR jedem Schreibzugriff — bei einem
+		// ungueltigen Wert darf noch nichts (auch keine Adress-Sperre) berührt
+		// worden sein.
+		var newDisplayName string
 		if update.DisplayName != nil {
-			name := strings.TrimSpace(*update.DisplayName)
-			if name == "" {
-				user.DisplayName = "" // Fallback auf Login-Name
-			} else if utf8.RuneCountInString(name) > 50 || hasControlChars(name) {
+			newDisplayName = strings.TrimSpace(*update.DisplayName)
+			if newDisplayName != "" && (utf8.RuneCountInString(newDisplayName) > 50 || hasControlChars(newDisplayName)) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(400)
 				w.Write([]byte(`{"error":"invalid display_name"}`))
 				return
-			} else {
-				user.DisplayName = name
 			}
 		}
 
-		// Issue #1219 Scheibe 1 (AC-5/AC-6): eine tatsächliche Änderung von
-		// email/mail_to setzt die Resend-Verifikation zurück — ein einmal
-		// verifiziertes Konto darf nicht nachträglich auf eine ungeprüfte
-		// Adresse umgebogen werden. No-Op-Updates (identischer Wert) lösen
-		// KEINEN Reset aus.
-		addressChanged := false
-		if update.Email != nil && *update.Email != user.Email {
-			user.Email = *update.Email
-			user.EmailVerifiedAt = nil
-			addressChanged = true
-		}
-		if update.MailTo != nil && *update.MailTo != user.MailTo {
-			user.MailTo = *update.MailTo
-			user.EmailVerifiedAt = nil
-			addressChanged = true
-		}
+		// Issue #2406: E.164-Formatpruefung VOR jedem Schreibzugriff (wie die
+		// Display-Name-Pruefung darueber) — bei einem ungueltigen Wert bleibt
+		// user.json byteidentisch, auch fuer gleichzeitig gesendete harmlose
+		// Felder. Der Leerstring bleibt erlaubt: er heisst "Nummer entfernen".
+		var newSmsTo string
 		if update.SmsTo != nil {
-			user.SmsTo = *update.SmsTo
+			newSmsTo = strings.TrimSpace(*update.SmsTo)
+			if newSmsTo != "" && !store.IsValidE164(newSmsTo) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(400)
+				w.Write([]byte(`{"error":"invalid_sms_number"}`))
+				return
+			}
 		}
-		if update.TelegramChatID != nil {
-			user.TelegramChatID = *update.TelegramChatID
+
+		// Issue #2147 Scheibe B1: ZWEI getrennte Praedikate.
+		// - "Feld geaendert": Feld gesendet UND normalisierter neuer Wert !=
+		//   normalisierter Bestandswert — leer zaehlt als Wert. Bestimmt die
+		//   Sperrmenge; OB und WIE die Aenderung wirkt, entscheidet seit B2 die
+		//   wirksame Kontaktadresse (siehe unten, "Adressaenderung wirkt").
+		// - "geaendert UND belegbar" (Sperr-/Belegt-Praedikat): zusaetzlich neuer
+		//   Wert nicht leer — Leeren kann nie 409 ausloesen (Spec §3).
+		emailFieldChanged := update.Email != nil &&
+			store.NormalizeEmailAddress(*update.Email) != store.NormalizeEmailAddress(user.Email)
+		mailToFieldChanged := update.MailTo != nil &&
+			store.NormalizeEmailAddress(*update.MailTo) != store.NormalizeEmailAddress(user.MailTo)
+		emailChanged := emailFieldChanged && store.NormalizeEmailAddress(*update.Email) != ""
+		mailToChanged := mailToFieldChanged && store.NormalizeEmailAddress(*update.MailTo) != ""
+
+		if emailFieldChanged || mailToFieldChanged {
+			// Die alte Adresse eines geleerten Felds gehoert mit in die
+			// Sperrmenge — sie wird gerade frei.
+			addrSet := map[string]struct{}{}
+			if emailFieldChanged {
+				if o := store.NormalizeEmailAddress(user.Email); o != "" {
+					addrSet[o] = struct{}{}
+				}
+				if n := store.NormalizeEmailAddress(*update.Email); n != "" {
+					addrSet[n] = struct{}{}
+				}
+			}
+			if mailToFieldChanged {
+				if o := store.NormalizeEmailAddress(user.MailTo); o != "" {
+					addrSet[o] = struct{}{}
+				}
+				if n := store.NormalizeEmailAddress(*update.MailTo); n != "" {
+					addrSet[n] = struct{}{}
+				}
+			}
+			addrs := make([]string, 0, len(addrSet))
+			for a := range addrSet {
+				addrs = append(addrs, a)
+			}
+			sort.Strings(addrs)
+			unlocks := make([]func(), len(addrs))
+			for i, a := range addrs {
+				unlocks[i] = store.LockEmailAddress(a)
+				if i == 0 && profileUpdateAfterFirstAddressLock != nil {
+					profileUpdateAfterFirstAddressLock(userId)
+				}
+			}
+			defer func() {
+				for i := len(unlocks) - 1; i >= 0; i-- {
+					unlocks[i]()
+				}
+			}()
+
+			// Read-Modify-Write: das eigene Konto FRISCH laden (Spec §3,
+			// dieselbe TOCTOU-Absicherung wie F003 fuer den Magic-Link-Pfad).
+			if profileUpdateBeforeFreshReload != nil {
+				profileUpdateBeforeFreshReload(userId)
+			}
+			fresh, ferr := s.LoadUser(userId)
+			if ferr != nil || fresh == nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(500)
+				w.Write([]byte(`{"error":"internal error"}`))
+				return
+			}
+			user = fresh
+			applyDismissFlags()
+
+			if emailChanged {
+				taken, terr := s.IsAddressTakenByOtherAccount(*update.Email, userId)
+				if terr != nil {
+					log.Printf("profile update: address uniqueness check failed: %v", terr)
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(500)
+					w.Write([]byte(`{"error":"internal error"}`))
+					return
+				}
+				if taken {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(409)
+					w.Write([]byte(`{"error":"email_taken"}`))
+					return
+				}
+			}
+			if mailToChanged {
+				taken, terr := s.IsAddressTakenByOtherAccount(*update.MailTo, userId)
+				if terr != nil {
+					log.Printf("profile update: address uniqueness check failed: %v", terr)
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(500)
+					w.Write([]byte(`{"error":"internal error"}`))
+					return
+				}
+				if taken {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(409)
+					w.Write([]byte(`{"error":"email_taken"}`))
+					return
+				}
+			}
+		}
+
+		if update.DisplayName != nil {
+			user.DisplayName = newDisplayName // "" => Fallback auf Login-Name
+		}
+
+		// Adressaenderung wirkt — Issue #2147 Scheibe B2 (ersetzt den
+		// #1219-Reset): ein bestaetigtes Konto wird nie auf eine ungepruefte
+		// Adresse umgebogen, aber auch nicht mehr ausgesperrt. Massgeblich ist
+		// die wirksame Kontaktadresse (mail_to, ersatzweise email):
+		// 1. sie aendert sich nicht (inaktives Feld, "mail_to leeren" bei
+		//    gleichem email) -> sofort schreiben, kein Reset, keine Mail;
+		// 2. Konto unbestaetigt -> sofort schreiben + Bestaetigungsmail;
+		// 3. Konto bestaetigt, neue wirksame Adresse -> email/mail_to bleiben
+		//    auf den alten Werten, die Aenderung wartet als Pending-Feld auf
+		//    den Bestaetigungslink (VerifyEmailHandler).
+		sendVerification := false
+		// Issue #2404: die Adresse, an die die Bestaetigungsmail ginge — in
+		// beiden Zweigen, die sendVerification setzen, ist das die neue
+		// wirksame Adresse (Pending-Zweig schreibt sie nach
+		// PendingContactAddress, der unbestaetigte Zweig direkt nach
+		// email/mail_to). Schluessel des Adress-Buckets.
+		verificationAddress := ""
+		if emailFieldChanged || mailToFieldChanged {
+			newEmail := user.Email
+			if update.Email != nil {
+				newEmail = store.NormalizeEmailAddress(*update.Email)
+			}
+			newMailTo := user.MailTo
+			if update.MailTo != nil {
+				newMailTo = store.NormalizeEmailAddress(*update.MailTo)
+			}
+			oldEffective := store.EffectiveContactAddress(user)
+			newEffective := store.EffectiveContactAddress(&model.User{Email: newEmail, MailTo: newMailTo})
+			verificationAddress = newEffective
+
+			switch {
+			case newEffective == oldEffective:
+				user.Email, user.MailTo = newEmail, newMailTo
+			case user.EmailVerifiedAt == nil || newEffective == "":
+				// Unbestaetigt: wie bisher direkt. Beide Felder leer: es gibt
+				// keine Adresse zu beweisen — direkt, Bestaetigungsstand bleibt.
+				user.Email, user.MailTo = newEmail, newMailTo
+				user.PendingContactAddress, user.PendingContactField = "", ""
+				sendVerification = user.EmailVerifiedAt == nil
+			default:
+				if mailToFieldChanged {
+					user.PendingContactField = "mail_to"
+					// Ein gleichzeitig geaendertes email wird sofort geschrieben,
+					// solange es das inaktive Feld ist. Ist es heute die
+					// wirksame Adresse (mail_to leer), bliebe sie sonst
+					// unbestaetigt wirksam — dann wird es nicht uebernommen.
+					if emailFieldChanged {
+						if store.NormalizeEmailAddress(user.MailTo) != "" {
+							user.Email = newEmail
+						} else {
+							log.Printf("profile update: email change for %s not applied while mail_to change is pending", userId)
+						}
+					}
+				} else {
+					user.PendingContactField = "email"
+				}
+				user.PendingContactAddress = newEffective
+				sendVerification = true
+			}
+		} else {
+			if update.Email != nil {
+				user.Email = store.NormalizeEmailAddress(*update.Email)
+			}
+			if update.MailTo != nil {
+				user.MailTo = store.NormalizeEmailAddress(*update.MailTo)
+			}
+		}
+		// Issue #2406 — SMS-Nummernwechsel (Spec §2). Das Aenderungs-Praedikat
+		// vergleicht gegen BEIDE Felder: `account/+page.svelte` schickt
+		// `sms_to` bei JEDEM Speichern mit, auch bei einer reinen
+		// display_name-Aenderung. Ein blosses `update.SmsTo != nil` loeste
+		// einen bezahlten SMS-Versand pro Klick auf "Speichern" aus (AC-5);
+		// der Vergleich gegen PendingSmsTo macht zusaetzlich das erneute
+		// Absenden eines bereits ausstehenden Werts zum No-op.
+		smsCodeTarget := ""
+		deleteSmsVerification := false
+		// Der No-op-Vergleich gegen PendingSmsTo gilt NUR fuer eine echte
+		// Nummer: beim Leeren ("Nummer entfernen") ist PendingSmsTo haeufig
+		// selbst leer — eine unbedingte Gleichheitspruefung wuerde genau die
+		// Aufraeum-Aenderung aus AC-9 verschlucken.
+		if update.SmsTo != nil && newSmsTo != user.SmsTo &&
+			(newSmsTo == "" || newSmsTo != user.PendingSmsTo) {
+			switch {
+			case newSmsTo == "":
+				// AC-9: vollstaendig aufraeumen — keine ueberlebende
+				// Bestaetigung, kein ueberlebender Code.
+				user.SmsTo, user.PendingSmsTo = "", ""
+				user.SmsVerifiedNumber, user.SmsVerifiedAt = "", nil
+				deleteSmsVerification = true
+			case !smsVerifiziert(user):
+				// Keine wirksame bestaetigte Nummer (Erst-Eintrag oder
+				// Bestandskonto): direkt schreiben. Fuer den Versand bleibt
+				// sie bis zur Bestaetigung gesperrt — das entscheidet die
+				// Wirkstelle in config.py, nicht dieser Schreibweg.
+				user.SmsTo = newSmsTo
+				user.PendingSmsTo = ""
+				smsCodeTarget = newSmsTo
+			default:
+				// Bestaetigte Nummer bleibt wirksam, die neue wartet.
+				user.PendingSmsTo = newSmsTo
+				smsCodeTarget = newSmsTo
+			}
+		}
+		// Tier-Gate VOR jedem Code-Versand: ein Free-Konto darf die Nummer
+		// eintragen, loest aber keine kostenpflichtige SMS aus (AC-7). Der Weg
+		// zurueck nach einem Tarif-Upgrade ist der Resend-Knopf, nicht ein
+		// erneutes Speichern desselben Werts (das waere ein No-op).
+		sendSmsCode := smsCodeTarget != "" && model.SmsAllowed(model.EffectiveTier(user.Tier))
+		// Issue #2141: die Telegram-Chat-ID ist eine Identitätszuordnung, keine
+		// Einstellung — gesetzt wird sie ausschließlich über den
+		// localhost-gesperrten Einmal-Token-Flow (PostTelegramConnectHandler).
+		// Über diesen generischen Profil-Decoder kommt nur der Leerstring durch,
+		// damit "Telegram trennen" im Konto-Bereich weiter funktioniert. Ein
+		// nicht-leerer Wert fließt nirgends ein; die Antwort (toProfileResponse)
+		// zeigt den unveränderten gespeicherten Wert, der Aufrufer sieht die
+		// Nicht-Übernahme also unmittelbar. Muster wie premium_sms_reply_to.
+		if update.TelegramChatID != nil && *update.TelegramChatID == "" {
+			user.TelegramChatID = ""
+		}
+		// Issue #2248: Read-Modify-Write — das geladene Objekt wird geaendert,
+		// nicht ersetzt (BUG-DATALOSS-GR221).
+		if update.PasskeyPromptDismissed != nil {
+			user.PasskeyPromptDismissed = *update.PasskeyPromptDismissed
+		}
+
+		// Issue #2404: die Mengenbremse greift genau dort, wo eine
+		// Bestaetigungsmail entstuende — Profil-Updates ohne wirksame
+		// Adressaenderung verbrauchen kein Kontingent (AC-5). Die Pruefung
+		// steht VOR SaveUser: bei Ablehnung bleibt kein Teil-Zustand zurueck,
+		// auch nicht fuer harmlose Felder im selben Request (AC-6). In
+		// dispatchVerificationMail waere sie strukturell zu spaet.
+		// verificationAddress != "": ohne Adresse verschickt
+		// dispatchVerificationMail nichts (beide Felder geleert bei einem
+		// unbestaetigten Konto) — dann darf auch kein Kontingent fallen. Sonst
+		// teilten sich alle Nutzer den Bucket des Leerstrings und der elfte,
+		// voellig unbeteiligte bekaeme 429.
+		if sendVerification && verificationAddress != "" && !mailLimiter.Allow(userId, verificationAddress) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Retry-After", mailLimiter.RetryAfterHeader())
+			w.WriteHeader(429)
+			w.Write([]byte(`{"error":"rate_limit_exceeded"}`))
+			return
+		}
+
+		// Issue #2406: eigenstaendige Mengenbremse (3/h je Nutzer UND je
+		// Zielnummer) — ein SMS-Angriff soll nicht das Mail-Kontingent
+		// verbrauchen und umgekehrt. Wie oben VOR SaveUser: bei Ablehnung
+		// bleibt kein Teilzustand zurueck (AC-6).
+		if sendSmsCode && !smsLimiter.Allow(userId, smsCodeTarget) {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Retry-After", smsLimiter.RetryAfterHeader())
+			w.WriteHeader(429)
+			w.Write([]byte(`{"error":"rate_limit_exceeded"}`))
+			return
 		}
 
 		if err := s.SaveUser(*user); err != nil {
@@ -625,8 +1398,16 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 			return
 		}
 
-		if addressChanged {
+		if deleteSmsVerification {
+			if err := s.DeleteSmsVerification(userId); err != nil {
+				log.Printf("sms verification: cleanup after removal failed for %s: %v", userId, err)
+			}
+		}
+		if sendVerification {
 			dispatchVerificationMail(s, cfg, userId, user)
+		}
+		if sendSmsCode {
+			dispatchSmsVerificationCode(s, cfg, userId, smsCodeTarget)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -642,53 +1423,164 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 // mail.SendVerificationMail selbst.
 var sendVerificationMailFn = mail.SendVerificationMail
 
+// issueVerificationToken erzeugt einen 24h-Verifikations-Token für userId,
+// persistiert seinen bcrypt-Hash und gibt den Klartext zurück (Issue #2304).
+// Herausgelöst aus dispatchVerificationMail, damit der staging-only Testweg
+// denselben Mechanismus benutzt, statt einen zweiten Token-Pfad zu bauen —
+// der Klartext ist nur hier und in der Bestätigungsmail zu sehen.
+//
+// Issue #2147 Scheibe B2: das Token wird an address gebunden (die zu
+// beweisende Adresse, normalisiert gespeichert) — VerifyEmailHandler
+// bestaetigt nur genau diese Adresse.
+func issueVerificationToken(s *store.Store, userId, address string) (string, error) {
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", fmt.Errorf("token generation failed: %w", err)
+	}
+	token := hex.EncodeToString(tokenBytes)
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("token hash failed: %w", err)
+	}
+
+	if err := s.SaveVerificationToken(userId, model.EmailVerificationToken{
+		TokenHash: string(hash),
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+		Address:   store.NormalizeEmailAddress(address),
+	}); err != nil {
+		return "", fmt.Errorf("SaveVerificationToken failed: %w", err)
+	}
+	return token, nil
+}
+
+// selfHealEmailVerification setzt `EmailVerifiedAt`, wenn provenAddress — die
+// von einem Anmeldeweg NACHGEWIESENE Adresse (Magic-Link: Empfang des Codes im
+// Postfach; Google: `email_verified`) — der effektiven Kontaktadresse des
+// Kontos entspricht (mail_to, Rückfall email; dieselbe Vorrangregel wie
+// dispatchVerificationMail). Issue #2304, AC-4..AC-6.
+//
+// Der Adressvergleich steht bewusst HIER und nicht in den Aufrufern: nur so
+// ist er an einer Stelle prüfbar und mutierbar. Weicht die Adresse ab, bleibt
+// das Feld unangetastet — die Anmeldung selbst hängt nicht daran (S1 sperrt
+// nichts). Ein bereits gesetzter Zeitstempel wird nie neu gestempelt.
+func selfHealEmailVerification(s *store.Store, userId, provenAddress string) {
+	proven := strings.ToLower(strings.TrimSpace(provenAddress))
+	if proven == "" {
+		return
+	}
+	user, err := s.LoadUser(userId) // RMW: vollständiges Objekt laden
+	if err != nil || user == nil {
+		return
+	}
+	if user.EmailVerifiedAt != nil {
+		return
+	}
+	contact := user.MailTo
+	if contact == "" {
+		contact = user.Email
+	}
+	if !strings.EqualFold(strings.TrimSpace(contact), proven) {
+		return
+	}
+	now := time.Now().UTC()
+	user.EmailVerifiedAt = &now
+	if err := s.SaveUser(*user); err != nil {
+		log.Printf("email verification self-heal: SaveUser failed for %s: %v", userId, err)
+	}
+}
+
+// ResendVerificationHandler verschickt die Bestätigungsmail erneut (Issue
+// #2304, AC-7/AC-8). Nutzlast ist die Kennung, nicht die Adresse — analog
+// ForgotPasswordHandler, damit sich keine Adresse einem Konto zuordnen lässt.
+//
+// Die Antwort ist IMMER `200 {"status":"ok"}`: ob das Konto existiert, bereits
+// bestätigt ist oder keine Kontaktadresse hält, darf von außen nicht
+// unterscheidbar sein.
+func ResendVerificationHandler(s *store.Store, cfg config.Config, mailLimiter *MailFloodLimiter) http.HandlerFunc {
+	const ok = `{"status":"ok"}`
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Username string `json:"username"`
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Username == "" {
+			w.Write([]byte(ok))
+			return
+		}
+		if !store.ValidUserID(req.Username) {
+			log.Printf("email verification resend: rejected path-unsafe user id %q", req.Username)
+			w.Write([]byte(ok))
+			return
+		}
+		user, _ := s.LoadUser(req.Username)
+		// Issue #2147 Scheibe B2 (AC-11): auch ein bestaetigtes Konto mit
+		// ausstehender Aenderung bekommt den Link erneut — an die ausstehende
+		// Adresse (dispatchVerificationMail waehlt sie).
+		if user != nil && (user.EmailVerifiedAt == nil || user.PendingContactAddress != "") {
+			// Issue #2404: ausschliesslich der Adress-Bucket. req.Username
+			// kommt aus dem Rumpf und ist faelschbar — ein User-Bucket-Verbrauch
+			// liesse einen Fremden das Profil-Kontingent des Opfers leerlaufen
+			// (AC-8). Zieladresse identisch zur Wahl in
+			// dispatchVerificationMail, hier bewusst dupliziert statt
+			// herausgeloest, um dessen Signatur unberuehrt zu lassen.
+			ziel := user.MailTo
+			if ziel == "" {
+				ziel = user.Email
+			}
+			if user.PendingContactAddress != "" {
+				ziel = user.PendingContactAddress
+			}
+			// Normalisiert, weil der Profil-Pfad auf der normalisierten
+			// Adresse keyt — sonst teilen beide Endpunkte den Bucket nur
+			// scheinbar. Leer heisst: keine Mail, also auch kein
+			// Bucket-Verbrauch (sonst teilten sich alle Konten den Bucket des
+			// Leerstrings).
+			zielNorm := store.NormalizeEmailAddress(ziel)
+			if zielNorm != "" && mailLimiter.AllowAddressOnly(zielNorm) {
+				dispatchVerificationMail(s, cfg, req.Username, user)
+			}
+		}
+		w.Write([]byte(ok))
+	}
+}
+
 // dispatchVerificationMail erzeugt einen 24h-Verifikations-Token für userId
 // und verschickt eine Bestätigungsmail an die neue Empfänger-Adresse (Issue
 // #1219 Scheibe 2a-i) — Muster identisch zu ForgotPasswordHandler
 // (Token-Erzeugung, Goroutine mit 20s-Timeout, Test-User→Gmail-Weiche). Die
 // effektive Adresse ist mail_to, Rückfall email; ist beides leer, passiert
-// nichts (kein Token, keine Mail).
+// nichts (kein Token, keine Mail). Steht eine Adressaenderung aus (Issue
+// #2147 Scheibe B2), geht die Mail an die AUSSTEHENDE Adresse.
 func dispatchVerificationMail(s *store.Store, cfg config.Config, userId string, user *model.User) {
 	recipient := user.MailTo
 	if recipient == "" {
 		recipient = user.Email
+	}
+	if user.PendingContactAddress != "" {
+		recipient = user.PendingContactAddress
 	}
 	if recipient == "" {
 		log.Printf("email verification: no address for user %s — no token generated", userId)
 		return
 	}
 
-	tokenBytes := make([]byte, 32)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		log.Printf("email verification: token generation failed for %s: %v", userId, err)
-		return
-	}
-	token := hex.EncodeToString(tokenBytes)
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
+	token, err := issueVerificationToken(s, userId, recipient)
 	if err != nil {
-		log.Printf("email verification: token hash failed for %s: %v", userId, err)
-		return
-	}
-
-	verificationToken := model.EmailVerificationToken{
-		TokenHash: string(hash),
-		ExpiresAt: time.Now().Add(24 * time.Hour),
-	}
-	if err := s.SaveVerificationToken(userId, verificationToken); err != nil {
-		log.Printf("email verification: SaveVerificationToken failed for %s: %v", userId, err)
+		log.Printf("email verification: token issuance failed for %s: %v", userId, err)
 		return
 	}
 
 	msg := mail.BuildVerificationMail(cfg.PublicHost, userId, token)
 
 	// Select SMTP config synchronously (identisches Muster zu
-	// ForgotPasswordHandler): Test-User (IsTestUser) → Gmail-Config; echte
-	// User → Resend-Sonderpfad SendVerificationMail (NICHT SendWithFallback/
-	// Send — die Allowlist-Prüfung darf hier nicht greifen, die Adresse ist
-	// per Definition unverifiziert). Nur der eigentliche Sendevorgang läuft
-	// in der Goroutine mit 20s-Timeout, der Endpoint blockiert nicht.
-	isTestUser := mail.IsTestUser(userId)
+	// ForgotPasswordHandler): Test-User (IsTestUser ueber das geladene Profil,
+	// Issue #2152) → Gmail-Config; echte User → Resend-Sonderpfad
+	// SendVerificationMail (NICHT SendWithFallback/Send — die Allowlist-Prüfung
+	// darf hier nicht greifen, die Adresse ist per Definition unverifiziert).
+	// Nur der eigentliche Sendevorgang läuft in der Goroutine mit 20s-Timeout,
+	// der Endpoint blockiert nicht.
+	isTestUser := mail.IsTestUser(user)
 	if isTestUser && cfg.GoogleSMTPHost == "" {
 		log.Printf("email verification: Google SMTP not configured, mail not sent for test user %s", userId)
 		return
@@ -741,7 +1633,7 @@ func hasControlChars(s string) bool {
 	return false
 }
 
-func ChangePasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
+func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		w.Header().Set("Content-Type", "application/json")
@@ -786,6 +1678,34 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		if err := s.SaveUser(*user); err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"internal error"}`))
+			return
+		}
+
+		// Issue #2129 AC-8: Der Passwortwechsel meldet auf allen ANDEREN
+		// Geraeten ab. Bislang hatte er ueberhaupt keine Session-Wirkung — es
+		// gab damit keinen wirksamen Notweg, ein verlorenes Geraet
+		// auszusperren.
+		//
+		// Das Geraet, an dem gewechselt wird, bekommt sofort einen frischen
+		// Nachweis: Liste leeren, neue Anmelde-Kennung eintragen, neues Cookie
+		// in dieser Antwort. Sonst saehe der Nutzer unmittelbar nach dem
+		// Wechsel eine Seite, deren Datenabrufe alle 401 geben.
+		//
+		// Bewusst NUR hier: Passwort-Zuruecksetzen, Kontoloeschung und "auf
+		// allen Geraeten abmelden" stellen KEIN neues Merkmal aus. Wer
+		// zuruecksetzt, weil das Passwort abgegriffen wurde, soll ausgesperrt
+		// bleiben.
+		if err := s.ClearSessions(userId); err != nil {
+			log.Printf("password change: allowlist clear failed for %s: %v", userId, err)
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"internal error"}`))
+			return
+		}
+		// Issue #2271: bewusst OHNE Bestaetigungs-Gate. Wer gerade seine
+		// Adresse geaendert hat, steht auf EmailVerifiedAt == nil — er muss
+		// sein Passwort weiter aendern koennen, ohne dabei ausgesperrt zu
+		// werden. Das ist die einzige Stelle, die die Ausnahme nutzen darf.
+		if !issueSessionWithoutVerificationGate(w, r, s, userId, secret, publicHost) {
 			return
 		}
 
@@ -835,47 +1755,78 @@ func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFun
 		now := time.Now()
 		user.RequestedTier = req.RequestedTier
 		user.RequestedAt = &now
+		// Ein alter Nachweis gilt nie fuer einen neuen Antrag (Issue #2436 AC-5).
+		user.RequestedNotifiedAt = nil
 		if err := s.SaveUser(*user); err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
 			return
 		}
 
-		// Erst nach erfolgreichem Save antworten — Mail beeinflusst die Response nie.
-		w.Write([]byte(`{"status":"ok"}`))
-
-		if cfg.PoEmail == "" {
-			log.Printf("tier-change: PO_EMAIL not configured — request stored for %s but no mail sent", userId)
-			return
-		}
-		if cfg.SMTPHost == "" {
-			log.Printf("tier-change: SMTP not configured — request stored for %s but no mail sent", userId)
-			return
-		}
-
-		mailCfg := mail.MailConfig{
-			Host: cfg.SMTPHost, Port: cfg.SMTPPort,
-			User: cfg.SMTPUser, Pass: cfg.SMTPPass,
-			From: cfg.SMTPFrom,
-		}
-		fallbackCfg := mail.MailConfig{
-			Host: cfg.FallbackSMTPHost, Port: 587,
-			User: cfg.FallbackSMTPUser, Pass: cfg.FallbackSMTPPass,
-		}
-		msg := mail.BuildTierChangeRequestMail(userId, currentTier, req.RequestedTier)
-
-		// Goroutine mit Timeout — der Endpoint darf nicht auf SMTP blockieren.
-		go func(to string, msg mail.Mail, c, fb mail.MailConfig, username string) {
-			done := make(chan error, 1)
-			go func() { done <- mail.SendWithFallback(c, fb, to, msg) }()
-			select {
-			case err := <-done:
-				if err != nil {
-					log.Printf("tier-change: mail send failed for %s: %v", username, err)
+		// Der Antrag ist gespeichert: HTTP 200 bleibt in jedem Fall. Ob der
+		// Betreiber erreicht wurde, sagt po_notified (Issue #2436).
+		notified := sendTierChangeNotification(cfg, userId, currentTier, req.RequestedTier)
+		if notified {
+			// Frisch laden (Read-Modify-Write), damit kein Zwischenstand ueberschrieben wird.
+			// Nur stempeln, wenn der gesendete Antrag noch der aktuelle ist (F001):
+			// sonst Freigabe/Folgeantrag waehrend des Versands -> kein Nachweis.
+			if fresh, err := s.LoadUser(userId); err == nil && fresh != nil &&
+				fresh.RequestedTier == req.RequestedTier &&
+				fresh.RequestedAt != nil && fresh.RequestedAt.Equal(now) {
+				ts := time.Now()
+				fresh.RequestedNotifiedAt = &ts
+				if err := s.SaveUser(*fresh); err != nil {
+					log.Printf("tier-change: could not persist requested_notified_at for %s: %v", userId, err)
+					notified = false
 				}
-			case <-time.After(20 * time.Second):
-				log.Printf("tier-change: mail send timeout (20s) for %s", username)
+			} else {
+				notified = false
 			}
-		}(cfg.PoEmail, msg, mailCfg, fallbackCfg, userId)
+		}
+		json.NewEncoder(w).Encode(map[string]any{"status": "ok", "po_notified": notified})
+	}
+}
+
+// sendTierChangeMailFn ist die Transportgrenze fuer die PO-Benachrichtigung
+// (Issue #2436), Muster sendResetMailFn.
+var sendTierChangeMailFn = mail.SendWithFallback
+
+// tierChangeMailTimeout begrenzt die synchrone Wartezeit auf den Versand.
+var tierChangeMailTimeout = 15 * time.Second
+
+// sendTierChangeNotification versendet die PO-Mail synchron mit hartem Timeout
+// und meldet, ob der Betreiber erreicht wurde.
+func sendTierChangeNotification(cfg config.Config, userId, currentTier, requestedTier string) bool {
+	if cfg.PoEmail == "" {
+		log.Printf("tier-change: PO_EMAIL not configured — request stored for %s but no mail sent", userId)
+		return false
+	}
+	if cfg.SMTPHost == "" {
+		log.Printf("tier-change: SMTP not configured — request stored for %s but no mail sent", userId)
+		return false
+	}
+	mailCfg := mail.MailConfig{
+		Host: cfg.SMTPHost, Port: cfg.SMTPPort,
+		User: cfg.SMTPUser, Pass: cfg.SMTPPass,
+		From: cfg.SMTPFrom,
+	}
+	fallbackCfg := mail.MailConfig{
+		Host: cfg.FallbackSMTPHost, Port: 587,
+		User: cfg.FallbackSMTPUser, Pass: cfg.FallbackSMTPPass,
+	}
+	msg := mail.BuildTierChangeRequestMail(userId, currentTier, requestedTier)
+
+	done := make(chan error, 1)
+	go func() { done <- sendTierChangeMailFn(mailCfg, fallbackCfg, cfg.PoEmail, msg) }()
+	select {
+	case err := <-done:
+		if err != nil {
+			log.Printf("tier-change: mail send failed for %s: %v", userId, err)
+			return false
+		}
+		return true
+	case <-time.After(tierChangeMailTimeout):
+		log.Printf("tier-change: mail send timeout (%s) for %s", tierChangeMailTimeout, userId)
+		return false
 	}
 }

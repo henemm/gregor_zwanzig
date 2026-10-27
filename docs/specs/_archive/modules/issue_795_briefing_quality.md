@@ -3,7 +3,7 @@ entity_id: issue_795_briefing_quality
 type: module
 created: 2026-06-13
 updated: 2026-06-13
-status: complete
+status: implemented
 version: "2.0"
 tags: [email, renderer, briefing, quality, pills, tests]
 ---

@@ -23,7 +23,7 @@ Rueckfall fuer ``outlook_metrics=None`` von "sieben feste Spalten" auf "volle
 Grundauswahl". Das widerspricht direkt
 ``test_trip_outlook_metric_selection.py::test_ac1_bestandstrip_html_ausblick_bleibt_byte_identisch``
 und ihren zwei Geschwistern (Legende/Klartext) -- Spec "Known Limitations"
-nennt das ausdruecklich ("Die Ausblick-Tabelle wird fuer bestehende Touren
+nennt das ausdruecklich ("Die Ausblick-Tabelle wird fuer bestehende Trips
 breiter"). Diese Datei fasst jene Tests NICHT an (RED-Phase-Auftrag: nur neue
 Tests, keine Implementierung/Aufraeumung bestehender Tests ausserhalb des
 explizit benannten AST-Waechters).
@@ -50,6 +50,10 @@ from tests.helpers.trip_outlook_selection import (  # noqa: E402
 # -- AC-3 verlangt, dass sie fuer eine Grundauswahl-gebundene Vorschau NICHT
 # mehr erscheinen.
 _FIXED_SEVEN = {"N", "D", "R", "PR", "Wind", "Böen", "Gew"}
+# #2098 AC-13: ACC ist seit der Behebung eine fest angehaengte Zusatzspalte
+# HINTER der Auswahl -- sie stammt nicht aus der Grundauswahl und ist auch
+# keine der abgeloesten sieben festen Spalten.
+_ACC = "ACC"
 
 
 def _soll_ueberschriften(metric_ids: set[str]) -> set[str]:
@@ -80,7 +84,7 @@ def test_ac3_ohne_gesetzte_ausblick_auswahl_zeigt_die_ausblick_tabelle_die_grund
     assert kopf, "Keine Ausblick-Tabelle gerendert -- Vorbedingung von AC-3 verletzt."
     assert kopf[0] == "Tag", kopf
     erwartet = _soll_ueberschriften(enabled)
-    assert set(kopf[1:]) == erwartet, (
+    assert set(kopf[1:]) == erwartet | {_ACC}, (
         f"Ausblick-Kopfzeile {kopf[1:]!r} entspricht nicht der Grundauswahl "
         f"{sorted(erwartet)!r} (AC-3). Ohne gesetzte Auswahl faellt der "
         "Renderer vermutlich noch auf die alten sieben festen Spalten zurueck."
@@ -105,23 +109,31 @@ def test_ac4_in_der_grundauswahl_abgewaehlte_groesse_erscheint_nie_im_ausblick()
     in ``outlook_metrics`` / When der Ausblick gerendert wird / Then
     erscheint dafuer KEINE Spalte -- unabhaengig davon, was gespeichert ist.
     """
+    from app.metric_catalog import get_metric
+
     enabled = {"temperature", "wind", "precipitation"}  # kein "thunder"
     auswahl = ["temperature", "thunder"]
     dc = display_config(enabled_ids=enabled, outlook_metrics=auswahl)
     rows = outlook_rows(trip_display_config=dc, report_type="evening")
     html, plain = render_trip_mail(dc, rows)
 
+    # #2136/ADR-0068: die Spaltenkoepfe tragen `col_label` ("Thdr"/"Temp"),
+    # nicht mehr den deutschen Katalog-Langnamen ("Gewitter"/"Temperatur").
+    thunder_label = get_metric("thunder").col_label
+    temp_label = get_metric("temperature").col_label
+
     kopf = html_outlook_headers(html)
-    assert "Gewitter" not in kopf, (
-        f"Kopfzeile {kopf!r}: 'Gewitter' erscheint, obwohl die Groesse in der "
-        "Grundauswahl nicht aktiv ist (AC-4)."
+    assert thunder_label not in kopf, (
+        f"Kopfzeile {kopf!r}: {thunder_label!r} erscheint, obwohl die Groesse "
+        "in der Grundauswahl nicht aktiv ist (AC-4)."
     )
-    assert kopf[1:] == ["Temperatur"], (
-        f"Erwartet nur die Grundauswahl-gedeckte Spalte 'Temperatur': {kopf!r}"
+    assert kopf[1:] == [temp_label, _ACC], (
+        f"Erwartet nur die Grundauswahl-gedeckte Spalte {temp_label!r}: {kopf!r}"
     )
     block = plain_outlook_block(plain)
-    assert block is not None and "Gewitter" not in block, (
-        f"Klartext-Ausblick nennt 'Gewitter' trotz Grundauswahl-Abwahl: {block!r}"
+    assert block is not None and thunder_label not in block, (
+        f"Klartext-Ausblick nennt {thunder_label!r} trotz "
+        f"Grundauswahl-Abwahl: {block!r}"
     )
 
 
@@ -168,7 +180,7 @@ def test_ac10_vs_ac11_vollstaendig_geschnittene_auswahl_faellt_auf_die_grundausw
         "liefert [] statt None)."
     )
     erwartet = _soll_ueberschriften(enabled)
-    assert set(kopf_ac10[1:]) == erwartet, (
+    assert set(kopf_ac10[1:]) == erwartet | {_ACC}, (
         f"AC-10: nach dem Totalschnitt zeigt der Ausblick {kopf_ac10[1:]!r} "
         f"statt der VOLLEN Grundauswahl {sorted(erwartet)!r}."
     )

@@ -3,7 +3,7 @@ entity_id: issue_498_stage_date_autosave
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trips, stages, autosave, bugfix]
 ---
@@ -16,7 +16,7 @@ tags: [frontend, trips, stages, autosave, bugfix]
 
 ## Purpose
 
-Das nachträgliche Verschieben eines Etappen-Datums (und die Kaskade „ganze Tour rückt
+Das nachträgliche Verschieben eines Etappen-Datums (und die Kaskade „ganze Trip rückt
 N Tage") muss **wirklich** gespeichert werden — sofort, ohne einen separaten, leicht zu
 übersehenden „Etappen speichern"-Klick. Heute mutiert die Datum-Änderung nur den lokalen
 UI-Zustand; der grüne Kaskaden-„verschoben ✓"-Zustand signalisiert fälschlich Abschluss,

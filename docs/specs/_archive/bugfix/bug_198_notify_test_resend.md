@@ -3,7 +3,7 @@ entity_id: bug_198_notify_test_resend
 type: bugfix
 created: 2026-05-11
 updated: 2026-05-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, mail, channel-test, resend]
 ---

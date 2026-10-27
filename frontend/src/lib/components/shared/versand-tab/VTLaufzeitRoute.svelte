@@ -22,7 +22,7 @@
 	<div class="vt-laufzeit-box" data-testid="briefings-laufzeit">
 		<span class="vt-laufzeit-dot"></span>
 		<div class="vt-laufzeit-text">
-			<div class="vt-laufzeit-title">Läuft mit der Tour · endet {tripEnd ?? '—'}</div>
+			<div class="vt-laufzeit-title">Läuft mit der Trip · endet {tripEnd ?? '—'}</div>
 			<div class="vt-laufzeit-sub">
 				Das Enddatum ergibt sich aus den Etappen — es wird dort gepflegt, nicht hier.
 			</div>

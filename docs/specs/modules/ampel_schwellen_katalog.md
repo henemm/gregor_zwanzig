@@ -3,7 +3,7 @@ entity_id: ampel_schwellen_katalog
 type: module
 created: 2026-07-28
 updated: 2026-07-28
-status: draft
+status: implemented
 version: "1.0"
 tags: [ampel, schwellen, metric_catalog, issue-1377, epic-1374]
 ---

@@ -3,7 +3,7 @@ entity_id: bug_563_deploy_gate
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [workflow, infra, deploy, gates]
 ---

@@ -29,9 +29,12 @@ node_modules/
 .claude/workflows/
 .claude/active_workflow
 .claude/validator.env
+.claude/staging_admin.env
 .claude/next_ticket_cache.json
 .claude/file_claims.json
 .claude/file_claims.json.lock
+.claude/session-locks/
+.claude/file_claims.lock
 
 # Claude Code (transient)
 .claude/current_task.json
@@ -45,6 +48,9 @@ node_modules/
 .claude/scheduled_tasks.lock
 .claude/e2e_verified.json
 .claude/e2e_verified/
+# Gate-Marker von staging_gate.py (#2047 S2: ci_prod_gate.sh darf git status nicht veraendern)
+.claude/last_preflight_base.json
+.claude/last_gate_scope.json
 
 # Schema-rework backups (BUG-DATALOSS-GR221, Issue #102)
 .backups/
@@ -110,3 +116,4 @@ data/debug/
 # Migration befüllt, service-verwaltet): beides durch die Regel `data/users/*`
 # weiter oben abgedeckt (#1602). Die frühere Einzelaufzählung war der Grund,
 # warum echte Nutzerdaten durch das Raster fielen.
+.claude/settings.local.json

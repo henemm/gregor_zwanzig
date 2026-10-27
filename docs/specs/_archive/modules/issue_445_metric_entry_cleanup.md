@@ -3,7 +3,7 @@ entity_id: issue_445_metric_entry_cleanup
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: completed
+status: implemented
 version: "1.0"
 tags: [frontend, typescript, refactoring, types, metric-entry]
 ---
@@ -22,7 +22,7 @@ Drei Svelte-Komponenten in `frontend/src/lib/components/trip-detail/` definieren
 
 ## Source
 
-- **File:** `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` — lines 17–24 (lokale `interface MetricEntry` + `type MetricCatalog`)
+- **File:** `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` — lines 17–24 (lokale `interface MetricEntry` + `type MetricCatalog`)
 - **File:** `frontend/src/lib/components/trip-detail/TablePreview.svelte` — lines 12–19 (lokale `interface MetricEntry` + `type MetricCatalog`)
 - **File:** `frontend/src/lib/components/trip-detail/MetricCheckbox.svelte` — lines 13–20 (lokale `interface MetricEntry`)
 - **Reference (unverändert):** `frontend/src/lib/types.ts:131` — kanonische `export interface MetricEntry`-Definition (8 Felder)

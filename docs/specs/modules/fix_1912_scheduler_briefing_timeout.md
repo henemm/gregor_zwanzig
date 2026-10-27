@@ -3,7 +3,7 @@ entity_id: fix_1912_scheduler_briefing_timeout
 type: module
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "2.0"
 tags: [scheduler, monitoring, go, issue-1912]
 ---

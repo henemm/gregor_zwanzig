@@ -35,7 +35,8 @@ frische Anker bereits, wenn der Reset laeuft?).
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -112,7 +113,7 @@ def _trip(trip_id: str) -> Trip:
     # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
     # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(LAT, LON),
         waypoints=[
             Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0,
                      arrival_calculated="08:00"),
@@ -181,7 +182,7 @@ def _trip_anchor_gust(user_id: str, trip_id: str) -> float | None:
     """Liest den Δ-Anker des Trips ueber den echten Snapshot-Service."""
     from services.weather_snapshot import WeatherSnapshotService
 
-    cached = WeatherSnapshotService(user_id=user_id).load_dated(trip_id, date.today())
+    cached = WeatherSnapshotService(user_id=user_id).load_dated(trip_id, ortstag(LAT, LON))
     if not cached:
         return None
     return cached[0].aggregated.gust_max_kmh
@@ -193,13 +194,13 @@ def _trip_anchor_gust(user_id: str, trip_id: str) -> float | None:
 def test_ac27_geplantes_briefing_setzt_genau_eine_kennung_zurueck(monkeypatch):
     """AC-27 (Wirkung, Bestandsverhalten).
 
-    GIVEN eine Tour mit einem Melde-Gedaechtnis, das einen amtlichen UND einen
+    GIVEN eine Trip mit einem Melde-Gedaechtnis, das einen amtlichen UND einen
           Aenderungs-Eintrag traegt, und drei weitere, FREMDE Zustandsdateien
-          (eine zweite Tour sowie zwei Ortsvergleichs-Kennungen desselben
+          (eine zweite Trip sowie zwei Ortsvergleichs-Kennungen desselben
           Nutzers).
     WHEN  das geplante Briefing laeuft (`on_demand=False`).
     THEN  wird der Reset GENAU EINMAL und GENAU fuer `trip.id` gerufen; der
-          amtliche Eintrag der Tour ueberlebt, ihr Aenderungs-Eintrag
+          amtliche Eintrag der Trip ueberlebt, ihr Aenderungs-Eintrag
           verschwindet, und keine der drei fremden Zustandsdateien wird
           angefasst.
 
@@ -239,12 +240,12 @@ def test_ac27_geplantes_briefing_setzt_genau_eine_kennung_zurueck(monkeypatch):
     )
     assert recorder.calls == [trip.id], (
         "Das geplante Briefing muss den Reset GENAU EINMAL und GENAU fuer die "
-        f"Tour-Kennung ausloesen, erhalten: {recorder.calls!r} (AC-27)"
+        f"Trip-Kennung ausloesen, erhalten: {recorder.calls!r} (AC-27)"
     )
 
     after = AlertStateService(user_id=uid).load(trip.id)
     assert after == {official_key: official_value}, (
-        "Nach dem Briefing darf nur noch der amtliche Eintrag der Tour stehen, "
+        "Nach dem Briefing darf nur noch der amtliche Eintrag der Trip stehen, "
         f"gefunden: {after!r} (AC-27)"
     )
     for entity_id, payload in fremde.items():
@@ -257,7 +258,7 @@ def test_ac27_geplantes_briefing_setzt_genau_eine_kennung_zurueck(monkeypatch):
 def test_ac27_anker_wird_vor_dem_reset_geschrieben(monkeypatch):
     """AC-27 (Reihenfolge, Bestandsverhalten).
 
-    GIVEN eine Tour ohne vorhandenen Δ-Anker fuer heute.
+    GIVEN eine Trip ohne vorhandenen Δ-Anker fuer heute.
     WHEN  das geplante Briefing laeuft.
     THEN  lag der frische Δ-Anker bereits auf Platte, ALS der Reset lief — und
           traegt danach den Briefing-Stand.
@@ -296,7 +297,7 @@ def test_ac27_anker_wird_vor_dem_reset_geschrieben(monkeypatch):
 def test_ac27_ad_hoc_abruf_laesst_anker_und_gedaechtnis_unberuehrt(monkeypatch):
     """AC-27 (Ad-hoc-Haelfte, Bestandsverhalten, Issue #1007).
 
-    GIVEN eine Tour mit einem bestehenden Δ-Anker (20 km/h) und einem
+    GIVEN eine Trip mit einem bestehenden Δ-Anker (20 km/h) und einem
           Melde-Gedaechtnis mit amtlichem UND Aenderungs-Eintrag.
     WHEN  ein Ad-hoc-Abruf laeuft (`on_demand=True`) und dabei ein deutlich
           anderes Wetter (48 km/h) sieht.
@@ -311,7 +312,7 @@ def test_ac27_ad_hoc_abruf_laesst_anker_und_gedaechtnis_unberuehrt(monkeypatch):
     trip = _trip(f"trip-ag5-adhoc-{uuid.uuid4().hex[:6]}")
 
     WeatherSnapshotService(user_id=uid).save_dated(
-        trip.id, date.today(), [_data(1, gust_max_kmh=20.0)]
+        trip.id, ortstag(LAT, LON), [_data(1, gust_max_kmh=20.0)]
     )
     vorher = {
         "gust_max_kmh:1": {"last_reported_value": 42.0, "reported_at": "x"},

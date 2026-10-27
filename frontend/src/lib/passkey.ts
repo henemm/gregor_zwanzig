@@ -20,8 +20,13 @@ export function isWebAuthnSupported(): boolean {
 
 export interface RegisteredPasskey {
 	id: string;
-	label: string;
+	/** Vom Nutzer vergeben und freiwillig — der Server laesst das Feld sonst weg. */
+	label?: string;
+	/** Aus der AAGUID abgeleiteter Geraetename; fehlt bei unbekannter/Null-AAGUID. */
+	authenticator_name?: string;
 	created_at: string;
+	/** Erst nach der ersten Anmeldung gesetzt; nie benutzte Passkeys haben kein Datum. */
+	last_used_at?: string;
 }
 
 /**

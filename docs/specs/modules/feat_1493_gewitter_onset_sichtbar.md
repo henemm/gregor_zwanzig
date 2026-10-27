@@ -3,7 +3,7 @@ entity_id: feat_1493_gewitter_onset_sichtbar
 type: feature
 created: 2026-08-17
 updated: 2026-08-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [thunder, trip, email, onset, issue-1493, issue-1419]
 ---

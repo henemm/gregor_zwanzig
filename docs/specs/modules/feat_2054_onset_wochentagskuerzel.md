@@ -3,14 +3,14 @@ entity_id: feat_2054_onset_wochentagskuerzel
 type: module
 created: 2026-08-22
 updated: 2026-08-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, sms, premium-sms, telegram, nowcast, onset, zeitangabe]
 ---
 
 # Onset-Kurznachricht: Wochentagskürzel statt Zahlensuffix
 
-Issue: [#2054](https://github.com/henemm/gregor_zwanzig/issues/2054) · Milestone „Tour KHW 2026-08"
+Issue: [#2054](https://github.com/henemm/gregor_zwanzig/issues/2054) · Milestone „Trip KHW 2026-08"
 Basis: `origin/main` = `1e0ee151`
 
 ## Approval

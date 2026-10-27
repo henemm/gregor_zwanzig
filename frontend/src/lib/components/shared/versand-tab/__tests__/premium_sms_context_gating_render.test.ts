@@ -1,30 +1,28 @@
-// TDD RED — Issue #1717 (Scheibe S3): Premium-SMS in der Oberflaeche.
+// Issue #1717 (Scheibe S3): Premium-SMS in der Oberflaeche.
 // Spec: docs/specs/modules/feat_1717_s3_premium_sms_ui.md — AC-1.
 //
-// AC-1 ist die Kontext-Trennung: derselbe geteilte Kanal-Baustein
-// (VTBriefingChannels) wird in VIER Mounts gerendert — einmal fuer das
-// Trip-Briefing (`context="route"`, /trips/[id]) und dreimal fuer den
-// Orts-Vergleich (`context="vergleich"`, /compare/[id] + /compare/new Desktop
-// und Mobil, docs/context/feat-1717-s3-premium-sms-ui.md "Vier Mounts").
-// Premium-SMS ist laut ADR-0049 ausschliesslich ein Trip-Briefing-Kanal; im
-// Orts-Vergleich muss der feste "bald verfuegbar"-Platzhalter stehen bleiben.
+// 🔴 Issue #2293 Scheibe S2 (#2448, Architektur-Entscheidung): die urspruengliche
+// AC-1-Zusicherung dieser Datei ("Premium-SMS ist laut ADR-0049 ausschliesslich
+// ein Trip-Briefing-Kanal, im Orts-Vergleich bleibt der feste Platzhalter")
+// beruhte auf einem irrefuehrenden Code-Kommentar, keinem ADR-Beschluss —
+// ADR-0049 aeussert sich nicht zum Ortsvergleich (sie beschreibt ausdruecklich
+// nur die S2a-Lieferung fuers Trip-Briefing). Mit #2448 bekommt der
+// Versand-Reiter des Ortsvergleichs einen EIGENEN, echten Premium-SMS-Schalter
+// (AC-8/AC-9/AC-14 der Spec `feat_2293_s2_compare_alarm_kanaele.md`) — DIESELBE
+// Naht-2-Verdrahtung wie im Trip-Briefing. Die Tests unten sind auf die NEUE
+// Zusicherung umgestellt (schaltbar in BEIDEN Kontexten), nicht geloescht.
 //
 // ZWEI NAEHTE, weil eine Naht die Zusicherung nicht traegt:
 //   1. VTBriefingChannels selbst — rendert den schaltbaren Block nur, wenn die
 //      Prop `onPremiumSmsChange` gesetzt ist (Muster `{#if onTelegramStyleChange}`,
-//      VTBriefingChannels.svelte:155).
-//   2. VersandTab — uebergibt diese Prop NUR im route-Zweig (:202-231), nie im
-//      vergleich-Zweig (:232-285). Die in der Spec benannte Mutation
-//      ("VersandTab uebergibt onPremiumSmsChange auch im vergleich-Zweig")
-//      waere an Naht 1 allein UNSICHTBAR — deshalb wird hier der echte
-//      Wirkort mitgemessen, nicht nur der Ort, an dem der Code steht.
+//      VTBriefingChannels.svelte:155). Diese Naht bleibt unveraendert wichtig:
+//      OHNE Handler bleibt der feste Platzhalter — das ist weiterhin das
+//      strukturelle Freischalt-Gate der geteilten Komponente.
+//   2. VersandTab — uebergibt diese Prop seit #2293 S2 in BEIDEN Zweigen
+//      (route UND vergleich).
 //
 // Echtes serverseitiges Rendern der echten Svelte-Komponenten (svelte/server
 // `render`, Hooks: frontend/test-svelte-ssr-hooks.mjs). Keine Mocks.
-//
-// RED heute: beide Komponentenzweige rendern denselben fest deaktivierten
-// Platzhalter (VTBriefingChannels.svelte:187-192) — es gibt weder die Prop
-// `onPremiumSmsChange` noch das Testid `channel-status-premium-sms`.
 //
 // Pfadregel #1409: alle Pfade relativ zu DIESER Datei.
 //
@@ -114,27 +112,29 @@ function renderVersandTab(context: 'route' | 'vergleich'): string {
 const SCHALTBAR_MARKER = 'data-testid="channel-status-premium-sms"';
 const PLATZHALTER_TEXT = 'bald verfügbar';
 
-describe('#1717 AC-1 — Premium-SMS ist nur im Trip-Briefing schaltbar', () => {
-	test('premium_sms_switchable_only_in_route_context', () => {
+describe('#1717 AC-1 / #2293 S2 (#2448) — Premium-SMS ist in BEIDEN Kontexten schaltbar', () => {
+	test('premium_sms_checkbox_gating_folgt_der_handler_praesenz', () => {
 		// ── Naht 1: der geteilte Baustein selbst, IDENTISCHES Profil ──────────
-		const routeHtml = renderChannels(FRESH, true);
-		const vergleichHtml = renderChannels(FRESH, false);
+		// Strukturelles Gate unveraendert: OHNE `onPremiumSmsChange` bleibt die
+		// Checkbox gesperrt, unabhaengig vom Kontext-Label.
+		const handlerPresentHtml = renderChannels(FRESH, true);
+		const handlerAbsentHtml = renderChannels(FRESH, false);
 
 		assert.equal(
-			isDisabled(checkboxInputTag(routeHtml, 'channel-premium-sms')),
+			isDisabled(checkboxInputTag(handlerPresentHtml, 'channel-premium-sms')),
 			false,
-			'AC-1 (route): Bei Premium-Tier und frischer Rueckadresse muss die Premium-SMS-Checkbox ' +
-				'im Trip-Briefing editierbar sein (kein disabled-Attribut) — heute steht dort ein ' +
-				'fest deaktivierter Platzhalter (VTBriefingChannels.svelte:187-192).'
+			'Bei Premium-Tier und frischer Rueckadresse muss die Premium-SMS-Checkbox editierbar ' +
+				'sein (kein disabled-Attribut), sobald `onPremiumSmsChange` gesetzt ist.'
 		);
 		assert.equal(
-			isDisabled(checkboxInputTag(vergleichHtml, 'channel-premium-sms')),
+			isDisabled(checkboxInputTag(handlerAbsentHtml, 'channel-premium-sms')),
 			true,
-			'AC-1 (vergleich): Ohne `onPremiumSmsChange` darf KEINE schaltbare Premium-SMS-Checkbox ' +
-				'entstehen — Premium-SMS ist laut ADR-0049 kein Vergleichs-Kanal.'
+			'Ohne `onPremiumSmsChange` darf KEINE schaltbare Premium-SMS-Checkbox entstehen — das ' +
+				'ist weiterhin das strukturelle Freischalt-Gate der geteilten Komponente ' +
+				'(VTBriefingChannels.svelte:208).'
 		);
 
-		// ── Naht 2: VersandTab — der Zweig, der die Prop uebergibt ────────────
+		// ── Naht 2: VersandTab — beide Zweige uebergeben die Prop (#2293 S2) ──
 		// Ohne Profil (SSR fuehrt onMount/fetch nicht aus) unterscheidet nicht das
 		// disabled-Attribut die beiden Zweige, sondern OB der schaltbare Block
 		// ueberhaupt gerendert wird.
@@ -147,27 +147,29 @@ describe('#1717 AC-1 — Premium-SMS ist nur im Trip-Briefing schaltbar', () => 
 				`schaltbare Premium-SMS-Block (${SCHALTBAR_MARKER}) entsteht.`
 		);
 		assert.ok(
-			!tabVergleich.includes(SCHALTBAR_MARKER),
-			'AC-1 (VersandTab vergleich): Der vergleich-Zweig darf `onPremiumSmsChange` NICHT ' +
-				'uebergeben — sonst erscheint der schaltbare Premium-SMS-Block auf /compare/[id] und ' +
-				'/compare/new (drei der vier Mounts).'
+			tabVergleich.includes(SCHALTBAR_MARKER),
+			'AC-8/#2448 (VersandTab vergleich): der vergleich-Zweig muss seit Issue #2293 S2 ' +
+				`ebenfalls \`onPremiumSmsChange\` uebergeben, damit der schaltbare Premium-SMS-Block ` +
+				`(${SCHALTBAR_MARKER}) auf /compare/[id] und /compare/new entsteht — die Anwesenheit ` +
+				'dieser Prop ist das bestehende Freischalt-Gate der Komponente.'
 		);
 	});
 
-	test('vergleich_behaelt_den_unveraenderten_platzhalter_hinweis', () => {
-		const vergleichHtml = renderChannels(FRESH, false);
+	test('der feste Platzhalter-Hinweis steht nur noch OHNE Handler — in keinem der beiden Kontexte mehr', () => {
+		const handlerAbsentHtml = renderChannels(FRESH, false);
 		const tabVergleich = renderVersandTab('vergleich');
 		const tabRoute = renderVersandTab('route');
 
 		assert.ok(
-			vergleichHtml.includes(PLATZHALTER_TEXT),
-			`AC-1 (vergleich): Der unveraenderte "${PLATZHALTER_TEXT}"-Hinweis muss im Orts-Vergleich ` +
-				'stehen bleiben.'
+			handlerAbsentHtml.includes(PLATZHALTER_TEXT),
+			`Ohne \`onPremiumSmsChange\` muss der feste "${PLATZHALTER_TEXT}"-Hinweis weiterhin stehen ` +
+				'(strukturelles Gate der geteilten Komponente).'
 		);
 		assert.ok(
-			tabVergleich.includes(PLATZHALTER_TEXT),
-			`AC-1 (VersandTab vergleich): "${PLATZHALTER_TEXT}" fehlt — der Vergleich haette dann ` +
-				'einen Kanal ohne jede Erklaerung.'
+			!tabVergleich.includes(PLATZHALTER_TEXT),
+			`AC-8/#2448 (VersandTab vergleich): "${PLATZHALTER_TEXT}" darf im Ortsvergleich NICHT mehr ` +
+				'stehen — der Kanal ist seit #2293 S2 live und wird hier schaltbar (eigener ' +
+				'Versand-Schalter, AC-8).'
 		);
 		assert.ok(
 			!tabRoute.includes(PLATZHALTER_TEXT),

@@ -1,0 +1,592 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 16 items
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py FFFFFFFFFFFFFFFF         [100%]
+
+=================================== FAILURES ===================================
+___________ test_trip_radar_kaputter_trip_reisst_folgetrip_nicht_mit ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d974f98c80>
+
+    def test_trip_radar_kaputter_trip_reisst_folgetrip_nicht_mit(monkeypatch):
+        """AC-1: Given zwei Trips mit aktivem Radar-Alarm, die Pruefung des ersten
+        wirft (unbrauchbares Quellenergebnis) / When der Radar-Lauf ueber den
+        echten Endpunkt laeuft / Then bekommt der zweite Trip seinen Alarm (Mail +
+        Sperrzeit gebucht), die Antwort ist HTTP 200 mit ``failed == 1`` und
+        nicht ``partial``.
+    
+        RED heute: der AttributeError bricht den Lauf ab (HTTP 500), der zweite
+        Trip wird nie geprueft."""
+        uid = _uid("ac1")
+        ids = _make_trips(uid, ["a-kaputt", "b-heil"])
+        mails: list = []
+        radar = _UnbrauchbaresErgebnis(_trip_idx, wet=True, kaputt_idx=(0,))
+        _bind_trip_service(monkeypatch, mails, radar=radar)
+    
+        resp = _post("radar-alert-checks", uid)
+        data = _json(resp)
+    
+>       assert len(_mails_fuer(mails, uid)) == 1, (
+            f"Der Folge-Trip {ids[1]!r} muss im selben Lauf alarmiert werden "
+            f"(Mails: {len(mails)}, Antwort {resp.status_code} {data!r})"
+        )
+E       AssertionError: Der Folge-Trip 'b-heil' muss im selben Lauf alarmiert werden (Mails: 0, Antwort 500 {'_raw': 'Internal Server Error'})
+E       assert 0 == 1
+E        +  where 0 = len([])
+E        +    where [] = _mails_fuer([], 'tdd-2261s2-ac1-2847ef')
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:370: AssertionError
+__________ test_unwetterlauf_kaputter_trip_reisst_folgetrip_nicht_mit __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d962732ae0>
+
+    def test_unwetterlauf_kaputter_trip_reisst_folgetrip_nicht_mit(monkeypatch):
+        """AC-2: Given zwei Trips mit amtlicher Gewitterwarnung im Lauf
+        ``check_all_trips``, beim ersten wirft der Wetter-Anker-Zugriff / When der
+        Lauf ueber ``/alert-checks`` startet / Then erhaelt der zweite Trip seine
+        Warnung, Antwort HTTP 200 mit ``failed == 1``, nicht ``partial``.
+    
+        RED heute: die Ausnahme bricht den Lauf ab (HTTP 500), keine Warnung."""
+        uid = _uid("ac2")
+        _unwetter_trips(uid, ["a-kaputt", "b-heil"])
+        mails: list = []
+        _bind_trip_service(monkeypatch, mails, kaputter_anker=("a-kaputt",))
+    
+        resp = _post("alert-checks", uid)
+        data = _json(resp)
+    
+>       assert len(_mails_fuer(mails, uid)) == 1, (
+            f"Der Folge-Trip 'b-heil' muss seine Warnung bekommen (Mails: {len(mails)}, "
+            f"Antwort {resp.status_code} {data!r})"
+        )
+E       AssertionError: Der Folge-Trip 'b-heil' muss seine Warnung bekommen (Mails: 0, Antwort 500 {'_raw': 'Internal Server Error'})
+E       assert 0 == 1
+E        +  where 0 = len([])
+E        +    where [] = _mails_fuer([], 'tdd-2261s2-ac2-4ef607')
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:405: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,015 INFO services.weather_snapshot: Dated snapshot saved: a-kaputt_2026-10-01.json
+2026-10-01 07:30:00,017 INFO services.weather_snapshot: Dated snapshot saved: b-heil_2026-10-01.json
+------------------------------ Captured log call -------------------------------
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: a-kaputt_2026-10-01.json
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: b-heil_2026-10-01.json
+_ test_ortsvergleich_abweichungslauf_kaputtes_preset_reisst_folgepreset_nicht_mit _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d962694980>
+
+    def test_ortsvergleich_abweichungslauf_kaputtes_preset_reisst_folgepreset_nicht_mit(monkeypatch):
+        """AC-3 (Standard-Lauf, ``/compare-alert-checks``): erstes Preset hat ein
+        kaputtes ``display_config`` (String) -> das zweite wird trotzdem geprueft
+        und alarmiert, Antwort 200 mit ``failed == 1``.
+    
+        RED heute: AttributeError in ``_build_eval_config`` -> HTTP 500."""
+        uid = _uid("ac3a")
+        specs = [("p-a-kaputt", {"display_config": "kaputt"}), ("p-b-heil", {})]
+        _deviation_presets(uid, specs)
+        mails: list = []
+        _bind_compare_alert(monkeypatch, mails, _deviation_source([s[0] for s in specs]))
+    
+        resp = _post("compare-alert-checks", uid)
+        data = _json(resp)
+    
+>       assert len(_mails_fuer(mails, uid)) == 1, (
+            f"Folge-Preset 'p-b-heil' muss alarmiert werden (Mails: {len(mails)}, "
+            f"Antwort {resp.status_code} {data!r})"
+        )
+E       AssertionError: Folge-Preset 'p-b-heil' muss alarmiert werden (Mails: 0, Antwort 500 {'_raw': 'Internal Server Error'})
+E       assert 0 == 1
+E        +  where 0 = len([])
+E        +    where [] = _mails_fuer([], 'tdd-2261s2-ac3a-c6f5e0')
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:434: AssertionError
+__ test_ortsvergleich_radarlauf_kaputtes_preset_reisst_folgepreset_nicht_mit ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d962695ee0>
+
+    def test_ortsvergleich_radarlauf_kaputtes_preset_reisst_folgepreset_nicht_mit(monkeypatch):
+        """AC-3 (Radar-Lauf, ``/compare-radar-alert-checks``): erstes Preset hat
+        ein kaputtes ``alert_cooldown_minutes`` (String), beide Orte melden Regen
+        -> das zweite Preset wird alarmiert, Antwort 200 mit ``failed == 1``.
+    
+        RED heute: TypeError beim Versandaufbau des ersten Presets -> HTTP 500."""
+        uid = _uid("ac3r")
+        ids = _radar_presets(uid, [
+            ("p-a-kaputt", {"alert_cooldown_minutes": "kaputt"}), ("p-b-heil", {}),
+        ])
+        mails: list = []
+        _bind_compare_radar(monkeypatch, mails, _ScriptedRadar(_loc_idx, wet=True))
+    
+        resp = _post("compare-radar-alert-checks", uid)
+        data = _json(resp)
+    
+>       assert len(_mails_fuer(mails, uid)) == 1, (
+            f"Folge-Preset {ids[1]!r} muss alarmiert werden (Mails: {len(mails)}, "
+            f"Antwort {resp.status_code} {data!r})"
+        )
+E       AssertionError: Folge-Preset 'p-b-heil' muss alarmiert werden (Mails: 0, Antwort 500 {'_raw': 'Internal Server Error'})
+E       assert 0 == 1
+E        +  where 0 = len([])
+E        +    where [] = _mails_fuer([], 'tdd-2261s2-ac3r-78f0f9')
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:460: AssertionError
+___ test_ortsvergleich_amtlich_kaputtes_preset_reisst_folgepreset_nicht_mit ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d962695670>
+
+    def test_ortsvergleich_amtlich_kaputtes_preset_reisst_folgepreset_nicht_mit(monkeypatch):
+        """AC-3 (amtliche Warnungen, ``/compare-official-alert-checks``): erstes
+        Preset hat ein kaputtes ``official_warnings`` (String) -> das zweite
+        bekommt seine Warnung, Antwort 200 mit ``failed == 1``.
+    
+        RED heute: AttributeError in ``_check_one_preset`` -> HTTP 500."""
+        uid = _uid("ac3o")
+        _official_presets(uid, [
+            ("p-a-kaputt", {"official_warnings": "kaputt"}), ("p-b-heil", {}),
+        ], warn_for=["p-a-kaputt", "p-b-heil"])
+        mails: list = []
+        _bind_compare_official(monkeypatch, mails)
+    
+        resp = _post("compare-official-alert-checks", uid)
+        data = _json(resp)
+    
+>       assert len(_mails_fuer(mails, uid)) == 1, (
+            f"Folge-Preset 'p-b-heil' muss seine Warnung bekommen (Mails: {len(mails)}, "
+            f"Antwort {resp.status_code} {data!r})"
+        )
+E       AssertionError: Folge-Preset 'p-b-heil' muss seine Warnung bekommen (Mails: 0, Antwort 500 {'_raw': 'Internal Server Error'})
+E       assert 0 == 1
+E        +  where 0 = len([])
+E        +    where [] = _mails_fuer([], 'tdd-2261s2-ac3o-0085ae')
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:486: AssertionError
+___ test_trip_radar_grenzabbruch_nach_gescheitertem_trip_partial_und_failed ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d962647bc0>
+
+    def test_trip_radar_grenzabbruch_nach_gescheitertem_trip_partial_und_failed(monkeypatch):
+        """AC-4: Trip 1 scheitert, Trip 2 bricht mit ``RadarDeadlineExceeded``
+        ab, Trip 3 wird nicht erreicht / Then ``status == "partial"``,
+        ``reason == "deadline"``, ``failed == 1`` (nur Trip 1), Trip 2 und 3 in
+        ``skipped_ids`` (der Grenzabbruch wird NICHT vom breiten Fehlerfaenger
+        geschluckt — sonst waere failed 2 und Trip 3 wuerde noch geprueft).
+    
+        RED heute: Trip 1 bricht den Lauf ab (HTTP 500)."""
+        uid = _uid("ac4t")
+        ids = _make_trips(uid, ["a-kaputt", "b-grenze", "c-rest"])
+        radar = _UnbrauchbaresErgebnis(
+            _trip_idx, kaputt_idx=(0,),
+            raise_on=(1, 1, RadarDeadlineExceeded("Zeitgrenze")),
+        )
+        _bind_trip_service(monkeypatch, [], radar=radar)
+    
+        resp = _post("radar-alert-checks", uid)
+        data = _json(resp)
+    
+>       assert resp.status_code == 200, (resp.status_code, data)
+E       AssertionError: (500, {'_raw': 'Internal Server Error'})
+E       assert 500 == 200
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:519: AssertionError
+____________ test_trip_radar_reiner_grenzabbruch_meldet_failed_null ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d9626d34d0>
+
+    def test_trip_radar_reiner_grenzabbruch_meldet_failed_null(monkeypatch):
+        """AC-4: Grenzabbruch ohne gescheiterten Trip -> ``partial``/``deadline``
+        und ``failed == 0`` (Feld vorhanden, Zeitgrenze ist kein Ausfall).
+    
+        RED heute: die Antwort traegt kein ``failed``."""
+        uid = _uid("ac4p")
+        _make_trips(uid, ["a", "b", "c", "d"])
+        _patch_deadline(monkeypatch, DEADLINE_S)
+        _bind_trip_service(monkeypatch, [], radar=_ScriptedRadar(_trip_idx, sleep_first_s=SLEEP_S))
+    
+        data = _json(_post("radar-alert-checks", uid))
+    
+        assert data.get("status") == "partial" and data.get("reason") == "deadline", data
+>       assert "failed" in data and data["failed"] == 0, (
+            f"Grenzabbruch ist kein Ausfall: failed muss vorhanden und 0 sein: {data!r}"
+        )
+E       AssertionError: Grenzabbruch ist kein Ausfall: failed muss vorhanden und 0 sein: {'status': 'partial', 'count': 0, 'checked': 2, 'skipped': 2, 'skipped_ids': ['c', 'd'], 'duration_s': 0.803, 'reason': 'deadline'}
+E       assert ('failed' in {'checked': 2, 'count': 0, 'duration_s': 0.803, 'reason': 'deadline', ...})
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:545: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,842 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac4p-1b3b68 — checked=2 skipped=2 skipped_ids=['c', 'd']
+------------------------------ Captured log call -------------------------------
+WARNING  trip_alert:trip_alert.py:1879 check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac4p-1b3b68 — checked=2 skipped=2 skipped_ids=['c', 'd']
+_ test_ortsvergleich_radar_grenzabbruch_nach_gescheitertem_preset_partial_und_failed _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d9626d3f50>
+
+    def test_ortsvergleich_radar_grenzabbruch_nach_gescheitertem_preset_partial_und_failed(monkeypatch):
+        """AC-4 (Ortsvergleich-Radar): Preset 1 scheitert (kaputte Daten), Preset 2
+        bricht an der Zeitgrenze ab, Preset 3 nicht erreicht -> ``partial`` und
+        ``failed == 1`` getrennt gezaehlt, Preset 2/3 in ``skipped_ids``.
+    
+        RED heute: Preset 1 bricht den Lauf ab (HTTP 500)."""
+        uid = _uid("ac4c")
+        ids = _radar_presets(uid, [
+            ("p-a-kaputt", {"alert_cooldown_minutes": "kaputt"}), ("p-b-grenze", {}), ("p-c-rest", {}),
+        ])
+        radar = _ScriptedRadar(_loc_idx, wet=True, raise_on=(1, 1, RadarDeadlineExceeded("Zeitgrenze")))
+        _bind_compare_radar(monkeypatch, [], radar)
+    
+        resp = _post("compare-radar-alert-checks", uid)
+        data = _json(resp)
+    
+>       assert resp.status_code == 200, (resp.status_code, data)
+E       AssertionError: (500, {'_raw': 'Internal Server Error'})
+E       assert 500 == 200
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:566: AssertionError
+___________ test_kaputter_trip_rueckt_in_der_reihenfolge_nach_hinten ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d9624d0b90>
+
+    def test_kaputter_trip_rueckt_in_der_reihenfolge_nach_hinten(monkeypatch):
+        """AC-5: Given vier Trips, der (nach ID) erste scheitert bei JEDEM Lauf,
+        die Zeitgrenze laesst je Lauf nur zwei Trips zu / When zwei Radar-Laeufe
+        nacheinander / Then
+        * Lauf 1 erreicht ``a-kaputt`` und ``b`` (``checked == 2`` — der
+          gescheiterte Trip zaehlt mit, festgeschrieben), ``failed == 1``;
+        * Lauf 2 beginnt mit den nicht erreichten ``c``, ``d`` — der kaputte Trip
+          blockiert die Spitze nicht, weil sein Stempel VOR der Pruefung gesetzt
+          wurde (Mutation „Stempel nach dem try" -> ``a-kaputt`` stuende ohne
+          Stempel wieder vorn -> rot).
+    
+        RED heute: Lauf 1 bricht an ``a-kaputt`` ab (HTTP 500), ``b`` wird nie
+        erreicht."""
+        uid = _uid("ac5")
+        ids = _make_trips(uid, ["a-kaputt", "b", "c", "d"])
+        _patch_deadline(monkeypatch, DEADLINE_S)
+    
+        radar1 = _UnbrauchbaresErgebnis(_trip_idx, kaputt_idx=(0,), sleep_first_s=SLEEP_S)
+        _bind_trip_service(monkeypatch, [], radar=radar1)
+        resp1 = _post("radar-alert-checks", uid)
+        first = _json(resp1)
+        run1 = [ids[i] for i in radar1.first_seen]
+    
+        radar2 = _UnbrauchbaresErgebnis(_trip_idx, kaputt_idx=(0,), sleep_first_s=SLEEP_S)
+        _bind_trip_service(monkeypatch, [], radar=radar2)
+        second = _json(_post("radar-alert-checks", uid))
+        run2 = [ids[i] for i in radar2.first_seen]
+    
+>       assert run1 == ["a-kaputt", "b"], (
+            f"Lauf 1 muss nach dem gescheiterten Trip weiterlaufen: erreicht {run1!r}, "
+            f"Antwort {resp1.status_code} {first!r}"
+        )
+E       AssertionError: Lauf 1 muss nach dem gescheiterten Trip weiterlaufen: erreicht ['a-kaputt'], Antwort 500 {'_raw': 'Internal Server Error'}
+E       assert ['a-kaputt'] == ['a-kaputt', 'b']
+E         
+E         Right contains one more item: 'b'
+E         Use -v to get more diff
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:605: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:01,261 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac5-3ade87 — checked=2 skipped=2 skipped_ids=['d', 'a-kaputt']
+------------------------------ Captured log call -------------------------------
+WARNING  trip_alert:trip_alert.py:1879 check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac5-3ade87 — checked=2 skipped=2 skipped_ids=['d', 'a-kaputt']
+_______________ test_log_trip_radar_nennt_trip_id_mit_stacktrace _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d9624d3dd0>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d9624d3d10>
+
+    def test_log_trip_radar_nennt_trip_id_mit_stacktrace(monkeypatch, caplog):
+        """AC-6 (Trip-Radar): ERROR-Eintrag mit der Trip-ID UND exc_info.
+    
+        RED heute: kein solcher Eintrag (der Lauf stirbt, Starlette loggt nur
+        eine ID-lose ASGI-Ausnahme)."""
+        uid = _uid("ac6t")
+        _make_trips(uid, ["a-kaputt-log", "b-heil"])
+        _bind_trip_service(monkeypatch, [], radar=_UnbrauchbaresErgebnis(_trip_idx, wet=True))
+        with caplog.at_level(logging.ERROR):
+            _post("radar-alert-checks", uid)
+>       _assert_error_log_mit_stacktrace(caplog, "a-kaputt-log", "AttributeError")
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:633: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d9624d3d10>
+unit_id = 'a-kaputt-log', exc_name = 'AttributeError'
+
+    def _assert_error_log_mit_stacktrace(caplog, unit_id: str, exc_name: str) -> None:
+        records = _error_records_mit_id(caplog, unit_id)
+        mit_trace = [
+            r for r in records
+            if r.exc_info and r.exc_info[0] is not None and r.exc_info[0].__name__ == exc_name
+        ]
+>       assert mit_trace, (
+            f"Erwartet: ERROR-Eintrag mit der ID {unit_id!r} UND Stacktrace (exc_info, "
+            f"{exc_name}). ERROR-Eintraege mit der ID: "
+            f"{[(r.getMessage(), bool(r.exc_info)) for r in records]!r}; alle ERROR: "
+            f"{[r.getMessage()[:120] for r in caplog.records if r.levelno >= logging.ERROR]!r}"
+        )
+E       AssertionError: Erwartet: ERROR-Eintrag mit der ID 'a-kaputt-log' UND Stacktrace (exc_info, AttributeError). ERROR-Eintraege mit der ID: []; alle ERROR: []
+E       assert []
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:340: AssertionError
+______________ test_log_unwetterlauf_nennt_trip_id_mit_stacktrace ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d9626d1160>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d9626d0350>
+
+    def test_log_unwetterlauf_nennt_trip_id_mit_stacktrace(monkeypatch, caplog):
+        """AC-6 (check_all_trips): ERROR-Eintrag mit der Trip-ID UND exc_info."""
+        uid = _uid("ac6u")
+        _unwetter_trips(uid, ["a-kaputt-log", "b-heil"])
+        _bind_trip_service(monkeypatch, [], kaputter_anker=("a-kaputt-log",))
+        with caplog.at_level(logging.ERROR):
+            _post("alert-checks", uid)
+>       _assert_error_log_mit_stacktrace(caplog, "a-kaputt-log", "RuntimeError")
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:643: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d9626d0350>
+unit_id = 'a-kaputt-log', exc_name = 'RuntimeError'
+
+    def _assert_error_log_mit_stacktrace(caplog, unit_id: str, exc_name: str) -> None:
+        records = _error_records_mit_id(caplog, unit_id)
+        mit_trace = [
+            r for r in records
+            if r.exc_info and r.exc_info[0] is not None and r.exc_info[0].__name__ == exc_name
+        ]
+>       assert mit_trace, (
+            f"Erwartet: ERROR-Eintrag mit der ID {unit_id!r} UND Stacktrace (exc_info, "
+            f"{exc_name}). ERROR-Eintraege mit der ID: "
+            f"{[(r.getMessage(), bool(r.exc_info)) for r in records]!r}; alle ERROR: "
+            f"{[r.getMessage()[:120] for r in caplog.records if r.levelno >= logging.ERROR]!r}"
+        )
+E       AssertionError: Erwartet: ERROR-Eintrag mit der ID 'a-kaputt-log' UND Stacktrace (exc_info, RuntimeError). ERROR-Eintraege mit der ID: []; alle ERROR: []
+E       assert []
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:340: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,013 INFO services.weather_snapshot: Dated snapshot saved: a-kaputt-log_2026-10-01.json
+2026-10-01 07:30:00,015 INFO services.weather_snapshot: Dated snapshot saved: b-heil_2026-10-01.json
+------------------------------ Captured log call -------------------------------
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: a-kaputt-log_2026-10-01.json
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: b-heil_2026-10-01.json
+________ test_log_ortsvergleich_amtlich_nennt_preset_id_mit_stacktrace _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d962647e60>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d962646b40>
+
+    def test_log_ortsvergleich_amtlich_nennt_preset_id_mit_stacktrace(monkeypatch, caplog):
+        """AC-6 (Ortsvergleich, amtlich): ERROR-Eintrag mit der Preset-ID UND
+        exc_info."""
+        uid = _uid("ac6o")
+        _official_presets(uid, [
+            ("p-a-kaputt-log", {"official_warnings": "kaputt"}), ("p-b-heil", {}),
+        ], warn_for=["p-a-kaputt-log", "p-b-heil"])
+        _bind_compare_official(monkeypatch, [])
+        with caplog.at_level(logging.ERROR):
+            _post("compare-official-alert-checks", uid)
+>       _assert_error_log_mit_stacktrace(caplog, "p-a-kaputt-log", "AttributeError")
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:656: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d962646b40>
+unit_id = 'p-a-kaputt-log', exc_name = 'AttributeError'
+
+    def _assert_error_log_mit_stacktrace(caplog, unit_id: str, exc_name: str) -> None:
+        records = _error_records_mit_id(caplog, unit_id)
+        mit_trace = [
+            r for r in records
+            if r.exc_info and r.exc_info[0] is not None and r.exc_info[0].__name__ == exc_name
+        ]
+>       assert mit_trace, (
+            f"Erwartet: ERROR-Eintrag mit der ID {unit_id!r} UND Stacktrace (exc_info, "
+            f"{exc_name}). ERROR-Eintraege mit der ID: "
+            f"{[(r.getMessage(), bool(r.exc_info)) for r in records]!r}; alle ERROR: "
+            f"{[r.getMessage()[:120] for r in caplog.records if r.levelno >= logging.ERROR]!r}"
+        )
+E       AssertionError: Erwartet: ERROR-Eintrag mit der ID 'p-a-kaputt-log' UND Stacktrace (exc_info, AttributeError). ERROR-Eintraege mit der ID: []; alle ERROR: []
+E       assert []
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:340: AssertionError
+_________ test_log_ortsvergleich_radar_nennt_preset_id_mit_stacktrace __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d9624ee210>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d9624ee390>
+
+    def test_log_ortsvergleich_radar_nennt_preset_id_mit_stacktrace(monkeypatch, caplog):
+        """AC-6 (Ortsvergleich, Radar): ERROR-Eintrag mit der Preset-ID UND
+        exc_info."""
+        uid = _uid("ac6r")
+        _radar_presets(uid, [
+            ("p-a-kaputt-log", {"alert_cooldown_minutes": "kaputt"}), ("p-b-heil", {}),
+        ])
+        _bind_compare_radar(monkeypatch, [], _ScriptedRadar(_loc_idx, wet=True))
+        with caplog.at_level(logging.ERROR):
+            _post("compare-radar-alert-checks", uid)
+>       _assert_error_log_mit_stacktrace(caplog, "p-a-kaputt-log", "TypeError")
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:669: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d9624ee390>
+unit_id = 'p-a-kaputt-log', exc_name = 'TypeError'
+
+    def _assert_error_log_mit_stacktrace(caplog, unit_id: str, exc_name: str) -> None:
+        records = _error_records_mit_id(caplog, unit_id)
+        mit_trace = [
+            r for r in records
+            if r.exc_info and r.exc_info[0] is not None and r.exc_info[0].__name__ == exc_name
+        ]
+>       assert mit_trace, (
+            f"Erwartet: ERROR-Eintrag mit der ID {unit_id!r} UND Stacktrace (exc_info, "
+            f"{exc_name}). ERROR-Eintraege mit der ID: "
+            f"{[(r.getMessage(), bool(r.exc_info)) for r in records]!r}; alle ERROR: "
+            f"{[r.getMessage()[:120] for r in caplog.records if r.levelno >= logging.ERROR]!r}"
+        )
+E       AssertionError: Erwartet: ERROR-Eintrag mit der ID 'p-a-kaputt-log' UND Stacktrace (exc_info, TypeError). ERROR-Eintraege mit der ID: []; alle ERROR: []
+E       assert []
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:340: AssertionError
+_______ test_log_ortsvergleich_abweichung_nennt_preset_id_mit_stacktrace _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d9624ed2b0>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d9624ee450>
+
+    def test_log_ortsvergleich_abweichung_nennt_preset_id_mit_stacktrace(monkeypatch, caplog):
+        """AC-6 (Ortsvergleich, Abweichung): ERROR-Eintrag mit der Preset-ID UND
+        exc_info."""
+        uid = _uid("ac6a")
+        specs = [("p-a-kaputt-log", {"display_config": "kaputt"}), ("p-b-heil", {})]
+        _deviation_presets(uid, specs)
+        _bind_compare_alert(monkeypatch, [], _deviation_source([s[0] for s in specs]))
+        with caplog.at_level(logging.ERROR):
+            _post("compare-alert-checks", uid)
+>       _assert_error_log_mit_stacktrace(caplog, "p-a-kaputt-log", "AttributeError")
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:681: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d9624ee450>
+unit_id = 'p-a-kaputt-log', exc_name = 'AttributeError'
+
+    def _assert_error_log_mit_stacktrace(caplog, unit_id: str, exc_name: str) -> None:
+        records = _error_records_mit_id(caplog, unit_id)
+        mit_trace = [
+            r for r in records
+            if r.exc_info and r.exc_info[0] is not None and r.exc_info[0].__name__ == exc_name
+        ]
+>       assert mit_trace, (
+            f"Erwartet: ERROR-Eintrag mit der ID {unit_id!r} UND Stacktrace (exc_info, "
+            f"{exc_name}). ERROR-Eintraege mit der ID: "
+            f"{[(r.getMessage(), bool(r.exc_info)) for r in records]!r}; alle ERROR: "
+            f"{[r.getMessage()[:120] for r in caplog.records if r.levelno >= logging.ERROR]!r}"
+        )
+E       AssertionError: Erwartet: ERROR-Eintrag mit der ID 'p-a-kaputt-log' UND Stacktrace (exc_info, AttributeError). ERROR-Eintraege mit der ID: []; alle ERROR: []
+E       assert []
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:340: AssertionError
+_________________ test_zwei_nutzer_trip_radar_fehler_nur_bei_a _________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d962508c80>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d96250bb30>
+
+    def test_zwei_nutzer_trip_radar_fehler_nur_bei_a(monkeypatch, caplog):
+        """AC-10 (Trip): Nutzer A hat einen kaputten und einen gesunden Trip,
+        Nutzer B einen gesunden; derselbe Radar-Dienst, je Nutzer ein eigener
+        Endpunkt-Aufruf (wie Go ihn macht) / Then werden A's gesunder Trip und
+        B's Trip alarmiert, ``failed`` ist bei A 1 und bei B 0, der ERROR-Eintrag
+        traegt nur A's Trip-ID, unter ``default`` aendert sich nichts.
+    
+        RED heute: A's Lauf bricht ab (HTTP 500, A's gesunder Trip ohne Alarm),
+        B's Antwort traegt kein ``failed``."""
+        user_a, user_b = _uid("ac10ta"), _uid("ac10tb")
+        _make_trips(user_a, ["a-kaputt", "a-heil"])
+        _make_trips(user_b, ["b-heil"])
+        default_before = _default_snapshot()
+        mails: list = []
+        # Index 0 ist nur bei Nutzer A kaputt (B's einziger Trip liegt ebenfalls auf Index 0).
+        radar = _UnbrauchbaresErgebnis(_trip_idx, wet=True, kaputt_idx=(0,), kaputt_user=user_a)
+        _bind_trip_service(monkeypatch, mails, radar=radar)
+    
+        with caplog.at_level(logging.ERROR):
+            resp_a = _post("radar-alert-checks", user_a)
+            resp_b = _post("radar-alert-checks", user_b)
+        data_a, data_b = _json(resp_a), _json(resp_b)
+    
+        assert len(_mails_fuer(mails, user_a)) == 1, (
+            f"A's gesunder Trip muss alarmiert werden: {len(_mails_fuer(mails, user_a))} "
+            f"Mails, Antwort {resp_a.status_code} {data_a!r}"
+        )
+        assert ThrottleStore(user_a).last_sent("radar", "a-heil") is not None
+        assert len(_mails_fuer(mails, user_b)) == 1, data_b
+        assert ThrottleStore(user_b).last_sent("radar", "b-heil") is not None
+>       assert resp_a.status_code == 200 and data_a.get("failed") == 1, (resp_a.status_code, data_a)
+E       AssertionError: (500, {'_raw': 'Internal Server Error'})
+E       assert (500 == 200)
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:728: AssertionError
+_______________ test_zwei_nutzer_ortsvergleich_fehler_nur_bei_a ________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x74d962501940>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x74d962503410>
+
+    def test_zwei_nutzer_ortsvergleich_fehler_nur_bei_a(monkeypatch, caplog):
+        """AC-10 (Ortsvergleich, amtlich): Nutzer A hat ein kaputtes und ein
+        gesundes Preset, Nutzer B ein gesundes / Then werden A's gesundes und B's
+        Preset gewarnt, ``failed`` A=1/B=0, der ERROR-Eintrag traegt nur A's
+        Preset-ID, unter ``default`` aendert sich nichts.
+    
+        RED heute: A's Lauf bricht ab (HTTP 500), B's Antwort ohne ``failed``."""
+        user_a, user_b = _uid("ac10ca"), _uid("ac10cb")
+        _official_presets(user_a, [
+            ("p-a-kaputt", {"official_warnings": "kaputt"}), ("p-a-heil", {}),
+        ], warn_for=["p-a-kaputt", "p-a-heil"])
+        # Fake-Quellen sind global registriert: B's Ort bekommt eine eigene Breite.
+        _official_presets(user_b, [("p-b-heil", {})], warn_for=["p-b-heil"], offset=2)
+        default_before = _default_snapshot()
+        mails: list = []
+        _bind_compare_official(monkeypatch, mails)
+    
+        with caplog.at_level(logging.ERROR):
+            resp_a = _post("compare-official-alert-checks", user_a)
+            resp_b = _post("compare-official-alert-checks", user_b)
+        data_a, data_b = _json(resp_a), _json(resp_b)
+    
+        assert len(_mails_fuer(mails, user_a)) == 1, (
+            f"A's gesundes Preset muss gewarnt werden: Antwort {resp_a.status_code} {data_a!r}"
+        )
+        assert len(_mails_fuer(mails, user_b)) == 1, data_b
+>       assert resp_a.status_code == 200 and data_a.get("failed") == 1, (resp_a.status_code, data_a)
+E       AssertionError: (500, {'_raw': 'Internal Server Error'})
+E       assert (500 == 200)
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py:761: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_trip_radar_kaputter_trip_reisst_folgetrip_nicht_mit
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_unwetterlauf_kaputter_trip_reisst_folgetrip_nicht_mit
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_ortsvergleich_abweichungslauf_kaputtes_preset_reisst_folgepreset_nicht_mit
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_ortsvergleich_radarlauf_kaputtes_preset_reisst_folgepreset_nicht_mit
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_ortsvergleich_amtlich_kaputtes_preset_reisst_folgepreset_nicht_mit
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_trip_radar_grenzabbruch_nach_gescheitertem_trip_partial_und_failed
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_trip_radar_reiner_grenzabbruch_meldet_failed_null
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_ortsvergleich_radar_grenzabbruch_nach_gescheitertem_preset_partial_und_failed
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_kaputter_trip_rueckt_in_der_reihenfolge_nach_hinten
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_log_trip_radar_nennt_trip_id_mit_stacktrace
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_log_unwetterlauf_nennt_trip_id_mit_stacktrace
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_log_ortsvergleich_amtlich_nennt_preset_id_mit_stacktrace
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_log_ortsvergleich_radar_nennt_preset_id_mit_stacktrace
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_log_ortsvergleich_abweichung_nennt_preset_id_mit_stacktrace
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_zwei_nutzer_trip_radar_fehler_nur_bei_a
+FAILED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_zwei_nutzer_ortsvergleich_fehler_nur_bei_a
+============================== 16 failed in 4.54s ==============================

@@ -31,7 +31,11 @@ from output.channels import email as email_mod
 from output.channels import sms as sms_mod
 from output.channels.base import OutputConfigError
 from output.channels.email import EmailOutput
-from output.channels.sms import SMSOutput
+from tests.helpers.sms_empfaenger import premium_ausgang, sms_ausgang
+
+# Issue #1412 S4b: Ausgaenge senden nur noch an einen belegten Empfaenger
+# (bestaetigte Nummer bzw. gelernte Rueckadresse im Profil dieses Kunden).
+SMS_KUNDE = "kunde-herkunft"
 
 # Lokal (@henemm.com) statt extern: smtp_host="mail.henemm.com" (Nicht-Resend-
 # Pfad, s. #1235) lässt nur lokale Empfänger durch -- ein echter Resend-Host
@@ -136,7 +140,9 @@ def _prod_style_sms_settings(**overrides) -> Settings:
 def test_sms_test_origin_switches_to_sandbox_key(sms_httpx_sink):
     """AC-6 (SMS): Testlauf-Herkunft erzwingt den Sandbox-Key -- der laut
     seven.io-Doku nie eine echte SMS sendet."""
-    SMSOutput(_prod_style_sms_settings(seven_sandbox_key="sandbox-key")).send("x", "Text")
+    sms_ausgang(
+        _prod_style_sms_settings(seven_sandbox_key="sandbox-key"), SMS_KUNDE, PROD_SMS_TO,
+    ).send("x", "Text")
 
     assert sms_httpx_sink.calls[0]["headers"]["X-Api-Key"] == "sandbox-key"
 
@@ -144,7 +150,9 @@ def test_sms_test_origin_switches_to_sandbox_key(sms_httpx_sink):
 def test_sms_test_origin_without_sandbox_key_hard_aborts(sms_httpx_sink):
     """AC-6 (SMS): keine Sandbox-Key konfiguriert -> harter Abbruch, kein POST."""
     with pytest.raises(OutputConfigError, match="1476"):
-        SMSOutput(_prod_style_sms_settings(seven_sandbox_key=None)).send("x", "Text")
+        sms_ausgang(
+            _prod_style_sms_settings(seven_sandbox_key=None), SMS_KUNDE, PROD_SMS_TO,
+        ).send("x", "Text")
 
     assert sms_httpx_sink.calls == []
 
@@ -154,7 +162,7 @@ def test_sms_production_origin_delivers_unchanged(sms_httpx_sink, monkeypatch):
     unveraenderter Prod-Key, wie vor #1476."""
     monkeypatch.setattr(sms_mod, "running_origin", lambda module_file: "production")
 
-    SMSOutput(_prod_style_sms_settings()).send("x", "Text")
+    sms_ausgang(_prod_style_sms_settings(), SMS_KUNDE, PROD_SMS_TO).send("x", "Text")
 
     assert sms_httpx_sink.calls[0]["headers"]["X-Api-Key"] == "prod-key"
 
@@ -232,12 +240,10 @@ def test_premium_sms_test_origin_switches_to_sandbox_key(premium_sms_stub):
     """AC-7 (Premium-SMS): Testlauf-Herkunft — jeder pytest-Lauf in einem
     Arbeitsordner ist eine — erzwingt den Sandbox-Key, der laut seven.io-Doku
     nie eine echte SMS sendet."""
-    from output.channels.premium_sms import PremiumSmsOutput
-
     settings = _prod_style_premium_sms_settings(
         premium_sms_stub.port, seven_sandbox_key="sandbox-key",
     )
-    PremiumSmsOutput(settings).send("x", "Text")
+    premium_ausgang(settings, SMS_KUNDE, PREMIUM_REPLY_TO).send("x", "Text")
 
     assert len(premium_sms_stub.received) == 1, (
         f"Erwartet genau EINEN POST, bekommen: {premium_sms_stub.received!r}"
@@ -251,13 +257,11 @@ def test_premium_sms_test_origin_switches_to_sandbox_key(premium_sms_stub):
 def test_premium_sms_test_origin_without_sandbox_key_hard_aborts(premium_sms_stub):
     """AC-7 (Premium-SMS): kein Sandbox-Key konfiguriert -> harter Abbruch,
     BEVOR ein HTTP-Aufruf stattfindet."""
-    from output.channels.premium_sms import PremiumSmsOutput
-
     settings = _prod_style_premium_sms_settings(
         premium_sms_stub.port, seven_sandbox_key=None,
     )
     with pytest.raises(OutputConfigError, match="1476"):
-        PremiumSmsOutput(settings).send("x", "Text")
+        premium_ausgang(settings, SMS_KUNDE, PREMIUM_REPLY_TO).send("x", "Text")
 
     assert premium_sms_stub.received == [], (
         f"Trotz Abbruch ging etwas hinaus: {premium_sms_stub.received!r}"

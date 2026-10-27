@@ -28,14 +28,21 @@ from email.header import decode_header, make_header
 from pathlib import Path
 
 import pytest
-from dotenv import load_dotenv
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-load_dotenv(REPO_ROOT / ".env")
 
 # Issue #1210 B1: echter Versand + IMAP-Verifikation -> addopts-wirksamer
 # Marker statt nur Credential-Skip (primaere Ausschlussmechanik).
 pytestmark = pytest.mark.email
+
+
+# Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
+# COLLECT statt beim Testlauf und kontaminierte os.environ ohne Teardown).
+# Autouse-Fixture fordert stattdessen die geteilte `dotenv_env`-Fixture aus
+# tests/conftest.py an, bevor JEDER Test dieser Datei laeuft.
+@pytest.fixture(autouse=True)
+def _dotenv(dotenv_env):
+    yield
 
 NICE_LAT = 43.7102
 NICE_LON = 7.2620
@@ -129,8 +136,10 @@ def _fr_trip_dict(
 def _write_user_profile(user_id: str) -> None:
     profile_dir = REPO_ROOT / "data" / "users" / user_id
     profile_dir.mkdir(parents=True, exist_ok=True)
+    # Issue #2152: Testkonto-Status ueber das Profilfeld (Test-SMTP statt Resend).
     (profile_dir / "user.json").write_text(
-        json.dumps({"mail_to": "gregor-test@henemm.com"}), encoding="utf-8"
+        json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True}),
+        encoding="utf-8",
     )
 
 

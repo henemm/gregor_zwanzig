@@ -3,7 +3,7 @@ entity_id: compare_email
 type: feature
 created: 2025-12-28
 updated: 2026-01-02
-status: approved
+status: implemented
 version: "4.3"
 tags: [ui, nicegui, compare, email, scheduler]
 entities: [comparesubscription, comparisonengine, comparisonresult, locationresult, hourlycell]

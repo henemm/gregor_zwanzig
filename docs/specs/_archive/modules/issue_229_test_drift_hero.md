@@ -3,7 +3,7 @@ entity_id: issue_229_test_drift_hero
 type: module
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, test, e2e, fixture]
 issue: 229

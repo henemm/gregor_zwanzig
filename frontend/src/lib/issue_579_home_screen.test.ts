@@ -31,6 +31,8 @@ test('AC-8: plannedBriefings kürzt morning_time HH:MM:SS auf HH:MM', () => {
 });
 
 test('AC-8: plannedBriefings kürzt evening_time HH:MM:SS auf HH:MM', () => {
+	// Issue #1969 (AC-24): der Versand nutzt nur die Stunde der Slot-Zeit — die
+	// Anzeige zeigt HH:00 (keine Minuten-Fiktion), weiterhin ohne Sekunden.
 	const rc: ReportConfig = {
 		morning_enabled: false,
 		evening_enabled: true,
@@ -38,5 +40,5 @@ test('AC-8: plannedBriefings kürzt evening_time HH:MM:SS auf HH:MM', () => {
 		send_email: true,
 	} as ReportConfig;
 	const result = plannedBriefings(rc);
-	assert.equal(result[0].when, '18:30', `evening_time muss als "18:30" kommen, war: "${result[0].when}"`);
+	assert.equal(result[0].when, '18:00', `evening_time 18:30:00 muss als "18:00" kommen, war: "${result[0].when}"`);
 });

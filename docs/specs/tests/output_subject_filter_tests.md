@@ -3,7 +3,7 @@ entity_id: output_subject_filter_tests
 type: tests
 created: 2026-04-26
 updated: 2026-04-26
-status: active
+status: implemented
 version: "1.0"
 tags: [tests, subject, output, epic-render-pipeline]
 parent: output_subject_filter

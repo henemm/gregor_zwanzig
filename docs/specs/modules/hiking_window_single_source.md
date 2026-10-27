@@ -3,7 +3,7 @@ entity_id: hiking_window_single_source
 type: bugfix
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [renderer, sms, telegram, compact_summary, email-pillen, hiking-window, issue-1417, issue-1146, issue-806, issue-807]
 ---
@@ -321,7 +321,7 @@ leerer Wert) — exakt das bisherige Verhalten bleibt als Fallback erhalten.
 > Doppelzaehlung**. Ein kuenftiger Umbau darf diesen Nachweisweg nicht durch
 > einen Spannenvergleich ersetzen.
 
-- **AC-4 (Regressionsschutz #806/#807):** Given zwei aufeinanderfolgende
+- **AC-4:** (Regressionsschutz #806/#807) Given zwei aufeinanderfolgende
   Segmente mit gemeinsamer Grenzstunde (Ende Segment 1 = Start Segment 2,
   NICHT die Ankunft), an der ein Extremwert liegt / When SMS und
   Mail-Kachelzeile aus demselben Report erzeugt werden / Then zaehlt dieser
@@ -329,7 +329,7 @@ leerer Wert) — exakt das bisherige Verhalten bleibt als Fallback erhalten.
   hoher Ausschlag gegenueber dem tatsaechlichen Messwert).
   - Test: `test_shared_boundary_hour_counted_once_across_channels`.
 
-- **AC-5 (Einzigkeit der Quelle, nicht nur zufaellige Uebereinstimmung):**
+- **AC-5:** (Einzigkeit der Quelle, nicht nur zufaellige Uebereinstimmung)
   Given eine Matrix aus mehreren Etappen-Konstellationen (Extremwert an der
   Ankunftsstunde, an einer inneren Segmentgrenze, mitten in einem Segment,
   bei einem einzelnen Segment, bei drei Segmenten) / When fuer JEDE
@@ -343,7 +343,7 @@ leerer Wert) — exakt das bisherige Verhalten bleibt als Fallback erhalten.
   - Test: `test_parity_matrix_across_constellations` (parametrisiert,
     mindestens 5 Konstellationen aus der obigen Liste).
 
-- **AC-6 (Teilausfall verschlechtert sich nicht):** Given eine Etappe aus
+- **AC-6:** (Teilausfall verschlechtert sich nicht) Given eine Etappe aus
   mehreren Teilen, von denen einer wegen Provider-Ausfall keine verwertbaren
   Daten hat (`has_error=True`, leeres `SegmentWeatherSummary`) / When Mail,
   SMS, Kurzzusammenfassung und Telegram gerendert werden / Then bilden alle
@@ -372,7 +372,7 @@ leerer Wert) — exakt das bisherige Verhalten bleibt als Fallback erhalten.
   (und betraefe Mail und Telegram gleichermassen), keine Vereinheitlichung —
   daher nicht Teil dieser Lieferung.
 
-- **AC-7 (Nachtwert unberuehrt):** Given ein Abendbriefing mit Ankunft am
+- **AC-7:** (Nachtwert unberuehrt) Given ein Abendbriefing mit Ankunft am
   Etappenziel und vorhandenem `night_weather` / When SMS, E-Mail-
   Kurzzusammenfassung und Telegram gerendert werden / Then bleibt die
   Nacht-Tiefsttemperatur (`N`/`FN`) exakt die echte Nachttemperatur am Ziel,
@@ -381,7 +381,7 @@ leerer Wert) — exakt das bisherige Verhalten bleibt als Fallback erhalten.
   Hoechstwert `K`/`D`/`FK`/`FD`).
   - Test: `test_night_temperature_unaffected_by_hiking_window_change`.
 
-- **AC-8 (Bestandsverhalten ohne Randstunden-Extremwert):** Given eine
+- **AC-8:** (Bestandsverhalten ohne Randstunden-Extremwert) Given eine
   Etappe, deren Extremwerte NICHT an der Ankunftsstunde oder einer
   Segmentgrenze liegen (klar in der Mitte eines Segments) / When alle vier
   Kanaele gerendert werden / Then bleibt das Ergebnis bit-identisch zum
@@ -390,7 +390,7 @@ leerer Wert) — exakt das bisherige Verhalten bleibt als Fallback erhalten.
   - Test: bestehende Golden-Fixtures ohne Randstunden-Extremwert bleiben nach
     Neu-Regeneration bit-identisch (kein Diff), namentlich zu pruefen.
 
-- **AC-9 (Ausgefallener LETZTER Etappenteil, Fund der RED-Phase):** Given eine
+- **AC-9:** (Ausgefallener LETZTER Etappenteil, Fund der RED-Phase) Given eine
   Etappe, deren letzter Teil wegen Provider-Ausfall keine Daten hat, waehrend
   der davorliegende Teil seinen Hoechstwert in seiner **eigenen Endstunde**
   traegt / When alle vier Kanaele gerendert werden / Then nennen alle vier

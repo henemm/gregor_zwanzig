@@ -1,0 +1,348 @@
+"""Live-Schicht (nur ``/e2e-verify``): Push-Eingang fuer Befehle gegen STAGING.
+
+Issue #2439 Scheibe (a). Spec: docs/specs/modules/feat_2439_befehle_push_eingang.md
+
+Marker ``live`` + ``staging``: laeuft NICHT im Kern-Testlauf und NICHT lokal
+(Opt-in ``GZ_STAGING_E2E=1``).
+
+AC-Zuordnung:
+  AC-11  HTTP-Smoke von aussen: ungueltiges Secret auf den Webhook-Pfaden ->
+         403 (nicht 401/404/Basic-Auth-Challenge); ein uebriger Staging-Pfad
+         -> 401 (Basic-Auth bleibt dort aktiv).
+  AC-1   SMS: ``push.last_received`` von ``premium_sms_poll`` und ``last_run``
+         des Jobs liegen Sekunden auseinander, nicht Minuten.
+  AC-2   Mail: dasselbe fuer ``inbound_command_poll``.
+  AC-8   ``push.last_received`` existiert im Status (Sichtbarkeit eines
+         Ausfalls des Sofort-Wegs).
+
+Voraussetzung fuer AC-1/AC-2: der /e2e-verify-Treiber hat VOR diesem Test eine
+echte Befehls-SMS (zweite seven.io-Nummer) bzw. -Mail (``gregor-test+...@``)
+auf Staging ausgeloest. Der Test misst nur den Zeitabstand im Status-Endpoint
+(``X-GZ-Status-Token`` aus ``GZ_STAGING_STATUS_TOKEN``); Basic-Auth fuer
+Staging optional aus ``GZ_STAGING_BASIC_AUTH`` (``user:pass``, nie im Klartext
+ins Repo).
+"""
+from __future__ import annotations
+
+import os
+import sys
+from datetime import datetime
+from pathlib import Path
+
+import httpx
+import pytest
+
+# Gemeinsame Auswertelogik (#2439): dieselbe wie im Prod-Lese-Werkzeug befehl_antwortzeit.py.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / ".claude" / "tools"))
+import befehl_messlogik as ml  # noqa: E402
+
+STAGING = "https://staging.gregor20.henemm.com"
+GRENZE_SEKUNDEN = 60  # "Sekunden, nicht Minuten" -- weit unter dem 5-min-Raster
+
+pytestmark = [
+    pytest.mark.live,
+    pytest.mark.staging,
+    pytest.mark.skipif(
+        os.environ.get("GZ_STAGING_E2E") != "1",
+        reason="Staging-Live-Test: nur /e2e-verify (GZ_STAGING_E2E=1)",
+    ),
+]
+
+
+def _basic_auth() -> tuple[str, str] | None:
+    roh = os.environ.get("GZ_STAGING_BASIC_AUTH", "")
+    if ":" not in roh:
+        return None
+    user, _, pw = roh.partition(":")
+    return user, pw
+
+
+# ---------------------------------------------------------------------------
+# AC-11: HTTP-Smoke von aussen
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("kanal", ["sms", "mail"])
+def test_ac11_webhook_pfad_ungueltiges_secret_ist_403_ohne_basic_auth(kanal):
+    antwort = httpx.post(
+        f"{STAGING}/api/webhooks/{kanal}/ungueltiges-secret-ac11",
+        content=b"{}", headers={"Content-Type": "application/json"}, timeout=15,
+    )  # bewusst OHNE Basic-Auth: die Ausnahme fuer diese Pfade ist die Pruefung
+    assert antwort.status_code == 403, (
+        f"/api/webhooks/{kanal}/ auf Staging: erwartet 403 (Go-API erreicht, kein "
+        f"Basic-Auth-Hindernis), bekam {antwort.status_code} "
+        f"(WWW-Authenticate={antwort.headers.get('www-authenticate')!r})"
+    )
+    assert "www-authenticate" not in {k.lower() for k in antwort.headers}
+
+
+def test_ac11_uebriger_staging_pfad_bleibt_geschuetzt():
+    antwort = httpx.get(f"{STAGING}/api/scheduler/status", timeout=15)  # ohne Basic-Auth
+    assert antwort.status_code == 401, (
+        f"uebrige Staging-Pfade muessen hinter Basic-Auth bleiben, bekam {antwort.status_code}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# AC-1 / AC-2 / AC-8: Zeitabstand last_received -> last_run im Status
+# ---------------------------------------------------------------------------
+
+def _job_status(job_id: str) -> dict:
+    token = os.environ.get("GZ_STAGING_STATUS_TOKEN")
+    assert token, "GZ_STAGING_STATUS_TOKEN fehlt (Befund der Testumgebung, kein Flake)"
+    antwort = httpx.get(
+        f"{STAGING}/api/scheduler/status",
+        headers={"X-GZ-Status-Token": token}, auth=_basic_auth(), timeout=15,
+    )
+    assert antwort.status_code == 200, antwort.text[:200]
+    for job in antwort.json()["jobs"]:
+        if job.get("id") == job_id:
+            return job
+    raise AssertionError(f"Job {job_id!r} nicht im Staging-Status")
+
+
+def _pruefe_sofortweg(job_id: str, *, ueberholt_ueberspringen: bool = False):
+    job = _job_status(job_id)
+    push = job.get("push")
+    assert isinstance(push, dict) and "last_received" in push, (
+        f"{job_id}: Status-Feld push.last_received fehlt: {push!r}"  # AC-8
+    )
+    assert push["last_received"], (
+        f"{job_id}: kein Webhook eingegangen (push.last_received leer) -- Treiber hat "
+        f"keinen Befehl ausgeloest oder der Sofort-Weg ist ausgefallen: {push!r}"
+    )
+    assert push.get("received_total", 0) >= 1
+    if ueberholt_ueberspringen and ml.messung_ueberholt(job, GRENZE_SEKUNDEN):
+        pytest.skip(
+            "Messung überholt: last_run stammt von einem späteren */5-Tick, nicht vom Poll-Lauf "
+            "nach dem Webhook -- direkt nach der SMS erneut fahren"
+        )
+    empfangen = datetime.fromisoformat(push["last_received"])
+    assert job.get("last_run"), f"{job_id}: kein last_run"
+    assert job["last_run"].get("status") == "ok", (
+        f"{job_id}: last_run.status ist {job['last_run'].get('status')!r} statt 'ok' -- "
+        f"Poll-Lauf nach Webhook gescheitert (z.B. EOF auf wiederverwendeter "
+        f"Core-Verbindung): {job['last_run']!r}"
+    )
+    gelaufen = datetime.fromisoformat(job["last_run"]["time"])
+    abstand = (gelaufen - empfangen).total_seconds()
+    assert 0 <= abstand <= GRENZE_SEKUNDEN, (
+        f"{job_id}: last_run {abstand:.0f} s nach last_received (erwartet Sekunden, "
+        f"nicht Minuten): {push!r} / {job['last_run']!r}"
+    )
+
+
+def test_ac1_sms_last_run_sekunden_nach_webhook():
+    _pruefe_sofortweg("premium_sms_poll", ueberholt_ueberspringen=True)
+
+
+def test_ac2_mail_last_run_sekunden_nach_webhook():
+    _pruefe_sofortweg("inbound_command_poll")
+
+
+# ===========================================================================
+# #2439 Scheibe (b): Antwortzeit der Befehle -- AC-3, AC-4, AC-5, AC-12, AC-14
+# Spec: docs/specs/modules/feat_2439_befehle_antwortzeit.md
+# ===========================================================================
+#
+# Messweise: Diese Tests LOESEN KEINE Befehle aus (wie AC-1/AC-2 oben: der /e2e-verify-Treiber
+# schickt sie ueber die ECHTEN Eingaenge -- E-Mail gregor-test+...@, Telegram, zweite
+# seven.io-Nummer). Sie WERTEN das Staging-Journal aus (Quelle der Wahrheit: die
+# Dauer-Zeile aus AC-1, NICHT der Gesamtlauf des Treibers):
+#     befehl=<NAME> kanal=<email|telegram|sms|premium_sms> trip=<id> dauer_ms=<n>
+# Umgebung (vom Treiber gesetzt):
+#   GZ_STAGING_MESSLAUF_SEIT   ISO-Zeitpunkt (UTC), VOR dem ersten ausgeloesten Befehl
+#   GZ_STAGING_TRIP_DE         (optional) Trip-ID der DE/Alpen-Route; filtert AC-4
+#   GZ_STAGING_TRIP_KORSIKA    Trip-ID des Korsika-Trips (`fr_direct`), Pflicht fuer AC-5
+# Das Journal von `gregor-python-staging` ist fuer `hem` lesbar (journalctl); ohne Lesezugriff
+# FAILt der Test mit klarer Meldung (Befund der Testumgebung, kein Flake).
+# Kalt (AC-4): der Treiber startet `gregor-python-staging` vor jedem Lauf neu oder nimmt ein
+# noch nie abgerufenes Datum; der Test BELEGT es aus dem Journal -- nur Laeufe, in deren
+# Zeitspanne eine DWD-Fensterzeile `downloads>0` steht, zaehlen als kalt.
+
+import re
+import statistics
+import subprocess
+from datetime import timedelta, timezone
+
+_KANAL_GRUPPEN = {
+    "email": {"email"},
+    "telegram": {"telegram"},
+    "premium_sms": {"premium_sms", "sms"},  # der SMS-Eingang laeuft ueber den Rueckkanal
+}
+GRENZE_OHNE_WETTER_MS = 30_000
+GRENZE_MIT_WETTER_MS = 60_000
+GRENZE_MEDIAN_MS = 45_000
+MIN_LAEUFE_OHNE_WETTER = 5
+MIN_LAEUFE_WETTER = 5
+MIN_LAEUFE_KORSIKA = 3
+HELP_NACH_HEUTE_MS = 30_000
+HELP_GESAMT_MS = 90_000
+PAAR_FENSTER_S = 300  # bewusst weiter als die 90-s-Pruefgrenze, damit ein Verstoss sichtbar bleibt
+
+
+def _nicht_messbar_premium_sms(eingang: str) -> None:
+    if eingang == "premium_sms":
+        pytest.skip(
+            "NOT_MEASURABLE_ON_STAGING: die Herkunftssperre laesst auf Staging keine "
+            "Premium-SMS-Antwort zu -- Prod-Messweg: .claude/tools/befehl_antwortzeit.py"
+        )
+
+
+def _messlauf_seit() -> str:
+    seit = os.environ.get("GZ_STAGING_MESSLAUF_SEIT", "")
+    assert seit, (
+        "GZ_STAGING_MESSLAUF_SEIT fehlt (Befund der Testumgebung): der Treiber muss den "
+        "Startzeitpunkt der ausgeloesten Befehle exportieren"
+    )
+    return seit
+
+
+def _journal(unit: str, seit: str) -> list[tuple[datetime, str]]:
+    erg = subprocess.run(
+        ["journalctl", "-u", unit, "--since", seit, "--no-pager", "-o", "short-iso-precise"],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert erg.returncode == 0, (
+        f"journalctl -u {unit} nicht lesbar (Befund der Testumgebung): {erg.stderr[:200]}"
+    )
+    zeilen = []
+    for roh in erg.stdout.splitlines():
+        kopf, _, rest = roh.partition(" ")
+        try:
+            zeit = datetime.strptime(kopf, "%Y-%m-%dT%H:%M:%S.%f%z")
+        except ValueError:
+            continue
+        zeilen.append((zeit.astimezone(timezone.utc), rest))
+    return zeilen
+
+
+def _dauerzeilen(seit: str, *, trip: str | None = None) -> list[dict]:
+    laeufe = ml.dauerzeilen(_journal("gregor-python-staging", seit))
+    return [l for l in laeufe if trip is None or l["trip"] == trip]
+
+
+def _auswahl(laeufe: list[dict], befehl: str, eingang: str | None = None) -> list[dict]:
+    kanaele = _KANAL_GRUPPEN[eingang] if eingang else None
+    return [l for l in laeufe if l["befehl"] == befehl and (kanaele is None or l["kanal"] in kanaele)]
+
+
+@pytest.mark.parametrize("befehl", ["HELP", "CODES", "STATUS"])
+@pytest.mark.parametrize("eingang", ["email", "telegram", "premium_sms"])
+def test_ac3_befehle_ohne_wetterabruf_unter_30_sekunden_auf_jedem_eingang(eingang, befehl):
+    """AC-3: jeder Lauf (>= 5 je Befehl und Eingang) liegt in der Dauer-Zeile unter 30 s."""
+    _nicht_messbar_premium_sms(eingang)
+    laeufe = _auswahl(_dauerzeilen(_messlauf_seit()), befehl, eingang)
+    werte = [l["ms"] for l in laeufe]
+    assert len(werte) >= MIN_LAEUFE_OHNE_WETTER, (
+        f"AC-3: nur {len(werte)} {befehl}-Laeufe ueber {eingang} im Journal (erwartet >= "
+        f"{MIN_LAEUFE_OHNE_WETTER}); der Treiber hat zu wenige ausgeloest oder die Dauer-Zeile "
+        f"(AC-1) fehlt"
+    )
+    assert max(werte) < GRENZE_OHNE_WETTER_MS, (
+        f"AC-3: {befehl} ueber {eingang}: Einzelwerte {werte} ms, Maximum {max(werte)} ms "
+        f">= {GRENZE_OHNE_WETTER_MS} ms"
+    )
+
+
+@pytest.mark.parametrize("befehl", ["HEUTE", "MORGEN"])
+def test_ac4_wetterbefehle_kalt_auf_de_route_max_unter_60s_und_median_unter_45s(befehl):
+    """AC-4: >= 5 KALTE Laeufe je Befehl, darunter mindestens einmal E-Mail (Pflicht): jeder
+    < 60 s UND Median < 45 s; alle Einzelwerte werden ausgegeben. Premium-SMS (Herkunftssperre)
+    und Telegram HEUTE/MORGEN (verwaistes Staging-Konto, Spec §9) sind auf Staging
+    NOT_MEASURABLE_ON_STAGING -- Prod-Messweg: .claude/tools/befehl_antwortzeit.py."""
+    print("AC-4 NOT_MEASURABLE_ON_STAGING: premium_sms, telegram -- Prod-Messweg "
+          ".claude/tools/befehl_antwortzeit.py")
+    seit = _messlauf_seit()
+    laeufe = _auswahl(_dauerzeilen(seit, trip=os.environ.get("GZ_STAGING_TRIP_DE")), befehl)
+    kalte = ml.kalt_laeufe(laeufe, _journal("gregor-python-staging", seit), quellen=("dwd_fenster",))
+    werte = [l["ms"] for l in kalte]
+    print(f"AC-4 {befehl}: kalte Einzelwerte (ms) = {werte}; alle Laeufe = "
+          f"{[(l['kanal'], l['ms']) for l in laeufe]}")
+    assert len(kalte) >= MIN_LAEUFE_WETTER, (
+        f"AC-4: nur {len(kalte)} KALTE {befehl}-Laeufe belegt (DWD-Fensterzeile mit "
+        f"downloads>0 im Befehlsfenster), erwartet >= {MIN_LAEUFE_WETTER}; alle Laeufe: "
+        f"{[(l['kanal'], l['ms']) for l in laeufe]}"
+    )
+    # premium_sms entfaellt auf Staging (Herkunftssperre, Prod-Messweg befehl_antwortzeit.py);
+    # Telegram HEUTE/MORGEN ist auf Staging NOT_MEASURABLE (verwaistes Konto, Spec §9, AC-10).
+    pflicht = ("email",)
+    fehlende = [e for e in pflicht
+                if not any(l["kanal"] in _KANAL_GRUPPEN[e] for l in kalte)]
+    assert not fehlende, f"AC-4: unter den kalten {befehl}-Laeufen fehlt der Eingang {fehlende}"
+    assert max(werte) < GRENZE_MIT_WETTER_MS, (
+        f"AC-4: {befehl} kalt, Einzelwerte {werte} ms: Maximum {max(werte)} ms >= "
+        f"{GRENZE_MIT_WETTER_MS} ms (Ausgangswert vor der Aenderung 57800 ms)"
+    )
+    assert statistics.median(werte) < GRENZE_MEDIAN_MS, (
+        f"AC-4: {befehl} kalt, Einzelwerte {werte} ms: Median {statistics.median(werte)} ms "
+        f">= {GRENZE_MEDIAN_MS} ms"
+    )
+
+
+@pytest.mark.parametrize("befehl", ["HEUTE", "MORGEN"])
+def test_ac5_wetterbefehle_kalt_auf_korsika_route_jeder_lauf_unter_60s(befehl):
+    """AC-5 auf Staging (Delta-Spec feat_2439_prod_antwortzeit_nachweis AC-1): Antwort fuer den
+    Korsika-Trip vorhanden, kein `fr_direct`-Download im Befehlsfenster (egress_guard sperrt
+    Meteo-France, Ersatzquelle eu_direct). Der `fr_direct`-Kaltlauf (>= 3 kalte Laeufe, jeder
+    < 60 s) ist auf Staging NOT_MEASURABLE -- Prod-Messweg .claude/tools/befehl_antwortzeit.py."""
+    trip = os.environ.get("GZ_STAGING_TRIP_KORSIKA", "")
+    assert trip, "GZ_STAGING_TRIP_KORSIKA fehlt (Befund der Testumgebung): Korsika-Trip-ID"
+    seit = _messlauf_seit()
+    alle = _auswahl(_dauerzeilen(seit, trip=trip), befehl)
+    print(f"AC-5 {befehl} Korsika: Laeufe (kanal, ms) = {[(l['kanal'], l['ms']) for l in alle]}")
+    assert alle, (
+        f"AC-5: keine Antwort -- keine Dauerzeile {befehl} fuer den Korsika-Trip {trip} seit "
+        f"{seit} (Antwort nicht an den Versand-Provider uebergeben oder Treiber hat nicht "
+        f"ausgeloest)"
+    )
+    fr_kalt = ml.kalt_laeufe(alle, _journal("gregor-python-staging", seit),
+                             quellen=("fr_direct_fenster",))
+    assert not fr_kalt, (
+        f"AC-5: Befund -- fr_direct-Download (fr_direct_fenster downloads>0) im Befehlsfenster "
+        f"auf Staging bei {[l['ms'] for l in fr_kalt]} ms: die egress_guard-Sperre fuer "
+        f"Meteo-France ist wirkungslos"
+    )
+    print(f"AC-5 {befehl} Korsika: Quelle eu_direct (Ersatz, egress_guard sperrt Meteo-France)")
+    pytest.skip(
+        f"NOT_MEASURABLE_ON_STAGING: public-api.meteofrance.fr ist auf Staging durch "
+        f"egress_guard gesperrt -- fr_direct-Kaltlauf (>= {MIN_LAEUFE_KORSIKA} kalte Laeufe, "
+        f"jeder < {GRENZE_MIT_WETTER_MS} ms) nur auf Prod messbar -- Prod-Messweg: "
+        f".claude/tools/befehl_antwortzeit.py --trip <id> --ziel"
+    )
+
+
+@pytest.mark.parametrize("eingang", ["email", "premium_sms"])
+def test_ac12_help_waehrend_heute_wird_spaetestens_30s_nach_dessen_ende_beantwortet(eingang):
+    """AC-12: Der Treiber sendet `HEUTE` und direkt danach `HELP` ueber denselben Eingang.
+    Gemessen aus den Journalzeitpunkten der beiden Dauer-Zeilen (Uebergabe der Antwort):
+    HELP <= 30 s nach HEUTE-Ende; HELP-Gesamtzeit (ab HEUTE-Start, obere Schranke) < 90 s."""
+    _nicht_messbar_premium_sms(eingang)
+    laeufe = sorted(_dauerzeilen(_messlauf_seit()), key=lambda l: l["ts"])
+    paare = ml.paare_heute_help(laeufe, _KANAL_GRUPPEN[eingang], PAAR_FENSTER_S)
+    assert paare, (
+        f"AC-12: kein HEUTE->HELP-Paar ueber {eingang} im Journal -- der Treiber hat den "
+        f"HELP nicht direkt nach dem HEUTE gesendet"
+    )
+    for heute, help_ in paare:
+        nach_ende_s = (help_["ts"] - heute["ts"]).total_seconds()
+        start_heute = heute["ts"] - timedelta(milliseconds=heute["ms"])
+        gesamt_ms = (help_["ts"] - start_heute).total_seconds() * 1000
+        assert nach_ende_s <= HELP_NACH_HEUTE_MS / 1000, (
+            f"AC-12 ({eingang}): HELP wurde {nach_ende_s:.1f} s nach Ende des HEUTE "
+            f"beantwortet (> 30 s)"
+        )
+        assert gesamt_ms < HELP_GESAMT_MS, (
+            f"AC-12 ({eingang}): HELP-Gesamtzeit {gesamt_ms:.0f} ms >= {HELP_GESAMT_MS} ms"
+        )
+
+
+def test_ac14_sms_nachversuch_kein_eof_im_staging_log():
+    """AC-14 (Ergaenzung zu test_ac1_sms_last_run_sekunden_nach_webhook, das `last_run.status ==
+    ok` bereits prueft): im Staging-Journal von Go-API UND Python-Kern steht seit dem Messlauf
+    kein EOF-Fehler (wiederverwendete Core-Verbindung)."""
+    seit = _messlauf_seit()
+    eof = []
+    for unit in ("gregor-api-staging", "gregor-python-staging"):
+        eof += [f"{unit}: {text[:160]}" for _zeit, text in _journal(unit, seit)
+                if re.search(r"\bEOF\b", text)]
+    assert not eof, f"AC-14: EOF-Fehler im Staging-Log seit {seit}: {eof[:5]}"

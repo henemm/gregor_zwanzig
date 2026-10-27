@@ -3,7 +3,7 @@ entity_id: fix_1866_claim_gate_freigabeweg
 type: bugfix
 created: 2026-08-15
 updated: 2026-08-15
-status: draft
+status: implemented
 workflow: fix-1866-claim-freigabeweg
 ---
 
@@ -151,7 +151,7 @@ als DEN Ausweg bewerben.
     `tests/tdd/test_validator_log_shared_repo_path.py`, Funktion
     `_setup_main_with_worktree`); KEIN Mock von Git-Befehlen oder der Registry-Datei.
 
-- **AC-5 (Gegenprobe zu AC-4):** Given denselben Aufbau wie AC-4, ABER die Datei im
+- **AC-5:** (Gegenprobe zu AC-4) Given denselben Aufbau wie AC-4, ABER die Datei im
   belegenden Worktree weicht entweder inhaltlich von `origin/main` ab ODER hat eine
   lokale (unstaged/staged/untracked) Änderung für genau diesen Pfad / When eine andere
   Session denselben Pfad editiert / Then blockiert der Aufruf weiterhin (Exit 2,

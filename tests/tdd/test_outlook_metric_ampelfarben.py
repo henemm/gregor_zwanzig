@@ -88,7 +88,11 @@ def test_ac1_numerische_spalte_ueber_schwelle_bekommt_ampelfarbe_im_trip():
     html = render_outlook_table([row], show_acc=True, metrics=[WIND])
 
     styles = _cell_styles(html)
-    assert len(styles) == 2, f"Erwartet Wochentag + 1 Metrikspalte: {styles!r}"
+    # #2098: seit der Behebung traegt der Trip-Zweig (show_acc=True) hinter
+    # den gewaehlten Spalten die fest angehaengte ACC-Zelle.
+    assert len(styles) == 3, (
+        f"Erwartet Wochentag + 1 Metrikspalte + ACC: {styles!r}"
+    )
     assert _bg_of(styles[1]) == f"background:{tone_css('orange')[0]};", (
         f"Windspalte (55 km/h, orange-Schwelle 50) traegt {styles[1]!r} -- "
         "der Metrik-Zweig faerbt heute KEINE Zelle (AC-1)."
@@ -132,9 +136,11 @@ def test_ac3_ac4_ac5_gewitterspalte_folgt_der_ampelband_zuordnung_je_stufe():
     html = render_outlook_table(rows, show_acc=True, metrics=[GEWITTER])
 
     styles = _cell_styles(html)
-    # Zwei Zellen je Zeile (Wochentag, Gewitter) -- Gewitterspalte ist Index 1
-    # jeder Zeile: 1, 3, 5, 7.
-    gewitter_bg = [_bg_of(styles[i]) for i in (1, 3, 5, 7)]
+    # Gewitterspalte ist Index 1 JEDER Zeile. Die Zahl der Zellen je Zeile
+    # wird abgeleitet statt festgeschrieben -- seit #2098 traegt der
+    # Trip-Zweig hinter der Auswahl zusaetzlich die feste ACC-Zelle.
+    je_zeile = len(styles) // len(stufen)
+    gewitter_bg = [_bg_of(styles[i * je_zeile + 1]) for i in range(len(stufen))]
 
     erwartet = [
         "",  # NONE
@@ -166,7 +172,10 @@ def test_ac6_metrik_ohne_katalogschwellen_bleibt_farblos_trotz_hohem_wert():
     html = render_outlook_table([row], show_acc=True, metrics=auswahl)
 
     styles = _cell_styles(html)
-    assert len(styles) == 3, f"Erwartet Wochentag + 2 Metrikspalten: {styles!r}"
+    # #2098: + die fest angehaengte ACC-Zelle (show_acc=True, Trip).
+    assert len(styles) == 4, (
+        f"Erwartet Wochentag + 2 Metrikspalten + ACC: {styles!r}"
+    )
     assert _bg_of(styles[1]) == f"background:{tone_css('red')[0]};", (
         f"Windspalte (80 km/h, red-Schwelle 70) traegt {styles[1]!r} statt rot."
     )

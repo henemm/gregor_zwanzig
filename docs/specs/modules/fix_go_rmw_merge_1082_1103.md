@@ -3,7 +3,7 @@ entity_id: fix_go_rmw_merge_1082_1103
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, data-loss, go, persistence, read-modify-write]
 ---

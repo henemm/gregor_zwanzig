@@ -36,6 +36,7 @@ from app.config import Settings
 from output.channels.base import OutputChannel, OutputError
 from output.channels import telegram as telegram_mod
 from output.channels.telegram import TelegramOutput
+from tests.helpers.telegram_empfaenger import profil_ausgang
 
 
 # =============================================================================
@@ -110,7 +111,15 @@ def fake_bot(monkeypatch):
         server.server_close()
 
 
-_LOCAL_SETTINGS = Settings(telegram_bot_token="test-token-650", telegram_chat_id="12345")
+_LOCAL_SETTINGS = Settings(
+    telegram_bot_token="test-token-650",
+    telegram_chat_id="12345",
+    # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout verlangt
+    # TelegramOutput die Test-Chat-ID, sonst bricht der Versand ab. Explizit
+    # auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+    # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196 Klasse C).
+    telegram_test_chat_id="12345",
+)
 
 _INLINE_KEYBOARD = {
     "inline_keyboard": [[{"text": "🌤️ Briefing", "callback_data": "briefing"}]]
@@ -127,7 +136,7 @@ def test_send_with_reply_markup_puts_inline_keyboard_on_the_wire(fake_bot):
     WHEN: send(subject, body, reply_markup=...) gegen einen echten HTTP-Server läuft
     THEN: der gesendete Payload enthält das reply_markup mit dem Button-Text.
     """
-    output = TelegramOutput(_LOCAL_SETTINGS)
+    output = profil_ausgang(_LOCAL_SETTINGS, "nutzer-650", "12345")
 
     # RED vor Fix: send() akzeptiert kein reply_markup-kwarg → TypeError.
     output.send("Test #650", "Body", reply_markup=_INLINE_KEYBOARD)
@@ -150,7 +159,7 @@ def test_send_without_reply_markup_has_no_reply_markup_key(fake_bot):
     WHEN: send(subject, body) OHNE reply_markup aufgerufen wird
     THEN: der Payload trägt KEINEN reply_markup-Schlüssel.
     """
-    output = TelegramOutput(_LOCAL_SETTINGS)
+    output = profil_ausgang(_LOCAL_SETTINGS, "nutzer-650", "12345")
     output.send("Test #650", "Body")
 
     payload = fake_bot.last_send_payload
@@ -209,7 +218,7 @@ def test_send_with_reply_markup_unreachable_raises_outputerror(monkeypatch):
     """
     # Port 1 ist nicht bindbar → echte ConnectError (kein Mock).
     monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", "http://127.0.0.1:1")
-    output = TelegramOutput(_LOCAL_SETTINGS)
+    output = profil_ausgang(_LOCAL_SETTINGS, "nutzer-650", "12345")
 
     with pytest.raises(OutputError) as exc_info:
         output.send("Test #650", "Body", reply_markup=_INLINE_KEYBOARD)
@@ -261,7 +270,7 @@ _real_reason = "GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#101
 def test_real_api_send_with_inline_keyboard_returns_buttons():
     """AC-1 gegen die echte Bot-API: 200 + Message trägt das Inline-Keyboard."""
     settings = Settings(telegram_bot_token=_REAL_TOKEN, telegram_chat_id=_REAL_CHAT)
-    output = TelegramOutput(settings)
+    output = profil_ausgang(settings, "nutzer-650-live", _REAL_CHAT)
     output.send("Gregor #650 E2E", "Inline-Keyboard-Test", reply_markup=_INLINE_KEYBOARD)
 
     # Direkter API-Read zur Bestätigung, dass die Buttons real ankamen.

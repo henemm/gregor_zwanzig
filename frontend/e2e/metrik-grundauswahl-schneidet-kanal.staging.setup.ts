@@ -3,7 +3,7 @@ import { assertNotProdBaseURL } from './prodUrlGuard';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 // Staging-Auth für Issue #1719 Scheibe 2 AC-10 Test B. Analog
-// compare-hub-save-chip.staging.setup.ts: nginx-Basic-Auth (Validator-Creds)
+// hub-send-dialog-target.staging.setup.ts: nginx-Basic-Auth (Validator-Creds)
 // UND App-Login (gz_session-Cookie via GZ_AUTH_*) sind getrennte
 // Credential-Paare (s. reference_staging_app_login_creds_live_in_staging_env
 // bei Staging-Ziel). Ein storageState statt Login pro Test — sonst erschöpft

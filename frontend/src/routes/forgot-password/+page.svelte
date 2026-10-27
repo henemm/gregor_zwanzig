@@ -15,7 +15,7 @@
 			<div class="rounded-md bg-green-50 p-3 text-sm text-green-800">
 				Falls der Account existiert, wurde ein Reset-Link generiert. Bitte den Server-Admin kontaktieren.
 			</div>
-			<a href="/login" class="block text-sm text-blue-600 hover:underline">Zurück zum Login</a>
+			<a href="/login" class="block py-3 text-sm text-blue-600 hover:underline">Zurück zum Login</a>
 		{:else}
 			<form method="POST" use:enhance class="space-y-3">
 				{#if form?.error}
@@ -33,7 +33,7 @@
 					Reset anfordern
 				</button>
 			</form>
-			<a href="/login" class="block text-sm text-muted-foreground hover:underline">Zurück zum Login</a>
+			<a href="/login" class="block py-3 text-sm text-muted-foreground hover:underline">Zurück zum Login</a>
 		{/if}
 	</div>
 </div>

@@ -1,3 +1,10 @@
+---
+entity_id: mess_2070_khw_track
+type: fast
+created: 2026-08-22
+status: implemented
+---
+
 # Mini-Spec: #2070 KHW-Trip gegen die Track-Auflösung messen
 
 ## Was ändert sich

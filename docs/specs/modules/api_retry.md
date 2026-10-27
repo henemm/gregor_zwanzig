@@ -3,7 +3,7 @@ entity_id: api_retry
 type: module
 created: 2026-01-02
 updated: 2026-01-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [resilience, api, geosphere]
 ---
@@ -19,6 +19,8 @@ tags: [resilience, api, geosphere]
 Automatische Wiederholung von fehlgeschlagenen API-Aufrufen bei transienten Fehlern (502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout, Connection Errors). Verhindert, dass temporaere API-Ausfaelle zu unvollstaendigen E-Mails fuehren.
 
 **Hintergrund:** Am 02.01.2026 um 07:00 lieferte die GeoSphere API fuer 4 von 5 Locations `502 Bad Gateway`. Die E-Mail enthielt nur 1 Skigebiet statt 5.
+
+**Update (#2302 Scheibe C):** Diese Spec beschreibt die Retry-Logik mit exponential Backoff. GeoSphere wurde ab Scheibe C um ein Zeitbudget-Limit (`FETCH_DEADLINE_SECONDS = 180.0`) erweitert, das über den geteilten Baustein `src/providers/http.py` durchgesetzt wird — Detaillierung: `docs/specs/modules/fix_2302_s3_geosphere_zeitbudget.md`.
 
 ## Source
 

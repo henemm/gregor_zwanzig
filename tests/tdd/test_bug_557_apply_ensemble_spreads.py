@@ -57,10 +57,21 @@ def _make_scheduler():
 
 
 def _spreads_for_segment(segment, spread_t: float = 1.5, spread_p: float = 0.8) -> Dict:
-    """Erzeugt naive-datetime-Spread-Dict mit einem Eintrag mitten im Segment-Zeitfenster."""
+    """Erzeugt naive-datetime-Spread-Dict mit einem Eintrag mitten im Segment-Zeitfenster.
+
+    Issue #1983: Rueckgabetyp von _fetch_ensemble_spread ist seither
+    EnsembleHourStats statt 2-Tupel (Typumstellung, keine neue Semantik).
+    """
+    from providers.openmeteo import EnsembleHourStats
+
     mid = segment.start_time + timedelta(hours=4)  # 10:00 UTC
     mid_naive = mid.replace(tzinfo=None)
-    return {mid_naive: (spread_t, spread_p)}
+    return {
+        mid_naive: EnsembleHourStats(
+            spread_t2m_k=spread_t, spread_precip_mm=spread_p,
+            thunder_member_share_pct=None,
+        )
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -188,11 +199,14 @@ def test_ac2_apply_ensemble_spreads_uses_minimum_across_datapoints():
     )
 
     # Spreads fuer beide Zeitstempel (hoeherer Spread = niedrigere Konfidenz)
+    # Issue #1983: EnsembleHourStats statt 2-Tupel (Typumstellung).
+    from providers.openmeteo import EnsembleHourStats
+
     ts1_naive = ts1.replace(tzinfo=None)
     ts2_naive = ts2.replace(tzinfo=None)
     spreads_naive = {
-        ts1_naive: (1.0, 0.5),   # moderate spread
-        ts2_naive: (3.0, 2.0),   # higher spread -> niedrigere Konfidenz
+        ts1_naive: EnsembleHourStats(1.0, 0.5, None),   # moderate spread
+        ts2_naive: EnsembleHourStats(3.0, 2.0, None),   # higher spread -> niedrigere Konfidenz
     }
 
     svc = _make_scheduler()

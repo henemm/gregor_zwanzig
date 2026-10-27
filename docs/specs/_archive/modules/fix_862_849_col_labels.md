@@ -27,7 +27,7 @@ Zwei zusammenhängende Defekte in der Spaltenköpfe-Kette beheben: (1) Der `brie
 - **File:** `api/routers/config.py` — GET `/api/metrics` Response
 - **File:** `frontend/src/lib/types.ts` — TypeScript-Interface `MetricEntry`
 - **File:** `frontend/src/lib/components/trip-detail/WeatherV2MailPreview.svelte` — Mail-Vorschau
-- **File:** `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte` — Metrik-Reihenfolge-UI
+- **File:** `frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte` — Metrik-Reihenfolge-UI
 
 ## Estimated Scope
 
@@ -73,7 +73,7 @@ In `frontend/src/lib/components/trip-detail/WeatherV2MailPreview.svelte` (~Z. 70
 
 ### #849c — `col_label`-Badge in Metrik-Reihenfolge-UI
 
-In `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte` (~Z. 60): Unter dem vollen deutschen Metrik-Namen (`m.label`) das Kürzel `m.col_label` als kleinen Badge/Tag einblenden. Kontext: Der User sieht im Reihenfolge-Dialog "Temperatur" und daneben das Badge "T" — so versteht er, was in der Mail-Spalte steht.
+In `frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte` (~Z. 60): Unter dem vollen deutschen Metrik-Namen (`m.label`) das Kürzel `m.col_label` als kleinen Badge/Tag einblenden. Kontext: Der User sieht im Reihenfolge-Dialog "Temperatur" und daneben das Badge "T" — so versteht er, was in der Mail-Spalte steht.
 
 ### Betroffene Tests
 
@@ -93,7 +93,7 @@ In `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte` (~Z. 60
 | `api/routers/config.py` | MODIFY | `"col_label": m.col_label` zur `/api/metrics`-Response hinzufügen (~Z. 44) |
 | `frontend/src/lib/types.ts` | MODIFY | `col_label?: string` zu `MetricEntry` hinzufügen (~Z. 150) |
 | `frontend/src/lib/components/trip-detail/WeatherV2MailPreview.svelte` | MODIFY | `shortOf()` nutzt `m.col_label ?? m.label` statt String-Abschneiden (~Z. 70) |
-| `frontend/src/lib/components/trip-detail/WeatherV2Reihenfolge.svelte` | MODIFY | `col_label`-Badge unter Metrik-Langname einblenden (~Z. 60) |
+| `frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte` | MODIFY | `col_label`-Badge unter Metrik-Langname einblenden (~Z. 60) |
 | `tests/unit/test_weather_metrics_ux.py` | MODIFY | `col_label`-Assertions aktualisieren |
 | `tests/tdd/test_forecast_confidence_output.py` | MODIFY | `"Sicherheit"` → `"Conf"` (Z. 151) |
 | `tests/tdd/test_bundle_771_796_787.py` | MODIFY | `"Blitz"` → `"Thdr"` (Z. ~116–133) |

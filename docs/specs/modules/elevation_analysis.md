@@ -2,7 +2,7 @@
 entity_id: elevation_analysis
 type: feature
 created: 2026-02-11
-status: draft
+status: implemented
 version: "1.0"
 workflow: gpx-elevation-analysis
 tags: [gpx, core, story-1, elevation]

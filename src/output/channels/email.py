@@ -12,12 +12,12 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from email.utils import formatdate, getaddresses, parseaddr
+from email.utils import formatdate, getaddresses, make_msgid, parseaddr
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from app.origin_guard import running_origin
-from output.channels.base import OutputConfigError, OutputError
+from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -241,9 +241,12 @@ def _load_resend_allowlist(data_dir: str | None = None) -> frozenset[str]:
     umgestellt von der Namens-Heuristik (`is_test_user_id`) auf das explizite
     Profilfeld `email_verified_at`.
 
-    Sammelt normalisierte `mail_to`-/`email`-Adressen aller Nutzerprofile
-    unter `<data_dir>/users/<id>/user.json`, die ein GESETZTES
-    `email_verified_at` haben. Profile ohne (leeres/fehlendes)
+    Sammelt je Nutzerprofil unter `<data_dir>/users/<id>/user.json` mit
+    GESETZTEM `email_verified_at` dessen normalisierte WIRKSAME
+    Kontaktadresse (`mail_to`, ersatzweise `email` — Issue #2147 Scheibe B2,
+    vorher beide Felder; Pendant zu Go `loadResendAllowlist`). Eine
+    ausstehende Adressaenderung (`pending_contact_address`) steht nie in
+    `mail_to`/`email` und ist damit nie enthalten. Profile ohne (leeres/fehlendes)
     `email_verified_at` werden konservativ ausgeschlossen — im Zweifel nicht
     in die Allowlist aufnehmen. Reservierte Test-Domains (siehe
     `_is_reserved_test_domain()`) werden hier zusätzlich ausgeschlossen, auch
@@ -290,22 +293,14 @@ def _load_resend_allowlist(data_dir: str | None = None) -> frozenset[str]:
             continue
         if not profile.get("email_verified_at"):
             continue
-        for field in ("mail_to", "email"):
-            raw = profile.get(field)
-            if raw:
-                addr = _extract_addr(raw).strip().lower()
-                if addr and not _is_reserved_test_domain(addr):
-                    allowed.add(addr)
+        raw = profile.get("mail_to")
+        if not raw or not str(raw).strip():
+            raw = profile.get("email")
+        if raw:
+            addr = _extract_addr(raw).strip().lower()
+            if addr and not _is_reserved_test_domain(addr):
+                allowed.add(addr)
     return frozenset(allowed)
-
-
-def _mask_addr_for_log(raw: str) -> str:
-    """Issue #1219 AC-6: reduziert eine Adresse auf die Domain für Log-/
-    Fehlermeldungen — verhindert, dass eine volle Empfängeradresse im
-    Klartext geloggt bzw. in einer Exception-Message ausgegeben wird."""
-    addr = _extract_addr(raw)
-    _, sep, domain = addr.partition("@")
-    return f"***@{domain.lower()}" if sep else "***"
 
 
 def build_mime_message(
@@ -319,6 +314,7 @@ def build_mime_message(
     mail_type: str | None = None,
     mail_format: str | None = None,
     compare_hourly_enabled: bool | None = None,
+    message_id: str | None = None,
 ):
     """Issue #722: Build a MIME message. Pure function, no SMTP side-effects.
 
@@ -331,6 +327,9 @@ def build_mime_message(
 
     Issue #1107: Optionaler Marker-Header X-GZ-Compare-Hourly-Enabled für den
     Compare-Mail-Validator (email_spec_validator.py).
+
+    Issue #2218 C5-53: genau eine Kopfzeile ``Message-ID`` (uebergeben oder
+    selbst erzeugt) -- reiner Zusatz-Header fuer den Zustellnachweis.
     """
     if html:
         msg = MIMEMultipart("alternative")
@@ -374,7 +373,35 @@ def build_mime_message(
             msg["X-GZ-Format"] = mail_format
         if compare_hourly_enabled is not None:
             msg["X-GZ-Compare-Hourly-Enabled"] = "true" if compare_hourly_enabled else "false"
+    msg["Message-ID"] = message_id or new_message_id()
     return msg
+
+
+def new_message_id() -> str:
+    """Issue #2218 C5-53: Message-ID in der Absender-Domain der Resend-Mails."""
+    return make_msgid(domain="henemm.com")
+
+
+def _set_message_id(msg, message_id: str) -> None:
+    """Kopfzeile ERSETZEN, nie eine zweite anhaengen (#2218 C5-53, AC-4)."""
+    if msg["Message-ID"] is None:
+        msg["Message-ID"] = message_id
+    else:
+        msg.replace_header("Message-ID", message_id)
+
+
+def _log_accepted(accepted, message_ids, attempt: int, route: str) -> None:
+    """Issue #2218 C5-53: je vom Postausgang ANGENOMMENEM Empfaenger eine
+    Zeile mit Message-ID und maskierter Adresse -- belegt die Annahme, nicht
+    die Zustellung im Postfach."""
+    from utils.pii_masking import mask_addr_for_pii_log
+
+    for recipient in accepted or []:
+        logger.info(
+            "Email accepted by SMTP: message_id=%s to=%s attempt=%d route=%s",
+            (message_ids or {}).get(recipient), mask_addr_for_pii_log(recipient),
+            attempt, route,
+        )
 
 
 class EmailOutput:
@@ -399,11 +426,17 @@ class EmailOutput:
         Raises:
             OutputConfigError: If SMTP configuration is incomplete
         """
-        if not settings.can_send_email():
+        # Issue #2144: mail_to bewusst NICHT hier prüfen -- ein fehlender
+        # Empfänger ist ein legitimer Laufzeitzustand (Nutzer ohne eigenes
+        # mail_to), keine Fehlkonfiguration. Der Guard dafür sitzt in
+        # send() und wirft dort ChannelBlockedError statt hier
+        # OutputConfigError, damit der aufrufende Trip-Briefing-Pfad
+        # (notification_service.py) unconditional konstruieren kann.
+        if not (settings.smtp_host and settings.smtp_user and settings.smtp_pass):
             raise OutputConfigError(
                 "email",
                 "Incomplete SMTP configuration. "
-                "Required: smtp_host, smtp_user, smtp_pass, mail_to",
+                "Required: smtp_host, smtp_user, smtp_pass",
             )
 
         # Hard-Guard: Staging darf NIEMALS über Resend senden — unabhängig von is_test_mode.
@@ -470,7 +503,8 @@ class EmailOutput:
         msg,
         from_addr: str,
         deadline_at: float,
-    ) -> None:
+        message_ids: dict | None = None,
+    ) -> list[str]:
         """Issue #1412 S3a: der EINE Ort, an dem eine SMTP-Verbindung entsteht.
 
         Reiner Transport — die Empfänger-Guards bleiben in `send()`, vor der
@@ -489,7 +523,12 @@ class EmailOutput:
         `min(SMTP_OP_TIMEOUT_SECONDS, Restzeit)`. `_phase_timeout_or_raise()`
         wirft `TimeoutError` statt `settimeout(0)`, falls die Restzeit vor
         Erreichen einer Phase bereits erschöpft ist.
+
+        Issue #2218 C5-53: `message_ids` (Empfaenger -> ID) setzt vor jedem
+        `sendmail()` die Kopfzeile des Empfaengers (ersetzt, nie doppelt).
+        Rueckgabe: die vom Postausgang ANGENOMMENEN Empfaenger.
         """
+        ids = message_ids or {}
         with smtplib.SMTP(
             host, port, timeout=_phase_timeout_or_raise(deadline_at)
         ) as server:
@@ -498,14 +537,21 @@ class EmailOutput:
             server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
             server.login(user, password)
             if len(recipients) == 1:
+                if recipients[0] in ids:
+                    _set_message_id(msg, ids[recipients[0]])
                 server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
                 server.sendmail(from_addr, recipients, msg.as_string())
+                return list(recipients)
             else:
                 fehler: list[tuple[str, Exception]] = []
+                angenommen: list[str] = []
                 for recipient in recipients:
+                    if recipient in ids:
+                        _set_message_id(msg, ids[recipient])
                     server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
                     try:
                         server.sendmail(from_addr, [recipient], msg.as_string())
+                        angenommen.append(recipient)
                     except smtplib.SMTPServerDisconnected:
                         # Adversary-Fund F001 zu #1448 S1: ein
                         # Transportabbruch (z.B. weil die neue
@@ -533,6 +579,7 @@ class EmailOutput:
                         f"Alle {len(recipients)} Empfaenger abgelehnt: "
                         f"{[str(e) for _, e in fehler]}",
                     )
+                return angenommen
 
     def _handle_transient_dial_failure(
         self,
@@ -545,6 +592,7 @@ class EmailOutput:
         recipients: list[str],
         msg,
         from_addr: str,
+        message_ids: dict | None = None,
     ) -> bool:
         """Issue #1448 S1: gemeinsame Behandlung für vorübergehende
         Transportfehler (`OSError`, `smtplib.SMTPServerDisconnected`) in
@@ -586,7 +634,7 @@ class EmailOutput:
         # auswerten, bevor auf ihn ausgewichen wird.
         if self._fallback_host and not self._fallback_recipients_blocked(recipients):
             try:
-                self._dial_and_send(
+                accepted = self._dial_and_send(
                     self._fallback_host,
                     FALLBACK_SMTP_PORT,
                     self._fallback_user,
@@ -597,8 +645,10 @@ class EmailOutput:
                     # Issue #1448 S1: eigene, garantierte Deadline statt des
                     # (evtl. bereits aufgebrauchten) Rests des Primärbudgets.
                     deadline_at=time.monotonic() + FALLBACK_RESERVE_SECONDS,
+                    message_ids=message_ids,
                 )
                 logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
+                _log_accepted(accepted, message_ids, attempt + 1, "fallback")
                 return True
             except Exception as fb_err:
                 raise OutputError("email", f"Connection error: {e} (fallback also failed: {fb_err})")
@@ -635,6 +685,23 @@ class EmailOutput:
         Raises:
             OutputError: If sending fails after all retry attempts
         """
+        # Issue #2157: lokaler Import (analog get_data_root() weiter unten) --
+        # utils.pii_masking importiert seinerseits _extract_addr aus diesem
+        # Modul, ein Import auf Modulebene wuerde einen Zirkelimport erzeugen.
+        from utils.pii_masking import mask_addr_for_pii_log
+
+        # Issue #2144: kein Empfaenger bekannt (weder Profil-mail_to noch
+        # per-Aufruf-Override) -- sauber abbrechen statt an [None] zu senden.
+        # Muss VOR jedem Verbindungsaufbau greifen (Vorbild premium_sms.py
+        # `_resolve_recipient()`).
+        if not to and not self._to:
+            raise ChannelBlockedError(
+                self.name,
+                "kein Empfaenger bekannt -- weder settings.mail_to noch ein "
+                "per-Aufruf-Override sind gesetzt.",
+                reason_code="email_no_recipient",
+            )
+
         # Build message once (outside retry loop)
         # Use inbound address as From if set (Gmail supports plus-addresses)
         from_addr = self._reply_to or self._from
@@ -658,7 +725,7 @@ class EmailOutput:
             logger.warning(
                 "Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- "
                 "E-Mail-Empfaenger von %s auf %s umgeschaltet.",
-                [_mask_addr_for_log(r) for r in recipients], _ORIGIN_GUARD_TEST_RECIPIENT,
+                [mask_addr_for_pii_log(r) for r in recipients], _ORIGIN_GUARD_TEST_RECIPIENT,
             )
             recipients = [_ORIGIN_GUARD_TEST_RECIPIENT]
         to_header = ", ".join(recipients)
@@ -717,10 +784,14 @@ class EmailOutput:
                     )
                     or any(_is_reserved_test_domain(a) for a in candidates)
                     or _raw_contains_test_mailbox(r)
+                    # Issue #1412 S5 (C3-20 A/Z1): die quote-bewusste
+                    # Hauptliste -- so liest der Postausgang das Feld -- darf
+                    # keinen nicht-leeren Eintrag ohne "@" enthalten.
+                    or any(a and "@" not in a for _, a in getaddresses([r]))
                 ):
                     blocked.append(r)
             if blocked:
-                masked = [_mask_addr_for_log(r) for r in blocked]
+                masked = [mask_addr_for_pii_log(r) for r in blocked]
                 logger.warning(
                     "Resend-Allowlist-Guard blockiert %d Empfänger, die "
                     "keinem echten Nutzerprofil zugeordnet werden konnten "
@@ -757,10 +828,12 @@ class EmailOutput:
                     not candidates
                     or any(_is_reserved_test_domain(a) for a in candidates)
                     or any(not _is_local_mail_domain(a) for a in candidates)
+                    # Issue #1412 S5 (C3-20 A/Z1): wie im Resend-Zweig.
+                    or any(a and "@" not in a for _, a in getaddresses([r]))
                 ):
                     blocked.append(r)
             if blocked:
-                masked = [_mask_addr_for_log(r) for r in blocked]
+                masked = [mask_addr_for_pii_log(r) for r in blocked]
                 logger.warning(
                     "Lokal-Guard blockiert %d Empfaenger ausserhalb von "
                     "LOCAL_MAIL_DOMAINS bzw. mit reservierter Test-Domain "
@@ -776,6 +849,9 @@ class EmailOutput:
                     f"Domains: {masked}",
                 )
 
+        # Issue #2218 C5-53: je Empfaenger EINE ID, vor der Retry-Schleife
+        # vergeben -- Retry und Ersatzweg senden dieselbe ID.
+        message_ids = {r: new_message_id() for r in recipients}
         msg = build_mime_message(
             subject=subject,
             body=body,
@@ -787,6 +863,7 @@ class EmailOutput:
             mail_type=mail_type,
             mail_format=mail_format,
             compare_hourly_enabled=compare_hourly_enabled,
+            message_id=message_ids.get(recipients[0]) if recipients else None,
         )
 
         # Retry logic with exponential backoff
@@ -835,7 +912,7 @@ class EmailOutput:
             # verbraucht hat).
             versuch_start = time.monotonic()
             try:
-                self._dial_and_send(
+                accepted = self._dial_and_send(
                     self._host,
                     self._port,
                     self._user,
@@ -844,11 +921,13 @@ class EmailOutput:
                     msg,
                     from_addr,
                     deadline_at=primaer_deadline,
+                    message_ids=message_ids,
                 )
 
                 # Success - log if this was after retry
                 if attempt > 0:
                     logger.info(f"Email send succeeded after {attempt + 1} attempt(s)")
+                _log_accepted(accepted, message_ids, attempt + 1, "primary")
                 return
 
             except smtplib.SMTPAuthenticationError as e:
@@ -898,7 +977,7 @@ class EmailOutput:
                     # wird — nicht bloß gegen self._host (Primärhost).
                     if self._fallback_host and not self._fallback_recipients_blocked(recipients):
                         try:
-                            self._dial_and_send(
+                            accepted = self._dial_and_send(
                                 self._fallback_host,
                                 FALLBACK_SMTP_PORT,
                                 self._fallback_user,
@@ -910,8 +989,10 @@ class EmailOutput:
                                 # statt des (evtl. bereits aufgebrauchten)
                                 # Rests des Primärbudgets.
                                 deadline_at=time.monotonic() + FALLBACK_RESERVE_SECONDS,
+                                message_ids=message_ids,
                             )
                             logger.info("[SMTP-FALLBACK] sent via fallback SMTP")
+                            _log_accepted(accepted, message_ids, attempt + 1, "fallback")
                             return
                         except Exception as fb_err:
                             raise OutputError(
@@ -961,6 +1042,7 @@ class EmailOutput:
                 if self._handle_transient_dial_failure(
                     e, attempt, max_attempts, versuch_dauer, primaer_deadline,
                     backoff_base, recipients, msg, from_addr,
+                    message_ids=message_ids,
                 ):
                     return
 
@@ -977,6 +1059,7 @@ class EmailOutput:
                 if self._handle_transient_dial_failure(
                     e, attempt, max_attempts, versuch_dauer, primaer_deadline,
                     backoff_base, recipients, msg, from_addr,
+                    message_ids=message_ids,
                 ):
                     return
 

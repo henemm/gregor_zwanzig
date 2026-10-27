@@ -2,8 +2,8 @@
 entity_id: fix_2017_nowcast_messpunkt
 type: bugfix
 created: 2026-08-20
-updated: 2026-08-20
-status: approved
+updated: 2026-10-02
+status: implemented
 version: "1.0"
 tags: [alerts, radar, nowcast, trip, geometry]
 ---
@@ -120,7 +120,7 @@ Ablauf:
    iterativ weiter. Reicht der Tag nicht aus (letztes Segment des Tages endet vor `at`), wird
    `convert_trip_to_segments(trip, segment_date + timedelta(days=1))` nachgeladen und die Suche
    dort fortgesetzt.
-5. **Fail-soft** (kein Folgetag vorhanden — Tour zu Ende, Ruhetag ohne Stage, < 2 Wegpunkte,
+5. **Fail-soft** (kein Folgetag vorhanden — Trip zu Ende, Ruhetag ohne Stage, < 2 Wegpunkte,
    oder eine durch den bestehenden Zeitlücken-Guard übersprungene Segmentkette,
    `trip_segments.py:200-218`): auf den letzten bekannten `end_point` klemmen, ein
    `logger.debug`/`logger.warning`-Eintrag mit erkennbarem Grund, **keine Exception nach
@@ -226,7 +226,7 @@ Segment-Startpunkt.
     Folgetags-Etappe, Assert auf einen Punkt aus dem Folgetag.
 
 - **AC-7:** Given `at` liegt jenseits des letzten verfügbaren Segments UND es existiert kein
-  Folgetag (Tour zu Ende, Ruhetag ohne Stage, oder eine durch den bestehenden Zeitlücken-Guard
+  Folgetag (Trip zu Ende, Ruhetag ohne Stage, oder eine durch den bestehenden Zeitlücken-Guard
   entstandene Lücke) / When `position_at_time()` aufgerufen wird / Then wird auf den letzten
   bekannten `end_point` geklemmt, ein Log-Eintrag mit erkennbarem Grund geschrieben, und es wird
   **keine** Exception nach außen geworfen.
@@ -261,7 +261,7 @@ Segment-Startpunkt.
     `test_feature_656_radar_nowcast.py` belegt, dass ein später Onset nicht mehr pauschal
     unterdrückt wird (Positivnachweis der Entfernung, nicht nur Abwesenheit des alten Tests).
 
-- **AC-11 (Kontrollfall/Regressionsschutz):** Given ein Segment, dessen Dauer kürzer ist als der
+- **AC-11:** (Kontrollfall/Regressionsschutz) Given ein Segment, dessen Dauer kürzer ist als der
   verwendete Zieloffset (`RADAR_ONSET_THRESHOLD_MIN // 2` bzw. `NOWCAST_HORIZON_MIN // 2`), und
   bei dem die Vorwärtssuche kein weiteres Segment und keinen Folgetag findet / When
   `position_at_time()` läuft / Then bleibt das Verhalten aus AC-7 (Klemmen auf `end_point`,
@@ -277,7 +277,7 @@ Segment-Startpunkt.
     hinzukommenden Aufrufer stehen). Die Zusicherung ist dadurch nicht schwächer, sondern
     genauer benannt.
 
-- **AC-12 (Budget-Invariante):** Given ein Lauf von `check_radar_alerts()` für einen Trip mit
+- **AC-12:** (Budget-Invariante) Given ein Lauf von `check_radar_alerts()` für einen Trip mit
   aktivem Geh-Segment / When der Radar-Alarm-Pfad vollständig durchläuft / Then erfolgt **genau
   ein** `get_nowcast()`-Aufruf für diesen Trip — die Verlegung des Abrufpunkts erhöht die Zahl
   der Abrufe nicht. Dasselbe gilt analog für den Starkregen-Hinweis-Pfad in
@@ -285,6 +285,22 @@ Segment-Startpunkt.
   pro Trip an Segment-Startpunkt") hielt diese Zusicherung bislang nur als Prosa fest; da genau
   diese Zeile durch Scheibe B angefasst wird, verliert der Kommentar seinen Anker — die
   Invariante gehört ab jetzt in einen Test, nicht in einen Kommentar.
+
+  > **⚠️ Für den Alarm-Pfad ABGELÖST durch #2051 S2a** (`feat_2051_s2a_raeumliche_ausdehnung.md`,
+  > Abschnitt „Abgelöste Zusicherung"). `check_radar_alerts()` fragt seit S2a **mehrere** Punkte
+  > entlang der Reststrecke ab — die räumliche Ausdehnung des Regenereignisses lässt sich aus
+  > einem Punkt nicht bilden. An die Stelle von „genau ein Abruf" tritt eine **Obergrenze**
+  > (`trip_segments.RADAR_ZONE_MAX_POINTS`); der **erste** Punkt bleibt unverändert der hier
+  > spezifizierte #2017-Messpunkt und trägt allein die Auslöseregel, die übrigen liefern nur die
+  > Zonen. Bei einer Reststrecke unterhalb des Punktabstands bleibt es faktisch bei einem Abruf.
+  >
+  > **Unverändert gültig** bleibt AC-12 für den **Starkregen-Hinweis-Pfad**
+  > (`trip_report_scheduler.py`, Wächter `test_ac12_starkregen_hinweis_ruft_get_nowcast_genau_einmal`)
+  > und für den `/jetzt`-Pfad. Die Ablösung ist eng auf den Alarm-Pfad begrenzt.
+  >
+  > Den Alarm-Pfad bewacht seither `tests/unit/test_alert_log_capture_correlation.py`
+  > (`test_ac4_e2e_zweig_c_...`): Budget-Deckel eingehalten **und** der auslösende Datensatz ist
+  > der #2017-Messpunkt, nicht ein Zonen-Folgepunkt.
   - Test: Aufruf-Zähler am `get_nowcast`-Seam (DI-Seam, kein Mock der Entscheidungslogik) über
     einen vollständigen `check_radar_alerts()`-Lauf, Assert `== 1`. Analoger Zähler-Assert für
     den Starkregen-Hinweis-Lauf in `trip_report_scheduler.py`.
@@ -337,7 +353,7 @@ Segment-Startpunkt.
   `radar_service.py:170-241`). Bräuchte zwingend n Abrufe — unverhältnismäßig für ein
   55–180-Minuten-Fenster mit linearer Näherung.
 - **GPS/Live-Check-in als Alternative.** Kein technischer, sondern ein Produktentscheid (PO
-  2026-08-20): Der Wanderer ist auf der Tour offline oder nur über Satellit erreichbar — das ist
+  2026-08-20): Der Wanderer ist auf der Trip offline oder nur über Satellit erreichbar — das ist
   der Daseinszweck des Produkts. Online-Warnsysteme mit Live-Position existieren zahlreich und
   helfen im Gebirge nicht.
 - **`/jetzt`-Sofortabfrage (`trip_command_processor.py:1375`, `stage.waypoints[0]`).** Andere
@@ -406,10 +422,30 @@ Segment-Startpunkt.
    falsche Weg gewesen: „2" ist auch das Ergebnis eines vollständig defekten Caches, die
    Zusicherung wäre dann durch ihre eigene Verletzung erfüllt.
 
+8. **Näherung "Fenstermitte vs. Onset" (Nachtrag 2026-10-02, #2261 Sz.8).** Der Messpunkt ist
+   die Position zur **Mitte** des Vorwarnfensters (`now + RADAR_ONSET_THRESHOLD_MIN // 2`), nicht
+   die Position zum tatsächlichen Onset. Das ist Absicht und keine Lücke: der Onset entsteht erst
+   aus dem Abruf (Zirkelschluss, siehe oben); ein fester Zeitpunkt macht den Abruf
+   deterministisch. Der Onset liegt im Fenster bis +55 Min, also bis etwa 3-4 km hinter dem
+   Fenstermitte-Punkt. Diese Strecke deckt seit #2051 S2a die Mehrpunktabfrage ab: bis zu
+   `RADAR_ZONE_MAX_POINTS = 6` Punkte im Abstand `RADAR_ZONE_POINT_SPACING_KM = 2.0` km entlang
+   der Reststrecke (`trip_segments.points_along_remaining_route`). Dass der Messpunkt mit dem
+   Wegpunkt mitwandert (Koordinaten aller Punkte und Höhe), bewacht auf Auslöseebene
+   `tests/tdd/test_alarm_szenario_messpunkt_position.py` (#2261 Sz.8).
+
+9. 🔴 **Restrisiko: Auslöseregel nur am ersten Punkt (Nachtrag 2026-10-02, #2261 Sz.8).**
+   Seit #2051 S2a wertet `check_radar_alerts()` die Auslöseregel nur am **ersten** Punkt (dem
+   hier spezifizierten #2017-Messpunkt) aus; die Folgepunkte liefern ausschließlich die Zonen.
+   Ein Ereignis, das nur über Punkt 2 oder weiter liegt (also in 2-10 km Abstand vor dem
+   Fenstermitte-Punkt), löst daher keinen Alarm aus, auch wenn es auf der Strecke liegt. Das ist
+   eine bewusste Entscheidung aus #2051 S2a, kein Versehen. Behandlung: festgehalten, nicht
+   gebaut; geführt als eigenes Issue #2480 (nutzersichtbare Alarm-Lücke).
+   > **Erledigt durch #2480 (2026-10-02):** die Auslöseregel gilt je Messpunkt. KL 8 (Fenstermitte statt Onset) bleibt gültig.
+
 6. **Kein Tages-Überlauf in der Messgrundlage getroffen.** Bei der Wirksamkeitsmessung (Trip
    `5f534011`) trat in keiner Kombination aus Variante/Horizont ein Tagesüberlauf auf (0
    übersprungene Onset-Punkte). AC-6 (Tagesgrenzen-Überschreitung) ist damit durch Konstruktion
-   getestet, nicht durch reale Beobachtung auf dieser Tour bestätigt.
+   getestet, nicht durch reale Beobachtung auf dieser Trip bestätigt.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -422,6 +458,9 @@ Segment-Startpunkt.
 ## Changelog
 
 - 2026-08-20: Initial spec created (Issue #2017)
+- 2026-10-02: Known Limitations 8 und 9 ergänzt (#2261 Sz.8): Näherung "Fenstermitte vs. Onset"
+  und Restrisiko "Auslöseregel nur am ersten Punkt" (bewusste #2051-S2a-Entscheidung, Issue
+  #2480). Rein dokumentarisch, keine Änderung an Zusicherungen.
 - 2026-08-21: Scheibe B geliefert (Verdrahtung beider Pfade, Segment-Ende-Guard-Rückbau).
   Known Limitation 7 ergänzt: Trip und Ortsvergleich teilen keinen Cache-Eintrag mehr,
   wenn ein Preset-Ort auf einem Trip-Wegpunkt liegt — der einzige reale Zusatzverbrauch

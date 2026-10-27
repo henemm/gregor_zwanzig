@@ -64,7 +64,7 @@ def fehlschlag_ist_meldewuerdig(bester_abstand_km: float) -> bool:
 
 def record_track_resolution_failure(
     *, user_id: str, trip_id: str, stage_id: str, reason: str, detail: object,
-) -> None:
+) -> bool:
     """Haelt einen gescheiterten Auflösungsversuch als Diagnose-Spur fest.
 
     Args:
@@ -83,6 +83,9 @@ def record_track_resolution_failure(
     darf nicht bis zum aeusseren Faenger von ``backfill_stage_distances``
     durchschlagen -- der wuerde denselben Rueckgabewert liefern, aber die
     Ursache unter "Etappe bleibt unvermessen" begraben (AC-8).
+
+    Rueckgabe (Issue #2218 C5-47): ``True`` nur, wenn die Zeile wirklich
+    geschrieben wurde -- die Daempfung darf nur dann greifen.
     """
     try:
         from app.loader import get_data_dir
@@ -98,9 +101,11 @@ def record_track_resolution_failure(
         }, ensure_ascii=False)
         with path.open("a", encoding="utf-8") as fh:
             fh.write(line + "\n")
+        return True
     except Exception as e:  # noqa: BLE001 — fail-soft, AC-8
         logger.warning(
             "Diagnose-Spur %s zur gescheiterten Track-Aufloesung (%s/%s, %s) "
             "nicht schreibbar: %s: %s",
             _FAILURE_FILE, trip_id, stage_id, reason, type(e).__name__, e,
         )
+        return False

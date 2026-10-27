@@ -3,7 +3,7 @@ entity_id: bug_600_tdd_verhaltenstest_tests
 type: tests
 created: 2026-06-04
 updated: 2026-06-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, workflow, tdd, documentation]
 parent: bug_600_tdd_verhaltenstest
@@ -21,7 +21,7 @@ phase: phase5_tdd_red
 Test-Manifest für `tests/tdd/test_bug_600_tdd_verhaltenstest.py`.
 Mappt die drei Test-Funktionen auf die Acceptance Criteria der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_600_tdd_verhaltenstest.md`
+Parent-Spec: `docs/specs/_archive/modules/bug_600_tdd_verhaltenstest.md`
 
 ## Source
 

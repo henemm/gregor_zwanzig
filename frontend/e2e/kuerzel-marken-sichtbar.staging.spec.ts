@@ -52,18 +52,7 @@ const BESCHRIFTUNGEN = ['Mail', 'Kurzform'];
 /** Auflösungsmatrix aus der Spec, Abschnitt 4 — VERBINDLICH, keine Auswahl.
  *  Schwerpunkt auf der Bruchzone und beiden Raendern der Media-Query. */
 const AUFLOESUNGEN = [
-	// 🔴 320×568 ist AUSGENOMMEN (#1791, PO-Entscheid 2026-08-12): dort werden die
-	// Marken auf Inhaltsbreite NULL gequetscht (`clientWidth` 8–9 = Polster+Rahmen,
-	// `scrollWidth` bis 47) — 24 echte Beschneidungen, je 12 in beiden Editoren.
-	// Das ist ein ECHTER Defekt der Kuerzel-Darstellung, nicht bloss ein fremdes
-	// Bauteil davor: in der Zeile teilen sich Positionsnummer, Griff, Textspalte
-	// und Bedienknoepfe eine Breite, und bei 320px bleibt fuer die Textspalte
-	// nichts uebrig. Ab 375px tritt es NICHT mehr auf.
-	// Erreichbarkeit fraglich: bei 320px existiert `trip-detail-tab-weather` gar
-	// nicht (eigene Messung, 20s Timeout) — der Klickpfad kommt nur hin, weil er
-	// in Normalgroesse oeffnet und danach verkleinert.
-	// **Beim Schliessen von #1791 gehoert diese Zeile zurueck.**
-	// { klasse: 'Kleines Handy', width: 320, height: 568 },
+	{ klasse: 'Kleines Handy', width: 320, height: 568 },
 	{ klasse: 'Kleines Handy', width: 375, height: 667 },
 	{ klasse: 'Handy', width: 390, height: 844 },
 	{ klasse: 'Handy', width: 414, height: 896 },
@@ -209,7 +198,9 @@ type Befund = {
  *  nur dort `getBoundingClientRect`, `scrollWidth` und `elementFromPoint` die
  *  tatsaechliche Darstellung kennen. */
 async function messeZeile(zeile: Locator): Promise<Befund[]> {
-	await zeile.scrollIntoViewIfNeeded();
+	// #1791: mittig scrollen — `scrollIntoViewIfNeeded()` scrollt nicht, wenn die Zeile
+	// teilweise hinter der fixierten Bottom-Nav steht (Messartefakt, kein Produktfehler).
+	await zeile.evaluate((el) => el.scrollIntoView({ block: 'center' }));
 	return zeile.evaluate((row, { mailSel, kurzSel }) => {
 		const befunde: {
 			groesse: string;
@@ -275,26 +266,11 @@ async function messeZeile(zeile: Locator): Promise<Befund[]> {
 				}
 				// 4: nicht von einem Nachbarelement ueberdeckt
 				//
-				// 🔴 #1791: unterhalb von 900px greift die mobile Media-Query — dort
-				// belegen die vollbreite Bottom-Nav und der dauerhaft fixierte
-				// „✓ Gespeichert"-Streifen die unteren ~60–90px permanent, und jede
-				// Zeile, die beim sequentiellen Durchscrollen dort landet, ist
-				// verdeckt. Gemessen 2026-08-12 gegen `18af3c4b`: zwischen 375 und
-				// 899px sind ALLE Verletzungen von dieser Art, KEINE ist ein
-				// „beschnitten" (Bedingung 1). Die Zusicherung dieser Scheibe —
-				// Marken werden nie abgeschnitten — gilt dort also; was scheitert,
-				// ist ein fremdes, vorbestehendes Bauteil, kein Kuerzel-Layout.
-				//
-				// Deshalb wird NICHT die Breite ausgenommen (das wuerde auch die
-				// Bedingungen 1/2/3/5 dort blind machen), sondern genau diese eine
-				// Bedingung — und nur unterhalb der Media-Query-Grenze.
-				// **Beim Schliessen von #1791 faellt dieser Block ersatzlos weg.**
-				const mobileNavZone = vw < 900;
 				const mitte = document.elementFromPoint(
 					(r.left + r.right) / 2,
 					(r.top + r.bottom) / 2
 				);
-				if (!mobileNavZone && (!mitte || !(mitte === el || el.contains(mitte)))) {
+				if ((!mitte || !(mitte === el || el.contains(mitte)))) {
 					const wer = mitte
 						? `<${mitte.tagName.toLowerCase()} class="${mitte.className}">`
 						: 'nichts (Punkt liegt ausserhalb des Sichtfensters)';
@@ -340,9 +316,9 @@ async function pruefeTextgleichheit(
 // Navigation
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function oeffneTourenEditor(page: Page): Promise<Locator> {
-	await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-	const reiter = page.getByTestId('trip-detail-tab-weather');
+async function oeffneTripEditor(page: Page): Promise<Locator> {
+	await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+	const reiter = page.getByTestId('trip-detail-tab-wetter-metriken');
 	await expect(reiter).toBeVisible({ timeout: 15_000 });
 	await page.waitForLoadState('networkidle');
 	await reiter.click();
@@ -371,8 +347,8 @@ async function oeffneVergleichsEditor(page: Page, presetId: string): Promise<Loc
  *  faelschlich fuer einen bestandenen Speichervorgang. Uebernommen aus
  *  wetter-metriken-vorschau-entfernt.staging.spec.ts. */
 async function ziehe(page: Page, quelle: Locator, ziel: Locator): Promise<void> {
-	await quelle.scrollIntoViewIfNeeded();
-	await ziel.scrollIntoViewIfNeeded();
+	await quelle.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+	await ziel.evaluate((el) => el.scrollIntoView({ block: 'center' }));
 	const q = await quelle.boundingBox();
 	const z = await ziel.boundingBox();
 	if (!q || !z) throw new Error('ziehe: Quelle/Ziel ohne BoundingBox');
@@ -435,11 +411,12 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 		const mail = await mailKurzformAusBackend(request);
 
 		await page.setViewportSize({ width: 1440, height: 900 });
-		const tab = await oeffneTourenEditor(page);
+		const tab = await oeffneTripEditor(page);
 
 		const abweichungen: string[] = [];
 		for (const metricId of TRIP_METRIKEN) {
-			const zeile = tab.locator(
+			// #1791: der Trip-Editor hat zwei Reihenfolge-Bloecke — der erste ist der Kanal.
+			const zeile = tab.locator('[data-testid="wm2-reihenfolge"]').first().locator(
 				`[data-testid="wm2-reihenfolge-row"][data-metric-id="${metricId}"]`
 			);
 			await expect(
@@ -479,13 +456,13 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 		).toEqual([]);
 	});
 
-	// ── AC-10 / AC-11 / AC-12 (Touren-Editor) ───────────────────────────────
+	// ── AC-10 / AC-11 / AC-12 (Trips-Editor) ───────────────────────────────
 	test('AC-10/AC-11: in allen 14 Aufloesungen erfuellt jede Marke jeder Zeile alle Bedingungen', async ({
 		page,
 		request
 	}) => {
 		await createTrip(request);
-		const tab = await oeffneTourenEditor(page);
+		const tab = await oeffneTripEditor(page);
 
 		const alleBefunde: string[] = [];
 		for (const { klasse, width, height } of AUFLOESUNGEN) {
@@ -495,10 +472,19 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 
 			const zeilen = tab.locator('[data-testid="wm2-reihenfolge-row"]');
 			const anzahl = await zeilen.count();
-			if (anzahl !== TRIP_METRIKEN.length) {
+			// #1791: der Trip-Editor hat zwei Reihenfolge-Bloecke (Kanal + Vorschau) mit je
+			// eigener, vom Backend aufgefaecherter Zeilenzahl (z. B. wind_chill → Tag Min/Max).
+			// Darum keine feste Gesamtzahl, sondern: jede erwartete Groesse steht im Kanal-Block.
+			const kanalIds = await tab
+				.locator('[data-testid="wm2-reihenfolge"]')
+				.first()
+				.locator('[data-testid="wm2-reihenfolge-row"]')
+				.evaluateAll((els) => els.map((e) => e.getAttribute('data-metric-id')));
+			const fehlend = TRIP_METRIKEN.filter((id) => !kanalIds.includes(id));
+			if (fehlend.length > 0) {
 				alleBefunde.push(
-					`${width}x${height} (${klasse}): ${anzahl} statt ${TRIP_METRIKEN.length} ` +
-						`Zeilen sichtbar — eine Groesse verschwindet bei dieser Breite`
+					`${width}x${height} (${klasse}): Zeilen fehlen [${fehlend.join(', ')}] ` +
+						`— eine Groesse verschwindet bei dieser Breite`
 				);
 			}
 			for (let i = 0; i < anzahl; i++) {
@@ -545,7 +531,7 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 	// erlaubt dem NAMEN ausdruecklich, gekuerzt zu sein.
 	test('AC-12: in der Bruchzone kuerzt der Name, nie eine Marke', async ({ page, request }) => {
 		await createTrip(request);
-		const tab = await oeffneTourenEditor(page);
+		const tab = await oeffneTripEditor(page);
 
 		const befunde: string[] = [];
 		let irgendeinNameGekuerzt = false;
@@ -557,7 +543,7 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 			const anzahl = await zeilen.count();
 			for (let i = 0; i < anzahl; i++) {
 				const zeile = zeilen.nth(i);
-				await zeile.scrollIntoViewIfNeeded();
+				await zeile.evaluate((el) => el.scrollIntoView({ block: 'center' }));
 				const messung = await zeile.evaluate((row, { mailSel, kurzSel }) => {
 					const groesse = row.getAttribute('data-metric-id') ?? '?';
 					const name = row.querySelector('.metric-label') as HTMLElement | null;
@@ -610,8 +596,11 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 	// ── AC-13 (Vergleichs-Editor) ───────────────────────────────────────────
 	test('AC-13: dieselbe Zusicherung im Vergleichs-Editor', async ({ page, request }) => {
 		const ort1 = await createTestLocation(request, { name: 'S4 Nord', lat: 46.5, lon: 8.1 });
+		// #1791: ort1 sofort zum Aufraeumen vormerken — scheitert die Anlage von ort2,
+		// bliebe ort1 sonst auf Staging liegen und frisst die Orte-Quote.
+		aufgeraeumt.orte.push(ort1.id);
 		const ort2 = await createTestLocation(request, { name: 'S4 Sued', lat: 46.9, lon: 8.4 });
-		aufgeraeumt.orte.push(ort1.id, ort2.id);
+		aufgeraeumt.orte.push(ort2.id);
 		const angelegt = await request.post('/api/compare/presets', {
 			data: {
 				name: 'E2E #1719 S4 Kuerzel-Marken',
@@ -693,43 +682,186 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 	});
 
 	// ── AC-14 ───────────────────────────────────────────────────────────────
-	test('AC-14: die Ziehgeste sortiert weiterhin um und speichert', async ({ page, request }) => {
-		// PFLICHT, kein Nice-to-have: S3 hat in genau dieser Datei die Ziehgeste
-		// lautlos zerbrochen (neue Array-Referenz im Zeilen-Markup), und 2553
-		// Unit-Tests haben das nicht gesehen.
-		await createTrip(request);
-		await page.setViewportSize({ width: 1440, height: 900 });
-		const tab = await oeffneTourenEditor(page);
+	// AC-14 gilt auch unter 900px (#1791 AC-6): 375px = Bereich der Einspalten-Zeile.
+	for (const breite of [1440, 375]) {
+		test(`AC-14: die Ziehgeste sortiert weiterhin um und speichert (${breite}px)`, async ({ page, request }) => {
+			// PFLICHT, kein Nice-to-have: S3 hat in genau dieser Datei die Ziehgeste
+			// lautlos zerbrochen (neue Array-Referenz im Zeilen-Markup), und 2553
+			// Unit-Tests haben das nicht gesehen.
+			await createTrip(request);
+			await page.setViewportSize({ width: breite, height: breite < 900 ? 1600 : 900 });
+			const tab = await oeffneTripEditor(page);
 
-		const zeilen = tab.locator('[data-testid="wm2-reihenfolge-row"]');
-		await expect(zeilen).toHaveCount(TRIP_METRIKEN.length);
-		const ersteVorher = await zeilen.first().getAttribute('data-metric-id');
-		expect(ersteVorher).toBe(TRIP_METRIKEN[0]);
+			const kanal = tab.locator('[data-testid="wm2-reihenfolge"]').first();
+			const zeilen = kanal.locator('[data-testid="wm2-reihenfolge-row"]');
+			// Keine feste Zeilenzahl: das Backend faechert wind_chill im Kanal-Block auf (8 Zeilen).
+			await expect(zeilen.first()).toBeVisible();
+			const ersteVorher = await zeilen.first().getAttribute('data-metric-id');
+			expect(ersteVorher).toBe(TRIP_METRIKEN[0]);
 
-		const quelle = tab.locator(
-			`[data-testid="wm2-reihenfolge-row"][data-metric-id="${TRIP_METRIKEN[2]}"]`
-		);
-		const ziel = tab.locator(
-			`[data-testid="wm2-reihenfolge-row"][data-metric-id="${TRIP_METRIKEN[0]}"]`
-		);
-		await ziehe(page, quelle, ziel);
+			// Unter 900px (#1791 AC-6) liegen die Bedienelemente in einer eigenen Zeile
+			// unter dem Label: am Ziehgriff greifen, nicht in der Zeilenmitte.
+			const quelleZeile = kanal.locator(
+				`[data-testid="wm2-reihenfolge-row"][data-metric-id="${TRIP_METRIKEN[2]}"]`
+			);
+			const quelle = breite < 900 ? quelleZeile.locator('.drag-handle') : quelleZeile;
+			const ziel = kanal.locator(
+				`[data-testid="wm2-reihenfolge-row"][data-metric-id="${TRIP_METRIKEN[0]}"]`
+			);
+			await ziehe(page, quelle, ziel);
 
-		await expect(zeilen.first()).toHaveAttribute('data-metric-id', TRIP_METRIKEN[2]);
-		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
-			timeout: 15_000
+			await expect(zeilen.first()).toHaveAttribute('data-metric-id', TRIP_METRIKEN[2]);
+			await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
+				timeout: 15_000
+			});
+
+			// Ohne Neuladen waere das nur eine DOM-Bewegung: der lokale
+			// `consider`-Zwischenstand sieht im selben Tab identisch aus.
+			await page.reload();
+			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+			const neu = page
+				.getByTestId('weather-metrics-tab')
+				.locator('[data-testid="wm2-reihenfolge"]')
+				.first()
+				.locator('[data-testid="wm2-reihenfolge-row"]');
+			await expect(
+				neu.first(),
+				'AC-14 FAIL: nach dem Neuladen steht die alte Reihenfolge — die Ziehgeste ' +
+					'hat bewegt, aber nicht gespeichert'
+			).toHaveAttribute('data-metric-id', TRIP_METRIKEN[2], { timeout: 10_000 });
 		});
+	}
 
-		// Ohne Neuladen waere das nur eine DOM-Bewegung: der lokale
-		// `consider`-Zwischenstand sieht im selben Tab identisch aus.
-		await page.reload();
-		await page.getByTestId('trip-detail-tab-weather').click();
-		const neu = page
-			.getByTestId('weather-metrics-tab')
-			.locator('[data-testid="wm2-reihenfolge-row"]');
+	// ── #1791 AC-3 / AC-5 ───────────────────────────────────────────────────
+	//
+	// Unter 900px liegen Roh/Einfach und "Aus" in einer EIGENEN Zeile unter Name
+	// und Marken; ab 900px bleiben sie rechts neben dem Namen. Geprueft wird die
+	// gerenderte Geometrie, nicht der CSS-Text.
+	test('AC-3: bei 320px liegen Umschalter und "Aus" unter dem Label und funktionieren', async ({
+		page,
+		request
+	}) => {
+		await createTrip(request);
+		const tab = await oeffneTripEditor(page);
+		await page.setViewportSize({ width: 320, height: 568 });
+		await page.waitForTimeout(250);
+
+		const kanal = tab.locator('[data-testid="wm2-reihenfolge"]').first();
+		const zeile = kanal.locator('[data-testid="wm2-reihenfolge-row"]').first();
+		await zeile.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+		const geo = await zeile.evaluate((row) => {
+			const l = (row.querySelector('.label-cell') as HTMLElement).getBoundingClientRect();
+			const c = (row.querySelector('.controls') as HTMLElement).getBoundingClientRect();
+			return { labelBottom: l.bottom, controlsTop: c.top };
+		});
+		expect(
+			geo.controlsTop,
+			`AC-3 FAIL: .controls beginnt bei y=${geo.controlsTop}, .label-cell endet bei y=${geo.labelBottom} — ` +
+				`die Bedienelemente liegen nicht unter dem Label`
+		).toBeGreaterThanOrEqual(geo.labelBottom - 1);
+
+		const vorher = await kanal.locator('[data-testid="wm2-reihenfolge-row"]').count();
+		await zeile.locator('.btn-aus').click();
 		await expect(
-			neu.first(),
-			'AC-14 FAIL: nach dem Neuladen steht die alte Reihenfolge — die Ziehgeste ' +
-				'hat bewegt, aber nicht gespeichert'
-		).toHaveAttribute('data-metric-id', TRIP_METRIKEN[2], { timeout: 10_000 });
+			kanal.locator('[data-testid="wm2-reihenfolge-row"]'),
+			'AC-3 FAIL: Klick auf "Aus" hat die Groesse nicht aus dem Kanal entfernt'
+		).toHaveCount(vorher - 1);
+	});
+
+	test('AC-5: bei 901px steht .controls neben dem Label, nicht darunter', async ({
+		page,
+		request
+	}) => {
+		await createTrip(request);
+		const tab = await oeffneTripEditor(page);
+		await page.setViewportSize({ width: 901, height: 900 });
+		await page.waitForTimeout(250);
+
+		const zeilen = tab
+			.locator('[data-testid="wm2-reihenfolge"]')
+			.first()
+			.locator('[data-testid="wm2-reihenfolge-row"]');
+		const anzahl = await zeilen.count();
+		const befunde: string[] = [];
+		for (let i = 0; i < anzahl; i++) {
+			const zeile = zeilen.nth(i);
+			await zeile.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+			const g = await zeile.evaluate((row) => {
+				const l = (row.querySelector('.label-cell') as HTMLElement).getBoundingClientRect();
+				const c = (row.querySelector('.controls') as HTMLElement).getBoundingClientRect();
+				return {
+					id: row.getAttribute('data-metric-id'),
+					labelMitte: (l.top + l.bottom) / 2,
+					controlsMitte: (c.top + c.bottom) / 2,
+					controlsTop: c.top,
+					labelBottom: l.bottom
+				};
+			});
+			if (g.controlsTop >= g.labelBottom - 1 || Math.abs(g.labelMitte - g.controlsMitte) > 20) {
+				befunde.push(
+					`${g.id}: Label-Mitte ${Math.round(g.labelMitte)}, Controls-Mitte ${Math.round(g.controlsMitte)}`
+				);
+			}
+		}
+		expect(
+			befunde,
+			`AC-5 FAIL — ab 900px muss .controls neben dem Label stehen:\n  ` + befunde.join('\n  ')
+		).toEqual([]);
+	});
+
+	// ── #1791 AC-6 (Aus-Zeile bei 320px) ────────────────────────────────────
+	test('AC-6: bei 320px bleibt die Aus-Zeile einzeilig, "Ein" bedienbar und holt die Groesse zurueck', async ({
+		page,
+		request
+	}) => {
+		await createTrip(request);
+		const tab = await oeffneTripEditor(page);
+		await page.setViewportSize({ width: 320, height: 568 });
+		await page.waitForTimeout(250);
+
+		const kanal = tab.locator('[data-testid="wm2-reihenfolge"]').first();
+		const zeilen = kanal.locator('[data-testid="wm2-reihenfolge-row"]');
+		const vorher = await zeilen.count();
+		// Eine Aus-Zeile entsteht, indem eine Groesse per "Aus" aus dem Kanal genommen wird.
+		const id = 'humidity'; // nicht aufgefaechert: genau eine Kanal-Zeile
+		await zeilen.and(kanal.locator(`[data-metric-id="${id}"]`)).locator('.btn-aus').click();
+		await expect(zeilen).toHaveCount(vorher - 1);
+
+		const aus = kanal.locator(`[data-testid="wm2-aus-row"][data-metric-id="${id}"]`);
+		await expect(aus, 'AC-6 FAIL: keine Aus-Zeile fuer die ausgeschaltete Groesse').toHaveCount(1);
+		await aus.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+
+		expect(await aus.locator('.drag-handle').count(), 'AC-6 FAIL: Aus-Zeile traegt einen Ziehgriff').toBe(0);
+
+		const g = await aus.evaluate((row) => {
+			const ein = row.querySelector('.btn-ein') as HTMLElement;
+			const label = row.querySelector('.label-cell') as HTMLElement;
+			const e = ein.getBoundingClientRect();
+			const l = label.getBoundingClientRect();
+			const mitte = document.elementFromPoint((e.left + e.right) / 2, (e.top + e.bottom) / 2);
+			return {
+				links: e.left,
+				rechts: e.right,
+				vw: window.innerWidth,
+				ueberlagert: !mitte || !(mitte === ein || ein.contains(mitte)),
+				wer: mitte ? `<${mitte.tagName.toLowerCase()} class="${mitte.className}">` : 'nichts',
+				einMitte: (e.top + e.bottom) / 2,
+				labelMitte: (l.top + l.bottom) / 2
+			};
+		});
+		expect(g.links, 'AC-6 FAIL: "Ein" links ausserhalb des Sichtfensters').toBeGreaterThanOrEqual(-1);
+		expect(g.rechts, `AC-6 FAIL: "Ein" ragt rechts aus dem Sichtfenster (${g.vw}px)`).toBeLessThanOrEqual(g.vw + 1);
+		expect(g.ueberlagert, `AC-6 FAIL: "Ein" wird ueberdeckt von ${g.wer}`).toBe(false);
+		expect(
+			Math.abs(g.einMitte - g.labelMitte),
+			`AC-6 FAIL: Label (Mitte ${Math.round(g.labelMitte)}) und "Ein" (Mitte ${Math.round(g.einMitte)}) liegen nicht in einer Zeile`
+		).toBeLessThanOrEqual(20);
+
+		await aus.locator('.btn-ein').click();
+		await expect(
+			zeilen,
+			'AC-6 FAIL: Klick auf "Ein" hat die Groesse nicht in den Kanal zurueckgeholt'
+		).toHaveCount(vorher);
+		await expect(aus).toHaveCount(0);
 	});
 });

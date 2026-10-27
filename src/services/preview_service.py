@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from app.config import Settings
-from app.loader import get_briefings_dir, load_trip
+from app.loader import VALID_ENTITY_ID_RE, get_briefings_dir, load_trip
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -51,7 +51,7 @@ class PreviewService:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or Settings()
 
-    def _load_trip(self, trip_id: str, user_id: str = "default") -> "Trip":
+    def _load_trip(self, trip_id: str, user_id: str) -> "Trip":
         """Lädt einen Trip aus `data/users/<user>/briefings/<id>.json`
         (Issue #1250 Scheibe 7a Cutover, ADR-0023 -- war `trips/<id>.json`).
 
@@ -62,8 +62,14 @@ class PreviewService:
 
         Raises:
             FileNotFoundError: wenn der Trip nicht existiert.
-            ValueError: wenn der Eintrag ein Vergleich (kind=vergleich) ist.
+            ValueError: wenn der Eintrag ein Vergleich (kind=vergleich) ist
+                oder die Kennung kein sicheres Pfadsegment ist (#2140 S2).
         """
+        # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau, spiegelt
+        # store.ValidEntityID auf der Go-Seite (Paritaets-Test
+        # tests/unit/test_entity_id_pattern_parity.py).
+        if not VALID_ENTITY_ID_RE.match(trip_id):
+            raise ValueError(f"invalid trip_id: {trip_id!r}")
         trips_dir = get_briefings_dir(user_id)
         path = trips_dir / f"{trip_id}.json"
         if not path.exists():
@@ -129,6 +135,7 @@ class PreviewService:
         report_type: str,
         now_utc: datetime,
         demo: bool = False,
+        user_id: str | None = None,
     ):
         """Gemeinsame Pipeline: segments → weather → format_email → TripReport.
 
@@ -143,13 +150,19 @@ class PreviewService:
             demo: Wenn True (Issue #483), wird der FixtureProvider statt der
                 Live-OpenMeteo-API genutzt. Damit ist die Vorschau immer
                 verfügbar — unabhängig von API-Limit oder Datum.
+            user_id: Nutzer der Anfrage (#2151/#2057) -- der Scheduler misst
+                Etappen mit dessen GPX statt still mit ``users/default``.
 
         Returns: (report, segment_weather, stage_name, trip_tz) — segment_weather,
         stage_name und trip_tz werden von render_sms_preview wiederverwendet
         (Issue #188 / Bug #397: tz muss in die SMS-Token durchgereicht werden).
         """
         from services.trip_report_scheduler import TripReportSchedulerService
-        scheduler = TripReportSchedulerService(self.settings)
+        # Ohne user_id bekommt der Scheduler ``None`` statt seines
+        # Signatur-Defaults "default": ``_convert_trip_to_segments`` ueberspringt
+        # dann den GPX-Backfill -- kein Zugriff auf irgendeinen Nutzerordner
+        # (ADR-0003, #2151 AC-2).
+        scheduler = TripReportSchedulerService(self.settings, user_id=user_id)
         # Issue #2036 CI-Nachschlag (PR #2055/#2058): eine Vorschau ist "kein
         # Versand, nur Render" (Modul-Docstring) -- sie darf den
         # Trip-Bestand nicht als Seiteneffekt veraendern. Das Attribut steuert
@@ -226,7 +239,9 @@ class PreviewService:
         from services.segment_weather import fetch_night_weather, night_weather_needed
         night_weather = None
         if segment_weather and night_weather_needed(trip.display_config):
-            night_weather = fetch_night_weather(segment_weather[-1], provider=provider)
+            night_weather = fetch_night_weather(
+                segment_weather[-1], provider=provider, user_id=user_id,
+            )
 
         multi_day_trend = None
         outlook_state = None
@@ -334,35 +349,11 @@ class PreviewService:
             night_weather=night_weather,
         )
 
-    def render_email_preview(
-        self,
-        trip_id: str,
-        *,
-        user_id: str = "default",
-        report_type: str = "morning",
-        target_date: str | None = None,
-        demo: bool = False,
-    ) -> str:
-        """Rendert die Email-HTML-Vorschau identisch zur echten Mail."""
-        if report_type not in VALID_REPORT_TYPES:
-            raise ValueError(f"Ungültiger report_type '{report_type}'")
-        trip = self._load_trip(trip_id, user_id)
-        now_utc = datetime.now(timezone.utc)
-        target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
-        report, _segments, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, now_utc=now_utc, demo=demo,
-        )
-        # Issue #722: compact format — wrap plain text in <pre> for browser preview
-        if not report.email_html and report.email_plain:
-            import html as _html
-            return f"<pre style='font-family:monospace;white-space:pre-wrap;font-size:13px'>{_html.escape(report.email_plain)}</pre>"
-        return report.email_html
-
     def render_sms_preview(
         self,
         trip_id: str,
         *,
-        user_id: str = "default",
+        user_id: str,
         report_type: str = "morning",
         target_date: str | None = None,
         demo: bool = False,
@@ -378,35 +369,17 @@ class PreviewService:
         now_utc = datetime.now(timezone.utc)
         target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
         report, _segment_weather, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, now_utc=now_utc, demo=demo,
+            trip, target, report_type, now_utc=now_utc, demo=demo, user_id=user_id,
         )
         # Issue #954: kein eigener Renderpfad mehr — report.sms_text ist bereits
         # der #944-korrekte Versandtext (inkl. disabled_specs-Filterung).
         return report.email_subject, report.sms_text
 
-    def render_telegram_preview(
-        self,
-        trip_id: str,
-        *,
-        user_id: str = "default",
-        report_type: str = "morning",
-        target_date: str | None = None,
-        demo: bool = False,
-    ) -> tuple[str, str, list[str]]:
-        """Rendert die Telegram-Vorschau via #1001-Multi-Bubble-Renderer (kein Versand).
 
-        Returns: (email_subject, body, bubbles). ``body`` ist die mit einem
-        Trennzeichen verbundene Kette aller Bubbles (Rueckwaertskompatibilitaet
-        fuer bestehende Konsumenten des einzelnen Body-Strings, AC-7).
-        """
-        if report_type not in VALID_REPORT_TYPES:
-            raise ValueError(f"Ungültiger report_type '{report_type}'")
-        trip = self._load_trip(trip_id, user_id)
-        now_utc = datetime.now(timezone.utc)
-        target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
-        report, _segments, _stage_name, _trip_tz = self._build_report(
-            trip, target, report_type, now_utc=now_utc, demo=demo,
-        )
-        bubbles = report.telegram_bubbles or []
-        body = "\n\n---\n\n".join(bubbles)
-        return report.email_subject, body, bubbles
+def _email_html_of(report) -> str:
+    """E-Mail-HTML der Vorschau; Issue #722: compact format — wrap plain text
+    in <pre> for browser preview."""
+    if not report.email_html and report.email_plain:
+        import html as _html
+        return f"<pre style='font-family:monospace;white-space:pre-wrap;font-size:13px'>{_html.escape(report.email_plain)}</pre>"
+    return report.email_html

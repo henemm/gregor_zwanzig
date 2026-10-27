@@ -39,6 +39,8 @@ from pathlib import Path
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.render import render_sms
 
+from tests.helpers.tagesbezug import KURZFORM_ZEIT_TOKEN
+
 _UNSET = object()
 
 
@@ -259,7 +261,10 @@ def test_ac12_kurzform_zeigt_kein_drittes_zeit_token_fuer_die_reichweite():
         location_sharpness_limit_time="19:00", source_reach_time="21:00",
     )))
 
-    zeit_token = re.findall(r"@\d{1,2}:\d{2}", sms)
+    # Issue #2096: das Kuerzel des Tagesuebergangs (`@Sa0:15`) gehoert mit
+    # gezaehlt -- sonst zaehlte der Ausdruck abends WENIGER Token, als da
+    # sind, und die Obergrenze waere genau dann wirkungslos.
+    zeit_token = re.findall(rf"@{KURZFORM_ZEIT_TOKEN}", sms)
     assert len(zeit_token) <= 2, (
         f"RED/E6: die Kurzform darf hoechstens zwei Zeit-Token tragen "
         f"(Beginn, Ende), kein drittes fuer die Reichweite: {sms!r} "

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import shutil
 from datetime import date, datetime, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -114,7 +115,7 @@ def test_dated_snapshot_preferred_over_undated(clean_user_dirs):
     from services.weather_snapshot import WeatherSnapshotService
 
     user_id = clean_user_dirs("tdd-823-ac1")
-    today = date.today()
+    today = ortstag(47.0, 11.0)
     trip_id = "trip-823-ac1"
 
     svc = WeatherSnapshotService(user_id=user_id)
@@ -147,7 +148,7 @@ def test_undated_fallback_when_no_dated_exists(clean_user_dirs):
     from services.weather_snapshot import WeatherSnapshotService
 
     user_id = clean_user_dirs("tdd-823-ac2")
-    today = date.today()
+    today = ortstag(47.0, 11.0)
     trip_id = "trip-823-ac2"
 
     svc = WeatherSnapshotService(user_id=user_id)
@@ -177,7 +178,7 @@ def test_evening_briefing_stale_snapshot_does_not_trigger_false_alert(clean_user
     from services.weather_snapshot import WeatherSnapshotService
 
     user_id = clean_user_dirs("tdd-823-ac3")
-    today = date.today()
+    today = ortstag(47.0, 11.0)
     trip_id = "trip-823-ac3"
 
     svc = WeatherSnapshotService(user_id=user_id)

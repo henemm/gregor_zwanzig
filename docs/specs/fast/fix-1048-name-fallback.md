@@ -1,3 +1,10 @@
+---
+entity_id: fix_1048_name_fallback
+type: fast
+created: 2026-07-07
+status: implemented
+---
+
 # Mini-Spec: #1048 F005 — absturzsicherer Name-Fallback
 
 ## Was ändert sich

@@ -34,10 +34,9 @@ from __future__ import annotations
 
 import re
 import uuid
-from datetime import date as date_type, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 
-import pytest
 from freezegun import freeze_time
 
 from app.config import Settings
@@ -51,6 +50,7 @@ from services.radar_service import (
 )
 
 from tests.helpers.alert_log_fixtures import settings_email_only, weather
+from tests.helpers.ortstag import ortstag
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -93,7 +93,9 @@ def _active_trip(trip_id: str) -> Trip:
 
     Muster: test_issue_818_radar_briefing_integration.py::_make_active_trip.
     """
-    today = date_type.today()
+    # #2314 D2: der Etappentag folgt dem Ortstag der Trip-Koordinaten
+    # (trip_local_today, ADR-0044), nicht dem Prozesstag.
+    today = ortstag(LAT, LON)
     wp0 = Waypoint(
         id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=100.0,
         arrival_override="00:00",
@@ -113,16 +115,18 @@ def _active_trip(trip_id: str) -> Trip:
 def _trip_with_segment_offset(trip_id: str, *, start_in_min: float, duration_min: float = 20.0) -> Trip:
     """Aktives/naechstes Segment beginnt in `start_in_min` Minuten ab jetzt (UTC).
 
-    Skip statt Fehlschlag, wenn der Offset eine Mitternachtsgrenze (UTC) beruehrt —
-    Stage.date ist ein einzelner Kalendertag, ein Tageswechsel wuerde die
-    HH:MM-Arithmetik verfaelschen (analog dem now.hour<4-Guard in
-    test_issue_818_radar_briefing_integration.py::test_ac5).
+    Issue #2096: der frueher hier stehende Selbst-Skip ("Testzeitpunkt zu nah
+    an einer Mitternachtsgrenze") ist ERSATZLOS entfallen. Er fing einen
+    Zufall der Wanduhr ab; die Aufrufer stellen die Uhr inzwischen fest
+    (`freeze_time`), damit gibt es diesen Zufall nicht mehr. Ein Test, der
+    sich still selbst ueberspringt, ist ein Waechter-Loch: er meldet Gruen,
+    ohne etwas geprueft zu haben. Wer diese Fixture kuenftig ohne gestellte
+    Uhr aufruft, bekommt einen Fehlschlag statt eines stillen Skips -- und
+    das ist die richtige Meldung.
     """
     now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
     start = now + timedelta(minutes=start_in_min)
     end = start + timedelta(minutes=duration_min)
-    if start.date() != end.date() or start.date() != date_type.today():
-        pytest.skip("Testzeitpunkt zu nah an einer Mitternachtsgrenze (UTC) fuer Offset-Segment")
 
     wp0 = Waypoint(
         id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=100.0,
@@ -240,7 +244,8 @@ def _install_fake_nowcast(
     `source_reach_minutes` additiv (Issue #2051 S3): ohne sie bleibt das
     `NowcastResult` unveraendert (`None`, Bestandsverhalten)."""
 
-    def _fake_get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+    def _fake_get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing",
+                          user_id=None):
         calls.append((lat, lon, priority))
         if raise_exc is not None:
             raise raise_exc
@@ -307,7 +312,7 @@ def test_ac1_budget_erschoepft_blockiert_fetch_und_hinweis(monkeypatch):
     trip = _active_trip(f"trip-ac1-{uuid.uuid4().hex[:6]}")
 
     now = datetime.now(timezone.utc)
-    # Issue #1726: der Zaehler laeuft in der Ortszone der TOUR — `LAT`/`LON`
+    # Issue #1726: der Zaehler laeuft in der Ortszone des TRIPS — `LAT`/`LON`
     # liegen auf Island. Wer hier eine andere Zone belegt als der Pruefling
     # liest, erschoepft ein Kontingent, das nie geprueft wird.
     trip_zone = tz_for_coords(LAT, LON)
@@ -372,22 +377,30 @@ def test_ac2_zeitfenster_guard_kein_fetch_ausserhalb_horizon(monkeypatch):
         )
 
     # Nah: Segment beginnt in 30 Minuten (<= 180) -> Fetch UND Hinweis.
-    uid_nah = _uid("ac2-nah")
-    trip_nah = _trip_with_segment_offset(f"trip-ac2-nah-{uuid.uuid4().hex[:6]}", start_in_min=30)
-    calls_nah: list = []
-    _install_fake_nowcast(monkeypatch, calls_nah, onset_minutes=10, intensity_label=INTENSITY_HEAVY)
-    rec_nah = _ReportRecorder()
-    rec_nah.install(monkeypatch)
-    _outcome_nah, report_nah = _run_briefing(rec_nah, uid_nah, trip_nah)
+    # Feste Uhr auch hier (#2096): frueher lief dieser Zweig auf der Wanduhr
+    # und uebersprang sich ab ~23:30 UTC still selbst. Ein Test, der abends
+    # nichts prueft und trotzdem gruen meldet, bewacht nichts.
+    with freeze_time("2026-08-17T10:00:00+00:00"):
+        uid_nah = _uid("ac2-nah")
+        trip_nah = _trip_with_segment_offset(
+            f"trip-ac2-nah-{uuid.uuid4().hex[:6]}", start_in_min=30
+        )
+        calls_nah: list = []
+        _install_fake_nowcast(
+            monkeypatch, calls_nah, onset_minutes=10, intensity_label=INTENSITY_HEAVY
+        )
+        rec_nah = _ReportRecorder()
+        rec_nah.install(monkeypatch)
+        _outcome_nah, report_nah = _run_briefing(rec_nah, uid_nah, trip_nah)
 
-    assert len(calls_nah) >= 1, (
-        "AC-2 (Gegenprobe): Segment beginnt in 30 Minuten (<= Horizont) -> "
-        f"get_nowcast() MUSS aufgerufen werden, war {calls_nah!r}."
-    )
-    assert _HINT_MARKER in report_nah.email_plain, (
-        "AC-2 (Gegenprobe): innerhalb des Horizonts MUSS der Hinweis erscheinen.\n"
-        f"{report_nah.email_plain}"
-    )
+        assert len(calls_nah) >= 1, (
+            "AC-2 (Gegenprobe): Segment beginnt in 30 Minuten (<= Horizont) -> "
+            f"get_nowcast() MUSS aufgerufen werden, war {calls_nah!r}."
+        )
+        assert _HINT_MARKER in report_nah.email_plain, (
+            "AC-2 (Gegenprobe): innerhalb des Horizonts MUSS der Hinweis erscheinen.\n"
+            f"{report_nah.email_plain}"
+        )
 
 
 # ══════════════════════════════════ AC-3 ══════════════════════════════════

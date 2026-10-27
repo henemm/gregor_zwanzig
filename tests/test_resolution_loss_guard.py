@@ -72,6 +72,8 @@ Spec: ``docs/specs/modules/waechter_1405_stille_aufloesung.md``.
 """
 from __future__ import annotations
 
+import functools as _functools
+
 import ast
 from collections import Counter
 from pathlib import Path
@@ -601,6 +603,18 @@ def _find_violations(path: Path) -> dict[str, str]:
 
 
 def _all_violations() -> dict[str, str]:
+    """Gecachter Mantel um ``_all_violations_berechnen()`` -- Kopie je Aufruf.
+
+    CI-Rot 2026-10-22 (Familie B): der Scan der Produktionsflaeche ist pro
+    Lauf deterministisch (dieselben Dateien, dasselbe Ergebnis), wurde aber von
+    jedem Test dieser Datei neu gerechnet. Einmal rechnen, allen liefern;
+    die synthetischen Wirkungsnachweise gehen weiter ueber ``_find_violations(path)``
+    und sind davon unberuehrt."""
+    return dict(_all_violations_berechnen())
+
+
+@_functools.cache
+def _all_violations_berechnen() -> dict[str, str]:
     """``_find_violations()`` über die gesamte Scanfläche, zu EINEM Dict vereint."""
     violations: dict[str, str] = {}
     for path in _scan_files():
@@ -677,10 +691,7 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/output/renderers/trip_report.py::_dp_to_row::0": (
         "A2 (#1405, vormals :482) — _dp_to_row: Stunden-Zeile-Spalte verschwindet."
     ),
-    "src/output/renderers/email/html.py::_allowed_col_keys_for_horizon::0": (
-        "A3 (#1405, vormals :721) — _allowed_col_keys_for_horizon: Spalte "
-        "fällt aus dem Horizont-Filter."
-    ),
+    # A3 BEHOBEN (#1405 S3): Verwerfen wird geloggt -> Eintrag entfernt
     # A4 lag bis Fix #1575 Scheibe 2 in render_html (_col_order-Bauschleife).
     # Die Schleife wurde nach helpers.py::resolve_metric_col_order extrahiert
     # (geteilter Helper mit plain.py) und in html.py durch einen Funktionsaufruf
@@ -735,11 +746,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
         "Log. Der logger.warning der Nachbarhälfte hat mit diesem Zweig nichts "
         "zu tun."
     ),
-    "src/services/official_alerts/meteoalarm.py::_group_and_map_info_entries::0": (
-        "A13 (#1405, vormals _extract_alerts_from_cap:362; Funktion mit #1445 "
-        "aufgeteilt) — ganze Warnung fällt weg bei unbekanntem awareness_type "
-        "(_TYPE_HAZARD_MAP-Fehltreffer)."
-    ),
+    # A13 BEHOBEN (#1430): _group_and_map_info_entries meldet verworfene
+    # awareness_types jetzt per logger.debug (Eintrag entfernt, Liste schrumpft).
     # --- Beim Bau des Wächters NEU gefunden (nicht in der Bestandsaufnahme).
     # Jede Zeile von Hand nachgelesen; jede ist die exakte Mechanik einer
     # bereits belegten Fundstelle an einer weiteren Stelle. Reparatur gehört
@@ -835,8 +843,7 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     "src/output/renderers/trip_report.py::_aggregate_night_block": 1,
     # A2 — Stunden-Zeile-Spalte
     "src/output/renderers/trip_report.py::_dp_to_row": 1,
-    # A3 — Spalte aus Horizont-Filter
-    "src/output/renderers/email/html.py::_allowed_col_keys_for_horizon": 1,
+    # A3 BEHOBEN (#1405 S3): Verwerfen wird geloggt -> Eintrag entfernt
     # A4 — Spaltenreihenfolge/-sichtbarkeit der ganzen Mail (_col_order). Mit
     # Fix #1575 Scheibe 2 aus render_html nach helpers.py::resolve_metric_col_order
     # extrahiert (Spec-Tabelle nennt weiterhin html.py::render_html:782 — der
@@ -869,7 +876,7 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # nachziehen, s. Spec #1466 "Known Limitations").
     # (Die Spec-Tabelle nennt "_parse_cap" — dieser Name existiert nicht.)
     "src/services/official_alerts/meteoalarm.py::_collect_cap_info_entries": 1,
-    "src/services/official_alerts/meteoalarm.py::_group_and_map_info_entries": 1,
+    # A13 BEHOBEN (#1430): Verwerfen wird geloggt -> Eintrag entfernt (Summe 12).
 }
 
 

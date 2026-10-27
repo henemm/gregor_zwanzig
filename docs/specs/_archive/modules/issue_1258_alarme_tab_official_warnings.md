@@ -3,7 +3,7 @@ entity_id: issue_1258_alarme_tab_official_warnings
 type: module
 created: 2026-07-15
 updated: 2026-07-15
-status: approved
+status: implemented
 version: "1.0"
 tags: [compare, trip, alerts, shared-components, data-model, official-warnings]
 ---
@@ -94,9 +94,9 @@ ist einer Scheibe zugeordnet (siehe „Scheiben-Zuordnung").
 | `frontend/src/lib/components/shared/VersandTab.svelte` | Frontend | Muster für `context="route"|"vergleich"`-Organismen, Auto-Save-$effect |
 | `frontend/src/lib/components/shared/corridor-editor/CorridorEditor.svelte` | Frontend | `notify`-Toggles (bleiben dort), Zähler `notifyN` für Read-only-Zusammenfassung im Alarme-Tab |
 | `docs/specs/modules/versand_tab_vergleich.md` | Spec | AC-4 wird durch dieses Issue revidiert |
-| `docs/specs/modules/issue_1256_compare_ui_rewire.md` | Spec | KL-2 wird als entschieden markiert |
-| `docs/specs/modules/issue_1231_korridor_editor.md` | Spec | Abgrenzung notify-Toggle-Verortung |
-| `docs/specs/modules/issue_1170_compare_alert_config.md` | Spec | Ursprung `CompareAlarmSection`, wird durch geteilten Organism abgelöst |
+| `docs/specs/_archive/modules/issue_1256_compare_ui_rewire.md` | Spec | KL-2 wird als entschieden markiert |
+| `docs/specs/_archive/modules/issue_1231_korridor_editor.md` | Spec | Abgrenzung notify-Toggle-Verortung |
+| `docs/specs/_archive/modules/issue_1170_compare_alert_config.md` | Spec | Ursprung `CompareAlarmSection`, wird durch geteilten Organism abgelöst |
 
 ## Implementation Details
 

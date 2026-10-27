@@ -3,7 +3,7 @@ entity_id: alert_daily_limit
 type: feature
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: implemented
 workflow: tiers-3-alert-frequency
 version: "1.0"
 tags: [epic-1067, tiers, alerts]
@@ -86,6 +86,13 @@ betroffen (PO-Entscheidung 2026-07-07).
    Fetch/Nowcast, zusätzlicher Gate-Check `alert_daily_limit.is_allowed(...)`.
    Increment `alert_daily_limit.increment(...)` strikt hinter dem
    bestehenden Recording (~Zeile 206-208), also nur wenn `delivered` truthy war.
+   - **Überholt (Issue #2050 S3c, 2026-08-23):** Diese feste Reihenfolge gilt
+     nur noch, wenn die Sperrzeit geschlossen ist. Ist sie offen, bricht das
+     Cooldown-Gate seither nicht mehr sofort ab — der Tageslimit-Check wird an
+     dieser Stelle ÜBERSPRUNGEN, der Fetch/Nowcast läuft trotzdem, und die
+     Tageslimit-Prüfung wird erst NACH dem Fetch nachgeholt (gemeinsam mit der
+     Sperrzeit-Überholungsprüfung). Geltende Fassung:
+     `docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md`.
 2. Radar-Pfad `check_radar_alerts` (~Zeile 711 ff.): analog nach
    `_is_radar_throttled`-Gate, Increment hinter dem bestehenden
    `_append_alert_log`/Recording (~Zeile 832-849).
@@ -116,9 +123,11 @@ betroffen (PO-Entscheidung 2026-07-07).
 
 - **AC-1:** Given ein Free-Nutzer (`tier: "free"`) hat am aktuellen Vienna-Kalendertag bereits 2 Alerts erhalten / When ein dritter Deviation- oder Radar-Alert ausgelöst wird / Then wird dieser unterdrückt — kein neuer `alert_log`-Eintrag, kein `mail_sink`-Eintrag, Zähler bleibt bei 2.
   - Test: Zählerdatei mit heutigem Vienna-Datum und `count=2` vorseeden, echten `check_and_send_alerts`- bzw. `check_radar_alerts`-Lauf über bestehende DI-Seams (`mail_sink`, `radar_service`) ausführen; danach prüfen, dass `mail_sink` leer ist und die Zählerdatei weiterhin `count=2` enthält (kein Mock, echter Dateizustand).
+  - **Teilweise abgelöst (Issue #2050 S3b, 2026-08-23):** für den Normalfall gilt dieses AC unverändert. ABGELÖST ist es (a) für den Eskalationsfall — eine akute Verschärfung der Dringlichkeitsstufe bricht das erschöpfte Budget im Nowcast-/Radarzweig, höchstens einmal je Tag und Zone — und (b) in der Aussage „kein neuer `alert_log`-Eintrag": jede Unterdrückung hinterlässt seither einen `not_delivered`-Eintrag mit dem Grund `daily_limit`. Geltende Fassung: `docs/specs/modules/feat_2050_s3b_budget_und_unterdrueckungsgrund.md`.
 
 - **AC-2:** Given ein Standard-Nutzer (`tier: "standard"`) hat am aktuellen Vienna-Kalendertag bereits 4 Alerts erhalten / When ein fünfter Alert ausgelöst wird / Then wird dieser unterdrückt, während derselbe Ablauf bei nur 3 vorherigen Alerts einen vierten noch zulässt.
   - Test: Zwei echte Läufe mit vorgeseedeter Zählerdatei (`count=3` bzw. `count=4`), Standard-Tier in `user.json`; Assert über tatsächlichen Versand (`mail_sink` gefüllt vs. leer) und den resultierenden Zählerstand in der Datei.
+  - **Teilweise abgelöst (Issue #2050 S3b, 2026-08-23):** dieselbe Ablösung wie bei AC-1, hier für das Standard-Tier — der Normalfall bleibt eine harte Unterdrückung, der Eskalationsfall bricht durch und wird protokolliert. Geltende Fassung: `docs/specs/modules/feat_2050_s3b_budget_und_unterdrueckungsgrund.md`.
 
 - **AC-3:** Given ein Premium-Nutzer (`tier: "premium"`) hat am aktuellen Vienna-Kalendertag bereits 6 Alerts erhalten / When ein weiterer Alert ausgelöst wird (Cooldown-Gate bereits passiert) / Then wird dieser trotzdem versendet, weil für Premium kein Tageslimit gilt.
   - Test: Zählerdatei mit `count=6` vorseeden, Premium-Tier setzen, echten Alert-Lauf ausführen; Assert, dass `mail_sink` einen neuen Eintrag enthält und der Zähler weiter erhöht wird (kein Deckel).
@@ -191,3 +200,6 @@ unverändert ohne Reserve (PO-Entscheidung, s. Known Limitations in
 
 - 2026-07-07: Initial spec created
 - 2026-08-07: NowCast-Reserve (#1555) additiv ergänzt
+- 2026-08-23: Hinweis auf die feste Vor-Fetch-Reihenfolge im Deviation-Pfad
+  als überholt markiert (Issue #2050 S3c: Tageslimit-Check läuft bei offener
+  Sperrzeit erst nach dem Fetch)

@@ -3,7 +3,7 @@ entity_id: fix_1703_s7_reihenfolge_matrix
 type: module
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [reihenfolge, compare, kompaktform, matrix-test, epic-1703, kanal-achse]
 ---

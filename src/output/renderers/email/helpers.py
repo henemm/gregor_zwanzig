@@ -557,7 +557,58 @@ def build_units_legend(rows: list[dict]) -> str:
     return format_units_legend(pairs)
 
 
-def build_column_legend(rows: list[dict]) -> str:
+# #2136/ADR-0068 (AC-5): Pfad 1 des 3-Tages-Ausblicks (keine Auswahl) zeigt
+# fest diese sechs Groessen (plus "Tag", kein Katalogfeld) -- dieselbe Menge,
+# die outlook.py als thead (siebenspaltig, Temperatur mit Tief/Hoch-Suffix)
+# UND als Klartext-Praefixe (vierspaltig, ohne Regenwahrscheinlichkeit/Böen)
+# rendert. 🔴 Diese Liste ist NICHT die einzige -- outlook.py fuehrt die
+# Kennungen fuer die konkrete Kopf-/Praefix-Reihenfolge (inkl. der
+# Min/Max-Aufspaltung bei Temperatur) noch einmal separat; eine kuenftige
+# Vereinheitlichung koennte hier eine ((metric_id, aggregation), ...)-Tupelliste
+# fuehren, aus der outlook.py UND diese Legende ableiten, statt drei
+# unabhaengige Kennungslisten zu pflegen.
+OUTLOOK_FIXED_METRIC_IDS = (
+    "temperature", "precipitation", "rain_probability", "wind", "gust", "thunder",
+)
+
+
+def outlook_legend_pairs(outlook_metrics: Optional[list]) -> list[tuple[str, str]]:
+    """(Kuerzel, Langname)-Paare der im 3-Tages-Ausblick TATSAECHLICH
+    sichtbaren Spalten (#2136/ADR-0068, AC-5) -- Pfad 1 (``outlook_metrics is
+    None``, feste sechs Groessen) oder Pfad 2 (``outlook_columns()``),
+    dieselbe Quelle, die auch die Ausblick-Kopfzeile speist. Geteilt zwischen
+    Trip (`build_column_legend`) und Ortsvergleich
+    (`compare_html._column_legend_text`) -- keine zweite Ableitung."""
+    if outlook_metrics is None:
+        metric_ids = list(OUTLOOK_FIXED_METRIC_IDS)
+    else:
+        from output.renderers.compare_outlook_metric_ids import outlook_columns
+
+        metric_ids = [c.get("metric_id") for c in outlook_columns(outlook_metrics)
+                      if c.get("metric_id")]
+    pairs: list[tuple[str, str]] = []
+    dropped: list[str] = []
+    for metric_id in metric_ids:
+        try:
+            m = get_metric(metric_id)
+        except KeyError:
+            dropped.append(metric_id)
+            continue
+        pairs.append((m.col_label, m.label_de))
+    if dropped:
+        # #2136: Verwerfung protokolliert statt stumm (Referenzmuster der
+        # Compare-Aufloeser, vgl. compare_outlook_metric_ids.outlook_columns).
+        logger.warning(
+            "outlook_legend_pairs: %s ohne Katalog-Entsprechung — Legenden-"
+            "Eintrag entfaellt (#2136)", dropped,
+        )
+    return pairs
+
+
+def build_column_legend(
+    rows: list[dict], outlook_metrics: Optional[list] = None, *,
+    outlook_active: bool = False,
+) -> str:
     """Trip-Weg zur Spalten-Legende (#1472): 'Spalten: Feels = Gefuehlte
     Temperatur · Dew = Taupunkt'.
 
@@ -574,10 +625,19 @@ def build_column_legend(rows: list[dict]) -> str:
     unmoeglich; ein stiller `continue` wuerde nur einen unerreichbaren Zweig
     vortaeuschen und eine Spalte im Fehlerfall wortlos verschlucken. Der
     Zwilling `build_units_legend()` (daruber) traegt die alte Form noch als
-    Altlast in `KNOWN_VIOLATIONS`."""
+    Altlast in `KNOWN_VIOLATIONS`.
+
+    ``outlook_active``/``outlook_metrics`` (#2136/ADR-0068, AC-5): ist der
+    3-Tages-Ausblick DERSELBEN Mail sichtbar, werden seine Spaltenkoepfe
+    zusaetzlich aufgeloest -- `format_column_legend()` dedupliziert bereits
+    gleichlautende Kuerzel, ein Ueberschneiden mit der Stundentabelle ist
+    also unschaedlich. `outlook_active=False` (Default) laesst bestehende
+    Aufrufer unveraendert."""
     pairs: list[tuple[str, str]] = []
     for col_key, col_label in visible_cols(rows):
         pairs.append((col_label, get_metric_by_col_key(col_key).label_de))
+    if outlook_active:
+        pairs.extend(outlook_legend_pairs(outlook_metrics))
     return format_column_legend(pairs)
 
 
@@ -923,6 +983,10 @@ def format_trend_tokens(stage: dict) -> dict:
             wind_risk       — bool (wind_kmh >= 50)
             thunder_word    — 'kein' / 'leicht' / 'mittel' / 'hoch'
             thunder_plain   — '⚡–' / '⚡leicht' / '⚡mittel' / '⚡hoch'
+                              (#2176: die LOW-Form wird von den Ausblick-
+                              Zellenbauern in `thunder_branch.py` auf das
+                              nackte 'leicht' zurueckgeschnitten -- das ⚡
+                              darf bei LOW nicht vor dem Stufenwort stehen)
             precip_token    — '{erst}@{h}({peak}@{h})' or '-' (#640)
             wind_token      — '{v}@{h}(...)' or '-' (#640)
             gust_token      — '{v}@{h}(...)' or '-' (#640)
@@ -1644,7 +1708,7 @@ def _pill_for_metric(
         vals = [(v, ts) for v, ts in vals if v is not None]
         if not vals:
             return None
-        thr = _sms_mention_threshold(metric_id)
+        thr = _sms_mention_threshold(metric_id, sms_mention_thresholds)
         peak_val = max(v for v, _ in vals)
         tone = ampel_stage_tone(peak_val,
                                 get_metric(metric_id).display_thresholds)
@@ -1668,7 +1732,7 @@ def _pill_for_metric(
         vals = [(dp.precip_1h_mm or 0.0, dp.ts) for dp in all_dps]
         if not vals:
             return None
-        thr = _sms_mention_threshold("precipitation")
+        thr = _sms_mention_threshold("precipitation", sms_mention_thresholds)
         total = sum(v for v, _ in vals)
         peak_val = max(v for v, _ in vals)
         tone = ampel_stage_tone(peak_val,
@@ -1693,7 +1757,7 @@ def _pill_for_metric(
                 if dp.pop_pct is not None]
         if not vals:
             return None
-        thr = _sms_mention_threshold("rain_probability")
+        thr = _sms_mention_threshold("rain_probability", sms_mention_thresholds)
         peak_val = max(v for v, _ in vals)
         tone = ampel_stage_tone(
             peak_val, get_metric("rain_probability").display_thresholds)
@@ -1716,6 +1780,7 @@ def _pill_for_metric(
         max_lvl = ThunderLevel.NONE
         first_thunder_ts = None
         peak_ts = None
+        peak_dp = None
         # Issue #1474b: die Erwaehnungsschwelle kommt aus derselben Quelle
         # wie SMS/Telegram (Trip-Einstellung ?? DEFAULTS["TH:"] = 1.0, "ab
         # leicht") -- nicht mehr fest an ThunderLevel.MED gebunden.
@@ -1736,6 +1801,7 @@ def _pill_for_metric(
             if thunder_ordinal(lvl) > thunder_ordinal(max_lvl):
                 max_lvl = lvl
                 peak_ts = dp.ts
+                peak_dp = dp
         # Issue #1475 S5a: Hagel ist ein eigenes, rein deskriptives Kennzeichen
         # NEBEN der Gewitterstufe (nie ein Bestandteil davon, Spec AC-3). Der
         # Zusatz erscheint nur bei "ja"; bei "unbekannt"/"nein" bleibt der Text
@@ -1782,7 +1848,20 @@ def _pill_for_metric(
             # unsichtbar. Das Wort kommt aus THUNDER_LABEL_DE (SSoT, #1480),
             # nicht aus einer lokalen Wortliste.
             _stufe = THUNDER_LABEL_DE[max_lvl]
-            return (f"Gewitter {_stufe} ab {first_hh:02d}:00 · "
+            # Issue #2176: bei LOW steht statt der Gewitteransage die
+            # Luftmassen-Aussage aus der geteilten Quelle -- herkunftsabhaengig
+            # ueber DIESELBE `_traeger`-Liste, die unten den ·-Zusatz speist.
+            # Form "lang" mit dem CAPE-Wert DER Spitzenstunde: diese Pille ist
+            # der real verdrahtete E-Mail-Highlight-Pfad, an dem AC-2 den
+            # Zahlenwert verlangt.
+            if max_lvl == ThunderLevel.LOW:
+                from output.metric_format import thunder_low_statement_sentence
+                _kopf = thunder_low_statement_sentence(
+                    "lang", _traeger, cape_jkg=peak_dp.cape_jkg,
+                )
+            else:
+                _kopf = f"Gewitter {_stufe}"
+            return (f"{_kopf} ab {first_hh:02d}:00 · "
                     f"stärkste {peak_hh:02d}:00"
                     f"{_origin_suffix}{_hail_suffix}", _tone)
         # Issue #1331: Ziel-Datenluecke (Ankunft->19 Uhr unbeobachtet) darf
@@ -1878,9 +1957,10 @@ def build_metrics_summary_pills(
         die Katalogordnung sie.
     sms_mention_thresholds: dict[metric_id -> float] (Issue #1474b) —
         pro Trip eingestellte Erwaehnungsschwellen (aus `MetricConfig.
-        sms_threshold`), im `metric_id`-Raum. Nur der `"thunder"`-Zweig in
-        `_pill_for_metric` liest sie derzeit; die uebrigen Metriken bleiben
-        auf `_sms_mention_threshold`s `DEFAULTS`-Fallback (Known Limitation).
+        sms_threshold`), im `metric_id`-Raum. Gelesen von den Zweigen
+        Wind/Boeen/Regen/Regenwahrsch./Gewitter in `_pill_for_metric` (Issue
+        #2422 S3: vorher nur Gewitter); ohne Eintrag gilt der `DEFAULTS`-
+        Fallback aus `_sms_mention_threshold`.
     tz: local timezone for hour formatting.
     night_weather: Issue #1317 / Epic #1319 — Rohdaten Ankunft→06:00 am Ziel;
         None = fail-soft, reine Segment-Fensterung (AC-9). Nur die Wert-Pillen

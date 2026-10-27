@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 // Staging-Verifikation Issue #1256 Scheibe S8c (Hub-Fidelity R2+R3: Layout-
 // Tab-Rahmen, SummaryCards-Copy, Orte-Tab-Rahmen, Breadcrumb, profileLabel,
 // Mobile-Eyebrow, Mobile-Summary-Stack). Config-Muster identisch zu
-// playwright.1256-s8.staging.config.ts (nginx-Basic-Auth = GZ_VALIDATOR_*,
+// playwright.hub-send-dialog-target.staging.config.ts (nginx-Basic-Auth = GZ_VALIDATOR_*,
 // App-Login separat via dediziertem Setup-Projekt — eigener storageState
 // statt Login pro Testlauf, s. reference_staging_e2e_storagestate_login_rate_limit
 // — 429-Rate-Limit).

@@ -3,7 +3,7 @@ entity_id: fix_1575_channel_metric_selection
 type: feature
 created: 2026-08-08
 updated: 2026-08-08
-status: draft
+status: implemented
 workflow: fix-1575-channel-metric-selection
 ---
 
@@ -283,7 +283,7 @@ aufgerufen, die auch vom `vergleich`-Zweig durchlaufen wird — Diff-Review
     Inhalt und Netzwerk-Requests. (Fortführung der alten AC-6-Hälfte
     „reiner Kanalwechsel bleibt clean" aus `layout_tab_route.md`.)
 
-- **AC-2 (Copy-on-write):** Given der SMS-Reiter zeigt noch die globale Auswahl
+- **AC-2:** (Copy-on-write) Given der SMS-Reiter zeigt noch die globale Auswahl
   A, B, C / When der Nutzer im SMS-Reiter Metrik C entfernt / Then entsteht ein
   eigener `channelBuckets.sms`-Eintrag mit Startpunkt A, B, C (Kopie der
   globalen Auswahl zum Edit-Zeitpunkt), nicht leer beginnend, und zeigt nach
@@ -293,7 +293,7 @@ aufgerufen, die auch vom `vergleich`-Zweig durchlaufen wird — Diff-Review
     Email/Telegram und prüft, dass dort die volle globale Auswahl weiterhin
     sichtbar ist.
 
-- **AC-3 (Pflicht — Shallow-Merge-Datenverlust-Schutz):** Given der Trip hat
+- **AC-3:** (Pflicht — Shallow-Merge-Datenverlust-Schutz) Given der Trip hat
   bereits gespeicherte, unterschiedliche Kanal-Layouts unter
   `display_config.channel_layouts.email` und `.telegram` / When der Nutzer
   ausschließlich im SMS-Reiter editiert und speichert / Then bleiben die
@@ -312,14 +312,14 @@ aufgerufen, die auch vom `vergleich`-Zweig durchlaufen wird — Diff-Review
   - Test: Playwright Drag&Drop in beiden Reitern nacheinander, Reload,
     Reihenfolge je Kanal geprüft.
 
-- **AC-5 (Roh/Einfach pro Kanal):** Given Metrik X ist im Email-Reiter auf
+- **AC-5:** (Roh/Einfach pro Kanal) Given Metrik X ist im Email-Reiter auf
   "Einfach" gesetzt (eigener Eintrag) / When im SMS-Reiter Metrik X auf "Roh"
   umgeschaltet und beides gespeichert wird / Then bleibt der Email-Modus für X
   nach einem Reload "Einfach", der SMS-Modus "Roh".
   - Test: Playwright Modus-Toggle in beiden Reitern, Reload, Modus je Kanal
     geprüft.
 
-- **AC-6 (SMS-Backend-Fix, RED vor Fix):** Given ein Trip mit Email-Auswahl
+- **AC-6:** (SMS-Backend-Fix, RED vor Fix) Given ein Trip mit Email-Auswahl
   {A, B, C} und SMS-eigener Auswahl {A} (`channel_layouts.sms` gesetzt) / When
   das SMS-Briefing gerendert wird (`trip_report.py` → `format_sms`) / Then
   enthält der SMS-Text ausschließlich die für A definierten SMS-Symbole, NICHT
@@ -331,7 +331,7 @@ aufgerufen, die auch vom `vergleich`-Zweig durchlaufen wird — Diff-Review
     Aufruf von `trip_report.py`s Render-Pfad mit präparierter
     `display_config`, Assertion auf den zusammengesetzten SMS-Text.
 
-- **AC-7 (Telegram bereits verdrahtet, Regressionsbeweis):** Given eine
+- **AC-7:** (Telegram bereits verdrahtet, Regressionsbeweis) Given eine
   Telegram-eigene Metrik-Auswahl, die von der Email-Auswahl abweicht / When
   das Telegram-Briefing gerendert wird (`narrow.py` → `render_for_channel`)
   / Then zeigt die Telegram-Bubble die Telegram-eigene Auswahl — ohne
@@ -340,7 +340,7 @@ aufgerufen, die auch vom `vergleich`-Zweig durchlaufen wird — Diff-Review
   - Test: E2E-Mail-/Telegram-Nachweis über eine echt zugestellte Staging-
     Mail bzw. Telegram-Testnachricht (Pflicht laut Test-Nachweis-Abschnitt).
 
-- **AC-8 (Compare strukturell unberührt):** Given der Compare-Editor
+- **AC-8:** (Compare strukturell unberührt) Given der Compare-Editor
   (`context="vergleich"`) / When diese Scheibe abgeschlossen ist / Then ist
   keine Compare-eigene Datei verändert, und `weatherMetricsTabSharing.test.ts`
   belegt zusätzlich, dass die neuen State-Variablen (`channelBuckets`,
@@ -349,7 +349,7 @@ aufgerufen, die auch vom `vergleich`-Zweig durchlaufen wird — Diff-Review
   - Test: Diff-Review (nur gelistete Affected Files verändert) + erweiterter
     `weatherMetricsTabSharing.test.ts`-Fall.
 
-- **AC-9 (globale Größen bleiben global):** Given Horizonte, SMS-Schwellwerte
+- **AC-9:** (globale Größen bleiben global) Given Horizonte, SMS-Schwellwerte
   und Auswertungswahl (min/max) sind Trip-weit konfiguriert / When ein Kanal
   editiert und gespeichert wird / Then ändern sich diese drei Werte NICHT pro
   Kanal — sie bleiben eine einzige globale Konfiguration, unabhängig vom
@@ -365,7 +365,7 @@ aufgerufen, die auch vom `vergleich`-Zweig durchlaufen wird — Diff-Review
   die Testids unverändert und alle genannten Bestands-Specs bleiben grün.
   - Test: Playwright-Regressionslauf der genannten Specs.
 
-- **AC-11 (Renderer-Mail-Gate #811 erfüllt):** Given `trip_report.py` wurde
+- **AC-11:** (Renderer-Mail-Gate #811 erfüllt) Given `trip_report.py` wurde
   verändert (Teil 1) / When ein Commit die Datei staged / Then blockiert
   `renderer_mail_gate.py` erst nach erfolgreichem `briefing_mail_validator.py`-
   Lauf gegen eine echt zugestellte Staging-Mail (`X-GZ-Mail-Type: trip-briefing`).

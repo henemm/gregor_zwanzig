@@ -3,7 +3,7 @@ entity_id: feat_1273_s3_redirect
 type: module
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, compare, epic-1273, redirect, ia]
 ---

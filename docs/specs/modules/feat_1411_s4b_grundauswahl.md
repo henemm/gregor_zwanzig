@@ -3,7 +3,7 @@ entity_id: feat_1411_s4b_grundauswahl
 type: feature
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, compare-editor, metric-catalog, epic-1372, issue-1411]
 ---

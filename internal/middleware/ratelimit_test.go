@@ -83,7 +83,8 @@ func TestIPRateLimiter_DifferentIPsIndependent(t *testing.T) {
 	}
 }
 
-// TestIPRateLimiter_PrefersXRealIP — Wenn X-Real-IP gesetzt ist (Nginx),
+// TestIPRateLimiter_PrefersXRealIP — Wenn X-Real-IP gesetzt ist (Nginx, kommt von
+// Loopback; #2159 AC-7: nur dann wird der Header geglaubt),
 // dominiert dieser über RemoteAddr. Zwei Requests mit identischem RemoteAddr
 // aber unterschiedlichem X-Real-IP zählen als unterschiedliche Buckets.
 func TestIPRateLimiter_PrefersXRealIP(t *testing.T) {
@@ -92,16 +93,50 @@ func TestIPRateLimiter_PrefersXRealIP(t *testing.T) {
 
 	// 5 Requests mit X-Real-IP=9.9.9.9 → Bucket A
 	for i := 1; i <= 5; i++ {
-		if got := doReq(t, h, "1.1.1.1:5000", "9.9.9.9"); got != http.StatusOK {
+		if got := doReq(t, h, "127.0.0.1:5000", "9.9.9.9"); got != http.StatusOK {
 			t.Fatalf("X-Real-IP=9.9.9.9 request %d: expected 200, got %d", i, got)
 		}
 	}
 	// 6. Request mit X-Real-IP=9.9.9.9 → 429
-	if got := doReq(t, h, "1.1.1.1:5000", "9.9.9.9"); got != http.StatusTooManyRequests {
+	if got := doReq(t, h, "127.0.0.1:5000", "9.9.9.9"); got != http.StatusTooManyRequests {
 		t.Fatalf("X-Real-IP=9.9.9.9 6th request: expected 429, got %d", got)
 	}
 	// Aber X-Real-IP=8.8.8.8 (gleiche RemoteAddr!) — fresh bucket → 200
-	if got := doReq(t, h, "1.1.1.1:5000", "8.8.8.8"); got != http.StatusOK {
+	if got := doReq(t, h, "127.0.0.1:5000", "8.8.8.8"); got != http.StatusOK {
 		t.Fatalf("X-Real-IP=8.8.8.8 fresh bucket: expected 200, got %d", got)
+	}
+}
+
+// Issue #2159 AC-7 — Nicht-Loopback-Absender mit erfundenem X-Real-IP: gezaehlt
+// wird die echte Absenderadresse. Wechselnde Fantasie-Header duerfen die
+// Begrenzung nicht umgehen.
+func TestIPRateLimiter_IgnoresSpoofedXRealIPFromNonLoopback(t *testing.T) {
+	limiter := NewIPRateLimiter(5, time.Minute)
+	h := limiter.Middleware(newOKHandler())
+
+	spoofs := []string{"10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4", "10.0.0.5"}
+	for i, spoof := range spoofs {
+		if got := doReq(t, h, "203.0.113.7:5000", spoof); got != http.StatusOK {
+			t.Fatalf("request %d: expected 200, got %d", i+1, got)
+		}
+	}
+	if got := doReq(t, h, "203.0.113.7:5000", "10.0.0.99"); got != http.StatusTooManyRequests {
+		t.Fatalf("6th request with new spoofed X-Real-IP: expected 429 (counted by real address), got %d", got)
+	}
+	// Anderer echter Absender bleibt unberuehrt.
+	if got := doReq(t, h, "203.0.113.8:5000", "10.0.0.1"); got != http.StatusOK {
+		t.Fatalf("different real sender: expected 200, got %d", got)
+	}
+}
+
+// IPv6-Loopback zaehlt ebenfalls als vertrauenswuerdiger Proxy.
+func TestIPRateLimiter_TrustsXRealIPFromIPv6Loopback(t *testing.T) {
+	limiter := NewIPRateLimiter(1, time.Minute)
+	h := limiter.Middleware(newOKHandler())
+	if got := doReq(t, h, "[::1]:5000", "9.9.9.9"); got != http.StatusOK {
+		t.Fatalf("expected 200, got %d", got)
+	}
+	if got := doReq(t, h, "[::1]:5000", "8.8.8.8"); got != http.StatusOK {
+		t.Fatalf("different X-Real-IP via loopback must be fresh bucket, got %d", got)
 	}
 }

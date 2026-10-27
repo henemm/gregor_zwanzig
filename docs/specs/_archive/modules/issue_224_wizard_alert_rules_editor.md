@@ -3,7 +3,8 @@ entity_id: issue_224_wizard_alert_rules_editor
 type: module
 created: 2026-05-15
 updated: 2026-05-15
-status: active
+status: superseded
+superseded_by: "#2277"
 version: "1.0"
 title: Wizard-Umstellung auf AlertRulesEditor
 issue: 224
@@ -16,6 +17,8 @@ approved_date: 2026-05-15
 <!-- Issue #224 — Wizard Step 4 auf AlertRulesEditor umstellen -->
 
 # Issue 224 — Wizard-Umstellung auf AlertRulesEditor
+
+> Abgelöst durch ADR-0032 und #2277 S3 (Wizard entfernt; `AlertRulesEditor` rückgebaut, `cf98d76f8`, 2026-10-01).
 
 ## Approval
 

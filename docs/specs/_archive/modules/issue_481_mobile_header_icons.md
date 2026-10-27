@@ -4,7 +4,8 @@ type: bugfix
 created: 2026-05-31
 updated: 2026-05-31
 completed: 2026-05-31
-status: complete
+status: superseded
+superseded_by: "docs/design-requests/mobile_shell_ohne_topbar.md"
 version: "1.0"
 tags: [bugfix, mobile, header, icons, svelte, frontend, issue-481]
 ---
@@ -12,6 +13,8 @@ tags: [bugfix, mobile, header, icons, svelte, frontend, issue-481]
 <!-- Issue #481 — Bug: Mobile Header zeigt Dark-Mode-Toggle statt Glocke + Plus -->
 
 # Issue #481 — Bug-Fix: Mobile Header rechte Icons (Glocke + Plus)
+
+> Abgelöst durch Mobile-Shell S2+S3 (Top-Balken `TopAppBar.svelte` abgeschafft, `f84f19214`, 2026-09-19).
 
 ## Approval
 

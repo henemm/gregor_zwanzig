@@ -3,7 +3,7 @@ entity_id: issue_634_treffer_quote_cleanup
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: approved
+status: implemented
 version: "1.0"
 tags: [cleanup, design-system, archive, frontend]
 ---

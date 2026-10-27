@@ -57,9 +57,10 @@ function backendHazardCatalog(): Record<string, string> {
 	for (const m of block![1].matchAll(/"([a-z_]+)"\s*:\s*"([A-Z]+)"/g)) {
 		catalog[m[1]] = m[2];
 	}
+	// 12 seit #1441 (avalanche_bulletin, Lawinen-Lagebericht).
 	assert.equal(
-		Object.keys(catalog).length, 10,
-		`Backend-Katalog muss 10 Gefahrenarten führen, gelesen: ${JSON.stringify(catalog)}`
+		Object.keys(catalog).length, 12,
+		`Backend-Katalog muss 12 Gefahrenarten führen, gelesen: ${JSON.stringify(catalog)}`
 	);
 	return catalog;
 }

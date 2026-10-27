@@ -3,12 +3,15 @@ entity_id: bug_330_modecard_fontsize
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: superseded
+superseded_by: "#1895"
 version: "1.0"
 tags: [design-system, css-tokens, frontend, ap-017, bugfix, area-alerts]
 ---
 
 # Bug 330 — Hardcodierte font-sizes in ModeCard.svelte → --g-text-* Tokens
+
+> Abgelöst durch #1895 (`ModeCard.svelte` rückgebaut, `13af5db93`, 2026-09-21).
 
 ## Approval
 

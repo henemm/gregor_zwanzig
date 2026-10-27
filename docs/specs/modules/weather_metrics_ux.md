@@ -27,7 +27,7 @@ Improve weather metrics user experience:
 - **Files:**
   - `src/app/models.py` - MetricConfig: new `use_friendly_format` field
   - `src/app/metric_catalog.py` - MetricDefinition: new `has_friendly_format` flag
-  - `src/formatters/trip_report.py` - `_fmt_val()`: respect toggle; `format_email()`: store config
+  - `src/output/renderers/trip_report.py` - `_fmt_val()`: respect toggle; `format_email()`: store config
   - `src/web/pages/weather_config.py` - Toggle widget per metric row
   - `src/app/loader.py` - Serialize/deserialize `use_friendly_format`
 
@@ -128,7 +128,7 @@ metrics.append(MetricConfig(
 
 #### 4d) Formatter: Config-aware `_fmt_val()`
 
-**File:** `src/formatters/trip_report.py`
+**File:** `src/output/renderers/trip_report.py`
 
 **Step 1: Store config on formatter instance** (in `format_email()`, line ~40)
 
@@ -367,7 +367,7 @@ See Changelog v1.0.
 | 1 | `src/app/metric_catalog.py` | Replace `has_friendly_format` with `friendly_label` field + set on 6 metrics | ~8 |
 | 2 | `src/app/models.py` | Add `use_friendly_format: bool = True` to MetricConfig | ~1 |
 | 3 | `src/app/loader.py` | Serialize + deserialize `use_friendly_format` | ~3 |
-| 4 | `src/formatters/trip_report.py` | `_build_friendly_keys()` + conditional in `_fmt_val()` for 3 groups | ~30 |
+| 4 | `src/output/renderers/trip_report.py` | `_build_friendly_keys()` + conditional in `_fmt_val()` for 3 groups | ~30 |
 | 5 | `src/web/pages/weather_config.py` | Collapsible table layout + metric-specific toggle labels + save handler | ~40 |
 | 6 | `tests/unit/test_weather_metrics_ux.py` | Tests for raw vs friendly toggle | ~40 |
 

@@ -329,6 +329,8 @@ def test_kurzform_klebt_das_wochentagskuerzel_vor_die_stunde():
 
     sms = render_sms(_regen_nachricht(now_utc=_uhr(TAG + timedelta(days=1), 9)), 160)
 
+    # Issue #1737: auch mit Stundenreihe bleibt es an anderen Tagen bei der Einzelstunde
+    # (`@Do13-17` waere formgleich zur Fensterform der amtlichen Warnung).
     assert f"@{kuerzel}15" in sms, (
         f"Erwartet das Wochentagskuerzel direkt vor der Stunde ('@{kuerzel}15'); "
         f"bekam {sms!r}"

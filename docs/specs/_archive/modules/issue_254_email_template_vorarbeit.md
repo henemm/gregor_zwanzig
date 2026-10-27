@@ -3,7 +3,7 @@ entity_id: issue_254_email_template_vorarbeit
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, design-tokens, html, tooling, epic9]
 ---

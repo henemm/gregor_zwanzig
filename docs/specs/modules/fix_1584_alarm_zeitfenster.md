@@ -3,7 +3,7 @@ entity_id: fix_1584_alarm_zeitfenster
 type: bugfix
 created: 2026-08-07
 updated: 2026-08-07
-status: draft
+status: implemented
 workflow: fix-1584-alarm-zeitfenster
 version: "1.0"
 tags: [issue-1584, alerts, day-window, trip-segments, adr-0035]
@@ -47,7 +47,7 @@ Anzeige und Bewertung.
   ~15-20, neuer E2E-Test ~30-45)
 - **Files:** 3 Produktionscode/Test (`trip_segments.py`,
   `tests/unit/test_destination_segment.py`, ein neuer Test am
-  Alarm-Sendepfad) + `docs/adr/0035-...md` (Ergänzung, zählt laut
+  Alarm-Sendepfad) + `docs/adr/0035-ein-tagesfenster-fuer-trip-und-ortsvergleich.md` (Ergänzung, zählt laut
   Regel-Budget nicht zum LoC-Limit)
 - **Effort:** medium
 
@@ -357,7 +357,7 @@ am Ziel wirkt statt auf das Mindestfenster zu fallen.
   Anwendung. Ein neues ADR wäre hier Overhead: es entsteht kein neuer
   Zeitbegriff, keine neue Quelle, keine neue Bedienfläche — nur ein
   zusätzlicher Aufrufer derselben, bereits etablierten Auflösung. Als Teil
-  dieser Scheibe bekommt `docs/adr/0035-...md` einen kurzen Ergänzungs-
+  dieser Scheibe bekommt `docs/adr/0035-ein-tagesfenster-fuer-trip-und-ortsvergleich.md` einen kurzen Ergänzungs-
   Absatz, der den Ziel-Segment-Alarmpfad als weiteren Konsumenten nennt.
 
 ## Changelog

@@ -3,7 +3,7 @@ entity_id: safari_cache_session_fix
 type: bugfix
 created: 2026-02-12
 updated: 2026-02-12
-status: draft
+status: deprecated
 version: "1.1"
 tags: [ui, bugfix, safari, nicegui, websocket, cache, session]
 related_specs:
@@ -11,6 +11,8 @@ related_specs:
 ---
 
 # Safari Cache + Session Fix
+
+> Abgelöst/entfernt durch ADR-0001 / #129 — die NiceGUI-UI unter `src/web/` wurde am 2026-05-15 ersatzlos entfernt; diese Spec ist nur noch historisch.
 
 ## Approval
 

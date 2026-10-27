@@ -7,6 +7,10 @@ KEINE Mocks — echter HTTP-Call gegen den internen Staging-Scheduler-Port
 Rolling-Trip (trip_id "staging-validator-rolling", User validator-issue110).
 Weder das Setup-Script noch der Trip existieren vor dem Fix — beide Tests
 müssen deshalb JETZT fehlschlagen (RED).
+
+#2240 (2026-09-10): modul-weiter `staging`-Marker + Laufzeit- statt
+Collect-Zeit-Skip — die Datei darf im Kernlauf keinen Versand auslösen und
+beim reinen Einsammeln keinen Socket öffnen (Versandrisiko-Klasse #1477).
 """
 from __future__ import annotations
 
@@ -15,6 +19,8 @@ import importlib
 import httpx
 import pytest
 
+pytestmark = pytest.mark.staging  # #2240: raus aus Kern-/Standardlauf
+
 STAGING_SCHEDULER_URL = "http://localhost:8001"
 TEST_TRIP_ID = "staging-validator-rolling"
 TEST_USER_ID = "validator-issue110"
@@ -22,11 +28,7 @@ TEST_USER_ID = "validator-issue110"
 
 def _staging_scheduler_reachable() -> bool:
     try:
-        httpx.post(
-            f"{STAGING_SCHEDULER_URL}/api/scheduler/trips/__reachability_probe__/send",
-            params={"user_id": TEST_USER_ID, "report_type": "evening"},
-            timeout=3,
-        )
+        httpx.get(f"{STAGING_SCHEDULER_URL}/health", timeout=3)
         return True
     except httpx.ConnectError:
         return False
@@ -44,12 +46,10 @@ def test_setup_script_exists_and_is_importable():
     assert hasattr(module, "main"), "setup_staging_validator_trip.py muss eine main()-Funktion haben"
 
 
-@pytest.mark.skipif(
-    not _staging_scheduler_reachable(),
-    reason="Interner Staging-Scheduler-Port 8001 auf diesem Host nicht erreichbar",
-)
 def test_rolling_trip_send_returns_sent_true():
     """Given der Rolling-Trip / When Versand getriggert wird / Then {'sent': true}."""
+    if not _staging_scheduler_reachable():
+        pytest.skip("Interner Staging-Scheduler-Port 8001 auf diesem Host nicht erreichbar")
     resp = httpx.post(
         f"{STAGING_SCHEDULER_URL}/api/scheduler/trips/{TEST_TRIP_ID}/send",
         params={"user_id": TEST_USER_ID, "report_type": "evening"},

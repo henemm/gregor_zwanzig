@@ -17,7 +17,7 @@ RED heute: es gibt keine Vorlauf-Sperre; jeder Lauf im Vorlauf-Fenster ruft ab.
 
 AC-7 nennt fuenf Gruende, aus denen ein Ortsvergleich „kein geplantes
 Briefing" hat: ``schedule: "manual"``, ``paused_at``, ``archived_at``,
-abgelaufenes ``end_date`` und abgeschalteter Slot.
+abgelaufenes ``end_date`` (seit #2422 S5: stumm, kein Alarm mehr) und abgeschalteter Slot.
 
 Die ersten DREI davon sind ``compare_alert_guard.is_silenced()`` — und der
 Riegel sitzt in BEIDEN Vergleichs-Alarmpfaden GANZ VORNE, vor Sperrzeit,
@@ -165,30 +165,37 @@ def test_ac3_abend_slot_wirkt_wie_der_morgen_slot(nutzer):
 # ═══════════ AC-7 — kein Schweigen ohne Ersatz (Preset ohne Briefing) ═══════
 
 
-def test_ac7_abgelaufenes_end_date_wird_nie_gesperrt(nutzer):
-    """AC-7 (Risiko R1), Grund 1 von 2, die heute ueberhaupt Alarme ausloesen:
-    Ein Preset, dessen ``end_date`` in der Vergangenheit liegt, bekommt kein
-    geplantes Briefing mehr (``presets_due_for_hour`` stoppt es ab dem
-    Folgetag) — sein Alarm muss trotzdem unveraendert durchgehen.
+def test_ac7_abgelaufenes_end_date_ist_stumm_kein_abruf(nutzer):
+    """AC-7 (Risiko R1) UMGESTELLT durch Issue #2422 S5 (PO-Entscheidung 2026-09-30,
+    AC-21 in ``fix_2422_s5_ortsvergleich_kette.md``): ein Ortsvergleich, dessen ``end_date``
+    in der Vergangenheit liegt, ist STUMM -- wie ein abgelaufener Trip (``trip_alert.py:941``).
+    Die fruehere Zusicherung („Alarm geht normal raus", ``fix_1594_alarm_vorlauf_sperre.md``
+    AC-7) ist fuer genau diesen Fall abgeloest: er alarmiert nicht mehr, ruft also auch kein
+    Wetter ab.
 
-    ROT HEUTE ueber den Kontroll-Lauf: das gleich getaktete Preset OHNE
-    ``end_date`` muesste gesperrt sein, ist es aber nicht.
+    Die Gegenproben schuetzen vor falschem Gruen: dasselbe Preset mit gueltigem Zeitraum und
+    FERNEM Slot alarmiert (Abrufe >= 1), und mit NAHEM Slot ist es von der Vorlauf-Sperre
+    gesperrt (0) -- beide beweisen, dass der Lauf ohne den Ablauf ueberhaupt losliefe.
     """
-    abrufe_abgelaufen = _lauf(
-        nutzer("ac7-enddate"), morgen_stunde=NAH(),
+    abrufe_abgelaufen_fern = _lauf(
+        nutzer("ac7-enddate"), morgen_stunde=FERN(),
         end_date=ortstag(LOCATION_ZONE, -3).isoformat(),
     )
-    abrufe_kontrolle = _lauf(nutzer("ac7-enddate-kontrolle"), morgen_stunde=NAH())
+    abrufe_kontrolle_fern = _lauf(nutzer("ac7-enddate-fern"), morgen_stunde=FERN())
+    abrufe_kontrolle_nah = _lauf(nutzer("ac7-enddate-kontrolle"), morgen_stunde=NAH())
 
-    assert abrufe_abgelaufen >= 1, (
-        f"Preset mit abgelaufenem end_date hat kein Briefing mehr — sein Alarm "
-        f"darf NIEMALS von der Vorlauf-Sperre verschluckt werden "
-        f"({abrufe_abgelaufen} Abrufe)."
+    assert abrufe_abgelaufen_fern == 0, (
+        f"Abgelaufener Ortsvergleich muss stumm sein und darf kein Wetter abrufen "
+        f"({abrufe_abgelaufen_fern} Abrufe)."
     )
-    assert abrufe_kontrolle == 0, (
-        f"Kontroll-Lauf: dasselbe Preset mit gueltigem Zeitraum muss gesperrt "
-        f"sein — sonst misst dieser Test die Sperre gar nicht "
-        f"({abrufe_kontrolle} Abrufe)."
+    assert abrufe_kontrolle_fern >= 1, (
+        f"Kontroll-Lauf: dasselbe Preset mit gueltigem Zeitraum und fernem Slot "
+        f"muss alarmieren -- sonst misst dieser Test den Ablauf gar nicht "
+        f"({abrufe_kontrolle_fern} Abrufe)."
+    )
+    assert abrufe_kontrolle_nah == 0, (
+        f"Kontroll-Lauf: gueltiger Zeitraum + naher Slot muss von der Vorlauf-Sperre "
+        f"gesperrt sein ({abrufe_kontrolle_nah} Abrufe)."
     )
 
 

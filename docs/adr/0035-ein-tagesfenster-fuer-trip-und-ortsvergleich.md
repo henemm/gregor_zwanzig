@@ -5,6 +5,7 @@
 - **Bezug:** GitHub-Issue #1361 (Befund 1), Epic #1372 (Etappe S1b), Dach #1374,
   Spec `docs/specs/modules/compare_shared_day_window.md`. Nimmt die Festlegung aus
   #1268 für den Ortsvergleich zurück.
+- **Ergänzt durch:** [ADR-0044](0044-kalendertage-folgen-der-ortszeit.md) (ergänzt)
 
 ## Kontext
 

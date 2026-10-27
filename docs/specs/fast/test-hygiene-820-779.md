@@ -1,3 +1,10 @@
+---
+entity_id: test_hygiene_820_779
+type: fast
+created: 2026-06-22
+status: implemented
+---
+
 # Mini-Spec: test-hygiene-820-779
 
 Issues: #820, #779

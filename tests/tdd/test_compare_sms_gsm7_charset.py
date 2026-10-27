@@ -335,17 +335,25 @@ def test_head_and_error_location_text_are_gsm7_clean():
     assert_gsm7_clean(sms, "SMS (Kopf + Fehler-Ort)")
 
 
-def test_aggregation_sign_characters_are_gsm7_clean():
-    """Das Auswertungszeichen `+`/`-` (Hoechst-/Tiefstwert derselben Groesse,
-    z.B. `temp_max`/`temp_min`) ist bereits GSM-7-basisch (0x2B/0x2D) --
-    Regressionsschutz, dass diese Kombination nicht doch ein anderes Zeichen
-    einschleust."""
+def test_hoechst_und_tiefstwert_derselben_groesse_bleiben_gsm7_clean():
+    """Hoechst- und Tiefstwert derselben Groesse in EINER Nachricht bleiben
+    GSM-7-rein.
+
+    Bis #2232 unterschied ein angehaengtes `+`/`-` die beiden Richtungen
+    (`D+`/`D-`); der Test hiess entsprechend und pruefte dessen Zeichen. Seit
+    #2232 tragen beide Richtungen EIGENE Kuerzel (`D`/`L`, identisch zur
+    Trip-SMS), das Zeichen ist ersatzlos entfallen. Der Pruefgegenstand -- die
+    Kombination beider Richtungen schleust kein GSM-7-fremdes Zeichen ein --
+    ist unveraendert und wird hier am neuen Kuerzelpaar gefuehrt."""
     loc = _loc_result("Innsbruck")
     sms = render_compare_sms(
         _result([loc]), enabled_metrics=["temp_max", "temp_min"],
     )
-    assert "D+ " in sms and "D- " in sms, f"Testaufbau defekt: {sms!r}"
-    assert_gsm7_clean(sms, "SMS (Auswertungszeichen +/-)")
+    assert "D " in sms and "L " in sms, f"Testaufbau defekt: {sms!r}"
+    assert "D+" not in sms and "D-" not in sms, (
+        f"Das mit #2232 entfallene Auswertungszeichen steht noch in {sms!r}."
+    )
+    assert_gsm7_clean(sms, "SMS (Hoechst- und Tiefstwert derselben Groesse)")
 
 
 # ---------------------------------------------------------------------------

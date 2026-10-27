@@ -11,9 +11,10 @@ TokenCategory = Literal[
 ]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class HourlyValue:
-    """One hourly sample (hour 0-23 + value)."""
+    """One hourly sample (hour 0-23 + value). ``order=True``: sortierbar nach
+    (Stunde, Wert), z.B. fuer Vergleiche von Fenster-Serien (#2422 S6)."""
     hour: int
     value: float
 
@@ -62,11 +63,18 @@ class DailyForecast:
     # Klasse (b) Invers-Min, Stunden-Samples:
     visibility_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
     freezing_level_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
+    # Issue #2422 S6 (B1): Stunden-Serie der gefuehlten Temperatur im Tagesfenster
+    # (Klasse (b) Invers-Min, Token 'TF'). Reines Laufzeit-Feld, kein Speicherformat.
+    wind_chill_hourly: tuple[HourlyValue, ...] = field(default_factory=tuple)
     # Klasse (c) Tageswert ohne Stunde:
     wind_direction_sector: Optional[str] = None   # 8-Sektor-Kompasswert (WD)
     precip_type_dominant: Optional[str] = None    # Ein-Buchstaben-Code G/S/M/R (PT)
     sunshine_hours: Optional[float] = None        # unrunde Sonnenstunden (SU)
     pressure_avg_hpa: Optional[float] = None      # Tagesmittel hPa (HP)
+    # Issue #1794: Die Fensterpunkte lagen vollstaendig vor, trugen aber
+    # durchgaengig kein `pop_pct` — ein metrik-lokaler Fehlbestand, den
+    # `has_data_gap` (nur Datenpunkt-Existenz) nicht erkennt. Nur fuer PR.
+    pop_all_missing: bool = False
 
 
 @dataclass(frozen=True)

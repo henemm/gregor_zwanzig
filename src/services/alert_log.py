@@ -35,14 +35,22 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Iterable, Optional
 
 from app.loader import get_data_dir
 from app.metric_catalog import metric_and_aggregation_for_field
+from services.file_lock import LockTimeout, atomic_write_json, exclusive_lock
 
 logger = logging.getLogger(__name__)
+
+# #1539 S1a: Wartefrist auf die Schreibsperre und Prozess-Zaehler verlorener
+# Eintraege (Sperre nicht erhalten -> Eintrag nur im Journal).
+ALERT_LOG_LOCK_TIMEOUT_SECONDS = 30.0
+alert_log_lost_entries = 0
+_lost_lock = threading.Lock()
 
 # O2 -- Gruende einer Nicht-Zustellung. Im JSON bewusst freie Strings statt
 # eines geschlossenen Enums: der kuenftige Grund "unter der Kanal-Schwelle"
@@ -61,6 +69,25 @@ REASON_BELOW_THRESHOLD = "below_channel_threshold"
 # (`services.alert_gate.check_event_identity_gate`) hat dieselbe Meldung
 # bereits ueber eine ANDERE Quelle gesehen (Nowcast <-> amtlich).
 REASON_EVENT_DUPLICATE = "event_duplicate"
+# Issue #2050 S3b (Szenario 10): der Doppel-Alarm-Guard (#818) hat dieselbe
+# Groesse desselben Segments innerhalb der Sperrzeit schon gemeldet. EIGENER
+# Grund, kein `REASON_COOLDOWN`: das ist kein Sperrzeit-Topf auf
+# `ThrottleStore`-Ebene, sondern ein kanaluebergreifender Wiederholungsschutz
+# auf `AlertStateService`-Ebene — die beiden koennen einzeln greifen.
+REASON_DOUBLE_ALERT_GUARD = "double_alert_guard"
+# Issue #2050 S4a (Szenario 6, Anforderung B-4): die Radarquelle selbst ist
+# ausgefallen — keine Bilder, kein Ergebnis, also auch keine Entwarnung.
+# EIGENER Grund, keiner der acht oben: die beschreiben ausnahmslos EIGENE
+# Entscheidungen (Nutzereinstellung, Wiederholungsschutz, Budget, Ereignis-
+# Identitaet), ein Fremdausfall ist das Gegenteil davon. ADR-0018 trennt ihn
+# zudem ausdruecklich von der selbst gewaehlten Drosselung (`throttled`) —
+# auf denselben Code gebucht, eskalierte eine spaetere Auswertung den eigenen
+# Rueckzug als Anbieterausfall.
+REASON_DATA_UNAVAILABLE = "data_unavailable"
+# Issue #2050 Sz.12 (D-2/E-1): der Abweichungs-Wächter fand keine gültige
+# Vergleichsbasis (Anker fehlt oder wurde verworfen). Der Untergrund steht im
+# additiven Feld `reference_gap`, nicht im Code.
+REASON_NO_REFERENCE_BASIS = "no_reference_basis"
 
 # Ausloeser der Meldung selbst (`reason` des Eintrags).
 REASON_FORECAST_CHANGE = "forecast_change"
@@ -171,30 +198,6 @@ def register_pairs_from_changes(changes) -> list[tuple[str, str]]:
             segment_id=c.segment_id,
         )
         for c in changes or []
-    )
-
-
-def register_pairs_from_corridor_hits(hits) -> list[tuple[str, str]]:
-    """Grenzwert-Treffer -> Register-Paare, ueber BEIDE Korridor-Namensraeume.
-
-    `CorridorHit.metric` kann aus dem alten `AlertMetric`-Namensraum oder aus
-    dem Compare-Katalog stammen; `resolve_corridor_summary_field()` (S2a-
-    Baustein) vereinheitlicht beide auf den Summary-Feldnamen.
-
-    Der gerissene Wert kommt mit (E4), ein Vorwert NICHT: ein Korridor-Treffer
-    hat keinen -- und die Schwelle (`bound`) ist Konfiguration, kein Messwert.
-    """
-    from services.corridor_threshold import resolve_corridor_summary_field
-
-    felder = [(h, resolve_corridor_summary_field(h.metric)) for h in hits or []]
-    return _norm_pairs(
-        _mit_werten(
-            metric_and_aggregation_for_field(f),
-            value=h.value,
-            rank=abs(h.value or 0.0),
-            segment_id=h.segment_id,
-        )
-        for h, f in felder if f
     )
 
 
@@ -320,6 +323,17 @@ _E1_FIELD_TYPES = {
     "measurement_point": dict,
     "reference_at": str,
     "source": str,
+    # Issue #2050 S4b (E-1): Zahl und km-Lage der ausgefallenen Messpunkte der
+    # Ausdehnungs-Messung. Ohne Eintrag HIER liefe das Feld an der
+    # additiv-defensiven Serialisierung vorbei (Typpruefung, Absenz bei
+    # `None`, fail-soft mit Meldung).
+    "measurement_gaps": dict,
+    # Issue #2050 Sz.12 (E-1): Untergrund + Bezugstag einer fehlenden
+    # Vergleichsbasis (`REASON_NO_REFERENCE_BASIS`).
+    "reference_gap": str,
+    "reference_day": str,
+    # Issue #2480 (E-1): Streckenkilometer des ausloesenden Messpunkts.
+    "trigger_point_km": float,
 }
 
 
@@ -327,6 +341,8 @@ def _apply_e1_fields(
     entry: dict, *, entity_id: str,
     lead_time_minutes=None, event_at=None, event_end_at=None,
     measurement_point=None, reference_at=None, source=None,
+    measurement_gaps=None, reference_gap=None, reference_day=None,
+    trigger_point_km=None,
 ) -> None:
     """Additive E-1-Groessen additiv-defensiv in ``entry`` schreiben
     (Issue #2050 S6). ``None`` -> Absenz (kein Schluessel, kein ``null``).
@@ -346,6 +362,10 @@ def _apply_e1_fields(
         ("measurement_point", measurement_point),
         ("reference_at", reference_at),
         ("source", source),
+        ("measurement_gaps", measurement_gaps),
+        ("reference_gap", reference_gap),
+        ("reference_day", reference_day),
+        ("trigger_point_km", trigger_point_km),
     ):
         if wert is None:
             continue
@@ -391,6 +411,8 @@ def append_entry(
     measurement_point: Optional[dict] = None,
     reference_at: Optional[str] = None,
     source: Optional[str] = None,
+    measurement_gaps: Optional[dict] = None,
+    trigger_point_km: Optional[float] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
 
@@ -407,16 +429,15 @@ def append_entry(
     * kein Kanal erreichbar -> `not_delivered` (fuer Go unsichtbar, veraendert
       also weder Cockpit-Kachel noch Archiv-Statistik).
 
-    Massgeblich fuer die Ziel-Liste ist damit EXAKT das heutige Kriterium des
-    Bestands (`NotificationResult.sent`: mindestens ein konfigurierter Kanal
-    war erreichbar), NICHT der Zustellerfolg -- der Bestand loggt nach
-    Best-Effort-Semantik ausdruecklich auch dann, wenn der Transport auf einem
-    erreichbaren Kanal scheitert (Anti-Pattern #656). `entries` bleibt fuer
-    Bestandstouren dadurch bit-identisch: wo heute geschrieben wird, wird
-    weiter geschrieben; `not_delivered` faengt nur die Faelle, die heute
-    SPURLOS verschwinden.
+    Massgeblich fuer die Ziel-Liste ist damit die ERREICHBARKEIT (mindestens
+    ein konfigurierter Kanal wurde betreten), NICHT der Zustellerfolg -- auch
+    ein auf einem erreichbaren Kanal gescheiterter Transport landet in
+    `entries` (#1459 AC-11/AC-15). Seit ADR-0086 (#1405 S1) heisst
+    `NotificationResult.sent` "zugestellt"; die Erreichbarkeit steht in
+    `NotificationResult.attempted_channels`. `not_delivered` faengt die
+    Faelle ohne jeden betretenen Kanal.
 
-    `reachable_channels` traegt diese Erreichbarkeit (`result.sent_channels`);
+    `reachable_channels` traegt diese Erreichbarkeit (`result.attempted_channels`);
     `sent_channels` traegt den tatsaechlichen Zustellerfolg und fuellt
     `channels_sent`/`channels_not_sent`. Ohne `reachable_channels` gilt
     `sent_channels` auch als Erreichbarkeits-Angabe (Direktaufrufer).
@@ -482,29 +503,45 @@ def append_entry(
         entry["addendum_reported_at"] = addendum_reported_at
     # Issue #2050 S6 (E-1): gemeldete Vorwarnzeit, Ereigniszeit, Messpunkt,
     # Vergleichsbasis, Quelle -- additiv, defensiv, nie werfend (AC-15).
+    # Issue #2050 S4b: `measurement_gaps` derselbe Weg -- aus wie vielen
+    # Messpunkten die Ausdehnung stammt, gehoert zur Nachvollziehbarkeit.
     _apply_e1_fields(
         entry, entity_id=entity_id,
         lead_time_minutes=lead_time_minutes, event_at=event_at,
         event_end_at=event_end_at, measurement_point=measurement_point,
         reference_at=reference_at, source=source,
+        measurement_gaps=measurement_gaps, trigger_point_km=trigger_point_km,
     )
 
     _append(user_id, "entries" if reachable else "not_delivered", entry)
 
 
 def _append(user_id: str, target: str, entry: dict) -> None:
-    """Read-Modify-Write der ganzen Datei; Alt-Eintraege bleiben unangetastet."""
+    """Gesperrtes Read-Modify-Write der ganzen Datei; Alt-Eintraege bleiben
+    unangetastet. Bei Sperr-Timeout: laut protokollieren, nie ungesperrt
+    schreiben, keine Ausnahme an den Aufrufer (#1539 S1a, AC-11)."""
+    global alert_log_lost_entries
     path = get_data_dir(user_id) / "alert_log.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
-        data = json.loads(path.read_text()) if path.exists() else {}
-    except (OSError, ValueError) as e:  # kaputte Datei darf keinen Alarm killen
-        logger.warning("alert_log: %s nicht lesbar (%s) -- neu angelegt", path, e)
-        data = {}
-    data.setdefault("entries", [])
-    data.setdefault(target, [])
-    data[target].append(entry)
-    path.write_text(json.dumps(data, indent=2))
+        with exclusive_lock(path, timeout_s=ALERT_LOG_LOCK_TIMEOUT_SECONDS):
+            try:
+                data = json.loads(path.read_text()) if path.exists() else {}
+            except (OSError, ValueError) as e:  # kaputte Datei darf keinen Alarm killen
+                logger.warning("alert_log: %s nicht lesbar (%s) -- neu angelegt", path, e)
+                data = {}
+            data.setdefault("entries", [])
+            data.setdefault(target, [])
+            data[target].append(entry)
+            atomic_write_json(path, data)
+    except LockTimeout:
+        with _lost_lock:
+            alert_log_lost_entries += 1
+        logger.error(
+            "alert_log: Sperre nicht erhalten -- Eintrag NICHT geschrieben "
+            "(target=%s, user=%s): %s",
+            target, user_id, json.dumps(entry, ensure_ascii=False, default=str),
+        )
 
 
 def append_suppressed_entry(
@@ -522,6 +559,11 @@ def append_suppressed_entry(
     measurement_point: Optional[dict] = None,
     reference_at: Optional[str] = None,
     source: Optional[str] = None,
+    measurement_gaps: Optional[dict] = None,
+    convective_checked: Optional[bool] = None,
+    reference_gap: Optional[str] = None,
+    reference_day: Optional[str] = None,
+    trigger_point_km: Optional[float] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag fuer eine VOR dem Versand abgewiesene
     Meldung an (#1467 S3, Aenderung (d)).
@@ -542,10 +584,12 @@ def append_suppressed_entry(
     Ohne eingeschalteten Kanal entsteht — wie in `append_entry()` — gar kein
     Eintrag: der Nutzer hat Alarme dort bewusst abgeschaltet.
 
-    Geltungsbereich sind ausschliesslich die beiden Nowcast-Pfade. Der
-    Vorhersage-Aenderungsalarm und die amtliche Warnung protokollieren ihre
-    Unterdrueckungen weiterhin NICHT (offene Luecke O3 in
-    `feat_1459_alert_protokoll.md`).
+    Issue #2050 S3b (Szenario 10): der Geltungsbereich waren bis dahin
+    ausschliesslich die beiden Nowcast-Pfade; Vorhersage-Aenderungsalarm und
+    amtliche Warnung schwiegen (Luecken O3/E3). Seither protokollieren auch
+    sie — in Trip UND Ortsvergleich. BEWUSST weiterhin still bleibt allein der
+    Briefing-Vorlauf (#1233/ADR-0009): dort wird die Meldung ERSETZT, nicht
+    verschluckt, sie kommt Minuten spaeter vollstaendig im Briefing an.
 
     `gate_reason` ist PFLICHT und muss gefuellt sein: ein leerer Wert wuerde
     von `_missed_channels()` beim LESEN still zu `REASON_DELIVERY_FAILED`
@@ -590,6 +634,13 @@ def append_suppressed_entry(
     }
     if capture_id is not None:  # additiv (#1948), siehe append_entry()
         entry["capture_id"] = capture_id
+    # Issue #2050 S4a (AC-9, Anforderung D-2): fiel die Gewitterpruefung dieses
+    # Abrufs aus, haelt der Eintrag das fest — nachtraeglich muss belegbar
+    # sein, dass die Entscheidung OHNE Gewitterinformation fiel. Geschrieben
+    # wird NUR der Ausfall (Muster `capture_id`/`is_addendum`): Absenz heisst
+    # "keine Aussage", Normalfaelle und Alt-Eintraege bleiben schema-identisch.
+    if convective_checked is False:
+        entry["convective_checked"] = False
     # Issue #2050 S6 (E-1): dieselben sechs Groessen, nur soweit am jeweiligen
     # Gate bereits bekannt -- der Aufrufer uebergibt an fruehen Gates schlicht
     # nichts (Absenz durch Nicht-Uebergabe).
@@ -598,8 +649,44 @@ def append_suppressed_entry(
         lead_time_minutes=lead_time_minutes, event_at=event_at,
         event_end_at=event_end_at, measurement_point=measurement_point,
         reference_at=reference_at, source=source,
+        measurement_gaps=measurement_gaps,
+        reference_gap=reference_gap, reference_day=reference_day,
+        trigger_point_km=trigger_point_km,
     )
     _append(user_id, "not_delivered", entry)
+
+
+def has_no_reference_entry(
+    user_id: str, *, entity_id: str, entity_type: str,
+    reference_gap: str, reference_day: str,
+) -> bool:
+    """Gibt es fuer DIESEN Nutzer schon einen `no_reference_basis`-Eintrag
+    dieser Entity fuer Untergrund + Tag? (Entdopplung, Issue #2050 Sz.12.)
+
+    Liest nur das `alert_log.json` des uebergebenen Nutzers. Nicht lesbar ⇒
+    `False` (lieber ein Eintrag zu viel als ein verschluckter Befund)."""
+    path = get_data_dir(user_id) / "alert_log.json"
+    try:
+        data = json.loads(path.read_text()) if path.exists() else {}
+    except (OSError, ValueError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    for e in data.get("not_delivered") or []:
+        if not isinstance(e, dict):
+            continue
+        if (e.get("entity_id") or e.get("trip_id")) != entity_id:
+            continue
+        if (e.get("entity_type") or "trip") != entity_type:
+            continue
+        if e.get("reference_gap") != reference_gap or e.get("reference_day") != reference_day:
+            continue
+        if any(
+            isinstance(c, dict) and c.get("reason") == REASON_NO_REFERENCE_BASIS
+            for c in e.get("channels_not_sent") or []
+        ):
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -622,6 +709,12 @@ class UndeliveredIncident:
     metrics: tuple[tuple[str, str], ...]
     hazards: tuple[str, ...]
     trigger: str
+    # Issue #2050 S4a (AC-9): die Gewitterpruefung mindestens eines Eintrags
+    # dieses Vorfalls ist AUSGEFALLEN. Additiv mit Vorgabewert — Alt-Eintraege
+    # ohne den Schluessel bleiben lesbar und melden schlicht "keine Aussage".
+    # Der Befund muss bis auf die Leseseite durchkommen: was nur in der
+    # JSON-Datei stuende, erreichte weder Briefing noch spaetere Auswertung.
+    convective_check_failed: bool = False
 
 
 def _parse_ts(raw: object) -> Optional[datetime]:
@@ -713,8 +806,14 @@ def read_undelivered(
             g = gruppen[-1]
         else:
             g = {"at": at, "channels": [], "reasons": set(),
-                 "metrics": [], "hazards": [], "trigger": entry.get("reason") or ""}
+                 "metrics": [], "hazards": [], "trigger": entry.get("reason") or "",
+                 "convective_check_failed": False}
             gruppen.append(g)
+        # Issue #2050 S4a (AC-9): ein Vorfall fasst bis zu drei Eintraege
+        # zusammen — der Ausfall EINES davon faerbt den ganzen Vorfall, wie
+        # schon Kanaele und Gruende vereinigt werden.
+        if entry.get("convective_checked") is False:
+            g["convective_check_failed"] = True
         g["channels"] += [c for c in channels if c not in g["channels"]]
         g["reasons"] |= reasons
         g["metrics"] += [
@@ -732,5 +831,6 @@ def read_undelivered(
             metrics=tuple(g["metrics"]),
             hazards=tuple(g["hazards"]),
             trigger=g["trigger"],
+            convective_check_failed=g["convective_check_failed"],
         ))
     return vorfaelle

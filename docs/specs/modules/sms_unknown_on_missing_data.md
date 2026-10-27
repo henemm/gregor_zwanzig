@@ -3,7 +3,7 @@ entity_id: sms_unknown_on_missing_data
 type: module
 created: 2026-07-20
 updated: 2026-07-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, day-window, teilausfall, tokens, bugfix]
 ---

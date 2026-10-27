@@ -74,13 +74,14 @@ class DrilldownResult:
 # ---------------------------------------------------------------------------
 
 class WeatherExtractor:
-    def __init__(self, user_id: str = "default") -> None:
+    def __init__(self, user_id: str) -> None:
         self._snapshots = WeatherSnapshotService(user_id)
 
     def timeline(
         self,
         trip_id: str,
         target_date: Optional[date] = None,
+        from_time: Optional[datetime] = None,
     ) -> TimelineResult:
         segments = self._snapshots.load(trip_id)
         if not segments:
@@ -94,28 +95,84 @@ class WeatherExtractor:
         return TimelineResult(
             trip_id=trip_id,
             target_date=target_date,
-            points=self._punkte(segments),
+            points=self._punkte(segments, from_time),
             available=True,
         )
 
     @staticmethod
-    def _punkte(segments: List[SegmentWeatherData]) -> List[TimelinePoint]:
+    def _punkte(
+        segments: List[SegmentWeatherData],
+        from_time: Optional[datetime] = None,
+    ) -> List[TimelinePoint]:
         """Segmente -> Timeline-Wegpunkte. EINE Umrechnung fuer beide Quellen
         (undatierter Anker und datierter Snapshot, Issue #1818) — eine zweite
         Kopie dieser Zuordnung wuerde bei jeder Feldaenderung auseinanderlaufen.
+
+        Issue #2186: mit ``from_time`` gilt das Tages-Aggregat AB dem
+        Anfragezeitpunkt — vollstaendig vergangene Segmente entfallen, ein
+        angebrochenes wird ueber sein Restfenster neu gerechnet. Ohne
+        ``from_time`` bleibt alles wie zuvor.
         """
-        return [
-            TimelinePoint(
+        punkte: List[TimelinePoint] = []
+        for seg in segments:
+            metrics = WeatherExtractor._restfenster_aggregat(seg, from_time)
+            if metrics is None:
+                continue
+            punkte.append(TimelinePoint(
                 # Issue #1599: Anzeige-Ende statt Alarm-Obergrenze.
                 arrival_time=display_end_time(seg.segment),
                 elevation_m=seg.segment.end_point.elevation_m,
                 label=str(seg.segment.segment_id),
-                metrics=seg.aggregated,
-            )
-            for seg in segments
-        ]
+                metrics=metrics,
+            ))
+        return punkte
 
-    def timeline_dated(self, trip_id: str, target_date: date) -> TimelineResult:
+    @staticmethod
+    def _restfenster_aggregat(
+        seg: SegmentWeatherData, from_time: Optional[datetime],
+    ) -> Optional[SegmentWeatherSummary]:
+        """Aggregat des Segments ab ``from_time``; ``None`` heisst „vollstaendig
+        vergangen, faellt aus den Wegpunkten" (Issue #2186)."""
+        if from_time is None or seg.timeseries is None:
+            return seg.aggregated
+        jetzt = _to_naive_utc(from_time)
+        if jetzt <= _to_naive_utc(seg.segment.start_time):
+            return seg.aggregated
+        if jetzt >= _to_naive_utc(seg.segment.end_time):
+            return None
+
+        from app.day_window import resolve_configured_window, segment_window_points
+        from app.models import NormalizedTimeseries
+        from services.weather_metrics import WeatherMetricsService
+        from utils.timezone import location_tz
+
+        # Kein eigener Stundenschnitt: dieselbe Quelle wie die Erstberechnung
+        # (Bug #806/#856), sonst driftet die Fenstergrenze.
+        punkte = segment_window_points(jetzt, seg.segment.end_time, seg.timeseries.data)
+        if not punkte:
+            return seg.aggregated
+        fenster_ts = NormalizedTimeseries(meta=seg.timeseries.meta, data=punkte)
+        window_start, window_end = resolve_configured_window(
+            seg.segment.day_window_start_hour, seg.segment.day_window_end_hour,
+        )
+        service = WeatherMetricsService()
+        basis = service.compute_basis_metrics(
+            fenster_ts, tz=location_tz(seg.segment.start_point),
+            day_window_start_hour=window_start, day_window_end_hour=window_end,
+        )
+        # ``compute_extended_metrics()`` baut seit Issue #2195 per
+        # ``dataclasses.replace(basis, ...)`` auf ``basis`` auf und verliert
+        # dadurch strukturell keine Basisfelder mehr -- der bisherige
+        # generische Nachzug (frueher hier, Issue #2186) ist damit toter
+        # Code und entfaellt.
+        return service.compute_extended_metrics(fenster_ts, basis)
+
+    def timeline_dated(
+        self,
+        trip_id: str,
+        target_date: date,
+        from_time: Optional[datetime] = None,
+    ) -> TimelineResult:
         """Timeline-Wegpunkte aus dem TAGESDATIERTEN Snapshot
         ``{trip_id}_{YYYY-MM-DD}.json`` (Issue #1818).
 
@@ -123,6 +180,11 @@ class WeatherExtractor:
         undatierte Anker ``{trip_id}.json`` traegt strukturell nur EINEN Tag
         (``_write_briefing_anchor`` ueberschreibt ihn je Briefing-Lauf); diese
         Quelle deckt einen Tag, den der Anker verloren hat, ohne Netzabruf.
+
+        ``from_time`` wirkt hier GENAUSO wie in ``timeline()`` (Issue #2186).
+        Beide Quellen beantworten dieselbe Frage; griffe die Fensterung nur am
+        Anker, zeigte derselbe Abruf je nach tragender Datei einen anderen
+        Tageswert — nach dem Abend-Briefing wieder den Vormittag.
         """
         segments = self._snapshots.load_dated(trip_id, target_date)
         if not segments:
@@ -139,7 +201,7 @@ class WeatherExtractor:
         return TimelineResult(
             trip_id=trip_id,
             target_date=target_date,
-            points=self._punkte(segments),
+            points=self._punkte(segments, from_time),
             available=True,
         )
 

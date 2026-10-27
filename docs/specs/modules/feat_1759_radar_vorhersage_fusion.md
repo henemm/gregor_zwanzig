@@ -3,7 +3,7 @@ entity_id: feat_1759_radar_vorhersage_fusion
 type: module
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, radar, fusion, thunder_enrichment]
 ---

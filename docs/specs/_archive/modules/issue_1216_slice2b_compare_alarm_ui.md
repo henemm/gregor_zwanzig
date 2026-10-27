@@ -3,7 +3,7 @@ entity_id: issue_1216_slice2b_compare_alarm_ui
 type: module
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, compare, alert-trigger, ui, scheduler, convergence]
 workflow: feature-1216-compare-alarm-ui

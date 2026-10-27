@@ -3,7 +3,7 @@ entity_id: issue_1277_list_table_unify
 type: feature
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, sveltekit, ui, organisms, trips, compare, issue-1277]
 ---

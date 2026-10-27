@@ -307,12 +307,17 @@ def outlook_columns(metrics: object, formats: object = None) -> list[dict]:
     wenn ein Flag gespeichert ist (AC-4: Sichtbarkeit und Wirkung haengen an
     derselben Faehigkeitsliste).
 
-    ``label`` kommt aus dem Compare-Katalog (deutsch, seit #1401 A1 der Name
-    des zentralen Registers), NICHT aus ``MetricDefinition.col_label``: dessen
-    Kuerzel sind englisch ("Rain"/"Thdr"/"PType") und fuer temperature
-    min/max/avg IDENTISCH ("Temp") -- zwei gewaehlte Temperatur-Auswertungen
-    ergaeben zwei gleich beschriftete Spalten (Abweichung zur Spec,
-    PO-Entscheidung 2026-07-27).
+    ``label`` kommt seit #2136/ADR-0068 aus ``MetricDefinition.col_label``
+    (dieselbe Quelle, aus der die Stunden-/Etappentabelle derselben Mail ihre
+    Spaltenkoepfe zieht, ``get_col_defs()`` -> ``visible_cols()``), NICHT mehr
+    aus dem deutschen Langnamen des Compare-Katalogs. Der fruehere Einwand
+    (ADR-0037, 2026-07-27: ``temperature`` liefert fuer min/max/avg identisch
+    "Temp") ist durch die seither gebaute Merge-/Dedup-Mechanik entkraeftet --
+    ``_merge_min_max_pairs()`` fuehrt Tief+Hoch zu einer Spannen-Spalte
+    zusammen, die Duplikat-Suffix-Schleife unten haengt einem verbleibenden
+    Restkollisionsfall (z. B. zusaetzliches Avg) ``aggregation_label_de()``
+    an -- beide Mechaniken arbeiten generisch auf ``column["label"]``,
+    unabhaengig von dessen Quelle.
 
     #1401 A1: die Auswertung ist kein Namensbestandteil mehr. Eine Tabellen-
     spalte traegt aber genau EINEN String -- traegt eine Groesse mehr als eine
@@ -343,7 +348,7 @@ def outlook_columns(metrics: object, formats: object = None) -> list[dict]:
         for aggregation in aggregations:
             catalog = _catalog_entry(metric_id, aggregation)
             columns.append({
-                "label": catalog["label"],
+                "label": catalog["col_label"],
                 "metric_id": metric_id,
                 "aggregation": aggregation,
                 "field": _summary_field(metric_id, aggregation),

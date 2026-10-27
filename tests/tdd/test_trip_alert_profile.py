@@ -99,7 +99,7 @@ def test_ac1_trip_alert_uses_compact_renderer_not_format_email():
     )
 
     # Kein Kanal konfiguriert → _send_alert rendert, findet aber keinen Kanal.
-    service = TripAlertService(settings=Settings())
+    service = TripAlertService(settings=Settings(), user_id="default")
     service._send_alert(trip, weather, [_alert_change()])
 
     # Beweise das knappe Alert-Format (Baustein D)

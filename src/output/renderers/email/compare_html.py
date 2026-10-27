@@ -21,7 +21,7 @@ SPEC: docs/specs/modules/issue_1110_compare_mail_v2.md
 from __future__ import annotations
 
 import html as _html
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -58,6 +58,7 @@ from output.renderers.alert.official_alerts import (
     _LEVEL_WORDS, OfficialAlertNotice, official_alert_source_label,
     render_official_alerts_html, render_warn_block,
 )
+from services.official_alerts.models import comparable_level
 
 
 # ---------------------------------------------------------------------------
@@ -566,6 +567,15 @@ def _warn_short(alert) -> tuple[str, str]:
     if alert.hazard == "flood":
         sev = {2: "caution", 3: "warn", 4: "danger"}.get(alert.level, "warn")
         return "Hochwasser", sev
+    if alert.hazard == "avalanche":
+        sev = {2: "caution", 3: "warn", 4: "danger"}.get(alert.level, "warn")
+        return "Lawine", sev
+    if alert.hazard == "avalanche_bulletin":
+        # Issue #1441: Originalstufe 1-5 (ersatzweise `level`), jede Stufe explizit
+        # -- Stufe 5 nie schwaecher als 4, Stufe 1 eine Info.
+        stufe = alert.native_level if alert.native_level is not None else alert.level
+        sev = {1: "info", 2: "caution", 3: "warn", 4: "danger", 5: "danger"}.get(stufe, "danger")
+        return f"Lawine {stufe}", sev
     return alert.label, "info"
 
 
@@ -807,10 +817,36 @@ def _visible_metrics(enabled_metrics: list[str] | None) -> list[dict]:
     return derive_row_labels(warn_row + ordered, form="long")
 
 
+def rowless_count(enabled_metrics: list[str] | None, row_keys) -> int:
+    """Issue #1405 S3: Anzahl gewaehlter Groessen OHNE Zeilendefinition in
+    ``row_keys`` -- genau die, die der Zeilenfilter (``_visible_metrics`` bzw.
+    ``comparison._ordered_rows``) verwirft. Die Warn-Zeile ist immer sichtbar
+    und zaehlt nie. ``None`` (kein Filter) = 0."""
+    if enabled_metrics is None:
+        return 0
+    return sum(
+        1 for k in dict.fromkeys(enabled_metrics) if k != "warn" and k not in row_keys
+    )
+
+
+def _render_selection_gap_html(count: int) -> str:
+    """Hinweiszeile unter der Uebersichtstabelle (Issue #1405 S3); leer bei 0."""
+    from output.renderers.channel_layout import selection_gap_notice
+
+    notice = selection_gap_notice(count, scope="vergleich")
+    if not notice:
+        return ""
+    return (
+        f'<div style="margin-top:6px;font-size:11px;font-family:{FONT_UI};'
+        f'color:{G_INK};">{_html.escape(notice)}</div>'
+    )
+
+
 def _render_overview_table(
     locations: list[LocationResult],
     enabled_metrics: list[str] | None = None,
     corridors: list[Corridor] | None = None,
+    unresolved_count: int = 0,
 ) -> str:
     header_cells = [
         f'<th style="text-align:left;padding:9px 5px;font-size:10px;'
@@ -844,9 +880,11 @@ def _render_overview_table(
         f'font-variant-numeric:tabular-nums;">'
         f'<thead>{header_row}</thead><tbody>{rows}</tbody></table>'
     )
+    gap = rowless_count(enabled_metrics, {m["key"] for m in CV2_METRICS})
     return (
         f'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;'
         f'margin-top:12px;border:1px solid #e6e1d3;">{table}</div>'
+        + _render_selection_gap_html(gap + unresolved_count)
     )
 
 
@@ -864,19 +902,29 @@ def _render_warn_banner(locations: list[LocationResult]) -> str:
     total = len(valid)
     leading_loc = None
     leading_alert = None
+    # Issue #1441 (AC-11, ADR-0089): primaer das Farblevel. Die Originalstufe
+    # (Lagebericht 5 vor 4) entscheidet einen Gleichstand NUR innerhalb
+    # derselben Gefahrenart -- nie ueber Skalen hinweg; sonst bleibt die
+    # zuerst gefundene Warnung fuehrend.
     for loc in alerted:
         for a in loc.official_alerts:
-            if leading_alert is None or a.level > leading_alert.level:
+            if (leading_alert is None or a.level > leading_alert.level or (
+                    a.level == leading_alert.level and a.hazard == leading_alert.hazard
+                    and comparable_level(a) > comparable_level(leading_alert))):
                 leading_alert, leading_loc = a, loc
     word = _LEVEL_WORDS.get(leading_alert.level, ("🔴", "ROT"))[1]
     count_line = f"höchste Stufe {word} · {leading_loc.location.name}"
+    if leading_alert.hazard == "avalanche_bulletin":
+        # Issue #1441: keine Awareness-Leiter/Ampelwort fuer die EAWS-Skala.
+        stufe = leading_alert.native_level or leading_alert.level
+        count_line = f"Lawinenstufe {stufe} · {leading_loc.location.name}"
 
     # Je Gefahr die höchststufige Warnung, Meter nach Stufe absteigend.
     by_hazard: dict = {}
     for loc in alerted:
         for a in loc.official_alerts:
             cur = by_hazard.get(a.hazard)
-            if cur is None or a.level > cur.level:
+            if cur is None or comparable_level(a) > comparable_level(cur):
                 by_hazard[a.hazard] = a
     notices = []
     for a in sorted(by_hazard.values(), key=lambda x: -x.level):
@@ -1394,7 +1442,10 @@ def _units_legend_text(visible: list[dict]) -> str:
     return format_units_legend(pairs)
 
 
-def _column_legend_text(visible: list[dict]) -> str:
+def _column_legend_text(
+    visible: list[dict], outlook_metrics: list[dict] | None = None,
+    outlook_enabled: bool = False,
+) -> str:
     """Issue #1472 (AC-1/AC-8): Spalten-Zeile fuer die sichtbaren Stunden-
     Spalten -- 'Spalten: Thdr = Gewitter · Visib = Sichtweite'.
 
@@ -1405,22 +1456,38 @@ def _column_legend_text(visible: list[dict]) -> str:
     Auswertungs-Zusatz wie der Kopf ('Temp max = Temperatur Maximum') statt
     ein Kuerzel zu erklaeren, das in der Tabelle gar nicht vorkommt.
     Formatiert vom geteilten Helfer `helpers.format_column_legend` -- dieselbe
-    Quelle wie die Trip-Briefing-Legende (keine Kopie)."""
-    from output.renderers.email.helpers import format_column_legend
+    Quelle wie die Trip-Briefing-Legende (keine Kopie).
+
+    ``outlook_enabled``/``outlook_metrics`` (#2136/ADR-0068, AC-5): ist der
+    3-Tages-Ausblick DERSELBEN Mail sichtbar, werden zusaetzlich dessen
+    Spaltenkoepfe aufgeloest -- `outlook_legend_pairs()` (geteilt mit der
+    Trip-Legende), `format_column_legend()` dedupliziert bereits
+    gleichlautende Kuerzel."""
+    from output.renderers.email.helpers import format_column_legend, outlook_legend_pairs
 
     kurz = derive_row_labels(visible, form="short")
     lang = derive_row_labels(visible, form="long")
     pairs = [(k["label"], lng["label"]) for k, lng in zip(kurz, lang)]
+    if outlook_enabled:
+        pairs += outlook_legend_pairs(outlook_metrics)
     return format_column_legend(pairs)
 
 
-def _render_units_legend(hourly_metrics: list[str] | None) -> str:
+def _render_units_legend(
+    hourly_metrics: list[str] | None, outlook_metrics: list[dict] | None = None,
+    outlook_enabled: bool = False,
+) -> str:
     """Einheiten-Legende UNTER der Stundentabelle (nicht im Spaltenkopf) --
     die Spaltenkoepfe bleiben 'Zeit'/'Sicht' (AC-2). Issue #1472: darunter die
-    zweite Zeile, die die englischen Kuerzel aufloest (ADR-0042-Bedingung)."""
+    zweite Zeile, die die englischen Kuerzel aufloest (ADR-0042-Bedingung).
+    #2136/ADR-0068 (AC-5): ``outlook_enabled``/``outlook_metrics`` speisen die
+    Spalten-Legende zusaetzlich mit den Ausblick-Kuerzeln."""
     visible = _visible_hour_metrics(hourly_metrics)
     blocks = ""
-    for text in (_units_legend_text(visible), _column_legend_text(visible)):
+    for text in (
+        _units_legend_text(visible),
+        _column_legend_text(visible, outlook_metrics, outlook_enabled),
+    ):
         if not text:
             continue
         blocks += (
@@ -1430,7 +1497,10 @@ def _render_units_legend(hourly_metrics: list[str] | None) -> str:
     return blocks
 
 
-def _render_legend(hourly_metrics: list[str] | None = None, hourly_enabled: bool = True) -> str:
+def _render_legend(
+    hourly_metrics: list[str] | None = None, hourly_enabled: bool = True,
+    outlook_metrics: list[dict] | None = None, outlook_enabled: bool = False,
+) -> str:
     items = [("#2f8a3e", "unkritisch"), ("#e3b008", "Achtung"), ("#e07b1a", "Warnung"), ("#c52a22", "Gefahr")]
     dots = "".join(
         f'<span style="display:inline-block;margin-right:16px;font-family:{FONT_DATA};'
@@ -1439,7 +1509,12 @@ def _render_legend(hourly_metrics: list[str] | None = None, hourly_enabled: bool
         f'background:{color};margin-right:6px;vertical-align:middle;"></span>{label}</span>'
         for color, label in items
     )
-    units = _render_units_legend(hourly_metrics) if hourly_enabled else ""
+    # #2136/ADR-0068 (AC-5): die Legende bleibt sichtbar, sobald der Ausblick
+    # sichtbar ist -- auch wenn die Stundentabelle abgeschaltet ist.
+    units = (
+        _render_units_legend(hourly_metrics, outlook_metrics, outlook_enabled)
+        if hourly_enabled or outlook_enabled else ""
+    )
     return (
         f'<div style="background:{G_PAPER};border-top:1px solid #e6e1d3;padding:18px 24px;'
         f'margin-top:22px;font-family:{FONT_DATA};font-size:10px;color:{G_INK_MUTED};">'
@@ -1451,34 +1526,29 @@ def _render_legend(hourly_metrics: list[str] | None = None, hourly_enabled: bool
     )
 
 
-def _compute_next_send(schedule, weekday, tz) -> Optional[str]:
-    """Known Limitation (SPEC): liefert None (-> '—'), wenn schedule nicht
-    ermittelbar ist.
-
-    Issue #1727 S5c (ADR-0044): ``today`` kommt aus ``tz`` (bereits von
-    ``render_compare_html`` aufgeloestes ``header_tz``) statt aus der
-    zonenlosen ``date.today()``-Serveruhr — dieselbe Zeitbasis wie die
-    Kopfzeile derselben Mail.
+def _compute_next_send(preset: Optional[dict], locations_by_id: dict) -> Optional[str]:
+    """Issue #1969 (AC-26/AC-27): KEINE eigene Rechnung mehr — die zentrale
+    Ableitung ``next_compare_briefing`` mit ``strict_after=True`` (der gerade
+    laufende Versand zaehlt nicht als naechster). Slots, Wochentag, ``end_date``
+    und Pause wirken; Datum/Uhrzeit/Kuerzel in der Ortszone (fix_1727_s5c AC-5).
+    ``None`` (-> '—'), wenn nichts mehr ansteht oder kein Preset bekannt ist.
     """
-    if not schedule:
+    if not preset:
         return None
-    today = local_dt(datetime.now(timezone.utc), tz).date()
-    schedule_str = str(schedule).lower()
-    if "weekly" in schedule_str and weekday is not None:
-        try:
-            target_wd = int(weekday)
-        except (TypeError, ValueError):
-            return None
-        days_ahead = (target_wd - today.weekday()) % 7 or 7
-        return (today + timedelta(days=days_ahead)).strftime("%d.%m.%Y")
-    if "daily" in schedule_str:
-        return (today + timedelta(days=1)).strftime("%d.%m.%Y")
-    return None
+    from services.next_briefing import next_compare_briefing
+
+    nb = next_compare_briefing(
+        preset, locations_by_id, datetime.now(timezone.utc), strict_after=True,
+    )
+    if nb.get("at") is None:
+        return None
+    tag = date.fromisoformat(nb["local_date"])
+    return f'{tag.strftime("%d.%m.%Y")} {nb["local_time"]} {nb["tz_abbr"]}'
 
 
-def _render_abo_footer(preset_name, preset_schedule, preset_weekday, location_count: int, sig, tz) -> str:
+def _render_abo_footer(preset_name, preset, locations_by_id: dict, location_count: int, sig) -> str:
     name = _html.escape(preset_name) if preset_name else "Ortsvergleich"
-    next_send = _compute_next_send(preset_schedule, preset_weekday, tz) or "—"
+    next_send = _compute_next_send(preset, locations_by_id) or "—"
     return (
         f'<div style="padding:20px 24px;background:{G_PAPER};border-top:1px solid #e6e1d3;">'
         f'<table style="width:100%;border-collapse:collapse;"><tr>'
@@ -1554,13 +1624,13 @@ def render_compare_html(
     hourly_metrics: list[str] | None = None,
     hourly_enabled: bool = True,
     preset_name: Optional[str] = None,
-    preset_schedule: Optional[str] = None,
-    preset_weekday: Optional[int] = None,
     corridors: list[Corridor] | None = None,
     outlook_enabled: bool = False,
     outlook_metrics: list[dict] | None = None,
     outlook_metric_formats: dict[str, bool] | None = None,
     undelivered: list | None = None,
+    preset: Optional[dict] = None,
+    unresolved_count: int = 0,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
 
@@ -1591,8 +1661,10 @@ def render_compare_html(
             gerendert wird. Default ``True`` (rueckwaertskompatibel,
             identisch zum Verhalten vor diesem Slice).
         preset_name: Name des Compare-Presets fuer den Abo-Footer.
-        preset_schedule: Schedule-Wert (z.B. "daily"/"weekly") fuer "Naechster Versand".
-        preset_weekday: Wochentag-Index (0=Mo) fuer weekly-Schedules.
+        preset: Issue #1969 -- das rohe Preset-Dict; der Fuss "Naechster
+            Versand" nennt daraus den echten Termin (Slots, Wochentag,
+            ``end_date``, Pause). Fehlt es, steht dort "—". Die frueheren
+            Parameter ``preset_schedule``/``preset_weekday`` sind entfallen.
         corridors: Issue #1231, Slice 7 -- Corridor-Liste des Presets. Zellen,
             deren Wert bei einem `mark=True`-Corridor innerhalb dessen `range`
             liegt (`corridor_inside()`, C5), erhalten zusaetzlich
@@ -1612,6 +1684,10 @@ def render_compare_html(
             (`{kennung: bool}`, ``True`` = Einfach). `None`/fehlender Eintrag
             = Rohzahl, der Ausblick-Default ist hart "Roh". Wirkt auf den
             Zellentext, NICHT auf die Ampel-Hintergrundtoenung.
+        unresolved_count: Issue #1405 S3 -- gewaehlte Eintraege ohne
+            Renderer-Zuordnung (``CompareRenderOptions.unresolved_by_channel``).
+            Zusammen mit den Groessen ohne Zeilendefinition als Hinweiszeile
+            unter der Uebersichtstabelle; bei 0 kein Hinweis.
 
     Returns:
         HTML-String (DOCTYPE bis </html>).
@@ -1645,7 +1721,7 @@ def render_compare_html(
     overview_html = (
         f'<div style="padding:6px 24px 0;">'
         f'{_render_section_head("ÜBERSICHT", "Alle Orte · gewählte Metriken", "← scrollen")}'
-        f'{_render_overview_table(locations, enabled_metrics, corridors)}</div>'
+        f'{_render_overview_table(locations, enabled_metrics, corridors, unresolved_count)}</div>'
     )
     # Issue #1278 (Nebenbefund, AC-12): die dritte Angabe war fest "09–16 Uhr" --
     # ein toter Rest des mit #1268 abgeschafften Zeitfensters. Die Bewertung
@@ -1694,10 +1770,17 @@ def render_compare_html(
         if has_undelivered(undelivered) else ""
     )
 
-    legend_html = _render_legend(hourly_metrics, hourly_enabled)
-    abo_html = _render_abo_footer(
-        preset_name, preset_schedule, preset_weekday, len(locations), sig, header_tz,
+    legend_html = _render_legend(
+        hourly_metrics, hourly_enabled, outlook_metrics, outlook_enabled,
     )
+    abo_html = _render_abo_footer(
+        preset_name,
+        preset,
+        {lr.location.id: lr.location for lr in locations},
+        len(locations), sig,
+    )
+    from output.renderers.email.command_block import render_commands_html
+    commands_html = render_commands_html("vergleich")
     app_footer_html = _render_app_footer()
 
     # Nur nicht-leere Bloecke einreihen (kein Doppel-Newline durch leeren
@@ -1706,7 +1789,7 @@ def render_compare_html(
         part for part in (
             header_html, warnings_html, warn_banner_html, unavailable_banner_html,
             overview_html, hourly_head_html, per_location_html,
-            undelivered_html, legend_html, abo_html, app_footer_html,
+            undelivered_html, legend_html, abo_html, commands_html, app_footer_html,
         ) if part
     )
 

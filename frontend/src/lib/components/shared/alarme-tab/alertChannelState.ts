@@ -1,6 +1,6 @@
 // Issue #1258 Scheibe S2 — geteilter Alarme-Organism (ungewired).
-// Pure-Function-Kern fuer AlertChannelPicker.svelte: Design-Default
-// (Telegram/SMS an, E-Mail aus, NUR bei Neuanlage), Anzeige-Reihenfolge und
+// Pure-Function-Kern fuer AlertChannelPicker.svelte: Neuanlage-Default
+// (Telegram/E-Mail an, SMS aus, NUR bei Neuanlage), Anzeige-Reihenfolge und
 // Warnhinweis bei null aktiven Kanaelen (AC-11).
 //
 // Design: claude-code-handoff/current/jsx/corridor-editor.jsx:469-489
@@ -21,17 +21,25 @@ export interface AlertChannelState {
 export const ALERT_CHANNEL_ORDER = ['telegram', 'sms', 'premium_sms', 'email'] as const;
 export type ChannelKind = (typeof ALERT_CHANNEL_ORDER)[number];
 
-// Design-Default (corridor-editor.jsx:470) — gilt NUR ohne uebergebenen
-// Bestands-State (Neuanlage, AC-11). Mit Bestand wird der Bestand
-// uebernommen, fehlende Keys werden false (kein stiller Kanal-Wechsel).
-// Issue #1745 A (D1): premium_sms ist beim Anlegen AUS — Kostenkanal
-// (Satelliten-SMS), wird bewusst angehakt, nie automatisch.
+// Neuanlage-Default — gilt NUR ohne uebergebenen Bestands-State (Neuanlage,
+// AC-11). Mit Bestand wird der Bestand uebernommen, fehlende Keys werden false
+// (kein stiller Kanal-Wechsel).
+// Issue #2518 (PO 2026-10-06): E-Mail ist der Hauptkanal und beim Anlegen AN;
+// Telegram AN (kostenlos, wirkt erst nach Verknuepfung); SMS AUS (Kostenkanal,
+// fuer Free nicht verfuegbar). Issue #1745 A (D1): premium_sms bleibt AUS —
+// Kostenkanal (Satelliten-SMS), wird bewusst angehakt, nie automatisch.
 const NEW_ENTITY_DEFAULT: AlertChannelState = {
 	telegram: true,
-	sms: true,
-	email: false,
+	sms: false,
+	email: true,
 	premium_sms: false
 };
+
+// Eine Quelle fuer Anzeige (Alarme-Reiter) UND Speicherung (Create-Rueckfall
+// Trip/Ortsvergleich): liefert immer eine Kopie des Neuanlage-Defaults.
+export function newEntityAlertChannelDefault(): AlertChannelState {
+	return { ...NEW_ENTITY_DEFAULT };
+}
 
 // Adversary Fix-Loop 1, F001: ein leeres Objekt `{}` (oder eines ohne einen
 // einzigen explizit gesetzten boolean-Wert, z.B. `{telegram: undefined}`)
@@ -56,7 +64,7 @@ function hasAnyExplicitChannelValue(existing: Partial<AlertChannelState>): boole
 export function resolveAlertChannels(
 	existing?: Partial<AlertChannelState> | null
 ): AlertChannelState {
-	if (!existing || !hasAnyExplicitChannelValue(existing)) return { ...NEW_ENTITY_DEFAULT };
+	if (!existing || !hasAnyExplicitChannelValue(existing)) return newEntityAlertChannelDefault();
 	return {
 		telegram: existing.telegram ?? false,
 		sms: existing.sms ?? false,

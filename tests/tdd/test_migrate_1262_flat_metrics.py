@@ -51,7 +51,7 @@ def _load_migrate_module() -> types.ModuleType:
 def _flat_file(trip_id: str) -> dict:
     return {
         "id": trip_id,
-        "name": "Flat-Metrics-Tour",
+        "name": "Flat-Metrics-Trip",
         "kind": "route",
         "display_config": {
             "trip_id": trip_id,
@@ -66,7 +66,7 @@ def _flat_file(trip_id: str) -> dict:
 def _correct_file(trip_id: str) -> dict:
     return {
         "id": trip_id,
-        "name": "Dict-Metrics-Tour",
+        "name": "Dict-Metrics-Trip",
         "kind": "route",
         "display_config": {
             "trip_id": trip_id,

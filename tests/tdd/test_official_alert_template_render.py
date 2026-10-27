@@ -150,9 +150,11 @@ def test_ac3_mixed_levels_highest_leads_all_channels():
     # FORTGESCHRIEBEN (#1948 S5): die Kurznachricht traegt die Stufe als
     # BUCHSTABEN am Token (`TH:M`/`HT:L`) statt als Stufenwort. Die hier
     # bewachte Zusicherung — die schwerere Warnung fuehrt — ist unveraendert.
+    # #2417 AC-27: Warn-Kuerzel "TH" (thunderstorm) -> "TS", weil "TH" mit dem
+    # Wetter-Kuerzel Gewitter (`TH:`/`TH+:`) kollidierte.
     sms = render_official_alert_sms(notices)
-    assert sms.index("TH") < sms.index("HT"), f"ORANGE(TH) muss vor GELB(HT) stehen: {sms!r}"
-    assert "TH:M" in sms and "HT:L" in sms, (
+    assert sms.index("TS") < sms.index("HT"), f"ORANGE(TS) muss vor GELB(HT) stehen: {sms!r}"
+    assert "TS:M" in sms and "HT:L" in sms, (
         f"Stufe gehoert als Buchstabe an den Token (M=orange, L=gelb): {sms!r}"
     )
     assert "ORANGE" not in sms and "GELB" not in sms, (
@@ -210,7 +212,8 @@ def test_ac5_sms_format_tokens():
     from output.renderers.alert.official_alerts import render_official_alert_sms
     # FORTGESCHRIEBEN (#1948 S5): Ortskopf statt Trip-Name + AMT-Sonderformat.
     sms = render_official_alert_sms(_two_gelb_full_route())
-    assert sms == "ges.Route: !HT:L Fr10.07. TH:L Sa15-21", (
+    # #2417 AC-27: Warn-Kuerzel "TH" (thunderstorm) -> "TS".
+    assert sms == "ges.Route: !HT:L Fr10.07. TS:L Sa15-21", (
         f"SMS folgt dem PO-Zielbild '<Ort>: !<Kuerzel>:<Stufe> <Zeit> …': {sms!r}"
     )
     assert "AMT" not in sms and "KHW403" not in sms, (
@@ -228,7 +231,10 @@ def test_ac5_sms_actually_dispatched():
     RED: `send_official_alert` kennt den Kwarg `sms_sink` noch nicht -> TypeError.
     """
     trip, notices = _dispatch_trip_and_notices()
+    import json
+
     from app.config import Settings
+    from app.loader import get_data_dir
     from services.notification_service import NotificationService
 
     settings = Settings(
@@ -237,7 +243,14 @@ def test_ac5_sms_actually_dispatched():
         sms_gateway_url="https://sms.test.invalid", seven_api_key="k",
         sms_to="+491700000000",
     )
-    svc = NotificationService(settings, "tdd-1216-ac5")
+    # Issue #2412 S4a Nachbesserung: ohne `user.json` faellt das neue
+    # SMS-Tageslimit-Gate auf Tier "free" (Cap 0) zurueck und wuerde diesen
+    # Dispatch faelschlich sperren -- Muster `test_sms_tageslimit.py::_nutzer_anlegen`.
+    _uid = "tdd-1216-ac5"
+    _d = get_data_dir(_uid)
+    _d.mkdir(parents=True, exist_ok=True)
+    (_d / "user.json").write_text(json.dumps({"id": _uid, "tier": "standard"}))
+    svc = NotificationService(settings, _uid)
     mail_calls: list = []
     sms_calls: list = []
     svc.send_official_alert(

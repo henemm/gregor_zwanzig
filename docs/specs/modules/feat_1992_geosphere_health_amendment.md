@@ -3,7 +3,7 @@ entity_id: feat_1992_geosphere_health_amendment
 type: module
 created: 2026-08-20
 updated: 2026-08-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [observability, providers, health, geosphere]
 ---
@@ -107,6 +107,8 @@ fängt (Zeile 424). Das bleibt **fail-soft** (kein Verhaltenswechsel: weiterhin
 `return None, None`), schließt aber eine echte, heute bestehende Lücke: ein Timeout
 oder Verbindungsfehler (nicht `HTTPStatusError`) propagiert HEUTE unverändert durch
 `fetch_snowgrid` hindurch (s. Punkt 3).
+
+**Update (#2302 Scheibe C):** Mit der Einführung des Zeitbudgets für GeoSphere wird der Except zusätzlich um `ProviderRequestError` erweitert, um auch Frist-Abbrüche abzufangen und zu journalisieren (AC-7 in `docs/specs/modules/fix_2302_s3_geosphere_zeitbudget.md`). Das Verhalten bleibt gleich (fail-soft mit Journal-Eintrag), die Fehlerklasse wird nur breiter.
 
 ### 3. Regressions-Leitplanke (`fetch_combined`, ~Zeile 597) — WICHTIGSTES AC
 
@@ -230,7 +232,7 @@ wird nie aufgerufen, Flag bleibt `False`, unverändertes Verhalten.
   - Test: Erfolgreichen Abruf faken, Journal auf genau eine `ok`-Zeile für
     `path="snowgrid"` prüfen, keine `unavailable`-Zeile.
 
-- **AC-3 (Regressions-Leitplanke, wichtigstes AC):** Given `fetch_snowgrid` wirft
+- **AC-3:** (Regressions-Leitplanke, wichtigstes AC) Given `fetch_snowgrid` wirft
   eine beliebige Exception (auch eine NICHT-httpx-Exception, z. B. ein simulierter
   Parsing-Fehler) / When `fetch_combined()` bzw. `fetch_forecast()` durchläuft /
   Then liefert der Aufruf trotzdem ein `NormalizedTimeseries`-Ergebnis mit den

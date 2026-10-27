@@ -42,6 +42,7 @@ from app.models import (
 from app.trip import Stage, Trip, Waypoint
 from services.notification_service import NotificationService, TripReportRequest
 from services.official_alerts.models import OfficialAlert
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +169,11 @@ def _settings() -> Settings:
     return Settings(
         telegram_bot_token="test-bot-token",
         telegram_chat_id="99999",
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout schaltet
+        # TelegramOutput auf die Test-Chat-ID um bzw. bricht ohne sie ab.
+        # Explizit auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196).
+        telegram_test_chat_id="99999",
     )
 
 
@@ -195,7 +201,7 @@ class TestAC7BriefingSpecialChars:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings()
-            svc = NotificationService(settings=settings, user_id="tdd-1260-pm-briefing")
+            svc = NotificationService(settings=settings, user_id=mit_profil_chat("tdd-1260-pm-briefing", settings))
 
             trip = _make_trip(name="Refuge d'Ortu & <Col>", telegram_style="kurzform")
             request = TripReportRequest(
@@ -277,7 +283,7 @@ class TestAC7OfficialAlertSpecialChars:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings()
-            svc = NotificationService(settings=settings, user_id="tdd-1260-pm-official")
+            svc = NotificationService(settings=settings, user_id=mit_profil_chat("tdd-1260-pm-official", settings))
 
             # Der Ortsname (nutzereingegeben) wird zum Ortskopf der amtlichen
             # Kurznachricht und traegt die Sonderzeichen dorthin.

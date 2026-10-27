@@ -6,13 +6,13 @@ outputs.* or output.renderers.* directly.
 """
 from __future__ import annotations
 
-import json as _json
 import logging
 from datetime import date, datetime as _datetime
 from pathlib import Path
 
 from app.config import Settings
 from app.loader import (
+    VALID_ENTITY_ID_RE,
     LoaderError,
     _parse_activity_profile,
     compare_preset_to_dict,
@@ -20,14 +20,33 @@ from app.loader import (
     load_all_locations,
     load_compare_presets,
 )
+from services.alert_check_state import report_unit_failure
+from services.file_lock import LockTimeout, locked_json_rmw
+from services.send_lock import release_send_lock, try_acquire_send_lock
+from services.send_outcomes import SendOutcomeError, outcome_from_result
+from utils.pii_masking import mask_addr_for_pii_log
 from services.alert_briefing_anchor import (
     record_briefing_dispatch_failure,
     undelivered_since_last_briefing,
     write_anchor_and_reset_memory,
 )
-from services.compare_alert_channels import effective_compare_channels
+from services.compare_alert_channels import (
+    effective_compare_briefing_channels,
+    effective_compare_telegram_style,
+)
+
+from services.user_tier import resolve_restricted_channel_flags
 
 logger = logging.getLogger("scheduler.dispatch")
+
+#: Reihenfolge des Flag-Tupels aus ``resolve_restricted_channel_flags``.
+_FLAG_KANAELE = ("email", "sms", "premium_sms", "telegram")
+
+
+def _missing_location_ids(locations: list, location_ids: list[str]) -> list[str]:
+    """IDs aus `location_ids`, die in `locations` nicht aufloesbar sind (#2216)."""
+    resolved_ids = {loc.id for loc in locations}
+    return [i for i in location_ids if i not in resolved_ids]
 
 
 def _load_presets_for_dispatch(user_id: str, data_root: str) -> list | None:
@@ -40,21 +59,20 @@ def _load_presets_for_dispatch(user_id: str, data_root: str) -> list | None:
     Faelligkeits-Liste.
     """
     # Issue #1250 Scheibe 7b: Existenz-Check gegen das briefings/-Verzeichnis
-    # (Cutover-Lesepfad), strict=True bewahrt die alte ERROR-Diagnose bei
-    # Korruption statt sie unter dem Skip-INFO-Log zu verstecken.
+    # (Cutover-Lesepfad).
     briefings_dir = Path(data_root) / "users" / user_id / "briefings"
     if not briefings_dir.exists():
         logger.info("No briefings/ dir for user %s — skipping", user_id)
         return None
 
-    try:
-        return [
-            compare_preset_to_dict(p)
-            for p in load_compare_presets(user_id=user_id, data_root=data_root, strict=True)
-        ]
-    except LoaderError as e:
-        logger.error("Failed to load compare presets for %s: %s", user_id, e)
-        return None
+    # Fix #2286 (AC-5): toleranter Lader -- eine kaputte Datei in briefings/
+    # (Trip oder Vergleich) wird mit WARNING uebersprungen statt alle
+    # Vergleiche des Nutzers stillzulegen; das zaehlt NICHT als failed
+    # (sichtbar ueber Korrupt-Zaehler + MQ). Paritaet zum Trip-Pfad.
+    return [
+        compare_preset_to_dict(p)
+        for p in load_compare_presets(user_id=user_id, data_root=data_root, strict=False)
+    ]
 
 
 def _auto_pause_expired_presets(
@@ -63,7 +81,7 @@ def _auto_pause_expired_presets(
     data_root: str,
     now_utc: _datetime,
     all_locations: list,
-) -> None:
+) -> int:
     """Pausiert Presets mit ueberschrittenem `end_date` (Issue #1250 Scheibe 3).
 
     Issue #1207: Extrahiert aus `run_compare_presets_daily` fuer Delegation
@@ -84,37 +102,48 @@ def _auto_pause_expired_presets(
     Der Zeitstempel `now_iso` stammt jetzt aus DERSELBEN Zeitabfrage wie die
     Ablauf-Pruefung (vorher `datetime.utcnow()`: naiv, ohne Zone, veraltet --
     und fuer Muster A des Zeitzonen-Waechters unsichtbar).
+
+    Issue #2217: jedes Preset ist abgeschottet; Rueckgabe = Zahl der
+    gescheiterten Presets (-> `failed` ueber `CompareDispatchStrategy`).
     """
     from services.compare_preview_service import order_locations_by_ids
     from utils.timezone import first_resolvable_tz, local_dt
 
     now_iso = now_utc.isoformat()
+    failed = 0
     for preset in presets:
-        if preset.get("archived_at"):
-            continue
-        if preset.get("paused_at") or preset.get("schedule") == "manual":
-            continue  # bereits pausiert -> idempotent, kein erneutes Schreiben
-        end_date_str = preset.get("end_date")
-        if not end_date_str:
-            continue
-        locations = order_locations_by_ids(
-            all_locations, preset.get("location_ids") or [],
-        )
-        zone = first_resolvable_tz(
-            locations, context_label=f"Preset {preset.get('id', '?')}",
-        )
         try:
-            expired = date.fromisoformat(end_date_str) < local_dt(now_utc, zone).date()
-        except (ValueError, TypeError) as e:
-            logger.warning(
-                "Preset %s: korruptes end_date bei Auto-Pause-Pruefung, "
-                "wird uebersprungen: %s",
-                preset.get("id", "?"),
-                e,
+            if preset.get("archived_at"):
+                continue
+            if preset.get("paused_at") or preset.get("schedule") == "manual":
+                continue  # bereits pausiert -> idempotent, kein erneutes Schreiben
+            end_date_str = preset.get("end_date")
+            if not end_date_str:
+                continue
+            locations = order_locations_by_ids(
+                all_locations, preset.get("location_ids") or [],
             )
-            continue
-        if expired:
-            save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+            zone = first_resolvable_tz(
+                locations, context_label=f"Preset {preset.get('id', '?')}",
+            )
+            try:
+                expired = date.fromisoformat(end_date_str) < local_dt(now_utc, zone).date()
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    "Preset %s: korruptes end_date bei Auto-Pause-Pruefung, "
+                    "wird uebersprungen: %s",
+                    preset.get("id", "?"),
+                    e,
+                )
+                continue
+            if expired:
+                save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+        except Exception:
+            # Issue #2217: ein Fehler bei EINEM Preset haelt die Auto-Pause der
+            # uebrigen nicht auf.
+            report_unit_failure("Compare-Auto-Pause", str(preset.get("id", "?")))
+            failed += 1
+    return failed
 
 
 def _dispatch_due_preset(
@@ -162,7 +191,7 @@ def _dispatch_due_preset(
 
 
 def run_compare_presets_daily(
-    user_id: str = "default",
+    user_id: str,
     data_root: str | None = None,
     hour: int | None = None,
 ) -> tuple[int, int]:
@@ -213,12 +242,44 @@ def run_compare_presets_daily(
     return run_briefing_dispatch("vergleich", user_id, now_utc, data_root=data_root)
 
 
+def _rmw_compare_preset(path: Path, label: str, mutate) -> str:
+    """Gesperrtes + atomares RMW eines Compare-Presets (#2158, ADR-0083).
+
+    ``mutate(entry)`` bekommt den frisch unter der Sperre gelesenen Stand und
+    liefert das zu schreibende dict oder ``None``. Der kind-Guard (F002, keine
+    Trip-Korruption bei ID-Kollision) laeuft hier fuer alle drei Schreiber.
+    Rueckgabe: ``"written"`` | ``"skipped"`` | ``"timeout"`` | ``"error"``.
+    Bei Sperr-Fristablauf wird NIE ungesperrt geschrieben.
+    """
+    def _inner(entry: dict) -> dict | None:
+        if entry.get("kind") not in (None, "", "vergleich"):
+            logger.warning(
+                "briefing %s traegt kind=%r (kein vergleich) -- %s "
+                "uebersprungen (F002, keine Trip-Korruption)",
+                path, entry.get("kind"), label,
+            )
+            return None
+        neu = mutate(entry)
+        if neu is not None:
+            neu["kind"] = "vergleich"
+        return neu
+
+    try:
+        return "written" if locked_json_rmw(path, _inner) else "skipped"
+    except LockTimeout:
+        logger.warning("briefing %s: Sperre nicht erhalten -- %s nicht geschrieben", path, label)
+        return "timeout"
+    except (OSError, ValueError) as e:
+        logger.error("Failed %s fuer briefing %s: %s", label, path, e)
+        return "error"
+
+
 def save_compare_preset_status(
     user_id: str,
     preset_id: str,
     top_ort: str | None,
     data_root: str | None = None,
-) -> None:
+) -> bool | None:
     """Read-Modify-Write: schreibt letzter_versand + top_ort_letzter_versand.
 
     Issue #1250 Scheibe 7b Cutover: per-Datei-RMW auf briefings/<id>.json
@@ -230,40 +291,25 @@ def save_compare_preset_status(
     if data_root is None:
         data_root = str(get_data_root())
 
+    # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau. Ohne sie faende
+    # eine Ausbruchs-Kennung wie "../../bob/user" die user.json eines fremden
+    # Kontos (briefings/ liegt zwei Ebenen unter users/) und dieser
+    # Read-Modify-Write ueberschriebe sie mit Preset-Feldern. Behandelt wie der
+    # "Datei gibt es nicht"-Zweig direkt darunter: stilles return, damit kein
+    # neuer Fehlerausgang fuer die Scheduler-Aufrufer entsteht.
+    if not VALID_ENTITY_ID_RE.match(preset_id):
+        return None  # Guard: kein Wert (Test: test_entity_id_path_guard)
+
     path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
     if not path.exists():
-        return
+        return False
 
-    try:
-        entry = _json.loads(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        logger.error("Failed to read briefing %s for status update: %s", path, e)
-        return
-    if not isinstance(entry, dict):
-        return
+    def _mutate(entry: dict) -> dict:
+        entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+        entry["top_ort_letzter_versand"] = top_ort
+        return entry
 
-    # Issue #1250 S7b (Adversary Fix-Loop F002): kind-Guard symmetrisch zu Gos
-    # DeleteComparePreset (internal/store/compare_preset.go). Bei ID-Kollision
-    # darf ein Trip (kind="route") NIE still in ein Fake-vergleich korrumpiert
-    # werden -- nur echte/neue vergleich-Eintraege (oder kind-leer) duerfen ueber
-    # diesen Pfad geschrieben werden.
-    if entry.get("kind") not in (None, "", "vergleich"):
-        logger.warning(
-            "briefing %s traegt kind=%r (kein vergleich) -- Status-Write "
-            "uebersprungen (F002, keine Trip-Korruption)",
-            path, entry.get("kind"),
-        )
-        return
-
-    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
-    entry["top_ort_letzter_versand"] = top_ort
-    entry["kind"] = "vergleich"
-
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            _json.dump(entry, f, indent=2, ensure_ascii=False)
-    except OSError as e:
-        logger.error("Failed to write briefing %s: %s", path, e)
+    return _rmw_compare_preset(path, "Status-Write", _mutate) == "written"
 
 
 def save_compare_preset_pause(
@@ -271,7 +317,7 @@ def save_compare_preset_pause(
     preset_id: str,
     data_root: str | None = None,
     now_iso: str | None = None,
-) -> None:
+) -> bool | None:
     """Read-Modify-Write: schreibt den Auto-Pause-Zustand (Issue #1250 Scheibe 3).
 
     Self-konsistente Pause-Repraesentation identisch zur manuellen Pause
@@ -284,41 +330,72 @@ def save_compare_preset_pause(
     if now_iso is None:
         now_iso = _datetime.utcnow().isoformat() + "Z"
 
+    # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau, identisch zu
+    # save_compare_preset_status (stilles return statt neuem Fehlerausgang).
+    if not VALID_ENTITY_ID_RE.match(preset_id):
+        return None  # Guard: kein Wert (Test: test_entity_id_path_guard)
+
     path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
     if not path.exists():
-        return
+        return False
 
-    try:
-        entry = _json.loads(path.read_text(encoding="utf-8"))
-    except Exception as e:
-        logger.error("Failed to read briefing %s for pause update: %s", path, e)
-        return
-    if not isinstance(entry, dict):
-        return
+    def _mutate(entry: dict) -> dict:
+        if entry.get("schedule") != "manual":
+            entry["previous_schedule"] = entry.get("schedule", "")
+            entry["schedule"] = "manual"
+        if not entry.get("paused_at"):
+            entry["paused_at"] = now_iso
+        return entry
 
-    # Issue #1250 S7b (Adversary Fix-Loop F002): kind-Guard symmetrisch zu Gos
-    # DeleteComparePreset -- bei ID-Kollision einen Trip (kind="route") NIE
-    # still in ein Fake-vergleich pausieren/korrumpieren.
-    if entry.get("kind") not in (None, "", "vergleich"):
-        logger.warning(
-            "briefing %s traegt kind=%r (kein vergleich) -- Pause-Write "
-            "uebersprungen (F002, keine Trip-Korruption)",
-            path, entry.get("kind"),
-        )
-        return
+    return _rmw_compare_preset(path, "Pause-Write", _mutate) == "written"
 
-    if entry.get("schedule") != "manual":
-        entry["previous_schedule"] = entry.get("schedule", "")
-        entry["schedule"] = "manual"
-    if not entry.get("paused_at"):
-        entry["paused_at"] = now_iso
-    entry["kind"] = "vergleich"
 
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            _json.dump(entry, f, indent=2, ensure_ascii=False)
-    except OSError as e:
-        logger.error("Failed to write briefing %s: %s", path, e)
+def resume_compare_preset(
+    user_id: str,
+    preset_id: str,
+    data_root: str | None = None,
+) -> str:
+    """Read-Modify-Write-Gegenstueck zu ``save_compare_preset_pause`` (Issue
+    #2282 Abschnitt 6, AC-9/AC-10): setzt ``schedule`` auf
+    ``previous_schedule`` zurueck (leer -> ``"daily"``, identisch zu
+    ``subscriptionHelpers.ts:computePauseToggle``) und loescht ``paused_at``
+    IM SELBEN Schreibvorgang (Mutations-Gegenprobe 3) — nie in zwei
+    getrennten Dateizugriffen, sonst koennte ein Crash dazwischen einen
+    inkonsistenten Zwischenzustand hinterlassen. Merge, kein Replace
+    (BUG-DATALOSS-GR221).
+
+    Rueckgabe: ``"resumed"`` | ``"not_paused"`` | ``"not_found"`` |
+    ``"wrong_kind"`` — der Aufrufer leitet den Antworttext daraus ab, statt
+    ihn hier zu behaupten.
+    """
+    if data_root is None:
+        data_root = str(get_data_root())
+    if not VALID_ENTITY_ID_RE.match(preset_id):
+        return "not_found"
+
+    path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
+    if not path.exists():
+        return "not_found"
+
+    box: dict = {}
+
+    def _mutate(entry: dict) -> dict | None:
+        # (F002-kind-Guard laeuft vorher in _rmw_compare_preset.)
+        if not (bool(entry.get("paused_at")) or entry.get("schedule") == "manual"):
+            box["not_paused"] = True
+            return None
+        entry["schedule"] = entry.get("previous_schedule") or "daily"
+        entry.pop("paused_at", None)
+        return entry
+
+    ergebnis = _rmw_compare_preset(path, "Resume-Write", _mutate)
+    if ergebnis == "written":
+        return "resumed"
+    if ergebnis == "timeout":
+        return "lock_timeout"
+    if ergebnis == "skipped":
+        return "not_paused" if box.get("not_paused") else "wrong_kind"
+    return "not_found"
 
 
 def build_compare_preset_subject(name: str, target_date: date) -> str:
@@ -333,19 +410,51 @@ def build_compare_preset_subject(name: str, target_date: date) -> str:
     return f"Wetter-Vergleich: {name} ({target_date.strftime('%d.%m.%Y')})"
 
 
-def _effective_compare_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
-    """Duenner Wrapper (Issue #1467 S2 AG1) — delegiert an den geteilten
-    Resolver `services.compare_alert_channels.effective_compare_channels`
-    (identisches Muster wie `compare_official_alert._effective_channels`,
-    Alarm-Pfad, jetzt auch fuer den Briefing-Pfad, Issue #1270 KB-3). Aufruf
-    ueber den Modul-Namensraum, damit Tests das importierte Symbol im
-    VERBRAUCHENDEN Modul patchen koennen (AC-3b).
+def _effective_compare_briefing_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
+    """Duenner Wrapper (Issue #1467 S2 AG1, umbenannt in Issue #2279 S1) —
+    delegiert an den geteilten Briefing-Resolver
+    `services.compare_alert_channels.effective_compare_briefing_channels`.
+    Bleibt bewusst auf dem Briefing-Resolver, NICHT auf der Alarm-Auflösung
+    `effective_alert_channels` — Briefing- und Alarm-Kanäle muessen getrennt
+    bleiben. Aufruf ueber den Modul-Namensraum, damit Tests das importierte
+    Symbol im VERBRAUCHENDEN Modul patchen koennen (AC-6).
 
     `send_email` ist auf Preset-Ebene bewusst NICHT beruecksichtigt: es wird gar
     nicht persistiert (vorbestehende Altlast, `versand_tab_vergleich.md` KL-6) —
     E-Mail bleibt daher wie bisher immer aktiv.
     """
-    return effective_compare_channels(preset, settings, user_id)
+    return effective_compare_briefing_channels(preset, settings, user_id)
+
+
+def _settle_compare_briefing(user_id: str, preset_id: str, loc_result) -> None:
+    """Issue #1441 S2: Briefing-Senk-/Tombstone-Pfad des Ortsvergleichs.
+
+    Bewertet wird die GEZEIGTE Lage: das Pro-Quelle-Ergebnis desselben Abrufs,
+    den die Vergleichs-Engine je Ort mitschneidet (`official_alert_query`,
+    Adversary F002) -- keine Nachfrage nach der Zustellung. Ohne Mitschnitt
+    (Fetch aus, Abruf-Fehler) ist die Gesundheit unbekannt: nie senken.
+    Fail-soft: ein Fehler kostet nur die Entwarnungs-Kuerzung."""
+    from datetime import timezone as _tz
+
+    from services import alert_briefing_anchor
+    from services.official_alert_allclear import AllClearQuery
+
+    loc = loc_result.location
+    entity_id = f"{preset_id}:{loc.id}"
+    query = getattr(loc_result, "official_alert_query", None)
+    try:
+        alert_briefing_anchor.settle_official_alerts_after_briefing(
+            user_id=user_id, entity_id=entity_id, queries=[AllClearQuery(
+                scope=loc.id, scope_ids=(loc.id,),
+                window_start=query.window_start if query else _datetime.now(_tz.utc),
+                window_end=query.window_end if query else None,
+                sources=query.sources if query else None,
+                shown=tuple(loc_result.official_alerts or ()),
+            )],
+        )
+    except Exception:
+        logger.warning("Compare-Briefing-Entwarnungspfad fehlgeschlagen fuer %s", entity_id,
+                       exc_info=True)
 
 
 def send_one_compare_preset(
@@ -360,6 +469,11 @@ def send_one_compare_preset(
     sms_sink=None,
     telegram_sink=None,
     on_demand: bool = False,
+    premium_sms_sink=None,
+    *,
+    weather_failure_as_outcome: bool = False,
+    restrict_to_channel: str | None = None,
+    orte_ohne_wetter: list | None = None,
 ) -> tuple:
     """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
 
@@ -379,7 +493,20 @@ def send_one_compare_preset(
     Transport-Naht, 1:1 durchgereicht an `NotificationService.send_compare_report`.
     `on_demand` (#1467 S2 AG5): Handversand — dann bleiben Δ-Anker UND
     Melde-Gedaechtnis unangetastet, genau wie beim Trip-Ad-hoc-Abruf (#1007).
-    Gibt (top_ort, empfaenger) zurueck. Wirft ValueError wenn kein Empfaenger konfiguriert.
+    Gibt (top_ort, empfaenger) zurueck.
+    Issue #2280: ohne Zustellung wirft er ``SendOutcomeError`` (ein
+    ``ValueError``) mit ``no_channels``/``channels_unreachable``/``no_weather``
+    — VOR Anker-Reset und Erfolgs-Status. ``mail_to`` ist nur Pflicht, wenn
+    E-Mail wirksam ist: ohne ``mail_to`` faellt E-Mail aus der wirksamen Menge.
+    ``weather_failure_as_outcome`` (nur Handversand): eine Ausnahme des
+    Wetterlaufs wird zu ``no_weather``; ohne Opt-in (Cron) propagiert sie.
+    Ein Fehler an JEDEM Ort ist seit #2286 (AC-4, ADR-0018) in BEIDEN Pfaden
+    ``no_weather`` -- keine Mail aus lauter Fehlerzellen, der Cron zaehlt den
+    Preset als ``failed``.
+    Issue #2282 S2: ``restrict_to_channel`` (HEUTE/MORGEN per Befehl) bedient
+    NUR den Anfragekanal ueber die mit dem Trip geteilte Aufloesung; gesperrt
+    ⇒ ``channels_unreachable``. ``orte_ohne_wetter`` sammelt die Namen der
+    Orte ohne Wetterdaten (Teilausfall). ``None`` = bisheriges Verhalten.
     """
     if (target_date is None) != (tage_ab_ortstag is None):
         raise ValueError(
@@ -408,13 +535,26 @@ def send_one_compare_preset(
 
     # Empfaenger-Check: Issue #1452 — ausschliesslich die Konto-Settings des
     # Nutzers, `preset.empfaenger` ist inert (kein Preset-Override mehr).
-    # Fehlerverhalten bewusst unveraendert laut (KL-3): ValueError statt Skip.
+    # Issue #2280 (AC-7): mail_to nur Pflicht, wenn E-Mail wirksam ist — ohne
+    # mail_to faellt E-Mail aus der wirksamen Menge (Kanal-Paritaet).
     default_to = getattr(settings, "mail_to", None)
+    if restrict_to_channel is None:
+        effective_channels = set(_effective_compare_briefing_channels(preset, settings, user_id))
+    else:
+        flags = resolve_restricted_channel_flags(restrict_to_channel, user_id)
+        effective_channels = {k for k, an in zip(_FLAG_KANAELE, flags) if an}
     if not default_to:
-        raise ValueError(
-            f"Preset {preset_id}: kein Empfaenger — mail_to fehlt in den Konto-Settings"
-        )
-    empfaenger = [default_to]
+        effective_channels.discard("email")
+    if not effective_channels and restrict_to_channel is not None:
+        # Anfragekanal per Tarif/Konto gesperrt (AC-6): nicht erreichbar.
+        raise SendOutcomeError("channels_unreachable")
+    if not effective_channels:
+        # Vor der Ortspruefung: die Reihenfolge der Fehlerpfade bleibt (#1727 AC-7).
+        raise SendOutcomeError("no_channels", (
+            f"Preset {preset_id}: kein Empfaenger — mail_to fehlt in den "
+            "Konto-Settings und kein anderer Versandweg ist wirksam"
+        ))
+    empfaenger = [default_to] if default_to else []
 
     if all_locations_cache is None:
         all_locations_cache = load_all_locations(user_id=user_id)
@@ -422,7 +562,17 @@ def send_one_compare_preset(
     # (konfigurierte Orts-Reihenfolge), nicht über die Cache-Reihenfolge.
     locations = order_locations_by_ids(all_locations_cache, location_ids)
     if not locations:
-        raise ValueError(f"Preset {preset_id}: Orte {location_ids} nicht aufloesbar")
+        raise ValueError(
+            f"Ortsvergleich '{preset_id}' verweist auf gelöschte Orte. "
+            f"Ersetze die Orte im Ortsvergleich. (Orte {location_ids} nicht aufloesbar)"
+        )
+    # #2216: Teilverlust sichtbar machen (Versand laeuft mit den uebrigen Orten).
+    fehlende_orte = _missing_location_ids(locations, location_ids)
+    if fehlende_orte:
+        logger.warning(
+            "Ortsvergleich %s: Orte nicht aufloesbar (geloescht?), Versand ohne sie: %s",
+            preset_id, fehlende_orte,
+        )
 
     if target_date is None:
         # Kein Slot-Kontext (Einzelversand): EINE Zeitabfrage, aus der beide
@@ -457,15 +607,28 @@ def send_one_compare_preset(
     # ``call_source`` MUSS ausdruecklich gesetzt werden: ein ThreadPoolExecutor
     # reicht den ContextVar-Kontext nicht an seine Arbeiter weiter, die
     # Stack-Marker des Aufruf-Journals liefen im Worker-Thread ins Leere.
-    result = run_comparison_parallel(
-        locations=locations,
-        time_window=resolve_compare_time_window(preset),
-        target_date=target_date,
-        forecast_hours=COMPARE_FORECAST_HOURS,  # Issue #1305: geteilte Konstante statt 48 fest
-        profile=profile,
-        official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
-        call_source="vergleich",
-    )
+    try:
+        result = run_comparison_parallel(
+            locations=locations,
+            time_window=resolve_compare_time_window(preset),
+            target_date=target_date,
+            forecast_hours=COMPARE_FORECAST_HOURS,  # Issue #1305: geteilte Konstante statt 48 fest
+            profile=profile,
+            official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
+            call_source="vergleich",
+        )
+    except Exception as exc:
+        if not weather_failure_as_outcome:
+            raise
+        raise SendOutcomeError("no_weather") from exc
+    # Issue #2280 (AC-6) / Fix #2286 (AC-4): kein einziger Ort mit
+    # Wetterdaten ⇒ no_weather -- im Handversand UND im Cron (ADR-0018:
+    # Fallback nicht kaschieren; sonst zaehlt eine Provider-Stoerung als
+    # "sent" und die Job-Flanke koennte nie feuern).
+    if result.locations and all(lr.error for lr in result.locations):
+        raise SendOutcomeError("no_weather")
+    if orte_ohne_wetter is not None:
+        orte_ohne_wetter.extend(lr.location.name for lr in result.locations if lr.error)
 
     top_ort = result.locations[0].location.name if result.locations else None
 
@@ -493,8 +656,9 @@ def send_one_compare_preset(
         hourly_metrics=opts.hourly_metrics,
         hourly_enabled=opts.hourly_enabled,
         preset_name=name,
-        preset_schedule=preset.get("schedule"),
-        preset_weekday=preset.get("weekday"),
+        # Issue #1969 (AC-26): das ganze Preset bis zum Fuss "Naechster
+        # Versand" -- derselbe Weg wie in der Vorschau (compare_preview_service).
+        preset=preset,
         corridors=opts.corridors,
         outlook_enabled=opts.outlook_enabled,
         outlook_metrics=opts.outlook_metrics,
@@ -502,6 +666,8 @@ def send_one_compare_preset(
         # service) -- sonst zeigte die versendete Mail etwas anderes als die
         # Vorschau, an der der Nutzer sie eingestellt hat.
         outlook_metric_formats=opts.outlook_metric_formats,
+        # Issue #1405 S3: unmappbare Auswahl sichtbar, nicht nur im Log.
+        unresolved_count=opts.unresolved_by_channel.get("email", 0),
     )
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt
     # gemeldeten Stand). Best-effort: ein fehlgeschlagener Snapshot-Write darf
@@ -549,6 +715,21 @@ def send_one_compare_preset(
     # ausschliesslich den Versandaufruf (AC-10), danach fliegt die Ausnahme
     # unveraendert weiter.
     try:
+        # Issue #2422 S5 (AC-28): Telegram-Stil "kurzform" = derselbe Text wie
+        # die SMS; sonst der bisherige Telegram-Renderer.
+        _sms_text = render_compare_sms(
+            result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
+            unresolved_count=opts.unresolved_by_channel.get("sms", 0),
+        )
+        if effective_compare_telegram_style(preset) == "kurzform":
+            _telegram_text = _sms_text
+        else:
+            _telegram_text = render_compare_telegram(
+                result,
+                enabled_metrics=opts.enabled_metrics_by_channel["telegram"],
+                preset_name=name,
+                unresolved_count=opts.unresolved_by_channel.get("telegram", 0),
+            )
         send_result = NotificationService(settings, user_id).send_compare_report(
             subject=subject,
             html_body=html_body,
@@ -557,20 +738,15 @@ def send_one_compare_preset(
             # Beide Render-Aufrufe bleiben bewusst INNERHALB des try-Blocks --
             # ihr Fehlerpfad gehoert wie bisher zu `record_briefing_dispatch_
             # failure` + `_anchor_and_reset()` (#1629).
-            telegram_text=render_compare_telegram(
-                result,
-                enabled_metrics=opts.enabled_metrics_by_channel["telegram"],
-                preset_name=name,
-            ),
-            sms_text=render_compare_sms(
-                result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
-            ),
+            telegram_text=_telegram_text,
+            sms_text=_sms_text,
             recipients=empfaenger,
-            effective_channels=_effective_compare_channels(preset, settings, user_id),
+            effective_channels=effective_channels,
             compare_hourly_enabled=opts.hourly_enabled,
             mail_sink=mail_sink,
             sms_sink=sms_sink,
             telegram_sink=telegram_sink,
+            premium_sms_sink=premium_sms_sink,
         )
     except Exception as exc:
         record_briefing_dispatch_failure(
@@ -579,10 +755,46 @@ def send_one_compare_preset(
         _anchor_and_reset()
         raise
 
+    # Issue #2275: gescheiterte/gesperrte Kanaele sichtbar machen (fail-soft).
+    for _kanal in dict.fromkeys([*send_result.failed_channels, *send_result.blocked_channels]):
+        logger.warning(
+            "Compare-Preset %s: Kanal %s nicht zugestellt (reason_code=%s, grund=%s)",
+            preset_id, _kanal, send_result.blocked_reason_codes.get(_kanal),
+            send_result.blocked_channels.get(_kanal),
+        )
+    # Issue #2280 (AC-4/5/8): Erfolg heisst Zustellung — ohne Zustellung weder
+    # Anker-Reset noch Erfolgs-Status (spiegelt VERMERK_AUSGAENGE beim Trip).
+    outcome = outcome_from_result(send_result)
+    if outcome == "channels_unreachable" and not on_demand:
+        # Diagnose-Spur wie der Ausnahme-Zweig oben (briefing_health), ohne Anker-Reset.
+        record_briefing_dispatch_failure(
+            user_id=user_id, kind="vergleich", entity_id=preset_id,
+            error=SendOutcomeError(outcome),
+        )
+    if outcome != "sent":
+        raise SendOutcomeError(outcome)
+
+    # Issue #2281 (AC-1): Versand-Historie -- derselbe Schreib-Helfer wie der
+    # Trip; Kanaele = tatsaechlich zugestellte, Slot aus dem Versatz.
+    from services.briefing_log import append_briefing_log
+
+    append_briefing_log(
+        user_id, "compare", preset_id,
+        "evening" if tage_ab_ortstag else "morning",
+        send_result.sent_channels, on_demand,
+        mask_addr_for_pii_log(default_to)
+        if default_to and "email" in send_result.sent_channels else None,
+    )
+
     # Issue #1714: im Briefing gezeigte amtliche Warnungen als „gemeldet"
     # vermerken, damit der unabhaengige Checker sie nicht kurz darauf erneut
     # als eigenen Alarm verschickt (Trip-Gegenstueck seit #1614 Teil 1).
     if send_result.sent and not on_demand:
+        # Issue #2521 S2: erstes planmaessig zugestelltes Briefing (fail-soft).
+        from services.first_briefing import mark_first_briefing
+
+        mark_first_briefing(user_id)
+
         from services import alert_briefing_anchor
 
         for loc_result in result.locations:
@@ -592,11 +804,18 @@ def send_one_compare_preset(
                     entity_id=f"{preset_id}:{loc_result.location.id}",
                     alerts=loc_result.official_alerts,
                 )
+            # Issue #1441 S2 (PO 15.10.): auch OHNE gezeigte Warnung senken bzw.
+            # Tombstone setzen -- nur bei gesunder meldender Quelle.
+            _settle_compare_briefing(user_id, preset_id, loc_result)
 
     _anchor_and_reset()
 
     save_compare_preset_status(user_id, preset_id, top_ort, data_root=data_root)
-    logger.info("Compare preset %s sent to %s (top_ort=%s)", preset_id, empfaenger, top_ort)
+    logger.info(
+        "Compare preset %s sent to %s (top_ort=%s)",
+        preset_id, mask_addr_for_pii_log(empfaenger) if empfaenger else empfaenger,
+        top_ort,
+    )
     return top_ort, empfaenger
 
 
@@ -604,6 +823,10 @@ def send_compare_preset(
     user_id: str,
     preset_id: str,
     data_root: str | None = None,
+    *,
+    restrict_to_channel: str | None = None,
+    target_date: date | None = None,
+    tage_ab_ortstag: int | None = None,
 ) -> dict:
     """Einzelversand fuer ein Compare-Preset — ignoriert schedule.
 
@@ -613,6 +836,10 @@ def send_compare_preset(
     Issue #1467 S2 AG5: Handversand ⇒ `on_demand=True` — weder Δ-Anker noch
     Melde-Gedaechtnis werden angefasst. Sonst verschoebe ein Handversand den
     Vergleichspunkt und der naechste echte Ausschlag ginge still verloren.
+
+    Issue #2282 S2: ``restrict_to_channel``/``target_date``/``tage_ab_ortstag``
+    reichen HEUTE/MORGEN per Befehl durch (``None`` = Web-Handversand
+    unveraendert); Orte ohne Wetterdaten stehen unter ``orte_ohne_wetter``.
     """
     if data_root is None:
         data_root = str(get_data_root())
@@ -629,11 +856,34 @@ def send_compare_preset(
         raise KeyError(f"Compare-Preset {preset_id} nicht gefunden")
     preset = compare_preset_to_dict(preset_obj)
 
-    settings = Settings().with_user_profile(user_id)
-    top_ort, actual_empfaenger = send_one_compare_preset(
-        preset, settings, user_id, data_root, on_demand=True,
+    # Issue #2124 (AC-5/AC-8): Lauf-Lock je (Nutzer, Preset) - Schluessel
+    # beginnt mit "compare", enthaelt user_id (Mandantentrennung).
+    if not try_acquire_send_lock("compare", user_id, preset_id):
+        return {"status": "already_in_progress"}
+    ohne_wetter: list = []
+    try:
+        settings = Settings().with_user_profile(user_id)
+        send_one_compare_preset(
+            preset, settings, user_id, data_root, on_demand=True,
+            weather_failure_as_outcome=True, target_date=target_date,
+            tage_ab_ortstag=tage_ab_ortstag, restrict_to_channel=restrict_to_channel,
+            orte_ohne_wetter=ohne_wetter,
+        )
+        outcome = "sent"
+    except SendOutcomeError as e:
+        # Issue #2280: Status aus dem echten Ausgang, nie fest "ok".
+        outcome = e.code
+    finally:
+        release_send_lock("compare", user_id, preset_id)
+    if outcome != "sent":
+        return {"status": outcome}
+    # #2216: Teilverlust an den Aufrufer melden (leer/fehlend = nichts fehlt).
+    fehlende = _missing_location_ids(
+        load_all_locations(user_id=user_id), preset.get("location_ids") or []
     )
-    return {"status": "ok", "winner": top_ort or "", "empfaenger_count": len(actual_empfaenger)}
+    return {"status": "ok" if outcome == "sent" else outcome,
+            **({"fehlende_orte": fehlende} if fehlende else {}),
+            **({"orte_ohne_wetter": ohne_wetter} if ohne_wetter else {})}
 
 
 def _write_compare_alert_snapshots(
@@ -694,6 +944,7 @@ def _write_compare_alert_snapshots(
             zusatz = {
                 "tage_ab_ortstag": tage_ab_ortstag,
                 "elevation_m": loc.elevation_m,
+                "user_id": user_id,  # Issue #2387 -- Budget-Topf je Nutzer
             }
             point = source.fetch(
                 loc.id, loc.lat, loc.lon, start_hour, end_hour, **zusatz

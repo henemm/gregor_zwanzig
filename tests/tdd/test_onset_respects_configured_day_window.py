@@ -88,7 +88,9 @@ ISLAND_TZ = ZoneInfo("Atlantic/Reykjavik")
 #   Fenster 3-21 (weiter)  -> 03:00
 #   Fenster 4-19 (Default) -> 05:00
 #   Fenster 8-16 (enger)   -> 12:00
-GEWITTERSTUNDEN = {3: 400.0, 5: 400.0, 12: 800.0}
+# Stunde 12 muss MED erreichen (Leiter 300/1000/2500, #2178) -- ein reiner
+# LOW-Tag bekommt die #2176-Luftmassen-Aussage statt "... ab HH:00".
+GEWITTERSTUNDEN = {3: 400.0, 5: 400.0, 12: 1500.0}
 
 
 def _dp(stunde: int, cape: float) -> ForecastDataPoint:
@@ -117,7 +119,7 @@ def _reihe(punkte) -> NormalizedTimeseries:
 
 
 def _ganztags_segment(start: int | None = None, ende: int | None = None) -> TripSegment:
-    """Segment ueber den vollen Tag, mit dem Auswertungsfenster der Tour.
+    """Segment ueber den vollen Tag, mit dem Auswertungsfenster der Trip.
 
     Voller Tag, damit der Segment-Vorschnitt in `_aggregate_for_segment`
     nichts wegnimmt -- sonst liessen sich Fenster-Wirkung und

@@ -40,7 +40,7 @@ async function deleteTestTrip(request: import('@playwright/test').APIRequestCont
 }
 
 async function navigateToMetricsTab(page: import('@playwright/test').Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=weather`);
+	await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
 	await page.waitForSelector('[data-testid="weather-metrics-tab"]', { timeout: 10_000 });
 }
 

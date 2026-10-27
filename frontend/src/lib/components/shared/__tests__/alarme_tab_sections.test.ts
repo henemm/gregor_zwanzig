@@ -23,11 +23,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-	alarmeTabSections,
-	wertebereicheTabId,
-	triggerGroupHeading
-} from '../alarme-tab/alarmeTabSections.ts';
+import * as alarmeTabSectionsModul from '../alarme-tab/alarmeTabSections.ts';
+const { alarmeTabSections, triggerGroupHeading } = alarmeTabSectionsModul;
 
 test('#1371 AC-6: route-Kontext liefert Abschnittsreihenfolge OHNE korridor-summary und OHNE radar', () => {
 	const sections = alarmeTabSections('route');
@@ -93,10 +90,8 @@ test('#1371 AC-6: kein Kontext (route/vergleich) enthaelt einen korridor-summary
 	}
 });
 
-test('#1258 AC-10: wertebereicheTabId("route") zeigt auf den Trip-Tab "alerts" (Wertebereiche)', () => {
-	assert.equal(wertebereicheTabId('route'), 'alerts');
-});
-
-test('#1258 AC-10: wertebereicheTabId("vergleich") zeigt auf den Compare-Editor-Tab "idealwerte"', () => {
-	assert.equal(wertebereicheTabId('vergleich'), 'idealwerte');
+// Feature #2287 AC-11: der Alarme-Reiter springt in beiden Hubs mit DERSELBEN Kennung
+// `wertebereiche` (subscriptionTabs); die kontextabhaengige Sonderfunktion entfaellt.
+test('#2287 AC-11: wertebereicheTabId existiert nicht mehr (eine Kennung fuer beide kinds)', () => {
+	assert.equal('wertebereicheTabId' in alarmeTabSectionsModul, false);
 });

@@ -2,14 +2,20 @@
 // vierter Kanal in der Alarm-Kanal-Auswahl.
 // Spec: docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md
 //   AC-8  — Ortsvergleichs-Hub: Dringlichkeits-Schwelle überlebt Speichern+Reload
-//   AC-10 — Ortsvergleichs-Hub: Haken überlebt Speichern+Reload, PUT trägt send_premium_sms
+//   AC-10 — Ortsvergleichs-Hub: Haken überlebt Speichern+Reload, PUT trägt
+//           alert_channels.premium_sms (Issue #2293 S2 hat die urspruengliche
+//           Zusicherung "PUT traegt send_premium_sms" abgeloest: der
+//           Alarme-Reiter-Klick schreibt seither AUSSCHLIESSLICH
+//           alert_channels.premium_sms, send_premium_sms ist ein reines
+//           Briefing-Feld des Versand-Reiters und bleibt unangetastet, AC-9)
 //   AC-14 — TRIP: Haken überlebt Speichern+Reload, PUT trägt alert_channels.premium_sms
 //
 // 🔴 WARUM DREI KLICKPFADE UND NICHT EINER: Trip und Ortsvergleich teilen die
 // KOMPONENTE (AlarmeTab.svelte), aber NICHT den SPEICHERWEG. Der Trip
 // persistiert über `buildAlarmeDeliveryPayload` (ein konsolidierter PUT auf
-// /api/trips/{id}), der Ortsvergleich über die Bridge-Kette
-// (currentAlarmSnapshot → flushPendingAlarmSave → buildHubPutPayload → PUT auf
+// /api/trips/{id}), der Ortsvergleich seit #2276 S2 über den eigenen
+// Speicherweg des Reiters (shared/alarmeVergleichSpeicherung.ts:
+// alarmSnapshotAus → flushPendingAlarmSave → baueAlarmNutzlast → PUT auf
 // /api/compare/presets/{id}). Ein Nachweis, der die eine Kette prüft und die
 // andere annimmt, prüft das Falsche — und der Trip ist der Fall, an dem dieses
 // Issue aufgefallen ist (KHW 403).
@@ -27,7 +33,13 @@
 //  Setup-Projekt: e2e/feat-1745-a.staging.setup.ts.)
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation, createTestComparePreset, createTestTrip, cleanupTracked } from './helpers';
+import {
+	createTestLocation,
+	createTestComparePreset,
+	createTestTrip,
+	cleanupTracked,
+	registriereBestaetigtenZweitnutzer
+} from './helpers';
 
 const KIND = 'premium_sms';
 
@@ -131,9 +143,13 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 	});
 
 	// ── AC-10: Ortsvergleichs-Hub — Haken ────────────────────────────────────
-	// Mutation (Spec): currentAlarmSnapshot() (CompareTabs.svelte:575-596) liest
-	// `sendPremiumSms` nicht aus `wizardState` — der Klick wäre sichtbar, käme
-	// aber nie im PUT-Body an.
+	// Issue #2293 S2 (AC-9 Entkopplung): der Alarme-Reiter schreibt seither
+	// `alert_channels.premium_sms`, NIE `send_premium_sms` (Briefing-Feld des
+	// Versand-Reiters, Same-Tab-Race-Schutz). Mutation (Spec #2293 S2,
+	// Mutations-Gegenprobe (f)): der Alarme-Reiter setzt zusaetzlich
+	// `send_premium_sms` — dann wuerde ein reiner Alarm-Kanal-Klick das
+	// Briefing-Premium-SMS mitschalten (die urspruengliche, jetzt behobene
+	// stille Kopplung aus #2448).
 	test('AC-10: hub_premium_sms_haken_ueberlebt_speichern_und_reload', async ({ page }) => {
 		const errors = trackConsoleErrors(page);
 		const suffix = Date.now() + 1;
@@ -164,12 +180,24 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 		const putRes = await putPromise;
 		expect(putRes.ok(), `PUT nach Premium-SMS-Schalter fehlgeschlagen: ${putRes.status()}`).toBeTruthy();
 
-		const body = putRes.request().postDataJSON() as { send_premium_sms?: boolean };
+		// Issue #2293 S2 (AC-9/AC-10): der Alarme-Reiter-Klick trägt
+		// `alert_channels.premium_sms`, NIE `send_premium_sms` (Briefing-Feld,
+		// bleibt vom reinen Alarm-Klick unangetastet).
+		const body = putRes.request().postDataJSON() as {
+			alert_channels?: Record<string, boolean>;
+			send_premium_sms?: boolean;
+		};
+		expect(body.alert_channels, 'PUT-Body ohne alert_channels').toBeTruthy();
+		expect(
+			body.alert_channels![KIND],
+			'Der PUT-Body trägt alert_channels.premium_sms nicht — der Haken wäre sichtbar und ' +
+				'wirkungslos (alarmePropsAus.ts::onChannelToggle/baueAlarmNutzlast).'
+		).toBe(true);
 		expect(
 			body.send_premium_sms,
-			'PUT-Body enthält kein send_premium_sms — der Haken wäre sichtbar und wirkungslos ' +
-				'(currentAlarmSnapshot()/buildHubPutPayload, Landmine 3).'
-		).toBe(true);
+			'#2293 S2 AC-9 FAIL: der Alarm-Kanal-Klick hat send_premium_sms (Briefing-Feld) ' +
+				'mitgeschrieben — die Entkopplung ist verletzt.'
+		).toBeUndefined();
 
 		// ── Der eigentliche Beweis: neu laden ────────────────────────────────
 		await page.reload();
@@ -181,10 +209,20 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 			fullPage: true
 		});
 
-		// Gegenprobe am Server, nicht nur an der Oberfläche.
+		// Gegenprobe am Server, nicht nur an der Oberfläche (#2293 S2: alert_channels
+		// ist der Bestand, send_premium_sms bleibt das unbeteiligte Briefing-Feld).
 		const getRes = await page.request.get(`/api/compare/presets/${preset.id}`);
 		expect(getRes.ok()).toBeTruthy();
-		expect((await getRes.json()).send_premium_sms).toBe(true);
+		const gespeichert = (await getRes.json()) as {
+			alert_channels?: Record<string, boolean>;
+			send_premium_sms?: boolean;
+		};
+		expect(gespeichert.alert_channels?.premium_sms).toBe(true);
+		expect(
+			gespeichert.send_premium_sms,
+			'#2293 S2 AC-9 FAIL: send_premium_sms wurde vom Alarm-Kanal-Klick auf true gesetzt (bzw. ' +
+				'ist entgegen der Serialisierung `*bool` mit omitempty ueberhaupt im JSON aufgetaucht).'
+		).toBeUndefined();
 
 		expect(errors, `Konsolenfehler während AC-10-Lauf: ${JSON.stringify(errors)}`).toEqual([]);
 	});
@@ -304,14 +342,10 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 			ctxB = await browser.newContext({ storageState: undefined });
 			const pageB = await ctxB.newPage();
 			const userB = `e2e1745a${suffix}`;
-			const reg = await pageB.request.post('/api/auth/register', {
-				data: { username: userB, password: 'Test1234!x', email: `${userB}@example.com` }
-			});
-			expect([200, 201].includes(reg.status()), `Registrierung B fehlgeschlagen: ${reg.status()}`).toBeTruthy();
-			const loginB = await pageB.request.post('/api/auth/login', {
-				data: { username: userB, password: 'Test1234!x' }
-			});
-			expect(loginB.ok(), `Login B fehlgeschlagen: ${loginB.status()}`).toBeTruthy();
+			// Issue #2271: registrieren → Token ueber AS angemeldete Sitzung holen →
+			// bestaetigen → erst dann anmelden. Ohne die Bestaetigung dazwischen
+			// antwortet der Login mit 403 (das Gate sitzt in issueSession).
+			await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, userB, 'Test1234!x');
 
 			// B sieht As Trip nicht.
 			const getBOnA = await pageB.request.get(`/api/trips/${tripAId}`);

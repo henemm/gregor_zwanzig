@@ -11,7 +11,7 @@
 // Fassung dieser Datei entschied zusätzlich nach Datenlage ("würde der Payload
 // leeren?" über `nextMetricIds`/`savedMetricIds`). Das erlaubte einen Schreib-
 // zugriff ohne Nutzeraktion immer dann, wenn der Payload NICHT leerte — genau
-// der Fall, wenn `EditReportConfigSection` beim Mounten die Report-Konfiguration
+// der Fall, wenn `MailInhaltCard` beim Mounten die Report-Konfiguration
 // normalisiert und zurückschreibt. Die Datenlage-Prüfung war der Versuch, den
 // Bug an seinen Symptomen zu erkennen statt an seiner Ursache.
 //

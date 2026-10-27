@@ -1,0 +1,15 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/ws-2050-s4b
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 27 items
+
+tests/tdd/test_radar_messluecken_protokoll.py ............               [ 44%]
+tests/tdd/test_regen_ausdehnung_zonenbildung.py ....                     [ 59%]
+tests/tdd/test_regen_ausdehnung_textstellen.py ...........               [100%]
+
+============================== 27 passed in 1.67s ==============================

@@ -50,10 +50,14 @@ def _segments_for_stage(trip: "Trip", stage) -> list:
     return convert_trip_to_segments(scoped_trip, stage.date)
 
 
-def _fetch_one(service: SegmentWeatherService, segment) -> Optional[SegmentWeatherData]:
+def _fetch_one(
+    service: SegmentWeatherService, segment, user_id: str,
+) -> Optional[SegmentWeatherData]:
     """Fetch Wetter fuer ein Segment; Fehler killen nur dieses Segment."""
     try:
-        return service.fetch_segment_weather(segment, enrich_ensemble=False)
+        return service.fetch_segment_weather(
+            segment, enrich_ensemble=False, user_id=user_id,
+        )
     except Exception:  # noqa: BLE001 -- pro Segment fangen, andere nicht killen
         return None
 
@@ -134,7 +138,9 @@ def _compute_one_stage(trip: "Trip", stage, segments: list, weather_list: list) 
     return {"weather_summary": weather_summary, "risk": risk_color}
 
 
-def compute_stage_weather(trip: "Trip", provider: "WeatherProvider") -> dict[str, Optional[dict]]:
+def compute_stage_weather(
+    trip: "Trip", provider: "WeatherProvider", *, user_id: str,
+) -> dict[str, Optional[dict]]:
     """Pro Stage in trip.stages: Wetter-Summary + Risiko (green/yellow/red).
 
     Leere Stage-ID -> Stage komplett uebersprungen. Fail-soft -> None bei
@@ -173,7 +179,9 @@ def compute_stage_weather(trip: "Trip", provider: "WeatherProvider") -> dict[str
     if flat:
         with ThreadPoolExecutor(max_workers=min(len(flat), 8)) as executor:
             future_to_idx = {
-                executor.submit(_fetch_one, services_by_stage[stage_id], seg): idx
+                executor.submit(
+                    _fetch_one, services_by_stage[stage_id], seg, user_id,
+                ): idx
                 for idx, (stage_id, seg) in enumerate(flat)
             }
             for future, idx in future_to_idx.items():

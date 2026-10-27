@@ -11,12 +11,17 @@
 	// 'compare-wizard-state' (Editor + gemountete Steps) und
 	// 'compare-wizard-profile' (CorridorEditor/VersandTab-Profil-Hints).
 
-	import { setContext } from 'svelte';
+	import { setContext, untrack } from 'svelte';
 	import { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import CompareNewEditor from '$lib/components/compare-new/CompareNewEditor.svelte';
+	import { vorlageInZustand } from '$lib/components/compare-new/compareNewVorlage';
 
 	let { data } = $props();
 	const state = new CompareWizardState();
+	// Issue #2277 S2c: ?from=<id> — einmalige Vorbelegung, bewusst KEIN $effect (AC-10).
+	untrack(() => {
+		if (data.vorlage) vorlageInZustand(data.vorlage, data.locations, state);
+	});
 	setContext('compare-wizard-state', state);
 	setContext('compare-wizard-profile', data.profile ?? null);
 </script>

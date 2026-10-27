@@ -1,3 +1,10 @@
+---
+entity_id: fix_1476_telegram_herkunftssperre
+type: fast
+created: 2026-08-03
+status: implemented
+---
+
 # Mini-Spec: Versandwege erkennen selbst, dass sie aus einem Testlauf kommen
 
 **Issue #1476.** Wiederholungsfall: Ein Testlauf hat dem PO eine echte

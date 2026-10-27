@@ -94,8 +94,10 @@ def test_inbound_telegram_reader_handles_start_command():
     settings = MagicMock()
     settings.telegram_bot_token = "testtoken"
 
-    with patch("services.inbound_telegram_reader.httpx") as mock_httpx:
-        mock_httpx.post.return_value = MagicMock(status_code=200)
+    # #1369: der Reader importiert kein httpx mehr; die Registrierung laeuft
+    # ueber post_internal (Go-Backend) -- dort wird abgefangen.
+    with patch("services.inbound_telegram_reader.post_internal") as mock_post:
+        mock_post.return_value = MagicMock(status_code=200)
         result = reader._process_start_command(
             token="abc123token",
             chat_id="987654321",

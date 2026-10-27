@@ -72,7 +72,8 @@ METRIC_TO_SYMBOLS = {
     # (verdoppelte nachweislich 'FK') -- "wind_chill" traegt danach
     # ueberhaupt kein SMS-Token mehr (weder in SMS_MULTI_SYMBOLS_BY_METRIC
     # noch SMS_SYMBOL_BY_METRIC, s. _symbols_for_metric()).
-    "wind_chill": (),
+    # #2422 S6 (B1, PO-Entscheid V1): 'wind_chill' traegt wieder ein Token, 'TF'.
+    "wind_chill": ("TF",),
     "wind_chill_day_low": ("FL",),
     "wind_chill_day_high": ("FD",),
     "wind_chill_night": ("FN",),
@@ -419,10 +420,16 @@ class TestAC9_RenderLineUnchangedByAdditiveFunction:
         # Zeile trifft die 160er-Grenze jetzt EXAKT (kein Puffer mehr) --
         # dieser Golden-Wert ist der neue, gemessene Ist-Stand nach der
         # Erweiterung, kein Rueckschluss aus alter Logik.
+        #
+        # #2422 S6 (B1) -- BEWUSST NEU GEMESSEN: die Fixture fuehrt alle Metriken
+        # inkl. wind_chill; 'TF-18@6' (+8 Zeichen) kommt hinzu, dafuer faellt per
+        # DROP_ORDER 'NS24+...' (Schnee vor Komfort-Angaben). Nur bei aktivem
+        # wind_chill aendert sich diese Zeile; die Zusicherung (render_line()
+        # bleibt von der additiven Nachbarfunktion unberuehrt) ist dieselbe.
         baseline = (
-            "Etappe: N-15 D-12/28 FN-21 FD-18/24 R245.0@6(845.0@14) "
+            "Etappe: N-15 D-12/28 FN-21 FD-18/24 TF-18@6 R245.0@6(845.0@14) "
             "PR25%@7(98%@14) W850@6(1420@16) G1200@6(2080@16) TH:L@8(H@12) "
-            "TH+:M@10 SD2450000000000 NS24+1850000000000"
+            "TH+:M@10 SD2450000000000"
         )
         line = self._truncating_line()
         out = render_line(line, 160)
@@ -450,3 +457,18 @@ class TestAC9_RenderLineUnchangedByAdditiveFunction:
         )
         assert isinstance(survivors, set)
         assert len(survivors) > 0
+
+
+def test_vorschau_zeigt_bei_aktivem_wind_chill_einen_echten_tf_wert():
+    """#2422 S6 (B1): bei aktiver Gefuehlter Temperatur zeigt die Editor-Vorschau
+    ``TF<°C>@<h>`` (Tiefstwert der Beispiel-Serie), nicht die Nullform ``TF-``.
+    Die Laengen-Pins anderer Tests bleiben unberuehrt, weil ``TF`` nur bei
+    aktivem ``wind_chill`` entsteht."""
+    import re
+
+    from services.validator_render_service import render_sms_fidelity_preview
+
+    zeile = render_sms_fidelity_preview(["wind_chill"])["line"]
+    tokens = zeile.split(": ", 1)[1].split(" ")
+    assert "TF-" not in tokens, zeile
+    assert any(re.fullmatch(r"TF-?\d+@\d+", t) for t in tokens), zeile

@@ -91,10 +91,20 @@ type ComparePreset struct {
 	SendTelegram     *bool                   `json:"send_telegram,omitempty"`
 	SendSms          *bool                   `json:"send_sms,omitempty"`
 	// SendPremiumSms — Issue #1701 (S2b, D8): Premium-SMS-Kanal-Opt-in fuer
-	// den Ortsvergleich, eigenes Feld statt Wiederverwendung (der Ortsvergleich
-	// hat kein alert_channels-Sub-Objekt wie der Trip, die Kanaele sind flache
-	// Top-Level-Felder). Pointer-Pattern wie SendTelegram/SendSms daneben.
+	// das planmaessige Briefing des Ortsvergleichs (Versand-Reiter). Seit
+	// Issue #2293 (S2) existiert daneben AlertChannels als eigenes
+	// Sub-Objekt fuer den Alarm-Versand (Trip-identisches Pointer-Pattern) —
+	// die fruehere Praemisse "der Ortsvergleich hat kein alert_channels-
+	// Sub-Objekt wie der Trip" gilt ab dieser Scheibe nicht mehr.
 	SendPremiumSms *bool `json:"send_premium_sms,omitempty"`
+	// AlertChannels — Issue #2293 Scheibe S2 (Epic #1374/#2345): eigenes,
+	// persistiertes Kanal-Sub-Objekt fuer den ALARM-Versand (Abweichung,
+	// amtliche Warnung, Regenradar) des Ortsvergleichs, unabhaengig von den
+	// Briefing-Feldern SendTelegram/SendSms/SendPremiumSms. Wiederverwendeter
+	// Typ, identisch zum Trip (internal/model/trip.go:214-219). nil = noch
+	// nicht materialisiert (Altbestand) — store.materializeAlertChannels
+	// leitet den Wert deterministisch aus den flachen Feldern ab.
+	AlertChannels *AlertChannelsConfig `json:"alert_channels,omitempty"`
 	// AlertChannelThresholds — Issue #1461 S3b-2b, additives Geschwisterfeld
 	// (bewusst NICHT in AlertChannels/OfficialWarnings) fuer die je Kanal
 	// eingestellte Dringlichkeits-Schwelle. Bestehender Typ, selbes Package
@@ -103,6 +113,14 @@ type ComparePreset struct {
 	// gesetzt = Feld-Level-Merge innerhalb des Unterobjekts Pflicht
 	// (internal/handler/compare_preset.go).
 	AlertChannelThresholds *AlertChannelThresholdsConfig `json:"alert_channel_thresholds,omitempty"`
+	// AlertMetricChannels — Issue #1895 Scheibe S1 (Epic #1230), Paritaet zum
+	// gleichnamigen Trip-Feld (internal/model/trip.go). Gleiche Semantik:
+	// Schluessel = Metrikname, Wert = Kanal-Repraesentation, in S1 unvalidiert
+	// und ohne Leser (ADR-0077). Der Vergleich-PUT braucht KEINE eigene
+	// Merge-Zeile (mergeBriefingPatch mergt generisch eine Ebene tief), das
+	// Struct-Feld ist aber Pflicht: ohne es verwirft der typisierte
+	// json.Unmarshal in applyComparePresetPatch den Schluessel wieder.
+	AlertMetricChannels map[string]interface{} `json:"alert_metric_channels,omitempty"`
 	// Issue #1232 Scheibe 2a — Zwei-Slot-Zeitplan (additiv auf das Trip-
 	// Briefing-Modell uebertragen, docs/specs/modules/compare_preset_zeitplan.md).
 	// Pointer-Pattern wie OfficialAlertsEnabled: fehlt ein Feld im JSON

@@ -1,40 +1,56 @@
-// E2E — #1488 Scheibe A: der Absolut-Modus ist fuer Gewitter gesperrt.
+// E2E — #2277 Scheibe S1: der Alarme-Reiter von `/trips/new` zeigt den geteilten
+// `AlarmeTab` (context="route", createMode) statt der Alt-Komponente
+// `AlertRulesEditor`.
 //
-// Spec: docs/specs/modules/fix_1488_sa_gewitter_absolutregel.md (AC-1, AC-2)
+// Spec: docs/specs/modules/fix_2277_s1_alarme_tab_route.md
 //
-// Gemessener Bug (docs/context/fix-1488-gewitterstufen.md, Befund 1+3): auf
-// `/trips/new` -> Alarmregeln laesst sich fuer die Metrik „Gewitter" eine Regel
-// im Modus „Absolut" mit den Schwellen „MITTEL"/„HOCH" anlegen. Der Alarm-Dienst
-// wertet diese Schwelle nie aus, und beide Woerter alarmieren eine Stufe frueher
-// als beschriftet. Die Bedienflaeche verspricht eine Wirkung, die es nicht gibt.
+// Diese Datei war bis #1895 der Sperr-Waechter aus #1488 Scheibe A („fuer Gewitter
+// ist der Absolut-Modus gesperrt"). Sie wurde in #1895 Schritt 1 IN PLACE zum
+// Abwesenheits-Waechter der Modus-Auswahl umgeschrieben und in Schritt 2 — wieder
+// IN PLACE — auf den Rueckbau von Δ-Schwelle und Zeitfenster der Alarmregel-Karte
+// nachgezogen.
 //
-// Regulaerer CI-Spec (kein `.staging.spec.ts`) und auf `.github/ci_e2e_specs.txt`
-// — ein von Hand gestarteter Staging-Spec belegt den Fix einmal und bewacht ihn
-// danach nie wieder; genau dieser Fehlertyp ist der Gegenstand des Tickets.
+// #2277 S1 hat den `AlertRulesEditor`-Mount unter `/trips/new` → Alerts durch den
+// geteilten `AlarmeTab` ersetzt. Die Alarmregel-Karte, die Schritt 1 und 2 hier
+// bewachten, gibt es an dieser Stelle nicht mehr; ihre Zusicherungen haben kein
+// Subjekt mehr und entfallen mit ihr. Die Datei wird darum ein drittes Mal IN
+// PLACE umgeschrieben und prueft jetzt das NEUE Bedienfeld: Kanal-Schalter
+// (inkl. Premium-SMS), Kanal-Schwellen, Amtliche-Warnungen-Schalter und das
+// Ueberleben der Eingaben beim Tab-Wechsel. Der Dateiname bleibt, weil die Datei
+// in der E2E-Ratsche `.github/ci_e2e_specs.txt` (Zeile 305) steht und im
+// `e2e`-Check der CI-Ampel laeuft. Ein neuer Dateiname haette den
+// Ratschen-Eintrag entwertet — „Ratsche leeren macht den abhaengigen Test
+// vakuum-gruen".
+//
+// Warum im echten Browser: der mobile Mount steckt in einem Wrapper, der nur per
+// `style:display` ein-/ausgeblendet wird (TripNewEditor.svelte, #2277 S1) — der
+// Kanal-/Schwellen-Stand lebt als lokaler State im gemounteten AlarmeTab und im
+// Schatten-State der Anlege-Seite. Ob er einen Tab-Wechsel wirklich ueberlebt und
+// ob Klicks auf `<span role="switch">` den Zustand umschalten, koennen SSR- und
+// Kern-Tests (node --test) strukturell nicht belegen.
+//
+// Premium-SMS: die Zeile ist beim Anlegen IMMER sichtbar (#2229), der Schalter
+// aber tarifgebunden (premiumSmsAlarmGate.ts — nur `premium_sms_allowed === true`
+// macht ihn bedienbar). Der Test misst den Tarif des angemeldeten Nutzers ueber
+// `/api/auth/profile` und prueft den dazu passenden Zustand — bedienbar ODER
+// gesperrt mit Begruendung. Umschalten und Persistenz laufen deshalb ueber den
+// tariffreien Kanal E-Mail, damit sie in jeder Umgebung begehbar sind.
 
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import * as path from 'node:path';
 
 const MOBILE = { width: 390, height: 844 };
 
-// Locator fuer eine Modus-Karte. ModeCard.svelte:58-60 wechselt die testid je
-// nach Auswahl (`mode-card-absolute` <-> `mode-card-absolute-selected`) — ein
-// exakter Testid-Vergleich wuerde die ausgewaehlte Karte uebersehen und
-// „nicht vorhanden" melden, obwohl sie dasteht.
-function modeCard(scope: ReturnType<Page['locator']>, mode: 'absolute' | 'delta' | 'both') {
-	return scope.locator(`[data-testid="mode-card-${mode}"], [data-testid="mode-card-${mode}-selected"]`);
-}
-
 // `/trips/new` bis zum Alerts-Tab durchklicken. Uebernommen aus dem bereits
 // funktionierenden `issue-776-metrics-toggle.spec.ts::openNewTripZeitplan()`
-// (mobiler Pfad, Progressive-Tab-Unlock) — einziger zusaetzlicher Schritt ist
-// der Klick auf „Alerts". Kein Trip wird angelegt: der GPX-Upload loest nur den
+// (mobiler Pfad, Progressive-Tab-Unlock) — einziger zusaetzlicher Schritt ist der
+// Klick auf „Alerts". Kein Trip wird angelegt: der GPX-Upload loest nur den
 // zustandslosen `POST /api/gpx/parse` aus.
 async function openNewTripAlerts(page: Page) {
 	await page.setViewportSize(MOBILE);
 	await page.goto('/trips/new');
-	await page.getByTestId('trip-new-name-input-mobile').fill('#1488 Gewitter-Alarmregel');
+	await page.getByTestId('trip-new-name-input-mobile').fill('#2277 Alarme-Reiter');
 	await page.getByTestId('trip-new-date-input').fill(new Date().toISOString().slice(0, 10));
 
 	const tabbar = page.getByTestId('tn-mobile-tabbar');
@@ -43,8 +59,7 @@ async function openNewTripAlerts(page: Page) {
 	const gpx = path.resolve('./e2e/fixtures/test-trip.gpx');
 	// IMMER den ersten verbleibenden offenen Datei-Input frisch aufloesen: eine
 	// Etappe mit gesetztem GPX verliert ihren Input komplett aus dem DOM
-	// (TripNewEditor.svelte `{#if s.gpx}`), ein fixierter Index zeigt danach
-	// ins Leere.
+	// (TripNewEditor.svelte `{#if s.gpx}`), ein fixierter Index zeigt danach ins Leere.
 	const stageCount = await page.locator('.tn-mobile input[type="file"][accept=".gpx"]').count();
 	for (let i = 0; i < stageCount; i++) {
 		const input = page.locator('.tn-mobile input[type="file"][accept=".gpx"]').first();
@@ -56,90 +71,126 @@ async function openNewTripAlerts(page: Page) {
 	}
 
 	await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-	await tabbar.getByRole('tab', { name: /Zeitplan/ }).click({ force: true });
-	await tabbar.getByRole('tab', { name: /Alerts/ }).click({ force: true });
+	// Issue #2277 S3: Alarme ist direkt nach Besuch von „Wertebereiche"
+	// freigeschaltet (Sperrkette Wetter-Metriken → Wertebereiche → Alarme → Versand).
+	await tabbar.getByRole('tab', { name: /Wertebereiche/ }).click({ force: true });
+	await tabbar.getByRole('tab', { name: /Alarme/ }).click({ force: true });
 
-	// Harter Surface-Check: ohne den waere jedes spaetere `toHaveCount(0)`
-	// bedeutungslos (leerer DOM zaehlt auch 0). AlertRulesEditor wird sowohl im
-	// .tn-desktop- als auch im .tn-mobile-Baum gemountet — daher scopen.
-	const editor = page.locator('.tn-mobile').getByTestId('alert-rules-editor');
-	await expect(editor).toBeVisible({ timeout: 15_000 });
-	return editor;
+	// Harter Surface-Check: ohne ihn waere jedes spaetere `toHaveCount(0)`
+	// bedeutungslos (leerer DOM zaehlt auch 0). Scope auf den mobilen Baum.
+	const scope = page.locator('.tn-mobile').getByTestId('alarme-tab');
+	await expect(scope).toBeVisible({ timeout: 15_000 });
+	return scope;
 }
 
-// Legt eine Default-Regel an (wind_gust/absolut) und oeffnet ihren Edit-Modus.
-async function openFirstRuleEditor(page: Page, editor: ReturnType<Page['locator']>) {
-	await editor.getByTestId('alert-rules-editor-add').click();
-	await editor.getByTestId('alert-rule-kebab-trigger').first().click();
-	await editor.getByTestId('alert-rule-edit-btn').first().click();
-	const edit = editor.getByTestId('alert-rule-edit').first();
-	await expect(edit).toBeVisible();
-	return edit;
+// Kanal-Schalter: die testid sitzt auf dem Container, der Schalter selbst ist ein
+// `<span role="switch" aria-checked>` (atoms/Switch.svelte) — KEINE Checkbox.
+function kanalSchalter(scope: Locator, kind: 'telegram' | 'sms' | 'email' | 'premium_sms') {
+	return scope.getByTestId(`alert-channel-toggle-${kind}`).getByRole('switch');
 }
 
-test.describe('#1488 Scheibe A: Absolut-Modus fuer Gewitter gesperrt', () => {
-	test('Böen: Absolut-Karte bleibt vorhanden und waehlbar (AC-2 Positivkontrolle)', async ({ page }) => {
-		const editor = await openNewTripAlerts(page);
-		const edit = await openFirstRuleEditor(page, editor);
+function schwelle(scope: Locator, kind: string, level: 'LOW' | 'MODERATE' | 'HIGH') {
+	return scope.getByTestId(`alert-channel-threshold-${kind}-${level}`);
+}
 
-		// Default-Regel ist wind_gust (newDefaultRule) — keine Delta-only-Metrik.
-		await expect(edit.getByTestId('alert-rule-metric')).toHaveValue('wind_gust');
-		await expect(modeCard(edit, 'absolute')).toHaveCount(1);
-		await expect(modeCard(edit, 'absolute')).toBeEnabled();
-		await modeCard(edit, 'absolute').click();
-		await expect(edit.locator('[data-testid="mode-card-absolute-selected"]')).toHaveCount(1);
+// Amtliche Warnungen: testid auf dem Container (ChannelToggle.svelte), die
+// eigentliche Checkbox liegt darin.
+function amtlicheWarnungen(scope: Locator) {
+	return scope.getByTestId('alerts-tab-official-alert-triggers-toggle').getByRole('checkbox');
+}
+
+test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
+	test('Mount: AlarmeTab statt AlertRulesEditor, Kanal-Defaults der Neuanlage', async ({ page }) => {
+		const scope = await openNewTripAlerts(page);
+
+		await expect(page.getByTestId('alert-rules-editor')).toHaveCount(0);
+
+		await expect.soft(kanalSchalter(scope, 'telegram')).toHaveAttribute('aria-checked', 'true');
+		// Issue #2518: Neuanlage-Default = E-Mail + Telegram an, SMS aus.
+		await expect.soft(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'false');
+		await expect.soft(kanalSchalter(scope, 'email')).toHaveAttribute('aria-checked', 'true');
+		await expect.soft(kanalSchalter(scope, 'premium_sms')).toHaveAttribute('aria-checked', 'false');
 	});
 
-	test('Gewitter: keine Absolut-Karte, kein MITTEL/HOCH-Select (AC-1)', async ({ page }) => {
-		const editor = await openNewTripAlerts(page);
-		const edit = await openFirstRuleEditor(page, editor);
+	test('Kanal-Schwellen: jede Zeile startet auf LOW', async ({ page }) => {
+		const scope = await openNewTripAlerts(page);
 
-		// Positivkontrolle im selben Testfall: bei Böen steht die Absolut-Karte da.
-		await expect(modeCard(edit, 'absolute')).toHaveCount(1);
+		for (const kind of ['telegram', 'sms', 'email', 'premium_sms']) {
+			await expect.soft(schwelle(scope, kind, 'LOW')).toHaveAttribute('aria-pressed', 'true');
+			await expect.soft(schwelle(scope, kind, 'MODERATE')).toHaveAttribute('aria-pressed', 'false');
+			await expect.soft(schwelle(scope, kind, 'HIGH')).toHaveAttribute('aria-pressed', 'false');
+		}
+	});
 
-		await edit.getByTestId('alert-rule-metric').selectOption('thunder_level');
-		// Gegenprobe, dass die Modus-Auswahl nach dem Metrik-Wechsel ueberhaupt
-		// noch gerendert wird — sonst waere die Abwesenheit der Absolut-Karte nur
-		// die Abwesenheit der ganzen Zeile.
-		await expect(modeCard(edit, 'delta')).toHaveCount(1);
+	test('Premium-SMS wird beim Anlegen angeboten — bedienbar nach Tarif (#2229)', async ({ page }) => {
+		const scope = await openNewTripAlerts(page);
+		const res = await page.request.get('/api/auth/profile');
+		expect(res.ok(), `GET /api/auth/profile fehlgeschlagen: ${res.status()}`).toBeTruthy();
+		const profile = (await res.json()) as { premium_sms_allowed?: boolean };
 
-		// AC-1a: keine „Absolut"-Karte mehr fuer Gewitter.
-		// AC-1b: der Schwellwert-Select mit MITTEL/HOCH existiert nicht mehr im DOM.
-		// Beide als SOFT-Assertion: eine harte wuerde den Testfall an der ersten
-		// Stelle abbrechen, und die zweite Zusicherung bliebe im RED-Lauf
-		// ungemessen — „nicht ausgefuehrt" saehe dann aus wie „erfuellt".
-		await expect.soft(modeCard(edit, 'absolute')).toHaveCount(0);
-		await expect.soft(edit.locator('option', { hasText: /^MITTEL$/ })).toHaveCount(0);
-		await expect.soft(edit.locator('option', { hasText: /^HOCH$/ })).toHaveCount(0);
+		const sw = kanalSchalter(scope, 'premium_sms');
+		await expect(scope.getByTestId('alert-channel-row-premium_sms')).toBeVisible();
+		await expect(sw).toHaveAttribute('aria-checked', 'false');
 
-		// AC-1c: der Modus darf nach dem Wechsel nicht auf der verschwundenen
-		// „Absolut"-Auswahl haengenbleiben. Ohne diese Zusicherung faengt KEIN
-		// Test die Entfernung des editMode-Guards (in der GREEN-Phase per
-		// Mutation gemessen, s. gegenprobe_mutation_editmode_guard.log) — der
-		// Nutzer saehe dann eine Schwelle, die beim Speichern still durch die
-		// Δ-Vorgabe ersetzt wird.
-		await expect.soft(edit.locator('[data-testid="mode-card-delta-selected"]')).toHaveCount(1);
+		if (profile.premium_sms_allowed === true) {
+			await expect(sw).not.toHaveAttribute('aria-disabled', 'true', { timeout: 10_000 });
+			await sw.click();
+			await expect(sw).toHaveAttribute('aria-checked', 'true');
+		} else {
+			await expect(scope.getByTestId('alert-channel-disabled-hint-premium_sms')).toContainText(
+				'ab Level Premium',
+				{ timeout: 10_000 }
+			);
+			await expect(sw).toHaveAttribute('aria-disabled', 'true');
+			await sw.click({ force: true });
+			await expect(sw).toHaveAttribute('aria-checked', 'false');
+		}
+	});
 
-		// AC-1d: die Sperre haengt an DELTA_ONLY_METRICS, nicht am Namen
-		// 'thunder_level'. Ohne eine ZWEITE Delta-only-Metrik bliebe eine
-		// Verengung des Guards auf `draft.metric !== 'thunder_level'` unbemerkt
-		// (Adversary-Fund F001) — dann saehe der Nutzer bei
-		// „Temperatur (Änderung)" weiterhin eine anklickbare Absolut-Karte,
-		// deren Schwelle expandRules() beim Speichern still zu kind='delta'
-		// umschreibt. Genau dieses „sichtbar, aber wirkungslos" ist der Gegen-
-		// stand des Tickets. `temperature_change` gewaehlt, weil im selben
-		// Select erreichbar: kein zweiter Seitenaufbau, kein weiterer
-		// GPX-Durchlauf, damit der billigste der drei verbleibenden Faelle.
-		await edit.getByTestId('alert-rule-metric').selectOption('temperature_change');
-		await expect.soft(modeCard(edit, 'delta')).toHaveCount(1);
-		await expect.soft(modeCard(edit, 'absolute')).toHaveCount(0);
+	test('Kanal umschalten: SMS an und wieder aus', async ({ page }) => {
+		const scope = await openNewTripAlerts(page);
+		// Issue #2518: E-Mail startet in der Neuanlage an, SMS aus.
+		const sw = kanalSchalter(scope, 'sms');
+
+		await expect(sw).toHaveAttribute('aria-checked', 'false');
+		await sw.click();
+		await expect(sw).toHaveAttribute('aria-checked', 'true');
+		await sw.click();
+		await expect(sw).toHaveAttribute('aria-checked', 'false');
+	});
+
+	test('Kanal-Schwelle und Amtliche Warnungen lassen sich setzen', async ({ page }) => {
+		const scope = await openNewTripAlerts(page);
+
+		await schwelle(scope, 'sms', 'HIGH').click();
+		await expect(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
+		await expect(schwelle(scope, 'sms', 'LOW')).toHaveAttribute('aria-pressed', 'false');
+
+		const cb = amtlicheWarnungen(scope);
+		await expect(cb).not.toBeChecked();
+		await cb.click();
+		await expect(cb).toBeChecked();
+	});
+
+	test('Eingaben ueberleben den Tab-Wechsel Alerts → Route → Alerts', async ({ page }) => {
+		const scope = await openNewTripAlerts(page);
+
+		await kanalSchalter(scope, 'sms').click();
+		await expect(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'true');
+		await schwelle(scope, 'sms', 'HIGH').click();
+		await expect(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
+		await amtlicheWarnungen(scope).click();
+		await expect(amtlicheWarnungen(scope)).toBeChecked();
+
+		const tabbar = page.getByTestId('tn-mobile-tabbar');
+		await tabbar.getByRole('tab', { name: /Route/ }).click({ force: true });
+		await expect(scope).toBeHidden();
+		await tabbar.getByRole('tab', { name: /Alarme/ }).click({ force: true });
+		await expect(scope).toBeVisible();
+
+		await expect.soft(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'true');
+		await expect.soft(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
+		await expect.soft(schwelle(scope, 'sms', 'LOW')).toHaveAttribute('aria-pressed', 'false');
+		await expect.soft(amtlicheWarnungen(scope)).toBeChecked();
 	});
 });
-
-// AC-4 („Bestandsregel ueberlebt PUT→GET unveraendert") ist per PO-Entscheid
-// vom 2026-08-16 gestrichen und der zugehoerige Testfall hier entfernt: der
-// Go-Store normalisiert `alert_rules` bei jedem Laden und Speichern
-// (internal/store/trip.go:206/:238 -> model.SyncAlertRules), die Given-Bedingung
-// ist also gar nicht herstellbar. Der Befund ist in #1895 nachgetragen; die
-// Zusicherung „Scheibe A fuegt keinen Umschreibe-Code hinzu" bleibt eine
-// Unterlassung, kein Testfall.

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -38,6 +39,33 @@ func NormalizeComparePreset(p *model.ComparePreset) {
 	// nie persistierten Zeitstempel erfinden (Adversary-Fund F001 CRITICAL).
 	if p.Schedule != "manual" {
 		p.PausedAt = nil
+	}
+	materializeAlertChannels(p, false)
+}
+
+// materializeAlertChannels ist der EINE Regelort fuer die AlertChannels-
+// Materialisierung (Issue #2293 S2). cleanupLegacyPremiumSms=true nur beim
+// Lesen einer Bestandsdatei (normalizeLoadedComparePreset): vor dieser
+// Scheibe war der Alarme-Reiter der einzige UI-Weg, der send_premium_sms
+// schreiben konnte -- ein gesetztes send_premium_sms ohne vorhandenes
+// alert_channels traegt also eine Alarm-, keine Briefing-Absicht.
+// cleanupLegacyPremiumSms=false bei Create und beim PUT-Merge-Nachlauf
+// (NormalizeComparePreset direkt): dort kann send_premium_sms aus dem NEUEN
+// Versand-Schalter stammen und muss unangetastet bleiben.
+func materializeAlertChannels(p *model.ComparePreset, cleanupLegacyPremiumSms bool) {
+	if p.AlertChannels != nil {
+		return
+	}
+	email := true
+	telegram := p.SendTelegram != nil && *p.SendTelegram
+	sms := p.SendSms != nil && *p.SendSms
+	premiumSms := p.SendPremiumSms != nil && *p.SendPremiumSms
+	p.AlertChannels = &model.AlertChannelsConfig{
+		Email: &email, Telegram: &telegram, Sms: &sms, PremiumSms: &premiumSms,
+	}
+	if cleanupLegacyPremiumSms && premiumSms {
+		falseVal := false
+		p.SendPremiumSms = &falseVal
 	}
 }
 
@@ -72,6 +100,13 @@ func normalizeLoadedComparePreset(p *model.ComparePreset) {
 		p.ForecastHours = 48
 	}
 	migrateComparePresetSlots(p)
+	// Issue #1981: Alt-Vokabular in metric_alert_levels -> Alarm-Namen.
+	migrateMetricAlertLevels(p.DisplayConfig)
+	// Issue #2293 S2: Altbestand-Bereinigung VOR dem generischen
+	// NormalizeComparePreset-Aufruf (der materialisiert mit cleanup=false,
+	// no-op sobald AlertChannels != nil) -- nur der Lade-Pfad einer
+	// Bestandsdatei darf ein verwaistes send_premium_sms=true zuruecksetzen.
+	materializeAlertChannels(p, true)
 	// Issue #1244 F002: Read-Path-Coercion symmetrisch zu SaveComparePreset —
 	// sonst liefert GET auf eine unmigrierte Legacy-Datei weiterhin
 	// "corridors":null.
@@ -87,6 +122,9 @@ func normalizeLoadedComparePreset(p *model.ComparePreset) {
 // kind==""/"route", AC-31). Spiegelt LoadTrips (trip.go), nur der kind-Filter
 // ist invertiert (dort wird kind=="vergleich" uebersprungen).
 func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	dir := s.briefingsDir()
 
 	entries, err := os.ReadDir(dir)
@@ -137,6 +175,13 @@ func (s *Store) LoadComparePresets() ([]model.ComparePreset, error) {
 // kein Preset). Spiegelt LoadTrip (trip.go) mit invertiertem kind-Guard
 // (Issue #1250 Scheibe 7b, AC-31).
 func (s *Store) LoadComparePreset(id string) (*model.ComparePreset, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return nil, ErrInvalidEntityID
+	}
 	path := filepath.Join(s.briefingsDir(), id+".json")
 
 	data, err := os.ReadFile(path)
@@ -197,8 +242,19 @@ func migrateComparePresetSlots(p *model.ComparePreset) {
 // Alt-Datei compare_presets.json wird NICHT mehr angefasst (Rollback-
 // Faehigkeit, AC-32). Kein Array. Spiegelt SaveTrip (trip.go).
 func (s *Store) SaveComparePreset(p model.ComparePreset) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(p.ID) {
+		return ErrInvalidEntityID
+	}
+	// Issue #2359: nie einen Trip gleicher Kennung ueberschreiben.
+	if s.idBelegtDurchFremdeArt(p.ID, true) {
+		return ErrKindConflict
+	}
 	dir := s.briefingsDir()
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 
@@ -221,6 +277,9 @@ func (s *Store) SaveComparePreset(p model.ComparePreset) error {
 // ueber diesen Wrapper geloescht — DELETE laeuft ausschliesslich ueber
 // DeleteComparePreset (echtes os.Remove, F-A).
 func (s *Store) SaveComparePresets(presets []model.ComparePreset) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
 	for i := range presets {
 		if err := s.SaveComparePreset(presets[i]); err != nil {
 			return err
@@ -238,6 +297,13 @@ func (s *Store) SaveComparePresets(presets []model.ComparePreset) error {
 // nicht als JSON lesbare Datei (Datenmuell) faellt fail-open durch zum Remove.
 // Nicht existierende Datei ist kein Fehler (idempotent).
 func (s *Store) DeleteComparePreset(id string) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return ErrInvalidEntityID
+	}
 	path := filepath.Join(s.briefingsDir(), id+".json")
 
 	if data, rerr := os.ReadFile(path); rerr == nil {
@@ -254,4 +320,26 @@ func (s *Store) DeleteComparePreset(id string) error {
 		return nil
 	}
 	return err
+}
+
+// ComparePresetsUsingLocation liefert die Ortsvergleiche DIESES Nutzers, deren
+// LocationIDs den Ort referenzieren (#2216). Nutzerbindung ueber den Store.
+func (s *Store) ComparePresetsUsingLocation(locationID string) ([]model.ComparePreset, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
+	presets, err := s.LoadComparePresets()
+	if err != nil {
+		return nil, err
+	}
+	var used []model.ComparePreset
+	for _, p := range presets {
+		for _, id := range p.LocationIDs {
+			if id == locationID {
+				used = append(used, p)
+				break
+			}
+		}
+	}
+	return used, nil
 }

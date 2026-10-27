@@ -3,7 +3,7 @@ entity_id: fix_1699_anker_ohne_briefing
 type: bugfix
 created: 2026-08-17
 updated: 2026-08-17
-status: draft
+status: implemented
 workflow: fix-1699-heute-abfrage-anker
 version: "1.1"
 tags: [alerts, trip, anchor, on-demand, issue-1699, observability]
@@ -130,8 +130,8 @@ sondern zieht Scope und Acceptance Criteria daraus.
 
 Ein durch den Bug bereits entstandener Anker trägt kein `briefing_backed`-Feld und gilt
 deshalb — wie jeder Altbestand — als briefing-gestützt (`True`), bis das nächste reguläre
-Briefing ihn überschreibt. Bei laufenden Touren geschieht das binnen Stunden, bei noch
-nicht gestarteten Touren ggf. erst zum Tourstart.
+Briefing ihn überschreibt. Bei laufenden Trips geschieht das binnen Stunden, bei noch
+nicht gestarteten Trips ggf. erst zum Trip-Start.
 
 > **🔴 Diese Auslegung ist der freigabepflichtige Punkt dieser Spec.** Sie ist eine
 > Empfehlung aus der Analyse-Phase, noch keine PO-Entscheidung — mit der Freigabe der Spec
@@ -223,7 +223,7 @@ davor und niemals in Stufe 1 oder 2. Begründung, wörtlich aus der Analyse übe
 **🔴 Der Fix muss zwischen zwei Alarm-Pfaden unterscheiden.** `_get_cached_weather`
 bedient zwei Aufrufer über den Schalter `tagesgleicher_anker_noetig`, mit je einem
 amtlichen Ausstieg in Stufe 2 (Zeile 668-669) und Stufe 3 (Zeile 693-695): amtliche
-**Warnungen** — der Snapshot liefert dort nur die **Geometrie** (wo ist die Tour), die
+**Warnungen** — der Snapshot liefert dort nur die **Geometrie** (wo ist die Trip), die
 Datumsprüfung aus #1661 wird hier bewusst übersprungen. Ab Zeile 696 läuft der
 **Abweichungs-Alarm** — der Snapshot ist dort die **Vergleichsbasis** (ADR-0009). Daraus
 folgt zwingend: Die neue Herkunftsprüfung darf **ausschließlich** in den Abweichungs-Zweig
@@ -293,7 +293,7 @@ ist bereits generisch (nimmt jeden String entgegen) und braucht keinen Code-Eing
     Dateiinhalt, sondern strukturiert parsen) und den `reason`-Wert der letzten Zeile
     prüfen.
 
-- **AC-3 (zentrale Nicht-Regression):** Amtliche Warnungen bleiben unberührt. Given ein
+- **AC-3:** (zentrale Nicht-Regression) Amtliche Warnungen bleiben unberührt. Given ein
   Trip, dessen einziger Snapshot aus einer Abfrage stammt, und eine vorliegende amtliche
   Warnung / When der Alarm-Lauf stattfindet / Then wird die amtliche Warnung versendet,
   weil für sie nur die Geometrie zählt (`tagesgleicher_anker_noetig=False`,
@@ -313,7 +313,7 @@ ist bereits generisch (nimmt jeden String entgegen) und braucht keinen Code-Eing
     `True`) schreiben, Alarm-Lauf ausführen. Assert: Rückgabe sind die geladenen
     Segmente, keine neue Zeile in der Diagnose-Datei.
 
-- **AC-5 (Altbestand):** Given eine vor dem Deploy geschriebene Snapshot-Datei OHNE das
+- **AC-5:** (Altbestand) Given eine vor dem Deploy geschriebene Snapshot-Datei OHNE das
   Feld `briefing_backed`, mit `target_date` = heute / When der Alarm läuft / Then gilt sie
   als briefing-gestützt, der Abweichungsalarm arbeitet normal und es entsteht kein
   Diagnose-Eintrag.
@@ -329,21 +329,21 @@ ist bereits generisch (nimmt jeden String entgegen) und braucht keinen Code-Eing
     Kommando-Antworttexte nach der Abfrage prüfen — Assert: `available=True`, Daten
     vorhanden, unverändert gegenüber dem Stand vor dieser Scheibe.
 
-- **AC-7 (Selbstheilung):** Given ein durch eine Abfrage entstandener, als nicht
+- **AC-7:** (Selbstheilung) Given ein durch eine Abfrage entstandener, als nicht
   briefing-gestützt markierter Snapshot / When danach ein reguläres Briefing läuft / Then
   ist der Anker wieder briefing-gestützt und der Abweichungsalarm arbeitet wieder.
   - Test: Kern. Erst Abfrage (schreibt `briefing_backed=False`), dann regulären
     Briefing-Lauf ausführen (überschreibt den Snapshot mit `briefing_backed=True`),
     danach Alarm-Lauf. Assert: kein Verwerfen mehr, kein neuer Diagnose-Eintrag.
 
-- **AC-8 (Persistenz-Roundtrip):** Given `save(..., briefing_backed=False)` / When die
+- **AC-8:** (Persistenz-Roundtrip) Given `save(..., briefing_backed=False)` / When die
   Lesemethode das Feld liest / Then liefert sie `False`; bei regulärem `save()` ohne
   Angabe liefert sie `True`.
   - Test: Kern (`tests/integration/test_weather_snapshot.py`). Beide Fälle direkt gegen
     `WeatherSnapshotService` fahren (echte Datei in `tmp_path`), Rückgabewert der neuen
     Lesemethode prüfen.
 
-- **AC-9 (Regression `/heute`):** Given der bestehende On-Demand-Pfad über
+- **AC-9:** (Regression `/heute`) Given der bestehende On-Demand-Pfad über
   `send_on_demand_report` (`on_demand=True`) / When `/heute` oder `/morgen` gesendet wird
   / Then bleiben Anker und Melde-Gedächtnis unberührt wie bisher (bewacht durch
   `tests/tdd/test_trip_briefing_anchor_unchanged.py::test_ac27_ad_hoc_abruf_laesst_anker_und_gedaechtnis_unberuehrt`).
@@ -351,7 +351,7 @@ ist bereits generisch (nimmt jeden String entgegen) und braucht keinen Code-Eing
     dieser Fix den sauberen `/heute`-Pfad (der nie in `_fetch_and_save_snapshot` läuft)
     nicht anfasst.
 
-- **AC-10 (Naht zu #1916 — kein rollierender Anker aus verworfener Basis):** Given ein
+- **AC-10:** (Naht zu #1916 — kein rollierender Anker aus verworfener Basis) Given ein
   Trip, dessen einziger Δ-Anker in Stufe 3 der Prioritätskette wegen `not_briefing_backed`
   verworfen wird (kein Briefing-Anker in Stufe 1, kein gültiger rollierender Anker in
   Stufe 2) / When der Alarm-Lauf (`check_all_trips` → `check_and_send_alerts`) für diesen
@@ -413,7 +413,7 @@ abgedeckt, nur nicht durch dasselbe AC.
 **AC-3 ist der Mutations-kritische Test dieser Scheibe:** verschiebt man die neue
 Herkunftsprüfung fälschlich vor einen der beiden amtlichen Ausstiege in `trip_alert.py`
 (Stufe 2 Zeile 668, Stufe 3 Zeile 693) statt danach, MUSS AC-3 rot werden — sonst würden
-amtliche Warnungen für Touren mit reinem Abfrage-Anker verstummen, was #1701 („Alarme
+amtliche Warnungen für Trips mit reinem Abfrage-Anker verstummen, was #1701 („Alarme
 müssen alle Kanäle erreichen") direkt widerspricht.
 
 Dafür braucht AC-3 **zwei** Tests, einen je Ausstieg (Korrektur aus Fix-Loop-Runde 1,
@@ -431,7 +431,7 @@ Fix-Loop-Runde 1, Finding F002): dass `check_and_send_alerts()` bei verworfener 
 nicht erst aufgerufen wird", weist
 `test_ac10_verworfene_basis_ruft_check_and_send_alerts_gar_nicht_erst_auf` am echten
 Kontrollfluss nach (Unterklasse des echten Dienstes, die den Aufruf protokolliert und an
-die Originalfassung weiterreicht; zweite Tour im selben Lauf als Positivkontrolle). Ohne
+die Originalfassung weiterreicht; zweite Trip im selben Lauf als Positivkontrolle). Ohne
 ihn hing die Zusicherung nur daran, dass `_fetch_fresh_weather(None)` einen `TypeError`
 wirft, den `check_all_trips()` verschluckt — ein späteres `cached_weather or []` hätte sie
 lautlos gekippt.

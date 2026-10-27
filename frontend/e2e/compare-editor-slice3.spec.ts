@@ -47,8 +47,8 @@ async function openIdealwerte(page: Page): Promise<void> {
 	// Epic #1301 F2a (AC-4/AC-5): neue Freischalt-Kette — Wertebereiche ist erst
 	// nach Besuch des NEUEN Wetter-Metriken-Tabs frei (Orte → Wetter-Metriken →
 	// Wertebereiche). Echter Klick auf den Metriken-Tab, kein goto.
-	await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
-	await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
+	await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
+	await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
 	await expect(
 		page.locator('[data-testid="corridor-editor-vergleich"]:visible').first()
 	).toBeVisible({ timeout: 8_000 });
@@ -190,13 +190,11 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 	test('AC-10: Wizard-Konfiguration wird beim Aktivieren an den Server gesendet', async ({ page }) => {
 		const { idA, idB } = await seedTwoAndOpenIdealwerte(page, 'wintersport', 'Persist');
 
-		// Bis zum Versand-Tab durchklicken (schaltet den Aktivieren-Button frei).
-		// Issue #1360 (Epic #1372 S1a): der Reiter `layout` ist aufgeloest — die
-		// Kette laeuft seither idealwerte -> alarme -> versand. Der frueher hier
-		// stehende Klick auf `compare-editor-tab-layout` lief deshalb in den
-		// 30s-Timeout, weil es das Ziel nicht mehr gibt.
+		// Bis zum Alarme-Tab durchklicken (schaltet den Aktivieren-Button frei).
+		// Issue #1360 (Epic #1372 S1a): der Reiter `layout` ist aufgeloest.
+		// Issue #1743: der Schritt `versand` ist aufgeloest (Versand steht unten im
+		// Schritt wetter-metriken) — Anlegen wird nach dem Besuch von `alarme` frei.
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
 
 		const [request] = await Promise.all([
 			page.waitForRequest(

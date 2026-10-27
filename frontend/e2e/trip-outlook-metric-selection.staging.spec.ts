@@ -41,9 +41,9 @@ function sammleKonsolenfehler(page: Page): string[] {
 
 /** Oeffnet den Trip und wechselt in den Wetter-Metriken-Reiter. */
 async function oeffneMetrikenReiter(page: Page, tripId: string): Promise<Locator> {
-	await page.goto(`/trips/${tripId}?tab=weather`);
+	await page.goto(`/trips/${tripId}?tab=wetter-metriken`);
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 15000 });
-	await page.getByTestId('trip-detail-tab-weather').first().click();
+	await page.getByTestId('trip-detail-tab-wetter-metriken').first().click();
 	const reiter = page.getByTestId('weather-metrics-tab');
 	await expect(reiter).toBeVisible({ timeout: 15000 });
 	return reiter;
@@ -227,7 +227,7 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 		// Gegenprobe: der EINE vorhandene Schalter lebt weiterhin in der
 		// Mail-Inhalt-Karte — und die sitzt im SELBEN Wetter-Metriken-Reiter,
 		// nicht im Versand-Reiter: `WeatherMetricsTab.svelte:1780-1787` bindet
-		// `EditReportConfigSection` (Abschnitt 'report_config') inline ein,
+		// `MailInhaltCard` (Abschnitt 'report_config') inline ein,
 		// `BriefingScheduleTab.svelte:117-119` haelt ausdruecklich fest
 		// "Mail-Inhalt bleibt unangetastet im Inhalt-Tab". Also ohne Tab-Wechsel.
 		await expect(
@@ -245,7 +245,7 @@ test.describe('Trip-Vorschau: waehlbare Spalten im Wetter-Metriken-Reiter (#1720
 	// ⚠️ #1848 A3: die Zusicherung "der PICKER bietet jede Katalog-Groesse an"
 	// ist ERSATZLOS entfallen — es gibt keinen Picker mehr (Block A, #2029).
 	// Welche Groessen der Ausblick zeigt, entscheidet seit A3 die Grundauswahl
-	// der Tour, nicht der Katalog; das deckt
+	// der Trip, nicht der Katalog; das deckt
 	// ausblick-erbt-grundauswahl.staging.spec.ts::AC-5 ab ("eine Groesse
 	// ausserhalb der Grundauswahl erscheint weder aktiv noch in der
 	// Aus-Gruppe").

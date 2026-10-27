@@ -3,7 +3,7 @@ entity_id: issue_653_telegram_tier2_timeline
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, inbound, query, timeline, tier2, epic-639]
 ---

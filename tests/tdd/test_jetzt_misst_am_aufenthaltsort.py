@@ -141,7 +141,7 @@ def _aufzeichnender_typ(calls: list, *, onset_minutes: int = 8):
                 cache=RadarNowcastCacheService(),
             )
 
-        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None, deadline_at=None):
             calls.append({
                 "lat": lat, "lon": lon,
                 "elevation_m": elevation_m, "priority": priority,
@@ -166,7 +166,7 @@ def _jetzt(monkeypatch, trip, now_utc: datetime):
         "services.radar_service.RadarNowcastService", _aufzeichnender_typ(calls),
     )
     with freeze_time(now_utc):
-        ergebnis = TripCommandProcessor()._show_now(trip, now_utc)
+        ergebnis = TripCommandProcessor()._show_now(trip, now_utc, "nutzer_jetzt")
     assert len(calls) == 1, (
         f"Testvoraussetzung: genau EIN get_nowcast()-Abruf je /jetzt erwartet, "
         f"gesehen {len(calls)} — Antwort: {ergebnis.confirmation_body!r}"
@@ -177,13 +177,14 @@ def _jetzt(monkeypatch, trip, now_utc: datetime):
 def _fenstermitte_offsets() -> list[int]:
     """Die Zieloffsets, die Alarm- bzw. Briefing-Pfad benutzen (#2017).
 
-    Ueber die MODUL-Referenz gelesen, nie beim Import gebunden: der
-    Laufzeit-Drift-Waechter aus #2009 setzt ``RADAR_ONSET_THRESHOLD_MIN`` zur
-    Laufzeit um; eine gebundene Kopie liefe still daran vorbei.
+    Ueber die MODUL-Referenz gelesen, nie beim Import gebunden. Seit #2261
+    A-1 ist der Alarm-Offset von der Schwelle entkoppelt
+    (``RADAR_MEASURE_OFFSET_MIN``, +27) — die Schwelle steht auf dem
+    Quell-Horizont, ihre Haelfte waere der Briefing-Offset (+90).
     """
     from services import radar_service as rs
 
-    return [rs.RADAR_ONSET_THRESHOLD_MIN // 2, rs.NOWCAST_HORIZON_MIN // 2]
+    return [rs.RADAR_MEASURE_OFFSET_MIN, rs.NOWCAST_HORIZON_MIN // 2]
 
 
 # ──────────────────────────────── AC-1 ──────────────────────────────────────
@@ -222,7 +223,7 @@ def test_ac2_zielzeitpunkt_ist_now_utc_und_nicht_die_fenstermitte(monkeypatch):
     GIVEN dieselbe laufende Etappe,
     WHEN  ``/jetzt`` um 11:30 aufgerufen wird,
     THEN  ist der Messzeitpunkt ``now_utc`` SELBST — nicht die Fenstermitte
-          (``RADAR_ONSET_THRESHOLD_MIN // 2`` bzw. ``NOWCAST_HORIZON_MIN // 2``),
+          (``RADAR_MEASURE_OFFSET_MIN`` bzw. ``NOWCAST_HORIZON_MIN // 2``),
           mit der Alarm- und Briefing-Pfad vorauswaehlen. ``/jetzt`` ist keine
           Vorwarnung: der Nutzer fragt nach dem Ort, an dem er STEHT.
 
@@ -264,7 +265,7 @@ def test_ac2_zielzeitpunkt_ist_now_utc_und_nicht_die_fenstermitte(monkeypatch):
 def test_ac3_messpunkt_wandert_mit_dem_zielwegpunkt(monkeypatch):
     """AC-3 (Nicht-Trivialitaet / Gegenprobe).
 
-    GIVEN zwei sonst gleiche Touren, deren ZIELwegpunkt verschoben ist,
+    GIVEN zwei sonst gleiche Trips, deren ZIELwegpunkt verschoben ist,
     WHEN  ``/jetzt`` jeweils zum selben Zeitpunkt laeuft,
     THEN  verschiebt sich der abgefragte Messpunkt mit — und er liegt in beiden
           Laeufen > 0.01° vom Etappenstart entfernt.
@@ -527,7 +528,7 @@ def test_ac10_fehlgeschlagene_positionsbestimmung_faellt_zurueck_und_loggt(
 
     aufrufe: list = []
 
-    def _wirft(trip, active, segment_date, at):
+    def _wirft(trip, active, segment_date, at, **_kw):
         aufrufe.append(at)
         raise RuntimeError("Positionsbestimmung kaputt (Testfall AC-10)")
 

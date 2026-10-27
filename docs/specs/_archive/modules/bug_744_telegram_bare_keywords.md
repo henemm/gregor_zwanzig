@@ -3,7 +3,7 @@ entity_id: bug_744_telegram_bare_keywords
 type: module
 created: 2026-06-11
 updated: 2026-06-11
-status: complete
+status: implemented
 version: "1.0"
 tags: [telegram, inbound, bare-keywords, channel-consistency, bug, issue-744]
 github_issue: 744

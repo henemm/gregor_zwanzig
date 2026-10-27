@@ -10,8 +10,9 @@ GEMESSENER IST-STAND (HEAD 6b6ad80d): `compare_alert.py:272` verdrahtet
 `channels={"email"}` FEST — ein Nutzer kann Telegram/SMS fuer
 Ortsvergleich-Alarme im Alarme-Tab einschalten (`AlertChannelPicker`,
 `AlarmeTab.svelte:295`) und bekommt trotzdem nur E-Mail. AG4 ersetzt die feste
-Liste durch den bereits vorhandenen Resolver
-`services/compare_alert_channels.py::effective_compare_channels()` (AG1),
+Liste durch den bereits vorhandenen Resolver aus
+`services/compare_alert_channels.py` (AG1; seit Issue #2279 S1 umbenannt zu
+`effective_compare_briefing_channels`),
 den heute nur `compare_official_alert.py:257` und
 `scheduler_dispatch_service.py:288` benutzen.
 
@@ -77,6 +78,7 @@ from app.user import SavedLocation
 
 from tests.helpers.compare_briefings import write_compare_briefings
 import pytest
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 # Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
@@ -233,7 +235,7 @@ class _ScriptedWeatherSource:
     def fetch(
         self, point_id: str, lat: float, lon: float,
         start_hour: int | None = None, end_hour: int | None = None,
-        elevation_m: int | None = None,
+        elevation_m: int | None = None, user_id: str | None = None,
     ):
         return _pwd(point_id, point_id, lat, lon, self._values.get(point_id, 0.0))
 
@@ -274,7 +276,11 @@ def _write_tier(user_id: str, tier: str) -> None:
 
     path = get_data_dir(user_id)
     path.mkdir(parents=True, exist_ok=True)
-    (path / "user.json").write_text(json.dumps({"id": user_id, "tier": tier}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld — ohne Flag wuerde
+    # with_user_profile() die Prod-Credentials statt for_testing() nehmen.
+    (path / "user.json").write_text(
+        json.dumps({"id": user_id, "tier": tier, "is_test_user": True})
+    )
 
 
 def _setup_single_location_preset(
@@ -332,7 +338,7 @@ def _run_compare_alerts(
     from services.compare_alert import CompareAlertService
 
     service = CompareAlertService(
-        settings=settings, user_id=user_id,
+        settings=settings, user_id=mit_profil_chat(user_id, settings),
         weather_source=_ScriptedWeatherSource(
             values if values is not None else {"loc-1": 30.0}
         ),

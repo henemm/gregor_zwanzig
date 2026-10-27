@@ -24,7 +24,8 @@ die erwartete RED-Aussage (Spec, Implementation Details Abschnitt 2).
 """
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 
 import pytest
 
@@ -254,7 +255,22 @@ def test_two_default_instances_mimicking_trip_and_compare_construction_share_cac
 
 def _e2e_trip(lat: float, lon: float):
     """Trip mit einer ganztaegigen Etappe -- gemeinsamer Aufbau der beiden
-    End-to-End-Faelle unten (Wegpunkt 1 bei ``(lat, lon)``, 1000 m)."""
+    End-to-End-Faelle unten (Wegpunkt 1 bei ``(lat, lon)``, 1000 m).
+
+    Issue #2051 S2a: das Segment ist ABSICHTLICH kurz gehalten (Delta 0.005°
+    statt vormals 0.02°, volle Segmentlaenge < 0.7 km). S2a fragt entlang der
+    Reststrecke bis zu ``RADAR_ZONE_MAX_POINTS`` Punkte ab, sobald die
+    Reststrecke >= 2 km ist (``RADAR_ZONE_POINT_SPACING_KM``) -- bei 0.02°
+    (~2,7 km volle Segmentlaenge) waere das Ein-Punkt-Regime, das beide
+    Tests unten voraussetzen ("EIN Fetch teilen sich"/"ZWEI Fetches"),
+    abhaengig von der WANDUHR (dieser Test friert die Zeit nicht ein) nicht
+    mehr garantiert. Mit < 0.7 km voller Segmentlaenge bleibt die
+    Reststrecke IMMER < 2 km, unabhaengig vom Zeitanteil `p` -- das
+    Ein-Punkt-Regime ist damit deterministisch, nicht nur zufaellig
+    zutreffend. Beide Tests pruefen weiterhin den Cache-TEIL-Mechanismus,
+    nicht die S2a-Mehrpunkt-Logik (die hat ihre eigenen Tests in
+    ``tests/tdd/test_regen_ausdehnung_messpunkte.py``).
+    """
     from app.trip import Stage, Trip, Waypoint
 
     return Trip(
@@ -264,7 +280,7 @@ def _e2e_trip(lat: float, lon: float):
             Stage(
                 id="T1",
                 name="Heute",
-                date=date.today(),
+                date=ortstag(lat, lon),
                 start_time=time(0, 0),
                 waypoints=[
                     Waypoint(
@@ -272,7 +288,7 @@ def _e2e_trip(lat: float, lon: float):
                         arrival_override="00:00",
                     ),
                     Waypoint(
-                        id="W2", name="Ziel", lat=lat + 0.02, lon=lon + 0.02,
+                        id="W2", name="Ziel", lat=lat + 0.005, lon=lon + 0.005,
                         elevation_m=1100, arrival_override="23:59",
                     ),
                 ],
@@ -291,7 +307,8 @@ def _messpunkt_des_trips(trip):
     bewachen `test_issue_822_radar_nowcast_segment.py` und
     `test_radar_alert_follows_ortstag.py`.
 
-    Die Schwelle kommt ueber die MODUL-Referenz (Drift-Waechter #2009).
+    Der Offset kommt ueber die MODUL-Referenz (`RADAR_MEASURE_OFFSET_MIN`,
+    #2261 — vorher Schwelle // 2).
     """
     from services import radar_service as radar_service_mod
     from services.trip_day import trip_local_today
@@ -302,7 +319,8 @@ def _messpunkt_des_trips(trip):
     assert aufgeloest is not None, "Fixture-Voraussetzung: aktives Segment noetig"
     active, segment_date = aufgeloest
     at = now_utc + timedelta(
-        minutes=radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+        # Issue #2261 (A-1, AC-2): eigener Messpunkt-Offset statt Schwelle // 2.
+        minutes=radar_service_mod.RADAR_MEASURE_OFFSET_MIN
     )
     pos = position_at_time(trip, active, segment_date, at)
     return pos.lat, pos.lon, int(round(pos.elevation_m))
@@ -360,7 +378,7 @@ def test_end_to_end_trip_and_compare_radar_paths_share_one_fetch(monkeypatch):
     _vorverdrahtete_klasse(monkeypatch, source)
 
     trip = _e2e_trip(46.5, 12.0)
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     mess_lat, mess_lon, mess_hoehe = _messpunkt_des_trips(trip)
 
     trip_svc = TripAlertService(user_id="default")
@@ -426,7 +444,7 @@ def test_end_to_end_trip_und_vergleich_am_selben_wegpunkt_erzeugen_zwei_fetches(
 
     lat, lon = 46.5, 12.0
     trip = _e2e_trip(lat, lon)
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     mess_lat, mess_lon, _mess_hoehe = _messpunkt_des_trips(trip)
 
     # Voraussetzung: die beiden Stellen muessen sich ueberhaupt unterscheiden
@@ -484,7 +502,7 @@ def test_boundary_coordinates_do_not_share_cache_across_region_change(monkeypatc
     """
     calls: list[tuple[str, float, float]] = []
 
-    def _fake_brightsky(self, lat, lon):
+    def _fake_brightsky(self, lat, lon, elevation_m=None):
         calls.append(("brightsky", lat, lon))
         now = datetime.now(timezone.utc)
         return [RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=0.0)]
@@ -519,7 +537,7 @@ def test_same_region_coordinates_rounding_to_identical_key_still_share_one_fetch
     weiterhin EINEN Fetch."""
     calls: list[tuple[float, float]] = []
 
-    def _fake_brightsky(self, lat, lon):
+    def _fake_brightsky(self, lat, lon, elevation_m=None):
         calls.append((lat, lon))
         now = datetime.now(timezone.utc)
         return [RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=0.0)]

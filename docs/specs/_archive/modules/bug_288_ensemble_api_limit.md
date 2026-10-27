@@ -3,7 +3,7 @@ entity_id: bug_288_ensemble_api_limit
 type: bugfix
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, ensemble, api-limit, open-meteo, alert-check, trip-report, issue-288]
 ---
@@ -210,7 +210,7 @@ self._enrich_ensemble_for_trip(trip, weather_data)  # 1 Ensemble-Call, danach Pr
 
 ## Known Limitations
 
-- **Confidence-Granularität reduziert:** Ein einziger Ensemble-Call für den letzten Wegpunkt repräsentiert nicht die meteorologische Variabilität entlang der gesamten Route. Für Touren mit starken Höhenunterschieden oder mehreren Klimazonen kann die Confidence-Aussage unscharf sein. Dies ist ein bewusster Trade-off gegen das API-Limit-Problem.
+- **Confidence-Granularität reduziert:** Ein einziger Ensemble-Call für den letzten Wegpunkt repräsentiert nicht die meteorologische Variabilität entlang der gesamten Route. Für Trips mit starken Höhenunterschieden oder mehreren Klimazonen kann die Confidence-Aussage unscharf sein. Dies ist ein bewusster Trade-off gegen das API-Limit-Problem.
 - **`_fetch_ensemble_spread()` ist private Methode:** `_enrich_ensemble_for_trip()` greift direkt auf `self._provider._fetch_ensemble_spread()` zu. Wenn der Provider kein Ensemble unterstützt (z.B. Geosphere), muss dieser Aufruf mit einem `hasattr`-Guard abgesichert werden.
 - **Propagation basiert auf Timestamp-Matching:** Ensemble-Daten und Segment-DataPoints müssen kompatible Timestamps haben. Timezone-Handling muss analog zur bestehenden Normalisierung in `openmeteo.py:770-787` erfolgen; Abweichungen führen zu `None`-Confidence.
 

@@ -3,7 +3,7 @@ entity_id: issue_434_per_report_layouts_tests
 type: tests
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, backend, data-model, per-report, channel-layouts, issue-434]
 parent: issue_434_per_report_layouts
@@ -18,9 +18,9 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_434_per_report_layouts.md`. Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-7).
+Test-Manifest für `docs/specs/_archive/modules/issue_434_per_report_layouts.md`. Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-7).
 
-Parent-Spec: `docs/specs/modules/issue_434_per_report_layouts.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_434_per_report_layouts.md` v1.0
 
 ## Source
 

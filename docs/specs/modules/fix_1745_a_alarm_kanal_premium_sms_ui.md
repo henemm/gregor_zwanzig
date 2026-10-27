@@ -3,7 +3,7 @@ entity_id: fix_1745_a_alarm_kanal_premium_sms_ui
 type: module
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, premium, garmin, alarm, channel, frontend, compare]
 ---
@@ -474,7 +474,7 @@ keine neue Fehlerklasse — nur dieselbe Regel auf ein viertes Feld angewendet.
     (AC-8/AC-10 prüfen ausschließlich die Compare-Bridge). „Strukturell derselbe Code" gilt für
     die Komponente, **nicht** für den Speicherweg.
   - Begründung, warum das nicht als Known Limitation durchgehen darf: Der Trip ist der Fall, an dem
-    dieses Issue aufgefallen ist (KHW 403), und der einzige, der vor dem Tourtermin zählt. Eine
+    dieses Issue aufgefallen ist (KHW 403), und der einzige, der vor dem Trip-Termin zählt. Eine
     Scheibe, die den Compare-Weg beweist und den Trip-Weg annimmt, beweist das Falsche.
   - Test: `frontend/e2e/feat-1745-a-alarm-premium-sms.spec.ts::trip_premium_sms_haken_ueberlebt_speichern_und_reload`
   - Mutation: `buildAlarmeDeliveryPayload()` nimmt `premium_sms` entgegen, schreibt es aber nicht

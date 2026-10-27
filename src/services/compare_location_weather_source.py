@@ -57,6 +57,8 @@ class CompareLocationWeatherSource:
         target_date: Optional[date] = None,
         tage_ab_ortstag: Optional[int] = None,
         elevation_m: Optional[int] = None,
+        *,
+        user_id: str,
     ) -> PointWeatherData:
         """Issue #1584 Scheibe C: das synthetische Segment deckt das
         TAGESFENSTER des laufenden lokalen Kalendertags am Ort ab, nicht mehr
@@ -90,6 +92,11 @@ class CompareLocationWeatherSource:
         lokaler Tag am Ort, kein Tagesstempel am Ergebnis. Beides gleichzeitig
         ist ein Programmierfehler und scheitert laut (`ValueError`), statt
         still einen der beiden Wege gewinnen zu lassen.
+
+        Issue #2387: `user_id` ist Schluesselwort-PFLICHT ohne Default
+        (ADR-0003). Ein Default waere der stille Rueckfall, den diese
+        Zusicherung verbietet — der Verbrauch des Ortsvergleichs gehoert in
+        den Topf DES Nutzers, dessen Vergleich gerade geprueft wird.
 
         Der AUFGELOESTE Tag wird auf das Ergebnis gestempelt, damit der
         15-Minuten-Frisch-Abruf spaeter DENSELBEN Tag holen kann.
@@ -176,6 +183,7 @@ class CompareLocationWeatherSource:
             enrich_ensemble=False,
             enrich_snow=False,
             priority="alert_check",  # Issue #1329 Teil 2
+            user_id=user_id,  # Issue #2387 -- Budget-Topf je Nutzer
         )
         point = TripSegmentWeatherAdapter.to_points([segment_weather])[0]
         # Issue #1661 (B1): den AUFGELOESTEN Tagesbezug mitgeben, wenn einer

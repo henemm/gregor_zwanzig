@@ -81,7 +81,9 @@ def test_trip_sms_zeigt_gelbe_warnung_bei_startwert_schwelle():
         segments=[seg], trip_name=trip.name, report_type="evening",
         trip=trip, tz=ZoneInfo("UTC"),
     )
-    assert "FL:" in report.sms_text, (
+    # #2417 AC-27: Warn-Kuerzel "FL" (Hochwasser) -> "FO", weil "FL" mit der
+    # Metrik `felt_day_low` kollidierte.
+    assert "FO:" in report.sms_text, (
         f"Die GELB-Warnung muss bei Startwert-Schwelle im SMS-Text erscheinen: "
         f"{report.sms_text!r}"
     )
@@ -158,7 +160,8 @@ def test_compare_bericht_zeigt_gelbe_warnung_unabhaengig_von_der_alarm_schwelle(
     sms = render_compare_sms(result)
     telegram = render_compare_telegram(result)
 
-    assert "!FL" in sms, (
+    # #2417 AC-27: Warn-Kuerzel "FL" (Hochwasser) -> "FO".
+    assert "!FO" in sms, (
         "Der Compare-SMS-Bericht muss eine GELB-Warnung unabhaengig von einer "
         f"Alarm-Kanal-Schwelle zeigen (Zwei Wirkungsorte, #1461 S3b-2b): {sms!r}"
     )

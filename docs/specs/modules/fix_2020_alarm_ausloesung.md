@@ -3,7 +3,7 @@ entity_id: fix_2020_alarm_ausloesung
 type: module
 created: 2026-08-21
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, nowcast, radar, briefing-sperre]
 ---
@@ -339,7 +339,7 @@ Produktionscode) statt des geteilten Singletons.
     Briefing-Schnappschuss ausführen; prüfen, dass ein Alarm tatsächlich versendet wird
     (nicht nur, dass die Sperre-Variable stimmt).
 
-- **AC-2 (Menge entscheidet, nicht die Rate):** Given dasselbe Briefing (1,0 mm
+- **AC-2:** (Menge entscheidet, nicht die Rate) Given dasselbe Briefing (1,0 mm
   angekündigt), der Nowcast erreicht kurzzeitig eine Spitzenrate von 6,0 mm/h, fällt aber im
   restlichen Stundenfenster ab, sodass insgesamt nur ≈ 1,768 mm akkumulieren (unter 2 × 1,0
   mm = 2,0 mm) / When derselbe Prüfzyklus läuft / Then bleibt die Sperre bestehen (kein
@@ -351,7 +351,7 @@ Produktionscode) statt des geteilten Singletons.
   - Test: Gleicher Aufbau wie AC-1 mit abklingender Frame-Serie (hohe Einzelrate, geringe
     Gesamtmenge); prüfen, dass `continue` greift und kein Versand stattfindet.
 
-- **AC-3 (Monotonie):** Given eine Kombination aus `window_precip_mm` und `max_rate_mm_h`,
+- **AC-3:** (Monotonie) Given eine Kombination aus `window_precip_mm` und `max_rate_mm_h`,
   die die Sperre für einen festen angekündigten Wert bereits durchbricht (Faktor UND
   Untergrenze erfüllt) / When ein zweiter Nowcast-Lauf für denselben angekündigten Wert
   geprüft wird, bei dem sowohl `window_precip_mm` als auch `max_rate_mm_h` mindestens so
@@ -363,7 +363,7 @@ Produktionscode) statt des geteilten Singletons.
     wobei Lauf 1 bereits auslöst; assert, dass Lauf 2 ebenfalls auslöst (nicht nur die
     Boolesche Zwischenvariable, sondern der tatsächliche Alarm-Versand).
 
-- **AC-4 (Fehlalarm-Wächter — Spitzenrate allein darf NIE auslösen):** Given das
+- **AC-4:** (Fehlalarm-Wächter — Spitzenrate allein darf NIE auslösen) Given das
   Morgen-Briefing hat 2,0 mm für die Onset-Stunde angekündigt und der Nowcast zeigt einen
   kurzen, 10-minütigen Schauer mit einer Spitzenrate von 4,5 mm/h, danach bleibt das
   Stundenfenster trocken, sodass real nur ≈ 0,75 mm akkumulieren (weit unter 2 × 2,0 mm =
@@ -376,7 +376,7 @@ Produktionscode) statt des geteilten Singletons.
     mm/h) gefolgt von trockenen Frames für den Rest der Stunde; assert, dass `continue`
     greift und explizit KEIN Versand stattfindet, obwohl eine hohe Spitzenrate vorlag.
 
-- **AC-5 (Konvektiv-Override bleibt unangetastet):** Given eine Situation mit
+- **AC-5:** (Konvektiv-Override bleibt unangetastet) Given eine Situation mit
   `is_convective=True` und einer Briefing-Ankündigung, bei der die Überholungsbedingung
   NICHT erfüllt ist (z. B. Nowcast-Rate unter der 2×-Schwelle) / When der Prüfzyklus läuft
   / Then durchbricht der Alarm die Sperre trotzdem, weil die bestehende konvektive
@@ -385,7 +385,7 @@ Produktionscode) statt des geteilten Singletons.
   - Test: Regressionstest mit `is_convective=True` und niedrigem Überholungsfaktor;
     prüfen, dass der Alarm trotzdem versendet wird.
 
-- **AC-6 (Sichtbarkeit):** Given die Sperre bleibt bestehen (weder Überholung noch
+- **AC-6:** (Sichtbarkeit) Given die Sperre bleibt bestehen (weder Überholung noch
   Konvektion) / When `check_radar_alerts()` durchläuft / Then entsteht ein
   `alert_log`-Eintrag über `append_suppressed_entry()` mit `reason=REASON_NOWCAST` und
   einem `gate_reason`, der die Briefing-Ankündigung als Ursache benennt — die
@@ -394,7 +394,7 @@ Produktionscode) statt des geteilten Singletons.
     prüfen, dass ein `not_delivered`-Eintrag mit dem erwarteten `reason`/`gate_reason`
     existiert — kein Dateiinhalt-Check, sondern Lesen über die Protokoll-Leseschnittstelle.
 
-- **AC-7 (kein Briefing-Wert):** Given `_briefing_precip_for_onset()` liefert `None` (kein
+- **AC-7:** (kein Briefing-Wert) Given `_briefing_precip_for_onset()` liefert `None` (kein
   Schnappschuss oder keine Daten für die Onset-Stunde) / When der Prüfzyklus läuft / Then
   bleibt das Verhalten unverändert gegenüber heute — `_briefing_announced` ist von
   vornherein `False`, die neue Überholungsprüfung wird gar nicht erst ausgewertet, kein
@@ -403,7 +403,7 @@ Produktionscode) statt des geteilten Singletons.
     wie vor dieser Änderung ausgelöst wird und kein `REASON_NOWCAST`-Suppressed-Eintrag
     für diese Ursache entsteht.
 
-- **AC-8 (F008-Fix — anhaltender mäßiger Regen löst aus):** Given das Morgen-Briefing hat
+- **AC-8:** (F008-Fix — anhaltender mäßiger Regen löst aus) Given das Morgen-Briefing hat
   1,0 mm für die Onset-Stunde angekündigt und der Nowcast zeigt eine realistische, dichte
   Frame-Serie im 5-Minuten-Raster mit durchgehend 3,9 mm/h über rund 50 Minuten (≈ 3,575 mm,
   über 2 × 1,0 mm = 2,0 mm UND über der absoluten Untergrenze von 2,0 mm) / When der
@@ -416,7 +416,7 @@ Produktionscode) statt des geteilten Singletons.
     Frames über die Stunde, kein Zwei-Frame-Konstrukt) durchgehend knapp unter der
     ehemaligen Ratenschwelle; assert, dass ein Alarm tatsächlich versendet wird.
 
-- **AC-9 (absolute Untergrenze — Nieselregen löst NIE aus):** Given das Morgen-Briefing hat
+- **AC-9:** (absolute Untergrenze — Nieselregen löst NIE aus) Given das Morgen-Briefing hat
   0,5 mm für die Onset-Stunde angekündigt und der Nowcast akkumuliert real 1,1 mm (der
   Faktor 2 × 0,5 mm = 1,0 mm wäre damit erfüllt) / When der Prüfzyklus läuft / Then bleibt
   die Sperre bestehen — KEIN Alarm, weil 1,1 mm die absolute Relevanzgrenze von 2,0 mm
@@ -449,7 +449,7 @@ Produktionscode) statt des geteilten Singletons.
   `alert_log`-Eintrag. `deviation_alert_engine.py` und die übrigen ~zehn
   Unterdrückungsstufen bleiben unprotokolliert (volle O3-Lücke, nicht Teil dieser Scheibe).
 - **Alarmaufkommen steigt**, Betrag vorab nicht messbar (Basislinie unbeobachtbar, siehe
-  Analyse). Zwei Tage vor Tourstart bewusst in Kauf genommen (PO-Entscheid 2026-08-21).
+  Analyse). Zwei Tage vor Trip-Start bewusst in Kauf genommen (PO-Entscheid 2026-08-21).
 - **Absolute Regeln und Empfindlichkeitsstufen bleiben unangetastet** — beide durch die
   Analyse als wirkungslos bzw. architektonisch gesperrt identifiziert (W1/W2), nicht Teil
   dieser Scheibe.

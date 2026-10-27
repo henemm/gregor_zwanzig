@@ -13,6 +13,7 @@
 	// Ungewired in dieser Scheibe — keine Flaeche bindet diese Komponente ein.
 
 	import { Eyebrow, Card, Switch } from '$lib/components/atoms';
+	import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
 	import {
 		ALERT_CHANNEL_ORDER,
 		NO_CHANNEL_WARNING,
@@ -90,6 +91,14 @@
 <div data-testid="alert-channel-picker">
 	<div class="acp-head">
 		<Eyebrow style="margin: 0;">Alert-Kanäle</Eyebrow>
+		{#if thresholds}
+			<!-- Issue #2521 S1 (AC-9): sichtbarer Anker fuer den Begriff, derselbe
+			     wie im aria-label der Stufen-Gruppe und im Erklaertext. -->
+			<span class="acp-schwelle">
+				<span class="acp-schwelle-label">Dringlichkeits-Schwelle</span>
+				<BegriffErklaerung begriff="kanal_schwelle" />
+			</span>
+		{/if}
 		<span
 			class="mono acp-counter"
 			class:warn={warningNeeded}
@@ -169,8 +178,18 @@
 		gap: 12px;
 		margin-bottom: 6px;
 	}
+	.acp-schwelle {
+		display: inline-flex;
+		align-items: center;
+		gap: 2px;
+		margin-left: auto;
+	}
+	.acp-schwelle-label {
+		font-size: 12px;
+		color: var(--g-ink-2);
+	}
 	.acp-counter {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-3);
 		letter-spacing: 0.03em;
 	}
@@ -198,7 +217,7 @@
 		border-bottom: none;
 	}
 	.acp-kind {
-		font-size: 10px;
+		font-size: 11px;
 		width: 60px;
 		flex-shrink: 0;
 		text-transform: uppercase;
@@ -217,7 +236,7 @@
 		text-overflow: ellipsis;
 	}
 	.acp-sub {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		margin-top: 2px;
 	}
@@ -228,8 +247,9 @@
 		margin-top: 3px;
 	}
 	.acp-threshold-btn {
-		font-size: 10px;
-		padding: 2px 7px;
+		font-size: 11px;
+		min-height: 32px; /* #2601: Tap-Ziel statt 21px */
+		padding: 2px 10px;
 		border: 1px solid var(--g-rule-soft);
 		border-radius: 999px;
 		background: transparent;

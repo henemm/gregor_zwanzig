@@ -4,13 +4,13 @@ als Wort (`THUNDER_LABEL_DE`), nicht mehr als nackte Ordinalzahl (0-3).
 Spec: docs/specs/modules/fix_1948_s6_alarm_stufenwort.md (AC-1 bis AC-7,
 AC-13 bis AC-17). Kontext: docs/context/feat-1948-s6-telegram-paritaet.md.
 
-Leitunterscheidung der Spec: `value_from`/`value_to`/Korridor-`bound`/`value`
+Leitunterscheidung der Spec: `value_from`/`value_to`
 sind POSITIONEN auf der Gewitter-Leiter -> Wort. `threshold` und
 `abs(value_to-value_from)` sind ABSTAENDE -> Zahl + Einheit "Stufe(n)"
 (AC-6 ist der Wächter dagegen, dass beide Sorten verwechselt werden).
 
 Alles echte Renderer-Aufrufe (render_subject/render_email/render_telegram/
-render_sms) mit echten AlertEvent/AlertMessage/CorridorEvent-Objekten. Kein
+render_sms) mit echten AlertEvent/AlertMessage-Objekten. Kein
 Mock, keine Dateiinhalt-Checks. Wörter werden aus `THUNDER_LABEL_DE`
 (SSoT) abgeleitet, nicht als Literal kopiert (Mutations-Gegenprobe 1 der
 Spec zielt auf genau diese SSoT-Bindung).
@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from app.models import ThunderLevel
 from output.metric_format import THUNDER_LABEL_DE
-from output.renderers.alert.model import AlertEvent, AlertMessage, CorridorEvent
+from output.renderers.alert.model import AlertEvent, AlertMessage
 from output.renderers.alert.render import (
     render_email, render_sms, render_subject, render_telegram,
 )
@@ -220,28 +220,6 @@ def test_ac6_schwelle_erscheint_niemals_als_stufenwort_plural():
             f"Verbotene Fehlumsetzung 'Schwelle {W_MED}' in {label} gefunden: {text!r}"
         )
     assert "Schwelle 2 Stufen" in tg, f"Korrekte Zahl+Einheit-Form (Plural) fehlt in Telegram: {tg!r}"
-
-
-# ===========================================================================
-# AC-7: Grenzwert-/Korridor-Alarm
-# ===========================================================================
-
-def test_ac7_korridor_alarm_grenze_und_wert_beide_als_wort():
-    """AC-7: GIVEN ein Grenzwert-/Korridor-Alarm auf thunder mit Grenze
-    Stufe 1 und aktuellem Wert Stufe 3, WHEN E-Mail oder Telegram gerendert
-    werden, THEN lautet die Zeile 'Gewitter: deine Grenze leicht ist
-    gerissen — jetzt hoch' -- beide Werte sind Positionen, also beide Wörter."""
-    ce = CorridorEvent(
-        metric_id="thunder", value=3.0, bound=1.0, direction="above",
-        occurred_at=None, km_from=0.0, km_to=4.0,
-    )
-    msg = AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(), corridor_events=(ce,))
-    html, plain = render_email(msg)
-    tg = render_telegram(msg)
-    expected_line = f"Gewitter: deine Grenze {W_LOW} ist gerissen — jetzt {W_HIGH} (km 0–4)"
-    assert expected_line in plain, f"Korridor-Zeile fehlt im E-Mail-Plaintext: {plain!r}"
-    assert expected_line in tg, f"Korridor-Zeile fehlt im Telegram-Text: {tg!r}"
-    assert f"Grenze {W_LOW} · jetzt {W_HIGH}" in html, f"Korridor-Wertzelle im HTML fehlt/falsch: {html!r}"
 
 
 # ===========================================================================

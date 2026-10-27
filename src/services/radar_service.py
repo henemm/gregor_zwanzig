@@ -19,6 +19,7 @@ from __future__ import annotations
 import bisect
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -47,6 +48,14 @@ _AROME_FR_LAT_MIN = 41.0
 _AROME_FR_LAT_MAX = 51.5
 _AROME_FR_LON_MIN = -5.5
 _AROME_FR_LON_MAX = 10.0
+
+# Korsika bounding box (real gemessene AROME-FR-Ausdehnung, Issue #1761).
+# Eigenstaendig -- NICHT durch Verkleinern von _ITALY_RADAR_* geloest,
+# wegen der Kopplung zu DpcSource.covers() (official_alerts/dpc.py).
+_CORSICA_LAT_MIN = 41.30
+_CORSICA_LAT_MAX = 43.11
+_CORSICA_LON_MIN = 8.39
+_CORSICA_LON_MAX = 9.60
 
 # Italien-Radar bounding box (IT — Zustaendigkeitsgebiet, kein Anbietername:
 # Werte aus #1162 uebernommen, seit #1648 bedient von ARPAE ICON-2I)
@@ -104,41 +113,69 @@ _ONSET_PRECIP_WINDOW_MIN = 60
 
 # Issue #2009: einzige Quelle der Onset-Alarmschwelle, ersetzt die bisher
 # doppelt gepflegten Literale in trip_alert.py und compare_radar_alert.py
-# (ADR-0021 — Trip und Ortsvergleich teilen den Code). Wert 55: am Cron-Takt
-# `7,22,37,52` und dem 15-Min-Datenraster sind nur die Onset-Werte
-# 8/23/38/53/68/83 ... erreichbar; 55 liegt knapp oberhalb von 53, laesst also
-# bis zu ~53 Min Vorlauf durch und schliesst 68+ aus (jenseits ~60 Min sinkt
-# die Ortsschaerfe des INCA-Extrapolationsprodukts deutlich).
+# (ADR-0021 — Trip und Ortsvergleich teilen den Code).
 #
-# BEWUSST NUR EIN NAME — kein privates `_RADAR_ONSET_THRESHOLD_MIN` daneben
-# (anders als beim Nachbarn `NOWCAST_HORIZON_MIN` oben, der einen echten
-# modulinternen Leser hat; hier gab es nie einen). Ein zweiter, privater Name
-# laedt dazu ein, ihn zu benutzen — und wer ihn benutzt, bindet den Wert beim
-# Import und umgeht damit den Laufzeit-Drift-Schutz aus AC-1: die Aufrufer in
-# trip_alert.py/compare_radar_alert.py lesen absichtlich ueber die
-# MODUL-Referenz (`radar_service_mod.RADAR_ONSET_THRESHOLD_MIN`), damit ein
-# Auseinanderlaufen der beiden Pfade auffaellt statt still zu bleiben.
-RADAR_ONSET_THRESHOLD_MIN = 55
+# Issue #2261 Teil A, PO-Entscheid A-1 (2026-08-21): der Radar-Alarm meldet
+# SO FRUEH WIE MOEGLICH. Keine kuenstliche Untergrenze — die einzige Grenze
+# ist die Reichweite der Quelle (`NOWCAST_HORIZON_MIN`), daher abgeleitet
+# statt als zweite Zahl gepflegt. Die Ortsschaerfe jenseits ~60 Min wird
+# nicht durch Schweigen behandelt, sondern ueber die Guetekennzeichnung
+# ausgewiesen (`LOCATION_SHARPNESS_LIMIT_MIN`, #2051 S3). Die fruehere
+# Festlegung aus `fix_2009_nowcast_vorlauf` ist abgeloest
+# (feat_2261_a1_radar_vorlauf).
+#
+# BEWUSST NUR EIN NAME — kein privates `_RADAR_ONSET_THRESHOLD_MIN` daneben.
+# Ein zweiter, privater Name laedt dazu ein, ihn zu benutzen — und wer ihn
+# benutzt, bindet den Wert beim Import und umgeht damit den Laufzeit-
+# Drift-Schutz aus #2009 AC-1: die Aufrufer in trip_alert.py/
+# compare_radar_alert.py lesen absichtlich ueber die MODUL-Referenz
+# (`radar_service_mod.RADAR_ONSET_THRESHOLD_MIN`), damit ein Auseinanderlaufen
+# der beiden Pfade auffaellt statt still zu bleiben.
+RADAR_ONSET_THRESHOLD_MIN = NOWCAST_HORIZON_MIN
 _DRY_THRESHOLD_MM_H = 0.1
 
-# Issue #2051 S3 (E2): eigener Name neben RADAR_ONSET_THRESHOLD_MIN (55) --
-# die 55 ist eine AUSLOESESCHWELLE (feuert der Alarm?), diese 60 eine
-# GUETE-GRENZE (wie belastbar ist die Ortsangabe?). Belegt durch den
-# Kommentar oben ("jenseits ~60 Min sinkt die Ortsschaerfe des
-# INCA-Extrapolationsprodukts deutlich"). Downstream-Leser (render.py,
+# Issue #2051 S3 (E2): eigener Name neben RADAR_ONSET_THRESHOLD_MIN --
+# jene ist eine AUSLOESESCHWELLE (feuert der Alarm?, seit #2261 = Horizont),
+# diese 60 eine GUETE-GRENZE (wie belastbar ist die Ortsangabe?): jenseits
+# ~60 Min sinkt die Ortsschaerfe des INCA-Extrapolationsprodukts deutlich.
+# Seit #2261 zugleich Grenze "vergleichbare Menge" und Grenze "Uhrzeit statt
+# Restminuten" im Kopf. Downstream-Leser (render.py,
 # starkregen_hint.py, project.py) referenzieren die MODUL-Variable
 # (`radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN`), nie ein Import zur
 # Bindezeit -- Laufzeit-Drift-Schutz wie bei RADAR_ONSET_THRESHOLD_MIN.
 LOCATION_SHARPNESS_LIMIT_MIN = 60
 
+# Issue #2261 (A-1, R2): Zeitversatz des ERSTEN Messpunkts ab jetzt. Bis
+# #2261 aus der Schwelle berechnet (`55 // 2`); mit der Schwelle auf dem
+# Horizont waere der Messpunkt auf +90 gewandert und mit dem Briefing-Offset
+# (`NOWCAST_HORIZON_MIN // 2`) zusammengefallen. Eigener Wert, bewusst NICHT
+# aus der Schwelle abgeleitet; der erste Messpunkt bleibt bit-identisch.
+RADAR_MEASURE_OFFSET_MIN = 27
+
+# Issue #2261 (A-1, R3): Toleranz des Aufenthaltsfensters eines Messpunkts.
+# Regen an Punkt k ist nur faellig, solange er beginnt, bevor der Nutzer laut
+# Zeitplan den Folgepunkt plus diese Toleranz erreicht hat (Planposition bzw.
+# gemeldeter GPS-Fix, nach Plan-Tempo fortgeschrieben — wer schneller/langsamer
+# geht, verschiebt sich dagegen).
+RADAR_PASSAGE_TOLERANCE_MIN = 30
+
 # Issue #1461 S3a: benannte Intensitaets-Label-Konstanten statt Inline-Strings
 # in intensity_to_text() -- alert_urgency.py vergleicht gegen diese Konstanten
 # statt gegen Zeichenketten-Duplikate (E3). Wortlaut unveraendert.
+# Issue #2205: der Hagel-Wortlaut gilt nur noch fuer WMO 96/99; Code 95
+# (Gewitter ohne Hagel) traegt INTENSITY_CONVECTIVE_NO_HAIL.
 INTENSITY_CONVECTIVE = "Starker Hagel/Gewitter"
+INTENSITY_CONVECTIVE_NO_HAIL = "Gewitter"
 INTENSITY_HEAVY = "Starker Regen"
 INTENSITY_MODERATE = "Mäßiger Regen"
 INTENSITY_LIGHT = "Leichter Regen"
 INTENSITY_DRY = "Kein Niederschlag"
+# #2417 Kurzform englisch: englische Fassung derselben Stufen.
+_INTENSITY_EN = {
+    INTENSITY_CONVECTIVE: "Heavy hail/storm", INTENSITY_CONVECTIVE_NO_HAIL: "Storm",
+    INTENSITY_HEAVY: "Heavy rain", INTENSITY_MODERATE: "Moderate rain",
+    INTENSITY_LIGHT: "Light rain", INTENSITY_DRY: "No precipitation",
+}
 
 HTTPX_TIMEOUT = 8.0
 
@@ -194,7 +231,7 @@ class NowcastResult:
     # Frames liegen. Eigenes Fenster, aber DIESELBE Akkumulationsmechanik wie
     # window_precip_mm (gemeinsamer Rechenkern `_accumulate_precip_mm`:
     # Frame-Dedup, _MAX_FRAME_COVERAGE-Deckel, Fensterende als harte Grenze).
-    # Der Alarm feuert bis RADAR_ONSET_THRESHOLD_MIN (55) Minuten vor dem
+    # Der Alarm feuert bis RADAR_ONSET_THRESHOLD_MIN (Horizont) Minuten vor dem
     # Beginn -- das Fenster ab jetzt deckt dann fast nur Trockenzeit ab und
     # untertriebe die Menge systematisch. BEWUSST beschreibend: kein Leser in
     # radar_alert_due()/der #2020-Ueberholungsregel.
@@ -384,15 +421,17 @@ def _laufendes_frame(frames: list, now: datetime):
     `_MAX_FRAME_COVERAGE`. Reicht sie nicht bis `now` (Datenluecke), gibt es
     kein laufendes Bild -- dann `None` statt einer Hochrechnung.
 
-    Rueckgabe: `(timestamp, rate_mm_h, is_convective, deckung_ende)`.
+    Rueckgabe: `(timestamp, rate_mm_h, is_convective, deckung_ende, hail)`.
     """
     by_ts: dict[datetime, float] = {}
     konvektiv: dict[datetime, bool] = {}
+    hagel: dict[datetime, bool] = {}
     for f in frames:
         vorhanden = by_ts.get(f.timestamp)
         if vorhanden is None or f.precip_mm_h > vorhanden:
             by_ts[f.timestamp] = f.precip_mm_h
             konvektiv[f.timestamp] = bool(f.is_convective)
+            hagel[f.timestamp] = bool(getattr(f, "hail", False))
     reihe = sorted(by_ts.items())
     for i, (ts, rate) in enumerate(reihe):
         if ts > now:
@@ -401,8 +440,19 @@ def _laufendes_frame(frames: list, now: datetime):
         if i + 1 < len(reihe) and reihe[i + 1][0] < deckung_ende:
             deckung_ende = reihe[i + 1][0]
         if ts <= now < deckung_ende:
-            return ts, rate, konvektiv[ts], deckung_ende
+            return ts, rate, konvektiv[ts], deckung_ende, hagel[ts]
     return None
+
+
+class RadarDeadlineExceeded(Exception):
+    """Die Zeitgrenze des Alarmlaufs ist abgelaufen, bevor eine weitere
+    Quelle der Kette begonnen wurde (Epic #2261 A-2 S2, ADR-0082). Kein
+    Quellenausfall und keine Entwarnung: der Aufrufer wertet nichts aus."""
+
+
+def _raise_if_deadline(deadline_at: Optional[float]) -> None:
+    if deadline_at is not None and time.monotonic() >= deadline_at:
+        raise RadarDeadlineExceeded("Zeitgrenze des Alarmlaufs erreicht")
 
 
 class RadarNowcastService:
@@ -439,14 +489,17 @@ class RadarNowcastService:
     # Public API
     # ------------------------------------------------------------------
 
-    def intensity_to_text(self, mm_per_h: float, is_convective: bool = False) -> str:
+    def intensity_to_text(
+        self, mm_per_h: float, is_convective: bool = False, hail: bool = False,
+    ) -> str:
         """Map mm/h rate to German intensity label.
 
         Convective flag (thunderstorm/hail WMO 95/96/99) overrides all rate-based
-        stages — even at very low precipitation rates.
+        stages — even at very low precipitation rates. Issue #2205: only hail
+        (WMO 96/99) carries the hail wording; 95 is plain "Gewitter".
         """
         if is_convective:
-            return INTENSITY_CONVECTIVE
+            return INTENSITY_CONVECTIVE if hail else INTENSITY_CONVECTIVE_NO_HAIL
         # Guard: NaN or non-numeric input → treat as dry
         if not isinstance(mm_per_h, (int, float)) or mm_per_h != mm_per_h:
             return INTENSITY_DRY
@@ -462,9 +515,14 @@ class RadarNowcastService:
         """Return True if WMO weather code indicates convective activity (thunderstorm/hail)."""
         return code in (95, 96, 99)
 
+    def _is_hail_weathercode(self, code) -> bool:
+        """Issue #2205: True only for WMO 96/99 (Gewitter mit Hagel), not 95."""
+        return code in (96, 99)
+
     def get_nowcast(
         self, lat: float, lon: float, elevation_m: Optional[int] = None,
-        priority: str = "user_briefing",
+        priority: str = "user_briefing", user_id: Optional[str] = None,
+        deadline_at: Optional[float] = None,
     ) -> NowcastResult:
         """
         Fetch frames (cache-first) and derive nowcast result.
@@ -475,11 +533,19 @@ class RadarNowcastService:
         Issue #1329 C2: `priority` steuert die Drosselung des internen
         open-meteo-Funnels ueber den geteilten `ForecastBudgetGate`
         ("polling" fuer Scheduler-Checks, "user_briefing" -- Default, nie
-        gedrosselt -- fuer Nutzeraktionen wie `/jetzt`). Der Cache-Lookup
+        gedrosselt -- fuer Nutzeraktionen wie `/jetzt`).
+
+        Issue #2387: `user_id` bucht den Verbrauch zusaetzlich in den
+        Budget-Topf DIESES Nutzers und entscheidet damit im Band zwischen
+        Schwelle und 100%, ob dieser Aufruf gedrosselt wird. Der Cache-Lookup
         selbst ist von `priority` unabhaengig; die Ableitung
         (`_derive_result`) laeuft bei Cache-Hit UND -Miss immer frisch
         relativ zur aktuellen (bzw. injizierten) Zeit -- der Cache liefert
         nie ein fertiges Ergebnis (Lehre aus Adversary-Fund F001, Scheibe C).
+
+        Epic #2261 A-2 S2: `deadline_at` (absolute `time.monotonic()`-Marke)
+        wird vor JEDER Quelle der Kette geprueft; abgelaufen =>
+        `RadarDeadlineExceeded`, nichts im Cache. `None` = unveraendert.
         """
         self._convective_checked = True
         self._openmeteo_unavailable_this_call = False
@@ -487,7 +553,11 @@ class RadarNowcastService:
         self._inca_unavailable_this_call = False
         self._priority = priority
         from services.forecast_budget import ForecastBudgetGate
-        self._budget_gate = ForecastBudgetGate()
+        # Issue #2387: die Kennung entscheidet, WEN eine erreichte Schwelle
+        # trifft. `None` heisst ausdruecklich "unattributiert" (bewusst
+        # nutzerfreie Provider-Schicht, ADR-0075 Punkt 4) -- dann gilt das
+        # Bestandsverhalten: drosseln ab Schwelle, nie eine Befreiung.
+        self._budget_gate = ForecastBudgetGate(user_id)
         now = self._now_fn()
 
         # Adversary-Fund F001 (Issue #1329 C2, BROKEN-Verdict behoben): der
@@ -501,6 +571,7 @@ class RadarNowcastService:
         if cached is not None:
             self._budget_gate.record_cache_hit()
             _capture_nowcast_frames(lat, lon, cached.frames, cached.source)
+            self._convective_checked = cached.convective_checked  # Issue #2464
             return self._derive_result(cached.frames, cached.source, now=now)
 
         self._budget_gate.record_cache_miss()
@@ -509,10 +580,15 @@ class RadarNowcastService:
             frames = self._frame_source(lat, lon)
             source = "radar"
         else:
-            frames, source = self._fetch_frames_with_fallback(lat, lon, elevation_m)
+            frames, source = self._fetch_frames_with_fallback(
+                lat, lon, elevation_m, deadline_at=deadline_at,
+            )
 
         if frames:
-            self._cache.put(lat, lon, region, frames, source, now=now, elevation_m=elevation_m)
+            self._cache.put(
+                lat, lon, region, frames, source, now=now, elevation_m=elevation_m,
+                convective_checked=self._convective_checked,
+            )
 
         _capture_nowcast_frames(lat, lon, frames, source)
         result = self._derive_result(frames, source, now=now)
@@ -566,8 +642,10 @@ class RadarNowcastService:
         *,
         tz: Optional[ZoneInfo] = None,
         include_source: bool = True,
+        englisch: bool = False,
     ) -> str:
-        """Format nowcast result as German text.
+        """Format nowcast result as German text (``englisch``: #2417,
+        Kurzform-Kanaele, GSM-7-sauber).
 
         Issue #822: optionaler ``tz``-Parameter (Tour-Zeitzone aus tz_for_coords).
         Wenn gesetzt, wird die Onset-Zeit in dieser TZ formatiert statt in der
@@ -579,6 +657,8 @@ class RadarNowcastService:
         Verhalten, alle anderen Caller bleiben unberührt.
         """
         lines: list[str] = []
+        if englisch:
+            return self._format_now_text_en(result, tz=tz, include_source=include_source)
 
         # Issue #2050 S2b: ein bereits laufendes Ereignis geht in den Zweig
         # unten, auch wenn kein kuenftiger Beginn bestimmbar ist -- sonst
@@ -685,53 +765,117 @@ class RadarNowcastService:
 
         return "\n".join(lines)
 
+    def _format_now_text_en(
+        self, result: NowcastResult, *, tz: Optional[ZoneInfo], include_source: bool,
+    ) -> str:
+        """Englische, GSM-7-saubere Fassung von ``format_now_text`` (#2417
+        Abschnitt H) -- dieselben Aussagen, ohne ``·``/``~``."""
+        from utils.timezone import local_dt
+
+        now = datetime.now(tz=timezone.utc)
+        label = _INTENSITY_EN.get(result.intensity_label, result.intensity_label)
+
+        def _hhmm(minuten: int) -> str:
+            moment = now + timedelta(minutes=minuten)
+            return (local_dt(moment, tz) if tz is not None else moment).strftime("%H:%M")
+
+        lines: list[str] = []
+        laeuft = getattr(result, "already_running", False)
+        if result.onset_minutes is None and not laeuft:
+            if result.data_unavailable:
+                lines += ["Short-term rain check not possible right now.",
+                          "Please watch the sky yourself."]
+            else:
+                lines += [f"{label}.", "No rain expected in the next "
+                          f"{_NOWCAST_HORIZON_MIN // 60} hours."]
+        else:
+            satz = (f"{label} ongoing" if laeuft else
+                    f"{label} from about {_hhmm(result.onset_minutes)} "
+                    f"(in {result.onset_minutes} min)")
+            if result.event_end_minutes is not None:
+                ende = _hhmm(result.event_end_minutes)
+                satz += (f", rain at least until {ende}"
+                         if result.event_ongoing_beyond_horizon
+                         else f", last rain around {ende}")
+            lines.append(satz + ".")
+        if result.convective_checked is False:
+            lines.append("Storm check not available.")
+        if include_source:
+            quelle = self.source_label(result.source).replace("Italien", "Italy")
+            lines.append(f"Source: {quelle}.")
+        return "\n".join(lines)
+
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
 
     def _fetch_frames_with_fallback(
-        self, lat: float, lon: float, elevation_m: Optional[int] = None
+        self, lat: float, lon: float, elevation_m: Optional[int] = None,
+        deadline_at: Optional[float] = None,
     ) -> tuple[list, str]:
         """Try source chain; return (frames, source_label)."""
         if _within_radolan(lat, lon):
-            frames = self._fetch_brightsky(lat, lon)
+            _raise_if_deadline(deadline_at)
+            frames = self._fetch_brightsky(lat, lon, elevation_m)
             if frames:
                 return frames, "radar"
 
         if _within_inca(lat, lon):
+            _raise_if_deadline(deadline_at)
             frames = self._fetch_geosphere_inca(lat, lon, elevation_m)
             if frames:
                 return frames, "INCA"
 
+        if _within_corsica(lat, lon):
+            _raise_if_deadline(deadline_at)
+            frames = self._fetch_corsica_arome_fr(lat, lon, elevation_m)
+            if frames:
+                return frames, "AROME-FR"
+
         if _within_italy_radar(lat, lon):
+            _raise_if_deadline(deadline_at)
             frames = self._fetch_italy_arpae(lat, lon, elevation_m)
             if frames:
                 return frames, "ARPAE-2I"
 
         if _within_arome_france(lat, lon):
+            _raise_if_deadline(deadline_at)
             frames = self._fetch_arome_france_hd(lat, lon, elevation_m)
             if frames:
                 return frames, "AROME-FR"
 
         if _within_icon_d2(lat, lon):
+            _raise_if_deadline(deadline_at)
             frames = self._fetch_icon_d2(lat, lon, elevation_m)
             if frames:
                 return frames, "ICON-D2"
 
+        _raise_if_deadline(deadline_at)
+
         frames = self._fetch_openmeteo_minutely15(lat, lon, elevation_m)
         return frames, "minutely_15"
 
-    def _fetch_brightsky(self, lat: float, lon: float) -> list:
+    def _fetch_brightsky(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         if _offline_fixture_active():
             # Issue #1329 C2 Abschnitt 8: kein Netz zu BrightSky im Offline-Modus.
             return []
         try:
             from providers.brightsky import BrightSkyProvider
-            provider = BrightSkyProvider()
-            return provider.fetch_radar(lat, lon)
+            frames = BrightSkyProvider().fetch_radar(lat, lon)
         except Exception as e:
             logger.warning(f"BrightSky failed, falling back: {e}")
             return []
+        if not frames:
+            return []  # Issue #2464: kein Sidecar ohne Frames
+        # Issue #2464: Konvektions-Sidecar wie INCA (Open-Meteo best_match = ICON-D2).
+        sidecar = self._fetch_openmeteo_15(lat, lon, elevation_m=elevation_m)
+        if sidecar:
+            self._merge_convective(frames, sidecar)
+        else:
+            self._convective_checked = False  # ADR-0018: nie als "kein Gewitter" kaschieren
+        return frames
 
     def _fetch_geosphere_inca(
         self, lat: float, lon: float, elevation_m: Optional[int] = None
@@ -746,6 +890,10 @@ class RadarNowcastService:
             provider = GeoSphereProvider()
             ts = provider.fetch_nowcast(lat, lon)
             if not ts or not ts.data:
+                # Issue #2218 C5-37 (ADR-0018): eine leere INCA-Antwort ist ein
+                # Ausfall, kein "ok" — Trockenwetter liefert Nullframes, nie [].
+                logger.warning("GeoSphere INCA returned no data points, falling back")
+                self._inca_unavailable_this_call = True
                 return []
             frames = []
             for dp in ts.data:
@@ -768,6 +916,29 @@ class RadarNowcastService:
             self._inca_unavailable_this_call = True
             return []
 
+    def _fetch_corsica_arome_fr(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
+        """AROME-FR-Niederschlag (1,5 km) fuer Korsika, Gewitter/Hagel per
+        ARPAE-Sidecar. AROME-FR liefert an Korsika-Koordinaten strukturell
+        KEINEN weather_code (Live-Befund 2026-09-20, Issue #1761) -- ohne
+        Sidecar waere is_convective/hail fuer JEDEN Frame False, obwohl
+        Niederschlag korrekt anliegt. ARPAE deckt denselben Punkt geometrisch
+        ab und fuehrt weather_code nativ; hier NUR als Sidecar genutzt, NICHT
+        als Fallback-Quelle (PO-Entscheidung 2026-09-20).
+        """
+        frames = self._fetch_arome_france_hd(lat, lon, elevation_m)
+        if not frames:
+            return frames
+        sidecar = self._fetch_italy_arpae(lat, lon, elevation_m)
+        if sidecar:
+            self._merge_convective(frames, sidecar)
+        else:
+            # ADR-0018 / Muster aus _fetch_geosphere_inca: ein gescheiterter
+            # Sidecar-Call darf NIE lautlos als "kein Gewitter" gelten.
+            self._convective_checked = False
+        return frames
+
     def _merge_convective(self, inca_frames: list, sidecar_frames: list) -> None:
         """Merge is_convective from nearest sidecar frame (<=5 min) into INCA frames."""
         tolerance = timedelta(minutes=5)
@@ -777,6 +948,7 @@ class RadarNowcastService:
             )
             if abs(nearest.timestamp - frame.timestamp) <= tolerance:
                 frame.is_convective = nearest.is_convective
+                frame.hail = getattr(nearest, "hail", False)
 
     def _fetch_openmeteo_minutely15(
         self, lat: float, lon: float, elevation_m: Optional[int] = None
@@ -825,6 +997,9 @@ class RadarNowcastService:
             return []
         if _offline_fixture_active():
             return self._load_radar_fixture_frames()
+        if self._budget_gate is None:  # Direktaufruf ausserhalb get_nowcast (Issue #2464)
+            from services.forecast_budget import ForecastBudgetGate
+            self._budget_gate = ForecastBudgetGate(None)
         if not self._budget_gate.allow(self._priority):
             self._budget_throttled_this_call = True
             self._openmeteo_unavailable_this_call = True
@@ -873,7 +1048,10 @@ class RadarNowcastService:
                 mm_h = float(raw) * 4.0
                 code = wcodes[i] if i < len(wcodes) else None
                 is_convective = self._is_convective_weathercode(code)
-                frames.append(RadarFrame(timestamp=dt, precip_mm_h=mm_h, is_convective=is_convective))
+                frames.append(RadarFrame(
+                    timestamp=dt, precip_mm_h=mm_h, is_convective=is_convective,
+                    hail=self._is_hail_weathercode(code),
+                ))
             return frames
         except Exception as e:
             logger.warning(f"Open-Meteo minutely_15 (models={models}) failed: {e}")
@@ -916,7 +1094,10 @@ class RadarNowcastService:
                 ts = base + timedelta(minutes=offset_min)
                 is_convective = self._is_convective_weathercode(code)
                 frames.append(
-                    RadarFrame(timestamp=ts, precip_mm_h=float(precip), is_convective=is_convective)
+                    RadarFrame(
+                        timestamp=ts, precip_mm_h=float(precip), is_convective=is_convective,
+                        hail=self._is_hail_weathercode(code),
+                    )
                 )
             return frames
         except Exception as e:
@@ -981,8 +1162,14 @@ class RadarNowcastService:
         is_convective = any(
             f.is_convective for f in window if f.precip_mm_h >= _DRY_THRESHOLD_MM_H
         ) or bool(already_running and _laufend[2])
+        # Issue #2205: Hagel (WMO 96/99) nach derselben Regel wie is_convective.
+        hail = any(
+            getattr(f, "hail", False) for f in window if f.precip_mm_h >= _DRY_THRESHOLD_MM_H
+        ) or bool(already_running and _laufend[4])
 
-        intensity_label = self.intensity_to_text(max_rate, is_convective=is_convective)
+        intensity_label = self.intensity_to_text(
+            max_rate, is_convective=is_convective, hail=hail,
+        )
 
         # Issue #1329 C2 AC-6: throttled=True nur wenn KEINE Frames geliefert
         # wurden UND die Ursache eine Budget-Drosselung war (nicht "echt kein
@@ -1050,10 +1237,15 @@ class RadarNowcastService:
         # window_precip_mm noch max_rate_mm_h.
         onset_precip_mm: Optional[float] = None
         if onset_ts is not None:
-            onset_precip_mm = _accumulate_precip_mm(
-                frames, all_ts_sorted, onset_ts,
-                onset_ts + timedelta(minutes=_ONSET_PRECIP_WINDOW_MIN),
-            )
+            _onset_window_end = onset_ts + timedelta(minutes=_ONSET_PRECIP_WINDOW_MIN)
+            # Issue #2261 (A-1, AC-7): reicht das Fenster ab dem Beginn ueber
+            # den Quell-Horizont hinaus, ist die Menge dort abgeschnitten und
+            # zu klein -- dann KEINE Mengenangabe (an der Quelle, alle vier
+            # Kanaele lesen dasselbe Feld). Intensitaet bleibt unberuehrt.
+            if _onset_window_end <= horizon:
+                onset_precip_mm = _accumulate_precip_mm(
+                    frames, all_ts_sorted, onset_ts, _onset_window_end,
+                )
 
         # Issue #2051 S1: Ende des zusammenhaengenden nassen Blocks aus
         # DERSELBEN `frames`-Liste (kein zweiter Quellenabruf) -- der Nutzer
@@ -1160,6 +1352,13 @@ def _within_italy_radar(lat: float, lon: float) -> bool:
     )
 
 
+def _within_corsica(lat: float, lon: float) -> bool:
+    return (
+        _CORSICA_LAT_MIN <= lat <= _CORSICA_LAT_MAX
+        and _CORSICA_LON_MIN <= lon <= _CORSICA_LON_MAX
+    )
+
+
 def _within_arome_france(lat: float, lon: float) -> bool:
     return (
         _AROME_FR_LAT_MIN <= lat <= _AROME_FR_LAT_MAX
@@ -1197,6 +1396,8 @@ def _region_bucket(lat: float, lon: float) -> str:
         return "radolan"
     if _within_inca(lat, lon):
         return "inca"
+    if _within_corsica(lat, lon):
+        return "corsica"
     if _within_italy_radar(lat, lon):
         return "italy_radar"
     if _within_arome_france(lat, lon):

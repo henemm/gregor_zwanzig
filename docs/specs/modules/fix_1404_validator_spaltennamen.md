@@ -3,7 +3,7 @@ entity_id: fix_1404_validator_spaltennamen
 type: bugfix
 created: 2026-07-28
 updated: 2026-07-28
-status: draft
+status: implemented
 workflow: fix-1404-validator-spaltennamen
 version: "1.0"
 tags: [compare, mail-validator, gate, metric-catalog, naming, trip-compare-sharing]

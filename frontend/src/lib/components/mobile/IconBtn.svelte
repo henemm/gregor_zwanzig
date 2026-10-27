@@ -2,7 +2,7 @@
 	// Issue #373 — IconBtn (interner Helfer, kanonisch aus mobile-shell.jsx).
 	//
 	// 44x44px Touch-Target um ein MIcon, optionaler Badge.
-	// Genutzt von TopAppBar-Wrapper / Drawer / Sheet.
+	// Genutzt von Drawer / Sheet.
 	//
 	// Spec: docs/specs/modules/issue_373_mobile.md
 	import MIcon, { type MIconKind } from './MIcon.svelte';

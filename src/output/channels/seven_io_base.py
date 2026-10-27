@@ -15,8 +15,8 @@ Warum eine gemeinsame Basis und keine Kopie: der Paritaetstest
 Testsuite nicht auf. Eine Kopie haette also genau die Vergessbarkeit
 verdoppelt, die die Sperren verhindern sollen.
 
-Die Unterklassen fuellen nur `_resolve_sender()` / `_resolve_recipient()`
-(und bei Bedarf `_validate_config()`).
+Die Unterklassen fuellen nur `_resolve_sender()`, `RECIPIENT_TYPE` /
+`NO_RECIPIENT_REASON` (Issue #1412 S4b) und bei Bedarf `_validate_config()`.
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ import httpx
 
 from app.config import Settings
 from app.origin_guard import running_origin
-from output.channels.base import OutputConfigError, OutputError
+from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +54,14 @@ class SevenIoChannelBase:
 
     #: Kanalname (`OutputChannel.name`) — von jeder Unterklasse zu setzen.
     CHANNEL_NAME = "seven_io"
+    #: Issue #1412 S4b: zulaessiger Empfaenger-Typ und Sperrgrund ohne
+    #: Empfaenger — von jeder Unterklasse zu setzen (`()` laesst nichts zu).
+    RECIPIENT_TYPE: tuple | type = ()
+    NO_RECIPIENT_REASON = "seven_io_no_recipient"
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, *, recipient=None) -> None:
         self._settings = settings
+        self._recipient = recipient
         self._validate_config()
 
     @property
@@ -71,8 +76,7 @@ class SevenIoChannelBase:
         """Transport-Voraussetzungen. Unterklassen verscharfen das.
 
         Bewusst NUR Gateway und Schluessel: ob ein Ziel vorliegt, entscheidet
-        `_resolve_recipient()` zur Sendezeit — bei Premium-SMS ist das erst
-        dort final bekannt (Spec D3).
+        `_check_recipient()` zur Sendezeit (Spec D3, Issue #1412 S4b).
         """
         if not (self._settings.sms_gateway_url and self._settings.seven_api_key):
             raise OutputConfigError(
@@ -86,8 +90,30 @@ class SevenIoChannelBase:
         raise NotImplementedError
 
     def _resolve_recipient(self) -> str:
-        """Empfaenger. Wirft `OutputConfigError`, wenn kein Versand erlaubt ist."""
-        raise NotImplementedError
+        """Nummer des belegten Empfaengers (Issue #1412 S4b); ob sie gesendet
+        werden darf, entscheidet `_check_recipient`."""
+        return getattr(self._recipient, "number", "")
+
+    def _check_recipient(self, to) -> None:
+        """Empfaengervertrag (Issue #1412 S4b), bedingungslos und VOR den
+        Sperren: Empfaenger vorhanden -> Form -> Ziel == Empfaenger. Meldung
+        und Log nennen die Nutzer-ID, nie die Nummer."""
+        recipient = self._recipient
+        user_id = getattr(recipient, "user_id", None)
+
+        def _block(reason_code: str, text: str) -> ChannelBlockedError:
+            logger.warning(
+                "%s-Versand fuer Nutzer %s blockiert (%s): %s",
+                self.name, user_id, reason_code, text,
+            )
+            return ChannelBlockedError(self.name, text, reason_code=reason_code)
+
+        if not isinstance(recipient, self.RECIPIENT_TYPE):
+            raise _block(self.NO_RECIPIENT_REASON, "kein belegter Empfaenger uebergeben.")
+        if not recipient.well_formed():
+            raise _block(f"{self.name}_invalid_number", "Empfaengernummer hat keine gueltige Form.")
+        if to != recipient.number:
+            raise _block(f"{self.name}_recipient_mismatch", "Ziel weicht vom belegten Empfaenger ab.")
 
     def _origin(self) -> str:
         """Herkunft DIESES Kanal-Moduls (Issue #1476).
@@ -152,28 +178,37 @@ class SevenIoChannelBase:
     # Transport
     # ------------------------------------------------------------------
 
+    def _post(self, url: str, api_key: str, payload: dict) -> httpx.Response:
+        """Einziger Netzausgang der seven.io-Kanaele (Issue #1412 S3b). Seit
+        S4b prueft er den Empfaengervertrag selbst, vor dem Draht; die
+        Schluessel-Sperren laufen in ``send`` (einziger Aufrufer)."""
+        self._check_recipient(payload.get("to"))
+        return httpx.post(
+            url,
+            headers={"X-Api-Key": api_key},
+            data=payload,
+            timeout=10,
+        )
+
     def send(self, subject: str, body: str) -> None:
         """Sende `body` ueber das seven.io-Gateway. `subject` wird ignoriert.
 
-        Reihenfolge ist Teil der Zusicherung: beide Sperren laufen
-        BEDINGUNGSLOS und VOR jeder Ziel-Auflosung, damit kein Kanal am
+        Reihenfolge ist Teil der Zusicherung (Issue #1412 S4b): Empfaenger
+        (Form -> Herkunft/Ziel) -> Herkunftssperre -> Sandbox-Sperre; beide
+        Sperren laufen BEDINGUNGSLOS vor dem Draht, damit kein Kanal am
         Sandbox-Zwang vorbeikommt.
         """
-        self._guard_test_mode_sandbox_key()
-        api_key = self._guard_code_origin()
         recipient = self._resolve_recipient()
+        self._check_recipient(recipient)
+        api_key = self._guard_code_origin()
+        self._guard_test_mode_sandbox_key()
         sender = self._resolve_sender()
 
         payload: dict[str, str] = {"to": recipient, "text": body}
         if sender:
             payload["from"] = sender
 
-        response = httpx.post(
-            self._settings.sms_gateway_url,
-            headers={"X-Api-Key": api_key},
-            data=payload,
-            timeout=10,
-        )
+        response = self._post(self._settings.sms_gateway_url, api_key, payload)
         if response.status_code != 200:
             raise OutputError(
                 self.name,
@@ -183,5 +218,5 @@ class SevenIoChannelBase:
         if status_code != "100":
             raise OutputError(self.name, f"seven.io Fehler-Code: {status_code!r}")
         logger.info(
-            "%s an %s ueber seven.io gesendet", self.name, mask_number(recipient),
+            "%s fuer Nutzer %s ueber seven.io gesendet", self.name, self._recipient.user_id,
         )

@@ -3,7 +3,7 @@ entity_id: issue_264_stage_order
 type: bugfix
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, frontend, gpx-import, stage-sort, wizard, edit-flow, issue-264]
 ---

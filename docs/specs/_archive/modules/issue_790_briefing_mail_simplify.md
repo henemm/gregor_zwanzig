@@ -3,7 +3,7 @@ entity_id: issue_790_briefing_mail_simplify
 type: module
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, renderer, briefing, simplification]
 ---
@@ -29,7 +29,7 @@ oben** umgebaut.
 - **File:** `src/output/renderers/email/plain.py`
 - **File:** `src/output/renderers/email/helpers.py`
 - **File:** `src/output/renderers/email/__init__.py`
-- **File:** `src/formatters/trip_report.py`
+- **File:** `src/output/renderers/trip_report.py`
 - **File:** `src/services/day_comparison.py`
 - **Identifier:** `render_html`, `render_plain`, `render_day_comparison_html/plain`, `build_metrics_summary_pills`, `DayComparisonService`
 

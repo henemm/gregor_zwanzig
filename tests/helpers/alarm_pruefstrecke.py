@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from app.trip import Trip
 
 from app.config import Settings
+from app.loader import get_data_dir
 from output.channels import telegram as telegram_mod
 from output.channels.telegram import reset_telegram_rate_limit_for_tests
 from output.channels.premium_sms import PREMIUM_SMS_SENDER
@@ -52,6 +53,54 @@ class AlarmPruefstreckeLauf:
     premium_sms: list = field(default_factory=list)
 
 
+#: CI-Rot 2026-10-22 (Familie B): jeder Stub laeuft in einem eigenen
+#: ``serve_forever``-Thread. Bislang wurde keiner je beendet -- der CI-
+#: Thread-Dump von pytest-timeout zeigte >= 56 lebende Stub-Threads spaet im
+#: Lauf. Ein solcher Thread, dessen Socket unbrauchbar geworden ist, dreht in
+#: ``serve_forever`` leer (``select`` meldet sofort "bereit", ``accept``
+#: scheitert) und frisst den GIL: ein CPU-gebundener Repo-Scan lief mit 56
+#: solcher Threads 4x langsamer (3,4 s -> 13 s gemessen) und im CI in die
+#: 30-s-Schranke. Deshalb: jeder Server wird hier registriert und von der
+#: autouse-Fixture ``_pruefstrecken_server_beenden`` (tests/conftest.py) nach
+#: jedem Test sauber heruntergefahren. ``poll_interval`` klein, damit
+#: ``shutdown()`` nicht bis zu 0,5 s je Server wartet.
+_OFFENE_SERVER: list[tuple[HTTPServer, threading.Thread]] = []
+_STUB_THREAD_NAME = "gz-pruefstrecke-stub"
+_POLL_INTERVAL_S = 0.05
+
+
+def _server_starten(server: HTTPServer) -> None:
+    thread = threading.Thread(
+        target=server.serve_forever, kwargs={"poll_interval": _POLL_INTERVAL_S},
+        name=_STUB_THREAD_NAME, daemon=True,
+    )
+    thread.start()
+    _OFFENE_SERVER.append((server, thread))
+
+
+def offene_server_beenden() -> int:
+    """Alle noch laufenden Stub-Server dieses Prozesses beenden.
+
+    Liefert die Zahl der beendeten Server. ``shutdown()`` stoppt die
+    ``serve_forever``-Schleife (und kehrt sofort zurueck, falls sie schon zu
+    Ende ist), ``server_close()`` gibt den Socket frei."""
+    beendet = 0
+    while _OFFENE_SERVER:
+        server, thread = _OFFENE_SERVER.pop()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+        beendet += 1
+    return beendet
+
+
+def lebende_stub_threads() -> int:
+    """Zahl der noch lebenden Stub-Threads (Nachweisgroesse fuer den Selbsttest)."""
+    return sum(
+        1 for t in threading.enumerate() if t.name == _STUB_THREAD_NAME and t.is_alive()
+    )
+
+
 def _start_json_stub(received: list) -> tuple[HTTPServer, int]:
     """Lokaler HTTP-Stub für die Telegram-Bot-API (JSON-Body, Vorbild
     `test_952_onset_alert_fidelity.py::_make_fake_bot_handler`)."""
@@ -72,7 +121,7 @@ def _start_json_stub(received: list) -> tuple[HTTPServer, int]:
             self.wfile.write(body)
 
     server = HTTPServer(("127.0.0.1", 0), _Handler)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
+    _server_starten(server)
     return server, server.server_address[1]
 
 
@@ -98,7 +147,7 @@ def _start_seven_io_stub(received: list) -> tuple[HTTPServer, int]:
             self.wfile.write(b"100")
 
     server = HTTPServer(("127.0.0.1", 0), _Handler)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
+    _server_starten(server)
     return server, server.server_address[1]
 
 
@@ -119,6 +168,32 @@ class AlarmPruefstrecke:
         _, seven_port = _start_seven_io_stub(self._seven_received)
         self._telegram_url = f"http://127.0.0.1:{telegram_port}"
         base = settings if settings is not None else Settings()
+        # Issue #2144 AC-2: `with_user_profile()` ueberschreibt mail_to/
+        # sms_to jetzt IMMER (auch auf None), wenn das Profil das Feld nicht
+        # traegt -- unconditional, bewusst OHNE force_test-Ausnahme (anders
+        # als telegram_chat_id, AC-3). Die Pruefstrecke simuliert einen
+        # Nutzer mit vollstaendig konfigurierten Kanaelen; das Profil muss
+        # diese Felder deshalb selbst tragen (Read-Modify-Write, damit
+        # `_write_tier()`/`_write_premium_profile()`-Aufrufe vor oder nach
+        # dieser Konstruktion nichts verlieren), sonst wischt
+        # `with_user_profile()` die hier uebergebenen Kanal-Ziele weg.
+        profile_path = get_data_dir(user_id) / "user.json"
+        try:
+            profile = json.loads(profile_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            profile = {"id": user_id}
+        profile.setdefault("mail_to", base.mail_to)
+        profile.setdefault("sms_to", base.sms_to)
+        # Issue #2406: seit der Fail-closed-Sperre in `with_user_profile()`
+        # erreicht eine Nummer `Settings.sms_to` nur mit passendem
+        # `sms_verified_number`. Die Pruefstrecke simuliert einen Nutzer mit
+        # vollstaendig konfigurierten Kanaelen — die Nummer gilt hier also als
+        # bewiesen, sonst verschwaende der SMS-Zweig strukturell.
+        if profile.get("sms_to"):
+            profile.setdefault("sms_verified_number", profile["sms_to"])
+        profile.setdefault("telegram_chat_id", base.telegram_chat_id)
+        profile_path.parent.mkdir(parents=True, exist_ok=True)
+        profile_path.write_text(json.dumps(profile))
         # Wie in Produktion (`TripAlertService(settings=None, ...)` baut sich
         # intern `Settings().with_user_profile(user_id)`, Vorbild
         # `trip_alert.py:198`): `premium_sms_reply_to`/`_at` sind KEIN

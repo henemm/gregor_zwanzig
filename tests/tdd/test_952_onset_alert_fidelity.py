@@ -27,7 +27,6 @@ from __future__ import annotations
 import json
 import re
 import threading
-from datetime import date as date_type
 from datetime import datetime, timedelta
 from datetime import time as time_type
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -43,7 +42,7 @@ from output.renderers.alert.render import (
     render_email, render_subject, render_sms, render_telegram,
 )
 from output.channels import telegram as telegram_mod
-from output.channels.telegram import TelegramOutput
+from tests.helpers.telegram_empfaenger import profil_ausgang
 from services.radar_service import NowcastResult, RadarNowcastService
 
 from app.loader import get_data_dir
@@ -113,7 +112,7 @@ class _GuaranteedWetRadar(RadarNowcastService):
             source=source, is_convective=is_convective,
         )
 
-    def get_nowcast(self, lat: float, lon: float, elevation_m=None, priority: str = "user_briefing") -> NowcastResult:
+    def get_nowcast(self, lat: float, lon: float, elevation_m=None, priority: str = "user_briefing", user_id=None, deadline_at=None) -> NowcastResult:
         # Issue #1329 C2: RadarNowcastService.get_nowcast() akzeptiert seit
         # Scheibe C2 zusaetzlich `priority` (Call-Site trip_alert.py ruft
         # jetzt priority="polling" auf). Dieses Fake ignoriert die
@@ -155,9 +154,19 @@ def _trip_with_active_segment(trip_id: str, config: TripReportConfig) -> Trip:
     Alert möglich). `arrival_override` auf erstem/letztem Waypoint plus
     passende `stage.start_time` sorgt dafür, dass das Segment zur
     Testlaufzeit aktiv ist (`seg.start_time <= now_utc <= seg.end_time`).
+
+    Issue #2096: das Etappendatum stammt aus derselben ORTSZEIT, aus der
+    `_active_window()` das Fenster rechnet — nicht aus `date_type.today()`
+    (Systemdatum, UTC). Ab 22:00 UTC weichen beide bei Korsika (UTC+2) um
+    einen Tag ab; das Segment landete dann rund 24 Stunden in der
+    Vergangenheit und `check_radar_alerts()` lieferte 0 statt 1. Echte Trips
+    tragen echte `stage.date`-Werte und `trip_alert.py` löst „heute" über
+    `trip_local_today()` in Ortszeit auf (ADR-0044) — der Fehler saß allein
+    im Aufbau.
     """
     lat, lon = 42.20, 9.10
     start_str, end_str, start_time = _active_window(lat, lon)
+    ortsdatum = datetime.now(tz_for_coords(lat, lon)).date()
     wp0 = Waypoint(
         id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0,
         time_window=TimeWindow(start=time_type(0, 0), end=time_type(23, 57)),
@@ -169,7 +178,7 @@ def _trip_with_active_segment(trip_id: str, config: TripReportConfig) -> Trip:
         arrival_override=end_str,
     )
     stage = Stage(
-        id="T1", name="Tag 1", date=date_type.today(),
+        id="T1", name="Tag 1", date=ortsdatum,
         start_time=start_time, waypoints=[wp0, wp1],
     )
     trip = Trip(id=trip_id, name="Onset-Fidelity-Trip", stages=[stage])
@@ -544,7 +553,10 @@ class TestAC6SmsOnlyRadarDispatch:
         # (sms_allowed() liefert bei fehlender user.json "free" = False). Dieser
         # Test prueft den SMS-Dispatch-Mechanismus selbst, nicht das Tier-Gating.
         get_data_dir(uid).mkdir(parents=True, exist_ok=True)
-        (get_data_dir(uid) / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        # Issue #2152: Testkonto-Status ueber das Profilfeld (statt "tdd" im Namen).
+        (get_data_dir(uid) / "user.json").write_text(
+            json.dumps({"id": uid, "tier": "standard", "is_test_user": True})
+        )
         stub = _SevenStub(body="100")
         try:
             config = TripReportConfig(
@@ -617,7 +629,7 @@ class TestAC4TelegramOutputHtmlParseMode:
     def test_send_with_new_params_has_html_parse_mode_and_no_subject_prefix(
         self, fake_telegram_bot,
     ):
-        output = TelegramOutput(_TELEGRAM_SETTINGS)
+        output = profil_ausgang(_TELEGRAM_SETTINGS, "nutzer-952", "99999")  # #1412 S4a
 
         # RED vor Fix: send() kennt parse_mode/suppress_subject_line nicht -> TypeError.
         output.send(
@@ -640,7 +652,7 @@ class TestAC5TelegramOutputBackwardCompatible:
         self, fake_telegram_bot,
     ):
         """Muss HEUTE UND nach dem Fix grün sein (Rückwärtskompatibilität)."""
-        output = TelegramOutput(_TELEGRAM_SETTINGS)
+        output = profil_ausgang(_TELEGRAM_SETTINGS, "nutzer-952", "99999")  # #1412 S4a
         output.send("Betreff 952", "Body")
 
         payload = fake_telegram_bot.last_payload

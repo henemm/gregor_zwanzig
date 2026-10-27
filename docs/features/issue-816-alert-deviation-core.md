@@ -132,7 +132,7 @@ def detect_changes(self, cached, fresh, include_absolute=True):
 
 ### 5. Knapper Alert-Render-Pfad
 
-**Datei:** `src/output/renderers/email/alert_compact.py` (NEU)
+**Datei:** `src/output/renderers/email/alert_compact.py` (NEU) — *historisch:* mit #917 durch den kanonischen Alert-Renderer `src/output/renderers/alert/` (`render.py`, `model.py`, `project.py`) ersetzt und gelöscht (`docs/features/architecture.md`).
 
 **Komplett RAUS:**
 - Stundentabellen
@@ -242,7 +242,7 @@ ohne Wetter-Delta erfolgt ein eigenständiger Versand über
 - **Weather Snapshot Service:** `docs/features/weather_snapshot_service.md`
 - **Change Detection:** `src/services/weather_change_detection.py`
 - **Trip Report Scheduler:** `src/services/trip_report_scheduler.py`
-- **Alert Rendering:** `src/output/renderers/email/alert_compact.py`
+- **Alert Rendering:** `src/output/renderers/alert/render.py` (vormals `email/alert_compact.py`, ersetzt mit #917)
 - **Epic #813:** Alert-Rework (4 Slices)
   - Slice 1: Deviation-Kern (#816) ✓
   - Slice 2: Tab-Delta-Justierung (#817) ✓

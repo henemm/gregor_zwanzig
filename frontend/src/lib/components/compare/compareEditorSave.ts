@@ -10,6 +10,8 @@
 import type { ComparePreset, ActivityProfile, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { toHHMMSS } from '../../utils/time.ts';
+import { pickEigenfelder } from '../shared/pickEigenfelder.ts';
+import { newEntityAlertChannelDefault } from '../shared/alarme-tab/alertChannelState.ts';
 // Issue #1373 (S2 Scheibe B): Speicherformat der Metrik-Auswahl ist Größe +
 // Auswertung. Die Übersetzung kommt aus der bereits geladenen Antwort von
 // GET /api/compare/metrics (Scheibe A liefert metric_id/aggregation je Eintrag) —
@@ -77,9 +79,13 @@ export interface CompareEditorEdits {
 	officialAlertTriggersEnabled?: boolean;
 	sendTelegram?: boolean;
 	sendSms?: boolean;
-	// Issue #1745 A: vierter Alarm-Kanal (Premium-SMS). Optional →
-	// rückwärtskompatibel (undefined = Feld nicht editiert → Round-Trip).
+	// Issue #1745 A / #2293 S2: Premium-SMS-BRIEFING-Opt-in (Versand-Reiter).
+	// Optional → rückwärtskompatibel (undefined = Feld nicht editiert → Round-Trip).
 	sendPremiumSms?: boolean;
+	// Issue #2293 Scheibe S2 (Epic #1374/#2345): ALARM-Kanal-Objekt (Alarme-
+	// Reiter), unabhängig von sendTelegram/sendSms/sendPremiumSms oben. Optional
+	// → rückwärtskompatibel (undefined = Feld nicht editiert → Round-Trip).
+	alertChannels?: { email: boolean; telegram: boolean; sms: boolean; premium_sms: boolean };
 	// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + editierbare Laufzeit
 	// (VersandTab context="vergleich"). Optional → rückwärtskompatibel.
 	// endDate: undefined = unangetastet (Round-Trip), null = "bis auf Weiteres"
@@ -235,8 +241,12 @@ export function buildComparePresetSavePayload(
 			: {}),
 		...(edits.sendTelegram !== undefined ? { send_telegram: edits.sendTelegram } : {}),
 		...(edits.sendSms !== undefined ? { send_sms: edits.sendSms } : {}),
-		// Issue #1745 A: analoges Round-Trip-Prinzip für den vierten Alarm-Kanal.
+		// Issue #1745 A / #2293 S2: analoges Round-Trip-Prinzip für das Premium-SMS-
+		// Briefing-Opt-in.
 		...(edits.sendPremiumSms !== undefined ? { send_premium_sms: edits.sendPremiumSms } : {}),
+		// Issue #2293 Scheibe S2: analoges Round-Trip-Prinzip für den Alarm-
+		// Kanal-Bestand (Alarme-Reiter) — unabhängig von den drei Feldern oben.
+		...(edits.alertChannels !== undefined ? { alert_channels: edits.alertChannels } : {}),
 		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + End-Datum-Lösch-Sentinel.
 		...(edits.morningEnabled !== undefined ? { morning_enabled: edits.morningEnabled } : {}),
 		...(edits.morningTime !== undefined ? { morning_time: toHHMMSS(edits.morningTime) } : {}),
@@ -270,6 +280,61 @@ export function buildComparePresetSavePayload(
 	return { url, body };
 }
 
+// ─── Teilfeld-Pfad (PUT, Issue #2375) ───────────────────────────────────────
+//
+// Jeder Schreibweg des Ortsvergleichs (Reiter, Kopf, Orte, Status) sendet NUR
+// seine Eigenfelder. Der Go-Handler mergt fehlende Felder als „unverändert"
+// (mergeBriefingPatch/mergeConfigMap) — ein Voll-Spread der lokalen, womöglich
+// veralteten Basis schriebe dagegen Fremdwerte zurück (#2375, #2381).
+// `buildComparePresetSavePayload` bleibt für die Neuanlage unverändert.
+
+/**
+ * PUT-Nutzlast mit ausschließlich den übergebenen Feldern. `felder` sind
+ * Top-Level-Schlüssel des Datensatzes (snake_case, bereits übersetzt);
+ * `displayConfigFelder` landen unter `display_config` — nur diese Schlüssel.
+ * `undefined`-Werte werden nicht gesendet; `[]`, `{}` und `""` schon (Lösch-Semantik).
+ */
+export function buildComparePresetPartialPayload(
+	id: string,
+	felder: Record<string, unknown>,
+	displayConfigFelder?: Record<string, unknown>
+): { url: string; body: ComparePreset } {
+	const body: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(felder)) {
+		if (v !== undefined) body[k] = v;
+	}
+	if (displayConfigFelder) {
+		const dc: Record<string, unknown> = {};
+		for (const [k, v] of Object.entries(displayConfigFelder)) {
+			if (v !== undefined) dc[k] = v;
+		}
+		if (Object.keys(dc).length > 0) body.display_config = dc;
+	}
+	return { url: '/api/compare/presets/' + id, body: body as unknown as ComparePreset };
+}
+
+/**
+ * Schneidet aus einer vollständig gebauten Nutzlast (die Leseübersetzungen wie
+ * `toStoredActiveMetrics`, `toHHMMSS`, `end_date: null → ""` schon angewendet
+ * hat) die Eigenfelder eines Reiters heraus.
+ */
+export function waehleEigenfelder(
+	voll: { url: string; body: ComparePreset },
+	topKeys: readonly string[],
+	displayKeys: readonly string[] = [],
+	displayConfigExtra: Record<string, unknown> = {}
+): { url: string; body: ComparePreset } {
+	const b = voll.body as unknown as Record<string, unknown>;
+	// Adapter auf die geteilte Auswahl (#1433): gleiche Regeln wie im Trip.
+	const body = pickEigenfelder(b, { top: topKeys });
+	const dc = {
+		...((pickEigenfelder(b, { display: displayKeys }).display_config as object | undefined) ?? {}),
+		...Object.fromEntries(Object.entries(displayConfigExtra).filter(([, v]) => v !== undefined))
+	};
+	if (Object.keys(dc).length > 0) body.display_config = dc;
+	return { url: voll.url, body: body as unknown as ComparePreset };
+}
+
 // ─── Create-Pfad (POST /api/compare/presets) ──────────────────────────────
 //
 // Issue #1360 F002: Pure-Function-Gegenstueck zu buildComparePresetSavePayload
@@ -293,9 +358,16 @@ export interface NewComparePresetFields {
 	officialAlertTriggersEnabled: boolean;
 	sendTelegram: boolean;
 	sendSms: boolean;
-	// Issue #1745 A (AC-11): Pflichtfeld wie seine beiden Geschwister-Booleans —
-	// ein weggelassener Schlüssel überliesse den Default dem Server.
+	// Issue #1745 A (AC-11) / #2293 S2: Premium-SMS-BRIEFING-Opt-in. Pflichtfeld
+	// wie seine beiden Geschwister-Booleans — ein weggelassener Schlüssel
+	// überliesse den Default dem Server.
 	sendPremiumSms: boolean;
+	// Issue #2293 Scheibe S2 (Implementation Details Abschnitt 1/7, AC-6):
+	// ALARM-Kanal-Bestand des Alarme-Reiters bei der Neuanlage. Optional — ohne
+	// Wert gilt der geteilte Neuanlage-Default (Issue #2518: `{email:true,
+	// telegram:true, sms:false, premium_sms:false}`), damit `AlertChannels` beim
+	// Create nie `nil` ist.
+	alertChannels?: { email: boolean; telegram: boolean; sms: boolean; premium_sms: boolean };
 	officialWarningsEnabled: boolean;
 	morningEnabled: boolean;
 	morningTime: string;
@@ -382,8 +454,13 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		official_alert_triggers_enabled: fields.officialAlertTriggersEnabled,
 		send_telegram: fields.sendTelegram,
 		send_sms: fields.sendSms,
-		// Issue #1745 A (AC-11): unconditional wie die beiden Geschwister oben.
+		// Issue #1745 A (AC-11) / #2293 S2: unconditional wie die beiden Geschwister oben.
 		send_premium_sms: fields.sendPremiumSms,
+		// Issue #2293 Scheibe S2 (AC-1/Abschnitt 1): IMMER gesendet (nie
+		// weggelassen), damit `AlertChannels` beim Create nie `nil` ist.
+		// Issue #2518: Rueckfall ist der geteilte Neuanlage-Default (dieselbe Quelle
+		// wie der Alarme-Reiter), NICHT mehr aus den Briefing-Schaltern abgeleitet.
+		alert_channels: fields.alertChannels ?? newEntityAlertChannelDefault(),
 		// Issue #1258 S4 (AC-27/E3): unconditional wie die Geschwister-Booleans
 		// oben — Neuanlagen tragen immer official_warnings.enabled (F1-Default
 		// false), kein sources-Feld (FE schreibt sources nie).

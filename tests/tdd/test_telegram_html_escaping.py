@@ -35,7 +35,7 @@ import pytest
 
 from app.config import Settings
 from output.channels import telegram as telegram_mod
-from output.channels.telegram import TelegramOutput
+from tests.helpers.telegram_empfaenger import profil_ausgang, profil_chat
 from services.official_alerts.models import OfficialAlert
 
 UTC = timezone.utc
@@ -107,7 +107,15 @@ def fake_telegram_bot(monkeypatch):
         server.server_close()
 
 
-_TELEGRAM_SETTINGS = Settings(telegram_bot_token="test-token-1252", telegram_chat_id="99999")
+_TELEGRAM_SETTINGS = Settings(
+    telegram_bot_token="test-token-1252",
+    telegram_chat_id="99999",
+    # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout verlangt
+    # TelegramOutput die Test-Chat-ID, sonst bricht der Versand ab. Explizit
+    # auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+    # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196 Klasse C).
+    telegram_test_chat_id="99999",
+)
 
 
 def _alert(level, hazard, label, vf=FR_FROM, vt=FR_TO, *, region="Var",
@@ -188,6 +196,7 @@ def test_standalone_alert_sends_with_html_parse_mode(fake_telegram_bot):
 
     trip = _trip_with_ampersand()
     notices = [(_alert(3, "access_ban", "Zugang eingeschränkt — Zone A & B"), ["1"])]
+    profil_chat("tdd-1252-standalone", "99999")  # #1412 S4a: Profil-Chat
     svc = NotificationService(_TELEGRAM_SETTINGS, "tdd-1252-standalone")
 
     svc.send_official_alert(
@@ -220,6 +229,7 @@ def test_compare_alert_sends_with_html_parse_mode(fake_telegram_bot):
 
     locations = [_Loc("a", "Zone A & B", 43.1, 5.9)]
     tagged = [(_alert(3, "access_ban", "Zugang eingeschränkt — Zone A & B"), ["a"])]
+    profil_chat("tdd-1252-compare", "99999")  # #1412 S4a: Profil-Chat
     svc = NotificationService(_TELEGRAM_SETTINGS, "tdd-1252-compare")
 
     svc.send_multi_location_official_alert(
@@ -254,7 +264,7 @@ def test_send_falls_back_without_parse_mode_on_400_and_delivers(fake_telegram_bo
     dasselbe kosmetische Problem (`&amp;` statt `&`) darf beim Fallback nicht
     neu entstehen."""
     fake_telegram_bot.status_sequence = [400]
-    output = TelegramOutput(_TELEGRAM_SETTINGS)
+    output = profil_ausgang(_TELEGRAM_SETTINGS, "nutzer-1252", "99999")
 
     message_id = output.send(
         "Betreff", "<b>Zone A &amp; B</b>",

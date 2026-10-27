@@ -3,7 +3,7 @@ entity_id: issue_1231_korridor_editor
 type: feature
 created: 2026-07-12
 updated: 2026-07-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [corridor-editor, alerts, compare, trip-editor, migration, epic-29]
 ---
@@ -52,7 +52,7 @@ liegt). User-facing Label ist „Wertebereich(e)"; der Code-/Datenterm bleibt
 | `internal/model/trip.go::AlertRule`, `AlertableMetrics`, `SyncAlertRules` | Go-Modul | bestehender Δ-Wächter-Mechanismus, bleibt unverändert Wirkungsträger für `notify` (PO-A) |
 | `frontend/.../alertMetricTable.ts::metric_alert_levels` (`display_config`) | FE-Modul | Empfindlichkeitsstufen je Metrik (off/entspannt/standard/sensibel) — `notify` steuert nur off↔nicht-off |
 | `src/services/weather_change_detection.py` | Python-Modul | konsumiert `AlertRule`/`metric_alert_levels`, unverändert |
-| `docs/specs/modules/issue_1191_compare_alert_deactivated_metric.md` | Spec | #1191-Erhalt: `active_metrics` mit bewusst leerer Liste `[]` darf die Migration nicht reaktivieren |
+| `docs/specs/_archive/modules/issue_1191_compare_alert_deactivated_metric.md` | Spec | #1191-Erhalt: `active_metrics` mit bewusst leerer Liste `[]` darf die Migration nicht reaktivieren |
 | `src/services/comparison_scoring.py::calculate_score()` | Python-Modul | C1-Grenze: `mark` darf hier NICHT andocken (Neutralität, #1229 parallel offen) |
 | `src/app/metric_catalog.py::selectable` | Python-Modul | `confidence_pct` (`selectable=False`) darf im Korridor-Metrikpool nie auftauchen (#710) |
 | `.claude/hooks/renderer_mail_gate.py` (#811) | Gate | greift auf Slice 7 (`compare_html.py`), Pflicht: `tests/tdd/test_issue_811_mode_matrix.py` grün + `briefing_mail_validator.py`-Lauf vor Commit |

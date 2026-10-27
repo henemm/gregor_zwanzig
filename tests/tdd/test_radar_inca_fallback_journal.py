@@ -259,3 +259,97 @@ def test_ac7_inca_erfolg_bleibt_ok(monkeypatch) -> None:
         "AC-7: ein erfolgreicher INCA-Abruf darf NICHT als 'fallback' "
         "gebucht werden."
     )
+
+
+# ---------------------------------------------------------------------------
+# Scheibe C (#2218, Eintrag C5-37): LEERE INCA-Antwort ist ein Fallback.
+# SPEC: docs/specs/modules/fix_2218_scheibe_c_observability.md (AC-10..AC-12)
+#
+# Fake nur an der Systemgrenze (GeoSphereProvider.fetch_nowcast); Journal wird
+# echt geschrieben und als JSONL gelesen, Warnzeilen ueber caplog.
+# ---------------------------------------------------------------------------
+
+import logging  # noqa: E402
+
+
+def _inca_none(self, lat: float, lon: float):
+    """INCA antwortet ohne Zeitreihe."""
+    return None
+
+
+def _inca_ohne_datenpunkte(self, lat: float, lon: float) -> NormalizedTimeseries:
+    """INCA antwortet mit Zeitreihe, aber ohne Datenpunkte."""
+    meta = ForecastMeta(provider=Provider.GEOSPHERE, model="NOWCAST", grid_res_km=1.0)
+    return NormalizedTimeseries(meta=meta, data=[])
+
+
+def _inca_warnzeilen(caplog) -> list:
+    return [
+        r.getMessage() for r in caplog.records
+        if r.levelno >= logging.WARNING and "inca" in r.getMessage().lower()
+    ]
+
+
+@pytest.mark.parametrize("leere_antwort", [_inca_none, _inca_ohne_datenpunkte])
+def test_ac10_leere_inca_antwort_bucht_fallback_und_warnt(
+    monkeypatch, caplog, leere_antwort,
+) -> None:
+    """AC-10: INCA antwortet ohne Zeitreihe bzw. ohne Datenpunkte -> das Journal
+    bucht fuer ``radar_nowcast`` den Ausgang ``fallback`` (nicht ``ok``) mit
+    der Ersatzquelle als Detail, und im Log steht eine Warnzeile zu INCA."""
+    assert _radar_zeilen() == [], "Testaufbau: Journal muss vor dem Abruf leer sein."
+    monkeypatch.setattr(GeoSphereProvider, "fetch_nowcast", leere_antwort)
+
+    with caplog.at_level(logging.WARNING):
+        ergebnis = _dienst().get_nowcast(_LAT, _LON)
+
+    assert ergebnis.source == "ICON-D2", (
+        f"Testaufbau: erwartete Ersatzquelle 'ICON-D2', bekommen {ergebnis.source!r}"
+    )
+    zeile = _letzte_radar_zeile()
+    assert zeile.get("outcome") == "fallback", (
+        f"AC-10: leere INCA-Antwort muss outcome='fallback' hinterlassen, "
+        f"bekommen {zeile.get('outcome')!r} (ganze Zeile: {zeile})"
+    )
+    assert zeile.get("detail") == "ICON-D2", zeile
+    assert _inca_warnzeilen(caplog), (
+        "AC-10: keine Warnzeile zur leeren INCA-Antwort: "
+        f"{[r.getMessage() for r in caplog.records]}"
+    )
+
+
+def test_ac11_trockene_inca_antwort_bleibt_ok_ohne_warnung(monkeypatch, caplog) -> None:
+    """AC-11 (Gegenprobe): INCA liefert Datenpunkte mit Nullniederschlag ->
+    Journal bleibt ``ok``, keine INCA-Warnzeile (trocken ist kein Ausfall)."""
+    monkeypatch.setattr(GeoSphereProvider, "fetch_nowcast", _inca_erfolgreich)
+
+    with caplog.at_level(logging.WARNING):
+        ergebnis = _dienst().get_nowcast(_LAT, _LON)
+
+    assert ergebnis.source == "INCA", f"Testaufbau: Quelle {ergebnis.source!r}"
+    assert _letzte_radar_zeile().get("outcome") == "ok"
+    assert not _inca_warnzeilen(caplog), (
+        f"AC-11: trockenes Wetter darf nicht warnen: {_inca_warnzeilen(caplog)}"
+    )
+
+
+def test_ac12_offline_fixture_modus_setzt_kein_flag_und_warnt_nicht(
+    monkeypatch, caplog, tmp_path,
+) -> None:
+    """AC-12: im Offline-Fixture-Modus liefert ``_fetch_geosphere_inca`` leise
+    ``[]``; das Flag bleibt ungesetzt, es gibt keine Warnzeile, der Provider
+    wird gar nicht erst gefragt."""
+    monkeypatch.setenv("GZ_TEST_FIXTURE_DIR", str(tmp_path))
+
+    def _darf_nicht_laufen(self, lat, lon):
+        raise AssertionError("Offline-Modus darf GeoSphere nicht abrufen")
+
+    monkeypatch.setattr(GeoSphereProvider, "fetch_nowcast", _darf_nicht_laufen)
+    dienst = _dienst()
+
+    with caplog.at_level(logging.WARNING):
+        frames = dienst._fetch_geosphere_inca(_LAT, _LON)
+
+    assert frames == []
+    assert dienst._inca_unavailable_this_call is False
+    assert not _inca_warnzeilen(caplog), _inca_warnzeilen(caplog)

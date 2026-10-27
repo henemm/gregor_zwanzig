@@ -25,7 +25,11 @@ async function exhaustRateLimitViaPage(page: import('@playwright/test').Page) {
 	await page.goto('/login');
 	await page.evaluate(async (burst: number) => {
 		for (let i = 0; i < burst + 2; i++) {
-			await fetch('/login', {
+			// Issue #2271: die Login-Action heisst seit der Scharfschaltung `login`
+			// (benannte Actions schliessen `default` aus). Ohne `?/login` beantwortet
+			// SvelteKit den POST selbst mit einem Fehler, die Go-API sieht ihn nie —
+			// der IP-Bucket bliebe voll und AC-2 unten wuerde still falsch messen.
+			await fetch('/login?/login', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 				body: new URLSearchParams({

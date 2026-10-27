@@ -3,7 +3,7 @@ entity_id: bug_590_signal_removal_telegram_start_tests
 type: tests
 created: 2026-06-04
 updated: 2026-06-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, signal, telegram, removal, start-flow, bug-590]
 parent: bug_590_kanal_settings

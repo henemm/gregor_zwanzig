@@ -31,11 +31,11 @@ import pytest
 
 import output.channels.telegram as tg_module
 from output.channels.telegram import (
-    TelegramOutput,
     reset_telegram_rate_limit_for_tests,
 )
 from tests.tdd import _telegram_live_fixture as live_fixture
 from tests.tdd._telegram_live_fixture import live_telegram_enabled, staging_live_settings
+from tests.helpers.telegram_empfaenger import antwort_im_update
 
 # 22 > Produktiv-Obergrenze (18 je 60-s-Fenster): ab Nachricht 19 MUSS die
 # eigene Bremse warten, sonst waere der Nachweis wertlos.
@@ -83,7 +83,7 @@ def _cleanup(chat_id: str, message_ids: list[int]) -> list[str]:
     failures: list[str] = []
     for message_id in message_ids:
         try:
-            if not TelegramOutput(settings).delete_message(chat_id, message_id):
+            if not antwort_im_update(settings, chat_id).delete_message(chat_id, message_id):
                 failures.append(f"message_id={message_id}: deleteMessage nicht bestaetigt")
         except Exception as exc:  # noqa: BLE001 — Aufraeumen darf nie hart abbrechen
             failures.append(f"message_id={message_id}: {exc!r}")
@@ -137,7 +137,7 @@ def test_long_live_series_stays_within_scheduler_budget():
             try:
                 # Frische Instanz je Nachricht — genau wie notification_service.py:344.
                 # Beweist, dass die Buchfuehrung prozessweit greift, nicht je Objekt.
-                message_id = TelegramOutput(settings).send(
+                message_id = antwort_im_update(settings, settings.telegram_chat_id).send(
                     "GZ-Testlauf", text, parse_mode="HTML", suppress_subject_line=True,
                 )
             except Exception as exc:  # noqa: BLE001 — Fehlerbild soll sichtbar sein

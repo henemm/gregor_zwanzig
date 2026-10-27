@@ -520,7 +520,9 @@ def test_alle_vier_kanaele_tragen_restmenge_und_ende():
             f"{kanal}: Kompakt-Token der Restmenge erwartet ('Rest14@17'); "
             f"bekam {kurz!r}"
         )
-        assert "R5->22@15" in kurz, (
+        # Issue #1737: die Fixture traegt eine Stundenreihe 13-17 Uhr -> das Token
+        # fuehrt die Zeitspanne (`@13-17`) statt der Einzelstunde.
+        assert "R5->22@13-17" in kurz, (
             f"{kanal}: Das bestehende Delta-Token bleibt unveraendert daneben "
             f"stehen; bekam {kurz!r}"
         )

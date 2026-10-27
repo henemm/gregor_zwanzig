@@ -21,6 +21,11 @@ import {
 } from './alertMetricTable.ts';
 
 import type { AlertRule, AlertMetric } from '../../types.ts';
+// Issue #2277 S3 (AC-6): DELTA_ONLY_METRICS zieht aus dem toten
+// alert-rules-editor/alertRuleDefaults.ts hierher. Namespace-Import, damit ein
+// (noch) fehlender Export nur den einen Testfall rot macht, nicht das Linking
+// der ganzen Datei.
+import * as alertMetricTableNs from './alertMetricTable.ts';
 
 // =============================================================================
 // METRIC_DEFAULTS — 16 Eintraege mit korrekten Standardwerten (Spec §Implementation)
@@ -305,4 +310,28 @@ test('applyModeToRowState bewahrt Threshold-Werte beim Modus-Wechsel (AC-6)', ()
 	applyModeToRowState(state, 'delta');
 	assert.equal(state['wind_gust'].absThreshold, 70);
 	assert.equal(state['wind_gust'].deltaThreshold, 25);
+});
+
+// =============================================================================
+// Issue #2277 S3 (AC-6): DELTA_ONLY_METRICS ist in alertMetricTable.ts DEFINIERT
+// (vorher alert-rules-editor/alertRuleDefaults.ts, das mit dem toten
+// AlertRulesEditor-Strang geloescht wird). Inhalt unveraendert uebernommen aus
+// alertRuleDefaults.test.ts („DELTA_ONLY_METRICS bleibt exportiert und
+// unveraendert bestueckt").
+// =============================================================================
+
+test('AC-6 (#2277 S3): DELTA_ONLY_METRICS wird von alertMetricTable.ts exportiert und ist unveraendert bestueckt', () => {
+	const delta = (alertMetricTableNs as Record<string, unknown>).DELTA_ONLY_METRICS as
+		| ReadonlySet<AlertMetric>
+		| undefined;
+	assert.ok(
+		delta instanceof Set,
+		'AC-6 FAIL: alertMetricTable.ts exportiert DELTA_ONLY_METRICS nicht — die Konstante muss hier definiert sein.'
+	);
+	const erwartet: AlertMetric[] = ['temperature_change', 'wind_change', 'precipitation_change', 'thunder_level'];
+	assert.equal(delta!.size, erwartet.length, 'Umfang der Konstante unveraendert');
+	for (const m of erwartet) {
+		assert.ok(delta!.has(m), `"${m}" muss in DELTA_ONLY_METRICS bleiben`);
+	}
+	assert.equal(delta!.has('wind_gust'), false, 'Boeen sind keine Delta-only-Metrik');
 });

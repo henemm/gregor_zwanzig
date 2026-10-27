@@ -3,7 +3,7 @@ entity_id: epic_136_step0_shell
 type: module
 created: 2026-05-09
 updated: 2026-05-10
-status: draft
+status: deprecated
 version: "1.0"
 parent_spec: epic_136_trip_wizard
 related: epic_136_trip_wizard
@@ -12,6 +12,8 @@ tags: [sveltekit, frontend, wizard, shell, stepper, epic-136]
 ---
 
 # Epic 136 — Sub-Spec #160: Wizard-Shell + 4-Schritt-Stepper
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 
@@ -45,7 +47,7 @@ Teil dieser Sub-Spec — sie werden in den Folge-Issues #161–#164 implementier
 ## Verweis auf Master-Spec
 
 Diese Sub-Spec ist eine Detail-Spezifikation der approved Master-Spec
-[`docs/specs/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
+[`docs/specs/_archive/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
 
 - **§1.4 Save-Pipeline** — `state.save()` wird in Step 4 vom Speichern-Button aufgerufen; Shell
   rendert nur den Button und liest `state.saveStatus` / `state.saveError`.
@@ -399,7 +401,7 @@ Loeschung erfolgt im Cleanup-Folge-Issue (Master-Spec §Delete).
 ### NICHT BERUEHRT (aus Master-Spec garantiert)
 
 - `frontend/src/lib/components/trip-wizard/wizardState.svelte.ts` (existiert, Schema unveraendert)
-- `frontend/src/lib/components/trip-wizard/wizardHelpers.ts` (existiert, kein Aufruf in Shell)
+- `frontend/src/lib/components/shared/wizardHelpers.ts` (existiert, kein Aufruf in Shell)
 - `frontend/src/lib/components/wizard/*` (alter Wizard, weiterhin im Edit-Pfad aktiv)
 - `internal/`, `src/`, `cmd/` (kein Backend-Touch)
 

@@ -502,6 +502,10 @@ def test_end_to_end_real_call_paths_trip_alert_and_compare_share_cache_with_own_
     )
 
     alert_service = TripAlertService.__new__(TripAlertService)
+    # `__new__` umgeht `__init__`: seit #2387 liest `_fetch_fresh_weather()`
+    # die Nutzerkennung fuer den Budget-Topf je Nutzer, also muss sie hier
+    # von Hand gesetzt werden (das Attribut setzt sonst `__init__`).
+    alert_service._user_id = "nutzer_cache_sharing"
     trip_results = alert_service._fetch_fresh_weather([trip_placeholder])
     assert len(trip_results) == 1, "Trip-Alarmpfad haette genau 1 Ergebnis liefern muessen"
     assert trip_results[0].segment.segment_id == "trip-real-leg-3h"
@@ -512,7 +516,8 @@ def test_end_to_end_real_call_paths_trip_alert_and_compare_share_cache_with_own_
     # Wert hier macht Trip- und Compare-Abruf wieder densselben physischen
     # Punkt, statt eine kuenstliche Hoehen-Diskrepanz zu simulieren.
     compare_result = CompareLocationWeatherSource().fetch(
-        "compare-point-99", lat, lon, elevation_m=1200
+        "compare-point-99", lat, lon, elevation_m=1200,
+        user_id="nutzer_cache_sharing",
     )
 
     assert compare_result.id == "compare-point-99", (

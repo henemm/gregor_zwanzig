@@ -19,7 +19,7 @@ tags: [alerts, official-alerts, notification, segment-reference]
 
 Die amtliche Warnungs-Mail (#1172, live seit Commit `8ac3b400`) zeigt pro
 Warnung Schwere, Region und Gültigkeitszeitraum, aber nicht, welche
-Segmente/Etappen des Trips konkret betroffen sind. Bei mehrtägigen Touren mit
+Segmente/Etappen des Trips konkret betroffen sind. Bei mehrtägigen Trips mit
 mehreren Etappen in derselben Warnregion ist für den Nutzer unterwegs unklar,
 ob die Warnung heute, morgen oder erst in fünf Tagen relevant wird. Diese Spec
 ergänzt einen kompakten Segment-Bezug (Range/Aufzählung/Verdichtung/

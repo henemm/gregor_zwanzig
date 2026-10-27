@@ -129,10 +129,10 @@ def test_ac6_distanz_uebersteht_speicher_roundtrip(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_ac9_kilometerzaehlung_beginnt_je_etappe_neu_bei_null():
-    """AC-9: Given eine mehrtaegige Tour mit mehreren vermessenen Etappen /
+    """AC-9: Given eine mehrtaegige Trip mit mehreren vermessenen Etappen /
     When die Kilometer-Spanne fuer eine BELIEBIGE (hier: dritte) Etappe
     berechnet wird / Then beginnt die Zaehlung an diesem Etappenstart wieder
-    bei 0 km, unabhaengig von der kumulierten Gesamtstrecke der Tour.
+    bei 0 km, unabhaengig von der kumulierten Gesamtstrecke der Trip.
 
     Die Waypoint-Distanzen der dritten Etappe sind bewusst NICHT bei 0
     verankert (40.0 statt 0.0) -- als kaeme die Messung aus einer
@@ -186,7 +186,7 @@ def test_ac9_kilometerzaehlung_beginnt_je_etappe_neu_bei_null():
     )
     assert first.start_point.distance_from_start_km == 0.0, (
         f"Etappe 3 startet nicht bei 0 km, sondern bei "
-        f"{first.start_point.distance_from_start_km} (Tour-Gesamtdistanz "
+        f"{first.start_point.distance_from_start_km} (Trip-Gesamtdistanz "
         "sickert ein statt je Etappe zurueckzusetzen)"
     )
     assert first.end_point.distance_from_start_km == pytest.approx(4.0), (

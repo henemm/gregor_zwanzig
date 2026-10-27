@@ -28,6 +28,9 @@ if TYPE_CHECKING:
     from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
+# Issue #2134: EINE Quelle fuer den Befehlssatz (s. plain.py) — zirkelfrei,
+# `renderers/narrow.py:52` importiert seit jeher aus demselben Modul.
+from output.renderers.email.command_block import render_commands_html
 from utils.timezone import local_dt, local_fmt, tz_abbrev
 
 from output.renderers.day_window import (
@@ -165,6 +168,9 @@ def _safe_float(v, default: float = 0.0) -> float:
         return default
 
 
+_AMPEL_BAND_RISK = {"green": "ok", "yellow": "yellow", "orange": "watch", "red": "risk"}
+
+
 def _thunder_risk_level(thunder) -> Optional[str]:
     """Bestimmt den Risiko-Beitrag von Gewitter fuer `_row_risk` (Issue #1418
     Fehler 1; Issue #1927 v1.1: eigenstaendige Gelb-Stufe fuer LOW). `r["thunder"]`
@@ -178,25 +184,21 @@ def _thunder_risk_level(thunder) -> Optional[str]:
     historische Zahlenwert (Regressionsschutz AC-7, #1377 — Gewitter war
     dort ausdruecklich ausgenommen) bleibt als Fallback erhalten.
 
-    LOW liefert seit v1.1 eine eigenstaendige 'yellow'-Stufe statt wie zuvor
-    zusammen mit MED auf 'watch' verschmolzen zu werden — Angleichung an die
-    bereits bestehende `_THUNDER_AMPEL_BAND`-Zuordnung
-    (`metric_format.py`: NONE→green, LOW→yellow, MED→orange, HIGH→red).
-    Liefert 'risk'/'watch'/'yellow'/None (kein Beitrag) — nie einen Absturz.
+    Die Stufen-Uebersetzung liest seit Issue #2011 tatsaechlich
+    `thunder_ampel_band()` (`metric_format.py`: NONE→green, LOW→yellow,
+    MED→orange, HIGH→red) statt einer eigenen Wort-Kette; NONE liefert damit
+    'ok' statt None (an jeder Pruefstelle gleich wirkungslos, s. Spec
+    fix_2010_2011_gewitter_stufenwoerter „Known Limitations").
+    Liefert 'risk'/'watch'/'yellow'/'ok'/None (kein Beitrag) — nie einen Absturz.
     """
     if isinstance(thunder, str):
-        level = thunder.upper()
-        if level == "HIGH":
-            return "risk"
-        if level == "MED":
-            return "watch"
-        if level == "LOW":
-            return "yellow"
-        if level == "NONE":
-            return None
+        band = thunder_ampel_band(ThunderLevel.__members__.get(thunder.upper()))
+        if band is not None:
+            return _AMPEL_BAND_RISK[band]
 
     num = _safe_float(thunder, None)
     if num is not None:
+        # gz-thunder-scale: roher Zahlenwert (Legacy-Datenpfad #1425), keine diskrete Stufe -- bewusst kein thunder_ampel_band()
         if num > 20:
             return "risk"
         if num > 0:
@@ -465,57 +467,6 @@ def _render_mobile_hour_list(
         '<div class="mobile-hour-list" style="margin-top:12px;'
         'border:1px solid #e6e1d3;background:#fff;">'
         + "".join(items)
-        + "</div>"
-    )
-
-
-def _render_kommandos_section() -> str:
-    """JSX EmailPreview L185-200 — Antwort-Kommandos eigene Sektion (AC-8)."""
-    cmds = [
-        ("HEUTE", "Wetter heutige Etappe"),
-        ("MORGEN", "Wetter morgige Etappe"),
-        ("JETZT / NOW", "Nowcast ~2h"),
-        ("GEWITTER", "Gewittergefahr heutige Etappe"),
-        ("PAUSE 2d", "Briefings pausieren"),
-        ("SKIP", "Nächstes überspringen"),
-        ("STOP / WEITER", "Deaktivieren / reaktivieren"),
-        ("STATUS", "Trip-Status abrufen"),
-        ("HELP", "Alle Kommandos"),
-    ]
-    rows = []
-    for i in range(0, len(cmds), 3):
-        tds = ""
-        for cmd, desc in cmds[i:i + 3]:
-            tds += (
-                f'<td style="padding:6px 16px 6px 0;vertical-align:top;">'
-                f'<span style="font-family:{FONT_DATA};font-size:11px;font-weight:700;'
-                f'color:#1d1c1a;min-width:70px;display:inline-block;">{cmd}</span>'
-                f'<span style="font-family:{FONT_DATA};font-size:10px;color:#9a978d;'
-                f'display:block;margin-top:1px;">{desc}</span>'
-                f'</td>'
-            )
-        rows.append(f'<tr>{tds}</tr>')
-
-    grid = (
-        '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:10px;">'
-        + "".join(rows)
-        + "</table>"
-    )
-    hint = (
-        f'<div style="font-family:{FONT_DATA};font-size:10px;color:#b8b4a8;margin-top:10px;">'
-        f'Antworte auf diese E-Mail mit einem Schlüsselwort.</div>'
-    )
-    eyebrow_html = (
-        f'<span style="font-family:{FONT_DATA};font-size:10px;'
-        f'letter-spacing:0.12em;color:#9a978d;font-weight:600;'
-        f'text-transform:uppercase;">Antwort-Kommandos</span>'
-    )
-    return (
-        f'<div style="background:{G_HEADER_BG};border-bottom:1px solid #e6e1d3;'
-        f'padding:16px 28px 18px;">'
-        + eyebrow_html
-        + grid
-        + hint
         + "</div>"
     )
 
@@ -967,8 +918,11 @@ def _allowed_col_keys_for_horizon(
     - Pro enabled MetricConfig: wenn horizons-Dict gesetzt und der gewählte
       Horizont darin auf False steht → ausschließen. Sonst einschließen
       (Default True bei fehlendem Feld → Backward-Compat AC-7).
+    - Issue #1405 S3 (AC-24): None nur ohne gespeicherte Metrik-Konfiguration;
+      sind alle Groessen fuer den Horizont abgewaehlt, ist die Menge leer
+      ("abgewaehlt heisst abgewaehlt", nicht "alle").
     """
-    if horizon is None:
+    if horizon is None or not dc.metrics:
         return None
     keys: set[str] = set()
     for mc in dc.metrics:
@@ -980,8 +934,12 @@ def _allowed_col_keys_for_horizon(
         try:
             keys.add(get_metric(mc.metric_id).col_key)
         except KeyError:
+            logger.warning(
+                "_allowed_col_keys_for_horizon: Metrik %r unbekannt — Spalte "
+                "entfaellt (#1405)", mc.metric_id,
+            )
             continue
-    return keys or None
+    return keys
 
 
 def render_html(
@@ -1362,12 +1320,9 @@ def render_html(
             if key in thunder_forecast:
                 fc = thunder_forecast[key]
                 icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
-                # Issue #1475 Nachbesserung (Punkt 4b): identischer Hagel-Zusatz
-                # wie in der Klartext-Fassung (geteilte Quelle format_hail_note).
-                from output.metric_format import format_hail_note
-                _note = format_hail_note(fc.get("hail"))
-                _suffix = f" · {_note}" if _note else ""
-                items.append(f"<li>{fc['date']}: {icon}{fc['text']}{_suffix}</li>")
+                # Issue #2205: Hagel-Zusatz steht IN `fc['text']` (Zeitplaner),
+                # wortgleich zur Klartext-Fassung -- kein Suffix mehr hier.
+                items.append(f"<li>{fc['date']}: {icon}{fc['text']}</li>")
         if items:
             thunder_html = f"""
             <div class="section">
@@ -1404,22 +1359,15 @@ def render_html(
         outlook_table = render_outlook_table(multi_day_trend, show_acc=True,
                                              metrics=_outlook_metrics)
 
-        # Code-Legende — NUR im Altbestand (#1720 S1, AC-9): sie beschreibt
-        # ausschliesslich die sieben festen Spalten. Bei aktiver Auswahl sind
-        # die Tabellenkoepfe bereits ausgeschriebene deutsche Katalog-Labels;
-        # eine Legende wuerde dort Kuerzel erklaeren, die gar nicht vorkommen.
-        # "N Tagestief" statt "N Nacht-Tief" (AC-8): die Spalte zeigt
-        # `summary.temp_min_c`, das Tages-Minimum IM WANDERFENSTER -- die
-        # Nachtdaten (_fetch_night_weather) fliessen hier gar nicht ein.
+        # Adversary F001 (#2136/ADR-0068): der frueher hier gepflegte
+        # Altbestand-Kuerzel-Block (Pfad 1, "N Tagestief · D Tag-Hoch °C ...")
+        # ist entfernt -- er widersprach seit der col_label-Umstellung den
+        # <th>-Koepfen direkt darueber ("Temp Minimum"/"Temp Maximum"/"Rain"/
+        # "Rain%"/"Wind"/"Gust"/"Thdr" statt N/D/R/PR/Wind/Böen/Gew). Die
+        # Spaltenlegende fuer BEIDE Pfade kommt seither ausschliesslich aus
+        # der geteilten Fusszeile (`build_column_legend(..., outlook_active=
+        # True)`, unten bei `column_legend_text`) -- eine Quelle statt zwei.
         outlook_legend = ""
-        if _outlook_metrics is None:
-            outlook_legend = (
-                f'<div style="font-family:{FONT_DATA};font-size:9px;color:#9a978d;'
-                f'margin-top:6px;line-height:1.8;">'
-                f'N Tagestief · D Tag-Hoch °C · R Regen mm · PR Regen-W. % · '
-                f'Wind/Böen km/h · Gew Gewitter-Stufe @h · ACC Prognose-Genauigkeit'
-                f'</div>'
-            )
 
         # AC-6 (#899): Context label (gesendet-Zeitstempel) bleibt erhalten
         _weekday_de_short = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
@@ -1675,7 +1623,14 @@ def render_html(
 
     all_rows = [r for tbl in seg_tables for r in tbl]
     legend_text = build_units_legend(all_rows) if all_rows else ""
-    column_legend_text = build_column_legend(all_rows) if all_rows else ""
+    # #2136/ADR-0068 (AC-5): die Trip-Legende loest zusaetzlich zu den
+    # Stundentabellen-Kuerzeln auch die im 3-Tages-Ausblick DERSELBEN Mail
+    # sichtbaren Kuerzel auf -- `outlook_active`/`_outlook_metrics` sind
+    # bereits weiter oben fuer den Ausblick-Block selbst aufgeloest.
+    column_legend_text = (
+        build_column_legend(all_rows, _outlook_metrics, outlook_active=outlook_active)
+        if all_rows or outlook_active else ""
+    )
 
     # AC-11 (#911): RISK-Legende als eigene Section vor dem Footer (helles #fbfaf6),
     # RISK-Präfix + CSS-Dots (border-radius:50%) statt Emoji-Kreise im dunklen Footer.
@@ -1783,7 +1738,7 @@ def render_html(
         {thunder_html}
         {trend_html}{undelivered_html}
 
-        {_render_kommandos_section()}
+        {render_commands_html("route")}
 
         {risk_legend_html}
         {footer_html}

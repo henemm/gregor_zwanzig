@@ -5,7 +5,23 @@ Radar-Pfad (#919) ohne Modell-Bruch zu konvergieren.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover — nur fuer Typpruefung
+    from services.rain_extent import RainZone
+
+
+@dataclass(frozen=True)
+class AlertHourRow:
+    """Eine Stundenzeile des Abweichungsalarms (Issue #1737).
+
+    `time`: "HH:MM" in ORTSZEIT. `value_from`: Wert der ALTEN Reihe (`None` =
+    kein Anker). Stufenmetriken (Gewitter) tragen die Ordinale 0..3; die
+    Darstellung (Wort/Zahl/Punkt) bildet der Renderer."""
+    time: str
+    value_from: float | None
+    value_to: float
 
 
 @dataclass(frozen=True)
@@ -67,6 +83,25 @@ class AlertEvent:
     # Reichweite nennt statt sie zu verschweigen.
     window_end_time: str | None = None
     window_end_day_offset: int = 0
+    # Issue #2122: additiv, optional, Muster `segment_id` (#1744)/`km_measured`
+    # (#2036). 1-basierte chronologische Etappen-Position (Trip.stages sortiert
+    # nach Datum), abgeleitet ueber `Trip.get_stage_for_date()` -- dieselbe Zahl
+    # wie `Trip.numbered_stage_label()`. Gesetzt vom Trip-Abweichungspfad;
+    # der Ortsvergleich setzt sie nie (AC-9).
+    stage_number: int | None = None
+    # Issue #2205: additiv, Default `None`. Hagel-Kennzeichen des Segment-
+    # Aggregats (`hail_flag`, dieselbe Punktmenge wie die Gewitterstufe) --
+    # gesetzt NUR fuer die Gewitter-Metrik. Wortlaut kommt ausschliesslich aus
+    # `format_hail_note` bzw. `FORECAST_TH_HAIL_SUFFIX`; `None`/`False` -> keine
+    # Hagelaussage (byte-identisch zum Bestand).
+    hail_flag: bool | None = None
+    # Issue #1737: additiv, Default leer -> ohne Stundenreihe byte-identisch.
+    # Stundenzeilen des Ereignisses (alt -> neu je Stunde, Ortszeit), hoechstens
+    # 6; `hours_range` = erste/letzte betroffene Stunde ("HH:MM"), `hours_capped`
+    # = es wurde gekappt (Hinweiszeile "betroffen HH:MM–HH:MM").
+    hours: tuple[AlertHourRow, ...] = ()
+    hours_range: tuple[str, str] | None = None
+    hours_capped: bool = False
 
 
 @dataclass(frozen=True)
@@ -165,12 +200,36 @@ class OnsetEvent:
     # hier (sonst zwei Wahrheiten, Muster AC-20).
     location_sharpness_limit_time: str | None = None
     location_sharpness_limit_day_offset: int = 0
+    # Issue #2051 S2a: raeumliche Ausdehnung des Regenereignisses entlang der
+    # Reststrecke — eigenes Feld, weil `km_from`/`km_to` die Segment-Lage
+    # bleiben (#2017 Known Limitation 5): zwei Bedeutungen, zwei Namen (AC-7).
+    # Gesetzt NUR vom Trip-Onset-Pfad; der Ortsvergleich hat kein
+    # Streckenkonzept und laesst das Feld leer (AC-15). Die km-Zahlen
+    # erscheinen im Text erst, wenn `km_measured` gesetzt ist (AC-8).
+    rain_zones: tuple["RainZone", ...] = ()
+    # Issue #2050 S4b-2: hat die Gewitterpruefung ueberhaupt stattgefunden?
+    # Quelle `NowcastResult.convective_checked` (`False` bei ausgefallenem
+    # INCA-Beiabruf). Default `True` -- ein `False`-Default wuerde jede
+    # Bestandslage, die das Feld nicht setzt, faelschlich als "ungeprueft"
+    # beschriften (AC-8). Gesetzt von BEIDEN Onset-Pfaden (Trip UND
+    # Ortsvergleich, ADR-0021) und vom Vorschauweg.
+    convective_checked: bool = True
+    # Issue #2050 S4b-2: km-Lage der AUSGEFALLENEN Messpunkte der
+    # Ausdehnungs-Messung (`trip_alert._messluecken_felder`). Bewusst ein
+    # `tuple` und KEIN dict: dieses dataclass ist `frozen=True` und muss
+    # hashbar bleiben. Leer heisst "keine Luecke bekannt" -- ausdruecklich
+    # NICHT "alles gemessen" (AC-14): der Text schweigt in beiden Faellen.
+    gap_km: tuple[float, ...] = ()
+    # Issue #2122: additiv, optional, Muster `AlertEvent.stage_number` (o.).
+    # Datumsquelle fuer Radar/Onset ist `segment_date` aus
+    # `_resolve_alert_segment` (kann der Vortag sein), NICHT `today`.
+    stage_number: int | None = None
 
 
 @dataclass(frozen=True)
 class OnsetShiftEvent:
     """Eine Beginn-Verschiebung (Issue #1468) -- eigener Render-Vertrag nach
-    dem Vorbild von `CorridorEvent` (ADR-0013).
+    dem Vorbild eines eigenen Render-Vertrags (ADR-0013).
 
     Bewusst KEIN `AlertEvent`: dessen Werte laufen durch den Zahlen-
     Formatierer (`render._val`/`_num`, Katalog-Einheit angehaengt, Vorzeichen
@@ -199,34 +258,8 @@ class OnsetShiftEvent:
     # verstrichen ist, und genau das war der Vorwurf aus #2020.
     to_day_offset: int = 0
     to_is_past: bool = False
-
-
-@dataclass(frozen=True)
-class CorridorEvent:
-    """Ein Schwellen-Treffer (Issue #1444 S1) -- eigener Render-Vertrag
-    (ADR-0013): KEIN `WeatherChange`-Missbrauch mit erfundenem
-    `old_value=0.0`. Kennt bewusst KEIN "vorher" -- nur den Ist-Wert gegen
-    die vom Nutzer gesetzte Grenze."""
-    metric_id: str           # catalog metric_id (NICHT summary_field)
-    value: float              # Ist-Wert
-    bound: float               # die TATSAECHLICH gerissene Grenze
-    direction: str            # "above" | "below"
-    occurred_at: str | None   # "HH:MM"
-    km_from: float
-    km_to: float
-    location_label: str | None = None
-    # Issue #2036 (Adversary F001): additiv, optional -- dieselbe Bauart wie
-    # `AlertEvent.segment_id` (#1744 A1). OHNE sie kann der Renderer bei einer
-    # unvermessenen Etappe gar keinen Ort nennen und faellt zwangslaeufig auf
-    # die Luftlinien-km zurueck, genau das verbietet AC-13. Gesetzt vom
-    # Trip-Korridor-Pfad (`project.to_corridor_events`); Altdaten ohne Kennung
-    # behalten den km-Rueckfall (#1744 AC-7).
-    segment_id: str | None = None
-    # Issue #2036: additiv, Default aus. `True` NUR, wenn `km_from`/`km_to`
-    # aus echter GPX-Wegstrecke stammen (`TripSegment.distance_measured`).
-    # Erst dann darf die Ortsangabe die km-Spanne statt der Segmentnummer
-    # zeigen -- eine aus Luftlinie geschaetzte Zahl nie (AC-13).
-    km_measured: bool = False
+    # Issue #2122: additiv, optional, Muster `AlertEvent.stage_number` (o.).
+    stage_number: int | None = None
 
 
 @dataclass(frozen=True)
@@ -234,19 +267,13 @@ class AlertMessage:
     """Kanonische Alert-Nachricht über alle vier Kanäle."""
     trip_short: str
     stand_at: str                              # "HH:MM"
-    events: tuple[AlertEvent | OnsetEvent, ...]  # ≥1 bei Deviation ODER Onset;
-    # leer, wenn ausschliesslich Korridor-Treffer vorliegen (s.u.)
+    events: tuple[AlertEvent | OnsetEvent, ...]  # ≥1 bei Deviation ODER Onset
     source: str | None = None                  # Radar (#919): source != None → Onset-Zweig; Deviation → None
     cooldown_display: str | None = None        # Radar (#919): Pflichttext Cooldown-Hinweis
     # Issue #1169: additiv, optional. Gesetzt nur vom Compare-Punkt-Pfad
     # (to_point_alert_message) — zeigt Ortsname statt km-Spanne. Trip-Pfad
     # (to_alert_message) setzt dieses Feld NIE (Regressions-Invariante, AC-7).
     location_label: str | None = None
-    # Issue #1444 S1: additiv, optional. Schwellen-Treffer desselben Laufs --
-    # werden zusaetzlich zu (oder anstelle von) `events` in dieselbe Nachricht
-    # gebuendelt (Muster #1088). Bestehende Aufrufer setzen dieses Feld nie
-    # (Default leer, Regressions-Invariante).
-    corridor_events: tuple[CorridorEvent, ...] = ()
     # Issue #1468: additiv, optional. Beginn-Verschiebungen desselben Laufs --
     # in DERSELBE Nachricht wie die Stufen-/Wert-Aenderungen (PO-Entscheid:
     # beide melden, im Text zusammenfassen, nicht zwei getrennte Nachrichten).
@@ -265,6 +292,14 @@ class AlertMessage:
     # und Voll-Telegram; der SMS-Renderer liest nur die Praesenz (nicht den
     # Inhalt) fuer sein Kompakt-Token -- der Satz passt nicht ins SMS-Budget.
     addendum_reference: str | None = None
+    # Issue #1737: additiv, Default leer. Kanal ("email"|"telegram"|"sms") ->
+    # {col_key: format_mode}, Form von `email.helpers.build_format_modes`. Leer/
+    # fehlend = "raw". Gelesen NUR von den Stundenzeilen.
+    format_modes: dict[str, dict[str, str]] = field(default_factory=dict)
+    # Issue #1737: Kanal -> col_keys, die im HTML einen Ampel-Punkt tragen
+    # (`email.helpers.build_html_indicator_keys`: der Editor speichert "Einfach"
+    # fuer Wind/Boeen/Regen/... als `use_friendly_format`, nicht als format_mode).
+    indicator_keys: dict[str, frozenset[str]] = field(default_factory=dict)
 
 
 def direction(e: AlertEvent) -> str:

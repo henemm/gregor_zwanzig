@@ -2,9 +2,9 @@
 entity_id: user_tiers_overview
 type: module
 created: 2026-07-07
-updated: 2026-07-07
+updated: 2026-09-24
 status: draft
-version: "1.1"
+version: "1.2"
 tags: [tiers, monetization, channels, alerts, epic]
 ---
 
@@ -22,16 +22,33 @@ oft Alerts/Updates pro Tag maximal verschickt werden dürfen. Level ist sichtbar
 kann per einfachem Formular zur Änderung beantragt werden (kein Self-Service-Upgrade, keine
 Zahlungsanbindung in diesem Schnitt).
 
-| Level | Channel | Alert-/Update-Frequenz |
-|---|---|---|
-| Free | E-Mail, Telegram | max. **2 pro Kalendertag** (harte Tages-Obergrenze, Mitternachts-Reset) |
-| Standard | + SMS | max. **4 pro Kalendertag** (harte Tages-Obergrenze, Mitternachts-Reset) |
-| Premium | + Premium-SMS (Garmin inReach, existiert noch nicht) | **Mindestabstand 15 Minuten** (kein Tageslimit — bei diesem Intervall ist ein Zähler kein zusätzlicher Schutz mehr) |
+| Level | Channel | Alert-/Update-Frequenz | Mengengrenzen (Trips aktiv / Ortsvergleiche aktiv / Orte) |
+|---|---|---|---|
+| Free | E-Mail, Telegram | max. **2 pro Kalendertag** (harte Tages-Obergrenze, Mitternachts-Reset) | 3 / 2 / 10 |
+| Standard | + SMS | max. **4 pro Kalendertag** (harte Tages-Obergrenze, Mitternachts-Reset) | 15 / 10 / 50 |
+| Premium | + Premium-SMS (Garmin inReach, existiert noch nicht) | **Mindestabstand 15 Minuten** (kein Tageslimit — bei diesem Intervall ist ein Zähler kein zusätzlicher Schutz mehr) | 50 / 30 / 200 |
+
+**Ergänzung #2482 S5 (2026-10-02) — Mengengrenzen:** Die Spalte „Mengengrenzen" begrenzt nur
+die NEUANLAGE (und das Wiederherstellen aus dem Archiv); Bestand über der Grenze bleibt voll
+erhalten und bearbeitbar. Trips und Ortsvergleiche zählen nur nicht archivierte, Orte alle.
+Admin (`GZ_ADMIN_USER_IDS`) und Konten aus `GZ_QUOTA_EXEMPT_USER_IDS` sind unbegrenzt.
+Einzige Quelle der Werte: `model.QuotaFor` (`internal/model/tier.go`). Spec:
+`docs/specs/modules/mengen_quoten_je_tier.md`.
 
 **PO-Entscheidung 2026-07-07 (beantwortet Frage 1 aus v1.0):** Free/Standard sind echte
 Tages-Obergrenzen mit Mitternachts-Reset, KEIN reiner Mindestabstand — ein Nutzer bekommt an
 einem Tag maximal N Alerts/Updates, unabhängig vom zeitlichen Abstand dazwischen. Premium bleibt
 ein reiner Mindestabstand (Intervall-Semantik von „alle 15 Minuten"), ohne Tageszähler.
+
+**Ergänzung #2412 S4a (2026-09-24):** Die Zeile „Premium: kein Tageslimit" (PO 2026-07-07) gilt
+weiterhin für die Alarm-FREQUENZ — sie ist NICHT durch einen Kosten-Deckel abgelöst. Zusätzlich
+zu diesem Frequenz-Limit bekommt der Kanal Premium-SMS einen EIGENEN, kanal-spezifischen
+Tages-Kostendeckel (`src/services/sms_daily_limit.py`, `docs/specs/modules/sms_daily_limit.md`):
+Standard 10 SMS/Tag, Premium 10 SMS/Tag + 15 Premium-SMS/Tag, Free 0/0 — UTC-getaktet, nicht
+ortszonengebunden (ADR-0044, Zusatz „Nicht betroffen"). E-Mail und Telegram bleiben von diesem
+Deckel unberührt. Grund: Premium-SMS spricht ein Satellitengerät an und kostet real Geld pro
+Nachricht — ein reiner Frequenz-Mindestabstand begrenzt die Rate, nicht die Tageskosten bei
+vielen Trips/Alarmen gleichzeitig.
 
 **Ergänzung #1555 (2026-08-07):** Innerhalb der Free-/Standard-Obergrenze ist das Budget seit
 `fix_1555_nowcast_alert_priority.md` nicht mehr rein first-come-first-served — ein Anteil
@@ -173,6 +190,13 @@ eigenes Folge-Issue nach F9-Fahrplan.
 
 ## Changelog
 
+- 2026-10-02: Ergänzung #2482 S5 — Mengengrenzen je Tarif (Trips/Ortsvergleiche/Orte) in
+  die Tier-Tabelle aufgenommen (`docs/specs/modules/mengen_quoten_je_tier.md`).
+- 2026-09-24: Ergänzung #2412 S4a implementiert (`src/services/sms_daily_limit.py`,
+  `docs/specs/modules/sms_daily_limit.md`) — Premium-SMS-Kosten-Deckel wie oben unter
+  „Ergänzung #2412 S4a" beschrieben. Deploy/Staging-Verifikation stehen zum Zeitpunkt
+  dieses Eintrags noch aus. S4b (Sichtbarkeit im Konto) bleibt eigener Folge-Workflow;
+  Issue #2412 und Sammel-Issue #2153 bleiben bis dahin offen.
 - 2026-07-07: Slice 4 (#1071) implementiert und Adversary-verifiziert (Endpoint
   POST /api/auth/tier-change-request, RequestedTier/RequestedAt als Pointer-Typ, neues
   Config-Feld PoEmail/GZ_PO_EMAIL, Formular in Account-Karte). Epic #1067 damit VOLLSTÄNDIG

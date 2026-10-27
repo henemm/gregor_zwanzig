@@ -3,7 +3,7 @@ entity_id: fix_1581_enrichment_health
 type: module
 created: 2026-08-19
 updated: 2026-08-19
-status: approved
+status: implemented
 version: "1.0"
 tags: [observability, providers, health]
 ---
@@ -351,6 +351,9 @@ Limitations.
   `journal_read_error` (unser eigener Fehler, analog `warn_service_health`).
   Diese Änderung geht per MQ an die `infra`-Instanz, inhaltlich nach Scheibe 1
   abgestimmt, final nach Scheibe 2.
+  **Erledigt 2026-09-18 mit #1647** (Spec `fix_1647_thunder_fallback_monitor`):
+  Block `2e-e` in `check-gregor20.sh`, Fenster 48 h, EXT/CORE wie hier
+  empfohlen; die MQ-Nachricht war nie gegangen.
 - **Der scheinbare Widerspruch im Issue-Text ist bewusst zugunsten von Rohdaten
   aufgelöst** (s. ADR-Abschnitt) — dieser Punkt ist keine offene Frage mehr,
   sondern eine getroffene Entscheidung.

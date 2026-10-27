@@ -3,12 +3,15 @@ entity_id: issue_693_email_config_cleanup
 type: module
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: superseded
+superseded_by: "#2277"
 version: "1.0"
 tags: [frontend, ux, briefing-config]
 ---
 
 # Issue #693 — E-Mail-Inhalt aufräumen: einklappbare Gruppen + verständliche Erklärungen
+
+> Abgelöst durch #2277 S5 (`EditReportConfigSection.svelte` rückgebaut, `cdb09d2b5`, 2026-10-02).
 
 ## Approval
 

@@ -3,7 +3,7 @@ entity_id: user_auth_endpoints
 type: module
 created: 2026-04-15
 updated: 2026-04-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, multi-user, auth, bcrypt, session, register, login, f13]
 ---
@@ -202,6 +202,7 @@ if !s.UserExists(cfg.UserID) && cfg.AuthPass != "" {
 ## Known Limitations
 
 - `bcryptCost`-Parameter in `RegisterHandler` ist notwendig fuer Tests mit `bcrypt.MinCost` — in Produktion immer `bcrypt.DefaultCost` uebergeben
+- `RegisterHandler` setzt inzwischen zusätzlich `Email` und `MailTo: req.Email` auf dem angelegten `User` (Issue #2144) — diese Spec kennt nur den Username/Password-Stand von 2026-04-15 und wurde dafür nicht aktualisiert. Details: `docs/specs/bugfix/user_recipient_fallback.md`.
 - AuthMiddleware-Exemptionliste waechst manuell — Refactoring fuer spaetere Phases vorgesehen
 - Kein Logout-Endpoint in dieser Phase — Cookie laeuft nach `MaxAge=86400` (24h) ab
 - Seed-User-Fehler beim bcrypt werden mit `_` ignoriert — unkritisch da Startup-Logik

@@ -3,7 +3,7 @@ entity_id: issue_252_compare_presets
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 issue: 252
 tags: [compare, subscriptions, scheduler, frontend, svelte, python, go, email, recipients]
@@ -28,7 +28,7 @@ Erweitert das bestehende `CompareSubscription`-System um drei neue Felder (`reci
 - **EDIT:** `cmd/server/main.go` — Route `GET /api/scheduler/subscriptions-status` als authentifizierten Endpoint registrieren
 - **EDIT:** `src/app/user.py` — `CompareSubscription`-Dataclass um 3 Felder erweitern
 - **EDIT:** `src/app/loader.py` — `load_compare_subscriptions()` liest 3 neue Felder
-- **EDIT:** `src/outputs/email.py` — `EmailOutput.send()` erhält optionalen `to`-Parameter
+- **EDIT:** `src/output/channels/email.py` — `EmailOutput.send()` erhält optionalen `to`-Parameter
 - **EDIT:** `api/routers/scheduler.py` — Scheduler schreibt `last_run`/`last_status` nach Lauf direkt in JSON; `_send_subscription()` nutzt `sub.recipients`
 - **EDIT:** `frontend/src/lib/types.ts` — `Subscription`-Interface um `recipients?`, `last_run?`, `last_status?` erweitern
 - **EDIT:** `frontend/src/lib/components/SubscriptionForm.svelte` — `recipients`-Eingabefeld + Validierung
@@ -44,7 +44,7 @@ Erweitert das bestehende `CompareSubscription`-System um drei neue Felder (`reci
 | `CompareSubscription` (`internal/model/subscription.go`) | intern | Basis-Struct; wird additiv um `Recipients []string`, `LastRun *time.Time`, `LastStatus string` erweitert |
 | `store.LoadSubscriptions` / `store.SaveSubscription` (`internal/store/store.go`) | intern | Lesen/Schreiben der Subscription-JSON; SaveSubscription muss die neuen Felder mit `omitempty` persistieren |
 | `run_comparison_for_subscription()` (`api/routers/scheduler.py`) | intern | Bestehende Python-Funktion, die die Compare-Engine aufruft und das Mail-Ergebnis aufbaut; Issue #253 |
-| `EmailOutput.send()` (`src/outputs/email.py`) | intern | Versendet die Compare-Mail; erhält neuen optionalen `to`-Parameter für per-Subscription-Empfänger |
+| `EmailOutput.send()` (`src/output/channels/email.py`) | intern | Versendet die Compare-Mail; erhält neuen optionalen `to`-Parameter für per-Subscription-Empfänger |
 | `load_compare_subscriptions()` (`src/app/loader.py`) | intern | Deserialize der Subscription-JSONs; muss 3 neue Felder einlesen |
 | `POST /api/compare/run` (`internal/handler/compare_run.go`) | intern | Compare-Engine-Endpoint; Issue #250, bereits implementiert |
 | `CompareSubscriptionsPanel`-Pattern (`frontend/src/lib/components/compare/`) | intern | Sidepanel-Muster aus Issue #249 (LocationsRail) als UI-Referenz |
@@ -132,7 +132,7 @@ class CompareSubscription:
 
 Bei Deserialisierung die drei neuen Felder mit `.get("recipients", [])`, `.get("last_run")`, `.get("last_status")` einlesen. Keine Migration nötig — fehlende Felder ergeben Default-Werte.
 
-### §8 `src/outputs/email.py` — EmailOutput.send()
+### §8 `src/output/channels/email.py` — EmailOutput.send()
 
 ```python
 def send(self, subject: str, body: str, to: list[str] | None = None) -> None:
@@ -198,7 +198,7 @@ Bestehende Subscriptions-Tabelle (`<SubscriptionsTable>` oder äquivalentes Elem
 | `internal/scheduler/scheduler.go` | Status()-Erweiterung | ~25 |
 | `src/app/user.py` | +3 Felder | ~6 |
 | `src/app/loader.py` | +3 .get()-Calls | ~6 |
-| `src/outputs/email.py` | optionaler `to`-Parameter | ~8 |
+| `src/output/channels/email.py` | optionaler `to`-Parameter | ~8 |
 | `api/routers/scheduler.py` | Status-Rückschreiben + recipients | ~30 |
 | `frontend/src/lib/types.ts` | +3 optionale Felder | ~5 |
 | `frontend/src/lib/components/SubscriptionForm.svelte` | recipients-Eingabe + Validierung | ~25 |

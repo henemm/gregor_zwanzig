@@ -32,6 +32,9 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+// Issue #2276 S6c: der geteilte Organismus liest im Vergleich reine Wertprops —
+// das Buendel baut dieselbe Funktion wie die drei Produktiv-Mounts.
+import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // __tests__ -> shared -> components -> lib -> src -> frontend
@@ -99,7 +102,7 @@ function renderVergleich(profileOverride: unknown, wizOverrides: Record<string, 
 	return render(AlarmeTab, {
 		props: {
 			context: 'vergleich',
-			wiz: wizStub(wizOverrides),
+			...alarmePropsAus(wizStub(wizOverrides)),
 			catalog: [],
 			profileOverride
 		}
@@ -173,16 +176,30 @@ describe('#1745 AC-1: beide_kontexte_zeigen_premium_sms_zeile', () => {
 	});
 
 	test('beide_kontexte_zeigen_premium_sms_zeile — der Haken spiegelt den Ist-Zustand je Fläche', () => {
-		// Trip: aus `existingChannels`; Vergleich: aus `wiz.sendPremiumSms`.
-		// Ohne diese Verdrahtung zeigte die Zeile im Vergleich dauerhaft „aus",
-		// egal was gespeichert ist (der gemeldete Bug in neuer Form).
-		const anHtml = rowFragment(renderVergleich(PREMIUM, { sendPremiumSms: true }), 'premium_sms');
-		const ausHtml = rowFragment(renderVergleich(PREMIUM, { sendPremiumSms: false }), 'premium_sms');
+		// Trip: aus `existingChannels`; Vergleich: seit Issue #2293 S2 (AC-9
+		// Entkopplung) ebenfalls aus `existingChannels` (abgeleitet aus
+		// `wiz.channels`, NICHT mehr aus `wiz.sendPremiumSms` — das ist seit
+		// dieser Scheibe ein reines Briefing-Feld). Ohne diese Verdrahtung
+		// zeigte die Zeile im Vergleich dauerhaft „aus", egal was gespeichert
+		// ist (der urspruenglich gemeldete Bug in neuer Form).
+		const anHtml = rowFragment(
+			renderVergleich(PREMIUM, {
+				channels: { email: true, telegram: true, sms: false, premium_sms: true }
+			}),
+			'premium_sms'
+		);
+		const ausHtml = rowFragment(
+			renderVergleich(PREMIUM, {
+				channels: { email: true, telegram: true, sms: false, premium_sms: false }
+			}),
+			'premium_sms'
+		);
 
 		assert.match(
 			anHtml,
 			/aria-checked="true"/,
-			'Ein im Vergleich gespeichertes `send_premium_sms: true` muss als gesetzter Haken erscheinen.'
+			'Ein im Vergleich gespeicherter Alarm-Kanal `alert_channels.premium_sms: true` muss als ' +
+				'gesetzter Haken erscheinen.'
 		);
 		assert.match(ausHtml, /aria-checked="false"/);
 	});

@@ -3,7 +3,8 @@ entity_id: fix_923_sms_fidelity_backend
 type: bugfix
 created: 2026-08-06
 updated: 2026-08-06
-status: corrected
+status: superseded
+superseded_by: "#1719 S3"
 version: "1.0"
 tags: [sms, validator, frontend, trip-detail, editor, issue-923, adr-0011]
 ---

@@ -33,6 +33,8 @@ import pytest
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.render import render_sms
 
+from tests.helpers.tagesbezug import KURZFORM_ZEIT_TOKEN
+
 # Eine Ziffer UNMITTELBAR hinter dem Kuerzel — die Mengen-Schreibweise des
 # Regen-Falls. Wird von den ZAHLENLOSEN Faellen (AC-4a/AC-4c) benutzt: dort
 # darf hinter KEINEM der beiden Kuerzel eine Ziffer stehen.
@@ -48,7 +50,12 @@ _ZIFFER_HINTER_KUERZEL_RE = re.compile(r"\b(TH|R)(\d)")
 # bleibt fuer AC-4a/AC-4c in Kraft und bewacht dort weiterhin BEIDE Kuerzel.
 _ZIFFER_HINTER_TH_RE = re.compile(r"\bTH(\d)")
 # Vollstaendiger Regen-Mengen-Token: `R<zahl mit einer Nachkommastelle>@HH:MM`.
-_MENGEN_TOKEN_RE = re.compile(r"\bR(\d+)\.(\d)@(\d{1,2}):(\d{2})\b")
+# Issue #2096: der Zeitteil traegt bei Tagesuebergang ein vorangestelltes
+# DE-Wochentagskuerzel (`R2.5@Sa0:15`). Der Ausdruck laesst es deshalb zu --
+# geprueft wird hier die ZAHLFORM, nicht der Tagesbezug; ohne diese
+# Zulassung faende er das Token in den letzten Minuten vor Mitternacht
+# ueberhaupt nicht mehr und meldete einen Defekt, den es nicht gibt.
+_MENGEN_TOKEN_RE = re.compile(rf"\bR(\d+)\.(\d)@{KURZFORM_ZEIT_TOKEN}\b")
 
 _UNSET = object()  # Sentinel: `onset_precip_mm` gar nicht erst uebergeben.
 
@@ -236,7 +243,7 @@ def test_ac4c_nowcast_ohne_belastbare_daten_rendert_ohne_zahl(flag):
     )
     sms = render_sms(msg)
 
-    assert re.search(r"\bR@\d{1,2}:\d{2}", sms), (
+    assert re.search(rf"\bR@{KURZFORM_ZEIT_TOKEN}", sms), (
         f"Erwartet die zahlenlose Form 'R@HH:MM': {sms!r}"
     )
     assert _ZIFFER_HINTER_KUERZEL_RE.search(sms) is None, (

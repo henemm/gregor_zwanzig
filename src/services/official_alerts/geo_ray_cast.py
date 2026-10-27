@@ -20,8 +20,10 @@ def _point_in_ring(lat: float, lon: float, ring: list[tuple[float, float]]) -> b
     n = len(ring)
     j = n - 1
     for i in range(n):
-        xi, yi = ring[i]
-        xj, yj = ring[j]
+        # Issue #1441: Index- statt Tupel-Entpackung -- toleriert GeoJSON-Punkte
+        # mit Hoehenwert ([lon, lat, alt]) wie die frueher eigene meteoalarm-Kopie.
+        xi, yi = ring[i][0], ring[i][1]
+        xj, yj = ring[j][0], ring[j][1]
         if (yi > lat) != (yj > lat) and lon < (xj - xi) * (lat - yi) / (yj - yi) + xi:
             inside = not inside
         j = i

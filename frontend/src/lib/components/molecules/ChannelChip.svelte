@@ -5,6 +5,9 @@
 		if (k.startsWith('email')) return '✉'; // ✉
 		if (k.startsWith('telegram')) return '✈'; // ✈
 		if (k.startsWith('sms')) return '✱'; // ✱
+		// Issue #2422 S3: vierter Briefing-Kanal (Premium-SMS, Garmin inReach) —
+		// eigenes Glyph, gleichrangig zu den drei anderen (statt Rueckfall '·').
+		if (k.startsWith('premium')) return '✦'; // ✦
 		return '·'; // ·
 	}
 </script>
@@ -19,7 +22,7 @@
 	// Spec: docs/specs/modules/issue_372_molecules.md (AC-1)
 
 	interface Props {
-		kind: string; // "Email" | "Telegram" | "SMS"
+		kind: string; // "Email" | "Telegram" | "SMS" | "premium-sms"
 		active?: boolean;
 		compact?: boolean;
 		class?: string;

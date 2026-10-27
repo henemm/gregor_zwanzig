@@ -148,7 +148,7 @@ test.describe('Issue #88: Report Config Dialog', () => {
 	// ----------------------------------------------------------------------------
 	// AC-3: Keine change_threshold_*-Inputs mehr in der Reports-Sektion
 	// ----------------------------------------------------------------------------
-	test('AC-3: change_threshold_*-Inputs sind aus EditReportConfigSection entfernt', async ({
+	test('AC-3: change_threshold_*-Inputs sind aus MailInhaltCard entfernt', async ({
 		page,
 		request
 	}) => {

@@ -141,7 +141,8 @@ def test_ac4_format_now_text_icon_d2_label():
 def test_ac4_icon_d2_convective_drives_intensity():
     """GIVEN ein konvektiver ICON-D2-Frame im Nowcast-Fenster (echte RadarFrame-Objekte)
     WHEN der Service daraus ableitet
-    THEN is_convective == True und intensity_to_text == 'Starker Hagel/Gewitter'.
+    THEN is_convective == True und intensity_to_text == 'Gewitter'
+    (Issue #2205: ohne Hagel-Kennzeichen kein Hagel-Wortlaut).
     Contract-Guard: belegt die Konvektions-Klassifikation, die der ICON-D2-Pfad nutzt.
     """
     svc = RadarNowcastService()
@@ -154,4 +155,4 @@ def test_ac4_icon_d2_convective_drives_intensity():
 
     assert result.source == "ICON-D2"
     assert result.is_convective is True
-    assert result.intensity_label == "Starker Hagel/Gewitter"
+    assert result.intensity_label == "Gewitter"

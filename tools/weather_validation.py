@@ -8,7 +8,7 @@ Referenzquellen:
 
 Verwendung:
     uv run python3 tools/weather_validation.py                    # Alle aktiven Trips
-    uv run python3 tools/weather_validation.py --trip gr221-mallorca
+    uv run python3 tools/weather_validation.py --user-id <konto> --trip gr221-mallorca
     uv run python3 tools/weather_validation.py --lat 39.77 --lon 2.72 --date 2026-02-16
 """
 from __future__ import annotations
@@ -80,13 +80,13 @@ def fetch_yrno(lat: float, lon: float, target_date: str) -> dict:
     return {"source": "yr.no", "hours": hours}
 
 
-def fetch_gregor_pipeline(trip_id: str, report_type: str) -> list[dict]:
+def fetch_gregor_pipeline(trip_id: str, report_type: str, user_id: str) -> list[dict]:
     """Fetch data through our pipeline for comparison."""
     from app.loader import load_all_trips
     from services.trip_report_scheduler import TripReportSchedulerService
 
-    service = TripReportSchedulerService()
-    trips = load_all_trips()
+    service = TripReportSchedulerService(user_id=user_id)
+    trips = load_all_trips(user_id=user_id)
     trip = next((t for t in trips if t.id == trip_id), None)
     if not trip:
         return []
@@ -211,13 +211,13 @@ def print_comparison(
     print()
 
 
-def validate_trip(trip_id: str, report_type: str = "morning"):
+def validate_trip(trip_id: str, user_id: str, report_type: str = "morning"):
     """Validate all waypoints of a trip against reference sources."""
     from app.loader import load_all_trips
     from services.trip_report_scheduler import TripReportSchedulerService
 
-    service = TripReportSchedulerService()
-    trips = load_all_trips()
+    service = TripReportSchedulerService(user_id=user_id)
+    trips = load_all_trips(user_id=user_id)
     trip = next((t for t in trips if t.id == trip_id), None)
     if not trip:
         print(f"Trip '{trip_id}' nicht gefunden.")
@@ -232,7 +232,7 @@ def validate_trip(trip_id: str, report_type: str = "morning"):
     target_str = target.isoformat()
 
     # Get pipeline data
-    pipeline_data = fetch_gregor_pipeline(trip_id, report_type)
+    pipeline_data = fetch_gregor_pipeline(trip_id, report_type, user_id)
 
     print(f"\n{'#'*70}")
     print(f"  WEATHER VALIDATION: {trip.name}")
@@ -282,6 +282,8 @@ def main():
     parser.add_argument("--lat", type=float, help="Latitude for point validation")
     parser.add_argument("--lon", type=float, help="Longitude for point validation")
     parser.add_argument("--date", help="Date (YYYY-MM-DD) for point validation")
+    # #2151 Scheibe C: Pflicht -- kein stilles Lesen von users/default/.
+    parser.add_argument("--user-id", required=True, help="Account whose trips are validated")
     args = parser.parse_args()
 
     if args.lat and args.lon:
@@ -292,17 +294,17 @@ def main():
         target_date = args.date or date.today().isoformat()
         validate_point(args.lat, args.lon, target_date)
     elif args.trip:
-        validate_trip(args.trip, args.report)
+        validate_trip(args.trip, args.user_id, args.report)
     else:
         # Validate all active trips
         from app.loader import load_all_trips
         from services.trip_report_scheduler import TripReportSchedulerService
 
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id=args.user_id)
         for report_type in ("morning", "evening"):
             active = service._get_active_trips(report_type)
             for trip in active:
-                validate_trip(trip.id, report_type)
+                validate_trip(trip.id, args.user_id, report_type)
 
 
 if __name__ == "__main__":

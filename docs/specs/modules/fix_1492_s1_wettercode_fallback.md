@@ -1,6 +1,6 @@
 ---
 entity_id: fix_1492_s1_wettercode_fallback
-status: draft
+status: implemented
 type: module
 created: 2026-08-05
 updated: 2026-08-05
@@ -117,7 +117,7 @@ ausschliesslich einen fehlenden Wert nach, entscheidet nichts neu ein.
 
 ## Acceptance Criteria
 
-- **AC-1 (Wirkungsnachweis über den produktiv verdrahteten Merge-Pfad):**
+- **AC-1:** (Wirkungsnachweis über den produktiv verdrahteten Merge-Pfad)
   Given ein Primär-Datenpunkt ohne `weather_code` (`thunder_level`,
   `wmo_code`, `hail_flag` alle `None`) und ein Ersatz-Datenpunkt mit
   demselben Zeitstempel und `weather_code=96` (Gewitter mit Hagel) / When
@@ -133,7 +133,7 @@ ausschliesslich einen fehlenden Wert nach, entscheidet nichts neu ein.
     aufgerufen (Zeile 1142) — diese Scheibe erweitert nur seinen Rumpf, baut
     keinen neuen Aufrufer.
 
-- **AC-2 (Überschreib-Invariante, allgemein):** Given ein Primär-Datenpunkt
+- **AC-2:** (Überschreib-Invariante, allgemein) Given ein Primär-Datenpunkt
   hat für denselben Zeitstempel bereits `thunder_level=ThunderLevel.HIGH`,
   `wmo_code=95` und `hail_flag=None` gesetzt (regulär vom eigenen Primärmodell
   geparst), das Ersatzmodell liefert für denselben Zeitstempel einen
@@ -176,7 +176,7 @@ ausschliesslich einen fehlenden Wert nach, entscheidet nichts neu ein.
       falsy-Check verhält sich für diesen Fall identisch zum `is None`-Check,
       die Mutation bliebe grün. (Gemessen 2026-08-05, Review-Fund team-lead.)
 
-- **AC-4 (Fail-soft, beide Modelle ohne Wert):** Given weder Primär- noch
+- **AC-4:** (Fail-soft, beide Modelle ohne Wert) Given weder Primär- noch
   Ersatzmodell liefern für einen Zeitpunkt einen `weather_code` / When
   `_merge_fallback` läuft / Then bleiben `thunder_level`, `wmo_code` und
   `hail_flag` an diesem Zeitpunkt `None` — kein Absturz, keine Ausnahme.

@@ -123,8 +123,7 @@
 	let swB = $state(true);
 	let swC = $state(true);
 
-	// ── Mobile-Demo State (PhoneFrame mit MobileShell — F001-Toggle live) ──────
-	let mobileMenuOpen = $state(false);
+	// ── Mobile-Demo State (PhoneFrame mit MobileShell) ──────────────────────
 	let sheetOpen = $state(false);
 	let mSwitch = $state(true);
 	let mActiveTab = $state('heute');
@@ -134,10 +133,6 @@
 		{ id: 'alerts', label: 'Alerts', badge: 2, accent: true },
 		{ id: 'config', label: 'Konfiguration' }
 	];
-
-	function toggleMobileMenu() {
-		mobileMenuOpen = !mobileMenuOpen;
-	}
 </script>
 
 <!-- ════════════════════════════════════════════════════════════════════════
@@ -770,10 +765,7 @@
 				{/snippet}
 				{#snippet shellInner()}
 					<MobileShell
-						title="Heute"
-						eyebrow="KHW · Etappe 3/9"
 						active="heute"
-						bind:mobileMenuOpen
 						sheet={sheetSlot}
 						toast={toastSlot}
 					>
@@ -794,12 +786,9 @@
 
 				<div style:max-width="360px" style:display="flex" style:flex-direction="column" style:gap="14px">
 					<div style:font-size="13px" style:color="var(--g-ink-2)" style:line-height="1.6">
-						Der Hamburger oben links togglet das Menü (F001-Fix live). MobileShell vereint TopAppBar,
-						Scroll-Bereich und BottomNav. Darin: MTab, Stat, MSwitch, MBtn (Varianten + Größen).
+						Kein Top-Balken (Mobile-Shell S2): MobileShell vereint Scroll-Bereich und
+						BottomNav. Darin: MTab, Stat, MSwitch, MBtn (Varianten + Größen).
 					</div>
-					<MBtn variant="ghost" onclick={toggleMobileMenu}>
-						Menü-Toggle: {mobileMenuOpen ? 'offen' : 'zu'}
-					</MBtn>
 					{@render MonoTag('MobileShell · MTab · MBtn · MSwitch · Sheet · Toast')}
 				</div>
 			</div>

@@ -3,7 +3,7 @@ entity_id: fix_1420_validator_uebersichtslabels
 type: bugfix
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 workflow: fix-1420-validator-uebersichtslabels
 version: "1.0"
 tags: [compare, mail-validator, gate, metric-catalog, naming, trip-compare-sharing]

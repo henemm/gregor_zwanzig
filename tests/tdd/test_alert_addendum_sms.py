@@ -37,7 +37,9 @@ import http.server
 import socket
 import threading
 import urllib.parse
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
+from tests.helpers.alert_log_fixtures import LAT as GUST_LAT, LON as GUST_LON
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -48,6 +50,7 @@ from output.renderers.alert.render import (
     render_email, render_sms, render_subject, render_telegram,
 )
 from services.notification_service import NotificationService, RadarAlertRequest
+from tests.helpers.nutzer_tier import nutzer_mit_tier
 from utils.timezone import local_fmt
 
 from tests.helpers.nowcast_gate_fixtures import (
@@ -448,7 +451,11 @@ def test_ac_b6_premium_sms_traegt_dasselbe_praefix_wie_die_sms(seven_io_stub):
     RED heute: ``RadarAlertRequest`` kennt ``addendum_reference`` nicht
     (``TypeError``)."""
     settings = _sms_and_premium_settings(seven_io_stub.port)
-    svc = NotificationService(settings, fresh_uid("2018-b6"))
+    from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4b
+
+    svc = NotificationService(
+        settings, mit_profil_kanaele(nutzer_mit_tier(fresh_uid("2018-b6"), "premium"), settings),
+    )
     trip = make_trip("trip-2018-b6")
 
     svc.send_radar_alert(
@@ -778,7 +785,7 @@ def test_ac_b12_amtliche_warnung_nach_nowcast_bleibt_unmarkierter_vollalarm():
         trip = gust_alert_trip("trip-2018-b12")
         trip.official_alert_triggers_enabled = None
         WeatherSnapshotService(user_id=uid).save_dated(
-            trip.id, date.today(), [weather(1, precip_sum_mm=2.0)],
+            trip.id, ortstag(GUST_LAT, GUST_LON), [weather(1, precip_sum_mm=2.0)],
         )
         # Stufe 4 (`LEVEL_LETTERS[4] == "H"` -> `HIGH`) uebertrifft den
         # registrierten Nowcast (`MODERATE`) -- die V2-Eskalation traegt die

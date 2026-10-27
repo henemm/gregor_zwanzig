@@ -3,7 +3,7 @@ entity_id: issue_500_stage_card_nav
 type: module
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, waypoint-editor, navigation, stage-card, svelte]
 ---
@@ -133,7 +133,7 @@ Durch:
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein eingeloggter Nutzer mit einer vorhandenen Tour / When er `/trips/[id]/edit` direkt aufruft oder über den „Bearbeiten"-Button navigiert / Then wird die TripEditView gerendert (HTTP 200, kein Redirect auf `?tab=stages`)
+- **AC-1:** Given ein eingeloggter Nutzer mit einer vorhandenen Trip / When er `/trips/[id]/edit` direkt aufruft oder über den „Bearbeiten"-Button navigiert / Then wird die TripEditView gerendert (HTTP 200, kein Redirect auf `?tab=stages`)
   - Test: (populated after /tdd-red)
 
 - **AC-2:** Given eine Etappen-Kachel (`StageCard`) mit gesetztem `onclick`-Prop im EtappenStrip / When der Nutzer mit der Maus darüber fährt / Then zeigt die Kachel `cursor: pointer` und einen sichtbaren Hover-Zustand (geänderter Hintergrund oder Rahmen)

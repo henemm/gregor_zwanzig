@@ -1,7 +1,46 @@
 
 # API Contract — Gregor Zwanzig
 
-**Updated:** 2026-08-22 (Issue #2050 Scheibe S6, `feat-2050-s6-protokoll-vorwarnzeit` —
+**Updated:** 2026-09-25 (Issue #2412, Sammel-Issue #2153 Scheibe S4b,
+`feat-2153-s4b-sms-kontingent-anzeige` — macht den von S4a (Commit `fc6afefd`) durchgesetzten
+täglichen SMS-/Premium-SMS-Zählerstand erstmals für den Nutzer sichtbar. Neuer interner
+Lesepfad: Python-Core `GET /api/_internal/sms/daily-usage` (`api/routers/internal.py`, ruft
+neue Funktion `sms_daily_limit.get_daily_usage(user_id, now)` auf) hinter neuer Go-Proxy-Route
+`GET /api/auth/sms-daily-usage` (`internal/handler/sms_daily_usage.go`, `user_id` strikt aus
+Auth-Kontext, Fail-Soft `204` statt Fehler bei nicht erreichbarem Python-Core). `/account`
+zeigt daraufhin je Kanal (SMS/Premium-SMS) den Stand „3 von 10", Zeile bleibt bei `limit <= 0`
+ausgeblendet (`shouldShowSmsUsageRow`, `frontend/src/lib/utils/smsDailyUsageHelpers.ts`).
+Reiner Lese-/Anzeige-Pfad ohne neue Zähler-Semantik — S4a bleibt alleinige
+Durchsetzungsinstanz, kein neues ADR. Details Section 0.5 Endpunkt-Inventar, Spec
+`docs/specs/modules/sms_daily_usage_anzeige.md`);
+2026-09-22 (Issue #1895 Scheibe S2, `feat-1895-s2-kanal-leser` —
+`alert_metric_channels` (S1, s. Abschnitt unten) bekommt seinen ersten Leser: Δ-Änderungsalarme
+lösen den Versand-Kanalsatz jetzt je AUSGELÖSTER Metrik auf (roher Summary-Key → Katalog-
+`metric_id` über `metric_catalog.metric_and_aggregation_for_field`, Wählbarkeits-Tie-Break),
+Vereinigung über alle ausgelösten Metriken einer Meldung; eine eintragslose oder mehrdeutig
+aufgelöste Metrik erbt weiterhin den bisherigen Kanalsatz (Regel-Union bzw. Abo-weit) statt die
+Vereinigung zu verkleinern. Beim Ortsvergleich geschieht das je Ort in der Ortsschleife — zwei
+Orte desselben Alarmlaufs können dadurch unterschiedliche Kanalsätze bekommen. Regen-/Nowcast-
+Alarme und amtliche Warnungen bleiben strukturell metrikfrei und unverändert (Abo-weiter Satz
+bzw. Regel-Union, je nachdem, was vor dieser Scheibe galt). Migration beim Laden (Python) kopiert
+`alert_rules[].channels` aktivierter Regeln mit nicht-leerer Kanalliste in
+`alert_metric_channels` (Read-Modify-Write mit Merge — ein bereits persistierter Eintrag gewinnt,
+`alert_rules` selbst bleibt unverändert bestehen). **Verhaltensänderung für Bestandsnutzer**
+(bewusst, PO-freigegeben): ein Alarm, der nach der Migration nur eine migrierte Metrik auslöst,
+erreicht danach nur noch deren Regel-Kanäle statt der bisherigen regelübergreifenden Union.
+Details Abschnitt „alert_metric_channels" unten, ADR-0077, Spec
+`docs/specs/modules/alert_metric_channels.md`);
+2026-09-18 (Issue #2285, `fix-2285-compare-put-merge-kernel` —
+ein Merge-Kernel `applyComparePresetPatch` (`internal/handler/compare_preset.go`)
+ersetzt die beiden bisher unabhängigen Merge-Implementierungen von
+`PUT /api/compare/presets/{id}` (dediziert, ~170 Zeilen Feldrettung entfallen)
+und `PUT /api/briefings/{id}?kind=vergleich` (Umgehungsweg); zusätzlich bekommt
+`GET /api/briefings/{id}?kind=route` Sperre und `ETag`, symmetrisch zum
+`vergleich`-Zweig und zu `GET /api/trips/{id}`. Trip-PUT bleibt unverändert
+(Pointer-DTO, Tech-Lead-Entscheidung). Kein neues ADR (reine Konsolidierung
+innerhalb ADR-0023). Details Abschnitt „Nebenläufigkeit: `ETag` / `If-Match`"
+unten, Spec: `docs/specs/modules/fix_2285_compare_put_merge_kernel.md`);
+2026-08-22 (Issue #2050 Scheibe S6, `feat-2050-s6-protokoll-vorwarnzeit` —
 `WeatherSnapshotService.load_dated()` bekommt additiven keyword-only Parameter
 `segment_fetched_at: bool = False`; datierte Snapshot-Segmente tragen additiv ihren eigenen
 `fetched_at`-Wert. Rein Python-intern, keine Go-/Frontend-Änderung, keine neue Route. Details
@@ -133,13 +172,21 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/_validator/format-metric` | GET |
 | `/api/_validator/metrics-for-channel` | GET |
 | `/api/_validator/sms-fidelity-preview` | POST |
+| `/api/admin/invites` | GET, POST — nur Admin, Einladungslinks (#2519, ADR-0084) |
+| `/api/admin/invites/{id}/revoke` | POST — nur Admin, offene Einladung widerrufen (#2519) |
+| `/api/admin/users` | GET — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S3) |
+| `/api/admin/users/{id}/disabled` | PUT — nur Admin, Konto sperren/entsperren (#2155 S3) |
+| `/api/admin/users/{id}/tier` | PUT — nur Admin, Tier setzen (#2155 S3) |
 | `/api/archive/stats` | GET |
-| `/api/auth/account` | DELETE |
+| `/api/auth/account/delete` | POST — Kontoloeschung mit Re-Auth (#2160, ADR-0081; ersetzt den entfallenen DELETE auf `/api/auth/account`) |
+| `/api/auth/account/delete-code` | POST — Lösch-Code an die wirksame Adresse (#2160) |
+| `/api/auth/export` | GET |
 | `/api/auth/forgot-password` | POST |
 | `/api/auth/google/callback` | GET |
 | `/api/auth/google/init` | GET |
 | `/api/auth/login` | POST |
 | `/api/auth/logout` | POST |
+| `/api/auth/logout-all` | POST |
 | `/api/auth/magic-link` | POST |
 | `/api/auth/magic-link/verify` | POST |
 | `/api/auth/passkey/credentials/{id}` | DELETE |
@@ -152,30 +199,43 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/passkey/register/public/begin` | POST |
 | `/api/auth/passkey/register/public/finish` | POST |
 | `/api/auth/password` | PUT |
+| `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
 | `/api/auth/profile` | GET, PUT |
+| `/api/auth/invite/check` | POST — öffentlich, rate-limited 30/h/IP, Token im Body; Vorab-Check einer Einladung (#2519) |
 | `/api/auth/register` | POST |
 | `/api/auth/reset-password` | POST |
+| `/api/auth/sms-daily-usage` | GET (Issue #2412, Sammel-Issue #2153 S4b — liefert das tägliche SMS-/Premium-SMS-Tageskontingent zur Anzeige auf /account; Fail-Soft 204 bei nicht erreichbarem Python-Core) |
+| `/api/auth/sms/resend` | POST (Issue #2406 — stellt den Bestätigungscode für die ausstehende Nummer erneut zu; Mengenbremse 3/h je Nutzer, sonst 429 mit `Retry-After`) |
+| `/api/auth/sms/staging-code` | POST (nur `GZ_ENV=staging`, sonst nicht registriert → 404; liefert den Klartext-Code der angemeldeten Sitzung, ignoriert den Body) |
+| `/api/auth/staging-seed` | POST (Issue #2423 — nur `GZ_ENV=staging`, sonst nicht registriert → 404; setzt für das EIGENE Konto `tier` (`free`/`standard`/`premium`) und/oder `sms`/`premium_sms` (Ganzzahl 0..1000, Tageszähler); Nutzerfelder im Body werden ignoriert; 400 `nothing_to_set`/`validation_error`, 502 `core_unavailable`; Antwort `{tier, sms, premium_sms}`. Intern: Python `POST /api/_internal/sms/seed-daily-usage`, ebenfalls nur bei `GZ_ENV=staging`) |
+| `/api/auth/sms/verify` | POST (Issue #2406 — löst den Code ein; erst danach wandert die Nummer nach `sms_to`) |
 | `/api/auth/telegram-link` | GET |
 | `/api/auth/telegram-status` | GET |
 | `/api/auth/tier-change-request` | POST |
 | `/api/auth/verify-email` | POST |
+| `/api/auth/verify-email/resend` | POST |
+| `/api/auth/verify-email/staging-token` | POST (nur `GZ_ENV=staging`, sonst nicht registriert → 404) |
 | `/api/briefings` | GET, POST |
 | `/api/briefings/{id}` | DELETE, GET, PUT |
+| `/api/briefings/{id}/alert-preview` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), ungültige ID 400 `validation_error`, fremde ID 404; kind-neutrale Alarm-Vorschau, Section 20 (#2283 S4)
+| `/api/briefings/{id}/briefing-history` | GET | — `?kind=route\|vergleich` Pflicht (400 bei fehlendem/ungültigem kind oder ungültiger ID), 401 ohne Nutzer, unbekannte ID 200 `[]`; kind-neutrales Versand-Log, Section 21 (#2281)
+| `/api/briefings/{id}/send` | POST | — `?kind=route\|vergleich` Pflicht (400 `kind_required`), Trip optional `&report_type=morning\|evening` (Default `morning`), ungültige ID 400 `validation_error`, fremde ID 404; einheitlicher Handversand, Section 10.1 (#2280)
 | `/api/cockpit/status` | GET |
 | `/api/compare` | GET |
 | `/api/compare/metrics` | GET |
 | `/api/compare/presets` | GET, POST |
 | `/api/compare/presets/{id}` | DELETE, GET, PUT |
-| `/api/compare/presets/{id}/send` | POST |
+| `/api/compare/presets/{id}/send` | POST | — Delegate (Alt-Route) auf denselben Versandweg wie `/api/briefings/{id}/send?kind=vergleich` (#2280)
 | `/api/compare/presets/{id}/state` | PATCH |
 | `/api/config` | GET |
-| `/api/debug/trigger-radar-alert` | POST |
+| `/api/debug/trigger-radar-alert` | POST | — nur `GZ_ENV=staging`, nur Admin (401 ohne Sitzung, 403 Nicht-Admin, #2155 S2)
 | `/api/forecast` | GET |
 | `/api/gpx/parse` | POST |
 | `/api/groups` | GET, POST |
 | `/api/groups/{id}` | DELETE, PATCH |
 | `/api/health` | GET |
-| `/api/internal/telegram-connect` | POST |
+| `/api/internal/premium-sms-learn` | POST | — Auth `X-GZ-Core-Auth`: 401 fehlend/falsch, 503 nicht konfiguriert (#2159); interner Lernweg der Garmin-Antwortadresse (#1676 S1; im Inventar nachgetragen #2218)
+| `/api/internal/telegram-connect` | POST | — Auth `X-GZ-Core-Auth`: 401 fehlend/falsch, 503 nicht konfiguriert (#2159); interner Verknüpfungsweg des Telegram-Kontos (#2141)
 | `/api/locations` | GET, POST |
 | `/api/locations/resolve` | POST |
 | `/api/locations/{id}` | DELETE, GET, PATCH, PUT |
@@ -183,30 +243,42 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/metric-presets` | GET, POST |
 | `/api/metric-presets/{id}` | DELETE, PATCH |
 | `/api/metrics` | GET |
+| `/api/next-briefings` | GET (Issue #1969 — „Nächstes Briefing“: der echte nächste Versandtermin je Trip und Ortsvergleich des angemeldeten Nutzers; rein lesend. Optionale Query `trip_id` (nur dieser Trip, Ortsvergleiche entfallen) bzw. `preset_id` (nur dieser Ortsvergleich, Trips entfallen). Der Nutzer kommt ausschließlich aus dem Auth-Kontext: der Go-Proxy `NextBriefingsProxyHandler` setzt `user_id` und überschreibt einen mitgesendeten Wert. Intern: Python `GET /api/_internal/next-briefings?user_id=…[&trip_id=…][&preset_id=…]`. Antwort `{"trips": {<trip_id>: NextBriefing}, "compare": {<preset_id>: NextBriefing}}`; ein Objekt, dessen Ableitung scheitert oder das dem Nutzer nicht gehört, fehlt in der Antwort. `NextBriefing`: `at` (ISO-8601 mit Ortszeit-Offset, `null` wenn kein Termin), `local_date` (`YYYY-MM-DD`), `local_time` (`HH:00`), `tz` (Zonenname, z. B. `Europe/Paris`), `tz_abbr` (Kürzel, z. B. `CEST`), `slot` (`morning`\|`evening`), `overdue` (nur wenn wahr: Termin ist fällig, aber noch nicht versendet), `skipped` (nur bei `skip_next`: `{local_date, local_time, slot}` des entfallenden Termins; `at` zeigt dann den übernächsten), `reason` (nur wenn `at` = `null`: `paused`\|`disabled`\|`ended`\|`manual`\|`none`), `paused_until` (optional bei `paused`, `YYYY-MM-DD`). Nicht zutreffende Felder fehlen. Spec `docs/specs/modules/feat_1969_naechstes_briefing.md`) |
 | `/api/notify/test` | POST |
-| `/api/preview/compare/{preset_id}` | POST |
-| `/api/preview/{trip_id}/email` | GET |
-| `/api/preview/{trip_id}/signal` | GET | — **tote Route** (Python-Core kennt Signal nicht mehr, #610; Abbau → Sammel-Issue #1199)
-| `/api/preview/{trip_id}/sms` | GET |
-| `/api/preview/{trip_id}/telegram` | GET |
-| `/api/scheduler/alert-checks` | POST |
-| `/api/scheduler/inbound-commands` | POST |
-| `/api/scheduler/status` | GET |
-| `/api/scheduler/trip-reports` | POST |
+| `/api/preview/{trip_id}/sms` | GET | — Trip-Vorschau SMS-Kurzform; Proxy-Logik `forwardPreview`, Section 20 (email/telegram/compare entfallen, #1743)
+| `/api/scheduler/alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
+| `/api/scheduler/compare-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
+| `/api/scheduler/compare-radar-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
+| `/api/scheduler/inbound-commands` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
+| `/api/scheduler/radar-alert-checks` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2218 C5-02a)
+| `/api/scheduler/status` | GET | — nur mit Header `X-GZ-Status-Token` (Maschinen-Token, keine Session, #2155 S2)
+| `/api/scheduler/status/me` | GET | — Session-Pflicht, liefert nur den eigenen Lauf-Status (#2155 S2)
+| `/api/scheduler/trip-reports` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/sms-symbols` | GET |
 | `/api/templates` | GET |
 | `/api/trips` | GET, POST |
 | `/api/trips/{id}` | DELETE, GET, PUT |
-| `/api/trips/{id}/alert-preview` | POST |
-| `/api/trips/{id}/briefing-history` | GET |
-| `/api/trips/{id}/send` | POST |
+| `/api/trips/{id}/alert-preview` | POST | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/alert-preview?kind=route` (#2283)
+| `/api/trips/{id}/briefing-history` | GET | — Alias auf denselben Handler wie `/api/briefings/{id}/briefing-history?kind=route`, identische Antwort (#2281)
+| `/api/trips/{id}/send` | POST | — Delegate (Alt-Route) auf denselben Versandweg wie `/api/briefings/{id}/send?kind=route` (#2280)
 | `/api/trips/{id}/stages/weather` | GET |
 | `/api/trips/{id}/state` | PATCH |
 | `/api/trips/{id}/waypoints/{waypointId}/confirm` | PATCH |
 | `/api/trips/{id}/weather-config` | GET, PUT |
+| `/api/webhooks/mail/{secret}` | POST | — sitzungsfrei, Bearer (Stalwart), #2439
+| `/api/webhooks/sms/{secret}` | POST | — sitzungsfrei, HMAC-SHA256-Signatur (seven.io), #2439
 | `/api/webhooks/telegram/{secret}` | POST |
 
-(76 Pfade, 96 Routen-Registrierungen.)
+(Stand 2026-10-08: 101 Pfade, 123 Routen-Registrierungen; #2439 fügt die zwei Webhook-Pfade
+`/api/webhooks/sms/{secret}` und `/api/webhooks/mail/{secret}` hinzu, nicht neu nachgezählt; nachgezählt per `chi.Walk` und
+Router-Quelltext; davon 4 Pfade/4 Registrierungen nur bei `GZ_ENV=staging`, ohne sie
+97 Pfade/119 Registrierungen — #2155 S2 fügt `GET /api/scheduler/status/me`
+hinzu, #2155 S3 die drei Pfade unter `/api/admin/users`; #2519 ergänzt `/api/admin/invites`,
+`/api/admin/invites/{id}/revoke` und `/api/auth/invite/check`; #2218 Scheibe C die vier
+Admin-Trigger `radar-alert-checks`, `compare-alert-checks`, `compare-radar-alert-checks`,
+`compare-official-alert-checks` (letzterer seit #2286 wieder entfernt — der amtliche Teil
+läuft in `compare-alert-checks` mit). Die frühere Angabe „80 Pfade/100 Registrierungen" war
+bereits vor #2218 veraltet.)
 
 ---
 
@@ -295,13 +367,28 @@ Ein **Normalized Forecast Timeseries**-Objekt (siehe unten), bestehend aus `meta
 |--------------------|-----------------|------------------------------------------------|
 | cloud_low_pct      | integer (0–100) | Tiefwolken-Anteil [%]                          |
 | pop_pct            | integer (0–100) | Niederschlagswahrscheinlichkeit [%] (Duplikat deprecated — siehe pop_pct Basis-Feld) |
-| wind_dir_deg       | integer (0–359) | Windrichtung [Grad]                            |
+| wind_direction_deg | integer (0–359) | Windrichtung [Grad], 0=N/90=O. Python nimmt `wind_dir_deg=` als Alias an und kanonisiert (`src/app/models.py`, #435) — auf der Leitung heißt das Feld `wind_direction_deg` |
+| cloud_mid_pct      | integer (0–100) | Mittelhohe Wolken (3–8 km) [%]                 |
+| cloud_high_pct     | integer (0–100) | Hohe Wolken (ab 8 km) [%]                      |
+| uv_index           | float           | UV-Index                                       |
+| wmo_code           | integer (0–99)  | WMO-Wettercode                                 |
+| is_day             | integer (0/1)   | 1 = Tag, 0 = Nacht (Open-Meteo)                |
+| dni_wm2            | float           | Direktnormalstrahlung [W/m²]                   |
+| confidence_pct     | integer (0–100) | Ensemble-Verlässlichkeit, lead-time-gedeckelt — **keine wählbare Metrik** (#710) |
+| spread_t2m_k       | float           | Ensemble-σ Temperatur [K]                      |
+| spread_precip_mm   | float           | Ensemble-σ Niederschlag [mm]                   |
+
+Go-Spiegel: `internal/model/forecast.go::ForecastDataPoint` trägt die Basis-, Wintersport- und diese
+Zusatzfelder (alle `omitempty`), **nicht** `symbol` und **nicht** die Gewitter-Roh-/Zusatzfelder unten —
+die existieren nur im Python-DTO. `ForecastMeta` (Go): `provider`, `model`, `run`, `grid_res_km`,
+`interp`, `stations_used`, `fallback_model`, `fallback_metrics`; Hülle `Timeseries` = `{timezone, meta, data}`.
 
 #### Gewitter-Zusatzfeld Météo-France (optional, Issue #1457 S2a)
 | Feld                          | Typ           | Beschreibung                                   |
 |-------------------------------|---------------|-------------------------------------------------|
 | lightning_density_per_km2_3h  | float \| None | Erwartete Blitzdichte [Blitze/km²/3h], Météo-France AROME, Coverage `AVERAGE_LIGHTNING_STRIKE_DENSITY_OVER_3HOURS__GROUND_OR_WATER_SURFACE` (Konstante `providers.meteofrance.LIGHTNING_COVERAGE`; die Kurzform `LITOTA3` existiert beim Dienst **nicht** — sie war bis `c33e7b28` eingetragen und ließ jeden Abruf lautlos in 404 laufen, s. #1457). Der GRIB-Lauf wird mit **eigenem** Sicherheitsabstand von 6 h gewählt (`THUNDER_RUN_SAFETY_HOURS`) und fällt bei 404 auf bis zu zwei ältere Läufe zurück; der Nullpunkt der Stunden-Offsets bleibt der 3-h-Lauf der Grundvorhersage, sonst driftete die Blitzdichte-Zeitachse gegen sie. Befüllt über den **gemeinsamen** Anreicherungsweg `providers/thunder_enrichment.py::enrich_thunder`, der im regulären Rückgabeweg von `OpenMeteoProvider.fetch_forecast` hängt (nicht nur bei Totalausfall der Hauptquelle) — kennt keinen Providernamen, sondern schlägt die zuständige Quelle in der **eigenen** Zuständigkeitstabelle `providers/thunder_routing.py` nach (getrennt von der Grundvorhersage-Tabelle `providers/region_routing.py`, weil die Zuständigkeit **größenabhängig** ist, s. `docs/reference/decision_matrix.md`) und ruft sie über das optionale Protokoll `ThunderSignalProvider` (`providers/base.py`). Heute trägt nur `fr_direct` (Frankreich/Korsika) diese Tabelle ein; ein zweiter Dienst wird wirksam, indem er das Protokoll erfüllt und eine Zeile in `thunder_routing.py` bekommt — ohne dass diese Anreicherungsstelle angefasst wird. Orte außerhalb des geladenen Abfragefensters bekommen `None` (verworfen), nicht den Randwert eines fremden Ortes. **Bewusst eigenes Feld** — NICHT zusammengelegt mit dem DWD-Blitzpotenzial (`cape_jkg`/`thunder_level`): Météo-France liefert eine **Dichte** (Blitze je Fläche/3h, Messwerte ~0,1–0,2), DWD ein **Potenzial** (Energiegröße in J/kg, Messwerte ~88) — verschiedene Größen, verschiedene Skalen, ein gemeinsames Feld mit einer Schwelle wäre ein stiller Fehler. `None` heißt **„keine Aussage"**, nie „kein Gewitter". |
-| thunder_probability_pct  | integer \| None | **Vorbereitet, in dieser Scheibe von keiner Quelle befüllt** (#1474). Gewitter-**Wahrscheinlichkeit** 0–100 % — die zweite, von der Stärke unabhängige Achse (PO-Vorgabe 2026-08-03: *Der bisherige Wert beschreibt die Stärke*). `None` heißt **keine Aussage**, nie 0 %. Kein Dienst liefert sie fertig: Météo-France AROME führt 46 Größen, alle physikalisch, keine Wahrscheinlichkeit. Ableitbar allein aus dem Open-Meteo-Ensemble (Anteil der 40 Modellläufe mit Gewitter — gemessen 2026-08-02 am GR20: 19 von 40 = 47 %). Befüllung braucht den Wettercode je Lauf im Ensemble-Abruf, der heute nur Temperatur und Niederschlag anfordert (`openmeteo.py`, `/v1/ensemble`) — erhöht das Kontingent (#1329), deshalb eigener Schritt: Konzept #1419 S6. **Kein Renderer-Anschluss**, das Feld erscheint in keiner Ausgabe, solange es leer ist. |
+| hail_potential_mf             | float \| None | Hagel-**Rohwert** Météo-France AROME (#1507 S5c), nur Frankreich/Korsika (`fr_direct`, dieselbe Zuständigkeitstabelle `thunder_routing.py` wie oben). Coverage `HAIL__GROUND_OR_WATER_SURFACE` (Konstante `providers.meteofrance.HAIL_COVERAGE`, Periodensuffix `_PT1H` in `HAIL_COVERAGE_SUFFIX`) — live gegen `GetCapabilities`/`DescribeCoverage` verifiziert (`tests/tdd/test_hail_coverage_name_live.py`): `<ows:Title>Total hail precipitation</ows:Title>`, uom `kg kg-1` (Massenanteil, **keine** Dichte wie die Blitzdichte oben). Bewusst **nicht** `GRAUPEL__GROUND_OR_WATER_SURFACE` — anderer Titel (`Total graupel precipitation`), andere Niederschlagsform. Abruf über `fetch_hail_signals_multi()`, dünner Wrapper um dieselbe parametrisierte Sammelabruf-Funktion wie `lightning_density_per_km2_3h` — teilt sich **dasselbe** Zeitbudget (`FETCH_DEADLINE_SECONDS`), kein zweites unabhängiges Budget. Fail-soft: `None` bei Fehler/Zeitüberschreitung/außerhalb Modellgebiet, **niemals** `0`. **Bewusst eigenes Feld** — NICHT zusammengelegt mit `hail_potential_grau_gsp` (DWD, andere Quelle/Größe/Skala) und **keine** Kombination mit `hail_flag` (#1475 S5a, WMO-Code-basiert): `MeteoFranceDirectProvider` setzt strukturell keinen `wmo_code`, eine Cross-Provider-Feldfusion existiert architektonisch nicht (Known Limitation, s. Spec). Reiner Rohwert, kein Renderer-Anschluss in dieser Scheibe. `None` heißt **„keine Aussage"**. Details: `docs/specs/modules/feat_1507_s5c_hagel_mf_fr.md`. |
+| thunder_probability_pct  | integer \| None | Gewitter-**Wahrscheinlichkeit** 0–100 % — die zweite, von der Stärke unabhängige Achse (PO-Vorgabe 2026-08-03: *Der bisherige Wert beschreibt die Stärke*). `None` heißt **keine Aussage**, nie 0 %. **Seit Issue #1983 (2026-09-19, ADR-0073) im Trip-Briefing-Pfad befüllt:** Anteil der gültigen Open-Meteo-Ensemble-Member (ICON-EPS + GEFS inkl. Kontrollläufe, ohne ECMWF) mit Gewittercode (95/96/99) je Stunde, `None` bei < 20 gültigen Werten. Der Wert speist ausschließlich die interne Fusion (`app.thunder_scale`, ADR-0073) — ≥ 60 % hebt die fusionierte Stufe auf `HIGH` (Signal `modelllauf`), < 10 % dämpft sie um eine Stufe (außer bei Radar-Bestätigung), 10–59 % neutral. **Weiterhin kein eigener Renderer-Anschluss als Prozentzahl** — das Feld erscheint in keiner Ausgabe als Zahl, nur indirekt über die davon beeinflusste Stufe `thunder_level`. Der `fetch_forecast(enrich_ensemble=True)`-interne Pfad (`trip_forecast.py`, `services/forecast.py`) bekommt nur die Typanpassung auf `EnsembleHourStats`, keine `modelllauf`-Semantik (Known Limitation, Spec `docs/specs/modules/feat_1983_gewitter_modelllauf_mehrheit.md`). Ursprüngliche Messung (2026-08-02, GR20, ohne die ≥20-Member-Regel): 19 von 40 = 47 %. |
 
 #### Gewitter-Zusatzfelder DWD (optional, Issue #1457 S2b + S2c)
 | Feld                          | Typ           | Beschreibung                                   |
@@ -598,7 +685,24 @@ Lawinenlagebericht als eigenstaendiges Datenobjekt (nicht Teil von NormalizedTim
 | snowfall_limit_m      | int \| None          | Schneefallgrenze [m] — MIN über das Segment (#1391) |
 | thunder_onset_utc     | datetime \| None     | **Beginn** des Gewitters (#1468): erste Stunde **im Tagesfenster** mit Gewitterstufe ≥ `LOW`, als naiver UTC-Zeitstempel (Hausnorm `src/utils/timezone.py`), **keine** Stundenzahl. `None`, wenn im Fenster kein Gewitter auftritt — ebenso bei Wetter-Ankern aus der Zeit vor #1468 (additives Feld, alte Anker laden unverändert). Maßgeblich ist das **für die Tour konfigurierte** Tagesfenster (`day_window_start_hour`/`day_window_end_hour`), damit Alarm und Briefing dieselbe Uhrzeit nennen |
 | precip_heavy_onset_utc | datetime \| None    | **Beginn** des Starkregens (#1468), gleiche Semantik: erste Stunde im Tagesfenster mit einer Regenintensität ≥ 4,0 mm/h (dieselbe Schwelle wie `radar_service.INTENSITY_HEAVY`). Datenquelle ist `precip_rate_mmph`, wo der Provider sie liefert (Geosphere), sonst der Stundenwert `precip_1h_mm` (Open-Meteo führt keine Rate) — bei 1-Stunden-Auflösung dieselbe Zahl |
+| wind_direction_avg_deg | int \| None        | Mittlere Windrichtung [Grad] (Python-Alias `wind_dir_deg_avg=`) |
+| precip_type_dominant  | PrecipType \| None   | Vorherrschender Niederschlagstyp                 |
+| pop_max_pct           | int \| None          | Max. Niederschlagswahrscheinlichkeit [%]         |
+| cape_max_jkg          | float \| None        | Max. CAPE [J/kg]                                 |
+| uv_index_max          | float \| None        | Max. UV-Index                                    |
+| snow_new_sum_cm       | float \| None        | Neuschnee-Summe [cm]                             |
+| dominant_wmo_code     | int \| None          | Schwerster WMO-Code im Segment                   |
+| sunny_hours           | float \| None        | Sonnenstunden [h] (#347) — **Go-Struct heißt abweichend `sunny_hours_h`** |
 | aggregation_config    | dict[str, str]       | Metadata: Aggregations-Funktionen pro Metrik     |
+
+Go-Spiegel `internal/model/segment.go::SegmentWeatherSummary` (alle `omitempty`): `temp_min_c`,
+`temp_max_c`, `temp_avg_c`, `wind_max_kmh`, `gust_max_kmh`, `wind_direction_avg_deg`, `precip_sum_mm`,
+`precip_type_dominant`, `cloud_avg_pct`, `humidity_avg_pct`, `thunder_level_max`, `visibility_min_m`,
+`freezing_level_m`, `wind_chill_min_c`, `pop_max_pct`, `cape_max_jkg`, `pressure_avg_hpa`,
+`dewpoint_avg_c`, `uv_index_max`, `sunny_hours_h`, `snow_depth_cm`, `snow_new_sum_cm`,
+`dominant_wmo_code`. Der Go-Struct wird von keinem Handler/Store referenziert (Stand 2026-10-21) —
+maßgeblich ist das Python-DTO (`src/app/models.py`); die übrigen Python-Felder (Cloud-Schichten,
+Onset-Zeiten, `snowfall_limit_m`, `dni_avg_wm2`, `confidence_pct_min`, `hail_flag` u. a.) fehlen in Go.
 
 #### SegmentWeatherCache
 | Feld        | Typ                  | Beschreibung                         |
@@ -664,7 +768,9 @@ Epochensekunden**; die lesbare Aufbereitung dort ist als Nebenbefund in #1199 no
 | Feld                            | Typ         | Beschreibung                                          |
 |---------------------------------|-------------|-------------------------------------------------------|
 | trip_id                         | str         | Trip-Identifier                                        |
-| enabled                         | bool        | Reports aktiv? (default: true)                         |
+| enabled                         | bool        | Reports aktiv? (default: true) — Gesamtschalter, Master über beide Slots |
+| morning_enabled                 | bool \| None | Einzel-Schalter „Morgen aktiv" (Issue #2422 S3). Fehlt/`null`/kein bool ⇒ None ⇒ Rückfall auf `enabled`. Wird nur geschrieben, wenn gesetzt (additiv). |
+| evening_enabled                 | bool \| None | Einzel-Schalter „Abend aktiv" (Issue #2422 S3), Semantik wie `morning_enabled`. Regel `slot_aktiv(rc, slot)` (`src/app/models.py`): kein `report_config` ⇒ aktiv; `enabled=false` ⇒ aus; sonst Einzel-Schalter, fehlend ⇒ aktiv. Dieselbe Regel steuert Versand (`_get_active_trips`), Alarm-Vorlauf (`trip_briefing_due_at`) und die abgeleiteten flachen Trip-Felder `morning_enabled`/`evening_enabled`. |
 | morning_time                    | time        | Morgen-Report Zeit (default: 07:00)                    |
 | evening_time                    | time        | Abend-Report Zeit (default: 18:00)                     |
 | timezone                        | str         | Zeitzone (default: "Europe/Vienna")                    |
@@ -682,7 +788,7 @@ Epochensekunden**; die lesbare Aufbereitung dort ist als Nebenbefund in #1199 no
 | show_stability                  | bool        | Großwetterlage-Label anzeigen? (default: true, Issue #621) |
 | show_highlights                 | bool        | Highlights/Zusammenfassung anzeigen? (default: true, Issue #621) |
 | daily_summary_metrics           | list[str]   | Metriken in der Tages-Summe (default: `["precipitation","wind","visibility","thunder"]`, Issue #621) |
-| show_metrics_summary            | bool        | Optionaler Metriken-Überblick am Beginn (default: false, Issue #664/795) — wenn true: farbige Pillen pro konfigurierter Metrik mit SMS-identischen Erwähnungsschwellen. **Pill-Inhalts-Format (Issue #795):** Ereignis-Metriken (wind/gust/precip/pop/thunder/visibility/humidity) zeigen „<Label> ab HH:00 · Spitze <X> um HH:00" (oder ruhige Form unter Schwelle); Bereichs-Metriken (temp/wind_chill/cloud/freezing_level/dewpoint/uv/sunshine) zeigen „<Label> min–max <Einheit>" ohne Uhrzeit. **Pill-Farbe (Issue #759/#795):** EIN Ampel-System (🟢🟡🟠🔴) pro Spitzenwert via `display_thresholds` + `ampel_dot`-Logik; HTML = WCAG-AA-Vollfarb-Kapsel (weißer Text ≥4.5:1); Plain = dieselben 4 Emojis wie die Stundentabelle; Compact (7bit/ASCII) = ASCII-Schwerezeichen (grün→kein, gelb→`!`, orange→`!!`, rot→`!!!`). Ersetzt Quick-Take und blendet Tages-Summe aus. |
+| show_metrics_summary            | bool        | Optionaler Metriken-Überblick am Beginn (default: false, Issue #664/795) — wenn true: farbige Pillen pro konfigurierter Metrik mit SMS-identischen Erwähnungsschwellen (seit #2422 S3, 2026-09-28: auch bei eigenem E-Mail-Kanal-Layout — die globale `sms_threshold` wird auf die kollabierte E-Mail-Liste übertragen, eine am Layout-Eintrag selbst gesetzte Schwelle behält Vorrang). **Pill-Inhalts-Format (Issue #795):** Ereignis-Metriken (wind/gust/precip/pop/thunder/visibility/humidity) zeigen „<Label> ab HH:00 · Spitze <X> um HH:00" (oder ruhige Form unter Schwelle); Bereichs-Metriken (temp/wind_chill/cloud/freezing_level/dewpoint/uv/sunshine) zeigen „<Label> min–max <Einheit>" ohne Uhrzeit. **Pill-Farbe (Issue #759/#795):** EIN Ampel-System (🟢🟡🟠🔴) pro Spitzenwert via `display_thresholds` + `ampel_dot`-Logik; HTML = WCAG-AA-Vollfarb-Kapsel (weißer Text ≥4.5:1); Plain = dieselben 4 Emojis wie die Stundentabelle; Compact (7bit/ASCII) = ASCII-Schwerezeichen (grün→kein, gelb→`!`, orange→`!!`, rot→`!!!`). Ersetzt Quick-Take und blendet Tages-Summe aus. |
 | show_outlook                    | bool        | Ausblick-Block anzeigen? (default: true, Issue #721) — verschmilzt Großwetterlage (Kopf) + Tabelle der nächsten Etappen mit Uhrzeiten und Vorhersage-Sicherheit (`confidence_pct` pro Etappe). Gilt für HTML **und** Plain-Text. `false` blendet den gesamten Block aus (Großwetterlage zusätzlich an `show_stability` gekoppelt). |
 | email_format                    | str         | E-Mail-Format-Schalter (default: `"full"`): `"full"` = multipart-HTML mit Stundentabellen (unverändert); `"compact"` = reine text/plain-Mail, nur ASCII, ohne HTML, mit fix Kopf + Metriken-Überblick + Ausblick + Footer, ~95% kleiner. Baustein-Toggles greifen bei compact NICHT. Siehe Issue #722. |
 | show_yesterday_comparison       | bool        | Vortag-Vergleich-Sektion in E-Mail anzeigen? (default: true, Issues #750 #752) — wenn true und Vortag-Snapshot vorhanden: zeigt Delta-Tabelle in HTML und Plain; fehlender Snapshot führt zu sanftem Überspringen (kein Fehler). Der Toggle wirkt einheitlich auf beide Kanäle: `format_email` nullt `day_comparison` bei `false`, sodass auch die Vortag-Zeile in der Telegram-Kurzübersicht-Bubble (`render_telegram_bubbles()`, Issue #1001) entfällt. |
@@ -787,11 +893,53 @@ Heute existieren zwei getrennte Domänenobjekte:
 
 | Domäne | Pfad-Prefix | Handler | Persistenz |
 |---|---|---|---|
-| **Compare-Presets** (Orts-Vergleich) | `/api/compare/presets` (CRUD, `PATCH …/{id}/state`, `POST …/{id}/send`), Vorschau: `POST /api/preview/compare/{preset_id}` | `internal/handler/compare_preset.go` | `data/users/{userID}/briefings/` (kind=vergleich) |
+| **Compare-Presets** (Orts-Vergleich) | `/api/compare/presets` (CRUD, `PATCH …/{id}/state`, `POST …/{id}/send`), Alarm-Vorschau: `POST /api/briefings/{id}/alert-preview?kind=vergleich` | `internal/handler/compare_preset.go` | `data/users/{userID}/briefings/` (kind=vergleich) |
 | **Briefing-Subscriptions** (Trip-Briefing-Abos, ADR-0023) | `/api/briefings` | `internal/handler/briefing_subscription.go` | `data/users/{userID}/briefings/` |
 
 Feld-Definitionen und Validierungsregeln: massgeblich sind die Go-Structs in
 `internal/model/` und die Handler-Validierung — hier nicht dupliziert.
+
+### 10.1) Handversand `POST /api/briefings/{id}/send` (Issue #2280, ADR-0023)
+
+EIN kind-neutraler Endpoint löst den Handversand eines Briefings aus — Trip und
+Ortsvergleich mit **einem** Fehlervokabular, **einer** Antwortform und **einem**
+Sende-Lock. „Erfolg heißt Zustellung": `200` nur, wenn mindestens ein Kanal
+tatsächlich zugestellt hat.
+
+| Query | Pflicht | Werte |
+|---|---|---|
+| `kind` | ja | `route` (Trip) \| `vergleich` (Ortsvergleich); fehlt/ungültig → 400 `kind_required` |
+| `report_type` | nein, nur `route` | `morning` (Default) \| `evening`; bei `vergleich` ignoriert |
+
+**Erfolg (200):** `{"status": "ok", "kind": "route"|"vergleich", "id": "<id>", "sent": true}`,
+bei `route` zusätzlich `report_type`, bei `vergleich` optional `fehlende_orte: [<ort_id>, …]`
+(gelöschte Orte, Versand lief mit den übrigen). `winner`/`empfaenger_count` entfallen.
+
+**Fehler (Form A):** `{"detail": "<deutscher Text>", "code": "<maschinenlesbar>"}` mit 4xx/5xx.
+`detail` wird im Frontend unverändert angezeigt.
+
+| Status | `code` | Bedeutung |
+|---|---|---|
+| 400 | `kind_required` / `validation_error` | `kind` fehlt/ungültig bzw. ungültige ID |
+| 404 | `not_found` | ID gehört nicht dem angemeldeten Nutzer oder existiert nicht |
+| 409 | `already_in_progress` | Versand für denselben Lock-Schlüssel läuft bereits |
+| 422 | `no_channels` | kein Kanal wirksam eingestellt |
+| 422 | `channels_unreachable` | alle eingestellten Kanäle sind gescheitert |
+| 422 | `no_weather` | für keinen Ort/keine Etappe liegen Wetterdaten vor |
+| 500 | `send_failed` | unerwarteter Fehler im Versand (Ausnahme, Traceback im Python-Log) — das Frontend zeigt die generische Serverfehler-Meldung |
+| 500 | `proxy_error` | Go-API kann die Anfrage an den Python-Core nicht bauen |
+| 502 | `upstream_unreachable` | Go-API erreicht den Python-Core nicht (oder Zeitlimit 300 s überschritten) — Versandausgang unklar |
+
+Die Fehler mit `kind_required`, `validation_error` und `upstream_unreachable` (sowie 500
+`proxy_error`) entstehen in der Go-API, alle übrigen im Python-Core (`src/services/send_outcomes.py`);
+beide in derselben Form A. Gilt auch für die Alt-Routen (gleiche Proxy-Funktion `forwardSend`).
+Die Vorschau-/CRUD-Routen unter `/api/briefings` behalten ihre Form `{"error":"<code>"}`.
+
+Lock-Schlüssel unverändert: Trip `(user_id, trip_id, report_type)`, Ortsvergleich
+`("compare", user_id, preset_id)`. Die Alt-Routen `POST /api/trips/{id}/send` und
+`POST /api/compare/presets/{id}/send` bleiben als **Delegate** erhalten; das Frontend
+nutzt ausschließlich den neuen Endpoint (`frontend/src/lib/utils/sendOutcome.ts`,
+`briefingSendUrl`). Spec: `docs/specs/modules/feat_2280_handversand_endpoint.md`.
 
 ---
 
@@ -828,6 +976,8 @@ type Trip struct {
     // Issue #1250 Scheibe 4 — flache Slot-/Kanal-Felder + EndDate, ABGELEITET aus
     // ReportConfig/Stages bei jedem Load (store.normalizeTrip). NICHT autoritativ:
     // ReportConfig bleibt die einzige Wahrheit fuer den Versand. nil = nicht ableitbar.
+    // MorningEnabled/EveningEnabled folgen seit #2422 S3 derselben Regel wie Python `slot_aktiv`
+    // (Gesamtschalter `enabled` = Master, sonst Einzel-Schalter, fehlend = aktiv; s. TripReportConfig).
     MorningTime             *string                `json:"morning_time,omitempty"`
     EveningTime             *string                `json:"evening_time,omitempty"`
     MorningEnabled          *bool                  `json:"morning_enabled,omitempty"`
@@ -870,9 +1020,9 @@ type AlertChannelThresholdsConfig struct {
 }
 ```
 
-### alert_channels (Issue #1258, seit #1701 S2b vier Kanäle)
+### alert_channels (Issue #1258, seit #1701 S2b vier Kanäle; seit #2293 S2 Trip UND Ortsvergleich)
 
-Trip-weites Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche Sofort-Alerts), Pointer-Feld analog `official_warnings`:
+Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche Sofort-Alerts), Pointer-Feld analog `official_warnings`. Identischer Go-Typ (`AlertChannelsConfig`) auf **Trip UND ComparePreset** — seit Issue #2293 (S2) trägt auch der Ortsvergleich ein eigenes `alert_channels`-Sub-Objekt statt flacher Top-Level-Felder:
 
 ```json
 {"alert_channels": {"email": true, "telegram": false, "sms": false, "premium_sms": true}}
@@ -880,14 +1030,14 @@ Trip-weites Kanal-Set für den Alert-Versand (Abweichungs-Alerts und amtliche So
 
 | Feld | Typ | Semantik |
 |------|-----|----------|
-| `alert_channels` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend (Legacy-Verhalten):** Alert-Kanäle erben die aktiven Briefing-Kanäle aus `report_config` (`send_email`/`send_telegram`/`send_sms`/`send_premium_sms`) — kein Verhaltenswechsel für Bestand. **Gesetzt:** ersetzt beim Alert-Versand den geerbten Briefing-Anteil, seit #1701 (D3) mit **Feld-Level-Merge**: ein PUT, das ein Feld nicht mitschickt (z. B. ein älterer Frontend-Build ohne `premium_sms`), lässt dessen Bestandswert unverändert statt ihn auf `false` zurückzusetzen |
-| `alert_channels.email`/`.telegram`/`.sms`/`.premium_sms` | bool | einzelne Kanal-Flags; `premium_sms` gated zusätzlich über `premium_sms_allowed()` (Tier-Gate, NICHT `sms_allowed()`) |
+| `alert_channels` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend (Legacy-Verhalten):** beim **Trip** erben die Alert-Kanäle die aktiven Briefing-Kanäle aus `report_config` (`send_email`/`send_telegram`/`send_sms`/`send_premium_sms`) — kein Verhaltenswechsel für Bestand. Beim **ComparePreset** wird `alert_channels` seit #2293 (S2) bei jedem Laden deterministisch materialisiert (`store.NormalizeComparePreset`/`normalizeLoadedComparePreset`): `email=true`, `telegram`/`sms`/`premium_sms` aus den flachen Top-Level-Feldern `send_telegram`/`send_sms`/`send_premium_sms` abgeleitet — reine In-Memory-Auflösung, kein Write-Back durch ein GET. **Gesetzt:** ersetzt beim Alert-Versand den geerbten/materialisierten Anteil, seit #1701 (D3) mit **Feld-Level-Merge**: ein PUT, das ein Feld nicht mitschickt (z. B. ein älterer Frontend-Build ohne `premium_sms`), lässt dessen Bestandswert unverändert statt ihn auf `false` zurückzusetzen |
+| `alert_channels.email`/`.telegram`/`.sms`/`.premium_sms` | bool | einzelne Kanal-Flags; `premium_sms` gated zusätzlich über `premium_sms_allowed()` (Tier-Gate, NICHT `sms_allowed()`); steuert beim ComparePreset ausschließlich den Alarm-Versand — die Briefing-Kanäle laufen weiterhin über `send_telegram`/`send_sms`/`send_premium_sms` |
 
-Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten Trip-Anteil; das SMS-/Premium-SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` (`AlertChannelsConfig`), Spec `docs/specs/_archive/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9, Spec `docs/specs/modules/feat_1701_alarm_premium_sms.md` (vierter Kanal, D3).
+Präzedenz unverändert: per-Regel-`channels`-Overrides (Issue #638, s. „Versand-Logik (Kanal pro Alert)" oben) gewinnen weiterhin über den geerbten/gesetzten bzw. materialisierten Anteil; das SMS-/Premium-SMS-Tier-Gate bleibt in jedem Fall aktiv. Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertChannelsConfig`), Spec `docs/specs/_archive/modules/issue_1258_alarme_tab_official_warnings.md` Abschnitt 9, Spec `docs/specs/modules/feat_1701_alarm_premium_sms.md` (vierter Kanal, D3), Spec `docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md` (ComparePreset-Materialisierung).
 
 ### alert_channel_thresholds (Issue #1461 S3b-2a Trip · S3b-2b Ortsvergleich · #1701 S2b vierter Kanal)
 
-Additives Geschwisterfeld zu `alert_channels`/`send_telegram`+`send_sms`+`send_premium_sms`: je Alarm-Kanal die Dringlichkeitsstufe, ab der eine ausgelöste Alarm-Meldung diesen Kanal erreichen darf. Identischer Vertrag auf `Trip` **und** `ComparePreset` — derselbe Go-Typ (`AlertChannelThresholdsConfig`), kein zweiter.
+Additives Geschwisterfeld zu `alert_channels`/`send_telegram`+`send_sms`+`send_premium_sms`: je Alarm-Kanal die Dringlichkeitsstufe, ab der eine ausgelöste Alarm-Meldung diesen Kanal erreichen darf. Identischer Vertrag auf `Trip` **und** `ComparePreset` — derselbe Go-Typ (`AlertChannelThresholdsConfig`), kein zweiter. Beim `ComparePreset` ist `alert_channels` seit #2293 (S2) vom Alarm-Versand her die maßgebliche Menge, `send_telegram`/`send_sms`/`send_premium_sms` steuern dort ausschließlich das Briefing — beide Felder bleiben nur beim `Trip` legacy-verkoppelt (Erb-Fallback bei `alert_channels == nil`, s. „alert_channels" oben).
 
 ```json
 {"alert_channel_thresholds": {"email": "LOW", "telegram": "HIGH", "sms": "MODERATE", "premium_sms": "HIGH"}}
@@ -905,6 +1055,31 @@ Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn
 - Der Compare-SMS-/Telegram-**Bericht** (`comparison.py`, kein Alarm-Versand) zeigt amtliche Warnungen seit S3b-2b ab der Startschwelle „gering" statt der vormals festen `MIN_SMS_LEVEL` (orange) — unabhängig von einer je Kanal gesetzten Alarm-Schwelle desselben Ortsvergleichs (zwei getrennte Wirkungsorte, s. `docs/reference/sms_format.md`).
 
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertChannelThresholdsConfig`), ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md` (Trip), `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md` (Ortsvergleich).
+
+### alert_metric_channels (Issue #1895 S1 · S2 · Epic #1230)
+
+Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_channel_thresholds` („je Kanal", ADR-0046): **je Metrik** die Kanal-Zuordnung. Identischer Vertrag auf `Trip` **und** `ComparePreset` (Go jeweils `map[string]interface{}`, Python `Optional[dict]`), Parität ab S1.
+
+```json
+{"alert_metric_channels": {"rain": {"telegram": true, "email": false}, "wind": {"email": true}}}
+```
+
+| Feld | Typ | Semantik |
+|------|-----|----------|
+| `alert_metric_channels` | Objekt \| `null`/nicht gesetzt | **`null`/fehlend:** keine metrik-genaue Abweichung — jede Metrik erbt den Abo-weiten Kanal-Satz. Dank `omitempty` liefert die API den Schlüssel für solche Trips/Vergleiche gar nicht erst aus (Bestandsdaten bleiben byte-gleich). **Gesetzt:** Objekt, Schlüssel = Metrikname |
+| `alert_metric_channels.<metrik>` | beliebige Kanal-Repräsentation | in S1 **bewusst unvalidiert** (weder Metrik-Schlüssel noch Kanalwerte, ADR-0077 Punkt 3). Ein im PUT-Body fehlender Metrik-Schlüssel behält seinen Bestandswert → **Feld-Level-Merge** je Metrik (`mergeConfigMap` im Trip-PUT, generischer `mergeBriefingPatch` im Vergleich-PUT); ein GANZ fehlendes `alert_metric_channels` im Body bewahrt das ganze Objekt (Top-Level-Erbe) |
+
+**Wirkung in S1: keine.** Die Scheibe ist reine Verrohrung (Feld, Persistenz, Roundtrip) — es gibt noch keinen Leser im Alarm-Pfad und keine Bedienfläche. Der Leser folgt in S2, die Editor-Spalte erst danach (Reihenfolge-Zwang aus ADR-0043, festgeschrieben in ADR-0077 Punkt 5). `alert_rules[].channels` bleibt in S1 unverändert die wirksame per-Regel-Präzedenz.
+
+**Semantik ab S2 (Issue #1895 · Leser + Migration).** Das Feld wirkt jetzt:
+
+- **Schlüssel = Katalog-`metric_id`.** Der Alarm-Pfad übersetzt den rohen Summary-Key der auslösenden Änderung (z. B. `gust_max_kmh`) über die eine Rückwärts-Primitive `metric_catalog.metric_and_aggregation_for_field` in die `metric_id` (`gust`) — mit Wählbarkeits-Tie-Break: `temp_min_c` ⇒ `temperature`, **nie** `temperature_cold`. Ein unbekannter oder mehrdeutiger Key wirft nicht, sondern gilt als „kein Eintrag" (fail-soft, die Metrik erbt).
+- **Wirkung je Alarm = Vereinigung über die ausgelösten Metriken.** Pro Metrik gilt der eigene Eintrag; hat eine Metrik keinen (oder einen leer aufgelösten) Eintrag, gilt für sie der Kanalsatz ohne diese Schicht (Abo-weiter Satz bzw. Regel-Union). Die Vereinigung kann nie unter diesen Satz fallen, wenn irgendeine ausgelöste Metrik eintragslos ist — ADR-0046: die Kanal-Ebene regelt den WEG, nicht das OB.
+- **Nur metrik-behaftete Alarme.** Regen-/Nowcast-Alarme und amtliche Warnungen sind strukturell metrikfrei und verwenden unverändert den Abo-weiten Satz.
+- **Je Ort beim Ortsvergleich.** Die Auflösung geschieht in der Ortsschleife: zwei Orte desselben Alarmlaufs können unterschiedliche Kanalsätze bekommen, wenn sie über verschiedene Metriken auslösen.
+- **Migration beim Laden (Python).** `alert_rules[].channels` wird in dieses Feld **kopiert** (`alert_rules` bleibt unverändert bestehen): nur aktivierte Regeln mit nicht-leerer Kanalliste, eins-zu-viele ausgerollt (`snow_line` ⇒ `snowfall_limit` **und** `freezing_level`), Kollisionen auf derselben `metric_id` unioniert, bereits vorhandene Einträge gewinnen (Read-Modify-Write mit Merge). Eine leere Regel-Kanalliste erzeugt **keinen** Schlüssel (ein `{}` läse sich als Override ins Leere). **Folge für Bestandsnutzer (bewusst, PO-freigegeben):** ein Alarm, der nur Metrik X auslöst, erreicht danach nur noch die Kanäle der X-Regel statt der regelübergreifenden Union.
+
+Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertMetricChannels`), ADR-0077 (schreibt ADR-0046 fort), Spec `docs/specs/modules/alert_metric_channels.md`.
 
 ### official_warnings (Issue #1258)
 
@@ -926,7 +1101,12 @@ für Trip UND ComparePreset (Go `*OfficialWarningsConfig`, Python `Optional[dict
 fällt fail-soft auf das Legacy-Feld `official_alert_triggers_enabled` zurück (`nil`/`true` →
 Alarm aktiv, `false` → kein Alarm). Ein `{}`-Wert (Key vorhanden, `enabled` fehlt) wird wie
 `nil` behandelt (Legacy-Fallback), nicht wie `enabled=false` — Go und Python sind hierin
-identisch (Fix-Loop F003, s. Changelog #1258).
+identisch (Fix-Loop F003, s. Changelog #1258). **Fix Issue #2422 S4:** Der Vorab-Filter in
+`trip_alert.py:895-911` (Sammellauf-Einstieg) prüft jetzt parallel **beide** Felder mit
+Vorranglogik: Ist `official_warnings.enabled` gesetzt (nicht `nil`/`{}`), bestimmt es allein die
+Auslöseentscheidung; fehlt es, nimmt der Filter wie bisher das Legacy-Feld `official_alert_triggers_enabled`
+als Fallback. Damit ist die Sammelauf-Prüfung identisch mit der öffentlichen Auslösefunktion
+`check_official_alert_triggers()` — beide verwenden dieselbe Drei-Zustands-Vorranglogik.
 
 **Neuanlage-Default:** `enabled: false` — bewusster Verhaltenswechsel gegenüber Bestand (der per
 Migration den alten Ist-Zustand behält, s.u.).
@@ -944,6 +1124,18 @@ mitgeschickt, aber `sources` darin weggelassen (Key fehlt im JSON) → bestehend
 bleiben erhalten (Feld-Level-Preserve, Fix-Loop F002); ein explizites `"sources": []` löscht die
 Liste bewusst. `enabled` ist innerhalb eines mitgeschickten `official_warnings`-Objekts immer
 Pflicht-Wert der Anfrage (kein separates Preserve für `enabled` selbst).
+
+**Drei Zustände optionaler Felder (Issue #2211, `internal/handler/optional_field.go`,
+`internal/handler/trip.go`):** `PUT /api/trips/{id}` (und `PUT /api/briefings/{id}?kind=route`,
+das dorthin delegiert) unterscheidet bei sieben optionalen Feldern: **Key fehlt** → Bestand bleibt
+(#99-Kontrakt) · **Key mit `null`** → Feld wird geleert (Systemstandard greift) · **Wert** → gesetzt.
+Felder: `alert_cooldown_minutes`, `alert_quiet_from`, `alert_quiet_to`, `official_alerts_enabled`,
+`official_alert_triggers_enabled`, `region`, `activity`. Listen, Maps, Structs und `name` behalten
+bei `null` den Bestand. Ein halbes Ruhezeit-Paar (nur `alert_quiet_from` oder nur `alert_quiet_to`)
+wird gespeichert, aber als „keine Ruhezeit" gelesen. Ortsvergleich-Frontend
+(`alarmeVergleichSpeicherung.ts`) sendet `null` für Alarm-Pause/Ruhezeit nur, wenn der Bestand einen
+Wert hatte und der Editor-Zustand leer ist; sonst lässt es den Key weg. Spec:
+`docs/specs/bugfix/optional_felder_null_leert.md` (vgl. `docs/specs/bugfix/update_trip_handler_merge.md`).
 
 **Isolation:** wie jedes trip-/presetgebundene Feld strikt über `user_id` — kein Cross-User-Leck
 (s. `CLAUDE.md` Mandantenfähigkeits-Pflicht).
@@ -1071,6 +1263,14 @@ Bei `start_time = "08:00"`, `activity = "fahrrad_20"` und 20 km kumulierter Dist
 
 ---
 
+### POST /api/trips — Kennungs-Konflikt (Issue #2359)
+
+Trips und Ortsvergleiche teilen einen Kennungsraum (`briefings/<id>.json`, ADR-0023). Ist eine Kennung bereits durch einen Ortsvergleich des Nutzers belegt, wird die Anlage abgelehnt. Die Prüfung läuft **vor** der Trip-Quota (#2482). Upsert der eigenen Art bleibt `201`.
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 409 | `{"error":"id_conflict","detail":"Ein Ortsvergleich trägt bereits diese Kennung — bitte anderen Namen wählen."}` | Kennung gehört einem Ortsvergleich desselben Nutzers (auch bei Rennen zwischen Prüfung und Schreiben, Store-Sentinel `ErrKindConflict`) |
+
 ## 11) Weather Config Endpoints (M5c)
 
 Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen und Schreiben des `display_config`-Subfelds auf Trip- und Location-Entitaeten ohne Uebertragung des gesamten Objekts. Alle Config-schreibenden Endpoints (Trip, Location, ComparePreset) mergen feldweise ueber den gemeinsamen `mergeConfigMap`-Helfer (`internal/handler/config_merge.go`, #1159) — Teil-Updates loeschen keine anderen `display_config`-Keys mehr. Der fruehere Subscription-Endpoint wurde mit #1250 Scheibe 0 entfernt.
@@ -1081,10 +1281,28 @@ Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen un
 
 | Method | Path | Status | Description |
 |--------|------|--------|-------------|
-| GET | `/api/trips/{id}/weather-config` | 200 / 404 | `display_config` eines Trips lesen — Antwort traegt `ETag` (#1395 S2) |
+| GET | `/api/trips/{id}/weather-config` | 200 / 400 / 404 | `display_config` eines Trips lesen — Antwort traegt `ETag` (#1395 S2) |
 | PUT | `/api/trips/{id}/weather-config` | 200 / 400 / 404 / **412** | `display_config` eines Trips setzen — prueft `If-Match`, Antwort traegt neuen `ETag` (#1395 S2) |
-| GET | `/api/locations/{id}/weather-config` | 200 / 404 | `display_config` einer Location lesen |
+| GET | `/api/locations/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Location lesen |
 | PUT | `/api/locations/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Location setzen — **kein** `ETag`/`If-Match` (Orte liegen auf einer anderen Datei-Ebene) |
+
+### DELETE /api/locations/{id} — Ort-Loeschen-Sperre (Issue #2216, seit 2026-10-08)
+
+Ein Ort, der in `LocationIDs` eines Ortsvergleichs **desselben Nutzers** steht, wird nicht geloescht.
+
+| Status | Bedeutung |
+|--------|-----------|
+| 204 | Ort geloescht (in keinem Ortsvergleich des Nutzers verwendet) |
+| **409** | `location_in_use` — Ort bleibt bestehen |
+| 500 | `store_error` — Nutzungspruefung fehlgeschlagen, nichts geloescht |
+
+409-Body:
+
+```json
+{"error":"location_in_use","compare_presets":[{"id":"…","name":"…"}]}
+```
+
+Die Orte-Seite zeigt die Namen mit Link auf `/compare/{id}` und den Hinweis, den Ort dort zuerst zu entfernen. Die Pruefung laeuft ueber den nutzergebundenen Store (`WithUser`), nie ueber `"default"`; Ortsvergleiche anderer Nutzer erscheinen nie.
 
 ### Nebenlaeufigkeit: `ETag` / `If-Match` (Issue #1395, seit 2026-07-27, Orts-Vergleiche seit S6 2026-07-31)
 
@@ -1103,6 +1321,8 @@ betroffen.
 | `PATCH /api/trips/{id}/state` | nein | nein |
 | `PATCH /api/trips/{id}/waypoints/{wp}/confirm` | nein | nein |
 | `DELETE /api/trips/{id}` | — | nein |
+| `GET /api/briefings/{id}?kind=route` | ja (seit #2285) | — |
+| `PUT /api/briefings/{id}?kind=route` | ja (der **neue** Stand) | **ja** |
 | `GET /api/compare/presets/{id}` | ja | — |
 | `PUT /api/compare/presets/{id}` | ja (der **neue** Stand) | **ja** |
 | `POST /api/compare/presets` | nein | — |
@@ -1125,16 +1345,42 @@ betroffen.
   `{"error":"precondition_failed","detail":"<deutscher Text>"}`, **ohne**
   `ETag`-Header und **ohne** dass geschrieben wird. Der Client soll neu laden,
   nicht blind wiederholen.
+- **Schreibsperre belegt → `503` + `Retry-After`** (Issue #2158, ADR-0083): Trip-,
+  Compare-Preset-, Wetter-Konfig- und Briefing-Abo-Schreibvorgaenge nehmen die
+  gemeinsame Sperre `briefings/<id>.json.lock` (Go und Python). Laeuft die Frist
+  (ca. 5 s) ab, antwortet die API mit `503` und Header `Retry-After`; es wird
+  **nichts** geschrieben. Der Client wiederholt spaeter (anders als `412`, wo er
+  neu laden soll).
 - `If-Match: *` und Kommalisten (ein Treffer genuegt) werden akzeptiert.
+- **Schwache Validatoren `W/"<fp>"` werden wie `"<fp>"` verglichen** (Issue #2317,
+  2026-09-15). nginx komprimiert JSON per gzip und schwaecht dabei den starken
+  `ETag` ab; Browser reichen genau diese Form als `If-Match` zurueck. Bewusste
+  Abweichung vom starken Vergleich nach RFC 7232 §3.1 — das `W/` stammt nur vom
+  eigenen Transport-Proxy. Vorher scheiterte hinter nginx jeder zweite
+  Schreibvorgang einer Sitzung mit falschem `412` (seit 2026-07-27).
 - **Ein erfolgreicher `PUT` liefert immer den NEUEN Stempel zurueck.** Pflicht,
   nicht Bequemlichkeit: Der Server heilt beim Lesen in-memory ohne
   Rueckschreiben, der naechste Save persistiert die Heilung — die Datei aendert
   sich also auch, wenn der Nutzer inhaltlich nichts geaendert hat. Ohne
   Rueckgabe liefe der zweite Klick desselben Nutzers in einen Konflikt mit sich
   selbst.
-- **Der Flush beim Verlassen der Seite** (`keepalive`) sendet bewusst **ohne**
-  `If-Match` — sonst liefe er in einen unsichtbaren Konflikt und die Aenderung
-  waere weg, ohne dass es jemand erfaehrt.
+- **Der Flush beim Verlassen der Seite** (`keepalive`) traegt seit Issue #1433
+  (2026-10-02) `If-Match` — ein veralteter Stand wird mit `412` abgelehnt statt
+  eine Fremdaenderung still zu ueberschreiben. (Frueher bewusst ohne `If-Match`;
+  abgeloest.)
+- **Trip-Konfliktschutz im Mehrreiter-Fall** (Issue #1433, 2026-10-02, reine
+  Frontend-Aenderung): Nach einem `412` bleibt `If-Match` bis „Nochmal speichern"
+  bestehen (kein Verwerfen des ETags), die Konfliktanzeige bleibt ueber
+  Reiterwechsel sichtbar, „Nochmal speichern" holt Trip und `ETag` gemeinsam neu
+  und sendet alle offenen Teilnutzlasten erneut. Jeder Reiter schreibt nur seine
+  Eigenfelder (`pickEigenfelder`, Teilfeld-Prinzip) — z. B. bleibt per
+  Telegram/SMS gesetztes `skip_next` erhalten. Der Versand-Reiter laeuft ueber die
+  If-Match-Warteschlange; Pausieren/Archivieren flusht, `PATCH`et `/state` und
+  holt Trip+`ETag` gemeinsam neu. Gleiches Verhalten im Ortsvergleich-Hub (AC-20).
+  Auch Schreibwege am Controller vorbei (Ortsvergleich-Kopf, Orte, Pausieren/Aktivieren
+  im Hub, Etappen-Sofortschreiben) melden `412` an den Controller, damit „Nochmal
+  speichern" erscheint (keine Sackgasse bis zum Neuladen).
+  Spec: `docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md`.
 - **Orts-Vergleiche haben zwei Schreibwege auf dieselbe Datei** —
   `PUT /api/compare/presets/{id}` (dediziert) und
   `PUT /api/briefings/{id}?kind=vergleich` (Umgehungsweg, `UpdateBriefingHandler`) —
@@ -1144,6 +1390,23 @@ betroffen.
   (Issue #1395 S6) — kein Weg ist eine Umgehung des anderen. Namensraum-Kollision
   mit Trip-IDs ist ausgeschlossen, da Compare-Preset-IDs das Praefix `cp-`
   tragen.
+- **Beide Vergleichs-PUT-Wege teilen sich seit Issue #2285 denselben
+  Merge-Kernel** (`applyComparePresetPatch` in `compare_preset.go`) — identisches
+  Verhalten bei Server-Feld-Faelschung und denselben Legacy-Sentinels auf
+  beiden Wegen, statt zweier unabhaengiger Implementierungen.
+- **Ortsvergleich-Hub sendet Teilfeld-Nutzlasten und traegt den Seitenaufbau-ETag**
+  (Issue #2375, 2026-09-30, reine Frontend-Aenderung, Go unveraendert): Der
+  Seitenaufbau von `/compare/[id]` uebernimmt den `ETag` des Presets, sodass schon
+  der erste Reiter-`PUT` `If-Match` traegt (`412` → „Nochmal speichern" statt
+  stillem Ueberschreiben). Jeder Speicherweg (Reiter Alarme/Wertebereiche/Versand/
+  Wetter-Metriken, Kopf Name/Region/Profil, Orte, Pausieren/Aktivieren in Hub und
+  Liste) sendet nur seine Eigenfelder (`buildComparePresetPartialPayload`:
+  `undefined` wird weggelassen, `[]`/`{}`/`""` bleiben); der Server merged wie
+  bisher (#2285). Der Gesamt-Payload-Builder `buildHubPutPayload` ist entfernt.
+- **`GET /api/briefings/{id}?kind=route` traegt seit Issue #2285 Sperre und
+  `ETag`**, symmetrisch zum `vergleich`-Zweig und zu `GET /api/trips/{id}`. Der
+  zugehoerige `PUT`-Weg prueft `If-Match` unveraendert ueber die Delegation an
+  `UpdateTripHandler`.
 
 ### Response Format
 
@@ -1159,11 +1422,22 @@ null
 
 **PUT Request Body:** Beliebiges gueltiges JSON-Objekt (opaque, kein Schema). Response: gespeichertes `display_config`.
 
+> **Metrik-Reihenfolge bei blossen ID-Strings (Hinweis 2026-09-09, #2236 C4-45; Befund #1703 S7):**
+> Go speichert `display_config` opak, ausgewertet wird es erst beim Laden im Python-Kern
+> (`src/app/loader.py::_parse_display_config`). Enthaelt `metrics[]` **blosse ID-Strings**
+> (`["wind", "temperature"]`, Legacy-Flachform, #1262), werden sie zu
+> `{"metric_id": ..., "enabled": true}` **ohne** `bucket`/`order` normalisiert — die
+> **Array-Position wird verworfen**; Spalte und Reihenfolge kommen dann aus `auto_distribute()`
+> (Katalog-Vorgabe, #360), nicht aus der gesendeten Liste. Wer eine Reihenfolge setzen will, sendet
+> vollstaendige `MetricConfig`-Objekte mit explizitem `bucket`/`order`; nur solche Eintraege
+> werden unveraendert uebernommen.
+
 ### Error Responses
 
 | Status | Body | Szenario |
 |--------|------|----------|
 | 400 | `{"error":"bad_request"}` | Request-Body ist kein gueltiges JSON (PUT) |
+| 400 | `{"error":"validation_error","detail":"invalid id"}` | Pfad-Parameter `{id}` verletzt `store.ValidEntityID` (Pfadsegment-Pruefung gegen Traversal, Issue #2140 S2) — Vorpruefung vor dem Store-Zugriff, gilt fuer GET **und** PUT, Trip wie Location |
 | 404 | `{"error":"not_found"}` | Parent-Entitaet nicht gefunden |
 
 ### Notes
@@ -1184,13 +1458,60 @@ null
 
 ## 12) Scheduler Status Endpoint (Epic #134)
 
-Exposes scheduler job metadata for dashboard display (BriefingsTimeline component).
+Exposes scheduler job metadata. Since #2155 S2 (ADR-0079) the global aggregate
+`GET /api/scheduler/status` is token-gated (its `forecast_budget` block carries, in every state,
+the anonymous integers `active_pots`, `fair_share` (= `daily_budget / max(active_pots,1)`),
+`max_user_calls`, `users_over_fair_share` — never user identifiers, #2475) and consumed only by the external
+monitor `check-gregor20.sh` — the account page (formerly BriefingsTimeline) now
+reads its own run status via the session-authenticated `GET
+/api/scheduler/status/me` (see below).
 
 **Handler:** `internal/handler/scheduler_status.go` | **Routing:** `internal/router/router.go`
 
 ### GET /api/scheduler/status
 
 Returns current scheduler state with per-job metadata (next_run, last_run).
+
+**Additive fields (#1539 S0):** `last_run.duration_s` (number, seconds, 3 decimals, present for
+every job; Go wall clock around the run, without the remaining runtime of late fan-out calls).
+`deadline_aborts{}` only on fan-out jobs: cumulative in-memory count of runs aborted by the
+Python time limit (`reason: "deadline"`) — `total` (never reset by an ok run), `last_at` (absent
+while `total == 0`), `last_skipped` (count), `counting_since` (process/scheduler start). Numbers
+only — never trip or user identifiers.
+
+**Additive field (#2439):** jobs `premium_sms_poll` and `inbound_command_poll` carry `push{}`:
+`last_received`, `received_total`, `rejected_total`, `kicks_coalesced`, `missed_total`,
+`last_missed` (missed = cron poll processed a command with no webhook/kick in the preceding
+5 min). In-memory counters, reset on Go restart. See `docs/runbooks/inbound-webhooks.md`.
+
+**Webhooks (#2439, ADR-0088, session-free):** `POST /api/webhooks/sms/{secret}` (seven.io
+`sms_mo`; headers `X-Signature`/`X-Timestamp`/`X-Nonce`, HMAC-SHA256, ±30 s, nonce cache; signed
+URL from `GZ_PUBLIC_HOST`) and `POST /api/webhooks/mail/{secret}` (Stalwart, Bearer). Valid ⇒ 200 and
+`Scheduler.Kick` runs `premium_sms_poll` / `inbound_command_poll` at once (coalescing, min gap 2 s);
+invalid ⇒ 403; missing env ⇒ 503 (fail-closed). Python `/api/scheduler/inbound-sms` and
+`/inbound-commands` hold a flock and answer `{"status":"busy"}` on a parallel run. Cron `*/5`
+remains the fallback.
+
+**Response of `POST /api/scheduler/inbound-commands` (since #1405 S4b):**
+
+```json
+{"status": "partial", "count": 1, "processed": 1, "failed": 1}
+```
+
+`status` is `"ok"` (`failed == 0`), `"partial"` (`failed > 0`), `"busy"` (flock held) or
+`"skipped"` (no IMAP credentials, `reason: "imap_not_configured"`). `failed` counts an
+unreachable mailbox (IMAP login/network error), a command mail whose processing failed and a
+command reply that could not be delivered (the mail is marked seen regardless — no retry).
+Go evaluates it for `inbound_command_poll` like `premium_sms_poll`: `failed > 0` ⇒
+`last_run.status = "error"`, `partial` without `failed` ⇒ `"partial"`. The push-kick retry
+still depends only on `processed`/`busy`.
+
+**Auth (since #2155 S2, ADR-0079):** requires header `X-GZ-Status-Token` matching the
+configured `GZ_STATUS_TOKEN` (machine secret for the external monitor
+`check-gregor20.sh`, constant-time comparison, both sides sha256-hashed first). A
+valid session cookie does **not** substitute for the token. An empty/unset
+`GZ_STATUS_TOKEN` fails closed — the endpoint then rejects **every** request. For a
+session-authenticated, per-user view see `GET /api/scheduler/status/me` below.
 
 **Response 200:**
 
@@ -1231,6 +1552,20 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
       "overlap": {
         "skipped_since_last_run": 3,
         "last_skipped_at": "2026-08-01T13:00:00Z"
+      },
+      "users": {
+        "total": 3,
+        "failing": 1,
+        "partial": 0,
+        "in_flight": 1,
+        "skipped_in_flight": 0,
+        "not_reached_budget": 0
+      },
+      "deadline_aborts": {
+        "total": 2,
+        "last_at": "2026-08-01T12:00:00Z",
+        "last_skipped": 2,
+        "counting_since": "2026-07-30T08:00:00Z"
       }
     }
   ],
@@ -1260,7 +1595,9 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
   },
   "tier_request_health": {
     "open_count": 1,
-    "oldest_open_age_hours": 192.4
+    "oldest_open_age_hours": 192.4,
+    "unnotified_count": 0,
+    "po_mail_configured": true
   }
 }
 ```
@@ -1269,7 +1606,7 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 
 | Field | Type | Description |
 |-------|------|-------------|
-| running | bool | Is scheduler process active |
+| running | bool | Real process state of the cron scheduler (Issue #2218 C5-15): `false` before `Start()`, `true` after `Start()`, `false` after `Stop()`. Staging runs with the scheduler disabled (`scheduler_gate.go`) and therefore reports `false` — correct, not a fault. Before #2218 this field was hard-wired to `true`. A process state, not a statement about successful runs (see `jobs[].last_run`). |
 | timezone | string | Scheduler timezone (default: "Europe/Vienna") |
 | jobs[] | array | List of scheduled jobs |
 | jobs[].id | string | Job identifier (morning, evening, alert, trip_reports_hourly) |
@@ -1278,10 +1615,17 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 | jobs[].last_run | object \| null | Metadata of last execution (null if never run) |
 | jobs[].last_run.time | datetime | ISO-8601 UTC timestamp of the last **actually executed** run — never overwritten by a skipped (overlapping) tick |
 | jobs[].last_run.status | enum | `ok`, `partial` or `error`. **Two distinct causes produce `partial`:** (1) Issue #1447 S2a — a per-user run reported `status: "partial"` without `failed`, e.g. the alert-run deadline from S1; (2) Issue #1912 — the HTTP call to the Python core hit the scheduler's client **timeout** (`net.Error` with `Timeout()`, or `context.DeadlineExceeded`). A timeout means "the core did not answer **in time**", which is **not** proof of an outage — the core may well complete the dispatch afterwards (measured 2026-08-16: timeout at 18:02, successful dispatch at 18:04:38). Every other transport failure (connection refused, DNS) stays `error`, because an unreachable core **is** an outage. |
-| jobs[].last_run.error | string \| null | Error code/message if status='error' or 'partial' |
+| jobs[].last_run.error | string \| null | Error code/message if status='error' or 'partial'. **Since Issue #2149 Scheibe A, this text never contains a `user_id`** — the four construction sites in `triggerEndpointForUser` build the message from `path` and the unwrapped transport cause (`errors.Unwrap`), even for a `*url.Error` whose own `Error()` text would otherwise embed the full requested URL including `?user_id=...`. |
 | jobs[].overlap | object \| null (Issue #1447 S2a) | Present **only** when at least one tick has been skipped since the last executed run of this job, because the previous run of the same job ID was still in progress (`sync.Mutex.TryLock()` in `recordRun`). Absent field means no overlap is occurring — never an error signal. |
 | jobs[].overlap.skipped_since_last_run | int | Number of consecutive ticks skipped since the last executed run; resets to 0 (and the `overlap` field disappears) the next time the job actually runs, regardless of outcome |
 | jobs[].overlap.last_skipped_at | datetime | ISO-8601 UTC timestamp of the most recently skipped tick |
+| jobs[].users | object \| absent (Issue #2149 Scheibe A) | Anonymous per-user aggregate, present **only** on the six fan-out jobs that run via `runForAllUsers` (`trip_reports_hourly`, `alert_checks`, `radar_alert_checks`, `compare_alert_checks`, `compare_radar_alert_checks`, `compare_presets_daily`; `compare_official_alert_checks` was folded into `compare_alert_checks` by Issue #2286). Absent on the three global jobs without user fan-out (`inbound_command_poll`, `data_write_selftest`, `premium_sms_poll`) — absent means "not applicable", not "all ok". Contains **only counts, never user IDs**. |
+| jobs[].users.total | int | Number of users with a recorded state entry for this job |
+| jobs[].users.failing | int | Number of users with `ConsecutiveFailures >= 1` |
+| jobs[].users.partial | int | Number of users with `ConsecutivePartial >= 1` |
+| jobs[].users.in_flight | int (Issue #2149 Scheibe B, ADR-0070) | Number of user calls of this job that were still running in the background at the end of the **last completed run** (wait budget exceeded, call continues). Always present on fan-out jobs, `0` is a valid value (also before the first run). |
+| jobs[].users.skipped_in_flight | int (Issue #2149 Scheibe B) | Number of users in the last completed run that got **no** new POST because their call from a previous run was still in flight. Always present, `0` when none. |
+| jobs[].users.not_reached_budget | int (Issue #2149 Scheibe B) | Number of users in the last completed run that were not attempted at all because the job's run budget was exhausted (job ranks `partial`). Always present, `0` when none. |
 | briefing_health | object (Issues #1115, #1421, #1629, #1661) | Health metrics for scheduler services (provider/weather, briefing dispatch, deviation-alert anchors). Privacy-safe aggregate across all users — only numeric and timestamps, no `user_id`/`trip_id`/reason appears here. |
 | briefing_health.provider_error_streak_since | string \| null (Issue #1115, ADR-0018) | ISO-8601 UTC timestamp when the current unbroken series of provider (weather/forecast API) errors started, or `null` if no error streak is active. External monitor calculates `now - provider_error_streak_since` to escalate with outage duration. Gap threshold (for streak detection): 2 hours. |
 | briefing_health.provider_errors_recent_count | int (Issue #1115, ADR-0018) | Count of provider errors in the last 24 hours. Used to distinguish temporary transients from persistent outages. |
@@ -1289,23 +1633,124 @@ Returns current scheduler state with per-job metadata (next_run, last_run).
 | briefing_health.briefing_dispatch_errors_recent_count | int (Issue #1629) | Count of briefing dispatch errors in the last 24 hours (recorded in `users/<uid>/diagnostics/briefing_dispatch_failures.jsonl`). |
 | briefing_health.alert_anchor_rejected_streak_since | string \| null (Issue #1661) | ISO-8601 UTC timestamp when the current unbroken series of **rejected deviation-alert anchors** started, or `null` if no streak is active. An anchor is rejected when it describes a different calendar day than today (`wrong_day`), is older than the 26 h fallback limit (`too_old`), or is missing entirely while the trip is already running (`missing`) — in each case the deviation guard has no valid comparison point and stays silent. Gap threshold: **60 minutes** (the alert check runs every 15 minutes, so an hour without a further rejection ends the series; the 26 h threshold used for briefings would keep the same fault invisible for days). |
 | briefing_health.alert_anchor_rejected_recent_count | int (Issue #1661) | Count of rejected deviation-alert anchors in the last 24 hours (recorded in `users/<uid>/diagnostics/alert_anchor_rejected.jsonl`). Only the timestamp is decoded on the Go side — neither the trip id nor the rejection reason leaves the Python core (#252). |
-| briefing_health.track_resolution_failure_streak_since | string \| null (Issue #2073 Scheibe 2) | ISO-8601 UTC timestamp when the current unbroken series of failed GPX track resolutions started, or `null` if no streak is active — exactly like the `provider_error_*`/`alert_anchor_rejected_*` neighbours above, so a monitor tests for `null`. (The Go helper `analyzeTrackResolutionFailures` returns the empty string internally for "no streak"; the handler does not put that into the response map, so the wire format carries `null` — measured on staging 2026-08-22 at `c38e35cc`.) A failure is written when `resolve_stage_track_km` finds no candidate within tolerance, finds several candidates that disagree on the distance, or the stage's already-stored distances turn out implausible (recorded in `users/<uid>/diagnostics/track_resolution_failures.jsonl`, written only on the dispatch path, not on preview). Gap threshold: **26 hours** — deliberately not the 60-minute threshold of the alert-anchor twin, because the Python writer damps track-resolution failures to at most one line per stage and process, so the next line only arrives with the following daily briefing/deploy cycle. |
+| briefing_health.track_resolution_failure_streak_since | string \| null (Issue #2073 Scheibe 2) | ISO-8601 UTC timestamp when the current unbroken series of failed GPX track resolutions started, or `null` if no streak is active — exactly like the `provider_error_*`/`alert_anchor_rejected_*` neighbours above, so a monitor tests for `null`. (The Go helper `analyzeTrackResolutionFailures` returns the empty string internally for "no streak"; the handler does not put that into the response map, so the wire format carries `null` — measured on staging 2026-08-22 at `c38e35cc`.) A failure is written when `resolve_stage_track_km` finds no candidate within tolerance, finds several candidates that disagree on the distance, or the stage's already-stored distances turn out implausible (recorded in `users/<uid>/diagnostics/track_resolution_failures.jsonl`, written only on the dispatch path, not on preview). Gap threshold: **26 hours** — deliberately not the 60-minute threshold of the alert-anchor twin, because the Python writer damps its lines: resolution failures (`no_candidate_within_tolerance`, `ambiguous_result`) to at most one line per stage and process, so the next line only arrives with the following daily briefing/deploy cycle; `implausible_measurement` (since Issue #2218 C5-47) to at most one line per (user, trip, stage) and **12 hours** — 12 h < 26 h, so that streak never lapses while the stage stays implausible. The damping only starts after the line was actually written; if writing fails, the next run retries. A process restart allows at most one extra line per stage. |
+| briefing_health.corrupt_briefings_total | int (Issue #2286) | Sum of corrupt/unloadable files in all users' `briefings/` folders (trips **and** compare presets) from the last scanner run, summed over all users. Addition only — `corrupt_trips_total`/`corrupt_trips_last_run_at` stay unchanged. |
+| briefing_health.corrupt_briefings_by_kind | object (Issue #2286) | `{"trip": n, "vergleich": n, "unbekannt": n}` — breakdown of `corrupt_briefings_total` by kind. Unparseable files count as `vergleich` only if the raw text contains `"kind": "vergleich"`, else `unbekannt`; structurally broken compare presets count as `vergleich`. Legacy `corrupt_trips.json` without `by_kind` counts as `unbekannt`. **Only counts** — no user IDs, no filenames (#252). |
 | briefing_health.track_resolution_failures_recent_count | int (Issue #2073 Scheibe 2) | Count of failed track resolutions in the last 24 hours, summed over all users. Only the timestamp is decoded on the Go side — neither trip id, stage id, reason nor detail leaves the Python core (#252). |
-| enrichment_health | object (Issue #1581, ADR-0018, ADR-0047 Addendum) | Raw call outcomes for degradable **enrichment** paths (thunder direct sources, radar nowcast, SNOWGRID snow depth, and since #2030 the forecast capture `forecast_capture` — a diagnostic path, not a provider fallback, but degradable in the same way) — a top-level sibling of `briefing_health`, never nested inside it, because an enrichment outage is explicitly not a briefing outage (`coreBriefingSources` stays unchanged). One key per path that has been called at least once; a path never called does not appear (no fabricated failure). No streak/threshold decision is made in Go — `check-gregor20.sh` forms `now − last_success_at` itself, exactly like `warn_service_health`. |
-| enrichment_health.\<path\>.last_attempt_at | string \| null | ISO-8601 UTC timestamp of the most recent call attempt for this path (`thunder`, `thunder_additive`, `radar_nowcast`, `snowgrid`, `forecast_capture`), regardless of outcome — including `self_throttled`, so a growing gap to `last_success_at` is externally visible. |
+| enrichment_health | object (Issue #1581, ADR-0018, ADR-0047 Addendum) | Raw call outcomes for degradable **enrichment** paths (thunder direct sources, radar nowcast, SNOWGRID snow depth, since #2218 the alert-check weather fetch `alert_fetch` with per-unit `failed_units`, and since #2030 the forecast capture `forecast_capture` — a diagnostic path, not a provider fallback, but degradable in the same way) — a top-level sibling of `briefing_health`, never nested inside it, because an enrichment outage is explicitly not a briefing outage (`coreBriefingSources` stays unchanged). One key per path that has been called at least once; a path never called does not appear (no fabricated failure). No streak/threshold decision is made in Go — `check-gregor20.sh` forms `now − last_success_at` itself, exactly like `warn_service_health`. |
+| enrichment_health.\<path\>.last_attempt_at | string \| null | ISO-8601 UTC timestamp of the most recent call attempt for this path (`thunder`, `thunder_additive`, `radar_nowcast`, `snowgrid`, `forecast_capture`, `alert_fetch`), regardless of outcome — including `self_throttled`, so a growing gap to `last_success_at` is externally visible. |
 | enrichment_health.\<path\>.last_success_at | string \| null | ISO-8601 UTC timestamp of the most recent outcome `"ok"`. A served-through-fallback call does **not** update this field, even though it delivered values — booking it as success would keep this timestamp fresh through a multi-day degradation and hide the exact state ADR-0018 wants visible. |
-| enrichment_health.\<path\>.last_fallback_at | string \| null | ISO-8601 UTC timestamp of the most recent outcome `"fallback"` (thunder: named substitute source, ADR-0047; radar: none currently produces this outcome). |
+| enrichment_health.\<path\>.last_fallback_at | string \| null | ISO-8601 UTC timestamp of the most recent outcome `"fallback"` (thunder: named substitute source, ADR-0047; radar: an HTTP error status from the GeoSphere INCA nowcast call that still yields frames from another source — since Issue #1658 Scheibe S2, 2026-08-23; before that fix the same case was mis-booked as `"ok"` because `fetch_nowcast()` swallowed the error status instead of raising it, see ADR-0018. Since Issue #2218 C5-37 an **empty** INCA answer — no timeseries or no data points — is booked as `"fallback"` too, with a WARN log line; dry weather is not affected, it yields zero-precipitation frames, never an empty answer. The offline fixture mode stays silent). |
+| enrichment_health.\<path\>.failed_units | string[] (Issue #2218 Scheibe B) | Units (`<user_id>/<trip_id>` for trips, `<user_id>/<preset_id>/<location_id>` for compare) whose **latest** journal line for this path is `"unavailable"` — a later `"ok"` of the same unit removes it. Newest first, at most 20 entries; `[]` when none. Used by the `alert_fetch` path (weather fetch of the alert checks: trip Δ check, trip radar nowcast since #2218 C5-02c, compare alert check); `RadarDeadlineExceeded` books nothing; a throttled or data-less radar result books neither `ok` nor `unavailable`. |
+| enrichment_health.\<path\>.last_fallback_detail | string \| null | The named substitute source (e.g. `eu_direct`) of the most recent `"fallback"` outcome — the youngest fallback wins, including its own detail if empty, decided by timestamp not file position (Issue #1647, AC-1). `null` without a fallback line. `check-gregor20.sh` block `2e-e` names this source in its alert text. |
 | enrichment_health.\<path\>.self_throttled | bool | `true` if the journal contains at least one `"self_throttled"` outcome for this path — the call was skipped by our own budget gate rather than failing against the remote source. |
 | enrichment_health.journal_read_error | bool (present only on error) | `true` when `data/diagnostics/enrichment_calls.jsonl` exists but could not be read (e.g. path is a directory) — our own fault, distinct from a missing journal (fresh deploy, silently empty map). |
-| tier_request_health | object (Issue #1555) | Privacy-safe aggregate of open tier-change requests (`POST /api/auth/tier-change-request`, Issue #1071) across ALL users. Purely numeric — the endpoint is public, so no `user_id`, `display_name` or e-mail ever appears here (#252). A request counts as **done** when `requested_tier` is empty OR equals the effective `tier`; only otherwise it is **open**. |
+| tier_request_health | object (Issue #1555) | Privacy-safe aggregate of open tier-change requests (`POST /api/auth/tier-change-request`, Issue #1071) across ALL users. Purely numeric — no `user_id`, `display_name` or e-mail ever appears here (#252), independent of the token gate added in #2155 S2. A request counts as **done** when `requested_tier` is empty OR equals the effective `tier`; only otherwise it is **open**. |
 | tier_request_health.open_count | int | Number of currently open tier-change requests across all users. `0` when none are pending. |
+| tier_request_health.unnotified_count | int | Issue #2436 — Number of open requests for which the operator was NOT notified (`requested_notified_at` missing). Count only, no identifiers. |
+| tier_request_health.po_mail_configured | bool | Issue #2436 — `true` only if both `PO_EMAIL` and `SMTP_HOST` are set; `false` means tier requests cannot reach the operator. |
 | tier_request_health.oldest_open_age_hours | float | Age in hours of the **oldest** open request (from its `requested_at`); `0.0` when `open_count` is 0 or no open request carries a `requested_at`. Raw hours only — the 7-day overdue threshold is evaluated by the external monitor (`check-gregor20.sh`), not here. |
 
 **Error Responses:**
 
 | Status | Body | Scenario |
 |--------|------|----------|
+| 401 | `{"error":"unauthorized"}` | Missing/wrong/empty `X-GZ-Status-Token` header, or `GZ_STATUS_TOKEN` not configured server-side (fail-closed), even with a valid session cookie (#2155 S2) |
 | 503 | `{"error":"scheduler_unavailable"}` | Scheduler process not reachable |
+
+### GET /api/scheduler/status/me (Issue #2155 S2, ADR-0079)
+
+Session-authenticated counterpart to `GET /api/scheduler/status`, used by the account
+page. Returns only the calling user's own run status for job `trip_reports_hourly` —
+never the global fan-out aggregate, never another user's data.
+
+**Auth:** normal session cookie via `AuthMiddleware` — not on the public allowlist, not
+token-gated. No session → 401.
+
+**Response 200:**
+
+```json
+{
+  "jobs": [
+    {
+      "id": "trip_reports_hourly",
+      "name": "Trip Reports (hourly check)",
+      "next_run": "2026-09-28T09:00:00Z",
+      "last_run": {
+        "time": "2026-09-28T08:00:00Z",
+        "status": "ok",
+        "error": ""
+      }
+    }
+  ]
+}
+```
+
+`next_run` is resolved the same way as in `Status()` (shared cron-entry lookup, no
+second code path). `last_run` comes from a per-`(jobID, userID)` getter on
+`userRunState`, returned by value — never the global fan-out record, so the response
+never leaks another user's error text. No recorded run for the caller yet →
+`"last_run": null` (a valid state, not an error).
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | `{"error":"unauthorized"}` | No session cookie |
+
+---
+
+### Admin-API Nutzerverwaltung (Issue #2155 S3, ADR-0080)
+
+Alle drei Routen: ohne Session 401, ohne Admin 403 `{"error":"forbidden"}`.
+
+**`GET /api/admin/users`** -> 200 `{"users":[AdminUser]}`. `AdminUser` (alle Felder immer
+vorhanden, kein `omitempty`): `id`, `email`, `display_name`, `tier`, `requested_tier`,
+`requested_at`, `email_verified_at`, `created_at`, `disabled` (bool), `is_test_user` (bool),
+`last_trip_report_run` (`{"time","status","error"}` oder `null`), `open_meteo_calls_today`
+(int, heutiger Open-Meteo-Verbrauch des Nutzers, UTC-Tag; 0 bei fehlender/kaputter/gestriger
+Zaehlerdatei, #2475). Nie `password_hash`,
+Passkey- oder Token-/Code-Felder.
+
+**`PUT /api/admin/users/{id}/tier`**, Body `{"tier":"free|standard|premium"}` -> 200 mit
+`AdminUser`. Setzt `tier` und loescht `requested_tier` und `requested_at`. 400 bei ungueltigem
+Tier (`{"error":"invalid_tier"}`) bzw. JSON (`{"error":"invalid_request"}`), 404
+`{"error":"not_found"}` bei unbekannter oder ungueltiger ID, 500 `{"error":"store_error"}`.
+
+**`PUT /api/admin/users/{id}/disabled`**, Body `{"disabled":true|false}` -> 200 mit
+`AdminUser`. Sperren setzt das Flag und leert danach alle Sitzungen des Kontos. 400
+`{"error":"invalid_request"}` bei fehlendem `disabled`/ungueltigem JSON, 404 unbekannt,
+409 `{"error":"cannot_disable_self"}` bei Selbstsperre, 500 wenn das Leeren der Sitzungen
+scheitert (Flag bleibt gesetzt, Wiederholung idempotent).
+
+**Login-Verweigerung:** Auf allen Wegen der Session-Ausgabe 403 `{"error":"account_disabled"}`
+fuer gesperrte Konten (nach erfolgreicher Credential-Pruefung; falsches Passwort bleibt 401).
+
+### Admin-Einladungslinks (Issue #2519, ADR-0084)
+
+Persistenz: globale Datei `data/invites.json`, nur der SHA-256-Hash des Tokens, nie Klartext.
+Die Admin-Routen: ohne Session 401, ohne Admin 403 `{"error":"forbidden"}`.
+
+**`AdminInvite`** (alle Felder immer vorhanden): `id`, `tier`, `note`, `status`
+(`open|used|revoked`), `created_at`, `created_by`, `used_by` (Benutzername oder `""`),
+`used_at`/`revoked_at` (Zeitstempel oder `null`). Nie Token oder `token_hash`.
+
+**`POST /api/admin/invites`**, Body `{"tier":"free|standard|premium","note":"<=200 Zeichen"}`
+-> 201 `{"invite":AdminInvite,"link":"<PublicHost>/register?invite=<token>"}`; der Link steht NUR in
+dieser Antwort. 400 `invalid_tier` / `note_too_long` / `invalid_request`, nichts wird gespeichert.
+
+**`GET /api/admin/invites`** -> 200 `{"invites":[AdminInvite]}`, neueste zuerst.
+
+**`POST /api/admin/invites/{id}/revoke`** -> 200 `AdminInvite`; 404 `not_found`, 409
+`invite_used` bei benutzter Einladung (bereits widerrufene: 200, unveraendert).
+
+**`POST /api/auth/invite/check`**, Body `{"token":"..."}` (öffentlich, 30/h/IP; Token nie in der URL wegen Access-Log) -> 200 `{"tier":"..."}` bei offener
+Einladung, sonst 404 `{"error":"invite_invalid"}` (keine Unterscheidung benutzt/widerrufen/unbekannt).
+
+**`POST /api/auth/register`** nimmt optional `invite` (Token). Gesetzt und ungültig -> 400
+`{"error":"invite_invalid"}`, kein Konto. Reihenfolge: alle Validierungen (inkl. `email_taken`)
+vor der Einlösung; bei Erfolg `Tier=<Level der Einladung>`, `requested_tier` leer, E-Mail-Bestätigung
+bleibt Pflicht. Ohne `invite` unverändert (Level Free).
 
 ---
 
@@ -1359,7 +1804,19 @@ Fetches normalized weather forecast for a given coordinate.
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"error":"invalid_coords"}` | lat/lon out of range or missing |
+| 401 | `{"error":"unauthorized","detail":"authentication required"}` | Kein Nutzerkontext (Issue #2391 — geprüft VOR Parametervalidierung, damit die Kontingent-Reservierung nie auf ein leeres/fremdes Konto bucht) |
+| 429 | `{"error":"budget_exceeded","detail":"daily forecast budget exhausted for this user"}`, Header `Retry-After` (Sekunden, 1..86400 geklemmt) | Tageskontingent des Nutzers erschöpft (Issue #2391, ADR-0076) |
 | 503 | `{"error":"provider_unavailable"}` | Weather provider API unreachable |
+
+**Note (Issue #2391, ADR-0076):** Vor dem eigentlichen Abruf reserviert der Go-Handler das
+Tageskontingent beim Python-Core über den neuen internen Endpunkt `POST
+/api/_internal/forecast-budget/reserve?user_id=...&priority=polling` (`api/routers/internal.py`,
+Section 23-Muster — kein Go-Proxy, `X-GZ-Core-Auth`-geschützt). Antwort `{"allowed": bool,
+"retry_after_s"?: int}` — `retry_after_s` ist nur bei `allowed: false` gesetzt. Ein Erfolg bucht
+2 Einheiten (ein Forecast-Abruf kostet Vorhersage- **und** UV-Abruf) gegen dieselbe
+`ForecastBudgetGate`-Zählung wie der reguläre Python-Pfad. Ist der Core nicht erreichbar oder
+antwortet fehlerhaft, gilt **fail-open** (Abruf läuft durch, WARNING-Log) — unverändertes
+Verhalten wie vor #2391.
 
 ---
 
@@ -1370,6 +1827,11 @@ Manually triggers briefing generation for immediate test/delivery.
 **Handler:** `internal/handler/scheduler_status.go` | **Routing:** `internal/router/router.go`
 
 ### POST /api/scheduler/trip-reports
+
+> **Nur Admin (Issue #2155 S1, ADR-0078):** über die Go-API nur für Nutzer, deren
+> Kennung in `GZ_ADMIN_USER_IDS` steht; sonst 403 `{"error":"forbidden"}` (ohne
+> Sitzung weiterhin 401). Der Cron-Scheduler ruft den Python-Core direkt und ist
+> nicht betroffen. Einzel-Trip-Versand für jeden Nutzer: `POST /api/trips/{id}/send`.
 
 Enqueues immediate trip report (morning/evening/alert) generation and send for active trip.
 
@@ -1392,6 +1854,18 @@ Enqueues immediate trip report (morning/evening/alert) generation and send for a
 | 400 | `{"error":"no_active_trip"}` | No trip with today's stage found |
 | 503 | `{"error":"scheduler_unavailable"}` | Scheduler not available |
 
+**Python-Core response (Cron path, `POST /api/scheduler/trip-reports?user_id=…`, since #766/#1405 S4b):**
+
+```json
+{"status": "partial", "count": 1, "failed": 0, "notice_failed": 1, "duration_s": 0.42}
+```
+
+`failed` = missed briefings (incl. failed catch-up deliveries, #1405 S4b). `notice_failed` =
+failed companion notices (Telegram "Briefing unvollständig", service error mail for SMS-only
+trips) while the briefing itself **was delivered** — not counted as `failed`, `failed_channels`
+untouched (ADR-0086). `status` is `"partial"` when `failed > 0` or `notice_failed > 0`; Go books
+`failed > 0` as `error`, otherwise `partial` as `last_run.status = "partial"`.
+
 ---
 
 ## 14.5) Manual Test-Briefing Send Endpoint (Issue #695, Bug #716)
@@ -1405,10 +1879,10 @@ Sends an immediate test briefing for a specific trip via the user's configured e
 Triggers immediate test briefing send for one trip. Returns success/failure based on whether stage data exists for the target date.
 
 **Query Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `user_id` | string | `"default"` | User identifier (multi-tenant scoping) |
-| `report_type` | string | `"evening"` | `"morning"` (today's stages) or `"evening"` (tomorrow's stages) |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `user_id` | string | yes | User identifier (multi-tenant scoping) — seit Issue #2151 Scheibe A Pflicht statt Default |
+| `report_type` | string | no (default `"evening"`) | `"morning"` (today's stages) or `"evening"` (tomorrow's stages) |
 
 **Response 200 (Success):**
 
@@ -1421,23 +1895,29 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 }
 ```
 
+Seit Issue #1405 S1 (ADR-0086) sind `status` und `sent` aus dem Versand-Ergebnis abgeleitet (`"sent": outcome == "sent"`, `"status": "ok"` nur bei `sent`, sonst das Ergebnis selbst). Für alle bekannten Ergebnisse ist die Antwort unverändert — die Nicht-`sent`-Fälle enden vorher in 422/409. Das Frontend wertet nur den HTTP-Status aus (`sendOutcome.ts`).
+
 **Error Responses:**
 
 | Status | Scenario | Detail |
 |--------|----------|--------|
+| 422 | Missing or empty `user_id` query parameter (Issue #2151 Scheibe A) | FastAPI validation error — `user_id` ist Pflicht |
 | 404 | Trip `trip_id` not found for user | `"Trip {trip_id} not found"` |
 | 409 | Another send for the same `(user_id, trip_id, report_type)` is already in progress (Issue #1756) | `"Versand für {report_type} läuft bereits — bitte warten"` |
 | 422 | SMTP not configured for user (Issue #474) | `"SMTP not configured for this user"` |
 | 422 | No stages for target date (Bug #716 — AC-1) | `"Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum"` |
 | 422 | Invalid `report_type` | `"Invalid report_type: {value}"` |
 
-**Idempotenz (Issue #1756):** Ein zweiter Aufruf für denselben `(user_id, trip_id, report_type)`-Schlüssel während ein erster Versand noch läuft (z. B. wiederholter Klick nach vorzeitigem Proxy-Timeout) wird mit HTTP 409 abgewiesen statt einen zweiten echten Versand auszulösen. Der Lock ist prozesslokal (`threading.Lock`, In-Memory), keine Persistenz. Der Go-Proxy (`SendTripReportProxyHandler`) hat außerdem einen auf 300s (vorher 120s) angehobenen Timeout, da der reguläre Erfolgsfall durch den vollständigen Mehrtages-Ausblick 3–4 Minuten dauern kann.
+**Idempotenz (Issue #1756):** Ein zweiter Aufruf für denselben `(user_id, trip_id, report_type)`-Schlüssel während ein erster Versand noch läuft (z. B. wiederholter Klick nach vorzeitigem Proxy-Timeout) wird mit HTTP 409 abgewiesen statt einen zweiten echten Versand auszulösen. Der Lock ist prozesslokal (`threading.Lock`, In-Memory), keine Persistenz; seit Issue #2124 liegt das Register im geteilten Modul `src/services/send_lock.py` (Trip und Ortsvergleich, Schlüssel enthält `user_id`). Der Go-Proxy reicht den Upstream-Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht); nginx `proxy_read_timeout` 330 s (henemm-infra) liegt über dem Proxy-Timeout. Das Frontend klassifiziert Antworten in `$lib/utils/sendOutcome.ts` (502/503/504/Netzfehler = „Ergebnis unklar — nicht erneut senden“, 409 = „Versand läuft bereits“). Der Go-Proxy (`SendTripReportProxyHandler`) hat außerdem einen auf 300s (vorher 120s) angehobenen Timeout, da der reguläre Erfolgsfall durch den vollständigen Mehrtages-Ausblick 3–4 Minuten dauern kann.
 
 **Multi-Tenant Behavior:**
 - `user_id` query parameter determines which user's data (trip, email config) is used
 - Trip must exist in `data/users/{user_id}/briefings/` directory (seit ADR-0023 / #1250 S7a; `trips/` ist toter Bestand, Issue #1708)
 - Email sent to `settings.mail_to` for that user (set via `/api/auth/profile`)
-- Default `user_id="default"` provided for backwards compatibility (e.g. test-mode without auth)
+- `user_id` is a mandatory query parameter (HTTP 422 if missing/empty, see table above, Issue #2151
+  Scheibe A) — there is no implicit default anymore. The account named `default` remains a valid,
+  explicitly-passable value (`?user_id=default`), it is simply never assumed silently
+  (2026-09-19, Issue #2151 Scheibe C).
 
 **Bug #716 Fix (2026-06-10):**
 - Prior: silent failure (HTTP 200 even when no email sent) when stages missing for target date
@@ -1450,14 +1930,24 @@ Triggers immediate test briefing send for one trip. Returns success/failure base
 
 Triggers `TripAlertService.check_all_trips()` for one user. Called by the Go
 scheduler every 30 minutes. Since Issue #1447 (S1), the run is bounded by a
-hard time budget (`ALERT_RUN_DEADLINE_SECONDS = 90.0`, `src/services/trip_alert.py`)
-— well under the 120s the Go scheduler's shared `http.Client` waits per user
+hard time budget (`ALERT_RUN_DEADLINE_SECONDS`, seit #2261 A-2 S1 180.0 s, `src/services/trip_alert.py`)
+— under the 300s budget (formerly 120s) the Go scheduler's shared `http.Client` waits per user
 before aborting the request. The response now reflects whether the run
 completed fully or was cut off by that budget.
 
 **Handler:** `api/routers/scheduler.py::trigger_alert_checks`
 
 ### POST /api/scheduler/alert-checks
+
+> **Nur Admin (Issue #2155 S1, ADR-0078):** über die Go-API nur für Nutzer, deren
+> Kennung in `GZ_ADMIN_USER_IDS` steht; sonst 403 `{"error":"forbidden"}` (ohne
+> Sitzung weiterhin 401). Gilt ebenso für `POST /api/scheduler/inbound-commands`
+> und — seit Issue #2218 Scheibe C (C5-02a) — für die vier übrigen Alarm-Trigger
+> `POST /api/scheduler/radar-alert-checks`, `/compare-alert-checks` und
+> `/compare-radar-alert-checks` (Proxy an den gleichnamigen Python-Pfad;
+> `/compare-official-alert-checks` ist seit Issue #2286 entfallen). Ein Admin-Trigger läuft über **alle** Nutzer und kann
+> echte Alarme versenden — auf Prod nicht als Test auslösen.
+> Der Cron-Scheduler ruft den Python-Core direkt und ist nicht betroffen.
 
 **Query Parameters:**
 | Parameter | Type | Required | Description |
@@ -1497,6 +1987,23 @@ completed fully or was cut off by that budget.
 | `skipped` | int | Trips not reached because the deadline was hit (0 on a full run) |
 | `duration_s` | float | Actual wall-clock runtime of this run |
 | `reason` | string | Present only when `status: "partial"` — currently always `"deadline"` |
+| `skipped_ids` | string[] | Trip-IDs, die der Lauf nicht mehr erreicht hat (Seit #2261 A-2 S1; `skipped` ist deren Anzahl). Leer bei vollem Lauf. |
+| `failed` | int | Trips, bei denen die Prüfung mit einer Ausnahme endete (Seit #2217; gilt auch für `radar-alert-checks`, `compare-radar-alert-checks`). Die Ausnahme reißt die folgenden Trips nicht mehr mit; sie wird mit Trip-/Preset-ID und Stacktrace geloggt (`report_unit_failure`, `src/services/alert_check_state.py`). `RadarDeadlineExceeded` bricht den Lauf weiterhin ab (`status: "partial"`). `compare-alert-checks` meldet `failed` ebenso — seit Issue #2286 inklusive des amtlichen Teils (vormals eigener Endpoint `compare-official-alert-checks`, entfallen): beide Teile laufen nacheinander in je eigenem try-Block, `count`/`failed`/`duration_s` werden summiert, `checked` ist die Zahl geprüfter Presets (Maximum der Teile); wirft ein Teil, zählt das als `failed += 1`, der andere läuft trotzdem. |
+| `notice_failed` | int | Seit #1405 S4b, **nur `compare-alert-checks`**: gescheiterte Begleit-Hinweise („Alarm unvollständig" per Telegram) bei **zugestelltem** Ortsvergleich-Änderungsalarm — nur dieser Alarm fächert Telegram in mehrere Sprechblasen auf; `alert-checks`, `radar-alert-checks` und `compare-radar-alert-checks` senden genau eine Nachricht und tragen das Feld nicht. Getrennt von `failed`: `failed_channels`, Retry-Backoff und Throttle bleiben unberührt (ADR-0086). `notice_failed > 0` ⇒ `status: "partial"` (ohne `reason`); Go verbucht das als `last_run.status = "partial"`, nicht als `error`. |
+
+**Seit #1405 S4b (2026-10-26):** `compare-alert-checks` meldet bei `failed > 0` den `status: "partial"` (vorher fest `"ok"`); ebenso bei `notice_failed > 0`. Go wertet `failed > 0` als `error`, `partial` ohne `failed` als `partial`.
+
+**Seit #2217 (2026-10-07):** Stapelläufe sind abgeschottet — Alarmläufe (Trip-Radar, `check_all_trips`, drei Ortsvergleich-Alarmläufe) und der Briefing-Sammellauf (Fälligkeits-/Filterprüfung Trip, Zonenbestimmung/Auto-Pause Ortsvergleich) zählen Ausnahmen einzelner Trips/Presets in `failed`, statt abzubrechen. Der Fairness-Stempel wird vor der Prüfung gesetzt; `skip_next` bleibt bei einer Ausnahme unverbraucht. Go-Scheduler: eine Panic in `recordRun`/`callUserWithBudget` wird als Fehler `panic in <jobID>` erfasst und der Job-Lock freigegeben.
+
+**Seit #2261 A-2 S1 (2026-10-05):** Die Zeitgrenze des Laufs beträgt 180 s
+(vorher 90 s; unter dem Go-Wartebudget von 300 s). Die Trips werden in fairer
+Reihenfolge geprüft — am längsten ungeprüft zuerst, Trip-ID als Tie-Break —,
+damit bei knapper Zeit nicht immer dieselben Trips hinten herausfallen. Status
+`"partial"` erscheint nur, wenn die Zeitgrenze tatsächlich erreicht wurde. Die
+nicht erreichten Trips stehen in `skipped_ids` und im WARNING-Log. Zeitpunkt der
+letzten Prüfung je Trip: `data/users/<user_id>/alert_last_checked.json`
+(Max-Merge, gelöschte Trips werden entfernt, fail-open;
+`src/services/alert_check_state.py`).
 
 **Resolved by Scheibe S2a (Issue #1447):** the limitation described below no
 longer applies — `internal/scheduler/scheduler.go::triggerEndpointForUser`
@@ -1548,54 +2055,85 @@ Provides metadata about available weather metrics, including per-metric format m
 
 Returns catalog of all available weather metrics with format mode options and defaults.
 
+**Antwortform (Korrektur 2026-09-09, #2236 B2-36):** ein Objekt, dessen Schluessel die
+Katalog-Kategorien sind (`temperature` · `wind` · `precipitation` · `atmosphere` · `winter`, aus
+`MetricDefinition.category`), je Kategorie eine Liste von Metrik-Eintraegen. Es gibt **kein**
+umhuellendes `metrics`-Feld — `metrics[]` in der Feldtabelle unten steht fuer „ein Eintrag in einer
+dieser Listen". Das fruehere Beispiel (`{"metrics": [...]}` mit `name`) beschrieb eine Form, die
+der Code nie gesendet hat.
+
 **Response 200:**
 
 ```json
 {
-  "metrics": [
+  "temperature": [
     {
       "id": "temperature",
-      "name": "Temperature",
+      "label": "Temperatur",
       "unit": "°C",
+      "category": "temperature",
+      "default_enabled": true,
+      "trip_default_enabled": true,
+      "has_friendly_format": false,
       "format_modes": ["raw"],
-      "default_format_mode": "raw"
-    },
+      "default_format_mode": "raw",
+      "col_label": "Temp",
+      "sms_code": "D",
+      "decimals": 0,
+      "cmp": "über",
+      "change_alert_metric": "temperature_change",
+      "aggregations": [
+        {"id": "min", "label": "Minimum", "alert_metric": "temperature_min"},
+        {"id": "max", "label": "Maximum", "alert_metric": "temperature_max"},
+        {"id": "avg", "label": "Mittel", "alert_metric": null}
+      ]
+    }
+  ],
+  "wind": [
     {
       "id": "wind_direction",
-      "name": "Wind Direction",
-      "unit": "degrees",
+      "label": "Windrichtung",
+      "unit": "°",
+      "category": "wind",
+      "default_enabled": false,
+      "trip_default_enabled": false,
+      "has_friendly_format": true,
       "format_modes": ["raw", "scale"],
-      "default_format_mode": "scale"
-    },
-    {
-      "id": "cloud_total",
-      "name": "Cloud Cover (Total)",
-      "unit": "%",
-      "format_modes": ["raw", "symbol"],
-      "default_format_mode": "symbol"
-    },
-    {
-      "id": "sunshine",
-      "name": "Sunshine",
-      "unit": "hours",
-      "format_modes": ["raw", "symbol"],
-      "default_format_mode": "symbol"
+      "default_format_mode": "scale",
+      "col_label": "WDir",
+      "sms_code": "WD",
+      "decimals": null,
+      "cmp": "",
+      "change_alert_metric": null,
+      "aggregations": [
+        {"id": "avg", "label": "Mittel", "alert_metric": null}
+      ]
     }
-  ]
+  ],
+  "precipitation": ["..."],
+  "atmosphere": ["..."],
+  "winter": ["..."]
 }
 ```
+
+*(Beispiel gekuerzt; Werte aus einem echten Aufruf von `get_metrics()` am 2026-09-09.)*
 
 **Field Definitions:**
 
 | Field | Type | Description |
 |-------|------|-------------|
-| metrics[] | array | List of available metrics (only selectable ones — meta-metrics like `confidence` and `cape` (#1585) are excluded) |
+| `<category>` | array | Liste der Metrik-Eintraege dieser Kategorie (nur waehlbare — Meta-Groessen wie `confidence` und `cape` (#1585) sind ausgefiltert). Die Antwort hat **kein** `metrics`-Feld; `metrics[]` in den folgenden Zeilen meint einen Eintrag dieser Listen (#2236 B2-36) |
 | metrics[].id | string | Metric identifier (e.g., `wind_direction`, `cloud_total`) |
-| metrics[].name | string | Human-readable metric name |
-| metrics[].unit | string | Unit of measurement |
+| metrics[].label | string | Deutscher Anzeigename (`MetricDefinition.label_de`, z. B. `Temperatur`). **Korrektur 2026-09-09 (#2236, B2-36):** das Feld heisst `label`, nicht `name` — `name` hat der Code nie gesendet |
+| metrics[].unit | string | Unit of measurement (`display_unit`, sonst `unit`) |
+| metrics[].category | string | Katalog-Kategorie, identisch mit dem umgebenden Schluessel |
+| metrics[].default_enabled | bool | Vorbelegung fuer Orte/Abonnements (`build_default_display_config()`); fuer neue Trips gilt `trip_default_enabled` |
+| metrics[].has_friendly_format | bool | Ob die Groesse eine Klartext-/Symbol-Darstellung kennt (`use_friendly_format`) |
+| metrics[].col_label | string | Kurze Spaltenueberschrift fuer Tabellen (z. B. `Temp`, `WDir`) |
 | metrics[].format_modes | string[] | Supported format modes for this metric (`raw`, `scale`, `simplified`, `symbol`) |
 | metrics[].default_format_mode | string | Recommended default format mode (must be in `format_modes`) |
-| metrics[].selectable | bool | Whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metrics have `selectable=false`: `confidence` (Issue #710) and, since 2026-08-10, `cape` (Issue #1585, precedent-following the confidence pattern per ADR-0005) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints resp. thunderstorm-level fusion (UI-Auswahl heißt heute Editor-Metrik-Auswahl, kein Wizard) |
+| metrics[].sms_format_capable | bool | **Neu #2422 S6 (2026-10-01).** `true`, wenn die Größe im SMS-/Premium-SMS-/Telegram-Kurzform-Kanal eine Roh/Einfach-Wahl kennt (Wolken `cloud_total`/`cloud_low`/`cloud_mid`/`cloud_high`; CAPE seit #2422 S6b gestrichen, da nicht wählbar). Quelle: `SMS_FORMAT_MODE_METRIC_IDS` (`src/app/metric_catalog.py`). Der Editor zeigt den Roh/Einfach-Umschalter im SMS-Reiter nur für diese Größen (`WeatherMetricsTab.svelte`, `types.ts`); Einfach-Stufen identisch zu den E-Mail-Bändern; Bestandsnutzer behalten den Default |
+| *(nicht gesendet)* `selectable` | — | **Kein Antwortfeld** (Korrektur 2026-09-09, #2236 B2-36): `MetricDefinition.selectable` wirkt nur als Filter, whether this metric appears in the user-facing selector (Wizard/Editor). Backend internal metrics have `selectable=false`: `confidence` (Issue #710) and, since 2026-08-10, `cape` (Issue #1585, precedent-following the confidence pattern per ADR-0005) — these are never returned by `/api/metrics` but used internally for aggregation/forecast-hints resp. thunderstorm-level fusion (UI-Auswahl heißt heute Editor-Metrik-Auswahl, kein Wizard) |
 | metrics[].trip_default_enabled | bool | **Neu Issue #1552.** Ob die Größe zur Vorbelegung eines **neu angelegten Trips** gehört — unabhängig von `default_enabled` (das weiterhin die Orte-/Abonnement-Konfiguration über `build_default_display_config()` versorgt; vor #1552 zeigte der Anlege-Dialog `default_enabled` als Vorbelegung an, während der Versand eines nie eingestellten Trips tatsächlich einem anderen Siebener-Satz folgte — Überschneidung nur 5 von 10). Quelle: `MetricDefinition.trip_default_rank is not None` (`metric_catalog.py`). **Seit Issue #1728 Scheibe 1 (2026-08-15) tragen neun statt sieben Größen einen Rang:** `temperature`(1), `wind`(2), `gust`(3), `precipitation`(4), `thunder`(5), `freezing_level`(6), `visibility`(7), `temperature_day_low`(8), `temperature_day_high`(9) — die beiden neuen Ränge sind angehängt, die ursprünglichen sieben unverändert. `wind_chill_day_low`/`wind_chill_day_high` bekommen bewusst **keinen** Rang (folgen der Lage von `wind_chill` selbst, das ebenfalls keinen Rang trägt) — dieselbe Rangfolge, aus der `DEFAULT_TRIP_METRIC_IDS` (`src/output/renderers/trip_metric_ids.py`) abgeleitet wird, statt sie hart zu listen |
 | metrics[].sms_code | string | GSM-7-safe short token for the metric in SMS/Subject/Telegram alert tokens (e.g., `W`, `G`, `R`, `PR`, `TH`, `CP`, `SL`, `VS`, `HU`). Single source for alert renderers (Issue #914 Slice 1); the metric catalog is the only place these are defined |
 | metrics[].decimals | int \| null | Rounding precision for display (e.g., `precipitation: 1`, `visibility: 1`, most metrics `0`). `null` ⇒ fall back to the unit-based heuristic in `format_metric_value()` |
@@ -1972,12 +2510,12 @@ type ComparePreset struct {
     TopOrtLetzterVersand *string                `json:"top_ort_letzter_versand,omitempty"`     // highest-ranked location from last send (server-managed)
     DisplayConfig        map[string]interface{} `json:"display_config,omitempty"`              // opaque config (Issue #680: active_metrics, ideal_ranges, etc.)
     HourlyEnabled        *bool                  `json:"hourly_enabled,omitempty"`              // Issue #1107, Pointer-Muster analog OfficialAlertsEnabled (#1040): nil/true = Stundenverlauf-Sektion sichtbar (Default), false = komplett weggelassen (Mail behält Übersichtstabelle). Seit Issue #1299 (C2 von Epic #1301) im Hub-Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`) bedienbar — vorher nur über den seit S3 weggeleiteten Legacy-`CompareEditor` erreichbar.
-    OutlookEnabled       *bool                  `json:"outlook_enabled,omitempty"`             // Issue #1361/#1368 (S3 Scheibe A von Epic #1372, 2026-07-27), Pointer-Muster wie HourlyEnabled: nil/true = 3-Tages-Ausblick je Ort gerendert (Python-Default true, `report_config_resolver.py`), false = komplett weggelassen. Feld fehlte bis dahin im Struct — ein PUT verlor den Wert beim Decode still (nil-Preserve-Block in `internal/handler/compare_preset.go` analog `HourlyEnabled`). Bedienbar in `CompareOutlookLayoutControls.svelte` (Wetter-Metriken-Reiter, `context="vergleich"`).
+    OutlookEnabled       *bool                  `json:"outlook_enabled,omitempty"`             // Issue #1361/#1368 (S3 Scheibe A von Epic #1372, 2026-07-27), Pointer-Muster wie HourlyEnabled: nil/true = 3-Tages-Ausblick je Ort gerendert (Python-Default true, `report_config_resolver.py`), false = komplett weggelassen. Feld fehlte bis dahin im Struct — ein PUT verlor den Wert beim Decode still (nil-Preserve-Block in `internal/handler/compare_preset.go` analog `HourlyEnabled`). Bedienbar in `shared/OutlookLayoutControls.svelte` (bis #2346 S3 `CompareOutlookLayoutControls.svelte`; Wetter-Metriken-Reiter, `context="vergleich"`).
     MorningEnabled       *bool                  `json:"morning_enabled,omitempty"`             // Issue #1232 Scheibe 2a: Zwei-Slot-Zeitplan analog Trip. nil = Altdaten vor Migration (Load-Migration setzt echten Wert), sonst true/false
     MorningTime          *string                `json:"morning_time,omitempty"`                // "HH:MM:SS", Fälligkeits-Check nur auf volle Stunde (Minuten ignoriert, KL-2)
     EveningEnabled       *bool                  `json:"evening_enabled,omitempty"`             // wie MorningEnabled, für den Abend-Slot
     EveningTime          *string                `json:"evening_time,omitempty"`                // "HH:MM:SS"; Abend-Versand zielt auf target_date = morgen (Ankündigungs-Charakter, wie Trip-Abendbriefing)
-    EndDate              *string                `json:"end_date,omitempty"`                    // "YYYY-MM-DD", nil = unbegrenzte Laufzeit; gesetzt+<heute (Europe/Vienna) = Versand-Guard greift. Bekannte Lücke: kann per PUT nicht auf nil zurückgesetzt werden (KL-7, Sammel-Issue #1199)
+    EndDate              *string                `json:"end_date,omitempty"`                    // "YYYY-MM-DD", nil = unbegrenzte Laufzeit; gesetzt+<heute (Europe/Vienna) = Versand-Guard greift. PUT-Sentinel (`internal/handler/compare_preset.go:338-340`): `end_date: ""` löscht das Enddatum (nil), ein fehlendes Feld erhält den gespeicherten Wert, ein ungültiges Datum ergibt 400
     Corridors            []Corridor             `json:"corridors"`                             // Issue #1231 Slice 1, additiv neben display_config["ideal_ranges"] — s. Section 24
     OfficialAlertTriggersEnabled *bool          `json:"official_alert_triggers_enabled,omitempty"` // @deprecated (Issue #1258, ersetzt durch official_warnings.enabled) — bleibt in den Daten fuer Rollback-Sicherheit
     OfficialWarnings     *OfficialWarningsConfig `json:"official_warnings,omitempty"`           // Issue #1258, identische Semantik wie Trip — s. Section 10.5 „official_warnings (Issue #1258)"
@@ -1989,9 +2527,10 @@ type ComparePreset struct {
     AlertCooldownMinutes *int                   `json:"alert_cooldown_minutes,omitempty"`      // Issue #1170: nil = Default in compare_alert.py
     AlertQuietFrom       *string                `json:"alert_quiet_from,omitempty"`            // Issue #1170
     AlertQuietTo         *string                `json:"alert_quiet_to,omitempty"`              // Issue #1170
-    SendTelegram         *bool                  `json:"send_telegram,omitempty"`               // Issue #1216 Slice 2b: Alarm-Kanal-Opt-in (Default falsy = E-Mail-only)
-    SendSms              *bool                  `json:"send_sms,omitempty"`                    // Issue #1216 Slice 2b
-    SendPremiumSms       *bool                  `json:"send_premium_sms,omitempty"`            // Issue #1701 S2b (D8): eigenes Feld statt alert_channels-Sub-Objekt (Ortsvergleich hat keins)
+    SendTelegram         *bool                  `json:"send_telegram,omitempty"`               // Issue #1216 Slice 2b: Briefing-Kanal-Opt-in (Default falsy = E-Mail-only); steuert NUR das planmäßige Briefing, nicht den Alarm-Versand (s. AlertChannels)
+    SendSms              *bool                  `json:"send_sms,omitempty"`                    // Issue #1216 Slice 2b — Briefing-Kanal, s. SendTelegram
+    SendPremiumSms       *bool                  `json:"send_premium_sms,omitempty"`            // Issue #1701 S2b (D8); Versand-Reiter (#2293 S2/#2448) — Briefing-Kanal, s. SendTelegram
+    AlertChannels        *AlertChannelsConfig   `json:"alert_channels,omitempty"`              // Issue #2293 S2: eigenes Alarm-Kanal-Sub-Objekt, identischer Typ wie beim Trip (s. „alert_channels" oben). nil = beim Laden materialisiert (email=true, übrige aus SendTelegram/SendSms/SendPremiumSms abgeleitet); steuert AUSSCHLIESSLICH den Alarm-Versand, nie das Briefing. Alt-Bestand ohne alert_channels UND SendPremiumSms=true: die Materialisierung deutet das als Alarm-Absicht (alert_channels.premium_sms=true) und setzt SendPremiumSms bei diesem Ladevorgang zusätzlich auf false zurück — reine In-Memory-Auflösung (kein Write-Back durch ein GET), persistiert erst mit dem nächsten PUT
     Kind                 string                 `json:"kind,omitempty"`                        // ADR-0023-Diskriminator ("vergleich"); nur Migration schreibt ihn
     CreatedAt            time.Time              `json:"created_at"`
 }
@@ -2089,8 +2628,8 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
   noch `metric_alert_levels` (Alarm-Schwelle je Metrik), unverändert. Die
   Legacy-Semantik (absent = alle alarmfähigen feuern) bleibt davon unberührt.
 - `ideal_ranges`: `Record<string, IdealRange>` — Min/Max-Idealwerte pro Metrik (z.B. `{"temp_max_c": {"min": 15, "max": 35}, ...}`). Wird vom Compare-Engine zur Bewertung verwendet.
-- `hourly_metrics`: `string[]` — Ausgewählte Größen für die STUNDEN-Sektion der Vergleichs-Mail. **Seit Issue #1406 Scheibe B (E2 von #1435, 2026-08-01):** kein eigenständiges Compare-Vokabular mehr — der Vorrat ist der zentrale Wetterkatalog (`src/app/metric_catalog.py`, 24 wählbare Größen; 22 davon bekommen eine Wert-Spalte, s.u.). **Geschrieben werden Katalog-IDs** (`"temperature"`, `"humidity"`, …). **Gelesen wird dauerhaft beides:** die zehn historischen Kurzschlüssel (`temp_c`, `wind_chill_c`, `wind_kmh`, `gust_kmh`, `precip_mm`, `uv_index`, `thunder_level`, `pop_pct`, `visibility_m`, `wind_dir_deg`) bleiben als Lese-Alias bestehen — keine Migration, kein Datenumbau. Einzige Auflösungsquelle: `src/output/renderers/compare_hourly_metric_ids.py` (`FRONTEND_TO_HOURLY_METRIC_ID` = Alias-Tabelle, `resolve_hourly_metrics()` = Auflösung nach `dp_field`); die früheren Frontend-Module `compareHourlyMetricDefs.ts::ALL_HOURLY_METRICS` und `compareHourlyCatalogIds.ts` sind ersatzlos entfallen, die Bedienfläche speist sich aus derselben Katalogantwort wie Übersicht und Ausblick (`GET /api/compare/metrics`). **Zwei benannte Ausnahmen** ohne eigene Spalte: `wind_direction` (reines Merge-Signal, wandert als Kompasstext in die Wind-Zelle) und `sunshine` (`HOURLY_EXCLUDED_METRIC_IDS`, AC-11 — stündlich nur als Einstrahlung in W/m² verfügbar; die Katalogantwort meldet das als `hourlySelectable=false` samt Begründung). **Key absent/`None` heißt seit #1406 B nicht mehr „alle Spalten", sondern die ausgesprochene Vorgabemenge der neun historischen Spalten** (`HOURLY_DEFAULT_METRIC_IDS`: Temp, Feels, Wind, Gust, Rain, UV, Thdr, Rain%, Visib) — sonst spränge jeder nie eingestellte Vergleich ungefragt von 9 auf 22 Spalten. **Seit Issue #1366 + #1361 Befund 3 (S3 Scheibe B von Epic #1372, 2026-07-26):** Key absent = Default „alle sichtbar" (Legacy-Fallback); Feld vorhanden und `[]` (bewusst leer) oder vollständig unauflösbar = „keine Spalten" — der Stundenverlauf-Block entfällt dafür ganz (nicht nur die Uhrzeit-Spalte übrig), weil der Resolver diesen Fall zusätzlich auf `hourly_enabled=False` abbildet. Eine Leerauswahl im UI wird seither unbedingt als `[]` gesendet, der Key wird beim Speichern nicht mehr weggelassen (vorher: „leer/absent → alle sichtbar", `buildComparePresetSavePayload`/`buildNewComparePresetPayload` in `compareEditorSave.ts`). Details: `docs/specs/modules/compare_empty_metric_selection.md`. **Schreiber seit Issue #1299 (C2 von Epic #1301):** bedienbar im Hub-Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`, `flushPendingLayoutSave`/`hydrateLayoutFieldsFromPreset`/`rollbackLayoutSnapshot` in `compareHubWizardBridge.ts`, Muster wie die C1-Wetter-Metriken-Bridge). Vorher nur über den seit S3 weggeleiteten Legacy-`CompareEditor` (`CompareInhaltSection.svelte`) erreichbar.
-- `outlook_metrics`: **Kennungsformat** (`string[]`), seit Issue #1848 Scheibe A2 (2026-08-20): `["temperature", "gust"]` — reine Katalog-IDs, dasselbe Vokabular wie Kanal-An/Aus, Reihenfolge, SMS-Kürzel und Schwellwerte, und dasselbe wie `hourly_metrics`. Welche **Auswertungen** eine Kennung zeigt, leitet der Katalog ab (`compare_outlook_metric_ids.derived_aggregations()`: alle Auswertungen aus `available_aggregations()`, die eine Compare-Katalogzeile haben, in dieser Reihenfolge) — Tief und Hoch derselben Größe ergeben EINE Spannen-Spalte (`9/27`, #1848 A1), eine Halbauswahl ist deshalb nicht mehr darstellbar. **Gelesen wird dauerhaft auch die Paar-Altform** `[{"metric_id": ..., "aggregation": ...}]` (ADR-0037, bis #1848 A2 das Schreibformat): sie wird beim Laden auf die Kennung reduziert, zwei Paare derselben Größe werden zu EINEM Eintrag. Geschrieben wird sie nicht mehr. Ausgewählte Größen für den 3-TAGES-AUSBLICK-Block je Ort (Katalog: alle 24 `selectable=True`-Größen mit `summary_fields` aus `src/app/metric_catalog.py` — seit #1406 B derselbe Vorrat wie beim Stundenverlauf, der früher eigene 9er-Katalog ist entfallen). Aufgelöst über `src/output/renderers/compare_outlook_metric_ids.py` gegen `compare_metric_catalog.key_for()` + `metric_catalog._METRICS`; unbekannte/ungültige Paare werden verworfen und per `logger.warning` protokolliert, Reihenfolge bleibt Auswahlreihenfolge. **Seit Issue #1361 Befund 2 + #1368 (S3 Scheibe A von Epic #1372, 2026-07-27):** Key absent/`None` = Default „die bisherigen sieben Spalten" (Temp min/max, Regen, Regen-Wahrscheinlichkeit, Wind, Böen, Gewitter, wie vor dieser Lieferung); Feld vorhanden und `[]` (bewusst leer) = der 3-Tages-Ausblick-Block entfällt für alle Orte vollständig (Überschrift UND Tabelle), analog zur `hourly_metrics`-Kopplung an `hourly_enabled=False` in `resolve_compare_render_options()`. Spaltenköpfe kommen aus `compare_metric_catalog.label` (deutsch, eindeutig), nicht aus `metric_catalog.col_label` (liefert für mehrere Temperatur-Auswertungen denselben Text „Temp"). Schreiber: `CompareOutlookLayoutControls.svelte` im Wetter-Metriken-Reiter — **eine geteilte Bedienfläche, zwei Flächen**: Ortsvergleich (`context="vergleich"`, mit Ein/Aus-Schalter) UND **Trip** (`context="route"`, ohne Schalter — sein Ein/Aus liegt in `report_config.show_outlook`). Der Trip schreibt seit ADR-0055 / Issue #1720 S1 ebenfalls `outlook_metrics`; die frühere ADR-0037-Aussage, der Trip bleibe ohne eigene Auswahlmöglichkeit, ist damit überholt. Die Auswahlliste zeigt seit #1848 A2 **einen Eintrag je Größe** (kein getrenntes Kästchen für Minimum und Maximum). Details: `docs/adr/0037-datengetriebener-ausblick-aus-metrik-katalog.md`, Spec `docs/specs/modules/issue_1361_1368_ausblick_konfigurierbar.md`.
+- `hourly_metrics`: `string[]` — Ausgewählte Größen für die STUNDEN-Sektion der Vergleichs-Mail. **Seit Issue #1406 Scheibe B (E2 von #1435, 2026-08-01):** kein eigenständiges Compare-Vokabular mehr — der Vorrat ist der zentrale Wetterkatalog (`src/app/metric_catalog.py`, 24 wählbare Größen; 22 davon bekommen eine Wert-Spalte, s.u.). **Geschrieben werden Katalog-IDs** (`"temperature"`, `"humidity"`, …). **Gelesen wird dauerhaft beides:** die zehn historischen Kurzschlüssel (`temp_c`, `wind_chill_c`, `wind_kmh`, `gust_kmh`, `precip_mm`, `uv_index`, `thunder_level`, `pop_pct`, `visibility_m`, `wind_dir_deg`) bleiben als Lese-Alias bestehen — keine Migration, kein Datenumbau. Einzige Auflösungsquelle: `src/output/renderers/compare_hourly_metric_ids.py` (`FRONTEND_TO_HOURLY_METRIC_ID` = Alias-Tabelle, `resolve_hourly_metrics()` = Auflösung nach `dp_field`); die früheren Frontend-Module `compareHourlyMetricDefs.ts::ALL_HOURLY_METRICS` und `compareHourlyCatalogIds.ts` sind ersatzlos entfallen, die Bedienfläche speist sich aus derselben Katalogantwort wie Übersicht und Ausblick (`GET /api/compare/metrics`). **Zwei benannte Ausnahmen** ohne eigene Spalte: `wind_direction` (reines Merge-Signal, wandert als Kompasstext in die Wind-Zelle) und `sunshine` (`HOURLY_EXCLUDED_METRIC_IDS`, AC-11 — stündlich nur als Einstrahlung in W/m² verfügbar; die Katalogantwort meldet das als `hourlySelectable=false` samt Begründung). **Key absent/`None` heißt seit #1406 B nicht mehr „alle Spalten", sondern die ausgesprochene Vorgabemenge der neun historischen Spalten** (`HOURLY_DEFAULT_METRIC_IDS`: Temp, Feels, Wind, Gust, Rain, UV, Thdr, Rain%, Visib) — sonst spränge jeder nie eingestellte Vergleich ungefragt von 9 auf 22 Spalten. **Seit Issue #1366 + #1361 Befund 3 (S3 Scheibe B von Epic #1372, 2026-07-26):** Key absent = Default „alle sichtbar" (Legacy-Fallback); Feld vorhanden und `[]` (bewusst leer) oder vollständig unauflösbar = „keine Spalten" — der Stundenverlauf-Block entfällt dafür ganz (nicht nur die Uhrzeit-Spalte übrig), weil der Resolver diesen Fall zusätzlich auf `hourly_enabled=False` abbildet. Eine Leerauswahl im UI wird seither unbedingt als `[]` gesendet, der Key wird beim Speichern nicht mehr weggelassen (vorher: „leer/absent → alle sichtbar", `buildComparePresetSavePayload`/`buildNewComparePresetPayload` in `compareEditorSave.ts`). Details: `docs/specs/modules/compare_empty_metric_selection.md`. **Schreiber seit Issue #1299 (C2 von Epic #1301):** bedienbar im Hub-Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`, `flushPendingLayoutSave`/`hydrateLayoutFieldsFromPreset`/`rollbackLayoutSnapshot` in `compareHubWizardBridge.ts`, Muster wie die C1-Wetter-Metriken-Bridge; die Bridge existiert seit #2276 S6f nicht mehr, die Layout-Funktionen liegen seit #2276 S4 in `shared/weather-metrics-tab/weatherMetricsCompareSave.ts`). Vorher nur über den seit S3 weggeleiteten Legacy-`CompareEditor` (`CompareInhaltSection.svelte`) erreichbar.
+- `outlook_metrics`: **Kennungsformat** (`string[]`), seit Issue #1848 Scheibe A2 (2026-08-20): `["temperature", "gust"]` — reine Katalog-IDs, dasselbe Vokabular wie Kanal-An/Aus, Reihenfolge, SMS-Kürzel und Schwellwerte, und dasselbe wie `hourly_metrics`. Welche **Auswertungen** eine Kennung zeigt, leitet der Katalog ab (`compare_outlook_metric_ids.derived_aggregations()`: alle Auswertungen aus `available_aggregations()`, die eine Compare-Katalogzeile haben, in dieser Reihenfolge) — Tief und Hoch derselben Größe ergeben EINE Spannen-Spalte (`9/27`, #1848 A1), eine Halbauswahl ist deshalb nicht mehr darstellbar. **Gelesen wird dauerhaft auch die Paar-Altform** `[{"metric_id": ..., "aggregation": ...}]` (ADR-0037, bis #1848 A2 das Schreibformat): sie wird beim Laden auf die Kennung reduziert, zwei Paare derselben Größe werden zu EINEM Eintrag. Geschrieben wird sie nicht mehr. Ausgewählte Größen für den 3-TAGES-AUSBLICK-Block je Ort (Katalog: alle 24 `selectable=True`-Größen mit `summary_fields` aus `src/app/metric_catalog.py` — seit #1406 B derselbe Vorrat wie beim Stundenverlauf, der früher eigene 9er-Katalog ist entfallen). Aufgelöst über `src/output/renderers/compare_outlook_metric_ids.py` gegen `compare_metric_catalog.key_for()` + `metric_catalog._METRICS`; unbekannte/ungültige Paare werden verworfen und per `logger.warning` protokolliert, Reihenfolge bleibt Auswahlreihenfolge. **Seit Issue #1361 Befund 2 + #1368 (S3 Scheibe A von Epic #1372, 2026-07-27):** Key absent/`None` = Default „die bisherigen sieben Spalten" (Temp min/max, Regen, Regen-Wahrscheinlichkeit, Wind, Böen, Gewitter, wie vor dieser Lieferung); Feld vorhanden und `[]` (bewusst leer) = der 3-Tages-Ausblick-Block entfällt für alle Orte vollständig (Überschrift UND Tabelle), analog zur `hourly_metrics`-Kopplung an `hourly_enabled=False` in `resolve_compare_render_options()`. Spaltenköpfe kommen seit #2136/ADR-0068 (2026-09-15) aus `metric_catalog.col_label` (dieselbe Quelle wie die Etappentabelle), **nicht** mehr aus `compare_metric_catalog.label`; das frühere Kollisionsargument (mehrere Temperatur-Auswertungen liefern identisch „Temp") ist durch die seit #1848 A1 bestehende Merge-/Dedup-Logik entkräftet (Restkollisionen tragen `aggregation_label_de()` als Suffix). Schreiber: `shared/OutlookLayoutControls.svelte` (bis #2346 S3 `CompareOutlookLayoutControls.svelte`) im Wetter-Metriken-Reiter — **eine geteilte Bedienfläche, zwei Flächen**: Ortsvergleich (`context="vergleich"`, mit Ein/Aus-Schalter) UND **Trip** (`context="route"`, ohne Schalter — sein Ein/Aus liegt in `report_config.show_outlook`). Der Trip schreibt seit ADR-0055 / Issue #1720 S1 ebenfalls `outlook_metrics`; die frühere ADR-0037-Aussage, der Trip bleibe ohne eigene Auswahlmöglichkeit, ist damit überholt. Die Auswahlliste zeigt seit #1848 A2 **einen Eintrag je Größe** (kein getrenntes Kästchen für Minimum und Maximum). Details: `docs/adr/0037-datengetriebener-ausblick-aus-metrik-katalog.md`, Spec `docs/specs/modules/issue_1361_1368_ausblick_konfigurierbar.md`.
 - `outlook_metric_formats`: `Record<string, boolean>`, seit Issue #2049 — Sibling-Feld
   neben `outlook_metrics`, KEINE Rückkehr zur Objektform (die hatte #1848 A2 bewusst
   abgeschafft). Schlüssel = Katalog-ID, Wert `true` = „Einfach" (Wortstufe/Symbol statt
@@ -2108,7 +2647,7 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
   beide denselben Zellenbau (`compare_outlook_metric_ids.py::format_outlook_value`)
   durchlaufen. Go braucht keine Struct-Änderung: `DisplayConfig` ist schemalos,
   `mergeConfigMap` reicht das Unterfeld automatisch durch. Schreiber:
-  `CompareOutlookLayoutControls.svelte` (dieselbe Bedienfläche wie `outlook_metrics`).
+  `shared/OutlookLayoutControls.svelte` (dieselbe Bedienfläche wie `outlook_metrics`).
   Spec: `docs/specs/modules/fix_2049_ausblick_darstellungsform.md`.
 - `output_layout`: opaque (zukünftig) — Spalten-Reihenfolge, Formatierung per Kanal
 - `schedule_config`: opaque (zukünftig) — Wiederholungs-Details
@@ -2121,10 +2660,16 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 |--------|------|--------|-------------|
 | GET | `/api/compare/presets` | 200 | List all presets for authenticated user ([] if none) |
 | GET | `/api/compare/presets/{id}` | 200 / 404 | Get single preset by ID (for detail-page view, Issue #491) |
-| POST | `/api/compare/presets` | 201 / 400 | Create new preset; ID auto-generated, user_id from auth context |
-| PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 | Update preset (user_id, created_at preserved from stored record) |
+| POST | `/api/compare/presets` | 201 / 400 / 409 | Create new preset; ID auto-generated, user_id from auth context; 409 = `id_conflict`, s. u. (Issue #2359) |
+| PUT | `/api/compare/presets/{id}` | 200 / 400 / 404 / 409 | Update preset (user_id, created_at preserved from stored record); 409 = `id_conflict`, s. u. (Issue #2359) |
 | DELETE | `/api/compare/presets/{id}` | 204 / 404 | Delete preset |
-| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'` |
+| POST | `/api/compare/presets/{id}/send` | 200 / 400 / 404 / 409 / 422 | Immediate send: executes comparison & emails all configured recipients regardless of schedule (Issue #627); ignores `schedule='manual'`. **Fehlende Orte (#2216):** sind alle Orte des Ortsvergleichs geloescht, antwortet der Versand mit **422** und der Meldung „Ortsvergleich '<id>' verweist auf gelöschte Orte. Ersetze die Orte im Ortsvergleich." (bewusst nicht 409). Fehlt nur ein Teil, laeuft der Versand mit den uebrigen Orten und die 200-Antwort traegt zusaetzlich `fehlende_orte` (Liste der nicht aufloesbaren Ort-IDs; leer/fehlend wenn nichts fehlt); der Scheduler-Lauf loggt eine Warnung, der Compare-Hub zeigt nach dem Test-Versand einen Hinweis. 409 = für diesen Ortsvergleich läuft bereits ein Versand (geteiltes Lock-Register `src/services/send_lock.py`, Schlüssel enthält `user_id`; Issue #2124). Der Go-Proxy reicht den Request per `context.WithoutCancel` weiter (Client-Abbruch stoppt den Versand nicht), Timeout 300 s (vorher 120 s) |
+
+**Kennungs-Konflikt `id_conflict` (Issue #2359, POST und PUT):** Die Kennung ist bereits durch einen Trip belegt (gemeinsamer Kennungsraum, ADR-0023). Store-Sentinel `ErrKindConflict` wird über `writeSaveError` abgebildet:
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 409 | `{"error":"id_conflict","detail":"Diese Kennung ist bereits durch einen Trip oder Ortsvergleich belegt — bitte anderen Namen wählen."}` | `SaveComparePreset` trifft auf eine Datei fremder Art (statt 500 `store_error`) |
 
 ### Validation Rules (POST/PUT)
 
@@ -2149,11 +2694,12 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 ### Notes
 
 - **User Isolation:** Every preset belongs to one user (read from Auth-Context). No user can see/modify another user's presets.
+- **Entitäts-ID-Guard (Issue #2140 S2):** Der Pfad-Parameter `{id}` bei `PUT`/`DELETE` durchläuft vor jedem Store-Zugriff `store.ValidEntityID` (Pfadsegment-Prüfung gegen Traversal, keine Zeichen-Whitelist — Umlaute in Presets sind ohnehin serverseitig generiert und damit unbetroffen). Fehltreffer liefern den oben stehenden generischen `400 validation_error`.
 - **Server-Managed Fields:** On CREATE, `id` is auto-generated (`cp-{hex}`) and `user_id` is set from context. On UPDATE, `user_id` and `created_at` are never overwritten from request body. `letzter_versand`, `top_ort_letzter_versand`, and `previous_schedule` are server-managed (not client-writable).
 - **forecast_hours (Issue #764, @deprecated #1268):** Vorhersage-Horizont — Legacy-Erklärung: (24|48|72 Stunden) wurde beim Orts-Vergleich-Versand verwendet. **Seit Issue #1268:** Das Feld ist deprecated und wird vom Dispatch nicht mehr gelesen. Der Versand verwendet fest 96 h (Issue #1305, zuvor 48 h — geteilte Konstante `COMPARE_FORECAST_HOURS` in `src/services/comparison_engine.py`). Beim Bearbeiten wird der Wert aus dem Preset nicht mehr hydratisiert und nicht mehr in den Request-Body geschrieben. Die Go-API akzeptiert den Wert bei PUT zum Bestandsschutz (RMW-Spread), schreibt ihn aber nicht selbst. Neue Presets erhalten 0 (Go Zero-Value, keine Editor-Eingabe). Bekannte Limitation #1280 (s. Spec #1268): Versandzeit-Genauigkeit (Minuten vs. Stunden) sichtbar geworden; **PO-Entscheid liegt vor** (2026-07-16: Eingabe auf volle Stunden begrenzen), Umsetzung in #1280.
 - **display_config (Issue #680):** Opaque JSON object stored as `map[string]interface{}` (no server-side schema validation). Contains `active_metrics` (persisted Metrik-Auswahl), `ideal_ranges` (Bewertungs-Schwellwerte), und zukünftig `output_layout` + `schedule_config`. Round-Trip beim Update: Server gibt `display_config` unverändert zurück, Frontend reicht nur geänderte Felder. Bestandsfelder erhalten sich automatisch (RMW-Semantik). **Fix #1191:** `CompareAlertService._build_eval_config` reicht `display_config` seither auch in die Δ-Alarm-Auswertung durch (vorher immer `None`, wodurch der #961-Deaktivierungs-Filter für Compare-Presets wirkungslos blieb — analog zum Trip-Pfad in `trip_alert.py`). Migrations-Skript `scripts/migrate_1191_compare_active_metrics.py` setzt auf Bestands-Presets ohne `active_metrics` einmalig den vollen Metrik-Satz (bewahrt „alles feuert", jetzt explizit + abschaltbar).
 - **POST /api/compare/presets/{id}/send:** Immediate send endpoint (Issue #627). Executes comparison engine and emails `settings.mail_to` immediately, regardless of `schedule` value (bypasses time-based gating). **Seit Issue #1452 (2026-08-02):** `empfaenger` wird für die Empfängerermittlung nicht mehr gelesen — s. Section 18 für Details. If `mail_to` is missing, the send fails. Returns HTTP 200 with `{"status":"ok","winner":"<top_location>","empfaenger_count":N}` on success (`empfaenger_count` ist seit #1452 stets 1). Updates `letzter_versand` and `top_ort_letzter_versand` server-side.
-- **previous_schedule Field (Issue #631):** When a preset is paused (`schedule='manual'`), the frontend sets `previous_schedule` to the prior schedule value (`"daily"` or `"weekly"`). On reactivation, `schedule` is restored from `previous_schedule`. This field is preserved across reloads (backend-persistent); altdata without this field remain unaffected (omitempty).
+- **previous_schedule Field (Issue #631):** When a preset is paused (`schedule='manual'`), the frontend sets `previous_schedule` to the prior schedule value (`"daily"` or `"weekly"`). On reactivation, `schedule` is restored from `previous_schedule`. This field is preserved across reloads (backend-persistent); altdata without this field remain unaffected (omitempty). **Seit Issue #2282 (Scheibe S1)** gibt es einen zweiten, serverseitigen Schreibpfad mit identischer Regel (leer → `"daily"`): `resume_compare_preset()` (`src/services/scheduler_dispatch_service.py`), ausgelöst durch den Inbound-Befehl `WEITER` an einem per Nachricht pausierten Ortsvergleich (Telegram/Premium-SMS/E-Mail). Beide Pfade schreiben dieselbe Datei nach demselben Muster, kein Konflikt.
 - **LocationIDs Validation:** Backend does not validate that referenced location IDs exist in `data/users/{userID}/locations.json`. Invalid IDs cause errors only during send.
 - **official_warnings (Issue #1258):** Identische Semantik wie beim Trip — s. Section 10.5 „official_warnings (Issue #1258)" für Feld-Format, Legacy-Fallback (`official_alert_triggers_enabled`), Migration und PUT-RMW-Verhalten (inkl. Feld-Level-Preserve von `sources`).
 
@@ -2224,14 +2770,19 @@ Handles the OAuth callback from Google. Exchanges authorization code for ID toke
 5. Validate `email_verified: true` in userinfo
 6. Lookup user by `OAuthProvider: "google"` + `OAuthSub: sub`
    - **Found:** Issue `gz_session` cookie, redirect to `/`
-   - **Not Found:** Generate new User-ID (`g-{8hex}`), create new user, issue `gz_session` cookie, redirect to `/`
-7. On any error: Redirect to `/login?error=oauth_failed` (no stack traces exposed)
+   - **Not Found:** under the per-address lock (ADR-0067, Issue #2147 Scheibe C) look up the `sub` again, then resolve the normalized address:
+     - free address → generate new User-ID (`g-{8hex}`), create new user with normalized `email`/`mail_to` (double opt-in, ADR-0066)
+     - confirmed owner without Google identity → link (`OAuthProvider`/`OAuthSub` set, `EmailVerifiedAt` and sessions unchanged), notice mail without link to the effective contact address
+     - unconfirmed owner without credentials → take over (confirm, link, clear old sessions, no mail)
+     - confirmed owner with another Google identity, unconfirmed owner with credentials, address only in the secondary field, or several owners → redirect to `/login?error=oauth_link_failed`, nothing written
+   - Then the ADR-0066 gate: unconfirmed address → `/login?error=email_not_verified`
+7. On any error (incl. unreadable account during the address scan): Redirect to `/login?error=oauth_failed` (no stack traces exposed)
 
 **Response:**
 
 | Status | Behavior |
 |--------|----------|
-| 302 | Redirect to `/` (success) or `/login?error=oauth_failed` (failure) |
+| 302 | Redirect to `/` (success) or `/login?error=oauth_failed` / `/login?error=oauth_link_failed` / `/login?error=email_not_verified` (failure) |
 | 400 | Invalid query parameters or malformed request |
 
 **Error Cases:**
@@ -2243,11 +2794,13 @@ Handles the OAuth callback from Google. Exchanges authorization code for ID toke
 | Google userinfo endpoint unavailable | 302 to `/login?error=oauth_failed` |
 | ID collision after 3 generation attempts | 302 to `/login?error=oauth_failed` |
 | Network error during token exchange | 302 to `/login?error=oauth_failed` |
+| Unreadable account during address scan | 302 to `/login?error=oauth_failed` |
+| Address not uniquely assignable (another Google identity, unconfirmed account with credentials, secondary field only, several owners) | 302 to `/login?error=oauth_link_failed` — same code for all cases, no statement whether the address exists |
 
 **Side Effects:**
 
 - New `data/users/g-{8hex}/user.json` created for first-time Google users
-- Session cookie `gz_session` set with 7-day expiry
+- Session cookie `gz_session` set, unbefristet gueltig bis zum Widerruf (MaxAge 34560000 = 400 Tage, Issue #2129)
 - Existing users with matching `oauth_sub` skip creation and reuse their account
 
 ### User Data Model (Modified)
@@ -2289,16 +2842,58 @@ type User struct {
 - `frontend/src/routes/register/+page.server.ts` — exposes `data.googleEnabled` flag
 - Conditional button: `{#if data.googleEnabled} <a href="/api/auth/google/init">Mit Google anmelden</a> {/if}`
 
+### POST /api/auth/logout-all — auf allen Geraeten abmelden (Issue #2129)
+
+Authentifiziert (Cookie erforderlich, **nicht** in der Public-Allowlist der
+AuthMiddleware — die Nutzerkennung kommt aus dem geprueften Merkmal).
+
+**Request:** kein Body.
+
+**Response 200:** `{"status":"ok"}`
+
+**Side Effects:**
+- Leert `data/users/<user_id>/sessions.json` — **alle** Anmeldungen dieses Nutzers werden ungueltig, auch die auf anderen Geraeten, und bleiben es nach einem Dienst-Neustart.
+- Loescht das Cookie des aufrufenden Geraets (`MaxAge=-1`).
+- Nur der eigene Nutzer ist betroffen; andere Konten bleiben unberuehrt.
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | `{"error":"unauthorized"}` | kein oder ungueltiges Anmelde-Merkmal |
+| 500 | `{"error":"store_error"}` | Gaesteliste nicht schreibbar |
+
+Dieselbe Wirkung loesen **Passwortwechsel** (`PUT /api/auth/password`) und
+**Passwort-Zuruecksetzen** (`POST /api/auth/reset-password`) aus. Die
+**Kontoloeschung** (`POST /api/auth/account/delete`, seit #2160) entfernt die Gaesteliste mit dem
+Nutzerordner. `POST /api/auth/logout` entfernt dagegen nur den Eintrag des
+aufrufenden Geraets.
+
+**Ausnahme beim Passwortwechsel:** Er meldet alle **anderen** Geraete ab, stellt
+dem wechselnden Geraet aber sofort ein frisches Merkmal aus (`Set-Cookie` in
+derselben Antwort). Sonst saehe der Nutzer unmittelbar nach dem Wechsel eine
+Seite, deren Datenabrufe alle 401 geben. Zuruecksetzen, Kontoloeschung und
+`logout-all` stellen **kein** neues Merkmal aus — wer zuruecksetzt, weil das
+Passwort abgegriffen wurde, soll ausgesperrt bleiben.
+
+**Uebergangsformat — ENTFALLEN am 2026-09-15 (#2262), kein API-Vertrag mehr.**
+Das alte dreiteilige Merkmal `{userId}.{ts}.{sig}` wird an beiden Pruefstellen
+wie jedes unbekannte Cookie mit 401 abgewiesen, ohne stille Hebung. Das Feld
+`legacy_revoked_at` in `sessions.json` wird weder geschrieben noch gelesen;
+Bestandsdateien, die es noch tragen, bleiben lesbar (unbekannte Felder werden
+ignoriert) und verlieren es beim naechsten Schreiben.
+
 ### Session Handling
 
 Google OAuth users receive the same session mechanism as password-auth users:
-- Cookie: `gz_session` (format: `{userId}.{timestamp}.{sig}`)
+- Cookie: `gz_session` (format: `{userId}.{sessionId}.{timestamp}.{sig}`, signiert ueber `{userId}:{sessionId}:{timestamp}`)
 - User-ID format for OAuth users: `g-{8hex}` (no dots to prevent session parsing errors)
-- Session verification: `frontend/src/lib/auth.ts` → `verifySession()` handles split defensively
+- Session verification: `frontend/src/lib/auth.ts` → `verifySession()` zerlegt von rechts (identisch zum Go-Dienst)
+- Gueltigkeit: das Merkmal gilt unbefristet, solange seine `sessionId` in `data/users/<user_id>/sessions.json` steht (Issue #2129, ADR-0060). Das alte dreiteilige Format `{userId}.{timestamp}.{sig}` wird seit dem 2026-09-15 (#2262) an beiden Pruefstellen wie jedes unbekannte Cookie mit 401 abgewiesen, ohne stille Hebung (siehe Uebergangsformat-Absatz oben). Kann die Gästeliste nicht gelesen werden (Serverfehler), antwortet die Middleware mit 503 statt 401; das Frontend bleibt dann auf der Seite (#2353).
 
 ---
 
-## 17) Compare-Preset Model (Issue #458)
+## 17.1) Compare-Preset Model (Issue #458)
 
 Das neue `ComparePreset`-Datenmodell für Auto-Briefings (Orts-Vergleiche) mit CRUD-Endpoints.
 
@@ -2363,7 +2958,7 @@ Alle Endpoints filtern nach dem eingeloggten User (via `middleware.UserIDFromCon
 
 ---
 
-## 17) Compare-Presets Daily Dispatch Endpoint (Issue #461, Slot-Zeitplan seit #1232 Scheibe 2a)
+## 17.2) Compare-Presets Daily Dispatch Endpoint (Issue #461, Slot-Zeitplan seit #1232 Scheibe 2a)
 
 **Veraltet (bis #1232 Scheibe 2a):** Dispatch lief einmal täglich um 06:00 UTC und filterte grob
 auf `schedule='daily'`. **Aktuell:** Der Go-Cron `compare_presets_daily` läuft **stündlich**
@@ -2397,7 +2992,8 @@ aktualisiert `letzter_versand` und `top_ort_letzter_versand`.
 {
   "status": "ok",
   "count": 2,
-  "failed": 0
+  "failed": 0,
+  "duration_s": 3.412
 }
 ```
 
@@ -2407,7 +3003,8 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 {
   "status": "partial",
   "count": 1,
-  "failed": 1
+  "failed": 1,
+  "duration_s": 2.108
 }
 ```
 
@@ -2417,7 +3014,8 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 |-------|------|-------------|
 | status | enum | `"ok"` wenn alle fälligen Presets erfolgreich versendet wurden, `"partial"` sobald `failed > 0` (Issue #1290; HTTP bleibt in beiden Fällen 200) |
 | count | int | Anzahl erfolgreich versendeter fälliger Presets (Morgen- oder Abend-Slot), die zur geprüften Stunde fällig waren |
-| failed | int | Anzahl fälliger Presets, deren Versand fehlgeschlagen ist (Issue #1290; zuvor nur intern als `error_count` geloggt, jetzt Teil der Response) |
+| failed | int | Anzahl fälliger Presets, deren Versand fehlgeschlagen ist (Issue #1290; zuvor nur intern als `error_count` geloggt, jetzt Teil der Response). Seit Issue #2286 zählt auch ein Provider-Totalausfall (alle Orte ohne Wetterdaten ⇒ `no_weather`, keine Mail) als `failed`; eine kaputte Datei in `briefings/` wird übersprungen und zählt **nicht** als `failed`. |
+| duration_s | float | Laufdauer des Aufrufs in Sekunden (Issue #2286 — gleiche Feldmenge wie `/api/scheduler/trip-reports`) |
 
 **Internal Behavior (seit Issue #1232 Scheibe 2a):**
 
@@ -2470,7 +3068,7 @@ Executes comparison and sends report for a single preset immediately (regardless
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| user_id | string | yes (via appendUserID) | User identifier (appended by Go proxy; anti-spoofing via Auth-Context) |
+| `user_id` | string | yes | User identifier — seit Issue #2151 Scheibe A explizit Pflicht (appended by Go proxy; anti-spoofing via Auth-Context) |
 
 **Response 200 (Success):**
 
@@ -2507,6 +3105,7 @@ Executes comparison and sends report for a single preset immediately (regardless
 
 | Status | Body | Scenario |
 |--------|------|----------|
+| 422 | FastAPI validation error | Missing or empty `user_id` query parameter (Issue #2151 Scheibe A) |
 | 422 | `{"detail":"Preset <id>: kein Empfaenger — mail_to fehlt in den Konto-Settings"}` | Keine `mail_to`-Adresse in den Konto-Settings des Users (dokumentierte Korrektur 2026-08-02, Issue #1452 — vorheriger Stand dieser Zeile beschrieb einen `400`/`no_recipients`-Fehlerkörper, der im Code nicht mehr existiert) |
 | 404 | `{"error":"not_found"}` | Preset ID not found in user's preset list |
 | 500 | `{"error":"send_failed","detail":"..."}` | Email dispatch failed (network/Resend error) |
@@ -2539,7 +3138,7 @@ User registration with username + password + email (HTTP 201 on success, 409 if 
 
 **Request Body:**
 ```json
-{"username": "alice", "password": "geheim123", "email": "alice@example.com"}
+{"username": "alice", "password": "geheim123", "email": "alice@example.com", "is_test_user": false}
 ```
 
 **Response 201:**
@@ -2550,9 +3149,10 @@ User registration with username + password + email (HTTP 201 on success, 409 if 
 **Validation:**
 - `username`: 3–50 characters, alphanumeric + underscore
 - `password`: ≥8 characters
-- `email`: required (Issue #1226), minimal format check (`strings.Contains(email, "@")` — no `net/mail` parsing, no uniqueness check)
+- `is_test_user` (optional, Issue #2152/ADR-0072): `true` markiert das Konto dauerhaft als Testkonto (`user.json` → `is_test_user`). Der Testkonto-Status wird ausschliesslich aus diesem Feld gelesen (plus der festen Fixture-ID `tg-live-e2e`) — die frühere Namens-Heuristik (`test`/`tdd` im Usernamen) ist entfallen. Fehlt das Feld, ist das Konto ein normales Nutzerkonto.
+- `email`: required (Issue #1226), minimal format check (`strings.Contains(email, "@")` — no `net/mail` parsing); **uniqueness IS enforced** (Issue #2147 Scheibe B1) — normalisiert (`TrimSpace`+`ToLower`) darf `email`/`mail_to` keinem anderen, echten (Nicht-Test-)Konto bereits gehören, geprüft unter einer prozessweiten Sperre je Adresse (`store.LockEmailAddress`)
 
-**Check order (Issue #1517):** format checks (username length/regex, password length) → existence check (`s.UserExists`) → email presence/format. The existence check runs **before** the email checks, so a request for an already-registered username returns 409 regardless of whether `email` is set — previously a missing `email` on an existing username produced a misleading 400 `validation failed`.
+**Check order (Issue #1517):** format checks (username length/regex, password length) → existence check (`s.UserExists`) → email presence/format → **address-uniqueness check** (Issue #2147 Scheibe B1). The existence check runs **before** the email checks, so a request for an already-registered username returns 409 regardless of whether `email` is set — previously a missing `email` on an existing username produced a misleading 400 `validation failed`.
 
 **Error Responses:**
 
@@ -2563,7 +3163,8 @@ User registration with username + password + email (HTTP 201 on success, 409 if 
 | 409 | `{"error":"user already exists"}` | User with this ID already registered (auth.go:62-67 — Klartext mit Leerzeichen, KEIN snake_case; checked before email validation) |
 | 400 | `{"error":"validation failed"}` | `email` missing (auth.go:75-79) |
 | 400 | `{"error":"invalid_email"}` | `email` present but without `@` (auth.go:81-85) |
-| 500 | `{"error":"internal error"}` / `{"error":"store_error"}` | Hashing-/Persistenz-Fehler (auth.go:88-93,102-106) |
+| 409 | `{"error":"email_taken"}` | `email` bereits von einem anderen, echten Konto (in `email` oder `mail_to`) getragen (Issue #2147 Scheibe B1) — kein Konto wird angelegt, keine Verifikationsmail |
+| 500 | `{"error":"internal error"}` / `{"error":"store_error"}` | Hashing-/Persistenz-Fehler oder Lesefehler bei der Adress-Eindeutigkeitsprüfung (fail-closed) (auth.go:88-93,102-106) |
 
 Since Issue #1226, a valid `email` also triggers the existing `dispatchVerificationMail` helper (from #1219) after account creation — same Double-Opt-In flow as profile email changes. Google-OAuth account creation (`createOAuthUser`) and passkey-public account creation (`PasskeyRegisterPublicFinishHandler`) trigger the same dispatch on first-time account creation (not on existing-user login).
 
@@ -2582,7 +3183,7 @@ User login with username + password, returns session cookie.
 ```
 
 **Side Effects:**
-- Sets `Set-Cookie: gz_session=<userId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=86400; Secure` (Secure flag active on HTTPS)
+- Sets `Set-Cookie: gz_session=<userId>.<sessionId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=34560000; Secure` (Secure flag active on HTTPS)
 
 **Error Responses:**
 
@@ -2591,6 +3192,37 @@ User login with username + password, returns session cookie.
 | 400 | `{"error":"invalid request"}` | JSON malformed (auth.go:124 — Klartext, KEIN snake_case) |
 | 401 | `{"error":"invalid credentials"}` | User not found or password incorrect — same message for both (auth.go:132,139; Klartext mit Leerzeichen) |
 
+#### POST /api/auth/magic-link
+
+Fordert einen 6-stelligen Anmeldecode (15 Min gültig) für `{"email": "..."}` an. Antwort **immer**
+`200 {"status":"ok"}` (keine Konto-Enumeration); `400 {"error":"invalid request"}` nur bei leerem
+Body/leerer Adresse. **Legt kein Konto an** (seit #2147). Der Code geht über den
+Bestätigungsmail-Weg (Resend-Sonderpfad ohne Empfänger-Allowlist), weil er wie die
+Bestätigungsmail ein Adressnachweis ist. Adressen werden per `TrimSpace + ToLower` normalisiert.
+
+#### POST /api/auth/magic-link/verify
+
+Löst `{"email","code"}` ein. Erfolg: `200 {"id": "<userId>"}` + `gz_session`-Cookie. Der Code wirkt
+genau einmal (auch bei gleichzeitigen Anfragen). Erst hier wird die Adresse X einem Konto zugeordnet
+(Issue #2147, Spec `magic_link_adress_eindeutigkeit.md`):
+
+- **Inhaber** von X = Nicht-Testkonto mit `email` oder `mail_to` gleich X. **Bestätigter Inhaber** =
+  zusätzlich `email_verified_at` gesetzt und X ist seine wirksame Kontaktadresse (`mail_to`,
+  ersatzweise `email`).
+- Genau ein bestätigter Inhaber → Anmeldung in dieses Konto (Konto unverändert).
+- Kein Inhaber → neues Konto `m-{8hex}` mit `email = mail_to = X`, sofort bestätigt.
+- Genau ein unbestätigter Inhaber ohne Passwort, Passkey und Google-Verknüpfung, X ist seine
+  Kontaktadresse → Konto wird bestätigt, seine bisherigen Sitzungen enden, dann Anmeldung.
+- Alles andere (mehrere Inhaber, X nur im Nebenfeld, unbestätigtes Konto mit Zugangsdaten) → keine
+  Anmeldung; dieselbe Antwort wie bei falschem Code. Das Log nennt nur Konto-IDs/Anzahl, nie X.
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"invalid request"}` | JSON malformed, Adresse oder Code leer |
+| 400 | `{"error":"invalid_or_expired_code"}` | Kein/abgelaufener/falscher/verbrauchter Code **oder** Adresse nicht eindeutig zuordenbar |
+| 400 | `{"error":"max_attempts_exceeded"}` | 3 Fehlversuche |
+| 500 | `{"error":"internal error"}` | Konten nicht lesbar / Anlage oder Bestätigung fehlgeschlagen |
+
 ### B) Passkey Authentication (WebAuthn/FIDO2)
 
 **Issue #450** — Add WebAuthn (Face ID, Touch ID, Windows Hello, etc.) as alternative auth method alongside password. V1 is add-on (existing users keep passwords).
@@ -2598,7 +3230,18 @@ User login with username + password, returns session cookie.
 **Issue #467** — Discoverable credentials (login without username) via Conditional UI. Browser shows Passkeys as native autofill suggestions on username field focus (`mediation: 'conditional'`).
 
 **Key Configuration:**
-- **RP-ID (Relying Party):** Prod `gregor20.henemm.com`, Staging `staging.gregor20.henemm.com` (isolated)
+- **RP-ID (Relying Party):** wird seit Issue #2130 aus `GZ_PUBLIC_HOST` abgeleitet
+  (`internal/config/webauthn.go::NewWebAuthn`/`resolveWebAuthnRP`/`deriveFromPublicHost`), nicht
+  mehr als separate, leicht vergessene ENV-Variable gepflegt. Prod: `gregor20.henemm.com`
+  (Default in `internal/config/config.go:39`, `GZ_PUBLIC_HOST` fehlt aktuell in der Prod-`.env`
+  und trifft dort zufällig zu). Staging: `staging.gregor20.henemm.com`, sofern dort
+  `GZ_PUBLIC_HOST` gesetzt ist (#2200 — bis dahin läuft Staging weiter auf dem Prod-Default).
+  Explizite `GZ_WEBAUTHN_RP_ID`/`GZ_WEBAUTHN_RP_ORIGINS` bleiben als Override erhalten (z.B.
+  lokal, wo `PublicHost` selbst nicht auf `localhost` zeigen soll). Die effektive RP-ID ist über
+  `GET /api/health` (Feld `webauthn_rpid`) beobachtbar und wird vom Post-Deploy-Selbsttest
+  (`prod_selftest.py`) gegen den erwarteten Hostnamen geprüft — vor #2130 lief Passkey in
+  Produktion nie, weil der Server unbemerkt `rpId: "localhost"` sendete (#878). Details:
+  `docs/specs/modules/passkey_rp_konfiguration.md`.
 - **Rate-Limit:** 30 requests/hour per IP (all 7 endpoints)
 - **Body-Size-Cap:** 64 KB (`http.MaxBytesReader`)
 - **Challenge-TTL:** 5 minutes (in-memory store with garbage collection)
@@ -2656,7 +3299,7 @@ Complete discoverable passkey login. Browser provides `userHandle` from stored c
 ```
 
 **Side Effects:**
-- Sets `Set-Cookie: gz_session=<userId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=86400; Secure`
+- Sets `Set-Cookie: gz_session=<userId>.<sessionId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=34560000; Secure`
 - Updates `last_used_at` timestamp on the used credential
 - Increments `sign_count` on the credential (cloning detection)
 - ChallengeStore entry is destroyed after successful `Take()` (replay protection)
@@ -2752,6 +3395,24 @@ Complete passkey registration (requires valid session cookie, challenge from `re
 | 401 | (via `AuthMiddleware`) | No valid session cookie |
 | 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Too many requests from this IP |
 
+#### POST /api/auth/passkey/register/public/begin und .../finish
+
+Public (no session required) passkey registration for brand-new, passwordless accounts — Issue
+#466 V2 Add-on. **Begin** takes `{"username","email"}`, checks username availability and (Issue
+#2147 Scheibe B1) e-mail-address uniqueness, then issues a WebAuthn challenge held in the
+`ChallengeStore` (5 min TTL) together with the submitted address. **Finish** re-checks the address
+uniqueness of exactly the address stored in the challenge entry (not a client-supplied field) under
+`store.LockEmailAddress`, since the address may have been claimed by a different account between
+Begin and Finish, before creating the credential-less account.
+
+**Error Responses (both endpoints):**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 409 | `{"error":"user_already_exists"}` | Username already taken |
+| 409 | `{"error":"email_taken"}` | The e-mail address already belongs to another real account (Issue #2147 Scheibe B1) — no challenge (Begin) resp. no account/credential (Finish) is created |
+| 500 | `{"error":"internal_error"}` | Read failure during the address-uniqueness check (fail-closed, Issue #2147 Scheibe B1) |
+
 #### POST /api/auth/passkey/login/begin
 
 Initiate passkey login (public, no auth required).
@@ -2811,7 +3472,7 @@ Complete passkey login (public, no auth required).
 ```
 
 **Side Effects:**
-- Sets `Set-Cookie: gz_session=<userId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=86400; Secure`
+- Sets `Set-Cookie: gz_session=<userId>.<sessionId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=34560000; Secure`
 - Updates `last_used_at` timestamp on the used credential
 - Increments `sign_count` on the credential (cloning detection)
 
@@ -2869,6 +3530,7 @@ Returns authenticated user profile (requires valid session cookie).
   "premium_sms_reply_to": "15551234567",
   "premium_sms_reply_at": "2026-08-05T12:00:00Z",
   "has_passkey": true,
+  "has_password": true,
   "passkeys": [
     {
       "id": "<base64url-credentialId>",
@@ -2884,7 +3546,9 @@ Returns authenticated user profile (requires valid session cookie).
       "created_at": "2026-05-25T10:00:00Z",
       "last_used_at": "2026-05-29T08:15:00Z"
     }
-  ]
+  ],
+  "passkey_prompt_dismissed": false,
+  "role": "user"
 }
 ```
 
@@ -2895,24 +3559,48 @@ Returns authenticated user profile (requires valid session cookie).
 | id | string | User identifier (immutable; also used as fallback display if `display_name` empty) |
 | display_name | string | User's chosen display name (optional, max 50 chars); shown in UI instead of `id` if set; null/empty if not configured |
 | email | string | Email address (for display only) |
+| email_verified | bool | Abgeleitet aus `user.json` → `email_verified_at` (gesetzt = `true`); **always present** (`internal/handler/auth.go`, `profileResponse`). Der Zeitstempel selbst wird nie ausgeliefert |
 | mail_to | string | Email recipient for trip reports (can differ from email) |
-| sms_to | string | SMS recipient phone number (international format, e.g. `+49151XXXXXXXX`); empty if not configured |
+| sms_to | string | SMS recipient phone number (international format, e.g. `+49151XXXXXXXX`); empty if not configured. Versand nur, wenn die Nummer bewiesen ist (`sms_verified`) — Wirkstelle `src/app/config.py::with_user_profile` (Issue #2406) |
+| sms_verified | bool | Issue #2406: abgeleitet — `sms_verified_number` (getrimmt) nicht leer UND gleich `sms_to` (getrimmt) (`internal/handler/sms_verify.go::smsVerifiziert`); **always present** (kein `omitempty`). Dieselbe Frage wie die Versandsperre in `config.py` |
+| pending_sms_to | string | Issue #2406: neue, noch unbestätigte Nummer eines Kontos mit bereits bestätigter Nummer; `omitempty`. Wird erst durch `POST /api/auth/sms/verify` nach `sms_to` befördert |
+| telegram_chat_id | string | Verknüpfte Telegram-Chat-ID; `omitempty`. Einziger Schreiber `POST /api/internal/telegram-connect`, `PUT` nimmt nur den Leerstring (Issue #2141, s. u.) |
 | tier | string | User's level: `free`/`standard`/`premium` (Issue #1068, Slice 1 of Epic #1067); always present, defaults to `free` if unset on the underlying `user.json` (fallback happens only at read time, never written back); display-only in this slice, no channel or alert-frequency enforcement yet |
 | sms_allowed | bool | Whether SMS channel is available for this user (Issue #1069, Slice 2 of Epic #1067); `true` if `tier` is `standard` or `premium`, `false` for `free`; determines server-side channel-gating in report-dispatch and alert-dispatch |
 | requested_tier | string | Level change requested by the user via `POST /api/auth/tier-change-request` (Issue #1071, Slice 4 of Epic #1067); `omitempty` — absent/empty if no request is pending. Does not change `tier` itself; only the PO setting `tier` manually clears the pending state (once `requested_tier == tier`, the frontend Pending-hint disappears) |
+| requested_notified_at | string (RFC3339) | Issue #2436 — set only after the operator mail was sent successfully for the current request; `omitempty` — absent means the operator was NOT notified (frontend shows a warning). Cleared on every new request and on admin approval |
 | requested_at | string (RFC3339) | Timestamp of the pending tier-change request set alongside `requested_tier`; pointer type server-side so it is omitted entirely (not a zero-value timestamp) when no request is pending |
 | premium_sms_allowed | bool | Whether the Premium-SMS channel (Garmin inReach) is available (Issue #1717 S3); **always present**. Own tariff gate `model.PremiumSmsAllowed` — `true` **only** for `tier == "premium"`, deliberately NOT derived from `sms_allowed` (which also lets `standard` through). Otherwise a `standard` user could tick a channel the dispatch path blocks anyway (#1676 S2a AC-8) |
 | premium_sms_reply_state | string | Server-derived state of the learned reply address (Issue #1717 S3): `none` (device never reported), `stale` (reported but past the expiry), `fresh` (valid); **always present**. Derived from `PremiumSmsReplyTo`/`PremiumSmsReplyAt` via `model.DerivePremiumSmsReplyState` against `model.PremiumSmsReplyTTL` (30 days, Go pendant of `PREMIUM_SMS_REPLY_TTL` in `src/output/channels/premium_sms.py`; drift guard: `tests/test_premium_sms_ttl_drift.py`). The UI follows this field only and never recomputes the deadline — otherwise a third copy of the number would exist |
 | premium_sms_reply_to | string | The learned Garmin reply address (Issue #1717 S3, raw value); `omitempty` — absent while the device has never reported. Read-only: the sole writer is the internal endpoint `POST /api/internal/premium-sms-learn` (#1676 S1), `PUT /api/auth/profile` does **not** accept it |
 | premium_sms_reply_at | string (RFC3339) | When that address was learned (Issue #1717 S3, raw value — here the timestamp *is* the payload, unlike `email_verified_at` which is never exposed); pointer server-side so it is omitted entirely instead of a zero-value timestamp. Same read-only rule as `premium_sms_reply_to` |
 | has_passkey | bool | Whether user has registered any passkeys |
+| has_password | bool | Issue #2160 (ADR-0081): Konto hat ein Passwort (abgeleitet aus `password_hash != ""`, der Hash wird nie ausgeliefert); **always present** (Muster `has_passkey`). Der Löschen-Dialog zeigt daran ein Passwortfeld; der Lösch-Code steht immer zur Wahl |
 | passkeys | array | List of registered WebAuthn credentials (empty if `has_passkey=false`) |
+| passkey_prompt_dismissed | bool | Whether the user has declined the one-time passkey setup offer (Issue #2248); **always present**. Persisted server-side so the dismissal holds across devices; absent/`false` on the underlying `user.json` both mean "not dismissed" |
+| pending_contact_address | string | Issue #2147 Scheibe B2: eine noch nicht bestätigte, ausstehende neue Kontaktadresse; `omitempty` — fehlt, solange keine Änderung aussteht. `email`/`mail_to` zeigen bis zur Bestätigung weiterhin die alten, wirksamen Werte; `email_verified` bleibt in dieser Zeit `true`. Wird erst über `POST /api/auth/verify-email` bestätigt (dann verschwindet dieses Feld und `mail_to`/`email` übernehmen den Wert) |
+| role | string | Issue #2155 S1 (ADR-0078): abgeleitete Rolle `admin`\|`user`; **always present** in `GET`. `admin` genau dann, wenn die Kennung in `GZ_ADMIN_USER_IDS` steht, sonst `user`. Nicht schreibbar: wird nie aus `user.json` gelesen oder dorthin geschrieben, ein mitgesendetes `role` in `PUT /api/auth/profile` wird ignoriert |
+| onboarding_pending | bool | Issue #2521 S2: neues Konto, dem die Startseite Willkommens-Kachel und „Startklar"-Checkliste zeigt; **always present**. Read-only (nur der Anlegeweg setzt es) |
+| onboarding_dismissed | bool | Issue #2521 S2: Willkommens-Kachel weggeklickt; **always present**. Über `PUT /api/auth/profile` schreibbar |
+| checklist_dismissed | bool | Issue #2521 S2: Checkliste weggeklickt; **always present**. Über `PUT /api/auth/profile` schreibbar |
+| test_mail_sent_at | string (RFC3339) | Issue #2521 S2: Zeitpunkt der letzten erfolgreichen Testmail (`POST /api/notify/test`, `channel=email`); `omitempty`, read-only. Nur informativ in der Checkliste |
+| first_briefing_at | string (RFC3339) | Issue #2521 S2: Zeitpunkt des ersten **planmäßigen** Briefings (Trip oder Ortsvergleich, nicht on-demand/Testversand); `omitempty`, read-only, wird einmalig gesetzt (`src/services/first_briefing.py`) |
+
+`PUT /api/auth/profile` nimmt von den Onboarding-Feldern **nur** `onboarding_dismissed` und `checklist_dismissed` an (Merge-Semantik, andere Felder bleiben unberührt); `onboarding_pending`, `test_mail_sent_at` und `first_briefing_at` werden ignoriert.
 
 **Error Responses:**
 
 | Status | Body | Scenario |
 |--------|------|----------|
 | 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+
+#### POST /api/notify/test
+
+Issue #2521 S2 (ADR-0092). Body `{"channel": "email"|"telegram"}`. Go proxyt an den Python-Core (`src/services/channel_test_service.py`) mit der `user_id` des Aufrufers.
+
+- `channel=email`: geht über die **normale Versandkette** an die **bestätigte Profiladresse** (`mail_to`, `email_verified_at` gesetzt) des Nutzers — nicht mehr über den Test-Postausgang (löst den entsprechenden Teil von `fix_1412_s4a` ab).
+- **Sperren** (Antwort HTTP 200 mit `{"error": "..."}`, kein Versand): fehlende oder unbestätigte Adresse, sowie Kennung `default`.
+- Erfolg: `{"status": "ok"}`. Nur dann setzt die Go-Schicht `test_mail_sent_at` im Profil des Aufrufers (Fehler des Core melden HTTP 200 + `error`, HTTP 200 allein genügt nicht).
 
 #### PUT /api/auth/profile
 
@@ -2933,7 +3621,40 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 **Validation:**
 - `display_name`: Optional, max 50 characters; trimmed (leading/trailing whitespace removed); empty or whitespace-only strings unset the field (reverts to fallback: `id`)
 - `mail_to`: Optional, any non-empty string (no format validation)
-- `sms_to`: Optional, any non-empty string (no format validation; validation happens during send via SMS provider)
+- **`email`/`mail_to` uniqueness (Issue #2147 Scheibe B1):** zwei getrennte Prädikate. **Breit**
+  ("Feld geändert"): Feld gesendet UND normalisierter (`TrimSpace`+`ToLower`) Wert ungleich
+  normalisiertem Bestand — leer zählt hier als Wert. Löst wie schon vor B1 (Issue #1219) den Reset
+  von `email_verified` aus und ruft `dispatchVerificationMail` auf, unverändert auch beim Leeren
+  eines Felds — ob dabei tatsächlich eine Mail rausgeht, hängt an der verbleibenden wirksamen
+  Kontaktadresse (`mail_to`, Rückfall `email`; sind beide leer, wird kein Token erzeugt und nichts
+  versendet). **Schmal** ("geändert UND belegbar"): zusätzlich neuer Wert nicht leer — nur
+  dieses engere Prädikat löst die Belegt-Prüfung aus (`store.IsAddressTakenByOtherAccount`,
+  `excludeUserID` = eigenes Konto); Leeren kann nie `409` auslösen. Ein reiner
+  Schreibweise-Unterschied (`Foo@X.de` → `foo@x.de`) erfüllt **keines** der beiden Prädikate — kein
+  Reset, keine Mail, keine Sperre. Alle vom breiten Prädikat betroffenen Adressen — bei Leeren auch
+  die frei werdende alte Adresse — werden sortiert+dedupliziert unter `store.LockEmailAddress`
+  gesperrt (feste Reihenfolge gegen Verklemmung bei gegenseitigem Adress-Tausch); das eigene Konto
+  wird dabei frisch geladen (Read-Modify-Write). Ist die Zieladresse bereits einem anderen, echten
+  Konto zugeordnet → `409 {"error":"email_taken"}`, das **gesamte** Update (auch andere
+  mitgeschickte Felder) wird verworfen, nichts gespeichert, keine Mail versendet.
+- **Ausstehende Änderung statt Sofort-Reset bei bestätigtem Konto (Issue #2147 Scheibe B2):** Ändert
+  sich dabei die **wirksame** Kontaktadresse (`mail_to`, Rückfall `email`) eines bereits bestätigten
+  Kontos (`email_verified: true`) auf eine neue, nicht belegte Adresse, wird `email`/`mail_to`
+  **NICHT** sofort überschrieben und `email_verified` bleibt `true` — statt des früheren
+  Sofort-Resets entsteht eine ausstehende Änderung (`pending_contact_address` in der Antwort), die
+  Bestätigungsmail geht an die neue Adresse, wirksam wird sie erst über `POST /api/auth/verify-email`.
+  Ändert sich nur ein NICHT wirksames Feld, oder ist das Konto noch unbestätigt, gilt weiterhin die
+  bisherige Sofort-Logik (Reset/Mail wie oben beschrieben). Details:
+  `docs/specs/modules/adresswechsel_nach_bestaetigung.md`.
+- `sms_to`: Optional, any string (no format validation). **Nummernwechsel (Issue #2406)** greift nur, wenn der
+  neue Wert sich von `sms_to` UND (bei nicht leerem Wert) von `pending_sms_to` unterscheidet — wiederholtes
+  Speichern ist ein No-op und löst keinen bezahlten Codeversand aus. Fälle: **leer** → `sms_to`,
+  `pending_sms_to`, `sms_verified_number`, `sms_verified_at` und `sms_verification.json` werden gelöscht;
+  **keine bestätigte Nummer** → direkt nach `sms_to` (bis zur Bestätigung für den Versand gesperrt);
+  **bestätigte Nummer vorhanden** → neue Nummer nur nach `pending_sms_to`, die alte bleibt wirksam. Ein
+  Bestätigungscode geht nur bei `sms_allowed` (Tarif ≥ standard) raus, Mengenbremse 3/h (eigener
+  `MailFloodLimiter`, `router.go`), sonst `429`. Details s. „SMS-Nummer-Verifikation“ unten
+- `passkey_prompt_dismissed`: Optional bool (Issue #2248); sets whether the one-time passkey setup offer stays hidden
 - Empty strings allowed (unset field)
 - **Not accepted (Issue #1717 S3, AC-7):** `premium_sms_reply_to`, `premium_sms_reply_at`,
   `premium_sms_reply_state`, `premium_sms_allowed`. The decode struct does not contain them, so
@@ -2942,6 +3663,15 @@ Returns updated profile object (same as `GET /api/auth/profile`).
   exclusively the learned reply address, never configuration" would collapse: a user could enter a
   foreign number and have paid Premium-SMS delivered there. Guarded by
   `internal/handler/profile_test.go::TestUpdateProfileHandlerIgnoresPremiumSmsReplyFields`
+- **`telegram_chat_id` accepts only the empty string (Issue #2141):** die Chat-ID ist eine
+  Identitätszuordnung, keine Einstellung, und wird ausschließlich über den localhost-gesperrten
+  Einmal-Token-Flow gesetzt (`POST /api/internal/telegram-connect`, siehe unten). Sendet dieser
+  Endpoint `{"telegram_chat_id":""}`, wird die bestehende Verknüpfung gelöscht ("Telegram trennen"
+  im Konto-Bereich); ein nicht-leerer Wert wird stillschweigend ignoriert — kein 400, die Antwort
+  zeigt weiterhin den zuvor gespeicherten Wert. Ohne diese Sperre könnte ein Nutzer die Chat-ID
+  eines fremden Kontos übernehmen und dessen Telegram-Nachrichten mitlesen bzw. eigene als dieses
+  Konto empfangen (Chat-ID-Hijacking). Guarded by
+  `internal/handler/profile_telegram_chat_id_test.go`
 
 **Error Responses:**
 
@@ -2949,13 +3679,127 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 |--------|------|----------|
 | 400 | `{"error":"bad_request"}` | JSON not decodable |
 | 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+| 409 | `{"error":"email_taken"}` | changed `email`/`mail_to` already belongs to another real account (Issue #2147 Scheibe B1) — entire update discarded, nothing saved |
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Issue #2404: das interne `MailFloodLimiter`-Kontingent (10 Bestätigungsmails/Stunde je User-ID UND je Zieladresse, unabhängig gezählt) ist ausgeschöpft, wenn diese Anfrage eine wirksame Adressänderung auslösen würde — der **gesamte** Request wird verworfen, `SaveUser` läuft nicht, auch harmlose Felder im selben Request (z. B. `display_name`) bleiben unverändert |
+| 500 | `{"error":"internal error"}` | Lesefehler bei der Adress-Eindeutigkeitsprüfung (fail-closed, Issue #2147 Scheibe B1) |
+
+#### POST /api/internal/telegram-connect
+
+Internal endpoint, localhost-only (`requireLocalOnly`) — called only by the Python
+`InboundTelegramReader` after a user sends `/start <token>` to the Telegram bot. Resolves the
+one-time deep-link token issued by `GET /api/auth/telegram-link` to a `user_id` and persists the
+sending chat's `chat_id` on that user (Issue #2141: erst nach einer Eindeutigkeitsprüfung).
+
+**Request Body:**
+```json
+{
+  "token": "<hex token from GET /api/auth/telegram-link>",
+  "chat_id": "55501"
+}
+```
+
+**Response 200:**
+```json
+{"status": "ok"}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"bad request"}` | JSON not decodable, or `token`/`chat_id` empty |
+| 404 | `{"error":"user not found"}` | Token resolved to a `user_id` whose `user.json` no longer exists |
+| 409 | `{"error":"chat_id_already_linked"}` | **(Issue #2141)** `chat_id` is already linked to a **different** real user's account — re-connecting the account that already owns it is explicitly not a conflict (200); test users (`model.IsTestAccount`) never trigger this and never win a collision, see `internal/store/user.go::FindUserByTelegramChatID` (#2152, ADR-0072). `SaveUser` does not run in this case, the existing owner's link is untouched |
+| 422 | `{"error":"token invalid or expired"}` | Token unknown or past its 24h TTL |
+| 500 | `{"error":"lookup failed"}` | `FindUserByTelegramChatID` failed |
+| 500 | `{"error":"save failed"}` | `SaveUser` failed |
+| 401 | `{"error":"unauthorized"}` | **(Issue #2159)** Header `X-GZ-Core-Auth` fehlt oder ist falsch (`coreauth.RequireCoreAuth`, ADR-0062) |
+| 503 | `{"error":"core_auth_not_configured"}` | **(Issue #2159)** Go-seitig ist `GZ_CORE_SHARED_SECRET` nicht gesetzt (fail-closed) |
+| 403 | `forbidden` (plain text) | Request did not originate from `127.0.0.1`/`::1`, or arrived via a proxy header (`requireLocalOnly`) |
+
+**Notes:**
+- Auth: Header `X-GZ-Core-Auth` (gemeinsames Geheimnis), gesendet von `lib.go_internal.post_internal`. Python-`/health` zeigt die wirksame Go-Basis-URL im Feld `go_api_url` (kein Secret).
+- Uniqueness check and `SaveUser` run under the same process-wide mutex (`telegramConnectMu`) to
+  close a TOCTOU window between two concurrent connect attempts targeting the same `chat_id`
+  (Issue #2141).
+
+#### POST /api/internal/premium-sms-learn
+
+Internal endpoint, localhost-only (`requireLocalOnly`) — called by the Python `InboundSmsReader`
+after polling the seven.io journal and finding a message addressed to the service number
+(`to == SERVICE_NUMBER`, Issue #2323; previously gated on the Garmin `inreachlink.com` marker in
+the message text). Resolves the incoming sender number (`from`) to a `user_id` (checking for a
+stored, fresh reply address or a valid link code) and persists the address on that user (Issue
+#1676 S1, improved by Issue #2154 Scheibe A, gate corrected by Issue #2323).
+
+**Request Body:**
+```json
+{
+  "from": "491501234567",
+  "code": "XXABC234",
+  "dry_run": false
+}
+```
+
+- `from` (string, required): The sender phone number from the SMS.
+- `code` (string, optional): Link code in the format `XX` + 3 letters (no I/L/O) + 3 digits (no
+  0/1), case-insensitive (Issue #2323; previously a 7-character alphanumeric code) issued by
+  `POST /api/auth/premium-sms-link-code`. If a stored reply address exists and is within the
+  `PremiumSmsReplyTTL` (30 days), `code` is ignored and the stored match confirms without
+  verification. Otherwise, `code` is required for resolution.
+- `dry_run` (bool, optional): If `true`, the endpoint returns the resolution outcome without
+  calling `SaveUser` — structurally unreachable, independent of success or failure.
+
+**Response 200 (dry_run=false, match found):**
+```json
+{
+  "status": "ok",
+  "user_id": "user-123",
+  "masked_from": "49150123****7"
+}
+```
+
+**Response 200 (dry_run=true, match found):**
+```json
+{
+  "status": "dry_run",
+  "outcome": "would_learn",
+  "user_id": "user-123",
+  "masked_from": "49150123****7"
+}
+```
+
+**Response 200 (dry_run=true, no match):**
+```json
+{
+  "status": "dry_run",
+  "outcome": "would_skip",
+  "reason": "no_unique_premium_candidate"
+}
+```
+
+`reason` also takes the value `stored_reply_to_ambiguous` when two or more Premium users hold a
+fresh stored match on the same `from` and no resolving `code` was provided (Issue #2328).
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"bad_request"}` | JSON not decodable, or `from` empty |
+| 401 | `{"error":"unauthorized"}` | **(Issue #2159)** Header `X-GZ-Core-Auth` fehlt oder ist falsch (ADR-0062); der Python-Leser behandelt 401/403/503 als vorübergehend (Lesezeiger rückt nicht vor) |
+| 503 | `{"error":"core_auth_not_configured"}` | **(Issue #2159)** Go-seitig ist `GZ_CORE_SHARED_SECRET` nicht gesetzt (fail-closed) |
+| 403 | `forbidden` (plain text) | Request did not originate from `127.0.0.1`/`::1`, or arrived via a proxy header (`requireLocalOnly`) |
+| 409 | `{"error":"skipped","reason":"no_unique_premium_candidate"}` | No Premium user with a stored match to `from` exists, and no `code` provided, or no single unambiguous Premium candidate exists |
+| 409 | `{"status":"skipped","reason":"stored_reply_to_ambiguous"}` | Two or more Premium users hold a fresh stored match on `from` (Garmin reuses reply addresses from a rotating pool) and no `code` resolved the collision — no user record is written (Issue #2328) |
+| 429 | `{"error":"too_many_requests"}` | Global rate limit for unsuccessful code comparisons exhausted |
 
 #### POST /api/auth/tier-change-request
 
 Requests a level change (Free/Standard/Premium) for the authenticated user (Issue #1071, Slice 4
 of Epic #1067). Vermerkt den Antrag per Read-Modify-Write in `user.json`
-(`requested_tier`/`requested_at`) und löst eine asynchrone Benachrichtigungsmail an den PO aus
-(`PO_EMAIL`/`cfg.PoEmail`). Das effektive `tier`-Feld wird durch diesen Endpoint **nicht**
+(`requested_tier`/`requested_at`) und versendet die Benachrichtigungsmail an den PO
+(`PO_EMAIL`/`cfg.PoEmail`) **synchron mit 15 s Timeout** (Issue #2436); `requested_notified_at` wird nur
+nach erfolgreichem Versand gesetzt und bei jedem neuen Antrag zuerst zurückgesetzt. Das effektive `tier`-Feld wird durch diesen Endpoint **nicht**
 verändert — Freigabe erfolgt weiterhin manuell durch den PO.
 
 **Request Body:**
@@ -2965,9 +3809,9 @@ verändert — Freigabe erfolgt weiterhin manuell durch den PO.
 }
 ```
 
-**Response 200:**
+**Response 200:** (Antrag ist in jedem Fall gespeichert; `po_notified` sagt, ob der Betreiber erreicht wurde — `false` bei fehlendem `PO_EMAIL`/`SMTP_HOST`, Versandfehler oder Timeout)
 ```json
-{"status": "ok"}
+{"status": "ok", "po_notified": true}
 ```
 
 **Error Responses:**
@@ -2989,28 +3833,340 @@ verändert — Freigabe erfolgt weiterhin manuell durch den PO.
 - Kein Dedup, kein Clear-Endpoint, kein Rate-Limiting über die Session-Auth hinaus — siehe
   `docs/specs/_archive/modules/issue_1071_tier_change_request.md` (Known Limitations).
 
+#### Kontoloeschung mit Re-Auth (Issue #2160, ADR-0081)
+
+Der frühere Endpunkt `DELETE /api/auth/account` ist entfallen (Route entfernt, 404/405). Beide
+neuen Endpunkte sind anmeldepflichtig (nicht in der Public-Allowlist); die Nutzerkennung kommt
+ausschließlich aus dem Auth-Kontext.
+
+**POST /api/auth/account/delete** — löscht das eigene Konto nach frischem Nachweis.
+
+Request: `{"password": "…"}` ODER `{"code": "123456"}`. Konten ohne Passwort (`has_password:
+false`) können nur den Lösch-Code nutzen. Ist `password` gesetzt, wird nur das Passwort geprüft
+(der Lösch-Code bleibt unberührt).
+
+Wirkung bei Erfolg (`200 {"status":"deleted"}`, Sitzungs-Cookie gelöscht): Telegram-Tokens des
+Nutzers (persistiert in `data/telegram_tokens.json`), Login-OTPs für `email`, `mail_to` und
+`pending_contact_address`, der Lösch-Code und `data/users/<id>/` (inkl. Gästeliste) sind weg.
+
+| Status | Body | Wann |
+|--------|------|------|
+| 400 | `{"error":"reauth_required"}` | weder `password` noch `code` |
+| 401 | `{"error":"unauthorized"}` | nicht angemeldet |
+| 403 | `{"error":"wrong_password"}` | falsches Passwort / Passwort bei passwortlosem Konto |
+| 403 | `{"error":"invalid_code"}` | Lösch-Code falsch, abgelaufen (15 min), verbraucht oder nach 3 Fehlversuchen gesperrt |
+| 404 | `{"error":"not_found"}` | Nutzer existiert nicht (mehr) |
+| 429 | `{"error":"rate_limit_exceeded"}` | mehr als 5 Aufrufe je IP in 15 min (geteilte IP-Middleware) |
+| 500 | `{"error":"internal"}` | Token-Store oder Ordner nicht löschbar — Ordner bleibt, Löschung wiederholbar |
+
+**POST /api/auth/account/delete-code** — verschickt einen 6-stelligen Lösch-Code
+ausschließlich an die wirksame Adresse (`mail_to`, sonst `email`; nie an
+`pending_contact_address`). Request-Body leer bzw. `{}`. Der Code wird erst nach erfolgreichem
+Versand gespeichert (eigener Store je Nutzerkennung, getrennt von Login-OTPs), gilt 15 Minuten,
+einmalig, max. 3 Fehlversuche. Eine neue Anforderung ersetzt den alten Code.
+
+| Status | Body | Wann |
+|--------|------|------|
+| 200 | `{"status":"sent"}` | Code verschickt |
+| 401 | `{"error":"unauthorized"}` | nicht angemeldet |
+| 404 | `{"error":"not_found"}` | Nutzer existiert nicht (mehr) |
+| 429 | `{"error":"rate_limit_exceeded"}` | mehr als 3 Aufrufe je IP in 15 min (geteilte IP-Middleware) |
+| 429 | `{"error":"rate_limit_exceeded"}` + `Retry-After` | Mindestpause je Nutzer/Adresse (1 Code pro Minute) |
+| 502 | `{"error":"mail_failed"}` | SMTP nicht konfiguriert oder Versand gescheitert — kein Code gespeichert |
+
+Das Frontend behandelt beide 429-Codes gleich.
+
+#### GET /api/auth/export
+
+Liefert dem angemeldeten Nutzer seinen Datenbestand als ZIP-Archiv aus (DSGVO Art. 20, Issue
+#2270) — die lesende Gegenrichtung zur Kontoloeschung `POST /api/auth/account/delete`. Authentifiziert über die
+Session (nicht in der Public-Allowlist von `AuthMiddleware`); die Nutzerkennung kommt
+ausschließlich aus dem Auth-Kontext, ein Request-Parameter hat keine Wirkung.
+
+**Response 200:**
+- `Content-Type: application/zip`
+- `Content-Disposition: attachment; filename="gregor-zwanzig-export.zip"`
+- Body: ZIP-Archiv des Nutzerbaums, durchgereicht statt gepuffert
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | (via `AuthMiddleware`) | Kein gültiges Session-Cookie |
+| 401 | `{"error":"unauthorized"}` (`Content-Type: application/json`) | Auth-Kontext ohne Nutzerkennung (leerer String) — ausdrückliche Handler-Prüfung, verhindert die Auslieferung des `default`-Sammelordners |
+
+**Notes:**
+- Geheimnisse sind bewusst ausgeschlossen: `sessions.json`, `password_reset.json`,
+  `email_verification.json` sowie `password_hash`/`passkey_credentials` aus `user.json` erscheinen
+  nirgends im Archiv.
+- Das Archiv wird gestreamt: bricht das Packen mitten im Vorgang ab, ist der 200-Statuscode bereits
+  gesendet — die Übertragung endet dann mit einem unvollständigen ZIP statt einem korrigierten
+  Fehlerstatus.
+- Vollständige Erlaubnis-/Ausnahmeliste, Pfadsicherheit im Archiv und Mandantentrennung:
+  `docs/specs/modules/user_data_export.md`.
+
+#### POST /api/auth/verify-email
+
+Löst ein Bestätigungs-Token ein (Registrierung, Resend, oder — Issue #2147 Scheibe B2 — eine
+ausstehende Adressänderung aus `PUT /api/auth/profile`). Öffentlich (Public-Allowlist).
+
+**Request Body:**
+```json
+{"user": "henning", "token": "<Klartext-Token>"}
+```
+
+**Response 200:** aktualisiertes Konto ist bestätigt; bei einer zuvor ausstehenden Adressänderung
+ist sie jetzt die wirksame Kontaktadresse (`mail_to`/`email`), `pending_contact_address` verschwindet
+aus dem Profil.
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"invalid token"}` | Token-Hash passt nicht zum gespeicherten Token (und keine ausstehende Änderung liegt vor) |
+| 400 | `{"error":"token expired"}` | Token abgelaufen, ODER (Issue #2147 Scheibe B2) das adressgebundene Token wurde durch eine neuere Adressänderung bereits ersetzt |
+| 409 | `{"error":"address_taken"}` | Issue #2147 Scheibe B2: die ausstehende Zieladresse wurde zwischen Anfordern und Einlösen des Links einem anderen, echten Konto zugeordnet — die ausstehende Änderung wird verworfen, nichts übernommen |
+
+Details zur B2-Fallunterscheidung (Alt-Token ohne Adresse, adressgebundenes Token, erneute
+Belegt-Prüfung beim Einlösen): `docs/specs/modules/adresswechsel_nach_bestaetigung.md`.
+
+#### POST /api/auth/verify-email/resend
+
+Löst erneut den Versand der Bestätigungsmail aus (Issue #2304, Vorbereitung der Login-Pflicht
+aus #2271/Epic #2138). Öffentlich — exakter Pfad in der Public-Allowlist von `AuthMiddleware`
+(der Eintrag für `/api/auth/verify-email` ist ein reiner Gleichheitsvergleich und deckt diesen
+Unterpfad nicht mit ab, deshalb ein eigener Allowlist-Eintrag). Nutzlast enthält bewusst nur die
+Nutzerkennung, keine Adresse — verhindert Adress-zu-Konto-Zuordnung, analog
+`ForgotPasswordHandler`.
+
+**Request Body:**
+```json
+{
+  "username": "henning"
+}
+```
+
+**Response 200 (immer, enumerationsfrei):**
+```json
+{"status": "ok"}
+```
+
+Antwortet identisch — Statuscode und Body — unabhängig davon, ob das Konto existiert, bereits
+bestätigt ist, keine Kontaktadresse hinterlegt hat, oder die Nutzlast unparsebar/leer ist. Bei
+existierendem, unbestätigtem Konto **mit** Kontaktadresse (`mail_to`, ersatzweise `email`) wird
+intern `dispatchVerificationMail` aufgerufen — dieselbe Versandlogik wie beim ursprünglichen
+Registrierungsflow, kein neuer Codepfad.
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Mehr als 5 Aufrufe/Stunde von derselben IP (`NewIPRateLimiter(5, time.Hour)`, Muster `forgotLimiter`) |
+
+**Notes:**
+- Mail-Versand ist "fire and forget" (Goroutine + 20s-Timeout, wie bei `ForgotPasswordHandler`
+  und `POST /api/auth/tier-change-request`).
+- **Issue #2404 — zusätzliches, unsichtbares Adress-Limit:** Ist das `MailFloodLimiter`-Kontingent
+  der Zieladresse (10/Stunde, geteilt mit `PUT /api/auth/profile`) bereits ausgeschöpft, bleibt die
+  Antwort unverändert `200 {"status":"ok"}` (Privacy-Invariante bleibt gewahrt), aber
+  `dispatchVerificationMail` wird nicht aufgerufen — keine Mail wird verschickt. Dieser Pfad
+  konsumiert bewusst **nur** den Adress-Bucket (`AllowAddressOnly`), nie den User-Bucket des per
+  `username` benannten Kontos, damit ein Angreifer nicht über wiederholte Resend-Aufrufe das
+  Mail-Kontingent eines fremden Opfer-Kontos leerlaufen lassen kann. Details:
+  `docs/specs/bugfix/profile_mail_ratelimit.md`.
+- Details, Enumerationsschutz-AC, Nachweisführung ohne Live-Mailversand:
+  `docs/specs/modules/email_verify_vorbereitung_2304.md`.
+
+#### POST /api/auth/verify-email/staging-token
+
+**Existiert ausschließlich, wenn der Dienst mit `GZ_ENV=staging` läuft** — in Produktion ist die
+Route nicht registriert und liefert den normalen Chi-404 (kein Handler-Body). Registrierung:
+`internal/router/router.go`, gleiches Muster wie andere `GZ_ENV`-gegateten Routen (#830).
+
+**Anmeldepflichtig** (Session-Cookie via `AuthMiddleware`) — bewusst **nicht** in der Public-
+Allowlist und bewusst **nicht** unter einem der pauschal freigeschalteten Präfixe
+(`/api/internal/`, `/api/webhooks/telegram/`), da diese die Anmeldepflicht aufheben
+würden. `/api/debug/` gehörte früher ebenfalls zu diesen pauschal freigeschalteten
+Präfixen, ist seit #2155 S2 aber selbst anmeldepflichtig und zusätzlich hinter
+`RequireAdmin` — kein Sonderfall mehr, unter dem sich diese Route hätte verstecken
+können.
+
+Zweck: Auf Staging sind Auth-Mails strukturell nicht zustellbar (Egress-Sperre #1337,
+Resend-Sperre), zur Laufzeit angelegte E2E-Test-Konten brauchen aber einen Weg an ihr
+Verifikations-Token, um die künftige Login-Pflicht (#2271) dort überhaupt prüfbar zu machen.
+
+**Request Body:**
+```json
+{
+  "username": "e2e-758"
+}
+```
+
+**Response 200:**
+```json
+{"token": "<Klartext-Verifikations-Token>"}
+```
+
+Gibt **nur** das Token heraus und setzt `email_verified_at` **nicht** selbst — einziger Schreiber
+dieses Feldes bleibt `POST /api/auth/verify-email` (`VerifyEmailHandler`), der das gelieferte
+Token danach entgegennimmt. Der Testweg prüft damit den echten Produktionspfad mit, statt ihn zu
+umgehen. Gilt auch für bereits bestätigte Konten (liefert ein Token, ohne den bestehenden
+Zeitstempel anzurühren).
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 400 | `{"error":"invalid request"}` | JSON nicht dekodierbar, `username` leer, oder pfad-unsichere Kennung (`store.ValidUserID`) |
+| 401 | (via `AuthMiddleware`) | Kein gültiges Session-Cookie |
+| 404 | `{"error":"unknown user"}` | Kein Konto zu `username` gefunden |
+| 404 | (Chi-Default, kein JSON-Body) | Route nicht registriert — jeder Aufruf außerhalb von `GZ_ENV=staging`, insbesondere Produktion |
+| 500 | `{"error":"internal error"}` | Token-Erzeugung fehlgeschlagen |
+
+**Notes:**
+- Ein angemeldeter Staging-Nutzer kann über diesen Weg ein Token für ein beliebiges fremdes
+  Konto anfordern — der Handler prüft nur, DASS jemand angemeldet ist, nicht WESSEN Konto
+  verifiziert werden soll. Gilt als hinnehmbar, weil der Endpoint in Produktion nicht existiert
+  und kein Informationsgewinn gegenüber dem regulären Resend-Weg entsteht (Details/Risiko-
+  Abwägung: Spec, Abschnitt „Risiko").
+- Spec: `docs/specs/modules/email_verify_vorbereitung_2304.md`.
+
+#### POST /api/auth/premium-sms-link-code
+
+Authenticated endpoint (SessionAuth) — the authenticated user generates or renews their Premium-SMS
+link code. This code pairs the user's Garmin inReach device with their account in the inbound
+learning path (`POST /api/internal/premium-sms-learn`, Issue #2154 Scheibe A). Resolves the
+one-time TTL-less deep-link code to a `user_id` and generates a new link code, returning it
+**once** in plaintext in the response. Renewal invalidates the previous code.
+
+**Request Body:**
+```json
+{}
+```
+
+(Empty, user is resolved from SessionAuth)
+
+**Response 200:**
+```json
+{
+  "code": "XXABC234"
+}
+```
+
+The code has a fixed prefix `XX` followed by 3 letters (no I/L/O) and 3 digits (no 0/1),
+case-insensitive on input (Issue #2323; previously a 7-character alphanumeric code without the
+fixed prefix). Returned **only once**; subsequent `GET /api/auth/premium-sms-link-code` calls
+never expose it.
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+| 500 | `{"error":"failed to generate code"}` | Code generation failed (cryptographic randomness unavailable) |
+
+#### GET /api/auth/premium-sms-link-code
+
+Authenticated endpoint (SessionAuth) — checks whether the authenticated user has a Premium-SMS
+link code configured. Does **not** return the code or its hash.
+
+**Request Body:**
+(None)
+
+**Response 200:**
+```json
+{
+  "exists": true
+}
+```
+
+or
+
+```json
+{
+  "exists": false
+}
+```
+
+**Error Responses:**
+
+| Status | Body | Scenario |
+|--------|------|----------|
+| 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
+
+#### SMS-Nummer-Verifikation (Issue #2406)
+
+Go erzeugt und prüft den Code (`internal/handler/sms_verify.go`), versendet wird er ausschließlich
+über den internen Python-Endpunkt `POST /api/_internal/sms/verification-code` (`{user_id, to, code}`).
+Code: 6 Ziffern aus `crypto/rand`, gültig 10 Minuten, max. 5 Fehlversuche (danach gelöscht);
+persistiert wird nur der bcrypt-Hash in `data/users/<id>/sms_verification.json`
+(`model.SmsVerificationCode`), gebunden an die zu beweisende Nummer (`pending_sms_to`, sonst `sms_to`).
+Alle drei Routen sind anmeldepflichtig; die Kennung kommt ausschließlich aus der Sitzung.
+
+| Route | Request | Antwort 200 | Fehler (`{"error": …}`) |
+|---|---|---|---|
+| `POST /api/auth/sms/verify` | `{"code": "123456"}` | Profilobjekt wie `GET /api/auth/profile`; `pending_sms_to` → `sms_to`, `sms_verified_number`/`sms_verified_at` gesetzt (Read-Modify-Write) | 400 `invalid request` · 404 `not_found` · 400 `code_expired` (fehlt/abgelaufen/≥5 Fehlversuche) · 400 `invalid_code` (falscher Code oder andere Nummer) · 500 `store_error` |
+| `POST /api/auth/sms/resend` | leer | `{"status":"sent"}` (Versand asynchron) | 404 `not_found` · 400 `no_number` · 400 `sms_not_allowed` (Tarif free) · 429 `rate_limit_exceeded` + `Retry-After` |
+| `POST /api/auth/sms/staging-code` | ignoriert | `{"code": "123456"}` — mintet frischen Code, **kein** Versand; nur `GZ_ENV=staging` (`internal/handler/staging_sms_code.go`) | 404 `not_found` / `no_number` · 500 `internal error` |
+
 ### User Model Extensions
 
 **File:** `internal/model/user.go`
 
 ```go
+// internal/model/user.go — Struct-Wahrheit (Stand 2026-10-21)
 type User struct {
-    ID                 string                 `json:"id"`
-    Email              string                 `json:"email,omitempty"`
-    PasswordHash       string                 `json:"password_hash,omitempty"`  // now optional (omitempty)
-    PasskeyCredentials []WebAuthnCredential   `json:"passkey_credentials,omitempty"`  // NEW (Issue #450)
-    CreatedAt          time.Time              `json:"created_at"`
-    MailTo             string                 `json:"mail_to,omitempty"`
-    SmsTo              string                 `json:"sms_to,omitempty"`  // NEW (Issue #609) — SMS recipient phone number
-    TelegramChatID     string                 `json:"telegram_chat_id,omitempty"`
-    OAuthProvider      string                 `json:"oauth_provider,omitempty"`
-    OAuthSub           string                 `json:"oauth_sub,omitempty"`
-    DisplayName        string                 `json:"display_name,omitempty"`  // NEW (Issue #642) — user's chosen display name; omitempty if not set
-    Tier               string                 `json:"tier,omitempty"`  // NEW (Issue #1068, Slice 1 of Epic #1067) — free/standard/premium; empty defaults to "free" at read time
-    RequestedTier      string                 `json:"requested_tier,omitempty"`  // NEW (Issue #1071, Slice 4 of Epic #1067) — pending level-change request
-    RequestedAt        *time.Time             `json:"requested_at,omitempty"`  // NEW (Issue #1071) — pointer type: plain time.Time's omitempty doesn't work, would serialize as zero-value "0001-01-01T00:00:00Z" instead of being omitted
-    PremiumSmsReplyTo  string                 `json:"premium_sms_reply_to,omitempty"`  // NEW (Issue #1676, Scheibe S1) — vom Garmin inReach zuletzt gelernte Rückadresse (seven.io-Journal, Kennzeichen `inreachlink.com`); einziger Schreiber bleibt der interne Endpoint `POST /api/internal/premium-sms-learn`. REVIDIERT durch #1717 S3: `GET /api/auth/profile` gibt den Wert seither LESEND aus (`premium_sms_reply_to` + abgeleitetes `premium_sms_reply_state`), damit die Oberfläche zeigen kann, wohin gesendet wird und ob die Adresse noch gilt — `PUT /api/auth/profile` nimmt ihn weiterhin NICHT an (AC-7)
-    PremiumSmsReplyAt  *time.Time             `json:"premium_sms_reply_at,omitempty"`  // NEW (Issue #1676, Scheibe S1) — Empfangszeitpunkt des Go-Endpoints (nicht der seven.io-`timestamp`); pointer-Muster analog RequestedAt
+    ID                     string               `json:"id"`
+    Email                  string               `json:"email,omitempty"`
+    PasswordHash           string               `json:"password_hash,omitempty"`        // optional seit #450
+    PasskeyCredentials     []WebAuthnCredential `json:"passkey_credentials,omitempty"`  // #450
+    CreatedAt              time.Time            `json:"created_at"`
+    MailTo                 string               `json:"mail_to,omitempty"`
+    SmsTo                  string               `json:"sms_to,omitempty"`               // #609; Versand nur wenn == SmsVerifiedNumber (#2406)
+    TelegramChatID         string               `json:"telegram_chat_id,omitempty"`     // einziger Schreiber POST /api/internal/telegram-connect (#2141)
+    OAuthProvider          string               `json:"oauth_provider,omitempty"`
+    OAuthSub               string               `json:"oauth_sub,omitempty"`
+    DisplayName            string               `json:"display_name,omitempty"`         // #642
+    Tier                   string               `json:"tier,omitempty"`                 // #1068; leer = "free" (nur beim Lesen)
+    RequestedTier          string               `json:"requested_tier,omitempty"`       // #1071
+    RequestedAt            *time.Time           `json:"requested_at,omitempty"`         // #1071; Pointer wegen omitempty
+    RequestedNotifiedAt    *time.Time           `json:"requested_notified_at,omitempty"` // #2436
+    EmailVerifiedAt        *time.Time           `json:"email_verified_at,omitempty"`    // #1219
+    PremiumSmsReplyTo      string               `json:"premium_sms_reply_to,omitempty"` // #1676 S1; einziger Schreiber premium-sms-learn
+    PremiumSmsReplyAt      *time.Time           `json:"premium_sms_reply_at,omitempty"` // #1676 S1
+    PasskeyPromptDismissed bool                 `json:"passkey_prompt_dismissed,omitempty"` // #2248
+    PendingContactAddress  string               `json:"pending_contact_address,omitempty"` // #2147 B2
+    PendingContactField    string               `json:"pending_contact_field,omitempty"`   // #2147 B2: "email"|"mail_to"
+    IsTestUser             bool                 `json:"is_test_user,omitempty"`            // #2152, ADR-0072
+    SmsVerifiedNumber      string               `json:"sms_verified_number,omitempty"`     // #2406: BEWIESENE Nummer
+    SmsVerifiedAt          *time.Time           `json:"sms_verified_at,omitempty"`         // #2406
+    PendingSmsTo           string               `json:"pending_sms_to,omitempty"`          // #2406: wartet auf Code
+    Disabled               bool                 `json:"disabled,omitempty"`                // #2155 S3, ADR-0080
+    OnboardingPending      bool                 `json:"onboarding_pending,omitempty"`      // #2521 S2
+    OnboardingDismissed    bool                 `json:"onboarding_dismissed,omitempty"`    // #2521 S2
+    ChecklistDismissed     bool                 `json:"checklist_dismissed,omitempty"`     // #2521 S2
+    TestMailSentAt         *time.Time           `json:"test_mail_sent_at,omitempty"`       // #2521 S2
+}
+
+// data/users/<id>/sms_verification.json — Issue #2406
+type SmsVerificationCode struct {
+    CodeHash       string    `json:"code_hash"`       // bcrypt, nie Klartext
+    ExpiresAt      time.Time `json:"expires_at"`      // +10 min
+    Number         string    `json:"number"`          // die zu beweisende Nummer
+    FailedAttempts int       `json:"failed_attempts,omitempty"` // ab 5 verbrannt
+}
+
+// E-Mail-Bestätigung (#1219) bzw. Passwort-Reset — Hash statt Klartext
+type EmailVerificationToken struct {
+    TokenHash string    `json:"token_hash"`
+    ExpiresAt time.Time `json:"expires_at"`
+    Address   string    `json:"address,omitempty"` // #2147 B2: zu beweisende Adresse
+}
+
+// data/users/<id>/premium_sms_link.json — internal/model/premium_sms_link.go (#2154 A)
+type PremiumSmsLinkCode struct {
+    CodeHash  string    `json:"code_hash"`
+    CreatedAt time.Time `json:"created_at"`
 }
 
 type WebAuthnCredential struct {
@@ -3036,15 +4192,55 @@ type WebAuthnCredential struct {
 
 ---
 
-## 20) Preview Endpoints (Issue #189, #483, #1270)
+## 20) Preview Endpoints (Issue #189, #483, #1743)
 
-Provides preview rendering of trip reports in Email, SMS, or Telegram formats (Signal wurde app-weit entfernt, Issue #610). Supports both live weather and fixture-based demo mode. Seit Issue #1270 zusätzlich: EIN Compare-Preview-Endpoint, der alle Kanäle eines Orts-Vergleich-Presets in einer Antwort liefert (s. `POST /api/preview/compare/{preset_id}` unten).
+Seit Issue #1743 (PO-Entscheid 22.10.2026: die Briefing-Vorschau je Kanal entfällt
+ersatzlos) gibt es nur noch die **Alarm-Vorschau** und die **SMS-Kurzform-Vorschau**
+eines Trips. Letztere bleibt, weil die Staging-Specs
+`frontend/e2e/metrik-abwahl-schreibt-alle-kanaele-durch.staging.spec.ts` und
+`frontend/e2e/metrik-grundauswahl-schneidet-kanal.staging.spec.ts` damit die
+zugestellte SMS-Kurzform messen.
 
-**Handler:** `api/routers/preview.py` | **Routing:** `internal/router/router.go` (Trip-Routen), `internal/router/router.go:161-167` (Compare-Proxy)
+**Handler:** `api/routers/preview.py` (SMS), `api/routers/validator.py` (Alarm) | **Routing:** `internal/router/router.go`
 
-### GET /api/preview/{trip_id}/email
+Entfernt (Router 404/405, Python-Core wird nicht erreicht):
 
-Render trip report preview in HTML format (Email).
+- `GET /api/briefings/{id}/preview` (#2283 S1) — mit #1743 entfallen (Reiter „Vorschau" abgebaut).
+- `GET /api/preview/{trip_id}/email`, `GET /api/preview/{trip_id}/telegram` und
+  `POST /api/preview/compare/{preset_id}` (#1270) — mit #1743 entfallen, kein Aufrufer mehr.
+  Die Dienste `PreviewService` und `ComparePreviewService` bleiben (Render-Pfad der
+  Paritätstests, `scripts/premium_sms_preflight_check.py`, Alarm-Vorschau).
+- `GET /api/preview/{trip_id}/signal` (404, #2283 AC-6).
+
+### POST /api/briefings/{id}/alert-preview (Issue #2283 S4)
+
+Kind-neutrale Alarm-Vorschau. Go-Handler
+`internal/handler/briefing_preview.go::BriefingAlertPreviewHandler` prüft `kind`
+(fehlt/falsch → 400 `{"error":"kind_required"}`) und die ID (`store.ValidEntityID`
+verletzt → 400 `{"error":"validation_error"}`, Python wird nicht erreicht), verwirft
+einen Client-`user_id` und injiziert die Kennung aus der Anmeldung (ADR-0003).
+Körper unverändert durch, Zeitlimit 30 s (`forwardPreview`). Proxy-Ziel: Python `POST /api/briefings/{id}/alert-preview`
+(`api/routers/validator.py::briefing_alert_preview`).
+
+- `kind=route`: Body und Antwort exakt wie `POST /api/trips/{id}/alert-preview`
+  (Section 22.5); die Alt-Route bleibt als Delegate.
+- `kind=vergleich`: orts-bezogener Body, **genau eines** von
+  `changes: [{location_id, metric, old_value, new_value, delta, threshold, severity, direction}]`,
+  `onsets: [{location_id, onset_minutes, intensity_label, source, is_convective}]`,
+  `official: [{source, hazard, level, label, valid_from, valid_to, region_label, location_ids}]`.
+  Antwort `{subject, email_html, email_plain, telegram, telegram_bubbles, sms}` aus
+  `src/services/compare_alert_preview_service.py` — dieselben Projektionen wie der
+  Versand (`to_multi_point_alert_message`, `to_multi_location_onset_alert_message`,
+  Bausteine von `send_multi_location_official_alert`, ADR-0011). Keine Seiteneffekte
+  (kein SMS-Kontingent, kein Versand). Ort nicht im Vergleich/Body ungültig → 422,
+  fremder Vergleich → 404.
+
+### GET /api/preview/{trip_id}/sms
+
+SMS-Kurzform-Vorschau eines Trips (`PreviewService.render_sms_preview`, derselbe
+Renderpfad wie der Versand). Go-Proxy `internal/handler/preview_proxy.go::PreviewProxyHandler`
+(`forwardPreview`, Zeitlimit 30 s; Client-`user_id` wird verworfen, die Kennung aus der
+Anmeldung injiziert, ADR-0003).
 
 **Query Parameters:**
 
@@ -3056,15 +4252,14 @@ Render trip report preview in HTML format (Email).
 
 **Response 200:**
 
-```
-Content-Type: text/html
-<html>...</html>  <!-- Full HTML rendered trip report -->
+```json
+{"subject": "...", "token_line": "...", "char_count": 137}
 ```
 
 **Example:**
 ```
-GET /api/preview/gr20/email?type=morning&date=2026-05-31&demo=1
-GET /api/preview/gr20/email?type=evening
+GET /api/preview/gr20/sms?type=morning&date=2026-05-31&demo=1
+GET /api/preview/gr20/sms?type=evening
 ```
 
 **Error Responses:**
@@ -3074,6 +4269,7 @@ GET /api/preview/gr20/email?type=evening
 | 400 | `{"error":"invalid_trip_or_date"}` | Trip not found or date unparseable |
 | 400 | `{"error":"invalid_type"}` | `type` parameter not in `["morning", "evening"]` |
 | 400 | `{"error":"no_segments"}` | Trip has no stages/segments for the given date |
+| 422 | `{"detail":"invalid trip_id: '...'"}` | `trip_id` verletzt `VALID_ENTITY_ID_RE` (Pendant zu `store.ValidEntityID`, Issue #2140 S2) — geprüft in `PreviewService._load_trip`, vor jedem Pfadbau, unabhängig davon, ob der Go-Proxy die Kennung roh durchreicht |
 | 503 | `{"error":"weather_unavailable"}` | Weather provider API unreachable (only when `demo=false`) |
 
 **Notes:**
@@ -3083,133 +4279,10 @@ GET /api/preview/gr20/email?type=evening
 - If weather fetch fails with `demo=false`, the endpoint returns 503; with `demo=true`, it returns 400 if fixtures are unavailable
 - Demo mode is ideal for testing preview rendering on past trips (where live weather is unavailable)
 
-### GET /api/preview/{trip_id}/sms
-
-Render trip report preview as SMS text (≤160 characters per message).
-
-**Query Parameters:** Same as `/email` (type, date, demo)
-
-**Response 200:**
-
-```
-Content-Type: text/plain
-Grüße! Morgen: 18°C, Wind 22 km/h, Regenwahrscheinlichkeit 20%.
-```
-
-**Error Responses:** Same as `/email`
-
-### GET /api/preview/{trip_id}/telegram
-
-Render trip report preview for Telegram channel. Seit Issue #1001 rendert das Backend
-das Briefing als mehrere einzelne Nachrichten ("Bubbles": Kopf, Kurzübersicht, je
-Segment, Ziel, optional Ausblick, Aktionen) statt einer einzelnen Prosa-Nachricht —
-siehe `docs/adr/0014-telegram-multi-bubble-format.md`.
-
-**Query Parameters:** Same as `/email` (type, date, demo)
-
-**Response 200:**
-
-```json
-{
-  "subject": "...",
-  "body": "<alle Bubbles, verbunden mit \"\\n\\n---\\n\\n\">",
-  "char_count": 0,
-  "max_line_width": 0,
-  "bubbles": ["<Bubble 1: Kopf>", "<Bubble 2: Kurzübersicht>", "..."]
-}
-```
-
-`bubbles` ist additiv seit #1001 (AC-7) — `body` bleibt aus Rückwärtskompatibilität
-erhalten und ist die mit `"\n\n---\n\n"` verbundene Kette aller Bubbles. Das dazugehörige
-`reply_markup` (Inline-Keyboard der Aktionen-Bubble) ist im Preview-JSON **nicht**
-enthalten; es wird ausschließlich beim tatsächlichen Versand über
-`TripReport.telegram_actions_markup` an die letzte Nachricht angehängt.
-
-**Error Responses:** Same as `/email`
-
 **Notes:**
 
-- All preview endpoints are **read-only** and do not send messages or modify state
-- Preview rendering uses the same Report Formatter and Channel Renderers as the scheduler (integrity guarantee)
-- Frontend may call multiple preview endpoints (e.g., email + SMS) to render side-by-side tabs
-
-### POST /api/preview/compare/{preset_id}
-
-Render **alle** Kanäle der Vorschau eines Orts-Vergleich-Presets in **einer**
-Antwort (Issue #1270, ADR-0011-Muster — Erweiterung des bestehenden
-`alert-preview`-Musters). Bewusste Abweichung von der Trip-Preview-Routenform
-oben (eine `GET`-Route je Kanal): ADR-0011 verlangt „die fertig gerenderten
-Kanäle über EINEN Backend-Endpunkt"; die Trip-Preview-Routen entstanden vor
-ADR-0011 (2026-06-29) und wurden nicht rückwirkend migriert (Nebenbefund,
-#1199).
-
-**Handler:** `api/routers/preview.py::preview_compare` — ruft
-`src/services/compare_preview_service.py::ComparePreviewService.render_all_channels`
-| **Go-Proxy:** `internal/handler/preview_proxy.go::ComparePreviewProxyHandler`
-(`router.go:167`)
-
-**Path Parameters:**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| preset_id | string | Compare-Preset-ID |
-
-**Query Parameters:**
-
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| user_id | string | yes | Session-User; vom Go-Proxy aus dem Auth-Kontext injiziert — ein client-seitig mitgeschickter Wert wird verworfen (Anti-Spoofing, ADR-0003) |
-| date | string | no | Ziel-Datum ISO-8601 (`YYYY-MM-DD`), Default: heute |
-
-Kein Request-Body erforderlich — der Go-Proxy leitet den Body zwar durch, der
-Python-Handler liest ihn nicht.
-
-**Response 200:**
-
-```json
-{
-  "subject": "...",
-  "email_html": "<html>...</html>",
-  "telegram": "...",
-  "sms": "...",
-  "sms_char_count": 137
-}
-```
-
-| Feld | Type | Description |
-|------|------|-------------|
-| subject | string | Betreffzeile (`build_compare_preset_subject`) |
-| email_html | string | Vollständiges HTML der E-Mail-Vorschau (`render_compare_email`) |
-| telegram | string | Fertiger Telegram-Nachrichtentext (`render_compare_telegram`) — kein Score/Rang (#1110) |
-| sms | string | Budgetierte SMS-Zeile (`render_compare_sms`, Budget über `CHANNEL_LIMITS`, #360) |
-| sms_char_count | integer | `len(sms)` |
-
-**Error Responses:**
-
-| Status | Scenario |
-|--------|----------|
-| 404 | Preset für diese `user_id` nicht gefunden — auch bei einem Preset, das einem anderen Nutzer gehört (Multi-User-Isolation, AC-6) |
-| 422 | fehlende/leere `user_id` (kein `"default"`-Fallback, ADR-0003) · Preset ohne konfigurierte Orte · konfigurierte Orte nicht auflösbar (gelöschte Location-Referenz) · ungültiges `date`-Format |
-| 503 | Wetter-Provider nicht erreichbar (`ComparisonEngine.run()` scheitert) |
-
-Der Router mappt `FileNotFoundError`/`LookupError` → 404, `ValueError` → 422,
-`RuntimeError` → 503; `detail` enthält den Ausnahme-Text (kein fester
-Error-Code wie bei den älteren Trip-Preview-Routen).
-
-**Notes:**
-
-- Read-only wie die anderen Preview-Endpoints — kein Versand, kein
-  Logbuch-Eintrag.
-- `ComparisonEngine.run()` läuft genau **einmal** je Aufruf; alle drei
-  Kanäle sitzen auf demselben `ComparisonResult` (AC-7) — ein Kanalwechsel
-  im Vorschau-Tab löst **keinen** weiteren Request aus, daher kein Cache
-  nötig.
-- Ersetzt fachlich den Validator-Stub
-  `POST /api/_validator/compare-email-preview` (#464) als Datenquelle für
-  die UI-Vorschau (Stub rendert einen hartcodierten Ort). Der Stub selbst
-  bleibt unverändert bestehen — er gehört dem externen Validator.
-- Details, Architektur-Begründung (ADR-0011) und AC-Mapping:
-  `docs/specs/modules/compare_channel_preview_dispatch.md`.
+- Read-only: kein Versand, kein Zustandswechsel.
+- Rendering über denselben Report-Formatter und dieselben Kanal-Renderer wie der Scheduler.
 
 ---
 
@@ -3221,12 +4294,19 @@ Lists all sent briefings (morning/evening) for an archived trip, ordered chronol
 
 **Handler:** `internal/handler/briefing_history.go` | **Routing:** `internal/router/router.go`
 
-### GET /api/trips/{id}/briefing-history
+### GET /api/briefings/{id}/briefing-history?kind=route|vergleich
 
-Retrieves briefing delivery log for a specific trip (archived or active).
+Kind-neutral delivery log (#2281) for a trip (`kind=route`) or a location comparison (`kind=vergleich`). Entries are written by `src/services/briefing_log.py` (locked, atomic) for cron and manual sends of both kinds. `GET /api/trips/{id}/briefing-history` remains as an alias on the same handler with identical response (equals `kind=route`).
 
 **Path Parameter:**
-- `id`: Trip identifier
+- `id`: Trip or comparison identifier
+
+**Query Parameter:**
+- `kind` (required): `route` | `vergleich`
+
+**Status codes:** 401 without user; 400 for missing/invalid `kind` or invalid ID; 200 `[]` for unknown ID.
+
+**Log entry storage** (`briefing_log.json` per user): each entry carries `entity_type` (`"trip"` | `"compare"`) and `entity_id`. Legacy entries without `entity_*` are read by Go with `EntityID := TripID`, `EntityType := "trip"` (in-memory only, `internal/store/log.go`). Archive statistics count briefings per `"<type>:<id>"` (`BriefingCountByEntity`). The double-send guard (`briefing_slots.py`) evaluates trip entries only.
 
 **Response 200:**
 
@@ -3426,7 +4506,7 @@ S1-Eingangsprotokoll (`src/services/alert_input_capture.py`, siehe
 |------|-----|------|
 | changes | `ChangePayload[]` | Zweig a (Δ-Alarm): rohe Änderungswerte je Etappe (`metric`, `old_value`, `new_value`, `delta`, `threshold`, `severity`, `direction`, `segment_id`) |
 | segment_times | `SegmentTimePayload[]` | Optional bei `changes` — fehlt es, synthetisiert der Endpoint die Etappen-Zeitfenster aus dem geladenen Trip über dieselbe Produktions-Segmentierung wie der Versandpfad (`convert_trip_to_segments`) |
-| onset | `OnsetPayload` \| null | Radar-Onset (Zweig c, Alt-Form vor S2): `onset_minutes`, `onset_time`, `km_from`, `km_to`, `is_convective`, `intensity_label`, `source_label`, `cooldown_display?`, `segment_id?` (additiv seit #1948 S5, AC-15 — ohne Segment-Kennung fiel der Zweig auf den km-Rückfall zurück), `onset_precip_mm?` (additiv seit #2046 — Menge in mm, akkumuliert über 60 Min ab Ereignisbeginn; `None`/fehlend ⇒ SMS-Onset-Token ohne Zahl), `onset_day_offset?: int = 0`, `onset_weekday?: string \| null` (additiv seit #2054 — Tagesbezug des Beginns und sein DE-Wochentagskürzel für die Kurzform-Darstellung; ohne die Felder zeigt die Vorschau einen Zeitpunkt von heute, wo der Versand einen von morgen meldet), `event_end_time?: string \| null`, `event_end_day_offset?: int = 0`, `event_end_weekday?: string \| null` (`event_end_weekday` additiv seit #2054, analog zu `onset_weekday`, aber eigenständig aus dem Ende-Zeitpunkt abgeleitet — Beginn und Ende können an verschiedenen Kalendertagen liegen), `event_ongoing_beyond_horizon?: bool = false` (additiv seit #2051 S1 — Ende des zusammenhängenden nassen Blocks mit eigenem Tagesbezug, analog zu `onset_time`/`onset_day_offset`/`onset_weekday`; ohne `event_end_time` rendert der Vorschauweg die Ausweichform ohne Ende; `event_ongoing_beyond_horizon=true` wählt die Untergrenzen-Form `Regen mindestens bis HH:MM` statt `letzter Regen gegen HH:MM`), `source_reach_time?: string \| null`, `source_reach_day_offset?: int = 0`, `location_sharpness_limit_time?: string \| null`, `location_sharpness_limit_day_offset?: int = 0` (additiv seit #2051 S3 — Reichweite der Radar-Quelle (`Radar reicht bis HH:MM`, sechs Langform-Stellen, entfällt bei `event_ongoing_beyond_horizon=true`) und Güte-Grenzzeit der Ortsangabe (`Ortsangabe ab HH:MM unscharf` in denselben sechs Stellen, `?`-Zeichen zusätzlich in der Kurzform); ohne die Felder zeigt der Vorschauweg keine der beiden Angaben) |
+| onset | `OnsetPayload` \| null | Radar-Onset (Zweig c, Alt-Form vor S2): `onset_minutes`, `onset_time`, `km_from`, `km_to`, `is_convective`, `intensity_label`, `source_label`, `cooldown_display?`, `segment_id?` (additiv seit #1948 S5, AC-15 — ohne Segment-Kennung fiel der Zweig auf den km-Rückfall zurück), `onset_precip_mm?` (additiv seit #2046 — Menge in mm, akkumuliert über 60 Min ab Ereignisbeginn; `None`/fehlend ⇒ SMS-Onset-Token ohne Zahl), `onset_day_offset?: int = 0`, `onset_weekday?: string \| null` (additiv seit #2054 — Tagesbezug des Beginns und sein DE-Wochentagskürzel für die Kurzform-Darstellung; ohne die Felder zeigt die Vorschau einen Zeitpunkt von heute, wo der Versand einen von morgen meldet), `event_end_time?: string \| null`, `event_end_day_offset?: int = 0`, `event_end_weekday?: string \| null` (`event_end_weekday` additiv seit #2054, analog zu `onset_weekday`, aber eigenständig aus dem Ende-Zeitpunkt abgeleitet — Beginn und Ende können an verschiedenen Kalendertagen liegen), `event_ongoing_beyond_horizon?: bool = false` (additiv seit #2051 S1 — Ende des zusammenhängenden nassen Blocks mit eigenem Tagesbezug, analog zu `onset_time`/`onset_day_offset`/`onset_weekday`; ohne `event_end_time` rendert der Vorschauweg die Ausweichform ohne Ende; `event_ongoing_beyond_horizon=true` wählt die Untergrenzen-Form `Regen mindestens bis HH:MM` statt `letzter Regen gegen HH:MM`), `source_reach_time?: string \| null`, `source_reach_day_offset?: int = 0`, `location_sharpness_limit_time?: string \| null`, `location_sharpness_limit_day_offset?: int = 0` (additiv seit #2051 S3 — Reichweite der Radar-Quelle (`Radar reicht bis HH:MM`, sechs Langform-Stellen, entfällt bei `event_ongoing_beyond_horizon=true`) und Güte-Grenzzeit der Ortsangabe (`Ortsangabe ab HH:MM unscharf` in denselben sechs Stellen, `?`-Zeichen zusätzlich in der Kurzform); ohne die Felder zeigt der Vorschauweg keine der beiden Angaben), `km_measured?: bool = false`, `rain_zones?: RainZonePayload[]` (additiv seit #2051 S2b — Feldspiegel von `RainZone`: `km_from: float`, `km_to: float`, `onset_minutes: int`, `event_end_minutes?: int`; speist die räumliche Ausdehnung, die S2a in `_onset_extent_suffix()` einführte, jetzt in allen vier betroffenen Vorschau-Texten `subject`/`email_plain`/`telegram`/`sms`; ohne die beiden Felder zeigt kein Kanal eine Ausdehnungsangabe, auch wenn der eigentliche Alarmpfad sie trägt), `convective_checked?: bool = true` (additiv seit #2050 S4b-2 — Default `true`, weil ein `false`-Default jede Bestandslage, die das Feld nicht setzt, fälschlich als „ungeprüft" beschriften würde; `false` löst in E-Mail/Telegram den Zusatz „ · Gewitter ungeprüft" und in SMS/Premium-SMS/Telegram-Kurzstil den Marker `#` unmittelbar hinter dem Kürzel (`R`/`TH`) aus; ohne das Feld zeigt der Live-Preview-Unterpfad die Kennzeichnung nie, unabhängig vom tatsächlichen `convective_checked`-Wert des echten Laufs — nachgetragen in `OnsetPayload` nach der RED-Phase, sonst verwirft pydantic den Schlüssel still) |
 | official | `OfficialAlertPayload[]` \| null | **NEU (#1948 S2), Zweig b:** amtliche Warnung(en), Feldspiegel von `OfficialAlert` — `source`, `hazard`, `level: int`, `label`, `valid_from?`, `valid_to?`, `url?`, `region_label?`, `dedup_id?`, `segment_ids: string[]` |
 | nowcast_frames | `NowcastFramesPayload` \| null | **NEU (#1948 S2), Zweig c:** Replay eines S1-Nowcast-Mitschnitts — `source`, `frames: [{timestamp, precip_mm_h, is_convective}]`, `km_from`, `km_to`, `segment_id?` (additiv seit #1948 S5, AC-15, analog zu `OnsetPayload`) |
 
@@ -3454,8 +4534,20 @@ Leerbefund statt Exception/HTTP 500.
   `changes` existiert nicht im Trip
 
 **Notes:**
-- Zustandslos wie `compare-email-preview`/`sms-fidelity-preview` — kein Wetterdaten-Fetch, kein
-  Versand, keine Persistenz.
+- Zustandslos wie `compare-email-preview`/`sms-fidelity-preview` — kein Versand, keine
+  Persistenz. Ausnahme Zweig `changes` (#1737): die Stundenzeilen entstehen nicht aus dem Body
+  (Kopfzeile/Ereignisse bleiben die synthetischen alt/neu-Werte), sondern der Server beschafft
+  Anker (alte Reihe) und frische Reihe selbst, **je Nutzer** über die echte `user_id` (nie
+  `"default"`, nie Anker eines fremden Nutzers) wie der Versand — Trip über `TripAlertService`,
+  Ortsvergleich über `CompareWeatherSnapshotService`/`CompareLocationWeatherSource`, geteilter
+  Helfer `src/services/alert_preview_hours.py`. Das ist ein lesender Frisch-Abruf, fail-soft:
+  ohne Anker nur der neue Wert, bei Fehler/Zeitüberschreitung oder ohne Reihe unverändert wie
+  vorher, nie ein Fehler. Das Frontend (`alertPreviewHelpers.ts`) sendet `segment_id: "1"`
+  (erstes Segment des Tages); die Etappen-Kennung (z. B. „T01") lehnt der Kern mit `422` ab.
+- **Entitäts-ID-Guard (Issue #2140 S2):** Verletzt `trip_id` `VALID_ENTITY_ID_RE`, behandelt
+  `_load_trip_raw` das wie „nicht gefunden" und der Endpoint antwortet mit dem regulären `404`
+  oben — bewusst **kein** eigener Statuscode, damit eine Ausbruchs-Kennung nicht von einem
+  existierenden fremden Trip unterscheidbar ist.
 - **Zwei verschiedene Dinge heißen „onset".** Der Payload-Typ `onset` hier ist der
   **Radar-Nowcast** („Regen beginnt in ~20 Minuten", Minuten seit jetzt). Die
   **Beginn-Verschiebung** aus #1468 (Uhrzeit, zu der Gewitter/Starkregen im Tagesfenster
@@ -3618,6 +4710,15 @@ eine zweite Regel mit demselben Feld wieder scharf wird (`wind_change` ⊃ `gust
 `display_config` bleibt in diesem Fall bewusst `None` — sonst entfiele die CAPE-Regel, deren
 Katalog-Größe seit #1585 `selectable=False` trägt.
 
+**Normalisierung Alt-Vokabular beim Laden (Issue #1981):** Bestandsdaten können Alt-Schlüssel im
+Summary-Vokabular enthalten (`temp_max_c`, `gust_max_kmh`, `cape_max_jkg`, `precip_sum_mm`,
+`visibility_min_m`, `thunder_level_max`, `wind_max_kmh`, `wind_chill_min_c`, `snow_line`).
+Diese werden beim Laden in Python (`src/app/loader.py`) und Go (`internal/store/trip.go`,
+`internal/store/compare_preset.go`) auf Alarm-Namen übersetzt (`temperature_max`, `wind_gust` …);
+`wind_chill_min_c` wird verworfen. Ein existierender Neu-Schlüssel gewinnt bei Doppelbelegung.
+Fremde Schlüssel bleiben unverändert. Der Normalisierer ist idempotent. Dies ermöglicht, dass
+eine im Editor abgewählte Alarm-Metrik (Stufe „off") auch bei Alt-Datenbestand wirkt.
+
 **`corridors[].metric` trug zwei Namensräume** (#1444 S2a, aus `resolve_corridor_summary_field()`
 in `corridor_threshold.py`): eine `AlertMetric`-Kennung (die 5 fest verdrahteten Zeilen, z.B.
 `wind_gust`, `snow_line`) ODER einen Katalog-`key` (die 18 seit #1425 aus dem Katalog gespeisten
@@ -3625,7 +4726,7 @@ Zeilen, z.B. `thunder_level_max`, `snow_depth_cm`). Seit #1460 T1 ist dieser Auf
 Aufrufer aus `trip_alert.py` (s. o.) — die Beschreibung bleibt als Code-Doku für
 `corridor_threshold.py` gültig, betrifft aber keinen Alarm-Auslöser mehr. Die doppelte
 `corridor:<metrik>:<etappe>`-Namensraum-Problematik (#1455) betraf ausschließlich diesen nun
-unerreichbaren Melde-Gedächtnis-Schlüsselraum.
+unerreichbaren Melde-Gedächtnis-Schlüsselraum. **Nachtrag (Audit 2026-10-21):** Seit #2230 (`rework_2230_corridor_path_removal.md`) ist der tote Pfad ganz entfernt — `src/services/corridor_threshold.py`, `CorridorEvent` und `corridor_hits` existieren nicht mehr (Beleg: `tests/tdd/test_alert_ausgabe_nach_korridor_rueckbau.py::test_ac1_modul_corridor_threshold_ist_weg`).
 Spec: `docs/specs/modules/feat_1444_s2a_schwellen_namensraum.md`.
 
 ```go
@@ -3709,8 +4810,223 @@ function corridorInside(value, min, max) {
 
 ---
 
+## 25) Location- und Group-DTO (Struct-Wahrheit, Nachtrag Audit 2026-10-21)
+
+Bis 2026-10-21 hatte das Orts-DTO keinen eigenen Abschnitt; der Drift-Wächter
+`tests/test_api_contract_drift.py` prüft nur `trip.go` und `compare_preset.go`. Die Tabellen
+geben ausschließlich den Struct-Stand wieder (Typ, `omitempty`), keine neue Semantik.
+Endpunkte: Sektion 0.5 (`/api/locations*`, `/api/groups*`).
+
+**`Location`** — `internal/model/location.go`, persistiert unter `data/users/<uid>/locations/<id>.json`
+
+| Feld | Go-Typ | JSON | Python (`src/app/user.py::SavedLocation`) |
+|---|---|---|---|
+| `id` | `string` | Pflicht | `id` |
+| `name` | `string` | Pflicht | `name` |
+| `lat` / `lon` | `float64` | Pflicht | `lat` / `lon` |
+| `elevation_m` | `*int` | omitempty | `elevation_m` (int, Pflicht) |
+| `region` | `*string` | omitempty | `region` (Lawinenregion, z. B. `AT-7`) |
+| `bergfex_slug` | `*string` | omitempty | `bergfex_slug` (Bergfex-Slug für Schneedaten) |
+| `activity_profile` | `*string` | omitempty | `activity_profile` (Enum `ActivityProfile`) |
+| `group` | `*string` | omitempty | `group` |
+| `group_id` | `*string` | omitempty | — (nur Go) |
+| `display_config` | `map[string]interface{}` | omitempty | `display_config` |
+| `timezone` | `string` | omitempty | `timezone` |
+| `data_source` | `string` | omitempty | — (nur Go) |
+| `created_at` | `*time.Time` | omitempty | `created_at` (str) |
+
+**`Group`** — `internal/model/group.go`
+
+| Feld | Go-Typ | JSON |
+|---|---|---|
+| `id` | `string` | Pflicht |
+| `name` | `string` | Pflicht |
+| `default_profile` | `*string` | omitempty |
+| `order` | `int` | Pflicht |
+
+**Hinweis:** `src/app/loader.py::save_location()` schreibt `group`, `group_id`, `timezone`,
+`data_source` und `created_at` nicht zurück (Replace statt Read-Modify-Write). Stand 2026-10-21 hat die
+Funktion in `src/`/`api/` keinen Aufrufer — schreibend ist allein die Go-API.
+
 ## Changelog
 
+- 2026-10-24: Issue #2359 — Kennungsraum Trip/Ortsvergleich: `POST /api/trips` (neuer Abschnitt „Kennungs-Konflikt“) sowie Compare-Preset POST/PUT antworten bei belegter Kennung mit 409 `id_conflict` (statt 500 `store_error`).
+- 2026-10-21: Doku-Drift (kein Code) — Profil-DTO um `email_verified`, `sms_verified`, `pending_sms_to`,
+  `telegram_chat_id` ergänzt; neuer Unterabschnitt „SMS-Nummer-Verifikation“ (#2406); `User`-Struct-Block
+  auf Struct-Wahrheit inkl. `SmsVerificationCode`/`PremiumSmsLinkCode`; Forecast-Zusatzfelder
+  (`wind_dir_deg` → `wind_direction_deg`, +9 Felder) und SegmentWeatherSummary (+8 Felder, Go-Abweichung
+  `sunny_hours_h`) nachgezogen; doppelt vergebene „17)“ → 17 / 17.1 / 17.2.
+- 2026-10-17: Issue #2521 Scheibe S2 (ADR-0092) — Onboarding: Profil-DTO erhält
+  `onboarding_pending`, `onboarding_dismissed`, `checklist_dismissed` (immer vorhanden) sowie
+  `test_mail_sent_at`, `first_briefing_at` (`omitempty`, read-only); `PUT /api/auth/profile`
+  nimmt nur die beiden Dismiss-Flags. `POST /api/notify/test` (`email`) sendet über die normale
+  Versandkette an die bestätigte Profiladresse; gesperrt bei fehlender/unbestätigter Adresse
+  oder Kennung `default`. Spec: `docs/specs/modules/onboarding_willkommen_checkliste.md`.
+- 2026-10-03: Issue #2160 (Epic #2138, ADR-0081) — Kontoloeschung mit Re-Auth: neuer
+  Endpunkt `POST /api/auth/account/delete` (Body `{password?, code?}`) und
+  `POST /api/auth/account/delete-code`; der alte DELETE auf `/api/auth/account` ist entfallen
+  (404/405). Profil-DTO erhält `has_password` (bool, immer vorhanden). Details Section 19
+  „Kontoloeschung mit Re-Auth".
+- 2026-09-28: Issue #2155 Scheibe S2 (Epic #2138, ADR-0079) — `GET
+  /api/scheduler/status` ist nicht mehr öffentlich: Header `X-GZ-Status-Token`
+  (Env `GZ_STATUS_TOKEN`, konstantzeitiger sha256-Vergleich) ist Pflicht, leeres/nicht
+  gesetztes Token sperrt den Endpunkt fail-closed für jede Anfrage, auch mit gültiger
+  Sitzung; Fehlerfall 401 `{"error":"unauthorized"}`. Neu: `GET
+  /api/scheduler/status/me` (Session-Pflicht) liefert nur den eigenen Lauf-Status
+  von `trip_reports_hourly`, genutzt von der Konto-Seite. `/api/debug/` ist nicht mehr
+  in der Public-Allowlist, sondern zusätzlich anmeldepflichtig und hinter
+  `RequireAdmin` (401 ohne Sitzung, 403 Nicht-Admin, 200 Admin); ein mitgeschickter
+  fremder `user_id`-Query-Parameter wird durch die Admin-Kennung aus dem
+  Auth-Kontext ersetzt.
+- 2026-09-28: Issue #2293 Scheibe S2 (Epic #1374/#2345) — `ComparePreset` bekommt das Feld
+  `AlertChannels *AlertChannelsConfig` (identischer Typ wie beim Trip), materialisiert beim
+  Laden über `store.NormalizeComparePreset`/`normalizeLoadedComparePreset` (reine
+  In-Memory-Auflösung, kein Write-Back durch ein GET). Alarm- (`alert_channels`) und
+  Briefing-Kanäle (`send_telegram`/`send_sms`/`send_premium_sms`) sind am Ortsvergleich damit
+  vollständig entkoppelt — identisch zum Trip, s. „alert_channels" oben. Neuer eigener
+  Premium-SMS-Schalter im Versand-Reiter (`send_premium_sms`) löst die bisherige stille
+  Kopplung „Alarme-Reiter-Premium-SMS-Klick setzt auch das Briefing-Flag" (#2448) auf.
+  Alt-Bestand ohne `alert_channels` mit `send_premium_sms=true`: die Materialisierung deutet
+  das als Alarm-Absicht (`alert_channels.premium_sms=true`) und setzt `send_premium_sms` beim
+  Laden zusätzlich auf `false` (persistiert mit dem nächsten PUT); Python-seitiger Guard in
+  `effective_compare_briefing_channels` (`src/services/compare_alert_channels.py`) deckt
+  dasselbe Zeitfenster vor dem ersten Go-Schreibzugriff ab. Details:
+  `docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md`.
+- 2026-09-28: Issue #2155 Scheibe S1 (Epic #2138, ADR-0078) — Admin-Rolle über die
+  ENV-Liste `GZ_ADMIN_USER_IDS` (komma-getrennt, leer = niemand ist Admin). Neue
+  Go-Middleware `RequireAdmin` schützt `POST /api/scheduler/trip-reports`,
+  `/api/scheduler/alert-checks` und `/api/scheduler/inbound-commands`: Nicht-Admins
+  erhalten 403 `{"error":"forbidden"}`, ohne Sitzung bleibt es 401. Der Cron-Scheduler ist
+  nicht betroffen. `GET /api/auth/profile` liefert neu `role` (`admin`|`user`, abgeleitet,
+  nicht schreibbar). Der Knopf „Briefing senden" der Trip-Liste nutzt nun
+  `POST /api/trips/{id}/send?report_type=morning|evening` für genau den gewählten Trip.
+  `GET /api/scheduler/status` und `/api/debug/` zu diesem Zeitpunkt noch unverändert
+  (folgte mit S2, siehe Eintrag oben).
+- 2026-09-22: Issue #2404 (Scheibe S2 von #2153, Epic #2138) — neuer schlüsselbasierter
+  `MailFloodLimiter` (Token-Bucket, Vorbild `IPRateLimiter`) begrenzt Bestätigungsmails aus `PUT
+  /api/auth/profile` und `POST /api/auth/verify-email/resend` auf 10/Stunde je User-ID UND je
+  Zieladresse, unabhängig gezählt. `PUT /api/auth/profile` bekommt neu `429
+  {"error":"rate_limit_exceeded"}` mit `Retry-After`-Header bei ausgeschöpftem Kontingent, gesamter
+  Request wird verworfen (kein Teil-Save). `POST /api/auth/verify-email/resend` bleibt aus
+  Privacy-Gründen immer `200`, unterdrückt bei ausgeschöpftem Adress-Kontingent nur den
+  Mailversand, und konsumiert dabei bewusst ausschließlich den Adress-Bucket, nie das
+  User-Kontingent des per `username` benannten (potenziell fremden) Kontos. Details:
+  `docs/specs/bugfix/profile_mail_ratelimit.md`.
+- 2026-09-21: Issue #2391 (Scheibe S3 von #2150, Epic #2138) — `GET /api/forecast` (Go) bucht
+  vor dem Abruf das Tageskontingent beim Python-Core, statt es zu umgehen: neuer interner
+  Endpunkt `POST /api/_internal/forecast-budget/reserve` (`api/routers/internal.py`) prüft und
+  bucht in einem Aufruf gegen `ForecastBudgetGate`; neue Fehlerantworten `401` (fehlender
+  Nutzerkontext, geprüft vor der Parametervalidierung) und `429` mit `Retry-After`-Header bei
+  erschöpftem Kontingent. Fail-open bei unerreichbarem Core (unverändertes Verhalten). Details
+  Section 13, ADR-0076, `docs/specs/modules/forecast_go_pfad_kontingent.md`.
+- 2026-09-20: Issue #1507 Scheibe S5c (Block C von #2257, Epic #1419) — neues optionales Feld
+  `hail_potential_mf` auf `ForecastDataPoint`: Hagel-**Rohwert** von Météo-France AROME für
+  Frankreich/Korsika (`fr_direct`), Coverage `HAIL__GROUND_OR_WATER_SURFACE`, live gegen
+  `GetCapabilities`/`DescribeCoverage` verifiziert (uom `kg kg-1`). Teilt sich denselben
+  Sammelabruf-Mechanismus und dasselbe Zeitbudget wie die bestehende Blitzdichte
+  (`lightning_density_per_km2_3h`, #1457 S2a); fail-soft, `None` nie `0`. **Bewusst
+  unverbunden** von `hail_flag` (#1475 S5a) und `hail_potential_grau_gsp` (DWD) — keine
+  Kombination, keine Schwellen-/Flag-Ableitung, kein Renderer-Anschluss (Known Limitation).
+  Details: `docs/specs/modules/feat_1507_s5c_hagel_mf_fr.md`.
+- 2026-09-19: Issue #2151 Scheibe A — `user_id` wird in den Routen `POST /api/scheduler/trips/{trip_id}/send` und `POST /api/scheduler/compare-presets/{preset_id}/send` zur Pflicht (kein Default mehr); fehlender Parameter → HTTP 422. Details: `docs/specs/modules/fix_2151_default_fallbacks_scheibe_a.md`.
+- 2026-09-15: Issue #2136/ADR-0068 — **kein neues Feld**, Korrektur einer Aussage in Section 19:
+  die Spaltenköpfe des 3-Tages-Ausblicks (Trip UND Ortsvergleich, HTML + Klartext) kommen jetzt
+  aus `metric_catalog.col_label` (dieselbe Quelle wie die Etappentabelle), **nicht** mehr aus dem
+  deutschen Langnamen des Compare-Katalogs. Das frühere Kollisionsargument (mehrere
+  Temperatur-Auswertungen ergäben identisch „Temp") ist durch die seit #1848 A1 bestehende
+  Merge-/Dedup-Mechanik entkräftet; ein verbleibender Restkollisionsfall trägt
+  `aggregation_label_de()` als Suffix. Löst ADR-0037 „Verworfene Alternativen" Punkt 3 ab.
+- 2026-09-14: Issue #2147 Scheibe B2 (Epic #2138) — Adresswechsel eines bestätigten Kontos wirkt
+  erst nach Bestätigung: neues Profil-Feld `pending_contact_address` (`omitempty`); `PUT
+  /api/auth/profile` legt bei geänderter wirksamer Adresse eines bestätigten Kontos eine
+  ausstehende Änderung statt eines Sofort-Resets an; `POST /api/auth/verify-email` bekommt neu
+  dokumentierte Fehlercodes `400 token expired` (ersetztes adressgebundenes Token) und `409
+  address_taken` (Adresse zwischenzeitlich vergeben). Details:
+  `docs/specs/modules/adresswechsel_nach_bestaetigung.md`.
+- 2026-09-13: Issue #2248 — Profil-DTO erhält neues Feld `passkey_prompt_dismissed` (bool,
+  Muster `has_passkey`: immer vorhanden, kein `omitempty`). `GET`/`PUT /api/auth/profile` geben es
+  aus, `PUT` nimmt es optional entgegen. Hält fest, dass der Nutzer das einmalige
+  Passkey-Einrichtungsangebot abgelehnt hat, geräteübergreifend persistiert.
+- 2026-09-11: Issue #2304 (Epic #2138, S1 von #2271/#2146) — zwei neue Endpunkte: `POST
+  /api/auth/verify-email/resend` (öffentlich, enumerationsfrei, 5/h-Ratenlimit, löst erneuten
+  Bestätigungsmail-Versand aus) und `POST /api/auth/verify-email/staging-token` (existiert nur
+  bei `GZ_ENV=staging`, sonst 404; anmeldepflichtig; liefert ein Verifikations-Token ohne
+  Mailversand, setzt `email_verified_at` nicht selbst). Details Section 19,
+  `docs/specs/modules/email_verify_vorbereitung_2304.md`.
+- 2026-09-09: Issue #2270 (Epic #2138) — neuer Endpoint `GET /api/auth/export` liefert dem
+  angemeldeten Nutzer seinen Datenbestand als ZIP-Archiv aus (DSGVO Art. 20), lesende
+  Gegenrichtung zu `DELETE /api/auth/account` (seit #2160 entfallen, ersetzt durch POST …/delete). Geheimnisse (`sessions.json`,
+  `password_reset.json`, `email_verification.json`, `password_hash`, `passkey_credentials`)
+  sind ausgeschlossen. Details Section 19 C) und `docs/specs/modules/user_data_export.md`.
+- 2026-09-09: Issue #2263 (Epic #2257) — **kein DTO-/Feld-Wechsel**, nur die interne
+  Schwellen-Schlüsselung: `_schwellen_fuer_reihe()` (`src/providers/thunder_enrichment.py`) löst
+  die LPI-Leiter für `lightning_potential_lpi_jkg` jetzt über die **liefernde Quelle** auf, nicht
+  mehr blind über das geografische Gebiet der Koordinate. Springt bei Ausfall einer Direktquelle
+  die benannte Vertretung ein (ADR-0047), wird ihr Wert gegen die für SIE kalibrierte Leiter
+  bewertet (`app.model_registry.lpi_schluessel_fuer_quelle()`: `de_direct`→`DE_ALPEN`,
+  `eu_direct`→`EU_REST`, `fr_direct`→kein Schlüssel). Vorher verpuffte das Vertretungssignal für
+  FR/Korsika vollständig und wurde für DE_ALPEN fälschlich eskaliert (HIGH statt MED).
+  `LPI_THRESHOLDS_JKG`/`lpi_thresholds_jkg()` bleiben unverändert. Siehe ADR-0065,
+  `docs/specs/modules/fix_2263_lpi_leiter_nach_liefernder_quelle.md`.
+- 2026-09-09: Issue #2236 (Doku-Drift, abgespalten aus #1199) — **kein API-Change**, nur Nachzug der
+  Doku auf die Code-Wahrheit. Section 15 (`GET /api/metrics`, B2-36): die Antwort ist ein nach
+  Kategorien geschluesseltes Objekt ohne `metrics`-Huelle, der Anzeigename heisst `label` (nicht
+  `name`), `selectable` wird nicht gesendet; fehlende Felder (`category`, `default_enabled`,
+  `has_friendly_format`, `col_label`) ergaenzt, Beispiel aus echtem Aufruf. Section 11
+  (`PUT .../weather-config`, C4-45): Hinweis, dass blosse ID-Strings in `metrics[]` keine
+  Reihenfolge setzen (Array-Position wird beim Laden verworfen, `auto_distribute()` greift).
+- 2026-09-08: Issue #2130 — Passkey-RP-ID/Origins werden nicht mehr auf dem Default `localhost`
+  belassen, sondern aus `GZ_PUBLIC_HOST` abgeleitet (`internal/config/webauthn.go`, verdrahtet
+  über `cmd/server/main.go`). `GET /api/health` liefert zusätzlich `webauthn_rpid` (effektiver
+  Wert, `internal/router/router.go`/`internal/handler/proxy.go`), geprüft vom
+  Post-Deploy-Selbsttest. Neu registrierte Passkeys fordern zudem `ResidentKey: preferred`
+  (`/register/public/begin`: `required`), damit sie im Autofill-Dialog auffindbar sind. Siehe
+  Section B) oben und `docs/specs/modules/passkey_rp_konfiguration.md`.
+- 2026-09-07: Issue #2140 Scheibe 2 — Entitäts-Kennungen (Trip-, Orts-, Compare-Preset-ID) werden
+  gegen Pfad-Traversal gesperrt (`store.ValidEntityID` in Go, `VALID_ENTITY_ID_RE` in Python,
+  Parität über `tests/unit/test_entity_id_pattern_parity.py`). Betroffen: `GET`/`PUT
+  /api/trips/{id}/weather-config` und `.../locations/{id}/weather-config` (neu: `400
+  validation_error` auch bei `GET`, s. Section 11), `PUT`/`DELETE /api/compare/presets/{id}` (fällt
+  unter den bereits dokumentierten generischen `400 validation_error`, s. Section 16), sowie
+  `GET /api/preview/{trip_id}/email|sms|telegram` (neu: `422` bei ungültiger `trip_id`, s. Section
+  20) und `POST /api/trips/{trip_id}/alert-preview` (fällt bewusst unter den bestehenden `404`, s.
+  Section 22.5). Bewusst **keine** ASCII-Zeichen-Whitelist (Begründung und Bestandsorte mit
+  Diakritika: `docs/specs/modules/fix_2140_entitaets_id_pfadsperre.md`). Fortsetzung von Scheibe 1
+  (Nutzer-Kennungen, `37559f9f`).
+- 2026-08-23: Issue #2050 Scheibe S4b-2 — zwei Sachverhalte, die das System bereits kennt und in
+  Auslöseentscheidung/Protokoll führt, aber im Alarmtext nicht zeigte, werden jetzt dort
+  kenntlich gemacht: ausgefallene Gewitterprüfung (`convective_checked=false` — der Text
+  beschriftete das Ereignis bisher trotzdem als „Regen"/`R`) und Messlücken in der
+  Radar-Ausdehnung (`gap_km` nicht leer, seit S4b im Protokoll). Langform (E-Mail/Telegram)
+  bekommt zwei neue Suffixe (` · Gewitter ungeprüft`, ` · Ausdehnung unvollständig gemessen`),
+  Kurzform (SMS/Premium-SMS/Telegram-Kurzstil) zwei neue Marker: `#` unmittelbar hinter dem
+  Kürzel (`R#2.5@18:00`) und `>` unmittelbar hinter der Zonen-Liste (`km2-4,9-11>`). Der
+  `>`-Marker reserviert sein Zeichenbudget **vor** der Zonenauswahl — sonst entfernt der harte
+  140-Zeichen-Sicherungsschnitt genau dieses eine Zeichen wieder, byte-identisch zur fehlerhaften
+  Fassung. `OnsetEvent` (`model.py`) und `RadarAlertRequest` (`notification_service.py`) bekommen
+  additiv `convective_checked: bool = true` und `gap_km: tuple[float, ...] = ()` — `gap_km` ist
+  **kein** Wire-Format-Feld (analog `km_measured`, #2036), steuert nur die Renderer-interne
+  Auflösung; `convective_checked` erreicht den Vorschau-Endpoint zusätzlich über `OnsetPayload`
+  (Section 22.5, s. oben). Beide Felder werden an allen vier Konstruktionsstellen gesetzt (Trip,
+  Ortsvergleich — nur `convective_checked`, `gap_km` ist dort gegenstandslos —, Validator-
+  Payload-Replay, Validator-Live-Preview). Reine Wortebenen-Änderung: keine Änderung an
+  Auslöseentscheidung, Zonenbildung oder Protokoll. Spec:
+  `docs/specs/modules/feat_2050_s4b2_wortebene_kennzeichnung.md`.
+- 2026-08-23: Issue #2051 Scheibe S2b — die räumliche Ausdehnung eines Regenereignisses
+  (km-Zonen der Reststrecke, S2a) erscheint jetzt in allen sieben Alarm-Textstellen statt
+  nur in der E-Mail-Trip-Langform: `_onset_extent_suffix()` (bereits seit S2a fertig) hängt
+  zusätzlich am E-Mail-Betreff, an Telegram rich und am Mehr-Orte-Zweig (dort dokumentierter
+  No-op — der Ortsvergleich setzt `rain_zones` nie, kein Streckenkonzept). Neu in der
+  Kurzform (SMS/Premium-SMS/Telegram-Kurzstil): ein Zonen-Kürzel `km8-12` bzw.
+  `km8-12,19-21`, budget-bewusst gebildet — passt es nicht vollständig ins Zeichenbudget,
+  entfällt es vollständig statt angeschnitten zu werden. `OnsetPayload` (Section 22.5,
+  `POST /api/trips/{trip_id}/alert-preview`) bekommt dafür additiv die Felder
+  `km_measured: bool = false` und `rain_zones: RainZonePayload[]` (neuer Feldspiegel von
+  `RainZone`) — ohne sie war kein AC dieser Scheibe über den Vorschau-Endpoint messbar (S2a
+  hatte die Prüffläche `validator_render_service.py` noch nicht erweitert). Reine additive
+  Feld-Ergänzung, kein Formatwechsel; ohne die Felder bleibt jeder Vorschau-Text
+  byte-identisch zum Stand vor dieser Spec. Spec:
+  `docs/specs/modules/feat_2051_s2b_ausdehnung_kanaele.md`.
 - 2026-08-22: Issue #2054 — die Alarm-Kurznachricht (SMS · Premium-SMS · Telegram-Kurzstil)
   schreibt eine Uhrzeit an einem anderen Kalendertag jetzt mit einem vorangestellten
   DE-Wochentagskürzel (`R2.5@Sa0:23`) statt des bisherigen Zahlensuffixes (`R2.5@0:23+1`) —
@@ -3880,7 +5196,7 @@ function corridorInside(value, min, max) {
   Siehe `docs/specs/modules/feat_1701_alarm_premium_sms.md`.
 - 2026-08-10: Issue #1676 Scheibe S2a (ADR-0049) — `TripReportConfig.send_premium_sms`
   (bool, default `false`) macht Premium-SMS (Garmin inReach) zum vierten, eigenständigen
-  Versandkanal `premium_sms` — **ausschließlich fürs Trip-Briefing**. Fester Absender
+  Versandkanal `premium_sms` — **ausschließlich fürs Trip-Briefing** (Stand S2a; seit #2275 zusätzlich Ortsvergleich-Briefing über `ComparePreset.send_premium_sms`, Alarm-Kanal seit #1701). Fester Absender
   `4916092172595` (unabhängig von `sms_from`), Empfänger ausschließlich die in Scheibe S1
   gelernte Rückadresse aus `user.json` (nie `sms_to`), Verfall nach 30 Tagen, fail-closed mit
   auswertbarem Grund. Lebt bislang nur im freien `report_config`-Schlüssel, kein eigenes
@@ -4098,7 +5414,9 @@ function corridorInside(value, min, max) {
   erreichbar. Neue reine Persist-Bridge-Funktionen
   `hydrateLayoutFieldsFromPreset`/`flushPendingLayoutSave`/
   `rollbackLayoutSnapshot` in `compareHubWizardBridge.ts`, Muster wie die
-  C1-Wetter-Metriken-Bridge (Issue #1311). `top_n` und die
+  C1-Wetter-Metriken-Bridge (Issue #1311; die Bridge existiert seit #2276 S6f
+  nicht mehr, die Layout-Funktionen liegen seit #2276 S4 in
+  `shared/weather-metrics-tab/weatherMetricsCompareSave.ts`). `top_n` und die
   „Spalte/Detail"-Zuordnung (`channel_layouts`) sind aus der Bedienung
   entfernt (Attrappen, #1287/#1291), round-trippen aber unverändert weiter
   (kein Feldverlust, Read-Modify-Write). Kein neues Wire-Format-Feld —
@@ -4324,7 +5642,7 @@ _snapshot_svc.save_dated(trip_id, target_date, segment_weather)  # neu, Issue #7
 - Bestandsdaten in `{trip_id}.json` bleiben unverändert
 - 2026-08-22: Issue #2050 S6 — `WeatherSnapshotService.load_dated()` bekommt additiven keyword-only Parameter `segment_fetched_at: bool = False`. Segmente im datierten JSON tragen zusätzlich ihren eigenen `fetched_at`-Wert (additiv, `_serialize_segment`). Nur die Alarm-Protokoll-Ableitung setzt `segment_fetched_at=True`; alle anderen Aufrufer unverändert. Details: `docs/specs/modules/alarm_protokoll_vorwarnzeit.md`.
 - 2026-08-17: Issue #1699 — `WeatherSnapshotService.save()` bekommt additiven keyword-only Parameter `briefing_backed: bool = True` (Herkunftsmerkmal des undatierten Snapshots) und neue Lesemethode `load_briefing_backed()` (fail-soft auf `True`). `TripAlertService._get_cached_weather` lehnt in Stufe 3 der #1916-Prioritätskette (undatierter Rückfall) einen nicht briefing-gestützten Anker für den Abweichungs-Alarm mit dem vierten Ablehnungsgrund `not_briefing_backed` ab (`diagnostics/alert_anchor_rejected.jsonl`, neben `wrong_day`/`too_old`/`missing` aus #1661); amtliche Warnungen (Geometrie-Lesart) bleiben unberührt. Siehe Zeile 3921 ff. oben und `docs/specs/modules/fix_1699_anker_ohne_briefing.md`.
-- 2026-05-30: Issue #461 — Compare-Presets Daily Dispatch (Cronjob): New `POST /api/scheduler/compare-presets-daily` endpoint (section 17) triggered daily by Go scheduler at 06:00 UTC. Filters presets by `schedule='daily'`, runs Compare Engine, renders/sends emails via Resend, updates `letzter_versand` and `top_ort_letzter_versand` fields. Per-preset error isolation; BetterStack Heartbeat pinged only on `error_count==0` (Readiness Principle). Config field `HeartbeatComparePresets` added to Go config; Go scheduler job count increased from 5 to 6. Tests: 11 new comprehensive tests in `test_issue_461_compare_preset_dispatch.py`.
+- 2026-05-30: Issue #461 — Compare-Presets Daily Dispatch (Cronjob): New `POST /api/scheduler/compare-presets-daily` endpoint (section 17.2) triggered daily by Go scheduler at 06:00 UTC. Filters presets by `schedule='daily'`, runs Compare Engine, renders/sends emails via Resend, updates `letzter_versand` and `top_ort_letzter_versand` fields. Per-preset error isolation; BetterStack Heartbeat pinged only on `error_count==0` (Readiness Principle). Config field `HeartbeatComparePresets` added to Go config; Go scheduler job count increased from 5 to 6. Tests: 11 new comprehensive tests in `test_issue_461_compare_preset_dispatch.py`.
 - 2026-05-30: Added section 18 — Authentication Endpoints (Issue #450 Passkey/WebAuthn V1): 5 passkey endpoints (register/begin|finish, login/begin|finish, delete), password auth methods (register, login), profile endpoint with `has_passkey`+`passkeys[]`. User model extended with `PasskeyCredentials[]` and `PasswordHash` now optional. Rate-limit 30/h per IP (alle 5 Endpoints), challenge TTL 5 min, RP-ID isolation (prod vs staging), 64 KB body cap.
 - 2026-05-30: Issue #459 — Auto-Briefings Sidepanel Frontend (ComparePreset-System): AutoReportsOverview, SavePresetDialog, subscriptionHelpers (presetScheduleLabel, formatLastSent), ComparePreset-Interface in types.ts; +page.server.ts lädt `/api/compare/presets`; AutoReportCard und AutoReportsOverview auf ComparePreset umgebaut mit manuellem Versand-Button. Spec #458-Backend-Endpoints vorausgesetzt (`GET /api/compare/presets`, `/send`).
 - 2026-05-31: Issue #475 — OutputLayoutEditor Organisms-Migration (Pure Frontend): OutputLayoutEditor verliert direkten `ui/card`-Import, nutzt stattdessen `atoms/Card.svelte`. Komponente wird als vierter Eintrag in `organisms/index.ts` re-exportiert. Consumer-Imports (Step4Layout×2, WeatherMetricsTab) auf `$lib/components/organisms` umgestellt. Keine API/DTO-Änderungen.

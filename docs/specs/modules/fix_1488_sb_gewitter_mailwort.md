@@ -3,7 +3,7 @@ entity_id: fix_1488_sb_gewitter_mailwort
 type: bugfix
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, mail-renderer, trip-briefing, backend]
 ---
@@ -114,7 +114,7 @@ Dreier-Skala `NONE=0/MED=1/HIGH=2` auf die seit #1474 gültige Vierer-Skala
     ruft alle drei produktiven Renderer-Funktionen direkt mit einer Stage ohne
     `hourly_thunder` auf (kein Dateiinhalt-Check, echte Renderfunktionen).
 
-- **AC-2 (Positivkontrolle):** Given eine Etappe MIT stündlicher Gewitterreihe, die im
+- **AC-2:** (Positivkontrolle) Given eine Etappe MIT stündlicher Gewitterreihe, die im
   Tagesfenster eine Stufe trägt (`resolve_thunder_day_branch()` liefert `"day"`), When
   dieselben drei Renderer aufgerufen werden, Then bleibt das gerenderte Wort unverändert
   aus dem Tages-Token abgeleitet (`_thunder_token_parts()`) — der `"day"`-Zweig liest
@@ -122,14 +122,14 @@ Dreier-Skala `NONE=0/MED=1/HIGH=2` auf die seit #1474 gültige Vierer-Skala
   - Test: derselbe neue Testfall, Gegenprobe im selben Testlauf mit gesetztem
     `hourly_thunder` und passendem Tagesfenster-Token.
 
-- **AC-3 (Erreichbarkeit belegt, kein toter Zweig):** Given `stage.get("hourly_thunder")`
+- **AC-3:** (Erreichbarkeit belegt, kein toter Zweig) Given `stage.get("hourly_thunder")`
   ist leer und `thunder="HIGH"`, When `resolve_thunder_day_branch()` direkt ausgewertet
   wird, Then liefert sie `"plain"` — der reproduzierbare Beleg, dass dieser Zweig für
   Etappen ohne stündliche Gewitterdaten tatsächlich greift.
   - Test: Teil desselben neuen Testfalls, direkter Aufruf von
     `resolve_thunder_day_branch()` ohne Umweg über die Renderer.
 
-- **AC-4 (Bestandsschutz #1474 AC-11):** Given der bestehende Test
+- **AC-4:** (Bestandsschutz #1474 AC-11) Given der bestehende Test
   `test_thunder_low_output_channels.py::test_ac11_trend_block_zeigt_leicht`, When
   Scheibe B umgesetzt ist, Then liefert `format_trend_tokens(...)["thunder_word"]` bei
   `ThunderLevel.LOW` weiterhin exakt `"leicht"` — das Feld wird korrigiert (aus
@@ -138,7 +138,7 @@ Dreier-Skala `NONE=0/MED=1/HIGH=2` auf die seit #1474 gültige Vierer-Skala
   - Test: bestehender Test `tests/tdd/test_thunder_low_output_channels.py`, unverändert
     lauffähig, CI-Lauf als Beleg.
 
-- **AC-5 (tote Felder restlos entfernt):** Given `_THUNDER_MAP` nach dem Fix, When
+- **AC-5:** (tote Felder restlos entfernt) Given `_THUNDER_MAP` nach dem Fix, When
   `format_trend_tokens()` für eine beliebige Stufe aufgerufen wird, Then enthält das
   zurückgegebene Dict keine Schlüssel `thunder_sms`, `thunder_sq_color`,
   `thunder_word_color` mehr.

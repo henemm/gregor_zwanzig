@@ -3,7 +3,7 @@ entity_id: fix_1931_heartbeat_warn_spam
 type: module
 created: 2026-08-17
 updated: 2026-08-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [scheduler, heartbeat, bugfix]
 ---

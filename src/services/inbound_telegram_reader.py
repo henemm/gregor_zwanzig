@@ -1,8 +1,10 @@
 """
-Inbound Telegram Reader — Bot API long-polling for trip commands.
+Inbound Telegram Reader — verarbeitet Trip-Befehle aus Telegram-Updates.
 
-Polls getUpdates for new messages, extracts commands (free-text, no ### prefix),
-delegates to TripCommandProcessor, and sends confirmations via NotificationService.
+Updates kommen ausschliesslich ueber den Webhook (api/routers/webhook.py, #637);
+der fruehere Poll-Pfad ist entfernt (#1369). Extrahiert Befehle (Freitext, kein
+### Praefix), delegiert an TripCommandProcessor und sendet Antworten ueber
+NotificationService.
 
 SPEC: docs/specs/modules/inbound_telegram_reader.md v1.0
 """
@@ -11,32 +13,63 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
-import httpx
-
-from app.config import Settings
-from app.loader import load_all_trips
+from app.config import Settings, resolve_public_host
+from app.loader import compare_preset_to_dict, load_all_trips, load_compare_presets
 from app.trip import Trip
+from lib.go_internal import post_internal
+from output.channels.recipient import _current_inbound_sender
+from output.channels.seven_io_base import mask_number
 from services.notification_service import NotificationService
+from services.trip_command_processor import TripCommandProcessor as _ParseNurProcessor
 from services.trip_command_processor import (
     CommandResult,
     InboundMessage,
     TripCommandProcessor,
+    befehl_markieren,
+    befehl_messung,
     _BARE_KEYWORD_MAP,
+    _erste_zeile,
+    _erstes_wort,
+    _metric_id_for_word,
+    _ohne_praefix,
+    _ohne_zitat,
+    _QUERY_KEYS,
+    _VALID_COMMANDS as _PROCESSOR_COMMANDS,
+    match_leading_name,
+    telegram_englisch,
+    unknown_command_body,
 )
-from services.trip_day import trip_local_today
+from services.trip_selection import (
+    ZIELLOS_SCHLUESSEL,
+    pick_active_trip,
+    resolve_active_target,
+    resolve_command_target,
+    resolve_trip_only_target,
+)
 
 logger = logging.getLogger(__name__)
 
-TELEGRAM_API_BASE = "https://api.telegram.org"
+def _bare_public_host(settings: Settings) -> str | None:
+    """Blosser Host ohne Schema — fuer die Fliesstext-Erwaehnung in Chat-Antworten."""
+    full = resolve_public_host(settings)
+    return urlsplit(full).netloc or None if full else None
 
-_VALID_COMMANDS = {"ruhetag", "startdatum", "report", "abbruch", "status", "hilfe",
-                   "glance", "heute", "morgen", "heute_gewitter",
-                   "timeline_heute", "timeline_morgen", "now"}
+
+# Issue #2134: keine eigene (achte) Befehlsliste mehr — der Reader kennt genau
+# das, was der Prozessor ausfuehrt (Steuerbefehle) plus die lesenden
+# Abfrage-Schluessel, die er selbst als `### query: <key>` kodiert.
+_VALID_COMMANDS = _PROCESSOR_COMMANDS | _QUERY_KEYS
+_VERGLEICH_LADE_KEYS = frozenset({"report", "heute", "morgen"})  # #2282 S2
 
 _SHORTCUT_MAP = {
     "/s": "glance",
-    "/status": "glance",  # AC-1: /status (mit Slash) ist Glance-Alias; nacktes "status" bleibt Etappenliste
+    # Issue #2417 AC-28: der fruehere "/status"->"glance"-Alias entfaellt --
+    # /status fuehrt jetzt wie das nackte "status" die Etappenliste aus
+    # (Tech-Lead-Entscheidung, Spec-Abschnitt "BOT_COMMANDS — Merge, nicht
+    # Ersatz"). Ohne eigenen Eintrag faellt "/status" durch _ohne_praefix auf
+    # "status" zurueck, das direkt in _BARE_KEYWORD_MAP steht.
     "/h": "heute",
     "/m": "morgen",
     "/hg": "heute_gewitter",
@@ -54,6 +87,7 @@ _SHORTCUT_MAP = {
     "/timeline_heute": "timeline_heute",
     "/timeline_morgen": "timeline_morgen",
     "/hilfe": "hilfe",
+    "/strecke": "strecke",  # Issue #2051 S4
 }
 
 
@@ -80,70 +114,55 @@ _CALLBACK_QUERY_MAP = {
 
 _CALLBACK_DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip|hours)_(today|tomorrow)$")
 
+# Issue #2417 AC-20: unsichtbare Zeichen, die ein Befehlswort umgeben koennen
+# (BOM am Anfang eines Copy-Paste-Texts, Zero-Width-Space als App-Artefakt) --
+# ``str.strip()`` faengt bereits NBSP und regulaeren Leerraum (beide zaehlen
+# als ``str.isspace()``), aber NICHT diese beiden Zeichen (kein Leerraum im
+# Unicode-Sinn).
+_UNSICHTBARE_ZEICHEN = ("﻿", "​")
+#: Satzzeichen UNMITTELBAR am Befehlswort (".", "!", "?", ",") — bewusst NUR
+#: diese vier, kein pauschales alphanumerisches Trimmen: sonst wuerde ein
+#: echtes Fremdwort wie "Hilfen" faelschlich zu "Hilfe" (Praefix-Ausartung,
+#: Gegenprobe der Spec).
+_BEFEHLSWORT_SATZZEICHEN = ".!?,"
+
+
+def _ohne_unsichtbare_zeichen(text: str) -> str:
+    """Entfernt BOM/ZWSP ueberall im Text (AC-20) — beide sind unsichtbar,
+    ihre Position im Freitext ist deshalb ohne Belang."""
+    for zeichen in _UNSICHTBARE_ZEICHEN:
+        text = text.replace(zeichen, "")
+    return text
+
+
+def _ohne_satzzeichen_am_wortende(word: str) -> str:
+    """Streift Satzzeichen, die UNMITTELBAR am Ende eines Befehlsworts
+    haengen (AC-20, z.B. 'hilfe.', 'pause!') — ``rstrip`` nur mit den vier
+    definierten Zeichen, kein generisches alphanumerisches Trimmen."""
+    return word.rstrip(_BEFEHLSWORT_SATZZEICHEN)
+
 
 class InboundTelegramReader:
-    """Polls Telegram Bot API and processes trip commands from messages."""
+    """Processes trip commands from Telegram webhook updates."""
 
     def __init__(self) -> None:
-        self._offset: int = 0
         self.sent_message_ids: list[int] = []  # Issue #686: collected for observability + cleanup
-        self._notification_service = NotificationService()
+        self._notification_service: NotificationService | None = None
 
-    def poll_and_process(self, settings: Settings) -> int:
-        """Long-polling: holt neue Updates, verarbeitet Befehle.
-
-        Returns: Anzahl verarbeiteter Befehle.
-        Gibt 0 zurück und macht keinen API-Call wenn settings.can_send_telegram() False ist.
-        """
-        if not settings.can_send_telegram():
-            return 0
-
-        token = settings.telegram_bot_token
-        updates = self._get_updates(token)
-        if not updates:
-            return 0
-
-        processed = 0
-        max_update_id = self._offset - 1
-        for update in updates:
-            update_id = update.get("update_id", 0)
-            if update_id > max_update_id:
-                max_update_id = update_id
-            try:
-                if self._process_update(update, settings):
-                    processed += 1
-            except Exception as e:
-                logger.error(f"Error processing update {update_id}: {e}")
-
-        self._offset = max_update_id + 1
-        return processed
-
-    def _get_updates(self, token: str) -> list[dict]:
-        """GET getUpdates with offset and timeout=30.
-
-        Returns empty list on any error (fail-soft).
-        """
-        url = f"{TELEGRAM_API_BASE}/bot{token}/getUpdates"
-        params = {"offset": self._offset, "timeout": 30}
-        try:
-            response = httpx.get(url, params=params, timeout=35)
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("result", [])
-            logger.error(
-                "getUpdates returned status %d: %s",
-                response.status_code,
-                response.text[:200],
-            )
-        except Exception as e:
-            logger.error("getUpdates failed: %s", e)
-        return []
+    def _ensure_notification_service(self, settings: Settings) -> None:
+        """#2151 Scheibe C: den Versanddienst erst mit den vorliegenden
+        ``settings`` bauen -- nie nutzerlos (kein ``with_user_profile("default")``).
+        Die genutzten Methoden lesen ohnehin nur die explizit uebergebenen
+        Nutzer-Settings."""
+        if self._notification_service is None:
+            self._notification_service = NotificationService(settings=settings)
 
     def _process_update(self, update: dict, settings: Settings) -> bool:
         """Verarbeitet ein einzelnes Update.
 
         Returns True wenn Update verarbeitet (nicht: ob Befehl erfolgreich).
         """
+        self._ensure_notification_service(settings)
         callback = update.get("callback_query")
         if callback:
             return self._process_callback_query(callback, settings)
@@ -156,7 +175,17 @@ class InboundTelegramReader:
         chat_id = str(message.get("chat", {}).get("id", ""))
         if not text or not chat_id:
             return False
+        # Issue #1412 S4a: Herkunftsbeleg "Absender des laufenden Updates" --
+        # nur innerhalb dieses Updates darf an chat_id geantwortet werden.
+        token = _current_inbound_sender.set(chat_id)
+        try:
+            with befehl_messung("telegram"):
+                return self._process_message(text, chat_id, settings)
+        finally:
+            _current_inbound_sender.reset(token)
 
+    def _process_message(self, text: str, chat_id: str, settings: Settings) -> bool:
+        """Verarbeitet eine geparste Textnachricht (innerhalb des Belegs)."""
         # /start TOKEN Handling — VOR user-resolve (user noch nicht bekannt)
         if text.startswith("/start "):
             token = text[len("/start "):].strip()
@@ -165,81 +194,184 @@ class InboundTelegramReader:
 
         # Resolve user-scoped settings for this chat_id
         user_id, user_settings = self._resolve_user_for_chat(chat_id, settings)
+        if self._ist_gesperrt(user_id, chat_id):
+            return True
 
         # #1019: unbekannter Absender (kein User-Match) erhaelt Registrierungs-Hinweis,
         # KEINE Trip-/Wetterdaten. Betreiber-Account faellt hier nie hinein, da
         # `henning` regulaer per telegram_chat_id registriert ist.
-        if user_id == "default":
+        if user_id is None:
+            host = _bare_public_host(settings)
             mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
                 subject="Registrierung erforderlich",
                 body=(
                     "Dieser Chat ist noch nicht mit einem Gregor-Zwanzig-Konto "
                     "verknuepft. Sende /start gefolgt von deinem Token (zu finden "
-                    "im Account-Bereich auf gregor20.henemm.com)."
+                    f"im Account-Bereich{f' auf {host}' if host else ''})."
                 ),
+                # #2168/#1412 S4a: Antwort an den fragenden Chat (inbound_reply).
                 settings=settings,
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
             return True
 
-        # Aktiven Trip ermitteln (user-scoped)
-        # #1727 S5a: EIN Zeitpunkt fuer Trip-Auswahl UND Nachrichtenstempel --
+        # Aktiven Trip/Ortsvergleich ermitteln (user-scoped)
+        # #1727 S5a: EIN Zeitpunkt fuer Auswahl UND Nachrichtenstempel --
         # vorher zwei knapp versetzte datetime.now()-Aufrufe, die an der
         # Tagesgrenze auf verschiedene Ortstage fallen konnten.
         now_utc = datetime.now(tz=timezone.utc)
-        trip = self._find_active_trip(now_utc, user_id)
-        if not trip:
-            mid = self._notification_service.send_telegram_message(
-                chat_id=chat_id,
-                subject="Fehler",
-                body="Kein aktiver Trip gefunden. Erstelle oder aktiviere einen Trip auf gregor20.henemm.com",
-                settings=user_settings,
+        trips = load_all_trips(user_id)
+        presets = [compare_preset_to_dict(p) for p in load_compare_presets(user_id)]
+
+        # Issue #2282 Abschnitt 2/4: ein vorangestellter Name hat Vorrang vor
+        # der aktiven Auswahl — Namensgleichheit/Kollision loest `process()`
+        # selbst auf (Abschnitt 4/AC-7).
+        named = match_leading_name(text, trips, presets)
+        if named is not None:
+            name_prefix, rest, name_kind, name_ziel = named
+            key, body = self._command_body(rest)
+            if key is None:
+                befehl_markieren(None)
+                self._send_unknown_command(chat_id, user_settings)
+                return True
+            # Adversary F001-Nachtrag (#2282 Fix-Loop 2): match_leading_name
+            # kennt Kind/Objekt des Treffers bereits -- direkt uebernehmen,
+            # keine zweite Suche. Bei Namensgleichheit (name_kind is None)
+            # bleibt resolved_kind unveraendert None (process() loest die
+            # Rueckfrage selbst auf); die Lade-Nachricht ist in BEIDEN
+            # Nicht-Trip-Faellen (Vergleich ODER Namensgleichheit) falsch.
+            resolved_kind = "vergleich" if name_kind == "vergleich" else None
+            resolved_preset_id = name_ziel.get("id") if name_kind == "vergleich" else None
+            inbound = InboundMessage(
+                channel="telegram", trip_name=name_prefix, body=body,
+                sender=chat_id, received_at=now_utc, user_id=user_id,
+                resolved_kind=resolved_kind, resolved_preset_id=resolved_preset_id,
+                # #2417 AC-5: Stil des benannten Ziels; bei Namensgleichheit
+                # (kein eindeutiges Ziel) das gesendete Wort.
+                englisch=telegram_englisch(ziel=name_ziel, wort=_erstes_wort(rest)),
             )
-            if mid is not None:
-                self.sent_message_ids.append(mid)
+            self._dispatch_and_reply(
+                key, inbound, chat_id, user_settings,
+                ladehinweis_erlaubt=(name_kind == "route"),
+            )
             return True
 
-        # Befehl parsen
-        key, value = self._parse_command(text)
+        # Befehl parsen UND kodieren — ein Einstieg, damit ein Test denselben
+        # Weg nimmt wie der Produktivpfad (Issue #2134). Issue #2417: die
+        # Klassifizierung entscheidet VOR jeder Zielaufloesung, ob ueberhaupt
+        # ein Trip/Vergleich geladen werden muss (AC-15/AC-16/AC-17) — vorher
+        # lief `resolve_active_target` unklassifiziert fuer JEDEN Befehl und
+        # blockierte z.B. "hilfe" bei Trip+Vergleich mit einer Rueckfrage (B1).
+        key, body = self._command_body(text)
         if key is None:
-            mid = self._notification_service.send_telegram_message(
-                chat_id=chat_id,
-                subject="Unbekannter Befehl",
-                body="Bekannte Befehle: heute, morgen, jetzt, gewitter, ruhetag, status, stop, weiter, hilfe",
-                settings=user_settings,
-            )
-            if mid is not None:
-                self.sent_message_ids.append(mid)
+            befehl_markieren(None)
+            self._send_unknown_command(chat_id, user_settings)
             return True
 
-        # InboundMessage bauen und verarbeiten
-        # Query-Keys werden als "### query: <key>" kodiert
-        from services.trip_command_processor import _QUERY_KEYS
-        if key in _QUERY_KEYS:
-            body = f"### query: {key}"
-        elif value:
-            body = f"### {key}: {value}"
+        # #2417 AC-5/Abschnitt H: ohne eindeutiges Ziel folgt die Sprache dem
+        # gesendeten Wort, mit Ziel dessen telegram_style.
+        englisch = telegram_englisch(wort=_erstes_wort(text))
+        if key in ZIELLOS_SCHLUESSEL:
+            # AC-15: "hilfe"/"columns"/"kuerzel" brauchen keine Trip-/Vergleichswahl.
+            trip_name, resolved_kind, resolved_preset_id = "", None, None
+            ladehinweis_erlaubt = False
         else:
-            body = f"### {key}"
+            ziel = resolve_command_target(
+                key, trips, presets, now_utc, channel="telegram", englisch=englisch,
+            )
+            if ziel.kind is None:
+                befehl_markieren(key)
+                # Issue #2282 AC-5: identischer Text wie Premium-SMS, kein
+                # Host-Zusatz mehr (der wuerde die Kanalgleichheit brechen).
+                mid = self._notification_service.send_telegram_message(
+                    chat_id=chat_id, subject="Error" if englisch else "Fehler",
+                    body=ziel.text, settings=user_settings,
+                )
+                if mid is not None:
+                    self.sent_message_ids.append(mid)
+                return True
+
+            englisch = telegram_englisch(ziel=ziel.target)
+            if ziel.kind == "route":
+                trip_name, resolved_kind, resolved_preset_id = ziel.target.name, None, None
+            else:
+                preset = ziel.target
+                trip_name = preset.get("name", "")
+                resolved_kind, resolved_preset_id = "vergleich", preset.get("id")
+            ladehinweis_erlaubt = (ziel.kind == "route")
 
         inbound = InboundMessage(
             channel="telegram",
-            trip_name=trip.name,
+            trip_name=trip_name,
             body=body,
             sender=chat_id,
             received_at=now_utc,
             user_id=user_id,
+            resolved_kind=resolved_kind,
+            resolved_preset_id=resolved_preset_id,
+            englisch=englisch,
         )
+        self._dispatch_and_reply(
+            key, inbound, chat_id, user_settings,
+            ladehinweis_erlaubt=ladehinweis_erlaubt,
+        )
+        return True
 
-        if key in _QUERY_KEYS:
+    def _send_unknown_command(self, chat_id: str, user_settings: Settings) -> None:
+        mid = self._notification_service.send_telegram_message(
+            chat_id=chat_id,
+            subject="Unbekannter Befehl",
+            # Issue #2134: derselbe abgeleitete Text wie im Prozessor —
+            # vorher war das die achte, eigenstaendig gepflegte Liste.
+            # #2417 AC-19: weder Ziel noch Wort -> deutsch mit englischem Hinweis.
+            body=unknown_command_body("Das war kein bekannter Befehl.")
+            + "\nEnglish: send HELP",
+            settings=user_settings,
+        )
+        if mid is not None:
+            self.sent_message_ids.append(mid)
+
+    def _dispatch_and_reply(
+        self, key: str, inbound: InboundMessage, chat_id: str, user_settings: Settings,
+        *, ladehinweis_erlaubt: bool = True,
+    ) -> None:
+        """Fuehrt `process()` aus und schickt die Antwort — Query-Keys mit
+        Lade-Zwischennachricht (AC-4), sonst direkt. Extrahiert aus
+        `_process_update` (Issue #2282), Verhalten fuer den Trip-Pfad
+        unveraendert.
+
+        Adversary F001 (#2282 Fix-Loop 1/2): die Lade-Nachricht darf nur fuer
+        ein echtes Trip-Ziel erscheinen. Der Aufrufer entscheidet das VORHER
+        (``ladehinweis_erlaubt``) statt hier nur an ``resolved_kind`` zu
+        pruefen: beim vorangestellten Namen gibt es neben "eindeutig
+        Vergleich" (`resolved_kind=="vergleich"`) noch den
+        Namensgleichheits-Fall (Trip<->Vergleich identisch benannt,
+        `resolved_kind` bleibt `None`, `process()` antwortet nur mit einer
+        Rueckfrage) — auch dort waere die Lade-Nachricht irrefuehrend, ein
+        reiner ``resolved_kind`` -Vergleich saehe das nicht.
+        """
+        # #2282 S2 (AC-14): am Ortsvergleich laden report/heute/morgen echtes
+        # Wetter -- dort ebenfalls Ladehinweis (Trip-report bleibt ohne).
+        if inbound.resolved_kind == "vergleich":
+            ladehinweis_erlaubt = key in _VERGLEICH_LADE_KEYS
+        elif key not in _QUERY_KEYS:
+            ladehinweis_erlaubt = False
+        if ladehinweis_erlaubt:
             # Loading-Message senden, dann Wetterdaten on-demand holen,
             # dann in-place ersetzen (AC-4)
+            # #2417 AC-4/AC-19: die Sprache ist bereits ermittelt
+            # (inbound.englisch) -- auf Kurzform-Kanaelen ist JEDE Antwort
+            # englisch, auch diese Zwischennachricht.
+            loading_body = (
+                "⏳ Loading weather..." if inbound.englisch
+                else "⏳ Wetter wird geladen..."
+            )
             loading_mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
                 subject="⏳",
-                body="⏳ Wetter wird geladen...",
+                body=loading_body,
                 settings=user_settings,
             )
             result: CommandResult = TripCommandProcessor().process(inbound)
@@ -279,9 +411,18 @@ class InboundTelegramReader:
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)
-        return True
 
     def _process_callback_query(self, callback: dict, settings: Settings) -> bool:
+        """Setzt den Herkunftsbeleg (Issue #1412 S4a) fuer den Button-Klick."""
+        msg = callback.get("message") or {}
+        token = _current_inbound_sender.set(str(msg.get("chat", {}).get("id", "")))
+        try:
+            with befehl_messung("telegram"):
+                return self._handle_callback_query(callback, settings)
+        finally:
+            _current_inbound_sender.reset(token)
+
+    def _handle_callback_query(self, callback: dict, settings: Settings) -> bool:
         """Verarbeitet einen Button-Klick (callback_query) — Zoom-Navigation.
 
         editMessageText ersetzt die Nachricht in-place; answerCallbackQuery wird
@@ -295,20 +436,31 @@ class InboundTelegramReader:
         message_id = msg.get("message_id")
 
         user_id, user_settings = self._resolve_user_for_chat(chat_id, settings)
+        if self._ist_gesperrt(user_id, chat_id):
+            # Nur den Lade-Spinner beenden, nichts editieren/senden.
+            try:
+                if cq_id:
+                    self._notification_service.answer_telegram_callback_query(
+                        callback_query_id=cq_id, settings=settings,
+                    )
+            except Exception as e:
+                logger.warning(f"answerCallbackQuery fehlgeschlagen: {e}")
+            return True
         try:
             # #1019: unbekannter Absender (kein User-Match) erhaelt auch beim
             # Button-Klick nur den Registrierungs-Hinweis, KEINE Trip-/Wetter-
             # daten. Die angeklickte Nachricht wird in-place ersetzt;
             # answer_telegram_callback_query laeuft weiterhin im finally.
-            if user_id == "default":
+            if user_id is None:
                 if message_id is not None and chat_id:
+                    host = _bare_public_host(settings)
                     self._notification_service.edit_telegram_message_text(
                         chat_id=chat_id,
                         message_id=message_id,
                         text=(
                             "Dieser Chat ist noch nicht mit einem Gregor-Zwanzig-Konto "
                             "verknuepft. Sende /start gefolgt von deinem Token (zu finden "
-                            "im Account-Bereich auf gregor20.henemm.com)."
+                            f"im Account-Bereich{f' auf {host}' if host else ''})."
                         ),
                         settings=settings,
                     )
@@ -318,28 +470,9 @@ class InboundTelegramReader:
             if body and message_id is not None and chat_id:
                 # #1727 S5a: ein Zeitpunkt fuer Auswahl und Stempel (s. oben).
                 now_utc = datetime.now(tz=timezone.utc)
-                trip = self._find_active_trip(now_utc, user_id)
-                if trip:
-                    inbound = InboundMessage(
-                        channel="telegram",
-                        trip_name=trip.name,
-                        body=body,
-                        sender=chat_id,
-                        received_at=now_utc,
-                        user_id=user_id,
-                    )
-                    result: CommandResult = TripCommandProcessor().process(inbound)
-                    # Issue #1007: heute/morgen per Button haben bereits das
-                    # volle Briefing per Bubbles verschickt — keine separate
-                    # Bestätigung mehr in die alte Nachricht editieren.
-                    if not result.suppress_email_reply:
-                        self._notification_service.edit_telegram_message_text(
-                            chat_id=chat_id,
-                            message_id=message_id,
-                            text=f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
-                            settings=user_settings,
-                            reply_markup=result.reply_markup,
-                        )
+                self._antworte_auf_knopf(
+                    data, body, now_utc, user_id, chat_id, message_id, user_settings,
+                )
         finally:
             if cq_id:
                 self._notification_service.answer_telegram_callback_query(
@@ -347,6 +480,74 @@ class InboundTelegramReader:
                     settings=user_settings,
                 )
         return True
+
+    def _antworte_auf_knopf(
+        self, data: str, body: str, now_utc: datetime, user_id: str,
+        chat_id: str, message_id: int, user_settings: Settings,
+    ) -> None:
+        """Issue #2417 (U4/AC-8/AC-9/AC-22): dieselbe klassifizierte
+        Zielaufloesung wie beim Text-Eingang, angewendet auf einen
+        Knopf-Klick — ersetzt die vergleichsblinde ``_find_active_trip``, die
+        bei "nur Vergleich aktiv" oder Mehrdeutigkeit stillschweigend gar
+        nichts tat (der Spinner endete ohne jeden sichtbaren Inhalt).
+
+        ``act_help``/``act_columns`` sind ziellos (AC-15, keine Trip-
+        /Vergleichsladung); ``act_pause`` bleibt die einzige verbleibende
+        Mehrdeutigkeits-Lage (``resolve_active_target``); alle anderen
+        Knoepfe (inkl. der ``dd_*``-Drilldowns) adressieren ausschliesslich
+        den aktiven Trip (``resolve_trip_only_target``).
+        """
+        englisch = False
+        if data in ("act_help", "act_columns"):
+            trip_name = ""
+        else:
+            trips = load_all_trips(user_id)
+            presets = [compare_preset_to_dict(p) for p in load_compare_presets(user_id)]
+            if data == "act_pause":
+                ziel = resolve_active_target(trips, presets, now_utc, channel="telegram")
+            else:
+                ziel = resolve_trip_only_target(trips, presets, now_utc)
+            if ziel.kind is None:
+                befehl_markieren(*_ParseNurProcessor()._parse_command(body))
+                # AC-22: sichtbare Antwort statt stillem No-Op.
+                self._notification_service.edit_telegram_message_text(
+                    chat_id=chat_id, message_id=message_id, text=ziel.text,
+                    settings=user_settings,
+                )
+                return
+            trip_name = ziel.target.name if ziel.kind == "route" else ziel.target.get("name", "")
+            # #2417 Abschnitt H: Knopf-Antworten folgen dem Stil des Ziels.
+            englisch = telegram_englisch(ziel=ziel.target)
+
+        inbound = InboundMessage(
+            channel="telegram", trip_name=trip_name, body=body,
+            sender=chat_id, received_at=now_utc, user_id=user_id, englisch=englisch,
+        )
+        result: CommandResult = TripCommandProcessor().process(inbound)
+        # Issue #1007: heute/morgen per Button haben bereits das volle
+        # Briefing per Bubbles verschickt — keine separate Bestaetigung mehr
+        # in die alte Nachricht editieren.
+        if result.suppress_email_reply:
+            return
+        if data == "act_help":
+            # AC-9: NEUE Nachricht -- die Aktionen-Bubble (``message_id``)
+            # bleibt dadurch unveraendert und bedienbar, statt vom Hilfetext
+            # ueberschrieben zu werden.
+            mid = self._notification_service.send_telegram_message(
+                chat_id=chat_id, subject=result.confirmation_subject,
+                body=result.confirmation_body, settings=user_settings,
+                reply_markup=result.reply_markup,
+            )
+            if mid is not None:
+                self.sent_message_ids.append(mid)
+            return
+        self._notification_service.edit_telegram_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=f"[{result.confirmation_subject}]\n\n{result.confirmation_body}",
+            settings=user_settings,
+            reply_markup=result.reply_markup,
+        )
 
     def _callback_to_body(self, data: str) -> str | None:
         """Mappt callback_data auf einen Processor-Body. None bei unbekanntem Wert."""
@@ -357,20 +558,15 @@ class InboundTelegramReader:
         return None
 
     def _find_active_trip(
-        self, now_utc: datetime, user_id: str = "default",
+        self, now_utc: datetime, user_id: str,
     ) -> Trip | None:
-        """Aktiver Trip = erster Trip mit Datum-Overlap.
+        """Aktiver Trip = erster Trip mit Datum-Overlap, sonst frühester
+        zukünftiger Trip; None wenn keine Trips existieren.
 
-        Fallback: nächster zukünftiger Trip.
-        Gibt None zurück wenn keine Trips existieren.
-
-        Issue #1727 S5a: "heute" ist der ORTStag DIESES Trips (ADR-0044), nicht
-        das Datum der Serveruhr. Der Vergleichstag wird deshalb IN der Schleife
-        je Trip bestimmt -- vorher stand er davor und galt fuer alle gleich.
-        Wortgleiches Muster zu `trip_report_scheduler._get_active_trips`
-        (#1724): ein einziger, aus nur einer Tour abgeleiteter Tag waehlt an der
-        Tourgrenze die bereits abgelaufene Tour, und diese Auswahl sitzt vor
-        JEDEM Telegram-Befehl. Auch der Zukunfts-Rueckfall rechnet je Trip.
+        Issue #2184: die Auswahlregel selbst liegt seit Scheibe S4 als
+        geteilter Baustein in ``services.trip_selection.pick_active_trip`` —
+        der Premium-SMS-Reader braucht sie genauso. ``load_all_trips`` bleibt
+        hier (Begründung im Modul-Docstring von ``trip_selection``).
 
         Args:
             now_utc: Zeitpunkt der eingehenden Nachricht. Pflichtparameter --
@@ -379,31 +575,20 @@ class InboundTelegramReader:
             user_id: Mandant, dessen Touren durchsucht werden.
         """
         trips = load_all_trips(user_id)
-        if not trips:
-            return None
+        return pick_active_trip(trips, now_utc)
 
-        # 1. Overlap: stage[0].date <= Ortstag DIESES Trips <= stage[-1].date
-        for trip in trips:
-            if not trip.stages:
-                continue
-            today = trip_local_today(trip, now_utc)
-            if trip.stages[0].date <= today <= trip.stages[-1].date:
-                return trip
-
-        # 2. Fallback: frühester zukünftiger Trip — "zukuenftig" ebenfalls am
-        #    Ortstag DIESES Trips gemessen, nicht an einem gemeinsamen Wert.
-        future = [
-            t for t in trips
-            if t.stages and t.stages[0].date > trip_local_today(t, now_utc)
-        ]
-        if future:
-            return min(future, key=lambda t: t.stages[0].date)
-
-        return None
+    @staticmethod
+    def _ist_gesperrt(user_id: str | None, chat_id: str) -> bool:
+        """Issue #2155 S3 (AC-13): gesperrtes Konto -- stumm verwerfen (loggen)."""
+        from app.loader import is_user_disabled
+        if user_id is None or not is_user_disabled(user_id):
+            return False
+        logger.warning(f"Konto gesperrt (disabled), Update verworfen: chat {mask_number(chat_id)}")
+        return True
 
     def _resolve_user_for_chat(
         self, chat_id: str, base_settings: Settings, data_dir: str | None = None
-    ) -> tuple[str, Settings]:
+    ) -> tuple[str | None, Settings]:
         """Resolve user_id and user-scoped Settings for an incoming Telegram chat ID.
 
         Args:
@@ -412,66 +597,137 @@ class InboundTelegramReader:
             data_dir: Root data directory (default: get_data_root())
 
         Returns:
-            (user_id, user_scoped_settings) — user_id is "default" if no match
+            (user_id, user_scoped_settings) — user_id is None if no match
+            (#2151: kein stiller Rueckfall auf "default"; ein echtes Konto
+            "default" mit verknuepftem Chat gilt als bekannt)
         """
         from app.loader import get_data_root, lookup_user_by_telegram_chat_id
         if data_dir is None:
             data_dir = str(get_data_root())
-        user_id = lookup_user_by_telegram_chat_id(chat_id, data_dir=data_dir) or "default"
+        user_id = lookup_user_by_telegram_chat_id(chat_id, data_dir=data_dir)
+        if user_id is None:
+            return None, base_settings
         return user_id, base_settings.with_user_profile(user_id)
 
     def _process_start_command(self, token: str, chat_id: str, settings: Settings) -> bool:
         """Verarbeitet /start TOKEN — registriert chat_id beim Go-Backend."""
+        self._ensure_notification_service(settings)
         try:
-            resp = httpx.post(
-                "http://localhost:8090/api/internal/telegram-connect",
+            resp = post_internal(
+                "/api/internal/telegram-connect",
                 json={"token": token, "chat_id": chat_id},
                 timeout=5,
             )
             if resp.status_code == 200:
-                logger.info(f"Telegram chat_id {chat_id} via token registriert")
+                logger.info(f"Telegram chat_id {mask_number(chat_id)} via token registriert")
                 try:
-                    confirm_settings = settings.model_copy(update={"telegram_chat_id": chat_id})
                     self._notification_service.send_telegram_message(
                         chat_id=chat_id,
                         subject="Verbunden",
                         body="✓ Du bist jetzt mit Gregor verbunden! Sende 'hilfe' für verfügbare Befehle.",
-                        settings=confirm_settings,
+                        settings=settings,
                     )
                 except Exception as ce:
                     logger.warning(f"Bestätigungsnachricht fehlgeschlagen: {ce}")
+            elif resp.status_code == 409:
+                # Issue #2141: die Chat-ID gehört bereits einem anderen Konto.
+                # Ohne Rückmeldung wäre das aus Nutzersicht ein Stillstand.
+                logger.warning(
+                    f"telegram-connect: chat_id {mask_number(chat_id)} bereits mit einem anderen Konto verknüpft"
+                )
+                try:
+                    self._notification_service.send_telegram_message(
+                        chat_id=chat_id,
+                        subject="Verbinden nicht möglich",
+                        body=(
+                            "Dieser Chat ist bereits mit einem anderen Gregor-Konto verbunden. "
+                            "Trenne die Verbindung zuerst im Konto-Bereich des anderen Kontos "
+                            "und sende danach erneut /start."
+                        ),
+                        settings=settings,
+                    )
+                except Exception as ce:
+                    logger.warning(f"Konflikt-Nachricht fehlgeschlagen: {ce}")
+            elif resp.status_code in (401, 503):
+                logger.error(f"telegram-connect abgelehnt (HTTP {resp.status_code}) -- Core-Geheimnis prüfen")
             else:
                 logger.warning(f"telegram-connect returned {resp.status_code}")
         except Exception as e:
             logger.error(f"telegram-connect Fehler: {e}")
         return True
 
+    def _command_body(self, text: str) -> tuple[str | None, str | None]:
+        """Getippter Text -> ``(interner Schluessel, Prozessor-Body)``.
+
+        Der EINE Einstieg des Telegram-Drahts: Erkennen und Kodieren stehen
+        beieinander, damit ein Test genau den Weg nimmt, den auch
+        ``_process_update`` nimmt. Vorher lag die Kodierung offen im
+        Update-Handler zwischen zwei Netz-Aufrufen und war damit ausserhalb
+        eines Live-Laufs nicht pruefbar — genau die Luecke, durch die
+        ``/strecke 5`` unbemerkt am Prozessor vorbeilief (Issue #2134).
+
+        ``(None, None)``, wenn kein Befehl erkannt wurde.
+        """
+        key, value = self._parse_command(text)
+        if key is None:
+            return None, None
+        # Query-Keys werden als "### query: <key>" kodiert
+        if key in _QUERY_KEYS:
+            return key, f"### query: {key}"
+        if value:
+            return key, f"### {key}: {value}"
+        return key, f"### {key}"
+
     def _parse_command(self, text: str) -> tuple[str | None, str | None]:
         """Parst ersten nicht-leeren Satz: 'ruhetag 2' → ('ruhetag', '2').
 
         Immer lowercase. Unbekannte Befehle → (None, None).
         Auflösungs-Reihenfolge:
+          0. Zitat-Praefix ab (``_ohne_zitat``, #2137) — der Slash bleibt noch
+             stehen, er traegt hier Bedeutung.
           1. Slash-Shortcuts (_SHORTCUT_MAP): /h, /m, /s, /hg, /jetzt, ...
-          2. Bare Keywords (_BARE_KEYWORD_MAP, channel-agnostisch wie E-Mail):
-             heute, morgen, jetzt, gewitter, stop, weiter, hilfe, status, ...
+             GANZE Zeile UND erstes Token, sonst faellt '/strecke 5' durch
+             (#2120: genau der gemeldete Fall).
+          2. Slash ab (``_ohne_praefix``), dann Bare Keywords
+             (_BARE_KEYWORD_MAP, channel-agnostisch wie E-Mail): heute, morgen,
+             jetzt, gewitter, stop, weiter, hilfe, status, ...
              stop→abbruch, jetzt→now, gewitter→heute_gewitter etc.
           3. _VALID_COMMANDS-Fallback: startdatum, report (nicht in _BARE_KEYWORD_MAP).
         Kein '### ' Prefix nötig — Freitext.
+
+        Issue #2417 AC-28: '/status' ist KEIN Sondereintrag mehr in
+        _SHORTCUT_MAP -- es faellt durch Schritt 2 (Slash ab, dann Bare
+        Keyword) genauso wie das nackte 'status' auf die Etappenliste. Der
+        fruehere Glance-Alias verletzte die Kanalgleichheit (E-Mail/Premium-
+        SMS/nacktes Telegram-Wort STATUS lieferten die Etappenliste, nur
+        '/status' etwas anderes) und ist deshalb aufgeloest; der
+        Wetter-Ueberblick bleibt ueber '/glance' erreichbar. Die
+        Praefix-Behandlung selbst kommt aus DERSELBEN Quelle wie im
+        Prozessor (Issue #2134), nur in zwei Stufen aufgerufen.
         """
-        first_line = next(
-            (line.strip() for line in text.splitlines() if line.strip()),
-            "",
-        )
+        # AC-20: BOM/ZWSP sind unsichtbar und tragen keinen Leerraum-Status im
+        # Unicode-Sinn (anders als NBSP) — VOR dem Lowering entfernen, sonst
+        # bliebe z.B. "﻿hilfe" als eigenes, nie in einer Map stehendes
+        # Wort stehen.
+        first_line = _ohne_unsichtbare_zeichen(_ohne_zitat(_erste_zeile(text))).lower()
         if not first_line:
             return None, None
 
-        # Kurzbefehl-Mapping: /s /h /m /hg
-        lower_first = first_line.lower()
-        if lower_first in _SHORTCUT_MAP:
-            return _SHORTCUT_MAP[lower_first], None
+        # Kurzbefehl-Mapping: /s /h /m /hg — vor dem Slash-Streifen
+        if first_line in _SHORTCUT_MAP:
+            return _SHORTCUT_MAP[first_line], None
+        teile = first_line.split(None, 1)
+        if teile[0] in _SHORTCUT_MAP:
+            rest = teile[1].strip() if len(teile) > 1 else None
+            return _SHORTCUT_MAP[teile[0]], rest or None
 
-        parts = lower_first.split(None, 1)
-        key = parts[0]
+        parts = _ohne_praefix(first_line).split(None, 1)
+        if not parts:
+            return None, None
+        # AC-20: Satzzeichen UNMITTELBAR am Befehlswort tolerieren ("hilfe.",
+        # "pause!") — NUR am erkannten Schluesselwort, nie am Wert (sonst
+        # koennte z.B. eine Distanzangabe verstuemmelt werden).
+        key = _ohne_satzzeichen_am_wortende(parts[0])
         value = parts[1].strip() if len(parts) > 1 else None
 
         # Bare keyword → resolve via shared _BARE_KEYWORD_MAP (channel-agnostic)
@@ -479,6 +735,12 @@ class InboundTelegramReader:
             return _BARE_KEYWORD_MAP[key], value or None
 
         if key not in _VALID_COMMANDS:
+            # Issue #2134: ein getipptes Katalog-Kuerzel (`Visib`, `FZ`, ...)
+            # wird durchgereicht — der Prozessor loest es gegen denselben
+            # Katalog auf. Steuerbefehle sind oben bereits abgearbeitet, ein
+            # Metrikwort kann sie deshalb nicht verdraengen (AC-20).
+            if _metric_id_for_word(key):
+                return key, value or None
             return None, None
 
         return key, value or None

@@ -104,9 +104,10 @@ test.describe('Issue #1229: Compare-Hub Briefing-Zeiten + Neutralisierung', () =
 			await page.setViewportSize({ width: 1280, height: 900 });
 			await page.goto(`/compare/${id}`);
 			await page.waitForLoadState('networkidle');
-			await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
+			// Issue #1743: Versand-Inhalt steht im Reiter Wetter-Metriken (#versand).
+			await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
 
-			const panel = page.locator('[data-testid="compare-detail-panel-versand"]:visible').first();
+			const panel = page.locator('[data-testid="versand-abschnitt"]:visible').first();
 			await expect(panel).toBeVisible({ timeout: 10_000 });
 			await expect(panel).toContainText('Briefing-Zeiten');
 			await expect(panel).not.toContainText('Rhythmus & Vorausschau');
@@ -144,7 +145,8 @@ test.describe('Issue #1229: Compare-Hub Briefing-Zeiten + Neutralisierung', () =
 	// ── AC-5: "Bearbeiten →" der Versand-Karte wechselt inline auf Versand ───
 	// Epic #1273 S4c: "Bearbeiten →" (neuer Testid compare-hub-versand-edit) ist
 	// ein reiner Inline-Tab-Wechsel — keine /edit-URL. Nachweis über aktives Panel.
-	test('AC-5: "Bearbeiten →" der Versand-Karte wechselt inline auf den Versand-Tab', async ({
+	// Issue #1743: Ziel ist der Versand-Abschnitt im Reiter Wetter-Metriken.
+	test('AC-5: "Bearbeiten →" der Versand-Karte wechselt inline auf den Versand-Abschnitt (Wetter-Metriken)', async ({
 		page
 	}) => {
 		const { id } = await createPreset(page);
@@ -157,8 +159,11 @@ test.describe('Issue #1229: Compare-Hub Briefing-Zeiten + Neutralisierung', () =
 			await page.locator('[data-testid="compare-hub-versand-edit"]:visible').first().click();
 
 			await expect(
-				page.locator('[data-testid="compare-detail-panel-versand"]:visible').first()
+				page.locator('[data-testid="compare-detail-panel-wetter-metriken"]:visible').first()
 			).toBeVisible({ timeout: 10_000 });
+			await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeInViewport({
+				timeout: 10_000
+			});
 			// Kein Seitenwechsel: die URL bleibt der Hub (keine /edit-Route).
 			await expect(page).toHaveURL(new RegExp(`/compare/${id}(\\?|$)`));
 		} finally {
@@ -208,47 +213,29 @@ test.describe('Issue #1229: Compare-Hub Briefing-Zeiten + Neutralisierung', () =
 		}
 	});
 
-	// ── AC-8: Vorschau-Tab Kanal SMS/Telegram → Missing-Hinweis, kein Rang/Score ─
-	test('AC-8: Vorschau-Tab Kanal SMS/Telegram zeigt Missing-Hinweis, kein Rang/Score-Markup', async ({
-		page
-	}) => {
-		const { id } = await createPreset(page);
-		try {
-			await page.setViewportSize({ width: 1280, height: 900 });
-			await page.goto(`/compare/${id}`);
-			await page.waitForLoadState('networkidle');
-			await page.locator('[data-testid="compare-detail-tab-vorschau"]:visible').first().click();
+	// ── AC-8 (#1229 → #2283 AC-12): Vorschau-Reiter per Issue #1743 ersatzlos
+	// zurueckgebaut (PO-Entscheid 2026-10-22). Die Pruefung des geteilten
+	// PreviewTab entfaellt mit dem Reiter; die Abwesenheit sichert AC-10 unten.
 
-			const panel = page.locator('[data-testid="compare-detail-panel-vorschau"]:visible').first();
-			await expect(panel).toBeVisible({ timeout: 10_000 });
-
-			for (const label of ['SMS', 'Telegram']) {
-				await panel.getByRole('button', { name: label, exact: true }).first().click();
-				await expect(panel).toContainText('Vorschau-Daten nicht verfügbar.', { timeout: 10_000 });
-				// Kein Rang/Score-Markup der V1-Molecules (CompareChatBubble/CompareSmsPreview):
-				// deren Bubble-Header trägt den Marker-Text "Gregor Zwanzig".
-				await expect(panel).not.toContainText('Gregor Zwanzig');
-			}
-		} finally {
-			await deletePreset(page, id);
-		}
-	});
-
-	// ── AC-10: alle 6 Tabs klickbar, Panel je sichtbar ───────────────────────
-	test('AC-10: alle sechs compare-detail-tab-* Testids klickbar, Panel sichtbar', async ({ page }) => {
+	// ── AC-10 (Issue #1743): genau fuenf Tabs klickbar, Panel je sichtbar ────
+	test('AC-10: genau fuenf compare-detail-tab-* Testids klickbar, Panel sichtbar; kein Versand-/Vorschau-Reiter', async ({ page }) => {
 		const { id } = await createPreset(page);
 		try {
 			await page.setViewportSize({ width: 1280, height: 900 });
 			await page.goto(`/compare/${id}`);
 			await page.waitForLoadState('networkidle');
 
-			const tabs = ['uebersicht', 'orte', 'idealwerte', 'layout', 'versand', 'vorschau'];
+			// Reihenfolge = shared/subscriptionTabs.ts ('vergleich'); Layout per #1360,
+			// Versand/Vorschau per #1743 aufgeloest.
+			const tabs = ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'];
 			for (const tab of tabs) {
 				await page.locator(`[data-testid="compare-detail-tab-${tab}"]:visible`).first().click();
 				await expect(
 					page.locator(`[data-testid="compare-detail-panel-${tab}"]:visible`).first()
 				).toBeVisible({ timeout: 10_000 });
 			}
+			await expect(page.locator('[data-testid="compare-detail-tab-versand"]')).toHaveCount(0);
+			await expect(page.locator('[data-testid="compare-detail-tab-vorschau"]')).toHaveCount(0);
 		} finally {
 			await deletePreset(page, id);
 		}

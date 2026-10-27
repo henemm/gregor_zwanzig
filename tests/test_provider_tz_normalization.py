@@ -38,6 +38,7 @@ import json
 import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import tenacity
@@ -341,8 +342,12 @@ def test_ac4_retry_succeeds_after_two_transient_errors(monkeypatch):
     )
 
     fake_provider = _FlakyFakeProvider(fail_times=2)
+    # Statt `None` ein minimaler Traeger der Nutzerkennung: seit #2387 liest
+    # `_fetch_weather()` `self._user_id` fuer den Budget-Topf je Nutzer. Die
+    # ECHTE Methode bleibt der Prueflings-Code (kein Nachbau der Schleife).
     result = TripReportSchedulerService._fetch_weather(
-        None, [segment], provider=fake_provider
+        SimpleNamespace(_user_id="nutzer_tz_normalization"),
+        [segment], provider=fake_provider,
     )
 
     assert fake_provider.calls == 3, (

@@ -3,7 +3,7 @@ entity_id: issue_1298_compare_metric_guard_cape_label
 type: bugfix
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, cape, metric-guard, label-rename]
 ---

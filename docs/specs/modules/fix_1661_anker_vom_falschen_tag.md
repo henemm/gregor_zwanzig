@@ -3,7 +3,7 @@ entity_id: fix_1661_anker_vom_falschen_tag
 type: bugfix
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 workflow: fix-1661-anker-vom-falschen-tag
 version: "1.0"
 tags: [alerts, trip, compare, day-window, anchor, issue-1661, observability]
@@ -66,7 +66,7 @@ davon, sondern zieht Scope und Acceptance Criteria daraus.
 | Datei | Änderungstyp | Beschreibung |
 |---|---|---|
 | `src/services/weather_snapshot.py` | MODIFY | Neue schlanke Methode `load_target_date(trip_id) -> Optional[date]` — liest nur das `target_date`-Feld der undatierten Datei, ohne Segmente zu rekonstruieren |
-| `src/services/trip_alert.py` | MODIFY | `_get_cached_weather` bekommt die Datums-/Alters-Prüfung (Teil A) und protokolliert/eskaliert einen verworfenen bzw. fehlenden Anker (Teil C). **Korrigiert 2026-08-10** (s. Abschnitt „🔴 Korrektur"): die Tages-/Altersprüfung gilt NUR dem Δ-Pfad (`:435`), NICHT dem amtliche-Warnungen-Pfad (`:1128`) — sonst verstummen Unwetterwarnungen für gebriefte, noch nicht gestartete Touren. Gesteuert über einen keyword-only Pflichtparameter ohne Default; zusätzlich musste das Tor `if not cached: continue` HINTER den amtlichen Check gezogen werden, sonst wirkt der Parameter nur im Test, nicht in Produktion |
+| `src/services/trip_alert.py` | MODIFY | `_get_cached_weather` bekommt die Datums-/Alters-Prüfung (Teil A) und protokolliert/eskaliert einen verworfenen bzw. fehlenden Anker (Teil C). **Korrigiert 2026-08-10** (s. Abschnitt „🔴 Korrektur"): die Tages-/Altersprüfung gilt NUR dem Δ-Pfad (`:435`), NICHT dem amtliche-Warnungen-Pfad (`:1128`) — sonst verstummen Unwetterwarnungen für gebriefte, noch nicht gestartete Trips. Gesteuert über einen keyword-only Pflichtparameter ohne Default; zusätzlich musste das Tor `if not cached: continue` HINTER den amtlichen Check gezogen werden, sonst wirkt der Parameter nur im Test, nicht in Produktion |
 | `src/services/scheduler_dispatch_service.py` | MODIFY | `_write_compare_alert_snapshots` bekommt einen Pflicht-Parameter `target_date`, gespeist aus dem bereits vorhandenen `target_date`-Parameter von `send_one_compare_preset` über die Closure `_anchor_and_reset()` |
 | `src/services/compare_location_weather_source.py` | MODIFY | `fetch()` bekommt einen optionalen `target_date`-Parameter; steuert bei Angabe den Kalendertag des Zeitfensters statt des tatsächlichen „heute" |
 | `src/services/point_weather.py` | MODIFY | `PointWeatherData` bekommt ein optionales Feld `target_date: Optional[date] = None` |
@@ -195,7 +195,7 @@ gegen einen veralteten Anker also **selbst abgesichert** — und laut #1460 P4
 prüft er bewusst die gesamte Restroute mit Tagen Vorlauf.
 
 Die zentrale Prüfung hätte deshalb **amtliche Warnungen stummgeschaltet** für
-Touren, die bereits gebrieft, aber noch nicht gestartet sind: deren undatierter
+Trips, die bereits gebrieft, aber noch nicht gestartet sind: deren undatierter
 Anker trägt `target_date = Starttag` (also „morgen"), würde als `wrong_day`
 verworfen, und `check_official_alert_triggers` gäbe sofort `[]` zurück — in
 genau den Tagen vor dem Aufbruch, in denen eine Unwetterwarnung am meisten zählt.
@@ -355,7 +355,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
 
 ## Acceptance Criteria
 
-- **AC-1 (Bug-Nachweis, Teil A):** Given kein datierter Wetter-Anker für heute
+- **AC-1:** (Bug-Nachweis, Teil A) Given kein datierter Wetter-Anker für heute
   existiert und der undatierte Rückfall ein `target_date` von gestern trägt
   (genau der gemessene Produktivfall vom 08.08.2026), When der
   Abweichungs-Alarm-Lauf für diesen Trip startet, Then wird dieser Anker
@@ -369,14 +369,14 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
   - Scheitert ohne Fix: `svc.load(trip.id)` wird ungeprüft zurückgegeben, der
     Alarm-Lauf vergleicht heutige Segmente gegen einen Referenzwert von gestern.
 
-- **AC-2 (Regressionsschutz — richtiges Datum bleibt gültig):** Given kein
+- **AC-2:** (Regressionsschutz — richtiges Datum bleibt gültig) Given kein
   datierter Anker für heute existiert und der undatierte Rückfall `target_date =
   heute` trägt, When der Alarm-Lauf startet, Then wird der Rückfall weiterhin
   normal als Vergleichsbasis verwendet — keine Verschärfung ohne Grund.
   - Test: Kern. Wie AC-1, aber `target_date` = heute. Assert: Rückgabe ist die
     geladenen Segmente, kein Verwerfen, keine WARNUNG.
 
-- **AC-3 (Altersnetz greift nur bei fehlendem Datum, innerhalb der Grenze):**
+- **AC-3:** (Altersnetz greift nur bei fehlendem Datum, innerhalb der Grenze)
   Given der undatierte Rückfall trägt KEIN lesbares `target_date` (reiner
   Absicherungsfall — das Feld wird seit jeher geschrieben, es geht also um eine
   beschädigte oder unvollständige Datei), ist aber jünger als 26 Stunden
@@ -385,7 +385,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
   - Test: Kern. Snapshot-Fixture ohne `target_date`-Feld, `snapshot_at` = jetzt
     minus 10 h. Assert: Rückgabe ist die geladenen Segmente.
 
-- **AC-4 (Altersnetz verwirft, außerhalb der Grenze):** Given der undatierte
+- **AC-4:** (Altersnetz verwirft, außerhalb der Grenze) Given der undatierte
   Rückfall trägt KEIN lesbares `target_date` UND ist älter als 26 Stunden
   (`snapshot_at`), When der Alarm-Lauf startet, Then wird er verworfen UND es
   erscheint eine WARNUNG mit Grund „zu alt".
@@ -395,7 +395,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
   - Scheitert ohne Fix: ein Uralt-Snapshot (im gemessenen Bestand bis zu 57
     Tage alt) würde unbegrenzt weiterverwendet.
 
-- **AC-5 (Verworfener Anker rührt niemals Melde-Gedächtnis oder Cooldown an):**
+- **AC-5:** (Verworfener Anker rührt niemals Melde-Gedächtnis oder Cooldown an)
   Given ein Anker wird verworfen (Fall AC-1 oder AC-4), When der Alarm-Lauf
   diesen Fall durchläuft, Then bleiben `alert_state` und der Cooldown-Zähler
   für diesen Trip exakt unverändert, UND der verworfene Anker wird NICHT neu
@@ -408,7 +408,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
     werden (Lehre `fix_1584c` AC-7 — sonst wird aus temporärer Unterdrückung
     Dauerstille).
 
-- **AC-6 (Regressionsschutz — Anzeigepfade bleiben unangetastet):** Given die
+- **AC-6:** (Regressionsschutz — Anzeigepfade bleiben unangetastet) Given die
   Kommandos `/heute` und `/morgen` (bzw. deren interne Entsprechung in
   `weather_extractor.py`), When sie denselben undatierten Snapshot lesen, den
   der Alarm-Pfad soeben verworfen hätte, Then zeigen sie ihn trotzdem an — ihr
@@ -418,7 +418,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
     weiterhin die vorhandenen Daten (`available=True`), keine neue
     Datumsprüfung in diesem Pfad.
 
-- **AC-7 (Teil B — Abendanker trägt den gebriefte Tag):** Given ein
+- **AC-7:** (Teil B — Abendanker trägt den gebriefte Tag) Given ein
   Ortsvergleich-Preset mit aktiviertem Abend-Slot, When der Abend-Report
   versendet wird und dabei den Δ-Anker schreibt, Then trägt der gespeicherte
   Δ-Anker `target_date = heute+1` (den Tag, über den das Briefing tatsächlich
@@ -431,7 +431,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
   - Scheitert ohne Fix: `_write_compare_alert_snapshots` bekommt `target_date`
     nicht durchgereicht, der Anker trägt weiterhin keinerlei Tagesbezug.
 
-- **AC-8 (Teil B — Anker und Frisch-Abruf beschreiben denselben Tag):** Given
+- **AC-8:** (Teil B — Anker und Frisch-Abruf beschreiben denselben Tag) Given
   ein Δ-Anker mit gesetztem `target_date` (Abend-Slot-Preset), When der
   15-Minuten-Alarm-Check den Frisch-Abruf für diesen Ort holt, Then bezieht sich
   der Frisch-Abruf auf DENSELBEN Kalendertag wie der Anker — unabhängig davon,
@@ -444,7 +444,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
   - Dies ist die neu gefasste Zusicherung, die `fix_1584c` AC-5 ablöst (s. u.
     „Bekannte, zu Recht rote Bestandstests").
 
-- **AC-9 (Teil B — Morgen-Slot bleibt unverändert):** Given ein
+- **AC-9:** (Teil B — Morgen-Slot bleibt unverändert) Given ein
   Ortsvergleich-Preset OHNE aktivierten Abend-Slot (Produktiv-Regelfall: 4 von
   5 Presets), When der Morgen-Report den Δ-Anker schreibt, Then trägt der Anker
   `target_date = heute`, und der nachfolgende Alarm-Check verhält sich exakt wie
@@ -454,7 +454,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
     Anker-Datum verhält sich identisch zum Bestand (Regressionstest gegen
     `test_compare_alert_day_window.py` AC-1/AC-2/AC-3a/AC-3b).
 
-- **AC-10 (Teil B — Altbestand ohne `target_date` bleibt unverändert):** Given
+- **AC-10:** (Teil B — Altbestand ohne `target_date` bleibt unverändert) Given
   ein Compare-Δ-Anker aus der Zeit vor dieser Scheibe (Datei ohne
   `target_date`-Feld), When der Alarm-Check ihn lädt, Then wird `target_date`
   als `None` gelesen und der Frisch-Abruf verhält sich exakt wie heute (lokaler
@@ -464,7 +464,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
     `target_date is None`, kein Absturz, Frisch-Abruf-Fenster identisch zum
     Bestandsverhalten.
 
-- **AC-11 (Teil C — verworfener Anker wird sichtbar):** Given ein Anker wird
+- **AC-11:** (Teil C — verworfener Anker wird sichtbar) Given ein Anker wird
   verworfen (Fall „falscher Tag" oder „zu alt", AC-1/AC-4), When das passiert,
   Then entsteht ein Diagnose-Eintrag, der über den Status-Endpunkt
   (`/api/scheduler/status`) als wachsendes Signal sichtbar wird — nicht nur als
@@ -474,7 +474,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
     vorhanden, `ts` gesetzt) UND `analyzeAlertAnchorRejections()` (Go) mit dieser
     Fixture aufrufen — `recentCount >= 1`.
 
-- **AC-12 (Teil C — wachsendes Signal bei Serie):** Given mehrere
+- **AC-12:** (Teil C — wachsendes Signal bei Serie) Given mehrere
   aufeinanderfolgende Anker-Ablehnungen desselben Nutzers innerhalb von 60
   Minuten, When der Status-Endpunkt abgefragt wird, Then wächst
   `alert_anchor_rejected_streak_since` NICHT mit jeder weiteren Ablehnung nach
@@ -486,7 +486,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
     bleibt der jüngere Serienbeginn (Lücken-Logik wie
     `analyzeBriefingDispatchErrors`).
 
-- **AC-13 (Teil C — laufender Trip ohne jeden Anker eskaliert):** Given ein
+- **AC-13:** (Teil C — laufender Trip ohne jeden Anker eskaliert) Given ein
   Trip, dessen Laufzeitraum bereits begonnen hat und noch nicht vorbei ist
   (`start_date <= heute <= end_date`), aber weder eine datierte noch eine
   undatierte Anker-Datei existiert, When der Alarm-Lauf ihn prüft, Then wird das
@@ -498,7 +498,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
   - Scheitert ohne Fix: ein laufender Trip ohne jedes Briefing bliebe komplett
     unsichtbar blind — kein Nutzer und kein Betrieb würde es je erfahren.
 
-- **AC-14 (Teil C — noch nicht gestarteter Trip ohne Anker ist der harmlose Normalfall):**
+- **AC-14:** (Teil C — noch nicht gestarteter Trip ohne Anker ist der harmlose Normalfall)
   Given ein Trip, dessen Laufzeitraum noch NICHT begonnen hat
   (`start_date > heute`), und weder eine datierte noch eine undatierte
   Anker-Datei existiert, When der Alarm-Lauf ihn prüft, Then erscheint NUR eine
@@ -511,7 +511,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
     JEDER noch nicht gestartete Trip täglich Dauerrauschen erzeugen
     (#1199-Muster).
 
-- **AC-15 (Teil C — Diagnose-Schreiber ist fail-soft):** Given der
+- **AC-15:** (Teil C — Diagnose-Schreiber ist fail-soft) Given der
   Diagnose-Schreiber `record_alert_anchor_rejected` selbst scheitert (z. B.
   nicht beschreibbares Zielverzeichnis), When gleichzeitig ein Anker verworfen
   wird (AC-1/AC-4/AC-13), Then bricht der Alarm-Lauf dadurch NICHT zusätzlich
@@ -522,7 +522,7 @@ Eskalationsformel (`now - streak_since`) ohne Anpassung greift.
     restlichen Ablauf wie AC-1 prüfen — Assert: Alarm-Lauf terminiert normal,
     nur eine WARNUNG zum Diagnose-Fehler zusätzlich.
 
-- **AC-16 (Teil C — Privacy #252 an der Go-Grenze):** Given eine Zeile in
+- **AC-16:** (Teil C — Privacy #252 an der Go-Grenze) Given eine Zeile in
   `alert_anchor_rejected.jsonl` enthält `entity_id` (Trip-ID) und `reason`,
   When `analyzeAlertAnchorRejections` (Go) diese Zeile verarbeitet, Then landen
   weder `entity_id` noch `reason` im Rückgabewert oder in `BriefingHealth()` —

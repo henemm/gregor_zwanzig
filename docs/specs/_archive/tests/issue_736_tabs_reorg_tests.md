@@ -3,7 +3,7 @@ entity_id: issue_736_tabs_reorg_tests
 type: tests
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, ui-cleanup, tab-reorg, issue-736]
 parent: issue_736_tabs_reorg
@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die Implementierung aus
-`docs/specs/modules/issue_736_tabs_reorg.md`. Alle Tests sind Playwright-E2E
+`docs/specs/_archive/modules/issue_736_tabs_reorg.md`. Alle Tests sind Playwright-E2E
 gegen Staging als eingeloggter Nutzer.
 
-Parent-Spec: `docs/specs/modules/issue_736_tabs_reorg.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_736_tabs_reorg.md` v1.0
 
 ## Source
 

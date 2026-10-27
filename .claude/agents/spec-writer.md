@@ -31,16 +31,15 @@ Dieser Agent erwartet folgende Informationen:
 
 Lies `docs/specs/_template.md` als Basis.
 
-### Step 2: Spec-Kategorie bestimmen
+### Step 2: Ablageort bestimmen
 
-Basierend auf Entity-Typ:
-- `modules/` -> `docs/specs/modules/[entity_id].md`
-- `functions/` -> `docs/specs/functions/[entity_id].md`
-- `tests/` -> `docs/specs/tests/[entity_id].md`
-
-Subdirectories fuer Organisation erlaubt.
+- Modul-/Feature-/Bugfix-Specs -> `docs/specs/modules/[entity_id].md` (Standard, CLAUDE.md)
+- Reine Test-Specs -> `docs/specs/tests/[entity_id].md`
 
 ### Step 3: Pflichtfelder ausfuellen
+
+**Massgeblich ist `docs/specs/_template.md`** (Abschnitte, Schicht-Hinweis, ADR-Abschnitt).
+Die Skizze unten zeigt nur die Pflichtkerne; bei Abweichung gilt das Template.
 
 ```markdown
 ---
@@ -97,8 +96,9 @@ workflow: [workflow-name]
 
 ## Acceptance Criteria
 
-- [ ] Criterion 1
-- [ ] Criterion 2
+- **AC-1:** Given <Vorbedingung> / When <Aktion> / Then <beobachtbares Ergebnis>
+  - Test: [konkretes Nutzerverhalten — kein Dateiinhalt-Check]
+- **AC-2:** Given ... / When ... / Then ...
 
 ## Changelog
 
@@ -113,18 +113,20 @@ Vor dem Speichern MUSS verifiziert werden:
 2. **Purpose ist klar** - Spezifisch und verstaendlich, nicht generisch
 3. **Alle Dependencies gelistet** - Vollstaendig, nicht "wird spaeter ergaenzt"
 4. **Approval Checkbox** - Muss `[ ]` (unchecked) sein
-5. **Test Plan vorhanden** - Mindestens 2 GIVEN/WHEN/THEN Tests
+5. **Testbezug vorhanden** - Jede AC traegt eine `Test:`-Zeile (Nutzerverhalten, kein Dateiinhalt-Check)
 6. **Scope vollstaendig** - Alle betroffenen Dateien mit Aenderungstyp
-7. **Acceptance Criteria** - Mindestens 2 messbare Kriterien
+7. **Acceptance Criteria** - Mindestens 2, **auf Deutsch**, im Format
+   `**AC-N:** Given.../When.../Then...` (>=30 Zeichen) — sonst blockt `workflow_gate` Phase 6
 8. **Keine Code-Bloecke >30 Zeilen** - Verweis auf Dateien stattdessen
 
 ## Output
 
-Praesentiere die fertige Spec dem User zur Freigabe:
+Melde die fertige Spec an den Orchestrator zurueck — **nicht** selbst beim User nachfragen.
+Der Orchestrator holt die Freigabe der ACs **per `AskUserQuestion`** ein
+(Antwort `approved`/`freigabe`):
 
 > "Spec erstellt: `docs/specs/[path]`
 >
 > Scope: [N] Dateien, ~[N] LoC
 > Tests: [N] automatisiert
->
-> Bestaetige mit 'approved' oder 'freigabe' um fortzufahren."
+> ACs: AC-1..AC-N (zur Freigabe vorlegen)"

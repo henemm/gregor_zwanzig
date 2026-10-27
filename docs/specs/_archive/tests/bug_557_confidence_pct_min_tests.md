@@ -3,7 +3,7 @@ entity_id: bug_557_confidence_pct_min_tests
 type: tests
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, ensemble, confidence, apply-ensemble-spreads, issue-557]
 parent: bug_557_confidence_pct_min
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für den Fix aus `docs/specs/modules/bug_557_confidence_pct_min.md`.
+Test-Manifest für den Fix aus `docs/specs/_archive/modules/bug_557_confidence_pct_min.md`.
 Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_557_confidence_pct_min.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_557_confidence_pct_min.md` v1.0
 
 ## Source
 

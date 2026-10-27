@@ -211,16 +211,18 @@ def _clean_user(uid: str) -> None:
 # --------------------------------------------------------------------------
 
 def _alarm_offset_minuten() -> int:
-    """Zieloffset des ALARM-Pfads = halbes Vorwarnfenster.
+    """Zieloffset des ALARM-Pfads = eigener Messpunkt-Offset.
 
-    Gelesen ueber die MODUL-Referenz, nie als `from ... import` gebunden: der
-    Laufzeit-Drift-Waechter aus #2009 (`test_radar_onset_threshold_variance.py
-    ::test_ac1_shared_threshold_drives_both_paths`) setzt die Konstante zur
-    Laufzeit um; eine beim Import gebundene Kopie liefe still daran vorbei.
+    Issue #2261 (A-1, AC-2): bis #2261 das halbe Vorwarnfenster
+    (`RADAR_ONSET_THRESHOLD_MIN // 2`); seit die Schwelle auf dem Horizont
+    steht, ist der Offset entkoppelt (`RADAR_MEASURE_OFFSET_MIN`, 27).
+
+    Gelesen ueber die MODUL-Referenz, nie als `from ... import` gebunden: eine
+    beim Import gebundene Kopie liefe still an einer Laufzeit-Aenderung vorbei.
     """
     from services import radar_service as radar_service_mod
 
-    return radar_service_mod.RADAR_ONSET_THRESHOLD_MIN // 2
+    return radar_service_mod.RADAR_MEASURE_OFFSET_MIN
 
 
 def _erwartete_messposition(trip, now_utc: datetime, offset_minuten: int):
@@ -317,7 +319,7 @@ def test_ac1_segment_helper_roundtrip_bit_identical():
     trip = Trip(id="tdd-822-ac1-trip", name="AC1 Trip", stages=[stage])
     target_date = stage_date(lat, lon)
 
-    svc = TripReportSchedulerService(settings=Settings())
+    svc = TripReportSchedulerService(settings=Settings(), user_id="default")
     expected = svc._convert_trip_to_segments(trip, target_date)
     actual = convert_trip_to_segments(trip, target_date)
 
@@ -608,8 +610,20 @@ def test_ac3_nowcast_called_at_segment_coordinates():
         now_ref = datetime.now(timezone.utc)
         svc.check_radar_alerts()
 
-        assert call_count[0] == 1, (
-            f"AC-3: get_nowcast muss genau 1× aufgerufen werden, war {call_count[0]}"
+        # Issue #2051 S2a: die #2017-Zusicherung "genau 1 Aufruf" wird
+        # BEWUSST auf eine Obergrenze abgeloest (Spec, Abschnitt "Abgeloeste
+        # Zusicherung") — S2a fragt bis zu RADAR_ZONE_MAX_POINTS Punkte
+        # entlang der Reststrecke ab. Ueber die Modulreferenz gelesen, nicht
+        # als Literal dupliziert (Drift-Schutz #2009-Muster).
+        from services.trip_segments import RADAR_ZONE_MAX_POINTS
+
+        assert call_count[0] <= RADAR_ZONE_MAX_POINTS, (
+            f"AC-3/#2051 AC-12: get_nowcast darf hoechstens "
+            f"{RADAR_ZONE_MAX_POINTS}× aufgerufen werden (Deckel), war "
+            f"{call_count[0]}"
+        )
+        assert call_count[0] >= 1, (
+            "AC-3: get_nowcast muss mindestens 1× aufgerufen werden, war 0"
         )
 
         from app.loader import load_all_trips
@@ -780,8 +794,8 @@ def test_ac4_mail_body_contains_segment_label_and_cooldown():
 # AC-5: format_now_text mit tz-Parameter (RED: TypeError)
 # --------------------------------------------------------------------------
 
-def test_ac5_onset_time_in_tour_timezone():
-    """AC-5: format_now_text(result, tz=<TourTZ>) formatiert Onset-Zeit in Tour-TZ.
+def test_ac5_onset_time_in_trip_timezone():
+    """AC-5: format_now_text(result, tz=<TripTZ>) formatiert Onset-Zeit in Trip-TZ.
 
     RED: format_now_text hat keinen `tz`-Parameter → TypeError (unexpected keyword).
 
@@ -789,7 +803,7 @@ def test_ac5_onset_time_in_tour_timezone():
     """
     from services.radar_service import RadarNowcastService, NowcastResult
 
-    tour_tz = ZoneInfo("Europe/Berlin")
+    trip_tz = ZoneInfo("Europe/Berlin")
 
     result = NowcastResult(
         onset_minutes=10,
@@ -802,15 +816,15 @@ def test_ac5_onset_time_in_tour_timezone():
     svc = RadarNowcastService()
 
     # RED: format_now_text() got unexpected keyword argument 'tz'
-    text = svc.format_now_text(result, tz=tour_tz)
+    text = svc.format_now_text(result, tz=trip_tz)
 
-    # Nach Implementierung: Onset-Zeit in Tour-TZ
+    # Nach Implementierung: Onset-Zeit in Trip-TZ
     now_utc = datetime.now(timezone.utc)
-    expected_dt = (now_utc + timedelta(minutes=10)).astimezone(tour_tz)
+    expected_dt = (now_utc + timedelta(minutes=10)).astimezone(trip_tz)
     expected_hhmm = expected_dt.strftime("%H:%M")
 
     assert expected_hhmm in text, (
-        f"AC-5: Onset-Uhrzeit nicht in Tour-TZ formatiert. "
+        f"AC-5: Onset-Uhrzeit nicht in Trip-TZ formatiert. "
         f"Erwartet '{expected_hhmm}' (Europe/Berlin) im Text: '{text}'"
     )
 
@@ -1101,43 +1115,12 @@ def test_ac8_mandantentrennung_isolated():
 # ══════════════════════════════════════════════════════════════════════════
 
 from tests.helpers.nowcast_gate_fixtures import (  # noqa: E402
-    CountingFrameSource, clean_uid, fresh_uid, make_trip, reset_radar_cache,
+    CountingFrameSource, aufzeichnender_radar_dienst as _aufzeichnender_radar_dienst,
+    clean_uid, fresh_uid, make_trip, reset_radar_cache,
     save_trip, settings_email_only, write_user_tier,
 )
 
 _MITTAGS_2017 = "2026-08-11T12:00:00+00:00"
-
-
-def _aufzeichnender_radar_dienst(frame_source):
-    """Echte `RadarNowcastService`-UNTERKLASSE, die nur mitschreibt — kein
-    Mock: `get_nowcast()` ruft `super()` auf, die gesamte Entscheidungslogik
-    (Cache, Region, `_derive_result`) laeuft unveraendert, und alle uebrigen
-    Methoden (`source_label()` u. a.) bleiben die echten.
-
-    Warum nicht der vorhandene `frame_source`-Seam: der bekommt nur
-    `(lat, lon)`. Die HOEHE (`elevation_m`, seit #1991 Teil der Abfrage) ist
-    dort strukturell unsichtbar — genau sie soll aber mitwandern (#2017 AC-8).
-
-    Klasse innerhalb der Funktion, weil `RadarNowcastService` erst zur
-    Laufzeit importiert wird (Import-Reihenfolge dieser Datei).
-    """
-    from services.radar_service import RadarNowcastService
-
-    class _Aufzeichnend(RadarNowcastService):
-        def __init__(self, fs) -> None:
-            super().__init__(frame_source=fs)
-            self.calls: list[dict] = []
-
-        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing"):
-            self.calls.append({
-                "lat": lat, "lon": lon, "elevation_m": elevation_m,
-                "priority": priority,
-            })
-            return super().get_nowcast(
-                lat, lon, elevation_m=elevation_m, priority=priority,
-            )
-
-    return _Aufzeichnend(frame_source)
 
 
 def _alarm_lauf_2017(
@@ -1241,7 +1224,7 @@ def test_2017_ac8_nowcast_an_interpolierter_position_mit_hoehe():
 def test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt():
     """AC-10: der Segment-Ende-Guard aus #2009 ist entfernt — POSITIVNACHWEIS.
 
-    Given ein aktives Segment, das in 20 Minuten endet, und ein Onset in 53
+    Given ein aktives Segment, das in 20 Minuten endet, und ein Onset in 173
     Minuten (nach ALTEM Massstab also hinter `active.end_time`) / When
     `check_radar_alerts()` laeuft / Then wird der Alarm regulaer gesendet.
 
@@ -1257,7 +1240,11 @@ def test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt():
     test_ac6_segment_end_guard_suppresses_late_onset` ist gewollt — jene Datei
     faellt in derselben Aenderung.
     """
-    onset_minutes = 53  # erreichbarer Rasterwert, <= RADAR_ONSET_THRESHOLD_MIN
+    # #2261 A-1: 173 statt 53 — groesster erreichbarer Rasterwert unter der
+    # neuen Schwelle (= Quell-Horizont 180). Der Messzeitpunkt (jetzt + 27)
+    # liegt hinter dem Segmentende, es bleibt beim Einzelpunkt am Ziel; dessen
+    # Aufenthaltsfenster ist nach oben offen (der Nutzer bleibt am Ziel).
+    onset_minutes = 173
     uid = fresh_uid("2017-ac10")
     try:
         sent, mails, _dienst, _frames, _trip, _now = _alarm_lauf_2017(
@@ -1268,7 +1255,9 @@ def test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt():
             f"AC-10: Segment endet in 20 Min, Onset liegt bei {onset_minutes} "
             f"Min — nach Entfernung des Segment-Ende-Guards MUSS der Alarm "
             f"regulaer ausgeloest werden, erhalten sent={sent}. sent=0 heisst: "
-            f"der Guard (trip_alert.py, `_onset_dt > _segment_end`) lebt noch."
+            f"der Guard (trip_alert.py, `_onset_dt > _segment_end`) lebt noch, "
+            f"die Schwelle ist nicht der Quell-Horizont (#2261) oder das "
+            f"Aufenthaltsfenster des Einzelpunkts ist nicht offen."
         )
         assert len(mails) == 1, (
             f"AC-10: erwartet genau EINE zugestellte Alarm-Mail, erhalten "
@@ -1280,48 +1269,73 @@ def test_2017_ac10_spaeter_onset_wird_nicht_mehr_pauschal_unterdrueckt():
 
 
 def test_2017_ac12_genau_ein_get_nowcast_aufruf_je_lauf():
-    """AC-12 (Budget-Invariante, Alarm-Pfad): genau EIN `get_nowcast()`-Aufruf
-    pro Trip und Durchlauf — die Verlegung des Abrufpunkts erhoeht die Zahl
-    der Abrufe nicht.
+    """#2051 S2a AC-12 (vormals #2017 AC-12, hier bewusst UMGEBAUT statt
+    ersetzt — Spec-Abschnitt "Abgeloeste Zusicherung"): die #2017-Aussage
+    "genau EIN `get_nowcast()`-Aufruf pro Trip" wird auf eine OBERGRENZE
+    abgeloest. #2051 fragt bis zu `RADAR_ZONE_MAX_POINTS` Punkte entlang der
+    Reststrecke ab statt eines einzigen Messpunkts.
 
-    Gezaehlt wird an ZWEI Naehten: am `get_nowcast()`-Seam (die Zusicherung
-    selbst) und am `frame_source`-Seam (dort entstehen die realen Kosten).
-    Der Kommentar `trip_alert.py` ("Genau EIN get_nowcast-Call pro Trip an
-    Segment-Startpunkt") hielt das bisher nur als Prosa fest und verliert mit
-    dieser Aenderung seinen Anker.
+    Gezaehlt wird weiterhin an ZWEI Naehten: am `get_nowcast()`-Seam (die
+    Zusicherung selbst) und am `frame_source`-Seam (dort entstehen die
+    realen Kosten) — beide muessen die Obergrenze einhalten, KEINER darf sie
+    unbemerkt umgehen.
 
-    RED heute nicht wegen der ZAHL — die stimmt bereits —, sondern weil der
-    eine Aufruf am falschen Ort erfolgt. Beides gehoert in EINE Zusicherung:
-    "ein Abruf, und zwar am neuen Messpunkt". Ein iteratives Nachfassen an der
-    Onset-Position (Variante 2, in der Spec ausgeschlossen) risse die
-    Zaehlung, ein unveraenderter Startpunkt die Ortsangabe.
+    RED heute: `services.trip_segments.RADAR_ZONE_MAX_POINTS` existiert noch
+    nicht -> ImportError.
     """
+    from services.trip_segments import RADAR_ZONE_MAX_POINTS
+    from utils.geo import haversine_km
+
     uid = fresh_uid("2017-ac12")
     try:
         sent, _mails, dienst, frames, trip, now_utc = _alarm_lauf_2017(
             uid, "trip-2017-ac12", start="11:00", ende="15:00",
         )
-        assert len(dienst.calls) == 1, (
-            f"AC-12: erwartet genau EIN get_nowcast() je Trip und Lauf, "
-            f"erhalten {len(dienst.calls)} (sent={sent}): {dienst.calls!r}"
+        assert len(dienst.calls) <= RADAR_ZONE_MAX_POINTS, (
+            f"AC-12: erwartet hoechstens {RADAR_ZONE_MAX_POINTS} "
+            f"get_nowcast()-Aufrufe je Trip und Lauf (Deckel), erhalten "
+            f"{len(dienst.calls)} (sent={sent}): {dienst.calls!r}"
         )
-        assert frames.call_count == 1, (
-            f"AC-12: erwartet genau EINEN echten Frame-Abruf (Kostenstelle), "
-            f"erhalten {frames.call_count}"
+        assert frames.call_count <= RADAR_ZONE_MAX_POINTS, (
+            f"AC-12: erwartet hoechstens {RADAR_ZONE_MAX_POINTS} echte "
+            f"Frame-Abrufe (Kostenstelle), erhalten {frames.call_count}"
+        )
+        assert len(dienst.calls) >= 1, (
+            "AC-12: mindestens EIN Aufruf wird weiterhin erwartet, war 0"
         )
         _active, p, (soll_lat, soll_lon, _h) = _erwartete_messposition(
             trip, now_utc, _alarm_offset_minuten(),
         )
         ruf = dienst.calls[0]
         assert abs(ruf["lat"] - soll_lat) < 1e-6 and abs(ruf["lon"] - soll_lon) < 1e-6, (
-            f"AC-12: der EINE Abruf muss am neuen Messpunkt erfolgen — "
+            f"AC-12: der ERSTE Abruf muss am neuen Messpunkt erfolgen — "
             f"({ruf['lat']:.5f}, {ruf['lon']:.5f}) statt erwartet "
             f"({soll_lat:.5f}, {soll_lon:.5f}), p={p:.4f}"
         )
-        assert ruf["priority"] == "polling", (
-            f"AC-12: der Scheduler-Abruf bleibt drosselbar (`polling`), war "
-            f"{ruf['priority']!r} — sonst umgeht die Verlegung das Budget-Gate"
+        for r in dienst.calls:
+            assert r["priority"] == "polling", (
+                f"AC-12: jeder Scheduler-Abruf bleibt drosselbar (`polling`), "
+                f"war {r['priority']!r} — sonst umgeht die Verlegung das "
+                f"Budget-Gate"
+            )
+        # AC-12: alle abgefragten Koordinaten liegen auf der erwarteten
+        # Reststrecke (hoechstens `active.distance_km` vom Segment-Start
+        # entfernt) und keine zwei sind identisch.
+        alle_coords = [(r["lat"], r["lon"]) for r in dienst.calls]
+        assert len(set(alle_coords)) == len(alle_coords), (
+            f"AC-12: keine zwei abgefragten Koordinaten duerfen identisch "
+            f"sein, erhalten {alle_coords!r}"
         )
+        for lat, lon in alle_coords:
+            abstand_vom_start = haversine_km(
+                _active.start_point.lat, _active.start_point.lon, lat, lon,
+            )
+            assert abstand_vom_start <= _active.distance_km + 0.05, (
+                f"AC-12: Koordinate ({lat:.5f},{lon:.5f}) liegt "
+                f"{abstand_vom_start:.3f} km vom Segment-Start entfernt — "
+                f"mehr als die Segmentlaenge {_active.distance_km:.3f} km "
+                f"(nicht auf der Reststrecke)"
+            )
     finally:
         clean_uid(uid)
 
@@ -1403,6 +1417,7 @@ def test_2017_fadv1_positionsfehler_eines_trips_kostet_den_anderen_nicht_den_ala
                 mail_sink=lambda subject, body: mails.append((subject, body)),
             )
             sent = svc.check_radar_alerts()
+            now_utc = datetime.now(timezone.utc)
 
         assert sent == 1, (
             f"F-ADV1: der gesunde Trip {gesund_id!r} MUSS seinen Alarm "
@@ -1414,10 +1429,42 @@ def test_2017_fadv1_positionsfehler_eines_trips_kostet_den_anderen_nicht_den_ala
             f"F-ADV1: erwartet genau EINE zugestellte Mail (die des gesunden "
             f"Trips), erhalten {len(mails)}"
         )
-        assert frames.call_count == 1, (
-            f"F-ADV1: der kaputte Trip darf kein Kontingent verbrauchen — "
-            f"sein Abruf kommt gar nicht erst zustande. Frame-Abrufe: "
-            f"{frames.call_count}"
+
+        # Issue #2051 S2a AC-14 (Umbau, Spec "Abgeloeste Zusicherung"):
+        # bisher gemeinsam gezaehlt (`frames.call_count == 1`, weil der
+        # Einzelpunkt-Abruf des #2017-Standes nur EINE Zahl kannte). Seit
+        # S2a fragt der gesunde Trip bis zu RADAR_ZONE_MAX_POINTS Punkte ab
+        # -- der kaputte Trip verbraucht strukturell weiterhin NULL Punkte,
+        # weil seine Ausnahme VOR jeder Koordinatenberechnung greift (er
+        # kann also gar keinen der gezaehlten Aufrufe beigetragen haben).
+        # Damit sind beide Trips GETRENNT nachweisbar, obwohl `frames` ein
+        # einziges, geteiltes Zaehlobjekt bleibt (derselbe Lauf, dieselbe
+        # Aussage wie das AC: "der Lauf durch beide Trips").
+        #
+        # Die erwartete Punktzahl fuer den GESUNDEN Trip wird ANALYTISCH aus
+        # seiner tatsaechlichen Reststrecke abgeleitet (nicht als Literal
+        # dupliziert) -- dieselbe Formel, die `points_along_remaining_route`
+        # laut Spec implementiert.
+        from app.loader import load_all_trips
+        from services.trip_segments import RADAR_ZONE_MAX_POINTS, RADAR_ZONE_POINT_SPACING_KM
+
+        trip_gesund = next(t for t in load_all_trips(user_id=uid) if t.id == gesund_id)
+        _active, p, _pos = _erwartete_messposition(
+            trip_gesund, now_utc, _alarm_offset_minuten(),
+        )
+        reststrecke_km = (1.0 - p) * _active.distance_km
+        erwartete_punkte = min(
+            RADAR_ZONE_MAX_POINTS,
+            int(reststrecke_km // RADAR_ZONE_POINT_SPACING_KM) + 1,
+        )
+        assert frames.call_count == erwartete_punkte, (
+            f"AC-14: der gesunde Trip {gesund_id!r} muss ALLE erwarteten "
+            f"Punkte seiner Reststrecke ({reststrecke_km:.3f} km) abfragen — "
+            f"erwartet {erwartete_punkte} (Abstand "
+            f"{RADAR_ZONE_POINT_SPACING_KM} km, Deckel "
+            f"{RADAR_ZONE_MAX_POINTS}), erhalten {frames.call_count}. Der "
+            f"kaputte Trip {kaputt_id!r} muss dabei NULL Punkte verbraucht "
+            f"haben (s. Testvoraussetzung sent==1/mails==1 oben)."
         )
     finally:
         clean_uid(uid)

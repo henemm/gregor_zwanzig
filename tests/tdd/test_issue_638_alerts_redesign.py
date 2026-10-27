@@ -46,6 +46,7 @@ from app.trip import Stage, Trip, Waypoint
 import output.channels.telegram as telegram_mod
 
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 def _reset_alert_state(user_id: str) -> None:
@@ -190,7 +191,12 @@ def _settings(smtp_port: int) -> Settings:
         mail_to="sink@henemm.com",
         mail_from="alerts@example.com",
         telegram_bot_token="test-token",
-        telegram_chat_id="test-chat",
+        telegram_chat_id="424200",  # #1412 S4a: numerisch (AC-6)
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout verlangt
+        # TelegramOutput die Test-Chat-ID, sonst bricht der Versand ab. Explizit
+        # auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196 Klasse C).
+        telegram_test_chat_id="424200",
     )
 
 
@@ -282,7 +288,7 @@ def _briefing_config(trip_id: str) -> TripReportConfig:
     Regeln mit explizitem Kanal-Override — die einzigen, die diese
     Konfiguration bekommen — ist beides ohnehin gleichwertig.
 
-    Die Uhrzeiten setzt :func:`_trip` selbst, in der Zone der Tour
+    Die Uhrzeiten setzt :func:`_trip` selbst, in der Zone der Trip
     (``anchor_tz``) — hier waere jede feste Zone geraten.
     """
     return TripReportConfig(
@@ -319,7 +325,7 @@ def _run_alert(trip: Trip, settings: Settings, user_id: str):
     # (2) erreichen und der Testfall wuerde faelschlich fehlschlagen.
     _reset_alert_state(user_id)
 
-    service = TripAlertService(settings=settings, user_id=user_id)
+    service = TripAlertService(settings=settings, user_id=mit_profil_chat(user_id, settings))
     cached = [_data(gust_max_kmh=25.0)]   # Δ=35 > MetricCatalog-Schwelle 20
     fresh = [_data(gust_max_kmh=60.0)]
     return service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
@@ -407,7 +413,7 @@ def test_ac4_channels_survive_save_load_roundtrip(tmp_path):
     trip = _trip(rule, report_config=None)
 
     path = save_trip(trip, user_id="tdd-638-ac4", data_dir=tmp_path)
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="tdd-638-ac4")
 
     assert loaded is not None
     assert len(loaded.alert_rules) == 1
@@ -435,7 +441,7 @@ def test_ac4_legacy_rule_without_channels_defaults_to_empty(tmp_path):
         ],
     }
 
-    loaded = load_trip(legacy)
+    loaded = load_trip(legacy, user_id="default")
 
     assert loaded is not None
     assert len(loaded.alert_rules) == 1
@@ -457,8 +463,8 @@ def test_ac5_per_user_alert_channels_are_isolated(tmp_path):
     path_a = save_trip(trip_a, user_id="tdd-638-userA", data_dir=tmp_path)
     path_b = save_trip(trip_b, user_id="tdd-638-userB", data_dir=tmp_path)
 
-    loaded_a = load_trip(path_a)
-    loaded_b = load_trip(path_b)
+    loaded_a = load_trip(path_a, user_id="tdd-638-userA")
+    loaded_b = load_trip(path_b, user_id="tdd-638-userB")
 
     assert loaded_a.alert_rules[0].channels == ["telegram"]
     assert loaded_b.alert_rules[0].channels == ["email"]
@@ -522,7 +528,7 @@ def test_mixed_rules_union_both_channels(telegram_sink, smtp_refuse, tmp_path):
     # alert_daily_count.json zusaetzlich seit #1070, siehe Kommentar oben).
     _reset_alert_state("tdd-638-mixed")
 
-    service = TripAlertService(settings=_settings(smtp_refuse.port), user_id="tdd-638-mixed")
+    service = TripAlertService(settings=_settings(smtp_refuse.port), user_id=mit_profil_chat("tdd-638-mixed", _settings(smtp_refuse.port)))
     cached = [_data(gust_max_kmh=25.0)]   # Δ=35 > MetricCatalog-Schwelle 20
     fresh = [_data(gust_max_kmh=60.0)]
     result = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
@@ -582,7 +588,7 @@ def test_channel_inheritance_no_alert_rules_uses_report_config(
     # alert_daily_count.json zusaetzlich seit #1070, siehe Kommentar oben).
     _reset_alert_state("tdd-638-legacy")
 
-    service = TripAlertService(settings=_settings(smtp_refuse.port), user_id="tdd-638-legacy")
+    service = TripAlertService(settings=_settings(smtp_refuse.port), user_id=mit_profil_chat("tdd-638-legacy", _settings(smtp_refuse.port)))
     # Delta=30 km/h > Standard-Schwelle 20 km/h → Change wird erkannt
     cached = [_data(gust_max_kmh=30.0)]
     fresh = [_data(gust_max_kmh=60.0)]
@@ -615,7 +621,12 @@ def test_telegram_only_user_without_smtp_still_gets_alert(telegram_sink, tmp_pat
         mail_to="",
         mail_from="",
         telegram_bot_token="test-token",
-        telegram_chat_id="test-chat",
+        telegram_chat_id="424200",  # #1412 S4a: numerisch (AC-6)
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout verlangt
+        # TelegramOutput die Test-Chat-ID, sonst bricht der Versand ab. Explizit
+        # auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196 Klasse C).
+        telegram_test_chat_id="424200",
     )
     rule = _wind_rule(AlertSeverity.WARNING, channels=["telegram"])
     # Issue #1594: wie in AC-1 — ohne Briefing-Zeiten schwiege die Sperre den
@@ -628,7 +639,7 @@ def test_telegram_only_user_without_smtp_still_gets_alert(telegram_sink, tmp_pat
     _reset_alert_state("tdd-638-f001")
 
     from services.trip_alert import TripAlertService
-    service = TripAlertService(settings=settings, user_id="tdd-638-f001")
+    service = TripAlertService(settings=settings, user_id=mit_profil_chat("tdd-638-f001", settings))
     cached = [_data(gust_max_kmh=25.0)]   # Δ=35 > MetricCatalog-Schwelle 20
     fresh = [_data(gust_max_kmh=60.0)]
     result = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
@@ -669,7 +680,7 @@ def test_f001_all_channels_off_sends_nothing(telegram_sink, smtp_refuse, tmp_pat
     trip.report_config = report_config
 
     from services.trip_alert import TripAlertService
-    service = TripAlertService(settings=_settings(smtp_refuse.port), user_id="tdd-638-alloff")
+    service = TripAlertService(settings=_settings(smtp_refuse.port), user_id=mit_profil_chat("tdd-638-alloff", _settings(smtp_refuse.port)))
     # Delta gross genug → Change wird erkannt (Legacy-Detektor)
     cached = [_data(gust_max_kmh=30.0)]
     fresh = [_data(gust_max_kmh=60.0)]

@@ -3,10 +3,12 @@ entity_id: fix_1719_s3_aus_ist_ein_zustand
 type: module
 created: 2026-08-11
 updated: 2026-08-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, metrik-kaskade, editor, adr-0050, issue-1719]
 ---
+
+> Teilweise abgelöst durch [ADR-0095](../../adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md) (2026-10-21): die Grenze „`ChannelId` kennt drei Kanäle; Premium-SMS bekommt keinen eigenen Reiter“ (Known Limitations) ist kein Soll mehr — Premium-SMS ist der vierte gleichrangige Kanal, inklusive Alarm (CLAUDE.md, Kanäle).
 
 # #1719 Scheibe S3 — Der Editor: „Aus" ist ein Zustand, und die Zahlen sagen die Wahrheit
 

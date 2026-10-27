@@ -3,7 +3,7 @@ entity_id: fix_1425_s2b_markier_wirkung
 type: feature
 created: 2026-07-31
 updated: 2026-07-31
-status: draft
+status: implemented
 version: "1.0"
 tags: [trip, corridor-editor, metric-catalog, wertebereiche, markieren]
 ---

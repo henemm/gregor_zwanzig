@@ -33,10 +33,10 @@ Diese Charter gilt für die Web-App `gregor.zwanzig` (SvelteKit-Frontend) und ih
 |---|---|
 | Haupt-Nav-Bereiche | **Genau 4**: Startseite · Touren · Orts-Vergleich · Archiv |
 | Nav-Reihenfolge | Diese Reihenfolge ist fixiert. Keine Umsortierung. |
-| Konto-Einstellungen | Erreichbar **nur** über User-Badge unten in der Sidebar. **Nicht** in Haupt-Nav. |
+| Konto-Einstellungen | Erreichbar **nur** über das User-Badge: unten in der Sidebar (Desktop) bzw. als **Konto-Kreis** neben der Mobile-Nav. **Nicht** in Haupt-Nav. |
 | Kanal-Einstellungen | Innerhalb der Konto-Seite, keine eigene Nav-Position. |
 | Wetter | **Keine eigene Seite.** Drill-Down inline aus Trip-Detail (Etappe) oder Compare (Ort) als Slide-Panel rechts (Desktop) / Bottom-Sheet (Mobile). |
-| Mobile Nav | Bottom-Nav mit denselben 4 Bereichen. Drawer enthält Konto + Logout. |
+| Mobile Nav | Schwebende Bottom-Nav (Glas) mit denselben 4 Bereichen plus User-Badge als **Konto-Kreis** rechts daneben. Der Konto-Kreis öffnet das **Konto-Sheet**: Kanäle & Empfänger · Einstellungen · System-Status · Dunkles Design · Datenexport · Abmelden (Benachrichtigungen erst mit echtem Posteingang, #1701). **Kein Top-Balken**, kein Hamburger-Drawer (Mobile-Shell S2, PO 2026-09-19). |
 
 ---
 

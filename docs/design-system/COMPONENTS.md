@@ -15,8 +15,8 @@ Die Datei ist in 10 Kategorien gegliedert, von Brand → Atoms → Molecules →
 4.5 **Molecules** — DetailRow, Field, StagePill, ChannelRow, ChannelChip, BriefingTimelineRow, BriefingScheduleRow, ThresholdRow, Stat, AlertRow, ConfirmDialog (Atomic Design Level 2, Epic #368/372)
 5. **Feedback** — Toast, Dialog
 6. **Overlay** — DropdownMenu, Sheet, Tooltip
-7. **Mobile-Shell** — PhoneFrame, TopAppBar, BottomNav, Drawer, MInput, MBtn
-8. **Organisms** — TripHeader, TripWizardShell, AlertRulesEditor (Atomic Design Level 3, Epic #471)
+7. **Mobile-Shell** — PhoneFrame, BottomNav (+ Konto-Kreis), KontoSheet, MInput, MBtn
+8. **Organisms** — TripHeader, TripWizardShell (Atomic Design Level 3, Epic #471)
 9. **Domain-Komponenten** — App-spezifische Bausteine (Trip-, Compare-, Email-Komponenten)
 
 ## Tabellen-Konvention
@@ -126,7 +126,7 @@ Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-V
 | `<DropdownMenu>` | `align: "start" \| "end"` (default `end`), Slot `trigger`, Slot default | Popover-Menü. Outside-Click + Esc schließen. |
 | `<DropdownItem>` | `icon: string`, `danger: boolean`, `disabled: boolean`, `shortcut: string`, `onClick` | Menü-Eintrag. |
 | `<DropdownDivider>` | — | Horizontale Trennlinie. |
-| `<Sheet>` | `open`, `onClose`, `snap: "peek" \| "half" \| "full"`, `title`, `eyebrow`, Slot default, Slot `footer` | Bottom-Sheet (Mobile). Backdrop + Handle + Drag-to-Close. |
+| `<Sheet>` | `open`, `onClose`, `snap: "peek" \| "half" \| "full" \| "collapsed" \| "auto"`, `title`, `eyebrow`, Slot default, Slot `footer` | Bottom-Sheet (Mobile). Backdrop + Handle + Drag-to-Close. `auto` = inhaltshoch (Deckel 84 %), z. B. Konto-Sheet. |
 | `<Tooltip>` | `content: string`, `side: "top" \| "right" \| "bottom" \| "left"` + Slot trigger | Sparsam verwenden — bevorzugt visible Helper-Text. |
 
 ---
@@ -136,15 +136,18 @@ Siehe `frontend/src/lib/components/molecules.test.ts` für statische Quellcode-V
 | Komponente | Props | Was sie tut |
 |---|---|---|
 | `<PhoneFrame>` | `width: number` (default 375), `height: number`, `theme: "light" \| "dark"`, `time: string` + Children | Statisches Mobile-Bezel im Design-Canvas. **Nicht** im Produktiv-Code. |
-| `<MobileShell>` | `active`, `title`, `eyebrow`, `leftIcon`, `right`, Children, Footer, `drawerOpen`, `sheet`, `toast`, `onMenu` | Mobile Page-Wrapper: TopBar + Content + BottomNav. |
-| `<TopAppBar>` | `title`, `eyebrow`, `onMenu`, `leftIcon: "menu" \| "back" \| "close"`, `right`, `scrolled` | Mobile-Top-Bar. Height 56. |
-| `<BottomNav>` | `active`, `onChange` | Mobile Bottom-Nav. Height 64. Fix 4 Items. |
-| `<Drawer>` | `open`, `onClose` | Hamburger-Drawer. Konto + Logout. |
+| `<MobileShell>` | `active`, `onChange`, `showBottomNav`, `background`, Children, `drawer`, `sheet`, `toast` | Mobile Page-Wrapper: Content + BottomNav. **Kein Top-Balken** (Mobile-Shell S2). |
+| `<BottomNav>` | `active`, `onChange`, `initials`, `onKonto`, `kontoOpen` | Schwebende Glas-Bottom-Nav (Tokens `--g-nav-*`). Fix 4 Items + **Konto-Kreis** (User-Badge, 64 × 64 Glas, Avatar 36 px Akzent) rechts daneben, wenn `onKonto` gesetzt. Kein FAB (AP-012). |
+| `<KontoSheet>` | `open`, `onClose`, `initials`, `displayName`, `userId`, `darkMode`, `ontoggleDark` | Konto-Sheet aus `<Sheet snap="auto">`: Kopf (Avatar 44 px, Name, Schließen) · Kanäle & Empfänger · Einstellungen · System-Status · Dunkles Design (Switch) · Datenexport · Fuß mit Version + Abmelden. Ersetzt den Hamburger-Drawer. |
+| `<PageHeader>` | `eyebrow`, `title`, `sub`, `right`, `back: {href,label,onclick?}`, `compact` | Seitenkopf (Atom, AP-011). `back` rendert einen `<BackLink>` (Mono-Caps, 36 px Touch) **über** dem Eyebrow — Rücksprung im Inhalt statt Balken. |
+| `<EditorStickyFooter>` | `context: "route" \| "vergleich"`, `testid`, `navClearance`, Children | Geteilter Sticky-Footer der Anlege-Editoren (Weiter/Aktivieren); hält über der schwebenden Tabbar. |
 | `<MInput>` | `type`, `placeholder`, `value`, `leftIcon`, `onChange` | Mobile-Input mit Min-Height 48, Body 16 px. |
 | `<MField>` | `label`, `sub`, Children | Field-Wrapper Mobile. |
 | `<MBtn>` | `variant`, `size: "md" \| "lg" \| "xl"`, `block`, `icon`, `onClick` | Mobile-Button mit Min-Height 48 (lg). |
 | `<MTab>` | `items`, `active`, `onChange`, `scrollable: boolean` | Tab-Bar Mobile (scrollbar wenn nötig). |
-| `<ScreenScroll>` | `padding`, `bg`, Children | Scrollbarer Mobile-Content-Bereich zwischen TopBar und BottomNav. |
+| `<MTabBar>` | `items: {value, label, badge?, testid?}[]`, `active`, `onChange(v)`, `ariaLabel`, `size?: "md" \| "sm"` | Geteilter Tab-Band (Mobile Usability Paket 2): Band + Fade <900px, `scrollIntoView` positioniert den aktiven Tab (Mount + Wechsel), WAI-ARIA (`tablist`/`tab`, `aria-selected`, roving `tabindex`, ←/→), Trigger ≥44px. Desktop: `md` = Trip-Unterline (Accent-Badges), `sm` = Compare-Reihe (13px/12-16px, inaktiv `--g-ink-3`, Badges neutral). Hält den `data-slot="segmented"`-Vertrag. Physisch `mobile/MTabBar.svelte`. |
+| `<StageCardM>` | `stage`, `index`, `risk?`, `open?`, `activityType?`, `onDateChange?`, `onStartTimeChange?`, `isFirst?` | Vertikale Etappen-Karte der mobilen Listen-Ansicht (Etappen-Tab, Listen-only nach PO-Entscheid F5 2026-09-22). Reine Präsentation: DragHandle + SortableList verdrahtet der Aufrufer (ADR-0024); `open` klappt die Wegpunkt-Zeilen auf (F7). Editier-Modus (#2496): mit `onDateChange`/`onStartTimeChange` rendert der Kartenkopf kompakte inline-Datums-/Zeitfelder (Label-los, Tap/Enter stoppt den Karten-Toggle); ohne Callbacks statisches Datum wie bisher. `isFirst` markiert die Trip-Start-Karte. Physisch `mobile/StageCardM.svelte`. |
+| `<ScreenScroll>` | `padding`, `bg`, Children | Scrollbarer Mobile-Content-Bereich über der BottomNav. |
 
 ---
 
@@ -156,7 +159,6 @@ Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/compo
 |---|---|---|---|
 | `<TripHeader>` | `$lib/components/organisms` | `trip`, `onEdit` | Trip-Kopfzeile mit Trip-Name, Statistiken (Etappen, Wegpunkte, Distanz), Edit-Button. Physisch in `trip-detail/TripHeader.svelte`. |
 | `<TripWizardShell>` | `$lib/components/organisms` | `step: 1-4`, `onNext`, `onPrev`, `onClose`, Children | Wizard-Hülle für Trip-Erstellung/Bearbeitung (Stepper + Step-Content + Footer-Navigation). Physisch in `trip-wizard/TripWizardShell.svelte`. |
-| `<AlertRulesEditor>` | `$lib/components/organisms` | `rules: AlertRule[]`, `onChange`, `onAdd`, `onRemove` | Alert-Konfiguration: Alerttyp (Lightning, Rain, Terrain, etc.), Schwellwert, Aktivierung. Physisch in `alert-rules-editor/AlertRulesEditor.svelte`. |
 | `<OutputLayoutEditor>` | `$lib/components/organisms` | `layout: OutputLayout`, `onChange` | Konfigurationsoberfläche für die Briefing-Ausgabe-Formatierung (Kanal-Reihenfolge, Metrik-Anzahl pro Kanal). Physisch in `shared/OutputLayoutEditor.svelte` (Issue #475). |
 | `<WeatherMetricsTab>` | `$lib/components/organisms` | `trip`, `stage?` | Tab-Inhalt mit Wetter-Metrik-Auswahl. Physisch in `shared/WeatherMetricsTab.svelte` (geteilt Trip/Compare). Bis #1719 S3 (2026-08-11) lief die Kanal-Vorschau (E-Mail/Telegram/SMS) über die eingebettete `WeatherV2MailPreview.svelte` — diese Live-Vorschau ist auf PO-Entscheid ersatzlos entfernt; der Tab zeigt seither nur noch Kanal-Wähler + Reihenfolge ohne Vorschau-Spalte (`docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md`). |
 | `<MetricGroup>` | `$lib/components/organisms` | `group`, `metrics`, `onChange` | Gruppen-Sektion in der Metrik-Auswahl. Physisch in `trip-detail/MetricGroup.svelte`. |
@@ -183,9 +185,6 @@ Diese sind nicht Foundation, aber kanonisch:
 | `<WxDrillDownPanel>` | Slide-Panel (Desktop) / Bottom-Sheet (Mobile) für Wetter aus Trip-Detail / Compare. |
 | `<TripStageCard>` | Etappen-Zeile in Trip-Detail. |
 | `<MapEditor>` | Karten-Editor für Wegpunkte. Keine Lat/Lon-Inputs. |
-| `<MapControl>` | Neutraler Karten-Werkzeug-Cluster auf Vollbild-Karten. `tools: string[]` (z.B. `['add-waypoint', 'map-style', 'search']`), `position: 'top-right'`. 44×44 px je Button, `--g-card` Hintergrund, kein Akzent. **Kein FAB** — siehe AP-012. |
-| `<ProfileSheetEmbedded>` | Bottom-Sheet im Wegpunkt-Editor (Mobile). Snaps: `peek: 92px`, `half: 320px`, `full: 540px`. Enthält `<EditorProfileSVG>` + Wegpunkt-Liste. |
-| `<EditorProfileSVG>` | Vereinfachtes Höhenprofil für Mobile-Bottom-Sheet. `width: 343px`, `height: 70px`. Synchron mit Karte via `selectedIndex`. |
 | `<EtappenStrip>` | Horizontaler Etappen-Umschalter im Editor (Drag-Sort + Pause-Insert). 70 px hoch, `StageCard` je Etappe. Sitzt direkt unter der Tab-Leiste. |
 | `<CompareMatrix>` | Kachel-Grid mit Score, Metrics, Winner-Highlight. |
 | `<CompareLocationsRail>` | Linke 280-px-Sidebar mit Gruppen + Orten. |
@@ -222,6 +221,11 @@ Neue Komponente braucht:
 
 | Version | Datum | Anmerkung |
 |---|---|---|
+| v1.7 | 2026-10-05 | `StageCardM` Editier-Modus ergänzt (#2496: inline-Datums-/Zeitfelder via `onDateChange`/`onStartTimeChange`, statisch ohne; Spec `mobile_stage_datum_zeit_edit`) |
+| v1.6 | 2026-10-03 | `MapControl`, `ProfileSheetEmbedded`, `EditorProfileSVG` entfernt — keine Aufrufer mehr seit PO-Entscheid F5 (Karte/Höhenprofil entfallen auf Mobile, Spec `mobile_stages_tab_listen_only`) |
+| v1.5 | 2026-09-26 | `MTabBar` ergänzt (Mobile Usability Paket 2, geteilter Tab-Band mit scrollIntoView + A11y; Spec `mobile_tab_leisten_mtabbar`) |
+| v1.4 | 2026-09-23 | `StageCardM` ergänzt (Mobile Usability Paket 1, Listen-only Etappen-Tab; Spec `mobile_stages_tab_listen_only`) |
+| v1.3 | 2026-09-19 | Mobile-Shell S2: `TopAppBar`/Hamburger-`Drawer` raus, `BottomNav` mit Konto-Kreis, `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, `Sheet snap="auto"` |
 | v1.2 | 2026-06-02 | MapControl, ProfileSheetEmbedded, EditorProfileSVG, EtappenStrip aus Wegpunkt-Editor-Handoff (#503) ergänzt |
 | v1.1 | 2026-05-31 | Molecules-Sektion (Epic #368/372) + ConfirmDialog (Issue #478) hinzugefügt; bestehende 10 Molecules dokumentiert |
 | v1.0 | 2026-05-21 | Initialer Katalog — Runde 1 |

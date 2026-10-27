@@ -51,8 +51,10 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 from services.notification_service import NotificationService
+from tests.helpers.nutzer_tier import nutzer_mit_tier
 from services.official_alerts.models import OfficialAlert
 from services.trip_alert import TripAlertService
+from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
 
 
 # ---------------------------------------------------------------------------
@@ -221,8 +223,17 @@ def _settings(*, sms_port: int) -> Settings:
     return Settings(
         telegram_bot_token="test-bot-token",
         telegram_chat_id="99999",
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout schaltet
+        # TelegramOutput auf die Test-Chat-ID um bzw. bricht ohne sie ab.
+        # Explizit auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196).
+        telegram_test_chat_id="99999",
         sms_gateway_url=f"http://127.0.0.1:{sms_port}/api/sms",
         seven_api_key="test-stub-key",
+        # Issue #1476: seven.io-Kanaele verlangen aus einem Testlauf den
+        # Sandbox-Key; identisch zum Stub-Key, damit kein GZ_SEVEN_SANDBOX_KEY
+        # aus einer Host-.env noetig ist (#1196).
+        seven_sandbox_key="test-stub-key",
         sms_to="+49000000000",
         sms_from=None,
     )
@@ -241,7 +252,7 @@ class TestAC3DeviationAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = TripAlertService(settings=settings, user_id="tdd-1260-alert-a")
+            svc = TripAlertService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-alert-a", settings))
 
             # Telegram-only (kein SMS-Tier-Gate); Style aus dem Trip aufgelöst.
             trip = _make_trip("kurzform", send_sms=False)
@@ -272,7 +283,7 @@ class TestAC3DeviationAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = TripAlertService(settings=settings, user_id="tdd-1260-alert-b")
+            svc = TripAlertService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-alert-b", settings))
 
             trip = _make_trip("rich", send_sms=False)
             svc._send_alert(trip, [_make_segment_data()], [_make_change()])
@@ -293,7 +304,7 @@ class TestAC3DeviationAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-alert-c")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(nutzer_mit_tier("tdd-1260-alert-c"), settings))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: send_deviation_alert kennt telegram_style noch nicht → TypeError.
@@ -332,7 +343,7 @@ class TestAC4OfficialAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-off-a")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(nutzer_mit_tier("tdd-1260-off-a"), settings))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: send_official_alert kennt telegram_style noch nicht → TypeError.
@@ -379,7 +390,7 @@ class TestAC4OfficialAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = NotificationService(settings=settings, user_id="tdd-1260-off-b")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-off-b", settings))
 
             trip = _make_trip("rich", send_sms=False)
             svc.send_official_alert(
@@ -420,7 +431,7 @@ class TestGuardCompareDeviationUnaffected:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = NotificationService(settings=settings, user_id="tdd-1260-cmp")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-cmp", settings))
 
             point = GPXPoint(lat=42.2, lon=9.05, elevation_m=400.0)
             svc.send_multi_location_deviation_alert(
@@ -503,7 +514,7 @@ class TestIssue2018AddendumReachesKurzstilTelegram:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-2018-b5")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(nutzer_mit_tier("tdd-2018-b5"), settings))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: `RadarAlertRequest` kennt `addendum_reference` nicht.
@@ -557,7 +568,7 @@ class TestIssue2018AddendumReachesKurzstilTelegram:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-2018-b10")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(nutzer_mit_tier("tdd-2018-b10"), settings))
 
             trip = _make_trip("kurzform", send_sms=True)
             svc.send_radar_alert(

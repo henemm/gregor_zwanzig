@@ -1,3 +1,10 @@
+---
+entity_id: fix_1429_wertebereich_aggregation_label
+type: fast
+created: 2026-07-30
+status: implemented
+---
+
 # Mini-Spec: Trip-Wertebereiche — Min/Max-Unterscheidung bei geteiltem Katalog-Label
 
 Issue: #1429

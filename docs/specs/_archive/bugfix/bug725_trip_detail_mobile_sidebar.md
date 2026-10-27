@@ -3,7 +3,7 @@ entity_id: bug725_trip_detail_mobile_sidebar
 type: bugfix
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, layout, sidebar, mobile, responsive, data-integrity]
 ---

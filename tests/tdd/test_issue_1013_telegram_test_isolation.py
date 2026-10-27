@@ -20,11 +20,48 @@ import pytest
 
 from tests.tdd._telegram_live_fixture import ensure_test_user_with_active_trip
 
+# AC-6 (#2226): strukturell relativ zu DIESER Testdatei aufgeloest, NICHT
+# ueber app.loader/get_data_root() (dessen _DATA_ROOT zeigt zur Testzeit
+# selbst auf eine isolierte Wegwerf-Wurzel).
+#
+# WICHTIG (Adversary-Vorabpruefung, #2226): die untenstehende Zusatzassertion
+# gegen _REPO_DATA_USERS_ROOT ist in test_fixture_guard_raises_outside_
+# staging_and_creates_no_prod_dir NICHT "strikt staerker" als die bestehende
+# tmp_path-Assertion -- sie ist dort zahnlos. Der Test macht
+# monkeypatch.chdir(tmp_path); data_dir="data" resolved damit zu
+# tmp_path/data, der GZ_ENV-Guard in ensure_test_user_with_active_trip()
+# wirft VOR jedem Schreibzugriff. Der echte Baum wird von diesem Test also
+# per Konstruktion nie erreicht, egal ob der Guard oder die zugrundeliegende
+# Fixture spaeter regressieren -- pytest.raises(RuntimeError) faengt jede
+# Guard-Regression zuerst, und eine Fixture-Regression (Schreibzugriff zeigt
+# wieder auf den echten Baum statt auf data_dir) bleibt fuer DIESEN Test
+# unsichtbar (empirisch mit einer Mutations-Gegenprobe verifiziert: Aufruf-
+# Ziel in ensure_test_user_with_active_trip() testweise auf einen
+# repo-root-abgeleiteten Pfad umgebogen -- dieser Test blieb gruen, weil er
+# wegen des fruehen RuntimeError nie bis zum Schreibzugriff kommt; zwei
+# ANDERE Tests in dieser Datei, die den Guard legitim passieren, wurden
+# durch dieselbe Mutation rot).
+#
+# Die Assertion bleibt trotzdem als Verteidigung in der Tiefe stehen (sie
+# kostet nichts und deckt ab, falls dieser Test je ohne chdir liefe), aber
+# die eigentliche Deckung fuer "ein Schreibzugriff ausserhalb von
+# app.loader landet im echten Baum" liefert der session-weite Waechter aus
+# AC-5 (tests/tdd/test_data_root_isolation_scopes.py), nicht diese Zeile.
+_REPO_DATA_USERS_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
-def _write_user(data_dir: Path, user_id: str, chat_id: str = "", mail_to: str = "") -> None:
+
+def _write_user(
+    data_dir: Path, user_id: str, chat_id: str = "", mail_to: str = "",
+    email_verified_at: str = "", is_test_user: bool = False,
+) -> None:
     user_dir = data_dir / "users" / user_id
     user_dir.mkdir(parents=True, exist_ok=True)
     profile = {"id": user_id, "telegram_chat_id": chat_id, "mail_to": mail_to}
+    if email_verified_at:
+        profile["email_verified_at"] = email_verified_at
+    if is_test_user:
+        # Issue #2152: Testkonto-Status kommt aus dem Profilfeld, nicht aus dem Namen.
+        profile["is_test_user"] = True
     (user_dir / "user.json").write_text(json.dumps(profile), encoding="utf-8")
 
 
@@ -44,6 +81,15 @@ def test_fixture_guard_raises_outside_staging_and_creates_no_prod_dir(tmp_path, 
         ensure_test_user_with_active_trip(chat_id="123456", data_dir="data")
 
     assert not (tmp_path / "data" / "users" / "tg-live-e2e").exists()
+    # AC-6 (#2226): Verteidigung in der Tiefe -- dieser Test erreicht den
+    # echten Baum wegen monkeypatch.chdir(tmp_path) + fruehem Guard-Raise
+    # per Konstruktion nie (s. Moduldocstring oben). Die eigentliche
+    # Deckung fuer CWD-relative/hartkodierte Schreibzugriffe in den echten
+    # Baum liefert der session-weite Waechter aus AC-5.
+    assert not (_REPO_DATA_USERS_ROOT / "tg-live-e2e").exists(), (
+        f"Fixture-Guard hat trotz RuntimeError eine Spur unter dem ECHTEN "
+        f"{_REPO_DATA_USERS_ROOT} hinterlassen."
+    )
 
 
 def test_fixture_guard_allows_explicit_tmp_path(tmp_path, monkeypatch):
@@ -92,8 +138,8 @@ def test_lookup_by_telegram_chat_id_prefers_real_user_over_test_user(tmp_path):
 
     chat_id = "999888"
     _write_user(tmp_path, "tg-live-e2e", chat_id=chat_id)
-    _write_user(tmp_path, "test_aaa", chat_id=chat_id)
-    _write_user(tmp_path, "tdd-zzz", chat_id=chat_id)
+    _write_user(tmp_path, "test_aaa", chat_id=chat_id, is_test_user=True)
+    _write_user(tmp_path, "tdd-zzz", chat_id=chat_id, is_test_user=True)
     _write_user(tmp_path, "henning", chat_id=chat_id)
 
     result = lookup_user_by_telegram_chat_id(chat_id, data_dir=str(tmp_path))
@@ -104,14 +150,20 @@ def test_lookup_by_telegram_chat_id_prefers_real_user_over_test_user(tmp_path):
 def test_lookup_by_email_prefers_real_user_over_test_user(tmp_path):
     """GIVEN echter User (henning) und mehrere Test-User mit identischer mail_to
     WHEN lookup_user_by_email(email) aufgerufen wird
-    THEN wird deterministisch die echte User-ID zurückgegeben."""
+    THEN wird deterministisch die echte User-ID zurückgegeben.
+
+    Alle Profile bestaetigt: seit Issue #2147 Scheibe B2 ordnet
+    lookup_user_by_email nur ueber eine BESTAETIGTE wirksame Adresse zu —
+    sonst lieferte der Lookup None und der Vorrang echt-vor-Test bliebe
+    ungeprueft."""
     from app.loader import lookup_user_by_email
 
     email = "henning@henemm.com"
-    _write_user(tmp_path, "tg-live-e2e", mail_to=email)
-    _write_user(tmp_path, "test_aaa", mail_to=email)
-    _write_user(tmp_path, "tdd-zzz", mail_to=email)
-    _write_user(tmp_path, "henning", mail_to=email)
+    verified = "2026-01-01T00:00:00Z"
+    _write_user(tmp_path, "tg-live-e2e", mail_to=email, email_verified_at=verified)
+    _write_user(tmp_path, "test_aaa", mail_to=email, email_verified_at=verified, is_test_user=True)
+    _write_user(tmp_path, "tdd-zzz", mail_to=email, email_verified_at=verified, is_test_user=True)
+    _write_user(tmp_path, "henning", mail_to=email, email_verified_at=verified)
 
     result = lookup_user_by_email(email, data_dir=str(tmp_path))
 
@@ -123,19 +175,34 @@ def test_lookup_by_email_prefers_real_user_over_test_user(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_central_test_user_predicate_classifies_known_ids_correctly():
-    """GIVEN test_xyz, tdd-123, tg-live-e2e sowie henning, steffi, admin, default
+def test_central_test_user_predicate_classifies_known_ids_correctly(tmp_path):
+    """GIVEN test_xyz, tdd-123 MIT is_test_user:true im Profil, tg-live-e2e ohne
+    Flag, sowie henning, steffi, admin, default ohne Flag
     WHEN das zentrale Prädikat is_test_user_id() angewendet wird
-    THEN klassifiziert es Test-User als True und echte User als False."""
+    THEN klassifiziert es Test-User als True und echte User als False.
+
+    Issue #2152 (AC-10): entscheidend ist NUR das Profilfeld bzw. die
+    Fixture-Konstante — dieselben Namen OHNE Flag sind echte Nutzer."""
     from app.config import is_test_user_id
 
-    assert is_test_user_id("test_xyz") is True
-    assert is_test_user_id("tdd-123") is True
-    assert is_test_user_id("tg-live-e2e") is True
-    assert is_test_user_id("henning") is False
-    assert is_test_user_id("steffi") is False
-    assert is_test_user_id("admin") is False
-    assert is_test_user_id("default") is False
+    _write_user(tmp_path, "test_xyz", is_test_user=True)
+    _write_user(tmp_path, "tdd-123", is_test_user=True)
+    for uid in ("henning", "steffi", "admin", "default"):
+        _write_user(tmp_path, uid)
+
+    assert is_test_user_id("test_xyz", data_dir=str(tmp_path)) is True
+    assert is_test_user_id("tdd-123", data_dir=str(tmp_path)) is True
+    assert is_test_user_id("tg-live-e2e", data_dir=str(tmp_path)) is True
+    assert is_test_user_id("henning", data_dir=str(tmp_path)) is False
+    assert is_test_user_id("steffi", data_dir=str(tmp_path)) is False
+    assert is_test_user_id("admin", data_dir=str(tmp_path)) is False
+    assert is_test_user_id("default", data_dir=str(tmp_path)) is False
+
+    # Ohne Flag entscheidet der Name nicht mehr (Bug #2152).
+    _write_user(tmp_path, "test_xyz")
+    _write_user(tmp_path, "tdd-123")
+    assert is_test_user_id("test_xyz", data_dir=str(tmp_path)) is False
+    assert is_test_user_id("tdd-123", data_dir=str(tmp_path)) is False
 
 
 def test_central_test_user_predicate_is_case_insensitive_for_fixture_id():
@@ -151,10 +218,17 @@ def test_central_test_user_predicate_is_case_insensitive_for_fixture_id():
 
 
 def test_is_test_user_delegates_to_central_predicate():
-    """GIVEN dieselben User-IDs (inkl. design_tdd)
+    """GIVEN dieselben User-IDs (inkl. design_tdd), geflaggte Profile unter der
+    konfigurierten Datenwurzel (get_data_dir, Isolation #1133)
     WHEN Settings()._is_test_user(uid) und is_test_user_id(uid) verglichen werden
     THEN liefern beide identische Ergebnisse (Delegation, keine Logik-Duplizierung)."""
     from app.config import Settings, is_test_user_id
+    from app.loader import get_data_root
+
+    root = get_data_root()
+    _write_user(root, "test_xyz", is_test_user=True)
+    _write_user(root, "tdd-123", is_test_user=True)
+    _write_user(root, "design_tdd")
 
     settings = Settings()
     ids = [
@@ -164,6 +238,8 @@ def test_is_test_user_delegates_to_central_predicate():
 
     for uid in ids:
         assert settings._is_test_user(uid) == is_test_user_id(uid), uid
+    assert settings._is_test_user("test_xyz") is True
+    assert settings._is_test_user("design_tdd") is False
 
 
 # ---------------------------------------------------------------------------

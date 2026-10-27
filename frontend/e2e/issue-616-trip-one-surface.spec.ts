@@ -22,13 +22,14 @@ const DESKTOP = { width: 1440, height: 900 };
 
 // Issue #1231 Slice 6: alerts-Label erneut umbenannt ("Alerts" -> "Wertebereiche").
 const CANONICAL_TABS: ReadonlyArray<[string, string]> = [
-	['overview', 'Übersicht'],
-	['stages', 'Etappen & Wegpunkte'],
-	['weather', 'Wetter-Metriken'],
-	['briefings', 'Versand'],
-	['alerts', 'Wertebereiche'],
-	['preview', 'Vorschau']
+	['uebersicht', 'Übersicht'],
+	['etappen', 'Etappen & Wegpunkte'],
+	['wetter-metriken', 'Wetter-Metriken'],
+	['wertebereiche', 'Wertebereiche'],
+	['alarme', 'Alarme']
 ];
+// Issue #1743: Reiter `versand`/`vorschau` entfallen — Versand steht im Reiter
+// Wetter-Metriken (`#versand`).
 
 test.describe('Issue #616 — EINE Trip-Seite', () => {
 	test.beforeEach(async ({ page }) => {
@@ -78,18 +79,20 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 8000 });
 	});
 
-	// ─── AC-3: kanonisches 6-Tab-Set in Reihenfolge ───
-	test('AC-3: Tab-Leiste zeigt exakt 6 Tabs in kanonischer Reihenfolge', async ({ page }) => {
+	// ─── AC-3: kanonisches 5-Tab-Set (Issue #1743) ───
+	test('AC-3: Tab-Leiste zeigt die 5 kanonischen Tabs, kein Versand/Vorschau', async ({ page }) => {
 		/**
 		 * GIVEN: die kanonische Trip-Oberfläche
 		 * WHEN:  die Tab-Leiste gerendert ist
-		 * THEN:  genau 6 Tabs: Übersicht · Etappen & Wegpunkte · Wetter-Metriken ·
-		 *        Versand · Wertebereiche · Vorschau (in dieser Reihenfolge).
+		 * THEN:  5 Tabs: Übersicht · Etappen & Wegpunkte · Wetter-Metriken ·
+		 *        Wertebereiche · Alarme; kein Reiter Versand/Vorschau.
 		 */
 		await page.goto(DETAIL_URL);
 		for (const [value, label] of CANONICAL_TABS) {
 			await expect(page.getByTestId(`trip-detail-tab-${value}`)).toContainText(label);
 		}
+		await expect(page.getByTestId('trip-detail-tab-versand')).toHaveCount(0);
+		await expect(page.getByTestId('trip-detail-tab-vorschau')).toHaveCount(0);
 	});
 
 	// ─── AC-4: Übersicht = Lese-Cockpit, "Bearbeiten →" wechselt zum Editor ───
@@ -106,7 +109,7 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		await page.goto(DETAIL_URL);
 		await expect(page.getByTestId('hub-overview')).toBeVisible();
 		await page.getByRole('button', { name: /Im Editor öffnen/i }).first().click();
-		await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible({ timeout: 8000 });
+		await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 8000 });
 	});
 
 	// ─── AC-5: Briefing-Zeitplan ist ein ECHTER Editor (kein Mockup) ───
@@ -122,8 +125,9 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		 *        nicht mehr (Auto-Save via saveController) — auf den globalen
 		 *        Save-Indikator umgestellt statt einen toten Button zu klicken.
 		 */
-		await page.goto(`${DETAIL_URL}?tab=briefings`);
-		const morning = page.getByTestId('report-morning-time');
+		// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken.
+		await page.goto(`${DETAIL_URL}?tab=wetter-metriken#versand`);
+		const morning = page.getByTestId('versand-abschnitt').getByTestId('report-morning-time');
 		await expect(morning).toBeVisible({ timeout: 8000 });
 		// Issue #1379: Stunden-Auswahlliste — Minuten sind nicht mehr waehlbar
 		// (der Server kappte sie seit #1280 ohnehin auf die volle Stunde).
@@ -178,18 +182,18 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		 * THEN:  CorridorEditor (context="route") vorhanden — keine Regression
 		 *        durch die Konsolidierung.
 		 */
-		await page.goto(`${DETAIL_URL}?tab=alerts`);
+		await page.goto(`${DETAIL_URL}?tab=wertebereiche`);
 		await expect(page.getByTestId('corridor-editor-route')).toBeVisible({ timeout: 8000 });
 	});
 
 	// ─── AC-8: Terminologie Trip · Etappe · Wegpunkt ───
-	test('AC-8: keine "Tour"/"Waypoint"-Terminologie auf der Trip-Oberfläche sichtbar', async ({
+	test('AC-8: keine "Trip"/"Waypoint"-Terminologie auf der Trip-Oberfläche sichtbar', async ({
 		page
 	}) => {
 		/**
 		 * GIVEN: die kanonische Trip-Oberfläche (alle Tabs)
 		 * WHEN:  der sichtbare Text gelesen wird
-		 * THEN:  kein "Tour"/"Reise"/"Waypoint" im sichtbaren UI.
+		 * THEN:  kein "Trip"/"Reise"/"Waypoint" im sichtbaren UI.
 		 */
 		await page.goto(DETAIL_URL);
 		await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();

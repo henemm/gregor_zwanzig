@@ -14,7 +14,21 @@ import (
 
 const version = "0.1.0"
 
-func HealthHandler(pythonURL string, gitCommit string) http.HandlerFunc {
+// Issue #2124: Zeitgrenzen-Kette Python-Lauf < Go-Client < nginx.
+// sendProxyTimeout gilt fuer Trip- UND Compare-Versand. nginxProxyReadTimeout
+// spiegelt proxy_read_timeout/proxy_send_timeout in `location /api/` der vhosts
+// (henemm-infra/nginx/*.conf). Paket-var, damit Tests den Wirkort pruefen koennen.
+var sendProxyTimeout = 300 * time.Second
+
+const nginxProxyReadTimeout = 330 * time.Second
+
+// stagesWeatherProxyTimeout: Wetterabruf (Lesezugriff), Issue #2124 AC-9.
+var stagesWeatherProxyTimeout = 120 * time.Second
+
+// HealthHandler liefert den Gesundheitsstatus. rpID ist die effektive
+// Passkey-RP-ID der real gebauten WebAuthn-Instanz (Issue #2130) — der
+// Post-Deploy-Selbsttest haelt sie gegen den Produktions-Hostnamen.
+func HealthHandler(pythonURL string, gitCommit string, rpID string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{Timeout: 2 * time.Second}
 		pythonStatus := "ok"
@@ -34,10 +48,11 @@ func HealthHandler(pythonURL string, gitCommit string) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
-			"status":      status,
-			"version":     version,
-			"python_core": pythonStatus,
-			"commit":      gitCommit,
+			"status":        status,
+			"version":       version,
+			"python_core":   pythonStatus,
+			"commit":        gitCommit,
+			"webauthn_rpid": rpID,
 		})
 	}
 }
@@ -192,7 +207,7 @@ func LoadedTripProxyHandler(pythonURL string) http.HandlerFunc {
 // Python core's /api/_internal/trips/{id}/stages-weather endpoint. The trip
 // ID is extracted via chi.URLParam; the client-supplied user_id is discarded
 // and the authenticated user_id from the auth context is injected instead
-// (anti-spoofing). Timeout 60s — the weather fetch spans multiple stages.
+// (anti-spoofing). Timeout stagesWeatherProxyTimeout (120s) — the weather fetch spans multiple stages.
 // Spec: docs/specs/modules/stage_weather_go_proxy.md (Issue #1212, Slice R2).
 func StagesWeatherProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -200,7 +215,45 @@ func StagesWeatherProxyHandler(pythonURL string) http.HandlerFunc {
 		query := appendUserID("", middleware.UserIDFromContext(r.Context()))
 		url := pythonURL + "/api/_internal/trips/" + id + "/stages-weather?" + query
 
-		client := &http.Client{Timeout: 60 * time.Second}
+		client := &http.Client{Timeout: stagesWeatherProxyTimeout}
+		resp, err := client.Get(url)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			return
+		}
+		defer resp.Body.Close()
+
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "application/json"
+		}
+		w.Header().Set("Content-Type", ct)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}
+}
+
+// NextBriefingsProxyHandler proxies GET /api/next-briefings to the Python core
+// (GET /api/_internal/next-briefings). Issue #1969: user_id comes ONLY from the
+// auth context (appendUserID overwrites a client-supplied user_id); the
+// optional ?trip_id= / ?preset_id= filters pass through. Without auth context
+// the request is rejected with 401 BEFORE any upstream call — appendUserID
+// would otherwise forward the client query unchanged (never "default").
+// Spec: docs/specs/modules/feat_1969_naechstes_briefing.md
+func NextBriefingsProxyHandler(pythonURL string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		uid := middleware.UserIDFromContext(r.Context())
+		if uid == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error":"unauthorized"}`))
+			return
+		}
+		url := pythonURL + "/api/_internal/next-briefings?" + appendUserID(r.URL.RawQuery, uid)
+
+		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Get(url)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -254,84 +307,23 @@ func ValidatorFormatMetricProxyHandler(pythonURL string) http.HandlerFunc {
 // SendTripReportProxyHandler proxies POST /api/trips/{id}/send.
 // Trip ID via chi.URLParam, user_id from auth context appended to query.
 // Spec: docs/specs/modules/issue_695_test_briefing_send.md
+// Issue #2280 AC-13: Alt-Route, Delegate auf forwardSend (send_proxy.go);
+// ohne ID-Validierung (Bestand), Default report_type=evening setzt Python.
 func SendTripReportProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
-		url := pythonURL + "/api/scheduler/trips/" + id + "/send"
-		if query != "" {
-			url += "?" + query
-		}
-
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, nil)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"proxy_error"}`))
-			return
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		// Issue #1756 (AC-8): 120s -> 300s, der reguläre Erfolgsfall
-		// (vollständiger Mehrtages-Ausblick) braucht 3-4 Minuten.
-		client := &http.Client{Timeout: 300 * time.Second}
-		resp, err := client.Do(req)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
-			return
-		}
-		defer resp.Body.Close()
-
-		ct := resp.Header.Get("Content-Type")
-		if ct == "" {
-			ct = "application/json"
-		}
-		w.Header().Set("Content-Type", ct)
-		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
+		forwardSend(w, r, pythonURL+"/api/scheduler/trips/"+id+"/send", r.URL.RawQuery)
 	}
 }
 
 // AlertPreviewProxyHandler proxies POST /api/trips/{id}/alert-preview.
 // Trip ID via chi.URLParam, user_id from auth context appended to query.
 // Spec: docs/specs/modules/issue_221_validator_observability_endpoints.md.
+// Issue #2283 AC-16: Alt-Route, Delegate auf forwardPreview (preview_proxy.go).
 func AlertPreviewProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		query := appendUserID(r.URL.RawQuery, middleware.UserIDFromContext(r.Context()))
-		url := pythonURL + "/api/trips/" + id + "/alert-preview"
-		if query != "" {
-			url += "?" + query
-		}
-
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"proxy_error"}`))
-			return
-		}
-		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
-
-		client := &http.Client{Timeout: 30 * time.Second}
-		resp, err := client.Do(req)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
-			return
-		}
-		defer resp.Body.Close()
-
-		ct := resp.Header.Get("Content-Type")
-		if ct == "" {
-			ct = "application/json"
-		}
-		w.Header().Set("Content-Type", ct)
-		w.WriteHeader(resp.StatusCode)
-		io.Copy(w, resp.Body)
+		forwardPreview(w, r, http.MethodPost, pythonURL+"/api/trips/"+id+"/alert-preview", previewProxyTimeout)
 	}
 }
 

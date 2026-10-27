@@ -21,8 +21,8 @@
 	// iconPx exakt nach brand-kit.jsx (Claude-Design-Grundgesetz, 1:1): sm 20 / md 26 / lg 34.
 	const SIZES: Record<string, SizeSpec> = {
 		sm: { row: 14, sub: 8, gap: 2, iconGap: 8, iconPx: 20 },
-		md: { row: 18, sub: 9, gap: 3, iconGap: 10, iconPx: 26 },
-		lg: { row: 24, sub: 10, gap: 4, iconGap: 14, iconPx: 34 }
+		md: { row: 18, sub: 11, gap: 3, iconGap: 10, iconPx: 26 },
+		lg: { row: 24, sub: 11, gap: 4, iconGap: 14, iconPx: 34 }
 	};
 	// Fallback auf md bei unbekanntem size.
 	const s = $derived(SIZES[size] ?? SIZES.md);

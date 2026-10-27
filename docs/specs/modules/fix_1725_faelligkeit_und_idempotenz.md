@@ -3,7 +3,7 @@ entity_id: fix_1725_faelligkeit_und_idempotenz
 type: bugfix
 created: 2026-08-11
 updated: 2026-08-11
-status: approved
+status: implemented
 workflow: fix-1725-faelligkeit-idempotenz
 version: "1.0"
 tags: [issue-1725, epic-1722, timezone, adr-0051, adr-0044, scheduler, briefing, idempotenz]
@@ -301,51 +301,51 @@ das Ergebnis als **ein** Commit. Begründung:
 
 ## Acceptance Criteria
 
-- **AC-1 (Frühjahrs-Umstellung — Slot fällt nicht mehr aus):** Given ein Trip in
+- **AC-1:** (Frühjahrs-Umstellung — Slot fällt nicht mehr aus) Given ein Trip in
   `Europe/Paris` mit Morgen-Briefing 02:00 und ein Sammellauf am 29.03.2026, an dem die
   Ortsstunde 02 nicht existiert / When der Versandlauf den Ortstag abschreitet / Then wird der
   Trip **genau einmal** als fällig gesammelt (bei Ortsstunde 03, weil `3 >= 2 und 3 < 5`) —
   heute entfällt der Versand ersatzlos.
   - Test: T1 in `test_briefing_slot_idempotenz.py`.
 
-- **AC-2 (Herbst-Umstellung — keine Doppelzustellung):** Given derselbe Trip an einem
+- **AC-2:** (Herbst-Umstellung — keine Doppelzustellung) Given derselbe Trip an einem
   Sammellauf am 25.10.2026, an dem die Ortsstunde 02 zweimal existiert / When beide Vorkommen
   der Ortsstunde 02 im Lauf durchschritten werden / Then wird der Trip **genau einmal** als
   fällig markiert — das erste Vorkommen setzt den Vermerk, das zweite wird durch ihn gefiltert;
   heute geht das Briefing zweimal raus.
   - Test: T2.
 
-- **AC-3 (Normaler Tag — nur die konfigurierte Stunde trifft):** Given ein Trip mit
+- **AC-3:** (Normaler Tag — nur die konfigurierte Stunde trifft) Given ein Trip mit
   Morgen-Briefing 07:00 an einem Tag ohne Zeitumstellung / When jede der 24 Ortsstunden dieses
   Tages einzeln durchlaufen wird / Then ist der Trip in genau der Stunde fällig, in der die
   Ortsstunde 07 erreicht wird, und in keiner der übrigen 23.
   - Test: T3.
 
-- **AC-4 (Nachhol-Fenster — beide Grenzen zugleich):** Given Slot-Stunde H fällt aus, weil der
+- **AC-4:** (Nachhol-Fenster — beide Grenzen zugleich) Given Slot-Stunde H fällt aus, weil der
   stündliche Tick nicht lief (Umstellungstag oder gescheiterter HTTP-Post ohne Retry) / When
   der nächste Lauf in Ortsstunde H+1 stattfindet / Then wird der Trip nachträglich als fällig
   gesammelt; findet der nächste Lauf dagegen erst in Ortsstunde H+3 statt, ist er **nicht mehr**
   fällig — das Nachhol-Fenster umfasst genau 3 Stunden, in beide Richtungen geprüft.
   - Test: T4 — einziger Test, der die Fensterbreite in beide Richtungen festnagelt.
 
-- **AC-5 (Schlüssel braucht den Slot):** Given ein Trip mit Morgen- **und** Abend-Briefing,
+- **AC-5:** (Schlüssel braucht den Slot) Given ein Trip mit Morgen- **und** Abend-Briefing,
   beide auf 07:00 gestellt / When die Ortsstunde 07 erreicht wird / Then werden **beide** Slots
   unabhängig voneinander als fällig gesammelt und unabhängig vermerkt — der Vermerk des einen
   Slots blockiert den anderen nicht.
   - Test: T5.
 
-- **AC-6 (Schlüssel braucht den Ortstag):** Given ein Trip, dessen Morgen-Briefing an zwei
+- **AC-6:** (Schlüssel braucht den Ortstag) Given ein Trip, dessen Morgen-Briefing an zwei
   aufeinanderfolgenden Ortstagen fällig wird / When der Lauf am zweiten Ortstag ausgeführt wird
   / Then ist der Trip erneut fällig — der Vermerk vom Vortag blockiert den neuen Tag nicht.
   - Test: T6.
 
-- **AC-7 (Schlüssel braucht die Trip-ID):** Given zwei verschiedene Trips in derselben Zone
+- **AC-7:** (Schlüssel braucht die Trip-ID) Given zwei verschiedene Trips in derselben Zone
   mit identischer Briefing-Stunde / When diese Ortsstunde erreicht wird / Then werden **beide**
   Trips unabhängig voneinander als fällig gesammelt und vermerkt — der Vermerk des einen Trips
   darf den anderen nicht blockieren.
   - Test: T7.
 
-- **AC-8 (Outcome-Matrix entscheidet über den Vermerk):** Given ein Versandversuch endet mit
+- **AC-8:** (Outcome-Matrix entscheidet über den Vermerk) Given ein Versandversuch endet mit
   einem der vier Ausgänge `sent`, `no_stage`, `no_weather` oder `no_channels` / When der
   Versuch abgeschlossen ist / Then wird für alle vier ein Vermerk gesetzt, sodass dieser Slot
   an diesem Ortstag **nicht erneut** verarbeitet wird — auch nicht in den verbleibenden
@@ -353,42 +353,42 @@ das Ergebnis als **ein** Commit. Begründung:
   aus, sodass der nächste Lauf innerhalb des Fensters einen weiteren Versuch unternimmt.
   - Test: T8.
 
-- **AC-9 (Rollout ohne Doppelversand beim Deploy):** Given `briefing_slots.json` existiert
+- **AC-9:** (Rollout ohne Doppelversand beim Deploy) Given `briefing_slots.json` existiert
   noch nicht (frischer Rollout dieser Änderung), aber `briefing_log.json` enthält für den Trip
   bereits einen Eintrag mit passender Trip-ID und Slot-Art, dessen Sendezeitpunkt in den
   aktuellen Ortstag fällt / When die Fälligkeit geprüft wird / Then gilt der Slot als bereits
   erledigt und wird **nicht** erneut fällig.
   - Test: T9.
 
-- **AC-10 (Kein rückwirkendes Feuern bei neuen/reaktivierten Trips):** Given ein Trip wird neu
+- **AC-10:** (Kein rückwirkendes Feuern bei neuen/reaktivierten Trips) Given ein Trip wird neu
   angelegt oder kehrt aus einer Pause (`paused_until`) zurück, seine erste Etappe liegt heute,
   die konfigurierte Morgen-Stunde liegt aber mehr als 3 Stunden zurück / When der erste
   Sammellauf danach stattfindet / Then wird der Trip **nicht** rückwirkend als fällig behandelt
   — das Nachhol-Fenster schließt diesen Fall strukturell aus.
   - Test: T10.
 
-- **AC-11 (Ortsvergleich bleibt bit-identisch):** Given der Ortsvergleichs-Pfad
+- **AC-11:** (Ortsvergleich bleibt bit-identisch) Given der Ortsvergleichs-Pfad
   (`CompareDispatchStrategy.collect_due`) mit unveränderter Konfiguration / When derselbe
   Versandlauf über 24 Stunden ausgeführt wird wie vor dieser Änderung / Then ist sein
   Fälligkeitsergebnis **bit-identisch** zum Stand davor — der Idempotenz-Check wirkt
   ausschließlich im Trip-Pfad, nicht im geteilten Skelett.
   - Test: T11.
 
-- **AC-12 (On-Demand-Versand ist vom Vermerk unabhängig):** Given ein Nutzer fordert per
+- **AC-12:** (On-Demand-Versand ist vom Vermerk unabhängig) Given ein Nutzer fordert per
   SMS-Kommando „heute" oder über den Test-Versand-Knopf ein Briefing außerhalb des regulären
   Slots an / When dieser On-Demand-Versand ausgeführt wird / Then setzt er **keinen** Vermerk
   für den regulären Slot, und er liest auch **keinen** — der reguläre Slot bleibt zur Stunde H
   weiterhin fällig, und der Test-Knopf funktioniert nach einem regulären Versand weiter.
   - Test: T12.
 
-- **AC-13 (Sperre nicht erhältlich → kein Versand, fail-closed):** Given die Schreibsperre auf
+- **AC-13:** (Sperre nicht erhältlich → kein Versand, fail-closed) Given die Schreibsperre auf
   `briefing_slots.json` ist innerhalb der konfigurierten Zeit nicht zu bekommen (z.B. gehaltene
   Sperre in einem parallelen Prozess) / When ein Trip zum Versand ansteht / Then wird **nicht**
   gesendet, statt ohne wirksamen Vermerk zu senden — die Fehlerrichtung ist bewusst umgekehrt
   zu `throttle_store`, das bei Sperren-Timeout fail-open ist.
   - Test: T13 (Machbarkeit als ausdrückliche Lücke markiert, siehe Known Limitations).
 
-- **AC-14 (`Australia/Lord_Howe` — 24,5-Stunden-Tag unauffällig):** Given ein Trip in der Zone
+- **AC-14:** (`Australia/Lord_Howe` — 24,5-Stunden-Tag unauffällig) Given ein Trip in der Zone
   `Australia/Lord_Howe` (Halbstunden-Versatz, an ihren eigenen Umstellungstagen 24,5 Stunden
   lang) mit konfigurierter Briefing-Stunde / When der Sammellauf über den vollständigen Ortstag
   läuft / Then wird der Trip genau einmal fällig, ohne Lücke und ohne Dopplung — der

@@ -2,13 +2,23 @@
 
 This document defines how E-Mail reports are generated in Gregor Zwanzig.
 
-**Last Updated:** 2026-08-22 (Issue #2049 — Abgrenzung „Metric Display Contract" (Sektion 4/5)
-gegen die eigene, unabhängige Roh/Einfach-Entscheidung des 3-Tages-Ausblicks (Sektion 6,
-`display_config.outlook_metric_formats`) ergänzt, s.u.)
+**Last Updated:** 2026-09-15 (Issue #2136/ADR-0068 — Pfad 1 des Ausblicks („Altform-Zweig")
+verliert seine hartkodierte Kürzel-Namensliste `N · D · R · PR · Wind · Böen · Gew`; Spaltenköpfe
+(HTML) und Klartext-Tokenpräfixe kommen jetzt aus `MetricDefinition.col_label` desselben
+zentralen Registers, das auch die Etappentabelle speist — dieselbe Quelle, mit der Pfad 2 seither
+ebenfalls arbeitet (vorher deutscher Langname aus dem Compare-Katalog))
 
-**Vorherige Aktualisierung:** 2026-08-14 (Bug #1801 S2 — neue Ampel-Palette (Punkt/Fläche/Text) für
-gelb/orange/rot, WCAG-Fix grüner Zelltext (`G_AMPEL_TEXT_GREEN`); `html.py`/`outlook.py`
-beziehen die Zellfarben seither aus `design_tokens.tone_css()` statt eigener Kopien)
+**Vorher:** 2026-08-23 (Issue #2098 — ACC-Spalte erscheint jetzt auch im konfigurierbaren
+Ausblick-Zweig, fest hinter den gewählten Metriken, mit Klartext-Wort statt nur Farbpunkt;
+Sonnenstunden werden beim Etappen-Aggregat mit der Regel `sum` zusammengefasst statt `–` zu zeigen)
+
+**Vorherige Aktualisierung:** 2026-08-22 (Issue #2011 — `_thunder_risk_level()` ruft für String-/Enum-Rohwerte
+jetzt tatsächlich `thunder_ampel_band()` auf statt einer eigenen Stufen-Wort-Kette; nur der
+numerische Legacy-Fallback bleibt hartcodiert, s.u.)
+
+**Davor:** 2026-08-22 (Issue #2049 — Abgrenzung „Metric Display Contract" (Sektion 4/5)
+gegen die eigene, unabhängige Roh/Einfach-Entscheidung des 3-Tages-Ausblicks (Sektion 6,
+`display_config.outlook_metric_formats`) ergänzt)
 
 **Acceptance Validators (seit Issue #733):**
 - **Trip-Briefing-Mail** (beide Formate: `full` HTML / `compact` Nur-Text): `.claude/hooks/briefing_mail_validator.py` (dispatcht auf `X-GZ-Mail-Type` + `X-GZ-Format` Header)
@@ -40,8 +50,8 @@ Siehe CLAUDE.md für Scope-Details und Pflicht-Gate-Dokumentation.
 | 3 | **Stirnlampe** | ENTFÄLLT | (PO-Entscheidung aus Issue #790 — nicht mehr in neuem Cloud-Design) |
 | 4 | **Segmente** (Stundentabellen) | LIVE | Pro Etappensegment: Segment-Header + zwei-stufige Desktop-Tabelle (Gruppen-Row TEMP/WIND/NIEDERSCHLAG + Einheiten-Row) + Mobile-Variante (`EmailHourList` zwei-Zeilen-Format) |
 | 5 | **Wetter am Ziel** (abgesetzte Sektion) | LIVE | Eigene abgesetzte Sektion mit accent-Eyebrow, Zielname, Ankunftszeiten-Range, identische Tabelle wie Segmente |
-| 6 | **Ausblick** (Folge-Etappen) | LIVE | Nächste 4 Tage als kompakte Zeilen-Tabelle; jede Etappe mit Wochentag + Code + Name + Temp-Range + Risk-Dot (Farbindikator); Gewitter-Badge falls vorhanden |
-| 7 | **Antwort-Kommandos** | LIVE | Dedizierte Sektion mit 3-spaltigem Grid der Befehle (HEUTE, MORGEN, JETZT/NOW, GEWITTER, PAUSE 2d, SKIP, STOP/WEITER, STATUS, CONFIG, HELP) + Hinweistext |
+| 6 | **Ausblick** (Folge-Etappen) | LIVE | Nächste 4 Tage als kompakte Zeilen-Tabelle; Trip zeigt Wochentag + Code + Name+Note + Temp-Range + (konfigurierbare Metriken) + ACC-Spalte + Risk-Dot; Ortsvergleich ohne ACC-Spalte; Gewitter-Badge falls vorhanden |
+| 7 | **Antwort-Kommandos** | LIVE | Dedizierte Sektion mit 3-spaltigem Grid der Befehle (HEUTE, MORGEN, JETZT/NOW, GEWITTER, STRECKE [km], RUHETAG [N], STATUS, PAUSE [2d/12h], SKIP, STOP, WEITER, HILFE/HELP) + Hinweistext |
 | 8 | **Footer** (zweigeteilt) | LIVE | Obere Zeile: Brand + Briefing-Typ; untere Zeile: Links (Trip-Übersicht, Zeitplan, Abmelden) |
 
 Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_884_mail_fidelity.md` (AC-1..AC-10).
@@ -67,8 +77,11 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
     Wind/Böen/Regen/Regenwahrscheinlichkeit/Sicht
     einheitlich aus `severity_for`/`ampel_level` und den Katalog-Schwellen der
     „Best-Practice-Schwellen"-Tabelle unten (Wind z.B. 30/50/70 km/h, nicht mehr die alte
-    fixe 20-km/h-Grenze). Gewitter bleibt ausdrücklich hartcodiert (kein `display_thresholds`
-    im Katalog): rot ab >30, orange >20-30, gelb >0-20 (`html.py:658-659`).
+    fixe 20-km/h-Grenze). Gewitter läuft für String-/Enum-Rohwerte seit #2011 über die
+    kanonische `thunder_ampel_band()` (`green/yellow/orange/red` → `ok/yellow/watch/risk`,
+    `metric_format.py`); nur der numerische Legacy-Fallback (seltener Rohdatenpfad #1425)
+    bleibt ausdrücklich hartcodiert, zweistufig, ohne `display_thresholds` im Katalog:
+    rot ab >20, orange >0-20 (`_thunder_risk_level()`, `html.py:171-203`).
 - **Mobile-Tabelle:** `EmailHourList` zwei-Zeilen-Format (neu ab Issue #884; ersetzt `_render_mobile_compact_rows`)
   - Hauptzeile: Zeit (mono bold, 26px breit) · Wetter-Glyph · Temp · gefühlte Temp · Risk-Dot
   - Detailzeile: Wind/Regen/Sicht/UV/Höhe komprimiert
@@ -81,18 +94,42 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 
 #### Ausblick (Sektion 6)
 - **Struktur:** `<table>` mit einer `<tr>` pro Folge-Etappe
-- **Desktop:** 5 Spalten – Wochentag · Code · Name+Note+ggf. Gewitter-Badge · Temp-Range · Risk-Dot
-- **Mobile:** 3 Spalten – Wochentag · (Name+Code+Note gestapelt) · (Temp+Risk-Dot übereinander)
+- **Zwei Render-Zweige**, unterschieden am Parameter `metrics` von `render_outlook_table()` /
+  `render_outlook_plain()` — **nicht** an der Mail-Art:
+  - **Altform-Zweig** (`metrics=None`): acht feste Spalten (Tag + sieben Wettergrößen), ACC-Spalte
+    je nach `show_acc`. Trip und Ortsvergleich fuhren früher hierüber; heute nur noch Altbestand
+    ohne aufgelöste Metrik-Auswahl. Die Spaltenköpfe sind seit #2136/ADR-0068 (2026-09-15) **keine**
+    eigene Namensliste mehr — sie kommen aus `MetricDefinition.col_label` (dieselbe Quelle wie die
+    Etappentabelle), mit `aggregation_label_de()` als Kollisionsauflösung für die beiden
+    Temperatur-Spalten Tief/Hoch. Vorher hartkodiert: `N · D · R · PR · Wind · Böen · Gew`.
+  - **Konfigurierbarer Zweig** (`metrics` gesetzt): die gewählten Metrik-Spalten in
+    Auswahl-Reihenfolge, dahinter die ACC-Spalte je nach `show_acc`. **Trip** fährt seit #1848 A3
+    hierüber, der **Ortsvergleich** seit #1361/#1368.
+- **ACC je Mail-Art:** Trip `show_acc=True` (Spalte erscheint), Ortsvergleich `show_acc=False`
+  (Kopfzelle UND Datenzellen entfallen vollständig). Gilt in **beiden** Zweigen gleich.
 - **Risk-Dot:** `border-radius:50%`, 10×10px, Farbe aus `_AMPEL_DOT_COLORS` (4-stufig seit #1927):
   - green (ok): `#15803d` + `rgba(21,128,61,0.18)`
   - yellow (watch-mild): `#d69500` + `rgba(214,149,0,0.20)`
   - orange (watch-mittel): `#d4530a` + `rgba(212,83,10,0.20)`
   - red (risk): `#a8104a` + `rgba(168,16,74,0.22)`
+- **ACC-Spalte** (Prognose-Genauigkeit; im konfigurierbaren Zweig seit Issue #2098): vier Stufen
+  aus der kanonischen Quelle `_ACC_STUFEN` — **eigene Farbwerte, nicht `_AMPEL_DOT_COLORS`**:
+  - HTML: Farbpunkt — `#2f8a3e` (≥80) · `#e3b008` (≥60) · `#e07b1a` (≥40) · `#c52a22` (<40)
+  - Klartext: deutsches Wort — **hoch** (≥80) / **mittel** (≥60) / **niedrig** (≥40) /
+    **sehr niedrig** (<40)
+  - Fehlender oder nicht lesbarer Wert: `–` in beiden Fassungen
+  - **Keine wählbare Metrik:** `confidence` trägt `selectable=False` (ADR-0005/#710) und kann in
+    der Metrik-Auswahl nicht erscheinen. Die Spalte wird am `outlook_columns()`/`cells`-Mechanismus
+    vorbei fest hinter den gewählten Metriken angehängt.
+- **Sonnenstunden im Ausblick (seit Issue #2098):** Werden beim Aggregieren mehrerer Segmente zu einer Etappe mit der Regel `sum` zusammengefasst (nicht `–`; `sunny_hours` trägt Katalog-Definition `summary_fields={"sum": "sunny_hours"}`)
 - **Gewitter-Badge:** `⚡ Gewitter {zeitangabe}` in `#a8104a` mit light-red Hintergrund und Border
 
 #### Antwort-Kommandos (Sektion 7 – NEU)
-- **Grid:** 3 Spalten, zeilenweise gefüllt via `<table>` (aktuell 10 Einträge → 4 Zeilen)
-- **10 Einträge:** HEUTE, MORGEN, JETZT/NOW, GEWITTER, PAUSE 2d, SKIP, STOP/WEITER, STATUS, CONFIG, HELP
+- **Grid:** 3 Spalten, zeilenweise gefüllt via `<table>` (12 Einträge → 4 Zeilen)
+- **12 Einträge, aus `_COMMAND_SPECS` abgeleitet — identisch in Klartext- und HTML-Fußzeile
+  (Issue #2134; vorher fehlte STRECKE in beiden, RUHETAG zusätzlich in HTML):**
+  HEUTE, MORGEN, JETZT (auch NOW), GEWITTER, STRECKE [km], RUHETAG [N], STATUS,
+  PAUSE [2d / 12h], SKIP, STOP, WEITER, HILFE (auch HELP)
 - **Stil:** CMD mono 11px bold + Beschreibung mono 10px `#9a978d`
 - **Hinweistext:** mono 10px, color `#b8b4a8`: "Antworte auf diese E-Mail mit einem Schlüsselwort."
 
@@ -109,7 +146,7 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 - **Format-Definition:** siehe [`docs/reference/sms_format.md`](sms_format.md) (v2.0) — Single Source of Truth.
 - Beispiel (mit Vigilance-Block und Fire-Block für Korsika):
   ```
-  Paliri: N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17) HR:M@17TH:H@17 Z:HIGH208 M:24
+  Paliri: N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17) VR:M@17VT:H@17 Z:HIGH208 M:24
   ```
 - Beispiel (ohne Vigilance/Fire, internationaler Trip):
   ```
@@ -163,6 +200,22 @@ Im E-Mail-Body wird ein Klartext-Hinweis ausgegeben, wenn an mindestens einer St
 - **Tables** may extend beyond 160 chars (no SMS limit).
 - **Times** in tables use **leading zeros** for clarity.
 - All numbers are integers unless explicitly defined as float (e.g. rainfall `R`).
+
+---
+
+## Abweichungs-Alarm: Stundenzeilen (seit Issue #1737)
+
+Die Abweichungs-Alarm-Mail (Trip und Ortsvergleich; `src/output/renderers/alert/render.py::render_email`) zeigt unter der Kopfzeile **jedes Ereignisses** einen eigenen Block mit einer Tabellenzeile je betroffener Stunde: `HH:MM | alt → neu` (Ortszeit, `local_fmt`). Keine gemeinsame Tabelle über mehrere Ereignisse.
+
+- **Darstellung Trip:** wie das Briefing desselben Kanals und Trips — ROH = Stufenwort bzw. Wert, EINFACH = farbiger Punkt aus HTML/CSS (**keine Emojis**, #2220). Modus aus der Anzeige-Konfiguration des jeweiligen Nutzers.
+- **Darstellung Ortsvergleich:** Stundenwerte immer roh (wie die Stundentabelle der Vergleichs-Mail, PO-Entscheid 2026-10-21), Zeilen nur unter betroffenen Orten.
+- **Auswahl** (`alert/hours.py`): Metrik mit Stufe = Stufenwechsel; Metrik ohne Stufe = Stundendifferenz ≥ Alarmschwelle der Metrik; angezeigt wird der zusammenhängende Bereich erste bis letzte betroffene Stunde. Alt/neu werden per UTC-Zeitstempel gepaart.
+- **Kappung:** höchstens 6 Zeilen (die stärksten, in Zeitfolge) plus Hinweiszeile „betroffen HH:MM–HH:MM".
+- **Summen-Metriken** (z. B. Niederschlag): Summe bleibt in der Kopfzeile, die Zeilen zeigen Stundenwerte.
+- **Fallbacks:** ohne Anker nur der neue Wert (ohne „alt →"); ohne Stundenreihe byte-gleich zur Ausgabe vor #1737.
+- Nur Uhrzeiten und Werte, keine Empfehlung, keine berechnete Prozentangabe. Die Alarm-Mail trägt weiterhin den Marker-Header `X-GZ-Mail-Type: deviation-alert` (Trip und Ortsvergleich, `notification_service.py`).
+
+Spec: `docs/specs/modules/feat_1737_alarm_stundenzeilen.md`.
 
 ---
 

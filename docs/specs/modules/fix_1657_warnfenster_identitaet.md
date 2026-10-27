@@ -3,7 +3,7 @@ entity_id: fix_1657_warnfenster_identitaet
 type: bugfix
 created: 2026-08-17
 updated: 2026-08-17
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-1657-warnung-identitaet
 ---
@@ -298,16 +298,16 @@ würde irgendwann als „flaky" abgetan und die Sicherung fiele still aus.
 - **AC-6:** Given im Melde-Gedächtnis steht ein Fenster mit spätem Beginn, When ein neues, NICHT umschließendes Fenster mit mindestens 2 Stunden früherem Beginn geprüft wird, Then meldet der Checker die Warnung erneut — die Vorverlegungs-Ausnahme aus #1685 bleibt für echte, nicht umschließende Vorverlegungen unverändert bestehen.
   - Test: Test 7.
 
-- **AC-7 (Kirchbach-Regression):** Given die drei realen Kirchbach-Fenster vom 2026-08-16 (`13:00–14:00Z`, `14:00–15:00Z`, `11:00–20:00Z`, alle Stufe 2.0, in dieser Reihenfolge), When sie nacheinander geprüft werden, Then meldet der Checker genau EINMAL (beim ersten Fenster), die beiden folgenden Fenster bleiben still fortgeschrieben.
+- **AC-7:** (Kirchbach-Regression) Given die drei realen Kirchbach-Fenster vom 2026-08-16 (`13:00–14:00Z`, `14:00–15:00Z`, `11:00–20:00Z`, alle Stufe 2.0, in dieser Reihenfolge), When sie nacheinander geprüft werden, Then meldet der Checker genau EINMAL (beim ersten Fenster), die beiden folgenden Fenster bleiben still fortgeschrieben.
   - Test: Test 8.
 
-- **AC-8 (Obertilliach-Regression, nachgerechnet):** Given die drei realen Obertilliach-Fenster vom 2026-08-11 (`15:00–16:00Z`, `17:00–18:00Z`, `13:00–19:00Z`, alle Stufe 2.0, in dieser Reihenfolge, mit einer echten einstündigen Lücke zwischen Fenster 1 und Fenster 2), When sie nacheinander geprüft werden, Then meldet der Checker GENAU ZWEIMAL (erstes und zweites Fenster), nur das dritte, umschließende Fenster bleibt still — nicht „genau einmal".
+- **AC-8:** (Obertilliach-Regression, nachgerechnet) Given die drei realen Obertilliach-Fenster vom 2026-08-11 (`15:00–16:00Z`, `17:00–18:00Z`, `13:00–19:00Z`, alle Stufe 2.0, in dieser Reihenfolge, mit einer echten einstündigen Lücke zwischen Fenster 1 und Fenster 2), When sie nacheinander geprüft werden, Then meldet der Checker GENAU ZWEIMAL (erstes und zweites Fenster), nur das dritte, umschließende Fenster bleibt still — nicht „genau einmal".
   - Test: Test 9.
 
-- **AC-9 (Ortsvergleich-Parität):** Given dieselbe Containment-Ausgangslage wie AC-3, aber im Melde-Gedächtnis eines Ortsvergleichs-Orts statt eines Trips, When der Ortsvergleichs-Checker (`_detect`) das breite Fenster prüft, Then verhält er sich identisch zum Trip-Pfad — still, wie in AC-3.
+- **AC-9:** (Ortsvergleich-Parität) Given dieselbe Containment-Ausgangslage wie AC-3, aber im Melde-Gedächtnis eines Ortsvergleichs-Orts statt eines Trips, When der Ortsvergleichs-Checker (`_detect`) das breite Fenster prüft, Then verhält er sich identisch zum Trip-Pfad — still, wie in AC-3.
   - Test: Test 10.
 
-- **AC-10 (Regression, Fail-soft unverändert):** Given eine Warnung ohne `valid_from`/`valid_to` steht mit unverändertem Level im Melde-Gedächtnis, When dieselbe zeitlose Warnung erneut geprüft wird, Then entscheidet weiterhin ausschließlich der exakte Schlüsseltreffer — keine Berührungs- oder Containment-Prüfung greift bei fehlenden Zeitfeldern.
+- **AC-10:** (Regression, Fail-soft unverändert) Given eine Warnung ohne `valid_from`/`valid_to` steht mit unverändertem Level im Melde-Gedächtnis, When dieselbe zeitlose Warnung erneut geprüft wird, Then entscheidet weiterhin ausschließlich der exakte Schlüsseltreffer — keine Berührungs- oder Containment-Prüfung greift bei fehlenden Zeitfeldern.
   - Test: Test 12.
 
 ## Non-Regression

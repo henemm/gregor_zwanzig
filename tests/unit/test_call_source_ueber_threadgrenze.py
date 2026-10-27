@@ -2,10 +2,10 @@
 
 Spec: docs/specs/modules/fix_1765_b1_compare_vorschau_parallel.md
 
-``resolve_call_source()`` (src/providers/call_log.py:56-64) liest die
+``resolve_call_source()`` (src/providers/call_log.py:86-103) liest die
 Funktionsnamen aus dem Aufruf-Stapel des AUSFUEHRENDEN Threads. Sobald die Orte
-eines Vergleichs in eigenen Threads berechnet werden, taucht dort keiner der 11
-Bestandsmarker (call_log.py:41-53) mehr auf und das Journal bucht "unbekannt"
+eines Vergleichs in eigenen Threads berechnet werden, taucht dort keiner der 10
+Bestandsmarker (call_log.py:43-54) mehr auf und das Journal bucht "unbekannt"
 (belegt: 7,4 % im Diagnose-Journal, Cluster beim bereits parallelen
 stage_weather-Pfad).
 
@@ -52,7 +52,7 @@ def journal(tmp_path, monkeypatch):
 def test_ac4_gleichzeitige_threads_verzeichnen_ihre_quelle_im_journal(journal):
     """AC-4: Zwei Threads laufen per Treffpunkt-Sperre garantiert gleichzeitig
     und protokollieren je einen Abruf innerhalb des Quellen-Overrides. Beide
-    Eintraege muessen "vergleich" tragen -- im Worker-Stack steht keiner der 11
+    Eintraege muessen "vergleich" tragen -- im Worker-Stack steht keiner der 10
     Bestandsmarker, ohne Override buchte das Journal "unbekannt"."""
     from providers.call_log import log_api_call, override_call_source
 
@@ -72,7 +72,7 @@ def test_ac4_gleichzeitige_threads_verzeichnen_ihre_quelle_im_journal(journal):
 
     assert journal() == {f"{BASIS}ort-1": "vergleich", f"{BASIS}ort-2": "vergleich"}, (
         f"AC-4: Das Journal verzeichnete {journal()} statt fuer JEDEN Eintrag "
-        "'vergleich'. Im Worker-Stack fehlen die 11 Namens-Marker -- die Quelle "
+        "'vergleich'. Im Worker-Stack fehlen die 10 Namens-Marker -- die Quelle "
         "muss im jeweiligen Thread gesetzt und VOR der Stapel-Inspektion "
         "geprueft werden."
     )
@@ -80,19 +80,19 @@ def test_ac4_gleichzeitige_threads_verzeichnen_ihre_quelle_im_journal(journal):
 
 def test_ohne_override_greifen_die_bestandsmarker_weiter(journal):
     """Rueckwaerts-Vertrag: Threads OHNE eigenen Override verhalten sich
-    unveraendert wie heute -- die 11 Namens-Marker bleiben der Rueckfall, ohne
+    unveraendert wie heute -- die 10 Namens-Marker bleiben der Rueckfall, ohne
     Marker bleibt es bei "unbekannt". Zusaetzlich geprueft: ein in einem ANDEREN
     Verarbeitungspfad aktiver Override faerbt nicht auf sie ab."""
     from providers.call_log import log_api_call, override_call_source
 
-    def render_email_preview() -> None:  # Bestandsmarker -> "vorschau"
+    def render_sms_preview() -> None:  # Bestandsmarker -> "vorschau"
         log_api_call(f"{BASIS}mit-marker", 200)
 
     def namenloser_pfad() -> None:  # kein Marker -> "unbekannt"
         log_api_call(f"{BASIS}ohne-marker", 200)
 
     with override_call_source("vergleich"):  # in einem FREMDEN Pfad aktiv
-        for ziel in (render_email_preview, namenloser_pfad):
+        for ziel in (render_sms_preview, namenloser_pfad):
             t = threading.Thread(target=ziel)
             t.start()
             t.join(timeout=ZEITSCHRANKE)
@@ -104,7 +104,7 @@ def test_ohne_override_greifen_die_bestandsmarker_weiter(journal):
     }, (
         f"Das Journal verzeichnete {journal()}. Wer keinen eigenen Override "
         "setzt, muss die Quelle unveraendert ueber die Bestandsmarker "
-        "(call_log.py:41-53) bekommen -- ein fremder Override darf nicht "
+        "(call_log.py:43-54) bekommen -- ein fremder Override darf nicht "
         "abfaerben."
     )
 

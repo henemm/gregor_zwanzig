@@ -3,12 +3,14 @@ entity_id: issue_360_signal_channel_renderer
 type: module
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: deprecated
 version: "1.0"
 tags: [output, signal, telegram, channel-renderer, epic-331]
 ---
 
 # Kanal-bewusster Renderer für Signal/Telegram + Spalten-Datenmodell
+
+> Abgelöst/entfernt durch ADR-0004 / #610 (Signal-Kanal app-weit entfernt) — beschreibt keinen aktuellen Code.
 
 ## Approval
 
@@ -31,7 +33,7 @@ Teil 1 von Epic #331 (Backend). Frontend-Editor + Multi-Kanal-Vorschau folgen in
 - **Neu:** `src/output/renderers/narrow.py` — `render_narrow()` für Signal/Telegram (pure)
 - **Geändert:** `src/app/models.py` — `MetricConfig` +`bucket`/`order`; `TripReport` +`signal_text`/`telegram_text`
 - **Geändert:** `src/app/loader.py` — Persistenz der neuen Felder + Legacy-Migration
-- **Geändert:** `src/formatters/trip_report.py` — `format_email()` befüllt zusätzlich `signal_text`/`telegram_text`
+- **Geändert:** `src/output/renderers/trip_report.py` — `format_email()` befüllt zusätzlich `signal_text`/`telegram_text`
 - **Geändert:** `src/services/trip_report_scheduler.py:444/457`, `src/services/trip_alert.py` — Versand nutzt `signal_text`/`telegram_text`
 - **Geändert (optional, additiv):** `src/output/renderers/email/plain.py` — `_render_text_table()` akzeptiert explizite Spaltenliste
 
@@ -160,10 +162,10 @@ Pre-Snapshot-Hook (`data_schema_backup.py`) greift bei Edit an `models.py`/`load
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine Tour mit ≤5 aktiven `primary`-Metriken / When `render_for_channel("signal", dc, "morning")` läuft / Then liegen alle Metriken in `table_columns` und `demoted_count == 0`.
+- **AC-1:** Given eine Trip mit ≤5 aktiven `primary`-Metriken / When `render_for_channel("signal", dc, "morning")` läuft / Then liegen alle Metriken in `table_columns` und `demoted_count == 0`.
   - Test: (populated after /tdd-red)
 
-- **AC-2:** Given eine Tour mit 9 aktiven `primary`-Metriken / When `render_for_channel("signal", ...)` läuft / Then enthält `table_columns` genau 5 Einträge (Zeit + 5 = 6 Spalten), `detail_metrics` die übrigen 4 und `demoted_count == 4`.
+- **AC-2:** Given eine Trip mit 9 aktiven `primary`-Metriken / When `render_for_channel("signal", ...)` läuft / Then enthält `table_columns` genau 5 Einträge (Zeit + 5 = 6 Spalten), `detail_metrics` die übrigen 4 und `demoted_count == 4`.
   - Test: (populated after /tdd-red)
 
 - **AC-3:** Given derselbe `dc` / When `render_for_channel("email", ...)` läuft / Then sind alle `primary`-Metriken in `table_columns` und `demoted_count == 0` (kein Limit).
@@ -172,7 +174,7 @@ Pre-Snapshot-Hook (`data_schema_backup.py`) greift bei Edit an `models.py`/`load
 - **AC-4:** Given derselbe `dc` / When `render_for_channel("sms", ...)` läuft / Then ist `table_columns == []` und alle Werte liegen flach in `detail_metrics`.
   - Test: (populated after /tdd-red)
 
-- **AC-5:** Given eine Tour mit 9 `primary`-Metriken / When `render_narrow("signal", ...)` läuft / Then ist jede Zeile des erzeugten Monospace-Bodys ≤26 Zeichen breit (Signal-Bubble-Constraint) und der Body endet mit einer Detail-Zeile.
+- **AC-5:** Given eine Trip mit 9 `primary`-Metriken / When `render_narrow("signal", ...)` läuft / Then ist jede Zeile des erzeugten Monospace-Bodys ≤26 Zeichen breit (Signal-Bubble-Constraint) und der Body endet mit einer Detail-Zeile.
   - Test: (populated after /tdd-red)
 
 - **AC-6:** Given ein im Scheduler erzeugter `TripReport` mit `send_signal=True` / When der Report gebaut wird / Then ist `report.signal_text` gesetzt, ungleich `report.email_plain`, und der Versand nutzt `report.signal_text`.
@@ -181,7 +183,7 @@ Pre-Snapshot-Hook (`data_schema_backup.py`) greift bei Edit an `models.py`/`load
 - **AC-7:** Given eine Legacy-Trip-JSON ohne `bucket`/`order` / When der Trip geladen und neu gespeichert wird / Then haben alle `MetricConfig` gültige `bucket`/`order`-Werte (via `auto_distribute`) und kein anderes Feld hat sich geändert (Roundtrip ohne Daten-Diff).
   - Test: (populated after /tdd-red)
 
-- **AC-8:** Given eine Tour mit konfigurierter `order` / When ein Report für irgendeinen Kanal gerendert wird / Then erscheinen die Spalten in der durch `order` festgelegten Reihenfolge.
+- **AC-8:** Given eine Trip mit konfigurierter `order` / When ein Report für irgendeinen Kanal gerendert wird / Then erscheinen die Spalten in der durch `order` festgelegten Reihenfolge.
   - Test: (populated after /tdd-red)
 
 ## Known Limitations

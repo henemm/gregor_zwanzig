@@ -3,7 +3,7 @@ entity_id: issue-578-molecules-1to1
 type: module
 created: 2026-06-05
 updated: 2026-06-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [design-fidelity, foundation, epic-575, sidebar, molecules, organisms]
 ---

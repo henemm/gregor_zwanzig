@@ -1,0 +1,25 @@
+{
+  "zweck": "Geteilte Wahrheitstabelle fuer die Muster-Paritaet der Entitaets-Kennungen (Issue #2140 Scheibe 2, AC-10). Beide Seiten pruefen VERHALTEN gegen dieselben Faelle: Python tests/unit/test_entity_id_pattern_parity.py gegen app.loader.VALID_ENTITY_ID_RE, Go internal/store/entity_id_test.go gegen store.ValidEntityID. Driftet eine Seite von dieser Tabelle ab, wird genau diese Seite rot.",
+  "invalid": [
+    "",
+    "/",
+    "a/b",
+    "\\",
+    "a\\b",
+    "a\u0000b",
+    ".",
+    "..",
+    "../x",
+    "../../bob/user",
+    ".hidden"
+  ],
+  "valid": [
+    "trip123",
+    "cp-a1b2c3d4",
+    "hochfügen",
+    "pollença",
+    "übergangsjoch-zillertal-arena",
+    "serfaus-schöngamp-berg",
+    "mühlbach"
+  ]
+}

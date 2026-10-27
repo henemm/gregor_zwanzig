@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -78,5 +79,24 @@ func TestSendWithFallback_GenuineNetworkErrorStillTriesFallback(t *testing.T) {
 		t.Errorf(
 			"AC-4: Fehlermeldung muss belegen, dass BEIDE Versuche tatsächlich "+
 				"liefen (primär UND Ersatzweg), war: %v", err)
+	}
+}
+
+// #1412 S5 (D1): die Lokalregel eines Nicht-Resend-Primärwegs blockt eine
+// Fremdadresse mit ErrGuardBlocked -- und wie jeder Guard-Block darf auch
+// dieser KEINEN zweiten Sendeversuch über den Ersatzweg auslösen (vorher
+// liefen Fremdadressen auf 127.0.0.1 ungeprüft bis zum Dial durch und
+// fielen dann auf den Fallback).
+func TestSendWithFallback_LocalRuleBlocksForeignAddressWithoutFallbackAttempt(t *testing.T) {
+	t.Setenv("GZ_DATA_DIR", t.TempDir())
+	primary := MailConfig{Host: "127.0.0.1", Port: 1, User: "u", Pass: "p"}
+	fallback := MailConfig{Host: "127.0.0.1", Port: 2, User: "u", Pass: "p"}
+
+	err := SendWithFallback(primary, fallback, "someone@gmail.com", resendTestMail())
+	if !errors.Is(err, ErrGuardBlocked) {
+		t.Fatalf("S5: Fremdadresse auf Nicht-Resend-Primärweg muss ErrGuardBlocked liefern, war: %v", err)
+	}
+	if strings.Contains(err.Error(), "fallback") {
+		t.Errorf("S5: Guard-Block darf keinen Ersatzweg-Versuch auslösen, Fehler war: %v", err)
 	}
 }

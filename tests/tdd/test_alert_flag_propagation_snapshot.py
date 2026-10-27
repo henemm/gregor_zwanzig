@@ -13,8 +13,7 @@ JEDER Zwischenstufe still auf den Default `False` zurueckfallen, ohne dass
 ein Test das bemerkt.
 
 RED-VERTRAG: `TripSegment.distance_measured`, `AlertEvent.km_measured`,
-`OnsetEvent.km_measured`, `OnsetShiftEvent.km_measured`,
-`CorridorEvent.km_measured` existieren heute nicht. Jede Konstruktion mit
+`OnsetEvent.km_measured`, `OnsetShiftEvent.km_measured` existieren heute nicht. Jede Konstruktion mit
 diesen Schluesselworten schlaegt mit `TypeError` fehl -- das IST der
 RED-Zustand.
 """
@@ -180,28 +179,6 @@ def test_ac15_onsetshiftevent_traegt_das_flag_aus_der_echten_projektion():
     assert getattr(oe, "km_measured", None) is True, (
         f"OnsetShiftEvent aus to_alert_message() traegt km_measured nicht: "
         f"{getattr(oe, 'km_measured', None)!r}"
-    )
-
-
-def test_ac15_corridorevent_traegt_das_flag_aus_der_echten_projektion():
-    """AC-15 (CorridorEvent, ueber `to_corridor_events`): ein Schwellen-
-    Treffer auf einem vermessenen Segment ergibt ein `CorridorEvent` mit
-    `km_measured=True`."""
-    from output.renderers.alert.project import to_corridor_events
-    from services.corridor_threshold import CorridorHit
-
-    seg = _measured_segment(segment_id="3")
-    hit = CorridorHit(
-        metric="wind_gust", value=90.0, bound=70.0, direction="above",
-        segment_id="3", occurred_at=datetime(2026, 7, 1, 14, 0, tzinfo=UTC),
-    )
-    events = to_corridor_events([hit], [seg], tz=TZ_VIENNA)
-
-    assert len(events) == 1, f"Erwartete ein CorridorEvent, erhielt: {events!r}"
-    ce = events[0]
-    assert getattr(ce, "km_measured", None) is True, (
-        f"CorridorEvent aus to_corridor_events() traegt km_measured nicht: "
-        f"{getattr(ce, 'km_measured', None)!r}"
     )
 
 

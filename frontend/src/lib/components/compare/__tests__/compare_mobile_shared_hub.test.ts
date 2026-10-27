@@ -41,50 +41,15 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC = resolve(HERE, '../../../..');
 
-const TILE = resolve(SRC, 'lib/components/compare/CompareTile.svelte');
-const LIST_PAGE = resolve(SRC, 'routes/compare/+page.svelte');
 const HUB_PAGE = resolve(SRC, 'routes/compare/[id]/+page.svelte');
 const TABS = resolve(SRC, 'lib/components/compare/CompareTabs.svelte');
-const SHEET = resolve(SRC, 'lib/components/mobile/MCompareActionSheet.svelte');
+const MTABBAR = resolve(SRC, 'lib/components/mobile/MTabBar.svelte');
+const SHEET = resolve(SRC, 'lib/components/mobile/SubscriptionActionSheet.svelte');
 
-describe('AC-21 — mobile Liste: Chevron statt Kebab im dense-Modus', () => {
-	test('CompareTile rendert im dense-Modus einen Chevron (Soll: screen-compare-list-mobile.jsx:54)', () => {
-		const src = readFileSync(TILE, 'utf-8');
-		assert.match(
-			src,
-			/chevron/i,
-			'CompareTile.svelte kennt keinen Chevron — dense-Kacheln müssen einen ' +
-				'Chevron als reines Navigations-Affordance zeigen (JSX: trailing={<MIcon kind="chevron"/>})'
-		);
-	});
-
-	test('CompareTile gated den Kebab auf Nicht-dense ({#if !dense})', () => {
-		const src = readFileSync(TILE, 'utf-8');
-		const kebabIdx = src.indexOf('<CompareKebab');
-		assert.ok(kebabIdx > -1, 'CompareKebab-Render nicht gefunden — Datei-Struktur geändert?');
-		const before = src.slice(Math.max(0, kebabIdx - 600), kebabIdx);
-		assert.match(
-			before,
-			/\{#if\s+!dense\}/,
-			'CompareKebab wird unconditional gerendert — im dense-Modus (mobile Liste) ' +
-				'darf KEIN Kebab erscheinen (Ist-Falle: S7 brauchte :visible-Selektoren, ' +
-				'weil Desktop- und Mobile-Kebab dasselbe aria-label tragen)'
-		);
-	});
-
-	test('mobile Listen-Kachel ist reine Navigation (kein onAction am dense-Tile)', () => {
-		const src = readFileSync(LIST_PAGE, 'utf-8');
-		const tiles = src.match(/<CompareTile[\s\S]*?\/>/g) ?? [];
-		const denseTile = tiles.find((t) => /dense=\{?true\}?/.test(t));
-		assert.ok(denseTile, 'Mobile CompareTile (dense) in routes/compare/+page.svelte nicht gefunden');
-		assert.doesNotMatch(
-			denseTile,
-			/onAction/,
-			'Mobile dense-Kachel reicht noch onAction (Kebab-Aktionen) durch — ' +
-				'Aktionen leben mobil ausschließlich im Detail-Hub (Fluss: Liste→Detail)'
-		);
-	});
-});
+// AC-21 (mobile Liste = reine Navigation, Chevron statt Kebab) und AC-23 (Lifecycle-Blatt aus
+// compareLifecycleActions) sind mit #2278 abgeloest (Entscheidung #1256 S8 AC-21 -> Paritaet,
+// Epic #2345 DoD-3): mobile Karte/Blatt/Pillen sind geteilt und stehen in
+// organisms/__tests__/subscription_card.test.ts und routes/compare/__tests__/compare_list_mobile_aktionen.test.ts.
 
 describe('AC-22 — mobiler Hub: geteilte CompareTabs mit 4-Stat-2×2 statt Bespoke-Block', () => {
 	test('Hub-Seite nutzt keinen Bespoke-Kanäle-Zähler mehr (channelCountLabel weg)', () => {
@@ -136,15 +101,22 @@ describe('AC-22 — mobiler Hub: geteilte CompareTabs mit 4-Stat-2×2 statt Besp
 	// Fix-Loop 1 (Fresh-Eyes-Fund): der Ein-Mount-Umbau rendert die Tab-Leiste
 	// jetzt auch mobil, aber ohne horizontales Scrollen waren „Versand"/
 	// „Vorschau" auf 390px unerreichbar (Inline-Edit-Paritäts-Verletzung).
-	// Muster TripTabs.svelte:330-352.
+	// Mobile Usability Paket 2 (Spec mobile_tab_leisten_mtabbar): Die Leiste
+	// lebt im geteilten MTabBar-Baustein — CompareTabs rendert ihn nur noch.
 	test('Mobile-Media-Query macht die Tab-Leiste horizontal scrollbar (overflow-x: auto)', () => {
-		const src = readFileSync(TABS, 'utf-8');
+		const tabsSrc = readFileSync(TABS, 'utf-8');
+		assert.match(
+			tabsSrc,
+			/<MTabBar[\s>]/,
+			'CompareTabs.svelte rendert nicht mehr den MTabBar-Baustein'
+		);
+		const src = readFileSync(MTABBAR, 'utf-8');
 		const mqStart = src.indexOf('@media (max-width: 899px)');
-		assert.ok(mqStart > -1, 'CompareTabs.svelte hat keine @media (max-width: 899px)-Regel');
+		assert.ok(mqStart > -1, 'MTabBar.svelte hat keine @media (max-width: 899px)-Regel');
 		const mqBlock = src.slice(mqStart, mqStart + 1500);
 		assert.match(
 			mqBlock,
-			/\.compare-tabs-bar\s*\{[^}]*overflow-x:\s*auto/,
+			/\.mtabbar\s*\{[^}]*overflow-x:\s*auto/,
 			'Mobile-Media-Query enthält keine overflow-x: auto-Regel für die Tab-Leiste — ' +
 				'„Versand"/„Vorschau" bleiben auf schmalen Viewports unerreichbar'
 		);
@@ -170,29 +142,9 @@ describe('AC-22 — mobiler Hub: geteilte CompareTabs mit 4-Stat-2×2 statt Besp
 	});
 });
 
-describe('AC-23 — MCompareActionSheet: Lifecycle-Aktionsliste statt compareActions()', () => {
-	// Ersetzt die (zu lose) Assertion aus issue_493_compare_mobile.test.ts:63-71 —
-	// deren Regex /compareActions/ matcht als Substring auch compareLifecycleActions
-	// und würde die Umstellung nie bemerken. Hier: positiver UND negativer Nachweis.
-	test('Sheet leitet seine Aktionen aus compareLifecycleActions() ab', () => {
+describe('AC-23 (abgeloest durch #2278): Aktionsblatt kommt aus der einen Quelle subscriptionActions', () => {
+	test('SubscriptionActionSheet leitet seine Aktionen aus subscriptionActions() ab', () => {
 		const src = readFileSync(SHEET, 'utf-8');
-		assert.match(
-			src,
-			/compareLifecycleActions\(/,
-			'MCompareActionSheet.svelte nutzt compareLifecycleActions() nicht — ' +
-				'mobile Aktionen müssen dem Desktop-Hub-Kebab (S3, AC-5) entsprechen: ' +
-				'Toggle/Archivieren/Löschen, draft = nur „Entwurf löschen"'
-		);
-	});
-
-	test('Sheet ruft den vollen compareActions()-Umfang NICHT mehr auf', () => {
-		const src = readFileSync(SHEET, 'utf-8');
-		assert.ok(
-			!/(?<!Lifecycle)compareActions\(/.test(src),
-			'MCompareActionSheet.svelte ruft noch compareActions() auf — ' +
-				'„Briefing jetzt senden"/„Vorschau"/„Bearbeiten" gehören mobil nicht ' +
-				'ins Lifecycle-Bottom-Sheet (Soll: CDM_lifecycleActions, ' +
-				'screen-compare-detail-mobile.jsx:16-22)'
-		);
+		assert.match(src, /subscriptionActions\(/, 'SubscriptionActionSheet nutzt subscriptionActions() nicht');
 	});
 });

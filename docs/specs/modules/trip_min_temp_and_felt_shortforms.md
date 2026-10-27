@@ -3,7 +3,7 @@ entity_id: trip_min_temp_and_felt_shortforms
 type: feature
 created: 2026-07-28
 updated: 2026-07-28
-status: draft
+status: implemented
 version: "1.1"
 tags: [renderer, tokens, sms, telegram, compact-summary, epic-1372, issue-1410]
 ---

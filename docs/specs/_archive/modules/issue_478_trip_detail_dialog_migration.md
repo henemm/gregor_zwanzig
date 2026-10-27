@@ -3,7 +3,7 @@ entity_id: issue_478_trip_detail_dialog_migration
 type: module
 created: 2026-05-31
 updated: 2026-05-31
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, atoms, migration, epic-368]
 ---

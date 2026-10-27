@@ -3,7 +3,7 @@ entity_id: feat_1680_s5b_gewitter_herkunft_vorschau
 type: feature
 created: 2026-08-14
 updated: 2026-08-14
-status: approved
+status: implemented
 version: "1.1"
 tags: [thunder, trip, sms, outlook, adr-0007, adr-0025, issue-1680, issue-1419, issue-1196]
 ---
@@ -509,6 +509,11 @@ bleibt einzig `aggregate_stage()`s unangeschlossener Dispatch-Zweig
 (Known Limitations 1) — er ist kein Ausgabeort, sondern totes Konfigurations-
 Feld ohne erreichbaren Verbraucher, bleibt in #1199 gebucht und braucht vor
 einem Fix zuerst einen echten Aufrufer.
+🔴 **Nachtrag 2026-09-15 (#2195):** Diesen Aufrufer gab es inzwischen — nicht
+aus dieser Ausgabeort-Familie, sondern als unabhängiger Bugfix der
+Etappen-Tagesaggregation. `aggregate_stage()` hat seither einen
+`union_of_max_carriers`-Zweig (`weather_metrics.py:1391-1400`). Details:
+`docs/specs/modules/bug_2195_tageswert_feldverlust.md`.
 
 ## Architektur-Entscheidung (ADR)
 

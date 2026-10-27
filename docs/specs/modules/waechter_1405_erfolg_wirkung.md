@@ -392,7 +392,17 @@ umgekehrt: ein Eintrag hier bedeutet „bewusst erlaubt", nicht „Reparatur
 ausstehend". Ein Fund, der auf dieser Liste steht, zählt NICHT als
 `KNOWN_VIOLATIONS`-Eintrag und macht die Ratsche nicht rot.
 
-Einziger bekannter Eintrag: `api/routers/webhook.py:72`
+**Nachzug #1405 S4a (2026-10-14, Spec `feat_1405_s4a_befehlsantwort_erfolg_wirkung`,
+AC-15/AC-18):** die Liste ist um genau drei Klasse-C-Funktionen gewachsen —
+`_show_help`, `_show_help_for_kind`, `_show_status` in
+`trip_command_processor.py`. Begründung: reine Text-Antworten aus der
+Trip-Konfiguration ohne Wetterabruf, ohne Schreiben, ohne Fehlerausgang
+(`_show_status` nutzt nur das Tagesdatum und die Etappenliste); es gibt nichts,
+was `success` abbilden könnte — Präzedenz `_show_columns_info`/`_show_config`.
+`_is_pure_computation_call` bleibt unverändert (Gate-Code, würde den Wächter
+repo-weit lockern).
+
+Ursprünglich einziger bekannter Eintrag: `api/routers/webhook.py:72`
 (`telegram_webhook`) — Begründungstext MUSS wörtlich die Unterscheidung
 tragen: „Protokoll-Empfangsbestätigung an Telegram, kein fachlicher
 Erfolgsstatus — verhindert Retry-Sturm (dokumentiert im Docstring, Z.
@@ -409,7 +419,7 @@ eigene Verifikations-Ergänzung).
 
 | # | Datei:Zeile | Funktion | Klasse | Befund |
 |---|---|---|---|---|
-| B1 | `api/routers/scheduler.py:217` | `send_test_trip_report` | 1 | Der #1403-Fall. `"no_channels"` wird vom Router nicht abgefangen — fällt durch bis `"sent": True` |
+| B1 | `api/routers/scheduler.py:217` | `send_test_trip_report` | 1 | Der #1403-Fall. `"no_channels"` wird vom Router nicht abgefangen — fällt durch bis `"sent": True`. **Repariert #1405 S1 (ADR-0086, 2026-10-09):** aus `KNOWN_VIOLATIONS` und `SPEC_LISTED_FINDINGS` entfernt. `"sent"` wird aus `outcome == "sent"` abgeleitet. |
 | B2 | `api/routers/scheduler.py:54` | `trigger_alert_checks` | 1 | `status: "ok"` fest; `count` echt, fließt nicht in den Status |
 | B3 | `api/routers/scheduler.py:64` | `trigger_compare_alert_checks` | 1 | dito |
 | B4 | `api/routers/scheduler.py:74` | `trigger_radar_alert_checks` | 1 | dito |
@@ -424,13 +434,13 @@ eigene Verifikations-Ergänzung).
 | B11c | `src/services/compare_official_alert.py:72` | `CompareOfficialAlertService.check_all_compare_presets` | 2 | `sum(1 for preset in presets if self._check_one_preset(...))` — kein Fehlerzähler, kein `try/except` im Rumpf |
 | B12 | `src/services/scheduler_dispatch_service.py:443` | `send_compare_preset` | 1 | `top_ort, actual_empfaenger` zugewiesen, aber `"status"` fest `"ok"` |
 | B13 | `api/routers/scheduler.py:147` | `_ping_heartbeat_compare` | 3 | Toter Code. Kein Aufrufer außerhalb der Definition; `trigger_compare_presets_daily` ruft sie nicht auf |
-| B14a | `src/services/notification_service.py:660` | `send_official_alert` | 1c | `sent_channels.append("email")` (analog telegram Z. 672, sms Z. 694) vor dem `try` — 3 Kanal-Vorkommen |
+| B14a | `src/services/notification_service.py:660` | `send_official_alert` | 1c | `sent_channels.append("email")` (analog telegram Z. 672, sms Z. 694) vor dem `try` — 3 Kanal-Vorkommen. **Repariert #1405 S1 (ADR-0086, 2026-10-09):** aus `KNOWN_VIOLATIONS` und `SPEC_LISTED_FINDINGS` entfernt. `sent_channels.append` steht im `try` nach dem Send, `attempted_channels.append` nach dem `try/except` (4 Kanäle inkl. Premium-SMS). |
 | B14b (email) | `src/services/notification_service.py:878` | `_dispatch_compare_official_email` | 4 | try/except, Handler nur `logger.error`, kein `return`-Wert, ruft `EmailOutput(...).send(...)` |
 | B14b (telegram) | `src/services/notification_service.py:891` | `_dispatch_compare_official_telegram` | 4 | dito, Telegram-Kanal; nacktes `return` (Z. 916) zählt NICHT als Rückmeldung (S-9) |
 | B14b (sms) | `src/services/notification_service.py:929` | `_dispatch_compare_official_sms` | 4 | dito, SMS-Kanal |
-| B14c | `src/services/notification_service.py:1066` | `_dispatch_alert_message` | 1c | dito wie B14a, 3 Kanal-Vorkommen (Z. 1066/1082/1103) |
-| B15 | `src/services/trip_command_processor.py:888` | `_trigger_report` | 1 | `service.send_test_report(trip, report_type)` unzugewiesen, danach bedingungslos `return CommandResult(success=True, ...)` |
-| B16 | `src/services/trip_command_processor.py:526` | `_trigger_on_demand` | 1 | `outcome` geprüft, Bestätigungstext variiert korrekt, `success` nicht |
+| B14c | `src/services/notification_service.py:1066` | `_dispatch_alert_message` | 1c | dito wie B14a, 3 Kanal-Vorkommen (Z. 1066/1082/1103). **Repariert #1405 S1 (ADR-0086, 2026-10-09):** aus `KNOWN_VIOLATIONS` und `SPEC_LISTED_FINDINGS` entfernt. Gleiche Reparatur wie B14a (4 Kanäle). |
+| B15 | `src/services/trip_command_processor.py:888` | `_trigger_report` | 1 | `service.send_test_report(trip, report_type)` unzugewiesen, danach bedingungslos `return CommandResult(success=True, ...)`. **Repariert #1405 S1 (ADR-0086, 2026-10-09):** aus `KNOWN_VIOLATIONS` und `SPEC_LISTED_FINDINGS` entfernt. `send_test_report_outcome` wird ausgewertet; `success` und Text folgen dem Ergebnis. |
+| B16 | `src/services/trip_command_processor.py:526` | `_trigger_on_demand` | 1 | `outcome` geprüft, Bestätigungstext variiert korrekt, `success` nicht. **Repariert #1405 S1 (ADR-0086, 2026-10-09):** aus `KNOWN_VIOLATIONS` und `SPEC_LISTED_FINDINGS` entfernt. `success` wird aus `outcome` abgeleitet. |
 | B17 | `src/services/trip_report_scheduler.py:240` | `send_reports` | 2 | Toter Code. `sent_count` ohne Gegenzähler, `return sent_count` (int) |
 | **B18** | `src/services/trip_command_processor.py` (zehn Funktionen, s. u.) | `_handle_query` (4×) / `_handle_drilldown` / `_handle_hours_drilldown` / `_apply_ruhetag` / `_show_status` / `_apply_pause` / `_apply_skip` / `_show_now` / `_cancel_trip` / `_resume_trip` | 1 | **NEU (E3, Tech-Lead-Entscheidung 2026-07-28).** Dateiweites Muster, dieselbe Mechanik wie B15/B16 — s. „B18-Detailtabelle" unten. Reparatur sinnvollerweise am Stück (eine Entscheidung über `CommandResult.success`, nicht zehn Einzelfixes) |
 | **B19** | `src/services/inbound_email_reader.py:77` | `poll_and_process` | 2 | **NEU (E4).** `for uid in uids: ... processed += self._process_single(...)`, `except Exception: logger.error(...)` (kein Gegenzähler), `return processed`. Bislang fälschlich als „kein Fund" geführt („zählt nur tatsächlich Verarbeitetes" ist fachlich richtig, aber KEIN strukturelles Ausschlusskriterium) |
@@ -500,6 +510,21 @@ Scan-Ergebnis):
 | `src/services/notification_service.py::_send_telegram_incomplete_hint` | 1 |
 | `src/services/notification_service.py::send_command_reply_email` | 1 |
 | `src/services/notification_service.py::_send_service_error_email` | 1 |
+
+**Stand nach #1405 S1 (ADR-0086, 2026-10-09):** `SPEC_LISTED_FINDINGS` führt noch **21** Funktionsschlüssel mit **Summe 24** (vorher 26/35). Entfernt: `send_test_trip_report` (B1, 1), `send_official_alert` (B14a, 4), `_dispatch_alert_message` (B14c, 4), `_trigger_report` (B15, 1), `_trigger_on_demand` (B16, 1). Die Tabelle oben bleibt als historische Herleitung stehen; maßgeblich ist der Kopfkommentar von `SPEC_LISTED_FINDINGS`.
+
+**Stand nach #1405 S4a (2026-10-14):** `SPEC_LISTED_FINDINGS` führt noch **9**
+Funktionsschlüssel mit **Summe 9** (vorher 19/22). Entfernt: alle zehn B18-Schlüssel
+(`_handle_query` 4, `_handle_drilldown`, `_handle_hours_drilldown`, `_apply_ruhetag`,
+`_show_status`, `_apply_pause`, `_apply_skip`, `_show_now`, `_cancel_trip`,
+`_resume_trip` = 13 Treffer). `KNOWN_VIOLATIONS` verliert alle 21 Trip-Schlüssel
+(18 repariert, 3 Klasse C als genehmigte Ausnahme). Restliste außerhalb des
+Trip-Befehlsprozessors: **gemessen** am 2026-10-14 — `len(KNOWN_VIOLATIONS)` des
+Erfolgs-Wächters 31 → **10** (Alt-Stand aus dem HEAD-Stand von `tests/test_success_status_guard.py`,
+Neu-Stand per Import der Datei und `len(KNOWN_VIOLATIONS)`);
+`_all_violations()` findet 16 = 10 offene + 6 genehmigte Ausnahmen
+(`INTENTIONAL_CONSTANT_SUCCESS`); Auflösungs-Wächter (`tests/test_resolution_loss_guard.py`)
+unverändert **22**. Die Zahl 31 im S4a-Briefing war damit korrekt.
 
 **Summe der Mindest-Treffer = 45**, verteilt über **38** Funktionsschlüssel
 (23 aus Version 1.1 + 10 aus B18 + 2 aus B19/B20 + 3 aus B21), die **23**
@@ -638,10 +663,10 @@ keinen — sie sind jetzt B19/B20 in der Restliste.
 - **AC-16b (NEU, S-7):** Given eine synthetische Funktion mit einem Dekorator, der selbst ein `ast.Call` ist (`@router.get("/health")`), aber ohne jeden Aufruf im eigenen Funktionsrumpf / When der Scanner sie einliest / Then wird KEIN Klasse-1-Fund gemeldet — der Dekorator erfüllt Bedingung (a) nicht.
   - Test: bereits Teil von `test_scanner_ignores_pure_liveness_endpoint()` (synthetischer Zwilling); kein zusätzlicher Test nötig, da AC-16 den Dekorator-Fall bereits mit abdeckt.
 
-- **AC-17 (NEU, E3/B18):** Given die zehn in `trip_command_processor.py` gelisteten Funktionen (B18) / When der Wächter über die Scanfläche läuft / Then schlägt er in `_handle_query` mindestens 4× und in den übrigen neun je mindestens 1× an (Teil der AC-1-Gesamtprüfung, hier als eigene AC benannt, weil B18 ein dateiweites Muster ist, dessen Einzelnachweis sonst in der Summenzahl untergehen würde).
+- **AC-17:** (NEU, E3/B18) Given die zehn in `trip_command_processor.py` gelisteten Funktionen (B18) / When der Wächter über die Scanfläche läuft / Then schlägt er in `_handle_query` mindestens 4× und in den übrigen neun je mindestens 1× an (Teil der AC-1-Gesamtprüfung, hier als eigene AC benannt, weil B18 ein dateiweites Muster ist, dessen Einzelnachweis sonst in der Summenzahl untergehen würde).
   - Test: Teil von `test_scanner_finds_every_spec_listed_finding()` (AC-1); keine separate Testfunktion.
 
-- **AC-18 (NEU, E4/B19+B20):** Given `inbound_email_reader.py::poll_and_process` und `inbound_telegram_reader.py::poll_and_process` / When der Wächter läuft / Then werden beide als Klasse-2-Fund erkannt (nicht mehr als „kein Fund" behandelt).
+- **AC-18:** (NEU, E4/B19+B20) Given `inbound_email_reader.py::poll_and_process` und `inbound_telegram_reader.py::poll_and_process` / When der Wächter läuft / Then werden beide als Klasse-2-Fund erkannt (nicht mehr als „kein Fund" behandelt).
   - Test: Teil von `test_scanner_finds_every_spec_listed_finding()` (AC-1); die frühere Behauptung „kein Fund" ist entfallen (kein eigener Negativ-Test mehr nötig).
 
 ## Known Limitations
@@ -799,3 +824,33 @@ B15–B17-Aufnahme trotz totem Code).
   auf 4 (Tabelle oben), `SPEC_LISTED_FINDINGS`-Summe von 40 auf 42.
   Funktionsschlüssel-Zahl (33) unverändert. Dies ist genau die in „Offene
   Punkte" 2 vorgesehene, hier beschlossene Korrektur.
+- 2026-10-09 (Nachzug Issue #1405 Scheibe 1, ADR-0086): B1, B14a (4), B14c (4),
+  B15 und B16 repariert und aus `KNOWN_VIOLATIONS`/`SPEC_LISTED_FINDINGS`
+  entfernt — 21 Funktionsschlüssel, Summe 24 (vorher 26/35). Der Detektor 1c
+  bleibt unverändert; ein neuer synthetischer Nachweis (AC-27 der Spec
+  `fix_1405_s1_alarm_zustellung.md`) belegt, dass ein
+  `attempted_channels.append` VOR einem riskanten `try` weiterhin ein Fund ist.
+- 2026-10-14 (Nachzug Issue #1405 Scheibe S4a): B18 komplett aus
+  `KNOWN_VIOLATIONS`/`SPEC_LISTED_FINDINGS` entfernt (21 Trip-Schlüssel, zehn
+  Funktionsschlüssel/13 Treffer) — Anker `len == 9 and sum == 9`. Klasse A
+  (Speichern) über divergierenden `except _SpeicherFehler`, Klasse B
+  (Wetterabruf) über einen Return, dessen `success` am selben Befund hängt wie
+  der Text; Klasse C (`_show_help`, `_show_help_for_kind`, `_show_status`) als
+  genehmigte Ausnahmen (Ausnahmeliste 3 → 6). Zentraler Fang in
+  `TripCommandProcessor.process()`: Programmfehler im Handler liefert eine
+  Fehlerantwort statt Schweigen.
+- 2026-10-26 (Nachzug Issue #1405 Scheibe S4b,
+  `fix_1405_s4b_erfolg_heisst_wirkung.md`): die letzten Funde ausserhalb der
+  Befehlsverarbeitung repariert, `KNOWN_VIOLATIONS` 8 → 0
+  (`SPEC_LISTED_FINDINGS` 7 → 0, Sonderpruefung `inbound_expected` entfernt).
+  B3 `trigger_compare_alert_checks` und B7 `trigger_inbound`: Status aus dem
+  Zaehler (`partial` bei `failed > 0`), Go wertet `inbound_command_poll` aus;
+  B19 `poll_and_process`: IMAP-/Netz-/Verarbeitungs-/Antwortfehler zaehlen in
+  `last_failed_count`; B21: Hinweis, Service-Fehlermail und Befehlsantwort
+  liefern `bool`, Hinweis-Fehlschlaege als `NotificationResult.notice_failures`
+  → `notice_failed` (`partial`, nicht `failed`, ADR-0086); B17 `send_reports`
+  geloescht; `_process_pending_markers` liefert `(delivered, failed)`.
+  Waechter-Korrektur Klasse 2: ein Zaehler im `else`/`elif` eines `if`, dessen
+  Rumpf einen gemeldeten Geschwister-Erfolgszaehler erhoeht, gilt als
+  Gegenzaehler (Fehlausgangs-Zweig, wie der Docstring schon versprach); ein
+  beliebiges `else: failed += 1` genuegt nicht.

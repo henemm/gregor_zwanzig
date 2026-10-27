@@ -33,3 +33,21 @@ Pfad inklusive Level-Filter.
 **Diese Dateien werden NICHT von Hand veraendert** (insbesondere nicht
 `awareness_type`/`awareness_level` hochgesetzt) — das waere keine
 Aufzeichnung mehr.
+
+## `feed_avalanche_type9.json` (Issue #1430, AC-2) — ABGELEITET
+
+- **ABGELEITET, nicht aufgezeichnet.** JSON erlaubt keinen Kommentar; der Vermerk steht im
+  Schluessel `_ABGELEITET` am Dateikopf.
+- Dict `{"IT":…, "AT":…, "DE":…}`, je Land ein Feed (`{"warnings":[…]}`) mit genau einem
+  Eintrag, kopiert aus `tests/fixtures/meteoalarm_feed/feed_{italy,austria,germany}_sample.json`.
+  Ersetzt: `awareness_type` -> `9; avalanche`, `awareness_level` -> `3; orange; Severe`,
+  `severity`, `event`, `headline`. Zeitfenster und Zonen unveraendert.
+
+## `feed_avalanche_type9.json` (Issue #1430, AC-2) — ABGELEITET
+
+- **ABGELEITET, nicht aufgezeichnet.** JSON erlaubt keinen Kommentar; der Vermerk steht im
+  Schluessel `_ABGELEITET` am Dateikopf.
+- Dict `{"IT":…, "AT":…, "DE":…}`, je Land ein Feed (`{"warnings":[…]}`) mit genau einem
+  Eintrag, kopiert aus `tests/fixtures/meteoalarm_feed/feed_{italy,austria,germany}_sample.json`.
+  Ersetzt: `awareness_type` -> `9; avalanche`, `awareness_level` -> `3; orange; Severe`,
+  `severity`, `event`, `headline`. Zeitfenster und Zonen unveraendert.

@@ -4,9 +4,10 @@
 - **Datum:** 2026-07-16
 - **Bezug:** GitHub-Issue #1275 (zweiter Anlauf), Spec
   `docs/specs/_archive/bugfix/fix_1275_sms_thunder_today.md`, Kontext
-  `docs/context/fix-1275-sms-thunder-today.md`. Vorgänger-Fix `e08a51c8`
+  `docs/context/fix-1275-sms-thunder-today.md` (gelöscht mit #1340, Git-Historie). Vorgänger-Fix `e08a51c8`
   (`docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md`), Lessons Learned in
   `docs/project/known_issues.md:26`.
+- **Ergänzt durch:** [ADR-0057](0057-mehrere-gewitter-signalquellen-je-gebiet.md) (ergänzt), [ADR-0073](0073-modelllauf-mehrheit-als-daempfendes-fusionssignal.md) (ergänzt)
 
 ## Kontext
 

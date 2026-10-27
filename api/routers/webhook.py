@@ -13,9 +13,11 @@ SPEC: docs/specs/modules/telegram_webhook_inbound.md v1.0 (Issue #637)
 from __future__ import annotations
 
 import logging
+import os
+import secrets
 from collections import deque
 
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, Header, HTTPException
 
 from app.config import Settings
 
@@ -48,14 +50,34 @@ def _already_seen(update_id: int) -> bool:
 
 
 @router.post("/api/internal/telegram-webhook")
-def telegram_webhook(update: dict = Body(...)):
+def telegram_webhook(
+    update: dict = Body(...),
+    x_telegram_bot_api_secret_token: str | None = Header(default=None),
+):
     """Verarbeitet ein einzelnes von Go weitergeleitetes Telegram-Update.
 
     Idempotent gegen Doppel-Zustellung (update_id-Dedup). Immer 200, auch bei
     Duplikat — verhindert Telegram-Retry-Sturm.
+
+    Issue #2142 (AC-10, Defense in Depth): Das Telegram-Secret wird hier ein
+    zweites Mal geprueft — die allgemeine Core-Auth-Pruefung in ``api/main.py``
+    genuegt nicht, denn wer das gemeinsame Geheimnis kennt (jeder Prozess mit
+    Lesezugriff auf die ``.env``), koennte sonst Kommandos fuer ein fremdes
+    Konto ausloesen. Die Pruefung laeuft VOR dem Dedup: ein abgewiesener
+    Request darf die ``update_id`` nicht verbrauchen.
     """
     global _reader
     from services.inbound_telegram_reader import InboundTelegramReader
+
+    expected_telegram_secret = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
+    if not expected_telegram_secret:
+        # fail-closed, exakt wie internal/handler/telegram_webhook.go.
+        raise HTTPException(status_code=503, detail="webhook not configured")
+    if not secrets.compare_digest(
+        x_telegram_bot_api_secret_token or "", expected_telegram_secret
+    ):
+        logger.warning("telegram-webhook: 403 — Telegram-Secret fehlt oder ist falsch (#2142)")
+        raise HTTPException(status_code=403, detail="forbidden")
 
     update_id = update.get("update_id")
     if isinstance(update_id, int) and _already_seen(update_id):

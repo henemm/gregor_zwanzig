@@ -3,10 +3,12 @@ entity_id: feat_1301_f2a_compare_new_trip_pattern
 type: feature
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [epic-1301, epic-1273, compare, trip-new-pattern, progressive-editor]
 ---
+
+> Hinweis (Doku-Audit 2026-10-21): das unter „Architektur-Entscheidung (ADR)“ reservierte ADR-0029 „anlege-shell-je-domaene-eigen“ wurde nie angelegt; ADR-0029 ist heute [Open-Meteo als Standard-Provider](../../adr/0029-openmeteo-standard-provider.md). Es gilt die Trip/Ortsvergleich-Code-Teilungs-Regel aus `CLAUDE.md` (geteilte Bausteine, kein domänen-eigener Anlege-Editor).
 
 # Epic #1301 Scheibe F2a — `/compare/new` als Progressive-Tab-Editor nach Trip-Muster
 
@@ -143,7 +145,7 @@ Folge-Scheibe verifiziert ist).
 Freischalt-Kette entspricht der heutigen Kette aus `compareEditorLogic.ts` (Name → ≥2 Orte →
 visited-Kaskade), erweitert um den neuen Wetter-Metriken-Tab zwischen Orte und Wertebereiche (schließt
 die C1-Lücke: der heutige Create-Modus mountet `WeatherMetricsTab` gar nicht). „Briefing aktivieren"
-ist erst aktiv, wenn `versandVisited` — analog zum Trip-Vorbild, wo „Tour speichern" erst nach
+ist erst aktiv, wenn `versandVisited` — analog zum Trip-Vorbild, wo „Trip speichern" erst nach
 Zeitplan-Besuch aktiv wird.
 
 ### `compareNewLogic.ts` — Signaturen

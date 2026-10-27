@@ -48,12 +48,21 @@ FESTE_SIEBEN = ["N", "D", "R", "PR", "Wind", "Böen", "Gew"]
 
 
 def _katalog_label(metric_id: str) -> str:
-    """Beschriftung, die der Compare-Katalog fuer diese Groesse fuehrt."""
+    """Beschriftung, die der Ausblick fuer diese Groesse fuehrt.
+
+    ⚠️ NACHGEZOGEN durch #2136/ADR-0068: bis hierher war das `label` des
+    Compare-Katalogs (deutscher Langname, "Böen"). ADR-0068 stellt beide
+    Ausblick-Renderpfade auf `col_label` um — dieselbe Quelle, aus der die
+    Stunden-/Etappentabelle derselben Mail ihre Koepfe zieht ("Gust"). Der
+    Compare-Katalog fuehrt dieses Feld bereits mit (`compare_metric_catalog.py`
+    reicht `MetricDefinition.col_label` zur Aufrufzeit durch), es entsteht
+    also keine neue Quelle — nur die bisher ungenutzte wird gelesen.
+    """
     from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 
     for eintrag in get_compare_metric_catalog():
         if eintrag.get("metric_id") == metric_id:
-            return eintrag["label"]
+            return eintrag["col_label"]
     raise AssertionError(f"Der Compare-Katalog kennt {metric_id!r} nicht.")
 
 
@@ -275,7 +284,7 @@ def test_ac3_unaufloesbare_auswahl_zeigt_die_grundauswahl_und_warnt(caplog):
 
     ⚠️ NACHGEZOGEN durch #1848 A3 (AC-10, PO-Freigabe 2026-08-21): das
     Rueckfall-ZIEL sind nicht mehr die sieben festen Standardspalten, sondern
-    die Grundauswahl der Tour. Der Rueckfall selbst — und die Warnung — sind
+    die Grundauswahl der Trip. Der Rueckfall selbst — und die Warnung — sind
     unveraendert Gegenstand dieses Tests.
     """
     from tests.helpers.trip_outlook_selection import (
@@ -296,7 +305,7 @@ def test_ac3_unaufloesbare_auswahl_zeigt_die_grundauswahl_und_warnt(caplog):
         "(AC-3, R-A2-3/M5)."
     )
     kopf = html_outlook_headers(html)
-    # #1848 A3: Rueckfall-Ziel ist die Grundauswahl der Tour. Gegen die
+    # #1848 A3: Rueckfall-Ziel ist die Grundauswahl der Trip. Gegen die
     # DARSTELLBAREN Kennungen der Grundauswahl geprueft, nicht gegen eine
     # getippte Spaltenliste -- so zieht die Erwartung mit dem Katalog mit.
     from output.renderers.compare_outlook_metric_ids import (
@@ -307,15 +316,23 @@ def test_ac3_unaufloesbare_auswahl_zeigt_die_grundauswahl_und_warnt(caplog):
          if mc.metric_id in (dc.allowed_metric_ids_for_report_type("evening") or set())]
     )
     erwartet = [c["label"] for c in outlook_columns(grund)]
-    assert kopf == ["Tag"] + erwartet, (
+    # #2098: die fest angehaengte ACC-Zusatzspalte steht hinter der Auswahl
+    # und stammt nicht aus `outlook_columns()` (#710 unberuehrt).
+    assert kopf == ["Tag"] + erwartet + ["ACC"], (
         f"Der Ausblick zeigt die Kopfzeile {kopf!r} statt der Grundauswahl "
         f"{erwartet!r} (AC-3)."
     )
-    # Gegenprobe auf die abgeloesten Kuerzel -- ohne "Wind"/"Böen", die im
-    # Katalog gleich heissen und deshalb nichts unterscheiden.
-    assert not set(kopf) & (set(FESTE_SIEBEN) - {"Wind", "Böen"}), (
+    # Gegenprobe auf die abgeloesten Kuerzel -- ohne "Wind", das in JEDER
+    # Namensform gleich heisst und deshalb nichts unterscheiden kann.
+    #
+    # ⚠️ NACHGEZOGEN durch #2136/ADR-0068: "Böen" war hier mit ausgenommen,
+    # weil der Ausblick-Kopf den deutschen Langnamen trug und der zufaellig
+    # mit dem festen Kuerzel zusammenfiel. Seit ADR-0068 traegt die Spalte
+    # `col_label` ("Gust") -- die Ausnahme ist damit nicht mehr noetig und
+    # verdeckte sonst genau den Fall, den dieser Test fangen soll.
+    assert not set(kopf) & (set(FESTE_SIEBEN) - {"Wind"}), (
         f"Die Kopfzeile {kopf!r} enthaelt Kuerzel der abgeloesten sieben "
-        f"festen Spalten {FESTE_SIEBEN!r} (#1848 A3)."
+        f"festen Spalten {FESTE_SIEBEN!r} (#1848 A3, #2136/ADR-0068)."
     )
     assert plain_outlook_block(plain), (
         "Im Klartext-Teil derselben Mail fehlt der Ausblick-Block (AC-3)."

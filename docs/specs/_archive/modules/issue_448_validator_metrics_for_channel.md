@@ -3,7 +3,7 @@ entity_id: issue_448_validator_metrics_for_channel
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: active
+status: implemented
 version: "1.0"
 tags: [validator, api, observability, metrics, channel, display-config]
 ---

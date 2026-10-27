@@ -3,7 +3,7 @@ entity_id: staging_selftest_stage_clamp
 type: bugfix
 created: 2026-07-20
 updated: 2026-07-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [scheduler, weather, staging-e2e, bugfix]
 workflow: fix-1325-staging-e2e-selftest

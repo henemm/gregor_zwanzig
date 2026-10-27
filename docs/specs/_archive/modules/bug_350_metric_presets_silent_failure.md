@@ -3,7 +3,7 @@ entity_id: bug_350_metric_presets_silent_failure
 type: module
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, store, metric-presets, data-loss]
 ---

@@ -13,7 +13,7 @@ auf `main` ist abgeschafft) und VOR `deploy-gregor-prod.sh`.
 Der Poll-Loop in Schritt 1 läuft so lang wie nötig (0 bis 150 Sek), kein manuelles "5 Minuten warten".
 
 Ablauf:
-1. Branch pushen → PR mit grüner CI-Ampel mergen (`gh pr create --fill` … `gh pr merge --merge`)
+1. Branch pushen → PR mit grüner CI-Ampel mergen (`gh pr create --fill` … `gh pr merge --merge --delete-branch`)
 2. Sofort `/e2e-verify` starten — Schritt 1 prüft Staging-Status und wartet aktiv
 3. `deploy-gregor-prod.sh`
 
@@ -66,7 +66,7 @@ python3 .claude/hooks/e2e_commit_gate.py <<< '{"tool_input":{"command":"git comm
 
 ## Schritt 3a: frontend-only — visuelle Pruefung
 
-**Alternativ (empfohlen):** `staging-validator` Agent via `/5-implement` Step 9 — loggt sich automatisch in Staging ein, prüft alle ACs aus der Spec via Playwright und schreibt `e2e_verified.json` mit `verified_commit` (aktueller HEAD-SHA). Voraussetzung: aktiver Workflow mit genehmigter Spec mit AC-Format `**AC-N:** Given.../When.../Then...`.
+**Alternativ (empfohlen):** `staging-validator` Agent (Aufruf aus `/50-implement` bzw. `/70-deploy`) — loggt sich automatisch in Staging ein, prüft alle ACs aus der Spec via Playwright und schreibt `.claude/e2e_verified/<sha>.json` mit `verified_commit` (aktueller HEAD-SHA). Voraussetzung: aktiver Workflow mit genehmigter Spec mit AC-Format `**AC-N:** Given.../When.../Then...`.
 
 Manuell (Fallback):
 
@@ -89,17 +89,54 @@ KEINE Mail in diesem Scope.
    Sammel-Versand ueber alle aktiven Touren. Nur dieser eine Test-Trip darf eine Mail
    erhalten.
 3. **IMAP-Pruefung gegen Stalwart:** Posteingang von `gregor-test@henemm.com` auf
-   `mail.henemm.com` abrufen (Credentials aus den Settings, nicht im Klartext hier).
+   `mail.henemm.com` abrufen (Creds `GZ_IMAP_*`, nie im Klartext).
    Pruefen: Subject mit Trip-Name + Report-Typ, HTML-Body nicht leer, Wetter-Tabelle
    vorhanden, Werte plausibel, Timestamp NACH dem Versand.
 
-Inhaltliche Tiefe via Spec-Validator (liest dieselbe Test-Mail):
+Inhaltliche Tiefe via **pfadrichtigem** Validator (liest dieselbe Test-Mail; falscher
+Validator auf einen Pfad ist strukturell nie bestehbar — `docs/reference/mail_validators.md`):
+
+- **Trip-Briefing** (`X-GZ-Mail-Type: trip-briefing`): `uv run python3 .claude/hooks/briefing_mail_validator.py`
+- **Orts-Vergleich** (`X-GZ-Mail-Type: compare`):
 
 ```bash
 uv run python3 .claude/hooks/email_spec_validator.py
 ```
 
-**STOP wenn:** Validator nicht Exit 0.
+**STOP wenn:** der zuständige Validator nicht Exit 0.
+
+### Rezept: Befehl per echtem Mail-Eingang auf Staging
+
+Fuer Aenderungen an E-Mail-Befehlen (`status`, `heute`, Ruhetag, Startdatum;
+`trip_command_processor.py`, `inbound_email_reader.py`) prueft dieses Werkzeug den
+ECHTEN Zustellweg. Testmails ueber die angemeldete Einlieferung (Port 587) tragen nie den
+Absender-Echtheitsvermerk und werden vom Eingang zu Recht verworfen (#2143). Das Werkzeug
+liefert deshalb anonym ueber Port 25 ein (der eigene Server ist fuer `henemm.com`
+sendeberechtigt), legt einen Wegwerf-Nutzer `gregor-test+<tag>@henemm.com` samt Trips an,
+stoesst den Poll ueber den Kern (Port 8001, `X-GZ-Core-Auth`) an und liest die Antwortmail
+per IMAP (nur `BODY.PEEK`, nur eigene Plus-Adresse). Im `finally` wird alles geloescht.
+Voraussetzung: ein bestaetigtes Helfer-Konto (`GZ_AUTH_USER`/`GZ_AUTH_PASS` in
+`/home/hem/gregor_zwanzig_staging/.env`) holt das Bestaetigungs-Token des neuen Nutzers
+(Henne-Ei, #2271); es wird nie veraendert oder geloescht. Fehlen die Werte: Exit 2 vor jeder Registrierung.
+
+```bash
+python3 .claude/tools/staging_befehl_pruefen.py --szenario status        # eine status-Mail (Trip B)
+python3 .claude/tools/staging_befehl_pruefen.py --szenario heute         # status + heute (Trip A)
+python3 .claude/tools/staging_befehl_pruefen.py --szenario verschiebung  # Ruhetag + Startdatum (D, D2)
+python3 .claude/tools/staging_befehl_pruefen.py --szenario alle          # A, B, C, D, D2
+```
+
+- **Exit 0:** alle gewaehlten Szenarien bestanden (je Szenario eine `PASS`-Zeile).
+- **Exit 1:** Antwort ausgeblieben (Mail vermutlich verworfen) oder Inhalt falsch.
+- **Exit 2:** Aufruf-/Umgebungsfehler (Relay-Sperre, fehlende Zugangsdaten, Registrierung
+  abgelehnt oder 429 — 5 Versuche pro IP und Stunde, Lauf nahe Mitternacht Ortszeit).
+- **Erfolg = Antwortmail, nicht count:** Hat der Cron die Mail schon verarbeitet, meldet der
+  Poll `count=0`, obwohl alles funktioniert. `count` ist nur Diagnose; eine ausbleibende
+  Antwortmail ist immer ein Fehler (der Eingang markiert verworfene Mails still als gelesen).
+- Scheitert das Aufraeumen, steht die Kennung des uebrig gebliebenen Nutzers in der Ausgabe.
+- **Nicht abgedeckt:** SMS, Premium-SMS und Telegram (#2441 AC-6, AC-7) laufen NICHT ueber
+  dieses Werkzeug, sondern ueber Kern-Tests mit echtem Eingang, die Staging-Vorschau und
+  den Handy-Nachtest nach dem Prod-Deploy.
 
 ## Schritt 3c: Telegram-Scope — funktionaler Live-Test
 

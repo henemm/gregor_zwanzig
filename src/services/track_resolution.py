@@ -26,6 +26,7 @@ bleibt dann byte-identisch bei ``Segment N`` (AC-10).
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -210,6 +211,20 @@ _IMPLAUSIBLE_DETAIL = (
 )
 
 
+# Issue #2218 C5-47: zeitbasierte Daempfung von `implausible_measurement` je
+# (user_id, trip_id, stage_id). 12 h < 26 h Streak-Luecke des Go-Lesers
+# (briefing_health.go) -- der Streak reisst also nie ab, solange die Etappe
+# unplausibel bleibt. Prozessspeicher: ein Neustart erlaubt hoechstens eine
+# Zusatzzeile je Etappe (bewusst akzeptiert).
+_IMPLAUSIBLE_REPORT_INTERVAL_S = 12 * 3600.0
+_implausible_reported: Dict[tuple, float] = {}
+
+
+def _jetzt() -> float:
+    """Monotone Uhr der Daempfung (Sekunden); im Test austauschbar."""
+    return time.monotonic()
+
+
 def _melde_unplausible_messung(trip, stage, user_id: str) -> None:
     """Stelle 2: die Etappe gilt als vermessen, ihre Werte taugen aber nicht.
 
@@ -219,19 +234,27 @@ def _melde_unplausible_messung(trip, stage, user_id: str) -> None:
     Fall erkannt. Eine zweite Kopie der Regel liefe beim naechsten
     Schwellen-Wechsel still auseinander.
 
-    Bewusst OHNE eigene Daempfung: wie beim Zwilling
-    ``alert_anchor_rejected.jsonl`` ist jede Zeile die Beobachtung EINES
-    Laufs; genau daraus waechst das Betreiber-Signal.
+    Gedaempft (Issue #2218 C5-47): hoechstens eine Zeile je
+    (Nutzer, Trip, Etappe) und 12 h. Das haelt den Go-Streak (Luecke 26 h)
+    lueckenlos, ohne jede 15-Minuten-Runde eine Zeile zu schreiben.
     """
     from services.track_resolution_health import record_track_resolution_failure
     from services.trip_segments import stage_measured_distances
 
     if stage_measured_distances(list(stage.waypoints)) is not None:
         return
-    record_track_resolution_failure(
+    key = (user_id, trip.id, stage.id)
+    now = _jetzt()
+    last = _implausible_reported.get(key)
+    if last is not None and now - last < _IMPLAUSIBLE_REPORT_INTERVAL_S:
+        return
+    # Erst NACH erfolgreichem Schreiben daempfen: scheitert es, holt die
+    # naechste Runde die Zeile nach (nichts geht still verloren).
+    if record_track_resolution_failure(
         user_id=user_id, trip_id=trip.id, stage_id=stage.id,
         reason="implausible_measurement", detail=_IMPLAUSIBLE_DETAIL,
-    )
+    ):
+        _implausible_reported[key] = now
 
 
 def _melde_fehlschlag(trip, stage, user_id: str, diagnose: Dict[str, object]) -> None:
@@ -259,6 +282,45 @@ def _melde_fehlschlag(trip, stage, user_id: str, diagnose: Dict[str, object]) ->
         user_id=user_id, trip_id=trip.id, stage_id=stage.id,
         reason=str(grund), detail=diagnose.get("detail"),
     )
+
+
+def _persistiere_distanzen(trip, stage, new_stage, user_id: str) -> None:
+    """#2158: Backfill gesperrt auf FRISCHEM Stand persistieren.
+
+    Uebernommen werden die Distanzen nur, wenn die Etappe in der frischen
+    Datei noch dieselbe ID UND dieselben Wegpunkte (ID + Koordinaten) traegt
+    -- sonst hat der Nutzer sie inzwischen geaendert und die berechneten
+    Werte passen nicht mehr. Sperr-Fristablauf: Warn-Log, nicht persistieren
+    (der Aufrufer rechnet mit dem In-Memory-Ergebnis weiter).
+    """
+    import dataclasses
+
+    from app.loader import LoaderError, update_trip
+    from services.file_lock import LockTimeout
+
+    def _signatur(wps):
+        return [(w.id, w.lat, w.lon) for w in wps]
+
+    distanzen = {wp.id: wp.distance_from_start_km for wp in new_stage.waypoints}
+
+    def _mutate(fresh):
+        stages = []
+        for s in fresh.stages:
+            if s.id == stage.id and _signatur(s.waypoints) == _signatur(stage.waypoints):
+                s = dataclasses.replace(s, waypoints=[
+                    dataclasses.replace(w, distance_from_start_km=distanzen[w.id])
+                    for w in s.waypoints
+                ])
+            stages.append(s)
+        return dataclasses.replace(fresh, stages=stages)
+
+    try:
+        update_trip(user_id, trip.id, _mutate)
+    except (LockTimeout, LoaderError) as e:
+        logger.warning(
+            "Track-Aufloesung: Distanzen fuer Trip %s nicht persistiert (%s)",
+            trip.id, e,
+        )
 
 
 def backfill_stage_distances(
@@ -328,9 +390,7 @@ def backfill_stage_distances(
             new_stage if s.id == stage.id else s for s in trip.stages
         ])
         if persist:
-            from app.loader import save_trip
-
-            save_trip(updated, user_id=user_id)
+            _persistiere_distanzen(trip, stage, new_stage, user_id)
         logger.info(
             "Track-Aufloesung: Etappe %s von Trip %s nachtraeglich vermessen "
             "(%d Wegpunkte, persist=%s)", stage.id, trip.id, len(distances), persist,

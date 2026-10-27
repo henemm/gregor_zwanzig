@@ -3,7 +3,7 @@ entity_id: issue_466_passkey_register_public
 type: module
 created: 2026-05-30
 updated: 2026-05-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, sveltekit, auth, passkey, webauthn, passwordless, issue-466]
 ---

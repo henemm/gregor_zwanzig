@@ -1,0 +1,10 @@
+
+Running 5 tests using 1 worker
+
+  ✓  1 [setup] › e2e/hub-send-dialog-target.staging.setup.ts:20:1 › authenticate via API (staging) — hub_send_dialog_target (775ms)
+  ✓  2 [tests] › e2e/hub-send-dialog-target.staging.spec.ts:151:2 › SD-1 (route): Lösch-Dialog behält eigenen Text; Sende-Dialog nennt das echte Ziel, „Senden" gesperrt, erzwungener Klick sendet nicht (3.0s)
+  ✓  3 [tests] › e2e/hub-send-dialog-target.staging.spec.ts:151:2 › SD-1 (vergleich): Lösch-Dialog behält eigenen Text; Sende-Dialog nennt das echte Ziel, „Senden" gesperrt, erzwungener Klick sendet nicht (2.3s)
+  ✓  4 [tests] › e2e/hub-send-dialog-target.staging.spec.ts:192:2 › SD-2 (route): Stress — zweimal Menü → Senden → Abbrechen, dann fünf erzwungene Klicks auf den gesperrten Knopf ⇒ kein Sende-Abruf, Dialog stabil (2.7s)
+  ✓  5 [tests] › e2e/hub-send-dialog-target.staging.spec.ts:192:2 › SD-2 (vergleich): Stress — zweimal Menü → Senden → Abbrechen, dann fünf erzwungene Klicks auf den gesperrten Knopf ⇒ kein Sende-Abruf, Dialog stabil (2.6s)
+
+  5 passed (13.1s)

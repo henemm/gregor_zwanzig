@@ -56,7 +56,7 @@ def _echt_gerechnet() -> tuple[list, SegmentWeatherSummary]:
     vereinigt beide (Aggregationsregel ``union_of_max_carriers``).
     """
     region = thunder_region_for(_LAT, _LON)
-    punkte = [_dp(14, cape=1500.0, cin=5.0), _dp(18, lpi=60.0)]
+    punkte = [_dp(14, cape=3000.0, cin=5.0), _dp(18, lpi=60.0)]
     _fuse_thunder_levels(
         punkte, cape_ladder_thresholds_jkg("icon_d2", region),
         lpi_thresholds_jkg(region),

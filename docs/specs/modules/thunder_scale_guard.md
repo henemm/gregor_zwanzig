@@ -3,7 +3,7 @@ entity_id: thunder_scale_guard
 type: feature
 created: 2026-08-20
 updated: 2026-08-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, guard, ratchet, issue-1480, thunder-scale]
 ---
@@ -187,8 +187,9 @@ nutzersichtbare Defekte sind (#2010, #2011).
    **Nicht-Leerlauf-Test** wie für die Basislinie, dazu ein **Granularitäts-Nachweis**: eine
    konstruierte Kopie in einer kanonischen Datei unter anderem Symbolnamen **muss** gemeldet
    werden.
-2. **Benannte Altlasten-Basislinie** (`ALTLASTEN` im Backend-Wächter, 9 Einträge): die bekannten
-   Kopien aus #1474. **Symbolgeschlüsselt** über `(Datei, Symbol-/Funktionsname, Regel)` —
+2. **Benannte Altlasten-Basislinie** (`ALTLASTEN` im Backend-Wächter, ursprünglich 9 Einträge,
+   nach #2010/#2011 noch 3, seit #2028 leer): die bekannten Kopien aus #1474. **Symbolgeschlüsselt** über
+   `(Datei, Symbol-/Funktionsname, Regel)` —
    **niemals** über Zeilennummern (#1466); jeder Eintrag trägt Grund und Tracking-Issue. Die Liste
    darf nur schrumpfen. Gegen Verrotten schützt ein **Nicht-Leerlauf-Test**: erzeugt ein Eintrag
    heute keinen echten Fund mehr (Symbol saniert, umbenannt, verschoben), wird der Wächter **rot**
@@ -470,10 +471,10 @@ Frontend-Läufe erfolgen über
   je Fixture einen erwarteten Fund-/Kein-Fund-Status prüfen.
 - **AC-6 bis AC-10 (Regel B/C/match-case):** dieselbe Vorgehensweise, Fixtures nach den in den
   ACs genannten realen Vorbildern.
-- **AC-11 (Treffsicherheit):** die acht Fixture-Vorlagen aus `faelle.py.txt` einzeln durch die
+- **AC-11:** (Treffsicherheit) die acht Fixture-Vorlagen aus `faelle.py.txt` einzeln durch die
   Scan-Funktion laufen lassen; **je Vorlage genau ein Fund an der erwarteten Fundstelle** — nicht
   bloß eine Gesamtsumme von acht, die auch bei ungleich verteilten Fehlfunden zustande käme.
-- **AC-12 (Fehlalarm-Obergrenze):** vollen Backend-Scan gegen den echten Repo-Baum ausführen;
+- **AC-12:** (Fehlalarm-Obergrenze) vollen Backend-Scan gegen den echten Repo-Baum ausführen;
   erwarteter Output: Exit 0, keine Erwähnung einer unbegründeten Stelle außer
   `narrow.py::_SEV_TO_THUNDER_LEVEL` (die durch den Marker bereits grün ist). Gegenprobe mit
   temporär entferntem Marker **nur an einer Kopie im Scratchpad**, nie am Repo-Stand.
@@ -484,33 +485,33 @@ Frontend-Läufe erfolgen über
   ein Fund" allein bliebe auch dann wahr, wenn der Wächter nur die halbe Baumfläche liefe.
 - **AC-13 bis AC-15, AC-17 (Frontend-Regeln):** Scan-Funktion des Frontend-Wächters auf
   In-Memory-AST-Fixtures anwenden; je Fixture erwarteten Fund-/Kein-Fund-Status prüfen.
-- **AC-16 (Live-Bezug der Ordnung):** die Ordnungsquelle per Injektion durch
+- **AC-16:** (Live-Bezug der Ordnung) die Ordnungsquelle per Injektion durch
   `['NONE','MED','LOW','HIGH']` ersetzen und **zwei** Fixtures prüfen — die der untergeschobenen
   Ordnung folgende bleibt grün, die der echten folgende wird rot. Beide Erwartungen sind nötig:
   eine allein wäre auch bei hartkodierter Liste erfüllbar. **Kein** Quelltext-Grep als Nachweis
   (Dateiinhalt-Check ist als Verhaltensnachweis unzulässig).
-- **AC-18 (Regel D):** Kommentar-Extraktion des jeweiligen Wächters auf Fixtures mit/ohne
+- **AC-18:** (Regel D) Kommentar-Extraktion des jeweiligen Wächters auf Fixtures mit/ohne
   Paritätsbehauptung anwenden, inklusive einer mehrzeiligen Kommentarvariante.
-- **AC-19 (Selbstbezug):** vollen Scan gegen `tests/fixtures/thunder_scale_guard_cases/` bzw.
+- **AC-19:** (Selbstbezug) vollen Scan gegen `tests/fixtures/thunder_scale_guard_cases/` bzw.
   `frontend/.../__tests__/fixtures/` ausführen; erwarteter Output: 0 Funde trotz vollem
   Stufen-Wortschatz in den Dateien.
-- **AC-20 (Wirkungsnachweis):** `len(funde) > 0` gegen eine Fixture mit bekanntem Verstoß prüfen.
-- **AC-21 (Marker-Duldung):** acht Fixtures je Wächter durch die Scan-Funktion laufen lassen —
+- **AC-20:** (Wirkungsnachweis) `len(funde) > 0` gegen eine Fixture mit bekanntem Verstoß prüfen.
+- **AC-21:** (Marker-Duldung) acht Fixtures je Wächter durch die Scan-Funktion laufen lassen —
   ausreichende Begründung, Alibi-Begründung (`x`), 15 Punkte, 15 Bindestriche, 15 gleiche
   Buchstaben, deutsche Begründung mit Umlauten sowie die Grenzproben mit 14 und 15 sinnvollen
   Zeichen. Erwarteter Output: Füllzeichen und 14 Zeichen liefern je einen Fund, die übrigen `[]`.
-- **AC-22 (Prüfdatum):** `grep -n "2026-11-01" tests/tdd/test_thunder_scale_local_copy_guard.py
+- **AC-22:** (Prüfdatum) `grep -n "2026-11-01" tests/tdd/test_thunder_scale_local_copy_guard.py
   frontend/src/lib/components/shared/weather-metrics-tab/__tests__/thunderScaleLocalCopyGuard.test.ts
   docs/reference/gates_und_ratschen.md` ausführen; erwarteter Output: mindestens ein Treffer je
   Datei. **Ausdrückliche Ausnahme von der Dateiinhalt-Check-Regel:** Geprüft wird hier reine
   Metadaten-Präsenz (Prüfdatum, Ratschen-Tabellenzeile), kein Laufzeitverhalten — ein
   Verhaltensnachweis ist dafür weder möglich noch sinnvoll. Die Testfunktion trägt deshalb den
   Marker `# doc-compliance-test`.
-- **AC-23 (Wächtertrennung):** `uv run pytest --collect-only` über `tests/` ausführen (erwarteter
+- **AC-23:** (Wächtertrennung) `uv run pytest --collect-only` über `tests/` ausführen (erwarteter
   Output: Exit 0, keine Collection-Fehler); ergänzend Quelltext-Grep des Backend-Wächters auf
   `node|tsc|svelte` (erwarteter Output: kein Treffer). Der Collection-Lauf ist der eigentliche
   Nachweis, der Grep nur eine Zusatzabsicherung.
-- **AC-24 (parametrisierter Kern):** den Erkennungs-Kern zweimal gegen **dieselbe** konstruierte
+- **AC-24:** (parametrisierter Kern) den Erkennungs-Kern zweimal gegen **dieselbe** konstruierte
   Fixture aufrufen — einmal mit `RiskLevel`-Parametern (Fund erwartet), einmal mit
   Gewitter-Parametern (kein Fund erwartet). Beide Erwartungen sind nötig: der Fund allein wiese
   nicht nach, dass der Kern sich wirklich nach den Parametern richtet und nicht ohnehin alles
@@ -545,10 +546,14 @@ unfangbar bleibt" — bewusst nicht Teil dieser Lieferung:
    Mitgliedsnamen, Scan-Wurzeln als Argumente), wird aber vorerst nur auf `ThunderLevel`
    angewandt — ein späterer `RiskLevel`-Wächter kostet dadurch ~20–30 LoC statt Neubau.
 5. **Die 10 bestehenden Kopien im Produktivcode werden nicht saniert.** Das ist ausdrücklich
-   nicht Teil dieses Workflows (#2010, #2011 decken zwei davon in eigenen PRs ab). Der Wächter
-   startet als Ratsche mit benannter, nur schrumpfender Duldungsliste — heute **neun**
-   Basislinien-Einträge (davon 7 in `src/services/`, 2 in `email/html.py`) plus der eine
-   Marker-Fall in `narrow.py`. Die beiden Go-Kopien liegen außerhalb der Python-Scanfläche.
+   nicht Teil dieses Workflows. Der Wächter startet als Ratsche mit benannter, nur schrumpfender
+   Duldungsliste — bei Einführung **neun** Basislinien-Einträge (davon 7 in `src/services/`,
+   2 in `email/html.py`) plus der eine Marker-Fall in `narrow.py`. **#2010/#2011 (2026-08-22)**
+   haben sechs davon saniert (4× `src/services/trip_command_processor.py`: `_THUNDER_LABEL`,
+   `_MAP_EMOJI`, `_MAP_PLAIN`, `_handle_hours_drilldown`; 2× `src/output/renderers/email/html.py`:
+   `_thunder_risk_level` Regel B und C) — verbleibend **drei** Einträge (`day_window.py` und
+   zwei `trip_report_scheduler.py`-Symbole). Die beiden Go-Kopien liegen außerhalb der
+   Python-Scanfläche.
 6. **Regel A/P laufen nicht auf Testdateien** — eine korrekte Fixture führt zwangsläufig alle
    vier Stufen-Wörter und würde 16 Dauerfeuer-Treffer erzeugen. Nur Regel D läuft dort.
 7. **Ein falsch schlagender Wächter blockiert jeden PR jeder Session** — beide CI-Jobs (`test`,
@@ -617,3 +622,17 @@ unfangbar bleibt" — bewusst nicht Teil dieser Lieferung:
   Marker in `src/output/renderers/narrow.py` besteht die verschärfte Prüfung unverändert
   (47 sinnvolle Zeichen, 16 verschiedene). Neue Fixtures und Grenzproben von beiden Seiten
   (14 → rot, 15 → grün): 50 → 56 Backend-, 30 → 36 Frontend-Tests.
+- 2026-08-22: `ALTLASTEN` um sechs sanierte Einträge geschrumpft (#2010, #2011) — 9 → 3.
+  `trip_command_processor.py::_THUNDER_LABEL`/`_MAP_EMOJI`/`_MAP_PLAIN`/`_handle_hours_drilldown`
+  leiten ihre Wörter jetzt aus `THUNDER_LABEL_DE` ab statt sie lokal zu kopieren;
+  `email/html.py::_thunder_risk_level` ruft für den String-/Enum-Pfad tatsächlich
+  `thunder_ampel_band()` auf (Regel B und C). Verbleibende drei Einträge (`day_window.py`,
+  zwei `trip_report_scheduler.py`-Symbole) unverändert. Details:
+  `docs/specs/modules/fix_2010_2011_gewitter_stufenwoerter.md`.
+- 2026-09-24: `ALTLASTEN` auf die letzten drei Einträge saniert (#2028) — 3 → 0, die
+  Basislinie ist jetzt leer. `day_window.py::_NIGHT_ADDENDUM_WORD` entfällt,
+  `trip_report_scheduler.py::_thunder_entry_from_trend_row`/`_build_thunder_forecast`
+  bauen den Gewitter-Satzkopf über die neue kanonische Funktion
+  `thunder_scale.py::thunder_headline_sentence()` (+ Tabelle `THUNDER_NIGHT_ADJECTIVE_DE`).
+  Der Ratschen-Mechanismus bleibt bestehen: jede neue lokale Kopie ist ab jetzt ein
+  „unbekannter" Fund. Details: `docs/specs/modules/fix_2028_gewitter_satzvorlagen.md`.

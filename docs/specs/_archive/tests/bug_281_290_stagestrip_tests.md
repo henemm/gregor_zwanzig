@@ -3,7 +3,7 @@ entity_id: bug_281_290_stagestrip_tests
 type: tests
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, svelte5, cockpit, stagestrip, pill, css-tokens, bug-281, bug-290]
 parent: bug_281_290_stagestrip
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_281_290_stagestrip.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_281_290_stagestrip.md`.
 Statische Quelltextprüfungen für alle 6 Acceptance Criteria.
 
-Parent-Spec: `docs/specs/modules/bug_281_290_stagestrip.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_281_290_stagestrip.md` v1.0
 
 ## Source
 

@@ -3,7 +3,7 @@ entity_id: issue_303_waypoint_suggestions
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 parent_issue: 303
 related: issue_296_be_naismith_arrival

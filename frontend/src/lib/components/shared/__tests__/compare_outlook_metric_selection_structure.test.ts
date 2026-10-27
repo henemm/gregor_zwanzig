@@ -1,4 +1,4 @@
-// Struktur-Waechter um den Ausblick-Block (CompareOutlookLayoutControls.svelte).
+// Struktur-Waechter um den Ausblick-Block (OutlookLayoutControls.svelte).
 //
 // HERKUNFT: Issue #1406 Scheibe A (Epic #1372 S4b Scheibe 2, Dach #1374),
 // fortgeschrieben in #1848 A2.
@@ -42,7 +42,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const OUTLOOK_COMPONENT = join(here, '..', 'CompareOutlookLayoutControls.svelte');
+const OUTLOOK_COMPONENT = join(here, '..', 'OutlookLayoutControls.svelte');
 const AGGREGATION_ROW_COMPONENT = join(
 	here, '..', 'weather-metrics-tab', 'AggregationMetricRow.svelte'
 );
@@ -174,7 +174,7 @@ describe('AC-5 [primaryColumns/onRemove/onDndReorder REGRESSIONSSCHUTZ] + AC-1/A
 		assert.equal(
 			rows.length,
 			1,
-			`REGRESSION: erwartet genau einen WeatherV2Reihenfolge-Aufruf in CompareOutlookLayoutControls.svelte, ` +
+			`REGRESSION: erwartet genau einen WeatherV2Reihenfolge-Aufruf in OutlookLayoutControls.svelte, ` +
 				`gefunden ${rows.length}.`
 		);
 		const row = rows[0];

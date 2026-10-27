@@ -8,6 +8,7 @@
   (Modell-Fallback ohne Kaschieren); grenzt sich ab von [ADR-0025](0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md)
   (Eine Gewitter-Quelle für alle Briefing-Kanäle); Vorgänger-Scheibe (unabhängig):
   `docs/specs/modules/fix_1492_s1_wettercode_fallback.md` (kein ADR nötig, additive Lückenschließung).
+- **Ergänzt durch:** [ADR-0057](0057-mehrere-gewitter-signalquellen-je-gebiet.md) (ergänzt), [ADR-0065](0065-lpi-leiter-folgt-liefernder-quelle.md) (stellt §5 her)
 
 ## Kontext
 
@@ -170,7 +171,7 @@ den Radar-Nowcast-Pfad nachgeliefert. Spec: `docs/specs/modules/fix_1581_enrichm
    selbst, wie es das bereits für `warn_service_health` tut. Preis: „wächst mit der Ausfalldauer"
    ist damit keine im Repo testbare Eigenschaft mehr, sondern eine der externen Auswertung —
    akzeptierte Abweichung vom wörtlichen ADR-0018-Vorbild (`provider_error_streak_since`), keine
-   offene Lücke.
+   offene Lücke. (umgesetzt 2026-09-18, #1647: Block `2e-e`, Fenster 48 h)
 3. **Eigenes Journal (`data/diagnostics/enrichment_calls.jsonl`), kein Ausbau von
    `call_log.py`.** `call_log.py` schreibt nach `openmeteo_calls.jsonl`, derselben Datei, die
    `briefing_health` liest — ein Ausbau dort hätte `coreBriefingSources` berührt. Der gemeinsame

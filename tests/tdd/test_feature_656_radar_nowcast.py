@@ -16,7 +16,8 @@ In der RED-Phase schlagen alle Tests fehl, weil die Module
 from __future__ import annotations
 
 import time as time_mod
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 
 import pytest
 
@@ -41,7 +42,7 @@ def _make_today_trip() -> Trip:
     arrival_override sorgt dafür, dass das Segment 00:00-23:59 Uhr Ortszeit
     aktiv ist — unabhängig von der Tageszeit, zu der der Test läuft (#979).
     """
-    today = date.today()
+    today = ortstag(_DE_LAT, _DE_LON)
     stages = [
         Stage(
             id="T1",
@@ -70,6 +71,7 @@ def _make_msg(body: str) -> InboundMessage:
         sender="gregor-test@henemm.com",
         channel="email",
         received_at=datetime.now(tz=timezone.utc),
+        user_id="default",
     )
 
 
@@ -166,7 +168,7 @@ def test_ac2_format_now_text_dry():
 def test_ac3_now_command_returns_nowcast_under_10s():
     """AC-3: `### now` liefert in <10s eine erfolgreiche Nowcast-Antwort."""
     trip = _make_today_trip()
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     try:
         processor = TripCommandProcessor()
         start = time_mod.monotonic()
@@ -185,14 +187,14 @@ def test_ac3_now_command_returns_nowcast_under_10s():
         assert "uelle" in body or "Quelle" in body
     finally:
         from app.loader import get_briefings_dir
-        p = get_briefings_dir() / f"{_TRIP_ID}.json"
+        p = get_briefings_dir(user_id="default") / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()
 
 
 def test_ac3_now_command_without_today_stage_gives_clear_message():
     """AC-3 (Rand): Ohne heutige Etappe klare Meldung statt Absturz."""
-    today = date.today()
+    today = ortstag(_DE_LAT, _DE_LON)
     trip = Trip(
         id=_TRIP_ID,
         name=_TRIP_NAME,
@@ -201,7 +203,7 @@ def test_ac3_now_command_without_today_stage_gives_clear_message():
             waypoints=[Waypoint(id="W1", name="X", lat=_DE_LAT, lon=_DE_LON, elevation_m=500)],
         )],
     )
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     try:
         result = TripCommandProcessor().process(_make_msg("### now"))
         # Kein heutiger Standort -> klare, positionsbezogene Meldung (nicht der
@@ -212,7 +214,7 @@ def test_ac3_now_command_without_today_stage_gives_clear_message():
         assert any(kw in body for kw in ("etappe", "standort", "position", "heute"))
     finally:
         from app.loader import get_briefings_dir
-        p = get_briefings_dir() / f"{_TRIP_ID}.json"
+        p = get_briefings_dir(user_id="default") / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()
 
@@ -225,34 +227,29 @@ def test_ac4_radar_alert_due_pure_logic():
     """AC-4: Reine Entscheidungsfunktion — Onset <= Schwelle -> Alert fällig.
 
     Issue #2009: geprüft wird gegen die geteilte Schwelle
-    ``RADAR_ONSET_THRESHOLD_MIN`` (55) statt gegen das frühere Literal 20.
-    Damit der ``later``-Fall seine Aussage („ferner Onset löst NICHT aus")
-    behält, wandert er von 45 auf 100 Min — 45 liegt bei Schwelle 55
-    innerhalb des Alarmfensters und hätte den Test ins Gegenteil gekippt.
+    ``RADAR_ONSET_THRESHOLD_MIN`` statt gegen das frühere Literal 20.
+
+    Issue #2261 A-1: die Schwelle ist jetzt die Reichweite der Quelle (180).
+    Der frühere ``later``-Fall („ferner Onset > Schwelle löst NICHT aus") ist
+    über die echte Quelle nicht mehr konstruierbar — ersetzt durch
+    test_vorlauf_horizont.py (#2261) (nasse Frames jenseits des Horizonts,
+    Quelle ohne Frames). Hier bleiben „bald" und „trocken".
     """
-    from services.radar_service import NowcastResult, RADAR_ONSET_THRESHOLD_MIN
+    from services import radar_service as radar_service_mod
+    from services.radar_service import NowcastResult
     from services.trip_alert import radar_alert_due
 
+    schwelle = radar_service_mod.RADAR_ONSET_THRESHOLD_MIN
     soon = NowcastResult(
         onset_minutes=10, intensity_label="Starker Regen", source="radar",
         frames=_frames(10, 8.0),
-    )
-    later = NowcastResult(
-        onset_minutes=100, intensity_label="Leichter Regen", source="radar",
-        frames=_frames(100, 0.3),
     )
     dry = NowcastResult(
         onset_minutes=None, intensity_label="Kein Niederschlag", source="radar",
         frames=_frames(None, 0.0),
     )
-    assert later.onset_minutes > RADAR_ONSET_THRESHOLD_MIN, (
-        "Testvoraussetzung: der 'later'-Fall muss OBERHALB der Schwelle "
-        f"liegen, sonst prueft er das Gegenteil ({later.onset_minutes} vs. "
-        f"{RADAR_ONSET_THRESHOLD_MIN})"
-    )
-    assert radar_alert_due(soon, threshold_min=RADAR_ONSET_THRESHOLD_MIN) is True
-    assert radar_alert_due(later, threshold_min=RADAR_ONSET_THRESHOLD_MIN) is False
-    assert radar_alert_due(dry, threshold_min=RADAR_ONSET_THRESHOLD_MIN) is False
+    assert radar_alert_due(soon, threshold_min=schwelle) is True
+    assert radar_alert_due(dry, threshold_min=schwelle) is False
 
 
 def test_ac4_check_radar_alerts_sends_once_then_throttles():
@@ -264,7 +261,7 @@ def test_ac4_check_radar_alerts_sends_once_then_throttles():
 
     user_id = "default"
     trip = _make_today_trip()
-    save_trip(trip)
+    save_trip(trip, user_id=user_id)
 
     # Echte Frame-Quelle (normale Funktion, KEIN Mock) liefert Onset in 10 min.
     def real_frame_source(lat: float, lon: float):
@@ -311,6 +308,6 @@ def test_ac4_check_radar_alerts_sends_once_then_throttles():
         assert radar_entries[0].get("severity") == "HIGH"
     finally:
         from app.loader import get_briefings_dir
-        p = get_briefings_dir() / f"{_TRIP_ID}.json"
+        p = get_briefings_dir(user_id=user_id) / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()

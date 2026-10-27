@@ -36,10 +36,15 @@ export function vtBriefingLeadText(context: VtBriefingContext): string {
 }
 
 /** Kanal-Unterzeile je Kanal (Layout-Hinweis) — keine Wertung (AC-5/AC-5a). */
-export function vtBriefingSubTexts(context: VtBriefingContext): { email: string; telegram: string; sms: string } {
+export function vtBriefingSubTexts(
+	context: VtBriefingContext,
+	telegramStyle: 'rich' | 'kurzform' = 'rich'
+): { email: string; telegram: string; sms: string } {
+	// Issue #2455: Telegram-Kurzform uebernimmt die SMS-Auswahl 1:1.
 	return {
 		email: 'Layout · volle Tabelle',
-		telegram: `Layout · ${CHANNEL_COL_BUDGET.telegram} Spalten`,
+		telegram:
+			telegramStyle === 'kurzform' ? 'folgt der SMS-Auswahl' : `Layout · ${CHANNEL_COL_BUDGET.telegram} Spalten`,
 		sms: `Layout · kein Raster, ${vtBriefingSmsCharLimit(context)} Zeichen`
 	};
 }

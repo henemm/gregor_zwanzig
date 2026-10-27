@@ -3,7 +3,7 @@ entity_id: bug707_trip_datum_overwrite
 type: bugfix
 created: 2026-06-10
 updated: 2026-06-10
-status: resolved
+status: implemented
 version: "1.0"
 tags: [frontend, trip, stages, data-integrity, partial-update]
 ---

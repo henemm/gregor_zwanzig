@@ -3,7 +3,7 @@ entity_id: fix_1196_s1_testnetz_entrauschen
 type: bugfix
 created: 2026-08-03
 updated: 2026-08-03
-status: draft
+status: implemented
 version: "1.3"
 tags: [testing, tdd, cleanup, issue-1196]
 ---
@@ -479,7 +479,7 @@ Kein AC in dieser Spec; eigenes Ticket je nach Messergebnis.
     3 rot / 4 grün, ist danach 7/7 grün.
 
 - **AC-5:** Given `_SELF_REFERENTIAL_EXCLUDES` (Z.80-90) verweist an einer
-  Stelle auf `docs/specs/modules/issue_1165_adr_index_cleanup.md`, eine
+  Stelle auf `docs/specs/_archive/modules/issue_1165_adr_index_cleanup.md`, eine
   Datei, die seit dem Archivieren unter `docs/specs/_archive/modules/` liegt,
   UND deckt an keiner Stelle das Selbstzitat des alten ADR-Dateinamens in der
   eigenen Kontext-Doku dieser Scheibe
@@ -569,7 +569,7 @@ Kein AC in dieser Spec; eigenes Ticket je nach Messergebnis.
     das war der Fehler des ersten, verworfenen Lösungswegs (Umzug nach
     `test_prod_selftest_564.py`, das modulweit `pytest.mark.staging` trägt).
 
-- **AC-11 (Gesamtwirkung, Pflicht):** Given der volle `uv run pytest`-Lauf
+- **AC-11:** (Gesamtwirkung, Pflicht) Given der volle `uv run pytest`-Lauf
   (Standardfilter) zeigt vor dieser Scheibe die 21 in AC-1 bis AC-10
   beschriebenen roten Tests / When alle Maßnahmen aus AC-1 bis AC-10
   umgesetzt sind / Then zeigt derselbe volle Lauf genau 21 rote Tests

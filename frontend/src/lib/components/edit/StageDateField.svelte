@@ -5,7 +5,7 @@
 	// Dünner Wrapper um native <input type="date"> mit:
 	//   - kleinem "DATUM"-Label (uppercase, muted, mono)
 	//   - Wochentag-Chip (Mo/Di/…/So) aus ISO-Datum abgeleitet
-	//   - optional "· TOURSTART"-Marker für die erste Etappe
+	//   - optional "· TRIP-START"-Marker für die erste Etappe
 	//
 	// Svelte-5: $props, $bindable, $derived. Kein Legacy-Event-Handler-Syntax.
 	//
@@ -17,9 +17,11 @@
 		value: string;
 		isFirst?: boolean;
 		onchange?: (newValue: string) => void;
+		/** #2496: 'inline' = Label-los fuer Kartenkontext (mobile StageCardM). */
+		variant?: 'default' | 'inline';
 	}
 
-	let { value = $bindable(''), isFirst = false, onchange }: Props = $props();
+	let { value = $bindable(''), isFirst = false, onchange, variant = 'default' }: Props = $props();
 
 	const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 	const wd = $derived(value ? WD[new Date(value + 'T00:00:00').getDay()] : '—');
@@ -31,15 +33,23 @@
 	}
 </script>
 
-<div class="stage-date" data-testid="stage-date-field">
-	<span class="label">
-		Datum{#if isFirst} · <em>Tourstart</em>{/if}
-	</span>
-	<label class="box">
+{#if variant === 'inline'}
+	<label class="box inline" data-testid="stage-date-field">
 		<span class="wd">{wd}</span>
 		<input type="date" {value} onchange={handleChange} />
+		{#if isFirst}<span class="trip-start">· Trip-Start</span>{/if}
 	</label>
-</div>
+{:else}
+	<div class="stage-date" data-testid="stage-date-field">
+		<span class="label">
+			Datum{#if isFirst} · <em>Trip-Start</em>{/if}
+		</span>
+		<label class="box">
+			<span class="wd">{wd}</span>
+			<input type="date" {value} onchange={handleChange} />
+		</label>
+	</div>
+{/if}
 
 <style>
 	.stage-date {
@@ -52,7 +62,7 @@
 
 	.label {
 		font-family: var(--g-font-data);
-		font-size: 10px;
+		font-size: 11px;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 		color: var(--g-ink-muted);
@@ -96,5 +106,28 @@
 		font-variant-numeric: tabular-nums;
 		padding: 0;
 		min-width: 110px;
+	}
+
+	.box.inline {
+		min-width: 0;
+	}
+
+	/* #2601: Touch — kein iOS-Auto-Zoom (16px), Trefferhöhe >= 36px */
+	@media (max-width: 899px), (pointer: coarse) {
+		.box {
+			min-height: 36px;
+		}
+		.box input[type='date'] {
+			font-size: 16px;
+		}
+	}
+
+	.trip-start {
+		font-family: var(--g-font-data);
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--g-ink-muted);
+		white-space: nowrap;
 	}
 </style>

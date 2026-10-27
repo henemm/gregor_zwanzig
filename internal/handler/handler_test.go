@@ -43,7 +43,7 @@ func TestHealthHandlerPythonUp(t *testing.T) {
 	py := startFakePython()
 	defer py.Close()
 
-	h := HealthHandler(py.URL, "test-sha")
+	h := HealthHandler(py.URL, "test-sha", "localhost")
 	req := httptest.NewRequest("GET", "/api/health", nil)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -70,7 +70,7 @@ func TestHealthHandlerPythonUp(t *testing.T) {
 }
 
 func TestHealthHandlerPythonDown(t *testing.T) {
-	h := HealthHandler("http://127.0.0.1:19999", "test-sha")
+	h := HealthHandler("http://127.0.0.1:19999", "test-sha", "localhost")
 	req := httptest.NewRequest("GET", "/api/health", nil)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)

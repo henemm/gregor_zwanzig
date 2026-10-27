@@ -3,7 +3,7 @@ entity_id: issue_250_compare_engine
 type: module
 created: 2026-05-19
 updated: 2026-05-19
-status: draft
+status: implemented
 version: "1.0"
 issue: 250
 tags: [compare, go, engine, scoring, cache, goroutines, api]

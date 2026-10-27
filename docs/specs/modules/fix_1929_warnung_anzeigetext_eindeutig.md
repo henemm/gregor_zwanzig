@@ -3,7 +3,7 @@ entity_id: fix_1929_warnung_anzeigetext_eindeutig
 type: bugfix
 created: 2026-08-17
 updated: 2026-08-17
-status: approved
+status: implemented
 version: "1.1"
 tags: [alerts, sms, official-alerts]
 workflow: fix-1929-warnung-anzeigetext-eindeutig
@@ -103,8 +103,8 @@ eine Tag-only-Angabe mit dem 15-Tage-Horizont von Open-Meteo. Das trägt **nicht
 **Folge:** Der Monat verhindert praktisch **keine** Kollision zweier Tokens in derselben Nachricht —
 er macht das **einzelne** Token für den Leser eindeutig („welcher Samstag?"). Das war die
 Entscheidungsgrundlage, abgestimmt mit #1948 („Eindeutigkeit schlägt Zeichenersparnis in vertretbarem
-Rahmen"). Für die Referenztouren (KHW, GR20, bis ~15 Tage) ist die Kollision unerreichbar; für
-mehrwöchige Touren bleibt sie selten, aber nicht strukturell ausgeschlossen.
+Rahmen"). Für die Referenz-Trips (KHW, GR20, bis ~15 Tage) ist die Kollision unerreichbar; für
+mehrwöchige Trips bleibt sie selten, aber nicht strukturell ausgeschlossen.
 
 **Nicht Teil dieser Spec:** Die #1948-Regel „Wochentag nur wenn Gültigkeit nicht heute" gilt laut
 PO-Entscheid auch für amtliche Warnungen, wird hier aber **bewusst nicht** umgesetzt — sie kommt mit
@@ -191,7 +191,7 @@ nie stilles Bestehen.
 - Fall B (zwei getrennte Nachrichten, gleicher Text) bleibt ungelöst — #1948.
 - Die Ganztags-Eindeutigkeit ist keine vom Code erzwungene Garantie: Zwei Ganztags-Fenster mit exakt
   einem Vielfachen von 28 Tagen Abstand *und* gleichem Tag im Monat kollidierten weiterhin. Für die
-  Referenztouren unerreichbar, für mehrwöchige Touren selten, aber nicht ausgeschlossen.
+  Referenz-Trips unerreichbar, für mehrwöchige Trips selten, aber nicht ausgeschlossen.
 - Sekunden-Ungenauigkeit (#1199) und der `None`-Fenster-Fall (F003) bleiben wie vorbestehend.
 
 ## Architektur-Entscheidung (ADR)

@@ -1,8 +1,10 @@
 {
+  "id": "/",
   "name": "gregor.zwanzig",
   "short_name": "gregor",
   "description": "Wetter-Briefing für Weitwanderungen",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f6f4ee",
   "theme_color": "#f6f4ee",
@@ -10,12 +12,20 @@
     {
       "src": "/favicon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/favicon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

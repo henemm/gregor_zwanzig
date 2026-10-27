@@ -20,7 +20,7 @@ gruen wird):
 1. `OnsetEvent` (src/output/renderers/alert/model.py:31) bekommt ein additives,
    optionales Feld ``segment_id: int | str | None = None`` — Namensmuster wie
    `WeatherChange.segment_id` (models.py:541), `TripSegment.segment_id`
-   (models.py:389) und `CorridorHit.segment_id`. Nur die Nowcast-Tests
+   (models.py:389) (Korridor-Alarm-Pfad entfernt, #2230). Nur die Nowcast-Tests
    konstruieren es direkt (`_onset_message`); ohne dieses Feld sind sie rot mit
    `TypeError: unexpected keyword argument 'segment_id'`.
 2. `AlertEvent` braucht dieselbe Kennung, aber KEIN Test setzt sie hier direkt:

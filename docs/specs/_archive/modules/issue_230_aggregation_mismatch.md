@@ -3,7 +3,7 @@ entity_id: issue_230_aggregation_mismatch
 type: bugfix
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, types, bug, data-flow]
 ---

@@ -31,7 +31,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date as date_type, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -40,6 +40,7 @@ from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+from tests.helpers.ortstag import ortstag
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
@@ -162,7 +163,9 @@ def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict)
     """
     from app.loader import get_snapshots_dir
 
-    today = date_type.today()
+    # #2314 D2: target_date folgt dem Ortstag der Trip-Koordinaten
+    # (trip_local_today, ADR-0044), nicht dem Prozesstag.
+    today = ortstag(LAT, LON)
     snapshots_dir = get_snapshots_dir(user_id)
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     now_utc = datetime.now(timezone.utc)
@@ -227,10 +230,20 @@ def _ensure_real_user_dir(uid: str) -> None:
 
 
 def _new_service(uid: str, frames, captured: list):
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
+    # #1196 Klasse C (Vorbild Batch 4, test_feature_656_radar_nowcast): ohne
+    # Settings baut der Service Settings() aus der Umgebung, und
+    # can_send_email() ist nur mit Host-.env True — auf dem CI-Runner lief
+    # jeder Override-Fall in "No channel configured; skipping radar alert"
+    # (count=0). Dummy-SMTP + mail_sink (DI-Naht) ersetzen den Versand.
+    settings = Settings(
+        smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+        mail_to="empfaenger@example.com",
+    )
     return TripAlertService(
-        throttle_hours=2, user_id=uid,
+        throttle_hours=2, user_id=uid, settings=settings,
         radar_service=RadarNowcastService(frame_source=frames),
         mail_sink=lambda subject, body: captured.append((subject, body)),
     )
@@ -445,10 +458,10 @@ def test_ac5_override_respects_quiet_hours():
     Der Override durchbricht nur die Briefing-Unterdrückung, nicht die Quiet Hours.
 
     🔴 Issue #1726: Dieser Test baute sein Ruhezeit-Fenster bis dahin über
-    `Europe/Vienna` — obwohl die Tour auf ISLAND liegt (`LAT`/`LON` = 64.0/
+    `Europe/Vienna` — obwohl die Trip auf ISLAND liegt (`LAT`/`LON` = 64.0/
     -22.0, `Atlantic/Reykjavik`, UTC+0). Er war nur deshalb grün, weil der
     Prüfling denselben falschen Bezug benutzte; das ist der Fehler dieses
-    Issues, im Test selbst. Das Fenster kommt jetzt aus der ORTSZONE der Tour
+    Issues, im Test selbst. Das Fenster kommt jetzt aus der ORTSZONE der Trip
     — abgeleitet aus ihren eigenen Koordinaten, nicht erneut angenommen. Die
     Zusicherung („der Override durchbricht die Nachtruhe nicht") ist
     unverändert; sie wird jetzt an der Zone gemessen, an der sie wirkt.

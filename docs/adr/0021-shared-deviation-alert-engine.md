@@ -5,10 +5,11 @@
 - **Bezug:** GitHub-Issue #1168 (Scheibe 1/3, Epic #1095), Spec
   `docs/specs/_archive/modules/issue_1168_alert_engine_extract.md`, Architektur-Gegenüberstellung
   `docs/context/feat-1095-compare-alerts.md` (Abschnitt „Architektur-Gegenüberstellung
-  Trip ↔ Compare"); verwandt [ADR-0011](0011-alert-render-single-backend-renderer.md)
+  Trip ↔ Compare"; Datei gelöscht mit #1340, Git-Historie); verwandt [ADR-0011](0011-alert-render-single-backend-renderer.md)
   (kanonischer Alert-Renderer), [ADR-0017](0017-output-paket-konsolidierung.md)
   (`NotificationService` als einziger Versand-Orchestrierer); Folge-Issues #1169
   (Scheibe 2 — Compare-Anbindung, live seit 2026-07-09), #1170 (Scheibe 3 — Config-UI, offen)
+- **Ergänzt durch:** [ADR-0086](0086-alarm-erfolg-heisst-zustellung.md) (setzt um)
 
 ## Kontext
 
@@ -280,3 +281,174 @@ dieser Scheibe (Scheibe 2, #1169).
   Default. Eine spätere Übernahme in den Ortsvergleich wäre eine eigene,
   spezifizierte Entscheidung. Details:
   `docs/specs/modules/fix_2065_verschaerfung_ueberholt_sperre.md`.
+
+- **Nachtrag (Issue #2050 S3b, 2026-08-23):** zwei Aussagen früherer Nachträge
+  werden hier abgelöst.
+
+  **(a) Der amtliche Pfad protokolliert.** Der Nachtrag zu #1467 S3 hielt fest,
+  dass der Geltungsbereich der Unterdrückungs-**Protokollierung** strikt
+  Nowcast-only bleibt und die Lücken O3 (Änderungsalarm) und E3 (amtliche
+  Warnung) bewusst offen sind. Das gilt nicht mehr: **jede** Unterdrückung
+  bekommt einen benannten Grund. Der **amtliche** Pfad protokolliert seither
+  seine **Ruhezeit**- und seine **Tages-Obergrenzen**-Unterdrückung — in
+  BEIDEN Flächen (`trip_alert.py::_send_official_alert_only`,
+  `compare_official_alert.py::_check_one_preset`). Neues Verhalten war dort
+  nicht nötig: `check_official_alert_gate()` liefert den passenden
+  `GateResult.reason` seit #1467 S4a mit, der Aufrufer verwarf ihn nur. Ebenso
+  protokolliert der **Vorhersage-Änderungsalarm** seine drei Stufen
+  (Ruhezeit/Sperrzeit/Tages-Obergrenze) und der Trip-Radarzweig den
+  **Doppel-Alarm-Guard** (#818) unter dem eigenen Grund `double_alert_guard` —
+  er sitzt auf `AlertStateService`-Ebene, nicht auf dem Sperrzeit-Topf, und ist
+  deshalb kein `cooldown`. **Bewusst weiterhin still bleibt allein der
+  Briefing-Vorlauf** (#1233/ADR-0009, vier Stellen): dort wird die Meldung
+  ersetzt, nicht verschluckt.
+
+  **(b) Die Tages-Obergrenze bekommt eine Ausnahme.** Der Nachtrag zu #2065
+  sagte, die Tages-Obergrenze bleibe unbrechbar. Sie bekommt jetzt — wie zuvor
+  die Sperrzeit — genau EINE Ausnahme: eine **akute Eskalation der
+  Dringlichkeitsstufe** bricht ein erschöpftes Tagesbudget. Die Bedingung ist
+  UND-verknüpft: die Stufe dieses Abrufs übersteigt echt die höchste heute in
+  dieser Zone bereits **zugestellte** Stufe (`alert_urgency.exceeds`, kein
+  dritter Eskalationsbegriff), UND der Deckel von **einem Durchbruch je Tag und
+  Zone** ist noch frei. Zustand dafür sind zwei additive Felder im Zonen-Eintrag
+  von `alert_daily_count.json` (`max_urgency_sent`, `escalation_breakthroughs`),
+  fortgeschrieben ausschließlich nach erfolgreicher Zustellung
+  (F001-Symmetrie). Reichweite: **nur Nowcast/Radar**, dort aber in BEIDEN
+  Flächen (Trip und Ortsvergleich). Struktur wie bei #2065:
+  `check_nowcast_gate()` bleibt in Signatur UND Verhalten unverändert — die zur
+  Entscheidung nötige Dringlichkeit entsteht erst aus dem Abruf, also nach dem
+  Gate; entschieden wird deshalb Caller-seitig. Die **Reihenfolge Ruhezeit →
+  Sperrzeit → Tages-Obergrenze bleibt unverändert**, und die **Ruhezeit bleibt
+  unbrechbar** (PO-Ablehnung #1955). Beide Ausnahmen wirken unabhängig: ein Lauf
+  kann an Sperrzeit UND Tagesbudget hängen und beide durchbrechen. Details:
+  `docs/specs/modules/feat_2050_s3b_budget_und_unterdrueckungsgrund.md`.
+
+- **Nachtrag (Issue #2050 S3c, 2026-08-23):** beide Ausnahmen der zwei vorigen
+  Nachträge galten bisher **nur für den Radar-/Nowcast-Zweig**. Diese Scheibe
+  überträgt sie auf den **Abweichungs-Zweig** (Vorhersage-Änderungsalarm,
+  `trip_alert.py::check_and_send_alerts`) — und **nur dort**, nicht in den
+  Ortsvergleich.
+
+  **Reichweite.** Eine im Rang echt höhere Lage überholt die laufende
+  **Sperrzeit** des Abweichungs-Zweigs; ist danach zusätzlich das **Tagesbudget**
+  erschöpft, entscheidet dieselbe generische S3b-Brücke
+  (`alert_daily_limit.escalation_breaks_through`) über den Durchbruch. Die
+  Vergleichsbasis ist ein additives Feld `urgency` im Sperrtopf-Eintrag
+  (`throttle_state.json`), geschrieben ausschließlich nach erfolgreicher
+  Zustellung (F001-Symmetrie). Fehlt sie — Bestandsdaten im Alt-Format oder eine
+  vom **amtlichen** Zweig gebuchte Sperre, der weiterhin ohne Dringlichkeit
+  schreibt — gibt es konservativ keinen Durchbruch.
+
+  **Rangvergleich statt Faktor-Formel.** #2065 misst „deutlich schlimmer" im
+  Radar-Zweig über einen Faktor auf der Regenmenge. Das ist hier nicht
+  übertragbar: der Abweichungs-Zweig trägt potenziell mehrere **heterogene
+  Metriken** gleichzeitig (°C, km/h, mm), auf denen kein gemeinsamer Faktor
+  definierbar ist. Entschieden wird deshalb über einen ordinalen **Rangsprung**
+  auf der bestehenden LOW/MODERATE/HIGH-Skala (`alert_urgency.exceeds`) — kein
+  dritter Eskalationsbegriff, dieselbe Skala wie im Budget-Zweig.
+
+  **Bekannte Grenze: die Skala sättigt bei `HIGH`.** Eine Lage, die von `HIGH`
+  auf noch schlimmer eskaliert, erzeugt keinen Rangsprung und bricht die
+  Sperrzeit nicht durch. #2065 löste dasselbe Sättigungsproblem im Radar-Zweig
+  über einen zusätzlichen mm-Kanal; dafür fehlt hier die Normierung über die
+  heterogenen Metriken. Bewusst offen gelassen, nicht übersehen.
+
+  **Der Durchbruch-Deckel ist geteilt, nicht addiert.**
+  `_MAX_ESCALATION_BREAKTHROUGHS = 1` gilt pro Zone und Tag **über beide Zweige
+  hinweg** — Radar und Abweichung teilen sich denselben einen Durchbruch. Sonst
+  könnte eine Lage, die abwechselnd im Radar- und im Abweichungs-Zweig
+  eskaliert, das Tagesbudget mehrfach aufreißen; genau dagegen wurde der Deckel
+  in S3b eingeführt.
+
+  **Unberührt bleiben:** die **Ruhezeit** (weiterhin unbrechbar, PO-Ablehnung
+  #1955) und das **Briefing-Vorlauf**-Gate (#1594 — die Meldung kommt Minuten
+  später vollständig im Briefing an, sie wird ersetzt statt verschluckt). Die
+  **Reihenfolge Ruhezeit → Sperrzeit → Tages-Obergrenze bleibt unverändert**;
+  die Ausnahmen hängen ausschließlich an den beiden hinteren Stufen. Ebenso
+  unverändert bleibt `DeviationAlertEngine` selbst in **Signatur UND
+  Verhalten** — sie ist mit dem PO-zurückgestellten Ortsvergleich geteilt
+  (`compare_alert.py`) und kennt den Sperrtopf strukturell nicht; genau deshalb
+  lebt die Ausnahme Caller-seitig im Trip-Pfad, exakt wie schon bei #2065 und
+  S3b. Details:
+  `docs/specs/modules/feat_2050_s3c_abweichung_ueberholt_sperrzeit.md`.
+
+- **Nachtrag (Issue #2050 S4c, 2026-08-23):** die quellenübergreifende
+  Ereignis-Identität (Nachträge zu #1467 S4b/S4b-2 und #2018) galt bisher
+  ausschließlich zwischen **Radar** und **amtlich**. Diese Scheibe schließt
+  einen dritten Aufrufer an denselben, unveränderten Mechanismus an: den
+  **Abweichungs-Zweig** (Vorhersage-Änderungsalarm,
+  `trip_alert.py::check_and_send_alerts`).
+
+  **Dritter Auflösungsweg für die Gefahrenklasse.** `resolve_hazard_class()`
+  bekommt einen dritten, optionalen Parameter `metrics` — eine Metrik-Liste
+  statt `is_convective`/`hazard`. Neuer Kanon `_WET_METRICS` (`precip_sum_mm`,
+  `precip_heavy_onset_utc`, `thunder_level_max`, `thunder_onset_utc`),
+  eigenständig neben `_WET_HAZARDS` (amtliche Hazard-STRINGS, anderer
+  Namensraum). Die Klasse ist nur dann `wet`, wenn die Metrik-Liste nicht leer
+  ist UND JEDE Metrik zum Kanon gehört — ein einziger Anteil außerhalb (z. B.
+  Wind oder Schnee) macht die Klasse `None`; Schnee-Metriken gehören
+  ausdrücklich NICHT zum Kanon (physikalisch Niederschlag, aber außerhalb des
+  T2-Kanons).
+
+  **Expliziter Quellenvermerk statt Ableitung.** `check_event_identity_gate()`
+  und `record_event_identity()` bekommen einen additiven, optionalen Parameter
+  `source: "official" | "nowcast" | "deviation"`. Radar und amtlich lassen ihn
+  weiterhin weg — der Fallback (Ableitung aus der Anwesenheit von `point_at`)
+  bleibt für sie identisch, die Signatur bricht für sie nicht. Der
+  Abweichungs-Zweig trägt (wie ein amtlicher Eintrag) ein Zeitintervall statt
+  eines Einzelzeitpunkts und übergibt deshalb IMMER `source="deviation"`
+  explizit — sonst läse ihn die alte Ableitung fälschlich als `"official"`.
+  `addendum_direction` erweitert sich entsprechend um den Fall
+  `match["source"] == "deviation" and new_source == "nowcast"` (bisher nur
+  `"official"`); ein nachfolgender, eskalierender Radar-Alarm nennt dann die
+  gemeldete Wetterabweichung statt einer nie vorliegenden amtlichen Warnung.
+
+  **Zeitbezug aus Segmentfenstern statt `occurred_at`.** `WeatherChange.
+  occurred_at` ist in drei von vier Erzeugungspfaden `None` und als Zeitbezug
+  ungeeignet. Der Δ-Zweig bildet `window_start`/`window_end` stattdessen aus
+  den Start-/Endzeitpunkten der Trip-Segmente der NASSEN Änderungen
+  (`trip_alert.py::_delta_event_window`); `point_at` bleibt für ihn immer
+  `None`. Lässt sich kein Segment mit Zeitfenster auffinden, bleiben beide
+  Werte `None` — `_times_overlap()` liefert dafür fail-soft `False`.
+
+  **Streng prüfen, großzügig registrieren.** Geprüft (Aufruf von
+  `check_event_identity_gate()`) wird nur, wenn die Gefahrenklasse des
+  GESAMTEN Bündels `wet` ist — ein einziger nicht-nasser Anteil lässt die
+  Meldung immer durch, ohne das Register überhaupt zu lesen. Registriert wird
+  dagegen unabhängig vom Prüfergebnis, sobald das Bündel NACH erfolgreicher
+  Zustellung mindestens eine nasse Änderung enthält — Eskalationen, die
+  V1-Ausnahme und gemischte Bündel hinterlassen damit ebenfalls einen
+  Registereintrag für die nassen Anteile.
+
+  **Ablösung des Doppel-Alarm-Wächters (#818).** Der seit #818 zur Hälfte tote
+  Wächter (`trip_alert.py`, Schlüssel `precip:<segment>`/
+  `thunder_level_max:<segment>` — `"precip"` ist kein Metrik-Schlüssel, der
+  reale heißt `precip_sum_mm`) ist ENTFERNT, nicht repariert. Die Paarung
+  „Δ meldete, Radar zieht nach" läuft jetzt ausschließlich über die
+  Ereignis-Identität; der protokollierte Grund wechselt für diese Paarung von
+  `double_alert_guard` auf `event_duplicate`, und — anders als beim alten
+  Wächter — eine echte Eskalation kommt jetzt durch (Verbindung zu #2065/
+  S3c). Der Grund-Code `double_alert_guard` selbst bleibt in `alert_log.py`/
+  `undelivered_hint.py` für historische Einträge erhalten.
+
+  **🔴 Der neue Unterdrückungspfad trägt die E-1-Nachweisfelder — wer das
+  umbaut, verliert sie ohne Fehlermeldung.** `**_e1` wird in `trip_alert.py`
+  an DREI Stellen ausgepackt; die mittlere ist der mit dieser Scheibe
+  entstandene Unterdrückungspfad der Ereignis-Identität. Er trug zunächst
+  **gar keine** E-1-Felder, insbesondere kein `convective_checked` — die
+  S4a-Zusicherung aus ADR-0018 („eine nicht stattgefundene Gewitterprüfung
+  reist bis auf die Leseseite") wäre dort still verloren gegangen, weil ein
+  neuer stummer Ausstieg entstanden wäre. Deshalb bewusst `**_e1` beibehalten
+  statt Wechsel auf `_protokolliere_radar_unterdrueckung()`: **der Helfer nimmt
+  die E-1-Felder nicht entgegen.** Ein Umbau auf ihn sähe wie eine harmlose
+  Vereinheitlichung aus, ließe die Tests grün und würde die Invariante an
+  genau dieser Stelle aushebeln. Felder späterer Scheiben (z. B. das
+  Messlücken-Protokoll aus #2050 S4b) landen durch diese Stelle automatisch
+  mit — das ist gewollt.
+
+  **Ortsvergleich bleibt unberührt.** `compare_alert.py` ruft weder
+  `check_event_identity_gate()` noch `record_event_identity()` auf —
+  Ortsvergleich-Themen sind PO-seitig zurückgestellt, die Anschlussstelle ist
+  kartiert (`docs/context/feat-2050-s4c-ein-ereignis-ein-alarm.md`) und geht
+  als benannte Folgescheibe ins Issue. Details:
+  `docs/specs/modules/feat_2050_s4c_ein_ereignis_ein_alarm.md`.

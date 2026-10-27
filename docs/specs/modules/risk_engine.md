@@ -42,8 +42,8 @@ Ein `RiskEngine`-Service der:
 ## Source
 
 - **Neu:** `src/services/risk_engine.py` — `class RiskEngine`
-- **Aenderung:** `src/formatters/trip_report.py` — `_determine_risk()` delegiert an Engine
-- **Aenderung:** `src/formatters/sms_trip.py` — `_detect_risk()` delegiert an Engine
+- **Aenderung:** `src/output/renderers/trip_report.py` — `_determine_risk()` delegiert an Engine
+- **Aenderung:** `src/output/renderers/sms_trip.py` — `_detect_risk()` delegiert an Engine
 - **Keine Aenderung:** `src/app/models.py` — Risk/RiskAssessment DTOs bleiben wie definiert
 - **Keine Aenderung:** `src/app/metric_catalog.py` — risk_thresholds bleiben wie definiert
 
@@ -320,15 +320,15 @@ assessment = RiskEngine().assess_segment(segment)
 | File | Change | LoC |
 |------|--------|-----|
 | `src/services/risk_engine.py` | NEU — RiskEngine Service | ~80 |
-| `src/formatters/trip_report.py` | `_determine_risk()` delegiert an Engine | ~-20 netto |
-| `src/formatters/sms_trip.py` | `_detect_risk()` delegiert an Engine | ~-15 netto |
+| `src/output/renderers/trip_report.py` | `_determine_risk()` delegiert an Engine | ~-20 netto |
+| `src/output/renderers/sms_trip.py` | `_detect_risk()` delegiert an Engine | ~-15 netto |
 | `src/app/metric_catalog.py` | POP: risk_thresholds hinzufuegen | ~1 |
 | `tests/integration/test_risk_engine.py` | NEU — Tests mit echten Wetterdaten | ~80 |
 | **Gesamt Phase 1** | **4 Prod + 1 Test** | **~125 LoC netto** |
 
 ### Phase 2 (Spaeter, optional, nicht Teil dieser Spec)
 
-- `src/formatters/compact_summary.py` — Wind-Adjektive aus Catalog
+- `src/output/renderers/compact_summary.py` — Wind-Adjektive aus Catalog
 - F7 Integration — TerrainExposure als Kontext fuer RiskEngine
 
 ## Test Plan

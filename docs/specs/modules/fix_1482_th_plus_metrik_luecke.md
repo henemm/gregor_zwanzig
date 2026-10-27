@@ -3,7 +3,7 @@ entity_id: fix_1482_th_plus_metrik_luecke
 type: bugfix
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, thunder, kurznachricht, telegram-kurzform]
 workflow: fix-1482-thplus-metrik-luecke
@@ -153,7 +153,7 @@ vom Editor-Wert. Falls angenommen: in `trip_report.py:263-267` zusätzlich
     prüft, dass weder das Substring `"TH:"` noch `"TH+:"` im zurückgegebenen String vorkommt
     (Verhalten des Renderers, kein Dateiinhalt-Check).
 
-- **AC-2 (Gegenprobe zu AC-1):** Given derselbe Trip, aber mit AKTIVIERTER Metrik „Gewitter" /
+- **AC-2:** (Gegenprobe zu AC-1) Given derselbe Trip, aber mit AKTIVIERTER Metrik „Gewitter" /
   When das Briefing gerendert wird / Then erscheinen `TH:` und `TH+:` beide im Text (wie im
   heutigen Bestandsverhalten).
   - Test: Derselbe Aufbau wie AC-1, nur mit `enabled=True`-Spec (bzw. ganz ohne `disabled_specs`)
@@ -168,7 +168,7 @@ vom Editor-Wert. Falls angenommen: in `trip_report.py:263-267` zusätzlich
     Fallback-Fetch auf, der für dieses Datum keine Daten liefert (simulierter Fetch-Fehlschlag),
     und prüft am Ende des vollen Renderpfads (`format_sms()`), dass `"TH+:?"` im Text steht.
 
-- **AC-4 (Regressions-Schutz, WICHTIG):** Given die berichtete Etappe ist die letzte Etappe des
+- **AC-4:** (Regressions-Schutz, WICHTIG) Given die berichtete Etappe ist die letzte Etappe des
   Trips (kein Folgetag existiert, `trip.get_future_stages()` liefert leer) / When das Briefing
   gerendert wird / Then zeigt der Text weiterhin `TH+:-`, NICHT `TH+:?`.
   - Test: Derselbe Testaufbau wie AC-3, aber mit einem Trip, dessen letzte Etappe die berichtete
@@ -176,7 +176,7 @@ vom Editor-Wert. Falls angenommen: in `trip_report.py:263-267` zusätzlich
     `"TH+:?"`. Der Test muss beide Fälle (AC-3 und AC-4) im selben Modul gegenüberstellen, sonst
     ist die Unterscheidung „kein Folgetag" vs. „Folgetag ohne Daten" nicht bewiesen.
 
-- **AC-5 (Mutations-Gegenprobe, PFLICHT):** Given die Implementierung aus AC-1 bis AC-4 / When der
+- **AC-5:** (Mutations-Gegenprobe, PFLICHT) Given die Implementierung aus AC-1 bis AC-4 / When der
   Adversary in Phase 6 gezielt (a) die Metrik-Bindung (z. B. `SMS_MULTI_SYMBOLS_BY_METRIC["thunder"]`
   entfernen) und (b) die Lücken-Weitergabe (z. B. `has_gap=tomorrow.has_data_gap` durch
   `has_gap=False` ersetzen) verfälscht / Then muss für JEDE der beiden Verfälschungen mindestens
@@ -187,7 +187,7 @@ vom Editor-Wert. Falls angenommen: in `trip_report.py:263-267` zusätzlich
     (String-Ersetzung mit externer Sicherungskopie, siehe `.claude/agents/implementation-validator.md`
     Sektion „Step 3b").
 
-- **AC-6 (PO-bestätigt bei Freigabe 2026-08-04, s. Mangel 3):** Given ein im Trip-Editor
+- **AC-6:** (PO-bestätigt bei Freigabe 2026-08-04, s. Mangel 3) Given ein im Trip-Editor
   gesetzter Gewitter-Schwellwert (`m.sms_threshold` für `metric_id == "thunder"`) / When das
   Briefing gerendert wird / Then verwendet `TH+:` denselben konfigurierten Schwellwert wie `TH:`
   (nicht den hartkodierten Default 1.0). Ursprünglich eine Nebenwirkung von Mangel 1, keine

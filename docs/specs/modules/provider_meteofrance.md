@@ -3,7 +3,7 @@ entity_id: provider_meteofrance
 type: module
 created: 2026-07-22
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, meteofrance, arome, openmeteo, reliability, fallback, routing, briefing]
 workflow: 1143-meteofrance-fr-fallback
@@ -105,13 +105,13 @@ FR-Zeile (36): `_RegionBounds("FR", 41.3, 51.1, -5.2, 8.3, "fr_direct")` → `_R
 - **AC-4:** Given Météo-France antwortet durchgehend mit 5xx/Timeout (nach Ausschöpfung der 5 Retry-Versuche), When das Segment verarbeitet wird, Then propagiert `MeteoFranceDirectProvider.fetch_forecast` eine `ProviderRequestError` (kein Crash mit einer rohen httpx-Exception oder einer anderen unbehandelten Exception), und der Seam in `openmeteo.py` fängt sie unverändert (Segment bleibt `has_error`).
   - Test: Lokaler `ThreadingHTTPServer` liefert durchgehend 503 für den WCS-Endpoint; `monkeypatch.setattr("providers.meteofrance.BASE_URL", <lokale URL>)`; Assertion auf `ProviderRequestError` nach genau 5 Anfragen (Retry-Zähler am Test-Server == 5) sowie auf den End-to-End-Pfad über den Open-Meteo-Seam (analog `test_seam_catches_provider_request_and_not_found_error` aus #1142).
 
-- **AC-5 (Korsika-Regression):** Given eine Koordinate auf einer GR20/Korsika-Kernroute (z. B. 42,0N/9,0E), When `direct_provider_for(lat, lon)` aufgerufen wird, Then wird `"fr_direct"` zurückgegeben (Box-Erweiterung auf `max_lon=9,7` greift; vor diesem Slice hätte die Koordinate außerhalb aller drei Regionen gelegen und `None` erhalten).
+- **AC-5:** (Korsika-Regression) Given eine Koordinate auf einer GR20/Korsika-Kernroute (z. B. 42,0N/9,0E), When `direct_provider_for(lat, lon)` aufgerufen wird, Then wird `"fr_direct"` zurückgegeben (Box-Erweiterung auf `max_lon=9,7` greift; vor diesem Slice hätte die Koordinate außerhalb aller drei Regionen gelegen und `None` erhalten).
   - Test: Rein deterministischer Aufruf von `direct_provider_for(42.0, 9.0)`; Assertion `result == "fr_direct"`. Zusätzlicher Test mit einer Koordinate knapp außerhalb der alten Box, aber innerhalb der neuen (z. B. 42,0N/9,0E liegt bereits im alten Bereich min_lon=-5.2 — konkret muss der Testfall eine Koordinate mit Längengrad zwischen 8,3 und 9,7 wählen, z. B. 42,3N/9,3E, um die Erweiterung isoliert nachzuweisen).
 
-- **AC-6 (Wind-Korrektheit, Detailkriterium zu AC-1):** Given AROME liefert U/V-Windkomponenten in m/s, When die Normalisierung läuft, Then entspricht `wind10m_kmh` dem Vektorbetrag `sqrt(u²+v²) * 3.6`, gerundet auf 1 Nachkommastelle (identische Formel zu `geosphere._vector_to_speed_kmh`).
+- **AC-6:** (Wind-Korrektheit, Detailkriterium zu AC-1) Given AROME liefert U/V-Windkomponenten in m/s, When die Normalisierung läuft, Then entspricht `wind10m_kmh` dem Vektorbetrag `sqrt(u²+v²) * 3.6`, gerundet auf 1 Nachkommastelle (identische Formel zu `geosphere._vector_to_speed_kmh`).
   - Test: Unit-Test mit bekannten U/V-Werten (z. B. u=10, v=0 → 36.0 km/h) gegen die neue Hilfsfunktion in `meteofrance.py`, ohne HTTP.
 
-- **AC-7 (Niederschlag-Umrechnung, Detailkriterium zu AC-1, korrigiert 2026-07-23, Runde 2):** Given AROME liefert TOTAL_PRECIPITATION über die `_PT1H`-Coverage als 1h-Akkumulation (GRIB-PDS `typeOfStatisticalProcessing=1`, `lengthOfTimeRange=1h` — Rohwert = mm, **keine** Rate; das GDAL-Tag `kg/(m²·s)` ist ein Fehletikett; empirisch verifiziert gegen die Live-API, Adversary #1143 F003 Runde 2), When die Normalisierung läuft, Then entspricht `precip_1h_mm` je Zeitschritt `max(0, round(rohwert, 1))` — **kein** `×3600`, keine Differenzbildung —, mit Untergrenze 0 (keine negativen Werte durch Rundungsartefakte).
+- **AC-7:** (Niederschlag-Umrechnung, Detailkriterium zu AC-1, korrigiert 2026-07-23, Runde 2) Given AROME liefert TOTAL_PRECIPITATION über die `_PT1H`-Coverage als 1h-Akkumulation (GRIB-PDS `typeOfStatisticalProcessing=1`, `lengthOfTimeRange=1h` — Rohwert = mm, **keine** Rate; das GDAL-Tag `kg/(m²·s)` ist ein Fehletikett; empirisch verifiziert gegen die Live-API, Adversary #1143 F003 Runde 2), When die Normalisierung läuft, Then entspricht `precip_1h_mm` je Zeitschritt `max(0, round(rohwert, 1))` — **kein** `×3600`, keine Differenzbildung —, mit Untergrenze 0 (keine negativen Werte durch Rundungsartefakte).
   - Test: Abgedeckt durch AC-1 (`test_fetch_forecast_parses_recorded_arome_grib2_fixture`, Plausibilitäts-Bounds `0 <= precip_1h_mm <= 100`) UND durch einen dedizierten Regressionstest `test_fetch_forecast_uses_recorded_nonzero_precip_fixture_without_rate_conversion` gegen ein echt aufgezeichnetes NICHT-NULL-Precip-Fixture (Alpenzelle 44,04N/7,84E, Rohwert 5,178) — das ursprüngliche AC-1-Fixture (Paris) war durchgehend `0,0`, wodurch der `×3600`-Fehler in Runde 1 unsichtbar blieb.
 
 ## Known Limitations

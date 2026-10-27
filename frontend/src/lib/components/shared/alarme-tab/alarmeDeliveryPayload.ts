@@ -78,10 +78,7 @@ export interface AlarmeDeliveryState {
 	metricLevels?: Record<string, string> | undefined;
 }
 
-export function buildAlarmeDeliveryPayload(
-	state: AlarmeDeliveryState,
-	currentDisplayConfig?: Record<string, unknown>
-): object {
+export function buildAlarmeDeliveryPayload(state: AlarmeDeliveryState): object {
 	if (typeof state.officialWarningsEnabled !== 'boolean') {
 		throw new Error(
 			'buildAlarmeDeliveryPayload: officialWarningsEnabled fehlt oder ist kein boolean — ' +
@@ -128,10 +125,9 @@ export function buildAlarmeDeliveryPayload(
 		};
 	}
 	if (state.metricLevels !== undefined) {
-		payload.display_config = {
-			...(currentDisplayConfig ?? {}),
-			metric_alert_levels: state.metricLevels
-		};
+		// Issue #1433: Teilfeld — nur der eigene Schluessel (Spec §2.2), kein
+		// Spread der lokalen, womoeglich veralteten display_config.
+		payload.display_config = { metric_alert_levels: state.metricLevels };
 	}
 	return payload;
 }

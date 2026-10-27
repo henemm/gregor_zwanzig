@@ -3,7 +3,7 @@ entity_id: issue_614_615_telegram_kurzform
 type: module
 created: 2026-06-06
 updated: 2026-06-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [output, telegram, sms, channel-renderer]
 ---
@@ -24,7 +24,7 @@ Wire-Format selbst bleibt unverändert (#615 erfordert keinen Format-Umbau).
 
 ## Source
 
-- **File (Python):** `src/app/models.py` (`UnifiedWeatherDisplayConfig`), `src/formatters/trip_report.py`
+- **File (Python):** `src/app/models.py` (`UnifiedWeatherDisplayConfig`), `src/output/renderers/trip_report.py`
 - **File (Go-API):** `internal/model/*.go` — **keine Struct-Änderung**; Wert läuft durch
   `DisplayConfig map[string]interface{}` (additiver Map-Key, Merge bleibt erhalten)
 - **File (Frontend):** Kanal-/Layout-Editor (Telegram-Bereich) — Toggle
@@ -51,7 +51,7 @@ Wire-Format selbst bleibt unverändert (#615 erfordert keinen Format-Umbau).
 # src/app/models.py — UnifiedWeatherDisplayConfig
 telegram_kurzform: bool = False   # additiv, Default aus = heutiges Verhalten
 
-# src/formatters/trip_report.py — nach telegram_text = render_narrow("telegram", …)
+# src/output/renderers/trip_report.py — nach telegram_text = render_narrow("telegram", …)
 if dc.telegram_kurzform:
     kurzform = SMSTripFormatter().format_sms(
         segments,

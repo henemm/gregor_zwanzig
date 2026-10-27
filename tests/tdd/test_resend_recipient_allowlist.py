@@ -214,6 +214,7 @@ class TestAC3TestUserAddressBlocked:
             app_loader.get_data_root() / "users",
             "tdd-1219-fixture",
             mail_to="tdd-1219-fixture@example.com",
+            is_test_user=True,  # Issue #2152: Flag statt Namens-Heuristik
         )
         output = _make_output()
         exc = _send_and_capture(output, to=["tdd-1219-fixture@example.com"])

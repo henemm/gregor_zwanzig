@@ -3,14 +3,14 @@ entity_id: issue_641_remove_dead_sms_trend_tests
 type: tests
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, cleanup, tests]
 ---
 
 # Tests: #641 Toten SMS-Trend-Pfad entfernen
 
-Test-Spec zu `docs/specs/modules/issue_641_remove_dead_sms_trend.md`.
+Test-Spec zu `docs/specs/_archive/modules/issue_641_remove_dead_sms_trend.md`.
 Mock-frei, Laufzeit-Introspektion (kein Datei-Text-Scan).
 
 ## Test-Fälle

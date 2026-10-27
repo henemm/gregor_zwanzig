@@ -10,7 +10,14 @@ import httpx
 
 from app.config import Settings
 from app.origin_guard import running_origin
-from output.channels.base import OutputConfigError, OutputError
+from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
+from output.channels.recipient import (
+    RecipientPurpose,
+    TelegramRecipient,
+    _current_inbound_sender,
+    normalize_chat_id,
+)
+from output.channels.seven_io_base import mask_number
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +45,9 @@ _NO_CHAT_KEY = "_bot"
 # Wir tracken nur Paare von öffnenden/schließenden Tags; self-closing Tags werden
 # ignoriert, weil sie keine Balance benötigen.
 _HTML_TAG_RE = re.compile(r"<(/?)([a-zA-Z][a-zA-Z0-9_]*)[^>]*>")
+
+# Issue #1412 S4a (AC-6): bedingungslose Formpruefung der Chat-ID.
+_CHAT_ID_RE = re.compile(r"-?\d{1,20}", re.ASCII)  # nur ASCII-Ziffern
 
 
 def _truncate_html(message: str, max_len: int) -> str:
@@ -108,6 +118,17 @@ def _truncate_html(message: str, max_len: int) -> str:
 
     return "".join(result_parts)
 
+# Issue #2417 (B3, "BOT_COMMANDS — Merge, nicht Ersatz"): die urspruenglich
+# 8 handgepflegten Eintraege bleiben unveraendert, dazu kommen die restlichen
+# 9 Woerter aus ``services.trip_command_processor._COMMAND_SPECS`` (heute,
+# morgen, hilfe stehen dort bereits oben). BEWUSST ein ausgeschriebenes
+# Listen-Literal statt einer Ableitung zur Laufzeit (Funktionsaufruf/Import):
+# `.claude/hooks/prod_selftest.py::_load_bot_commands()` liest BOT_COMMANDS
+# dependency-frei per `ast.literal_eval` direkt aus dieser Quelldatei (kein
+# Import der output-Pakete, kein pydantic noetig) — nur ein einziges,
+# literales `BOT_COMMANDS = [...]` ist dafuer auswertbar. Beschreibungen =
+# Kopie aus `_COMMAND_SPECS`, statisch wegen `prod_selftest.py`
+# (ast.literal_eval); Drift bewacht `test_befehlsangebot_vollstaendig.py`.
 BOT_COMMANDS = [
     {"command": "glance", "description": "🌤️ Wetter-Überblick (heute & morgen)"},
     {"command": "heute", "description": "📅 Nur heute"},
@@ -117,6 +138,30 @@ BOT_COMMANDS = [
     {"command": "timeline_heute", "description": "🕐 Timeline heute"},
     {"command": "timeline_morgen", "description": "🕐 Timeline morgen"},
     {"command": "hilfe", "description": "ℹ️ Verfügbare Befehle"},
+    {"command": "jetzt", "description": "Nowcast Regen/Gewitter nächste ~2h (auch NOW)"},
+    {"command": "gewitter", "description": "Gewittergefahr heutige Etappe"},
+    {"command": "strecke", "description": "Regen-Ereignisflächen entlang der Reststrecke"},
+    {"command": "ruhetag", "description": "Etappen um N Tage verschieben (Standard: 1)"},
+    {"command": "status", "description": "Heute und kommende Etappen"},
+    {"command": "pause", "description": "Briefings für Dauer unterbrechen"},
+    {"command": "skip", "description": "Nächstes Briefing überspringen"},
+    {"command": "stop", "description": "Briefings dauerhaft deaktivieren (auch ABBRUCH)"},
+    {"command": "weiter", "description": "Briefings reaktivieren"},
+    # #2417 Kurzform englisch AC-20: KUERZEL + englische Slash-Befehle
+    # (gleich geschriebene now/status/pause/skip/stop stehen oben schon).
+    {"command": "kuerzel", "description": "Kürzel-Bedeutungen anzeigen (auch CODES)"},
+    {"command": "today", "description": "today's stage weather"},
+    {"command": "tomorrow", "description": "tomorrow's stage weather"},
+    {"command": "storms", "description": "storm risk today"},
+    {"command": "route", "description": "rain areas ahead"},
+    {"command": "restday", "description": "shift stages n days"},
+    {"command": "resume", "description": "restart briefings"},
+    {"command": "help", "description": "command list"},
+    {"command": "codes", "description": "code meanings"},
+    # #2420: STARTDATUM/REPORT (Beschreibung = Kopie aus _COMMAND_SPECS).
+    {"command": "startdatum", "description": "Startdatum des Trips setzen, alle Etappen verschieben"},
+    {"command": "startdate", "description": "move start"},
+    {"command": "report", "description": "Briefing jetzt senden (Standard: morning)"},
 ]
 
 
@@ -150,8 +195,11 @@ class TelegramOutput:
     _rate_limit_lock = threading.Lock()
     _rate_limit_stamps: dict[str, list[float]] = {}
 
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(
+        self, settings: Settings | None = None, *, recipient: TelegramRecipient | None = None,
+    ) -> None:
         self._settings = settings if settings else Settings()
+        self._recipient = recipient
         self._timeout = 10
         self.sent_message_ids: list[int] = []
 
@@ -190,24 +238,24 @@ class TelegramOutput:
             logger.warning(
                 "Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt "
                 "-- Ziel-Chat von %r auf Test-Chat-ID %r umgeschaltet.",
-                chat_id, test_chat_id,
+                mask_number(chat_id), test_chat_id,
             )
         return test_chat_id
 
-    def _guard_test_mode_chat_id(self) -> None:
+    def _guard_test_mode_chat_id(self, chat_id) -> None:
         """Bedingungsloser Guard (Issue #1288, Vorbild email.py #1219): im
         Test-Modus (is_test_mode=True — gesetzt durch for_testing()/
         with_user_profile() bei Staging ODER is_test_user_id()) ist
         AUSSCHLIESSLICH die konfigurierte Test-Chat-ID erlaubt. Faengt genau
         die Fallback-Luecke aus config.py:225,237 ab: fehlt
         telegram_test_chat_id, bleibt telegram_chat_id sonst unveraendert
-        die Prod-ID.
+        die Prod-ID. Seit #1412 S4a wird der urspruengliche Ziel-Chat des
+        Empfaengers geprueft, nicht mehr settings.telegram_chat_id.
         """
         if not self._settings.is_test_mode:
             return
         test_chat_id = self._settings.telegram_test_chat_id
-        chat_id = self._settings.telegram_chat_id
-        if not test_chat_id or chat_id != test_chat_id:
+        if not test_chat_id or str(chat_id) != str(test_chat_id):
             raise OutputConfigError(
                 "telegram",
                 f"Test-Modus aktiv, aber chat_id={chat_id!r} ist nicht die "
@@ -250,6 +298,31 @@ class TelegramOutput:
                 "konfigurierte Test-Chat-ID (GZ_TELEGRAM_TEST_CHAT_ID) — "
                 "Versand blockiert (Issue #1363).",
             )
+
+    def _check_recipient(self, chat_id) -> None:
+        """Empfaengervertrag (Issue #1412 S4a), VOR jedem Umschreiben: Form
+        (bedingungslos) -> Empfaenger vorhanden -> Herkunft je Zweck. Blockt
+        mit ``ChannelBlockedError``; die Meldung nennt nie die Chat-ID."""
+        def _block(reason_code: str, text: str):
+            logger.warning("Telegram-Versand blockiert (%s): %s", reason_code, text)
+            return ChannelBlockedError(self.name, text, reason_code=reason_code)
+
+        chat = normalize_chat_id(chat_id)
+        if not _CHAT_ID_RE.fullmatch(chat):
+            raise _block("telegram_invalid_chat_id", "Chat-ID ist nicht numerisch.")
+        recipient = self._recipient
+        if recipient is None:
+            raise _block("telegram_no_recipient", "kein belegter Empfaenger uebergeben.")
+        if recipient.chat_id != chat:
+            raise _block("telegram_recipient_mismatch", "Ziel-Chat weicht vom Empfaenger ab.")
+        if recipient.purpose == RecipientPurpose.inbound_reply:
+            if normalize_chat_id(_current_inbound_sender.get()) != chat:
+                raise _block(
+                    "telegram_not_inbound_sender",
+                    "Antwort-Ziel ist nicht der Absender des laufenden Updates.",
+                )
+        elif recipient.purpose != RecipientPurpose.user_profile:
+            raise _block("telegram_unknown_purpose", "unbekannter Empfaenger-Zweck.")
 
     def _reserve_send_slot(self, chat_key: str) -> None:
         """Drossel-Bremse (Issue #1370): haelt die Schreibzugriffe je Chat unter
@@ -309,16 +382,16 @@ class TelegramOutput:
                     "Telegram-Drossel: Abbruch nach %.2fs Wartezeit (chat=%s) "
                     "-- SEND_SLOT_MAX_WAIT_SECONDS (%.0fs) ueberschritten, "
                     "Nachricht wird NICHT gesendet",
-                    waited, chat_key, SEND_SLOT_MAX_WAIT_SECONDS,
+                    waited, mask_number(chat_key), SEND_SLOT_MAX_WAIT_SECONDS,
                 )
                 raise OutputError(
                     "telegram",
                     f"_reserve_send_slot timed out after {waited:.2f}s "
-                    f"(chat={chat_key})",
+                    f"(chat={mask_number(chat_key)})",
                 )
             logger.info(
                 "Telegram-Drossel: warte %.2fs vor dem naechsten Schreibzugriff "
-                "(chat=%s, %d/%ds)", wait, chat_key, max_per_window, window,
+                "(chat=%s, %d/%ds)", wait, mask_number(chat_key), max_per_window, window,
             )
             time.sleep(max(min(wait, remaining), _MIN_SLEEP_SECONDS))
 
@@ -337,23 +410,45 @@ class TelegramOutput:
             pass
         return max(0.0, min(seconds, cap))
 
-    def _post(self, url: str, payload: dict, *, chat_id=None) -> httpx.Response:
-        """Einziger Transportweg zur Bot-API (Issue #1370). Kapselt AUSSCHLIESSLICH
-        Drossel-Bremse -> POST -> genau EINE 429-Wiederholung und gibt die rohe
+    def _post(
+        self, url: str, payload: dict, *, chat_id=None, bound_chat: bool = False,
+    ) -> httpx.Response:
+        """Einziger Transportweg zur Bot-API (Issue #1370) und einziger
+        geschuetzter Ausgang (Issue #1412 S3b). Ablauf: Egress-Guards ->
+        Drossel-Bremse -> POST -> genau EINE 429-Wiederholung; gibt die rohe
         Antwort zurueck.
 
-        Bewusst KEINE Guards und KEINE Statuscode-Auswertung: die Egress-Guards
-        (#1288/#1363) bleiben in der jeweiligen oeffentlichen Methode VOR diesem
-        Aufruf stehen (``test_telegram_test_isolation.py`` sichert die
-        Reihenfolge ab), und ob ein Nicht-200 eine Ausnahme wirft, fail-soft ist
-        oder den 400-HTML-Fallback ausloest (ADR-0012), entscheidet weiterhin
-        der Aufrufer.
+        Die Guards laufen HIER, fuer jede oeffentliche Methode, VOR
+        ``_reserve_send_slot`` und genau EINMAL pro Aufruf (nicht erneut beim
+        429-Wiederholungsversuch): Herkunftssperre (#1476) auf die chat_id der
+        Nutzlast, Test-Bot-Token (#1363), bei ``bound_chat`` zusaetzlich der
+        Settings-Chat (#1288), dann der Ziel-Chat (#1363). Eine neue Methode
+        bekommt diesen Schutz, ohne selbst etwas pruefen zu muessen.
+
+        Bewusst KEINE Statuscode-Auswertung: ob ein Nicht-200 eine Ausnahme
+        wirft, fail-soft ist oder den 400-HTML-Fallback ausloest (ADR-0012),
+        entscheidet weiterhin der Aufrufer.
 
         Args:
             chat_id: Chat aus der jeweiligen Anfrage (Nutzlast bzw. Argument),
                 nicht aus ``self._settings`` — sonst liefe ``delete_message``
                 auf das falsche Chat-Konto.
+            bound_chat: nur ``send`` setzt True — dann wird zusaetzlich der
+                Settings-Chat geprueft (#1288, alter Fehlertext).
         """
+        if "chat_id" in payload:
+            payload = dict(payload)
+            original = payload["chat_id"]
+            self._check_recipient(original)
+            target = self._guard_code_origin(original)
+            self._guard_test_mode_bot_token()
+            if bound_chat:
+                self._guard_test_mode_chat_id(original)
+            self._guard_test_mode_target_chat(target)
+            payload["chat_id"] = target
+            chat_id = target
+        else:
+            self._guard_test_mode_bot_token()
         chat_key = _NO_CHAT_KEY if chat_id is None else str(chat_id)
         self._reserve_send_slot(chat_key)
         response = httpx.post(url, json=payload, timeout=self._timeout)
@@ -363,7 +458,7 @@ class TelegramOutput:
         wait = self._retry_after_seconds(response)
         logger.warning(
             "Telegram drosselt (HTTP 429, chat=%s) — warte %.2fs und sende "
-            "genau einmal erneut", chat_key, wait,
+            "genau einmal erneut", mask_number(chat_key), wait,
         )
         if wait > 0:
             time.sleep(wait)
@@ -400,9 +495,15 @@ class TelegramOutput:
             OutputConfigError: Test-Modus mit fehlender/abweichender
                 Test-Chat-ID (Issue #1288) — VOR jedem httpx.post.
         """
-        chat_id = self._guard_code_origin(self._settings.telegram_chat_id)
-        self._guard_test_mode_bot_token()
-        self._guard_test_mode_chat_id()
+        # Issue #1412 S4a: Empfaenger kommt ausschliesslich aus dem belegten
+        # Empfaenger-Objekt, nie aus settings.telegram_chat_id (Default: Block).
+        if self._recipient is None:
+            logger.warning("Telegram-Versand blockiert (telegram_no_recipient)")
+            raise ChannelBlockedError(
+                self.name, "kein belegter Empfaenger uebergeben.",
+                reason_code="telegram_no_recipient",
+            )
+        chat_id = self._recipient.chat_id
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
 
@@ -419,7 +520,7 @@ class TelegramOutput:
             payload["parse_mode"] = parse_mode
 
         try:
-            response = self._post(url, payload, chat_id=chat_id)
+            response = self._post(url, payload, chat_id=chat_id, bound_chat=True)
             if response.status_code == 200 and _api_ok(response):
                 logger.info("Telegram message sent (subject=%r)", subject)
                 try:
@@ -465,9 +566,6 @@ class TelegramOutput:
         OHNE `parse_mode`, mit gestrippten HTML-Tags UND `html.unescape()`ten
         Entities — sonst wuerde der Fallback "&amp;" statt "&" zeigen, ein
         kosmetischer Fehler gegen einen anderen getauscht."""
-        chat_id = self._guard_code_origin(chat_id)
-        self._guard_test_mode_bot_token()
-        self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
         fallback_text = html.unescape(_HTML_TAG_RE.sub("", message))
@@ -509,9 +607,6 @@ class TelegramOutput:
         Returns:
             True on HTTP 200 + ok:true, False otherwise.
         """
-        chat_id = self._guard_code_origin(chat_id)
-        self._guard_test_mode_bot_token()
-        self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/deleteMessage"
         payload: dict = {"chat_id": chat_id, "message_id": message_id}
@@ -547,9 +642,6 @@ class TelegramOutput:
         fail-soft: a non-200 / HTTPError / Timeout is only logged, never raised —
         "message is not modified" and stale messages must not crash the webhook.
         """
-        chat_id = self._guard_code_origin(chat_id)
-        self._guard_test_mode_bot_token()
-        self._guard_test_mode_target_chat(chat_id)
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/editMessageText"
 
@@ -603,7 +695,6 @@ class TelegramOutput:
             commands: List of command dicts with 'command' and 'description' keys.
                       Defaults to BOT_COMMANDS when None.
         """
-        self._guard_test_mode_bot_token()
         token = self._settings.telegram_bot_token
         url = f"{TELEGRAM_API_BASE}/bot{token}/setMyCommands"
         payload = {"commands": commands if commands is not None else BOT_COMMANDS}

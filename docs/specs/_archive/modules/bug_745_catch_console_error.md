@@ -3,7 +3,7 @@ entity_id: bug_745_catch_console_error
 type: bugfix
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, logging, tdd]
 ---
@@ -25,7 +25,7 @@ gleichzeitig echte Logging-Lücken sichtbar wurden.
 
 - **File:** `frontend/src/lib/bug_601_api_catch_logging.test.ts`
 - **File:** `frontend/src/routes/trips/[id]/+page.svelte`
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **File:** `frontend/src/lib/components/trip-wizard/steps/Step3Weather.svelte`
 
 ## Estimated Scope

@@ -4,6 +4,7 @@ type: module
 created: 2026-07-06
 updated: 2026-07-07
 status: superseded
+superseded_by: "docs/specs/_archive/modules/issue_1036_meteo_forets_source.md"
 version: "1.0"
 tags: [compare, alerts, official-alerts, meteofrance]
 ---
@@ -16,7 +17,7 @@ tags: [compare, alerts, official-alerts, meteofrance]
 > verwendet wurden** — real verifiziert wurde stattdessen ein einfacher `apikey`-HTTP-Header
 > (identisch zu Vigilance) gegen den département-scoped JSON-Endpoint
 > `.../DPMeteoForets/v1/carte/departement/encours`. Die verbindliche, implementierte Spec ist
-> **`docs/specs/modules/issue_1036_meteo_forets_source.md`**. Diese Datei bleibt nur als
+> **`docs/specs/_archive/modules/issue_1036_meteo_forets_source.md`**. Diese Datei bleibt nur als
 > Analyse-Historie erhalten, nicht als aktuelle Referenz.
 
 ## Approval

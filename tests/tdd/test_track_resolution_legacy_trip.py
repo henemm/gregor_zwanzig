@@ -781,12 +781,12 @@ def test_ac2_nicht_identische_kandidaten_innerhalb_der_toleranz_liefern_ergebnis
 
 
 # ---------------------------------------------------------------------------
-# AC-3 — Einzeletappe + durchlaufende Gesamt-Tour (das AC-11-Leitbeispiel)
+# AC-3 — Einzeletappe + durchlaufende Gesamt-Trip (das AC-11-Leitbeispiel)
 # ---------------------------------------------------------------------------
 
-def test_ac3_gesamt_tour_gpx_mit_grossem_offset_liefert_ein_ergebnis(tmp_path):
+def test_ac3_gesamter_trip_gpx_mit_grossem_offset_liefert_ein_ergebnis(tmp_path):
     """AC-3: Given eine Einzeletappen-GPX und eine durchlaufende
-    Gesamt-Tour-GPX decken dieselbe Etappe ab, ihre ROHEN Distanzwerte
+    Gesamt-Trip-GPX decken dieselbe Etappe ab, ihre ROHEN Distanzwerte
     unterscheiden sich aber um einen grossen Offset / When die
     Track-Aufloesung laeuft / Then liefert sie ein Ergebnis, weil die auf den
     Etappenstart normierten Werte je Wegpunkt innerhalb von 10 m

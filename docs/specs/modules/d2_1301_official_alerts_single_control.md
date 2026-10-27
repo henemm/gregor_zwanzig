@@ -3,7 +3,7 @@ entity_id: d2_1301_official_alerts_single_control
 type: module
 created: 2026-07-18
 updated: 2026-07-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, trip, alarme, ui, dataloss-fix]
 ---
@@ -131,7 +131,7 @@ Abschnitt mit der Amtliche-Warnungen-Checkbox nur für `context='route'` ein.
   Label „Amtliche Warnungen im Bericht" und schaltet weiterhin `official_alerts_enabled`.
   - Test: Rendering zeigt das Label; ein Klick schaltet den gebundenen Zustand.
 
-- **AC-6 (Erreichbarkeit Vergleich, Staging-Nachweis):** Given ein **bestehender** Ortsvergleich im
+- **AC-6:** (Erreichbarkeit Vergleich, Staging-Nachweis) Given ein **bestehender** Ortsvergleich im
   Hub / When der Nutzer den Tab „Wetter-Metriken" öffnet / Then ist der Schalter „Amtliche
   Warnungen im Bericht" sichtbar; ihn umzuschalten persistiert `official_alerts_enabled` (GET nach
   Speichern bestätigt den Wert).

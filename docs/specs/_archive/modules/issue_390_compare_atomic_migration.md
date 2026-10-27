@@ -3,7 +3,7 @@ entity_id: issue_390_compare_atomic_migration
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: active
+status: implemented
 version: "1.0"
 tags: [compare, atomic-design, migration, refactoring, svelte, epic-368, issue-390]
 ---

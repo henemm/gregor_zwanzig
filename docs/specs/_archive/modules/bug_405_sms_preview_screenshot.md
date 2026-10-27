@@ -3,7 +3,7 @@ entity_id: bug_405_sms_preview_screenshot
 type: bugfix
 created: 2026-05-27
 updated: 2026-05-27
-status: done
+status: implemented
 version: "1.0"
 tags: [bugfix, screenshot, audit, tooling, issue-405]
 ---

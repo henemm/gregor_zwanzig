@@ -26,6 +26,7 @@ import (
 func (s *Scheduler) TierRequestHealth() map[string]any {
 	var (
 		openCount       int
+		unnotifiedCount int
 		oldestRequested time.Time
 		haveOldest      bool
 	)
@@ -41,6 +42,9 @@ func (s *Scheduler) TierRequestHealth() map[string]any {
 				continue // kein Antrag bzw. bereits gewährt
 			}
 			openCount++
+			if user.RequestedNotifiedAt == nil {
+				unnotifiedCount++
+			}
 			if user.RequestedAt == nil {
 				continue
 			}
@@ -59,6 +63,8 @@ func (s *Scheduler) TierRequestHealth() map[string]any {
 
 	return map[string]any{
 		"open_count":            openCount,
+		"unnotified_count":      unnotifiedCount,
+		"po_mail_configured":    s.poEmail != "" && s.smtpHost != "",
 		"oldest_open_age_hours": oldestAgeHours,
 	}
 }

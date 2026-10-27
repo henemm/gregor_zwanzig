@@ -42,10 +42,10 @@ WICHTIGE ABGRENZUNG (zwei verschiedene Arten von "Luecke"):
 Diese beiden Tests widersprechen sich nicht — sie trennen "nicht getroffen"
 von "nicht mehr vorhanden".
 
-ROT/GRUEN-Aufteilung dieser Datei:
-- `test_k1_*`/`test_k2_*`/`test_k4_*`: ROT. Zielverhalten der Korrektur.
-- `test_k3_*`: GRUEN vor UND nach (die Positions-Quelle aendert sich nicht)
-  bis auf den weggefallenen Kopf im Goldstring — deshalb heute ROT im
+ROT/GRUEN-Aufteilung dieser Datei (Stand zur Auslieferung, Commit 97ec3deb):
+- `test_k1_*`/`test_k2_*`/`test_k4_*`: waren ROT, Zielverhalten der Korrektur.
+- `test_k3_*`: waren GRUEN vor UND nach (die Positions-Quelle aendert sich
+  nicht) bis auf den weggefallenen Kopf im Goldstring — deshalb damals ROT im
   Goldstring, gruen in allen Einzel-Zusicherungen.
 - `test_regression_*` (3 Tests): GRUEN vor UND nach dem Umbau. Sie nageln die
   drei anderen Alarmwege (Trip-Aenderung, Trip-Radar, Ortsvergleich-Radar)
@@ -55,6 +55,13 @@ ROT/GRUEN-Aufteilung dieser Datei:
   gemessene Goldstrings, keine Vermutungen. K-3 der Korrektur-Runde ist die
   wichtigste Zusicherung: wird einer dieser drei rot, ist das ein BEFUND —
   kein Anlass, den Goldstring anzupassen.
+
+NACHTRAG (Issue #2241, 2026-09-09): die Produktivkorrektur aus AG3b ist
+inzwischen ausgeliefert, alle neun Tests dieser Datei sind GRUEN. Der einzige
+Goldstring-Nachzug betrifft `test_regression_trip_deviation_alert_sms_text_
+unchanged` — nicht wegen AG3b, sondern wegen der spaeteren, unabhaengigen
+Kopf-Faltung "Segment " -> "Seg " (#1948 S5, Commit e9885f08): der Text lautet
+seither `'Seg 1: R2->30'` statt `'Segment 1: R2->30'`.
 
 TESTPOLITIK (CLAUDE.md, Kern-Schicht): kein `Mock()`/`patch()`/`MagicMock`.
 Als Naht dient ein echter lokaler HTTP-Stub fuer die seven.io-SMS-API
@@ -70,6 +77,16 @@ JEDES versandrelevante Feld ausdruecklich: Telegram-Felder auf leere
 Zeichenketten (`can_send_telegram() == False`), SMS auf den lokalen Stub,
 E-Mail auf leere Felder bzw. ausschliesslich `mail_sink`. Es gibt in dieser
 Datei keinen Pfad, auf dem eine Nachricht den Rechner verlassen kann.
+
+Issue #2241 (Befund): bis zu diesem Fix fehlte in `_settings_sms_only()` und
+`_settings_email_and_sms()` der `seven_sandbox_key` -- die unabhaengige
+Herkunftssperre (#1476/#1336, `seven_io_base.py::_guard_code_origin`) blockte
+JEDEN Versand aus einem Testlauf-Verzeichnis ohne konfigurierten Sandbox-Key,
+bevor die Nachricht ueberhaupt den lokalen SMS-Stub erreichte -- alle sieben
+Tests, die ueber `NotificationService`/`CompareAlertService` versenden, sahen
+deshalb `stub.texts() == []` statt einer Zusicherung ueber den Inhalt. Fix:
+`seven_sandbox_key` deckungsgleich mit `seven_api_key` gesetzt (Vorbild
+`tests/unit/test_channel_blocked_missing_recipient.py:128`).
 
 Pfadregel #1409: der Prueflings-Datenpfad wird relativ zur Testdatei
 aufgeloest, nie ueber einen festen Hauptrepo-Pfad.
@@ -98,13 +115,25 @@ from services.notification_service import NotificationService, RadarAlertRequest
 from services.radar_service import NowcastResult
 
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.nutzer_tier import nutzer_mit_tier
+from tests.helpers.sms_empfaenger import profil_sms
 import pytest
 
-
-# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
-# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
-# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
-pytestmark = pytest.mark.live
+# Issue #2241: der modulweite `live`-Marker (vormals hier) war falsch belegt --
+# diese Datei sendet nie echt, sie schreibt ausschliesslich an einen lokalen
+# HTTP-Stub (`_SMSStub`, Loopback-Socket) und laeuft ohne Netz/Live-Dienste.
+# Das ist Kern-Schicht (CLAUDE.md), kein Live-E2E-Fall.
+#
+# `real_data_root` bleibt noetig (kein blosser Marker-Tausch): `live` deckte
+# hier NEBENBEI zwei unabhaengige Dinge ab -- Netz-Zugriff (den es nie gab)
+# UND den Opt-out aus der `_isolate_data_root`-Fixture (conftest.py). Ohne
+# diesen Opt-out schreibt `app.loader.save_location()` (ueber `get_data_dir()`)
+# in eine ISOLIERTE tmp-Wurzel, waehrend `write_compare_briefings()` per
+# Pfadregel #1409 bewusst den ECHTEN `DATA_ROOT` unten anspricht -- die dann
+# auseinanderlaufenden Baeume liessen `_zone_des_presets()` keine Orte mehr
+# finden und `check_all_compare_presets()` das Preset lautlos als nicht
+# faellig uebergehen (gemessen: 0 Sende-Versuche, kein Log-Eintrag).
+pytestmark = pytest.mark.real_data_root
 
 # Pfadregel #1409: relativ zur Testdatei. `load_compare_presets()` liest
 # ComparePresets ueber `data_root="data"` RELATIV zum Arbeitsverzeichnis
@@ -173,7 +202,8 @@ def _settings_sms_only(sms_port: int) -> Settings:
         smtp_host="", smtp_user="", smtp_pass="", mail_to="",
         telegram_bot_token="", telegram_chat_id="",
         sms_gateway_url=f"http://127.0.0.1:{sms_port}/api/sms",
-        seven_api_key="tdd-stub-key", sms_to="+49000000000", sms_from=None,
+        seven_api_key="tdd-stub-key", seven_sandbox_key="tdd-stub-key",
+        sms_to="+49000000000", sms_from=None,
     )
 
 
@@ -186,7 +216,8 @@ def _settings_email_and_sms(sms_port: int) -> Settings:
         mail_to="dummy@example.invalid",
         telegram_bot_token="", telegram_chat_id="",
         sms_gateway_url=f"http://127.0.0.1:{sms_port}/api/sms",
-        seven_api_key="tdd-stub-key", sms_to="+49000000000", sms_from=None,
+        seven_api_key="tdd-stub-key", seven_sandbox_key="tdd-stub-key",
+        sms_to="+49000000000", sms_from=None,
     )
 
 
@@ -216,7 +247,7 @@ class _ScriptedWeatherSource:
     def fetch(
         self, point_id: str, lat: float, lon: float,
         start_hour: int | None = None, end_hour: int | None = None,
-        elevation_m: int | None = None,
+        elevation_m: int | None = None, user_id: str | None = None,
     ):
         return _pwd(point_id, point_id, lat, lon, self._values.get(point_id, 0.0))
 
@@ -368,6 +399,7 @@ def test_k1_bundled_two_location_sms_carries_only_the_values_no_head():
         user_dir = get_data_dir(uid)
         user_dir.mkdir(parents=True, exist_ok=True)
         (user_dir / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        profil_sms(uid, "+49000000000")  # #1412 S4b: bestaetigte Profilnummer
 
         save_location(
             SavedLocation(id="loc-graz", name="Graz", lat=47.07, lon=15.44, elevation_m=353),
@@ -538,6 +570,7 @@ def test_k2_single_location_sms_carries_no_location_name():
         user_dir = get_data_dir(uid)
         user_dir.mkdir(parents=True, exist_ok=True)
         (user_dir / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        profil_sms(uid, "+49000000000")  # #1412 S4b: bestaetigte Profilnummer
 
         save_location(
             SavedLocation(id="loc-graz", name="Graz", lat=47.07, lon=15.44, elevation_m=353),
@@ -632,6 +665,7 @@ def test_k3_position_numbers_come_from_configured_list_not_from_hit_order():
         user_dir = get_data_dir(uid)
         user_dir.mkdir(parents=True, exist_ok=True)
         (user_dir / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        profil_sms(uid, "+49000000000")  # #1412 S4b: bestaetigte Profilnummer
 
         # Die Orte werden ABSICHTLICH in einer anderen Reihenfolge angelegt,
         # als sie im Preset stehen: die Anlege-/Ladereihenfolge darf die
@@ -776,6 +810,7 @@ def test_k4_deleted_location_lets_the_following_positions_move_up():
         user_dir = get_data_dir(uid)
         user_dir.mkdir(parents=True, exist_ok=True)
         (user_dir / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        profil_sms(uid, "+49000000000")  # #1412 S4b: bestaetigte Profilnummer
 
         save_location(
             SavedLocation(id="loc-bruck", name="Bruck", lat=47.41, lon=15.27, elevation_m=482),
@@ -906,12 +941,26 @@ def test_k3_sms_token_binds_position_to_location_name_not_to_token_order():
 # AC-26 in `test_compare_alert_telegram_per_location.py`. Die Vergleichswerte
 # sind an HEAD 6b6ad80d GEMESSEN (lokaler seven.io-Stub), nicht geschaetzt.
 
-def test_regression_trip_deviation_alert_sms_text_unchanged():
+def _isolierter_standard_nutzer(monkeypatch, tmp_path, uid: str) -> str:
+    """Issue #2412 S4a: das SMS-Tageslimit sperrt Nutzer ohne Tarif (free).
+    Die drei Regressionstests brauchen den echten Baum nicht (kein
+    `write_compare_briefings`) -- trotz modulweitem `real_data_root` wird die
+    Datenwurzel hier auf `tmp_path` umgelenkt, damit weder `user.json` noch
+    die Tageszaehler-Sperrdatei im echten `data/users` landen (#2226)."""
+    from app import loader
+
+    monkeypatch.setattr(loader, "_DATA_ROOT", str(tmp_path))
+    nutzer_mit_tier(uid)
+    profil_sms(uid, "+49000000000")  # #1412 S4b: bestaetigte Profilnummer
+    return uid
+
+
+def test_regression_trip_deviation_alert_sms_text_unchanged(monkeypatch, tmp_path):
     """Trip-Aenderungsalarm (`send_deviation_alert`) — SMS byte-identisch."""
     stub = _SMSStub()
     try:
         svc = NotificationService(
-            settings=_settings_sms_only(stub.port), user_id="tdd-ag3b-reg-trip",
+            settings=_settings_sms_only(stub.port), user_id=_isolierter_standard_nutzer(monkeypatch, tmp_path, "tdd-ag3b-reg-trip"),
         )
         svc.send_deviation_alert(
             trip=_trip(), weather=[_segment_weather_data()], changes=[_change()],
@@ -923,7 +972,13 @@ def test_regression_trip_deviation_alert_sms_text_unchanged():
         # Issue #1948 S3: das Vorzeichen-Praefix ist im Trip-Δ-Pfad entfallen
         # und `>` durch `->` ersetzt -- der Compare-Pfad (unten) behaelt beides,
         # deshalb aendert sich hier genau ein Goldstring und keiner der anderen.
-        assert stub.texts() == ["Segment 1: R2->30"], (
+        # Issue #1948 S5 (Commit e9885f08, 2026-08-20): `_ascii_alert_location()`
+        # faltet "Segment " -> "Seg " im SMS-Kopf -- die fruehere Erwartung
+        # 'Segment 1: R2->30' (volles Wort) ist damit veraltet (#2241). Kein
+        # Etappen-Praefix (#2122): `_trip()` hat genau eine Etappe mit festem
+        # Datum 2026-05-01, das nie auf `date.today()` faellt -- die Praefix-
+        # Aufloesung liefert daher `None`.
+        assert stub.texts() == ["Seg 1: R2->30"], (
             "Regression: der SMS-Text des Trip-Aenderungsalarms muss ohne "
             "Orts-Positionszuordnung unveraendert bleiben, gemessen: "
             f"{stub.texts()!r}"
@@ -932,12 +987,12 @@ def test_regression_trip_deviation_alert_sms_text_unchanged():
         stub.stop()
 
 
-def test_regression_trip_radar_alert_sms_text_unchanged():
+def test_regression_trip_radar_alert_sms_text_unchanged(monkeypatch, tmp_path):
     """Trip-Radar-Alarm (`send_radar_alert`) — SMS byte-identisch."""
     stub = _SMSStub()
     try:
         svc = NotificationService(
-            settings=_settings_sms_only(stub.port), user_id="tdd-ag3b-reg-radar",
+            settings=_settings_sms_only(stub.port), user_id=_isolierter_standard_nutzer(monkeypatch, tmp_path, "tdd-ag3b-reg-radar"),
         )
         req = RadarAlertRequest(
             onset_minutes=12, onset_time="14:35", km_from=5.0, km_to=18.0,
@@ -961,7 +1016,7 @@ def test_regression_trip_radar_alert_sms_text_unchanged():
         stub.stop()
 
 
-def test_regression_compare_radar_alert_sms_text_unchanged():
+def test_regression_compare_radar_alert_sms_text_unchanged(monkeypatch, tmp_path):
     """Ortsvergleich-Radar-Alarm (`send_multi_location_radar_alert`) — SMS
     byte-identisch, obwohl MEHRERE Orte beteiligt sind. Die Positions-
     Kodierung aus AG3b gilt ausdruecklich nur fuer den Aenderungs-Pfad
@@ -969,7 +1024,7 @@ def test_regression_compare_radar_alert_sms_text_unchanged():
     stub = _SMSStub()
     try:
         svc = NotificationService(
-            settings=_settings_sms_only(stub.port), user_id="tdd-ag3b-reg-cmp-radar",
+            settings=_settings_sms_only(stub.port), user_id=_isolierter_standard_nutzer(monkeypatch, tmp_path, "tdd-ag3b-reg-cmp-radar"),
         )
         loc_a = SavedLocation(id="loc-a", name="Zermatt", lat=46.02, lon=7.75, elevation_m=1600)
         loc_b = SavedLocation(id="loc-b", name="Chamonix", lat=45.92, lon=6.87, elevation_m=1000)

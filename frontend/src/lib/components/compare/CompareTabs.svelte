@@ -1,9 +1,9 @@
 <script lang="ts">
 	// Issue #517 — CompareTabs: 6-Tab-Orchestrator für /compare/[id] Detail-Seite.
 	//
-	// Tabs: Übersicht · Orte · Wertebereiche · Layout · Versand · Vorschau
+	// Tabs (#1743): Übersicht · Orte · Wetter-Metriken (mit Versand-Abschnitt #versand) · Wertebereiche · Alarme
 	// Issue #1231, Slice 6 (Begriffs-Konsistenz): Label „Idealwerte" -> „Wertebereiche",
-	// `value`-Schlüssel unverändert (`idealwerte`). Reine Lesenansicht, keine
+	// Issue #2287: Kennung jetzt `wertebereiche` (gemeinsam mit dem Trip-Hub). Reine Lesenansicht, keine
 	// funktionale CorridorEditor-Migration hier (bleibt späterer Scope).
 	//
 	// URL-Sync via history.replaceState (?tab=VALUE), kein Hash wie TripTabs.
@@ -12,33 +12,28 @@
 	// Spec: docs/specs/modules/issue_517_compare_hub.md
 
 	import { Dot, Pill, Btn, Eyebrow, Card, SectionH } from '$lib/components/atoms';
-	import CompareChannelSwitch from '$lib/components/molecules/CompareChannelSwitch.svelte';
-	// Issue #1270: CompareBriefingPreview-Mount entfernt — er wurde nie mit
-	// profile/data gemountet und rendert darum bedingungslos die Missing-Box
-	// „Vorschau-Daten nicht verfügbar." (KB-2). Die Kanal-Anzeige läuft jetzt
-	// direkt über die beiden Anzeige-Hüllen (ADR-0011).
-	import CompareChatBubble from '$lib/components/molecules/CompareChatBubble.svelte';
-	import CompareSmsPreview from '$lib/components/molecules/CompareSmsPreview.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
-	import VersandTab from '$lib/components/shared/VersandTab.svelte';
-	// Epic #1273 S1: geteilter Save-Chip (position:fixed) + SaveStatus-Typ/Helper.
-	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
-	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	// Issue #1743: Wetter-Metriken und Versand in EINEM geteilten Baustein (Anker #versand).
+	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	import BriefingHistory from '$lib/components/shared/BriefingHistory.svelte';
+	// SaveStatus-Typ/Helper (der Chip selbst kommt seit #2284 S2 vom SubscriptionHeader).
+	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { extractMessage } from '$lib/stores/saveStatusStore.svelte';
+	import { merkeNutzlast, wendeNutzlastAn } from '$lib/stores/nutzlastStand';
 	import {
 		deriveStatusWithScheduleOverride,
 		presetBriefingTimesLabel,
 		formatLastSent,
-		formatNextSend,
 		channelNamesLabel,
-		presetChannels,
 		presetProfileLabel,
 		STATUS_MAP
 	} from '$lib/components/compare/subscriptionHelpers.js';
-	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
+	// Issue #1969 (AC-23/AC-24): nächster Versand = Backend-Wert, keine eigene Rechnung.
+	import { formatNextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
+	import { erstelleNaechstesBriefingLader } from '../shared/versand-tab/naechstesBriefingLader.svelte.ts';
 	import type { ComparePreset, Location, Group } from '$lib/types.js';
 	import { api } from '$lib/api.js';
-	import { setContext, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	// Issue #1256 Scheibe 6 (AC-14/15/16/31/32/33/34): Orte-Tab-Drag +
 	// eingebetteter CorridorEditor im Idealwerte-Tab.
 	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
@@ -49,19 +44,20 @@
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
 	// Issue #1258 Scheibe 5 (AC-19): geteilter Alarme-Organism im 7. Hub-Tab.
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
+	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
+	import { alarmePropsAus } from './alarmePropsAus.ts';
+	import { corridorPropsAus } from './corridorPropsAus.ts';
+	import { versandPropsAus } from './versandPropsAus.ts';
+	import { wetterMetrikenPropsAus } from './wetterMetrikenPropsAus.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
-	// vergleich-Kontext) — analog Alarme-/Versand-Bridge oben.
-	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
+	// vergleich-Kontext) — seit #1743 ueber WetterMetrikenVersandPanel eingebettet.
 	import {
 		hydrateWeatherMetricsFromPreset,
 		hydrateChannelActiveMetricsFromPreset,
-		flushPendingWeatherMetricsSave,
 		hydrateDayWindowFromPreset,
-		type WeatherMetricsSnapshot
+		hydrateLayoutFieldsFromPreset,
+		wetterMetrikenHydrationAbgeschlossen
 	} from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
-	// Issue #1366 F002: EINZIGE Materialisierungs-Quelle „nie eingestellt" (null)
-	// -> Vorgabemenge, geteilt mit WeatherMetricsTab.svelte/CorridorEditor(Mobile).
-	import { materializeActiveMetricKeys } from '../shared/weather-metrics-tab/compareMetricOrder.ts';
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): die Metrik-Auswahl liegt im
 	// Speicherformat Größe + Auswertung — die Hydration dieses Reiters muss die
 	// Katalogantwort (Übersetzung auf Auswahl-Schlüssel) abwarten, BEVOR sie den
@@ -76,29 +72,29 @@
 	// Epic #1301 Scheibe F2a: Stundenverlauf-Steuerung als geteilte Komponente
 	// (Hub + Anlege-Seite /compare/new). Inline-Markup + Handler wanderten dorthin.
 	import { CompareWizardState } from './compareWizardState.svelte';
+	import { hydrateHubFieldsFromPreset, hydrateAlarmFieldsFromPreset } from './compareHubHydration.ts';
+	import { buildComparePresetPartialPayload } from './compareEditorSave.ts';
 	import {
-		hydrateWizardStateFromPreset,
-		buildHubPutPayload,
-		flushPendingCorridorSave,
 		snapshotForRollback,
-		shouldFlushOnWindowPointerUp,
 		buildToggleActivePutPayload,
-		hydrateVersandFieldsFromPreset,
-		flushPendingVersandSave,
-		hydrateAlarmFieldsFromPreset,
-		flushPendingAlarmSave,
-		rollbackAlarmSnapshot,
+		statusZielNutzlast,
 		hubActivationBanner,
-		createPutQueue,
-		hydrateLayoutFieldsFromPreset,
-		flushPendingLayoutSave,
-		rollbackLayoutSnapshot,
-		type VersandSnapshot,
-		type AlarmSnapshot,
-		type LayoutSnapshot
-	} from './compareHubWizardBridge.ts';
+		createPutQueue
+	} from './compareHubPersistenz.ts';
+	import {
+		baueSpeicherung,
+		mitKonfliktSchluessel,
+		speichereOderMeldeKonflikt,
+		type PutClient
+	} from '../shared/tripSpeicherung.ts';
+	// Issue #2276 S5: der Versand-Reiter speichert selbst — Snapshot, Diff-Gate,
+	// Nutzlast und Rollback liegen im geteilten Baustein; hier bleibt nur die
+	// Hydration des Wizard-Zustands vor dem Mount.
+	import { hydrateVersandFieldsFromPreset } from '../shared/versandVergleichSpeicherung.ts';
+	import { sichereSelbstSpeichererVorReiterwechsel } from '../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
 	import { groupLocations } from './locationHelpers.js';
-	import { COMPARE_TABS, resolveCompareTab } from './compareTabsResolve.js';
+	import { subscriptionTabs, resolveTab, bereinigteTabAdresse, versandSprungStart } from '../shared/subscriptionTabs.ts';
+	import MTabBar from '$lib/components/mobile/MTabBar.svelte';
 
 	interface Props {
 		preset: ComparePreset;
@@ -113,27 +109,57 @@
 		 * erfolgt. Wird nach erfolgreichem PUT mit dem neuen `schedule` aufgerufen. */
 		onScheduleChange?: (schedule: string) => void;
 		/** Epic #1273 S1: geteilter Hub-SaveStatus-Controller (aus der Routen-
-		 * Ebene). Wird von den 5 Commit-Handlern manuell getrieben
-		 * (setSaving/setSaved/setError/markPristine), NICHT via schedule() —
-		 * die Netzwerk-Serialisierung bleibt bei hubPutQueue. */
+		 * Ebene). Orte/Wertebereiche/Versand/Aktiv-Status treiben ihn weiterhin
+		 * manuell (setSaving/setSaved/setError/markPristine), NICHT via
+		 * schedule() — die Netzwerk-Serialisierung bleibt bei hubPutQueue.
+		 * Ausnahme seit Issue #2276 S2: der Alarme-Reiter (`AlarmeTab`) speichert
+		 * selbst ueber saveController.schedule() (analog dem Trip-Zweig), s.
+		 * shared/alarmeVergleichSpeicherung.ts. */
 		saveController?: SaveStatus;
 	}
 
-	let { preset, locations, initialTab = 'uebersicht', onScheduleChange, saveController }: Props =
+	// `saveController = undefined`: ausdruecklicher Default (semantisch gleich) — ein Hub
+	// ohne Controller ruft den Flush-Guard mit `undefined` (no-op), nie mit einer
+	// ungebundenen Variablen.
+	let { preset, locations, initialTab = 'uebersicht', onScheduleChange, saveController = undefined }: Props =
 		$props();
 
-	// Epic #1273 S3: TABS/VALID_VALUES/resolve() liegen jetzt in
-	// compareTabsResolve.ts (Adversary-Fund F001 — echter Funktionsaufruf statt
-	// Datei-Grep für AC-3 testbar), Verhalten unverändert.
-	const TABS = COMPARE_TABS;
-	function resolve(value: string): string {
-		return resolveCompareTab(value);
-	}
-
-	let activeTab = $state<string>('uebersicht');
+	// Issue #2287: Tabelle und Aufloesung kommen aus der GEMEINSAMEN Reiter-Tabelle
+	// (shared/subscriptionTabs.ts) — dieselben Kennungen wie im Trip-Hub; die
+	// fruehere compareTabsResolve.ts (RETIRED_TABS) geht darin auf.
+	// Issue #2283: synchron aus initialTab — SSR und erster Render zeigen sofort den
+	// richtigen Reiter (der $effect unten bereinigt nur noch die Adresszeile).
+	// svelte-ignore state_referenced_locally -- bewusst nur der Startwert; spaetere
+	// initialTab-Aenderungen setzt der $effect unten.
+	let activeTab = $state<string>(resolveTab('vergleich', initialTab).tab);
+	// Issue #1743: jede Erhoehung laesst den Baustein zum Versand-Abschnitt scrollen
+	// (der Baustein mountet erst nach der Versand-Hydration, s. Template). Startwert aus
+	// der Alt-Kennung; ein direkter Link mit `#versand` liest der Baustein beim Mount.
+	// svelte-ignore state_referenced_locally -- bewusst nur der Startwert.
+	// Startwert auch aus einem direkten Link mit `#versand`; jeder Reiterwechsel ohne
+	// Anker setzt ihn auf 0 — ein spaeterer Remount des Bausteins scrollt nicht.
+	let versandSprung = $state(versandSprungStart(resolveTab('vergleich', initialTab)));
+	// E4: Alt-/kind-fremde Kennung → Adresszeile EINMAL per replaceState auf die neue
+	// Kennung; unbekannte Kennung → Parameter `tab` entfernt. Keine Schleife: danach
+	// ist die Kennung neu, und history.replaceState aendert `initialTab` nicht.
+	// Issue #1743: `versand`/`briefings` → `?tab=wetter-metriken#versand`.
 	$effect(() => {
-		activeTab = resolve(initialTab);
+		const r = resolveTab('vergleich', initialTab);
+		activeTab = r.tab;
+		if (typeof window === 'undefined') return;
+		const ziel = bereinigteTabAdresse(window.location.href, r);
+		if (ziel !== null) history.replaceState(history.state, '', ziel);
 	});
+
+	// Tab-Leisten-Items für den MTabBar-Baustein — Orte mit Zähler-Badge.
+	const compareBarItems = $derived(
+		subscriptionTabs('vergleich').map((t) => ({
+			value: t.id,
+			label: t.label,
+			testid: `compare-detail-tab-${t.id}`,
+			badge: t.id === 'orte' ? orteCount : undefined
+		}))
+	);
 
 	// Issue #1256 Scheibe 8 (AC-22): Viewport-Weiche fuer den Monitoring-
 	// Streifen (Desktop-5-Stat-Leiste vs. mobiles 4-Stat-2×2) und den
@@ -148,28 +174,45 @@
 		return () => mq.removeEventListener('change', onChange);
 	});
 
-	function handleValueChange(value: string): void {
+	async function handleValueChange(value: string, anchor: 'versand' | null = null): Promise<void> {
+		// Issue #2276 S2/S3 (TripTabs-Muster): eine ausstehende Aenderung eines
+		// selbst speichernden Reiters (Alarme, Wertebereiche) vor dem Verlassen
+		// senden — beide teilen den EINEN Speicher-Platz des Controllers.
+		await sichereSelbstSpeichererVorReiterwechsel(activeTab, value, saveController);
 		activeTab = value;
+		versandSprung = anchor === 'versand' ? versandSprung + 1 : 0;
 		if (typeof window !== 'undefined') {
 			const url = new URL(window.location.href);
 			url.searchParams.set('tab', value);
+			// #1743: Sprungziel als Hash; ein Reiterwechsel ohne Anker verwirft den alten.
+			url.hash = anchor ?? '';
 			history.replaceState(history.state, '', url.toString());
 		}
 	}
 
 	// Tab-Daten ──────────────────────────────────────────────────────────────────
 
+	// Issue #2276 S6g (svelte-check-Fund, AC-10): VOR ihrer ersten Nutzung in
+	// `status` unten deklariert (Nutzung-vor-Deklaration im Modul-Scope der
+	// Instanz) — Verhalten von `status`/`statusInfo` bleibt unveraendert, reine
+	// Reihenfolge-Korrektur. Issue #527/#558 + #631: Pause/Aktivieren-Zustand.
+	let localSchedule = $state<string>(preset.schedule ?? 'manual');
 	const status = $derived(deriveStatusWithScheduleOverride(preset, localSchedule));
 	const statusInfo = $derived(STATUS_MAP[status]);
 
 	// Issue #1229 Fix-Loop 1 (F001/F002): "Nächster Versand" aus dem berechneten
 	// Zeitstempel ableiten statt aus dem Rhythmus-Label (presetScheduleLabel enthält
 	// einen rohen hour_from–hour_to-Bereich, den AC-4 im Versand-Tab verbietet).
-	// Muster identisch zu CompareStatusRow.svelte.
-	const now = new Date();
-	const nextSend = $derived(deriveNextSend(preset, now));
+	// Issue #1969 (AC-23/AC-24): Backend-Wert aus GET /api/next-briefings statt
+	// deriveNextSend. Neu geladen nach jedem erfolgreichen Speichern des Hubs
+	// (`savedAt`, auch Pausieren/Aktivieren); Laufnummer gegen veraltete Antworten.
+	const naechstesBriefing = erstelleNaechstesBriefingLader(
+		() => ({ context: 'vergleich', id: preset?.id, neuLaden: saveController?.savedAt }),
+		(p) => api.get(p)
+	);
+	const nextSendText = $derived(formatNextBriefing(naechstesBriefing.wert, 'vergleich'));
 	const versandSummaryText = $derived(
-		`Briefings ${presetBriefingTimesLabel(preset)} · nächster Versand ${formatNextSend(nextSend)}.`
+		`Briefings ${presetBriefingTimesLabel(preset)} · nächster Versand ${nextSendText}.`
 	);
 
 	// Issue #1256 Scheibe 3 AC-6: Kanal-Namen statt Kanal-Anzahl in der
@@ -190,20 +233,31 @@
 	// eingefroren (aktualisiert nur nach togglePause()/invalidateAll() im
 	// Parent, routes/compare/[id]/+page.svelte:76) — ein zweiter S6-PUT im
 	// selben Seitenbesuch wuerde sonst den ersten Edit still rueckgaengig
-	// machen, weil buildHubPutPayload nicht-editierte Felder aus genau dieser
-	// Baseline defaultet. Wird nach JEDEM erfolgreichen S6-PUT aus dem
+	// machen, weil ein Voll-Spread nicht-editierte Felder aus genau dieser
+	// Baseline defaultet (seit #2375 senden Orte/Status nur ihre Eigenfelder). Wird nach JEDEM erfolgreichen S6-PUT aus dem
 	// Response-Body aufgefrischt (internal/handler/compare_preset.go:390
 	// liefert das gespeicherte Preset zurueck — writeJSON(w, 200, updated)).
 	// Uebersicht-/Vorschau-Tab lesen bewusst weiterhin `preset` direkt
 	// (bekannte, akzeptierte Stale-Anzeige, s. Fix-Vorgabe Scope).
 	let currentPreset = $state<ComparePreset>(snapshotForRollback(preset));
 
+	// Fix-Loop 3 (#1433, F201): Hydrationsquelle der Reiter ist dieser Stand. Bei einem 412
+	// wird er lokal um die abgelehnte Eigenfeld-Nutzlast fortgeschrieben (Seitenstand =
+	// Server ⊕ ausstehende Nutzlasten) — so liest ein ERSTMALS geoeffneter Reiter (z. B.
+	// Versand, teilt Abkuehlzeit/Ruhezeit mit Alarme) die Eingabe und setzt `wizardState`
+	// nicht auf den Altstand zurueck. Bewusst NUR dieser interne Stand, nicht die Seiten-
+	// Prop `preset`: deren Wechsel loest den Effekt unten aus, der die Hydrations-Flags
+	// zuruecksetzt und den OFFENEN Reiter ueber seine Eingabe neu hydrieren wuerde.
+	$effect(() => saveController?.registriereAbgelehnt((nutzlast) => {
+		currentPreset = wendeNutzlastAn(currentPreset, nutzlast);
+	}));
+
 	// Fix-Loop 1 (F002, Adversary CRITICAL): EINE gemeinsame Serialisierungs-
 	// Queue fuer ALLE Hub-PUT-Pfade (Orte/Idealwerte/Versand/Toggle-Active) —
 	// verhindert, dass zwei schnell aufeinanderfolgende Aktionen (z. B. eine
 	// Versand-Aenderung gefolgt vom Aktivieren-Klick) zwei parallele
 	// api.put()-Aufrufe mit derselben, noch veralteten currentPreset-Baseline
-	// ausloesen (compareHubWizardBridge.ts: createPutQueue).
+	// ausloesen (compareHubPersistenz.ts: createPutQueue).
 	const hubPutQueue = createPutQueue();
 
 	// Issue #1256 Scheibe 6 (AC-14/15/31/32): lokaler, optimistischer Orte-Zustand.
@@ -212,10 +266,10 @@
 	let currentLocationIds = $state<string[]>([...currentPreset.location_ids]);
 	const orteCount = $derived(currentLocationIds.length);
 	// Fix-Loop 2 (F003-Analogie): zuletzt ERFOLGREICH persistierter Orte-Stand,
-	// analog lastPersistedCorridorSnapshot/lastPersistedVersandSnapshot — nur
+	// analog zur Snapshot-Baseline der selbst speichernden Reiter — nur
 	// so kann persistPickedIds beim Rollback auf den Stand NACH einem zuvor
 	// in der Queue bereits erfolgreichen Edit zurueckfallen statt auf einen
-	// aelteren, beim Funktionsaufruf gelesenen Stand (s. handleCorridorCommit).
+	// aelteren, beim Funktionsaufruf gelesenen Stand.
 	let lastPersistedLocationIds: string[] = [...currentLocationIds];
 
 	// Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
@@ -248,39 +302,43 @@
 		await persistPickedIds(currentLocationIds.filter((id) => id !== locId));
 	}
 
+	// Issue #1433 Fix-Loop: der PUT-Weg der Schreiber ausserhalb von `schedule` (Orte,
+	// Status) laeuft durch die Hub-Queue — auch, wenn „Nochmal speichern" die Funktion
+	// spaeter direkt aufruft (F002: nie zwei Hub-PUTs parallel).
+	function hubPut<T>(pfad: string, rumpf: unknown, init: RequestInit | undefined): Promise<T> {
+		return hubPutQueue.enqueue(() => api.put<T>(pfad, rumpf, init));
+	}
+	const hubClient: PutClient = { put: hubPut };
+
+	// Issue #1433 Fix-Loop (F805): Ortsliste des offenen 'orte'-Konflikts — die sendet
+	// „Nochmal speichern". Ziel eines Rollbacks bei Nicht-412, solange der Konflikt offen ist.
+	let offeneOrteIds: string[] | null = null;
+
 	async function persistPickedIds(newIds: string[]): Promise<void> {
 		currentLocationIds = newIds;
-		// Epic #1273 S1: der try/catch liegt INNERHALB des enqueue-Closures und
-		// faengt den Fehler dort ab — der aeussere await wirft nie. Damit
-		// setError() ueberhaupt erreichbar wird, den gefangenen Fehler in einer
-		// ausserhalb deklarierten `failure`-Variable festhalten.
-		let failure: unknown = null;
 		saveController?.setSaving();
-		// Fix-Loop 1 (F002): Payload-Bau innerhalb des enqueueten fn, damit
-		// currentPreset erst zur tatsaechlichen Ausfuehrungszeit gelesen wird
-		// (frisch aus einer evtl. vorher in der Queue gelaufenen PUT-Response).
-		// Fix-Loop 2 (F003-Analogie): Rollback-Baseline (lastPersistedLocationIds)
-		// ebenfalls erst HIER lesen — s. Begruendung an der Deklaration oben.
-		const updated = await hubPutQueue.enqueue(async () => {
-			try {
-				const { url, body } = buildHubPutPayload(currentPreset, { pickedIds: newIds });
-				const result = await api.put<ComparePreset>(url, body);
-				// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen —
-				// der PUT-Handler liefert das tatsaechlich gespeicherte Preset zurueck.
-				lastPersistedLocationIds = newIds;
-				return result;
-			} catch (e) {
-				console.error('[CompareTabs] Orte-Persistenz fehlgeschlagen, Rollback:', e);
-				currentLocationIds = lastPersistedLocationIds;
-				failure = e;
-				return null;
+		// Issue #2375: nur das Eigenfeld. Issue #1433 Fix-Loop: eigener Eintrag 'orte' —
+		// bei 412 „Nochmal speichern" statt Sackgasse.
+		const { url, body } = buildComparePresetPartialPayload(currentPreset.id, { location_ids: newIds });
+		const speichern = baueSpeicherung<ComparePreset>(hubClient, url, body, (result) => {
+			// Fix-Loop 2 (F005): Baseline aus der Server-Antwort auffrischen.
+			lastPersistedLocationIds = newIds;
+			offeneOrteIds = null;
+			currentPreset = result;
+		}, 'orte');
+		try {
+			if ((await speichereOderMeldeKonflikt(speichern, saveController)) === 'gespeichert') {
+				saveController?.setSaved();
+			} else {
+				// 'konflikt': KEIN Rollback (Falle 1) — B sieht die Liste, die der Retry sendet.
+				offeneOrteIds = newIds;
 			}
-		});
-		if (updated) {
-			currentPreset = updated;
-			saveController?.setSaved();
-		} else if (failure) {
-			saveController?.setError(extractMessage(failure));
+		} catch (e) {
+			console.error('[CompareTabs] Orte-Persistenz fehlgeschlagen, Rollback:', e);
+			// F805: bei offenem Konflikt zurueck auf dessen Liste (= was der Retry sendet).
+			const offen = saveController?.state === 'conflict' ? offeneOrteIds : null;
+			currentLocationIds = offen ?? lastPersistedLocationIds;
+			saveController?.setError(extractMessage(e));
 		}
 	}
 
@@ -326,30 +384,7 @@
 	// die der Organism im vergleich-Kontext aus dem Wizard-State liest
 	// (Entscheidung 1, C0: 0 Zeilen Diff im Organism selbst).
 	const wizardState = new CompareWizardState();
-	setContext('compare-wizard-state', wizardState);
 	let idealwerteHydrated = $state(false);
-	let lastPersistedCorridorSnapshot: {
-		corridors: typeof wizardState.corridors;
-		idealRanges: typeof wizardState.idealRanges;
-		// Issue #1366 F002: CorridorSnapshot (compareHubWizardBridge.ts) erwartet
-		// weiterhin `string[]` (nicht nullable) -- materialisiert unten.
-		activeMetricKeys: string[];
-		metricAlertLevels: typeof wizardState.metricAlertLevels;
-	} | null = null;
-
-	function currentCorridorSnapshot() {
-		return snapshotForRollback({
-			corridors: wizardState.corridors,
-			idealRanges: wizardState.idealRanges,
-			// Issue #1366 F002: `null` ("nie eingestellt") auf die Vorgabemenge
-			// materialisieren -- kein `new Set(null)`-Aufruf ueber einen ungeprueften
-			// Zwischenstand in buildCompareCorridorSavePayload (compareHubWizardBridge
-			// -> corridorEditorState.ts), konsistent mit CorridorEditor(Mobile).svelte.
-			activeMetricKeys: materializeActiveMetricKeys(wizardState.activeMetricKeys),
-			metricAlertLevels: wizardState.metricAlertLevels
-		});
-	}
-
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): dritte Hydrationsstelle mit
 	// derselben Wurzel — auch hier wird die Katalogantwort abgewartet, BEVOR
 	// hydriert und der Grundzustand aufgenommen wird. Ohne Aufloesung traefe das
@@ -360,129 +395,45 @@
 		const catalog = await loadCompareSelectionEntries().catch(() => []);
 		// Fix-Loop 2 (F005): aus currentPreset statt preset hydrieren, damit ein
 		// vorheriger Orte-Edit in derselben Sitzung nicht ueberschrieben wird.
-		const hydrated = hydrateWizardStateFromPreset(currentPreset, catalog);
+		const hydrated = hydrateHubFieldsFromPreset(currentPreset, catalog);
 		wizardState.isEditMode = hydrated.isEditMode;
 		wizardState.corridors = hydrated.corridors;
 		wizardState.activityProfile = hydrated.activityProfile;
 		wizardState.idealRanges = hydrated.idealRanges;
 		if (hydrated.activeMetricKeys !== null) wizardState.activeMetricKeys = hydrated.activeMetricKeys;
 		wizardState.metricAlertLevels = hydrated.metricAlertLevels;
-		lastPersistedCorridorSnapshot = currentCorridorSnapshot();
 		idealwerteHydrated = true;
 	}
 
 	$effect(() => {
-		if (activeTab !== 'idealwerte' || idealwerteHydrated || idealwerteHydrating) return;
+		if (activeTab !== 'wertebereiche' || idealwerteHydrated || idealwerteHydrating) return;
 		idealwerteHydrating = true;
 		void hydrateIdealwerteTab().finally(() => {
 			idealwerteHydrating = false;
 		});
 	});
 
-	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): blur an
-	// Zahlenfeldern (onfocusout bubbelt, blur nicht), click an
-	// ✕/Markieren/+Metrik, pointerup nach Slider-Drag — je EIN PUT,
-	// nur wenn sich der persistenzrelevante Ausschnitt tatsächlich geändert hat.
-	//
-	// Fix-Loop 1 (F002, Adversary HIGH): Diff-/Payload-Entscheidung liegt in
-	// `flushPendingCorridorSave` (compareHubWizardBridge.ts) — dieselbe reine
-	// Funktion wird sowohl vom Wrapper-Handler (onfocusout/onclick, Z. unten)
-	// als auch vom Fenster-Handler (`<svelte:window onpointerup>`) aufgerufen,
-	// damit ein Band-Handle-Drag mit Pointer-Release AUSSERHALB des Wrapper-
-	// Subtrees nicht mehr zu einem uebersehenen Commit fuehrt.
-	async function handleCorridorCommit(): Promise<void> {
-		if (!idealwerteHydrated) return;
-		// Epic #1273 S1: `failure` trennt den No-Op-Fall (kein Diff, gar kein PUT)
-		// vom Fehlerfall — beide liefern `updated === null`. No-Op bekommt
-		// markPristine() (keine Speicher-Anzeige-Luege, #1269 AC-3), nur ein
-		// echter Fehler setError().
-		let failure: unknown = null;
-		saveController?.setSaving();
-		// Fix-Loop 2 (F003, Adversary MEDIUM): current/before/Diff-Check/Rollback
-		// KOMPLETT innerhalb des enqueueten fn lesen bzw. ausfuehren — bei
-		// tatsaechlicher Ausfuehrung ist `lastPersistedCorridorSnapshot` bereits
-		// durch einen zuvor in der Queue gelaufenen, erfolgreichen Edit
-		// aufgefrischt. Ein hier NEU (statt beim Funktionsaufruf) gelesenes
-		// `before` faellt bei einem Fehlschlag daher korrekt nur auf den Stand
-		// NACH diesem vorherigen Edit zurueck, nicht auf einen aelteren Stand
-		// (sonst UI/Server-Divergenz bis Reload). `current` bleibt trotzdem
-		// korrekt: wizardState wird zwischen Enqueue und Ausfuehrung von
-		// niemandem ausser dem Nutzer veraendert, ein hier gelesener Snapshot
-		// spiegelt also weiterhin (sogar aktueller) den Nutzerstand zum
-		// Commit-Zeitpunkt.
-		const updated = await hubPutQueue.enqueue(async () => {
-			const current = currentCorridorSnapshot();
-			const before = lastPersistedCorridorSnapshot ?? current;
-			const payload = flushPendingCorridorSave(currentPreset, current, lastPersistedCorridorSnapshot);
-			if (!payload) return null;
-			try {
-				const result = await api.put<ComparePreset>(payload.url, payload.body);
-				// Fix-Loop 2 (F005): Baseline aus dem Response-Body auffrischen, s.o.
-				lastPersistedCorridorSnapshot = current;
-				return result;
-			} catch (e) {
-				console.error('[CompareTabs] Wertebereich-Persistenz fehlgeschlagen, Rollback:', e);
-				wizardState.corridors = before.corridors;
-				wizardState.idealRanges = before.idealRanges;
-				wizardState.activeMetricKeys = before.activeMetricKeys;
-				wizardState.metricAlertLevels = before.metricAlertLevels;
-				failure = e;
-				return null;
-			}
-		});
-		if (updated) {
-			currentPreset = updated;
-			saveController?.setSaved();
-		} else if (failure) {
-			saveController?.setError(extractMessage(failure));
-		} else {
-			saveController?.markPristine();
-		}
+	// Issue #2276 S3: der Wertebereiche-Reiter speichert selbst (CorridorEditor/
+	// Mobile -> shared/corridor-editor/wertebereicheVergleichSpeicherung.ts) —
+	// EIN Speicherweg, kein Wrapper und kein fensterweiter pointerup-Auffang mehr.
+	// Queue und Basis-Rueckmeldung als benannte Funktionen durchgereicht.
+	function reiheHubSchreibvorgangEin<T>(fn: () => Promise<T>): Promise<T> {
+		return hubPutQueue.enqueue(fn);
 	}
-
-	// Fix-Loop 1 (F002, Adversary HIGH): `<svelte:window>` muss auf Komponenten-
-	// Top-Level stehen (Svelte-Constraint, nicht in {#if}-Bloecken zulaessig) —
-	// die Gemountet-Bedingung ("solange der Idealwerte-Tab gemountet ist")
-	// wird daher im Handler selbst geprueft. Faengt JEDEN Pointerup im
-	// Dokument ab, auch wenn ein Band-Handle-Drag (CorridorEditor.svelte,
-	// kein setPointerCapture) ausserhalb des `.hub-corridor-wrap`-Subtrees
-	// endet (z. B. ueber der Tab-Leiste). `flushPendingCorridorSave` bleibt
-	// der Waechter gegen unnoetige PUTs (No-Op bei unveraendertem Snapshot).
-	//
-	// Fix-Loop 2 (F006, Adversary MEDIUM): die Guard-Entscheidung selbst ist in
-	// `shouldFlushOnWindowPointerUp` (reine, exportierte Funktion in
-	// compareHubWizardBridge.ts) ausgelagert und dort unit-getestet — dieser
-	// Handler bleibt eine reine 1-Zeilen-Delegation.
-	function handleWindowPointerUp(): void {
-		if (!shouldFlushOnWindowPointerUp(activeTab, idealwerteHydrated)) return;
-		void handleCorridorCommit();
+	function uebernehmeHubAntwort(updated: ComparePreset): void {
+		currentPreset = updated;
 	}
 
 	// Issue #1256 Scheibe 7 (AC-35/36): eingebetteter VersandTab (context="vergleich")
-	// im Versand-Tab — analog Idealwerte-Bridge oben (S6-Muster), gleicher
-	// `wizardState`/gleiche `currentPreset`-Baseline, ABER eigene Snapshot-
-	// Baseline (`lastPersistedVersandSnapshot`), damit der Versand-Flush den
-	// Idealwerte-Flush nicht ueberschreibt.
+	// — gleicher `wizardState`/gleiche `currentPreset`-Baseline wie die Nachbar-Reiter.
+	// Seit #2276 S5 speichert der Abschnitt selbst (Baseline + Diff-Gate in
+	// shared/versandVergleichSpeicherung.ts); hier bleibt nur die Hydration, die
+	// `wizardState` VOR dem Mount befuellt. Issue #1743: der Versand-Abschnitt steht
+	// unten im Reiter Wetter-Metriken — die Hydration haengt an diesem Reiter.
 	let versandHydrated = $state(false);
-	let lastPersistedVersandSnapshot: VersandSnapshot | null = null;
-
-	function currentVersandSnapshot(): VersandSnapshot {
-		return snapshotForRollback({
-			sendTelegram: wizardState.sendTelegram,
-			sendSms: wizardState.sendSms,
-			morningEnabled: wizardState.morningEnabled,
-			morningTime: wizardState.morningTime,
-			eveningEnabled: wizardState.eveningEnabled,
-			eveningTime: wizardState.eveningTime,
-			endDate: wizardState.endDate,
-			alertCooldownMinutes: wizardState.alertCooldownMinutes,
-			alertQuietFrom: wizardState.alertQuietFrom,
-			alertQuietTo: wizardState.alertQuietTo
-		});
-	}
 
 	$effect(() => {
-		if (activeTab !== 'versand' || versandHydrated) return;
+		if (activeTab !== 'wetter-metriken' || versandHydrated) return;
 		// F005-Muster: aus currentPreset hydrieren, damit ein vorheriger
 		// Orte-/Idealwerte-Edit in derselben Sitzung nicht ueberschrieben wird.
 		const hydrated = hydrateVersandFieldsFromPreset(currentPreset);
@@ -497,109 +448,19 @@
 		wizardState.alertCooldownMinutes = hydrated.alertCooldownMinutes;
 		wizardState.alertQuietFrom = hydrated.alertQuietFrom;
 		wizardState.alertQuietTo = hydrated.alertQuietTo;
-		lastPersistedVersandSnapshot = currentVersandSnapshot();
 		versandHydrated = true;
 	});
 
-	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): change an
-	// Toggles/Zeit-/Datumsfeldern (Bubble-Phase, s. Staging-Fund SF-1 unten am
-	// Wrapper-Markup), focusout an Cooldown-/Stille-Stunden-Zahlenfeldern
-	// (onfocusout bubbelt, blur nicht — S6-Kommentar).
-	//
-	// Fix-Loop 1 (F001, Adversary HIGH): zusaetzlich onclick am Wrapper —
-	// `VTLaufzeitVergleich` (Laufzeit-Control) mutiert `wiz.endDate` bei
-	// „Bis auf Weiteres" rein per Klick auf einen Button, der weder ein
-	// change- noch garantiert ein focusout-Event ausloest (WebKit fokussiert
-	// Buttons nicht per Klick) — ohne onclick wuerde diese Aenderung nie
-	// geflusht. `flushPendingVersandSave` bleibt der Waechter gegen
-	// unnoetige PUTs (No-Op bei unveraendertem Snapshot), daher unkritisch,
-	// dass auch andere Klicks im Subtree diesen Handler ausloesen.
-	async function handleVersandCommit(): Promise<void> {
-		if (!versandHydrated) return;
-		// Epic #1273 S1: `failure` trennt No-Op (markPristine) vom Fehler
-		// (setError), s. handleCorridorCommit.
-		let failure: unknown = null;
-		saveController?.setSaving();
-		// Fix-Loop 2 (F003, Adversary MEDIUM): current/before/Diff-Check/Rollback
-		// KOMPLETT innerhalb des enqueueten fn — identisches Prinzip wie
-		// handleCorridorCommit (s. dortiger Kommentar): `lastPersistedVersandSnapshot`
-		// ist zur tatsaechlichen Ausfuehrungszeit bereits durch einen zuvor in der
-		// Queue gelaufenen, erfolgreichen Edit aufgefrischt — ein hier erst
-		// gelesenes `before` faellt bei einem Fehlschlag daher korrekt nur auf
-		// den Stand NACH diesem vorherigen Edit zurueck.
-		const updated = await hubPutQueue.enqueue(async () => {
-			const current = currentVersandSnapshot();
-			const before = lastPersistedVersandSnapshot ?? current;
-			const payload = flushPendingVersandSave(currentPreset, current, lastPersistedVersandSnapshot);
-			if (!payload) return null;
-			try {
-				const result = await api.put<ComparePreset>(payload.url, payload.body);
-				lastPersistedVersandSnapshot = current;
-				return result;
-			} catch (e) {
-				console.error('[CompareTabs] Versand-Persistenz fehlgeschlagen, Rollback:', e);
-				wizardState.sendTelegram = before.sendTelegram;
-				wizardState.sendSms = before.sendSms;
-				wizardState.morningEnabled = before.morningEnabled;
-				wizardState.morningTime = before.morningTime;
-				wizardState.eveningEnabled = before.eveningEnabled;
-				wizardState.eveningTime = before.eveningTime;
-				wizardState.endDate = before.endDate;
-				wizardState.alertCooldownMinutes = before.alertCooldownMinutes;
-				wizardState.alertQuietFrom = before.alertQuietFrom;
-				wizardState.alertQuietTo = before.alertQuietTo;
-				failure = e;
-				return null;
-			}
-		});
-		if (updated) {
-			currentPreset = updated;
-			saveController?.setSaved();
-		} else if (failure) {
-			saveController?.setError(extractMessage(failure));
-		} else {
-			saveController?.markPristine();
-		}
-	}
-
 	// Issue #1258 Scheibe 5 (AC-19, AC-29, H2/H3): eingebetteter AlarmeTab
 	// (context="vergleich") im 7. Hub-Tab — analog Idealwerte-/Versand-Bridge
-	// oben (gleicher `wizardState`/gleiche `currentPreset`-Baseline, eigene
-	// Snapshot-Baseline `lastPersistedAlarmSnapshot`). H3: der Alarme-Tab kann
+	// oben (gleicher `wizardState`/gleiche `currentPreset`-Baseline). Seit
+	// #2276 S2 speichert der Reiter selbst (Baseline + Diff-Gate in
+	// shared/alarmeVergleichSpeicherung.ts). H3: der Alarme-Tab kann
 	// als ERSTER Tab geoeffnet werden (Deep-Link `?tab=alarme`) — der
 	// Hydrations-Effekt hydriert deshalb ALLE Alarm-Felder eigenstaendig ueber
 	// `hydrateAlarmFieldsFromPreset` (statt sich auf einen bereits gelaufenen
-	// idealwerte-/versand-Effekt zu verlassen).
+	// Wertebereiche-/Versand-Effekt zu verlassen).
 	let alarmeHydrated = $state(false);
-	let lastPersistedAlarmSnapshot: AlarmSnapshot | null = null;
-
-	function currentAlarmSnapshot(): AlarmSnapshot {
-		return snapshotForRollback({
-			officialAlertsEnabled: wizardState.officialAlertsEnabled,
-			officialWarningsEnabled: wizardState.officialWarningsEnabled,
-			radarAlertEnabled: wizardState.radarAlertEnabled,
-			metricAlertLevels: wizardState.metricAlertLevels,
-			alertCooldownMinutes: wizardState.alertCooldownMinutes,
-			alertQuietFrom: wizardState.alertQuietFrom,
-			alertQuietTo: wizardState.alertQuietTo,
-			// Issue #1260: Kurzstil-Toggle im Snapshot, damit ein reiner
-			// Toggle-Klick (ohne andere Aenderung) als dirty erkannt wird und
-			// handleAlarmeCommit einen PUT ausloest.
-			telegramStyle: wizardState.telegramStyle,
-			// Issue #1461 S3b-2b (Speicher-Bugfix): der Alarme-Reiter zeigt seit
-			// dieser Scheibe den Kanal-Picker (Telegram/SMS-Schalter + Schwelle) —
-			// ohne diese beiden Felder war eine dortige Aenderung weder als
-			// Snapshot-Differenz erkennbar noch im PUT-Body enthalten.
-			sendTelegram: wizardState.sendTelegram,
-			sendSms: wizardState.sendSms,
-			// Issue #1745 A: ohne dieses Feld geht ein im Hub gesetzter Haken beim
-			// naechsten Speichern verloren (Snapshot-Diff sieht die Aenderung sonst
-			// nicht, flushPendingAlarmSave sendet sie deshalb nie).
-			sendPremiumSms: wizardState.sendPremiumSms,
-			channelThresholds: wizardState.channelThresholds
-		});
-	}
-
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): derselbe Grund wie beim
 	// Wetter-Metriken-Reiter unten — `hydrateAlarmFieldsFromPreset` hydriert
 	// `activeMetricKeys` mit (#1320, sonst zeigt die Empfindlichkeits-Tabelle
@@ -617,9 +478,8 @@
 		// F005-Muster: aus currentPreset hydrieren, damit ein vorheriger
 		// Orte-/Idealwerte-/Versand-Edit in derselben Sitzung nicht
 		// ueberschrieben wird (H3: eigenstaendige Hydration ALLER Alarm-Felder,
-		// setzt KEINEN vorherigen idealwerte-/versand-Effekt voraus).
+		// setzt KEINEN vorherigen Wertebereiche-/Versand-Effekt voraus).
 		hydrateAlarmFieldsFromPreset(wizardState, currentPreset, catalog);
-		lastPersistedAlarmSnapshot = currentAlarmSnapshot();
 		alarmeHydrated = true;
 	}
 
@@ -631,99 +491,24 @@
 		});
 	});
 
-	// Event-diskretisierte Persistenz (KEIN Debounce/#1234): change/focusout/
-	// click am Wrapper, Muster identisch `handleVersandCommit` (s. dortiger
-	// Kommentar SF-1/F001 zur Bubble-Phase).
-	//
-	// H3 Snapshot-Kreuzeffekte (Adversary-Punkt, Context Zeile 33/49):
-	// `metricAlertLevels` wird auch vom Idealwerte-Snapshot
-	// (`lastPersistedCorridorSnapshot`) und `alertCooldownMinutes`/
-	// `alertQuietFrom/To` auch vom Versand-Snapshot (`lastPersistedVersandSnapshot`)
-	// getrackt — der Alarme-Tab fuehrt (S5) die ERSTE Ueberlappung zwischen
-	// zwei Hub-Snapshots ein. Fuer den ERFOLGS-Pfad unkritisch: jeder
-	// Commit-Handler liest `current` IMMER frisch aus dem gemeinsamen
-	// `wizardState` (nie aus dem stale `before`), ein bereits von einem
-	// Nachbar-Tab persistiertes Feld wird beim naechsten Flush also korrekt
-	// mitgesendet — hoechstens ein redundanter Echo-PUT desselben Werts.
-	//
-	// Fix-Loop 1 (F001, Adversary CRITICAL): der FEHLER-Pfad (Rollback) darf
-	// deshalb NICHT pauschal alle Felder auf `before` zuruecksetzen — sonst
-	// wuerde ein zwischenzeitlicher Nachbar-Tab-Edit an einem geteilten Feld
-	// (z. B. Cooldown im Versand-Tab, waehrend dieser Alarme-PUT noch
-	// in-flight war und dann fehlschlaegt) still verworfen. Diff-basierter
-	// Rollback via `rollbackAlarmSnapshot` (compareHubWizardBridge.ts): pro
-	// Feld nur zuruecksetzen, wenn `wizardState` noch den Wert traegt, den
-	// DIESER gescheiterte Commit gesendet hat (`current`); ein Feld, das ein
-	// Nachbar-Tab seither veraendert hat, bleibt unangetastet.
-	async function handleAlarmeCommit(): Promise<void> {
-		if (!alarmeHydrated) return;
-		// Epic #1273 S1: `failure` trennt No-Op (markPristine) vom Fehler
-		// (setError), s. handleCorridorCommit.
-		let failure: unknown = null;
-		saveController?.setSaving();
-		const updated = await hubPutQueue.enqueue(async () => {
-			const current = currentAlarmSnapshot();
-			const before = lastPersistedAlarmSnapshot ?? current;
-			const payload = flushPendingAlarmSave(currentPreset, current, lastPersistedAlarmSnapshot);
-			if (!payload) return null;
-			try {
-				const result = await api.put<ComparePreset>(payload.url, payload.body);
-				lastPersistedAlarmSnapshot = current;
-				return result;
-			} catch (e) {
-				console.error('[CompareTabs] Alarme-Persistenz fehlgeschlagen, Rollback:', e);
-				rollbackAlarmSnapshot(wizardState, before, current);
-				failure = e;
-				return null;
-			}
-		});
-		if (updated) {
-			currentPreset = updated;
-			saveController?.setSaved();
-		} else if (failure) {
-			saveController?.setError(extractMessage(failure));
-		} else {
-			saveController?.markPristine();
-		}
-	}
-
-	// Issue #1311 (C1): eingebetteter WeatherMetricsTab (context="vergleich")
-	// im neuen Hub-Tab "Wetter-Metriken" — analog Alarme-/Versand-Bridge oben.
-	// Eigene Hydrations-/Snapshot-Baseline, weil der Tab als ERSTER geoeffnet
-	// werden kann (Deep-Link `?tab=wetter-metriken`), ohne dass idealwerte
-	// vorher hydriert hat.
+	// Issue #1311 (C1) / Issue #2276 S4: eingebetteter WeatherMetricsTab
+	// (context="vergleich") im Hub-Tab "Wetter-Metriken" — analog Alarme-/
+	// Idealwerte-Bridge oben. Seit S4 speichert der Reiter SELBST (Baseline +
+	// Diff-Gate + kombinierte Wetter-Metriken/Layout-Orchestrierung liegen in
+	// WeatherMetricsTab.svelte/weatherMetricsCompareSave.ts) — CompareTabs
+	// traegt nur noch die BEIDEN Hydrations-Flags (der Reiter bedient zwei
+	// Domaenen, die zu unterschiedlichen Zeitpunkten fertig laden koennen,
+	// AC-3) und mountet WeatherMetricsTab ERST, wenn
+	// `wetterMetrikenHydrationAbgeschlossen()` beide meldet — die Orchestrierung
+	// entsteht dann per `untrack()` INNERHALB von WeatherMetricsTab bereits
+	// gegen die vollstaendig hydrierte Baseline (kein PUT ohne Nutzergeste).
 	let wetterMetrikenHydrated = $state(false);
-	let lastPersistedWetterMetrikenSnapshot: WeatherMetricsSnapshot | null = null;
-
-	function currentWetterMetrikenSnapshot(): WeatherMetricsSnapshot {
-		return {
-			// Issue #1366 F002: materialisiert `null` ("nie eingestellt") auf die
-			// Vorgabemenge -- an dieser Stelle laueft die Hydration IMMER zuerst
-			// (hydrateWetterMetrikenTab unten), zur Absicherung trotzdem konsequent
-			// dieselbe Funktion statt eines rohen Spreads (kein `[...null]`).
-			activeMetricKeys: [...materializeActiveMetricKeys(wizardState.activeMetricKeys)],
-			// Issue #1703 Scheibe 8: Kanal-Ebene derselben Uebersichtstabelle —
-			// flach kopiert, damit der Grundzustand nicht auf dieselbe Referenz
-			// zeigt wie der lebende $state (sonst ist JEDER Vergleich identisch).
-			// Die Kanal-Arrays selbst werden nur per Copy-on-write ersetzt, nie
-			// an Ort und Stelle mutiert (WeatherMetricsTab.svelte).
-			channelActiveMetricKeys: { ...wizardState.channelActiveMetricKeys },
-			officialAlertsEnabled: wizardState.officialAlertsEnabled,
-			dayWindowStartHour: wizardState.dayWindowStartHour,
-			dayWindowEndHour: wizardState.dayWindowEndHour
-		};
-	}
-
-	// Issue #1373 (S2 Scheibe B, Fix-Runde 1 / Adversary F001): die Hydration
-	// wartet die Katalogantwort ab. Vorher lief sie synchron und nahm den
-	// Dirty-Check-Grundzustand mit der noch UNAUFGELOESTEN Rohform der
-	// Metrik-Auswahl auf — Folge: Scheindiff bei jeder Geste, und ein
-	// fehlgeschlagenes Speichern setzte `activeMetricKeys` (Z.678 unten) auf die
-	// Rohform zurueck, wodurch kein Haekchen mehr passte. Eigener In-Flight-
-	// Merker, damit `wetterMetrikenHydrated` weiterhin "fertig hydriert"
-	// bedeutet (handleWetterMetrikenCommit haengt daran und schreibt in diesem
-	// Fenster bewusst nicht).
 	let wetterMetrikenHydrating = false;
+	let layoutHydrated = $state(false);
+	let layoutHydrating = false;
+	const wetterMetrikenLayoutHydrationBereit = $derived(
+		wetterMetrikenHydrationAbgeschlossen({ wetterMetrikenHydrated, layoutHydrated })
+	);
 
 	async function hydrateWetterMetrikenTab(): Promise<void> {
 		// Katalogfehler darf den Reiter nicht unbenutzbar machen: ohne Katalog
@@ -749,9 +534,6 @@
 		const dayWindow = hydrateDayWindowFromPreset(currentPreset);
 		wizardState.dayWindowStartHour = dayWindow.dayWindowStartHour;
 		wizardState.dayWindowEndHour = dayWindow.dayWindowEndHour;
-		// Grundzustand IMMER erst nach der Auflösung — er muss bitgleich zum
-		// hydrierten Zustand sein, sonst entsteht ein PUT ohne Nutzeraenderung.
-		lastPersistedWetterMetrikenSnapshot = currentWetterMetrikenSnapshot();
 		wetterMetrikenHydrated = true;
 	}
 
@@ -763,57 +545,17 @@
 		});
 	});
 
-	async function handleWetterMetrikenCommit(): Promise<void> {
-		if (!wetterMetrikenHydrated) return;
-		let failure: unknown = null;
-		saveController?.setSaving();
-		const updated = await hubPutQueue.enqueue(async () => {
-			const current = currentWetterMetrikenSnapshot();
-			const before = lastPersistedWetterMetrikenSnapshot ?? current;
-			const payload = flushPendingWeatherMetricsSave(currentPreset, current, lastPersistedWetterMetrikenSnapshot);
-			if (!payload) return null;
-			try {
-				const result = await api.put<ComparePreset>(payload.url, payload.body);
-				lastPersistedWetterMetrikenSnapshot = current;
-				return result;
-			} catch (e) {
-				console.error('[CompareTabs] Wetter-Metriken-Persistenz fehlgeschlagen, Rollback:', e);
-				wizardState.activeMetricKeys = before.activeMetricKeys;
-				wizardState.channelActiveMetricKeys = before.channelActiveMetricKeys;
-				wizardState.officialAlertsEnabled = before.officialAlertsEnabled;
-				wizardState.dayWindowStartHour = before.dayWindowStartHour;
-				wizardState.dayWindowEndHour = before.dayWindowEndHour;
-				failure = e;
-				return null;
-			}
-		});
-		if (updated) {
-			currentPreset = updated;
-			saveController?.setSaved();
-		} else if (failure) {
-			saveController?.setError(extractMessage(failure));
-		} else {
-			saveController?.markPristine();
-		}
-	}
-
-	// Issue #1299/#1291/#1287 (C2): eingebetteter Stundenverlauf-Bereich —
-	// analog Wetter-Metriken-Bridge oben. Eigene Hydrations-/Snapshot-Baseline.
-	// Issue #1360: der Bereich liegt jetzt im Reiter "Wetter-Metriken" (der
-	// Layout-Reiter ist aufgeloest), die Hydration haengt entsprechend an
-	// `wetter-metriken` — auch bei Deep-Link `?tab=wetter-metriken` oder dem
-	// umgeleiteten Alt-Link `?tab=layout` (resolveCompareTab).
-	let layoutHydrated = $state(false);
-	let lastPersistedLayoutSnapshot: LayoutSnapshot | null = null;
-
+	// Issue #1299/#1291/#1287 (C2) / Issue #2276 S4: eingebetteter Stundenverlauf-
+	// /Ausblick-Bereich — teilt sich den Reiter "Wetter-Metriken" mit der
+	// Domaene oben, eigene Hydrations-Baseline (kann zeitversetzt fertig
+	// werden, AC-3).
+	//
 	// Issue #1361/#1368: die Hydration wartet jetzt auf die Katalogantwort — die
 	// Ausblick-Auswahl liegt im Neuformat (Groesse + Auswertung) und ist ohne
 	// Katalog nicht auf Auswahl-Schluessel aufloesbar. Ohne das Abwarten stuende
 	// im Dirty-Check-Grundzustand die Rohform (Scheindiff + Ruecksetzen auf die
 	// Rohform, Adversary-Befund F001 aus #1373). Die Anfrage ist geteilt
 	// zwischengespeichert (compareMetricCatalogLoader) — kein zweiter Abruf.
-	let layoutHydrating = false;
-
 	async function hydrateLayoutTab(): Promise<void> {
 		const catalog = await loadCompareSelectionEntries().catch(() => []);
 		const hydrated = hydrateLayoutFieldsFromPreset(currentPreset, catalog);
@@ -823,7 +565,6 @@
 		// Issue #2049: Roh/Einfach je Ausblick-Groesse, aus derselben Hydration.
 		wizardState.outlookMetricFormats = hydrated.outlookMetricFormats ?? null;
 		wizardState.outlookEnabled = hydrated.outlookEnabled;
-		lastPersistedLayoutSnapshot = hydrated;
 		layoutHydrated = true;
 	}
 
@@ -834,59 +575,6 @@
 			layoutHydrating = false;
 		});
 	});
-
-	// Epic #1301 Scheibe F2a: isHourlyMetricActive/makeHourlyMetricHandler +
-	// Inline-Markup nach shared/CompareHourlyLayoutControls.svelte extrahiert
-	// (Hub + Anlege-Seite teilen die Steuerung). Der Commit-Wrapper unten bleibt.
-
-	async function handleLayoutCommit(): Promise<void> {
-		if (!layoutHydrated) return;
-		let failure: unknown = null;
-		saveController?.setSaving();
-		const updated = await hubPutQueue.enqueue(async () => {
-			const current: LayoutSnapshot = {
-				// Issue #1366 F001: `null` (nie eingestellt) bleibt `null`, sonst
-				// wuerde ein reiner Toggle-Wechsel ohne Metrik-Anfassen den
-				// unangetasteten Zustand faelschlich in eine Leerauswahl kippen.
-				hourlyMetricKeys:
-					wizardState.hourlyMetricKeys === null ? null : [...wizardState.hourlyMetricKeys],
-				hourlyEnabled: wizardState.hourlyEnabled,
-				// Issue #1361/#1368: analog oben — `null` (nie eingestellt) bleibt
-				// `null`, sonst kippte ein reiner Schalter-Wechsel den
-				// unangetasteten Zustand in eine Leerauswahl.
-				outlookMetricKeys:
-					wizardState.outlookMetricKeys === null ? null : [...wizardState.outlookMetricKeys],
-				// Issue #2049: analog oben — `null` (nie eingestellt) bleibt
-				// `null` und laesst den Schluessel unangetastet round-trippen.
-				outlookMetricFormats:
-					wizardState.outlookMetricFormats == null
-						? null
-						: { ...wizardState.outlookMetricFormats },
-				outlookEnabled: wizardState.outlookEnabled
-			};
-			const before = lastPersistedLayoutSnapshot ?? current;
-			const payload = flushPendingLayoutSave(currentPreset, current, lastPersistedLayoutSnapshot);
-			if (!payload) return null;
-			try {
-				const result = await api.put<ComparePreset>(payload.url, payload.body);
-				lastPersistedLayoutSnapshot = current;
-				return result;
-			} catch (e) {
-				console.error('[CompareTabs] Layout-Persistenz fehlgeschlagen, Rollback:', e);
-				rollbackLayoutSnapshot(wizardState, before);
-				failure = e;
-				return null;
-			}
-		});
-		if (updated) {
-			currentPreset = updated;
-			saveController?.setSaved();
-		} else if (failure) {
-			saveController?.setError(extractMessage(failure));
-		} else {
-			saveController?.markPristine();
-		}
-	}
 
 	const idealRanges = $derived(
 		preset.display_config?.ideal_ranges as
@@ -908,97 +596,11 @@
 	// behaupteten eine Orts-Kappung je Kanal ("Telegram · max 8"), die es im
 	// Ortsvergleich nicht gibt (AC-4).
 
-	// ── Vorschau-Tab (Issue #514, #582) ─────────────────────────────────────────
-	let previewChannel = $state<'email' | 'sms' | 'telegram'>('email');
-	// Issue #1256 S8b (AC-2, Rest-Inventur R1): Kanal-Liste fuer den Umschalter
-	// kommt aus der Preset-Konfiguration statt hart ['email','sms'] — dieselbe
-	// Ableitungsquelle wie channelNamesLabel (S3 AC-6), nur auf die von
-	// CompareChannelSwitch erwarteten Kleinschreib-Keys projiziert (kein neues
-	// Ableitungs-Duplikat).
-	const previewConfiguredChannels = $derived(presetChannels(preset).map((c) => c.toLowerCase()));
-	let emailView = $state('desktop');
-	let previewHtml = $state('');
-	// Issue #1270 (ADR-0011): Telegram/SMS kommen fertig gerendert aus dem
-	// Backend — das Frontend rendert Kanal-Inhalte nicht nach.
-	let previewTelegram = $state('');
-	let previewSms = $state('');
-	let previewSmsCount = $state(0);
-	let previewLoading = $state(false);
-	let previewError = $state<string | null>(null);
-	let sendQueued = $state(false);
-	let sendLoading = $state(false);
-	let sendError = $state<string | null>(null);
-
-	// Issue #1270 (AC-1/AC-2/AC-7): EIN Abruf auf /api/preview/compare/{id}
-	// liefert alle Kanäle aus EINEM ComparisonEngine-Lauf über die echten Orte
-	// des Presets. Vorher hing der Tab am Validator-Stub
-	// (/api/_validator/compare-email-preview, #464), der einen hartcodierten
-	// "Vorschau-Ort" rendert — der Endpoint selbst bleibt für den externen
-	// Validator bestehen, nur dieser Tab hängt um.
-	//
-	// AC-7: `previewChannel` wird hier bewusst NICHT gelesen — der Effect hängt
-	// nur an Tab + Preset-ID + Orte-Anzahl. Ein Kanalwechsel löst damit keinen
-	// neuen Request aus, er schaltet nur die Anzeige der bereits geladenen
-	// Payloads um. Vorbild: AlertPreviewCard.svelte:34-44.
-	$effect(() => {
-		if (activeTab !== 'vorschau') return;
-		if (preset.location_ids.length === 0) return;
-		const presetId = preset.id;
-		previewHtml = '';
-		previewTelegram = '';
-		previewSms = '';
-		previewSmsCount = 0;
-		previewError = null;
-		previewLoading = true;
-		api
-			.post<{
-				subject: string;
-				email_html: string;
-				telegram: string;
-				sms: string;
-				sms_char_count: number;
-			}>(`/api/preview/compare/${presetId}`, {})
-			.then((r) => {
-				previewHtml = r.email_html;
-				previewTelegram = r.telegram;
-				previewSms = r.sms;
-				previewSmsCount = r.sms_char_count;
-			})
-			.catch((e: unknown) => {
-				previewError =
-					e && typeof e === 'object' && 'error' in e
-						? String((e as { error: unknown }).error)
-						: e instanceof Error
-							? e.message
-							: 'Vorschau konnte nicht geladen werden';
-			})
-			.finally(() => {
-				previewLoading = false;
-			});
-	});
-
-	async function handleSend() {
-		if (sendLoading) return;
-		sendLoading = true;
-		sendError = null;
-		sendQueued = false;
-		try {
-			await api.post(`/api/compare/presets/${preset.id}/send`, {});
-			sendQueued = true;
-		} catch (e: unknown) {
-			const body = e as { detail?: string; error?: string };
-			sendError = body?.detail ?? body?.error ?? 'Versand fehlgeschlagen';
-		} finally {
-			sendLoading = false;
-		}
-	}
-
 	// Issue #527/#558 + #631 — Pause/Aktivieren mit Schedule-Gedächtnis (persistiert).
 	// previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
 	let previousSchedule = $state<string>(
 		preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
 	);
-	let localSchedule = $state<string>(preset.schedule ?? 'manual');
 
 	// Liefert true/false statt zu werfen — der Hub-eigene CTA-Klick ignoriert
 	// den Rueckgabewert (fire-and-forget wie bisher), der Kebab-Delegations-
@@ -1008,31 +610,36 @@
 		const isPausing = localSchedule !== 'manual';
 		if (isPausing) previousSchedule = localSchedule;
 		const next = isPausing ? 'manual' : previousSchedule;
-		// Epic #1273 S1: einziger der 5 Handler mit try/catch AUSSERHALB des
-		// enqueue-Closures — ein echter Fehler propagiert normal, daher direktes
-		// Wrapping ohne `failure`-Variable.
+		// Issue #2276 S2/S3: ausstehende Aenderung der selbst speichernden Reiter
+		// (Alarme, Wertebereiche) vorab senden — unabhaengig vom aktiven Reiter,
+		// weil der Kebab auch von anderen Reitern aus pausiert (S3 AC-6).
+		await saveController?.flush();
+		// Issue #1433: bei offenem Konflikt ein No-op (der Konflikt endet nur per Retry).
 		saveController?.setSaving();
-		try {
-			// Fix-Loop 3 (F007, Adversary CRITICAL): Payload aus currentPreset
-			// bauen (nicht der eingefrorenen preset-Prop) und die Baseline nach
-			// Erfolg auffrischen — identisches Muster wie persistPickedIds/
-			// handleCorridorCommit (F005), da dies einer von mehreren
-			// PUT-Pfaden im selben Komponenten-Scope ist.
-			// Fix-Loop 1 (F002): Payload-Bau innerhalb des enqueueten fn, damit
-			// currentPreset erst zur Ausfuehrungszeit gelesen wird — verhindert
-			// den Race mit handleVersandCommit im selben Versand-Tab.
-			currentPreset = await hubPutQueue.enqueue(async () => {
-				const { url, body } = buildToggleActivePutPayload(currentPreset, next, previousSchedule);
-				return api.put<ComparePreset>(url, body);
+		const pfad = `/api/compare/presets/${currentPreset.id}`;
+		const gemerkt = previousSchedule;
+		// Issue #1433 Fix-Loop: eigener Eintrag 'status' fuer „Nochmal speichern".
+		const speichern: SaveFn = mitKonfliktSchluessel(async (init) => {
+			const antwort = await hubPutQueue.enqueue(async () => {
+				// F002: Nutzlast erst in der Queue bauen. Falle 2: beim Retry aus dem FRISCH
+				// geholten Stand ableiten — der gemerkte `previous_schedule` kann veraltet sein.
+				const body = saveController?.imWiederholen
+					? statusZielNutzlast(await api.get<ComparePreset>(pfad), next, gemerkt)
+					: buildToggleActivePutPayload(currentPreset, next, gemerkt).body;
+				merkeNutzlast(speichern, body);
+				return api.put<ComparePreset>(pfad, body, init);
 			});
-			localSchedule = next;
-			// Staging-Fund SF-2: Elternkomponente ueber den neuen Schedule
-			// informieren, damit die Header-Status-Pille (andere Status-Quelle,
-			// s. Props-Kommentar) mitzieht, ohne dass wir hier invalidateAll()
-			// aufrufen (wuerde die eingefrorene-Prop-/currentPreset-Baseline-
-			// Architektur mit frisch geladenen `data` kollidieren lassen).
-			onScheduleChange?.(next);
-			saveController?.setSaved();
+			currentPreset = antwort;
+			localSchedule = antwort.schedule ?? next;
+			if (antwort.previous_schedule) previousSchedule = antwort.previous_schedule;
+			// Staging-Fund SF-2: die Header-Status-Pille (andere Status-Quelle) zieht mit.
+			onScheduleChange?.(localSchedule);
+		}, 'status');
+		try {
+			if ((await speichereOderMeldeKonflikt(speichern, saveController)) === 'gespeichert') {
+				saveController?.setSaved();
+			}
+			// 'konflikt': die Konfliktanzeige uebernimmt — kein eigener Fehlertext im Kebab.
 			return true;
 		} catch (e) {
 			console.error('[CompareTabs] toggleActive failed:', e);
@@ -1080,34 +687,23 @@
 		versandHydrated = false;
 		alarmeHydrated = false;
 		wetterMetrikenHydrated = false;
+		layoutHydrated = false;
 	});
 </script>
 
-<svelte:window onpointerup={handleWindowPointerUp} />
-
-<!-- Epic #1273 S1: geteilter Save-Chip (position:fixed, daher Mount-Stelle frei),
-     analog TripHeader.svelte:194-195. -->
-{#if saveController}
-	<SaveIndicator controller={saveController} />
-{/if}
-
 <div class="compare-tabs" data-testid="compare-detail-tab-list">
-	<!-- Tab-Leiste — custom buttons mit Underline-Indikator (Issue #582) -->
-	<div class="compare-tabs-bar" style="display: flex; gap: 0">
-		{#each TABS as t}
-			{@const on = activeTab === t.value}
-			<button
-				onclick={() => handleValueChange(t.value)}
-				data-testid="compare-detail-tab-{t.value}"
-				style="padding: 12px 16px; cursor: pointer; font-size: 13px; font-weight: {on ? 600 : 500}; background: transparent; border: none; font-family: var(--g-font-sans); color: {on ? 'var(--g-ink)' : 'var(--g-ink-3)'}; border-bottom: {on ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; display: flex; align-items: center; gap: 7px"
-			>
-				{t.label}
-				{#if t.value === 'orte'}
-					<span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; background: var(--g-paper-deep); color: var(--g-ink-3); font-family: var(--g-font-mono)">{orteCount}</span>
-				{/if}
-			</button>
-		{/each}
-	</div>
+	<!-- Tab-Leiste — geteilter MTabBar-Baustein (Mobile Usability Paket 2,
+	     Spec mobile_tab_leisten_mtabbar, Iteration 2). Ersetzt das handgebaute
+	     compare-tabs-bar-Markup + das 1:1-kopierte Mobil-CSS (AP-006-Drift).
+	     size="sm" haelt die Compare-Optik (13px, 12/16px, neutraler Badge);
+	     Test-IDs bleiben. -->
+	<MTabBar
+		items={compareBarItems}
+		active={activeTab}
+		onChange={(v) => void handleValueChange(v)}
+		ariaLabel="Vergleich-Detail"
+		size="sm"
+	/>
 
 	<!-- Tab-Inhalte — Wrapper mit Padding nach JSX-Vorlage (Issue #582) -->
 	<div class="compare-tabs-content" style="position: relative; max-width: 1320px">
@@ -1134,7 +730,7 @@
 						</Card>
 						<Card padding={14}>
 							<div class="hub-mobile-stat-label">Nächster Versand</div>
-							<div class="hub-mobile-stat-value">{formatNextSend(nextSend)}</div>
+							<div class="hub-mobile-stat-value">{nextSendText}</div>
 						</Card>
 						<Card padding={14}>
 							<div class="hub-mobile-stat-label">Zuletzt raus</div>
@@ -1156,7 +752,7 @@
 					<div style="padding: 18px 24px; display: flex; align-items: center; gap: 40px; flex-wrap: wrap">
 						<!-- Status -->
 						<div>
-							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Status</div>
+							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Status</div>
 							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">
 								{#if status === 'active'}
 									<span style="display: inline-flex; align-items: center; gap: 7px"><Dot tone="good" size={7}/> Läuft automatisch</span>
@@ -1169,22 +765,22 @@
 						</div>
 						<!-- Nächster Versand -->
 						<div>
-							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Nächster Versand</div>
-							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{formatNextSend(nextSend)}</div>
+							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Nächster Versand</div>
+							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{nextSendText}</div>
 						</div>
 						<!-- Briefings -->
 						<div>
-							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Briefings</div>
+							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Briefings</div>
 							<div data-testid="compare-detail-stat-briefings" style="font-size: 14px; color: var(--g-ink); font-weight: 500">{presetBriefingTimesLabel(preset)}</div>
 						</div>
 						<!-- Zuletzt raus -->
 						<div>
-							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Zuletzt raus</div>
+							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Zuletzt raus</div>
 							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{formatLastSent(preset.letzter_versand)}</div>
 						</div>
 						<!-- Kanäle — Issue #1256 Scheibe 3 AC-6: Namen statt Anzahl (Soll: screen-compare-detail.jsx:147-150) -->
 						<div>
-							<div style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Kanäle</div>
+							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Kanäle</div>
 							<div data-testid="compare-detail-stat-kanaele" style="font-size: 14px; color: var(--g-ink); font-weight: 500">
 								{#if channelsLabel === '—'}
 									—
@@ -1218,7 +814,7 @@
 							</span>
 							{@render summaryChevron()}
 						</button>
-						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('idealwerte')}>
+						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('wertebereiche')}>
 							<span class="hub-summary-row-body">
 								<span class="hub-summary-row-eyebrow">Wertebereiche</span>
 								<span class="hub-summary-row-title">{profileLabel}</span>
@@ -1228,7 +824,7 @@
 						</button>
 						<!-- Issue #1360: Übersichts-Zeile "Layout" entfaellt — sie sprang auf
 						     den aufgeloesten Reiter und behauptete eine Orts-Kappung je Kanal. -->
-						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('versand')}>
+						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('wetter-metriken', 'versand')}>
 							<span class="hub-summary-row-body">
 								<span class="hub-summary-row-eyebrow">Versand</span>
 								<span class="hub-summary-row-title">{status === 'draft' ? 'Nicht geplant' : presetBriefingTimesLabel(preset)}</span>
@@ -1252,7 +848,7 @@
 					<Card padding={20} style="display: flex; flex-direction: column">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
 							<Eyebrow>Wertebereiche</Eyebrow>
-							<button onclick={() => handleValueChange('idealwerte')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+							<button onclick={() => handleValueChange('wertebereiche')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
 						<!-- Issue #1256 S8c (AC-6): presetProfileLabel statt rohem preset.profil. -->
 						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{profileLabel}</div>
@@ -1267,22 +863,20 @@
 					<Card padding={20} style="display: flex; flex-direction: column">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
 							<Eyebrow>Versand</Eyebrow>
-							<button data-testid="compare-hub-versand-edit" onclick={() => handleValueChange('versand')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+							<button data-testid="compare-hub-versand-edit" onclick={() => handleValueChange('wetter-metriken', 'versand')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
 						</div>
 						<!-- Issue #1256 S8c (AC-5): Draft-Sonderfall (Soll: jsx:175-177). -->
 						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{status === 'draft' ? 'Noch nicht geplant' : presetBriefingTimesLabel(preset)}</div>
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{status === 'draft' ? 'Briefing-Uhrzeiten im Tab Versand festlegen.' : versandSummaryText}</div>
+						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{status === 'draft' ? 'Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen.' : versandSummaryText}</div>
 					</Card>
 				</div>
 				{/if}
 
-				<!-- Verifikations-Hinweis -->
-				<div style="display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--g-card); border: 1px solid var(--g-rule); border-left: 3px solid var(--g-accent); border-radius: var(--g-r-3)">
-					<div style="font-size: 13px; color: var(--g-ink-2); flex: 1; line-height: 1.5">
-						Gelesen wird das Briefing unterwegs im Postfach — nicht hier. Der Tab <strong>Vorschau</strong> dient nur zum Prüfen der Konfiguration.
-					</div>
-					<Btn variant="ghost" size="sm" onclick={() => handleValueChange('vorschau')}>Vorschau prüfen →</Btn>
-				</div>
+				<!-- Issue #2281: Versand-Historie, geteilter Baustein mit dem Trip-Hub
+				     (mobil und Desktop). -->
+				<BriefingHistory id={preset.id} kind="vergleich" />
+				<!-- Issue #1743: Verifikations-Hinweis mit „Vorschau prüfen →" entfaellt
+				     (Briefing-Vorschau ersatzlos zurueckgebaut, PO-Entscheid 2026-10-22). -->
 			</div>
 		</div>
 	{/if}
@@ -1361,75 +955,46 @@
 
 	{#if activeTab === 'wetter-metriken'}
 		<div class="tab-panel" data-testid="compare-detail-panel-wetter-metriken">
-			{#if wetterMetrikenHydrated}
-				<!-- Fix-Loop 1 (F003, Adversary HIGH): reines `onclick` am Wrapper
-				     feuert VOR dem eigenen `onchange` der Checkbox (Klick-Reihenfolge:
-				     click -> change) — der erste Toggle wurde dadurch nie persistiert
-				     (Commit las den noch alten wizardState.activeMetricKeys). Muster
-				     identisch `.hub-versand-wrap`/`.hub-alarme-wrap` (SF-1-Erkenntnis,
-				     s. dortige Kommentare): `onchange` MUSS in der Bubble-Phase laufen,
-				     dort ist die Checkbox-Mutation garantiert bereits abgeschlossen.
-				     Kein <svelte:window onpointerup> noetig (Checkbox-Toggles ohne
-				     Drag-Geste, Spec Abschnitt 2). -->
-				<!-- Issue #1360: die Stundenverlauf-Steuerung ist mit dem aufgeloesten
-				     Layout-Reiter in WeatherMetricsTab gewandert. Ihr Speicherweg MUSS
-				     mitwandern, sonst speichert sie stumm nicht mehr (bekannte Falle,
-				     vgl. #1359 Ziehgeste): deshalb hier der bestehende
-				     `.hub-layout-hourly-wrap` als AEUSSERER Wrapper. Beide Commits sind
-				     diff-geschuetzt (flushPendingLayoutSave/flushPendingWeatherMetrics-
-				     Save liefern `null` ohne Aenderung) — ein Klick erzeugt deshalb
-				     genau EINEN PUT, und beide gehen ueber denselben
-				     Round-Trip-Spread (buildComparePresetSavePayload: `...original`),
-				     der hour_from/hour_to schuetzt. -->
-				<div
-					class="hub-layout-hourly-wrap"
-					onchange={handleLayoutCommit}
-					onfocusout={handleLayoutCommit}
-					onclick={handleLayoutCommit}
-				>
-					<div
-						class="hub-wetter-metriken-wrap"
-						onchange={handleWetterMetrikenCommit}
-						onfocusout={handleWetterMetrikenCommit}
-						onclick={handleWetterMetrikenCommit}
-					>
-						<!-- Issue #1359: `onCompareCommit` verdrahtet den Speichervorgang
-						     DIREKT (wie im Trip), statt sich auf die Wrapper-Ereignisse
-						     oben zu verlassen. Nach einer Ziehgeste unterdruecken Browser
-						     das nachfolgende `click` haeufig — die neue Reihenfolge waere
-						     dann nie gespeichert (Kontext-Doku § Risiko 5). Issue #1361
-						     Befund 4: `onHourlyCommit={handleLayoutCommit}` loest dasselbe
-						     Problem fuer die neue Stundenverlauf-Reihenfolge (dieselbe
-						     Ziehgeste, anderer Speicherpfad/Commit-Funktion). -->
-						<WeatherMetricsTab
-							context="vergleich"
-							wiz={wizardState}
-							onCompareCommit={handleWetterMetrikenCommit}
-							onHourlyCommit={handleLayoutCommit}
-							onOutlookCommit={handleLayoutCommit}
-						/>
-					</div>
-				</div>
+			{#if wetterMetrikenLayoutHydrationBereit && versandHydrated}
+				<!-- Issue #2276 S4: der Reiter speichert selbst (saveController,
+				     Hub-Queue, Basis-Rueckmeldung, EINE kombinierte Wetter-Metriken/
+				     Layout-Orchestrierung in WeatherMetricsTab.svelte) — kein Wrapper
+				     und keine getrennten Commit-Funktionen mehr. Gemountet wird ERST,
+				     wenn BEIDE Domaenen hydriert sind (wetterMetrikenLayoutHydrationBereit,
+				     AC-3), damit die Orchestrierung gegen eine vollstaendige Baseline
+				     entsteht.
+				     Issue #1743: geteilter Baustein mit Versand-Abschnitt (#versand) samt
+				     Aktivierungs-Karte; er mountet zusaetzlich erst nach der Versand-
+				     Hydration (versandHydrated) — nie mit Platzhalterwerten (AC-9). -->
+				<WetterMetrikenVersandPanel
+					context="vergleich"
+					{...wetterMetrikenPropsAus(wizardState)}
+					versand={versandPropsAus(wizardState)}
+					vergleichTelegramStyle={wizardState.telegramStyle ?? 'rich'}
+					activation={hubActivationCard}
+					preset={currentPreset}
+					{saveController}
+					enqueueHubWrite={reiheHubSchreibvorgangEin}
+					onCompareUpdate={uebernehmeHubAntwort}
+					{versandSprung}
+				/>
 			{/if}
 		</div>
 	{/if}
 
-	{#if activeTab === 'idealwerte'}
-		<div class="tab-panel" data-testid="compare-detail-panel-idealwerte">
+	{#if activeTab === 'wertebereiche'}
+		<div class="tab-panel" data-testid="compare-detail-panel-wertebereiche">
 			{#if idealwerteHydrated}
-				<div
-					class="hub-corridor-wrap"
-					onfocusout={handleCorridorCommit}
-					onclick={handleCorridorCommit}
-				>
-					<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung der Idealwerte-
-					     Inline-Edit-Paritaet, Muster TripTabs.svelte:198-202. -->
-					{#if isMobileViewport}
-						<CorridorEditorMobile context="vergleich" />
-					{:else}
-						<CorridorEditor context="vergleich" />
-					{/if}
-				</div>
+				<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung, Muster TripTabs.svelte.
+				     Issue #2276 S3: der Reiter speichert selbst (saveController, Hub-Queue,
+				     Basis-Rueckmeldung) — kein Wrapper mehr. -->
+				{#if isMobileViewport}
+					<!-- Mobil: dieselbe Verdrahtung wie der Desktop-Zweig. -->
+					<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wizardState)} preset={currentPreset} {saveController} enqueueHubWrite={reiheHubSchreibvorgangEin} onCompareUpdate={uebernehmeHubAntwort} />
+				{:else}
+					<!-- Desktop. -->
+					<CorridorEditor context="vergleich" {...corridorPropsAus(wizardState)} preset={currentPreset} {saveController} enqueueHubWrite={reiheHubSchreibvorgangEin} onCompareUpdate={uebernehmeHubAntwort} />
+				{/if}
 			{/if}
 		</div>
 	{/if}
@@ -1445,42 +1010,25 @@
 	{#if activeTab === 'alarme'}
 		<div class="tab-panel" data-testid="compare-detail-panel-alarme">
 			{#if alarmeHydrated}
-				<!-- Muster identisch `.hub-versand-wrap` :987-994 (Bubble-Phase,
-				     SF-1-Erkenntnis) — onchange/onfocusout/onclick am Wrapper. -->
-				<div
-					class="hub-alarme-wrap"
-					onchange={handleAlarmeCommit}
-					onfocusout={handleAlarmeCommit}
-					onclick={handleAlarmeCommit}
-				>
-					<AlarmeTab context="vergleich" wiz={wizardState} catalog={alarmeCatalog} />
-				</div>
+				<!-- Issue #2276 S2: der Reiter speichert selbst (saveController,
+				     Hub-Queue, Basis-Rueckmeldung) — kein Wrapper mehr. -->
+				<AlarmeTab
+					context="vergleich"
+					{...alarmePropsAus(wizardState)}
+					catalog={alarmeCatalog}
+					preset={currentPreset}
+					{saveController}
+					enqueueHubWrite={(fn) => hubPutQueue.enqueue(fn)}
+					onCompareUpdate={(updated) => {
+						currentPreset = updated;
+					}}
+				/>
 			{/if}
 		</div>
 	{/if}
 
-	{#if activeTab === 'versand'}
-		<div class="tab-panel" data-testid="compare-detail-panel-versand">
-			{#if versandHydrated}
-				<!-- Staging-Fund SF-1 (CRITICAL, AC-35): `onchange` MUSS in der Bubble-
-				     Phase laufen, nicht `onchangecapture` — Capture liefe VOR dem
-				     Checkbox-eigenen `onchange`, das `wiz.sendTelegram` (o.ä.) erst
-				     setzt. Mit Capture sah `handleVersandCommit` daher noch den
-				     ALTEN Wert, der Diff-Waechter erkannte keine Aenderung und der
-				     PUT blieb aus, bis zufaellig ein anderes Event (focusout/click)
-				     feuerte. In der Bubble-Phase ist die Ziel-Mutation garantiert
-				     abgeschlossen, bevor der Wrapper-Handler laeuft. -->
-				<div
-					class="hub-versand-wrap"
-					onchange={handleVersandCommit}
-					onfocusout={handleVersandCommit}
-					onclick={handleVersandCommit}
-				>
-					<VersandTab context="vergleich" wiz={wizardState} activation={hubActivationCard} />
-				</div>
-			{/if}
-		</div>
-	{/if}
+	<!-- Issue #1743: das eigene Versand-Panel entfaellt — der Versand-Abschnitt steht
+	     im Reiter Wetter-Metriken (WetterMetrikenVersandPanel oben). -->
 
 	{#snippet hubActivationCard()}
 		{@const banner = hubActivationBanner(status)}
@@ -1499,123 +1047,8 @@
 			>
 				{banner.cta}
 			</Btn>
-			<div style="margin-top: 10px">
-				{#if sendQueued}
-					<p class="send-success" data-testid="compare-send-success-versand">
-						Briefing wurde zur Zustellung vorgemerkt.
-					</p>
-				{:else}
-					<Btn
-						variant="quiet"
-						size="sm"
-						style="width: 100%; justify-content: center"
-						disabled={sendLoading}
-						onclick={handleSend}
-						data-testid="compare-hub-activation-testsend"
-					>
-						{sendLoading ? 'Wird gesendet…' : 'Test-Briefing jetzt senden'}
-					</Btn>
-				{/if}
-				{#if sendError !== null}
-					<p class="send-error">{sendError}</p>
-				{/if}
-			</div>
 		</Card>
 	{/snippet}
-
-	{#if activeTab === 'vorschau'}
-		<div data-testid="compare-detail-panel-vorschau">
-			{#if preset.location_ids.length === 0}
-				<div style="padding: 32px; text-align: center; color: var(--g-ink-3); font-size: 13px">
-					Noch keine Orte konfiguriert — Tab <strong>Orte</strong> besuchen um Kandidaten hinzuzufügen.
-				</div>
-			{:else}
-			<!-- Verifikations-Hinweis (Issue #582) -->
-			<div style="display: flex; align-items: center; gap: 14px; padding: 13px 18px; background: var(--g-card); border: 1px solid var(--g-rule); border-left: 3px solid var(--g-accent); border-radius: var(--g-r-3); margin-bottom: 20px">
-				<Eyebrow style="flex-shrink: 0">Vorschau · Prüfung</Eyebrow>
-				<div style="font-size: 13px; color: var(--g-ink-2); flex: 1; line-height: 1.5">
-					So sieht dein Briefing aus — gelesen wird es unterwegs im Postfach, nicht hier.
-				</div>
-				<Btn variant="ghost" size="sm" onclick={handleSend} disabled={sendLoading}>
-					{sendLoading ? 'Wird gesendet…' : 'Test-Briefing senden'}
-				</Btn>
-			</div>
-
-			{#if sendQueued}
-				<p style="font-size: 0.875rem; color: var(--g-success, #16a34a); margin: 0 0 12px" data-testid="compare-send-success">
-					Briefing wurde zur Zustellung vorgemerkt.
-				</p>
-			{/if}
-			{#if sendError !== null}
-				<p style="font-size: 0.875rem; color: var(--g-danger, #dc2626); margin: 0 0 12px" data-testid="compare-send-error">{sendError}</p>
-			{/if}
-
-			<!-- Kanal-Umschalter + Email-View-Toggle (Issue #582) -->
-			<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap">
-				<CompareChannelSwitch
-					value={previewChannel}
-					onChange={(v: string) => (previewChannel = v as 'email' | 'sms' | 'telegram')}
-					channels={previewConfiguredChannels}
-				/>
-				{#if previewChannel === 'email'}
-					<div style="display: inline-flex; background: var(--g-paper-deep); border: 1px solid var(--g-rule); border-radius: var(--g-r-2); padding: 3px; gap: 2px; margin-left: 12px">
-						{#each [['desktop', 'Desktop-Inbox'], ['iphone', 'iPhone-Mail']] as [v, l]}
-							<button onclick={() => (emailView = v)} style="padding: 7px 13px; border: none; cursor: pointer; border-radius: 4px; font-size: 12.5px; font-family: var(--g-font-sans); font-weight: {emailView === v ? 600 : 500}; background: {emailView === v ? 'var(--g-card)' : 'transparent'}; box-shadow: {emailView === v ? 'var(--g-shadow-1)' : 'none'}; color: {emailView === v ? 'var(--g-ink)' : 'var(--g-ink-3)'}">
-								{l}
-							</button>
-						{/each}
-					</div>
-				{/if}
-				{#if !previewConfiguredChannels.includes(previewChannel)}
-					<!-- AC-3 (Soll: screen-compare-detail.jsx:365-369): gewählter Kanal ist
-					     im Preset nicht konfiguriert — Beispiel-Render bleibt sichtbar,
-					     Hinweis läuft neben dem Umschalter statt die Render-Fläche zu leeren. -->
-					<span class="mono" data-testid="compare-preview-channel-not-configured" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.04em">
-						Kanal nicht konfiguriert · Beispiel-Render
-					</span>
-				{/if}
-			</div>
-
-			<!-- Render-Fläche -->
-			<div style="padding: {previewChannel === 'email' && emailView === 'desktop' ? '24px' : '0'}; background: {previewChannel === 'email' && emailView === 'desktop' ? 'var(--g-paper-deep)' : 'transparent'}; border-radius: var(--g-r-3)">
-				{#if previewLoading}
-					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0" data-testid="compare-preview-loading">
-						Vorschau wird geladen…
-					</p>
-				{:else if previewError !== null}
-					<p style="font-size: 0.875rem; color: var(--g-danger, #dc2626); margin: 0" data-testid="compare-preview-error">{previewError}</p>
-				{:else if previewChannel === 'email' && previewHtml !== ''}
-					<div style="width: 680px; max-width: 100%;">
-						<iframe
-							data-testid="compare-preview-iframe"
-							srcdoc={previewHtml}
-							sandbox="allow-same-origin"
-							title="E-Mail-Vorschau"
-							style="width: 100%; min-height: 500px; border: 0; display: block"
-						></iframe>
-					</div>
-				{:else if previewChannel === 'telegram' && previewTelegram !== ''}
-					<!-- Issue #1270 (AC-2): echte Telegram-Vorschau statt Platzhalter-Copy.
-					     Text kommt fertig aus dem Backend (ADR-0011), die Bubble ist reine Hülle. -->
-					<div data-testid="compare-preview-telegram">
-						<CompareChatBubble text={previewTelegram} />
-					</div>
-				{:else if previewChannel === 'sms' && previewSms !== ''}
-					<!-- Issue #1270 (AC-2): echte SMS-Vorschau statt Platzhalter-Copy. -->
-					<div data-testid="compare-preview-sms">
-						<CompareSmsPreview text={previewSms} charCount={previewSmsCount} />
-					</div>
-				{:else}
-					<!-- Ehrlicher Leerfall statt stiller Leere (KB-2/#1269): das Backend
-					     lieferte für diesen Kanal keinen Inhalt. -->
-					<p style="font-size: 0.875rem; color: var(--g-ink-3); margin: 0" data-testid="compare-preview-empty">
-						Für diesen Kanal hat das Briefing keinen Inhalt geliefert.
-					</p>
-				{/if}
-			</div>
-			{/if}
-		</div>
-	{/if}
 
 	</div>
 </div>
@@ -1640,28 +1073,10 @@
 	}
 
 	@media (max-width: 899px) {
-		/* Mobile: Tab-Leiste horizontal scrollbar. Fix-Loop 1 (Fresh-Eyes-Fund,
-		   S8): Regel fehlte, "Versand"/"Vorschau" waren auf 390px unerreichbar.
-		   Muster 1:1 TripTabs.svelte:330-352 (dort selbst ein Fresh-Eyes-Fund
-		   #1231 S6) — Rand-Fade statt hartem Abschnitt. */
-		.compare-tabs-bar {
-			overflow-x: auto;
-			white-space: nowrap;
-			scrollbar-width: none;
-			-ms-overflow-style: none;
-			scroll-snap-type: x mandatory;
-			scroll-padding-inline: 12px;
-			mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
-			-webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
-		}
-		.compare-tabs-bar::-webkit-scrollbar {
-			display: none;
-		}
-		.compare-tabs-bar button {
-			flex-shrink: 0;
-			white-space: nowrap;
-			scroll-snap-align: start;
-		}
+		/* Tab-Band-Regeln (Fade/Snap) leben im MTabBar-Baustein — das frueher
+		   1:1 aus TripTabs.svelte kopierte Mobil-CSS der compare-tabs-bar ist
+		   mit der Umstellung (Spec mobile_tab_leisten_mtabbar, Iteration 2)
+		   ersatzlos entfernt (AP-006). */
 
 		/* Issue #1256 Scheibe 8 (AC-22): CompareTabs wird jetzt ueber die
 		   Ein-Mount-Strategie auch mobil gerendert — schmaleres Padding statt
@@ -1669,18 +1084,6 @@
 		.compare-tabs-content {
 			padding: 16px 16px 60px;
 		}
-	}
-
-	/* ── Vorschau-Tab (Issue #514) — Design nach HubPreview ─────────────────── */
-	.send-success {
-		font-size: 0.875rem;
-		color: var(--g-success, #16a34a);
-		margin: 0;
-	}
-	.send-error {
-		font-size: 0.875rem;
-		color: var(--g-danger, #dc2626);
-		margin: 0;
 	}
 
 	@media (max-width: 899px) {
@@ -1732,7 +1135,7 @@
 	}
 	.hub-add-group-header {
 		font-family: var(--g-font-mono);
-		font-size: 10px;
+		font-size: 11px;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--g-ink-3);
@@ -1764,7 +1167,7 @@
 		gap: 12px;
 	}
 	.hub-mobile-stat-label {
-		font-size: 10px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		letter-spacing: 0.16em;
 		text-transform: uppercase;
@@ -1829,7 +1232,7 @@
 	.hub-summary-row-eyebrow {
 		display: block;
 		font-family: var(--g-font-mono);
-		font-size: 9px;
+		font-size: 11px;
 		color: var(--g-ink-4);
 		letter-spacing: 0.12em;
 		text-transform: uppercase;

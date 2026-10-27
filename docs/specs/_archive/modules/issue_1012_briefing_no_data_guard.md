@@ -3,7 +3,7 @@ entity_id: issue_1012_briefing_no_data_guard
 type: module
 created: 2026-07-05
 updated: 2026-07-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [briefing, scheduler, weather, monitoring, bug]
 ---

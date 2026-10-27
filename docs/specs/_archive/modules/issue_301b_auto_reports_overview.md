@@ -3,7 +3,7 @@ entity_id: issue_301b_auto_reports_overview
 type: module
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 issue: 301
 tags: [frontend, svelte, compare, subscriptions, auto-reports, grid, issue-301, lieferung-b]

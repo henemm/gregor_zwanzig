@@ -30,7 +30,8 @@ function desktop(page: Page) {
 }
 
 /** Öffnet /compare/new, benennt den Vergleich, wählt 2 echte Bibliotheks-Orte und
- *  navigiert bis zum freigeschalteten Layout-Tab. */
+ *  öffnet den Reiter, der seit #1360 den früheren Layout-Inhalt trägt
+ *  (Wetter-Metriken mit der Stundenverlauf-Steuerung). */
 async function gotoLayoutTab(page: Page): Promise<void> {
 	const D = desktop(page);
 	await page.goto('/compare/new', { waitUntil: 'networkidle' });
@@ -46,39 +47,25 @@ async function gotoLayoutTab(page: Page): Promise<void> {
 	await libBtns.nth(0).click();
 	await libBtns.nth(1).click();
 
-	// Idealwerte öffnen (schaltet Layout frei), dann Layout.
-	await D.getByTestId('compare-editor-tab-idealwerte').first().click();
-	await D.getByTestId('compare-editor-tab-layout').first().click();
+	await D.getByTestId('compare-editor-tab-wetter-metriken').first().click();
 }
 
-test('AC-1: Layout-Tab lädt ohne pageerror, Spinner verschwindet', async ({ page }) => {
+// Stand #2287-Nachbarschaft: Der Layout-Reiter (Step4Layout mit LayoutPreview,
+// `step4-loading`/`compare-step4-layout-preview`) ist per #1360 aufgelöst; die
+// Crash-Oberfläche von #1093 existiert nicht mehr. AC-1 prüft deshalb den
+// Nachfolger — Wetter-Metriken mit echten Orten rendert ohne pageerror. AC-2
+// (Vorschau-Tabelle) ist GELÖSCHT: die Vorschau-Tabelle gibt es nicht mehr
+// (layout-tab-vergleich.spec.ts AC-11 prüft ausdrücklich ihre Abwesenheit).
+test('AC-1: Wetter-Metriken (früher Layout) lädt mit echten Orten ohne pageerror', async ({ page }) => {
 	const pageErrors: string[] = [];
 	page.on('pageerror', (e) => pageErrors.push(e.message));
 
 	await gotoLayoutTab(page);
 
-	// Der Lade-Spinner muss innerhalb von 5s verschwinden.
-	await expect(page.getByTestId('step4-loading').first()).toBeHidden({ timeout: 5000 });
-
-	// Vorschau muss sichtbar sein.
-	await expect(page.getByTestId('compare-step4-layout-preview').first()).toBeVisible();
+	await expect(
+		desktop(page).getByTestId('compare-layout-hourly-enabled-toggle').first()
+	).toBeVisible({ timeout: 10_000 });
 
 	// Kein Render-Crash.
 	expect(pageErrors, `pageerrors: ${pageErrors.join(' | ')}`).toHaveLength(0);
-});
-
-test('AC-2: Vorschau-Tabelle rendert ≥1 Zeile mit Ort-Name, kein "undefined"', async ({ page }) => {
-	await gotoLayoutTab(page);
-
-	const preview = page.getByTestId('compare-step4-layout-preview').first();
-	await expect(preview).toBeVisible({ timeout: 5000 });
-
-	// Mindestens eine Datenzeile in der Vorschau-Tabelle.
-	const rows = preview.locator('tbody tr');
-	await expect(rows.first()).toBeVisible();
-	expect(await rows.count()).toBeGreaterThanOrEqual(1);
-
-	// Kein "undefined" im gerenderten Vorschau-Text.
-	const text = (await preview.innerText()).toLowerCase();
-	expect(text).not.toContain('undefined');
 });

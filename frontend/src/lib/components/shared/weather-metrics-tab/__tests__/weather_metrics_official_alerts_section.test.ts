@@ -111,11 +111,10 @@ describe('AC-6: flushPendingWeatherMetricsSave — officialAlertsEnabled-Toggle 
 			(result!.body.display_config as Record<string, unknown>).active_metrics,
 			['temp_max', 'niederschlag']
 		);
-		assert.deepStrictEqual(
-			result!.body.empfaenger,
-			preset.empfaenger,
-			'Read-Modify-Write: Nicht-Wetter-Metriken-Felder (z. B. Empfaenger) duerfen nicht verloren gehen'
-		);
-		assert.strictEqual(result!.body.schedule, preset.schedule);
+		// Seit #2375 bewahrt der Server die Nicht-Wetter-Metriken-Felder, weil der
+		// Rumpf sie gar nicht sendet (Teilfeld statt Voll-Spread).
+		const roh = result!.body as unknown as Record<string, unknown>;
+		assert.ok(!('empfaenger' in roh), 'Empfaenger gehoeren nicht in den Wetter-Metriken-PUT');
+		assert.ok(!('schedule' in roh), 'schedule gehoert nicht in den Wetter-Metriken-PUT');
 	});
 });

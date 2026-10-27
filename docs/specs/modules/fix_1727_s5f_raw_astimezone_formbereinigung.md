@@ -3,7 +3,7 @@ entity_id: fix_1727_s5f_raw_astimezone_formbereinigung
 type: refactor
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: implemented
 workflow: fix-1727-s5f-weather-cache-tz
 tags: [timezone, weather-cache, trip-segments, segment-weather, adr-0051]
 ---

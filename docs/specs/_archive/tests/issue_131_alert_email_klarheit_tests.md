@@ -3,7 +3,7 @@ entity_id: issue_131_alert_email_klarheit_tests
 type: tests
 created: 2026-05-13
 updated: 2026-05-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bug, email, alert, change-detection, issue-131]
 parent: issue_131_alert_email_klarheit
@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die Implementierung aus
-`docs/specs/modules/issue_131_alert_email_klarheit.md`. Jeder pytest-
+`docs/specs/_archive/modules/issue_131_alert_email_klarheit.md`. Jeder pytest-
 Funktionsname mappt 1:1 auf eine Acceptance-Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_131_alert_email_klarheit.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_131_alert_email_klarheit.md` v1.0
 
 ## Source
 
@@ -44,7 +44,7 @@ sie auflösen kann.
 | `test_ac6_format_metric_value_celsius_and_mm_with_comma` | AC-6 | `°C` / `mm` mit Komma + 1 NK; signed liefert Unicode-Minus. |
 | `test_ac7_format_change_line_with_segment_label` | AC-7 | Komplette Change-Zeile inkl. `Segment N (HH:MM–HH:MM)`-Präfix. |
 | `test_ac8_two_segments_render_two_distinct_lines` | AC-8 | Zwei Sichtweite-Aenderungen in zwei Segmenten erzeugen zwei unterschiedliche Zeilen via `format_change_line()`. |
-| `test_ac9_trip_report_legacy_change_block_removed` | AC-9 | Toter Renderer-Block in `src/formatters/trip_report.py` ist entfernt (kein `Wetteränderungen` mehr). |
+| `test_ac9_trip_report_legacy_change_block_removed` | AC-9 | Toter Renderer-Block in `src/output/renderers/trip_report.py` ist entfernt (kein `Wetteränderungen` mehr). |
 
 ## Implementation Details
 

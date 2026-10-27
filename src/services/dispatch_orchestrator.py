@@ -42,6 +42,12 @@ class TripDispatchStrategy:
     """
 
     inter_mail_delay: float = 2.0
+    # smtp_guard (Fix #2286, AC-11 -- Unterschied zu Compare bewusst): der
+    # Trip-Guard prueft die GLOBALE SMTP-Konfiguration; fehlt sie, ist das ein
+    # Deploy-Fehler, den /api/health und prod_selftest fangen -- daher (0, 0)
+    # statt failed, aber mit WARNING-Log (run_briefing_dispatch). "Kein SMTP
+    # => failed" wuerde CI ohne SMTP rot machen (test_dispatch_orchestrator).
+    # Compare zaehlt dagegen pro Preset (s. CompareDispatchStrategy).
     smtp_guard: bool = True
 
     def __init__(self, settings: Settings, user_id: str, data_root: str | None = None) -> None:
@@ -57,14 +63,26 @@ class TripDispatchStrategy:
         return (0, 0)
 
     def collect_due(self, now_utc: "datetime") -> list:
-        return self._service._collect_due_trips(now_utc)
+        due = self._service._collect_due_trips(now_utc)
+        # Issue #2217: gescheiterte Faelligkeitspruefungen zaehlen als failed.
+        self._failed += self._service.collect_failed
+        return due
 
     def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1012 (b2): Catch-up ZUERST, offene Nachliefer-Marker vor den
         # regulaeren faelligen Slots abarbeiten (AC-6/AC-7).
         # Issue #1725: `collect_due` liefert (trip, report_type, ortstag).
         due_trip_ids_now = {trip.id for trip, _, _ in due}
-        self._sent += self._service._process_pending_markers(now_utc, due_trip_ids_now)
+        # Issue #1405 S4b (#8): gescheiterte Nachlieferungen zaehlen als failed.
+        delivered, failed = self._service._process_pending_markers(now_utc, due_trip_ids_now)
+        self._sent += delivered
+        self._failed += failed
+
+    @property
+    def notice_failed(self) -> int:
+        """Issue #1405 S4b (B21): gescheiterte Begleit-Hinweise dieses Laufs
+        (Zaehler am je Lauf neu gebauten Dienst, Reset im Sammellauf)."""
+        return self._service.notice_failed
 
     def dispatch_one(self, item, now_utc: "datetime") -> None:
         trip, report_type, local_day = item
@@ -85,12 +103,15 @@ class TripDispatchStrategy:
                 # zu bekommen). Weder gesendet noch technisch fehlgeschlagen --
                 # der Wrapper hat den Grund bereits protokolliert.
                 return
-            # Issue #1012 (c): "no_weather" (kompletter Ausfall) zaehlt als
-            # failed statt sent -- alle anderen Outcomes bleiben sent.
-            if outcome == "no_weather":
-                self._failed += 1
-            else:
+            # Issue #2218 (A): Zaehlung nach Zustellung. Nur "sent" ist gesendet;
+            # "no_channels"/"no_stage" sind neutral (nichts zu tun); alles
+            # andere (no_weather, channels_unreachable, unbekannt) ist failed.
+            if outcome == "sent":
                 self._sent += 1
+            elif outcome in ("no_channels", "no_stage"):
+                pass
+            else:
+                self._failed += 1
         except Exception as e:
             self._failed += 1
             logger.error("Failed %s report for %s: %s", report_type, trip.id, e)
@@ -111,6 +132,11 @@ class CompareDispatchStrategy:
     """
 
     inter_mail_delay: float = 2.0
+    # smtp_guard (Fix #2286, AC-11 -- Unterschied zum Trip bewusst): Compare
+    # versendet pro Preset an die Empfaenger des Nutzers (Altverhalten #1207);
+    # ein Sendefehler zaehlt dort je Preset als failed. Ein globaler
+    # SMTP-Vorab-Guard wuerde das verdecken -- die globale SMTP-Konfiguration
+    # bewacht der Trip-Guard bzw. /api/health und prod_selftest.
     smtp_guard: bool = False
 
     def __init__(self, settings: Settings, user_id: str, data_root: str | None = None) -> None:
@@ -146,7 +172,10 @@ class CompareDispatchStrategy:
         if self._all_locations is None:
             self._all_locations = load_all_locations(user_id=self._user_id)
         by_id = {loc.id: loc for loc in self._all_locations}
-        return presets_due_for_hour(presets, by_id, now_utc)
+        due = presets_due_for_hour(presets, by_id, now_utc)
+        # Issue #2217: gescheiterte Faelligkeitspruefungen zaehlen als failed.
+        self._failed += len(getattr(due, "failed_ids", ()))
+        return due
 
     def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1250 Scheibe 3 (AC-10/AC-11/AC-12): Auto-Pause fuer Presets
@@ -158,7 +187,7 @@ class CompareDispatchStrategy:
         # durchgereicht, damit der Ablauf gegen den ORTSTAG des Presets
         # geprueft wird (ADR-0044) statt gegen den Servertag. Keine zweite
         # Zeitabfrage, kein zweiter Ladevorgang.
-        _auto_pause_expired_presets(
+        self._failed += _auto_pause_expired_presets(
             self._presets, self._user_id, self._data_root,
             now_utc, self._all_locations or [],
         )
@@ -205,8 +234,13 @@ _STRATEGY = {
 def run_briefing_dispatch(
     kind: str, user_id: str, now_utc: "datetime", data_root: str | None = None,
     settings: Settings | None = None,
+    notice_sink: object | None = None,
 ):
     """Gemeinsamer Versand-Einstieg fuer Trip (`route`) und Vergleich (`vergleich`).
+
+    Issue #1405 S4b: ``notice_sink`` (nur ``kind="route"``) bekommt nach dem
+    Lauf ``last_notice_failed`` = gescheiterte Begleit-Hinweise; der
+    Tupelvertrag ``(sent, failed)`` bleibt unveraendert.
 
     Kapselt das geteilte Skelett: Settings-Laden, Strategie-Aufloesung,
     kind-Hook `pre_pass`, Faelligkeitssammlung `collect_due`, Schleife mit
@@ -229,6 +263,11 @@ def run_briefing_dispatch(
     strategy = _STRATEGY[kind](settings, user_id, data_root)
 
     if strategy.smtp_guard and not settings.can_send_email():
+        # Fix #2286 (AC-11): weiterhin (0, 0), aber nicht mehr still.
+        logger.warning(
+            "%s-Versand fuer user_id=%s uebersprungen: SMTP-Konfiguration "
+            "unvollstaendig (smtp_guard)", kind, user_id,
+        )
         return strategy.empty_result()
 
     due = strategy.collect_due(now_utc)
@@ -242,4 +281,6 @@ def run_briefing_dispatch(
         if i < len(due) - 1:
             time_module.sleep(strategy.inter_mail_delay)
 
+    if notice_sink is not None:
+        notice_sink.last_notice_failed = strategy.notice_failed
     return strategy.result()

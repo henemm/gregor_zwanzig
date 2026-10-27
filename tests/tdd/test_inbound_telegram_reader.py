@@ -32,23 +32,8 @@ def _make_trip(trip_id: str, trip_name: str, stages):
     return Trip(id=trip_id, name=trip_name, stages=stages)
 
 
-# =============================================================================
-# AC-7: Fehlende Credentials → 0 zurück, kein API-Call
-# =============================================================================
-
-def test_poll_returns_zero_without_credentials():
-    """
-    GIVEN: Settings without telegram_bot_token or telegram_chat_id
-    WHEN: poll_and_process() is called
-    THEN: Returns 0 and makes no API call
-    """
-    from services.inbound_telegram_reader import InboundTelegramReader
-    from app.config import Settings
-
-    settings = Settings(telegram_bot_token="", telegram_chat_id="")
-    reader = InboundTelegramReader()
-    result = reader.poll_and_process(settings)
-    assert result == 0
+# AC-7 (poll_and_process ohne Credentials) entfaellt: der Poll-Pfad ist
+# entfernt (#1369), Updates kommen nur noch per Webhook.
 
 
 # =============================================================================
@@ -75,7 +60,7 @@ def test_find_active_trip_today_overlap(monkeypatch):
 
     from services.inbound_telegram_reader import InboundTelegramReader
     reader = InboundTelegramReader()
-    result = reader._find_active_trip(datetime.now(tz=timezone.utc))
+    result = reader._find_active_trip(datetime.now(tz=timezone.utc), user_id="default")
     assert result is not None
     assert result.name == "GR20"
 
@@ -94,7 +79,7 @@ def test_find_active_trip_next_future(monkeypatch):
     near_trip = _make_trip("gr20", "GR20", [
         _make_stage("T1", "Tag 1", today + timedelta(days=5)),
     ])
-    far_trip = _make_trip("tour2", "Alpentour", [
+    far_trip = _make_trip("trip2", "Alpentour", [
         _make_stage("T1", "Tag 1", today + timedelta(days=30)),
     ])
 
@@ -105,7 +90,7 @@ def test_find_active_trip_next_future(monkeypatch):
 
     from services.inbound_telegram_reader import InboundTelegramReader
     reader = InboundTelegramReader()
-    result = reader._find_active_trip(datetime.now(tz=timezone.utc))
+    result = reader._find_active_trip(datetime.now(tz=timezone.utc), user_id="default")
     assert result is not None
     assert result.name == "GR20"
 
@@ -127,7 +112,7 @@ def test_find_active_trip_no_trips_returns_none(monkeypatch):
 
     from services.inbound_telegram_reader import InboundTelegramReader
     reader = InboundTelegramReader()
-    result = reader._find_active_trip(datetime.now(tz=timezone.utc))
+    result = reader._find_active_trip(datetime.now(tz=timezone.utc), user_id="default")
     assert result is None
 
 
@@ -289,7 +274,7 @@ def test_hilfe_command_in_processor():
     WHEN: TripCommandProcessor.process() is called
     THEN: CommandResult.success=True, body contains the consolidated #731 command set:
           HEUTE / MORGEN / JETZT / GEWITTER / RUHETAG / STATUS / STOP / WEITER / HILFE.
-          Entfernte Befehle (startdatum, config, pause, skip) tauchen NICHT mehr auf.
+          STARTDATUM und REPORT kommen seit #2420 hinzu.
     """
     from services.trip_command_processor import TripCommandProcessor, InboundMessage
 
@@ -299,6 +284,7 @@ def test_hilfe_command_in_processor():
         sender="test",
         channel="telegram",
         received_at=datetime.now(tz=timezone.utc),
+        user_id="default",
     )
     processor = TripCommandProcessor()
     result = processor.process(msg)
@@ -316,7 +302,7 @@ def test_hilfe_command_in_processor():
     assert "weiter" in body_lower, "WEITER fehlt im Hilfetext"
     assert "hilfe" in body_lower, "HILFE fehlt im Hilfetext"
     # Entfernte Befehle dürfen NICHT mehr erscheinen
-    assert "startdatum" not in body_lower, "startdatum wurde in #731 entfernt, darf nicht mehr im Hilfetext stehen"
+    assert "startdatum" in body_lower, "STARTDATUM wird seit #2420 wieder angeboten"
 
 
 # =============================================================================
@@ -348,6 +334,7 @@ def test_status_command_in_processor(monkeypatch):
         sender="test",
         channel="telegram",
         received_at=datetime.now(tz=timezone.utc),
+        user_id="default",
     )
     processor = TripCommandProcessor()
     result = processor.process(msg)

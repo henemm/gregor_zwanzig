@@ -1,3 +1,10 @@
+---
+entity_id: fix_1197_nebenbefund_gate_false_positives
+type: module
+created: 2026-07-16
+status: implemented
+---
+
 # Spec: nebenbefund_gate — Trigger token-basiert + --body-file-Marker mitlesen
 
 - **Issue:** #1197 (Sammel-Gate-Audit), Scheibe „nebenbefund_gate False-Positives"

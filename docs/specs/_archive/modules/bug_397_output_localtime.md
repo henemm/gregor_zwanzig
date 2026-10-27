@@ -4,7 +4,7 @@
 **Created:** 2026-05-26
 **Issues:** #397 (hoch, user-gemeldet), #398 (Nacht-Sektion), #399 (Mitternacht-Filter)
 **Verwandte Spec:** `docs/specs/bugfix/utc_localtime_display.md` (Vorarbeit — diese Spec vollendet sie)
-**Schweregrad:** hoch — Wanderer treffen Tour-Entscheidungen anhand der angezeigten Zeiten.
+**Schweregrad:** hoch — Wanderer treffen Trip-Entscheidungen anhand der angezeigten Zeiten.
 
 ## Problem & Ursache
 
@@ -14,7 +14,7 @@ Segment-Zeiten werden intern **korrekt als UTC** geführt (validiert in `segment
 - **#398 (Nacht 2 h zu spät):** `_extract_night_rows` vergleicht `local_dt.hour >= arrival_hour`, aber `arrival_hour = last_seg.segment.end_time.hour` ist **UTC** (`trip_report.py:89`). Für CEST (UTC+2) ist die Grenze 2 h zu niedrig.
 - **#399 (leere Tabelle über Mitternacht):** Stunden-Filter `start_h <= dp.ts.hour <= end_h` ist bei Mitternachts-Übergang (`start_h > end_h`, z. B. 23…1) **nie erfüllbar** → 0 Zeilen. Betrifft `trip_report._extract_hourly_rows:197` und `segment_weather.py:166`.
 
-**Wichtige Befund-Korrektur:** Die in #399 genannten Modul-Funktionen `extract_hourly_rows`/`extract_night_rows` in `src/output/renderers/email/helpers.py` sind **toter Code** (keine Aufrufer in `src/`). Die **lebenden** Extraktoren sind die Formatter-Methoden in `src/formatters/trip_report.py`. Der Fix muss den lebenden Pfad treffen.
+**Wichtige Befund-Korrektur:** Die in #399 genannten Modul-Funktionen `extract_hourly_rows`/`extract_night_rows` in `src/output/renderers/email/helpers.py` sind **toter Code** (keine Aufrufer in `src/`). Die **lebenden** Extraktoren sind die Formatter-Methoden in `src/output/renderers/trip_report.py`. Der Fix muss den lebenden Pfad treffen.
 
 ## Lösung
 

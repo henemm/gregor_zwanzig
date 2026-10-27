@@ -4,65 +4,84 @@ import (
 	"mime"
 	"strings"
 	"testing"
+
+	"github.com/henemm/gregor-api/internal/model"
 )
 
-// TDD RED — Pure-Function Unit-Tests fuer IsTestUser (AC-4) und BuildResetMail (AC-5).
-// These tests will FAIL to compile until internal/mail/sender.go and reset.go exist.
-
+// TestIsTestUser prueft das Mail-Routing-Praedikat ueber das geladene Profil
+// (Issue #2152, AC-10 — ersetzt die frueheren Tests TestIsTestUser /
+// TestIsTestUser_Boundary / TestIsTestUser_TgLiveE2eStaysNameHeuristicOnly,
+// die die "test"/"tdd"-Namens-Heuristik als akzeptierten False Positive
+// festpinnten). Entscheidend ist NUR das Flag is_test_user oder die feste
+// Fixture-ID tg-live-e2e:
+//   - "test-alice"/"AliceTDD"/"contest"/"tdd-prod-user" ohne Flag sind KEINE
+//     Testkonten mehr — das ist der Bug-Fix (Reset-Mail echter Nutzer mit
+//     solchem Namen laeuft ueber Resend statt Gmail/Test-SMTP).
+//   - "tg-live-e2e" ist jetzt AUCH im Mail-Pfad Testkonto: bewusste
+//     Vereinheitlichung mit Scheduler/Store auf model.IsTestAccount (die
+//     #1265-Fix-Loop-1-Sonderbehandlung "name-heuristic-only" entfaellt),
+//     damit die Fixture nie Verifikations-/Reset-Mails ueber Resend ausloest.
 func TestIsTestUser(t *testing.T) {
 	cases := []struct {
-		userID string
-		want   bool
+		name string
+		u    *model.User
+		want bool
 	}{
-		{"test-alice", true},
-		{"TEST-bob", true},
-		{"alice-tdd", true},
-		{"AliceTDD", true},
-		{"default", false},
-		{"henning", false},
-		{"", false},
+		{"test-alice ohne Flag", &model.User{ID: "test-alice"}, false},
+		{"AliceTDD ohne Flag", &model.User{ID: "AliceTDD"}, false},
+		{"contest ohne Flag", &model.User{ID: "contest"}, false},
+		{"tdd-prod-user ohne Flag", &model.User{ID: "tdd-prod-user"}, false},
+		{"default", &model.User{ID: "default"}, false},
+		{"henning", &model.User{ID: "henning"}, false},
+		{"leere ID", &model.User{ID: ""}, false},
+		{"test-alice mit Flag", &model.User{ID: "test-alice", IsTestUser: true}, true},
+		{"admin mit Flag", &model.User{ID: "admin", IsTestUser: true}, true},
+		{"tg-live-e2e ohne Flag", &model.User{ID: "tg-live-e2e"}, true},
+		{"TG-LIVE-E2E ohne Flag", &model.User{ID: "TG-LIVE-E2E"}, true},
 	}
 	for _, c := range cases {
-		if got := IsTestUser(c.userID); got != c.want {
-			t.Errorf("IsTestUser(%q) = %v, want %v", c.userID, got, c.want)
+		if got := IsTestUser(c.u); got != c.want {
+			t.Errorf("IsTestUser(%s) = %v, want %v", c.name, got, c.want)
 		}
 	}
 }
 
-// TestIsTestUser_Boundary documents the KNOWN false-positive behaviour of
-// IsTestUser: any string containing "test" or "tdd" as a substring matches.
-// NOTE (Issue #1219 Adversary F001): IsTestUser() covers ONLY the name-
-// substring heuristic. Since Issue #1013, Python's is_test_user_id()
-// (src/app/config.py:30) ALSO excludes the fixed ID "tg-live-e2e" and any
-// profile with the "is_test_user": true flag — IsTestUser() alone is no
-// longer a full mirror of that function. The Resend-Allowlist-Loader
-// (loadResendAllowlist/isResendAllowlistTestUser, sender.go) applies all
-// three criteria for symmetry with Python; IsTestUser() itself stays
-// name-heuristic-only so existing callers (e.g. handler/auth.go:224) are
-// unaffected. If a prod-user registers with such a name, their reset mail
-// goes through Gmail instead of Resend — acceptable risk, easy to avoid in
-// setup. See spec Known Limitations.
-func TestIsTestUser_Boundary(t *testing.T) {
-	if !IsTestUser("contest") {
-		t.Errorf("IsTestUser('contest') = false; expected true (known false positive — see spec)")
-	}
-	if !IsTestUser("tdd-prod-user") {
-		t.Errorf("IsTestUser('tdd-prod-user') = false; expected true (known false positive — see spec)")
-	}
-}
+// ---------------------------------------------------------------------------
+// TDD RED — Issue #2152, AC-6: Mail-Routing-Praedikat liest das geladene
+// Profil (Flag), nicht den rohen Namen. Spec: docs/specs/modules/testkonto_profilfeld.md
+//
+// Erwartete GREEN-Signatur (entsteht in /50, der Compile-Fehler dieses Pakets
+// ist das beabsichtigte RED):
+//
+//	func IsTestUser(u *model.User) bool   // = model.IsTestAccount(u)
+//
+// Aufrufer handler/auth.go:371,1225 und auth_oauth.go:352 laden das Profil
+// vorher per store.LoadUser. Die frueheren Tests TestIsTestUser_Boundary /
+// TestIsTestUser_TgLiveE2eStaysNameHeuristicOnly (String-Signatur, Heuristik)
+// sind in GREEN durch TestIsTestUser oben ersetzt (AC-10).
+//
+// Luecke, dokumentiert fuer den Adversary: die AC-6-Zusicherung wirkt in
+// handler/auth.go:371 (Weiche Resend/Gmail im Reset-Pfad). Dort gibt es keine
+// Versand-Naht (nur sendVerificationMailFn fuer den Verifikationspfad), daher
+// prueft dieser Test das Praedikat, nicht die Weiche.
+// ---------------------------------------------------------------------------
 
-// TestIsTestUser_TgLiveE2eStaysNameHeuristicOnly (Issue #1265 Fix-Loop 1,
-// Adversary Runde-2-Ripple-Fund): die #1265-Konsolidierung auf
-// model.IsTestUserID hätte IsTestUser("tg-live-e2e") stillschweigend von
-// false auf true umschalten können — genau das würde das Passwort-Reset-/
-// Verifikations-Mail-Routing in handler/auth.go (Zeilen 249, 660) für die
-// Telegram-E2E-Fixture-ID ändern. Sperrt exakt das Vor-#1265-Verhalten
-// (s. TestIsTestUser_Boundary-Docstring: "name-heuristic-only").
-func TestIsTestUser_TgLiveE2eStaysNameHeuristicOnly(t *testing.T) {
-	if IsTestUser("tg-live-e2e") {
-		t.Error("IsTestUser('tg-live-e2e') = true; expected false — bewusst OHNE den " +
-			"Fixed-Fixture-Sonderfall aus model.IsTestUserID (kein Ripple-Verhaltenswechsel " +
-			"im auth.go-Mail-Routing, Issue #1265 Fix-Loop 1)")
+// TestIsTestUser_ProfilfeldStattName_AC6 — "protester" ohne Flag laeuft ueber
+// Resend (false); "mitarbeiter42" mit Flag ueber Test-SMTP (true).
+func TestIsTestUser_ProfilfeldStattName_AC6(t *testing.T) {
+	if IsTestUser(&model.User{ID: "protester"}) {
+		t.Error("IsTestUser(protester ohne Flag) = true; expected false — " +
+			"Reset-Mail eines echten Nutzers muss ueber Resend laufen (AC-6)")
+	}
+	if IsTestUser(&model.User{ID: "contest"}) {
+		t.Error("IsTestUser(contest ohne Flag) = true; expected false — " +
+			"der frueher akzeptierte False Positive entfaellt (Spec Known Limitations)")
+	}
+	if !IsTestUser(&model.User{ID: "mitarbeiter42", IsTestUser: true}) {
+		t.Error("IsTestUser(mitarbeiter42 mit Flag) = false; expected true")
+	}
+	if IsTestUser(nil) {
+		t.Error("IsTestUser(nil) = true; expected false (nil-sicher, kein Panic)")
 	}
 }
 

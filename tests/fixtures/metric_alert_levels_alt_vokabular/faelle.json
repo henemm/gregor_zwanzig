@@ -1,0 +1,70 @@
+{
+  "_zweck": "Issue #1981 AC-9: gemeinsame Ein-/Ausgabe-Faelle fuer den metric_alert_levels-Normalisierer. Gelesen von tests/tdd/test_alarm_abwahl_alt_vokabular.py (Python) und internal/store/compare_preset_test.go + internal/store/trip_metric_alert_levels_test.go (Go). Beide Seiten muessen fuer jeden Fall exakt 'erwartet' liefern.",
+  "tabelle": {
+    "temp_max_c": "temperature_max",
+    "temp_min_c": "temperature_min",
+    "gust_max_kmh": "wind_gust",
+    "precip_sum_mm": "precipitation_sum",
+    "visibility_min_m": "visibility",
+    "cape_max_jkg": "cape",
+    "thunder_level_max": "thunder_level",
+    "wind_max_kmh": "wind_change",
+    "snow_line": "freezing_level",
+    "wind_chill_min_c": null
+  },
+  "faelle": [
+    {
+      "name": "alle_acht_summary_schluessel",
+      "eingabe": {
+        "temp_max_c": "off",
+        "temp_min_c": "sensibel",
+        "gust_max_kmh": "off",
+        "precip_sum_mm": "robust",
+        "visibility_min_m": "off",
+        "cape_max_jkg": "off",
+        "thunder_level_max": "sensibel",
+        "wind_max_kmh": "off"
+      },
+      "erwartet": {
+        "temperature_max": "off",
+        "temperature_min": "sensibel",
+        "wind_gust": "off",
+        "precipitation_sum": "robust",
+        "visibility": "off",
+        "cape": "off",
+        "thunder_level": "sensibel",
+        "wind_change": "off"
+      }
+    },
+    {
+      "name": "neu_schluessel_gewinnt",
+      "eingabe": {"temp_max_c": "off", "temperature_max": "standard"},
+      "erwartet": {"temperature_max": "standard"}
+    },
+    {
+      "name": "fremde_schluessel_bleiben",
+      "eingabe": {"gust_max_kmh": "off", "thunder_level": "off", "zukunfts_metrik": "sensibel"},
+      "erwartet": {"wind_gust": "off", "thunder_level": "off", "zukunfts_metrik": "sensibel"}
+    },
+    {
+      "name": "wind_chill_wird_verworfen",
+      "eingabe": {"wind_chill_min_c": "off", "wind_gust": "robust"},
+      "erwartet": {"wind_gust": "robust"}
+    },
+    {
+      "name": "nur_wind_chill_ergibt_leere_map",
+      "eingabe": {"wind_chill_min_c": "off"},
+      "erwartet": {}
+    },
+    {
+      "name": "snow_line_bestand_959",
+      "eingabe": {"snow_line": "sensibel", "temp_min_c": "off"},
+      "erwartet": {"freezing_level": "sensibel", "temperature_min": "off"}
+    },
+    {
+      "name": "bereits_normalisiert_bleibt_gleich",
+      "eingabe": {"temperature_max": "off", "wind_gust": "standard", "cape": "off"},
+      "erwartet": {"temperature_max": "off", "wind_gust": "standard", "cape": "off"}
+    }
+  ]
+}

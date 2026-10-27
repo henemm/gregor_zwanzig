@@ -29,7 +29,7 @@ Chronologie der bestehenden Teil-Schutzmaßnahmen:
 - `for_testing()` (2) lenkt `smtp_host` nicht um → Test-Mails landen im Wächter und
   **schlagen fehl** statt lokal über Stalwart zugestellt zu werden. Der Test-/E2E-Mail-Pfad
   ist faktisch kaputt.
-- **Staging hat keine eigene Bremse:** Eine echte (nicht test-getaggte) Tour auf Staging
+- **Staging hat keine eigene Bremse:** Eine echte (nicht test-getaggte) Trip auf Staging
   würde ein echtes Briefing über Resend an einen echten Empfänger senden und still das
   Produktivkontingent belasten.
 
@@ -49,7 +49,7 @@ ist vom DNSSEC-Problem aus #876 nicht betroffen.
 
 - `src/app/config.py` — `Settings.for_testing()`, neue Felder `test_smtp_host`/`test_smtp_port`,
   Staging-Erzwingung in `with_user_profile()`.
-- `src/outputs/email.py` — Resend-Wächter (unverändert, bleibt als zweite Sicherung).
+- `src/output/channels/email.py` — Resend-Wächter (unverändert, bleibt als zweite Sicherung).
 - `.env` (Server/Staging) — `GZ_TEST_SMTP_HOST` setzen (Operations, nicht im Repo).
 - `tests/tdd/test_issue_879_*.py` — neue Tests.
 

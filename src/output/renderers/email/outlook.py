@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from datetime import tzinfo
     from app.models import SegmentWeatherSummary, ForecastDataPoint
 
-from app.metric_catalog import get_metric
+from app.metric_catalog import aggregation_label_de, get_metric
 from output.renderers.email.helpers import format_trend_tokens
 from output.renderers.email.thunder_branch import (
     resolve_thunder_day_branch, thunder_cell_html, thunder_cell_plain,
@@ -36,6 +36,43 @@ from output.renderers.email.thunder_branch import (
 )
 from output.renderers.email.design_tokens import FONT_DATA, tone_css
 from utils.geo import degrees_to_compass
+
+
+# ---------------------------------------------------------------------------
+# ACC-Stufen — EINE Quelle fuer Farbpunkt (HTML) und Wort (Klartext)
+# ---------------------------------------------------------------------------
+
+# Issue #2098 Befund C: der Farbpunkt ist im HTML der einzige Informations-
+# traeger, im Klartext braucht dieselbe Aussage ein Wort ("HTML=Normalfassung,
+# Farbe im HTML ⇒ WORT im Klartext"). Beide lesen dieselben vier Untergrenzen,
+# damit Wort und Punkt nicht auseinanderdriften koennen.
+# (Untergrenze | None = Restfall, Farbe, Klartext-Wort)
+_ACC_STUFEN = (
+    (80, "#2f8a3e", "hoch"),
+    (60, "#e3b008", "mittel"),
+    (40, "#e07b1a", "niedrig"),
+    (None, "#c52a22", "sehr niedrig"),
+)
+_ACC_KEIN_WERT = "–"
+ACC_LABEL = "ACC"
+
+
+def _acc_stufe(conf_pct) -> tuple[str, str] | None:
+    """(Farbe, Klartext-Wort) zu einer Prognose-Genauigkeit; ``None`` ohne Wert."""
+    try:
+        v = float(conf_pct)
+    except (TypeError, ValueError):
+        return None
+    for grenze, farbe, wort in _ACC_STUFEN:
+        if grenze is None or v >= grenze:
+            return farbe, wort
+    return None
+
+
+def _acc_wort(conf_pct) -> str:
+    """Klartext-Entsprechung des ACC-Farbpunkts (#2098 AC-6/AC-11/AC-12)."""
+    stufe = _acc_stufe(conf_pct)
+    return stufe[1] if stufe else _ACC_KEIN_WERT
 
 
 # ---------------------------------------------------------------------------
@@ -100,21 +137,12 @@ def render_outlook_table(
 
     # 4-stufiger ACC-Dot aus confidence_pct
     # hoch>=80=ok, mittel>=60=caution, niedrig>=40=warn, sehr_niedrig<40=danger
+    # #2098: Stufen aus `_ACC_STUFEN` -- dieselbe Quelle wie das Klartext-Wort.
     def _acc_dot(conf_pct) -> str:
-        if conf_pct is None:
-            return "–"
-        try:
-            v = float(conf_pct)
-        except (TypeError, ValueError):
-            return "–"
-        if v >= 80:
-            color = "#2f8a3e"
-        elif v >= 60:
-            color = "#e3b008"
-        elif v >= 40:
-            color = "#e07b1a"
-        else:
-            color = "#c52a22"
+        stufe = _acc_stufe(conf_pct)
+        if stufe is None:
+            return _ACC_KEIN_WERT
+        color = stufe[0]
         return (
             f'<span style="display:inline-block;width:10px;height:10px;'
             f'border-radius:50%;background:{color};"></span>'
@@ -126,6 +154,9 @@ def render_outlook_table(
         f'padding:6px 4px;text-align:center;font-family:{FONT_DATA};'
         f'font-size:10px;font-weight:600;color:#3a3835;white-space:nowrap;"'
     )
+    # #2098 Befund B: die ACC-Kopfzelle gilt fuer BEIDE Zweige -- der Trip
+    # laeuft seit #1848 A3 praktisch immer ueber den konfigurierbaren.
+    _acc_th = f'<th {_oh_style}>{ACC_LABEL}</th>' if show_acc else ""
     if metrics is not None:
         from output.renderers.compare_outlook_metric_ids import outlook_columns
 
@@ -145,6 +176,15 @@ def render_outlook_table(
             texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
             if gew_index is not None:
                 texte[gew_index] = thunder_cell_html(format_trend_tokens(stage), stage)
+            # #2098 Befund B: ACC HINTER den gewaehlten Spalten -- am
+            # `outlook_columns()`/`cells`-Mechanismus vorbei, damit
+            # `confidence` nie eine waehlbare Metrik wird (ADR-0005/#710).
+            # Kopf- und Datenzelle haengen an DEMSELBEN `show_acc`, ein
+            # Auseinanderlaufen von Beschriftung und Wert ist damit
+            # ausgeschlossen (AC-10).
+            acc_td = (
+                _otd(_acc_dot(stage.get("confidence_pct"))) if show_acc else ""
+            )
             body += (
                 '<tr>' + _otd(stage.get("weekday", "–"))
                 + "".join(
@@ -152,29 +192,44 @@ def render_outlook_table(
                          bg=cell_bg[i] if i < len(cell_bg) else "")
                     for i, text in enumerate(texte)
                 )
+                + acc_td
                 + '</tr>'
             )
         return (
             '<table cellpadding="0" cellspacing="0" '
             'style="border-collapse:collapse;width:100%;'
             'border-top:2px solid #1d1c1a;">'
-            f'<thead><tr><th {_oh_style}>Tag</th>{head}</tr></thead>'
+            f'<thead><tr><th {_oh_style}>Tag</th>{head}{_acc_th}</tr></thead>'
             f'<tbody>{body}</tbody></table>'
         )
 
-    _acc_th = f'<th {_oh_style}>ACC</th>' if show_acc else ""
+    # #2136/ADR-0068: die sieben Standardfall-Kuerzel (bisher "N D R PR Wind
+    # Böen Gew") sind KEINE eigene Namensliste mehr, sondern aus demselben
+    # zentralen Register abgeleitet wie die Stunden-/Etappentabelle derselben
+    # Mail (`MetricDefinition.col_label`). Die beiden Temperatur-Spalten (bisher
+    # "N"/"D") sind der statische Kollisionsfall aus AC-7: eine nackte
+    # `col_label`-Ersetzung ergaebe zweimal "Temp" -- deshalb traegt jede ihr
+    # Auswertungs-Suffix (`aggregation_label_de`, dieselbe Wortquelle wie die
+    # Duplikat-Aufloesung in `outlook_columns()`). `Tag` bleibt unveraendert,
+    # ist kein Katalogfeld; die Spaltenzahl bleibt bei acht.
+    _temp_col_label = get_metric("temperature").col_label
+    _pfad1_labels = (
+        f"{_temp_col_label} {aggregation_label_de('min')}",
+        f"{_temp_col_label} {aggregation_label_de('max')}",
+        get_metric("precipitation").col_label,
+        get_metric("rain_probability").col_label,
+        get_metric("wind").col_label,
+        get_metric("gust").col_label,
+        get_metric("thunder").col_label,
+    )
     outlook_thead = (
         f'<thead><tr>'
         f'<th {_oh_style}>Tag</th>'
-        f'<th {_oh_style}>N</th>'
-        f'<th {_oh_style}>D</th>'
-        f'<th {_oh_style}>R</th>'
-        f'<th {_oh_style}>PR</th>'
-        f'<th {_oh_style}>Wind</th>'
-        f'<th {_oh_style}>Böen</th>'
-        f'<th {_oh_style}>Gew</th>'
-        f'{_acc_th}'
-        f'</tr></thead>'
+        + "".join(
+            f'<th {_oh_style}>{_html.escape(label)}</th>' for label in _pfad1_labels
+        )
+        + f'{_acc_th}'
+        + '</tr></thead>'
     )
 
     # Fix #1801 S1: MED/HIGH aus tone_css() (EINE Quelle); LOW bleibt bewusst
@@ -270,9 +325,11 @@ def render_outlook_plain(
 ) -> str:
     """Rendert den Klartext-Ausblick-Block.
 
-    ``show_acc`` existiert fuer Signatur-Symmetrie mit
-    ``render_outlook_table``; der Klartext-Ausblick zeigte schon im
-    Ist-Zustand keine ACC-Spalte, daher ohne Effekt.
+    ``show_acc`` haengt im konfigurierbaren Zweig (``metrics`` gesetzt) das
+    ACC-Wort hinter die gewaehlten Spalten -- die Klartext-Entsprechung des
+    HTML-Farbpunkts (#2098 Befund C). Der Altform-Zweig zeigte ACC noch nie
+    und bleibt unveraendert; ``show_acc=False`` (Ortsvergleich) laesst die
+    Spalte in beiden Zweigen entfallen.
 
     ``metrics`` (#1361): gesetzte Auswahl ersetzt die festen Wert-Tokens
     durch die gewaehlten Groessen. ``heading`` (#1368): Compare schreibt
@@ -299,7 +356,13 @@ def render_outlook_plain(
             if gew_index is not None:
                 texte[gew_index] = thunder_cell_plain(format_trend_tokens(stage), stage)
             values = "  ".join(
-                f"{c['label']} {texte[i]}" for i, c in enumerate(columns)
+                [f"{c['label']} {texte[i]}" for i, c in enumerate(columns)]
+                # #2098 Befund C: der ACC-Farbpunkt des HTML ist fuer
+                # Klartext-Leser unsichtbar -- dieselbe Aussage als Wort,
+                # aus derselben Stufenquelle, an derselben Position
+                # (hinter den gewaehlten Spalten) wie im HTML.
+                + ([f"{ACC_LABEL} {_acc_wort(stage.get('confidence_pct'))}"]
+                   if show_acc else [])
             )
             # #1848 A3: Etappenname und Notiz stehen auch hier -- der feste
             # Zweig darunter fuehrt beide seit jeher, und seit A3 laeuft JEDE
@@ -324,10 +387,19 @@ def render_outlook_plain(
         # auch der konfigurierbare Zweig oben ruft.
         thunder_word = thunder_cell_plain(tok, stage)
 
+        # #2136/ADR-0068 (AC-4): jedes tatsaechlich gerenderte Token traegt
+        # das `col_label`-Praefix seiner Groesse -- dieselbe Quelle wie die
+        # Pfad-1-Kopfzeile des HTML-Ausblicks und die Stundentabelle derselben
+        # Mail. Die Temperatur-Spanne bleibt OHNE Auswertungs-Suffix: der
+        # Klartext fuehrt Tief/Hoch bereits als EIN Token zusammen (kein
+        # AC-7-Kollisionsfall, den gibt es nur bei zwei getrennten Spalten).
         name_field = f"{name:<26} " if show_name else ""
         line = (
-            f"{weekday:<3} {name_field}{tok['temp_str']:<8} "
-            f"{precip_str:<5} {tok['wind_str']:<5} {thunder_word}"
+            f"{weekday:<3} {name_field}"
+            f"{get_metric('temperature').col_label} {tok['temp_str']:<8} "
+            f"{get_metric('precipitation').col_label} {precip_str:<5} "
+            f"{get_metric('wind').col_label} {tok['wind_str']:<5} "
+            f"{get_metric('thunder').col_label} {thunder_word}"
         )
         lines.append(line)
 
@@ -547,7 +619,12 @@ def build_outlook_row(
     # (eine Fensterauflösung, nicht zwei; Spec AC-9).
     _thunder_signals: list = []
     _hat_signale = False
+    # Issue #2205: Ortszeit-Stunden mit bestaetigtem Hagel -- Quelle fuer den
+    # Hagelzusatz im Nacht-Halbsatz der Gewitter-Vorschau (Trend-Weg).
+    _hail_hours: list = []
     for dp in points:
+        if getattr(dp, "hail_flag", None) is True:
+            _hail_hours.append(_lh(dp.ts, tz))
         lh = _lh(dp.ts, tz)
         if dp.precip_1h_mm is not None:
             _hourly_precip.append(HourlyValue(hour=lh, value=dp.precip_1h_mm))
@@ -615,6 +692,8 @@ def build_outlook_row(
         "hourly_thunder_signals": (
             tuple(_thunder_signals) if _hat_signale else None
         ),
+        # Issue #2205: ohne Hagelstunde bleibt das Row-Dict zeichengleich.
+        "hourly_hail": tuple(_hail_hours) or None,
     }
     row.update({k: v for k, v in optional.items() if v is not None})
 

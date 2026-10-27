@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Issue #586 — Eyebrow statt h4, JSX-konformer Hint-Text, Mono-Input.
 	import { Eyebrow } from '$lib/components/atoms';
+	import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
 
     let { cooldown_minutes = $bindable<number | undefined>(undefined) }: {
         cooldown_minutes?: number;
@@ -8,7 +9,11 @@
 </script>
 
 <div class="cooldown-card" data-testid="alert-cooldown-card">
-    <Eyebrow>Cooldown</Eyebrow>
+    <!-- Issue #2521 S1 (AC-11): ⓘ an der Ueberschrift, Hinweistext unten unveraendert. -->
+    <div class="eyebrow-row">
+        <Eyebrow>Cooldown</Eyebrow>
+        <BegriffErklaerung begriff="cooldown" />
+    </div>
     <div class="input-row">
         <input
             type="number"
@@ -35,6 +40,7 @@
         border-radius: var(--g-radius-md);
         background: var(--g-surface-1, #fff);
     }
+    .eyebrow-row { display: flex; align-items: center; gap: 4px; }
     .input-row {
         display: flex;
         align-items: center;

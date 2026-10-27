@@ -3,7 +3,7 @@ entity_id: issue_221_validator_observability_endpoints
 type: module
 created: 2026-05-14
 updated: 2026-05-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [validator, api, observability, tooling, alerts]
 ---

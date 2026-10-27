@@ -5,7 +5,7 @@
 //   § Implementation Details Punkt 3 ("Baseline-Korrektheit"),
 //   § Acceptance Criteria AC-1/AC-3
 // Kontext: docs/context/fix-1269-save-status-lie.md
-//   Root-Cause (a): EditReportConfigSection.svelte / VersandTab.svelte
+//   Root-Cause (a): MailInhaltCard.svelte / VersandTab.svelte
 //   normalisieren die geladene report_config beim Mounten (u.a. `toHHMMSS`:
 //   "07:00" → "07:00:00", Materialisierung fehlender Default-Felder wie
 //   `daily_summary_metrics`) und schreiben das Ergebnis zurück. Die
@@ -21,7 +21,7 @@
 // Vorgeschlagene Signatur (Kontrakt für GREEN):
 //   reportConfigChangedByUser(baseline: ReportConfig | undefined, current: ReportConfig | undefined): boolean
 // Reine Funktion: kanonisiert BEIDE Seiten identisch (dieselbe Normalisierung
-// wie EditReportConfigSection.svelte / VersandTab.svelte beim Mounten:
+// wie MailInhaltCard.svelte / VersandTab.svelte beim Mounten:
 // `toHHMMSS`-Zeitformat, Default-Materialisierung) und vergleicht danach
 // inhaltlich. Nur wenn nach Kanonisierung ein ECHTER Unterschied bleibt,
 // liefert sie `true` — reine Formatunterschiede/Default-Ergänzungen (Mount-
@@ -65,7 +65,7 @@ describe('AC-1/AC-3: reine Mount-Kanonisierung (Format + Default-Ergänzung) ist
 			send_email: true
 		};
 
-		// So sieht dieselbe Config aus, NACHDEM EditReportConfigSection.svelte /
+		// So sieht dieselbe Config aus, NACHDEM MailInhaltCard.svelte /
 		// VersandTab.svelte beim Mounten kanonisiert und zurückgeschrieben haben
 		// (toHHMMSS: "07:00" → "07:00:00"; fehlende Felder werden mit ihren
 		// UI-Defaults materialisiert) — OHNE dass der Nutzer etwas angefasst hat.

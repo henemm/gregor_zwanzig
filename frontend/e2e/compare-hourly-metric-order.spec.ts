@@ -372,7 +372,7 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		// Wrapper, sie rendert WeatherMetricsTab direkt im `metriken`-Tab-
 		// Zweig. Analog compare-layout-tab-dissolution.spec.ts AC-6: direkt
 		// auf der Seite scopen, nicht über einen nicht existierenden Panel-Testid.
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
 		const hourly = page.locator('[data-testid="weather-metrics-stundenverlauf"]:visible').first();
 		await expect(hourly).toBeVisible({ timeout: 10_000 });
 
@@ -410,9 +410,9 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		// flipDurationMs schafft hier Verlässlichkeit; 7/7 Läufe seither grün.
 		await page.waitForTimeout(400);
 
-		await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
+		// Issue #1743: Alarme ist der letzte Schritt (kein Versand-Schritt mehr).
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
 
 		const [response] = await Promise.all([
 			page.waitForResponse(

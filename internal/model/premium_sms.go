@@ -56,7 +56,8 @@ func DerivePremiumSmsReplyState(replyTo string, replyAt *time.Time) string {
 		return PremiumSmsStateNone
 	}
 	age := time.Since(*replyAt).Truncate(time.Second)
-	if age > PremiumSmsReplyTTL {
+	// age < 0: Zeitstempel in der Zukunft ist ungueltig (#2231), wie im Sendepfad.
+	if age < 0 || age > PremiumSmsReplyTTL {
 		return PremiumSmsStateStale
 	}
 	return PremiumSmsStateFresh

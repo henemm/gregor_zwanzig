@@ -3,7 +3,7 @@ entity_id: fix_1510_versand_ziel_dedupe
 type: bugfix
 created: 2026-08-05
 updated: 2026-08-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [versand, trip-editor, compare, frontend]
 ---

@@ -1,0 +1,503 @@
+TAP version 13
+# node:fs:440
+#     return binding.readFileUtf8(path, stringToFlags(options.flag));
+#                    ^
+# Error: ENOENT: no such file or directory, open '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/SubscriptionKachel.svelte'
+#     at readFileSync (node:fs:440:20)
+#     at ladeSvelte (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/lib/components/shared/__tests__/aktionsmodellAst.ts:17:15)
+#     at file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/compare_kachel_aktionen.test.ts:40:13 {
+#   errno: -2,
+#   code: 'ENOENT',
+#   syscall: 'open',
+#   path: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/SubscriptionKachel.svelte'
+# }
+# Node.js v22.22.2
+# Subtest: src/routes/_home/__tests__/compare_kachel_aktionen.test.ts
+not ok 1 - src/routes/_home/__tests__/compare_kachel_aktionen.test.ts
+  ---
+  duration_ms: 908.089917
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/compare_kachel_aktionen.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-1/AC-16: beide kinds — dieselben Felder, dieselbe Reihenfolge, aus EINEM Baustein
+    # Subtest: Trip und Vergleich zeigen Status, Kanaele, naechster und letzter Versand in gleicher Reihenfolge
+    not ok 1 - Trip und Vergleich zeigen Status, Kanaele, naechster und letzter Versand in gleicher Reihenfolge
+      ---
+      duration_ms: 1.258672
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:78:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/SubscriptionKachel.svelte fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        laden (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:49:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:79:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: compact-Vergleichs-Kachel zeigt Kanaele sowie naechsten und letzten Versand (AC-16)
+    not ok 2 - compact-Vergleichs-Kachel zeigt Kanaele sowie naechsten und letzten Versand (AC-16)
+      ---
+      duration_ms: 4805.554055
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:87:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + []
+        - [
+        -   'Email',
+        -   'Telegram'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'Email'
+        1: 'Telegram'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:93:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: fehlende Werte zeigen den ehrlichen Leerzustand "—", nie leere Felder
+    not ok 3 - fehlende Werte zeigen den ehrlichen Leerzustand "—", nie leere Felder
+      ---
+      duration_ms: 3.656875
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:99:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/SubscriptionKachel.svelte fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        laden (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:49:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:100:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 2 - AC-1/AC-16: beide kinds — dieselben Felder, dieselbe Reihenfolge, aus EINEM Baustein
+  ---
+  duration_ms: 4811.290024
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:77:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-9: Trip-Kanaele kommen aus den report_config-Flags, nie aus empfaenger
+    # Subtest: nur send_email an, empfaenger enthaelt Telegram => ausschliesslich Email
+    not ok 1 - nur send_email an, empfaenger enthaelt Telegram => ausschliesslich Email
+      ---
+      duration_ms: 0.266949
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:111:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/SubscriptionKachel.svelte fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        laden (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:49:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:112:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: Gegenprobe: alle vier Flags => vier Kanaele
+    not ok 2 - Gegenprobe: alle vier Flags => vier Kanaele
+      ---
+      duration_ms: 0.216109
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:116:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/SubscriptionKachel.svelte fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        laden (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:49:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:117:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 3 - AC-9: Trip-Kanaele kommen aus den report_config-Flags, nie aus empfaenger
+  ---
+  duration_ms: 0.647032
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:110:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-17: Kennung und Link beider kinds
+    # Subtest: Trip: subscription-card-{id}, data-kind, Name als echter Link auf den Hub; kein altes trip-card
+    not ok 1 - Trip: subscription-card-{id}, data-kind, Name als echter Link auf den Hub; kein altes trip-card
+      ---
+      duration_ms: 0.25867
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:124:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/SubscriptionKachel.svelte fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        laden (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:49:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:125:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: Vergleich: Name verlinkt auf /compare/{id}
+    not ok 2 - Vergleich: Name verlinkt auf /compare/{id}
+      ---
+      duration_ms: 0.34995
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:133:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/SubscriptionKachel.svelte fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        laden (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:49:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:134:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 4 - AC-17: Kennung und Link beider kinds
+  ---
+  duration_ms: 0.783481
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:123:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-18: naechster/letzter Versand aus der Backend-Antwort, ohne eigene Rechnung
+    # Subtest: Trip mit Termin: Wert aus local_date/local_time/tz_abbr; letzter Versand null bis S4
+    not ok 1 - Trip mit Termin: Wert aus local_date/local_time/tz_abbr; letzter Versand null bis S4
+      ---
+      duration_ms: 0.26871
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:144:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/kachelVersand.ts fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        modul (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:53:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:145:35)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: at === null: der Grund statt eines Zeitpunkts (Trip und Vergleich)
+    not ok 2 - at === null: der Grund statt eines Zeitpunkts (Trip und Vergleich)
+      ---
+      duration_ms: 1.132692
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:149:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/kachelVersand.ts fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        modul (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:53:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:150:35)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Antwort fehlt: "—" statt erfundener Zeit
+    not ok 3 - Antwort fehlt: "—" statt erfundener Zeit
+      ---
+      duration_ms: 0.39961
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:155:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/kachelVersand.ts fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        modul (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:53:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:156:35)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Vergleich: letzter Versand aus letzter_versand; ohne Wert null
+    not ok 4 - Vergleich: letzter Versand aus letzter_versand; ohne Wert null
+      ---
+      duration_ms: 0.23667
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:160:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/kachelVersand.ts fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        modul (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:53:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:161:35)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Kachel rendert den gemappten Wert (Verdrahtung Mapping -> Anzeige)
+    not ok 5 - Kachel rendert den gemappten Wert (Verdrahtung Mapping -> Anzeige)
+      ---
+      duration_ms: 0.21202
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:167:2'
+      failureType: 'testCodeFailure'
+      error: 'src/routes/_home/SubscriptionKachel.svelte fehlt (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        laden (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:49:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:168:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+not ok 5 - AC-18: naechster/letzter Versand aus der Backend-Antwort, ohne eigene Rechnung
+  ---
+  duration_ms: 2.440624
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:141:1'
+  failureType: 'subtestsFailed'
+  error: '5 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-10: tote Bausteine und Doppelungen sind weg
+    # Subtest: routes/_home/TripKachel.svelte existiert nicht mehr
+    not ok 1 - routes/_home/TripKachel.svelte existiert nicht mehr
+      ---
+      duration_ms: 0.205742
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:184:3'
+      failureType: 'testCodeFailure'
+      error: 'routes/_home/TripKachel.svelte existiert noch (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:184:53)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: routes/_home/CompareKachel.svelte existiert nicht mehr
+    not ok 2 - routes/_home/CompareKachel.svelte existiert nicht mehr
+      ---
+      duration_ms: 0.11131
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:184:3'
+      failureType: 'testCodeFailure'
+      error: 'routes/_home/CompareKachel.svelte existiert noch (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:184:53)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: organisms/HomeHeroTrip.svelte existiert nicht mehr
+    not ok 3 - organisms/HomeHeroTrip.svelte existiert nicht mehr
+      ---
+      duration_ms: 0.10743
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:184:3'
+      failureType: 'testCodeFailure'
+      error: 'organisms/HomeHeroTrip.svelte existiert noch (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:184:53)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: organisms/HomeHeroCompare.svelte existiert nicht mehr
+    ok 4 - organisms/HomeHeroCompare.svelte existiert nicht mehr
+      ---
+      duration_ms: 0.075131
+      type: 'test'
+      ...
+    # Subtest: molecules/CompareIdealRow.svelte existiert nicht mehr
+    not ok 5 - molecules/CompareIdealRow.svelte existiert nicht mehr
+      ---
+      duration_ms: 0.086081
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:184:3'
+      failureType: 'testCodeFailure'
+      error: 'molecules/CompareIdealRow.svelte existiert noch (RED)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:184:53)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Barrel organisms/index.ts exportiert HomeHeroTrip/HomeHeroCompare nicht mehr
+    not ok 6 - Barrel organisms/index.ts exportiert HomeHeroTrip/HomeHeroCompare nicht mehr
+      ---
+      duration_ms: 1411.524222
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:187:2'
+      failureType: 'testCodeFailure'
+      error: 'Barrel exportiert noch HomeHero*'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:190:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..6
+not ok 6 - AC-10: tote Bausteine und Doppelungen sind weg
+  ---
+  duration_ms: 1415.088387
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/2346-s2/frontend/src/routes/_home/__tests__/subscription_kachel_paritaet.test.ts:175:1'
+  failureType: 'subtestsFailed'
+  error: '5 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..6
+# tests 19
+# suites 5
+# pass 1
+# fail 18
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7395.749545

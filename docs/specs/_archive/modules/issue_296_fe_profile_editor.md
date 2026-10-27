@@ -3,7 +3,7 @@ entity_id: issue_296_fe_profile_editor
 type: module
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 parent_issue: 296
 related: issue_296_be_naismith_arrival

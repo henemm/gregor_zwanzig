@@ -3,7 +3,7 @@ entity_id: fix_1771_s2_playwright_ci_ampel
 type: feature
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 workflow: fix-1771-s2-playwright-ci-ampel
 tags: [testing, e2e, playwright, ci, infrastructure]
 ---

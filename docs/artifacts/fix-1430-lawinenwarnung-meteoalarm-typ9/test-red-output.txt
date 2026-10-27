@@ -1,0 +1,603 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/rippling-drifting-treasure
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 172 items / 139 deselected / 33 selected
+
+tests/tdd/test_sms_official_alert_tokens.py .....F.....FFFF              [ 45%]
+tests/tdd/test_hazard_symbols.py FFFF                                    [ 57%]
+tests/tdd/test_official_alert_hazard_labels.py FF                        [ 63%]
+tests/tdd/test_telegram_official_alert_bubble.py FFF                     [ 72%]
+tests/tdd/test_avalanche_official_alert_channels.py FFFFFFF              [ 93%]
+tests/tdd/test_hazard_symbol_catalog_docs.py F                           [ 96%]
+tests/tdd/test_meteoalarm_feed_deutschland.py F                          [100%]
+
+=================================== FAILURES ===================================
+_________ test_ac5_all_nine_hazards_render_their_symbol[avalanche-AW] __________
+
+hazard = 'avalanche', symbol = 'AW'
+
+    @pytest.mark.parametrize("hazard,symbol", SPEC_SYMBOLS)
+    def test_ac5_all_nine_hazards_render_their_symbol(hazard: str, symbol: str):
+        sms = _sms([_alert(hazard, 3)])
+        expected = "!AB" if hazard == "access_ban" else f"!{symbol}:M"
+>       assert expected in sms, (
+            f"Gefahrenart {hazard} muss als {expected!r} erscheinen: {sms!r}"
+        )
+E       AssertionError: Gefahrenart avalanche muss als '!AW:M' erscheinen: 'E5: N18 D18/18 R- PR- W- G- TH:- TH+:- !AVA:M@14'
+E       assert '!AW:M' in 'E5: N18 D18/18 R- PR- W- G- TH:- TH+:- !AVA:M@14'
+
+tests/tdd/test_sms_official_alert_tokens.py:310: AssertionError
+_____________________ test_ac5_catalog_matches_spec_table ______________________
+
+    def test_ac5_catalog_matches_spec_table():
+        """Der Katalog `hazard_symbols.py` ist die einzige Quelle — und traegt
+        exakt die 9 Paare der Spec-Tabelle."""
+        from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
+>       assert dict(SPEC_SYMBOLS) == dict(HAZARD_SMS_SYMBOLS), (
+            "Katalog weicht von der Spec-Tabelle (Abschnitt 1) ab: "
+            f"{dict(HAZARD_SMS_SYMBOLS)!r}"
+        )
+E       AssertionError: Katalog weicht von der Spec-Tabelle (Abschnitt 1) ab: {'thunderstorm': 'TS', 'flood': 'FO', 'rain': 'RA', 'wind_gust': 'WG', 'snow': 'SN', 'black_ice': 'IC', 'extreme_heat': 'HT', 'extreme_cold': 'CD', 'wildfire_risk': 'FR', 'access_ban': 'AB'}
+E       assert {'access_ban'...d': 'CD', ...} == {'access_ban'...t': 'HT', ...}
+E         
+E         Omitting 10 identical items, use -vv to show
+E         Left contains 1 more item:
+E         {'avalanche': 'AW'}
+E         Use -v to get more diff
+
+tests/tdd/test_sms_official_alert_tokens.py:320: AssertionError
+__________ test_ac14_both_sms_paths_use_the_same_symbol[avalanche-AW] __________
+
+hazard = 'avalanche', symbol = 'AW'
+
+    @pytest.mark.parametrize("hazard,symbol", SPEC_SYMBOLS)
+    def test_ac14_both_sms_paths_use_the_same_symbol(hazard: str, symbol: str):
+        from output.renderers.alert.official_alerts import render_official_alert_sms
+        from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
+    
+>       catalog_symbol = HAZARD_SMS_SYMBOLS[hazard]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'avalanche'
+
+tests/tdd/test_sms_official_alert_tokens.py:454: KeyError
+___________ test_1430_ac4_lawinenwarnung_steht_als_aw_im_warn_block ____________
+
+    def test_1430_ac4_lawinenwarnung_steht_als_aw_im_warn_block():
+>       alert = _lawinen_alert_aus_aufzeichnung()
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_official_alert_tokens.py:642: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _lawinen_alert_aus_aufzeichnung() -> OfficialAlert:
+        """Echte aufgezeichnete CAP-Datei (Typ 9, Stufe 3) durch die echte
+        Eingangsfunktion -- kein von Hand gebauter Alert."""
+        from pathlib import Path
+    
+        from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+    
+        cap = (Path(__file__).resolve().parent.parent / "fixtures" / "meteoalarm"
+               / "cap_avalanche_plus_heat.xml").read_text(encoding="utf-8")
+        lawinen = [a for a in _extract_alerts_from_cap(cap) if a.hazard == "avalanche"]
+>       assert lawinen, "Fixture liefert keine avalanche-Warnung (Mapper kennt Typ 9 nicht)"
+E       AssertionError: Fixture liefert keine avalanche-Warnung (Mapper kennt Typ 9 nicht)
+E       assert []
+
+tests/tdd/test_sms_official_alert_tokens.py:637: AssertionError
+___________ test_1430_ac8_schnee_steht_vor_lawine_bei_gleicher_stufe ___________
+
+    def test_1430_ac8_schnee_steht_vor_lawine_bei_gleicher_stufe():
+        sms = _sms([_alert("avalanche", 3), _alert("snow", 3)])
+>       assert "SN:M" in sms and "AW:M" in sms, f"beide Warnungen erwartet: {sms!r}"
+E       AssertionError: beide Warnungen erwartet: 'E5: N18 D18/18 R- PR- W- G- TH:- TH+:- !SN:M@14 AVA:M@14'
+E       assert ('SN:M' in 'E5: N18 D18/18 R- PR- W- G- TH:- TH+:- !SN:M@14 AVA:M@14' and 'AW:M' in 'E5: N18 D18/18 R- PR- W- G- TH:- TH+:- !SN:M@14 AVA:M@14')
+
+tests/tdd/test_sms_official_alert_tokens.py:649: AssertionError
+__________________ test_1430_lawine_hat_kuerzel_aw_und_nie_av __________________
+
+    def test_1430_lawine_hat_kuerzel_aw_und_nie_av():
+        from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS, sms_symbol_for
+    
+>       assert HAZARD_SMS_SYMBOLS.get("avalanche") == "AW"
+E       AssertionError: assert None == 'AW'
+E        +  where None = <built-in method get of dict object at 0x77f76e636180>('avalanche')
+E        +    where <built-in method get of dict object at 0x77f76e636180> = {'access_ban': 'AB', 'black_ice': 'IC', 'extreme_cold': 'CD', 'extreme_heat': 'HT', ...}.get
+
+tests/tdd/test_hazard_symbols.py:62: AssertionError
+_________ test_1430_aw_kollidiert_mit_keinem_wetter_oder_warn_kuerzel __________
+
+    def test_1430_aw_kollidiert_mit_keinem_wetter_oder_warn_kuerzel():
+        from app.metric_catalog import _METRICS
+        from output.tokens.builder import STD_SYMBOLS
+        from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
+    
+>       assert HAZARD_SMS_SYMBOLS.get("avalanche") == "AW", "Katalogeintrag fehlt"
+E       AssertionError: Katalogeintrag fehlt
+E       assert None == 'AW'
+E        +  where None = <built-in method get of dict object at 0x77f76e636180>('avalanche')
+E        +    where <built-in method get of dict object at 0x77f76e636180> = {'access_ban': 'AB', 'black_ice': 'IC', 'extreme_cold': 'CD', 'extreme_heat': 'HT', ...}.get
+
+tests/tdd/test_hazard_symbols.py:73: AssertionError
+______________ test_1430_lawine_sortiert_unmittelbar_nach_schnee _______________
+
+    def test_1430_lawine_sortiert_unmittelbar_nach_schnee():
+        from output.tokens.hazard_symbols import HAZARD_ORDER
+    
+>       assert HAZARD_ORDER["avalanche"] == HAZARD_ORDER["snow"] + 1
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'avalanche'
+
+tests/tdd/test_hazard_symbols.py:83: KeyError
+____________ test_1430_codes_und_kuerzel_nennen_aw_getrennt_von_av _____________
+
+    def test_1430_codes_und_kuerzel_nennen_aw_getrennt_von_av():
+        from output.tokens.hazard_symbols import HAZARD_BEDEUTUNG_DE, HAZARD_BEDEUTUNG_EN
+        from services.trip_command_processor import codes_text
+    
+>       assert HAZARD_BEDEUTUNG_DE.get("avalanche") == "Lawine"
+E       AssertionError: assert None == 'Lawine'
+E        +  where None = <built-in method get of dict object at 0x77f76e636740>('avalanche')
+E        +    where <built-in method get of dict object at 0x77f76e636740> = {'access_ban': 'Sperrung', 'black_ice': 'Glätte', 'extreme_cold': 'Kälte', 'extreme_heat': 'Hitze', ...}.get
+
+tests/tdd/test_hazard_symbols.py:90: AssertionError
+___________ test_1430_lawine_hat_deutsche_bezeichnung_statt_rohlabel ___________
+
+    def test_1430_lawine_hat_deutsche_bezeichnung_statt_rohlabel():
+        from output.renderers.alert.official_alerts import _hazard_display
+    
+        typ, _sms = _hazard_display(_lawine_alert())
+>       assert typ == "Lawine", f"erhalten {typ!r}"
+E       AssertionError: erhalten '9; avalanche'
+E       assert '9; avalanche' == 'Lawine'
+E         
+E         - Lawine
+E         + 9; avalanche
+
+tests/tdd/test_official_alert_hazard_labels.py:113: AssertionError
+_____________ test_1430_lawine_kurzchip_text_und_schwere_je_stufe ______________
+
+    def test_1430_lawine_kurzchip_text_und_schwere_je_stufe():
+        from output.renderers.email.compare_html import _warn_short
+    
+        erwartet = {2: "caution", 3: "warn", 4: "danger"}
+        for level, sev in erwartet.items():
+            text, severity = _warn_short(_lawine_alert(level))
+>           assert text == "Lawine", f"Stufe {level}: Chip-Text {text!r}"
+E           AssertionError: Stufe 2: Chip-Text '9; avalanche'
+E           assert '9; avalanche' == 'Lawine'
+E             
+E             - Lawine
+E             + 9; avalanche
+
+tests/tdd/test_official_alert_hazard_labels.py:122: AssertionError
+________ test_1430_lawinenwarnung_erscheint_als_lawine_mit_stufe[4-ROT] ________
+
+level = 4, level_word = 'ROT'
+
+    @pytest.mark.parametrize(("level", "level_word"), [(4, "ROT"), (3, "ORANGE")])
+    def test_1430_lawinenwarnung_erscheint_als_lawine_mit_stufe(level: int, level_word: str):
+        texts = _bubbles([_alert("avalanche", level)])
+        hits = _warn_bubbles(texts, "Lawine")
+>       assert hits, f"Keine Bubble nennt die Lawinenwarnung (Stufe {level}): {texts!r}"
+E       AssertionError: Keine Bubble nennt die Lawinenwarnung (Stufe 4): ['GR20 Warn-Test\nMorning 15.07.2026', '<b>Amtliche Warnung · Segment 1 · Warnstufe ROT (3/3)</b>\n🔴 avalanche · Mi 15.07. · 14:00–18:00\nMeteoAlarm', 'Kurzübersicht\nT 18.0\nR 0.0\nW 5\nTH kein\n\n⚡ kein', 'Segment 1 · 0.0–0.0 km · ↑800 m ↓600 m\n<pre>\nZt T    R   W TH\n08 12.0 0.0 5 kein\n09 14.0 0.0 5 kein\n</pre>', 'Aktionen']
+E       assert []
+
+tests/tdd/test_telegram_official_alert_bubble.py:351: AssertionError
+______ test_1430_lawinenwarnung_erscheint_als_lawine_mit_stufe[3-ORANGE] _______
+
+level = 3, level_word = 'ORANGE'
+
+    @pytest.mark.parametrize(("level", "level_word"), [(4, "ROT"), (3, "ORANGE")])
+    def test_1430_lawinenwarnung_erscheint_als_lawine_mit_stufe(level: int, level_word: str):
+        texts = _bubbles([_alert("avalanche", level)])
+        hits = _warn_bubbles(texts, "Lawine")
+>       assert hits, f"Keine Bubble nennt die Lawinenwarnung (Stufe {level}): {texts!r}"
+E       AssertionError: Keine Bubble nennt die Lawinenwarnung (Stufe 3): ['GR20 Warn-Test\nMorning 15.07.2026', '<b>Amtliche Warnung · Segment 1 · Warnstufe ORANGE (2/3)</b>\n🟠 avalanche · Mi 15.07. · 14:00–18:00\nMeteoAlarm', 'Kurzübersicht\nT 18.0\nR 0.0\nW 5\nTH kein\n\n⚡ kein', 'Segment 1 · 0.0–0.0 km · ↑800 m ↓600 m\n<pre>\nZt T    R   W TH\n08 12.0 0.0 5 kein\n09 14.0 0.0 5 kein\n</pre>', 'Aktionen']
+E       assert []
+
+tests/tdd/test_telegram_official_alert_bubble.py:351: AssertionError
+______ test_1430_gelbe_lawinenwarnung_folgt_dem_bestehenden_stufenfilter _______
+
+    def test_1430_gelbe_lawinenwarnung_folgt_dem_bestehenden_stufenfilter():
+        """Lawine verhaelt sich wie jede andere Gefahrenart (Startwert 'gering',
+        #1461 S3b-2a): gelb erzeugt dieselbe Bubble wie gelber Starkregen."""
+        regen = _warn_bubbles(_bubbles([_alert("rain", 2)]), "Starkregen")
+        lawine = _warn_bubbles(_bubbles([_alert("avalanche", 2)]), "Lawine")
+>       assert bool(lawine) == bool(regen), (
+            f"Lawine gelb weicht vom Filter der anderen Gefahrenarten ab: {lawine!r} / {regen!r}"
+        )
+E       AssertionError: Lawine gelb weicht vom Filter der anderen Gefahrenarten ab: [] / ['<b>Amtliche Warnung · Segment 1 · Warnstufe GELB (1/3)</b>\n🟡 Starkregen · Mi 15.07. · 14:00–18:00\nMeteoAlarm']
+E       assert False == True
+E        +  where False = bool([])
+E        +  and   True = bool(['<b>Amtliche Warnung · Segment 1 · Warnstufe GELB (1/3)</b>\n🟡 Starkregen · Mi 15.07. · 14:00–18:00\nMeteoAlarm'])
+
+tests/tdd/test_telegram_official_alert_bubble.py:363: AssertionError
+____________ test_ac5_standalone_sms_traegt_aw_und_stufe_im_budget _____________
+
+    def test_ac5_standalone_sms_traegt_aw_und_stufe_im_budget():
+        from output.renderers.alert.official_alerts import render_official_alert_sms
+    
+>       sms = render_official_alert_sms([_notice(_lawine())], tz=_TZ)
+                                                 ^^^^^^^^^
+
+tests/tdd/test_avalanche_official_alert_channels.py:34: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _lawine() -> OfficialAlert:
+        from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+    
+        alerts = _extract_alerts_from_cap(_FIXTURE.read_text(encoding="utf-8"))
+        lawinen = [a for a in alerts if a.hazard == "avalanche"]
+>       assert lawinen, "Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung"
+E       AssertionError: Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung
+E       assert []
+
+tests/tdd/test_avalanche_official_alert_channels.py:27: AssertionError
+_______________ test_ac5_premium_sms_budget_traegt_aw_und_stufe ________________
+
+    def test_ac5_premium_sms_budget_traegt_aw_und_stufe():
+        from output.renderers.alert.official_alerts import render_official_alert_sms
+    
+>       text = render_official_alert_sms([_notice(_lawine())], limit=_PREMIUM_MAX_CHARS, tz=_TZ)
+                                                  ^^^^^^^^^
+
+tests/tdd/test_avalanche_official_alert_channels.py:42: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _lawine() -> OfficialAlert:
+        from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+    
+        alerts = _extract_alerts_from_cap(_FIXTURE.read_text(encoding="utf-8"))
+        lawinen = [a for a in alerts if a.hazard == "avalanche"]
+>       assert lawinen, "Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung"
+E       AssertionError: Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung
+E       assert []
+
+tests/tdd/test_avalanche_official_alert_channels.py:27: AssertionError
+_________ test_ac5_trip_sms_und_standalone_sms_nutzen_dasselbe_kuerzel _________
+
+    def test_ac5_trip_sms_und_standalone_sms_nutzen_dasselbe_kuerzel():
+        from output.renderers.alert.official_alerts import render_official_alert_sms
+    
+>       alert = _lawine()
+                ^^^^^^^^^
+
+tests/tdd/test_avalanche_official_alert_channels.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _lawine() -> OfficialAlert:
+        from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+    
+        alerts = _extract_alerts_from_cap(_FIXTURE.read_text(encoding="utf-8"))
+        lawinen = [a for a in alerts if a.hazard == "avalanche"]
+>       assert lawinen, "Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung"
+E       AssertionError: Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung
+E       assert []
+
+tests/tdd/test_avalanche_official_alert_channels.py:27: AssertionError
+_________ test_ac6_telegram_alarm_nennt_lawine_mit_stufe_statt_rohtext _________
+
+    def test_ac6_telegram_alarm_nennt_lawine_mit_stufe_statt_rohtext():
+        from output.renderers.alert.official_alerts import render_official_alert_telegram
+    
+        text = render_official_alert_telegram(
+>           [_notice(_lawine())], prefix="Etappe 5", source_label="MeteoAlarm", tz=_TZ,
+                     ^^^^^^^^^
+        )
+
+tests/tdd/test_avalanche_official_alert_channels.py:61: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _lawine() -> OfficialAlert:
+        from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+    
+        alerts = _extract_alerts_from_cap(_FIXTURE.read_text(encoding="utf-8"))
+        lawinen = [a for a in alerts if a.hazard == "avalanche"]
+>       assert lawinen, "Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung"
+E       AssertionError: Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung
+E       assert []
+
+tests/tdd/test_avalanche_official_alert_channels.py:27: AssertionError
+__________________ test_ac7_trip_mail_warnkasten_nennt_lawine __________________
+
+    def test_ac7_trip_mail_warnkasten_nennt_lawine():
+        from output.renderers.alert.official_alerts import render_warn_block
+    
+        html = render_warn_block(
+>           [_notice(_lawine())], variant="embedded", source_label="MeteoAlarm",
+                     ^^^^^^^^^
+        )
+
+tests/tdd/test_avalanche_official_alert_channels.py:72: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _lawine() -> OfficialAlert:
+        from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+    
+        alerts = _extract_alerts_from_cap(_FIXTURE.read_text(encoding="utf-8"))
+        lawinen = [a for a in alerts if a.hazard == "avalanche"]
+>       assert lawinen, "Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung"
+E       AssertionError: Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung
+E       assert []
+
+tests/tdd/test_avalanche_official_alert_channels.py:27: AssertionError
+____________ test_ac7_ortsvergleich_chip_zeigt_lawine_nicht_rohtext ____________
+
+    def test_ac7_ortsvergleich_chip_zeigt_lawine_nicht_rohtext():
+        from output.renderers.email.compare_html import _warn_short
+    
+>       alert = _lawine()
+                ^^^^^^^^^
+
+tests/tdd/test_avalanche_official_alert_channels.py:80: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _lawine() -> OfficialAlert:
+        from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+    
+        alerts = _extract_alerts_from_cap(_FIXTURE.read_text(encoding="utf-8"))
+        lawinen = [a for a in alerts if a.hazard == "avalanche"]
+>       assert lawinen, "Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung"
+E       AssertionError: Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung
+E       assert []
+
+tests/tdd/test_avalanche_official_alert_channels.py:27: AssertionError
+____________ test_ac9_nur_der_nutzer_mit_lawinenwarnung_bekommt_aw _____________
+
+    def test_ac9_nur_der_nutzer_mit_lawinenwarnung_bekommt_aw():
+>       sms_a = _sms([_lawine()])
+                      ^^^^^^^^^
+
+tests/tdd/test_avalanche_official_alert_channels.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _lawine() -> OfficialAlert:
+        from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+    
+        alerts = _extract_alerts_from_cap(_FIXTURE.read_text(encoding="utf-8"))
+        lawinen = [a for a in alerts if a.hazard == "avalanche"]
+>       assert lawinen, "Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung"
+E       AssertionError: Mapper liefert aus der aufgezeichneten Typ-9-Datei keine Lawinenwarnung
+E       assert []
+
+tests/tdd/test_avalanche_official_alert_channels.py:27: AssertionError
+____________ test_1430_sms_format_nennt_lawine_aw_und_grenzt_av_ab _____________
+
+    def test_1430_sms_format_nennt_lawine_aw_und_grenzt_av_ab():  # doc-compliance-test
+        text = _SMS_FORMAT.read_text(encoding="utf-8")
+>       assert "avalanche | AW | Lawine" in text.replace("`", ""), (
+            "Tabellenzeile 'avalanche | AW | Lawine' fehlt in sms_format.md §3.4c"
+        )
+E       AssertionError: Tabellenzeile 'avalanche | AW | Lawine' fehlt in sms_format.md §3.4c
+E       assert 'avalanche | AW | Lawine' in '---\nentity_id: sms_format\ntype: reference\nversion: "2.34"\nstatus: active\ncreated: 2025-12-27\nupdated: 2026-10-0...sion.md §5 (Wintersport-Tokens)\n  - docs/reference/renderer_email_spec.md §2 (Token line is single source of truth)\n'
+E        +  where '---\nentity_id: sms_format\ntype: reference\nversion: "2.34"\nstatus: active\ncreated: 2025-12-27\nupdated: 2026-10-0...sion.md §5 (Wintersport-Tokens)\n  - docs/reference/renderer_email_spec.md §2 (Token line is single source of truth)\n' = <built-in method replace of str object at 0x29ed3bf0>('`', '')
+E        +    where <built-in method replace of str object at 0x29ed3bf0> = '---\nentity_id: sms_format\ntype: reference\nversion: "2.34"\nstatus: active\ncreated: 2025-12-27\nupdated: 2026-10-0...n.md` §5 (Wintersport-Tokens)\n  - `docs/reference/renderer_email_spec.md` §2 (Token line is single source of truth)\n'.replace
+
+tests/tdd/test_hazard_symbol_catalog_docs.py:68: AssertionError
+______ test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe _______
+
+    def test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe():
+        """GIVEN der (abgeleitete) DE-Feed fuehrt fuer Garmisch-Partenkirchen
+        (DE195 / 109180000) einen Eintrag ``9; avalanche`` / ``3; orange; Severe``
+        (Cache-Vorbelegung wie die uebrigen DE-Tests), WHEN die amtlichen
+        Warnungen ueber MeteoAlarmFeedSource("DE") ermittelt werden, THEN
+        erscheint die Warnung mit hazard == "avalanche" und Stufe 3."""
+        _assert_pruefling_aus_diesem_baum()
+        from services.official_alerts import get_official_alerts_with_status
+        from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
+    
+        feed = json.loads(
+            (_REPO_ROOT / "tests" / "fixtures" / "meteoalarm" / "feed_avalanche_type9.json")
+            .read_text(encoding="utf-8")
+        )["DE"]
+        _feed_vorbelegen("DE", feed)
+        de = MeteoAlarmFeedSource("DE")
+    
+        with _nur_quellen(de):
+            alerts, unavailable = get_official_alerts_with_status(*GARMISCH, now=TEST_NOW_BAYERN)
+    
+        assert unavailable is False
+>       assert any(a.hazard == "avalanche" and a.level == 3 for a in alerts), (
+            f"Typ 9 muss als hazard 'avalanche' mit Stufe 3 erscheinen. Erhalten: {alerts}"
+        )
+E       AssertionError: Typ 9 muss als hazard 'avalanche' mit Stufe 3 erscheinen. Erhalten: []
+E       assert False
+E        +  where False = any(<generator object test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe.<locals>.<genexpr> at 0x77f76e540930>)
+
+tests/tdd/test_meteoalarm_feed_deutschland.py:862: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[thunderstorm-TS]
+PASSED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[flood-FO]
+PASSED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[rain-RA]
+PASSED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[wind_gust-WG]
+PASSED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[snow-SN]
+PASSED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[black_ice-IC]
+PASSED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[extreme_heat-HT]
+PASSED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[extreme_cold-CD]
+PASSED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[wildfire_risk-FR]
+PASSED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[access_ban-AB]
+FAILED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_all_nine_hazards_render_their_symbol[avalanche-AW]
+FAILED tests/tdd/test_sms_official_alert_tokens.py::test_ac5_catalog_matches_spec_table
+FAILED tests/tdd/test_sms_official_alert_tokens.py::test_ac14_both_sms_paths_use_the_same_symbol[avalanche-AW]
+FAILED tests/tdd/test_sms_official_alert_tokens.py::test_1430_ac4_lawinenwarnung_steht_als_aw_im_warn_block
+FAILED tests/tdd/test_sms_official_alert_tokens.py::test_1430_ac8_schnee_steht_vor_lawine_bei_gleicher_stufe
+FAILED tests/tdd/test_hazard_symbols.py::test_1430_lawine_hat_kuerzel_aw_und_nie_av
+FAILED tests/tdd/test_hazard_symbols.py::test_1430_aw_kollidiert_mit_keinem_wetter_oder_warn_kuerzel
+FAILED tests/tdd/test_hazard_symbols.py::test_1430_lawine_sortiert_unmittelbar_nach_schnee
+FAILED tests/tdd/test_hazard_symbols.py::test_1430_codes_und_kuerzel_nennen_aw_getrennt_von_av
+FAILED tests/tdd/test_official_alert_hazard_labels.py::test_1430_lawine_hat_deutsche_bezeichnung_statt_rohlabel
+FAILED tests/tdd/test_official_alert_hazard_labels.py::test_1430_lawine_kurzchip_text_und_schwere_je_stufe
+FAILED tests/tdd/test_telegram_official_alert_bubble.py::test_1430_lawinenwarnung_erscheint_als_lawine_mit_stufe[4-ROT]
+FAILED tests/tdd/test_telegram_official_alert_bubble.py::test_1430_lawinenwarnung_erscheint_als_lawine_mit_stufe[3-ORANGE]
+FAILED tests/tdd/test_telegram_official_alert_bubble.py::test_1430_gelbe_lawinenwarnung_folgt_dem_bestehenden_stufenfilter
+FAILED tests/tdd/test_avalanche_official_alert_channels.py::test_ac5_standalone_sms_traegt_aw_und_stufe_im_budget
+FAILED tests/tdd/test_avalanche_official_alert_channels.py::test_ac5_premium_sms_budget_traegt_aw_und_stufe
+FAILED tests/tdd/test_avalanche_official_alert_channels.py::test_ac5_trip_sms_und_standalone_sms_nutzen_dasselbe_kuerzel
+FAILED tests/tdd/test_avalanche_official_alert_channels.py::test_ac6_telegram_alarm_nennt_lawine_mit_stufe_statt_rohtext
+FAILED tests/tdd/test_avalanche_official_alert_channels.py::test_ac7_trip_mail_warnkasten_nennt_lawine
+FAILED tests/tdd/test_avalanche_official_alert_channels.py::test_ac7_ortsvergleich_chip_zeigt_lawine_nicht_rohtext
+FAILED tests/tdd/test_avalanche_official_alert_channels.py::test_ac9_nur_der_nutzer_mit_lawinenwarnung_bekommt_aw
+FAILED tests/tdd/test_hazard_symbol_catalog_docs.py::test_1430_sms_format_nennt_lawine_aw_und_grenzt_av_ab
+FAILED tests/tdd/test_meteoalarm_feed_deutschland.py::test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe
+================ 23 failed, 10 passed, 139 deselected in 2.40s =================
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/rippling-drifting-treasure
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 117 items / 113 deselected / 4 selected
+
+tests/tdd/test_meteoalarm_source.py FF                                   [ 50%]
+tests/tdd/test_meteoalarm_feed_italien.py F                              [ 75%]
+tests/tdd/test_meteoalarm_feed_oesterreich.py F                          [100%]
+
+=================================== FAILURES ===================================
+__ test_ac4_lawine_typ9_wird_zur_gefahrenart_avalanche_hitze_bleibt_erhalten ___
+
+    def test_ac4_lawine_typ9_wird_zur_gefahrenart_avalanche_hitze_bleibt_erhalten():
+        """#1430 AC-1: GIVEN die aufgezeichnete CAP-Datei mit Lawinenwarnung
+        (awareness_type 9, Stufe 3 orange) UND Hitzewarnung (Typ 5, Stufe 2),
+        WHEN sie ueber den CAP-Weg eingelesen wird, THEN entstehen ZWEI Warnungen:
+        `avalanche` mit Stufe 3 (nicht umgerechnet) und die unveraenderte Hitze."""
+        from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+    
+        cap_text = _read_fixture("cap_avalanche_plus_heat.xml")
+        alerts = _extract_alerts_from_cap(cap_text)
+    
+        by_hazard = {a.hazard: a for a in alerts}
+>       assert len(alerts) == 2, (
+            f"erwartet Lawine + Hitze (2 Warnungen), erhalten {len(alerts)}: {alerts}"
+        )
+E       AssertionError: erwartet Lawine + Hitze (2 Warnungen), erhalten 1: [OfficialAlert(source='meteoalarm', hazard='extreme_heat', level=2, label='Hitzewarnung', valid_from=datetime.datetime(2026, 7, 15, 0, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200))), valid_to=datetime.datetime(2026, 7, 15, 23, 59, 59, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200))), url=None, region_label='Villach (Stadt)', dedup_id=None, capture_id=None)]
+E       assert 1 == 2
+E        +  where 1 = len([OfficialAlert(source='meteoalarm', hazard='extreme_heat', level=2, label='Hitzewarnung', valid_from=datetime.datetime...timezone(datetime.timedelta(seconds=7200))), url=None, region_label='Villach (Stadt)', dedup_id=None, capture_id=None)])
+
+tests/tdd/test_meteoalarm_source.py:343: AssertionError
+________ test_ac3_verworfene_typen_hinterlassen_debug_zeile_typ9_bleibt ________
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7ccd77b18a70>
+
+    def test_ac3_verworfene_typen_hinterlassen_debug_zeile_typ9_bleibt(caplog):
+        """#1430 AC-3: GIVEN Eintraege der Typen 4 (Nebel), 7 (Kueste), 99
+        (unbekannt) neben einer Typ-9-Warnung, WHEN sie durch die gemeinsame
+        Mapper-Stelle laufen, THEN bleibt genau die Typ-9-Warnung uebrig und das
+        Log (DEBUG) nennt je Typ Nummer und Stufe; Nebel/Kueste mit dem Vermerk
+        'bewusst nicht unterstuetzt'."""
+        import logging
+    
+        from services.official_alerts.meteoalarm import _group_and_map_info_entries
+    
+        def _entry(type_raw: str, level_raw: str) -> dict:
+            return {
+                "type_raw": type_raw, "level_raw": level_raw,
+                "onset": "2026-07-15T00:00:00+02:00", "expires": "2026-07-15T23:59:59+02:00",
+                "area_desc": "Villach (Stadt)", "lang": "de-DE",
+                "event": f"Typ {type_raw}", "headline": f"Typ {type_raw}",
+            }
+    
+        entries = [
+            _entry("4; fog", "3; orange; Severe"),
+            _entry("7; coastal-event", "2; yellow; Moderate"),
+            _entry("99; unbekannt", "4; red; Extreme"),
+            _entry("9; avalanche", "3; orange; Severe"),
+        ]
+        with caplog.at_level(logging.DEBUG, logger="meteoalarm"):
+            alerts = _group_and_map_info_entries(entries)
+    
+>       assert [a.hazard for a in alerts] == ["avalanche"], (
+            f"nur die Typ-9-Warnung darf uebrig bleiben, erhalten {alerts}"
+        )
+E       AssertionError: nur die Typ-9-Warnung darf uebrig bleiben, erhalten []
+E       assert [] == ['avalanche']
+E         
+E         Right contains one more item: 'avalanche'
+E         Use -v to get more diff
+
+tests/tdd/test_meteoalarm_source.py:377: AssertionError
+______ test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ccd77b18830>
+
+    def test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe(monkeypatch):
+        """GIVEN der (abgeleitete) IT-Feed fuehrt fuer Lazio (IT012) einen Eintrag
+        ``9; avalanche`` / ``3; orange; Severe``, WHEN die amtlichen Warnungen fuer
+        Rom ueber MeteoAlarmFeedSource("IT") ermittelt werden, THEN erscheint die
+        Warnung mit hazard == "avalanche" und der Stufe 3 des Eintrags."""
+        import services.official_alerts.base as oa_base
+        from services.official_alerts import get_official_alerts_with_status, meteoalarm_feed
+    
+        _assert_pruefling_aus_diesem_baum()
+        feed = json.loads(
+            (_REPO_ROOT / "tests" / "fixtures" / "meteoalarm" / "feed_avalanche_type9.json")
+            .read_text(encoding="utf-8")
+        )["IT"]
+        server = _JsonServer(feed)
+        backup = list(oa_base._REGISTERED_SOURCES)
+        oa_base._REGISTERED_SOURCES.clear()
+        try:
+            monkeypatch.setattr(meteoalarm_feed, "FEED_BASE_URL", f"http://127.0.0.1:{server.port}")
+            oa_base._REGISTERED_SOURCES.append(meteoalarm_feed.MeteoAlarmFeedSource("IT"))
+    
+            alerts, unavailable = get_official_alerts_with_status(*ROM, now=TEST_NOW)
+    
+            assert unavailable is False
+>           assert any(a.hazard == "avalanche" and a.level == 3 for a in alerts), (
+                f"Typ 9 muss als hazard 'avalanche' mit Stufe 3 erscheinen. Erhalten: {alerts}"
+            )
+E           AssertionError: Typ 9 muss als hazard 'avalanche' mit Stufe 3 erscheinen. Erhalten: []
+E           assert False
+E            +  where False = any(<generator object test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe.<locals>.<genexpr> at 0x7ccd77609970>)
+
+tests/tdd/test_meteoalarm_feed_italien.py:1300: AssertionError
+______ test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ccd799f7350>
+
+    def test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe(monkeypatch):
+        """GIVEN der (abgeleitete) AT-Feed fuehrt fuer AT707 (Lienz/Sillian) einen
+        Eintrag ``9; avalanche`` / ``3; orange; Severe``, WHEN die amtlichen
+        Warnungen fuer Sillian ueber MeteoAlarmFeedSource("AT") ermittelt werden,
+        THEN erscheint die Warnung mit hazard == "avalanche" und Stufe 3."""
+        import services.official_alerts.base as oa_base
+        from services.official_alerts import geosphere_warn, get_official_alerts_with_status, meteoalarm_feed
+    
+        _assert_pruefling_aus_diesem_baum()
+        feed = json.loads(
+            (_REPO_ROOT / "tests" / "fixtures" / "meteoalarm" / "feed_avalanche_type9.json")
+            .read_text(encoding="utf-8")
+        )["AT"]
+        zamg = _ZamgServer({_round4(*SILLIAN): _zamg_body(70728, "Sillian")})
+        feed_server = _JsonServer(feed)
+        backup = list(oa_base._REGISTERED_SOURCES)
+        oa_base._REGISTERED_SOURCES.clear()
+        try:
+            monkeypatch.setattr(geosphere_warn, "GEOSPHERE_WARN_URL", f"http://127.0.0.1:{zamg.port}")
+            monkeypatch.setattr(meteoalarm_feed, "FEED_BASE_URL", f"http://127.0.0.1:{feed_server.port}")
+            oa_base._REGISTERED_SOURCES.append(meteoalarm_feed.MeteoAlarmFeedSource("AT"))
+    
+            alerts, unavailable = get_official_alerts_with_status(*SILLIAN, now=TEST_NOW)
+    
+            assert unavailable is False
+>           assert any(a.hazard == "avalanche" and a.level == 3 for a in alerts), (
+                f"Typ 9 muss als hazard 'avalanche' mit Stufe 3 erscheinen. Erhalten: {alerts}"
+            )
+E           AssertionError: Typ 9 muss als hazard 'avalanche' mit Stufe 3 erscheinen. Erhalten: []
+E           assert False
+E            +  where False = any(<generator object test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe.<locals>.<genexpr> at 0x7ccd7760ae90>)
+
+tests/tdd/test_meteoalarm_feed_oesterreich.py:1309: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_meteoalarm_source.py::test_ac4_lawine_typ9_wird_zur_gefahrenart_avalanche_hitze_bleibt_erhalten
+FAILED tests/tdd/test_meteoalarm_source.py::test_ac3_verworfene_typen_hinterlassen_debug_zeile_typ9_bleibt
+FAILED tests/tdd/test_meteoalarm_feed_italien.py::test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe
+FAILED tests/tdd/test_meteoalarm_feed_oesterreich.py::test_ac2_avalanche_typ9_im_feed_wird_zur_lawinenwarnung_mit_stufe
+====================== 4 failed, 113 deselected in 1.98s =======================

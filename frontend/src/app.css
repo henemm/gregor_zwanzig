@@ -1,5 +1,47 @@
 @import "tailwindcss";
 
+/* Selbst ausgelieferte Schriften (Issue #2128, AC-5) -- vorher kamen sie per
+   <link> von fonts.googleapis.com. Beide Dateien sind die auf "latin"
+   beschnittenen VARIABLEN woff2-Fassungen von Google Fonts: je eine Datei deckt
+   die ganze wght-Achse ab, der Schnitt wird hier je @font-face festgelegt.
+   `font-display: swap` haelt den Text sofort lesbar (kein unsichtbarer Text).
+   Lizenz (SIL OFL 1.1): frontend/static/fonts/LICENSE.txt */
+@font-face {
+  font-family: 'Inter Tight'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/inter-tight-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter Tight'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/inter-tight-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter Tight'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/inter-tight-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter Tight'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/inter-tight-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/jetbrains-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/jetbrains-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/jetbrains-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* @property syntax="<color>" zwingt rgb()-Normalisierung in getComputedStyle (Issue #218) */
 @property --color-background { syntax: "<color>"; inherits: true; initial-value: rgb(246, 244, 238); }
 @property --color-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
@@ -137,6 +179,20 @@
     --g-paper-deep: #ecead9;  /* #576: tokens.css-Sync */
     --g-rule-soft: #e7e2d3;  /* #378: opak, ersetzt rgba(26,26,24,0.08) */
 
+    /* Schwebende Tabbar (iOS-27-Stil) — einzige Quelle fuer Geometrie und Glas.
+       Konsumenten: BottomNav.svelte, .mobile-scroll-pad, Toast-/SaveIndicator-Anker.
+       --g-nav-clearance = Oberkante der Leiste ab Viewport-Unterkante. */
+    --g-nav-h: 64px;
+    --g-nav-gap: 6px;          /* Abstand Leiste <-> Home-Indicator-Zone (tief = Daumen-erreichbar) */
+    --g-nav-inset: 16px;       /* seitlicher Rand */
+    --g-nav-konto-gap: 10px;   /* Luft zwischen Leiste und Konto-Kreis (Canvas „TabBar") */
+    --g-nav-glass: rgba(246, 244, 238, 0.86);   /* --g-paper mit 86 % Deckung: Lesbarkeit vor Glas (PO 2026-09-19) */
+    --g-nav-blur: 24px;
+    --g-nav-hairline: rgba(26, 26, 24, 0.10);
+    --g-nav-highlight: rgba(255, 255, 255, 0.65);
+    --g-nav-active: rgba(196, 90, 42, 0.12);    /* Kapsel des aktiven Items */
+    --g-nav-clearance: calc(var(--g-nav-h) + var(--g-nav-gap) + env(safe-area-inset-bottom));
+
     /* === Atomic-Design-Bridge (#369) — Sandbox-Token-Namen + -Werte, additiv.
        Damit 1:1 aus der Claude-Design-Sandbox uebernommene Bausteine pixeltreu rendern.
        Bestehende Tokens bleiben unveraendert. Mapping: docs/design-requests/issue_15_atomic_design/spec/TOKEN-MAPPING.md === */
@@ -187,19 +243,53 @@
   }
 }
 
-/* Issue #267 — Padding für Mobile-Content unter TopAppBar + über BottomNav.
+/* Issue #267 / Mobile-Shell S2 — Padding für Mobile-Content: oben unter der
+   Statusleiste, unten über der schwebenden BottomNav.
    Im utilities-Layer, damit Tailwind-Utilities mit gleicher Specificity
-   nicht das padding-bottom überschreiben. */
+   nicht das padding-bottom überschreiben. Oben gibt es keinen fixen Balken
+   mehr: der Inhalt beginnt unter der Safe-Area (env(safe-area-inset-top),
+   ≈54 px auf dem Gerät, 0 im Browser) plus einem Raster-Schritt Luft.
+   Unten: Leiste schwebt (--g-nav-clearance) plus ein Raster-Schritt, damit
+   die letzte Karte nicht unter dem Glas endet. */
 @layer utilities {
   .mobile-scroll-pad {
-    padding-top: 56px;
-    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    padding-top: calc(env(safe-area-inset-top) + var(--g-s-3));
+    padding-bottom: calc(var(--g-nav-clearance) + var(--g-s-4));
+  }
+  /* Anlege-Seiten blenden die BottomNav aus — unten bleibt nur die Safe-Area. */
+  @media (max-width: 899px) {
+    .mobile-scroll-pad.mobile-scroll-pad--ohne-nav {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
   }
   @media (min-width: 900px) {
     .mobile-scroll-pad {
       padding-top: 0;
       padding-bottom: 0;
     }
+  }
+}
+
+/* Issue #2131 / Mobile-Shell S2 — Offline-Bänder unter der Safe-Area.
+
+   Die Stand-Zeile (`#gz-stand`, app.html) und das Sperr-Band
+   (`[data-gz-offline-band]`, OfflineSperre.svelte) stehen beide AUSSERHALB von
+   <main> und sind damit die erste Zeile des Dokuments. Ohne fixen Balken gibt
+   es nichts mehr, was sie verdecken könnte — nur die Statusleiste des Geräts:
+   das erste Band trägt deshalb die Safe-Area selbst, und <main> gibt seinen
+   Safe-Area-Anteil im selben Fall ab, sonst entstünde der Abstand doppelt.
+
+   Bewusst ohne @layer: diese Regeln müssen die Utility `.mobile-scroll-pad`
+   schlagen, und ungeschichtete Deklarationen gehen geschichteten vor. */
+@media (max-width: 899px) {
+  body > #gz-stand:not([hidden]),
+  body > #gz-stand[hidden] + * [data-gz-offline-band] {
+    margin-top: env(safe-area-inset-top);
+  }
+
+  body:has(#gz-stand:not([hidden])) .mobile-scroll-pad,
+  body:has([data-gz-offline-band]) .mobile-scroll-pad {
+    padding-top: var(--g-s-3);
   }
 }
 
@@ -531,9 +621,55 @@
   color: var(--g-ink-muted);
 }
 
-/* iOS Safari: font-size >= 16px auf Focus-Elementen, verhindert Auto-Zoom (#272) */
-@media (max-width: 767px) {
+/* iOS Safari: font-size >= 16px auf Focus-Elementen, verhindert Auto-Zoom (#272).
+   #2601: auch im Querformat (844px) und auf jedem Touch-Gerät, nicht nur < 768px. */
+@media (max-width: 899px), (pointer: coarse) {
   input, select, textarea {
     font-size: 16px;
   }
+}
+
+/* #2601 Mobile-UX — Erreichbarkeit auf Touch-Geräten.
+   - Native Häkchen/Radios: 20px Optik, das umschließende Label trägt 44px.
+   - .g-link-tap: Textlink mit unsichtbar vergrößerter Trefferfläche (Padding
+     + negativer Rand), Layout bleibt unverändert.
+   - Fixe Hinweise (iOS-Install, Passkey) reservieren am Scroll-Ende Platz,
+     sonst liegen Footer-Links darunter; im flachen Querformat (< 500px Höhe)
+     entfällt der iOS-Hinweis ganz, er nähme sonst ein Drittel der Fläche. */
+@layer base {
+@media (max-width: 899px), (pointer: coarse) {
+  /* @layer base + :where() hält Schicht und Spezifität unten — jede Bausteinregel (z. B. 44px-Pills
+     der Tab-Leiste, Profil-Knopf) gewinnt; die Regeln hier sind nur der Boden. */
+  :where(input[type="checkbox"], input[type="radio"]) {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  :where(label:has(> input[type="checkbox"]), label:has(> input[type="radio"])) {
+    min-height: 44px;
+  }
+  [data-slot="btn"][data-size="sm"] { min-height: 36px; }
+  /* Alle übrigen Knöpfe und Textfelder im Inhalt: mindestens 36/40px hoch.
+     Ausgenommen: Btn-Atom (eigene Größen), Schalter, Icon-Knöpfe. */
+  :where(main button:not([data-slot="btn"]):not([role="switch"]):not([data-size^="icon"])) { min-height: 36px; }
+  :where(main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  main select) { min-height: 40px; }
+  :where([data-slot="segmented-item"]) { min-height: 36px; }
+  [data-testid="switch"] { position: relative; }
+  [data-testid="switch"]::after { content: ""; position: absolute; inset: -12px -8px; }
+}
+}
+.g-link-tap {
+  display: inline-block;
+  padding: 13px 12px;
+  margin: -13px -12px;
+}
+:root { --g-hint-h: 72px; }
+@media (max-width: 899px) {
+  body:has([data-testid="ios-install-hint"], [data-testid="passkey-angebot"]) .mobile-scroll-pad {
+    padding-bottom: calc(var(--g-nav-clearance) + var(--g-s-4) + var(--g-hint-h));
+  }
+}
+@media (max-height: 500px) {
+  [data-testid="ios-install-hint"] { display: none !important; }
 }

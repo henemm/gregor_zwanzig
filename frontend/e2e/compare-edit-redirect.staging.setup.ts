@@ -3,7 +3,7 @@ import { assertNotProdBaseURL } from './prodUrlGuard';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 // Staging-Auth für Epic #1273 Slice S3 (Compare-Edit-Route wird reiner Redirect).
-// Analog compare-hub-name-region-profil.staging.setup.ts: nginx-Basic-Auth
+// Analog hub-send-dialog-target.staging.setup.ts: nginx-Basic-Auth
 // (Validator-Creds) UND App-Login (gz_session-Cookie via GZ_AUTH_*) sind
 // getrennte Credential-Paare. Alle Tests dieser Slice teilen sich EINEN
 // storageState statt sich pro Test einzuloggen — sonst erschöpft die Suite das

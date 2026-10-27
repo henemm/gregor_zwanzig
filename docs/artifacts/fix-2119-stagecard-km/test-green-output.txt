@@ -1,0 +1,14 @@
+▶ #2119 Etappen-Kachel: GPX-Track-Distanz
+  ✔ AC-1: Desktop-Kachel zeigt Differenz der distance_from_start_km (17.5 km) (2.007911ms)
+  ✔ AC-2: mobile Kachel zeigt dieselbe Track-Distanz wie die Desktop-Kachel (4.335333ms)
+  ✔ AC-3: ohne Messwerte weiterhin Naeherungs-Distanz (beide Kacheln) (0.472231ms)
+  ✔ AC-3: unter 2 Wegpunkten keine km-Angabe (beide Kacheln) (0.40033ms)
+✔ #2119 Etappen-Kachel: GPX-Track-Distanz (8.048916ms)
+ℹ tests 4
+ℹ suites 1
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 785.959415

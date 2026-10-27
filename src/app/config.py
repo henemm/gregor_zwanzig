@@ -53,22 +53,33 @@ def _parse_learned_timestamp(raw: Any) -> Optional[datetime]:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def is_test_user_id(user_id: str, data_dir: str = "data") -> bool:
+def is_test_user_id(user_id: str, data_dir: str | None = None) -> bool:
     """Zentrales Test-User-Prädikat (Issue #1013 — eine Quelle statt zwei Konventionen).
 
-    True bei "test"/"tdd"-Substring (case-insensitive), dem Fixture-User tg-live-e2e
-    (ebenfalls case-insensitive, Adversary-Finding F002 Fix-Loop 1 -- vorher verglich
-    der Fixed-ID-Zweig gegen die UN-lowercased Originalvariable), oder wenn das Profil
-    (data_dir/users/<user_id>/user.json) is_test_user=True setzt (Adversary-Finding
-    F002 Runde 1 — Namens-Heuristik allein wird von neutral benannten Test-Usern mit
-    gesetztem Profil-Flag umgangen). Fail-soft: fehlt/kaputt die Profildatei,
-    entscheidet nur die Namens-Heuristik.
+    True ausschließlich für den Fixture-User tg-live-e2e (case-insensitive,
+    Adversary-Finding F002 Fix-Loop 1) oder wenn das Profil
+    (data_dir/users/<user_id>/user.json) is_test_user=True setzt. Die frühere
+    "test"/"tdd"-Substring-Heuristik ist ersatzlos entfallen (Issue #2152,
+    ADR-0072): sie traf echte Nutzer ("protester") und verfehlte Testkonten
+    mit neutralem Namen — Go-Pendant ``model.IsTestAccount``. Kein Fallback
+    auf den Namen, wenn das Feld fehlt.
+
+    ``data_dir=None`` liest unter der konfigurierten Datenwurzel
+    (``get_data_root()``: ``_DATA_ROOT`` > ``GZ_DATA_DIR`` > ``data``), nicht
+    unter einem literalen Pfad — respektiert die Testisolation (#1133/#1265).
+    Fail-soft: fehlt/kaputt die Profildatei, ist das Konto ein echter Nutzer.
     """
-    uid = user_id.lower()
-    if "test" in uid or "tdd" in uid or uid == "tg-live-e2e":
+    if user_id.lower() == "tg-live-e2e":
         return True
     try:
-        profile_path = Path(data_dir) / "users" / user_id / "user.json"
+        if data_dir is None:
+            # Lokaler Import: app.loader importiert app.config (Zirkularität).
+            from app.loader import get_data_root
+
+            root = get_data_root()
+        else:
+            root = Path(data_dir)
+        profile_path = root / "users" / user_id / "user.json"
         if profile_path.exists():
             profile = json.loads(profile_path.read_text(encoding="utf-8"))
             if profile.get("is_test_user") is True:
@@ -177,6 +188,31 @@ class Settings(BaseSettings):
     # Deployment environment (GZ_ENV)
     env: str = Field(default="production", description="Deployment environment (GZ_ENV)")
 
+    # Issue #2142 — gemeinsames Geheimnis Go-API -> Python-Core. Dieselbe
+    # Umgebungsvariable, die die Go-Seite als GZ_CORE_SHARED_SECRET liest;
+    # beide Prozesse lesen je Umgebung dieselbe .env, ein Abgleich entfaellt.
+    # Bewusst KEIN Fail-Fast hier (wie bei _resend_default_deny): Settings()
+    # wird auch von CLI und Tests gebaut, die den Core gar nicht ansprechen.
+    # Die Durchsetzung sitzt in der Middleware von api/main.py.
+    core_shared_secret: str = Field(
+        default="",
+        description="Gemeinsames Geheimnis Go -> Python-Core (env: GZ_CORE_SHARED_SECRET, #2142)",
+    )
+
+    # Issue #2159 — Basis-URL der Go-API fuer interne Aufrufe (Staging: :8091).
+    go_api_url: str = Field(
+        default="http://localhost:8090",
+        description="Basis-URL der Go-API (env: GZ_GO_API_URL, #2159)",
+    )
+
+    # Issue #2272 — oeffentliche Basis-URL fuer Nutzer-Links. Bewusst OHNE
+    # Default: ein fehlender Wert ist ein Konfigurationsfehler, ein Fallback
+    # auf die Produktionsadresse waere derselbe Bug mit Log-Zeile.
+    public_host: Optional[str] = Field(
+        default=None,
+        description="Oeffentliche Basis-URL fuer Nutzer-Links (env: GZ_PUBLIC_HOST, #2272)",
+    )
+
     # SMS settings (for sms channel)
     sms_gateway_url: str = Field(default="https://gateway.seven.io/api/sms", description="SMS gateway HTTP endpoint")
     seven_api_key: Optional[str] = Field(default=None, description="seven.io API key (env: GZ_SEVEN_API_KEY)")
@@ -200,6 +236,14 @@ class Settings(BaseSettings):
     premium_sms_reply_at: Optional[datetime] = Field(
         default=None,
         description="Zeitpunkt, zu dem die Rueckadresse gelernt wurde (30-Tage-Frist)",
+    )
+    email_verified_at: Optional[str] = Field(
+        default=None,
+        description="RFC3339 Verifizierungszeitpunkt der mail_to-Adresse (#2143) -- NUR aus user.json, analog premium_sms_reply_to: extra='ignore' (Zeile ~117) wuerde das Feld sonst beim Laden des Nutzerprofils stillschweigend verwerfen.",
+    )
+    mail_server_hostname: Optional[str] = Field(
+        default="mail.henemm.com",
+        description="Eigener Mailserver-Hostname fuer den authserv-id-Abgleich bei der SPF/DKIM-Pruefung eingehender Mails (#2143, env: GZ_MAIL_SERVER_HOSTNAME)",
     )
 
     # Telegram settings (for telegram channel via Bot API)
@@ -349,7 +393,8 @@ class Settings(BaseSettings):
 
     @staticmethod
     def _is_test_user(user_id: str) -> bool:
-        """Detect test user IDs. Thin wrapper — siehe is_test_user_id() (Issue #1013)."""
+        """Detect test user IDs. Thin wrapper — siehe is_test_user_id() (Issue #1013);
+        liest das Profilfeld unter der konfigurierten Datenwurzel (#2152)."""
         return is_test_user_id(user_id)
 
     def with_user_profile(self, user_id: str) -> "Settings":
@@ -372,22 +417,36 @@ class Settings(BaseSettings):
         # Issue #1265: get_data_dir() statt hartkodiertem "data/users/..." --
         # respektiert die pytest-Isolation (tests/conftest.py, #1133), sonst
         # liest dieser Read-Pfad am isolierten Test-User vorbei.
+        # Issue #1412 S4b: ohne lesbares Profil keine SMS-Nummer -- sonst bliebe
+        # die globale GZ_SMS_TO-Betreibernummer stehen (Cross-Tenant).
         profile_path = get_data_dir(user_id) / "user.json"
         if not profile_path.exists():
-            return base
+            return base.model_copy(update={"sms_to": None})
 
         try:
             profile = json.loads(profile_path.read_text())
         except (json.JSONDecodeError, OSError):
-            return base
+            return base.model_copy(update={"sms_to": None})
 
-        overrides = {}
-        if profile.get("mail_to"):
-            overrides["mail_to"] = profile["mail_to"]
-        if profile.get("telegram_chat_id") and not force_test:
-            overrides["telegram_chat_id"] = profile["telegram_chat_id"]
-        if profile.get("sms_to"):
-            overrides["sms_to"] = profile["sms_to"]
+        # Issue #2144: immer explizit setzen (auch auf None), statt nur bei
+        # vorhandenem Profilwert zu ueberschreiben -- sonst bleibt bei einem
+        # Nutzer ohne eigenen Empfaenger der globale .env-Fallback (Betreiber-
+        # Adresse) auf base/self stehen (Cross-Tenant-Zustellung).
+        # Issue #2406: Fail-closed-Wirkstelle. `sms_to` erreicht Settings NUR,
+        # wenn die Nummer bewiesen ist -- `sms_verified_number` muss mit ihr
+        # uebereinstimmen. Beide Seiten werden identisch getrimmt (AC-12): das
+        # Backfill-Skript kopiert einen Altbestand mit Randleerzeichen
+        # byteidentisch, ein asymmetrischer Vergleich spaerrte danach genau das
+        # Konto aus, das der Nachtrag schuetzen sollte.
+        sms_verified_number = (profile.get("sms_verified_number") or "").strip()
+        raw_sms_to = (profile.get("sms_to") or "").strip()
+        overrides = {
+            "mail_to": profile.get("mail_to") or None,
+            "sms_to": raw_sms_to if (sms_verified_number and sms_verified_number == raw_sms_to) else None,
+            "email_verified_at": profile.get("email_verified_at") or None,
+        }
+        if not force_test:
+            overrides["telegram_chat_id"] = profile.get("telegram_chat_id") or None
         # Issue #1676 S2a: gelernte Premium-SMS-Rueckadresse (S1 schreibt sie
         # hier hinein). Der Zeitstempel wird zu einem zeitzonenbehafteten
         # datetime aufgeloest — model_copy() unten umgeht die Feld-Validierung,
@@ -398,9 +457,6 @@ class Settings(BaseSettings):
         reply_at = _parse_learned_timestamp(profile.get("premium_sms_reply_at"))
         if reply_at is not None:
             overrides["premium_sms_reply_at"] = reply_at
-
-        if not overrides:
-            return base
 
         return base.model_copy(update=overrides)
 
@@ -428,6 +484,9 @@ class Settings(BaseSettings):
     _SENSITIVE_FIELDS = {
         "smtp_pass", "imap_pass", "test_smtp_pass", "test_imap_pass",
         "seven_api_key", "telegram_bot_token",
+        # Issue #2142: repr(settings) landet in Logzeilen — das gemeinsame
+        # Geheimnis darf dort nie im Klartext auftauchen.
+        "core_shared_secret",
         # Issue #1676: die gelernte Geraete-Rufnummer gehoert nach S1-Vorgabe
         # nur maskiert in Protokolle — repr(settings) landet in Logzeilen.
         "premium_sms_reply_to",
@@ -441,3 +500,20 @@ class Settings(BaseSettings):
             else:
                 fields.append(f"{name}={value!r}")
         return f"Settings({', '.join(fields)})"
+
+
+def resolve_public_host(settings: Settings) -> Optional[str]:
+    """Oeffentliche Basis-URL ohne trailing Slash — `None`, wenn nicht gesetzt.
+
+    Issue #2272: einzige Ableitungsquelle fuer alle Nutzer-Links des
+    Python-Core. Ein trailing Slash in GZ_PUBLIC_HOST erzeugte sonst
+    Doppel-Slashes in `resolve_public_url`.
+    """
+    value = settings.public_host
+    return value.rstrip("/") if value else None
+
+
+def resolve_public_url(settings: Settings, path: str) -> Optional[str]:
+    """Vollstaendige oeffentliche URL — `None`, wenn kein Host konfiguriert ist."""
+    host = resolve_public_host(settings)
+    return f"{host}{path}" if host else None

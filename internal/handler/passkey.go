@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -20,7 +20,10 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-var validUsernameRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+// validUsernameRe haengt an der kanonischen Quelle in internal/store
+// (Issue #2140) — ein zweites Regex-Literal koennte von der Pfad-Sperre
+// abdriften und Kennungen durchlassen, die der Store dann ablehnt.
+var validUsernameRe = store.ValidUserIDRe
 
 // Passkey/WebAuthn handlers — Issue #450 V1 Add-on.
 //
@@ -202,7 +205,7 @@ func PasskeyLoginBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challen
 // assertion via go-webauthn, persists the updated SignCount/LastUsedAt on the
 // matched credential, and sets a session cookie with the same shape as the
 // classic Username/Password login flow.
-func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret string) http.HandlerFunc {
+func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret, publicHost string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Cap the body size to prevent memory exhaustion (F004).
 		r.Body = http.MaxBytesReader(w, r.Body, maxWebAuthnBodyBytes)
@@ -253,17 +256,9 @@ func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challe
 			return
 		}
 
-		token := middleware.SignSession(entry.UserID, secret)
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400,
-			Secure:   secure,
-		})
+		if !issueSession(w, r, s, entry.UserID, secret, publicHost) {
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"id": entry.UserID})
@@ -304,7 +299,7 @@ func PasskeyLoginDiscoverableBeginHandler(wa *webauthn.WebAuthn, cs *ChallengeSt
 // The browser supplies the user identity via the assertion's userHandle; we look
 // up the user via that handle and validate the signature against their stored
 // credentials. Issue #467 — V3 Add-on.
-func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret string) http.HandlerFunc {
+func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, secret, publicHost string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Cap body size — same as V1 (F004).
 		r.Body = http.MaxBytesReader(w, r.Body, maxWebAuthnBodyBytes)
@@ -362,17 +357,9 @@ func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn
 		}
 
 		userID := mu.WebAuthnName()
-		token := middleware.SignSession(userID, secret)
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400,
-			Secure:   secure,
-		})
+		if !issueSession(w, r, s, userID, secret, publicHost) {
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"id": userID})
@@ -488,8 +475,25 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 			return
 		}
 
+		// Issue #2147 Scheibe B1 (AC-5): Belegt-Pruefung vor dem Ablegen im
+		// ChallengeStore — kein Lock hier, die endgueltige Pruefung passiert
+		// unter Lock im Finish-Schritt (AC-6).
+		taken, err := s.IsAddressTakenByOtherAccount(req.Email, "")
+		if err != nil {
+			log.Printf("passkey register public begin: address uniqueness check failed: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "internal_error")
+			return
+		}
+		if taken {
+			writeJSONError(w, http.StatusConflict, "email_taken")
+			return
+		}
+
+		// Issue #2130: hier zwingend auffindbar (discoverable) — ohne Passwort
+		// und ohne auffindbaren Passkey haette der Nutzer keinen Wiedereinstieg.
 		tempUser := &model.User{ID: req.Username}
-		creation, sessionData, err := wa.BeginRegistration(tempUser)
+		creation, sessionData, err := wa.BeginRegistration(tempUser,
+			webauthn.WithResidentKeyRequirement(protocol.ResidentKeyRequirementRequired))
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "webauthn_begin_failed")
 			return
@@ -539,6 +543,24 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 			return
 		}
 
+		// Issue #2147 Scheibe B1 (AC-6): die im Begin-Schritt hinterlegte
+		// Adresse kann zwischenzeitlich an ein anderes Konto vergeben worden
+		// sein — erneute Belegt-Pruefung unter Lock, bevor das Konto entsteht.
+		normalizedEmail := store.NormalizeEmailAddress(entry.Email)
+		unlock := store.LockEmailAddress(normalizedEmail)
+		defer unlock()
+
+		taken, err := s.IsAddressTakenByOtherAccount(normalizedEmail, "")
+		if err != nil {
+			log.Printf("passkey register public finish: address uniqueness check failed: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "internal_error")
+			return
+		}
+		if taken {
+			writeJSONError(w, http.StatusConflict, "email_taken")
+			return
+		}
+
 		tempUser := &model.User{ID: entry.UserID}
 		credential, err := wa.CreateCredential(tempUser, entry.SessionData, parsedResponse)
 		if err != nil {
@@ -549,7 +571,8 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		now := time.Now().UTC()
 		newUser := model.User{
 			ID:        entry.UserID,
-			Email:     entry.Email,
+			Email:     normalizedEmail,
+			MailTo:    normalizedEmail,
 			CreatedAt: now,
 			PasskeyCredentials: []model.WebAuthnCredential{{
 				ID:              credential.ID,
@@ -561,6 +584,7 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 				CreatedAt:       now,
 			}},
 		}
+		model.MarkOnboardingPending(&newUser)
 		if err := s.SaveUser(newUser); err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "store_error")
 			return
@@ -572,20 +596,17 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		// Begin-Schritt übermittelte Adresse dauerhaft unverifiziert.
 		dispatchVerificationMail(s, cfg, entry.UserID, &newUser)
 
-		token := middleware.SignSession(entry.UserID, secret)
-		secure := r.Header.Get("X-Forwarded-Proto") == "https" || r.TLS != nil
-		http.SetCookie(w, &http.Cookie{
-			Name:     "gz_session",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400,
-			Secure:   secure,
-		})
-
+		// Issue #2271: KEIN Auto-Login mehr. Die Kontoerstellung war
+		// erfolgreich (201, kein 403), aber eine Sitzung gibt es erst nach
+		// der Bestaetigung der Adresse — wie bei RegisterHandler (auth.go:117),
+		// der schon immer ohne Auto-Login auskam. Der Hinweis reist
+		// maschinenlesbar im Feld status, damit kein Aufrufer an einer
+		// Formulierung haengt.
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		_ = json.NewEncoder(w).Encode(map[string]string{"id": entry.UserID})
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"id":     entry.UserID,
+			"status": "verification_pending",
+		})
 	}
 }

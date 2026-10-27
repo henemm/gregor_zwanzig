@@ -3,12 +3,14 @@ entity_id: scheduler_per_trip_times
 type: bugfix
 created: 2026-02-10
 updated: 2026-02-10
-status: done
+status: deprecated
 version: "1.0"
 tags: [bugfix, story-3, feature-3.3, scheduler, config]
 ---
 
 # Bugfix: Scheduler nutzt per-Trip Report-Zeiten
+
+> Abgelöst/entfernt durch ADR-0001 / #129 — die NiceGUI-UI unter `src/web/` wurde am 2026-05-15 ersatzlos entfernt; diese Spec ist nur noch historisch.
 
 ## Approval
 

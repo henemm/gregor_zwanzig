@@ -3,7 +3,7 @@ entity_id: fix_1723_zeitzonen_waechter_entscheidung
 type: bugfix
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, guard, ratchet, zeitzone, epic-1722, issue-1723]
 ---

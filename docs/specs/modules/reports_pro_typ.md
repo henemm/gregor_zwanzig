@@ -23,7 +23,7 @@ Aktiviert die bereits in `MetricConfig` vorhandenen Felder `morning_enabled` und
 - **Files:**
   - `src/app/models.py` (MODIFY) — neue Methode `get_metrics_for_report_type()` auf `UnifiedWeatherDisplayConfig`
   - `src/app/loader.py` (MODIFY) — Serialisierung von `morning_enabled`/`evening_enabled` ergaenzen
-  - `src/formatters/trip_report.py` (MODIFY) — Metrik-Filterung am Einstiegspunkt `format_email()`
+  - `src/output/renderers/trip_report.py` (MODIFY) — Metrik-Filterung am Einstiegspunkt `format_email()`
   - `src/web/pages/weather_config.py` (MODIFY) — M/A-Toggle-Spalten pro Metrik-Zeile in der Konfigurationsdialog-UI
 
 ## Dependencies
@@ -127,7 +127,7 @@ metric_dict = {
 
 `None`-Werte werden als JSON `null` serialisiert, was bei der Deserialisierung korrekt zu `None` zurueckgemapped wird.
 
-### 3. src/formatters/trip_report.py — Gefilterte Metriken in format_email()
+### 3. src/output/renderers/trip_report.py — Gefilterte Metriken in format_email()
 
 Am Anfang von `format_email()`, nachdem `dc` (DisplayConfig) aufgeloest wurde, eine gefilterte Kopie erstellen:
 
@@ -202,7 +202,7 @@ Fuer den True-Override-Fall (disabled global, aber in einem Report erzwingen) ka
 |---|------|--------|-----|
 | 1 | `src/app/models.py` | MODIFY -- neue Methode `get_metrics_for_report_type()` | +20 |
 | 2 | `src/app/loader.py` | MODIFY -- `morning_enabled`/`evening_enabled` in Serialisierung | +10 |
-| 3 | `src/formatters/trip_report.py` | MODIFY -- Filterung am Einstiegspunkt `format_email()` | +15 |
+| 3 | `src/output/renderers/trip_report.py` | MODIFY -- Filterung am Einstiegspunkt `format_email()` | +15 |
 | 4 | `src/web/pages/weather_config.py` | MODIFY -- M/A-Toggle-Spalten im Konfig-Dialog | +70 |
 
 **Total: ca. +115 LoC netto**

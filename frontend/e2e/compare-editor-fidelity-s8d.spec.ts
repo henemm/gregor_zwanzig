@@ -16,7 +16,7 @@
 // AC-20 (Sharing-Invariante) ist bereits als Node-Source-Wächter in
 // compare_editor_mobile_fidelity.test.ts abgedeckt (läuft bei jedem
 // vitest/node-test-Durchlauf, kein Staging nötig) — hier nicht dupliziert.
-// Die migrierten Bestandssuiten (compare-mobile-vervollstaendigung.spec.ts,
+// Die migrierten Bestandssuiten (hub-list-menu.spec.ts/hub-tab-bar.spec.ts,
 // issue-682-compare-editor-mobile.spec.ts) laufen im selben Staging-Zyklus
 // separat weiter grün (eigene Config).
 
@@ -78,8 +78,10 @@ async function createPresetWithLocations(page: Page, name: string, locationIds: 
 // Gruppe A — Mobile-Liste (compare/+page.svelte)
 // ─────────────────────────────────────────────────────────────────────────
 
-test.describe('Issue #1256 S8d (AC-1): mobile Design-Kopfleiste auf /compare', () => {
-	test('Titel + Eyebrow sichtbar, Plus navigiert nach /compare/new; andere Seiten/Desktop unverändert', async ({
+// Mobile-Shell S2: kein fixer Balken mehr — Titel/Eyebrow/„Neuer Vergleich"
+// stehen mobil im <PageHeader> der Seite (Rechts-Slot), wie auf der Übersicht.
+test.describe('Issue #1256 S8d (AC-1): mobiler Seitenkopf auf /compare', () => {
+	test('Titel + Eyebrow sichtbar, „Neuer Vergleich" navigiert nach /compare/new; andere Seiten/Desktop unverändert', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -90,20 +92,21 @@ test.describe('Issue #1256 S8d (AC-1): mobile Design-Kopfleiste auf /compare', (
 		await page.goto('/compare');
 		await page.waitForLoadState('networkidle');
 
-		const bar = page.getByTestId('top-app-bar');
-		await expect(bar).toBeVisible();
-		await expect(bar.getByTestId('top-app-bar-title')).toHaveText('Orts-Vergleiche');
-		await expect(bar).toContainText('Workspace ·');
+		const head = page.locator('.desktop\\:hidden [data-slot="page-header"]:visible');
+		await expect(head).toBeVisible();
+		await expect(head.locator('h1')).toHaveText('Orts-Vergleiche');
+		await expect(head).toContainText('Workspace ·');
+		await expect(page.getByTestId('top-app-bar')).toHaveCount(0);
 
-		const plus = page.getByTestId('top-app-bar-new-compare');
-		await expect(plus).toBeVisible();
-		await plus.click();
+		const neu = page.getByTestId('compare-list-new-mobile');
+		await expect(neu).toBeVisible();
+		await neu.click();
 		await page.waitForURL('**/compare/new');
 
-		// Andere Seite (/trips) zeigt weiterhin den Wordmark-Default.
+		// Andere Seite (/trips) traegt keinen Vergleichs-Kopf.
 		await page.goto('/trips');
 		await page.waitForLoadState('networkidle');
-		await expect(page.getByTestId('top-app-bar').getByTestId('top-app-bar-title')).toHaveCount(0);
+		await expect(page.getByTestId('compare-list-new-mobile')).toHaveCount(0);
 
 		// Desktop-Viewport auf /compare zeigt weiterhin den 32px-Titel.
 		await page.setViewportSize(DESKTOP);
@@ -252,12 +255,12 @@ test.describe('Issue #1256 S8d (AC-6/AC-7): mobiler Orte-Tab dense-Stack', () =>
 	});
 });
 
-test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versand ohne Boden-CTA', () => {
+test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versand mit Aktivieren im Sticky-Footer', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 	});
 
-	test('CTA-Labels wechseln pro Tab; Versand-Tab hat keine Floating-CTA mehr', async ({ page }) => {
+	test('CTA-Labels wechseln pro Tab; Versand-Tab zeigt Aktivieren im Sticky-Footer', async ({ page }) => {
 		const suffix = Date.now();
 		const locA = await createLocation(page, `E2E S8d Ort-CtaA ${suffix}`, 47.09, 11.09);
 		const locB = await createLocation(page, `E2E S8d Ort-CtaB ${suffix}`, 47.1, 11.1);
@@ -302,7 +305,7 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 		await page.locator('button[aria-label="Schliessen"]:visible').click();
 		await expect(cta).toContainText('Wetter-Metriken →');
 		await cta.getByRole('button').click();
-		await expect(page.locator('[data-testid="cm-mobile-tab-metriken"]:visible')).toHaveAttribute(
+		await expect(page.locator('[data-testid="cm-mobile-tab-wetter-metriken"]:visible')).toHaveAttribute(
 			'data-active',
 			'true'
 		);
@@ -310,21 +313,13 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 		// Wetter-Metriken-Tab -> "Wertebereiche festlegen →".
 		await expect(cta).toContainText('Wertebereiche festlegen →');
 		await cta.getByRole('button').click();
-		await expect(page.locator('[data-testid="cm-mobile-tab-idealwerte"]:visible')).toHaveAttribute(
+		await expect(page.locator('[data-testid="cm-mobile-tab-wertebereiche"]:visible')).toHaveAttribute(
 			'data-active',
 			'true'
 		);
 
-		// AC-10: Wertebereiche-Tab -> "Layout einrichten →".
-		await expect(cta).toContainText('Layout einrichten →');
-		await cta.getByRole('button').click();
-		await expect(page.locator('[data-testid="cm-mobile-tab-layout"]:visible')).toHaveAttribute(
-			'data-active',
-			'true'
-		);
-
-		// AC-11 (Issue #1258 S4, AC-28): Layout-Tab -> "Alarme einrichten →" (neue
-		// reguläre Station, ersetzt den vormals direkten Sprung zu "Versand").
+		// AC-10/AC-11 (Issue #1258 S4, AC-28; Layout-Reiter per #1360 aufgelöst):
+		// Wertebereiche-Tab -> "Alarme einrichten →" (reguläre Station vor "Versand").
 		await expect(cta).toContainText('Alarme einrichten →');
 		await cta.getByRole('button').click();
 		await expect(page.locator('[data-testid="cm-mobile-tab-alarme"]:visible')).toHaveAttribute(
@@ -332,16 +327,12 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 			'true'
 		);
 
-		// Alarme-Tab -> "Versand einrichten →".
-		await expect(cta).toContainText('Versand einrichten →');
-		await cta.getByRole('button').click();
-		await expect(page.locator('[data-testid="cm-mobile-tab-versand"]:visible')).toHaveAttribute(
-			'data-active',
-			'true'
-		);
-
-		// AC-12: Versand-Tab hat keine Boden-Floating-CTA mehr.
-		await expect(page.locator('[data-testid="cm-mobile-cta"]:visible')).toHaveCount(0);
+		// Issue #1743: kein Schritt „Versand" mehr — Alarme ist der letzte Schritt,
+		// der Sticky-Footer traegt dort „Briefing aktivieren" (derselbe Baustein, den
+		// AC-15 prueft).
+		await expect(page.locator('[data-testid="cm-mobile-tab-versand"]')).toHaveCount(0);
+		await expect(page.getByTestId('cm-mobile-activate')).toBeVisible();
+		await expect(cta).not.toContainText('Versand einrichten →');
 	});
 });
 
@@ -371,12 +362,15 @@ test.describe('Issue #1256 S8d (AC-13/AC-14): Profil-Häkchen + gekürzte Metrik
 	});
 });
 
-test.describe('Issue #1256 S8d (AC-15): genau eine App-Leiste im mobilen Editor', () => {
+// Mobile-Shell S2: statt App-Leiste traegt der Editor einen <PageHeader back>
+// (Rücksprung + Eyebrow + Reiter-Titel) und den geteilten Sticky-Footer mit
+// „Briefing aktivieren" auf dem Versand-Reiter.
+test.describe('Issue #1256 S8d (AC-15): genau ein Kopf im mobilen Editor', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 	});
 
-	test('„…" vor Bereitschaft, „Aktivieren" danach; Zurück navigiert /compare; Titel wechselt mit Tab', async ({
+	test('kein Aktivieren vor Versand, „Briefing aktivieren" im Footer danach; Zurück navigiert /compare; Titel wechselt mit Tab', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -386,43 +380,45 @@ test.describe('Issue #1256 S8d (AC-15): genau eine App-Leiste im mobilen Editor'
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
 
-		const bars = page.getByTestId('top-app-bar');
-		await expect(bars).toHaveCount(1);
-		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Vergleich');
-		await expect(bars.getByTestId('top-app-bar-activate')).toHaveText('…');
+		const head = page.getByTestId('cm-mobile-head');
+		await expect(head).toHaveCount(1);
+		const titel = head.locator('h1');
+		await expect(titel).toHaveText('Vergleich');
+		await expect(page.getByTestId('top-app-bar')).toHaveCount(0);
+		await expect(page.getByTestId('cm-mobile-activate')).toHaveCount(0);
 
 		// Epic #1301 F3 (#989): eigenständiges Mobile-Namensfeld.
 		await page.getByTestId('compare-editor-name-mobile').fill(`E2E S8d Bar ${suffix}`);
-		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Vergleich');
+		await expect(titel).toHaveText('Vergleich');
 		const cta = page.locator('[data-testid="cm-mobile-cta"]:visible');
 		await cta.getByRole('button').click();
-		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Orte');
+		await expect(titel).toHaveText('Orte');
 
 		await page.getByTestId('compare-step2-mobile-library-btn').click();
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locA}"]`).click();
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locB}"]`).click();
 		await page.locator('button[aria-label="Schliessen"]:visible').click();
-		// Epic #1301 F2a: fünf Klicks für die 7-Tab-Kette ab Orte
-		// (orte → metriken → idealwerte → layout → alarme → versand).
+		// Issue #1743: drei Klicks ab Orte (orte → wetter-metriken → wertebereiche
+		// → alarme); Alarme ist der letzte Schritt, kein Versand-Schritt mehr.
 		await cta.getByRole('button').click();
-		await cta.getByRole('button').click();
-		await cta.getByRole('button').click();
+		await expect(page.getByTestId('cm-mobile-activate')).toHaveCount(0);
 		await cta.getByRole('button').click();
 		await cta.getByRole('button').click();
 
-		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Versand');
-		await expect(bars.getByTestId('top-app-bar-activate')).toHaveText('Aktivieren');
+		await expect(titel).toHaveText('Alarme');
+		const aktivieren = page.getByTestId('cm-mobile-activate');
+		await expect(aktivieren).toBeVisible();
+		await expect(aktivieren).toHaveText('Briefing aktivieren');
+		await expect(aktivieren).toBeEnabled();
 
-		await bars.getByTestId('top-app-bar-back').click();
+		await head.getByTestId('back-link').click();
 		await page.waitForURL('**/compare');
 
-		// F001-Fix (Adversary): Rück-Navigation muss die App-Leiste wirklich in
-		// den Listen-Zustand versetzen, nicht nur die URL wechseln — beweist,
-		// dass der Editor-Store-Reset ($effect-Cleanup, CompareEditor.svelte:225)
-		// bei Client-Navigation tatsächlich greift statt hängenzubleiben.
-		await expect(bars.getByTestId('top-app-bar-title')).toHaveText('Orts-Vergleiche');
-		await expect(bars).toContainText('Workspace ·');
-		await expect(bars.getByTestId('top-app-bar-back')).toHaveCount(0);
+		// Rück-Navigation zeigt den Listen-Kopf, kein Editor-Kopf haengt nach.
+		await expect(page.getByTestId('cm-mobile-head')).toHaveCount(0);
+		const liste = page.locator('.desktop\\:hidden [data-slot="page-header"]:visible');
+		await expect(liste.locator('h1')).toHaveText('Orts-Vergleiche');
+		await expect(liste).toContainText('Workspace ·');
 	});
 });
 
@@ -455,9 +451,9 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await page.getByText(`E2E S8d D-Ort-A ${suffix}`).click();
 
 		// Epic #1301 F2a: der Orte-Weiter-Knopf ist ziel-benannt
-		// (compare-editor-continue-metriken) und führt zum NEUEN Wetter-Metriken-Tab.
+		// (compare-editor-continue-wetter-metriken) und führt zum NEUEN Wetter-Metriken-Tab.
 		// Das ⊘-Gate (disabled bis ≥2 Orte) ist unverändert.
-		const continueBtn = page.getByTestId('compare-editor-continue-metriken');
+		const continueBtn = page.getByTestId('compare-editor-continue-wetter-metriken');
 		await expect(page.getByText('⊘ min. 2 Orte auswählen')).toBeVisible();
 		await expect(continueBtn).toBeDisabled();
 
@@ -465,13 +461,14 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await expect(page.getByText('⊘ min. 2 Orte auswählen')).toHaveCount(0);
 		await expect(continueBtn).toBeEnabled();
 		await continueBtn.click();
-		await expect(page.getByTestId('compare-editor-tab-metriken')).toHaveAttribute('data-active', 'true');
+		await expect(page.getByTestId('compare-editor-tab-wetter-metriken')).toHaveAttribute('data-active', 'true');
 	});
 
 	// Issue #1258 Scheibe S4 (E1/E2, AC-28): Layout fuehrt jetzt zu "alarme"
 	// (Testid compare-editor-continue-alarme), Alarme fuehrt zu "versand"
-	// (neuer CTA im Alarme-Fuß, testid compare-editor-continue-versand).
-	test('AC-17/AC-18: Wertebereiche → „Layout einrichten →" → Layout → „Alarme einrichten →" → Alarme → „Versand einrichten →"', async ({
+	// (frueher CTA im Alarme-Fuß, compare-editor-continue-versand — seit #1743
+	// entfallen: Alarme ist der letzte Schritt).
+	test('AC-17/AC-18: Wertebereiche → „Alarme einrichten →" → Alarme ist letzter Schritt, Aktivieren frei', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -486,24 +483,22 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await page.getByText(`E2E S8d D2-Ort-B ${suffix}`).click();
 		// Epic #1301 F2a: neue Kette Orte → Wetter-Metriken → Wertebereiche.
 		// Orte-Fuß führt zum Metriken-Tab; der Wertebereiche-Fuß
-		// (compare-editor-continue-idealwerte) sitzt jetzt auf dem Metriken-Tab.
-		await page.getByTestId('compare-editor-continue-metriken').click();
-		await page.getByTestId('compare-editor-continue-idealwerte').click();
+		// (compare-editor-continue-wertebereiche) sitzt jetzt auf dem Metriken-Tab.
+		await page.getByTestId('compare-editor-continue-wetter-metriken').click();
+		await page.getByTestId('compare-editor-continue-wertebereiche').click();
 
-		const layoutBtn = page.getByTestId('compare-editor-continue-layout');
-		await expect(layoutBtn).toBeVisible();
-		await layoutBtn.click();
-		await expect(page.getByTestId('compare-editor-tab-layout')).toHaveAttribute('data-active', 'true');
-
+		// Layout-Schritt entfällt (Reiter per #1360 aufgelöst): der Alarme-Fuß
+		// (compare-editor-continue-alarme) sitzt auf dem Wertebereiche-Tab.
 		const alarmeBtn = page.getByTestId('compare-editor-continue-alarme');
 		await expect(alarmeBtn).toBeVisible();
 		await alarmeBtn.click();
 		await expect(page.getByTestId('compare-editor-tab-alarme')).toHaveAttribute('data-active', 'true');
 
-		const versandBtn = page.getByTestId('compare-editor-continue-versand');
-		await expect(versandBtn).toBeVisible();
-		await versandBtn.click();
-		await expect(page.getByTestId('compare-editor-tab-versand')).toHaveAttribute('data-active', 'true');
+		// Issue #1743: kein Versand-Schritt mehr — Alarme ist der letzte Schritt,
+		// danach ist „Briefing aktivieren" frei.
+		await expect(page.getByTestId('compare-editor-continue-versand')).toHaveCount(0);
+		await expect(page.getByTestId('compare-editor-tab-versand')).toHaveCount(0);
+		await expect(page.getByTestId('compare-editor-activate')).toBeEnabled();
 	});
 });
 

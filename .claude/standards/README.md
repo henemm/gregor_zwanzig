@@ -19,9 +19,9 @@ These standards provide **domain knowledge** that gets **automatically injected*
 
 | Standard | Purpose | When Applicable |
 |----------|---------|-----------------|
-| `provider_selection.md` | Weather provider selection logic | Provider features |
+| `provider_selection.md` | Merkzettel zur Decision Matrix (Open-Meteo + Fallbacks) | Provider features |
 | `email_formatting.md` | Email report formatting rules | Email/channel features |
-| `safari_compatibility.md` | NiceGUI Safari compatibility | Web UI features |
+| `safari_compatibility.md` | **Obsolet** (NiceGUI entfernt, #129) — Stub | — |
 
 ## How Standards Work
 
@@ -43,7 +43,6 @@ Standards can be auto-injected based on context:
 ```python
 # Feature category: "Channel" → Inject email_formatting.md
 # Feature category: "Provider" → Inject provider_selection.md
-# Feature category: "WebUI" → Inject safari_compatibility.md
 # ALL features → Inject api_contracts.md, no_mocked_tests.md
 ```
 
@@ -116,7 +115,7 @@ Reviewer checks compliance:
 
 - [ ] API contract updated (if DTOs changed)
 - [ ] Real E2E tests (no mocks)
-- [ ] Safari tested (if UI changed)
+- [ ] UI auf Staging verifiziert (if UI changed)
 - [ ] Provider fallback (if provider added)
 - [ ] Email format (if email changed)
 
@@ -133,7 +132,7 @@ Reviewer checks compliance:
 
 ### UX Standards
 - `email_formatting.md` - Email UX
-- `safari_compatibility.md` - Browser compatibility
+- `safari_compatibility.md` - obsolet (Stub)
 
 ## Maintaining Standards
 
@@ -156,7 +155,6 @@ Update standard when:
 ### CRITICAL (Zero Tolerance)
 - No Mocked Tests (blocks deployment)
 - API Contracts (breaks integration)
-- Safari Compatibility (breaks user experience)
 
 ### IMPORTANT (Review Required)
 - Provider Selection (reliability impact)
@@ -197,6 +195,5 @@ Read and comply with:
 Goal: Automatically inject relevant standards based on:
 - Feature category (Provider → provider_selection.md)
 - Affected systems (Email → email_formatting.md)
-- Tools used (Browser tests → safari_compatibility.md)
 
 Implementation: Hook or agent configuration.

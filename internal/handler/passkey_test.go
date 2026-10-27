@@ -2,12 +2,7 @@ package handler
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/binary"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -15,11 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fxamacker/cbor/v2"
-
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 
+	"github.com/henemm/gregor-api/internal/handler/passkeytest"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -35,211 +29,9 @@ import (
 // Test Authenticator — ECDSA-P-256, "none" attestation format
 // -----------------------------------------------------------------------------
 
-type testAuthenticator struct {
-	rpID    string
-	origin  string
-	privKey *ecdsa.PrivateKey
-	credID  []byte
-	aaguid  []byte
-}
-
-func newTestAuthenticator(t *testing.T, rpID, origin string) *testAuthenticator {
-	t.Helper()
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatalf("ecdsa keygen: %v", err)
-	}
-	credID := make([]byte, 32)
-	if _, err := rand.Read(credID); err != nil {
-		t.Fatalf("rand credID: %v", err)
-	}
-	return &testAuthenticator{
-		rpID:    rpID,
-		origin:  origin,
-		privKey: priv,
-		credID:  credID,
-		aaguid:  make([]byte, 16), // zero AAGUID (none-format authenticator)
-	}
-}
-
-// cosePublicKey returns the CBOR-encoded COSE_Key for the EC2 public key.
-func (a *testAuthenticator) cosePublicKey(t *testing.T) []byte {
-	t.Helper()
-	x := a.privKey.PublicKey.X.Bytes()
-	y := a.privKey.PublicKey.Y.Bytes()
-	// pad to 32 bytes
-	x = leftPad(x, 32)
-	y = leftPad(y, 32)
-	// COSE_Key map with int keys (canonical CTAP2 encoding):
-	// 1 (kty)  = 2 (EC2)
-	// 3 (alg)  = -7 (ES256)
-	// -1 (crv) = 1 (P-256)
-	// -2 (x)   = x-coord
-	// -3 (y)   = y-coord
-	m := map[int]interface{}{
-		1:  2,
-		3:  -7,
-		-1: 1,
-		-2: x,
-		-3: y,
-	}
-	enc, err := cbor.CTAP2EncOptions().EncMode()
-	if err != nil {
-		t.Fatalf("cbor enc mode: %v", err)
-	}
-	out, err := enc.Marshal(m)
-	if err != nil {
-		t.Fatalf("cbor marshal cose key: %v", err)
-	}
-	return out
-}
-
-// buildAuthenticatorData constructs the binary authenticator data blob.
-// withAttested=true → includes AttestedCredentialData (registration case).
-func (a *testAuthenticator) buildAuthenticatorData(t *testing.T, withAttested bool, signCount uint32) []byte {
-	t.Helper()
-	rpidHash := sha256.Sum256([]byte(a.rpID))
-
-	var flags byte
-	flags |= 0x01 // UP (user present)
-	flags |= 0x04 // UV (user verified)
-	if withAttested {
-		flags |= 0x40 // AT (attested credential data included)
-	}
-
-	buf := &bytes.Buffer{}
-	buf.Write(rpidHash[:])
-	buf.WriteByte(flags)
-	scBuf := make([]byte, 4)
-	binary.BigEndian.PutUint32(scBuf, signCount)
-	buf.Write(scBuf)
-
-	if withAttested {
-		buf.Write(a.aaguid) // 16 bytes
-		credLen := make([]byte, 2)
-		binary.BigEndian.PutUint16(credLen, uint16(len(a.credID)))
-		buf.Write(credLen)
-		buf.Write(a.credID)
-		buf.Write(a.cosePublicKey(t))
-	}
-	return buf.Bytes()
-}
-
-// makeAttestationResponse constructs the JSON body the browser would POST to
-// /register/finish: { id, rawId, type, response: { clientDataJSON, attestationObject } }.
-func (a *testAuthenticator) makeAttestationResponse(t *testing.T, challengeB64URL string) []byte {
-	t.Helper()
-	clientData := map[string]interface{}{
-		"type":      "webauthn.create",
-		"challenge": challengeB64URL,
-		"origin":    a.origin,
-	}
-	clientDataJSON, err := json.Marshal(clientData)
-	if err != nil {
-		t.Fatalf("clientData marshal: %v", err)
-	}
-
-	authData := a.buildAuthenticatorData(t, true, 0)
-
-	// AttestationObject CBOR: { fmt: "none", attStmt: {}, authData: <bytes> }
-	attObj := map[string]interface{}{
-		"fmt":      "none",
-		"attStmt":  map[string]interface{}{},
-		"authData": authData,
-	}
-	enc, _ := cbor.CTAP2EncOptions().EncMode()
-	attObjBytes, err := enc.Marshal(attObj)
-	if err != nil {
-		t.Fatalf("attObj marshal: %v", err)
-	}
-
-	credIDB64 := base64.RawURLEncoding.EncodeToString(a.credID)
-	body := map[string]interface{}{
-		"id":    credIDB64,
-		"rawId": credIDB64,
-		"type":  "public-key",
-		"response": map[string]interface{}{
-			"clientDataJSON":    base64.RawURLEncoding.EncodeToString(clientDataJSON),
-			"attestationObject": base64.RawURLEncoding.EncodeToString(attObjBytes),
-		},
-	}
-	out, err := json.Marshal(body)
-	if err != nil {
-		t.Fatalf("body marshal: %v", err)
-	}
-	return out
-}
-
-// makeAssertionResponse signs an assertion for the given challenge and returns
-// the JSON body for /login/finish.
-func (a *testAuthenticator) makeAssertionResponse(t *testing.T, challengeB64URL string, signCount uint32) []byte {
-	t.Helper()
-	clientData := map[string]interface{}{
-		"type":      "webauthn.get",
-		"challenge": challengeB64URL,
-		"origin":    a.origin,
-	}
-	clientDataJSON, err := json.Marshal(clientData)
-	if err != nil {
-		t.Fatalf("clientData marshal: %v", err)
-	}
-	clientDataHash := sha256.Sum256(clientDataJSON)
-
-	authData := a.buildAuthenticatorData(t, false, signCount)
-
-	// Signature over authData || sha256(clientDataJSON), ASN.1 DER encoded.
-	signedPayload := append([]byte{}, authData...)
-	signedPayload = append(signedPayload, clientDataHash[:]...)
-	digest := sha256.Sum256(signedPayload)
-	sig, err := ecdsa.SignASN1(rand.Reader, a.privKey, digest[:])
-	if err != nil {
-		t.Fatalf("ecdsa sign: %v", err)
-	}
-
-	credIDB64 := base64.RawURLEncoding.EncodeToString(a.credID)
-	body := map[string]interface{}{
-		"id":    credIDB64,
-		"rawId": credIDB64,
-		"type":  "public-key",
-		"response": map[string]interface{}{
-			"clientDataJSON":    base64.RawURLEncoding.EncodeToString(clientDataJSON),
-			"authenticatorData": base64.RawURLEncoding.EncodeToString(authData),
-			"signature":         base64.RawURLEncoding.EncodeToString(sig),
-			"userHandle":        base64.RawURLEncoding.EncodeToString([]byte("placeholder")),
-		},
-	}
-	out, err := json.Marshal(body)
-	if err != nil {
-		t.Fatalf("body marshal: %v", err)
-	}
-	return out
-}
-
-func leftPad(in []byte, n int) []byte {
-	if len(in) >= n {
-		return in
-	}
-	out := make([]byte, n)
-	copy(out[n-len(in):], in)
-	return out
-}
-
 // -----------------------------------------------------------------------------
 // Helpers for test setup
 // -----------------------------------------------------------------------------
-
-func newTestWebAuthn(t *testing.T, rpID, origin string) *webauthn.WebAuthn {
-	t.Helper()
-	wa, err := webauthn.New(&webauthn.Config{
-		RPID:          rpID,
-		RPDisplayName: "Gregor Zwanzig Test",
-		RPOrigins:     []string{origin},
-	})
-	if err != nil {
-		t.Fatalf("webauthn.New: %v", err)
-	}
-	return wa
-}
 
 // authedRequest wraps a request with a valid auth context (UserID set in context).
 func authedRequest(method, target, userID string, body []byte) *http.Request {
@@ -260,7 +52,7 @@ func authedRequest(method, target, userID string, body []byte) *http.Request {
 func TestPasskeyRegisterRoundtrip_Success(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	// GIVEN: existing user without any passkey
@@ -291,8 +83,8 @@ func TestPasskeyRegisterRoundtrip_Success(t *testing.T) {
 	}
 
 	// Step 2: Authenticator signs → Finish
-	auth := newTestAuthenticator(t, rpID, origin)
-	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
 
 	finishH := PasskeyRegisterFinishHandler(s, wa, cs)
 	finishReq := authedRequest("POST", "/api/auth/passkey/register/finish", "alice", finishBody)
@@ -311,13 +103,13 @@ func TestPasskeyRegisterRoundtrip_Success(t *testing.T) {
 	if len(reloaded.PasskeyCredentials) != 1 {
 		t.Fatalf("AC-1 persist: expected 1 credential, got %d", len(reloaded.PasskeyCredentials))
 	}
-	if !bytes.Equal(reloaded.PasskeyCredentials[0].ID, auth.credID) {
+	if !bytes.Equal(reloaded.PasskeyCredentials[0].ID, auth.CredID) {
 		t.Errorf("AC-1 persist: credID mismatch")
 	}
 
 	// F001 / AC-1: Profile endpoint must report has_passkey:true with one
 	// entry — and MUST NOT leak the public_key material.
-	profileH := GetProfileHandler(s)
+	profileH := GetProfileHandler(s, nil)
 	profileReq := authedRequest("GET", "/api/auth/profile", "alice", nil)
 	profileW := httptest.NewRecorder()
 	profileH.ServeHTTP(profileW, profileReq)
@@ -364,11 +156,15 @@ func TestPasskeyRegisterRoundtrip_Success(t *testing.T) {
 func TestPasskeyLoginRoundtrip_Success(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 
 	// GIVEN: user with one registered passkey (we register via roundtrip first)
+	// #2271: bestaetigt seeden, BEVOR registerForUser laeuft — der Helfer
+	// seedet nur unter `if existing == nil` (:969), ein vorgeschaltetes
+	// SaveUser gewinnt, ohne den geteilten Helfer anzufassen.
+	seedeKonto2271(t, s, "alice", true)
 	auth := registerForUser(t, s, wa, cs, "alice")
 
 	// Step 1: Login Begin
@@ -391,9 +187,9 @@ func TestPasskeyLoginRoundtrip_Success(t *testing.T) {
 	}
 
 	// Step 2: Authenticator signs Assertion
-	finishBody := auth.makeAssertionResponse(t, beginResp.PublicKey.Challenge, 1)
+	finishBody := auth.MakeAssertionResponse(t, beginResp.PublicKey.Challenge, 1)
 
-	finishH := PasskeyLoginFinishHandler(s, wa, cs, secret)
+	finishH := PasskeyLoginFinishHandler(s, wa, cs, secret, "")
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/login/finish", bytes.NewReader(finishBody))
 	finishW := httptest.NewRecorder()
 	finishH.ServeHTTP(finishW, finishReq)
@@ -416,8 +212,9 @@ func TestPasskeyLoginRoundtrip_Success(t *testing.T) {
 	if !sess.HttpOnly {
 		t.Errorf("AC-2: cookie should be HttpOnly")
 	}
-	if sess.MaxAge != 86400 {
-		t.Errorf("AC-2: expected MaxAge=86400, got %d", sess.MaxAge)
+	// Issue #2129: die Anmeldung gilt unbefristet, bis sie widerrufen wird.
+	if sess.MaxAge != middleware.SessionMaxAgeSeconds {
+		t.Errorf("AC-2: expected MaxAge=%d, got %d", middleware.SessionMaxAgeSeconds, sess.MaxAge)
 	}
 	if sess.SameSite != http.SameSiteLaxMode {
 		t.Errorf("AC-2: expected SameSite=Lax, got %v", sess.SameSite)
@@ -425,9 +222,10 @@ func TestPasskeyLoginRoundtrip_Success(t *testing.T) {
 	if !strings.HasPrefix(sess.Value, "alice.") {
 		t.Errorf("AC-2: cookie should start with 'alice.', got %q", sess.Value)
 	}
+	// Issue #2129: vierteilig — {userId}.{sessionId}.{ts}.{sig}.
 	parts := strings.Split(sess.Value, ".")
-	if len(parts) != 3 {
-		t.Errorf("AC-2: cookie expected 3 dot-segments, got %d", len(parts))
+	if len(parts) != 4 {
+		t.Errorf("AC-2: cookie expected 4 dot-segments, got %d", len(parts))
 	}
 	// F003 / AC-2: Cookie path must be "/" so the session is sent on all routes.
 	if sess.Path != "/" {
@@ -448,10 +246,11 @@ func TestPasskeyLoginRoundtrip_Success(t *testing.T) {
 func TestPasskeyLoginCookieSecure_OnHTTPS(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 
+	seedeKonto2271(t, s, "alice", true) // #2271: siehe TestPasskeyLoginRoundtrip_Success
 	auth := registerForUser(t, s, wa, cs, "alice")
 
 	// Login Begin
@@ -470,14 +269,12 @@ func TestPasskeyLoginCookieSecure_OnHTTPS(t *testing.T) {
 	}
 	json.Unmarshal(beginW.Body.Bytes(), &beginResp)
 
-	finishBody := auth.makeAssertionResponse(t, beginResp.PublicKey.Challenge, 1)
+	finishBody := auth.MakeAssertionResponse(t, beginResp.PublicKey.Challenge, 1)
 
-	// Simulate the Nginx reverse proxy forwarding an HTTPS request: set
-	// X-Forwarded-Proto: https. Cookie MUST be Secure=true.
-	finishH := PasskeyLoginFinishHandler(s, wa, cs, secret)
+	// #2159: Secure kommt aus dem https-PublicHost, nicht aus X-Forwarded-Proto.
+	finishH := PasskeyLoginFinishHandler(s, wa, cs, secret, "https://gregor20.henemm.com")
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/login/finish",
 		bytes.NewReader(finishBody))
-	finishReq.Header.Set("X-Forwarded-Proto", "https")
 	finishW := httptest.NewRecorder()
 	finishH.ServeHTTP(finishW, finishReq)
 
@@ -509,7 +306,7 @@ func TestPasskeyLoginCookieSecure_OnHTTPS(t *testing.T) {
 func TestPasskeyAddPreservesUserFields(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	// GIVEN: User with ALL optional fields populated
@@ -561,7 +358,7 @@ func TestPasskeyAddPreservesUserFields(t *testing.T) {
 func TestPasskeyChallengeExpired_Fails(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	user := model.User{ID: "alice", PasswordHash: "h", CreatedAt: time.Now()}
@@ -590,8 +387,8 @@ func TestPasskeyChallengeExpired_Fails(t *testing.T) {
 	}
 
 	// Now Finish should fail with 400 challenge_expired_or_missing
-	auth := newTestAuthenticator(t, rpID, origin)
-	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
 
 	finishW := httptest.NewRecorder()
 	PasskeyRegisterFinishHandler(s, wa, cs).ServeHTTP(finishW,
@@ -612,7 +409,7 @@ func TestPasskeyChallengeExpired_Fails(t *testing.T) {
 func TestPasskeyChallengeReplay_Fails(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	user := model.User{ID: "alice", PasswordHash: "h", CreatedAt: time.Now()}
@@ -632,8 +429,8 @@ func TestPasskeyChallengeReplay_Fails(t *testing.T) {
 	}
 	json.Unmarshal(beginW.Body.Bytes(), &beginResp)
 
-	auth := newTestAuthenticator(t, rpID, origin)
-	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
 
 	// First Finish — should succeed (201)
 	finish1 := httptest.NewRecorder()
@@ -659,7 +456,7 @@ func TestPasskeyChallengeReplay_Fails(t *testing.T) {
 func TestPasskeyLoginRateLimit_Triggers(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	user := model.User{ID: "alice", PasswordHash: "h", CreatedAt: time.Now()}
@@ -712,7 +509,7 @@ func TestPasskeyLoginRateLimit_Triggers(t *testing.T) {
 func TestPasskeyDeleteCredentialPreservesPassword(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	// GIVEN: user with password AND one passkey
@@ -722,7 +519,7 @@ func TestPasskeyDeleteCredentialPreservesPassword(t *testing.T) {
 		t.Fatalf("save: %v", err)
 	}
 	auth := registerForUser(t, s, wa, cs, "alice")
-	credIDB64 := base64.RawURLEncoding.EncodeToString(auth.credID)
+	credIDB64 := base64.RawURLEncoding.EncodeToString(auth.CredID)
 
 	// WHEN: DELETE /api/auth/passkey/credentials/{id}
 	delH := PasskeyDeleteCredentialHandler(s)
@@ -749,7 +546,7 @@ func TestPasskeyDeleteCredentialPreservesPassword(t *testing.T) {
 
 	// F001 / AC-6: Profile endpoint must now report has_passkey:false and an
 	// empty (or absent) passkeys[] array.
-	profileH := GetProfileHandler(s)
+	profileH := GetProfileHandler(s, nil)
 	profileReq := authedRequest("GET", "/api/auth/profile", "alice", nil)
 	profileW := httptest.NewRecorder()
 	profileH.ServeHTTP(profileW, profileReq)
@@ -829,7 +626,7 @@ func TestPasskeyDeleteRateLimit_Triggers(t *testing.T) {
 func TestPasskeyFinishRejectsOversizedBody(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
 
@@ -858,7 +655,7 @@ func TestPasskeyFinishRejectsOversizedBody(t *testing.T) {
 	}
 
 	// Login Finish: oversized body must be rejected (not 200).
-	loginH := PasskeyLoginFinishHandler(s, wa, cs, secret)
+	loginH := PasskeyLoginFinishHandler(s, wa, cs, secret, "")
 	loginReq := httptest.NewRequest("POST", "/api/auth/passkey/login/finish",
 		bytes.NewReader(oversized))
 	loginW := httptest.NewRecorder()
@@ -891,8 +688,8 @@ func TestPasskeyStagingRPIDFailsOnProd_RoundtripIsolation(t *testing.T) {
 	stagingOrigin := "https://staging.gregor20.henemm.com"
 
 	s := newTestStore(t)
-	waProd := newTestWebAuthn(t, prodRPID, prodOrigin)
-	waStaging := newTestWebAuthn(t, stagingRPID, stagingOrigin)
+	waProd := passkeytest.NewWebAuthn(t, prodRPID, prodOrigin)
+	waStaging := passkeytest.NewWebAuthn(t, stagingRPID, stagingOrigin)
 	csProd := NewChallengeStore()
 	csStaging := NewChallengeStore()
 	secret := "test-secret-32-chars-long-enough"
@@ -921,17 +718,17 @@ func TestPasskeyStagingRPIDFailsOnProd_RoundtripIsolation(t *testing.T) {
 	// Authenticator built for STAGING signs PROD-issued challenge
 	// → assertion's authenticatorData.RPIDHash will be sha256(staging.RPID),
 	//   but Prod RP expects sha256(prod.RPID) → library verification fails.
-	stagingAuthForProdChallenge := &testAuthenticator{
-		rpID:    stagingRPID,
-		origin:  stagingOrigin,
-		privKey: authStaging.privKey,
-		credID:  authStaging.credID,
-		aaguid:  make([]byte, 16),
+	stagingAuthForProdChallenge := &passkeytest.Authenticator{
+		RPID:    stagingRPID,
+		Origin:  stagingOrigin,
+		PrivKey: authStaging.PrivKey,
+		CredID:  authStaging.CredID,
+		AAGUID:  make([]byte, 16),
 	}
-	finishBody := stagingAuthForProdChallenge.makeAssertionResponse(t, beginResp.PublicKey.Challenge, 1)
+	finishBody := stagingAuthForProdChallenge.MakeAssertionResponse(t, beginResp.PublicKey.Challenge, 1)
 
 	finishW := httptest.NewRecorder()
-	PasskeyLoginFinishHandler(s, waProd, csProd, secret).ServeHTTP(finishW,
+	PasskeyLoginFinishHandler(s, waProd, csProd, secret, "").ServeHTTP(finishW,
 		httptest.NewRequest("POST", "/api/auth/passkey/login/finish",
 			bytes.NewReader(finishBody)))
 
@@ -952,12 +749,12 @@ func TestPasskeyStagingRPIDFailsOnProd_RoundtripIsolation(t *testing.T) {
 // Shared helpers for AC-2/3/6/8: register a passkey via real roundtrip
 // -----------------------------------------------------------------------------
 
-func registerForUser(t *testing.T, s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, userID string) *testAuthenticator {
+func registerForUser(t *testing.T, s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, userID string) *passkeytest.Authenticator {
 	t.Helper()
 	return registerForUserAt(t, s, wa, cs, userID, "localhost", "http://localhost")
 }
 
-func registerForUserAt(t *testing.T, s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, userID, rpID, origin string) *testAuthenticator {
+func registerForUserAt(t *testing.T, s *store.Store, wa *webauthn.WebAuthn, cs *ChallengeStore, userID, rpID, origin string) *passkeytest.Authenticator {
 	t.Helper()
 
 	// Make the helper idempotent: ensure the user record exists so the begin
@@ -986,8 +783,8 @@ func registerForUserAt(t *testing.T, s *store.Store, wa *webauthn.WebAuthn, cs *
 		t.Fatalf("registerForUser begin decode: %v", err)
 	}
 
-	auth := newTestAuthenticator(t, rpID, origin)
-	finishBody := auth.makeAttestationResponse(t, beginResp.PublicKey.Challenge)
+	auth := passkeytest.NewAuthenticator(t, rpID, origin)
+	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
 	finishH := PasskeyRegisterFinishHandler(s, wa, cs)
 	finishReq := authedRequest("POST", "/api/auth/passkey/register/finish", userID, finishBody)
 	finishW := httptest.NewRecorder()
@@ -1007,56 +804,11 @@ var _ = protocol.AuthenticatorTransport("")
 // do NOT exist yet → build fails (RED state). Tests written against the spec.
 // -----------------------------------------------------------------------------
 
-// makeAssertionResponseDiscoverable builds an assertion body for the Discoverable
-// flow where userHandle carries the real user ID (not "placeholder").
-func (a *testAuthenticator) makeAssertionResponseDiscoverable(t *testing.T, challengeB64URL string, signCount uint32, userID string) []byte {
-	t.Helper()
-	clientData := map[string]interface{}{
-		"type":      "webauthn.get",
-		"challenge": challengeB64URL,
-		"origin":    a.origin,
-	}
-	clientDataJSON, err := json.Marshal(clientData)
-	if err != nil {
-		t.Fatalf("clientData marshal: %v", err)
-	}
-	clientDataHash := sha256.Sum256(clientDataJSON)
-
-	authData := a.buildAuthenticatorData(t, false, signCount)
-
-	signedPayload := append([]byte{}, authData...)
-	signedPayload = append(signedPayload, clientDataHash[:]...)
-	digest := sha256.Sum256(signedPayload)
-	sig, err := ecdsa.SignASN1(rand.Reader, a.privKey, digest[:])
-	if err != nil {
-		t.Fatalf("ecdsa sign: %v", err)
-	}
-
-	credIDB64 := base64.RawURLEncoding.EncodeToString(a.credID)
-	body := map[string]interface{}{
-		"id":    credIDB64,
-		"rawId": credIDB64,
-		"type":  "public-key",
-		"response": map[string]interface{}{
-			"clientDataJSON":    base64.RawURLEncoding.EncodeToString(clientDataJSON),
-			"authenticatorData": base64.RawURLEncoding.EncodeToString(authData),
-			"signature":         base64.RawURLEncoding.EncodeToString(sig),
-			// Real user ID as userHandle — required by DiscoverableUserHandler
-			"userHandle": base64.RawURLEncoding.EncodeToString([]byte(userID)),
-		},
-	}
-	out, err := json.Marshal(body)
-	if err != nil {
-		t.Fatalf("body marshal: %v", err)
-	}
-	return out
-}
-
 // AC-1: Discoverable Begin liefert HTTP 200 mit "mediation":"conditional"
 func TestPasskeyDiscoverableBeginHandler_ReturnsConditionalMediation(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	_ = newTestStore(t) // Begin does not require a populated store
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	h := PasskeyLoginDiscoverableBeginHandler(wa, cs)
@@ -1096,7 +848,7 @@ func TestPasskeyDiscoverableBeginHandler_ReturnsConditionalMediation(t *testing.
 func TestPasskeyDiscoverableBeginHandler_ChallengeEntryUserIDIsEmpty(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	_ = newTestStore(t) // store not needed for begin-only test
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 
 	h := PasskeyLoginDiscoverableBeginHandler(wa, cs)
@@ -1127,12 +879,13 @@ func TestPasskeyDiscoverableBeginHandler_ChallengeEntryUserIDIsEmpty(t *testing.
 func TestPasskeyDiscoverableFinishHandler_FullRoundtrip_Success(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret"
 
 	// Register a passkey for alice
 	userID := "alice"
+	seedeKonto2271(t, s, userID, true) // #2271: siehe TestPasskeyLoginRoundtrip_Success
 	auth := registerForUser(t, s, wa, cs, userID)
 
 	// Discoverable Begin
@@ -1150,10 +903,10 @@ func TestPasskeyDiscoverableFinishHandler_FullRoundtrip_Success(t *testing.T) {
 	challenge, _ := pk["challenge"].(string)
 
 	// Construct assertion with real userHandle = "alice"
-	assertionBody := auth.makeAssertionResponseDiscoverable(t, challenge, 1, userID)
+	assertionBody := auth.MakeAssertionResponseDiscoverable(t, challenge, 1, userID)
 
 	// Discoverable Finish
-	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret)
+	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret, "")
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
 		strings.NewReader(string(assertionBody)))
 	finishReq.Header.Set("Content-Type", "application/json")
@@ -1199,7 +952,7 @@ func TestPasskeyDiscoverableFinishHandler_FullRoundtrip_Success(t *testing.T) {
 func TestPasskeyDiscoverableFinishHandler_EmptyUserHandle_Returns401(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret"
 
@@ -1217,9 +970,9 @@ func TestPasskeyDiscoverableFinishHandler_EmptyUserHandle_Returns401(t *testing.
 	challenge, _ := pk["challenge"].(string)
 
 	// Assertion with empty userHandle
-	assertionBody := auth.makeAssertionResponseDiscoverable(t, challenge, 1, "")
+	assertionBody := auth.MakeAssertionResponseDiscoverable(t, challenge, 1, "")
 
-	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret)
+	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret, "")
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
 		strings.NewReader(string(assertionBody)))
 	finishReq.Header.Set("Content-Type", "application/json")
@@ -1235,7 +988,7 @@ func TestPasskeyDiscoverableFinishHandler_EmptyUserHandle_Returns401(t *testing.
 func TestPasskeyDiscoverableFinishHandler_UnknownUserHandle_Returns401(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret"
 
@@ -1252,9 +1005,9 @@ func TestPasskeyDiscoverableFinishHandler_UnknownUserHandle_Returns401(t *testin
 	challenge, _ := pk["challenge"].(string)
 
 	// userHandle points to a user that doesn't exist
-	assertionBody := auth.makeAssertionResponseDiscoverable(t, challenge, 1, "does-not-exist")
+	assertionBody := auth.MakeAssertionResponseDiscoverable(t, challenge, 1, "does-not-exist")
 
-	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret)
+	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret, "")
 	finishReq := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
 		strings.NewReader(string(assertionBody)))
 	finishReq.Header.Set("Content-Type", "application/json")
@@ -1270,11 +1023,12 @@ func TestPasskeyDiscoverableFinishHandler_UnknownUserHandle_Returns401(t *testin
 func TestPasskeyDiscoverableFinishHandler_ChallengeReplay_Returns401(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
 	s := newTestStore(t)
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	secret := "test-secret"
 
 	userID := "alice"
+	seedeKonto2271(t, s, userID, true) // #2271: der erste Finish unten muss gelingen
 	auth := registerForUser(t, s, wa, cs, userID)
 
 	beginH := PasskeyLoginDiscoverableBeginHandler(wa, cs)
@@ -1286,8 +1040,8 @@ func TestPasskeyDiscoverableFinishHandler_ChallengeReplay_Returns401(t *testing.
 	pk, _ := beginResp["publicKey"].(map[string]interface{})
 	challenge, _ := pk["challenge"].(string)
 
-	assertionBody := auth.makeAssertionResponseDiscoverable(t, challenge, 1, userID)
-	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret)
+	assertionBody := auth.MakeAssertionResponseDiscoverable(t, challenge, 1, userID)
+	finishH := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret, "")
 
 	// First call — must succeed
 	req1 := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
@@ -1313,7 +1067,7 @@ func TestPasskeyDiscoverableFinishHandler_ChallengeReplay_Returns401(t *testing.
 // F004 (Discoverable): oversized body must not be accepted at /discoverable/finish.
 func TestPasskeyDiscoverableFinishRejectsOversizedBody(t *testing.T) {
 	rpID, origin := "localhost", "http://localhost"
-	wa := newTestWebAuthn(t, rpID, origin)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
 	cs := NewChallengeStore()
 	s := newTestStore(t)
 	secret := "test-secret"
@@ -1324,7 +1078,7 @@ func TestPasskeyDiscoverableFinishRejectsOversizedBody(t *testing.T) {
 		oversized[i] = 'x'
 	}
 
-	h := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret)
+	h := PasskeyLoginDiscoverableFinishHandler(s, wa, cs, secret, "")
 	req := httptest.NewRequest("POST", "/api/auth/passkey/discoverable/finish",
 		bytes.NewReader(oversized))
 	req.Header.Set("Content-Type", "application/json")

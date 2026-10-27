@@ -1,0 +1,2366 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0 -- /home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/.venv/bin/python
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 78 items
+
+tests/tdd/test_sms_recipient_contract.py::test_ac1_sms_ohne_empfaenger_wird_geblockt_ohne_http FAILED [  1%]
+tests/tdd/test_sms_recipient_contract.py::test_ac1_premium_ohne_empfaenger_wird_geblockt_ohne_http FAILED [  2%]
+tests/tdd/test_sms_recipient_contract.py::test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[sms] FAILED [  3%]
+tests/tdd/test_sms_recipient_contract.py::test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[premium_sms] FAILED [  5%]
+tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[unbestaetigt] FAILED [  6%]
+tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[abweichend] FAILED [  7%]
+tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[leer] FAILED [  8%]
+tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[kein_profil] FAILED [ 10%]
+tests/tdd/test_sms_recipient_contract.py::test_ac2_bestaetigte_nummer_wird_frisch_aus_dem_profil_gelesen FAILED [ 11%]
+tests/tdd/test_sms_recipient_contract.py::test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[fehlt] FAILED [ 12%]
+tests/tdd/test_sms_recipient_contract.py::test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[kaputt] FAILED [ 14%]
+tests/tdd/test_sms_recipient_contract.py::test_ac4_dienst_mit_model_copy_nummer_von_a_sendet_fuer_b_nur_an_b FAILED [ 15%]
+tests/tdd/test_sms_recipient_contract.py::test_ac4_ausgang_fuer_b_ignoriert_settings_nummer_von_a FAILED [ 16%]
+tests/tdd/test_sms_recipient_contract.py::test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[sms] FAILED [ 17%]
+tests/tdd/test_sms_recipient_contract.py::test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[premium_sms] FAILED [ 19%]
+tests/tdd/test_sms_recipient_contract.py::test_ac4_block_im_dienst_verbraucht_keinen_drosselplatz FAILED [ 20%]
+tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[fehlend-premium_sms_no_reply_address] FAILED [ 21%]
+tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[zukunft-premium_sms_reply_address_stale] FAILED [ 23%]
+tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[31_tage-premium_sms_reply_address_stale] FAILED [ 24%]
+tests/tdd/test_sms_recipient_contract.py::test_ac5_frische_rueckadresse_aus_dem_profil_wird_bedient FAILED [ 25%]
+tests/tdd/test_sms_recipient_contract.py::test_ac5_alarm_buchung_registriert_den_unveraenderten_code[fehlend-premium_sms_no_reply_address] FAILED [ 26%]
+tests/tdd/test_sms_recipient_contract.py::test_ac5_alarm_buchung_registriert_den_unveraenderten_code[31_tage-premium_sms_reply_address_stale] FAILED [ 28%]
+tests/tdd/test_sms_recipient_contract.py::test_ac6_code_geht_nur_an_die_eigene_ausstehende_nummer FAILED [ 29%]
+tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[fremd] FAILED [ 30%]
+tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[ohne_plus] FAILED [ 32%]
+tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[kein_profil] FAILED [ 33%]
+tests/tdd/test_sms_recipient_contract.py::test_ac7_verification_gibt_es_nur_am_sms_typ_und_nur_fuer_die_profilnummer FAILED [ 34%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-abc] FAILED [ 35%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-12; DROP] FAILED [ 37%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-123456] FAILED [ 38%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-1234567890123456] FAILED [ 39%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-+49 151 12a4567] FAILED [ 41%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-491511234567] FAILED [ 42%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+0151123456] FAILED [ 43%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-abc] FAILED [ 44%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-12; DROP] FAILED [ 46%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567] FAILED [ 47%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567890123456] FAILED [ 48%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-abc] FAILED [ 50%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-12; DROP] FAILED [ 51%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567] FAILED [ 52%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567890123456] FAILED [ 53%]
+tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-+0170000000001] FAILED [ 55%]
+tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[+49 151 123-45 67] FAILED [ 56%]
+tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[(0151) 123 4567] FAILED [ 57%]
+tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[0041-79-000 00 01] FAILED [ 58%]
+tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[1234567] FAILED [ 60%]
+tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[+491511234567890] FAILED [ 61%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[briefing-sms] PASSED [ 62%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[briefing-premium_sms] PASSED [ 64%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[kein_daten_hinweis-sms] PASSED [ 65%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[kein_daten_hinweis-premium_sms] PASSED [ 66%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[amtswarnung-sms] PASSED [ 67%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[amtswarnung-premium_sms] PASSED [ 69%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich-sms] PASSED [ 70%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich-premium_sms] PASSED [ 71%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich_amtswarnung-sms] PASSED [ 73%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich_amtswarnung-premium_sms] PASSED [ 74%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_trip-sms] PASSED [ 75%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_trip-premium_sms] PASSED [ 76%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_ortsvergleich-sms] PASSED [ 78%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_ortsvergleich-premium_sms] PASSED [ 79%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_trip-sms] PASSED [ 80%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_trip-premium_sms] PASSED [ 82%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_ortsvergleich-sms] PASSED [ 83%]
+tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_ortsvergleich-premium_sms] PASSED [ 84%]
+tests/tdd/test_sms_recipient_contract.py::test_ac11_befehlsantwort_ueber_den_echten_reader[erfolgreich] PASSED [ 85%]
+tests/tdd/test_sms_recipient_contract.py::test_ac11_befehlsantwort_ueber_den_echten_reader[kollision_409] PASSED [ 87%]
+tests/tdd/test_sms_recipient_contract.py::test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab[sms] FAILED [ 88%]
+tests/tdd/test_sms_recipient_contract.py::test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab[premium_sms] FAILED [ 89%]
+tests/tdd/test_sms_recipient_contract.py::test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer[sms] FAILED [ 91%]
+tests/tdd/test_sms_recipient_contract.py::test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer[premium_sms] FAILED [ 92%]
+tests/tdd/test_sms_recipient_contract.py::test_ac14_sandbox_guard_im_testmodus_bleibt_wirksam FAILED [ 93%]
+tests/tdd/test_sms_recipient_contract.py::test_ac14_herkunftssperre_schaltet_weiter_auf_den_sandbox_key FAILED [ 94%]
+tests/tdd/test_sms_recipient_contract.py::test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[ohne_empfaenger] FAILED [ 96%]
+tests/tdd/test_sms_recipient_contract.py::test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[unfoermig] FAILED [ 97%]
+tests/tdd/test_sms_recipient_contract.py::test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[sms] FAILED [ 98%]
+tests/tdd/test_sms_recipient_contract.py::test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[premium_sms] FAILED [100%]
+
+=================================== FAILURES ===================================
+_____________ test_ac1_sms_ohne_empfaenger_wird_geblockt_ohne_http _____________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54878c0>
+
+    def test_ac1_sms_ohne_empfaenger_wird_geblockt_ohne_http(sink):
+        """AC-1: Given ein SMS-Ausgang, der ohne Empfaenger-Objekt gebaut wurde
+        (Settings tragen die globale Betreibernummer) / When er eine Nachricht
+        senden soll / Then ``ChannelBlockedError`` mit
+        ``reason_code=sms_no_recipient`` und kein einziger HTTP-Versuch.
+    
+        RED heute: ``send`` liest ``settings.sms_to`` und sendet an den Betreiber.
+        """
+        out = SMSOutput(_settings())
+>       with pytest.raises(ChannelBlockedError) as exc:
+E       Failed: DID NOT RAISE <class 'output.channels.base.ChannelBlockedError'>
+
+tests/tdd/test_sms_recipient_contract.py:200: Failed
+___________ test_ac1_premium_ohne_empfaenger_wird_geblockt_ohne_http ___________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54c6450>
+
+    def test_ac1_premium_ohne_empfaenger_wird_geblockt_ohne_http(sink):
+        """AC-1: Given ein Premium-SMS-Ausgang ohne Empfaenger-Objekt (Settings
+        tragen eine frische Rueckadresse) / When er senden soll / Then Block mit
+        dem bestehenden ``reason_code=premium_sms_no_reply_address`` (Alarm-
+        Buchung greift unveraendert), kein HTTP-Versuch.
+    
+        RED heute: ``send`` liest ``settings.premium_sms_reply_to`` und sendet.
+        """
+        out = PremiumSmsOutput(_mit_rueck(_settings(), RUECK_SETTINGS))
+>       with pytest.raises(ChannelBlockedError) as exc:
+E       Failed: DID NOT RAISE <class 'output.channels.base.ChannelBlockedError'>
+
+tests/tdd/test_sms_recipient_contract.py:215: Failed
+__________ test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[sms] __________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54c4cb0>
+kanal = 'sms'
+
+    @pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+    def test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger(sink, kanal):
+        """AC-1 (Kernregel 6, Pruefort ist ``_post``): Given ein Ausgang ohne
+        Empfaenger / When der einzige Netzausgang ``_post`` direkt mit einer
+        wohlgeformten Nutzlast aufgerufen wird / Then Block mit dem Kanal-
+        ``reason_code`` und kein HTTP-Versuch.
+    
+        RED heute: ``_post`` ist reiner Transport und sendet.
+        """
+        if kanal == "sms":
+            out, ziel, code = SMSOutput(_settings()), BETREIBER, CODE_SMS_NO_RECIPIENT
+        else:
+            out = PremiumSmsOutput(_mit_rueck(_settings(), RUECK_SETTINGS))
+            ziel, code = RUECK_SETTINGS, BLOCK_REASON_NO_REPLY_ADDRESS
+>       with pytest.raises(ChannelBlockedError) as exc:
+E       Failed: DID NOT RAISE <class 'output.channels.base.ChannelBlockedError'>
+
+tests/tdd/test_sms_recipient_contract.py:235: Failed
+______ test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[premium_sms] ______
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54c5700>
+kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+    def test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger(sink, kanal):
+        """AC-1 (Kernregel 6, Pruefort ist ``_post``): Given ein Ausgang ohne
+        Empfaenger / When der einzige Netzausgang ``_post`` direkt mit einer
+        wohlgeformten Nutzlast aufgerufen wird / Then Block mit dem Kanal-
+        ``reason_code`` und kein HTTP-Versuch.
+    
+        RED heute: ``_post`` ist reiner Transport und sendet.
+        """
+        if kanal == "sms":
+            out, ziel, code = SMSOutput(_settings()), BETREIBER, CODE_SMS_NO_RECIPIENT
+        else:
+            out = PremiumSmsOutput(_mit_rueck(_settings(), RUECK_SETTINGS))
+            ziel, code = RUECK_SETTINGS, BLOCK_REASON_NO_REPLY_ADDRESS
+>       with pytest.raises(ChannelBlockedError) as exc:
+E       Failed: DID NOT RAISE <class 'output.channels.base.ChannelBlockedError'>
+
+tests/tdd/test_sms_recipient_contract.py:235: Failed
+____ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[unbestaetigt] ____
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54c61e0>
+zustand = 'unbestaetigt'
+
+    @pytest.mark.parametrize("zustand", ["unbestaetigt", "abweichend", "leer", "kein_profil"])
+    def test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt(sink, zustand):
+        """AC-2: Given Nutzer B, dessen Nummer unbestaetigt
+        (``sms_verified_number`` leer oder abweichend) oder leer ist oder der kein
+        Profil hat; die Settings tragen die Betreibernummer / When fuer ihn per
+        SMS gesendet werden soll / Then Block mit ``sms_no_recipient``, kein
+        HTTP-Versuch (kein Rueckfall auf ``settings.sms_to``)."""
+        if zustand == "unbestaetigt":
+            profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False)
+        elif zustand == "abweichend":
+            profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False, sms_verified_number=NUMMER_A)
+        elif zustand == "leer":
+            profil_sms(KUNDE_B, "")
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+>           sms_ausgang(settings, KUNDE_B).send("", "Text")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:259: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_____ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[abweichend] _____
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54c6d50>
+zustand = 'abweichend'
+
+    @pytest.mark.parametrize("zustand", ["unbestaetigt", "abweichend", "leer", "kein_profil"])
+    def test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt(sink, zustand):
+        """AC-2: Given Nutzer B, dessen Nummer unbestaetigt
+        (``sms_verified_number`` leer oder abweichend) oder leer ist oder der kein
+        Profil hat; die Settings tragen die Betreibernummer / When fuer ihn per
+        SMS gesendet werden soll / Then Block mit ``sms_no_recipient``, kein
+        HTTP-Versuch (kein Rueckfall auf ``settings.sms_to``)."""
+        if zustand == "unbestaetigt":
+            profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False)
+        elif zustand == "abweichend":
+            profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False, sms_verified_number=NUMMER_A)
+        elif zustand == "leer":
+            profil_sms(KUNDE_B, "")
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+>           sms_ausgang(settings, KUNDE_B).send("", "Text")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:259: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+________ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[leer] ________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54c7d10>
+zustand = 'leer'
+
+    @pytest.mark.parametrize("zustand", ["unbestaetigt", "abweichend", "leer", "kein_profil"])
+    def test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt(sink, zustand):
+        """AC-2: Given Nutzer B, dessen Nummer unbestaetigt
+        (``sms_verified_number`` leer oder abweichend) oder leer ist oder der kein
+        Profil hat; die Settings tragen die Betreibernummer / When fuer ihn per
+        SMS gesendet werden soll / Then Block mit ``sms_no_recipient``, kein
+        HTTP-Versuch (kein Rueckfall auf ``settings.sms_to``)."""
+        if zustand == "unbestaetigt":
+            profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False)
+        elif zustand == "abweichend":
+            profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False, sms_verified_number=NUMMER_A)
+        elif zustand == "leer":
+            profil_sms(KUNDE_B, "")
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+>           sms_ausgang(settings, KUNDE_B).send("", "Text")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:259: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+____ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[kein_profil] _____
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54c7260>
+zustand = 'kein_profil'
+
+    @pytest.mark.parametrize("zustand", ["unbestaetigt", "abweichend", "leer", "kein_profil"])
+    def test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt(sink, zustand):
+        """AC-2: Given Nutzer B, dessen Nummer unbestaetigt
+        (``sms_verified_number`` leer oder abweichend) oder leer ist oder der kein
+        Profil hat; die Settings tragen die Betreibernummer / When fuer ihn per
+        SMS gesendet werden soll / Then Block mit ``sms_no_recipient``, kein
+        HTTP-Versuch (kein Rueckfall auf ``settings.sms_to``)."""
+        if zustand == "unbestaetigt":
+            profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False)
+        elif zustand == "abweichend":
+            profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False, sms_verified_number=NUMMER_A)
+        elif zustand == "leer":
+            profil_sms(KUNDE_B, "")
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+>           sms_ausgang(settings, KUNDE_B).send("", "Text")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:259: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+________ test_ac2_bestaetigte_nummer_wird_frisch_aus_dem_profil_gelesen ________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54c55b0>
+
+    def test_ac2_bestaetigte_nummer_wird_frisch_aus_dem_profil_gelesen(sink):
+        """AC-2: Given Nutzer B mit bestaetigter Nummer B, Settings tragen die
+        Betreibernummer / When fuer ihn per SMS gesendet wird / Then geht die SMS
+        an genau Nummer B (aus ``user.json``), nie an die Settings-Nummer."""
+        profil_sms(KUNDE_B, NUMMER_B)
+>       sms_ausgang(_settings(), KUNDE_B).send("", "Text")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:269: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+___ test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[fehlt] ____
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54c49e0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x78bbe54c5160>
+profil = 'fehlt'
+
+    @pytest.mark.parametrize("profil", ["fehlt", "kaputt"])
+    def test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts(sink, monkeypatch, profil):
+        """AC-3: Given die ``user.json`` des Nutzers fehlt bzw. ist unlesbar und
+        ``GZ_SMS_TO`` (Betreibernummer) ist gesetzt / When fuer diesen Nutzer per
+        SMS gesendet werden soll (echter ``NotificationService``-Pfad auf
+        ``with_user_profile``) / Then wird geblockt, die Betreibernummer erhaelt
+        nichts, und ``with_user_profile`` liefert ``sms_to=None``.
+    
+        RED heute: ``with_user_profile`` gibt in beiden ``base``-Pfaden die
+        Basis-Settings samt ``GZ_SMS_TO`` zurueck; die SMS geht an den Betreiber.
+        """
+        monkeypatch.setenv("GZ_SMS_TO", BETREIBER)
+        base = Settings(
+            _env_file=None, env="production", is_test_mode=False,
+            sms_gateway_url=GATEWAY, seven_api_key=PROD_KEY, seven_sandbox_key=SANDBOX_KEY,
+        )
+        assert base.sms_to == BETREIBER, "Vorbedingung: GZ_SMS_TO muss in den Basis-Settings stehen"
+        uid = f"kunde-ohne-profil-{profil}"
+        if profil == "kaputt":
+            ordner = get_data_dir(uid)
+            ordner.mkdir(parents=True, exist_ok=True)
+            (ordner / "user.json").write_text("{kaputt")
+    
+        nutzer_settings = base.with_user_profile(uid)
+>       assert nutzer_settings.sms_to is None, (
+            f"AC-3 ({profil}): with_user_profile muss sms_to=None liefern, ist {nutzer_settings.sms_to!r}"
+        )
+E       AssertionError: AC-3 (fehlt): with_user_profile muss sms_to=None liefern, ist '+41790009999'
+E       assert '+41790009999' is None
+E        +  where '+41790009999' = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', report_type='evening', channel='console', debug_level='info', dry_run=False, forecast_hours=48, include_snow=True, sunny_dni_min_wm2=60.0, sunny_dni_max_wm2=180.0, sunny_cloud_threshold_pct=30, smtp_host=None, smtp_port=587, smtp_user=None, smtp_pass=None, mail_to=None, mail_from=None, inbound_address=None, imap_host=None, imap_port=993, imap_user=None, imap_pass=None, test_smtp_host='mail.henemm.com', test_smtp_port=587, test_smtp_user=None, test_smtp_pass=None, test_mail_from=None, test_imap_user=None, test_imap_pass=None, is_test_mode=False, resend_allowed=False, env='production', core_shared_secret='***', go_api_url='http://localhost:8090', public_host=None, sms_gateway_url='https://gateway.seven.invalid/api/sms', seven_api_key='***', seven_sandbox_key='seven-sandbox-key-s4b', sms_from=None, sms_to='+41790009999', premium_sms_reply_to=None, premium_sms_reply_at=None, email_verified_at=None, mail_server_hostname='mail.henemm.com', telegram_bot_token='', telegram_chat_id='', telegram_test_chat_id='', telegram_test_bot_token='', telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0).sms_to
+
+tests/tdd/test_sms_recipient_contract.py:300: AssertionError
+___ test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[kaputt] ___
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe54c7560>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x78bbe54c47a0>
+profil = 'kaputt'
+
+    @pytest.mark.parametrize("profil", ["fehlt", "kaputt"])
+    def test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts(sink, monkeypatch, profil):
+        """AC-3: Given die ``user.json`` des Nutzers fehlt bzw. ist unlesbar und
+        ``GZ_SMS_TO`` (Betreibernummer) ist gesetzt / When fuer diesen Nutzer per
+        SMS gesendet werden soll (echter ``NotificationService``-Pfad auf
+        ``with_user_profile``) / Then wird geblockt, die Betreibernummer erhaelt
+        nichts, und ``with_user_profile`` liefert ``sms_to=None``.
+    
+        RED heute: ``with_user_profile`` gibt in beiden ``base``-Pfaden die
+        Basis-Settings samt ``GZ_SMS_TO`` zurueck; die SMS geht an den Betreiber.
+        """
+        monkeypatch.setenv("GZ_SMS_TO", BETREIBER)
+        base = Settings(
+            _env_file=None, env="production", is_test_mode=False,
+            sms_gateway_url=GATEWAY, seven_api_key=PROD_KEY, seven_sandbox_key=SANDBOX_KEY,
+        )
+        assert base.sms_to == BETREIBER, "Vorbedingung: GZ_SMS_TO muss in den Basis-Settings stehen"
+        uid = f"kunde-ohne-profil-{profil}"
+        if profil == "kaputt":
+            ordner = get_data_dir(uid)
+            ordner.mkdir(parents=True, exist_ok=True)
+            (ordner / "user.json").write_text("{kaputt")
+    
+        nutzer_settings = base.with_user_profile(uid)
+>       assert nutzer_settings.sms_to is None, (
+            f"AC-3 ({profil}): with_user_profile muss sms_to=None liefern, ist {nutzer_settings.sms_to!r}"
+        )
+E       AssertionError: AC-3 (kaputt): with_user_profile muss sms_to=None liefern, ist '+41790009999'
+E       assert '+41790009999' is None
+E        +  where '+41790009999' = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', report_type='evening', channel='console', debug_level='info', dry_run=False, forecast_hours=48, include_snow=True, sunny_dni_min_wm2=60.0, sunny_dni_max_wm2=180.0, sunny_cloud_threshold_pct=30, smtp_host=None, smtp_port=587, smtp_user=None, smtp_pass=None, mail_to=None, mail_from=None, inbound_address=None, imap_host=None, imap_port=993, imap_user=None, imap_pass=None, test_smtp_host='mail.henemm.com', test_smtp_port=587, test_smtp_user=None, test_smtp_pass=None, test_mail_from=None, test_imap_user=None, test_imap_pass=None, is_test_mode=False, resend_allowed=False, env='production', core_shared_secret='***', go_api_url='http://localhost:8090', public_host=None, sms_gateway_url='https://gateway.seven.invalid/api/sms', seven_api_key='***', seven_sandbox_key='seven-sandbox-key-s4b', sms_from=None, sms_to='+41790009999', premium_sms_reply_to=None, premium_sms_reply_at=None, email_verified_at=None, mail_server_hostname='mail.henemm.com', telegram_bot_token='', telegram_chat_id='', telegram_test_chat_id='', telegram_test_bot_token='', telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0).sms_to
+
+tests/tdd/test_sms_recipient_contract.py:300: AssertionError
+______ test_ac4_dienst_mit_model_copy_nummer_von_a_sendet_fuer_b_nur_an_b ______
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe5487a70>
+
+    def test_ac4_dienst_mit_model_copy_nummer_von_a_sendet_fuer_b_nur_an_b(sink):
+        """AC-4: Given Nutzer A und B mit je bestaetigter Nummer; die Settings des
+        Dienstes fuer B tragen per ``model_copy`` die Nummer von A / When fuer B
+        eine SMS ausgeloest wird (echter ``NotificationService``) / Then geht sie
+        ausschliesslich an Nummer B; spiegelbildlich fuer A.
+    
+        RED heute: der Ausgang sendet an ``settings.sms_to`` (= Nummer von A).
+        """
+        profil_sms(KUNDE_A, NUMMER_A)
+        profil_sms(KUNDE_B, NUMMER_B)
+    
+        _kein_daten_hinweis(_settings().model_copy(update={"sms_to": NUMMER_A}), KUNDE_B, "sms")
+>       assert sink.ziele() == [NUMMER_B], f"AC-4: fuer B nur Nummer B erwartet, gesehen {sink.ziele()!r}"
+E       AssertionError: AC-4: fuer B nur Nummer B erwartet, gesehen ['+41790000001']
+E       assert ['+41790000001'] == ['+41790000002']
+E         
+E         At index 0 diff: '+41790000001' != '+41790000002'
+E         
+E         Full diff:
+E           [
+E         -     '+41790000002',
+E         ?                 ^
+E         +     '+41790000001',
+E         ?                 ^
+E           ]
+
+tests/tdd/test_sms_recipient_contract.py:332: AssertionError
+___________ test_ac4_ausgang_fuer_b_ignoriert_settings_nummer_von_a ____________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe509d670>
+
+    def test_ac4_ausgang_fuer_b_ignoriert_settings_nummer_von_a(sink):
+        """AC-4: Given Settings per ``model_copy`` mit der Nummer von A und ein
+        Empfaenger ``SmsRecipient.for_user(B)`` / When gesendet wird / Then geht
+        die SMS an Nummer B (frisch aus B's ``user.json``)."""
+        profil_sms(KUNDE_A, NUMMER_A)
+        profil_sms(KUNDE_B, NUMMER_B)
+        settings_mit_a = _settings().model_copy(update={"sms_to": NUMMER_A})
+>       sms_ausgang(settings_mit_a, KUNDE_B).send("", "fuer B")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:345: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+______ test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[sms] ______
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe509e480>
+kanal = 'sms'
+
+    @pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+    def test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang(sink, kanal):
+        """AC-4 (Mismatch): Given ein Ausgang mit Empfaenger ``for_user(B)`` /
+        When der einzige Ausgang ``_post`` mit einer Nutzlast an die Nummer von A
+        aufgerufen wird / Then Mismatch-Block mit ``reason_code``, kein
+        HTTP-Versuch."""
+        settings = _settings()
+        if kanal == "sms":
+            profil_sms(KUNDE_A, NUMMER_A)
+>           out, fremdziel = sms_ausgang(settings, KUNDE_B, NUMMER_B), NUMMER_A
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:358: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = '+41790000002'
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+__ test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[premium_sms] __
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe509f0e0>
+kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+    def test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang(sink, kanal):
+        """AC-4 (Mismatch): Given ein Ausgang mit Empfaenger ``for_user(B)`` /
+        When der einzige Ausgang ``_post`` mit einer Nutzlast an die Nummer von A
+        aufgerufen wird / Then Mismatch-Block mit ``reason_code``, kein
+        HTTP-Versuch."""
+        settings = _settings()
+        if kanal == "sms":
+            profil_sms(KUNDE_A, NUMMER_A)
+            out, fremdziel = sms_ausgang(settings, KUNDE_B, NUMMER_B), NUMMER_A
+        else:
+            profil_rueckadresse(KUNDE_A, RUECK_A)
+>           out, fremdziel = premium_ausgang(settings, KUNDE_B, RUECK_B), RUECK_A
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = '4917000000002'
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+___________ test_ac4_block_im_dienst_verbraucht_keinen_drosselplatz ____________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe509fd70>
+
+    def test_ac4_block_im_dienst_verbraucht_keinen_drosselplatz(sink):
+        """AC-4: Given Nutzer B ohne bestaetigte Nummer; die Settings des Dienstes
+        tragen per ``model_copy`` die Nummer von A / When fuer B eine SMS
+        ausgeloest wird / Then kein HTTP-Versuch, und B's SMS-Tageszaehler
+        (``sms_daily_limit``) bleibt unveraendert.
+    
+        RED heute: die SMS geht an Nummer A und verbraucht einen Platz.
+        """
+        profil_sms(KUNDE_A, NUMMER_A)
+        profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False)
+        vorher = _verbraucht(KUNDE_B, "sms")
+        _kein_daten_hinweis(_settings().model_copy(update={"sms_to": NUMMER_A}), KUNDE_B, "sms")
+>       assert sink.calls == [], f"AC-4: Block erwartet, gesehen {sink.calls!r}"
+E       AssertionError: AC-4: Block erwartet, gesehen [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '+41790000001', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}]
+E       assert [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '+41790000001', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}] == []
+E         
+E         Left contains one more item: {'api_key': 'seven-prod-key-s4b', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.', 'to': '+41790000001', ...}
+E         
+E         Full diff:
+E         - []
+E         + [
+E         +     {
+E         +         'api_key': 'seven-prod-key-s4b',
+E         +         'from': None,
+E         +         'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und '
+E         +         'liefern das Briefing nach, sobald Daten verfügbar sind.',
+E         +         'to': '+41790000001',
+E         +         'url': 'https://gateway.seven.invalid/api/sms',
+E         +     },
+E         + ]
+
+tests/tdd/test_sms_recipient_contract.py:380: AssertionError
+_ test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[fehlend-premium_sms_no_reply_address] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe510c0e0>
+fall = 'fehlend', code = 'premium_sms_no_reply_address'
+
+    @pytest.mark.parametrize(
+        ("fall", "code"),
+        [
+            ("fehlend", BLOCK_REASON_NO_REPLY_ADDRESS),
+            ("zukunft", BLOCK_REASON_REPLY_ADDRESS_STALE),
+            ("31_tage", BLOCK_REASON_REPLY_ADDRESS_STALE),
+        ],
+    )
+    def test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code(sink, fall, code):
+        """AC-5: Given Nutzer B ohne Rueckadresse bzw. mit Zeitstempel in der
+        Zukunft bzw. 31 Tage alt; die Settings tragen eine frische fremde
+        Rueckadresse / When ein Premium-SMS-Versand ausgeloest wird / Then Block
+        mit ``premium_sms_no_reply_address`` bzw.
+        ``premium_sms_reply_address_stale`` (Codes unveraendert), kein HTTP."""
+        if fall == "fehlend":
+            profil_rueckadresse(KUNDE_B, None, gelernt_vor=None)
+        elif fall == "zukunft":
+            profil_rueckadresse(KUNDE_B, RUECK_B, gelernt_am=datetime.now(timezone.utc) + timedelta(hours=1))
+        else:
+            profil_rueckadresse(KUNDE_B, RUECK_B, gelernt_vor=timedelta(days=31))
+        settings = _mit_rueck(_settings(), RUECK_SETTINGS)
+        with pytest.raises(ChannelBlockedError) as exc:
+>           premium_ausgang(settings, KUNDE_B).send("", "Text")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:409: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+_ test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[zukunft-premium_sms_reply_address_stale] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe509ffe0>
+fall = 'zukunft', code = 'premium_sms_reply_address_stale'
+
+    @pytest.mark.parametrize(
+        ("fall", "code"),
+        [
+            ("fehlend", BLOCK_REASON_NO_REPLY_ADDRESS),
+            ("zukunft", BLOCK_REASON_REPLY_ADDRESS_STALE),
+            ("31_tage", BLOCK_REASON_REPLY_ADDRESS_STALE),
+        ],
+    )
+    def test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code(sink, fall, code):
+        """AC-5: Given Nutzer B ohne Rueckadresse bzw. mit Zeitstempel in der
+        Zukunft bzw. 31 Tage alt; die Settings tragen eine frische fremde
+        Rueckadresse / When ein Premium-SMS-Versand ausgeloest wird / Then Block
+        mit ``premium_sms_no_reply_address`` bzw.
+        ``premium_sms_reply_address_stale`` (Codes unveraendert), kein HTTP."""
+        if fall == "fehlend":
+            profil_rueckadresse(KUNDE_B, None, gelernt_vor=None)
+        elif fall == "zukunft":
+            profil_rueckadresse(KUNDE_B, RUECK_B, gelernt_am=datetime.now(timezone.utc) + timedelta(hours=1))
+        else:
+            profil_rueckadresse(KUNDE_B, RUECK_B, gelernt_vor=timedelta(days=31))
+        settings = _mit_rueck(_settings(), RUECK_SETTINGS)
+        with pytest.raises(ChannelBlockedError) as exc:
+>           premium_ausgang(settings, KUNDE_B).send("", "Text")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:409: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+_ test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[31_tage-premium_sms_reply_address_stale] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe509e8d0>
+fall = '31_tage', code = 'premium_sms_reply_address_stale'
+
+    @pytest.mark.parametrize(
+        ("fall", "code"),
+        [
+            ("fehlend", BLOCK_REASON_NO_REPLY_ADDRESS),
+            ("zukunft", BLOCK_REASON_REPLY_ADDRESS_STALE),
+            ("31_tage", BLOCK_REASON_REPLY_ADDRESS_STALE),
+        ],
+    )
+    def test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code(sink, fall, code):
+        """AC-5: Given Nutzer B ohne Rueckadresse bzw. mit Zeitstempel in der
+        Zukunft bzw. 31 Tage alt; die Settings tragen eine frische fremde
+        Rueckadresse / When ein Premium-SMS-Versand ausgeloest wird / Then Block
+        mit ``premium_sms_no_reply_address`` bzw.
+        ``premium_sms_reply_address_stale`` (Codes unveraendert), kein HTTP."""
+        if fall == "fehlend":
+            profil_rueckadresse(KUNDE_B, None, gelernt_vor=None)
+        elif fall == "zukunft":
+            profil_rueckadresse(KUNDE_B, RUECK_B, gelernt_am=datetime.now(timezone.utc) + timedelta(hours=1))
+        else:
+            profil_rueckadresse(KUNDE_B, RUECK_B, gelernt_vor=timedelta(days=31))
+        settings = _mit_rueck(_settings(), RUECK_SETTINGS)
+        with pytest.raises(ChannelBlockedError) as exc:
+>           premium_ausgang(settings, KUNDE_B).send("", "Text")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:409: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+__________ test_ac5_frische_rueckadresse_aus_dem_profil_wird_bedient ___________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe510d0a0>
+
+    def test_ac5_frische_rueckadresse_aus_dem_profil_wird_bedient(sink):
+        """AC-5: Given Nutzer B mit frisch gelernter Rueckadresse B; die Settings
+        tragen eine andere Rueckadresse / When ein Premium-SMS-Versand ausgeloest
+        wird / Then geht die Nachricht nur an Rueckadresse B, mit der festen
+        Dienstnummer als Absender."""
+        profil_rueckadresse(KUNDE_B, RUECK_B)
+>       premium_ausgang(_mit_rueck(_settings(), RUECK_SETTINGS), KUNDE_B).send("", "Text")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:420: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+_ test_ac5_alarm_buchung_registriert_den_unveraenderten_code[fehlend-premium_sms_no_reply_address] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe510f1a0>
+fall = 'fehlend', code = 'premium_sms_no_reply_address'
+
+    @pytest.mark.parametrize(
+        ("fall", "code"),
+        [("fehlend", BLOCK_REASON_NO_REPLY_ADDRESS), ("31_tage", BLOCK_REASON_REPLY_ADDRESS_STALE)],
+    )
+    def test_ac5_alarm_buchung_registriert_den_unveraenderten_code(sink, fall, code):
+        """AC-5 (Alarm-Buchung): Given Nutzer B ohne bzw. mit veralteter
+        Rueckadresse, Settings des Dienstes mit frischer fremder Rueckadresse /
+        When eine Amtswarnung nur per Premium-SMS geht (echter Dienst) und das
+        Ergebnis ins Alarm-Protokoll gebucht wird (echtes ``append_entry``) /
+        Then kein HTTP-Versuch, ``blocked_reason_codes`` und
+        ``channels_not_sent`` tragen den unveraenderten Code.
+    
+        RED heute: die Premium-SMS geht an die Rueckadresse aus den Settings.
+        """
+        from services import alert_log
+        from services.notification_service import NotificationService
+    
+        from tests.helpers.alert_log_fixtures import read_log, reason_for_channel
+    
+        if fall == "fehlend":
+            profil_rueckadresse(KUNDE_B, None, gelernt_vor=None)
+        else:
+            profil_rueckadresse(KUNDE_B, RUECK_B, gelernt_vor=timedelta(days=31))
+        dienst = NotificationService(_mit_rueck(_settings(), RUECK_SETTINGS), KUNDE_B)
+        ergebnis = dienst.send_official_alert(
+            trip=_amtswarnung_trip("trip-ac5"), notices=[(_warnung(), ["1"])],
+            effective_channels={"premium_sms"},
+        )
+>       assert sink.calls == [], f"AC-5 ({fall}): Block erwartet, gesehen {sink.calls!r}"
+E       AssertionError: AC-5 (fehlend): Block erwartet, gesehen [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31'}]
+E       assert [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31'}] == []
+E         
+E         Left contains one more item: {'api_key': 'seven-prod-key-s4b', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31', 'to': '4917000000099', ...}
+E         
+E         Full diff:
+E         - []
+E         + [
+E         +     {
+E         +         'api_key': 'seven-prod-key-s4b',
+E         +         'from': '4916092172595',
+E         +         'text': 'ges.Route: !TS:L 10:31-17:31',
+E         +         'to': '4917000000099',
+E         +         'url': 'https://gateway.seven.invalid/api/sms',
+E         +     },
+E         + ]
+
+tests/tdd/test_sms_recipient_contract.py:453: AssertionError
+_ test_ac5_alarm_buchung_registriert_den_unveraenderten_code[31_tage-premium_sms_reply_address_stale] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe298f1d0>
+fall = '31_tage', code = 'premium_sms_reply_address_stale'
+
+    @pytest.mark.parametrize(
+        ("fall", "code"),
+        [("fehlend", BLOCK_REASON_NO_REPLY_ADDRESS), ("31_tage", BLOCK_REASON_REPLY_ADDRESS_STALE)],
+    )
+    def test_ac5_alarm_buchung_registriert_den_unveraenderten_code(sink, fall, code):
+        """AC-5 (Alarm-Buchung): Given Nutzer B ohne bzw. mit veralteter
+        Rueckadresse, Settings des Dienstes mit frischer fremder Rueckadresse /
+        When eine Amtswarnung nur per Premium-SMS geht (echter Dienst) und das
+        Ergebnis ins Alarm-Protokoll gebucht wird (echtes ``append_entry``) /
+        Then kein HTTP-Versuch, ``blocked_reason_codes`` und
+        ``channels_not_sent`` tragen den unveraenderten Code.
+    
+        RED heute: die Premium-SMS geht an die Rueckadresse aus den Settings.
+        """
+        from services import alert_log
+        from services.notification_service import NotificationService
+    
+        from tests.helpers.alert_log_fixtures import read_log, reason_for_channel
+    
+        if fall == "fehlend":
+            profil_rueckadresse(KUNDE_B, None, gelernt_vor=None)
+        else:
+            profil_rueckadresse(KUNDE_B, RUECK_B, gelernt_vor=timedelta(days=31))
+        dienst = NotificationService(_mit_rueck(_settings(), RUECK_SETTINGS), KUNDE_B)
+        ergebnis = dienst.send_official_alert(
+            trip=_amtswarnung_trip("trip-ac5"), notices=[(_warnung(), ["1"])],
+            effective_channels={"premium_sms"},
+        )
+>       assert sink.calls == [], f"AC-5 ({fall}): Block erwartet, gesehen {sink.calls!r}"
+E       AssertionError: AC-5 (31_tage): Block erwartet, gesehen [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31'}]
+E       assert [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31'}] == []
+E         
+E         Left contains one more item: {'api_key': 'seven-prod-key-s4b', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31', 'to': '4917000000099', ...}
+E         
+E         Full diff:
+E         - []
+E         + [
+E         +     {
+E         +         'api_key': 'seven-prod-key-s4b',
+E         +         'from': '4916092172595',
+E         +         'text': 'ges.Route: !TS:L 10:31-17:31',
+E         +         'to': '4917000000099',
+E         +         'url': 'https://gateway.seven.invalid/api/sms',
+E         +     },
+E         + ]
+
+tests/tdd/test_sms_recipient_contract.py:453: AssertionError
+___________ test_ac6_code_geht_nur_an_die_eigene_ausstehende_nummer ____________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbe298e4b0>
+endpunkt = (<function send_sms_verification_code at 0x78bbd3b477e0>, <class 'api.routers.internal.SmsVerificationCodeRequest'>)
+
+    def test_ac6_code_geht_nur_an_die_eigene_ausstehende_nummer(sink, endpunkt):
+        """AC-6: Given Nutzer A mit ``pending_sms_to``=A und Nutzer B mit
+        unbestaetigtem ``sms_to``=B (kein pending) / When Go fuer A die Nummer A,
+        fuer B die Nummer B und fuer B die Nummer von A anfordert / Then gehen die
+        Codes an A bzw. B; die Anforderung von B fuer die Nummer von A wird
+        geblockt, ohne HTTP-Versuch.
+    
+        RED heute: der Endpunkt sendet an jedes uebergebene ``to``.
+        """
+        profil_sms(KUNDE_A, "", bestaetigt=False, pending_sms_to=NUMMER_A)
+        profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False)
+    
+        assert _code_anfordern(endpunkt, KUNDE_A, NUMMER_A).json() == {"status": "sent"}
+        assert _code_anfordern(endpunkt, KUNDE_B, NUMMER_B).json() == {"status": "sent"}
+        assert sink.ziele() == [NUMMER_A, NUMMER_B], f"AC-6: gesehen {sink.ziele()!r}"
+        assert "428913" in sink.calls[0]["text"]
+    
+        antwort = _code_anfordern(endpunkt, KUNDE_B, NUMMER_A)
+>       assert antwort.json() != {"status": "sent"}, f"AC-6: fremde Nummer angenommen: {antwort.text}"
+E       AssertionError: AC-6: fremde Nummer angenommen: {'status': 'sent'}
+E       assert {'status': 'sent'} != {'status': 'sent'}
+E        +  where {'status': 'sent'} = json()
+E        +    where json = <tdd.test_sms_recipient_contract._Antwort object at 0x78bbd3c37410>.json
+
+tests/tdd/test_sms_recipient_contract.py:542: AssertionError
+_______ test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[fremd] ________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3b66630>
+endpunkt = (<function send_sms_verification_code at 0x78bbd3b477e0>, <class 'api.routers.internal.SmsVerificationCodeRequest'>)
+fall = 'fremd'
+
+    @pytest.mark.parametrize("fall", ["fremd", "ohne_plus", "kein_profil"])
+    def test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt(sink, endpunkt, fall):
+        """AC-6: Given eine fremde wohlgeformte Nummer bzw. die ausstehende
+        Nummer ohne ``+`` (nicht strikt E.164) bzw. ein Nutzer ohne Profil / When
+        Go den Bestaetigungscode fuer diese Nummer anfordert / Then wird
+        geblockt, kein HTTP-Versuch.
+    
+        RED heute: der Endpunkt setzt ``sms_to=req.to`` per ``model_copy`` und
+        sendet.
+        """
+        if fall == "fremd":
+            profil_sms(KUNDE_A, "", bestaetigt=False, pending_sms_to=NUMMER_A)
+            uid, nummer = KUNDE_A, FREMD
+        elif fall == "ohne_plus":
+            profil_sms(KUNDE_A, "", bestaetigt=False, pending_sms_to=NUMMER_A.lstrip("+"))
+            uid, nummer = KUNDE_A, NUMMER_A.lstrip("+")
+        else:
+            uid, nummer = "kunde-ohne-profil", NUMMER_A
+        antwort = _code_anfordern(endpunkt, uid, nummer)
+>       assert antwort.json() != {"status": "sent"}, f"AC-6 ({fall}): {antwort.text}"
+E       AssertionError: AC-6 (fremd): {'status': 'sent'}
+E       assert {'status': 'sent'} != {'status': 'sent'}
+E        +  where {'status': 'sent'} = json()
+E        +    where json = <tdd.test_sms_recipient_contract._Antwort object at 0x78bbd3b66a20>.json
+
+tests/tdd/test_sms_recipient_contract.py:565: AssertionError
+_____ test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[ohne_plus] ______
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3b671a0>
+endpunkt = (<function send_sms_verification_code at 0x78bbd3b477e0>, <class 'api.routers.internal.SmsVerificationCodeRequest'>)
+fall = 'ohne_plus'
+
+    @pytest.mark.parametrize("fall", ["fremd", "ohne_plus", "kein_profil"])
+    def test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt(sink, endpunkt, fall):
+        """AC-6: Given eine fremde wohlgeformte Nummer bzw. die ausstehende
+        Nummer ohne ``+`` (nicht strikt E.164) bzw. ein Nutzer ohne Profil / When
+        Go den Bestaetigungscode fuer diese Nummer anfordert / Then wird
+        geblockt, kein HTTP-Versuch.
+    
+        RED heute: der Endpunkt setzt ``sms_to=req.to`` per ``model_copy`` und
+        sendet.
+        """
+        if fall == "fremd":
+            profil_sms(KUNDE_A, "", bestaetigt=False, pending_sms_to=NUMMER_A)
+            uid, nummer = KUNDE_A, FREMD
+        elif fall == "ohne_plus":
+            profil_sms(KUNDE_A, "", bestaetigt=False, pending_sms_to=NUMMER_A.lstrip("+"))
+            uid, nummer = KUNDE_A, NUMMER_A.lstrip("+")
+        else:
+            uid, nummer = "kunde-ohne-profil", NUMMER_A
+        antwort = _code_anfordern(endpunkt, uid, nummer)
+>       assert antwort.json() != {"status": "sent"}, f"AC-6 ({fall}): {antwort.text}"
+E       AssertionError: AC-6 (ohne_plus): {'status': 'sent'}
+E       assert {'status': 'sent'} != {'status': 'sent'}
+E        +  where {'status': 'sent'} = json()
+E        +    where json = <tdd.test_sms_recipient_contract._Antwort object at 0x78bbd3c37800>.json
+
+tests/tdd/test_sms_recipient_contract.py:565: AssertionError
+____ test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[kein_profil] _____
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3b67e60>
+endpunkt = (<function send_sms_verification_code at 0x78bbd3b477e0>, <class 'api.routers.internal.SmsVerificationCodeRequest'>)
+fall = 'kein_profil'
+
+    @pytest.mark.parametrize("fall", ["fremd", "ohne_plus", "kein_profil"])
+    def test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt(sink, endpunkt, fall):
+        """AC-6: Given eine fremde wohlgeformte Nummer bzw. die ausstehende
+        Nummer ohne ``+`` (nicht strikt E.164) bzw. ein Nutzer ohne Profil / When
+        Go den Bestaetigungscode fuer diese Nummer anfordert / Then wird
+        geblockt, kein HTTP-Versuch.
+    
+        RED heute: der Endpunkt setzt ``sms_to=req.to`` per ``model_copy`` und
+        sendet.
+        """
+        if fall == "fremd":
+            profil_sms(KUNDE_A, "", bestaetigt=False, pending_sms_to=NUMMER_A)
+            uid, nummer = KUNDE_A, FREMD
+        elif fall == "ohne_plus":
+            profil_sms(KUNDE_A, "", bestaetigt=False, pending_sms_to=NUMMER_A.lstrip("+"))
+            uid, nummer = KUNDE_A, NUMMER_A.lstrip("+")
+        else:
+            uid, nummer = "kunde-ohne-profil", NUMMER_A
+        antwort = _code_anfordern(endpunkt, uid, nummer)
+>       assert antwort.json() != {"status": "sent"}, f"AC-6 ({fall}): {antwort.text}"
+E       AssertionError: AC-6 (kein_profil): {'status': 'sent'}
+E       assert {'status': 'sent'} != {'status': 'sent'}
+E        +  where {'status': 'sent'} = json()
+E        +    where json = <tdd.test_sms_recipient_contract._Antwort object at 0x78bbd3b67290>.json
+
+tests/tdd/test_sms_recipient_contract.py:565: AssertionError
+__ test_ac7_verification_gibt_es_nur_am_sms_typ_und_nur_fuer_die_profilnummer __
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c140b0>
+
+    def test_ac7_verification_gibt_es_nur_am_sms_typ_und_nur_fuer_die_profilnummer(sink):
+        """AC-7: Given die Empfaenger-Typen / When jemand am Premium-SMS-Typ den
+        Zweck ``verification`` sucht bzw. am SMS-Typ ``verification`` mit einer
+        nicht an das Profil gebundenen Nummer nutzt / Then gibt es am
+        Premium-Typ keine ``verification``-Fabrik, der Zweck existiert in
+        ``RecipientPurpose``, und die SMS-Fabrik blockt jede fremde Nummer (auch
+        die eines anderen Nutzers) -- nur die eigene ausstehende geht raus."""
+>       from output.channels.recipient import PremiumSmsRecipient, RecipientPurpose, SmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/tdd/test_sms_recipient_contract.py:579: ImportError
+___ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-abc] ___
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c14da0>
+zweck = 'sms_profil', nummer = 'abc'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+>               sms_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:626: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-12; DROP] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c159d0>
+zweck = 'sms_profil', nummer = '12; DROP'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+>               sms_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:626: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-123456] __
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c16690>
+zweck = 'sms_profil', nummer = '123456'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+>               sms_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:626: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-1234567890123456] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3b66690>
+zweck = 'sms_profil', nummer = '1234567890123456'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+>               sms_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:626: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-+49 151 12a4567] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3b66bd0>
+zweck = 'sms_profil', nummer = '+49 151 12a4567'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+>               sms_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:626: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-491511234567] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c16fc0>
+zweck = 'verification', nummer = '491511234567'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+>               verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:629: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = '491511234567'
+
+    def verifikations_ausgang(settings, user_id: str, nummer: str):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.verification`` -- nur fuer
+        die an das Profil gebundene ausstehende Nummer zulaessig."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:118: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+0151123456] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c17b90>
+zweck = 'verification', nummer = '+0151123456'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+>               verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:629: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = '+0151123456'
+
+    def verifikations_ausgang(settings, user_id: str, nummer: str):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.verification`` -- nur fuer
+        die an das Profil gebundene ausstehende Nummer zulaessig."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:118: ImportError
+__ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-abc] __
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c143b0>
+zweck = 'verification', nummer = 'abc'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+>               verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:629: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = 'abc'
+
+    def verifikations_ausgang(settings, user_id: str, nummer: str):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.verification`` -- nur fuer
+        die an das Profil gebundene ausstehende Nummer zulaessig."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:118: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-12; DROP] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3bb7fb0>
+zweck = 'verification', nummer = '12; DROP'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+>               verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:629: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = '12; DROP'
+
+    def verifikations_ausgang(settings, user_id: str, nummer: str):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.verification`` -- nur fuer
+        die an das Profil gebundene ausstehende Nummer zulaessig."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:118: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c14050>
+zweck = 'verification', nummer = '+1234567'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+>               verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:629: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = '+1234567'
+
+    def verifikations_ausgang(settings, user_id: str, nummer: str):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.verification`` -- nur fuer
+        die an das Profil gebundene ausstehende Nummer zulaessig."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:118: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567890123456] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c15610>
+zweck = 'verification', nummer = '+1234567890123456'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+>               verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:629: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = '+1234567890123456'
+
+    def verifikations_ausgang(settings, user_id: str, nummer: str):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.verification`` -- nur fuer
+        die an das Profil gebundene ausstehende Nummer zulaessig."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:118: ImportError
+____ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-abc] _____
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3b67830>
+zweck = 'premium', nummer = 'abc'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+                verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+            else:
+                profil_rueckadresse(KUNDE_B, nummer)
+>               premium_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:632: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+__ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-12; DROP] __
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3bb7140>
+zweck = 'premium', nummer = '12; DROP'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+                verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+            else:
+                profil_rueckadresse(KUNDE_B, nummer)
+>               premium_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:632: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+__ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567] ___
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3bb6240>
+zweck = 'premium', nummer = '1234567'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+                verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+            else:
+                profil_rueckadresse(KUNDE_B, nummer)
+>               premium_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:632: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567890123456] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3bb4320>
+zweck = 'premium', nummer = '1234567890123456'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+                verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+            else:
+                profil_rueckadresse(KUNDE_B, nummer)
+>               premium_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:632: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-+0170000000001] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3b66630>
+zweck = 'premium', nummer = '+0170000000001'
+
+    @pytest.mark.parametrize(
+        ("zweck", "nummer"),
+        [(z, n) for z, liste in _UNFOERMIG.items() for n in liste],
+    )
+    def test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch(sink, zweck, nummer):
+        """AC-8: Given eine Nummer, die der Form des Zwecks nicht genuegt
+        (Produktion, kein Testmodus) und ansonsten belegt ist (bestaetigt bzw.
+        ausstehend bzw. frisch gelernt) / When gesendet werden soll / Then Block
+        vor jedem HTTP-Versuch: ``verification`` strikt ``^\\+[1-9]\\d{7,14}$``,
+        SMS-Profil nur Ziffern/``+``/Leerzeichen/``-``/Klammern mit 7-15
+        Ziffern, Premium ``^\\+?[1-9]\\d{7,14}$``."""
+        settings = _settings()
+        with pytest.raises(ChannelBlockedError) as exc:
+            if zweck == "sms_profil":
+                profil_sms(KUNDE_B, nummer)
+                sms_ausgang(settings, KUNDE_B).send("", "Text")
+            elif zweck == "verification":
+                profil_sms(KUNDE_B, "", bestaetigt=False, pending_sms_to=nummer)
+                verifikations_ausgang(settings, KUNDE_B, nummer).send("", "Code")
+            else:
+                profil_rueckadresse(KUNDE_B, nummer)
+>               premium_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:632: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+_ test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[+49 151 123-45 67] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c15190>
+nummer = '+49 151 123-45 67'
+
+    @pytest.mark.parametrize(
+        "nummer",
+        ["+49 151 123-45 67", "(0151) 123 4567", "0041-79-000 00 01", "1234567", "+491511234567890"],
+    )
+    def test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus(sink, nummer):
+        """AC-9: Given ein Bestandskonto, dessen bestaetigte Nummer tolerant
+        geschrieben ist (Leerzeichen, Bindestriche, Klammern; 7 bzw. 15 Ziffern)
+        / When fuer diesen Nutzer gesendet wird / Then wird ausgeliefert, und der
+        Anbieter sieht die gespeicherte Form byteidentisch (kein Ziffernumbau)."""
+        profil_sms(KUNDE_B, nummer)
+>       sms_ausgang(_settings(), KUNDE_B).send("", "Text")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:650: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[(0151) 123 4567] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3bb4da0>
+nummer = '(0151) 123 4567'
+
+    @pytest.mark.parametrize(
+        "nummer",
+        ["+49 151 123-45 67", "(0151) 123 4567", "0041-79-000 00 01", "1234567", "+491511234567890"],
+    )
+    def test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus(sink, nummer):
+        """AC-9: Given ein Bestandskonto, dessen bestaetigte Nummer tolerant
+        geschrieben ist (Leerzeichen, Bindestriche, Klammern; 7 bzw. 15 Ziffern)
+        / When fuer diesen Nutzer gesendet wird / Then wird ausgeliefert, und der
+        Anbieter sieht die gespeicherte Form byteidentisch (kein Ziffernumbau)."""
+        profil_sms(KUNDE_B, nummer)
+>       sms_ausgang(_settings(), KUNDE_B).send("", "Text")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:650: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[0041-79-000 00 01] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3bb6b10>
+nummer = '0041-79-000 00 01'
+
+    @pytest.mark.parametrize(
+        "nummer",
+        ["+49 151 123-45 67", "(0151) 123 4567", "0041-79-000 00 01", "1234567", "+491511234567890"],
+    )
+    def test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus(sink, nummer):
+        """AC-9: Given ein Bestandskonto, dessen bestaetigte Nummer tolerant
+        geschrieben ist (Leerzeichen, Bindestriche, Klammern; 7 bzw. 15 Ziffern)
+        / When fuer diesen Nutzer gesendet wird / Then wird ausgeliefert, und der
+        Anbieter sieht die gespeicherte Form byteidentisch (kein Ziffernumbau)."""
+        profil_sms(KUNDE_B, nummer)
+>       sms_ausgang(_settings(), KUNDE_B).send("", "Text")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:650: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[1234567] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3bb6c60>
+nummer = '1234567'
+
+    @pytest.mark.parametrize(
+        "nummer",
+        ["+49 151 123-45 67", "(0151) 123 4567", "0041-79-000 00 01", "1234567", "+491511234567890"],
+    )
+    def test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus(sink, nummer):
+        """AC-9: Given ein Bestandskonto, dessen bestaetigte Nummer tolerant
+        geschrieben ist (Leerzeichen, Bindestriche, Klammern; 7 bzw. 15 Ziffern)
+        / When fuer diesen Nutzer gesendet wird / Then wird ausgeliefert, und der
+        Anbieter sieht die gespeicherte Form byteidentisch (kein Ziffernumbau)."""
+        profil_sms(KUNDE_B, nummer)
+>       sms_ausgang(_settings(), KUNDE_B).send("", "Text")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:650: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[+491511234567890] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c0b260>
+nummer = '+491511234567890'
+
+    @pytest.mark.parametrize(
+        "nummer",
+        ["+49 151 123-45 67", "(0151) 123 4567", "0041-79-000 00 01", "1234567", "+491511234567890"],
+    )
+    def test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus(sink, nummer):
+        """AC-9: Given ein Bestandskonto, dessen bestaetigte Nummer tolerant
+        geschrieben ist (Leerzeichen, Bindestriche, Klammern; 7 bzw. 15 Ziffern)
+        / When fuer diesen Nutzer gesendet wird / Then wird ausgeliefert, und der
+        Anbieter sieht die gespeicherte Form byteidentisch (kein Ziffernumbau)."""
+        profil_sms(KUNDE_B, nummer)
+>       sms_ausgang(_settings(), KUNDE_B).send("", "Text")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:650: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+______ test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab[sms] ______
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c0e5a0>
+kanal = 'sms'
+
+    @pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+    def test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab(sink, kanal):
+        """AC-12: Given die Debug-CLI ohne Nutzer (globale Settings mit
+        Betreibernummer bzw. Rueckadresse) / When ``get_channel("sms")`` bzw.
+        ``get_channel("premium_sms")`` angefordert und gesendet wird / Then klare
+        Ablehnung (Meldung nennt den Kanal), 0 HTTP-Versuche.
+    
+        RED heute: ``get_channel`` liefert einen Ausgang, der still an
+        ``settings.sms_to`` bzw. die Settings-Rueckadresse sendet.
+        """
+        from output.channels.base import get_channel
+    
+        settings = _mit_rueck(_settings(), RUECK_SETTINGS)
+>       with pytest.raises((ChannelBlockedError, OutputConfigError, OutputError, ValueError)) as exc:
+E       Failed: DID NOT RAISE any of (<class 'output.channels.base.ChannelBlockedError'>, <class 'output.channels.base.OutputConfigError'>, <class 'output.channels.base.OutputError'>, <class 'ValueError'>)
+
+tests/tdd/test_sms_recipient_contract.py:925: Failed
+__ test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab[premium_sms] __
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c0f500>
+kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+    def test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab(sink, kanal):
+        """AC-12: Given die Debug-CLI ohne Nutzer (globale Settings mit
+        Betreibernummer bzw. Rueckadresse) / When ``get_channel("sms")`` bzw.
+        ``get_channel("premium_sms")`` angefordert und gesendet wird / Then klare
+        Ablehnung (Meldung nennt den Kanal), 0 HTTP-Versuche.
+    
+        RED heute: ``get_channel`` liefert einen Ausgang, der still an
+        ``settings.sms_to`` bzw. die Settings-Rueckadresse sendet.
+        """
+        from output.channels.base import get_channel
+    
+        settings = _mit_rueck(_settings(), RUECK_SETTINGS)
+>       with pytest.raises((ChannelBlockedError, OutputConfigError, OutputError, ValueError)) as exc:
+E       Failed: DID NOT RAISE any of (<class 'output.channels.base.ChannelBlockedError'>, <class 'output.channels.base.OutputConfigError'>, <class 'output.channels.base.OutputError'>, <class 'ValueError'>)
+
+tests/tdd/test_sms_recipient_contract.py:925: Failed
+___ test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer[sms] ____
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3a9ef30>
+kanal = 'sms'
+
+    @pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+    def test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer(sink, kanal):
+        """AC-13: Given Nutzer A und B mit je eigener bestaetigter Nummer bzw.
+        Rueckadresse und EINEM gemeinsamen Settings-Objekt / When abwechselnd
+        A, B, A, B gesendet wird / Then trifft jede Nachricht genau die Nummer
+        ihres Nutzers (Mandantentrennung)."""
+        settings = _mit_rueck(_settings(), RUECK_SETTINGS)
+        if kanal == "sms":
+            profil_sms(KUNDE_A, NUMMER_A)
+            profil_sms(KUNDE_B, NUMMER_B)
+            bauen, ziel = sms_ausgang, {KUNDE_A: NUMMER_A, KUNDE_B: NUMMER_B}
+        else:
+            profil_rueckadresse(KUNDE_A, RUECK_A)
+            profil_rueckadresse(KUNDE_B, RUECK_B)
+            bauen, ziel = premium_ausgang, {KUNDE_A: RUECK_A, KUNDE_B: RUECK_B}
+        reihenfolge = [KUNDE_A, KUNDE_B, KUNDE_A, KUNDE_B]
+        for uid in reihenfolge:
+>           bauen(settings, uid).send("", f"fuer {uid}")
+            ^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:952: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-a', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer[premium_sms] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3a9fe90>
+kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+    def test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer(sink, kanal):
+        """AC-13: Given Nutzer A und B mit je eigener bestaetigter Nummer bzw.
+        Rueckadresse und EINEM gemeinsamen Settings-Objekt / When abwechselnd
+        A, B, A, B gesendet wird / Then trifft jede Nachricht genau die Nummer
+        ihres Nutzers (Mandantentrennung)."""
+        settings = _mit_rueck(_settings(), RUECK_SETTINGS)
+        if kanal == "sms":
+            profil_sms(KUNDE_A, NUMMER_A)
+            profil_sms(KUNDE_B, NUMMER_B)
+            bauen, ziel = sms_ausgang, {KUNDE_A: NUMMER_A, KUNDE_B: NUMMER_B}
+        else:
+            profil_rueckadresse(KUNDE_A, RUECK_A)
+            profil_rueckadresse(KUNDE_B, RUECK_B)
+            bauen, ziel = premium_ausgang, {KUNDE_A: RUECK_A, KUNDE_B: RUECK_B}
+        reihenfolge = [KUNDE_A, KUNDE_B, KUNDE_A, KUNDE_B]
+        for uid in reihenfolge:
+>           bauen(settings, uid).send("", f"fuer {uid}")
+            ^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:952: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-a', nummer = None
+
+    def premium_ausgang(
+        settings, user_id: str, nummer: Optional[str] = None, *,
+        gelernt_vor: timedelta = timedelta(minutes=5),
+    ):
+        """``PremiumSmsOutput`` mit Empfaenger ``PremiumSmsRecipient.for_user``;
+        ``nummer`` wird vorher als frisch gelernte Rueckadresse eingetragen."""
+        from output.channels.premium_sms import PremiumSmsOutput
+>       from output.channels.recipient import PremiumSmsRecipient
+E       ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:131: ImportError
+_____________ test_ac14_sandbox_guard_im_testmodus_bleibt_wirksam ______________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3a9d310>
+
+    def test_ac14_sandbox_guard_im_testmodus_bleibt_wirksam(sink):
+        """AC-14: Given Testmodus und ein belegter Empfaenger / When der aktive
+        Schluessel der Prod-Key ist bzw. der Sandbox-Key / Then blockt der
+        Sandbox-Key-Guard den Prod-Key (``OutputConfigError``, kein HTTP), und mit
+        dem Sandbox-Key geht der Versuch ausschliesslich mit dem Sandbox-Key an
+        den Draht (sendet laut seven.io nie echt)."""
+        profil_sms(KUNDE_B, NUMMER_B)
+        prod = _settings(is_test_mode=True, seven_api_key=PROD_KEY)
+        with pytest.raises(OutputConfigError) as exc:
+>           sms_ausgang(prod, KUNDE_B).send("", "Text")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:968: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+________ test_ac14_herkunftssperre_schaltet_weiter_auf_den_sandbox_key _________
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3c0ee10>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x78bbd3c0f230>
+
+    def test_ac14_herkunftssperre_schaltet_weiter_auf_den_sandbox_key(sink, monkeypatch):
+        """AC-14: Given Testlauf-Herkunft (``_guard_code_origin``) und ein
+        belegter Empfaenger / When mit dem Prod-Key gesendet wird / Then geht der
+        Versuch mit dem Sandbox-Key an die Empfaengernummer -- der Herkunfts-Guard
+        greift unveraendert."""
+        monkeypatch.setattr(sms_mod, "running_origin", lambda module_file: "test")
+        profil_sms(KUNDE_B, NUMMER_B)
+>       sms_ausgang(_settings(), KUNDE_B).send("", "Text")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:984: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_ test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[ohne_empfaenger] _
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3a9fa40>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x78bbd3a9e420>
+fall = 'ohne_empfaenger'
+
+    @pytest.mark.parametrize("fall", ["ohne_empfaenger", "unfoermig"])
+    def test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards(sink, monkeypatch, fall):
+        """AC-14 (Reihenfolge Form -> Herkunft -> Guards): Given Testlauf-Herkunft
+        ohne Sandbox-Key und Testmodus mit Prod-Key (beide Guards wuerden
+        blocken) / When ein Ausgang ohne Empfaenger bzw. mit unfoermiger Nummer
+        senden soll / Then kommt der Block aus der Empfaengerpruefung
+        (``ChannelBlockedError`` mit ``reason_code``), nicht aus einem Guard.
+    
+        RED heute (ohne_empfaenger): der Sandbox-Guard laeuft zuerst und wirft ein
+        schlichtes ``OutputConfigError``.
+        """
+        monkeypatch.setattr(sms_mod, "running_origin", lambda module_file: "test")
+        settings = _settings(is_test_mode=True, seven_sandbox_key=None)
+        with pytest.raises(ChannelBlockedError) as exc:
+            if fall == "ohne_empfaenger":
+>               SMSOutput(settings).send("", "Text")
+
+tests/tdd/test_sms_recipient_contract.py:1003: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/output/channels/seven_io_base.py:173: in send
+    self._guard_test_mode_sandbox_key()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <output.channels.sms.SMSOutput object at 0x78bbd3a9f9b0>
+
+    def _guard_test_mode_sandbox_key(self) -> None:
+        """Bedingungsloser Guard (Issue #1336, Vorbild telegram.py #1288): im
+        Test-Modus (is_test_mode=True) ist AUSSCHLIESSLICH der konfigurierte
+        seven.io-Sandbox-Key erlaubt. Faengt die Fallback-Luecke aus
+        config.py::for_testing() ab: fehlt seven_sandbox_key, bleibt
+        seven_api_key sonst unveraendert der Prod-Key.
+        """
+        if not self._settings.is_test_mode:
+            return
+        sandbox_key = self._settings.seven_sandbox_key
+        active = self._settings.seven_api_key
+        if not sandbox_key or active != sandbox_key:
+>           raise OutputConfigError(
+                self.name,
+                "Test-Modus aktiv, aber seven_api_key ist nicht der "
+                "Sandbox-Zugang (GZ_SEVEN_SANDBOX_KEY) — Versand blockiert "
+                "(Issue #1336).",
+            )
+E           output.channels.base.OutputConfigError: [sms] Test-Modus aktiv, aber seven_api_key ist nicht der Sandbox-Zugang (GZ_SEVEN_SANDBOX_KEY) — Versand blockiert (Issue #1336).
+
+src/output/channels/seven_io_base.py:120: OutputConfigError
+____ test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[unfoermig] ____
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3a9cad0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x78bbd3a9cb00>
+fall = 'unfoermig'
+
+    @pytest.mark.parametrize("fall", ["ohne_empfaenger", "unfoermig"])
+    def test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards(sink, monkeypatch, fall):
+        """AC-14 (Reihenfolge Form -> Herkunft -> Guards): Given Testlauf-Herkunft
+        ohne Sandbox-Key und Testmodus mit Prod-Key (beide Guards wuerden
+        blocken) / When ein Ausgang ohne Empfaenger bzw. mit unfoermiger Nummer
+        senden soll / Then kommt der Block aus der Empfaengerpruefung
+        (``ChannelBlockedError`` mit ``reason_code``), nicht aus einem Guard.
+    
+        RED heute (ohne_empfaenger): der Sandbox-Guard laeuft zuerst und wirft ein
+        schlichtes ``OutputConfigError``.
+        """
+        monkeypatch.setattr(sms_mod, "running_origin", lambda module_file: "test")
+        settings = _settings(is_test_mode=True, seven_sandbox_key=None)
+        with pytest.raises(ChannelBlockedError) as exc:
+            if fall == "ohne_empfaenger":
+                SMSOutput(settings).send("", "Text")
+            else:
+                profil_sms(KUNDE_B, "12; DROP")
+>               sms_ausgang(settings, KUNDE_B).send("", "Text")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_sms_recipient_contract.py:1006: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+settings = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', repor... telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0)
+user_id = 'kunde-b', nummer = None
+
+    def sms_ausgang(settings, user_id: str, nummer: Optional[str] = None):
+        """``SMSOutput`` mit Empfaenger ``SmsRecipient.for_user``; ``nummer`` wird
+        vorher als bestaetigte Nummer ins Profil geschrieben (``None``: Profil
+        bleibt, wie es ist)."""
+>       from output.channels.recipient import SmsRecipient
+E       ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+
+tests/helpers/sms_empfaenger.py:107: ImportError
+_______ test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[sms] _______
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3a9deb0>
+kanal = 'sms'
+
+    @pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+    def test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz(sink, kanal):
+        """AC-14: Given Nutzer B ohne bestaetigte Nummer bzw. ohne Rueckadresse;
+        die Settings des Dienstes tragen trotzdem eine Nummer bzw. frische
+        Rueckadresse / When ein Versand durch den echten Dienst laeuft / Then
+        kein HTTP-Versuch, und der Tageszaehler (``sms_daily_limit``) des Kanals
+        bleibt unveraendert.
+    
+        RED heute: der Ausgang sendet an die Settings-Nummer und verbraucht einen
+        Platz.
+        """
+        if kanal == "sms":
+            profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False)
+            settings = _settings().model_copy(update={"sms_to": NUMMER_B})
+        else:
+            profil_rueckadresse(KUNDE_B, None, gelernt_vor=None)
+            settings = _mit_rueck(_settings(), RUECK_SETTINGS)
+        vorher = _verbraucht(KUNDE_B, kanal)
+        _kein_daten_hinweis(settings, KUNDE_B, kanal)
+>       assert sink.calls == [], f"AC-14 ({kanal}): Block erwartet, gesehen {sink.calls!r}"
+E       AssertionError: AC-14 (sms): Block erwartet, gesehen [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '+41790000002', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}]
+E       assert [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '+41790000002', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}] == []
+E         
+E         Left contains one more item: {'api_key': 'seven-prod-key-s4b', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.', 'to': '+41790000002', ...}
+E         
+E         Full diff:
+E         - []
+E         + [
+E         +     {
+E         +         'api_key': 'seven-prod-key-s4b',
+E         +         'from': None,
+E         +         'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und '
+E         +         'liefern das Briefing nach, sobald Daten verfügbar sind.',
+E         +         'to': '+41790000002',
+E         +         'url': 'https://gateway.seven.invalid/api/sms',
+E         +     },
+E         + ]
+
+tests/tdd/test_sms_recipient_contract.py:1030: AssertionError
+___ test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[premium_sms] ___
+
+sink = <tdd.test_sms_recipient_contract._SevenSink object at 0x78bbd3a9ecf0>
+kanal = 'premium_sms'
+
+    @pytest.mark.parametrize("kanal", ["sms", "premium_sms"])
+    def test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz(sink, kanal):
+        """AC-14: Given Nutzer B ohne bestaetigte Nummer bzw. ohne Rueckadresse;
+        die Settings des Dienstes tragen trotzdem eine Nummer bzw. frische
+        Rueckadresse / When ein Versand durch den echten Dienst laeuft / Then
+        kein HTTP-Versuch, und der Tageszaehler (``sms_daily_limit``) des Kanals
+        bleibt unveraendert.
+    
+        RED heute: der Ausgang sendet an die Settings-Nummer und verbraucht einen
+        Platz.
+        """
+        if kanal == "sms":
+            profil_sms(KUNDE_B, NUMMER_B, bestaetigt=False)
+            settings = _settings().model_copy(update={"sms_to": NUMMER_B})
+        else:
+            profil_rueckadresse(KUNDE_B, None, gelernt_vor=None)
+            settings = _mit_rueck(_settings(), RUECK_SETTINGS)
+        vorher = _verbraucht(KUNDE_B, kanal)
+        _kein_daten_hinweis(settings, KUNDE_B, kanal)
+>       assert sink.calls == [], f"AC-14 ({kanal}): Block erwartet, gesehen {sink.calls!r}"
+E       AssertionError: AC-14 (premium_sms): Block erwartet, gesehen [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}]
+E       assert [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}] == []
+E         
+E         Left contains one more item: {'api_key': 'seven-prod-key-s4b', 'from': '4916092172595', 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.', 'to': '4917000000099', ...}
+E         
+E         Full diff:
+E         - []
+E         + [
+E         +     {
+E         +         'api_key': 'seven-prod-key-s4b',
+E         +         'from': '4916092172595',
+E         +         'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und '
+E         +         'liefern das Briefing nach, sobald Daten verfügbar sind.',
+E         +         'to': '4917000000099',
+E         +         'url': 'https://gateway.seven.invalid/api/sms',
+E         +     },
+E         + ]
+
+tests/tdd/test_sms_recipient_contract.py:1030: AssertionError
+==================================== PASSES ====================================
+________ test_ac11_befehlsantwort_ueber_den_echten_reader[erfolgreich] _________
+------------------------------ Captured log call -------------------------------
+WARNING  services.trip_command_processor:trip_command_processor.py:1588 No trip found for name: '' (user: 'kunde-a')
+WARNING  services.trip_command_processor:trip_command_processor.py:1588 No trip found for name: '' (user: 'kunde-a')
+_______ test_ac11_befehlsantwort_ueber_den_echten_reader[kollision_409] ________
+------------------------------ Captured log call -------------------------------
+WARNING  services.inbound_sms_reader:inbound_sms_reader.py:298 premium-sms-learn abgelehnt (HTTP 409) fuer maskierte Nummer **********001: {"error":"premium_number_collision"}
+=========================== short test summary info ============================
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[briefing-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[briefing-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[kein_daten_hinweis-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[kein_daten_hinweis-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[amtswarnung-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[amtswarnung-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich_amtswarnung-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich_amtswarnung-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_trip-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_trip-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_trip-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_trip-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac11_befehlsantwort_ueber_den_echten_reader[erfolgreich]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac11_befehlsantwort_ueber_den_echten_reader[kollision_409]
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac1_sms_ohne_empfaenger_wird_geblockt_ohne_http - Failed: DID NOT RAISE <class 'output.channels.base.ChannelBlockedError'>
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac1_premium_ohne_empfaenger_wird_geblockt_ohne_http - Failed: DID NOT RAISE <class 'output.channels.base.ChannelBlockedError'>
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[sms] - Failed: DID NOT RAISE <class 'output.channels.base.ChannelBlockedError'>
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[premium_sms] - Failed: DID NOT RAISE <class 'output.channels.base.ChannelBlockedError'>
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[unbestaetigt] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[abweichend] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[leer] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[kein_profil] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac2_bestaetigte_nummer_wird_frisch_aus_dem_profil_gelesen - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[fehlt] - AssertionError: AC-3 (fehlt): with_user_profile muss sms_to=None liefern, ist '+41790009999'
+assert '+41790009999' is None
+ +  where '+41790009999' = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', report_type='evening', channel='console', debug_level='info', dry_run=False, forecast_hours=48, include_snow=True, sunny_dni_min_wm2=60.0, sunny_dni_max_wm2=180.0, sunny_cloud_threshold_pct=30, smtp_host=None, smtp_port=587, smtp_user=None, smtp_pass=None, mail_to=None, mail_from=None, inbound_address=None, imap_host=None, imap_port=993, imap_user=None, imap_pass=None, test_smtp_host='mail.henemm.com', test_smtp_port=587, test_smtp_user=None, test_smtp_pass=None, test_mail_from=None, test_imap_user=None, test_imap_pass=None, is_test_mode=False, resend_allowed=False, env='production', core_shared_secret='***', go_api_url='http://localhost:8090', public_host=None, sms_gateway_url='https://gateway.seven.invalid/api/sms', seven_api_key='***', seven_sandbox_key='seven-sandbox-key-s4b', sms_from=None, sms_to='+41790009999', premium_sms_reply_to=None, premium_sms_reply_at=None, email_verified_at=None, mail_server_hostname='mail.henemm.com', telegram_bot_token='', telegram_chat_id='', telegram_test_chat_id='', telegram_test_bot_token='', telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0).sms_to
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[kaputt] - AssertionError: AC-3 (kaputt): with_user_profile muss sms_to=None liefern, ist '+41790009999'
+assert '+41790009999' is None
+ +  where '+41790009999' = Settings(latitude=47.2692, longitude=11.4041, location_name='Innsbruck', elevation_m=None, provider='geosphere', report_type='evening', channel='console', debug_level='info', dry_run=False, forecast_hours=48, include_snow=True, sunny_dni_min_wm2=60.0, sunny_dni_max_wm2=180.0, sunny_cloud_threshold_pct=30, smtp_host=None, smtp_port=587, smtp_user=None, smtp_pass=None, mail_to=None, mail_from=None, inbound_address=None, imap_host=None, imap_port=993, imap_user=None, imap_pass=None, test_smtp_host='mail.henemm.com', test_smtp_port=587, test_smtp_user=None, test_smtp_pass=None, test_mail_from=None, test_imap_user=None, test_imap_pass=None, is_test_mode=False, resend_allowed=False, env='production', core_shared_secret='***', go_api_url='http://localhost:8090', public_host=None, sms_gateway_url='https://gateway.seven.invalid/api/sms', seven_api_key='***', seven_sandbox_key='seven-sandbox-key-s4b', sms_from=None, sms_to='+41790009999', premium_sms_reply_to=None, premium_sms_reply_at=None, email_verified_at=None, mail_server_hostname='mail.henemm.com', telegram_bot_token='', telegram_chat_id='', telegram_test_chat_id='', telegram_test_bot_token='', telegram_rate_limit_max_per_window=18, telegram_rate_limit_window_seconds=60.0, telegram_retry_after_cap_seconds=45.0).sms_to
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac4_dienst_mit_model_copy_nummer_von_a_sendet_fuer_b_nur_an_b - AssertionError: AC-4: fuer B nur Nummer B erwartet, gesehen ['+41790000001']
+assert ['+41790000001'] == ['+41790000002']
+  
+  At index 0 diff: '+41790000001' != '+41790000002'
+  
+  Full diff:
+    [
+  -     '+41790000002',
+  ?                 ^
+  +     '+41790000001',
+  ?                 ^
+    ]
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac4_ausgang_fuer_b_ignoriert_settings_nummer_von_a - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[sms] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[premium_sms] - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac4_block_im_dienst_verbraucht_keinen_drosselplatz - AssertionError: AC-4: Block erwartet, gesehen [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '+41790000001', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}]
+assert [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '+41790000001', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}] == []
+  
+  Left contains one more item: {'api_key': 'seven-prod-key-s4b', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.', 'to': '+41790000001', ...}
+  
+  Full diff:
+  - []
+  + [
+  +     {
+  +         'api_key': 'seven-prod-key-s4b',
+  +         'from': None,
+  +         'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und '
+  +         'liefern das Briefing nach, sobald Daten verfügbar sind.',
+  +         'to': '+41790000001',
+  +         'url': 'https://gateway.seven.invalid/api/sms',
+  +     },
+  + ]
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[fehlend-premium_sms_no_reply_address] - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[zukunft-premium_sms_reply_address_stale] - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[31_tage-premium_sms_reply_address_stale] - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac5_frische_rueckadresse_aus_dem_profil_wird_bedient - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac5_alarm_buchung_registriert_den_unveraenderten_code[fehlend-premium_sms_no_reply_address] - AssertionError: AC-5 (fehlend): Block erwartet, gesehen [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31'}]
+assert [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31'}] == []
+  
+  Left contains one more item: {'api_key': 'seven-prod-key-s4b', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31', 'to': '4917000000099', ...}
+  
+  Full diff:
+  - []
+  + [
+  +     {
+  +         'api_key': 'seven-prod-key-s4b',
+  +         'from': '4916092172595',
+  +         'text': 'ges.Route: !TS:L 10:31-17:31',
+  +         'to': '4917000000099',
+  +         'url': 'https://gateway.seven.invalid/api/sms',
+  +     },
+  + ]
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac5_alarm_buchung_registriert_den_unveraenderten_code[31_tage-premium_sms_reply_address_stale] - AssertionError: AC-5 (31_tage): Block erwartet, gesehen [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31'}]
+assert [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31'}] == []
+  
+  Left contains one more item: {'api_key': 'seven-prod-key-s4b', 'from': '4916092172595', 'text': 'ges.Route: !TS:L 10:31-17:31', 'to': '4917000000099', ...}
+  
+  Full diff:
+  - []
+  + [
+  +     {
+  +         'api_key': 'seven-prod-key-s4b',
+  +         'from': '4916092172595',
+  +         'text': 'ges.Route: !TS:L 10:31-17:31',
+  +         'to': '4917000000099',
+  +         'url': 'https://gateway.seven.invalid/api/sms',
+  +     },
+  + ]
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac6_code_geht_nur_an_die_eigene_ausstehende_nummer - AssertionError: AC-6: fremde Nummer angenommen: {'status': 'sent'}
+assert {'status': 'sent'} != {'status': 'sent'}
+ +  where {'status': 'sent'} = json()
+ +    where json = <tdd.test_sms_recipient_contract._Antwort object at 0x78bbd3c37410>.json
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[fremd] - AssertionError: AC-6 (fremd): {'status': 'sent'}
+assert {'status': 'sent'} != {'status': 'sent'}
+ +  where {'status': 'sent'} = json()
+ +    where json = <tdd.test_sms_recipient_contract._Antwort object at 0x78bbd3b66a20>.json
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[ohne_plus] - AssertionError: AC-6 (ohne_plus): {'status': 'sent'}
+assert {'status': 'sent'} != {'status': 'sent'}
+ +  where {'status': 'sent'} = json()
+ +    where json = <tdd.test_sms_recipient_contract._Antwort object at 0x78bbd3c37800>.json
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[kein_profil] - AssertionError: AC-6 (kein_profil): {'status': 'sent'}
+assert {'status': 'sent'} != {'status': 'sent'}
+ +  where {'status': 'sent'} = json()
+ +    where json = <tdd.test_sms_recipient_contract._Antwort object at 0x78bbd3b67290>.json
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac7_verification_gibt_es_nur_am_sms_typ_und_nur_fuer_die_profilnummer - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-abc] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-12; DROP] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-123456] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-1234567890123456] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-+49 151 12a4567] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-491511234567] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+0151123456] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-abc] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-12; DROP] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567890123456] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-abc] - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-12; DROP] - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567] - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567890123456] - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-+0170000000001] - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[+49 151 123-45 67] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[(0151) 123 4567] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[0041-79-000 00 01] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[1234567] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[+491511234567890] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab[sms] - Failed: DID NOT RAISE any of (<class 'output.channels.base.ChannelBlockedError'>, <class 'output.channels.base.OutputConfigError'>, <class 'output.channels.base.OutputError'>, <class 'ValueError'>)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab[premium_sms] - Failed: DID NOT RAISE any of (<class 'output.channels.base.ChannelBlockedError'>, <class 'output.channels.base.OutputConfigError'>, <class 'output.channels.base.OutputError'>, <class 'ValueError'>)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer[sms] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer[premium_sms] - ImportError: cannot import name 'PremiumSmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac14_sandbox_guard_im_testmodus_bleibt_wirksam - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac14_herkunftssperre_schaltet_weiter_auf_den_sandbox_key - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[ohne_empfaenger] - output.channels.base.OutputConfigError: [sms] Test-Modus aktiv, aber seven_api_key ist nicht der Sandbox-Zugang (GZ_SEVEN_SANDBOX_KEY) — Versand blockiert (Issue #1336).
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[unfoermig] - ImportError: cannot import name 'SmsRecipient' from 'output.channels.recipient' (/home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth/src/output/channels/recipient.py)
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[sms] - AssertionError: AC-14 (sms): Block erwartet, gesehen [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '+41790000002', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}]
+assert [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '+41790000002', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}] == []
+  
+  Left contains one more item: {'api_key': 'seven-prod-key-s4b', 'from': None, 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.', 'to': '+41790000002', ...}
+  
+  Full diff:
+  - []
+  + [
+  +     {
+  +         'api_key': 'seven-prod-key-s4b',
+  +         'from': None,
+  +         'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und '
+  +         'liefern das Briefing nach, sobald Daten verfügbar sind.',
+  +         'to': '+41790000002',
+  +         'url': 'https://gateway.seven.invalid/api/sms',
+  +     },
+  + ]
+FAILED tests/tdd/test_sms_recipient_contract.py::test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[premium_sms] - AssertionError: AC-14 (premium_sms): Block erwartet, gesehen [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}]
+assert [{'url': 'https://gateway.seven.invalid/api/sms', 'api_key': 'seven-prod-key-s4b', 'to': '4917000000099', 'from': '4916092172595', 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.'}] == []
+  
+  Left contains one more item: {'api_key': 'seven-prod-key-s4b', 'from': '4916092172595', 'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.', 'to': '4917000000099', ...}
+  
+  Full diff:
+  - []
+  + [
+  +     {
+  +         'api_key': 'seven-prod-key-s4b',
+  +         'from': '4916092172595',
+  +         'text': 'Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und '
+  +         'liefern das Briefing nach, sobald Daten verfügbar sind.',
+  +         'to': '4917000000099',
+  +         'url': 'https://gateway.seven.invalid/api/sms',
+  +     },
+  + ]
+======================== 58 failed, 20 passed in 2.41s =========================

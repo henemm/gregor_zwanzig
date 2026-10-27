@@ -163,7 +163,11 @@ def test_ac1_tagesgewitter_sichtbar_trotz_none_im_aggregat():
     erwartet_html = stufe_mit_herkunft.replace("hoch", "hoch @14", 1)
     erwartet_plain = "⚡" + stufe_mit_herkunft.replace("hoch", "hoch@14", 1)
 
-    assert html_outlook_headers(html) == ["Tag", "Gewitter"], (
+    # #2098: hinter der Auswahl steht die fest angehaengte ACC-Zusatzspalte.
+    # #2136/ADR-0068: `col_label` ("Thdr") statt deutschem Langnamen.
+    from app.metric_catalog import get_metric
+
+    assert html_outlook_headers(html) == ["Tag", get_metric("thunder").col_label, "ACC"], (
         f"Testaufbau: unerwartete Kopfzeile {html_outlook_headers(html)!r}."
     )
     zeilen = html_outlook_body_rows(html)
@@ -175,10 +179,11 @@ def test_ac1_tagesgewitter_sichtbar_trotz_none_im_aggregat():
     )
 
     block = plain_outlook_block(plain)
-    assert block is not None and f"Gewitter {erwartet_plain}" in block, (
+    thunder_label = get_metric("thunder").col_label
+    assert block is not None and f"{thunder_label} {erwartet_plain}" in block, (
         f"Klartext-Ausblick:\n{block}\nenthaelt nicht "
-        f"'Gewitter {erwartet_plain}' -- dieselbe Ursache wie im HTML-Zweig "
-        "(AC-1)."
+        f"'{thunder_label} {erwartet_plain}' -- dieselbe Ursache wie im "
+        "HTML-Zweig (AC-1)."
     )
 
 
@@ -212,7 +217,7 @@ def test_ac3_keine_nachtangabe_im_metrik_zweig():
     Zusatz in der Gewitterzelle (PO-Entscheid 2026-08-14, bewusste
     Abweichung von #1653/#1671).
 
-    #1848 A3: dieser Entscheid gilt seither fuer ALLE Touren, nicht mehr nur
+    #1848 A3: dieser Entscheid gilt seither fuer ALLE Trips, nicht mehr nur
     fuer den Metrik-Zweig -- der feste Zweig entfaellt als Normalfall, und die
     Nachtangabe ist aus allen VIER Ausblick-Darstellungen entfernt. DREIFACH
     bestaetigt (2026-08-14 · 2026-08-21 mit Kenntnis von Verwechslungsluecke

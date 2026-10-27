@@ -3,7 +3,7 @@ entity_id: epic_404_phase2_ist_screenshots
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [playwright, screenshots, audit, staging, epic-404, tooling]
 ---

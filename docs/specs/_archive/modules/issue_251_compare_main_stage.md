@@ -3,7 +3,7 @@ entity_id: issue_251_compare_main_stage
 type: module
 created: 2026-05-19
 updated: 2026-05-19
-status: draft
+status: implemented
 version: "1.0"
 issue: 251
 tags: [compare, frontend, svelte, matrix, scoring, hourly, banner, preset]

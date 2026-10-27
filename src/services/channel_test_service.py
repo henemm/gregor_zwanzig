@@ -6,7 +6,36 @@ outputs.* modules.
 """
 from __future__ import annotations
 
+import json
+
 from app.config import Settings
+
+_MAIL_GESPERRT = (
+    "Die Testmail wurde nicht gesendet: Für dein Konto ist keine bestätigte "
+    "E-Mail-Adresse hinterlegt. Bitte bestätige zuerst deine Adresse im Profil."
+)
+
+
+def _sperre_email(user_id: str) -> str | None:
+    """Fehlertext, wenn fuer diesen Nutzer keine Testmail gesendet werden darf.
+
+    Issue #2521 S2 / ADR-0092: gesendet wird nur an die bestaetigte
+    Profiladresse dieses Nutzers -- nie an "default", nie an die globale
+    Betreiber-Adresse (Rueckfall von ``with_user_profile``).
+    """
+    if not user_id or user_id == "default":
+        return _MAIL_GESPERRT
+    from app.loader import get_data_dir
+
+    try:
+        profil = json.loads((get_data_dir(user_id) / "user.json").read_text())
+    except (OSError, ValueError):
+        return _MAIL_GESPERRT
+    if not isinstance(profil, dict):
+        return _MAIL_GESPERRT
+    if not profil.get("email_verified_at") or not (profil.get("mail_to") or "").strip():
+        return _MAIL_GESPERRT
+    return None
 
 
 def send_test_message(channel: str, user_id: str) -> dict:
@@ -19,10 +48,6 @@ def send_test_message(channel: str, user_id: str) -> dict:
     Returns:
         A dict with either {"status": "ok"} or {"error": ...}.
     """
-    # Issue #198: Channel-Tests sind konzeptionell Tests → IMMER Gmail-Routing,
-    # nie über Production-SMTP (Resend). _is_test_user("default") liefert False,
-    # daher zwingen wir .for_testing() unabhängig vom user_id.
-    settings = Settings().with_user_profile(user_id).for_testing()
     subject = "Gregor 20 — Testmeldung"
     body = "Dein Kanal funktioniert!"
 
@@ -30,12 +55,23 @@ def send_test_message(channel: str, user_id: str) -> dict:
         if channel == "email":
             from output.channels.email import EmailOutput
 
-            output = EmailOutput(settings)
+            sperre = _sperre_email(user_id)
+            if sperre:
+                return {"error": sperre}
+            # Issue #2521 S2 / ADR-0092 (loest #198 fuer echte Nutzer ab):
+            # normale Versandkette an die bestaetigte Profiladresse; Testnutzer
+            # und Staging bleiben ueber force_test in with_user_profile auf Stalwart.
+            output = EmailOutput(Settings().with_user_profile(user_id))
             output.send(subject, body, html=False)
         elif channel == "telegram":
+            from output.channels.recipient import TelegramRecipient
             from output.channels.telegram import TelegramOutput
 
-            output = TelegramOutput(settings)
+            # Issue #1412 S4a (M3): an den Profil-Chat ueber den Produktions-Bot,
+            # NICHT ueber for_testing() (das zielte auf den Betreiber-Test-Chat).
+            settings = Settings().with_user_profile(user_id)
+            recipient = TelegramRecipient.for_user(user_id, settings)
+            output = TelegramOutput(settings, recipient=recipient)
             output.send(subject, body)
         else:
             return {"error": f"Unbekannter Kanal: {channel}"}

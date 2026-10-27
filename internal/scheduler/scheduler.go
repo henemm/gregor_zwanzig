@@ -13,9 +13,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net"
 	"net/http"
+	"os"
+	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
@@ -34,6 +38,26 @@ type jobResult struct {
 	Time   time.Time `json:"time"`
 	Status string    `json:"status"` // "ok", "partial" (Issue #1447 S2a) or "error"
 	Error  string    `json:"error,omitempty"`
+	// DurationS: Go-Wanduhr des Laufs in Sekunden (Issue #1539 S0), KEIN omitempty.
+	DurationS float64 `json:"duration_s"`
+}
+
+// deadlineFailedError: Zeitobergrenzen-Abbruch MIT gescheitertem Element
+// (failed > 0). Bleibt ein harter Fehler (Status "error"), wird aber als
+// Abbruch gezaehlt (Issue #1539 S0).
+type deadlineFailedError struct {
+	msg     string
+	skipped int
+}
+
+func (e *deadlineFailedError) Error() string { return e.msg }
+
+// deadlineAbortState zaehlt Zeitobergrenzen-Abbrueche (reason "deadline") je
+// Fan-out-Job kumulativ (Issue #1539 S0). Nur Zahlen/Zeitstempel -- nie IDs.
+type deadlineAbortState struct {
+	Total       int
+	LastAt      time.Time
+	LastSkipped int
 }
 
 // jobOverlapState zaehlt Ticks, die wegen eines noch laufenden Vorgaengers
@@ -59,6 +83,9 @@ type jobOverlapState struct {
 type partialRunError struct {
 	msg     string
 	wrapped error
+	// deadline/skipped: Zeitobergrenzen-Abbruch aus dem Python-Body (#1539 S0).
+	deadline bool
+	skipped  int
 }
 
 func (e *partialRunError) Error() string { return e.msg }
@@ -95,8 +122,11 @@ type jobMeta struct {
 // Scheduler wraps robfig/cron and triggers Python services via HTTP.
 type Scheduler struct {
 	cron                    *cron.Cron
+	running                 atomic.Bool // Issue #2218 C5-15: echter Prozesszustand fuer Status()
 	pythonURL               string
 	heartbeatComparePresets string
+	poEmail                 string // Issue #2436: tier_request_health.po_mail_configured
+	smtpHost                string
 	client                  *http.Client
 	store                   *store.Store
 	mu                      sync.RWMutex
@@ -131,6 +161,13 @@ type Scheduler struct {
 	jobLocksMu sync.Mutex
 	jobLocks   map[string]*sync.Mutex
 
+	// pushMu/push/kickSleep: Push-Weckruf der Befehls-Poll-Jobs (Issue #2439,
+	// push_kick.go). kickSleep ist die injizierbare Wartefunktion (nil =
+	// time.Sleep).
+	pushMu    sync.Mutex
+	push      map[string]*pushState
+	kickSleep func(time.Duration)
+
 	// notifier delivers MQ messages (e.g. heartbeat-URL missing). Defaults to
 	// notify.SendMQ; tests inject their own.
 	notifier Notifier
@@ -139,6 +176,99 @@ type Scheduler struct {
 	// per (process, jobName) — avoids MQ spam on every cron tick.
 	onceMissingHB   map[string]*sync.Once
 	onceMissingHBmu sync.Mutex
+
+	// userState verzeichnet Job-Ergebnisse je (jobID, userID), GETRENNT von
+	// lastRuns (Issue #2149 Scheibe A) — eigener Mutex, eigene Persistenz,
+	// s. user_run_state.go.
+	userState *userRunState
+
+	// Fix #2149 Scheibe B (Spec Abschnitt 8): Wartebudget je Nutzeraufruf,
+	// Laufbudget je Job-Lauf und Deckel je in den Hintergrund verlagertem
+	// Alarm-Aufruf. Unexported, damit Tests derselben Package sie direkt
+	// verkleinern koennen. s.client.Timeout (#1912) bleibt unveraendert.
+	alertWaitBudget    time.Duration
+	alertRunBudget     time.Duration
+	alertCallCap       time.Duration
+	briefingWaitBudget time.Duration
+	briefingRunBudget  time.Duration
+	// Epic #2261 A-2 S2 (ADR-0082): Budget der Radar-Jobs, an den 5-Min-Takt
+	// gebunden (Wait 240 < Run 270 + 10 s Nacharbeit < Takt 300, Cap 2 Takte).
+	radarWaitBudget time.Duration
+	radarRunBudget  time.Duration
+	radarCallCap    time.Duration
+
+	// callBudget ist das nicht persistierte In-Flight-Register (Spec
+	// Abschnitt 2, eigener Mutex).
+	callBudget *userCallBudget
+
+	// runCounter zaehlt Eintritte in runForAllUsers je jobID fuer die
+	// Rotation der Nutzerreihenfolge; runBudgetSummary haelt die Budget-
+	// Zahlen des zuletzt abgeschlossenen Laufs je jobID (Spec Abschnitt 7/9).
+	// Beide geschuetzt durch s.mu wie overlapState.
+	runCounter       map[string]int
+	runBudgetSummary map[string]*jobBudgetSummary
+
+	// abortMu schuetzt abortState/abortSince (Issue #1539 S0); eigener Mutex,
+	// damit weder harvestLateResult noch Status die s.mu-Reihenfolge beruehren.
+	abortMu    sync.Mutex
+	abortState map[string]*deadlineAbortState
+	abortSince time.Time
+}
+
+// jobBudgetSummary sind die oeffentlichen Budget-Zahlen des zuletzt
+// abgeschlossenen Laufs eines Fan-out-Jobs (Fix #2149 Scheibe B, Spec
+// Abschnitt 9) -- nur Zahlen, keine Nutzerkennung.
+type jobBudgetSummary struct {
+	InFlight         int // am Laufende noch aktive Marker
+	SkippedInFlight  int // wegen Marker aus Vorlauf kein neuer POST
+	NotReachedBudget int // wegen erschoepftem Laufbudget gar nicht versucht
+}
+
+// budgetExceededError signalisiert, dass das Wartebudget eines Nutzeraufrufs
+// abgelaufen ist, waehrend der Aufruf im Hintergrund weiterlaeuft (Fix #2149
+// Scheibe B, Spec Abschnitt 4). Dockt per Unwrap an die partialRunError-Kette
+// an, damit recordRun den Job-Lauf als "partial" (nicht "error", #1346) rankt.
+// Der Text enthaelt nie eine Nutzerkennung oder URL (oeffentliches Feld).
+type budgetExceededError struct{ msg string }
+
+func (e *budgetExceededError) Error() string { return e.msg }
+func (e *budgetExceededError) Unwrap() error { return &partialRunError{msg: e.msg} }
+
+// radarBudgetJobIDs sind die zwei Radar-Jobs im 5-Minuten-Takt mit eigenem,
+// an den Takt gebundenem Budget (Epic #2261 A-2 S2, ADR-0082). Benutzt von
+// budgetsFor.
+var radarBudgetJobIDs = map[string]bool{
+	"radar_alert_checks":         true,
+	"compare_radar_alert_checks": true,
+}
+
+// newCoreClient baut den geteilten HTTP-Client zum Python-Core.
+//
+// Issue #2439: ohne Keep-Alive. uvicorn schliesst eine Idle-Verbindung nach
+// 5 s, der Go-Default haelt sie 90 s. Trifft der naechste POST (z. B. der
+// SMS-Nachversuch nach 5 s) genau diese geschlossene Verbindung, scheitert er
+// mit EOF -- und Go wiederholt einen POST nicht von selbst. Der Client spricht
+// nur Loopback zum Core, eine neue TCP-Verbindung je Aufruf kostet praktisch
+// nichts. Bewusst KEIN generischer Retry: derselbe Client traegt
+// nicht-idempotente Briefing-Versaende (triggerEndpointForUser).
+func newCoreClient(timeout time.Duration) *http.Client {
+	return &http.Client{Timeout: timeout, Transport: closeConnTransport{}}
+}
+
+// closeConnTransport setzt Close=true und delegiert an das ZUR AUFRUFZEIT
+// gueltige http.DefaultTransport. Bewusst kein eigener *http.Transport und
+// keine Typ-Assertion: coreauth.Install (#2142, X-GZ-Core-Auth) und
+// egress.Install haengen ihre Wrapper in http.DefaultTransport ein -- ein
+// eigener Transport wuerde beide umgehen (Core antwortet 401), eine
+// Assertion auf *http.Transport panict im Produktivstart.
+type closeConnTransport struct{}
+
+func (closeConnTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Klonen statt mutieren: der RoundTripper-Vertrag verbietet, den
+	// uebergebenen Request zu veraendern.
+	cloned := req.Clone(req.Context())
+	cloned.Close = true
+	return http.DefaultTransport.RoundTrip(cloned)
 }
 
 // New creates a Scheduler from config and store. Returns error if timezone is invalid.
@@ -149,26 +279,49 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 	}
 
 	s := &Scheduler{
-		cron:                    cron.New(cron.WithLocation(loc)),
+		// Issue #2217 (C1-63): aeusseres Netz — eine Panic in einem Cron-Eintrag
+		// ausserhalb von recordRun() beendet sonst den ganzen Prozess.
+		cron: cron.New(cron.WithLocation(loc), cron.WithChain(
+			cron.Recover(cron.PrintfLogger(log.New(os.Stderr, "[cron] ", log.LstdFlags))),
+		)),
 		pythonURL:               cfg.PythonCoreURL,
 		heartbeatComparePresets: cfg.HeartbeatComparePresets,
+		poEmail:                 cfg.PoEmail,
+		smtpHost:                cfg.SMTPHost,
 		// Issue #1912: 120s reichte fuer den regulaeren Versand nicht mehr
 		// (laengster gemessener Einzelversand 319s, briefing_slots.py:48) und
 		// riss Laeufe als Timeout ab, die tatsaechlich noch liefen. 3000s (50
 		// min) liegt knapp unter dem stuendlichen Cron-Abstand; die
 		// Overlap-Sperre in recordRun() verhindert, dass ein langsamer Lauf
 		// den Folgetick blockiert.
-		client: &http.Client{Timeout: 3000 * time.Second},
-		store:                   st,
-		lastRuns:                make(map[string]*jobResult),
-		entryMap:                make(map[cron.EntryID]jobMeta),
-		overlapState:            make(map[string]*jobOverlapState),
-		lastHardStatus:          make(map[string]string),
-		jobLocks:                make(map[string]*sync.Mutex),
+		client:         newCoreClient(3000 * time.Second),
+		store:          st,
+		lastRuns:       make(map[string]*jobResult),
+		entryMap:       make(map[cron.EntryID]jobMeta),
+		overlapState:   make(map[string]*jobOverlapState),
+		lastHardStatus: make(map[string]string),
+		jobLocks:       make(map[string]*sync.Mutex),
 		notifier: func(sender, recipient, priority, subject, body string) error {
 			return notify.SendMQ(sender, recipient, priority, subject, body)
 		},
 		onceMissingHB: make(map[string]*sync.Once),
+		userState:     newUserRunState(st.DataDir),
+		// Fix #2149 Scheibe B, Spec Abschnitt 8: Alarm-Laufbudget = 80 % des
+		// */15-Takts, Deckel = 2 Takte; Briefing-Laufbudget = 80 % des
+		// Stundentakts auf zwei Teiljobs verteilt.
+		alertWaitBudget:    300 * time.Second,
+		alertRunBudget:     720 * time.Second,
+		alertCallCap:       1800 * time.Second,
+		briefingWaitBudget: 600 * time.Second,
+		briefingRunBudget:  1440 * time.Second,
+		radarWaitBudget:    240 * time.Second,
+		radarRunBudget:     270 * time.Second,
+		radarCallCap:       600 * time.Second,
+		callBudget:         newUserCallBudget(),
+		runCounter:         make(map[string]int),
+		runBudgetSummary:   make(map[string]*jobBudgetSummary),
+		abortState:         make(map[string]*deadlineAbortState),
+		abortSince:         time.Now(),
 	}
 
 	// Register jobs and store EntryID → jobMeta mapping
@@ -193,14 +346,13 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)", nil},
 		// Issue #637: inbound_telegram_poll entfernt — Telegram-Eingang läuft jetzt
 		// push-basiert über den Webhook (POST /api/webhooks/telegram/{secret}).
-		// Issue #1628 S0: 7/22/37/52 statt */15 (= 0/15/30/45) -- weicht der
-		// gemessenen Open-Meteo-Lastspitze auf :00/:30 zeitlich aus. NUR
-		// diese zwei Radar-Jobs; alle anderen */15-Jobs bleiben unveraendert.
-		{"7,22,37,52 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (offset 7/22/37/52 min)", nil},
+		// Issue #1628 S0 / #2261 A-2 S2: 5-Min-Takt mit Offset 3 (Minuten 3, 8,
+		// ... 58) -- kollidiert nie mit den */5-/*/15-Jobs und :00, weicht der
+		// Open-Meteo-Lastspitze :00/:30 aus. NUR diese zwei Radar-Jobs.
+		{"3-58/5 * * * *", s.radarAlertChecks, "radar_alert_checks", "Radar Alert Checks (every 5 min, offset 3)", nil},
 		{"*/15 * * * *", s.dataWriteSelftest, "data_write_selftest", "Data Write Selftest (every 15 min)", nil},
 		{"*/15 * * * *", s.compareAlertChecks, "compare_alert_checks", "Compare Alert Checks (every 15 min)", nil},
-		{"7,22,37,52 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (offset 7/22/37/52 min)", nil},
-		{"*/15 * * * *", s.compareOfficialAlertChecks, "compare_official_alert_checks", "Compare Official Alert Checks (every 15 min)", nil},
+		{"3-58/5 * * * *", s.compareRadarAlertChecks, "compare_radar_alert_checks", "Compare Radar Alert Checks (every 5 min, offset 3)", nil},
 		// Issue #1676 Scheibe S1: Premium-SMS-Rueckkanal — pollt das seven.io-
 		// Journal auf eingehende Garmin-Nachrichten (globaler Job, kein
 		// Nutzer-Fan-out, analog inboundCommands()).
@@ -217,6 +369,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
 	s.cron.Start()
+	s.running.Store(true)
 	log.Printf("[scheduler] Started: 9 cron entries (10 jobs), timezone %s", s.cron.Location())
 }
 
@@ -224,34 +377,24 @@ func (s *Scheduler) Start() {
 func (s *Scheduler) Stop() {
 	ctx := s.cron.Stop()
 	<-ctx.Done()
+	s.running.Store(false)
 	log.Println("[scheduler] Stopped")
 }
 
 // runForAllUsers iterates over all registered users and triggers the endpoint
 // for each. Returns nil only if all users succeeded.
 //
-// Issue #1265 (Defense-in-Depth): Test-/tdd-Konten werden vor der
-// Verarbeitung übersprungen (model.IsTestUserID) — auch wenn ein solches
-// Konto künftig wieder in data/users/ leakt, verarbeitet der Scheduler es
-// nie. Log-Hinweis einmal je Lauf (nicht pro Job-Tick).
+// Issue #1265 (Defense-in-Depth): Testkonten werden vor der Verarbeitung
+// übersprungen (model.IsTestAccount über das Profilfeld is_test_user bzw. die
+// feste Fixture-ID, Issue #2152) — auch wenn ein solches Konto künftig wieder
+// in data/users/ leakt, verarbeitet der Scheduler es nie. Log-Hinweis einmal
+// je Lauf (nicht pro Job-Tick).
 func (s *Scheduler) runForAllUsers(jobID, path string) error {
 	allUserIDs, err := s.store.ListUserIDs()
 	if err != nil {
 		return fmt.Errorf("list users: %w", err)
 	}
-
-	userIDs := make([]string, 0, len(allUserIDs))
-	var skipped []string
-	for _, uid := range allUserIDs {
-		if model.IsTestUserID(uid) {
-			skipped = append(skipped, uid)
-			continue
-		}
-		userIDs = append(userIDs, uid)
-	}
-	if len(skipped) > 0 {
-		log.Printf("[scheduler] %s: skipping %d test-user account(s): %v", jobID, len(skipped), skipped)
-	}
+	userIDs := s.filterOutTestUsers(jobID, allUserIDs)
 
 	if len(userIDs) == 0 {
 		log.Printf("[scheduler] %s: no users registered, skipping", jobID)
@@ -261,30 +404,337 @@ func (s *Scheduler) runForAllUsers(jobID, path string) error {
 	// Issue #1447 S2a: Rangfolge error > partial > ok bei gemischten
 	// Nutzer-Ergebnissen — ein einzelner echter Fehler macht den gesamten
 	// Job-Lauf "error", auch wenn andere Nutzer nur "partial" waren.
-	var firstHardErr, firstPartialErr error
-	for _, uid := range userIDs {
-		err := s.triggerEndpointForUser(path, uid)
-		if err == nil {
-			continue
-		}
-		var pe *partialRunError
-		if errors.As(err, &pe) {
-			log.Printf("[scheduler] %s: user %s partial: %v", jobID, uid, err)
-			if firstPartialErr == nil {
-				firstPartialErr = err
-			}
-			continue
-		}
-		log.Printf("[scheduler] %s: user %s failed: %v", jobID, uid, err)
-		if firstHardErr == nil {
-			firstHardErr = err
-		}
-		// continue — do not stop other users
+	//
+	// Issue #2149 Scheibe A: zusaetzlich wird JEDE Klassifikation ueber
+	// s.userState.Record je (jobID, userID) verbucht — die Flanken-Ergebnisse
+	// werden gesammelt und am Ende dieses Laufs zu hoechstens einer Nachricht
+	// je Art gebuendelt (Spec Abschnitt 2, gegen Telegram-Laerm).
+	//
+	// Fix #2149 Scheibe B: rotierte Reihenfolge, zuerst Ernte aller Spaet-
+	// ergebnisse (Marker-Zustand aktuell), dann je Nutzer Skip / Laufbudget /
+	// Aufruf mit Wartebudget (Spec Abschnitt 7). Die Schleife laeuft bei
+	// erschoepftem Laufbudget bewusst weiter, damit ein noch markierter Nutzer
+	// hinter der Budgetgrenze als skipped_in_flight (nicht not_reached) zaehlt.
+	rotated := s.rotateUsers(jobID, userIDs)
+	for _, uid := range rotated {
+		s.harvestLateResult(jobID, uid)
 	}
+	waitBudget, runBudget, callCap := s.budgetsFor(jobID)
+	deadline := time.Now().Add(runBudget)
+	summary := &jobBudgetSummary{}
+
+	var firstHardErr, firstPartialErr error
+	var failedUsers, partialUsers, recoveredUsers []string
+	var lastFailedErrText string
+	for _, uid := range rotated {
+		outcome, errText, hardErr, partialErr := s.runUserStep(jobID, path, uid, deadline, waitBudget, callCap, summary)
+		if hardErr != nil && firstHardErr == nil {
+			firstHardErr = hardErr
+		}
+		if partialErr != nil && firstPartialErr == nil {
+			firstPartialErr = partialErr
+		}
+		failureEdge, partialEdge, recoveryEdge := s.userState.Record(jobID, uid, outcome, errText)
+		if failureEdge {
+			failedUsers = append(failedUsers, uid)
+			lastFailedErrText = errText
+		}
+		if partialEdge {
+			partialUsers = append(partialUsers, uid)
+		}
+		if recoveryEdge {
+			recoveredUsers = append(recoveredUsers, uid)
+		}
+	}
+
+	// Pruning-Basis ist die bereits gefilterte userIDs-Liste (Spec Abschnitt
+	// 1) — entfernt geloeschte Konten UND jedes potenziell geleakte Testkonto
+	// aus dem Zustand dieses Jobs in einem Schritt. persistLocked() greift
+	// hier ausserhalb jeder s.mu-Sperre (eigener Mutex, s. user_run_state.go).
+	s.userState.Prune(jobID, userIDs)
+	s.sendBundledUserAlerts(jobID, failedUsers, partialUsers, recoveredUsers, lastFailedErrText)
+
+	for _, uid := range rotated {
+		if s.callBudget.IsInFlight(jobID, uid) {
+			summary.InFlight++
+		}
+	}
+	s.mu.Lock()
+	s.runBudgetSummary[jobID] = summary
+	s.mu.Unlock()
+
 	if firstHardErr != nil {
 		return firstHardErr
 	}
-	return firstPartialErr // nil, falls kein Nutzer partial war -> "ok"
+	if firstPartialErr != nil {
+		return firstPartialErr
+	}
+	if summary.NotReachedBudget > 0 {
+		// Spec Abschnitt 7: synthetischer Teilerfolg, damit der Job "partial"
+		// rankt, ohne lastHardStatus (#1346) zu beruehren.
+		return &partialRunError{msg: fmt.Sprintf("%s: Laufbudget erschöpft, %d Nutzer nicht erreicht",
+			jobID, summary.NotReachedBudget)}
+	}
+	return nil // kein Nutzer partial -> "ok"
+}
+
+// budgetsFor liefert (Wartebudget, Laufbudget, Deckel) fuer einen Fan-out-Job
+// (Fix #2149 Scheibe B, Spec Abschnitt 3/8). Briefing-Teiljobs haben keinen
+// eigenen Deckel (0) -- dort bleibt s.client.Timeout (#1912) der einzige.
+// Unbekannte jobIDs erhalten die Alarm-Werte.
+func (s *Scheduler) budgetsFor(jobID string) (wait, run, callCap time.Duration) {
+	if jobID == "trip_reports_hourly" || jobID == "compare_presets_daily" {
+		return s.briefingWaitBudget, s.briefingRunBudget, 0
+	}
+	if radarBudgetJobIDs[jobID] {
+		return s.radarWaitBudget, s.radarRunBudget, s.radarCallCap
+	}
+	return s.alertWaitBudget, s.alertRunBudget, s.alertCallCap
+}
+
+// rotateUsers zaehlt den Laufzaehler des Jobs hoch und rotiert die
+// Nutzerliste um Startindex = Laufzaehler mod N (Spec Abschnitt 7, AC-8).
+func (s *Scheduler) rotateUsers(jobID string, userIDs []string) []string {
+	s.mu.Lock()
+	start := s.runCounter[jobID] % len(userIDs)
+	s.runCounter[jobID]++
+	s.mu.Unlock()
+	rotated := make([]string, 0, len(userIDs))
+	rotated = append(rotated, userIDs[start:]...)
+	return append(rotated, userIDs[:start]...)
+}
+
+// harvestLateResult uebernimmt ein inzwischen fertiges Spaetergebnis eines
+// aktuell markierten Aufrufs rein informativ (Spec Abschnitt 6, AC-4): kein
+// Record(), keine Zaehler-/Flankenaenderung. Greift nie s.mu.
+func (s *Scheduler) harvestLateResult(jobID, uid string) {
+	err, ok := s.callBudget.TryHarvest(jobID, uid)
+	if !ok {
+		return
+	}
+	outcome, errText := "ok", ""
+	if err != nil {
+		errText = err.Error()
+		outcome = "error"
+		var pe *partialRunError
+		if errors.As(err, &pe) {
+			outcome = "partial"
+		}
+	}
+	log.Printf("[scheduler] %s: user %s late result harvested (%s), informational only", jobID, uid, outcome)
+	s.countDeadlineAbort(jobID, err)
+	s.userState.RecordLate(jobID, uid, outcome, errText)
+}
+
+// countDeadlineAbort verbucht einen Zeitobergrenzen-Abbruch (Issue #1539 S0).
+// Zwei Aufrufstellen (Nutzerschritt, Nachzuegler), die sich ausschliessen: bei
+// abgelaufenem Wartebudget kommt hier ein budgetExceededError (deadline=false),
+// das spaete Ergebnis zaehlt erst beim Einsammeln -- nie doppelt.
+func (s *Scheduler) countDeadlineAbort(jobID string, err error) {
+	if err == nil {
+		return
+	}
+	var skipped int
+	var pe *partialRunError
+	var de *deadlineFailedError
+	switch {
+	case errors.As(err, &pe) && pe.deadline:
+		skipped = pe.skipped
+	case errors.As(err, &de):
+		skipped = de.skipped
+	default:
+		return
+	}
+	s.abortMu.Lock()
+	defer s.abortMu.Unlock()
+	st, ok := s.abortState[jobID]
+	if !ok {
+		st = &deadlineAbortState{}
+		s.abortState[jobID] = st
+	}
+	st.Total++
+	st.LastAt = time.Now().In(s.cron.Location())
+	st.LastSkipped = skipped
+}
+
+// deadlineAbortsField baut den Block deadline_aborts (nur Fan-out-Jobs).
+func (s *Scheduler) deadlineAbortsField(jobID string) map[string]any {
+	if !fanOutJobIDs[jobID] {
+		return nil
+	}
+	s.abortMu.Lock()
+	defer s.abortMu.Unlock()
+	out := map[string]any{
+		"total":          0,
+		"counting_since": s.abortSince.In(s.cron.Location()).Format(time.RFC3339),
+	}
+	if st, ok := s.abortState[jobID]; ok && st.Total > 0 {
+		out["total"] = st.Total
+		out["last_at"] = st.LastAt.Format(time.RFC3339)
+		out["last_skipped"] = st.LastSkipped
+	}
+	return out
+}
+
+// runUserStep entscheidet fuer einen Nutzer: Skip bei noch laufendem Vorlauf-
+// Aufruf, not_reached bei erschoepftem Laufbudget, sonst Aufruf mit
+// Wartebudget = min(Wartebudget, Rest-Laufbudget) (Spec Abschnitt 7).
+func (s *Scheduler) runUserStep(jobID, path, uid string, deadline time.Time, waitBudget, callCap time.Duration, summary *jobBudgetSummary) (outcome, errText string, hardErr, partialErr error) {
+	if s.callBudget.IsInFlight(jobID, uid) {
+		summary.SkippedInFlight++
+		log.Printf("[scheduler] %s: user %s skipped, previous call still in flight", jobID, uid)
+		// Bewusst partialErr: ein Lauf mit uebersprungenem Nutzer darf nicht
+		// "ok" ranken, sonst pingt briefingDispatch den Heartbeat trotz
+		// haengendem Nutzer (AC-13).
+		msg := fmt.Sprintf("%s: Aufruf aus Vorlauf läuft noch", jobID)
+		return "skipped_in_flight", msg, nil, &partialRunError{msg: msg}
+	}
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		summary.NotReachedBudget++
+		log.Printf("[scheduler] %s: user %s not reached, run budget exhausted", jobID, uid)
+		return "not_reached", fmt.Sprintf("%s: Laufbudget erschöpft", jobID), nil, nil
+	}
+	err := s.callUserWithBudget(jobID, path, uid, min(waitBudget, remaining), callCap)
+	s.countDeadlineAbort(jobID, err)
+	return s.classifyUserErr(jobID, uid, err)
+}
+
+// callUserWithBudget startet triggerEndpointForUser in einer Goroutine und
+// wartet hoechstens wait (Spec Abschnitt 1). Laeuft das Wartebudget ab, bleibt
+// der Aufruf im In-Flight-Register und laeuft weiter; Rueckgabe ist dann ein
+// *budgetExceededError. Bei Alarm-Jobs (callCap > 0) gibt der Deckel den
+// Marker ohne Buchung frei; ein danach eintreffendes Ergebnis wird verworfen.
+func (s *Scheduler) callUserWithBudget(jobID, path, uid string, wait, callCap time.Duration) error {
+	resultCh := make(chan error, 1)
+	var capped atomic.Bool
+	tok := s.callBudget.Begin(jobID, uid, resultCh, callCap, func() {
+		capped.Store(true)
+		log.Printf("[scheduler] %s: user %s call cap %v expired, in-flight marker released without booking", jobID, uid, callCap)
+	})
+	go func() {
+		// Issue #2217: eine Panic im Aufruf fuer EINEN Nutzer darf den Prozess
+		// nicht beenden — sie zaehlt als Fehler dieses Nutzers.
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[scheduler] %s: user %s call panicked: %v\n%s", jobID, uid, r, debug.Stack())
+				// PO-Entscheid 2026-10-07: Status-Text ohne Interna (kein Panic-Wert).
+				resultCh <- fmt.Errorf("panic in %s", jobID)
+			}
+		}()
+		err := s.triggerEndpointForUser(path, uid)
+		resultCh <- err // gepuffert: blockiert nie, auch wenn niemand mehr liest
+		if capped.Load() {
+			log.Printf("[scheduler] %s: user %s stale result after call cap discarded: %v", jobID, uid, err)
+		}
+	}()
+	timer := time.NewTimer(wait)
+	defer timer.Stop()
+	select {
+	case err := <-resultCh:
+		s.callBudget.Finish(jobID, uid, tok)
+		return err
+	case <-timer.C:
+		log.Printf("[scheduler] %s: user %s exceeded wait budget %v, call continues in background", jobID, uid, wait)
+		return &budgetExceededError{msg: fmt.Sprintf("%s: Wartebudget %v überschritten", jobID, wait)}
+	}
+}
+
+// filterOutTestUsers entfernt Testkonten (Issue #1265, Defense-in-Depth) aus
+// der Nutzerliste, mit einem Log-Hinweis je Lauf (nicht je Job-Tick) —
+// ausgelagert aus runForAllUsers, um dessen Funktionslaenge klein zu halten
+// (Issue #2149 Scheibe A).
+//
+// Issue #2152: Testkonto ist, wessen geladenes Profil das Feld is_test_user
+// traegt (oder die feste Fixture-ID) — dafuer wird je ID das Profil ueber den
+// Store geladen (LoadUser nimmt die explizite ID, user records sind global).
+// Fail-open bei Ladefehler: ein unlesbares oder fehlendes Profil (nil, nil)
+// zaehlt als ECHTER Nutzer und wird bedient, mit Log. Ein Ladefehler darf
+// keinen echten Nutzer stumm schalten — der Fan-out-Aufruf selbst meldet
+// dann sauber, was mit dem Konto nicht stimmt.
+func (s *Scheduler) filterOutTestUsers(jobID string, allUserIDs []string) []string {
+	userIDs := make([]string, 0, len(allUserIDs))
+	var skipped, disabled []string
+	for _, uid := range allUserIDs {
+		u, err := s.store.LoadUser(uid)
+		if err != nil {
+			log.Printf("[scheduler] %s: user %s profile unreadable (%v), serving as real user", jobID, uid, err)
+		}
+		if model.IsTestAccount(u) {
+			skipped = append(skipped, uid)
+			continue
+		}
+		// Issue #2155 S3 (ADR-0080): gesperrte Konten bekommen nichts.
+		if u != nil && u.Disabled {
+			disabled = append(disabled, uid)
+			continue
+		}
+		userIDs = append(userIDs, uid)
+	}
+	if len(disabled) > 0 {
+		log.Printf("[scheduler] %s: skipping %d disabled (gesperrt) account(s): %v", jobID, len(disabled), disabled)
+	}
+	if len(skipped) > 0 {
+		log.Printf("[scheduler] %s: skipping %d test-user account(s): %v", jobID, len(skipped), skipped)
+	}
+	return userIDs
+}
+
+// classifyUserErr klassifiziert das Ergebnis eines Nutzeraufrufs
+// (ok/budget/partial/error) inkl. Logging — ausgelagert aus runForAllUsers,
+// damit diese uebersichtlich bleibt (Issue #2149 Scheibe A). hardErr/
+// partialErr sind nur gesetzt, wenn der jeweilige Fall vorliegt (fuer die
+// Rangfolge error > partial > ok in runForAllUsers).
+//
+// Fix #2149 Scheibe B (AC-9): budgetExceededError wird ZUERST geprueft — er
+// ist per Unwrap auch ein partialRunError, soll aber als "budget" zaehlen.
+func (s *Scheduler) classifyUserErr(jobID, uid string, err error) (outcome, errText string, hardErr, partialErr error) {
+	if err == nil {
+		return "ok", "", nil, nil
+	}
+	var be *budgetExceededError
+	if errors.As(err, &be) {
+		return "budget", err.Error(), nil, err
+	}
+	var pe *partialRunError
+	if errors.As(err, &pe) {
+		log.Printf("[scheduler] %s: user %s partial: %v", jobID, uid, err)
+		return "partial", err.Error(), nil, err
+	}
+	log.Printf("[scheduler] %s: user %s failed: %v", jobID, uid, err)
+	return "error", err.Error(), err, nil
+}
+
+// sendBundledUserAlerts versendet hoechstens eine Nachricht je Art
+// (Fehler-Alarm high, Teilerfolg-Hinweis normal, Entwarnung normal) fuer
+// einen einzelnen Job-Lauf (Spec Abschnitt 2, AC-11). Die echte userID steht
+// bewusst im Klartext (Spec Abschnitt 4 — interner Betriebskanal), der
+// Fehlertext ist bereits an der Konstruktionsstelle redigiert.
+func (s *Scheduler) sendBundledUserAlerts(jobID string, failedUsers, partialUsers, recoveredUsers []string, lastFailedErrText string) {
+	if s.notifier == nil {
+		return
+	}
+	if len(failedUsers) > 0 {
+		subject := fmt.Sprintf("Nutzer-Fehlerserie bei Job %s (#2149)", jobID)
+		body := formatUserAlertBody(jobID, failedUsers, lastFailedErrText)
+		if err := s.notifier("gregor", "infra", "high", subject, body); err != nil {
+			log.Printf("[scheduler] WARN: user failure alert notifier failed: %v", err)
+		}
+	}
+	if len(partialUsers) > 0 {
+		subject := fmt.Sprintf("Nutzer-Läufe wiederholt unvollständig bei Job %s (#2149)", jobID)
+		body := formatUserAlertBody(jobID, partialUsers, "")
+		if err := s.notifier("gregor", "infra", "normal", subject, body); err != nil {
+			log.Printf("[scheduler] WARN: user partial alert notifier failed: %v", err)
+		}
+	}
+	if len(recoveredUsers) > 0 {
+		subject := fmt.Sprintf("Nutzer-Läufe wieder OK bei Job %s (#2149)", jobID)
+		body := formatUserAlertBody(jobID, recoveredUsers, "")
+		if err := s.notifier("gregor", "infra", "normal", subject, body); err != nil {
+			log.Printf("[scheduler] WARN: user recovery notifier failed: %v", err)
+		}
+	}
 }
 
 // briefingDispatch ist der vereinheitlichte stündliche Briefing-Einstieg
@@ -329,20 +779,45 @@ func (s *Scheduler) briefingDispatch() {
 // darf eine fortlaufende Störung weder verdoppeln (error->partial->error)
 // noch die Recovery-Notiz verschlucken (error->partial->ok).
 func (s *Scheduler) tripReports() {
+	s.runWithJobFlank("trip_reports_hourly", "/api/scheduler/trip-reports", jobFlankTexts{
+		alertSubject:    "Trip-Briefing-Totalausfall (#1346)",
+		alertBody:       "Job trip_reports_hourly: Trip-Briefing-Versand fehlgeschlagen.\n%s",
+		recoverySubject: "Trip-Briefing wieder OK (#1346)",
+		recoveryBody:    "Job trip_reports_hourly: Trip-Briefing-Versand läuft wieder erfolgreich.",
+		logName:         "trip-reports",
+	})
+}
+
+// jobFlankTexts parametrisiert die Job-weite Flankenmeldung (Fix #2286):
+// alertBody ist ein Format-String mit genau einem %s fuer den Fehlertext.
+type jobFlankTexts struct {
+	alertSubject    string
+	alertBody       string
+	recoverySubject string
+	recoveryBody    string
+	logName         string
+}
+
+// runWithJobFlank fuehrt einen Fan-out-Job aus und meldet den Wechsel nach
+// "error" (MQ high) bzw. "error"->"ok" (MQ normal) Job-weit an infra.
+// Geteilt zwischen Trip- und Vergleichs-Versand (Fix #2286, Muster aus
+// #1346/#1912): der Vorzustand stammt aus lastHardStatus je jobID, ein
+// "partial"-Lauf ueberschreibt ihn nicht.
+func (s *Scheduler) runWithJobFlank(jobID, endpoint string, texts jobFlankTexts) {
 	s.mu.RLock()
-	prevHardStatus := s.lastHardStatus["trip_reports_hourly"]
+	prevHardStatus := s.lastHardStatus[jobID]
 	s.mu.RUnlock()
 
-	s.recordRun("trip_reports_hourly", func() error {
-		return s.runForAllUsers("trip_reports_hourly", "/api/scheduler/trip-reports")
+	s.recordRun(jobID, func() error {
+		return s.runForAllUsers(jobID, endpoint)
 	})
 
 	s.mu.Lock()
-	cur := s.lastRuns["trip_reports_hourly"]
+	cur := s.lastRuns[jobID]
 	if cur != nil && cur.Status != "partial" {
 		// "partial" bleibt bewusst aussen vor -- s. Dokumentation an
 		// lastHardStatus-Feld weiter oben.
-		s.lastHardStatus["trip_reports_hourly"] = cur.Status
+		s.lastHardStatus[jobID] = cur.Status
 	}
 	s.mu.Unlock()
 
@@ -351,17 +826,14 @@ func (s *Scheduler) tripReports() {
 	}
 	// ok→error (inkl. erster Lauf ohne Vorzustand) → Alarm high
 	if cur.Status == "error" && prevHardStatus != "error" {
-		subject := "Trip-Briefing-Totalausfall (#1346)"
-		body := fmt.Sprintf("Job trip_reports_hourly: Trip-Briefing-Versand fehlgeschlagen.\n%s", cur.Error)
-		if err := s.notifier("gregor", "infra", "high", subject, body); err != nil {
-			log.Printf("[scheduler] WARN: trip-reports alert notifier failed: %v", err)
+		body := fmt.Sprintf(texts.alertBody, cur.Error)
+		if err := s.notifier("gregor", "infra", "high", texts.alertSubject, body); err != nil {
+			log.Printf("[scheduler] WARN: %s alert notifier failed: %v", texts.logName, err)
 		}
 	} else if cur.Status == "ok" && prevHardStatus == "error" {
 		// error→ok: Recovery-Notiz
-		subject := "Trip-Briefing wieder OK (#1346)"
-		body := "Job trip_reports_hourly: Trip-Briefing-Versand läuft wieder erfolgreich."
-		if err := s.notifier("gregor", "infra", "normal", subject, body); err != nil {
-			log.Printf("[scheduler] WARN: trip-reports recovery notifier failed: %v", err)
+		if err := s.notifier("gregor", "infra", "normal", texts.recoverySubject, texts.recoveryBody); err != nil {
+			log.Printf("[scheduler] WARN: %s recovery notifier failed: %v", texts.logName, err)
 		}
 	}
 }
@@ -379,6 +851,9 @@ func (s *Scheduler) radarAlertChecks() {
 }
 
 // compareAlertChecks triggers Compare-Preset Deviation-Alert-Checks (Issue #1169).
+// Fix #2286: der Python-Endpoint prueft im selben Lauf auch die amtlichen
+// Warnungen (vormals eigener Job compare_official_alert_checks) -- Muster
+// Trip, dort laufen sie im alert_checks-Job mit.
 func (s *Scheduler) compareAlertChecks() {
 	s.recordRun("compare_alert_checks", func() error {
 		return s.runForAllUsers("compare_alert_checks", "/api/scheduler/compare-alert-checks")
@@ -390,15 +865,6 @@ func (s *Scheduler) compareAlertChecks() {
 func (s *Scheduler) compareRadarAlertChecks() {
 	s.recordRun("compare_radar_alert_checks", func() error {
 		return s.runForAllUsers("compare_radar_alert_checks", "/api/scheduler/compare-radar-alert-checks")
-	})
-}
-
-// compareOfficialAlertChecks triggers Compare-Preset Official-Alert-Checks
-// (Issue #1216 Slice 2b) — ruft den bestehenden Slice-2a-Endpoint alle 15 Min
-// fuer alle registrierten Nutzer auf.
-func (s *Scheduler) compareOfficialAlertChecks() {
-	s.recordRun("compare_official_alert_checks", func() error {
-		return s.runForAllUsers("compare_official_alert_checks", "/api/scheduler/compare-official-alert-checks")
 	})
 }
 
@@ -444,9 +910,7 @@ func (s *Scheduler) dataWriteSelftest() {
 }
 
 func (s *Scheduler) inboundCommands() {
-	s.recordRun("inbound_command_poll", func() error {
-		return s.triggerGlobalEndpoint("/api/scheduler/inbound-commands")
-	})
+	s.cronPoll(JobInboundCommandPoll)
 }
 
 // premiumSmsPoll triggert den seven.io-Journal-Abruf des Python-Core (Issue
@@ -462,19 +926,39 @@ func (s *Scheduler) inboundCommands() {
 // wird -- ein voruebergehender heilt sich durch den Zeiger-Fix (Fix F001,
 // Python-Seite) im naechsten Lauf von selbst.
 func (s *Scheduler) premiumSmsPoll() {
-	s.recordRun("premium_sms_poll", func() error {
-		return s.triggerPremiumSmsPollEndpoint()
-	})
+	s.cronPoll(JobPremiumSMSPoll)
 }
 
 // triggerPremiumSmsPollEndpoint ruft POST /api/scheduler/inbound-sms auf und
 // wertet den Antwortkoerper wie triggerEndpointForUser() aus: failed > 0 ist
 // ein harter Fehler, status == "partial" (ohne failed) ein Teilerfolg.
-// Lokal fuer diesen Job -- triggerGlobalEndpoint() bleibt unveraendert, weil
-// inbound_command_poll und weitere Jobs daran haengen, die dieses Verhalten
-// nicht wollen.
+// Lokal fuer die Poll-Jobs (seit #1405 S4b auch inbound_command_poll, siehe
+// triggerInboundCommandsEndpointRes) -- triggerGlobalEndpoint() bleibt fuer
+// weitere Jobs unveraendert, die dieses Verhalten nicht wollen.
 func (s *Scheduler) triggerPremiumSmsPollEndpoint() error {
-	url := s.pythonURL + "/api/scheduler/inbound-sms"
+	return s.triggerPremiumSmsPollEndpointRes(nil)
+}
+
+// triggerPremiumSmsPollEndpointRes wie triggerPremiumSmsPollEndpoint; res
+// (optional) nimmt `processed`/busy auf (Issue #2439).
+func (s *Scheduler) triggerPremiumSmsPollEndpointRes(res *pollResult) error {
+	return s.triggerCountedPollEndpointRes("/api/scheduler/inbound-sms", "learn call(s)", res)
+}
+
+// triggerInboundCommandsEndpointRes ruft POST /api/scheduler/inbound-commands
+// auf und wertet failed/partial aus wie der Premium-SMS-Poll (#1405 S4b):
+// ein nicht erreichbares Postfach oder eine nicht zugestellte Befehlsantwort
+// steht damit in last_run.status. Nachversuche (kickRound) haengen weiter nur
+// an processed/busy (res).
+func (s *Scheduler) triggerInboundCommandsEndpointRes(res *pollResult) error {
+	return s.triggerCountedPollEndpointRes("/api/scheduler/inbound-commands", "command mail(s)", res)
+}
+
+// triggerCountedPollEndpointRes ist die gemeinsame Auswertung beider
+// Poll-Endpunkte: failed > 0 ist ein harter Fehler, status == "partial"
+// (ohne failed) ein Teilerfolg; res (optional) nimmt processed/busy auf.
+func (s *Scheduler) triggerCountedPollEndpointRes(path, what string, res *pollResult) error {
+	url := s.pythonURL + path
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
 		// Issue #1912: Timeout-Klassifikation gilt fuer den geteilten Client
@@ -482,7 +966,7 @@ func (s *Scheduler) triggerPremiumSmsPollEndpoint() error {
 		// Client") — nicht nur fuer triggerEndpointForUser().
 		if isTimeoutTransportError(err) {
 			return &partialRunError{
-				msg:     fmt.Sprintf("/api/scheduler/inbound-sms timed out: %v", err),
+				msg:     fmt.Sprintf("%s timed out: %v", path, err),
 				wrapped: err,
 			}
 		}
@@ -497,32 +981,39 @@ func (s *Scheduler) triggerPremiumSmsPollEndpoint() error {
 
 	var parsed triggerResponseBody
 	if jsonErr := json.Unmarshal(body, &parsed); jsonErr == nil {
+		fillPollResult(res, parsed)
 		if parsed.Failed > 0 {
 			return fmt.Errorf(
-				"/api/scheduler/inbound-sms reported %d failed learn call(s) "+
-					"(status=%s, count=%d): %s",
-				parsed.Failed, parsed.Status, parsed.Count, string(body),
+				"%s reported %d failed %s (status=%s, count=%d): %s",
+				path, parsed.Failed, what, parsed.Status, parsed.Count, string(body),
 			)
 		}
 		if parsed.Status == "partial" {
 			return &partialRunError{msg: fmt.Sprintf(
-				"/api/scheduler/inbound-sms reported partial status (count=%d): %s",
-				parsed.Count, string(body),
+				"%s reported partial status (count=%d): %s",
+				path, parsed.Count, string(body),
 			)}
 		}
 	}
 
-	log.Printf("[scheduler] /api/scheduler/inbound-sms → %d", resp.StatusCode)
+	log.Printf("[scheduler] %s → %d", path, resp.StatusCode)
 	return nil
 }
 
 // comparePresetsDaily triggert den Ortsvergleich-Slot-Check. Der Heartbeat-
 // Ping wurde nach #1346 in briefingDispatch() konsolidiert (dort gated auf
 // BEIDE Teil-Jobs statt allein diesen).
+//
+// Fix #2286: Job-weite Flanke wie beim Trip (geteilter Helper
+// runWithJobFlank) -- Totalausfall/Recovery an infra, ohne Nutzerkennung.
 func (s *Scheduler) comparePresetsDaily() {
 	log.Println("[scheduler] Running compare presets daily...")
-	s.recordRun("compare_presets_daily", func() error {
-		return s.runForAllUsers("compare_presets_daily", "/api/scheduler/compare-presets-daily")
+	s.runWithJobFlank("compare_presets_daily", "/api/scheduler/compare-presets-daily", jobFlankTexts{
+		alertSubject:    "Vergleichs-Briefing-Totalausfall (#2286)",
+		alertBody:       "Job compare_presets_daily: Vergleichs-Briefing-Versand fehlgeschlagen.\n%s",
+		recoverySubject: "Vergleichs-Briefing wieder OK (#2286)",
+		recoveryBody:    "Job compare_presets_daily: Vergleichs-Briefing-Versand läuft wieder erfolgreich.",
+		logName:         "compare-presets",
 	})
 }
 
@@ -551,8 +1042,16 @@ func (s *Scheduler) jobLock(jobID string) *sync.Mutex {
 // of skipping it, and robfig/cron would stack goroutines under frequent
 // overlap.
 func (s *Scheduler) recordRun(jobID string, fn func() error) {
+	s.runJob(jobID, fn, false)
+}
+
+// runJob ist recordRun; wait=true (Push-Kick, Issue #2439) wartet auf den
+// jobLock statt den Lauf zu ueberspringen.
+func (s *Scheduler) runJob(jobID string, fn func() error, wait bool) {
 	lock := s.jobLock(jobID)
-	if !lock.TryLock() {
+	if wait {
+		lock.Lock()
+	} else if !lock.TryLock() {
 		now := time.Now().In(s.cron.Location())
 		s.mu.Lock()
 		st, ok := s.overlapState[jobID]
@@ -570,7 +1069,9 @@ func (s *Scheduler) recordRun(jobID string, fn func() error) {
 	}
 	defer lock.Unlock()
 
-	err := fn()
+	started := time.Now()
+	err := runRecovered(jobID, fn)
+	durationS := math.Round(time.Since(started).Seconds()*1000) / 1000
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -592,13 +1093,31 @@ func (s *Scheduler) recordRun(jobID string, fn func() error) {
 			Time:   time.Now().In(s.cron.Location()),
 			Status: status,
 			Error:  err.Error(),
+
+			DurationS: durationS,
 		}
 	} else {
 		s.lastRuns[jobID] = &jobResult{
 			Time:   time.Now().In(s.cron.Location()),
 			Status: "ok",
+
+			DurationS: durationS,
 		}
 	}
+}
+
+// runRecovered fuehrt fn aus und macht eine Panic zum Fehler (Issue #2217):
+// der Lauf wird als "error" mit exakt "panic in <jobID>" verbucht (PO-Entscheid
+// 2026-10-07: Status-Endpunkt halb-oeffentlich, kein Panic-Wert/Stack); Wert und
+// Stack stehen nur im Server-Log. Der Prozess lebt weiter.
+func runRecovered(jobID string, fn func() error) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[scheduler] %s panicked: %v\n%s", jobID, r, debug.Stack())
+			err = fmt.Errorf("panic in %s", jobID)
+		}
+	}()
+	return fn()
 }
 
 // triggerResponseBody mirrors the JSON body returned by Python trigger
@@ -611,29 +1130,50 @@ type triggerResponseBody struct {
 	Status string `json:"status"`
 	Count  int    `json:"count"`
 	Failed int    `json:"failed"`
+	// Issue #2439: verarbeitete Befehle des Poll-Laufs (Push-Nachversuch/AC-13).
+	Processed int `json:"processed"`
+	// reason/skipped/duration_s (Issue #1539 S0): skipped_ids wird bewusst
+	// NICHT gelesen -- es duerfen nie IDs im Status landen.
+	Reason    string  `json:"reason"`
+	Skipped   int     `json:"skipped"`
+	DurationS float64 `json:"duration_s"`
 }
 
 // triggerEndpointForUser sends a POST to the Python trigger endpoint for a specific user.
+//
+// Issue #2149 Scheibe A: der zurueckgegebene Fehlertext ist an allen vier
+// Konstruktionsstellen redigiert (kein "?user_id=<id>" mehr) — er fliesst
+// unveraendert in jobResult.Error und damit in den oeffentlichen, ohne
+// Anmeldung erreichbaren /api/scheduler/status-Endpoint (Spec Abschnitt 3).
+// Ein *url.Error (aus s.client.Post) enthaelt in seinem Error()-Text IMMER
+// die volle angefragte URL inkl. "?user_id=..." — errors.Unwrap(err) liefert
+// die innere Ursache OHNE URL; die volle Kette bleibt via wrapped erhalten
+// (Issue #1912 errors.As/errors.Is).
 func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 	url := s.pythonURL + path + "?user_id=" + userID
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
+		cause := errors.Unwrap(err)
+		if cause == nil {
+			cause = err
+		}
 		// Issue #1912: ein Timeout ist kein Ausfallbeweis — der Core kann
 		// dabei erfolgreich weiterarbeiten. Nur eine tatsaechlich verweigerte
 		// Verbindung (kein Timeout) bleibt ein harter Fehler.
 		if isTimeoutTransportError(err) {
 			return &partialRunError{
-				msg:     fmt.Sprintf("%s?user_id=%s timed out: %v", path, userID, err),
-				wrapped: err,
+				msg:     fmt.Sprintf("%s timed out: %v", path, cause),
+				wrapped: err, // unveraendert: volle Kette fuer #1912 errors.As
 			}
 		}
-		return fmt.Errorf("HTTP error: %w", err)
+		return fmt.Errorf("%s: transport error: %v", path, cause)
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
+		// Kein Rohbody (F008): er kann skipped_ids/Trip-IDs enthalten.
+		return fmt.Errorf("HTTP %d (body %d bytes)", resp.StatusCode, len(body))
 	}
 
 	// Issue #1012 (AC-5, d): HTTP 200 kann trotzdem einen fachlichen
@@ -642,20 +1182,34 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 	// Job fälschlich als "ok", obwohl kein Briefing zugestellt wurde.
 	var parsed triggerResponseBody
 	if jsonErr := json.Unmarshal(body, &parsed); jsonErr == nil {
+		if parsed.Failed > 0 && parsed.Reason == "deadline" {
+			// Abbruch + gescheiterter Trip: Body traegt skipped_ids -- nur Zahlen.
+			return &deadlineFailedError{msg: fmt.Sprintf(
+				"%s reported %d failed (status=%s, count=%d, reason=deadline, skipped=%d)",
+				path, parsed.Failed, parsed.Status, parsed.Count, parsed.Skipped,
+			), skipped: parsed.Skipped}
+		}
 		if parsed.Failed > 0 {
 			return fmt.Errorf(
-				"%s?user_id=%s reported %d failed (status=%s, count=%d): %s",
-				path, userID, parsed.Failed, parsed.Status, parsed.Count, string(body),
+				"%s reported %d failed (status=%s, count=%d, skipped=%d)",
+				path, parsed.Failed, parsed.Status, parsed.Count, parsed.Skipped,
 			)
 		}
 		// Issue #1447 S2a: status="partial" ohne failed (Scheibe S1 —
 		// Alarm-Lauf durch die Zeitobergrenze abgebrochen) ist ein
 		// Teilerfolg, kein harter Fehler — recordRun() verbucht das als
 		// jobResult.Status "partial", nicht "error".
+		if parsed.Status == "partial" && parsed.Reason == "deadline" {
+			// Der Body traegt skipped_ids (Trip-IDs) -- nie in den Status-Text.
+			return &partialRunError{msg: fmt.Sprintf(
+				"%s reported partial status (count=%d, reason=deadline, skipped=%d)",
+				path, parsed.Count, parsed.Skipped,
+			), deadline: true, skipped: parsed.Skipped}
+		}
 		if parsed.Status == "partial" {
 			return &partialRunError{msg: fmt.Sprintf(
-				"%s?user_id=%s reported partial status (count=%d): %s",
-				path, userID, parsed.Count, string(body),
+				"%s reported partial status (count=%d, skipped=%d)",
+				path, parsed.Count, parsed.Skipped,
 			)}
 		}
 	}
@@ -671,6 +1225,12 @@ func (s *Scheduler) triggerEndpointForUser(path, userID string) error {
 // Issue #200: inbound IMAP polling targets a shared mailbox; one tick must
 // produce exactly one IMAP login, not N (one per user).
 func (s *Scheduler) triggerGlobalEndpoint(path string) error {
+	return s.triggerGlobalEndpointRes(path, nil)
+}
+
+// triggerGlobalEndpointRes wie triggerGlobalEndpoint; res (optional) nimmt
+// `processed`/busy aus dem Antwortkoerper auf (Issue #2439).
+func (s *Scheduler) triggerGlobalEndpointRes(path string, res *pollResult) error {
 	url := s.pythonURL + path
 	resp, err := s.client.Post(url, "application/json", nil)
 	if err != nil {
@@ -690,8 +1250,21 @@ func (s *Scheduler) triggerGlobalEndpoint(path string) error {
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
+	var parsed triggerResponseBody
+	if json.Unmarshal(body, &parsed) == nil {
+		fillPollResult(res, parsed)
+	}
 	log.Printf("[scheduler] %s → %d", path, resp.StatusCode)
 	return nil
+}
+
+// fillPollResult uebernimmt processed/busy der Python-Antwort (res darf nil sein).
+func fillPollResult(res *pollResult, parsed triggerResponseBody) {
+	if res == nil {
+		return
+	}
+	res.Processed = parsed.Processed
+	res.Busy = parsed.Status == "busy"
 }
 
 // pingHeartbeat sends a GET to BetterStack. Fire-and-forget with logging.
@@ -761,7 +1334,104 @@ func (s *Scheduler) overlapField(jobID string) map[string]any {
 	return overlap
 }
 
+// usersField builds the "users" sibling field (Issue #2149 Scheibe A) for a
+// Fan-out-Job — nil for the three globalen Jobs ohne Nutzer-Fan-out
+// (fehlendes Feld bedeutet "nicht anwendbar", analog overlapField). Nur
+// Zahlen, keine IDs (Spec Abschnitt 5). Braucht kein s.mu, weil userState
+// einen eigenen Mutex haelt — darf trotzdem nur aufgerufen werden, waehrend
+// s.mu (RLock) bereits gehalten wird, um die Lock-Reihenfolge s.mu ->
+// userState.mu konsistent zu halten (nie umgekehrt).
+func (s *Scheduler) usersField(jobID string) map[string]any {
+	if !fanOutJobIDs[jobID] {
+		return nil
+	}
+	users := s.userState.Aggregate(jobID)
+	// Fix #2149 Scheibe B (Spec Abschnitt 9): Budget-Zahlen des zuletzt
+	// abgeschlossenen Laufs, immer vorhanden (0 ist ein gueltiger Wert).
+	summary := jobBudgetSummary{}
+	if sum, ok := s.runBudgetSummary[jobID]; ok && sum != nil {
+		summary = *sum
+	}
+	users["in_flight"] = summary.InFlight
+	users["skipped_in_flight"] = summary.SkippedInFlight
+	users["not_reached_budget"] = summary.NotReachedBudget
+	return users
+}
+
 // Status returns current scheduler state for API exposure.
+// entryJobsLocked liefert die logischen Jobs eines Cron-Eintrags: bei einem
+// unified entry (Issue #1250 Scheibe 7c) die Sub-Jobs, sonst den Job selbst.
+// ok == false: Eintrag ohne bekannte Job-Identitaet. Aufrufer haelt s.mu.
+// Gemeinsame Aufloesung fuer Status() und StatusForUser() (#2155 S2).
+func (s *Scheduler) entryJobsLocked(id cron.EntryID) ([]jobMeta, bool) {
+	meta, ok := s.entryMap[id]
+	if !ok {
+		return nil, false
+	}
+	if len(meta.subs) > 0 {
+		return meta.subs, true
+	}
+	return []jobMeta{meta}, true
+}
+
+// statusForUserJobID ist der einzige Job, den /api/scheduler/status/me zeigt
+// (Issue #2155 S2).
+const statusForUserJobID = "trip_reports_hourly"
+
+// StatusForUser liefert die Nutzer-Sicht des Scheduler-Status (Issue #2155
+// S2): nur trip_reports_hourly, next_run aus derselben Cron-Aufloesung wie
+// Status(), last_run ausschliesslich aus dem Pro-Nutzer-Zustand -- nie aus
+// s.lastRuns (globaler Fan-out-Text). Kein Eintrag => last_run null.
+func (s *Scheduler) StatusForUser(userID string) map[string]any {
+	s.mu.RLock()
+	var job map[string]any
+	for _, e := range s.cron.Entries() {
+		metas, ok := s.entryJobsLocked(e.ID)
+		if !ok {
+			continue
+		}
+		for _, meta := range metas {
+			if meta.id == statusForUserJobID {
+				job = map[string]any{
+					"id":       meta.id,
+					"name":     meta.name,
+					"next_run": e.Next.Format(time.RFC3339),
+				}
+			}
+		}
+	}
+	s.mu.RUnlock()
+
+	jobs := make([]map[string]any, 0, 1)
+	if job != nil {
+		if rec, ok := s.userState.UserRecord(statusForUserJobID, userID); ok {
+			job["last_run"] = map[string]any{
+				"time":   rec.LastRun.Format(time.RFC3339),
+				"status": rec.LastStatus,
+				"error":  rec.LastError,
+			}
+		} else {
+			job["last_run"] = nil
+		}
+		jobs = append(jobs, job)
+	}
+	return map[string]any{"jobs": jobs}
+}
+
+// LastTripReportRun liefert den letzten Lauf von trip_reports_hourly fuer
+// einen Nutzer (Issue #2155 S3, Admin-Liste); nil ohne Eintrag.
+func (s *Scheduler) LastTripReportRun(userID string) map[string]any {
+	rec, ok := s.userState.UserRecord(statusForUserJobID, userID)
+	if !ok {
+		return nil
+	}
+	return map[string]any{
+		"time":   rec.LastRun.Format(time.RFC3339),
+		"status": rec.LastStatus,
+		"error":  rec.LastError,
+	}
+}
+
 func (s *Scheduler) Status() map[string]any {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -770,46 +1440,31 @@ func (s *Scheduler) Status() map[string]any {
 	jobs := make([]map[string]any, 0, len(entries))
 	for _, e := range entries {
 		nextRun := e.Next.Format(time.RFC3339)
-		meta, ok := s.entryMap[e.ID]
-		if ok && len(meta.subs) > 0 {
-			// Issue #1250 Scheibe 7c: ein unified cron entry (z.B.
-			// briefing_dispatch) expandiert zu einer Zeile PRO Sub-Job, damit
-			// die externe Beobachtbarkeit (Job-Anzahl, ids, last_run je Job)
-			// unverändert bleibt.
-			for _, sub := range meta.subs {
-				subJob := map[string]any{
-					"next_run": nextRun,
-					"id":       sub.id,
-					"name":     sub.name,
-				}
-				if lr, ok := s.lastRuns[sub.id]; ok {
-					subJob["last_run"] = map[string]any{
-						"time":   lr.Time.Format(time.RFC3339),
-						"status": lr.Status,
-						"error":  lr.Error,
-					}
-				} else {
-					subJob["last_run"] = nil
-				}
-				if overlap := s.overlapField(sub.id); overlap != nil {
-					subJob["overlap"] = overlap
-				}
-				jobs = append(jobs, subJob)
-			}
+		metas, ok := s.entryJobsLocked(e.ID)
+		if !ok {
+			jobs = append(jobs, map[string]any{
+				"next_run": nextRun,
+				"id":       int(e.ID),
+				"last_run": nil,
+			})
 			continue
 		}
-
-		job := map[string]any{
-			"next_run": nextRun,
-		}
-		if ok {
-			job["id"] = meta.id
-			job["name"] = meta.name
+		// Issue #1250 Scheibe 7c: ein unified cron entry (z.B.
+		// briefing_dispatch) expandiert zu einer Zeile PRO Sub-Job, damit
+		// die externe Beobachtbarkeit (Job-Anzahl, ids, last_run je Job)
+		// unverändert bleibt.
+		for _, meta := range metas {
+			job := map[string]any{
+				"next_run": nextRun,
+				"id":       meta.id,
+				"name":     meta.name,
+			}
 			if lr, ok := s.lastRuns[meta.id]; ok {
 				job["last_run"] = map[string]any{
-					"time":   lr.Time.Format(time.RFC3339),
-					"status": lr.Status,
-					"error":  lr.Error,
+					"time":       lr.Time.Format(time.RFC3339),
+					"status":     lr.Status,
+					"error":      lr.Error,
+					"duration_s": lr.DurationS,
 				}
 			} else {
 				job["last_run"] = nil
@@ -817,14 +1472,20 @@ func (s *Scheduler) Status() map[string]any {
 			if overlap := s.overlapField(meta.id); overlap != nil {
 				job["overlap"] = overlap
 			}
-		} else {
-			job["id"] = int(e.ID)
-			job["last_run"] = nil
+			if users := s.usersField(meta.id); users != nil {
+				job["users"] = users
+			}
+			if aborts := s.deadlineAbortsField(meta.id); aborts != nil {
+				job["deadline_aborts"] = aborts
+			}
+			if push := s.pushField(meta.id); push != nil {
+				job["push"] = push
+			}
+			jobs = append(jobs, job)
 		}
-		jobs = append(jobs, job)
 	}
 	return map[string]any{
-		"running":             true,
+		"running":             s.running.Load(),
 		"jobs":                jobs,
 		"timezone":            s.cron.Location().String(),
 		"briefing_health":     s.BriefingHealth(),

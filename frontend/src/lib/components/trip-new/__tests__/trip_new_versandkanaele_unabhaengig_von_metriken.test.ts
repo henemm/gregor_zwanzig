@@ -4,7 +4,7 @@
 //
 // NUTZERSICHT: Wer im Metriken-Tab einen Wetter-Kanal abwaehlt, verliert im
 // Zeitplan-Tab den Zugang zum zugehoerigen VERSAND-Kanal — bei Premium-SMS
-// doppelt verschachtelt (EditReportConfigSection.svelte:377 + :401). Premium-SMS
+// doppelt verschachtelt (die frühere Report-Config-Section (#2277 S5 entfernt)). Premium-SMS
 // ist auf der Huette der einzige empfangbare Kanal (ADR-0049).
 //
 // Gemessen wird am ECHTEN serverseitigen Render der echten Anlege-Komponente
@@ -15,7 +15,7 @@
 //   - Die Vorbedingung schlaegt fehl, solange TripNewEditor keine
 //     `stateOverride`-Prop hat: der Zeitplan-Tab ist im Test nicht erreichbar.
 //   - Danach bleiben AC-1/AC-2/AC-3 rot, weil die Kanal-Bloecke aus
-//     EditReportConfigSection kommen und dort in `{#if weatherVisible.*}`
+//     die frühere Report-Config-Section (#2277 S5 entfernt) kommen und dort in `{#if weatherVisible.*}`
 //     haengen; bei allen drei Wetter-Kanaelen aus ersetzt zusaetzlich der
 //     Leerzustand `briefings-channel-empty` den gesamten Zeitplan.
 //
@@ -41,12 +41,13 @@ const KANAL_TESTIDS = ['channel-email', 'channel-telegram', 'channel-sms', 'chan
 /** /trips/new mit offenem Zeitplan-Tab, breite Ansicht. */
 function zeitplan(channels: WetterKanaele, reportConfig?: Record<string, unknown>): string {
 	const html = renderTripNew({
-		activeTab: 'zeitplan',
+		// #1743: der Versand-Inhalt steht unten im Schritt Wetter-Metriken (kein Reiter „Versand" mehr).
+		activeTab: 'wetter-metriken',
 		isMobileViewport: false,
 		channels,
 		reportConfig
 	});
-	assertTabOffen(html, 'zeitplan');
+	assertTabOffen(html, 'wetter-metriken');
 	return html;
 }
 

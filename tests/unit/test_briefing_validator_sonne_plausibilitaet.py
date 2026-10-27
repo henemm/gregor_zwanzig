@@ -99,3 +99,72 @@ def test_emoji_modus_plausible_pille_bleibt_stumm():
     )
     errors = v._check_metric_plausibility(_mail(180, [tbl]))
     assert errors == []
+
+
+def test_ausblick_tabelle_mit_gleichem_header_verfaelscht_die_summe_nicht():
+    """Given eine 'kein Regen'-Pille, eine Stundentabelle mit 0.0 mm Regen UND
+    einen 3-Tages-Ausblick MIT eigener 'Rain'-Spalte (#2136/ADR-0068: der
+    Ausblick traegt seither denselben col_label-Kuerzel-Text wie die
+    Stundentabelle) / When der Pruefer prueft / Then zaehlt er NUR die
+    Stundentabelle — der TAEGLICHE Ausblickswert (2.5/1.0 mm) darf die
+    'kein Regen'-Summe nicht verfaelschen (#2136-Folgebug; Unterscheidungs-
+    merkmal ist der feste 'Tag'-Erstkopf des Ausblicks)."""
+    v = _load_validator()
+    hourly = (
+        "<table><tr><th>Zeit</th><th>Rain</th></tr>"
+        "<tr><td>09:00</td><td>0.0</td></tr>"
+        "<tr><td>10:00</td><td>0.0</td></tr></table>"
+    )
+    outlook = (
+        "<table><tr><th>Tag</th><th>Rain</th></tr>"
+        "<tr><td>Mo</td><td>2.5</td></tr>"
+        "<tr><td>Di</td><td>1.0</td></tr></table>"
+    )
+    html = (
+        "<span>kein Regen</span>"
+        + '<div class="section desktop-only">' + hourly + "</div>"
+        + '<div class="mobile-compact"><div style="overflow-x:auto;">'
+        + hourly + "</div></div>"
+        + outlook
+    )
+    assert v._check_metric_plausibility(html) == []
+
+
+def _night_section(tbl: str) -> str:
+    """Renderer-Muster der 'Nacht am Ziel'-Sektion (html.py): h3-Kopf vor
+    der Desktop-Tabelle, Kopf-Div vor der Mobile-Fassung."""
+    return (
+        '<div class="section desktop-only"><h3>🌙 Nacht am Ziel (1800m)</h3>'
+        "<p>Ankunft 19:00 → Morgen 06:00</p>" + tbl + "</div>"
+        '<div class="mobile-compact"><div>🌙 Nacht am Ziel (1800m)</div>'
+        + tbl + "</div>"
+    )
+
+
+def _mehrsegment_mail(pill_min: int) -> str:
+    """Zwei Segmente mit doppelt gerenderter Nahtstunde 12:00 (5 distinkte
+    Etappenstunden je 1.0 h = 300 min) plus 'Nacht am Ziel'-Tabelle."""
+    s1 = _tbl([("09:00", "1.0 h"), ("10:00", "1.0 h"), ("11:00", "1.0 h"),
+               ("12:00", "1.0 h")])
+    s2 = _tbl([("12:00", "1.0 h"), ("13:00", "1.0 h")])
+    night = _tbl([("18:00", "1.0 h"), ("20:00", "0.3 h")])
+    return _mail(pill_min, [s1, s2]) + _night_section(night)
+
+
+def test_mehrsegment_etappe_mit_nahtstunden_und_nacht_ist_bestehbar():
+    """Given eine Etappe aus zwei Segmenten, deren Nahtstunde (12:00) bewusst
+    in BEIDEN Segmenttabellen steht, plus eine 'Nacht am Ziel'-Tabelle, und
+    eine Pill 300 min = 5 distinkte Etappenstunden / When der Pruefer prueft /
+    Then meldet er KEINEN Widerspruch (#2104: vorher Summe ueber alle Zeilen
+    = 6 h Segmente + 1.3 h Nacht = 438 min vs. 300)."""
+    v = _load_validator()
+    assert v._check_metric_plausibility(_mehrsegment_mail(300)) == []
+
+
+def test_mehrsegment_etappe_echte_verletzung_faellt_weiter_auf():
+    """Given dieselbe Mehrsegment-Etappe (300 min), aber eine Pill von
+    120 min / When der Pruefer prueft / Then meldet er weiterhin einen
+    Sonne-Widerspruch (Dedup/Nacht-Ausschluss frisst keine Verletzungen)."""
+    v = _load_validator()
+    errors = v._check_metric_plausibility(_mehrsegment_mail(120))
+    assert len(errors) == 1 and "Sonne" in errors[0]

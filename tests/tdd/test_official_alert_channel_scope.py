@@ -269,7 +269,7 @@ def test_ac2_sms_uniform_scope_same_level_bit_identical():
     / When die SMS gerendert wird / Then bleibt ihr Text bit-identisch zum Stand
     vor diesem Fix (gemeinsamer Ortszusatz am Ende)."""
     sms = _sms(_uniform_scope_same_level_notices())
-    assert sms == "Toulon+Hyeres: !HT:M Fr06-20 W:M Sa15-21", (
+    assert sms == "Toulon+Hyeres: !HT:M Fr06-20 WG:M Sa15-21", (
         f"SMS bei einheitlichem Umfang veraendert: {sms!r}"
     )
 
@@ -369,14 +369,14 @@ def test_ac5_sms_hazard_shortcodes_unchanged():
     unterschiedlicher Gefahrentypen / When die SMS gerendert wird / Then bleiben
     die verwendeten Zwei-Buchstaben-Kuerzel je Gefahrentyp identisch zum Stand
     aus dem geteilten Katalog `hazard_symbols.py` (Issue #1318 AC-13/AC-14:
-    Hitze HT, Gewitter TH, Zugangssperre CL, Waldbrand FR)."""
+    Hitze HT, Gewitter TS, Zugangssperre AB, Waldbrand FR)."""
     sms = _sms(_mixed_scope_notices())
     # FORTGESCHRIEBEN (#1948 S5): der Token traegt die Stufe direkt am Kuerzel
-    # (`FR:M`), die stufenlose Zugangssperre bleibt blank (`CL`), und dem
+    # (`FR:M`), die stufenlose Zugangssperre bleibt blank (`AB`), und dem
     # ersten Token geht das `!` voraus. Die bewachte Zusicherung — die Kuerzel
     # selbst stammen unveraendert aus `hazard_symbols.py` — ist dieselbe.
-    for code, hazard in (("CL", "Zugangssperre"), ("FR", "Waldbrand"),
-                         ("TH", "Gewitter"), ("HT", "Hitze")):
+    for code, hazard in (("AB", "Zugangssperre"), ("FR", "Waldbrand"),
+                         ("TS", "Gewitter"), ("HT", "Hitze")):
         assert re.search(rf"(?:^|[ :!]){code}(?::[LMH-]|[ ]|$)", sms), (
             f"SMS-Kuerzel {code!r} ({hazard}) fehlt/veraendert: {sms!r}"
         )
@@ -608,7 +608,7 @@ def test_ac14_sms_token_omits_placeholder_when_time_unknown():
     assert "?" not in sms, f"SMS enthaelt weiterhin den Zeit-Platzhalter '?': {sms!r}"
 
     # Non-Regression: Warnungen MIT Zeit zeigen ihre Zeitangabe unveraendert.
-    for code, tag in (("FR", "Fr06-20"), ("TH", "Sa15-21"), ("HT", "Sa15-21")):
+    for code, tag in (("FR", "Fr06-20"), ("TS", "Sa15-21"), ("HT", "Sa15-21")):
         assert tag in sms, f"Zeitangabe {tag!r} fuer {code!r} fehlt: {sms!r}"
 
 
@@ -667,7 +667,7 @@ def test_ac15_sms_normal_location_names_unaffected():
     die Ausgabe unveraendert (Ort bleibt Teil der schwersten Warnung) -- die
     Rueckfallebene greift NICHT, wenn sie nicht gebraucht wird."""
     sms = _sms(_uniform_scope_same_level_notices())
-    assert sms == "Toulon+Hyeres: !HT:M Fr06-20 W:M Sa15-21", (
+    assert sms == "Toulon+Hyeres: !HT:M Fr06-20 WG:M Sa15-21", (
         f"Normalfall (kein Overflow) veraendert durch die Rueckfallebene: {sms!r}"
     )
     sms2 = _sms(_overflow_notices())

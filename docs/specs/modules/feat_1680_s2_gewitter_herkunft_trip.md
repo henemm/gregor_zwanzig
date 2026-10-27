@@ -3,7 +3,7 @@ entity_id: feat_1680_s2_gewitter_herkunft_trip
 type: feature
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [thunder, trip, adr-0007, adr-0025, adr-0048, issue-1680, issue-1419]
 ---

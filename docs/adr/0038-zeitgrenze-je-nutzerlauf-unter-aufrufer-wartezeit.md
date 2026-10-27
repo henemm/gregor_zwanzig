@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-08-01
 - **Bezug:** GitHub-Issue #1447 (Ursprung: henemm-infra#147), Spec `docs/specs/modules/fix_1447_s1_alarm_lauf_zeitgrenze.md`
+- **Ergänzt durch:** [ADR-0070](0070-aufruferseitige-wartegrenze-je-nutzeraufruf.md) (erweitert)
 
 ## Kontext
 

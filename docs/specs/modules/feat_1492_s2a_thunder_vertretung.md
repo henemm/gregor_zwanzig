@@ -1,6 +1,6 @@
 ---
 entity_id: feat_1492_s2a_thunder_vertretung
-status: draft
+status: implemented
 type: module
 created: 2026-08-06
 updated: 2026-08-06
@@ -244,7 +244,7 @@ Fusion (`_fuse_thunder_levels`) oder an irgendeinem Renderer/Kanal.
 
 ## Acceptance Criteria
 
-- **AC-1 (Vertretung springt bei echtem Dienstfehler ein):** Given ein
+- **AC-1:** (Vertretung springt bei echtem Dienstfehler ein) Given ein
   Ort mit Primärquelle `de_direct`, die bei jedem der angefragten Punkte
   einen Verbindungsfehler wirft (Fake-Provider, erfüllt das echte
   `ThunderSignalProvider`-Protokoll, wirft `ThunderSourceUnavailableError`
@@ -287,7 +287,7 @@ Fusion (`_fuse_thunder_levels`) oder an irgendeinem Renderer/Kanal.
     Implementierung, die jedes `None`-Ergebnis als Fehlschlag zählt, wird
     rot (sie würfe hier fälschlich).
 
-- **AC-4 (Herkunft wird vermerkt):** Given AC-1s Vertretungsfall / When
+- **AC-4:** (Herkunft wird vermerkt) Given AC-1s Vertretungsfall / When
   die Vertretung erfolgreich Werte liefert / Then trägt
   `reihe.meta.fallback_model == "eu_direct"`,
   `reihe.meta.fallback_reason == "thunder_source_unavailable"`, und
@@ -317,7 +317,7 @@ Fusion (`_fuse_thunder_levels`) oder an irgendeinem Renderer/Kanal.
     auch eine Absicherung gegen eine künftige Erweiterung, nicht nur ein
     Abbild des Ist-Zustands.
 
-- **AC-6 (Teilfehlschlag ist KEIN Dienstausfall):** Given `de_direct`
+- **AC-6:** (Teilfehlschlag ist KEIN Dienstausfall) Given `de_direct`
   liefert für 23 von 24 angefragten Zeitpunkten einen gültigen Wert und
   scheitert nur an EINEM Zeitpunkt mit Verbindungsfehler / When
   `fetch_thunder_signals_named` läuft / Then wirft die Methode **keine**
@@ -345,7 +345,7 @@ Fusion (`_fuse_thunder_levels`) oder an irgendeinem Renderer/Kanal.
     der Ersatzquelle), macht diesen Test rot, weil `None` erwartet, aber
     ein Wert vorgefunden würde.
 
-- **AC-8 (Primärauswahl-Reihenfolge bleibt unverletzt):** Given die neue
+- **AC-8:** (Primärauswahl-Reihenfolge bleibt unverletzt) Given die neue
   Vertretungstabelle `_VERTRETUNG` existiert / When `thunder_provider_for`
   für einen französischen und einen deutschen/alpinen Testort abgefragt
   wird (dieselben Koordinaten wie in

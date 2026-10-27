@@ -6,7 +6,8 @@ Neue Testdateien heissen nach VERHALTEN (test_alert_throttle.py), nicht nach
 Issue-Nummer (test_issue_1234.py). Bestandsdateien (262 Stueck) bleiben editierbar;
 ihre Sanierung laeuft ueber #1196.
 
-Regel-Budget: Pruefdatum 2026-10-09 — danach deaktiviert sich das Gate selbst;
+Regel-Budget: Pruefdatum 2027-01-19 (verlaengert 2026-10-21 (PO): Doku-Audit fand
+reale Drift; vorher 2026-10-09) — danach deaktiviert sich das Gate selbst;
 Entscheidung (behalten/entfernen) faellt im Gate-Audit #1197.
 Fail-open: Parse-Fehler blockieren nie fremde Arbeit.
 """
@@ -16,7 +17,7 @@ import re
 import sys
 from datetime import date
 
-EXPIRY = date(2026, 10, 9)
+EXPIRY = date(2027, 1, 19)
 PATTERN = re.compile(
     r"(tests/.*test_(issue|bug|feature)_\d|frontend/e2e/.*(issue|bug)[-_]\d)",
     re.IGNORECASE,
@@ -43,7 +44,7 @@ def main() -> int:
         "Beispiel: tests/tdd/test_alert_throttle.py statt test_issue_1234.py.\n"
         "Der Repro-Test fuer einen Bug gehoert in die passende Verhaltens-/Modul-Datei\n"
         "(bestehende Datei erweitern oder eine nach dem Verhalten benannte neue anlegen).\n"
-        "(Bestandsdateien sind nicht betroffen. Kontext: #1196. Pruefdatum dieses Gates: 2026-10-09.)\n"
+        "(Bestandsdateien sind nicht betroffen. Kontext: #1196. Pruefdatum dieses Gates: 2027-01-19.)\n"
     )
     return 2
 

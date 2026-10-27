@@ -3,7 +3,7 @@ entity_id: compare_metric_catalog_endpoint
 type: feature
 created: 2026-07-23
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, metrics, api, ssot]
 workflow: fix-1350-compare-metric-catalog-source

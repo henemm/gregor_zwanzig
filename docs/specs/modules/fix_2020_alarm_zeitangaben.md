@@ -4,6 +4,7 @@ type: module
 created: 2026-08-21
 updated: 2026-08-21
 status: superseded
+superseded_by: "docs/specs/modules/fix_2020_alarm_blickrichtung.md"
 version: "1.0"
 tags: [alert, deviation-alert, zeitangaben, issue-2020, scheibe-2]
 ---

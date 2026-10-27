@@ -15,8 +15,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
+import { register } from 'node:module';
 
 const moleculesDir = dirname(fileURLToPath(import.meta.url));
 const componentsRoot = join(moleculesDir, '..');
@@ -248,134 +249,71 @@ describe('AC-8: ScoreToggle — neues Molecule', () => {
 	});
 });
 
-describe('AC-9: CompareChannelSwitch — neues Molecule', () => {
-	test('CompareChannelSwitch.svelte existiert in molecules/', () => {
-		assert.ok(
-			hasMol('CompareChannelSwitch.svelte'),
-			'molecules/CompareChannelSwitch.svelte fehlt — noch nicht implementiert'
-		);
-	});
-	test('CompareChannelSwitch aktiver Kanal: card + shadow-1', () => {
-		const src = readMol('CompareChannelSwitch.svelte');
-		assert.ok(/g-shadow-1/.test(src), 'CompareChannelSwitch: --g-shadow-1 für aktiven Kanal fehlt');
-		assert.ok(/g-card/.test(src), 'CompareChannelSwitch: --g-card für aktiven Kanal fehlt');
-	});
-	// #610: signal entfernt — CompareChannelSwitch zeigt nur noch 3 Kanäle
-	test('CompareChannelSwitch rendert Email, Telegram, SMS (kein Signal, #610)', () => {
-		const src = readMol('CompareChannelSwitch.svelte');
-		for (const ch of ['email', 'telegram', 'sms']) {
-			assert.ok(src.includes(ch), `CompareChannelSwitch: Kanal "${ch}" fehlt`);
-		}
-		assert.ok(!src.includes("'signal'") && !src.includes('"signal"'), 'CompareChannelSwitch darf nach #610 kein Signal mehr enthalten');
-	});
-	test('CompareChannelSwitch in molecules/index.ts exportiert', () => {
-		const idx = readMol('index.ts');
-		assert.ok(
-			/CompareChannelSwitch/.test(idx),
-			'molecules/index.ts: CompareChannelSwitch nicht exportiert'
-		);
-	});
-});
+// AC-9 (CompareChannelSwitch) und AC-10–13 (Compare-Briefing-Vorschau-Molecules)
+// entfallen: die Briefing-Vorschau ist ersatzlos entfernt (#2283 AC-14, #1743 F003,
+// PO-Entscheid 2026-10-22). Die Abwesenheit prueft der Block „#2283 AC-14" unten.
 
-describe('AC-10–13: Compare-Briefing-Vorschau-Molecules', () => {
-	const PREVIEW_MOLS = [
-		'ComparePreviewMissing',
+// ════════════════ Issue #2283 AC-14 — tote/ersetzte Vorschau-Molecules entfernt ════════════════
+//
+// Spec: docs/specs/modules/shared_preview_tab.md (AC-14). Geprueft ueber echte
+// Importe (Barrel laden, Exportliste lesen; Komponentenpfad laden) statt ueber
+// Dateitext. Der Barrel enthaelt .svelte-Dateien, deshalb laufen die Importe
+// ueber die SSR-Hooks (frontend/test-svelte-ssr-hooks.mjs, Pfadregel #1409).
+//
+// RED HEUTE: der Barrel exportiert alle drei noch, die Dateien laden noch.
+describe('#2283 AC-14: CompareBriefingPreview, ComparePreviewMissing, CompareSmsPreview entfernt', () => {
+	const FRONTEND = join(componentsRoot, '../../..');
+	// #1743 F003 (PO-Entscheid 2026-10-22): auch CompareChannelSwitch und
+	// CompareChatBubble entfallen — die Briefing-Vorschau ist ersatzlos weg.
+	const ENTFERNT = [
 		'CompareBriefingPreview',
-		'CompareChatBubble',
+		'ComparePreviewMissing',
 		'CompareSmsPreview',
+		'CompareChannelSwitch',
+		'CompareChatBubble'
 	];
 
-	for (const name of PREVIEW_MOLS) {
-		test(`${name}.svelte existiert in molecules/`, () => {
-			assert.ok(
-				hasMol(`${name}.svelte`),
-				`molecules/${name}.svelte fehlt — noch nicht implementiert`
+	let registriert = false;
+	async function barrel(): Promise<Record<string, unknown>> {
+		if (!registriert) {
+			register(
+				pathToFileURL(join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href,
+				pathToFileURL(FRONTEND + '/').href
+			);
+			registriert = true;
+		}
+		return (await import(pathToFileURL(join(moleculesDir, 'index.ts')).href)) as Record<string, unknown>;
+	}
+
+	for (const name of ENTFERNT) {
+		test(`molecules/index.ts exportiert ${name} nicht mehr`, async () => {
+			const mod = await barrel();
+			assert.equal(
+				name in mod,
+				false,
+				`molecules/index.ts exportiert ${name} noch — AC-14: der Baustein ist entfallen bzw. tot (#1270) und faellt samt Barrel-Eintrag`
 			);
 		});
-		test(`${name} in molecules/index.ts exportiert`, () => {
-			const idx = readMol('index.ts');
-			assert.ok(
-				new RegExp(`\\b${name}\\b`).test(idx),
-				`molecules/index.ts: ${name} nicht exportiert`
+		test(`${name}.svelte laesst sich nicht mehr laden`, async () => {
+			await barrel();
+			await assert.rejects(
+				import(pathToFileURL(join(moleculesDir, `${name}.svelte`)).href),
+				(e: { code?: string }) => e.code === 'ERR_MODULE_NOT_FOUND',
+				`molecules/${name}.svelte ist noch vorhanden — AC-14 verlangt die Entfernung`
 			);
 		});
 	}
-
-	test('AC-11: CompareChatBubble hat Telegram-Farben (#610: Signal-Farben entfernt)', () => {
-		const src = readMol('CompareChatBubble.svelte');
-		assert.ok(/#17212b/.test(src), 'CompareChatBubble: Telegram-Backdrop #17212b fehlt');
-		assert.ok(/#5ea9dd/.test(src), 'CompareChatBubble: Telegram-Accent #5ea9dd fehlt');
-	});
-
-	// Issue #1719 S3 (Spec-Korrektur, Commit 6403c57a): das Limit ist 153, nicht
-	// 140 — 140 war fuer den Vergleichspfad nachweislich falsch gemessen
-	// (channel_layout.py:45-54, GSM-7/UDH floor((140-6)*8/7)). Umgedreht statt
-	// geloescht, weil AC-12 (Kuerzung + Warn-Farbe) weiterhin gilt, nur mit der
-	// korrigierten Zahl.
-	test('AC-12: CompareSmsPreview kürzt bei > 153 Zeichen + Warn-Farbe', () => {
-		const src = readMol('CompareSmsPreview.svelte');
-		assert.ok(/153/.test(src), 'CompareSmsPreview: 153-Zeichen-Limit fehlt');
-		assert.ok(/#f0a060/.test(src), 'CompareSmsPreview: Warn-Farbe #f0a060 bei Überschreitung fehlt');
-	});
-
-	test('AC-13: ComparePreviewMissing hat dashed-border', () => {
-		const src = readMol('ComparePreviewMissing.svelte');
-		assert.ok(/dashed/.test(src), 'ComparePreviewMissing: border: 1px dashed ... fehlt');
-		assert.ok(/g-rule/.test(src), 'ComparePreviewMissing: --g-rule fehlt');
-	});
 });
 
 // ════════════════ BLOCK C — Neue Organisms ════════════════
 
-const HOME_ORGANISMS = ['HomeHeroTrip', 'HomeHeroCompare', 'OutboxCard', 'AlertsCard'];
+// Issue #1969 (AC-25): HomeHeroCompare ist gelöscht (kein Importeur; die
+// Startseite rendert ihren Vergleichs-Hero inline in routes/+page.svelte) —
+// AC-15 hat damit keinen Prüfling mehr.
+// Issue #2346 S2 (AC-10): HomeHeroTrip ist ebenfalls gelöscht (kein Importeur) —
+// AC-14 hat damit keinen Prüfling mehr; der Hero folgt in S3 als ein `HomeHero`.
+const HOME_ORGANISMS = ['OutboxCard', 'AlertsCard'];
 const METRICS_ORGANISMS = ['PresetRail', 'MetricOffShelf', 'MetricsEditorContextBar'];
-
-describe('AC-14/15: Home-Hero-Organisms', () => {
-	for (const name of ['HomeHeroTrip', 'HomeHeroCompare']) {
-		test(`${name}.svelte existiert in organisms/`, () => {
-			assert.ok(
-				hasOrg(`${name}.svelte`),
-				`organisms/${name}.svelte fehlt — noch nicht implementiert`
-			);
-		});
-	}
-
-	test('AC-14: HomeHeroTrip hat border-left: 3px solid var(--g-accent)', () => {
-		const src = readOrg('HomeHeroTrip.svelte');
-		assert.ok(
-			/3px solid var\(--g-accent\)/.test(src),
-			'HomeHeroTrip: border-left: 3px solid var(--g-accent) fehlt'
-		);
-	});
-
-	test('AC-14: HomeHeroTrip Footer-Leiste mit card-alt + Kanal-Dots + Trip-öffnen-Link', () => {
-		const src = readOrg('HomeHeroTrip.svelte');
-		assert.ok(/g-card-alt/.test(src), 'HomeHeroTrip: Footer card-alt fehlt');
-		assert.ok(/Trip öffnen/.test(src), 'HomeHeroTrip: "Trip öffnen →"-Link fehlt');
-		assert.ok(/Kanäle|Eyebrow/.test(src), 'HomeHeroTrip: Kanal-Eyebrow in Footer fehlt');
-	});
-
-	test('AC-14: HomeHeroTrip Pills-Reihe zuerst', () => {
-		const src = readOrg('HomeHeroTrip.svelte');
-		assert.ok(/Pill/.test(src), 'HomeHeroTrip: Pills-Atom fehlt');
-		assert.ok(/Live/.test(src), 'HomeHeroTrip: "Live · Tag X von Y" fehlt');
-	});
-
-	test('AC-15: HomeHeroCompare hat 2-Spalten-Stat-Grid', () => {
-		const src = readOrg('HomeHeroCompare.svelte');
-		assert.ok(/grid-template-columns.*1fr.*1fr|repeat\(2/.test(src), 'HomeHeroCompare: 2-Spalten-Grid fehlt');
-		assert.ok(/Zeitplan/.test(src), 'HomeHeroCompare: "Zeitplan"-Stat fehlt');
-		assert.ok(/Nächster Versand/.test(src), 'HomeHeroCompare: "Nächster Versand"-Stat fehlt');
-	});
-
-	test('AC-15: HomeHeroCompare border-left: 3px solid var(--g-accent)', () => {
-		const src = readOrg('HomeHeroCompare.svelte');
-		assert.ok(
-			/3px solid var\(--g-accent\)/.test(src),
-			'HomeHeroCompare: border-left: 3px solid var(--g-accent) fehlt'
-		);
-	});
-});
 
 describe('AC-16/17: OutboxCard + AlertsCard', () => {
 	test('AC-16: OutboxCard.svelte existiert in organisms/', () => {
@@ -458,11 +396,9 @@ describe('AC-20: molecules/index.ts — alle neuen Molecules exportiert', () => 
 		// 'StageCascadeNotice' entfällt seit #1375 (tote Zweitfassung, s.o.)
 		'HorizonChips',
 		'ScoreToggle',
-		'CompareChannelSwitch',
-		'CompareBriefingPreview',
-		'CompareChatBubble',
-		'CompareSmsPreview',
-		'ComparePreviewMissing',
+		// CompareBriefingPreview, CompareSmsPreview, ComparePreviewMissing entfallen
+		// mit #2283 AC-14, CompareChannelSwitch und CompareChatBubble mit #1743 F003
+		// (Gegenprobe: Block „#2283 AC-14" oben).
 	];
 
 	for (const name of ALL_NEW_MOLECULES) {

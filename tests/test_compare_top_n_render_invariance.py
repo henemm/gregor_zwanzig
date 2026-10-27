@@ -180,8 +180,7 @@ def _render_from_options(result: ComparisonResult, preset: dict) -> tuple[str, s
         hourly_metrics=opts.hourly_metrics,
         hourly_enabled=opts.hourly_enabled,
         preset_name=preset.get("name"),
-        preset_schedule=preset.get("schedule"),
-        preset_weekday=preset.get("weekday"),
+        preset=preset,
         corridors=opts.corridors,
         outlook_enabled=opts.outlook_enabled,
     )

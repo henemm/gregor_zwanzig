@@ -3,7 +3,7 @@ entity_id: fix_1871_radar_fixture_zeitfenster_klemmung
 type: bugfix
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [radar, test-fixture, zeitfenster, wanduhr]
 ---
@@ -128,7 +128,7 @@ verursacht hat.
     (erweitert um die neue Assertion) läuft ohne `AssertionError` über die volle
     Schleife durch.
 
-- **AC-3 (Mutations-Gegenprobe, PFLICHT):** Given die Klemmung in
+- **AC-3:** (Mutations-Gegenprobe, PFLICHT) Given die Klemmung in
   `radar_fixture_start_local()` wird per String-Ersetzung zurückgenommen (zurück
   auf `arrival - timedelta(hours=4)` ohne `if arrival_local.hour < 4: ...`-Zweig)
   / When beide Tests aus AC-1 und AC-2 erneut laufen / Then werden BEIDE rot —

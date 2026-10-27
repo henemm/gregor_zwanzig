@@ -136,7 +136,7 @@ test('AC-8/#1271: activeOrNextTrip wählt NICHT den pausierten Trip, wenn ein ec
 	assert.equal(hero?.id, 'real-active');
 });
 
-test('AC-8/#1271: activeOrNextTrip wählt bei AUSSCHLIESSLICH pausiertem, datums-aktivem Trip die nächste anstehende Tour statt den pausierten', () => {
+test('AC-8/#1271: activeOrNextTrip wählt bei AUSSCHLIESSLICH pausiertem, datums-aktivem Trip die nächste anstehende Trip statt den pausierten', () => {
 	const paused = tripWith({
 		id: 'paused-only',
 		paused_at: '2026-05-01T00:00:00Z',

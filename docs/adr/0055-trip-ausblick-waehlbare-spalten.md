@@ -187,7 +187,7 @@ bleibt. Eine Vereinheitlichung muss ihn **hineinziehen**, nicht danebenlegen.
 > Dieser Abschnitt bleibt als Beleg stehen, dass die Divergenz eine bewusste,
 > befristete Zuschnitt-Folge war — keine dauerhafte Festlegung.
 
-## Folgen
+## Konsequenzen
 
 - Bestandstrips ohne Bedienung der neuen Fläche bleiben byte-identisch —
   zugesichert (AC-1), gemessen am echten Versandpfad gegen eine vor der

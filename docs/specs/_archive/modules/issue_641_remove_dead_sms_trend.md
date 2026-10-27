@@ -3,7 +3,7 @@ entity_id: issue_641_remove_dead_sms_trend
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, cleanup, dead-code]
 ---
@@ -23,7 +23,7 @@ und telegram_kurzform übergeben es nicht). Toter Code, in dem zuletzt der #640-
 
 ## Source
 
-- **File:** `src/formatters/sms_trip.py`
+- **File:** `src/output/renderers/sms_trip.py`
 - **Identifier:** `_sms_peak_only`, `format_sms`-Trend-Block + `multi_day_trend`-Param
 
 ## Estimated Scope
@@ -41,7 +41,7 @@ und telegram_kurzform übergeben es nicht). Toter Code, in dem zuletzt der #640-
 
 **AC-1:** Given `format_sms`, When der Rückbau abgeschlossen ist, Then existiert kein
 `multi_day_trend`-Parameter, kein `Trend 3T:`-Block und keine `_sms_peak_only`-Funktion
-mehr in `src/formatters/sms_trip.py`.
+mehr in `src/output/renderers/sms_trip.py`.
 
 **AC-2:** Given die echte SMS-Vorschau (`render_sms_preview`), When sie vor und nach dem
 Rückbau für denselben Trip/Report erzeugt wird, Then ist die Ausgabe **bit-identisch**

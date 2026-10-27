@@ -5,6 +5,7 @@
 // Wird von AlertPreviewCard.svelte und alertPreviewHelpers.test.ts genutzt.
 
 import type { AlertRule, AlertMetric, Stage } from '../../types.ts';
+import { METRIC_DEFAULTS } from './alertMetricTable.ts';
 
 export const METRIC_MAP: Record<AlertMetric, { metric: string; direction: string }> = {
 	wind_gust:            { metric: 'gust_max_kmh',      direction: 'above' },
@@ -60,12 +61,15 @@ export interface AlertPreviewPayload {
 
 export function buildAlertPreviewPayload(
 	rules: AlertRule[],
-	stages: Stage[],
+	_stages: Stage[],
 ): AlertPreviewPayload {
-	// Issue #1244 F002: zweite Verteidigungslinie — falls ein Legacy-Trip auf
-	// Platte trotz Backend-Coercion noch mit "stages": null ankommt, darf der
-	// Zugriff hier nicht crashen (TypeError beim Versand-Tab).
-	const segmentId = (stages ?? [])[0]?.id ?? '1';
+	// Issue #1737: `segment_id` ist eine SEGMENT-Kennung des Tages (1..N,
+	// `trip_segments.py`), keine Etappen-Kennung. Frueher stand hier
+	// `stages[0].id` ("T01") -- das lehnte der Kern fuer jeden heute laufenden
+	// Trip mit 422 ab. Die Vorschau zeigt das erste Segment des Tages.
+	// (Issue #1244 F002: `stages` wird nicht mehr gelesen, ein Legacy-`null`
+	// kann hier also nicht mehr crashen.)
+	const segmentId = '1';
 	const enabled = rules.filter((r) => r.enabled);
 	const changes: ChangePayload[] = enabled.map((rule) => {
 		const mapped = METRIC_MAP[rule.metric];
@@ -86,4 +90,44 @@ export function buildAlertPreviewPayload(
 		changes,
 		segment_times: [{ segment_id: segmentId, start: '08:00', end: '17:00' }],
 	};
+}
+
+// Issue #2283 S5 (AC-20): Body-Bau je kind fuer die kind-neutrale
+// Alarm-Vorschau (POST /api/briefings/{id}/alert-preview?kind=…).
+// route: unveraendert der Trip-Koerper (Segmente). vergleich: dieselben
+// Aenderungswerte je aktiver Regel, aber je Ort (`location_id`) statt Segment
+// und ohne `segment_times` — Koerperform wie die S4-Python-Tests.
+export type CompareChangePayload = Omit<ChangePayload, 'segment_id'> & { location_id: string };
+
+export function buildAlertPreviewBody(
+	kind: 'route' | 'vergleich',
+	input: { rules: AlertRule[]; stages?: Stage[]; locationIds?: string[] },
+): AlertPreviewPayload | { changes: CompareChangePayload[] } {
+	const trip = buildAlertPreviewPayload(input.rules, input.stages ?? []);
+	if (kind === 'route') return trip;
+	const orte = input.locationIds ?? [];
+	return {
+		changes: trip.changes.flatMap(({ segment_id: _s, ...rest }) =>
+			orte.map((location_id) => ({ ...rest, location_id })),
+		),
+	};
+}
+
+// Issue #2283 S5: der Vergleich speichert keine `alert_rules` — die Vorschau
+// bildet je aktiver Alarm-Metrik (Empfindlichkeit nicht „off") eine Regel mit
+// dem Standard-Schwellwert des Alarm-Editors.
+export function vergleichAlarmRegeln(
+	metrics: AlertMetric[],
+	levels: Record<string, string> = {},
+): AlertRule[] {
+	return metrics
+		.filter((m) => levels[m] !== 'off' && METRIC_MAP[m])
+		.map((m) => ({
+			id: `vergleich-${m}`,
+			kind: 'absolute',
+			metric: m,
+			threshold: METRIC_DEFAULTS[m],
+			severity: 'warning',
+			enabled: true,
+		}));
 }

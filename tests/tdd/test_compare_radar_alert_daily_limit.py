@@ -19,8 +19,8 @@ from __future__ import annotations
 
 from tests.helpers.nowcast_gate_fixtures import (
     CountingFrameSource, clean_uid, compare_radar_service, fresh_uid, location,
-    radar_preset, read_daily_counter, read_log, seed_daily_counter,
-    settings_email_only, write_presets, write_user_tier,
+    quiet_window_now, radar_preset, read_daily_counter, read_log,
+    seed_daily_counter, settings_email_only, write_presets, write_user_tier,
 )
 from app.loader import save_location
 
@@ -105,26 +105,53 @@ def test_freies_tagesbudget_stellt_den_vergleichs_nowcast_weiterhin_zu():
         clean_uid(uid)
 
 
-def test_erreichte_tages_obergrenze_verhindert_auch_den_nowcast_abruf():
-    """AC-1 (Kostenseite): Die Freigabe-Stufen laufen — wie in der
-    Trip-Vorlage (``trip_alert.py:748-765``: Ruhezeit, Sperrzeit, Tageslimit,
-    DANN Abruf) — vollstaendig VOR der Datenbeschaffung. Ist das Tagesbudget
-    aufgebraucht, wird fuer keinen Ort des Presets ein Nowcast abgerufen.
+def test_ruhezeit_verhindert_auch_den_nowcast_abruf():
+    """AC-1 (Kostenseite) — TEILWEISE ABGELOEST durch #2050 S3b, deshalb hier
+    an der Stufe festgenagelt, an der die Zusicherung UNVERAENDERT gilt.
 
-    RED heute: der Vergleichs-Nowcast holt zuerst die Daten und prueft
-    ueberhaupt kein Tagesbudget — der Abrufzaehler steht auf 1 statt 0."""
+    Bis #2050 S3b hiess dieser Test
+    ``test_erreichte_tages_obergrenze_verhindert_auch_den_nowcast_abruf`` und
+    sicherte zu, dass ALLE drei Freigabe-Stufen vollstaendig VOR der
+    Datenbeschaffung laufen. Fuer die TAGES-OBERGRENZE ist das seit Szenario 7
+    strukturell nicht mehr moeglich: ob eine akut eskalierende Lage das
+    erschoepfte Budget durchbrechen darf, entscheidet sich an ihrer
+    Dringlichkeit — und die entsteht ERST aus dem Abruf. Der Abruf ist dort
+    also die Voraussetzung der Entscheidung, nicht ihre Folge (Spec
+    ``feat_2050_s3b_budget_und_unterdrueckungsgrund.md``, AC-20).
+
+    Fuer RUHEZEIT und Sperrzeit gilt die Kostenzusicherung unveraendert — sie
+    bleiben harte Stops VOR dem Abruf. Genau das wird hier gemessen, damit die
+    Ablösung nicht als „Kostenschutz entfernt" durchrutscht: die
+    Fallunterscheidung im Pruefling (``not gate.allowed and not
+    _budget_erschoepft``) muss die Ruhezeit weiterhin sofort anhalten.
+
+    ZWEITE HAELFTE (Gegenprobe): bei erschoepftem Budget wird zwar abgerufen,
+    zugestellt wird ohne echte Eskalation aber nichts — der teurere Abruf
+    kauft keine Meldungsflut ein. Das deckt der Test
+    ``test_erreichte_tages_obergrenze_unterdrueckt_den_vergleichs_nowcast``
+    oben mit derselben Lage ab."""
     uid, preset_id = fresh_uid("ac1-abruf"), "cp-1467s3-ac1-abruf"
     clean_uid(uid)
     try:
-        _setup(uid, preset_id, count=2)
+        write_user_tier(uid, "free")
+        save_location(location("loc-dl", "Limitdorf"), user_id=uid)
+        quiet_from, quiet_to = quiet_window_now()
+        write_presets(uid, [radar_preset(
+            preset_id, ["loc-dl"], user_id=uid,
+            quiet_from=quiet_from, quiet_to=quiet_to,
+        )])
         frames = CountingFrameSource(onset_minutes=8)
-        compare_radar_service(
+        sent = compare_radar_service(
             uid, settings_email_only(), frames, lambda subject, body: None,
         ).check_all_compare_presets()
 
+        assert sent == 0, (
+            f"Vorbedingung: die Ruhezeit muss den Vergleichs-Nowcast "
+            f"unterdruecken, hat aber {sent} Alarm(e) versendet"
+        )
         assert frames.call_count == 0, (
-            f"Bei erreichter Tages-Obergrenze darf kein Nowcast abgerufen werden, "
-            f"es wurden aber {frames.call_count} Abrufe gezaehlt: {frames.calls!r}"
+            f"Waehrend der Ruhezeit darf kein Nowcast abgerufen werden, es "
+            f"wurden aber {frames.call_count} Abrufe gezaehlt: {frames.calls!r}"
         )
     finally:
         clean_uid(uid)

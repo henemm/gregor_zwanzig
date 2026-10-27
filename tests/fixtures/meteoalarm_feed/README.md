@@ -27,20 +27,20 @@
 
 - **Herkunft:** `https://api.meteoalarm.org` (der bisherige, kontingentierte
   EDR-Weg), abgerufen über den echten Produktivcode
-  (`MeteoAlarmSource.fetch()` je Tourpunkt) — kein nachbearbeitetes Ergebnis.
+  (`MeteoAlarmSource.fetch()` je Trip-Punkt) — kein nachbearbeitetes Ergebnis.
 - **Aufgezeichnet:** 2026-08-01, **16:06:28 UTC**. Die Feed-Seite derselben
   Minute liegt als `feed_italy_equivalence.json` daneben; nur weil beide Seiten
   zeitgleich gezogen wurden, ist der Vergleich überhaupt aussagekräftig.
-- **Umfang:** 8 Tourpunkte, zusammen 62 Warnungs-Einträge (Rohausgabe inklusive
+- **Umfang:** 8 Trip-Punkte, zusammen 62 Warnungs-Einträge (Rohausgabe inklusive
   der von der Quelle mehrfach gelieferten identischen Einträge — bewusst nicht
   entdoppelt), ~14 KB.
 - **Auswahl der 8 Punkte** (je eine andere EMMA-Zone, Nord/Mitte/Süd/Insel):
 
   | Punkt | Koordinate | DPC-Zone | EMMA | Warum |
   |---|---|---|---|---|
-  | Trentino (Karnischer Höhenweg) | 46.7248, 12.2254 | Tren-A | IT002 | grenznaher Tourpunkt aus #1397 S4 |
-  | Veneto (Karnischer Höhenweg) | 46.6508, 12.6476 | Vene-A1 | IT006 | grenznaher Tourpunkt aus #1397 S4 |
-  | Friaul (Karnischer Höhenweg) | 46.6283, 12.8023 | Friu-B | IT020 | grenznaher Tourpunkt aus #1397 S4 |
+  | Trentino (Karnischer Höhenweg) | 46.7248, 12.2254 | Tren-A | IT002 | grenznaher Trip-Punkt aus #1397 S4 |
+  | Veneto (Karnischer Höhenweg) | 46.6508, 12.6476 | Vene-A1 | IT006 | grenznaher Trip-Punkt aus #1397 S4 |
+  | Friaul (Karnischer Höhenweg) | 46.6283, 12.8023 | Friu-B | IT020 | grenznaher Trip-Punkt aus #1397 S4 |
   | Rom | 41.9028, 12.4964 | Lazi-D | IT012 | Referenzpunkt der übrigen Tests |
   | Mailand | 45.4642, 9.1900 | Lomb-09 | IT003 | Referenzpunkt der übrigen Tests |
   | Florenz | 43.7696, 11.2558 | Tosc-A3 | IT009 | Mittelitalien |
@@ -69,7 +69,7 @@
 - **Aufgezeichnet:** 2026-08-01, **16:06:28 UTC** — dieselbe Minute wie
   `edr_snapshot_it.json`.
 - **Auswahl:** 205 von 433 Einträgen des Vollabrufs. Kriterium ist rein
-  mechanisch: **alle** Einträge der 8 von den Tourpunkten betroffenen
+  mechanisch: **alle** Einträge der 8 von den Trip-Punkten betroffenen
   EMMA-Zonen (IT002: 16, IT003: 34, IT006: 25, IT009: 26, IT012: 32, IT016: 27,
   IT018: 33, IT020: 12). Keine inhaltliche Vorauswahl — sonst wäre die
   Obermengen-Aussage wertlos.
@@ -153,7 +153,7 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
 
 - **Herkunft:** `https://api.meteoalarm.org` (der bisherige, kontingentierte
   EDR-Weg), abgerufen über den echten Produktivcode
-  (`MeteoAlarmSource.fetch()` je Tourpunkt) — kein nachbearbeitetes Ergebnis.
+  (`MeteoAlarmSource.fetch()` je Trip-Punkt) — kein nachbearbeitetes Ergebnis.
 - **Aufgezeichnet:** 2026-08-01, **16:19:43 UTC**. Die Feed-Seite
   (`feed_austria_equivalence.json`) und die Zonenzuordnung
   (`zamg_snapshot_at.json`) derselben Minute liegen daneben; nur weil alle drei
@@ -163,15 +163,15 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
   1–38** geblättert — 3678 Roheinträge, nach Entduplizierung 1536. Ein
   Teilabruf hätte die Obermengen-Aussage wertlos gemacht: fehlende EDR-Einträge
   können im Vergleich nicht als Lücke auffallen.
-- **Umfang:** 8 Tourpunkte, zusammen 118 Warnungs-Einträge (Rohausgabe
+- **Umfang:** 8 Trip-Punkte, zusammen 118 Warnungs-Einträge (Rohausgabe
   inklusive der von der Quelle mehrfach gelieferten identischen Einträge —
   bewusst nicht entdoppelt), ~25 KB.
 - **Auswahl der 8 Punkte:**
 
   | Punkt | Koordinate | `gemeindenr` | EMMA | Warnungen | Warum |
   |---|---|---|---|---|---|
-  | Sillian (Karnischer Höhenweg) | 46.7597, 12.4177 | 70728 | AT707 | 20 | Tourpunkt des Nutzerbefunds #1397 S4 |
-  | Lienz | 46.8296, 12.7698 | 70716 | AT707 | 20 | zweiter Punkt derselben Tour |
+  | Sillian (Karnischer Höhenweg) | 46.7597, 12.4177 | 70728 | AT707 | 20 | Trip-Punkt des Nutzerbefunds #1397 S4 |
+  | Lienz | 46.8296, 12.7698 | 70716 | AT707 | 20 | zweiter Punkt desselben Trips |
   | Zell am See | 47.3230, 12.7951 | 50628 | AT506 | 20 | Alpen/Salzburg, hohe Warndichte |
   | Wien | 48.2082, 16.3738 | 90101 | AT901 | 12 | Referenzpunkt der übrigen Tests |
   | Innsbruck | 47.2692, 11.4041 | 70101 | AT701 | 18 | Referenzpunkt der übrigen Tests |
@@ -217,7 +217,7 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
 - **Aufgezeichnet:** 2026-08-01, **16:19:43 UTC** — dieselbe Minute wie
   `edr_snapshot_at.json` und `zamg_snapshot_at.json`.
 - **Auswahl:** 90 von 1358 Einträgen des Vollabrufs. Kriterium ist rein
-  mechanisch: **alle** Einträge der 7 von den Tourpunkten betroffenen
+  mechanisch: **alle** Einträge der 7 von den Trip-Punkten betroffenen
   EMMA-Zonen (AT101: 9, AT302: 9, AT506: 16, AT601: 10, AT701: 16, AT707: 20,
   AT901: 10). Keine inhaltliche Vorauswahl — sonst wäre die Obermengen-Aussage
   wertlos.
@@ -227,12 +227,12 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
 - **Nur für das AC-5-Gate.** Alle übrigen Tests benutzen weiterhin
   `feed_austria_sample.json`; diese kuratierte 6-Einträge-Auswahl kann
   strukturell nie Obermenge eines vollständigen EDR-Index sein — gemessen
-  2026-08-01 meldete das Gate mit ihr an allen 8 Tourpunkten Abweichungen.
+  2026-08-01 meldete das Gate mit ihr an allen 8 Trip-Punkten Abweichungen.
 
 ## `zamg_snapshot_at.json` — Äquivalenz-Aufzeichnung, Zonenzuordnung (Adversary-Fund F2, S3 Fix-Loop)
 
 - **Herkunft:** `https://warnungen.zamg.at/wsapp/api/getWarningsForCoords`, die
-  vollständige, unveränderte Antwort je Tourpunkt.
+  vollständige, unveränderte Antwort je Trip-Punkt.
 - **Aufgezeichnet:** 2026-08-01, **16:19:43 UTC** — dieselbe Minute wie die
   beiden anderen Seiten. Das ist zwingend: Österreichs Punkt→Zone-Auflösung
   läuft über ZAMG, eine später gezogene Zuordnung vergliche gegen einen anderen
@@ -246,16 +246,16 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
   gegen `warnungen.zamg.at` zu greifen (verletzt die Kern-Testschicht-Regel
   „kein Netz“; eine Störung oder Ratenbremse dort erzeugte irreführende
   Fehlschläge). Der Test speist damit einen lokalen `_ZamgServer` und prüft
-  zusätzlich, dass die Aufzeichnung **jeden** Tourpunkt abdeckt — ein fehlender
+  zusätzlich, dass die Aufzeichnung **jeden** Trip-Punkt abdeckt — ein fehlender
   Punkt liefe sonst still in den 404-Zweig und gälte fälschlich als „nicht
   zuständig“.
 
-**Format:** eine JSON-Liste, ein Eintrag je Tourpunkt (`lat`, `lon` identisch zu den
+**Format:** eine JSON-Liste, ein Eintrag je Trip-Punkt (`lat`, `lon` identisch zu den
 Koordinaten in `edr_snapshot_at.json`), plus GENAU eines von:
 - `"response"`: die vollständige, unveränderte ZAMG-JSON-Antwort (Erfolgsfall, Form wie
   `_zamg_body()` in den Tests — `properties.location.properties.gemeindenr` als Ganzzahl).
 - `"status"`: der HTTP-Statuscode als Ganzzahl (z. B. `404` für „nicht zuständig“, kein
-  österreichischer Tourpunkt).
+  österreichischer Trip-Punkt).
 
 ```json
 [
@@ -281,3 +281,49 @@ Aus dem Kontext-Dokument zusätzlich gemessen: Villach `20201`→AT202, Tamsweg
 `gemeindenr` real eine Ganzzahl ist, muss die Implementierung `str(gemeindenr)`
 bilden, bevor sie die ersten drei Zeichen nimmt, sonst wirft `gemeindenr[:3]`
 einen `TypeError`.
+
+---
+
+# Fixtures: MeteoAlarm-Feed Deutschland (Issue #1681)
+
+## `feed_germany_sample.json`
+
+- **Herkunft:** `https://feeds.meteoalarm.org/api/v1/warnings/feeds-germany`
+  (öffentlicher, kontingentfreier CAP-Feed, kein Auth; Inhalt: amtliche
+  DWD-Warnungen).
+- **Aufgezeichnet:** 2026-09-19, ca. 16:50 MESZ (Vollabruf ~5 MB / 254
+  Einträge, davon 39 mit `responseType: ["AllClear"]`, 215 mit
+  `["Prepare"]`). Der Feed führt bereits abgelaufene Einträge der Vortage
+  weiter — die Stichprobe nutzt das: die Bayern-Einträge stammen vom
+  Unwettertag 16.09.2026 und sind zum Test-Referenzzeitpunkt
+  `2026-09-16T15:40:00Z` (17:40 MESZ) gültig.
+- **Auswahl:** 7 reale, unveränderte `warnings[]`-Elemente (Index im
+  Vollabruf in Klammern), ausgewählt für Testabdeckung:
+
+  | # | Index | Art / Stufe | `responseType` | Gültig (MESZ) | Warnzellen (Auszug) | Zweck |
+  |---|---|---|---|---|---|---|
+  | 1 | 108 | STARKREGEN, orange (3; Rain) | Prepare | 16.09. 14:00–23:00 | Garmisch-Partenkirchen `109180000`, Weilheim-Schongau, Ostallgäu, … | orange DE-Warnung für die Kanal-Parität (AC-10) |
+  | 2 | 141 | STARKES GEWITTER, orange (3; Thunderstorm) | Prepare | 16.09. 14:00–15:00 | Landsberg am Lech `109181000` | orange Gewitter DE vs. orange Gewitter IT (AC-10) |
+  | 3 | 211 | GEWITTER, gelb (2; Thunderstorm) | Prepare | 16.09. 17:25–18:30 | Garmisch-Partenkirchen `109180000`, Landsberg, Bad Tölz, Kaufbeuren, … | aktive gelbe Warnung Bayerische Alpen (AC-1, AC-11) |
+  | 4 | 216 | STARKES GEWITTER, orange (3; Thunderstorm) | **AllClear** | 16.09. 16:57–17:47 | Starnberg `109188000`, München `909184999`, Weilheim, … | Aufhebung mit zum Testzeitpunkt noch zukünftigem `expires` (AC-5) |
+  | 5 | 244 | WINDBÖEN, gelb (1; Wind) | Prepare | 19.09. 00:00–20.09. 00:00 | Kreis Cuxhaven – Küste `903352002`, Borkum, … | küstennahe **Kreis**-Zelle (Präfix `9…`) als Positivkontrolle neben der Seezelle (AC-7) |
+  | 6 | 245 | NEBEL, gelb (4; Fog) | Prepare | 19.09. 05:10–08:00 | Altötting, Mühldorf, `909187999` (Kreis und Stadt Rosenheim) | `9…`-Sammelzelle; Grundlage der konstruierten Drift-Kopie im Drift-Wächter (AC-9) |
+  | 7 | 246 | BÖEN, gelb (7; coastalevent) | Prepare | ab 19.09. 05:31, **ohne `expires`** | `501000004` (Elbe von Hamburg bis Cuxhaven) | Küsten-/Seezelle ohne Geometrie (AC-7) |
+
+- **Prüfpunkte (Ray-Cast gegen DWD-Layer `dwd:Warngebiete_Kreise`, 402 Flächen,
+  abgerufen 2026-09-19):** Garmisch-Partenkirchen 47.4921/11.0958 →
+  `109180000`; Lenggries 47.6800/11.5760 → `109173000` (Bad Tölz-Wolfratshausen,
+  nördlich der DPC-Bbox-Grenze 47,5 N); Starnberg 47.9990/11.3400 → `109188000` (einziger Eintrag der
+  Stichprobe für diese Zelle ist die Aufhebung #4); Landsberg 48.0480/10.8830
+  → `109181000`; Peine 52.32/10.23 → `103157000` (kein Eintrag in der
+  Stichprobe ⇒ deutscher Punkt ohne Warnung); Cuxhaven 53.8615/8.6944 →
+  `903352002`; Freilassing 47.8406/12.9767 → `109172000`; Weil am Rhein
+  47.5947/7.6206 → `108336000`. Innsbruck, Salzburg, Basel → kein Treffer.
+- **Drift-Befund der Aufzeichnung:** 290 distinkte `WARNCELLID`s im Vollabruf;
+  alle bis auf die acht Küsten-/Seezellen `501000001…501000008` liegen im
+  Kreis-Layer. Einen echten Drift-Fall enthält die Aufzeichnung daher nicht —
+  der Drift-Wächter-Test konstruiert ihn im Testcode aus einer Kopie von #6
+  (Vorbild `test_dpc_zone_drift.py`), die Fixture selbst bleibt unverändert.
+- **Unverändert:** Jedes ausgewählte `warnings[]`-Element ist eine 1:1-Kopie
+  aus dem Originalabruf (kein Feld umgeschrieben, keine Erfindung), kompakt
+  serialisiert (~140 KB).

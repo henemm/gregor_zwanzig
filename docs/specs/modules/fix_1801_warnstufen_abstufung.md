@@ -3,7 +3,7 @@ entity_id: fix_1801_warnstufen_abstufung
 type: bugfix
 created: 2026-08-14
 updated: 2026-08-14
-status: draft
+status: implemented
 workflow: fix-1801-warnstufen-abstufung
 version: "1.0"
 tags: [email, design-tokens, ampel, kontrast, chips]

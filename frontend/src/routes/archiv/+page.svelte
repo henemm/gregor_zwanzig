@@ -57,7 +57,7 @@
 					body: JSON.stringify({ archived: false })
 				});
 				if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
-				// Issue #1395 S3: nur Touren fuehren einen Stempel — der
+				// Issue #1395 S3: nur Trips fuehren einen Stempel — der
 				// Orts-Vergleich folgt erst mit S6 und bleibt unberuehrt.
 				if (item.type === 'trip') discardEtag(item.id);
 				await invalidateAll();
@@ -149,7 +149,7 @@
 				>
 					{c.label}
 					<span
-						style="font-size:10px;padding:1px 6px;border-radius:8px;background:{active
+						style="font-size:11px;padding:1px 6px;border-radius:8px;background:{active
 							? 'rgba(255,255,255,0.18)'
 							: 'var(--g-paper-deep)'};color:{active ? 'var(--g-paper)' : 'var(--g-ink-3)'}"
 						>{c.n}</span

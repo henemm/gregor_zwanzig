@@ -26,7 +26,7 @@
 		class: className = ''
 	}: Props = $props();
 
-	const SIZES = { sm: { value: 18, label: 9 }, md: { value: 22, label: 10 }, lg: { value: 28, label: 10 } };
+	const SIZES = { sm: { value: 18, label: 11 }, md: { value: 22, label: 11 }, lg: { value: 28, label: 11 } }; // #2601: Label-Minimum 11px
 	const s = $derived(SIZES[size] ?? SIZES.md);
 	const valueColor = $derived(tone === 'accent' ? 'var(--g-accent)' : 'var(--g-ink)');
 	const valueFontSize = $derived(layout === 'inline' ? Math.max(s.value, 22) : s.value);

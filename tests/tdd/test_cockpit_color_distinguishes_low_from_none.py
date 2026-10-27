@@ -120,7 +120,7 @@ def test_ac2_risikofreie_etappe_bleibt_gruen():
     stage, provider = _stage_with_thunder("s_none", 40.0, 8.0, thunder_level=None)
     trip = Trip(id="trip-ac2", name="trip-ac2", stages=[stage])
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     assert results["s_none"] is not None
     assert results["s_none"]["risk"] == "green", (
@@ -140,7 +140,7 @@ def test_ac3_nur_leichtes_gewitter_faerbt_die_etappe_gelb():
     stage, provider = _stage_with_thunder("s_low", 41.0, 8.0, thunder_level=ThunderLevel.LOW)
     trip = Trip(id="trip-ac3", name="trip-ac3", stages=[stage])
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     assert results["s_low"] is not None
     assert results["s_low"]["risk"] == "yellow", (
@@ -161,7 +161,7 @@ def test_ac4_mittleres_gewitter_bleibt_gelb():
     stage, provider = _stage_with_thunder("s_med", 42.0, 8.0, thunder_level=ThunderLevel.MED)
     trip = Trip(id="trip-ac4-med", name="trip-ac4-med", stages=[stage])
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     assert results["s_med"] is not None
     assert results["s_med"]["risk"] == "yellow", (
@@ -175,7 +175,7 @@ def test_ac4_hohes_gewitter_bleibt_rot():
     stage, provider = _stage_with_thunder("s_high", 43.0, 8.0, thunder_level=ThunderLevel.HIGH)
     trip = Trip(id="trip-ac4-high", name="trip-ac4-high", stages=[stage])
 
-    results = compute_stage_weather(trip, provider)
+    results = compute_stage_weather(trip, provider, user_id="nutzer_stage_weather")
 
     assert results["s_high"] is not None
     assert results["s_high"]["risk"] == "red", (

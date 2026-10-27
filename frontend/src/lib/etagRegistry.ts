@@ -1,20 +1,45 @@
-// Issue #1395 S3 — ETag-Registry und Schreib-Warteschlange je Tour.
+// Issue #1395 S3 — ETag-Registry und Schreib-Warteschlange je Trip.
 // Spec: docs/specs/modules/issue_1395_s3_etag_registry.md
 // Server-Vertrag: docs/specs/modules/issue_1395_s2_etag_ifmatch.md · ADR-0036
 //
 // Bewusst ein Modul-Singleton (anders als saveStatusStore.svelte.ts, das eine
 // Instanz je Editor-Oberflaeche verlangt): der Stempel ist ein Frischezustand
-// der RESSOURCE (der Tour), nicht der Editor-Instanz. Genau das braucht der
+// der RESSOURCE (der Trip), nicht der Editor-Instanz. Genau das braucht der
 // Kernfall — die zwei aufeinanderfolgenden Schreibvorgaenge des Wetter-Reiters
-// und der unabhaengige Auto-Save des Alarme-Reiters auf derselben Tour muessen
+// und der unabhaengige Auto-Save des Alarme-Reiters auf derselben Trip muessen
 // denselben Stand sehen. Zwei Browser-Tabs sind ohnehin getrennte JS-Realms mit
 // je eigener Registry; der Schutz zwischen ihnen kommt vollstaendig vom Server.
 
 const knownEtags = new Map<string, string>();
 const writeQueues = new Map<string, Promise<unknown>>();
+// Issue #1433: Ressourcen, bei denen ein Schreibvorgang mit 412 abgelehnt wurde
+// („jemand anderes hat inzwischen geaendert"). Der alte Stempel bleibt stehen,
+// jeder weitere Schreibvorgang traegt ihn weiter und wird wieder abgelehnt —
+// kein unbedingtes Schreiben nach einem 412. Endet nur durch `loescheKonflikt`
+// (Retry nach frischem GET) oder Neuladen der Seite.
+const konflikte = new Set<string>();
+
+/** Markiert die Ressource als im Konflikt (der Stempel bleibt unveraendert). */
+export function markiereKonflikt(tripId: string): void {
+	konflikte.add(tripId);
+	// Veraenderung des Eintrags im Sinne von F001: ein gleichzeitig laufender,
+	// nicht serialisierter Lesevorgang darf seinen (nun fraglichen) Stempel nicht
+	// still uebernehmen.
+	bumpVersion(tripId);
+}
+
+/** true, solange nach einem 412 noch kein Retry den Konflikt aufgeloest hat. */
+export function istKonflikt(tripId: string): boolean {
+	return konflikte.has(tripId);
+}
+
+/** Hebt die Konflikt-Markierung auf (nur nach frischem GET der Ressource). */
+export function loescheKonflikt(tripId: string): void {
+	konflikte.delete(tripId);
+}
 
 /**
- * F001 — zaehlt JEDE Veraenderung des Eintrags einer Tour (Setzen wie Verwerfen).
+ * F001 — zaehlt JEDE Veraenderung des Eintrags einer Trip (Setzen wie Verwerfen).
  * Ein Vorgang ausserhalb der Warteschlange (Lesevorgang, Entlade-Flush) erkennt
  * damit beim Eintreffen, ob inzwischen ein juengerer Stand hinterlegt wurde, und
  * verwirft seinen eigenen, dann veralteten Stempel. Ohne das ueberschreibt eine
@@ -27,7 +52,7 @@ function bumpVersion(tripId: string): void {
 	etagVersions.set(tripId, (etagVersions.get(tripId) ?? 0) + 1);
 }
 
-/** Aktueller Aenderungszaehler dieser Tour (0 = noch nie beruehrt). */
+/** Aktueller Aenderungszaehler dieser Trip (0 = noch nie beruehrt). */
 export function etagVersion(tripId: string): number {
 	return etagVersions.get(tripId) ?? 0;
 }
@@ -39,15 +64,30 @@ export function etagVersion(tripId: string): number {
  * bewusst NICHT — dort prueft der Server kein `If-Match` (S2 AC-15, S6 AC-15)
  * und liefert keinen Stempel.
  *
- * Beide Ressourcenarten teilen sich EINE Registry: Preset-Kennungen tragen
- * immer das Praefix `cp-` (`newComparePresetID()`), eine Verwechslung mit einer
- * Tour-Kennung ist damit ausgeschlossen.
+ * Beide Ressourcenarten teilen sich EINEN Schluesselraum — Eintraege liegen
+ * unter der reinen Kennung, nicht unter dem Pfad.
+ *
+ * Issue #2276 S1 (Korrektur einer falschen Zusicherung): das Praefix `cp-`
+ * (`newComparePresetID()`) tragen NUR NEU erzeugte Presets. Alt-Ortsvergleiche
+ * im Bestand tragen Slug-Kennungen ohne Praefix (gemessen 2026-09-18:
+ * `zillertal-t-glich`). Das Praefix allein schliesst eine Verwechslung mit
+ * einer Trip-Kennung also NICHT aus.
+ *
+ * Issue #2359: die Eindeutigkeit einer Kennung ueber BEIDE Arten erzwingt der
+ * Server (Wächter in `Store.SaveTrip`/`SaveComparePreset` -> `ErrKindConflict`,
+ * `POST /api/trips` -> 409 `id_conflict`; bewacht durch
+ * `internal/store/id_eindeutigkeit_test.go` und
+ * `internal/handler/id_eindeutigkeit_test.go`). Es gibt also nie einen Trip
+ * und einen Ortsvergleich mit derselben Kennung — EIN Schluesselraum genuegt,
+ * die Registry wird bewusst NICHT nach Art geschluesselt.
+ * Konsequenz fuer Aufrufer bleibt: die Ressourcenart NIE aus der Kennung ableiten,
+ * immer uebergeben (s. `refreshResourceEtag` in `api.ts`).
  */
 const RESOURCE_PATH_RE =
 	/^\/api\/(?:trips\/([^/?#]+)(?:\/weather-config)?|compare\/presets\/([^/?#]+))(?:[?#]|$)/;
 
 /**
- * Ressourcen-Kennung eines Pfades (Tour oder Ortsvergleich), oder `null` fuer
+ * Ressourcen-Kennung eines Pfades (Trip oder Ortsvergleich), oder `null` fuer
  * alle uebrigen Pfade. Der Name stammt aus S3 und bleibt bewusst unveraendert —
  * ein Umbenennen beruehrte alle Aufrufer ohne Verhaltensgewinn.
  */
@@ -62,7 +102,7 @@ export function extractTripId(path: string): string | null {
 	}
 }
 
-/** Zuletzt vom Server erhaltener Stand dieser Tour, oder `undefined`. */
+/** Zuletzt vom Server erhaltener Stand dieser Trip, oder `undefined`. */
 export function getKnownEtag(tripId: string): string | undefined {
 	return knownEtags.get(tripId);
 }
@@ -88,7 +128,7 @@ export function setKnownEtagIfUnchanged(tripId: string, etag: string, seenVersio
 }
 
 /**
- * Stempel aus dem Seitenaufbau (Server-Naht) — nur, wenn diese Tour in dieser
+ * Stempel aus dem Seitenaufbau (Server-Naht) — nur, wenn diese Trip in dieser
  * Sitzung noch nie einen gefuehrt hat. Auch der Seitenaufbau ist ein
  * Lesevorgang, und sein Startzeitpunkt ist im Browser nicht greifbar: laeuft
  * `load()` erneut (Invalidierung), waehrend ein Speichervorgang unterwegs ist,
@@ -100,10 +140,28 @@ export function adoptEtagFromPageLoad(tripId: string, etag: string): boolean {
 }
 
 /**
- * Verwirft den gemerkten Stand. Noetig nach jedem Vorgang, der die Tourdatei
- * veraendert, ohne einen neuen Stempel zu liefern (`PATCH /state`), und nach
- * einer `412`-Ablehnung — die traegt laut S2 bewusst keinen neuen Stempel.
- * Ohne Verwerfen scheiterte jeder weitere Versuch endlos am selben Wert.
+ * Fix-Loop 1 (#1433, F003): Stempel beim AUFBAU einer frischen Seiteninstanz
+ * (SvelteKit-Navigation weg und zurueck, Neuladen). Trip und Stempel kommen dort
+ * gemeinsam vom Server und ersetzen den lokalen Stand — ein offener Konflikt dieser
+ * Ressource endet damit („bleibt sichtbar, bis der Nutzer es ausfuehrt oder neu
+ * laedt"). Ohne Konflikt gilt unveraendert die Regel von `adoptEtagFromPageLoad`.
+ * NUR im Skript-Kopf der Seite aufrufen (einmal je Instanz), NIE in einem Effekt:
+ * ein erneut laufendes `load()` bei gemounteter Seite haelt den alten `trip`.
+ */
+export function adoptEtagBeiSeitenaufbau(tripId: string, etag: string): boolean {
+	if (konflikte.has(tripId)) {
+		konflikte.delete(tripId);
+		setKnownEtag(tripId, etag);
+		return true;
+	}
+	return adoptEtagFromPageLoad(tripId, etag);
+}
+
+/**
+ * Verwirft den gemerkten Stand. Noetig nach einem Vorgang, der die Trip-Datei
+ * veraendert, ohne einen neuen Stempel zu liefern. Seit #1433 ruft `api.ts` es
+ * NICHT mehr nach einem 412 auf (Konflikt-Sperre: `markiereKonflikt`) und
+ * `PATCH /state` ersetzt es durch GET + gemeinsame Adoption.
  */
 export function discardEtag(tripId: string): void {
 	knownEtags.delete(tripId);
@@ -117,7 +175,7 @@ export function discardEtag(tripId: string): void {
  * NICHT zur Laufzeit aufrufen, solange noch Anfragen unterwegs sein koennen:
  * der Zaehlerstand faengt danach wieder bei 0 an und wird also wiederverwendet.
  * Ein Nachzuegler, der sich vorher Stand 2 gemerkt hat, findet nach zwei
- * beliebigen weiteren Aenderungen an derselben Tour erneut Stand 2 vor — die
+ * beliebigen weiteren Aenderungen an derselben Trip erneut Stand 2 vor — die
  * Pruefung in `setKnownEtagIfUnchanged` kann ihn dann nicht mehr von einem
  * frischen Vorgang unterscheiden und uebernimmt seinen laengst veralteten
  * Stempel (F001 durch die Hintertuer).
@@ -131,12 +189,13 @@ export function clearEtagRegistry(): void {
 	knownEtags.clear();
 	writeQueues.clear();
 	etagVersions.clear();
+	konflikte.clear();
 }
 
 /**
  * Reiht einen Schreibvorgang hinter jeden bereits laufenden Schreibvorgang auf
- * DIESELBE Tour ein — unabhaengig davon, welche Komponente ihn ausgeloest hat.
- * Verschiedene Touren laufen weiterhin nebeneinander. Ein fehlgeschlagener
+ * DIESELBE Trip ein — unabhaengig davon, welche Komponente ihn ausgeloest hat.
+ * Verschiedene Trips laufen weiterhin nebeneinander. Ein fehlgeschlagener
  * Vorgaenger bricht die Kette NICHT ab (kein Domino).
  */
 export function enqueueTripWrite<T>(tripId: string, fn: () => Promise<T>): Promise<T> {

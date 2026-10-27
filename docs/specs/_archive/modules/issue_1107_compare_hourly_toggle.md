@@ -3,7 +3,7 @@ entity_id: issue_1107_compare_hourly_toggle
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, preset, hourly, validator, marker-header]
 workflow: fix-1107-compare-sections-validator

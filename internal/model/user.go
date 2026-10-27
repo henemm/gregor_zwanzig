@@ -25,6 +25,10 @@ type User struct {
 	// Zero-Value würde als "0001-01-01T00:00:00Z" serialisiert statt weggelassen.
 	RequestedTier string     `json:"requested_tier,omitempty"`
 	RequestedAt   *time.Time `json:"requested_at,omitempty"`
+	// Issue #2436 — Nachweis, dass der Betreiber ueber den offenen Antrag
+	// benachrichtigt wurde. Nur nach erfolgreichem Versand gesetzt, bei jedem
+	// neuen Antrag zuerst zurueckgesetzt, bei Freigabe geloescht.
+	RequestedNotifiedAt *time.Time `json:"requested_notified_at,omitempty"`
 	// Issue #1219 Scheibe 1 — Resend-Allowlist-Eignungskriterium. Pointer aus
 	// demselben Grund wie RequestedAt: omitempty greift bei time.Time-Structs
 	// nicht, ein Zero-Value würde als "0001-01-01T00:00:00Z" serialisiert
@@ -36,6 +40,65 @@ type User struct {
 	// time.Time-Structs nicht).
 	PremiumSmsReplyTo string     `json:"premium_sms_reply_to,omitempty"`
 	PremiumSmsReplyAt *time.Time `json:"premium_sms_reply_at,omitempty"`
+	// Issue #2248 (#2199 Scheibe 3) — das Passkey-Angebot wurde abgewiesen. Der
+	// Vermerk gehoert ins Profil, damit er geraeteuebergreifend gilt. Schlichtes
+	// bool: "fehlt" und "false" bedeuten beide "nicht abgewiesen", es gibt hier
+	// kein Zeitstempel-Nullwert-Problem wie bei RequestedAt.
+	PasskeyPromptDismissed bool `json:"passkey_prompt_dismissed,omitempty"`
+	// Issue #2147 Scheibe B2 — ausstehende Adressaenderung eines bestaetigten
+	// Kontos. Solange sie aussteht, bleiben Email/MailTo auf den alten,
+	// bestaetigten Werten; die neue Adresse steht NUR hier (unsichtbar fuer
+	// ResolveAddressOwner, Allowlists, Versand). PendingContactField nennt das
+	// beim Einloesen zu schreibende Feld ("email"|"mail_to"). Beide fehlen im
+	// JSON, solange nichts aussteht (Bestandsdaten laden unveraendert).
+	PendingContactAddress string `json:"pending_contact_address,omitempty"`
+	PendingContactField   string `json:"pending_contact_field,omitempty"`
+	// Issue #2152 — Testkonto-Status als persistiertes Profilfeld (ADR-0072).
+	// Einzige Quelle der Wahrheit neben der festen Fixture-ID tg-live-e2e
+	// (IsTestAccount); ersetzt die "test"/"tdd"-Namens-Heuristik. omitempty:
+	// Bestandsprofile ohne das Feld laden unveraendert als echte Nutzer.
+	IsTestUser bool `json:"is_test_user,omitempty"`
+	// Issue #2406 (S3 aus #2153) — SMS-Nummer-Verifikation. SmsVerifiedNumber
+	// ist die BEWIESENE Nummer, nicht bloss ein Zeitstempel: nur wenn sie mit
+	// SmsTo uebereinstimmt, darf eine SMS an das Konto gehen (Wirkstelle
+	// src/app/config.py::with_user_profile). PendingSmsTo haelt eine neue
+	// Nummer, solange das Konto eine bestaetigte hat — sie wird erst beim
+	// Einloesen des Codes nach SmsTo befoerdert. Alle drei omitempty:
+	// Bestandsdaten laden unveraendert. SmsVerifiedAt ist ein Pointer aus
+	// demselben Grund wie EmailVerifiedAt.
+	SmsVerifiedNumber string     `json:"sms_verified_number,omitempty"`
+	SmsVerifiedAt     *time.Time `json:"sms_verified_at,omitempty"`
+	PendingSmsTo      string     `json:"pending_sms_to,omitempty"`
+	// Issue #2155 S3 (ADR-0080) — Kontosperre durch einen Admin. TYPISIERT,
+	// weil fast alle Schreiber (Profil, Passkey, Magic-Link ...) per SaveUser
+	// komplett zurueckschreiben: ein nur roh gesetztes Feld verschwaende dort.
+	// omitempty: Bestandsprofile laden unveraendert als nicht gesperrt.
+	Disabled bool `json:"disabled,omitempty"`
+	// Issue #2521 S2 — Onboarding. OnboardingPending markiert ein NEU angelegtes
+	// Konto (alle nutzerseitigen Anlagewege, nie der Admin-Seed); Bestandskonten
+	// tragen es nicht und sehen Willkommen/Checkliste nie. Nur der Server setzt
+	// es. Die Dismiss-Flags setzt der Nutzer ueber PUT /api/auth/profile.
+	// TestMailSentAt: Versand der Testmail angenommen (nicht Zustellung).
+	// TYPISIERT, damit die Felder jeden SaveUser-Schreiber ueberstehen.
+	OnboardingPending   bool       `json:"onboarding_pending,omitempty"`
+	OnboardingDismissed bool       `json:"onboarding_dismissed,omitempty"`
+	ChecklistDismissed  bool       `json:"checklist_dismissed,omitempty"`
+	TestMailSentAt      *time.Time `json:"test_mail_sent_at,omitempty"`
+}
+
+// MarkOnboardingPending kennzeichnet ein neu angelegtes Konto als "neu
+// eingeladen" (Issue #2521 S2). Gemeinsamer Helfer aller Anlagewege.
+func MarkOnboardingPending(u *User) { u.OnboardingPending = true }
+
+// SmsVerificationCode — Issue #2406. Struktureller Klon von
+// EmailVerificationToken: nur der bcrypt-Hash liegt auf Platte, mit Ablauf und
+// an die zu beweisende Nummer gebunden. FailedAttempts riegelt Brute-Force auf
+// den kurzen Zahlencode ab.
+type SmsVerificationCode struct {
+	CodeHash       string    `json:"code_hash"`
+	ExpiresAt      time.Time `json:"expires_at"`
+	Number         string    `json:"number"`
+	FailedAttempts int       `json:"failed_attempts,omitempty"`
 }
 
 type PasswordResetToken struct {
@@ -48,6 +111,9 @@ type PasswordResetToken struct {
 type EmailVerificationToken struct {
 	TokenHash string    `json:"token_hash"`
 	ExpiresAt time.Time `json:"expires_at"`
+	// Issue #2147 Scheibe B2 — die zu beweisende Adresse (normalisiert). Leer
+	// bei Alt-Tokens von vor diesem Stand.
+	Address string `json:"address,omitempty"`
 }
 
 // WebAuthnCredential is the persisted form of a registered Passkey/FIDO2 credential.

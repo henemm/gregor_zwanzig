@@ -872,6 +872,13 @@ def test_ac17_signaturen_des_geteilten_bausteins_bleiben_unveraendert():
         # Trip-Zweig (ADR-0021-Nachtrag vom selben Tag, Abschnitt „warum der
         # Ortsvergleich sie NICHT bekommt").
         ("quantitative_escalation", "KEYWORD_ONLY", True),
+        # Issue #2050 S4c, 2026-08-23: zulaessig, weil additiv und optional --
+        # Vorgabewert `None`, den kein Compare- oder Bestandsaufrufer (Radar/
+        # amtlich) setzt. Ohne den Parameter bleibt die alte Ableitung aus
+        # `point_at` unveraendert (Fallback, AC-12); nur der neue
+        # Abweichungs-Zweig (`trip_alert.py::check_and_send_alerts`) uebergibt
+        # ihn explizit als `"deviation"`.
+        ("source", "KEYWORD_ONLY", True),
     ], f"check_event_identity_gate: {_parameter_form(check_event_identity_gate)!r}"
 
     assert _parameter_form(record_event_identity) == [
@@ -884,11 +891,20 @@ def test_ac17_signaturen_des_geteilten_bausteins_bleiben_unveraendert():
         ("point_at", "KEYWORD_ONLY", True),
         ("window_start", "KEYWORD_ONLY", True),
         ("window_end", "KEYWORD_ONLY", True),
+        # Issue #2050 S4c, 2026-08-23: dieselbe Begruendung wie oben bei
+        # `check_event_identity_gate` -- additiv, optional, Fallback bleibt
+        # unveraendert.
+        ("source", "KEYWORD_ONLY", True),
     ], f"record_event_identity: {_parameter_form(record_event_identity)!r}"
 
     assert _parameter_form(resolve_hazard_class) == [
         ("is_convective", "KEYWORD_ONLY", True),
         ("hazard", "KEYWORD_ONLY", True),
+        # Issue #2050 S4c, 2026-08-23: dritter, optionaler Auflösungsweg fuer
+        # den Abweichungs-Zweig (Metrik-Liste statt `is_convective`/`hazard`).
+        # Radar und amtlich lassen ihn weiterhin weg -- ihr Verhalten ist
+        # unveraendert.
+        ("metrics", "KEYWORD_ONLY", True),
     ], f"resolve_hazard_class: {_parameter_form(resolve_hazard_class)!r}"
 
 

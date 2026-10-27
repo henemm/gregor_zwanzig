@@ -1,7 +1,8 @@
 <script lang="ts">
 	// BrandIcon — kanonisches Berg+Blitz-Bildmark.
 	// 1:1 portiert aus docs/design-requests/issue_15_atomic_design/spec/brand-kit.jsx.
-	// Bergkamm in --g-ink, Blitz in --g-accent. Scharfe miter-Joins (alpine Gewitter-DNA).
+	// Gefuellte Bergsilhouette in --g-ink, Blitz in --g-accent, 1,35x vergroessert
+	// um seinen Schwerpunkt (45.5, 20). Scharfe Spitzen (alpine Gewitter-DNA).
 	interface Props {
 		size?: 'sm' | 'md' | 'lg' | number;
 		color?: string;
@@ -12,8 +13,6 @@
 
 	const SIZES: Record<string, number> = { sm: 18, md: 24, lg: 32 };
 	const px = $derived(typeof size === 'number' ? size : (SIZES[size] ?? SIZES.md));
-	// Stroke-Width proportional zur Render-Groesse, mit Floor fuer Hairline-Schutz.
-	const sw = $derived(Math.max(1.6, px / 12));
 </script>
 
 <svg
@@ -24,8 +23,10 @@
 	aria-label="Gregor Zwanzig"
 	style="display:inline-block;flex-shrink:0;vertical-align:middle"
 >
-	<!-- Blitz — Akzent-Orange, scharfe Spitzen -->
-	<path d="M48 11 L41 23 L45 23 L43 29 L50 17 L46 17 Z" fill={accent} stroke-linejoin="miter" stroke-miterlimit="8" />
-	<!-- Hauptkamm — vier Spitzen, miter-Joins -->
-	<path d="M3 54 L18 22 L29 38 L38 26 L52 50 L61 54 Z" stroke={color} stroke-width={sw} stroke-linejoin="miter" stroke-linecap="square" stroke-miterlimit="8" fill="none" />
+	<!-- Hauptkamm — gefuellte Silhouette, vier Spitzen -->
+	<path d="M3 54 L18 22 L29 38 L38 26 L52 50 L61 54 Z" fill={color} />
+	<!-- Blitz — Akzent-Orange, ueber der Silhouette, 1,35x -->
+	<g transform="translate(45.5,20) scale(1.35) translate(-45.5,-20)">
+		<path d="M48 11 L41 23 L45 23 L43 29 L50 17 L46 17 Z" fill={accent} />
+	</g>
 </svg>

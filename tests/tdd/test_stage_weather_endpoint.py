@@ -27,7 +27,7 @@ gegen die erwarteten Bodies/Statuscodes fehlschlaegt.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi.testclient import TestClient
@@ -36,6 +36,7 @@ from app.loader import save_trip
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from app.trip import Stage, Trip, Waypoint
 from providers.base import ProviderRequestError
+from tests.helpers.ortstag import utc_tag
 
 # Echte, im Repo vorhandene Fixture-Koordinaten (fixtures/openmeteo/*.json) --
 # siehe src/providers/fixture.py::_FIXTURE_LOCATIONS.
@@ -92,7 +93,7 @@ class _KeyedFakeProvider:
 
 def _two_wp_stage(stage_id: str, lat0, lon0, lat1, lon1, elevation_m=600):
     return Stage(
-        id=stage_id, name=stage_id, date=date.today(),
+        id=stage_id, name=stage_id, date=utc_tag(),  # #2314 D2: FixtureProvider verankert am UTC-Tag
         waypoints=[
             Waypoint(id="g1", name="g1", lat=lat0, lon=lon0, elevation_m=elevation_m),
             Waypoint(id="g2", name="g2", lat=lat1, lon=lon1, elevation_m=elevation_m),
@@ -159,7 +160,7 @@ def test_ac5_fail_soft_returns_http_200_with_null_result():
 
     user_id = "stage-weather-ac5-user"
     ok_stage = _two_wp_stage("ok", *_INNSBRUCK, *_STUBAI)
-    broken_stage = Stage(id="broken", name="broken", date=date.today(), waypoints=[])
+    broken_stage = Stage(id="broken", name="broken", date=utc_tag(), waypoints=[])
     trip = Trip(id="ac5-trip", name="AC5", stages=[ok_stage, broken_stage])
     save_trip(trip, user_id=user_id)
 

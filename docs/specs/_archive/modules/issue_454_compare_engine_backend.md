@@ -3,13 +3,15 @@ entity_id: issue_454_compare_engine_backend
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: deprecated
 version: "1.0"
 issue: 454
 tags: [compare, go, engine, scoring, cache, goroutines, api, date-range, hourly, epic-246]
 ---
 
 # Issue #454 — Orts-Vergleich · Compare-Engine Backend (Multi-Day, Datums-/Stunden-Fenster)
+
+> Abgelöst/entfernt durch #1215 (produktions-tote Go-Compare-Engine `internal/compare/` gelöscht, `a45e82161`, 2026-07-11).
 
 ## Approval
 

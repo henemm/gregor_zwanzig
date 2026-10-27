@@ -41,6 +41,16 @@ kappen würde die Vorschau kurz vor Mitternacht still auf Minuten schrumpfen las
 UTC-Zeitstempel. Die Ortszeit entsteht erst bei der Auswertung „welcher Tag" und bei der
 Beschriftung — nicht in den Daten.
 
+**Nicht betroffen: der SMS-/Premium-SMS-Kostendeckel (Issue #2412 S4a, 2026-09-24).**
+`src/services/sms_daily_limit.py` taktet den täglichen Versand-Zähler je Nutzer an der
+UTC-Mitternacht, nicht an der Ortszeit der Tour. Dieser Zähler ist eine reine
+Kosten-Referenzgröße pro Nutzerkonto (Vorbild `forecast_budget._today_utc`,
+`meteoalarm_budget._today_utc` unten unter „Bewusst NICHT betroffen"), kein wetter- oder
+tourfachlicher Kalendertag — eine Ortszeit-Bindung würde bei mehreren Zonen dasselbe
+Kontingent mehrfach gewähren, den genau vermiedenen Effekt aus #1726s Tageszähler-Umstellung.
+`test_ruhezeit_und_zaehler_folgen_der_ortszone.py` bewacht den ANDEREN, weiterhin
+ortszonengebundenen Alarm-Tageszähler (`alert_daily_limit.py`) und ist kein Gegenargument.
+
 ## Konsequenzen
 
 **Ein Ortstag hat nicht immer 24 Stunden.** An den Umstellungstagen sind es 23 oder 25, in
@@ -164,7 +174,9 @@ Regelverstoß — genau das war der Zustand vor #1697.
   `first_resolvable_tz(locations)`, demselben Muster wie der Compare-Versand seit S5b. Der
   Mail-Footer „Nächster Versand" (`compare_html.py::_compute_next_send`) übernimmt das in
   `render_compare_html` bereits aufgelöste `header_tz`, statt selbst ein zweites Mal
-  aufzulösen. Die siebte Fundstelle, `comparison_engine.py::dict_to_comparison_result`,
+  aufzulösen. (Stand 2026-10-24, #1969: `_compute_next_send` rechnet nicht mehr selbst, sondern
+  delegiert an die zentrale Ableitung `src/services/next_briefing.py`; die Ortszone bleibt
+  maßgeblich.) Die siebte Fundstelle, `comparison_engine.py::dict_to_comparison_result`,
   wurde NICHT korrigiert, sondern als toter Code (0 Aufrufer im gesamten Repo) ersatzlos
   entfernt.
 - **`raw_astimezone`-Formbereinigung, dritte Fundart des Wächters** (#1727 S5f, live

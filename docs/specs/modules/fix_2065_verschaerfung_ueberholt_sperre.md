@@ -3,7 +3,7 @@ entity_id: fix_2065_verschaerfung_ueberholt_sperre
 type: module
 created: 2026-08-22
 updated: 2026-08-22
-status: approved
+status: implemented
 workflow: fix-2065-verschaerfung-durchbricht-sperrzeit
 version: "1.0"
 tags: [alarm, nowcast, sperrzeit, entdopplung]
@@ -210,6 +210,13 @@ nicht als solche verbucht werden.
     Begründung: die Kette schließt heute bei Sperrzeit kurz, das Tageslimit wurde für den
     Überholungsfall also nie geprüft; der Durchbruch darf es nicht stillschweigend
     mit-überspringen.
+  - **Teilweise abgelöst (Issue #2050 S3b, 2026-08-23):** die Ausnahmslosigkeit dieses AC
+    ist ABGELÖST. Eine rein MENGENMÄSSIGE Verschärfung stoppt weiterhin am erschöpften
+    Tagesbudget (dieser Fall gilt unverändert); eine akute Eskalation der
+    DRINGLICHKEITSSTUFE bricht es dagegen, höchstens einmal je Tag und Zone. Der Test ist
+    dort in drei benannte Nachfolger aufgelöst
+    (`tests/tdd/test_radar_cooldown_overtake.py::test_ac22_*`). Geltende Fassung:
+    `docs/specs/modules/feat_2050_s3b_budget_und_unterdrueckungsgrund.md`.
 
 - **AC-8:** Given die Sperre wurde von einem zweiten Schreiber ohne Mengenangabe gebucht
   (Kurzfristhinweis im Briefing, `trip_report_scheduler.py:1574`), sodass keine
@@ -266,7 +273,7 @@ nicht als solche verbucht werden.
 
 ## Known Limitations
 
-- **Budget-Mehrkosten:** bis zu 7 zusätzliche Nowcast-Abrufe je Sperrfenster und Tour
+- **Budget-Mehrkosten:** bis zu 7 zusätzliche Nowcast-Abrufe je Sperrfenster und Trip
   (Prüftakt 15 Min, Sperrzeit-Vorgabe 2 h, Radar-Cache-TTL 300 s), gegen ein Tagesbudget von
   9000 (`forecast_budget.py:40`). Unkritisch in der Größenordnung, aber real und im PR zu
   nennen.

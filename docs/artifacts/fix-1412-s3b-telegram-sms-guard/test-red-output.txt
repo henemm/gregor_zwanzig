@@ -1,0 +1,385 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/epic-2138-triage
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 71 items
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py F...F............ [ 23%]
+.........FF.FFFFF.F.                                                     [ 52%]
+tests/tdd/test_egress_single_dial_point.py ...............FF............ [ 92%]
+....F                                                                    [100%]
+
+=================================== FAILURES ===================================
+_ test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[answer_callback_query] _
+
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd99b9010>
+name = 'answer_callback_query'
+
+    @pytest.mark.parametrize("name", sorted(_ALLE_METHODEN))
+    def test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf(sink, name):
+        """AC-1/AC-4: Given Test-Modus mit abweichendem Bot-Token / When eine der
+        sieben oeffentlichen Methoden sendet / Then OutputConfigError (#1363
+        Token) und 0 Aufrufe an httpx.post.
+    
+        RED heute: answer_callback_query und get_my_commands (keine Pruefung)."""
+        output = TelegramOutput(_token_falsch())
+    
+>       with pytest.raises(OutputConfigError) as exc:
+E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py:176: Failed
+_ test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[get_my_commands] _
+
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd99ba780>
+name = 'get_my_commands'
+
+    @pytest.mark.parametrize("name", sorted(_ALLE_METHODEN))
+    def test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf(sink, name):
+        """AC-1/AC-4: Given Test-Modus mit abweichendem Bot-Token / When eine der
+        sieben oeffentlichen Methoden sendet / Then OutputConfigError (#1363
+        Token) und 0 Aufrufe an httpx.post.
+    
+        RED heute: answer_callback_query und get_my_commands (keine Pruefung)."""
+        output = TelegramOutput(_token_falsch())
+    
+>       with pytest.raises(OutputConfigError) as exc:
+E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py:176: Failed
+_______ test_ac2_neue_methode_mit_fremdem_chat_wird_am_ausgang_geblockt ________
+
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd9a10320>
+
+    def test_ac2_neue_methode_mit_fremdem_chat_wird_am_ausgang_geblockt(sink):
+        """AC-2: Given Test-Modus, neue Methode zielt auf den Prod-Chat / When sie
+        `_post` ruft / Then OutputConfigError und 0 Netzaufrufe.
+    
+        RED heute: `_post` prueft nichts, der Sink faengt den POST."""
+        output = _NeueMethodeOhnePruefung(_settings())
+    
+>       with pytest.raises(OutputConfigError) as exc:
+E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py:272: Failed
+______ test_ac2_neue_methode_mit_falschem_token_wird_am_ausgang_geblockt _______
+
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd9a28590>
+
+    def test_ac2_neue_methode_mit_falschem_token_wird_am_ausgang_geblockt(sink):
+        """AC-2: auch ein chatloser Endpunkt prueft am Ausgang den Token."""
+        output = _NeueMethodeOhnePruefung(_token_falsch())
+    
+>       with pytest.raises(OutputConfigError) as exc:
+E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py:283: Failed
+_ test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[answer_callback_query] _
+
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd9a2a720>
+aufruf = <function <lambda> at 0x719cda964d60>
+
+    @pytest.mark.parametrize(
+        "aufruf",
+        [
+            pytest.param(lambda: TelegramOutput(_token_falsch()).answer_callback_query("cb"),
+                         id="answer_callback_query"),
+            pytest.param(lambda: TelegramOutput(_token_falsch()).get_my_commands(),
+                         id="get_my_commands"),
+            pytest.param(lambda: _NeueMethodeOhnePruefung(_settings()).pin_message(PROD_CHAT_ID, 7),
+                         id="neue_methode"),
+        ],
+    )
+    def test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz(sink, aufruf):
+        """AC-5: Given eine Blockade / When `_post` laeuft / Then wird KEIN
+        Drossel-Platz reserviert -- die Pruefung laeuft vor `_reserve_send_slot`.
+        Gemessen an der echten prozessweiten Buchfuehrung."""
+>       with pytest.raises(OutputConfigError):
+E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py:320: Failed
+___ test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[get_my_commands] ____
+
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd99bbb30>
+aufruf = <function <lambda> at 0x719cda964e00>
+
+    @pytest.mark.parametrize(
+        "aufruf",
+        [
+            pytest.param(lambda: TelegramOutput(_token_falsch()).answer_callback_query("cb"),
+                         id="answer_callback_query"),
+            pytest.param(lambda: TelegramOutput(_token_falsch()).get_my_commands(),
+                         id="get_my_commands"),
+            pytest.param(lambda: _NeueMethodeOhnePruefung(_settings()).pin_message(PROD_CHAT_ID, 7),
+                         id="neue_methode"),
+        ],
+    )
+    def test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz(sink, aufruf):
+        """AC-5: Given eine Blockade / When `_post` laeuft / Then wird KEIN
+        Drossel-Platz reserviert -- die Pruefung laeuft vor `_reserve_send_slot`.
+        Gemessen an der echten prozessweiten Buchfuehrung."""
+>       with pytest.raises(OutputConfigError):
+E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py:320: Failed
+_____ test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[neue_methode] _____
+
+sink = <tdd.test_telegram_post_is_single_guarded_exit._HttpxPostSink object at 0x719cd9a2a8a0>
+aufruf = <function <lambda> at 0x719cda964ea0>
+
+    @pytest.mark.parametrize(
+        "aufruf",
+        [
+            pytest.param(lambda: TelegramOutput(_token_falsch()).answer_callback_query("cb"),
+                         id="answer_callback_query"),
+            pytest.param(lambda: TelegramOutput(_token_falsch()).get_my_commands(),
+                         id="get_my_commands"),
+            pytest.param(lambda: _NeueMethodeOhnePruefung(_settings()).pin_message(PROD_CHAT_ID, 7),
+                         id="neue_methode"),
+        ],
+    )
+    def test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz(sink, aufruf):
+        """AC-5: Given eine Blockade / When `_post` laeuft / Then wird KEIN
+        Drossel-Platz reserviert -- die Pruefung laeuft vor `_reserve_send_slot`.
+        Gemessen an der echten prozessweiten Buchfuehrung."""
+>       with pytest.raises(OutputConfigError):
+E       Failed: DID NOT RAISE <class 'output.channels.base.OutputConfigError'>
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py:320: Failed
+_ test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[answer_callback_query-<lambda>-0] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x719cd9a293d0>
+name = 'answer_callback_query', aufruf = <function <lambda> at 0x719cda9651c0>
+erwartet_ziel = 0
+
+    @pytest.mark.parametrize(
+        "name, aufruf, erwartet_ziel",
+        [
+            ("answer_callback_query", lambda o: o.answer_callback_query("cb"), 0),
+            ("get_my_commands", lambda o: o.get_my_commands(), 0),
+            ("delete_message", lambda o: o.delete_message(TEST_CHAT_ID, 1), 1),
+        ],
+    )
+    def test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429(
+        monkeypatch, name, aufruf, erwartet_ziel
+    ):
+        """AC-5: Given HTTP 429 beim ersten Versuch / When `_post` einmal
+        wiederholt / Then laufen die Pruefungen genau EINMAL (nicht erneut beim
+        Wiederholungsversuch), der Sink sieht zwei POSTs.
+    
+        RED heute: answer_callback_query/get_my_commands pruefen den Token nie
+        (0 statt 1)."""
+        s = _sink_429_dann_200(monkeypatch)
+        output = _ZaehltPruefungen(_settings())
+    
+        aufruf(output)
+    
+        assert len(s.calls) == 2, f"{name}: erwartet 429 + Wiederholung: {s.calls!r}"
+>       assert output.token_pruefungen == 1, (
+            f"{name}: Token-Pruefung lief {output.token_pruefungen}x statt genau 1x"
+        )
+E       AssertionError: answer_callback_query: Token-Pruefung lief 0x statt genau 1x
+E       assert 0 == 1
+E        +  where 0 = <tdd.test_telegram_post_is_single_guarded_exit._ZaehltPruefungen object at 0x719cd99bbe90>.token_pruefungen
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py:380: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:396 Telegram drosselt (HTTP 429, chat=_bot) — warte 0.00s und sende genau einmal erneut
+_ test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[get_my_commands-<lambda>-0] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x719cd9a139b0>
+name = 'get_my_commands', aufruf = <function <lambda> at 0x719cda965260>
+erwartet_ziel = 0
+
+    @pytest.mark.parametrize(
+        "name, aufruf, erwartet_ziel",
+        [
+            ("answer_callback_query", lambda o: o.answer_callback_query("cb"), 0),
+            ("get_my_commands", lambda o: o.get_my_commands(), 0),
+            ("delete_message", lambda o: o.delete_message(TEST_CHAT_ID, 1), 1),
+        ],
+    )
+    def test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429(
+        monkeypatch, name, aufruf, erwartet_ziel
+    ):
+        """AC-5: Given HTTP 429 beim ersten Versuch / When `_post` einmal
+        wiederholt / Then laufen die Pruefungen genau EINMAL (nicht erneut beim
+        Wiederholungsversuch), der Sink sieht zwei POSTs.
+    
+        RED heute: answer_callback_query/get_my_commands pruefen den Token nie
+        (0 statt 1)."""
+        s = _sink_429_dann_200(monkeypatch)
+        output = _ZaehltPruefungen(_settings())
+    
+        aufruf(output)
+    
+        assert len(s.calls) == 2, f"{name}: erwartet 429 + Wiederholung: {s.calls!r}"
+>       assert output.token_pruefungen == 1, (
+            f"{name}: Token-Pruefung lief {output.token_pruefungen}x statt genau 1x"
+        )
+E       AssertionError: get_my_commands: Token-Pruefung lief 0x statt genau 1x
+E       assert 0 == 1
+E        +  where 0 = <tdd.test_telegram_post_is_single_guarded_exit._ZaehltPruefungen object at 0x719cd99b9e20>.token_pruefungen
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py:380: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:396 Telegram drosselt (HTTP 429, chat=_bot) — warte 0.00s und sende genau einmal erneut
+_______________ test_ac6_seven_io_basis_hat_einen_transport_post _______________
+
+    def test_ac6_seven_io_basis_hat_einen_transport_post():
+        """AC-6: `SevenIoChannelBase._post` ist der eine Transportweg.
+    
+        RED heute: die Methode fehlt, `httpx.post` steht direkt in `send`."""
+        from output.channels.seven_io_base import SevenIoChannelBase
+    
+>       assert callable(getattr(SevenIoChannelBase, "_post", None)), (
+            "SevenIoChannelBase._post fehlt -- httpx.post steht noch in send()"
+        )
+E       AssertionError: SevenIoChannelBase._post fehlt -- httpx.post steht noch in send()
+E       assert False
+E        +  where False = callable(None)
+E        +    where None = getattr(<class 'output.channels.seven_io_base.SevenIoChannelBase'>, '_post', None)
+
+tests/tdd/test_telegram_post_is_single_guarded_exit.py:400: AssertionError
+_____________ test_ac7_httpx_post_nur_an_den_erlaubten_ausgaengen ______________
+
+    def test_ac7_httpx_post_nur_an_den_erlaubten_ausgaengen():
+        """AC-7: `src/` + `api/` senden per httpx-POST nur ueber
+        `TelegramOutput._post`, `SevenIoChannelBase._post` und die drei
+        localhost-Ausnahmen.
+    
+        RED heute: src/output/channels/seven_io_base.py (httpx.post direkt in
+        `SevenIoChannelBase.send`)."""
+        funde = scan_httpx_posts(REPO_ROOT)
+        befunde = bewerte_httpx_funde(
+            funde, AUSNAHMEN_HTTPX, AUSNAHMEN_HTTPX_HOECHSTZAHL, date.today()
+        )
+>       assert not befunde, "httpx-POST ausserhalb der Ausgaenge:\n" + "\n".join(befunde)
+E       AssertionError: httpx-POST ausserhalb der Ausgaenge:
+E         src/output/channels/seven_io_base.py:171 (httpx.post(...) in SevenIoChannelBase.send) -- httpx-POST ausserhalb der erlaubten Ausgaenge ohne gueltige Ausnahme.
+E       assert not ['src/output/channels/seven_io_base.py:171 (httpx.post(...) in SevenIoChannelBase.send) -- httpx-POST ausserhalb der erlaubten Ausgaenge ohne gueltige Ausnahme.']
+
+tests/tdd/test_egress_single_dial_point.py:717: AssertionError
+_____________ test_ac7_beide_erlaubten_httpx_ausgaenge_existieren ______________
+
+    def test_ac7_beide_erlaubten_httpx_ausgaenge_existieren():
+        """Gegenprobe: "keine unerlaubte Stelle" waere auch gruen, wenn der
+        Scanner nichts mehr faende. Beide Ausgaenge muessen wirklich POSTen.
+    
+        RED heute: `SevenIoChannelBase._post` fehlt."""
+        orte = {(f.datei, f.ort) for f in scan_httpx_posts(REPO_ROOT)
+                if ist_erlaubter_httpx_ausgang(f)}
+>       assert orte == set(ERLAUBTE_HTTPX_AUSGAENGE), (
+            f"fehlende Ausgaenge: {sorted(set(ERLAUBTE_HTTPX_AUSGAENGE) - orte)}"
+        )
+E       AssertionError: fehlende Ausgaenge: [('src/output/channels/seven_io_base.py', 'SevenIoChannelBase._post')]
+E       assert {('src/output...utput._post')} == {('src/output...utput._post')}
+E         
+E         Extra items in the right set:
+E         ('src/output/channels/seven_io_base.py', 'SevenIoChannelBase._post')
+E         Use -v to get more diff
+
+tests/tdd/test_egress_single_dial_point.py:727: AssertionError
+_______________ test_ac7_pruefdatum_steht_in_gates_und_ratschen ________________
+
+    def test_ac7_pruefdatum_steht_in_gates_und_ratschen():  # doc-compliance-test
+        """AC-7 / Regel-Budget: die Pruefdaten-Tabelle nennt diesen Waechter mit
+        seinem Datum, damit das Gate-Audit ihn am Pruefdatum findet.
+    
+        RED heute: die Zeile fehlt."""
+        tabelle = (REPO_ROOT / "docs/reference/gates_und_ratschen.md").read_text(
+            encoding="utf-8"
+        )
+        zeilen = [z for z in tabelle.splitlines()
+                  if "test_egress_single_dial_point" in z]
+>       assert zeilen, "Zeile fuer test_egress_single_dial_point fehlt"
+E       AssertionError: Zeile fuer test_egress_single_dial_point fehlt
+E       assert []
+
+tests/tdd/test_egress_single_dial_point.py:885: AssertionError
+==================================== PASSES ====================================
+_ test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[fallback_ohne_parse_mode] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:523 Telegram 400-fallback (no parse_mode) delivered (subject='Betreff')
+_ test_korrekte_test_konfiguration_sendet_jede_methode[fallback_ohne_parse_mode] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:523 Telegram 400-fallback (no parse_mode) delivered (subject='Betreff')
+_ test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[delete_message-<lambda>-1] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:396 Telegram drosselt (HTTP 429, chat=424242) — warte 0.00s und sende genau einmal erneut
+=========================== short test summary info ============================
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[delete_message]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[edit_message_text]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[fallback_ohne_parse_mode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[send]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[set_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_fremder_chat_blockt_jede_chat_methode_ohne_netzaufruf[delete_message]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_fremder_chat_blockt_jede_chat_methode_ohne_netzaufruf[edit_message_text]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_fremder_chat_blockt_jede_chat_methode_ohne_netzaufruf[fallback_ohne_parse_mode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_fremder_chat_blockt_jede_chat_methode_ohne_netzaufruf[send]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_send_meldet_weiter_die_settings_chat_pruefung_1288
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[answer_callback_query]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[delete_message]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[edit_message_text]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[fallback_ohne_parse_mode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[get_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[send]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac4_ohne_test_modus_sendet_jede_methode_unveraendert[set_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[answer_callback_query]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[delete_message]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[edit_message_text]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[fallback_ohne_parse_mode]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[get_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[send]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_korrekte_test_konfiguration_sendet_jede_methode[set_my_commands]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac2_neue_methode_mit_korrekter_konfiguration_sendet
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[delete_message-<lambda>-1]
+PASSED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac6_keine_unterklasse_ueberschreibt_send
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac5_genau_eine_verbindungsstelle_im_ausgelieferten_stand
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac5_der_eine_erlaubte_ausgang_existiert_wirklich
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ausnahmenliste_ist_im_ausgelieferten_stand_leer
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_verbindung_ausserhalb_des_erlaubten_orts_wird_namentlich_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_erlaubte_stelle_in_der_attrappe_wird_nicht_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_umgehungsformen_werden_erkannt[alias-import smtplib as s\n\n\ndef dial_ueber_alias(host, port):\n    return s.SMTP(host, port)\n-s.SMTP-dial_ueber_alias]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_umgehungsformen_werden_erkannt[direktimport-from smtplib import SMTP\n\n\ndef dial_ueber_direktimport(host, port):\n    return SMTP(host, port)\n-SMTP-dial_ueber_direktimport]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_umgehungsformen_werden_erkannt[ssl-import smtplib\n\n\nclass Versender:\n    def zustellen(self, host):\n        return smtplib.SMTP_SSL(host, 465)\n-smtplib.SMTP_SSL-Versender.zustellen]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_ausnahme_klassen_sind_keine_fundstellen
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_zu_viele_ausnahmen_werden_rot
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_abgelaufene_frist_wird_rot
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_zu_kurze_begruendung_zaehlt_nicht
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_aufgeloeste_ausnahme_muss_entfernt_werden
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_pruefdatum_ist_maschinell_auffindbar
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_repo_wurzel_ist_der_eigene_baum
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_httpx_ausnahmen_unter_dem_deckel_und_befristet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[alias]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[async_client_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[client_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[direkt]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[direkt_alias]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[direkt_client_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[modul]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[request_method_kw]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[request_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[stream_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_get_und_router_dekoratoren_sind_keine_fundstellen
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_erlaubte_ausgaenge_in_attrappe_werden_nicht_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_post_in_send_statt_post_wird_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_vierte_httpx_ausnahme_reisst_den_deckel
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_abgelaufene_httpx_ausnahme_wird_rot
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[answer_callback_query]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac1_ac4_falscher_bot_token_blockt_jede_methode_ohne_netzaufruf[get_my_commands]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac2_neue_methode_mit_fremdem_chat_wird_am_ausgang_geblockt
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac2_neue_methode_mit_falschem_token_wird_am_ausgang_geblockt
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[answer_callback_query]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[get_my_commands]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_geblockter_aufruf_belegt_keinen_drossel_platz[neue_methode]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[answer_callback_query-<lambda>-0]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac5_pruefung_laeuft_genau_einmal_auch_bei_429[get_my_commands-<lambda>-0]
+FAILED tests/tdd/test_telegram_post_is_single_guarded_exit.py::test_ac6_seven_io_basis_hat_einen_transport_post
+FAILED tests/tdd/test_egress_single_dial_point.py::test_ac7_httpx_post_nur_an_den_erlaubten_ausgaengen
+FAILED tests/tdd/test_egress_single_dial_point.py::test_ac7_beide_erlaubten_httpx_ausgaenge_existieren
+FAILED tests/tdd/test_egress_single_dial_point.py::test_ac7_pruefdatum_steht_in_gates_und_ratschen
+======================== 13 failed, 58 passed in 3.48s =========================

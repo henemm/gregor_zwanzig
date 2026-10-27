@@ -221,7 +221,13 @@ def _capture_hourly_enabled_kwarg(preset: dict, location, tmp_path):
     from services.scheduler_dispatch_service import send_one_compare_preset as _send_one_compare_preset
 
     user_id = preset["_user_id"]
-    settings = Settings().with_user_profile(user_id)
+    # #1196 Klasse C Teil 4 (Vorbild test_issue_764::_capture_forecast_hours):
+    # Empfaenger explizit statt aus der Host-.env erben -- send_one_compare_
+    # preset prueft settings.mail_to VOR dem Engine-Aufruf (#1452) und brach
+    # auf dem CI-Runner mit "kein Empfaenger" ab, bevor der beobachtete
+    # hourly_enabled-Wert ueberhaupt erreicht wurde. Die Adresse wird nie
+    # angeschrieben: die Recording-Engine bricht vor SMTP ab.
+    settings = Settings(mail_to="empfaenger@example.com")
 
     original_render = compare_render_mod.render_compare_email
 
@@ -280,8 +286,25 @@ class TestDispatchWiring:
 # ---------------------------------------------------------------------------
 
 
+def _flag_test_user(user_id: str) -> str:
+    """Issue #2152: Testkonto-Status kommt aus dem Profilfeld ``is_test_user``,
+    nicht mehr aus dem Namen — ohne dieses Profil naehme
+    ``with_user_profile()`` die PRODUKTIV-Credentials (Resend) statt
+    ``for_testing()`` (Stalwart-Test-Postfach)."""
+    import json as _json
+
+    from app.loader import get_data_dir
+
+    d = get_data_dir(user_id)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "user.json").write_text(
+        _json.dumps({"id": user_id, "is_test_user": True}), encoding="utf-8"
+    )
+    return user_id
+
+
 def _fresh_test_user() -> str:
-    return f"test1107e2e-{uuid.uuid4().hex[:8]}"
+    return _flag_test_user(f"test1107e2e-{uuid.uuid4().hex[:8]}")
 
 
 def _send_compare_preset_and_fetch_message(hourly_enabled, tag: str):

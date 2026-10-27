@@ -45,7 +45,8 @@ import json
 import socket
 import threading
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from zoneinfo import ZoneInfo
 
 from app.config import Settings
@@ -68,6 +69,7 @@ from tests.helpers.alert_log_fixtures import (
 )
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 # ═══════════════════════════ Telegram-Stub (echtes 127.0.0.1) ═════════════
 #
@@ -163,7 +165,7 @@ def _change(severity: ChangeSeverity) -> WeatherChange:
 
 
 def _telegram_trip(trip_id: str) -> Trip:
-    """Tour mit scharfer Boeen-Delta-Regel (gust_alert_trip) UND
+    """Trip mit scharfer Boeen-Delta-Regel (gust_alert_trip) UND
     eingeschaltetem Telegram-Kanal — Vorbild
     ``test_alert_urgency.py::_telegram_trip``."""
     trip = gust_alert_trip(trip_id)
@@ -180,7 +182,7 @@ def _telegram_trip(trip_id: str) -> Trip:
 
 
 def _ac4_trip(trip_id: str) -> Trip:
-    """Tour mit ZWEI Wegpunkten (fuer den echten Briefing-Renderpfad, Vorbild
+    """Trip mit ZWEI Wegpunkten (fuer den echten Briefing-Renderpfad, Vorbild
     ``test_alert_undelivered_hint.py::_trip``) UND scharfer Boeen-Delta-Regel
     (fuer den echten Alarm-Auslosepfad, Vorbild ``gust_alert_trip``).
 
@@ -193,7 +195,7 @@ def _ac4_trip(trip_id: str) -> Trip:
     ``trip.alert_channels`` -- das ist ohnehin der praezisere Test: er prueft
     die Schwelle, nicht die Kanal-Vererbung (Issue #638 D2)."""
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(LAT, LON),
         waypoints=[
             Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0),
             Waypoint(id="G2", name="Ziel", lat=LAT + 0.1, lon=LON + 0.1, elevation_m=1500.0),
@@ -220,7 +222,7 @@ def _ac4_trip(trip_id: str) -> Trip:
 
 
 def _radar_trip(trip_id: str) -> Trip:
-    """Tour im aktiven Segmentfenster JETZT — Vorbild
+    """Trip im aktiven Segmentfenster JETZT — Vorbild
     ``test_issue_827_radar_throttle_recording.py::_make_trip``."""
     # #1667 S1: wanduhr-robustes Ankunftsfenster statt roher now+Nh-Arithmetik
     # (ab 22:00 UTC lief die +2h/+4h-Folge steigend ueber Mitternacht).
@@ -288,7 +290,7 @@ def test_ac2_erhoehte_schwelle_blockt_nur_diesen_kanal_bei_geringer_dringlichkei
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         result = svc._send_alert(
@@ -339,7 +341,7 @@ def test_ac3_regenradar_pfad_respektiert_dieselbe_schwelle(monkeypatch):
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), throttle_hours=0, user_id=uid,
+            settings=_settings_email_and_telegram(), throttle_hours=0, user_id=mit_profil_chat(uid, _settings_email_and_telegram()),
             radar_service=RadarNowcastService(frame_source=_light_wet_frames),
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
@@ -403,7 +405,7 @@ def test_ac4_alle_kanaele_unter_schwelle_landet_im_protokoll_und_briefing(
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         sent = svc.check_and_send_alerts(
@@ -539,7 +541,7 @@ def test_ac8_zwei_nutzer_je_eigene_schwelle_ohne_vermischung(monkeypatch):
         _pin_telegram_stub(monkeypatch, stub_hoch)
         mails_hoch: list = []
         svc_hoch = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid_hoch,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid_hoch, _settings_email_and_telegram()),
             throttle_hours=0,
             mail_sink=lambda subject, body: mails_hoch.append((subject, body)),
         )
@@ -550,7 +552,7 @@ def test_ac8_zwei_nutzer_je_eigene_schwelle_ohne_vermischung(monkeypatch):
         _pin_telegram_stub(monkeypatch, stub_gering)
         mails_gering: list = []
         svc_gering = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid_gering,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid_gering, _settings_email_and_telegram()),
             throttle_hours=0,
             mail_sink=lambda subject, body: mails_gering.append((subject, body)),
         )
@@ -668,10 +670,10 @@ def test_ac12_kurznachricht_zeigt_gelbe_amtliche_warnung_bei_startschwelle():
         stage_name="Etappe 1",
     )
 
-    assert "W:L" in out, (
+    assert "WG:L" in out, (
         "AC-12: Beim Startwert 'gering' (Stufe 2, gelb) muss die amtliche "
-        f"Warnung jetzt in der Trip-Kurznachricht erscheinen (Kuerzel 'W:L' "
-        f"-- Wind-Symbol 'W', Stufenbuchstabe 'L' fuer Stufe 2). War: {out!r}"
+        f"Warnung jetzt in der Trip-Kurznachricht erscheinen (Kuerzel 'WG:L' "
+        f"-- Wind-Symbol 'WG', Stufenbuchstabe 'L' fuer Stufe 2). War: {out!r}"
     )
 
 
@@ -707,7 +709,7 @@ def test_ac1_ohne_gesetzte_schwelle_erreicht_die_meldung_alle_konfigurierten_kan
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         result = svc._send_alert(
@@ -753,7 +755,7 @@ def test_ac9_kachel_und_archiv_quelle_entries_unveraendert_bei_normalem_alarm(
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         sent = svc.check_and_send_alerts(
@@ -838,7 +840,7 @@ def test_ac11_ortsvergleich_alarm_unveraendert_trotz_trip_kanal_schwellen(monkey
         trip_stub = _TelegramStub()
         _pin_telegram_stub(monkeypatch, trip_stub)
         TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: None,
         )._send_alert(trip, [weather(1)], [_change(ChangeSeverity.MINOR)])
         trip_stub.stop()
@@ -905,7 +907,7 @@ def test_ac13_gelbe_amtliche_warnung_loest_alarm_unveraendert_aus(monkeypatch):
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         result = svc._send_alert(
@@ -976,7 +978,7 @@ def test_f001_below_threshold_grund_im_echten_delta_wetter_dispatch(monkeypatch)
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         sent = svc.check_and_send_alerts(
@@ -1111,7 +1113,7 @@ def test_f002_go_geschriebene_json_wird_gelesen_und_wirkt_im_alarm_dispatch(
         _pin_telegram_stub(monkeypatch, stub)
         mails: list = []
         svc = TripAlertService(
-            settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+            settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
             mail_sink=lambda subject, body: mails.append((subject, body)),
         )
         result = svc._send_alert(trip, [weather(1)], [_change(ChangeSeverity.MINOR)])
@@ -1212,7 +1214,7 @@ def test_einzeln_auftretende_amtliche_warnung_ohne_wetter_delta_respektiert_kana
     oa_base._REGISTERED_SOURCES.clear()
     try:
         stage = Stage(
-            id="T1", name="Tag 1", date=date.today(),
+            id="T1", name="Tag 1", date=ortstag(LAT_1088, LON_1088),
             waypoints=[
                 Waypoint(id="G1", name="Start", lat=LAT_1088, lon=LON_1088, elevation_m=1000.0),
             ],
@@ -1245,7 +1247,7 @@ def test_einzeln_auftretende_amtliche_warnung_ohne_wetter_delta_respektiert_kana
             _pin_telegram_stub(monkeypatch, stub)
             mails: list = []
             svc = TripAlertService(
-                settings=_settings_email_and_telegram(), user_id=uid, throttle_hours=0,
+                settings=_settings_email_and_telegram(), user_id=mit_profil_chat(uid, _settings_email_and_telegram()), throttle_hours=0,
                 mail_sink=lambda subject, body: mails.append((subject, body)),
             )
             official_notices = svc.check_official_alert_triggers(trip)

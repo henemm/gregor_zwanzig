@@ -3,7 +3,7 @@ entity_id: data_sources
 type: reference
 created: 2025-12-31
 updated: 2025-12-31
-status: approved
+status: implemented
 version: "1.0"
 tags: [provider, api, data-governance]
 owner: henning
@@ -51,6 +51,7 @@ Diese Tabelle definiert, welche Information aus welcher Quelle bezogen wird.
 | SWE | GeoSphere SNOWGRID | - | Alpen/AT | Schneewasseraequivalent |
 | Sonnenstunden | *Berechnet* | - | - | effective_cloud < 30% |
 | Gefuehlte Temp. | *Berechnet* | - | - | Wind Chill Formel |
+| Lawinengefahrenstufe (EAWS 1-5) | avalanche.report (CAAML v6) | - | Tirol, Suedtirol, Trentino, Kaernten | Amtlicher Lagebericht, CC BY 4.0, siehe Antrag #6 |
 
 **Regionen-Codes:**
 - `Alpen/AT` = Oesterreich, Alpenraum (GeoSphere bevorzugt)
@@ -147,9 +148,26 @@ Diese Tabelle definiert, welche Information aus welcher Quelle bezogen wird.
 | Parameter | Status | Bemerkung |
 |-----------|--------|-----------|
 | sunshine_duration | REJECTED | Abgelehnt am 2025-12-31 |
-| direct_radiation | NOT APPROVED | - |
+| direct_radiation | NOT APPROVED | wird auch nicht gesendet — der Code fragt stattdessen `direct_normal_irradiance` (DNI) ab, s. Ist-Tabelle unten (#2236 B2-67) |
 | snowfall | NOT APPROVED | Verwende GeoSphere SNOWGRID |
 | snow_depth | NOT APPROVED | Verwende GeoSphere/Bergfex |
+
+**Produktiv gesendet, aber in dieser Positivliste nicht gefuehrt (Befund #2236 B2-67, Stand 2026-09-09):**
+
+`src/providers/openmeteo.py::fetch_forecast` sendet acht Parameter, die hier weder genehmigt noch
+abgelehnt stehen. Diese Tabelle ist der **Ist-Stand**, kein Freigabe-Nachweis — die Freigabe ist
+PO-Entscheid und als Antrag #5 (unten) vorbereitet.
+
+| Parameter | Feld in ForecastDataPoint | Spec-Spur | Status |
+|-----------|---------------------------|-----------|--------|
+| apparent_temperature | wind_chill_c | #1887 E6 (herstellereigene gefuehlte Temperatur, keine Windchill-Formel) | in Betrieb, Freigabe offen |
+| visibility | visibility_m | #846 (Sichtweite-Alarm), `feat_1492_s2b_fallback_sichtbarkeit.md` | in Betrieb, Freigabe offen |
+| precipitation_probability | pop_pct | `feat_1492_s2b_fallback_sichtbarkeit.md` | in Betrieb, Freigabe offen |
+| cape | cape_jkg | #1592 / #1679 (Gewitter-Fusion, ADR-0048) | in Betrieb, Freigabe offen |
+| freezing_level_height | freezing_level_m | #959 (Nullgradgrenze) | in Betrieb, Freigabe offen |
+| uv_index | uv_index | `provider_openmeteo.md` (bei allen 5 Wettermodellen `null`; produktiv ueber die Air-Quality-API `/v1/air-quality`, CAMS) | in Betrieb, Freigabe offen |
+| direct_normal_irradiance | dni_wm2 | `weather_emoji_dni.md` (Spec selbst nicht freigegeben) | in Betrieb, Freigabe offen |
+| is_day | is_day | `weather_emoji_dni.md` | in Betrieb, Freigabe offen |
 
 ---
 
@@ -186,6 +204,8 @@ Die folgenden Quellen sind NICHT genehmigt:
 | 2025-12-31 | 1.0 | Initial: GeoSphere, Open-Meteo (cloud layers), Bergfex | Henning |
 | 2026-01-24 | 1.1 | Open-Meteo erweitert: Wetter-Parameter + Regional Models (AROME, ICON-D2, MetNo, ECMWF). Bedingung: ZWINGEND Modellauswahl fuer alle Regionen. | Henning |
 | 2026-08-01 | 1.2 | Amtliche Warnungen nachgetragen: MeteoAlarm (Bestand, war nie eingetragen) + Wechsel des Bezugswegs auf den kontingentfreien Feed `feeds.meteoalarm.org`. Siehe ADR-0039. | Henning (PO-Entscheidung 2026-08-01) |
+| 2026-10-13 | 1.3 | Amtlicher Lawinen-Lagebericht ueber avalanche.report (Tirol, Suedtirol, Trentino, Kaernten), Issue #1441. Siehe ADR-0089. | Henning (Spec-Freigabe 2026-10-13) |
+| 2026-10-17 | 1.4 | Amtlicher Lawinen-Lagebericht des SLF (Schweiz, `aws.slf.ch`), Issue #1441 S3, Antrag #7, genehmigt mit Auflagen (Quellenangabe, Link, schriftliche Anfrage beim SLF, Abschaltbarkeit). Siehe ADR-0091. | Henning (PO-Entscheid 2026-10-17) |
 
 ---
 
@@ -200,6 +220,67 @@ Die folgenden Quellen sind NICHT genehmigt:
 Keine offenen Antraege.
 
 ### Genehmigte Antraege
+
+#### Antrag #7: Lawinen-Lagebericht des SLF (Schweiz, CAAML v6)
+
+**Datum:** 2026-10-17
+**Status:** ✅ APPROVED mit Auflagen (2026-10-17, Henning — PO-Entscheid vor der Spec-Freigabe)
+**Antragsteller:** Claude (Issue #1441 Scheibe S3)
+**Spec:** `docs/specs/modules/feat_1441_s3_slf.md`
+**ADR:** [ADR-0091](../adr/0091-slf-eigene-lawinenquelle.md)
+
+**Zusammenfassung:** Der amtliche Lawinen-Lagebericht des WSL-Instituts fuer Schnee- und
+Lawinenforschung SLF (EAWS-Gefahrenstufe 1-5 mit amtlicher Feinstufe, Hoehengrenze und
+Lawinenproblem fuer die ganze Schweiz), bezogen als CAAML-v6-JSON von `aws.slf.ch`
+(`/api/bulletin/caaml/de/json`, ohne Schluessel). Ein Abruf fuer die ganze Schweiz ueber
+`warn_egress.cached_fetch` (TTL 1800 s). Die Schnittstelle traegt **keine ausdrueckliche
+Weiterverwendungs-Lizenz**; die Rechtliches-Seite des SLF enthaelt nur Haftungsausschluss und
+Eigenverantwortung.
+
+| Daten | Status | Bemerkung |
+|-------|--------|-----------|
+| Lawinen-Lagebericht SLF (Stufe, Feinstufe, Hoehe, Problem, Gueltigkeit) | approved mit Auflagen | Host `aws.slf.ch`; Auflagen siehe unten |
+| Mikroregionen-Geometrie CH (EAWS Regions, `regions.avalanches.org`, nur `latest/`) | approved | **CC0**, eine Datei eingecheckt (`avalanche_regions_CH.geojson.json`), kein Laufzeitabruf |
+
+**Auflagen des PO (2026-10-17):**
+1. **Quellenangabe** „WSL-Institut fuer Schnee- und Lawinenforschung SLF" in Mail und Telegram-Langform,
+   dazu der Link zum Originalbericht `https://www.slf.ch/de/lawinenbulletin-und-schneesituation/`
+   (die API hat kein Link-Feld) und der Hinweis, dass der Originalbericht massgeblich ist.
+2. **Schriftliche Anfrage beim SLF** zur Weiterverwendung (Entwurf:
+   `docs/artifacts/feat-1441-s3-slf/anfrage_slf_entwurf.md`; Versand durch den PO).
+3. **Abschaltbar mit einer Zeile:** Lehnt das SLF ab, wird die Quelle abgeschaltet, indem die
+   Registrierung in `src/services/official_alerts/__init__.py` entfernt wird; die Spec sichert das
+   mit einem Test ab.
+4. Stufe, Feinstufe, Hoehe und Problemnamen bleiben Wortlaut des SLF (Haftung); nur Daten, keine
+   Handlungsempfehlung.
+
+**Begruendung:** Der SLF-Bericht ist fuer Weitwanderer in der Schweiz die amtliche
+Lawineninformation; die Awareness-Warnungen von MeteoAlarm sind dafuer zu grob und fuer die
+Schweiz nicht angebunden.
+
+#### Antrag #6: Lawinen-Lagebericht ueber avalanche.report (CAAML v6)
+
+**Datum:** 2026-10-13
+**Status:** ✅ APPROVED (2026-10-13, Henning — mit der Freigabe der Spec)
+**Antragsteller:** Claude (Issue #1441 Slice 1, Epic #2258)
+**Spec:** `docs/specs/modules/avalanche_report_bulletin.md`
+**ADR:** [ADR-0089](../adr/0089-lawinen-lagebericht-zweite-skala.md)
+
+**Zusammenfassung:** Der amtliche Lawinen-Lagebericht (EAWS-Gefahrenstufe 1-5 mit Hoehengrenze
+und Lawinenproblem) der Euregio Tirol-Suedtirol-Trentino und des Lawinenwarndienstes Kaernten,
+bezogen als statische CAAML-v6-Dateien von `static.avalanche.report` (leitet per 301 auf
+`avalanche.report` weiter). Kein Schluessel, kein veroeffentlichtes Limit; Abruf nur ueber
+`warn_egress.cached_fetch` (TTL 1800 s).
+
+| Daten | Status | Bemerkung |
+|-------|--------|-----------|
+| Lawinen-Lagebericht AT-07, IT-32-BZ, IT-32-TN, AT-02 (Stufe, Hoehe, Problem, Gueltigkeit) | approved | Hosts `static.avalanche.report` + `avalanche.report`; Lizenz **CC BY 4.0** — Quellenname und Bulletin-Link in Mail und Telegram |
+| Mikroregionen-Geometrie (EAWS Regions, `regions.avalanches.org`, nur `latest/`) | approved | **CC0**, vier Dateien eingecheckt, kein Laufzeitabruf |
+| Salzburg, Bayern, uebrige AT-Laender | **nicht beantragt** | Lizenz der Dienste nicht belegt; Freischaltung spaeter per Tabelleneintrag nach Lizenzzusage |
+| `lawinen-warnung.eu`, EU-Sammelfeed `eaws_bulletins`, SLF | **nicht beantragt** | SLF (Schweiz) = Slice 2 |
+
+**Begruendung:** Der Lagebericht ist fuer Weitwanderer im Winter und Fruehjahr die zentrale
+Sicherheitsinformation; MeteoAlarm liefert nur eine grobe Awareness-Stufe 1-4.
 
 #### Antrag #2: MeteoAlarm — amtliche Unwetterwarnungen ueber den kontingentfreien Feed
 
@@ -243,6 +324,22 @@ Parameter, reiner Nachtrag.
 | Daten | Status | Bemerkung |
 |-------|--------|-----------|
 | `minutely_15` (precipitation, weather_code) | approved (Nachtrag) | Open-Meteo, seit #656 produktiv im Nowcast-Pfad (Fallback + Konvektions-Sidecar) |
+
+#### Antrag #5: Open-Meteo — acht bereits produktiv gesendete Parameter nachtraeglich freigeben
+
+**Datum:** 2026-09-09
+**Status:** ⏳ OFFEN — PO-Entscheid ausstehend
+**Antragsteller:** Claude (Issue #2236, Befund B2-67 aus #1199)
+**Spec:** dieses Dokument (Ist-Tabelle unter „2. Open-Meteo")
+
+**Zusammenfassung:** `fetch_forecast` sendet seit laengerem `apparent_temperature`, `visibility`,
+`precipitation_probability`, `cape`, `freezing_level_height`, `uv_index`,
+`direct_normal_irradiance` und `is_day`, ohne dass diese Positivliste sie fuehrt. Die Parameter
+tragen produktive Funktionen (Windchill-Spalte, Sichtweite-Alarm, Gewitter-Fusion, Nullgradgrenze,
+UV, Wetter-Emoji Tag/Nacht). Der Antrag legalisiert den Bestand; er fuehrt **keinen** neuen
+Parameter ein. Bei Ablehnung eines Eintrags ist der Rueckbau ein eigenes Issue.
+
+**Genehmigt durch:** — (offen)
 
 #### Antrag #4: Open-Meteo `elevation` — Wegpunkt-Hoehe an den Provider
 

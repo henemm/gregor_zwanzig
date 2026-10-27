@@ -189,6 +189,51 @@ def test_trip_briefing_sms_stays_gsm7_clean_with_dense_token_line():
     assert_gsm7_clean(full, "Trip-Briefing-SMS (ungekuerzt, alle Token)")
 
 
+def test_trip_briefing_sms_einfach_modi_bleiben_gsm7_rein_und_tragen_stufen_token():
+    """#2422 S6 (AC-9): der GSM-7-Waechter deckt auch die EINFACH-Modi ab.
+
+    Wolken (``CT``/``CL``/``CM``/``CH``) tragen
+    ``format_mode="symbol"`` (Einfach) UND das Emoji-``friendly_label`` des Katalogs
+    -- der bisherige Einfach-Zweig des Builders gaebe dieses Emoji aus (nicht GSM-7,
+    UCS-2-Kostenverdopplung). Erwartet: ASCII-Stufe ``CT:BKN@...`` (Doppelpunkt im
+    Kuerzel, #1824 B), weder Emoji noch Zahl.
+
+    Vakuum-Schutz: die Einfach-Stufen MUESSEN im ungekuerzten Text stehen
+    (``CT:``/``CL:``/``CM:``/``CH:``) -- sonst prueft der Waechter nur
+    Zahlen. (#2422 S6b: CAPE hat keine Einfachform mehr.) Bug-Nachweis: heute steht dort das Emoji-Label (oder die Zahl), der
+    Waechter wird ROT, sobald es im Text steht bzw. die Stufe fehlt."""
+    from app.metric_catalog import get_metric
+    from output.tokens.dto import MetricSpec
+
+    specs = [
+        MetricSpec(
+            symbol=sym, enabled=True, format_mode="symbol", use_friendly_format=True,
+            friendly_label=get_metric(mid).friendly_label or "",
+        )
+        for sym, mid in (
+            ("CT", "cloud_total"), ("CL", "cloud_low"), ("CM", "cloud_mid"),
+            ("CH", "cloud_high"),
+        )
+    ]
+    formatter = SMSTripFormatter()
+    kwargs = dict(
+        report_type="evening", tz=_UTC, night_weather=_night(),
+        thunder_forecast={"+1": {"level": "HIGH", "hour": 15, "hail": True}},
+        stage_name="Świnica", sms_alert_min_level=3, disabled_specs=specs,
+    )
+    sms = formatter.format_sms([_dense_segment()], **kwargs)
+    full = formatter.format_sms([_dense_segment()], max_length=2000, **kwargs)
+
+    fehlend = [sym for sym in ("CT:", "CL:", "CM:", "CH:") if sym not in full]
+    assert not fehlend, (
+        f"AC-9 (S6): die Einfach-Stufen-Token {fehlend} stehen nicht im "
+        f"ungekuerzten Text {full!r} -- der Waechter pruefte sonst nur Zahlen."
+    )
+    assert_gsm7_clean(sms, "Trip-Briefing-SMS Einfach-Modi (Versandtext, 160 Zeichen)")
+    assert_gsm7_clean(full, "Trip-Briefing-SMS Einfach-Modi (ungekuerzt)")
+    assert len(sms) <= 160
+
+
 def test_stage_prefix_folds_non_gsm7_letters_on_its_own():
     """``_sms_stage_prefix`` einzeln geprueft, ohne Umweg ueber ``format_sms``.
 
@@ -250,11 +295,11 @@ def test_official_alert_sms_filters_gsm7_extension_char_in_scope(ext_char: str):
 
     FORTGESCHRIEBEN (#1948 S5): Eintrittstor ist der ORTSKOPF (``sms_scope``)
     statt des entfallenen Trip-Namens."""
-    sms = render_official_alert_sms([_notice("thunderstorm", 4, f"Tour{ext_char}Nord")])
+    sms = render_official_alert_sms([_notice("thunderstorm", 4, f"Trip{ext_char}Nord")])
     assert_gsm7_clean(sms, f"amtlicher Alarm (Extension-Zeichen {ext_char!r})")
 
 
-@pytest.mark.parametrize("ortsname", ["KHW [Test]", "Tour~Nord", "Weg|Nord"])
+@pytest.mark.parametrize("ortsname", ["KHW [Test]", "Trip~Nord", "Weg|Nord"])
 def test_official_alert_sms_with_gsm7_extension_char_in_scope(ortsname: str):
     """fix_1796 AC-3 (Bug-Nachweis): die drei in Issue #1796 gemessenen
     Beispiel-Namen, direkt aus dem Issue uebernommen -- reproduziert den

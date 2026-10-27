@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 import sys
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -44,6 +44,7 @@ from tests.helpers.trip_outlook_selection import (  # noqa: E402
 from tests.tdd.test_trip_outlook_dispatch_mail import (  # noqa: E402
     _fixture_scheduler_klasse,
 )
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 REFERENCE_COMPACT = REFERENCE_DIR / "compact_block.txt"
 REFERENCE_TELEGRAM = REFERENCE_DIR / "telegram_bubble.txt"
@@ -93,10 +94,10 @@ def _settings(user_id: str):
 def trip(*, outlook_metrics, enabled_ids=None, telegram_layout_ids=None,
          stage_count: int = 5, email_format: str = "compact",
          outlook_metric_formats=None):
-    """Tour ab heute: der Abendbericht zielt auf MORGEN, der Ausblick zeigt
+    """Trip ab heute: der Abendbericht zielt auf MORGEN, der Ausblick zeigt
     die drei Etappen danach.
 
-    ``stage_count=2`` laesst die Tour mit dem Zieltag enden -- dann liefert
+    ``stage_count=2`` laesst die Trip mit dem Zieltag enden -- dann liefert
     ``_build_stage_trend()`` ``rows=None``/``state=NO_STAGES``, also den
     Zustands-Fallback-Zweig (AC-4, zweiter Fall).
     ``telegram_layout_ids`` setzt ``per_channel_layouts["telegram"]`` (AC-5).
@@ -106,9 +107,10 @@ def trip(*, outlook_metrics, enabled_ids=None, telegram_layout_ids=None,
     from app.metric_catalog import build_default_display_config
     from app.models import TripReportConfig
     from app.trip import Stage, Trip, Waypoint
+    from tests.helpers.ortstag import ortstag
 
     trip_id = f"trip-1720s2-{uuid.uuid4().hex[:8]}"
-    heute = date.today()
+    heute = ortstag(LAT, LON)  # #2314: Ortstag, nicht Prozesstag
     stages = [
         Stage(id=f"S{i}", name=f"Tag {i}", date=heute + timedelta(days=i),
               waypoints=[
@@ -174,7 +176,7 @@ def versendete_teile(t, *, report_type: str = "evening") -> tuple[str, list[str]
     try:
         with utc_process_tz():
             scheduler = _fixture_scheduler_klasse()(
-                settings=_settings(user_id), user_id=user_id)
+                settings=_settings(user_id), user_id=mit_profil_chat(user_id, _settings(user_id)))
             ergebnis = scheduler._send_trip_report_outcome(
                 t, report_type, on_demand=True)
     finally:

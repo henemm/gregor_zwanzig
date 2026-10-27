@@ -11,7 +11,7 @@
 // Vorfahre (<table>) hatte display:none, die tatsaechliche Rendergroesse
 // war 0x0. Dieser Test prueft deshalb explizit die Bounding-Box.
 //
-// Komponente ist geteilt (Touren UND Ortsvergleich) — ein Trip-Kontext
+// Komponente ist geteilt (Trips UND Ortsvergleich) — ein Trip-Kontext
 // deckt beide ab (Spec docs/specs/fast/fix-1436-mobile-table-display.md).
 
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';

@@ -107,8 +107,20 @@ def lauf_bei_uhrzeit(testdatei: Path, uhrzeit: datetime) -> dict[str, str]:
         # PYTEST_*-Env-Variablen des AEUSSEREN Laufs nicht in den Kindprozess
         # durchreichen -- sonst haelt der verschachtelte pytest-Lauf sich
         # faelschlich fuer denselben Testlauf (Muster: test_worktree_path_
-        # resolution_effect.py::_run_pytest_in).
-        env = {k: v for k, v in os.environ.items() if not k.startswith("PYTEST_")}
+        # resolution_effect.py::_run_pytest_in). Ebenso GZ_TEST_PROCESS_TZ /
+        # GZ_TEST_WALL_CLOCK_UTC entfernen (#2314 D2, Adversary-Fund F001-
+        # Analogon): dieser Aufrufer setzt oben explizit ``TZ`` NICHT selbst,
+        # sondern verlaesst sich darauf, dass Root-`conftest.py` im
+        # Kindprozess die feste Prozesszone `America/St_Johns` setzt --
+        # erbt der Kindprozess stattdessen eine AEUSSERE Gestern-Zone (z.B.
+        # aus einem Vollsuite-Nachweislauf), verschiebt sich der angeforderte
+        # `uhrzeit`-Zeitpunkt um deren Ortsversatz (dieselbe Messung wie im
+        # Docstring oben: "angefordert 12:30 UTC, wirksam 10:00 UTC").
+        env = {
+            k: v for k, v in os.environ.items()
+            if not k.startswith("PYTEST_")
+            and k not in ("GZ_TEST_PROCESS_TZ", "GZ_TEST_WALL_CLOCK_UTC")
+        }
         try:
             proc = subprocess.run(
                 [sys.executable, "-c", skript],

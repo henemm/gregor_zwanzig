@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.29"
+version: "2.37"
 status: active
 created: 2025-12-27
-updated: 2026-08-17
+updated: 2026-10-27
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -13,7 +13,7 @@ tags: [sms, compact, tokens, single-source-of-truth]
 - [x] Approved (v2.0 am 2026-04-25)
 - [x] Implementiert in SMS-Adapter via `src/output/renderers/sms/` (β3, 2026-04-28)
 
-# SMS / Kompakt-Format Specification (v2.29)
+# SMS / Kompakt-Format Specification (v2.30)
 
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
@@ -56,12 +56,29 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 - **Threshold = Max:** Wenn Threshold-Wert UND Threshold-Stunde exakt dem Tagesmaximum entsprechen, wird der Peak-Block `(max@h)` weggelassen (Details §5).
 - **Priorität bei Truncation:** Thunderstorm > Wind/Gusts > Rain > Temperatur (siehe §6).
 
+### 1a. Befehlseingang je Kanal (Ist-Stand 2026-10-21)
+
+Die normale SMS (`sms`) ist ein **reiner Ausgangskanal**: Es gibt keinen Pfad, der eine
+eingehende SMS von der Nummer `sms_to` einem Nutzer zuordnet, keinen `InboundMessage` mit
+`channel="sms"` und keine `send_command_reply_sms`. Der einzige SMS-Eingang (seven.io-Journal,
+`src/services/inbound_sms_reader.py:239`) verarbeitet nur Nachrichten an die Dienstnummer und ordnet
+sie über den Premium-SMS-Lernpfad Premium-Konten zu — die Antwort geht als Premium-SMS.
+`TripCommandProcessor` führt `sms` zwar in `_KURZFORM_KANAELE` (`trip_command_processor.py:782`),
+dieser Zweig hat heute aber keinen eingehenden Aufrufer.
+
+| Kanal | Befehlseingang | Weg | Antwort |
+|---|---|---|---|
+| E-Mail | ja | IMAP-Poll `inbound_command_poll` (`*/5` + Push `/api/webhooks/mail/{secret}`), Absender → Nutzer, Trip aus Betreff | E-Mail |
+| Telegram | ja | Webhook `/api/webhooks/telegram/{secret}`, Chat-ID → Nutzer (`telegram_format.md` §3) | Telegram |
+| Premium-SMS | ja | seven.io-Journal-Poll `premium_sms_poll` (`*/5` + Push `/api/webhooks/sms/{secret}`) (`premium_sms_format.md` §4) | Premium-SMS |
+| SMS | **nein** | — | — |
+
 ---
 
 ## 2. Token-Reihenfolge (fix)
 
 ```
-{Name}: N L D FN FL FD R PR W G TH: TH+: HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ C HR:TH: !{Warn-Block} Z: M: [SD NS24+ SL AV] X? DBG
+{Name}: N L D FN FL FD R PR W G TH: TH+: HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ C VR:VT: !{Warn-Block} Z: M: [SD NS24+ SL] X? DBG
 ```
 
 **Hinweis zu `L D` / `FL FD` (Issue #1824, 2026-08-14; Kürzel `K`→`L`/`FK`→`FL` seit Fix #1926, 2026-08-17):** Sind bei einer Temperatur-Metrik **beide** Auswertungen („Tiefstwert" UND „Höchstwert") gewählt, erscheinen die beiden Kürzel nicht getrennt, sondern als **ein Bereichs-Token** unter dem Höchstwert-Kürzel: `D{min}/{max}` statt `L{min} D{max}` (gefühlt: `FD{min}/{max}`). Ist nur eine der beiden Auswertungen gewählt, bleibt die bisherige Einzelform (`L13` bzw. `D27`) unverändert — `L`/`FL` bedeuten also weiterhin immer den Tiefstwert. `N`/`FN` (Nacht) sind davon nicht betroffen.
@@ -77,15 +94,14 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 | Forecast | `R PR W G TH:` | nur bei aktivierter Metrik (bei `-` als Null-Wert) |
 | Forecast (Gewitter Folge-Etappe) | `TH+:` | nur bei aktivierter Metrik „Gewitter“ — seit Fix #1482 (2026-08-04) synchron mit `TH:` über dieselbe Metrik-Bindung (vorher Ist-Abweichung, s. Hinweis unter §2) |
 | Forecast (14 erweiterte Metriken, Issue #1660 Scheibe B) | `HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ` (bis 2026-08-17 `NL`, Fix #1926) | Morgen + Abend, jeweils nur bei aktivierter Metrik — Details §3.2a. `WD:`/`PT:` tragen seit Issue #1824 den Grammatik-Doppelpunkt (Buchstaben-Wert, s. §3.2a) |
-| Confidence | `C` | nur wenn Provider Konfidenz liefert (Issue #121, v2.1) |
-| Risks (Vigilance) | `HR:TH:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
+| Risks (Vigilance) | `VR:VT:` (zusammenhängend, kein Leerzeichen zwischen den beiden) | nur bei FR-Provider |
 | Amtliche Warnungen | `!{Kürzel}:{Stufe}[@{h}]` … (Warn-Block, Marker `!` genau einmal) | nur bei aktiver amtlicher Warnung ab der wirksamen Kanal-Schwelle — Ortsvergleich weiterhin fest ab ORANGE, Trips seit Issue #1461 S3b-2a je Kanal einstellbar, Startwert bereits ab GELB (§3.4c) |
 | Fire-Zonen | `Z: M:` | nur Korsika, weglassen wenn leer |
-| Wintersport | `SD NS24+ SL AV` | optional (Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL`; `WC` mit Fix #1887 entfallen, verdoppelte `FK`) |
+| Wintersport | `SD NS24+ SL` | optional (Kürzel seit #1435 E3b aus dem Wetter-Register, vorher `SN SN24+ SFL`; `WC` mit Fix #1887 entfallen, verdoppelte `FK`; `AV` seit #1441 im Warn-Block, §3.4c) |
 | Nicht abrufbar | `X?` | nur wenn ≥1 abdeckende amtliche Warn-Quelle beim Fetch ausgefallen ist (§3.4d, Issue #1349; Kürzel seit Epic #1703 Scheibe 6 `X?`, vormals `W?` — Kollision mit dem Wind-Datenausfall-Marker) |
 | Debug | `DBG[...]` | nur Dry-Run / Debug-Modus |
 
-**Hinweis zu `HR:TH:`** — Das sind zwei separate Tokens, die ohne Leerzeichen aneinandergeschrieben werden (z.B. `HR:M@17TH:H@17` oder `HR:-TH:-`). Siehe §3.3 und §3.4.
+**Hinweis zu `VR:VT:`** (bis #2417 `HR:TH:`) — Das sind zwei separate Tokens, die ohne Leerzeichen aneinandergeschrieben werden (z.B. `VR:M@17VT:H@17` oder `VR:-VT:-`). Siehe §3.3 und §3.4.
 
 **Hinweis zu `N` (Issue #1319 Scheibe D, 2026-07-23):** Im Abendbriefing ist `N` das erste Forecast-Token wie oben dargestellt. Im Morgenbriefing entfällt `N` vollständig aus der Zeile (nicht `N-`) — die Reihenfolge rutscht entsprechend nach: `{Name}: L D FL FD R PR W G TH: TH+: ...`.
 
@@ -101,7 +117,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 
 > **Fix #1483 (2026-08-05):** Bis hierhin gab es die `?`-Form nur für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:`/`TH+:`. Die Temperatur-Kürzel `N`/`K`/`D`/`FN`/`FK`/`FD` durchliefen stattdessen `render_temperature()`, das ausschliesslich Zahl oder `-` lieferte — eine Datenlücke erschien dort folglich als `K-` und war von „geprüft, kein Wert” nicht unterscheidbar. Jetzt nutzen beide Pfade denselben gemeinsamen Helfer `_gap_or()` (`builder.py:120-130`): `_mk_metric()` (Zeile 150, Schwellwert-Kürzel) UND die Temperatur-Schleife in `build_token_line()` (Zeile 299). `_wintersport()` (Schneehöhe/Neuschnee/Schneefallgrenze/Lawinenstufe/Windchill) bleibt bewusst unverändert und zeigt weiterhin nie `?` — es ruft `render_int()` über einen eigenen Pfad auf, der mit `_gap_or()` nichts zu tun hat. Details: `docs/specs/modules/fix_1483_temp_gap_marker.md`.
 
-> **Fix #1677 (2026-08-10, v2.23):** Die in §2 gezeigte Token-Reihenfolge ist ab jetzt der **Default** — sie gilt unverändert, solange für den Kanal `sms` keine kanal-eigene Kaskadenebene aktiv ist (weder `per_report_layouts[report_type].sms` noch `per_channel_layouts.sms`, geprüft über `UnifiedWeatherDisplayConfig.cascade_source_for_channel("sms", report_type)`). Ist eine dieser beiden Ebenen gesetzt, bestimmt die dort im SMS-Kanal-Tab des Trip-Editors per Drag&Drop gezogene Reihenfolge die Anzeigefolge der **Vorhersage-** (`R PR W G TH: TH+: HU DP WD CP PT CT CL CM CH VS SU UV HP NL K D FK FD N FN`) und **Wintersport-Token** (`SD NS24+ SL AV`) — jede Metrik ist dabei EIN Anker: bei Mehrfach-Symbol-Metriken (`temperature`→`K D`, `temperature_night`→`N`, `wind_chill`→`FK FD`, `wind_chill_night`→`FN`, `thunder`→`TH: TH+:`) erben alle zugehörigen Symbole dieselbe Nutzer-Position, ihre interne Reihenfolge (z.B. `K` vor `D`) bleibt fix. **Unverändert fix, unabhängig von jeder Nutzer-Reihenfolge:** die Vigilance-Adjazenz `HR:TH:` (§3.3, ohne Leerzeichen), der amtliche Warn-Block, Fire (`Z: M:`), `X?` und `DBG` — diese System-Blöcke stehen immer hinter dem sortierbaren Block, in ihrer bisherigen relativen Reihenfolge (sie sind nicht Teil der wählbaren Metrik-Kaskade). Die Kürzung bei Überlänge (§6) bleibt unverändert prioritätsbasiert — die Anzeige-Position beeinflusst NICHT, welches Token zuerst fällt. Details: `docs/specs/modules/fix_1677_sms_reihenfolge.md`.
+> **Fix #1677 (2026-08-10, v2.23):** Die in §2 gezeigte Token-Reihenfolge ist ab jetzt der **Default** — sie gilt unverändert, solange für den Kanal `sms` keine kanal-eigene Kaskadenebene aktiv ist (weder `per_report_layouts[report_type].sms` noch `per_channel_layouts.sms`, geprüft über `UnifiedWeatherDisplayConfig.cascade_source_for_channel("sms", report_type)`). Ist eine dieser beiden Ebenen gesetzt, bestimmt die dort im SMS-Kanal-Tab des Trip-Editors per Drag&Drop gezogene Reihenfolge die Anzeigefolge der **Vorhersage-** (`R PR W G TH: TH+: HU DP WD CP PT CT CL CM CH VS SU UV HP NL K D FK FD N FN`) und **Wintersport-Token** (`SD NS24+ SL`) — jede Metrik ist dabei EIN Anker: bei Mehrfach-Symbol-Metriken (`temperature`→`K D`, `temperature_night`→`N`, `wind_chill`→`FK FD`, `wind_chill_night`→`FN`, `thunder`→`TH: TH+:`) erben alle zugehörigen Symbole dieselbe Nutzer-Position, ihre interne Reihenfolge (z.B. `K` vor `D`) bleibt fix. **Unverändert fix, unabhängig von jeder Nutzer-Reihenfolge:** die Vigilance-Adjazenz `HR:TH:` (§3.3, ohne Leerzeichen), der amtliche Warn-Block, Fire (`Z: M:`), `X?` und `DBG` — diese System-Blöcke stehen immer hinter dem sortierbaren Block, in ihrer bisherigen relativen Reihenfolge (sie sind nicht Teil der wählbaren Metrik-Kaskade). Die Kürzung bei Überlänge (§6) bleibt unverändert prioritätsbasiert — die Anzeige-Position beeinflusst NICHT, welches Token zuerst fällt. Details: `docs/specs/modules/fix_1677_sms_reihenfolge.md`.
 
 ---
 
@@ -215,7 +231,7 @@ Levels für `TH`/`TH+`:
 
 ### 3.2a Erweiterte Metrik-Tokens (Issue #1660 Scheibe B)
 
-14 vorher wählbare, aber wirkungslose Metriken tragen jetzt ein SMS-Kürzel — Position im Format: eigener Block direkt nach `TH+:`, vor `C`/Vigilance (§2). Alle 14 folgen der Grundregel „gewählt/nicht gewählt" (§2): abgewählt entfällt das Kürzel vollständig, gewählt aber ohne Wert zeigt die Null-Form, Datenlücke macht daraus `?` (`_gap_or()`, s. §4).
+14 vorher wählbare, aber wirkungslose Metriken tragen jetzt ein SMS-Kürzel — Position im Format: eigener Block direkt nach `TH+:`, vor Vigilance (§2). Alle 14 folgen der Grundregel „gewählt/nicht gewählt" (§2): abgewählt entfällt das Kürzel vollständig, gewählt aber ohne Wert zeigt die Null-Form, Datenlücke macht daraus `?` (`_gap_or()`, s. §4).
 
 Drei Wertegrammatik-Klassen:
 
@@ -233,8 +249,8 @@ Die zwei Tokens bilden einen **zusammenhängenden Block** ohne Leerzeichen dazwi
 
 | Token | Bedeutung | Quelle | Beispiel |
 |-------|-----------|--------|----------|
-| `HR:{level}@{h}` / `HR:-` | Heavy Rain Vigilance (Pluie-inondation) | Météo France `get_warning_full()` | `HR:M@17` |
-| `TH:{level}@{h}` / `TH:-` | Thunderstorm Vigilance (Orages) | Météo France `get_warning_full()` | `TH:H@17` |
+| `VR:{level}@{h}` / `VR:-` | Heavy Rain Vigilance (Pluie-inondation) | Météo France `get_warning_full()` | `VR:M@17` |
+| `VT:{level}@{h}` / `VT:-` | Thunderstorm Vigilance (Orages) | Météo France `get_warning_full()` | `VT:H@17` |
 
 Levels:
 - `L` = 1 (Gelb)
@@ -243,7 +259,9 @@ Levels:
 - `R` = 4 (Violett)
 - `-` = keine Warnung
 
-**Beispiel zusammen:** `HR:M@17TH:H@17` (kein Trennzeichen zwischen `HR:` und `TH:`) bzw. `HR:-TH:-` wenn keine Warnungen.
+**Beispiel zusammen:** `VR:M@17VT:H@17` (kein Trennzeichen zwischen `VR:` und `VT:`) bzw. `VR:-VT:-` wenn keine Warnungen.
+
+**Seit #2417 (AC-27):** vormals `HR:`/`TH:` — umbenannt, weil `TH:` zugleich das Gewitter-Kürzel der Vorhersage und `HR` die amtliche Starkregen-Warnung war (ein Kürzel = eine Bedeutung).
 
 **Geographische Geltung:** Météo France Vigilance API funktioniert nur für Frankreich. Außerhalb FR werden beide Tokens **komplett weggelassen** (nicht als `-` ausgegeben).
 
@@ -252,17 +270,17 @@ Levels:
 Dasselbe Kürzel kann in mehreren Blöcken vorkommen — ein Phänomen trägt überall dasselbe Kürzel, unterschieden wird der **Block**. Zwei Mechanismen, in dieser Reihenfolge:
 
 1. **Marker** (ab v2.9): alles ab dem `!` gehört zum amtlichen Warn-Block (§3.4c). Vorhersage-Tokens tragen nie ein `!`.
-2. **Position** (unverändert seit v2.0): innerhalb der markerfreien Tokens unterscheidet die Position Forecast- von Vigilance-`TH:`:
+2. **Eigenes Kürzel** (seit #2417): die Vigilance-Gewitterwarnung heißt `VT:`, das Vorhersage-Gewitter `TH:` — eine Positions-Unterscheidung ist nicht mehr nötig:
 
 | Position | Bedeutung | Quelle |
 |----------|-----------|--------|
 | Zwischen `G` und `TH+:` | Forecast-Gewitter heute (Wettervorhersage) | Hourly Wetterdaten |
-| Direkt nach `HR:` (kein Space) | Vigilance-Gewitterwarnung (offizielle Warnung) | Météo France Vigilance API |
+| `VT:` direkt nach `VR:` (kein Space) | Vigilance-Gewitterwarnung (offizielle Warnung) | Météo France Vigilance API |
 
 Parser erkennen den Unterschied durch:
 - Forecast-`TH:` ist von Leerzeichen umgeben
-- Vigilance-`TH:` folgt **direkt** auf `HR:` ohne Leerzeichen
-- Amtliches `TH:` steht im `!`-Block (§3.4c)
+- Vigilance-`VT:` folgt **direkt** auf `VR:` ohne Leerzeichen
+- Amtliches Gewitter `TS:` steht im `!`-Block (§3.4c)
 
 ### 3.4c Amtliche Warn-Token (`!`-Block, v2.9, Issue #1318)
 
@@ -270,15 +288,24 @@ Amtliche Unwetterwarnungen (`official_alerts`-Dienst, alle Provider) erscheinen 
 
 | hazard | Kürzel | Bedeutung |
 |--------|--------|-----------|
-| `thunderstorm` | `TH` | Gewitter |
-| `rain` | `HR` | Starkregen |
-| `wind_gust` | `W` | Sturm |
+| `thunderstorm` | `TS` | Gewitter |
+| `flood` | `FO` | Hochwasser/Erdrutsch |
+| `rain` | `RA` | Starkregen |
+| `wind_gust` | `WG` | Sturm |
 | `snow` | `SN` | Schneefall |
+| `avalanche` | `AW` | Lawine |
+| `avalanche_bulletin` | `AV` | Lawinenstufe (amtlicher Lagebericht, EAWS 1-5, Ziffer statt L/M/H — `!AV4`) |
 | `black_ice` | `IC` | Glatteis |
 | `extreme_heat` | `HT` | Hitze |
 | `extreme_cold` | `CD` | Kälte |
 | `wildfire_risk` | `FR` | Waldbrand-Gefahr |
-| `access_ban` | `CL` | Zugang gesperrt |
+| `access_ban` | `AB` | Zugang gesperrt |
+
+**Abgrenzung `AW` / `AV` (Issue #1430, seit #1441):** `AW` (`avalanche`) ist die amtliche Lawinen-**Warnung** (MeteoAlarm awareness_type 9, Awareness-Skala 1-4, z.B. `!AW:M`); `AV` (`avalanche_bulletin`) ist die Lawinenstufe 1-5 des amtlichen **Lageberichts** (avalanche.report, EAWS). Zwei verschiedene Aussagen auf zwei Skalen, zwei Kürzel — beide dürfen nebeneinander stehen (`!AV4 AW:M`), verglichen wird nie über die Skalen hinweg (ADR-0089).
+
+**Sonderfall `avalanche_bulletin` (`AV`, Issue #1441):** das Token trägt die **Originalziffer** der EAWS-Stufe direkt am Kürzel — `AV4`, `AV5` —, ohne Doppelpunkt, ohne `L/M/H` und ohne Stunde (die Ausgabezeit 17:00 ist keine Warnstunde). Es steht ausschließlich im `!`-Block (nie mehr im Wintersport-Block, §3.6) und damit genau einmal, unabhängig von der Metrik-Einstellung; Kürzungspriorität wie alle amtlichen Warnungen. Der Stufenfilter wirkt wie bei allen amtlichen Warnungen auf das abgeleitete Farblevel (1, 2, 3, 4, 4). Alarm- und Premium-SMS (`render_official_alert_sms`) zeigen dasselbe Token (`!AV5`).
+
+**Seit #2417 (AC-27):** `TS`/`FO`/`RA`/`WG`/`AB` statt `TH`/`FL`/`HR`/`W`/`CL` — die alten Kürzel glichen Wetter-Kürzeln. Die Bedeutung jedes Kürzels (en/de) steht an genau einer Stelle: Wettermetriken im Metrik-Katalog (`MetricDefinition.kuerzel_bedeutung_en/_de`), Warn-Kürzel in `hazard_symbols.py` (`HAZARD_BEDEUTUNG_*`), Bausteine und Formatzeichen in `tokens/builder.py`; der Befehl `CODES`/`KUERZEL` liefert sie per Nachricht.
 
 **Single Source of Truth der Kürzel:** `src/output/tokens/hazard_symbols.py` — derselbe Katalog speist die Trip-Briefing-SMS, die eigenständige amtliche-Warnung-SMS (`render_official_alert_sms`) **und** die Compare-SMS (`render_compare_sms` in `src/output/renderers/comparison.py`, Issue #1332). Zwei getrennte Listen sind ein Fehler.
 
@@ -286,9 +313,9 @@ Amtliche Unwetterwarnungen (`official_alerts`-Dienst, alle Provider) erscheinen 
 
 **Filter (sicherheitsrelevant), seit Issue #1461 S3b-2a (Trips) / S3b-2b (Ortsvergleiche) auf die Startschwelle „gering" umgestellt:** Ursprünglich (bis 2026-08-05) fest — nur Stufe **orange (3) und rot (4)** erschienen, Gelb (2) und Grün (1) wurden vor dem Rendern verworfen. Für **Trips** ist die Schwelle Teil der Kanal-Einstellung `Trip.alert_channel_thresholds` (Startwert **gering**). Für den **Ortsvergleich** gibt es (Stand S3b-2b) keinen eigenen Kanal-Parameter am Bericht — `comparison.py` ruft den geteilten Kern seither mit der Startschwelle „gering" statt des vormals festen `MIN_SMS_LEVEL` auf; beim Startwert erscheint bereits **Gelb (2)**, unabhängig von der Alarm-Kanal-Schwelle desselben Ortsvergleichs (die regelt nur den Alarm-**Versand**, nicht diesen Bericht). Die alte feste Grenze (nur orange/rot) gilt beim Trip nur noch, wenn der Nutzer die Schwelle für einen Kanal auf „mittel" oder höher stellt. `L` bleibt im Mapping strukturell vorhanden, ist unterhalb der jeweils wirksamen Schwelle aber weiterhin nie sichtbar (analog zur `L`-Fußnote in §3.2). Quelle: `official_alerts_to_sms_entries(min_level=…)` (`official_alerts.py`) — `sms_trip.py`/`narrow.py` (Trip) übergeben die Nutzereinstellung, `comparison.py` (Compare) übergibt seit S3b-2b `min_official_level_for_threshold("LOW")`. Details: ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md`.
 
-**Stunde `@h`:** erscheint, wenn die Warnung zu einer bestimmten Stunde beginnt (Beginn-Stunde in Ortszeit). Bei ganztägiger Gültigkeit entfällt sie ersatzlos — `W:M`, nicht `W:M@0`.
+**Stunde `@h`:** erscheint, wenn die Warnung zu einer bestimmten Stunde beginnt (Beginn-Stunde in Ortszeit). Bei ganztägiger Gültigkeit entfällt sie ersatzlos — `WG:M`, nicht `WG:M@0`.
 
-**Sonderfall `access_ban` (`CL`):** eine Zugangssperre ist ein binärer Zustand ohne Schweregrad (analog zu den `Z:`/`M:`-Fire-Tokens) — sie erscheint als blankes `CL` ohne Doppelpunkt und ohne Stufe, nie als `CL:H`, und trägt nie eine Stunde.
+**Sonderfall `access_ban` (`AB`):** eine Zugangssperre ist ein binärer Zustand ohne Schweregrad (analog zu den `Z:`/`M:`-Fire-Tokens) — sie erscheint als blankes `AB` ohne Doppelpunkt und ohne Stufe, nie als `AB:H`, und trägt nie eine Stunde.
 
 **Sortierung:** Stufe absteigend (rot vor orange), bei Gleichstand die Katalog-Reihenfolge der Tabelle oben — deterministisch, unabhängig vom Gültigkeitsbeginn.
 
@@ -304,8 +331,9 @@ Beides ist sicherheitsrelevant, nicht kosmetisch: eine amtliche Warnung, die sti
 
 ```
 Nur Vorhersage:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16
-Mit Warnung:      GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 !TH:H@14 W:M
-Brand + Sperrung: GR20 E5: N9 D28 R- W12@11 TH:- !FR:H CL
+Mit Warnung:      GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 !TS:H@14 WG:M
+Brand + Sperrung: GR20 E5: N9 D28 R- W12@11 TH:- !FR:H AB
+Lagebericht:      KHW E5: N-6 D2 R- W20@11 !AV4
 Nicht abrufbar:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 X?
 ```
 
@@ -317,28 +345,30 @@ Ein **eigenständiger** Marker `X?` (2 Zeichen, GSM-7-sicher) signalisiert: für
 
 - **Bedingung:** `any(SegmentWeatherData.official_alerts_unavailable)` — gesetzt am echten Fail-soft-Pfad (`get_official_alerts_with_status`, #1348). Strenge Regel: **eine** ausgefallene abdeckende Quelle genügt.
 - **Kein Warn-Block-Token:** `X?` gehört zur eigenen Kategorie `unavailable`, trägt **nie** den `!`-Marker (§3.4c) und darf nicht als amtliche Warnung („`!X?`") gelesen werden. Es ist „nicht abrufbar", nicht „es liegt eine Warnung vor".
-- **Position:** am Ende der Zeile (nach Wintersport-Block, vor `DBG`), analog zum Verlässlichkeits-Symbol `C`.
+- **Position:** am Ende der Zeile (nach Wintersport-Block, vor `DBG`).
 - **Truncation:** höchste Priorität (12, §6, noch über dem Warn-Block) und **nicht** in der Drop-Liste — der sicherheitsrelevante Marker fällt unter 160-Zeichen-Druck **strukturell nie** weg.
 - **Kanäle:** In Telegram-Kurzform (die `sms_text` sendet) erscheint `X?` automatisch mit; das Telegram-„rich"-Briefing und die Compare-/Trip-Mail zeigen stattdessen die ausgeschriebene Hinweiszeile bzw. den Banner.
 
 Quelle des Flags: `src/output/tokens/dto.py` (`NormalizedForecast.official_alerts_unavailable`), Emission in `src/output/tokens/builder.py`. Vertraglich abgesichert durch `docs/specs/modules/feat_1349_sms_unavailable.md`.
 
-### 3.4b Confidence-Symbol `C` (v2.1, Issue #121)
+### 3.4e Telegram-Kurzform folgt der SMS-Auswahl (Issue #2455)
 
-Einzelnes Zeichen, das die tagesweise Worst-Case-Konfidenz der Wettervorhersage signalisiert. Position: **nach `TH+:`, vor `HR:`/Vigilance-Tokens**.
+Die Telegram-Kurzform (`telegram_style="kurzform"`, Schalter „Telegram im SMS-Kurzstil") sendet den `sms_text` und übernimmt damit die SMS-Auswahl (Metriken, Reihenfolge, Layout aus `channel_layouts.sms`, im Ortsvergleich `channel_active_metrics.sms`) 1:1. Das ist **gewolltes Verhalten** (PO-Entscheidung 2026-10-09), kein Defekt: eine abweichende Telegram-Auswahl bleibt bei Kurzform wirkungslos und gilt nur für das ausführliche Telegram (`rich`). Abgesichert durch `tests/tdd/test_telegram_kurzform_ignoriert_telegram_auswahl.py`; in der Oberfläche erklärt der Hinweis am Schalter die Regel. Spec: `docs/specs/modules/telegram_kurzform_sms_auswahl_2455.md`.
 
-| Wert | Symbol | Bedeutung |
-|------|--------|-----------|
-| `confidence_pct_min >= 75` | `C+` | Sichere Vorhersage |
-| `50 <= confidence_pct_min < 75` | `C~` | Mittlere Sicherheit |
-| `confidence_pct_min < 50` | `C?` | Unsichere Vorhersage |
-| `confidence_pct_min is None` | _(Token weggelassen)_ | Kein Provider-Support |
+### 3.4f Zeitspanne am Abweichungs-Alarm-Token (Issue #1737)
 
-**GSM-7-konform** — `+`, `~`, `?` sind alle Standard-GSM-7-Zeichen.
+Der Abweichungs-Alarm (Trip und Ortsvergleich; `alert/render.py::render_sms`) trägt am bestehenden Ereignis-Token die Zeitspanne der betroffenen Stunden als `HH-HH` (Ortszeit, z. B. `14-16`). Die Stufen-Tokens (z. B. `TH:M->H`) bleiben unverändert; die Spanne ist **additiv**.
 
-Aggregation: `min()` der stündlichen `confidence_pct` über alle Segmente des Tages.
+- **Bindestrich:** ASCII-Bindestrich `-`, nie Gedankenstrich — ein `–` kippt die SMS auf UCS-2 (70 Zeichen, #1796). Der Gedankenstrich in „betroffen HH:MM–HH:MM" gilt nur für E-Mail und Telegram.
+- **Keine Stundenzeilen:** SMS und Premium-SMS (gleicher Text, `premium_sms_format.md`) tragen nur die Spanne, keine Einzelwerte. Länge weiter ≤ 160 Zeichen.
+- **Ohne Stundenreihe** (kein Anker, keine frische Reihe) entfällt die Spanne, der Text ist byte-gleich zu vorher.
+- Auswahl der betroffenen Stunden (`src/output/renderers/alert/hours.py`): Metrik mit Stufe = Stufenwechsel, Metrik ohne Stufe = Stundendifferenz ≥ Alarmschwelle; Spanne = erste bis letzte betroffene Stunde. Nur Daten, keine Empfehlung.
 
-Beispiel mit niedriger Konfidenz: `Etappe: N12 D22 R0.5 W15 G25 C?`
+Spec: `docs/specs/modules/feat_1737_alarm_stundenzeilen.md`.
+
+### 3.4b Confidence-Symbol `C` — entfallen (v2.34, Issue #2233)
+
+Das in v2.1 (Issue #121) spezifizierte Token `C+`/`C~`/`C?` wurde nie im Builder erzeugt und ist per PO-Entscheid 2026-09-08 aus dem Vertrag gestrichen: `confidence_pct` ist keine wählbare Metrik (#710), und das SMS-Zeichenbudget ist knapp. Die Vorhersage-Verlässlichkeit erscheint nur im E-Mail-Textblock.
 
 ### 3.5 Fire-Risk-Tokens (Korsika-spezifisch)
 
@@ -367,7 +397,10 @@ Wenn keine relevanten Zonen/Massifs aktiv sind: **Block komplett weglassen** (ke
 | `SD{cm}` | Schneehöhe gesamt | `snow_depth_cm` |
 | `NS24+{cm}` | Neuschnee 24h | `snow_new_24h_cm` |
 | `SL{m}` | Schneefallgrenze | `snowfall_limit_m` |
-| `AV{1-5}` | Lawinenstufe | `AvalancheReport.danger.level` |
+
+> **Seit Issue #1441:** `AV{1-5}` (Lawinenstufe) ist kein Wintersport-Token mehr. Die Stufe kommt
+> aus dem amtlichen Lagebericht und steht im `!`-Warnblock (§3.4c, `avalanche_bulletin`), genau
+> einmal und unabhängig von der Metrik-Einstellung.
 
 > **Kürzel-Umstellung 2026-08-01 (#1435 E3b).** Schneehöhe hieß bis dahin `SN`,
 > Neuschnee `SN24+`, Schneefallgrenze `SFL`. Die drei Kürzel stammen jetzt aus
@@ -449,12 +482,14 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 | `HU`/`DP`/`CP`/`UV`/`CT`/`CL`/`CM`/`CH` | `HU-` usw. | Klasse (a), bei fehlendem oder Sub-Threshold-Wert — Issue #1660 Scheibe B, zusätzliche `?`-Form bei Datenlücke s. Hinweis unten |
 | `VS` / `FZ` (bis 2026-08-17 `NL`, Fix #1926) | `VS-` / `FZ-` | Klasse (b), bei fehlenden Stundenwerten ODER wenn der Tiefstwert eine konfigurierte Schwelle NICHT unterschreitet (Invers-Gate) |
 | `WD:` / `PT:` / `SU` / `HP` | `WD:-` / `PT:-` / `SU-` / `HP-` | Klasse (c), bei fehlendem Tageswert — anders als bei den Wintersport-Token (unten) gibt es hier eine Null-Form, kein komplettes Weglassen (DEC-3, `fix_1660b_sms_token_wiring.md`). Der Doppelpunkt bei `WD:`/`PT:` gehört zum Symbol und steht deshalb auch in Null- und Lückenform (Issue #1824, Muster `TH:-`) |
-| `HR` / `TH` (Vigilance) | `HR:-TH:-` | Bei keiner Vigilance-Warnung; immer paarweise |
+| `VR` / `VT` (Vigilance) | `VR:-VT:-` | Bei keiner Vigilance-Warnung; immer paarweise |
 | `Z` / `M` (Fire) | komplett weglassen | Kein `Z:-`, einfach Block entfernen |
-| `SD`/`NS24+`/`SL`/`AV` | komplett weglassen | Wintersport-Tokens nicht zwingend |
+| `SD`/`NS24+`/`SL` | komplett weglassen | Wintersport-Tokens nicht zwingend |
 | `DBG` | komplett weglassen | Nur Debug-Modus |
 
 **Zur `?`-Form (Issue #1328, erweitert um `TH+:` durch Fix #1482, um die Temperatur-Kürzel durch Fix #1483 (2026-08-04/05) und um die 14 erweiterten Metrik-Kürzel durch Issue #1660 Scheibe B, 2026-08-10; Kürzel `K`→`L`/`FK`→`FL`/`NL`→`FZ` seit Fix #1926, 2026-08-17):** Bei einer Datenlücke im ausgewerteten Fenster wird die Null-Form `-` zu `?` („unbekannt”) — das gilt für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:` des berichteten Tages sowie für `TH+:` der Folge-Etappe, wenn diese existiert, ihre Daten aber weder über den Trend-Pfad noch den Fallback-Fetch beschaffbar waren. Dieselbe Regel gilt für alle 14 Kürzel aus §3.2a (`HU`/`DP`/`WD`/`CP`/`PT`/`CT`/`CL`/`CM`/`CH`/`VS`/`SU`/`UV`/`HP`/`FZ`) — auch die vier Tageswert-Kürzel ohne Stunde (`WD`/`PT`/`SU`/`HP`) zeigen bei Datenlücke `?` statt `-`. Existiert schlicht kein Folgetag (letzte Etappe des Trips), bleibt es unverändert bei `TH+:-`, nie `TH+:?`. Seit Fix #1483 gilt dieselbe Regel auch für die Temperatur-Kürzel `N`/`L`/`D`/`FN`/`FL`/`FD` — eine Datenlücke im Fenster zeigt jetzt `N?`/`L?`/… statt `N-`/`L-`/…; fehlt lediglich der Wert ohne Datenlücke, bleibt es bei `-`. Beide Kürzel-Gruppen laufen über denselben gemeinsamen Helfer `_gap_or()` (`builder.py:120-130`), aufgerufen aus `_mk_metric()` (Zeile 150) bzw. der Temperatur-Schleife in `build_token_line()` (Zeile 299).
+
+**Fix #1794 (2026-09-19) — `PR` zusätzlich metrik-lokal:** Bis hierhin löste ausschließlich das segmentweite `has_data_gap` (Datenpunkt fehlt komplett) die `?`-Form aus. Für `PR` allein gibt es jetzt einen zweiten, unabhängigen Auslöser: Die Fensterpunkte liegen vollständig vor (`has_data_gap=False` bleibt korrekt), tragen aber durchgängig `pop_pct=None` (Fallback-Kette WEATHER-05a/05b für dieses Feld erschöpft). Ohne diese Ergänzung zeigte `PR` in diesem Fall fälschlich die Null-Form `PR-` — identisch zu „geprüft, kein Regen" statt „keine Daten". Ein echtes `pop_pct=0` bleibt davon unberührt und zeigt weiterhin `PR-`. Umsetzung: neues DTO-Feld `pop_all_missing` (`DailyForecast`, `dto.py`), berechnet in `_segments_to_normalized_forecast()` (`sms_trip.py`), eingespeist in `build_token_line()` (`builder.py`) als `gap = today.has_data_gap or (sym == "PR" and today.pop_all_missing)` — nur für `PR`, alle anderen Kürzel bleiben allein am segmentweiten Flag. Betrifft SMS, Telegram-Kurzform (`telegram_style="kurzform"`) und Premium-SMS, da alle drei denselben `sms_text`-Pfad teilen; Telegram-Rich war bereits None-sicher. Spec: `docs/specs/modules/fix_1794_arome_precip_prob_null.md`.
 
 ---
 
@@ -482,13 +517,81 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 
 ---
 
+## 5a. Ad-hoc-Verlauf in Kurzform (Issue #2207, Epic #2133 S5)
+
+Der **Ad-hoc-Verlauf einer Einzelgröße** (getipptes Metrik-Wort, z. B. `wind`
+oder `visib`) ist keine Token-Zeile im Sinne von §2 — er beantwortet eine
+Frage nach dem *Stundenverlauf* einer einzigen Größe. Auf E-Mail und Telegram
+antwortet er ausgeschrieben (`Sichtweite — Verlauf`, Zeilen mit `HH:MM`), auf
+**Premium-SMS und `sms`** in der hier beschriebenen Kurzform. Erzeugt in
+`TripCommandProcessor._format_drilldown_kurzform()`; die Wechselpunkt-Gruppen
+kommen aus demselben Helfer wie die Langform (`_gruppiere_wechselpunkte()`,
+Issue #2185), damit die Gruppengrenzen beider Fassungen nicht auseinander
+laufen können.
+
+**Aufbau:** `{Kürzel} {wert}@{h1}-{h2} {wert}@{h} …`
+
+```
+VS 0.3@14-16 5.0@17 42.5@18-21
+```
+
+| Element | Regel |
+|---|---|
+| Kürzel | `metric.sms_code`; ist er leer (im Katalog genau `temperature_night` und `temperature_day_high`), tritt `col_label` an seine Stelle (`Night`, `DayMax`) — **keine** zweite Abkürzungsliste |
+| Folgetag | `+` direkt am Kürzel (`VS+`), Konvention wie `TH+` — ohne das wären die Stundenzahlen zwischen heute und morgen mehrdeutig |
+| Bereich | Aufeinanderfolgende Stunden mit **identischem Anzeigetext** verschmelzen zu `{wert}@{h1}-{h2}`; eine Einzelstunde bleibt `{wert}@{h}` |
+| Lücke | Fehlt ein Zeitpunkt ganz, **bricht der Bereich** — ein Bereich behauptet nie Gültigkeit für eine ungemessene Stunde (#2167) |
+| Werte-Format | Ohne Einheit, gerundet nach `metric.decimals` (Konventionen §5); Stunden 0–23 **ohne** führende Null |
+| Nicht-numerische Größen | Tragen dieselben Kürzel wie im Briefing, nicht den ausgeschriebenen Wert: Windrichtung als Himmelsrichtungs-Kürzel (`W`, `NW` … wie §3.2a, aus `degrees_to_compass()`), Gewitter als Stufenbuchstabe (`-`/`L`/`M`/`H` wie §3.2/§4, aus `thunder_label_value()` + `tokens/metrics.LEVELS`) — die Kurzform ist nie länger als die Langform |
+| `?` | Ein Zeitpunkt, der **vorliegt, aber keinen Wert trägt**, erscheint als `?@{h}` — die Bedeutung „unbekannt" aus §4. Der Unterschied zur fehlenden Stunde ist der zwischen „nichts gemessen" und „gar nicht abgefragt" |
+| Keine Daten | Ist die Größe für Ort und Zeitraum insgesamt nicht befüllt, lautet die ganze Antwort `{Kürzel} no data` — englisch wie der übrige Kurztext, kein Schweigen und keine leere Zeile („geführt ≠ gefüllt") |
+| Zeichensatz | Der fertige Text läuft durch `fold_ascii()` (§1) — ein einziges GSM-7-fremdes Zeichen (Gedankenstrich, `·`, `°`, Umlaut aus einem `col_label`) würde die Nachricht auf UCS-2 umschalten und das Budget faktisch halbieren |
+
+**Kürzung (eigene Regel, NICHT die Rangfolge aus §6):** Gemessen wird **nach**
+der Faltung („erst falten, dann kürzen"). Passt die Zeile nicht in 160
+Zeichen, fallen **hintere ganze** Gruppen weg — nie ein Teil einer Gruppe,
+nie eine Gruppe aus der Mitte. Wurde gekürzt, benennt ein englischer Anhang
+die Zahl der nicht mehr gezeigten Stunden; ohne Kürzung erscheint **kein**
+Anhang. Der Anhang zählt zur 160er-Grenze mit.
+
+```
+VS 0.3@10 5.0@11 12.5@12 8.2@13 3.1@14 +2h not shown
+```
+
+Ein Verlauf ergibt immer **genau eine** Nachricht — keine Aufteilung auf
+mehrere Premium-SMS.
+
+---
+
+## 5b. Ortsvergleich-SMS: Zähler `?N` für fehlende Größen (Issue #1405 S3)
+
+Die Ortsvergleich-SMS (`render_compare_sms`, auch Premium-SMS und Telegram-Kurzform —
+derselbe Text) trägt im **Ortsteil** einen Zähler `?N` (N ≥ 1), **nur wenn** mindestens
+eine gewählte Größe an diesem Ort keinen darstellbaren Wert hat oder ihr Schlüssel
+keine Renderer-Zuordnung besitzt (unmappbar → fehlt an jedem Ort). Position:
+unmittelbar nach den Wertzellen, **vor** dem optionalen `!`-Warn-Block, z. B.
+`Alpha D 20C W 10 km/h ?1` bzw. `Alpha D 20C ?2 !TH:M@14`.
+
+- **Abgrenzung:** `+N` bleibt der **Platzmangel**-Zähler (vorhandene, verdrängte Werte);
+  `?N` zählt **fehlende** Werte. Je Ort gilt: sichtbare Zellen + `+N` + `?N` = Anzahl
+  gewählter Größen. `?` bedeutet wie im Trip (§4) „keine Daten“.
+- **Normalfall unverändert:** ohne fehlende Größe steht weder `?` noch ein zusätzliches
+  Leerzeichen im Text (Zeichen für Zeichen wie vor v2.37).
+- **Budget:** Der Zähler ist fester Bestandteil der Budgetprüfung (153 Zeichen,
+  `CHANNEL_LIMITS["sms"]`) wie der Warn-Marker; die Wertzellen weichen ihm, nie umgekehrt.
+- **Nicht gezählt:** zentral nicht wählbare Größen (`selectable=False`, z. B.
+  `confidence_pct`, #710) und vom Kanal bewusst abgewählte Größen.
+- GSM-7: `?` und Ziffern sind Basiszeichen.
+
+---
+
 ## 6. Truncation-Strategie
 
 Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser **Reihenfolge** entfernt:
 
 1. `DBG[...]`
 2. Die 14 erweiterten Metrik-Tokens aus §3.2a (`HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ`, Issue #1660 Scheibe B; `NL`→`FZ` seit Fix #1926) — fallen als erste Fachtoken, noch VOR den Wintersport-Größen
-3. Wintersport-Tokens (`AV`, `SL`, `NS24+`, `SD`)
+3. Wintersport-Tokens (`SL`, `NS24+`, `SD`)
 4. Fire-Block komplett (`Z:HIGH...`, `MAX...`, `M:...`)
 5. Peak-Werte `(max@h)` (Threshold-Werte bleiben erhalten)
 6. `FN`, `FL`, `FD` (gefühlte Temperaturen — Komfortangabe, fällt VOR den sicherheitsrelevanten Planungsgrössen, Issue #1410; `FK`→`FL` seit Fix #1926)
@@ -503,7 +606,7 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser 
 ## 7. Pflicht-Tokens
 
 - `{Name}:` ist immer im Output.
-- Mindestens **ein** Wert-/Risk-Token ist Pflicht (z.B. `TH:M@14`, `W22@14`, `R0.2@6` oder `HR:M@17`).
+- Mindestens **ein** Wert-/Risk-Token ist Pflicht (z.B. `TH:M@14`, `W22@14`, `R0.2@6` oder `VR:M@17`).
 - Reine Null-Zeilen sind erlaubt und zeigen "alles ruhig" — Abendbriefing (alle
   gezeigten Metriken gewählt): `Ballone: N- D- R- PR- W- G- TH:- TH+:-`;
   Morgenbriefing (ohne `N`, Issue #1319): `Ballone: D- R- PR- W- G- TH:- TH+:-`.
@@ -534,21 +637,22 @@ Paliri: D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16
 
 ### 8.3 Evening Report mit Vigilance + Fire-Block (Korsika)
 ```
-Paliri: N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17) HR:M@17TH:H@17 Z:HIGH208 M:24
+Paliri: N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17) VR:M@17VT:H@17 Z:HIGH208 M:24
 ```
 **Länge:** 134 Zeichen.
 
 ### 8.4 Update Report (nur kritische Werte)
 ```
-Paliri: D24 G35@14(58@17) TH:H@15 HR:-TH:H@15
+Paliri: D24 G35@14(58@17) TH:H@15 VR:-VT:H@15
 ```
 **Länge:** 46 Zeichen.
 
 ### 8.5 Wintersport
 ```
-Arlberg: N-12 D-5 SD180 NS24+25 SL1800 AV3 W45@12 G78@14(85@16)
+Arlberg: N-12 D-5 SD180 NS24+25 SL1800 W45@12 G78@14(85@16)
 ```
-**Länge:** 63 Zeichen. (Bis Fix #1887 stand hier zusätzlich `WC-22` am Ende —
+**Länge:** 59 Zeichen. (Bis #1441 stand hier zusätzlich `AV3` — die Lawinenstufe steht seither
+als amtlicher Lagebericht im `!`-Block, §3.4c.) (Bis Fix #1887 stand hier zusätzlich `WC-22` am Ende —
 entfallen, verdoppelte den Wert von `FK`, s. §3.6/§9.)
 
 ### 8.6 Mit Debug
@@ -582,7 +686,7 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 | `!`-Warn-Block (§3.4c) | `SegmentWeatherData.official_alerts` (`official_alerts`-Dienst, alle Provider, 9 hazards) | Dedup (`dedupe_official_alerts`) + Filter Stufe ≥ Startschwelle „gering" (seit #1461 S3b-2a/S3b-2b, s. §2), Kürzel aus `hazard_symbols.py` | ✅ vorhanden (Issue #1318) — **andere Quelle** als die beiden Vigilance-Zeilen darüber, die weiterhin am alten `get_warning_full()`-Pfad hängen |
 | `Z`/`M` | `risque-prevention-incendie.fr` | tagesaktueller JSON | ⚠️ Provider TODO |
 | `SD`/`NS24+`/`SL` | GeoSphere/SLF | siehe Wintersport-Spec | ⚠️ teilweise vorhanden |
-| `AV` | `AvalancheReport.danger.level` | aus Lawinenbericht | ⚠️ Provider TODO |
+| `AV` | amtlicher Lagebericht `avalanche.report` (`avalanche_bulletin`, Warn-Block) | CAAML v6, EAWS 1-5 | ✅ seit #1441 (Tirol, Südtirol, Trentino, Kärnten) |
 | `FN` / `FL` / `FD` (bis 2026-08-17 `FK`, Fix #1926) | `night_wind_chill_min_c` / `wind_chill_min_c` / `wind_chill_max_c` | Open-Meteo `apparent_temperature`, GeoSphere | ✅ vorhanden (Issue #1410) — `FL`/`FD` seit #1728 (2026-08-15) über die eigenen Metriken `wind_chill_day_low`/`wind_chill_day_high` gegated (s. §2) |
 | `L` (bis 2026-08-17 `K`, Fix #1926) | `temp_min_c` (Gehzeit-Fenster) | Provider | ✅ vorhanden (Issue #1410) — seit #1728 (2026-08-15) nur bei aktivierter Metrik „Tages-Tiefsttemperatur (Gehzeit)“ (`temperature_day_low`); bis dahin hing das Kürzel an der Auswertungswahl „nur Tiefstwert“ von „Temperatur“. Ist zusätzlich `temperature_day_high` aktiv, trägt `D{min}/{max}` denselben Wert in der ersten Hälfte (Issue #1824) |
 | `HU` | `humidity_pct` hourly | Threshold + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
@@ -609,7 +713,7 @@ Markierte TODOs sind separate Issues, nicht Teil dieser Spec.
 | Forecast (N…TH+) | global | immer ausgeben, **soweit die Metrik gewählt ist** (§2, Issue #1415) |
 | Vigilance (`HR`/`TH`) | nur Frankreich | komplett weglassen (kein `-`) |
 | Fire (`Z`/`M`) | nur Korsika (FR) | komplett weglassen |
-| Wintersport (SD…AV) | AT/CH/Tirol/Südtirol/Trentino | komplett weglassen, wenn Provider fehlt |
+| Wintersport (SD…SL) | AT/CH/Tirol/Südtirol/Trentino | komplett weglassen, wenn Provider fehlt |
 
 ---
 
@@ -668,6 +772,14 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.27 | 2026-08-15 | **Temperatur-Auflösung Scheibe 1 (Issue #1728) — die Auswertungswahl steuert `K`/`D`/`FK`/`FD` nicht mehr.** Vier neue, eigenständig wählbare Katalog-Größen (`temperature_day_low`/`temperature_day_high`/`wind_chill_day_low`/`wind_chill_day_high`) übernehmen die Sichtbarkeits-Gates dieser vier Kürzel von der bisherigen Auswertungswahl (`MetricConfig.aggregations`) der Elterngrößen „Temperatur"/„Gefühlte Temperatur" — exakt nach dem Muster von `temperature_night`/`wind_chill_night` (#1484/#1660 A). `temperature`/`wind_chill` bleiben als Katalogeinträge bestehen und liefern weiterhin den Stundenwert für Stundentabelle und Telegram-Zelle; `WC` bleibt unverändert an `wind_chill` gebunden (PO E3, „WC soll bleiben" — **löst die in v2.24 angekündigte, nie umgesetzte Entfernung ab**, s. §3.6/§9-Korrekturen). Das Bereichs-Token-Verhalten aus v2.26 ist unverändert, greift jetzt aber, wenn **beide** neuen Tagesrichtungs-Größen aktiviert sind, statt bei „beide Auswertungen gewählt". Betrifft §2, den Hinweis zu `K`/`FK`/`FD`/`FN`, §3.2, §3.6, §4, §9. Reine Backend-Scheibe — der Trip-Editor zeigt bis Scheibe 2 weiterhin die (jetzt wirkungslose) alte Auswertungswahl für „Temperatur"/„Gefühlte Temperatur" an. Spec: `docs/specs/modules/feat_1728_s1_temp_aufloesung.md`. |
 | 2.28 | 2026-08-16 | **`WC` entfällt ersatzlos (Fix #1887 Scheibe A).** Löst die in v2.27 (PO E3, #1728) getroffene Entscheidung „WC soll bleiben" ab — die PO-Freigabe zu #1887 legt die Regel „verschieden von `FD` ⇒ bleibt" dem Sinn nach aus: die nachgewiesene Wert-Dublette betrifft `FK`, nicht `FD`. Die sechs Trip-SMS-Mehrfach-Kürzel `K`/`D`/`N`/`FK`/`FD`/`FN` kommen jetzt aus dem neuen Register-Feld `MetricDefinition.sms_multi_symbols` statt aus einer handgetippten Nebentabelle (`SMS_MULTI_SYMBOLS_BY_METRIC` wird zur reinen Ableitung). Die zwei toten `sms_code`-Werte `TD` (`temperature_day_high`) und `TN` (`temperature_night`) sind auf `""` gesetzt — kein Leser erreichte sie je; `temperature`/`temperature_cold`/`wind_chill` behalten unverändert `D`/`N`/`TF`. Betrifft §2 (Format-Zeile, Token-Tabelle, `K D`/`FK FD`-Hinweis, Fix-#1677-Absatz), §3.6 (Token-Tabelle, Korrektur-Block), §4 (Null-Repräsentation), §5 (Beispielwerte), §6 (Truncation-Reihenfolge), §8.5 (Beispiel), §9 (Datenquellen-Mapping), §10 (Geltungsbereich). Spec: `docs/specs/modules/fix_1887_e6a_sms_kuerzel_register.md`. |
 | 2.29 | 2026-08-17 | **Drei Register-Kürzel geändert (Fix #1926, PO-Konsistenzentscheid).** `K`→`L` (Tages-Tiefsttemperatur, Gehzeit) und `FK`→`FL` (gefühlte Tages-Tiefsttemperatur, Gehzeit) — reine Konsistenz-Fixes ohne Sprachbezug (ADR-0042 Klasse 1 bleibt von Sprachfragen ausgenommen). `NL`→`FZ` (Nullgradgrenze) zur Kollisionsvermeidung mit dem Schnee-/`SL`-Bereich. Alle drei neuen Werte kollisionsfrei gegen alle 32 Katalog-Einträge geprüft. Betrifft §2 (Format-Zeile, Token-Tabelle, `L D`/`FL FD`-Hinweis), §3.2 (Token-Tabelle, Gehzeit-Berechnung-Absatz), §3.2a (Invers-Min-Klasse), §4 (Null-Repräsentation), §6 (Truncation-Reihenfolge), §9 (Datenquellen-Mapping). Historische, datierte Korrektur-Absätze (§3.6, die WC/FK-Dublette vom 2026-08-11 ff.) bleiben mit dem damaligen Kürzel-Namen stehen. Spec: `docs/specs/modules/fix_1926_metrik_kuerzel_englisch.md`. |
+| 2.30 | 2026-09-08 | **Neuer §5a: Ad-hoc-Verlauf in Kurzform (Issue #2207, Epic #2133 Scheibe S5).** Der Ad-hoc-Verlauf einer Einzelgröße erreichte Premium-SMS bisher wortwörtlich als derselbe ausgeschriebene Text wie E-Mail und Telegram (Wortlabel, `HH:MM`-Uhrzeiten, kein Längenbudget) — auf dem Satellitengerät teuer und teils gar nicht darstellbar. Neu für die Kanäle `premium_sms`/`sms`: Bereichsnotation `{Kürzel} {wert}@{h1}-{h2}` bzw. `{wert}@{h}` (Kürzel aus `sms_code`, ersatzweise `col_label`; `+` am Kürzel für den Folgetag wie `TH+`), `?@{h}` für einen vorliegenden Zeitpunkt ohne Wert (§4-Bedeutung „unbekannt"), `{Kürzel} no data` für eine insgesamt unbefüllte Größe. Nicht-numerische Größen tragen dabei dieselben Kürzel wie im Briefing (Windrichtung als Himmelsrichtung `W`/`NW` nach §3.2a, Gewitter als Stufenbuchstabe `-`/`L`/`M`/`H` nach §3.2/§4) — beides aus den vorhandenen Quellen des Briefing-Pfads (`degrees_to_compass()` bzw. `thunder_label_value()` + `tokens/metrics.LEVELS`), keine zweite Umrechnung. Eigene Kürzungsregel (bewusst NICHT die Token-Rangfolge aus §6, die einen anderen Nachrichtentyp betrifft): nach `fold_ascii()` gemessen, hintere **ganze** Gruppen fallen weg, Anhang `+{N}h not shown` nur bei tatsächlicher Kürzung. Genau eine Nachricht je Verlauf. **Keine** Änderung an der Token-Zeile (§2–§6) und **keine** Änderung an der E-Mail-/Telegram-Langform. Grouping-Kern mit der Langform geteilt (`_gruppiere_wechselpunkte()`, aus #2185 herausgelöst). Spec: `docs/specs/modules/feat_2207_kurzform_verlauf.md`. |
+| 2.31 | 2026-09-19 | **`PR` bekommt einen zweiten, metrik-lokalen `?`-Auslöser (Fix #1794).** Bisher löste für `PR` ausschließlich das segmentweite `has_data_gap` die `?`-Form aus. Fällt `pop_pct` trotz vollständiger Fensterpunkte durchgängig `None` (WEATHER-05a/05b-Fallback für dieses Feld erschöpft), zeigte `PR` bislang fälschlich die Null-Form `PR-` statt eines Fehlend-Hinweises. Neues DTO-Feld `pop_all_missing` (`DailyForecast`, `dto.py`), berechnet in `_segments_to_normalized_forecast()` (`sms_trip.py`), in `build_token_line()` (`builder.py`) nur für `sym == "PR"` mit `has_data_gap` ODER-verknüpft. Ein echtes `pop_pct=0` bleibt unverändert `PR-`. Betrifft §4 (`?`-Form-Hinweis). Spec: `docs/specs/modules/fix_1794_arome_precip_prob_null.md`. |
+| 2.32 | 2026-09-27 | **Kurzform ist englisch — Kürzel bereinigt (Issue #2417).** Eingabe-Kürzel `temperature` (Stundenverlauf) wechselt von `D` auf `T`, weil `D` in der SMS bereits der Tageshöchstwert ist (kein Formatwechsel — nur betroffen ist die per Nachricht abfragbare Bedeutung, siehe §3.4c). Amtliche Warn-Kürzel `TS`/`FO`/`RA`/`WG`/`AB` ersetzen `TH`/`FL`/`HR`/`W`/`CL` (§3.4c), Météo-France-Vigilance `VR:`/`VT:` ersetzt `HR:`/`TH:` (§3.3/§3.4). Neuer Befehl `CODES`/`KUERZEL` liefert die vollständige Kürzel-Legende auf Anfrage. Spec: `docs/specs/modules/feat_2417_kurzform_englisch.md`. |
+| 2.33 | 2026-10-01 | **Register leeren (Issue #2422 S6).** (B1) `TF` ist jetzt auch im **Trip** ein Token (Eltern-Metrik `wind_chill`): `TF<Tiefstwert °C>@<Stunde>` über das Tagesfenster, `TF-` ohne Stundenwerte, `TF?` bei Datenlücke; fällt beim Kürzen als allererstes Komfort-Token (`TF`, `FN`, `FL`, `FD`); `KÜRZEL`/`CODES` im Trip-Kontext nennen `TF` wieder (löst #2454 AC-6/AC-7 ab). (B2) Roh/Einfach je Metrik wirkt jetzt in SMS, Premium-SMS und Telegram-Kurzform für Wolken (`cloud_total`/`low`/`mid`/`high`): Einfach-Stufen identisch zu den E-Mail-Bändern (z. B. `CT:SCT@4` statt `CT70@4`); Quelle `SMS_FORMAT_MODE_METRIC_IDS`, Bestandsnutzer behalten den Default. (B3) Telegram rich nutzt seine eigene Roh/Einfach-Einstellung statt der E-Mail-Einstellung. (B5) Keine Windrichtungs-Geisterspalte in Telegram, wenn `wind_direction` mit Wind zusammengeführt ist. Spec: `docs/specs/modules/fix_2422_s6_register_leeren.md`. |
+| 2.34 | 2026-10-08 | **Confidence-Symbol `C+`/`C~`/`C?` gestrichen (Issue #2233, PO-Entscheid 2026-09-08).** Das Token war seit v2.1 spezifiziert, wurde aber nie erzeugt (`"C"` fehlt in `POSITIONAL`/`PRIORITY` von `src/output/tokens/builder.py`). §2-Zeile und §3.4b entfernt; keine Codeänderung. |
+| 2.35 | 2026-10-21 | Neuer §1a: Befehlseingang je Kanal (Ist-Stand) — normale SMS hat keinen Befehlseingang; Verweise auf `telegram_format.md` und `premium_sms_format.md`. Keine Formatänderung. |
+| 2.36 | 2026-10-21 | Neuer §3.4f: Abweichungs-Alarm-Token trägt die Zeitspanne `HH-HH` der betroffenen Stunden (ASCII-Bindestrich, GSM-7), Stufen-Tokens unverändert (Issue #1737). |
+| 2.37 | 2026-10-27 | Neuer §5b: Ortsvergleich-SMS trägt im Ortsteil den Zähler `?N` für gewählte, aber fehlende bzw. nicht darstellbare Größen (nach den Wertzellen, vor `!`); Normalfall unverändert (Issue #1405 S3, Spec `feat_1405_s3_mengenerhalt.md`). |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

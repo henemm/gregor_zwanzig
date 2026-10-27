@@ -3,7 +3,7 @@ entity_id: mail_origin_footer
 type: module
 created: 2026-07-15
 updated: 2026-07-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, renderer, footer, mime, observability]
 ---
@@ -177,7 +177,7 @@ msg["Date"] = email.utils.formatdate(localtime=True)
 - **AC-10:** Given eine beliebige versendete Mail (HTML- oder Plain-Zweig) / When `build_mime_message` aufgerufen wird / Then enthält die zurückgegebene MIME-Message einen `Date`-Header, der als RFC-2822-Datum parsbar ist (`email.utils.parsedate_to_datetime`).
   - Test: Unit-Test ruft `build_mime_message` in beiden Zweigen (`html=True`/`html=False`) auf und prüft `msg["Date"]` ist gesetzt und parsbar.
 
-- **AC-11 (Nicht-Regression):** Given die drei bestehenden Mail-Validatoren (`briefing_mail_validator.py`, `email_spec_validator.py`, `official_alert_mail_validator.py`) und die bestehenden Golden-Email-Tests / When sie nach Einführung des Footers erneut ausgeführt werden / Then bleiben alle drei Validatoren sowie alle Golden-Email-Tests grün (kein neuer Fehlschlag durch die Footer-Änderung).
+- **AC-11:** (Nicht-Regression) Given die drei bestehenden Mail-Validatoren (`briefing_mail_validator.py`, `email_spec_validator.py`, `official_alert_mail_validator.py`) und die bestehenden Golden-Email-Tests / When sie nach Einführung des Footers erneut ausgeführt werden / Then bleiben alle drei Validatoren sowie alle Golden-Email-Tests grün (kein neuer Fehlschlag durch die Footer-Änderung).
   - Test: Live-E2E — Test-Mail an `gregor-test@henemm.com` senden, alle drei Validatoren gegen die zugestellte Mail laufen lassen (Exit 0 erforderlich), zusätzlich `uv run pytest` auf die Golden-Email-Suite (Kern).
 
 ## Known Limitations

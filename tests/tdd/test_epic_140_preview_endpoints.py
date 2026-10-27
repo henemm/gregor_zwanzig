@@ -94,46 +94,8 @@ class TestT1PreviewService:
         assert target is not None
 
 
-# ---------- T2: Endpoint /api/preview/{trip_id}/email --------------
-
-
-class TestT2EmailEndpoint:
-    """AC-1, AC-2, AC-3: Email-Preview-Endpoint."""
-
-    def test_email_endpoint_returns_html_or_503(self, client):
-        """AC-1: Existierender Trip → HTML zurück (200) ODER 503 bei Wetter-API-Fehler.
-
-        Bei 200: muss text/html sein und den Trip-Namen enthalten.
-        """
-        resp = client.get(
-            "/api/preview/gr221-mallorca/email",
-            params={"type": "morning", "user_id": "default"},
-        )
-        # Wetter-API kann ausfallen — beide Status akzeptabel
-        assert resp.status_code in (200, 503), \
-            f"Erwarte 200 oder 503, bekam {resp.status_code}: {resp.text[:200]}"
-        if resp.status_code == 200:
-            assert "text/html" in resp.headers.get("content-type", "").lower()
-            assert "GR221" in resp.text or "Mallorca" in resp.text, \
-                "HTML muss Trip-Namen enthalten"
-
-    def test_email_endpoint_unknown_trip_returns_404(self, client):
-        """AC-2: Unbekannter Trip → 404."""
-        resp = client.get(
-            "/api/preview/nope-not-real-12345/email",
-            params={"type": "morning", "user_id": "default"},
-        )
-        assert resp.status_code == 404, \
-            f"Erwarte 404 für unbekannten Trip, bekam {resp.status_code}"
-
-    def test_email_endpoint_invalid_type_returns_422_or_400(self, client):
-        """AC-1: Ungültiger Report-Type → 422 oder 400."""
-        resp = client.get(
-            "/api/preview/gr221-mallorca/email",
-            params={"type": "wrong-type", "user_id": "default"},
-        )
-        assert resp.status_code in (400, 422), \
-            f"Erwarte 400/422 bei ungültigem type, bekam {resp.status_code}"
+# T2 (GET /api/preview/{trip_id}/email) entfallen: Route mit #1743 entfernt
+# (Nachweis tests/integration/test_briefing_vorschau_endpoint_entfernt.py).
 
 
 # ---------- T3: Endpoint /api/preview/{trip_id}/sms ----------------
@@ -194,9 +156,10 @@ class TestT4Structure:
         from api.routers import preview
         assert hasattr(preview, "router")
 
-    def test_preview_service_has_two_render_methods(self):
+    def test_preview_service_has_sms_render_method(self):
+        """Seit #1743 (AC-31) bleibt nur die SMS-Vorschau als Dienst-Methode;
+        die E-Mail-Huelle ist entfallen."""
         from src.services.preview_service import PreviewService
-        assert hasattr(PreviewService, "render_email_preview")
         assert hasattr(PreviewService, "render_sms_preview")
 
 
@@ -332,22 +295,24 @@ class TestT6DemoMode:
     Spec: docs/specs/modules/issue_483_demo_mode_preview.md
 
     Diese Tests MÜSSEN FEHLSCHLAGEN bis die Implementierung existiert:
-    - render_email_preview/render_sms_preview akzeptieren noch kein `demo`-Kwarg
+    - E-Mail-Render-Pfad/render_sms_preview akzeptieren noch kein `demo`-Kwarg
     - _fetch_weather akzeptiert noch keinen `provider`-Parameter
     """
 
-    def test_ac3_render_email_preview_accepts_demo_flag(self, service):
-        """AC-3: render_email_preview muss `demo=True` akzeptieren und HTML zurückgeben.
+    def test_ac3_email_vorschau_accepts_demo_flag(self, service):
+        """AC-3: der E-Mail-Render-Pfad (``_build_report``, seit #1743 ohne
+        Huelle ``render_email_preview``) muss `demo=True` akzeptieren und HTML
+        zurückgeben."""
+        from tests.helpers.trip_vorschau_bericht import trip_email_html
 
-        ERWARTET FEHLSCHLAG: TypeError — `demo` ist noch kein gültiger Parameter.
-        """
-        html = service.render_email_preview(
+        html = trip_email_html(
+            service,
             "gr221-mallorca",
             user_id="default",
             report_type="morning",
             demo=True,
         )
-        assert isinstance(html, str), "render_email_preview muss HTML-String zurückgeben"
+        assert isinstance(html, str), "E-Mail-Vorschau muss HTML-String zurückgeben"
         assert len(html) > 100, f"HTML zu kurz: {len(html)} Zeichen"
 
     def test_ac3_render_sms_preview_accepts_demo_flag(self, service):
@@ -376,7 +341,7 @@ class TestT6DemoMode:
 
         from services.trip_report_scheduler import TripReportSchedulerService
         from app.config import Settings
-        scheduler = TripReportSchedulerService(Settings())
+        scheduler = TripReportSchedulerService(Settings(), user_id="default")
         trip = service._load_trip("gr221-mallorca", user_id="default")
         from datetime import date
         target = date.today()
@@ -388,21 +353,6 @@ class TestT6DemoMode:
         result = scheduler._fetch_weather(segments, provider=fixture_provider)
         assert isinstance(result, list), "_fetch_weather mit provider muss Liste zurückgeben"
         assert len(result) > 0
-
-    def test_ac3_demo_endpoint_email_returns_200(self, client):
-        """AC-3: GET /api/preview/{trip_id}/email?demo=1 muss immer HTTP 200 zurückgeben.
-
-        ERWARTET FEHLSCHLAG: Endpoint verarbeitet demo-Param noch nicht —
-        Service wirft TypeError bei demo=True.
-        """
-        resp = client.get(
-            "/api/preview/gr221-mallorca/email",
-            params={"type": "morning", "user_id": "default", "demo": "1"},
-        )
-        assert resp.status_code == 200, (
-            f"Demo-Endpoint muss 200 zurückgeben, war: {resp.status_code}\n{resp.text[:300]}"
-        )
-        assert len(resp.text) > 100, "Demo-HTML darf nicht leer sein"
 
     def test_ac3_demo_endpoint_sms_returns_200(self, client):
         """AC-3: GET /api/preview/{trip_id}/sms?demo=1 muss immer HTTP 200 zurückgeben."""

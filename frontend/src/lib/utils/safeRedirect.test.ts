@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { safeRedirectPath } from './safeRedirect.ts';
 
 test('AC-4: relativer Pfad wird uebernommen', () => {
-	assert.equal(safeRedirectPath('/trips/abc?tab=stages'), '/trips/abc?tab=stages');
+	assert.equal(safeRedirectPath('/trips/abc?tab=etappen'), '/trips/abc?tab=etappen');
 });
 
 test('AC-4: fehlender Wert faellt auf Startseite zurueck', () => {

@@ -3,7 +3,7 @@ entity_id: issue_674_aktivitaetstyp_fahrrad
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 parent_issue: 674
 issues: [674]
@@ -25,7 +25,7 @@ Fahrradtouren als eigenen Aktivitätstyp mit drei Geschwindigkeitsstufen (15, 20
 **Schicht: Frontend (SvelteKit) + Go-API (gemischt)**
 
 - `frontend/src/lib/types.ts` — `ActivityType` Union: 3 neue Werte ergänzen
-- `frontend/src/lib/components/trip-wizard/wizardHelpers.ts` — `mapActivityToProfile()`: neue Fahrrad-Fälle → `'allgemein'`; `ACTIVITY_TO_OPTION`-Record ergänzen
+- `frontend/src/lib/components/shared/wizardHelpers.ts` — `mapActivityToProfile()`: neue Fahrrad-Fälle → `'allgemein'`; `ACTIVITY_TO_OPTION`-Record ergänzen
 - `frontend/src/lib/components/trip-wizard/steps/Step3Weather.svelte` — `ACTIVITY_OPTIONS`, `OPTION_TO_ACTIVITY`, `ACTIVITY_TO_OPTION`: Fahrrad-Einträge
 - `frontend/src/lib/utils/naismith.ts` — `computeArrivalTimes()`: neuer optionaler Parameter `speedFlatKmh?`; neue exportierte Hilfsfunktion `activityToSpeed(activity?: ActivityType)`
 - `frontend/src/lib/components/edit/EditStagesPanelNew.svelte` — neue Prop `activityType?: ActivityType`; wird an `computeArrivalTimes` weitergegeben

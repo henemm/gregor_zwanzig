@@ -3,12 +3,14 @@ entity_id: issue_339_verify_timing
 type: infra
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [workflow, hooks, e2e, ci-cd, deployment-pipeline, staging, issue-339, issue-337, issue-86]
 ---
 
 <!-- Issue #339 — Schwere E2E-Verifikation vom Commit-Gate in die Post-Push-Staging-Phase verschieben -->
+
+> Teilweise abgelöst durch den Liefer-Workflow in `CLAUDE.md` (PR statt Direkt-Push): „nach `git push origin main`“ gilt nicht mehr — `main` ändert sich nur per Pull Request mit grüner CI-Ampel; `/e2e-verify` läuft nach Merge und Staging-Auto-Deploy.
 
 # Issue #339 — Verifikation zum richtigen Zeitpunkt (Commit-Stage vs. Acceptance-Stage)
 
@@ -44,7 +46,7 @@ Konkret: Die deployed-environment-Anforderung wird aus dem Commit-Pfad **entfern
 | `.claude/commands/e2e-verify.md` | Slash-Command | Wird zur staging-basierten Acceptance-Stage-Prozedur |
 | `.claude/hooks/e2e_browser_test.py` | Python-Tool | Browser-Check; Ziel-URL wird konfigurierbar |
 | `.claude/hooks/email_spec_validator.py` | Python-Tool | Mail-Inhaltsprüfung; IMAP-Quelle wird Stalwart |
-| `src/services/trip_report_scheduler.py` | Python-Modul (read-only) | `send_reports()` iteriert über ALLE aktiven Touren → in der Verifikation verboten |
+| `src/services/trip_report_scheduler.py` | Python-Modul (read-only) | `send_reports()` iteriert über ALLE aktiven Trips → in der Verifikation verboten |
 | Issue #337 | GitHub-Issue | Akutes Sicherheitsleck — wird hiermit miterledigt |
 | Issue #86 | GitHub-Issue | `detect_scope()` bleibt gültig, wird in die Acceptance-Prozedur übernommen |
 
@@ -64,7 +66,7 @@ Die Prozedur läuft **nach** `git push origin main`, sobald der Staging-Auto-Dep
 - **Verboten:** `fuser -k 8090/tcp`, lokaler `go run ./cmd/gregor-api`, jeder Eingriff in einen Prod-/Staging-Systemd-Prozess.
 - **Scope-Verzweigung** (Logik aus #86, `detect_scope()`):
   - `frontend-only`: visuelle Prüfung auf Staging (Playwright/Screenshot). **Kein** Mailversand.
-  - `backend` / `full-stack`: Test-Trip anlegen, Report **ausschließlich** an diesen Test-Trip mit Test-Empfänger `gregor-test@henemm.com` senden — **niemals** `send_reports()` (alle aktiven Touren). IMAP-Verifikation gegen Stalwart.
+  - `backend` / `full-stack`: Test-Trip anlegen, Report **ausschließlich** an diesen Test-Trip mit Test-Empfänger `gregor-test@henemm.com` senden — **niemals** `send_reports()` (alle aktiven Trips). IMAP-Verifikation gegen Stalwart.
 - Schreibt `.claude/e2e_verified.json` mit `scope` und den durchgeführten Checks als Nachweis für den Pre-Prod-Schritt.
 
 ### 3. `e2e_browser_test.py` — URL konfigurierbar

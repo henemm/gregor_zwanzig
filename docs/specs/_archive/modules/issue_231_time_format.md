@@ -3,7 +3,7 @@ entity_id: issue_231_time_format
 type: module
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, refactor, normalization]
 issue: 231
@@ -131,7 +131,7 @@ test('AC-1.5: toHHMMSS — unbekanntes Format wird durchgereicht (kein Crash)', 
 });
 ```
 
-Ausführung: `cd frontend && node --experimental-strip-types --test src/lib/utils/time.test.ts`
+Ausführung: `cd frontend && node --experimental-strip-types --test frontend/src/lib/utils/time.test.ts`
 
 ## Out-of-Scope
 

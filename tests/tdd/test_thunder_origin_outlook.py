@@ -104,7 +104,7 @@ def _dp(h: int, *, tag: date = _MORGEN, cape=None, cin=None, lpi=None,
     """Ein Stundenpunkt mit ROHWERTEN — Stufe und Traeger rechnet die Fusion.
 
     Geeichte Leitern der Testregion DE_ALPEN/icon_d2 (gemessen, nicht
-    geraten): CAPE 300/750/1200 J/kg, LPI 1/30/50 J/kg, Blitzdichte
+    geraten): CAPE 300/1000/2500 J/kg (#2178), LPI 1/30/50 J/kg, Blitzdichte
     0.003/0.015/0.075 je km2. ``cin=5.0`` liegt im Band "schwacher Deckel"
     (Betrag < 25) und laesst die CAPE-Leiter voll zaehlen.
     """
@@ -204,7 +204,20 @@ def _mail(zeilen: list[dict], *, report_config: TripReportConfig | None = None):
 # Messsonden auf der ZUGESTELLTEN Ausgabe
 # ---------------------------------------------------------------------------
 
-def _gew_zelle(html: str, kopf: str = "Gewitter") -> str:
+def _gewitter_kopf() -> str:
+    """Beschriftung der Gewitter-Spalte -- abgeleitet, nicht getippt.
+
+    #2136/ADR-0068: beide Ausblick-Pfade (der feste Sieben-Spalten-Zweig OHNE
+    Grundauswahl UND der grundauswahl-getriebene Zweig ueber
+    ``outlook_columns()``) tragen seither denselben `MetricDefinition.col_label`
+    ("Thdr") -- die vormalige Unterscheidung "Gew" (fest) vs. "Gewitter"
+    (Katalog-Langname, #1848 A3) ist damit entfallen."""
+    from app.metric_catalog import get_metric
+
+    return get_metric("thunder").col_label
+
+
+def _gew_zelle(html: str, kopf: "str | None" = None) -> str:
     """Der Text der Gewitter-Zelle der Ausblick-Tabelle aus fertigem Mail-HTML.
 
     Die Ausblick-Tabelle ist die EINZIGE Tabelle der Mail mit der Kopfzelle
@@ -214,13 +227,11 @@ def _gew_zelle(html: str, kopf: str = "Gewitter") -> str:
     eine spaeter eingeschobene Spalte darf diesen Test nicht still
     verschieben.
 
-    ``kopf`` ist die Beschriftung der Gewitter-Spalte: der Katalogname
-    "Gewitter" (``outlook_columns()``), seit #1848 A3 die Vorgabe -- der
-    Ausblick erbt die Grundauswahl und traegt deshalb ausgeschriebene
-    deutsche Spaltennamen. Das Kuerzel "Gew" des festen Sieben-Spalten-
-    Ausblicks bleibt ueber den Parameter erreichbar; es gilt nur noch fuer
-    Flaechen ganz ohne Grundauswahl (ADR-0050 D4).
+    ``kopf`` (Default ``None`` -> ``_gewitter_kopf()``, `col_label` "Thdr"):
+    seit #2136/ADR-0068 dieselbe Beschriftung in BEIDEN Ausblick-Pfaden.
     """
+    if kopf is None:
+        kopf = _gewitter_kopf()
     suppe = BeautifulSoup(html, "html.parser")
     tabellen = [
         t for t in suppe.find_all("table")
@@ -330,7 +341,7 @@ def test_ac1_html_ausblickzelle_nennt_die_tragende_zutat():
 def test_ac2_klartext_ausblick_traegt_denselben_zusatz():
     """AC-2: Given dieselbe Etappe / When der Klartext-Ausblick derselben Mail
     gerendert wird / Then traegt das Gewitterfeld denselben Zusatz im selben
-    Wortlaut, hinter der Onset-Stunde ("⚡leicht@16 · CAPE").
+    Wortlaut, hinter der Onset-Stunde ("leicht@16 · CAPE").
 
     ⚠️ Abgeloest durch #1493 (2026-08-18): der urspruengliche Wortlaut dieses
     AC lautete "… — der Klartext fuehrt wie bisher keine Tagesuhrzeit", und
@@ -343,8 +354,8 @@ def test_ac2_klartext_ausblick_traegt_denselben_zusatz():
     """
     bericht = _mail([_ausblick_zeile([_dp(16, cape=400.0, cin=5.0)])])
     zeile = _klartext_ausblick_zeile(bericht.email_plain)
-    assert "⚡leicht@16 · CAPE" in zeile, (
-        f"Der Klartext-Ausblick muss '⚡leicht@16 · CAPE' zeigen (Onset-Stunde "
+    assert "leicht@16 · CAPE" in zeile, (
+        f"Der Klartext-Ausblick muss 'leicht@16 · CAPE' zeigen (Onset-Stunde "
         f"am Gewitterfeld seit #1493): {zeile!r}")
 
 
@@ -356,8 +367,8 @@ def test_ac3_telegram_trendblock_nennt_die_zutat():
     Block vor der Pruefung wieder zusammengefuegt, s. ``_telegram_ausblick``)."""
     bericht = _mail([_ausblick_zeile([_dp(16, cape=400.0, cin=5.0)])])
     block = _telegram_ausblick(bericht)
-    assert "⚡leicht@16 · CAPE" in block, (
-        f"Der Telegram-Ausblick muss '⚡leicht@16 · CAPE' zeigen: {block!r}")
+    assert "leicht@16 · CAPE" in block, (
+        f"Der Telegram-Ausblick muss 'leicht@16 · CAPE' zeigen: {block!r}")
 
 
 def test_ac4_zwei_tragende_zutaten_werden_beide_genannt():
@@ -389,7 +400,7 @@ def test_ac4_zwei_tragende_zutaten_werden_beide_genannt():
     Testartefakt.
     """
     zelle_a = _gew_zelle(_mail([
-        _ausblick_zeile([_dp(16, cape=1500.0, cin=5.0, lpi=60.0)])
+        _ausblick_zeile([_dp(16, cape=3000.0, cin=5.0, lpi=60.0)])
     ]).email_html)
     assert zelle_a == "hoch @16 · CAPE, Blitzpotenzial", (
         f"Beide Traeger der Hoechststufe muessen mit ', ' verbunden in "
@@ -397,7 +408,7 @@ def test_ac4_zwei_tragende_zutaten_werden_beide_genannt():
         f"das die Katalogreihenfolge: {zelle_a!r}")
 
     zelle_b = _gew_zelle(_mail([_ausblick_zeile(
-        [_dp(15, lpi=60.0), _dp(16, cape=1500.0, cin=5.0)]
+        [_dp(15, lpi=60.0), _dp(16, cape=3000.0, cin=5.0)]
     )]).email_html)
     assert zelle_b == "hoch @15 · Blitzpotenzial, CAPE", (
         f"Tragen ZWEI Stunden des Tagesfensters die Hoechststufe ueber "
@@ -419,7 +430,7 @@ def test_ac5_herkunft_steht_vor_dem_hagel_zusatz():
     zeile = _klartext_ausblick_zeile(bericht.email_plain)
     # #1493: Onset-Stunde im Klartext-Ausblick; Reihenfolge Herkunft vor
     # Hagel -- der Gegenstand dieses Tests -- unveraendert.
-    assert "⚡leicht@16 · CAPE · Hagel: ja" in zeile, (
+    assert "leicht@16 · CAPE · Hagel: ja" in zeile, (
         f"Dieselbe Reihenfolge im Klartext-Ausblick: {zeile!r}")
 
 
@@ -486,7 +497,9 @@ def test_ac7_ohne_gewitter_bleibt_die_zelle_zeichengleich():
     # #1848 A3: das Gewitterfeld ist nicht mehr das letzte der Zeile (der
     # Ausblick erbt die Grundauswahl, weitere Spalten folgen). Geprueft wird
     # unveraendert der Zellentext, nur spaltengenau statt am Zeilenende.
-    assert "Gewitter ⚡–" in zeile_ruhig, (
+    # #2136/ADR-0068: das Klartext-Praefix ist `col_label` ("Thdr"), nicht
+    # mehr der deutsche Katalog-Langname ("Gewitter").
+    assert f"{_gewitter_kopf()} ⚡–" in zeile_ruhig, (
         f"Der Klartext-Ausblick bleibt zeichengleich '⚡–': {zeile_ruhig!r}")
 
     laut = _gew_zelle(_mail([_ausblick_zeile([_dp(16, cape=400.0, cin=5.0)])]).email_html)
@@ -588,7 +601,7 @@ def test_ac9_stufe_und_herkunft_stammen_aus_demselben_tagesfenster():
     wird dadurch schaerfer, nicht schwaecher.
     """
     abweichend = _gew_zelle(_mail([_ausblick_zeile(
-        [_dp(10, dichte=0.1), _dp(21, cape=1500.0, cin=5.0)],
+        [_dp(10, dichte=0.1), _dp(21, cape=3000.0, cin=5.0)],
         report_config=TripReportConfig(day_window_start_hour=20, day_window_end_hour=23),
     )]).email_html)
     assert abweichend == "hoch @21 · CAPE", (
@@ -600,7 +613,7 @@ def test_ac9_stufe_und_herkunft_stammen_aus_demselben_tagesfenster():
         f"{abweichend!r}")
 
     standard = _gew_zelle(_mail([_ausblick_zeile(
-        [_dp(10, dichte=0.1), _dp(21, cape=1500.0, cin=5.0)],
+        [_dp(10, dichte=0.1), _dp(21, cape=3000.0, cin=5.0)],
     )]).email_html)
     assert standard == "hoch @10 · Blitzdichte", (
         f"Im Standardfenster 4-19 muessen Stufe UND Herkunft aus der "
@@ -640,14 +653,15 @@ def test_ac11a_compare_ausblick_ohne_metrikauswahl_erbt_die_herkunft():
     """
     html, text = _compare_mail([_dp(16, cape=400.0, cin=5.0)])
     # Ohne gespeicherte Spaltenauswahl UND ohne Grundauswahl bleibt der feste
-    # Sieben-Spalten-Ausblick in Kraft (ADR-0050 D4) -- dort heisst die Spalte
-    # weiterhin "Gew", nicht "Gewitter" (#1848 A3).
-    zelle = _gew_zelle(html, kopf="Gew")
+    # Sieben-Spalten-Ausblick in Kraft (ADR-0050 D4) -- die Spalte traegt seit
+    # #2136/ADR-0068 denselben `col_label` ("Thdr") wie der grundauswahl-
+    # getriebene Zweig, `_gew_zelle()` braucht keinen expliziten Kopf mehr.
+    zelle = _gew_zelle(html)
     assert zelle == "leicht @16 · CAPE", (
         f"Der Compare-Ausblick erbt den geteilten Zeilenbau und muss die "
         f"Herkunft ebenso nennen: {zelle!r}")
     zeile = _klartext_ausblick_zeile(text, _COMPARE_UEBERSCHRIFT)
-    assert "⚡leicht@16 · CAPE" in zeile, (
+    assert "leicht@16 · CAPE" in zeile, (
         f"Auch der Klartext-Ausblick der Vergleichsmail muss Herkunft UND "
         f"Onset-Stunde nennen (seit #1493): {zeile!r}")
 
@@ -701,21 +715,23 @@ def test_ac11b_compare_ausblick_mit_metrikauswahl_nennt_die_herkunft():
 
     html_a, text_a = _compare_mail([_dp(16, cape=400.0, cin=5.0)],
                                    outlook_metrics=auswahl)
-    zelle_a = _gew_zelle(html_a, kopf="Gewitter")
+    zelle_a = _gew_zelle(html_a)
     assert zelle_a == "leicht @16 · CAPE", (
         f"Auch der Metrik-Zweig des Compare-Ausblicks muss die tragende Zutat "
         f"nennen — seit #1848 A3 aus demselben Zellenbau wie der feste Zweig, "
         f"also MIT Onset-Uhrzeit: {zelle_a!r}")
     zeile_a = _klartext_ausblick_zeile(text_a, _COMPARE_UEBERSCHRIFT)
-    assert "Gewitter ⚡leicht@16 · CAPE" in zeile_a, (
+    # #2136/ADR-0068: das Klartext-Praefix ist seither `col_label` ("Thdr"),
+    # nicht mehr der deutsche Katalog-Langname ("Gewitter").
+    assert f"{_gewitter_kopf()} leicht@16 · CAPE" in zeile_a, (
         f"Der Klartext-Ausblick des Metrik-Zweigs muss dieselbe Herkunft "
         f"zeigen: {zeile_a!r}")
 
     html_b, _ = _compare_mail(
-        [_dp(2, cape=1500.0, cin=5.0), _dp(16, dichte=0.005)],
+        [_dp(2, cape=3000.0, cin=5.0), _dp(16, dichte=0.005)],
         outlook_metrics=auswahl,
     )
-    zelle_b = _gew_zelle(html_b, kopf="Gewitter")
+    zelle_b = _gew_zelle(html_b)
     # #1848 A3: Metrik-Zweig und fester Zweig liefern fuer DIESELBE Fixture
     # jetzt zeichengleich denselben Text (nachgemessen) -- vorher stand hier
     # "hoch · CAPE", waehrend der feste Zweig derselben Mail den Satz unten
@@ -727,9 +743,9 @@ def test_ac11b_compare_ausblick_mit_metrikauswahl_nennt_die_herkunft():
         f"Die staerkere NACHT-Stufe darf in der Vorschau gar nicht "
         f"erscheinen (#1848 A3): {zelle_b!r}")
     fest_b, _ = _compare_mail(
-        [_dp(2, cape=1500.0, cin=5.0), _dp(16, dichte=0.005)],
+        [_dp(2, cape=3000.0, cin=5.0), _dp(16, dichte=0.005)],
     )
-    assert _gew_zelle(fest_b, kopf="Gew") == zelle_b, (
+    assert _gew_zelle(fest_b) == zelle_b, (
         "Metrik-Zweig und fester Zweig derselben Mailart muessen dieselbe "
         "Gewitter-Zelle zeigen — sonst haette der Ortsvergleich zwei "
         "Bedeutungen fuer dieselbe Spalte (#1848 A3)."

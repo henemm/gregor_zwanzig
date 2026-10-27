@@ -3,7 +3,7 @@ entity_id: issue_653_telegram_tier2_timeline_tests
 type: tests
 created: 2026-06-07
 updated: 2026-06-07
-status: approved
+status: implemented
 version: "1.0"
 tags: [telegram, query, timeline, tier2, epic-639, tdd]
 ---
@@ -17,7 +17,7 @@ tags: [telegram, query, timeline, tier2, epic-639, tdd]
 ## Purpose
 
 TDD-Test-Inventar für die vertikale Timeline-Ausgabe (Tier-2).
-Modul-Spec: `docs/specs/modules/issue_653_telegram_tier2_timeline.md`.
+Modul-Spec: `docs/specs/_archive/modules/issue_653_telegram_tier2_timeline.md`.
 
 Alle Tests beweisen Nutzerverhalten über **echte Datei-I/O** (Trip + Snapshot über
 eine `tmp_path`-Umlenkung von `app.loader.get_data_dir`) — **keine** Mocks, keine

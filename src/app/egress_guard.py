@@ -48,6 +48,13 @@ INVENTORY: dict[str, IsolationKind] = {
     "public-api.meteofrance.fr": IsolationKind.BLOCKED,
     # Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
     "www.risque-prevention-incendie.fr": IsolationKind.BLOCKED,
+    # Issue #1441 S1: Lawinen-Lagebericht (avalanche.report, CAAML v6) -- Warn-Host
+    # wie alle uebrigen: Test/Staging erreichen ihn nicht real. ``static.`` leitet
+    # per 301 auf ``avalanche.report`` weiter (beide deklariert).
+    "static.avalanche.report": IsolationKind.BLOCKED,
+    "avalanche.report": IsolationKind.BLOCKED,
+    # Issue #1441 S3: SLF-Lawinen-Lagebericht (CAAML6, ganze Schweiz) -- Warn-Host.
+    "aws.slf.ch": IsolationKind.BLOCKED,
     "gateway.seven.io": IsolationKind.TEST_ACCESS,
     "api.telegram.org": IsolationKind.TEST_ACCESS,
     "mail.henemm.com": IsolationKind.TEST_ACCESS,

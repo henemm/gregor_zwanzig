@@ -115,8 +115,17 @@ class LocationWeatherSource(Protocol):
         start_hour: Optional[int] = None,
         end_hour: Optional[int] = None,
         elevation_m: Optional[int] = None,
+        *,
+        user_id: str,
     ) -> PointWeatherData:
         ...
+
+    # Issue #2387: `user_id` ist Schluesselwort-PFLICHT ohne Default. Ein
+    # Default waere genau der stille Rueckfall, den ADR-0003 verbietet --
+    # der Ortsvergleichs-Abrufpfad bucht sonst den Verbrauch eines Nutzers
+    # in einen fremden oder gar keinen Topf. Beide Aufrufer
+    # (`compare_alert.py`, `scheduler_dispatch_service.py`) fuehren die
+    # Kennung bereits.
 
 
 class TripSegmentWeatherAdapter:

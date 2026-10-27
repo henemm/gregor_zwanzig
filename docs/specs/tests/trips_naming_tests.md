@@ -3,7 +3,7 @@ entity_id: trips_naming_tests
 type: tests
 created: 2026-05-05
 updated: 2026-05-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, naming, ui, issue-126]
 ---

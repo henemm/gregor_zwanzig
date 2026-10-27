@@ -3,7 +3,7 @@ entity_id: issue_379_session_self_isolate_tests
 type: tests
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, hooks, infrastructure, session, worktree, parallel-sessions]
 parent: issue_379_session_self_isolate
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_379_session_self_isolate.md`. Jeder
+Test-Manifest für `docs/specs/_archive/modules/issue_379_session_self_isolate.md`. Jeder
 pytest-Test mappt 1:1 auf ein Acceptance Criterion (AC-1..AC-9) der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_379_session_self_isolate.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_379_session_self_isolate.md` v1.0
 
 ## Source
 

@@ -32,6 +32,7 @@ class RadarCacheEntry:
     frames: list
     source: str
     cached_at: datetime
+    convective_checked: bool = True  # Issue #2464
 
 
 class RadarNowcastCacheService:
@@ -64,7 +65,7 @@ class RadarNowcastCacheService:
     Thread-safe (interner Lock, Muster `WeatherCacheService`).
     """
 
-    def __init__(self, ttl_seconds: int = 300) -> None:
+    def __init__(self, ttl_seconds: int = 240) -> None:
         self._cache: dict[str, RadarCacheEntry] = {}
         self._lock = Lock()
         self._ttl_seconds = ttl_seconds
@@ -101,13 +102,16 @@ class RadarNowcastCacheService:
 
     def put(
         self, lat: float, lon: float, region: str, frames: list, source: str, now: datetime,
-        elevation_m: Optional[float] = None,
+        elevation_m: Optional[float] = None, convective_checked: bool = True,
     ) -> None:
         if not frames:
             return  # Negativ-Ergebnisse werden NIE gecacht (Alarm-Blindheit vermeiden)
         key = self._key(lat, lon, region, elevation_m)
         with self._lock:
-            self._cache[key] = RadarCacheEntry(frames=frames, source=source, cached_at=now)
+            self._cache[key] = RadarCacheEntry(
+                frames=frames, source=source, cached_at=now,
+                convective_checked=convective_checked,
+            )
 
     def clear(self) -> None:
         with self._lock:
@@ -120,10 +124,11 @@ _shared_radar_cache: Optional["RadarNowcastCacheService"] = None
 _shared_radar_cache_lock = Lock()
 
 
-def get_shared_radar_cache(ttl_seconds: int = 300) -> "RadarNowcastCacheService":
+def get_shared_radar_cache(ttl_seconds: int = 240) -> "RadarNowcastCacheService":
     """Prozessweiter Singleton (thread-safe, double-checked locking) --
-    TTL default 300s (unter der feinsten Quell-Aufloesung RADOLAN 5 Min,
-    weit unter dem 15-Minuten-Alarmtakt): der Radar-Pfad ist der
+    TTL default 240s (<= Takt 300 s - Zeitgrenze 45 s, #2261 A-2 S2, ADR-0082:
+    ein im Lauf N geholter Eintrag wird im Lauf N+1 nicht aelter als TTL
+    ausgeliefert, im 5-Minuten-Alarmtakt): der Radar-Pfad ist der
     zeitkritischste Alarm-Pfad (Gewitter-Anzug)."""
     global _shared_radar_cache
     if _shared_radar_cache is None:

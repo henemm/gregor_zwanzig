@@ -87,7 +87,10 @@
 	let availableChannels = $derived({
 		email: !!profile?.mail_to,
 		telegram: !!profile?.telegram_chat_id,
-		sms: !!profile?.sms_to && profile?.sms_allowed !== false
+		// Issue #2406: nur eine BEWIESENE Nummer ist schaltbar — die Sperre in
+		// config.py verwirft eine unbestaetigte ohnehin, ein aktivierbarer
+		// Schalter verspraeche also einen Versand, den es nicht gibt (AC-14).
+		sms: !!profile?.sms_to && profile?.sms_allowed !== false && !!profile?.sms_verified
 	});
 
 	// Issue #1258 S6 (R5): ehrlicher Verbindungsstatus je Kanal (Dot + Label),
@@ -95,7 +98,7 @@
 	let connectionStatus = $derived(channelConnectionStatus(profile));
 	let contactLabel = $derived(channelContactLabel(profile));
 	// Issue #1717 S3: geteilter Zustands-Helfer — dieselbe Quelle, die
-	// EditReportConfigSection benutzt (keine zweite Kopie der Logik).
+	// die frühere Report-Config-Section (#2277 S5 entfernt) benutzt (keine zweite Kopie der Logik).
 	let premiumSms = $derived(premiumSmsChannelState(profile));
 
 	onMount(() => {
@@ -114,7 +117,7 @@
 	// Funktionen (vtBriefingChannelsText.ts) — keine Wertung mehr ("läuft/wird
 	// flach" raus), SMS-Zeichengrenze kontextabhängig (Trip 160 / Vergleich 153).
 	const ctxLeadText = $derived(vtBriefingLeadText(context));
-	const SUB = $derived(vtBriefingSubTexts(context));
+	const SUB = $derived(vtBriefingSubTexts(context, telegramStyle));
 </script>
 
 <div>
@@ -185,6 +188,13 @@
 				{#if profile?.sms_allowed === false}
 					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
 						SMS ab Level Standard verfügbar
+					</div>
+				{:else if profile?.sms_to && !profile?.sms_verified}
+					<!-- Issue #2406: eine eingetragene, aber unbewiesene Nummer ist nicht
+					     dasselbe wie "keine Nummer" — der Hinweis nennt den einzigen Weg
+					     zur Freischaltung. -->
+					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
+						Nummer noch nicht bestätigt — <a href="/account">Code im Account eingeben</a>
 					</div>
 				{:else if !availableChannels.sms}
 					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">

@@ -65,7 +65,7 @@ nie „vorbei".
 Bezugstag
 ---------
 ``stage_date(lat, lon)`` liefert dieselbe Formel, die ``trip_alert.py`` seit
-Issue #1697 fuer ``convert_trip_to_segments`` benutzt (Ortstag der Tour ueber
+Issue #1697 fuer ``convert_trip_to_segments`` benutzt (Ortstag der Trip ueber
 ``trip_local_today``, ADR-0044, nicht mehr ``date.today()``). Fixturen
 nehmen das Etappendatum daraus statt aus
 ``datetime.now(timezone.utc).date()``: sonst zeigen Etappendatum und
@@ -187,7 +187,7 @@ def stage_date(lat: float, lon: float) -> date:
     """Etappendatum, das zur Segmentauswahl in ``trip_alert.py`` passt.
 
     Issue #1697: ``check_radar_alerts()`` sucht die Etappe seither ueber
-    ``trip_local_today(trip, now_utc)`` (Ortstag der Tour, ADR-0044) statt
+    ``trip_local_today(trip, now_utc)`` (Ortstag der Trip, ADR-0044) statt
     ueber ``date.today()`` (Serverdatum). ``lat``/``lon`` sind deshalb
     PFLICHT (kein Default) — jeder Aufrufer muss bewusst dieselben
     Koordinaten uebergeben, die er auch fuer

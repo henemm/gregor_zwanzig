@@ -1,0 +1,273 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/2346-s2
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 30 items
+
+tests/unit/test_e2e_positivliste_ratschen_bindung.py ...........         [ 36%]
+tests/unit/test_e2e_compare_paritaet_waechter.py ...................     [100%]
+
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/hub-cross-user-write-block.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/compare-editor-autosave-user-isolation.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_kein_spec_schreibt_in_den_versionierten_baum
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_filter_c_kriterium_ist_geeicht
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[36-38-True-nennt0]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[40-38-True-nennt1]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[38-38-False-nennt2]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[3-3-False-nennt3]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[5-3-True-nennt4]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[None-38-True-nennt5]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_echte_ci_yml_und_positivliste_sind_exakt_gebunden
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_hat_keine_unbegruendete_compare_only_spec
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_waechst_nicht_ueber_den_einfuehrungsstand
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_ist_nicht_leer
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[altmuster]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[hub_kinds]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_neue_compare_spec_ohne_kopf_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_mit_zu_kurzer_begruendung_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_kurzer_marker_ist_auch_mit_schleife_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_hinter_zeile_30_zaehlt_nicht
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_umgehung_per_dateiname_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trips_url]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trip_tab]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[schleife]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_spec_ohne_compare_bezug_ist_nicht_betroffen
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_deckt_verstoss
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_toter_altlast_eintrag_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_konformer_altlast_eintrag_ist_rot
+============================== 30 passed in 0.82s ==============================
+=== PLAYWRIGHT pw_base ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (1.4s)
+  ✓  2 [tests] › e2e/hub-cross-user-write-block.spec.ts:57:2 › AC-2 (route): Nutzer B schreibt per PUT auf das Objekt von A ⇒ 404, Stand von A unverändert (34ms)
+  ✓  3 [tests] › e2e/hub-cross-user-write-block.spec.ts:57:2 › AC-2 (vergleich): Nutzer B schreibt per PUT auf das Objekt von A ⇒ 404, Stand von A unverändert (30ms)
+  ✓  4 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (1.9s)
+  ✓  5 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (2.0s)
+  5 passed (26.6s)
+=== PLAYWRIGHT pw_mutA_sync ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (799ms)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (2.1s)
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (2.2s)
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: 1
+    Received: 2
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: 1
+    Received: 2
+  2 failed
+  1 passed (25.5s)
+=== PLAYWRIGHT pw_mutA_400 ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (752ms)
+  ✓  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (1.8s)
+  ✓  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (1.9s)
+  3 passed (24.0s)
+=== PLAYWRIGHT pw_mutA_100 ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (726ms)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (2.0s)
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (2.2s)
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: 1
+    Received: 2
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: 1
+    Received: 2
+  2 failed
+  1 passed (25.6s)
+=== PLAYWRIGHT pw_mutP1 ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (872ms)
+  ✓  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (2.0s)
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (10.9s)
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+    Expected: >= 1
+    Received:    0
+  1 failed
+  2 passed (34.3s)
+=== PLAYWRIGHT pw_mutP2 ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (818ms)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (11.0s)
+  ✓  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (2.8s)
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+    Expected: >= 1
+    Received:    0
+  1 failed
+  2 passed (36.9s)
+=== PLAYWRIGHT pw_mutP3 ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (930ms)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (1.9s)
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (2.0s)
+    Error: gespeicherter Stand trägt 08:00
+    Expected pattern: /^08:00/
+    Received string:  "09:00:00"
+    Error: gespeicherter Stand trägt 08:00
+    Expected pattern: /^08:00/
+    Received string:  "09:00:00"
+  2 failed
+  1 passed (29.5s)
+=== PLAYWRIGHT pw_mutP5 ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (1.0s)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (6.9s)
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (8.0s)
+    Error: expect(locator).toContainText(expected) failed
+    Expected substring: "Gespeichert"
+    Received string:    "✓ Gesichert 12:13"
+          - unexpected value "✓ Gesichert 12:13"
+    Error: expect(locator).toContainText(expected) failed
+    Expected substring: "Gespeichert"
+    Received string:    "✓ Gesichert 12:14"
+          - unexpected value "✓ Gesichert 12:14"
+  2 failed
+  1 passed (37.4s)
+=== PLAYWRIGHT pw_mutP6 ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (796ms)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (6.8s)
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:45:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen (11.3s)
+    Error: expect(locator).toHaveText(expected) failed
+    Expected pattern: /^\d{2}:\d{2}$/
+    Received string:  ""
+    Error: expect(locator).toHaveText(expected) failed
+    Expected pattern: /^\d{2}:\d{2}$/
+    Received string:  ""
+  2 failed
+  1 passed (39.6s)
+=== PLAYWRIGHT pw_mutG1 ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (1.5s)
+  ✘  2 [tests] › e2e/hub-cross-user-write-block.spec.ts:57:2 › AC-2 (route): Nutzer B schreibt per PUT auf das Objekt von A ⇒ 404, Stand von A unverändert (22ms)
+    Error: PUT von B auf /api/trips/e2e-gz-hub-1793016982767-349507
+    Expected: 404
+    Received: 200
+  1 failed
+  1 did not run
+  1 passed (21.9s)
+=== PLAYWRIGHT pw_mutG2 ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (1.4s)
+  ✓  2 [tests] › e2e/hub-cross-user-write-block.spec.ts:57:2 › AC-2 (route): Nutzer B schreibt per PUT auf das Objekt von A ⇒ 404, Stand von A unverändert (33ms)
+  ✘  3 [tests] › e2e/hub-cross-user-write-block.spec.ts:57:2 › AC-2 (vergleich): Nutzer B schreibt per PUT auf das Objekt von A ⇒ 404, Stand von A unverändert (19ms)
+    Error: PUT von B auf /api/compare/presets/cp-34abda38d5431c2a
+    Expected: 404
+    Received: 200
+  1 failed
+  2 passed (21.7s)
+=== PLAYWRIGHT Hauptlauf 63 Dateien (ohne bug-703), unmutiert ===
+  ✓  369 [tests] › e2e/send-in-flight-guard.spec.ts:258:2 › #2124 Ortsvergleich — geteilter Laufzustand › AC-2: Compare-Detail — 502 zeigt „Ergebnis unklar" statt „Fehler beim Senden" (732ms)
+
+  369 passed (6.8m)
+
+=== UNIT-MUTATIONEN (Adversary, String-Ersetzung, Ursprung per diff bestaetigt) ===
+E2E_MIN_SPECS 64->65               -> ROT test_echte_ci_yml_und_positivliste_sind_exakt_gebunden
+E2E_MIN_SPECS 64->63               -> ROT (selber Test)
+E2E_MIN_EXECUTED_HAUPT 369->370    -> KEIN Unit-Test rot (nur e2e_gate.py im CI)
+hub-versand-autosave-chip aus Liste-> ROT (selber Test, Laengenvergleich)
+Listeneintrag -> nicht existente Datei (Laenge gleich) -> KEIN Test rot (30 passed)
+hub-cross durch alten Namen        -> ROT test_positivliste_enthaelt_mandantentrennungs_spec[hub-cross...]
+ALTLAST + toter Eintrag            -> ROT test_echter_baum_hat_keine_unbegruendete_compare_only_spec
+neue compare-zzz-neu.spec.ts (ohne Kopf) + ALTLAST-Eintrag (ALTLAST_MAX = len(ALTLAST) folgt mit) -> 19 passed, KEIN Test rot
+MIN_BEGRUENDUNG 15->5              -> ROT test_marker_mit_zu_kurzer_begruendung_ist_rot
+KOPF_ZEILEN 30->300                -> KEIN Test rot (test_marker_hinter_zeile_30 nutzt die Konstante selbst)
+Regel 2 aus                        -> ROT (2 Tests)
+Regel 1 aus                        -> ROT (4 Tests)
+tote-Datei-Pruefung aus            -> ROT test_toter_altlast_eintrag_ist_rot
+Altmuster-Regex aus                -> ROT test_gedeckte_compare_spec_ist_konform[altmuster]
+ALTLAST_MAX = 3                    -> ROT test_altlast_waechst_nicht_ueber_den_einfuehrungsstand
+=== PLAYWRIGHT pw_mutG3 (Statuspruefung auf toBeGreaterThan(0) gelockert, Trip-Mutation) ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (1.4s)
+  ✘  2 [tests] › e2e/hub-cross-user-write-block.spec.ts:57:2 › AC-2 (route): Nutzer B schreibt per PUT auf das Objekt von A ⇒ 404, Stand von A unverändert (52ms)
+    Error: Name des Eigentümers unverändert
+    Expected: "E2E-GZ-Hub-Trip-1793017688872-405198"
+    Received: "Hijack"
+  1 failed
+  1 did not run
+  1 passed (21.8s)
+=== RUNDE 3: pytest nach Fix-Runde 1 ===
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/hub-cross-user-write-block.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/compare-editor-autosave-user-isolation.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_jeder_positivlisten_eintrag_existiert
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_kein_spec_schreibt_in_den_versionierten_baum
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_filter_c_kriterium_ist_geeicht
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[36-38-True-nennt0]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[40-38-True-nennt1]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[38-38-False-nennt2]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[3-3-False-nennt3]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[5-3-True-nennt4]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[None-38-True-nennt5]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_echte_ci_yml_und_positivliste_sind_exakt_gebunden
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_hat_keine_unbegruendete_compare_only_spec
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_waechst_nicht_ueber_den_einfuehrungsstand
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_ist_nicht_leer
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[altmuster]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[hub_kinds]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_neue_compare_spec_ohne_kopf_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_mit_zu_kurzer_begruendung_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_kurzer_marker_ist_auch_mit_schleife_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_hinter_zeile_30_zaehlt_nicht
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_in_zeile_30_zaehlt_noch
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_umgehung_per_dateiname_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trips_url]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trip_tab]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[schleife]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_spec_ohne_compare_bezug_ist_nicht_betroffen
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_deckt_verstoss
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_toter_altlast_eintrag_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_konformer_altlast_eintrag_ist_rot
+============================== 32 passed in 1.00s ==============================
+--- R3 M F002: neue Datei + ALTLAST-Eintrag
+FAILED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_waechst_nicht_ueber_den_einfuehrungsstand
+========================= 1 failed, 19 passed in 0.50s =========================
+--- R3 M F003: KOPF_ZEILEN 300
+FAILED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_hinter_zeile_30_zaehlt_nicht
+========================= 1 failed, 19 passed in 0.50s =========================
+--- R3 M F004: Listeneintrag nicht existent, gleiche Laenge
+FAILED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_jeder_positivlisten_eintrag_existiert
+========================= 1 failed, 11 passed in 0.91s =========================
+=== R3 PLAYWRIGHT F001 Doppel-PUT r3_400 ms ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (1.3s)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM",
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: [32m"stabil"[39m
+    Received: [31m2[39m
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: [32m"stabil"[39m
+    Received: [31m2[39m
+  2 failed
+  1 passed (45.7s)
+=== R3 PLAYWRIGHT F001 Doppel-PUT r3_800 ms ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (714ms)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM",
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: [32m"stabil"[39m
+    Received: [31m2[39m
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: [32m"stabil"[39m
+    Received: [31m2[39m
+  2 failed
+  1 passed (45.3s)
+=== R3 PLAYWRIGHT F001 Doppel-PUT r3_1400 ms ===
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (714ms)
+  ✘  2 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (route): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM",
+  ✘  3 [tests] › e2e/hub-versand-autosave-chip.spec.ts:46:2 › AC-1 (vergleich): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: [32m"stabil"[39m
+    Received: [31m2[39m
+    Error: eine Geste im Versand-Abschnitt darf nur EINEN PUT auslösen
+    Expected: [32m"stabil"[39m
+    Received: [31m2[39m
+  2 failed
+  1 passed (39.2s)
+=== R3 HAUPTLAUF 1 (frischer Stack, admin.json geloescht, 63 Dateien ohne bug-703) ===
+  369 passed (6.8m)
+=== R3 HAUPTLAUF 2 (frischer Stack, admin.json geloescht, 63 Dateien ohne bug-703) ===
+  369 passed (6.9m)
+=== R3 HAUPTLAUF 3 (frischer Stack, admin.json geloescht, 63 Dateien ohne bug-703) ===
+  369 passed (6.9m)
+=== R3 F005 ETag-Vakuum (etag: undefined) ===
+AC-2 (route) ROT: Vorbedingung: GET des Eigentuemers liefert einen ETag; vergleich did not run

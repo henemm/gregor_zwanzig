@@ -52,10 +52,12 @@ from app.models import (
 from providers.base import ProviderRequestError
 from providers.openmeteo import OpenMeteoProvider
 
-# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
-# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
-# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
-pytestmark = pytest.mark.live
+# Kern-Schicht (Test-Politik, CLAUDE.md): fuenf der sechs Tests arbeiten mit
+# lokalen Fehler-Servern (`_FaultServer`, `_DwdAlwaysFailServer`) und laufen
+# ohne Netz. Der modulweite `live`-Marker vom 2026-08-04 nahm sie alle aus der
+# Ampel, darunter die #1145-Zusicherung zur Mail-Fusszeile -- #1196 Klasse A,
+# 2026-09-08, offline nachgemessen. Nur `test_total_outage_routes_to_region_
+# direct_provider` bleibt live (s. dort).
 
 # Alle bekannten Open-Meteo-Modell-Forecast-Endpoints (Issue #1115-Vorbild).
 _FORECAST_ENDPOINTS = {"/v1/meteofrance", "/v1/dwd-icon", "/v1/metno", "/v1/ecmwf"}
@@ -325,6 +327,10 @@ def _make_segment_data(fallback_model=None, fallback_metrics=None) -> SegmentWea
 # AC-1 — Total-Ausfall routet auf den Direkt-Provider der Zielregion.
 # ---------------------------------------------------------------------------
 
+# Offline rot: der 503 des Open-Meteo-Seams propagiert, der Regions-Fallback
+# greift nicht (Ursache offen, #1196 Klasse A). Bis zur Klaerung in der
+# Live-Schicht, damit die fuenf gruenen Waechter der Datei nicht mitgesperrt bleiben.
+@pytest.mark.live
 def test_total_outage_routes_to_region_direct_provider(monkeypatch, tmp_path):
     """AC-1: Given Open-Meteo hat ALLE abdeckenden Modelle (inkl. globalem
     ECMWF) mit 5xx erschoepft (echter lokaler Test-Server liefert 503 auf

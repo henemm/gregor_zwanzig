@@ -89,6 +89,78 @@
       "host": "smtp.resend-fixture.test",
       "to": "paritaet-fixture@henemm.com",
       "soll": "allow"
+    },
+    {
+      "id": "adresse-nur-in-email-mail_to-abweichend",
+      "host": "smtp.resend-fixture.test",
+      "to": "nebenfeld-login@henemm.com",
+      "soll": "block"
+    },
+    {
+      "id": "wirksame-adresse-bei-abweichendem-email-erreichbar",
+      "host": "smtp.resend-fixture.test",
+      "to": "nebenfeld-kontakt@henemm.com",
+      "soll": "allow"
+    },
+    {
+      "id": "C3-20-A-resend",
+      "host": "smtp.resend-fixture.test",
+      "to": "henning@henemm.com, garbage",
+      "soll": "block"
+    },
+    {
+      "id": "C3-20-A-stalwart",
+      "host": "mail.henemm.com",
+      "to": "henning@henemm.com, garbage",
+      "soll": "block"
+    },
+    {
+      "id": "C3-20-B-resend",
+      "host": "smtp.resend-fixture.test",
+      "to": "henning@henemm.com garbage",
+      "soll": "block"
+    },
+    {
+      "id": "C3-20-B-stalwart",
+      "host": "mail.henemm.com",
+      "to": "henning@henemm.com garbage",
+      "soll": "block"
+    },
+    {
+      "id": "C3-20-C-resend",
+      "host": "smtp.resend-fixture.test",
+      "to": "\"x y\"@henemm.com",
+      "soll": "block"
+    },
+    {
+      "id": "C3-20-C-stalwart",
+      "host": "mail.henemm.com",
+      "to": "\"x y\"@henemm.com",
+      "soll": "allow"
+    },
+    {
+      "id": "C3-20-Z1-resend",
+      "host": "smtp.resend-fixture.test",
+      "to": "Nachname, Vorname <henning@henemm.com>",
+      "soll": "block"
+    },
+    {
+      "id": "C3-20-Z1-stalwart",
+      "host": "mail.henemm.com",
+      "to": "Nachname, Vorname <henning@henemm.com>",
+      "soll": "block"
+    },
+    {
+      "id": "C3-20-Z2-resend",
+      "host": "smtp.resend-fixture.test",
+      "to": "\"Nachname, Vorname\" <henning@henemm.com>",
+      "soll": "allow"
+    },
+    {
+      "id": "C3-20-Z2-stalwart",
+      "host": "mail.henemm.com",
+      "to": "\"Nachname, Vorname\" <henning@henemm.com>",
+      "soll": "allow"
     }
   ],
   "profile": {
@@ -115,19 +187,15 @@
     "paritaet-fixture-nutzer": {
       "mail_to": "paritaet-fixture@henemm.com",
       "email_verified_at": "2026-01-01T00:00:00Z"
+    },
+    "nebenfeld-email-verifiziert": {
+      "email": "nebenfeld-login@henemm.com",
+      "mail_to": "nebenfeld-kontakt@henemm.com",
+      "email_verified_at": "2026-01-01T00:00:00Z"
     }
   },
-  "ausnahmen": [
-    {
-      "fall": "D1",
-      "seite": "go",
-      "ist": "allow",
-      "scheibe": "S5",
-      "frist": "2026-10-28",
-      "grund": "Go blockt nur Resend-Hosts; auf dem Stalwart-Pfad greift der Guard nicht, daher wird die fremde Adresse durchgelassen. Aufloesung braucht den Zweck-Begriff aus S4."
-    }
-  ],
-  "ausnahmen_hoechstzahl": 1,
-  "verzweigungen_python": 15,
-  "verzweigungen_go": 34
+  "ausnahmen": [],
+  "ausnahmen_hoechstzahl": 0,
+  "verzweigungen_python": 19,
+  "verzweigungen_go": 42
 }

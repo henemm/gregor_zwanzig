@@ -28,6 +28,7 @@ from __future__ import annotations
 import shutil
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 from app.models import (
@@ -100,7 +101,7 @@ def _data(
 def _save_cached(user_id: str, trip_id: str, cached: list[SegmentWeatherData]) -> None:
     from services.weather_snapshot import WeatherSnapshotService
 
-    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, date.today(), cached)
+    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, ortstag(LAT, LON), cached)
 
 
 def _trip(trip_id: str, *, with_levels: bool = False, stage_date: date | None = None) -> Trip:
@@ -109,7 +110,7 @@ def _trip(trip_id: str, *, with_levels: bool = False, stage_date: date | None = 
     # Default-Start 08:00 samt Laufzeit-Schaetzung. Die Zeiten selbst tragen
     # keine Pruefaussage dieser Datei; sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
-        id="T1", name="Tag 1", date=stage_date or date.today(),
+        id="T1", name="Tag 1", date=stage_date or ortstag(LAT, LON),
         waypoints=[
             Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0,
                      arrival_calculated="08:00"),
@@ -168,7 +169,7 @@ def test_ac20_reset_behaelt_die_amtlichen_eintraege():
     GIVEN ein Melde-Gedaechtnis mit einem Aenderungs-Eintrag
           ("gust_max_kmh:seg1") UND einem amtlichen Eintrag
           ("official_alert:region:X:thunderstorm:...")
-    WHEN  das Gedaechtnis der Tour zurueckgesetzt wird
+    WHEN  das Gedaechtnis der Trip zurueckgesetzt wird
     THEN  bleibt der amtliche Eintrag unveraendert erhalten und nur der
           Aenderungs-Eintrag verschwindet.
     """
@@ -240,7 +241,7 @@ def test_ac20b_reset_bleibt_ohne_amtliche_eintraege_ein_vollstaendiges_loeschen(
 def test_ac21_nach_dem_briefing_meldet_der_unveraenderte_wert_nicht_erneut():
     """AC-21 (nutzersichtbar).
 
-    GIVEN eine Tour mit einer bereits gemeldeten Wetter-Aenderung im
+    GIVEN eine Trip mit einer bereits gemeldeten Wetter-Aenderung im
           Melde-Gedaechtnis
     WHEN  danach das regulaere Briefing versendet wird (Gedaechtnis-Reset) und
           derselbe, unveraenderte Wert erneut geprueft wird
@@ -605,7 +606,7 @@ def _install_fake_email_send_1614(monkeypatch) -> list:
 # liegt zu JEDER Tageszeit vollstaendig in der Zukunft — anders als "heute",
 # dessen Etappenfenster (06:00-17:00 UTC) am Abend vorbei ist.
 def _stage_date_1614() -> date:
-    return date.today() + timedelta(days=1)
+    return ortstag(LAT, LON) + timedelta(days=1)
 
 
 def _official_alert_1614(hazard: str, level: int, *, region: str = "Gailtal",

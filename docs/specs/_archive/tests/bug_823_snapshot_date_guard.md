@@ -3,7 +3,7 @@ entity_id: bug_823_snapshot_date_guard_tests
 type: tests
 created: 2026-06-20
 updated: 2026-06-20
-status: approved
+status: implemented
 version: "1.0"
 tags: [alerts, snapshot, bug]
 ---

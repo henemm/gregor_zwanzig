@@ -318,6 +318,11 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     # Roh/Einfach-Umschalter im 3-Tages-Ausblick -- geteilte Quelle mit dem
     # Frontend (Drift-Test gegen outlookFriendlyCapability.ts).
     ("src/app/metric_catalog.py", "OUTLOOK_FRIENDLY_CAPABLE", "element"),
+    # Issue #2422 S6 (B2): SMS_FORMAT_MODE_METRIC_IDS ist die EINE Quelle fuer
+    # "diese Groesse hat in der SMS zwei Formen (Roh/Einfach)" -- speist
+    # SMS-Builder, SMS-Reiter im Editor (/api/metrics sms_format_capable) und das
+    # Orakel (Drift-Test test_sms_einfach_roh_je_metrik.py).
+    ("src/app/metric_catalog.py", "SMS_FORMAT_MODE_METRIC_IDS", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['alpen-trekking']['metrics']", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['wandern']['metrics']", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['skitouren']['metrics']", "element"),
@@ -342,6 +347,8 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "email/compare_html.py", "_HOUR_FMT_OVERRIDES", "schluessel"),
     (_R + "email/compare_html.py", "_HOUR_SEV_OVERRIDES", "schluessel"),
     (_R + "email/helpers.py", "NO_HOURLY_COLUMN_METRIC_IDS", "element"),
+    # #2136: die sechs festen Ausblick-Groessen (Pfad 1, keine Auswahl).
+    (_R + "email/helpers.py", "OUTLOOK_FIXED_METRIC_IDS", "element"),
     (_R + "email/helpers.py", "_AMPEL_KEY_TO_METRIC_ID", "wert"),
     (_R + "email/helpers.py", "_AMPEL_CAPABLE_METRIC_IDS", "element"),
     (_R + "email/helpers.py", "_PILL_CATALOG_ORDER", "element"),
@@ -366,6 +373,12 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     ("src/services/day_comparison.py", "_METRIC_ID_TO_ENTRY_ATTR", "schluessel"),
     ("src/services/day_comparison.py", "_DIRECTION_WORDS", "schluessel"),
     ("src/services/day_comparison.py", "_DISPLAY_SALIENCE_OVERRIDES", "schluessel"),
+    # Issue #2134: die drei Bestands-Callback-Token der Telegram-Buttons
+    # (`dd_thunder_today` …) auf Katalog-Kennungen. Die Schluessel sind fremdes
+    # Button-Vokabular, die WERTE sind echte Kennungen — bei einer Umbenennung
+    # im Katalog muss diese Uebersetzung mitgezogen werden, sonst loesen die
+    # Bestands-Buttons still ins Leere auf.
+    ("src/services/trip_command_processor.py", "_DRILLDOWN_TOKEN_METRIC", "wert"),
     ("src/services/weather_change_detection.py",
      "_ALERT_METRIC_TO_CATALOG_ID[AlertMetric.TEMPERATURE_MIN]", "element"),
     ("src/services/weather_change_detection.py",

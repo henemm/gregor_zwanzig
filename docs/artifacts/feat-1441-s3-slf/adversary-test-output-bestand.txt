@@ -1,0 +1,830 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 304 items
+
+tests/test_avalanche_report_ausfall_sichtbarkeit.py .........            [  2%]
+tests/test_avalanche_report_channels.py ................................ [ 13%]
+                                                                         [ 13%]
+tests/test_avalanche_report_coverage.py ................                 [ 18%]
+tests/test_avalanche_report_dedup.py .....                               [ 20%]
+tests/test_avalanche_report_docs.py ....                                 [ 21%]
+tests/test_avalanche_report_escalation.py .................              [ 27%]
+tests/test_avalanche_report_ortsvergleich_kopfzeile.py ......            [ 29%]
+tests/test_avalanche_report_parser.py .................................. [ 40%]
+....                                                                     [ 41%]
+tests/test_avalanche_report_region_mapper.py ........................... [ 50%]
+..                                                                       [ 51%]
+tests/test_avalanche_report_sms.py .......................               [ 58%]
+tests/test_avalanche_report_source.py ..........                         [ 62%]
+tests/test_avalanche_report_states.py ................                   [ 67%]
+tests/test_avalanche_report_stufen_darstellung.py ........               [ 70%]
+tests/test_egress_inventory_drift.py ...                                 [ 71%]
+tests/test_adr_index_drift.py ..                                         [ 71%]
+tests/tdd/test_official_alert_allclear_blocked_terminal.py ..            [ 72%]
+tests/tdd/test_official_alert_allclear_channels.py ..................    [ 78%]
+tests/tdd/test_official_alert_allclear_compare_briefing.py ......        [ 80%]
+tests/tdd/test_official_alert_allclear_edge_cases.py .....               [ 81%]
+tests/tdd/test_official_alert_allclear_mail_validator.py ......          [ 83%]
+tests/tdd/test_official_alert_allclear.py ............................   [ 93%]
+tests/tdd/test_official_alert_allclear_source_attribution.py .....       [ 94%]
+tests/tdd/test_official_alert_allclear_source_health.py ................ [100%]
+
+==================================== PASSES ====================================
+_________ test_voraussetzung_bestandsquellen_fallen_im_kern_aus[tirol] _________
+------------------------------ Captured log call -------------------------------
+WARNING  geosphere_warn:warn_egress.py:545 geosphere_warn-Abruf fehlgeschlagen (warnungen.zamg.at)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/geosphere_warn.py", line 93, in _do_request
+    return httpx.get(
+           ^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 195, in get
+    return request(
+           ^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 109, in request
+    return client.request(
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: warnungen.zamg.at
+______ test_voraussetzung_bestandsquellen_fallen_im_kern_aus[zell-am-see] ______
+------------------------------ Captured log call -------------------------------
+WARNING  geosphere_warn:warn_egress.py:545 geosphere_warn-Abruf fehlgeschlagen (warnungen.zamg.at)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/geosphere_warn.py", line 93, in _do_request
+    return httpx.get(
+           ^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 195, in get
+    return request(
+           ^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 109, in request
+    return client.request(
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: warnungen.zamg.at
+_ test_kein_aktueller_bericht_verdeckt_den_ausfall_der_bestandsquellen_nicht[404] _
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:577 avalanche_report: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+___________ test_antwort_ohne_caaml_bulletinliste_ist_nicht_abrufbar ___________
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:665 avalanche_report-Abruf fehlgeschlagen (static.avalanche.report, Parse)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 663, in _fetch_and_store
+    data = parse_fn(resp)
+           ^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/avalanche_report.py", line 78, in _parse_document
+    raise ValueError("keine CAAML-v6-Bulletinliste")
+ValueError: keine CAAML-v6-Bulletinliste
+______ test_auswertungsfehler_nach_erfolgreichem_abruf_ist_nicht_abrufbar ______
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:avalanche_report.py:156 avalanche_report: Auswertung fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/avalanche_report.py", line 154, in fetch
+    candidates = self._candidates(lat, lon)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/avalanche_report.py", line 139, in _candidates
+    alert = parse_region_alert(doc, region_id, source=f"{SOURCE_PREFIX}:{row.key}")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/caaml.py", line 170, in parse_region_alert
+    valid_to = _parse_time(valid.get("endTime"))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/caaml.py", line 42, in _parse_time
+    return to_utc(datetime.fromisoformat(value.replace("Z", "+00:00")))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: Invalid isoformat string: 'kein-zeitpunkt'
+____ test_ac16_eigenstaendige_warn_mail_traegt_quellenname_und_bulletin_url ____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+____ test_ac16_ortsvergleich_warn_mail_traegt_quellenname_und_bulletin_url _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+_ test_ac20_standardquelle_macht_im_kern_keinen_echten_abruf_und_meldet_dann_nicht_abrufbar _
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:545 avalanche_report-Abruf fehlgeschlagen (static.avalanche.report)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/avalanche_report.py", line 118, in _request
+    return client.get(url)
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: static.avalanche.report
+____ test_ac9_mapper_ist_fail_soft_bei_fehlender_oder_kaputter_datei[fehlt] ____
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.region_mapper:region_mapper.py:71 region_mapper: Regionsdatei /tmp/pytest-of-hem/pytest-187/test_ac9_mapper_ist_fail_soft_0/x.geojson.json nicht ladbar
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/region_mapper.py", line 60, in _load_features
+    doc = json.loads(Path(path).read_text(encoding="utf-8"))
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1029, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pathlib.py", line 1015, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-hem/pytest-187/test_ac9_mapper_ist_fail_soft_0/x.geojson.json'
+__ test_ac9_mapper_ist_fail_soft_bei_fehlender_oder_kaputter_datei[kein-json] __
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.region_mapper:region_mapper.py:71 region_mapper: Regionsdatei /tmp/pytest-of-hem/pytest-187/test_ac9_mapper_ist_fail_soft_1/x.geojson.json nicht ladbar
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/region_mapper.py", line 60, in _load_features
+    doc = json.loads(Path(path).read_text(encoding="utf-8"))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+               ^^^^^^^^^^^^^^^^^^^^^^
+json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+_ test_ac9_mapper_ist_fail_soft_bei_fehlender_oder_kaputter_datei[falscher-typ] _
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.region_mapper:region_mapper.py:71 region_mapper: Regionsdatei /tmp/pytest-of-hem/pytest-187/test_ac9_mapper_ist_fail_soft_3/x.geojson.json nicht ladbar
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/region_mapper.py", line 61, in _load_features
+    features = doc.get("features") or []
+               ^^^^^^^
+AttributeError: 'list' object has no attribute 'get'
+________________ test_ac5_404_ist_leer_und_kein_nicht_abrufbar _________________
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:577 avalanche_report: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+____________ test_ac5_5xx_und_netzfehler_melden_nicht_abrufbar[503] ____________
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:577 avalanche_report: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  avalanche_report:warn_egress.py:655 avalanche_report-Abruf fehlgeschlagen (static.avalanche.report, HTTP 503)
+____________ test_ac5_5xx_und_netzfehler_melden_nicht_abrufbar[500] ____________
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:577 avalanche_report: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  avalanche_report:warn_egress.py:655 avalanche_report-Abruf fehlgeschlagen (static.avalanche.report, HTTP 500)
+_______ test_ac5_5xx_und_netzfehler_melden_nicht_abrufbar[connect-error] _______
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:545 avalanche_report-Abruf fehlgeschlagen (static.avalanche.report)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/avalanche_report.py", line 118, in _request
+    return client.get(url)
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/helpers/avalanche_report_support.py", line 141, in handle_request
+    raise reply.error
+httpx.ConnectError: Verbindung verweigert
+__________ test_ac5_5xx_und_netzfehler_melden_nicht_abrufbar[timeout] __________
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:545 avalanche_report-Abruf fehlgeschlagen (static.avalanche.report)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/avalanche_report.py", line 118, in _request
+    return client.get(url)
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/helpers/avalanche_report_support.py", line 141, in handle_request
+    raise reply.error
+httpx.ReadTimeout: Zeitueberschreitung
+________ test_ac5_kaputtes_json_ist_ein_ausfall_und_keine_stille_leere _________
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:577 avalanche_report: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  avalanche_report:warn_egress.py:665 avalanche_report-Abruf fehlgeschlagen (static.avalanche.report, Parse)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 663, in _fetch_and_store
+    data = parse_fn(resp)
+           ^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/avalanche_report.py", line 76, in _parse_document
+    doc = resp.json()
+          ^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_models.py", line 832, in json
+    return jsonlib.loads(self.content, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+___ test_ac6_nach_404_erscheint_ein_neues_bulletin_nach_ueber_1800_sekunden ____
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:577 avalanche_report: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+_______ test_ac6_nach_einem_ausfall_wird_binnen_kurzer_zeit_neu_versucht _______
+------------------------------ Captured log call -------------------------------
+WARNING  avalanche_report:warn_egress.py:577 avalanche_report: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  avalanche_report:warn_egress.py:655 avalanche_report-Abruf fehlgeschlagen (static.avalanche.report, HTTP 503)
+_______________ test_transportfehler_bei_entwarnung_bleibt_offen _______________
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:1324 Official alert sms failed for Hoehenweg-Trip: sms: Transportfehler (Test)
+WARNING  alert_retry_backoff:alert_retry_backoff.py:82 Alarm nicht zugestellt (hoehenweg-f639a5|allclear:official_alert:region:Innsbruck-Land:extreme_heat:2026-10-17T06:09:00+00:00:2026-10-18T03:09:00+00:00:2, trip_official) -- naechster Versuch fruehestens in 30 Minuten
+________ test_teilausfall_der_meldenden_quelle_im_briefing_senkt_nicht _________
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+____ test_ac6_ausfall_der_meldenden_quelle_ist_keine_entwarnung[exception] _____
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+___________ test_ac7_wechsel_der_besten_quelle_ist_keine_entwarnung ____________
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+_______ test_ac11_fehlversand_schreibt_nichts_und_wird_wiederholt[trip] ________
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:1287 Official alert email failed for Hoehenweg-Trip: email: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:1307 Official alert telegram failed for Hoehenweg-Trip: telegram: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:1324 Official alert sms failed for Hoehenweg-Trip: sms: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:1346 Official alert premium-sms failed for Hoehenweg-Trip: premium_sms: Transportfehler (Test)
+WARNING  alert_retry_backoff:alert_retry_backoff.py:82 Alarm nicht zugestellt (hoehenweg-c0392b|allclear:official_alert:region:Innsbruck-Land:extreme_heat:2026-10-17T06:09:00+00:00:2026-10-18T03:09:00+00:00:2, trip_official) -- naechster Versuch fruehestens in 30 Minuten
+_____ test_ac11_fehlversand_schreibt_nichts_und_wird_wiederholt[vergleich] _____
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:1616 Compare official alert email failed for Kette Alarm: email: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:1658 Compare official alert telegram failed for Kette Alarm: telegram: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:1693 Compare official alert sms failed for Kette Alarm: sms: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:1725 Compare official alert premium-sms failed for Kette Alarm: premium_sms: Transportfehler (Test)
+WARNING  alert_retry_backoff:alert_retry_backoff.py:82 Alarm nicht zugestellt (vergleich-e2674f|loc-ibk/allclear:official_alert:region:Innsbruck-Land:extreme_heat:2026-10-17T06:09:00+00:00:2026-10-18T03:09:00+00:00:2, compare_official) -- naechster Versuch fruehestens in 30 Minuten
+____ test_ac13_briefing_mit_gesunder_quelle_informiert_nicht_abrufbar_nicht ____
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+ERROR    services.notification_service:notification_service.py:718 E-Mail send failed for Hoehenweg-Trip: email: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:824 Telegram bubble 1/7 send failed for Hoehenweg-Trip: telegram: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:824 Telegram bubble 2/7 send failed for Hoehenweg-Trip: telegram: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:824 Telegram bubble 3/7 send failed for Hoehenweg-Trip: telegram: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:824 Telegram bubble 4/7 send failed for Hoehenweg-Trip: telegram: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:824 Telegram bubble 5/7 send failed for Hoehenweg-Trip: telegram: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:824 Telegram bubble 6/7 send failed for Hoehenweg-Trip: telegram: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:824 Telegram bubble 7/7 send failed for Hoehenweg-Trip: telegram: Transportfehler (Test)
+ERROR    services.notification_service:notification_service.py:883 Telegram incomplete-briefing hint failed: telegram: Transportfehler (Test)
+_______ test_ac13_ortsvergleich_briefing_informiert_nicht_abrufbar_nicht _______
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+_ test_ausfall_der_meldenden_quelle_an_einem_von_zwei_orten_ist_keine_entwarnung[exception] _
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/test_official_alert_allclear_source_health.py", line 65, in fetch
+    return super().fetch(lat, lon)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+WARNING  services.official_alerts.base:base.py:255 official_alerts: quelle-x fetch failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 253, in get_official_alerts_with_status
+    source_alerts = list(source.fetch(lat, lon))
+                         ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/test_official_alert_allclear_source_health.py", line 65, in fetch
+    return super().fetch(lat, lon)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/_official_alert_allclear_fixtures.py", line 100, in fetch
+    raise RuntimeError(f"{self.name}: HTTP 503 (Test-Ausfall)")
+RuntimeError: quelle-x: HTTP 503 (Test-Ausfall)
+_ test_meldende_quelle_fehlt_im_pro_quelle_ergebnis_ist_keine_entwarnung[trip-covers_wirft] _
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.base:base.py:240 official_alerts: quelle-x covers() failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 236, in get_official_alerts_with_status
+    does_cover = source.covers(lat, lon)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/test_official_alert_allclear_source_health.py", line 55, in covers
+    raise RuntimeError(f"{self.name}: covers() kaputt (Test)")
+RuntimeError: quelle-x: covers() kaputt (Test)
+WARNING  services.official_alerts.base:base.py:240 official_alerts: quelle-x covers() failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 236, in get_official_alerts_with_status
+    does_cover = source.covers(lat, lon)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/test_official_alert_allclear_source_health.py", line 55, in covers
+    raise RuntimeError(f"{self.name}: covers() kaputt (Test)")
+RuntimeError: quelle-x: covers() kaputt (Test)
+_ test_meldende_quelle_fehlt_im_pro_quelle_ergebnis_ist_keine_entwarnung[vergleich-covers_wirft] _
+------------------------------ Captured log call -------------------------------
+WARNING  services.official_alerts.base:base.py:240 official_alerts: quelle-x covers() failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 236, in get_official_alerts_with_status
+    does_cover = source.covers(lat, lon)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/test_official_alert_allclear_source_health.py", line 55, in covers
+    raise RuntimeError(f"{self.name}: covers() kaputt (Test)")
+RuntimeError: quelle-x: covers() kaputt (Test)
+WARNING  services.official_alerts.base:base.py:240 official_alerts: quelle-x covers() failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 236, in get_official_alerts_with_status
+    does_cover = source.covers(lat, lon)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/test_official_alert_allclear_source_health.py", line 55, in covers
+    raise RuntimeError(f"{self.name}: covers() kaputt (Test)")
+RuntimeError: quelle-x: covers() kaputt (Test)
+WARNING  services.official_alerts.base:base.py:240 official_alerts: quelle-x covers() failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 236, in get_official_alerts_with_status
+    does_cover = source.covers(lat, lon)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/test_official_alert_allclear_source_health.py", line 55, in covers
+    raise RuntimeError(f"{self.name}: covers() kaputt (Test)")
+RuntimeError: quelle-x: covers() kaputt (Test)
+WARNING  services.official_alerts.base:base.py:240 official_alerts: quelle-x covers() failed
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/base.py", line 236, in get_official_alerts_with_status
+    does_cover = source.covers(lat, lon)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/tdd/test_official_alert_allclear_source_health.py", line 55, in covers
+    raise RuntimeError(f"{self.name}: covers() kaputt (Test)")
+RuntimeError: quelle-x: covers() kaputt (Test)
+=========================== short test summary info ============================
+PASSED tests/test_avalanche_report_ausfall_sichtbarkeit.py::test_voraussetzung_bestandsquellen_fallen_im_kern_aus[tirol]
+PASSED tests/test_avalanche_report_ausfall_sichtbarkeit.py::test_voraussetzung_bestandsquellen_fallen_im_kern_aus[zell-am-see]
+PASSED tests/test_avalanche_report_ausfall_sichtbarkeit.py::test_kein_aktueller_bericht_verdeckt_den_ausfall_der_bestandsquellen_nicht[404]
+PASSED tests/test_avalanche_report_ausfall_sichtbarkeit.py::test_kein_aktueller_bericht_verdeckt_den_ausfall_der_bestandsquellen_nicht[abgelaufenes-bulletin]
+PASSED tests/test_avalanche_report_ausfall_sichtbarkeit.py::test_kein_aktueller_bericht_verdeckt_den_ausfall_der_bestandsquellen_nicht[bbox-ohne-mikroregion]
+PASSED tests/test_avalanche_report_ausfall_sichtbarkeit.py::test_gueltiger_bericht_kompensiert_den_ausfall_weiterhin
+PASSED tests/test_avalanche_report_ausfall_sichtbarkeit.py::test_antwort_ohne_caaml_bulletinliste_ist_nicht_abrufbar
+PASSED tests/test_avalanche_report_ausfall_sichtbarkeit.py::test_auswertungsfehler_nach_erfolgreichem_abruf_ist_nicht_abrufbar
+PASSED tests/test_avalanche_report_ausfall_sichtbarkeit.py::test_no_rating_wird_verworfen_ohne_absturz_und_ohne_falsches_nicht_abrufbar
+PASSED tests/test_avalanche_report_channels.py::test_ac14_trip_mail_zeigt_stufe_1_als_info
+PASSED tests/test_avalanche_report_channels.py::test_ac14_ohne_bericht_zeigt_die_trip_mail_nichts_von_alledem
+PASSED tests/test_avalanche_report_channels.py::test_ac14_ortsvergleich_mail_zeigt_stufe_1_als_info_und_ohne_bericht_nichts
+PASSED tests/test_avalanche_report_channels.py::test_ac14_ortsvergleich_chip_fuer_stufe_1_ist_eine_info_und_kein_leerstrich
+PASSED tests/test_avalanche_report_channels.py::test_ac15_trip_mail_nennt_stufe_5_im_wortlaut_ohne_leiter
+PASSED tests/test_avalanche_report_channels.py::test_ac15_ortsvergleich_mail_nennt_stufe_5_im_wortlaut_ohne_leiter
+PASSED tests/test_avalanche_report_channels.py::test_ac15_ortsvergleich_schwere_von_stufe_5_ist_danger_und_nicht_schwaecher_als_4
+PASSED tests/test_avalanche_report_channels.py::test_ac15_telegram_nennt_stufe_5_im_wortlaut_ohne_leiter
+PASSED tests/test_avalanche_report_channels.py::test_ac15_alarm_mail_standalone_nennt_stufe_5_im_wortlaut_ohne_leiter
+PASSED tests/test_avalanche_report_channels.py::test_ac15_stufe_5_und_stufe_4_sind_im_text_unterscheidbar
+PASSED tests/test_avalanche_report_channels.py::test_ac16_trip_mail_und_telegram_tragen_den_wortlaut_des_warndienstes
+PASSED tests/test_avalanche_report_channels.py::test_ac16_quellenname_und_bulletin_url_stehen_in_mail_und_telegram
+PASSED tests/test_avalanche_report_channels.py::test_ac16_eigenstaendige_warn_mail_traegt_quellenname_und_bulletin_url
+PASSED tests/test_avalanche_report_channels.py::test_ac16_ortsvergleich_warn_mail_traegt_quellenname_und_bulletin_url
+PASSED tests/test_avalanche_report_channels.py::test_ac16_keine_handlungsempfehlung_in_mail_und_telegram
+PASSED tests/test_avalanche_report_channels.py::test_ac16_echtes_bulletin_nennt_alle_probleme_des_warndienstes_unveraendert
+PASSED tests/test_avalanche_report_channels.py::test_ac16_ortsvergleich_nennt_den_wortlaut_ebenfalls
+PASSED tests/test_avalanche_report_channels.py::test_ac16_zentraler_text_helfer[kwargs0-Lawinenstufe 1 (gering)]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_zentraler_text_helfer[kwargs1-Lawinenstufe 3 (erheblich) oberhalb 2200 m]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_zentraler_text_helfer[kwargs2-Lawinenstufe 3 (erheblich) unterhalb 2200 m (nachmittags) \xb7 Altschnee, Nassschnee]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_zentraler_text_helfer[kwargs3-Lawinenstufe 5 (sehr gro\xdf) oberhalb Waldgrenze]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_zentraler_text_helfer[kwargs4-Lawinenstufe 2 (m\xe4\xdfig) unterhalb 1800 m (vormittags)]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_problemnamen_deutsch_und_unbekannte_codes_gehen_nie_verloren[new_snow-Neuschnee]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_problemnamen_deutsch_und_unbekannte_codes_gehen_nie_verloren[wind_slab-Triebschnee]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_problemnamen_deutsch_und_unbekannte_codes_gehen_nie_verloren[persistent_weak_layers-Altschnee]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_problemnamen_deutsch_und_unbekannte_codes_gehen_nie_verloren[wet_snow-Nassschnee]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_problemnamen_deutsch_und_unbekannte_codes_gehen_nie_verloren[gliding_snow-Gleitschnee]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_problemnamen_deutsch_und_unbekannte_codes_gehen_nie_verloren[cornices-Wechten]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_problemnamen_deutsch_und_unbekannte_codes_gehen_nie_verloren[no_distinct_avalanche_problem-kein ausgepr\xe4gtes Lawinenproblem]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_problemnamen_deutsch_und_unbekannte_codes_gehen_nie_verloren[favourable_situation-g\xfcnstige Situation]
+PASSED tests/test_avalanche_report_channels.py::test_ac16_problemnamen_deutsch_und_unbekannte_codes_gehen_nie_verloren[brandneuer_code-brandneuer_code]
+PASSED tests/test_avalanche_report_channels.py::test_ac19_nur_der_tirol_nutzer_bekommt_den_lagebericht_in_mail_und_sms
+PASSED tests/test_avalanche_report_coverage.py::test_ac7_punkt_ausserhalb_loest_keinen_abruf_und_keinen_hinweis_aus[muenchen]
+PASSED tests/test_avalanche_report_coverage.py::test_ac7_punkt_ausserhalb_loest_keinen_abruf_und_keinen_hinweis_aus[zuerich]
+PASSED tests/test_avalanche_report_coverage.py::test_ac7_punkt_ausserhalb_loest_keinen_abruf_und_keinen_hinweis_aus[salzburg]
+PASSED tests/test_avalanche_report_coverage.py::test_ac7_bounding_box_treffer_ohne_region_ist_leer_und_ohne_hinweis
+PASSED tests/test_avalanche_report_coverage.py::test_ac7_covers_kennt_nur_die_vier_gebiete
+PASSED tests/test_avalanche_report_coverage.py::test_ac7_standardtabelle_hat_genau_die_vier_belegten_zeilen_mit_eingecheckter_geometrie
+PASSED tests/test_avalanche_report_coverage.py::test_ac7_standardquelle_deckt_tirol_aber_nicht_muenchen_ohne_netz
+PASSED tests/test_avalanche_report_coverage.py::test_ac8_zusaetzliche_tabellenzeile_wird_abgerufen_und_ausgewertet
+PASSED tests/test_avalanche_report_coverage.py::test_ac8_ohne_die_zeile_bleibt_salzburg_unberuehrt
+PASSED tests/test_avalanche_report_coverage.py::test_ac20_python_inventar_fuehrt_genau_die_zwei_neuen_hosts_als_gesperrt_wie_alle_warn_hosts
+PASSED tests/test_avalanche_report_coverage.py::test_ac20_weder_lawinen_warnung_eu_noch_ein_eu_sammelfeed_im_inventar
+PASSED tests/test_avalanche_report_coverage.py::test_ac20_egress_waechter_sperrt_im_testlauf_beide_hosts_und_den_nicht_beantragten_spiegel
+PASSED tests/test_avalanche_report_coverage.py::test_ac20_standardquelle_macht_im_kern_keinen_echten_abruf_und_meldet_dann_nicht_abrufbar
+PASSED tests/test_avalanche_report_coverage.py::test_quelle_ist_im_register_eingetragen_und_deckt_tirol_aber_nicht_muenchen
+PASSED tests/test_avalanche_report_coverage.py::test_ortsvergleich_quellenfilter_avalanche_report_laesst_den_lagebericht_durch
+PASSED tests/test_avalanche_report_coverage.py::test_ortsvergleich_quellenfilter_ohne_filter_oder_mit_anderer_quelle
+PASSED tests/test_avalanche_report_dedup.py::test_ac11_meteoalarm_lawine_und_lagebericht_bleiben_als_zwei_gefahrenarten_erhalten
+PASSED tests/test_avalanche_report_dedup.py::test_ac11_reihenfolge_der_registrierung_aendert_nichts
+PASSED tests/test_avalanche_report_dedup.py::test_ac11_schwaechere_lagebericht_stufe_verdraengt_die_meteoalarm_warnung_nicht
+PASSED tests/test_avalanche_report_dedup.py::test_ac11_dublettenwahl_innerhalb_der_gefahrenart_vergleicht_die_originalstufe
+PASSED tests/test_avalanche_report_dedup.py::test_ac11_dublettenwahl_ist_unabhaengig_von_der_sammel_reihenfolge
+PASSED tests/test_avalanche_report_docs.py::test_ac20_go_inventar_fuehrt_genau_die_zwei_neuen_hosts_als_gesperrt_wie_alle_warn_hosts
+PASSED tests/test_avalanche_report_docs.py::test_ac22_datenquellen_spec_enthaelt_antrag_und_aenderungshistorie_1_3
+PASSED tests/test_avalanche_report_docs.py::test_ac22_sms_format_doku_erklaert_die_doppelung_avalanche_und_avalanche_bulletin
+PASSED tests/test_avalanche_report_docs.py::test_ac22_adr_zur_zweiten_skala_existiert_und_steht_im_index
+PASSED tests/test_avalanche_report_escalation.py::test_ac12_gedaechtnis_traegt_die_originalstufe_nicht_das_farblevel
+PASSED tests/test_avalanche_report_escalation.py::test_ac12_stufe_4_auf_5_in_derselben_periode_eskaliert
+PASSED tests/test_avalanche_report_escalation.py::test_ac12_stufe_4_auf_5_in_der_folgeperiode_eskaliert_ueber_den_ueberlappungspfad
+PASSED tests/test_avalanche_report_escalation.py::test_ac12_gleiche_stufe_in_neuer_periode_am_folgetag_loest_keinen_alarm_aus
+PASSED tests/test_avalanche_report_escalation.py::test_ac12_kette_ueber_drei_tage_bleibt_still
+PASSED tests/test_avalanche_report_escalation.py::test_ac12_dieselbe_meldung_wird_nicht_wiederholt
+PASSED tests/test_avalanche_report_escalation.py::test_ac12_erstmeldung_ohne_gedaechtnis_wird_gemeldet
+PASSED tests/test_avalanche_report_escalation.py::test_ac12_eskalation_4_auf_5_bleibt_nach_stiller_fortschreibung_erhalten
+PASSED tests/test_avalanche_report_escalation.py::test_ac13_absenkung_von_4_auf_2_wird_nicht_als_neue_warnung_gemeldet
+PASSED tests/test_avalanche_report_escalation.py::test_ac13_absenkung_im_identischen_gueltigkeitsfenster_wird_nicht_gemeldet
+PASSED tests/test_avalanche_report_escalation.py::test_ac13_absenkung_in_beruehrender_folgeperiode_behaelt_den_alten_hoechstwert_im_gedaechtnis
+PASSED tests/test_avalanche_report_escalation.py::test_ac13_nachtrags_absenkung_4_auf_2_ergibt_entwarnung_und_senkt_das_gedaechtnis
+PASSED tests/test_avalanche_report_escalation.py::test_ac13_absenkung_traegt_die_dringlichkeit_des_alten_werts
+PASSED tests/test_avalanche_report_escalation.py::test_ac13_entwarnung_traegt_die_dringlichkeit_des_alten_werts
+PASSED tests/test_avalanche_report_escalation.py::test_ac13_mittlere_stufe_bleibt_mittlere_dringlichkeit_bei_absenkung
+PASSED tests/test_avalanche_report_escalation.py::test_ac13_stufe_5_entwarnung_ist_hoch
+PASSED tests/test_avalanche_report_escalation.py::test_ac13_anstieg_nutzt_den_hoeheren_der_beiden_werte
+PASSED tests/test_avalanche_report_ortsvergleich_kopfzeile.py::test_banner_kopfzeile_nennt_die_originalstufe_5_und_den_ort
+PASSED tests/test_avalanche_report_ortsvergleich_kopfzeile.py::test_banner_kopfzeile_bei_stufe_1_ohne_ampelwort
+PASSED tests/test_avalanche_report_ortsvergleich_kopfzeile.py::test_chip_schwere_der_stufe_1_ist_info
+PASSED tests/test_avalanche_report_ortsvergleich_kopfzeile.py::test_ac11_kopfzeile_sturm_zuerst_wird_nicht_von_lawinenstufe_5_verdraengt
+PASSED tests/test_avalanche_report_ortsvergleich_kopfzeile.py::test_ac11_kopfzeile_lagebericht_zuerst_fuehrt_auch_in_umgekehrter_reihenfolge
+PASSED tests/test_avalanche_report_ortsvergleich_kopfzeile.py::test_ac11_innerhalb_des_lageberichts_fuehrt_stufe_5_vor_stufe_4
+PASSED tests/test_avalanche_report_parser.py::test_ac2_zahl_bleibt_zahl_oberhalb_2200
+PASSED tests/test_avalanche_report_parser.py::test_ac2_treeline_erscheint_woertlich_als_waldgrenze_ohne_erfundene_zahl
+PASSED tests/test_avalanche_report_parser.py::test_ac2_nachmittags_split_hoechste_stufe_traegt_ihre_eigene_hoehenangabe
+PASSED tests/test_avalanche_report_parser.py::test_ac2_gleichstand_der_hoechststufe_nimmt_das_rating_ohne_hoehenbegrenzung
+PASSED tests/test_avalanche_report_parser.py::test_ac2_ganztags_bulletin_hat_keine_tageszeit
+PASSED tests/test_avalanche_report_parser.py::test_ac2_bulletin_ohne_hoehenbegrenzung_liefert_keine_hoehenangabe
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-01-30_AT-07_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-02-19_AT-07_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-02-20_AT-07_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-02-21_AT-07_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-02-26_AT-07_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-03-01_AT-02_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-03-01_AT-07_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-03-01_IT-32-BZ_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-03-01_IT-32-TN_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-04-06_AT-07_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-05-02_AT-07_de_CAAMLv6.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-02-20_AT-07_de_CAAMLv6_DERIVED_border_2_4.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-02-20_AT-07_de_CAAMLv6_DERIVED_border_4_4.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-02-20_AT-07_de_CAAMLv6_DERIVED_very_high.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac2_kein_erfundener_zahlenwert_in_keiner_aufgezeichneten_datei[2026-03-01_AT-07_de_CAAMLv6_DERIVED_no_rating.json]
+PASSED tests/test_avalanche_report_parser.py::test_ac3_originalstufen_1_bis_5_und_abgeleitetes_farblevel[2026-03-01_AT-02_de_CAAMLv6.json-AT-02-05-02-1-1]
+PASSED tests/test_avalanche_report_parser.py::test_ac3_originalstufen_1_bis_5_und_abgeleitetes_farblevel[2026-03-01_AT-07_de_CAAMLv6.json-AT-07-29-02-2-2]
+PASSED tests/test_avalanche_report_parser.py::test_ac3_originalstufen_1_bis_5_und_abgeleitetes_farblevel[2026-01-30_AT-07_de_CAAMLv6.json-AT-07-28-3-3]
+PASSED tests/test_avalanche_report_parser.py::test_ac3_originalstufen_1_bis_5_und_abgeleitetes_farblevel[2026-02-20_AT-07_de_CAAMLv6.json-AT-07-25-4-4]
+PASSED tests/test_avalanche_report_parser.py::test_ac3_originalstufen_1_bis_5_und_abgeleitetes_farblevel[derived/2026-02-20_AT-07_de_CAAMLv6_DERIVED_very_high.json-AT-07-25-5-4]
+PASSED tests/test_avalanche_report_parser.py::test_ac3_stufe_5_wird_nie_auf_4_gequetscht
+PASSED tests/test_avalanche_report_parser.py::test_ac3_label_traegt_stufe_und_eaws_wort[1-gering]
+PASSED tests/test_avalanche_report_parser.py::test_ac3_label_traegt_stufe_und_eaws_wort[2-m\xe4\xdfig]
+PASSED tests/test_avalanche_report_parser.py::test_ac3_label_traegt_stufe_und_eaws_wort[3-erheblich]
+PASSED tests/test_avalanche_report_parser.py::test_ac3_label_traegt_stufe_und_eaws_wort[4-gro\xdf]
+PASSED tests/test_avalanche_report_parser.py::test_ac3_label_traegt_stufe_und_eaws_wort[5-sehr gro\xdf]
+PASSED tests/test_avalanche_report_parser.py::test_ac1_felder_url_zeitraum_region_und_dedup_id
+PASSED tests/test_avalanche_report_parser.py::test_ac1_url_datum_ist_ortsdatum_des_gueltigkeitsendes_auch_in_der_sommerzeit
+PASSED tests/test_avalanche_report_parser.py::test_ac1_probleme_ohne_dubletten_in_bulletin_reihenfolge
+PASSED tests/test_avalanche_report_parser.py::test_ac2_alle_caaml_problemcodes_bleiben_erhalten
+PASSED tests/test_avalanche_report_parser.py::test_ac1_region_die_in_keinem_bulletin_steht_liefert_none
+PASSED tests/test_avalanche_report_parser.py::test_ac3_parser_ist_deterministisch_und_veraendert_die_eingabe_nicht
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_voraussetzung_grenzpunkt_liegt_nach_dem_bestands_raycast_in_beiden_polygonen
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_mapper_liefert_beide_regionen_am_grenzpunkt_und_bei_jedem_lauf_gleich
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_innerer_punkt_trifft_genau_eine_region_und_ein_punkt_ausserhalb_keine
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_mapper_bounding_box_umschliesst_alle_features
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_mapper_beachtet_loecher
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_mapper_ist_fail_soft_bei_fehlender_oder_kaputter_datei[fehlt]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_mapper_ist_fail_soft_bei_fehlender_oder_kaputter_datei[kein-json]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_mapper_ist_fail_soft_bei_fehlender_oder_kaputter_datei[ohne-features]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_mapper_ist_fail_soft_bei_fehlender_oder_kaputter_datei[falscher-typ]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_grenzpunkt_meldet_die_hoechste_stufe_mit_der_url_der_tragenden_region[echt-3-4]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_grenzpunkt_meldet_die_hoechste_stufe_mit_der_url_der_tragenden_region[abgeleitet-2-4]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac9_bei_gleichstand_gewinnt_die_kleinste_regions_id
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_meteoalarm_nutzt_den_gemeinsamen_mapper_und_keine_eigene_kopie
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_meteoalarm_trefferlogik_ist_fuer_die_bestandsfaelle_unveraendert[polygon-innen]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_meteoalarm_trefferlogik_ist_fuer_die_bestandsfaelle_unveraendert[polygon-aussen]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_meteoalarm_trefferlogik_ist_fuer_die_bestandsfaelle_unveraendert[polygon-loch]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_meteoalarm_trefferlogik_ist_fuer_die_bestandsfaelle_unveraendert[multipolygon-zweites]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_meteoalarm_trefferlogik_ist_fuer_die_bestandsfaelle_unveraendert[multipolygon-keiner]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_meteoalarm_trefferlogik_ist_fuer_die_bestandsfaelle_unveraendert[punkt-typ]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_meteoalarm_trefferlogik_ist_fuer_die_bestandsfaelle_unveraendert[leer]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_meteoalarm_trefferlogik_ist_fuer_die_bestandsfaelle_unveraendert[ohne-koordinaten]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_mapper_liefert_fuer_dieselben_faelle_dieselben_treffer[polygon-innen]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_mapper_liefert_fuer_dieselben_faelle_dieselben_treffer[polygon-aussen]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_mapper_liefert_fuer_dieselben_faelle_dieselben_treffer[polygon-loch]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_mapper_liefert_fuer_dieselben_faelle_dieselben_treffer[multipolygon-zweites]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_mapper_liefert_fuer_dieselben_faelle_dieselben_treffer[multipolygon-keiner]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_mapper_liefert_fuer_dieselben_faelle_dieselben_treffer[punkt-typ]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_mapper_liefert_fuer_dieselben_faelle_dieselben_treffer[leer]
+PASSED tests/test_avalanche_report_region_mapper.py::test_ac10_mapper_liefert_fuer_dieselben_faelle_dieselben_treffer[ohne-koordinaten]
+PASSED tests/test_avalanche_report_sms.py::test_ac17_stufe_4_steht_genau_einmal_als_av4_im_warnblock[AV-sichtbar]
+PASSED tests/test_avalanche_report_sms.py::test_ac17_stufe_4_steht_genau_einmal_als_av4_im_warnblock[AV-ausgeschaltet]
+PASSED tests/test_avalanche_report_sms.py::test_ac17_stufe_4_steht_genau_einmal_als_av4_im_warnblock[AV-nicht-konfiguriert]
+PASSED tests/test_avalanche_report_sms.py::test_ac17_token_hat_keinen_doppelpunkt_keinen_buchstaben_und_keine_stunde
+PASSED tests/test_avalanche_report_sms.py::test_ac17_sichtbare_und_ausgeschaltete_metrik_liefern_dieselbe_nachricht
+PASSED tests/test_avalanche_report_sms.py::test_ac17_stufe_5_steht_als_originalziffer_obwohl_das_farblevel_4_ist
+PASSED tests/test_avalanche_report_sms.py::test_ac17_stufe_2_erscheint_bei_voreinstellung_stufe_1_nicht
+PASSED tests/test_avalanche_report_sms.py::test_ac17_stufenfilter_folgt_der_kanal_schwelle
+PASSED tests/test_avalanche_report_sms.py::test_ac17_lagebericht_und_meteoalarm_lawine_haben_getrennte_kuerzel
+PASSED tests/test_avalanche_report_sms.py::test_ac18_alarm_sms_traegt_av5_mit_originalziffer_ohne_buchstaben_im_budget
+PASSED tests/test_avalanche_report_sms.py::test_ac18_premium_sms_traegt_av5_im_budget_des_premium_kanals
+PASSED tests/test_avalanche_report_sms.py::test_ac18_jede_stufe_erscheint_mit_ihrer_ziffer_nie_als_l_m_h[1]
+PASSED tests/test_avalanche_report_sms.py::test_ac18_jede_stufe_erscheint_mit_ihrer_ziffer_nie_als_l_m_h[2]
+PASSED tests/test_avalanche_report_sms.py::test_ac18_jede_stufe_erscheint_mit_ihrer_ziffer_nie_als_l_m_h[3]
+PASSED tests/test_avalanche_report_sms.py::test_ac18_jede_stufe_erscheint_mit_ihrer_ziffer_nie_als_l_m_h[4]
+PASSED tests/test_avalanche_report_sms.py::test_ac18_jede_stufe_erscheint_mit_ihrer_ziffer_nie_als_l_m_h[5]
+PASSED tests/test_avalanche_report_sms.py::test_ac18_langer_ortsname_laesst_das_token_nicht_aus_dem_budget_fallen
+PASSED tests/test_avalanche_report_sms.py::test_ac18_gemischte_nachricht_nennt_lagebericht_und_gewitter
+PASSED tests/test_avalanche_report_sms.py::test_ac17_ortsvergleich_sms_traegt_av_mit_originalziffer[4]
+PASSED tests/test_avalanche_report_sms.py::test_ac17_ortsvergleich_sms_traegt_av_mit_originalziffer[5]
+PASSED tests/test_avalanche_report_sms.py::test_ac21_wintersport_baut_kein_av_token_mehr_auch_nicht_bei_sichtbarer_metrik
+PASSED tests/test_avalanche_report_sms.py::test_ac21_wintersport_ohne_av_spec_baut_ebenfalls_kein_av_token
+PASSED tests/test_avalanche_report_sms.py::test_ac21_trip_ohne_av_metrik_erhaelt_nie_ein_zweites_av_token_neben_dem_lagebericht
+PASSED tests/test_avalanche_report_source.py::test_ac1_tirol_punkt_liefert_genau_einen_alert_mit_stufe_3_oberhalb_2200
+PASSED tests/test_avalanche_report_source.py::test_ac1_redirect_von_static_host_wird_gefolgt_und_nur_die_region_wird_geladen
+PASSED tests/test_avalanche_report_source.py::test_ac1_ergebnis_ist_ueber_den_registry_pfad_identisch_und_nicht_abrufbar_false
+PASSED tests/test_avalanche_report_source.py::test_ac1_zweiter_abruf_im_ttl_trifft_den_cache
+PASSED tests/test_avalanche_report_source.py::test_ac1_abruf_steht_im_call_log_unter_dem_servicenamen_avalanche_report
+PASSED tests/test_avalanche_report_source.py::test_ac1_name_und_covers_arbeiten_nur_mit_den_boundingboxen
+PASSED tests/test_avalanche_report_source.py::test_ac1_alle_vier_tabellenzeilen_liefern_ihren_lagebericht[AT-02-2026-03-01-point0-1-1-None-None-AT-02-05-02-Lawinenwarndienst K\xe4rnten, avalanche.report]
+PASSED tests/test_avalanche_report_source.py::test_ac1_alle_vier_tabellenzeilen_liefern_ihren_lagebericht[IT-32-BZ-2026-03-01-point1-2-2-Waldgrenze-above-IT-32-BZ-16-Lawinenwarndienst S\xfcdtirol, avalanche.report]
+PASSED tests/test_avalanche_report_source.py::test_ac1_alle_vier_tabellenzeilen_liefern_ihren_lagebericht[IT-32-TN-2026-03-01-point2-3-3-Waldgrenze-above-IT-32-TN-09-Lawinenwarndienst Trentino, avalanche.report]
+PASSED tests/test_avalanche_report_source.py::test_ac1_grenzpunkt_liefert_trotz_zwei_regionen_genau_einen_alert
+PASSED tests/test_avalanche_report_states.py::test_ac4_mai_bulletin_im_oktober_ist_leer_und_nicht_abrufbar_false
+PASSED tests/test_avalanche_report_states.py::test_ac4_die_quelle_selbst_filtert_das_abgelaufene_bulletin
+PASSED tests/test_avalanche_report_states.py::test_ac4_dieselbe_datei_ist_am_gueltigkeitstag_eine_stufe_1
+PASSED tests/test_avalanche_report_states.py::test_ac4_gueltigkeitsgrenze_gleichheit_gilt_noch_eine_sekunde_danach_nicht_mehr
+PASSED tests/test_avalanche_report_states.py::test_ac4_echte_latest_antwort_des_aufzeichnungstages_ist_ebenfalls_veraltet
+PASSED tests/test_avalanche_report_states.py::test_ac5_404_ist_leer_und_kein_nicht_abrufbar
+PASSED tests/test_avalanche_report_states.py::test_ac5_5xx_und_netzfehler_melden_nicht_abrufbar[503]
+PASSED tests/test_avalanche_report_states.py::test_ac5_5xx_und_netzfehler_melden_nicht_abrufbar[500]
+PASSED tests/test_avalanche_report_states.py::test_ac5_5xx_und_netzfehler_melden_nicht_abrufbar[connect-error]
+PASSED tests/test_avalanche_report_states.py::test_ac5_5xx_und_netzfehler_melden_nicht_abrufbar[timeout]
+PASSED tests/test_avalanche_report_states.py::test_ac5_kaputtes_json_ist_ein_ausfall_und_keine_stille_leere
+PASSED tests/test_avalanche_report_states.py::test_ac6_nach_404_erscheint_ein_neues_bulletin_nach_ueber_1800_sekunden
+PASSED tests/test_avalanche_report_states.py::test_ac6_nach_abgelaufenem_bulletin_erscheint_das_neue_nach_ueber_1800_sekunden
+PASSED tests/test_avalanche_report_states.py::test_ac6_innerhalb_von_1800_sekunden_wird_nicht_erneut_abgerufen
+PASSED tests/test_avalanche_report_states.py::test_ac6_nach_einem_ausfall_wird_binnen_kurzer_zeit_neu_versucht
+PASSED tests/test_avalanche_report_states.py::test_ac6_ablauf_waehrend_der_cache_dauer_wird_trotz_cache_erkannt
+PASSED tests/test_avalanche_report_stufen_darstellung.py::test_warn_block_zeigt_fuer_den_lagebericht_keine_warnstufen_leiter[stufe-1]
+PASSED tests/test_avalanche_report_stufen_darstellung.py::test_warn_block_zeigt_fuer_den_lagebericht_keine_warnstufen_leiter[stufe-2]
+PASSED tests/test_avalanche_report_stufen_darstellung.py::test_warn_block_zeigt_fuer_den_lagebericht_keine_warnstufen_leiter[stufe-3]
+PASSED tests/test_avalanche_report_stufen_darstellung.py::test_warn_block_zeigt_fuer_den_lagebericht_keine_warnstufen_leiter[stufe-4-und-5]
+PASSED tests/test_avalanche_report_stufen_darstellung.py::test_ortsvergleich_chip_der_hoechsten_lagebericht_stufe_ist_danger
+PASSED tests/test_avalanche_report_stufen_darstellung.py::test_ortsvergleich_chip_nennt_lawine_mit_stufe_und_nicht_den_rohen_label
+PASSED tests/test_avalanche_report_stufen_darstellung.py::test_alarm_sms_zeigt_die_stufe_als_ziffer_ohne_buchstaben
+PASSED tests/test_avalanche_report_stufen_darstellung.py::test_wortlaut_der_gefahrenart_ist_lawinenstufe_und_nicht_der_rohe_quell_label
+PASSED tests/test_egress_inventory_drift.py::test_inventories_are_identical
+PASSED tests/test_egress_inventory_drift.py::test_parser_ignores_commented_out_lines
+PASSED tests/test_egress_inventory_drift.py::test_go_inventory_declares_go_only_hosts
+PASSED tests/test_adr_index_drift.py::test_every_adr_file_is_in_index
+PASSED tests/test_adr_index_drift.py::test_index_status_matches_file_status
+PASSED tests/tdd/test_official_alert_allclear_blocked_terminal.py::test_rein_gesperrte_entwarnung_gilt_als_erledigt_und_wiederholt_sich_nicht
+PASSED tests/tdd/test_official_alert_allclear_blocked_terminal.py::test_transportfehler_bei_entwarnung_bleibt_offen
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac3_entwarnung_kommt_in_jeder_flaeche_ueber_jeden_kanal_an[trip-email]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac3_entwarnung_kommt_in_jeder_flaeche_ueber_jeden_kanal_an[trip-sms]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac3_entwarnung_kommt_in_jeder_flaeche_ueber_jeden_kanal_an[trip-premium_sms]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac3_entwarnung_kommt_in_jeder_flaeche_ueber_jeden_kanal_an[trip-telegram]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac3_entwarnung_kommt_in_jeder_flaeche_ueber_jeden_kanal_an[vergleich-email]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac3_entwarnung_kommt_in_jeder_flaeche_ueber_jeden_kanal_an[vergleich-sms]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac3_entwarnung_kommt_in_jeder_flaeche_ueber_jeden_kanal_an[vergleich-premium_sms]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac3_entwarnung_kommt_in_jeder_flaeche_ueber_jeden_kanal_an[vergleich-telegram]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac4_entwarnung_von_hoch_erreicht_premium_sms_nach_alter_stufe[trip]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac4_entwarnung_von_hoch_erreicht_premium_sms_nach_alter_stufe[vergleich]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac4_entwarnung_von_gering_erreicht_premium_sms_nicht[trip]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac4_entwarnung_von_gering_erreicht_premium_sms_nicht[vergleich]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac12_neue_warnung_und_entwarnung_in_einer_nachricht[trip]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac12_neue_warnung_und_entwarnung_in_einer_nachricht[vergleich]
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac12_von_der_sms_kuerzung_verdraengte_entwarnung_gilt_als_nicht_zugestellt
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac16_darstellung_gesenkt_mail_telegram_sms_premium
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac16_darstellung_beendet_und_telegram_kurzform
+PASSED tests/tdd/test_official_alert_allclear_channels.py::test_ac16_lawinen_lagebericht_traegt_den_numerischen_uebergang
+PASSED tests/tdd/test_official_alert_allclear_compare_briefing.py::test_briefing_ohne_warnung_setzt_den_tombstone_und_der_alarm_bleibt_still
+PASSED tests/tdd/test_official_alert_allclear_compare_briefing.py::test_briefing_mit_sichtbarer_warnung_loescht_absent_since
+PASSED tests/tdd/test_official_alert_allclear_compare_briefing.py::test_briefing_senkt_nur_das_gedaechtnis_des_eigenen_nutzers
+PASSED tests/tdd/test_official_alert_allclear_compare_briefing.py::test_teilausfall_der_meldenden_quelle_im_briefing_senkt_nicht
+PASSED tests/tdd/test_official_alert_allclear_compare_briefing.py::test_briefing_erstmeldung_im_ortsvergleich_ermoeglicht_die_spaetere_entwarnung
+PASSED tests/tdd/test_official_alert_allclear_compare_briefing.py::test_vergleichs_engine_schneidet_die_quellen_gesundheit_ihres_abrufs_mit
+PASSED tests/tdd/test_official_alert_allclear_edge_cases.py::test_ortsvergleich_von_der_sms_kuerzung_verdraengte_entwarnung_bleibt_offen
+PASSED tests/tdd/test_official_alert_allclear_edge_cases.py::test_nicht_ueberlappende_folgeperiode_verdeckt_die_absenkung_nicht
+PASSED tests/tdd/test_official_alert_allclear_edge_cases.py::test_alt_eintrag_ohne_source_wird_von_der_erkennung_nicht_bewertet
+PASSED tests/tdd/test_official_alert_allclear_edge_cases.py::test_entwarnung_kommt_auch_wenn_im_selben_lauf_ein_wetter_alarm_feuert
+PASSED tests/tdd/test_official_alert_allclear_edge_cases.py::test_gesenkte_neuausgabe_unter_neuem_schluessel_meldet_nur_einmal
+PASSED tests/tdd/test_official_alert_allclear_mail_validator.py::test_echte_entwarnungs_mails_bestehen
+PASSED tests/tdd/test_official_alert_allclear_mail_validator.py::test_e3_uebergang_ohne_absenkung_wird_abgelehnt[rein]
+PASSED tests/tdd/test_official_alert_allclear_mail_validator.py::test_e3_uebergang_ohne_absenkung_wird_abgelehnt[gemischt]
+PASSED tests/tdd/test_official_alert_allclear_mail_validator.py::test_e2_betreff_ohne_entwarnung_wird_abgelehnt
+PASSED tests/tdd/test_official_alert_allclear_mail_validator.py::test_e4_handlungsempfehlung_wird_abgelehnt
+PASSED tests/tdd/test_official_alert_allclear_mail_validator.py::test_e4_sicher_nur_als_ganzes_wort
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac1_gesenkte_warnung_ergibt_entwarnung_und_senkt_das_gedaechtnis[trip]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac1_gesenkte_warnung_ergibt_entwarnung_und_senkt_das_gedaechtnis[vergleich]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac2_vorzeitig_beendet_braucht_zwei_laeufe_bei_gesunder_quelle[trip]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac2_vorzeitig_beendet_braucht_zwei_laeufe_bei_gesunder_quelle[vergleich]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac2_wiederauftauchen_zwischen_den_laeufen_loescht_absent_since
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac5_entwarnung_nur_beim_nutzer_dem_die_warnung_gemeldet_wurde[trip]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac5_entwarnung_nur_beim_nutzer_dem_die_warnung_gemeldet_wurde[vergleich]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac6_ausfall_der_meldenden_quelle_ist_keine_entwarnung[exception]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac6_ausfall_der_meldenden_quelle_ist_keine_entwarnung[fetch_failed]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac6_ausfall_der_meldenden_quelle_ist_keine_entwarnung[not_covered]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac6_ausfall_der_meldenden_quelle_ist_keine_entwarnung[fetch_incomplete]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac7_wechsel_der_besten_quelle_ist_keine_entwarnung
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac8a_neuausgabe_mit_neuem_zeitraum_ist_keine_entwarnung
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac8b_vergangenes_trip_segment_ist_keine_entwarnung
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac8c_tagesfenster_ende_im_ortsvergleich_ist_keine_entwarnung
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac9_planmaessiger_ablauf_ist_keine_entwarnung_und_der_eintrag_wird_aufgeraeumt
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac9_gc_raeumt_nur_abgelaufene_eintraege_und_reset_schont_die_uebrigen
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac10_entwarnung_kommt_nur_einmal_und_wiederanstieg_ist_normale_warnung[trip]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac10_entwarnung_kommt_nur_einmal_und_wiederanstieg_ist_normale_warnung[vergleich]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac11_fehlversand_schreibt_nichts_und_wird_wiederholt[trip]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac11_fehlversand_schreibt_nichts_und_wird_wiederholt[vergleich]
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac13_briefing_mit_gesunder_quelle_informiert_nicht_abrufbar_nicht
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac13_ortsvergleich_briefing_informiert_nicht_abrufbar_nicht
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac14_briefing_tombstone_nach_absent_since_ergibt_keine_entwarnung
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac14_briefing_zeigt_warnung_noch_loescht_absent_since_und_verschiebt_beendet
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac15_briefing_erstmeldung_schreibt_source_scope_level
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac15_alt_eintrag_ohne_source_ergibt_nie_eine_entwarnung
+PASSED tests/tdd/test_official_alert_allclear.py::test_ac17_meteoalarm_allclear_bleibt_verworfen_und_kuerzt_keine_bestaetigung_ab
+PASSED tests/tdd/test_official_alert_allclear_source_attribution.py::test_gleicher_schluessel_bei_zwei_quellen_ordnet_die_gezeigte_warnung_ihrer_quelle_zu[trip]
+PASSED tests/tdd/test_official_alert_allclear_source_attribution.py::test_gleicher_schluessel_bei_zwei_quellen_ordnet_die_gezeigte_warnung_ihrer_quelle_zu[vergleich]
+PASSED tests/tdd/test_official_alert_allclear_source_attribution.py::test_zuordnung_folgt_stufe_und_quelle_der_gezeigten_warnung_nicht_dem_schluessel
+PASSED tests/tdd/test_official_alert_allclear_source_attribution.py::test_mehrdeutige_zuordnung_ergibt_keine_quelle
+PASSED tests/tdd/test_official_alert_allclear_source_attribution.py::test_briefing_erstmeldung_bei_gleichem_schluessel_ordnet_die_gezeigte_warnung_ihrer_quelle_zu
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_ausfall_der_meldenden_quelle_an_einem_von_zwei_orten_ist_keine_entwarnung[exception]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_ausfall_der_meldenden_quelle_an_einem_von_zwei_orten_ist_keine_entwarnung[fetch_failed]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_ausfall_der_meldenden_quelle_an_einem_von_zwei_orten_ist_keine_entwarnung[not_covered]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_ausfall_der_meldenden_quelle_an_einem_von_zwei_orten_ist_keine_entwarnung[fetch_incomplete]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_gleichnamige_instanzen_eine_ausgefallen_ergibt_quelle_nicht_ok[ausgefallene_zuerst]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_gleichnamige_instanzen_eine_ausgefallen_ergibt_quelle_nicht_ok[gesunde_zuerst]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_gleichnamige_instanz_der_meldenden_quelle_ausgefallen_ist_keine_entwarnung[trip]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_gleichnamige_instanz_der_meldenden_quelle_ausgefallen_ist_keine_entwarnung[vergleich]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_meldende_quelle_fehlt_im_pro_quelle_ergebnis_ist_keine_entwarnung[trip-covers_false]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_meldende_quelle_fehlt_im_pro_quelle_ergebnis_ist_keine_entwarnung[trip-covers_wirft]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_meldende_quelle_fehlt_im_pro_quelle_ergebnis_ist_keine_entwarnung[vergleich-covers_false]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_meldende_quelle_fehlt_im_pro_quelle_ergebnis_ist_keine_entwarnung[vergleich-covers_wirft]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_registry_name_ungleich_alert_source_ergibt_entwarnung[trip-meteoalarm_feed-meteoalarm]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_registry_name_ungleich_alert_source_ergibt_entwarnung[trip-avalanche_report-avalanche_report:AT-07]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_registry_name_ungleich_alert_source_ergibt_entwarnung[vergleich-meteoalarm_feed-meteoalarm]
+PASSED tests/tdd/test_official_alert_allclear_source_health.py::test_registry_name_ungleich_alert_source_ergibt_entwarnung[vergleich-avalanche_report-avalanche_report:AT-07]
+============================= 304 passed in 19.17s =============================

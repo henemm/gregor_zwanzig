@@ -34,7 +34,8 @@ import re
 import socket
 import threading
 import urllib.parse
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -154,7 +155,12 @@ def _write_profile(
     """
     path = get_data_dir(user_id)
     path.mkdir(parents=True, exist_ok=True)
-    profile: dict = {"id": user_id, "tier": tier}
+    # #1412 S4b: der normale SMS-Kanal sendet nur an die BESTAETIGTE
+    # Profilnummer -- CONFIG_SMS_TO steht deshalb bestaetigt im Profil.
+    profile: dict = {
+        "id": user_id, "tier": tier,
+        "sms_to": CONFIG_SMS_TO, "sms_verified_number": CONFIG_SMS_TO,
+    }
     if reply_to is not None:
         stamp = datetime.now(timezone.utc) - reply_age
         profile["premium_sms_reply_to"] = reply_to
@@ -247,7 +253,7 @@ def _persisted_trip(user_id: str, *, send_sms: bool, send_premium_sms: bool):
     # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
     # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
     stage = Stage(
-        id="S1", name="Etappe 1", date=date.today() + timedelta(days=1),
+        id="S1", name="Etappe 1", date=ortstag(42.2, 9.05) + timedelta(days=1),
         waypoints=[
             Waypoint(id="W1", name="Start", lat=42.2, lon=9.05, elevation_m=400,
                      arrival_calculated="08:00"),
@@ -395,17 +401,16 @@ def test_sender_is_fixed_number_regardless_of_sms_from(stub) -> None:
 # AC-2: Empfaenger ist die gelernte Rueckadresse, nie sms_to
 # ---------------------------------------------------------------------------
 
-def test_recipient_comes_from_learned_reply_to_not_sms_to(stub, monkeypatch) -> None:
-    """AC-2: Given ``GZ_SMS_TO`` steht bewusst widersprüchlich im Prozess-
-    Environment / When das Briefing per Premium-SMS geht / Then geht der POST
+def test_recipient_comes_from_learned_reply_to_not_sms_to(stub) -> None:
+    """AC-2: Given ``sms_to`` ist bewusst auf einen widersprüchlichen Wert
+    gesetzt / When das Briefing per Premium-SMS geht / Then geht der POST
     ausschliesslich an die gelernte Rueckadresse."""
     user_id = "tdd-1676-recipient"
     contradicting = "+49111111111"
-    monkeypatch.setenv("GZ_SMS_TO", contradicting)
     _write_profile(user_id, tier="premium", reply_to=LEARNED_REPLY_TO)
-    settings = _stub_settings(stub.port, user_id, sms_to=_KEEP)
+    settings = _stub_settings(stub.port, user_id, sms_to=contradicting)
     assert settings.sms_to == contradicting, (
-        f"GZ_SMS_TO wurde nicht wirksam ({settings.sms_to!r}) — der Widerspruch, "
+        f"sms_to wurde nicht wirksam ({settings.sms_to!r}) — der Widerspruch, "
         "den dieser Test braucht, liegt nicht vor."
     )
 
@@ -772,12 +777,14 @@ def _block_case(user_id: str, stub: _SevenIoStub, *, reply_to, reply_age) -> tup
     Aufrufer fragen muss, der auch Ausnahmen ohne Kurzschluessel faengt.
     """
     from output.channels.base import OutputConfigError
-    from output.channels.premium_sms import PremiumSmsOutput
+
+    from tests.helpers.sms_empfaenger import premium_ausgang
 
     _write_profile(user_id, tier="premium", reply_to=reply_to, reply_age=reply_age)
     settings = _stub_settings(stub.port, user_id)
+    # #1412 S4b: die Rueckadresse prueft die Profil-Fabrik des Kanals.
     with pytest.raises(OutputConfigError) as caught:
-        PremiumSmsOutput(settings).send(subject="egal", body="egal")
+        premium_ausgang(settings, user_id).send(subject="egal", body="egal")
     code = getattr(caught.value, "reason_code", None)
     assert isinstance(code, str) and code.strip(), (
         f"Die Sperre traegt keinen maschinenlesbaren Grund (reason_code={code!r}) "
@@ -789,28 +796,27 @@ def _block_case(user_id: str, stub: _SevenIoStub, *, reply_to, reply_age) -> tup
 
 def test_channel_name_premium_sms_resolves_to_the_premium_channel(stub) -> None:
     """Given der Kanalname ``premium_sms`` wird ueber die zentrale Kanal-Fabrik
-    aufgeloest (der Weg der CLI, ``get_channel``) / When ohne gelernte
-    Rueckadresse gesendet wird / Then blockt derselbe Fail-Closed-Grund wie beim
-    direkt gebauten Kanal, und es geht KEIN POST hinaus.
+    aufgeloest (der Weg der CLI, ``get_channel``) / When gesendet werden soll
+    / Then lehnt die Fabrik mit einer Meldung ab, die den Premium-Kanal nennt,
+    und es geht KEIN POST hinaus.
 
-    Gemessen wird das Verhalten, nicht der Typ: waere der Name dort auf den
-    normalen SMS-Kanal verdrahtet, ginge hier eine kostenpflichtige SMS an
-    ``sms_to`` ab — mit falschem Absender und falschem Empfaenger — statt zu
-    blocken. Die Registrierung war bis hierhin von keinem Test beruehrt.
+    Issue #1412 S4b (AC-12): die CLI hat keinen belegten Empfaenger, die
+    globale ``.env`` ist keine Empfaengerquelle -- frueher lieferte die Fabrik
+    einen Kanal, der erst beim Senden blockte. Gemessen wird weiter, dass der
+    Name nicht auf den normalen SMS-Kanal verdrahtet ist (sonst ginge eine
+    kostenpflichtige SMS an ``sms_to``).
     """
     from output.channels.base import OutputConfigError, get_channel
 
     user_id = "tdd-1676-factory"
-    _write_profile(user_id, tier="premium", reply_to=None)
+    _write_profile(user_id, tier="premium", reply_to=LEARNED_REPLY_TO)
     settings = _stub_settings(stub.port, user_id)
 
     with pytest.raises(OutputConfigError) as caught:
         get_channel("premium_sms", settings).send(subject="egal", body="egal")
 
-    assert getattr(caught.value, "reason_code", None) == EXPECTED_CODE_NO_REPLY, (
-        f"Kanalname 'premium_sms' fuehrt nicht auf den Premium-Kanal: der "
-        f"Abbruch traegt {getattr(caught.value, 'reason_code', None)!r} statt "
-        f"{EXPECTED_CODE_NO_REPLY!r}."
+    assert caught.value.channel == "premium_sms", (
+        f"Kanalname 'premium_sms' fuehrt nicht auf den Premium-Kanal: {caught.value!r}"
     )
     assert stub.received == [], (
         f"Trotz fehlender Rueckadresse ging ein POST hinaus: {stub.received!r}"

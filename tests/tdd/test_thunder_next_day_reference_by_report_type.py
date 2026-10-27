@@ -28,6 +28,7 @@ from datetime import date, timedelta
 from src.output.tokens.dto import HourlyValue
 from src.app.models import ThunderLevel
 from src.services.trip_report_scheduler import TripReportSchedulerService
+from tests.helpers.ortstag import utc_tag
 
 
 def _trend_rows_for(target: date) -> list[dict]:
@@ -74,9 +75,11 @@ class TestThunderNextDayReferenceByReportType:
         WHEN:  thunder_forecast aus dem Trend abgeleitet wird
         THEN:  fc["+1"]["date"] == (heute + 1 Tag) — morgen, NICHT uebermorgen
         """
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
         target = svc._get_target_date("morning", _zonenloser_trip(), _jetzt())
-        assert target == date.today(), (
+        # #2314 D2: der Trip hat KEINE Wegpunkte -- es gilt der UTC-Rueckfall
+        # (trip_tz, Durchgang 1), nicht der Prozesstag.
+        assert target == utc_tag(), (
             "Vorbedingung: morning-Zieltag muss heute sein"
         )
 
@@ -98,9 +101,11 @@ class TestThunderNextDayReferenceByReportType:
         WHEN:  thunder_forecast aus dem Trend abgeleitet wird
         THEN:  fc["+1"]["date"] == (heute + 2 Tage) — uebermorgen
         """
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
         target = svc._get_target_date("evening", _zonenloser_trip(), _jetzt())
-        assert target == date.today() + timedelta(days=1), (
+        # #2314 D2: der Trip hat KEINE Wegpunkte -- es gilt der UTC-Rueckfall
+        # (trip_tz, Durchgang 1), nicht der Prozesstag.
+        assert target == utc_tag() + timedelta(days=1), (
             "Vorbedingung: evening-Zieltag muss heute+1 sein"
         )
 
@@ -122,7 +127,7 @@ class TestThunderNextDayReferenceByReportType:
         Tag spaeter als im Morgenbriefing (uebermorgen vs. morgen) — nicht
         gleich, nicht zwei Tage verschoben.
         """
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
         _trip, _now = _zonenloser_trip(), _jetzt()
         morning_target = svc._get_target_date("morning", _trip, _now)
         evening_target = svc._get_target_date("evening", _trip, _now)

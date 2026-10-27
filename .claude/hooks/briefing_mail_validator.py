@@ -180,6 +180,32 @@ def _table_blocks(html: str) -> list[str]:
     return blocks
 
 
+def _hourly_table_blocks(html: str) -> list[str]:
+    """Wie ``_table_blocks``, aber OHNE den 3-Tages-Ausblick (#2136 Folgebug).
+
+    Seit #2136/ADR-0068 traegt ``render_outlook_table`` dieselben
+    ``MetricDefinition.col_label``-Kuerzel wie die Stundentabelle derselben
+    Mail (z.B. "Rain", "Wind", "Gust") -- ``_table_blocks()`` liefert also
+    BEIDE Tabellenarten mit UEBEREINSTIMMENDEN Spaltennamen zurueck. Ohne
+    Trennung mischen ``_column_values``/``_column_hours_sum``/
+    ``_column_num_sum`` die TAEGLICHEN Ausblick-Werte in dieselbe Summe wie
+    die STUENDLICHEN Etappen-Werte (falscher Massstab; Beleg: die "kein
+    Regen"-Pruefung schlug auf einen taeglichen Ausblicks-Regenwert an, den
+    die Etappen-Stundentabelle selbst gar nicht enthielt).
+
+    Unterscheidungsmerkmal: der Ausblick traegt in BEIDEN Rendering-Pfaden
+    (outlook.py, konfigurierbar wie fest) immer ``Tag`` als allerersten
+    th-Text; eine Etappen-Stundentabelle beginnt nie mit ``Tag`` (produktiv
+    ``Time``, s. html.py `_render_html_table`). Bloecke ohne th-Zeile
+    (leere Tabellen) bleiben erhalten -- kein Filterkriterium.
+    """
+    return [
+        block
+        for block in _table_blocks(html)
+        if not _th_tokens(block) or _th_tokens(block)[0] != "Tag"
+    ]
+
+
 def _mobile_header_tokens(html: str) -> list[str]:
     """Erste nicht-leere Zeile im .mobile-compact-<pre>, per Whitespace gesplittet."""
     m = _MOBILE_PRE_RE.search(html)
@@ -203,7 +229,7 @@ def _column_values(html: str, header_de: str) -> list[float]:
     tabellen mit gleichem Header) behalten so ihr Summenverhalten über Etappen.
     """
     values: list[float] = []
-    for block in _table_blocks(html):
+    for block in _hourly_table_blocks(html):
         headers = _th_tokens(block)
         try:
             idx = headers.index(header_de)
@@ -224,10 +250,19 @@ def _column_hours_sum(html: str, *header_names: str) -> float | None:
 
     Issue #997: pro <table>-Block gescoped (analog _column_values), damit die
     Spaltenzahl der Trend-Tabelle die Stunden-Spalte nicht verfälscht.
+
+    Issue #2104: Die Pill bildet die ETAPPE ab — daher (1) 'Nacht am Ziel'-
+    Tabellen ausschließen (fremder Bezugsraum) und (2) jede Stunde nur
+    einmal zählen (Dedup über die Zeit-Zelle): die Nahtstunde zwischen zwei
+    Segmenten steht bewusst in beiden Segmenttabellen.
     """
     total = 0.0
     found = False
-    for block in _table_blocks(html):
+    seen_hours: set[str] = set()
+    night = _night_table_blocks(html)
+    for block in _hourly_table_blocks(html):
+        if block in night:
+            continue
         headers = _th_tokens(block)
         idx = next((headers.index(h) for h in header_names if h in headers), None)
         if idx is None:
@@ -236,11 +271,27 @@ def _column_hours_sum(html: str, *header_names: str) -> float | None:
             cells = _TD_RE.findall(row_html)
             if len(cells) != len(headers):
                 continue
+            hour_key = _strip_tags(cells[0])
+            if hour_key in seen_hours:
+                continue
             m = re.search(r"(\d+(?:\.\d+)?)\s*h\b", _strip_tags(cells[idx]))
             if m:
+                seen_hours.add(hour_key)
                 total += float(m.group(1))
                 found = True
     return total if found else None
+
+
+def _night_table_blocks(html: str) -> set[str]:
+    """Tabellen der 'Nacht am Ziel'-Sektion (#2104): der Renderer stellt den
+    Kopf 'Nacht am Ziel' unmittelbar vor Desktop- UND Mobile-Tabelle."""
+    night: set[str] = set()
+    prev_end = 0
+    for m in _TABLE_RE.finditer(html):
+        if "Nacht am Ziel" in html[prev_end:m.start()]:
+            night.add(m.group(0))
+        prev_end = m.end()
+    return night
 
 
 def _column_cells(html: str, *header_names: str) -> list[str]:
@@ -250,7 +301,7 @@ def _column_cells(html: str, *header_names: str) -> list[str]:
     <table>-Block, nur Zeilen mit passender Spaltenzahl.
     """
     cells: list[str] = []
-    for block in _table_blocks(html):
+    for block in _hourly_table_blocks(html):
         headers = _th_tokens(block)
         idx = next((headers.index(h) for h in header_names if h in headers), None)
         if idx is None:
@@ -296,7 +347,7 @@ def _column_num_sum(html: str, *header_names: str) -> float | None:
     Issue #997: Der erste vorkommende Header-Name gewinnt (unverändertes
     Verhalten); die Summe läuft über das pro-Tabelle gescopte _column_values.
     """
-    all_headers = [h for block in _table_blocks(html) for h in _th_tokens(block)]
+    all_headers = [h for block in _hourly_table_blocks(html) for h in _th_tokens(block)]
     name = next((h for h in header_names if h in all_headers), None)
     if name is None:
         return None

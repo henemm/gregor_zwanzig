@@ -3,7 +3,7 @@ entity_id: fix_1355_regen_adjektiv
 type: module
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, compact_summary, briefing]
 ---
@@ -16,7 +16,7 @@ tags: [bugfix, compact_summary, briefing]
 
 ## Purpose
 
-Die Kurz-Zusammenfassungszeile im Briefing (`CompactSummaryFormatter._format_precipitation`) gibt bei spät einsetzendem Regen unbedingt `"trocken, Regen ab {HH}:00"` aus — auch wenn die Tagesregensumme erheblich ist (Beleg: 15,4 mm → "starker Regen"). Das bereits berechnete Adjektiv (`_precip_adjective`) wird in diesem Zweig verworfen. Für ein Briefing-Tool, das Tourenentscheidungen unter Zeitdruck stützt, ist "trocken" am Satzanfang bei starkem Regen eine irreführende Aussage.
+Die Kurz-Zusammenfassungszeile im Briefing (`CompactSummaryFormatter._format_precipitation`) gibt bei spät einsetzendem Regen unbedingt `"trocken, Regen ab {HH}:00"` aus — auch wenn die Tagesregensumme erheblich ist (Beleg: 15,4 mm → "starker Regen"). Das bereits berechnete Adjektiv (`_precip_adjective`) wird in diesem Zweig verworfen. Für ein Briefing-Tool, das Trip-Entscheidungen unter Zeitdruck stützt, ist "trocken" am Satzanfang bei starkem Regen eine irreführende Aussage.
 
 ## Source
 

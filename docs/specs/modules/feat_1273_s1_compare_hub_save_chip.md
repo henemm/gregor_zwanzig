@@ -3,7 +3,7 @@ entity_id: feat_1273_s1_compare_hub_save_chip
 type: module
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, compare, save-status, epic-1273, save-indicator]
 workflow: epic-1273-compare-one-surface
@@ -12,7 +12,7 @@ workflow: epic-1273-compare-one-surface
 <!-- Issue #1273 — Epic: Ortsvergleich auf EINE Fläche wie beim Trip. Diese Spec deckt NUR Slice S1 ab
      (Save-Chip-Infra). S2 (Name/Region/Aktivitätsprofil-Parität), S3 (Link-Umbiegung + Redirect),
      S4a/S4b (Test-Migration) und S5 (CompareEditor-Löschung) sind eigene, spätere Specs.
-     Kontext: docs/context/epic-1273-compare-one-surface.md, Abschnitt "## Analysis". -->
+     Kontext: docs/features/epic-1273-compare-one-surface.md, Abschnitt "## Analysis". -->
 
 # Spec: #1273 Slice S1 — Compare-Hub: geteilter Save-Chip
 
@@ -22,7 +22,7 @@ workflow: epic-1273-compare-one-surface
 
 ## Purpose
 
-Der Ortsvergleich-Hub (`CompareTabs.svelte`) bekommt den gleichen „✓ Gespeichert HH:MM"-Anzeige-Chip wie die Tour-Bearbeitung (`SaveIndicator.svelte` + `SaveStatus`), damit der Nutzer beim Bearbeiten eines Ortsvergleichs jederzeit ehrlich sieht, ob eine Änderung tatsächlich zum Server durchgereicht wurde. Diese Slice ist reine additive Infrastruktur: **kein** Redirect, **keine** Feldmigration, **keine** Testlöschung, **keine** Änderung am bestehenden Speicherverhalten selbst (die 5 Commit-Handler bleiben strukturell erhalten). Sie ist die Voraussetzung dafür, dass der Hub in S2–S5 schrittweise zur einzigen Bearbeiten-Fläche werden kann (PO-Entscheid, Prod-Audit Befund 9, 2026-07-16) und erfüllt sofort sichtbar die Trip/Compare-Teilungs-Invariante (CLAUDE.md): kein neuer Compare-eigener Baustein, sondern Verdrahtung des bestehenden geteilten `SaveStatus`/`SaveIndicator`-Paars in eine dritte Fläche.
+Der Ortsvergleich-Hub (`CompareTabs.svelte`) bekommt den gleichen „✓ Gespeichert HH:MM"-Anzeige-Chip wie die Trip-Bearbeitung (`SaveIndicator.svelte` + `SaveStatus`), damit der Nutzer beim Bearbeiten eines Ortsvergleichs jederzeit ehrlich sieht, ob eine Änderung tatsächlich zum Server durchgereicht wurde. Diese Slice ist reine additive Infrastruktur: **kein** Redirect, **keine** Feldmigration, **keine** Testlöschung, **keine** Änderung am bestehenden Speicherverhalten selbst (die 5 Commit-Handler bleiben strukturell erhalten). Sie ist die Voraussetzung dafür, dass der Hub in S2–S5 schrittweise zur einzigen Bearbeiten-Fläche werden kann (PO-Entscheid, Prod-Audit Befund 9, 2026-07-16) und erfüllt sofort sichtbar die Trip/Compare-Teilungs-Invariante (CLAUDE.md): kein neuer Compare-eigener Baustein, sondern Verdrahtung des bestehenden geteilten `SaveStatus`/`SaveIndicator`-Paars in eine dritte Fläche.
 
 ## Source
 
@@ -243,4 +243,4 @@ Offene Frage aus der Analyse-Phase, hier entschieden: Der Trip-Guard (`routes/tr
 
 ## Changelog
 
-- 2026-07-16: Erstfassung (Slice S1 von Epic #1273). Basiert auf `docs/context/epic-1273-compare-one-surface.md` Abschnitt „Analysis" (Technical Approach — Speicher-Modell: Kombination `hubPutQueue` + manuell getriebener `SaveStatus`, NICHT `schedule()`-Ersatz). Implementation Details löst zusätzlich die im Kontext-Dokument nicht explizit behandelte No-Op-vs-Fehler-Doppeldeutigkeit von `updated === null` in `handleCorridorCommit`/`handleVersandCommit`/`handleAlarmeCommit` auf (via `markPristine()`) und entscheidet die offene Frage zum `beforeNavigate`-Guard (entfällt in S1).
+- 2026-07-16: Erstfassung (Slice S1 von Epic #1273). Basiert auf `docs/features/epic-1273-compare-one-surface.md` Abschnitt „Analysis" (Technical Approach — Speicher-Modell: Kombination `hubPutQueue` + manuell getriebener `SaveStatus`, NICHT `schedule()`-Ersatz). Implementation Details löst zusätzlich die im Kontext-Dokument nicht explizit behandelte No-Op-vs-Fehler-Doppeldeutigkeit von `updated === null` in `handleCorridorCommit`/`handleVersandCommit`/`handleAlarmeCommit` auf (via `markPristine()`) und entscheidet die offene Frage zum `beforeNavigate`-Guard (entfällt in S1).

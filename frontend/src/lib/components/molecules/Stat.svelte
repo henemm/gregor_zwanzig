@@ -42,8 +42,10 @@
 		class: className = ''
 	}: Props = $props();
 
+	// Mobile Usability Paket 1 (AP-017): Label-Minimum 11px — sm-Labels
+	// (z.B. TripHeader-Metriken) waren mit 9px unter dem Scale-Minimum.
 	const SIZES = {
-		sm: { value: 18, label: 9 },
+		sm: { value: 18, label: 11 },
 		md: { value: 22, label: 10 },
 		lg: { value: 28, label: 10 }
 	} as const;

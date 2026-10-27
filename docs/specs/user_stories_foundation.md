@@ -16,7 +16,7 @@ Diese drei User Stories bilden die **produktstrategische Grundlage** für alle F
 
 ## US-1: Geografische & Zeitliche Kontrolle (Der Workspace)
 
-> **Als Tourenplaner**
+> **Als Trip-Planer**
 > möchte ich meine GPX-Tracks importieren und die vom System errechneten Wegpunkte und Ankunftszeiten auf einer Karte kontrollieren, anpassen sowie Pausentage einschieben können,
 > damit das System mein exaktes Bewegungsprofil kennt und die späteren Wetterabfragen räumlich und zeitlich präzise mit meinem realen Standort auf dem Berg übereinstimmen.
 
@@ -71,7 +71,7 @@ Keine Bevormundung. Rohdaten wenn gewollt, Indikatoren wenn praktischer — der 
 
 ## US-3: Das Autarke Briefing-System (Die Report-Konfiguration)
 
-> **Als Alpinist auf einer mehrtägigen Tour mit limitiertem Empfang**
+> **Als Alpinist auf einer mehrtägigen Trip mit limitiertem Empfang**
 > möchte ich einmalig für den gesamten Trip konfigurieren, an welche Kanäle (z.B. Signal für kurze Alerts, E-Mail für detaillierte 5-Tage-Trends) und zu welchen festen Uhrzeiten das System seine Berichte sendet,
 > damit ich mich in der Wildnis darauf verlassen kann, dass die rettungswichtigen Informationen genau dann auf meinem Gerät eintreffen, wenn ich mein kurzes Empfangsfenster auf der Hütte habe.
 >

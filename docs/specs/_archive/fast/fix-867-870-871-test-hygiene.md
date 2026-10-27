@@ -10,7 +10,7 @@
 - Kein Produktionscode
 
 ## Manuelle Test-Schritte
-1. `cd frontend && node --experimental-strip-types --test src/lib/components/alerts-tab/alertMetricTable.test.ts`
+1. `cd frontend && node --experimental-strip-types --test frontend/src/lib/components/alerts-tab/alertMetricTable.test.ts`
 2. Ergebnis: 35/35 pass, 0 fail
 
 ## Acceptance Criteria

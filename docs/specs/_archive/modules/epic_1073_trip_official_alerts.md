@@ -3,7 +3,7 @@ entity_id: epic_1073_trip_official_alerts
 type: feature
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [trip-briefing, alerts, official-alerts, epic-1073, shared-renderer]
 workflow: 1087-trip-official-alerts
@@ -56,7 +56,7 @@ ergänzt einen Trip-Toggle `official_alerts_enabled` (Default `true`, Pointer-Mu
 | `internal/model/compare_preset.go::OfficialAlertsEnabled *bool` (#1040) | Muster-Referenz | Pointer-Bool-Toggle-Pattern für `internal/model/trip.go` |
 | `internal/handler/compare_preset.go` Merge-Block (#1040) | Muster-Referenz | `if req.X != nil`-Merge-Pattern für `internal/handler/trip.go::UpdateTripHandler` |
 | `src/services/comparison_engine.py:187-200` | Muster-Referenz | Fetch-Gating-Pattern (`if enabled: fetch else []`) für Scheduler-Fetch |
-| `frontend/src/lib/components/trip-wizard/steps/ChannelToggle.svelte` | Wiederverwendung | Bestehende Toggle-UI-Komponente, direkter Import in `AlertsTab.svelte` |
+| `frontend/src/lib/components/shared/ChannelToggle.svelte` | Wiederverwendung | Bestehende Toggle-UI-Komponente, direkter Import in `AlertsTab.svelte` |
 | `tests/tdd/test_issue_1040_alerts_toggle.py` | Test-Vorbild | Mock-freies Fake-Quelle-Pattern (`register_official_alert_source`, Call-Counter) |
 
 ## Implementation Details

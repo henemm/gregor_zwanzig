@@ -12,6 +12,56 @@ src = root / "src"
 if str(src) not in sys.path:
     sys.path.insert(0, str(src))
 
+# ---------------------------------------------------------------------------
+# Issue #1196 Klasse B: geteilte .env-Fixture statt Modul-weitem load_dotenv()
+# ---------------------------------------------------------------------------
+
+_DOTENV_PATH = root / ".env"
+
+
+@pytest.fixture(scope="module")
+def dotenv_env():
+    """Laedt Werte aus der Worktree-``.env`` NUR fuer Tests, die dies per
+    Fixture anfordern -- ersetzt das fruehere modulweite ``load_dotenv()`` auf
+    Modulebene mehrerer Live-/E-Mail-Testdateien.
+
+    Root Cause (#1196 Klasse B): ein ``load_dotenv()``-Aufruf auf Modulebene
+    laeuft beim COLLECT, nicht beim Testlauf -- unabhaengig davon, ob der
+    jeweilige Test spaeter per Marker deselektiert wird. Jeder Volllauf, der
+    eine dieser Dateien nur EINSAMMELT, schrieb damit die komplette lokale
+    ``.env`` dauerhaft (kein Teardown) nach ``os.environ`` und kontaminierte
+    andere, spaeter im selben Prozess laufende Tests (Beleg: der
+    Vorbelegungs-Waechter in ``tests/tdd/_telegram_live_fixture.py``,
+    ``test_issue_1014_live_optin.py::test_with_optin_gate_returns_true_and_sources_env``).
+
+    MODULE-Scope + eigenes ``pytest.MonkeyPatch()`` statt der
+    function-scoped ``monkeypatch``-Fixture, damit auch module-scoped
+    Fixtures (z.B. ``session_cookie`` in den Account-Page-Live-Tests) diese
+    Fixture anfordern koennen (eine function-scoped Fixture waere dort ein
+    Scope-Mismatch). Bewusst NICHT session-scoped: dann blieben die Werte
+    bis zum Ende des Laufs in ``os.environ`` und traefen jedes spaeter
+    laufende Modul -- exakt die Verschmutzung, die hier abgestellt wird.
+    Mit Modul-Scope werden sie am Ende des anfordernden Moduls zurueckgerollt.
+    Nur FEHLENDE Keys werden gesetzt -- Vorrang fuer bereits gesetzte Werte
+    (Shell-Export, CI), analog ``load_dotenv(override=False)``. Fehlt die
+    ``.env`` (CI), ist die Fixture ein No-op.
+    """
+    if not _DOTENV_PATH.exists():
+        yield
+        return
+
+    from dotenv import dotenv_values
+
+    mp = pytest.MonkeyPatch()
+    try:
+        for key, value in dotenv_values(_DOTENV_PATH).items():
+            if value is not None and key not in os.environ:
+                mp.setenv(key, value)
+        yield
+    finally:
+        mp.undo()
+
+
 # Issue #346: force all tests onto the offline FixtureProvider so pytest runs
 # never hit the live Open-Meteo API (and exhaust the server-IP rate limit).
 _FIXTURE_DIR = os.path.join(os.path.dirname(__file__), "..", "fixtures", "openmeteo")
@@ -36,6 +86,116 @@ def _use_fixture_provider(request):
         os.environ.pop("GZ_TEST_FIXTURE_DIR", None)
 
 
+# ---------------------------------------------------------------------------
+# Issue #2142: Core-Auth-Header zentral fuer jeden TestClient
+# ---------------------------------------------------------------------------
+
+CORE_AUTH_HEADER = "X-GZ-Core-Auth"
+CORE_SECRET_ENV = "GZ_CORE_SHARED_SECRET"
+# Nur fuer den Testlauf. Kein Produktivwert, steht bewusst im Repo.
+_CORE_AUTH_TEST_SECRET = "pytest-core-shared-secret-0123456789abcdef"
+
+# Beim IMPORT dieser conftest, nicht in einer Fixture: Testmodule werden vor
+# dem ersten Fixture-Lauf eingesammelt, und ein dort auf Modulebene gebauter
+# TestClient braucht das Geheimnis bereits. ``setdefault`` laesst einen von
+# aussen gesetzten Wert (Server-.env, CI) unangetastet.
+os.environ.setdefault(CORE_SECRET_ENV, _CORE_AUTH_TEST_SECRET)
+
+
+def _patch_testclient_with_core_auth() -> None:
+    """Versorgt JEDE ``TestClient``-Instanz mit dem gueltigen Auth-Header.
+
+    Ohne das braechen die ~68 Bestands-Testdateien geschlossen mit 401, sobald
+    ``api/main.py`` die Pruefung durchsetzt. Der Waechter selbst wird dabei
+    NICHT abgeschaltet — es gibt keinen ``_in_pytest()``-Bypass: ein Test, der
+    den Header aus seinem Client wieder entfernt, bekommt weiterhin 401
+    (AC-11, ``tests/tdd/test_core_auth_enforcement.py``).
+
+    Der Wert wird bei jeder Instanziierung frisch aus der Umgebung gelesen,
+    damit ein Test, der das Geheimnis per ``monkeypatch.setenv`` aendert,
+    danach auch einen dazu passenden Client bekommt.
+
+    Gepatcht wird ``starlette.testclient.TestClient`` — ``fastapi.testclient``
+    re-exportiert genau diese Klasse.
+    """
+    from starlette.testclient import TestClient
+
+    if getattr(TestClient, "_gz_core_auth_patched", False):
+        return
+
+    original_init = TestClient.__init__
+
+    def __init__(self, *args, **kwargs):  # noqa: ANN001, ANN202
+        original_init(self, *args, **kwargs)
+        secret = os.environ.get(CORE_SECRET_ENV, "")
+        if secret:
+            self.headers[CORE_AUTH_HEADER] = secret
+
+    TestClient.__init__ = __init__
+    TestClient._gz_core_auth_patched = True
+
+
+_patch_testclient_with_core_auth()
+
+
+@pytest.fixture(autouse=True)
+def _dwd_raster_cache_leeren():
+    """#2465: `providers.dwd._RASTER_CACHE` ist ein PROZESSWEITER Cache, keyed
+    nach URL (Lauf/Parameter/Zeitschritt, also zeitabhaengig). Ohne Reset lesen
+    zwei Tests mit unterschiedlichen Fake-Rastern zur selben URL je nach
+    Reihenfolge und Stunde die Werte des anderen. Nur wenn das Modul ohnehin
+    schon geladen ist — kein Import fuer Tests, die DWD nie beruehren."""
+    def _leeren():
+        modul = sys.modules.get("providers.dwd")
+        cache = getattr(modul, "_RASTER_CACHE", None)
+        if cache is not None:
+            cache.clear()
+    _leeren()
+    yield
+    _leeren()
+
+
+@pytest.fixture(autouse=True)
+def _telegram_herkunftsbeleg_leeren():
+    """#1412 S4a: der Herkunftsbeleg ``_current_inbound_sender`` (Absender des
+    laufenden Webhook-Updates) ist eine ContextVar im Haupt-Thread -- ein Test,
+    der ihn per ``tests.helpers.telegram_empfaenger.antwort_im_update`` setzt,
+    darf ihn nicht an den naechsten Test vererben."""
+    def _leeren():
+        modul = sys.modules.get("output.channels.recipient")
+        if modul is not None:
+            modul._current_inbound_sender.set(None)
+    _leeren()
+    yield
+    _leeren()
+
+
+@pytest.fixture(autouse=True)
+def _core_auth_secret_configured():
+    """Stellt fuer jeden Test sicher, dass ein Geheimnis konfiguriert ist.
+
+    Fehlt es (weil ein vorheriger Test es ohne monkeypatch aus der Umgebung
+    geraeumt hat), antwortete der Core mit 503 statt mit dem erwarteten
+    Verhalten. Tests, die den unkonfigurierten Zustand BEWUSST herstellen
+    wollen, ueberschreiben das per eigenem ``monkeypatch.delenv`` im Test —
+    diese Fixture laeuft als autouse zuerst und wird danach ueberstimmt.
+
+    BEWUSST OHNE ``monkeypatch``: als autouse-Fixture wuerde sie den
+    function-scoped ``monkeypatch`` VOR ``_isolate_data_root`` aufbauen. Damit
+    liefe ``monkeypatch.undo()`` erst NACH dessen Restore — ein Test, der
+    ``loader._DATA_ROOT`` per ``monkeypatch.setattr`` umbiegt (z. B.
+    ``tests/tdd/test_compare_dispatch_failed_tally.py``), setzte den Wert am
+    Ende auf SEINEN tmp-Pfad zurueck statt auf den echten Baum. Alle folgenden
+    ``@pytest.mark.real_data_root``-Tests lasen dann eine leere Wegwerf-Wurzel
+    und scheiterten mit 404 ("Trip ... nicht gefunden"). Reines
+    ``os.environ``-Setzen hat keine Fixture-Abhaengigkeit und verschiebt die
+    Reihenfolge nicht.
+    """
+    if not os.environ.get(CORE_SECRET_ENV):
+        os.environ[CORE_SECRET_ENV] = _CORE_AUTH_TEST_SECRET
+    yield
+
+
 _REPO_DATA_USERS = root / "data" / "users"
 
 # Issue #1624: die frueher unter ``<repo>/data/users`` COMMITTETEN
@@ -47,9 +207,101 @@ _REPO_DATA_USERS = root / "data" / "users"
 # handhaben; ``data/users/*`` ist seit #1602 ohnehin gitignored).
 _REAL_DATA_FIXTURE_SRC = root / "tests" / "fixtures" / "data_root"
 
+# Issue #2226 (Defekt 1 + 3): vor dem Fix gab es KEINE session-weite
+# Umleitung -- ``app.loader._DATA_ROOT`` blieb den gesamten Lauf ueber
+# unangetastet (None), bis eine funktionsweite Fixture sie kurzfristig
+# setzte. Hoeher gescopte Fixtures (module/class/session) liefen deshalb
+# VOR jeder Isolation direkt gegen den echten Baum. Die beiden Namen hier
+# sind die einzige Quelle der Wahrheit fuer "echte Wurzel" bzw. "isolierte
+# Session-Wurzel" -- von JEDER Redirect-Fixture unten gelesen/gesetzt,
+# nirgends hartkodiert.
+_ORIGINAL_DATA_ROOT: str | None = None
+_SESSION_DATA_ROOT: str | None = None
+
 
 @pytest.fixture(scope="session", autouse=True)
-def _materialize_real_data_root_fixtures() -> None:
+def _redirect_data_root_session(tmp_path_factory):
+    """Leitet ``app.loader._DATA_ROOT`` SOFORT bei Sessionstart auf eine
+    isolierte Wegwerf-Wurzel um -- laeuft vor JEDER hoeher gescopten
+    Fixture (pytest-Scope-Rang: session > package > module > class >
+    function), schliesst also Defekt 3 an der Wurzel.
+
+    Sichert den Ausgangswert nach ``_ORIGINAL_DATA_ROOT``, BEVOR er
+    ueberschrieben wird -- das ist die einzige Stelle, die diesen Wert je
+    setzt. ``_materialize_real_data_root_fixtures`` (unten) haengt explizit
+    von dieser Fixture ab, damit die Reihenfolge nicht dem Zufall der
+    Definitionsreihenfolge ueberlassen bleibt.
+    """
+    global _ORIGINAL_DATA_ROOT, _SESSION_DATA_ROOT
+
+    from app import loader
+
+    _ORIGINAL_DATA_ROOT = getattr(loader, "_DATA_ROOT", None)
+    _SESSION_DATA_ROOT = str(tmp_path_factory.mktemp("gz-data-root-session"))
+    loader._DATA_ROOT = _SESSION_DATA_ROOT
+    yield
+    loader._DATA_ROOT = _ORIGINAL_DATA_ROOT
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _isolate_data_root_module(request, _redirect_data_root_session):
+    """Modul-scope Gegenstueck zu ``_isolate_data_root`` (Funktionsebene,
+    unten). Noetig, weil ein modul-scope Fixture, das ``real_data_root``
+    ueber ``pytestmark`` traegt, VOR der funktionsweiten Redirect-Fixture
+    laeuft (Defekt 3) -- ohne dieses Gegenstueck wuerde das Opt-in fuer
+    hoeher gescopte Fixtures wirkungslos bleiben, weil die Umleitung auf
+    die echte Wurzel sonst erst zu spaet (auf Funktionsebene) griffe. Als
+    Fixture in der ROOT-conftest wird sie vor modul-eigenen Fixtures
+    DERSELBEN Testdatei gesetzt (pytest: Fixtures aus einer Vorfahren-
+    conftest laufen vor gleich gescopten Fixtures der Testdatei selbst).
+    """
+    if request.node.get_closest_marker("real_data_root"):
+        from app import loader
+
+        loader._DATA_ROOT = _ORIGINAL_DATA_ROOT
+        yield
+        loader._DATA_ROOT = _SESSION_DATA_ROOT
+        return
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _guard_repo_data_users_session(_materialize_real_data_root_fixtures):
+    """Session-weiter Waechter (Defekt 3): nimmt den Fingerprint des
+    ECHTEN ``<repo>/data/users``-Baums NACH abgeschlossener Materialisierung
+    (Abhaengigkeit oben) und vergleicht ihn am Ende der GESAMTEN Session
+    erneut. Faengt damit JEDEN Schreibzugriff auf den echten Baum,
+    unabhaengig vom Mechanismus (app.loader, CWD-relativ oder hartkodiert)
+    und unabhaengig vom Fixture-Scope -- die funktionsweite Pruefung in
+    ``_isolate_data_root`` sieht nur Schreibzugriffe INNERHALB einer
+    einzelnen Testfunktion, nicht in hoeher gescopten Fixtures.
+
+    WICHTIG: der ``before``-Schnappschuss darf NICHT vor der Materialisierung
+    genommen werden -- sonst kopiert ``_materialize_real_data_root_fixtures``
+    auf einem frischen (leeren) Checkout Dateien in den Baum, NACHDEM
+    ``before`` schon leer war, und der Waechter meldet einen falschen
+    Befund bei JEDEM Lauf auf einem frischen Checkout (z. B. CI). Deshalb
+    haengt diese Fixture explizit von der Materialisierung ab, statt beide
+    unabhaengig als Session-Fixtures zu deklarieren.
+    """
+    before = _snapshot_repo_data_users()
+    yield
+    after = _snapshot_repo_data_users()
+    if after != before:
+        pytest.fail(
+            "Issue #2226: der echte "
+            f"{_REPO_DATA_USERS}-Baum hat sich waehrend der GESAMTEN "
+            f"Session veraendert (vorher: {before}, nachher: {after}). "
+            "Ein Test/eine Fixture hat -- unabhaengig vom Scope -- direkt "
+            "oder ueber app.loader in den echten Baum geschrieben, ohne "
+            "@pytest.mark.real_data_root zu tragen, oder ein "
+            "real_data_root-Test hat seine Spur nicht vollstaendig "
+            "entfernt."
+        )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _materialize_real_data_root_fixtures(_redirect_data_root_session) -> None:
     """Rematerialisiert die umgezogenen Referenz-Fixtures additiv (nie
     ueberschreibend) in den echten, gitignoreten ``<repo>/data/users``-Baum.
 
@@ -61,6 +313,11 @@ def _materialize_real_data_root_fixtures() -> None:
     autouse-Session-Fixture in der ROOT-conftest, damit sie garantiert vor
     dem allerersten Test der gesamten Suite fertig ist (auch fuer
     tests/tdd/ und tests/unit/, nicht nur tests/integration/).
+
+    Haengt explizit von ``_redirect_data_root_session`` ab (Issue #2226) --
+    schreibt selbst ueber einen hartkodierten Pfad (``root / "data" / ...``,
+    nicht ``loader._DATA_ROOT``) und ist damit vom Redirect unabhaengig,
+    MUSS aber trotzdem vor dem session-weiten Waechter unten fertig sein.
 
     Zusaetzlich additiv gespiegelt: ``briefings/<id>.json`` aus jeder
     ``trips/<id>.json`` (Issue #1250 Scheibe 7a Cutover, ADR-0023) --
@@ -118,32 +375,141 @@ def _snapshot_repo_data_users() -> dict[str, int]:
     return {"file_count": file_count, "max_mtime_ns": max_mtime_ns, "total_size": total_size}
 
 
+_BUDGET_SPUR_MUSTER = "*/diagnostics/forecast_budget.json*"
+
+
+@pytest.fixture(autouse=True)
+def _raeume_budget_spur_bei_real_data_root(request):
+    """Issue #2387: `ForecastBudgetGate` legt seit dem Kontingent je Nutzer
+    einen Tageszaehler unter
+    ``data/users/<user_id>/diagnostics/forecast_budget.json`` an -- also
+    INNERHALB des von ``_guard_repo_data_users_session`` bewachten Baums
+    (der globale Topf liegt weiterhin unter ``data/diagnostics/``, also
+    ausserhalb). Ein ``real_data_root``-Test, der einen echten Wetterabruf
+    ausloest (gemessen: ``test_issue_363_signal_telegram_preview.py``,
+    51 Abrufe), hinterlaesst damit eine Spur, die der Waechter zu Recht
+    meldet -- und die vor #2387 nicht entstehen konnte.
+
+    Der Waechter nennt genau diesen Fall selbst als erwartete Ursache
+    ("ein real_data_root-Test hat seine Spur nicht vollstaendig
+    entfernt"). Die Spur wird deshalb hier zentral entfernt, statt den
+    Waechter aufzuweichen: er misst jede Trip-, Briefing-, GPX- und
+    Settings-Datei unveraendert scharf, und auch den Zaehler selbst, wenn
+    ihn ein Test NICHT selbst angelegt hat.
+
+    Zentral statt je Testdatei, weil es keine Eigenheit von #363 ist: JEDER
+    kuenftige ``real_data_root``-Test mit Wetterabruf traefe dasselbe.
+
+    Zwei Faelle, beide eng gefuehrt (Adversary Fix-Loop 1, F005):
+
+    * Der Pfad entstand WAEHREND des Tests -> er wird entfernt.
+    * Der Pfad bestand schon VOR dem Test (Rest einer abgebrochenen
+      ``real_data_root``-Session) -> sein Byte-Inhalt wird vorher gemerkt
+      und danach exakt wiederhergestellt -- samt ``mtime`` (der
+      Fingerprint misst neben Inhalt und Groesse auch ``max_mtime_ns``,
+      also genuegt das Zurueckschreiben des Inhalts allein nicht). Ohne
+      das schlaegt der Waechter trotz aktiver Fixture an, weil der Test
+      die Datei in-place ueberschreibt: der Pfad ist bekannt, der Inhalt
+      und der Zeitstempel nicht.
+
+    Beides gilt AUSSCHLIESSLICH fuer ``diagnostics/forecast_budget.json``
+    (und deren Sidecar-Lock). Jede Trip-, Briefing-, GPX- und
+    Settings-Datei faellt dem Waechter unveraendert auf.
+
+    Verzeichnisse zaehlen im Fingerprint nicht
+    (``_snapshot_repo_data_users`` laeuft nur ueber ``filenames``), ein
+    leer zurueckbleibendes ``diagnostics/`` wird trotzdem aufgeraeumt.
+    """
+    if not request.node.get_closest_marker("real_data_root"):
+        yield
+        return
+    vorher: dict[Path, tuple[bytes, int, int] | None] = {}
+    if _REPO_DATA_USERS.exists():
+        for pfad in _REPO_DATA_USERS.glob(_BUDGET_SPUR_MUSTER):
+            try:
+                st = pfad.stat()
+                vorher[pfad.resolve()] = (
+                    pfad.read_bytes(), st.st_atime_ns, st.st_mtime_ns,
+                )
+            except OSError:
+                vorher[pfad.resolve()] = None
+    yield
+    if not _REPO_DATA_USERS.exists():
+        return
+    for pfad in list(_REPO_DATA_USERS.glob(_BUDGET_SPUR_MUSTER)):
+        aufgeloest = pfad.resolve()
+        if aufgeloest in vorher:
+            # Adversary Fix-Loop 1 (F005): eine VORBESTEHENDE Zaehlerdatei
+            # (Rest einer abgebrochenen `real_data_root`-Session) wird vom
+            # Test in-place ueberschrieben -- ihr Pfad ist dann in `vorher`,
+            # ihr INHALT aber veraendert, und der Waechter schlaegt trotz
+            # aktiver Fixture an. Deshalb wird der Byte-Inhalt gemerkt und
+            # exakt wiederhergestellt, statt nur die Existenz zu pruefen.
+            # Ausschliesslich diese eine Datei; alles andere bleibt dem
+            # Waechter ueberlassen.
+            zustand = vorher[aufgeloest]
+            if zustand is None:
+                continue
+            inhalt, atime_ns, mtime_ns = zustand
+            try:
+                if pfad.read_bytes() != inhalt:
+                    pfad.write_bytes(inhalt)
+                # Der Fingerprint misst NEBEN Inhalt und Groesse auch
+                # `max_mtime_ns` -- ein blosses Zurueckschreiben des Inhalts
+                # laesst den Waechter weiterhin anschlagen, weil der
+                # Schreibvorgang selbst die mtime hebt.
+                os.utime(pfad, ns=(atime_ns, mtime_ns))
+            except OSError:
+                pass
+            continue
+        try:
+            pfad.unlink()
+        except OSError:
+            continue
+        elternteil = pfad.parent
+        if elternteil.name == "diagnostics" and not any(elternteil.iterdir()):
+            try:
+                elternteil.rmdir()
+            except OSError:
+                pass
+
+
 @pytest.fixture(autouse=True)
 def _isolate_data_root(request, tmp_path_factory):
     """Redirect ``app.loader._DATA_ROOT`` to an isolated temp root for every
     test (Issue #1133), so pytest runs never write into the real
     ``data/users/`` tree.
 
-    Tests marked ``@pytest.mark.real_data_root`` or ``@pytest.mark.live``
-    opt out — they deliberately read/write the real tree (contract tests).
-    Issue #1624: die dafuer benoetigten, frueher direkt hier committeten
-    Referenz-Fixtures (gr221-mallorca, validator-issue110, GPX-Dateien) sind
-    nach ``tests/fixtures/data_root`` umgezogen (``data/`` bleibt so
-    vollstaendig untracked) und werden von der Session-Fixture
+    Nur ``@pytest.mark.real_data_root`` schaltet die Isolation ab -- Tests
+    opten damit bewusst gegen den echten Baum (Contract-Tests). Issue #2226
+    (Defekt 1): ``@pytest.mark.live`` allein bedeutet laut ``pyproject.toml``
+    nur Netz-Egress und schaltet die Isolation seither NICHT mehr ab; ein
+    live-markierter Test durchlaeuft denselben isolierten Pfad wie jeder
+    andere Test.
+
+    Issue #1624: die fuer das Opt-in benoetigten, frueher direkt hier
+    committeten Referenz-Fixtures (gr221-mallorca, validator-issue110,
+    GPX-Dateien) sind nach ``tests/fixtures/data_root`` umgezogen (``data/``
+    bleibt so vollstaendig untracked) und werden von der Session-Fixture
     ``_materialize_real_data_root_fixtures`` oben additiv wieder in diesen
     Baum kopiert -- fuer den echten Baum selbst aendert sich dadurch nichts.
 
-    Issue #1265 Teil C (Verursacher-Befund): die Redirect-Fixture allein
-    schützt nur Code-Pfade, die tatsächlich über ``app.loader`` gehen --
-    direkte ``<repo>/data/users``-Pfade laufen vorbei. Der Wächter unten
-    prüft deshalb zusätzlich am Test-Ende, dass unter dem ECHTEN
-    ``<repo>/data/users`` keine neuen/geänderten Top-Level-Einträge
-    entstanden sind, und FAILT den Test sonst mit Klartext-Hinweis.
+    Issue #1265 Teil C / #2226: diese funktionsweite Pruefung sieht nur
+    Schreibzugriffe INNERHALB der eigenen Testfunktion -- hoeher gescopte
+    Fixtures (module/class/session) laufen VOR ihr und werden vom
+    session-weiten Waechter (``_guard_repo_data_users_session`` oben)
+    gefangen, nicht hier.
     """
-    if request.node.get_closest_marker(
-        "real_data_root"
-    ) or request.node.get_closest_marker("live"):
+    if request.node.get_closest_marker("real_data_root"):
+        from app import loader
+
+        loader._DATA_ROOT = _ORIGINAL_DATA_ROOT
         yield
+        # Zurueck auf die Session-Wurzel, NICHT auf _ORIGINAL_DATA_ROOT --
+        # sonst sickert die echte Wurzel in JEDEN nachfolgenden Test durch,
+        # weil dessen eigene "before"-Erfassung dann faelschlich die echte
+        # Wurzel als Ausgangswert saehe (Issue #2226).
+        loader._DATA_ROOT = _SESSION_DATA_ROOT
         return
 
     from app import loader
@@ -166,7 +532,7 @@ def _isolate_data_root(request, tmp_path_factory):
             "app.loader.get_data_dir()-Basis bzw. tmp_path schreiben. "
             "Abhilfe: Pfad-Quelle auf get_data_dir()/tmp_path umstellen, "
             "oder falls der Test bewusst den echten Baum braucht: "
-            "@pytest.mark.real_data_root / @pytest.mark.live setzen."
+            "@pytest.mark.real_data_root setzen."
         )
 
 
@@ -247,9 +613,13 @@ def _isolate_warn_calls_path(request, tmp_path_factory):
     ``app.loader.get_data_root()`` folgt, schützt bereits ``_isolate_data_root``
     oben jeden normalen Test. Diese Umlenkung ist dort nicht mehr nötig — und
     schädlich, weil sie verdecken würde, ob die Datenwurzel überhaupt beachtet
-    wird. Sie bleibt genau für die Fälle, in denen ``_isolate_data_root``
-    aussteigt (``real_data_root``/``live``): dort soll die reale Diagnose-Datei
-    trotzdem NIE aus Tests wachsen.
+    wird. Sie bleibt genau für den Fall, in dem ``_isolate_data_root``
+    aussteigt (``real_data_root`` -- seit Issue #2226 steigt ``live`` allein
+    dort NICHT mehr aus): dort soll die reale Diagnose-Datei trotzdem NIE aus
+    Tests wachsen. Der zusätzliche ``live``-Zweig im Marker-Check unten ist
+    seit #2226 redundant, aber unschädlich: die Datenwurzel eines reinen
+    ``live``-Tests ist ohnehin schon isoliert, dieser Override betrifft nur
+    eine weitere, ebenfalls sichere tmp-Datei.
 
     Wichtig für die Rücklese-Tests (AC-7/8/9 in
     ``test_warn_service_egress.py`` sowie die MeteoAlarm-Suite): setzen diese
@@ -332,3 +702,114 @@ def _reset_telegram_rate_limit():
     reset_telegram_rate_limit_for_tests()
     yield
     reset_telegram_rate_limit_for_tests()
+
+# ---------------------------------------------------------------------------
+# Issue #2096: gestellte Wanduhr fuer den GANZEN Lauf
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="session", autouse=True)
+def _gestellte_wanduhr():
+    """Stellt die Uhr des gesamten Laufs auf ``GZ_TEST_WALL_CLOCK_UTC``.
+
+    Nachweis-Werkzeug fuer die Zeitunabhaengigkeit (#2096 AC-10): dieselbe
+    Testmenge muss um 12:00 UTC dasselbe Ergebnis liefern wie um 23:58 UTC.
+    Ohne diesen Schalter liesse sich das nur belegen, indem man auf die
+    entsprechende Tageszeit wartet oder die SYSTEMzeit des Servers verstellt —
+    beides ist keine Option.
+
+    Ohne gesetzte Variable passiert NICHTS: der Normallauf (CI, lokal) laeuft
+    unveraendert auf der echten Wanduhr. Das ist Absicht — ein dauerhaft
+    gestellter Lauf wuerde genau die Zeitabhaengigkeit verdecken, die hier
+    gefunden werden soll.
+
+    Format: ``HH:MM`` (heutiges Datum, UTC) oder ein vollstaendiger
+    ISO-Zeitstempel. ``tick=True``, damit die Zeit waehrend des Laufs weiter
+    voranschreitet — ein vollstaendig stehender Zaehler waere ein anderer
+    Zustand als "der Lauf startet um 23:58".
+
+    Session-Scope und damit AUSSERHALB jedes ``@freeze_time`` einzelner
+    Testfaelle: freezegun stapelt, der innere Zeitpunkt gewinnt.
+
+    Selbst bewacht durch ``tests/tdd/test_gestellte_wanduhr_schalter.py``:
+    ein Nachweiswerkzeug ohne Selbsttest ist genau der blinde Waechter,
+    gegen den dieses Ticket geschrieben ist -- legt man diese Fixture stumm,
+    saehen die vier Uhrzeit-Laeufe weiterhin gruen aus und maessen nichts
+    (Adversary-Finding F001 zu #2096).
+    """
+    from tests.helpers.wanduhr import anker_aus, roh_wert
+
+    roh = roh_wert()
+    if not roh:
+        yield
+        return
+
+    anker = anker_aus(roh)
+
+    # `pydantic.v1.types` leitet Klassen von `datetime.date`/`datetime`
+    # AB. Wird das Modul erst WAEHREND des gefrorenen Fensters importiert,
+    # sind die Basisklassen bereits freezeguns `FakeDate`/`FakeDatetime` und
+    # die Klassendefinition scheitert mit "metaclass conflict" -- ein
+    # Artefakt des Messwerkzeugs, kein Befund. Deshalb vorher laden.
+    import pydantic.v1.types  # noqa: F401
+
+    from freezegun import freeze_time
+
+    with freeze_time(anker, tick=True):
+        yield
+
+# ---------------------------------------------------------------------------
+# CI-Rot 2026-10-22, Familie A: freezegun-Stapel nach jedem Test pruefen
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _freezegun_stapel_waechter(request):
+    """Ein Test darf den globalen freezegun-Stapel nicht tiefer hinterlassen,
+    als er ihn vorgefunden hat.
+
+    Warum: ``freeze_time().start()`` legt den Zeitpunkt auf den Stapel, BEVOR
+    es die Module patcht. Faellt eine Ausnahme mitten in diese Schleife (im CI
+    das SIGALRM von pytest-timeout), laeuft kein ``stop()`` -- und jeder
+    spaetere ``freeze_time`` haelt sich fuer verschachtelt und patcht nichts
+    mehr: bereits geladene Testmodule lesen fortan die echte Wanduhr. So
+    wurden am 2026-10-22 (run 39747019320) aus EINEM Timeout 136 Folge-
+    Fehlschlaege. Mechanik und Rueckbau: ``tests/helpers/freezegun_stapel.py``.
+
+    Der Lauf wird repariert UND laut (Warnung mit Test-Kennung) -- der
+    verursachende Test ist ohnehin rot; die Folgetests sollen es nicht sein.
+    """
+    import warnings
+
+    from tests.helpers.freezegun_stapel import reparieren, tiefe
+
+    vorher = tiefe()
+    yield
+    nachher = tiefe()
+    if nachher != vorher:
+        reparieren(vorher)
+        warnings.warn(
+            f"freezegun-Stapel nach {request.node.nodeid} bei Tiefe {nachher} "
+            f"statt {vorher} (unterbrochener freeze_time-Start, z. B. durch "
+            f"pytest-timeout) -- auf {vorher} repariert, damit die Folgetests "
+            f"eine gestellte Uhr behalten.",
+            RuntimeWarning,
+            stacklevel=1,
+        )
+
+
+# ---------------------------------------------------------------------------
+# CI-Rot 2026-10-22, Familie B: Stub-Server der AlarmPruefstrecke beenden
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _pruefstrecken_server_beenden():
+    """Nach jedem Test alle Stub-Server der ``AlarmPruefstrecke`` herunterfahren.
+
+    Ohne diese Abschaltung ueberlebten die ``serve_forever``-Threads den Test
+    (CI-Thread-Dump: >= 56 lebende Stubs) und brachten als Leerlauf-Dreher den
+    GIL-gebundenen Rest des Laufs in die 30-s-Schranke von pytest-timeout.
+    Der Helfer wird NICHT importiert, solange ihn kein Test geladen hat --
+    sonst zahlte jeder der ~16.000 Tests seinen Import."""
+    yield
+    modul = sys.modules.get("tests.helpers.alarm_pruefstrecke")
+    if modul is not None:
+        modul.offene_server_beenden()

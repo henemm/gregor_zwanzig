@@ -3,7 +3,7 @@ entity_id: multi_location_onset_alert
 type: module
 created: 2026-07-10
 updated: 2026-07-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, radar, nowcast, renderer, epic-1095, issue-1041]
 ---

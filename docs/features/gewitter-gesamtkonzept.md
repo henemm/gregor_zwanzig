@@ -46,6 +46,15 @@ Davon zu unterscheiden sind **Böen** und **Starkregen**: Sie sind eigenständig
 die auch ohne Gewitter existieren, und bleiben es (E9). Sie erscheinen also ebenfalls, aber
 nicht als Gewitteraussage — die vollständige Liste steht in 2.1b.
 
+🔴 **Nachtrag 2026-09-08 (ADR-0064, Issue #2176):** Die Stufe „leicht" ist seither keine
+Gewitter-**Ereignisbehauptung** mehr — in keinem Kanal erscheint dafür noch das Wort
+„Gewitter" als Ereignis (Tabellenkopf/Katalogeintrag „Gewitter" bleibt als reiner
+Metrik-Name zulässig). Statt „Gewitter möglich" steht dort eine Luftmassen-Aussage mit dem
+CAPE-Wert, außer die Einstufung stammt (auch) aus Blitzdichte/-potenzial/Wettercode — dann
+bleibt der tatsächliche Signal-Träger sichtbar. Die vier-stufige, nutzersichtbare
+Gewitterleiter (`keine/möglich/wahrscheinlich/akut`) beginnt seither bei `MED`, nicht mehr
+bei `LOW`. Das Stufenwort „leicht" selbst und die Werte-Spalte oben bleiben unverändert.
+
 ### 2.1 Die Wahrscheinlichkeit entfällt — gemessen, nicht vermutet
 
 Geplant war eine zweite Achse „Gewitter-Wahrscheinlichkeit 0–100 %". **Es gibt dafür keine
@@ -61,6 +70,17 @@ tragfähige Quelle.** Alle vier Wege wurden live geprüft:
 ⇒ **Das Produkt zeigt vorerst EINE Gewitter-Metrik, nicht zwei.** Die Unsicherheit trägt
 niemand — das ist eine bewusste Lücke, keine vergessene. Sollte je eine flächige, publizierte
 Quelle auftauchen, ist das Feld `thunder_probability_pct` bereits vorbereitet.
+
+🔴 **Nachtrag 2026-09-19 (ADR-0073, Issue #1983):** Der hier verworfene Weg „Anteil der
+Ensemble-Läufe mit Gewittercode" wurde inzwischen doch verdrahtet — aber **nicht** als die hier
+abgelehnte nutzersichtbare Prozent-Achse, sondern als internes, binäres fünftes
+Fusionssignal `modelllauf` mit weit auseinanderliegenden Schwellen (≥ 60 % hebt, < 10 % dämpft
+die vier anderen Signale um eine Stufe, 10–59 % neutral). Das widerspricht der Messung oben
+nicht: Die 0,04-%-Zahl belegt, dass eine feingranulare Prozentanzeige nicht belastbar ist —
+zwei grobe, weit getrennte Bänder für eine Ja/Nein-Wirkung sind das nicht. `thunder_level`
+bleibt die einzige nutzersichtbare Gewitter-Metrik, `thunder_probability_pct` erscheint
+weiterhin in keinem Renderer als Zahl. Details: Spec
+`docs/specs/modules/feat_1983_gewitter_modelllauf_mehrheit.md`.
 
 ### 2.1b Alle gewitterbezogenen Größen im Überblick
 
@@ -133,6 +153,14 @@ eine Stufe und nimmt dann **das schärfste**. Sind alle leer, ist das Ergebnis l
 | 2 | Blitzdichte (Blitze/km²/3 h) | 0,003 / 0,015 / **0,075** | ECMWF-Leitfaden; **0,075 nicht publiziert** |
 | 3 | Blitzpotenzial LPI (J/kg) | 5 / **20** / 50 | DWD/Copernicus; **20 interpoliert** ⇒ ersetzbar durch 1/30/50, s. 3.5b |
 | 4 | CAPE (J/kg) | ≥ 1000 → nur „leicht", **deckelt** | Katalog-Risikoschwelle |
+
+🔴 **Nachtrag 2026-09-19 (ADR-0073, Issue #1983):** Ein fünftes Signal `modelllauf` ist
+dazugekommen — Anteil der Open-Meteo-Ensemble-Member mit Gewittercode. Es fällt aus dem
+Tabellenraster oben heraus, weil es nicht dieselbe leicht/mittel/hoch-Übersetzung hat: es hebt
+ausschließlich auf `HIGH` (≥ 60 % Member-Anteil) und ist zugleich das **erste** Signal, das die
+übrigen vier nachträglich dämpfen darf (< 10 % ⇒ eine Stufe runter, nie unter `NONE`, außer bei
+Radar-Bestätigung). Details: ADR-0073, Spec
+`docs/specs/modules/feat_1983_gewitter_modelllauf_mehrheit.md`.
 
 ### 3.2 Die Annahmen darin — offen ausgesprochen
 
@@ -342,6 +370,11 @@ ersetzt die heutige Fassung aus 3.1.
 | **Radar-Beobachtung** | nicht konvektiv | — | konvektiv | — | #1419 §4 |
 | **Updraft-Helizität** | trägt vorerst **nichts** bei — keine übertragbare Schwelle | | | | — |
 
+> **Stand 2026-09-15:** Die Wettercode-Zeile oben (< 95 kein · 95 leicht · 96 mittel · 99 hoch)
+> ist bewusst NICHT umgesetzt — Wettercode 95/96/99 bleibt auf `ThunderLevel.HIGH` (höchste
+> Stufe), siehe [ADR-0069](../adr/0069-wettercode-95-96-99-bleibt-hoechste-stufe.md). Statt der
+> Stufe wird die Hagel-Information im Text unterschieden (Issue #2205).
+
 Der Superzellen-Index kennt bewusst **kein „leicht"**: Der DWD nennt ihn ein experimentelles
 Produkt mit zwei Schwellen; eine dritte zu erfinden wäre Eigenkalibrierung.
 
@@ -451,6 +484,15 @@ denselben Zusatz — letzter Ausgabeort ohne Herkunft, **Ticket #1680 damit schl
 SMS/Premium-SMS/Telegram/Kompakt-Mail bleiben strukturell ohne Herkunft. **Go-DTO und Frontend
 fallen weiterhin ersatzlos** — dort existiert kein Ort, an dem die Herkunft erscheinen könnte.
 
+🔴 **Nachtrag (#2184, S4 Epic #2133, 2026-09-08):** „strukturell ohne Herkunft" galt bis hierhin
+nur, weil `InboundMessage` genau zwei Erzeuger hatte (E-Mail, Telegram) und der SMS-/
+Premium-SMS-Kommandopfad schlicht nicht existierte. Mit Premium-SMS als drittem Erzeuger
+(Garmin-inReach-Rückkanal ruft jetzt `TripCommandProcessor` auf) ist die Abwesenheit kein
+Nebeneffekt fehlenden Codes mehr, sondern ein echter Kanal-Guard: `_fmt_day_agg`, `_fmt_gewitter`
+und `_fmt_timeline` bekommen einen `channel`-Parameter, `zeige_herkunft = channel not in
+("sms", "premium_sms")`. Die PO-Entscheidung selbst bleibt unverändert — nur ihre Absicherung
+wechselt von „es gibt keinen Pfad" zu „der Pfad existiert und wird explizit unterdrückt".
+
 Drei Festlegungen, die aus der Umsetzung stammen und hier nicht überlesen werden dürfen:
 
 - **Genannt werden ALLE tragenden Zutaten, nicht die eine „auslösende"** (PO-Auslegung (ii)).
@@ -472,6 +514,14 @@ GEWITTER-Kommando, Compare-Stundentabelle, Go-DTO, Frontend. ⚠️ Wer die Herk
 **Trip-Seite** bringt, muss zuerst `aggregate_stage()` beibringen, die Aggregationsregel
 `union_of_max_carriers` zu kennen — sonst gewinnt dort die Herkunft des *ersten* Segments,
 während die Stufe über alle Segmente maximiert wird (Known Limitation 7, gebucht in #1199).
+
+🔴 **Überholt (2026-09-15, #2195):** `aggregate_stage()` kennt `union_of_max_carriers`
+inzwischen — die hier beschriebene Voraussetzung ist damit erfüllt. Anlass war jedoch nicht
+diese Scheibe (Herkunft auf der Trip-Seite existiert bereits seit #1680 S2 über einen
+separaten Pfad, s. `metric_output_matrix.md` Zeile „Herkunft der Gewitterstufe — Trip"),
+sondern ein unabhängiger Bugfix an der Etappen-Tagesaggregation (`weather_metrics.py:1391-1400`,
+`docs/specs/modules/bug_2195_tageswert_feldverlust.md`). Die übrige „Noch offen"-Liste dieses
+Absatzes ist davon unberührt und nicht Gegenstand dieses Nachtrags.
 
 ### Was das je Gebiet konkret bedeutet
 
@@ -660,7 +710,10 @@ Quellenkette je Gebiet (`radar_service.py:280-313`): RADOLAN/BrightSky für Deut
 Österreich, ARPAE ICON-2I für Italien **inklusive Korsika** (seit #1648 — der frühere Radar-DPC
 war ersatzlos zu streichen, er lieferte nur Vergangenheitsbilder), AROME-HD für Frankreich, ICON-D2 für die
 Alpen, `minutely_15` als globaler Rückfall. Ob es gewittert, kommt aus dem WMO-Code 95/96/99 je
-Einzelbild (`radar_service.py:151-153`).
+Einzelbild (`radar_service.py:151-153`). Auch der Deutschland-Zweig (BrightSky liefert nur Niederschlag) bezieht die
+Konvektion seit #2464 aus einem Open-Meteo-Sidecar (ICON-D2); fällt dieser aus, meldet der Nowcast
+„Storm check not available." statt „kein Gewitter". Der Radar-Cache führt `convective_checked` mit
+und liefert es bei Treffern für alle Regionen aus.
 
 🔴 **Diese Beobachtung fließt an keiner Stelle in die Gewitterstufe ein.**
 `thunder_level_from_signals()` hat gar keinen Parameter dafür (`metric_format.py:326-370`), und
@@ -695,14 +748,16 @@ sauber gebaut (Abschnitt 6.1).
 
 ## 6. Amtliche Warnungen
 
-Warnungen der Wetterdienste kommen aus sieben registrierten Quellen
-(`official_alerts/__init__.py:36-42`): Vigilance und Meteo-Forêts für Frankreich,
-Massif-Sperrungen, GeoSphere für Österreich, MeteoAlarm-Feeds für Italien und Österreich, DPC
-für Italien. Gewitter erscheint dort als `hazard="thunderstorm"`.
+Warnungen der Wetterdienste kommen aus acht registrierten Quellen
+(`official_alerts/__init__.py:36-47`): Vigilance und Meteo-Forêts für Frankreich,
+Massif-Sperrungen, GeoSphere für Österreich, MeteoAlarm-Feeds für Italien, Österreich und (seit
+#1681) Deutschland, DPC für Italien. Gewitter erscheint dort als `hazard="thunderstorm"`.
 
-🔴 **Für Deutschland ist kein Warndienst registriert.** Der DWD betreibt einen amtlichen
-Warndienst, wir binden ihn nicht an. Wer in Deutschland unterwegs ist, bekommt also
-Gewitterwarnungen der Behörde nicht — anders als in Frankreich, Italien und Österreich.
+✅ **Nachtrag 2026-09-19 (#1681):** Der unten als Rang 10 geplante DWD-Anschluss ist umgesetzt —
+`MeteoAlarmFeedSource("DE")` ist registriert (nach AT, vor DPC), Zonenauflösung über eine
+eingecheckte DWD-Kreisgeometrie (`dwd_zones.py`, 402 Kreise). Wer in Deutschland unterwegs ist,
+bekommt damit dieselben amtlichen Gewitterwarnungen wie bisher schon in Frankreich, Italien und
+Österreich. Details: `docs/specs/modules/feat_1681_meteoalarm_de.md`.
 
 **Für E6 gibt es bereits Tickets — kein neues anlegen** (geprüft 2026-08-08):
 
@@ -915,7 +970,7 @@ blockiert.
 | **7** | ✅ **Feineichung je Quelle** (E1b): eigene Leiter für `lpi_con_max` | EU_REST bekommt eine belegte, publizierte Leiter (Schröder/Göcke/Köhler 2022) statt der Interim-Werte 5/20/50 — die zunächst vorgesehene Eichung über die Historical Forecast API (4.4) war nicht gangbar | ✅ erledigt — **#1678** |
 | **8** | **`sdi_2` einhängen** | Publizierte DWD-Schwelle vorhanden; erst sinnvoll, wenn die Skala geeicht ist | nach Rang 7 |
 | **9** | **Amtliche Warnung + Änderungsalarm zusammenführen** (E5); Radar-Nowcast bleibt eigener Kanal | Unabhängig von der Signalkette | ✅ E5 |
-| **10** | **Deutschland an den Meteoalarm-Feed** — `MeteoAlarmFeedSource("DE")` | Der Weg läuft produktiv für IT/AT und ist kontingentfrei. Offen: Punkt→Zone-Auflösung für DE, und 13,5 MB je Abruf ohne gzip | ✅ E6 |
+| **10** | ✅ **Deutschland an den Meteoalarm-Feed** — `MeteoAlarmFeedSource("DE")` | Der Weg läuft produktiv für IT/AT und ist kontingentfrei; Punkt→Zone-Auflösung über eingecheckte DWD-Kreisgeometrie | ✅ **erledigt** (#1681, Spec `docs/specs/modules/feat_1681_meteoalarm_de.md`) |
 
 **Nicht geplant:** Gewitter-Wahrscheinlichkeit (keine Quelle, Abschnitt 2.1),
 `dbz_cmax`/`echotop` (falsch kalibriert bzw. falsche Größe), Ausfallsichtbarkeit im Radar-Pfad

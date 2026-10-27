@@ -2,9 +2,9 @@
 entity_id: feat_1676_s1_premium_sms_rueckkanal
 type: module
 created: 2026-08-10
-updated: 2026-08-10
-status: draft
-version: "1.5"
+updated: 2026-09-14
+status: implemented
+version: "1.6"
 tags: [sms, inbound, premium, garmin, seven-io, dual-stack]
 ---
 
@@ -102,6 +102,18 @@ Frontend (folgt in S2/S3).
    Nachricht MIT Kennzeichen entscheidet Schritt 9 ueber das Anheben --
    NICHT mehr bedingungslos (Fix F001, v1.2, s.u.).
 8. Kein "inreachlink.com" im Text -> ignorieren, naechste Nachricht (R1).
+   **Nachtrag (v1.6, Fix #2323):** Schritt 7/8 beschreiben das
+   Content-Gate im Stand VOR #2323. Das Kennzeichen `inreachlink.com` im
+   Nachrichtentext war abschaltbar (Nutzer koennen den Kartenlink in ihrer
+   Garmin-Einstellung deaktivieren) und ignorierte dadurch legitime
+   Nachrichten dauerhaft und lautlos. Das Gate prueft seit #2323 stattdessen
+   das strukturell immer vorhandene Ziel-Feld (`message.get("to") ==
+   SERVICE_NUMBER`) -- ueber Annahme/Ablehnung der Absendernummer
+   entscheidet weiterhin ausschliesslich der Go-Lern-Endpunkt (Schritt 9).
+   `GARMIN_MARKER`/`inreachlink.com` bleibt als reines Text-Zerlegungsmerkmal
+   fuer `split_link_code()` bestehen (Trennung Code/Befehl vom
+   Garmin-Link+Koordinaten-Suffix), ist aber keine Zulassungsentscheidung
+   mehr. Details: `docs/specs/modules/fix_2323_premium_sms_gate_generisch.md`.
 9. "inreachlink.com" im Text -> POST premium-sms-learn {"from": msg.from,
    "dry_run": dry_run}, 5s Timeout.
    - HTTP 200: last_seen_id-Kandidat anheben. dry_run=False -> Zaehler
@@ -145,7 +157,7 @@ Frontend (folgt in S2/S3).
 last_seen_id-Kandidaten in Schritt 7 IMMER an, auch fuer eine erkannte
 Garmin-Nachricht, deren Lernaufruf fehlschlug — dann wanderte der Zeiger
 ueber die Nachricht hinweg und sie wurde nie wieder betrachtet. Da sich das
-Garmin-Geraet im Wesentlichen EINMAL pro Tour meldet, macht ein Fehlschlag
+Garmin-Geraet im Wesentlichen EINMAL pro Trip meldet, macht ein Fehlschlag
 in genau diesem 5-Minuten-Fenster (z.B. ein Deploy-Neustart der Go-API) die
 Rueckadresse DAUERHAFT verloren, ohne dass irgendwo eine Fehlermeldung
 entsteht (`trigger_inbound_sms()` antwortete bedingungslos `{"status": "ok"}`).
@@ -303,6 +315,8 @@ protokolliert.
 - **AC-4:** Given genau ein Nutzer mit Tier `premium` existiert (kein gespeicherter Treffer für den Absender) / When eine als Garmin erkannte Nachricht eintrifft / Then wird sie diesem einen Nutzer zugeordnet, kein anderer Nutzer wird verändert.
   - Test: Fixture mit zwei Nutzern (einer `free`, einer `premium`) im Store, Endpoint aufrufen, nur den `premium`-Nutzer als verändert prüfen.
 
+> **Abgelöst durch `docs/specs/modules/fix_2154_premium_sms_verknuepfungscode.md` AC-1:** Diese Heuristik (Fallback auf den einen Kandidaten) war ein Sicherheitsbefund — bei genau einem Premium-Nutzer schreibt eine fremde SMS mit `inreachlink.com` dessen Rückadresse, Hijacking ohne Geheimnis. Fix #2154 ersetzt den Fallback durch einen Code-gestützten TTL-Abgleich, diese AC-4 entfällt ersatzlos.
+
 - **AC-5:** Given es existieren zwei Nutzer mit Tier `premium`, KEINER hat bereits eine passende `premium_sms_reply_to` gespeichert / When eine als Garmin erkannte Nachricht eintrifft / Then wird bei KEINEM der beiden Nutzer `user.json` verändert, der Endpoint antwortet mit einem Fehlerstatus statt 200, und es gibt keinen Fallback auf einen Default-Nutzer.
   - Test: Zwei-Nutzer-Fixture (beide `premium`), Endpoint aufrufen, beide `user.json`-Dateien vor/nach vergleichen — müssen identisch sein; HTTP-Status prüfen.
 
@@ -361,7 +375,7 @@ protokolliert.
 - 2026-08-10: v1.1 — AC-10 (Trockenlauf-Schalter `GZ_PREMIUM_SMS_POLL_DRYRUN`) ergänzt, Known Limitations zum Origin-Guard entsprechend angepasst (Team-Lead-Nachtrag: Totalsperre hätte den Reader bis zum Produktivlauf unbeobachtbar gemacht)
 - 2026-08-10: v1.2 — Fix F001 (Adversary-Fund): verlorene Rückadresse bei
   vorübergehendem Lernfehler (Deploy-Neustart der Go-API als realistischer
-  Auslöser, da sich das Garmin-Gerät im Wesentlichen einmal pro Tour meldet).
+  Auslöser, da sich das Garmin-Gerät im Wesentlichen einmal pro Trip meldet).
   Schritt 7/9/11 korrigiert — der Dedup-Zeiger wandert nur noch bei Erfolg
   oder bewusster Ablehnung (HTTP 4xx) über eine erkannte Garmin-Nachricht
   hinweg, nicht mehr bei einem vorübergehenden Fehlschlag (Netzwerk/Timeout/
@@ -399,3 +413,10 @@ protokolliert.
   `tests/unit/test_inbound_sms_reply_learning.py` liefern `id` jetzt als
   Zeichenkette, exakt wie die gemessene API-Antwort. ACs wörtlich
   unverändert.
+- 2026-09-14: v1.6 — Fix #2323 (Ursprung #2322): das content-basierte
+  Akzeptanz-Gate (`inreachlink.com`-Kennzeichen im Text, Schritt 8) war
+  abschaltbar und ignorierte Nutzer, die den Garmin-Kartenlink deaktiviert
+  hatten, dauerhaft und lautlos. Korrigiert auf das strukturell immer
+  vorhandene Ziel-Feld (`to == SERVICE_NUMBER`). Nachtrag bei Schritt 8, ACs
+  wörtlich unverändert (betrifft nur die interne Gate-Bedingung, nicht die
+  Zuordnungslogik des Go-Endpunkts).

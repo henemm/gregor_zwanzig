@@ -3,7 +3,7 @@ entity_id: fix_990_preview_empty_waypoints
 type: bugfix
 created: 2026-07-11
 updated: 2026-07-11
-status: done
+status: implemented
 version: "1.0"
 tags: [backend, preview, bugfix]
 ---

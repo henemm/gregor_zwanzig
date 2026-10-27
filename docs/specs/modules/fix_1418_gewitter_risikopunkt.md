@@ -3,7 +3,7 @@ entity_id: fix_1418_gewitter_risikopunkt
 type: bugfix
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, gewitter, ampel, issue-1418, epic-1419]
 ---
@@ -198,7 +198,7 @@ die neuen, korrigierten Erwartungen aus AC-1 bis AC-4.
 
 ## Acceptance Criteria
 
-- **AC-1 (Risikopunkt bei hoher Gewittergefahr):** Given eine Stundenzeile mit
+- **AC-1:** (Risikopunkt bei hoher Gewittergefahr) Given eine Stundenzeile mit
   Gewitterstufe HIGH und sonst unauffälligen Werten / When die Briefing-Mail
   gerendert wird / Then zeigt der Risiko-Punkt am Zeilenende Rot — heute
   bleibt er in diesem Fall grün, obwohl das Gewittersymbol ⚡⚡ bereits korrekt
@@ -208,7 +208,7 @@ die neuen, korrigierten Erwartungen aus AC-1 bis AC-4.
     ThunderLevel.HIGH, ...}`; das erzeugte HTML enthält die rote
     Punktfarbe für diese Zeile, kein isolierter Aufruf nur der Hilfsfunktion.
 
-- **AC-2 (Gewitterzelle bei hoher Gewittergefahr):** Given dieselbe
+- **AC-2:** (Gewitterzelle bei hoher Gewittergefahr) Given dieselbe
   Stundenzeile mit Gewitterstufe HIGH / When die Briefing-Mail gerendert
   wird / Then ist die Gewitterspalte dieser Zeile rot hinterlegt
   (`#f6c5bf`) — heute bleibt sie in jedem Fall ungefärbt, unabhängig vom
@@ -217,7 +217,7 @@ die neuen, korrigierten Erwartungen aus AC-1 bis AC-4.
     Gewitterspalte ist nicht mehr leer/transparent, sondern die rote
     Tonwert-Farbe.
 
-- **AC-3 (mittlere Gewittergefahr färbt orange, nicht rot):** Given eine
+- **AC-3:** (mittlere Gewittergefahr färbt orange, nicht rot) Given eine
   Stundenzeile mit Gewitterstufe MED / When die Briefing-Mail gerendert wird
   / Then zeigt der Risiko-Punkt „Achtung" (orange/watch) und die
   Gewitterzelle ist orange hinterlegt (`#fad6b8`) — nicht rot, nicht grün.
@@ -228,7 +228,7 @@ die neuen, korrigierten Erwartungen aus AC-1 bis AC-4.
   - Test: gerendertes HTML mit einer Zeile `{"thunder": ThunderLevel.MED,
     ...}`; Punktfarbe „watch"-Ton, Zellfarbe `#fad6b8`.
 
-- **AC-4 (keine Gewittergefahr bleibt unauffällig, Regressionsschutz):**
+- **AC-4:** (keine Gewittergefahr bleibt unauffällig, Regressionsschutz)
   Given eine Stundenzeile mit Gewitterstufe NONE bzw. ganz ohne
   Gewitterwert (`None`) und sonst unauffälligen Werten / When die
   Briefing-Mail gerendert wird / Then bleibt der Risiko-Punkt grün und die

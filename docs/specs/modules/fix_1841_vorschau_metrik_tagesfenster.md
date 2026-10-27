@@ -3,7 +3,7 @@ entity_id: fix_1841_vorschau_metrik_tagesfenster
 type: bugfix
 created: 2026-08-14
 updated: 2026-08-14
-status: approved
+status: implemented
 version: "1.0"
 tags: [gewitter, ausblick, vorschau, tagesfenster, metrik-zweig, issue-1841]
 ---

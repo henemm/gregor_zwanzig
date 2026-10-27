@@ -25,6 +25,8 @@
 		// Klick-Effekt, reduzierte Deckkraft). Default false, kein
 		// Verhaltensunterschied für bestehende Aufrufer.
 		disabled?: boolean;
+		// Mobile-Shell S2 — optionaler Test-Anker (z. B. cm-mobile-activate).
+		testid?: string;
 		children?: Snippet;
 	}
 
@@ -35,6 +37,7 @@
 		icon,
 		onclick,
 		disabled = false,
+		testid = undefined,
 		children
 	}: Props = $props();
 
@@ -62,6 +65,7 @@
 	type="button"
 	onclick={disabled ? undefined : onclick}
 	{disabled}
+	data-testid={testid}
 	data-variant={variant}
 	data-size={size}
 	style:display="inline-flex"

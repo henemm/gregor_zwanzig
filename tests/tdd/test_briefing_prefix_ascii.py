@@ -53,7 +53,7 @@ def test_compact_test_prefix_plain_is_ascii():
     report = _report(compact=True)
     request = _request(trip, test_prefix=True)
 
-    NotificationService()._apply_prefixes(report, request)
+    NotificationService(user_id="default")._apply_prefixes(report, request)
 
     assert report.email_plain.isascii(), (
         f"Compact-Hinweis muss reines ASCII sein, ist es nicht:\n{report.email_plain!r}"
@@ -68,7 +68,7 @@ def test_compact_on_demand_prefix_plain_is_ascii():
     report = _report(compact=True)
     request = _request(trip, on_demand_prefix=True)
 
-    NotificationService()._apply_prefixes(report, request)
+    NotificationService(user_id="default")._apply_prefixes(report, request)
 
     assert report.email_plain.isascii(), (
         f"Compact-Hinweis muss reines ASCII sein, ist es nicht:\n{report.email_plain!r}"
@@ -84,7 +84,7 @@ def test_full_report_keeps_umlaut_in_hint():
     report = _report(compact=False)
     request = _request(trip, test_prefix=True)
 
-    NotificationService()._apply_prefixes(report, request)
+    NotificationService(user_id="default")._apply_prefixes(report, request)
 
     assert "für" in report.email_plain
     assert "<p>Test-Vorschau für" in report.email_html

@@ -3,7 +3,7 @@ entity_id: bug_482_stage_badge_color
 type: bugfix
 created: 2026-05-31
 updated: 2026-05-31
-status: draft
+status: deprecated
 version: "1.0"
 tags: [bugfix, frontend, wizard, pill, color, accent, issue-482]
 ---
@@ -11,6 +11,8 @@ tags: [bugfix, frontend, wizard, pill, color, accent, issue-482]
 <!-- Issue #482 — Trip-Wizard Step 2: Etappen-Badge zeigt Blau statt Orange (tone="info" statt tone="accent") -->
 
 # Bug #482 — Etappen-Badge im Trip-Wizard Step 2 hat falsche Farbe (Blau statt Orange)
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 
@@ -46,7 +48,7 @@ tags: [bugfix, frontend, wizard, pill, color, accent, issue-482]
 |--------|------|---------|
 | `frontend/src/lib/components/atoms/Pill.svelte` | Atom-Komponente | Rendert die Pill; akzeptiert `tone`-Prop; kein Change nötig |
 | `frontend/src/app.css` | CSS-Token | Definiert `--g-accent: #c45a2a` (orange) und `--g-info: #2a6cb3` (blau); kein Change nötig |
-| `docs/specs/modules/issue_300_wizard_redesign.md` | Design-Spec | Legt orange als Akzentfarbe für Etappen-Elemente fest |
+| `docs/specs/_archive/modules/issue_300_wizard_redesign.md` | Design-Spec | Legt orange als Akzentfarbe für Etappen-Elemente fest |
 
 ## Implementation Details
 

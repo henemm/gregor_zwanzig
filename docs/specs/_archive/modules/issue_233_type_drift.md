@@ -3,7 +3,7 @@ entity_id: issue_233_type_drift
 type: module
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, typescript, refactor, drift]
 issue: 233
@@ -48,7 +48,7 @@ Wird mit erledigt durch explizite Typ-Annotation `$state<ActivityProfile>`.
 
 - `frontend/src/lib/types.ts` (Zeilen 9, 137) — Typ-Definitionen
 - `frontend/src/routes/compare/+page.svelte` (Zeile 38, Import) — State-Variable
-- `docs/specs/modules/epic_135_step5_right_column.md` (§1, Zeilen 78, 106, 111) — Spec-Codeblock
+- `docs/specs/_archive/modules/epic_135_step5_right_column.md` (§1, Zeilen 78, 106, 111) — Spec-Codeblock
 
 ## Acceptance Criteria
 
@@ -56,7 +56,7 @@ Wird mit erledigt durch explizite Typ-Annotation `$state<ActivityProfile>`.
 
 - **AC-2:** Given `frontend/src/routes/compare/+page.svelte` / When der Build läuft (`npx svelte-check`) / Then existiert der bisherige Error in Zeile 732 (`Type 'string' is not assignable to type '"wintersport" | "wandern" | "allgemein" | undefined'`) nicht mehr — `activityProfile` ist als `ActivityProfile` typisiert
 
-- **AC-3:** Given `docs/specs/modules/epic_135_step5_right_column.md` §1-Blueprint-Codeblock / When ein Leser den Snippet kopiert / Then verwendet er `trip.aggregation?.profile` (typisiert), keine `Record<string, unknown>`-Casts, und keinen Verweis auf den entfernten `aggregation.activity_profile`-Pfad
+- **AC-3:** Given `docs/specs/_archive/modules/epic_135_step5_right_column.md` §1-Blueprint-Codeblock / When ein Leser den Snippet kopiert / Then verwendet er `trip.aggregation?.profile` (typisiert), keine `Record<string, unknown>`-Casts, und keinen Verweis auf den entfernten `aggregation.activity_profile`-Pfad
 
 - **AC-4:** Given alle bestehenden Konsumenten von `Location.activity_profile` und `Subscription.activity_profile` (`SubscriptionForm.svelte`, `LocationForm.svelte`, `compare/+page.svelte`, `locations/+page.svelte`) / When der Build läuft / Then treten keine neuen Type-Errors auf — `ActivityProfile` ist Obermenge der bisherigen 3-Wert-Union, Konsumenten brechen nicht
 

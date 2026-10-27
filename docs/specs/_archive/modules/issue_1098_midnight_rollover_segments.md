@@ -3,7 +3,7 @@ entity_id: issue_1098_midnight_rollover_segments
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, trip-segments, midnight, briefing]
 ---

@@ -120,7 +120,7 @@
 		>{label}</span>
 		<span
 			style:font-family="var(--g-font-mono)"
-			style:font-size="10.5px"
+			style:font-size="11px"
 			style:text-transform="uppercase"
 			style:letter-spacing="0.04em"
 			style:line-height="1.3"

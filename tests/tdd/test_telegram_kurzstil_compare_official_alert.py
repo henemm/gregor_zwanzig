@@ -43,7 +43,9 @@ from datetime import datetime, timezone
 import output.channels.telegram as tg_module
 from app.config import Settings
 from services.notification_service import NotificationService
+from tests.helpers.nutzer_tier import nutzer_mit_tier
 from services.official_alerts.models import OfficialAlert
+from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
 
 
 # ---------------------------------------------------------------------------
@@ -159,10 +161,24 @@ def _settings(*, sms_port: int) -> Settings:
     return Settings(
         telegram_bot_token="test-bot-token",
         telegram_chat_id="99999",
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout schaltet
+        # TelegramOutput auf die Test-Chat-ID um bzw. bricht ohne sie ab.
+        # Explizit auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196).
+        telegram_test_chat_id="99999",
         sms_gateway_url=f"http://127.0.0.1:{sms_port}/api/sms",
         seven_api_key="test-stub-key",
+        # Issue #1476: seven.io-Kanaele verlangen aus einem Testlauf den
+        # Sandbox-Key; identisch zum Stub-Key, damit kein GZ_SEVEN_SANDBOX_KEY
+        # aus einer Host-.env noetig ist (#1196).
+        seven_sandbox_key="test-stub-key",
         sms_to="+49000000000",
         sms_from=None,
+        # can_send_email() muss ohne Host-.env True sein (#1196): der
+        # AC-6-Test beobachtet den E-Mail-Pfad ueber mail_sink; die Dummy-
+        # SMTP-Werte werden nie gewaehlt (pytest-socket blockt Egress).
+        smtp_host="dummy.invalid", smtp_user="dummy", smtp_pass="dummy",
+        mail_to="dummy@example.com",
     )
 
 
@@ -177,7 +193,7 @@ class TestAC5CompareOfficialKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-cmp-off-a")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(nutzer_mit_tier("tdd-1260-cmp-off-a"), settings))
 
             # RED: send_multi_location_official_alert kennt telegram_style noch
             # nicht → TypeError.
@@ -230,7 +246,7 @@ class TestAC5CompareOfficialKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = NotificationService(settings=settings, user_id="tdd-1260-cmp-off-b")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-cmp-off-b", settings))
 
             svc.send_multi_location_official_alert(
                 "Korsika-Vergleich",
@@ -282,7 +298,7 @@ class TestAC6RegularCompareStaysEmailOnly:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-cmp-eo")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-cmp-eo", settings))
 
             svc.send_multi_location_official_alert(
                 "Korsika-Vergleich",

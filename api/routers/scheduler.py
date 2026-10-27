@@ -8,20 +8,48 @@ SPEC: docs/specs/modules/go_scheduler.md v1.0 (Step 2)
 """
 from __future__ import annotations
 
+import fcntl
+import logging
+import time
+from contextlib import contextmanager
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
 from app.config import Settings
-from services.scheduler_dispatch_service import (
-    run_compare_presets_daily,
-    send_compare_preset,
-)
+from api.routers.briefings_send import send_briefing
+from services.scheduler_dispatch_service import run_compare_presets_daily
+
+logger = logging.getLogger("scheduler")
 
 router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
 
-_telegram_reader = None
 
+@contextmanager
+def _poll_lock(name: str):
+    """Nicht-blockierender flock je Poll-Kanal (Issue #2439, ADR-0088).
+
+    Cron, Push-Weckruf und Admin-Proxy laufen alle durch diesen Lock, damit
+    ``last_seen_id`` bzw. IMAP-``UNSEEN`` nie doppelt abgearbeitet werden.
+    Liefert True, wenn der Lock gehalten wird, False bei Belegung.
+    """
+    from app.loader import get_data_root
+
+    directory = get_data_root() / "diagnostics"
+    directory.mkdir(parents=True, exist_ok=True)
+    fd = open(directory / name, "a+")
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        fd.close()
 
 @router.post("/trip-reports")
 def trigger_trip_reports(at: Optional[str] = None, user_id: str = Query(...)):
@@ -53,9 +81,21 @@ def trigger_trip_reports(at: Optional[str] = None, user_id: str = Query(...)):
     service = TripReportSchedulerService(user_id=user_id)
     # Issue #766: (sent, failed) — bei Teilfehlern status="partial" zurückgeben,
     # damit das externe Monitoring 452-Rate-Limit-Ausfälle erkennen kann.
+    started_at = time.monotonic()
     sent, failed = service.send_due_reports(now_utc)
-    status = "partial" if failed > 0 else "ok"
-    return {"status": status, "count": sent, "failed": failed}
+    # Issue #1405 S4b (B21): gescheiterte Begleit-Hinweise bei zugestelltem
+    # Briefing -> "partial", aber NICHT failed (kein verpasstes Briefing).
+    notice_failed = service.last_notice_failed
+    duration_s = round(time.monotonic() - started_at, 3)
+    logger.info(
+        f"trip_reports: Lauf beendet nach {duration_s:.3f}s fuer "
+        f"user_id={user_id} (sent={sent} failed={failed} notice_failed={notice_failed})"
+    )
+    status = "partial" if failed > 0 or notice_failed > 0 else "ok"
+    return {
+        "status": status, "count": sent, "failed": failed,
+        "notice_failed": notice_failed, "duration_s": duration_s,
+    }
 
 
 @router.post("/alert-checks")
@@ -76,7 +116,9 @@ def trigger_alert_checks(user_id: str = Query(...)):
         "count": result.alerts_sent,
         "checked": result.checked,
         "skipped": result.skipped,
+        "skipped_ids": result.skipped_ids,
         "duration_s": result.duration_s,
+        "failed": result.failed,
     }
     if result.hit_deadline:
         response["reason"] = "deadline"
@@ -85,12 +127,72 @@ def trigger_alert_checks(user_id: str = Query(...)):
 
 @router.post("/compare-alert-checks")
 def trigger_compare_alert_checks(user_id: str = Query(...)):
-    """Trigger Compare-Preset Deviation-Alert-Checks (Issue #1169, Epic #1095)."""
-    from services.compare_alert import CompareAlertService
+    """Trigger Compare-Preset Deviation-Alert-Checks (Issue #1169, Epic #1095)
+    UND amtliche Warnungen (vormals eigener Endpoint
+    ``/compare-official-alert-checks``, Issue #1216 Slice 2a).
 
-    service = CompareAlertService(user_id=user_id)
-    count = service.check_all_compare_presets()
-    return {"status": "ok", "count": count}
+    Fix #2286 (AC-9): Muster Trip -- dort laufen amtliche Warnungen im
+    ``alert-checks``-Lauf mit. Beide Teile laufen nacheinander, JEDER in
+    eigenem try-Block (Fehlerisolation): wirft einer, laeuft der andere
+    trotzdem, und der Fehler zaehlt als ``failed``. ``count``/``failed``/
+    ``duration_s`` werden summiert; ``checked`` ist die Zahl gepruefter
+    Presets (beide Teile pruefen dieselben Presets -> Maximum, nicht Summe).
+
+    Issue #1405 S4b: ``status`` folgt dem Zaehler (``failed > 0`` oder
+    ``notice_failed > 0`` -> ``"partial"``, Muster ``trigger_trip_reports``).
+    ``notice_failed`` zaehlt gescheiterte "unvollstaendig"-Hinweise bei
+    zugestelltem Abweichungsalarm (nur der Abweichungsteil sendet sie).
+    """
+    from services.compare_alert import CompareAlertService
+    from services.compare_official_alert import CompareOfficialAlertService
+
+    count = failed = checked = notice_failed = 0
+    duration_s = 0.0
+    for name, service_cls, sendet_hinweise in (
+        ("compare_alert", CompareAlertService, True),
+        ("compare_official_alert", CompareOfficialAlertService, False),
+    ):
+        try:
+            service = service_cls(user_id=user_id)
+            count += service.check_all_compare_presets()
+            failed += service.last_failed_count
+            if sendet_hinweise:
+                notice_failed += service.last_notice_failed
+            checked = max(checked, service.last_checked_count)
+            duration_s += service.last_duration_s
+        except Exception:
+            logger.exception(f"{name}: Lauf fuer user_id={user_id} abgebrochen")
+            failed += 1
+    status = "partial" if failed > 0 or notice_failed > 0 else "ok"
+    return {
+        "status": status,
+        "count": count,
+        "failed": failed,
+        "notice_failed": notice_failed,
+        "checked": checked,
+        "duration_s": round(duration_s, 3),
+    }
+
+
+def _radar_run_response(result, dienst: str, user_id: str) -> dict:
+    """Antwort der Radar-Laeufe (Epic #2261 A-2 S2): bisherige Felder plus
+    checked/skipped/skipped_ids/duration_s; Grenzabbruch = partial/deadline."""
+    logger.info(
+        f"{dienst}: Lauf beendet nach {result.duration_s:.3f}s fuer "
+        f"user_id={user_id} (checked={result.checked} skipped={result.skipped})"
+    )
+    body = {
+        "status": "partial" if result.hit_deadline else "ok",
+        "count": result.alerts_sent,
+        "checked": result.checked,
+        "skipped": result.skipped,
+        "skipped_ids": result.skipped_ids,
+        "duration_s": round(result.duration_s, 3),
+        "failed": result.failed,
+    }
+    if result.hit_deadline:
+        body["reason"] = "deadline"
+    return body
 
 
 @router.post("/radar-alert-checks")
@@ -98,9 +200,9 @@ def trigger_radar_alert_checks(user_id: str):
     """Trigger radar/thunderstorm nowcast alert checks (proaktiv)."""
     from services.trip_alert import TripAlertService
 
-    service = TripAlertService(user_id=user_id)
-    count = service.check_radar_alerts()
-    return {"status": "ok", "count": count}
+    return _radar_run_response(
+        TripAlertService(user_id=user_id).check_radar_alerts_run(), "radar_alert", user_id
+    )
 
 
 @router.post("/compare-radar-alert-checks")
@@ -108,19 +210,11 @@ def trigger_compare_radar_alert_checks(user_id: str):
     """Trigger Compare-Preset Radar-Onset-Alert-Checks (Issue #1041 Slice 1b, Epic #1095)."""
     from services.compare_radar_alert import CompareRadarAlertService
 
-    service = CompareRadarAlertService(user_id=user_id)
-    count = service.check_all_compare_presets()
-    return {"status": "ok", "count": count}
-
-
-@router.post("/compare-official-alert-checks")
-def trigger_compare_official_alert_checks(user_id: str = Query(...)):
-    """Trigger Compare-Preset Official-Alert-Standalone-Checks (Issue #1216 Slice 2a)."""
-    from services.compare_official_alert import CompareOfficialAlertService
-
-    service = CompareOfficialAlertService(user_id=user_id)
-    count = service.check_all_compare_presets()
-    return {"status": "ok", "count": count}
+    return _radar_run_response(
+        CompareRadarAlertService(user_id=user_id).check_all_compare_presets_run(),
+        "compare_radar_alert",
+        user_id,
+    )
 
 
 @router.post("/inbound-commands")
@@ -135,9 +229,18 @@ def trigger_inbound():
     if not imap_user or not imap_pass:
         return {"status": "skipped", "reason": "imap_not_configured"}
 
-    reader = InboundEmailReader()
-    count = reader.poll_and_process(settings)
-    return {"status": "ok", "count": count}
+    with _poll_lock("inbound_command_poll.lock") as frei:
+        if not frei:
+            return {"status": "busy"}
+        reader = InboundEmailReader()
+        count = reader.poll_and_process(settings)
+    # Issue #1405 S4b: nicht erreichbares Postfach / gescheiterte Verarbeitung /
+    # nicht zugestellte Antwort -> failed + status "partial" (Muster
+    # trigger_inbound_sms); Go wertet beides im Laufstatus aus.
+    failed = reader.last_failed_count
+    status = "partial" if failed > 0 else "ok"
+    # Issue #2439: "processed" steuert den Nachversuch des Push-Weckrufs in Go.
+    return {"status": status, "count": count, "processed": count, "failed": failed}
 
 
 @router.post("/inbound-sms")
@@ -162,25 +265,25 @@ def trigger_inbound_sms():
 
     settings = Settings()
     reader = InboundSmsReader()
-    count = reader.poll_and_process(settings)
+    with _poll_lock("inbound_sms_poll.lock") as frei:
+        if not frei:
+            return {"status": "busy"}
+        count = reader.poll_and_process(settings)
     failed = reader.last_failed_count
-    status = "partial" if failed > 0 else "ok"
-    return {"status": status, "count": count, "failed": failed}
-
-
-@router.post("/inbound-telegram")
-def trigger_inbound_telegram():
-    """Trigger Telegram Bot polling."""
-    global _telegram_reader
-    from services.inbound_telegram_reader import InboundTelegramReader
-
-    settings = Settings()
-    if not settings.can_send_telegram():
-        return {"status": "skipped", "reason": "telegram not configured"}
-    if _telegram_reader is None:
-        _telegram_reader = InboundTelegramReader()
-    count = _telegram_reader.poll_and_process(settings)
-    return {"status": "ok", "processed": count}
+    # Issue #2154 AC-11: eine bewusste Ablehnung (409 fehlender/ungueltiger
+    # Verknuepfungs-Code, 429 Ratebremse) ist KEIN Netz-/5xx-Fehler und darf
+    # `failed` nicht erhoehen -- als "ok" durchgehen darf sie aber auch nicht,
+    # sonst bleibt ein dauerhaft ausgesperrter Nutzer unsichtbar. Denselben
+    # Wert "partial" wertet internal/scheduler/scheduler.go::
+    # triggerPremiumSmsPollEndpoint bereits zu einem sichtbaren
+    # partialRunError aus -- kein neues Go-Statusfeld noetig.
+    rejected = getattr(reader, "last_rejected_count", 0)
+    status = "partial" if failed > 0 or rejected > 0 else "ok"
+    # Issue #2439: "processed" = in diesem Lauf gefundene/verarbeitete Befehle.
+    return {
+        "status": status, "count": count, "failed": failed,
+        "rejected": rejected, "processed": count,
+    }
 
 
 @router.post("/compare-presets-daily")
@@ -196,106 +299,30 @@ def trigger_compare_presets_daily(hour: Optional[int] = None, user_id: str = Que
     externe Monitoring einen 100%-Ausfall (Prod-Journal 2026-07-16:
     133/133) von einem leeren Lauf unterscheiden kann.
     """
+    # Fix #2286 (AC-8): gleiche Feldmenge wie /trip-reports inkl. duration_s.
+    started_at = time.monotonic()
     sent, failed = run_compare_presets_daily(user_id, hour=hour)
+    duration_s = round(time.monotonic() - started_at, 3)
     status = "partial" if failed > 0 else "ok"
-    return {"status": status, "count": sent, "failed": failed}
+    return {"status": status, "count": sent, "failed": failed, "duration_s": duration_s}
 
 
 @router.post("/trips/{trip_id}/send")
-def send_test_trip_report(trip_id: str, user_id: str = "default", report_type: str = "evening"):
-    """Test-Versand für einen spezifischen Trip. Issue #695."""
-    from app.config import Settings
-    from app.loader import load_all_trips
-    from services.trip_report_scheduler import TripReportSchedulerService
+def send_test_trip_report(trip_id: str, user_id: str = Query(...), report_type: str = "evening"):
+    """Test-Versand für einen spezifischen Trip. Issue #695.
 
-    # AC-5: Trip-Existenz zuerst prüfen — vor SMTP-Check (F002-Fix)
-    all_trips = load_all_trips(user_id=user_id)
-    trip = next((t for t in all_trips if t.id == trip_id), None)
-    if trip is None:
-        raise HTTPException(status_code=404, detail=f"Trip {trip_id} not found")
-
-    # Issue #904: Trip ohne Etappen muss 422 liefern, bevor der SMTP-Check
-    # eine irreführende "SMTP not configured"-Meldung zurückgibt.
-    if not trip.stages:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Kein Briefing für {report_type} — keine Etappen",
-        )
-
-    # AC-6: SMTP-Check nach Trip-Lookup
-    settings = Settings().with_user_profile(user_id)
-    if not settings.can_send_email():
-        raise HTTPException(status_code=422, detail="SMTP not configured for this user")
-
-    service = TripReportSchedulerService(user_id=user_id)
-    try:
-        outcome = service.send_test_report_outcome(trip, report_type)
-    except ValueError as e:
-        # F003-Fix: Ungültiger report_type → 422 statt 500
-        raise HTTPException(status_code=422, detail=str(e))
-    if outcome == "no_stage":
-        raise HTTPException(
-            status_code=422,
-            detail=f"Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum",
-        )
-    # Issue #1325: "no_weather" ist ein genuiner Wetter-Ausfall (der
-    # Test-Fallback-Pfad klemmt Vergangenheits-Etappen bereits auf heute —
-    # dieser Fall bleibt trotzdem möglich, z.B. bei einem echten
-    # Provider-Ausfall) und wird NICHT mehr mit der irreführenden
-    # No-Stage-Meldung vermischt.
-    if outcome == "no_weather":
-        raise HTTPException(
-            status_code=422,
-            detail=f"Kein Briefing für {report_type} — keine Wetterdaten für die gewählte Etappe verfügbar",
-        )
-    # Issue #1403: "no_channels" bedeutet Etappe+Wetter waren da, aber E-Mail,
-    # Telegram und SMS sind alle deaktiviert — bisher fiel das fälschlich auf
-    # die Erfolgsantwort {"sent": true} durch. Analog zu "no_stage"/"no_weather"
-    # oben: eigener 422-Zweig mit sprechendem Grund statt stillem Erfolg.
-    if outcome == "no_channels":
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Kein Briefing für {report_type} versendet — kein "
-                "Versandweg aktiv (E-Mail, Telegram und SMS sind alle "
-                "deaktiviert)"
-            ),
-        )
-    # Issue #1403 AC-4: anderer Auslöser, gleiches Symptom — mindestens ein
-    # Versandweg war konfiguriert (send_telegram/send_sms/send_email=true),
-    # aber technisch nicht erreichbar (z.B. Telegram ohne gültige Bot-
-    # Verbindung), sodass kein einziger Kanal tatsächlich betreten wurde.
-    # Eigene Meldung, damit sie sich von "no_channels" (Konfiguration) und
-    # nicht mit ihr verwechseln lässt.
-    if outcome == "channels_unreachable":
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Kein Briefing für {report_type} versendet — Versandweg "
-                "konfiguriert, aber nicht einsatzbereit (Kanal technisch "
-                "nicht erreichbar)"
-            ),
-        )
-    # Issue #1756: ein zweiter Sendeversuch waehrend ein erster fuer
-    # denselben Schluessel noch laeuft wird abgewiesen statt parallel
-    # ausgefuehrt (Doppelversand-Schutz).
-    if outcome == "already_in_progress":
-        raise HTTPException(
-            status_code=409,
-            detail=f"Versand für {report_type} läuft bereits — bitte warten",
-        )
-    return {"status": "ok", "trip_id": trip_id, "report_type": report_type, "sent": True}
+    Issue #2280 (AC-13): Delegate auf den geteilten Helfer des Endpoints
+    ``POST /api/briefings/{id}/send`` — gleiche Antwort- und Fehlerform; die
+    Alt-Route behaelt den Default ``report_type=evening``.
+    """
+    return send_briefing("route", trip_id, user_id, report_type)
 
 
 @router.post("/compare-presets/{preset_id}/send")
-def manual_send_compare_preset(preset_id: str, user_id: str = Query("default")):
+def manual_send_compare_preset(preset_id: str, user_id: str = Query(...)):
     """Einzelversand-Trigger fuer ein Compare-Preset. Issue #627.
 
-    Ignoriert schedule — sendet sofort, egal ob daily/weekly/manual.
+    Ignoriert schedule — sendet sofort. Issue #2280 (AC-13): Delegate auf den
+    geteilten Helfer des Endpoints ``POST /api/briefings/{id}/send``.
     """
-    try:
-        return send_compare_preset(user_id, preset_id)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+    return send_briefing("vergleich", preset_id, user_id, "morning")

@@ -3,7 +3,7 @@ entity_id: fix_1483_temp_gap_marker
 type: bugfix
 created: 2026-08-05
 updated: 2026-08-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, temperature, kurznachricht, datenluecke]
 workflow: fix-1483-temp-gap-marker
@@ -100,7 +100,7 @@ def _gap_or(value: str, has_gap: bool) -> str:
     prüft, dass alle sechs Substrings `"N?"`, `"K?"`, `"D?"`, `"FN?"`, `"FK?"`, `"FD?"` im
     zurückgegebenen Text vorkommen und keines der sechs Kürzel mit `-` erscheint.
 
-- **AC-2 (Abgrenzung zu AC-1):** Given dieselbe Etappe und dieselben aktivierten Metriken, aber
+- **AC-2:** (Abgrenzung zu AC-1) Given dieselbe Etappe und dieselben aktivierten Metriken, aber
   OHNE Datenlücke (Wetterdaten vollständig, echt kein Temperatur-Rohwert für ein Kürzel
   vorhergesagt) / When die Kurznachricht (SMS) gerendert wird / Then zeigt der Text für dieses Kürzel
   weiterhin `-`, NICHT `?`.
@@ -110,7 +110,7 @@ def _gap_or(value: str, has_gap: bool) -> str:
     Kürzel vorkommt. Ohne diese Gegenprobe wäre AC-1 nur zufällig erfüllt, weil `?` und `-` sonst
     nicht unterscheidbar geprüft wären.
 
-- **AC-3 (Regressionsschutz #1415, WICHTIG):** Given eine Etappe mit ABGEWÄHLTER Metrik
+- **AC-3:** (Regressionsschutz #1415, WICHTIG) Given eine Etappe mit ABGEWÄHLTER Metrik
   „Temperatur" (bzw. „Gefühlte Temperatur") UND einer Datenlücke im Fenster / When die Kurznachricht
   (SMS) gerendert wird / Then fehlt das jeweilige Kürzel vollständig im Text — weder als `-` noch als
   `?` — unabhängig davon, dass eine Datenlücke vorliegt.
@@ -121,7 +121,7 @@ def _gap_or(value: str, has_gap: bool) -> str:
     vorkommt. Die Abwahl-Prüfung MUSS vor der Lücken-Prüfung greifen (Reihenfolge aus #1415 darf
     durch diesen Fix nicht umgekehrt werden).
 
-- **AC-4 (Isolation Wintersport, PFLICHT, korrigiert nach Code-Verifikation):** Given eine Etappe
+- **AC-4:** (Isolation Wintersport, PFLICHT, korrigiert nach Code-Verifikation) Given eine Etappe
   mit einer Datenlücke im Fenster (`has_data_gap=True`) UND aktivierten Wintersport-Metriken
   (Schneehöhe/Neuschnee/Schneefallgrenze/Lawinenstufe/Windchill) / When die Kurznachricht (SMS)
   gerendert wird / Then verhalten sich die Wintersport-Kürzel `SD`/`NS24+`/`SL`/`AV`/`WC`
@@ -140,7 +140,7 @@ def _gap_or(value: str, has_gap: bool) -> str:
     die Zahl (`SD180` etc.), Fall „fehlend" zeigt das Kürzel gar nicht — in keinem der beiden
     Fälle kommt `"SD?"`/`"NS24+?"`/`"SL?"`/`"AV?"`/`"WC?"` im Text vor.
 
-- **AC-5 (Zeichenbudget):** Given eine Etappe mit mehreren `?`-Kürzeln aus AC-1 / When die
+- **AC-5:** (Zeichenbudget) Given eine Etappe mit mehreren `?`-Kürzeln aus AC-1 / When die
   Kurznachricht (SMS) gerendert wird / Then bleibt der Text weiterhin innerhalb der 160-Zeichen-Grenze
   (§1 `docs/reference/sms_format.md`) — `?` belegt exakt eine Zeichenstelle wie zuvor `-`, es
   entsteht kein zusätzlicher Text.
@@ -148,7 +148,7 @@ def _gap_or(value: str, has_gap: bool) -> str:
     `len(sms) <= 160`-Assertion, analog `TestAC4LengthBudget` in
     `test_sms_unknown_on_missing_data.py`.
 
-- **AC-6 (Mutations-Gegenprobe, PFLICHT):** Given die Implementierung aus AC-1 bis AC-5 / When der
+- **AC-6:** (Mutations-Gegenprobe, PFLICHT) Given die Implementierung aus AC-1 bis AC-5 / When der
   Adversary in Phase 6 gezielt die Gap-Anbindung der Temperatur-Schleife verfälscht (z. B. den
   `_gap_or(...)`-Aufruf um `render_temperature(val)` entfernt bzw. durch `render_temperature(val)`
   ohne Wrapper ersetzt) / Then muss mindestens ein Test aus AC-1 an der Wirkstelle rot werden. Die

@@ -3,7 +3,7 @@ entity_id: feat_1273_s2_compare_hub_name_region_profil
 type: module
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, compare, hub, epic-1273, inline-edit]
 workflow: epic-1273-s2-hub-fields
@@ -193,16 +193,16 @@ Dieser Effekt reagiert auf einen echten **Referenzwechsel** der `preset`-Prop. W
 - **AC-3:** Given derselbe Hub / When der Nutzer eine andere Aktivitätsprofil-Kachel anklickt / Then markiert sich sofort die neue Kachel als ausgewählt, das Profil-Label in der Unterzeile aktualisiert sich, und der Wert ist nach Reload persistiert.
   - Test: Playwright/Staging — `[data-testid="compare-hub-profil-option-wandern"]` klicken, `data-selected="true"` prüfen, GET-Preset nach Reload: `profil === "wandern"`.
 
-- **AC-4 (Datenverlust-Schutz, Teil-Edit):** Given ein bestehender Ortsvergleich mit gesetzten `location_ids` (≥2 Orte), `empfaenger` (≥1 Adresse) und aktivem `schedule` / When der Nutzer NUR den Namen ändert und speichert / Then bleiben `location_ids`, `empfaenger`, `schedule` und `profil` nach dem Save unverändert (per `GET /api/compare/presets/{id}` verifiziert) — kein Zurücksetzen auf leere Arrays/Zero-Values.
+- **AC-4:** (Datenverlust-Schutz, Teil-Edit) Given ein bestehender Ortsvergleich mit gesetzten `location_ids` (≥2 Orte), `empfaenger` (≥1 Adresse) und aktivem `schedule` / When der Nutzer NUR den Namen ändert und speichert / Then bleiben `location_ids`, `empfaenger`, `schedule` und `profil` nach dem Save unverändert (per `GET /api/compare/presets/{id}` verifiziert) — kein Zurücksetzen auf leere Arrays/Zero-Values.
   - Test: Playwright/Staging — Preset mit 2 Orten + 1 Empfänger + `schedule=daily` seeden, nur Name im Hub ändern+speichern, anschließend `GET`-Response auf unveränderte `location_ids.length === 2`, `empfaenger.length === 1`, `schedule === 'daily'` prüfen. Reproduziert das BUG-DATALOSS-Muster aus CLAUDE.md, falls der Minimal-Body-Fehler versehentlich doch verwendet würde — Test MUSS vor einem korrekten Fix rot sein.
 
-- **AC-5 (Datenverlust-Schutz, Cross-Tab):** Given der Nutzer hat den Namen im Header geändert und gespeichert / When er danach — im selben Seitenaufenthalt, ohne Reload — einen Wert im Wertebereiche- oder Versand-Tab ändert und dieser automatisch/über den dortigen Speichern-Pfad committet / Then bleibt der zuvor geänderte Name erhalten (wird NICHT auf den alten Wert zurückgesetzt).
+- **AC-5:** (Datenverlust-Schutz, Cross-Tab) Given der Nutzer hat den Namen im Header geändert und gespeichert / When er danach — im selben Seitenaufenthalt, ohne Reload — einen Wert im Wertebereiche- oder Versand-Tab ändert und dieser automatisch/über den dortigen Speichern-Pfad committet / Then bleibt der zuvor geänderte Name erhalten (wird NICHT auf den alten Wert zurückgesetzt).
   - Test: Playwright/Staging — Namen im Header ändern+speichern, zum Wertebereiche-Tab wechseln, ein Zahlenfeld ändern und `blur()` auslösen (Commit), zurück zur Übersicht/Header, sichtbaren Namen UND per `GET`-Preset den `name` prüfen — beide zeigen den neuen Namen.
 
-- **AC-6 (Mobile-Parität):** Given ein Nutzer öffnet den Hub im Mobile-Viewport (≤899px) / When er Name, Region und Aktivitätsprofil über dieselben Stift-Icon-/Kachel-Interaktionen wie auf Desktop ändert / Then funktioniert jede der drei Änderungen identisch (sofort sichtbar, nach Reload persistiert) — keine Geräte-Parität-Lücke.
+- **AC-6:** (Mobile-Parität) Given ein Nutzer öffnet den Hub im Mobile-Viewport (≤899px) / When er Name, Region und Aktivitätsprofil über dieselben Stift-Icon-/Kachel-Interaktionen wie auf Desktop ändert / Then funktioniert jede der drei Änderungen identisch (sofort sichtbar, nach Reload persistiert) — keine Geräte-Parität-Lücke.
   - Test: Playwright/Staging — Viewport auf `375×812` setzen, `/compare/{id}` öffnen, AC-1/AC-2/AC-3 wiederholen gegen die sichtbaren Mobile-Elemente (gleiche `data-testid`s wie Desktop — Sichtbarkeitsfilter nötig, da Desktop-Block per CSS `hidden desktop:block` ausgeblendet, aber im DOM vorhanden bleibt: `page.getByTestId(...).filter({ visible: true })` bzw. `.locator(':visible')`, analog bestehendem Projekt-Muster für `runtime-exceeded-hint`).
 
-- **AC-7 (Fehlerfall):** Given der PUT-Endpunkt schlägt fehl (z. B. simulierter 500er) / When der Nutzer eines der drei Felder ändert und zu speichern versucht / Then zeigt das jeweilige Feld eine Fehlermeldung („Speichern fehlgeschlagen" bzw. Server-Fehlertext), das Eingabefeld bleibt offen (kein stiller Datenverlust der Eingabe), und der im Hub angezeigte (nicht editierte) Wert bleibt der letzte persistierte Stand.
+- **AC-7:** (Fehlerfall) Given der PUT-Endpunkt schlägt fehl (z. B. simulierter 500er) / When der Nutzer eines der drei Felder ändert und zu speichern versucht / Then zeigt das jeweilige Feld eine Fehlermeldung („Speichern fehlgeschlagen" bzw. Server-Fehlertext), das Eingabefeld bleibt offen (kein stiller Datenverlust der Eingabe), und der im Hub angezeigte (nicht editierte) Wert bleibt der letzte persistierte Stand.
   - Test: Playwright/Staging — `page.route()` auf `PUT /api/compare/presets/{id}` mit Status 500 stubben, Namensänderung versuchen und speichern, `[data-testid="compare-hub-name-save-error"]` sichtbar mit Fehlertext prüfen, H1 zeigt weiterhin den alten Namen.
 
 ## Known Limitations

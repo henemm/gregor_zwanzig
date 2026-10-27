@@ -1,10 +1,9 @@
 package store
 
-// TDD RED: Issue #449 — Magic Link / OTP Login per E-Mail
-// Spec: docs/specs/modules/issue_449_magic_link.md
-//
-// Tests für FindUserByEmail — muss FEHLSCHLAGEN bis implementiert.
-// Ausführung: cd <repo> && go test ./internal/store/... -run TestFindUserByEmail -v
+// Issue #2147 Scheibe A: ResolveAddressOwner ordnet eine Adresse genau einem
+// Konto zu (ersetzt die frühere reine email-Feld-Suche aus Issue #449).
+// Spec: docs/specs/modules/magic_link_adress_eindeutigkeit.md — Regeltabelle.
+// Echter Store auf t.TempDir(), kein Mock.
 
 import (
 	"testing"
@@ -13,110 +12,73 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 )
 
-// AC-3: Bestehender User mit E-Mail-Feld wird gefunden.
-func TestFindUserByEmailFound(t *testing.T) {
-	// GIVEN: User mit gesetzter E-Mail-Adresse existiert
-	tmpDir := t.TempDir()
-	s := New(tmpDir, "test")
-
-	user := model.User{
-		ID:        "alice",
-		Email:     "alice@example.com",
-		CreatedAt: time.Now(),
-	}
-	if err := s.SaveUser(user); err != nil {
-		t.Fatalf("SaveUser: %v", err)
-	}
-
-	// WHEN: FindUserByEmail mit passender Adresse
-	found, err := s.FindUserByEmail("alice@example.com")
-
-	// THEN: User wird zurückgegeben
-	if err != nil {
-		t.Fatalf("FindUserByEmail error: %v", err)
-	}
-	if found == nil {
-		t.Fatal("expected user, got nil")
-	}
-	if found.ID != "alice" {
-		t.Errorf("expected ID 'alice', got '%s'", found.ID)
-	}
-	if found.Email != "alice@example.com" {
-		t.Errorf("expected Email 'alice@example.com', got '%s'", found.Email)
-	}
+func bestaetigtAm() *time.Time {
+	t := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
+	return &t
 }
 
-// AC-2: Kein User mit dieser E-Mail → nil zurück (kein Fehler — neuer User wird angelegt).
-func TestFindUserByEmailNotFound(t *testing.T) {
-	// GIVEN: Leerer Store
-	tmpDir := t.TempDir()
-	s := New(tmpDir, "test")
-
-	// WHEN: FindUserByEmail ohne passenden Eintrag
-	found, err := s.FindUserByEmail("nobody@example.com")
-
-	// THEN: nil, nil (kein Fehler)
-	if err != nil {
-		t.Fatalf("expected nil error, got: %v", err)
+func TestResolveAddressOwner(t *testing.T) {
+	const x = "inhaber@example.com"
+	faelle := []struct {
+		name      string
+		konten    []model.User
+		adresse   string
+		wantRes   AddressResolution
+		wantOwner string
+	}{
+		{"frei", []model.User{{ID: "anderer", Email: "b@example.com", MailTo: "b@example.com"}},
+			x, AddressFree, ""},
+		{"leere-adresse-trifft-nie", []model.User{{ID: "ohne-mail"}},
+			"  ", AddressAmbiguous, ""},
+		{"ein-bestaetigter-inhaber", []model.User{{ID: "alice", Email: x, MailTo: x, EmailVerifiedAt: bestaetigtAm(), PasswordHash: "h"}},
+			x, AddressOwned, "alice"},
+		{"gross-klein-und-leerraum-egal", []model.User{{ID: "bob", Email: x, MailTo: x, EmailVerifiedAt: bestaetigtAm()}},
+			"  INHABER@Example.COM ", AddressOwned, "bob"},
+		{"bestaetigter-gewinnt-gegen-nebenfeld", []model.User{
+			{ID: "a-nebenfeld", Email: x, MailTo: "a@example.com", EmailVerifiedAt: bestaetigtAm()},
+			{ID: "b-inhaber", Email: "b-alt@example.com", MailTo: x, EmailVerifiedAt: bestaetigtAm()}},
+			x, AddressOwned, "b-inhaber"},
+		{"testkonto-uebersprungen", []model.User{{ID: "tg-live-e2e", Email: x, MailTo: x, EmailVerifiedAt: bestaetigtAm()}},
+			x, AddressFree, ""},
+		{"nur-nebenfeld-ist-mehrdeutig", []model.User{{ID: "carl", Email: x, MailTo: "carl@example.com", EmailVerifiedAt: bestaetigtAm()}},
+			x, AddressAmbiguous, ""},
+		{"unbestaetigt-mit-passwort", []model.User{{ID: "dora", Email: x, MailTo: x, PasswordHash: "h"}},
+			x, AddressAmbiguous, ""},
+		{"unbestaetigt-mit-passkey", []model.User{{ID: "dora", Email: x, MailTo: x, PasskeyCredentials: []model.WebAuthnCredential{{ID: []byte{1}}}}},
+			x, AddressAmbiguous, ""},
+		{"unbestaetigt-mit-google", []model.User{{ID: "dora", Email: x, MailTo: x, OAuthProvider: "google", OAuthSub: "sub"}},
+			x, AddressAmbiguous, ""},
+		{"unbestaetigt-zugangslos-kontaktadresse-ueber-email", []model.User{{ID: "emil", Email: x}},
+			x, AddressOwned, "emil"},
+		{"unbestaetigt-zugangslos-nur-nebenfeld", []model.User{{ID: "emil", Email: x, MailTo: "emil@example.com"}},
+			x, AddressAmbiguous, ""},
+		{"zwei-unbestaetigte-inhaber", []model.User{{ID: "f1", Email: x}, {ID: "f2", MailTo: x}},
+			x, AddressAmbiguous, ""},
+		{"zwei-bestaetigte-inhaber", []model.User{
+			{ID: "g1", Email: x, MailTo: x, EmailVerifiedAt: bestaetigtAm()},
+			{ID: "g2", MailTo: x, EmailVerifiedAt: bestaetigtAm()}},
+			x, AddressAmbiguous, ""},
 	}
-	if found != nil {
-		t.Errorf("expected nil user, got: %+v", found)
-	}
-}
-
-// Sicherstellen: Case-insensitive Suche — E-Mail in Großbuchstaben trifft lowercase-User.
-func TestFindUserByEmailCaseInsensitive(t *testing.T) {
-	// GIVEN: User mit kleingeschriebener E-Mail
-	tmpDir := t.TempDir()
-	s := New(tmpDir, "test")
-
-	user := model.User{
-		ID:        "bob",
-		Email:     "bob@example.com",
-		CreatedAt: time.Now(),
-	}
-	if err := s.SaveUser(user); err != nil {
-		t.Fatalf("SaveUser: %v", err)
-	}
-
-	// WHEN: Suche mit Großbuchstaben
-	found, err := s.FindUserByEmail("BOB@EXAMPLE.COM")
-
-	// THEN: User wird trotzdem gefunden (case-insensitive)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if found == nil {
-		t.Fatal("expected user for case-insensitive match, got nil")
-	}
-	if found.ID != "bob" {
-		t.Errorf("expected ID 'bob', got '%s'", found.ID)
-	}
-}
-
-// Sicherstellen: User ohne E-Mail-Feld wird nicht fälschlich gefunden.
-func TestFindUserByEmailSkipsUserWithoutEmail(t *testing.T) {
-	// GIVEN: User ohne E-Mail-Feld
-	tmpDir := t.TempDir()
-	s := New(tmpDir, "test")
-
-	user := model.User{
-		ID:        "no-email-user",
-		Email:     "", // kein E-Mail-Feld gesetzt
-		CreatedAt: time.Now(),
-	}
-	if err := s.SaveUser(user); err != nil {
-		t.Fatalf("SaveUser: %v", err)
-	}
-
-	// WHEN: Suche mit leerer E-Mail → soll nie treffen
-	found, err := s.FindUserByEmail("")
-
-	// THEN: nil (leere E-Mail ist kein gültiger Suchschlüssel)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if found != nil {
-		t.Errorf("empty email search must return nil, got: %+v", found)
+	for _, f := range faelle {
+		t.Run(f.name, func(t *testing.T) {
+			s := New(t.TempDir(), "test")
+			for _, u := range f.konten {
+				u.CreatedAt = time.Now()
+				if err := s.SaveUser(u); err != nil {
+					t.Fatalf("SaveUser(%q): %v", u.ID, err)
+				}
+			}
+			owner, res, err := s.ResolveAddressOwner(f.adresse)
+			if err != nil {
+				t.Fatalf("ResolveAddressOwner: %v", err)
+			}
+			got := ""
+			if owner != nil {
+				got = owner.ID
+			}
+			if res != f.wantRes || got != f.wantOwner {
+				t.Errorf("erwartet (%d, %q), bekommen (%d, %q)", f.wantRes, f.wantOwner, res, got)
+			}
+		})
 	}
 }

@@ -302,29 +302,70 @@ def test_send_compare_preset_raises_keyerror_with_original_parse_error_text(tmp_
     assert "nicht gefunden" not in message
 
 
-def test_run_compare_presets_daily_logs_error_on_corrupt_file(tmp_path, caplog):
-    """F002: korrupte Datei -> ERROR-Log (nicht das Skip-INFO), return (0, 0).
+def test_dispatch_loader_skips_corrupt_file_and_keeps_valid_presets(tmp_path, caplog):
+    """Issue #2286 AC-5 (ersetzt F002 "(0, 0) + ERROR-Log"): eine unlesbare
+    Datei in briefings/ legt NICHT mehr alle Vergleiche des Nutzers still.
 
-    Issue #1290 (E1, nicht im Spec-Audit erfasst — gleicher Rueckgabetyp-
-    Wechsel int -> tuple[int, int] betrifft auch diesen Test): die korrupte
-    Datei fuehrt zu `_load_presets_for_dispatch` -> `None` (LoaderError
-    gefangen), also KEINE faelligen Presets -> (sent=0, failed=0). Kein
-    echter Fehlschlag-Fall im Sinne von E1 (Preset wurde nie geladen, also
-    nie im Dispatch-Versuch), sondern strukturell derselbe "keine faelligen
-    Presets"-Pfad wie ein fehlendes briefings/-Verzeichnis.
+    Given zwei gueltige Vergleichs-Presets und eine unlesbare JSON-Datei, die
+    alphabetisch ZWISCHEN ihnen liegt (eine "bis zum ersten Fehler"-Variante
+    faellt so auf) / When der Dispatch-Lader `_load_presets_for_dispatch`
+    laeuft / Then liefert er beide gueltigen Presets (nicht `None`), und es
+    steht ein WARNING-Log mit dem Dateinamen der kaputten Datei im Log.
+
+    Bewusst NICHT ueber `load_compare_presets(strict=False)` geprueft -- der
+    tolerante Modus existiert dort schon; der Defekt sitzt im Dispatch, der
+    `strict=True` nutzt.
     """
+    from services.scheduler_dispatch_service import _load_presets_for_dispatch
+
+    data_root = tmp_path / "data"
+    briefings = _write_presets(
+        data_root, "testuser", [_preset_full("preset-a"), _preset_full("preset-c")],
+    )
+    (briefings / "preset-b-kaputt.json").write_text("{not valid json", encoding="utf-8")
+
+    caplog.set_level(logging.WARNING)
+    result = _load_presets_for_dispatch("testuser", str(data_root))
+
+    assert result is not None, (
+        "AC-5: eine kaputte Datei darf den Dispatch-Lader nicht auf `None` "
+        "(= kein Versand fuer den ganzen Nutzer) kippen"
+    )
+    assert sorted(p["id"] for p in result) == ["preset-a", "preset-c"], (
+        f"AC-5: die gueltigen Presets muessen geladen werden, kam: {result!r}"
+    )
+    warnings = [
+        r for r in caplog.records
+        if r.levelno == logging.WARNING and "preset-b-kaputt.json" in r.getMessage()
+    ]
+    assert warnings, (
+        "AC-5: das Ueberspringen der kaputten Datei muss als WARNING mit "
+        "Dateinamen geloggt werden"
+    )
+
+
+def test_run_compare_presets_daily_corrupt_file_alone_is_not_failed(tmp_path, caplog):
+    """Issue #2286 AC-5: nur eine unlesbare Datei, kein gueltiges Preset ⇒
+    `(0, 0)` -- das Ueberspringen zaehlt NICHT als `failed` (Sichtbarkeit
+    laeuft ueber Korrupt-Zaehler + MQ, nicht ueber SOFORT_ALARM_JOBS) -- und
+    kein ERROR "Failed to load compare presets" mehr, sondern ein WARNING mit
+    Dateinamen."""
     data_root = tmp_path / "data"
     path = data_root / "users" / "testuser" / "briefings" / "preset-1.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{not valid json", encoding="utf-8")
 
-    with caplog.at_level(logging.INFO, logger="scheduler.dispatch"):
-        result = run_compare_presets_daily(user_id="testuser", data_root=str(data_root), hour=6)
+    caplog.set_level(logging.INFO)
+    result = run_compare_presets_daily(user_id="testuser", data_root=str(data_root), hour=6)
 
     assert result == (0, 0)
-    error_records = [r for r in caplog.records if r.levelno == logging.ERROR]
-    assert any("Failed to load compare presets" in r.message for r in error_records)
-    assert not any("No compare_presets.json" in r.message for r in caplog.records)
+    assert not any("Failed to load compare presets" in r.getMessage() for r in caplog.records), (
+        "AC-5: der strenge Lade-Abbruch (ERROR) darf im Dispatch nicht mehr greifen"
+    )
+    assert any(
+        r.levelno == logging.WARNING and "preset-1.json" in r.getMessage()
+        for r in caplog.records
+    ), "AC-5: kaputte Datei muss als WARNING mit Dateinamen sichtbar sein"
 
 
 def test_run_compare_presets_daily_no_skip_log_on_valid_empty_list(tmp_path, caplog):

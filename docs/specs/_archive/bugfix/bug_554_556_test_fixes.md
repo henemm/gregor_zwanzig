@@ -3,7 +3,7 @@ entity_id: bug_554_556_test_fixes
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: completed
+status: implemented
 version: "1.0"
 tags: [test, bugfix]
 ---

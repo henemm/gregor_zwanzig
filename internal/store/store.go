@@ -13,6 +13,17 @@ func New(dataDir, userID string) *Store {
 
 // WithUser returns a shallow copy of the Store with a different UserID.
 // Empty userId is a no-op: returns the original Store unchanged.
+//
+// Der leere String laeuft BEWUSST nicht ueber ValidUserID (Issue #2140): er
+// wuerde dort als "ungueltig" gelten, obwohl er hier seit jeher schlicht "kein
+// Wechsel" bedeutet. Die Pfadsicherheit haengt nicht an dieser Stelle, sondern
+// an den Store-Methoden, die aus einer Kennung einen Pfad bauen.
+//
+// Seit Issue #2151 Scheibe B traegt der Basis-Store ohne gesetzte GZ_USER_ID
+// eine LEERE Kennung (kein Config-Default "default" mehr). WithUser("") liefert
+// dann diesen Basis-Store, und dessen nutzerbezogene Methoden verweigern jeden
+// Dateizugriff ueber requireUser() mit ErrInvalidUserID (fail-closed).
+// gz-store-scope-exempt: ist selbst der Bindungsmechanismus und kann sich nicht vorher binden
 func (s *Store) WithUser(userId string) *Store {
 	if userId == "" {
 		return s

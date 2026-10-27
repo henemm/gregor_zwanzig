@@ -462,3 +462,77 @@ describe('Issue #1395 S5 (RED): settle()/SETTLE_TIMEOUT_MS sind zurückgebaut', 
 		);
 	});
 });
+
+// ── Issue #1433 (AC-2, AC-24 — bewusst ergaenzt) ─────────────────────────────
+// Spec: docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md — §4 Punkt 2 und 5.
+// Der Zustand `conflict` ist STICKY: `schedule()` und `doSave()` verlassen ihn
+// nicht (heute rufen beide `setSaving()` ohne Konflikt-Guard auf, die Anzeige
+// „Nochmal speichern" verschwindet beim Speichern in einem anderen Reiter).
+// Er endet nur durch `retryConflict()` (siehe saveStatusConflictRetry.test.ts)
+// oder Neuladen der Seite.
+describe('Issue #1433: der Zustand `conflict` bleibt beim Weiterspeichern stehen', () => {
+	const fehler412 = () =>
+		Object.assign(new Error('Konflikt'), {
+			error: 'precondition_failed',
+			detail: 'Stand zwischenzeitlich geaendert',
+			status: 412
+		});
+
+	/** Controller mit Kennung (sonst bildet doSave() keinen `conflict`-Zustand). */
+	async function imKonflikt(): Promise<SaveStatus> {
+		const c = createTestInstance();
+		const f = c as unknown as Record<string, unknown>;
+		f._tripId = 'gr20';
+		f._resourceKind = 'trip';
+		f._lastFailed = null;
+		await c.doSave(async () => {
+			throw fehler412();
+		});
+		assert.equal(c.state, 'conflict', 'Vorbedingung: ein 412 mit Kennung fuehrt in den Zustand `conflict`');
+		return c;
+	}
+
+	test('schedule() bei offenem Konflikt: Zustand bleibt `conflict` (nicht `saving`)', async () => {
+		const c = await imKonflikt();
+		c.schedule(async () => undefined, 5);
+		assert.equal(c.state, 'conflict', 'schedule() darf die Konfliktanzeige nicht durch `saving` ersetzen (heute: setSaving())');
+		c.cancel();
+		assert.equal(c.state, 'conflict', 'cancel() darf den Konflikt ebenfalls nicht aufloesen');
+	});
+
+	test('doSave() bei offenem Konflikt, Speichervorgang scheitert erneut (412): bleibt `conflict`, kein generischer Fehler', async () => {
+		const c = await imKonflikt();
+		await c.doSave(async () => {
+			throw fehler412();
+		});
+		assert.equal(c.state, 'conflict');
+		assert.notEqual(c.error, null, 'die Konfliktmeldung bleibt sichtbar');
+	});
+
+	test('doSave() bei offenem Konflikt, Speichervorgang laeuft durch: Konflikt endet NICHT von selbst', async () => {
+		const c = await imKonflikt();
+		await c.doSave(async () => undefined);
+		assert.equal(
+			c.state,
+			'conflict',
+			'ein Erfolg eines anderen Reiters darf den Konflikt nicht in „Gespeichert" umdeuten — nur retryConflict() beendet ihn'
+		);
+	});
+
+	test('flush() eines ausstehenden Speichervorgangs bei Konflikt: bleibt `conflict`', async () => {
+		const c = await imKonflikt();
+		c.schedule(async () => {
+			throw fehler412();
+		}, 10_000);
+		await c.flush();
+		assert.equal(c.state, 'conflict');
+	});
+
+	test('Gegenprobe: ohne Konflikt bleibt schedule() → saving → idle unveraendert', async () => {
+		const c = createTestInstance();
+		c.schedule(async () => undefined, 5);
+		assert.equal(c.state, 'saving', 'ausserhalb eines Konflikts zeigt schedule() sofort `saving`');
+		await c.flush();
+		assert.equal(c.state, 'idle');
+	});
+});

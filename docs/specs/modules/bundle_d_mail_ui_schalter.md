@@ -3,7 +3,7 @@ entity_id: bundle_d_mail_ui_schalter
 type: module
 created: 2026-06-20
 updated: 2026-06-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, editor, email, report-config]
 issues: [785, 709]

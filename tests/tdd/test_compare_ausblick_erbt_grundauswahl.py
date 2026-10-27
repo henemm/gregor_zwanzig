@@ -143,14 +143,21 @@ def test_ac6_ortsvergleich_ausblick_zeigt_keine_spalte_ausserhalb_von_active_met
     assert tabellen, "Kein 3-Tages-Ausblick in der Vergleichsmail gefunden."
     kopf = _headers(tabellen[0])
 
-    assert "Luftfeuchtigkeit" not in kopf, (
-        f"Kopfzeile {kopf!r}: 'Luftfeuchtigkeit' erscheint, obwohl 'humidity' "
+    # #2136/ADR-0068: Spaltenkoepfe tragen `col_label`, nicht mehr den
+    # deutschen Katalog-Langnamen.
+    from app.metric_catalog import get_metric
+
+    humidity_label = get_metric("humidity").col_label
+    temp_label = get_metric("temperature").col_label
+
+    assert humidity_label not in kopf, (
+        f"Kopfzeile {kopf!r}: {humidity_label!r} erscheint, obwohl 'humidity' "
         "in der Grundauswahl (active_metrics) NICHT aktiv ist (AC-6). Der "
         "Ortsvergleich-Ausblick klemmt die Auswahl noch nicht gegen "
         "active_metrics (report_config_resolver.py:291)."
     )
-    assert kopf[1:] == ["Temperatur"], (
-        f"Erwartet nur die grundauswahl-gedeckte Spalte 'Temperatur': {kopf!r}"
+    assert kopf[1:] == [temp_label], (
+        f"Erwartet nur die grundauswahl-gedeckte Spalte {temp_label!r}: {kopf!r}"
     )
 
 
@@ -166,8 +173,12 @@ def test_ac6_ortsvergleich_ohne_active_metrics_bleibt_ungeklemmt_regressionsschu
     opts = _render_options(preset)
     html, _text = _render_mail(opts)
 
+    from app.metric_catalog import get_metric
+
     kopf = _headers(_outlook_tables(html)[0])
-    assert set(kopf[1:]) == {"Temperatur", "Luftfeuchtigkeit"}, (
+    assert set(kopf[1:]) == {
+        get_metric("temperature").col_label, get_metric("humidity").col_label,
+    }, (
         f"Kopfzeile {kopf!r}: ohne konfigurierte active_metrics darf die "
         "Ausblick-Auswahl nicht geschnitten werden (kein Maximum definiert)."
     )
@@ -231,10 +242,15 @@ def test_ac10_vs_ac11_ortsvergleich_totalschnitt_faellt_auf_die_grundauswahl_zur
         "leer war -- 'unaufloesbar nach dem Grundauswahl-Schnitt' und "
         "'bewusst geleert' duerfen nie denselben Zustand erzeugen (M3-Bug)."
     )
+    from app.metric_catalog import get_metric
+
+    erwartet_ac10 = [
+        get_metric("temperature").col_label, get_metric("precipitation").col_label,
+    ]
     kopf_ac10 = _headers(tabellen_ac10[0])
-    assert kopf_ac10[1:] == ["Temperatur", "Niederschlag"], (
+    assert kopf_ac10[1:] == erwartet_ac10, (
         f"AC-10: nach dem Totalschnitt zeigt der Ausblick {kopf_ac10[1:]!r} "
-        "statt der VOLLEN Grundauswahl ['Temperatur', 'Niederschlag']."
+        f"statt der VOLLEN Grundauswahl {erwartet_ac10!r}."
     )
     warnungen = "\n".join(
         r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING

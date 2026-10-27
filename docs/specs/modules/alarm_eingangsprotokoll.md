@@ -3,7 +3,7 @@ entity_id: alarm_eingangsprotokoll
 type: feature
 created: 2026-08-17
 updated: 2026-08-17
-status: draft
+status: implemented
 workflow: feat-1948-eingangsprotokoll
 version: "1.0"
 tags: [alarm, observability, debug]

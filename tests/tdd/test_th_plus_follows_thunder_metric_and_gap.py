@@ -249,7 +249,7 @@ class TestAC3RealGapShowsUnknown:
             aggregation=AggregationConfig(),
         )
 
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
         forecast = svc._build_thunder_forecast_from_trend_or_fetch(
             trip, today, now_utc=datetime.now(timezone.utc), tz=None,
             multi_day_trend=None,

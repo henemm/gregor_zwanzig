@@ -828,7 +828,20 @@ class TestAC12OutlookTable:
     Then echte Tabelle mit Spalten Tag N D R PR Wind Böen Gew ACC."""
 
     def test_outlook_table_has_required_columns(self):
-        """Ausblick-Tabelle hat Köpfe: Tag, N, D, R, PR, Wind, Böen, Gew, ACC."""
+        """Ausblick-Tabelle hat acht Spaltenkoepfe (Tag + sieben Groessen + ACC).
+
+        #2136/ADR-0068 (Adversary F001, Nachbesserung): die urspruengliche
+        Erwartung pruefte die ALTEN Einzelbuchstaben-Kuerzel ("N", "D", "R",
+        "PR", "Böen", "Gew") als reine Teilzeichenketten -- seit der
+        col_label-Umstellung sind das keine echten Spaltenkoepfe mehr, die
+        alte Assertion war nur noch gruen, weil ein inzwischen entfernter
+        redundanter Legendenblock diese Buchstaben zusaetzlich im Flie(ss)text
+        trug (die vom Adversary gefundene Dopplung). Jetzt gegen die
+        TATSAECHLICH gerenderten `col_label`-Koepfe geprueft, dieselbe Quelle
+        wie `outlook.py:206-233`.
+        """
+        from app.metric_catalog import aggregation_label_de, get_metric
+
         trend = [
             _trend_stage(weekday="Di", name="E1", confidence_pct=82),
             _trend_stage(weekday="Mi", name="E2", confidence_pct=55),
@@ -836,13 +849,22 @@ class TestAC12OutlookTable:
         ]
         html = _render(trend=trend)
 
-        # Soll-Spaltenköpfe laut OutlookTable in JSX
-        required_headers = ["Tag", "N", "D", "R", "PR", "Wind", "Böen", "Gew", "ACC"]
+        _temp = get_metric("temperature").col_label
+        required_headers = [
+            "Tag",
+            f"{_temp} {aggregation_label_de('min')}",
+            f"{_temp} {aggregation_label_de('max')}",
+            get_metric("precipitation").col_label,
+            get_metric("rain_probability").col_label,
+            get_metric("wind").col_label,
+            get_metric("gust").col_label,
+            get_metric("thunder").col_label,
+            "ACC",
+        ]
         missing = [h for h in required_headers if h not in html]
         assert not missing, (
             f"Ausblick-Tabelle fehlen Spalten: {missing}. "
-            "Aktuell rendert der Renderer Chip-Zeilen statt einer Tabelle. "
-            "Vorlage OutlookTable: Tag·N·D·R·PR·Wind·Böen·Gew·ACC"
+            f"Erwartet (col_label-Quelle, #2136/ADR-0068): {required_headers}"
         )
 
     def test_outlook_is_html_table_not_just_divs(self):
@@ -871,20 +893,25 @@ class TestAC12OutlookTable:
         )
 
     def test_outlook_table_has_code_legend(self):
-        """Unter der Ausblick-Tabelle steht eine Code-Legende."""
+        """Unter der Mail steht eine Legende, die die Ausblick-Kuerzel aufloest.
+
+        #2136/ADR-0068 (Adversary F001, Nachbesserung): der frueher hier
+        gepruefte eigene `<div>`-Legendenblock unter der Ausblick-Tabelle
+        (Pfad 1, "N Nacht-Tief · D Tag-Hoch °C · ...") ist entfernt -- er
+        widersprach den inzwischen umbenannten `<th>`-Koepfen. Die Aussage
+        "es gibt eine Kuerzel-Legende" lebt seither in der geteilten
+        Fusszeilen-Spaltenlegende (`build_column_legend(...,
+        outlook_active=True)`, `helpers.py:599`), die hier stattdessen
+        geprueft wird.
+        """
         trend = [
             _trend_stage(weekday="Di", name="E1", confidence_pct=82),
         ]
         html = _render(trend=trend)
-        # Vorlage: "N Nacht-Tief · D Tag-Hoch °C · R Regen mm · PR Regen-W. %@h ..."
-        has_legend = (
-            "Nacht-Tief" in html
-            or ("N Nacht" in html)
-            or ("D Tag-Hoch" in html)
-        )
-        assert has_legend, (
-            "Code-Legende unter der Ausblick-Tabelle fehlt. "
-            "Vorlage: 'N Nacht-Tief · D Tag-Hoch °C · R Regen mm...'"
+        assert "Spalten: " in html, (
+            "Die Fusszeilen-Spaltenlegende ('Spalten: ...') fehlt -- sie muss "
+            "auch die im Ausblick sichtbaren Kuerzel aufloesen (AC-5, "
+            "#2136/ADR-0068)."
         )
 
     def test_outlook_cells_with_high_values_have_background(self):
@@ -994,25 +1021,33 @@ class TestAC13PipelineRainProbAndThunderPct:
         )
 
     def test_outlook_table_renders_pr_column_from_stage(self):
-        """PR-Spalte in der Ausblick-Tabelle muss rain_probability_pct aus dem
-        Stage-dict rendern — nicht als leeres/fehlendes Feld."""
+        """PR-Spalte (Regenwahrscheinlichkeit) in der Ausblick-Tabelle muss
+        rain_probability_pct aus dem Stage-dict rendern — nicht als
+        leeres/fehlendes Feld.
+
+        #2136/ADR-0068 (Adversary F001, Nachbesserung): der Spaltenkopf
+        traegt seither `col_label` ("Rain%"), nicht mehr das Kuerzel "PR" --
+        das kam vorher zusaetzlich aus dem inzwischen entfernten
+        Legendenblock (Adversary-Fund), nicht aus dem echten Tabellenkopf.
+        """
+        from app.metric_catalog import get_metric
+
         # Baue Stage-dict mit explizitem rain_probability_pct
         stage = _trend_stage(weekday="Di", name="E1", confidence_pct=70)
         stage["rain_probability_pct"] = 65  # explizit gesetzt
 
         html = _render(trend=[stage])
 
-        # Soll: PR-Spalte mit Wert "65%" in der Ausblick-Tabelle
-        # Aktuell: Ausblick rendert nur Chips, keine Tabelle → PR-Wert fehlt
-        # Wenn die Tabelle existiert, muss die PR-Spalte den Wert aus dem Stage-dict zeigen
-        assert "PR" in html, (
-            "PR-Spalten-Kopf fehlt im Ausblick. "
-            "AC-13: rain_probability_pct muss als PR-Spalte in OutlookTable gerendert werden."
+        rain_prob_label = get_metric("rain_probability").col_label
+        assert rain_prob_label in html, (
+            f"{rain_prob_label!r}-Spalten-Kopf fehlt im Ausblick. "
+            "AC-13: rain_probability_pct muss als eigene Spalte in OutlookTable "
+            "gerendert werden (Kopf aus col_label, #2136/ADR-0068)."
         )
         # Die Spalte muss den Prozentwert enthalten (65% → "65%")
         assert "65%" in html, (
-            "PR-Wert '65%' fehlt im Ausblick-HTML. "
-            "Stage-dict hat rain_probability_pct=65, Renderer muss diesen Wert als PR zeigen."
+            f"{rain_prob_label!r}-Wert '65%' fehlt im Ausblick-HTML. "
+            "Stage-dict hat rain_probability_pct=65, Renderer muss diesen Wert zeigen."
         )
 
     def test_gew_column_shows_level_for_med_thunder(self):
@@ -1032,16 +1067,33 @@ class TestAC13PipelineRainProbAndThunderPct:
             "Gew-Spalte muss 'mittel' zeigen bei ThunderLevel.MED. "
             "F002: Gew zeigt Stufe, keine Fake-%."
         )
-        assert "%" not in html.split("mittel")[0].split("Gew")[-1] if "Gew" in html else True, \
-            "Gew-Zelle darf kein %-Zeichen für Gewitter enthalten"
+        # #2136/ADR-0068: der Spaltenkopf traegt seither `col_label` ("Thdr"),
+        # nicht mehr das Kuerzel "Gew" -- das kam frueher NUR aus dem
+        # Ausblick-Kopf, "Gew" als reine Teilzeichenkette faellt jetzt auch auf
+        # unbeteiligte Vorkommen wie "kein Gewitter" (Risiko-Legende) herein,
+        # was die urspruengliche Positions-Heuristik verfaelscht.
+        from app.metric_catalog import get_metric
+
+        thunder_label = get_metric("thunder").col_label
+        assert (
+            "%" not in html.split("mittel")[0].split(thunder_label)[-1]
+            if thunder_label in html else True
+        ), "Gew-Zelle darf kein %-Zeichen für Gewitter enthalten"
 
     def test_gew_column_shows_dash_for_none_thunder(self):
-        """F003: Gew-Spalte zeigt '–' bei ThunderLevel.NONE."""
+        """F003: Gew-Spalte zeigt '–' bei ThunderLevel.NONE.
+
+        #2136/ADR-0068 (Adversary F001, Nachbesserung): "PR" war das ALTE
+        Spaltenkuerzel; der tatsaechliche Kopf ist seither `col_label`
+        ("Rain%")."""
+        from app.metric_catalog import get_metric
+
         stage = _trend_stage(weekday="Do", name="E-klar", confidence_pct=85)
         stage["thunder"] = "NONE"
         html = _render(trend=[stage])
-        assert "PR" in html, "PR-Spalte muss vorhanden sein"
-        # Nach dem PR-Bereich muss eine Gew-Zelle mit '–' kommen
+        rain_prob_label = get_metric("rain_probability").col_label
+        assert rain_prob_label in html, f"{rain_prob_label!r}-Spalte muss vorhanden sein"
+        # Nach dem Regenwahrscheinlichkeits-Bereich muss eine Gew-Zelle mit '–' kommen
         assert "–" in html, "Gew-Spalte muss '–' zeigen bei NONE"
 
     def test_trend_stage_dict_dash_when_no_data(self):

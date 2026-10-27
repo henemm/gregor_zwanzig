@@ -1,12 +1,22 @@
 <script lang="ts">
 	// Issue #182 — Alert-Konfigurator: Alert-Vorschau (Email).
 	// Issue #586 — h4 entfernt, Card-Styling nach JSX.
+	// Issue #2283 S5: kind-neutral — derselbe Baustein im Trip (Segmente) und im
+	// Ortsvergleich (Orte); Abruf ueber POST /api/briefings/{id}/alert-preview?kind=….
 
-	import { api } from '$lib/api';
-	import type { Trip, AlertRule } from '$lib/types';
-	import { buildAlertPreviewPayload } from './alertPreviewHelpers';
+	import { alarmVorschau } from '$lib/api';
+	import type { AlertRule, Stage } from '$lib/types';
+	import { buildAlertPreviewBody } from './alertPreviewHelpers';
 
-	let { trip, alertRules }: { trip: Trip; alertRules: AlertRule[] } = $props();
+	interface Props {
+		kind: 'route' | 'vergleich';
+		/** Trip- bzw. Vergleichs-ID; leer (Anlege-Seite) ⇒ kein Abruf moeglich. */
+		id: string;
+		alertRules: AlertRule[];
+		stages?: Stage[];
+		locationIds?: string[];
+	}
+	let { kind, id, alertRules, stages = [], locationIds = [] }: Props = $props();
 
 	let subject = $state('');
 	let emailHtml = $state('');
@@ -30,14 +40,15 @@
 		telegram = '';
 		sms = '';
 		try {
-			const payload = buildAlertPreviewPayload(alertRules, trip.stages);
-			const result = await api.post<{
+			const payload = buildAlertPreviewBody(kind, { rules: alertRules, stages, locationIds });
+			// #2361: eigenes Budget 40 s (Go-Proxy ca. 30 s), s. `alarmVorschau` in api.ts.
+			const result = await alarmVorschau<{
 				subject: string;
 				email_html: string;
 				email_plain: string;
 				telegram: string;
 				sms: string;
-			}>(`/api/trips/${trip.id}/alert-preview`, payload);
+			}>(kind, id, payload);
 			subject = result.subject;
 			emailHtml = result.email_html;
 			telegram = result.telegram;
@@ -55,14 +66,25 @@
 	}
 </script>
 
-<div class="preview-card" data-testid="alert-preview-card">
+<div class="preview-card" data-testid="alert-preview-card" data-kind={kind}>
 	{#if hasNoAlertableMetrics}
 		<!-- Issue #809: Kein alert_rules nach Self-Heal = keine alert-fähigen Metriken -->
 		<!-- Issue #850: Link direkt auf Inhalt-Tab -->
 		<p class="empty" data-testid="alert-preview-no-metrics">
 			Keine alert-fähigen Wetter-Metriken aktiv. Aktiviere zuerst
 			Wetter-Metriken (z.B. Windböen, Temperatur) im Tab
-			<a href="?tab=weather" data-testid="alert-preview-no-metrics-link"><strong>Wetter-Metriken</strong></a>.
+			<a href="?tab=wetter-metriken" data-testid="alert-preview-no-metrics-link"><strong>Wetter-Metriken</strong></a>.
+		</p>
+	{:else if id === ''}
+		<!-- Issue #2283 S5: Anlege-Seite — es gibt noch keinen gespeicherten Eintrag. -->
+		<p class="empty" data-testid="alert-preview-unsaved">
+			Die Vorschau mit echten Daten ist nach dem Speichern verfügbar.
+		</p>
+	{:else if kind === 'vergleich' && locationIds.length === 0}
+		<!-- Issue #2283 (F006b): ohne Orte gibt es nichts vorzuschauen — kein Abruf
+		     (das Backend antwortete sonst 422), analog zum „0 Orte"-Hinweis der Vorschau. -->
+		<p class="empty" data-testid="alert-preview-no-locations">
+			Noch keine Orte konfiguriert — im Reiter <strong>Orte</strong> Kandidaten hinzufügen.
 		</p>
 	{:else if enabledRules.length === 0}
 		<p class="empty" data-testid="alert-preview-empty">

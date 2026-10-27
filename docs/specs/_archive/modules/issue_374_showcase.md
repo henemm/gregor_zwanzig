@@ -3,7 +3,7 @@ entity_id: issue_374_showcase
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, atomic-design, showcase, route, epic-368, issue-374]
 ---

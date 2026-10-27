@@ -3,7 +3,7 @@ entity_id: compare_endpoint_user_id
 type: module
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, security, mandantentrennung, compare]
 ---

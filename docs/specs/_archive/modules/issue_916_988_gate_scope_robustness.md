@@ -3,7 +3,7 @@ entity_id: issue_916_988_gate_scope_robustness
 type: module
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [gate, tooling, bugfix, deploy]
 ---
@@ -216,7 +216,7 @@ ergänzt:
     speichert zusätzlich den bereits berechneten Scope (`gate_last_scope`),
     `prod_selftest.py::_detect_committed_scope()` nutzt diesen Cache-Wert bei
     exakter Commit-Übereinstimmung, statt ihn selbstreferenziell neu
-    herzuleiten. Details: `docs/specs/modules/issue_1084_gate_scope_cache.md`.
+    herzuleiten. Details: `docs/specs/_archive/modules/issue_1084_gate_scope_cache.md`.
 - Fix 2 (#988) unterscheidet ausschließlich über die Existenz von
   `pyproject.toml` — ein Repo, das `pyproject.toml`, aber absichtlich (aus
   legitimen Gründen) keine Golden-Tests führt, würde weiterhin fälschlich

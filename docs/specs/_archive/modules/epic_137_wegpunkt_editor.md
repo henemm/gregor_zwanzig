@@ -3,7 +3,7 @@ entity_id: epic_137_wegpunkt_editor
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: active
+status: implemented
 version: "1.0"
 parent_spec: epic_136_trip_wizard
 related: epic_136_trip_wizard
@@ -13,7 +13,7 @@ tags: [sveltekit, frontend, trip-detail, waypoints, map, profile, dnd, epic-137]
 
 # Epic 137 — Wegpunkt-Editor: Tab „Etappen & Wegpunkte" in Trip-Detail
 
-**Status Notiz (2026-05-31):** MapCanvas wurde in Issue #495 von SVG-Pseudo-Karte auf echte Leaflet-Karte mit OpenTopoMap-Tiles umgestellt. Die Beschreibung unten für MapCanvas ist veraltet; siehe `docs/specs/modules/issue_495_leaflet_map.md` für aktuelle Details.
+**Status Notiz (2026-05-31):** MapCanvas wurde in Issue #495 von SVG-Pseudo-Karte auf echte Leaflet-Karte mit OpenTopoMap-Tiles umgestellt. Die Beschreibung unten für MapCanvas ist veraltet; siehe `docs/specs/_archive/modules/issue_495_leaflet_map.md` für aktuelle Details.
 
 ## Approval
 

@@ -41,21 +41,12 @@ Basis für den BetterStack-Healthcheck (Alert bei Fehler/Stau).
 
 ## Rollback (Webhook → Polling)
 
-Telegram erlaubt **kein** Parallelbetrieb (ein Bot = eine URL; `getUpdates` liefert
-`409` solange ein Webhook gesetzt ist). Rollback ist Big-Bang:
-
-1. **Webhook entfernen:**
-   ```bash
-   export TELEGRAM_BOT_TOKEN=...
-   scripts/telegram_set_webhook.sh delete
-   ```
-2. **Poll-Job reaktivieren:** in `internal/scheduler/scheduler.go` die mit Issue #637
-   entfernte Job-Zeile wiederherstellen
-   (`{"@every 30s", s.inboundTelegram, "inbound_telegram_poll", ...}`) plus die Methode
-   `inboundTelegram()` (triggert `/api/scheduler/inbound-telegram`), Job-Zähler-Log auf
-   „5 jobs" zurücksetzen, Go-Binary neu bauen + Service restarten.
-   Der Python-Trigger-Endpoint `/api/scheduler/inbound-telegram` ist als Notfall-Fallback
-   erhalten geblieben und sofort wieder nutzbar.
+Gibt es nicht mehr. Der Poll-Pfad (`InboundTelegramReader.poll_and_process`/
+`_get_updates`) und der Trigger-Endpoint `/api/scheduler/inbound-telegram` sind mit
+#1369 entfernt, weil sie mit rohem Bot-Token an den Egress-Guards vorbeiliefen.
+Bei Webhook-Störungen: Webhook neu registrieren (`scripts/telegram_set_webhook.sh`),
+`getWebhookInfo` prüfen; Telegram puffert Updates bis 24 h. Soll Polling je
+wiederkommen, braucht es eine neue Spec mit Egress-Guard von Anfang an.
 
 ## Token-Rotation
 
@@ -73,14 +64,15 @@ Telegram erlaubt **kein** Parallelbetrieb (ein Bot = eine URL; `getUpdates` lief
 
 ## Bot-Menü (Slash-Befehle)
 
-Telegram-Bots können ein Menü mit 6–7 Befehlen anzeigen, die Nutzer per Tap auswählen.
+Telegram-Bots zeigen ein Menü mit den per Tap auswählbaren Befehlen.
 Das Menü wird **automatisch beim Service-Start** aus `BOT_COMMANDS` gesetzt (Issue #671,
-2026-06-09).
+2026-06-09; seit Issue #2417 AC-21 vollständig alle `_COMMAND_SPECS`-Wörter, 17 Befehle
+statt vormals 7 — Details `docs/features/architecture.md`).
 
 **Automatisches Setup (Produktions-Standard):**
 
 - FastAPI-Lifespan-Hook (`api/main.py`) ruft beim Service-Start `TelegramOutput.set_my_commands()` auf
-- `setMyCommands`-Payload nutzt `BOT_COMMANDS` aus `src/outputs/telegram.py` (7 Befehle)
+- `setMyCommands`-Payload nutzt `BOT_COMMANDS` aus `src/output/channels/telegram.py` (17 Befehle)
 - Idempotent: jeder Deploy/Service-Restart stellt das Menü sicher
 - Fail-soft: fehlender Token blockt den Service-Start nicht
 

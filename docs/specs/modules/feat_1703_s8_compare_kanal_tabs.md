@@ -3,10 +3,12 @@ entity_id: feat_1703_s8_compare_kanal_tabs
 type: feature
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, backend, compare, metrik-kaskade, adr-0050, adr-0053, issue-1703]
 ---
+
+> Teilweise abgelöst durch [ADR-0095](../../adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md) (2026-10-21): „alle drei Kanäle“ (Purpose) gilt nicht mehr als Soll — Premium-SMS ist der vierte gleichrangige Kanal, inklusive Alarm (CLAUDE.md, Kanäle).
 
 # #1703 Scheibe 8 — Compare-Kanal-Tabs für die Übersichtstabelle
 

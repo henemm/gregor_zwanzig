@@ -3,7 +3,7 @@ entity_id: refactor_1286_shared_versandzeit
 type: refactor
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 workflow: refactor-1286-shared-versandzeit
 ---
 

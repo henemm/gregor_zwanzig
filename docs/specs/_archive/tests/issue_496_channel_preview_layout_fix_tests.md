@@ -3,7 +3,7 @@ entity_id: issue_496_channel_preview_layout_fix_tests
 type: tests
 created: 2026-06-01
 updated: 2026-06-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, layout, overflow, channel-preview, issue-496]
 parent: issue_496_channel_preview_layout_fix

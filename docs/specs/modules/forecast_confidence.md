@@ -3,12 +3,14 @@ entity_id: forecast_confidence
 type: module
 created: 2026-05-15
 updated: 2026-05-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [forecast, ensemble, openmeteo, risk, sms, email, dto]
 ---
 
 <!-- Issue #121 — F11: Prognose-Konfidenz im Report -->
+
+> Teilweise abgelöst durch [ADR-0093](../../adr/0093-confidence-token-in-sms-entfaellt.md) (2026-10-21) und [ADR-0005](../../adr/0005-confidence-not-selectable-metric.md) (2026-06-10): das SMS-Symbol `C`/`C+`/`C~`/`C?` gibt es nicht (#2233), und `confidence` ist keine wählbare Metrik/E-Mail-Spalte (`selectable=false`, #710). Der Klartext-Hinweis im E-Mail-Textblock gilt weiter.
 
 # F11: Prognose-Konfidenz (Master-Spec)
 

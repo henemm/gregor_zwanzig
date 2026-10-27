@@ -38,10 +38,10 @@ test.describe('Issue #294 — Home Kachel-Übersicht', () => {
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
 
-		const section = page.locator('section', { hasText: 'Meine Touren' });
+		const section = page.locator('section', { hasText: 'Meine Trips' });
 		await expect(section).toBeVisible();
 
-		const cards = section.locator('[data-testid="trip-card"]');
+		const cards = section.locator('[data-testid^="subscription-card-"][data-kind="trip"]');
 		await expect(cards.first()).toBeVisible();
 		await expect(cards.first()).toContainText(/\d+ Etappe/);
 	});
@@ -51,17 +51,16 @@ test.describe('Issue #294 — Home Kachel-Übersicht', () => {
 		/**
 		 * GIVEN: User ist eingeloggt und hat Subscriptions
 		 * WHEN: User öffnet /
-		 * THEN: data-testid="subscription-card" sichtbar mit Name und Schedule-Label
+		 * THEN: data-testid="subscription-card-<id>" (data-kind="vergleich") sichtbar mit Name und Schedule-Label
 		 */
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
 
-		const section = page.locator('section', { hasText: 'Orts-Vergleiche' });
-		await expect(section).toBeVisible();
-
-		const cards = section.locator('[data-testid="subscription-card"]');
+		// #2346 S2: Vergleichs-Kacheln stehen in der Card „Außerdem beobachtet" (div, keine section).
+		const cards = page.locator('[data-testid^="subscription-card-"][data-kind="vergleich"]');
 		await expect(cards.first()).toBeVisible();
-		await expect(cards.first()).toContainText(/tägl\.|Mo|Di|Mi|Do|Fr|Sa|So/);
+		await expect(cards.first().locator('a[href^="/compare/"]').first()).toBeVisible();
+		await expect(cards.first().locator('[data-field="next-send"]')).toHaveText(/^nächster ((Mo|Di|Mi|Do|Fr|Sa|So) \d{2}:\d{2} \(|—$)|pausiert|beendet|manueller Versand|abgeschaltet|kein Termin/);
 	});
 
 	// AC-4: Trip-Kachel navigiert zu /trips/{id}
@@ -74,11 +73,11 @@ test.describe('Issue #294 — Home Kachel-Übersicht', () => {
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
 
-		const card = page.locator('[data-testid="trip-card"]').first();
+		const card = page.locator('[data-testid^="subscription-card-"][data-kind="trip"]').first();
 		await expect(card).toBeVisible();
 
-		// Kachel muss ein <a>-Element sein und auf /trips/{id} verlinken
-		const href = await card.getAttribute('href');
+		// #2346 S2: der Name der Kachel ist ein echter Link auf /trips/{id}
+		const href = await card.locator('a').first().getAttribute('href');
 		expect(href).toMatch(/^\/trips\/[a-zA-Z0-9_-]+$/);
 	});
 
@@ -92,23 +91,25 @@ test.describe('Issue #294 — Home Kachel-Übersicht', () => {
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
 
-		const card = page.locator('[data-testid="subscription-card"]').first();
-		await card.click();
-		await page.waitForURL(/\/compare/);
-		expect(page.url()).toContain('/compare');
+		const card = page.locator('[data-testid^="subscription-card-"][data-kind="vergleich"]').first();
+		const id = (await card.getAttribute('data-testid'))!.replace('subscription-card-', '');
+		// #2346 S2: der Name der Kachel ist ein echter Link auf /compare/{id}
+		await card.locator(`a[href="/compare/${id}"]`).click();
+		await page.waitForURL(new RegExp(`/compare/${id}(\\?|$)`));
+		expect(page.url()).toContain(`/compare/${id}`);
 	});
 
-	// AC-6: CTAs sichtbar (+ Neue Tour, + Neuer Vergleich)
-	test('AC-6: CTA-Links für neue Tour und neuen Vergleich sichtbar', async ({ page }) => {
+	// AC-6: CTAs sichtbar (+ Neue Trip, + Neuer Vergleich)
+	test('AC-6: CTA-Links für neue Trip und neuen Vergleich sichtbar', async ({ page }) => {
 		/**
 		 * GIVEN: User ist eingeloggt und hat Daten
 		 * WHEN: User öffnet /
-		 * THEN: "Neue Tour"- und "Neuer Vergleich"-Links sind sichtbar
+		 * THEN: "Neue Trip"- und "Neuer Vergleich"-Links sind sichtbar
 		 */
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('a', { hasText: /\+ Neue Tour/ })).toBeVisible();
+		await expect(page.locator('a', { hasText: /\+ Neue Trip/ })).toBeVisible();
 		await expect(page.locator('a', { hasText: /\+ Neuer Vergleich/ })).toBeVisible();
 	});
 
@@ -146,7 +147,7 @@ test.describe('Issue #294 — Home Kachel-Übersicht', () => {
 		await page.goto('/');
 		await page.waitForLoadState('networkidle');
 
-		const cards = page.locator('[data-testid="trip-card"]');
+		const cards = page.locator('[data-testid^="subscription-card-"][data-kind="trip"]');
 		const count = await cards.count();
 
 		if (count >= 2) {

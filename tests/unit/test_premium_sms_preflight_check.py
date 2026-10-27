@@ -100,7 +100,7 @@ def test_check_sms_text_flags_length_and_charset_violations():
 
 def test_run_checks_both_morning_and_evening_via_preview_service(_geseedeter_trip):
     """``run()`` muss BEIDE Report-Typen pruefen -- ein Vorab-Check, der nur
-    das Morgenbriefing ansieht, laesst genau die Haelfte des Tourbetriebs
+    das Morgenbriefing ansieht, laesst genau die Haelfte des Trip-Betriebs
     ungeprueft."""
     from scripts.premium_sms_preflight_check import run
 

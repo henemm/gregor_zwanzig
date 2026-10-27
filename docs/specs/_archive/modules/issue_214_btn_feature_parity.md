@@ -3,7 +3,7 @@ entity_id: issue_214_btn_feature_parity
 type: module
 created: 2026-05-13
 updated: 2026-05-13
-status: draft
+status: implemented
 version: "1.0"
 parent_spec: epic_133_design_system
 issues: [214]
@@ -503,7 +503,7 @@ Vollständiger Original-Code zur Reaktivierung:
 ~~~typescript
 // TDD RED + GREEN: Issue #214 — Btn Feature-Paritaet (Phase A).
 //
-// Spec: docs/specs/modules/issue_214_btn_feature_parity.md
+// Spec: docs/specs/_archive/modules/issue_214_btn_feature_parity.md
 //
 // Diese Tests beweisen, dass die Btn-Komponente das in der Spec gefoderte
 // Props-Interface, alle 7 Variants, 8 Sizes, den href-Switch und den
@@ -518,7 +518,7 @@ Vollständiger Original-Code zur Reaktivierung:
 //
 // Ausfuehrung:
 //   cd frontend && node --experimental-strip-types --test \
-//     src/lib/components/ui/btn/Btn.test.ts
+//     frontend/src/lib/components/ui/btn/Btn.test.ts
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

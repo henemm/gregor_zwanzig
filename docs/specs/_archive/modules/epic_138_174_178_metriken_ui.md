@@ -3,7 +3,7 @@ entity_id: epic_138_174_178_metriken_ui
 type: module
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, sveltekit, go, weather-config, trip-detail, metrics, epic-138]
 ---
@@ -24,10 +24,10 @@ Baut auf dem funktionsfähigen `WeatherMetricsTab.svelte` (Phase 1, VERIFIED) au
 - `frontend/src/lib/components/trip-detail/MetricGroup.svelte`
 - `frontend/src/lib/components/trip-detail/MetricCheckbox.svelte`
 - `frontend/src/lib/components/trip-detail/TablePreview.svelte`
-- `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte`
+- `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte`
 
 **Frontend — geändert:**
-- `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - `frontend/src/lib/components/trip-detail/index.ts`
 - `frontend/src/lib/types.ts`
 

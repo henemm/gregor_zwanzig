@@ -3,7 +3,7 @@ entity_id: issue_378_surface_stack
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [design-system, surface-tokens, foundation, visual-regression, issue-378, epic-368]
 ---

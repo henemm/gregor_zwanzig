@@ -1,3 +1,10 @@
+---
+entity_id: verify_1555_nowcast_fix
+type: fast
+created: 2026-08-08
+status: implemented
+---
+
 # Mini-Spec: Verifizieren, ob #1584 den in #1555 gemeldeten Alarm-Ausfall behebt
 
 **Issue #1555.** Ursprünglich mit einer falschen Ursachenkette dokumentiert

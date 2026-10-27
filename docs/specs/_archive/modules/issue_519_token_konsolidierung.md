@@ -3,7 +3,7 @@ entity_id: issue_519_token_konsolidierung
 type: module
 created: 2026-06-01
 updated: 2026-06-01
-status: active
+status: implemented
 version: "1.0"
 tags: [frontend, design-tokens, css, app.css, cleanup, consolidation]
 ---

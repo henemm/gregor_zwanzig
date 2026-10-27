@@ -3,7 +3,7 @@ entity_id: feat_1406a_ausblick_geteiltes_element
 type: feature
 created: 2026-07-30
 updated: 2026-07-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, compare-editor, metric-catalog, epic-1372, issue-1406]
 ---

@@ -15,6 +15,7 @@ welche Funktion aufgerufen wurde. Kein Dateiinhalt-Check.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date, datetime, timedelta, timezone
 
 from bs4 import BeautifulSoup
@@ -26,9 +27,35 @@ TZ_NAME = "Europe/Vienna"
 # identisch zu tests/tdd/test_shared_outlook_renderer.py).
 _OUTLOOK_TABLE_MARKER = "border-top:2px solid #1d1c1a"
 
-# Die heutigen sieben festen Spaltenkuerzel (+ "Tag") — Beleg-Tabelle im
-# Kontext-Dokument, echte Staging-Mail vom 27.07.2026.
-_FIXED_SEVEN_HEADERS = ["Tag", "N", "D", "R", "PR", "Wind", "Böen", "Gew"]
+# --- #2136 / ADR-0068 ------------------------------------------------------
+# Die sieben festen Spaltenkuerzel des Standardfall-Ausblicks (Pfad 1,
+# `outlook.py` thead) waren bis #2136 eine EIGENE, handgepflegte Namensliste:
+# "N D R PR Wind Böen Gew" -- dieselbe Groesse hiess in der Stunden-/
+# Etappentabelle derselben Mail anders ("Temp Rain Rain% Wind Gust Thdr").
+# ADR-0068 stellt beide Ausblick-Renderpfade auf `MetricDefinition.col_label`
+# um, dieselbe Quelle, aus der die Stundentabelle ihre Koepfe zieht
+# (`get_col_defs()` -> `visible_cols()`).
+#
+# 🔴 Die Soll-Kopfzeile wird deshalb ABGELEITET, nie getippt. Ein zweites
+# Literal hier waere genau die Doppelpflege, die der Fix abschafft -- und die
+# Mutations-Gegenprobe (AC-8, tests/tdd/test_outlook_col_label_collision.py)
+# haette eine zweite Stelle, an der sie haengenbleibt.
+#
+# (Kennung, Auswertung | None) je Wert-Spalte, in der unveraenderten
+# Reihenfolge des festen Zweiges. Die beiden Temperatur-Spalten sind der
+# statische Kollisionsfall aus AC-7: eine nackte `col_label`-Ersetzung ergaebe
+# zweimal "Temp", deshalb traegt jede ihr Auswertungs-Suffix
+# (`aggregation_label_de`, dieselbe Wortquelle wie die Duplikat-Aufloesung in
+# `outlook_columns()`).
+_PFAD1_WERTSPALTEN = (
+    ("temperature", "min"),      # bisher "N"
+    ("temperature", "max"),      # bisher "D"
+    ("precipitation", None),     # bisher "R"
+    ("rain_probability", None),  # bisher "PR"
+    ("wind", None),              # bisher "Wind"
+    ("gust", None),              # bisher "Böen"
+    ("thunder", None),           # bisher "Gew"
+)
 
 # Auswahl im Speicherformat von ``display_config.outlook_metrics``: seit
 # #1848 A2 die reine KENNUNG (vorher Groesse + Auswertung, #1373). Welche
@@ -187,6 +214,97 @@ def _resolved_outlook_metrics(preset: dict):
         f"(Spec Punkt 2). Vorhandene Felder: {sorted(vars(opts))}"
     )
     return value
+
+
+# ---------------------------------------------------------------------------
+# #2136 / ADR-0068 — geteilte Soll-Ableitung und Pruefbloecke
+#
+# Die beiden `pruefe_*`-Bloecke sind bewusst Funktionen und keine Testkoerper:
+# die Mutations-Gegenprobe (AC-8) ruft GENAU diese Bloecke mit verfaelschtem
+# Katalog-`col_label` erneut auf. Waeren sie dort nachgebaut, pruefte AC-8
+# seine eigene Nachbildung statt des Prueflings.
+# ---------------------------------------------------------------------------
+
+def col_label(metric_id: str) -> str:
+    """Tabellenueberschrift der Groesse aus dem ZENTRALEN Register — dieselbe
+    Quelle, aus der `get_col_defs()` die Stundentabellen-Koepfe speist."""
+    from app.metric_catalog import get_metric
+
+    return get_metric(metric_id).col_label
+
+
+def erwartete_pfad1_kopfzeile() -> list[str]:
+    """Soll-Kopfzeile des Standardfall-Ausblicks (AC-2 + AC-7), abgeleitet."""
+    from app.metric_catalog import aggregation_label_de
+
+    kopf = ["Tag"]
+    for metric_id, aggregation in _PFAD1_WERTSPALTEN:
+        label = col_label(metric_id)
+        if aggregation is not None:
+            label = f"{label} {aggregation_label_de(aggregation)}"
+        kopf.append(label)
+    return kopf
+
+
+def _stundentabelle_kopf(html: str) -> list[str]:
+    """Spaltenkoepfe der Stundentabelle DERSELBEN Mail (Vergleichsanker für
+    AC-1: dieselbe Groesse, derselbe Name, eine Mail)."""
+    soup = BeautifulSoup(html, "html.parser")
+    for table in soup.find_all("table"):
+        kopf = [th.get_text(strip=True) for th in table.find_all("th")]
+        if kopf and kopf[0] == "Zeit":
+            return kopf
+    return []
+
+
+def pruefe_pfad1_kopfzeile_html() -> list[str]:
+    """AC-2/AC-7-Pruefblock: Standardfall-Ausblick ohne jede Auswahl."""
+    html, _text = _render_mail(outlook_metrics=None)
+    tabellen = _outlook_tables(html)
+    assert tabellen, "Ohne Auswahl muss der 3-Tages-Ausblick erscheinen"
+
+    kopf = _headers(tabellen[0])
+    erwartet = erwartete_pfad1_kopfzeile()
+    assert kopf == erwartet, (
+        f"Der Standardfall-Ausblick (Pfad 1) traegt die Kopfzeile {kopf!r} "
+        f"statt der aus dem Metrik-Katalog abgeleiteten {erwartet!r}. Die "
+        "sieben Kuerzel stehen als zweite, handgepflegte Namensliste im "
+        "`thead` von src/output/renderers/email/outlook.py — dieselbe Groesse "
+        "heisst in der Stundentabelle derselben Mail anders (AC-2/AC-7, "
+        "ADR-0068)."
+    )
+    return kopf
+
+
+def pruefe_pfad2_kopfzeile_html(metric_ids) -> list[str]:
+    """AC-1-Pruefblock: konfigurierbarer Ausblick mit gesetzter Auswahl."""
+    metric_ids = list(metric_ids)
+    html, _text = _render_mail(outlook_metrics=metric_ids)
+    tabellen = _outlook_tables(html)
+    assert tabellen, "Kein 3-Tages-Ausblick in der HTML-Mail gefunden"
+
+    kopf = _headers(tabellen[0])
+    erwartet = ["Tag"] + [col_label(m) for m in metric_ids]
+    assert kopf == erwartet, (
+        f"Der konfigurierbare Ausblick (Pfad 2) traegt die Kopfzeile {kopf!r} "
+        f"statt {erwartet!r}. `outlook_columns()` speist die Beschriftung "
+        "weiterhin aus `compare_metric_catalog['label']` (deutscher Langname) "
+        "statt aus `MetricDefinition.col_label` (AC-1, ADR-0068)."
+    )
+
+    stunden = _stundentabelle_kopf(html)
+    assert stunden, (
+        "Die Stundentabelle derselben Mail ist nicht auffindbar — ohne sie "
+        "kann der Test die Gleichheit der Beschriftungen nicht belegen."
+    )
+    fehlend = [k for k in kopf[1:] if k not in stunden]
+    assert not fehlend, (
+        f"Die Ausblick-Spalten {fehlend!r} tragen einen Namen, den die "
+        f"Stundentabelle DERSELBEN Mail nicht kennt ({stunden!r}). Genau das "
+        "ist der gemeldete Befund: eine Groesse, zwei Namen in einer Mail "
+        "(AC-1)."
+    )
+    return kopf
 
 
 # ---------------------------------------------------------------------------
@@ -371,11 +489,20 @@ def test_empty_outlook_selection_removes_the_whole_block():
 # AC-9: Altbestand ohne Auswahl behaelt die bisherigen sieben Groessen
 # ---------------------------------------------------------------------------
 
-def test_missing_outlook_selection_keeps_the_seven_legacy_columns():
-    """AC-9: Given ein Preset OHNE `display_config.outlook_metrics` (Feld fehlt,
+def test_missing_outlook_selection_uses_the_catalog_col_labels():
+    """AC-9 (Auswahl-Aufloesung) + #2136 AC-2/AC-7 (Beschriftung).
+
+    Given ein Preset OHNE `display_config.outlook_metrics` (Feld fehlt,
     Altbestand) / When die Vergleichs-Mail erzeugt wird / Then zeigt der
-    3-Tages-Ausblick unveraendert die bisherigen sieben Groessen — kein stiller
-    Verhaltenswechsel fuer Bestandsnutzer.
+    3-Tages-Ausblick unveraendert DIESELBEN sieben Groessen in derselben
+    Reihenfolge (AC-9, Regressionsschutz) — aber unter der Beschriftung des
+    zentralen Metrik-Katalogs statt unter den sieben handgepflegten Kuerzeln.
+
+    ⚠️ NACHGEZOGEN durch #2136/ADR-0068: bis hierher stand an dieser Stelle
+    die Literal-Liste `["Tag","N","D","R","PR","Wind","Böen","Gew"]`. Sie war
+    der Regressionsschutz gegen einen STILLEN Wechsel — der Wechsel ist jetzt
+    beschlossen und die Erwartung wandert auf die abgeleitete Kopfzeile. Die
+    Spaltenzahl (acht) und die Reihenfolge bleiben Gegenstand des Tests.
     """
     from services.report_config_resolver import resolve_compare_render_options
 
@@ -389,14 +516,153 @@ def test_missing_outlook_selection_keeps_the_seven_legacy_columns():
         "Ohne Auswahl bleibt der Ausblick sichtbar (Default True)."
     )
 
-    html, text = _render_mail(outlook_metrics=None)
-    tables = _outlook_tables(html)
-    assert tables, "Ohne Auswahl muss der Ausblick unveraendert erscheinen"
-    assert _headers(tables[0]) == _FIXED_SEVEN_HEADERS, (
-        f"Altbestand-Ausblick zeigt {_headers(tables[0])} statt der bisherigen "
-        f"{_FIXED_SEVEN_HEADERS} (AC-9, Regressionsschutz)."
+    kopf = pruefe_pfad1_kopfzeile_html()
+    assert len(kopf) == 8, (
+        f"Der Standardfall-Ausblick zeigt {len(kopf)} Spalten statt der "
+        f"unveraenderten acht (Tag + 7): {kopf!r}. #2136 aendert ausschliess"
+        "lich die Beschriftung, nicht das Layout (AC-7, Abgrenzung)."
     )
+
+    _html, text = _render_mail(outlook_metrics=None)
     assert _plain_outlook_blocks(text), "Ohne Auswahl fehlt der Klartext-Ausblick"
+
+
+# ---------------------------------------------------------------------------
+# #2136 AC-1: konfigurierbarer Ausblick traegt die Etappentabellen-Ueberschrift
+# ---------------------------------------------------------------------------
+
+def test_ac1_configured_outlook_header_matches_the_hourly_table_of_the_same_mail():
+    """AC-1: Given eine Ortsvergleichs-Mail (HTML) mit konfigurierter
+    `outlook_metrics`-Auswahl / When der Ausblick-Block gerendert wird / Then
+    traegt jede Spalte denselben `col_label`-Text wie dieselbe Groesse in der
+    Stunden-/Etappentabelle DERSELBEN Mail — nicht mehr den deutschen
+    Langnamen aus `compare_metric_catalog['label']`.
+    """
+    pruefe_pfad2_kopfzeile_html([SEL_TEMPERATUR, SEL_NIEDERSCHLAG])
+
+
+# ---------------------------------------------------------------------------
+# #2136 AC-3: Klartext des konfigurierbaren Ausblicks
+# ---------------------------------------------------------------------------
+
+def test_ac3_configured_plain_outlook_tokens_carry_the_col_label():
+    """AC-3: Given dieselbe Mail im KLARTEXT / When der Ausblick-Block
+    gerendert wird / Then traegt jedes Werte-Token dasselbe `col_label`-Praefix
+    wie die Spalte der Stundentabelle derselben Mail — heute steht dort der
+    deutsche Langname ("Temperatur 6/18"), waehrend die Stundenzeile derselben
+    Mail "Temp 6°" schreibt.
+    """
+    gewaehlt = [SEL_TEMPERATUR, SEL_NIEDERSCHLAG]
+    _html, text = _render_mail(outlook_metrics=gewaehlt)
+
+    blocks = _plain_outlook_blocks(text)
+    assert blocks, f"Kein Ausblick-Block im Klartext gefunden:\n{text}"
+    _heading, body = blocks[0]
+    assert body, "Der Klartext-Ausblick hat keine Datenzeilen"
+    zeile = body[0]
+
+    stundenzeilen = [z for z in text.splitlines()
+                     if re.match(r"\s*\d{2}:\d{2}\s", z)]
+    assert stundenzeilen, (
+        "Die Klartext-Stundentabelle derselben Mail ist nicht auffindbar — "
+        "ohne sie kann der Test die Gleichheit der Beschriftungen nicht "
+        "belegen."
+    )
+
+    for metric_id in gewaehlt:
+        marke = col_label(metric_id)
+        assert re.search(rf"(?<!\S){re.escape(marke)}\s", zeile), (
+            f"Die Klartext-Ausblick-Zeile {zeile!r} fuehrt die Groesse "
+            f"{metric_id!r} nicht unter ihrer Tabellenueberschrift {marke!r} "
+            "(AC-3, ADR-0068)."
+        )
+        assert any(re.search(rf"(?<!\S){re.escape(marke)}\s", z)
+                   for z in stundenzeilen), (
+            f"Die Klartext-Stundentabelle derselben Mail kennt {marke!r} "
+            f"nicht: {stundenzeilen[0]!r}. Dann vergleicht der Test zwei "
+            "Welten statt einer Mail (AC-3)."
+        )
+
+
+# ---------------------------------------------------------------------------
+# #2136 AC-4: Klartext des Standardfall-Ausblicks
+# ---------------------------------------------------------------------------
+
+def test_ac4_default_plain_outlook_tokens_carry_the_col_label():
+    """AC-4: Given eine Mail OHNE konfigurierte Auswahl (Pfad 1) / When der
+    KLARTEXT-Ausblick gerendert wird / Then traegt jedes Werte-Token das
+    `col_label`-Praefix seiner Groesse — heute steht dort eine nackte
+    Wertreihe ohne jede Beschriftung ("Mo  6/18°C   0.4mm 15    ⚡–"), in der
+    kein Leser erkennt, welche Zahl welche Groesse ist.
+
+    🔴 ABWEICHUNG zur Spec-Formulierung von AC-4 ("dieselben sieben ersetzten
+    Kuerzel wie AC-2"): der feste Klartext-Zweig rendert nur VIER Tokens
+    (Temperatur-Spanne, Niederschlag, Wind, Gewitter) und fuehrt Tief/Hoch
+    bereits in EINER Spanne zusammen — Regenwahrscheinlichkeit und Böen kommen
+    dort ueberhaupt nicht vor. "Sieben Kuerzel in identischer Reihenfolge zum
+    bisherigen festen Format" sind zusammen nicht erfuellbar. Geprueft wird
+    deshalb, was die Zusicherung im Klartext bedeuten KANN: jedes tatsaechlich
+    gerenderte Token traegt die Katalog-Ueberschrift seiner Groesse. Die
+    Temperatur-Spanne traegt folgerichtig `col_label` OHNE Auswertungs-Suffix
+    — AC-7 (zwei unterscheidbare Koepfe) ist eine Aussage ueber die HTML-
+    Tabelle mit zwei getrennten Spalten, die es hier nicht gibt.
+    """
+    _html, text = _render_mail(outlook_metrics=None)
+
+    blocks = _plain_outlook_blocks(text)
+    assert blocks, f"Kein Ausblick-Block im Klartext gefunden:\n{text}"
+    _heading, body = blocks[0]
+    assert body, "Der Klartext-Ausblick hat keine Datenzeilen"
+    zeile = body[0]
+
+    for metric_id in ("temperature", "precipitation", "wind", "thunder"):
+        marke = col_label(metric_id)
+        assert re.search(rf"(?<!\S){re.escape(marke)}\s*\S", zeile), (
+            f"Die Klartext-Zeile des Standardfall-Ausblicks {zeile!r} fuehrt "
+            f"die Groesse {metric_id!r} nicht unter ihrer Tabellen"
+            f"ueberschrift {marke!r} (AC-4, ADR-0068)."
+        )
+
+
+# ---------------------------------------------------------------------------
+# #2136 AC-5: Spalten-Legende loest auch die Ausblick-Kuerzel auf
+# ---------------------------------------------------------------------------
+
+def test_ac5_column_legend_resolves_outlook_only_abbreviations():
+    """AC-5: Given eine Mail, deren Ausblick Groessen zeigt, die in der
+    Stundentabelle NICHT vorkommen / When die Spalten-Legende gebildet wird /
+    Then loest sie zusaetzlich zu den Stundentabellen-Kuerzeln auch die im
+    Ausblick sichtbaren Kuerzel auf (`Gust = Böen`, `Thdr = Gewitter`) — heute
+    sieht die Legende ausschliesslich die Stundentabelle und laesst die
+    Ausblick-Kuerzel unerklaert.
+
+    Die Erwartung wird aus dem Register abgeleitet (`col_label` = Kuerzel,
+    `label_de` = ausgeschriebener Name), nicht getippt.
+    """
+    from app.metric_catalog import get_metric
+    from output.renderers.comparison import render_compare_email
+
+    gewaehlt = ["gust", "thunder"]
+    html, text = render_compare_email(
+        _result(), outlook_enabled=True, outlook_metrics=gewaehlt,
+        # Stundentabelle bewusst auf eine ANDERE Groesse verengt: nur so ist
+        # messbar, ob die Legende den Ausblick ueberhaupt ansieht.
+        hourly_metrics={"temp_max_c"},
+    )
+
+    for metric_id in gewaehlt:
+        definition = get_metric(metric_id)
+        eintrag = f"{definition.col_label} = {definition.label_de}"
+        assert eintrag in html, (
+            f"Die Spalten-Legende der HTML-Mail loest {eintrag!r} nicht auf, "
+            f"obwohl die Spalte im Ausblick sichtbar ist. `build_column_legend"
+            "()` sieht nur die Stundentabelle (`visible_cols(seg_tables)`), "
+            "nicht die Ausblick-Spalten (AC-5, ADR-0042/ADR-0068)."
+        )
+        assert eintrag in text, (
+            f"Die Spalten-Legende des KLARTEXT-Teils derselben Mail loest "
+            f"{eintrag!r} nicht auf (AC-5)."
+        )
 
 
 # ---------------------------------------------------------------------------

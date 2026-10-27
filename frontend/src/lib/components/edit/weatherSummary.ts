@@ -1,9 +1,9 @@
-// Issue #345 (Wetter-Editor-Konsolidierung, Touren-Teil) — AC-1.
+// Issue #345 (Wetter-Editor-Konsolidierung, Trips-Teil) — AC-1.
 // Spec: docs/specs/modules/issue_345_weather_editor_consolidation.md
 //
 // Reine Funktion ohne Svelte-Abhängigkeit, damit sie via node:test
 // unit-getestet werden kann (siehe weatherSummary.test.ts). Liefert die
-// read-only Wetter-Zusammenfassung für die Tour-Bearbeiten-Maske aus dem
+// read-only Wetter-Zusammenfassung für die Trip-Bearbeiten-Maske aus dem
 // gespeicherten display_config.
 //
 // Bucket-Parsing ist KONSISTENT mit dem Loader in

@@ -2,7 +2,7 @@
 //
 // EIN Ort fuer die Read-Modify-Write-Regel des `report_config`-Blobs. Beide
 // Schreiber rufen ihn auf: VersandTab.svelte (Kanaele + Zeitplan) und
-// EditReportConfigSection.svelte (Mail-Inhalt, dort je nach Props zusaetzlich
+// MailInhaltCard.svelte (Mail-Inhalt, dort je nach Props zusaetzlich
 // Kanaele/Zeitplan).
 //
 // Warum ueberhaupt eine eigene Datei: seit /trips/new beide Komponenten

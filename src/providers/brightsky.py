@@ -35,6 +35,7 @@ class RadarFrame:
     timestamp: datetime   # tz-aware UTC
     precip_mm_h: float    # mm/h
     is_convective: bool = False  # True when WMO code indicates thunderstorm/hail
+    hail: bool = False  # Issue #2205: True only for WMO 96/99 (Gewitter mit Hagel)
 
 
 def within_radolan_coverage(lat: float, lon: float) -> bool:

@@ -21,9 +21,16 @@ func GetTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 		// Issue #1395 S2: Sperre auch beim Lesen, damit der ausgelieferte ETag
 		// zur ausgelieferten Fassung gehoert (analog TripHandler).
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		trip, err := s.LoadTrip(id)
 		if err != nil {
@@ -53,11 +60,18 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 		// Issue #1395 S2: Sperre + Vorbedingung, identisch zu UpdateTripHandler.
 		// Dieser Pfad schreibt dieselbe Datei UND synchronisiert dabei
 		// alert_rules (model.SyncAlertRules) — ein verlorener Schreibvorgang
 		// zieht hier also mehr nach sich als nur display_config.
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		oldFp, fpErr := s.BriefingFingerprint(id)
 		if fpErr != nil {
@@ -132,6 +146,9 @@ func GetLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 		loc, err := s.LoadLocation(id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -154,6 +171,10 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
+		defer s.LockLocation(id)() // #2158
 		loc, err := s.LoadLocation(id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")

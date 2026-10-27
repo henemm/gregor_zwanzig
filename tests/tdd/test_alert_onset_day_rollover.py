@@ -2,9 +2,12 @@
 
 SPEC: docs/specs/modules/fix_2009_nowcast_vorlauf.md
 
-Mit der auf 55 Min angehobenen Onset-Schwelle (#2009) kann der berechnete
-Onset-Zeitpunkt ueber Mitternacht rutschen (23:30 + 53 Min = 00:23
-Folgetag). `render.py` formatiert `onset_time` heute als reines `%H:%M`
+Seit der Onset-Schwelle oberhalb weniger Minuten (#2009: 55, seit #2261 A-1
+der Quell-Horizont 180) kann der berechnete Onset-Zeitpunkt ueber
+Mitternacht rutschen (23:30 + 53 Min = 00:23 Folgetag). Onset 53 bleibt hier
+bewusst stehen: er liegt diesseits LOCATION_SHARPNESS_LIMIT_MIN (60), der
+Kopf sagt also weiter "in 53 Min" -- den Uhrzeit-Kopf jenseits 60 bewacht
+`test_vorlauf_kopf_uhrzeit.py`. `render.py` formatiert `onset_time` heute als reines `%H:%M`
 (`utils/timezone.py::local_fmt`) -- ohne Tagesbezug ist "00:23" mehrdeutig
 (heute Nacht oder in ueber 23 Stunden?).
 

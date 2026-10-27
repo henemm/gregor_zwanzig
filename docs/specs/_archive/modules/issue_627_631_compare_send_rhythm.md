@@ -3,7 +3,7 @@ entity_id: issue_627_631_compare_send_rhythm
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: completed
+status: implemented
 version: "1.0"
 tags: [compare, scheduler, multi-user, frontend, go-proxy]
 ---

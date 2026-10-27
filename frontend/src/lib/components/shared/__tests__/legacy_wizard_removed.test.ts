@@ -11,7 +11,7 @@
 // TDD RED: Vor der Implementierung schlagen die removed/moved-Tests fehl.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -97,9 +97,62 @@ test('AC-3: NewLocationWizard.svelte existiert nicht mehr', () => {
 test('AC-4: organisms/index.ts exportiert TripWizardShell nicht mehr, aktive Exporte bleiben', () => {
 	const src = read(join(COMPONENTS, 'organisms', 'index.ts'));
 	assert.ok(!src.includes('TripWizardShell'), 'TripWizardShell-Re-Export muss weg (AC-4)');
-	for (const keep of ['AlertRulesEditor', 'OutputLayoutEditor']) {
+	// Issue #2277 S3 (AC-7): AlertRulesEditor ist kein aktiver Export mehr (toter
+	// Strang geloescht) — nur OutputLayoutEditor bleibt als Ueber-Loeschungs-Waechter.
+	for (const keep of ['OutputLayoutEditor']) {
 		assert.ok(src.includes(keep), `organisms/index.ts: aktiver Export ${keep} fehlt — Über-Löschung!`);
 	}
+});
+
+// ── Issue #2277 S3 (AC-6/AC-7): toter AlertRulesEditor-Strang ist entfernt ───
+// Spec: docs/specs/modules/feat_2277_s3_reiter_angleichung_rueckbau.md
+// Ersetzt fix_2277_s1_alarme_tab_route.md AC-7 („AlertRulesEditor.svelte bleibt").
+
+const TOTER_STRANG = [
+	join('edit', 'TripEditView.svelte'),
+	join('alert-rules-editor', 'AlertRulesEditor.svelte'),
+	join('alert-rules-editor', 'AlertRuleRow.svelte'),
+	join('alert-rules-editor', 'alertChannels.ts'),
+	// AC-6: DELTA_ONLY_METRICS ist nach alerts-tab/alertMetricTable.ts umgezogen —
+	// ein blosser Re-Export aus der alten Datei erfuellt „dort definiert" NICHT.
+	join('alert-rules-editor', 'alertRuleDefaults.ts'),
+];
+
+test('AC-7 (#2277 S3): TripEditView, AlertRulesEditor, AlertRuleRow, alertChannels, alertRuleDefaults existieren nicht mehr', () => {
+	const uebrig = TOTER_STRANG.filter((f) => existsSync(join(COMPONENTS, f)));
+	assert.deepEqual(uebrig, [], `AC-7 FAIL: toter Strang noch vorhanden: ${uebrig.join(', ')}`);
+});
+
+test('AC-7 (#2277 S3): organisms/index.ts exportiert AlertRulesEditor nicht mehr', () => {
+	const src = read(join(COMPONENTS, 'organisms', 'index.ts'));
+	assert.ok(
+		!/export\s*\{[^}]*\bAlertRulesEditor\b/.test(src),
+		'AC-7 FAIL: Barrel-Export von AlertRulesEditor steht noch in organisms/index.ts.'
+	);
+});
+
+/** Alle .ts/.svelte/.js-Dateien unterhalb von `dir` (ohne node_modules). */
+function quelldateien(dir: string): string[] {
+	const out: string[] = [];
+	for (const e of readdirSync(dir, { withFileTypes: true })) {
+		if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+		const p = join(dir, e.name);
+		if (e.isDirectory()) out.push(...quelldateien(p));
+		else if (/\.(ts|svelte|js|mjs)$/.test(e.name)) out.push(p);
+	}
+	return out;
+}
+
+test('AC-7 (#2277 S3): kein Quell- oder Testcode unter src/ und e2e/ importiert den toten Strang', () => {
+	const SRC = join(LIB, '..');
+	// Import-/Re-Export-Anweisungen, die auf eine der geloeschten Dateien zeigen.
+	const ziel = /(?:import|export)[^;'"]*?from\s*['"][^'"]*(?:TripEditView|AlertRulesEditor|AlertRuleRow|alertChannels|alertRuleDefaults)(?:\.svelte|\.ts)?['"]|import\(\s*['"][^'"]*(?:TripEditView|AlertRulesEditor|AlertRuleRow|alertChannels|alertRuleDefaults)/;
+	const treffer: string[] = [];
+	for (const f of [...quelldateien(SRC), ...quelldateien(E2E)]) {
+		if (f === fileURLToPath(import.meta.url)) continue;
+		if (ziel.test(read(f))) treffer.push(f.slice(SRC.length - 3));
+	}
+	assert.deepEqual(treffer, [], `AC-7 FAIL: Importeure des toten Strangs gefunden:\n${treffer.join('\n')}`);
 });
 
 // ── AC-5: stale Wizard-E2E-Specs weg, helpers.ts bleibt ─────────────────────

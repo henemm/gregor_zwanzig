@@ -109,6 +109,19 @@ def telegram_metric_notice(demoted_count: int, *, context: str) -> str:
     )
 
 
+def selection_gap_notice(count: int, *, scope: str) -> str:
+    """Issue #1405 S3: EIN Wortlaut fuer "gewaehlte Groessen ohne Wert".
+
+    scope='ort' -> je Ort (Telegram, Wortlaut seit #1362 unveraendert);
+    scope='vergleich' -> tabellenweit (E-Mail HTML + Klartext). Leer bei
+    ``count <= 0``. Die SMS traegt stattdessen das Kuerzel ``?N``
+    (Wire-Vertrag sms_format.md §5b)."""
+    if count <= 0:
+        return ""
+    where = "an diesem Ort" if scope == "ort" else "in diesem Vergleich"
+    return f"… +{count} gewählte Wettergrößen ohne Wert {where}"
+
+
 def render_for_channel(
     channel: str, dc: "UnifiedWeatherDisplayConfig", report_type: str,
 ) -> ChannelLayout:
@@ -127,6 +140,12 @@ def render_for_channel(
     # METRIC_PRIORITY noetig: die Auto-Verteilungs-Heuristik sieht sie dank
     # dieses Filters gar nicht erst.
     enabled = [m for m in enabled if m.metric_id not in VISIBILITY_GATE_IDS]
+    # #2422 S6 (B5): zusammengefuehrte Windrichtung hat keine eigene Spalte --
+    # die Windzelle traegt die Richtung (Lazy-Import: Importzyklus).
+    import dataclasses
+    from output.renderers.email.helpers import should_merge_wind_dir
+    if should_merge_wind_dir(dataclasses.replace(dc, metrics=enabled)):
+        enabled = [m for m in enabled if m.metric_id != "wind_direction"]
     primary = sorted(
         [m for m in enabled if m.bucket == "primary"], key=lambda m: m.order,
     )

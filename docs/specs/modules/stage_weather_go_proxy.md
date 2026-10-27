@@ -3,7 +3,7 @@ entity_id: stage_weather_go_proxy
 type: module
 created: 2026-07-10
 updated: 2026-07-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [risk, weather, cockpit, adr-0015, issue-1212, go, dead-code]
 ---
@@ -75,22 +75,22 @@ func StagesWeatherProxyHandler(pythonURL string) http.HandlerFunc:
 
 ## Acceptance Criteria
 
-- **AC-1 (Route-Parität):** Given ein authentifizierter Nutzer mit einem bekannten Trip / When er `GET /api/trips/{id}/stages/weather` aufruft / Then erhält er dieselbe JSON-Struktur (`results` mit `weather_summary`/`risk` je Etappe) wie der Python-Endpoint direkt liefert — der Proxy reicht Status und Body transparent durch.
+- **AC-1:** (Route-Parität) Given ein authentifizierter Nutzer mit einem bekannten Trip / When er `GET /api/trips/{id}/stages/weather` aufruft / Then erhält er dieselbe JSON-Struktur (`results` mit `weather_summary`/`risk` je Etappe) wie der Python-Endpoint direkt liefert — der Proxy reicht Status und Body transparent durch.
   - Test: Staging-HTTP-Vergleich — die geproxyte Go-Route und der direkte Python-Endpoint liefern für denselben Trip strukturell dieselbe Antwort.
 
-- **AC-2 (Anti-Spoofing / Isolation):** Given ein authentifizierter Nutzer A, der in der Query ein fremdes `user_id=B` mitschickt / When der Proxy die Anfrage weiterleitet / Then wird B verworfen und die authentifizierte user_id A injiziert — A sieht nie B's Daten.
+- **AC-2:** (Anti-Spoofing / Isolation) Given ein authentifizierter Nutzer A, der in der Query ein fremdes `user_id=B` mitschickt / When der Proxy die Anfrage weiterleitet / Then wird B verworfen und die authentifizierte user_id A injiziert — A sieht nie B's Daten.
   - Test: Go-Handler-Test mit gesetztem Auth-Kontext A und `?user_id=B` prüft, dass die an Python gehende URL `user_id=A` trägt.
 
-- **AC-3 (Upstream-Fehler):** Given der Python-Core ist nicht erreichbar / When der Proxy aufgerufen wird / Then antwortet er mit HTTP 502 Body `{"error":"upstream unreachable"}`, Content-Type application/json — kein Absturz, kein 5xx-Leck von Go-internem Zustand.
+- **AC-3:** (Upstream-Fehler) Given der Python-Core ist nicht erreichbar / When der Proxy aufgerufen wird / Then antwortet er mit HTTP 502 Body `{"error":"upstream unreachable"}`, Content-Type application/json — kein Absturz, kein 5xx-Leck von Go-internem Zustand.
   - Test: Go-Handler-Test mit unerreichbarer pythonURL → 502 + exakter Body.
 
-- **AC-4 (Durchgereichte Fehler):** Given der Python-Endpoint antwortet 404 (unbekannter Trip) bzw. 200 / When der Proxy aufgerufen wird / Then reicht der Proxy Status und Body unverändert durch (404 bleibt 404, 200 bleibt 200).
+- **AC-4:** (Durchgereichte Fehler) Given der Python-Endpoint antwortet 404 (unbekannter Trip) bzw. 200 / When der Proxy aufgerufen wird / Then reicht der Proxy Status und Body unverändert durch (404 bleibt 404, 200 bleibt 200).
   - Test: Go-Handler-Test mit Fake-Upstream (404/200) prüft transparente Weiterleitung.
 
-- **AC-5 (Löschung + Build-Integrität):** Given die Löschung von `internal/risk/` und der Aggregations-Logik / When `go build ./...` und `go vet ./...` laufen / Then kompilieren sie fehlerfrei, und kein anderer Go-Konsument (insb. `ForecastHandler`, `internal/compare/*`) bricht.
+- **AC-5:** (Löschung + Build-Integrität) Given die Löschung von `internal/risk/` und der Aggregations-Logik / When `go build ./...` und `go vet ./...` laufen / Then kompilieren sie fehlerfrei, und kein anderer Go-Konsument (insb. `ForecastHandler`, `internal/compare/*`) bricht.
   - Test: `go build ./...` + `go vet ./...` + bestehende Go-Test-Suite grün; `grep` bestätigt: kein Import von `internal/risk` mehr.
 
-- **AC-6 (Provider-Invariante):** Given `ForecastHandler` nutzt weiterhin `deps.WeatherProvider` / When R2 deployt ist / Then funktioniert `GET /api/forecast` unverändert (die Provider-Verdrahtung bleibt bestehen).
+- **AC-6:** (Provider-Invariante) Given `ForecastHandler` nutzt weiterhin `deps.WeatherProvider` / When R2 deployt ist / Then funktioniert `GET /api/forecast` unverändert (die Provider-Verdrahtung bleibt bestehen).
   - Test: bestehender Forecast-Handler-Test grün nach dem Umbau.
 
 ## Known Limitations

@@ -1,3 +1,10 @@
+---
+entity_id: fix_1329_ac8_budget_status
+type: fast
+created: 2026-08-05
+status: implemented
+---
+
 # Mini-Spec: #1329 AC-8 — Forecast-Budget-Verbrauchsanzeige im Go-Status-Endpoint
 
 ## Kontext

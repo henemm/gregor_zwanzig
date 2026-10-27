@@ -286,8 +286,13 @@ class Szenario:
                 load_compare_presets(user_id=self.user_id)[0]
             )
             start_hour, end_hour = resolve_compare_time_window(preset)
-            return quelle.fetch(self.location_id, self.lat, self.lon, start_hour, end_hour)
-        return quelle.fetch(self.location_id, self.lat, self.lon)
+            return quelle.fetch(
+                self.location_id, self.lat, self.lon, start_hour, end_hour,
+                user_id=self.user_id,
+            )
+        return quelle.fetch(
+            self.location_id, self.lat, self.lon, user_id=self.user_id,
+        )
 
     # -- Schritte ----------------------------------------------------------
 
@@ -408,12 +413,14 @@ def test_f001_versandpfad_reicht_das_preset_fenster_an_den_anker_durch(
         # entgegen und gibt es weiter, statt hier an einem TypeError zu
         # scheitern — geprueft wird in DIESEM Test weiterhin nur das Fenster.
         def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None,
-                  target_date=None, tage_ab_ortstag=None, elevation_m=None):
+                  target_date=None, tage_ab_ortstag=None, elevation_m=None,
+                  user_id=None):
             aufgezeichnete_fenster.append((start_hour, end_hour))
             return super().fetch(point_id, lat, lon, start_hour, end_hour,
                                  target_date=target_date,
                                  tage_ab_ortstag=tage_ab_ortstag,
-                                 elevation_m=elevation_m)
+                                 elevation_m=elevation_m,
+                                 user_id=user_id)
 
     # `_write_compare_alert_snapshots` importiert die Klasse erst zur Laufzeit
     # aus ihrem Heimatmodul — dort ist die Naht.

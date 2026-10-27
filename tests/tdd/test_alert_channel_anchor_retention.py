@@ -2,8 +2,8 @@
 datierten Snapshots darf die kanalscharfen Alarm-Anker nicht mitreissen.
 
 `_prune_dated_snapshots()` (`weather_snapshot.py`) haelt maximal sieben
-datierte Snapshots je Tour und loescht den Rest. Es sammelte sie ueber
-`{trip_id}_*.json` ein — ein Muster, das jede Nachbardatei derselben Tour
+datierte Snapshots je Trip und loescht den Rest. Es sammelte sie ueber
+`{trip_id}_*.json` ein — ein Muster, das jede Nachbardatei derselben Trip
 mitnimmt, also auch `{trip_id}_alarm_anchor_{channel}.json`.
 
 Gemessen VOR dem Fix (vier Kanal-Anker, danach acht Briefing-Laeufe): von
@@ -30,7 +30,7 @@ ALLE_KANAELE = ("email", "telegram", "sms", "premium_sms")
 
 
 def test_aufraeumung_der_datierten_snapshots_laesst_kanal_anker_stehen():
-    """GIVEN eine Tour mit einem rollierenden Alarm-Anker je Kanal.
+    """GIVEN eine Trip mit einem rollierenden Alarm-Anker je Kanal.
     WHEN  acht Briefing-Laeufe datierte Snapshots schreiben und die
           Aufraeumung auf sieben zurueckschneidet.
     THEN  stehen ALLE VIER Kanal-Anker unveraendert da, und es bleiben

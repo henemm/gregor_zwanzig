@@ -1,7 +1,9 @@
 {
-  "framework_version": "3.4.13",
+  "framework_version": null,
   "last_updated": "2026-06-30T13:15:00.000000",
   "installed_modules": [],
   "notes": "edit_gate: ORCHESTRATOR_FILES-Schutz (settings.json, settings.local.json, active_workflow) vor json$-Always-Allowed eingefuegt. developer-agent: Regel 6 (keine Framework-Dateien). Fix PR #20. Manueller Backport 2026-07-10: .claude/agents/{bug-intake,bug-investigator,feature-planner}.md 1:1 aus agent-os-openspec@022e79f (Plugin 3.9.1) uebernommen, [triage:x]-Marker fuer gh issue create (agent-os-openspec#67). Kein voller Framework-Sync, weiterhin ~350 Zeilen Hook-Drift gegenueber Plugin-Stand.",
-  "plugin_mode": true
+  "plugin_mode": true,
+  "version_source": "plugin",
+  "note": "Im Plugin-Modus pinnt diese Datei keine Version \u2014 Updates laufen ueber `claude plugin update` und aendern sie nicht. Massgeblich ist das geladene Plugin: `claude plugin list`, oder der Marker am Ende jeder Phase (\u2699 /<befehl> \u00b7 agent-os-openspec <version>)."
 }

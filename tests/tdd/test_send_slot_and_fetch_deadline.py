@@ -84,6 +84,7 @@ from output.channels.base import OutputError
 from output.channels.telegram import TelegramOutput
 from providers.base import ProviderRequestError
 from providers.openmeteo import OpenMeteoProvider
+from tests.helpers.telegram_empfaenger import antwort_im_update
 
 # Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
 # lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
@@ -112,7 +113,7 @@ _ALL_MODEL_IDS = (
 def _settings(chat_id: str, **overrides) -> Settings:
     return Settings(
         telegram_bot_token="stub-bot-token", telegram_chat_id=chat_id,
-        telegram_test_chat_id="", is_test_mode=False,
+        telegram_test_chat_id=chat_id, is_test_mode=False,
         **overrides, _env_file=None,
     )
 
@@ -314,7 +315,7 @@ def test_reserve_send_slot_raises_output_error_after_max_wait(monkeypatch):
     monkeypatch.setattr(tg_module, "SEND_SLOT_MAX_WAIT_SECONDS", 0.15, raising=False)
     _fill_window(chat_key, 3)
 
-    ausgang = TelegramOutput(settings)
+    ausgang = antwort_im_update(settings, chat_key)
     start = time.monotonic()
     with pytest.raises(OutputError):
         ausgang._reserve_send_slot(chat_key)
@@ -358,7 +359,7 @@ def test_reserve_send_slot_logs_chat_key_and_waited_time_on_timeout(monkeypatch,
     monkeypatch.setattr(tg_module, "SEND_SLOT_MAX_WAIT_SECONDS", 0.15, raising=False)
     _fill_window(chat_key, 3)
 
-    ausgang = TelegramOutput(settings)
+    ausgang = antwort_im_update(settings, chat_key)
     with caplog.at_level(logging.WARNING, logger="output.channels.telegram"):
         with pytest.raises(OutputError):
             ausgang._reserve_send_slot(chat_key)
@@ -367,7 +368,9 @@ def test_reserve_send_slot_logs_chat_key_and_waited_time_on_timeout(monkeypatch,
     assert warn_records, "keine WARNING/ERROR-Logzeile beim Abbruch gefunden"
     matching = [
         r for r in warn_records
-        if chat_key in r.getMessage() and any(ch.isdigit() for ch in r.getMessage())
+        # #1412 S4a: Drossel-Logs maskieren die Chat-ID (Endung statt Volltext).
+        if f"…{chat_key[-3:]}" in r.getMessage() and chat_key not in r.getMessage()
+        and any(ch.isdigit() for ch in r.getMessage())
     ]
     assert matching, (
         f"keine Logzeile enthaelt sowohl chat_key={chat_key!r} als auch eine "
@@ -455,7 +458,7 @@ def test_normal_case_unaffected_by_new_deadlines(monkeypatch, tmp_path):
     sleep_calls: list[float] = []
     monkeypatch.setattr(tg_module.time, "sleep", lambda s: sleep_calls.append(s))
 
-    ausgang = TelegramOutput(settings)
+    ausgang = antwort_im_update(settings, chat_key)
     ausgang._reserve_send_slot(chat_key)
 
     assert sleep_calls == [], (
@@ -509,7 +512,7 @@ def test_429_retry_skips_new_slot_reservation_and_stays_capped(monkeypatch):
     """
     chat_key = _chat("ac5")
     settings = _settings(chat_key, telegram_retry_after_cap_seconds=0.05)
-    ausgang = TelegramOutput(settings)
+    ausgang = antwort_im_update(settings, chat_key)
 
     reserve_calls: list[str] = []
     original_reserve = TelegramOutput._reserve_send_slot

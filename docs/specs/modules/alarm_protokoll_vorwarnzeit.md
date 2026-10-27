@@ -3,7 +3,7 @@ entity_id: alarm_protokoll_vorwarnzeit
 type: feature
 created: 2026-08-22
 updated: 2026-08-22
-status: approved
+status: implemented
 workflow: feat-2050-s6-protokoll-vorwarnzeit
 version: "1.0"
 tags: [alarm, protokoll, nachvollziehbarkeit]
@@ -156,7 +156,7 @@ bekannt" (der bestehende Docstring, `alert_log.py:415-420`, behauptet das pausch
   - Test: `AlarmPruefstrecke.lauf(zweig="deviation", ...)` mit einer Aenderung an einem Segment;
     der Eintrag traegt beide Schluessel.
 
-- **AC-4 (Positivkontrolle zu AC-3):** Given dieselbe Vorhersage-Aenderung, aber ueber ZWEI
+- **AC-4:** (Positivkontrolle zu AC-3) Given dieselbe Vorhersage-Aenderung, aber ueber ZWEI
   VERSCHIEDENE Segmente in EINEM Protokoll-Eintrag, When protokolliert wird, Then FEHLT
   `measurement_point` in diesem Eintrag vollstaendig (kein willkuerlich gewaehltes Segment).
   - Test: zwei `WeatherChange` mit unterschiedlichem `segment_id` im selben Lauf; der Eintrag
@@ -164,7 +164,7 @@ bekannt" (der bestehende Docstring, `alert_log.py:415-420`, behauptet das pausch
     Segmente (AC-3-Fixture) ist der Schluessel vorhanden — der Unterschied beweist, dass die
     Mehrdeutigkeit tatsaechlich der Grund fuer die Absenz ist, nicht ein durchgehend leerer Pfad.
 
-- **AC-5 (Zweig-Abdeckung amtlich):** Given eine zugestellte amtliche Warnung mit `valid_from`/
+- **AC-5:** (Zweig-Abdeckung amtlich) Given eine zugestellte amtliche Warnung mit `valid_from`/
   `valid_to`, When protokolliert wird, Then traegt der Eintrag `event_at`/`event_end_at` und
   `source` (= `OfficialAlert.source`), aber NIEMALS `lead_time_minutes` oder `reference_at` —
   auch nicht als `null`, der Schluessel fehlt.
@@ -172,7 +172,7 @@ bekannt" (der bestehende Docstring, `alert_log.py:415-420`, behauptet das pausch
     `event_end_at`/`source` vorhanden, `"lead_time_minutes" not in entry` und
     `"reference_at" not in entry`.
 
-- **AC-6 (Zweig-Abdeckung Abweichung, Positivkontrolle zu AC-5):** Given eine Vorhersage-
+- **AC-6:** (Zweig-Abdeckung Abweichung, Positivkontrolle zu AC-5) Given eine Vorhersage-
   Aenderung wird protokolliert, When derselbe Eintrag gepruft wird, Then fehlt
   `lead_time_minutes` UND `event_end_at` ebenfalls vollstaendig (strukturell, nicht nur in diesem
   Einzelfall) — waehrend derselbe Eintrag `event_at` sehr wohl tragen KANN (AC-3). Der
@@ -181,14 +181,14 @@ bekannt" (der bestehende Docstring, `alert_log.py:415-420`, behauptet das pausch
   - Test: Fixture aus AC-3; `"lead_time_minutes" not in entry` und `"event_end_at" not in entry`,
     waehrend `"event_at" in entry`.
 
-- **AC-7 (Ortsvergleich, Nowcast, Positivkontrolle Ambiguitaet):** Given ein Ortsvergleichs-
+- **AC-7:** (Ortsvergleich, Nowcast, Positivkontrolle Ambiguitaet) Given ein Ortsvergleichs-
   Nowcast-Alarm, der GENAU EINEN Ort ausloest, When protokolliert wird, Then traegt der Eintrag
   `measurement_point={"location_id": <der eine Ort>}`; ausloesend an ZWEI Orten GLEICHZEITIG,
   wenn protokolliert wird, dann fehlt `measurement_point` in diesem zweiten Fall vollstaendig.
   - Test: zwei Compare-Radar-Laeufe ueber die Pruefstrecke, einer mit einem, einer mit zwei
     getriggerten Orten; nur der Ein-Ort-Fall traegt `measurement_point`.
 
-- **AC-8 (Fail-soft, PFLICHT):** Given ein Alarm, bei dem ALLE sechs neuen Groessen nicht
+- **AC-8:** (Fail-soft, PFLICHT) Given ein Alarm, bei dem ALLE sechs neuen Groessen nicht
   bestimmbar sind (z. B. eine Vorhersage-Aenderung ohne Vergleichs-Anker — Erstlauf-Situation —
   ueber mehr als ein Segment gleichzeitig), When der Alarm ausgeloest wird, Then wird er TROTZDEM
   zugestellt (mindestens ein Kanal in `channels_sent`) UND vollstaendig protokolliert — der
@@ -196,14 +196,14 @@ bekannt" (der bestehende Docstring, `alert_log.py:415-420`, behauptet das pausch
   - Test: echter Lauf ueber `AlarmPruefstrecke` mit leerem Anker-Snapshot und zwei Segmenten;
     `triggered_count == 1`, der Eintrag existiert und enthaelt keinen der sechs neuen Schluessel.
 
-- **AC-9 (Unterdrueckung, fruehes Gate — nichts bekannt):** Given ein Nowcast-Alarm wird durch
+- **AC-9:** (Unterdrueckung, fruehes Gate — nichts bekannt) Given ein Nowcast-Alarm wird durch
   das Cooldown-/Ruhezeit-Gate VOR dem eigentlichen Radar-Abruf unterdrueckt, When der
   Unterdrueckungs-Eintrag geschrieben wird, Then enthaelt er KEINEN der sechs neuen Schluessel
   (strukturell nichts bekannt an dieser Stelle).
   - Test: Trip mit aktivem Cooldown, Radar-Zweig ausgeloest; der `not_delivered`-Eintrag hat
     `gate_reason` wie bisher, aber keinen der sechs neuen Schluessel.
 
-- **AC-10 (Unterdrueckung, spaetes Gate — Vergleichsbasis ist die Begruendung):** Given ein
+- **AC-10:** (Unterdrueckung, spaetes Gate — Vergleichsbasis ist die Begruendung) Given ein
   Nowcast-Alarm wird unterdrueckt, WEIL das Briefing die Menge bereits angekuendigt hatte (Gate
   NACH dem Radar-Abruf), When der Unterdrueckungs-Eintrag geschrieben wird, Then traegt er
   `reference_at` (der Briefing-Schnappschusszeitpunkt, der die Unterdrueckung begruendet) sowie
@@ -212,7 +212,7 @@ bekannt" (der bestehende Docstring, `alert_log.py:415-420`, behauptet das pausch
     aus, wird aber wegen Ankuendigung unterdrueckt; der Eintrag traegt alle fuenf genannten
     Schluessel (`event_end_at` ggf. zusaetzlich, wenn ein Ende bestimmbar ist).
 
-- **AC-11 (Mandantentrennung, PFLICHT):** Given zwei verschiedene Nutzer A und B loesen im
+- **AC-11:** (Mandantentrennung, PFLICHT) Given zwei verschiedene Nutzer A und B loesen im
   selben Testlauf je einen Nowcast-Alarm fuer ihren jeweils eigenen Trip aus, When beide
   protokolliert werden, Then traegt Nutzer As Eintrag in `data/users/<A>/alert_log.json` As
   eigenen Messpunkt/Vorwarnzeit, Nutzer Bs Eintrag in `data/users/<B>/alert_log.json` Bs eigenen
@@ -221,7 +221,7 @@ bekannt" (der bestehende Docstring, `alert_log.py:415-420`, behauptet das pausch
     unterschiedlichen Segment-/Ort-Daten; beide Protokolldateien getrennt gelesen und auf die
     JEWEILS EIGENEN Werte geprueft.
 
-- **AC-12 (Alt-Eintraege unangetastet, PFLICHT mit Gegenprobe):** Given eine bestehende
+- **AC-12:** (Alt-Eintraege unangetastet, PFLICHT mit Gegenprobe) Given eine bestehende
   `alert_log.json` mit einem Eintrag aus VOR dieser Scheibe (ohne die sechs neuen Schluessel),
   When ein neuer Alarm fuer denselben Nutzer protokolliert wird, Then bleibt der ALTE Eintrag
   byte-identisch (keiner der sechs Schluessel wird nachtraeglich ergaenzt), WAEHREND der NEUE
@@ -232,7 +232,7 @@ bekannt" (der bestehende Docstring, `alert_log.py:415-420`, behauptet das pausch
     Eintraegen in derselben Datei ist die Positivkontrolle: er zeigt, dass die neuen Schluessel
     technisch geschrieben WERDEN, nur eben nicht rueckwirkend.
 
-- **AC-13 (D4-Invarianz, PFLICHT mit Gegenprobe):** Given zwei sonst identische
+- **AC-13:** (D4-Invarianz, PFLICHT mit Gegenprobe) Given zwei sonst identische
   `alert_log.json`-Dateien fuer denselben Nutzer, eine MIT den sechs neuen Schluesseln in ihren
   Eintraegen befuellt, eine OHNE, When `internal/store/log.go LoadAlertLog()` bzw.
   `AlertCountByEntity()` auf beide angewendet wird, Then liefern beide Dateien EXAKT dieselbe
@@ -247,7 +247,7 @@ bekannt" (der bestehende Docstring, `alert_log.py:415-420`, behauptet das pausch
     andere Zahl liefern — das zeigt, dass der Zaehl-Pfad ueberhaupt etwas misst und nicht
     zufaellig immer gleich zaehlt.
 
-- **AC-14 (`unique_or_none()` selbst, PFLICHT mit Gegenprobe):** Given eine Werteliste mit genau
+- **AC-14:** (`unique_or_none()` selbst, PFLICHT mit Gegenprobe) Given eine Werteliste mit genau
   einem wiederkehrenden Nicht-`None`-Wert (z. B. `["seg-1", "seg-1"]` oder `["seg-1", None]`),
   When `unique_or_none()` aufgerufen wird, Then liefert es diesen einen Wert. Given eine Liste
   mit ZWEI VERSCHIEDENEN Nicht-`None`-Werten (z. B. `["seg-1", "seg-2"]`) ODER einer leeren
@@ -255,7 +255,7 @@ bekannt" (der bestehende Docstring, `alert_log.py:415-420`, behauptet das pausch
   - Test: reiner Funktionstest mit den drei Fallgruppen (eindeutig direkt, eindeutig mit
     `None`-Rauschen, mehrdeutig) plus Leerfall; alle vier Erwartungen in einem Test.
 
-- **AC-15 (Protokollfehler darf Alarm nie verhindern, PFLICHT):** Given eine der sechs neuen
+- **AC-15:** (Protokollfehler darf Alarm nie verhindern, PFLICHT) Given eine der sechs neuen
   Eingaben an einer ungeschuetzten `append_entry()`-Aufrufstelle (`trip_alert.py:408`, `:1632`
   oder `:2050`) ist unerwartet fehlerhaft geformt (z. B. ein nicht-serialisierbares Objekt statt
   `None`/`str`/`dict`), When der Alarm ausgeloest wird, Then wirft `append_entry()` KEINE

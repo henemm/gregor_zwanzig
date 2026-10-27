@@ -80,25 +80,45 @@ class TestAC1HtmlFooter:
     """Rendert die echte E-Mail (html.py + plain.py) und prueft den tatsaechlichen
     Ausgabe-Text -- kein Produkt-Quelltext-Read (CLAUDE.md/#765 AC-4)."""
 
+    # Issue #2134: der HTML-Kommando-Block ist ABGELEITET (`_COMMAND_SPECS`,
+    # dieselbe Quelle wie Klartext-Fussz., Hilfe und beide Fehlertexte). Die
+    # frueheren Zeichenketten-Erwartungen ("PAUSE 2d", "Nächstes
+    # überspringen") waren die HTML-EIGENE #884-Formulierung -- genau die
+    # Kanal-Abweichung, die AC-11 abschafft. Geprueft wird deshalb weiter der
+    # tatsaechliche Ausgabe-Text, aber gegen die Quelle statt gegen eine
+    # eingetippte Kopie: waere der Block nicht abgeleitet, faende sich der
+    # Wortlaut dort nicht.
+    def _erwartete_zeile(self, wort: str) -> tuple[str, str]:
+        from services.trip_command_processor import command_rows
+
+        for label, beschreibung in command_rows():
+            if label.split()[0] == wort:
+                return label, beschreibung
+        raise AssertionError(f"{wort} steht nicht in _COMMAND_SPECS")
+
     def test_pause_in_html_footer(self):
-        # Superseded by #884 design: PAUSE CMD is now "PAUSE 2d" (no bracket hint),
-        # description changed to "Briefings pausieren"
         from output.renderers.email import render_email
         from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
 
         html, _plain = render_email(_make_token_line(), **_common_kwargs())
+        label, beschreibung = self._erwartete_zeile("PAUSE")
         assert "PAUSE" in html, "HTML-Footer muss PAUSE enthalten (AC-1)"
-        assert "PAUSE 2d" in html, "HTML-Kommandos-Block muss PAUSE 2d enthalten (AC-1/#884)"
+        assert label in html and beschreibung in html, (
+            f"HTML-Kommandos-Block muss {label!r} / {beschreibung!r} aus "
+            f"_COMMAND_SPECS enthalten (AC-1/#884, Quelle seit #2134)"
+        )
 
     def test_skip_in_html_footer(self):
-        # Superseded by #884 design: SKIP description changed from "Nächstes Briefing überspringen"
-        # to "Nächstes überspringen"
         from output.renderers.email import render_email
         from tests.unit.test_renderers_email import _common_kwargs, _make_token_line
 
         html, _plain = render_email(_make_token_line(), **_common_kwargs())
+        label, beschreibung = self._erwartete_zeile("SKIP")
         assert "SKIP" in html, "HTML-Footer muss SKIP enthalten (AC-1)"
-        assert "Nächstes überspringen" in html, "HTML-Kommandos-Block muss SKIP-Beschreibung 'Nächstes überspringen' enthalten (AC-1/#884)"
+        assert label in html and beschreibung in html, (
+            f"HTML-Kommandos-Block muss {label!r} / {beschreibung!r} aus "
+            f"_COMMAND_SPECS enthalten (AC-1/#884, Quelle seit #2134)"
+        )
 
     def test_pause_in_plain_footer(self):
         from output.renderers.email import render_email

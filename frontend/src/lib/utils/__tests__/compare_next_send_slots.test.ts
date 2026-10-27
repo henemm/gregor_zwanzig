@@ -1,20 +1,19 @@
-// TDD RED — Issue #1268 (AC-9): "Nächster Versand" wird aus den echten
-// Versand-Slots (morning_time/evening_time) abgeleitet, NICHT aus hour_from.
+// Issue #1268 (AC-9): "Nächster Versand" folgt den echten Versand-Slots
+// (morning_time/evening_time), NICHT hour_from.
 //
 // Spec: docs/specs/modules/issue_1268_compare_timewindow_removal.md § AC-9
+// Umgestellt mit Issue #1969 (AC-23/AC-24, docs/specs/modules/feat_1969_naechstes_briefing.md):
+// `deriveNextSend` ist entfernt — den nächsten Termin rechnet ausschließlich das
+// Backend (GET /api/next-briefings; Python-Ableitung `next_compare_briefing`,
+// bewacht in tests/tdd/test_next_briefing.py inkl. weekly/manual/Pause). Die
+// Zusicherung „Anzeige = Versandzeit, nie hour_from" bleibt hier an ZWEI
+// Stellen bewacht:
+//   1. Anzeige-Ebene: die Startseiten-Zeile „Nächster · …" zeigt den
+//      Backend-Wert, auch wenn hour_from etwas anderes behauptet.
+//   2. Slot-Auflösung `resolvePresetSlots`/`primarySendSlot` (Zeitplan-Label,
+//      deckungsgleich mit compare_slot_scheduler.py::resolve_preset_slots).
 //
-// Befund (GREEN-Phase, PO-bestätigt): deriveNextSend() rechnete mit
-// `hour_from` — dem Start des Bewertungs-Zeitfensters. Die Versand-Wahrheit
-// sind seit #1232 Scheibe 2a die Slot-Felder (types.ts:304: "die einzige
-// Wahrheit für den Versand"). Die Anzeige behauptete 09:00, obwohl um 07:00
-// verschickt wurde. Seit #1268 schickt der Wizard `hour_from` nicht mehr mit →
-// Go legt neue Presets mit HourFrom = 0 an (Zero-Value) → die Anzeige hätte
-// "00:00" behauptet. Fall (b) ist genau diese verhinderte Regression.
-//
-// Auflösungs-Semantik (Referenz, muss deckungsgleich bleiben):
-//   src/services/compare_slot_scheduler.py::resolve_preset_slots
-//
-// Reine Verhaltenstests auf der Pure-Function (kein Mock, kein Netz, kein DOM).
+// Reine Verhaltenstests (kein Mock, kein Netz, kein DOM).
 //
 // Ausführung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -23,8 +22,11 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { deriveNextSend } from '../cockpitHelpers568.ts';
+import { resolvePresetSlots, primarySendSlot } from '../cockpitHelpers568.ts';
+import { homeCompareTimeline } from '../../../routes/_home/cockpitHelpers.ts';
 import type { ComparePreset } from '../../types.ts';
+
+process.env.TZ = 'America/Los_Angeles';
 
 function makeCompare(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	return {
@@ -39,53 +41,40 @@ function makeCompare(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	} as ComparePreset;
 }
 
-describe('#1268 AC-9: deriveNextSend liest die Versand-Slots, nicht hour_from', () => {
+/** Backend-Wert „heute 07:00 (CEST)" — Fr 05.06.2026. */
+const NB = (local_time: string, slot: 'morning' | 'evening' = 'morning') => ({
+	at: `2026-06-05T${local_time}:00+02:00`,
+	local_date: '2026-06-05',
+	local_time,
+	tz: 'Europe/Paris',
+	tz_abbr: 'CEST',
+	slot
+});
+
+const naechster = (preset: ComparePreset, nb: unknown) =>
+	homeCompareTimeline(preset, nb as never).find((r) => r.when.startsWith('Nächster · '))?.when;
+
+describe('#1268 AC-9 / #1969: Anzeige zeigt die Versandzeit (Backend-Wert), nicht hour_from', () => {
 	test('(a) Versand 07:00 bei Bewertungsfenster ab 09:00 → Anzeige 07:00, nicht 09:00', () => {
-		// GIVEN: Versand-Slot 07:00, altes Bewertungsfenster hour_from=9
-		// WHEN: die Anzeige den nächsten Versand ableitet (jetzt 04:00)
-		// THEN: 07:00 — die echte Versandzeit
-		// RED vor Fix: liefert 09:00 (hour_from), die Anzeige log den Nutzer an.
-		const now = new Date('2026-06-05T04:00:00');
-		const preset = makeCompare({
-			schedule: 'daily',
-			hour_from: 9,
-			morning_enabled: true,
-			morning_time: '07:00:00'
-		});
-
-		const result = deriveNextSend(preset, now);
-
-		assert.ok(result !== null, 'daily-Preset muss einen nächsten Versand liefern');
-		assert.strictEqual(result!.getHours(), 7, 'Stunde muss die Versandzeit 07:00 sein, nicht hour_from=9');
-		assert.strictEqual(result!.getMinutes(), 0);
-		assert.strictEqual(result!.getDate(), now.getDate(), 'heute, da 07:00 noch bevorsteht');
+		const preset = makeCompare({ schedule: 'daily', hour_from: 9, morning_enabled: true, morning_time: '07:00:00' });
+		const zeile = naechster(preset, NB('07:00'));
+		assert.ok(zeile, 'daily-Preset mit Backend-Termin muss eine Nächster-Zeile liefern');
+		assert.ok(zeile!.includes('Fr 07:00 (CEST)'), `Versandzeit 07:00 fehlt: ${zeile}`);
+		assert.ok(!zeile!.includes('09:00'), `hour_from=9 sichtbar: ${zeile}`);
 	});
 
 	test('(b) neu angelegtes Preset ohne hour_from → 07:00, niemals 00:00', () => {
-		// GIVEN: ein nach #1268 angelegtes Preset — der Wizard schickt hour_from
-		//        nicht mehr, Go schreibt den Zero-Value 0 (oder das Feld fehlt).
-		// WHEN: die Anzeige den nächsten Versand ableitet
-		// THEN: 07:00 aus dem Slot — die Anzeige darf nicht "00:00" behaupten.
-		// RED vor Fix: hour_from=0 → 00:00 (bzw. null wenn Feld fehlt).
-		const now = new Date('2026-06-05T04:00:00');
-		const zeroValue = makeCompare({ schedule: 'daily', hour_from: 0, morning_time: '07:00:00' });
-		const missing = makeCompare({ schedule: 'daily', morning_time: '07:00:00' });
-
-		for (const [label, preset] of [
-			['hour_from=0 (Go-Zero-Value)', zeroValue],
-			['hour_from fehlt komplett', missing]
-		] as const) {
-			const result = deriveNextSend(preset, now);
-			assert.ok(result !== null, `${label}: muss einen nächsten Versand liefern`);
-			assert.strictEqual(result!.getHours(), 7, `${label}: muss 07:00 zeigen, nicht 00:00`);
+		for (const preset of [
+			makeCompare({ schedule: 'daily', hour_from: 0, morning_time: '07:00:00' }),
+			makeCompare({ schedule: 'daily', morning_time: '07:00:00' })
+		]) {
+			const zeile = naechster(preset, NB('07:00'));
+			assert.ok(zeile?.includes('07:00'), `07:00 fehlt: ${zeile}`);
+			assert.ok(!zeile!.includes('00:00 ') && !zeile!.includes(' 00:00'), `00:00 sichtbar: ${zeile}`);
 		}
 	});
 
-	test('(c) nur Abend-Slot aktiv → Anzeige nimmt den Abend-Slot', () => {
-		// GIVEN: Morgen-Slot aus, Abend-Slot an um 18:00
-		// WHEN: die Anzeige den nächsten Versand ableitet (jetzt 04:00)
-		// THEN: 18:00 heute — nicht der deaktivierte Morgen-Slot
-		const now = new Date('2026-06-05T04:00:00');
+	test('(c) nur Abend-Slot aktiv → Anzeige nimmt den Abend-Termin des Backends', () => {
 		const preset = makeCompare({
 			schedule: 'daily',
 			hour_from: 9,
@@ -94,69 +83,53 @@ describe('#1268 AC-9: deriveNextSend liest die Versand-Slots, nicht hour_from', 
 			evening_enabled: true,
 			evening_time: '18:00:00'
 		});
-
-		const result = deriveNextSend(preset, now);
-
-		assert.ok(result !== null);
-		assert.strictEqual(result!.getHours(), 18, 'muss den aktiven Abend-Slot zeigen');
-		assert.strictEqual(result!.getDate(), now.getDate(), 'heute, da 18:00 noch bevorsteht');
+		assert.ok(naechster(preset, NB('18:00', 'evening'))?.includes('Fr 18:00 (CEST)'));
 	});
 
-	test('(d) schedule "manual" → weiterhin null', () => {
-		const now = new Date('2026-06-05T04:00:00');
+	test('(d) schedule "manual" (Backend: reason manual) → keine Nächster-Zeile', () => {
 		const preset = makeCompare({ schedule: 'manual', morning_time: '07:00:00' });
-		assert.strictEqual(deriveNextSend(preset, now), null, 'manual liefert keinen nächsten Versand');
+		assert.equal(naechster(preset, { at: null, reason: 'manual' }), undefined);
 	});
 });
 
-describe('#1268 AC-9: Slot-Auflösung deckungsgleich mit resolve_preset_slots', () => {
-	test('beide Slots aktiv → der nächste bevorstehende gewinnt', () => {
+describe('#1268 AC-9: Slot-Auflösung deckungsgleich mit resolve_preset_slots (Zeitplan-Label)', () => {
+	test('Versand-Slot 07:00 schlägt hour_from=9', () => {
+		const preset = makeCompare({ hour_from: 9, morning_enabled: true, morning_time: '07:00:00' });
+		assert.deepEqual(primarySendSlot(preset), { hour: 7, minute: 0 });
+	});
+
+	test('nur Abend-Slot aktiv → Abend-Slot', () => {
 		const preset = makeCompare({
-			schedule: 'daily',
+			hour_from: 9,
+			morning_enabled: false,
+			morning_time: '07:00:00',
+			evening_enabled: true,
+			evening_time: '18:00:00'
+		});
+		assert.deepEqual(resolvePresetSlots(preset), [{ hour: 18, minute: 0 }]);
+	});
+
+	test('beide Slots aktiv → beide aufgelöst, frühester ist der primäre', () => {
+		const preset = makeCompare({
 			morning_enabled: true,
 			morning_time: '07:00:00',
 			evening_enabled: true,
 			evening_time: '18:00:00'
 		});
-
-		// 04:00 → als nächstes der Morgen-Slot
-		assert.strictEqual(deriveNextSend(preset, new Date('2026-06-05T04:00:00'))!.getHours(), 7);
-		// 12:00 → Morgen-Slot vorbei, als nächstes der Abend-Slot (heute)
-		const midday = deriveNextSend(preset, new Date('2026-06-05T12:00:00'))!;
-		assert.strictEqual(midday.getHours(), 18);
-		assert.strictEqual(midday.getDate(), 5, 'Abend-Slot heute, nicht morgen');
-		// 20:00 → beide vorbei → Morgen-Slot morgen früh
-		const evening = deriveNextSend(preset, new Date('2026-06-05T20:00:00'))!;
-		assert.strictEqual(evening.getHours(), 7);
-		assert.strictEqual(evening.getDate(), 6, 'morgen früh');
+		assert.deepEqual(resolvePresetSlots(preset), [
+			{ hour: 7, minute: 0 },
+			{ hour: 18, minute: 0 }
+		]);
+		assert.deepEqual(primarySendSlot(preset), { hour: 7, minute: 0 });
 	});
 
 	test('Alt-Preset ohne morning_time → Migrations-Fallback 06:00 (Morgen-Intention)', () => {
-		// resolve_preset_slots: morning_time fehlt = "nie migriert" → Morgen-Slot
-		// 06:00 aktiv (verhaltensidentisch zum bisherigen 06:00-Cron).
-		const now = new Date('2026-06-05T04:00:00');
-		const preset = makeCompare({ schedule: 'daily', hour_from: 9 });
-		const result = deriveNextSend(preset, now);
-		assert.ok(result !== null);
-		assert.strictEqual(result!.getHours(), 6, 'Fallback-Morgen-Slot 06:00, nicht hour_from=9');
+		assert.deepEqual(resolvePresetSlots(makeCompare({ schedule: 'daily', hour_from: 9 })), [{ hour: 6, minute: 0 }]);
 	});
 
 	test('Alt-Preset ohne morning_time mit schedule "daily_evening" → Fallback Abend 18:00', () => {
-		// resolve_preset_slots KL-6: Alt-Wert daily_evening → Abend-Intention.
-		const now = new Date('2026-06-05T04:00:00');
-		const preset = makeCompare({ schedule: 'daily_evening' as never });
-		const result = deriveNextSend(preset, now);
-		assert.ok(result !== null);
-		assert.strictEqual(result!.getHours(), 18, 'Fallback-Abend-Slot 18:00');
-	});
-
-	test('weekly: nächster passender Wochentag zur echten Versandzeit', () => {
-		// 2026-06-05 ist ein Freitag (weekday=4). Ziel: Montag (weekday=0).
-		const now = new Date('2026-06-05T04:00:00');
-		const preset = makeCompare({ schedule: 'weekly', weekday: 0, hour_from: 9, morning_time: '07:00:00' });
-		const result = deriveNextSend(preset, now);
-		assert.ok(result !== null);
-		assert.strictEqual(result!.getHours(), 7, 'Versandzeit aus dem Slot, nicht hour_from');
-		assert.strictEqual(result!.getDay(), 1, 'JS-Wochentag Montag');
+		assert.deepEqual(resolvePresetSlots(makeCompare({ schedule: 'daily_evening' as never })), [
+			{ hour: 18, minute: 0 }
+		]);
 	});
 });

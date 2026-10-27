@@ -174,7 +174,7 @@ class TestTripAlertPriority:
             stages=[_stage()],
             display_config=config,
         )
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         detector = service._select_change_detector(trip)
         # Summary-Field-Schlüssel für wind_gust ist "gust_max_kmh" (via _ALERT_METRIC_TO_SUMMARY_FIELD)
         wind_threshold = detector._thresholds.get("gust_max_kmh")

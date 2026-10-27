@@ -10,6 +10,8 @@ epic: render-pipeline-consolidation (#96)
 phase: β3
 ---
 
+> Teilweise abgelöst durch [ADR-0004](../../adr/0004-signal-channel-removed.md) (2026-06-06): `SignalOutput` als Vertragspartner von `TripReport` gilt nicht mehr; Signal ist app-weit entfernt (#610).
+
 # Output Channel Renderers
 
 ## Approval
@@ -53,8 +55,8 @@ in `trip_report.py`).
   - `tests/unit/test_renderers_email.py`
   - `tests/unit/test_renderers_sms.py`
 - **Migration (Adapter):**
-  - `src/formatters/trip_report.py` — `format_email()` wird Adapter (Signatur byte-identisch)
-  - `src/formatters/sms_trip.py` — `format_sms()` wird Adapter (Output-Format wechselt auf v2.0)
+  - `src/output/renderers/trip_report.py` — `format_email()` wird Adapter (Signatur byte-identisch)
+  - `src/output/renderers/sms_trip.py` — `format_sms()` wird Adapter (Output-Format wechselt auf v2.0)
 
 **Pflicht:** Jede Datei ≤500 LoC. Bei Überschreitung Refactor in weitere Submodule, kein
 Aufweichen des Limits.
@@ -200,7 +202,7 @@ ist Reviewer-Pflicht.
 
 ### A8. Adapter-Lebensdauer bis β6
 
-**Entscheidung:** `src/formatters/sms_trip.py` und `src/formatters/trip_report.py` bleiben
+**Entscheidung:** `src/output/renderers/sms_trip.py` und `src/output/renderers/trip_report.py` bleiben
 als Adapter bestehen. Deprecation-Kommentar im Header verweist auf β6 Cleanup.
 Caller-Code (Scheduler, Alert, CLI, Tests) wird nicht angefasst.
 
@@ -280,7 +282,7 @@ def render_email(
 ### Adapter-Skelett (`TripReportFormatter.format_email`)
 
 ```python
-# src/formatters/trip_report.py — bleibt als Adapter, Signatur byte-identisch
+# src/output/renderers/trip_report.py — bleibt als Adapter, Signatur byte-identisch
 def format_email(
     self,
     segments: list[SegmentWeatherData],
@@ -346,7 +348,7 @@ def format_email(
 ### Adapter-Skelett (`SMSTripFormatter.format_sms`)
 
 ```python
-# src/formatters/sms_trip.py — wird Adapter, Wire-Format wechselt auf v2.0 (A3)
+# src/output/renderers/sms_trip.py — wird Adapter, Wire-Format wechselt auf v2.0 (A3)
 def format_sms(self, ...) -> str:
     # 1. TokenLine bauen wie im E-Mail-Pfad
     token_line = build_token_line(...)

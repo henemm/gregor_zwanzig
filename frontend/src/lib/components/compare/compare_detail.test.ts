@@ -31,14 +31,6 @@ test('#491 AC-1: +page.svelte Breadcrumb-Text enthält ORTS-VERGLEICHE', () => {
 	assert.ok(src.includes('ORTS-VERGLEICHE'), '+page.svelte enthält keinen Breadcrumb-Text "ORTS-VERGLEICHE"');
 });
 
-test('#491 AC-1: +page.svelte hat Bearbeiten-Link', () => {
-	const pagePath = '../../../routes/compare/[id]/+page.svelte';
-	assert.ok(has(pagePath), 'frontend/src/routes/compare/[id]/+page.svelte fehlt');
-	const src = read(pagePath);
-	assert.ok(src.includes('Bearbeiten'), '+page.svelte enthält keinen "Bearbeiten"-Link');
-	assert.ok(src.includes('/compare/'), '+page.svelte enthält keinen /compare/-Pfad für Bearbeiten-Link');
-});
-
 test('#491 AC-2: CompareDetail.svelte hat Monitoring-Streifen-Felder', () => {
 	assert.ok(has('CompareDetail.svelte'), 'CompareDetail.svelte fehlt');
 	const src = read('CompareDetail.svelte');

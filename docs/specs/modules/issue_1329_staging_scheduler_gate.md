@@ -3,7 +3,7 @@ entity_id: issue_1329_staging_scheduler_gate
 type: module
 created: 2026-07-20
 updated: 2026-07-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [scheduler, staging, open-meteo, go-api]
 ---
@@ -98,7 +98,7 @@ weiterhin manuell auslösbare Jobs über den bestehenden Python-Trigger-Pfad
 - **AC-4:** Given der Scheduler wurde wegen `GZ_ENV=staging` nicht gestartet / When `GET /api/scheduler/status` aufgerufen wird / Then antwortet der Endpoint mit HTTP 200, listet alle registrierten Jobs mit `next_run`-Zeitstempel und `last_run: null`, ohne Panic oder Nil-Dereferenz.
   - Test: Integrationstest ruft den Handler mit einem `Scheduler`, dessen `New()` lief aber `Start()` nicht, auf und prüft Statuscode 200 sowie `last_run == nil` für jeden Job-Eintrag.
 
-- **AC-5 (Betrieb, kein Code-Test):** Given der Fix ist auf Staging deployt und `gregor-api-staging` läuft / When man das Staging-Log über einen Beobachtungszeitraum (z. B. 30–60 Min) sichtet / Then erscheinen keine neuen scheduler-ausgelösten `open-meteo`-Requests (kein `[scheduler] ... → 2xx`-Log-Muster für die 8 Cron-Jobs), während `GET /api/health` weiterhin 200 liefert.
+- **AC-5:** (Betrieb, kein Code-Test) Given der Fix ist auf Staging deployt und `gregor-api-staging` läuft / When man das Staging-Log über einen Beobachtungszeitraum (z. B. 30–60 Min) sichtet / Then erscheinen keine neuen scheduler-ausgelösten `open-meteo`-Requests (kein `[scheduler] ... → 2xx`-Log-Muster für die 8 Cron-Jobs), während `GET /api/health` weiterhin 200 liefert.
   - Nachweis: manuelle Staging-Verifikation nach Deploy, dokumentiert im Issue-Kommentar (Log-Auszug + Health-Check), kein automatisierter Test — Teil des Auslieferungsschritts, nicht der TDD-RED-Phase.
 
 ## Known Limitations

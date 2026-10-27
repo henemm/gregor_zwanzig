@@ -24,7 +24,7 @@ import statistics
 import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Tuple
 
 import httpx
 from tenacity import (
@@ -45,7 +45,13 @@ from app.models import (
 )
 from providers import call_log
 from providers.base import ProviderError, ProviderRequestError
+from providers.http import (
+    capped_timeout_or_raise,
+    make_deadline_before_hook,
+    stop_at_deadline,
+)
 from providers.merge import merge_missing_fields
+from services.file_lock import LockTimeout, atomic_write_json, exclusive_lock
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -69,8 +75,8 @@ ENSEMBLE_TIMEOUT = 15.0  # Issue #121: shorter timeout for ensemble (best-effort
 # 27s/49s), 60s sind ~60-fache Reserve und bleiben unter den 90s des
 # Alarm-Laufs (ALERT_RUN_DEADLINE_SECONDS, trip_alert.py:40). Greift bereits
 # INNERHALB der tenacity-Wiederholkette eines einzelnen _request-Aufrufs,
-# nicht erst zwischen Modell-Kandidaten (PO-Vorgabe #1448, s.
-# _resolve_request_deadline/_stop_at_request_deadline unten).
+# nicht erst zwischen Modell-Kandidaten (PO-Vorgabe #1448, s. die geteilten
+# Bausteine in providers/http.py, seit #2302 Scheibe A).
 FETCH_DEADLINE_SECONDS = 60.0
 
 # Issue #338: Diagnose-Zähler — append-only JSONL für jeden ausgehenden Abruf.
@@ -178,6 +184,15 @@ def is_within_forecast_horizon(stage_date: date, reference_date: date) -> bool:
     return (stage_date - reference_date).days <= OPENMETEO_MAX_FORECAST_DAYS
 
 
+# Issue #1994 (Audit B-04): Einheiten explizit senden, statt sich auf API-
+# Defaults zu verlassen. Die Normalisierung nimmt km/h, Celsius und mm an.
+OPENMETEO_EINHEITEN: Dict[str, str] = {
+    "wind_speed_unit": "kmh",
+    "temperature_unit": "celsius",
+    "precipitation_unit": "mm",
+}
+
+
 def _koordinaten_params(
     lat: float, lon: float, elevation_m: Optional[float] = None
 ) -> Dict[str, Any]:
@@ -192,6 +207,7 @@ def _koordinaten_params(
     radar_service.py rufen ausschliesslich diese Funktion -- kein zweiter,
     unregistrierter Aufbau-Ort mehr im Code."""
     params: Dict[str, Any] = {"latitude": lat, "longitude": lon}
+    params.update(OPENMETEO_EINHEITEN)
     if elevation_m is not None:
         params["elevation"] = int(round(elevation_m))
     return params
@@ -268,6 +284,27 @@ _PROBE_COORDS = {
 # https://open-meteo.com/en/docs#weathervariables
 THUNDER_CODES = {95, 96, 99}  # Thunderstorm codes
 
+# Issue #1983 (Gewitter S6): Mindestzahl gueltiger Ensemble-Member je Stunde,
+# damit ein Gewittercode-Anteil ueberhaupt gebildet wird -- bewusst ein
+# ANDERER (hoeherer) Mindestwert als die Spread-Mindestzahl (5, s.u.
+# `_fetch_ensemble_spread`): Streuung und Mehrheits-Prozentsatz sind zwei
+# verschiedene Aussagen mit verschiedenen Stichproben-Anforderungen (Spec
+# "Schwellen-Herkunft").
+ENSEMBLE_THUNDER_MIN_MEMBERS = 20
+
+
+class EnsembleHourStats(NamedTuple):
+    """Je-Stunde-Statistik aus `_fetch_ensemble_spread` (Issue #1983).
+
+    Benannte Struktur statt 2-Tupel: ein drittes Feld haette als Tupel-
+    Position 2/3 Vertauschungs-Risiko getragen (Adversary-Risiko, Spec
+    "Rueckgabetyp"). `thunder_member_share_pct` ist `None`, wenn weniger als
+    `ENSEMBLE_THUNDER_MIN_MEMBERS` gueltige Wettercodes vorlagen.
+    """
+    spread_t2m_k: Optional[float]
+    spread_precip_mm: Optional[float]
+    thunder_member_share_pct: Optional[int]
+
 
 def _is_retryable_error(exception: Exception) -> bool:
     """Check if exception is retryable."""
@@ -281,36 +318,6 @@ def _is_retryable_error(exception: Exception) -> bool:
         if isinstance(exception.__cause__, (httpx.ConnectError, httpx.ReadTimeout)):
             return True
     return False
-
-
-def _resolve_request_deadline(retry_state) -> None:
-    """tenacity ``before``-Hook (Fix #1448 S3): fixiert ``deadline_at`` fuer
-    die GESAMTE Wiederholkette EINES ``_request``-Aufrufs, nicht nur den
-    ersten Versuch. ``before`` feuert vor JEDEM Versuch (auch dem ersten) und
-    ``retry_state.kwargs`` ist dieselbe dict-Instanz, mit der tenacity jeden
-    weiteren Versuch aufruft — eine hier vorgenommene Mutation bleibt ueber
-    die ganze Kette hinweg stabil.
-
-    Team-Lead-Praezisierung (Spec Implementation Details B): fehlt
-    ``deadline_at`` (None), wird die Ersatzfrist ``time.monotonic() +
-    FETCH_DEADLINE_SECONDS`` GENAU EINMAL gebildet — wuerde sie bei jedem
-    Versuch neu berechnet, waere die Deadline eine rollende Frist statt einer
-    festen Obergrenze und damit wirkungslos.
-    """
-    if retry_state.kwargs.get("deadline_at") is None:
-        retry_state.kwargs["deadline_at"] = time.monotonic() + FETCH_DEADLINE_SECONDS
-
-
-def _stop_at_request_deadline(retry_state) -> bool:
-    """Zeitbasierte Stop-Bedingung (Fix #1448 S3), per ``|`` mit
-    ``stop_after_attempt(RETRY_ATTEMPTS)`` zu ``stop_any`` kombiniert (Spec
-    Implementation Details B, Punkt 2). Liest dieselbe von
-    ``_resolve_request_deadline`` fixierte ``deadline_at`` — Versuchszahl UND
-    verstrichene Zeit begrenzen die Kette gemeinsam, nicht nur die
-    Versuchszahl allein.
-    """
-    deadline_at = retry_state.kwargs.get("deadline_at")
-    return deadline_at is not None and time.monotonic() >= deadline_at
 
 
 class OpenMeteoProvider:
@@ -357,7 +364,26 @@ class OpenMeteoProvider:
         """Save probe result as JSON cache."""
         pfad = availability_cache_path()
         pfad.parent.mkdir(parents=True, exist_ok=True)
-        pfad.write_text(json.dumps(result, indent=2))
+        atomic_write_json(pfad, result)
+
+    def _auto_probe_single(self) -> Optional[dict]:
+        """Auto-Probe genau einmal (#1539 S1a, AC-10): unter Sperre den Cache
+        erneut laden (Double-Checked-Locking) und nur proben, wenn er immer
+        noch fehlt/abgelaufen ist."""
+        try:
+            # Wartende bleiben bis zum Ende der Probe stehen: Probe-HTTP-Timeout
+            # (TIMEOUT) + 30 s Puffer fuer mehrere Modelle/Retries.
+            with exclusive_lock(availability_cache_path(), timeout_s=TIMEOUT + 30.0):
+                cache = self._load_availability_cache()
+                if cache is not None:
+                    return cache
+                logger.info("Availability cache missing/expired — auto-probing...")
+                return self.probe_model_availability()
+        except LockTimeout as e:
+            logger.warning("Auto-probe lock not acquired: %s", e)
+        except Exception as e:
+            logger.warning("Auto-probe failed: %s", e)
+        return None
 
     def probe_model_availability(self) -> dict:
         """
@@ -388,6 +414,7 @@ class OpenMeteoProvider:
                 "timezone": "UTC",
                 "start_date": tomorrow,
                 "end_date": tomorrow,
+                **OPENMETEO_EINHEITEN,
             }
 
             try:
@@ -617,11 +644,20 @@ class OpenMeteoProvider:
         finally:
             call_log.DIAGNOSTICS_PATH = prev
 
+    def _fetch_deadline_seconds(self) -> float:
+        """Fristdauer je ``_request``-Aufruf, gelesen zur AUFRUFZEIT.
+
+        #2302: der geteilte ``before``-Hook (``providers/http.py``) loest
+        ueber den NAMEN dieser Methode auf, nie ueber ihren Wert — so wirkt
+        ein Laufzeit-Patch des Modul-Globals unveraendert.
+        """
+        return FETCH_DEADLINE_SECONDS
+
     @retry(
-        stop=stop_after_attempt(RETRY_ATTEMPTS) | _stop_at_request_deadline,
+        stop=stop_after_attempt(RETRY_ATTEMPTS) | stop_at_deadline,
         wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
         retry=retry_if_exception(_is_retryable_error),
-        before=_resolve_request_deadline,
+        before=make_deadline_before_hook("_fetch_deadline_seconds"),
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
@@ -641,15 +677,16 @@ class OpenMeteoProvider:
         HTTP-Timeout jedes einzelnen Versuchs als auch die gesamte
         Wiederholkette dieses Aufrufs sind auf die Restzeit bis
         ``deadline_at`` gedeckelt (kombinierte tenacity-``stop``-Bedingung,
-        ``_stop_at_request_deadline``).
+        ``http.stop_at_deadline``; #2302: geteilter Baustein statt lokaler
+        Kopie, reiner Mechanik-Tausch).
 
         Args:
             endpoint: API endpoint path (e.g., "/v1/meteofrance")
             params: Query parameters
             base_host: Override BASE_HOST (e.g., AIR_QUALITY_HOST)
             deadline_at: Absolute monotone Frist. Fehlt sie, bildet der
-                ``before``-Hook ``_resolve_request_deadline`` intern
-                ``time.monotonic() + FETCH_DEADLINE_SECONDS`` — dient dazu,
+                geteilte ``before``-Hook (``http.make_deadline_before_hook``)
+                intern ``time.monotonic() + FETCH_DEADLINE_SECONDS`` — dient dazu,
                 EINE gemeinsame Frist ueber mehrere Kandidaten hinweg
                 durchzureichen (s. ``fetch_forecast``), ist aber NICHT der
                 Schalter, der die Absicherung ueberhaupt erst einschaltet
@@ -663,14 +700,13 @@ class OpenMeteoProvider:
             ProviderRequestError: On non-retryable errors, after max retries,
                 or after FETCH_DEADLINE_SECONDS is exceeded
         """
-        restzeit = deadline_at - time.monotonic() if deadline_at is not None else None
-        if restzeit is not None and restzeit <= 0:
-            raise ProviderRequestError(
-                "openmeteo",
-                f"Zeitbudget (FETCH_DEADLINE_SECONDS={FETCH_DEADLINE_SECONDS:.0f}s) "
-                "vor diesem Versuch bereits aufgebraucht",
-            )
-        request_timeout = TIMEOUT if restzeit is None else min(TIMEOUT, restzeit)
+        request_timeout = capped_timeout_or_raise(
+            provider_name="openmeteo",
+            base_timeout=TIMEOUT,
+            deadline_at=deadline_at,
+            budget_label="FETCH_DEADLINE_SECONDS",
+            budget_seconds=FETCH_DEADLINE_SECONDS,
+        )
         host = base_host or BASE_HOST
         url = f"{host}{endpoint}"  # host+path ohne Query (params separat)
         try:
@@ -740,20 +776,27 @@ class OpenMeteoProvider:
         location: "Location",
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
-    ) -> Dict[datetime, Tuple[Optional[float], Optional[float]]]:
+    ) -> Dict[datetime, "EnsembleHourStats"]:
         """
         Fetch ensemble spread from OpenMeteo Ensemble API. Best-effort.
 
-        Issue #121 / AC-3, AC-6: Returns dict mapping timestamp -> (spread_t2m_k,
-        spread_precip_mm). On ANY failure (HTTP error, timeout, connection error,
-        malformed response) returns {} - never raises to caller (AC-6).
+        Issue #121 / AC-3, AC-6: Returns dict mapping timestamp -> EnsembleHourStats
+        (spread_t2m_k, spread_precip_mm, thunder_member_share_pct). On ANY failure
+        (HTTP error, timeout, connection error, malformed response) returns {} -
+        never raises to caller (AC-6).
 
         Spread is computed as stdev across ensemble members. Requires >=5 valid
         members per hour; otherwise that hour's spread is None.
+
+        Issue #1983 (Gewitter S6): zusaetzlich `weather_code` je Stunde ueber
+        alle Member-/Kontrolllauf-Spalten von ICON-EPS und GEFS (OHNE
+        `weather_code_ecmwf_ifs04`, liefert keine Member) ausgewertet --
+        Anteil der Gewittercodes (95/96/99) an den gueltigen Werten, `None`
+        bei weniger als `ENSEMBLE_THUNDER_MIN_MEMBERS` gueltigen Werten.
         """
         params = _punkt_params(
             location,
-            hourly="temperature_2m,precipitation",
+            hourly="temperature_2m,precipitation,weather_code",
             models="ecmwf_ifs04,icon_seamless,gfs_seamless",
             timezone="UTC",
         )
@@ -785,8 +828,14 @@ class OpenMeteoProvider:
             # Collect all member keys for temperature_2m and precipitation.
             temp_keys = [k for k in hourly.keys() if k.startswith("temperature_2m")]
             precip_keys = [k for k in hourly.keys() if k.startswith("precipitation")]
+            # Issue #1983: alle Member-/Kontrolllauf-Spalten fuer weather_code,
+            # OHNE weather_code_ecmwf_ifs04 (liefert keine Member, Spec Punkt 1).
+            wcode_keys = [
+                k for k in hourly.keys()
+                if k.startswith("weather_code") and "ecmwf" not in k
+            ]
 
-            result: Dict[datetime, Tuple[Optional[float], Optional[float]]] = {}
+            result: Dict[datetime, "EnsembleHourStats"] = {}
             for i, time_str in enumerate(times):
                 try:
                     ts = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
@@ -815,7 +864,27 @@ class OpenMeteoProvider:
 
                 spread_t = statistics.stdev(temp_vals) if len(temp_vals) >= 5 else None
                 spread_p = statistics.stdev(precip_vals) if len(precip_vals) >= 5 else None
-                result[ts] = (spread_t, spread_p)
+
+                # Issue #1983: Gewittercode-Anteil ueber alle gueltigen
+                # weather_code-Werte dieser Stunde.
+                n_valid = 0
+                n_thunder = 0
+                for k in wcode_keys:
+                    arr = hourly.get(k, [])
+                    if i >= len(arr) or arr[i] is None:
+                        continue
+                    n_valid += 1
+                    if arr[i] in THUNDER_CODES:
+                        n_thunder += 1
+                thunder_share: Optional[int] = None
+                if n_valid >= ENSEMBLE_THUNDER_MIN_MEMBERS:
+                    thunder_share = int(round(100 * n_thunder / n_valid))
+
+                result[ts] = EnsembleHourStats(
+                    spread_t2m_k=spread_t,
+                    spread_precip_mm=spread_p,
+                    thunder_member_share_pct=thunder_share,
+                )
 
             return result
         except Exception as e:
@@ -845,6 +914,7 @@ class OpenMeteoProvider:
             "timezone": "UTC",
             "start_date": start.strftime("%Y-%m-%d"),
             "end_date": end.strftime("%Y-%m-%d"),
+            **OPENMETEO_EINHEITEN,
         }
         try:
             logger.debug("Fetching UV from Air Quality API (CAMS)")
@@ -1174,7 +1244,7 @@ class OpenMeteoProvider:
             if spreads:
                 now_utc = datetime.now(timezone.utc)
                 # Build a lookup with naive UTC ts to match primary timeseries.
-                spreads_naive: Dict[datetime, Tuple[Optional[float], Optional[float]]] = {}
+                spreads_naive: Dict[datetime, "EnsembleHourStats"] = {}
                 for k, v in spreads.items():
                     k_naive = k.replace(tzinfo=None) if k.tzinfo is not None else k
                     spreads_naive[k_naive] = v
@@ -1184,7 +1254,11 @@ class OpenMeteoProvider:
                     spread = spreads_naive.get(dp_ts_naive)
                     if spread is None:
                         continue
-                    s_t, s_p = spread
+                    # Nur Typanpassung (EnsembleHourStats statt 2-Tupel) --
+                    # KEINE modelllauf-Semantik in diesem Pfad (Spec
+                    # "Abgrenzung: fetch_forecast(enrich_ensemble=True)").
+                    s_t = spread.spread_t2m_k
+                    s_p = spread.spread_precip_mm
                     dp.spread_t2m_k = s_t
                     dp.spread_precip_mm = s_p
                     if s_t is not None and s_p is not None:
@@ -1196,11 +1270,7 @@ class OpenMeteoProvider:
         # WEATHER-05b: Check for missing metrics and fetch fallback
         cache = self._load_availability_cache()
         if cache is None:
-            try:
-                logger.info("Availability cache missing/expired — auto-probing...")
-                cache = self.probe_model_availability()
-            except Exception as e:
-                logger.warning("Auto-probe failed: %s", e)
+            cache = self._auto_probe_single()
         if cache is not None:
             primary_info = cache["models"].get(model_id)
             if primary_info:

@@ -3,7 +3,7 @@ entity_id: fix_1219_verify_flow_2a_ii
 type: feature
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [mail, security, resend, verification, double-opt-in]
 workflow: 1219-verify-flow-2a-ii

@@ -30,6 +30,11 @@ tags: []
 >
 > Im Zweifel vor dem Spec-Schreiben grep auf den betroffenen Symbol-Namen — Server-Code (Go vs. Python) und UI-Code (SvelteKit vs. Server-Templates) sind getrennt. Es gab in der Vergangenheit Doppelarbeit, weil Specs Helper-Funktionen in der falschen Schicht verortet haben (Issue #129).
 
+> **PFLICHT — Querschnitts-Prüfpunkte (CLAUDE.md):**
+> - **Trip/Ortsvergleich-Teilung:** Gibt es zum neuen Baustein ein Trip- bzw. Compare-Pendant? Dann geteilt unter `shared/` (Parameter `context="route"|"vergleich"`) — eine einseitige Neuanlage braucht hier eine dokumentierte Begründung (Pendant-Sperre, `docs/reference/gates_und_ratschen.md`).
+> - **Mandantentrennung:** Bewegt die Änderung Nutzerdaten, wird mit **zwei verschiedenen Nutzern** getestet; `user_id` kommt aus dem Auth-Kontext, nie `"default"`.
+> - **Kanäle:** Betrifft die Änderung Briefing- oder Alarm-Inhalt, sind alle vier Kanäle (E-Mail · Telegram · SMS · Premium-SMS) benannt — gleicher Inhalt, kanalgerechte Form.
+
 ## Estimated Scope
 
 - **LoC:** [Zahl oder Bereich, z.B. ~50]

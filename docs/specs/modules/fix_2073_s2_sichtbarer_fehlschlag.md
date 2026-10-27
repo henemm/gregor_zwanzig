@@ -3,7 +3,7 @@ entity_id: fix_2073_s2_sichtbarer_fehlschlag
 type: module
 created: 2026-08-22
 updated: 2026-08-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [observability, track-resolution, diagnostics]
 ---

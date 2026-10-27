@@ -985,7 +985,7 @@ def test_abrufzahl_haengt_nicht_an_der_zahl_gueltiger_warnungen(monkeypatch):
     und einmal 0, einmal 15, einmal 60 gleichzeitig gueltige, ortsrelevante
     mehrtaegige Warnungen (plausibel bei einer landesweiten, bezirksweise
     ausgesprochenen Hitzewelle -- der Bestand ist laenderweit geteilt, nicht pro
-    Tour), WHEN der Dienst 24 Stunden im heutigen Aufrufmuster laeuft, THEN ist
+    Trip), WHEN der Dienst 24 Stunden im heutigen Aufrufmuster laeuft, THEN ist
     die Zahl der echten Abrufe in allen drei Faellen GLEICH und unter 100.
 
     Das war der Kern von Adversary F007: mit der Rueckfrage-Mechanik aus

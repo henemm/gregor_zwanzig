@@ -3,7 +3,7 @@ entity_id: fix_2075_ende_am_radar_horizont
 type: module
 created: 2026-08-22
 updated: 2026-08-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, nowcast, radar, dauer, ende, bugfix]
 ---

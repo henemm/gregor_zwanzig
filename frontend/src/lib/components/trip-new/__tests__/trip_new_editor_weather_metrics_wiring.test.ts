@@ -49,8 +49,10 @@ describe('AC-1/AC-2/AC-3 (Test 4): handleWeatherMetricsChange schreibt weatherMe
 	});
 
 	test('beide WeatherMetricsTab-Mounts (Desktop+Mobile) uebergeben onWeatherMetricsChange', () => {
-		const mounts = code.match(/<WeatherMetricsTab\b[^>]*\/>/g) ?? [];
-		assert.equal(mounts.length, 2, `Erwartet genau 2 WeatherMetricsTab-Mounts, gefunden: ${mounts.length}`);
+		// #1743: der Anlege-Editor mountet den geteilten Baustein, der die Rueckkanaele
+		// unveraendert an WeatherMetricsTab weiterreicht (Rest-Props `...wetter`).
+		const mounts = code.match(/<WetterMetrikenVersandPanel\b[^>]*\/>/g) ?? [];
+		assert.equal(mounts.length, 2, `Erwartet genau 2 WetterMetrikenVersandPanel-Mounts, gefunden: ${mounts.length}`);
 		for (const [i, m] of mounts.entries()) {
 			assert.match(
 				m,
@@ -102,8 +104,10 @@ describe('AC-2/AC-3/AC-6 (Test 4-6, Issue #1775): handleDayWindowChange + stubTr
 	});
 
 	test('beide WeatherMetricsTab-Mounts (Desktop+Mobile) uebergeben onDayWindowChange', () => {
-		const mounts = code.match(/<WeatherMetricsTab\b[^>]*\/>/g) ?? [];
-		assert.equal(mounts.length, 2, `Erwartet genau 2 WeatherMetricsTab-Mounts, gefunden: ${mounts.length}`);
+		// #1743: der Anlege-Editor mountet den geteilten Baustein, der die Rueckkanaele
+		// unveraendert an WeatherMetricsTab weiterreicht (Rest-Props `...wetter`).
+		const mounts = code.match(/<WetterMetrikenVersandPanel\b[^>]*\/>/g) ?? [];
+		assert.equal(mounts.length, 2, `Erwartet genau 2 WetterMetrikenVersandPanel-Mounts, gefunden: ${mounts.length}`);
 		for (const [i, m] of mounts.entries()) {
 			assert.match(
 				m,
@@ -138,7 +142,7 @@ describe('Test 4 (Ende-zu-Ende der Anlage): buildCreateTripPayload uebernimmt ei
 	// Auswahl unveraendert im POST-Payload -- nicht die anfaengliche [].
 	test('eine im Dialog abgewaehlte Groesse (enabled=false) bleibt im Payload erhalten', () => {
 		const state: CreateTripState = {
-			name: 'Testtour',
+			name: 'Test-Trip',
 			startDate: '2026-06-15',
 			stages: [{ id: 1, name: 'Etappe 1', waypoints: [] }],
 			weatherMetrics: [

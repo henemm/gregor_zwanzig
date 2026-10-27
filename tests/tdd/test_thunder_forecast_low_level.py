@@ -87,7 +87,7 @@ class TestThunderEntryFromTrendRowLow:
                 HourlyValue(hour=16, value=1.0),
             ),
         }
-        entry = TripReportSchedulerService()._thunder_entry_from_trend_row(row, _TARGET)
+        entry = TripReportSchedulerService(user_id="default")._thunder_entry_from_trend_row(row, _TARGET)
 
         assert entry["level"] == ThunderLevel.LOW
         assert entry["hour"] == 14, f"Erwartet fruehste Stunde 14, war {entry!r}"
@@ -103,7 +103,7 @@ class TestThunderEntryFromTrendRowLow:
             "thunder": "HIGH",
             "hourly_thunder": (HourlyValue(hour=9, value=3.0),),
         }
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
 
         med_entry = svc._thunder_entry_from_trend_row(med_row, _TARGET)
         high_entry = svc._thunder_entry_from_trend_row(high_row, _TARGET)
@@ -132,7 +132,7 @@ class TestBuildThunderForecastLow:
         ]
         seg = _segment(1, points, thunder_level_max=ThunderLevel.LOW)
 
-        fc = TripReportSchedulerService()._build_thunder_forecast(seg, _TARGET, tz=_UTC)
+        fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(seg, _TARGET, tz=_UTC)
 
         assert fc is not None and "+1" in fc, f"Kein +1-Eintrag: {fc!r}"
         entry = fc["+1"]
@@ -143,8 +143,12 @@ class TestBuildThunderForecastLow:
             f"F005: LOW darf NICHT als starkes Gewitter gemeldet werden: {entry['text']!r}"
         )
         assert entry["text"] != med_text
-        assert "leicht" in entry["text"].lower(), (
-            f"LOW-Text muss 'leicht' benennen (Skala AC-6): {entry['text']!r}"
+        # #2176: der LOW-Text benennt keine Gewitterstufe mehr, sondern die
+        # Luftmasse -- die Trennschaerfe gegen MED/HIGH bleibt die Zusicherung
+        # dieses Tests und wird hier positiv festgehalten (Onset-Stunde
+        # mitgebunden, sonst bliebe von der Zeitangabe nichts bewacht).
+        assert entry["text"] == "Schwaches Signal (leicht) ab 14:00", (
+            f"LOW-Text muss die Luftmassen-Aussage tragen (#2176): {entry['text']!r}"
         )
 
     def test_med_and_high_text_unchanged(self):
@@ -159,7 +163,7 @@ class TestBuildThunderForecastLow:
                 thunder=ThunderLevel.HIGH if h == 9 else ThunderLevel.NONE)
             for h in range(0, 24)
         ]
-        svc = TripReportSchedulerService()
+        svc = TripReportSchedulerService(user_id="default")
 
         med_fc = svc._build_thunder_forecast(
             _segment(1, med_points, thunder_level_max=ThunderLevel.MED), _TARGET, tz=_UTC,
@@ -184,7 +188,7 @@ class TestBuildThunderForecastLow:
         ]
         seg = _segment(1, points, thunder_level_max=ThunderLevel.LOW)
 
-        fc = TripReportSchedulerService()._build_thunder_forecast(seg, _TARGET, tz=_UTC)
+        fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(seg, _TARGET, tz=_UTC)
 
         assert fc["+1"]["level"] == ThunderLevel.LOW, (
             f"LOW muss gegen NONE gewinnen, nicht gleichrangig verloren gehen: {fc!r}"

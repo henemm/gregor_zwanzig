@@ -108,7 +108,7 @@ RAIN_ONSET_METRIK = "precipitation_heavy_onset"
 # erscheinen im Alarmtext zeichengleich als Ortszeit.
 ISLAND_LAT, ISLAND_LON = 64.13, -21.90
 # Alpen-Koordinate + Modell fuer die ECHTE Gewitter-Fusion (Gebiet DE_ALPEN,
-# geeichte CAPE-Leiter 300/750/1200 J/kg -> 400 = leicht, 800 = mittel).
+# geeichte CAPE-Leiter 300/1000/2500 J/kg, #2178 -> 400 = leicht, 1500 = mittel).
 ALPEN_LAT, ALPEN_LON, MODELL = 47.0, 12.0, "icon_d2"
 
 TAG = date(2026, 8, 20)
@@ -384,7 +384,7 @@ def _tagesreihe_mit_nacht_und_tag_gewitter() -> list[ForecastDataPoint]:
     das Nacht-Ereignis waeren beide Zahlen zufaellig gleich und der Test
     blind (E2: nicht nachruestbar).
     """
-    cape = {2: 400.0, 14: 800.0, 15: 800.0, 16: 800.0}
+    cape = {2: 400.0, 14: 1500.0, 15: 1500.0, 16: 1500.0}
     return _fusioniere([
         _dp(h, cape=cape.get(h, 200.0), cin=5.0) for h in range(0, 24)
     ])
@@ -696,6 +696,7 @@ def _premium_settings(port: int) -> Settings:
 
 def _pruefe_vier_kanaele(flaeche: str, texte: dict[str, str], stub) -> None:
     from output.channels.premium_sms import PremiumSmsOutput
+    from output.channels.recipient import PremiumSmsRecipient
 
     for kanal in ("email_html", "email_plain", "telegram"):
         text = texte[kanal]
@@ -716,7 +717,14 @@ def _pruefe_vier_kanaele(flaeche: str, texte: dict[str, str], stub) -> None:
         f"nicht.\n{texte['sms']}"
     )
 
-    PremiumSmsOutput(_premium_settings(stub.port)).send("Alarm", texte["sms"])
+    # #1412 S4b: Empfaenger = gelernte Rueckadresse aus dem Profil.
+    from tests.helpers.sms_empfaenger import mit_profil_rueckadresse
+
+    settings = _premium_settings(stub.port)
+    uid = mit_profil_rueckadresse(f"kunde-onset-{flaeche}", settings)
+    PremiumSmsOutput(
+        settings, recipient=PremiumSmsRecipient.for_user(uid, settings),
+    ).send("Alarm", texte["sms"])
     assert len(stub.received) == 1, (
         f"AC-9 ({flaeche}/premium_sms): erwartet GENAU EINEN Versand, "
         f"bekommen: {stub.received!r}"

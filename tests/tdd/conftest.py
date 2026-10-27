@@ -52,7 +52,7 @@ REPO_DIR = Path("/home/hem/gregor_zwanzig")
 
 
 # ---------------------------------------------------------------------------
-# Zwei-Zonen-Tour -- geteilter Ort (Issue #1727 S5a, Spec-Sektion "Testfixtur")
+# Zwei-Zonen-Trip -- geteilter Ort (Issue #1727 S5a, Spec-Sektion "Testfixtur")
 #
 # Gehoben aus tests/tdd/test_drilldown_day_window_local_date.py (#1470).
 # Wellington und Vizzavona liegen zwoelf Stunden auseinander: genau die
@@ -65,7 +65,7 @@ WP_KORSIKA = (42.1, 9.0)    # Vizzavona  -> Europe/Paris,     im August UTC+2
 
 
 def trip_two_zones(
-    day0: _date, trip_id: str = "zwei-zonen", trip_name: str = "Zwei-Zonen-Tour",
+    day0: _date, trip_id: str = "zwei-zonen", trip_name: str = "Zwei-Zonen-Trip",
 ):
     """Etappe 0 in Neuseeland, ab Etappe 1 auf Korsika (drei Tage ab ``day0``)."""
     from app.trip import Stage, Trip, Waypoint

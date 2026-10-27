@@ -78,6 +78,8 @@ entdoppelt (`resolve_location_tz`), nicht über den Scanner erzwungen.
 """
 from __future__ import annotations
 
+import functools as _functools
+
 import ast
 import re
 from pathlib import Path
@@ -410,6 +412,18 @@ def _find_violations(path: Path) -> dict[str, str]:
 
 
 def _all_violations() -> dict[str, str]:
+    """Gecachter Mantel um ``_all_violations_berechnen()`` -- Kopie je Aufruf.
+
+    CI-Rot 2026-10-22 (Familie B): der Scan der Produktionsflaeche ist pro
+    Lauf deterministisch (dieselben Dateien, dasselbe Ergebnis), wurde aber von
+    jedem Test dieser Datei neu gerechnet. Einmal rechnen, allen liefern;
+    die synthetischen Wirkungsnachweise gehen weiter ueber ``_find_violations(path)``
+    und sind davon unberuehrt."""
+    return dict(_all_violations_berechnen())
+
+
+@_functools.cache
+def _all_violations_berechnen() -> dict[str, str]:
     violations: dict[str, str] = {}
     for path in _scan_files():
         violations.update(_find_violations(path))
@@ -653,7 +667,7 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     #   src/services/stage_weather.py::_to_utc_date::0
     #   src/services/trip_alert.py::_briefing_precip_for_onset::0
     #   src/services/trip_alert.py::check_radar_alerts::0
-    "src/services/forecast_budget.py::_today_utc::0": "BEWUSST-UTC(#1345) (vormals :130) — Kontingent-Tag bewusst in UTC gerechnet: Zaehlwerk fuer das Anfrage-Budget, kein Nutzerdatum.",
+    "src/services/forecast_budget.py::_today_utc::0": "BEWUSST-UTC(#1345) (vormals :130) — Kontingent-Tag bewusst in UTC gerechnet, NICHT in der Zeitzone des Nutzers: der Schnitt haengt am Konto des Anbieters, nicht am Kalender des Nutzers. Seit #2387 partitioniert derselbe Tagesschnitt auch die Toepfe je Nutzer (ADR-0075) — die Begruendung ist damit bewusst-UTC, nicht mehr nutzerlos.",
     "src/services/official_alerts/meteoalarm_budget.py::_now_ts::0": "BEWUSST-UTC(#1345) (vormals :167) — Kontingent-Zeitstempel bewusst in UTC, reines Zaehlwerk ohne Nutzeranzeige.",
     "src/services/official_alerts/meteoalarm_budget.py::_today_utc::0": "BEWUSST-UTC(#1345) (vormals :176) — Kontingent-Tag bewusst in UTC, reines Zaehlwerk ohne Nutzeranzeige.",
     "src/services/weather_extractor.py::_to_naive_utc::0": "BEWUSST-UTC(#1345) (vormals :32) — Naiv-Guard nach Hausnorm #1345: naiv == UTC, keine Ortszeit-Ausgabe.",

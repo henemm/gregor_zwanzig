@@ -3,7 +3,7 @@ entity_id: fix_1491_gewitter_ampelkreis
 type: bugfix
 created: 2026-08-04
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, mail, ampel, renderer, issue-1491, issue-1474, issue-1419]
 ---
@@ -153,7 +153,7 @@ und kein Freigabegegenstand dieser Spec — bindend sind die Zuordnung (Tabelle 
     Gewitter-Zelle dieser Stunde auf Strich prüfen und explizit ausschließen, dass dort ein
     grüner Kreis steht.
 
-- **AC-2 (ruhige Stunde zeigt grünen Kreis statt Strich):** Given eine Stunde mit geprüfter
+- **AC-2:** (ruhige Stunde zeigt grünen Kreis statt Strich) Given eine Stunde mit geprüfter
   Entwarnung (`dp.thunder_level == ThunderLevel.NONE`) / When dieselbe Mail gerendert wird /
   Then zeigt die Gewitter-Spalte für diese Stunde einen grünen Ampel-Kreis — nicht mehr den
   bisherigen Strich.
@@ -161,28 +161,28 @@ und kein Freigabegegenstand dieser Spec — bindend sind die Zuordnung (Tabelle 
     unterscheidbar von der Strich-Zelle aus AC-1 (Gegenprobe: AC-1 und AC-2 dürfen nicht
     dasselbe Ergebnis liefern).
 
-- **AC-3 (alle vier Stufen als Ampel-Kreis, kein Blitzsymbol mehr):** Given vier Stunden mit
+- **AC-3:** (alle vier Stufen als Ampel-Kreis, kein Blitzsymbol mehr) Given vier Stunden mit
   je einer der Stufen kein/leicht/mittel/hoch / When die Mail gerendert wird / Then zeigt
   jede Stunde den zugehörigen Ampel-Kreis (grün/gelb/orange/rot) in der Gewitter-Spalte, und
   in keiner der vier Zellen erscheint ein Blitzsymbol (`⚡`) oder das Wort `mögl.`.
   - Test: vier gerenderte Zellen (eine je Stufe) auf die jeweilige Kreisfarbe geprüft, plus
     Abwesenheitsprüfung von `⚡` und `mögl.` in der Gewitter-Spalte.
 
-- **AC-4 (Text-Fassung zeigt die vier Wörter, keine Blitzsymbole, kein „mögl."):** Given
+- **AC-4:** (Text-Fassung zeigt die vier Wörter, keine Blitzsymbole, kein „mögl.") Given
   dieselben vier Stufen / When der Klartext-Teil der Mail bzw. die schmale Darstellung
   gerendert wird / Then steht in der Gewitter-Spalte das jeweilige Wort `kein`/`leicht`/
   `mittel`/`hoch`, nirgends ein Blitzsymbol oder `mögl.`.
   - Test: Klartext-Rendering für alle vier Stufen, Wortsuche in der Gewitter-Spalte je
     Stufe, Abwesenheitsprüfung von `⚡`/`mögl.`.
 
-- **AC-5 (Zell-Tönung widerspricht dem Kreis nie mehr):** Given eine Stunde mit Stufe
+- **AC-5:** (Zell-Tönung widerspricht dem Kreis nie mehr) Given eine Stunde mit Stufe
   `LOW` und eine mit Stufe `MED` / When die HTML-Mail gerendert wird / Then hat die
   `LOW`-Zelle eine andere Hintergrundfarbe als die `MED`-Zelle (gelb-Ton vs. orange-Ton) —
   die beiden Stufen sind nicht mehr farblich ununterscheidbar getönt.
   - Test: Hintergrundfarbe der `LOW`- und der `MED`-Zelle aus dem gerenderten HTML
     extrahieren und auf Ungleichheit prüfen (bisher: beide identisch orange).
 
-- **AC-6 (Widerspruchsfreiheit an der ganzen gerenderten Mail — der eigentliche Bug):**
+- **AC-6:** (Widerspruchsfreiheit an der ganzen gerenderten Mail — der eigentliche Bug)
   Given eine Etappe, deren einzige Gewitterstunde `LOW` trägt (Kurzfassung und Prosa-Pille
   melden dadurch ein Gewitter für diese Stunde) / When die vollständige Briefing-Mail
   gerendert wird / Then meldet die Stundentabelle für exakt dieselbe Stunde NICHT `–`/`kein`
@@ -193,7 +193,7 @@ und kein Freigabegegenstand dieser Spec — bindend sind die Zuordnung (Tabelle 
     Genau dieser kombinierte Test hätte den ursprünglichen Bug gefangen — ein isolierter
     Aufruf des Zellformatierers allein hätte das nicht getan.
 
-- **AC-7 (Ortsvergleich: unverändertes Aussehen, geteilte Herkunft):** Given eine
+- **AC-7:** (Ortsvergleich: unverändertes Aussehen, geteilte Herkunft) Given eine
   Ortsvergleich-Mail mit den Stufen leicht/mittel/hoch / When sie gerendert wird / Then
   zeigt sie exakt dieselben Wörter **und dieselben Zell-Tönungsfarben** wie vor dieser
   Änderung — kein am gerenderten Ergebnis ablesbarer Unterschied zum bisherigen

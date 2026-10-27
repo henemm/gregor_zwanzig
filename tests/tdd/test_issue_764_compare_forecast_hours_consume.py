@@ -100,7 +100,12 @@ def _capture_forecast_hours(preset: dict, location, tmp_path) -> int:
     from app.config import Settings
 
     user_id = preset["_user_id"]
-    settings = Settings().with_user_profile(user_id)
+    # #1196 Klasse C: Empfaenger explizit setzen statt aus der Host-.env erben.
+    # Der Helper prueft `settings.mail_to` VOR dem Engine-Aufruf (#1452) —
+    # ohne .env (CI-Runner) brach er dort mit "kein Empfaenger" ab, bevor der
+    # beobachtete forecast_hours-Wert ueberhaupt erreicht wurde. Die Adresse
+    # wird nie angeschrieben: die Recording-Engine bricht vor SMTP ab.
+    settings = Settings(mail_to="empfaenger@example.com")
 
     original_engine = ce_mod.ComparisonEngine
 

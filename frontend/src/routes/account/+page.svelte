@@ -3,7 +3,7 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Btn } from '$lib/components/atoms';
-	import { api } from '$lib/api.js';
+	import { api, downloadUserDataExport, langlaeufer } from '$lib/api.js';
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
@@ -11,9 +11,27 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { MetricPreset, UserTier } from '$lib/types';
+	import { TIER_LABELS } from '$lib/admin';
 	import { metricCountLabel, showDefaultBadge, isValidRename, applyRename, removePreset, isEmpty } from '$lib/utils/presetCardHelpers';
 	import { formatNextRun } from '$lib/utils/schedulerTime';
+	import { ABMELDE_MERKMAL, merkeAbmeldung, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
+	import { isWebAuthnSupported, registerPasskey, deletePasskey, type RegisteredPasskey } from '$lib/passkey';
+	import { profileSaveErrorMessage } from './profileSaveError';
+	import { lastRunDot } from './schedulerLastRun';
+	import PremiumSmsLinkCard from '$lib/components/account/PremiumSmsLinkCard.svelte';
+	import {
+		shouldShowPremiumSmsLinkCard,
+		resolveGenerateClick,
+		resolveDialogAction,
+		errorMessageFrom
+	} from '$lib/utils/premiumSmsLinkCodeHelpers';
+	import { shouldShowSmsUsageRow } from '$lib/utils/smsDailyUsageHelpers';
+	import { countActive, formatQuotaUsage } from '$lib/utils/mengenQuoteHelpers';
+	import type { ProfileQuota } from '$lib/types';
 	let { data } = $props();
+
+	// Issue #2482: Tarif-Grenzen aus dem Profil; fehlt das Feld, bleibt die Anzeige bei "x".
+	const quota = $derived(data.profile?.quota as ProfileQuota | undefined);
 
 	let displayName = $state(data.profile?.display_name ?? '');
 	let mailTo = $state(data.profile?.mail_to ?? '');
@@ -28,7 +46,6 @@
 	let telegramPollInterval: ReturnType<typeof setInterval> | null = null;
 	let successMsg = $state<string | null>(null);
 	let errorMsg = $state<string | null>(null);
-	let deleteErrorMsg = $state<string | null>(null);
 
 	type TestStatus = 'idle' | 'loading' | 'ok' | 'error';
 	let testStatus = $state<Record<string, TestStatus>>({email: 'idle', telegram: 'idle'});
@@ -41,14 +58,74 @@
 	let presetError = $state<string | null>(null);
 	let deletePresetTarget: MetricPreset | null = $state(null);
 	let showDeleteAccountDialog = $state(false);
+	let showLogoutAllDialog = $state(false);
+	let logoutAllErrorMsg = $state<string | null>(null);
+
+	// Issue #2154 Scheibe B — Premium-SMS-Verknüpfungscode. `linkCodeValue`
+	// bleibt bewusst rein lokaler Client-State (AC-7): er fliesst nie in
+	// `data`/`PageData` und verschwindet bei Reload, weil das Backend nur den
+	// Hash haelt, nie den Klartext erneut liefert.
+	let linkCodeExists = $state(data.premiumSmsLinkCodeExists);
+	let linkCodeValue = $state<string | null>(null);
+	let linkCodeBusy = $state(false);
+	let linkCodeErrorMsg = $state<string | null>(null);
+	let showRenewConfirm = $state(false);
+
+	function onGenerateOrRenewClick() {
+		const decision = resolveGenerateClick(linkCodeExists, linkCodeBusy);
+		if (decision === 'confirm-dialog') {
+			showRenewConfirm = true;
+			return;
+		}
+		if (decision === 'call-post') runLinkCodeGenerate();
+	}
+
+	function onDialogConfirm() {
+		const decision = resolveDialogAction('confirm');
+		showRenewConfirm = false;
+		if (decision === 'call-post') runLinkCodeGenerate();
+	}
+
+	function onDialogCancel() {
+		resolveDialogAction('cancel');
+		showRenewConfirm = false;
+	}
+
+	async function runLinkCodeGenerate() {
+		linkCodeBusy = true;
+		linkCodeErrorMsg = null;
+		try {
+			const res = await api.post<{ code: string }>('/api/auth/premium-sms-link-code', {});
+			linkCodeValue = res.code;
+			linkCodeExists = true;
+		} catch (e: unknown) {
+			linkCodeErrorMsg = errorMessageFrom(e, 'Code-Vorgang fehlgeschlagen');
+		} finally {
+			linkCodeBusy = false;
+		}
+	}
+
+	// Issue #2270 — Datenexport nach DSGVO Art. 20.
+	let exportBusy = $state(false);
+	let exportErrorMsg = $state<string | null>(null);
+
+	// Issue #2246 — Passkey-Karte. Die Liste kommt aus dem ohnehin geladenen
+	// Profil, ein eigener Lese-Abruf waere ein zweiter Weg zu denselben Daten.
+	// `null` heisst "noch nicht gemessen": WebAuthn laesst sich erst im Browser
+	// pruefen, und ein serverseitiges `false` liesse den Hinweis kurz aufblitzen.
+	let passkeySupported = $state<boolean | null>(null);
+	let showPasskeyDialog = $state(false);
+	let passkeyLabel = $state('');
+	let passkeyBusy = $state(false);
+	let passkeySuccessMsg = $state<string | null>(null);
+	let passkeyErrorMsg = $state<string | null>(null);
+	// Rueckfrage vor dem Loeschen (PO-Entscheid 2026-09-08): das Entfernen ist
+	// nicht umkehrbar, und jede andere destruktive Aktion dieser Seite fragt nach.
+	let deletePasskeyTarget = $state<RegisteredPasskey | null>(null);
+	const passkeys = $derived((data.profile?.passkeys ?? []) as RegisteredPasskey[]);
 
 	// Issue #1068 — Nutzerlevel-Badge (immer sichtbar). Der Wert kommt aus
 	// data.profile.tier (Response-Feld ist serverseitig immer gesetzt, Default "free").
-	const TIER_LABELS: Record<UserTier, string> = {
-		free: 'Free',
-		standard: 'Standard',
-		premium: 'Premium'
-	};
 	function tierLabel(tier: unknown): string {
 		return TIER_LABELS[(tier as UserTier)] ?? 'Free';
 	}
@@ -60,17 +137,26 @@
 	let requestedTierChoice = $state<UserTier>('standard');
 	let tierChangeStatus = $state<TestStatus>('idle');
 	let tierChangeError = $state<string | null>(null);
+	// Issue #2436 — Antwort des Servers: wurde der Betreiber benachrichtigt?
+	let tierChangeNotified = $state<boolean | null>(null);
 	const pendingTier = $derived(
 		data.profile?.requested_tier && data.profile.requested_tier !== data.profile?.tier
 			? (data.profile.requested_tier as UserTier)
 			: null
 	);
+	const tierNotNotified = $derived(
+		!!pendingTier && !data.profile?.requested_notified_at
+	);
 
 	async function requestTierChange() {
 		tierChangeStatus = 'loading';
 		tierChangeError = null;
+		tierChangeNotified = null;
 		try {
-			await api.post('/api/auth/tier-change-request', { requested_tier: requestedTierChoice });
+			const res = (await api.post('/api/auth/tier-change-request', {
+				requested_tier: requestedTierChoice
+			})) as { po_notified?: boolean } | undefined;
+			tierChangeNotified = res?.po_notified === true;
 			// Profil neu laden, damit requested_tier sofort im UI erscheint.
 			await invalidateAll();
 			tierChangeStatus = 'ok';
@@ -129,11 +215,69 @@
 		}
 	}
 
+	// Issue #2147 Scheibe B2 (AC-17) — ausstehende Adressaenderung: die
+	// Bestaetigungsmail an die ausstehende Adresse erneut anfordern. Der
+	// Endpunkt antwortet immer 200 (verraet nichts), die Seite quittiert daher
+	// bestaetigend.
+	let resendStatus = $state<TestStatus>('idle');
+	async function resendVerification() {
+		resendStatus = 'loading';
+		try {
+			await api.post('/api/auth/verify-email/resend', { username: data.profile?.id ?? '' });
+			resendStatus = 'ok';
+		} catch {
+			resendStatus = 'error';
+		}
+	}
+
+	// Issue #2406 (AC-13) — SMS-Nummer bestaetigen. Die Nummer, um die es geht,
+	// ist die ausstehende; ohne ausstehende die eingetragene, solange sie
+	// unbestaetigt ist. Ist die wirksame Nummer bewiesen und nichts ausstehend,
+	// gibt es nichts zu bestaetigen (kein Hinweis, keine Code-Eingabe).
+	let smsZuBestaetigen = $derived(
+		data.profile?.pending_sms_to || (data.profile?.sms_verified ? '' : (data.profile?.sms_to ?? ''))
+	);
+	let smsCode = $state('');
+	let smsVerifyStatus = $state<TestStatus>('idle');
+	let smsVerifyError = $state<string | null>(null);
+	let smsResendStatus = $state<TestStatus>('idle');
+
+	async function verifySmsCode() {
+		smsVerifyStatus = 'loading';
+		smsVerifyError = null;
+		try {
+			await api.post('/api/auth/sms/verify', { code: smsCode });
+			smsCode = '';
+			smsVerifyStatus = 'ok';
+			// Der Pending-Hinweis haengt an `data.profile` — ohne Neuladen bliebe
+			// er stehen, obwohl die Nummer bereits bewiesen ist.
+			await invalidateAll();
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string; status?: number };
+			smsVerifyError = profileSaveErrorMessage(body?.status ?? 0, body);
+			smsVerifyStatus = 'error';
+		}
+	}
+
+	async function resendSmsCode() {
+		smsResendStatus = 'loading';
+		smsVerifyError = null;
+		try {
+			await api.post('/api/auth/sms/resend', {});
+			smsResendStatus = 'ok';
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string; status?: number };
+			smsVerifyError = profileSaveErrorMessage(body?.status ?? 0, body);
+			smsResendStatus = 'error';
+		}
+	}
+
 	async function sendTest(channel: string) {
 		testStatus[channel] = 'loading';
 		testError[channel] = null;
 		try {
-			const resp = await api.post('/api/notify/test', { channel });
+			// #2361: eigenes Budget 130 s (Go-Proxy 120 s), s. `langlaeufer` in api.ts.
+			const resp = await langlaeufer.testNachricht<{ error?: string }>(channel);
 			if (resp?.error) {
 				testError[channel] = resp.error;
 				testStatus[channel] = 'error';
@@ -196,6 +340,70 @@
 		}
 	}
 
+	/**
+	 * Bezeichnung einer Passkey-Zeile: das freiwillige Label zuerst, sonst der
+	 * aus der AAGUID abgeleitete Geraetename (fehlt bei Null-AAGUID), sonst ein
+	 * neutraler Platzhalter — namenlos darf keine Zeile bleiben.
+	 */
+	function passkeyTitel(pk: RegisteredPasskey): string {
+		return pk.label?.trim() || pk.authenticator_name?.trim() || 'Unbenannter Passkey';
+	}
+
+	/** Rohe Zeremonie-Fehler in verstaendliches Deutsch uebersetzen. */
+	function passkeyFehlertext(e: unknown, ersatz: string): string {
+		const name = (e as { name?: string })?.name;
+		if (name === 'NotAllowedError' || name === 'AbortError' || name === 'TimeoutError') {
+			return 'Das Anlegen wurde abgebrochen oder hat zu lange gedauert. Bitte versuche es noch einmal.';
+		}
+		return ersatz;
+	}
+
+	async function createPasskey() {
+		// Der Dialog bleibt waehrend der Zeremonie offen und zeigt den
+		// Wartezustand — ein Dialog, der vor der Geraeteabfrage zugeht, wirkt,
+		// als sei nichts passiert. Geschlossen wird erst im `finally`.
+		passkeyBusy = true;
+		passkeySuccessMsg = null;
+		passkeyErrorMsg = null;
+		try {
+			await registerPasskey(passkeyLabel.trim());
+			passkeyLabel = '';
+			// Liste aus dem Server-Stand nachziehen statt die Seite neu zu laden.
+			await invalidateAll();
+			passkeySuccessMsg = 'Passkey angelegt';
+			setTimeout(() => (passkeySuccessMsg = null), 4000);
+		} catch (e: unknown) {
+			passkeyErrorMsg = passkeyFehlertext(
+				e,
+				'Der Passkey konnte nicht angelegt werden. Bitte versuche es noch einmal.'
+			);
+		} finally {
+			passkeyBusy = false;
+			showPasskeyDialog = false;
+		}
+	}
+
+	/** Bestaetigte Rueckfrage: erst hier wird wirklich geloescht. */
+	async function confirmDeletePasskey() {
+		const ziel = deletePasskeyTarget;
+		deletePasskeyTarget = null;
+		if (!ziel) return;
+		await removePasskey(ziel.id);
+	}
+
+	async function removePasskey(id: string) {
+		passkeySuccessMsg = null;
+		passkeyErrorMsg = null;
+		try {
+			await deletePasskey(id);
+			await invalidateAll();
+			passkeySuccessMsg = 'Passkey entfernt';
+			setTimeout(() => (passkeySuccessMsg = null), 4000);
+		} catch {
+			passkeyErrorMsg = 'Der Passkey konnte nicht entfernt werden. Bitte versuche es noch einmal.';
+		}
+	}
+
 	async function save() {
 		errorMsg = null;
 		successMsg = null;
@@ -207,9 +415,13 @@
 			});
 			successMsg = 'Profil gespeichert';
 			setTimeout(() => (successMsg = null), 4000);
+			// Issue #2147 Scheibe B2: eine Adressaenderung eines bestaetigten
+			// Kontos steht danach als ausstehend im Profil — neu laden, damit
+			// der Hinweis sofort erscheint.
+			await invalidateAll();
 		} catch (e: unknown) {
-			const body = e as { detail?: string; error?: string };
-			errorMsg = body?.detail ?? body?.error ?? 'Speichern fehlgeschlagen';
+			const body = e as { detail?: string; error?: string; status?: number };
+			errorMsg = profileSaveErrorMessage(body?.status ?? 0, body);
 		}
 	}
 
@@ -268,7 +480,10 @@
 	// Nutzer saehen UTC statt ihrer eigenen Zone. Die Uhrzeit entsteht deshalb erst
 	// nach dem Mounten im Browser; bis dahin steht dort '—'.
 	let imBrowser = $state(false);
-	onMount(() => { imBrowser = true; });
+	onMount(() => {
+		imBrowser = true;
+		passkeySupported = isWebAuthnSupported();
+	});
 
 	function getProvider(lat: number, lon: number): string {
 		return (lat >= 45 && lat <= 50 && lon >= 8 && lon <= 18)
@@ -279,18 +494,119 @@
 		trip_reports_hourly: 'Trip-Checks',
 	};
 
+	// Issue #2160 (ADR-0081): Löschen nur mit frischem Nachweis — Passwort
+	// (falls das Konto eines hat) oder Lösch-Code per E-Mail.
+	const deleteHasPassword = $derived(data.profile?.has_password === true);
+	const deleteCodeAddress = $derived(data.profile?.mail_to || data.profile?.email || '');
+	let deletePassword = $state('');
+	let deleteCode = $state('');
+	let deleteBusy = $state(false);
+	let deleteCodeSent = $state(false);
+	let deleteDialogMsg = $state<string | null>(null);
+
+	const DELETE_ERROR_TEXT: Record<string, string> = {
+		reauth_required: 'Bitte Passwort oder Lösch-Code eingeben.',
+		wrong_password: 'Das Passwort ist falsch.',
+		invalid_code: 'Der Code ist falsch, abgelaufen oder bereits benutzt.',
+		rate_limit_exceeded: 'Zu viele Versuche. Bitte warte einige Minuten.',
+		mail_failed: 'Der Code konnte nicht verschickt werden. Bitte später erneut versuchen.',
+	};
+
+	function deleteErrorText(e: unknown, fallback: string): string {
+		const body = e as { detail?: string; error?: string };
+		return (body?.error && DELETE_ERROR_TEXT[body.error]) || body?.detail || body?.error || fallback;
+	}
+
 	function deleteAccount() {
+		deletePassword = '';
+		deleteCode = '';
+		deleteCodeSent = false;
+		deleteDialogMsg = null;
 		showDeleteAccountDialog = true;
 	}
 
-	async function confirmDeleteAccount() {
-		showDeleteAccountDialog = false;
+	async function requestDeleteCode() {
+		deleteBusy = true;
+		deleteDialogMsg = null;
 		try {
-			await api.del('/api/auth/account');
-			window.location.href = '/login';
+			await api.post('/api/auth/account/delete-code', {});
+			deleteCodeSent = true;
 		} catch (e: unknown) {
-			const body = e as { detail?: string; error?: string };
-			deleteErrorMsg = body?.detail ?? body?.error ?? 'Löschen fehlgeschlagen';
+			deleteDialogMsg = deleteErrorText(e, 'Code-Versand fehlgeschlagen');
+		} finally {
+			deleteBusy = false;
+		}
+	}
+
+	async function confirmDeleteAccount() {
+		const body = deletePassword ? { password: deletePassword } : { code: deleteCode.trim() };
+		deleteBusy = true;
+		deleteDialogMsg = null;
+		// Abmelde-Muster wie "auf allen Geräten abmelden" (#2128): Merker VOR dem
+		// Aufruf, weil die Löschung die Sitzung sofort beendet.
+		merkeAbmeldung();
+		try {
+			await api.post('/api/auth/account/delete', body);
+			showDeleteAccountDialog = false;
+			window.location.href = `/login?${ABMELDE_MERKMAL}=1`;
+		} catch (e: unknown) {
+			const err = e as { status?: number };
+			if (err?.status !== 401) vergissAbmeldung();
+			deleteDialogMsg = deleteErrorText(e, 'Löschen fehlgeschlagen');
+		} finally {
+			deleteBusy = false;
+		}
+	}
+
+	// Issue #2129 AC-17: auf allen Geräten abmelden — mit Bestätigungsschritt,
+	// weil die Wirkung jedes andere Gerät des Nutzers trifft.
+	function logoutAllDevices() {
+		showLogoutAllDialog = true;
+	}
+
+	async function confirmLogoutAllDevices() {
+		showLogoutAllDialog = false;
+		// Issue #2128 AC-11: dasselbe Abmelde-Merkmal wie beim Abmelden ueber die
+		// Seitenleiste -- geraeumt wird auf der Anmeldeseite. Es steht VOR dem
+		// Aufruf und zusaetzlich im Sitzungsspeicher, weil die Abmeldung sofort
+		// serverseitig wirkt: der zentrale 401-Umleiter kann uns danach jederzeit
+		// von dieser Seite nehmen und ersetzt dabei das Weiterleitungsziel durch
+		// `/login?expired=1&redirect=…` (gemessen, #2128).
+		merkeAbmeldung();
+		try {
+			await api.post('/api/auth/logout-all', {});
+			window.location.href = `/login?${ABMELDE_MERKMAL}=1`;
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string; status?: number };
+			// Issue #2128 AC-19: gescheitert heisst NICHT abgemeldet. Der Merker
+			// muss weg -- sonst gilt der naechste, voellig regulaere
+			// Sitzungsablauf (401 -> /login?expired=1) als Abmeldung und die
+			// Anmeldeseite raeumt still den Gerätespeicher (AC-12). Gilt fuer
+			// beide Fehlerarten gleich, in denen der Nutzer auf dieser Seite
+			// bleibt: geworfener Netzfehler wie 5xx-Antwort.
+			//
+			// AUSNAHME 401: die Sitzung ist bereits fort, der Nutzer ist also
+			// tatsaechlich abgemeldet, und $lib/api leitet in diesem Moment auf
+			// die Anmeldeseite -- dort soll geraeumt werden (AC-11). Bleibt diese
+			// Umleitung wider Erwarten aus, faengt das Zeitfenster des Merkers den
+			// Fall (AC-20).
+			if (body?.status !== 401) vergissAbmeldung();
+			logoutAllErrorMsg = body?.detail ?? body?.error ?? 'Abmelden fehlgeschlagen';
+		}
+	}
+
+	// Issue #2270 — Datenexport. Der Download laeuft am JSON-Client vorbei
+	// (s. downloadUserDataExport in $lib/api).
+	async function exportiereMeineDaten() {
+		exportBusy = true;
+		exportErrorMsg = null;
+		try {
+			await downloadUserDataExport();
+		} catch (e: unknown) {
+			const body = e as { detail?: string; error?: string; message?: string };
+			exportErrorMsg = body?.detail ?? body?.error ?? body?.message ?? 'Download fehlgeschlagen';
+		} finally {
+			exportBusy = false;
 		}
 	}
 </script>
@@ -338,7 +654,7 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root>
+	<Card.Root id="kanaele">
 		<Card.Header>
 			<Card.Title>Kanäle</Card.Title>
 			<Card.Description>Wohin sollen deine Wetter-Reports gesendet werden?</Card.Description>
@@ -371,6 +687,31 @@
 				{#if testStatus.email === 'error'}
 					<span class="text-sm text-red-600">{testError.email}</span>
 				{/if}
+				{#if data.profile?.pending_contact_address}
+					<div
+						data-testid="pending-address-notice"
+						class="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+					>
+						<p>
+							Bestätigung ausstehend für <strong>{data.profile.pending_contact_address}</strong> — bis dahin
+							gehen Mails weiter an <strong>{data.profile.mail_to || data.profile.email}</strong>.
+						</p>
+						<button
+							type="button"
+							onclick={resendVerification}
+							disabled={resendStatus === 'loading'}
+							class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
+						>
+							Bestätigungsmail erneut senden
+						</button>
+						{#if resendStatus === 'ok'}
+							<span class="text-sm text-green-700">Bestätigungsmail verschickt</span>
+						{/if}
+						{#if resendStatus === 'error'}
+							<span class="text-sm text-red-700">Senden fehlgeschlagen</span>
+						{/if}
+					</div>
+				{/if}
 			</div>
 
 			<div class="space-y-2">
@@ -384,6 +725,53 @@
 					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
 				<p class="mt-1 text-xs text-gray-500">Internationales Format, z.B. +49151XXXXXXXX</p>
+				<!-- Issue #2406 (AC-13): solange die Nummer nicht per Code bewiesen ist,
+				     geht an sie keine SMS raus (Sperre in config.py). Der Hinweis macht
+				     das sichtbar und traegt den einzigen Weg heraus. -->
+				{#if smsZuBestaetigen}
+					<div
+						data-testid="sms-pending-notice"
+						class="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+					>
+						<p>
+							Bestätigung ausstehend für <strong>{smsZuBestaetigen}</strong> — bis dahin geht an
+							diese Nummer keine SMS. Den per SMS zugestellten Code hier eintragen:
+						</p>
+						<input
+							data-testid="sms-code-input"
+							name="sms_code"
+							inputmode="numeric"
+							autocomplete="one-time-code"
+							bind:value={smsCode}
+							placeholder="6-stelliger Code"
+							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+						/>
+						<div class="flex flex-wrap items-center gap-4">
+							<button
+								type="button"
+								onclick={verifySmsCode}
+								disabled={smsVerifyStatus === 'loading'}
+								class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
+							>
+								Code bestätigen
+							</button>
+							<button
+								type="button"
+								onclick={resendSmsCode}
+								disabled={smsResendStatus === 'loading'}
+								class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
+							>
+								Code erneut senden
+							</button>
+						</div>
+						{#if smsResendStatus === 'ok'}
+							<span class="text-sm text-green-700">Neuer Code verschickt</span>
+						{/if}
+						{#if smsVerifyError}
+							<span class="text-sm text-red-700">{smsVerifyError}</span>
+						{/if}
+					</div>
+				{/if}
 			</div>
 
 			<div class="space-y-2">
@@ -431,6 +819,92 @@
 			>
 				Speichern
 			</button>
+		</Card.Content>
+	</Card.Root>
+
+	<!-- Issue #2154 Scheibe B — Premium-SMS-Verknüpfungscode (nur Tier Premium) -->
+	{#if shouldShowPremiumSmsLinkCard(data.profile?.tier)}
+		<PremiumSmsLinkCard
+			tier={data.profile?.tier}
+			exists={linkCodeExists}
+			codeValue={linkCodeValue}
+			busy={linkCodeBusy}
+			errorMsg={linkCodeErrorMsg}
+			showRenewConfirm={showRenewConfirm}
+			onGenerateOrRenewClick={onGenerateOrRenewClick}
+			onDialogConfirm={onDialogConfirm}
+			onDialogCancel={onDialogCancel}
+		/>
+	{/if}
+
+	<!-- Issue #2246 — Passkeys verwalten -->
+	<Card.Root data-testid="passkeys-card">
+		<Card.Header>
+			<Card.Title>Passkeys</Card.Title>
+		</Card.Header>
+		<Card.Content class="space-y-4">
+			{#if passkeySuccessMsg}
+				<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+					{passkeySuccessMsg}
+				</div>
+			{/if}
+			{#if passkeyErrorMsg}
+				<div
+					data-testid="passkey-error"
+					class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
+				>
+					{passkeyErrorMsg}
+				</div>
+			{/if}
+
+			{#if passkeys.length === 0}
+				<p data-testid="passkey-empty" class="text-sm text-muted-foreground">
+					Du hast noch keinen Passkey. Mit einem Passkey meldest du dich per Face ID, Touch ID,
+					Windows Hello oder Sicherheitsschlüssel an — ohne Passwort.
+				</p>
+			{:else}
+				<ul class="space-y-2">
+					{#each passkeys as pk (pk.id)}
+						<li
+							data-testid="passkey-row"
+							class="flex items-start justify-between gap-3 rounded-md border border-input p-3"
+						>
+							<div class="space-y-1">
+								<span class="block text-sm font-medium">{passkeyTitel(pk)}</span>
+								{#if pk.label?.trim() && pk.authenticator_name?.trim()}
+									<span class="block text-sm text-muted-foreground">{pk.authenticator_name}</span>
+								{/if}
+								<span class="block text-sm text-muted-foreground">
+									Angelegt am {formatDate(pk.created_at)}
+								</span>
+								{#if pk.last_used_at}
+									<span data-testid="passkey-last-used" class="block text-sm text-muted-foreground">
+										Zuletzt verwendet am {formatDate(pk.last_used_at)}
+									</span>
+								{/if}
+							</div>
+							<button
+								onclick={() => (deletePasskeyTarget = pk)}
+								class="shrink-0 inline-flex items-center gap-1 min-h-[44px] text-sm text-destructive hover:underline"
+							>
+								<Trash2Icon class="h-4 w-4" aria-hidden="true" />
+								Löschen
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+
+			{#if passkeySupported === true}
+				<Btn onclick={() => (showPasskeyDialog = true)} disabled={passkeyBusy}>
+					Passkey hinzufügen
+				</Btn>
+			{:else if passkeySupported === false}
+				<p data-testid="passkey-unsupported" class="text-sm text-muted-foreground">
+					Dieser Browser oder dieses Gerät unterstützt Passkeys nicht. Melde dich mit einem anderen
+					Gerät an, um hier einen Passkey anzulegen.
+				</p>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 
@@ -576,12 +1050,15 @@
 				{:else if data.scheduler?.jobs && data.scheduler.jobs.length > 0}
 					<div class="space-y-3">
 						{#each data.scheduler.jobs.filter((j: any) => j.id in userJobs) as job}
+							{@const dot = lastRunDot(job.last_run)}
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2">
 									<span class="inline-block size-2 rounded-full"
-										class:bg-green-500={job.last_run?.status === 'ok'}
-										class:bg-red-500={job.last_run?.status === 'error'}
-										class:bg-gray-300={!job.last_run?.time}
+										data-last-run-dot={dot}
+										class:bg-green-500={dot === 'ok'}
+										class:bg-red-500={dot === 'error'}
+										class:bg-slate-500={dot === 'neutral'}
+										class:bg-gray-300={dot === 'none'}
 									></span>
 									<span class="font-medium">{userJobs[job.id]}</span>
 								</div>
@@ -620,6 +1097,16 @@
 						<p data-testid="tier-change-pending" class="text-sm text-muted-foreground mb-2">
 							Level-Wechsel zu <span class="font-medium">{tierLabel(pendingTier)}</span> beantragt — wird vom Betreiber geprüft.
 						</p>
+						{#if tierNotNotified}
+							<p
+								data-testid="tier-change-not-notified"
+								role="alert"
+								class="text-sm font-medium text-destructive border border-destructive rounded-md px-3 py-2 mb-2"
+							>
+								Der Antrag ist gespeichert, aber der Betreiber wurde nicht benachrichtigt. Bitte
+								melde dich beim Betreiber, sonst bleibt der Antrag womöglich unbemerkt.
+							</p>
+						{/if}
 					{/if}
 					<div class="flex flex-wrap items-center gap-2">
 						<select
@@ -641,7 +1128,7 @@
 							{tierChangeStatus === 'loading' ? 'Wird gesendet…' : 'Antrag stellen'}
 						</Btn>
 					</div>
-					{#if tierChangeStatus === 'ok'}
+					{#if tierChangeStatus === 'ok' && tierChangeNotified}
 						<p class="text-sm text-green-600 mt-2">Antrag gesendet</p>
 					{/if}
 					{#if tierChangeStatus === 'error' && tierChangeError}
@@ -649,21 +1136,57 @@
 					{/if}
 				</div>
 
-				<!-- Zähler -->
-				<div class="space-y-2 mb-4">
+				<!-- Zähler mit Tarif-Grenzen "x von N" (Issue #2482); unbegrenzt: nur "x" -->
+				<div class="space-y-2 mb-4" data-testid="mengen-quote">
 					<div class="flex items-center justify-between text-sm">
 						<span>Aktive Trips</span>
-						<a href="/trips" class="font-medium hover:underline">{data.trips.length}</a>
+						<a href="/trips" class="g-link-tap font-medium hover:underline" data-testid="quota-trips">{formatQuotaUsage(countActive(data.trips), quota?.trips)}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>Aktive Vergleiche</span>
-						<a href="/compare" class="font-medium hover:underline">{data.comparePresets.filter((p: any) => !p.archived_at).length}</a>
+						<a href="/compare" class="g-link-tap font-medium hover:underline" data-testid="quota-compare-presets">{formatQuotaUsage(countActive(data.comparePresets), quota?.compare_presets)}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>Locations</span>
-						<a href="/locations" class="font-medium hover:underline">{data.locations.length}</a>
+						<a href="/locations" class="g-link-tap font-medium hover:underline" data-testid="quota-locations">{formatQuotaUsage(Array.isArray(data.locations) ? data.locations.length : 0, quota?.locations)}</a>
 					</div>
 				</div>
+
+				<!-- SMS-/Premium-SMS-Tageskontingent (Issue #2412 S4b) -->
+				{#if data.smsDailyUsage && (shouldShowSmsUsageRow(data.smsDailyUsage.sms?.limit) || shouldShowSmsUsageRow(data.smsDailyUsage.premium_sms?.limit))}
+					<div data-testid="sms-daily-usage" class="mb-4">
+						<p class="text-sm font-medium mb-2">SMS-Kontingent (heute)</p>
+						{#if shouldShowSmsUsageRow(data.smsDailyUsage.sms?.limit)}
+							<div class="flex items-center justify-between text-sm">
+								<span>SMS</span>
+								<span class="font-medium">
+									{data.smsDailyUsage.sms.used} von {data.smsDailyUsage.sms.limit}
+								</span>
+							</div>
+							<p class="text-xs text-muted-foreground mb-2">
+								davon max. {data.smsDailyUsage.sms.limit - data.smsDailyUsage.sms.reserve} Briefings,
+								{data.smsDailyUsage.sms.reserve} Alarm-Reserve
+							</p>
+						{/if}
+						{#if shouldShowSmsUsageRow(data.smsDailyUsage.premium_sms?.limit)}
+							<div class="flex items-center justify-between text-sm">
+								<span>Premium-SMS</span>
+								<span class="font-medium">
+									{#if data.smsDailyUsage.premium_sms.used > data.smsDailyUsage.premium_sms.limit}
+										{data.smsDailyUsage.premium_sms.limit} von {data.smsDailyUsage.premium_sms.limit}
+										(+{data.smsDailyUsage.premium_sms.used - data.smsDailyUsage.premium_sms.limit} Antworten)
+									{:else}
+										{data.smsDailyUsage.premium_sms.used} von {data.smsDailyUsage.premium_sms.limit}
+									{/if}
+								</span>
+							</div>
+							<p class="text-xs text-muted-foreground">
+								davon max. {data.smsDailyUsage.premium_sms.limit - data.smsDailyUsage.premium_sms.reserve} Briefings,
+								{data.smsDailyUsage.premium_sms.reserve} Alarm-Reserve
+							</p>
+						{/if}
+					</div>
+				{/if}
 
 				<!-- Benachrichtigungskanäle -->
 				<div data-testid="channels" class="mb-4">
@@ -758,7 +1281,52 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root class="border-red-200">
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Anmeldungen</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<p class="mb-4 text-sm text-muted-foreground">
+				Deine Anmeldung bleibt bestehen, bis du dich abmeldest. Hast du ein Gerät verloren,
+				kannst du hier alle Anmeldungen auf einmal beenden — auch die auf Geräten, die du
+				gerade nicht zur Hand hast.
+			</p>
+			<Btn variant="outline" onclick={logoutAllDevices}>Auf allen Geräten abmelden</Btn>
+			{#if logoutAllErrorMsg}
+				<p class="mt-2 text-sm text-red-600">{logoutAllErrorMsg}</p>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+
+	<!--
+		Issue #2270: eigene Karte, bewusst VOR und nicht IN der Gefahrenzone —
+		der Export ist nichts Destruktives.
+	-->
+	<Card.Root id="datenexport" data-testid="data-export-card">
+		<Card.Header>
+			<Card.Title>Deine Daten</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<p class="mb-4 text-sm text-muted-foreground">
+				Du kannst jederzeit alles herunterladen, was zu deinem Konto gespeichert ist — Orte,
+				Trips, Vergleiche, Einstellungen und die Versand-Protokolle. Du bekommst ein
+				ZIP-Archiv; Anmelde-Merkmale und technische Fehlersuch-Protokolle sind nicht dabei.
+			</p>
+			<Btn
+				variant="outline"
+				data-testid="data-export-button"
+				disabled={exportBusy}
+				onclick={exportiereMeineDaten}
+			>
+				{exportBusy ? 'Archiv wird erstellt …' : 'Daten herunterladen'}
+			</Btn>
+			{#if exportErrorMsg}
+				<p class="mt-2 text-sm text-red-600" data-testid="data-export-error">{exportErrorMsg}</p>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root class="border-red-200" data-testid="danger-zone-card">
 		<Card.Header>
 			<Card.Title class="text-red-700">Gefahrenzone</Card.Title>
 		</Card.Header>
@@ -772,9 +1340,6 @@
 			>
 				Account löschen
 			</button>
-			{#if deleteErrorMsg}
-				<p class="mt-2 text-sm text-red-600">{deleteErrorMsg}</p>
-			{/if}
 		</Card.Content>
 	</Card.Root>
 
@@ -797,6 +1362,110 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
+	<!-- Passkey löschen Rückfrage (#2246) -->
+	<Dialog.Root
+		open={deletePasskeyTarget !== null}
+		onOpenChange={(open) => { if (!open) deletePasskeyTarget = null; }}
+	>
+		<Dialog.Content>
+			<Dialog.Header>
+				<Dialog.Title>Passkey löschen</Dialog.Title>
+				<Dialog.Description>
+					Möchtest du „{deletePasskeyTarget ? passkeyTitel(deletePasskeyTarget) : ''}" wirklich
+					löschen? Du kannst dich dann mit diesem Gerät nicht mehr ohne Passwort anmelden und musst
+					den Passkey bei Bedarf neu anlegen.
+				</Dialog.Description>
+			</Dialog.Header>
+			<Dialog.Footer>
+				<Btn
+					variant="outline"
+					data-testid="passkey-delete-cancel"
+					onclick={() => (deletePasskeyTarget = null)}>Abbrechen</Btn
+				>
+				<Btn variant="destructive" data-testid="passkey-delete-confirm" onclick={confirmDeletePasskey}
+					>Löschen</Btn
+				>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<!-- Passkey anlegen Dialog (#2246) -->
+	<Dialog.Root
+		open={showPasskeyDialog}
+		onOpenChange={(open) => { if (!open && !passkeyBusy) showPasskeyDialog = false; }}
+	>
+		<!--
+			Waehrend der Zeremonie darf sich der Dialog auf KEINEM Weg schliessen
+			(AC-9). `onOpenChange` allein reicht dafuer nicht: der Dialog schliesst
+			seinen eigenen Zustand bei Escape/Aussenklick/X selbst und meldet das
+			nur noch — der Waechter dort ueberspringt dann bloss das Zuruecksetzen
+			von `showPasskeyDialog`, die Anzeige ist da schon weg (gemessen
+			09.09.2026: Dialog nach 77 ms bis 1,5 s weg, waehrend `passkeyBusy`
+			noch stand und keine Rueckmeldung vorlag). Das Schliessen muss deshalb
+			an der Quelle abgelehnt werden; `onOpenChange` bleibt als zweite
+			Sicherung stehen.
+		-->
+		<Dialog.Content
+			escapeKeydownBehavior={passkeyBusy ? 'ignore' : 'close'}
+			interactOutsideBehavior={passkeyBusy ? 'ignore' : 'close'}
+			showCloseButton={!passkeyBusy}
+		>
+			<Dialog.Header>
+				<Dialog.Title>Passkey hinzufügen</Dialog.Title>
+				<Dialog.Description>
+					Vergib eine Bezeichnung, damit du diesen Passkey später wiedererkennst — das ist
+					freiwillig. Danach bestätigst du die Erstellung an deinem Gerät.
+				</Dialog.Description>
+			</Dialog.Header>
+			<div class="space-y-2">
+				<label for="passkeyLabel" class="text-sm font-medium">Bezeichnung (optional)</label>
+				<input
+					id="passkeyLabel"
+					data-testid="passkey-label-input"
+					type="text"
+					maxlength="50"
+					disabled={passkeyBusy}
+					bind:value={passkeyLabel}
+					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				/>
+			</div>
+			{#if passkeyBusy}
+				<p data-testid="passkey-create-pending" class="text-sm text-muted-foreground">
+					Bestätige das Anlegen jetzt an deinem Gerät — per Face ID, Touch ID, Windows Hello oder
+					Sicherheitsschlüssel. Dieses Fenster bleibt so lange offen.
+				</p>
+			{/if}
+			<Dialog.Footer>
+				<Btn variant="outline" disabled={passkeyBusy} onclick={() => (showPasskeyDialog = false)}>
+					Abbrechen
+				</Btn>
+				<Btn data-testid="passkey-create-confirm" disabled={passkeyBusy} onclick={createPasskey}>
+					Anlegen
+				</Btn>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<!-- Auf allen Geräten abmelden Dialog -->
+	<Dialog.Root
+		open={showLogoutAllDialog}
+		onOpenChange={(open) => { if (!open) showLogoutAllDialog = false; }}
+	>
+		<Dialog.Content>
+			<Dialog.Header>
+				<Dialog.Title>Auf allen Geräten abmelden</Dialog.Title>
+				<Dialog.Description>
+					Alle Anmeldungen werden beendet, auch die auf diesem Gerät. Zum Weiterarbeiten
+					musst du dich neu anmelden.
+				</Dialog.Description>
+			</Dialog.Header>
+			<Dialog.Footer>
+				<Btn variant="outline" onclick={() => (showLogoutAllDialog = false)}>Abbrechen</Btn>
+				<Btn variant="destructive" onclick={confirmLogoutAllDevices}>Abmelden</Btn>
+			</Dialog.Footer>
+		</Dialog.Content>
+	</Dialog.Root>
+
 	<!-- Account löschen Dialog -->
 	<Dialog.Root
 		open={showDeleteAccountDialog}
@@ -806,12 +1475,63 @@
 			<Dialog.Header>
 				<Dialog.Title>Account löschen</Dialog.Title>
 				<Dialog.Description>
-					Bist du sicher? Alle deine Daten werden unwiderruflich gelöscht.
+					Bist du sicher? Alle deine Daten werden unwiderruflich gelöscht. Bestätige die
+					Löschung {deleteHasPassword ? 'mit deinem Passwort oder ' : 'mit '}einem Code per E-Mail.
 				</Dialog.Description>
 			</Dialog.Header>
+			<div class="space-y-4">
+				{#if deleteHasPassword}
+					<div class="space-y-2">
+						<label for="deletePassword" class="text-sm font-medium">Passwort</label>
+						<input
+							id="deletePassword"
+							type="password"
+							autocomplete="current-password"
+							data-testid="delete-account-password"
+							bind:value={deletePassword}
+							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						/>
+					</div>
+				{/if}
+				<div class="space-y-2">
+					<Btn
+						variant="outline"
+						class="h-auto w-full min-w-0 whitespace-normal [overflow-wrap:anywhere]"
+						data-testid="delete-account-send-code"
+						disabled={deleteBusy}
+						onclick={requestDeleteCode}
+					>
+						Code an {deleteCodeAddress} senden
+					</Btn>
+					{#if deleteCodeSent}
+						<p class="text-sm">Code verschickt — er ist 15 Minuten gültig.</p>
+					{/if}
+					<label for="deleteCode" class="block text-sm font-medium">Lösch-Code</label>
+					<input
+						id="deleteCode"
+						type="text"
+						inputmode="numeric"
+						autocomplete="one-time-code"
+						maxlength="6"
+						data-testid="delete-account-code"
+						bind:value={deleteCode}
+						class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					/>
+				</div>
+				{#if deleteDialogMsg}
+					<p class="text-sm text-red-700" data-testid="delete-account-error">{deleteDialogMsg}</p>
+				{/if}
+			</div>
 			<Dialog.Footer>
 				<Btn variant="outline" onclick={() => (showDeleteAccountDialog = false)}>Abbrechen</Btn>
-				<Btn variant="destructive" onclick={confirmDeleteAccount}>Account löschen</Btn>
+				<Btn
+					variant="destructive"
+					data-testid="delete-account-confirm"
+					disabled={deleteBusy || (!deletePassword && deleteCode.trim() === '')}
+					onclick={confirmDeleteAccount}
+				>
+					Account löschen
+				</Btn>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>

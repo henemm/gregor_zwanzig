@@ -130,7 +130,7 @@ def _make_segment_data():
 
 
 def test_ac1_signal_five_primary_all_in_table():
-    """GIVEN eine Tour mit 5 aktiven primary-Metriken
+    """GIVEN eine Trip mit 5 aktiven primary-Metriken
     WHEN render_for_channel("signal", dc, "morning") läuft
     THEN liegen alle 5 Metriken in table_columns und demoted_count == 0."""
     from src.output.renderers.channel_layout import render_for_channel
@@ -158,7 +158,7 @@ def test_ac1_signal_five_primary_all_in_table():
 
 @pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — Signal-spezifisches Limit (6 Spalten) nicht mehr relevant")
 def test_ac2_signal_nine_primary_caps_at_five():
-    """GIVEN eine Tour mit 9 aktiven primary-Metriken
+    """GIVEN eine Trip mit 9 aktiven primary-Metriken
     WHEN render_for_channel("signal", dc, "morning") läuft
     THEN enthält table_columns genau 5 Einträge (Zeit + 5 = 6 Spalten),
          detail_metrics die übrigen 4 und demoted_count == 4.
@@ -285,7 +285,7 @@ def test_ac7_legacy_roundtrip_assigns_bucket_order_without_diff(tmp_path: Path):
     legacy_path.write_text(json.dumps(legacy, indent=2), encoding="utf-8")
 
     # Load (migrate) -> save -> load again.
-    loaded = load_trip(legacy_path)
+    loaded = load_trip(legacy_path, user_id="default")
     for mc in loaded.display_config.metrics:
         assert mc.bucket in ("primary", "secondary"), (
             f"Migration muss gültiges bucket setzen, war: {mc.bucket!r}"
@@ -298,7 +298,7 @@ def test_ac7_legacy_roundtrip_assigns_bucket_order_without_diff(tmp_path: Path):
     saved_path.write_text(
         json.dumps(_trip_to_dict(loaded), indent=2), encoding="utf-8",
     )
-    reloaded = load_trip(saved_path)
+    reloaded = load_trip(saved_path, user_id="default")
 
     # Roundtrip ohne Daten-Diff: alle bisherigen Felder unverändert.
     orig_by_id = {mc.metric_id: mc for mc in loaded.display_config.metrics}
@@ -373,7 +373,7 @@ def test_ac7b_partial_migration_keeps_active_metric_primary(tmp_path: Path):
     path = tmp_path / "partial-360.json"
     path.write_text(json.dumps(partial, indent=2), encoding="utf-8")
 
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="default")
     by_id = {mc.metric_id: mc for mc in loaded.display_config.metrics}
 
     # temperature: explizit gesetzt, bleibt primary.
@@ -398,7 +398,7 @@ def test_ac7b_partial_migration_keeps_active_metric_primary(tmp_path: Path):
 
 
 def test_ac8_order_determines_column_sequence():
-    """GIVEN eine Tour mit konfigurierter (nicht-aufsteigender) order
+    """GIVEN eine Trip mit konfigurierter (nicht-aufsteigender) order
     WHEN render_for_channel("email", dc, "morning") rendert
     THEN erscheinen die Spalten in genau der durch order festgelegten
          Reihenfolge."""

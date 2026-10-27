@@ -26,7 +26,7 @@ const DESKTOP_MAP_CANVAS = '[data-testid="map-card"] [data-testid="map-canvas"]'
 
 test('AC-1: Etappe 2 wählen → map-canvas wird remounted', async ({ page }) => {
 	await page.goto(`/trips/${TRIP_ID}`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 
 	// Stages-Panel muss geladen sein
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
@@ -64,7 +64,7 @@ test('AC-1: Etappe 2 wählen → map-canvas wird remounted', async ({ page }) =>
 
 test('AC-2: Zurück zu Etappe 1 → map-canvas wird erneut remounted', async ({ page }) => {
 	await page.goto(`/trips/${TRIP_ID}`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
 	await expect(page.locator(DESKTOP_MAP_CANVAS)).toBeVisible({ timeout: 10_000 });
@@ -108,7 +108,7 @@ test('AC-3: Etappe ohne Wegpunkte → kein Absturz, Seite bleibt bedienbar', asy
 	page.on('pageerror', (err) => errors.push(err.message));
 
 	await page.goto(`/trips/${TRIP_ID}`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 
 	// Stage 3 (0 Wegpunkte / Pausenetappe) wählen
 	await page.getByTestId('stage-card-2').click();

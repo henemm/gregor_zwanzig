@@ -5,6 +5,39 @@
 >
 > Diese Datei bleibt als Detail-Referenz fuer Root-Cause-Analysen bestehen.
 
+## C1-83 / #2239: `load_all_trips` lieferte 0 Trips für `validator-issue110`, obwohl `load_trip` 8 Dateien lud — kein Defekt (Archiv-Filter #824 + Fehlmessung)
+
+**Status:** RESOLVED (2026-10-03) | **Severity:** Low (KEIN Datenverlust, kein Defekt) | **GitHub Issue:** #2239 (Eintrag C1-83 aus #1199)
+
+### Symptom
+
+Eine Messung im Juli 2026 (gebucht als C1-83 in #1199) ergab: `load_all_trips('validator-issue110')` liefert 0 Trips, während `load_trip` alle 8 Dateien dieses Kontos einzeln fehlerfrei lädt. Das sah nach einem stillen Verlust gültiger Trips im Listen-Ladeweg aus.
+
+### Root Cause
+
+1. **Gewolltes Archiv-Filterverhalten (#824):** Alle 8 Validator-Trips tragen `archived_at` (angelegt vom Seed `scripts/seed_validator_archive.py`). `load_all_trips` blendet archivierte Trips per Default aus (`include_archived=False`), `load_trip` filtert nicht. Zwei unterschiedliche Fragen, zwei unterschiedliche Antworten — beide korrekt.
+2. **Zusätzlich Fehlmessung:** Gemessen wurde als Nutzer `hem` ohne gesetztes `GZ_DATA_DIR`. Damit greift der relative `data`-Fallback in `get_data_root` bzw. ein veralteter `data/users`-Baum im Prod-Arbeitsverzeichnis — nicht der Datenbestand, den der Dienst tatsächlich liest.
+
+**Kein Datenverlust.**
+
+### Evidenz-Ebene (ehrlich)
+
+- **Prod-Inhalt wurde NICHT gelesen** (Lesezugriff auf das Prod-Datenverzeichnis gesperrt) — nichts hier ist „auf Prod verifiziert".
+- Nur Metadaten von Prod: 8 Dateien unter `validator-issue110/briefings/`, mtime 16.07. 04:11 (Tag des S7a-Deploys), je exakt +19 Byte gegenüber der Fixture — das entspricht der Zeile `"kind": "route",`. Indiz, kein Inhaltsbeweis.
+- Reproduziert an einer Fixture-Kopie (migriert nach `briefings/`, `kind: route`): `load_trip` 8/8 ok, `load_all_trips()` = 0, `load_all_trips(include_archived=True)` = 8.
+- Nicht gemessen: Vergleich beider Ladewege über alle Prod-Nutzer.
+
+### Fix (2026-10-03)
+
+Kein Produktivcode geändert (`src/app/loader.py` unangetastet). Neu ist der Bewachungstest `tests/tdd/test_load_all_trips_deckt_sich_mit_load_trip.py`: Er bewacht die Invariante „einzeln per `load_trip` ladbare `kind=route`-Dateien == `load_all_trips(include_archived=True)`", den Archiv-Filter, den Ausschluss von `kind=vergleich`, dass eine kaputte Datei den Ladevorgang nicht abbricht und ein ERROR-Log „Skipping corrupt trip" erzeugt, sowie die Nutzertrennung. Da der Test gegen den unveränderten Code grün ist, wurde sein Wert per Mutation M1–M4 (Archiv-Filter, ERROR-Log, Abbruch statt `continue`, `kind`-Filter entfernt) als RED belegt. Der echte Verlustpfad „kaputte Datei" bleibt über `logger.error` und `record_corrupt_trip_observability` (MQ) sichtbar.
+
+### Lessons Learned
+
+1. **Nullergebnis eines Listenladers erst gegen Archiv-/Filterflags prüfen** (`include_archived=True` gegenmessen), bevor ein Datenverlust vermutet wird.
+2. **Datenbestand nur mit gesetztem `GZ_DATA_DIR` bzw. als Service-Nutzer messen** — der relative `data`-Fallback zeigt sonst auf einen veralteten Baum.
+
+---
+
 ## BUG-1264-CUTOVER-DEPLOY: Persistenz-Cutover (#1250 S7a) ohne Prod-Migration deployt — alle Trips im Frontend unsichtbar
 
 **Status:** RESOLVED (2026-07-16) | **Severity:** High (alle Nutzer, ~1 Tag unsichtbar; KEIN Datenverlust) | **GitHub Issue:** #1264
@@ -121,7 +154,7 @@ Zwei Fallen, die beim Fix zutage traten:
 
 ## BUG-1275-TH-MISMATCH: SMS/Telegram zeigten kein Gewitterrisiko, während E-Mail-Outlook-Tabelle "hoch" zeigte
 
-**Status:** WIEDERERÖFFNET (2026-07-17) — der Fix vom 2026-07-16 behob nur einen von mehreren Defekten, s. „Zweiter Anlauf" unten | **Severity:** Critical (widersprüchliche Sicherheitsaussage zwischen Kanälen im selben Report) | **GitHub Issue:** #1275 | **Specs:** `docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md` (1. Anlauf), `docs/specs/_archive/bugfix/fix_1275_sms_thunder_today.md` (2. Anlauf) | **ADR:** `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md`
+**Status:** RESOLVED (2026-07-17, zweiter Anlauf; GitHub #1275 geschlossen 2026-07-17) — zwischenzeitlich WIEDERERÖFFNET, weil der Fix vom 2026-07-16 nur einen von mehreren Defekten behob, s. „Zweiter Anlauf" unten | **Severity:** Critical (widersprüchliche Sicherheitsaussage zwischen Kanälen im selben Report) | **GitHub Issue:** #1275 | **Specs:** `docs/specs/_archive/bugfix/fix_1275_sms_th_mismatch.md` (1. Anlauf), `docs/specs/_archive/bugfix/fix_1275_sms_thunder_today.md` (2. Anlauf) | **ADR:** `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md`
 
 ### Symptom
 
@@ -263,6 +296,23 @@ Auf Prod lagen 124 von 139 `data/users/`-Verzeichnissen, auf Staging ~152 von 15
 ### Fix (Committed 2026-07-09, Workflow `fix-1133-testdata-cleanup`)
 
 `get_data_dir()` respektiert jetzt `_DATA_ROOT` und (als zweite Quelle) `GZ_DATA_DIR`. Neue autouse-Fixture `tests/conftest.py::_isolate_data_root` lenkt `loader._DATA_ROOT` für jeden Test auf ein `tmp_path_factory`-Verzeichnis um (Opt-out via `@pytest.mark.real_data_root`/`@pytest.mark.live`). `scripts/cleanup_1133_testdata.py` räumt bestehende Residuen einmalig auf (Backup + Positivliste + Dry-Run-Default).
+
+> **Korrektur 2026-09-12 (#2226):** Der `@pytest.mark.live`-Teil des obigen Opt-outs war selbst ein
+> Bug, nicht die Spezifikation — `live` bedeutet laut `pyproject.toml` nur „Netz-Egress erlaubt",
+> nicht „echter Dateibaum nötig", schaltete die Isolation aber ebenfalls ab. Zusätzlich entkamen
+> module-/class-/session-weite Fixtures der Isolation vollständig, weil sie vor der funktionsweiten
+> `_isolate_data_root` liefen (Scope-Rang session > package > module > class > function) — betraf
+> jeden Test, unabhängig vom Marker. #2226 kehrt die Vorzeichen um: eine neue session-weite Fixture
+> `_redirect_data_root_session` isoliert **per Default schon vor jeder höher gescopten Fixture**; ihr
+> Modul-Gegenstück `_isolate_data_root_module` sorgt dafür, dass auch ein `real_data_root`-Opt-in per
+> `pytestmark` auf Modulebene rechtzeitig greift (die funktionsweite Fixture allein löst es zu spät
+> auf). `_isolate_data_root` (funktionsweit) stellt nur noch für `@pytest.mark.real_data_root`-
+> markierte Tests die echte Wurzel wieder her. `live` allein schaltet seitdem nichts mehr ab. Ein
+> neuer session-weiter Wächter `_guard_repo_data_users_session` fängt jeden Schreibzugriff auf den
+> echten Baum während der GESAMTEN Session, unabhängig vom Mechanismus (`app.loader`, CWD-relativ
+> oder hartkodiert) und unabhängig vom Fixture-Scope. Sein Fingerprint (Dateizahl/mtime/Größe) sieht
+> allerdings neu angelegte **leere** Verzeichnisse nicht — bekanntes Non-Goal, gebucht in #1199.
+> Details: `docs/specs/modules/fix_2226_testdaten_isolation.md`.
 
 ### Known Limitations
 

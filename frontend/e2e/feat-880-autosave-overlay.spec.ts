@@ -35,7 +35,7 @@ function saveIndicator(page: Page) {
 }
 
 async function openStagesEditor(page: Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=stages`);
+	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
 	await expect(page.getByTestId('stage-date-field').first()).toBeVisible();
 }
@@ -236,7 +236,7 @@ test.describe('feat_880 — Compare-Editor & Cross-Tab-Isolation', () => {
 			await expect(saveIndicator(pageCompare).locator('.save-time')).toHaveCount(0);
 
 			// Im Trip-Editor speichern → dessen Timestamp erscheint.
-			await pageTrip.goto(`/trips/${TRIP_ID}?tab=stages`);
+			await pageTrip.goto(`/trips/${TRIP_ID}?tab=etappen`);
 			await expect(pageTrip.getByTestId('edit-stages-panel')).toBeVisible();
 			const input = pageTrip.getByTestId('stage-date-field').first().locator('input[type="date"]');
 			await input.fill('2026-08-23');

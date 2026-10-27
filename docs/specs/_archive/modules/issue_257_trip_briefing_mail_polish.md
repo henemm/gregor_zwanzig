@@ -3,7 +3,7 @@ entity_id: issue_257_trip_briefing_mail_polish
 type: module
 created: 2026-05-18
 updated: 2026-05-18
-status: active
+status: implemented
 version: "1.0"
 tags: [email, design-system, mobile, dark-footer, pill, epic-236, issue-257]
 parent: epic_236_email_design_system

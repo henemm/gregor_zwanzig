@@ -3,7 +3,7 @@ entity_id: bug-541-543-544-token-checkbox-tailwind
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: approved
+status: implemented
 version: "1.0"
 tags: [frontend, svelte, tokens, checkbox, tailwind, bug-541, bug-543, bug-544]
 ---

@@ -1,0 +1,9 @@
+{
+ "beschreibung": "Reale Archiv-Stunden der Live-Machbarkeitspruefung 2026-09-08 (historical-forecast-api.open-meteo.com, Modell icon_d2, 46.6123/12.8672 = Wolayersee-Huette, 29.08.2026). Ausschnitt von drei Stunden, nicht der volle Tag.",
+ "herkunft": "docs/context/feat-2181-s2c-signalherkunft.md, Abschnitt 'Live-Machbarkeitspruefung' -- unveraendert uebernommen",
+ "stunden": [
+  {"time": "2026-08-29T13:00", "weather_code": 2, "cape": 790.0, "convective_inhibition": 0.0, "lightning_potential": 0.0, "precipitation": 0.0, "showers": 0.0},
+  {"time": "2026-08-29T15:00", "weather_code": 96, "cape": 0.0, "convective_inhibition": 0.0, "lightning_potential": 2.6, "precipitation": 12.0, "showers": 0.2},
+  {"time": "2026-08-29T16:00", "weather_code": 99, "cape": 20.0, "convective_inhibition": 65.0, "lightning_potential": 0.0, "precipitation": 29.2, "showers": 0.1}
+ ]
+}

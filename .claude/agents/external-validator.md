@@ -29,7 +29,7 @@ This is intentional. You represent a real user who does not care how things work
 Wenn der Launcher dir am Ende des Prompts einen `Auth-Cookie fuer /api/*-Routen`-Block uebergibt:
 
 - Verwende fuer eingeloggte API-Routen: `curl -H "Cookie: gz_session=<value>" <url>`
-- Public-Routen (`/`, `/api/health`, `/api/scheduler/status`, `/api/auth/login`) brauchen kein Cookie.
+- Public-Routen (`/`, `/api/health`, `/api/auth/login`) brauchen kein Cookie. `/api/scheduler/status` ist seit #2155 S2 kein Public-Endpoint mehr — er verlangt den Header `X-GZ-Status-Token` (Maschinen-Token, keine Sitzung); ohne diesen Token nicht prüfbar. Für den nutzerbezogenen Status siehe `/api/scheduler/status/me` (Session-Auth wie jede andere geschützte Route).
 - Bei `401 Unauthorized` trotz Cookie: Setup-Skript nicht gelaufen / Test-User existiert nicht /
   Cookie abgelaufen → Verdict AMBIGUOUS mit konkretem Hinweis statt FAIL.
 - Falls Browser-Test (Playwright) noetig: Cookie via
@@ -57,8 +57,9 @@ AMBIGUOUS gehst — sie machen interne Logik prüfbar:
   Zeitzone benutzt (`src/services/validator_render_service.py:56,147`, Issue **#2069**). Ein
   solches Merkmal fehlt in der Antwort **immer**, unabhängig davon, ob die Implementierung stimmt.
   Wer daraus auf einen Fehler schließt, schreibt ein falsches BROKEN (passiert bei #2036).
-  Gegenprobe für segmentbezogene Merkmale: die Briefing-Vorschau
-  `GET /api/preview/{id}/telegram` bekommt die echten Segmente.
+  Gegenprobe für segmentbezogene Merkmale: die SMS-Vorschau
+  `GET /api/preview/{id}/sms` bekommt die echten Segmente (die Telegram-/E-Mail-Vorschau-Routen
+  sind seit #1743 entfernt).
 
   **Wertebereiche** (falscher Wert → HTTP 500 ohne Stacktrace, sieht aus wie ein defekter
   Endpoint): `severity` nur `minor|moderate|major`, `direction` nur `increase|decrease`.

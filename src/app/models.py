@@ -164,6 +164,17 @@ class ForecastDataPoint:
     lightning_potential_lpi_jkg: Optional[float] = None
     hail_potential_grau_gsp: Optional[float] = None
 
+    # Hagel-Rohwert Meteo-France AROME (#1507 S5c, FR/Korsika): Coverage
+    # `HAIL__GROUND_OR_WATER_SURFACE`, "Total hail precipitation", uom
+    # `kg kg-1` (Massenanteil). BEWUSST ein EIGENES Feld, NICHT mit
+    # `hail_potential_grau_gsp` (DWD, kumulierter Graupel-Niederschlag)
+    # zusammengelegt: andere Quelle, andere Groesse, andere Skala (#1419
+    # Abs. 3.1) — beide heissen nur fachlich "Hagel-Rohwert". Reiner
+    # Rohwert: KEIN Einfluss auf `hail_flag` (dort entscheidet allein die
+    # WMO-Code-Ableitung aus #1475 S5a), keine Stufen-/Schwellenbildung,
+    # in dieser Scheibe auch kein Renderer-Anschluss.
+    hail_potential_mf: Optional[float] = None
+
     # Gewittergroessen DWD ICON-D2/ICON-EU (#1531, Fortfuehrung #1457 S2):
     # sieben Groessen, die Epic #1419 Abs. 2a/3.2 je Gebiet vorsieht, bisher
     # aber nicht abgerufen wurden. Je Groesse ein eigenes Feld -- die drei
@@ -1119,6 +1130,11 @@ class TripReportConfig:
     """
     trip_id: str = ""
     enabled: bool = True
+    # Issue #2422 S3: Einzel-Slot-Schalter „Morgen/Abend aktiv" aus dem Editor.
+    # None = Schluessel fehlt (Altdaten) -> Rueckfall auf `enabled`. Auswertung
+    # ausschliesslich ueber `slot_aktiv()`.
+    morning_enabled: Optional[bool] = None
+    evening_enabled: Optional[bool] = None
 
     # Schedule
     morning_time: time = field(default_factory=lambda: time(7, 0))
@@ -1180,6 +1196,22 @@ class TripReportConfig:
 
     # Metadata
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+def slot_aktiv(rc: Optional[TripReportConfig], report_type: str) -> bool:
+    """Issue #2422 S3: ist der Briefing-Slot ``report_type`` eingeschaltet?
+
+    Die EINE Regel fuer Versand, Alarm-Vorlauf und flache Ableitung:
+    ohne report_config aktiv (Bestandsverhalten); ``enabled=False`` ist Master
+    und schaltet beide Slots ab; sonst entscheidet der Einzel-Schalter, fehlt
+    er (None), gilt der Slot als aktiv.
+    """
+    if rc is None:
+        return True
+    if rc.enabled is False:
+        return False
+    per_slot = rc.morning_enabled if report_type == "morning" else rc.evening_enabled
+    return per_slot if isinstance(per_slot, bool) else True
 
 
 # --- Alert Rules (Issue #205) ----------------------------------------------
@@ -1324,6 +1356,14 @@ class ComparePreset:
     official_warnings: Optional[dict] = field(default_factory=lambda: {"enabled": False})
     send_telegram: Optional[bool] = None
     send_sms: Optional[bool] = None
+    # Issue #2293 Scheibe S2 — Modellparität zu Go (internal/model/compare_preset.go),
+    # 1:1 analog zu alert_metric_channels weiter unten. send_premium_sms steuert
+    # ausschliesslich das planmaessige Briefing (Versand-Reiter); alert_channels
+    # ist das eigene Kanal-Sub-Objekt fuer den Alarm-Versand. Kein neuer Leser:
+    # _compare_channel_inputs (src/services/alert_channels.py) liest weiterhin
+    # ueber das Roh-Dict.
+    send_premium_sms: Optional[bool] = None
+    alert_channels: Optional[dict] = None
     morning_enabled: Optional[bool] = None
     morning_time: Optional[str] = None
     evening_enabled: Optional[bool] = None
@@ -1343,6 +1383,12 @@ class ComparePreset:
     # scripts/migrate_1361_drop_compare_hour_from_to.py sie entfernt.
     day_window_start_hour: Optional[int] = None
     day_window_end_hour: Optional[int] = None
+    # Issue #1895 S1 (ADR-0077): metrik-genaue Kanal-Schicht, Paritaet zum
+    # gleichnamigen Trip-Feld (app.trip.Trip.alert_metric_channels). Fuer die
+    # Persistenz nicht erforderlich (compare_preset_to_dict liefert `raw`
+    # unveraendert zurueck) -- das Feld ist der benannte Leser fuer S2, damit
+    # der Alarm-Pfad nicht am anonymen `raw`-Dict vorbeigreifen muss.
+    alert_metric_channels: Optional[dict] = None
     raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
 
 

@@ -3,7 +3,7 @@ entity_id: fix_1596_user_json_fehler_laut
 type: module
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, auth, tier-gating, mail, logging]
 ---
@@ -171,7 +171,7 @@ for user_id in user_ids:
     finden und erweitern) — Fixture mit einem validen und einem kaputten Profil, prüft
     Allowlist-Inhalt UND Log-Eintrag.
 
-- **AC-4 (Abgrenzung):** Given eine **fehlende** `user.json` (Datei existiert nicht) / When
+- **AC-4:** (Abgrenzung) Given eine **fehlende** `user.json` (Datei existiert nicht) / When
   Login, Tier-Gating-Funktionen oder Allowlist-Aufbau für diesen Nutzer laufen / Then bleibt
   das Verhalten wie bisher (401 bzw. `False`/free-Default bzw. übersprungen), UND es
   erscheint **kein** neuer Log-Eintrag — der Normalfall „nicht registriert"/„noch kein

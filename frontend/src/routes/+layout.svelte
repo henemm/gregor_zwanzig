@@ -3,14 +3,95 @@
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
 	import { Sidebar } from '$lib/components/ui/sidebar';
-	import TopAppBar from '$lib/components/ui/sidebar/TopAppBar.svelte';
 	import BottomNav from '$lib/components/ui/sidebar/BottomNav.svelte';
-	// Issue #1256 Scheibe 8d — Seiten befüllen die EINE globale Design-Kopfleiste
-	// über diesen Store (title/eyebrow/leftIcon/backHref/right); Default (leer)
-	// = unverändertes Wordmark/Bell/Plus-Erscheinungsbild auf allen Seiten.
-	import { topAppBarStore } from '$lib/stores/topAppBar.svelte';
+	// Mobile-Shell S2 — kein fixer Balken oben mehr: Seitentitel kommen aus dem
+	// <PageHeader> der Seite, Konto/Abmelden aus dem Konto-Sheet, das der
+	// Konto-Kreis neben der Tabbar oeffnet (docs/design-requests/
+	// mobile_shell_ohne_topbar.md).
+	import KontoSheet from '$lib/components/ui/sidebar/KontoSheet.svelte';
+	import { initialen } from '$lib/utils/initialen';
+	// Issue #2128/#2316 — die app-weiten Systemhinweise der PWA. Sie haengen
+	// BEWUSST ausserhalb des Chrome-Blocks: der Update-Hinweis gehoert auch auf
+	// die Anmeldeseite, die ohne Sidebar/BottomNav rendert.
+	import { initServiceWorkerUpdate } from '$lib/pwa/serviceWorkerUpdate';
+	import { setContext } from 'svelte';
+	import { AKTIVE_SPEICHERUNG, erzeugeSpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
+	// Issue #2131 — Offline-Ansicht mit Stand-Kennzeichnung.
+	import { afterNavigate } from '$app/navigation';
+	import { initOfflineStand, standAnwenden } from '$lib/pwa/offlineStand';
+	import OfflineSperre from '$lib/components/shared/OfflineSperre.svelte';
+	// Issue #2268 — app-weiter Footer mit „Impressum" und „Datenschutz".
+	import AppFooter from '$lib/components/shared/AppFooter.svelte';
+	// Issue #2248 — einmaliges, geraeteuebergreifend abweisbares Passkey-Angebot.
+	import { ANGEBOT_MARKER, passkeyAngebotFaellig } from '$lib/passkeyAngebot.js';
+	import { isWebAuthnSupported, registerPasskey } from '$lib/passkey';
+	import { api } from '$lib/api.js';
 
 	let { children, data } = $props();
+
+	let updateBereit = $state(false);
+	let updateFehlgeschlagen = $state(false);
+	let updateUebernehmen: (() => void | Promise<void>) | null = null;
+
+	// Issue #2317 Baustein 2: die Detailseiten melden hier ihren SaveStatus an;
+	// „Aktualisieren" schliesst eine ausstehende Speicherung vorher regulaer ab.
+	const speicherAnmeldestelle = erzeugeSpeicherAnmeldestelle();
+	setContext(AKTIVE_SPEICHERUNG, speicherAnmeldestelle);
+	let updateSpaeter: (() => void) | null = null;
+	let iosHinweisSichtbar = $state(false);
+
+	/** Geraeteweiter Merker (keine nutzerbezogene Angabe, ADR-0003 unberuehrt). */
+	const IOS_HINWEIS_MERKER = 'gz-ios-install-hint';
+
+	/** Nur Safari auf iOS und nur, wenn die App NICHT vom Startbildschirm laeuft. */
+	function iosHinweisFaellig(): boolean {
+		if (localStorage.getItem(IOS_HINWEIS_MERKER) === 'gesehen') return false;
+		const ua = navigator.userAgent;
+		const istIos = /iPad|iPhone|iPod/.test(ua);
+		const istSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+		const vomStartbildschirm =
+			window.matchMedia('(display-mode: standalone)').matches ||
+			(navigator as Navigator & { standalone?: boolean }).standalone === true;
+		return istIos && istSafari && !vomStartbildschirm;
+	}
+
+	function iosHinweisSchliessen() {
+		iosHinweisSichtbar = false;
+		localStorage.setItem(IOS_HINWEIS_MERKER, 'gesehen');
+	}
+
+	// Issue #2248 — das Passkey-Angebot. Eigener Sichtbarkeits-Zustand, weil das
+	// Banner nach seiner Erfuellung sofort weg muss: der serverseitig geladene
+	// hasPasskey-Wert sagt in diesem Moment noch "kein Passkey".
+	let passkeyAngebotSichtbar = $state(false);
+
+	async function passkeyAngebotEinrichten() {
+		try {
+			await registerPasskey('Dieses Gerät');
+			passkeyAngebotSichtbar = false;
+		} catch {
+			// Abgebrochene oder gescheiterte Zeremonie: das Angebot bleibt stehen,
+			// der Nutzer kann es erneut versuchen oder abweisen.
+		}
+	}
+
+	async function passkeyAngebotAbweisen() {
+		passkeyAngebotSichtbar = false;
+		try {
+			// AUSSCHLIESSLICH das eigene Feld: kaeme ein abweichender
+			// email/mail_to-Wert mit, setzte der Profil-Endpunkt die
+			// Adress-Bestaetigung zurueck — nach #2271 eine Aussperr-Falle.
+			// Seit #2147 Scheibe B2 entfaellt diese Falle allgemein (eine
+			// Adressaenderung eines bestaetigten Kontos wartet als ausstehend
+			// auf den Bestaetigungslink); die Beschraenkung bleibt trotzdem
+			// richtig, das Angebot aendert nie eine Adresse.
+			await api.put('/api/auth/profile', { passkey_prompt_dismissed: true });
+		} catch {
+			// Ein abgelehntes Angebot ist kein Vorgang, dessen Scheitern der Nutzer
+			// beheben muesste (Spec, Known Limitations). Es kann dann bei der
+			// naechsten Anmeldung erneut erscheinen.
+		}
+	}
 
 	const darkVars: Record<string, string> = {
 		'--color-background': 'oklch(0.145 0 0)',
@@ -34,7 +115,14 @@
 	};
 
 	let darkMode = $state(false);
-	let mobileMenuOpen = $state(false);
+	// Mobile-Shell S2 — Konto-Sheet; schliesst bei jeder Navigation.
+	let kontoOpen = $state(false);
+	const kontoInitialen = $derived(initialen(data.displayName, data.userId));
+	// Issue #2370 — bei offenem Konto-Sheet duerfen die Rand-Hinweise (iOS-
+	// Install, Update, Passkey) nicht rendern: sie lagen ueber den
+	// Sheet-Zeilen "Dunkles Design"/"Datenexport" und fingen deren Klicks ab.
+	// Eine Stelle fuer alle drei Hinweise statt drei Einzelregeln.
+	const hinweiseErlaubt = $derived(!kontoOpen);
 
 	function applyDarkMode(dark: boolean) {
 		const el = document.documentElement;
@@ -49,9 +137,68 @@
 		}
 	}
 
+	// Issue #2131: die Stand-Zeile des DOKUMENTS steht schon im ausgelieferten
+	// Bytestrom (der Worker schreibt sie beim Ablegen ein). Hier wird sie nur
+	// bei einer Client-Navigation nachgefuehrt — dort entsteht kein neues
+	// Dokument, und der Stand der vorigen Ansicht bliebe sonst stehen (AC-5).
+	if (browser) initOfflineStand();
+	afterNavigate(() => {
+		standAnwenden();
+		kontoOpen = false;
+	});
+
 	if (browser) {
 		darkMode = localStorage.getItem('gz-dark') === '1';
 		if (darkMode) applyDarkMode(true);
+
+		iosHinweisSichtbar = iosHinweisFaellig();
+
+		// Issue #2248: der Marker steht in der Adresse des gerade geladenen
+		// Dokuments — genau dann, wenn die Passwort-Anmeldung eben hierher
+		// weitergeleitet hat. Er wird NICHT abgestreift (Spec): sonst waere die
+		// Reload-Zusicherung trivial wahr, weil das Neuladen eine markerfreie
+		// Adresse holte.
+		passkeyAngebotSichtbar = passkeyAngebotFaellig({
+			marker: new URLSearchParams(window.location.search).has(ANGEBOT_MARKER),
+			hasPasskey: data.hasPasskey === true,
+			dismissed: data.passkeyPromptDismissed === true,
+			webauthnFaehig: isWebAuthnSupported()
+		});
+
+		// SvelteKit registriert den Worker selbst (config.kit.serviceWorker.register
+		// = true) -- hier wird NICHT registriert, sondern nur zugehoert.
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.ready
+				.then((registration) => {
+					// Issue #2316 Scheibe B: aktive Pruef-Ausloeser (sichtbar/pageshow/
+					// 30-Min-Intervall), Drossel ueber die echte Browser-Uhr, Rueckfall
+					// bei ausbleibendem controllerchange, Fehlschlag-Meldung des Workers.
+					const steuerung = initServiceWorkerUpdate({
+						registration,
+						container: navigator.serviceWorker,
+						onUpdateReady: () => {
+							updateBereit = true;
+						},
+						reload: () => location.reload(),
+						document,
+						window,
+						uhr: { now: () => Date.now() },
+						timer: {
+							setTimeout: (fn, ms) => window.setTimeout(fn, ms),
+							clearTimeout: (id) => window.clearTimeout(id),
+							setInterval: (fn, ms) => window.setInterval(fn, ms),
+							clearInterval: (id) => window.clearInterval(id)
+						},
+						onUpdateFailed: () => {
+							updateFehlgeschlagen = true;
+						},
+						awaitPendingSave: () => speicherAnmeldestelle.wartenAufAusstehendeSpeicherung()
+					});
+					updateUebernehmen = steuerung.applyUpdate;
+					updateSpaeter = steuerung.spaeter;
+				})
+				.catch(() => {});
+		}
 	}
 
 	function toggleDark() {
@@ -61,40 +208,187 @@
 	}
 
 	const publicPages = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
-	const isLogin = $derived(publicPages.includes(page.url.pathname));
-	const isWizard = $derived(page.url.pathname.startsWith('/trips/new'));
-	// Showcase-Route (#370): ohne App-Chrome (TopAppBar/Sidebar/BottomNav), damit
+	// Issue #2520 — `/` ist fuer Ausgeloggte die oeffentliche Startseite (ohne Chrome).
+	const isLogin = $derived(
+		publicPages.includes(page.url.pathname) || (page.url.pathname === '/' && !data.userId)
+	);
+	// Showcase-Route (#370): ohne App-Chrome (Sidebar/BottomNav), damit
 	// die Brand-Demos die einzigen App-Bausteine auf der Seite sind.
 	const isShowcase = $derived(page.url.pathname === '/_design');
+
+	// Issue #2316 (AC-8): auf den Anlege-Seiten lebt der Zwischenstand nur im
+	// Speicher — ein Reload ueber den Update-Hinweis wuerde ihn unbemerkt
+	// loeschen. Zurueckgehalten bis zum Verlassen dieser Seiten.
+	const istAnlegeSeite = $derived(
+		page.url.pathname === '/trips/new' || page.url.pathname === '/compare/new'
+	);
+	// Issue #2316 (AC-7): nie zwei Systemhinweise am unteren Bildschirmrand
+	// uebereinander — der Update-Hinweis hat den geringsten Vorrang.
+	const updateHinweisSichtbar = $derived(
+		updateBereit && !iosHinweisSichtbar && !passkeyAngebotSichtbar && !istAnlegeSeite
+	);
+
+	function updateAnwenden(): void {
+		updateFehlgeschlagen = false;
+		// #2317: bei gescheiterter Speicherung bleibt der Hinweis stehen und die
+		// Konflikt-/Fehleranzeige des Reiters sichtbar — erneut antippbar.
+		void Promise.resolve(updateUebernehmen?.()).catch(() => {});
+	}
+	function updateSpaeterKlicken(): void {
+		updateBereit = false;
+		updateSpaeter?.();
+	}
 </script>
 
-{#if isLogin || isShowcase}
+{#if isShowcase}
+	<!-- Showcase-Route (#370): hier steht BEWUSST kein Footer (#2268), damit die
+	     Brand-Demos die einzigen App-Bausteine auf der Seite bleiben. -->
 	{@render children()}
+{:else if isLogin}
+	{@render children()}
+	<!-- Issue #2268 — oeffentlicher Zweig: Footer unter dem min-h-screen-
+	     zentrierten Anmelde-/Registrier-Block, ohne Sidebar und BottomNav. -->
+	<AppFooter />
 {:else}
-	<TopAppBar
-		bind:mobileMenuOpen
-		{darkMode}
-		ontoggleDark={toggleDark}
-		title={topAppBarStore.fill.title}
-		eyebrow={topAppBarStore.fill.eyebrow}
-		leftIcon={topAppBarStore.fill.leftIcon}
-		backHref={topAppBarStore.fill.backHref}
-		right={topAppBarStore.fill.right}
-	/>
+	<!-- Issue #2131 — sichtbare Begruendung der Bearbeitungssperre; sperrt
+	     zugleich die Bedienelemente der Ansicht (ADR-0034: gesperrt und
+	     begruendet, nicht versteckt). -->
+	<OfflineSperre />
 	<div class="flex h-screen">
 		<Sidebar
 			userId={data.userId}
 			displayName={data.displayName}
+			isAdmin={data.isAdmin === true}
 			currentPath={page.url.pathname}
 			{darkMode}
 			ontoggleDark={toggleDark}
-			bind:mobileMenuOpen
 		/>
-		<main class="mobile-scroll-pad flex-1 overflow-auto px-4 desktop:p-6 desktop:pt-6">
+		<main
+			class="mobile-scroll-pad flex-1 overflow-auto px-4 desktop:p-6 desktop:pt-6"
+			class:mobile-scroll-pad--ohne-nav={istAnlegeSeite}
+		>
 			{@render children()}
+			<!-- Issue #2268 — letztes Kind INNERHALB <main>, nicht Geschwister
+			     daneben: so scrollt der Footer mit dem Inhalt und erbt die
+			     BottomNav-Freihaltung .mobile-scroll-pad. -->
+			<AppFooter />
 		</main>
 	</div>
-	{#if !isWizard}
-		<BottomNav />
+	{#if !istAnlegeSeite}
+		<BottomNav initials={kontoInitialen} {kontoOpen} onKonto={() => (kontoOpen = true)} />
+		<KontoSheet
+			open={kontoOpen}
+			onClose={() => (kontoOpen = false)}
+			initials={kontoInitialen}
+			displayName={data.displayName}
+			userId={data.userId}
+			isAdmin={data.isAdmin === true}
+			{darkMode}
+			ontoggleDark={toggleDark}
+		/>
 	{/if}
+{/if}
+
+<!-- Issue #2128 — Systemhinweise, app-weit und ausserhalb des Chrome-Blocks.
+     Der feste Rahmen ist nur der Bezugspunkt fuer die absolut positionierte
+     Toast-Optik; er hat selbst keine Hoehe und faengt daher keine Klicks ab. -->
+{#if updateHinweisSichtbar && hinweiseErlaubt}
+	<!-- Issue #2316 — Zweiknopf-Hinweis nach Vorlage des Passkey-Banners
+	     (Muster unten): "Aktualisieren"/"Später" statt der frueheren
+	     Einknopf-Toast-Variante (#2128). -->
+	<div
+		data-testid="update-hinweis"
+		role="status"
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 59;
+		       display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;
+		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
+		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
+		       font-size: 14px; line-height: 1.4;"
+	>
+		<div>
+			{#if updateFehlgeschlagen}
+				Aktualisieren fehlgeschlagen — bitte erneut versuchen.
+			{:else}
+				Neue Version verfügbar. Wird erst auf Antippen geladen.
+			{/if}
+		</div>
+		<div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end;">
+			<button
+				type="button"
+				onclick={updateSpaeterKlicken}
+				style="background: transparent; border: none; color: inherit; font-size: 13px;
+				       font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+				       font-family: var(--g-font-data); cursor: pointer; min-height: 44px; padding: 0 4px;"
+			>Später</button>
+			<button
+				type="button"
+				onclick={updateAnwenden}
+				style="background: var(--g-paper, #f6f4ee); border: none; color: var(--g-ink, #1a1a18);
+				       font-size: 13px; font-weight: 600; text-transform: uppercase;
+				       letter-spacing: 0.06em; font-family: var(--g-font-data); cursor: pointer;
+				       min-height: 44px; padding: 0 16px; border-radius: var(--g-radius-md, 0.5rem);"
+			>Aktualisieren</button>
+		</div>
+	</div>
+{/if}
+
+{#if iosHinweisSichtbar && hinweiseErlaubt}
+	<!-- z-index 59 (Issue #2370): unter dem Sheet-Backdrop (60), ueber der
+	     bottom-shell (50). Vorher 61 — lag ueber dem Konto-Sheet-Panel. -->
+	<div
+		data-testid="ios-install-hint"
+		role="status"
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 59;
+		       display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
+		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
+		       font-size: 14px; line-height: 1.4;"
+	>
+		<div style="flex: 1; min-width: 0;">
+			Auf den Startbildschirm legen: unten „Teilen“ antippen, dann „Zum Home-Bildschirm“.
+		</div>
+		<button
+			type="button"
+			onclick={iosHinweisSchliessen}
+			style="background: transparent; border: none; color: inherit; font-size: 13px;
+			       font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+			       font-family: var(--g-font-data); cursor: pointer; min-height: 44px; padding: 0 4px;"
+		>Schließen</button>
+	</div>
+{/if}
+
+<!-- Issue #2248 — Passkey-Angebot nach der Passwort-Anmeldung. Gleiche Bauart
+     wie der iOS-Hinweis daneben, aber mit ZWEI Aktionen; der Toast-Baustein
+     kennt nur eine. -->
+{#if passkeyAngebotSichtbar && hinweiseErlaubt}
+	<div
+		data-testid="passkey-angebot"
+		role="status"
+		style="position: fixed; left: 16px; right: 16px; bottom: calc(var(--g-nav-clearance) + var(--g-s-3)); z-index: 59;
+		       display: flex; flex-direction: column; gap: 10px; padding: 12px 16px;
+		       border-radius: var(--g-radius-lg, 0.75rem); background: var(--g-ink, #1a1a18);
+		       color: var(--g-paper, #f6f4ee); box-shadow: var(--g-elev-3, 0 8px 24px rgba(26,26,24,0.16));
+		       font-size: 14px; line-height: 1.4;"
+	>
+		<div>
+			Nächstes Mal ohne Passwort anmelden: Passkey auf diesem Gerät einrichten.
+		</div>
+		<div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end;">
+			<button
+				type="button"
+				onclick={passkeyAngebotAbweisen}
+				style="background: transparent; border: none; color: inherit; font-size: 13px;
+				       font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+				       font-family: var(--g-font-data); cursor: pointer; min-height: 44px; padding: 0 4px;"
+			>Nicht jetzt</button>
+			<button
+				type="button"
+				onclick={passkeyAngebotEinrichten}
+				style="background: var(--g-paper, #f6f4ee); border: none; color: var(--g-ink, #1a1a18);
+				       font-size: 13px; font-weight: 600; text-transform: uppercase;
+				       letter-spacing: 0.06em; font-family: var(--g-font-data); cursor: pointer;
+				       min-height: 44px; padding: 0 16px; border-radius: var(--g-radius-md, 0.5rem);"
+			>Jetzt einrichten</button>
+		</div>
+	</div>
 {/if}

@@ -341,7 +341,7 @@ test.describe('Issue #1373 S2 Scheibe B: umgestellte Metrik-Auswahl im Hub', () 
 
 		// Im Wartefenster hin- und herwechseln (Idealwerte braucht denselben
 		// Katalog) — es darf nichts geschrieben werden.
-		await page.getByTestId('compare-detail-tab-idealwerte').click();
+		await page.getByTestId('compare-detail-tab-wertebereiche').click();
 		await page.getByTestId('compare-detail-tab-wetter-metriken').click();
 		expect(puts.length, 'im Wartefenster darf kein Speichervorgang laufen').toBe(0);
 

@@ -8,7 +8,9 @@ kein Modell wirklich belegt (Spec Befund A). Dieses Modul buendelt:
 1. ``normalize_model_id()`` -- das uneinheitliche Roh-Vokabular
    (Open-Meteo-Technikschluessel, DWD-/Meteo-France-/GeoSphere-Direktworte,
    kuenstliche Werte wie "aggregate"/"snapshot") auf einen kanonischen
-   Schluessel je Modellwelt.
+   Schluessel je Modellwelt. Meteo-France meldet ``AROME-HIGHRES``
+   (-> ``meteofrance_arome``); GeoSphere meldet ``AROME`` und bekommt einen
+   eigenen Schluessel (-> ``geosphere_arome``, Issue #2225).
 2. ``effective_cape_model_id()`` -- die Fallback-Vorrang-Regel fuer CAPE
    EINMAL fuer beide Nutzstellen (C0 Aggregat-Befuellung, C1 Fusion).
 3. ``CAPE_THRESHOLDS_JKG`` / ``cape_threshold_jkg()`` -- die statische,
@@ -35,12 +37,15 @@ _KEINE_HERKUNFT = frozenset({"aggregate", "snapshot", "fixture"})
 # Technikschluessel, s. `providers.openmeteo.REGIONAL_MODELS`). Jede
 # Schreibweise derselben Modellwelt MUSS auf denselben Wert abbilden --
 # sonst haette die Eichtabelle (unten) zwei Eintraege fuer dieselbe Welt.
+# Umgekehrt gilt: "arome" (GeoSphere) und "arome-highres" (Meteo-France)
+# sind VERSCHIEDENE Modellwelten, die nur zufaellig aehnlich heissen --
+# deshalb zwei Ziel-Schluessel, kein gemeinsamer (Issue #2225).
 _MODEL_ALIASES: Dict[str, str] = {
     "icon_d2": "icon_d2",
     "icon-d2": "icon_d2",
     "meteofrance_arome": "meteofrance_arome",
     "arome-highres": "meteofrance_arome",
-    "arome": "meteofrance_arome",
+    "arome": "geosphere_arome",
     "icon_eu": "icon_eu",
     "metno_nordic": "metno_nordic",
     "ecmwf_ifs04": "ecmwf_ifs04",
@@ -187,6 +192,31 @@ def lpi_thresholds_jkg(region: Optional[str]) -> Optional[Tuple[float, float, fl
     return LPI_THRESHOLDS_JKG.get(region)
 
 
+# Issue #2263: die LPI-Leiter wird nach der LIEFERNDEN Quelle geschluesselt,
+# nicht mehr nach dem geografischen Gebiet -- die Leiter kalibriert eine
+# Groesse (`lpi` aus ICON-D2 vs. `lpi_con_max` aus ICON-EU), kein Gebiet. Die
+# Gebiets-Schluessel in `LPI_THRESHOLDS_JKG` bleiben unveraendert bestehen und
+# werden hier lediglich von ihrer liefernden Quelle aus erreicht (ADR-0065).
+# `fr_direct` bekommt bewusst KEINEN Eintrag -- AROME liefert dort Blitzdichte,
+# kein LPI (s. Kommentar bei `LPI_THRESHOLDS_JKG`).
+_LPI_QUELLE_ZU_SCHLUESSEL: Dict[str, str] = {
+    "de_direct": "DE_ALPEN",
+    "eu_direct": "EU_REST",
+}
+
+
+def lpi_schluessel_fuer_quelle(quelle: Optional[str]) -> Optional[str]:
+    """Uebersetzt die liefernde Gewitterquelle (Providername, z.B.
+    ``"eu_direct"``) auf den bestehenden Kalibrierungs-Schluessel von
+    ``LPI_THRESHOLDS_JKG``. ``None`` fuer eine unbekannte oder fehlende
+    Quelle sowie fuer ``fr_direct`` (keine Kalibrierung, AROME liefert
+    Blitzdichte statt LPI) -- identisch "nicht belegt" wie bei
+    ``lpi_thresholds_jkg()``."""
+    if quelle is None:
+        return None
+    return _LPI_QUELLE_ZU_SCHLUESSEL.get(quelle)
+
+
 # Issue #1592 Scheibe C3: kein neu gesetzter Wert -- die bis Scheibe C1
 # ueberall gueltige, modellblinde CAPE-Schwelle. Genau fuer DIESE Welt wurde
 # die Empfindlichkeitsleiter der CAPE-Aenderungsalarme (1200/600/200,
@@ -214,30 +244,35 @@ def cape_delta_threshold_jkg(
     return nominal * geeicht / CAPE_REFERENZ_NIVEAU_JKG
 
 
-# CAPE-Leiter (Issue #1679, CIN-Teil). Belegt: NWS/SPC, mehrfach unabhaengig
-# publiziert -- "Weak instability: less than 1000 J/kg, Moderate: 1000 to
-# 2500, Strong: 2500-4000, Extreme: greater than 4000" (Gesamtkonzept 3.5b).
-# Die beiden oberen Sprossen sind KEINE eigenstaendige Eichung, sondern die
-# publizierten Verhaeltnisse (2,5x / 4x) auf die bereits geeichte
-# LOW-Schwelle (#1592) uebertragen -- ueber dieselbe Umrechnung, die
-# `cape_delta_threshold_jkg()` schon fuer die Alarm-Empfindlichkeit nutzt.
-CAPE_LEITER_MED_NOMINAL_JKG = 2500.0
-CAPE_LEITER_HIGH_NOMINAL_JKG = 4000.0
+# CAPE-Leiter (Issue #1679, CIN-Teil; Issue #2178: MED/HIGH auf Absolutwerte
+# umgestellt). Belegt: NWS/SPC, mehrfach unabhaengig publiziert -- "Weak
+# instability: less than 1000 J/kg, Moderate: 1000 to 2500, Strong:
+# 2500-4000, Extreme: greater than 4000" (Gesamtkonzept 3.5b).
+#
+# MED/HIGH sind ab #2178 die publizierten Absolutwerte selbst, NICHT mehr
+# proportional aus der geeichten LOW-Schwelle hochgerechnet -- die
+# Umrechnung (2,5x/4x auf `low`) unterschaetzte MED/HIGH fuer alle
+# Modell-/Gebiets-Kombinationen mit `low` < 1000 J/kg systematisch (z.B.
+# DE_ALPEN/icon_d2: 750.0/1200.0 statt der publizierten 1000.0/2500.0).
+# `cape_delta_threshold_jkg()` bleibt als Funktion bestehen -- sie wird
+# weiterhin von `weather_change_detection.py` fuer die (unabhaengigen)
+# Aenderungsalarm-Presets genutzt, hier aber NICHT mehr aufgerufen.
+CAPE_LEITER_MED_ABSOLUT_JKG = 1000.0
+CAPE_LEITER_HIGH_ABSOLUT_JKG = 2500.0
 
 
 def cape_ladder_thresholds_jkg(
     model_id: Optional[str], region: Optional[str]
 ) -> Optional[Tuple[float, float, float]]:
-    """(low, med, high)-CAPE-Leiter fuer (``model_id``, ``region``),
-    regions-/modellskaliert. ``low`` ist unveraendert ``cape_threshold_jkg()``
-    -- keine zweite, abweichende Kalibrierung derselben Sprosse.
+    """(low, med, high)-CAPE-Leiter fuer (``model_id``, ``region``). ``low``
+    ist unveraendert ``cape_threshold_jkg()`` (regions-/modellgeeicht).
+    ``med``/``high`` sind feste, publizierte NWS/SPC-Absolutwerte,
+    unabhaengig von Modell/Region (#2178).
 
     ``None``, wenn keine Kalibrierung fuer die Kombination vorliegt --
-    identisch zu ``cape_threshold_jkg()``, kein Rueckfall auf die rohe
-    NWS-Leiter."""
+    identisch zu ``cape_threshold_jkg()``: fehlt ``low``, liefert die
+    GESAMTE Leiter ``None``, nicht ``(None, 1000.0, 2500.0)``."""
     low = cape_threshold_jkg(model_id, region)
     if low is None:
         return None
-    med = cape_delta_threshold_jkg(CAPE_LEITER_MED_NOMINAL_JKG, model_id, region)
-    high = cape_delta_threshold_jkg(CAPE_LEITER_HIGH_NOMINAL_JKG, model_id, region)
-    return (low, med, high)
+    return (low, CAPE_LEITER_MED_ABSOLUT_JKG, CAPE_LEITER_HIGH_ABSOLUT_JKG)

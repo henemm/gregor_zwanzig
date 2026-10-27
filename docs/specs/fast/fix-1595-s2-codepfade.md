@@ -1,3 +1,10 @@
+---
+entity_id: fix_1595_s2_codepfade
+type: fast
+created: 2026-08-08
+status: implemented
+---
+
 # Mini-Spec: Hartkodierte Datenwurzeln auf die zentrale Aufloesung umstellen
 
 Folgearbeit zu #1595. Die Produktivdaten liegen seit 2026-08-08 unter

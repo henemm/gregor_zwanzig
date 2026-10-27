@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 def _get_active_trip():
     """Find a trip with a stage on today's date and alert_on_changes=True."""
     today = date.today()
-    for trip in load_all_trips():
+    for trip in load_all_trips(user_id="default"):
         if not trip.report_config or not trip.report_config.alert_on_changes:
             continue
         stage = trip.get_stage_for_date(today)
@@ -36,7 +36,7 @@ def _get_active_trip():
 
     # Fallback: try tomorrow (evening reports use tomorrow)
     tomorrow = today + timedelta(days=1)
-    for trip in load_all_trips():
+    for trip in load_all_trips(user_id="default"):
         if not trip.report_config or not trip.report_config.alert_on_changes:
             continue
         stage = trip.get_stage_for_date(tomorrow)
@@ -78,7 +78,7 @@ class TestManipulatedSnapshotTriggersAlert:
         logger.info(f"Testing with trip: {trip.name}, date: {target_date}")
 
         # --- Step 2: Fetch real weather (API call) ---
-        scheduler = TripReportSchedulerService()
+        scheduler = TripReportSchedulerService(user_id="default")
         segments = scheduler._convert_trip_to_segments(trip, target_date)
         assert len(segments) > 0, f"No segments for {trip.id} on {target_date}"
 
@@ -91,10 +91,10 @@ class TestManipulatedSnapshotTriggersAlert:
         )
 
         # --- Step 3: Save snapshot (simulates morning report) ---
-        snapshot_service = WeatherSnapshotService()
+        snapshot_service = WeatherSnapshotService(user_id="default")
         snapshot_service.save(trip.id, fresh_weather, target_date)
 
-        snapshot_path = get_snapshots_dir() / f"{trip.id}.json"
+        snapshot_path = get_snapshots_dir(user_id="default") / f"{trip.id}.json"
         assert snapshot_path.exists(), "Snapshot file was not created"
 
         # --- Step 4: Manipulate snapshot (extreme values) ---
@@ -192,16 +192,16 @@ class TestManipulatedSnapshotTriggersAlert:
             pytest.skip("No active trip with stage on today/tomorrow")
 
         # --- Fetch real weather ---
-        scheduler = TripReportSchedulerService()
+        scheduler = TripReportSchedulerService(user_id="default")
         segments = scheduler._convert_trip_to_segments(trip, target_date)
         fresh_weather = scheduler._fetch_weather(segments)
         assert len(fresh_weather) > 0
 
         # --- Save + manipulate snapshot ---
-        snapshot_service = WeatherSnapshotService()
+        snapshot_service = WeatherSnapshotService(user_id="default")
         snapshot_service.save(trip.id, fresh_weather, target_date)
 
-        snapshot_path = get_snapshots_dir() / f"{trip.id}.json"
+        snapshot_path = get_snapshots_dir(user_id="default") / f"{trip.id}.json"
         raw = json.loads(snapshot_path.read_text())
         for seg in raw["segments"]:
             agg = seg["aggregated"]
@@ -218,7 +218,7 @@ class TestManipulatedSnapshotTriggersAlert:
         assert cached_weather is not None
 
         # --- Send alert (real SMTP) ---
-        alert_service = TripAlertService(settings=settings, throttle_hours=0)
+        alert_service = TripAlertService(settings=settings, throttle_hours=0, user_id="default")
         alert_service.clear_throttle(trip.id)
 
         sent = alert_service.check_and_send_alerts(

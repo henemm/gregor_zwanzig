@@ -179,7 +179,7 @@ class TestAC2StartTimePersists:
 
 class TestAC3CreateFlowStartTime:
     """
-    AC-3: GIVEN /trips/new Wegpunkte-Tab / WHEN start_time=15:00 gesetzt + Tour angelegt /
+    AC-3: GIVEN /trips/new Wegpunkte-Tab / WHEN start_time=15:00 gesetzt + Trip angelegt /
     THEN nach Laden: start_time=15:00 erhalten.
     RED: Feld im /trips/new Wegpunkte-Tab fehlt → TimeoutError.
     """
@@ -208,8 +208,8 @@ class TestAC3CreateFlowStartTime:
                 time_input = page.locator('[data-testid="stage-start-time-field"] input[type="time"]')
                 time_input.wait_for(state="visible", timeout=5000)
                 time_input.fill("15:00")
-                # Tour anlegen
-                page.get_by_role("button", name="Tour anlegen").click()
+                # Trip anlegen
+                page.get_by_role("button", name="Trip anlegen").click()
                 page.wait_for_url(re.compile(r"/trips/"), timeout=15000)
                 time.sleep(2)
                 # Feld nach Anlegen: 15:00 erhalten?

@@ -3,7 +3,7 @@ entity_id: feat_1260_telegram_kurzstil
 type: feature
 created: 2026-07-15
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, sms, notification, dispatch, multi-user]
 workflow: feat-1260-telegram-kurzstil

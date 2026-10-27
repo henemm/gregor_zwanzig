@@ -13,7 +13,8 @@ Fehler-Bodies. Dieser Test erzwingt die zwei billig prüfbaren Invarianten:
 
 Rot heißt IMMER: Doku nachziehen — niemals diesen Test aufweichen.
 
-Regel-Budget: Prüfdatum 2026-10-20 — kein nachweisbarer Fang bis dahin → Rückbau.
+Regel-Budget: Prüfdatum 2027-01-19 — kein nachweisbarer Fang bis dahin → Rückbau.
+(verlängert 2026-10-21 (PO): Doku-Audit fand reale Drift; vorher 2026-10-20)
 """
 from __future__ import annotations
 
@@ -85,4 +86,52 @@ def test_no_phantom_go_json_tags_in_doc():
     assert not phantoms, (
         "```go-Blöcke in api_contract.md enthalten json-Tags, die in keinem "
         f"Struct unter internal/ existieren: {sorted(set(phantoms))}"
+    )
+
+
+def _inventory_rows(text: str) -> dict[str, str]:
+    """Zeilen des Endpunkt-Inventars (Sektion 0.5): `| `/api/...` | … |` →
+    {pfad: ganze Zeile}. Nur echte Tabellenzeilen zaehlen — Fliesstext im
+    Changelog (z. B. „/signal entfernt") darf den Test nicht taeuschen."""
+    rows: dict[str, str] = {}
+    for line in text.splitlines():
+        m = re.match(r"^\|\s*`(/api/[^`]+)`\s*\|", line)
+        if m:
+            rows[m.group(1)] = line
+    return rows
+
+
+def test_inventory_lists_kind_neutral_alert_preview_and_drops_removed_previews():
+    """AC-7 (Issue #2283 S1), nachgezogen fuer #1743 AC-32: GIVEN
+    docs/reference/api_contract.md WHEN das Endpunkt-Inventar gelesen wird
+    THEN steht `/api/briefings/{id}/alert-preview` als eigene Zeile, die
+    Alt-Route `/api/trips/{id}/alert-preview` ist als Delegate gekennzeichnet,
+    und weder die entfernte Briefing-Vorschau `/api/briefings/{id}/preview`
+    (#1743) noch `/api/preview/{trip_id}/signal` (#610) ist eine Inventarzeile
+    oder wird von einer Inventarzeile referenziert."""
+    rows = _inventory_rows(_contract_text())
+
+    assert "/api/briefings/{id}/alert-preview" in rows, (
+        "AC-7: Inventarzeile `/api/briefings/{id}/alert-preview` fehlt"
+    )
+
+    removed_routes = (
+        "/api/briefings/{id}/preview",
+        "/api/preview/{trip_id}/signal",
+        # #1743 (PO-Entscheid 22.10.2026): Kanal-Vorschauen ohne Aufrufer.
+        "/api/preview/{trip_id}/email",
+        "/api/preview/{trip_id}/telegram",
+        "/api/preview/compare/{preset_id}",
+    )
+    for removed in removed_routes:
+        referencing = [line for line in rows.values() if f"`{removed}`" in line]
+        assert not referencing, (
+            f"AC-32/AC-7: entfernte Route `{removed}` steht noch im Inventar:\n  "
+            + "\n  ".join(referencing)
+        )
+
+    legacy = ["/api/trips/{id}/alert-preview"]
+    not_delegate = [p for p in legacy if "delegate" not in rows.get(p, "").lower()]
+    assert not not_delegate, (
+        f"AC-7: Alt-Routen ohne Delegate-Kennzeichnung im Inventar: {not_delegate}"
     )

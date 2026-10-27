@@ -31,7 +31,7 @@ from app.profile import ActivityProfile  # noqa: E402,F401  # re-export — sieh
 
 # Issue #760: Dedup-Pattern für Etappen-Präfixe (Etappe N / Tag N)
 _STAGE_PREFIX_RE = re.compile(
-    r"^\s*(?:Etappe|Tag)\s*\d+\b\s*[:.\-–—]?\s*(?P<rest>.*)$",
+    r"^\s*(?:(?:Etappe|Tag|Stage)\s*\d+\b\s*[:.\-–—]?|\d{1,2}\s*[:\-–—](?:\s+|$))\s*(?P<rest>.*)$",
     re.IGNORECASE,
 )
 
@@ -224,6 +224,11 @@ class Trip:
     # Meldung diesen Kanal erreichen darf. Fehlender Kanal-Key -> Startwert
     # "LOW" (services.alert_channel_threshold.split_by_threshold).
     alert_channel_thresholds: Optional[dict] = None
+    # Issue #1895 S1 (Epic #1230, ADR-0077): metrik-genaue Kanal-Schicht --
+    # Schluessel = Metrikname, Wert = Kanal-Repraesentation, in S1 unvalidiert.
+    # None bzw. fehlender Metrik-Eintrag = die Metrik erbt den Abo-weiten
+    # Kanal-Satz. S1 hat KEINEN Leser (reine Verrohrung/Persistenz).
+    alert_metric_channels: Optional[dict] = None
     extra: Dict[str, Any] = field(default_factory=dict)  # #991: unmodellierte Top-Level-Keys, roundtrip-erhalten
     # Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder, beim Laden aus
     # `report_config` ABGELEITET (Dual-Read, s. app.loader._parse_trip). Nicht
@@ -286,7 +291,7 @@ class Trip:
             key=lambda s: s.date,
         )
 
-    def numbered_stage_label(self, stage: "Stage") -> str:
+    def numbered_stage_label(self, stage: "Stage", en: bool = False) -> str:
         """Etappen-Bezeichnung mit zwingender, dedupliziert vorangestellter Nummer.
 
         Die Nummer ist die 1-basierte chronologische Position der Etappe innerhalb
@@ -302,7 +307,8 @@ class Trip:
         name = (stage.name or "").strip()
         m = _STAGE_PREFIX_RE.match(name)
         rest = m.group("rest").strip() if m else name
-        return f"Etappe {number}: {rest}" if rest else f"Etappe {number}"
+        wort = "Stage" if en else "Etappe"
+        return f"{wort} {number}: {rest}" if rest else f"{wort} {number}"
 
     def __str__(self) -> str:
         dates = f"{self.start_date}" if self.start_date == self.end_date else f"{self.start_date} - {self.end_date}"

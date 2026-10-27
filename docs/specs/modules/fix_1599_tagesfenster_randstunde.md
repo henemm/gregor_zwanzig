@@ -3,7 +3,7 @@ entity_id: fix_1599_tagesfenster_randstunde
 type: bugfix
 created: 2026-08-17
 updated: 2026-08-17
-status: approved
+status: implemented
 workflow: fix-1599-tagesfenster-obergrenze
 version: "1.0"
 tags: [issue-1599, alerts, day-window, trip-segments, compare, adr-0035]

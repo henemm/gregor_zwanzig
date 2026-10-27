@@ -5,8 +5,12 @@
 //   - AC-6: Stats-Grid mit 5 Labels (Distanz, Aufstieg, Abstieg, Max-Hoehe, Segmente)
 //
 // Test-Strategie: Dev-Route /email-preview-dev rendert die Komponente
-// isoliert mit Mock-Daten. Die Route wird in Issue #189 (Vorschau-Integration)
-// durch die echte Einbindung ersetzt.
+// isoliert mit Mock-Daten.
+//
+// Issue #1743 (docs/specs/modules/feat_1743_reiter_aufraeumen.md): der Reiter
+// „Vorschau" ist entfernt, GET /api/briefings/{id}/preview existiert nicht
+// mehr. Der fruehere Block „Issue #2283 AC-11: Trip-Vorschau inhaltsgleich"
+// pruefte ausschliesslich diesen Reiter und ist deshalb ersatzlos entfallen.
 
 import { test, expect } from '@playwright/test';
 

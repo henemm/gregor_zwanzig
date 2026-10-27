@@ -3,7 +3,7 @@ entity_id: issue_956_email_format
 type: bugfix
 created: 2026-07-01
 updated: 2026-07-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, renderer, html, trip-briefing, visual-tdd]
 workflow: fix-956-email-format
@@ -31,7 +31,7 @@ Vorlage und beseitigt den Datumsfehler.
 
 - **File:** `src/output/renderers/email/html.py` — `render_html()`, `_render_email_stat()`,
   `_render_html_table()` (Python-Backend, `src/output/renderers/email/`)
-- **File:** `src/formatters/trip_report.py` — `_extract_night_rows()`,
+- **File:** `src/output/renderers/trip_report.py` — `_extract_night_rows()`,
   `_aggregate_night_block()` (Python-Backend, `src/formatters/`)
 - **File:** `src/output/renderers/email/design_tokens.py` — `FONT_UI`, `FONT_DATA`,
   `WEB_FONT_LINK` (Diagnose-Referenz für Teil C)
@@ -66,7 +66,7 @@ Vorlage und beseitigt den Datumsfehler.
 | File | Change Type | Description |
 |------|-------------|--------------|
 | `src/output/renderers/email/html.py` | MODIFY | Zeile 778 (`stats_grid_html` `border-top:1px solid #e6e1d3`) entfernen; Zeile 840 (Header-Div `border-bottom:1px solid #e6e1d3`) entfernen; vertikale Stat-Trenner (`_render_email_stat`, Zeile 150 `border-right:1px solid #e6e1d3`) in den Body-Bereich verlängern statt am Header-Rand zu enden; senkrechte Spalten-Trennlinie zwischen `left_col`/`right_col` (Zeile 808–838, `<table>`-Aufbau) lokalisieren und entfernen; `_eyebrow(f"{_rt_upper}-BRIEFING · {_stage_label}")` Zeile 810 auf `_eyebrow(f"{_rt_upper}-BRIEFING")` kürzen; Segment-Header Zeile 930–946 umbauen: `sub_header or seg_header_text(seg)`-Titel-Text (Zeile 940–941) entfernen, `km_str`/`elev_arrow`-Format (Zeile 931–932, 944) durch kumulierte `fromKm - toKm km · fromElev - toElev m`-Darstellung ersetzen (neue Hilfsberechnung: laufende Summe über `seg.distance_km` aller vorherigen Segmente der Etappe); Cell-Tint negative-margin (Zeile 553–556, aktuell `margin:-6px -4px;padding:6px 4px;`) auf die tatsächliche `<td>`-Padding-Regel (Zeile 562: `padding:8px 4px` bei der Risk-Dot-Spalte — als Referenzwert für die Datenzellen-Padding-Regel im CSS-Block zu verifizieren) anpassen |
-| `src/formatters/trip_report.py` | MODIFY | Zeile 298: `is_next_day = local_dt.date() > first_date` → `is_next_day = local_dt.date() == first_date + timedelta(days=1)` (setzt `datetime.timedelta`-Import voraus, falls noch nicht vorhanden) |
+| `src/output/renderers/trip_report.py` | MODIFY | Zeile 298: `is_next_day = local_dt.date() > first_date` → `is_next_day = local_dt.date() == first_date + timedelta(days=1)` (setzt `datetime.timedelta`-Import voraus, falls noch nicht vorhanden) |
 | `tests/tdd/test_issue_956_night_rows_date_bug.py` | CREATE | Klassischer pytest-Test für Teil D (Datumslogik, kein visuelles Element) |
 | `tests/visual/test_issue_956_email_pixel_diff.py` (oder `.claude/hooks/`-Pendant, Pfad in TDD-RED-Phase final) | CREATE | Playwright-basiertes Pixel-Diff-Tool + Test für Teile A, B, E gegen die Referenz-PNGs unter `docs/design-requests/issue-956-mail-vorschau/screenshots/` |
 | `src/output/renderers/email/compact.py` | KEINE ÄNDERUNG | Bestätigt (Analyse-Phase): kein SEG-Header-, Font- oder Cell-Tint-Codepfad betroffen. Teil D (Nacht-Zeit-Bug) wirkt gemeinsam, weil `compact.py` dieselbe `trip_report.py::_extract_night_rows()`-Datenquelle nutzt — mit dem Fix in `trip_report.py` ist auch der `compact`-Pfad automatisch korrigiert, ohne dass `compact.py` selbst geändert werden muss |
@@ -118,7 +118,7 @@ Vorlage und beseitigt den Datumsfehler.
 {fromElev} - {toElev} m` — der bisherige Titel-Text (`sub_header or
 seg_header_text(seg)`) entfällt vollständig.
 
-> **Supersession-Hinweis (2026-07-19):** Dieses Format wurde durch Feature #574 superceded. Das neu festgelegte Format seit #574 ist `SEG {N} · Zeit · km X.X–Y.Y` (En-Dash, kumulierte km-Spanne statt Segmentlänge). Siehe `docs/specs/modules/feature_574_segment_km_header.md` ADR-Abschnitt für Rationale. Diese Spec (#956) bleibt als historische Referenz erhalten.
+> **Supersession-Hinweis (2026-07-19):** Dieses Format wurde durch Feature #574 superceded. Das neu festgelegte Format seit #574 ist `SEG {N} · Zeit · km X.X–Y.Y` (En-Dash, kumulierte km-Spanne statt Segmentlänge). Siehe `docs/specs/_archive/modules/feature_574_segment_km_header.md` ADR-Abschnitt für Rationale. Diese Spec (#956) bleibt als historische Referenz erhalten.
 
 ## Test Plan
 

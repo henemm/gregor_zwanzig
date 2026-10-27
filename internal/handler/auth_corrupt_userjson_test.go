@@ -21,7 +21,7 @@ func TestLoginHandlerLogsOnlyForCorruptNotMissingUserJSON(t *testing.T) {
 	os.MkdirAll(dir, 0755)
 	os.WriteFile(filepath.Join(dir, "user.json"), []byte(`{not valid json`), 0644)
 
-	h := LoginHandler(s, "secret")
+	h := LoginHandler(s, "secret", "")
 
 	// Fall 1: kaputte, aber vorhandene user.json ("alice") -> muss geloggt
 	// werden (AC-1).

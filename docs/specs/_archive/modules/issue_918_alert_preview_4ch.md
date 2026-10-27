@@ -3,7 +3,7 @@ entity_id: issue_918_alert_preview_4ch
 type: module
 created: 2026-06-30
 updated: 2026-06-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [alert, preview, renderer, slice-3, issue-918]
 ---

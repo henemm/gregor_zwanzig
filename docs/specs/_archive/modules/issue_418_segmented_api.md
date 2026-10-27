@@ -3,7 +3,7 @@ entity_id: issue_418_segmented_api
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, design-system, atomic, segmented, api-compatibility]
 ---

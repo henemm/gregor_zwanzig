@@ -1,3 +1,10 @@
+---
+entity_id: harden_1181_scheduler_userid
+type: fast
+created: 2026-07-15
+status: implemented
+---
+
 # Mini-Spec: Scheduler-Trigger-Endpoints — `user_id`-Default „default" härten (#1181)
 
 ## Kontext

@@ -15,7 +15,7 @@ Critical rules from spec (A1-A6):
 - MainRisk DE: Thunder→Gewitter, Storm→Sturm, Heat→Hitze, ...
 - Whitelist: only D, W, G, TH: (Vigilance), HR: (Vigilance) — others dropped
 - Truncation 78 chars: drop HR:/TH: → G → W → D → trip prefix; never stage_name
-- HR:/TH: Vigilance pair fused without space: 'HR:M@13TH:H@14'
+- HR:/TH: Vigilance pair fused without space: 'VR:M@13VT:H@14'
 """
 from __future__ import annotations
 
@@ -144,25 +144,25 @@ def test_subject_hr_th_vigilance_fusion():
     """
     GIVEN: TokenLine with HR (vigilance) and TH: (vigilance) tokens
     WHEN: build_email_subject is called
-    THEN: Tokens are fused without space: 'HR:M@13TH:H@14'
+    THEN: Tokens are fused without space: 'VR:M@13VT:H@14'
     """
     line = TokenLine(
         stage_name="Étape 7",
         report_type="evening",
         tokens=(
             _tok("D", "18"),
-            _tok("HR", ":M@13", category="vigilance", priority=1),
-            _tok("TH", ":H@14", category="vigilance", priority=1),
+            _tok("VR", ":M@13", category="vigilance", priority=1),
+            _tok("VT", ":H@14", category="vigilance", priority=1),
         ),
         main_risk="Storm",
         trip_name="GR20",
     )
     subject = build_email_subject(line)
 
-    assert "HR:M@13TH:H@14" in subject, (
+    assert "VR:M@13VT:H@14" in subject, (
         f"vigilance pair must be fused without space, got {subject!r}"
     )
-    assert "HR:M@13 TH:H@14" not in subject, (
+    assert "VR:M@13 VT:H@14" not in subject, (
         f"vigilance pair must NOT have space between HR and TH, got {subject!r}"
     )
 
@@ -185,8 +185,8 @@ def test_subject_truncation_to_78_drops_weather_first():
             _tok("D", "24"),
             _tok("W", "15"),
             _tok("G", "30"),
-            _tok("HR", ":M@13", category="vigilance", priority=1),
-            _tok("TH", ":H@14", category="vigilance", priority=1),
+            _tok("VR", ":M@13", category="vigilance", priority=1),
+            _tok("VT", ":H@14", category="vigilance", priority=1),
         ),
         main_risk="Thunder",
         trip_name="GR221",
@@ -195,7 +195,7 @@ def test_subject_truncation_to_78_drops_weather_first():
 
     assert len(subject) <= 78, f"subject must be ≤78 chars, got {len(subject)}: {subject!r}"
     if len(subject) < 78:
-        assert "HR:" not in subject or "G30" not in subject, (
+        assert "VR:" not in subject or "G30" not in subject, (
             f"vigilance should be dropped before D/W, got {subject!r}"
         )
 

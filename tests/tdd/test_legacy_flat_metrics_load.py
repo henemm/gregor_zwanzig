@@ -31,7 +31,7 @@ from app import loader
 from app.loader import _trip_to_dict, load_all_trips, load_trip
 
 
-def _flat_metrics_trip(trip_id: str, name: str = "Flat-Metrics-Tour") -> dict:
+def _flat_metrics_trip(trip_id: str, name: str = "Flat-Metrics-Trip") -> dict:
     """Trip-Dict mit Legacy-Flach-String-`display_config.metrics`."""
     return {
         "id": trip_id,
@@ -60,7 +60,7 @@ def test_flat_string_metrics_load_as_metricconfig():
     Liste ist / WHEN es via `load_trip` geladen wird / THEN wird es ohne
     Exception geladen und jeder String-Eintrag erscheint als
     `MetricConfig(metric_id=<string>, enabled=True)` (AC-1)."""
-    trip = load_trip(_flat_metrics_trip("gr20-flat"))
+    trip = load_trip(_flat_metrics_trip("gr20-flat"), user_id="default")
 
     assert trip is not None
     # #1484: abgeleitete Eintraege (derived=True) sind keine geladenen
@@ -120,7 +120,7 @@ def test_dict_metrics_roundtrip_field_identical():
     trip_id = "vanoise-dict"
     source = {
         "id": trip_id,
-        "name": "Dict-Metrics-Tour",
+        "name": "Dict-Metrics-Trip",
         "kind": "route",
         "stages": [],
         "display_config": {
@@ -147,9 +147,9 @@ def test_dict_metrics_roundtrip_field_identical():
         },
     }
 
-    trip1 = load_trip(source)
+    trip1 = load_trip(source, user_id="default")
     dict_out = _trip_to_dict(trip1)
-    trip2 = load_trip(dict_out)
+    trip2 = load_trip(dict_out, user_id="default")
 
     m1 = [m for m in trip1.display_config.metrics if not m.derived]
     m2 = [m for m in trip2.display_config.metrics if not m.derived]

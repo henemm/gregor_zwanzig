@@ -1,6 +1,6 @@
 # ADR-0048: Modellabhängige Schwellen statt einer Zahl für alle Quellen
 
-- **Status:** Akzeptiert
+- **Status:** Akzeptiert — zwei Einzelsätze abgelöst durch ADR-0064 (2026-09-08) und ADR-0071 (2026-09-18), im Text markiert
 - **Datum:** 2026-08-08
 - **Bezug:** GitHub-Issue #1592, Spec `docs/specs/modules/fix_1592_s1_cape_modellschwelle.md`,
   Kontext `docs/context/fix-1592-cape-modellschwelle.md`, Epic #1419,
@@ -61,6 +61,17 @@ Konkret für CAPE:
 
 Unberührt bleibt die Produktentscheidung aus feat_1474 AC-6: **CAPE misst Energie, kein
 Ereignis** und eskaliert nie über `LOW`. Die Schwelle wird variabel, die Deckelung bleibt.
+
+> **[Abgelöst durch ADR-0071, 2026-09-18]** Dieser Satz ist bereits durch #1679 (Commit
+> `937bba52`, 2026-08-11) im Code widerlegt worden: CAPE erreicht seither bei schwacher/
+> mäßiger Konvektionshemmung (CIN) auch `MED`/`HIGH`. ADR-0071 dokumentiert diesen — und den
+> seither über #1896/#2178 weiter nachgeschärften — Ist-Zustand nachträglich.
+>
+> **[Abgelöst durch ADR-0064, 2026-09-08]** Dieser Satz ist durch #2176 gegenstandslos
+> geworden: `ThunderLevel.LOW` verlässt die vier-stufige, nutzersichtbare Gewitterleiter
+> vollständig, statt nur nie über sie hinaus zu eskalieren. Die übrigen Regeln dieser ADR
+> (modellabhängige Schwellentabelle je Modell × Gebiet) bleiben unverändert **Akzeptiert** —
+> nur dieser eine Satz ist betroffen.
 
 ## Verworfene Alternativen
 

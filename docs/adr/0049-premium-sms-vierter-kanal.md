@@ -1,12 +1,13 @@
 # ADR-0049: Premium-SMS (Garmin inReach) ist ein vierter, eigenständiger Kanal `premium_sms` — kein SMS-Sonderfall (schreibt ADR-0004 fort)
 
-- **Status:** Akzeptiert (PO-„freigabe" 2026-08-10)
+- **Status:** Teilweise abgelöst durch [ADR-0095](0095-kanal-paritaet-jeder-kanal-jede-frage.md) — abgelöst sind nur die Begründung „einziger Kanal/Weg ohne Netz“ (Zeilen 22-23, 105, 118; Empfangslage PO-korrigiert 2026-09-05) und „bis dahin ausdrücklich kein Alarm-Kanal“ (Zeile 114-115; Alarm-Kanal seit #1701); der eigenständige Kanal `premium_sms` mit allen sechs verbindlichen Festlegungen gilt weiter (PO-„freigabe" 2026-08-10)
 - **Datum:** 2026-08-10
 - **Bezug:** Issue #1676 (Scheibe S2a), Spec
   `docs/specs/modules/feat_1676_s2a_premium_sms_versand.md`; **schreibt
   ADR-0004 fort** („Die unterstützten Kanäle sind nur noch E-Mail · Telegram ·
   SMS"), ohne es zu widerrufen; folgt ADR-0015 (Kanal-Transporte gehören in
   den Python-Kern)
+- **Ergänzt durch:** [ADR-0050](0050-metrik-kaskade-verfeinerung-nicht-ersetzung.md) (ergänzt)
 
 ## Kontext
 
@@ -64,7 +65,11 @@ Verbindlich festgelegt:
    steht als auswertbares Ergebnisfeld (`blocked_channels`) beim Aufrufer —
    nicht nur in einer Logzeile. Begründung der 30 Tage: eine von Garmin
    inzwischen neu vergebene Nummer nimmt die SMS mit HTTP 200 an, der
-   Scheinerfolg wäre von einem echten nicht zu unterscheiden.
+   Scheinerfolg wäre von einem echten nicht zu unterscheiden. Dieselbe Frist
+   (`model.PremiumSmsReplyTTL`, 30 Tage) entscheidet seit #2154 auch im
+   **Eingangspfad**: eine eingehende Garmin-SMS confirmt eine gespeicherte
+   Rückadresse nur noch, wenn sie innerhalb dieser Frist liegt; sonst wird ein
+   Verknüpfungs-Code verlangt.
 5. **Eigenes Tier-Gate.** `premium_sms_allowed()` prüft ausschließlich
    `premium`. Eine Wiederverwendung von `sms_allowed()` (das `standard`
    durchlässt) wäre eine stille Rechte-Ausweitung.

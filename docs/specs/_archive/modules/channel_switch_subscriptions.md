@@ -37,7 +37,7 @@ Adds per-subscription channel selection (Email/Signal) to `CompareSubscription`,
 | `save_compare_subscriptions()` | Function | `src/app/loader.py` (line 715); serialize new fields |
 | `show_subscription_dialog()` | Function | `src/web/pages/subscriptions.py` (line 247); add channel checkboxes |
 | `_execute_subscription()` | Function | `src/web/scheduler.py` (line 205); gate channels on flags |
-| `EmailOutput` | Class | `src/outputs/email.py`; existing email sender |
+| `EmailOutput` | Class | `src/output/channels/email.py`; existing email sender |
 | `SignalOutput` | Class | `src/outputs/signal.py`; existing Signal sender |
 | `Settings.can_send_email()` | Function | `src/app/config.py`; checks SMTP credentials |
 | `Settings.can_send_signal()` | Function | `src/app/config.py`; checks Signal credentials |

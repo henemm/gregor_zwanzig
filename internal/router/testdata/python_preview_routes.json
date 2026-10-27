@@ -1,0 +1,22 @@
+[
+  {
+    "method": "POST",
+    "path": "/api/_validator/compare-email-preview"
+  },
+  {
+    "method": "POST",
+    "path": "/api/_validator/sms-fidelity-preview"
+  },
+  {
+    "method": "POST",
+    "path": "/api/briefings/{entity_id}/alert-preview"
+  },
+  {
+    "method": "GET",
+    "path": "/api/preview/{trip_id}/sms"
+  },
+  {
+    "method": "POST",
+    "path": "/api/trips/{trip_id}/alert-preview"
+  }
+]

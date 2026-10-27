@@ -3,7 +3,7 @@ entity_id: fix_1329_e2e_data_hygiene
 type: module
 created: 2026-07-20
 updated: 2026-07-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [e2e, staging, cleanup, playwright]
 ---
@@ -120,7 +120,7 @@ Objekte bleiben, der Rest wird entfernt (Presets vor Orten, Trips vor Orten).
 - **AC-3:** Given ein Testfall legt einen Ort UND ein Compare-Preset an, das diesen Ort referenziert / When `globalTeardown` bzw. der Helfer-Cleanup laeuft / Then wird zuerst das Preset, danach der Ort geloescht, ohne dass die Ort-Loeschung mit HTTP 409 fehlschlaegt.
   - Test: `DELETE /api/locations/{id}` wird nach Ablauf des Cleanups fuer diesen konkreten Ort ausgefuehrt und liefert 404 (bereits weg) statt 409 (referenziert) — der Statuscode wird real geprueft, kein geloggter Fehler wird stillschweigend hingenommen.
 
-- **AC-4 (Ops, manuell auf Staging verifiziert):** Given der Staging-Bestand vor dem Raeumlauf enthaelt 706 Orte und 429 Presets / When der einmalige Allowlist-erhaltende Raeumlauf (mit vorherigem Backup) als `claude-gregor` durchgefuehrt wird / Then faellt `GET /api/locations` (Admin-/Validator-Sicht) auf die Allowlist-Groesse (3 Seed-Orte + Validator-Konto-Objekte), und ein anschliessender regulaerer Login samt Trip-Cockpit-Aufruf funktioniert unveraendert.
+- **AC-4:** (Ops, manuell auf Staging verifiziert) Given der Staging-Bestand vor dem Raeumlauf enthaelt 706 Orte und 429 Presets / When der einmalige Allowlist-erhaltende Raeumlauf (mit vorherigem Backup) als `claude-gregor` durchgefuehrt wird / Then faellt `GET /api/locations` (Admin-/Validator-Sicht) auf die Allowlist-Groesse (3 Seed-Orte + Validator-Konto-Objekte), und ein anschliessender regulaerer Login samt Trip-Cockpit-Aufruf funktioniert unveraendert.
   - Test: `curl` gegen `GET /api/locations` (mit Validator-Basic-Auth) vor und nach dem Raeumlauf, Anzahl-Vergleich; zusaetzlich manueller Login-Smoke-Test auf `https://staging.gregor20.henemm.com`, dass Seeds und Validator-Konto weiterhin funktionieren. Dieser AC ist ein einmaliger Ops-Schritt, kein automatisierter Testfall in der CI-Suite.
 
 ## Known Limitations

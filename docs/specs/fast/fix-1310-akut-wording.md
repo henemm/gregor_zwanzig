@@ -1,3 +1,10 @@
+---
+entity_id: fix_1310_akut_wording
+type: fast
+created: 2026-08-07
+status: implemented
+---
+
 # Mini-Spec: #1310 — Akut-Override sagt „jetzt akut"
 
 **Issue:** #1310 (Akut-Override, Rest aus #883 Slice 4)
@@ -31,7 +38,7 @@ Override-Fall — also keine Teilungs-Lücke (Trip/Compare-Invariante geprüft).
 - `src/services/trip_alert.py:834` — dritter Zustand, wenn angekündigt **und** konvektiv:
   `"bereits angekündigt — jetzt akut"`
 - `tests/tdd/test_issue_883_acute_danger_override.py:319` — `xfail`-Marker entfällt (AC-4 wird scharf)
-- `docs/specs/_archive/modules/issue_883_acute_danger_override.md` → zurück nach
+- `docs/specs/modules/issue_883_acute_danger_override.md` → zurück nach
   `docs/specs/modules/`, Status auf `implemented`
 
 ## Was darf sich nicht ändern

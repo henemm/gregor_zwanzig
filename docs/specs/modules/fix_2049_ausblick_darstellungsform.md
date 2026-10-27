@@ -3,7 +3,7 @@ entity_id: fix_2049_ausblick_darstellungsform
 type: bugfix
 created: 2026-08-22
 updated: 2026-08-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [ausblick, darstellungsform, roh-einfach, issue-2049]
 workflow: fix-2049-vorschau-einfach

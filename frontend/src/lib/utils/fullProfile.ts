@@ -11,6 +11,8 @@
 
 import type { Trip, Stage, Waypoint } from '$lib/types';
 import { deriveTripStatus } from './tripStatus.ts';
+// #2110: geteilte Etappen-Vorpruefung (identische Regel wie computeHeaderStats).
+import { stageHasFullTrackDistance } from '../components/email-preview/headerStats.ts';
 
 export interface ProfilePoint {
 	x: number; // kumulative Distanz in km
@@ -57,9 +59,17 @@ export function buildProfilePoints(trip: Trip): ProfilePoint[] {
 
 	for (const stage of stages) {
 		const wps = stage?.waypoints ?? [];
-		for (const wp of wps) {
+		// #2110: Track-Distanz nur innerhalb einer vollstaendig vermessenen Etappe.
+		const useTrack = stageHasFullTrackDistance(wps);
+		for (let i = 0; i < wps.length; i++) {
+			const wp = wps[i];
 			if (prevWp !== null) {
-				cumKm += haversineKm(prevWp, wp);
+				// i === 0 ist das etappenuebergreifende Segment → immer Haversine.
+				cumKm +=
+					useTrack && i > 0
+						? (wp.distance_from_start_km as number) -
+							(wps[i - 1].distance_from_start_km as number)
+						: haversineKm(prevWp, wp);
 			}
 			if (hasElevation(wp)) {
 				points.push({ x: cumKm, y: wp.elevation_m, stageId: stage.id });
@@ -93,10 +103,18 @@ export function computeStageBoundaries(trip: Trip): StageBoundary[] {
 		const code = formatStageCode(nonPauseIndex, isPause);
 
 		const xStart = cumKm;
+		// #2110: Track-Distanz nur innerhalb einer vollstaendig vermessenen Etappe.
+		const useTrack = stageHasFullTrackDistance(wps);
 		// Distanzen innerhalb der Stage durchlaufen.
-		for (const wp of wps) {
+		for (let i = 0; i < wps.length; i++) {
+			const wp = wps[i];
 			if (prevWp !== null) {
-				cumKm += haversineKm(prevWp, wp);
+				// i === 0 ist das etappenuebergreifende Segment → immer Haversine.
+				cumKm +=
+					useTrack && i > 0
+						? (wp.distance_from_start_km as number) -
+							(wps[i - 1].distance_from_start_km as number)
+						: haversineKm(prevWp, wp);
 			}
 			prevWp = wp;
 		}

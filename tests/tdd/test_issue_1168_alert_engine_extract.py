@@ -46,6 +46,7 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 import output.channels.telegram as telegram_mod
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 # ───────────────────────── echter Telegram-Socket-Sink (kein Mock) ──────────
@@ -129,7 +130,12 @@ def _settings_telegram_only() -> Settings:
     """Settings mit Telegram-Kanal (erfüllt can_send_telegram), kein SMTP."""
     return Settings(
         telegram_bot_token="test-token",
-        telegram_chat_id="test-chat",
+        telegram_chat_id="424200",  # #1412 S4a: numerisch (AC-6)
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout verlangt
+        # TelegramOutput die Test-Chat-ID, sonst bricht der Versand ab. Explizit
+        # auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196 Klasse C).
+        telegram_test_chat_id="424200",
     )
 
 
@@ -224,7 +230,7 @@ def test_ac1_trip_alarm_fires_identically_after_extraction(telegram_sink, clean_
     _save_briefing_snapshot(user_id, trip.id, cached)
     fresh = [_data(precip_sum_mm=18.0)]  # Δ=16 ≥ Schwelle 10 → MAJOR
 
-    service = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     sent = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
     assert sent is True, "Δ=16 ≥ Schwelle 10 muss einen Alarm auslösen"
@@ -261,7 +267,7 @@ def test_ac1_trip_alarm_stays_silent_identically_after_extraction(telegram_sink,
     _save_briefing_snapshot(user_id, trip.id, cached)
     fresh = [_data(precip_sum_mm=5.0)]  # Δ=3 < Schwelle 10 → kein Alarm
 
-    service = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     sent = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
     assert sent is False, "Δ=3 < Schwelle 10 darf keinen Alarm auslösen"
@@ -288,7 +294,7 @@ def test_ac2_cooldown_suppresses_second_alert(telegram_sink, clean_user_dirs):
     _save_briefing_snapshot(user_id, trip.id, cached)
     fresh = [_data(precip_sum_mm=18.0)]  # Δ=16 ≥ Schwelle 10
 
-    service = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     first = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
     assert first is True, "Erster Lauf (kein Cooldown aktiv) muss alerten"
     assert telegram_sink.send_count() == 1
@@ -305,7 +311,7 @@ def test_ac2_cooldown_suppresses_second_alert(telegram_sink, clean_user_dirs):
 
     # Auch ein frischer Service-Instanz (lädt Throttle-Datei von Platte) bleibt
     # innerhalb des Cooldown-Fensters stumm — echter Disk-State, kein Mock.
-    service2 = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service2 = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     third = service2.check_and_send_alerts(trip, cached, fresh_weather=fresh)
     assert third is False
     assert telegram_sink.send_count() == 1
@@ -334,7 +340,7 @@ def test_ac2_quiet_hours_midnight_wrap_suppresses_alert(telegram_sink, clean_use
     trip.alert_quiet_from = "22:00"
     trip.alert_quiet_to = "06:00"
 
-    service = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
 
     # Teil 1: reale Entscheidungsfunktion, Mitternachts-Wrap-Zeitpunkt fix.
     wrap_now = datetime(2026, 4, 5, 23, 30, tzinfo=timezone.utc)
@@ -344,8 +350,8 @@ def test_ac2_quiet_hours_midnight_wrap_suppresses_alert(telegram_sink, clean_use
 
     # Teil 2: End-to-End über check_and_send_alerts(), Ruhezeitfenster dynamisch
     # um die echte aktuelle Uhrzeit gelegt (±1h), kein Zeit-Mock. Issue #1726:
-    # `is_quiet_hours` vergleicht in der ORTSZONE DER TOUR (vorher fest
-    # Europe/Vienna). Das Fenster wird deshalb um die Ortszeit ebendieser Tour
+    # `is_quiet_hours` vergleicht in der ORTSZONE DES TRIPS (vorher fest
+    # Europe/Vienna). Das Fenster wird deshalb um die Ortszeit ebendieser Trip
     # zentriert — aus DERSELBEN Auflösung, die der Prüfling benutzt, statt aus
     # einer im Test wiederholten Zonen-Annahme.
     from services.trip_day import anchor_tz
@@ -400,7 +406,7 @@ def test_ac4_legacy_alert_state_file_still_readable(telegram_sink, clean_user_di
     # Frischer Wert identisch zum bereits gemeldeten Wert (18.0) → keine
     # Eskalation (|18-18|=0 < Schwelle 10) → kein erneuter Versand.
     fresh = [_data(precip_sum_mm=18.0)]
-    service = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     sent = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
     assert sent is False, (

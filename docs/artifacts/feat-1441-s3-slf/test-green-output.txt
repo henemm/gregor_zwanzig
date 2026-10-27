@@ -1,0 +1,804 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 148 items
+
+tests/test_slf_bulletin_parser.py .................                      [ 11%]
+tests/test_slf_bulletin_abdeckung.py ..................................  [ 34%]
+tests/test_slf_bulletin_kanaele.py ..................................... [ 59%]
+...............                                                          [ 69%]
+tests/test_slf_bulletin_entwarnung.py ................                   [ 80%]
+tests/test_slf_bulletin_docs.py ......                                   [ 84%]
+tests/tdd/test_official_alert_mail_validator.py .......................  [100%]
+
+==================================== PASSES ====================================
+_______ test_ac10_abruffehler_macht_die_quelle_nicht_abrufbar[http-503] ________
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:577 slf_bulletin: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  slf_bulletin:warn_egress.py:655 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, HTTP 503)
+_____ test_ac10_abruffehler_macht_die_quelle_nicht_abrufbar[kaputtes-json] _____
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:577 slf_bulletin: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  slf_bulletin:warn_egress.py:665 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, Parse)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 663, in _fetch_and_store
+    data = parse_fn(resp)
+           ^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 47, in _parse_document
+    doc = resp.json()
+          ^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_models.py", line 832, in json
+    return jsonlib.loads(self.content, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+______ test_ac10_abruffehler_macht_die_quelle_nicht_abrufbar[netzfehler] _______
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:545 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 79, in _request
+    return client.get(API_URL)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/helpers/slf_support.py", line 339, in handle_request
+    raise reply.error
+httpx.ConnectError: Verbindung verweigert
+____ test_ac10_abruffehler_macht_die_quelle_nicht_abrufbar[ohne-bulletins] _____
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:665 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, Parse)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 663, in _fetch_and_store
+    data = parse_fn(resp)
+           ^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 49, in _parse_document
+    raise ValueError("keine CAAML-v6-Bulletinliste")
+ValueError: keine CAAML-v6-Bulletinliste
+_ test_ac12_echte_registry_mit_slf_ruft_im_ausland_nie_aws_slf_ch_ab[innsbruck] _
+------------------------------ Captured log call -------------------------------
+WARNING  geosphere_warn:warn_egress.py:545 geosphere_warn-Abruf fehlgeschlagen (warnungen.zamg.at)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/geosphere_warn.py", line 93, in _do_request
+    return httpx.get(
+           ^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 195, in get
+    return request(
+           ^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 109, in request
+    return client.request(
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: warnungen.zamg.at
+WARNING  avalanche_report:warn_egress.py:545 avalanche_report-Abruf fehlgeschlagen (static.avalanche.report)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/avalanche_report.py", line 118, in _request
+    return client.get(url)
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: static.avalanche.report
+WARNING  geosphere_warn:warn_egress.py:545 geosphere_warn-Abruf fehlgeschlagen (warnungen.zamg.at)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/geosphere_warn.py", line 93, in _do_request
+    return httpx.get(
+           ^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 195, in get
+    return request(
+           ^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 109, in request
+    return client.request(
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: warnungen.zamg.at
+_ test_ac12_echte_registry_mit_slf_ruft_im_ausland_nie_aws_slf_ch_ab[bregenz] __
+------------------------------ Captured log call -------------------------------
+WARNING  vigilance:vigilance.py:65 GZ_METEOFRANCE_APIKEY nicht gesetzt — Vigilance-Warnungen werden übersprungen (fail-soft).
+WARNING  geosphere_warn:warn_egress.py:545 geosphere_warn-Abruf fehlgeschlagen (warnungen.zamg.at)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/geosphere_warn.py", line 93, in _do_request
+    return httpx.get(
+           ^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 195, in get
+    return request(
+           ^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 109, in request
+    return client.request(
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: warnungen.zamg.at
+__ test_ac12_echte_registry_mit_slf_ruft_im_ausland_nie_aws_slf_ch_ab[aosta] ___
+------------------------------ Captured log call -------------------------------
+WARNING  meteoalarm_feed:warn_egress.py:545 meteoalarm_feed:IT-Abruf fehlgeschlagen (feeds.meteoalarm.org)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/meteoalarm_feed.py", line 264, in _do_request
+    return httpx.get(f"{FEED_BASE_URL}{_FEED_PATHS[country]}", timeout=TIMEOUT)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 195, in get
+    return request(
+           ^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 109, in request
+    return client.request(
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: feeds.meteoalarm.org
+WARNING  dpc:warn_egress.py:545 dpc-Abruf fehlgeschlagen (raw.githubusercontent.com)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/dpc.py", line 162, in _do_request
+    return httpx.get(DPC_ZIP_URL, timeout=TIMEOUT)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 195, in get
+    return request(
+           ^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 109, in request
+    return client.request(
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: raw.githubusercontent.com
+_ test_ac12_echte_registry_mit_slf_ruft_im_ausland_nie_aws_slf_ch_ab[feldberg] _
+------------------------------ Captured log call -------------------------------
+WARNING  meteoalarm_feed:warn_egress.py:545 meteoalarm_feed:DE-Abruf fehlgeschlagen (feeds.meteoalarm.org)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/meteoalarm_feed.py", line 264, in _do_request
+    return httpx.get(f"{FEED_BASE_URL}{_FEED_PATHS[country]}", timeout=TIMEOUT)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 195, in get
+    return request(
+           ^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 109, in request
+    return client.request(
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: feeds.meteoalarm.org
+_ test_ac12_echte_registry_mit_slf_ruft_im_ausland_nie_aws_slf_ch_ab[tirol-at-07-05] _
+------------------------------ Captured log call -------------------------------
+WARNING  geosphere_warn:warn_egress.py:545 geosphere_warn-Abruf fehlgeschlagen (warnungen.zamg.at)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/geosphere_warn.py", line 93, in _do_request
+    return httpx.get(
+           ^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 195, in get
+    return request(
+           ^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 109, in request
+    return client.request(
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: warnungen.zamg.at
+___ test_ac14_slf_ausfall_im_mittelland_zeigt_den_generischen_ausfallhinweis ___
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:577 slf_bulletin: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  slf_bulletin:warn_egress.py:655 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, HTTP 503)
+__________ test_ac15_echter_abruf_aus_der_testumgebung_wird_blockiert __________
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:545 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 79, in _request
+    return client.get(API_URL)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: aws.slf.ch
+_ test_ac17_ohne_slf_kein_abruf_keine_warnung_kein_ausfallhinweis_in_graubuenden _
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:577 slf_bulletin: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  slf_bulletin:warn_egress.py:655 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, HTTP 503)
+___________ test_ac17_tirol_ergebnis_ist_mit_und_ohne_slf_identisch ____________
+------------------------------ Captured log call -------------------------------
+WARNING  geosphere_warn:warn_egress.py:545 geosphere_warn-Abruf fehlgeschlagen (warnungen.zamg.at)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/geosphere_warn.py", line 93, in _do_request
+    return httpx.get(
+           ^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 195, in get
+    return request(
+           ^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_api.py", line 109, in request
+    return client.request(
+           ^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/app/egress_guard.py", line 118, in _guarded_httpx_handle_request
+    raise EgressBlockedError(f"httpx egress blocked for host: {host}")
+app.egress_guard.EgressBlockedError: httpx egress blocked for host: warnungen.zamg.at
+_ test_ac10_slf_abruffehler_zeigt_die_ausfall_hinweiszeile_im_trip_briefing[http-503] _
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:577 slf_bulletin: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  slf_bulletin:warn_egress.py:655 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, HTTP 503)
+_ test_ac10_slf_abruffehler_zeigt_die_ausfall_hinweiszeile_im_trip_briefing[kaputtes-json] _
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:577 slf_bulletin: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  slf_bulletin:warn_egress.py:665 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, Parse)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 663, in _fetch_and_store
+    data = parse_fn(resp)
+           ^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 47, in _parse_document
+    doc = resp.json()
+          ^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_models.py", line 832, in json
+    return jsonlib.loads(self.content, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+_ test_ac10_slf_abruffehler_zeigt_die_ausfall_hinweiszeile_im_trip_briefing[netzfehler] _
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:545 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 79, in _request
+    return client.get(API_URL)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/helpers/slf_support.py", line 339, in handle_request
+    raise reply.error
+httpx.ConnectError: Verbindung verweigert
+_ test_ac10_slf_abruffehler_zeigt_die_ausfall_hinweiszeile_im_trip_briefing[ohne-bulletins] _
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:665 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, Parse)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 663, in _fetch_and_store
+    data = parse_fn(resp)
+           ^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 49, in _parse_document
+    raise ValueError("keine CAAML-v6-Bulletinliste")
+ValueError: keine CAAML-v6-Bulletinliste
+_ test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[trip-abruffehler-http-503] _
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:577 slf_bulletin: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  slf_bulletin:warn_egress.py:655 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, HTTP 503)
+WARNING  slf_bulletin:warn_egress.py:577 slf_bulletin: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  slf_bulletin:warn_egress.py:655 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, HTTP 503)
+_ test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[trip-abruffehler-netz] _
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:545 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 79, in _request
+    return client.get(API_URL)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/helpers/slf_support.py", line 339, in handle_request
+    raise reply.error
+httpx.ConnectError: Verbindung verweigert
+WARNING  slf_bulletin:warn_egress.py:545 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 79, in _request
+    return client.get(API_URL)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/helpers/slf_support.py", line 339, in handle_request
+    raise reply.error
+httpx.ConnectError: Verbindung verweigert
+_ test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[vergleich-abruffehler-http-503] _
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:577 slf_bulletin: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  slf_bulletin:warn_egress.py:655 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, HTTP 503)
+WARNING  slf_bulletin:warn_egress.py:577 slf_bulletin: Eingangs-Mitschnitt fehlgeschlagen (Expecting value: line 1 column 1 (char 0))
+WARNING  slf_bulletin:warn_egress.py:655 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch, HTTP 503)
+_ test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[vergleich-abruffehler-netz] _
+------------------------------ Captured log call -------------------------------
+WARNING  slf_bulletin:warn_egress.py:545 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 79, in _request
+    return client.get(API_URL)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/helpers/slf_support.py", line 339, in handle_request
+    raise reply.error
+httpx.ConnectError: Verbindung verweigert
+WARNING  slf_bulletin:warn_egress.py:545 slf_bulletin-Abruf fehlgeschlagen (aws.slf.ch)
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/warn_egress.py", line 538, in _fetch_and_store
+    resp = request_fn()
+           ^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/src/services/official_alerts/slf.py", line 79, in _request
+    return client.get(API_URL)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/.venv/lib/python3.12/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/tests/helpers/slf_support.py", line 339, in handle_request
+    raise reply.error
+httpx.ConnectError: Verbindung verweigert
+_______________________ test_avalanche_only_mail_passes ________________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+______________ test_avalanche_wrong_eaws_word_only_in_html_fails _______________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+______________ test_avalanche_wrong_eaws_word_only_in_plain_fails ______________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+___ test_thunderstorm_mail_without_ladder_but_avalanche_text_fails[Gewitter] ___
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+_ test_thunderstorm_mail_without_ladder_but_avalanche_text_fails[Gewitterwarnung] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+______________ test_mixed_thunderstorm_and_avalanche_mail_passes _______________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+________________ test_mixed_mail_without_meter_or_ladder_fails _________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+___________ test_ac30_slf_mail_mit_feinstufe_und_slf_quelle_besteht ____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+________ test_ac30_slf_mail_mit_feinstufe_und_falschem_eaws_wort_faellt ________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+____________________ test_ac30_slf_mail_ohne_quelle_faellt _____________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@test.invalid'] auf gregor-test@henemm.com umgeschaltet.
+=========================== short test summary info ============================
+PASSED tests/test_slf_bulletin_parser.py::test_ac1_muenstertal_morgen_liefert_genau_eine_slf_warnung_mit_allen_feldern
+PASSED tests/test_slf_bulletin_parser.py::test_ac2_muenstertal_abend_maessiges_nassschnee_problem_zaehlt_nicht_hoehe_oberhalb_2000
+PASSED tests/test_slf_bulletin_parser.py::test_ac2_vouvry_januar_zwei_erhebliche_probleme_mit_gleicher_grenze_oberhalb_2000
+PASSED tests/test_slf_bulletin_parser.py::test_ac2_gegenprobe_abgeleitet_nassschnee_auf_erheblich_ergibt_keine_hoehe
+PASSED tests/test_slf_bulletin_parser.py::test_ac3_gadmertal_april_nassschnee_bis_2400_ergibt_unterhalb_2400
+PASSED tests/test_slf_bulletin_parser.py::test_ac4_suedliches_praettigau_abend_zwei_verschiedene_grenzen_keine_hoehe
+PASSED tests/test_slf_bulletin_parser.py::test_ac5a_vallee_de_joux_stufe_1_lowerbound_0_ist_keine_hoehe
+PASSED tests/test_slf_bulletin_parser.py::test_ac5b_vouvry_april_nachmittags_traegendes_problem_ohne_elevation_keine_hoehe
+PASSED tests/test_slf_bulletin_parser.py::test_ac6_feinstufe_im_modell_ziffer_bleibt_unveraendert[minus]
+PASSED tests/test_slf_bulletin_parser.py::test_ac6_feinstufe_im_modell_ziffer_bleibt_unveraendert[plus]
+PASSED tests/test_slf_bulletin_parser.py::test_ac6_feinstufe_im_modell_ziffer_bleibt_unveraendert[neutral]
+PASSED tests/test_slf_bulletin_parser.py::test_ac6_feinstufe_im_modell_ziffer_bleibt_unveraendert[ohne]
+PASSED tests/test_slf_bulletin_parser.py::test_ac6_feinstufe_kommt_vom_traeger_rating_nicht_vom_ersten_rating
+PASSED tests/test_slf_bulletin_parser.py::test_ac6_level_modifier_ist_optionales_modellfeld_mit_default_none
+PASSED tests/test_slf_bulletin_parser.py::test_ac7_caaml_parser_liefert_auf_s1_fixture_dasselbe_wie_avalanche_report_source
+PASSED tests/test_slf_bulletin_parser.py::test_ac7_abgeleitet_rating_mit_eigener_elevation_schlaegt_abweichende_problem_grenze
+PASSED tests/test_slf_bulletin_parser.py::test_ac7_avalanche_report_enthaelt_keine_eigene_kopie_der_verschobenen_funktionen
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac8_abend_ausgabe_gilt_am_folgetag_um_06_uhr_und_liefert_die_warnung
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac8_dieselbe_abend_ausgabe_um_17_uhr_ist_leer_ohne_ausfallhinweis
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac8_gueltigkeitsgrenze_16_uhr_gilt_noch_eine_sekunde_danach_nicht_mehr
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac8_morgen_update_um_08_uhr_traegt_seine_eigene_gueltigkeit
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac9_leere_saison_ist_leer_ohne_ausfallhinweis_und_im_journal_erfolgreich
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac9_abruf_url_hat_kein_active_at
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac9_leere_antwort_bleibt_hoechstens_1800_sekunden_im_cache
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac10_abruffehler_macht_die_quelle_nicht_abrufbar[http-503]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac10_abruffehler_macht_die_quelle_nicht_abrufbar[kaputtes-json]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac10_abruffehler_macht_die_quelle_nicht_abrufbar[netzfehler]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac10_abruffehler_macht_die_quelle_nicht_abrufbar[ohne-bulletins]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac11_drei_mikroregionen_teilen_sich_genau_einen_abruf
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac12_covers_ist_nur_fuer_den_schweizer_punkt_wahr
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac12_ausland_punkt_loest_keinen_abruf_und_keinen_hinweis_aus[innsbruck]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac12_ausland_punkt_loest_keinen_abruf_und_keinen_hinweis_aus[bregenz]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac12_ausland_punkt_loest_keinen_abruf_und_keinen_hinweis_aus[aosta]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac12_ausland_punkt_loest_keinen_abruf_und_keinen_hinweis_aus[feldberg]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac12_echte_registry_mit_slf_ruft_im_ausland_nie_aws_slf_ch_ab[innsbruck]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac12_echte_registry_mit_slf_ruft_im_ausland_nie_aws_slf_ch_ab[bregenz]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac12_echte_registry_mit_slf_ruft_im_ausland_nie_aws_slf_ch_ab[aosta]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac12_echte_registry_mit_slf_ruft_im_ausland_nie_aws_slf_ch_ab[feldberg]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac12_echte_registry_mit_slf_ruft_im_ausland_nie_aws_slf_ch_ab[tirol-at-07-05]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac13_mittelland_ist_leer_ohne_hinweis_und_nicht_zustaendig[ch-9211-innenpunkt]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac13_mittelland_ist_leer_ohne_hinweis_und_nicht_zustaendig[zuerich-47.37-8.54-ch-9311]
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac13_region_aus_februar_fehlt_im_dezember_dieselbe_quelle_liefert_sie_nur_einmal
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac13_quelltext_enthaelt_keine_feste_liste_von_regions_ids
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac14_slf_ausfall_im_mittelland_zeigt_den_generischen_ausfallhinweis
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac15_aws_slf_ch_ist_wie_avalanche_report_klassifiziert
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac15_echter_abruf_aus_der_testumgebung_wird_blockiert
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac16_slf_steht_unmittelbar_nach_avalanche_report_am_ende_der_registry
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac16_registrierter_eintrag_ist_eine_slf_source_mit_polygon_zustaendigkeit
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac17_ohne_registrierungszeile_fehlt_nur_der_slf_eintrag
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac17_ohne_slf_kein_abruf_keine_warnung_kein_ausfallhinweis_in_graubuenden
+PASSED tests/test_slf_bulletin_abdeckung.py::test_ac17_tirol_ergebnis_ist_mit_und_ohne_slf_identisch
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac3_gerenderter_mail_und_telegram_text_nennt_unterhalb_2400_m
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac4_mehrdeutige_grenzen_ergeben_im_gerenderten_text_keine_hoehe
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac10_slf_abruffehler_zeigt_die_ausfall_hinweiszeile_im_trip_briefing[http-503]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac10_slf_abruffehler_zeigt_die_ausfall_hinweiszeile_im_trip_briefing[kaputtes-json]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac10_slf_abruffehler_zeigt_die_ausfall_hinweiszeile_im_trip_briefing[netzfehler]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac10_slf_abruffehler_zeigt_die_ausfall_hinweiszeile_im_trip_briefing[ohne-bulletins]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac18_trip_briefing_mail_traegt_slf_quelle_link_und_massgeblichkeitssatz
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac18_ortsvergleichs_mail_traegt_slf_quelle_link_und_massgeblichkeitssatz
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac18_eigenstaendige_warnmail_und_telegram_langform_tragen_quelle_link_und_satz[trip]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac18_eigenstaendige_warnmail_und_telegram_langform_tragen_quelle_link_und_satz[vergleich]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac18_sms_premium_sms_und_telegram_kurzform_tragen_weder_quelle_noch_link_noch_satz
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac18_quellenlabel_fuer_registry_name_und_region[slf_bulletin]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac18_quellenlabel_fuer_registry_name_und_region[slf_bulletin:CH-7231]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac18_quellenlabel_fuer_registry_name_und_region[slf_bulletin:CH-5123]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_trip_briefing_mail_zeigt_die_feinstufe_in_html_und_text[minus-echt]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_trip_briefing_mail_zeigt_die_feinstufe_in_html_und_text[neutral-abgeleitet]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_trip_briefing_mail_zeigt_die_feinstufe_in_html_und_text[plus-abgeleitet]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_ortsvergleichs_mail_zeigt_die_feinstufe_in_html_und_text[minus-echt]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_ortsvergleichs_mail_zeigt_die_feinstufe_in_html_und_text[neutral-abgeleitet]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_ortsvergleichs_mail_zeigt_die_feinstufe_in_html_und_text[plus-abgeleitet]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_eigenstaendige_warnmail_zeigt_die_feinstufe_in_html_und_text[minus-echt-trip]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_eigenstaendige_warnmail_zeigt_die_feinstufe_in_html_und_text[minus-echt-vergleich]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_eigenstaendige_warnmail_zeigt_die_feinstufe_in_html_und_text[neutral-abgeleitet-trip]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_eigenstaendige_warnmail_zeigt_die_feinstufe_in_html_und_text[neutral-abgeleitet-vergleich]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_eigenstaendige_warnmail_zeigt_die_feinstufe_in_html_und_text[plus-abgeleitet-trip]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_eigenstaendige_warnmail_zeigt_die_feinstufe_in_html_und_text[plus-abgeleitet-vergleich]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac19_echte_feinstufe_plus_aus_dem_januar_bulletin
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac20_telegram_langform_zeigt_feinstufe_in_zeile_und_kopfzeile[trip]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac20_telegram_langform_zeigt_feinstufe_in_zeile_und_kopfzeile[vergleich]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac20_telegram_kurzform_ist_identisch_zum_sms_text_ohne_feinstufe
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac21_briefing_sms_traegt_av3_im_warnblock_ohne_feinstufe
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac21_alarm_sms_und_premium_sms_tragen_av3_ohne_feinstufe
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac22_abgeleitet_stufe_4_kommt_in_beiden_flaechen_ueber_jeden_kanal_an[trip-email]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac22_abgeleitet_stufe_4_kommt_in_beiden_flaechen_ueber_jeden_kanal_an[trip-telegram]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac22_abgeleitet_stufe_4_kommt_in_beiden_flaechen_ueber_jeden_kanal_an[trip-sms]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac22_abgeleitet_stufe_4_kommt_in_beiden_flaechen_ueber_jeden_kanal_an[trip-premium_sms]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac22_abgeleitet_stufe_4_kommt_in_beiden_flaechen_ueber_jeden_kanal_an[vergleich-email]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac22_abgeleitet_stufe_4_kommt_in_beiden_flaechen_ueber_jeden_kanal_an[vergleich-telegram]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac22_abgeleitet_stufe_4_kommt_in_beiden_flaechen_ueber_jeden_kanal_an[vergleich-sms]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac22_abgeleitet_stufe_4_kommt_in_beiden_flaechen_ueber_jeden_kanal_an[vergleich-premium_sms]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac22_abgeleitet_stufe_5_nimmt_dieselben_wege_mit_originalziffer[trip]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac22_abgeleitet_stufe_5_nimmt_dieselben_wege_mit_originalziffer[vergleich]
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac23_ortsvergleich_ohne_filter_zeigt_die_slf_warnung
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac23_ortsvergleich_mit_filter_slf_bulletin_zeigt_die_slf_warnung
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac23_ortsvergleich_mit_filter_meteoalarm_blendet_die_slf_warnung_aus
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac24_abgeleitet_eskalation_3_auf_4_wird_gemeldet
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac24_abgeleitet_eskalation_4_auf_5_vergleicht_native_level
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac24_abgeleitet_kette_3_4_5_mit_gedaechtnis_meldet_zweimal
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac24_folgeausgabe_gleiche_stufe_abend_auf_morgen_update_bleibt_still
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac24_abend_ausgabe_gilt_frueh_am_folgetag_noch_und_bleibt_still
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac25_nur_der_graubuenden_nutzer_bekommt_den_slf_bericht_in_mail_und_sms
+PASSED tests/test_slf_bulletin_kanaele.py::test_ac25_melde_gedaechtnisse_der_beiden_nutzer_bleiben_getrennt
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac26_absenkung_4_auf_2_abgeleitet_ergibt_genau_eine_entwarnung_ueber_vier_kanaele[trip]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac26_absenkung_4_auf_2_abgeleitet_ergibt_genau_eine_entwarnung_ueber_vier_kanaele[vergleich]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac27_feinstufenwechsel_abgeleitet_ist_weder_entwarnung_noch_neuer_alarm[trip-3plus-zu-3minus]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac27_feinstufenwechsel_abgeleitet_ist_weder_entwarnung_noch_neuer_alarm[trip-3minus-zu-3plus]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac27_feinstufenwechsel_abgeleitet_ist_weder_entwarnung_noch_neuer_alarm[vergleich-3plus-zu-3minus]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac27_feinstufenwechsel_abgeleitet_ist_weder_entwarnung_noch_neuer_alarm[vergleich-3minus-zu-3plus]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac28_quellenwechsel_at_zu_ch_ist_keine_entwarnung[trip]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac28_quellenwechsel_at_zu_ch_ist_keine_entwarnung[vergleich]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[trip-abruffehler-http-503]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[trip-abruffehler-netz]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[trip-leere-saison]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[trip-region-verschwunden]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[vergleich-abruffehler-http-503]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[vergleich-abruffehler-netz]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[vergleich-leere-saison]
+PASSED tests/test_slf_bulletin_entwarnung.py::test_ac29_ausfall_leere_saison_und_verschwundene_region_sind_keine_entwarnung[vergleich-region-verschwunden]
+PASSED tests/test_slf_bulletin_docs.py::test_ac31_datenquellen_spec_enthaelt_antrag_7_slf_mit_auflagen
+PASSED tests/test_slf_bulletin_docs.py::test_ac31_datenquellen_spec_traegt_aenderungshistorie_1_4
+PASSED tests/test_slf_bulletin_docs.py::test_ac31_adr_0091_existiert_und_steht_im_index
+PASSED tests/test_slf_bulletin_docs.py::test_ac31_adr_0089_verweist_auf_adr_0091
+PASSED tests/test_slf_bulletin_docs.py::test_ac31_s1_spec_verweist_auf_die_s3_spec_statt_slice_2
+PASSED tests/test_slf_bulletin_docs.py::test_ac31_entwurf_der_anfrage_an_das_slf_existiert
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_validator_file_exists
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_validator_exports_validate_message
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_valid_official_alert_mail_passes
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_wrong_mail_type_is_clean_noop
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_broken_body_fails
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_empty_body_fails
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_validity_unknown_is_rejected
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_missing_validity_line_is_accepted
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_valid_timed_validity_still_passes
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_official_alerts_py_blocked_without_official_nachweis
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_official_alerts_py_passes_with_official_nachweis_alone
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_render_py_still_requires_radar_nachweis_not_official
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_avalanche_only_mail_passes
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_avalanche_wrong_eaws_word_only_in_html_fails
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_avalanche_wrong_eaws_word_only_in_plain_fails
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_thunderstorm_mail_without_ladder_but_avalanche_text_fails[Gewitter]
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_thunderstorm_mail_without_ladder_but_avalanche_text_fails[Gewitterwarnung]
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_mixed_thunderstorm_and_avalanche_mail_passes
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_mixed_mail_without_meter_or_ladder_fails
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_other_hazard_words_mirror_renderer_hazard_labels
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_ac30_slf_mail_mit_feinstufe_und_slf_quelle_besteht
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_ac30_slf_mail_mit_feinstufe_und_falschem_eaws_wort_faellt
+PASSED tests/tdd/test_official_alert_mail_validator.py::test_ac30_slf_mail_ohne_quelle_faellt
+============================= 148 passed in 17.13s =============================

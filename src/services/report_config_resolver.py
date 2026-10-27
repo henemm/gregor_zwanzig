@@ -57,6 +57,9 @@ RENDER_NEUTRAL: dict[str, str] = {
     "enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     "paused_until": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     "skip_next": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
+    # Issue #2422 S3: Einzel-Slot-Schalter, ausgewertet ueber slot_aktiv().
+    "morning_enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
+    "evening_enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     # Zeitplanung
     "morning_time": "Steuert WANN der Scheduler laeuft, nicht WAS gerendert wird.",
     "evening_time": "Steuert WANN der Scheduler laeuft, nicht WAS gerendert wird.",
@@ -199,8 +202,9 @@ class CompareRenderOptions:
     # Issue #1703 Scheibe 8: kanal-eigene Auswahl der UEBERSICHTSTABELLE, je
     # Kanal bereits gegen die Grundauswahl geschnitten (ADR-0050 Regel 1/2 ueber
     # `resolve_channel_enabled_metrics`). Keys: "email"/"telegram"/"sms" --
-    # Compare-Briefing kennt strukturell nur diese drei (ADR-0049; Premium-SMS
-    # ist im Vergleich reiner Alarm-Kanal, #1745).
+    # Compare-Briefing kennt strukturell nur diese drei (ADR-0049): Premium-SMS
+    # ist seit #2275 auch im Vergleich Briefing-Kanal, hat aber keine eigene
+    # Metrik-Auswahl -- sie sendet den fertig gerenderten SMS-Text.
     #
     # BEWUSST ADDITIV: `enabled_metrics` daruerber behaelt Bedeutung UND Wert
     # (reine globale Aufloesung). Nur die zwei Leser dieses Objekts
@@ -211,6 +215,12 @@ class CompareRenderOptions:
     enabled_metrics_by_channel: dict[str, Optional[list[str]]] = field(
         default_factory=dict
     )
+    # Issue #1405 S3: je Kanal die Anzahl GEWAEHLTER Eintraege ohne Renderer-
+    # Zuordnung (Grundauswahl + Kanal-eigene, dedupliziert). Zentral nicht
+    # waehlbare und vom Kanal abgewaehlte Groessen zaehlen nicht. Die Renderer
+    # zeigen die Zahl (Hinweiszeile bzw. SMS-Zaehler `?N`), statt sie nur zu
+    # loggen. Lesestelle: `.get(kanal, 0)` (fehlender Eintrag = nichts fehlt).
+    unresolved_by_channel: dict[str, int] = field(default_factory=dict)
 
 
 def resolve_compare_time_window(preset: dict) -> tuple[int, int]:
@@ -255,7 +265,7 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         resolve_compare_outlook_formats, resolve_compare_outlook_metrics,
     )
     from output.renderers.compare_metric_ids import (
-        resolve_channel_enabled_metrics, resolve_enabled_metrics,
+        resolve_channel_enabled_metrics, resolve_enabled_metrics_report,
     )
     from output.renderers.email.compare_html import has_visible_hour_columns
 
@@ -297,7 +307,11 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     # Issue #1848 A3: dieselbe Menge ist jetzt auch das Maximum des Ausblicks
     # (dritter Konsument, KEINE zweite Aufloesung) -- deshalb steht sie vor der
     # Ausblick-Aufloesung darunter.
-    global_metrics = resolve_enabled_metrics(display_config.get("active_metrics"))
+    # Issue #1405 S3: dieselbe EINE Aufloesung liefert zusaetzlich die
+    # unmappbaren Eintraege -- sie werden je Kanal gezaehlt und sichtbar.
+    global_metrics, global_unresolved = resolve_enabled_metrics_report(
+        display_config.get("active_metrics"),
+    )
     channel_raw = display_config.get("channel_active_metrics")
 
     # Issue #1361/#1368 (AC-8): eine bewusst geleerte Ausblick-Auswahl laesst
@@ -332,6 +346,26 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         ),
         enabled_metrics_by_channel={
             ch: resolve_channel_enabled_metrics(global_metrics, channel_raw, ch)
+            # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
+            for ch in ("email", "telegram", "sms")
+        },
+        unresolved_by_channel={
+            ch: _channel_unresolved_count(global_unresolved, channel_raw, ch)
+            # ADR-0049: Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
             for ch in ("email", "telegram", "sms")
         },
     )
+
+
+def _channel_unresolved_count(
+    global_unresolved: tuple[str, ...], channel_raw: object, channel: str,
+) -> int:
+    """Issue #1405 S3: Anzahl unmappbarer Eintraege fuer EINEN Kanal --
+    Grundauswahl plus Kanal-eigene Auswahl, dedupliziert nach Kennung."""
+    from output.renderers.compare_metric_ids import resolve_enabled_metrics_report
+
+    names = dict.fromkeys(global_unresolved)
+    if isinstance(channel_raw, dict) and channel in channel_raw:
+        _resolved, own = resolve_enabled_metrics_report(channel_raw.get(channel))
+        names.update(dict.fromkeys(own))
+    return len(names)

@@ -100,8 +100,8 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
-		const panel = page.getByTestId('trip-detail-panel-weather');
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+		const panel = page.getByTestId('trip-detail-panel-wetter-metriken');
 		await expect(panel).toBeVisible();
 
 		// Kein Platzhaltertext mehr
@@ -120,7 +120,7 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 	// Secondary ist seit #587 immer leer — es gibt nur noch EINE Grundauswahl-Sektion.
 	test('AC-2: Grundauswahl-Sektion zeigt Metrik-Toggle-Buttons (aktiv/inaktiv)', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const grundauswahl = page.getByTestId('wm2-grundauswahl');
 		await expect(grundauswahl).toBeVisible();
 		// Mindestens ein aktivierter Toggle-Button (Metrik "on") vorhanden.
@@ -132,7 +132,7 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 	// AC-3 (Fix #964, ex #536): Preset-Leiste zeigt Preset-Pills (User-Presets + Templates)
 	test('AC-3: Preset-Leiste zeigt Preset-Pills', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const pills = page.locator('[data-testid^="weather-preset-pill-"]');
 		await expect(pills.first()).toBeVisible();
 	});
@@ -140,7 +140,7 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 	// AC-4 (Fix #964, ex #536): Klick auf "Wandern"-Preset aktiviert Metriken in der Grundauswahl
 	test('AC-4: Klick auf "Wandern"-Preset befüllt Grundauswahl mit aktiven Metriken', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const wandernPill = page.getByTestId('weather-preset-pill-wandern');
 		await expect(wandernPill).toBeVisible();
 		await wandernPill.click();
@@ -165,7 +165,7 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 	// Umschalter.
 	test('AC-5: Format-Toggle Roh/Einfach umschaltbar', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const row = page
 			.getByTestId('weather-metrics-kanal-reihenfolge')
 			.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="thunder"]');
@@ -195,7 +195,7 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 
 		const ausblick = page.getByTestId('weather-metrics-ausblick');
 		await expect(ausblick).toBeVisible();
@@ -246,7 +246,7 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 	// die Grundauswahl-Toggle-Interaktion selbst löst scheduleAutoSave() aus (Issue #758).
 	test('AC-6: Metrik-Toggle löst Auto-Save-PUT mit bucket/order-Feldern aus', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const putPromise = page.waitForRequest(
 			(req) => req.method() === 'PUT' && req.url().includes('/weather-config')
 		);
@@ -264,7 +264,7 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 	// AC-7 (Fix #964, ex #536): Grundauswahl-Zustand nach Auto-Save und Reload korrekt geladen
 	test('AC-7: Grundauswahl-Zustand nach Auto-Save und Reload korrekt geladen', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		await page.getByTestId('weather-preset-pill-wandern').click();
 		const confirmOk = page.getByTestId('preset-confirm-ok');
 		if (await confirmOk.isVisible()) await confirmOk.click();
@@ -273,7 +273,7 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 			timeout: 5000
 		});
 		await page.reload();
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		// Grundauswahl hat nach Reload noch aktive Metriken.
 		await expect(
 			page.locator('[data-testid="wm2-grundauswahl"] .toggle-btn.on').first()
@@ -285,7 +285,7 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 	// ist das reale Erfolgssignal auf der Trip-Detail-Seite (kein separater Success-Text mehr).
 	test('AC-10: SaveIndicator zeigt saving→idle-Übergang nach Metrik-Änderung', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		await page.locator('[data-testid="wm2-grundauswahl"] .toggle-btn').first().click();
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'saving');
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {

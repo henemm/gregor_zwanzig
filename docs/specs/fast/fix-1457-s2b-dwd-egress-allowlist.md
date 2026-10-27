@@ -1,3 +1,10 @@
+---
+entity_id: fix_1457_s2b_dwd_egress_allowlist
+type: fast
+created: 2026-08-04
+status: implemented
+---
+
 # Mini-Spec: DWD-Dienst auf die Test-/Staging-Erlaubnisliste setzen
 
 ## Was ändert sich

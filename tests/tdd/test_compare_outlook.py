@@ -29,6 +29,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from bs4 import BeautifulSoup
 
+from tests.helpers.ortstag import utc_tag
+
 TARGET_DATE = date(2026, 7, 20)
 
 
@@ -108,7 +110,7 @@ def test_engine_retains_multiday_slice_without_extra_fetch(monkeypatch):
     result = ce_mod.ComparisonEngine.run(
         locations=[loc],
         time_window=(0, 23),
-        target_date=date.today(),
+        target_date=utc_tag(),  # #2314 D2: FixtureProvider verankert Offline-Daten am UTC-Tag
         forecast_hours=ce_mod.COMPARE_FORECAST_HOURS,
         official_alerts_enabled=False,
     )
@@ -305,7 +307,7 @@ def _dispatch_kwargs(preset, location, user_id, tmp_path):
 def _preview_kwargs(preset_id, user_id):
     from services.compare_preview_service import ComparePreviewService
     return _capture_render_compare_email_kwargs(
-        lambda: ComparePreviewService().render_email_preview(preset_id, user_id=user_id)
+        lambda: ComparePreviewService().render_all_channels(preset_id, user_id=user_id)
     )
 
 

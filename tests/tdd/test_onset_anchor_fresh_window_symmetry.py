@@ -4,7 +4,7 @@ SPEC: docs/specs/modules/feat_1468_onset_verschiebung_alarm.md (E2, AC-10)
 
 WAS HIER BEWACHT WIRD, und warum es eine eigene Datei verdient:
 
-Der Beginn-Alarm vergleicht zwei Staende derselben Tour — den Anker (vom
+Der Beginn-Alarm vergleicht zwei Staende derselben Trip — den Anker (vom
 Briefing-/Versandpfad geschrieben, `trip_report_scheduler._fetch_weather`)
 gegen den frischen Stand (vom Alarm-Pfad geholt,
 `trip_alert._fetch_fresh_weather`). Beide Seiten muessen ihre Onset-Stunde
@@ -59,7 +59,7 @@ from services.weather_change_detection import (  # noqa: E402
 from services.weather_snapshot import WeatherSnapshotService  # noqa: E402
 
 TH_ONSET_FELD = "thunder_onset_utc"
-# Die TOUR liegt auf Island (ganzjaehrig UTC+0, keine Sommerzeit): damit ist
+# Der TRIP liegt auf Island (ganzjaehrig UTC+0, keine Sommerzeit): damit ist
 # die UTC-Stunde der Fixture zugleich die Ortszeit-Stunde, nach der die
 # Aggregation filtert -- der Test haengt weder an der Systemzone noch an der
 # Sommerzeit. Die Gewitter-FUSION nutzt weiterhin die geeichte Alpen-Leiter
@@ -128,7 +128,7 @@ def _trip(start: int | None, ende: int | None) -> Trip:
 
 def _segmente(start: int | None, ende: int | None):
     segmente = convert_trip_to_segments(_trip(start, ende), _tag())
-    assert segmente, "Vorbedingung: die Tour muss Segmente ergeben"
+    assert segmente, "Vorbedingung: die Trip muss Segmente ergeben"
     return segmente
 
 
@@ -174,14 +174,14 @@ def _onset_aenderungen(alt, neu) -> list:
 # Die Strukturaussage: das Fenster haengt am Segment
 # ==========================================================================
 
-def test_jedes_segment_der_tour_traegt_das_eingestellte_fenster():
+def test_jedes_segment_des_trips_traegt_das_eingestellte_fenster():
     """Auch das ZIEL-Segment — es entsteht in `convert_trip_to_segments()` an
     einer eigenen Stelle und wurde dort frueher vergessen (#1584 setzte dort
     nur das Zeit-Ende aus dem Fenster, nicht die Auswertungsgrenzen)."""
     segmente = _segmente(*ENG)
     kennungen = [str(s.segment_id) for s in segmente]
     assert "Ziel" in kennungen, (
-        f"Vorbedingung: die Tour muss ein Ziel-Segment haben: {kennungen!r}"
+        f"Vorbedingung: die Trip muss ein Ziel-Segment haben: {kennungen!r}"
     )
     for s in segmente:
         assert (s.day_window_start_hour, s.day_window_end_hour) == ENG, (
@@ -206,8 +206,8 @@ def test_ohne_eingestelltes_fenster_bleiben_die_segmente_leer():
 # Die Wirkung: kein Alarm aus der Fensterwahl
 # ==========================================================================
 
-def test_anker_und_frischer_stand_derselben_tour_erzeugen_keinen_alarm():
-    """Beide Vergleichsseiten stammen aus derselben Tour mit Fenster 8-16 und
+def test_anker_und_frischer_stand_desselben_trips_erzeugen_keinen_alarm():
+    """Beide Vergleichsseiten stammen aus derselben Trip mit Fenster 8-16 und
     DERSELBEN Stundenreihe — es hat sich am Wetter nichts geaendert, also darf
     kein Beginn-Alarm entstehen."""
     segment = _segmente(*ENG)[0]

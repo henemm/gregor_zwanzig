@@ -3,7 +3,7 @@ entity_id: issue_203_stage_weather_risk
 type: module
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: implemented
 version: "1.0"
 parent_spec: epic_135_step4_left_column
 issues: [203]

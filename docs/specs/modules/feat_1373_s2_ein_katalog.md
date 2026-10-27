@@ -3,7 +3,7 @@ entity_id: feat_1373_s2_ein_katalog
 type: module
 created: 2026-07-26
 updated: 2026-07-26
-status: draft
+status: implemented
 version: "1.2"
 tags: [compare, metric-catalog, drift-guard]
 ---

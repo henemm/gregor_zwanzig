@@ -1,7 +1,7 @@
 ---
 issue: 596
 title: Breadcrumb-Inkonsistenz „MEINE TRIPS" vs „MEINE TOUREN"
-status: approved
+status: implemented
 ---
 
 # Spec: Bug #596 — Breadcrumb-Inkonsistenz
@@ -11,7 +11,7 @@ status: approved
 Auf `/trips/[id]/edit` zeigt der Breadcrumb „MEINE TOUREN" statt „MEINE TRIPS".
 Auf `/trips/[id]` (TripHeader) ist es bereits korrekt „MEINE TRIPS".
 
-Verstoß gegen Terminologie-Konvention: Trip (englisch) — „Touren" ist verboten.
+Verstoß gegen Terminologie-Konvention: Trip (englisch) — „Trips" ist verboten.
 
 ## Betroffene Datei
 

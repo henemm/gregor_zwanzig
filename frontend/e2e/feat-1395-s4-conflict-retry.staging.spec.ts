@@ -203,7 +203,7 @@ test('#1395 S4 (AC-1/AC-2): 412 zeigt "Nochmal speichern" — Klick frischt auf 
 // ─────────────────────────────────────────────────────────────────────────────
 // Aufraeum-Kontrolle.
 // ─────────────────────────────────────────────────────────────────────────────
-test('#1395 S4 Aufraeum-Kontrolle: keine Test-Tour dieses Laufs bleibt liegen', async ({ request }) => {
+test('#1395 S4 Aufraeum-Kontrolle: keine Test-Trip dieses Laufs bleibt liegen', async ({ request }) => {
 	const res = await request.get('/api/trips');
 	expect(res.ok(), `GET /api/trips HTTP ${res.status()}`).toBeTruthy();
 	const trips = (await res.json()) as Array<{ id: string; name?: string }>;
@@ -211,5 +211,5 @@ test('#1395 S4 Aufraeum-Kontrolle: keine Test-Tour dieses Laufs bleibt liegen', 
 		.filter((t) => (t.name ?? '').startsWith(`${E2E_TEST_PREFIX}1395S4-`))
 		.map((t) => `${t.id} (${t.name})`);
 	console.log(`[#1395 S4 Aufraeumen] Reste: ${JSON.stringify(leftovers)}`);
-	expect(leftovers, 'keine Test-Tour dieses Laufs bleibt liegen').toEqual([]);
+	expect(leftovers, 'keine Test-Trip dieses Laufs bleibt liegen').toEqual([]);
 });

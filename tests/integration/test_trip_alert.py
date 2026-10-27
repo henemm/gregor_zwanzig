@@ -37,7 +37,7 @@ class TestFilterSignificantChanges:
         """
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
 
         changes = [
             _create_change("temp_max_c", ChangeSeverity.MINOR),
@@ -53,7 +53,7 @@ class TestFilterSignificantChanges:
         """Issue #638: MINOR changes are no longer silently dropped."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
 
         changes = [
             _create_change("temp_max_c", ChangeSeverity.MINOR),
@@ -68,7 +68,7 @@ class TestFilterSignificantChanges:
         """Empty list should return empty."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         filtered = service._filter_significant_changes([])
 
         assert filtered == []
@@ -170,7 +170,7 @@ class TestDetectAllChanges:
         """Should detect changes between matching segments."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
 
         # Create cached and fresh with different temps
         cached = [_create_segment_weather(segment_id=1, temp_max=15.0)]
@@ -186,7 +186,7 @@ class TestDetectAllChanges:
         """Should return empty when no significant changes."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
 
         # Create cached and fresh with similar temps
         cached = [_create_segment_weather(segment_id=1, temp_max=15.0)]
@@ -206,7 +206,7 @@ class TestAlertOnChangesConfig:
         """Should not send alert when alert_on_changes is False."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         trip = _create_test_trip()
         trip.report_config = TripReportConfig(
             trip_id=trip.id, alert_on_changes=False
@@ -221,7 +221,7 @@ class TestAlertOnChangesConfig:
         """Should not block when alert_on_changes is True."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         trip = _create_test_trip()
         trip.report_config = TripReportConfig(
             trip_id=trip.id, alert_on_changes=True
@@ -241,7 +241,7 @@ class TestAlertOnChangesConfig:
         """Should not block when report_config is None (default)."""
         from services.trip_alert import TripAlertService
 
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         trip = _create_test_trip()
         trip.report_config = None
 

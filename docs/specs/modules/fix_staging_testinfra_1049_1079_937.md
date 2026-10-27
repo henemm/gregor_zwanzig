@@ -3,7 +3,7 @@ entity_id: fix_staging_testinfra_1049_1079_937
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [staging, testinfra, bugfix, telegram, imap, cron]
 ---

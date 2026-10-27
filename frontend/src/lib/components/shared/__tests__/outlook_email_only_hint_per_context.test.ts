@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const CONTROLS = join(here, '..', 'CompareOutlookLayoutControls.svelte');
+const CONTROLS = join(here, '..', 'OutlookLayoutControls.svelte');
 const TAB = join(here, '..', 'WeatherMetricsTab.svelte');
 
 const HINT_TESTID = 'compare-layout-outlook-email-only-hint';
@@ -106,7 +106,7 @@ describe('#1720 S2 AC-6 — der E-Mail-only-Hinweis haengt am Kontext', () => {
 		});
 		assert.ok(
 			gefunden,
-			`AC-6 FAIL: CompareOutlookLayoutControls.svelte kennt die Prop \`${PROP}\` nicht — ` +
+			`AC-6 FAIL: OutlookLayoutControls.svelte kennt die Prop \`${PROP}\` nicht — ` +
 				'ohne sie kann der Trip-Kontext den Hinweis nicht abschalten, ohne den ' +
 				'Ortsvergleich mitzureissen (Spec Implementation Details 5).'
 		);
@@ -135,7 +135,7 @@ describe('#1720 S2 AC-6 — der E-Mail-only-Hinweis haengt am Kontext', () => {
 
 	test('Gegeben die Trip-Einbindung, dann schaltet sie den Hinweis mit showEmailOnlyHint={false} ab', () => {
 		const ast = parseComponent(TAB);
-		const mounts = findComponentsNamed(ast.fragment, 'CompareOutlookLayoutControls');
+		const mounts = findComponentsNamed(ast.fragment, 'OutlookLayoutControls');
 		assert.equal(
 			mounts.length,
 			2,
@@ -164,7 +164,7 @@ describe('#1720 S2 AC-6 — der E-Mail-only-Hinweis haengt am Kontext', () => {
 
 	test('Gegeben die Ortsvergleich-Einbindung, dann laesst sie die Vorgabe unangetastet', () => {
 		const ast = parseComponent(TAB);
-		const mounts = findComponentsNamed(ast.fragment, 'CompareOutlookLayoutControls');
+		const mounts = findComponentsNamed(ast.fragment, 'OutlookLayoutControls');
 		const vergleich = mounts.filter((m) => staticAttrText(m, 'title') !== TRIP_TITLE);
 		assert.equal(
 			vergleich.length,

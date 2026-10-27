@@ -17,6 +17,7 @@ import pytest
 from app.loader import get_briefings_dir, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.inbound_email_reader import InboundEmailReader
+from services.notification_service import NotificationService
 
 
 # ---------------------------------------------------------------------------
@@ -45,7 +46,7 @@ def _make_trip() -> Trip:
 @pytest.fixture(autouse=True)
 def cleanup():
     yield
-    trip_path = get_briefings_dir() / f"{_TRIP_ID}.json"
+    trip_path = get_briefings_dir(user_id="default") / f"{_TRIP_ID}.json"
     if trip_path.exists():
         trip_path.unlink()
 
@@ -66,10 +67,13 @@ class TestGateErrorNoTripName:
 
         # The key assertion: _process_single should send an error reply via the
         # NotificationService (Issue #1024: Inbound-Reader über NotificationService).
+        # #2151 Scheibe C: der Dienst wird erst in poll_and_process(settings)
+        # mit Identitaet gebaut, ist also vor dem Aufruf noch None -- die
+        # Faehigkeitspruefung laeuft daher gegen die Klasse, nicht die Instanz.
         assert hasattr(reader, '_notification_service'), (
             "Reader must delegate replies to NotificationService"
         )
-        assert hasattr(reader._notification_service, 'send_command_reply_email'), (
+        assert hasattr(NotificationService, 'send_command_reply_email'), (
             "NotificationService must provide send_command_reply_email"
         )
 
@@ -96,7 +100,7 @@ class TestProcessorErrorReplySent:
 
     def test_unknown_command_still_gets_reply(self):
         """### foobar should trigger error reply with command help."""
-        save_trip(_make_trip())
+        save_trip(_make_trip(), user_id="default")
         from services.trip_command_processor import TripCommandProcessor
 
         p = TripCommandProcessor()
@@ -109,6 +113,7 @@ class TestProcessorErrorReplySent:
             sender="test@example.com",
             channel="email",
             received_at=datetime.now(tz=timezone.utc),
+            user_id="default",
         )
         result = p.process(msg)
         assert result.success is False
@@ -119,7 +124,7 @@ class TestProcessorErrorReplySent:
 
     def test_no_command_format_gets_reply(self):
         """Plain text (no ### prefix) should trigger help reply from processor."""
-        save_trip(_make_trip())
+        save_trip(_make_trip(), user_id="default")
         from services.trip_command_processor import TripCommandProcessor, InboundMessage
         from datetime import datetime, timezone
 
@@ -130,6 +135,7 @@ class TestProcessorErrorReplySent:
             sender="test@example.com",
             channel="email",
             received_at=datetime.now(tz=timezone.utc),
+            user_id="default",
         )
         result = p.process(msg)
         assert result.success is False

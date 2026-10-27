@@ -3,7 +3,7 @@ entity_id: compare_kanal_metriken
 type: bugfix
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, telegram, sms, kurzform, issue-1362, issue-1399, epic-1372]
 ---
@@ -270,7 +270,7 @@ hier je Ort für die nicht mehr passenden Metrik-Zellen (z.B.
 
 ## Acceptance Criteria
 
-- **AC-1 (neue Größe erscheint im Telegram):** Given eine ausgewählte
+- **AC-1:** (neue Größe erscheint im Telegram) Given eine ausgewählte
   Wettergröße außerhalb der heutigen Sechserliste (z.B. Taupunkt) / When der
   Telegram-Kurztext für einen Ort gerendert wird / Then erscheint diese
   Größe mit Bezeichnung und Wert im Text — heute verschwindet sie
@@ -278,7 +278,7 @@ hier je Ort für die nicht mehr passenden Metrik-Zellen (z.B.
   - Test: `render_compare_telegram(result, enabled_metrics=["dewpoint_avg"])`
     enthält "Taupunkt" und den formatierten Wert im gerenderten Text.
 
-- **AC-2 (Überlauf wird gezählt, nicht verschwiegen):** Given mehr
+- **AC-2:** (Überlauf wird gezählt, nicht verschwiegen) Given mehr
   ausgewählte Größen, als Telegram-Zellen Platz haben (z.B. 10 gewählte
   Größen bei 7 Zellen je Ort) / When der Telegram-Kurztext gerendert wird /
   Then erscheinen die 7 wichtigsten in der Nutzer-Reihenfolge als Zellen,
@@ -287,7 +287,7 @@ hier je Ort für die nicht mehr passenden Metrik-Zellen (z.B.
   - Test: `enabled_metrics` mit 10 Renderer-IDs → genau 7 Zellen im
     Ortsblock, Text enthält einen Hinweis mit der Zahl "3".
 
-- **AC-3 (SMS bleibt im Budget, kürzt nie mittendrin):** Given eine
+- **AC-3:** (SMS bleibt im Budget, kürzt nie mittendrin) Given eine
   Metrik-Auswahl, die mehr Größen enthält, als ins 140-Zeichen-Budget einer
   SMS passen / When die SMS gerendert wird / Then bleibt die Nachricht unter
   140 Zeichen und lässt ganze Größen entfallen statt ein Kürzel oder einen
@@ -296,7 +296,7 @@ hier je Ort für die nicht mehr passenden Metrik-Zellen (z.B.
     `len(sms) <= 140`; kein abgeschnittenes Teil-Kürzel am Zeilenende
     (Regex-Prüfung auf vollständige "Kürzel Wert"-Paare).
 
-- **AC-4 (Nutzer-Reihenfolge wirkt weiterhin):** Given zwei Metrik-Auswahlen
+- **AC-4:** (Nutzer-Reihenfolge wirkt weiterhin) Given zwei Metrik-Auswahlen
   mit denselben Größen in umgekehrter Reihenfolge / When Telegram bzw. SMS
   gerendert werden / Then unterscheidet sich die Zellfolge entsprechend der
   jeweils eingestellten Reihenfolge.
@@ -305,7 +305,7 @@ hier je Ort für die nicht mehr passenden Metrik-Zellen (z.B.
     Zellfolgen in Telegram UND SMS unterscheiden sich und entsprechen
     jeweils der eingegebenen Reihenfolge.
 
-- **AC-5 (keine leere Nachricht bei reiner Nicht-Sechser-Auswahl):** Given
+- **AC-5:** (keine leere Nachricht bei reiner Nicht-Sechser-Auswahl) Given
   eine Auswahl ausschließlich aus Größen außerhalb der heutigen
   Sechserliste (z.B. nur Taupunkt und Luftdruck) / When Telegram und SMS
   gerendert werden / Then zeigen beide die gewählten Werte — heute liefert
@@ -315,7 +315,7 @@ hier je Ort für die nicht mehr passenden Metrik-Zellen (z.B.
     `render_compare_telegram`/`render_compare_sms` enthalten NICHT die
     Zeichenkette "keine Werte" und zeigen stattdessen die beiden Werte.
 
-- **AC-6 (Nachweis #1399 — Telegram rechnet in Ortszeit):** Given ein Ort
+- **AC-6:** (Nachweis #1399 — Telegram rechnet in Ortszeit) Given ein Ort
   ohne gespeichertes Zeitzonenfeld (nur Koordinaten, z.B. in einer von UTC
   abweichenden Zone) mit einer amtlichen Warnung oder einem Ausblick-Wert,
   der eine Uhrzeit zeigt / When der Telegram-Kurztext für diesen Ort
@@ -331,7 +331,7 @@ hier je Ort für die nicht mehr passenden Metrik-Zellen (z.B.
     `render_compare_sms`) — die angezeigte Stunde entspricht der
     Koordinaten-Ortszeit, nicht UTC.
 
-- **AC-7 (Regressionsschutz — die heutigen sechs Größen unverändert):**
+- **AC-7:** (Regressionsschutz — die heutigen sechs Größen unverändert)
   Given eine Auswahl, die exakt die heutigen sechs Größen enthält (Temp max,
   Wind, Sonne, Wolken, Schneehöhe, Neuschnee) in ihrer bisherigen Reihenfolge
   / When Telegram und SMS gerendert werden / Then sind die dargestellten
@@ -343,7 +343,7 @@ hier je Ort für die nicht mehr passenden Metrik-Zellen (z.B.
     Vergleich (nicht String-Gleichheit der ganzen Nachricht, da sich Labels
     ändern dürfen).
 
-- **AC-8 (SMS-Kürzel kommen ausschließlich aus dem Katalog):** Given jede der
+- **AC-8:** (SMS-Kürzel kommen ausschließlich aus dem Katalog) Given jede der
   26 Compare-Größen, die grundsätzlich in der SMS erscheinen kann / When ihr
   Kürzel über `get_sms_code()` auf die zugrundeliegende Katalog-Metrik
   abgefragt wird / Then liefert JEDE Größe ein nicht-leeres Kürzel — keine

@@ -7,7 +7,7 @@
 
 ## Problem
 
-Die H1 im Tour-Kopf (`/trips/[id]`) rendert Kürzel + Trenn-Mittelpunkt + Namen als
+Die H1 im Trip-Kopf (`/trips/[id]`) rendert Kürzel + Trenn-Mittelpunkt + Namen als
 `"KHW ·Karnischer Höhenweg"` — das Leerzeichen **nach** dem Mittelpunkt fehlt. Svelte trimmt
 das nachgestellte Leerzeichen des Text-Nodes `" · "` direkt vor dem `{/if}`-Block-Ende.
 

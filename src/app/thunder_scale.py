@@ -28,7 +28,31 @@ __all__ = [
     "thunder_signal_label",
     "THUNDER_SIGNAL_LABEL_DE",
     "union_of_max_carriers",
+    "thunder_low_statement",
+    "thunder_low_statement_sentence",
+    "THUNDER_LABEL_DE",
+    "format_hail_note",
+    "MODELLLAUF_ANHEBUNG_MIN_PCT",
+    "MODELLLAUF_DAEMPFUNG_MAX_PCT",
+    "dampen_thunder_level_by_one_step",
+    "elevate_thunder_level_by_modelllauf",
 ]
+
+
+def format_hail_note(hail_flag: Optional[bool]) -> Optional[str]:
+    """Der EINE gemeinsame Anzeige-Textbaustein fuer das Hagel-Kennzeichen
+    (Trip-/Compare-Mail-Renderer UND ``GEWITTER``-Kommando, #1481 DRY-Pflicht).
+
+    Rein deskriptiv, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
+    "unbekannt"/"nein" gibt es KEINEN Zusatztext (kein Rauschen).
+
+    Issue #2205: aus ``output/metric_format.py`` hierher gezogen (dort
+    re-exportiert) -- der Nacht-Halbsatz (``app/day_window.py``) liegt auf
+    dem Zeitplaner-Pfad und darf keine Darstellungsschicht importieren.
+    """
+    if hail_flag is True:
+        return "Hagel: ja"
+    return None
 
 # Kanonische Ordnungsquelle fuer ThunderLevel (str-Enum ohne eigene Ordnung,
 # app/models.py). ThunderLevel(str, Enum) hasht/vergleicht identisch zu
@@ -101,6 +125,11 @@ THUNDER_SIGNAL_LABEL_DE: dict[str, str] = {
     "blitzdichte": "Blitzdichte",
     "cape": "CAPE",
     "blitzpotenzial": "Blitzpotenzial",
+    # Issue #1983 (Gewitter S6): fuenftes Signal, NICHT Teil der Fusion in
+    # `_signal_levels()` (die bleibt bei den vier obigen Schluesseln) --
+    # entsteht ausschliesslich in `trip_report_scheduler._apply_ensemble_spreads`
+    # ueber `elevate_thunder_level_by_modelllauf()`.
+    "modelllauf": "Modellläufe",
 }
 
 
@@ -171,3 +200,185 @@ def union_of_max_carriers(
             if name not in traeger:
                 traeger.append(name)
     return traeger or None
+
+
+# ---------------------------------------------------------------------------
+# Issue #1983 (Gewitter S6): Modelllauf-Mehrheit als fuenftes Fusionssignal
+# (nur anhebend) UND als Ein-Stufen-Daempfer auf die vier bestehenden Signale
+# (nur bei ausgeprägter Uneinigkeit der Ensemble-Laeufe). Beide Helfer wirken
+# NACH der eigentlichen Fusion auf das bereits gebildete `dp.thunder_level`
+# (Spec "Architektur-Befund" -- der Ensemble-Abruf liegt zeitlich hinter
+# `_signal_levels()`, ein mathematisch gleichwertiger Ersatz fuer "jedes
+# Einzelsignal daempfen und neu fusionieren").
+MODELLLAUF_ANHEBUNG_MIN_PCT = 60
+MODELLLAUF_DAEMPFUNG_MAX_PCT = 10
+
+# Umkehrabbildung von `_THUNDER_ORDER` fuer den Ein-Stufen-Daempfer.
+_THUNDER_BY_ORDINAL = {ordinal: level for level, ordinal in _THUNDER_ORDER.items()}
+
+
+def dampen_thunder_level_by_one_step(level: Optional[ThunderLevel]) -> Optional[ThunderLevel]:
+    """Daempft `level` um GENAU eine Stufe, niemals unter `NONE` (Issue #1983 AC-4).
+
+    `None` ("keine Aussage") bleibt `None` -- nichts zu daempfen. Die
+    Traegerliste ist NICHT Teil dieser Funktion (Aufrufer-Verantwortung,
+    Spec: Traeger bleiben unveraendert, ausser das Ergebnis faellt auf
+    `NONE` -- dann leert sie der Aufrufer).
+    """
+    if level is None:
+        return None
+    return _THUNDER_BY_ORDINAL[max(0, thunder_ordinal(level) - 1)]
+
+
+def elevate_thunder_level_by_modelllauf(
+    level: Optional[ThunderLevel],
+    carriers: Optional[list[str]],
+) -> tuple[ThunderLevel, Optional[list[str]]]:
+    """Hebt `level` auf `HIGH` an, Traegerliste ueber `union_of_max_carriers()`
+    gebildet (Issue #1983 AC-2, S2-Wiederverwendung #1680).
+
+    `modelllauf` ist ein fuenftes Signal auf der Skalen-Obergrenze `HIGH` --
+    das neue Maximum ist deshalb nach Konstruktion immer `HIGH`, unabhaengig
+    vom Ausgangswert.
+    """
+    new_carriers = union_of_max_carriers(
+        [(level, carriers), (ThunderLevel.HIGH, ["modelllauf"])]
+    )
+    return ThunderLevel.HIGH, new_carriers
+
+
+# ---------------------------------------------------------------------------
+# Issue #2176: die LOW-Aussage OHNE Ereignisbehauptung
+#
+# `ThunderLevel.LOW` verlaesst mit dieser Scheibe die vier-stufige,
+# nutzersichtbare Gewitterleiter (PO-Entscheid 2026-09-08, Epic #1419
+# Abschnitt 9): "leicht" misst eine Luftmasse, kein Ereignis. Bis hierher baute
+# JEDE der sechs+ Formulierungsstellen ihren LOW-Satz selbst aus
+# "Gewitter"-Strings -- die geteilte Quelle liefert deshalb ein FERTIGES
+# Satzfragment, nicht nur einen Baustein, sonst bliebe genau diese
+# Sechsfach-Duplizierung bestehen.
+#
+# Domaenenschicht (nicht `output/metric_format.py`) aus DEMSELBEN Grund wie
+# `thunder_signal_label` darueber: `app/day_window.py` und
+# `services/trip_report_scheduler.py` brauchen den Baustein, duerfen aber keine
+# Darstellungsschicht importieren (Waechter #1365). `output.metric_format`
+# re-exportiert ihn unveraendert.
+_LOW_KERN_REINE_LUFTMASSE = "instabile Luftmasse"
+_LOW_KERN_GEMISCHT = "schwaches Signal"
+
+
+# Geteilte deutsche Beschriftung (Issue #1474, "geteilte Quelle statt Kopien"
+# statt fuenffach dupliziertem Label). NONE fehlt bewusst nicht -- Konsumenten
+# mit abweichender NONE-Darstellung (z.B. compare_html.py "—" statt "kein")
+# ueberschreiben nur diesen einen Eintrag lokal.
+#
+# Issue #2176 hierher verschoben aus `output/metric_format.py`, nach DEMSELBEN
+# Muster wie `THUNDER_SIGNAL_LABEL_DE` darueber: `thunder_low_statement()`
+# haengt das Stufenwort an und braucht es deshalb in der Domaenenschicht -- ein
+# Import aus `output.metric_format` waere hier ein Zirkelbezug UND ein
+# Schichtbruch (Waechter #1365). `output.metric_format` re-exportiert das Dict
+# unveraendert, alle bestehenden Importe bleiben gueltig.
+THUNDER_LABEL_DE: dict[ThunderLevel, str] = {
+    ThunderLevel.NONE: "kein",
+    ThunderLevel.LOW: "leicht",
+    ThunderLevel.MED: "mittel",
+    ThunderLevel.HIGH: "hoch",
+}
+
+
+def _thunder_low_is_pure_cape(carriers: Optional[Iterable[str]]) -> bool:
+    """True NUR wenn ``carriers`` eine NICHT-LEERE Menge ist und ausschliesslich
+    ``"cape"`` enthaelt.
+
+    ``None`` UND ``[]`` gelten BEIDE als unbekannte/fehlende Herkunft -- KEINE
+    reine Luftmasse (Analogie ADR-0048 Regel 5: unbekannte Herkunft ist keine
+    Aussage, nicht "unauffaellig"). LOW kann strukturell aus reiner
+    Blitzdichte ohne jeden CAPE-Beitrag entstehen; eine pauschale
+    "nur Luftmasse"-Behauptung waere dort sachlich falsch (Spec AC-4).
+    """
+    if not carriers:
+        return False
+    return set(carriers) <= {"cape"}
+
+
+def thunder_low_statement(
+    form: str,
+    carriers: Optional[Iterable[str]],
+    cape_jkg: Optional[float] = None,
+) -> str:
+    """Fertige LOW-Aussage OHNE Gewitterwort, herkunftsabhaengig (#2176).
+
+    ``form="lang"`` (E-Mail-/Telegram-Fliesstext) traegt den CAPE-Wert, wenn
+    bekannt (Spec AC-2: der Zahlenwert steht AN der Aussage, nicht nur in der
+    ohnehin vorher bestehenden Stundentabellen-Spalte). ``form="kurz"``
+    (Kompakt/Fusszeile/SMS-Umfeld) traegt ihn NICHT -- dort entscheidet das
+    Zeichenbudget.
+
+    Rueckgabe ist bewusst KLEIN geschrieben: der Baustein steht mal
+    satzanfangs (Highlight, Pille), mal mitten im Satz (Nacht-Zusatz).
+    Satzanfangs setzen die Aufrufer ``thunder_low_statement_sentence()``.
+
+    Das STUFENWORT ("leicht") bleibt Teil der Aussage: #2176 nimmt die
+    Ereignisbehauptung heraus, nicht die Stufe. `feat_1474` AC-11 ("jeder
+    Kanal zeigt ein erkennbares 'leicht'") und `fix_1488` AC-4 bleiben laut
+    Spec-Dependencies fuer das Stufenwort in Kraft -- nur die Satzform mit
+    "Gewitter" entfaellt. Stufenwort und CAPE teilen sich EINE Klammer, sonst
+    stuenden bei ``form="lang"`` zwei Klammern hintereinander.
+    """
+    if form not in ("lang", "kurz"):
+        raise ValueError(f"Unbekannte thunder_low_statement-Form: {form!r}")
+    kern = (
+        _LOW_KERN_REINE_LUFTMASSE if _thunder_low_is_pure_cape(carriers)
+        else _LOW_KERN_GEMISCHT
+    )
+    zusatz = [THUNDER_LABEL_DE[ThunderLevel.LOW]]
+    if form == "lang" and cape_jkg is not None:
+        zusatz.append(f"CAPE {cape_jkg:.0f} J/kg")
+    return f"{kern} ({', '.join(zusatz)})"
+
+
+def thunder_low_statement_sentence(
+    form: str,
+    carriers: Optional[Iterable[str]],
+    cape_jkg: Optional[float] = None,
+) -> str:
+    """``thunder_low_statement()`` satzanfangs -- erster Buchstabe gross.
+
+    Eigene Funktion statt ``str.capitalize()`` an vier Aufrufstellen:
+    ``capitalize()`` wuerde den Rest KLEIN schreiben und aus
+    "instabile Luftmasse" ein falsches "Instabile luftmasse" machen.
+    """
+    text = thunder_low_statement(form, carriers, cape_jkg)
+    return text[:1].upper() + text[1:]
+
+
+# Nacht-Adjektive des Nacht-Halbsatzes (#1651, kanonisiert #2028). Eigene
+# Groesse statt Flexion von THUNDER_LABEL_DE: dort heisst HIGH "hoch", der
+# Halbsatz braucht "starkes". LOW hat eine eigene ereignisfreie Aussage (#2176).
+THUNDER_NIGHT_ADJECTIVE_DE: dict[ThunderLevel, str] = {
+    ThunderLevel.MED: "mittleres",
+    ThunderLevel.HIGH: "starkes",
+}
+
+
+def thunder_headline_sentence(
+    level: ThunderLevel,
+    when: Optional[str],
+    carriers: Optional[Iterable[str]],
+) -> str:
+    """Satzkopf der Gewitter-Tagesaussage (#2028) -- EINE Quelle fuer den
+    Trend-Weg und den Fetch-Weg des Schedulers.
+
+    ``when`` ist die bereits formatierte Uhrzeit (``None`` = unbekannt, dann
+    ohne " ab ..."-Anhang). NONE traegt nie eine Uhrzeit. LOW delegiert an
+    ``thunder_low_statement_sentence("kurz", carriers)`` (#2176).
+    """
+    if level == ThunderLevel.NONE:
+        return "Kein Gewitter erwartet"
+    if level == ThunderLevel.LOW:
+        kern = thunder_low_statement_sentence("kurz", carriers)
+    elif level == ThunderLevel.MED:
+        kern = "Gewitter möglich"
+    else:
+        kern = "Starkes Gewitter erwartet"
+    return f"{kern} ab {when}" if when else kern

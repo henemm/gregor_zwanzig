@@ -210,7 +210,7 @@ class _ScriptedWeatherSource:
     def fetch(
         self, point_id: str, lat: float, lon: float,
         start_hour: int | None = None, end_hour: int | None = None,
-        elevation_m: int | None = None,
+        elevation_m: int | None = None, user_id: str | None = None,
     ):
         return _point(point_id, point_id, lat, lon, precip_sum_mm=self._values.get(point_id, 0.0))
 
@@ -605,8 +605,9 @@ def test_ac6_cooldown_and_state_dedup_suppress_repeat_email_only_channel(telegra
     Zeitpunkt wird Telegram/SMS bedient — nicht weil Compare-Alerts E-Mail-only
     wären (das galt bis #1467 S2 AG4), sondern weil DIESES Preset kein
     Kanal-Opt-in trägt: `send_telegram`/`send_sms` fehlen im Preset-Dict, und
-    ein fehlender Schlüssel gilt nie als „an" (Resolver
-    `compare_alert_channels.effective_compare_channels`, Spec-Risiko R4).
+    ein fehlender Schlüssel gilt nie als „an" (geteilte Alarm-Auflösung
+    `services.alert_channels.effective_alert_channels` seit Issue #2279 S1,
+    Spec-Risiko R4).
     Telegram ist dabei technisch konfiguriert — es scheitert also am Opt-in,
     nicht an der Fähigkeit.
 

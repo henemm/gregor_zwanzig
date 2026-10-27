@@ -1,21 +1,21 @@
 // TDD RED — Issue #1453, AC-7: die Konfiguration zeigt je Wettergroesse ALLE
 // DREI Namensformen (ausgeschriebener deutscher Name · englische Fachkurzform ·
-// SMS-Kuerzel) — und zwar in ALLEN VIER Editoren, nicht nur im Touren-Editor.
+// SMS-Kuerzel) — und zwar in ALLEN VIER Editoren, nicht nur im Trips-Editor.
 //
 // Warum: ein Kuerzel in einer Mail ("Dew") oder einer SMS ("DP") muss an
 // mindestens einer Stelle in der Oberflaeche aufloesbar sein. Alle drei Formen
 // liegen im zentralen Register und werden von GET /api/metrics bereits
 // ausgeliefert (`label`/`col_label`/`sms_code`) — AC-7 ist eine
-// Darstellungs-, keine Datenaufgabe. Heute zeigt nur der Touren-Editor die
+// Darstellungs-, keine Datenaufgabe. Heute zeigt nur der Trips-Editor die
 // englische Kurzform als Marke (WeatherV2Reihenfolge.svelte:80-81); das
 // SMS-Kuerzel erscheint nirgends, und die drei Compare-Flaechen bauen ihre
 // Zeilen-Eintraege ganz ohne `col_label`/`sms_code` auf.
 //
 // Die vier Editoren:
-//   1. Touren-Editor            WeatherMetricsTab.svelte (context="route")
+//   1. Trips-Editor            WeatherMetricsTab.svelte (context="route")
 //   2. Compare-Uebersicht       WeatherMetricsTab.svelte (context="vergleich")
-//   3. Compare-Stundenverlauf   CompareHourlyLayoutControls.svelte
-//   4. Compare-Ausblick         CompareOutlookLayoutControls.svelte
+//   3. Compare-Stundenverlauf   compare/CompareHourlyLayoutControls.svelte
+//   4. Compare-Ausblick         OutlookLayoutControls.svelte
 //
 // DIE DARSTELLUNGSFORM IST BEWUSST OFFEN (Spec, Implementation Details 5):
 // Zeile je Groesse ODER ausklappbare Legende am Ende des Reiters — das
@@ -51,7 +51,7 @@ const LIB = resolve(here, '..', '..', '..'); // frontend/src/lib
  *  ANNAHME dieses Waechters ("sms_code IST das SMS-Kuerzel") — und genau die
  *  war bei 5 von 25 Groessen falsch: die Trip-SMS sendet fuer
  *  `temperature_night` ein `N`, das Register fuehrt `TN`. Seit S4 richtet
- *  sich die Quelle nach der FLAECHE (Touren: /api/sms-symbols ueber
+ *  sich die Quelle nach der FLAECHE (Trips: /api/sms-symbols ueber
  *  `kuerzelById`; Vergleich: Register-`sms_code`, ebenfalls ueber
  *  `kuerzelById`), weil Trip und Vergleich aus verschiedenen Tabellen senden.
  *
@@ -67,13 +67,13 @@ const FORMEN = ['label', 'col_label', 'kurzform'] as const;
  *  traegt. */
 const KURZFORM_QUELLEN = ['sms_code', 'kuerzelById', 'sms_symbols'];
 
-/** Die vier Editoren. `WeatherMetricsTab.svelte` traegt zwei davon (Touren-
+/** Die vier Editoren. `WeatherMetricsTab.svelte` traegt zwei davon (Trips-
  *  Editor und Compare-Uebersicht) — dieselbe Datei, zwei Kontexte. */
 const EDITOREN: { name: string; datei: string }[] = [
-	{ name: 'Touren-Editor (context="route")', datei: 'WeatherMetricsTab.svelte' },
+	{ name: 'Trips-Editor (context="route")', datei: 'WeatherMetricsTab.svelte' },
 	{ name: 'Compare-Uebersicht (context="vergleich")', datei: 'WeatherMetricsTab.svelte' },
-	{ name: 'Compare-Stundenverlauf', datei: 'CompareHourlyLayoutControls.svelte' },
-	{ name: 'Compare-Ausblick', datei: 'CompareOutlookLayoutControls.svelte' }
+	{ name: 'Compare-Stundenverlauf', datei: '../compare/CompareHourlyLayoutControls.svelte' },
+	{ name: 'Compare-Ausblick', datei: 'OutlookLayoutControls.svelte' }
 ];
 
 function parseComponent(path: string): any {
@@ -169,8 +169,8 @@ describe('AC-7: jeder der vier Editoren zeigt alle drei Namensformen', () => {
 // Ohne diesen zweiten Teil genuegte ein `{m.sms_code}` im Markup, das immer
 // leer bliebe: die drei Compare-Editoren bauen ihre Metrik-Eintraege heute
 // von Hand aus wenigen Feldern zusammen (WeatherMetricsTab.svelte:822-831,
-// CompareHourlyLayoutControls.svelte:116-124,
-// CompareOutlookLayoutControls.svelte:65-73) — dort fehlt die Datengrundlage,
+// compare/CompareHourlyLayoutControls.svelte:116-124,
+// OutlookLayoutControls.svelte:65-73) — dort fehlt die Datengrundlage,
 // nicht nur die Anzeige.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -194,8 +194,8 @@ function eintragsLiterale(ast: any): any[] {
 describe('AC-7: die Metrik-Eintraege der Compare-Editoren fuehren alle drei Formen', () => {
 	for (const datei of [
 		'WeatherMetricsTab.svelte',
-		'CompareHourlyLayoutControls.svelte',
-		'CompareOutlookLayoutControls.svelte'
+		'../compare/CompareHourlyLayoutControls.svelte',
+		'OutlookLayoutControls.svelte'
 	]) {
 		test(`${datei}: jedes gebaute Metrik-Objekt traegt Kurzform und SMS-Kuerzel`, () => {
 			const ast = parseComponent(join(SHARED, datei));

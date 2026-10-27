@@ -3,12 +3,15 @@ entity_id: bug_329_weather_metrics_preview_fontsize
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: superseded
+superseded_by: "#1435"
 version: "1.0"
 tags: [frontend, design-system, css, ap-010]
 ---
 
 # Bug #329: Hardcodierte font-sizes in WeatherMetricsPreviewCard.svelte → --g-text-* Tokens
+
+> Abgelöst durch #1435 E3a (`WeatherMetricsPreviewCard.svelte` entfernt, `fbffe6d44`, 2026-08-01).
 
 ## Approval
 

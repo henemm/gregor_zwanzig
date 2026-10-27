@@ -3,7 +3,7 @@ entity_id: fix_1849_ausblick_ampelfarben
 type: bugfix
 created: 2026-08-15
 updated: 2026-08-15
-status: approved
+status: implemented
 version: "1.0"
 tags: [ausblick, ampelfarben, metrik-zweig, issue-1849]
 ---

@@ -1,0 +1,8 @@
+{
+ "beschreibung": "AC-8: zwei Stunden, identisch bis auf den Wettercode -- einmal fehlend (None, keine Aussage), einmal explizit 'kein Gewitter' (Code 2, geprueefte Entwarnung). CAPE und Blitzpotenzial fehlen in beiden Stunden ebenfalls, damit die Gesamtstufe ausschliesslich vom Wettercode-Ast abhaengt.",
+ "herkunft": "konstruiert nach Spec AC-8",
+ "stunden": [
+  {"time": "2026-09-01T18:00", "weather_code": null, "cape": null, "convective_inhibition": null, "lightning_potential": null, "precipitation": 0.0, "showers": 0.0},
+  {"time": "2026-09-01T19:00", "weather_code": 2, "cape": null, "convective_inhibition": null, "lightning_potential": null, "precipitation": 0.0, "showers": 0.0}
+ ]
+}

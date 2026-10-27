@@ -3,7 +3,7 @@ entity_id: issue_758_save_indicator
 type: module
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, ux, trip-editor, compare-editor, auto-save, svelte5]
 ---
@@ -37,7 +37,7 @@ den Dirty-Zustand und den Speicher-Fortschritt.
 - **File:** `frontend/src/lib/components/trip-detail/TripHeader.svelte` — Andock-Stelle für den Trip-Indikator (immer sichtbar über allen Tabs); Name-Save meldet an den Store; expliziter Name-Speichern-Button entfällt.
 - **File:** `frontend/src/lib/components/edit/EditStagesPanelNew.svelte` — expliziter „Etappen speichern"-Button entfällt; Auto-Save-Debounce (~700 ms) bei allen Änderungen; Datums-Änderung (`handleDateChange`) und Flush vor Navigation melden an den Store.
 - **File:** `frontend/src/lib/components/trip-detail/BriefingScheduleTab.svelte` — expliziter „Briefing-Zeitplan speichern"-Button entfällt; Channel-Änderungen (`handleChannelChange`) mit Auto-Save + Store-Meldung statt `console.error`.
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` — expliziter Metriken-Speichern-Button entfällt; Metriken-Änderung triggert Auto-Save mit Store-Meldung.
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` — expliziter Metriken-Speichern-Button entfällt; Metriken-Änderung triggert Auto-Save mit Store-Meldung.
 - **File:** `frontend/src/lib/components/compare/CompareEditor.svelte` — Andock-Stelle für Compare-Indikator im Header-Bereich; vorhandene Dirty-Pill (`Ungespeichert`) durch `SaveIndicator`-Atom ersetzt; `saveStatus`/`saveError` aus `compareWizardState` fließen in Indikator.
 - **File:** `frontend/src/lib/components/compare/compareWizardState.svelte.ts` — `saveStatus` und `saveError` werden bereits korrekt gesetzt (kein Umbau nötig); neuer `isDirty`-Rune-State für `dirty`-Zustand.
 

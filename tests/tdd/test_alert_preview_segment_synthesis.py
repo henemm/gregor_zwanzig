@@ -22,7 +22,8 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -57,7 +58,7 @@ def real_trip():
     payload = {
         "id": trip_id, "name": "AC-2 Trip",
         "stages": [{
-            "id": "T1", "name": "Tag 1", "date": date.today().isoformat(),
+            "id": "T1", "name": "Tag 1", "date": ortstag(47.0, 11.0).isoformat(),
             "waypoints": [
                 {"id": "G1", "name": "Start", "lat": 47.0, "lon": 11.0,
                  "elevation_m": 1000, "arrival_override": "08:00"},

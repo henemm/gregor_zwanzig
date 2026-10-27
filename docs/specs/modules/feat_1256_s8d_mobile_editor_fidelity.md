@@ -3,7 +3,7 @@ entity_id: feat_1256_s8d_mobile_editor_fidelity
 type: feature
 created: 2026-07-15
 updated: 2026-07-15
-status: draft
+status: deprecated
 version: "1.0"
 tags: [compare, ui-fidelity, design-handoff-4, issue-1256, mobile]
 workflow: feat-1256-s8d-mobile-editor-fidelity
@@ -23,6 +23,8 @@ workflow: feat-1256-s8d-mobile-editor-fidelity
      in jedem AC). -->
 
 # Issue #1256 — Scheibe S8d: Mobile-Editor-Fidelity (Restliste-Bündel R4 + C1)
+
+> Abgelöst/entfernt durch ADR-0032 / #1301 — Multi-Step-Wizards und `CompareEditor.svelte` sind abgeschafft; diese Spec ist nur noch historisch.
 
 ## Approval
 
@@ -295,7 +297,7 @@ bereits bestehenden Vergleich-Tab-CTA (Z.1045-1071,
   - Test: Playwright Mobil-Viewport — auf dem Layout-Tab zeigt die CTA
     „Versand einrichten →"; Klick wechselt sichtbar in den Versand-Tab.
 
-- **AC-12 (PO-Entscheidungspunkt, s. Known Limitations (b)):** Given den
+- **AC-12:** (PO-Entscheidungspunkt, s. Known Limitations (b)) Given den
   Versand-Tab des mobilen Editors im Create-Modus / When der Tab geöffnet
   wird / Then ist KEIN Boden-Floating-CTA sichtbar — „Aktivieren" ist
   ausschließlich über den App-Bar-Button (AC-15) sowie die

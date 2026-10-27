@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/coreauth"
 	"github.com/henemm/gregor-api/internal/handler"
 	authmw "github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/provider"
@@ -19,14 +20,19 @@ import (
 
 // Deps holds the dependencies required to build the application router.
 type Deps struct {
-	Config           *config.Config
-	Store            *store.Store
-	WeatherProvider  provider.WeatherProvider
-	WebAuthn         *webauthn.WebAuthn
-	ChallengeStore   *handler.ChallengeStore
-	Scheduler        *scheduler.Scheduler
+	Config             *config.Config
+	Store              *store.Store
+	WeatherProvider    provider.WeatherProvider
+	WebAuthn           *webauthn.WebAuthn
+	ChallengeStore     *handler.ChallengeStore
+	Scheduler          *scheduler.Scheduler
 	TelegramTokenStore *handler.TelegramTokenStore
-	GitCommit        string
+	// Issue #2519: Admin-Einladungslinks; nil => Store unter Config.DataDir.
+	InviteStore *store.InviteStore
+	// Issue #2154 Scheibe A: prozessweiter Fehlversuchszaehler fuer
+	// Verknuepfungs-Code-Vergleiche, instanziiert in cmd/server/main.go.
+	PremiumSmsRateLimiter *handler.PremiumSmsRateLimiter
+	GitCommit             string
 }
 
 // New builds the chi router with all application routes.
@@ -34,19 +40,41 @@ type Deps struct {
 func New(deps Deps) chi.Router {
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
-	r.Use(authmw.AuthMiddleware(deps.Config.SessionSecret))
+	r.Use(authmw.AuthMiddleware(deps.Config.SessionSecret, deps.Store))
+
+	// Issue #2155 S1 (ADR-0078): Admin-Menge einmal aus GZ_ADMIN_USER_IDS.
+	admins := config.ParseAdminUserIDs(deps.Config.AdminUserIDs)
+
+	// Issue #2482: Mengen-Quoten-Policy ueber den Request-Kontext — Admin und
+	// Ausnahme-Liste (GZ_QUOTA_EXEMPT_USER_IDS) sind unbegrenzt. Ueber den
+	// Kontext erreicht sie jeden Anlage-Weg, auch POST /api/briefings, das
+	// intern an die Trip-/Preset-Create-Handler delegiert. Die Ausnahme-Liste
+	// verleiht KEINE Admin-Rechte (RequireAdmin/profileRole nutzen nur admins).
+	r.Use(handler.QuotaPolicyMiddleware(admins, config.ParseAdminUserIDs(deps.Config.QuotaExemptUserIDs)))
 
 	// Auth endpoints (register/login exempt from AuthMiddleware)
 	// Rate-limit register: 5 attempts per IP per hour (Issue #117).
+	inviteStore := deps.InviteStore
+	if inviteStore == nil {
+		inviteStore = store.NewInviteStore(deps.Config.DataDir)
+	}
 	registerLimiter := authmw.NewIPRateLimiter(5, time.Hour)
 	r.Post("/api/auth/register",
-		registerLimiter.Middleware(handler.RegisterHandler(deps.Store, bcrypt.DefaultCost, *deps.Config)).ServeHTTP,
+		registerLimiter.Middleware(handler.RegisterHandlerWithInvites(deps.Store, bcrypt.DefaultCost, *deps.Config, inviteStore)).ServeHTTP,
 	)
+	// Issue #2519: oeffentlicher Vorab-Check per POST (Token im Body, nie im
+	// Access-Log); 30/h je IP, grosszuegiger als Register (der Check ist nur Komfort).
+	inviteCheckLimiter := authmw.NewIPRateLimiter(30, time.Hour)
+	r.Post("/api/auth/invite/check", inviteCheckLimiter.Middleware(handler.InviteCheckHandler(inviteStore)).ServeHTTP)
 	loginLimiter := authmw.NewIPRateLimiter(30, time.Hour)
 	r.Post("/api/auth/login",
-		loginLimiter.Middleware(handler.LoginHandler(deps.Store, deps.Config.SessionSecret)).ServeHTTP,
+		loginLimiter.Middleware(handler.LoginHandler(deps.Store, deps.Config.SessionSecret, deps.Config.PublicHost)).ServeHTTP,
 	)
-	r.Post("/api/auth/logout", handler.LogoutHandler())
+	r.Post("/api/auth/logout", handler.LogoutHandler(deps.Store, deps.Config.SessionSecret))
+	// Issue #2129: "auf allen Geraeten abmelden" — authentifiziert, bewusst
+	// NICHT in der Public-Allowlist von AuthMiddleware: der Endpunkt braucht
+	// die Nutzerkennung aus dem geprueften Merkmal.
+	r.Post("/api/auth/logout-all", handler.LogoutAllHandler(deps.Store))
 	forgotLimiter := authmw.NewIPRateLimiter(5, time.Hour)
 	r.Post("/api/auth/forgot-password",
 		forgotLimiter.Middleware(handler.ForgotPasswordHandler(deps.Store, bcrypt.DefaultCost, *deps.Config)).ServeHTTP,
@@ -60,21 +88,91 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/auth/verify-email",
 		verifyLimiter.Middleware(handler.VerifyEmailHandler(deps.Store)).ServeHTTP,
 	)
-	r.Delete("/api/auth/account", handler.DeleteAccountHandler(deps.Store))
-	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store))
-	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config))
-	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost))
+	// Issue #2304 — erneuter Versand der Bestätigungsmail (public, exakter
+	// Eintrag in der Public-Allowlist; der Eintrag /api/auth/verify-email ist
+	// ein Pfadvergleich und deckt diesen Unterpfad NICHT mit ab).
+	resendVerifyLimiter := authmw.NewIPRateLimiter(5, time.Hour)
+	// Issue #2404 — Rate-Limit auf Bestaetigungsmails aus Profil-Update und
+	// Resend-Verification: je 10/h pro User-ID und pro Zieladresse, verhindert
+	// Mail-Bombing ueber wiederholte Adresswechsel. EINE Instanz fuer beide
+	// Endpunkte, damit das Adress-Limit endpointuebergreifend gilt.
+	mailFloodLimiter := handler.NewMailFloodLimiter(10, time.Hour)
+	r.Post("/api/auth/verify-email/resend",
+		resendVerifyLimiter.Middleware(handler.ResendVerificationHandler(deps.Store, *deps.Config, mailFloodLimiter)).ServeHTTP,
+	)
+	// Issue #2304 — staging-only Testweg (Muster #830 unten): gibt das
+	// Verifikations-Token ohne Mailversand heraus. ANMELDEPFLICHTIG — bewusst
+	// NICHT in der Public-Allowlist und bewusst nicht unter /api/debug/,
+	// /api/internal/ oder /api/webhooks/telegram/, die AuthMiddleware pauschal
+	// freigibt.
+	if os.Getenv("GZ_ENV") == "staging" {
+		r.Post("/api/auth/verify-email/staging-token", handler.StagingVerificationTokenHandler(deps.Store))
+	}
+	// Issue #2160 (ADR-0081): Kontoloeschung nur mit frischem Nachweis
+	// (Passwort oder Lösch-Code). Der alte DELETE /api/auth/account entfaellt.
+	// Anmeldepflichtig, bewusst NICHT in der Public-Allowlist.
+	accountDeleteLimiter := authmw.NewIPRateLimiter(5, 15*time.Minute)
+	r.Post("/api/auth/account/delete",
+		accountDeleteLimiter.Middleware(handler.DeleteAccountHandler(deps.Store, deps.TelegramTokenStore)).ServeHTTP,
+	)
+	// IP-Grenze plus Mindestpause je Nutzer/Adresse (1 Code pro Minute).
+	deleteCodeLimiter := authmw.NewIPRateLimiter(3, 15*time.Minute)
+	deleteCodeMailLimiter := handler.NewMailFloodLimiter(1, time.Minute)
+	r.Post("/api/auth/account/delete-code",
+		deleteCodeLimiter.Middleware(handler.RequestDeleteCodeHandler(deps.Store, *deps.Config, deleteCodeMailLimiter)).ServeHTTP,
+	)
+	// Issue #2270: Datenexport nach DSGVO Art. 20 — authentifiziert, bewusst
+	// NICHT in der Public-Allowlist von AuthMiddleware.
+	r.Get("/api/auth/export", handler.ExportUserDataHandler(deps.Store))
+	r.Get("/api/auth/profile", handler.GetProfileHandler(deps.Store, admins))
+	// Issue #2412 S4b — SMS-Tageskontingent-Anzeige, anmeldepflichtig.
+	r.Get("/api/auth/sms-daily-usage", handler.GetSmsDailyUsageHandler(*deps.Config))
+	// Issue #2406 — EIGENES Kontingent fuer SMS-Bestaetigungscodes (3/h je
+	// Nutzer und je Zielnummer, Retry-After 1200). Bewusst eine zweite,
+	// eigenstaendige Instanz: SMS kostet Geld, und ein Angriff auf den einen
+	// Kanal darf das Kontingent des anderen nicht leerlaufen lassen.
+	smsFloodLimiter := handler.NewMailFloodLimiter(3, time.Hour)
+	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config, mailFloodLimiter, smsFloodLimiter))
+	// Issue #2406 — Bestaetigungscode einloesen / erneut anfordern.
+	// Anmeldepflichtig (nicht in der Public-Allowlist): die Kennung kommt aus
+	// der Sitzung, nie aus dem Rumpf.
+	r.Post("/api/auth/sms/verify", handler.PostSmsVerifyHandler(deps.Store))
+	r.Post("/api/auth/sms/resend", handler.PostSmsResendHandler(deps.Store, *deps.Config, smsFloodLimiter))
+	// Staging-only Testweg (Muster verify-email/staging-token): gibt den
+	// Klartext-Code des EIGENEN Kontos heraus, ohne Sendeversuch.
+	if os.Getenv("GZ_ENV") == "staging" {
+		r.Post("/api/auth/sms/staging-code", handler.StagingSmsCodeHandler(deps.Store))
+		// Issue #2423 — Tarif/SMS-Tageszaehler des EIGENEN Kontos setzen.
+		r.Post("/api/auth/staging-seed", handler.StagingSeedHandler(deps.Store, *deps.Config))
+	}
+	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost, deps.Config.SessionSecret, deps.Config.PublicHost))
 	// Issue #1071 — Level-Änderungs-Antrag (authentifiziert, NICHT in Public-Allowlist)
 	r.Post("/api/auth/tier-change-request", handler.RequestTierChangeHandler(deps.Store, *deps.Config))
 	// Bug #590: Telegram /start-Flow — link generation + status polling + internal connect
 	r.Get("/api/auth/telegram-link", handler.GetTelegramLinkHandler(deps.Store, deps.TelegramTokenStore))
 	r.Get("/api/auth/telegram-status", handler.GetTelegramStatusHandler(deps.Store))
-	r.Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(deps.Store, deps.TelegramTokenStore))
+	coreAuth := coreauth.RequireCoreAuth(deps.Config.CoreSharedSecret)
+	r.With(coreAuth).Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(deps.Store, deps.TelegramTokenStore))
 	// Issue #1676 Scheibe S1: Premium-SMS-Rueckkanal — lernt die von Garmin
 	// vergebene Rueckadresse (localhost-only, aufgerufen vom Python-Core).
-	r.Post("/api/internal/premium-sms-learn", handler.PostPremiumSmsLearnHandler(deps.Store))
+	premiumSmsLimiter := deps.PremiumSmsRateLimiter
+	if premiumSmsLimiter == nil {
+		// Aufbauten ohne diese Abhaengigkeit (Router-Tests) duerfen nicht
+		// abstuerzen; der Zaehler ist reiner Arbeitsspeicher, ein frischer ist
+		// funktional gleichwertig.
+		premiumSmsLimiter = handler.NewPremiumSmsRateLimiter(handler.DefaultPremiumSmsLinkCodeBudget)
+	}
+	r.With(coreAuth).Post("/api/internal/premium-sms-learn", handler.PostPremiumSmsLearnHandler(deps.Store, premiumSmsLimiter))
+	// Issue #2154 Scheibe A: Verknuepfungs-Code im Konto — anmeldepflichtig
+	// ueber die globale AuthMiddleware, bewusst NICHT in der Public-Allowlist.
+	r.Post("/api/auth/premium-sms-link-code", handler.PostPremiumSmsLinkCodeHandler(deps.Store, bcrypt.DefaultCost))
+	r.Get("/api/auth/premium-sms-link-code", handler.GetPremiumSmsLinkCodeHandler(deps.Store))
 	// Issue #637: Telegram Inbound Webhook (public, secret-header-protected)
 	r.Post("/api/webhooks/telegram/{secret}", handler.TelegramWebhookHandler(deps.Config.PythonCoreURL))
+	// Issue #2439: Push-Eingang fuer Befehle (SMS seven.io, Mail Stalwart) --
+	// oeffentlich, secret-/signaturgeschuetzt, weckt nur den Poll-Job (ADR-0088).
+	r.Post("/api/webhooks/sms/{secret}", handler.InboundSMSWebhook(deps.Scheduler, deps.Config.PublicHost, time.Now))
+	r.Post("/api/webhooks/mail/{secret}", handler.InboundMailWebhook(deps.Scheduler))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(deps.Config))
 	r.Get("/api/auth/google/callback", handler.GoogleOAuthCallbackHandler(deps.Config, deps.Store))
 	magicLinkLimiter := authmw.NewIPRateLimiter(5, 15*time.Minute)
@@ -93,14 +191,14 @@ func New(deps Deps) chi.Router {
 		passkeyLimiter.Middleware(handler.PasskeyLoginBeginHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore)).ServeHTTP,
 	)
 	r.Post("/api/auth/passkey/login/finish",
-		passkeyLimiter.Middleware(handler.PasskeyLoginFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret)).ServeHTTP,
+		passkeyLimiter.Middleware(handler.PasskeyLoginFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret, deps.Config.PublicHost)).ServeHTTP,
 	)
 	// Issue #467 — Discoverable Credentials + Conditional UI (public)
 	r.Post("/api/auth/passkey/discoverable/begin",
 		passkeyLimiter.Middleware(handler.PasskeyLoginDiscoverableBeginHandler(deps.WebAuthn, deps.ChallengeStore)).ServeHTTP,
 	)
 	r.Post("/api/auth/passkey/discoverable/finish",
-		passkeyLimiter.Middleware(handler.PasskeyLoginDiscoverableFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret)).ServeHTTP,
+		passkeyLimiter.Middleware(handler.PasskeyLoginDiscoverableFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret, deps.Config.PublicHost)).ServeHTTP,
 	)
 	// Authenticated endpoints (cookie required via AuthMiddleware)
 	r.Post("/api/auth/passkey/register/begin",
@@ -120,13 +218,16 @@ func New(deps Deps) chi.Router {
 		passkeyRegPubLimiter.Middleware(handler.PasskeyRegisterPublicFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret, *deps.Config)).ServeHTTP,
 	)
 
-	r.Get("/api/health", handler.HealthHandler(deps.Config.PythonCoreURL, deps.GitCommit))
+	// Issue #2130: Quelle ist die effektive RP-ID der real gebauten Instanz,
+	// nicht deps.Config.WebAuthnRPID (der nicht abgeleitete Rohwert) — sonst
+	// meldete /api/health etwas anderes, als der Browser bei begin bekommt.
+	r.Get("/api/health", handler.HealthHandler(deps.Config.PythonCoreURL, deps.GitCommit, deps.WebAuthn.Config.RPID))
 	r.Get("/api/config", handler.ProxyHandler(deps.Config.PythonCoreURL, "/config"))
 	r.Get("/api/metrics", handler.ProxyHandler(deps.Config.PythonCoreURL, "/metrics"))
 	r.Get("/api/templates", handler.ProxyHandler(deps.Config.PythonCoreURL, "/templates"))
 	// Issue #1318 AC-9: read-only SMS-Kuerzel-Katalog (Metriken + Gefahrenarten).
 	r.Get("/api/sms-symbols", handler.ProxyHandler(deps.Config.PythonCoreURL, "/sms-symbols"))
-	r.Get("/api/forecast", handler.ForecastHandler(deps.WeatherProvider))
+	r.Get("/api/forecast", handler.ForecastHandler(deps.WeatherProvider, deps.Config.PythonCoreURL))
 	r.Get("/api/locations", handler.LocationsHandler(deps.Store))
 	r.Get("/api/locations/{id}", handler.LocationHandler(deps.Store))
 	r.Post("/api/locations/resolve", handler.ResolveLocationHandler())
@@ -146,13 +247,15 @@ func New(deps Deps) chi.Router {
 	r.Patch("/api/trips/{id}/waypoints/{waypointId}/confirm", handler.ConfirmWaypointHandler(deps.Store))
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(deps.Store))
 	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherProxyHandler(deps.Config.PythonCoreURL))
-	r.Get("/api/trips/{id}/briefing-history", handler.BriefingHistoryHandler(deps.Store))
+	// Issue #1969: naechstes Briefing je Trip/Ortsvergleich (Python-Ableitung).
+	r.Get("/api/next-briefings", handler.NextBriefingsProxyHandler(deps.Config.PythonCoreURL))
+	r.Get("/api/trips/{id}/briefing-history", handler.TripBriefingHistoryHandler(deps.Store))
 	r.Get("/api/trips/{id}/weather-config", handler.GetTripWeatherConfigHandler(deps.Store))
 	r.Put("/api/trips/{id}/weather-config", handler.PutTripWeatherConfigHandler(deps.Store))
 	r.Get("/api/locations/{id}/weather-config", handler.GetLocationWeatherConfigHandler(deps.Store))
 	r.Put("/api/locations/{id}/weather-config", handler.PutLocationWeatherConfigHandler(deps.Store))
 	r.Post("/api/gpx/parse", handler.GpxProxyHandler(deps.Config.PythonCoreURL))
-	r.Post("/api/notify/test", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/notify/test"))
+	r.Post("/api/notify/test", handler.NotifyTestHandler(deps.Store, deps.Config.PythonCoreURL))
 	r.Get("/api/compare", handler.CompareProxyHandler(deps.Config.PythonCoreURL))
 	// Issue #1350 Teil 1: read-only Compare-Metrik-Katalog (statisch, kein user_id-Bezug).
 	r.Get("/api/compare/metrics", handler.ProxyHandler(deps.Config.PythonCoreURL, "/api/compare/metrics"))
@@ -165,14 +268,10 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/_validator/sms-fidelity-preview", handler.SmsFidelityPreviewProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/trips/{id}/send", handler.SendTripReportProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/trips/{id}/alert-preview", handler.AlertPreviewProxyHandler(deps.Config.PythonCoreURL))
-	// Issue #140 / #189: Output-Vorschau Email + SMS
-	r.Get("/api/preview/{trip_id}/email", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "email"))
+	// Issue #140 / #189: SMS-Kurzform-Vorschau. Issue #1743: email/telegram und
+	// POST /api/preview/compare/{id} entfallen mit der Briefing-Vorschau; /sms
+	// bleibt, weil Staging-Specs damit die zugestellte SMS-Kurzform messen.
 	r.Get("/api/preview/{trip_id}/sms", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "sms"))
-	// Issue #363: Signal/Telegram-Vorschau (kanal-bewusster Narrow-Renderer #360)
-	r.Get("/api/preview/{trip_id}/signal", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "signal"))
-	r.Get("/api/preview/{trip_id}/telegram", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "telegram"))
-	// Issue #1270: Orts-Vergleich-Vorschau — EIN Abruf, ALLE Kanäle (ADR-0011).
-	r.Post("/api/preview/compare/{preset_id}", handler.ComparePreviewProxyHandler(deps.Config.PythonCoreURL))
 	// Epic #138 Issue #177: User-MetricPresets (+ #342 PATCH Read-Modify-Write)
 	r.Get("/api/metric-presets", handler.ListMetricPresetsHandler(deps.Store))
 	r.Post("/api/metric-presets", handler.CreateMetricPresetHandler(deps.Store))
@@ -193,23 +292,53 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/briefings", handler.CreateBriefingHandler(deps.Store))
 	r.Put("/api/briefings/{id}", handler.UpdateBriefingHandler(deps.Store))
 	r.Delete("/api/briefings/{id}", handler.DeleteBriefingHandler(deps.Store))
+	// Issue #2283: kind-neutrale Alarm-Vorschau (Alt-Route oben als Delegate).
+	// Die kind-neutrale Briefing-Vorschau ist mit #1743 entfallen.
+	r.Get("/api/briefings/{id}/briefing-history", handler.BriefingHistoryHandler(deps.Store))
+	r.Post("/api/briefings/{id}/alert-preview", handler.BriefingAlertPreviewHandler(deps.Config.PythonCoreURL))
+	// Issue #2280: kind-neutraler Handversand (Alt-Routen oben sind Delegates).
+	r.Post("/api/briefings/{id}/send", handler.BriefingSendHandler(deps.Config.PythonCoreURL))
 	// Issue #393: Cockpit-Kacheln — Versandstatus + Alarm-Historie (read-only Logs)
 	r.Get("/api/cockpit/status", handler.CockpitStatusHandler(deps.Store))
 	// Issue #396: Archiv-Statistiken — Briefings + Alarme pro Tour (Gesamtzahl, kein Zeitfilter)
 	r.Get("/api/archive/stats", handler.ArchiveStatsHandler(deps.Store))
 
 	// Scheduler status endpoints
-	r.Get("/api/scheduler/status", handler.SchedulerStatusHandler(deps.Scheduler))
+	// Issue #2155 S2: voller Status nur mit Maschinen-Token (Header
+	// X-GZ-Status-Token); die Route bleibt auf der Public-Allowlist, der
+	// Schutz haengt ausschliesslich an der Route. Nutzer-Sicht: /status/me
+	// (Session-Pflicht ueber die AuthMiddleware, nur eigener Laufzustand).
+	statusGuard := authmw.RequireStatusToken(deps.Config.StatusToken)
+	r.With(statusGuard).Get("/api/scheduler/status", handler.SchedulerStatusHandler(deps.Scheduler))
+	r.Get("/api/scheduler/status/me", handler.SchedulerStatusMeHandler(deps.Scheduler))
 
-	// Issue #830 — Staging-only: Debug-Trigger-Endpoint fuer Radar-Alert-Mail-Tests
+	// Issue #2155 S1: nur Admins (GZ_ADMIN_USER_IDS), sonst 403.
+	requireAdmin := authmw.RequireAdmin(admins)
+
+	// Issue #830 — Staging-only: Debug-Trigger-Endpoint fuer Radar-Alert-Mail-Tests.
+	// Issue #2155 S2: nicht mehr oeffentlich — Session + RequireAdmin;
+	// ProxyPostHandler ersetzt user_id durch die Session-Kennung.
 	if os.Getenv("GZ_ENV") == "staging" {
-		r.Post("/api/debug/trigger-radar-alert", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/debug/trigger-radar-alert"))
+		r.With(requireAdmin).Post("/api/debug/trigger-radar-alert", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/debug/trigger-radar-alert"))
 	}
 
+	// Issue #2155 S3: Admin-API (Nutzerliste, Tier setzen, Konto sperren).
+	r.With(requireAdmin).Get("/api/admin/users", handler.AdminListUsersHandler(deps.Store, deps.Scheduler))
+	r.With(requireAdmin).Put("/api/admin/users/{id}/tier", handler.AdminSetUserTierHandler(deps.Store, deps.Scheduler))
+	r.With(requireAdmin).Put("/api/admin/users/{id}/disabled", handler.AdminSetUserDisabledHandler(deps.Store, deps.Scheduler))
+	// Issue #2519: Admin-Einladungslinks.
+	r.With(requireAdmin).Post("/api/admin/invites", handler.AdminCreateInviteHandler(inviteStore, deps.Config.PublicHost))
+	r.With(requireAdmin).Get("/api/admin/invites", handler.AdminListInvitesHandler(inviteStore))
+	r.With(requireAdmin).Post("/api/admin/invites/{id}/revoke", handler.AdminRevokeInviteHandler(inviteStore))
+
 	// Scheduler trigger proxies (frontend → Go → Python)
-	r.Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/trip-reports"))
-	r.Post("/api/scheduler/alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/alert-checks"))
-	r.Post("/api/scheduler/inbound-commands", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/inbound-commands"))
+	// Der Cron-Scheduler ruft Python direkt und haengt nicht an dieser Sperre.
+	r.With(requireAdmin).Post("/api/scheduler/trip-reports", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/trip-reports"))
+	r.With(requireAdmin).Post("/api/scheduler/alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/alert-checks"))
+	r.With(requireAdmin).Post("/api/scheduler/inbound-commands", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/inbound-commands"))
+	r.With(requireAdmin).Post("/api/scheduler/radar-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/radar-alert-checks"))
+	r.With(requireAdmin).Post("/api/scheduler/compare-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/compare-alert-checks"))
+	r.With(requireAdmin).Post("/api/scheduler/compare-radar-alert-checks", handler.ProxyPostHandler(deps.Config.PythonCoreURL, "/api/scheduler/compare-radar-alert-checks"))
 
 	return r
 }

@@ -3,7 +3,7 @@ entity_id: issue_1104_compare_config_foundation
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, preset, display_config, wiring, top_n, active_metrics]
 workflow: fix-1094-compare-config

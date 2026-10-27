@@ -3,7 +3,7 @@ entity_id: issue_364_metrics_editor_buckets
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [output, frontend, editor, epic-331, issue-361]
 ---
@@ -32,7 +32,7 @@ Spalten-Vorschau.
 - **Design (verbindlich):** `docs/design/epic_331_output_layout/screen-metrics-editor.jsx`; Design-System `docs/design-system/` (Tokens/Components/Copy)
 - **Geändert:** `frontend/src/lib/types.ts` — `WeatherConfigMetric` additiv +`bucket?: 'primary'|'secondary'` +`order?: number`
 - **Geändert:** `frontend/src/lib/components/trip-detail/metricsEditor.ts` — Bucket-Modell, `autoAssign`, `move`, `reorder`, `channelOverflow`-Helfer
-- **Umgebaut:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` — Bucket-Layout statt Kategorie-Checkboxen
+- **Umgebaut:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` — Bucket-Layout statt Kategorie-Checkboxen
 - **Neu:** `BucketSection.svelte`, `ActiveMetricRow.svelte`, `ChannelLimitMarkers.svelte`, `BucketSectionOff.svelte`, `AboutOutputLayout.svelte` (unter `trip-detail/`)
 - **Wiederverwendet/angepasst:** `PresetRow.svelte`, `SavePresetDialog.svelte`, `TablePreview.svelte` (zeigt vorerst nur die `primary`-Spalten); `MetricGroup`/`MetricCheckbox` wandern in die „Nicht im Briefing"-Ansicht oder werden abgelöst.
 

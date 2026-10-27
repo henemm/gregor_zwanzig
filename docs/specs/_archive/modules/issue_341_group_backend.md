@@ -3,7 +3,7 @@ entity_id: issue_341_group_backend
 type: module
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 issue: 341
 tags: [compare, groups, backend, go, store, migration, foundation]

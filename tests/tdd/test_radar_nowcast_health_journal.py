@@ -55,7 +55,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -69,6 +69,7 @@ if str(_SRC) not in sys.path:
 from providers.brightsky import RadarFrame  # noqa: E402
 from services.radar_cache import RadarNowcastCacheService  # noqa: E402
 from services.radar_service import RadarNowcastService  # noqa: E402
+from tests.helpers.ortstag import utc_tag  # noqa: E402
 
 # Atlantik: ausserhalb ALLER fuenf Bounding-Boxen (RADOLAN/INCA/DPC/AROME-FR/
 # ICON-D2, radar_service.py:28-58) -- reiner generischer minutely_15-Zweig,
@@ -169,7 +170,7 @@ def _write_budget(calls_openmeteo: int) -> None:
     pfad = get_data_root() / "diagnostics" / "forecast_budget.json"
     pfad.parent.mkdir(parents=True, exist_ok=True)
     pfad.write_text(json.dumps({
-        "date": date.today().isoformat(),
+        "date": utc_tag().isoformat(),  # #2314 D2: Produkt liest den Zaehler am UTC-Tag
         "calls": {"openmeteo": calls_openmeteo},
         "cache_hits": 0,
         "cache_misses": 0,

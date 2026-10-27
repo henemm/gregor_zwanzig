@@ -3,7 +3,7 @@ entity_id: bug599_telegram_persistent_tests
 type: tests
 created: 2026-06-04
 updated: 2026-06-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, telegram, persistent, singleton, bug-599]
 parent: bug599_telegram_persistent
@@ -21,13 +21,13 @@ phase: phase5_tdd_red
 Test-Manifest für Bug #599.
 Prüft: Modul-Singleton in scheduler.py, Offset-Persistenz, Bot-Bestätigungsnachricht.
 
-Parent-Spec: `docs/specs/modules/bug599_telegram_persistent.md`.
+Parent-Spec: `docs/specs/_archive/modules/bug599_telegram_persistent.md`.
 
 ## Source
 
 - **Files:**
   - `tests/tdd/test_bug599_telegram_persistent.py` (NEU)
-- **Spec:** `docs/specs/modules/bug599_telegram_persistent.md` v1.0
+- **Spec:** `docs/specs/_archive/modules/bug599_telegram_persistent.md` v1.0
 
 ## Test Inventory
 

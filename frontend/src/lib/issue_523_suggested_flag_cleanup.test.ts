@@ -29,13 +29,9 @@ test('AC-5: model/trip.go hat kein Suggested-Feld mehr', () => {
 	);
 });
 
-test('AC-5: model/trip.go hat kein SuggestionReason-Feld mehr', () => {
-	const src = read('internal/model/trip.go');
-	assert.ok(
-		!src.includes('SuggestionReason'),
-		'internal/model/trip.go darf kein SuggestionReason-Feld mehr enthalten'
-	);
-});
+// AC-5 (model/trip.go ohne SuggestionReason) entfällt seit #2058: der Python-Kern
+// schreibt suggestion_reason weiterhin; das Go-Feld verhindert Datenverlust beim
+// Editor-Save und wird vom Trip-Schema-Drift-Gate bewacht.
 
 // AC-4: frontend/src/lib/types.ts hat kein suggested?/suggestion_reason? mehr
 test('AC-4: types.ts hat kein suggested?-Feld mehr', () => {
@@ -97,15 +93,7 @@ test('WaypointCard.svelte hat keine deprecated onReject-Prop mehr', () => {
 	);
 });
 
-// Aufrufstellen: kein stripSuggested-Aufruf in den 3 Edit-Komponenten
-test('TripEditView.svelte ruft kein stripSuggested mehr auf', () => {
-	const src = read('frontend/src/lib/components/edit/TripEditView.svelte');
-	assert.ok(
-		!src.includes('stripSuggested'),
-		'TripEditView.svelte darf stripSuggested nicht mehr aufrufen'
-	);
-});
-
+// Aufrufstellen: kein stripSuggested-Aufruf in den Edit-Komponenten
 test('WaypointsPanel.svelte ruft kein stripSuggested mehr auf', () => {
 	const src = read('frontend/src/lib/components/trip-detail/WaypointsPanel.svelte');
 	assert.ok(

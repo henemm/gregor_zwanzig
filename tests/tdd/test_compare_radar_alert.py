@@ -478,6 +478,9 @@ def test_no_alert_when_all_locations_dry_or_late_onset():
     „Spätregen"-Ort behält seine Aussage nur, wenn sein Onset MIT der
     Schwelle mitwandert — 45 Min lägen jetzt innerhalb des Alarmfensters und
     der Negativtest würde stumm sein Gegenteil prüfen. Daher 100 Min.
+
+    Issue #2261 (A-1): die Schwelle steht auf dem Quell-Horizont (180 Min);
+    "jenseits der Schwelle" heisst jetzt jenseits des Horizonts — 195 Min.
     """
     from services.compare_radar_alert import CompareRadarAlertService
     from services.radar_service import RadarNowcastService
@@ -496,7 +499,9 @@ def test_no_alert_when_all_locations_dry_or_late_onset():
 
         frame_source = _CoordFrameSource({
             (47.0, 11.0): _dry_frames(),
-            (47.2, 11.2): _wet_frame(100),  # #2009: > Schwelle 55
+            # #2261 (A-1): Schwelle = Quell-Horizont (180) — "spaet" heisst
+            # jetzt: Beginn jenseits des Horizonts.
+            (47.2, 11.2): _wet_frame(195),
         })
         radar_service = RadarNowcastService(frame_source=frame_source)
         mail_calls: list[tuple[str, str]] = []

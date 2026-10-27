@@ -37,6 +37,7 @@ from datetime import date
 
 from app.loader import get_data_dir
 from services.preview_service import PreviewService
+from tests.helpers.trip_vorschau_bericht import trip_telegram
 from tests.tdd.test_track_resolution_legacy_trip import _trip_mit_gpx_im_bestand
 
 # Bewusst "default" -- siehe Nebenbefund-Absatz oben im Modul-Docstring:
@@ -61,8 +62,8 @@ def test_preview_ohne_alarm_und_briefing_veraendert_den_trip_bestand_nicht():
     mtime_vorher = trip_datei.stat().st_mtime_ns
 
     service = PreviewService()
-    subject, body, bubbles = service.render_telegram_preview(
-        trip.id, user_id=_USER, report_type="morning",
+    subject, body, bubbles = trip_telegram(
+        service, trip.id, user_id=_USER, report_type="morning",
         target_date=heute.isoformat(), demo=True,
     )
     assert isinstance(subject, str)

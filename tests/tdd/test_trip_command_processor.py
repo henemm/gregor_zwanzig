@@ -36,6 +36,7 @@ def _make_msg(body: str, trip_name: str = _TRIP_NAME) -> InboundMessage:
         sender="test@example.com",
         channel="email",
         received_at=datetime.now(tz=timezone.utc),
+        user_id="default",
     )
 
 
@@ -64,18 +65,18 @@ def _make_trip(
 def _save_test_trip(**kwargs) -> Trip:
     """Create and persist a test trip. Returns the Trip."""
     trip = _make_trip(**kwargs)
-    save_trip(trip)
+    save_trip(trip, user_id="default")
     return trip
 
 
 def _cleanup_test_trip(trip_id: str = _TRIP_ID) -> None:
     """Remove test trip file and command log entries."""
-    trip_path = get_briefings_dir() / f"{trip_id}.json"
+    trip_path = get_briefings_dir(user_id="default") / f"{trip_id}.json"
     if trip_path.exists():
         trip_path.unlink()
 
     # Clean command log entries for this trip
-    log_path = get_data_dir() / "command_log.json"
+    log_path = get_data_dir(user_id="default") / "command_log.json"
     if log_path.exists():
         try:
             with open(log_path, "r") as f:
@@ -87,7 +88,7 @@ def _cleanup_test_trip(trip_id: str = _TRIP_ID) -> None:
             pass
 
     # Clean snapshot if exists
-    snap_path = get_snapshots_dir() / f"{trip_id}.json"
+    snap_path = get_snapshots_dir(user_id="default") / f"{trip_id}.json"
     if snap_path.exists():
         snap_path.unlink()
 
@@ -251,7 +252,7 @@ class TestRuhetag:
     def test_snapshot_deleted_after_ruhetag(self):
         _save_test_trip(start_date=date.today() - timedelta(days=1))
         # Create a fake snapshot
-        snap_dir = get_snapshots_dir()
+        snap_dir = get_snapshots_dir(user_id="default")
         snap_dir.mkdir(parents=True, exist_ok=True)
         snap_path = snap_dir / f"{_TRIP_ID}.json"
         snap_path.write_text("{}")

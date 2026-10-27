@@ -54,16 +54,16 @@ test('#1745 AC-1: alert_channel_order_hat_vier_kanaele_premium_sms_direkt_nach_s
 	);
 });
 
-test('#1258 AC-11 / #1745 AC-2: resolveAlertChannels(undefined) liefert Design-Default TG/SMS an, E-Mail aus (Neuanlage)', () => {
+test('#1258 AC-11 / #1745 AC-2: resolveAlertChannels(undefined) liefert Neuanlage-Default TG/E-Mail an, SMS aus (#2518)', () => {
 	const state = resolveAlertChannels(undefined);
-	assert.deepEqual(state, { telegram: true, sms: true, email: false, premium_sms: false });
+	assert.deepEqual(state, { telegram: true, sms: false, email: true, premium_sms: false });
 });
 
 test('#1258 AC-11: resolveAlertChannels(null) liefert denselben Default wie undefined', () => {
 	assert.deepEqual(resolveAlertChannels(null), {
 		telegram: true,
-		sms: true,
-		email: false,
+		sms: false,
+		email: true,
 		premium_sms: false
 	});
 });
@@ -98,8 +98,8 @@ test('#1745 AC-2: neuanlage_default_premium_sms_aus', () => {
 	// Gegenprobe an derselben Stelle: Telegram/SMS bleiben unverändert AN, der
 	// vierte Kanal darf den Design-Default der drei Bestandskanäle nicht kippen.
 	assert.strictEqual(state.telegram, true);
-	assert.strictEqual(state.sms, true);
-	assert.strictEqual(state.email, false);
+	assert.strictEqual(state.sms, false);
+	assert.strictEqual(state.email, true);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -139,8 +139,8 @@ test('#1745 AC-3 (Gegenprobe): {premium_sms:false} ist ebenfalls ein expliziter 
 test('#1258 AC-11/F001: resolveAlertChannels({}) liefert den Neuanlage-Default (kein "alles aus")', () => {
 	assert.deepEqual(resolveAlertChannels({}), {
 		telegram: true,
-		sms: true,
-		email: false,
+		sms: false,
+		email: true,
 		premium_sms: false
 	});
 });
@@ -148,8 +148,8 @@ test('#1258 AC-11/F001: resolveAlertChannels({}) liefert den Neuanlage-Default (
 test('#1258 AC-11/F001: resolveAlertChannels({telegram: undefined}) liefert den Neuanlage-Default (kein explizit gesetzter Wert)', () => {
 	assert.deepEqual(resolveAlertChannels({ telegram: undefined }), {
 		telegram: true,
-		sms: true,
-		email: false,
+		sms: false,
+		email: true,
 		premium_sms: false
 	});
 });
@@ -157,7 +157,7 @@ test('#1258 AC-11/F001: resolveAlertChannels({telegram: undefined}) liefert den 
 test('#1258 AC-11/F001 (#1745): resolveAlertChannels({premium_sms: undefined}) liefert ebenfalls den Neuanlage-Default', () => {
 	assert.deepEqual(
 		resolveAlertChannels({ premium_sms: undefined } as Record<string, boolean | undefined>),
-		{ telegram: true, sms: true, email: false, premium_sms: false }
+		{ telegram: true, sms: false, email: true, premium_sms: false }
 	);
 });
 
