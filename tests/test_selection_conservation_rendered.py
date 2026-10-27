@@ -273,6 +273,77 @@ def test_ac14_sms_laenge_gsm7_und_zaehler_wird_nie_verdraengt():
         assert _fragezaehler(teil) is not None, f"Zaehler verdraengt: {teil!r}"
 
 
+def test_ac14_zaehler_ist_fester_teil_des_budgets():
+    """Adversary F001: der Zaehler ``?N`` muss in der Kuerzungsschleife
+    mitgerechnet sein -- sonst ragt der Ortsteil um `` ?N`` ueber sein Budget,
+    und die SMS verliert Ort bzw. Zaehler an die Notkuerzung. Die Ortsnamen-
+    Laenge wird durchgefahren, damit jede Restluecke im Budget einmal knapp
+    ist (ein fester Name traefe die kritische Laenge nur zufaellig)."""
+    from output.renderers.comparison import render_compare_sms
+
+    gewaehlt = ["temp_max", "wind_max", "cloud_avg", "sunny_hours", "precip_sum",
+                "pop_max", "uv_max", OHNE_WERT]
+    for laenge in range(20, 130):
+        name = "N" * laenge
+        sms = render_compare_sms(_make_comparison_result([name]), enabled_metrics=gewaehlt)
+        assert len(sms) <= 153, sms
+        teile = _sms_orte(sms)
+        assert len(teile) == 1 and teile[0].startswith(name + " "), (
+            f"Ort fiel der Notkuerzung zum Opfer (Name {laenge}): {sms!r}"
+        )
+        teil = teile[0]
+        assert _fragezaehler(teil) == 1, f"Zaehler fehlt (Name {laenge}): {teil!r}"
+        verdraengt = sum(int(n) for n in re.findall(r"(?:^|\s)\+(\d+)(?=\s|$)", teil))
+        sichtbar = len(re.findall(r"\s[A-Z]{1,3}\s+\d", teil))
+        assert sichtbar + verdraengt + 1 == len(gewaehlt), teil
+
+
+def test_ac12_reihenfolge_platzmangel_vor_fehlend_exakt():
+    """Adversary F005: Wire-Vertrag sms_format.md §5b -- ``+N`` (verdraengt)
+    steht VOR ``?N`` (fehlend), Zeichen fuer Zeichen."""
+    from output.renderers.comparison import render_compare_sms
+
+    name = "N" * 90
+    gewaehlt = ["temp_max", "wind_max", "cloud_avg", "sunny_hours", "precip_sum",
+                "pop_max", "uv_max", OHNE_WERT]
+    sms = render_compare_sms(_make_comparison_result([name]), enabled_metrics=gewaehlt)
+    assert sms == f"Vergleich 08.07.: {name} D 20C W 10 km/h CT 30% SU 5.0h +3 ?1", sms
+
+
+def _sms_ueber_echten_eingang(display_config: dict):
+    from output.renderers.comparison import render_compare_sms
+    from services.report_config_resolver import resolve_compare_render_options
+
+    opts = resolve_compare_render_options({"id": "p-kanal", "display_config": display_config})
+    sms = render_compare_sms(
+        _result(), enabled_metrics=opts.enabled_metrics_by_channel["sms"],
+        unresolved_count=opts.unresolved_by_channel.get("sms", 0),
+    )
+    return opts, sms
+
+
+def test_ac15_kanal_und_grundauswahl_mit_demselben_unmappbaren_zaehlen_einmal():
+    """Adversary F004a: derselbe unmappbare Schluessel in Grundauswahl UND
+    Kanal-Auswahl ist EINE Luecke, nicht zwei."""
+    opts, sms = _sms_ueber_echten_eingang({
+        "active_metrics": ["temp_max_c", "wind_max_kmh", "gibt_es_nicht_xyz"],
+        "channel_active_metrics": {"sms": ["temp_max_c", "gibt_es_nicht_xyz"]},
+    })
+    assert opts.unresolved_by_channel == {"email": 1, "telegram": 1, "sms": 1}
+    assert [_fragezaehler(t) for t in _sms_orte(sms)] == [1, 1, 1], sms
+
+
+def test_ac15_nur_kanal_eigener_unmappbarer_zaehlt_nur_in_diesem_kanal():
+    """Adversary F004b: ein unmappbarer Schluessel NUR in der SMS-Auswahl
+    zaehlt in der SMS (``?1``), nicht in Mail/Telegram."""
+    opts, sms = _sms_ueber_echten_eingang({
+        "active_metrics": ["temp_max_c", "wind_max_kmh"],
+        "channel_active_metrics": {"sms": ["temp_max_c", "gibt_es_nicht_abc"]},
+    })
+    assert opts.unresolved_by_channel == {"email": 0, "telegram": 0, "sms": 1}
+    assert [_fragezaehler(t) for t in _sms_orte(sms)] == [1, 1, 1], sms
+
+
 def test_ac15_unmappbarer_schluessel_erhoeht_den_zaehler_an_jedem_ort():
     from output.renderers.comparison import render_compare_sms
 
@@ -306,6 +377,18 @@ def test_ac16_report_trennt_unmappbar_von_nicht_waehlbar():
     assert unresolved == ("gibt_es_nicht_xyz",)
 
 
+def test_ac16_namensform_einer_waehlbaren_groesse_bleibt_meldepflichtig():
+    """``t2m_c`` traegt die nicht waehlbare ``temperature_cold`` UND die waehlbare
+    ``temperature`` -- ohne Compare-Zuordnung ist es eine echte Luecke (Art a),
+    keine still verschluckte nicht-waehlbare Groesse (Art b)."""
+    from services.report_config_resolver import resolve_compare_render_options
+
+    opts = resolve_compare_render_options(
+        {"id": "p-t2m", "display_config": {"active_metrics": ["temp_max_c", "t2m_c"]}},
+    )
+    assert opts.unresolved_by_channel == {"email": 1, "telegram": 1, "sms": 1}
+
+
 def test_ac17_kanal_abgewaehlte_groesse_ist_keine_luecke():
     from services.report_config_resolver import resolve_compare_render_options
 
@@ -329,6 +412,48 @@ def test_ac18_vorschau_und_versand_tragen_denselben_zaehler(tmp_path, monkeypatc
     assert opts.unresolved_by_channel == {"email": 1, "telegram": 1, "sms": 1}
     _text, kanaele = _versand_mit_unmappbarem(tmp_path, monkeypatch)
     assert _fragezaehler(_sms_orte(kanaele["sms"])[0]) == opts.unresolved_by_channel["sms"]
+
+
+def test_ac3_warn_in_der_auswahl_ist_keine_luecke():
+    """Adversary F003: die Warn-Zeile ist immer sichtbar -- ``warn`` in der
+    Auswahl darf weder im HTML noch im Klartext als fehlend gezaehlt werden."""
+    from output.renderers.comparison import render_compare_email
+
+    html, text = render_compare_email(_result(), enabled_metrics=["warn", "temp_max"])
+    assert "ohne Wert in diesem Vergleich" not in html
+    assert "ohne Wert in diesem Vergleich" not in text
+
+
+def _vorschau(uid: str, preset_id: str) -> tuple[dict, str]:
+    from services.compare_preview_service import ComparePreviewService
+    from tests.tdd._compare_kette_fixtures import TARGET_DATE
+
+    svc = ComparePreviewService()
+    kanaele = svc.render_all_channels(preset_id, user_id=uid, target_date=TARGET_DATE)
+    ctx = svc._prepare(preset_id, user_id=uid, target_date=TARGET_DATE)
+    _html, plain = svc._render_email(ctx)
+    return kanaele, plain
+
+
+def test_ac18_wirkort_mail_und_telegram_versand_gleich_vorschau(tmp_path, monkeypatch):
+    """Adversary F002: unmappbarer Schluessel in ``active_metrics`` -> der
+    ZUGESTELLTE Mail-Text (HTML + Klartext, am Transport-Aufzeichner) und das
+    zugestellte Telegram (rich) tragen die Zahl; die Vorschau zeigt dieselbe."""
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+
+    mit = aufzeichner_installieren(monkeypatch)
+    uid, preset_id = _versand_mit_unmappbarem(tmp_path, monkeypatch, ohne_senken=True)
+    mail = mit.sendungen("email")[0]
+    telegram = mit.sendungen("telegram")[0]["body"]
+    assert _zahlen(_HINWEIS_VERGLEICH, mail["body"]) == [1], "HTML-Versand ohne Hinweis"
+    assert _zahlen(_HINWEIS_VERGLEICH, mail["plain_text_body"]) == [1], "Klartext-Versand ohne Hinweis"
+    assert _zahlen(_HINWEIS_ORT, telegram) == [1, 1], f"Telegram-Versand: {telegram!r}"
+
+    vorschau, plain = _vorschau(uid, preset_id)
+    assert _zahlen(_HINWEIS_VERGLEICH, vorschau["email_html"]) == [1], "HTML-Vorschau luegt"
+    assert _zahlen(_HINWEIS_VERGLEICH, plain) == [1], "Klartext-Vorschau luegt"
+    assert _zahlen(_HINWEIS_ORT, vorschau["telegram"]) == [1, 1], "Telegram-Vorschau luegt"
+    assert [_fragezaehler(t) for t in _sms_orte(vorschau["sms"])] == [1, 1], "SMS-Vorschau luegt"
 
 
 def test_ac19_ein_baustein_ein_wortlaut():
@@ -509,7 +634,10 @@ def _premium_erreichbar_machen(uid: str) -> None:
     pfad.write_text(json.dumps(profil))
 
 
-def _versand_mit_unmappbarem(tmp_path, monkeypatch, *, stil: str = "rich"):
+def _versand_mit_unmappbarem(tmp_path, monkeypatch, *, stil: str = "rich",
+                             ohne_senken: bool = False):
+    """``ohne_senken=True``: Versand laeuft bis zum (vorher installierten)
+    Transport-Aufzeichner -- Rueckgabe ``(uid, preset_id)`` fuer die Vorschau."""
     from tests.tdd._compare_kette_fixtures import (
         TARGET_DATE, briefing_senden, engine_naht, fixture_dict, nutzer_anlegen,
         orte_anlegen, preset_ablegen, settings_fuer, transport_einrichten,
@@ -536,6 +664,10 @@ def _versand_mit_unmappbarem(tmp_path, monkeypatch, *, stil: str = "rich"):
     }
     orte_anlegen(uid)
     preset_ablegen(uid, roh)
+
+    if ohne_senken:
+        briefing_senden(uid, roh["id"], settings_fuer(uid), target_date=TARGET_DATE)
+        return uid, roh["id"]
 
     kanaele: dict[str, str] = {}
     briefing_senden(

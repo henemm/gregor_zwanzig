@@ -918,8 +918,11 @@ def _allowed_col_keys_for_horizon(
     - Pro enabled MetricConfig: wenn horizons-Dict gesetzt und der gewählte
       Horizont darin auf False steht → ausschließen. Sonst einschließen
       (Default True bei fehlendem Feld → Backward-Compat AC-7).
+    - Issue #1405 S3 (AC-24): None nur ohne gespeicherte Metrik-Konfiguration;
+      sind alle Groessen fuer den Horizont abgewaehlt, ist die Menge leer
+      ("abgewaehlt heisst abgewaehlt", nicht "alle").
     """
-    if horizon is None:
+    if horizon is None or not dc.metrics:
         return None
     keys: set[str] = set()
     for mc in dc.metrics:
@@ -931,8 +934,12 @@ def _allowed_col_keys_for_horizon(
         try:
             keys.add(get_metric(mc.metric_id).col_key)
         except KeyError:
+            logger.warning(
+                "_allowed_col_keys_for_horizon: Metrik %r unbekannt — Spalte "
+                "entfaellt (#1405)", mc.metric_id,
+            )
             continue
-    return keys or None
+    return keys
 
 
 def render_html(

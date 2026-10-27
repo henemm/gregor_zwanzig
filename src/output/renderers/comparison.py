@@ -24,7 +24,8 @@ from app.models import Corridor, MetricConfig, UnifiedWeatherDisplayConfig
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
 from output.renderers.channel_layout import (
-    CHANNEL_LIMITS, render_for_channel, telegram_metric_notice,
+    CHANNEL_LIMITS, render_for_channel, selection_gap_notice,
+    telegram_metric_notice,
 )
 from output.renderers.compare_metric_catalog import (
     COMPARE_METRIC_CATALOG, kuerzel_metric_id_for,
@@ -35,7 +36,7 @@ from output.renderers.email.compare_html import (
     _column_legend_text, _fmt_precip_type, _fmt_thunder,
     _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
     _units_legend_text, _visible_hour_metrics, derive_row_labels,
-    loc_hail_flag, loc_thunder_signals, location_render_order,
+    loc_hail_flag, loc_thunder_signals, location_render_order, rowless_count,
 )
 from output.renderers.email.outlook_state_hint import (
     OutlookState, render_outlook_state_plain,
@@ -154,6 +155,7 @@ def render_comparison_text(
     hourly_metrics: list[str] | None = None,
     hourly_enabled: bool = True,
     undelivered: list | None = None,
+    unresolved_count: int = 0,
 ) -> str:
     """
     Render ComparisonResult als Klartext (v2, Issue #1110).
@@ -194,6 +196,10 @@ def render_comparison_text(
             (`email_spec_validator` liest nur den HTML-Body; genau so blieb
             in #1366 `hourly_enabled` im Klartext monatelang wirkungslos).
             ``None``/leer = kein Abschnitt, keine Ueberschrift.
+        unresolved_count: Issue #1405 S3 -- wie im HTML-Pfad: gewaehlte
+            Eintraege ohne Renderer-Zuordnung; zusammen mit den Groessen ohne
+            Zeile EINE Hinweiszeile unter der Uebersicht (Baustein
+            ``selection_gap_notice``), bei 0 keine.
 
     Returns:
         Klartext-String fuer die E-Mail.
@@ -259,6 +265,16 @@ def render_comparison_text(
         for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)]):
             lines.append(f"   ⚠️ {line}")
 
+        lines.append("")
+
+    # Issue #1405 S3: EIN Hinweis je Mail unter der Uebersicht, dieselbe Zahl
+    # wie im HTML-Teil (Zeilen ohne Definition + unmappbare Eintraege).
+    gap_notice = selection_gap_notice(
+        rowless_count(enabled_metrics, _PLAIN_ROWS_BY_ID) + unresolved_count,
+        scope="vergleich",
+    )
+    if gap_notice:
+        lines.append(gap_notice)
         lines.append("")
 
     # Stundentabelle + 3-Tage-Ausblick (Epic #1301 B4) je Ort, direkt
@@ -436,6 +452,7 @@ def render_compare_email(
     outlook_metric_formats: dict[str, bool] | None = None,
     undelivered: list | None = None,
     preset: Optional[dict] = None,
+    unresolved_count: int = 0,
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
@@ -474,6 +491,8 @@ def render_compare_email(
         undelivered=undelivered,
         # Issue #1969 (AC-26): das rohe Preset fuer den Fuss "Naechster Versand".
         preset=preset,
+        # Issue #1405 S3: dieselbe Zahl in BEIDE Fassungen der Mail.
+        unresolved_count=unresolved_count,
     )
     text_body = render_comparison_text(
         result, profile=profile, enabled_metrics=enabled_metrics,
@@ -495,6 +514,7 @@ def render_compare_email(
         # Ortsvergleich gegenueber dem Trip (`email/plain.py`) schlechter
         # gestellt (Teilungs-Invariante).
         undelivered=undelivered,
+        unresolved_count=unresolved_count,
     )
     return html_body, text_body
 
@@ -626,8 +646,8 @@ def _sms_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
     Das spart zwei Zeichen je Zelle im 153-Zeichen-Budget.
 
     ``None`` = kein Wert an diesem Ort ODER keine ``metric_id``/kein Kuerzel
-    bekannt -- die Zelle entfaellt dann, ohne Platz oder einen Zaehler zu
-    belegen (analog ``_plain_metric_cell``/Telegram-Pfad)."""
+    bekannt -- die Zelle entfaellt dann und zaehlt im Zaehler ``?N`` des
+    Ortsteils (Issue #1405 S3, ``_sms_location_part``)."""
     row = _PLAIN_ROWS_BY_ID.get(metric_id)
     if row is None:
         return None
@@ -697,6 +717,7 @@ def render_compare_telegram(
     *,
     enabled_metrics: list[str] | None = None,
     preset_name: Optional[str] = None,
+    unresolved_count: int = 0,
 ) -> str:
     """Rendert einen Orts-Vergleich als Telegram-Nachricht (Issue #1270).
 
@@ -704,6 +725,10 @@ def render_compare_telegram(
     ``CHANNEL_LIMITS["telegram"]``: ``max_table_cols`` = 8 zaehlt inkl. der
     impliziten Zeit-/Orts-Spalte, also hoechstens 7 Metrik-Werte je Ort;
     ``max_chars`` = 4096 begrenzt die Gesamtnachricht.
+
+    Issue #1405 S3: ``unresolved_count`` = gewaehlte Eintraege ohne Renderer-
+    Zuordnung (``CompareRenderOptions.unresolved_by_channel``); sie fehlen an
+    JEDEM Ort und zaehlen in den "ohne Wert"-Hinweis jedes Ortsblocks.
     """
     limits = CHANNEL_LIMITS["telegram"]
     # Issue #1362: die feste Sechserliste verliert ihre Torwaechter-Rolle --
@@ -748,7 +773,7 @@ def render_compare_telegram(
         # doppelte `_metric_value`/`_daily_summary`-Berechnung).
         cell_values = {mid: _plain_metric_cell(loc_result, mid) for mid in dedup_ids}
         available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
-        no_data_count = len(dedup_ids) - len(available_ids)
+        no_data_count = len(dedup_ids) - len(available_ids) + unresolved_count
         layout = _channel_layout_for_metrics("telegram", available_ids)
         cells = [cell_values[mid] for mid in layout.table_columns]
         block.append("   " + (" · ".join(cells) if cells else "keine Werte"))
@@ -854,10 +879,9 @@ def _telegram_no_data_notice(no_data_count: int) -> str:
     gewaehlter Groessen). Bewusst OHNE "vollstaendig per E-Mail": die Mail
     zeigt fuer diese Groesse ebenfalls keinen Wert (nur einen "-"-Platzhalter,
     s. ``render_comparison_text``), das waere also ein falsches Versprechen.
-    Leer, wenn nichts fehlt."""
-    if no_data_count <= 0:
-        return ""
-    return f"… +{no_data_count} gewählte Wettergrößen ohne Wert an diesem Ort"
+    Leer, wenn nichts fehlt. Issue #1405 S3: Wortlaut aus dem EINEN Baustein
+    ``selection_gap_notice`` (geteilt mit E-Mail HTML/Klartext)."""
+    return selection_gap_notice(no_data_count, scope="ort")
 
 
 def _official_alert_sms_marker(
@@ -882,6 +906,7 @@ def _official_alert_sms_marker(
 
 def _sms_location_part(
     loc_result, enabled_metrics: list[str] | None, budget: "int | None",
+    unresolved_count: int = 0,
 ) -> str:
     """Flache SMS-Darstellung EINES Ortes.
 
@@ -907,9 +932,10 @@ def _sms_location_part(
     Ortsteil ins Budget passt. Verdraengte Zellen werden als ``+N`` ausgewiesen
     (Spec Implementation Details Punkt 3) -- nie stillschweigend weggelassen.
     Groessen OHNE Wert an diesem Ort zaehlen dabei NICHT als verdraengt: sie
-    waren nie Kandidat fuer einen Platz (analog Telegram/``_plain_metric_cell``,
-    kein zweiter "ohne Wert"-Zaehler im SMS-Budget -- dafuer fehlt hier
-    schlicht der Platz, s. Spec "Implementation Details Punkt 3").
+    waren nie Kandidat fuer einen Platz. Issue #1405 S3: sie (plus die
+    unmappbaren Eintraege, ``unresolved_count``) erscheinen als eigener
+    Zaehler ``?N`` nach ``+N`` und vor dem ``!``-Marker (sms_format.md §5b),
+    fester Bestandteil jeder Budget-Pruefung; ohne Luecke kein Zeichen mehr.
 
     Issue #1332: traegt ein Ort eine amtliche Warnung >= orange, haengt ein
     `!`-Kuerzel-Marker an (geteilter Kern ``official_alerts_to_sms_entries``,
@@ -946,11 +972,16 @@ def _sms_location_part(
         c for c in (_sms_metric_cell(loc_result, mid) for mid in dedup_ids)
         if c is not None
     ]
+    # Issue #1405 S3 (sms_format.md §5b): fehlende Werte + unmappbare
+    # Eintraege als `?N` -- fester Bestandteil wie der Warn-Marker.
+    missing = len(dedup_ids) - len(cells) + unresolved_count
 
     def _assemble(kept_cells: list[str], demoted: int) -> str:
         text_parts = [name] + kept_cells
         if demoted > 0:
             text_parts.append(f"+{demoted}")
+        if missing > 0:
+            text_parts.append(f"?{missing}")
         if marker:
             text_parts.append(marker)
         return " ".join(text_parts)
@@ -968,8 +999,12 @@ def render_compare_sms(
     result: ComparisonResult,
     *,
     enabled_metrics: list[str] | None = None,
+    unresolved_count: int = 0,
 ) -> str:
     """Rendert einen Orts-Vergleich als flache SMS (Issue #1270).
+
+    Issue #1405 S3: ``unresolved_count`` (unmappbare gewaehlte Eintraege)
+    erhoeht den Zaehler ``?N`` jedes Ortsteils (sms_format.md §5b).
 
     Reine Funktion, kein Score/Rang (AC-3). Budget aus
     ``CHANNEL_LIMITS["sms"]``: ``max_table_cols`` = 0 (keine Tabelle, flache
@@ -1019,7 +1054,7 @@ def render_compare_sms(
         if max_chars is not None else None
     )
     parts = [
-        _sms_location_part(loc, enabled_metrics, location_budget)
+        _sms_location_part(loc, enabled_metrics, location_budget, unresolved_count)
         for loc in locations
     ]
     if not parts:

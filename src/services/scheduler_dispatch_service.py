@@ -666,6 +666,8 @@ def send_one_compare_preset(
         # service) -- sonst zeigte die versendete Mail etwas anderes als die
         # Vorschau, an der der Nutzer sie eingestellt hat.
         outlook_metric_formats=opts.outlook_metric_formats,
+        # Issue #1405 S3: unmappbare Auswahl sichtbar, nicht nur im Log.
+        unresolved_count=opts.unresolved_by_channel.get("email", 0),
     )
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt
     # gemeldeten Stand). Best-effort: ein fehlgeschlagener Snapshot-Write darf
@@ -717,6 +719,7 @@ def send_one_compare_preset(
         # die SMS; sonst der bisherige Telegram-Renderer.
         _sms_text = render_compare_sms(
             result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
+            unresolved_count=opts.unresolved_by_channel.get("sms", 0),
         )
         if effective_compare_telegram_style(preset) == "kurzform":
             _telegram_text = _sms_text
@@ -725,6 +728,7 @@ def send_one_compare_preset(
                 result,
                 enabled_metrics=opts.enabled_metrics_by_channel["telegram"],
                 preset_name=name,
+                unresolved_count=opts.unresolved_by_channel.get("telegram", 0),
             )
         send_result = NotificationService(settings, user_id).send_compare_report(
             subject=subject,

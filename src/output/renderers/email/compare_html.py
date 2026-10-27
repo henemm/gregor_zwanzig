@@ -817,10 +817,36 @@ def _visible_metrics(enabled_metrics: list[str] | None) -> list[dict]:
     return derive_row_labels(warn_row + ordered, form="long")
 
 
+def rowless_count(enabled_metrics: list[str] | None, row_keys) -> int:
+    """Issue #1405 S3: Anzahl gewaehlter Groessen OHNE Zeilendefinition in
+    ``row_keys`` -- genau die, die der Zeilenfilter (``_visible_metrics`` bzw.
+    ``comparison._ordered_rows``) verwirft. Die Warn-Zeile ist immer sichtbar
+    und zaehlt nie. ``None`` (kein Filter) = 0."""
+    if enabled_metrics is None:
+        return 0
+    return sum(
+        1 for k in dict.fromkeys(enabled_metrics) if k != "warn" and k not in row_keys
+    )
+
+
+def _render_selection_gap_html(count: int) -> str:
+    """Hinweiszeile unter der Uebersichtstabelle (Issue #1405 S3); leer bei 0."""
+    from output.renderers.channel_layout import selection_gap_notice
+
+    notice = selection_gap_notice(count, scope="vergleich")
+    if not notice:
+        return ""
+    return (
+        f'<div style="margin-top:6px;font-size:11px;font-family:{FONT_UI};'
+        f'color:{G_INK};">{_html.escape(notice)}</div>'
+    )
+
+
 def _render_overview_table(
     locations: list[LocationResult],
     enabled_metrics: list[str] | None = None,
     corridors: list[Corridor] | None = None,
+    unresolved_count: int = 0,
 ) -> str:
     header_cells = [
         f'<th style="text-align:left;padding:9px 5px;font-size:10px;'
@@ -854,9 +880,11 @@ def _render_overview_table(
         f'font-variant-numeric:tabular-nums;">'
         f'<thead>{header_row}</thead><tbody>{rows}</tbody></table>'
     )
+    gap = rowless_count(enabled_metrics, {m["key"] for m in CV2_METRICS})
     return (
         f'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;'
         f'margin-top:12px;border:1px solid #e6e1d3;">{table}</div>'
+        + _render_selection_gap_html(gap + unresolved_count)
     )
 
 
@@ -1602,6 +1630,7 @@ def render_compare_html(
     outlook_metric_formats: dict[str, bool] | None = None,
     undelivered: list | None = None,
     preset: Optional[dict] = None,
+    unresolved_count: int = 0,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
 
@@ -1655,6 +1684,10 @@ def render_compare_html(
             (`{kennung: bool}`, ``True`` = Einfach). `None`/fehlender Eintrag
             = Rohzahl, der Ausblick-Default ist hart "Roh". Wirkt auf den
             Zellentext, NICHT auf die Ampel-Hintergrundtoenung.
+        unresolved_count: Issue #1405 S3 -- gewaehlte Eintraege ohne
+            Renderer-Zuordnung (``CompareRenderOptions.unresolved_by_channel``).
+            Zusammen mit den Groessen ohne Zeilendefinition als Hinweiszeile
+            unter der Uebersichtstabelle; bei 0 kein Hinweis.
 
     Returns:
         HTML-String (DOCTYPE bis </html>).
@@ -1688,7 +1721,7 @@ def render_compare_html(
     overview_html = (
         f'<div style="padding:6px 24px 0;">'
         f'{_render_section_head("ÜBERSICHT", "Alle Orte · gewählte Metriken", "← scrollen")}'
-        f'{_render_overview_table(locations, enabled_metrics, corridors)}</div>'
+        f'{_render_overview_table(locations, enabled_metrics, corridors, unresolved_count)}</div>'
     )
     # Issue #1278 (Nebenbefund, AC-12): die dritte Angabe war fest "09–16 Uhr" --
     # ein toter Rest des mit #1268 abgeschafften Zeitfensters. Die Bewertung
