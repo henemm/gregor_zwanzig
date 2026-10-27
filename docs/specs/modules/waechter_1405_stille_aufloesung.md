@@ -226,7 +226,8 @@ gegen Fehlalarme; sie hat ihren Zweck erfüllt (erster Entwurf: 59 Treffer, davo
   eigene Arbeitseinheit, eigene Spec, läuft als nächstes.
 - **S3 (Mengenerhalt-Nachweise über die gerenderte Ausgabe)** und
   **S4 (Reparatur der Restliste A1–A13)** — eigene Scheiben, PO-Entscheidung
-  2026-07-28. Diese Einheit ändert keinen Produktivcode.
+  2026-07-28. Diese Einheit ändert keinen Produktivcode. *(S3 liefert inzwischen
+  eigenen Produktivcode: `docs/specs/modules/feat_1405_s3_mengenerhalt.md`.)*
 - **Go-Code (`internal/`)** — ein Python-`ast`-Scan erreicht diesen Baum
   strukturell nicht (andere Sprache, keine `.py`-Dateien). Bewusste,
   dokumentierte Lücke, kein Versehen (Vorbild: `test_egress_inventory_drift.py`
