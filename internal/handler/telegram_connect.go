@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/store"
 )
@@ -77,6 +78,10 @@ func (s *TelegramTokenStore) saveLocked(tokens map[string]pendingTelegramToken) 
 	}
 	if cerr := tmp.Close(); werr == nil {
 		werr = cerr
+	}
+	if werr == nil {
+		// CreateTemp legt 0600 an; Gruppen-Schreibrecht unter Default-ACL (#2624).
+		werr = os.Chmod(tmpName, fsmode.FileMode)
 	}
 	if werr == nil {
 		werr = os.Rename(tmpName, s.path)

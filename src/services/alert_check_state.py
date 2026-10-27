@@ -20,7 +20,9 @@ import tempfile
 from datetime import datetime, timezone
 from typing import Iterable
 
-from services.file_lock import LOCK_TIMEOUT_SECONDS, acquire_exclusive
+from services.file_lock import (
+    LOCK_TIMEOUT_SECONDS, acquire_exclusive, open_lock_file, share_state_file,
+)
 
 logger = logging.getLogger("alert_check_state")
 
@@ -55,7 +57,7 @@ class AlertCheckStateStore:
         try:
             self._dir.mkdir(parents=True, exist_ok=True)
             lock_path = str(self._path) + ".lock"
-            fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+            fd = open_lock_file(lock_path)
             if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
                 logger.warning(f"{self._filename}: Sperre {lock_path} nicht erhalten — Stempel nicht gespeichert")
                 return
@@ -92,6 +94,7 @@ class AlertCheckStateStore:
         )
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
+                share_state_file(f.fileno())
                 f.write(json.dumps({k: v.isoformat() for k, v in sorted(stamps.items())}, indent=2))
             os.replace(tmp_name, self._path)
         except OSError:

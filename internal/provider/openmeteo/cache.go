@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/fsmode"
 )
 
 type ModelAvailability struct {
@@ -56,7 +58,7 @@ func SaveAvailabilityCache(path string, cache *AvailabilityCache) error {
 	defer cacheMu.Unlock()
 
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 
@@ -65,5 +67,13 @@ func SaveAvailabilityCache(path string, cache *AvailabilityCache) error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0644)
+	f, err := fsmode.OpenFile(path, os.O_WRONLY|os.O_TRUNC)
+	if err != nil {
+		return err
+	}
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
 }

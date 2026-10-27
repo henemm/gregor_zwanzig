@@ -58,7 +58,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-from services.file_lock import LOCK_TIMEOUT_SECONDS, acquire_exclusive
+from services.file_lock import (
+    LOCK_TIMEOUT_SECONDS, acquire_exclusive, open_lock_file, share_state_file,
+)
 
 logger = logging.getLogger("meteoalarm_budget")
 
@@ -250,6 +252,7 @@ class MeteoAlarmBudgetGate:
         )
         try:
             with os.fdopen(fd, "w") as f:
+                share_state_file(f.fileno())
                 f.write(json.dumps(data))
             os.replace(tmp_name, self._path)
         except OSError:
@@ -278,7 +281,7 @@ class MeteoAlarmBudgetGate:
     def _update_unter_sperre(self, mutate: Callable[[dict], None], now) -> bool:
         self._dir.mkdir(parents=True, exist_ok=True)
         lock_path = str(self._path) + _LOCK_SUFFIX
-        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        fd = open_lock_file(lock_path)
         try:
             start = time.monotonic()
             if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):

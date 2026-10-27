@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/fsmode"
 )
 
 // schedulerUserStateFileName ist die Geschwisterdatei von users/ unter
@@ -139,7 +141,7 @@ func (u *userRunState) persistLocked() {
 		log.Printf("[scheduler] user-run-state: write %s failed: %v", u.path, err)
 		return
 	}
-	if err := os.Chmod(tmp, 0644); err != nil {
+	if err := os.Chmod(tmp, fsmode.FileMode); err != nil {
 		os.Remove(tmp)
 		log.Printf("[scheduler] user-run-state: write %s failed: %v", u.path, err)
 		return

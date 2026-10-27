@@ -30,7 +30,7 @@ from typing import Callable, Optional
 from zoneinfo import ZoneInfo
 
 from services import file_lock
-from services.file_lock import acquire_exclusive
+from services.file_lock import acquire_exclusive, open_lock_file, share_state_file
 from utils.timezone import UTC, local_dt
 
 logger = logging.getLogger("briefing_slots")
@@ -235,7 +235,7 @@ class BriefingSlotStore:
         wenn repariert wurde; fehlende oder lesbare Datei ⇒ ``False``.
         """
         self._dir.mkdir(parents=True, exist_ok=True)
-        fd = os.open(str(self._path) + _LOCK_SUFFIX, os.O_CREAT | os.O_RDWR, 0o644)
+        fd = open_lock_file(str(self._path) + _LOCK_SUFFIX)
         try:
             if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
                 logger.warning("Dateisperre fuer Reparatur nicht erhalten")
@@ -485,6 +485,7 @@ class BriefingSlotStore:
         )
         try:
             with os.fdopen(fd, "w") as f:
+                share_state_file(f.fileno())
                 f.write(json.dumps(data, indent=2))
             os.replace(tmp_name, self._path)
         except OSError:
@@ -509,7 +510,7 @@ class BriefingSlotStore:
         """
         self._dir.mkdir(parents=True, exist_ok=True)
         lock_path = str(self._path) + _LOCK_SUFFIX
-        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        fd = open_lock_file(lock_path)
         try:
             if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
                 logger.warning(

@@ -22,7 +22,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-from services.file_lock import LOCK_TIMEOUT_SECONDS, acquire_exclusive
+from services.file_lock import (
+    LOCK_TIMEOUT_SECONDS, acquire_exclusive, open_lock_file, share_state_file,
+)
 
 logger = logging.getLogger("throttle_store")
 
@@ -162,6 +164,7 @@ class ThrottleStore:
         )
         try:
             with os.fdopen(fd, "w") as f:
+                share_state_file(f.fileno())
                 f.write(json.dumps(data, indent=2))
             os.replace(tmp_name, self._path)
         except OSError:
@@ -188,7 +191,7 @@ class ThrottleStore:
         blanket `except Exception`."""
         self._dir.mkdir(parents=True, exist_ok=True)
         lock_path = str(self._path) + _LOCK_SUFFIX
-        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        fd = open_lock_file(lock_path)
         try:
             start = time.monotonic()
             if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):

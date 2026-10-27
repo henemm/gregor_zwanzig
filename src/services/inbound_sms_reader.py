@@ -58,6 +58,7 @@ from app.loader import (
 )
 from app.origin_guard import classify_origin
 from utils.timezone import SEVEN_IO_JOURNAL_TZ, to_utc
+from services.file_lock import share_state_file
 from services.notification_service import NotificationService
 from services.trip_command_processor import (
     CommandResult,
@@ -508,6 +509,7 @@ class InboundSmsReader:
         fd, tmp_path = tempfile.mkstemp(dir=directory, prefix=".premium_sms_inbound_")
         try:
             with os.fdopen(fd, "w") as f:
+                share_state_file(f.fileno())
                 json.dump({"last_seen_id": last_seen_id}, f)
             os.rename(tmp_path, path)
         except Exception:

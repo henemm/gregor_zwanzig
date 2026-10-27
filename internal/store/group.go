@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -166,7 +167,7 @@ func (s *Store) migrateGroups() ([]model.Group, error) {
 
 func (s *Store) saveGroups(gs []model.Group) error {
 	dir := filepath.Join(s.DataDir, "users", s.UserID)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 	if gs == nil {

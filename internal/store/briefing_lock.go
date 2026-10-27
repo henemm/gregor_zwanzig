@@ -7,6 +7,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/fsmode"
 )
 
 // Sperre je Nutzer+Briefing (Issue #1395 Scheibe 1).
@@ -169,8 +171,8 @@ func (s *Store) openBriefingLockFile(id string) (*os.File, error) {
 		return nil, errors.New("briefing lock: ungueltiger Nutzer oder Id")
 	}
 	path := s.briefingLockPath(id)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := fsmode.MkdirAll(filepath.Dir(path)); err != nil {
 		return nil, err
 	}
-	return os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+	return fsmode.OpenFile(path, os.O_RDWR)
 }

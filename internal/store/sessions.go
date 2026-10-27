@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/fsmode"
 )
 
 // Gaesteliste gueltiger Anmeldungen je Nutzer (Issue #2129, ADR-0060).
@@ -69,7 +71,7 @@ func (s *Store) writeSessionFile(userId string, f sessionFile) error {
 		return err
 	}
 	dir := s.UserDir(userId)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 	if f.Sessions == nil {

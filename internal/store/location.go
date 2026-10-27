@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -98,7 +99,7 @@ func (s *Store) SaveLocation(loc model.Location) error {
 		return ErrInvalidEntityID
 	}
 	dir := s.LocationsDir()
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 

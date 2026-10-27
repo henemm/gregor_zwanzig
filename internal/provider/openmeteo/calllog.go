@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/fsmode"
 )
 
 // Issue #338: Diagnose-Zähler für den Go-Provider. Jeder ausgehende
@@ -64,12 +66,12 @@ func logAPICall(reqURL string, status int, errStr string) {
 
 	logPath := diagnosticsGoLogPath()
 	if dir := filepath.Dir(logPath); dir != "" {
-		if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+		if mkErr := fsmode.MkdirAll(dir); mkErr != nil {
 			return
 		}
 	}
 
-	f, openErr := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, openErr := fsmode.OpenFile(logPath, os.O_APPEND|os.O_WRONLY)
 	if openErr != nil {
 		return
 	}
