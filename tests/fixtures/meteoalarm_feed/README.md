@@ -26,8 +26,13 @@
 ## `edr_snapshot_it.json` — Äquivalenz-Aufzeichnung, EDR-Seite
 
 - **Herkunft:** `https://api.meteoalarm.org` (der bisherige, kontingentierte
-  EDR-Weg), abgerufen über den echten Produktivcode
-  (`MeteoAlarmSource.fetch()` je Trip-Punkt) — kein nachbearbeitetes Ergebnis.
+  EDR-Weg), abgerufen über den damaligen Produktivcode (die EDR-Klasse in
+  `meteoalarm.py`, je Trip-Punkt) — kein nachbearbeitetes Ergebnis.
+- **Eingefroren (#2266):** Der Snapshot ist eingefroren und wird nie neu
+  aufgezeichnet; ein Aufzeichnungsskript existiert nicht im Repo (der Abruf war
+  ein einmaliger Ad-hoc-Lauf, und die EDR-Klasse ist mit #2266 zurückgebaut).
+  Die Datei bleibt unverändert als Referenz des Kern-Tests
+  `tests/tdd/test_meteoalarm_feed_aequivalenz_snapshots.py`.
 - **Aufgezeichnet:** 2026-08-01, **16:06:28 UTC**. Die Feed-Seite derselben
   Minute liegt als `feed_italy_equivalence.json` daneben; nur weil beide Seiten
   zeitgleich gezogen wurden, ist der Vergleich überhaupt aussagekräftig.
@@ -152,8 +157,13 @@ Deckt sich mit den drei in der Spec vorab genannten, live geprüften Paaren
 ## `edr_snapshot_at.json` — Äquivalenz-Aufzeichnung, EDR-Seite
 
 - **Herkunft:** `https://api.meteoalarm.org` (der bisherige, kontingentierte
-  EDR-Weg), abgerufen über den echten Produktivcode
-  (`MeteoAlarmSource.fetch()` je Trip-Punkt) — kein nachbearbeitetes Ergebnis.
+  EDR-Weg), abgerufen über den damaligen Produktivcode (die EDR-Klasse in
+  `meteoalarm.py`, je Trip-Punkt) — kein nachbearbeitetes Ergebnis.
+- **Eingefroren (#2266):** Der Snapshot ist eingefroren und wird nie neu
+  aufgezeichnet; ein Aufzeichnungsskript existiert nicht im Repo (der Abruf war
+  ein einmaliger Ad-hoc-Lauf, und die EDR-Klasse ist mit #2266 zurückgebaut).
+  Die Datei bleibt unverändert als Referenz des Kern-Tests
+  `tests/tdd/test_meteoalarm_feed_aequivalenz_snapshots.py`.
 - **Aufgezeichnet:** 2026-08-01, **16:19:43 UTC**. Die Feed-Seite
   (`feed_austria_equivalence.json`) und die Zonenzuordnung
   (`zamg_snapshot_at.json`) derselben Minute liegen daneben; nur weil alle drei

@@ -180,7 +180,7 @@ func userUsageAggregates(globalPath string, fairShare int) (maxCalls, over int) 
 
 // ForecastBudgetHealth reads the open-meteo daily-call budget snapshot from
 // data/diagnostics/forecast_budget.json directly — no Python-Core HTTP call,
-// analog WarnServiceHealth's meteoalarm_budget field. Issue #1329 AC-8.
+// analog WarnServiceHealth's journal read. Issue #1329 AC-8.
 func (s *Scheduler) ForecastBudgetHealth() map[string]any {
 	if s.store == nil {
 		return forecastBudgetSnapshot("")

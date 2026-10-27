@@ -129,12 +129,18 @@ def test_cache_treffer_auf_fehlgeschlagenen_eintrag_ist_kein_erfolg(journal, stu
 
 
 def test_selbst_auferlegter_rueckzug_markiert_sich_selbst(journal):
-    """AC-2: Das erschoepfte EIGENE Tagesbudget (echtes ``_MeteoAlarmBudgetExhausted``,
-    kein Netz-Call) muss vom echten Anbieter-Ausfall unterscheidbar sein."""
-    from services.official_alerts.meteoalarm import _MeteoAlarmBudgetExhausted
+    """AC-2: Ein SELBST auferlegter Rueckzug (Ausnahme mit Attribut
+    ``self_throttled = True``, kein Netz-Call) muss vom echten Anbieter-Ausfall
+    unterscheidbar sein. Seit #2266 gibt es keinen produktiven Ausloeser mehr
+    (das MeteoAlarm-Tagesbudget ist zurueckgebaut); der Zweig in
+    ``warn_egress`` bleibt aus Schema-Stabilitaet und wird hier mit einer
+    eigenen Ausnahme bewacht, die genau den Attribut-Vertrag erfuellt."""
+
+    class _EigenerRueckzug(Exception):
+        self_throttled = True
 
     def _budget_exhausted():
-        raise _MeteoAlarmBudgetExhausted("MeteoAlarm-Tagesbudget erschoepft")
+        raise _EigenerRueckzug("eigener Rueckzug (Testeingabe)")
 
     _fetch(request_fn=_budget_exhausted)
     _fetch(request_fn=_get(_dead_url()), key="AT2")

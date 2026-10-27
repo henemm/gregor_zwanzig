@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 )
 
@@ -167,80 +166,12 @@ func nilIfEmpty(ts string) any {
 	return ts
 }
 
-// meteoalarmDefaultDailyBudget mirrors MeteoAlarmBudgetGate.DEFAULT_DAILY_BUDGET
-// (src/services/official_alerts/meteoalarm_budget.py).
-const meteoalarmDefaultDailyBudget = 100
-
-// meteoalarmDailyBudget mirrors MeteoAlarmBudgetGate.daily_budget: the
-// GZ_METEOALARM_DAILY_BUDGET env var (positive integer) overrides the
-// default, deployable without a Go rebuild.
-func meteoalarmDailyBudget() int {
-	if raw := os.Getenv("GZ_METEOALARM_DAILY_BUDGET"); raw != "" {
-		if v, err := strconv.Atoi(raw); err == nil && v > 0 {
-			return v
-		}
-	}
-	return meteoalarmDefaultDailyBudget
-}
-
-// meteoalarmBudgetFile mirrors the persisted shape written by
-// MeteoAlarmBudgetGate._write (data/diagnostics/meteoalarm_budget.json):
-// {"date": ..., "calls": ..., "observed_reset_ts": ...}.
-type meteoalarmBudgetFile struct {
-	Date            string   `json:"date"`
-	Calls           int      `json:"calls"`
-	ObservedResetTs *float64 `json:"observed_reset_ts"`
-}
-
-// meteoalarmBudgetSnapshot reads path (data/diagnostics/meteoalarm_budget.json)
-// and returns the same field set as MeteoAlarmBudgetGate.snapshot() (Python):
-// calls_today, daily_budget, usage_ratio, observed_reset_ts, status — a
-// direct passthrough of the persisted counters, fail-soft exactly like
-// snapshot() itself ("unavailable" instead of raising). path=="" (no
-// s.store) is treated the same as a read failure.
-func meteoalarmBudgetSnapshot(path string) map[string]any {
-	budget := meteoalarmDailyBudget()
-	unavailable := map[string]any{
-		"calls_today":       0,
-		"daily_budget":      budget,
-		"usage_ratio":       0.0,
-		"observed_reset_ts": nil,
-		"status":            "unavailable",
-	}
-	if path == "" {
-		return unavailable
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return unavailable
-	}
-	var file meteoalarmBudgetFile
-	if err := json.Unmarshal(data, &file); err != nil {
-		return unavailable
-	}
-
-	ratio := 0.0
-	if budget > 0 {
-		ratio = float64(file.Calls) / float64(budget)
-	}
-	var resetTs any
-	if file.ObservedResetTs != nil {
-		resetTs = *file.ObservedResetTs
-	}
-	return map[string]any{
-		"calls_today":       file.Calls,
-		"daily_budget":      budget,
-		"usage_ratio":       ratio,
-		"observed_reset_ts": resetTs,
-		"status":            "ok",
-	}
-}
-
 // WarnServiceHealth aggregates raw call outcomes per canonical warn service
-// (Issue #1422 S2) directly from data/diagnostics/warn_service_calls.jsonl
-// plus the MeteoAlarm daily-budget snapshot from
-// data/diagnostics/meteoalarm_budget.json — both read from s.store.DataDir,
-// analog BriefingHealth(): no Python HTTP call, no login required.
+// (Issue #1422 S2) directly from data/diagnostics/warn_service_calls.jsonl,
+// read from s.store.DataDir, analog BriefingHealth(): no Python HTTP call, no
+// login required. The former MeteoAlarm daily-budget mirror
+// ("meteoalarm_budget") was removed together with the EDR class (#2266); a
+// leftover data/diagnostics/meteoalarm_budget.json is ignored.
 //
 // Deliberately raw timestamps/flags only, no threshold decision (s. spec
 // "Bewusste Design-Entscheidung — nur Rohdaten, keine Schwelle"): the 3h
@@ -263,7 +194,6 @@ func (s *Scheduler) WarnServiceHealth() map[string]any {
 	result := map[string]any{}
 
 	if s.store == nil {
-		result["meteoalarm_budget"] = meteoalarmBudgetSnapshot("")
 		return result
 	}
 
@@ -302,9 +232,6 @@ func (s *Scheduler) WarnServiceHealth() map[string]any {
 		}
 		result[name] = entry
 	}
-
-	budgetPath := filepath.Join(s.store.DataDir, "diagnostics", "meteoalarm_budget.json")
-	result["meteoalarm_budget"] = meteoalarmBudgetSnapshot(budgetPath)
 
 	return result
 }

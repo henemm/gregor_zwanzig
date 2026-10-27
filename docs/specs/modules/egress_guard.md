@@ -145,7 +145,7 @@ vollständige bekannte Host-Set mit konservativer Default-Isolationsart
 | `warnungen.zamg.at` | BLOCKED (Scheibe 2b #1348) |
 | `api.brightsky.dev` | TEST_ACCESS |
 | ~~`radar-api.protezionecivile.it`~~ | seit #1648 aus beiden Inventaren entfernt (Radar-DPC ersatzlos gestrichen) |
-| `api.meteoalarm.org` | BLOCKED (Scheibe 2b #1348) |
+| `api.meteoalarm.org` | BLOCKED (Scheibe 2b #1348) — mit #2266 aus beiden Inventaren entfernt (EDR-Weg zurückgebaut) |
 | `public-api.meteofrance.fr` | BLOCKED (Scheibe 2b #1348) |
 | `www.risque-prevention-incendie.fr` | BLOCKED (Scheibe 2b #1348) |
 | `gateway.seven.io` | TEST_ACCESS (Scheibe B #1336, s. u.) |
@@ -260,3 +260,4 @@ ergänzen.
 - 2026-07-24: Scheibe B (#1336) geschlossen — `gateway.seven.io` von `BLOCKED` auf `TEST_ACCESS` gehoben (dedizierter seven.io-Sandbox-Zugang), Inventar-Tabelle und Known Limitations aktualisiert. Siehe `docs/specs/modules/egress_guard_sms.md`.
 - 2026-07-24: Scheibe C (#1363) geschlossen — `api.telegram.org` von `BLOCKED` auf `TEST_ACCESS` gehoben (fail-closed Token-Guard + argument-basierter Chat-Guard auf 5 schreibenden Methoden), Inventar-Tabelle, Absatz darunter und Known Limitations aktualisiert (inkl. damals offenem Poll-Pfad `_get_updates`, inzwischen mit #1369 zurückgebaut). Siehe `docs/specs/modules/egress_guard_telegram.md`.
 - 2026-10-12: Telegram-Poll-Pfad (`_get_updates`) mit #1369 zurückgebaut — Known-Limitations-Absatz zu Scheibe C angepasst.
+- 2026-10-27: `api.meteoalarm.org` mit #2266 (Rückbau der MeteoAlarm-EDR-Klasse) synchron aus Python- und Go-Inventar entfernt; `feeds.meteoalarm.org` bleibt BLOCKED.

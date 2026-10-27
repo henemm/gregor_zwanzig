@@ -63,11 +63,6 @@ def _forecast_budget(tmp_path):
     ForecastBudgetGate("alice", data_root=tmp_path).record_call()
 
 
-def _meteoalarm(tmp_path):
-    from services.official_alerts.meteoalarm_budget import MeteoAlarmBudgetGate
-    MeteoAlarmBudgetGate(data_root=tmp_path).record_call()
-
-
 def _alert_check_state(tmp_path):
     from services.alert_check_state import AlertCheckStateStore
     AlertCheckStateStore("alice").record({"t1": NOW}, ["t1"])
@@ -98,9 +93,11 @@ def _sms_reserve(tmp_path):
         user_tier.daily_sms_limit = orig
 
 
+# Issue #2266: der MeteoAlarm-Budget-Schreibpfad ist mit dem Rueckbau der
+# EDR-Klasse entfallen.
 SCHREIBPFADE = [
     _file_lock, _throttle, _slots_reserve, _slots_repair, _forecast_budget,
-    _meteoalarm, _alert_check_state, _sms_seed, _sms_release, _sms_reserve,
+    _alert_check_state, _sms_seed, _sms_release, _sms_reserve,
 ]
 
 

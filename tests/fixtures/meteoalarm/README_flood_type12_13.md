@@ -15,7 +15,7 @@ Abschnitt "Test Plan").
 - `cap_flooding_type12_ro.xml` / `cap_rainflood_type13_ro.xml` — **mechanische**
   CAP-1.2-XML-Transkription der jeweiligen JSON-Rohaufzeichnung (Feldname zu
   XML-Element 1:1, kein Wert veraendert). Grund: die bestehenden
-  MeteoAlarm-Parser-Tests (`tests/tdd/test_meteoalarm_source.py`,
+  MeteoAlarm-Parser-Tests (seit #2266 `tests/tdd/test_meteoalarm_cap_mapper.py`,
   `_extract_alerts_from_cap()`) laden CAP als XML; der oeffentliche Feed
   liefert aber JSON. Die Provenienz steht zusaetzlich als Kommentar am
   Dateianfang jeder XML-Datei.

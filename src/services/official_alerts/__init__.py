@@ -33,11 +33,9 @@ from services.official_alerts.vigilance import VigilanceSource
 # keine funktionale Notwendigkeit), VOR DpcSource -- eine ganz normale
 # additive Quelle, kein fallback_for (Issue #1427 S2, Gewitter-Tie-Break bei
 # Ueberschneidung: bei gleicher Stufe gewinnt MeteoAlarm als zuerst
-# registrierte Quelle). ``MeteoAlarmSource`` (EDR-Index-Apparat, meteoalarm.py)
-# wird seit Issue #1445 S3 NICHT MEHR registriert -- Code bleibt bestehen,
-# dient nur noch dem Aequivalenznachweis (AC-5), ueber ihren eigenen
-# Modulpfad ``services.official_alerts.meteoalarm.MeteoAlarmSource`` weiter
-# erreichbar.
+# registrierte Quelle). Die fruehere kontingentierte EDR-Klasse (seit #1445 S3
+# nicht mehr registriert) ist mit Issue #2266 zurueckgebaut; ``meteoalarm.py``
+# enthaelt nur noch den geteilten CAP-Mapper, den der Feed-Weg nutzt.
 register_official_alert_source(VigilanceSource())
 register_official_alert_source(MeteoForetsSource())
 register_official_alert_source(MassifClosureSource())

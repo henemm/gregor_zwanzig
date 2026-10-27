@@ -41,6 +41,8 @@ Die Zuordnung Punkt → Warnzone kommt ohne neue Geodaten und ohne zusätzliche 
 
 Der EDR-Apparat bleibt vorerst als Code erhalten, weil der ausstehende Äquivalenznachweis ihn als Vergleichsmaßstab braucht. Sein Rückbau ist eine eigene Folgearbeit.
 
+> **Nachtrag 2026-10-27 (Issue #2266): Rückbau erledigt.** `MeteoAlarmSource`, das Tagesbudget (`meteoalarm_budget.py` samt Go-Spiegel im Scheduler-Status), die 429-Retry-Policy in `warn_egress.py`, der `parallel_fetch`-Slot und der Inventar-Eintrag `api.meteoalarm.org` (Python und Go) sind entfernt. `meteoalarm.py` enthält nur noch den geteilten CAP-Mapper, den der Feed-Weg nutzt. Der Äquivalenznachweis läuft als ungemarkerter Kern-Test gegen die eingefrorenen Snapshots (`tests/tdd/test_meteoalarm_feed_aequivalenz_snapshots.py`). Die Entscheidung dieses ADR bleibt unverändert.
+
 ## Verworfene Alternativen
 
 - **Verbrauch weiter drosseln und verstetigen** (Token-Bucket, Rampe nach Sperre, Bestand über Neustarts persistieren) — technisch machbar, aber das Ziel ist unbekannt und beweglich; jede Kalibrierung wäre eine Wette. Zudem skaliert dieser Weg gegen die geplante Ländererweiterung: Mehr Länder teilen dasselbe Kontingent, während der Feed pro Land genau einen Abruf kostet.

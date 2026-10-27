@@ -147,10 +147,13 @@ def test_ac9_bei_gleichstand_gewinnt_die_kleinste_regions_id():
 
 # ---------------------------------------------------------------- AC-10: MeteoAlarm nutzt den Mapper
 def test_ac10_meteoalarm_nutzt_den_gemeinsamen_mapper_und_keine_eigene_kopie():
-    from services.official_alerts import geo_ray_cast, meteoalarm, region_mapper
+    """Seit #2266 (Rueckbau der EDR-Klasse) braucht ``meteoalarm.py`` keine
+    Punkt-in-Flaeche-Pruefung mehr: es darf weder einen Alias noch eine eigene
+    Kopie der Geometrie-Logik tragen -- die Trefferlogik lebt allein im Mapper."""
+    from services.official_alerts import meteoalarm, region_mapper
 
-    assert meteoalarm._point_in_geometry is region_mapper.point_in_geometry
-    assert getattr(meteoalarm, "_point_in_ring", geo_ray_cast._point_in_ring) is geo_ray_cast._point_in_ring
+    assert not hasattr(meteoalarm, "_point_in_geometry")
+    assert not hasattr(meteoalarm, "_point_in_ring")
     assert Path(region_mapper.__file__).resolve().is_relative_to(_REPO)
 
 
@@ -169,16 +172,9 @@ _GEOMETRIEN = [
 ]
 
 
-@pytest.mark.parametrize("name, geometrie, punkt, erwartet", _GEOMETRIEN, ids=[g[0] for g in _GEOMETRIEN])
-def test_ac10_meteoalarm_trefferlogik_ist_fuer_die_bestandsfaelle_unveraendert(name, geometrie, punkt, erwartet):
-    """REGRESSIONSWACHE (bewusst schon heute gruen): dieselben Treffer wie vor der Umstellung --
-    laeuft unveraendert weiter, wenn `_point_in_geometry` auf den Mapper zeigt."""
-    from services.official_alerts import meteoalarm
-
-    lat, lon = punkt
-    assert meteoalarm._point_in_geometry(lat, lon, geometrie) is erwartet
-
-
+# Die fruehere Regressionswache ueber den Alias ``meteoalarm._point_in_geometry``
+# entfiel mit #2266; dieselben Bestandsfaelle prueft der folgende Test direkt am
+# Ursprungsmodul ``region_mapper.point_in_geometry``.
 @pytest.mark.parametrize("name, geometrie, punkt, erwartet", _GEOMETRIEN, ids=[g[0] for g in _GEOMETRIEN])
 def test_ac10_mapper_liefert_fuer_dieselben_faelle_dieselben_treffer(name, geometrie, punkt, erwartet):
     from services.official_alerts.region_mapper import point_in_geometry

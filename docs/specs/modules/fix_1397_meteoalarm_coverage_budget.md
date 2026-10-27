@@ -11,6 +11,11 @@ workflow: fix_1397_meteoalarm_quota
 
 # MeteoAlarm-Index: Rückschau und Abrufaufwand entkoppeln (Issue #1397, Scheibe S1)
 
+> **Zurückgebaut durch #2266 (2026-10-27):** Der hier beschriebene EDR-Index-Apparat
+> (`MeteoAlarmSource`, Tagesbudget `meteoalarm_budget.py`, 429-Retry-Policy) existiert nicht mehr.
+> Amtliche Warnungen AT/IT/DE kommen aus dem kontingentfreien Feed (ADR-0039). Diese Spec ist
+> historisch; maßgeblich ist `refactor_2266_meteoalarm_edr_rueckbau.md`.
+
 ## Approval
 
 - [ ] Approved
