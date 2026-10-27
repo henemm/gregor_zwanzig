@@ -714,8 +714,9 @@ func TestTelegramTokenStore_SaveSchreibtAtomarOhneTempRest(t *testing.T) {
 		t.Errorf("nach save() darf nur telegram_tokens.json im Verzeichnis liegen, ist %v", names)
 	}
 	info, _ := os.Stat(filepath.Join(dir, "telegram_tokens.json"))
-	if info.Mode().Perm() != 0600 {
-		t.Errorf("Token-Datei muss 0600 haben, hat %v", info.Mode().Perm())
+	// Issue #2624 AC-4: 0660 statt 0600 (Gruppen-Schreibrecht unter Default-ACL).
+	if info.Mode().Perm() != 0660 {
+		t.Errorf("Token-Datei muss 0660 haben, hat %v", info.Mode().Perm())
 	}
 }
 

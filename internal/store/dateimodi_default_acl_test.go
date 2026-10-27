@@ -6,6 +6,7 @@ package store
 // danach Stat() auf jedem entstandenen Pfad.
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -167,7 +168,11 @@ func TestDateimodi_DefaultACL_MaskeBleibtSchreibbar(t *testing.T) {
 	if err := os.MkdirAll(root, 0o770); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := exec.Command("setfacl", "-d", "-m", "g::rwX", root).CombinedOutput(); err != nil {
+	// Benannter Gruppen-Eintrag wie in Prod (d:g:gregor-staging-data:rwX):
+	// nur ein erweitertes ACL fuehrt eine mask:: -- mit "g::rwX" allein
+	// entsteht ein Minimal-ACL ohne Maske, das nichts beweisen kann.
+	spec := fmt.Sprintf("g::rwX,g:%d:rwX", os.Getgid())
+	if out, err := exec.Command("setfacl", "-d", "-m", spec, root).CombinedOutput(); err != nil {
 		t.Skipf("Dateisystem ohne ACL-Unterstuetzung: %v %s", err, out)
 	}
 	setzeUmask077(t)

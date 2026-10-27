@@ -22,6 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from services.file_lock import share_state_file
 from services.user_tier import daily_alert_limit
 from utils.timezone import local_dt
 
@@ -207,6 +208,7 @@ def increment(
     fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=".alert_daily_count_", suffix=".tmp")
     try:
         with os.fdopen(fd, "w") as f:
+            share_state_file(f.fileno())
             f.write(json.dumps({"zones": zones}))
         os.replace(tmp_name, path)
     except OSError:

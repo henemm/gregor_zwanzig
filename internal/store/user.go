@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -79,7 +80,7 @@ func (s *Store) SaveUser(user model.User) error {
 		return ErrInvalidUserID
 	}
 	dir := s.UserDir(user.ID)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 
@@ -221,7 +222,7 @@ func (s *Store) ProvisionUserDirs(id string) error {
 	}
 	base := s.UserDir(id)
 	for _, sub := range []string{"locations", "gpx", "weather_snapshots"} {
-		if err := os.MkdirAll(filepath.Join(base, sub), 0755); err != nil {
+		if err := fsmode.MkdirAll(filepath.Join(base, sub)); err != nil {
 			return err
 		}
 	}
@@ -234,7 +235,7 @@ func (s *Store) SaveResetToken(userId string, token model.PasswordResetToken) er
 		return ErrInvalidUserID
 	}
 	dir := s.UserDir(userId)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(token, "", "  ")
@@ -287,7 +288,7 @@ func (s *Store) SaveLinkCode(userId string, c model.PremiumSmsLinkCode) error {
 		return ErrInvalidUserID
 	}
 	dir := s.UserDir(userId)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(c, "", "  ")
@@ -329,7 +330,7 @@ func (s *Store) SaveVerificationToken(userId string, token model.EmailVerificati
 		return ErrInvalidUserID
 	}
 	dir := s.UserDir(userId)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(token, "", "  ")
@@ -383,7 +384,7 @@ func (s *Store) SaveSmsVerification(userId string, code model.SmsVerificationCod
 		return ErrInvalidUserID
 	}
 	dir := s.UserDir(userId)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(code, "", "  ")

@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -63,7 +64,7 @@ func (s *InviteStore) saveLocked(next []model.Invite) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+	if err := fsmode.MkdirAll(filepath.Dir(s.path)); err != nil {
 		return err
 	}
 	return writeFileAtomic(s.path, data)

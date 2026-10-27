@@ -34,7 +34,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-from services.file_lock import LOCK_TIMEOUT_SECONDS, acquire_exclusive
+from services.file_lock import (
+    LOCK_TIMEOUT_SECONDS, acquire_exclusive, open_lock_file, share_state_file,
+)
 
 logger = logging.getLogger("forecast_budget")
 
@@ -407,6 +409,7 @@ class ForecastBudgetGate:
         )
         try:
             with os.fdopen(fd, "w") as f:
+                share_state_file(f.fileno())
                 f.write(json.dumps(data))
             os.replace(tmp_name, pfad)
         except OSError:
@@ -462,7 +465,7 @@ class ForecastBudgetGate:
     def _update_unter_sperre(self, verzeichnis, pfad, laden, leerbau, mutate) -> bool:
         verzeichnis.mkdir(parents=True, exist_ok=True)
         lock_path = str(pfad) + _LOCK_SUFFIX
-        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        fd = open_lock_file(lock_path)
         try:
             start = time.monotonic()
             if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):

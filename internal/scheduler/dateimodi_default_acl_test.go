@@ -16,6 +16,9 @@ func TestDateimodi_UserRunState_0660_UnterUmask077(t *testing.T) {
 	dir := t.TempDir()
 	u := newUserRunState(dir)
 	u.Record("job", "alice", "ok", "")
+	// Record() persistiert nicht; geschrieben wird erst ueber Prune()
+	// (so ruft es auch runForAllUsers am Ende jedes Laufs, scheduler.go).
+	u.Prune("job", []string{"alice"})
 
 	p := filepath.Join(dir, schedulerUserStateFileName)
 	fi, err := os.Stat(p)

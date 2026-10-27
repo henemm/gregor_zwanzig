@@ -114,3 +114,24 @@ def test_sperrdatei_entsteht_mit_modus_0660_unter_umask_077(pfad, tmp_path):
     for lock in locks:
         modus = lock.stat().st_mode & 0o777
         assert modus == 0o660, f"{lock.name}: Modus {oct(modus)}, erwartet 0o660"
+
+
+# Adversary F003 / Known Limitation: eine BESTEHENDE Sperrdatei (Altbestand
+# 0644) behaelt ihren Modus, und der Schreibpfad laeuft ohne Fehler durch
+# (kein chmod auf fremde/alte Dateien). _sms_release entfernt die Sperren
+# absichtlich und ist daher hier ohne Aussage.
+@pytest.mark.parametrize(
+    "pfad", [p for p in SCHREIBPFADE if p is not _sms_release],
+    ids=lambda f: f.__name__.lstrip("_"))
+def test_bestehende_sperrdatei_behaelt_modus_0644(pfad, tmp_path):
+    pfad(tmp_path)
+    locks = _locks(tmp_path)
+    if not locks and pfad.__name__ in ("_slots_repair",):
+        pytest.skip("repair_if_corrupt legt ohne beschaedigte Datei keine Sperre an")
+    assert locks, f"{pfad.__name__}: keine .lock entstanden -- Test waere vakuum"
+    for lock in locks:
+        os.chmod(lock, 0o644)
+    pfad(tmp_path)
+    for lock in locks:
+        modus = lock.stat().st_mode & 0o777
+        assert modus == 0o644, f"{lock.name}: Modus {oct(modus)}, erwartet unveraendert 0o644"

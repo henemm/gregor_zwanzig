@@ -25,7 +25,9 @@ from pathlib import Path
 from app.loader import get_data_dir
 from output.channels.base import ChannelBlockedError
 from services import user_tier
-from services.file_lock import LOCK_TIMEOUT_SECONDS, acquire_exclusive
+from services.file_lock import (
+    LOCK_TIMEOUT_SECONDS, acquire_exclusive, open_lock_file, share_state_file,
+)
 from utils.timezone import to_utc
 
 logger = logging.getLogger("sms_daily_limit")
@@ -96,6 +98,7 @@ def _write(path, data: dict) -> None:
     fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=".sms_daily_count_", suffix=".tmp")
     try:
         with os.fdopen(fd, "w") as f:
+            share_state_file(f.fileno())
             f.write(json.dumps(data))
         os.replace(tmp_name, path)
     except OSError:
@@ -161,7 +164,7 @@ def check_and_reserve(user_id: str, kind: str, purpose: str, now: datetime) -> N
     lock_path = str(path) + _LOCK_SUFFIX
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        fd = open_lock_file(lock_path)
     except OSError as e:
         logger.warning(
             "SMS-Tageslimit: Sperrdatei %s nicht erreichbar (%s) -- "
@@ -222,7 +225,7 @@ def release_reservation(user_id: str, kind: str, now: datetime) -> None:
     lock_path = str(path) + _LOCK_SUFFIX
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        fd = open_lock_file(lock_path)
     except OSError as e:
         logger.warning(
             "SMS-Tageslimit: Sperrdatei %s nicht erreichbar (%s) -- "
@@ -269,7 +272,7 @@ def seed_daily_usage(user_id: str, sms: int | None, premium_sms: int | None, now
     Rueckgabe: neuer Stand `{"sms": N, "premium_sms": M}`."""
     path = _path(user_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(str(path) + _LOCK_SUFFIX, os.O_CREAT | os.O_RDWR, 0o644)
+    fd = open_lock_file(str(path) + _LOCK_SUFFIX)
     try:
         if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
             raise TimeoutError(f"Dateisperre fuer {path} nicht erhalten")

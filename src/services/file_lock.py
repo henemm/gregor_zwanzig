@@ -30,6 +30,38 @@ LOCK_TIMEOUT_SECONDS = 2.0
 # Kleiner Bruchteil der Gesamtfrist zwischen zwei Erwerbsversuchen.
 _POLL_INTERVAL_SECONDS = 0.02
 
+# Issue #2624: Modus neu angelegter Sperrdateien. Unter einer Default-ACL
+# begrenzt der Anlage-Modus die ACL-Maske; 0644 nahm der Dienstgruppe das
+# Schreibrecht. Pendant zu fsmode.FileMode (Go).
+LOCK_FILE_MODE = 0o660
+
+
+def open_lock_file(path) -> int:
+    """Oeffnet die Sperrdatei ``path`` (O_RDWR, legt sie bei Bedarf an).
+
+    Entsteht die Datei neu, wird sie explizit auf ``LOCK_FILE_MODE`` gesetzt
+    -- unabhaengig von der Prozess-Umask (Prod: 0077). Eine bestehende
+    Sperrdatei behaelt ihren Modus (sie kann einem anderen Dienst gehoeren,
+    dann schluege chmod fehl).
+    """
+    try:
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_RDWR, LOCK_FILE_MODE)
+    except FileExistsError:
+        return os.open(path, os.O_CREAT | os.O_RDWR, LOCK_FILE_MODE)
+    try:
+        os.fchmod(fd, LOCK_FILE_MODE)
+    except BaseException:
+        os.close(fd)
+        raise
+    return fd
+
+
+def share_state_file(fd: int) -> None:
+    """Issue #2624 AC-10: setzt eine per ``tempfile.mkstemp`` angelegte
+    Temp-Datei (0600) vor dem ``os.replace`` auf ``LOCK_FILE_MODE`` (0660),
+    damit die Zustandsdatei unter Default-ACL gruppenschreibbar bleibt."""
+    os.fchmod(fd, LOCK_FILE_MODE)
+
 
 def acquire_exclusive(fd: int, timeout_s: float) -> bool:
     """Versucht, eine exklusive Dateisperre auf `fd` zu erwerben, gibt
@@ -83,7 +115,7 @@ def exclusive_lock(target: Path, timeout_s: Optional[float] = None) -> Iterator[
     """
     lock_file = lock_path_for(Path(target))
     lock_file.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(lock_file, os.O_RDWR | os.O_CREAT, 0o644)
+    fd = open_lock_file(lock_file)
     try:
         if not acquire_exclusive(
             fd, BRIEFING_LOCK_TIMEOUT_SECONDS if timeout_s is None else timeout_s):

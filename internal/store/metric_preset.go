@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -135,7 +136,7 @@ func (s *Store) SaveMetricPresets(presets []model.MetricPreset) error {
 		return err
 	}
 	dir := filepath.Join(s.DataDir, "users", s.UserID)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 	if presets == nil {

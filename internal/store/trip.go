@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -288,7 +289,7 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
 	// trips/<id>.json wird NICHT mehr angefasst (Rollback-Faehigkeit, AC-26).
 	dir := s.briefingsDir()
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 

@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from app.loader import get_data_dir, load_all_trips
+from services.file_lock import share_state_file
 from utils.geo import point_to_segment_m
 from utils.timezone import local_dt, tz_for_coords
 
@@ -154,6 +155,7 @@ def _speichere(user_id: str, eintrag: dict, observed_at: datetime) -> Optional[d
     fd, tmp = tempfile.mkstemp(dir=pfad.parent, prefix=".position_fix_")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
+            share_state_file(f.fileno())
             json.dump(bestand, f, ensure_ascii=False, indent=2)
         os.replace(tmp, pfad)
     except Exception:

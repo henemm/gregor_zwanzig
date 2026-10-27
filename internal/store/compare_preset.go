@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -253,7 +254,7 @@ func (s *Store) SaveComparePreset(p model.ComparePreset) error {
 		return ErrKindConflict
 	}
 	dir := s.briefingsDir()
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 

@@ -105,9 +105,9 @@ func TestWriteFileLogged_FailureKeepsOldFileAndLeavesNoLeftovers(t *testing.T) {
 	}
 }
 
-// Der ersetzte Stand traegt weiterhin 0644, und es bleibt keine tmp-Datei
-// liegen (sonst wuerde ein *.json-Glob spaeter Muell einsammeln).
-func TestWriteFileLogged_SuccessKeeps0644AndNoLeftovers(t *testing.T) {
+// Der ersetzte Stand traegt 0660 (Issue #2624, vorher 0644), und es bleibt
+// keine tmp-Datei liegen (sonst wuerde ein *.json-Glob spaeter Muell einsammeln).
+func TestWriteFileLogged_SuccessKeeps0660AndNoLeftovers(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "trip.json")
 	for i := 0; i < 3; i++ {
@@ -119,8 +119,8 @@ func TestWriteFileLogged_SuccessKeeps0644AndNoLeftovers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat: %v", err)
 	}
-	if info.Mode().Perm() != 0644 {
-		t.Errorf("erwarte Rechte 0644, bekam %v", info.Mode().Perm())
+	if info.Mode().Perm() != 0660 {
+		t.Errorf("erwarte Rechte 0660, bekam %v", info.Mode().Perm())
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {

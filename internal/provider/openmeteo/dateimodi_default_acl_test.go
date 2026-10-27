@@ -53,3 +53,38 @@ func TestDateimodi_Calllog_0770_0660_UnterUmask077(t *testing.T) {
 		t.Errorf("Journal-Datei: %#o, erwartet 0660", got)
 	}
 }
+
+// Adversary F003 / Known Limitation: bestehende Cache- und Journal-Dateien
+// (Altbestand 0644) behalten ihren Modus -- ohne Fehler, Inhalt wird geschrieben.
+func TestDateimodi_BestehendeCacheUndJournalDateiBehaltenModus(t *testing.T) {
+	alt := syscall.Umask(0o077)
+	defer syscall.Umask(alt)
+	dir := t.TempDir()
+	cache := filepath.Join(dir, "availability.json")
+	journal := filepath.Join(dir, "openmeteo_calls_go.jsonl")
+	for _, p := range []string{cache, journal} {
+		if err := os.WriteFile(p, []byte(""), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(p, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := SaveAvailabilityCache(cache, &AvailabilityCache{ProbeDate: "2026-10-27"}); err != nil {
+		t.Fatalf("SaveAvailabilityCache auf Bestand: %v", err)
+	}
+	old := diagnosticsGoPath
+	diagnosticsGoPath = journal
+	defer func() { diagnosticsGoPath = old }()
+	logAPICall("https://api.open-meteo.com/v1/forecast?x=1", 200, "")
+
+	for _, p := range []string{cache, journal} {
+		if got := modus(t, p); got != 0o644 {
+			t.Errorf("%s: Modus %#o, erwartet unveraendert 0644", filepath.Base(p), got)
+		}
+		raw, _ := os.ReadFile(p)
+		if len(raw) == 0 {
+			t.Errorf("%s: nichts geschrieben", filepath.Base(p))
+		}
+	}
+}
