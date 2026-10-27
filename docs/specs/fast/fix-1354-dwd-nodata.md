@@ -1,3 +1,10 @@
+---
+entity_id: fix_1354_dwd_nodata
+type: fast
+created: 2026-08-05
+status: implemented
+---
+
 # Mini-Spec: DWD-Provider nodata-Leerpixel (#1354)
 
 ## Was ändert sich

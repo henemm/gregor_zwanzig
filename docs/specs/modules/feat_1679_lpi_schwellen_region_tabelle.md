@@ -3,7 +3,7 @@ entity_id: feat_1679_lpi_schwellen_region_tabelle
 type: feature
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, lpi, model-registry, thunder-fusion, issue-1679]
 ---
@@ -244,7 +244,7 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
 
 ## Acceptance Criteria
 
-- **AC-1 (Tabelle + Lookup — zwei Einträge, FR bewusst ausgespart):** Given
+- **AC-1:** (Tabelle + Lookup — zwei Einträge, FR bewusst ausgespart) Given
   `model_registry.LPI_THRESHOLDS_JKG` nach dieser Änderung / When sie gegen die drei
   Regionsnamen aus `thunder_routing._REGIONS` (`"FR"`, `"DE_ALPEN"`, `"EU_REST"`) sowie `None`
   geprüft wird / Then trägt sie GENAU zwei Einträge (`"DE_ALPEN": (1.0, 30.0, 50.0)`,
@@ -287,7 +287,7 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
     Dictionary-Zuordnung — GENAU das vom PO in der Analyse benannte Risiko), läge 4.9 J/kg
     fälschlich bei `LOW` statt `NONE` (weil 4.9 ≥ 1.0) — der Test muss das fangen.
 
-- **AC-4 (unbekannte/fehlende Region — kein Signal, kein TypeError, kein stiller Fallback):**
+- **AC-4:** (unbekannte/fehlende Region — kein Signal, kein TypeError, kein stiller Fallback)
   Given `region=None` (z. B. weil die Koordinaten fehlen) ODER ein unbekannter Regionsname
   (z. B. `"XX"`) / When `lpi_thresholds_jkg(region)` aufgerufen wird / Then liefert sie `None`.
   Given ZUSÄTZLICH ein Aufruf von `thunder_level_from_signals()` mit
@@ -302,7 +302,7 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
     Fusion lieferte fälschlich `HIGH` statt `None` — der Test muss das fangen. Genau das ist der
     Fehler, den das keyword-only-ohne-Default-Muster strukturell verhindern soll.
 
-- **AC-5 (TypeError ohne die neuen Parameter — kein stiller Rückfall über die gesamte Kette):**
+- **AC-5:** (TypeError ohne die neuen Parameter — kein stiller Rückfall über die gesamte Kette)
   Given ein Aufruf von `thunder_level_from_signals()` OHNE die drei keyword-only Parameter
   `lpi_low_min`/`lpi_med_min`/`lpi_high_min` / When der Aufruf ausgeführt wird / Then bricht er
   mit `TypeError` — exakt das Muster von `cape_threshold_jkg` seit #1592 C1. Given ZUSÄTZLICH
@@ -315,7 +315,7 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
     Default `= None`, würde der jeweilige Aufruf klaglos durchlaufen (mit stillschweigend
     deaktiviertem LPI-Signal) statt zu brechen — der Test muss das fangen.
 
-- **AC-6 (FR-Gebiet bleibt vom LPI-Ladder-Umbau komplett unberührt):** Given ein Datenpunkt im
+- **AC-6:** (FR-Gebiet bleibt vom LPI-Ladder-Umbau komplett unberührt) Given ein Datenpunkt im
   FR-Gebiet (Blitzdichte-Pfad, AROME liefert kein LPI, `lightning_potential_jkg` bleibt
   strukturell `None`) mit gesetzter Blitzdichte / When die Fusion über den regulären
   Produktionspfad (`enrich_thunder()`) läuft / Then bleibt `dp.thunder_level` identisch zum
@@ -342,6 +342,13 @@ NUR eine Änderung am Wrapper selbst — die einzelnen Testaufrufe bleiben unang
   allein als Tabellenschlüssel, weil `thunder_routing._REGIONS` das liefernde Modell für LPI
   bereits eindeutig festlegt (DE_ALPEN → ICON-D2, EU_REST → ICON-EU) — das ist bewusst
   einfacher als das CAPE-Muster, kein Fehler.
+  🔄 **Nachtrag 2026-09-09 (#2263, ADR-0065):** Das gilt nur, solange keine Vertretung (ADR-0047)
+  eingesprungen ist. Fällt die Primärquelle aus, liefert eine andere Quelle als die, die
+  `thunder_region_for()` für die Koordinate nennt — die Region legt das liefernde Modell dann
+  NICHT mehr eindeutig fest. `_schwellen_fuer_reihe()` löst den Tabellenschlüssel seither über die
+  tatsächlich liefernde Quelle auf (`app.model_registry.lpi_schluessel_fuer_quelle()`), nicht mehr
+  über die Region allein. Diese Spec gilt **ausschließlich in der Schlüsselungs-Frage** als
+  abgelöst — `LPI_THRESHOLDS_JKG` und die FR-Aussparung bleiben unverändert gültig.
 - **Momentanwert-vs-60-Minuten-Maximum-Unterschied bleibt bestehen.** ICON-D2 liefert LPI als
   Momentanwert, ICON-EU als 60-Minuten-Maximum (s. `feat_1474c` Known Limitations) — beide
   landen weiterhin im selben Feld `lightning_potential_lpi_jkg`. Die neue Region-Tabelle ändert

@@ -18,7 +18,15 @@ import type {
 // bleiben. Vite löst $lib-Alias und relativen Pfad zur Laufzeit identisch auf.
 import { computeHeaderStats } from '../../lib/components/email-preview/headerStats.ts';
 import { tripStatus } from '../../lib/utils/tripStatus.ts';
-import { deriveNextSend } from '../../lib/utils/cockpitHelpers568.ts';
+// Issue #1969 (AC-23/AC-24): nächster Versand = Backend-Wert (GET /api/next-briefings).
+import {
+	formatNextBriefing,
+	type NextBriefing
+} from '../../lib/components/shared/versand-tab/nextBriefingText.ts';
+import { reportSlotAktiv } from '../../lib/utils/reportSlotAktiv.ts';
+// Issue #2422 S3: Kanal-Defaults (E-Mail fehlend => an, Rest fehlend => aus)
+// aus derselben Ladefunktion wie der Editor — keine dritte Fassung.
+import { ladeReportZustand } from '../../lib/components/shared/versand-tab/reportConfigPayload.ts';
 import {
 	formatNextSend,
 	presetChannels
@@ -69,11 +77,11 @@ export type StageStripState = 'done' | 'active' | 'future';
 
 /**
  * Zustand einer Etappe im Hero-Etappen-Streifen (strikt datumsbasiert, AC-4).
- *   - `todayIdx < 0` (Hero ist "Nächste Tour", keine Etappe ist heute) →
+ *   - `todayIdx < 0` (Hero ist "Nächster Trip", keine Etappe ist heute) →
  *     ALLE Etappen liegen in der Zukunft → immer 'future'.
  *   - sonst: i < todayIdx → 'done', i === todayIdx → 'active', i > todayIdx → 'future'.
  *
- * 'active' bedeutet ausschließlich "läuft heute" — bei geplanten Touren darf
+ * 'active' bedeutet ausschließlich "läuft heute" — bei geplanten Trips darf
  * daher keine Etappe 'active' sein (Fix Adversary-Finding F001, Issue #386).
  */
 export function stageStripState(todayIdx: number, i: number): StageStripState {
@@ -114,12 +122,30 @@ export interface BriefingReport {
 	etappe?: string;
 }
 
-/** Aktive Kanäle aus report_config (email/telegram/sms). Signal ist entfernt (#610). */
+/** Aktive Kanäle aus report_config (email/telegram/sms/premium-sms). Signal ist
+ *  entfernt (#610). Issue #2422 S3: Defaults wie Editor und Versand — ein
+ *  fehlendes `send_email` (auch ganz ohne report_config) heisst E-Mail an. */
 export function reportChannels(rc: ReportConfig | undefined): string[] {
+	const z = ladeReportZustand(rc as Record<string, unknown> | undefined);
 	const out: string[] = [];
-	if (rc?.send_email) out.push('email');
-	if (rc?.send_telegram) out.push('telegram');
-	if (rc?.send_sms) out.push('sms');
+	if (z.send_email) out.push('email');
+	if (z.send_telegram) out.push('telegram');
+	if (z.send_sms) out.push('sms');
+	if (z.send_premium_sms) out.push('premium-sms');
+	return out;
+}
+
+/** Kanal-Dots der Startseite (Hero-Trip): Beschriftung je aktivem Briefing-Kanal,
+ *  leer wenn kein Slot aktiv ist. Issue #2422 S3: Slot-Regel wie der Versand
+ *  (reportSlotAktiv), Kanal-Defaults wie der Editor, alle vier Kanaele. */
+export function heroKanaele(rc: ReportConfig | undefined): string[] {
+	if (!reportSlotAktiv(rc, 'morning') && !reportSlotAktiv(rc, 'evening')) return [];
+	const z = ladeReportZustand(rc as Record<string, unknown> | undefined);
+	const out: string[] = [];
+	if (z.send_email) out.push('Email');
+	if (z.send_telegram) out.push('Telegram');
+	if (z.send_sms) out.push('SMS');
+	if (z.send_premium_sms) out.push('Premium-SMS');
 	return out;
 }
 
@@ -130,35 +156,58 @@ export function reportChannels(rc: ReportConfig | undefined): string[] {
  * Rows als 'sent', wenn ein passender Eintrag (gleicher tripId + kind + heutiges
  * Datum) existiert; sonst 'planned'. Ohne sentLog/tripId bleibt alles 'planned'
  * (backward-compatible).
+ *
+ * Issue #1969 (AC-23/AC-24): Uhrzeit immer „HH:00" (der Versand nutzt nur die
+ * Stunde, Default 7/18 wie der Scheduler) — keine Minuten-Fiktion. Die Zeile des
+ * Slots, den das Backend als nächsten meldet (`nextBriefing.slot`), zeigt dessen
+ * `local_time` + Zonenkürzel (`tz_abbr`), nie die Browser-Zone.
  */
 export function plannedBriefings(
 	rc: ReportConfig | undefined,
 	sentLog?: BriefingLogEntry[],
-	tripId?: string
+	tripId?: string,
+	nextBriefing?: NextBriefing | null
 ): BriefingReport[] {
-	if (!rc) return [];
+	// Issue #2422 S3 (N2): auch ohne report_config plant der Versand beide
+	// Slots (Standardzeiten) — die Zeilen folgen derselben Slot-Regel.
 	const channels = reportChannels(rc);
 	const todayPrefix = new Date().toISOString().slice(0, 10);
 
 	const isSent = (kind: string): boolean => {
 		if (!sentLog || !tripId) return false;
+		// #2281: Typ UND Kennung (Muster alertsForTrip) — ein Ortsvergleich mit
+		// gleicher ID zaehlt nie als Trip-Briefing.
 		return sentLog.some(
-			(e) => e.trip_id === tripId && e.kind === kind && e.sent_at.startsWith(todayPrefix)
+			(e) =>
+				e.entity_type === 'trip' &&
+				e.entity_id === tripId &&
+				e.kind === kind &&
+				e.sent_at.startsWith(todayPrefix)
 		);
 	};
 
+	const when = (slot: 'morning' | 'evening', raw: string | undefined, standardStunde: number): string => {
+		if (nextBriefing?.at && nextBriefing.slot === slot && nextBriefing.local_time) {
+			return nextBriefing.tz_abbr
+				? `${nextBriefing.local_time} (${nextBriefing.tz_abbr})`
+				: nextBriefing.local_time;
+		}
+		const m = /^(\d{1,2}):/.exec(raw ?? '');
+		return `${String(m ? Number(m[1]) : standardStunde).padStart(2, '0')}:00`;
+	};
+
 	const rows: BriefingReport[] = [];
-	if (rc.morning_enabled) {
+	if (reportSlotAktiv(rc, 'morning')) {
 		rows.push({
-			when: (rc.morning_time || '07:00').slice(0, 5),
+			when: when('morning', rc?.morning_time, 7),
 			kind: 'morgen',
 			channels,
 			status: isSent('morning') ? 'sent' : 'planned'
 		});
 	}
-	if (rc.evening_enabled) {
+	if (reportSlotAktiv(rc, 'evening')) {
 		rows.push({
-			when: (rc.evening_time || '18:00').slice(0, 5),
+			when: when('evening', rc?.evening_time, 18),
 			kind: 'abend',
 			channels,
 			status: isSent('evening') ? 'sent' : 'planned'
@@ -168,12 +217,12 @@ export function plannedBriefings(
 }
 
 /**
- * Alarm-Einträge EINER Tour (Issue #1467 S1).
+ * Alarm-Einträge EINES Trips (Issue #1467 S1).
  *
- * Seit der Zusammenlegung von `trip_id`/`preset_id` liegen Tour- und
+ * Seit der Zusammenlegung von `trip_id`/`preset_id` liegen Trip- und
  * Ortsvergleichs-Kennungen im selben Feld `entity_id` — ein Gleichheits-
  * Vergleich allein wäre nicht mehr eindeutig, deshalb zählt der Typ mit.
- * Ohne Alarm-Liste oder ohne Tour-Kennung: leere Liste (fail-soft), nicht
+ * Ohne Alarm-Liste oder ohne Trip-Kennung: leere Liste (fail-soft), nicht
  * „alles durchlassen".
  */
 export function alertsForTrip(
@@ -213,7 +262,7 @@ function shortRange(trip: Trip): string {
 // Spec: docs/specs/modules/issue_647_home_fidelity.md
 //
 // Reine Ableitung aus echten ComparePreset-DTO-Feldern (letzter_versand =
-// Versand-Historie, schedule/hour_from → deriveNextSend). Kein Mock, kein Netz.
+// Versand-Historie) plus Backend-Wert `NextBriefing` (#1969). Kein Mock, kein Netz.
 // Zeilen-Typ passt zur Report-Schnittstelle von BriefingTimelineRow.svelte.
 
 export interface CompareTimelineRow {
@@ -227,11 +276,15 @@ export interface CompareTimelineRow {
 /**
  * Versand-Timeline (Zuletzt/Nächster) für einen aktiven ComparePreset.
  *   - letzter_versand gesetzt → "Zuletzt · …"-Zeile (status='sent').
- *   - deriveNextSend liefert ein Datum → "Nächster · …"-Zeile (status='planned').
- * Keine Fake-Zeile: fehlt letzter_versand → nur Nächster; manual (next=null) →
- * nur Zuletzt; weder noch → leeres Array (Aufrufer zeigt Platzhalter).
+ *   - Backend-Wert mit Termin (`nextBriefing.at`) → "Nächster · …"-Zeile (status='planned').
+ * Keine Fake-Zeile: fehlt letzter_versand → nur Nächster; kein Termin (manual,
+ * pausiert, beendet) oder nicht geladen → nur Zuletzt; weder noch → leeres Array
+ * (Aufrufer zeigt Platzhalter). Issue #1969: keine eigene Rechnung mehr.
  */
-export function homeCompareTimeline(preset: ComparePreset, now: Date): CompareTimelineRow[] {
+export function homeCompareTimeline(
+	preset: ComparePreset,
+	nextBriefing: NextBriefing | null | undefined
+): CompareTimelineRow[] {
 	const region = (preset.display_config as Record<string, unknown> | undefined)?.region as
 		| string
 		| undefined;
@@ -252,10 +305,9 @@ export function homeCompareTimeline(preset: ComparePreset, now: Date): CompareTi
 		});
 	}
 
-	const next = deriveNextSend(preset, now);
-	if (next) {
+	if (nextBriefing?.at) {
 		rows.push({
-			when: `Nächster · ${formatNextSend(next)}`,
+			when: `Nächster · ${formatNextBriefing(nextBriefing, 'vergleich')}`,
 			kind: 'Vergleich',
 			channels,
 			status: 'planned',
@@ -267,8 +319,8 @@ export function homeCompareTimeline(preset: ComparePreset, now: Date): CompareTi
 }
 
 /**
- * Abgeschlossene/archivierte Touren (Status 'fertig'), bis zu `limit`.
- * Hero-Tour ist per Definition nie 'fertig', daher keine Sonderbehandlung nötig.
+ * Abgeschlossene/archivierte Trips (Status 'fertig'), bis zu `limit`.
+ * Hero-Trip ist per Definition nie 'fertig', daher keine Sonderbehandlung nötig.
  */
 export function archivedTrips(trips: Trip[], now: Date = new Date(), limit = 4): ArchiveCard[] {
 	return (trips ?? [])

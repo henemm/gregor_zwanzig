@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -50,12 +51,19 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		// Issue #1395 S2: Sperre auch beim Lesen — sonst koennte ein
 		// gleichzeitiger PUT zwischen Fingerabdruck und Serialisierung
 		// dazwischenfunken, und der Client haelt einen Stempel, der nicht zum
 		// ausgelieferten Rumpf gehoert.
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		trip, err := s.LoadTrip(id)
 		if err != nil {
@@ -86,9 +94,33 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 	}
 }
 
+// rejectInvalidEntityID weist eine Entitaets-Kennung ab, die kein sicheres
+// Pfadsegment ist (Issue #2140 Scheibe 2). Vor-Pruefung VOR dem ersten
+// Store-Aufruf, damit die Route einen sauberen 400er im bestehenden
+// validation_error-Muster liefert statt eines 404/204/500 aus dem Store.
+// Die eigentliche Sperre sitzt im Store (store.ValidEntityID) und faengt
+// auch Aufrufer, die hier nicht vorbeikommen.
+func rejectInvalidEntityID(w http.ResponseWriter, id string) bool {
+	if store.ValidEntityID(id) {
+		return false
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error":  "validation_error",
+		"detail": "invalid id",
+	})
+	return true
+}
+
 func validateTrip(t model.Trip) error {
 	if t.ID == "" {
 		return fmt.Errorf("id required")
+	}
+	// Issue #2140 Scheibe 2: die Kennung landet ueber SaveTrip in einem
+	// Dateipfad — ein Trenner darin bricht aus dem Nutzerverzeichnis aus.
+	if !store.ValidEntityID(t.ID) {
+		return fmt.Errorf("invalid id")
 	}
 	if t.Name == "" {
 		return fmt.Errorf("name required")
@@ -126,6 +158,20 @@ func ensureStageIDs(stages []model.Stage) []model.Stage {
 		}
 	}
 	return stages
+}
+
+// writeSaveError bildet Save-Fehler von SaveTrip/SaveComparePreset EINHEITLICH
+// ab (Issue #2359): store.ErrKindConflict (Kennung von der anderen Art belegt)
+// ⇒ 409 id_conflict mit deutscher Meldung, jeder andere Fehler ⇒ 500.
+func writeSaveError(w http.ResponseWriter, err error) {
+	if errors.Is(err, store.ErrKindConflict) {
+		writeJSON(w, http.StatusConflict, map[string]string{
+			"error":  "id_conflict",
+			"detail": "Diese Kennung ist bereits durch einen Trip oder Ortsvergleich belegt — bitte anderen Namen wählen.",
+		})
+		return
+	}
+	writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
 }
 
 func CreateTripHandler(s *store.Store) http.HandlerFunc {
@@ -175,12 +221,50 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		// am Handler-Anfang. Kein If-Match, kein ETag: beim Anlegen gibt es
 		// keinen Vorstand, gegen den geprueft werden koennte, und der Client
 		// holt danach ohnehin frisch (AC-12).
-		defer s.LockBriefing(trip.ID)()
-
-		if err := s.SaveTrip(&trip); err != nil {
+		//
+		// Issue #2482: Mengen-Quote. Der Quoten-Lock (LockQuota) kommt VOR
+		// LockBriefing; die Upsert-Pruefung (eigene ID existiert schon -> keine
+		// Neuanlage, keine Pruefung) laeuft innerhalb des Quoten-Locks.
+		defer s.LockQuota()()
+		vorhanden, err := s.LoadTrip(trip.ID)
+		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
 			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+		// Geprueft wird die Neuanlage UND der Upsert, der einen archivierten
+		// Trip reaktiviert (fachlich ein Wiederherstellen, AC-9). Das reine
+		// Ueberschreiben bleibt frei (AC-6).
+		reaktiviert := vorhanden != nil && vorhanden.ArchivedAt != nil && trip.ArchivedAt == nil
+		// Issue #2359: Kennung von einem Ortsvergleich belegt ⇒ 409, VOR der
+		// Quota-Pruefung (sonst maskiert eine Quota-Ablehnung den Konflikt).
+		if vorhanden == nil {
+			belegt, err := s.LoadComparePreset(trip.ID)
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+				return
+			}
+			if belegt != nil {
+				writeJSON(w, http.StatusConflict, map[string]string{
+					"error":  "id_conflict",
+					"detail": "Ein Ortsvergleich trägt bereits diese Kennung — bitte anderen Namen wählen.",
+				})
+				return
+			}
+		}
+		if (vorhanden == nil || reaktiviert) && !quotaAllows(w, r, s, quotaTrips) {
+			return
+		}
+
+		unlockB, okB := lockBriefingOr503(w, s, trip.ID)
+		if !okB {
+			return
+		}
+		defer unlockB()
+
+		if err := s.SaveTrip(&trip); err != nil {
+			writeSaveError(w, err)
 			return
 		}
 
@@ -206,14 +290,17 @@ type tripUpdateRequest struct {
 	// Corridors — Issue #1231, Slice 3: additiv neben AlertRules, RMW-Kontrakt
 	// analog AlertRules (nil = im Body nicht gesendet -> bestehende Corridors
 	// bleiben erhalten, statt geloescht zu werden).
-	Corridors                    *[]model.Corridor `json:"corridors,omitempty"`
-	AlertCooldownMinutes         *int              `json:"alert_cooldown_minutes,omitempty"`
-	AlertQuietFrom               *string           `json:"alert_quiet_from,omitempty"`
-	AlertQuietTo                 *string           `json:"alert_quiet_to,omitempty"`
-	Region                       *string           `json:"region,omitempty"`
-	Activity                     *string           `json:"activity,omitempty"`
-	OfficialAlertsEnabled        *bool             `json:"official_alerts_enabled,omitempty"`
-	OfficialAlertTriggersEnabled *bool             `json:"official_alert_triggers_enabled,omitempty"`
+	Corridors *[]model.Corridor `json:"corridors,omitempty"`
+	// Issue #2211: die 7 Skalar-Optionals sind drei-zustaendig (Optional[T]):
+	// Key fehlt = behalten, null = leeren, Wert = setzen. Alle anderen Felder
+	// (Name, Listen, Maps, Structs) behalten bei null weiter den Bestand.
+	AlertCooldownMinutes         Optional[int]    `json:"alert_cooldown_minutes"`
+	AlertQuietFrom               Optional[string] `json:"alert_quiet_from"`
+	AlertQuietTo                 Optional[string] `json:"alert_quiet_to"`
+	Region                       Optional[string] `json:"region"`
+	Activity                     Optional[string] `json:"activity"`
+	OfficialAlertsEnabled        Optional[bool]   `json:"official_alerts_enabled"`
+	OfficialAlertTriggersEnabled Optional[bool]   `json:"official_alert_triggers_enabled"`
 	// OfficialWarnings — Issue #1258, RMW-Kontrakt analog OfficialAlertTriggersEnabled
 	// (nil = im Body nicht gesendet -> bestehender Wert bleibt erhalten).
 	OfficialWarnings *model.OfficialWarningsConfig `json:"official_warnings,omitempty"`
@@ -230,19 +317,32 @@ type tripUpdateRequest struct {
 	// (analog OfficialWarnings.Sources) -- fehlt im Body nur ein Kanal,
 	// bleibt dessen Bestandswert erhalten.
 	AlertChannelThresholds *model.AlertChannelThresholdsConfig `json:"alert_channel_thresholds,omitempty"`
+	// AlertMetricChannels — Issue #1895 Scheibe S1 (Epic #1230), RMW-Kontrakt
+	// analog DisplayConfig: nil = im Body nicht gesendet -> bestehende
+	// Zuordnungen bleiben erhalten; gesetzt = Feld-Level-Merge je Metrik
+	// (mergeConfigMap), eine im Body fehlende Metrik behaelt ihren
+	// Bestandswert statt geloescht zu werden.
+	AlertMetricChannels *map[string]interface{} `json:"alert_metric_channels,omitempty"`
 }
 
 func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		// Issue #1395 S2: Sperre ueber den GANZEN Lesen-Pruefen-Schreiben-Zyklus.
 		// ACHTUNG: PUT /api/briefings/{id}?kind=route reicht per ServeHTTP hierher
 		// durch (briefing_subscription.go) — dort darf KEINE zweite Sperre auf
 		// dieselbe <Nutzer, ID> genommen werden (sync.Mutex, nicht wiedereintritts-
 		// faehig -> sicherer Selbst-Blockierer).
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		// Fingerabdruck des Standes VOR dem Schreiben — Bezugspunkt der
 		// If-Match-Pruefung. Ein echter Lesefehler ist ein Store-Fehler; eine
@@ -305,6 +405,11 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		if req.DisplayConfig != nil {
 			existing.DisplayConfig = mergeConfigMap(existing.DisplayConfig, *req.DisplayConfig)
 		}
+		if req.AlertMetricChannels != nil {
+			// Issue #1895 S1: Feld-Level-Merge je Metrik statt Blind-Replace —
+			// ein PUT mit nur einer Metrik darf die uebrigen nicht loeschen.
+			existing.AlertMetricChannels = mergeConfigMap(existing.AlertMetricChannels, *req.AlertMetricChannels)
+		}
 		if req.ReportConfig != nil {
 			// Issue #1103: Feld-Level-Merge statt Blind-Replace — Teil-Updates
 			// duerfen bestehende report_config-Keys nicht loeschen.
@@ -324,31 +429,15 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		if req.Corridors != nil {
 			existing.Corridors = *req.Corridors
 		}
-		if req.AlertCooldownMinutes != nil {
-			existing.AlertCooldownMinutes = req.AlertCooldownMinutes
-		}
-		if req.AlertQuietFrom != nil {
-			existing.AlertQuietFrom = req.AlertQuietFrom
-		}
-		if req.AlertQuietTo != nil {
-			existing.AlertQuietTo = req.AlertQuietTo
-		}
-		if req.Region != nil {
-			existing.Region = *req.Region
-		}
-		// Issue #674 — Activity-Feld aus PUT-Body übernehmen (F001-Fix).
-		if req.Activity != nil {
-			existing.Activity = *req.Activity
-		}
-		// Issue #1087 — Read-Modify-Write-Merge: nil = Feld fehlte im Body,
-		// bestehender Wert (auch explizit false) bleibt erhalten.
-		if req.OfficialAlertsEnabled != nil {
-			existing.OfficialAlertsEnabled = req.OfficialAlertsEnabled
-		}
-		// Issue #1088 — gleiches RMW-Merge-Muster wie OfficialAlertsEnabled.
-		if req.OfficialAlertTriggersEnabled != nil {
-			existing.OfficialAlertTriggersEnabled = req.OfficialAlertTriggersEnabled
-		}
+		// Issue #2211 (Kontrakt #99): fehlt = behalten, null = leeren, Wert = setzen.
+		// Issue #674 (Activity), #1087/#1088 (OfficialAlerts*): gleicher Merge.
+		req.AlertCooldownMinutes.ApplyPtr(&existing.AlertCooldownMinutes)
+		req.AlertQuietFrom.ApplyPtr(&existing.AlertQuietFrom)
+		req.AlertQuietTo.ApplyPtr(&existing.AlertQuietTo)
+		req.Region.ApplyValue(&existing.Region)
+		req.Activity.ApplyValue(&existing.Activity)
+		req.OfficialAlertsEnabled.ApplyPtr(&existing.OfficialAlertsEnabled)
+		req.OfficialAlertTriggersEnabled.ApplyPtr(&existing.OfficialAlertTriggersEnabled)
 		// Issue #1258 — gleiches RMW-Merge-Muster wie OfficialAlertTriggersEnabled.
 		if req.OfficialWarnings != nil {
 			// Fix-Loop F002: RMW griff bisher nur auf Objekt-Ebene — ein PUT mit
@@ -455,12 +544,24 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		// Issue #1395 S2: Sperre um den Lesen-Aendern-Schreiben-Zyklus, damit
 		// dieser PATCH nicht mitten in einen laufenden PUT hineinschreibt.
 		// Bewusst OHNE If-Match-Pruefung (AC-15): eine Pruefung hier wuerde S3
 		// zwingen, auch fuer die PATCH-Pfade ETags zu fuehren — nicht beauftragt.
-		defer s.LockBriefing(id)()
+		//
+		// Issue #2482: Quoten-Lock IMMER vor LockBriefing (feste Reihenfolge).
+		// Er serialisiert nur die Zustandswechsel eines Nutzers; abgelehnt wird
+		// ausschliesslich das Wiederherstellen aus dem Archiv (AC-9).
+		defer s.LockQuota()()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		existing, err := s.LoadTrip(id)
 		if err != nil {
@@ -482,6 +583,14 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 			w.WriteHeader(400)
 			w.Write([]byte(`{"error":"bad_request"}`))
 			return
+		}
+
+		// Issue #2482 AC-9: Wiederherstellen erzeugt einen aktiven Trip und
+		// wird wie eine Neuanlage gegen die Grenze geprueft.
+		if existing.ArchivedAt != nil && req.Archived != nil && !*req.Archived {
+			if !quotaAllows(w, r, s, quotaTrips) {
+				return
+			}
 		}
 
 		now := time.Now().UTC()
@@ -536,7 +645,11 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 
 		// Issue #1395 S2: Sperre analog UpdateTripStateHandler — kein If-Match
 		// (AC-15), aber kein Hineinschreiben in einen laufenden PUT.
-		defer s.LockBriefing(tripID)()
+		unlockB, okB := lockBriefingOr503(w, s, tripID)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		trip, err := s.LoadTrip(tripID)
 		if err != nil || trip == nil {
@@ -596,6 +709,9 @@ func DeleteTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
 		// Issue #1395 S2: Der Loeschpfad veraendert dieselbe Datei wie alle
 		// Schreibpfade und braucht darum dieselbe Sperre. Ohne sie faellt ein
@@ -604,7 +720,11 @@ func DeleteTripHandler(s *store.Store) http.HandlerFunc {
 		// — die geloeschte Tour ersteht wieder auf. Mit Sperre sind nur die
 		// beiden unbedenklichen Reihenfolgen moeglich (PUT dann DELETE = weg;
 		// DELETE dann PUT = 404, es wird nichts geschrieben).
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		if err := s.DeleteTrip(id); err != nil {
 			w.Header().Set("Content-Type", "application/json")

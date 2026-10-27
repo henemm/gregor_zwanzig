@@ -3,7 +3,7 @@ entity_id: fix_1667_s3_tagesuebergreifende_segmente
 type: bugfix
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 workflow: fix-1667-s3-tagesuebergreifende-segmente
 version: "1.0"
 tags: [issue-1667, radar-alert, nowcast, segmentauswahl, ortstag, midnight-wrap]
@@ -105,7 +105,7 @@ Produktions-Aufrufer), `src/services/trip_alert.py:518 ff.`
 | `src/services/weather_snapshot.py::WeatherSnapshotService.load_dated` | method | Schnappschuss-Leser; muss ab S3 das **Segment-Datum** statt `today` bekommen, sonst wird ein frisch gewonnener Alarm still unterdrückt |
 | `tests/helpers/nowcast_gate_fixtures.py` | fixture | `make_trip`/`trip_stage`/`CountingFrameSource`/`reset_radar_cache` — bereits für mehrstufige Trips mit exakten Ankunftszeiten erweitert (#1697), keine Duplizierung nötig |
 | `tests/tdd/test_radar_alert_follows_ortstag.py` | test | Nachbarwächter (28 Tests, CI-laufend) und Ablageort der neuen ACs; Kollisionsprüfung zeigt: kein bestehender Test dort exerziert den S3-Kernfall (alle Ein-Etappen-Trips oder AC-3, das strukturell nicht kollidiert) |
-| `docs/adr/0044-kalendertage-folgen-der-ortszeit.md` | adr | „heute"/„gestern" bestimmen sich nach der Ortszeit der Tour — Grundlage für `today`/`yesterday` in der Vorrangkette |
+| `docs/adr/0044-kalendertage-folgen-der-ortszeit.md` | adr | „heute"/„gestern" bestimmen sich nach der Ortszeit der Trip — Grundlage für `today`/`yesterday` in der Vorrangkette |
 | `docs/specs/modules/fix_1584_alarm_zeitfenster.md:310-323` | spec | Abgrenzung: ein *konfiguriertes* Tagesfenster über Mitternacht ist am Ziel-Segment bewusst nicht abgebildet — nicht derselbe Fall wie eine *Etappe* mit Ankunft nach Mitternacht; `test_mitternachtsfenster_22_2_klemmt_auf_mindestfenster` bleibt unverändert grün |
 
 ## Implementation Details
@@ -222,7 +222,7 @@ yesterday)` wird nur aufgerufen, wenn heute kein aktives Segment liefert.
 
 ## Acceptance Criteria
 
-- **AC-1 (Vorrangkette — Koordinaten-Nachweis):** Given ein Trip mit zwei
+- **AC-1:** (Vorrangkette — Koordinaten-Nachweis) Given ein Trip mit zwei
   Etappen, bei dem zum Prüfzeitpunkt sowohl ein Segment der heutigen Etappe
   als auch das Ziel-Segment der gestrigen Etappe zeitlich aktiv wären (echte
   Überlappung) / When `check_radar_alerts()` läuft / Then erfolgt der
@@ -269,7 +269,7 @@ yesterday)` wird nur aufgerufen, wenn heute kein aktives Segment liefert.
     nur unter dem heutigen Datum; Assertion auf `check_radar_alerts()`
     Rückgabewert (Anzahl ausgelöster Alarme).
 
-- **AC-4 (Ein-Etappen-Trip nach Mitternacht — Kernmotivation):** Given ein
+- **AC-4:** (Ein-Etappen-Trip nach Mitternacht — Kernmotivation) Given ein
   Trip mit genau einer Etappe, deren Start bei ca. 22:00 Ortszeit liegt und
   deren kumulierte Naismith-Gehzeit über Mitternacht des Folgetags reicht
   (Modulo-Wrap aus S2) / When `check_radar_alerts()` zu einem Zeitpunkt nach
@@ -283,7 +283,7 @@ yesterday)` wird nur aufgerufen, wenn heute kein aktives Segment liefert.
     `freeze_time`-Zeitpunkte im selben Test (innerhalb/außerhalb des
     Ziel-Segment-Fensters), Assertion auf `frame_source.calls`.
 
-- **AC-5 (Rückwärts-Suche genau einen Tag — Negativtest):** Given ein Trip,
+- **AC-5:** (Rückwärts-Suche genau einen Tag — Negativtest) Given ein Trip,
   dessen letzte Etappe vor **zwei** Kalendertagen endete (eine echte Lücke
   von mindestens einem vollständigen dazwischenliegenden Tag ohne Etappe) /
   When `check_radar_alerts()` heute läuft / Then wird **kein** Nowcast-Abruf
@@ -292,7 +292,7 @@ yesterday)` wird nur aufgerufen, wenn heute kein aktives Segment liefert.
   - Test: neue Funktion, Trip mit `stage_date = heute - 2 Tage`, keine
     weitere Etappe; Assertion `frame_source.calls == []`.
 
-- **AC-6 (Bestandsschutz):** Given die zwölf #1584-Tests in
+- **AC-6:** (Bestandsschutz) Given die zwölf #1584-Tests in
   `tests/unit/test_alarm_zeitfenster_ziel.py` (insbesondere
   `test_mitternachtsfenster_22_2_klemmt_auf_mindestfenster`) und alle sieben
   bestehenden Tests in `tests/tdd/test_radar_alert_follows_ortstag.py` / When
@@ -374,7 +374,7 @@ yesterday)` wird nur aufgerufen, wenn heute kein aktives Segment liefert.
 
 - **ADR-Nr.:** keine (wendet ADR-0044 an, führt keine neue Entscheidung ein)
 - **Rationale:** ADR-0044 hat bereits akzeptiert, dass „heute"/„morgen" sich
-  nach der Ortszeit der Tour bestimmen. S3 fügt dem Alarm-Pfad, der ADR-0044
+  nach der Ortszeit der Trip bestimmen. S3 fügt dem Alarm-Pfad, der ADR-0044
   seit #1697 bereits anwendet, lediglich einen zusätzlichen, additiven
   Rückgriff auf den unmittelbaren Vortag hinzu — keine neue Zeitquelle, kein
   geänderter Kalendertag-Begriff, keine neue Zone-Auflösung. Die

@@ -1,3 +1,10 @@
+---
+entity_id: fix_1638_monitor_permission
+type: fast
+created: 2026-08-09
+status: implemented
+---
+
 # Mini-Spec: Monitor (CI) immer genehmigen
 
 ## Was ändert sich

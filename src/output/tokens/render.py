@@ -20,7 +20,9 @@ DROP_ORDER = [
     "HP", "FZ",
     # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
     # nachweislich 'FK') -- kein Eintrag mehr.
-    "AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:",
+    # Issue #1441: 'AV' (Lagebericht) ist ein Warnblock-Token und faellt mit den
+    # amtlichen Warnungen zuletzt -- kein Eintrag hier.
+    "SL", "NS24+", "SD", "Z:", "MAX", "M:",
 ]
 
 
@@ -37,9 +39,10 @@ def _fuse(tokens: list[Token]) -> list[str]:
             parts.append(f"{prefix}{t.render()}")
             i += 1
             continue
-        if (t.symbol == "HR:" and t.category == "vigilance"
+        # Issue #2417 AC-27: Meteo-France-Paar VR:/VT: (builder.VIGI_HR/VIGI_TH).
+        if (t.symbol == "VR:" and t.category == "vigilance"
                 and i + 1 < len(tokens)
-                and tokens[i + 1].symbol == "TH:"
+                and tokens[i + 1].symbol == "VT:"
                 and tokens[i + 1].category == "vigilance"):
             parts.append(f"{t.render()}{tokens[i + 1].render()}")
             i += 2
@@ -86,7 +89,9 @@ def _truncate(tokens: list[Token], stage: str, mx: int) -> tuple[list[Token], bo
     # Issue #1410 §3b: die gefuehlte Temperatur ist eine Komfort-Zusatzangabe
     # und faellt deshalb noch VOR PR -- die sicherheitsrelevanten
     # Planungsgroessen (R/PR/W/G/TH) bleiben laenger stehen.
-    for sym in ("FN", "FL", "FD"):
+    # Issue #2422 S6 (B1): 'TF' (Stundenwert) ist das am ehesten redundante
+    # der vier gefuehlten Token und faellt als allererstes.
+    for sym in ("TF", "FN", "FL", "FD"):
         if _drop_first(tokens, sym):
             truncated = True
             if len(_draw(stage, tokens)) <= mx:

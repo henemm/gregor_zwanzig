@@ -28,15 +28,19 @@ from utils.timezone import local_fmt, local_hour
 
 from output.renderers.alert.render import _esc
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
-from output.renderers.channel_layout import VISIBILITY_GATE_IDS, render_for_channel
+from output.renderers.channel_layout import (
+    VISIBILITY_GATE_IDS, render_for_channel, telegram_metric_notice,
+)
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, collect_hiking_window_points,
     hiking_field_min_max, night_temp_min_c, night_wind_chill_min_c,
 )
 from output.metric_format import THUNDER_LABEL_DE
 from output.renderers.compare_outlook_metric_ids import outlook_columns
-from output.renderers.email.helpers import _THUNDER_MAP, fmt_val, format_trend_tokens
-from output.renderers.email.thunder_branch import resolve_thunder_day_branch
+from output.renderers.email.helpers import fmt_val, format_trend_tokens
+from output.renderers.email.thunder_branch import (
+    thunder_cell_telegram, thunder_column_index,
+)
 from output.renderers.email.unavailable_hint import (
     any_official_alerts_unavailable,
     render_official_alerts_unavailable_plain,
@@ -108,36 +112,6 @@ def _wrap(text: str, width: int) -> list[str]:
     return lines
 
 
-def _detail_lines(
-    metric_ids: list[str], row: dict, friendly_keys: set[str], width: int,
-) -> list[str]:
-    """Baue die ``·``-getrennte Detail-Zeile(n) fuer ``detail_metrics``.
-
-    Wird auf ``width`` umgebrochen, sodass auch Signal jede Zeile <=26 haelt.
-    """
-    parts: list[str] = []
-    for mid in metric_ids:
-        val = _cell(mid, row, friendly_keys)
-        parts.append(f"{_compact_label(mid)} {val}")
-
-    lines: list[str] = []
-    cur = ""
-    for part in parts:
-        candidate = part if not cur else f"{cur} · {part}"
-        if len(candidate) <= width:
-            cur = candidate
-            continue
-        if cur:
-            lines.append(cur)
-        # Ein Einzel-Part koennte breiter als width sein -> hart umbrechen.
-        for sub in _wrap(part, width):
-            lines.append(sub)
-        cur = ""
-    if cur:
-        lines.append(cur)
-    return lines
-
-
 def _narrow_table(
     table_columns: list[str], rows: list[dict], friendly_keys: set[str],
     width: int,
@@ -183,6 +157,8 @@ def _thunder_severity(level: Optional[ThunderLevel]) -> int:
 # Issue #1474 (F003-Nachbesserung): Inverse der kanonischen Ordinalskala
 # (thunder_ordinal() -> {NONE:0, LOW:1, MED:2, HIGH:3}), NUR fuer die
 # Ruecklookup-Stelle in _tg_day_footer -- Index == thunder_ordinal(Level).
+# gz-thunder-scale: geduldete Inverse der kanonischen Ordinalskala, reine
+# Rueck-Lookup-Stelle ohne eigene Stufen-Wahrheit (#1480 Duldungsliste)
 _SEV_TO_THUNDER_LEVEL: tuple[ThunderLevel, ...] = (
     ThunderLevel.NONE, ThunderLevel.LOW, ThunderLevel.MED, ThunderLevel.HIGH,
 )
@@ -216,6 +192,28 @@ def _day_window_thunder_severity(
     return worst
 
 
+def _day_window_hail_note(
+    segments: list[SegmentWeatherData],
+    night_weather: Optional["NormalizedTimeseries"],
+    tz: ZoneInfo,
+    *,
+    start_hour: int = DAY_WINDOW_START_HOUR,
+    end_hour: int = DAY_WINDOW_END_HOUR,
+) -> Optional[str]:
+    """Hagelaussage ueber DIESELBE Tagesfenster-Punktmenge wie
+    ``_day_window_thunder_severity`` (Issue #2205): Fusszeile und
+    Kurzuebersicht derselben Bubble lesen dieses eine Ergebnis.
+    """
+    from output.metric_format import format_hail_note, hail_priority
+    from output.renderers.day_window import build_day_window_points
+
+    return format_hail_note(hail_priority([
+        getattr(dp, "hail_flag", None) for dp in build_day_window_points(
+            segments, night_weather, tz, start_hour=start_hour, end_hour=end_hour,
+        )
+    ]))
+
+
 def _tg_day_footer(
     segments: list[SegmentWeatherData],
     enabled_metric_ids: set[str] | list[str],
@@ -240,8 +238,6 @@ def _tg_day_footer(
     bubbles``, dem echten Bubble-Einstiegspunkt mit ``night_weather``) bereits
     ermittelte Ziel-Datenluecke — KEINE eigene Berechnung mehr hier.
     """
-    from output.renderers.day_window import build_day_window_points
-
     enabled = set(enabled_metric_ids)
     max_thunder_sev = 0
     min_vis: Optional[int] = None
@@ -279,18 +275,22 @@ def _tg_day_footer(
             thunder_word = "?" if has_gap else THUNDER_LABEL_DE[ThunderLevel.NONE]
         else:
             thunder_word = THUNDER_LABEL_DE[_SEV_TO_THUNDER_LEVEL[max_thunder_sev]]
-        parts.append(f"⚡ {thunder_word}")
+        # Issue #2176: ⚡ ist hier das Ereignis-Symbol unmittelbar vor dem
+        # Stufenwort. Bei "leicht" traegt die Fusszeile stattdessen die
+        # Luftmassen-Beschriftung -- kanaltypisch kurz, ohne CAPE-Wert und
+        # ohne Herkunft (Spec AC-1/AC-2-Ausnahme fuer Kurzformen).
+        if max_thunder_sev == _thunder_severity(ThunderLevel.LOW):
+            parts.append(f"Luftmasse {thunder_word}")
+        else:
+            parts.append(f"⚡ {thunder_word}")
         # Issue #1475 S5a: Hagel-Kennzeichen rein deskriptiv NEBEN der
         # Gewitterstufe -- derselbe geteilte Textbaustein wie Mail und
         # `GEWITTER`-Kommando (#1481 DRY, call-time Import). Bei
         # "unbekannt"/"nein" bleibt die Zeile zeichengleich (Spec AC-6).
-        from output.metric_format import format_hail_note, hail_priority
-        _hail_note = format_hail_note(hail_priority([
-            getattr(dp, "hail_flag", None) for dp in build_day_window_points(
-                segments, night_weather, tz,
-                start_hour=day_window_start_hour, end_hour=day_window_end_hour,
-            )
-        ]))
+        _hail_note = _day_window_hail_note(
+            segments, night_weather, tz,
+            start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+        )
         if _hail_note:
             parts.append(_hail_note)
 
@@ -443,6 +443,7 @@ def _overview_line(
     hiking_felt_extrema: Optional[tuple[float, float, str]] = None,
     has_gap: bool = False,
     day_thunder_sev: Optional[int] = None,
+    day_thunder_hail_note: Optional[str] = None,
 ) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
@@ -541,6 +542,10 @@ def _overview_line(
                     value = THUNDER_LABEL_DE[
                         _SEV_TO_THUNDER_LEVEL[day_thunder_sev]
                     ]
+                    # Issue #2205 (AC-15/16): Hagel aus derselben
+                    # Tagesfenster-Quelle wie die Fusszeile.
+                    if day_thunder_hail_note:
+                        value = f"{value} · {day_thunder_hail_note}"
             else:
                 worst_row = max(
                     hits, key=lambda h: _thunder_severity(h.get(key))
@@ -584,12 +589,20 @@ def _outlook_lines(
     lines: list[str] = ["Ausblick"]
     if outlook_metrics is not None:
         columns = outlook_columns(outlook_metrics)
+        # #1848 A3: Gewitterteil aus DEMSELBEN Zellenbau wie der feste Zweig
+        # darunter (thunder_cell_telegram) -- `cells` traegt dort nur das
+        # Stufenwort ohne Token-Uhrzeit, Herkunft und Nachtanteil.
+        gew_index = thunder_column_index(columns)
         for stage in multi_day_trend:
             weekday = stage.get("weekday", "")
             cells = stage.get("cells") or []
+            texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
+            if gew_index is not None:
+                texte[gew_index] = thunder_cell_telegram(
+                    format_trend_tokens(stage), stage,
+                )
             values = "  ".join(
-                f"{c['label']}: {cells[i] if i < len(cells) else '–'}"
-                for i, c in enumerate(columns)
+                f"{c['label']}: {texte[i]}" for i, c in enumerate(columns)
             )
             lines.extend(_wrap(f"{weekday}  {values}", _TG_PROSE_WIDTH))
             note = stage.get("note")
@@ -610,25 +623,12 @@ def _outlook_lines(
         # Tagesfenster. Vorher fiel dieser Zweig auf `thunder_plain` (das auf
         # die Gehzeit geklemmte Aggregat) zurueck und schrieb "⚡HIGH · nachts
         # hoch@0" -- ein Tagesgewitter, das es im Tagesfenster nicht gab.
-        dt = tok.get("thunder_day_token", "-")
-        nt = tok.get("thunder_night_token", "-")
         # Issue #1671: Zweigwahl aus dem geteilten Helfer (identisch zu
-        # compact.py/outlook.py) -- die Formatierung bleibt hier unveraendert.
-        branch = resolve_thunder_day_branch(tok, stage)
-        if branch == "day":
-            thunder_part = f"⚡{dt}"
-            # Issue #1680 S5a: die tragende Zutat hinter der Tagesstufe --
-            # derselbe Token wie in HTML- und Klartext-Mail (AC-3). Ein
-            # Zeilenumbruch auf _TG_PROSE_WIDTH ist hinnehmbar (Wort-Umbruch).
-            _origin = tok.get("thunder_day_origin")
-            if _origin:
-                thunder_part += f" · {_origin}"
-        elif branch == "none":
-            thunder_part = _THUNDER_MAP["NONE"]["plain"]
-        else:
-            thunder_part = tok["thunder_plain"]
-        if nt != "-":
-            thunder_part += f" · nachts {nt}"
+        # compact.py/outlook.py). #1848 A3: auch die Formatierung steht jetzt
+        # dort (`thunder_cell_telegram`) -- DIESELBE Quelle, die der
+        # konfigurierbare Zweig oben ruft. Ein Zeilenumbruch auf
+        # _TG_PROSE_WIDTH bleibt hinnehmbar (Wort-Umbruch).
+        thunder_part = thunder_cell_telegram(tok, stage)
         trend_line = f"{weekday}  {tok['temp_str']}  {precip_part}  {wind_part}  {thunder_part}"
         lines.extend(_wrap(trend_line, _TG_PROSE_WIDTH))
         note = stage.get("note")
@@ -765,6 +765,10 @@ def render_telegram_bubbles(
         [sd for sd in segments if not sd.has_error], night_weather, tz,
         start_hour=day_window_start_hour, end_hour=day_window_end_hour,
     )
+    _day_thunder_hail_note = _day_window_hail_note(
+        [sd for sd in segments if not sd.has_error], night_weather, tz,
+        start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+    )
     overview_lines: list[str] = ["Kurzübersicht"]
     # Issue #1484: die Nacht-Untergrenze der T-Zeile folgt der EIGENEN
     # Groesse "temperature_night". Ohne aktive "temperature" bekommt sie
@@ -775,7 +779,13 @@ def render_telegram_bubbles(
     # gefuehlte Nacht-Untergrenze -- "wind_chill_night" statt unbedingt
     # "wind_chill".
     _felt_night_selected = "wind_chill_night" in _enabled_ids
+    # #2422 S6 (B5): zusammengefuehrte Windrichtung hat keine eigene Zeile --
+    # die Richtung steckt in der Windzeile (geteilter Helfer wie Tabelle/Mail).
+    from output.renderers.email.helpers import should_merge_wind_dir
+    _merge_wind_dir = should_merge_wind_dir(dc)
     for mid in dc.get_enabled_metric_ids():
+        if mid == "wind_direction" and _merge_wind_dir:
+            continue
         if mid == "temperature_night":
             if ("temperature" in _enabled_ids or report_type != "evening"
                     or _night_min_c is None):
@@ -812,6 +822,7 @@ def render_telegram_bubbles(
             hiking_felt_extrema=_hiking_felt,
             has_gap=has_gap,
             day_thunder_sev=_day_thunder_sev,
+            day_thunder_hail_note=_day_thunder_hail_note,
         )), _TG_PROSE_WIDTH))
     # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
     # echten Versandpfad (notification_service.compute_has_gap() aus
@@ -840,6 +851,14 @@ def render_telegram_bubbles(
     if vortag_line:
         overview_lines.append("")
         overview_lines.extend(_wrap(_esc(vortag_line), _TG_PROSE_WIDTH))
+    # Issue #1741: Kappungshinweis (>7 primary-Metriken verlieren ihre
+    # stuendliche Aufloesung in der Segment-Tabelle) -- ans Ende der
+    # Kurzuebersicht, EINMAL fuer den ganzen Trip (dieselbe `layout`-
+    # Berechnung wie die Segment-Tabellen oben, nicht je Segment neu).
+    notice = telegram_metric_notice(layout.demoted_count, context="route")
+    if notice:
+        overview_lines.append("")
+        overview_lines.extend(_wrap(_esc(notice), _TG_PROSE_WIDTH))
     bubbles.append(TelegramBubble(text="\n".join(overview_lines)))
 
     # 3./4. Segment-/Ziel-Bubbles: Mini-Header + echte Monospace-Tabelle.

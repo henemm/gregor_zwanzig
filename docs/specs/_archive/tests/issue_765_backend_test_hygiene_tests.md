@@ -3,7 +3,7 @@ entity_id: issue_765_backend_test_hygiene_tests
 type: tests
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, hygiene, backend, cleanup, gate, issue-765]
 parent: issue_765_backend_test_hygiene
@@ -18,11 +18,11 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_765_backend_test_hygiene.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_765_backend_test_hygiene.md`.
 Das Detektor-Gate prüft die Test-Artefakte selbst (Compliance-Test, kein
 Produkt-Verhalten) und verhindert Regress des Backend-Datei-Inhalt-Anti-Patterns.
 
-Parent-Spec: `docs/specs/modules/issue_765_backend_test_hygiene.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_765_backend_test_hygiene.md` v1.0
 
 ## Source
 

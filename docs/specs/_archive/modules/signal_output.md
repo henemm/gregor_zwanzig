@@ -3,12 +3,14 @@ entity_id: signal_output
 type: module
 created: 2026-04-03
 updated: 2026-07-23
-status: superseded
+status: deprecated
 version: "1.0"
 tags: [signal, channel, notification, callmebot, output]
 ---
 
 # Signal Output
+
+> Abgelöst/entfernt durch ADR-0004 / #610 (Signal-Kanal app-weit entfernt) — beschreibt keinen aktuellen Code.
 
 > **HISTORISCH / ABGELÖST (2026-07-23).** Diese Modul-Spec beschreibt einen nicht mehr gültigen Stand — die zugrundeliegende Architektur (NiceGUI-UI unter `src/web/`, Python-APScheduler, Signal-Kanal bzw. Compare-Subscriptions) wurde ersetzt (SvelteKit-Frontend, Go-Scheduler `internal/scheduler/`, briefings/trips). Die genannten Quelldateien existieren nicht mehr. **Aktueller Stand:** der Code + `docs/reference/api_contract.md`. Aufbewahrt zur Nachvollziehbarkeit.
 
@@ -138,7 +140,7 @@ def can_send_signal(self) -> bool:
     return bool(self.signal_phone and self.signal_api_key)
 ```
 
-### 3. OutputChannel Factory Erweiterung (src/outputs/base.py)
+### 3. OutputChannel Factory Erweiterung (src/output/channels/base.py)
 
 ```python
 # In get_channel() factory function
@@ -292,7 +294,7 @@ uv run pytest -m signal tests/e2e/test_signal_output.py -v
 | File | Action | LoC |
 |------|--------|-----|
 | `src/outputs/signal.py` | NEW | ~55 |
-| `src/outputs/base.py` | MODIFY | +3 |
+| `src/output/channels/base.py` | MODIFY | +3 |
 | `src/app/config.py` | MODIFY | +10 |
 | `src/app/models.py` | MODIFY | +2 |
 | `src/app/cli.py` | MODIFY | +1 |

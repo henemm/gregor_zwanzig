@@ -93,6 +93,10 @@ class ForecastMeta:
     # ("model_5xx") from the WEATHER-05b per-metric gap fill ("metric_gap"), so
     # the two mechanisms don't silently overwrite each other's fallback_model.
     fallback_reason: Optional[str] = None
+    # Issue #1991 AC-5: die vom Provider tatsaechlich verwendete Hoehe (Open-Meteo
+    # meldet sie im Response-Feld "elevation" zurueck) -- None wenn unbekannt/
+    # nicht gemeldet.
+    model_elevation_m: Optional[float] = None
 
 
 @dataclass
@@ -159,6 +163,17 @@ class ForecastDataPoint:
     # die baut #1474.
     lightning_potential_lpi_jkg: Optional[float] = None
     hail_potential_grau_gsp: Optional[float] = None
+
+    # Hagel-Rohwert Meteo-France AROME (#1507 S5c, FR/Korsika): Coverage
+    # `HAIL__GROUND_OR_WATER_SURFACE`, "Total hail precipitation", uom
+    # `kg kg-1` (Massenanteil). BEWUSST ein EIGENES Feld, NICHT mit
+    # `hail_potential_grau_gsp` (DWD, kumulierter Graupel-Niederschlag)
+    # zusammengelegt: andere Quelle, andere Groesse, andere Skala (#1419
+    # Abs. 3.1) — beide heissen nur fachlich "Hagel-Rohwert". Reiner
+    # Rohwert: KEIN Einfluss auf `hail_flag` (dort entscheidet allein die
+    # WMO-Code-Ableitung aus #1475 S5a), keine Stufen-/Schwellenbildung,
+    # in dieser Scheibe auch kein Renderer-Anschluss.
+    hail_potential_mf: Optional[float] = None
 
     # Gewittergroessen DWD ICON-D2/ICON-EU (#1531, Fortfuehrung #1457 S2):
     # sieben Groessen, die Epic #1419 Abs. 2a/3.2 je Gebiet vorsieht, bisher
@@ -428,6 +443,12 @@ class TripSegment:
     # Segment, das ohne Trip-Bezug entsteht.
     day_window_start_hour: Optional[int] = None
     day_window_end_hour: Optional[int] = None
+    # Issue #2036: additiv, Default aus. `True` NUR, wenn die km-Spanne
+    # dieses Segments aus echter GPX-Wegstrecke stammt und die Etappe die
+    # Plausibilitaetspruefung bestanden hat (`trip_segments`). `False`
+    # heisst: `distance_from_start_km` ist eine Luftlinien-Kumulation und
+    # darf NIE als Ortsangabe erscheinen (AC-13).
+    distance_measured: bool = False
 
 
 @dataclass
@@ -836,12 +857,27 @@ class UnifiedWeatherDisplayConfig:
     # Frontend (AlertsTab) und trip_alert._select_change_detector lesen dieses Feld.
     alert_preset: Optional[str] = None
     metric_alert_levels: Optional[dict[str, str]] = None  # metric → SensLevel (off|entspannt|standard|sensibel)
-    # Issue #1720 S1: Spaltenauswahl der 3-Tages-Vorschau im Neuformat
-    # [{"metric_id": ..., "aggregation": ...}] (#1373), dasselbe Vokabular wie
-    # der Ortsvergleich. Drei-Werte-Semantik (ADR-0037): None/fehlt = die
-    # bisherigen sieben festen Spalten · [] = der Ausblick-Block entfaellt ganz
-    # · gefuellt = gewaehlte Spalten in Auswahlreihenfolge.
-    outlook_metrics: Optional[list[dict]] = None
+    # Issue #1720 S1 / #1848 A2: Spaltenauswahl der 3-Tages-Vorschau als reine
+    # KENNUNGEN (["temperature", "gust"]) -- dasselbe Vokabular wie Kanal-
+    # An/Aus, Reihenfolge, SMS-Kuerzel und Schwellwerte, und dasselbe wie im
+    # Ortsvergleich. Welche Auswertungen eine Kennung zeigt, leitet der Katalog
+    # ab (compare_outlook_metric_ids.derived_aggregations()); die Paar-Altform
+    # [{"metric_id": ..., "aggregation": ...}] (#1373/ADR-0037) bleibt dauerhaft
+    # lesbar und wird im Ladepfad normalisiert (metric_catalog.
+    # normalize_outlook_metric_ids()).
+    # Drei-Werte-Semantik (ADR-0037/ADR-0055): None/fehlt = die bisherigen
+    # sieben festen Spalten · [] = der Ausblick-Block entfaellt ganz · gefuellt
+    # = gewaehlte Groessen in Auswahlreihenfolge.
+    outlook_metrics: Optional[list[str]] = None
+    # Issue #2049: Roh/Einfach je Ausblick-Groesse, {kennung: bool} (True =
+    # Einfach). PARALLELES Feld statt Objektform in `outlook_metrics` -- jenes
+    # bleibt eine reine Kennungsliste (#1848 A2), strukturell dasselbe Muster
+    # wie `channel_layouts` neben `metrics`. Fehlende Kennung = Roh; der
+    # Ausblick-Default ist hart "Roh" und folgt bewusst NICHT dem
+    # `default_format_mode` des Katalogs (der waere fuer cloud_total/sunshine/
+    # wind_direction symbol/scale und aenderte bestehende Trips ohne jede
+    # Nutzeraktion).
+    outlook_metric_formats: Optional[dict[str, bool]] = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:
@@ -1094,6 +1130,11 @@ class TripReportConfig:
     """
     trip_id: str = ""
     enabled: bool = True
+    # Issue #2422 S3: Einzel-Slot-Schalter „Morgen/Abend aktiv" aus dem Editor.
+    # None = Schluessel fehlt (Altdaten) -> Rueckfall auf `enabled`. Auswertung
+    # ausschliesslich ueber `slot_aktiv()`.
+    morning_enabled: Optional[bool] = None
+    evening_enabled: Optional[bool] = None
 
     # Schedule
     morning_time: time = field(default_factory=lambda: time(7, 0))
@@ -1155,6 +1196,22 @@ class TripReportConfig:
 
     # Metadata
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+def slot_aktiv(rc: Optional[TripReportConfig], report_type: str) -> bool:
+    """Issue #2422 S3: ist der Briefing-Slot ``report_type`` eingeschaltet?
+
+    Die EINE Regel fuer Versand, Alarm-Vorlauf und flache Ableitung:
+    ohne report_config aktiv (Bestandsverhalten); ``enabled=False`` ist Master
+    und schaltet beide Slots ab; sonst entscheidet der Einzel-Schalter, fehlt
+    er (None), gilt der Slot als aktiv.
+    """
+    if rc is None:
+        return True
+    if rc.enabled is False:
+        return False
+    per_slot = rc.morning_enabled if report_type == "morning" else rc.evening_enabled
+    return per_slot if isinstance(per_slot, bool) else True
 
 
 # --- Alert Rules (Issue #205) ----------------------------------------------
@@ -1299,6 +1356,14 @@ class ComparePreset:
     official_warnings: Optional[dict] = field(default_factory=lambda: {"enabled": False})
     send_telegram: Optional[bool] = None
     send_sms: Optional[bool] = None
+    # Issue #2293 Scheibe S2 — Modellparität zu Go (internal/model/compare_preset.go),
+    # 1:1 analog zu alert_metric_channels weiter unten. send_premium_sms steuert
+    # ausschliesslich das planmaessige Briefing (Versand-Reiter); alert_channels
+    # ist das eigene Kanal-Sub-Objekt fuer den Alarm-Versand. Kein neuer Leser:
+    # _compare_channel_inputs (src/services/alert_channels.py) liest weiterhin
+    # ueber das Roh-Dict.
+    send_premium_sms: Optional[bool] = None
+    alert_channels: Optional[dict] = None
     morning_enabled: Optional[bool] = None
     morning_time: Optional[str] = None
     evening_enabled: Optional[bool] = None
@@ -1318,6 +1383,12 @@ class ComparePreset:
     # scripts/migrate_1361_drop_compare_hour_from_to.py sie entfernt.
     day_window_start_hour: Optional[int] = None
     day_window_end_hour: Optional[int] = None
+    # Issue #1895 S1 (ADR-0077): metrik-genaue Kanal-Schicht, Paritaet zum
+    # gleichnamigen Trip-Feld (app.trip.Trip.alert_metric_channels). Fuer die
+    # Persistenz nicht erforderlich (compare_preset_to_dict liefert `raw`
+    # unveraendert zurueck) -- das Feld ist der benannte Leser fuer S2, damit
+    # der Alarm-Pfad nicht am anonymen `raw`-Dict vorbeigreifen muss.
+    alert_metric_channels: Optional[dict] = None
     raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
 
 

@@ -65,17 +65,18 @@ ALLDAY_TO = datetime(_YEAR, _MONTH, _DAY, 23, 59, tzinfo=UTC)
 # Katalog-Reihenfolge). Bewusst hier NICHT aus `hazard_symbols.py` importiert:
 # die Tabelle ist die Zusage der Spec, gegen die der Katalog geprueft wird.
 SPEC_SYMBOLS: list[tuple[str, str]] = [
-    ("thunderstorm", "TH"),
-    # Issue #1427 S1: "flood" (Hochwasser/Erdrutsch), Kuerzel "FL".
-    ("flood", "FL"),
-    ("rain", "HR"),
-    ("wind_gust", "W"),
+    ("thunderstorm", "TS"),
+    # Issue #1427 S1: "flood" (Hochwasser/Erdrutsch), Kuerzel "FO" (#2417 AC-27: vormals "FL").
+    ("flood", "FO"),
+    ("rain", "RA"),
+    ("wind_gust", "WG"),
     ("snow", "SN"),
+    ("avalanche", "AW"),
     ("black_ice", "IC"),
     ("extreme_heat", "HT"),
     ("extreme_cold", "CD"),
     ("wildfire_risk", "FR"),
-    ("access_ban", "CL"),
+    ("access_ban", "AB"),
 ]
 
 # Die deutsch abgeleiteten Alt-Kuerzel, die ersatzlos verschwinden (Spec 1b).
@@ -208,11 +209,11 @@ def _word_present(text: str, token: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# AC-1 — Gewitter ROT mit Uhrzeit -> `!TH:H@14`
+# AC-1 — Gewitter ROT mit Uhrzeit -> `!TS:H@14`
 # ---------------------------------------------------------------------------
 def test_ac1_red_thunderstorm_warning_appears_as_warn_block():
     sms = _sms([_alert("thunderstorm", 4)])
-    assert "!TH:H@14" in sms, (
+    assert "!TS:H@14" in sms, (
         f"Amtliche Gewitterwarnung (ROT, ab 14:00) fehlt in der SMS: {sms!r}"
     )
 
@@ -225,7 +226,7 @@ def test_ac2_two_warnings_single_marker_severest_first():
         _alert("wind_gust", 3, allday=True),   # absichtlich schwaechere zuerst
         _alert("thunderstorm", 4),
     ])
-    assert "!TH:H@14 W:M" in sms, f"Warn-Block falsch aufgebaut: {sms!r}"
+    assert "!TS:H@14 WG:M" in sms, f"Warn-Block falsch aufgebaut: {sms!r}"
     assert sms.count("!") == 1, (
         f"Der `!`-Marker muss genau einmal erscheinen, gezaehlt: {sms.count('!')} in {sms!r}"
     )
@@ -305,7 +306,7 @@ def test_ac4_wet_day_without_alerts_is_bit_identical():
 @pytest.mark.parametrize("hazard,symbol", SPEC_SYMBOLS)
 def test_ac5_all_nine_hazards_render_their_symbol(hazard: str, symbol: str):
     sms = _sms([_alert(hazard, 3)])
-    expected = "!CL" if hazard == "access_ban" else f"!{symbol}:M"
+    expected = "!AB" if hazard == "access_ban" else f"!{symbol}:M"
     assert expected in sms, (
         f"Gefahrenart {hazard} muss als {expected!r} erscheinen: {sms!r}"
     )
@@ -316,20 +317,22 @@ def test_ac5_catalog_matches_spec_table():
     """Der Katalog `hazard_symbols.py` ist die einzige Quelle — und traegt
     exakt die 9 Paare der Spec-Tabelle."""
     from output.tokens.hazard_symbols import HAZARD_SMS_SYMBOLS
-    assert dict(SPEC_SYMBOLS) == dict(HAZARD_SMS_SYMBOLS), (
+    # #1441: der amtliche Lawinen-Lagebericht (EAWS 1-5) traegt `AV` (Ziffer statt Buchstabe,
+    # eigene Darstellung -- hier nicht Teil der parametrisierten L/M/H-Faelle).
+    assert {**dict(SPEC_SYMBOLS), "avalanche_bulletin": "AV"} == dict(HAZARD_SMS_SYMBOLS), (
         "Katalog weicht von der Spec-Tabelle (Abschnitt 1) ab: "
         f"{dict(HAZARD_SMS_SYMBOLS)!r}"
     )
 
 
 # ---------------------------------------------------------------------------
-# AC-6 — access_ban ist binaer: `CL` ohne Doppelpunkt/Stufe
+# AC-6 — access_ban ist binaer: `AB` ohne Doppelpunkt/Stufe
 # ---------------------------------------------------------------------------
 def test_ac6_access_ban_has_no_level_suffix():
     sms = _sms([_alert("access_ban", 4)])
-    assert "!CL" in sms, f"Zugangssperre fehlt: {sms!r}"
-    assert "CL:" not in sms, (
-        f"Zugangssperre darf keine Stufe tragen (kein 'CL:'): {sms!r}"
+    assert "!AB" in sms, f"Zugangssperre fehlt: {sms!r}"
+    assert "AB:" not in sms, (
+        f"Zugangssperre darf keine Stufe tragen (kein 'AB:'): {sms!r}"
     )
 
 
@@ -346,7 +349,7 @@ def test_ac7_warn_block_survives_truncation_before_pr():
 
     full = formatter.format_sms([seg], stage_name="Etappe 5", tz=_TZ, max_length=1000)
     assert "PR" in full, f"Fixture taugt nicht: kein PR-Token in {full!r}"
-    assert "!TH:H@14" in full, f"Fixture taugt nicht: kein Warn-Block in {full!r}"
+    assert "!TS:H@14" in full, f"Fixture taugt nicht: kein Warn-Block in {full!r}"
 
     # Die Rangfolge wird ueber das ganze Budget-Spektrum geprueft statt an
     # einer magischen Zahl: bei KEINEM Budget darf die amtliche Warnung fallen,
@@ -364,12 +367,12 @@ def test_ac7_warn_block_survives_truncation_before_pr():
             f"Budget {budget} verletzt ({len(short)} Zeichen): {short!r}"
         )
         if "PR" in short:
-            assert "!TH:H@14" in short, (
+            assert "!TS:H@14" in short, (
                 f"Bei Budget {budget} fiel die amtliche Warnung vor PR: {short!r}"
             )
         else:
             pr_dropped_at_least_once = True
-            assert "!TH:H@14" in short, (
+            assert "!TS:H@14" in short, (
                 f"Bei Budget {budget} fehlt die amtliche Warnung trotz "
                 f"gedropptem PR: {short!r}"
             )
@@ -401,7 +404,7 @@ def test_ac12_warning_of_user_a_does_not_leak_into_user_b():
         disabled_specs=_DISABLE_NEW_14,
     )
 
-    assert "!TH:H@14" in sms_a, f"Nutzer A ohne Warn-Block: {sms_a!r}"
+    assert "!TS:H@14" in sms_a, f"Nutzer A ohne Warn-Block: {sms_a!r}"
     assert "!" not in sms_b, (
         f"Nutzer B darf keinen Warn-Block bekommen (Datenleck): {sms_b!r}"
     )
@@ -414,20 +417,24 @@ def test_ac12_warning_of_user_a_does_not_leak_into_user_b():
 # AC-13 — Standalone-Warn-SMS nutzt die neuen internationalen Kuerzel
 # ---------------------------------------------------------------------------
 _AC13_CASES = [
-    ("wind_gust", "W"),
+    ("wind_gust", "WG"),
     ("extreme_heat", "HT"),
-    ("rain", "HR"),
+    ("rain", "RA"),
     ("black_ice", "IC"),
-    ("access_ban", "CL"),
+    ("access_ban", "AB"),
     ("wildfire_risk", "FR"),
 ]
 
 
 @pytest.mark.parametrize("hazard,symbol", _AC13_CASES)
 def test_ac13_standalone_alert_sms_uses_new_symbols(hazard: str, symbol: str):
+    # FORTGESCHRIEBEN (#1948 S5): `sms_prefix` (Trip-/Preset-Name) ist aus
+    # `render_official_alert_sms` ersatzlos entfallen -- die Ortsangabe steht
+    # jetzt im Kopf. Die hier bewachte Zusicherung (Kuerzel-Katalog, keine
+    # Alt-Kuerzel) ist davon unberuehrt.
     from output.renderers.alert.official_alerts import render_official_alert_sms
     text = render_official_alert_sms(
-        [_notice(_alert(hazard, 3))], sms_prefix="GZ20", tz=_TZ,
+        [_notice(_alert(hazard, 3))], tz=_TZ,
     )
     assert _word_present(text, symbol), (
         f"Neues Kuerzel {symbol!r} fehlt in der Standalone-Warn-SMS: {text!r}"
@@ -453,10 +460,10 @@ def test_ac14_both_sms_paths_use_the_same_symbol(hazard: str, symbol: str):
 
     trip_sms = _sms([_alert(hazard, 3)])
     standalone = render_official_alert_sms(
-        [_notice(_alert(hazard, 3))], sms_prefix="GZ20", tz=_TZ,
+        [_notice(_alert(hazard, 3))], tz=_TZ,
     )
 
-    trip_expected = "!CL" if hazard == "access_ban" else f"!{catalog_symbol}:M"
+    trip_expected = "!AB" if hazard == "access_ban" else f"!{catalog_symbol}:M"
     assert trip_expected in trip_sms, (
         f"Trip-Briefing-SMS ohne {trip_expected!r}: {trip_sms!r}"
     )
@@ -482,7 +489,7 @@ def test_unknown_hazard_same_symbol_in_both_sms_paths():
 
     trip_sms = _sms([_alert("volcanic_ash", 3)])
     standalone = render_official_alert_sms(
-        [_notice(_alert("volcanic_ash", 3))], sms_prefix="GZ20", tz=_TZ,
+        [_notice(_alert("volcanic_ash", 3))], tz=_TZ,
     )
     assert "!VO:M" in trip_sms, f"Trip-Briefing-SMS ohne 'VO': {trip_sms!r}"
     assert _word_present(standalone, "VO"), (
@@ -523,7 +530,7 @@ _COLLIDING_UNKNOWNS = [
     "htx_warning",      # -> HT (extreme_heat)
     "cd_alert",         # -> CD (extreme_cold)
     "frost_burst",      # -> FR (wildfire_risk)
-    "closure_notice",   # -> CL (access_ban)
+    "closure_notice",   # -> AB (access_ban)
     "w",                # -> W  (wind_gust), zu kurz fuer 3 Buchstaben
 ]
 
@@ -560,7 +567,7 @@ def test_f002_two_similar_hazards_render_as_two_distinct_tokens():
     assert len(set(warn_symbols)) == 2, (
         f"Zwei verschiedene Gefahren tragen dasselbe Kuerzel: {sms!r}"
     )
-    assert "!TH:H@14" in sms, f"Gewitterwarnung fehlt: {sms!r}"
+    assert "!TS:H@14" in sms, f"Gewitterwarnung fehlt: {sms!r}"
 
 
 def test_f002_fallback_is_deterministic():
@@ -580,7 +587,7 @@ def test_f002_colliding_unknown_same_symbol_in_both_sms_paths(hazard: str):
     symbol = sms_symbol_for(hazard)
     trip_sms = _sms([_alert(hazard, 3)])
     standalone = render_official_alert_sms(
-        [_notice(_alert(hazard, 3))], sms_prefix="GZ20", tz=_TZ,
+        [_notice(_alert(hazard, 3))], tz=_TZ,
     )
     assert f"!{symbol}:M" in trip_sms, (
         f"Trip-Briefing-SMS ohne {symbol!r}: {trip_sms!r}"
@@ -599,7 +606,7 @@ def test_f002_colliding_unknown_same_symbol_in_both_sms_paths(hazard: str):
 # ein Byte veraendern (AC-3).
 # ---------------------------------------------------------------------------
 GOLDEN_TWO_ALERTS_MIXED_LEVEL = (
-    "E5: N18 D18/18 R- PR- W- G- TH:- TH+:- !TH:H@14 W:M@14"
+    "E5: N18 D18/18 R- PR- W- G- TH:- TH+:- !TS:H@14 WG:M@14"
 )
 
 
@@ -613,4 +620,35 @@ def test_characterization_two_alerts_mixed_level_survives_extraction():
         "Trip-SMS-Warn-Block hat sich veraendert -- Regressionsanker fuer die "
         "Extraktion (#1332) gebrochen.\n"
         f"  erwartet: {GOLDEN_TWO_ALERTS_MIXED_LEVEL!r}\n  erhalten: {sms!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# #1430 AC-4 / AC-8 — Lawinenwarnung (MeteoAlarm Typ 9) im !-Warn-Block
+# ---------------------------------------------------------------------------
+def _lawinen_alert_aus_aufzeichnung() -> OfficialAlert:
+    """Echte aufgezeichnete CAP-Datei (Typ 9, Stufe 3) durch die echte
+    Eingangsfunktion -- kein von Hand gebauter Alert."""
+    from pathlib import Path
+
+    from services.official_alerts.meteoalarm import _extract_alerts_from_cap
+
+    cap = (Path(__file__).resolve().parent.parent / "fixtures" / "meteoalarm"
+           / "cap_avalanche_plus_heat.xml").read_text(encoding="utf-8")
+    lawinen = [a for a in _extract_alerts_from_cap(cap) if a.hazard == "avalanche"]
+    assert lawinen, "Fixture liefert keine avalanche-Warnung (Mapper kennt Typ 9 nicht)"
+    return lawinen[0]
+
+
+def test_1430_ac4_lawinenwarnung_steht_als_aw_im_warn_block():
+    alert = _lawinen_alert_aus_aufzeichnung()
+    sms = _sms([alert])
+    assert "!AW:M" in sms, f"Lawinenwarnung Stufe 3 muss '!AW:M' ergeben: {sms!r}"
+
+
+def test_1430_ac8_schnee_steht_vor_lawine_bei_gleicher_stufe():
+    sms = _sms([_alert("avalanche", 3), _alert("snow", 3)])
+    assert "SN:M" in sms and "AW:M" in sms, f"beide Warnungen erwartet: {sms!r}"
+    assert sms.index("SN:M") < sms.index("AW:M"), (
+        f"Schnee muss vor Lawine stehen (Katalog-Reihenfolge): {sms!r}"
     )

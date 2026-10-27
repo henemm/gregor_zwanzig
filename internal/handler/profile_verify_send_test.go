@@ -63,7 +63,7 @@ func TestUpdateProfileHandler_MailToChangeCreatesVerificationToken_AC1(t *testin
 	// Sendezweig überhaupt betritt; der Wert selbst ist irrelevant, da
 	// sendVerificationMailFn den echten Dial ersetzt.
 	cfg := config.Config{PublicHost: "https://gregor20.henemm.com", SMTPHost: "smtp.resend.com", SMTPPort: 587, SMTPUser: "resend", SMTPPass: "re_x"}
-	h := UpdateProfileHandler(s, cfg)
+	h := UpdateProfileHandler(s, cfg, weitMailLimiter, weitSmsLimiter)
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(`{"mail_to":"neu@x.de"}`))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "vera"))
 	w := httptest.NewRecorder()
@@ -100,7 +100,7 @@ func TestUpdateProfileHandler_NoOpUpdateCreatesNoVerificationToken_AC2(t *testin
 	seedVerifyUser(t, dir, "wade", `{"id":"wade","mail_to":"wade@x.de"}`)
 
 	cfg := config.Config{PublicHost: "https://gregor20.henemm.com", SMTPHost: "127.0.0.1", SMTPPort: 1, SMTPUser: "u", SMTPPass: "p"}
-	h := UpdateProfileHandler(s, cfg)
+	h := UpdateProfileHandler(s, cfg, weitMailLimiter, weitSmsLimiter)
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(`{"mail_to":"wade@x.de"}`))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "wade"))
 	w := httptest.NewRecorder()
@@ -125,7 +125,7 @@ func TestUpdateProfileHandler_ReservedDomainDoesNotCrashHandler_AC3(t *testing.T
 	seedVerifyUser(t, dir, "xena", `{"id":"xena","mail_to":"alt@x.de"}`)
 
 	cfg := config.Config{PublicHost: "https://gregor20.henemm.com", SMTPHost: "smtp.resend.com", SMTPPort: 587, SMTPUser: "resend", SMTPPass: "re_x"}
-	h := UpdateProfileHandler(s, cfg)
+	h := UpdateProfileHandler(s, cfg, weitMailLimiter, weitSmsLimiter)
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(`{"mail_to":"foo@example.com"}`))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "xena"))
 	w := httptest.NewRecorder()
@@ -136,14 +136,15 @@ func TestUpdateProfileHandler_ReservedDomainDoesNotCrashHandler_AC3(t *testing.T
 	}
 }
 
-// AC-6: ein Test-User (IsTestUser==true) mit NUR SMTPHost konfiguriert
-// (kein GoogleSMTPHost) darf NICHT über den Resend-Sonderpfad versendet
-// werden — der Handler muss synchron "Google SMTP not configured" loggen und
+// AC-6: ein Test-User (IsTestUser==true, Issue #2152: ueber das Profilfeld
+// is_test_user, nicht den Namen) mit NUR SMTPHost konfiguriert (kein
+// GoogleSMTPHost) darf NICHT über den Resend-Sonderpfad versendet werden —
+// der Handler muss synchron "Google SMTP not configured" loggen und
 // abbrechen, statt auf cfg.SMTPHost auszuweichen.
 func TestUpdateProfileHandler_TestUserUsesGoogleSMTPNotResend_AC6(t *testing.T) {
 	s := newTestStore(t)
 	dir := filepath.Join(s.DataDir, "users", "test-yara")
-	seedVerifyUser(t, dir, "test-yara", `{"id":"test-yara","mail_to":"alt@x.de"}`)
+	seedVerifyUser(t, dir, "test-yara", `{"id":"test-yara","mail_to":"alt@x.de","is_test_user":true}`)
 
 	var logBuf bytes.Buffer
 	log.SetOutput(&logBuf)
@@ -154,7 +155,7 @@ func TestUpdateProfileHandler_TestUserUsesGoogleSMTPNotResend_AC6(t *testing.T) 
 		SMTPHost:   "smtp.resend.com", SMTPPort: 587, SMTPUser: "resend", SMTPPass: "re_x",
 		// GoogleSMTPHost bewusst leer
 	}
-	h := UpdateProfileHandler(s, cfg)
+	h := UpdateProfileHandler(s, cfg, weitMailLimiter, weitSmsLimiter)
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(`{"mail_to":"neu-yara@x.de"}`))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "test-yara"))
 	w := httptest.NewRecorder()
@@ -179,7 +180,7 @@ func TestUpdateProfileHandler_TokenIsolatedPerUser_AC8(t *testing.T) {
 	seedVerifyUser(t, dirB, "bob-b", `{"id":"bob-b","mail_to":"bob-old@x.de"}`)
 
 	cfg := config.Config{PublicHost: "https://gregor20.henemm.com", SMTPHost: "127.0.0.1", SMTPPort: 1, SMTPUser: "u", SMTPPass: "p"}
-	h := UpdateProfileHandler(s, cfg)
+	h := UpdateProfileHandler(s, cfg, weitMailLimiter, weitSmsLimiter)
 
 	for _, tc := range []struct{ userId, body string }{
 		{"alice-a", `{"mail_to":"alice-new@x.de"}`},
@@ -218,7 +219,7 @@ func TestUpdateProfileHandler_TokenExpiresIn24Hours_AC9(t *testing.T) {
 	seedVerifyUser(t, dir, "zack", `{"id":"zack","mail_to":"alt@x.de"}`)
 
 	cfg := config.Config{PublicHost: "https://gregor20.henemm.com", SMTPHost: "127.0.0.1", SMTPPort: 1, SMTPUser: "u", SMTPPass: "p"}
-	h := UpdateProfileHandler(s, cfg)
+	h := UpdateProfileHandler(s, cfg, weitMailLimiter, weitSmsLimiter)
 	before := time.Now()
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(`{"mail_to":"zack-neu@x.de"}`))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "zack"))

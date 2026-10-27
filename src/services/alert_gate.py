@@ -99,9 +99,32 @@ class GateResult(NamedTuple):
 
     allowed: bool
     reason: Optional[str] = None
+    # Issue #2018: additiv, defaultet. `True` = die Meldung geht raus, aber
+    # als NACHTRAG zu einer bereits zugestellten AMTLICHEN Warnung, statt als
+    # zweiter voller Alarm -- ausschliesslich fuer eine Zustellung, die
+    # ohnehin stattgefunden haette (s. `check_event_identity_gate`).
+    # `allowed` bleibt "geht raus oder nicht"; bestehende
+    # `if not gate.allowed`-Zweige sind unveraendert (Muster
+    # `AlertMessage.reference_at`, #1916).
+    is_addendum: bool = False
+    addendum_source: Optional[str] = None       # "official" | "deviation" erreichbar (Issue #2050 S4c)
+    addendum_reported_at: Optional[datetime] = None
 
 
 _ALLOWED = GateResult(True, None)
+
+# Ersatz-Zeitpunkt fuer Kandidaten ohne (parsbares) `reported_at` -- sie
+# verlieren den Gleichstands-Vergleich, statt ihn zum Absturz zu bringen.
+_MIN_TS = datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _entry_source(entry: dict) -> str:
+    """Quelle eines Registereintrags. Alt-Eintraege (vor #2018) tragen kein
+    `"source"`-Feld -- ihre Quelle steckt fail-soft in der Anwesenheit der
+    Zeitfelder: Nowcast setzt NUR `point_at`, amtlich NUR `window_*`. Dieselbe
+    Ableitung wie beim Schreiben (`record_event_identity`), damit ein Eintrag
+    seine Quellen-Zuordnung nie durch sein Alter verliert (AC-A2)."""
+    return entry.get("source") or ("nowcast" if entry.get("point_at") else "official")
 
 
 def _resolve_store(user_id: str, throttle_store: Optional[ThrottleStore]) -> ThrottleStore:
@@ -307,8 +330,8 @@ def check_briefing_imminent(
     Sperrzeit (`ThrottleStore`), kein Tageszaehler, kein `alert_log`-Eintrag —
     dieselbe Eigenschaft, die #1233 fuer die Ruhezeit-Unterdrueckung
     zusichert. Und insbesondere kein Verbrauch von `report_config.skip_next`:
-    `briefing_due_at` MUSS seiteneffektfrei sein (der Trip-Sammellauf
-    `_get_active_trips()` ist es NICHT, er konsumiert `skip_next` per
+    `briefing_due_at` MUSS seiteneffektfrei sein (der Trip-Sammellauf ist es
+    NICHT, `_skip_next_verbrauchen()` konsumiert `skip_next` per
     Read-Modify-Write mit `save_trip()`).
 
     Args:
@@ -368,13 +391,135 @@ def record_nowcast_sent(
     now: datetime,
     zone: ZoneInfo,
     throttle_store: Optional[ThrottleStore] = None,
+    precip_mm: Optional[float] = None,
+    urgency: Optional[str] = None,
+    is_escalation_breakthrough: bool = False,
 ) -> None:
     """Tageszaehler und Sperrzeit buchen — NUR nach erfolgreicher Zustellung.
     #1726: `zone` ist PFLICHT; wer hier eine andere uebergibt als
     `check_nowcast_gate()`, fuellt einen anderen Zaehler als den geprueften.
+
+    Issue #2065: `precip_mm` ist die gemeldete Menge und wird zur
+    Vergleichsbasis der naechsten Ueberholungspruefung
+    (`radar_overtakes_cooldown`). Sie wird — wie die Sperrzeit selbst —
+    ausschliesslich NACH erfolgreicher Zustellung fortgeschrieben
+    (F001-Symmetrie); wer sie weglaesst, hinterlaesst keine Basis.
+
+    Issue #2050 S3b: `urgency` und `is_escalation_breakthrough` gehen
+    unveraendert an `alert_daily_limit.increment()` durch — exakt das Muster,
+    mit dem #2065 hier `precip_mm` ergaenzt hat. Auch sie werden
+    ausschliesslich NACH erfolgreicher Zustellung fortgeschrieben: eine
+    gescheiterte Zustellung darf weder die hoechste Stufe des Tages heben noch
+    den einen Durchbruch verbrauchen.
     """
-    alert_daily_limit.increment(user_id, now, zone)
-    _resolve_store(user_id, throttle_store).record(throttle_scope, throttle_key, now)
+    alert_daily_limit.increment(
+        user_id, now, zone,
+        urgency=urgency, is_escalation_breakthrough=is_escalation_breakthrough,
+    )
+    # Issue #2261 (A-1, AC-5): die Dringlichkeit reist in den Sperr-Eintrag
+    # mit — Vergleichsbasis der Gewitter-Ausnahme an der Sperrzeit. Das Feld
+    # existiert im Eintragsformat bereits (#2050 S3c), kein Schemawechsel.
+    _resolve_store(user_id, throttle_store).record(
+        throttle_scope, throttle_key, now, precip_mm=precip_mm, urgency=urgency,
+    )
+
+
+# Issue #2065: Definition von "deutlich schlimmer" fuer die Sperrzeit-
+# Ueberholung. Muster identisch zur PO-freigegebenen Briefing-Ueberholung
+# (`trip_alert.py`, F008/#2020), aber mit EIGENEN Konstanten: die
+# Vergleichsbasis ist eine andere (zuletzt GEMELDETE Menge statt
+# Briefing-Ankuendigung), beide Regler sind deshalb eigenstaendig nachziehbar.
+_COOLDOWN_OVERTAKE_FACTOR = 2.0
+_COOLDOWN_OVERTAKE_MIN_ABSOLUTE_MM = 2.0
+
+
+def radar_overtakes_cooldown(
+    *, basis_mm: Optional[float], menge_mm: Optional[float],
+) -> bool:
+    """Ueberholt diese Lage die laufende Sperrzeit? (Issue #2065)
+
+    UND-verknuepft: die Menge muss das `_COOLDOWN_OVERTAKE_FACTOR`-fache der
+    zuletzt gemeldeten Menge erreichen UND fuer sich genommen ueber
+    `_COOLDOWN_OVERTAKE_MIN_ABSOLUTE_MM` liegen. Ohne die absolute
+    Untergrenze verdoppelte sich auch ein Nieselregen "deutlich".
+
+    Fehlt die Vergleichsbasis (kein gespeicherter Wert — z.B. Sperre vom
+    Kurzfristhinweis im Briefing gebucht), gibt es keinen Durchbruch: ein
+    Durchbruch ohne Nachweis waere die gefaehrlichere Fehlerrichtung
+    (Alarmflut), die Stille hier die konservative.
+
+    🔴 Bewusst NICHT in `check_nowcast_gate()`: der Vergleich lebt im
+    Trip-Pfad. Der geteilte Baustein bliebe sonst nicht in Signatur UND
+    Verhalten unveraendert und der PO-zurueckgestellte Ortsvergleich bekaeme
+    die Ausnahme still mit.
+    """
+    if basis_mm is None or menge_mm is None:
+        return False
+    return (
+        menge_mm >= basis_mm * _COOLDOWN_OVERTAKE_FACTOR
+        and menge_mm >= _COOLDOWN_OVERTAKE_MIN_ABSOLUTE_MM
+    )
+
+
+def last_nowcast_precip_mm(
+    *,
+    user_id: str,
+    throttle_scope: str,
+    throttle_key: str,
+    throttle_store: Optional[ThrottleStore] = None,
+) -> Optional[float]:
+    """Die zuletzt gemeldete Menge zu dieser Sperre — die Vergleichsbasis der
+    Ueberholungspruefung (Issue #2065). `None`, wenn der Eintrag aus dem
+    Alt-Format stammt oder ohne Mengenangabe gebucht wurde."""
+    _, precip_mm = _resolve_store(user_id, throttle_store).last_sent_with_precip(
+        throttle_scope, throttle_key,
+    )
+    return precip_mm
+
+
+def deviation_overtakes_cooldown(
+    *, basis_urgency: Optional[str], urgency: str,
+) -> bool:
+    """Ueberholt diese Lage die laufende Sperrzeit? — Abweichungs-Zweig
+    (Issue #2050 S3c)
+
+    Schwester von `radar_overtakes_cooldown()`, gleiche Grundform (fehlende
+    Vergleichsbasis ⇒ kein Durchbruch), andere Vergleichsformel: ein ordinaler
+    RANGSPRUNG auf der bestehenden LOW/MODERATE/HIGH-Skala statt eines
+    Faktors. Der Radar-Zweig vergleicht EINE physikalische Menge (mm/h), der
+    Abweichungs-Zweig traegt potenziell mehrere heterogene Metriken (°C, km/h,
+    mm) gleichzeitig — ein gemeinsamer Faktor ist auf ihnen nicht definierbar.
+    `alert_urgency.exceeds` ist dafuer bereits etabliertes Vokabular, kein
+    dritter Eskalationsbegriff.
+
+    Bekannte Grenze, bewusst nicht gefangen: die Skala saettigt bei `HIGH` —
+    eine Lage, die von `HIGH` auf noch schlimmer geht, erzeugt keinen
+    Rangsprung und bricht nicht durch (s. Spec „Known Limitations").
+
+    🔴 Bewusst NICHT in `check_nowcast_gate()` und in keinem anderen geteilten
+    Gate: die Verortungs-Begruendung aus #2065 (s.o.) gilt unveraendert — der
+    PO-zurueckgestellte Ortsvergleich darf die Ausnahme nicht erben.
+    """
+    if basis_urgency is None:
+        return False
+    return alert_urgency.exceeds(urgency, basis_urgency)
+
+
+def last_deviation_urgency(
+    *,
+    user_id: str,
+    throttle_scope: str,
+    throttle_key: str,
+    throttle_store: Optional[ThrottleStore] = None,
+) -> Optional[str]:
+    """Die Dringlichkeit, mit der die laufende Sperre gebucht wurde — die
+    Vergleichsbasis der Ueberholungspruefung (Issue #2050 S3c). `None`, wenn
+    der Eintrag aus dem Alt-Format stammt oder ohne Dringlichkeit gebucht
+    wurde (amtlicher Zweig, `trip_alert.py:2480`)."""
+    _, urgency = _resolve_store(user_id, throttle_store).last_sent_with_urgency(
+        throttle_scope, throttle_key,
+    )
+    return urgency
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -401,21 +546,44 @@ def record_nowcast_sent(
 HAZARD_CLASS_WET = "wet"
 _WET_HAZARDS = frozenset({"thunderstorm", "flood", "rain"})
 
+# Issue #2050 S4c: dritter Auflösungsweg — der Abweichungs-Zweig kennt weder
+# `is_convective` noch `hazard`, sondern eine Liste von Metrik-Schlüsseln.
+# EIGENER Kanon, NICHT identisch mit `_WET_HAZARDS` (das sind amtliche
+# Hazard-STRINGS, ein anderer Namensraum). Schnee-Metriken gehören
+# ausdrücklich NICHT dazu (AC-7) — physikalisch Niederschlag, aber außerhalb
+# des T2-Kanons.
+_WET_METRICS = frozenset({
+    "precip_sum_mm", "precip_heavy_onset_utc", "thunder_level_max",
+    "thunder_onset_utc",
+})
+
 
 def resolve_hazard_class(
     *, is_convective: Optional[bool] = None, hazard: Optional[str] = None,
+    metrics: Optional[Iterable[str]] = None,
 ) -> Optional[str]:
     """T2-Kanon. Genau EIN Identifikationsweg pro Aufrufer: Nowcast liefert
-    `is_convective`, amtlich liefert `hazard`. Unbekannter/anderer Hazard
-    -> None (keine Klasse, nie entdoppelt, AC-4).
+    `is_convective`, amtlich liefert `hazard`, der Abweichungs-Zweig liefert
+    `metrics` (Issue #2050 S4c). Unbekannter/anderer Hazard bzw. Metrik-Mix
+    -> None (keine Klasse, nie entdoppelt, AC-4/AC-7).
 
     Ein Nowcast ist IMMER Niederschlag — `is_convective` unterscheidet nur
     die Erscheinungsform derselben Zelle, nicht das Ereignis (PO-Entscheid
-    2026-08-16, Messung s. Spec Implementation Details T2, AC-4b)."""
+    2026-08-16, Messung s. Spec Implementation Details T2, AC-4b).
+
+    `metrics` ist nur dann `wet` (Entscheidung 1, Spec Implementation Details
+    Punkt 1), wenn die Liste NICHT leer ist UND JEDE Metrik zum
+    `_WET_METRICS`-Kanon gehört — ein einziger Anteil außerhalb des Kanons
+    (z.B. eine Schnee- oder Windböen-Metrik) macht die Klasse `None` (AC-7).
+    Eine leere Liste liefert ebenfalls `None` (`all([])` wäre sonst `True`)."""
     if is_convective is not None:
         return HAZARD_CLASS_WET
     if hazard in _WET_HAZARDS:
         return HAZARD_CLASS_WET
+    if metrics is not None:
+        metrics_list = list(metrics)
+        if metrics_list and all(m in _WET_METRICS for m in metrics_list):
+            return HAZARD_CLASS_WET
     return None
 
 
@@ -504,11 +672,19 @@ def _find_matching_entry(
     nie zum Absturz -- die naechsten Kandidaten werden trotzdem geprueft.
 
     AC-5 (Bruchstelle): eine leere Segment-Menge -- auf der neuen ODER der
-    registrierten Seite -- erzeugt NIE ein Match."""
+    registrierten Seite -- erzeugt NIE ein Match.
+
+    Issue #2018 (AC-A10): gesammelt werden ALLE gueltigen Kandidaten, geliefert
+    wird der STAERKSTE (hoechste Dringlichkeit, bei Gleichstand der zuletzt
+    gemeldete) -- nicht mehr der erstbeste. Der Nachtrag zitiert einen
+    KONKRETEN Eintrag (Quelle + Uhrzeit im Text); ein zufaellig erstbester
+    Treffer wuerde einen schwaecheren Bezug nennen. Vorbild
+    `official_alerts.py::_pick_strongest`."""
     new_segments = {s for s in (segment_ids or []) if s}
     if not new_segments:
         return None
 
+    candidates: list[dict] = []
     prefix = f"event_identity:{hazard_class}:"
     for key, entry in state.items():
         if not isinstance(key, str) or not key.startswith(prefix):
@@ -533,12 +709,38 @@ def _find_matching_entry(
             covered_until = _covered_until(entry_point_at, entry_window_end)
             if covered_until is None:
                 continue
-            return {"severity": severity, "covered_until": covered_until}
+            candidates.append({
+                "severity": severity,
+                "covered_until": covered_until,
+                # Issue #2018: Quelle und Meldezeitpunkt tragen den Bezug des
+                # Nachtrags. `reported_at` ist fail-soft `None`, wenn das Feld
+                # fehlt oder unparsbar ist -- das verhindert das Match NICHT,
+                # laesst aber die Uhrzeit im Nachtragstext entfallen.
+                "source": _entry_source(entry),
+                "reported_at": _parse_event_ts(entry.get("reported_at")),
+            })
         except (KeyError, TypeError, ValueError):
             # AC-19: ein kaputter/unbekannter Registereintrag zaehlt fail-soft
-            # als "kein Match" -- nicht als Absturz.
+            # als "kein Match" -- nicht als Absturz. Issue #2018/#1405: der
+            # Ueberspringen-Fall wird protokolliert, damit ein kaputter
+            # Registereintrag nicht still ein Match verhindert -- sonst
+            # ginge wieder ein VOLLER zweiter Alarm raus statt des
+            # gerichteten Nachtrags.
+            logger.warning(
+                "Kaputter Registereintrag beim Auflösen übersprungen "
+                "(Issue #2018/#1405), Schlüssel=%s",
+                key,
+            )
             continue
-    return None
+    if not candidates:
+        return None
+    # Staerkster Treffer ueber die GETEILTE Rangordnung (`highest_urgency`),
+    # keine zweite Rangtabelle (#1481); bei Gleichstand der juengste Eintrag.
+    staerkste = alert_urgency.highest_urgency(*(c["severity"] for c in candidates))
+    return max(
+        (c for c in candidates if c["severity"] == staerkste),
+        key=lambda c: c["reported_at"] or _MIN_TS,
+    )
 
 
 def _covers_materially_more(
@@ -569,6 +771,8 @@ def check_event_identity_gate(
     window_start: Optional[datetime] = None,
     window_end: Optional[datetime] = None,
     cooldown_minutes: Optional[int] = None,
+    quantitative_escalation: bool = False,
+    source: Optional[str] = None,
 ) -> GateResult:
     """Darf diese Meldung raus, oder ist sie ein quellenuebergreifendes
     Duplikat einer bereits gemeldeten Meldung (Issue #1467 Scheibe S4b-1)?
@@ -590,7 +794,22 @@ def check_event_identity_gate(
     Verschaerfung (hoehere Dringlichkeit) muss IMMER durchkommen, auch wenn
     ihr Zeitfenster das bereits abgedeckte NICHT wesentlich erweitert
     (AC-10) -- das ist die Absicherung gegen die gefaehrlichste
-    Fehlerrichtung "Alarm bleibt aus"."""
+    Fehlerrichtung "Alarm bleibt aus".
+
+    Issue #2065: `quantitative_escalation` ist eine bereits vom Aufrufer
+    getroffene MENGEN-Feststellung, ODER-verknuepft mit der bestehenden
+    Stufenpruefung. Notwendig, weil die dreistufige Skala
+    LOW/MODERATE/HIGH bei 4 mm/h saettigt: eine Verdreifachung von 11 auf
+    30 mm/h ist zweimal `HIGH`, `exceeds("HIGH","HIGH")` also False — die
+    Verschaerfung ist an dieser Stelle strukturell unsichtbar. Vorbelegt mit
+    `False`: kein Bestandsaufrufer aendert sein Verhalten.
+
+    Issue #2050 S4c: `source` ist additiv. Radar und amtlich lassen ihn
+    unveraendert weg -- der Fallback (Ableitung aus der Anwesenheit von
+    `point_at`) bleibt fuer sie identisch (AC-12). Der Abweichungs-Zweig
+    uebergibt IMMER `source="deviation"` explizit (AC-11), sonst laese ihn die
+    alte Ableitung -- er traegt ein Zeitintervall wie ein amtlicher Eintrag --
+    faelschlich als `"official"`."""
     if hazard_class is None:
         return _ALLOWED
 
@@ -602,12 +821,39 @@ def check_event_identity_gate(
     if match is None:
         return _ALLOWED
 
-    if alert_urgency.exceeds(severity, match["severity"]):
-        return _ALLOWED  # V2 — struktureller erster Zweig, bricht IMMER durch
+    # Issue #2018: die Richtung entscheidet ausschliesslich ueber die FORM der
+    # Zustellung, nie ueber ihr Ob. Nur "amtlich/Abweichung zuerst, Nowcast
+    # danach" kennt den dritten Ausgang -- die Gegenrichtung ist eigenstaendig
+    # ueber #1467 S4b PO-freigegeben und bleibt hier unangetastet.
+    new_source = source if source is not None else (
+        "nowcast" if point_at is not None else "official"
+    )
+    # Issue #2050 S4c: der Δ-Zweig ist jetzt ein zweiter moeglicher Vorgaenger
+    # eines Nachtrags (bisher nur "official") -- Spec Implementation Details
+    # Punkt 6.
+    addendum_direction = (
+        match["source"] in ("official", "deviation") and new_source == "nowcast"
+    )
+
+    if quantitative_escalation or alert_urgency.exceeds(severity, match["severity"]):
+        # V2 — struktureller erster Zweig, bricht IMMER durch. In der
+        # Nachtrags-Richtung geht DIESELBE Zustellung raus, nur als Nachtrag
+        # statt als zweiter voller Alarm (AC-A1); sonst unveraendert.
+        if addendum_direction:
+            return GateResult(
+                True, None, is_addendum=True,
+                addendum_source=match["source"],
+                addendum_reported_at=match["reported_at"],
+            )
+        return _ALLOWED
 
     if _covers_materially_more(match["covered_until"], point_at, window_end):
-        return _ALLOWED  # V1-Ausnahme
+        # V1-Ausnahme — quellenunabhaengig und weiterhin VOLLER Alarm (AC-A7):
+        # wesentlich neue Zeitabdeckung ist neue Information, kein Nachtrag.
+        return _ALLOWED
 
+    # Unveraendert Stille (AC-A8): aus Stille wird nie ein Nachtrag -- der
+    # PO-Entscheid aendert die Form einer ohnehin stattfindenden Zustellung.
     logger.debug(
         "Ereignis-Identitaet unterdrueckt (%s) fuer %s/%s", hazard_class,
         entity_id, user_id,
@@ -626,6 +872,7 @@ def record_event_identity(
     point_at: Optional[datetime] = None,
     window_start: Optional[datetime] = None,
     window_end: Optional[datetime] = None,
+    source: Optional[str] = None,
 ) -> None:
     """Legt GENAU EINEN Registereintrag an (AC-2) -- AUSSCHLIESSLICH nach
     erfolgreicher Zustellung aufzurufen (F001-Symmetrie zu
@@ -636,7 +883,14 @@ def record_event_identity(
 
     Registerschluessel `event_identity:<hazard_class>:<segment_ids>:<now>`
     (analog `_identity_hazard_prefix()` in `official_alerts.py`) -- eindeutig
-    je Meldung, damit spaetere Registrierungen einander nicht ueberschreiben."""
+    je Meldung, damit spaetere Registrierungen einander nicht ueberschreiben.
+
+    Issue #2050 S4c: `source` ist additiv (AC-11/AC-12). Radar und amtlich
+    lassen ihn weiterhin weg -- der Fallback (Ableitung aus der Anwesenheit
+    von `point_at`) bleibt fuer sie identisch, die Signatur bricht fuer sie
+    nicht. Der Abweichungs-Zweig traegt ein Zeitintervall wie ein amtlicher
+    Eintrag und uebergibt deshalb IMMER `source="deviation"` explizit --
+    sonst wuerde die alte Ableitung ihn faelschlich als `"official"` lesen."""
     segments = sorted({s for s in (segment_ids or []) if s})
     key = f"event_identity:{hazard_class}:{','.join(segments)}:{now.isoformat()}"
 
@@ -646,6 +900,12 @@ def record_event_identity(
         "hazard_class": hazard_class,
         "segment_ids": segments,
         "severity": severity,
+        # Issue #2018 (AC-A2) / #2050 S4c: expliziter Quellenvermerk, sonst
+        # (Radar/amtlich, additiv unveraendert) dieselbe Fallunterscheidung
+        # wie T2/T4 -- Nowcast setzt NUR `point_at`, amtlich NUR `window_*`.
+        "source": source if source is not None else (
+            "nowcast" if point_at is not None else "official"
+        ),
         "point_at": point_at.isoformat() if point_at is not None else None,
         "window_start": window_start.isoformat() if window_start is not None else None,
         "window_end": window_end.isoformat() if window_end is not None else None,

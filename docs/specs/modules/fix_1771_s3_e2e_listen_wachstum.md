@@ -3,7 +3,7 @@ entity_id: fix_1771_s3_e2e_listen_wachstum
 type: feature
 created: 2026-08-14
 updated: 2026-08-14
-status: draft
+status: implemented
 workflow: fix-1771-s3-e2e-listen-wachstum
 tags: [testing, e2e, playwright, ci, infrastructure]
 ---

@@ -1,3 +1,10 @@
+---
+entity_id: fix_1224_remove_daylight_toggle
+type: fast
+created: 2026-07-22
+status: implemented
+---
+
 # Mini-Spec: #1224 — toten „Tageslicht anzeigen"-Toggle entfernen
 
 - **Status:** Draft
@@ -44,10 +51,10 @@ Schalter bleibt aber in UI + Modell und der Scheduler berechnet bei
   kein `daylight`-Parameter-Pfad) und die Mail-Ausgabe ist unverändert.
 - **AC-2:** Given der Report-Config-Editor im Frontend, When er geöffnet wird, Then
   erscheint KEIN „Tageslicht anzeigen"-Toggle mehr.
-- **AC-3 (kein Datenverlust):** Given ein bestehendes Trip-JSON mit
+- **AC-3:** (kein Datenverlust) Given ein bestehendes Trip-JSON mit
   `report_config.show_daylight`, When es geladen wird, Then lädt es ohne Fehler
   (Alt-Feld toleriert), keine anderen Felder gehen verloren.
-- **AC-4 (Test):** Given der Fix, Then belegt ein Test AC-1 (kein Tageslicht-Pfad,
+- **AC-4:** (Test) Given der Fix, Then belegt ein Test AC-1 (kein Tageslicht-Pfad,
   Mail unverändert) und der #1208-Resolver-Vertragstest bleibt grün; Frontend-Test
   belegt das Fehlen des Toggles.
 

@@ -3,7 +3,7 @@ entity_id: fix_1756_send_idempotenz_lock
 type: module
 created: 2026-08-14
 updated: 2026-08-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, scheduler, mandantenfaehigkeit]
 ---
@@ -190,7 +190,7 @@ unverändert gegenüber dem bestehenden Verhalten.
 - **AC-8:** Given der Go-Proxy-Handler `SendTripReportProxyHandler` / When der Python-Upstream länger als die bisherigen 120s, aber innerhalb von 300s antwortet / Then liefert der Go-Proxy die tatsächliche Antwort (inkl. 409-Fälle unverändert durchgereicht) statt eines generischen 502 "upstream unreachable".
   - Test: Go-Test gegen `SendTripReportProxyHandler` mit einem simulierten Upstream, der z. B. nach 150s antwortet (oder Timeout-Konstante direkt inspiziert `client.Timeout == 300*time.Second`); zusätzlicher Test bestätigt, dass ein vom Upstream gelieferter 409-Statuscode unverändert im Response-StatusCode ankommt.
 
-- **AC-9 (Nachtrag Adversary-Runde, 2026-08-14):** Given der SMS-Inbound-Pfad "heute"/"morgen" löst über `send_on_demand_report()` einen Kollisionsfall aus (`outcome="already_in_progress"`, s. AC-6) / When `_on_demand_failure_body()` in `src/services/trip_command_processor.py` diesen Outcome in SMS-Antworttext übersetzt / Then liefert die Funktion einen Text, der den Kollisionsfall benennt (z. B. "Versand läuft bereits — bitte kurz warten"), NICHT den bestehenden `no_stage`-Fallback-Text ("Keine Etappe geplant"), der fachlich falsch wäre.
+- **AC-9:** (Nachtrag Adversary-Runde, 2026-08-14) Given der SMS-Inbound-Pfad "heute"/"morgen" löst über `send_on_demand_report()` einen Kollisionsfall aus (`outcome="already_in_progress"`, s. AC-6) / When `_on_demand_failure_body()` in `src/services/trip_command_processor.py` diesen Outcome in SMS-Antworttext übersetzt / Then liefert die Funktion einen Text, der den Kollisionsfall benennt (z. B. "Versand läuft bereits — bitte kurz warten"), NICHT den bestehenden `no_stage`-Fallback-Text ("Keine Etappe geplant"), der fachlich falsch wäre.
   - Test: Direkter Unit-Test von `_on_demand_failure_body("already_in_progress", label, target_date)` (mock-frei, reine Mapping-Funktion, Muster: `tests/tdd/test_issue_1007_heute_voll_briefing.py`), prüft den zurückgegebenen Text auf Unterscheidbarkeit vom `no_stage`-Text.
 
 ## Known Limitations

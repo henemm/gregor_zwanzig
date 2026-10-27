@@ -138,8 +138,9 @@ class TestAC8ManualTestSendUnaffected:
         trip_id = "ac8-paused-trip"
         marker = uuid.uuid4().hex[:8]
         get_data_dir(_USER_AC8).mkdir(parents=True, exist_ok=True)
+        # Issue #2152: Testkonto-Status ueber das Profilfeld (Test-SMTP statt Resend).
         (get_data_dir(_USER_AC8) / "user.json").write_text(
-            json.dumps({"mail_to": "gregor-test@henemm.com"})
+            json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True})
         )
         trip = _make_trip(trip_id, TripReportConfig(trip_id=trip_id, send_email=True))
         trip.name = f"AC8 [{marker}]"
@@ -150,7 +151,7 @@ class TestAC8ManualTestSendUnaffected:
         if not settings.can_send_email():
             pytest.skip("SMTP für tdd-995-ac8 nicht konfiguriert")
 
-        loaded = load_trip(get_briefings_dir(_USER_AC8) / f"{trip_id}.json")
+        loaded = load_trip(get_briefings_dir(_USER_AC8) / f"{trip_id}.json", user_id="default")
         sent = TripReportSchedulerService(user_id=_USER_AC8).send_test_report(loaded, "morning")
         assert sent is True, "Contract: Test-Versand muss auch für pausierten Trip funktionieren"
 
@@ -191,6 +192,7 @@ class TestAC9AlertDispatchUnaffected:
         from services.trip_alert import TripAlertService
         from services.radar_service import RadarNowcastService
         from providers.brightsky import RadarFrame
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         trip_id = "ac9-paused-trip"
         now = datetime.now(timezone.utc)
@@ -233,8 +235,13 @@ class TestAC9AlertDispatchUnaffected:
             ]
 
         captured: list[str] = []
+        # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+        # settings= baut TripAlertService Settings() aus der Umgebung, und
+        # can_send_email() ist nur mit Host-.env True -- auf dem CI-Runner
+        # lief der Versand in "kein Alert-Kanal konfiguriert". Dummy-SMTP
+        # (settings_email_only) + mail_sink (DI-Naht) ersetzen den Versand.
         svc = TripAlertService(
-            throttle_hours=2, user_id=_USER_AC9,
+            throttle_hours=2, user_id=_USER_AC9, settings=settings_email_only(),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=lambda subject, body: captured.append(subject),
         )
@@ -267,10 +274,10 @@ class TestAC10ReadModifyWritePreservesFields:
                           threshold=-5.0, severity=AlertSeverity.INFO, enabled=False),
             ]
             save_trip(trip, user_id=uid)
-            before = load_trip(get_briefings_dir(uid) / f"{trip_id}.json")
+            before = load_trip(get_briefings_dir(uid) / f"{trip_id}.json", user_id="default")
 
             _set_paused_at(uid, trip_id, "2026-07-03T08:00:00+00:00")
-            after = load_trip(get_briefings_dir(uid) / f"{trip_id}.json")
+            after = load_trip(get_briefings_dir(uid) / f"{trip_id}.json", user_id="default")
 
             assert getattr(after, "paused_at", None) == "2026-07-03T08:00:00+00:00", (
                 f"AC-10 ({uid}): paused_at wird beim Laden nicht durchgereicht "

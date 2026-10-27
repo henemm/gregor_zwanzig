@@ -37,15 +37,22 @@ def test_ac11_briefing_anker_datei_bleibt_unberuehrt_von_rollierenden_schreibvor
     vor_mtime = briefing_pfad.stat().st_mtime_ns
 
     trip = gust_alert_trip(trip_id)
-    svc = TripAlertService(settings=settings_email_only(), user_id=user_id)
-    now = datetime.now(timezone.utc)
+    # Issue #1987 (S1): der rollierende Anker rueckt seither NUR fuer
+    # tatsaechlich ZUGESTELLTE Kanaele vor. Ohne die `mail_sink`-Naht
+    # scheitert der E-Mail-Versand am Egress-Waechter, `delivered_channels`
+    # bliebe leer und der Fixtur-Schutz unten haette nichts zu finden --
+    # kein Mock, dieselbe Transportnaht wie in `test_alert_anchor_day_guard`.
+    svc = TripAlertService(
+        settings=settings_email_only(), user_id=user_id,
+        mail_sink=lambda subject, body: None,
+    )
     ausgeloest = svc.check_and_send_alerts(
         trip, [weather(1, gust_max_kmh=10.0)],
         fresh_weather=[weather(1, gust_max_kmh=150.0)],
     )
 
     assert ausgeloest, "Fixtur-Schutz: der Alarm (Trigger a) muss ausgeloest haben."
-    anker = snap_svc.load_alarm_anchor(trip_id)
+    anker = snap_svc.load_alarm_anchor(trip_id, "email")
     assert anker, "Fixtur-Schutz: der rollierende Anker muss geschrieben worden sein."
     assert briefing_pfad.read_bytes() == vor_inhalt, (
         "AC-11: die Briefing-Anker-Datei darf durch den rollierenden "

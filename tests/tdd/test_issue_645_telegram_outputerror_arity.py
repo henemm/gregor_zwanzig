@@ -19,7 +19,7 @@ import pytest
 
 from app.config import Settings
 from output.channels.base import OutputError
-from output.channels.telegram import TelegramOutput
+from tests.helpers.telegram_empfaenger import antwort_im_update
 
 _INVALID = Settings(
     telegram_bot_token="000000:INVALID-TOKEN-issue-645",
@@ -40,7 +40,7 @@ def test_non_200_raises_outputerror_not_typeerror():
     WHEN: send() aufgerufen wird (echter API-Call → HTTP 404)
     THEN: ein OutputError (KEIN TypeError) wird geworfen
     """
-    output = TelegramOutput(_INVALID)
+    output = antwort_im_update(_INVALID, _INVALID.telegram_chat_id)
 
     # pytest.raises(OutputError) fängt einen TypeError NICHT ab →
     # vor dem Fix schlägt der Test mit dem rohen TypeError fehl (RED).
@@ -64,7 +64,7 @@ def test_non_200_message_contains_status_code():
     Geprüft wird, dass der tatsächliche Code in der Meldung steht — nicht ein
     hart kodierter Wert.
     """
-    output = TelegramOutput(_INVALID)
+    output = antwort_im_update(_INVALID, _INVALID.telegram_chat_id)
 
     with pytest.raises(OutputError) as exc_info:
         output.send("Test #645", "Body")
@@ -94,7 +94,7 @@ def test_http_error_path_raises_clean_outputerror(monkeypatch):
     import output.channels.telegram as telegram_mod
 
     monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", "http://127.0.0.1:1")
-    output = TelegramOutput(_INVALID)
+    output = antwort_im_update(_INVALID, _INVALID.telegram_chat_id)
 
     with pytest.raises(OutputError) as exc_info:
         output.send("Test #645", "Body")

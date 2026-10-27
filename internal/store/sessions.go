@@ -1,0 +1,172 @@
+package store
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/henemm/gregor-api/internal/fsmode"
+)
+
+// Gaesteliste gueltiger Anmeldungen je Nutzer (Issue #2129, ADR-0060).
+//
+// Ablage BEWUSST in einer eigenen Datei data/users/<user_id>/sessions.json,
+// nicht in der user.json. Zwei Gruende: (1) die bestehenden SaveUser-Aufrufer
+// schreiben das GANZE Nutzerobjekt zurueck -- ein gleichzeitiger
+// Profil-Schreiber koennte einen Widerruf sonst schlicht ueberschreiben, und
+// ausgerechnet der Widerruf vertraegt diesen Verlust nicht; (2) es bleibt aus
+// dem model.User-Schema heraus und loest damit nicht bei jeder Anmeldung den
+// Schema-Backup-Hook aus.
+
+// Session ist ein Eintrag der Gaesteliste. Bewusst ein Objekt und kein blanker
+// String: eine spaetere Geraeteuebersicht ("angemeldet auf 3 Geraeten seit
+// ...") soll ohne Formatbruch hineinwachsen koennen.
+type Session struct {
+	ID        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type sessionFile struct {
+	Sessions []Session `json:"sessions"`
+}
+
+// sessionsPath ist die gemeinsame Engstelle aller fuenf Einstiege
+// (LoadSessions, HasSession, AddSession, RemoveSession, ClearSessions) — die
+// Pfad-Traversal-Sperre (Issue #2140) sitzt deshalb HIER einmal statt
+// fuenffach in den Methoden.
+func (s *Store) sessionsPath(userId string) (string, error) {
+	if !ValidUserID(userId) {
+		return "", ErrInvalidUserID
+	}
+	return filepath.Join(s.UserDir(userId), "sessions.json"), nil
+}
+
+// readSessionFile liest die Datei ohne Sperre. Eine FEHLENDE Datei ist der
+// leere Stand, kein Fehler -- Bestandsnutzer haben noch keine, und ein Fehler
+// wuerde sie mit einem Serverfehler statt mit einer Anmeldeaufforderung
+// aussperren.
+func (s *Store) readSessionFile(userId string) (sessionFile, error) {
+	var f sessionFile
+	path, err := s.sessionsPath(userId)
+	if err != nil {
+		return f, err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return f, nil
+		}
+		return f, err
+	}
+	if err := json.Unmarshal(data, &f); err != nil {
+		return sessionFile{}, err
+	}
+	return f, nil
+}
+
+func (s *Store) writeSessionFile(userId string, f sessionFile) error {
+	path, err := s.sessionsPath(userId)
+	if err != nil {
+		return err
+	}
+	dir := s.UserDir(userId)
+	if err := fsmode.MkdirAll(dir); err != nil {
+		return err
+	}
+	if f.Sessions == nil {
+		f.Sessions = []Session{}
+	}
+	data, err := json.MarshalIndent(f, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeFileLogged(path, data)
+}
+
+// LoadSessions liefert die Gaesteliste eines Nutzers (leer, wenn keine da ist).
+func (s *Store) LoadSessions(userId string) ([]Session, error) {
+	unlock := lockSessions(userId)
+	defer unlock()
+	f, err := s.readSessionFile(userId)
+	return f.Sessions, err
+}
+
+// HasSession beantwortet die Frage, an der die gesamte unbefristete Anmeldung
+// haengt: steht diese Anmelde-Kennung noch auf der Gaesteliste?
+//
+// Bei einer pfadunsicheren userId ist die Antwort (false, error), nicht
+// (false, nil) — der Aufrufer soll eine Traversal-Kennung nicht mit einer
+// schlicht abgemeldeten Sitzung verwechseln koennen (Issue #2140).
+func (s *Store) HasSession(userId, sessionId string) (bool, error) {
+	if userId == "" || sessionId == "" {
+		return false, nil
+	}
+	unlock := lockSessions(userId)
+	defer unlock()
+
+	f, err := s.readSessionFile(userId)
+	if err != nil {
+		return false, err
+	}
+	for _, sess := range f.Sessions {
+		if sess.ID == sessionId {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// AddSession traegt eine neue Anmeldung ein. Lesen-Aendern-Schreiben laeuft
+// unter der Pro-Nutzer-Sperre, damit zwei gleichzeitige Anmeldungen desselben
+// Kontos einander nicht verdraengen.
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
+func (s *Store) AddSession(userId, sessionId string) error {
+	unlock := lockSessions(userId)
+	defer unlock()
+
+	f, err := s.readSessionFile(userId)
+	if err != nil {
+		return err
+	}
+	for _, sess := range f.Sessions {
+		if sess.ID == sessionId {
+			return nil
+		}
+	}
+	f.Sessions = append(f.Sessions, Session{ID: sessionId, CreatedAt: time.Now()})
+	return s.writeSessionFile(userId, f)
+}
+
+// RemoveSession entfernt genau eine Anmeldung ("dieses Geraet abmelden").
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
+func (s *Store) RemoveSession(userId, sessionId string) error {
+	unlock := lockSessions(userId)
+	defer unlock()
+
+	f, err := s.readSessionFile(userId)
+	if err != nil {
+		return err
+	}
+	kept := make([]Session, 0, len(f.Sessions))
+	for _, sess := range f.Sessions {
+		if sess.ID != sessionId {
+			kept = append(kept, sess)
+		}
+	}
+	if len(kept) == len(f.Sessions) {
+		return nil
+	}
+	f.Sessions = kept
+	return s.writeSessionFile(userId, f)
+}
+
+// ClearSessions leert die Gaesteliste ("auf allen Geraeten abmelden", ebenso
+// Passwortwechsel und Passwort-Zuruecksetzen).
+// gz-store-scope-exempt: die Kennung kommt als Parameter userId herein, nicht aus s.UserID
+func (s *Store) ClearSessions(userId string) error {
+	unlock := lockSessions(userId)
+	defer unlock()
+
+	return s.writeSessionFile(userId, sessionFile{})
+}

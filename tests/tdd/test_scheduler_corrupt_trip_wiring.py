@@ -41,7 +41,7 @@ def _corrupt_trip(trip_id: str) -> dict:
     """Strukturell defekter Trip: Etappe mit ungueltigem `date`."""
     return {
         "id": trip_id,
-        "name": "Kaputte-Tour",
+        "name": "Kaputte-Trip",
         "kind": "route",
         "stages": [
             {

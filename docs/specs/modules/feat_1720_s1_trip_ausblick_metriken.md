@@ -3,7 +3,7 @@ entity_id: feat_1720_s1_trip_ausblick_metriken
 type: feature
 created: 2026-08-14
 updated: 2026-08-14
-status: approved
+status: implemented
 version: "1.0"
 workflow: feat-1720-vorschau-metriken
 tags: [trip, outlook, ausblick, mail, metrik-katalog, feature, epic-1372, issue-1720]

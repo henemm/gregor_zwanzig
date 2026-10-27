@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import shutil
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -52,8 +53,15 @@ _REMOVED_KEYWORDS = ["CONFIG"]
 # HTML-specific keywords added by #884 design (Antwort-Kommandos 3x2-grid)
 # Issue #1058: CONFIG removed from the HTML block (dead command, never dispatched).
 _HTML_NEW_KEYWORDS = ["PAUSE", "SKIP", "STOP", "STATUS", "HELP"]
-# Keywords removed from the HTML kommandos block by #884 / #1058
-_HTML_REMOVED_KEYWORDS = ["HILFE", "CONFIG"]
+# Keywords removed from the HTML kommandos block by #884 / #1058.
+# Issue #2134: HILFE ist hier RAUS. Der HTML- und der Klartext-Block stammen
+# seitdem aus derselben Quelle (`_COMMAND_SPECS`) und muessen dieselbe
+# Befehlsmenge tragen (AC-11) -- die Klartext-Fussz. nannte HILFE seit jeher.
+# Die #884-Entscheidung "HILFE durch HELP ersetzt" galt nur fuer den HTML-Block
+# und ist damit ueberholt; HELP steht weiter als Alias in der Beschreibung.
+# Das Deutsch-Wort im deutschen Produkt zu verschweigen waere eine
+# Kanal-Abweichung, die AC-11 gerade abschafft.
+_HTML_REMOVED_KEYWORDS = ["CONFIG"]
 
 
 # ---------------------------------------------------------------------------
@@ -134,7 +142,7 @@ def _render_plain() -> str:
 
 def _make_trip(enabled: bool = True) -> Trip:
     """Trip mit Etappen gestern/heute/morgen."""
-    start = date.today() - timedelta(days=1)
+    start = ortstag(42.13, 9.13) - timedelta(days=1)
     stages = []
     for i in range(3):
         stages.append(Stage(
@@ -308,8 +316,9 @@ class TestAC6StatusUpcomingOnly:
         save_trip(_make_trip(), user_id=_USER_A)
         result = TripCommandProcessor().process(_msg("STATUS", _USER_A))
         body = result.confirmation_body or ""
-        assert _today_name() in body, "STATUS muss die heutige Etappe zeigen (AC-6)"
-        assert _yesterday_name() not in body, \
+        # #2441: STATUS nennt die gezaehlte Nummer ("Etappe N"), nicht den Rohnamen
+        assert "Etappe 2" in body, "STATUS muss die heutige Etappe zeigen (AC-6)"
+        assert "Etappe 1" not in body, \
             "STATUS darf vergangene Etappen NICHT mehr listen (AC-6)"
 
 

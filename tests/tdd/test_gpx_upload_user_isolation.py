@@ -82,17 +82,17 @@ def test_upload_landet_im_ordner_des_hochladenden_nutzers(datenbaum):
 
     client = TestClient(app)
 
-    antwort_a = _upload(client, _sample(_SAMPLE_A), "alice-tour.gpx", user_id="alice")
-    antwort_b = _upload(client, _sample(_SAMPLE_B), "bob-tour.gpx", user_id="bob")
+    antwort_a = _upload(client, _sample(_SAMPLE_A), "alice-trip.gpx", user_id="alice")
+    antwort_b = _upload(client, _sample(_SAMPLE_B), "bob-trip.gpx", user_id="bob")
 
     assert antwort_a.status_code == 200, antwort_a.text
     assert antwort_b.status_code == 200, antwort_b.text
 
-    assert _dateien(_gpx_dir("alice")) == {"alice-tour.gpx"}, (
+    assert _dateien(_gpx_dir("alice")) == {"alice-trip.gpx"}, (
         f"alice-Ordner {_gpx_dir('alice')} enthaelt "
         f"{_dateien(_gpx_dir('alice'))} statt nur die eigene Datei"
     )
-    assert _dateien(_gpx_dir("bob")) == {"bob-tour.gpx"}, (
+    assert _dateien(_gpx_dir("bob")) == {"bob-trip.gpx"}, (
         f"bob-Ordner {_gpx_dir('bob')} enthaelt "
         f"{_dateien(_gpx_dir('bob'))} statt nur die eigene Datei"
     )
@@ -258,12 +258,12 @@ def test_echte_nutzerkennungen_werden_weiterhin_akzeptiert(datenbaum, kennung):
     from api.main import app
 
     client = TestClient(app)
-    antwort = _upload(client, _sample(_SAMPLE_A), "tour.gpx", user_id=kennung)
+    antwort = _upload(client, _sample(_SAMPLE_A), "trip.gpx", user_id=kennung)
 
     assert antwort.status_code == 200, (
         f"Legitime Kennung {kennung!r} wurde abgewiesen: {antwort.text}"
     )
-    assert _dateien(_gpx_dir(kennung)) == {"tour.gpx"}, (
+    assert _dateien(_gpx_dir(kennung)) == {"trip.gpx"}, (
         f"Ordner von {kennung!r} enthaelt {_dateien(_gpx_dir(kennung))}"
     )
 

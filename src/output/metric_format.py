@@ -24,7 +24,7 @@ from __future__ import annotations
 from typing import Iterable, Optional
 
 from app.metric_catalog import get_metric
-from app.models import ThunderLevel
+from app.models import PrecipType, ThunderLevel
 
 # Beide ThunderLevel-Skalen wohnen seit der #1196-Nacharbeit in der
 # Domaenenschicht (app/thunder_scale.py) -- der Zeitplaner braucht sie, darf
@@ -41,8 +41,11 @@ from app.models import ThunderLevel
 from app.thunder_scale import (  # noqa: F401  (Re-Export, s.o.)
     _THUNDER_LABEL_VALUE,
     _THUNDER_ORDER,
+    THUNDER_LABEL_DE,
     THUNDER_SIGNAL_LABEL_DE,
     thunder_label_value,
+    thunder_low_statement,
+    thunder_low_statement_sentence,
     thunder_ordinal,
     thunder_signal_label,
     union_of_max_carriers,
@@ -58,7 +61,11 @@ __all__ = [
     "thunder_ordinal",
     "thunder_label_value",
     "thunder_level_from_signals",
+    # Issue #2176: Re-Export der LOW-Aussage aus der Domaenenschicht.
+    "thunder_low_statement",
+    "thunder_low_statement_sentence",
     "THUNDER_LABEL_DE",
+    "PRECIP_TYPE_LABEL_DE",
     "thunder_ampel_band",
     "max_thunder",
 ]
@@ -276,15 +283,22 @@ def cloud_emoji(pct: Optional[float]) -> str:
 
 
 
-# Geteilte deutsche Beschriftung (Issue #1474, "geteilte Quelle statt Kopien"
-# statt fuenffach dupliziertem Label). NONE fehlt bewusst nicht -- Konsumenten
-# mit abweichender NONE-Darstellung (z.B. compare_html.py "—" statt "kein")
-# ueberschreiben nur diesen einen Eintrag lokal.
-THUNDER_LABEL_DE: dict[ThunderLevel, str] = {
-    ThunderLevel.NONE: "kein",
-    ThunderLevel.LOW: "leicht",
-    ThunderLevel.MED: "mittel",
-    ThunderLevel.HIGH: "hoch",
+# THUNDER_LABEL_DE liegt seit #2176 in `app/thunder_scale.py` (Domaenenschicht)
+# und wird oben unveraendert re-exportiert -- `thunder_low_statement()` haengt
+# das Stufenwort an und darf dafuer keine Darstellungsschicht importieren.
+
+
+# Geteilte deutsche Beschriftung der Niederschlagsart (Issue #2134, analog zu
+# THUNDER_LABEL_DE). Der Ad-hoc-Abruf einer Groesse mit ``dp_field ==
+# "precip_type"`` liefert sonst den internen Enum-Bezeichner (``SNOW``), der
+# fuer einen Wanderer keine Aussage ist. Schluessel ist das Enum-Mitglied;
+# weil ``PrecipType`` ein ``str``-Enum mit Name == Wert ist, findet auch ein
+# roher String aus dem Snapshot-Roundtrip ("SNOW") seinen Eintrag.
+PRECIP_TYPE_LABEL_DE: dict[PrecipType, str] = {
+    PrecipType.RAIN: "Regen",
+    PrecipType.SNOW: "Schnee",
+    PrecipType.MIXED: "Schneeregen",
+    PrecipType.FREEZING_RAIN: "gefrierender Regen",
 }
 
 
@@ -609,13 +623,8 @@ def hail_priority(values: Iterable[Optional[bool]]) -> Optional[bool]:
     return None
 
 
-def format_hail_note(hail_flag: Optional[bool]) -> Optional[str]:
-    """Der EINE gemeinsame Anzeige-Textbaustein fuer das Hagel-Kennzeichen
-    (Trip-/Compare-Mail-Renderer UND ``GEWITTER``-Kommando, #1481 DRY-Pflicht).
-
-    Rein deskriptiv, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
-    "unbekannt"/"nein" gibt es KEINEN Zusatztext (kein Rauschen).
-    """
-    if hail_flag is True:
-        return "Hagel: ja"
-    return None
+# `format_hail_note` wohnt seit #2205 in `app/thunder_scale.py` (Domaenen-
+# schicht): der Nacht-Halbsatz der Gewitter-Vorschau (`app/day_window.py`,
+# vom Zeitplaner aufgerufen) braucht denselben Wortlaut. Re-Export haelt alle
+# bestehenden `from output.metric_format import format_hail_note` gueltig.
+from app.thunder_scale import format_hail_note  # noqa: E402,F401

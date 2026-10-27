@@ -396,3 +396,74 @@ def test_ac13_compare_warnmail_traegt_denselben_gebauten_klartext(
         "Der Klartext-Teil ist der aus dem HTML gestrippte Text, kein "
         f"gebauter:\n{klartext!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Issue #2018 Teil C (Korrektur 5) — additiver Waechter, Adversary-Finding F001
+# ---------------------------------------------------------------------------
+
+#: Der bestehende, bewusst unangetastete Kern des Cooldown-Satzes.
+COOLDOWN_KERN = "höchstens einmal in"
+#: Die Praezisierung aus Issue #2018 Teil C — sie MUSS in DERSELBEN Zeile
+#: stehen (Spec, Korrektur 5), sonst zerfaellt der Sperrzeit-Hinweis in zwei
+#: Bloecke und die zeilenweise Klassifikation oben (`_zeilenarten`) sieht
+#: hinter der Stand-Zeile eine zweite Zeilengruppe.
+COOLDOWN_ZUSATZ = "greift dieser Cooldown nicht"
+
+
+def _buendel_nowcast_klartext() -> str:
+    """Derselbe Klartext, aber aus dem Buendel-Zweig
+    (`_render_email_onset_multi`) — er baut den Cooldown-Satz ein ZWEITES Mal
+    und muss dieselbe Auflage erfuellen."""
+    ereignisse = tuple(
+        OnsetEvent(
+            onset_minutes=minuten, onset_time=zeit, km_from=8.0, km_to=8.0,
+            is_convective=True, intensity_label="stark",
+            source_label="Radar (DWD)", location_label=ort,
+        )
+        for ort, minuten, zeit in (("Zermatt", 25, "10:05"), ("Chamonix", 40, "10:20"))
+    )
+    return render_email(AlertMessage(
+        trip_short="KHW 403", stand_at="09:30", source="radar",
+        cooldown_display="60 Min", events=ereignisse,
+    ))[1]
+
+
+@pytest.mark.parametrize(
+    "klartext_bauen, zweig",
+    [(_nowcast_klartext, "Einzel-Onset"), (_buendel_nowcast_klartext, "Buendel-Onset")],
+)
+def test_2018_cooldown_zusatz_steht_in_derselben_klartext_zeile(klartext_bauen, zweig):
+    """Issue #2018 Teil C, Korrektur 5 — Adversary-Finding F001.
+
+    GIVEN den gerenderten Klartext einer Nowcast-Mail mit gesetztem Cooldown
+    WHEN  die Zeile mit dem bestehenden Cooldown-Satz gesucht wird
+    THEN  traegt GENAU DIESE Zeile auch den Quellen-Zusatz — der Zusatz
+          steht nie in einer eigenen Zeile und nie ein zweites Mal.
+
+    Warum dieser Waechter noetig ist: die Klassifikation in `_zeilenarten()`
+    erkennt den Sperrzeit-Hinweis am Substring `höchstens einmal in`. Ein in
+    eine eigene Zeile ausgelagerter Zusatz faellt durch alle vier Muster und
+    bleibt unklassifiziert — die Reihenfolge-Pruefung dieser Datei bliebe
+    gruen, obwohl die Auflage gebrochen ist (nachgemessen 2026-08-21). Der
+    Waechter prueft die Auflage deshalb am gerenderten Nutzertext direkt.
+
+    Gegenprobe (Pflicht): wird der Zusatz in `render.py` in einen eigenen
+    Klartext-Block gezogen, wird dieser Test rot.
+    """
+    klartext = klartext_bauen()
+    kern_zeilen = [z.strip() for z in klartext.splitlines() if COOLDOWN_KERN in z]
+    zusatz_zeilen = [z.strip() for z in klartext.splitlines() if COOLDOWN_ZUSATZ in z]
+
+    assert len(kern_zeilen) == 1, (
+        f"{zweig}: erwartet GENAU EINE Cooldown-Zeile:\n{klartext}"
+    )
+    assert COOLDOWN_ZUSATZ in kern_zeilen[0], (
+        f"{zweig}: der Quellen-Zusatz muss in DERSELBEN Zeile wie der "
+        f"bestehende Cooldown-Satz stehen (Spec Korrektur 5) — "
+        f"gefunden: {kern_zeilen[0]!r}\nGanzer Klartext:\n{klartext}"
+    )
+    assert zusatz_zeilen == kern_zeilen, (
+        f"{zweig}: der Quellen-Zusatz steht ausserhalb der Cooldown-Zeile "
+        f"oder doppelt: {zusatz_zeilen!r}\nGanzer Klartext:\n{klartext}"
+    )

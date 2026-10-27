@@ -51,8 +51,10 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 from services.notification_service import NotificationService
+from tests.helpers.nutzer_tier import nutzer_mit_tier
 from services.official_alerts.models import OfficialAlert
 from services.trip_alert import TripAlertService
+from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
 
 
 # ---------------------------------------------------------------------------
@@ -221,8 +223,17 @@ def _settings(*, sms_port: int) -> Settings:
     return Settings(
         telegram_bot_token="test-bot-token",
         telegram_chat_id="99999",
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout schaltet
+        # TelegramOutput auf die Test-Chat-ID um bzw. bricht ohne sie ab.
+        # Explizit auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196).
+        telegram_test_chat_id="99999",
         sms_gateway_url=f"http://127.0.0.1:{sms_port}/api/sms",
         seven_api_key="test-stub-key",
+        # Issue #1476: seven.io-Kanaele verlangen aus einem Testlauf den
+        # Sandbox-Key; identisch zum Stub-Key, damit kein GZ_SEVEN_SANDBOX_KEY
+        # aus einer Host-.env noetig ist (#1196).
+        seven_sandbox_key="test-stub-key",
         sms_to="+49000000000",
         sms_from=None,
     )
@@ -241,7 +252,7 @@ class TestAC3DeviationAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = TripAlertService(settings=settings, user_id="tdd-1260-alert-a")
+            svc = TripAlertService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-alert-a", settings))
 
             # Telegram-only (kein SMS-Tier-Gate); Style aus dem Trip aufgelöst.
             trip = _make_trip("kurzform", send_sms=False)
@@ -272,7 +283,7 @@ class TestAC3DeviationAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = TripAlertService(settings=settings, user_id="tdd-1260-alert-b")
+            svc = TripAlertService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-alert-b", settings))
 
             trip = _make_trip("rich", send_sms=False)
             svc._send_alert(trip, [_make_segment_data()], [_make_change()])
@@ -293,7 +304,7 @@ class TestAC3DeviationAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-alert-c")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(nutzer_mit_tier("tdd-1260-alert-c"), settings))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: send_deviation_alert kennt telegram_style noch nicht → TypeError.
@@ -332,7 +343,7 @@ class TestAC4OfficialAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-off-a")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(nutzer_mit_tier("tdd-1260-off-a"), settings))
 
             trip = _make_trip("kurzform", send_sms=True)
             # RED: send_official_alert kennt telegram_style noch nicht → TypeError.
@@ -358,6 +369,18 @@ class TestAC4OfficialAlertKurzstil:
                 "identisch zum render_official_alert_sms-Text.\n"
                 f"  Telegram={payload.get('text')!r}\n  SMS={sms_text!r}"
             )
+            # FORTGESCHRIEBEN (#1948 S5, AC-12): die Parität bleibt bestehen,
+            # aber BEIDE Texte tragen jetzt die neue Grammatik — Ortskopf statt
+            # Trip-Name, Kürzel:Stufe statt `AMT {WORT}{Pos}/3`.
+            assert "AMT" not in sms_text, (
+                f"Kurzstil/SMS tragen noch das alte AMT-Format: {sms_text!r}"
+            )
+            assert "Kurzstil-Trip" not in sms_text, (
+                f"Der Trip-Name ist ersatzlos entfallen: {sms_text!r}"
+            )
+            assert sms_text.count("!") == 1 and ": !" in sms_text, (
+                f"Erwartet '<Ortskopf>: !<Kuerzel>:<Stufe> …': {sms_text!r}"
+            )
         finally:
             tg_stub.stop()
             sms_stub.stop()
@@ -367,7 +390,7 @@ class TestAC4OfficialAlertKurzstil:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = NotificationService(settings=settings, user_id="tdd-1260-off-b")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-off-b", settings))
 
             trip = _make_trip("rich", send_sms=False)
             svc.send_official_alert(
@@ -408,7 +431,7 @@ class TestGuardCompareDeviationUnaffected:
         try:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
             settings = _settings(sms_port=_free_port())
-            svc = NotificationService(settings=settings, user_id="tdd-1260-cmp")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-cmp", settings))
 
             point = GPXPoint(lat=42.2, lon=9.05, elevation_m=400.0)
             svc.send_multi_location_deviation_alert(
@@ -442,3 +465,140 @@ class TestTelegramStyleResolver:
 
         no_cfg = Trip(id="t", name="Ohne Config", stages=[], report_config=None)
         assert _trip_telegram_style(no_cfg) == "rich"
+
+
+# ---------------------------------------------------------------------------
+# Issue #2018 (Teil B, AC-B5/AC-B10): die Nachtrags-Kennzeichnung erreicht den
+# Kurzstil-Telegram-Zweig, weil dieser den SMS-Text sendet.
+#
+# SPEC: docs/specs/modules/alert_nachtragsmeldung.md, Abschnitt B1/B4.
+# RED-Grund: `RadarAlertRequest` kennt `addendum_reference` noch nicht
+# (TypeError), und der SMS-Renderer kennt kein Nachtrags-Praefix.
+#
+# Additiv angehaengt. Die bestehende Byte-Identitaets-Zusicherung fuer den
+# GEWOEHNLICHEN Alarm (TestAC3DeviationAlertKurzstil::
+# test_kurzform_telegram_body_equals_sms_body) bleibt unangetastet und muss
+# unveraendert gruen bleiben (AC-B9).
+# ---------------------------------------------------------------------------
+
+_ADDENDUM_LINE_2018 = "Ergänzung zur amtlichen Warnung von 16:15"
+
+
+def _radar_request_2018(*, addendum_reference):
+    from services.notification_service import RadarAlertRequest
+
+    return RadarAlertRequest(
+        onset_minutes=25, onset_time="16:45", km_from=0.0, km_to=6.0,
+        is_convective=True, intensity_label="kräftiger Regen",
+        source_label="Radar (DWD)", tz=ZoneInfo("Europe/Paris"),
+        briefing_context="nicht angekündigt", segment_id="Ziel",
+        addendum_reference=addendum_reference,
+    )
+
+
+class TestIssue2018AddendumReachesKurzstilTelegram:
+    def test_kurzform_telegram_body_equals_sms_body_inklusive_nachtrag(
+        self, monkeypatch,
+    ) -> None:
+        """AC-B5 GIVEN eine Nowcast-Meldung mit gesetztem
+        ``addendum_reference`` UND ``telegram_style="kurzform"``
+        WHEN der Versand ueber den echten ``NotificationService`` laeuft
+        THEN ist der an Telegram gesendete Text BYTE-IDENTISCH zum SMS-Text
+        — inklusive des ``"Erg "``-Praefix.
+
+        Der Kurzstil-Zweig sendet den SMS-Text (``notification_service.py``);
+        sitzt die Kennzeichnung nicht dort, erreicht sie diesen Kanal nie.
+        """
+        tg_stub = _TelegramStub()
+        sms_stub = _SMSStub()
+        try:
+            monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
+            settings = _settings(sms_port=sms_stub.port)
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(nutzer_mit_tier("tdd-2018-b5"), settings))
+
+            trip = _make_trip("kurzform", send_sms=True)
+            # RED: `RadarAlertRequest` kennt `addendum_reference` nicht.
+            svc.send_radar_alert(
+                trip=trip,
+                request=_radar_request_2018(
+                    addendum_reference=_ADDENDUM_LINE_2018,
+                ),
+                source="Radar (DWD)",
+                cooldown_display="2 Stunden",
+                effective_channels={"telegram", "sms"},
+                telegram_style="kurzform",
+            )
+
+            assert len(tg_stub.sent) == 1, (
+                f"Erwartet GENAU EINE Telegram-Nachricht: {tg_stub.sent!r}"
+            )
+            assert len(sms_stub.received) == 1, (
+                f"Erwartet GENAU EINEN SMS-Versand: {sms_stub.received!r}"
+            )
+            payload = tg_stub.sent[0]
+            sms_text = sms_stub.received[0]["text"]
+            assert sms_text.startswith("Erg "), (
+                f"RED: der SMS-Text traegt kein Nachtrags-Token: {sms_text!r}"
+            )
+            assert "parse_mode" not in payload
+            assert "reply_markup" not in payload
+            assert payload.get("text") == sms_text, (
+                "RED: der Kurzstil-Telegram-Text ist nicht byte-identisch zum "
+                f"SMS-Text.\n  Telegram={payload.get('text')!r}\n"
+                f"  SMS={sms_text!r}"
+            )
+        finally:
+            tg_stub.stop()
+            sms_stub.stop()
+
+    def test_s6_zusicherungen_gelten_auch_mit_gesetztem_nachtrag(
+        self, monkeypatch,
+    ) -> None:
+        """AC-B10 GIVEN dieselbe Nachtrags-Meldung im Kurzstil
+        WHEN man den Kurzstil-Telegram-Text gegen die beiden S6-AC-12-
+        Zusicherungen prueft
+        THEN gelten beide UNVERAENDERT weiter: im SMS-/Kurzstil-Text steht
+        KEINE ``"Stand:"``-Zeile (die gehoert allein dem reichen Telegram),
+        und die Byte-Identitaet Kurzstil == SMS bleibt gewahrt.
+
+        Das neue Token heisst nicht ``"Stand:"`` und sitzt im SMS-Text — es
+        darf keine der beiden Zusicherungen brechen."""
+        tg_stub = _TelegramStub()
+        sms_stub = _SMSStub()
+        try:
+            monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
+            settings = _settings(sms_port=sms_stub.port)
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(nutzer_mit_tier("tdd-2018-b10"), settings))
+
+            trip = _make_trip("kurzform", send_sms=True)
+            svc.send_radar_alert(
+                trip=trip,
+                request=_radar_request_2018(
+                    addendum_reference=_ADDENDUM_LINE_2018,
+                ),
+                source="Radar (DWD)",
+                cooldown_display="2 Stunden",
+                effective_channels={"telegram", "sms"},
+                telegram_style="kurzform",
+            )
+
+            sms_text = sms_stub.received[0]["text"]
+            kurzstil_text = tg_stub.sent[0].get("text")
+            assert "Stand:" not in sms_text, (
+                f"S6 AC-12 gebrochen — 'Stand:' im SMS-Text: {sms_text!r}"
+            )
+            assert "Stand:" not in kurzstil_text, (
+                "S6 AC-12 gebrochen — 'Stand:' im Kurzstil-Telegram-Text: "
+                f"{kurzstil_text!r}"
+            )
+            assert kurzstil_text == sms_text, (
+                "S6 AC-12 gebrochen — Kurzstil und SMS laufen auseinander.\n"
+                f"  Telegram={kurzstil_text!r}\n  SMS={sms_text!r}"
+            )
+            assert "Ergänzung zur amtlichen Warnung" not in sms_text, (
+                "Der ausformulierte Satz gehoert NICHT ins SMS-Budget: "
+                f"{sms_text!r}"
+            )
+        finally:
+            tg_stub.stop()
+            sms_stub.stop()

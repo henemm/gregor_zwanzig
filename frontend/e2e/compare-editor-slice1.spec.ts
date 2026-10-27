@@ -47,26 +47,27 @@ test.describe('Issue #678: Compare-Editor Slice 1 (Desktop/Create)', () => {
 		).toHaveAttribute('data-done', 'true');
 	});
 
-	// ── AC-3 (Epic #1301 F2a): Fortschrittsbalken 6 Segmente + „N / 6" ────────
-	// Der CompareNewEditor hat 6 Tabs (CompareNewEditor.svelte TAB_DEFS:
-	// vergleich · orte · metriken · idealwerte · alarme · versand). Bis
-	// Issue #1360 (Scheibe S1a von Epic #1372) waren es 7 — der Reiter `layout`
-	// ist dort aufgeloest worden, die Stundenverlauf-Steuerung liegt seither im
-	// Reiter `metriken`. Der Fortschrittsbalken iteriert TAB_DEFS, progressCount()
-	// deckelt entsprechend bei 6.
-	test('AC-3: Fortschritt zeigt 6 Segmente und steigt mit Name', async ({ page }) => {
+	// ── AC-3 (Epic #1301 F2a): Fortschrittsbalken 5 Segmente + „N / 5" ────────
+	// Der CompareNewEditor hat 5 Schritte (CompareNewEditor.svelte TAB_DEFS =
+	// anlegeKette('vergleich'): vergleich · orte · wetter-metriken ·
+	// wertebereiche · alarme). Bis Issue #1743 (Spec AC-17/AC-19) waren es 6 —
+	// der Schritt `versand` ist dort entfallen, der Versand-Inhalt steht unten im
+	// Schritt „Wetter-Metriken" und zaehlt nicht als eigener Schritt. Davor (bis
+	// #1360) waren es 7 mit dem Reiter `layout`. Der Fortschrittsbalken iteriert
+	// TAB_DEFS, progressCount() deckelt entsprechend bei 5.
+	test('AC-3: Fortschritt zeigt 5 Segmente und steigt mit Name', async ({ page }) => {
 		const progress = page.locator('[data-testid="compare-editor-progress"]');
 		await expect(progress).toBeVisible();
 		await expect(
 			page.locator('[data-testid="compare-editor-progress-segment"]')
-		).toHaveCount(6);
-		await page.locator('[data-testid="compare-editor-name"]').fill('Tour A');
-		await expect(progress).toContainText('1 / 6');
+		).toHaveCount(5);
+		await page.locator('[data-testid="compare-editor-name"]').fill('Trip A');
+		await expect(progress).toContainText('1 / 5');
 	});
 
 	// ── AC-4: Profil-Auswahl bleibt nach Tab-Wechsel erhalten ────────────────
 	test('AC-4: Profil-Auswahl persistiert über Tab-Wechsel', async ({ page }) => {
-		await page.locator('[data-testid="compare-editor-name"]').fill('Tour A');
+		await page.locator('[data-testid="compare-editor-name"]').fill('Trip A');
 		const firstProfile = page.locator('[data-testid^="compare-editor-profile-"]').first();
 		await firstProfile.click();
 		await expect(firstProfile).toHaveAttribute('data-selected', 'true');
@@ -78,7 +79,7 @@ test.describe('Issue #678: Compare-Editor Slice 1 (Desktop/Create)', () => {
 
 	// ── AC-5: „Orte hinzufügen →" wechselt aktiv auf Tab „Orte" ──────────────
 	test('AC-5: Weiter-Button wechselt auf Tab "Orte"', async ({ page }) => {
-		await page.locator('[data-testid="compare-editor-name"]').fill('Tour A');
+		await page.locator('[data-testid="compare-editor-name"]').fill('Trip A');
 		await page.locator('[data-testid="compare-editor-continue-orte"]').click();
 		await expect(
 			page.locator('[data-testid="compare-editor-tab-orte"]')

@@ -3,7 +3,7 @@ entity_id: fix_1689_attestation_findings_typkontrakt
 type: bugfix
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 version: "1.2"
 tags: [gate, attestation, staging-gate, prod-selftest]
 ---

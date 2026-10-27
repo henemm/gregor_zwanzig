@@ -1,5 +1,5 @@
 # doc-compliance-test
-"""PARITAETS-WAECHTER — die Tour-Mail darf sich durch #1406 Scheibe B nicht
+"""PARITAETS-WAECHTER — die Trip-Mail darf sich durch #1406 Scheibe B nicht
 aendern.
 
 SPEC: docs/specs/modules/feat_1406b_stundenverlauf_katalog.md — AC-7.
@@ -8,8 +8,8 @@ Vorbild: ``tests/tdd/test_trip_outlook_parity.py`` (Scheibe A).
 Scheibe B stellt den Ortsvergleich-Stundenverlauf auf den zentralen Katalog um
 und ersetzt dabei die Compare-eigenen ``_fmt_*``-Funktionen durch die BEREITS
 GETEILTEN ``format_value()``/``severity_for()`` aus ``output/metric_format.py``.
-Genau diese beiden Funktionen benutzt auch die Tour-Mail. Wer sie "passend fuer
-Compare" nachjustiert, aendert stillschweigend jede Tour-Mail mit.
+Genau diese beiden Funktionen benutzt auch die Trip-Mail. Wer sie "passend fuer
+Compare" nachjustiert, aendert stillschweigend jede Trip-Mail mit.
 
 Zwei Waechter, beide HEUTE BEREITS GRUEN — sie muessen es BLEIBEN:
 
@@ -17,16 +17,16 @@ Zwei Waechter, beide HEUTE BEREITS GRUEN — sie muessen es BLEIBEN:
    der Umstellung (aufgezeichnete Wertetabelle, `tests/fixtures/
    shared_metric_format_parity/`). Referenz ist eine Datei mit dem Stand VOR
    dem Umbau, kein zweiter Aufruf desselben Codes im selben Lauf.
-2. Der Vergleichs-Renderer importiert die Tour-ORCHESTRIERUNG nicht
+2. Der Vergleichs-Renderer importiert die Trip-ORCHESTRIERUNG nicht
    (``dp_to_row``/``extract_hourly_rows``/``visible_cols`` aus
    ``email/helpers.py``) — geteilt ist die Formel, nicht die Aufrufsignatur
    (Spec Known Limitations). Geprueft am Syntaxbaum, nicht per Textsuche.
 
-Ein dritter Waechter fror zusaetzlich die sha256 der 10 Tour-Mail-Goldens ein
+Ein dritter Waechter fror zusaetzlich die sha256 der 10 Trip-Mail-Goldens ein
 ("wer sie neu einfriert, um einen roten Golden-Lauf loszuwerden, faellt hier
 auf"). Er ist mit Issue #1472 ENTFERNT (PO-Freigabe 2026-08-04): seine
 Zusicherung war ausdruecklich an #1406 Scheibe B gebunden, diese Scheibe ist
-geliefert, und er konnte eine bewusst freigegebene Aenderung der Tour-Mail
+geliefert, und er konnte eine bewusst freigegebene Aenderung der Trip-Mail
 nicht von einem Kollateralschaden unterscheiden. Die beiden verbleibenden
 Waechter sind nicht scheibengebunden und tragen dauerhaft.
 
@@ -62,7 +62,7 @@ _GRID_FIXTURE = (
 # Wertegitter der Aufzeichnung — identisch zum Erzeugungslauf.
 GRID = [None, -12.5, 0, 0.4, 7.5, 42, 137.0, 1013.0, 20000]
 
-# Tour-Orchestrierung, die der Vergleich NICHT importieren darf (Spec Known
+# Trip-Orchestrierung, die der Vergleich NICHT importieren darf (Spec Known
 # Limitations: sie erwartet ein volles UnifiedWeatherDisplayConfig).
 TRIP_ORCHESTRATION = {"dp_to_row", "extract_hourly_rows", "visible_cols",
                       "aggregate_night_block"}
@@ -93,10 +93,10 @@ def _current_grid() -> str:
 
 
 def test_shared_metric_format_layer_is_unchanged():
-    """AC-7 (1): Given die Tour-Mail formatiert und ampelt ueber
+    """AC-7 (1): Given die Trip-Mail formatiert und ampelt ueber
     ``format_value``/``severity_for`` / When Scheibe B dieselben Funktionen
     fuer den Vergleichs-Stundenverlauf einspannt / Then liefern sie
-    zeichengleich dasselbe wie vorher — sonst aendert sich jede Tour-Mail mit.
+    zeichengleich dasselbe wie vorher — sonst aendert sich jede Trip-Mail mit.
     """
     erwartet = _GRID_FIXTURE.read_text(encoding="utf-8")
     assert erwartet.count("\n") > 0, (
@@ -114,7 +114,7 @@ def test_shared_metric_format_layer_is_unchanged():
 
 
 def test_compare_renderer_does_not_import_the_trip_orchestration():
-    """AC-7 (2): Given die Tour-Orchestrierung erwartet ein Datenmodell, das
+    """AC-7 (2): Given die Trip-Orchestrierung erwartet ein Datenmodell, das
     der Vergleich gar nicht hat / When man den Vergleichs-Renderer am
     Syntaxbaum untersucht / Then importiert er keine ihrer Funktionen —
     geteilt ist die Formel, nicht die Aufrufsignatur."""
@@ -140,15 +140,15 @@ def test_compare_renderer_does_not_import_the_trip_orchestration():
         "geprueft — Waechter greift ins Leere."
     )
     assert not treffer, (
-        "Der Vergleichs-Renderer haengt sich an die Tour-Orchestrierung:\n"
+        "Der Vergleichs-Renderer haengt sich an die Trip-Orchestrierung:\n"
         + "\n".join(treffer)
     )
 
 
 # Der dritte Waechter dieser Datei -- `test_trip_mail_goldens_are_not_
-# re_recorded`, der die sha256 der 10 Tour-Mail-Goldens festhielt -- wurde mit
+# re_recorded`, der die sha256 der 10 Trip-Mail-Goldens festhielt -- wurde mit
 # Issue #1472 entfernt (PO-Freigabe 2026-08-04). Begruendung im Commit; kurz:
-# er war ausdruecklich an #1406 Scheibe B gebunden ("die Tour-Mail darf sich
+# er war ausdruecklich an #1406 Scheibe B gebunden ("die Trip-Mail darf sich
 # DURCH #1406 Scheibe B nicht aendern"), diese Scheibe ist geliefert, und er
-# konnte eine bewusste, freigegebene Aenderung der Tour-Mail nicht von einem
+# konnte eine bewusste, freigegebene Aenderung der Trip-Mail nicht von einem
 # Kollateralschaden unterscheiden.

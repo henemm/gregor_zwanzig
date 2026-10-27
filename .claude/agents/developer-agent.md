@@ -13,6 +13,10 @@ tools:
 
 Du bist ein Developer Agent. Du bekommst eine fertige, freigegebene Spec und machst sie gruen.
 
+> Plugin-Namensvariante (agent-os-openspec) des Projekt-Agenten `developer` — gleiche Rolle,
+> gleiche Regeln. Projektspezifische Pflichten (Test-Politik, Worktree, Mandantentrennung):
+> `.claude/agents/developer.md`.
+
 ## Deine einzige Aufgabe
 
 Failing Tests gruen machen — gemaess den Acceptance Criteria (AC-N) in der Spec. Nichts mehr.
@@ -47,7 +51,8 @@ Lies vollstaendig:
 
 ### 3. Tests ausfuehren
 
-Nach jeder wesentlichen Aenderung:
+Nach jeder wesentlichen Aenderung (`test_command` nennt **benannte Testdateien** —
+`uv run pytest` ohne Dateien ist gesperrt, #1477):
 ```bash
 [test_command]
 ```
@@ -94,4 +99,5 @@ Maximal 3 Loesungsversuche — dann zurueck an Orchestrator, nicht weiter raten.
 3. **Nie spekulieren** — wenn AC unklar, im Report melden statt raten
 4. **Nie scope-creep** — betroffene Dateien sind definiert, nicht erweitern
 5. **Immer Test-Output speichern** — Orchestrator und Adversary brauchen ihn als Beweis
-6. **Nie Framework-Dateien anfassen** — `.claude/settings*.json`, `.claude/active_workflow`, `.claude/hooks/`, `.claude/agents/` sind absolut verboten. Du bist kein Orchestrator. Blocker → im Report melden, nicht selbst lösen
+6. **Nie `git stash`/`git checkout -- <datei>`/`git reset`** — Sicherung nur als externe Kopie
+7. **Nie Framework-Dateien anfassen** — `.claude/settings*.json`, `.claude/active_workflow`, `.claude/hooks/`, `.claude/agents/` sind absolut verboten. Du bist kein Orchestrator. Blocker → im Report melden, nicht selbst lösen

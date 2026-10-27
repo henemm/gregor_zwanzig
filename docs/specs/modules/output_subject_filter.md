@@ -3,7 +3,7 @@ entity_id: output_subject_filter
 type: module
 created: 2026-04-26
 updated: 2026-06-13
-status: live
+status: implemented
 version: "1.2"
 tags: [output, pipeline, refactor, epic-render-pipeline, shortcode]
 epic: render-pipeline-consolidation (#96)
@@ -20,7 +20,7 @@ phase: β2
 
 Eine zentrale Funktion `build_email_subject(token_line) -> str` extrahieren, die das E-Mail-Subject als reinen **Filter über die `TokenLine`-DTO** produziert. Damit erfüllt das Subject die SSOT-Forderung von `sms_format.md` v2.0 §11 — das gleiche TokenLine-Objekt, das die SMS- und Push-Renderer speist, liefert auch das Subject, ohne paralleles Subject-Building.
 
-Heute baut `src/formatters/trip_report.py::_generate_subject()` ein triviales Subject (`[Trip] Morning Report - DD.MM.YYYY`) ohne Wetter-Tokens und ohne Risk-Information. β2 ersetzt diese Funktion durch ein §11-konformes Subject mit MainRisk und den wichtigsten Wetter-Tokens (D, W, G, TH:/HR:), gekürzt auf 78 Zeichen für gute Postfach-Sichtbarkeit.
+Heute baut `src/output/renderers/trip_report.py::_generate_subject()` ein triviales Subject (`[Trip] Morning Report - DD.MM.YYYY`) ohne Wetter-Tokens und ohne Risk-Information. β2 ersetzt diese Funktion durch ein §11-konformes Subject mit MainRisk und den wichtigsten Wetter-Tokens (D, W, G, TH:/HR:), gekürzt auf 78 Zeichen für gute Postfach-Sichtbarkeit.
 
 ## Source
 
@@ -29,7 +29,7 @@ Heute baut `src/formatters/trip_report.py::_generate_subject()` ein triviales Su
 - **Tests (neu):** `tests/unit/test_subject_filter.py`, `tests/golden/test_subject_golden.py`
 - **DTO-Erweiterung (β1-Nachbesserung):** `src/output/tokens/dto.py::TokenLine.main_risk: str | None = None`, `TokenLine.trip_name: str | None = None`
 - **Builder-Erweiterung (β1-Nachbesserung):** `src/output/tokens/builder.py` füllt `main_risk` aus `RiskEngine`
-- **Migration:** `src/formatters/trip_report.py::_generate_subject()` ruft `build_email_subject(token_line)` auf
+- **Migration:** `src/output/renderers/trip_report.py::_generate_subject()` ruft `build_email_subject(token_line)` auf
 
 ## Dependencies
 

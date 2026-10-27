@@ -3,12 +3,14 @@ entity_id: trip_edit
 type: feature
 created: 2025-12-28
 updated: 2025-12-28
-status: approved
+status: deprecated
 version: "1.0"
 tags: [ui, nicegui, trips, crud]
 ---
 
 # Trip Edit - Bearbeitung bestehender Trips
+
+> Abgelöst/entfernt durch ADR-0001 / #129 — die NiceGUI-UI unter `src/web/` wurde am 2026-05-15 ersatzlos entfernt; diese Spec ist nur noch historisch.
 
 ## Approval
 

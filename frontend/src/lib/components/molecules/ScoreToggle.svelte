@@ -19,7 +19,7 @@
 	onclick={onToggle}
 	aria-pressed={on}
 	style:padding={compact ? '3px 9px' : '4px 11px'}
-	style:font-size={compact ? '10px' : '10.5px'}
+	style:font-size="11px"
 	style:font-weight="600"
 	style:letter-spacing="0.08em"
 	style:font-family="var(--g-font-mono)"

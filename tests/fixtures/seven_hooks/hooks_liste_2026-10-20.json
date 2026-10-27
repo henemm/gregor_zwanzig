@@ -1,0 +1,16 @@
+{
+ "success": true,
+ "code": null,
+ "hooks": [
+  {
+   "id": "4750",
+   "target_url": "https://staging.gregor20.henemm.com/api/webhooks/sms/<STAGING_PFAD_SECRET>",
+   "headers": "",
+   "event_type": "sms_mo",
+   "event_filter": "<SERVICENUMMER>",
+   "request_method": "POST",
+   "enabled": true,
+   "created": "2026-10-14 19:12:23"
+  }
+ ]
+}

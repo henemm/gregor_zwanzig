@@ -3,7 +3,7 @@ package mail
 import "testing"
 
 // TDD GREEN — Issue #1219 Scheibe 1: Resend-Allowlist auf E-Mail-
-// Verifikation umstellen. Spec: docs/specs/modules/fix_1219_email_verify.md
+// Verifikation umstellen. Spec: docs/specs/_archive/modules/fix_1219_email_verify.md
 // (AC-1..AC-4, AC-7 Go-Hälfte).
 //
 // Go-Pendant zu tests/tdd/test_resend_verified_allowlist.py. Testet

@@ -4,10 +4,14 @@ SPEC: docs/specs/modules/issue_1034_official_alerts_foundation.md
 """
 from __future__ import annotations
 
+from services.official_alerts.avalanche_report import AvalancheReportSource
 from services.official_alerts.base import (
     OfficialAlertSource,
+    OfficialSourceQuery,
+    collect_source_queries,
     filter_alerts_to_window,
     get_official_alerts_for_location,
+    get_official_alerts_with_sources,
     get_official_alerts_with_status,
     register_official_alert_source,
 )
@@ -17,6 +21,7 @@ from services.official_alerts.massif_closure import MassifClosureSource
 from services.official_alerts.meteo_forets import MeteoForetsSource
 from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
 from services.official_alerts.models import OfficialAlert
+from services.official_alerts.slf import SlfSource
 from services.official_alerts.vigilance import VigilanceSource
 
 # Lazy-Registration bei Modul-Import (analog Provider-Pattern), Issue #1035/#1036/#1037/#1085/#1086/#1427/#1445.
@@ -39,7 +44,21 @@ register_official_alert_source(MassifClosureSource())
 register_official_alert_source(GeoSphereWarnSource())
 register_official_alert_source(MeteoAlarmFeedSource("IT"))
 register_official_alert_source(MeteoAlarmFeedSource("AT"))
+# Issue #1681: MeteoAlarmFeedSource("DE") NACH AT, VOR DpcSource -- keine
+# funktionale Abhaengigkeit (eigene DWD-Kreisgeometrie, kein ZAMG-Cache);
+# Gewitter-Tie-Break "zuerst registriert gewinnt" betrifft DE nur bei
+# Ueberschneidung mit DPC. "Nicht zustaendig"-Antworten von AT/GeoSphere/DPC
+# kompensieren einen DE-Ausfall nicht (warn_egress.mark_not_covered, AC-3).
+register_official_alert_source(MeteoAlarmFeedSource("DE"))
 register_official_alert_source(DpcSource())
+# Issue #1441 (ADR-0089): Lawinen-Lagebericht als LETZTE Quelle -- eigene
+# Gefahrenart `avalanche_bulletin`, konkurriert mit keiner Bestandsquelle;
+# die Position haelt den Tie-Break der Bestandsquellen unveraendert.
+register_official_alert_source(AvalancheReportSource())
+# Issue #1441 S3 (ADR-0091): SLF-Lagebericht DIREKT nach avalanche.report (AT/CH-
+# Polygone disjunkt). Diese Zeile ist der einzige Schalter: lehnt das SLF die
+# Nutzung ab, wird nur sie entfernt (Antrag #7).
+register_official_alert_source(SlfSource())
 
 __all__ = [
     "OfficialAlert",
@@ -47,6 +66,9 @@ __all__ = [
     "register_official_alert_source",
     "get_official_alerts_for_location",
     "get_official_alerts_with_status",
+    "get_official_alerts_with_sources",
+    "collect_source_queries",
+    "OfficialSourceQuery",
     "filter_alerts_to_window",
     "VigilanceSource",
     "MeteoForetsSource",
@@ -54,4 +76,6 @@ __all__ = [
     "GeoSphereWarnSource",
     "MeteoAlarmFeedSource",
     "DpcSource",
+    "AvalancheReportSource",
+    "SlfSource",
 ]

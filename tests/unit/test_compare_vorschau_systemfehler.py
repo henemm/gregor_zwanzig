@@ -8,19 +8,17 @@ docs/artifacts/fix-1765-compare-vorschau-parallel/adversary-dialog.md
 ``LocationResult(error=...)`` und wirft dafuer nicht (comparison_engine.py:
 128-147, :369-381). Was als AUSNAHME herauskommt, ist deshalb per Definition
 systemisch (z.B. die ``Settings()``-Konstruktion vor der Ortsschleife) — vor
-der Parallelisierung schlug so etwas bis zum Router durch und wurde dort zu
-HTTP 503 (api/routers/preview.py:99-110). Ein breiter Ausnahmefang je Ort
-machte daraus eine 200er-Antwort mit N gleichlautenden Ortsfehlern: andere
-Form, anderer Inhalt, AC-8 verletzt.
+der Parallelisierung schlug so etwas als ``RuntimeError`` aus dem Dienst durch.
+Ein breiter Ausnahmefang je Ort machte daraus ein Ergebnis mit N
+gleichlautenden Ortsfehlern: andere Form, anderer Inhalt, AC-8 verletzt.
 
-🔴 **Warum eine eigene Datei und nicht
-``test_preview_fehlerformen.py::test_vergleichs_vorschau_meldet_wetterausfall_als_503``:**
-jener Test ersetzt die GESAMTE ``ComparePreviewService``-Klasse durch einen
-stoerenden Ersatz und erreicht ``run_comparison_parallel`` nie — er bewacht die
-Zuordnung im Router, nicht die neue Nahtstelle. Hier laeuft der ECHTE Dienst
-mit echten Preset-/Ortsdaten; substituiert wird ausschliesslich die teure
-Engine-Naht (braucht Live-Wetter, in der Kern-Schicht verboten), und zwar per
-echter Subklasse, kein Mock.
+Issue #1743: die HTTP-Route ``POST /api/preview/compare/{id}`` ist entfallen
+(PO-Entscheid 22.10.2026); die Zusicherung wird deshalb am Dienst
+``ComparePreviewService.render_all_channels`` geprueft, der weiter den
+Render-Pfad der Paritaetstests traegt. Es laeuft der ECHTE Dienst mit echten
+Preset-/Ortsdaten; substituiert wird ausschliesslich die teure Engine-Naht
+(braucht Live-Wetter, in der Kern-Schicht verboten), und zwar per echter
+Subklasse, kein Mock.
 """
 from __future__ import annotations
 
@@ -29,8 +27,6 @@ from datetime import date, datetime
 from pathlib import Path
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
 from app.loader import get_data_dir, save_location
 from app.models import ForecastDataPoint, ThunderLevel
@@ -91,17 +87,19 @@ def preset_mit_drei_orten(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def client():
+def dienst():
+    """Echter ``ComparePreviewService``. Issue #1743: die HTTP-Route
+    ``POST /api/preview/compare/{id}`` ist entfallen; geprueft wird deshalb
+    direkt am Dienst — systemische Stoerung = durchgereichte ``RuntimeError``
+    (vormals vom Router auf 503 abgebildet)."""
     import services.comparison_parallel as pruefling
-    from api.routers import preview
+    from services.compare_preview_service import ComparePreviewService
 
     # Pfadregel #1409: der Pruefling muss aus DIESEM Checkout stammen -- sonst
     # misst dieser Test aus dem Worktree die unveraenderte Hauptrepo-Kopie und
     # meldet falsches Gruen.
     assert Path(pruefling.__file__).resolve().is_relative_to(WORKTREE), pruefling.__file__
-    app = FastAPI()
-    app.include_router(preview.router)
-    return TestClient(app)
+    return ComparePreviewService()
 
 
 def _engine_scheitert_bei(monkeypatch, ids: set[str]) -> None:
@@ -135,10 +133,9 @@ def _engine_scheitert_bei(monkeypatch, ids: set[str]) -> None:
     monkeypatch.setattr(ce_mod, "ComparisonEngine", ScheiterndeEngine)
 
 
-def _vorschau(client, preset_id: str, user_id: str):
-    return client.post(
-        f"/api/preview/compare/{preset_id}",
-        params={"user_id": user_id, "date": ZIELDATUM.isoformat()},
+def _vorschau(dienst, preset_id: str, user_id: str) -> dict:
+    return dienst.render_all_channels(
+        preset_id, user_id=user_id, target_date=ZIELDATUM.isoformat(),
     )
 
 
@@ -150,42 +147,32 @@ def _blockzeile(telegram: str, ortsname: str) -> str:
     return zeilen[zeilen.index(ortsname) + 1]
 
 
-def test_systemische_stoerung_bleibt_ein_503(client, preset_mit_drei_orten, monkeypatch):
+def test_systemische_stoerung_bleibt_eine_ausnahme(dienst, preset_mit_drei_orten, monkeypatch):
     """AC-8: JEDER Ort scheitert mit derselben Ausnahme (Wetterdienst komplett
-    weg / Konfigurationsfehler) → der echte Vorschau-Pfad antwortet wie vor der
-    Parallelisierung mit HTTP 503 und der durchgereichten Meldung — nicht mit
-    200 und N eingebetteten Ortsfehlern."""
+    weg / Konfigurationsfehler) → der echte Vorschau-Pfad reicht die
+    ``RuntimeError`` mit der Meldung durch, wie vor der Parallelisierung —
+    statt ein Ergebnis mit N eingebetteten Ortsfehlern zu liefern."""
     preset_id, user_id = preset_mit_drei_orten
     _engine_scheitert_bei(monkeypatch, {loc_id for loc_id, *_ in ORTE})
 
-    antwort = _vorschau(client, preset_id, user_id)
+    with pytest.raises(RuntimeError) as fehler:
+        _vorschau(dienst, preset_id, user_id)
 
-    assert antwort.status_code == 503, (
-        "AC-8: Eine Stoerung, die ALLE Orte trifft, ist systemisch und muss die "
-        "bisherige Fehlerform behalten (RuntimeError → 503). Bekommen: "
-        f"{antwort.status_code} — {antwort.text[:300]}"
-    )
-    assert AUSFALL in antwort.text, (
-        f"Die Meldung des Dienstes muss im 503-Detail stehen: {antwort.text[:300]}"
+    assert AUSFALL in str(fehler.value), (
+        f"Die Meldung des Dienstes muss durchgereicht werden: {fehler.value!r}"
     )
 
 
-def test_ein_ort_von_dreien_scheitert_liefert_weiter_200(
-    client, preset_mit_drei_orten, monkeypatch
+def test_ein_ort_von_dreien_scheitert_liefert_weiter_ein_ergebnis(
+    dienst, preset_mit_drei_orten, monkeypatch
 ):
     """AC-3: Scheitert nur EIN Ort mit einer Ausnahme, bleibt es beim heutigen
-    Verhalten — 200, die uebrigen Orte vollstaendig, der betroffene mit Fehler
-    AN SEINER POSITION. Die 503-Regel aus AC-8 darf hier nicht greifen."""
+    Verhalten — Ergebnis, die uebrigen Orte vollstaendig, der betroffene mit
+    Fehler AN SEINER POSITION. Die Ausnahme-Regel aus AC-8 darf nicht greifen."""
     preset_id, user_id = preset_mit_drei_orten
     _engine_scheitert_bei(monkeypatch, {"loc-bz"})
 
-    antwort = _vorschau(client, preset_id, user_id)
-
-    assert antwort.status_code == 200, (
-        "AC-3: Ein einzelner gescheiterter Ort darf die Vorschau der anderen "
-        f"nicht verhindern. Bekommen: {antwort.status_code} — {antwort.text[:300]}"
-    )
-    nutzlast = antwort.json()
+    nutzlast = _vorschau(dienst, preset_id, user_id)
     telegram, html = nutzlast["telegram"], nutzlast["email_html"]
     zeilen = telegram.splitlines()
     assert [n for n in ("Innsbruck", "Bozen", "Muenchen") if n in zeilen] == [

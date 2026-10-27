@@ -1,0 +1,1015 @@
+"""Orakel + Ausnahme-Register + Parser + Matrix fuer Issue #2422 S1
+("Einstellung = Auslieferung").
+
+SPEC: docs/specs/modules/fix_2422_einstellung_gleich_auslieferung.md
+
+**Orakel-Unabhaengigkeit (PFLICHT):** Dieses Modul importiert NICHTS aus
+``src/app/models.py`` oder ``src/output/*`` fuer die ERWARTUNGSBILDUNG --
+weder ``get_metrics_for_channel`` noch ``_sorted_by_layout`` noch
+``_clip_to_global_maximum``. Die Kaskade (globales Maximum ∩ Kanal-Layout,
+sortiert nach Bucket+Order) wird HIER eigenstaendig aus dem rohen
+``json.load``-Dict nachgebaut (Orakel-Regel der Spec). Nur der statische
+Metrik-KATALOG (``app.metric_catalog``) wird gelesen -- das ist Register-Wissen
+(Daten), keine Kaskaden-Entscheidungsfunktion, und fuer AC-11 ausdruecklich
+vorgeschrieben ("iteriert den Metrik-Katalog gefiltert auf selectable=true").
+
+Kuerzel-Register (``SMS_SYMBOL_BY_METRIC``/``SMS_MULTI_SYMBOLS_BY_METRIC``)
+wird AUSSCHLIESSLICH zum PARSEN des tatsaechlich gesendeten Textes verwendet,
+niemals zur Erwartungsbildung (AC-4).
+"""
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from typing import Optional
+
+from app.metric_catalog import (
+    SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC, _METRICS, get_metric,
+)
+
+# ---------------------------------------------------------------------------
+# Ausnahme-Register
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AusnahmeEintrag:
+    metrik: str        # metric_id, oder "*" fuer eine kanalweite Ausnahme (B2)
+    kanal: str          # "email_html" | "email_plain" | "telegram_rich" | "telegram_kurzform" | "sms" | "premium_sms"
+    dimension: str      # "erscheint" | "reihenfolge" | "roh_einfach"
+    befund: str         # Pflichtfeld, z.B. "B1", "#2412" -- keine leere Referenz
+    grund: str          # Pflichtfeld -- keine leere Begruendung
+    befristet: bool     # True = Fix in eigener Scheibe geplant
+
+
+class RegisterValidierungsFehler(Exception):
+    """AC-8: ein Register-Eintrag ohne befund/grund blockt VOR der Matrix."""
+
+
+#: F006/F007 (Adversary-Runde 4+5): ``metrik="*"`` ist laut Spec (Abschnitt
+#: "Ausnahme-Register") ausschliesslich fuer den kanalweiten Befund B2
+#: vorgesehen -- UND dort nur fuer den in der Spec benannten Scope
+#: (sms/telegram_kurzform/premium_sms x roh_einfach). Ein metrikscharfer
+#: Eintrag darf sich weder unbemerkt auf "*" verbreitern (F006) noch als
+#: Wildcard in einen fremden (Kanal, Dimension)-Scope hinein deklariert
+#: werden (F007) -- beides wuerde die Ausnahme fuer ALLE Metriken einer
+#: Stelle oeffnen statt fuer die eine begruendete.
+KANALWEITE_BEFUNDE: "dict[str, frozenset[tuple[str, str]]]" = {
+    "B2": frozenset({
+        ("sms", "roh_einfach"),
+        ("telegram_kurzform", "roh_einfach"),
+        ("premium_sms", "roh_einfach"),
+    }),
+}
+
+
+def register_validieren(register: "list[AusnahmeEintrag]") -> None:
+    for eintrag in register:
+        if not eintrag.befund or not eintrag.befund.strip():
+            raise RegisterValidierungsFehler(
+                f"Register-Eintrag ohne 'befund': {eintrag!r}"
+            )
+        if not eintrag.grund or not eintrag.grund.strip():
+            raise RegisterValidierungsFehler(
+                f"Register-Eintrag ohne 'grund': {eintrag!r}"
+            )
+        if eintrag.metrik == "*":
+            if eintrag.befund not in KANALWEITE_BEFUNDE:
+                raise RegisterValidierungsFehler(
+                    f"Register-Eintrag mit metrik='*' aber befund={eintrag.befund!r} "
+                    f"ist nicht erlaubt -- 'metrik=\"*\"' ist laut Spec ausschliesslich "
+                    f"fuer die kanalweiten Befunde {sorted(KANALWEITE_BEFUNDE)} "
+                    f"vorgesehen: {eintrag!r}"
+                )
+            scope = KANALWEITE_BEFUNDE[eintrag.befund]
+            if (eintrag.kanal, eintrag.dimension) not in scope:
+                raise RegisterValidierungsFehler(
+                    f"Register-Eintrag mit metrik='*' und befund={eintrag.befund!r} "
+                    f"liegt ausserhalb des fuer diesen Befund erlaubten Scopes "
+                    f"{sorted(scope)} -- (kanal, dimension)="
+                    f"{(eintrag.kanal, eintrag.dimension)!r} ist nicht abgedeckt: "
+                    f"{eintrag!r}"
+                )
+
+
+#: Register-Endzustand nach #2422 S6 (AC-14): NUR noch die strukturelle
+#: Design-Grenze ``gust`` (Telegram-7er-Tabellenlimit, #360, ``befristet=False``).
+#: Die vier S1-Produktabweichungen B1 (``wind_chill`` ohne Trip-Kuerzel), B2
+#: (Roh/Einfach in SMS/Premium-SMS/Kurzform), B3 (Telegram rich erbt die
+#: E-Mail-Wahl, #2429) und B5 (Geisterspalte ``WD``) sind im Produkt behoben --
+#: ihre Eintraege sind entfernt, der Unbenutzt-Waechter
+#: (``test_ac6_ac7_echtes_register_hat_keine_unbenutzten_eintraege``) erzwingt
+#: das mechanisch.
+AUSNAHMEN: "list[AusnahmeEintrag]" = [
+    # Strukturell (kein Register-verfallendes Produktdefizit, sondern eine
+    # bewusste Design-Grenze): Telegram-Tabellen sind auf 8 Gesamtspalten
+    # begrenzt (Zeit + 7 Metriken, CHANNEL_LIMITS["telegram"]["max_table_cols"]
+    # = 8, src/output/renderers/channel_layout.py:46-55, eingefuehrt mit
+    # Issue #360 "kanal-bewusster Renderer fuer Signal/Telegram", Commit
+    # 5f9b57f9). gust liegt in den Goldens hinter der 7er-Grenze und wird in
+    # Telegram rich deshalb verdraengt (demoted), erscheint aber laut Orakel
+    # weiterhin als "aktiv" (AC-5: die Orakel-Regel kennt das Limit nicht).
+    AusnahmeEintrag(
+        metrik="gust", kanal="telegram_rich", dimension="erscheint",
+        befund="Issue #360 (Telegram-7er-Tabellenlimit)",
+        grund=(
+            "Telegram begrenzt Tabellen strukturell auf 8 Gesamtspalten "
+            "(Zeit + 7 Metriken, channel_layout.py:46-55, CHANNEL_LIMITS"
+            "['telegram']['max_table_cols']=8, eingefuehrt mit Issue #360, "
+            "Commit 5f9b57f9). gust wird deshalb ab der 8. Kandidaten-"
+            "Metrik verdraengt (demoted) -- bewusste Design-Grenze, kein "
+            "Konfigurations-Fehler, daher nicht befristet."
+        ),
+        befristet=False,
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
+# Kanaele / Dimensionen
+# ---------------------------------------------------------------------------
+
+KANAELE = (
+    "email_html", "email_plain", "telegram_rich", "telegram_kurzform",
+    "sms", "premium_sms",
+)
+DIMENSIONEN = ("erscheint", "reihenfolge", "roh_einfach")
+
+#: Quell-Layoutschluessel je Kanal (Orakel-Regel: Kurzstil/Premium <- SMS).
+_LAYOUT_KEY_JE_KANAL = {
+    "email_html": "email", "email_plain": "email",
+    "telegram_rich": "telegram",
+    "telegram_kurzform": "sms", "sms": "sms", "premium_sms": "sms",
+}
+
+#: Tiers, die eine Berechtigung fuer SMS bzw. Premium-SMS haben (Berechtigung
+#: ist etwas anderes als die Einstellung: ein Schalter an ohne Berechtigung
+#: liefert nichts aus).
+_TIER_SMS = ("standard", "premium")
+_TIER_PREMIUM_SMS = ("premium",)
+
+
+def erreichbare_kanaele(
+    report_config: Optional[dict], *, tier: str = "premium",
+) -> tuple[str, ...]:
+    """Welche Kanaele ein Trip tatsaechlich erreicht -- gelesen aus dem ROHEN
+    ``report_config``-JSON, mit den Standardwerten des Editors (#2422 S3):
+
+    - kein ``report_config`` -> nur E-Mail (Rueckfall des Schedulers).
+    - ``send_email`` fehlt -> an; ``send_telegram``/``send_sms``/
+      ``send_premium_sms`` fehlen -> aus.
+    - Berechtigung: SMS nur Tier ``standard``/``premium``, Premium-SMS nur
+      ``premium`` (Einstellung != Berechtigung).
+    - E-Mail-HTML und -Klartext sind EINE Nachricht (zwei Teile).
+    - Telegram-Form folgt ``telegram_style`` (``kurzform`` sonst ``rich``).
+
+    ``tier`` hat den Default ``premium``: bestehende Aufrufer ohne das
+    Argument (S1-Tests, Golden A/B/C) sehen unveraendert alle Kanaele, deren
+    Schalter an sind.
+    """
+    if not report_config:
+        return ("email_html", "email_plain")
+    kanaele: list[str] = []
+    if report_config.get("send_email", True):
+        kanaele += ["email_html", "email_plain"]
+    if report_config.get("send_telegram", False):
+        if report_config.get("telegram_style") == "kurzform":
+            kanaele.append("telegram_kurzform")
+        else:
+            kanaele.append("telegram_rich")
+    if report_config.get("send_sms", False) and tier in _TIER_SMS:
+        kanaele.append("sms")
+    if report_config.get("send_premium_sms", False) and tier in _TIER_PREMIUM_SMS:
+        kanaele.append("premium_sms")
+    return tuple(kanaele)
+
+
+# ---------------------------------------------------------------------------
+# Katalog-Register (nur Parsen/AC-11-Aufzaehlung, keine Kaskaden-Entscheidung)
+# ---------------------------------------------------------------------------
+
+_SELECTABLE_IDS: tuple[str, ...] = tuple(m.id for m in _METRICS if m.selectable)
+_COL_LABEL_TO_ID: dict[str, str] = {m.col_label: m.id for m in _METRICS}
+_COMPACT_LABEL_TO_ID: dict[str, str] = {m.compact_label: m.id for m in _METRICS}
+_HAS_FRIENDLY: dict[str, bool] = {m.id: m.has_friendly_format for m in _METRICS}
+
+#: Symbol -> metric_id (invers zu SMS_SYMBOL_BY_METRIC/SMS_MULTI_SYMBOLS_BY_METRIC).
+_SMS_SYMBOL_TO_METRIC: dict[str, str] = {}
+for _mid, _sym in SMS_SYMBOL_BY_METRIC.items():
+    _SMS_SYMBOL_TO_METRIC[_sym] = _mid
+for _mid, _syms in SMS_MULTI_SYMBOLS_BY_METRIC.items():
+    for _sym in _syms:
+        _SMS_SYMBOL_TO_METRIC[_sym] = _mid
+
+
+def alle_waehlbaren_metrik_ids() -> tuple[str, ...]:
+    """AC-11: alle Katalog-Metriken mit ``selectable=true`` (Issue #710:
+    ``confidence_pct`` bereits per ``selectable=False`` ausgeschlossen)."""
+    return _SELECTABLE_IDS
+
+
+_SMS_ARTIGE_KANAELE = ("sms", "premium_sms", "telegram_kurzform")
+
+
+def _sms_format_menge() -> frozenset:
+    """#2422 S6 (AC-8): die Groessen, die in SMS/Premium-SMS/Kurzform zwei
+    Formen (Roh/Einfach) haben -- gelesen zur AUFRUFZEIT aus der PRODUKT-
+    Konstante ``app.metric_catalog.SMS_FORMAT_MODE_METRIC_IDS`` (dieselbe Quelle
+    wie SMS-Builder und Editor, ``/api/metrics`` -> ``sms_format_capable``).
+    KEINE Oracle-eigene Liste. Fehlt die Konstante (RED-Zustand), ist die Menge
+    leer -- die klare Fehlermeldung traegt der dedizierte AC-8-Test, damit nicht
+    ~15 unbeteiligte S1-Waechter aus dem falschen Grund rot werden."""
+    import app.metric_catalog as katalog
+
+    return frozenset(getattr(katalog, "SMS_FORMAT_MODE_METRIC_IDS", ()))
+
+
+def hat_roh_einfach_dimension(metric_id: str, kanal: Optional[str] = None) -> bool:
+    """Hat ``metric_id`` im Kanal ``kanal`` eine Roh/Einfach-Dimension?
+
+    E-Mail/Telegram rich: jede Groesse mit ``has_friendly_format``. In den
+    SMS-artigen Kanaelen (``sms``/``premium_sms``/``telegram_kurzform``) nur
+    Groessen der Produktkonstante ``SMS_FORMAT_MODE_METRIC_IDS`` (#2422 S6).
+    Ohne ``kanal`` (Altaufrufer, AC-11): die Katalog-Aussage."""
+    if kanal in _SMS_ARTIGE_KANAELE:
+        return metric_id in _sms_format_menge()
+    return _HAS_FRIENDLY.get(metric_id, False)
+
+
+# ---------------------------------------------------------------------------
+# Orakel: eigenstaendige Kaskaden-Rekonstruktion aus dem rohen Golden-Dict
+# ---------------------------------------------------------------------------
+
+_BUCKET_RANK = {"primary": 0, "secondary": 1}
+
+
+def _behalten_fuer_report_typ(mc: dict, report_type: str) -> bool:
+    me, ee = mc.get("morning_enabled"), mc.get("evening_enabled")
+    if report_type == "morning":
+        if me is True:
+            return True
+        if me is False:
+            return False
+        return bool(mc.get("enabled", True))
+    if report_type == "evening":
+        if ee is True:
+            return True
+        if ee is False:
+            return False
+        return bool(mc.get("enabled", True))
+    return bool(mc.get("enabled", True))
+
+
+def _global_erlaubte_ids(golden: dict, report_type: str) -> Optional[set[str]]:
+    """D4: leere globale Liste -> None ("kein Maximum definiert")."""
+    metrics = golden["display_config"].get("metrics") or []
+    if not metrics:
+        return None
+    erlaubt = set()
+    for mc in metrics:
+        mid = mc["metric_id"]
+        if mid not in _SELECTABLE_IDS:
+            continue
+        if _behalten_fuer_report_typ(mc, report_type):
+            erlaubt.add(mid)
+    return erlaubt
+
+
+def erwartete_kaskade(
+    golden: dict, kanal: str, report_type: str = "evening",
+) -> list[tuple[str, bool]]:
+    """Erwartete (metric_id, friendly)-Liste in gespeicherter Reihenfolge fuer
+    ``kanal`` -- EIGENSTAENDIGE Kaskaden-Rekonstruktion (kein Import von
+    ``get_metrics_for_channel``/``_sorted_by_layout``).
+
+    Kernregeln (nicht ausnahmefaehig, direkt in der Regel -- B6/B4):
+    - Kanal-Layout ist Teilmenge des globalen Maximums (``display_config.
+      metrics``), nie eine Ergaenzung.
+    - sms/telegram_kurzform/premium_sms lesen IMMER ``channel_layouts.sms``
+      (bzw. ``channel_layouts_per_report[report_type].sms``, das gewinnt).
+    """
+    layout_key = _LAYOUT_KEY_JE_KANAL[kanal]
+    dc = golden["display_config"]
+    global_erlaubt = _global_erlaubte_ids(golden, report_type)
+    layouts = dc.get("channel_layouts") or {}
+    # #2422 S3: Vorrang per_report > per_channel > global (wie die Produktkaskade,
+    # aber eigenstaendig aus dem rohen JSON gelesen).
+    je_report = (dc.get("channel_layouts_per_report") or {}).get(report_type) or {}
+
+    if layout_key in je_report:
+        kandidaten = je_report[layout_key]
+        schneiden = True
+    elif layout_key in layouts:
+        kandidaten = layouts[layout_key]
+        schneiden = True
+    else:
+        kandidaten = dc.get("metrics") or []
+        schneiden = False  # globale Liste IST das Maximum, kein Schnitt gegen sich selbst
+
+    gefiltert = []
+    for mc in kandidaten:
+        mid = mc["metric_id"]
+        if mid not in _SELECTABLE_IDS:
+            continue
+        if not _behalten_fuer_report_typ(mc, report_type):
+            continue
+        if schneiden and global_erlaubt is not None and mid not in global_erlaubt:
+            continue
+        gefiltert.append(mc)
+
+    gefiltert.sort(
+        key=lambda mc: (_BUCKET_RANK.get(mc.get("bucket", "primary"), 2), mc.get("order", 0))
+    )
+    return [(mc["metric_id"], bool(mc.get("use_friendly_format", True))) for mc in gefiltert]
+
+
+# ---------------------------------------------------------------------------
+# Parser -- lesen NUR den tatsaechlich gesendeten Text
+# ---------------------------------------------------------------------------
+
+_HEADER_TRENNER_RE = re.compile(r"^\s*-{3,}(\s+-{3,})+\s*$")
+_PLATZHALTER = {"-", "–", "?", ""}
+#: Deutsche Himmelsrichtungs-Kuerzel -- narrow.py haengt sie an den Windwert
+#: an ("20 W"), wenn wind_direction im Skalenmodus gemeinsam mit wind aktiv
+#: ist (should_merge_wind_dir). Fuer die Tabellen-Tokenisierung wird ein
+#: solches Kuerzel wieder an sein Zahlwort angehaengt.
+_HIMMELSRICHTUNGEN = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"}
+
+
+def _ist_numerisch(wert: str) -> bool:
+    return bool(re.fullmatch(r"-?\d+(\.\d+)?%?", wert))
+
+
+def _zell_modus(wert: str) -> Optional[str]:
+    """"raw" | "friendly" | None (Platzhalter/Null-Form -- kein Modus ablesbar)."""
+    if wert in _PLATZHALTER:
+        return None
+    return "raw" if _ist_numerisch(wert) else "friendly"
+
+
+def _hat_richtungs_suffix(wert: str) -> bool:
+    """Endet die Zelle auf ein Himmelsrichtungs-Kuerzel ("20 W")?"""
+    teile = wert.split()
+    return len(teile) == 2 and teile[1] in _HIMMELSRICHTUNGEN
+
+
+def _tabellen_tokens_mit_richtungs_merge(zeile: str, spaltenzahl: int) -> list[str]:
+    """``zeile.split()``, mit Ruecklauf fuer die Windrichtungs-Verschmelzung
+    (narrow.py: Windwert + Himmelsrichtung landen als EINE Zelle mit
+    innerem Leerzeichen, z.B. "20 W"). Nur wenn genau EIN Token zu viel da
+    ist UND eines davon ein Himmelsrichtungs-Kuerzel ist, wird es an das
+    VORANGEHENDE Token zurueckgehaengt."""
+    tokens = zeile.split()
+    if len(tokens) == spaltenzahl:
+        return tokens
+    if len(tokens) == spaltenzahl + 1:
+        for i, tok in enumerate(tokens):
+            if tok in _HIMMELSRICHTUNGEN and i > 0:
+                merged = tokens[:i - 1] + [f"{tokens[i-1]} {tok}"] + tokens[i + 1:]
+                if len(merged) == spaltenzahl:
+                    return merged
+    return tokens
+
+
+def _email_tabellen_kopf_und_zeile(text: str) -> tuple[list[str], list[str]]:
+    """Kopf (Labels ohne 'Time') + erste Datenzeile-Werte (ohne Zeit) der
+    ERSTEN Stunden-Tabelle im Klartext. Windrichtungs-Merge-Ruecklauf wie bei
+    Telegram (Mutations-Faelle wie M4 koennen wind_direction+wind auch in
+    E-Mail aktiv werden lassen, obwohl das golden-eigene E-Mail-Layout es
+    nicht vorsieht)."""
+    zeilen = text.splitlines()
+    for i, zeile in enumerate(zeilen):
+        if _HEADER_TRENNER_RE.match(zeile):
+            kopf = zeilen[i - 1].split()
+            daten = _tabellen_tokens_mit_richtungs_merge(zeilen[i + 1], len(kopf))
+            assert len(kopf) == len(daten), (
+                f"Tabellenkopf/-zeile passen nicht zusammen: {kopf!r} vs {daten!r}"
+            )
+            return kopf[1:], daten[1:]
+    raise AssertionError(f"Keine Tabellen-Trennzeile in Klartext gefunden:\n{text[:1500]}")
+
+
+def parse_email_plain(text: str) -> tuple[list[str], dict[str, Optional[str]]]:
+    """(metric_ids in Spaltenreihenfolge, {metric_id: Modus|None})."""
+    labels, werte = _email_tabellen_kopf_und_zeile(text)
+    ids, modi = [], {}
+    for label, wert in zip(labels, werte):
+        mid = _COL_LABEL_TO_ID.get(label)
+        if mid is None:
+            continue
+        ids.append(mid)
+        modi[mid] = _zell_modus(wert)
+    return ids, modi
+
+
+_TD_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.DOTALL)
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _text_ohne_tags(html_fragment: str) -> str:
+    return _TAG_RE.sub("", html_fragment).strip()
+
+
+def _email_html_kopf_und_werte(html: str) -> tuple[list[str], list[str]]:
+    """(Labels ohne 'Time', Werte ohne Zeit-Spalte) der ERSTEN Stunden-Tabelle
+    im HTML -- gemeinsame Grundlage fuer ``parse_email_html`` (Modus) und
+    ``roh_wert_der_metrik`` (Rohwert, AC-13)."""
+    tabellen = [m.start() for m in re.finditer(r"<table", html)]
+    assert len(tabellen) >= 2, "Keine zweite <table> (Stunden-Tabelle) im HTML gefunden"
+    ausschnitt = html[tabellen[1]:tabellen[2] if len(tabellen) > 2 else tabellen[1] + 20000]
+    kopf_match = re.search(r"<thead>(.*?)</thead>", ausschnitt, re.DOTALL)
+    assert kopf_match, "Kein <thead> in der Stunden-Tabelle gefunden"
+    labels = [_text_ohne_tags(t) for t in re.findall(r"<th[^>]*>(.*?)</th>", kopf_match.group(1), re.DOTALL)]
+    rumpf = ausschnitt[kopf_match.end():]
+    erste_zeile_match = re.search(r"<tr[^>]*>(.*?)</tr>", rumpf, re.DOTALL)
+    assert erste_zeile_match, "Keine Datenzeile in der Stunden-Tabelle gefunden"
+    werte = [_text_ohne_tags(t) for t in _TD_RE.findall(erste_zeile_match.group(1))]
+    assert len(labels) == len(werte), f"Kopf/Zeile-Laenge weicht ab: {labels!r} vs {werte!r}"
+    return labels[1:], werte[1:]  # erste Spalte = Zeit
+
+
+def parse_email_html(html: str) -> tuple[list[str], dict[str, Optional[str]]]:
+    """(metric_ids in Spaltenreihenfolge, {metric_id: Modus|None}) aus der
+    ZWEITEN ``<table>`` (die erste ist der Mastkopf) -- deren ``<th>``-Zeile
+    traegt die Spalten-Labels, die naechste ``<tr>`` die erste Datenzeile."""
+    labels, werte = _email_html_kopf_und_werte(html)
+    ids, modi = [], {}
+    for label, wert in zip(labels, werte):
+        mid = _COL_LABEL_TO_ID.get(label)
+        if mid is None:
+            continue
+        ids.append(mid)
+        modi[mid] = _zell_modus(wert)
+    return ids, modi
+
+
+def parse_telegram_rich(bodies: list[str]) -> tuple[list[str], dict[str, Optional[str]]]:
+    """Sucht ueber ALLE Bubble-Texte den Tabellenkopf (Zeile beginnend mit
+    "Zt ") des ERSTEN Segments -- ignoriert Kurzuebersicht/Fusszeile/Nacht/
+    Ausblick.
+
+    B5-Regel: eine Spalte, deren gesamte gesampelte Zelle ein Platzhalter ist
+    (Geisterspalte), zaehlt NICHT als "erscheint" -- ihr Kuerzel wird aus der
+    ID-Liste entfernt (sie bleibt dadurch automatisch ohne Reihenfolge-/
+    Roh-Einfach-Zelle, s. Matrix-Regel "nur bei beidseitiger Praesenz").
+    """
+    for body in bodies:
+        zeilen = body.splitlines()
+        for i, zeile in enumerate(zeilen):
+            if zeile.startswith("Zt "):
+                kopf = zeile.split()
+                daten = _tabellen_tokens_mit_richtungs_merge(zeilen[i + 1], len(kopf))
+                assert len(kopf) == len(daten), (
+                    f"Telegram-Tabellenkopf/-zeile passen nicht zusammen: "
+                    f"{kopf!r} vs {daten!r}"
+                )
+                ids, modi = [], {}
+                for label, wert in zip(kopf[1:], daten[1:]):
+                    mid = _COMPACT_LABEL_TO_ID.get(label)
+                    if mid is None:
+                        continue
+                    modus = _zell_modus(wert)
+                    if modus is None:
+                        continue  # Geisterspalte: zaehlt nicht als "erscheint"
+                    ids.append(mid)
+                    modi[mid] = modus
+                    # #2422 S6 (B5): ist die Windrichtung im Skalenmodus in die
+                    # Windzelle verschmolzen ("20 W"), ERSCHEINT sie -- als
+                    # Kompass-Sektor, also "friendly" -- direkt an der Windzelle.
+                    if mid == "wind" and _hat_richtungs_suffix(wert):
+                        ids.append("wind_direction")
+                        modi["wind_direction"] = "friendly"
+                return ids, modi
+    raise AssertionError("Kein Telegram-Tabellenkopf ('Zt ...') in den Bubbles gefunden")
+
+
+#: Wert-Grammatik der SMS-/Kurzform-Tokens (Vorbild test_sms_user_metric_order.py).
+_RANGE_HALF = r"-?\d+|-|\?"
+#: #2422 S6: Einfach-Stufenwerte der SMS (Doppelpunkt gehoert ins Kuerzel, #1824 B:
+#: ``CT:SCT@4``) und optionales Minus vor Zahlen (``TF-3@6``).
+_STUFE = r"(?:CLR|FEW|SCT|BKN|OVC|[LMH]|-)"
+_VALUE_GRAMMAR = (
+    rf"(?:(?:{_RANGE_HALF})/(?:{_RANGE_HALF})"
+    rf"|:{_STUFE}(?:@\d+(?:\({_STUFE}@\d+\))?)?"
+    r"|(?:-?\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:-?\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)"
+)
+
+
+def _sms_treffer(text: str) -> list[tuple[int, str, str]]:
+    """(index, metric_id, roher Wert) je erkanntem Kuerzel-Token in
+    Token-Reihenfolge -- gemeinsame Grundlage fuer ``parse_sms_artig``
+    (Modus) und ``roh_wert_der_metrik`` (Rohwert, AC-13)."""
+    rumpf = text.split(": ", 1)[1] if ": " in text else text
+    tokens = rumpf.split(" ")
+    treffer: list[tuple[int, str, str]] = []  # (index, metric_id, wert)
+    for i, tok in enumerate(tokens):
+        for symbol, mid in _SMS_SYMBOL_TO_METRIC.items():
+            m = re.fullmatch(rf"{re.escape(symbol)}({_VALUE_GRAMMAR})", tok)
+            if m:
+                treffer.append((i, mid, m.group(1)))
+                break
+    treffer.sort(key=lambda t: t[0])
+    return treffer
+
+
+def parse_sms_artig(text: str) -> tuple[list[str], dict[str, Optional[str]]]:
+    """(metric_ids in Token-Reihenfolge, {metric_id: Modus|None}) aus einem
+    SMS-/Kurzform-/Premium-SMS-Text -- Kuerzel-Register NUR zum Parsen
+    (AC-4), niemals zur Erwartungsbildung."""
+    treffer = _sms_treffer(text)
+    ids: list[str] = []
+    modi: dict[str, Optional[str]] = {}
+    for _, mid, wert in treffer:
+        if mid in ids:
+            continue  # Mehrfachsymbole (TH:/TH+:) -> erste Fundstelle zaehlt
+        ids.append(mid)
+        if wert in ("-", "?") or re.fullmatch(r":-(?:@\d+)?", wert):
+            modi[mid] = None
+        elif wert.startswith(":"):
+            modi[mid] = "friendly"  # #2422 S6: Einfach-Stufe (CT:SCT@4)
+        elif re.fullmatch(r"[LMH]", wert):
+            modi[mid] = "friendly"
+        else:
+            modi[mid] = "raw" if _ist_numerisch(wert.split("@")[0].split("/")[0]) else "friendly"
+    return ids, modi
+
+
+def _kanal_texte(mitschrift, kanal: str) -> tuple[list[str], Optional[str]]:
+    """(telegram_bodies_liste, einzeltext) -- fuer telegram_rich die Liste
+    aller Bubbles, sonst der EINE gesendete Text."""
+    if kanal == "email_html":
+        s = mitschrift.sendungen("email")
+        return [], (s[0]["body"] if s else None)
+    if kanal == "email_plain":
+        s = mitschrift.sendungen("email")
+        return [], (s[0]["plain_text_body"] if s else None)
+    if kanal == "telegram_rich":
+        bodies = [s["body"] for s in mitschrift.sendungen("telegram") if s["parse_mode"] == "HTML"]
+        return bodies, None
+    if kanal == "telegram_kurzform":
+        s = [x for x in mitschrift.sendungen("telegram") if x["parse_mode"] is None]
+        return [], (s[0]["body"] if s else None)
+    if kanal == "sms":
+        s = mitschrift.sendungen("sms")
+        return [], (s[0]["body"] if s else None)
+    if kanal == "premium_sms":
+        s = mitschrift.sendungen("premium_sms")
+        return [], (s[0]["body"] if s else None)
+    raise ValueError(f"Unbekannter Kanal {kanal!r}")
+
+
+def parse_kanal(mitschrift, kanal: str) -> tuple[list[str], dict[str, Optional[str]]]:
+    bodies, text = _kanal_texte(mitschrift, kanal)
+    if kanal == "telegram_rich":
+        assert bodies, f"Kanal {kanal!r}: keine aufgezeichnete Sendung mit nicht-leerem Text"
+        return parse_telegram_rich(bodies)
+    assert text, f"Kanal {kanal!r}: keine aufgezeichnete Sendung mit nicht-leerem Text"
+    if kanal == "email_html":
+        return parse_email_html(text)
+    if kanal == "email_plain":
+        return parse_email_plain(text)
+    return parse_sms_artig(text)
+
+
+def _kurzuebersicht_wert(bodies: list[str], compact_label: str) -> Optional[str]:
+    """Sucht in ALLEN Bubble-Texten eine Kurzuebersicht-Zeile "<Kuerzel>
+    <Wert>" (z.B. "G 45") -- Format der Telegram-rich-Kurzuebersicht-Bubble,
+    die zusaetzlich zur Stunden-Tabelle mitgesendet wird. Fuer eine wegen des
+    Telegram-7er-Tabellenlimits (Issue #360) aus der Stunden-Tabelle
+    verdraengte Metrik (z.B. ``gust``) ist dies die einzige Fundstelle."""
+    muster = re.compile(rf"^{re.escape(compact_label)}\s+(\S.*)$")
+    for body in bodies:
+        for zeile in body.splitlines():
+            m = muster.match(zeile.strip())
+            if m:
+                return m.group(1).strip()
+    return None
+
+
+def roh_wert_der_metrik(mitschrift, kanal: str, metric_id: str) -> Optional[str]:
+    """Roher Zellwert (String) an der Stelle von ``metric_id`` im tatsaechlich
+    gesendeten Text von ``kanal`` -- fuer punktuelle Wert-Zuordnungs-
+    Pruefungen (AC-13), damit ein Substring-Treffer nicht zufaellig von einer
+    anderen Stelle im Text stammt. ``None``, wenn die Metrik in diesem
+    Kanaltext nicht auffindbar ist."""
+    bodies, text = _kanal_texte(mitschrift, kanal)
+    if kanal == "telegram_rich":
+        assert bodies, f"Kanal {kanal!r}: keine aufgezeichnete Sendung"
+        for body in bodies:
+            zeilen = body.splitlines()
+            for i, zeile in enumerate(zeilen):
+                if zeile.startswith("Zt "):
+                    kopf = zeile.split()
+                    daten = _tabellen_tokens_mit_richtungs_merge(zeilen[i + 1], len(kopf))
+                    for label, wert in zip(kopf[1:], daten[1:]):
+                        if _COMPACT_LABEL_TO_ID.get(label) == metric_id:
+                            return wert
+        metric = get_metric(metric_id)
+        return _kurzuebersicht_wert(bodies, metric.compact_label)
+    assert text, f"Kanal {kanal!r}: keine aufgezeichnete Sendung"
+    if kanal == "email_html":
+        labels, werte = _email_html_kopf_und_werte(text)
+    elif kanal == "email_plain":
+        labels, werte = _email_tabellen_kopf_und_zeile(text)
+    else:
+        for _, mid, wert in _sms_treffer(text):
+            if mid == metric_id:
+                return wert
+        return None
+    for label, wert in zip(labels, werte):
+        if _COL_LABEL_TO_ID.get(label) == metric_id:
+            return wert
+    return None
+
+
+def vorbedingung_pruefen(mitschrift, kanaele: tuple[str, ...]) -> None:
+    """Vor der Matrix: jeder erwartete Kanal hat GENAU eine (telegram_rich:
+    mindestens eine) aufgezeichnete Sendung mit nicht-leerem Text."""
+    for kanal in kanaele:
+        bodies, text = _kanal_texte(mitschrift, kanal)
+        if kanal == "telegram_rich":
+            assert bodies, f"Vorbedingung verletzt: kein Telegram-rich-Text fuer {kanal!r}"
+        else:
+            assert text, f"Vorbedingung verletzt: kein Text fuer Kanal {kanal!r}"
+
+
+# ---------------------------------------------------------------------------
+# Matrix
+# ---------------------------------------------------------------------------
+
+Zelle = tuple[str, str, str]  # (metric_id, kanal, dimension)
+
+
+def _register_deckt(
+    zelle: Zelle, register: "list[AusnahmeEintrag]", genutzt: set,
+) -> bool:
+    mid, kanal, dim = zelle
+    for eintrag in register:
+        if eintrag.kanal == kanal and eintrag.dimension == dim and eintrag.metrik in (mid, "*"):
+            genutzt.add(eintrag)
+            return True
+    return False
+
+
+def _verschmolzene_windrichtung_an_die_windzelle(
+    erwartet_ids: "list[str]", erwartet_friendly: "dict[str, bool]",
+) -> "list[str]":
+    """#2422 S6 (B5): sind ``wind`` UND ``wind_direction`` (Skalenmodus =
+    ``friendly``) aktiv, steht die Richtung im Text in der Windzelle ("20 W")
+    -- ihre ERWARTETE Position ist die der Windzelle, nicht die eigene
+    Layout-Position. Reine Umordnung der Erwartung; ``erscheint`` bleibt
+    unberuehrt."""
+    if "wind" not in erwartet_ids or "wind_direction" not in erwartet_ids:
+        return erwartet_ids
+    if not erwartet_friendly.get("wind_direction", True):
+        return erwartet_ids
+    umgeordnet = [m for m in erwartet_ids if m != "wind_direction"]
+    umgeordnet.insert(umgeordnet.index("wind") + 1, "wind_direction")
+    return umgeordnet
+
+
+def abweichungen_fuer_golden(
+    golden: dict, mitschrift, register: "list[AusnahmeEintrag]",
+    *, report_type: str = "evening",
+) -> tuple[set[Zelle], set[Zelle], set["AusnahmeEintrag"]]:
+    """(rote Zellen, ALLE Abweichungen VOR Register-Filterung, genutzte
+    Register-Eintraege) fuer EIN Golden (nur die von diesem Golden
+    erreichbaren Kanaele). ``alle_abweichungen`` ist unabhaengig vom
+    uebergebenen ``register`` -- sie ist die Grundlage fuer AC-6 (Vergleich
+    "leeres Register" gegen "was das Register normalerweise deckt")."""
+    register_validieren(register)
+    kanaele = erreichbare_kanaele(golden["report_config"])
+    vorbedingung_pruefen(mitschrift, kanaele)
+
+    rot: set[Zelle] = set()
+    alle_abweichungen: set[Zelle] = set()
+    genutzt: set = set()
+
+    def _pruefen(zelle: Zelle) -> None:
+        alle_abweichungen.add(zelle)
+        if not _register_deckt(zelle, register, genutzt):
+            rot.add(zelle)
+
+    for kanal in kanaele:
+        erwartet = erwartete_kaskade(golden, kanal, report_type)
+        erwartet_ids = [mid for mid, _ in erwartet]
+        erwartet_friendly = dict(erwartet)
+        ist_ids, ist_modi = parse_kanal(mitschrift, kanal)
+
+        erwartet_set, ist_set = set(erwartet_ids), set(ist_ids)
+        for mid in erwartet_set | ist_set:
+            e_da, i_da = mid in erwartet_set, mid in ist_set
+            if e_da != i_da:
+                _pruefen((mid, kanal, "erscheint"))
+
+        if kanal == "telegram_rich":
+            erwartet_ids = _verschmolzene_windrichtung_an_die_windzelle(
+                erwartet_ids, erwartet_friendly,
+            )
+        gemeinsame_erw = [m for m in erwartet_ids if m in ist_set]
+        gemeinsame_ist = [m for m in ist_ids if m in erwartet_set]
+        for mid in gemeinsame_erw:
+            if gemeinsame_erw.index(mid) != gemeinsame_ist.index(mid):
+                _pruefen((mid, kanal, "reihenfolge"))
+            if not hat_roh_einfach_dimension(mid, kanal):
+                continue
+            ist_modus = ist_modi.get(mid)
+            if ist_modus is None:
+                continue
+            erwartet_modus = "friendly" if erwartet_friendly[mid] else "raw"
+            if erwartet_modus != ist_modus:
+                _pruefen((mid, kanal, "roh_einfach"))
+
+    return rot, alle_abweichungen, genutzt
+
+
+def rote_zellen_fuer_golden(
+    golden: dict, mitschrift, register: "list[AusnahmeEintrag]",
+    *, report_type: str = "evening",
+) -> tuple[set[Zelle], set["AusnahmeEintrag"]]:
+    """Rote Zellmenge + tatsaechlich genutzte Register-Eintraege fuer EIN
+    Golden (nur die von diesem Golden erreichbaren Kanaele)."""
+    rot, _alle, genutzt = abweichungen_fuer_golden(
+        golden, mitschrift, register, report_type=report_type,
+    )
+    return rot, genutzt
+
+
+def rote_zellen_beide_goldens(
+    golden_a: dict, mitschrift_a, golden_b: dict, mitschrift_b,
+    register: "list[AusnahmeEintrag]", *, report_type: str = "evening",
+) -> tuple[set[Zelle], set["AusnahmeEintrag"]]:
+    rot_a, genutzt_a = rote_zellen_fuer_golden(golden_a, mitschrift_a, register, report_type=report_type)
+    rot_b, genutzt_b = rote_zellen_fuer_golden(golden_b, mitschrift_b, register, report_type=report_type)
+    return rot_a | rot_b, genutzt_a | genutzt_b
+
+
+def veraltete_eintraege(
+    register: "list[AusnahmeEintrag]", genutzt: set["AusnahmeEintrag"],
+) -> set["AusnahmeEintrag"]:
+    return set(register) - genutzt
+
+
+# ===========================================================================
+# Vergleichs-Orakel (Issue #2422 S5, Ortsvergleich)
+# ===========================================================================
+#
+# **Orakel-Unabhaengigkeit (PFLICHT):** Die Erwartung wird hier aus dem ROHEN
+# ``json.load`` des Presets, dem Tarif und der Sendefaehigkeit gebildet --
+# nie aus ``resolve_channel_enabled_metrics``,
+# ``effective_compare_briefing_channels`` oder ``effective_alert_channels``.
+# Die Text-Zuordnung (Label/Kuerzel) ist statisches Register-Wissen, einmal
+# gegen den gesendeten Text abgelesen; sie ist KEINE Entscheidungsfunktion.
+#
+# Die Vergleichs-Kanaele haben eigene Textformen, die Trip-Parser oben passen
+# nicht: Telegram geht mit ``parse_mode=None`` und Zellen ``Label Wert`` mit
+# `` · `` verbunden je Ort; die E-Mail ist je Ort ein Block ``   Label: Wert``;
+# die SMS ist EINE Zeile ``Vergleich TT.MM.: Ort K1 W1 K2 W2; Ort2 ...``.
+
+#: Gespeicherte Auswahl-Schluessel (Frontend-Vokabular, wie der Editor sie
+#: schreibt) -> (metric_id, aggregation, E-Mail-Label, Telegram-Label, SMS-Kuerzel)
+COMPARE_METRIKEN: dict[str, tuple[str, str, str, str, str]] = {
+    "temp_max_c": ("temperature", "max", "Temperatur", "Temp max", "D"),
+    "temp_min_c": ("temperature", "min", "Temperatur", "Temp min", "L"),
+    "wind_max_kmh": ("wind", "max", "Wind", "Wind", "W"),
+    "gust_max_kmh": ("gust", "max", "Böen", "Böen", "G"),
+    "cloud_avg_pct": ("cloud_total", "avg", "Bewölkung", "Wolken", "CT"),
+    "sunny_hours_h": ("sunshine", "sum", "Sonnenstunden", "Sonne", "SU"),
+    "snow_depth_cm": ("snow_depth", "max", "Schneehöhe", "Schneehöhe", "SD"),
+    "snow_new_sum_cm": ("fresh_snow", "sum", "Neuschnee", "Neuschnee", "NS"),
+    "precip_sum_mm": ("precipitation", "sum", "Niederschlag", "Regen", "R"),
+    "pop_max_pct": ("rain_probability", "max", "Regenwahrscheinlichkeit",
+                    "Regenwahrscheinlichkeit", "PR"),
+}
+_COMPARE_PAAR_ZU_KEY = {(v[0], v[1]): k for k, v in COMPARE_METRIKEN.items()}
+
+#: Sieben Werte je Ort im Telegram-Vergleich (Spec S5, Abschnitt Testinfrastruktur).
+COMPARE_TELEGRAM_ZELLEN_JE_ORT = 7
+
+COMPARE_KANAELE = ("email", "telegram", "sms", "premium_sms")
+
+
+def compare_erreichbare_kanaele(
+    preset_json: dict, tier: str, *, kann_telegram: bool, kann_sms: bool,
+) -> tuple[str, ...]:
+    """Kanalmenge des Vergleichs-BRIEFINGS aus rohem JSON + Tarif + globaler
+    Sendefaehigkeit (Spec AC-7/AC-8/AC-9). Reihenfolge = Versandreihenfolge
+    (``ALLE_KANAELE``-Muster: email, sms, premium_sms, telegram).
+
+    * E-Mail: immer (der Ortsvergleich speichert kein ``send_email``).
+    * Telegram: Opt-in UND sendefaehig.
+    * SMS: Opt-in UND sendefaehig UND Tarif standard/premium.
+    * Premium-SMS: Opt-in UND ``alert_channels`` vorhanden (sonst Alarm-Absicht
+      des Altbestands) UND Tarif premium.
+    """
+    kanaele = ["email"]
+    if preset_json.get("send_sms") and kann_sms and tier in _TIER_SMS:
+        kanaele.append("sms")
+    if (
+        preset_json.get("send_premium_sms")
+        and preset_json.get("alert_channels") is not None
+        and tier in _TIER_PREMIUM_SMS
+    ):
+        kanaele.append("premium_sms")
+    if preset_json.get("send_telegram") and kann_telegram:
+        kanaele.append("telegram")
+    return tuple(kanaele)
+
+
+def _compare_auswahl_keys(rohliste) -> Optional[list[str]]:
+    """Gespeicherte Auswahl (Strings ODER ``{metric_id, aggregation}``) -> Liste
+    der Schluessel in Speicherreihenfolge; ``None`` wenn das Feld fehlt."""
+    if not isinstance(rohliste, list):
+        return None
+    keys: list[str] = []
+    for eintrag in rohliste:
+        if isinstance(eintrag, str):
+            key = eintrag if eintrag in COMPARE_METRIKEN else None
+        elif isinstance(eintrag, dict):
+            key = _COMPARE_PAAR_ZU_KEY.get((eintrag.get("metric_id"), eintrag.get("aggregation")))
+        else:
+            key = None
+        if key is not None and key not in keys:
+            keys.append(key)
+    return keys
+
+
+def compare_erwartete_metriken(preset_json: dict, kanal: str) -> Optional[list[str]]:
+    """Erwartete Uebersichts-Auswahl je Kanal (Reihenfolge = Kanal-Liste), aus
+    rohem JSON: Grundauswahl ``display_config.active_metrics`` ist das MAXIMUM,
+    ein Kanal-Eintrag darf nur abwaehlen (ADR-0050). ``None`` = kein Filter
+    (Grundauswahl fehlt, kein Kanal-Eintrag). Premium-SMS traegt den Inhalt der
+    SMS (Spec AC-6) -- ein Eintrag ``premium_sms`` gilt NICHT."""
+    dc = preset_json.get("display_config") or {}
+    basis = _compare_auswahl_keys(dc.get("active_metrics"))
+    kanal_key = "sms" if kanal == "premium_sms" else kanal
+    cam = dc.get("channel_active_metrics")
+    if not isinstance(cam, dict) or kanal_key not in cam:
+        return basis
+    eintrag = _compare_auswahl_keys(cam[kanal_key])
+    if eintrag is None:
+        return basis
+    if basis is None:
+        return eintrag
+    return [k for k in eintrag if k in set(basis)]
+
+
+def compare_telegram_erwartung(erwartet: Optional[list[str]]) -> tuple[list[str], int]:
+    """(Zellen je Ort, Anzahl verdraengter Groessen) unter der 7er-Grenze."""
+    if erwartet is None:
+        return [], 0
+    return (
+        erwartet[:COMPARE_TELEGRAM_ZELLEN_JE_ORT],
+        max(0, len(erwartet) - COMPARE_TELEGRAM_ZELLEN_JE_ORT),
+    )
+
+
+# --- Parser ---------------------------------------------------------------
+
+_EMAIL_LABEL_KEY = {
+    "Temperatur Maximum": "temp_max_c", "Temperatur Minimum": "temp_min_c",
+    # Nur EINE Temperatur-Groesse gewaehlt: der Renderer laesst die Auswertung weg.
+    # Die Fixtures der E-Mail-Pruefungen kombinieren nie beide -> Zuordnung eindeutig.
+    "Temperatur": "temp_max_c",
+    "Wind": "wind_max_kmh", "Böen": "gust_max_kmh", "Bewölkung": "cloud_avg_pct",
+    "Sonnenstunden": "sunny_hours_h", "Schneehöhe": "snow_depth_cm",
+    "Neuschnee": "snow_new_sum_cm", "Niederschlag": "precip_sum_mm",
+    "Regenwahrscheinlichkeit": "pop_max_pct",
+}
+_TELEGRAM_LABELS = sorted(
+    ((v[3], k) for k, v in COMPARE_METRIKEN.items()), key=lambda p: -len(p[0]),
+)
+
+
+def compare_parse_email_plain(text: str, orte: list[str]) -> dict[str, list[str]]:
+    """Klartext der Vergleichs-Mail -> {Ort: [Schluessel in Zeilenfolge]}.
+    Nur der Uebersichtsteil (vor ``STUNDENVERLAUF``/``AUSBLICK``); Ortsblock =
+    unverrueckte Zeile mit dem Ortsnamen, Metrikzeilen ``   Label: Wert``."""
+    ergebnis: dict[str, list[str]] = {}
+    aktuell: Optional[str] = None
+    for zeile in text.splitlines():
+        if zeile.startswith(("STUNDENVERLAUF", "AUSBLICK")):
+            break
+        if zeile in orte:
+            aktuell = zeile
+            ergebnis.setdefault(aktuell, [])
+            continue
+        m = re.match(r"^   ([^:]+): ", zeile)
+        if aktuell is not None and m and m.group(1) in _EMAIL_LABEL_KEY:
+            ergebnis[aktuell].append(_EMAIL_LABEL_KEY[m.group(1)])
+    return ergebnis
+
+
+def compare_parse_telegram(text: str, orte: list[str]) -> tuple[dict[str, list[str]], Optional[int]]:
+    """Telegram-Vergleichstext -> ({Ort: [Schluessel in Zellenfolge]},
+    Anzahl im Ueberlauf-Hinweis genannter verdraengter Groessen oder ``None``)."""
+    ergebnis: dict[str, list[str]] = {}
+    hinweis: Optional[int] = None
+    aktuell: Optional[str] = None
+    for zeile in text.splitlines():
+        if zeile in orte:
+            aktuell = zeile
+            ergebnis.setdefault(aktuell, [])
+            continue
+        if aktuell is None or not zeile.startswith("   "):
+            continue
+        inhalt = zeile.strip()
+        m = re.match(r"^… \+(\d+) weitere Wettergrößen", inhalt)
+        if m:
+            hinweis = int(m.group(1))
+            continue
+        if inhalt.startswith("…") or inhalt == "keine Werte":
+            continue
+        for zelle in inhalt.split(" · "):
+            for label, key in _TELEGRAM_LABELS:
+                if zelle.startswith(label + " "):
+                    ergebnis[aktuell].append(key)
+                    break
+    return ergebnis, hinweis
+
+
+_SMS_KUERZEL_KEY = {v[4]: k for k, v in COMPARE_METRIKEN.items()}
+
+
+def compare_parse_sms(text: str, orte: list[str]) -> dict[str, list[str]]:
+    """SMS-Vergleichstext ``Vergleich TT.MM.: Ort K W; Ort2 K W`` ->
+    {Ort: [Schluessel in Zellenfolge]}. Ein Ort, den das Zeichenbudget
+    verdraengt hat (``+N Orte``), fehlt im Ergebnis."""
+    _, _, rest = text.partition(": ")
+    ergebnis: dict[str, list[str]] = {}
+    for segment in rest.split("; "):
+        for ort in orte:
+            if segment == ort or segment.startswith(ort + " "):
+                ergebnis[ort] = [
+                    _SMS_KUERZEL_KEY[k]
+                    for k in re.findall(r"(?:^|\s)([A-Z]{1,2}) -?\d", segment[len(ort):])
+                    if k in _SMS_KUERZEL_KEY
+                ]
+    return ergebnis
+
+
+def compare_vorbedingung_pruefen(mitschrift, kanaele: tuple[str, ...]) -> None:
+    """Vor JEDER Zusicherung (Spec AC-30): jeder erwartete Vergleichs-Kanal hat
+    mindestens eine aufgezeichnete Sendung mit nicht-leerem Text -- null
+    Sendungen sind nie gruen."""
+    for kanal in kanaele:
+        sendungen = mitschrift.sendungen(kanal)
+        assert sendungen, (
+            f"Vorbedingung verletzt: Kanal {kanal!r} hat KEINE aufgezeichnete Sendung "
+            f"(Aufzeichner nicht am Laufzeit-Import installiert?) -- {mitschrift!r}"
+        )
+        if kanal == "email":
+            text = sendungen[-1].get("plain_text_body") or sendungen[-1].get("body")
+        else:
+            text = sendungen[-1].get("body")
+        assert text, f"Vorbedingung verletzt: leerer Text fuer Kanal {kanal!r}"
+
+
+# --- Alarm-Kanaele des Ortsvergleichs (Block D) -----------------------------
+
+_STUFE_RANG = {"LOW": 0, "MODERATE": 1, "HIGH": 2}
+
+
+def compare_alarm_kanaele(
+    preset_json: dict, tier: str, dringlichkeit: str, *, metric_id: Optional[str] = None,
+) -> tuple[set[str], set[str]]:
+    """(zugestellte Kanaele, unter der Kanal-Schwelle unterdrueckte Kanaele) eines
+    Ortsvergleich-ALARMS -- aus rohem JSON + Tarif + Dringlichkeit, unabhaengig von
+    ``effective_alert_channels``/``split_by_threshold``.
+
+    Regel (ADR-0021/0046/0049/0077):
+    1. Basis: die truthy Kanaele in ``alert_channels`` (auch wenn leer); fehlt das
+       Sub-Objekt: E-Mail plus die ``send_*``-Opt-ins des Briefings.
+    2. Nur beim Abweichungsalarm (``metric_id`` gesetzt): ein NICHT-leerer Eintrag
+       ``alert_metric_channels[metric_id]`` ersetzt die Basis; ein leerer/fehlender
+       Eintrag erbt sie.
+    3. Tarif: SMS nur standard/premium, Premium-SMS nur premium.
+    4. Schwelle je Kanal (Startwert LOW): der Kanal wird nur bedient, wenn die
+       Dringlichkeit sie erreicht -- die Schwelle regelt das WIE, nie das OB des
+       Eintrags im Protokoll.
+    """
+    ac = preset_json.get("alert_channels")
+    if isinstance(ac, dict):
+        basis = {k for k in COMPARE_KANAELE if ac.get(k)}
+    else:
+        basis = {"email"} | {k for k in ("telegram", "sms", "premium_sms") if preset_json.get(f"send_{k}")}
+    if metric_id is not None:
+        eintrag = (preset_json.get("alert_metric_channels") or {}).get(metric_id)
+        if isinstance(eintrag, dict):
+            ersatz = {k for k in COMPARE_KANAELE if eintrag.get(k)}
+            if ersatz:
+                basis = ersatz
+    if tier not in _TIER_SMS:
+        basis.discard("sms")
+    if tier not in _TIER_PREMIUM_SMS:
+        basis.discard("premium_sms")
+    schwellen = preset_json.get("alert_channel_thresholds") or {}
+    zugestellt: set[str] = set()
+    unterdrueckt: set[str] = set()
+    for kanal in basis:
+        schwelle = schwellen.get(kanal) or "LOW"
+        if _STUFE_RANG[dringlichkeit] >= _STUFE_RANG.get(schwelle, 0):
+            zugestellt.add(kanal)
+        else:
+            unterdrueckt.add(kanal)
+    return zugestellt, unterdrueckt

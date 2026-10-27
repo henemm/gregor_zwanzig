@@ -56,7 +56,7 @@ const BROKEN_PROMISES = [
 ];
 
 const TRIP_LEAD =
-	'Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Werte im ' +
+	'Ein Wertebereich je Metrik legt fest, welche Werte du auf der Trip noch akzeptierst. Werte im ' +
 	'Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im ' +
 	'Reiter Alarme ein.';
 

@@ -263,7 +263,7 @@ def vergleichs_alarmdienst(user_id: str):
         detect_aufrufe = 0
 
         def _detect_triggered_locations(
-            self, preset_id, location_ids, all_locations, config, day_window
+            self, preset_id, location_ids, all_locations, config, day_window, **kwargs
         ):
             type(self).detect_aufrufe += 1
             return []
@@ -751,7 +751,7 @@ def test_ac5_unbrauchbarer_ruhezeitwert_bleibt_keine_ruhezeit(sauberer_nutzer, k
 def test_ac5_nicht_string_ruhezeitwert_bleibt_keine_ruhezeit(sauberer_nutzer):
     """AC-5, zweiter Teil (grüner Anker): ein Nicht-String (`int`) darf keine
     Ausnahme an den Aufrufer durchreichen — der gefährlichste Fehlerfall wäre
-    ein Alarm-Totalausfall für ALLE Touren des Kontos (#1467)."""
+    ein Alarm-Totalausfall für ALLE Trips des Kontos (#1467)."""
     user_id = sauberer_nutzer("ac5-nichtstring")
     dienst = trip_abweichungsdienst(user_id)
     trip = trip_mit_ruhezeit(user_id, "t-int", "Pacific/Auckland", ("22:00", "07:00"))
@@ -1776,7 +1776,8 @@ class _OrtsWetterQuelle:
         self._precip = precip_sum_mm
 
     def fetch(self, point_id: str, lat: float, lon: float,
-              start_hour: int | None = None, end_hour: int | None = None):
+              start_hour: int | None = None, end_hour: int | None = None,
+              elevation_m: int | None = None, user_id: str | None = None):
         from app.models import SegmentWeatherSummary
         from services.point_weather import PointWeatherData
 

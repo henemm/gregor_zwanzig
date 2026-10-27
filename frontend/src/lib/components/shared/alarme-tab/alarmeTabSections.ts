@@ -37,7 +37,3 @@ export function alarmeTabSections(context: AlarmeContext): string[] {
 export function triggerGroupHeading(context: AlarmeContext): string {
 	return context === 'vergleich' ? 'Amtliche & Radar-Warnungen' : 'Amtliche Warnungen';
 }
-
-export function wertebereicheTabId(context: AlarmeContext): string {
-	return context === 'vergleich' ? 'idealwerte' : 'alerts';
-}

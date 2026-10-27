@@ -67,7 +67,7 @@ def _render_reference(trip, target: date, report_type: str):
     from src.output.renderers.trip_report import TripReportFormatter
     from utils.timezone import tz_for_coords
 
-    scheduler = TripReportSchedulerService()
+    scheduler = TripReportSchedulerService(user_id="default")
     segments = scheduler._convert_trip_to_segments(trip, target)
     provider = FixtureProvider(str(_FIXTURE_DIR))
     segment_weather = scheduler._fetch_weather(segments, provider=provider)

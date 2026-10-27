@@ -10,10 +10,11 @@
 // verloren die Änderung beim Verlassen/Reload.
 //
 // AC-1/AC-2/AC-3/AC-5 lassen den separaten Save-Klick BEWUSST weg → vor dem Fix ROT.
-// Editor lebt im Trip-Detail unter ?tab=stages (EditStagesSection → EditStagesPanelNew).
+// Editor lebt im Trip-Detail unter ?tab=etappen (EditStagesSection → EditStagesPanelNew).
 // Auth via storageState (playwright.config 'tests'-Projekt → admin.json).
 
 import { test, expect, type Page } from '@playwright/test';
+import { dragDndZoneItem } from './helpers';
 
 const TRIP_ID = 'e2e-498-autosave';
 const TRIP_NAME = 'E2E #498 Datum-Autosave';
@@ -31,7 +32,7 @@ const seedStages = [
 const seedBody = { id: TRIP_ID, name: TRIP_NAME, region: 'Korsika', stages: seedStages };
 
 async function openStagesEditor(page: Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=stages`);
+	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
 	await expect(page.getByTestId('stage-date-field').first()).toBeVisible();
 }
@@ -55,7 +56,7 @@ async function fetchStageDates(page: Page): Promise<Record<string, string>> {
 
 /** Bug #1393 F002: Etappenreihenfolge und Datumsfolge müssen zueinander passen.
  *  ECHT aufsteigend — zwei Etappen am selben Tag wären in einer durchdatierten
- *  Tour genauso falsch wie eine rückwärts laufende. Etappen ohne Datum werden
+ *  Trip genauso falsch wie eine rückwärts laufende. Etappen ohne Datum werden
  *  ausdrücklich benannt statt stillschweigend übergangen (sie verbrauchen keinen
  *  Tag und dürfen die Prüfung deshalb weder tragen noch aushebeln). */
 async function expectTimelineStrictlyAscending(
@@ -75,7 +76,7 @@ async function expectTimelineStrictlyAscending(
 }
 
 /** Ersetzt die Etappen des Seed-Trips (Bug #1393: die Fälle brauchen andere
- *  Ausgangstouren als die lückenlose Vier-Tage-Vorlage oben — genau deren
+ *  Ausgangs-Trips als die lückenlose Vier-Tage-Vorlage oben — genau deren
  *  Lückenlosigkeit hat den Rechenfehler bisher unsichtbar gemacht). */
 async function reseedStages(page: Page, stages: unknown[]): Promise<void> {
 	const res = await page.request.put(`/api/trips/${TRIP_ID}`, { data: { stages } });
@@ -332,7 +333,7 @@ test('AC-8 (#1389): „Nur diese Etappe" persistiert die Etappe-1-Änderung', as
 // `cascade.done` wird erst NACH dem ersten `await` gesetzt. Zwei Tipps im
 // selben JS-Tick (auf dem Handy alltäglich) laufen deshalb beide durch die
 // Eingangsprüfung und verschieben die Folge-Etappen ZWEIMAL — Datenkorruption
-// an der echten Tour. Seit `await settle()` (F002) klafft dieses Fenster sogar
+// an der echten Trip. Seit `await settle()` (F002) klafft dieses Fenster sogar
 // bis zu 8 s auseinander statt nur die Dauer eines PUT.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -629,26 +630,29 @@ test('AC-16 (#1389): beide Knöpfe im selben Tick — der Erfolgsbanner bleibt v
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Zieht die Etappen-Karte an Position `fromIdx` auf die an Position `toIdx`.
- *  Der Etappen-Streifen nutzt das native HTML5-Drag-API (EtappenStrip:
- *  `draggable={true}` + ondragstart/ondragover) — dafür ist Playwrights
- *  `dragTo()` das passende Werkzeug (es erzeugt echte Eingabe-Ereignisse, aus
- *  denen Chromium die Drag-Ereignisse ableitet).
+ *  Seit #2288 sortiert der Etappen-Streifen über den geteilten Baustein
+ *  `SortableList` (svelte-dnd-action, Pointer-Events) — wie alle anderen
+ *  Sortier-Flächen. Darum die geteilte Ziehgeste `dragDndZoneItem` (#1771 S1):
+ *  Maus-Sequenz über die 3px-Schwelle und Warten auf das `finalize`-Ereignis,
+ *  nicht Playwrights `dragTo()` (das erzeugt nur einen Move-Schritt).
  *
- *  Zwei bekannte Fallen dieses Repos sind hier berücksichtigt:
- *  1) Scrollen — `boundingBox()` scrollt nicht selbst; liegt der Streifen
- *     außerhalb des Ausschnitts, landet die Maus im Leeren. `dragTo()` scrollt
- *     implizit mit, der zusätzliche `scrollIntoViewIfNeeded()` macht es
- *     unabhängig von dieser Zusicherung.
+ *  Fallen:
+ *  1) Scrollen — erledigt `dragDndZoneItem` (scrollIntoViewIfNeeded vor boundingBox).
  *  2) Umsortier-Animation/Neuaufbau — der `{#each}` ist nach `stage.id`
- *     verschlüsselt, die Karten wechseln beim Ablegen ihren Platz im DOM.
- *     Deshalb wird danach auf den neuen Namen an der Zielposition GEWARTET
- *     statt sofort weiterzuklicken. */
+ *     verschlüsselt; Tests warten danach auf den neuen Namen an der Zielposition.
+ *  3) #2496 F3: Pausen-Karten tragen `stage-card-pause-{i}` statt
+ *     `stage-card-{i}`. Der Ziel-Locator deckt beide Varianten ab. */
+function stageCardAt(page: Page, idx: number) {
+	// Auf den Strip beschraenkt: Drag-Klon (body) und Platzhalter tragen sonst dieselbe testid.
+	return page.getByTestId('etappen-strip').locator(
+		`[data-testid="stage-card-${idx}"], [data-testid="stage-card-pause-${idx}"]`
+	);
+}
+
 async function dragStageCard(page: Page, fromIdx: number, toIdx: number): Promise<void> {
 	const source = page.getByTestId(`stage-card-${fromIdx}`);
-	const target = page.getByTestId(`stage-card-${toIdx}`);
-	await source.scrollIntoViewIfNeeded();
-	await target.scrollIntoViewIfNeeded();
-	await source.dragTo(target);
+	const target = stageCardAt(page, toIdx);
+	await dragDndZoneItem(page, source, target);
 }
 
 test('AC-17 (#1390): Umsortieren bei offener Rückfrage lässt beide Knöpfe erreichbar', async ({
@@ -747,8 +751,8 @@ test('AC-19 (#1390): eine andere Etappe anklicken lässt die Rückfrage erreichb
 // greift dieses Gate nicht mehr: der Banner bleibt mit dem ALTEN Stand stehen
 // und rechnet nicht neu, während das neue Datum über den bedingungslosen Pfad
 // darunter sofort gespeichert wird. Die Bestätigung datierte die Folge-Etappen
-// danach ab dem veralteten Datum — die Tour ist in sich widersprüchlich (auf
-// Staging belegt: Tourstart +199, Folge-Etappen +163).
+// danach ab dem veralteten Datum — die Trip ist in sich widersprüchlich (auf
+// Staging belegt: Trip-Start +199, Folge-Etappen +163).
 // ─────────────────────────────────────────────────────────────────────────────
 
 test('AC-20 (#1390 F001/F002): zweites Umdatieren NACH dem Umsortieren rechnet mit der neuen Wahl', async ({
@@ -773,7 +777,7 @@ test('AC-20 (#1390 F001/F002): zweites Umdatieren NACH dem Umsortieren rechnet m
 	await page.getByRole('button', { name: /Lückenlos anschließen/ }).click();
 	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
 
-	// Nach dem Neuladen muss die Tour in sich stimmig sein: lückenlos ab der
+	// Nach dem Neuladen muss die Trip in sich stimmig sein: lückenlos ab der
 	// zuletzt getroffenen Wahl. Bug #1393 F002: „Tag 2" steht seit dem Umsortieren
 	// VOR der bearbeiteten Etappe und bleibt deshalb unberührt; der Prüfgegenstand
 	// dieses Tests hängt an den Etappen DAHINTER — mit dem veralteten Anker (08-22)
@@ -964,7 +968,7 @@ test('AC-26 (#1393): die Rückfrage nennt die tatsächlich betroffene Anzahl', a
 	const strip = page.getByTestId('cascade-strip');
 	await expect(strip).toBeVisible();
 	await expect(strip).toContainText('die 3 folgenden Etappen');
-	await expect(strip).not.toContainText('Tourstart');
+	await expect(strip).not.toContainText('Trip-Start');
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1055,11 +1059,16 @@ test('AC-29 (#1393 F002): die bearbeitete Etappe ans Ende ziehen — Rückfrage 
 	// Rückfrage keinen Inhalt. Sie darf weder mit „0 betroffenen Etappen"
 	// stehenbleiben noch die Änderung still verschlucken (#1389 F006).
 	test.setTimeout(60_000);
+	const puts = await countTripPuts(page);
 	await openCascadePlus21(page); // s1 → 2026-08-22, Rückfrage offen
 
 	await dragStageCard(page, 0, 3);
 	await expect(page.getByTestId('stage-card-3')).toContainText('Tag 1');
 	await expect(page.getByTestId('cascade-strip')).toHaveCount(0);
+	// #2288 F002: gegenstandslos gewordene Rückfrage + Umsortieren = EIN Schreibvorgang
+	// (dismissCascade schreibt schon; kein zweiter PUT im selben Tick).
+	await page.waitForTimeout(1_500);
+	expect(puts.n, 'genau ein PUT fuer Umsortieren + gegenstandslose Rueckfrage').toBe(1);
 
 	await expect
 		.poll(async () => (await fetchStageDates(page))['s1'], { timeout: 15_000 })
@@ -1081,7 +1090,7 @@ test('AC-29 (#1393 F002): die bearbeitete Etappe ans Ende ziehen — Rückfrage 
 // war. Stiller Datenverlust an einer fremden Etappe.
 //
 // F002: Der Etappen-Streifen meldet jede Zwischenposition WÄHREND des Ziehens
-// (`ondragover`, nicht erst beim Ablegen). Streifte die gezogene Karte unterwegs
+// (früher `ondragover`; seit #2288 nur noch beim Ablegen — die Absicherung bleibt). Streifte die gezogene Karte unterwegs
 // die letzte Position, galt die Rückfrage als gegenstandslos und wurde mitten in
 // der Geste als „Nur diese Etappe" beantwortet und geschrieben.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1132,7 +1141,7 @@ test('AC-30 (#1393 R2-F001): „Nur diese Etappe" fasst eine fremde, bewusst ge�
  *  streifen, auf `toIdx` ablegen. Bewusst nicht `dragTo()` — das springt von der
  *  Quelle zum Ziel und überspringt jeden Zwischenzustand, genau den, in dem
  *  R2-F002 zuschlägt. Playwright braucht je Station zwei Bewegungen, damit
- *  Chromium `dragover` erzeugt; die Karten-Positionen werden nach jeder Station
+ *  Chromium Zwischenzustände erzeugt; die Karten-Positionen werden nach jeder Station
  *  neu gemessen, weil der Streifen live umsortiert. */
 async function dragStageCardVia(
 	page: Page,
@@ -1140,21 +1149,38 @@ async function dragStageCardVia(
 	stations: number[]
 ): Promise<void> {
 	const centerOf = async (i: number) => {
-		const el = page.getByTestId(`stage-card-${i}`);
+		const el = stageCardAt(page, i);
 		await el.scrollIntoViewIfNeeded();
 		const b = await el.boundingBox();
 		if (!b) throw new Error(`stage-card-${i} hat keine Bounding-Box`);
 		return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
 	};
+	// Wie dragDndZoneItem (#1771): erst zurueck, wenn die Zone `finalize` gefeuert hat.
+	const zone = await page.locator('[data-testid="etappen-strip"] .sortable-zone').elementHandle();
+	if (!zone) throw new Error('dragStageCardVia: keine .sortable-zone im Strip');
+	const before = await zone.evaluate((el) => {
+		const m = el as HTMLElement & { __gzFin?: number };
+		if (m.__gzFin === undefined) {
+			m.__gzFin = 0;
+			el.addEventListener('finalize', () => (m.__gzFin = (m.__gzFin ?? 0) + 1));
+		}
+		return m.__gzFin;
+	});
 	const start = await centerOf(fromIdx);
 	await page.mouse.move(start.x, start.y);
 	await page.mouse.down();
+	await page.mouse.move(start.x, start.y - 12, { steps: 6 });
 	for (const station of stations) {
 		const p = await centerOf(station);
 		await page.mouse.move(p.x, p.y, { steps: 8 });
 		await page.mouse.move(p.x, p.y);
 	}
 	await page.mouse.up();
+	await page.waitForFunction(
+		({ el, before }) => ((el as HTMLElement & { __gzFin?: number }).__gzFin ?? 0) > before,
+		{ el: zone, before },
+		{ timeout: 5_000, polling: 100 }
+	);
 }
 
 test('AC-31 (#1393 R2-F002): eine Ziehgeste über die letzte Position beantwortet die Rückfrage nicht', async ({
@@ -1166,8 +1192,9 @@ test('AC-31 (#1393 R2-F002): eine Ziehgeste über die letzte Position beantworte
 
 	// EINE Geste: „Tag 1" über die letzte Position (Pausentag) hinweg auf Platz 2.
 	await dragStageCardVia(page, 0, [3, 1]);
-	await expect(page.getByTestId('stage-card-0')).toContainText('Tag 2');
-	await expect(page.getByTestId('stage-card-1')).toContainText('Tag 1');
+	const stripCards = page.getByTestId('etappen-strip');
+	await expect(stripCards.getByTestId('stage-card-0')).toContainText('Tag 2');
+	await expect(stripCards.getByTestId('stage-card-1')).toContainText('Tag 1');
 
 	// Während des Ziehens darf NICHTS geschrieben worden sein …
 	expect(puts.n, 'eine Ziehgeste ist keine Antwort auf die Rückfrage').toBe(0);
@@ -1533,6 +1560,43 @@ test('AC-37 (#1393 R6-F002): bleibt die Antwort aus, löst sich die Sperre nach 
 
 	// Die Rückfrage steht weiter — die Entscheidung ist nicht verfallen.
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
+});
+
+test('AC-5 (#2288): Ziehgeste bei gesperrtem Strip lässt die Reihenfolge unberührt und schreibt nichts', async ({
+	page
+}) => {
+	test.setTimeout(90_000);
+	await delayCascadePut(page, 4000);
+	// `page.on('request')` statt countTripPuts: dessen Route würde die Verzögerung umgehen.
+	const puts = { n: 0 };
+	page.on('request', (r) => {
+		if (r.method() === 'PUT' && r.url().includes('/api/trips/')) puts.n++;
+	});
+	await openCascadePlus21(page);
+
+	await page.getByRole('button', { name: /Lückenlos anschließen/ }).click();
+	await expect(page.getByTestId('etappen-strip-wrapper')).toHaveAttribute('data-locked', 'true');
+	const putsBefore = puts.n;
+
+	// Echte Ziehgeste (Maus) von Karte 0 auf Karte 1, während gesperrt ist.
+	const strip = page.getByTestId('etappen-strip');
+	const a = (await strip.getByTestId('stage-card-0').boundingBox())!;
+	const b = (await strip.getByTestId('stage-card-1').boundingBox())!;
+	await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(a.x + a.width / 2 + 12, a.y + a.height / 2, { steps: 6 });
+	await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 15 });
+	await page.waitForTimeout(500);
+	await page.mouse.up();
+	await page.waitForTimeout(500);
+
+	// Sofort lesen, NICHT per Retry-Assertion: nach dem Ende des Schreibvorgangs
+	// (4 s Verzoegerung) setzt der Strip sich ohnehin auf den gespeicherten Stand — ein
+	// wiederholendes expect wuerde eine kurz sichtbare Umsortierung verschleiern.
+	expect(await strip.getByTestId('stage-card-0').innerText()).toContain('Tag 1');
+	expect(await strip.getByTestId('stage-card-1').innerText()).toContain('Tag 2');
+	expect(puts.n, 'Ziehgeste bei Sperre darf nichts schreiben').toBe(putsBefore);
+	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
 });
 
 test('AC-38 (#1393 R6-F003): der Löschen-Dialog öffnet sich während des Schreibens auch programmatisch nicht', async ({

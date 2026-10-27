@@ -3,7 +3,7 @@ entity_id: feat_1475_hagel_luecken_nachbesserung
 type: feature
 created: 2026-08-05
 updated: 2026-08-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, hagel, epic-1419, issue-1475, nachbesserung]
 ---
@@ -276,7 +276,7 @@ dieses Fundes (Nebenbefund, nicht Teil dieser Spec).
 
 ## Acceptance Criteria
 
-- **AC-1 (SMS-Kürzel-Umbenennung, Ende-zu-Ende):** Given eine Etappe mit
+- **AC-1:** (SMS-Kürzel-Umbenennung, Ende-zu-Ende) Given eine Etappe mit
   `hail_flag=True` und aktivierter Gewitter-Metrik / When das SMS-Trip-
   Briefing gerendert wird / Then trägt der Gewitter-Token den Suffix
   `+HL` (nicht mehr `+HG`), UND `docs/reference/sms_format.md` beschreibt
@@ -288,7 +288,7 @@ dieses Fundes (Nebenbefund, nicht Teil dieser Spec).
     in `sms_format.md` gegen die aktive Konstante `FORECAST_TH_HAIL_SUFFIX`
     spiegelt — kein Verhaltensnachweis, ausdrücklich als Doku-Test markiert.
 
-- **AC-2 (Trip-Stundentabelle, Ampel-Kreis-Doppelring erscheint):** Given
+- **AC-2:** (Trip-Stundentabelle, Ampel-Kreis-Doppelring erscheint) Given
   eine Stunde mit `thunder_level != NONE` und `hail_flag=True` in der
   "einfachen" HTML-Ansicht (Ampel-Kreis-Modus, `mode != "raw"`, `html=True`)
   / When die Stundentabelle gerendert wird / Then enthält die CSS-Regel der
@@ -314,7 +314,7 @@ dieses Fundes (Nebenbefund, nicht Teil dieser Spec).
     zweiten Fall, im ersten Fall ist er nachweislich abwesend (kein
     unbedingtes „immer angehängt").
 
-- **AC-4 (compact_summary.py — echter Code-Beleg, nicht Behauptung):**
+- **AC-4:** (compact_summary.py — echter Code-Beleg, nicht Behauptung)
   Given eine Etappe mit `thunder_level != NONE` und `hail_flag=True`
   innerhalb des von `_format_thunder()` gefensterten Zeitraums / When die
   Kurzzusammenfassung (`friendly` und Text-Variante) gerendert wird / Then
@@ -330,7 +330,7 @@ dieses Fundes (Nebenbefund, nicht Teil dieser Spec).
     ein Test, der nur prüft, dass die Funktion EXISTIERT, ohne den
     Rückgabewert zu verifizieren, erfüllt diesen AC NICHT.
 
-- **AC-5 (Mehrtages-Vorschau, Wurzel-Fix wirkt in allen 3 Konsumenten):**
+- **AC-5:** (Mehrtages-Vorschau, Wurzel-Fix wirkt in allen 3 Konsumenten)
   Given ein `+1`-Forecast-Eintrag mit aggregiertem `hail_flag=True` für die
   Folge-Etappe / When (a) die E-Mail-Gewitter-Vorschau (Klartext UND HTML),
   (b) `email/outlook.py` und (c) das SMS-Token `TH+:` gerendert werden /
@@ -341,7 +341,7 @@ dieses Fundes (Nebenbefund, nicht Teil dieser Spec).
     Outputs wird einzeln auf das Hagel-Fragment geprüft (drei getrennte
     Assertions, kein „einer reicht").
 
-- **AC-6 (sms_trip.py, today/tomorrow-Konsistenz):** Given ein
+- **AC-6:** (sms_trip.py, today/tomorrow-Konsistenz) Given ein
   `thunder_forecast["+1"]["hail"] == True` / When das SMS-Trip-Briefing für
   den Folgetag gerendert wird / Then trägt `tomorrow`s `DailyForecast`
   ebenfalls `hail_flag=True` (nicht mehr strukturell leer wie vor dieser
@@ -389,7 +389,7 @@ dieses Fundes (Nebenbefund, nicht Teil dieser Spec).
     dass die beiden Stundentabellen (Trip vs. Compare) bewusst
     unterschiedliche Darstellungsmodi für dieselbe Information nutzen.
 
-- **AC-9 (Telegram-Stunden-Drilldown):** Given ein Nutzer ruft den
+- **AC-9:** (Telegram-Stunden-Drilldown) Given ein Nutzer ruft den
   `⛈ Gewitter`-Drilldown (`dd_thunder_today`/`dd_thunder_tomorrow`) für
   einen Trip mit mindestens einer Stunde `hail_flag=True` auf / When die
   Antwort gebaut wird / Then enthält die entsprechende Stundenzeile den
@@ -415,7 +415,7 @@ dieses Fundes (Nebenbefund, nicht Teil dieser Spec).
     `thunder_level_from_signals()` durchgereicht oder beeinflusst die
     dortige Text-/Farbentscheidung, MUSS dieser Test rot werden.
 
-- **AC-11 (keine Handlungsempfehlung, ADR-0007, alle neuen Textstellen):**
+- **AC-11:** (keine Handlungsempfehlung, ADR-0007, alle neuen Textstellen)
   Given jede der neu ergänzten Ausgaben (compact_summary, Mehrtages-Vorschau
   ×3 Konsumenten, Ortsvergleich ×5 Aufrufer inkl. SMS/Telegram,
   Telegram-Drilldown) mit `hail_flag=True` / When der tatsächlich sichtbare

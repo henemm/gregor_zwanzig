@@ -24,7 +24,7 @@ import assert from 'node:assert/strict';
 
 import { buildComparePresetSavePayload } from '../compareEditorSave.ts';
 import {
-	normalizeStoredActiveMetrics,
+	normalizeStoredOutlookMetrics,
 	registerCompareMetricCatalog,
 	type CompareSelectionEntry
 } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
@@ -89,32 +89,34 @@ function displayConfigOf(body: ComparePreset): Record<string, unknown> {
 // ─── AC-12: Auswahl uebersteht Speichern + Neuladen, Reihenfolge bleibt ──────
 
 describe('AC-12 — Ausblick-Metriken: Roundtrip Speichern → Neuladen', () => {
-	test('die gewaehlte Teilmenge landet als display_config.outlook_metrics im Neuformat', () => {
+	test('die gewaehlte Teilmenge landet als display_config.outlook_metrics im Kennungsformat', () => {
+		// #1848 A2: die Bedienflaeche liefert Kennungen, gespeichert werden
+		// Kennungen. Die Zusicherung ist unveraendert — die Auswahl erreicht die
+		// Persistenz im vereinbarten Format —, nur das Format ist ein anderes.
 		const { body } = buildComparePresetSavePayload(
 			makePreset(),
-			baseEdits({ outlookMetricKeys: ['temp_max_c', 'precip_sum_mm'] })
+			baseEdits({ outlookMetricKeys: ['temperature', 'precipitation'] })
 		);
 
 		assert.deepEqual(
 			displayConfigOf(body).outlook_metrics,
-			[
-				{ metric_id: 'temperature', aggregation: 'max' },
-				{ metric_id: 'precipitation', aggregation: 'sum' }
-			],
+			['temperature', 'precipitation'],
 			'Die Ausblick-Auswahl erreicht die Persistenz nicht: display_config.outlook_metrics ' +
 				`fehlt oder hat das falsche Format (erhalten: ${JSON.stringify(displayConfigOf(body).outlook_metrics)})`
 		);
 	});
 
 	test('Speichern → Laden liefert exakt dieselbe Auswahl in derselben Reihenfolge', () => {
-		const gewaehlt = ['precip_sum_mm', 'gust_max_kmh', 'temp_max_c'];
+		const gewaehlt = ['precipitation', 'gust', 'temperature'];
 
 		const { body } = buildComparePresetSavePayload(
 			makePreset(),
 			baseEdits({ outlookMetricKeys: gewaehlt })
 		);
-		// Ladeweg: derselbe geteilte Leser wie fuer active_metrics (#1373).
-		const wiederGeladen = normalizeStoredActiveMetrics(
+		// #1848 A2: eigener Leser fuer den Ausblick — `active_metrics` behaelt
+		// seinen (compareMetricSelection.ts). Die bewusst unsortierte Auswahl
+		// faengt eine `set`-basierte Zwischenstufe unveraendert ab.
+		const wiederGeladen = normalizeStoredOutlookMetrics(
 			displayConfigOf(body).outlook_metrics,
 			CATALOG
 		);
@@ -144,6 +146,10 @@ describe('AC-12 — Ausblick-Metriken: Roundtrip Speichern → Neuladen', () => 
 	});
 
 	test('unangetastete Ausblick-Auswahl bleibt per Read-Modify-Write erhalten', () => {
+		// Bewusst in der PAAR-ALTFORM abgelegt: genau so liegen Bestandsdaten
+		// auf der Platte. Ein nicht editiertes Feld wird unveraendert
+		// durchgereicht, nicht umgeschrieben — Read-Modify-Write, kein
+		// Blind-Replace (Fehlerklasse #102).
 		const original = makePreset();
 		(original.display_config as unknown as Record<string, unknown>).outlook_metrics = [
 			{ metric_id: 'temperature', aggregation: 'max' }
@@ -160,66 +166,79 @@ describe('AC-12 — Ausblick-Metriken: Roundtrip Speichern → Neuladen', () => 
 	});
 
 	test('Ausblick-Auswahl und Stundenverlauf-Auswahl bleiben getrennte Felder', () => {
+		// #1848 A2: beide Felder sind jetzt Zeichenketten-Listen. Damit „getrennt"
+		// nachweisbar bleibt, tragen sie bewusst UNTERSCHIEDLICHE Werte — sonst
+		// waere ein Feld, das versehentlich aus dem anderen befuellt wird, nicht
+		// mehr von der richtigen Zuordnung zu unterscheiden.
 		const { body } = buildComparePresetSavePayload(
 			makePreset(),
 			baseEdits({
-				outlookMetricKeys: ['temp_max_c'],
+				outlookMetricKeys: ['temperature'],
 				hourlyMetricKeys: ['temp_c', 'wind_kmh']
 			})
 		);
 		const dc = displayConfigOf(body);
 
 		assert.deepEqual(dc.hourly_metrics, ['temp_c', 'wind_kmh']);
-		assert.deepEqual(dc.outlook_metrics, [{ metric_id: 'temperature', aggregation: 'max' }]);
+		assert.deepEqual(dc.outlook_metrics, ['temperature']);
 	});
 });
 
-// ─── AC-6 (Issue #1406 Scheibe A) — Persistenz zeichengleich vor/nach dem ────
-// Auswahl-Block-Umbau: buildComparePresetSavePayload/normalizeStoredActiveMetrics
-// sind Pure-Functions auf outlookMetricKeys, unabhaengig von der Svelte-Markup-
-// Form des Auswahl-Blocks (flache Liste vs. gruppiertes AggregationMetricRow-
-// Muster). Der deterministische Nachweisweg fuer AC-6 (PO-informierte
-// Tech-Lead-Entscheidung, Kontingent-Schonung #1329, s. Spec § AC-6): dieselbe
-// Auswahl liefert vor UND nach dem Umbau exakt dasselbe display_config.
-// outlook_metrics — insbesondere die Temperatur-Mehrfachauswahl (Hoechst- UND
-// Tiefstwert gleichzeitig aktiv), die im Ausblick nach diesem Umbau erstmals
-// ueber ein AggregationMetricRow-Kaestchenpaar statt zwei flacher Checkboxen
-// bedient wird.
+// ─── AC-6 (Issue #1406 Scheibe A) — UMGESTELLT in Issue #1848 Scheibe A2 ─────
 //
-// Spec: docs/specs/modules/feat_1406a_ausblick_geteiltes_element.md § AC-6, Test-Plan
+// Ursprünglich sicherte AC-6 zu: ein reiner Markup-Umbau des Auswahl-Blocks
+// darf `display_config.outlook_metrics` nicht verändern — belegt an der
+// Temperatur-Mehrfachauswahl (Höchst- UND Tiefstwert gleichzeitig aktiv), die
+// damals über ein AggregationMetricRow-Kästchenpaar bedient wurde.
+//
+// A2 ändert das Speicherformat ABSICHTLICH (Spec AC-1/AC-8, PO-Entscheid
+// 2026-08-20): gespeichert wird die Kennung, und beide Temperatur-Enden sind
+// EIN Eintrag — sie ergeben seit #1848 A1 EINE Spannen-Spalte `9/27`. Die
+// Kästchenpaar-Bedienung ist damit entfallen.
+//
+// Die Zusicherung bleibt der Sache nach erhalten und wird hier auf den
+// heutigen Sollzustand gedreht: die Bedienfläche und die Persistenz sprechen
+// dasselbe Vokabular, die Auswahl übersteht Speichern und Neuladen
+// zeichengleich, und aus einer Größe wird nie mehr als ein Eintrag.
+//
+// Spec: docs/specs/modules/feat_1406a_ausblick_geteiltes_element.md § AC-6
+//       docs/specs/modules/feat_1848_a2_ausblick_kennungen.md § AC-1/AC-8
 
-describe('AC-6 — Persistenz-Roundtrip bleibt zeichengleich, unabhaengig von der Auswahl-Block-Markup-Form', () => {
-	test('Temperatur Hoechst- UND Tiefstwert gleichzeitig aktiv: display_config.outlook_metrics exakt wie vor dem Auswahl-Block-Umbau', () => {
+describe('AC-6 [#1848 A2] — Persistenz-Roundtrip bleibt zeichengleich, unabhaengig von der Auswahl-Block-Markup-Form', () => {
+	test('Temperatur ist EIN Eintrag: display_config.outlook_metrics fuehrt die Kennung genau einmal', () => {
 		const { body } = buildComparePresetSavePayload(
 			makePreset(),
-			baseEdits({ outlookMetricKeys: ['temp_max_c', 'temp_min_c', 'precip_sum_mm'] })
+			baseEdits({ outlookMetricKeys: ['temperature', 'precipitation'] })
 		);
 
 		assert.deepEqual(
 			displayConfigOf(body).outlook_metrics,
-			[
-				{ metric_id: 'temperature', aggregation: 'max' },
-				{ metric_id: 'temperature', aggregation: 'min' },
-				{ metric_id: 'precipitation', aggregation: 'sum' }
-			],
-			'AC-6 FAIL: display_config.outlook_metrics weicht bei gleichzeitig aktivem Hoechst- UND ' +
-				`Tiefstwert der Temperatur ab (erhalten: ${JSON.stringify(displayConfigOf(body).outlook_metrics)}). ` +
-				'Ein reiner Auswahl-Block-Markup-Umbau (Issue #1406 Scheibe A) darf dieses Format nicht aendern — ' +
-				'weicht es doch ab, ist AC-6 nicht mehr deterministisch belegbar und die Staging-Mail-Verifikation ' +
-				'(email_spec_validator.py) muss nachgeholt werden.'
+			['temperature', 'precipitation'],
+			'AC-6 FAIL: display_config.outlook_metrics weicht ab (erhalten: ' +
+				`${JSON.stringify(displayConfigOf(body).outlook_metrics)}). Seit #1848 A2 traegt der ` +
+				'Ausblick reine Kennungen; Tief und Hoch derselben Groesse sind EIN Eintrag und ' +
+				'ergeben EINE Spannen-Spalte. Ein Auswahl-Block-Umbau darf daran nichts aendern — ' +
+				'weicht es doch ab, ist AC-6 nicht mehr deterministisch belegbar und die ' +
+				'Staging-Mail-Verifikation (email_spec_validator.py) muss nachgeholt werden.'
 		);
 	});
 
-	test('Roundtrip: dieselbe Mehrfachauswahl geladen -> dieselben Auswahl-Schluessel, keine Verschmelzung von max/min', () => {
-		const gewaehlt = ['temp_max_c', 'temp_min_c'];
-		const { body } = buildComparePresetSavePayload(makePreset(), baseEdits({ outlookMetricKeys: gewaehlt }));
-		const wiederGeladen = normalizeStoredActiveMetrics(displayConfigOf(body).outlook_metrics, CATALOG);
+	test('Roundtrip: eine BESTANDS-Mehrfachauswahl (max+min) kommt als EIN Eintrag zurueck', () => {
+		// Die Gegenrichtung zum Test darueber: so liegt die Auswahl in
+		// Bestandsdaten auf der Platte. Der Leser darf sie nicht als zwei
+		// Eintraege anzeigen — die Bedienflaeche zeigt seit A2 EINE Zeile
+		// „Temperatur", und ein Klick darauf schaltet die ganze Groesse.
+		const gespeichert = [
+			{ metric_id: 'temperature', aggregation: 'max' },
+			{ metric_id: 'temperature', aggregation: 'min' }
+		];
+		const wiederGeladen = normalizeStoredOutlookMetrics(gespeichert, CATALOG);
 
 		assert.deepEqual(
 			wiederGeladen,
-			gewaehlt,
-			'AC-6 FAIL: nach Speichern und Neuladen der Temperatur-Mehrfachauswahl (max+min) zeigt die ' +
-				`Bedienflaeche nicht mehr dieselben zwei Auswahl-Schluessel (erhalten: ${JSON.stringify(wiederGeladen)}).`
+			['temperature'],
+			'AC-6 FAIL: die Bestands-Mehrfachauswahl (max+min) erscheint als ' +
+				`${JSON.stringify(wiederGeladen)} statt als ein einziger Eintrag ['temperature'].`
 		);
 	});
 });

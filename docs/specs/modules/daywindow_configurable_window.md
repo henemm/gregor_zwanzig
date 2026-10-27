@@ -3,7 +3,7 @@ entity_id: daywindow_configurable_window
 type: feature
 created: 2026-07-23
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, sms, tagesfenster, epic-1319, issue-1319-slice-b, adr-0025, konfigurierbarkeit]
 ---

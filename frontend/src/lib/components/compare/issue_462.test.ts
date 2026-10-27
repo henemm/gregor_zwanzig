@@ -140,12 +140,6 @@ test('AC-1: Komponenten ohne Atom-Pendant (Dialog, Table, Checkbox) bleiben in u
 		comparePage.includes('ConfirmDialog'),
 		'compare/+page.svelte: ConfirmDialog-Molecule-Import fehlt (Wrapper um ui/dialog)'
 	);
-	// GroupSection nutzt Checkbox
-	const group = readFile(join(COMPARE_DIR, 'GroupSection.svelte'));
-	assert.ok(
-		group.includes('ui/checkbox'),
-		'GroupSection.svelte: Checkbox-Import aus ui/ fehlt (darf nicht migriert werden)'
-	);
 });
 
 // ── AC-3: contrast-audit Basis-Check ─────────────────────────────────────────

@@ -1,0 +1,29 @@
+{
+  "id": "golden-abweichung-alarm",
+  "name": "Golden Abweichungsalarm-Kette (#2422 S4)",
+  "stages": [
+    {
+      "id": "T0",
+      "name": "Etappe 1",
+      "date": "2026-01-01",
+      "waypoints": [
+        {"id": "G0", "name": "Start", "lat": 47.2692, "lon": 11.4041, "elevation_m": 600}
+      ]
+    }
+  ],
+  "display_config": {
+    "trip_id": "golden-abweichung-alarm",
+    "metrics": [{"metric_id": "precipitation", "enabled": true}],
+    "metric_alert_levels": {"precipitation_sum": "standard"}
+  },
+  "report_config": {
+    "trip_id": "golden-abweichung-alarm",
+    "enabled": true,
+    "send_email": false,
+    "send_telegram": false,
+    "send_sms": false,
+    "send_premium_sms": false,
+    "alert_on_changes": true
+  },
+  "alert_cooldown_minutes": 0
+}

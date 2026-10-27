@@ -233,14 +233,25 @@ def test_ac2_email_configured_sends_and_records():
     assert service._throttle_store.last_sent("trip", trip.id) is not None
 
 
-# --- AC-3: transienter Send-Fehler → best-effort recording (kein #656-Anti-Pattern) ---
+# --- AC-3 (abgelöst durch ADR-0086, #1405 S1): Totalausfall wird NICHT gebucht ---
 
 
-def test_ac3_configured_smtp_transient_failure_still_records():
-    """AC-3: SMTP konfiguriert, aber Server bricht Verbindung ab (echter
-    Disconnect über lokalen Accept-and-Close-Socket) → Recording bleibt erhalten:
-    return True, Alert-Log + Throttle gesetzt. Recording NICHT an Send-Erfolg
-    gekoppelt."""
+def test_ac3_configured_smtp_total_failure_not_booked_backoff_set():
+    """ADR-0086 (#1405): #684 AC-3 ist abgelöst — bewusst umgeschrieben, nicht
+    gelöscht (Spec fix_1405_s1_alarm_zustellung.md, AC-28 / AC-10 / AC-18).
+
+    Alte Zusicherung: SMTP konfiguriert, Server bricht die Verbindung ab ⇒
+    ``True``, Alert-Log + Sperrzeit gesetzt (Recording nicht an Send-Erfolg
+    gekoppelt, Begründung: sonst Alarm-Spam alle 30 Min).
+
+    Neue Zusicherung: derselbe echte Disconnect über einen lokalen
+    Accept-and-Close-Socket ist ein Totalausfall (einziger Kanal E-Mail,
+    Transportfehler) ⇒ ``False``; KEIN Alarm-Zustand und KEINE Sperrzeit
+    gebucht (sonst ginge der Alarm still verloren), stattdessen ein
+    Fehlversuchs-Backoff im Scope ``trip:retry`` — der löst die Spam-Sorge
+    (höchstens ein Versuch je 30 Min, AC-11). Der Alarm-Protokoll-Eintrag
+    bleibt (#1459 AC-15: "konfiguriert, aber nichts zugestellt").
+    """
     from services.trip_alert import TripAlertService
 
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -267,19 +278,66 @@ def test_ac3_configured_smtp_transient_failure_still_records():
         })
         assert settings.can_send_email() is True
 
+        # ADR-0086 (#1405) / #1594: Briefing-Zeiten ausserhalb des Vorlaufs der
+        # Alarm-Sperre. Sonst schweigt der Alarm in den Fenstern um 07:00/18:00
+        # Ortszeit schon VOR dem Versand, und `result is False` waere ohne
+        # jeden Sendeversuch gruen — der Test maesse die Sperre, nicht den
+        # Totalausfall. Expliziter E-Mail-Config statt `None`: AC-1 behaelt
+        # den Default-Pfad fuer sich.
+        from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
         trip = _trip(report_config=None)
+        morgen, abend = briefing_zeiten_fuer_trip(trip)
+        trip.report_config = TripReportConfig(
+            trip_id=trip.id, send_email=True, send_telegram=False,
+            alert_on_changes=True, morning_time=morgen, evening_time=abend,
+        )
         service = TripAlertService(settings=settings, throttle_hours=0, user_id=TEST_USER)
         service.clear_throttle(trip.id)
+        assert service._effective_alert_channels(trip) == {"email"}
 
         cached, fresh = _significant_pair()
         result = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
-        assert result is True, (
-            "Best-Effort: bei konfiguriertem aber gestörtem SMTP muss das Recording "
-            "erhalten bleiben (sonst Alarm-Spam alle 30 Min, #656-Anti-Pattern)."
+        # ADR-0086 (#1405): Totalausfall heißt "nicht gesendet" (vorher True).
+        assert result is False, (
+            "ADR-0086: bei einem Totalausfall (einziger Kanal E-Mail, SMTP bricht "
+            "ab) darf der Alarm nicht als gesendet gelten — sonst wird er gebucht "
+            "und nie wiederholt."
         )
-        assert _alert_log_count(trip.id) == 1
-        assert service._throttle_store.last_sent("trip", trip.id) is not None
+        # ADR-0086 (#1405): Protokoll-Eintrag bleibt (#1459 AC-15).
+        assert _alert_log_count(trip.id) == 1, (
+            "Der Totalausfall muss im Alarm-Protokoll stehen (konfiguriert, aber "
+            "nichts zugestellt, #1459 AC-15)."
+        )
+        # ADR-0086 (#1405): KEINE Sperrzeit (vorher gesetzt).
+        assert service._throttle_store.last_sent("trip", trip.id) is None, (
+            "ADR-0086: Sperrzeit darf bei Totalausfall NICHT gebucht werden."
+        )
+        # ADR-0086 (#1405): KEIN Alarm-Zustand (Melde-Gedächtnis/Ereignis-Identität).
+        from services.alert_state import AlertStateService
+
+        state = AlertStateService(user_id=TEST_USER).load(trip.id)
+        booked = sorted(
+            key for key, value in state.items()
+            if key.startswith("event_identity")
+            or (isinstance(value, dict) and "last_reported_value" in value)
+        )
+        assert not booked, (
+            "ADR-0086: bei Totalausfall darf kein Alarm-Zustand gebucht werden, "
+            f"sonst wird der Alarm nie wiederholt. Gebucht: {booked}"
+        )
+        # ADR-0086 (#1405): Fehlversuchs-Backoff im Scope "trip:retry" gesetzt.
+        throttle_path = get_data_dir(TEST_USER) / "throttle_state.json"
+        throttle_data = (
+            json.loads(throttle_path.read_text()) if throttle_path.exists() else {}
+        )
+        retry_entries = throttle_data.get("trip:retry", {})
+        assert len(retry_entries) == 1, (
+            "ADR-0086: nach einem Totalausfall muss genau ein Backoff-Eintrag "
+            "(Scope 'trip:retry', Schlüssel = Ereignis-Fingerabdruck) gesetzt "
+            f"sein. throttle_state.json: {throttle_data}"
+        )
     finally:
         srv.close()
 

@@ -1,6 +1,24 @@
 # Architektur – Gregor Zwanzig
 
-**Updated:** 2026-08-11 (Issue #1745 Scheibe A — Premium-SMS ist jetzt auch im
+**Updated:** 2026-10-22 (Issue #1743 — Hub-Reiter auf fünf verkürzt: Reiter „Versand" entfällt, Versand ist
+Abschnitt unter Wetter-Metriken (Anker `#versand`); Reiter „Vorschau" und Endpoint `GET /api/briefings/{id}/preview`
+entfallen ersatzlos; Details `docs/reference/navigation.md`). Vorheriger Stand 2026-09-28 (Issue #2293 Scheibe S2, Epic #1374/#2345 — Ortsvergleich bekommt
+ein eigenes, persistiertes `alert_channels`-Objekt für den Alarm-Versand, entkoppelt von
+den Briefing-Flags `send_telegram`/`send_sms`/`send_premium_sms`; neuer eigener
+Premium-SMS-Schalter im Versand-Abschnitt des Ortsvergleichs, löst die stille Kopplung
+„Alarm-Premium-SMS-Klick schaltet Briefing-Premium-SMS mit" (#2448) auf; Alt-Bestand ohne
+`alert_channels` wird beim Laden in-memory materialisiert (kein Write-Back), ein Legacy
+`send_premium_sms=true` wird dabei als Alarm-Absicht gedeutet und das Briefing-Flag beim
+nächsten Speichern bereinigt; siehe „Premium-SMS als Versandkanal" unten, Spec
+`docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md`); 2026-09-14 (Issue #2317 — Speichern beim Entladen/„Aktualisieren"/Anzeige nach
+Neuladen: Trip-Reiter reichen `init` (keepalive) über `shared/tripSpeicherung.ts` durch statt es zu
+verschlucken; `+layout.svelte` stellt per Svelte-Context (`stores/aktiveSpeicherung.ts`) eine
+Anmeldestelle bereit, an der `serviceWorkerUpdate.ts` vor `SKIP_WAITING` eine ausstehende
+Speicherung regulär abwartet (`SaveStatus.laufendeSpeicherung`); `stores/nachEntladenNachladen.ts`
+holt nach einem per Merker (`geraetespeicher.ts`, `gz-nachladen`) erkannten Entladen-Speichern bis
+zu 6× den Server-Stand nach, ohne eine neue lokale Eingabe zu überschreiben; siehe „Trip-Editor &
+Compare-Editor Save-Strategien" und „PWA" unten, Spec `docs/specs/modules/speicherung_beim_neuladen.md`);
+2026-08-11 (Issue #1745 Scheibe A — Premium-SMS ist jetzt auch im
 Alarme-Reiter als vierter Kanal sichtbar/schaltbar, mit eigener Dringlichkeits-Schwelle, in
 **beiden** Flächen (Trip UND Ortsvergleich); wirkt sofort für Gewitter-, Änderungs- und
 amtliche Alarme, **nicht** für Regen-/Radar-Alarme, die weiterhin am Briefing-Flag hängen
@@ -12,15 +30,19 @@ eingeholt wurde; siehe „Premium-SMS als Versandkanal" unten); 2026-08-11 (Issu
 ## Überblick
 Gregor Zwanzig ist ein verteiltes System mit separatem Frontend (SvelteKit) und einem Dual-Stack-Backend (Go + Python):
 
-- **Go-API:** REST-API (Port 8090), Auth/Sessions, Mandantentrennung, Persistenz/Store, Proxy zum Python-Core
-- **Python-Core:** Wetter-Domäne (Provider, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte, Scheduler, Alerts, Inbound-Handler (FastAPI, Port 8000)
+- **Go-API:** REST-API (Port 8090), Auth/Sessions, Mandantentrennung, Persistenz/Store, Proxy zum Python-Core, **Cron-Taktgeber** (einzige Zeitsteuerung, ruft die Python-Job-Endpunkte auf)
+- **Python-Core:** Wetter-Domäne (Provider, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte, **Job-Ausführung** (Fälligkeit je Trip/Vergleich, Versand), Alerts, Inbound-Handler (FastAPI, Port 8000) — ohne eigenen Timer
 - **Frontend:** SvelteKit Web-UI für Trip-Management, Konfiguration und Orts-Vergleiche
 - **Channels:** E-Mail (SMTP), Telegram, SMS (seven.io), Premium-SMS (seven.io, Garmin
-  inReach) — als **Versandkanal** seit Issue #1676 S2a weiterhin **nur im Trip-Briefing**
-  (kein Ortsvergleich-Versand); als **Alarm-Kanal** seit #1701 (Backend) und #1745 Scheibe A
-  (Oberfläche, Alarme-Reiter) in **beiden** Flächen verdrahtet — Trip UND Ortsvergleich,
-  für Gewitter-, Änderungs- und amtliche Alarme, **nicht** für Regen-/Radar-Alarme (Scheibe
-  B, #1752, offen); siehe ADR-0049
+  inReach) — als **Versandkanal** seit Issue #1676 S2a im Trip-Briefing UND seit #2275
+  (Backend) bzw. #2293 S2 (eigener Schalter im Versand-Abschnitt) im Ortsvergleich-Briefing
+  verdrahtet — zwei getrennte Felder (`Trip.report_config.send_premium_sms`,
+  `ComparePreset.SendPremiumSms`); als **Alarm-Kanal** seit #1701 (Backend) und #1745
+  Scheibe A (Oberfläche, Alarme-Reiter) in **beiden** Flächen verdrahtet — Trip UND
+  Ortsvergleich, für Gewitter-, Änderungs- und amtliche Alarme; seit #1752 (Scheibe B)
+  auch für Regen-/Radar-Alarme. Seit #2293 S2 ist der Alarm-Kanal (`alert_channels`) am
+  Ortsvergleich vom Briefing-Kanal (`send_premium_sms`) vollständig entkoppelt, identisch
+  zum Trip; siehe ADR-0049
 - **Abo-Objekte:** Briefing-Subscriptions für Trips (ADR-0023) und Compare-Presets für Orts-Vergleiche — getrennte Domänenobjekte, keine gemeinsame „Subscription“-Abstraktion mehr
 
 Siehe `docs/adr/0015-dual-stack-zielarchitektur.md` für die verbindliche Zuständigkeitsgrenze.
@@ -32,13 +54,54 @@ Siehe `docs/adr/0015-dual-stack-zielarchitektur.md` für die verbindliche Zustä
 Das Backend besteht aus zwei klar getrennten Schichten (siehe `docs/adr/0015-dual-stack-zielarchitektur.md`):
 
 - **Go-API (`gregor-api`, Port 8090):** REST-API, Auth/Sessions, Mandantentrennung,
-  Persistenz/Store (`internal/store/`) und Proxy zum Python-Core.
+  Persistenz/Store (`internal/store/`), Proxy zum Python-Core und Cron-Taktgeber
+  (`internal/scheduler/`, s. „Scheduler-Zuständigkeit“).
 - **Python-Core (`api/` + `src/`, interner Port 8000):** Wetter-Domäne
   (Provider, Normalisierung, Risk Engine, Aggregation), alle Kanal-Renderer und -Transporte,
-  Scheduler, Alert-System, Inbound-Handler.
+  Job-Ausführung der Scheduler-Endpunkte (ohne eigenen Timer), Alert-System, Inbound-Handler.
+
+### Scheduler-Zuständigkeit (Ist-Stand, Code-belegt 2026-10-21)
+
+**Go löst aus, Python führt aus.** Die einzige Zeitsteuerung ist der Go-Cron in
+`internal/scheduler/scheduler.go` (robfig/cron, Zone `cfg.SchedulerTimezone`, Jobtabelle
+`scheduler.go:341-360`, 8 Cron-Einträge / 9 Jobs). Der Python-Core hat **keinen eigenen Timer**
+(kein APScheduler o. ä.); er stellt je Job einen `POST /api/scheduler/<job>`-Endpunkt
+(`api/routers/scheduler.py`) und entscheidet dort selbst die **Fälligkeit** (welcher Trip/Vergleich
+in seiner Ortszeit jetzt dran ist: `trip_report_scheduler.py`, `compare_slot_scheduler.py`,
+Idempotenz `briefing_slots.py`), rendert und versendet.
+
+| Go-Job (`jobID`) | Takt | Python-Endpunkt | Aufruf |
+|---|---|---|---|
+| `briefing_dispatch` → `trip_reports_hourly` + `compare_presets_daily` | `0 * * * *` | `/trip-reports`, `/compare-presets-daily` | je Nutzer (`runForAllUsers`) |
+| `alert_checks` | `*/15` | `/alert-checks` | je Nutzer |
+| `compare_alert_checks` | `*/15` | `/compare-alert-checks` (Abweichung + amtliche Warnungen, seit #2286) | je Nutzer |
+| `radar_alert_checks` | `3-58/5` | `/radar-alert-checks` | je Nutzer |
+| `compare_radar_alert_checks` | `3-58/5` | `/compare-radar-alert-checks` | je Nutzer |
+| `inbound_command_poll` | `*/5` + Push-Kick `/api/webhooks/mail/{secret}` | `/inbound-commands` (IMAP) | global |
+| `premium_sms_poll` | `*/5` + Push-Kick `/api/webhooks/sms/{secret}` | `/inbound-sms` (seven.io-Journal) | global |
+| `data_write_selftest` | `*/15` | — (Go-intern, `probeDataWritable`) | — |
+
+Telegram-Eingang hat keinen Cron-Job: Push über `POST /api/webhooks/telegram/{secret}` (Go) →
+`POST /api/internal/telegram-webhook` (Python). Status/Observability: `GET /api/scheduler/status`
+(Go). Manuelle Sofortversände (`/api/scheduler/trips/{id}/send`, `.../compare-presets/{id}/send`)
+laufen nicht über den Cron.
+
+**Schreib-Autorität (#2158, ADR-0083):** Go ist **nicht** alleiniger Schreiber — auch der
+Python-Kern schreibt `data/users/<uid>/briefings/<id>.json` (Telegram-/SMS-Kommandos,
+`skip_next`, Distanz-Backfill, Compare-Preset-Status). Beide Prozesse sperren dieselbe Datei
+`briefings/<id>.json.lock` per `flock` (Go `LockBriefing`, Python `src/services/file_lock.py`);
+Python schreibt atomar (tmp + `os.replace`) über `update_trip` (frisch lesen unter Sperre).
+Fristablauf (~5 s) ⇒ Go antwortet 503 + `Retry-After`. Orte, Gruppen und Metrik-Vorlagen
+haben In-Prozess-Sperren je Nutzer. Lock-Reihenfolge: Quota → Gruppen/Vorlagen → Ort →
+Briefing-Mutex → flock. Gilt nur auf lokalem Dateisystem. Ersetzt ADR-0031.
 
 Die Vertragsgrenze zwischen Go und Python ist HTTP mit den DTOs aus
-`docs/reference/api_contract.md`.
+`docs/reference/api_contract.md`. Seit Issue #2142 authentifiziert sich die Go-API gegenüber
+dem Python-Core mit einem gemeinsamen Geheimnis (`GZ_CORE_SHARED_SECRET`, Header
+`X-GZ-Core-Auth`) — Details siehe `docs/adr/0062-python-core-authentifiziert-gegenueber-go.md`. Seit #2159 gilt dasselbe
+Geheimnis in Gegenrichtung: Die internen Go-Endpunkte (`/api/internal/premium-sms-learn`,
+`/api/internal/telegram-connect`) verlangen zusätzlich zum Localhost-Guard `X-GZ-Core-Auth`;
+Python ruft sie über `src/lib/go_internal.py::post_internal` (Basis-URL `GZ_GO_API_URL`).
 
 ### Python-Core: Wetter-Pipeline und Rendering
 
@@ -46,7 +109,7 @@ Die folgenden Komponenten leben im Python-Core:
 
 1. **Business-Logik**
    - **Provider-Adapter**: holen Rohdaten von Wetter-APIs — Standard Open-Meteo, Fallback-Kette siehe `docs/reference/decision_matrix.md`
-   - **Normalizer**: wandelt Daten in ein gemeinsames DTO ([api_contract.md](./api_contract.md))
+   - **Normalizer**: wandelt Daten in ein gemeinsames DTO ([api_contract.md](../reference/api_contract.md))
    - **Risk Engine**: bewertet Forecasts anhand Schwellen (Regen, Gewitter, Wind, Hitze)
    - **Report Formatter**: erzeugt kurze Texte + Debug-Anhang
    - **DebugBuffer**: gemeinsame Quelle für Console + E-Mail-Debug
@@ -79,14 +142,21 @@ Die folgenden Komponenten leben im Python-Core:
      gewartet, reale Briefings (5–13 Nachrichten) bleiben unverzögert. Bei HTTP 429
      wird `parameters.retry_after` aus dem JSON-Rumpf gelesen, auf
      `telegram_retry_after_cap_seconds` (45) gedeckelt und **genau einmal** erneut
-     gesendet. Die Egress-Guards (#1288/#1363) bleiben bewusst **vor** `_post` in
-     den öffentlichen Methoden; `_post` wertet keine Statuscodes aus.
-     Spec: `docs/specs/modules/telegram_send_pacing.md`.
+     gesendet. Die Egress-Guards (#1288/#1363; Herkunft, Test-Bot-Token,
+     Settings-Chat via `bound_chat`, Ziel-Chat) laufen seit #1412 S3b zentral in
+     `_post` **vor** der Drossel-Reservierung — jede (auch künftige) Telegram-Methode
+     ist damit geschützt, auch `answer_callback_query`/`get_my_commands`; `_post`
+     wertet keine Statuscodes aus. SMS/Premium-SMS: `httpx.post` nur noch in
+     `SevenIoChannelBase._post` (reiner Transport), Prüfungen bleiben in `send`.
+     Specs: `docs/specs/modules/telegram_send_pacing.md`,
+     `docs/specs/modules/fix_1412_s3b_telegram_sms_ausgang.md`.
    - **SMS** (`src/output/channels/sms.py`) – SMS-Versand via seven.io
    - **Premium-SMS** (`src/output/channels/premium_sms.py`, `PremiumSmsOutput`,
-     `name == "premium_sms"`, seit Issue #1676 S2a) – als **Versandkanal** weiterhin **nur
-     Trip-Briefing**, kein Ortsvergleich-Versand. Als **Alarm-Kanal** seit #1701 (Backend)
-     für Gewitter-, Änderungs- und amtliche Alarme verdrahtet, in Trip **und** Ortsvergleich;
+     `name == "premium_sms"`, seit Issue #1676 S2a) – als **Versandkanal** im
+     **Trip-Briefing** (seit #1676 S2a) UND im **Ortsvergleich-Briefing** (Backend seit
+     #2275, eigener Schalter im Versand-Abschnitt seit #2293 S2) verdrahtet — getrennte Felder,
+     kein gemeinsamer Schalter. Als **Alarm-Kanal** seit #1701 (Backend) für Gewitter-,
+     Änderungs- und amtliche Alarme verdrahtet, in Trip **und** Ortsvergleich;
      seit #1752 (Scheibe B) gilt das auch für **Regen-/Radar-Alarme** — sie lösen ihre Kanäle
      über denselben `_effective_alert_channels()` auf wie alle anderen Alarmtypen. Die frühere
      Sonderfassung `_radar_effective_channels()`, die ausschließlich die Briefing-Flags las, ist
@@ -97,13 +167,26 @@ Die folgenden Komponenten leben im Python-Core:
      ausschließlich Tier `premium`). Teilt sich mit `SMSOutput` die Basisklasse
      `SevenIoChannelBase` (Sicherheitssperren + HTTP-Transport genau einmal statt zweimal).
      Kein eigener Render-Pfad — Text kommt unverändert aus `report.sms_text`. Frontend-Schalter
-     im Versand-Reiter seit #1717 S3, im Alarme-Reiter (Trip UND Ortsvergleich) seit #1745
-     Scheibe A. Details: ADR-0049, `docs/specs/modules/feat_1676_s2a_premium_sms_versand.md`.
+     im Versand-Abschnitt unter Wetter-Metriken (seit #1743; vormals Reiter Versand; #1717 S3 Trip, #2293 S2 Ortsvergleich, eigener Schalter,
+     löst #2448 ab), im Alarme-Reiter (Trip UND Ortsvergleich) seit #1745 Scheibe A. Details:
+     ADR-0049, `docs/specs/modules/feat_1676_s2a_premium_sms_versand.md`,
+     `docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md`.
+   - **SMS-/Premium-SMS-Tageslimit** (`src/services/sms_daily_limit.py`, seit Issue #2412 S4a,
+     2026-09-24) – kanal-eigener Kosten-Deckel, getrennt vom Alarm-Frequenz-Limit
+     (`alert_daily_limit.py` für Free/Standard bzw. dem Premium-Mindestabstand): je Nutzer
+     zwei UTC-getaktete Tageszähler (`sms`, `premium_sms`) mit fester Alarm-Reserve, geprüft/
+     reserviert an allen 12 Sendestellen in `notification_service.py`. Gesperrte Versuche
+     landen mit `reason_code="sms_daily_limit_exceeded"` in `NotificationResult.blocked_channels`/
+     `blocked_reason_codes`; E-Mail/Telegram bleiben unberührt. Sichtbarkeit im Konto (S4b, seit
+     Issue #2412, 2026-09-25) zeigt den Zählerstand je Kanal auf `/account` ("3 von 10") über
+     `GET /api/auth/sms-daily-usage` — reiner Lese-/Anzeige-Pfad, S4a bleibt alleinige
+     Durchsetzungsinstanz. Details: `docs/specs/modules/sms_daily_limit.md`,
+     `docs/specs/modules/sms_daily_usage_anzeige.md`.
 
 ### Datenfluss (Produktiv)
 
-Der Produktivpfad läuft über den Python-Core-Scheduler und wird von der Go-API getriggert
-oder über Cron-Jobs gesteuert:
+Der Produktivpfad wird vom Go-Cron ausgelöst (`internal/scheduler/scheduler.go`) und im
+Python-Core ausgeführt (`POST /api/scheduler/*`, s. „Scheduler-Zuständigkeit“):
 
 ```
 Scheduler / API-Trigger
@@ -124,7 +207,7 @@ Channel Renderers
   ├─→ render_sms() → Wire-Format ≤160 Zeichen
   └─→ DebugBuffer
   ↓
-Channel (E-Mail / Telegram / SMS / Premium-SMS [nur Trip-Briefing] / Console)
+Channel (E-Mail / Telegram / SMS / Premium-SMS / Console)
 ```
 
 **Report-Config-Resolver (Issue #1208, Scheibe A):** Für Trip-Briefings löst
@@ -141,11 +224,31 @@ stellt zusätzlich Preview- und Compare-Pfad auf einen parallelen
 `CompareRenderOptions`-Resolver um und ergänzt ein src-weites Struktur-Gate gegen 
 Direktzugriffe auf render-wirksame Felder.
 
+**Slot-Regel (Issue #2422 S3, 2026-09-28):** Ob ein Trip-Briefing-Slot (Morgen/Abend)
+ausgeliefert wird, entscheidet EINE Regel `slot_aktiv(rc, report_type)`
+(`src/app/models.py`): ohne `report_config` aktiv; `enabled=false` = Master über
+beide Slots; sonst der Einzel-Schalter `morning_enabled`/`evening_enabled`, fehlend =
+aktiv. Sie wirkt im Scheduler (`_get_active_trips`), im Alarm-Vorlauf
+(`trip_briefing_due_at`), in der abgeleiteten flachen Ableitung (Python-Loader,
+Go `deriveFlatFields`) und im Frontend (`reportSlotAktiv`, Editor-Startzustand und
+Trip-Übersicht). Die drei Fassungen prüft eine geteilte Fallzeilen-Tabelle
+(`tests/fixtures/report_config_slot_faelle.json`). Spec:
+`docs/specs/modules/fix_2422_s3_kanal_an_aus_kette.md`.
+
 ### Datenfluss (Legacy-CLI)
 
 Für lokale Entwicklung und Debugging existiert weiterhin die CLI in `src/app/cli.py`
 (`--report`, `--channel`, `--dry-run`, `--config`, `--debug`). Dieser Pfad ist nicht
 mehr der Produktivpfad.
+
+**Analyse-Werkzeuge (kein Produktivpfad):** `src/analysis/` enthält reine
+Auswertungswerkzeuge für bereits vorhandene Wetter-Mitschnitte bzw. Archivdaten, aktuell
+`thunder_replay.py` (Issue #2181 Scheibe S2a) und `thunder_ablation.py` (Issue #2181
+Scheibe S2c). Kein anderer Code importiert das Paket und es hat keinen Netz-, Datei-,
+DB- oder Umgebungszugriff — es läuft ausschließlich, wenn jemand es gezielt für eine
+Auswertung aufruft. Specs:
+`docs/specs/modules/feat_2181_s2a_gewitter_mitschnitt_auswertung.md`,
+`docs/specs/modules/feat_2181_s2c_gewitter_archiv_ablation.md`.
 
 ## Debug-Prinzip
 - Alle Schritte schreiben standardisierte Debug-Zeilen in den DebugBuffer
@@ -163,8 +266,10 @@ mehr der Produktivpfad.
 
 1. **Email-Handler** (`InboundEmailReader.poll_and_process()`)
    - Liest IMAP-Inbox (shared mailbox)
-   - Pro Nachricht: `lookup_user_by_email(from_addr)` → sucht User-Profil mit passender `mail_to`
-   - Fallback: `user_id = "default"` wenn kein User gefunden
+   - Pro Nachricht: `lookup_user_by_email(from_addr)` → sucht User-Profil mit passender, **bestätigter
+     wirksamer** Kontaktadresse (`mail_to`, ersatzweise `email`; Issue #2147 Scheibe B2)
+   - Kein Treffer/mehrdeutig: `user_id = None` (bis Scheibe B2: Fallback `"default"`) — Gate
+     `_process_single` verwirft ohne Antwort, kein Rückfall auf ein Sammelkonto
    - Ladet Trips des Nutzers via `load_all_trips(user_id)`
    - Verarbeitet Befehl (z. B. "status", "help")
    - Antwortet an die aufgelöste User-Adresse
@@ -185,33 +290,101 @@ mehr der Produktivpfad.
 
 **Lookup-Funktionen** (`src/app/loader.py`):
 - `list_all_user_ids(data_dir)` – alle User-IDs unter `data/users/` (ausschließt test_ / _ Präfixe)
-- `lookup_user_by_email(email)` – sucht User mit `mail_to == email` (case-insensitive)
-- `lookup_user_by_telegram_chat_id(chat_id)` – sucht User mit `telegram_chat_id == chat_id`
+- `lookup_user_by_email(email)` – sucht User mit passender, **bestätigter wirksamer** Kontaktadresse
+  (`mail_to`, ersatzweise `email`; case-insensitive); mehrdeutig oder unbestätigt → `None` (Issue
+  #2147 Scheibe B2)
+- `lookup_user_by_telegram_chat_id(chat_id)` – sucht User mit `telegram_chat_id == chat_id`; tragen
+  mehrere echte Nutzer dieselbe Chat-ID (Bestandsdaten von vor Issue #2141), liefert die Funktion
+  `None` statt einer der beiden IDs und protokolliert die Kollision (`logger.error`) — ein echter
+  Treffer hat weiterhin Vorrang vor Test-Nutzern (Issue #1013)
 
 **Konfiguration:** Nutzer-Profile liegen in `data/users/<user_id>/user.json` mit Feldern `mail_to` und `telegram_chat_id`.
 
-### Premium-SMS-Rückkanal (Issue #1676, Scheibe S1 — kein Trip-Befehlskanal)
+### Telegram-Empfängervertrag (Issue #1412, Scheibe S4a)
+
+`TelegramOutput` (`src/output/channels/telegram.py`) sendet nur noch an einen **ausdrücklich
+belegten Empfänger** (`TelegramRecipient`, `src/output/channels/recipient.py`) — es gibt keinen
+Rückfall auf den globalen `.env`-Chat:
+- `TelegramRecipient.for_user(user_id, settings)` liest den Chat frisch aus
+  `data/users/<uid>/user.json`; im Testmodus (`is_test_mode`) gilt `telegram_test_chat_id`.
+- `TelegramRecipient.inbound_reply(chat_id)` ist nur innerhalb eines eingehenden Updates und nur
+  an den Absender zulässig (ContextVar-Herkunftsbeleg in `inbound_telegram_reader`).
+- Die Chat-ID wird vor jedem HTTP-Call auf die Form `-?\d{1,20}` geprüft.
+- Ohne Empfänger: Block mit Reason-Code `telegram_no_recipient` bzw. `telegram_no_chat_id`,
+  0 HTTP-Calls.
+- `set_my_commands` / `answer_callback_query` brauchen keinen Empfänger.
+- Test-Knopf „Telegram testen“ (`channel_test_service`) geht an den **Profil-Chat** des Nutzers über
+  den Produktions-Bot (vorher Betreiber-Test-Chat).
+- Debug-CLI lehnt den Kanal `telegram` mit `OutputConfigError` ab.
+
+Spec: `docs/specs/modules/fix_1412_s4a_empfaengervertrag_telegram.md`.
+
+### SMS-/Premium-SMS-Empfängervertrag (Issue #1412, Scheibe S4b)
+
+Analog zu Telegram gehen SMS und Premium-SMS nur noch an eine **belegte Nummer**
+(`src/output/channels/recipient.py`); `settings.sms_to` / `GZ_SMS_TO` werden nie gelesen
+(`Settings.with_user_profile` setzt `sms_to=None`):
+- `SmsRecipient.for_user(user_id, settings)`: bestätigte Nummer frisch aus `user.json`
+  (`sms_verified_number == sms_to`, #2406).
+- `SmsRecipient.verification(...)`: Bestätigungscode nur an `pending_sms_to` bzw. `sms_to` (E.164).
+- `PremiumSmsRecipient.for_user(...)`: gelernte Rückadresse `premium_sms_reply_to`.
+- Prüfung vor jedem Draht in `SevenIoChannelBase.send` (`seven_io_base.py`), Reihenfolge:
+  Empfänger → Code-Herkunft → Testmodus-Sandbox → `_post` mit Payload-Abgleich.
+- Block-Codes: `sms_no_recipient`, `sms_verification_number_not_bound` sowie die bestehenden
+  `premium_sms_*`-Codes; 0 HTTP-Calls.
+- `get_channel('sms'|'premium_sms')` wirft `OutputConfigError` — Zugriff nur über die Nutzer-Fabrik.
+
+Spec: `docs/specs/modules/fix_1412_s4b_empfaengervertrag_sms.md`.
+
+### Premium-SMS-Rückkanal (Issue #1676, Scheibe S1 — Rückadresse lernen)
 
 **Komponente:** `src/services/inbound_sms_reader.py` (`InboundSmsReader.poll_and_process()`),
 getriggert vom Go-Cron-Job `premium_sms_poll` (`*/5 * * * *`) über
-`POST /api/scheduler/inbound-sms`.
+`POST /api/scheduler/inbound-sms`. Seit #2439 weckt zusätzlich ein Webhook
+(`/api/webhooks/sms/{secret}`, E-Mail analog `/api/webhooks/mail/{secret}`) den Poll sofort
+(`Scheduler.Kick`); der Poll bleibt Wahrheit, Cron Fallback (ADR-0088,
+`docs/runbooks/inbound-webhooks.md`).
 
-**Zweck:** Anders als die beiden Handler oben verarbeitet dieser Reader **keine
-Trip-Befehle** — er pollt das seven.io-Journal (`GET journal/inbound`), erkennt
-darin Antworten des Garmin inReach am Kennzeichen `inreachlink.com` und lernt
-daraus die aktuell gültige (von Garmin je Gespräch neu vergebene) Rückadresse
-für genau einen Premium-Nutzer. Schreibender Endpoint ist ausschließlich der
-neue, localhost-only Go-Endpoint `POST /api/internal/premium-sms-learn`
-(`internal/handler/premium_sms_connect.go`), der `user.PremiumSmsReplyTo`/
-`PremiumSmsReplyAt` per Read-Modify-Write setzt. Außerhalb Produktion pollt der
+**Zweck:** Der Reader pollt das seven.io-Journal (`GET journal/inbound`) und
+entscheidet seit #2323 anhand des strukturell immer vorhandenen `to`-Felds
+(`to == SERVICE_NUMBER`), ob eine Nachricht überhaupt zur Auflösung vorgelegt
+wird — nicht mehr am abschaltbaren Garmin-Kartenlink-Text `inreachlink.com`
+im Nachrichteninhalt. Die Zuordnung zum Nutzer entscheidet unverändert der
+Go-Lern-Endpunkt: Bis #2154: bei gespeicherter Rückadresse oder genau einem
+Premium-Nutzer; seit #2154: bei gespeicherter, frischer Adresse (TTL-Abgleich)
+oder validem Verknüpfungs-Code im Format `XX`+3 Buchstaben+3 Ziffern (s.
+`docs/specs/modules/fix_2154_premium_sms_verknuepfungscode.md`,
+Format-Änderung durch `docs/specs/modules/fix_2323_premium_sms_gate_generisch.md`);
+seit #2328: die frische Adresse zieht nur bei **genau einem** Treffer — bei zwei
+oder mehr frischen Treffern auf dieselbe Nummer (Garmin vergibt Rückadressen aus
+einem rotierenden Pool erneut) lehnt der Endpunkt mit 409/`stored_reply_to_ambiguous`
+ab, auflösbar allein per Verknüpfungs-Code (s.
+`docs/specs/modules/fix_2328_premium_sms_rueckkanal_kollision.md`).
+Die aktuelle, gültige Rückadresse wird per Read-Modify-Write in `user.PremiumSmsReplyTo`/
+`PremiumSmsReplyAt` gespeichert — ausschließlich über den localhost-only Go-Endpoint
+`POST /api/internal/premium-sms-learn` (`internal/handler/premium_sms_connect.go`). Außerhalb Produktion pollt der
 Reader nicht (Sandbox-Key liefert auf dem Lesepfad dasselbe Produktiv-Journal
 wie der Prod-Key — siehe `docs/specs/modules/egress_guard_sms.md` → Known
 Limitations), außer der Trockenlauf-Schalter `GZ_PREMIUM_SMS_POLL_DRYRUN=1`
 ist gesetzt. Details: `docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md`.
-Kein Frontend, keine Befehlsausführung. Der Versand über diese gelernte
-Rückadresse ist seit Scheibe S2a live (s. u.) — **nur fürs Trip-Briefing**.
+Der Versand über diese gelernte Rückadresse ist seit Scheibe S2a live (s. u.) —
+zunächst **nur fürs Trip-Briefing**; seit #2275 auch im Ortsvergleich-Briefing, als Alarm-Kanal
+seit #1701/#1745/#1752 in beiden Flächen (s. „Channels" oben).
 
-### Premium-SMS als Versandkanal (Issue #1676, Scheibe S2a — nur Trip-Briefing)
+🔴 **Nachtrag (#2184, S4 Epic #2133, 2026-09-08):** „Kein Frontend, keine
+Befehlsausführung" galt nur bis hierhin. Seit #2184 wird der vor dem Kennzeichen
+stehende Nachrichtentext im selben Poll-Durchlauf — **nach** dem unveränderten
+Lernaufruf, in einem eigenen, nachgelagerten `try/except` — als Befehl an
+`TripCommandProcessor` gegeben; die Antwort geht per neuer
+`NotificationService.send_command_reply_premium_sms` an die soeben gelernte
+Rückadresse zurück. Premium-SMS ist damit der dritte Erzeuger von
+`InboundMessage` (neben E-Mail, Telegram) und schließt den letzten der vier
+Eingangswege aus Epic #2133 (`channel="premium_sms"`, kanalneutral bereits seit
+S3/#2126). Kein Frontend weiterhin, aber Befehlsausführung ja. Details:
+`docs/specs/modules/feat_2184_s4_premium_sms_kommandoverarbeiter.md`,
+`docs/specs/modules/inbound_command_channels.md`.
+
+### Premium-SMS als Versandkanal (Issue #1676 Scheibe S2a; Ortsvergleich seit #2275/#2293 S2)
 
 Aufbauend auf der gelernten Rückadresse aus S1 ist Premium-SMS seit S2a ein
 vierter, eigenständiger Versandkanal `premium_sms` (s. „Channels" oben und
@@ -230,11 +403,29 @@ Sonderfassung `_radar_effective_channels()`, die ausschließlich die Briefing-Fl
 ersatzlos entfallen; das Kanal-Set wird einmal über `_effective_alert_channels()` aufgelöst
 und im ganzen Radar-Pfad geteilt (Unterdrückungs-Protokoll, Leer-Check, Versand). Damit gibt
 es **einen** Auflösungsweg für alle Alarmtypen — die zwei konkurrierenden Wege waren die
-Ursache von #1745. Der Versand-Pfad selbst (dieser Abschnitt) bleibt unverändert
-Trip-Briefing-only, davon unberührt. Details:
+Ursache von #1745. Der Versand-Pfad selbst (dieser Abschnitt) blieb bis #2275 unverändert
+Trip-Briefing-only. Details:
 `docs/specs/modules/feat_1701_alarm_premium_sms.md`,
 `docs/specs/modules/fix_1745_a_alarm_kanal_premium_sms_ui.md`,
 `docs/specs/modules/fix_1752_radar_folgt_alarm_kanaelen.md`.
+
+🔴 **Nachtrag 2 (2026-09-28, Issue #2293 Scheibe S2 — aktueller Stand; der Versand-Satz im
+Nachtrag oben ist damit überholt):** Der
+Versand-Pfad ist seit **#2275** (Backend) und **#2293 S2** (eigener Schalter im
+Versand-Abschnitt des Ortsvergleichs unter Wetter-Metriken, löst #2448 ab) **kein** Trip-Briefing-only mehr —
+Premium-SMS ist jetzt Versandkanal in **beiden** Flächen, über getrennte, nicht mehr
+gekoppelte Felder: `ComparePreset.SendPremiumSms` (Briefing) und
+`ComparePreset.AlertChannels.PremiumSms` (Alarm, identischer Typ wie beim Trip). Vor
+#2293 S2 gab es am Ortsvergleich nur den Alarme-Reiter-Schalter, der still auch
+`send_premium_sms` (Briefing) mitsetzte; das ist mit dieser Scheibe aufgehoben.
+Alt-Bestand ohne `alert_channels` wird beim Laden deterministisch materialisiert
+(reine In-Memory-Auflösung, kein Write-Back durch ein GET) — ein Legacy
+`send_premium_sms=true` ohne vorhandenes `alert_channels` wird dabei als Alarm-Absicht
+gedeutet: `alert_channels.premium_sms` wird `true`, `send_premium_sms` wird beim ersten
+Go-Schreibzugriff auf `false` zurückgesetzt (Python-seitig deckt derselbe Zeitraum ein
+Guard in `effective_compare_briefing_channels`, `src/services/compare_alert_channels.py`,
+ab). Details: `docs/specs/modules/fix_2275_compare_premium_sms_versand.md`,
+`docs/specs/modules/feat_2293_s2_compare_alarm_kanaele.md`.
 
 ### Telegram Bot-Menü (Automatisches Setup)
 
@@ -242,7 +433,7 @@ Trip-Briefing-only, davon unberührt. Details:
 aus `BOT_COMMANDS` gesetzt und verifiziert:
 
 - **Startup-Hook** (`api/main.py`, Lifespan): ruft `TelegramOutput.set_my_commands()` auf
-- **Quelle:** `BOT_COMMANDS` in `src/output/channels/telegram.py` (8 Befehle: glance, heute, morgen, now, heute_gewitter, timeline_heute, timeline_morgen, hilfe)
+- **Quelle:** `BOT_COMMANDS` in `src/output/channels/telegram.py` (29 Befehle: glance, heute, morgen, now, heute_gewitter, timeline_heute, timeline_morgen, hilfe, jetzt, gewitter, strecke, ruhetag, status, pause, skip, stop, weiter, kuerzel, today, tomorrow, storms, route, restday, resume, help, codes, startdatum, startdate, report) — seit #2417 AC-21 (deutsche Vereinigung) bzw. AC-20 (englische Slash-Befehle + `kuerzel`/`codes`) mit allen `_COMMAND_SPECS`-Wörtern
 - **Idempotent:** jeder Deploy/Restart stellt das Menü sicher
 - **Fail-soft:** fehlender Bot-Token blockt den Service-Start nicht
 - **Live-Verifikation (Post-Deploy):** Der Selftest prüft via `getMyCommands` gegen den Prod-Bot,
@@ -276,17 +467,26 @@ für `ComparePreset`-Orte auf, ohne die Auswertungslogik zu duplizieren. Wetter-
 und beim Report-Versand (`send_one_compare_preset()`) aktualisiert; der 15-Minuten-Check liest
 nur. Versand ohne Trip-Bindung über `NotificationService.send_location_deviation_alert()`; der
 geteilte Alert-Renderer löst den Ortsbezug seit #1744 A1 in **einer** Funktion
-(`renderers/alert/segments.py::format_alert_location`) über drei Stufen auf: gesetztes
-`location_label` → Ortsname (Ortsvergleich), sonst Segment-Kennung über
-`format_segment_reference` (`Segment 3–5`, `🏁 Ziel` — dieselbe Sprache wie die amtliche
-Warnung), sonst km-Spanne als Rückfall. Die Kurznachricht (SMS/Premium-SMS) nennt bewusst
+(`renderers/alert/segments.py::format_alert_location`) auf, seit **#2036** (2026-08-21) vier
+Stufen statt drei: gesetztes `location_label` → Ortsname (Ortsvergleich), sonst **gemessene**
+km-Spanne (`km A-B`, nur wenn `km_measured=True` — die Distanz stammt aus echter GPX-Wegstrecke,
+nie aus Luftlinie), sonst Segment-Kennung über `format_segment_reference` (`Segment 3–5`,
+`🏁 Ziel` — dieselbe Sprache wie die amtliche Warnung), sonst km-Spanne (ungemessen) als
+letzter Rückfall für Altdaten ohne Segment-Kennung. Die Kurznachricht (SMS/Premium-SMS) nennt bewusst
 weiterhin keinen Ortsbezug. Alarmkonfiguration ist in Scheibe 2 hartkodiert
 (Default-Sensitivität „standard", 120 Min Cooldown, nur E-Mail) — editierbare UI folgt in
 Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cron-Job
 `compare_alert_checks` (`*/15 * * * *`, 7. registrierter Job). Details:
 `docs/specs/_archive/modules/issue_1169_compare_alert_consumer.md`.
 
+**Radar-Alarm-Takt (Epic #2261 A-2 S2, ADR-0082):** die Jobs `radar_alert_checks` und `compare_radar_alert_checks` laufen im 5-Minuten-Takt (`3-58/5 * * * *`) mit eigenem Budget (Wartebudget 240 s, Laufbudget 270 s, Deckel 600 s); die übrigen Alarm-Jobs behalten 300/720/1800 s. Die Radar-Zeitgrenze `RADAR_RUN_DEADLINE_SECONDS = 45` reicht per `deadline_at` in die Quellenkette; Reihenfolge je Lauf über `alert_last_checked_radar.json` bzw. `alert_last_checked_compare_radar.json`; Radar-Cache-TTL 240 s.
+
 **Architektur:**
+
+0. **Faire Reihenfolge im Alarmlauf (#2261 A-2 S1, 2026-10-05)**
+   - `check_all_trips` sortiert die Trips nach dem Zeitpunkt der letzten Prüfung (am längsten ungeprüft zuerst, Trip-ID als Tie-Break). Persistenz: `data/users/<user_id>/alert_last_checked.json` (`src/services/alert_check_state.py`; Max-Merge, Prune gelöschter Trips, fail-open).
+   - Zeitgrenze des Laufs 180 s; nicht erreichte Trips erscheinen als `skipped_ids` (Ergebnis, WARNING-Log, Scheduler-Endpoint → `docs/reference/api_contract.md` §14.6). Status `partial` nur bei erreichter Zeitgrenze.
+   - Abgeschottet (#2217, 2026-10-07): Eine Ausnahme bei einem Trip/Preset reißt die Folgenden nicht mehr mit — in allen Alarmläufen und im Briefing-Sammellauf wird sie als `failed` gezählt und mit ID + Stacktrace geloggt (`report_unit_failure`). Go-Scheduler: Panic in `recordRun`/`callUserWithBudget` → Fehler `panic in <jobID>`, Lock freigegeben.
 
 1. **Read-Only Briefing-Snapshot**
    - `WeatherSnapshotService.save()` wird NUR vom Briefing-Scheduler aufgerufen (nicht vom Alert-Pfad)
@@ -301,6 +501,17 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        `region_label` > `label`; Präfix-Konstante `OFFICIAL_ALERT_KEY_PREFIX` in
        `services/alert_state.py`. Die Felder `valid_from`/`valid_to` kamen mit **#1685**;
        Bestandseinträge ohne sie bleiben gültig (Read-Modify-Write mit Merge).
+       Mit **#1441 S2** (ADR-0090) kommen additiv `source`, `scope`, `level`, `absent_since` und
+       `ended_at` (Tombstone) hinzu; Bestandseinträge ohne `source`
+       erzeugen bewusst keine Entwarnung (einmalige Lücke).
+   - **Entwarnung amtlicher Warnungen seit #1441 S2 (ADR-0090):** Wird eine gemeldete Warnung
+     gesenkt (z. B. 4 → 2) oder ist sie bei gesunder Quelle in zwei aufeinanderfolgenden
+     Alarm-Läufen verschwunden („vorzeitig beendet"), geht eine Entwarnung über alle vier Kanäle
+     (Trip und Ortsvergleich, geteilter Pfad in `services/official_alert_allclear.py` und
+     `output/renderers/alert/official_alerts.py`); Dringlichkeit = alte Stufe, SMS-Block `+`
+     (`+TS:H>L`, `+AV4>2`, `+TS:H>0`). Planmäßiger Ablauf und Quellenausfall sind keine
+     Entwarnung; ein zugestelltes Briefing, das die Senkung schon zeigte, senkt das Gedächtnis
+     ⇒ kein Entwarnungs-Alarm. Spec: `docs/specs/modules/feat_1441_s2_entwarnung.md`.
    - **Re-Alert-Logik (Änderungs-Raum):**
      - Neu (kein Eintrag): Alert sent, Eintrag angelegt
      - Stagnation (`|current - last| < threshold`): unterdrückt
@@ -348,8 +559,10 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
    - 4 Render-Pfade: `render_subject()`, `render_email()`, `render_telegram()`, `render_sms()`
    - Projektion: `to_alert_message()` erzeugt `AlertMessage` aus `WeatherChange`-Events
    - Dynamischer Betreff: `Trip · Ortsangabe · Richtung · Metrik`; faktisch-generische H1.
-     Die Ortsangabe kommt aus der **einen** Auflösung `_location_of` (`render.py:101`, seit #1744 A1):
-     `location_label` (Ortsvergleich) → Segment-Kennung → km-Spanne als Rückfall. Der Funktionsname
+     Die Ortsangabe kommt aus der **einen** Auflösung `_location_of` (`render.py:101`, seit #1744 A1,
+     erweitert um die gemessene km-Stufe in **#2036**):
+     `location_label` (Ortsvergleich) → gemessene km-Spanne (`km_measured=True`) → Segment-Kennung
+     → km-Spanne (ungemessen) als Rückfall. Der Funktionsname
      `_km_str` ist ein Relikt — hier stand bis 2026-08-13 noch `km`, das war seit A1 überholt
    - Severity-Sortierung pro Metrik; ASCII-SMS ≤140 Zeichen mit Überlauf-Marker
    - Enthält NICHT: Stundentabellen, Ausblick, Gewitter-Vorschau, Pills, Vortag-Vergleich, Statistik
@@ -360,6 +573,10 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      Compare UND Trip-Briefing), keine Δ-Abweichungslogik
 
 5. **Radar-/Regen-Nowcast-Alert segmentbewusst (Issue #822) — kanonischer Renderer seit Issue #919**
+   - **Verfeinerungskette des Abfrage-Messpunkts:** `waypoints[0]` (#656) → `active.start_point`
+     (#822, dieser Punkt) → seit **#2017** die zur Mitte des jeweiligen Vorwarnfensters
+     interpolierte Position (`services.trip_segments.position_at_time()`, inkl. Höhe) —
+     s. Punkt „Nowcast + Ort-Label" unten und `docs/specs/modules/fix_2017_nowcast_messpunkt.md`.
    - Gemeinsamer Segment-Helfer: `src/services/trip_segments.py:convert_trip_to_segments(trip, target_date) -> List[TripSegment]`
      - Extrahiert SSoT-Segmentlogik aus dem Briefing-Scheduler
      - Erzeugt konsistente Segmente mit `segment_id`, `start_point`/`end_point`, `start_time`/`end_time`
@@ -377,24 +594,91 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        (`WeatherSnapshotService.load_dated`, Punkt „Konvektiver Sicherheits-Override" unten)
        liest unter diesem Segment-Datum, nicht mehr zwingend unter `today`
    - **Nowcast + Ort-Label:**
-     - Ein `get_nowcast()`-Call am `segment.start_point` (nicht am alten Stage-Waypoint)
+     - Ein `get_nowcast()`-Call — seit **#2017** an der Position, die `position_at_time(trip,
+       active, segment_date, at=now + RADAR_MEASURE_OFFSET_MIN)` (27 Min) auf dem aktiven
+       Segment interpoliert (inkl. Höhe), statt wie zuvor (#822) fest am `segment.start_point`.
+       Seit **#2261 A-1** ist der Messpunkt-Versatz (`RADAR_MEASURE_OFFSET_MIN = 27`) von der
+       Auslöseschwelle entkoppelt: `RADAR_ONSET_THRESHOLD_MIN` (vorher 55) = `NOWCAST_HORIZON_MIN`
+       = 180 Min, der Alarm meldet so früh, wie die Quelle sieht. Der Messort liegt zur
+       Ereigniszeit (Passierzeit-Fenster); ein Ereignis = ein Alarm über Segmentwechsel;
+       Cooldown-Überholung nur bei vergleichbarer Menge (Onset < 60 Min); die Menge entfällt bei
+       am Horizont abgeschnittenem Fenster; der Alarmkopf nennt bei Beginn > 60 Min die Uhrzeit
+       statt „in N Min" (alle vier Kanäle + Ortsvergleich). Spec:
+       `docs/specs/modules/feat_2261_a1_radar_vorlauf.md`
+     - **Positionsquelle mit GPS-Fix (Issue #2327, ADR-0102, 2026-10-26):** `position_at_time` und
+       `points_with_passage_times` starten bei einem plausiblen Positions-Fix (höchstens 100 m neben
+       der Heute-Etappe, aus einer Premium-SMS mit Koordinaten) und schreiben ihn nach Plan-Tempo bis
+       Etappenende fort; danach bzw. am Folgetag gilt wieder die Planposition. Gespeichert je Nutzer in
+       `data/users/<user_id>/position_fix.json`. Ohne `user_id` unverändert.
      - `tz_for_coords(lat, lon)` bestimmt Tour-Zeitzone; `format_now_text(result, tz=tz)` gibt Onset-Zeit in Tour-TZ aus
      - `build_segment_label()` erzeugt „Etappe N, km X–Y" mit echten Strecken-Kilometern
    - **Kanonischer Render-Pfad (Issue #919):** `check_radar_alerts` konstruiert `AlertMessage(OnsetEvent(...))` und leitet durch dieselben vier Renderer wie der Abweichungs-Alert:
-     - `render_subject(msg)` — Betreff: `[<trip>] <Ortsangabe> · Regen/Gewitter in <m> Min`,
+     - `render_subject(msg)` — Betreff: `[<trip>] <Ortsangabe> · Regen/Gewitter in <m> Min` (bei Beginn > 60 Min seit #2261 A-1 mit Uhrzeit statt Minuten),
        an einer echt zugestellten Mail gemessen z.B. `[KHW 403] 🏁 Ziel · Regen in 25 Min`.
-       Ortsangabe nach derselben dreistufigen Auflösung wie oben (seit #1744 A1; hier stand bis
-       2026-08-13 noch die km-Spanne)
+       Ortsangabe nach derselben (seit #2036 vierstufigen) Auflösung wie oben (seit #1744 A1;
+       hier stand bis 2026-08-13 noch die km-Spanne)
      - `render_email(msg)` — HTML + Plain mit Onset-Uhrzeit, Intensity-Label, Quellenangabe, Cooldown-Block
      - `render_telegram(msg)` — Fettzeile + Detail mit Onset-Uhrzeit und Quelle
      - `render_sms(msg)` — Token `R@<hh:mm>` (Regen) oder `TH@<hh:mm>` (Gewitter), Zeitpunkt statt
        Countdown (seit #1948 S4; Kurznachricht kürzt bei der Stunde die führende Null,
-       `TH@9:05` statt `TH@09:05`), ≤140 Zeichen GSM-7
-     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`
+       `TH@9:05` statt `TH@09:05`), ≤140 Zeichen GSM-7. **Seit #2046** trägt der Token bei
+       belastbarer Menge (≥ 0,1 mm, akkumuliert über 60 Min **ab dem Beginn**, nicht ab
+       Versandzeitpunkt) zusätzlich die erwartete Regenmenge: `R2.5@18:00` (Regen, Zahl
+       direkt hinter dem Kürzel) bzw. `TH@18:00 R2.5` (Gewitter, Zahl als eigenes Token
+       nach der Zeit — hinter `TH` bleibt die Stufen-Position frei). Ohne belastbare Zahl
+       (`None`, unter 0,1 mm, Daten nicht verfügbar) bleibt die zahlenlose Form
+       (`R@18:00`/`TH@18:00`) erhalten; E-Mail- und Telegram-Langform sind unverändert und
+       zeigen weiterhin `intensity_label` als Wort. **Seit #2051 S1** trägt der Token
+       zusätzlich das Ende des zusammenhängenden nassen Blocks, abgeleitet aus denselben
+       bereits abgerufenen Nowcast-Frames: `@HH:MM` direkt hinter dem Mengen-Token
+       (`R2.5@18:00@20:00`). Reicht der nasse Block über den 180-Min-Horizont hinaus oder
+       bricht die Frame-Zeitreihe ab, wird stattdessen eine belegte Untergrenze angezeigt
+       (` >@HH:MM`, PO-Entscheid 2026-08-22 — kehrt die ursprüngliche Weglass-Entscheidung
+       um). Dieselbe Unterscheidung gilt in der Langform: `letzter Regen gegen HH:MM` bzw.
+       `Regen mindestens bis HH:MM`, in allen sieben Textstellen (E-Mail-Betreff, E-Mail
+       Trip/Mehr-Orte, Telegram rich, SMS/Premium-SMS/Telegram-Kurzstil, Briefing-
+       Kurzfristhinweis, Inbound-Kommando-Antwort). **Seit #2054** trägt eine Uhrzeit, die an
+       einem anderen Kalendertag als der Versandzeitpunkt liegt, in der Kurzform ein
+       vorangestelltes DE-Wochentagskürzel statt des vorherigen Zahlensuffixes: `R2.5@Sa0:23`
+       statt `R2.5@0:23+1`, Beginn und Ende unabhängig bewertet (`TH@Do18:00@Fr3:00 R2.5`) —
+       dieselbe Schreibweise, die derselbe Kanal für Abweichungsalarme (#2020 S2) und amtliche
+       Warnungen (#1948 S5) bereits führt. Bei Tagesversatz 0 bleibt die Ausgabe byte-identisch.
+       **Seit #2051 S2a/S2b** trägt der Token zusätzlich die räumliche Ausdehnung des
+       Regenereignisses als km-Zonen der Reststrecke: `derive_rain_zones()`
+       (`src/services/rain_extent.py`) bildet aus den bereits abgerufenen Nowcast-Frames
+       zusammenhängend nasse km-Spannen; der Baustein `_onset_extent_suffix()` hängt sie in
+       der Langform an (`Nass km 8-12` bzw. bei mehreren getrennt gezählten Zonen
+       `Nass km 8-12, km 19-21` — die trockene Strecke dazwischen erscheint bewusst nicht
+       als zusammengefasste Spanne). S2a bespielte damit zunächst nur die E-Mail-Trip-
+       Langform; S2b (2026-08-23) hängt denselben Baustein zusätzlich an E-Mail-Betreff,
+       Telegram rich und den Mehr-Orte-Zweig (dort dokumentierter No-op — der Ortsvergleich
+       hat kein Streckenkonzept und setzt `rain_zones` nie) und ergänzt die Kurzform
+       (SMS/Premium-SMS/Telegram-Kurzstil) um ein eigenes, budget-bewusstes Zonen-Kürzel
+       `km8-12` bzw. `km8-12,19-21` — als **letztes** Element angehängt und, anders als der
+       Rest der Kurzform, budget-abhängig: passt es nicht vollständig ins verbleibende
+       140-Zeichen-Budget, entfällt es komplett statt angeschnitten zu werden. Sichtbar nur
+       bei vermessener Etappe (`km_measured=True`, echte GPX-Wegstrecke) und nicht-leeren
+       `rain_zones`; ohne beides bleibt jeder betroffene Text byte-identisch zum Stand vor
+       #2051. Spec: `docs/specs/modules/feat_2051_s2a_raeumliche_ausdehnung.md`,
+       `docs/specs/modules/feat_2051_s2b_ausdehnung_kanaele.md`.
+       **Seit #2050 S4b-2** trägt der Token zwei zusätzliche Ein-Zeichen-Marker für
+       Sachverhalte, die das System schon kennt, aber bis dahin im Alarmtext verschwieg: `#`
+       unmittelbar hinter dem Kürzel (`R`/`TH`), wenn die Gewitterprüfung ausgefallen ist
+       (`convective_checked=False`, z.B. `R#2.5@18:00`), und `>` unmittelbar hinter der
+       Zonen-Liste, wenn ein Teil der Ausdehnung nicht gemessen wurde (`gap_km` nicht leer,
+       z.B. `km2-4,9-11>`). Der `>`-Marker reserviert sein Zeichenbudget **vor** der
+       Zonenauswahl, nicht danach — sonst entfernt der harte 140-Zeichen-Sicherungsschnitt bei
+       Überlänge genau dieses eine Zeichen wieder, byte-identisch zur fehlerhaften Fassung; im
+       Zweifelsfall entfällt stattdessen die letzte Zone. Dieselben zwei Sachverhalte tragen in
+       E-Mail/Telegram-Langform die Suffixe ` · Gewitter ungeprüft` bzw.
+       ` · Ausdehnung unvollständig gemessen`. Spec:
+       `docs/specs/modules/feat_2050_s4b2_wortebene_kennzeichnung.md`.
+     - `OnsetEvent`-Datenklasse: `onset_minutes`, `onset_time`, `km_from`/`km_to`, `is_convective`, `intensity_label`, `source_label`, `onset_precip_mm` (additiv, #2046 — Menge ab Ereignisbeginn, getrennt von `NowcastResult.window_precip_mm`, das ab „jetzt" misst), `onset_day_offset`/`onset_weekday` (additiv, #2054 — Tagesbezug des Beginns und sein DE-Wochentagskürzel, `onset_day_offset` selbst existiert bereits seit #2009), `event_end_time`/`event_end_day_offset`/`event_end_weekday`/`event_ongoing_beyond_horizon` (additiv — `event_end_time`/`event_end_day_offset`/`event_ongoing_beyond_horizon` seit #2051 S1, `event_end_weekday` seit #2054 analog zu `onset_weekday`, aber eigenständig aus dem Ende-Zeitpunkt abgeleitet, da Beginn und Ende an verschiedenen Kalendertagen liegen können — Ende desselben Ereignisses aus `NowcastResult.event_end_minutes`/`.event_ongoing_beyond_horizon` abgeleitet), `km_measured`/`rain_zones` (additiv, #2051 S2a — `rain_zones: tuple[RainZone, ...]`, Feldspiegel `km_from`/`km_to`/`onset_minutes`/`event_end_minutes`; S2b konsumiert beide Felder zusätzlich in Betreff, Telegram rich, Mehr-Orte-Zweig und Kurzform, ändert sie selbst nicht), `convective_checked`/`gap_km` (additiv, #2050 S4b-2 — `convective_checked: bool = True`, Default bewusst „geprüft", sonst würde jede Bestandslage ohne das Feld fälschlich als „ungeprüft" gelten; `gap_km: tuple[float, ...] = ()`, km-Lage der ausgefallenen Messpunkte aus `trip_alert._messluecken_felder()`, seit S4b im Protokoll — beide Felder speisen nur die Textkennzeichnung, keine Änderung an Auslöseentscheidung oder Zonenbildung)
      - `AlertMessage.cooldown_display` trägt den dynamischen Cooldown-Text (z.B. „2 Stunden")
      - `src/outputs/radar_alert.py` ist gelöscht — kein separater Inline-Body-Bau mehr
-   - **Throttle-Semantik unverändert** (Issue #773): `radar_alert_throttle.json` + `alert_log` auch bei Best-Effort-Versandfehlern
+   - **Throttle-Semantik seit #1405 S1 geändert (ADR-0086, 2026-10-11):** Ein Alarm gilt nur als versendet, wenn mindestens ein Kanal ihn zugestellt hat. Nur dann werden `radar_alert_throttle.json` und `alert_log` gebucht. Bei Totalausfall (kein Kanal hat zugestellt) wird nichts gebucht, stattdessen setzt der geteilte Baustein `src/services/alert_retry_backoff.py` einen 30-Minuten-Backoff je Ereignis und der Alarm wird später erneut versucht. Gilt für alle 7 Alarmpfade (Trip und Ortsvergleich). Der Befehl `report` und `heute`/`morgen` melden das tatsächliche Ergebnis statt pauschal Erfolg. Vorher (#773): Buchung auch bei Versandfehlern. Spec: `docs/specs/modules/fix_1405_s1_alarm_zustellung.md`.
    - **Zweiter Schreiber seit Issue #1439:** Der planmäßige Briefing-Versand (`_send_briefing_report()`, s. Datenfluss unten) kann denselben Throttle-Eintrag (`ThrottleStore`, Scope `"radar"`) schreiben, wenn er einen Starkregen-Kurzfristhinweis versendet — dieselbe Cooldown-Prüfung in `check_radar_alerts` unterdrückt dadurch einen widersprüchlichen Folge-Alert im Cooldown-Fenster, ohne dass diese Stelle selbst geändert wurde.
+   - **Alle Messpunkte statt nur Punkt 0 (Bugfix #2480, 2026-10-03):** `check_radar_alerts` (`src/services/trip_alert.py`) wertet den Radar-Nowcast an allen Messpunkten des Trips aus, nicht mehr nur am ersten. Aus den Treffern wählt `waehle_massgeblichen_punkt` genau einen maßgeblichen Punkt (Reihenfolge: frühester Beginn → Dringlichkeit → Index); es entsteht eine Meldung ohne Mischwerte aus mehreren Punkten. Ein Ausfall an Punkt 0 blockiert die Folgepunkte nicht mehr; ist Punkt 0 gedrosselt (Throttle), erfolgt kein Zusatzabruf. Sperren, Tageslimit und Identität sind unverändert, alle vier Kanäle laufen über denselben Pfad, der Ortsvergleich ist unberührt. Das Alarmprotokoll (`alert_log.py`) trägt dafür das neue, rückwärtskompatible Feld `trigger_point_km` (km-Lage des auslösenden Messpunkts). Spec: `docs/specs/modules/fix_2480_radar_alle_messpunkte.md`.
 
 6. **Konvektiver Sicherheits-Override (Issue #883, Epic #813 Slice 4)**
    - Der Radar-Wächter unterdrückt einen Alert normalerweise, wenn das Briefing den Regen für die Onset-Stunde bereits angekündigt hatte (`_briefing_precip >= 0.5` → kein Alert).
@@ -414,15 +698,15 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      standard/sensibel) ist wieder der EINZIGE Alarm-Regler (ADR-0009/ADR-0013 bestätigt).
      Der Aufruf von `_evaluate_corridors()` in `trip_alert.py` ist entfernt; `corridor_hits`
      ist strukturell immer leer, der Render-Vertrag (`CorridorEvent`) bleibt bestehen, wird
-     aber nie mehr gefüttert. `corridor_threshold.py` selbst bleibt unverändert im Repo,
-     nur ohne Aufrufer. Ein Trip, der bisher AUSSCHLIESSLICH über Korridore alarmiert wurde,
+     aber nie mehr gefüttert. `corridor_threshold.py` blieb zunächst ohne Aufrufer im Repo.
+     **Nachtrag (Audit 2026-10-21):** Seit #2230 (`rework_2230_corridor_path_removal.md`) ist der tote Pfad ganz entfernt — `src/services/corridor_threshold.py`, `CorridorEvent` und `corridor_hits` existieren nicht mehr (Beleg: `tests/tdd/test_alert_ausgabe_nach_korridor_rueckbau.py::test_ac1_modul_corridor_threshold_ist_weg`). Ein Trip, der bisher AUSSCHLIESSLICH über Korridore alarmiert wurde,
      alarmiert seither gar nicht mehr — das ist beabsichtigt, nicht stillschweigend in Kauf
      genommen. `Corridor.notify` bleibt Feld in Datenmodell/Persistenz (kein Datenverlust),
      nur wirkungslos. `Corridor.range`/`.mark` (Anzeige-Markierung) sind davon unberührt —
      sie waren nie ein Alarm-Auslöser.
      Spec: `docs/specs/modules/rework_1460_t1_relevanzfilter.md`.
    - Match-Logik `corridorInside(value, min, max)` wortgleich an zwei Stellen: TS
-     `frontend/src/lib/shared/corridor-editor/corridorMatch.ts` und Python
+     `frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts` und Python
      `src/services/corridor_match.py::corridor_inside()` (Consumer:
      `src/output/renderers/email/compare_html.py`, Slice 7) — darf nur einmal implementiert sein.
      Diese Anzeige-Markierung ist von der oben beschriebenen Alarm-Abschaltung unberührt.
@@ -455,6 +739,18 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      einen `capture_ids`-Listenparameter für den Fall mehrerer gebündelter Mitschnitte (z.B.
      mehrere Warnquellen im selben Trip). Spec:
      `docs/specs/modules/feat_1944_warn_mitschnitt_herkunft.md`.
+   - **Nachtrag #2050 Sz.12 (2026-10-02): fehlende Vergleichsbasis.** Kann ein Alarm-Check
+     mangels gültiger Vergleichsbasis nicht prüfen (kein/abgelehnter Briefing-Anker:
+     `missing`, `not_briefing_backed`, `too_old`, `wrong_day`), steht das als Unterdrückung
+     mit Grund `no_reference_basis` im Alarm-Protokoll (Felder `reference_gap`,
+     `reference_day`, optional `reference_at`; `alert_log.py`). Je Trip/Ortsvergleich, laufendem
+     Tag und Untergrund nur einmal (Entdopplung), mandantengetrennt, fail-soft. Gilt für
+     Trip-Alarm (nur laufender Trip, nur Abweichungszweig, `trip_alert.py`) und Ortsvergleich
+     (`compare_alert.py`); es gibt weiterhin keinen frischen Wetterabruf ohne Anker, die
+     bisherige Diagnosedatei schreibt unverändert. Im nächsten Briefing erscheint unter
+     „FEHLGESCHLAGEN" das Label „Kein Alarm möglich: keine gültige Vergleichsbasis"
+     (`undelivered_hint.py`); ohne Briefing-Zeitstempel liefert das Ersatz-Fenster nur diese
+     Einträge. Spec: `docs/specs/modules/feat_2050_sz12_fehlende_vergleichsbasis.md`.
    - Spec: `docs/specs/modules/alarm_eingangsprotokoll.md`.
 
 **Datenfluss:**
@@ -468,7 +764,8 @@ check_and_send_alerts(trip, cached_weather)
 
 check_radar_alerts(user_id)  [Issue #822 + #919, tagesübergreifend seit #1667 S3]
   ↓ pro Trip: resolve_current_segment(trip, now_utc, today)  [heute → gestern → Vorschau → nichts]
-  ↓ get_nowcast(segment.start_point.lat, segment.start_point.lon)
+  ↓ position_at_time(trip, active, segment_date, now + RADAR_MEASURE_OFFSET_MIN)  [#2017, #2261 A-1, s. Punkt 5]
+  ↓ get_nowcast(pos.lat, pos.lon, elevation_m=pos.elevation_m)
   ↓ build_segment_label() + format_now_text(tz=tour_tz)
   ↓ AlertMessage(OnsetEvent(...))  [seit #919]
   ↓ render_subject / render_email / render_telegram / render_sms
@@ -493,7 +790,12 @@ send_one_compare_preset() [scheduler_dispatch_service.py, nach Report-Versand]
 
 **Mandantentrennung:** `AlertStateService(user_id=...)`, `TripAlertService(user_id=...)` laden/speichern strikt unter `data/users/{user_id}/alert_state/` resp. `data/users/{user_id}/radar_alert_throttle.json`.
 
-Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`, `docs/specs/_archive/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/_archive/modules/issue_883_acute_danger_override.md`, `docs/specs/modules/alarm_eingangsprotokoll.md`
+**Abruf-Baustein (Issue #1539 S1b+S2, 2026-10-08, noch nicht in Produktionspfaden parallel verdrahtet):**
+- *Single-flight* (`src/services/single_flight.py`): parallele Abrufe desselben Schlüssels (Warn-Feeds über `warn_egress.cached_fetch`, Segment-Wetter) teilen sich EINEN Upstream-Abruf; Wartende bedienen ihre eigenen Senken und ihr eigenes Budget-Gate, die Wartefrist ist begrenzt, danach Fail-open-Selbstabruf.
+- *Atomares Budget-`reserve()`*: `forecast_budget.reserve()` und `meteoalarm_budget.reserve()` entscheiden und buchen in EINER Dateisperre (kein Überbuchen bei Parallelität); ein Lock-Timeout ist laut (WARNING + Verlustzähler). `POST /api/_internal/forecast-budget/reserve` nutzt `reserve()`, Antwortform unverändert.
+- *`parallel_fetch`* (`src/services/parallel_fetch.py`): Ergebnisse in Eingabereihenfolge, Teilausfall isoliert, Slot-Semaphore je Provider, Deadline und Timeout unterscheidbar, verschachtelte Aufrufe laufen inline, `contextvars` werden je Aufgabe kopiert. Spec: `docs/specs/modules/feat_1539_s1b_s2_abruf_baustein.md`.
+
+Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`, `docs/specs/_archive/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/modules/issue_883_acute_danger_override.md`, `docs/specs/modules/alarm_eingangsprotokoll.md`
 
 ---
 
@@ -519,7 +821,7 @@ frontend/
 │   │   │   ├── atoms/             # Atom-Schicht (Atomic Design Level 1, Epic #371)
 │   │   │   │   └── *.svelte       # Token-basierte UI-Primitive (Button, Label, Badge, etc.)
 │   │   │   ├── molecules/         # Molecule-Schicht (Atomic Design Level 2, Epic #372)
-│   │   │   │   └── *.svelte       # Combinations of atoms (FieldGroup, StatCard, etc.)
+│   │   │   │   └── *.svelte       # Combinations of atoms (FieldGroup, StatCard, BegriffErklaerung, Infobox, etc.)
 │   │   │   ├── organisms/         # Organism-Schicht (Atomic Design Level 3, Epic #471)
 │   │   │   │   ├── index.ts       # Barrel re-export (19 Organisms — Datei lesen, nicht raten)
 │   │   │   │   └── organisms.test.ts  # Source-inspection tests (no ui/ imports)
@@ -532,12 +834,10 @@ frontend/
 │   │   │   │   │   ├── MapCanvas.svelte    # Leaflet-Karte mit OpenTopoMap-Tiles (Issue #495)
 │   │   │   │   │   └── ...
 │   │   │   │   └── index.ts       # Barrel (TripHeader re-exported in organisms/)
-│   │   │   ├── alert-rules-editor/  # Alert configuration
-│   │   │   │   ├── AlertRulesEditor.svelte
-│   │   │   │   └── components/
 │   │   │   ├── compare/           # Vergleichs-Screen (CompareTabs, CompareDetail, CompareMatrix, …)
 │   │   │   ├── shared/            # Geteilte Tab-Organismen route|vergleich (WeatherMetricsTab,
-│   │   │   │                      #   layout-tab/, versand-tab/, alarme-tab/, OutputLayoutEditor)
+│   │   │   │                      #   layout-tab/, versand-tab/, alarme-tab/, OutputLayoutEditor,
+│   │   │   │                      #   subscription-header/ = geteilter Hub-Kopf, #2284)
 │   │   │   ├── preview/           # Email/SMS preview renderers
 │   │   │   ├── email-preview/     # Email rendering
 │   │   │   ├── mobile/            # Mobile-only components
@@ -553,8 +853,10 @@ frontend/
 │       ├── trips/                 # Trip-Liste, Detail-Hub (?tab=), /trips/new (TripNewEditor)
 │       ├── compare/               # Vergleichs-Liste, Detail-Hub, /compare/new (CompareNewEditor)
 │       ├── locations/ · settings/ · subscriptions/ · archiv/ · gpx-upload/ · account/
+│       ├── hilfe/                 # Hilfeseite (nur eingeloggt, #2521 S3): Briefing, Alarme, vier Kanäle, Antwort-Befehle
+│       ├── admin/                 # Admin-Seite (#2155 S4): Nutzerliste, Tier, Konto sperren; Load antwortet 403 für Nicht-Admins
 │       ├── login/ · register/ · logout/ · magic-link/ · forgot-password/ · reset-password/ · verify-email/
-│       ├── _home/                 # Route-lokale Cockpit-Kacheln
+│       ├── _home/                 # Route-lokale Cockpit-Kacheln (inkl. Willkommen/StartklarCheckliste, #2521 S2)
 │       ├── _design/ · _design-system/  # Component showcases (dev-only)
 │       └── email-preview-dev/     # Mail-Vorschau (dev-only)
 │       (URL-Konvention ?tab= statt #hash: docs/reference/navigation.md)
@@ -574,7 +876,7 @@ Frontend components follow Atomic Design principles with 3 explicit layers:
 |-------|----------|---------|----------|------|
 | **Atoms** | `components/atoms/` | Base UI primitives | Button, Label, Badge, Icon | #371 |
 | **Molecules** | `components/molecules/` | Combinations of atoms | FieldGroup, StatCard, Tabs | #372 |
-| **Organisms** | `components/organisms/` | Complex page sections | TripHeader, AlertRulesEditor, ListTable, HomeHero* | #471 |
+| **Organisms** | `components/organisms/` | Complex page sections | TripHeader, OutputLayoutEditor, ListTable, HomeHero* | #471 |
 
 **Import Rules:**
 - **Atoms** may import from `ui/` (shadcn + gregor primitives)
@@ -583,8 +885,8 @@ Frontend components follow Atomic Design principles with 3 explicit layers:
 - **Routes** should prefer importing from `organisms/` and `molecules/`, using `atoms/` only for rare custom layouts
 
 **Organism Barrel** (`components/organisms/index.ts`):
-Re-exportiert die Organisms (aktuell 19, u. a. `TripHeader`, `AlertRulesEditor`,
-`OutputLayoutEditor`, `WeatherMetricsTab`, `ListTable*`, `HomeHeroTrip/Compare`,
+Re-exportiert die Organisms (aktuell 19, u. a. `TripHeader`,
+`OutputLayoutEditor`, `WeatherMetricsTab`, `ListTable*`, `SubscriptionCard`,
 `OutboxCard`, `AlertsCard`, `PresetRail`). Die Datei selbst ist die Wahrheit —
 Exporte hier nicht duplizieren.
 
@@ -612,14 +914,16 @@ See `docs/design-system/COMPONENTS.md` for the canonical component catalog.
 ### Trip-Editor & Compare-Editor Save-Strategien (Issue #758, konsolidiert #1234/#1261/#1269)
 
 **Beide Editoren: Auto-Save (Ortsvergleich seit #1261, vorher expliziter Speichern-Button):**
-- Trip: `TripHeader.svelte`; Ortsvergleich: der Compare-Editor-Header — beide rendern einen `SaveIndicator` (zentral sichtbar über allen Tabs)
+- Trip und Ortsvergleich: seit #2284 S2 rendert der geteilte Kopf-Baustein `SubscriptionHeader` den einzigen `SaveIndicator` (Prop `saveController`: Trip `tripSaveCtl`, Vergleich `hubSaveCtl`; zentral sichtbar über allen Tabs)
 - Alle Änderungen triggern **Auto-Save** mit Debounce (~700 ms): Trip (Name, Etappen, Briefing, Metriken), Ortsvergleich (Orte, Wertebereich, Layout, Versand, Alarme)
 - Zustände: `idle` (sauber) → `dirty` → `saving` (API-Call läuft) → `idle` (erfolgreich, `savedAt` gesetzt) oder `error` (Fehler)
-- Seit #1395 S4 (Trip, `createSaveStatus(tripId)`): bei einem `412`-ETag-Konflikt zusätzlicher Zustand `conflict` statt generischem `error` — der `SaveIndicator` zeigt „Nochmal speichern"; der Klick frischt den ETag-Stand still auf (`refreshTripEtag()`) und wiederholt danach automatisch den abgelehnten Speichervorgang (`retryConflict()`). Ortsvergleich (`createSaveStatus()` ohne `tripId`, vor S6) bleibt bei `error`. Siehe `docs/specs/modules/issue_1395_s4_conflict_retry.md`.
+- Seit #1395 S4 (Trip, seit #2276 S1 `createSaveStatus({ typ: 'trip', id })`): bei einem `412`-ETag-Konflikt zusätzlicher Zustand `conflict` statt generischem `error` — der `SaveIndicator` zeigt „Nochmal speichern"; der Klick frischt den ETag-Stand still auf (`refreshResourceEtag(id, kind)`) und wiederholt danach automatisch den abgelehnten Speichervorgang (`retryConflict()`). Die Adresse des Auffrischens folgt ausschließlich der übergebenen Art (`NachladeKennung.typ`: `'trip'` → `/api/trips/{id}`, `'vergleich'` → `/api/compare/presets/{id}`), nie der Form der Kennung — Alt-Ortsvergleiche tragen Slugs ohne `cp-`-Präfix. **Stand Ortsvergleich:** der Mechanismus ist seit #2276 S1 entitätsneutral bereit; der Hub (`compare/[id]/+page.svelte`) ruft `createSaveStatus({ typ: 'vergleich', id })` seit #2276 S1 mit Kennung auf. Real „Nochmal speichern"-fähig sind inzwischen vier der fünf ursprünglichen Hub-Commit-Handler — seit #2276 S2 (Alarme), S3 (Wertebereiche), S4 (Wetter-Metriken/Layout) und S5 (Versand) —, weil sie über `saveController.schedule()` laufen (analog dem Trip-Zweig, `shared/alarmeVergleichSpeicherung.ts`, `shared/corridor-editor/wertebereicheVergleichSpeicherung.ts`, `shared/weather-metrics-tab/weatherMetricsCompareSave.ts` bzw. `shared/versandVergleichSpeicherung.ts`) und damit `doSave()`s Konflikt-Erkennung durchlaufen. Nur noch Orte/Aktiv-Status melden einen `412` manuell über `setError()` (kein `schedule()`-Pfad) und landen dort bei generischem `error`, nicht bei `conflict`. Siehe `docs/specs/modules/issue_1395_s4_conflict_retry.md`, `docs/specs/modules/rework_2276_s1_netz_und_fundament.md`, `docs/specs/modules/rework_2276_s2_alarme.md`, `docs/specs/modules/rework_2276_s3_wertebereiche.md`, `docs/specs/modules/rework_2276_s4_wetter_metriken.md` und `docs/specs/modules/rework_2276_s5_versand.md`.
 - Flush vor Navigation: `beforeNavigate` leert die Debounce-Queue (Datenverlust-Schutz)
 - **Store:** `saveStatusStore.svelte.ts` (Klasse `SaveStatus`) — pro Editor-Instanz ein eigenes Objekt, kein globales Sharing
 
 **Ausnahme vom Debounce: offene Rückfragen (Issue #1389).** Steht eine Rückfrage aus, deren Antwort denselben Datensatz betrifft, darf der Debounce **nicht** feuern — sonst konkurrieren zwei Schreibvorgänge um dieselben Felder. Dafür gibt es `SaveStatus.defer(fn)`: der Speichervorgang wird **ohne Timer** vorgemerkt, zählt als `hasPending` (also greift `beforeNavigate` weiter) und wird erst ausgelöst, wenn die Rückfrage beantwortet ist. Angewandt beim Etappen-Datum: `handleDateChange()` stellt zurück, `applyCascade()` bzw. `dismissCascade()` schreiben — **genau ein** PUT je Entscheidung.
+
+**Bauliche Etappen-Änderungen speichern sofort (Issue #2213, 2026-10-18).** Im Etappen-Tab (`EditStagesPanelNew.svelte`, Auto-Save-Modus, Desktop und Mobil) lösen Etappe hinzufügen/löschen, Pausentag einfügen und Wegpunkt hinzufügen (Höhenprofil-Klick)/umbenennen/löschen den Speichervorgang sofort aus, nicht erst beim Seitenwechsel. Alle Wege laufen über den gemeinsamen Helfer `speichereBaulicheAenderung`, den auch das Umsortieren (#2288) nutzt. Ist die Datums-Rückfrage der Kaskade offen, wird nur vorgemerkt (`deferSave`) und beim Beantworten bzw. Verlassen der Seite geschrieben. Während die Kaskade läuft (`cascadeBusy`), sind Höhenprofil und Wegpunktliste gesperrt (Klasse `cascade-locked`, `aria-busy`). Spec: `docs/specs/modules/etappen_bauliche_aenderung_speichern.md`.
 
 Warum das nötig ist: Das Backend ersetzt die Etappen bei jedem PUT vollständig, ohne Version oder Sperre (`internal/handler/trip.go`). Bei zwei gleichzeitigen Schreibvorgängen gewinnt der, der **zuletzt ankommt** — nicht der, der zuletzt abgeschickt wurde. Auf schnellem Netz fällt das nicht auf, bei asymmetrischer Verzögerung (Funkloch, Netzwechsel, Wiederholung nach Paketverlust) schon. Die Ordnungsgarantie trägt seit Issue #1395 S3 ausschließlich `api.ts`s zentrale Schreib-Warteschlange je Tour (`enqueueTripWrite` in `frontend/src/lib/etagRegistry.ts`): Jeder `PUT` auf `/api/trips/{id}` läuft serialisiert, unabhängig vom Aufrufer, sodass kein späterer Schreibvorgang von einem noch laufenden früheren überholt werden kann. Der frühere clientseitige Wartemechanismus im Panel (`SaveStatus.settle()`, `SETTLE_TIMEOUT_MS`) ist damit redundant geworden und wurde in Issue #1395 S5 entfernt.
 
@@ -636,6 +940,32 @@ Solange zurückgestellt wird, zeigt der `SaveIndicator` ehrlich `dirty`/„Nicht
 - Alle PUT-Endpunkte nutzen Read-Modify-Write-Semantik (Backend, `api.ts`), kein partielles Überschreiben
 
 Siehe `docs/specs/_archive/modules/issue_758_save_indicator.md`, `docs/specs/_archive/modules/issue_1234_autosave_hydration_gate.md`, `docs/specs/_archive/modules/issue_1269_save_status_lie.md` für technische Details.
+
+**Verlässlich beim Entladen (Issue #2317):** Die Speicherfunktionen der Trip-Reiter
+(Wertebereiche, Alarme, Wetter-Metriken) reichen den vom Speicher-Wächter
+(`ausstehendeSpeicherungSichern.ts::willUnload` → `flush({keepalive:true})`) hereingereichten
+`init`-Parameter jetzt an `api.put(url, body, init)` durch, statt ihn zu verschlucken — gebaut
+über `shared/tripSpeicherung.ts` (svelte-frei, `baueTripSpeicherung`/`baueWetterMetrikenSpeicherung`).
+Bei Wetter-Metriken laufen die beiden PUTs (`/weather-config`, `/api/trips/{id}`) nur beim
+Entladen parallel; regulär bleiben sie strikt nacheinander (#850). `SaveStatus` bekommt einen
+Getter `laufendeSpeicherung` (den gerade im Netz laufenden PUT); `+layout.svelte` stellt darüber
+per Svelte-Context (`stores/aktiveSpeicherung.ts`, Schlüssel `'aktive-speicherung'`) eine
+Anmeldestelle bereit, an der `trips/[id]`/`compare/[id]` ihren `SaveStatus` an-/abmelden — der
+Update-Hinweis (#2316) wartet darüber vor `SKIP_WAITING` eine ausstehende Speicherung regulär
+(ohne keepalive, mit If-Match; der Unload-Flush selbst traegt seit #1433 ebenfalls If-Match) ab, statt einen laufenden PUT durch den Reload abzuschneiden. Im
+Ortsvergleich wirft die Idealwerte-Speicherfunktion einen gescheiterten PUT jetzt an den
+aufrufenden Speicher-Takt weiter, statt ihn selbst zu schlucken — sonst hätte `SaveStatus`
+fälschlich „gespeichert" gemeldet. Seit #2276 S3 lebt diese Funktion in
+`shared/corridor-editor/wertebereicheVergleichSpeicherung.ts` (Nachfolger des inzwischen
+gelöschten `compare/korridorCommit.ts`); die `init`-Weiterreichung (Keepalive) blieb beim Umzug
+erhalten. Seit #2276 S4 gilt dasselbe für den Wetter-Metriken/Layout-Reiter: die vormals zwei
+getrennten Commit-Funktionen (`handleWetterMetrikenCommit`/`handleLayoutCommit`) sind zu einer
+kombinierten Orchestrierung `erstelleWetterMetrikenVergleichSpeicherung()` in
+`shared/weather-metrics-tab/weatherMetricsCompareSave.ts` zusammengeführt (ein Snapshot über
+beide Domänen, ein `schedule()`-Aufruf pro Geste); die `init`-Weiterreichung bleibt erhalten.
+Details: `docs/specs/modules/speicherung_beim_neuladen.md`,
+`docs/specs/modules/rework_2276_s3_wertebereiche.md` und
+`docs/specs/modules/rework_2276_s4_wetter_metriken.md`.
 
 #### Design-System Lauf B (Issues #143, #144, #146)
 
@@ -690,9 +1020,10 @@ HTML + Client-Side Interactivity
   - Init: GET `/api/auth/google/init` → redirect to Google consent
   - Callback: GET `/api/auth/google/callback?code=...&state=...` → create/lookup user, issue session
   - User-ID format for OAuth users: `g-{8hex}` to prevent session parsing errors
+  - Unbekannter `sub` + Adresse gehört bereits einem bestätigten Konto → Verknüpfung statt Zweitkonto (Hinweis-Mail); mehrdeutige Lage → neutrale Ablehnung `/login?error=oauth_link_failed`; `email_verified=false` bleibt immer `oauth_failed` (ADR-0067, Issue #2147 Scheibe C)
 - **Magic Link (Issue #449):** `/api/auth/magic-link` + `/api/auth/magic-link/verify` (6-digit OTP per E-Mail)
 
-**Session Format:** Server-side-signed cookie `gz_session = <userId>.<timestamp>.<hmacSig>` (24h TTL, HttpOnly, SameSite=Lax, Secure on HTTPS) — identisch über alle Auth-Methoden hinweg.
+**Session Format (ADR-0060, löst ADR-0030 ab):** Server-side-signed cookie `gz_session = <userId>.<sessionId>.<timestamp>.<hmacSig>` (HttpOnly, SameSite=Lax, Secure on HTTPS, Cookie-Lebensdauer 400 Tage) — identisch über alle Auth-Methoden hinweg. Gültig, solange `sessionId` in `data/users/<user_id>/sessions.json` steht, keine Ablaufprüfung. Abmelden entfernt den Eintrag; `POST /api/auth/logout-all` leert die Liste. Alte dreiteilige Merkmale (`<userId>.<timestamp>.<hmacSig>`) werden seit dem 2026-09-15 (#2262) an beiden Prüfstellen wie jedes unbekannte Cookie mit 401 abgewiesen — der Übergangszweig (stille Hebung, 24h-TTL) ist ersatzlos entfernt. Kann die Gästeliste nicht gelesen werden (Serverfehler), antwortet die Middleware mit 503 statt 401; das Frontend bleibt dann auf der Seite (#2353).
 
 **User Model Extensions (Issues #425, #450):**
 - `PasswordHash` field optional (`omitempty` JSON tag) — leerer Hash für reine OAuth/Passkey-User
@@ -739,6 +1070,73 @@ HTML + Client-Side Interactivity
 - **Production:** Systemd service `gregor-frontend.service` (port 5173)
 - **Nginx Reverse-Proxy:** Routes `/` to SvelteKit frontend
 
+### PWA (installierbar, Issue #2128, ADR-0061)
+
+Das Frontend ist eine installierbare Progressive Web App:
+
+- **Service Worker:** `frontend/src/service-worker.ts` — handgeführt (kein `vite-plugin-pwa`),
+  fünf Speicherregeln (seit #2131 Regel 2 eingefügt): `/api/*` nie im Speicher, Positivliste
+  vorgehaltener Ansichten (`/trips/[id]`, `/compare/[id]`) mit Stand-Kennzeichnung, übrige
+  Seitenaufrufe (Navigations-Requests) nie abgelegt, Programmdateien (Build-Assets) aus dem
+  Speicher, alles Übrige ohne Ablage. Details: ADR-0061 §3.
+- **Update-Verhalten:** Der Download einer neuen Fassung passiert erst auf Antippen des
+  Update-Hinweises (`frontend/src/lib/pwa/serviceWorkerUpdate.ts`), nicht schon beim Erkennen
+  (PO-Entscheid Epic #2127 — kein ungefragtes Datenvolumen im Funkloch). Seit #2316 prüft das
+  Modul aktiv statt nur beim zufälligen Neustart: bei Sichtbarwerden, `pageshow` und alle 30
+  Minuten (nur solange die Seite sichtbar ist), gedrosselt auf höchstens eine echte Prüfung pro
+  60 Sekunden; „Später" blendet den Hinweis bis zum nächsten Kaltstart aus. Ungespeicherte
+  Änderungen auf `/trips/[id]`/`/compare/[id]` sichert vor dem Reload der geteilte Speicher-Wächter
+  `frontend/src/lib/stores/ausstehendeSpeicherungSichern.ts` (ein Baustein für Trip und
+  Ortsvergleich, Trip/Vergleich-Code-Teilung) — er hinterlässt beim Entladen zusätzlich einen
+  reinen Kennungs-Merker (`geraetespeicher.ts`, `gz-nachladen`: `{typ, id}`, keine Werte).
+  Räumen des Geräte-Speichers beim Abmelden: `frontend/src/lib/pwa/geraetespeicher.ts`.
+  Seit #2317 wartet `serviceWorkerUpdate.ts` vor `SKIP_WAITING` außerdem eine noch ausstehende
+  Speicherung der offenen Detailseite regulär ab (`stores/aktiveSpeicherung.ts`); schlägt sie fehl
+  oder liegt ein Konflikt vor, bleibt die alte Fassung aktiv und die Reiter-Fehleranzeige stehen.
+  Findet die neu geladene Seite den Kennungs-Merker vor, holt `stores/nachEntladenNachladen.ts`
+  bis zu 6× im Abstand von 500 ms den Server-Stand nach und übernimmt ihn nur, wenn er sich
+  unterscheidet und der Nutzer seither nichts geändert hat (Trip: ETag-Vergleich über
+  `api.ts::getMitFassung`; Ortsvergleich: Inhalts-Fingerabdruck, da kein ETag existiert) — behebt
+  das Zeitfenster, in dem eine neu geladene Seite trotz erfolgreicher `keepalive`-Speicherung noch
+  den alten Stand zeigte. Details: `docs/specs/modules/speicherung_beim_neuladen.md`.
+- **Offline-Seite:** `frontend/static/offline.html` — seit #2131 keine Sackgasse mehr, sondern
+  eine Übersicht der offline vorgehaltenen Ansichten (Titel + Stand), Einstiegspunkt auch für den
+  Homescreen-Start (`start_url: "/"`).
+- **Fonts:** lokal ausgeliefert statt über Google Fonts geladen (kein externer Ladepfad mehr).
+- **Icon:** maskable Symbol für die Installation.
+
+Details, Speicherregeln im Volltext und die 24 Acceptance Criteria: `docs/specs/modules/pwa_installierbar_offline_start.md`,
+aktive Update-Erkennung und geteilter Speicher-Wächter: `docs/specs/modules/pwa_update_erkennung.md`,
+Bauform-Entscheidung: `docs/adr/0061-pwa-service-worker-bauform.md`.
+
+**Offline-Ansicht mit Stand-Kennzeichnung (Issue #2131, Scheibe 4 zu Epic #2127):** Trip- und
+Ortsvergleichs-Ansicht (`/trips/[id]`, `/compare/[id]`) bleiben ohne Netz aus dem Gerätespeicher
+sichtbar — mit allen anderen Routen ausdrücklich **nicht**:
+
+- **Ablage-Positivliste statt Feldfilter:** nur `/trips/[id]` und `/compare/[id]` (Seitenantwort
+  **und** `__data.json` für die clientseitige Navigation) werden abgelegt. Startseite/Cockpit
+  (`/`), `/archiv` sowie `/api/cockpit/status` und `/api/archive/stats` sind dauerhaft
+  ausgeschlossen, weil sie Alarm-Historie zeigen — ein veralteter Alarmstand wäre gefährlicher als
+  gar keiner.
+- **Stand-Kennzeichnung im Byte-Strom:** Der Worker schreibt die Stand-Zeile („Stand: TT.MM.,
+  HH:MM — offline, aus dem Gerätespeicher") beim Ablegen in die Antwortkopie ein, nicht erst
+  client-seitig beim Anzeigen — es gibt kein Zeitfenster mit ungekennzeichnet sichtbarem Altstand.
+- **Zweiter Cache-Bucket, mandantengetrennt:** `gz-daten-<mandanten-hash>` neben dem
+  Programm-Cache `gz-${version}` aus #2128; die Kennung kommt über einen Antwort-Header aus
+  `frontend/src/hooks.server.ts`, fail-closed (fehlt der Header, wird nicht abgelegt). Fester
+  Obergrenzen-Bestand mit Ältestes-zuerst-Verdrängung; Nutzerwechsel auf demselben Gerät räumt den
+  Bucket des vorherigen Nutzers beim ersten Online-Abruf des neuen.
+- **Schreib-Sperre statt Ausblenden:** Bearbeitungs- und Speichern-Elemente bleiben sichtbar, sind
+  aber gesperrt und tragen eine sichtbare Begründung (`OfflineSperre.svelte`, `offlineGate.ts`,
+  Vorbild `premiumSmsAlarmGate.ts`) — sowohl bei aus dem Speicher gezeigten Ansichten als auch bei
+  Netzverlust während einer live geladenen Sitzung (`frontend/src/lib/stores/verbindung.svelte.ts`).
+  Zentrales Zeitlimit in `send()` (`frontend/src/lib/api.ts`, Issue #2361): abgelaufenes Limit = `TimeoutError` und Store „offline"; bei „offline" entsperrt eine Verbindungs-Probe (`GET /api/health`, alle 15 s, nur bei sichtbarer Seite) wieder. Spec: `docs/specs/modules/fix_2361_abruf_zeitlimit.md`.
+- Programm-Update lässt den Inhalts-Bucket unangetastet; Abmelden über beide bekannten Wege leert
+  ihn vollständig mit.
+
+Details, Entscheidungsbegründung (Positivliste, Header-Ablauf, Verdrängung, Sperr-Design) und die
+18 Acceptance Criteria: `docs/specs/modules/pwa_offline_ansicht_letzter_stand.md`.
+
 ### Anlege- und Bearbeitungs-Editoren (Wizards abgeschafft)
 
 Die früheren Multi-Step-Wizards (Trip-Wizard Epic #136, Compare-Wizard Epic #438)
@@ -749,8 +1147,38 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
 - **Anlegen:** `/trips/new` → `trip-new/TripNewEditor.svelte`; `/compare/new` →
   `compare-new/CompareNewEditor.svelte` — progressive Tab-Anlege-Seiten aus den
   geteilten Tab-Organismen (`shared/`, `context="route"|"vergleich"`), Auto-Save.
+- **„Mit Standardwerten speichern“ (#2521 S3, 2026-10-17):** Beide Anlege-Seiten haben den
+  geteilten Knopf `shared/StandardwerteSpeichernKnopf.svelte`. Er speichert ohne Durchklicken
+  aller Reiter mit denselben Werten, die das Durchklicken ergäbe. Aktiv wird er über das Gate
+  `canFinishMitStandardwerten` (`shared/anlegeLockEngine.ts`): Trip = Name, Startdatum und alle
+  Etappen mit GPX; Vergleich = Name + mindestens 2 Orte; jeweils erst, wenn der Metrik-Katalog
+  geladen ist. Vorbelegung: `ergaenzeStandardwerteReportConfig` (`trip-new/tripNewLogic.ts`)
+  bzw. `belegeWertebereicheVor` (`compare-new/CompareNewEditor.svelte`).
+- **Hilfeseite `/hilfe` (#2521 S3):** Abschnitte Briefing, Alarme, vier Kanäle
+  (E-Mail/Telegram/SMS/Premium-SMS) und Antwort-Befehle; nur eingeloggt. Erreichbar über
+  Sidebar, Konto-Sheet und Startklar-Checkliste. Die Befehlsliste wird durch
+  `tests/test_hilfe_befehle_drift.py` gegen die Python-Befehle abgesichert.
+  Spec: `docs/specs/modules/onboarding_standardwerte_hilfe.md`.
 - **Bearbeiten:** Detail-Hub mit `?tab=`-Navigation (`trip-detail/` bzw.
   `compare/CompareTabs.svelte`/`CompareDetail.svelte`).
+- **Hub-Kopf (#2284 S1, Epic #2345 Etappe P2):** `shared/subscription-header/SubscriptionHeader.svelte`
+  ist der geteilte Kopf-Baustein des Detail-Hubs. Name/Region/Profil sind inline editierbar;
+  gesteuert wird er ausschließlich über Props (kein Kontext-Zweig im Markup, kein API-Import),
+  ein Markup für Desktop und Mobil. Snippet-Slots: `eyebrow`, `badges`, `meta`, `actions`.
+  Gespeichert wird über den Prop `onSaveField(field, value, schliessen)`, der drei Ausgänge
+  meldet: übernommen, Konflikt (HTTP 412) oder Fehler. Der Vergleich-Hub
+  (`routes/compare/[id]/+page.svelte`) nutzt ihn bereits (doppelter Desktop-/Mobil-Kopf entfällt;
+  Orte-Anzahl mit `compare-hub-orte-anzahl-desktop`/`-mobil`). Seit S2 nutzt ihn auch der Trip-Hub:
+  `TripHeader.svelte` ist nur noch Hülle (Status-/Meta-Zeile, Mobil-Kacheln) und mountet den Baustein
+  mit `titleTestid="trip-detail-h1"`, Snippet `namePrefix` (Shortcode) und Eyebrow nur Datumsbereich.
+  Die Aktivität des Trips ist eine Kachelreihe im Kopf (`ACTIVITY_TYPE_OPTIONS`; auf dem Handy ein
+  Aktivitäts-Knopf „Aktivität wählen ▾" statt Kacheln), nicht mehr eine
+  Auswahlliste im Etappen-Reiter; Konflikt-Schlüssel `kopf-name`/`kopf-region`/`kopf-profil`.
+  Trip-Speicherweg: `speichereKopfFeld` in `shared/tripSpeicherung.ts` (412 ⇒ Konfliktbehandlung).
+  Titelgröße (v1.3): mobil in beiden Hubs 20 px einzeilig mit Ellipsis; Desktop über Prop `titleSize`
+  (Trip 38 px, Vergleich 30 px). Etappenliste mobil nicht tiefer als vorher (≤474 px).
+  Region leer wird als „—" gezeigt. Specs: `docs/specs/modules/feat_2284_s1_subscription_header.md`,
+  `docs/specs/modules/feat_2284_s2_trip_kopf.md`.
 - **Persistenz:** `/api/trips` bzw. `/api/compare/presets` (nicht
   `/api/subscriptions` — entfernt, 404).
 
@@ -760,6 +1188,18 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
 - `IdealRange` — Min/max thresholds for a metric (numeric or enum)
 - `PROFILE_METRICS_WITH_SCALES` — Metric definitions indexed by profile
 - `IDEAL_DEFAULTS` — Default ranges per profile (populated on first render)
+
+### Aktionsmodell für Trips und Ortsvergleiche (Issue #2278, 2026-10-18)
+
+Ein gemeinsames Aktionsmodell für Liste, Detail-Hub und Mobil (Spec: `docs/specs/modules/feat_2278_aktionsmodell.md`).
+
+- **Tabelle:** `shared/subscriptionActions.ts` leitet die Aktionen aus Art (Trip/Ortsvergleich) × Status × Fläche (Liste/Hub/Mobil) ab.
+- **Ausführung:** `shared/subscriptionExec.ts` (Adapter); Pausieren/Fortsetzen per Read-Modify-Write.
+- **Senden:** nur nach Bestätigung im `SendConfirmDialog`. Er zeigt das Versandziel, sperrt ohne zustellbaren Kanal; Morgen/Abend gibt es nur beim Trip (Default Morgen). Das Profil lädt `lib/server/profileLoader.ts` serverseitig aus der Session, ohne Default-Fallback.
+- **Hub:** Lebenszyklus-Kebab (Pausieren/Fortsetzen, Archivieren/Reaktivieren, Löschen mit Bestätigung); „Senden" ist der Primärknopf.
+- **Gemeinsame Bausteine:** `SubscriptionCard`, `SubscriptionActionSheet`, `SubscriptionKebab`, `StatusFilterPills`.
+- **Entfallen:** `CompareTile`, `MCompareActionSheet`, `ReportConfigDialog`, `TestReportDialog`, `tripListSend`. Alarme und Wetter-Metriken liegen auf den Editor-Reitern. Die Startseiten-Kachel hat nur „Bearbeiten"; archivierte Trips verschwinden aus der Liste.
+- **Wächter:** Ein Kern-Test übersetzt jede `.svelte`-Datei unter `frontend/src` mit dem Svelte-Compiler und parst das JS (fängt Build-Brüche, die `svelte-check` nicht sieht).
 
 ---
 
@@ -785,13 +1225,13 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
 | `/api/trips` | GET/POST | Trip CRUD |
 | `/api/trips/{id}` | GET/PUT/DELETE | Individual trip |
 | `/api/trips/{id}/stages` | GET/POST | Stage management |
-| `/api/trips/{id}/briefing-history` | GET | Briefing delivery log for archived trip (Issue #559) |
+| `/api/trips/{id}/briefing-history` | GET | Briefing delivery log for archived trip (Issue #559); Alias of `/api/briefings/{id}/briefing-history?kind=route` (kind-neutral, trip + comparison, #2281) |
 | `/api/locations` | GET/POST | Location library (for compare) |
 | `/api/compare/presets` | GET/POST | Compare-Presets (Orts-Vergleich) |
 | `/api/compare/presets/{id}` | GET/PUT/DELETE | Einzelnes Compare-Preset (`PATCH …/state`, `POST …/send`) |
-| `/api/preview/compare/{preset_id}` | POST | Vorschau aller Kanäle eines Compare-Presets (#1270) |
+| `/api/briefings/{id}/alert-preview?kind=route\|vergleich` | POST | Alarm-Vorschau Trip und Ortsvergleich (#2283) |
 | `/api/briefings` | GET | Briefing-Subscriptions (Trip-Briefing-Abos, ADR-0023) |
-| `/api/preview/{id}/email\|sms\|telegram` | GET | Trip report preview rendering (demo mode optional) |
+| `/api/preview/{id}/sms` | GET | SMS-Kurzform-Vorschau (demo mode optional); email/telegram/compare entfallen (#1743), `/signal` entfernt (#2283) |
 | `/api/account` | GET/PUT | User account |
 | `/api/scheduler/status` | GET | Job status monitoring |
 
@@ -801,13 +1241,13 @@ Feld-Definitionen: `internal/model/` und `docs/reference/api_contract.md` Sektio
 
 **Format:** JSON, standard HTTP methods (GET, POST, PUT, DELETE)
 
-**Auth:** Session cookies (format: `<userId>.<timestamp>.<hmacSig>`, set by Login or Passkey endpoints, 24h TTL)
+**Auth:** Session cookies (format: `<userId>.<sessionId>.<timestamp>.<hmacSig>`, set by Login or Passkey endpoints, gültig bis Abmeldung — Details ADR-0060)
 
 ### Frontend → Channels
 
 Frontend **does not** directly call E-Mail/SMS channels. Instead:
 - User configures subscriptions in `/account`
-- Backend scheduler handles actual sends (cron-based)
+- Go-Cron (`internal/scheduler/`) triggers, Python-Core (`/api/scheduler/*`) decides due-ness and sends
 - Frontend displays subscription status + last-send timestamps
 
 ---
@@ -817,7 +1257,7 @@ Frontend **does not** directly call E-Mail/SMS channels. Instead:
 - **Frontend Errors:** Client-side error logging (future: Sentry)
 - **Backend Metrics:** BetterStack heartbeats for jobs (morning/evening reports, trip alerts, compare subscriptions)
 - **Health Checks:** `/api/health` (backend), `/` (frontend)
-- **Scheduler Status:** `/api/scheduler/status` shows last-run timestamps and errors per job
+- **Scheduler Status:** `/api/scheduler/status` shows per-job status + per-user aggregates (since #2149 Scheibe A: `users{total, failing, partial}` pro Fan-out-Job; `last_run.error` trägt keine Nutzerkennung mehr); Zustandsdatei `scheduler_user_state.json` unter `store.DataDir` persistiert `(jobID, userID)`-Paare mit letztem Lauf, Status, Fehler und Zähler für Fehler-/Teilerfolgs-Folgen
 
 **Compare-Specific:**
 - Frontend validiert die Editor-Tabs vor dem Speichern (Schreib-Gate, s. Save-Strategien)
@@ -833,6 +1273,7 @@ See `~/.claude/CLAUDE.md` → Monitoring for details.
 - **Epic #134 (Trip Cockpit Dashboard):** `docs/features/epic-134-cockpit-dashboard.md`
 - **Epic #1033 (Amtliche Alerts im Orts-Vergleich):** `docs/features/epic-1033-compare-official-alerts.md` — additives `src/services/official_alerts/`-Modul (Slices 1, 2, 5 implementiert), Registry-Pattern analog Provider-Adapter, Fail-soft-Garantie, pro Orts-Vergleich ein-/ausschaltbar (Slice 5)
 - **Epic #1073 (Amtliche Alerts AT/IT + querschnittliche Nutzung):** `docs/features/epic-1073-alerts-at-it.md` — Slice 1 (#1085, implementiert): `GeoSphereWarnSource` (AT), erste Nicht-FR-Quelle im Registry, auth-frei, koordinatenbasiert, `warnstufeid`→`level`-Mapping; Slice 3 (#1087, implementiert): amtliche Warnungen jetzt auch in Trip-Briefings, gemeinsame Renderer-Komponente `src/output/renderers/alert/official_alerts.py` (Compare + Trip, keine Kopie), Trip-Toggle `official_alerts_enabled`
+- **Issue #1681 (Amtliche Alerts Deutschland):** `docs/specs/modules/feat_1681_meteoalarm_de.md` — `MeteoAlarmFeedSource("DE")` im selben Registry (registriert nach AT, vor DPC), kontingentfreier MeteoAlarm-Feed statt EDR-Index; Punkt→Warngebiet über eingecheckte DWD-Kreisgeometrie (`src/services/official_alerts/data/dwd_warngebiete_kreise.json`, 402 Kreise, Loader `dwd_zones.py`); neues generisches Signal `warn_egress.mark_not_covered()` (base.py) verhindert, dass „nicht zuständig"-Antworten anderer Quellen einen Ausfall der eigentlich zuständigen Quelle kompensieren
 - **Epic #1127 (Cross-Provider-Fallback bei Open-Meteo-Total-Ausfall):** `docs/features/epic-1127-cross-provider-fallback.md` — zweite Redundanz-Stufe nach dem Intra-Open-Meteo-Modell-Fallback (#1115, ADR-0018): greift nur, wenn Open-Meteo als Verteiler komplett ausfällt. Slice 0 (#1141, implementiert): Routing-Unterbau `src/providers/region_routing.py` (Land/Alpen-Rechtecke AT/DE/FR) + Stub-Direktprovider `src/providers/regional_stubs.py`, Einhängepunkt `src/providers/openmeteo.py:864`, neuer `fallback_reason="cross_provider_total_outage"`; Slice AT (#1142, implementiert): `GeoSphereDirectProvider` ersetzt `at_direct`-Stub; FR/DE (#1143/#1144) offen
 - **Design System:** `docs/design-system/` (CHARTER, COMPONENTS, TOKENS, SCREENS)
 - **API Contract:** `docs/reference/api_contract.md`

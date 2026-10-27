@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date as date_type, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -36,6 +36,7 @@ from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 
 from tests.helpers.arrival_window_fixtures import past_window_offsets, stage_date
+from tests.helpers.ortstag import ortstag
 
 # #1940 AC-7: 12:00 Ortszeit in Pacific/Auckland (UTC+12, August). Die Uhr
 # gestellt statt der Zeitzone vertraut: ein oestlicher Ort allein garantiert
@@ -72,6 +73,24 @@ def _wet_frames(lat: float, lon: float) -> list:
     ]
 
 
+def _wet_frames_below_overtake_floor(lat: float, lon: float) -> list:
+    """Issue #2020: gewoehnlicher angekuendigter Regen. Die Ueberholungs-
+    Pruefung in check_radar_alerts() kann hier strukturell nie greifen --
+    seit dem F008-Fix-Loop (2026-08-21, Adversary-Runde 3) NICHT mehr weil
+    die Rate unter HEAVY_RAIN_THRESHOLD_MM_H bliebe (die Regel liest
+    max_rate_mm_h dort gar nicht mehr), sondern weil die akkumulierte Menge
+    im 60-Min-Vergleichsfenster (~1,25 mm) unter der absoluten
+    Relevanz-Untergrenze _OVERTAKE_MIN_ABSOLUTE_MM (2,0 mm) bleibt. Bewacht
+    weiterhin den reinen Briefing-Unterdrueckungs-Pfad aus #818 AC-1, ohne
+    von der #2020-Ausnahme ueberholt zu werden."""
+    from providers.brightsky import RadarFrame
+    now = datetime.now(timezone.utc)
+    return [
+        RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=2.0),
+        RadarFrame(timestamp=now + timedelta(minutes=20), precip_mm_h=3.0),
+    ]
+
+
 def _make_active_trip(trip_id: str) -> Trip:
     """2-Waypoint-Trip mit ganztägig aktivem Segment (00:00-23:59 Ortszeit).
 
@@ -79,7 +98,9 @@ def _make_active_trip(trip_id: str) -> Trip:
     abends zu leeren Segmenten (#979). arrival_override fixiert die
     Start-/Endzeit auf den ganzen Tag.
     """
-    today = date_type.today()
+    # #2314 D2: der Etappentag folgt dem Ortstag der Trip-Koordinaten
+    # (trip_local_today, ADR-0044), nicht dem Prozesstag.
+    today = ortstag(LAT, LON)
     wp0 = Waypoint(
         id="WP0", name="Start", lat=LAT, lon=LON, elevation_m=100.0,
         arrival_override="00:00",
@@ -158,7 +179,9 @@ def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict)
     # get_data_dir() (isoliert) — Schreibpfad muss identisch aufgelöst werden.
     from app.loader import get_snapshots_dir
 
-    today = date_type.today()
+    # #2314 D2: target_date folgt dem Ortstag der Trip-Koordinaten
+    # (trip_local_today, ADR-0044), nicht dem Prozesstag.
+    today = ortstag(LAT, LON)
     snapshots_dir = get_snapshots_dir(user_id)
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     now_utc = datetime.now(timezone.utc)
@@ -248,7 +271,22 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
 
     RED-Treiber: check_radar_alerts prüft den Snapshot noch nicht.
     Alert feuert trotzdem → count >= 1, erwartet 0 → AssertionError.
+
+    Issue #2020 (Team-Lead-Review): Frame-Quelle auf
+    `_wet_frames_below_overtake_floor` umgestellt (2.0/3.0 mm/h statt
+    4.0/8.0 mm/h) — mit den alten Raten wuerde die neue Ueberholungs-
+    Pruefung (#2020 Scheibe 1) den Alarm bewusst durchlassen, weil die
+    reale Menge die Ankuendigung (1,2 mm) inzwischen um mehr als das
+    Doppelte uebersteigt. Die neuen Raten bleiben unter der
+    Starkregen-Untergrenze (4,0 mm/h) und koennen die Ueberholung
+    strukturell nie ausloesen — der urspruengliche Pruefzweck (reine
+    Briefing-Unterdrueckung) bleibt unveraendert bewacht. Zusaetzlicher
+    Nachweis, dass der Unterdrueckungs-Zweig tatsaechlich durchlaufen
+    wurde (nicht nur durch einen fruehen `radar_alert_due()`-Ausstieg):
+    ein `REASON_NOWCAST`-Protokoll-Eintrag mit `briefing_announced:`-Grund
+    (#2020 AC-6).
     """
+    from services import alert_log
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
 
@@ -259,7 +297,8 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
         trip_id = f"tdd-818-ac1-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
 
-        # Briefing: 1.2 mm für die Onset-UTC-Stunde (onset = now+5min aus _wet_frames)
+        # Briefing: 1.2 mm für die Onset-UTC-Stunde (onset = now+5min aus
+        # _wet_frames_below_overtake_floor)
         # onset_h statt now_h vermeidet Race Condition bei XX:55-XX:59 UTC.
         onset_h = (datetime.now(timezone.utc) + timedelta(minutes=5)).hour
         _write_snapshot(uid, trip_id, segment_id=1, hourly_precip={onset_h: 1.2})
@@ -267,7 +306,7 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
         captured: list = []
         svc = TripAlertService(
             throttle_hours=2, user_id=uid,
-            radar_service=RadarNowcastService(frame_source=_wet_frames),
+            radar_service=RadarNowcastService(frame_source=_wet_frames_below_overtake_floor),
             mail_sink=lambda subject, body: captured.append((subject, body)),
         )
 
@@ -280,6 +319,15 @@ def test_ac1_briefing_announced_rain_suppresses_radar_alert():
         )
         assert len(captured) == 0, (
             "AC-1: mail_sink darf nicht aufgerufen werden — Regen war im Briefing angekündigt."
+        )
+
+        # Nachweis (#2020): der Unterdrueckungs-Zweig wurde tatsaechlich
+        # erreicht, nicht nur durch einen fruehen Ausstieg umgangen.
+        incidents = alert_log.read_undelivered(uid, entity_id=trip_id, entity_type="trip")
+        gate_reasons = {r for i in incidents if i.trigger == alert_log.REASON_NOWCAST for r in i.reasons}
+        assert any(r.startswith("briefing_announced:") for r in gate_reasons), (
+            f"AC-1/#2020: erwarte einen 'briefing_announced:'-Protokoll-Eintrag als "
+            f"Nachweis, dass die Briefing-Sperre tatsaechlich griff. Gefunden: {gate_reasons!r}."
         )
     finally:
         _clean_user(uid)
@@ -380,19 +428,51 @@ def test_ac3_missing_snapshot_fallback_sends_alert():
 
 
 # --------------------------------------------------------------------------
-# AC-4: Doppel-Alert-Guard — kürzlicher Forecast-Alert unterdrückt Radar-Alert
+# AC-4 (umgeschrieben, Issue #2050 S4c AC-14): Der Doppel-Alarm-Wächter aus
+# #818 ist ABGELÖST, nicht repariert. Die Paarung „der Δ-Zweig meldete, der
+# Radar zieht nach" läuft ab jetzt ausschließlich über die
+# quellenübergreifende Ereignis-Identität — mit dem Grund `event_duplicate`
+# statt `double_alert_guard` und, anders als beim alten Wächter, mit
+# Eskalations-Ausnahme.
+#
+# Warum der alte Wortlaut nicht mehr trägt (Befund D der Kontext-Kartierung
+# zu S4c): der Wächter las `precip:<segment_id>`, geschrieben wird das
+# Melde-Gedächtnis aber als `<change.metric>:<segment_id>` — und `"precip"`
+# ist kein Metrik-Schlüssel (der reale heißt `precip_sum_mm`). Der
+# Niederschlags-Teil dieses Wächters war seit seiner Einführung toter Code;
+# der alte Test hat ihn über einen Schlüssel geprüft, den kein
+# Produktivpfad je schreibt.
 # --------------------------------------------------------------------------
 
-def test_ac4_double_alert_guard_suppresses_radar_when_forecast_recent():
-    """AC-4: precip:1 im alert_state vor 30 Min gesendet → kein Radar-Alert.
+def _radar_unterdrueckungsgruende(uid: str, trip_id: str, seit) -> set:
+    """Gründe, die der Prüfling selbst protokolliert hat — kein
+    Dateiinhalt-Check."""
+    from services import alert_log
 
-    RED-Treiber: Doppel-Alert-Guard nicht implementiert → Radar feuert trotzdem.
-    Cooldown = 120 Min, 30 Min < 120 Min → Guard müsste greifen.
-    Erwartet count=0, aktuell count>=1 → AssertionError.
+    vorfaelle = alert_log.read_undelivered(
+        uid, entity_id=trip_id, entity_type="trip", since=seit,
+    )
+    return {g for v in vorfaelle for g in v.reasons}
+
+
+def test_ac4_radar_nach_abweichungsalarm_wird_als_ereignis_duplikat_entdoppelt():
+    """#2050 S4c AC-14: Ein registrierter Abweichungs-Alarm (Quelle
+    `deviation`, gleiche Zelle, überlappendes Zeitfenster, gleiche Stufe)
+    hält den nachfolgenden Radar-Alarm zurück — mit dem Grund
+    `event_duplicate`. Der alte Grund `double_alert_guard` entsteht für
+    diese Paarung nicht mehr neu.
+
+    Der Registereintrag entsteht über den PRODUKTIVEN Schreibweg
+    (`record_event_identity(..., source="deviation")`), nicht als von Hand
+    getippter Zustand.
+
+    RED heute: `record_event_identity()` kennt keinen `source`-Parameter und
+    `resolve_hazard_class()` keine Metrik-Liste — beides entsteht erst mit
+    dieser Scheibe.
     """
-    from services.trip_alert import TripAlertService
+    from services.alert_gate import record_event_identity, resolve_hazard_class
     from services.radar_service import RadarNowcastService
-    from services.alert_state import AlertStateService
+    from services.trip_alert import TripAlertService
 
     uid = f"tdd-818-ac4-{uuid.uuid4().hex[:6]}"
     _clean_user(uid)
@@ -401,14 +481,15 @@ def test_ac4_double_alert_guard_suppresses_radar_when_forecast_recent():
         trip_id = f"tdd-818-ac4-{uuid.uuid4().hex[:6]}"
         _save_trip_direct(_make_active_trip(trip_id), uid)
 
-        # Forecast-Alert für precip:1 vor 30 Minuten (innerhalb 120-Min-Cooldown)
-        thirty_min_ago = (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
-        AlertStateService(uid).save(trip_id, {
-            "precip:1": {
-                "last_reported_value": 5.0,
-                "reported_at": thirty_min_ago,
-            }
-        })
+        jetzt = datetime.now(timezone.utc)
+        vor_30 = jetzt - timedelta(minutes=30)
+        record_event_identity(
+            user_id=uid, entity_id=trip_id,
+            hazard_class=resolve_hazard_class(metrics=["precip_sum_mm"]),
+            segment_ids=["1"], severity="HIGH", source="deviation",
+            window_start=vor_30, window_end=jetzt + timedelta(hours=3),
+            now=vor_30,
+        )
 
         captured: list = []
         svc = TripAlertService(
@@ -419,14 +500,102 @@ def test_ac4_double_alert_guard_suppresses_radar_when_forecast_recent():
 
         count = svc.check_radar_alerts()
 
+        gruende = _radar_unterdrueckungsgruende(uid, trip_id, jetzt - timedelta(hours=1))
         assert count == 0, (
-            f"AC-4: Forecast-Alert für 'precip:1' vor 30 Min (Cooldown=120 Min). "
-            f"Doppel-Alert-Guard muss Radar-Alert unterdrücken. "
-            f"Erwartet 0, war {count}. "
-            f"RED: Doppel-Alert-Guard noch nicht implementiert."
+            f"AC-14: der Radar-Alarm derselben Zelle muss über die "
+            f"Ereignis-Identität entdoppelt werden. Erwartet 0, war {count}; "
+            f"protokollierte Gründe: {gruende!r}"
         )
         assert len(captured) == 0, (
-            "AC-4: mail_sink darf nicht aufgerufen werden wenn Doppel-Alert-Guard aktiv."
+            "AC-14: kein Kanal darf bedient werden, wenn entdoppelt wurde."
+        )
+        assert "event_duplicate" in gruende, (
+            f"AC-14: der protokollierte Grund muss `event_duplicate` lauten: "
+            f"{gruende!r}"
+        )
+        assert "double_alert_guard" not in gruende, (
+            f"AC-14: der abgelöste Wächter darf für diese Paarung keinen Grund "
+            f"mehr erzeugen: {gruende!r}"
+        )
+    finally:
+        _clean_user(uid)
+
+
+def test_ac4_melde_gedaechtnis_allein_haelt_keinen_radar_alarm_mehr_zurueck():
+    """#2050 S4c AC-14 (Gegenrichtung): Ein reiner Melde-Gedächtnis-Eintrag
+    (`thunder_level_max:1`, geschrieben vom Δ-Zweig) hält OHNE
+    Ereignis-Identitäts-Registereintrag nichts mehr zurück — der Wächter, der
+    genau darauf ansprang, ist entfernt.
+
+    Das ist die eigentliche Verhaltensänderung: der alte Wächter kannte keine
+    Eskalations-Ausnahme und verglich nur den Zeitabstand. Er ist nicht durch
+    einen strengeren, sondern durch einen ANDEREN Mechanismus ersetzt, der an
+    Gefahrenklasse, Ortsbezug und Zeitfenster hängt.
+
+    RED heute: der Wächter lebt noch und unterdrückt (gemessen: `count == 0`,
+    Grund `double_alert_guard`).
+
+    CI-Korrektur (#2050 S4c): `count` misst NICHT die Unterdrückungslogik
+    selbst, sondern die Zustellbilanz — in einer Umgebung ohne Zustellweg
+    (CI) scheitert der Versand technisch (`delivery_failed`), `count` bliebe
+    0, obwohl der Wächter gar nicht gezogen hat. Ein zufällig gültiges
+    lokales `.env` verdeckte das (Vorbild AC-2/AC-3 oben, Settings mit festen
+    Zugangsdaten): `Settings(...)` macht `can_send_email()` in JEDER Umgebung
+    True, `mail_sink` ersetzt SMTP — der Test misst damit in CI und lokal
+    dasselbe. Zusätzlich zum Negativ-Nachweis (kein Unterdrückungsgrund)
+    steht der Positiv-Nachweis, dass der Alarm tatsächlich den Versandpunkt
+    erreicht hat (`len(captured) == 1`) — ohne ihn wäre der Test auch dann
+    grün, wenn gar kein Alarm entstünde.
+    """
+    from app.config import Settings
+    from services.alert_state import AlertStateService
+    from services.radar_service import RadarNowcastService
+    from services.trip_alert import TripAlertService
+
+    uid = f"tdd-818-ac4b-{uuid.uuid4().hex[:6]}"
+    _clean_user(uid)
+    _ensure_real_user_dir(uid)
+    try:
+        trip_id = f"tdd-818-ac4b-{uuid.uuid4().hex[:6]}"
+        _save_trip_direct(_make_active_trip(trip_id), uid)
+
+        jetzt = datetime.now(timezone.utc)
+        AlertStateService(uid).save(trip_id, {
+            "thunder_level_max:1": {
+                "last_reported_value": 2.0,
+                "reported_at": (jetzt - timedelta(minutes=30)).isoformat(),
+            },
+        })
+
+        captured: list = []
+        svc = TripAlertService(
+            throttle_hours=2, user_id=uid,
+            radar_service=RadarNowcastService(frame_source=_wet_frames),
+            settings=Settings(
+                smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+                mail_to="x@example.com",
+            ),
+            mail_sink=lambda subject, body: captured.append((subject, body)),
+        )
+        count = svc.check_radar_alerts()
+
+        gruende = _radar_unterdrueckungsgruende(uid, trip_id, jetzt - timedelta(hours=1))
+        assert count == 1, (
+            f"AC-14: ohne Registereintrag darf ein bloßer "
+            f"Melde-Gedächtnis-Eintrag den Radar-Alarm nicht mehr "
+            f"unterdrücken (war {count}, Gründe {gruende!r})."
+        )
+        assert len(captured) == 1, (
+            f"AC-14: Positiv-Nachweis — der Alarm muss den Versandpunkt "
+            f"tatsächlich erreicht haben (war {len(captured)})."
+        )
+        assert "double_alert_guard" not in gruende, (
+            f"AC-14: der Grund des abgelösten Wächters darf nicht mehr "
+            f"entstehen: {gruende!r}"
+        )
+        assert "event_duplicate" not in gruende, (
+            f"AC-14: ohne Ereignis-Identitäts-Registereintrag darf auch der "
+            f"neue Wächter nicht ziehen: {gruende!r}"
         )
     finally:
         _clean_user(uid)

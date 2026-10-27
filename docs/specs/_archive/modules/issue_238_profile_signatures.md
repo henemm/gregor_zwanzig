@@ -3,7 +3,7 @@ entity_id: issue_238_profile_signatures
 type: module
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, design-system, activity-profile, epic-236]
 issue: 238

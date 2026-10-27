@@ -21,7 +21,8 @@ In der RED-Phase schlagen die Tests fehl, weil:
 """
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 
 import pytest
 
@@ -48,7 +49,7 @@ def _make_today_trip() -> Trip:
     arrival_override sorgt dafür, dass das Segment 00:00-23:59 Uhr Ortszeit
     aktiv ist — unabhängig von der Tageszeit, zu der der Test läuft (#979).
     """
-    today = date.today()
+    today = ortstag(_LAT, _LON)
     stages = [
         Stage(
             id="T1",
@@ -93,13 +94,19 @@ def _convective_frames(onset_minutes: int, rate_mm_h: float):
 # ===========================================================================
 
 def test_ac1_intensity_convective_overrides_rate():
-    """AC-1: is_convective=True → 'Starker Hagel/Gewitter', unabhängig von mm/h."""
+    """AC-1: is_convective=True → Gewitter-Stufe, unabhängig von mm/h.
+
+    Issue #2205: ohne Hagel (WMO 95) lautet das Label "Gewitter", nur mit
+    Hagel (WMO 96/99) "Starker Hagel/Gewitter".
+    """
     from services.radar_service import RadarNowcastService
 
     svc = RadarNowcastService()
     # Auch bei sehr niedriger Rate gewinnt die Konvektions-Stufe.
-    assert svc.intensity_to_text(0.2, is_convective=True) == "Starker Hagel/Gewitter"
-    assert svc.intensity_to_text(8.0, is_convective=True) == "Starker Hagel/Gewitter"
+    assert svc.intensity_to_text(0.2, is_convective=True) == "Gewitter"
+    assert svc.intensity_to_text(8.0, is_convective=True) == "Gewitter"
+    assert svc.intensity_to_text(0.2, is_convective=True, hail=True) == "Starker Hagel/Gewitter"
+    assert svc.intensity_to_text(8.0, is_convective=True, hail=True) == "Starker Hagel/Gewitter"
 
 
 def test_ac1_intensity_non_convective_unchanged():
@@ -157,10 +164,12 @@ def test_ac3_derive_result_convective_label_and_text():
     result = svc.get_nowcast(_LAT, _LON)
 
     assert result.is_convective is True
-    assert result.intensity_label == "Starker Hagel/Gewitter"
+    # Issue #2205: konvektive Frames ohne Hagel-Kennzeichen -> "Gewitter".
+    assert result.intensity_label == "Gewitter"
 
     text = svc.format_now_text(result)
-    assert "Starker Hagel/Gewitter" in text
+    assert "Gewitter" in text
+    assert "Hagel" not in text
 
 
 # ===========================================================================
@@ -177,7 +186,7 @@ def test_ac4_radar_alert_convective_marked_once_then_throttles():
 
     user_id = "default"
     trip = _make_today_trip()
-    save_trip(trip)
+    save_trip(trip, user_id=user_id)
 
     radar_service = RadarNowcastService(
         frame_source=lambda lat, lon: _convective_frames(onset_minutes=10, rate_mm_h=4.0)
@@ -231,6 +240,6 @@ def test_ac4_radar_alert_convective_marked_once_then_throttles():
     finally:
         EmailOutput.send = original_send
         from app.loader import get_briefings_dir
-        p = get_briefings_dir() / f"{_TRIP_ID}.json"
+        p = get_briefings_dir(user_id=user_id) / f"{_TRIP_ID}.json"
         if p.exists():
             p.unlink()

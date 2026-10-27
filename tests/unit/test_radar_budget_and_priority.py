@@ -23,7 +23,8 @@ wird -- Vererbung, kein Verhalten vorgetaeuscht) bewiesen.
 """
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import datetime, time, timezone
+from tests.helpers.ortstag import ortstag, utc_tag
 
 import httpx
 import pytest
@@ -99,7 +100,7 @@ def _write_budget(calls_openmeteo: int) -> None:
     path = _budget_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "date": date.today().isoformat(),
+        "date": utc_tag().isoformat(),  # #2314 D2: Produkt liest den Zaehler am UTC-Tag
         "calls": {"openmeteo": calls_openmeteo},
         "cache_hits": 0,
         "cache_misses": 0,
@@ -165,8 +166,13 @@ class _CapturingRadarService:
     def __init__(self) -> None:
         self.calls: list[dict] = []
 
-    def get_nowcast(self, lat: float, lon: float, priority: str = "user_briefing") -> NowcastResult:
-        self.calls.append({"lat": lat, "lon": lon, "priority": priority})
+    def get_nowcast(
+        self, lat: float, lon: float, elevation_m=None,
+        priority: str = "user_briefing", user_id=None, deadline_at=None,
+    ) -> NowcastResult:
+        self.calls.append(
+            {"lat": lat, "lon": lon, "priority": priority, "user_id": user_id}
+        )
         return NowcastResult(
             onset_minutes=None, intensity_label="Kein Niederschlag",
             source="radar", frames=[],
@@ -182,7 +188,7 @@ def test_trip_alert_scheduler_radar_check_uses_polling_priority():
     from app.trip import Stage, Trip, Waypoint
     from services.trip_alert import TripAlertService
 
-    today = date.today()
+    today = ortstag(48.0, 9.0)
     trip = Trip(
         id="budget-ac6-trip",
         name="AC6 Budget Trip",
@@ -202,10 +208,10 @@ def test_trip_alert_scheduler_radar_check_uses_polling_priority():
             )
         ],
     )
-    save_trip(trip)
+    save_trip(trip, user_id="nutzer_trip_radar")
 
     fake = _CapturingRadarService()
-    svc = TripAlertService(user_id="default", radar_service=fake)
+    svc = TripAlertService(user_id="nutzer_trip_radar", radar_service=fake)
     svc.clear_radar_throttle(trip.id)
     svc.check_radar_alerts()
 
@@ -214,6 +220,13 @@ def test_trip_alert_scheduler_radar_check_uses_polling_priority():
         "AC-6: Scheduler-Radar (TripAlertService.check_radar_alerts) muss "
         f"priority='polling' uebergeben, tatsaechlich: "
         f"{fake.calls[0]['priority']!r}"
+    )
+    # Issue #2387: derselbe Aufruf muss die ECHTE Kennung des Nutzers
+    # tragen, dessen Trip geprueft wird -- ohne sie kann Stufe 1 den
+    # Verbrauch niemandem zuordnen und drosselt bei Budget-Druck wieder alle.
+    assert fake.calls[0]["user_id"] == "nutzer_trip_radar", (
+        "Issue #2387: der Scheduler-Radar-Check muss die Nutzerkennung bis "
+        f"in get_nowcast durchreichen, tatsaechlich: {fake.calls[0]['user_id']!r}"
     )
 
 
@@ -226,7 +239,7 @@ def test_compare_radar_scheduler_check_uses_polling_priority():
     from services.compare_radar_alert import CompareRadarAlertService
 
     fake = _CapturingRadarService()
-    svc = CompareRadarAlertService(user_id="default", radar_service=fake)
+    svc = CompareRadarAlertService(user_id="nutzer_compare_radar", radar_service=fake)
     loc = SavedLocation(id="loc-ac6", name="Testort", lat=47.05, lon=11.15, elevation_m=1200)
 
     svc._detect_triggered_locations("preset-ac6", ["loc-ac6"], {"loc-ac6": loc})
@@ -235,6 +248,11 @@ def test_compare_radar_scheduler_check_uses_polling_priority():
     assert fake.calls[0]["priority"] == "polling", (
         "AC-6: Compare-Radar-Scheduler-Check muss priority='polling' "
         f"uebergeben, tatsaechlich: {fake.calls[0]['priority']!r}"
+    )
+    assert fake.calls[0]["user_id"] == "nutzer_compare_radar", (
+        "Issue #2387: der Compare-Radar-Scheduler-Check muss die "
+        "Nutzerkennung bis in get_nowcast durchreichen, tatsaechlich: "
+        f"{fake.calls[0]['user_id']!r}"
     )
 
 
@@ -253,25 +271,38 @@ def test_jetzt_command_uses_user_briefing_priority_explicitly(monkeypatch):
 
         def __init__(self, *a, **kw) -> None:
             self.calls: list[str] = []
+            self.user_ids: list = []
             _CapturingRadarServiceClass.last_instance = self
 
-        def get_nowcast(self, lat, lon, priority: str = "user_briefing") -> NowcastResult:
+        def get_nowcast(
+            self, lat, lon, elevation_m=None,
+            priority: str = "user_briefing", user_id=None, deadline_at=None,
+        ) -> NowcastResult:
             self.calls.append(priority)
+            self.user_ids.append(user_id)
             return NowcastResult(
                 onset_minutes=None, intensity_label="Kein Niederschlag",
                 source="radar", frames=[],
             )
 
-        def format_now_text(self, result, *, tz=None, include_source: bool = True) -> str:
+        def format_now_text(
+            self, result, *, tz=None, include_source: bool = True,
+            englisch: bool = False,
+        ) -> str:
             # Issue #1402: der echte Aufrufer (_show_now) uebergibt jetzt
             # immer eine echte Ortszeit statt des stillen Defaults.
+            # #2417: die Attrappe muss denselben Parameter wie die echte
+            # ``format_now_text`` annehmen (Kurzform-Kanaele antworten
+            # englisch) -- die hier bewachte Zusicherung (Briefing-Prioritaet
+            # explizit) bleibt unveraendert.
             self.last_tz = tz
-            return "Kein Niederschlag."
+            self.last_englisch = englisch
+            return "Kein Niederschlag." if not englisch else "No precipitation."
 
     import services.radar_service as radar_service_module
     monkeypatch.setattr(radar_service_module, "RadarNowcastService", _CapturingRadarServiceClass)
 
-    today = date.today()
+    today = ortstag(48.0, 9.0)
     trip = Trip(
         id="ac6-jetzt-trip",
         name="AC6 Jetzt Trip",
@@ -291,11 +322,12 @@ def test_jetzt_command_uses_user_briefing_priority_explicitly(monkeypatch):
             )
         ],
     )
-    save_trip(trip)
+    save_trip(trip, user_id="nutzer_jetzt")
 
     msg = InboundMessage(
         trip_name=trip.name, body="### now", sender="gregor-test@henemm.com",
         channel="email", received_at=datetime.now(tz=timezone.utc),
+        user_id="nutzer_jetzt",
     )
     result = TripCommandProcessor().process(msg)
 
@@ -307,6 +339,12 @@ def test_jetzt_command_uses_user_briefing_priority_explicitly(monkeypatch):
     assert instance.calls[0] == "user_briefing", (
         "AC-6: /jetzt muss priority='user_briefing' explizit uebergeben "
         f"(Nutzeraktion, nie gedrosselt), tatsaechlich: {instance.calls[0]!r}"
+    )
+    # Issue #2387: `/jetzt` reicht die Kennung aus `msg.user_id` durch
+    # (Signaturaenderung an `_show_now`) -- kein geratener Ersatzwert.
+    assert instance.user_ids[0] == "nutzer_jetzt", (
+        "Issue #2387: /jetzt muss die echte Kennung aus msg.user_id bis in "
+        f"get_nowcast durchreichen, tatsaechlich: {instance.user_ids[0]!r}"
     )
     # Issue #1402: /jetzt darf die Onset-Zeit nicht mehr in der Prozess-
     # Zeitzone des Servers zeigen -- format_now_text() muss die echte,
@@ -363,13 +401,28 @@ def test_openmeteo_funnel_records_against_shared_budget_counter():
     unabhaengig von der jeweils aufrufenden Quellenkette."""
     _write_budget(calls_openmeteo=0)
     svc = RadarNowcastService()
+    nutzer = "nutzer_radar_funnel"
 
-    svc.get_nowcast(_ATLANTIC_LAT, _ATLANTIC_LON)  # reiner minutely_15-Pfad
+    svc.get_nowcast(  # reiner minutely_15-Pfad
+        _ATLANTIC_LAT, _ATLANTIC_LON, user_id=nutzer,
+    )
 
-    snapshot = ForecastBudgetGate().snapshot()
+    snapshot = ForecastBudgetGate(user_id=nutzer).snapshot()
     assert snapshot["calls_today"] >= 1, (
         "AC-8: ein tatsaechlicher open-meteo-Fetch-Versuch (ueber den "
         "gemeinsamen Funnel _fetch_openmeteo_15, der auch beide Sidecar-"
         f"Zweige bedient) muss gegen den geteilten Budget-Zaehler zaehlen, "
         f"tatsaechlicher Snapshot: {snapshot}"
+    )
+    # Issue #2387: DERSELBE Fetch muss zusaetzlich im Topf DES Nutzers
+    # ankommen, der ihn ausgeloest hat -- sonst kennt Stufe 1 den
+    # Verursacher nicht und drosselt bei Budget-Druck wieder alle.
+    assert snapshot["user_calls_today"] >= 1, (
+        "Issue #2387: ein Fetch ueber den gemeinsamen Funnel muss auch den "
+        f"Nutzer-Topf von {nutzer!r} erhoehen, tatsaechlich: {snapshot}"
+    )
+    fremder = ForecastBudgetGate(user_id="nutzer_unbeteiligt").snapshot()
+    assert fremder["user_calls_today"] == 0, (
+        "Gegenlesung (ADR-0003): der Fetch darf im Topf eines unbeteiligten "
+        f"Nutzers NICHT auftauchen, tatsaechlich: {fremder}"
     )

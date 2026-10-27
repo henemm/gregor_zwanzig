@@ -8,6 +8,8 @@ version: "1.0"
 tags: [official-alerts, email, safety, issue-1348]
 ---
 
+> Teilweise abgelöst durch [ADR-0093](../../adr/0093-confidence-token-in-sms-entfaellt.md) (2026-10-21): der Verweis auf ein SMS-Token „analog `C+/C~/C?`“ (Known Limitations) hat kein Vorbild mehr — das Confidence-Token in der SMS ist entfallen (#2233).
+
 # Briefing-Hinweis: amtliche Warnungen nicht abrufbar
 
 ## Approval

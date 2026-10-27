@@ -3,7 +3,7 @@ entity_id: fix_1197_staging_gate_e2e_scope
 type: bugfix
 created: 2026-08-15
 updated: 2026-08-15
-status: draft
+status: implemented
 workflow: fix-1197-staging-gate-e2e-testfile-scope
 ---
 

@@ -3,7 +3,7 @@ entity_id: issue_1234_autosave_hydration_gate
 type: bugfix
 created: 2026-07-14
 updated: 2026-07-14
-status: draft
+status: implemented
 version: "1.1"
 tags: [bug, dataloss, frontend, trip-editor, autosave, epic-1230]
 workflow: fix-1234-mount-autosave-metrics
@@ -26,7 +26,7 @@ Ursache ist ein Wettlauf: Eine Unterkomponente normalisiert die Report-Konfigura
 ## Source
 
 **Zu ändern:**
-- **File:** `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **File:** `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
   - **Identifier:** `scheduleAutoSave()` (Z. 447-457) — schedult ohne Bereitschaftsprüfung, baut den Payload sofort
   - **Identifier:** `buildWeatherPayload()` (Z. 400-417) — setzt den Key `metrics` bedingungslos
   - **Identifier:** `load()` (Z. 237-259) — `finally { loading = false }` auch im Fehlerfall

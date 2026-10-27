@@ -20,7 +20,7 @@ gruen wird):
 1. `OnsetEvent` (src/output/renderers/alert/model.py:31) bekommt ein additives,
    optionales Feld ``segment_id: int | str | None = None`` — Namensmuster wie
    `WeatherChange.segment_id` (models.py:541), `TripSegment.segment_id`
-   (models.py:389) und `CorridorHit.segment_id`. Nur die Nowcast-Tests
+   (models.py:389) (Korridor-Alarm-Pfad entfernt, #2230). Nur die Nowcast-Tests
    konstruieren es direkt (`_onset_message`); ohne dieses Feld sind sie rot mit
    `TypeError: unexpected keyword argument 'segment_id'`.
 2. `AlertEvent` braucht dieselbe Kennung, aber KEIN Test setzt sie hier direkt:
@@ -345,6 +345,15 @@ def test_ortsvergleich_aenderungsalarm_nennt_weiterhin_den_ortsnamen():
     Die Erwartungen sind der HEUTIGE Wortlaut, byte-genau. Sie duerfen sich
     durch #1744 nicht bewegen; `location_label` bleibt die erste Stufe der
     Aufloesungsreihenfolge.
+
+    Nachgezogen mit Issue #2020 Scheibe 2: der ZEIT-Teil der "Wo & wann"-Zeile
+    benennt seither seine Groesse ("staerkste Stunde 16:00" statt der nackten
+    "16:00", AC-11) -- eine bewusste Wortlaut-Aenderung dieser Spec, die den
+    geteilten Renderer und damit BEIDE Flaechen trifft (Trip UND Ortsvergleich;
+    eine Zweiteilung des Wortlauts waere ein Verstoss gegen die
+    Teilungs-Invariante). Der von diesem Test bewachte ORTS-Teil ist davon
+    unberuehrt und bleibt byte-genau gepruefte Invariante -- deshalb steht er
+    unten in einer eigenen, unveraenderten Zusicherung.
     """
     from output.renderers.alert.project import to_point_alert_message
     from output.renderers.alert.render import (
@@ -358,7 +367,11 @@ def test_ortsvergleich_aenderungsalarm_nennt_weiterhin_den_ortsnamen():
 
     assert render_subject(msg) == "[Toulon] Toulon · ↑ Böen: 50 km/h→80 km/h"
     assert render_telegram(msg).splitlines()[0] == "<b>Toulon · Toulon · ↑ Böen</b>"
-    assert _wo_und_wann(render_email(msg)[1]) == "Toulon · 16:00"
+    plain = render_email(msg)[1]
+    # Die #1744-Invariante: der Ort steht vorn und ist der Ortsname.
+    assert _wo_ort(plain) == "Toulon"
+    # Der Zeit-Teil in seiner #2020-Fassung (Groesse benannt, Uhrzeit unveraendert).
+    assert _wo_und_wann(plain) == "Toulon · stärkste Stunde 16:00"
 
 
 def test_ortsvergleich_mehrere_orte_nennen_weiterhin_ihre_namen():
@@ -500,11 +513,37 @@ def _assert_kurznachricht_nennt_ortstext_wie_betreff(sms: str, ort_im_betreff: s
     Ortstext wie der Betreff, statt einer km-Spanne, und bleibt <= 140 Zeichen.
     Der Gedankenstrich in Segment-Bereichen ('Segment 3–5') wird auf der SMS
     zu einem einfachen Bindestrich gefaltet (GSM-7) -- dieselbe, andernorts
-    bereits bewachte Faltungsregel, hier nur zur Vergleichsbildung nachgebaut."""
-    erwartet = ort_im_betreff.replace("–", "-")
+    bereits bewachte Faltungsregel, hier nur zur Vergleichsbildung nachgebaut.
+
+    NEU GEFASST (#1948 S5, AC-14): die Invariante ist NICHT mehr
+    "SMS-Kopf == Betreff-Ortstext" -- AC-14 bricht die Gleichheit bewusst.
+    Sie lautet jetzt: **dieselbe Ortsaufloesung, zwei Schreibweisen** -- die
+    SMS nennt denselben Ort in der Kurzform ('Seg 3-5'), der Betreff schreibt
+    ihn AUS ('Segment 3–5'). Geprueft werden deshalb BEIDE Richtungen, sonst
+    bewachte der Test nach dem Bruch nichts mehr: der Betreff MUSS
+    ausschreiben, die SMS MUSS kuerzen. Ein Renderer, der beide Seiten auf
+    dieselbe Schreibweise zoege (egal welche), faellt hier auf."""
+    erwartet = ort_im_betreff.replace("–", "-").replace("Segment ", "Seg ")
     assert sms.startswith(f"{erwartet}: "), (
         f"Kurznachricht beginnt nicht mit dem Betreff-Ortstext {erwartet!r}: {sms!r}"
     )
+    # Beide Richtungen der neuen Invariante. Die Ersetzung oben allein waere
+    # ein reiner String-Tausch: sie bliebe auch dann gruen, wenn Betreff UND
+    # SMS auf DIESELBE Schreibweise zusammenfielen. Die Bedingung greift
+    # deshalb, sobald EINE der beiden Seiten von Segmenten spricht -- egal
+    # welche -- und verlangt dann von JEDER Seite ihre eigene Schreibweise.
+    # (Segmentlose Orte wie "Ziel" haben keine zwei Schreibweisen und fallen
+    # bewusst heraus.)
+    if sms.startswith("Seg ") or "Segment " in ort_im_betreff:
+        assert "Segment " in ort_im_betreff, (
+            f"Betreff schreibt 'Segment' nicht mehr aus, obwohl die SMS die "
+            f"Kurzform nutzt (AC-14 verlangt BEIDE Schreibweisen): "
+            f"Betreff-Ort {ort_im_betreff!r}, SMS {sms!r}"
+        )
+        assert "Segment " not in sms, (
+            f"Kurznachricht schreibt 'Segment' aus statt der SMS-Kurzform "
+            f"'Seg' (AC-14): {sms!r}"
+        )
     assert not re.search(r"km\d", sms), (
         f"Kurznachricht nennt noch eine km-Spanne statt der Betreff-Ortssprache: {sms!r}"
     )

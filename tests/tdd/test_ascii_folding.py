@@ -96,7 +96,7 @@ def test_official_alert_sms_folds_accented_location_hyeres():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("Hyères")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", tz=UTC)
+    sms = render_official_alert_sms(notices, tz=UTC)
 
     assert "Hyeres" in sms, f"Gefaltetes 'Hyeres' fehlt in der SMS: {sms!r}"
     assert "Hyres" not in sms, (
@@ -113,7 +113,7 @@ def test_official_alert_sms_folds_umlaut_location_muenchen():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("München")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", tz=UTC)
+    sms = render_official_alert_sms(notices, tz=UTC)
 
     assert "Muenchen" in sms, f"Gefaltetes 'Muenchen' fehlt in der SMS: {sms!r}"
     assert "Mnchen" not in sms, (
@@ -214,29 +214,29 @@ def test_radar_alert_trip_short_survives_double_truncation():
     falten, dann nochmal kuerzen), die Buchstaben frisst, weil 'ü' -> 'ue'
     beim Falten waechst.
 
-    Retargeted ZWEIMAL, jedesmal weil der VORHERIGE Traeger-Pfad die
+    Retargeted DREIMAL, jedesmal weil der VORHERIGE Traeger-Pfad die
     Doppelkuerzung verlor — die Pruefling-Logik selbst blieb unveraendert:
-    (1) Issue #1935/#1779 E4: weg vom reinen Trip-Radar/Onset-Pfad, der
-    seither keinen Namen mehr im Kopf fuehrt, hin zum Compare-Radar-
-    Buendel-Pfad. (2) Issue #1948 S4 (2026-08-19): auch der Onset-Buendel-Kopf
-    fuehrt seither den Ortsnamen aus `location_label` statt des gekuerzten
-    `trip_short` — die Kuerzungslogik `_ascii(msg.trip_short)[:16].rstrip(...)`
-    lebt unveraendert im Schwellen-Alarm-Kopf (`_render_sms_corridor_only`,
-    render.py:872) und im Trip-Aenderungs-Kopf (render.py:922) weiter. Dorthin
-    verlegt dieser Test die Fixture — wieder ohne den Pruefling zu aendern.
-    Blieben wir am Onset-Pfad, waere der Test still bedeutungslos gruen."""
-    from output.renderers.alert.model import AlertMessage, CorridorEvent
+    (1) Issue #1935/#1779 E4: weg vom reinen Trip-Radar/Onset-Pfad. (2) Issue
+    #1948 S4: auch der Onset-Buendel-Kopf fuehrt den Ortsnamen aus
+    `location_label`. (3) Issue #2230: der Schwellen-Alarm-Kopf
+    (`_render_sms_corridor_only`) ist mit dem Korridor-Pfad entfernt. Die
+    Kuerzung `_ascii(msg.trip_short)[:16].rstrip(...)` lebt unveraendert im
+    Kopf des Aenderungs-Alarms mit nachrichtenweitem `location_label` (Ein-Ort-
+    Ortsvergleich, `_render_sms_body`, Zweig `elif msg.location_label`) weiter.
+    Dorthin verlegt dieser Test die Fixture — wieder ohne den Pruefling zu
+    aendern."""
+    from output.renderers.alert.model import AlertEvent, AlertMessage
     from output.renderers.alert.render import render_sms
     from utils.ascii_fold import fold_ascii
 
     trip_short = "Wandergruppe München"
-    corridor = CorridorEvent(
-        metric_id="temperature", value=31.0, bound=30.0, direction="above",
-        occurred_at="14:00", km_from=0.0, km_to=5.0,
+    event = AlertEvent(
+        metric_id="temperature", value_from=20.0, value_to=31.0, threshold=5.0,
+        cmp="über", occurred_at="14:00", km_from=0.0, km_to=5.0,
     )
     msg = AlertMessage(
-        trip_short=trip_short, stand_at="14:00", events=(),
-        corridor_events=(corridor,), cooldown_display="60 Min",
+        trip_short=trip_short, stand_at="14:00", events=(event,), source=None,
+        location_label="Ort",
     )
 
     sms = render_sms(msg)
@@ -435,7 +435,7 @@ def test_official_alert_sms_stays_ascii_and_within_limit_with_special_chars():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("Hyères")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", limit=160, tz=UTC)
+    sms = render_official_alert_sms(notices, limit=160, tz=UTC)
 
     assert sms.isascii(), f"SMS ist nicht rein ASCII/GSM-7: {sms!r}"
     assert len(sms) <= 160, f"SMS ueberschreitet 160 Zeichen: {len(sms)} — {sms!r}"
@@ -529,7 +529,7 @@ def test_official_alert_sms_names_greek_location_real_send_path():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("Θεσσαλονίκη")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", tz=UTC)
+    sms = render_official_alert_sms(notices, tz=UTC)
 
     assert "Thessaloniki" in sms, (
         f"Transliterierter Ortsname fehlt in der SMS -- amtliche Warnung ohne "
@@ -554,7 +554,7 @@ def test_official_alert_sms_names_serbian_location_real_send_path():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("Ђердап")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", tz=UTC)
+    sms = render_official_alert_sms(notices, tz=UTC)
 
     assert "Djerdap" in sms, (
         f"Transliterierter serbischer Ortsname fehlt in der SMS -- amtliche "
@@ -597,7 +597,7 @@ def test_official_alert_sms_cyrillic_worst_case_length_budget():
             affected_chips=[name], free_chips=[], scope_kind="locations",
         ))
 
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", limit=160, tz=UTC)
+    sms = render_official_alert_sms(notices, limit=160, tz=UTC)
 
     assert sms.isascii(), f"SMS ist nicht rein ASCII/GSM-7: {sms!r}"
     assert len(sms) <= 160, f"SMS ueberschreitet 160 Zeichen: {len(sms)} — {sms!r}"
@@ -630,7 +630,7 @@ def test_official_alert_sms_mixed_scripts_worst_case_length_budget():
             affected_chips=[name], free_chips=[], scope_kind="locations",
         ))
 
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", limit=160, tz=UTC)
+    sms = render_official_alert_sms(notices, limit=160, tz=UTC)
 
     assert sms.isascii(), f"SMS ist nicht rein ASCII/GSM-7: {sms!r}"
     assert len(sms) <= 160, f"SMS ueberschreitet 160 Zeichen: {len(sms)} — {sms!r}"
@@ -673,7 +673,7 @@ def test_official_alert_sms_names_arabic_location_real_send_path():
     from output.renderers.alert.official_alerts import render_official_alert_sms
 
     notices = _compare_notices_for_single_location("ا")
-    sms = render_official_alert_sms(notices, sms_prefix="GZ", tz=UTC)
+    sms = render_official_alert_sms(notices, tz=UTC)
 
     assert "nur " in sms, f"SMS traegt kein Scope-Praefix 'nur ': {sms!r}"
     assert "nur " not in sms or not sms.rstrip().endswith("nur"), (

@@ -59,6 +59,27 @@ _VERDICT_RE = re.compile(r"(\d+)\s+amtliche Warnung(?:en)?")
 # Warnstufe strukturell vorhanden ist (zusaetzlich ueber S-2 abgesichert).
 _LEVEL_WORD_RE = re.compile(r"(GELB|ORANGE|ROT)")
 
+# Issue #1441 (Spec avalanche_report_bulletin.md Abschnitt 7, ADR-0089): der
+# amtliche Lawinen-Lagebericht traegt die EAWS-Stufe als Wortlaut
+# "Lawinenstufe N (<EAWS-Wort>)" -- die Leiter "Warnstufe X · n/3" und die
+# Farbwoerter GELB/ORANGE/ROT entfallen fuer diese Gefahrenart. Der Renderer
+# emittiert dafuer KEINE eigene CSS-Klasse (official_alerts.py `_is_eaws`
+# unterdrueckt nur Leiter/Meter), Stufentraeger ist daher der Text.
+_AVALANCHE_LEVEL_RE = re.compile(r"Lawinenstufe\s+([1-5])[-+]?\s*\(([^)\n<]+)\)")
+_EAWS_WORDS = {1: "gering", 2: "mäßig", 3: "erheblich", 4: "groß", 5: "sehr groß"}
+# Positive Quellen-Kennung des Lageberichts (Quellenlabel bzw. Bulletin-URL).
+_AVALANCHE_SOURCE_MARKS = ("avalanche.report", "Schnee- und Lawinenforschung SLF", "slf.ch")
+# Typ-Woerter aller ANDEREN Gefahrenarten (Spiegel von official_alerts.py
+# `_HAZARD_LABELS` ohne die Lawinen-Eintraege; Drift bewacht
+# tests/tdd/test_official_alert_mail_validator.py). Taucht eines davon auf,
+# ist die Mail keine reine Lawinenmail und S-2/P-2 bleiben strikt (Adversary F012).
+# Bewusst OHNE abschliessende Wortgrenze: Quell-Labels erscheinen auch
+# zusammengesetzt ("Gewitterwarnung", "Hitzewarnung", `_display_label`).
+_OTHER_HAZARD_RE = re.compile(
+    r"\b(Hitze|Gewitter|Kälte|Sturm|Starkregen|Schneefall|Glatteis|"
+    r"Zugang gesperrt|Waldbrand-Gefahr|Hochwasser/Erdrutsch)"
+)
+
 # Gueltigkeits-Zeile (P-3, Issue #1240): jedes Vorkommen mitsamt seinem Wert bis
 # zum Zeilen- bzw. Element-Ende. Der Plain-Text-Part ist tag-gestrippt, der
 # HTML-Part nicht -- deshalb endet der Wert am Umbruch ODER am naechsten Tag.
@@ -135,6 +156,45 @@ def _extract_parts(msg: Message) -> tuple[str, str]:
     return "\n".join(plain_parts), "\n".join(html_parts)
 
 
+# Issue #1441 S2 (ADR-0090): Entwarnungs-Uebergang "Stufe 4 → 2" bzw. "Stufe 4 → beendet".
+_ALLCLEAR_TRANSITION_RE = re.compile(r"Stufe\s+(\d)\s*(?:→|->)\s*(\d|beendet)")
+# Nur Daten, keine Handlungsempfehlung (Spec AC-16).
+_RECOMMENDATION_WORDS = ("sicher", "kannst", "empfehlen", "gefahrlos", "aufbrechen", "losgehen")
+
+
+def _decoded_subject(msg: Message) -> str:
+    """Betreff RFC-2047-dekodiert (fail-soft: Rohwert)."""
+    from email.header import decode_header, make_header
+
+    raw = msg.get("Subject") or ""
+    try:
+        return str(make_header(decode_header(raw)))
+    except Exception:
+        return str(raw)
+
+
+def _allclear_errors(msg: Message, plain: str, html: str, classes: set[str]) -> list[str]:
+    """E-1..E-4: Abschnitt, Betreff, plausibler Uebergang (alt > neu bzw.
+    'beendet'), keine Handlungsempfehlung."""
+    errors: list[str] = []
+    text = plain + "\n" + html
+    if "entwarnung" not in classes or "Entwarnung" not in (plain or html):
+        errors.append("E-1: Abschnitt 'Entwarnung' fehlt (Klasse 'entwarnung' bzw. Ueberschrift).")
+    if "Entwarnung" not in _decoded_subject(msg):
+        errors.append(f"E-2: Betreff ohne 'Entwarnung': {_decoded_subject(msg)!r}")
+    transitions = _ALLCLEAR_TRANSITION_RE.findall(text)
+    if not transitions:
+        errors.append("E-3: Kein Uebergang 'Stufe N → M' bzw. 'Stufe N → beendet' gefunden.")
+    for old, new in transitions:
+        if new != "beendet" and int(old) <= int(new):
+            errors.append(f"E-3: Entwarnung ohne Absenkung: 'Stufe {old} → {new}' (alt muss > neu sein).")
+    # Ganzes Wort (Adversary F008): "Sicherheitsbereich"/"unsicher" sind Daten.
+    hits = [w for w in _RECOMMENDATION_WORDS if re.search(rf"\b{re.escape(w)}\b", text.lower())]
+    if hits:
+        errors.append(f"E-4: Handlungsempfehlung im Text: {hits}")
+    return errors
+
+
 def validate_message(msg: Message) -> tuple[bool, list[str]]:
     """Faellt das Urteil ueber ein geparstes email.message.Message-Objekt.
 
@@ -165,6 +225,17 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
     except Exception as exc:  # fail-closed: kaputtes HTML ist ein echter Befund
         errors.append(f"S-0: HTML-Body nicht parsbar: {exc}")
 
+    # Issue #1441 S2: Entwarnungs-Plausibilitaet. Eine REINE Entwarnungs-Mail
+    # traegt keinen Warn-Block -- dann entfallen S-1/S-2/P-1..P-4, die
+    # Entwarnungs-Pruefungen E-1..E-4 und der Stand-Footer P-5 bleiben.
+    # Gemischte Mails durchlaufen zusaetzlich alle bisherigen Pruefungen.
+    if "entwarnung" in collector.classes or "Entwarnung" in _decoded_subject(msg):
+        errors.extend(_allclear_errors(msg, plain, html, collector.classes))
+        if not ({"verdict", "warn"} & collector.classes):
+            if "Stand: heute" not in text:
+                errors.append("P-5: 'Stand: heute'-Footer fehlt im Body.")
+            return len(errors) == 0, errors
+
     missing_classes = _REQUIRED_CLASSES - collector.classes
     if missing_classes:
         errors.append(
@@ -181,9 +252,33 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
             f"Gefundene Klassen: {sorted(collector.classes)}"
         )
 
+    # Issue #1441: Lawinen-Lagebericht positiv erkennen (Stufen-Wortlaut UND
+    # Quelle avalanche.report) -- NIE allein daraus, dass die Leiter fehlt.
+    # Klartext UND HTML-Teil getrennt durchsuchen (Adversary F013): ein falsches
+    # Stufen-Wort nur im HTML-Teil darf nicht unbemerkt bleiben.
+    avalanche_levels = _AVALANCHE_LEVEL_RE.findall(plain) + _AVALANCHE_LEVEL_RE.findall(html)
+    is_avalanche = bool(avalanche_levels) and any(m in text + html for m in _AVALANCHE_SOURCE_MARKS)
+    # Reine Lawinenmail: KEIN Farbwort und KEIN Typ-Wort einer anderen
+    # Gefahrenart (F012). Traegt die Mail zusaetzlich eine andere Warnung
+    # (gemischt), bleibt S-2 strikt wie bisher (Leiter oder Meter Pflicht).
+    avalanche_only = (
+        is_avalanche
+        and not _LEVEL_WORD_RE.search(text)
+        and not _OTHER_HAZARD_RE.search(plain + html)
+    )
+    # P-2b: Ziffer und EAWS-Wort muessen zusammenpassen (bewacht u. a., dass
+    # Stufe 5 nie als "groß" erscheint). Gilt fuer JEDES Vorkommen.
+    for digit, word in avalanche_levels:
+        expected = _EAWS_WORDS[int(digit)]
+        if word.strip() != expected:
+            errors.append(
+                f"P-2b: 'Lawinenstufe {digit} ({word.strip()})' -- EAWS-Wort passt "
+                f"nicht zur Ziffer (erwartet '{expected}')."
+            )
+
     has_ladder = bool(_LADDER_CLASSES & collector.classes)
     has_mixed_meter = _MIXED_METER_CLASSES <= collector.classes
-    if not (has_ladder or has_mixed_meter):
+    if not (has_ladder or has_mixed_meter or avalanche_only):
         errors.append(
             "S-2: Weder Warnstufen-Leiter ('stufe-line', uniform) noch "
             "Eskalations-Meter ('warn stacked'/'meter', gemischt) im HTML-Body "
@@ -197,7 +292,7 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
             f"N>=1 gefunden. Text-Ausschnitt: {text[:160]!r}"
         )
 
-    if not _LEVEL_WORD_RE.search(text):
+    if not _LEVEL_WORD_RE.search(text) and not avalanche_only:
         errors.append(
             "P-2: Keine Warnstufe (GELB/ORANGE/ROT) im Text erkennbar."
         )

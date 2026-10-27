@@ -3,7 +3,7 @@ entity_id: feat_1474_gewitter_befund_stufen
 type: feature
 created: 2026-08-03
 updated: 2026-08-03
-status: draft
+status: implemented
 version: "2.4"
 tags: [gewitter, alerts, meteofrance, cape, s3, issue-1419]
 ---
@@ -63,7 +63,7 @@ eine Design-/Produktentscheidung ist, keine technische.
 |---|---|---|
 | `docs/specs/modules/feat_1457_s2a_blitzdichte_meteofrance.md` | Vorgänger-Scheibe | liefert `lightning_density_per_km2_3h` regulär für FR/Korsika |
 | `docs/adr/0043-empfindlichkeitsstufe-als-niveau-statt-zweiter-alarm-typ.md` | bindende Vorgabe | Bounds-Tabelle ist skalenunabhängig formuliert („die höchste Stufe" bzw. „überhaupt steigt") — s. Abschnitt 2, KEIN wörtliches Zitat zur Stufenzahl beansprucht |
-| `docs/adr/0025-...md` | bindende Vorgabe | Sortier- und Render-Skala leben in `metric_format.py`; werden hier zum ersten Mal zahlenmäßig deckungsgleich (s. Abschnitt 1), bleiben aber zwei benannte Funktionen |
+| `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md` | bindende Vorgabe | Sortier- und Render-Skala leben in `metric_format.py`; werden hier zum ersten Mal zahlenmäßig deckungsgleich (s. Abschnitt 1), bleiben aber zwei benannte Funktionen |
 | `tests/tdd/test_alert_sensitivity_levels.py` | Regressions-Anker | bestehender Testsatz aus #1460 T1 (AC-4..AC-19) — muss nach dieser Scheibe **unverändert grün** bleiben (s. AC-2) |
 | `metric_catalog.py` Eintrag `cape` (`risk_thresholds`) | Quelle | liefert die CAPE-Schwelle 1000 J/kg — bereits produktentschieden, nicht neu erfunden |
 | `services.risk_engine.RiskEngine._check_thunder`, `trip_report.py::_RISK_LABELS` (Zeilen 734-745), `sms_trip.py::_SMS_RISK_LABELS` (Zeilen 104-114) | **im Scope** | bekommen je einen `LOW`-Zweig/-Eintrag, s. Abschnitt 4 und AC-12. Beide Konsumenten lesen `assessment.risks` direkt (nicht über `get_max_risk_level()`), deshalb ist die Erweiterung hier eindeutig wirksam |
@@ -337,7 +337,7 @@ Spalte, kein Token, keine Mail-Erwähnung) und **keine** Summary-/Aggregations-G
 
 **Fundament**
 
-- **AC-1 (additive Erweiterung, keine Umdeutung von MED/HIGH):** Given der neue Enum-Wert
+- **AC-1:** (additive Erweiterung, keine Umdeutung von MED/HIGH) Given der neue Enum-Wert
   `ThunderLevel.LOW` / When `thunder_ordinal()` und `thunder_label_value()` mit allen vier
   Werten aufgerufen werden / Then liefern beide Funktionen für jeden Wert identische Zahlen
   `{NONE:0, LOW:1, MED:2, HIGH:3}`, und `thunder_label_value(MED) == 2` sowie
@@ -363,7 +363,7 @@ Spalte, kein Token, keine Mail-Erwähnung) und **keine** Summary-/Aggregations-G
     (z. B. der heutige AC-6-Fall „standard bei NONE→MED löst NICHT aus") muss dadurch rot
     werden.
 
-- **AC-3 (heimtückischer Literal an eine benannte Stufe gebunden statt an eine Rohzahl):**
+- **AC-3:** (heimtückischer Literal an eine benannte Stufe gebunden statt an eine Rohzahl)
   Given eine Etappe, deren Stundenreihe NUR `ThunderLevel.LOW` („leicht", ausschließlich über
   CAPE gesetzt) trägt, nie `MED`/`HIGH` / When die E-Mail-Prosa gerendert wird
   (`email/helpers.py`, Zweig um Zeile 1549) / Then erscheint der Satz „Gewitter ab HH:00 ·
@@ -374,7 +374,7 @@ Spalte, kein Token, keine Mail-Erwähnung) und **keine** Summary-/Aggregations-G
     (statt auf `thunder_ordinal(ThunderLevel.MED)` gehärtet), löst bereits der reine
     `LOW`-Fall aus — der erste Testfall muss das fangen.
 
-- **AC-4 („keine Aussage" ≠ „keine Gefahr" beim Wettercode):** Given ein
+- **AC-4:** („keine Aussage" ≠ „keine Gefahr" beim Wettercode) Given ein
   Vorhersage-Zeitpunkt ohne Wettercode (`weather_code=None`) / When `_parse_thunder_level()`
   aufgerufen wird / Then liefert sie `None`, **nicht** `ThunderLevel.NONE`. Ein Zeitpunkt mit
   vorhandenem, nicht-Gewitter-Wettercode liefert weiterhin `ThunderLevel.NONE`.
@@ -383,7 +383,7 @@ Spalte, kein Token, keine Mail-Erwähnung) und **keine** Summary-/Aggregations-G
 
 **Fusion**
 
-- **AC-5 (Blitzdichte-Dreiteilung, belegt gegen den echten Messwert):** Given die
+- **AC-5:** (Blitzdichte-Dreiteilung, belegt gegen den echten Messwert) Given die
   Blitzdichte-Werte 0,0 / 0,004 / 0,02 sowie der GR20-Messwert 0,1–0,2 vom 2026-08-02 / When
   `thunder_level_from_signals()` mit jeweils nur diesem Signal (Wettercode und CAPE `None`)
   aufgerufen wird / Then liefert sie der Reihe nach `NONE` / `LOW` („leicht") / `MED`
@@ -392,7 +392,7 @@ Spalte, kein Token, keine Mail-Erwähnung) und **keine** Summary-/Aggregations-G
   - Test: vier Aufrufe mit den genannten Werten, Rückgaben gegen die Schwellen
     0,003/0,015/0,075 geprüft.
 
-- **AC-6 (CAPE gedeckelt bei „leicht", eskaliert NIE):** Given CAPE-Werte 500, 1200 und 2630
+- **AC-6:** (CAPE gedeckelt bei „leicht", eskaliert NIE) Given CAPE-Werte 500, 1200 und 2630
   J/kg (Wettercode und Blitzdichte `None`) / When `thunder_level_from_signals()` aufgerufen
   wird / Then liefert sie `NONE` / `LOW` / `LOW` — **auch der hohe Wert 2630 J/kg (realer
   Messwert eines bestätigten Gewitters) bleibt bei `LOW`**, weil CAPE allein nie über
@@ -409,7 +409,7 @@ Spalte, kein Token, keine Mail-Erwähnung) und **keine** Summary-/Aggregations-G
     `MED`/`HIGH` eskalieren — das ist eine bewusste, dokumentierte Erweiterung dieses AC,
     keine stille Aufhebung. Referenz: ADR-0048.
 
-- **AC-7 („keine Aussage" ≠ „keine Gefahr" in der Fusion):** Given alle drei Signale sind
+- **AC-7:** („keine Aussage" ≠ „keine Gefahr" in der Fusion) Given alle drei Signale sind
   `None` / When `thunder_level_from_signals()` aufgerufen wird / Then liefert sie `None`.
   Given STATTDESSEN mindestens ein Signal ist aktiv geprüft und unauffällig (Wettercode-Level
   `NONE`, die anderen beiden `None`) / Then liefert sie `NONE`.
@@ -417,13 +417,13 @@ Spalte, kein Token, keine Mail-Erwähnung) und **keine** Summary-/Aggregations-G
     `ThunderLevel.NONE`. Gegenprobe: Vertauscht die Implementierung diese beiden Fälle, muss
     mindestens einer der Tests rot werden.
 
-- **AC-8 (schärfstes Signal gewinnt):** Given Wettercode liefert `NONE`, Blitzdichte 0,02
+- **AC-8:** (schärfstes Signal gewinnt) Given Wettercode liefert `NONE`, Blitzdichte 0,02
   („mittel") und CAPE `None` / When `thunder_level_from_signals()` aufgerufen wird / Then
   liefert sie `MED` — das schärfere der zwei vorhandenen Signale. Zweiter Fall: Wettercode
   `HIGH`, Blitzdichte 0,004 („leicht") → Rückgabe `HIGH` (Wettercode gewinnt, weil schärfer).
   - Test: beide Fälle einzeln geprüft.
 
-- **AC-9 (ein Anschluss, kein Sonderweg — Muster #1457 S2a AC-8/AC-9):** Given ein Ort in
+- **AC-9:** (ein Anschluss, kein Sonderweg — Muster #1457 S2a AC-8/AC-9) Given ein Ort in
   Frankreich/Korsika mit gefüllter Blitzdichte und CAPE / When eine Vorhersage über den
   regulären Weg (`OpenMeteoProvider.fetch_forecast` → `thunder_enrichment.enrich_thunder()`)
   abgerufen wird, egal ob über den Trip-Pfad oder den Ortsvergleichs-Pfad / Then trägt
@@ -433,7 +433,7 @@ Spalte, kein Token, keine Mail-Erwähnung) und **keine** Summary-/Aggregations-G
     `thunder_enrichment.py` eine Fallunterscheidung nach Aufrufer-Typ, muss dieser Test rot
     werden.
 
-- **AC-10 (vorbereitetes, leeres Wahrscheinlichkeitsfeld):** Given eine reguläre Vorhersage
+- **AC-10:** (vorbereitetes, leeres Wahrscheinlichkeitsfeld) Given eine reguläre Vorhersage
   / When sie über den heutigen (unveränderten) Weg abgerufen wird / Then trägt
   `ForecastDataPoint.thunder_probability_pct` bei JEDEM Datenpunkt `None`, und KEINE Ausgabe
   (Mail, SMS, Telegram) erwähnt es.

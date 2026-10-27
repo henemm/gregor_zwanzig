@@ -4,7 +4,7 @@
 - **Datum:** 2026-07-15
 - **Bezug:** GitHub-Issue #1250 (Scheibe 5, Phase 3 von Epic #1230
   „Briefing-Abo-Chassis"), Spec `docs/specs/_archive/modules/issue_1250_briefing_subscription.md`
-  (AC-16–AC-19, Zielmodell §72-90), Analyse `docs/context/feat-1250-s5-kind-migration.md`;
+  (AC-16–AC-19, Zielmodell §72-90), Analyse `docs/context/feat-1250-s5-kind-migration.md` (gelöscht mit #1340, Git-Historie);
   verwandt [ADR-0021](0021-shared-deviation-alert-engine.md) (geteilte Alert-Engine),
   [ADR-0003](0003-multi-tenant-isolation.md) (per-User-Isolation). Vorstufen live:
   S1 (Preset-Kontrakt), S2 (Pause-Konvergenz), S3 (Auto-Pause), S4 (Trip-Konvergenz).
@@ -43,7 +43,7 @@ Kernrisiko des Projekts (BUG-DATALOSS-GR221).
 5. **Koexistenz:** In S5 lesen App/Scheduler weiter aus `trips/`+`compare_presets.json`; die
    `briefings/`-Dateien entstehen daneben (verhaltensneutral).
 
-   **Fortschreibung 2026-07-15 (S6-Analyse, `docs/context/feat-1250-s6-api-konsolidierung.md`):**
+   **Fortschreibung 2026-07-15 (S6-Analyse, `docs/context/feat-1250-s6-api-konsolidierung.md` — gelöscht mit #1340, Git-Historie):**
    Die ursprüngliche Formulierung „S6 schaltet die Lesepfade um" wird korrigiert. **S6 schaltet
    die Persistenz NICHT um.** Go-API und Python-Core teilen dieselben Alt-Dateien (Dateisystem =
    einziger Integrationspunkt), und Python **schreibt** die Alt-Stores auch — Versand-Status
@@ -65,7 +65,7 @@ Kernrisiko des Projekts (BUG-DATALOSS-GR221).
    (~40 Felder, `points`-Sum-Type) bleibt damit S7-Arbeit; S6 nutzt die schon typisierten
    `model.Trip`/`model.ComparePreset`.
 
-   **2. Fortschreibung 2026-07-15 (S7-Analyse, `docs/context/feat-1250-s7-cutover.md`, Plan-Gegenprobe):**
+   **2. Fortschreibung 2026-07-15 (S7-Analyse, `docs/context/feat-1250-s7-cutover.md` — gelöscht mit #1340, Git-Historie, Plan-Gegenprobe):**
    Entscheidung 4 wird **teilweise revidiert**. Das **volle typisierte Union-Modell** (~40 Felder,
    `points`-Sum-Type, `activity`↔`profil`-Konvertierung) wird **NICHT gebaut** — es ist obsolet:
    (a) kein Konsument braucht eine Einzelstruktur (`ListBriefingsHandler` baut schon `[]interface{}`
@@ -92,3 +92,14 @@ Kernrisiko des Projekts (BUG-DATALOSS-GR221).
   `points`-Diskriminierung sind offene S6-Arbeit (dort ADR-Fortschreibung).
 - **Deploy:** Die Migration ist ein **per-Host-Schritt nach dem Code-Deploy** (erst Dry-Run-Report
   prüfen, dann `--execute` mit Backup), idempotent — siehe `reference_data_migration_per_host_deploy`.
+
+## Nachtrag 2026-10-20 — Handversand über `kind` (Issue #2280, Epic #2345 P4)
+
+Der Dispatcher über `kind` (`route` | `vergleich`) ist das hier beschlossene Modell; der
+Handversand fügt sich als weitere kind-neutrale Route ein, kein neues ADR:
+`POST /api/briefings/{id}/send?kind=route|vergleich[&report_type=morning|evening]` — mit einem
+Fehlervokabular (`{detail, code}`, 422 `no_channels`/`channels_unreachable`/`no_weather`),
+einer Antwortform und den bestehenden Sende-Locks. Die Alt-Routen `POST /api/trips/{id}/send`
+und `POST /api/compare/presets/{id}/send` bleiben als Delegate erhalten; das Frontend baut die
+Send-URL an genau einer Stelle (`sendOutcome.ts`, `briefingSendUrl`). Vertrag:
+`docs/reference/api_contract.md` Section 10.1.

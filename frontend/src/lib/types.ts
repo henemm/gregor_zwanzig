@@ -45,6 +45,9 @@ export interface Waypoint {
 	arrival_override?: string;    // User-Override "HH:MM"
 	// Issue #585 — Wegpunkt-Typ (Gipfel, Pass, Hütte, etc.)
 	type?: string;                // 'start' | 'end' | 'summit' | 'pass' | 'valley' | 'hut'
+	// Issue #2110 — real aus dem GPX-Track vermessene Distanz ab Etappenstart (km).
+	// Optional: fehlt/null heißt "nicht gemessen" → Haversine-Fallback.
+	distance_from_start_km?: number | null;
 }
 
 export interface Stage {
@@ -137,6 +140,24 @@ type _ActivityProfileOptionsCoverage =
 const _activityProfileCoverageCheck: _ActivityProfileOptionsCoverage = true;
 void _activityProfileCoverageCheck;
 
+// Issue #2284 S2 — Aktivität des Trips als Kachelreihe im Hub-Kopf. Labels wie
+// zuvor in der Auswahlliste des Etappen-Reiters.
+export const ACTIVITY_TYPE_OPTIONS = [
+	{ value: 'trekking',     label: 'Trekking' },
+	{ value: 'skitour',      label: 'Skitour' },
+	{ value: 'hochtour',     label: 'Hochtour' },
+	{ value: 'klettersteig', label: 'Klettersteig' },
+	{ value: 'mtb',          label: 'MTB' },
+	{ value: 'fahrrad_15',   label: 'Fahrrad (15 km/h)' },
+	{ value: 'fahrrad_20',   label: 'Fahrrad (20 km/h)' },
+	{ value: 'fahrrad_25',   label: 'Fahrrad (25 km/h)' },
+] as const satisfies ReadonlyArray<{ value: ActivityType; label: string }>;
+
+type _ActivityTypeOptionsCoverage =
+	ActivityType extends (typeof ACTIVITY_TYPE_OPTIONS)[number]['value'] ? true : never;
+const _activityTypeCoverageCheck: _ActivityTypeOptionsCoverage = true;
+void _activityTypeCoverageCheck;
+
 export interface Aggregation {
 	profile?: ActivityProfile;
 }
@@ -176,6 +197,12 @@ export interface MetricEntry {
 	 *  aendert (CI-Regression svelte-check 36->94, #1554 Fix-Loop). */
 	trip_default_enabled?: boolean;
 	has_friendly_format: boolean;
+	/** Issue #2422 S6 (B2): hat die Größe in SMS/Premium-SMS/Telegram-Kurzform
+	 *  zwei Formen (Roh/Einfach)? Quelle: Backend-Konstante
+	 *  SMS_FORMAT_MODE_METRIC_IDS — der SMS-Reiter bietet den Umschalter nur dafür.
+	 *  Optional, weil bestehende Test-/Mock-Kataloge MetricEntry-Literale ohne
+	 *  das Feld bauen (Muster trip_default_enabled). */
+	sms_format_capable?: boolean;
 	/** Issue #435: erlaubte Format-Modi pro Metrik (raw/scale/simplified/symbol). */
 	format_modes?: string[];
 	/** Issue #435: Default-Format-Modus dieser Metrik. */
@@ -260,6 +287,8 @@ export interface ReportConfig {
 	show_outlook?: boolean;
 	// Issue #722 — E-Mail-Format: "full" (HTML multipart) | "compact" (plain-text only)
 	email_format?: 'full' | 'compact';
+	// Issue #785 — Vortag-Vergleich im Briefing (Default an, wenn Feld fehlt)
+	show_yesterday_comparison?: boolean;
 	// Issue #1260 — Telegram im SMS-Kurzstil (opt-in). "rich" (Default, Multi-Bubble
 	// mit Inline-Knöpfen) | "kurzform" (ein Zeilentext wie SMS). Regelt Trip-Briefing
 	// UND Trip-Alarme (ein Feld je Trip).
@@ -294,9 +323,16 @@ export interface DisplayConfig {
 	alert_preset?: string; // Issue #846: "deaktiviert" | "entspannt" | "standard" | "sensibel"
 	metric_alert_levels?: Record<string, SensLevel>; // Issue #864: metric → SensLevel
 	telegram_style?: 'rich' | 'kurzform'; // Issue #1260: Compare-amtliche Warnung im SMS-Kurzstil (opt-in)
-	// Issue #1720 S1: Spaltenauswahl der 3-Tages-Vorschau, Neuformat #1373.
+	// Issue #1720 S1 / #1848 A2: Spaltenauswahl der 3-Tages-Vorschau als reine
+	// Kennungen (`["temperature", "gust"]`); welche Auswertungen eine Kennung
+	// zeigt, leitet der Katalog serverseitig ab. Die Paar-Altform (#1373)
+	// bleibt lesbar, wird aber nicht mehr geschrieben.
 	// Feld fehlt = die sieben festen Spalten; `[]` = der Block entfaellt ganz.
-	outlook_metrics?: { metric_id: string; aggregation: string }[];
+	outlook_metrics?: string[];
+	// Issue #2049: Roh/Einfach je Vorschau-Groesse (`true` = Einfach). PARALLELES
+	// Feld, damit `outlook_metrics` eine reine Kennungsliste bleibt. Fehlende
+	// Kennung = Roh; das Feld ganz fehlend = nie eingestellt.
+	outlook_metric_formats?: Record<string, boolean>;
 }
 
 // Epic #138 Issue #177 — User-definierte Metric-Presets (Server-seitig persistiert).
@@ -518,6 +554,13 @@ export interface CompareMetricCatalogEntry {
 	// ohne sie im Browser ein zweites Mal zu führen.
 	col_label?: string;
 	sms_code?: string;
+	// Issue #2232: die Kennung, unter der die KURZFORM-MARKE dieser Größe in
+	// `/api/sms-symbols` steht. Für die Temperatur-Familie ist das eine ANDERE
+	// als `metric_id` (`temperature_day_high` statt `temperature`), damit Trip
+	// und Ortsvergleich dieselbe Marke zeigen, ohne dieselbe Größe zu sein
+	// (verschiedene Zeitfenster, #1848 Scheibe C). Das Backend löst sie auf —
+	// der Browser führt dafür KEINE eigene Regel.
+	kuerzel_metric_id?: string;
 	// Issue #1435 (E1a-1, live): Alarm-Identität der Größe aus dem zentralen
 	// Register — `null`, wenn sie nicht alarmfähig ist. E1a-2 macht sie zur
 	// EINZIGEN Quelle dafür, welche Alarm-Zeilen der Alarme-Reiter zeigt.
@@ -586,11 +629,16 @@ export interface StagesWeatherResponse {
 }
 
 // Issue #393 — Cockpit-Kacheln: Versandstatus + Alarm-Historie.
+// Issue #2281: kind-neutral wie AlertLogEntry (#1467). `kind` ist der Slot.
+// `trip_id` ist optionales Altfeld; Go leitet entity_id/entity_type beim Lesen ab.
 export interface BriefingLogEntry {
-	trip_id: string;
+	entity_id: string;
+	entity_type: string;
+	trip_id?: string;
 	kind: 'morning' | 'evening';
 	sent_at: string;
 	channels: string[];
+	on_demand?: boolean;
 }
 
 // Issue #1467 S1: EINE Kennung + Typfeld statt trip_id/preset_id. `trip_id` ist
@@ -647,10 +695,18 @@ export interface ComparePreset {
 	official_alert_triggers_enabled?: boolean;
 	send_telegram?: boolean;
 	send_sms?: boolean;
-	// Issue #1745 A — Premium-SMS als vierter ALARM-Kanal des Ortsvergleichs
-	// (Go-Pendant model.ComparePreset.SendPremiumSms, #1701 AC-4). Anders als
-	// beim Trip ist das hier das Alarm-Opt-in, kein abgeleitetes Briefing-Flag.
+	// Issue #1745 A / #2293 S2 — Premium-SMS-Opt-in fuer das planmaessige
+	// BRIEFING des Ortsvergleichs (Versand-Reiter). Seit #2293 S2 steuert
+	// dieses Feld NICHT mehr den Alarm-Kanal (die fruehere Praemisse "das ist
+	// hier das Alarm-Opt-in" ist ueberholt) — der Alarm-Kanal lebt seither in
+	// alert_channels.premium_sms, s.u.
 	send_premium_sms?: boolean;
+	// Issue #2293 Scheibe S2 (Epic #1374/#2345) — eigenes Kanal-Sub-Objekt fuer
+	// den ALARM-Versand (Abweichung, amtliche Warnung, Regenradar), Go-Pendant
+	// model.ComparePreset.AlertChannels. Unabhaengig von send_telegram/
+	// send_sms/send_premium_sms (Briefing-Felder oben). Jedes GET liefert ab
+	// dieser Scheibe ein materialisiertes Objekt (auch fuer Alt-Presets).
+	alert_channels?: { email: boolean; telegram: boolean; sms: boolean; premium_sms: boolean };
 	// Issue #1232 Scheibe 2a/2b — Zwei-Slot-Zeitplan + editierbare Laufzeit
 	// (docs/specs/modules/compare_preset_zeitplan.md, versand_tab_vergleich.md).
 	// morning_time/evening_time im Format "HH:MM:SS", end_date "YYYY-MM-DD".
@@ -685,3 +741,40 @@ export interface ComparePreset {
 // Spiegelt das serverseitige User.Tier-Feld (internal/model/user.go).
 // Default "free" wird am Lesezeitpunkt in toProfileResponse() gesetzt.
 export type UserTier = 'free' | 'standard' | 'premium';
+
+// Issue #2482 — Mengengrenzen im Profil (GET /api/auth/profile, Feld `quota`).
+// null = unbegrenzt (Admin/Ausnahme-Konto). Quelle: model.QuotaFor (Go).
+export interface ProfileQuota {
+	trips: number | null;
+	compare_presets: number | null;
+	locations: number | null;
+}
+
+// Issue #2155 S4 — DTO der Admin-API (GET /api/admin/users), nur diese Felder.
+export interface AdminUser {
+	id: string;
+	email: string;
+	display_name: string;
+	tier: UserTier;
+	requested_tier: string;
+	requested_at: string;
+	email_verified_at: string;
+	created_at: string;
+	disabled: boolean;
+	is_test_user: boolean;
+	last_trip_report_run: { time: string; status: string; error: string } | null;
+	open_meteo_calls_today: number;
+}
+
+// Issue #2519 — Einladungslink-DTO der Admin-API (GET /api/admin/invites); nie Token/Hash.
+export interface AdminInvite {
+	id: string;
+	tier: UserTier;
+	note: string;
+	status: 'open' | 'used' | 'revoked';
+	created_at: string;
+	created_by: string;
+	used_by: string;
+	used_at: string | null;
+	revoked_at: string | null;
+}

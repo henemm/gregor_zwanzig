@@ -1,12 +1,12 @@
 <script lang="ts">
 	// Issue #345 (Wetter-Editor-Konsolidierung) — read-only Wetter-Profil-Karte
-	// in der Tour-Bearbeiten-Maske (AC-1, AC-5).
+	// in der Trip-Bearbeiten-Maske (AC-1, AC-5).
 	// Design: docs/design-requests/issue_345_assets/screen-weather-consolidation.jsx
 	//         (Funktion WEKEditFormDrop).
 	//
 	// Zeigt Profilname + Mono-Zähler (Spalten · Detail · aktiv) und verlinkt in
-	// den einzigen Bearbeitungs-Ort: Tour-Detail → Tab „Wetter-Briefing"
-	// (/trips/{id}#weather). KEINE bearbeitbaren Toggles (AP-013).
+	// den einzigen Bearbeitungs-Ort: Trip-Detail → Tab „Wetter-Briefing"
+	// (/trips/{id}?tab=wetter-metriken, #2287). KEINE bearbeitbaren Toggles (AP-013).
 	import { goto } from '$app/navigation';
 	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import { summarizeTripWeather, type DisplayConfigLike } from './weatherSummary.js';
@@ -25,7 +25,7 @@
 	// Factory Pattern für den Navigations-Handler (Safari-Closure-Schutz, CLAUDE.md).
 	function makeOpenWeatherTab() {
 		return function openWeatherTab() {
-			goto(`/trips/${tripId}#weather`);
+			goto(`/trips/${tripId}?tab=wetter-metriken`);
 		};
 	}
 	const onOpenWeatherTab = makeOpenWeatherTab();

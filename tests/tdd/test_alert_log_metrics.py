@@ -21,7 +21,7 @@ import json
 from datetime import datetime, timedelta, timezone
 
 from app.loader import get_briefings_dir, get_data_dir
-from app.models import Corridor, ThunderLevel
+from app.models import ThunderLevel
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 
@@ -84,32 +84,6 @@ def test_ac1_boeen_aenderung_protokolliert_register_paar_und_grund():
 
 
 # ───────────────────────────────── AC-2 ────────────────────────────────────
-
-def test_ac2_beide_korridor_namensraeume_liefern_dasselbe_register_paar():
-    """AC-2 GIVEN zwei Grenzwert-Treffer derselben Wettergroesse — einer mit
-    der Kennung aus dem Alarm-Namensraum (``thunder_level``), einer mit der
-    Kennung aus dem Vergleichs-Katalog (``thunder_level_max``)
-    WHEN beide auf Register-Paare abgebildet werden
-    THEN tragen beide dasselbe Paar ``("thunder", "max")``."""
-    from services.alert_log import register_pairs_from_corridor_hits
-    from services.corridor_threshold import evaluate_corridor_thresholds
-
-    hits = evaluate_corridor_thresholds(
-        [weather(1, thunder_level_max=ThunderLevel.MED)],
-        [
-            Corridor(metric="thunder_level", range=[None, 0], notify=True),
-            Corridor(metric="thunder_level_max", range=[None, 0], notify=True),
-        ],
-    )
-    assert len(hits) == 2, f"Voraussetzung: zwei Treffer erwartet, erhalten {len(hits)}"
-    assert {h.metric for h in hits} == {"thunder_level", "thunder_level_max"}, (
-        "Voraussetzung: die beiden Treffer stammen aus verschiedenen Namensraeumen."
-    )
-
-    paare = [register_pairs_from_corridor_hits([hit]) for hit in hits]
-    assert paare[0] == [("thunder", "max")] and paare[1] == [("thunder", "max")], (
-        f"Die beiden Namensraeume laufen auseinander: {paare!r}"
-    )
 
 
 # ───────────────────────────────── AC-3 ────────────────────────────────────

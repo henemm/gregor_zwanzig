@@ -9,7 +9,7 @@
 // die Opt-out-Checkbox war eine wirkungslose Karteileiche und wurde entfernt.
 //
 // Reale Ziel-Oberfläche der Checkbox: das Neuanlegen-Formular /trips/new,
-// Tab „Briefing-Zeitplan" (TripNewEditor → EditReportConfigSection, showMailContent
+// Tab „Briefing-Zeitplan" (TripNewEditor → MailInhaltCard, showMailContent
 // default true). Auf der Trip-Detail-Seite ist der Mail-Inhalt-Block via
 // showMailContent={false} ohnehin ausgeblendet (BriefingScheduleTab).
 //
@@ -54,11 +54,12 @@ async function openNewTripZeitplan(page: Page) {
 	}
 
 	await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-	await tabbar.getByRole('tab', { name: /Zeitplan/ }).click({ force: true });
+	// Issue #1743: kein Schritt Versand mehr — die Mail-Inhalt-Karte steht im
+	// Schritt Wetter-Metriken (oben aktiviert).
 
 	// Harter Surface-Check: die Mail-Inhalt-Karte MUSS sichtbar sein — sonst prüfen
 	// wir versehentlich einen leeren DOM und count()==0 wäre bedeutungslos.
-	// EditReportConfigSection wird sowohl im .tn-desktop- als auch im .tn-mobile-Baum
+	// MailInhaltCard wird sowohl im .tn-desktop- als auch im .tn-mobile-Baum
 	// gemountet (CSS-Media-Query-Toggle statt {#if}) — beide Instanzen stehen
 	// gleichzeitig im DOM, daher hier wie bei den GPX-Inputs auf .tn-mobile scopen.
 	await expect(page.locator('.tn-mobile').getByTestId('report-mail-content')).toBeVisible({ timeout: 15_000 });

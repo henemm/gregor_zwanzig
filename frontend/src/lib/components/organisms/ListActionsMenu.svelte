@@ -4,7 +4,7 @@
 	// Geteilter Baustein für Trips + Orts-Vergleiche. Übernimmt das Portal-/
 	// Flip-Positionierungs-Muster aus trips/+page.svelte (openMenuAtBtn +
 	// $effect-Flip-Korrektur, #706) und die role="menu"-Semantik aus
-	// CompareKebab.svelte — vereinheitlicht in EINER Komponente.
+	// dem frueheren Compare-Kebab — vereinheitlicht in EINER Komponente.
 	//
 	// Jede Instanz verwaltet ihren eigenen Offen-Zustand. Das Menü wird via
 	// portal an document.body gehängt (kein overflow-Ancestor clippt es) und

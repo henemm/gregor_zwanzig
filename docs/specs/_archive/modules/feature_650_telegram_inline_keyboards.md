@@ -3,7 +3,7 @@ entity_id: feature_650_telegram_inline_keyboards
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, output, foundation, epic-639]
 ---
@@ -22,13 +22,13 @@ keine Wetter-Datenlogik, keine Reaktion auf Button-Klicks (das ist Teil 6/6).
 
 ## Source
 
-- **File:** `src/outputs/telegram.py`
+- **File:** `src/output/channels/telegram.py`
 - **Identifier:** `TelegramOutput.send`, `TelegramOutput.set_my_commands`, `TelegramOutput.get_my_commands`, `BOT_COMMANDS`
 
 ## Estimated Scope
 
 - **LoC:** ~70 (Produktivcode), zzgl. Tests + dünnes Ops-Script
-- **Files:** `src/outputs/telegram.py` (erweitern), `scripts/telegram_set_commands.sh` (neu), `tests/tdd/test_issue_650_telegram_foundation.py` (neu)
+- **Files:** `src/output/channels/telegram.py` (erweitern), `scripts/telegram_set_commands.sh` (neu), `tests/tdd/test_issue_650_telegram_foundation.py` (neu)
 - **Effort:** low
 
 ## Dependencies

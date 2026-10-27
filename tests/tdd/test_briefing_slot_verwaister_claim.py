@@ -73,6 +73,9 @@ ABEND_STUNDE = 18
 
 # Die vier Ausgaenge, die einen Slot abschliessen (`trip_report_scheduler.py:94`).
 VERMERK_AUSGAENGE = ("sent", "no_stage", "no_weather", "no_channels")
+# Issue #2422 S3: dazu der Ausgang eines per `skip_next` uebersprungenen Slots
+# (`AUSGANG_UEBERSPRUNGEN`) -- kein Versandversuch, schliesst den Slot aber ab.
+ABSCHLIESSENDE_AUSGAENGE = VERMERK_AUSGAENGE + ("skipped",)
 
 
 def _ttl() -> int:
@@ -578,7 +581,7 @@ def test_neuer_vermerk_traegt_den_lauf_zeitpunkt():
 # AC-8 — Bestandsvermerke bleiben abgeschlossen, ohne Migration
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("ausgang", VERMERK_AUSGAENGE)
+@pytest.mark.parametrize("ausgang", ABSCHLIESSENDE_AUSGAENGE)
 def test_ac8_bestandsvermerke_bleiben_abgeschlossen(ausgang: str):
     """AC-8.
 

@@ -118,14 +118,32 @@ def test_email_output_erlaubt_resend_in_production():
 
 
 def test_test_user_routing_aktiviert_test_modus(tmp_path, monkeypatch):
-    """with_user_profile() für Test-User (ID enthält 'test'/'tdd') MUSS is_test_mode setzen."""
-    monkeypatch.chdir(tmp_path)
-    profile_dir = tmp_path / "data" / "users" / "test_alice"
-    profile_dir.mkdir(parents=True)
-    (profile_dir / "user.json").write_text('{"mail_to": "alice@example.com"}')
+    """with_user_profile() fuer ein Testkonto (Profilfeld ``is_test_user``,
+    Issue #2152 — NICHT mehr der Name) MUSS is_test_mode setzen; dasselbe
+    Profil ohne Flag darf es nicht, auch wenn die ID "test" enthaelt."""
+    import json as _json
+
+    from app import loader as _loader
+
+    monkeypatch.setattr(_loader, "_DATA_ROOT", str(tmp_path))
+    for uid, flag in (("test_alice", True), ("alice", False)):
+        profile_dir = tmp_path / "users" / uid
+        profile_dir.mkdir(parents=True)
+        profil = {"mail_to": f"{uid}@example.com"}
+        if flag:
+            profil["is_test_user"] = True
+        (profile_dir / "user.json").write_text(_json.dumps(profil))
 
     s = _resend_settings().with_user_profile("test_alice")
-    assert s.is_test_mode is True, "Test-User MUSS Test-Modus aktivieren"
+    assert s.is_test_mode is True, "Testkonto (is_test_user) MUSS Test-Modus aktivieren"
 
     s_normal = _resend_settings().with_user_profile("alice")
     assert s_normal.is_test_mode is False, "Normaler User darf Test-Modus NICHT aktivieren"
+
+    # Bug #2152: derselbe Name OHNE Flag ist ein echter Nutzer.
+    ohne_flag = tmp_path / "users" / "test_bob"
+    ohne_flag.mkdir(parents=True)
+    (ohne_flag / "user.json").write_text(_json.dumps({"mail_to": "bob@example.com"}))
+    assert _resend_settings().with_user_profile("test_bob").is_test_mode is False, (
+        "Name allein darf den Test-Modus nicht mehr aktivieren"
+    )

@@ -2,11 +2,13 @@
 entity_id: fix_1719_s3_aus_ist_ein_zustand
 type: module
 created: 2026-08-11
-updated: 2026-08-11
-status: draft
+updated: 2026-08-21
+status: implemented
 version: "1.0"
 tags: [frontend, metrik-kaskade, editor, adr-0050, issue-1719]
 ---
+
+> Teilweise abgelöst durch [ADR-0095](../../adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md) (2026-10-21): die Grenze „`ChannelId` kennt drei Kanäle; Premium-SMS bekommt keinen eigenen Reiter“ (Known Limitations) ist kein Soll mehr — Premium-SMS ist der vierte gleichrangige Kanal, inklusive Alarm (CLAUDE.md, Kanäle).
 
 # #1719 Scheibe S3 — Der Editor: „Aus" ist ein Zustand, und die Zahlen sagen die Wahrheit
 
@@ -314,9 +316,20 @@ Spalte: `preview: Snippet<…>` (`:28`) ist heute
 
 ### Block D — Der Ortsvergleich bleibt unberührt
 
+  > 🔴 **Teilweise abgelöst — Issue #1848 Scheibe A3 (2026-08-21).** Für den
+  > **Ausblick**-Mountpunkt gilt AC-13 nicht mehr: Er bekommt seither
+  > `offColumns`/`onRestore` wie ein Kanal-Reiter, exakt umgekehrt zur
+  > damaligen Zusicherung — die Begründung unten („bereits ein
+  > funktionierender Rückweg über die Checkbox darüber") entfällt mit dem
+  > Wegfall ebendieser Checkbox-Liste. **Übersicht und Stundenverlauf bleiben
+  > von AC-13 unverändert erfasst.** Details:
+  > `docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md`,
+  > [ADR-0059](../../adr/0059-compare-ausblick-erbt-grundauswahl.md).
+
 - **AC-13:** Given die drei Vergleichs-Einbettungen der Reihenfolge-Liste (Übersicht,
   Ausblick, Stundenverlauf) / When dort „Aus" geklickt wird / Then verhält sich die Liste
   **exakt wie vor dieser Scheibe** — die Zeile verschwindet, es entsteht keine Aus-Gruppe.
+  **(Seit #1848 A3 nur noch für Übersicht und Stundenverlauf gültig, s. Hinweis oben.)**
   - Test: **AST-Strukturwächter** `compare_outlook_metric_selection_structure.test.ts` und
     `compare_hourly_layout_controls_structure.test.ts` prüfen, dass am
     `WeatherV2Reihenfolge`-Aufruf **kein** `offColumns`- und **kein** `onRestore`-Attribut

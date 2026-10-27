@@ -254,8 +254,16 @@ def test_ac3_confidence_propagated_to_all_segments_after_enrichment():
     )
 
     # Spreads mitten im Segment-Fenster (segment.start_time ist now.replace(hour=6))
+    # Issue #1983: Rueckgabetyp von _fetch_ensemble_spread ist seither
+    # EnsembleHourStats statt 2-Tupel (Typumstellung, keine neue Semantik).
+    from providers.openmeteo import EnsembleHourStats
+
     mid_naive = (segment.start_time + timedelta(hours=4)).replace(tzinfo=None)
-    spreads_naive = {mid_naive: (1.5, 0.8)}
+    spreads_naive = {
+        mid_naive: EnsembleHourStats(
+            spread_t2m_k=1.5, spread_precip_mm=0.8, thunder_member_share_pct=None,
+        )
+    }
     now_utc = datetime.now(timezone.utc)
 
     svc = _make_scheduler()

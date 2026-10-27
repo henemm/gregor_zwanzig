@@ -192,7 +192,8 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 
 		// Aktion 2: Morgen-Uhrzeit ändern → weiterer PUT. Volle Stunde (Input
 		// step={3600}, VTSchedulePlan); Telegram-Toggle ist ohne chat_id ausgegraut.
-		await page.getByTestId('compare-detail-tab-versand').click();
+		// Issue #1743: Versand-Inhalt steht im Reiter Wetter-Metriken (Abschnitt #versand).
+		await page.getByTestId('compare-detail-tab-wetter-metriken').click();
 		const morningTime = page.locator('[data-testid="report-morning-time"]:visible').first();
 		await expect(morningTime).toBeVisible({ timeout: 10_000 });
 		const put2 = page.waitForResponse(
@@ -388,7 +389,7 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		});
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-detail-tab-idealwerte').click();
+		await page.getByTestId('compare-detail-tab-wertebereiche').click();
 		await expect(page.getByTestId('corridor-editor-vergleich')).toBeVisible({ timeout: 10_000 });
 
 		const markToggle = page.getByTestId('corridor-row-gust_max_kmh').getByRole('button', { name: 'Markieren' });
@@ -418,7 +419,7 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		});
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-detail-tab-idealwerte').click();
+		await page.getByTestId('compare-detail-tab-wertebereiche').click();
 		const row = page.getByTestId('corridor-row-gust_max_kmh');
 		await expect(row).toBeVisible({ timeout: 10_000 });
 
@@ -446,7 +447,7 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		});
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-detail-tab-idealwerte').click();
+		await page.getByTestId('compare-detail-tab-wertebereiche').click();
 		await expect(page.getByTestId('corridor-editor-vergleich')).toBeVisible({ timeout: 10_000 });
 
 		const put = page.waitForResponse(
@@ -478,7 +479,8 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 		const id = await createPresetWithLocations(page, `E2E 1261 AC14v ${suffix}`, [locA]);
 
 		await openEditor(page, id);
-		await page.getByTestId('compare-detail-tab-versand').click();
+		// Issue #1743: Versand-Inhalt steht im Reiter Wetter-Metriken (Abschnitt #versand).
+		await page.getByTestId('compare-detail-tab-wetter-metriken').click();
 
 		const put = page.waitForResponse(
 			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',

@@ -1,3 +1,10 @@
+---
+entity_id: design_system_drift_fixes
+type: module
+created: 2026-05-22
+status: draft
+---
+
 # Spec: Design-System Drift-Fixes (AP-001 + AP-009)
 
 **Issue:** Design-System-Audit (nach Einpflegen der Claude-Design-Dokumente)  

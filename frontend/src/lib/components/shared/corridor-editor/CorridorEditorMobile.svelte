@@ -24,14 +24,19 @@
 	//  - Issue #1371: das "Warnen"-Bedienelement (Effekt-Buttons) ist entfernt —
 	//    der Reiter markiert nur noch, die Alarm-Empfindlichkeit setzt
 	//    ausschliesslich der Reiter Alarme.
-	import { getContext } from 'svelte';
-	import { Eyebrow, Dot } from '$lib/components/atoms';
+	import { untrack } from 'svelte';
+	import { Eyebrow, Dot } from '$lib/components/atoms'; import Infobox from '$lib/components/molecules/Infobox.svelte'; import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
 	import ScreenScroll from '$lib/components/mobile/ScreenScroll.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import { api } from '$lib/api';
-	import { toCompareProfile, type Trip, type SensLevel, type Corridor } from '$lib/types';
+	import { baueTripSpeicherung } from '../tripSpeicherung.ts';
+	import { toCompareProfile, type ActivityProfile, type Trip, type SensLevel, type Corridor, type ComparePreset } from '$lib/types';
+	import {
+		corridorZustandsBruecke,
+		erstelleWertebereicheVergleichSpeicherung,
+		wertebereicheVergleichSpeicherungAktiv
+	} from './wertebereicheVergleichSpeicherung.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import { corridorFmt } from './corridorMatch.ts';
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
@@ -39,39 +44,107 @@
 		saveGateDecision, openBoundValue, supportsMark, countEffectiveMarks, type CorridorRowState,
 		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
-		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
+		type RouteMetricDef, type CompareMetricDef, type ProfileKey, type IdealRange,
 	} from './corridorEditorState.ts';
 	import { loadCompareMetricCatalog, loadRouteExtraMetricDefs } from './compareMetricCatalogLoader.ts';
-	// Issue #1366 F002: `ws.activeMetricKeys` ist jetzt `string[] | null` ("nie
+	// Issue #1366 F002: `activeMetricKeys` ist `string[] | null` ("nie
 	// eingestellt" vs. "bewusst leer") -- materialisiert lesen, NIE roh
 	// spreaden/an buildCompareCorridorSavePayload durchreichen (das wuerde
 	// `null` still zu `[]` = "bewusst leer" machen).
 	import { materializeActiveMetricKeys } from '../weather-metrics-tab/compareMetricOrder.ts';
 
 	interface Props {
-		context?: 'route' | 'vergleich';
+		context?: 'route' | 'vergleich'; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
 		trip?: Trip;
 		onTripUpdate?: (t: Trip) => void;
 		saveController?: SaveStatus;
+		/** Issue #2276 S3: der vergleich-Zweig speichert selbst (Hub). Ohne `preset`
+		 *  (Anlege-Seite) bleibt der Zweig inaktiv. */
+		preset?: ComparePreset;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
+		onCompareUpdate?: (updated: ComparePreset) => void;
+		/** Issue #2276 S6d: der vergleich-Zweig bekommt seinen Stand als WERTPROPS
+		 *  statt aus `getContext('compare-wizard-state')`. Das Buendel baut
+		 *  `compare/corridorPropsAus.ts`; alle drei Vergleichs-Mounts speisen es
+		 *  identisch ein, der route-Zweig laesst es weg. */
+		corridors?: Corridor[];
+		idealRanges?: Record<string, IdealRange>;
+		/** `null` = nie eingestellt (Vorgabemenge), `[]` = bewusst leer (#1366 F002). */
+		activeMetricKeys?: string[] | null;
+		metricAlertLevels?: Record<string, string>;
+		/** Anlege-Merkmale des Wizards — sie steuern allein den Profil-Prefill. */
+		isEditMode?: boolean;
+		activityProfile?: ActivityProfile | null;
+		onCorridorsChange?: (v: Corridor[]) => void;
+		onIdealRangesChange?: (v: Record<string, IdealRange>) => void;
+		onActiveMetricKeysChange?: (v: string[] | null) => void;
+		onMetricAlertLevelsChange?: (v: Record<string, string>) => void;
 	}
-	let { context = 'route', trip, onTripUpdate, saveController }: Props = $props();
+	let {
+		context = 'route', showInfobox = false,
+		trip,
+		onTripUpdate,
+		saveController,
+		preset,
+		enqueueHubWrite,
+		onCompareUpdate,
+		corridors,
+		idealRanges,
+		activeMetricKeys,
+		metricAlertLevels,
+		isEditMode,
+		activityProfile,
+		onCorridorsChange,
+		onIdealRangesChange,
+		onActiveMetricKeysChange,
+		onMetricAlertLevelsChange
+	}: Props = $props();
 
-	const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
+	// Issue #2276 S6d: der Speicherweg braucht eine lebendige, mutierbare
+	// Referenz — das Diff-Gate liest bei jedem Melden frisch, der Rollback
+	// schreibt feldweise zurueck. Die Bruecke bildet genau das aus den Wertprops
+	// nach, ohne den Wizard-Zustand zu kennen.
+	const corridorZustand = corridorZustandsBruecke(
+		() => ({ corridors, idealRanges, activeMetricKeys, metricAlertLevels }),
+		(feld, wert) => {
+			if (feld === 'corridors') onCorridorsChange?.(wert as Corridor[]);
+			else if (feld === 'idealRanges') onIdealRangesChange?.(wert as Record<string, IdealRange>);
+			else if (feld === 'activeMetricKeys') onActiveMetricKeysChange?.(wert as string[] | null);
+			else if (feld === 'metricAlertLevels')
+				onMetricAlertLevelsChange?.(wert as Record<string, string>);
+		}
+	);
+
+	// Issue #2276 S3: EINZIGER Speicherweg des vergleich-Zweigs im Hub (Muster
+	// AlarmeTab, S2). Baseline beim Mount — CompareTabs mountet erst nach der
+	// Hydration (Design Punkt 6). Anlege-Seite/Trip: inaktiv (AC-9, AC-12).
+	const vergleichSpeicherung = untrack(() =>
+		wertebereicheVergleichSpeicherungAktiv({ context, zustand: corridorZustand, preset, saveController })
+			? erstelleWertebereicheVergleichSpeicherung({
+					client: api,
+					zustand: corridorZustand,
+					preset: () => preset!,
+					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
+					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
+					saveController: saveController!
+				})
+			: null
+	);
 
 	// AC-10: "zuletzt bekannte Stufe" bezieht sich auf den beim Mount geladenen
 	// Stand — analog Desktop (CorridorEditor.svelte), gilt fuer beide Kontexte.
-	const originalLevels = (
-		context === 'vergleich'
-			? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
-			: trip?.display_config?.metric_alert_levels
-	) ?? {} as Record<string, SensLevel>;
-	const originalActiveMetricKeys: string[] =
-		context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
+	const originalLevels: Record<string, SensLevel> =
+		(metricAlertLevels as Record<string, SensLevel> | undefined) ??
+		trip?.display_config?.metric_alert_levels ??
+		{};
+	const originalActiveMetricKeys: string[] = [
+		...materializeActiveMetricKeys(activeMetricKeys ?? null)
+	];
 
-	const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
+	const isFreshCompareCreate = context === 'vergleich' && !isEditMode && (corridors ?? []).length === 0;
 	function computeInitialCompare(defs: CompareMetricDef[]): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
-		if (!isFreshCompareCreate) return buildComparePool(ws?.corridors ?? [], defs);
-		const profileKey = ws?.activityProfile ? (toCompareProfile(ws.activityProfile) as ProfileKey) : 'ALLGEMEIN';
+		if (!isFreshCompareCreate) return buildComparePool(corridors ?? [], defs);
+		const profileKey = activityProfile ? (toCompareProfile(activityProfile) as ProfileKey) : 'ALLGEMEIN';
 		const prefillRows = buildComparePrefillRows(profileKey, defs);
 		const poolLeft = defs.filter((d) => !prefillRows.some((r) => r.metric === d.metric));
 		return { rows: prefillRows, poolLeft, unknownCorridors: [] };
@@ -152,36 +225,47 @@
 	// Alarme (AC-2/AC-3).
 	function buildSaveFn() {
 		const payload = buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors);
-		return async () => {
-			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, {
-				corridors: payload.corridors,
-				display_config: trip!.display_config,
-			});
-			onTripUpdate?.(updated);
-		};
+		// #2317 Baustein 1: die Entlade-Option (keepalive) erreicht den PUT.
+		// Issue #1433: Teilfeld — nur `corridors`, kein display_config (Spec §2.2).
+		return baueTripSpeicherung<Trip>(
+			api,
+			trip!.id,
+			() => ({ corridors: payload.corridors }),
+			(updated) => onTripUpdate?.(updated), 'wertebereiche'
+		);
 	}
 	function syncToWizard() {
-		if (!ws) return;
 		const payload = buildCompareCorridorSavePayload(rows, removedMetrics, {
-			idealRanges: ws.idealRanges,
-			activeMetricKeys: materializeActiveMetricKeys(ws.activeMetricKeys),
-			metricAlertLevels: ws.metricAlertLevels as Record<string, SensLevel | undefined>,
+			idealRanges: idealRanges ?? {},
+			activeMetricKeys: materializeActiveMetricKeys(activeMetricKeys ?? null),
+			metricAlertLevels: metricAlertLevels as Record<string, SensLevel | undefined>,
 		}, unknownCorridors);
-		ws.corridors = payload.corridors;
-		ws.idealRanges = payload.idealRanges;
-		ws.activeMetricKeys = payload.activeMetricKeys;
-		ws.metricAlertLevels = payload.metricAlertLevels;
+		onCorridorsChange?.(payload.corridors);
+		onIdealRangesChange?.(payload.idealRanges);
+		onActiveMetricKeysChange?.(payload.activeMetricKeys);
+		onMetricAlertLevelsChange?.(payload.metricAlertLevels);
 	}
 	// Issue #1350 Teil 3: Fresh-Create-Prefill fuer 'vergleich' laeuft jetzt im
 	// $effect oben (nach erfolgreichem Katalog-Laden) — vorher synchron hier.
 
 	function maybeSchedule() {
 		if (context === 'vergleich') {
-			if (saveGateDecision(rows) === 'schedule') syncToWizard();
+			// Issue #2276 S3: genau EIN Auslöser — nach dem Spiegeln in den Wizard-
+			// Zustand meldet der Editor die Änderung an die eigene Orchestrierung
+			// (Diff-Gate, Queue, Rückmeldung, Rollback in wertebereicheVergleichSpeicherung.ts).
+			// Anlege-Seite: kein Speicherweg hier, Speichern über wiz.saveNewPreset().
+			if (saveGateDecision(rows) === 'schedule') {
+				syncToWizard();
+				vergleichSpeicherung?.aenderungMelden();
+			} else {
+				// #2215: der vorgemerkte Save des letzten gueltigen Stands (Orchestrierung) darf
+				// den ungueltigen Zwischenstand nicht als „Gespeichert" melden. Anlege-Seite: kein Controller.
+				saveController?.setUnsavedInput();
+			}
 			return;
 		}
 		if (saveGateDecision(rows) === 'schedule') saveController?.schedule(buildSaveFn());
-		else saveController?.setDirty();
+		else saveController?.setUnsavedInput();
 	}
 	function patch(metric: string, p: Partial<Pick<CorridorRowState, 'min' | 'max' | 'notify' | 'mark'>>) {
 		rows = patchRow(rows, metric, p);
@@ -258,11 +342,11 @@
 <svelte:window onpointermove={onWindowPointerMove} onpointerup={onWindowPointerUp} />
 
 <ScreenScroll padding={14}>
-	<div class="cem" data-testid="corridor-editor-mobile-{context}">
+	<div class="cem" data-testid="corridor-editor-mobile-{context}">{#if showInfobox}<Infobox reiter="wertebereiche" {context} />{/if}
 		{#if context === 'vergleich' && compareDefsError}
 			<!-- Issue #1350 Teil 3 (AC-4): sichtbarer Fehlerzustand statt still
 			     leerem Editor bei Endpoint-Ausfall. -->
-			<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<p class="cem-error" role="alert" data-testid="corridor-editor-mobile-vergleich-load-error">
 				{compareDefsError}
 			</p>
@@ -273,23 +357,23 @@
 				onclick={() => (compareDefsError = null)}
 			>Wiederholen</button>
 		{:else if context === 'vergleich' && compareDefs === null}
-			<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-vergleich-loading">Lade Metriken…</div>
 		{:else if context === 'route' && routeExtraDefs === null}
 			<!-- Issue #1425 (AC-6): Ladezustand statt Nachpoppen der Zusatz-Metriken. -->
-			<Eyebrow>Wertebereiche</Eyebrow>
+			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-route-loading">Lade Metriken…</div>
 		{:else}
 		{#if context === 'vergleich'}
-			<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<div class="cem-title">Sag mir, welche Werte dir ideal sind</div>
 			<div class="cem-lead">Ein Wertebereich je Metrik legt deinen Idealbereich fest. Werte im Bereich werden im Briefing pro Ort grün markiert — kein Score, kein Ranking, nur eine Lese-Hilfe.</div>
 		{:else}
 			<!-- Issue #1425 (S2 Teil 2, Scheibe C, AC-1): wortgleich zum Desktop-Editor —
 			     keine Sofort-Meldung mehr versprechen, Verweis auf den Reiter Alarme. -->
-			<Eyebrow>Wertebereiche</Eyebrow>
+			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<div class="cem-title">Sag mir, welche Werte für dich passen</div>
-			<div class="cem-lead">Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Werte im Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im Reiter Alarme ein.</div>
+			<div class="cem-lead">Ein Wertebereich je Metrik legt fest, welche Werte du auf der Trip noch akzeptierst. Werte im Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im Reiter Alarme ein.</div>
 		{/if}
 
 		{#if context === 'route' && routeDefsFailed}
@@ -439,7 +523,7 @@
 	.cem-card { background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3, 10px); padding: 14px 14px 12px; margin-bottom: 10px; }
 	.cem-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 	.cem-label { font-size: 15px; font-weight: 600; color: var(--g-ink); }
-	.cem-unit { font-size: 10px; color: var(--g-ink-4); margin-left: 6px; }
+	.cem-unit { font-size: 11px; color: var(--g-ink-4); margin-left: 6px; }
 	/* Issue #1401: Auswertung als eigenes Element neben dem Namen. */
 	.cem-aggregation { font-size: 11px; color: var(--g-ink-3); background: var(--g-paper); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
 	.cem-range { font-size: 13px; font-weight: 600; color: var(--g-ink); white-space: nowrap; }
@@ -453,17 +537,17 @@
 	   fuer den Handle selbst — AC-14-Test erfasst nur Stepper/Toggle-Buttons):
 	   unsichtbare 44x44-Trefffläche um den 24px-Punkt, Optik bleibt JSX-treu. */
 	.cem-handle::before { content: ''; position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
-	.cem-open { position: absolute; top: -18px; font-size: 10px; color: var(--g-ink-4); }
+	.cem-open { position: absolute; top: -18px; font-size: 11px; color: var(--g-ink-4); }
 	.cem-open-left { left: 2px; }
 	.cem-open-right { right: 2px; }
-	.cem-band-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--g-ink-4); }
+	.cem-band-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--g-ink-4); }
 	.cem-bounds { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
 	.cem-bound { flex: 1 1 0; min-width: 0; }
 	/* Staging-Fund F001: Ordinal-Bound erzwingt eine eigene volle Zeile (flex-wrap
 	   auf .cem-bounds bricht davor/danach um), damit .cem-ordinal-btn real 44px
 	   Breite bekommt statt sich eine ~175px-Von/Bis-Spalte zu teilen. */
 	.cem-bound-full { flex: 1 1 100%; }
-	.cem-bound-label { font-size: 9.5px; color: var(--g-ink-4); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
+	.cem-bound-label { font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
 	.cem-open-btn { width: 100%; min-height: 44px; border: 1px dashed var(--g-rule); background: transparent; border-radius: var(--g-r-2, 6px); cursor: pointer; color: var(--g-ink-4); font-size: 12px; }
 	.cem-stepper, .cem-ordinal-group { display: flex; align-items: center; gap: 6px; }
 	/* AC-14 Hit-Area-Technik: Trefffläche 44x44 (Playwright-messbar), Glyph-Optik bleibt 40px wie im JSX. */
@@ -471,7 +555,7 @@
 	.cem-step-btn-glyph { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--g-rule); background: var(--g-card); border-radius: var(--g-r-2, 6px); color: var(--g-ink); font-size: 20px; line-height: 1; }
 	.cem-step-value { flex: 1; min-width: 0; text-align: center; padding: 0 2px; }
 	.cem-step-num { font-size: 16px; font-weight: 600; color: var(--g-ink); font-variant-numeric: tabular-nums; line-height: 1.1; }
-	.cem-step-unit { font-size: 9px; color: var(--g-ink-4); }
+	.cem-step-unit { font-size: 11px; color: var(--g-ink-4); }
 	.cem-ordinal-btn { flex: 1; min-width: 44px; min-height: 44px; padding: 4px 6px; font-size: 11.5px; border-radius: var(--g-r-2, 6px); border: 1px solid var(--g-rule); background: transparent; color: var(--g-ink-3); cursor: pointer; }
 	.cem-ordinal-btn.on { border-color: var(--g-accent); color: var(--g-accent-deep); background: var(--g-accent-tint); }
 	.cem-clear-btn { width: 30px; height: 40px; flex-shrink: 0; border: none; background: transparent; cursor: pointer; color: var(--g-ink-4); font-size: 15px; }
@@ -483,8 +567,10 @@
 	.cem-remove-row { display: flex; justify-content: flex-end; margin-top: 8px; }
 	.cem-remove { background: transparent; border: none; padding: 6px 2px; color: var(--g-ink-4); cursor: pointer; font-size: 11.5px; }
 	.cem-pool { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 6px; }
-	.cem-pool-label { font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.08em; text-transform: uppercase; }
+	.cem-pool-label { font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.08em; text-transform: uppercase; }
 	.cem-summary { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12.5px; color: var(--g-ink-2); }
 	.cem-summary-item { display: inline-flex; align-items: center; gap: 7px; }
-	.cem-neutral { font-size: 10.5px; color: var(--g-ink-4); margin-top: 8px; letter-spacing: 0.02em; line-height: 1.5; }
+	/* #2521 S1: Ueberschrift + ⓘ in einer Zeile (Eyebrow ist display:block). */
+	.cem-eyebrow-row { display: flex; align-items: center; gap: 4px; }
+	.cem-neutral { font-size: 11px; color: var(--g-ink-4); margin-top: 8px; letter-spacing: 0.02em; line-height: 1.5; }
 </style>

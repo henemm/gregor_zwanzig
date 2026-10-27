@@ -30,6 +30,7 @@ from services.official_alerts import warn_egress
 from services.official_alerts.department_mapper import lookup_department
 from services.official_alerts.meteoalarm_budget import MeteoAlarmBudgetGate
 from services.official_alerts.models import OfficialAlert
+from services.official_alerts.region_mapper import point_in_geometry
 from services.radar_service import (
     _INCA_LAT_MAX,
     _INCA_LAT_MIN,
@@ -468,9 +469,9 @@ def _index_cache_entries_for(country: str, page: int) -> list[dict]:
 # awareness_type (führende Ganzzahl) -> App-hazard. 11 (flood), 12 (flooding),
 # 13 (rain-flood) sind Ueberschwemmungs-Warnarten und werden auf "flood"
 # abgebildet (Issue #1427 S1; 12 war zuvor faelschlich "rain", 13 unabgebildet).
-# 4 (fog), 7 (coastal-event), 9 (avalanche, s. Issue #1430): keine App-
-# Kategorie, bewusst NICHT gemappt -> wird uebersprungen (analog unbekannter
-# warntypid bei GeoSphere, kein Crash).
+# 9 (avalanche) -> "avalanche" (Issue #1430). 4 (fog), 7 (coastal-event):
+# keine App-Kategorie, bewusst NICHT gemappt (s. _DISCARDED_TYPES) -> wird
+# uebersprungen (analog unbekannter warntypid bei GeoSphere, kein Crash).
 _TYPE_HAZARD_MAP: dict[int, str] = {
     1: "wind_gust",
     2: "snow",
@@ -478,10 +479,17 @@ _TYPE_HAZARD_MAP: dict[int, str] = {
     5: "extreme_heat",
     6: "extreme_cold",
     8: "wildfire_risk",
+    9: "avalanche",
     10: "rain",
     11: "flood",
     12: "flood",
     13: "flood",
+}
+
+# Bewusst verworfene awareness_types (Issue #1430) -- nur fuer die Debug-Zeile.
+_DISCARDED_TYPES: dict[int, str] = {
+    4: "Nebel",
+    7: "Kueste",
 }
 
 # Modul-Level-Caches: Index pro Land, geometry-/CAP-Inhalte pro URL.
@@ -608,6 +616,10 @@ def _group_and_map_info_entries(entries: list[dict]) -> list[OfficialAlert]:
         type_raw = entry.get("type_raw")
         if not level_raw or not type_raw:
             continue
+        # Issue #1681 (AC-5): eine amtliche Aufhebung ist keine aktive Warnung.
+        # Bewusst eng: nur "AllClear" (IT/AT tragen None/"Monitor").
+        if "AllClear" in (entry.get("response_type") or ()):
+            continue
         key = (type_raw, level_raw, entry.get("onset"), entry.get("expires"), entry.get("area_desc"))
         lang_entry = {"lang": entry.get("lang") or "", "event": entry.get("event"), "headline": entry.get("headline")}
         if key not in groups:
@@ -622,8 +634,15 @@ def _group_and_map_info_entries(entries: list[dict]) -> list[OfficialAlert]:
             level = _leading_int(level_raw)
             if level is None or level < 2:
                 continue
-            hazard = _TYPE_HAZARD_MAP.get(_leading_int(type_raw))
+            type_num = _leading_int(type_raw)
+            hazard = _TYPE_HAZARD_MAP.get(type_num)
             if hazard is None:
+                name = _DISCARDED_TYPES.get(type_num)
+                grund = "bewusst nicht unterstuetzt" if name else "unbekannter awareness_type"
+                logger.debug(
+                    "MeteoAlarm awareness_type %s (%s) Stufe %s verworfen: %s",
+                    type_num, name or type_raw, level, grund,
+                )
                 continue
             preferred = _pick_preferred_entry(groups[key])
             label = preferred.get("event") or preferred.get("headline") or hazard
@@ -728,12 +747,13 @@ def _get_cached_index(country: str) -> Optional[dict]:
             # naechsten 429. Faellt-offen (MeteoAlarmBudgetGate.allow()):
             # ein kaputter Zaehler blockiert nie.
             gate = _meteoalarm_budget_gate()
-            if not gate.allow():
+            # Issue #1539 S1b: Pruefen + Buchen atomar (reserve), damit parallele
+            # Abrufe das Tagesbudget nicht ueberbuchen.
+            if not gate.reserve():
                 raise _MeteoAlarmBudgetExhausted(
                     f"MeteoAlarm-Tagesbudget erschoepft ({gate.daily_budget}/Tag) "
                     f"-- Abruf {country} Seite {page} uebersprungen"
                 )
-            gate.record_call()
             key = os.environ.get("GZ_METEOALARM_APIKEY")
             url = f"{METEOALARM_BASE_URL}/collections/warnings/locations/{country}"
             return httpx.get(
@@ -986,38 +1006,9 @@ def _fetch_cap(url: str, alert_id: Optional[str], country_code: Optional[str] = 
     )
 
 
-def _point_in_ring(lat: float, lon: float, ring: list) -> bool:
-    """Ray-Casting gegen einen einzelnen GeoJSON-Ring ([lon, lat]-Paare)."""
-    inside = False
-    n = len(ring)
-    j = n - 1
-    for i in range(n):
-        xi, yi = ring[i][0], ring[i][1]
-        xj, yj = ring[j][0], ring[j][1]
-        if (yi > lat) != (yj > lat):
-            x_at_lat = (xj - xi) * (lat - yi) / (yj - yi) + xi
-            if lon < x_at_lat:
-                inside = not inside
-        j = i
-    return inside
-
-
-def _point_in_polygon_coords(lat: float, lon: float, coords: list) -> bool:
-    if not coords:
-        return False
-    if not _point_in_ring(lat, lon, coords[0]):
-        return False
-    return not any(_point_in_ring(lat, lon, hole) for hole in coords[1:])
-
-
-def _point_in_geometry(lat: float, lon: float, geometry: dict) -> bool:
-    gtype = geometry.get("type")
-    coords = geometry.get("coordinates")
-    if gtype == "Polygon":
-        return _point_in_polygon_coords(lat, lon, coords)
-    if gtype == "MultiPolygon":
-        return any(_point_in_polygon_coords(lat, lon, poly) for poly in coords or [])
-    return False
+# Issue #1441 (AC-10): der Polygon-Test ist der geteilte Mapper-Baustein --
+# keine eigene Ray-Cast-Kopie mehr (geo_ray_cast._point_in_ring ist die einzige).
+_point_in_geometry = point_in_geometry
 
 
 class MeteoAlarmSource:

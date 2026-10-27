@@ -1,0 +1,7 @@
+{
+ "beschreibung": "AC-11: Mitschnitt-Tagesstufe HIGH fuer 2026-08-29 (realer Gewittertag, PO-bestaetigt: 14mm Niederschlag mit Gewitter) -- gepaart im Test mit der archiv-Niederschlagssumme aus wolayersee_29_08_ausschnitt.json.",
+ "herkunft": "thunder_level_max konstruiert entsprechend dem bekannten realen Tagesbefund (Issue #2181 S1-Korrektur), keine rohe Mitschnitt-Zeile fuer diesen Tag im Repo verfuegbar",
+ "mitschnitt_tageswerte": {
+  "2026-08-29": {"cape_max_jkg": 840.0, "thunder_level_max": "HIGH"}
+ }
+}

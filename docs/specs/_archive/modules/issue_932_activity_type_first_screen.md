@@ -3,7 +3,7 @@ entity_id: issue_932_activity_type_first_screen
 type: module
 created: 2026-06-30
 updated: 2026-06-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip-new, ux]
 ---
@@ -16,11 +16,11 @@ tags: [frontend, trip-new, ux]
 
 ## Purpose
 
-Das Aktivitätstyp-Dropdown in der Touren-Erstellung (`TripNewEditor`) soll auf den "Route"-Tab (erster Tab) verschoben werden. Von dort soll es automatisch das passende Wetter-Metrik-Template vorauswählen, wenn der User zum "Metriken"-Tab wechselt. Der überflüssige "Speichern"-Button in `WeatherMetricsTab` wird im Create-Modus ausgeblendet.
+Das Aktivitätstyp-Dropdown in der Trips-Erstellung (`TripNewEditor`) soll auf den "Route"-Tab (erster Tab) verschoben werden. Von dort soll es automatisch das passende Wetter-Metrik-Template vorauswählen, wenn der User zum "Metriken"-Tab wechselt. Der überflüssige "Speichern"-Button in `WeatherMetricsTab` wird im Create-Modus ausgeblendet.
 
 ## Source
 
-- **Files:** `frontend/src/lib/components/trip-new/TripNewEditor.svelte`, `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte`
+- **Files:** `frontend/src/lib/components/trip-new/TripNewEditor.svelte`, `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`
 - **Schicht:** Frontend / User-UI (SvelteKit)
 
 ## Estimated Scope
@@ -50,7 +50,7 @@ In `TripNewEditor.svelte`:
 ```typescript
 const stubTrip = $derived<Trip>({
     id: '__new__',
-    name: name || 'Neue Tour',
+    name: name || 'Neue Trip',
     stages: [],
     activity: selectedActivity ?? '',     // NEU
     display_config: { channels, metrics: weatherMetrics } as unknown as Trip['display_config'],
@@ -111,7 +111,7 @@ Gleiche Bedingung auch für "Ungespeicherte Änderungen"-Pill und "Gespeichert"-
 
 ## Acceptance Criteria
 
-**AC-1:** Given Neue Tour anlegen / When Route-Tab geöffnet / Then erscheint das Aktivitätstyp-Dropdown unterhalb des Startdatums (Desktop + Mobile).
+**AC-1:** Given Neue Trip anlegen / When Route-Tab geöffnet / Then erscheint das Aktivitätstyp-Dropdown unterhalb des Startdatums (Desktop + Mobile).
 - Test: Playwright — `[data-testid="trip-new-editor"]` Route-Tab aufrufen, Aktivitätstyp-Dropdown sichtbar und bedienbar.
 
 **AC-2:** Given Aktivitätstyp "Wandern" gewählt im Route-Tab / When Metriken-Tab geöffnet / Then ist Template "wandern" automatisch aktiv (passende Metriken vorausgewählt).
@@ -123,7 +123,7 @@ Gleiche Bedingung auch für "Ungespeicherte Änderungen"-Pill und "Gespeichert"-
 **AC-4:** Given Aktivitätstyp gewählt + Metriken-Tab manuell angepasst / When Aktivitätstyp nochmals geändert / Then bestehende manuelle Anpassungen bleiben (kein Auto-Select mehr nach isDirty=true).
 - Test: Playwright — Metriken manuell ändern → isDirty → Aktivitätstyp erneut setzen → Metriken unverändert.
 
-**AC-5:** Given Metriken-Tab im Edit-Modus (bestehende Tour) / When geöffnet / Then Speichern-Button weiterhin sichtbar (kein Regress).
+**AC-5:** Given Metriken-Tab im Edit-Modus (bestehende Trip) / When geöffnet / Then Speichern-Button weiterhin sichtbar (kein Regress).
 - Test: Playwright — `/trips/:id/edit` → Wetter-Tab → `[data-testid="weather-metrics-tab-save"]` im DOM.
 
 ## Known Limitations

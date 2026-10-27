@@ -8,6 +8,8 @@ version: "1.0"
 tags: [telegram, channel, notification, bot-api, output]
 ---
 
+> Teilweise abgelöst durch [ADR-0004](../../adr/0004-signal-channel-removed.md) (2026-06-06): der Signal-Zweig (`send_signal`, `SignalOutput`) im Versand-Beispiel gilt nicht mehr; Signal ist app-weit entfernt (#610).
+
 # Telegram Output
 
 ## Approval
@@ -20,7 +22,7 @@ Adds Telegram as a new output channel for weather reports and alerts, using the 
 
 ## Source
 
-- **File:** `src/outputs/telegram.py` (NEW)
+- **File:** `src/output/channels/telegram.py` (NEW)
 - **Identifier:** `TelegramOutput`
 
 ## Dependencies
@@ -64,7 +66,7 @@ TelegramOutput
 
 ### Phase 1 — Core (telegram.py + config + factory + model flags)
 
-#### 1. TelegramOutput Class (`src/outputs/telegram.py`, NEW, ~55 LoC)
+#### 1. TelegramOutput Class (`src/output/channels/telegram.py`, NEW, ~55 LoC)
 
 ```python
 """Telegram output channel via Bot API."""
@@ -137,7 +139,7 @@ def can_send_telegram(self) -> bool:
     return bool(self.telegram_bot_token and self.telegram_chat_id)
 ```
 
-#### 3. Factory Extension (`src/outputs/base.py`, +2 LoC)
+#### 3. Factory Extension (`src/output/channels/base.py`, +2 LoC)
 
 In `get_channel()`:
 
@@ -398,8 +400,8 @@ uv run pytest -m telegram tests/tdd/test_telegram_output.py -v
 
 | # | File | Action | Est. LoC |
 |---|------|--------|---------|
-| 1 | `src/outputs/telegram.py` | NEW | ~55 |
-| 2 | `src/outputs/base.py` | MODIFY: +1 branch in `get_channel()` | ~2 |
+| 1 | `src/output/channels/telegram.py` | NEW | ~55 |
+| 2 | `src/output/channels/base.py` | MODIFY: +1 branch in `get_channel()` | ~2 |
 | 3 | `src/app/config.py` | MODIFY: +2 fields + `can_send_telegram()` | ~8 |
 | 4 | `src/app/models.py` | MODIFY: +1 field on `TripReportConfig` | ~1 |
 | 5 | `src/app/user.py` | MODIFY: +1 field on `CompareSubscription` | ~1 |

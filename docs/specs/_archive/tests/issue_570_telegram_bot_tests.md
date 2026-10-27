@@ -3,7 +3,7 @@ entity_id: issue_570_telegram_bot_tests
 type: tests
 created: 2026-06-03
 updated: 2026-06-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, telegram, inbound, bot, issue-570]
 parent: inbound_telegram_reader

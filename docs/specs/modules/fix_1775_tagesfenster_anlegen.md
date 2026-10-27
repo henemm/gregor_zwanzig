@@ -3,7 +3,7 @@ entity_id: fix_1775_tagesfenster_anlegen
 type: feature
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
+status: implemented
 workflow: fix-1775-tagesfenster-anlegen
 version: "1.0"
 tags: [issue-1775, trip-new, day-window, weather-metrics-tab, adr-0035]
@@ -207,7 +207,7 @@ Baustein bereits alles Nötige leistet.
     Tagesfenster-Karte zu berühren; gespeicherten Trip per GET abrufen und
     die beiden Felder auf die expliziten Werte 4 und 19 prüfen.
 
-- **AC-4 (Regressionsschutz Mitternachts-Fenster):** Given ein Nutzer stellt
+- **AC-4:** (Regressionsschutz Mitternachts-Fenster) Given ein Nutzer stellt
   im Anlege-Dialog die Startstunde auf 22 / When er anschließend die
   Bis-Auswahl öffnet / Then bietet sie weiterhin alle Stunden außer 22 an
   (inkl. Stunden kleiner als 22, z. B. 2 Uhr), ein gewählter Wert wie „02:00"
@@ -221,7 +221,7 @@ Baustein bereits alles Nötige leistet.
     Element prüfen, speichern, gespeicherten Trip per GET auf
     `day_window_start_hour=22`/`day_window_end_hour=2` prüfen.
 
-- **AC-5 (Regressionsschutz bestehender Trip-Editor):** Given ein bereits
+- **AC-5:** (Regressionsschutz bestehender Trip-Editor) Given ein bereits
   gespeicherter Trip / When ein Nutzer ihn im Editor öffnet, den Reiter
   „Wetter-Metriken" ansteuert und dort das Tagesfenster ändert / Then
   speichert der bestehende PUT-Autosave-Pfad die Änderung unverändert wie vor

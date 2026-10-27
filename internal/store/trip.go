@@ -2,14 +2,43 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/model"
 )
+
+// ErrKindConflict: die Kennung ist im gemeinsamen Kennungsraum briefings/
+// (ADR-0023) bereits von einer Ressource der ANDEREN Art belegt (Issue #2359).
+// SaveTrip/SaveComparePreset liefern ihn, statt die fremde Datei zu
+// ueberschreiben (stiller Datenverlust).
+var ErrKindConflict = errors.New("kennung von anderer art belegt")
+
+// idBelegtDurchFremdeArt prueft, ob briefings/<id>.json einer anderen Art
+// gehoert. vergleich=true: Aufrufer will einen Ortsvergleich schreiben ⇒
+// jede gueltige Datei mit kind!="vergleich" (inkl. "" = Alt-Trip) ist fremd.
+// vergleich=false: Aufrufer will einen Trip schreiben ⇒ nur kind=="vergleich"
+// ist fremd. Fehlende, unlesbare, leere oder korrupte Datei ⇒ nicht belegt
+// (fail-open, wie DeleteComparePreset). Laeuft unter dem Briefing-Lock des
+// Aufrufers, Pruefung + Schreiben sind damit atomar.
+func (s *Store) idBelegtDurchFremdeArt(id string, vergleich bool) bool {
+	data, err := os.ReadFile(filepath.Join(s.briefingsDir(), id+".json"))
+	if err != nil {
+		return false
+	}
+	var probe struct {
+		Kind string `json:"kind"`
+	}
+	if json.Unmarshal(data, &probe) != nil {
+		return false
+	}
+	return (probe.Kind == "vergleich") != vergleich
+}
 
 // normalizeTrip coerces nil slice fields (Corridors, Stages, per-stage
 // Waypoints, AlertRules) to empty slices in place. Single source of truth
@@ -43,13 +72,16 @@ func normalizeTrip(trip *model.Trip) {
 	// Stages ABGELEITET — nie stale. ReportConfig bleibt die einzige Wahrheit
 	// fuer den Versand, s. docs/context/feat-1250-s4-trip-konvergenz.md.
 	deriveFlatFields(trip)
+
+	// Issue #1981: Alt-Vokabular in metric_alert_levels auch beim Laden
+	// uebersetzen (Save-Pfad ruft es zusaetzlich, idempotent).
+	migrateMetricAlertLevels(trip.DisplayConfig)
 }
 
 // deriveFlatFields leitet additive, nicht-autoritative flache Slot-/Kanal-
 // Felder aus trip.ReportConfig sowie EndDate aus max(stage.date) ab
-// (Dual-Read, Issue #1250 Scheibe 4). trip.ReportConfig.enabled ist der
-// EINZIGE Schalter (kein getrenntes morning/evening-Flag) -> steuert beide
-// abgeleiteten *Enabled-Felder.
+// (Dual-Read, Issue #1250 Scheibe 4). MorningEnabled/EveningEnabled folgen
+// slotAktiv (Issue #2422 S3).
 func deriveFlatFields(trip *model.Trip) {
 	// Fix-Loop F001 (Adversary BROKEN): erst ALLE abgeleiteten Pointer-Felder
 	// unbedingt zuruecksetzen, DANN neu ableiten (nur wenn Quelle vorhanden).
@@ -89,10 +121,12 @@ func deriveFlatFields(trip *model.Trip) {
 		if v, ok := rc["send_premium_sms"].(bool); ok {
 			trip.SendPremiumSms = &v
 		}
-		if v, ok := rc["enabled"].(bool); ok {
-			trip.MorningEnabled = &v
-			trip.EveningEnabled = &v
-		}
+		// Issue #2422 S3 (AC-20): EINE Regel, gleich wie Python slot_aktiv
+		// (Tabelle tests/fixtures/report_config_slot_faelle.json).
+		morning := slotAktiv(rc, "morning_enabled")
+		evening := slotAktiv(rc, "evening_enabled")
+		trip.MorningEnabled = &morning
+		trip.EveningEnabled = &evening
 	}
 
 	if len(trip.Stages) == 0 {
@@ -110,7 +144,23 @@ func deriveFlatFields(trip *model.Trip) {
 	}
 }
 
+// slotAktiv: Gesamtschalter report_config.enabled (fehlend => an) ist Master —
+// explizit false schaltet beide Slots ab. Sonst entscheidet der Per-Slot-bool
+// (key), fehlend oder kein bool => Rueckfall an.
+func slotAktiv(rc map[string]interface{}, key string) bool {
+	if enabled, ok := rc["enabled"].(bool); ok && !enabled {
+		return false
+	}
+	if v, ok := rc[key].(bool); ok {
+		return v
+	}
+	return true
+}
+
 func (s *Store) LoadTrips() ([]model.Trip, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
 	// briefingsDir() traegt sowohl route- als auch vergleich-Eintraege (S5-
 	// Migration) -- nur kind=="route" (bzw. leer bei unmigriertem Altbestand)
@@ -172,6 +222,13 @@ func (s *Store) LoadTrips() ([]model.Trip, error) {
 }
 
 func (s *Store) LoadTrip(id string) (*model.Trip, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return nil, ErrInvalidEntityID
+	}
 	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
 	path := filepath.Join(s.briefingsDir(), id+".json")
 
@@ -216,10 +273,23 @@ func (s *Store) LoadTrip(id string) (*model.Trip, error) {
 // pointer parameter makes the normalization visible to every caller that
 // holds the same trip afterwards.
 func (s *Store) SaveTrip(trip *model.Trip) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join. Ohne sie
+	// ueberschreibt eine Kennung wie "../../bob/user" die user.json eines
+	// fremden Kontos (briefingsDir liegt zwei Ebenen unter data/users/).
+	if !ValidEntityID(trip.ID) {
+		return ErrInvalidEntityID
+	}
+	// Issue #2359: nie einen Ortsvergleich gleicher Kennung ueberschreiben.
+	if s.idBelegtDurchFremdeArt(trip.ID, false) {
+		return ErrKindConflict
+	}
 	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
 	// trips/<id>.json wird NICHT mehr angefasst (Rollback-Faehigkeit, AC-26).
 	dir := s.briefingsDir()
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 
@@ -259,6 +329,13 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 }
 
 func (s *Store) DeleteTrip(id string) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return ErrInvalidEntityID
+	}
 	// Issue #1250 Scheibe 7a: Cutover route -> briefings/ (ADR-0023, KL-7).
 	path := filepath.Join(s.briefingsDir(), id+".json")
 
@@ -284,26 +361,46 @@ func (s *Store) DeleteTrip(id string) error {
 	return err
 }
 
-// migrateMetricAlertLevels verschiebt einen Legacy-Key
-// "display_config.metric_alert_levels.snow_line" nach "freezing_level",
-// falls letzterer noch nicht gesetzt ist. Siehe Python-_migrate_metric_alert_levels
-// (Issue #959) und Go-Pendant Issue #1000.
+// legacyAlertLevelKeys: Alt-Schluessel (Summary-Vokabular) -> Alarm-Name,
+// "" = verwerfen. Deckungsgleich mit Python `_ALT_ALERT_LEVEL_KEYS` (Issue #1981).
+var legacyAlertLevelKeys = map[string]string{
+	"temp_max_c":        "temperature_max",
+	"temp_min_c":        "temperature_min",
+	"gust_max_kmh":      "wind_gust",
+	"precip_sum_mm":     "precipitation_sum",
+	"visibility_min_m":  "visibility",
+	"cape_max_jkg":      "cape",
+	"thunder_level_max": "thunder_level",
+	"wind_max_kmh":      "wind_change",
+	"snow_line":         "freezing_level", // Issue #959/#1000
+	"wind_chill_min_c":  "",
+}
+
+// normalizeMetricAlertLevels uebersetzt Alt-Schluessel in-place; ein vorhandener
+// Neu-Schluessel gewinnt, andere Schluessel bleiben unveraendert (idempotent).
+func normalizeMetricAlertLevels(levels map[string]interface{}) {
+	for alt, neu := range legacyAlertLevelKeys {
+		v, ok := levels[alt]
+		if !ok {
+			continue
+		}
+		if neu != "" {
+			if _, exists := levels[neu]; !exists {
+				levels[neu] = v
+			}
+		}
+		delete(levels, alt)
+	}
+}
+
+// migrateMetricAlertLevels wendet die Alt-Vokabular-Uebersetzung auf
+// display_config.metric_alert_levels an. Siehe Python-_migrate_metric_alert_levels
+// (Issues #959/#1981) und Go-Pendant Issue #1000.
 func migrateMetricAlertLevels(displayConfig map[string]interface{}) {
 	if displayConfig == nil {
 		return
 	}
-	raw, ok := displayConfig["metric_alert_levels"]
-	if !ok {
-		return
-	}
-	levels, ok := raw.(map[string]interface{})
-	if !ok {
-		return
-	}
-	if v, ok := levels["snow_line"]; ok {
-		if _, exists := levels["freezing_level"]; !exists {
-			levels["freezing_level"] = v
-		}
-		delete(levels, "snow_line")
+	if levels, ok := displayConfig["metric_alert_levels"].(map[string]interface{}); ok {
+		normalizeMetricAlertLevels(levels)
 	}
 }

@@ -203,16 +203,90 @@ def _fuse_thunder_levels(
             dp.thunder_level_signals = thunder_signal_carriers(*werte, **leitern)
 
 
+# Halbe Breite des Zeitfensters um `jetzt`, in dem eine Beobachtung ueberhaupt
+# etwas ueber die Vorhersage sagen kann (Issue #1759, PO-Entscheid 2026-08-19).
+_RADAR_OVERRIDE_FENSTER_MIN = 90
+
+# Eigene Ausloese-Schwelle der Blitzdichte fuer den Override, Blitze/km2/3h.
+# NOCH NICHT KALIBRIERT (Spec Known Limitations, TODO PO/Meteorologie) --
+# Platzhalter. BEWUSST getrennt von der Leiter der normalen Fusion
+# (`_LIGHTNING_*_MIN` in `output/metric_format.py`): das sind zwei
+# verschiedene Fusionsstufen, eine gemeinsame Zahl wuerde sie verwechselbar
+# machen. Wer hier kalibriert, aendert NICHT die Fusionsleiter mit.
+_RADAR_OVERRIDE_BLITZDICHTE_MIN = 0.005
+
+
+def _apply_radar_override(data: list, location: "Location") -> None:
+    """Regel 1 des Gewitter-Gesamtkonzepts, "Beobachtung schlaegt Vorhersage"
+    (Issue #1759): eine aktuelle konvektive Beobachtung im engen Zeitfenster um
+    `jetzt` hebt die fusionierte Stufe auf mindestens ``MED`` an.
+
+    DECKEL NACH UNTEN, NIE NACH OBEN: eine bereits als ``MED``/``HIGH``
+    fusionierte Stunde bleibt unveraendert -- der Override kann eine Stufe
+    anheben, aber niemals senken und auch nicht ueber ``MED`` hinaus treiben.
+
+    Laeuft NACH ``_fuse_thunder_levels()`` und BEWUSST nicht darin: er ist kein
+    gleichrangiges fuenftes ``max()``-Signal, sondern ein bedingter
+    Post-Fusion-Deckel mit eigenem Zeitfenster-Gate (Spec Abschnitt
+    "Architektur-Entscheidung", Ergaenzung zu ADR-0057).
+
+    ``dp.ts`` ist laut Hausnorm naiv-UTC (``ForecastDataPoint.__post_init__``),
+    der Vergleich laeuft deshalb ueber ``_naiv_utc()`` -- ein direkter Vergleich
+    mit ``datetime.now(timezone.utc)`` wuerde ``TypeError`` werfen.
+
+    Fail-soft wie der uebrige Anschlussweg: ein Ausfall der Beobachtungsquelle
+    laesst das Fusionsergebnis stehen und kippt die Vorhersage nicht.
+    """
+    from app.models import ThunderLevel
+    from output.metric_format import thunder_ordinal
+
+    jetzt = _naiv_utc(datetime.now(timezone.utc))
+    grenze = _RADAR_OVERRIDE_FENSTER_MIN * 60
+    fenster = [
+        dp for dp in data
+        if abs((_naiv_utc(dp.ts) - jetzt).total_seconds()) <= grenze
+    ]
+    if not fenster:
+        return  # kein Abruf ohne betroffenen Datenpunkt (1x je Reihe, nie je dp)
+
+    try:
+        from services.radar_service import RadarNowcastService
+
+        beobachtung = RadarNowcastService().get_nowcast(
+            location.latitude, location.longitude,
+            elevation_m=location.elevation_m, priority="user_briefing",
+        )
+    except Exception:
+        logger.warning("Beobachtungs-Override fehlgeschlagen", exc_info=True)
+        return
+
+    mindest = thunder_ordinal(ThunderLevel.MED)
+    for dp in fenster:
+        dichte = dp.lightning_density_per_km2_3h
+        ausgeloest = beobachtung.is_convective or (
+            dichte is not None and dichte >= _RADAR_OVERRIDE_BLITZDICHTE_MIN
+        )
+        if not ausgeloest:
+            continue
+        if dp.thunder_level is None or thunder_ordinal(dp.thunder_level) < mindest:
+            dp.thunder_level = ThunderLevel.MED
+        if dp.thunder_level_signals is None:
+            dp.thunder_level_signals = []
+        if "radar" not in dp.thunder_level_signals:
+            dp.thunder_level_signals.append("radar")
+
+
 def _schwellen_fuer_reihe(
     reihe: "NormalizedTimeseries", location: "Location",
 ) -> Tuple[
     Optional[Tuple[float, float, float]], Optional[Tuple[float, float, float]]
 ]:
-    """Loest die beiden gebietsabhaengigen Schwellenleitern der Fusion EINMAL
-    je Reihe auf: die geeichte CAPE-Leiter (Issue #1592 C1 / #1679,
-    Modell x Gebiet) und die Blitzpotenzial-Leiter (Issue #1679, Gebiet).
-    BEIDE haengen am SELBEN Gebiets-Nachschlag -- kein zweiter
-    Aufloesungs-Ort.
+    """Loest die beiden Schwellenleitern der Fusion EINMAL je Reihe auf: die
+    geeichte CAPE-Leiter (Issue #1592 C1 / #1679, Modell x Gebiet) und die
+    Blitzpotenzial-Leiter (Issue #1679, seit #2263 nach LIEFERNDER Quelle
+    statt nach Gebiet -- die Leiter kalibriert eine Groesse, deren Skala je
+    nach liefernder Quelle wechselt, kein Gebiet; welche Skala das im
+    Einzelfall ist, steht ausschliesslich in `app.model_registry`, ADR-0065).
 
     Wohnt bewusst NEBEN ``enrich_thunder()`` statt darin: der Kern-Dispatch
     dort darf keinen einzelnen Signalnamen im Quelltext tragen (Waechter
@@ -220,15 +294,34 @@ def _schwellen_fuer_reihe(
     AC-9), und der Name der Nachschlag-Funktion traegt ihn.
     """
     from app.model_registry import (
-        cape_ladder_thresholds_jkg, effective_cape_model_id, lpi_thresholds_jkg,
+        cape_ladder_thresholds_jkg, effective_cape_model_id,
+        lpi_schluessel_fuer_quelle, lpi_thresholds_jkg,
     )
-    from providers.thunder_routing import thunder_region_for
+    from providers.thunder_routing import (
+        thunder_provider_for, thunder_region_for, thunder_vertretung_for,
+    )
 
     region = thunder_region_for(location.latitude, location.longitude)
-    return (
-        cape_ladder_thresholds_jkg(effective_cape_model_id(reihe.meta), region),
-        lpi_thresholds_jkg(region),
+    cape_leiter = cape_ladder_thresholds_jkg(
+        effective_cape_model_id(reihe.meta), region,
     )
+
+    # #2263: die liefernde Quelle bestimmt die LPI-Leiter, nicht das Gebiet.
+    # Erkennungsmerkmal der Vertretung ist ausschliesslich `fallback_metrics`
+    # (Feldname, aus `_SIGNAL_ZU_FELD` abgeleitet statt literal hingeschrieben)
+    # -- NIE `fallback_model`: das Feld traegt nur den Providernamen und kann
+    # zugleich vom Grundvorhersage-Fallback belegt sein (ADR-0047 Known
+    # Limitations 3), dann bliebe die Vertretung sonst unerkannt.
+    primaerquelle = thunder_provider_for(location.latitude, location.longitude)
+    lpi_feld = _SIGNAL_ZU_FELD["lpi"]
+    vertretung_aktiv = lpi_feld in (reihe.meta.fallback_metrics or ())
+    if vertretung_aktiv and primaerquelle is not None:
+        liefernde_quelle = thunder_vertretung_for(primaerquelle)
+    else:
+        liefernde_quelle = primaerquelle
+    lpi_leiter = lpi_thresholds_jkg(lpi_schluessel_fuer_quelle(liefernde_quelle))
+
+    return (cape_leiter, lpi_leiter)
 
 
 def enrich_thunder(
@@ -279,6 +372,14 @@ def enrich_thunder(
     try:
         _fetch_lightning_density(reihe, location, bereits_befragt)
     except Exception:
+        # #1581 AC-12: der im Issue benannte "einzige Beobachtungspunkt".
+        # Hierher propagiert u.a. der Fall "auch die Vertretung wirft"; in
+        # ALLEN Faellen dieses Fangs hat die Anreicherung nicht geliefert,
+        # deshalb `unavailable`.
+        from providers.enrichment_health import (
+            OUTCOME_UNAVAILABLE, PATH_THUNDER, log_enrichment_call,
+        )
+        log_enrichment_call(PATH_THUNDER, OUTCOME_UNAVAILABLE)
         logger.warning("Gewitter-Anreicherung fehlgeschlagen", exc_info=True)
 
     cape_leiter, potenzial_leiter = _schwellen_fuer_reihe(reihe, location)
@@ -287,6 +388,10 @@ def enrich_thunder(
     # Abruf-Fehlschlag) -- CAPE steht unabhaengig von der Blitzdichte-Quelle
     # an jedem Datenpunkt und kann allein schon "leicht" ausloesen.
     _fuse_thunder_levels(reihe.data, cape_leiter, potenzial_leiter)
+
+    # #1759: Beobachtung schlaegt Vorhersage -- laeuft NACH der Fusion und
+    # kann deren Ergebnis nur anheben, nie senken.
+    _apply_radar_override(reihe.data, location)
 
 
 def _hole_eintraege(
@@ -397,26 +502,45 @@ def _fetch_primaerquelle(
     1). Scheitert sie selbst auch, propagiert die Ausnahme zum bestehenden
     aeusseren Fang in `enrich_thunder()` (Spec AC-5)."""
     from providers.base import ThunderSourceUnavailableError
+    from providers.enrichment_health import (
+        OUTCOME_FALLBACK, OUTCOME_OK, OUTCOME_UNAVAILABLE, PATH_THUNDER,
+        log_enrichment_call,
+    )
     from providers.thunder_routing import thunder_vertretung_for
 
+    # #1581: jeder der Ausgaenge unten hinterlaesst eine Journalzeile. Ohne sie
+    # bleibt ein ANDAUERNDER Ausfall unsichtbar -- der stille Rueckzug (kein
+    # Ersatz verfuegbar) hinterliess bisher NICHTS, nicht einmal einen Log-
+    # Eintrag. `log_enrichment_call` ist selbst fail-soft, der Aufruf braucht
+    # hier also keine eigene Absicherung (Spec AC-4).
     aktive_quelle = quelle
     try:
         eintraege = _hole_eintraege(quelle, location, von, bis)
     except ThunderSourceUnavailableError:
         ersatz = thunder_vertretung_for(quelle)
         if ersatz is None or ersatz == bereits_befragt:
+            log_enrichment_call(PATH_THUNDER, OUTCOME_UNAVAILABLE)
             return
         aktive_quelle = ersatz
+        # Wirft die Vertretung selbst, propagiert die Ausnahme zum aeusseren
+        # Fang in `enrich_thunder()` -- DORT wird die Zeile geschrieben (AC-12),
+        # sonst entstuenden zwei fuer denselben Vorgang.
         eintraege = _hole_eintraege(ersatz, location, von, bis)
 
     if not any(werte for _feld, werte in eintraege):
+        # Gueltige, aber leere Antwort ("kein Gewitter in Sicht") -- ein
+        # Erfolg. Als Ausfall gebucht meldete jede ruhige Wetterlage einen
+        # Dauerausfall.
+        log_enrichment_call(PATH_THUNDER, OUTCOME_OK)
         return
 
     gefuellt = _wende_eintraege_an(reihe, eintraege, basis)
     if not gefuellt:
+        log_enrichment_call(PATH_THUNDER, OUTCOME_OK)
         return
 
     if aktive_quelle == quelle:
+        log_enrichment_call(PATH_THUNDER, OUTCOME_OK)
         logger.info(
             "Gewittersignale von '%s': %d Zeitpunkte gefuellt", quelle, gefuellt
         )
@@ -432,6 +556,9 @@ def _fetch_primaerquelle(
     if reihe.meta.fallback_model is None:
         reihe.meta.fallback_model = aktive_quelle
         reihe.meta.fallback_reason = "thunder_source_unavailable"
+    # #1581 AC-1: `detail` nennt die tatsaechlich verwendete Ersatzquelle --
+    # die Information, die aussen "laeuft noch, aber degradiert" traegt.
+    log_enrichment_call(PATH_THUNDER, OUTCOME_FALLBACK, aktive_quelle)
     logger.warning(
         "Gewittersignale von Ersatzquelle '%s' statt '%s' "
         "(nicht erreichbar): %d Zeitpunkte gefuellt",
@@ -480,6 +607,10 @@ def _fetch_lightning_density(
     # eine scheiternde Zusatzquelle weder die Primaerquelle noch andere
     # Zusatzquellen mitreisst. Keine Vertretung fuer Zusatzquellen (Scope-
     # Abgrenzung).
+    from providers.enrichment_health import (
+        OUTCOME_OK, OUTCOME_UNAVAILABLE, PATH_THUNDER_ADDITIVE, log_enrichment_call,
+    )
+
     for quelle in zusatz:
         if quelle == bereits_befragt:
             continue
@@ -487,10 +618,13 @@ def _fetch_lightning_density(
             eintraege = _hole_eintraege(quelle, location, von, bis)
         except Exception:
             logger.warning("Zusatzquelle '%s' fehlgeschlagen", quelle, exc_info=True)
+            log_enrichment_call(PATH_THUNDER_ADDITIVE, OUTCOME_UNAVAILABLE, quelle)
             continue
         if not any(werte for _feld, werte in eintraege):
+            log_enrichment_call(PATH_THUNDER_ADDITIVE, OUTCOME_OK, quelle)
             continue
         gefuellt = _wende_eintraege_an(reihe, eintraege, basis)
+        log_enrichment_call(PATH_THUNDER_ADDITIVE, OUTCOME_OK, quelle)
         if gefuellt:
             logger.info(
                 "Gewittersignale von Zusatzquelle '%s': %d Zeitpunkte gefuellt",

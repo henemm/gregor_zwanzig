@@ -76,7 +76,7 @@ test('AC-21: consecutiveDates datiert lückenlos ab dem Anker durch', () => {
 });
 
 test('AC-22: consecutiveDates ebnet ungleiche Abstände ein', () => {
-	// Ausgangstour 1./5./12./13. — nach dem Durchdatieren ab dem 3. lückenlos.
+	// Ausgangs-Trip 1./5./12./13. — nach dem Durchdatieren ab dem 3. lückenlos.
 	assert.deepEqual(consecutiveDates('2026-08-03', ['s2', 's3', 's4']), {
 		s2: '2026-08-04',
 		s3: '2026-08-05',

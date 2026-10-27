@@ -3,7 +3,7 @@ entity_id: bug_600_tdd_verhaltenstest
 type: module
 created: 2026-06-04
 updated: 2026-06-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [workflow, tdd, testing]
 ---

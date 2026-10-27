@@ -1,3 +1,10 @@
+---
+entity_id: feat_914_slice4_alert_sms
+type: fast
+created: 2026-06-30
+status: implemented
+---
+
 # Mini-Spec: #914 Slice 4 — Alert-SMS-Versand anschließen
 
 ## Was ändert sich

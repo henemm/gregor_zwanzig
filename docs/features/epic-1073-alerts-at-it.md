@@ -2,7 +2,7 @@
 
 **Status:** Geplant (2026-07-07); Slice 1 (#1085), Slice 2 (#1086), Slice 3 (#1087) und Slice 4
 (#1088) implementiert; Slice 5 (#1089) über die Kind-Issues #1161 (AT) und #1162 (IT) inhaltlich
-umgesetzt, Epic-Issue #1089 selbst zum Zeitpunkt dieser Doku noch offen (siehe Slice-Tabelle).
+umgesetzt, Epic-Issue #1089 zum Zeitpunkt dieser Doku noch offen, inzwischen geschlossen (GitHub, Stand 2026-10-21).
 Fortsetzung 2026-07-31: Issue #1427 (S1+S2 live) — zweite amtliche IT-Warnquelle (DPC/Zivilschutz)
 additiv neben MeteoAlarm, siehe eigener Abschnitt unten.
 Baut direkt auf Epic #1033 (amtliche Alerts Frankreich) auf.

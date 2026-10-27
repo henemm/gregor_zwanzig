@@ -3,7 +3,7 @@ entity_id: fix_1407_compare_versand_ueberwachung
 type: bug
 created: 2026-07-30
 updated: 2026-07-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [rueckbau, compare, monitoring, issue-1407]
 ---

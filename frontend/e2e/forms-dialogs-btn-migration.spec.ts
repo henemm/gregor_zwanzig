@@ -42,8 +42,8 @@ test.describe('Issue #215 Sprint 2 — Forms+Dialogs Button→Btn Migration', ()
 		await page.goto(`/trips/${TRIP_ID}`);
 
 		// Dialog via Archive-Action öffnen — dieser nutzt dialog-content.svelte
-		const archiveBtn = page.getByTestId('trip-detail-action-archive');
-		await archiveBtn.click();
+		await page.getByTestId('subscription-kebab').click();
+		await page.getByTestId('subscription-action-archive').click();
 
 		// Close-Button im Dialog-Overlay (oben rechts):
 		// Hinweis: bits-ui's DialogPrimitive.Close spreadet `data-slot="dialog-close"`

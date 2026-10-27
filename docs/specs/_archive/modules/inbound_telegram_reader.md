@@ -4,6 +4,7 @@ type: module
 created: 2026-06-03
 updated: 2026-07-23
 status: superseded
+superseded_by: "docs/specs/modules/telegram_webhook_inbound.md"
 version: "1.0"
 tags: [telegram, inbound, bot, polling, channel, f7, issue-570]
 github_issue: 570

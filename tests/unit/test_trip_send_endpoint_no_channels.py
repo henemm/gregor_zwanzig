@@ -32,11 +32,17 @@ from datetime import date
 from pathlib import Path
 
 import pytest
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+# Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
+# COLLECT statt beim Testlauf und kontaminierte os.environ ohne Teardown).
+# Autouse-Fixture fordert stattdessen die geteilte `dotenv_env`-Fixture aus
+# tests/conftest.py an, bevor JEDER Test dieser Datei laeuft.
+@pytest.fixture(autouse=True)
+def _dotenv(dotenv_env):
+    yield
 
 
 # ---------------------------------------------------------------------------
@@ -254,7 +260,7 @@ class TestAC2LogLineDistinguishesOutcome:
         _patch_email_transport(monkeypatch)
 
         user_id, trip_id = trip_no_channels
-        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json")
+        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json", user_id=user_id)
         service = TripReportSchedulerService(user_id=user_id)
 
         with caplog.at_level(logging.INFO, logger="trip_report_scheduler"):
@@ -309,7 +315,7 @@ class TestAC3ActiveChannelUnchanged:
         _patch_email_transport(monkeypatch)
 
         user_id, trip_id = trip_with_email_channel
-        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json")
+        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json", user_id=user_id)
         service = TripReportSchedulerService(user_id=user_id)
 
         with caplog.at_level(logging.INFO, logger="trip_report_scheduler"):
@@ -376,7 +382,7 @@ class TestAC4ConfiguredButUnreachableChannel:
         _patch_telegram_unreachable(monkeypatch)
 
         user_id, trip_id = trip_with_unreachable_telegram
-        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json")
+        trip = load_trip(get_briefings_dir(user_id) / f"{trip_id}.json", user_id=user_id)
         service = TripReportSchedulerService(user_id=user_id)
 
         with caplog.at_level(logging.INFO, logger="trip_report_scheduler"):

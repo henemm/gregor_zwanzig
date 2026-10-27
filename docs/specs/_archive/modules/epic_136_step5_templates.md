@@ -3,7 +3,7 @@ entity_id: epic_136_step5_templates
 type: module
 created: 2026-05-09
 updated: 2026-05-19
-status: approved
+status: deprecated
 version: "1.0"
 parent_spec: epic_136_trip_wizard
 related: epic_136_step2_stages
@@ -12,6 +12,8 @@ tags: [sveltekit, frontend, wizard, step2, templates, epic-136]
 ---
 
 # Epic 136 — Sub-Spec #165: Trip-Vorlagen
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 
@@ -45,7 +47,7 @@ planen und sofort mit dem Wizard weiterarbeiten wollen.
 ## Verweis auf Master-Spec
 
 Diese Sub-Spec ist eine Detail-Spezifikation der approved Master-Spec
-[`docs/specs/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
+[`docs/specs/_archive/modules/epic_136_trip_wizard.md`](./epic_136_trip_wizard.md). Konkret konsumiert sie:
 
 - **§3.1 WizardState** — direkte Zuweisung `wizard.stages = [...]` (NICHT `addStage()`),
   `wizard.activity`, `wizard.name`, `wizard.shortcode`, `wizard.recomputeStageDates()`.

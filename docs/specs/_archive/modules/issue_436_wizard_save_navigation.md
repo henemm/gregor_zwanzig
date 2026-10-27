@@ -3,12 +3,14 @@ entity_id: issue_436_wizard_save_navigation
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: active
+status: deprecated
 version: "1.0"
 tags: [frontend, wizard, svelte, navigation, issue-436, epic-135]
 ---
 
 # Issue #436 — Wizard-Save-Navigation zu Trip-Detail
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

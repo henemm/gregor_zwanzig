@@ -30,7 +30,7 @@ const putCalls = () => server.calls.filter((c) => c.method === 'PUT');
 
 describe('AC-3 (Kernfall): der Doppel-PUT des Wetter-Reiters', () => {
 	test('test_weatherMetricsTab_sequentialDoublePut_bothSucceed', async () => {
-		// GIVEN: die Tour-Seite wurde geladen, der Stand ist bekannt
+		// GIVEN: die Trip-Seite wurde geladen, der Stand ist bekannt
 		await api.get('/api/trips/gr20');
 		const stampFromGet = getKnownEtag('gr20');
 
@@ -61,7 +61,7 @@ describe('AC-3 (Kernfall): der Doppel-PUT des Wetter-Reiters', () => {
 		// Dies ist der Test, der die REIHENFOLGE im Trichter festnagelt:
 		// einreihen ZUERST, Stand nachschlagen DANACH (innerhalb der Warteschlange).
 		//
-		// GIVEN: die Tour ist geladen
+		// GIVEN: die Trip ist geladen
 		await api.get('/api/trips/gr20');
 		const stampFromGet = getKnownEtag('gr20');
 
@@ -87,9 +87,9 @@ describe('AC-3 (Kernfall): der Doppel-PUT des Wetter-Reiters', () => {
 	});
 });
 
-describe('AC-4: zwei Browser-Fenster auf derselben Tour', () => {
+describe('AC-4: zwei Browser-Fenster auf derselben Trip', () => {
 	test('test_twoRealms_secondArrivalRejected_notOverwritten', async () => {
-		// GIVEN: dieses Fenster hat die Tour geladen und kennt den Stand
+		// GIVEN: dieses Fenster hat die Trip geladen und kennt den Stand
 		await api.get('/api/trips/gr20');
 		const stampHier = getKnownEtag('gr20');
 		assert.ok(stampHier);
@@ -126,7 +126,7 @@ describe('AC-4: zwei Browser-Fenster auf derselben Tour', () => {
 
 describe('AC-9: gleichzeitig ausgeloeste Schreibvorgaenge laufen serialisiert', () => {
 	test('test_concurrentAutoSaveAcrossTabs_sameTripId_bothSucceedSerialized', async () => {
-		// GIVEN: ein Server mit messbarer Laufzeit und eine geladene Tour
+		// GIVEN: ein Server mit messbarer Laufzeit und eine geladene Trip
 		boot(15);
 		await api.get('/api/trips/gr20');
 
@@ -150,7 +150,7 @@ describe('AC-9: gleichzeitig ausgeloeste Schreibvorgaenge laufen serialisiert', 
 	});
 
 	test('test_concurrentWrites_differentTrips_notSerializedAgainstEachOther', async () => {
-		// GIVEN: zwei verschiedene Touren
+		// GIVEN: zwei verschiedene Trips
 		boot(15);
 
 		// WHEN: beide gleichzeitig gespeichert werden
@@ -159,13 +159,13 @@ describe('AC-9: gleichzeitig ausgeloeste Schreibvorgaenge laufen serialisiert', 
 			api.put('/api/trips/jakobsweg', { a: 1 })
 		]);
 
-		// THEN: laufen sie ueberlappend — die Warteschlange trennt nach Tour und
+		// THEN: laufen sie ueberlappend — die Warteschlange trennt nach Trip und
 		// bremst nicht die ganze Anwendung aus.
 		const puts = putCalls();
 		assert.equal(puts.length, 2);
 		assert.ok(
 			puts[1].startedAt < puts[0].finishedAt,
-			'Schreibvorgaenge auf verschiedene Touren duerfen sich nicht gegenseitig blockieren'
+			'Schreibvorgaenge auf verschiedene Trips duerfen sich nicht gegenseitig blockieren'
 		);
 	});
 });
@@ -211,14 +211,14 @@ describe('F001: ein Lesevorgang darf einen juengeren Stempel nie ueberschreiben'
 
 	test('test_slowRead_afterStateDiscard_doesNotResurrectStaleStamp', async () => {
 		// Derselbe Mechanismus deckt einen zweiten Weg ab: `PATCH /state`
-		// veraendert die Tourdatei und verwirft deshalb den Stempel. Kommt eine
+		// veraendert die Trip-Datei und verwirft deshalb den Stempel. Kommt eine
 		// vorher gestartete Leseantwort danach an, darf sie den verworfenen Stand
 		// nicht wieder ablegen — er beschreibt die Datei VOR dem PATCH.
 		boot((method) => (method === 'GET' ? 60 : 0));
 		await api.get('/api/trips/gr20');
 		const langsamerLesevorgang = api.get('/api/trips/gr20');
 
-		// WHEN: die Tour zwischenzeitlich pausiert/archiviert wird
+		// WHEN: die Trip zwischenzeitlich pausiert/archiviert wird
 		await server.handler('/api/trips/gr20/state', {
 			method: 'PATCH',
 			body: JSON.stringify({ paused: true })
@@ -239,7 +239,7 @@ describe('F001: ein Lesevorgang darf einen juengeren Stempel nie ueberschreiben'
 
 describe('AC-7: ohne bekannten Stand verhaelt sich alles wie vor S3', () => {
 	test('test_withoutKnownStamp_writeSucceeds_asBefore', async () => {
-		// GIVEN: die Tour wurde nie ueber die Detailseite geladen
+		// GIVEN: die Trip wurde nie ueber die Detailseite geladen
 		assert.equal(getKnownEtag('nie-geladen'), undefined);
 
 		// WHEN: geschrieben wird — auch wenn sich die Datei serverseitig laengst
@@ -272,5 +272,32 @@ describe('AC-7: ohne bekannten Stand verhaelt sich alles wie vor S3', () => {
 		const puts = putCalls();
 		assert.equal(puts[puts.length - 1].ifMatch, null);
 		assert.equal(puts[puts.length - 1].status, 200);
+	});
+});
+
+// Issue #1433 (AC-18, AC-24 — bewusst ergaenzt): der Test oben ruft `discardEtag`
+// SELBST auf und bleibt deshalb gruen. Neu dokumentiert ist, was `api.ts` bei einem
+// 412 selbst tut: bis #1433 verwarf es den Stempel (naechster Schreibvorgang ohne
+// Vorbedingung = unbedingtes Schreiben, die Fremdaenderung ging verloren). Jetzt
+// bleibt der alte Stempel stehen, die Ressource ist `konflikt`, und der naechste
+// Schreibvorgang bekommt wieder 412.
+// Spec: docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md §4 Punkt 1.
+describe('Issue #1433 AC-18: nach 412 kein Discard — der naechste Schreibvorgang traegt das alte If-Match', () => {
+	test('test_after412_etagIsKept_nextWriteCarriesStaleIfMatch_andIsRejectedAgain', async () => {
+		// GIVEN: Stand bekannt, Fremdschreiber aendert, ein Schreibvorgang scheitert (412)
+		await api.get('/api/trips/gr20');
+		const alt = getKnownEtag('gr20');
+		await server.handler('/api/trips/gr20', { method: 'PUT', body: JSON.stringify({ name: 'fremd' }) });
+		await assert.rejects(api.put('/api/trips/gr20', { name: 'A' }), (e: { status?: number }) => e.status === 412);
+
+		// THEN (a): api.ts hat den Stempel NICHT verworfen
+		assert.equal(getKnownEtag('gr20'), alt, 'api.ts darf den Stempel nach einem 412 nicht mehr verwerfen');
+
+		// WHEN/THEN (b): der naechste Schreibvorgang (anderer Reiter) wird wieder abgelehnt
+		await assert.rejects(api.put('/api/trips/gr20', { name: 'B' }), (e: { status?: number }) => e.status === 412);
+		const puts = putCalls();
+		assert.equal(puts[puts.length - 1].ifMatch, alt, 'kein unbedingtes Schreiben nach 412: das alte If-Match wird erneut mitgesendet');
+		assert.equal(puts[puts.length - 1].status, 412);
+		assert.deepEqual(server.storedBody('gr20'), { name: 'fremd' }, 'die Fremdaenderung steht unveraendert auf dem Server');
 	});
 });

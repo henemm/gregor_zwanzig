@@ -1,7 +1,7 @@
 import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 // Staging-Auth für issue_953 (Alerts-Empfindlichkeit über Tab-Wechsel).
-// ZWEI GETRENNTE Credential-Paare (Muster wie compare-hub-save-chip.staging.setup.ts
+// ZWEI GETRENNTE Credential-Paare (Muster wie hub-send-dialog-target.staging.setup.ts
 // und compare-outlook-metric-selection.staging.setup.ts): nginx-Basic-Auth =
 // GZ_VALIDATOR_*, App-Login (gz_session-Cookie) = GZ_AUTH_*. Frueher stand hier
 // EIN Paar fuer beides; seit die Paare auseinanderlaufen gab das am App-Login 401

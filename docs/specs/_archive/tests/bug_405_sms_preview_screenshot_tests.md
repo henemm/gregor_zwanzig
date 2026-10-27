@@ -3,7 +3,7 @@ entity_id: bug_405_sms_preview_screenshot_tests
 type: tests
 created: 2026-05-27
 updated: 2026-05-27
-status: active
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, screenshot, audit, tooling, issue-405]
 parent: bug_405_sms_preview_screenshot
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_405_sms_preview_screenshot.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_405_sms_preview_screenshot.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_405_sms_preview_screenshot.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_405_sms_preview_screenshot.md` v1.0
 
 ## Source
 

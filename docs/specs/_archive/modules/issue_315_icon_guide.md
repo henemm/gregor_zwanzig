@@ -3,7 +3,7 @@ entity_id: issue_315_icon_guide
 type: module
 created: 2026-05-26
 updated: 2026-05-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, lucide, icons, design-system, documentation, conventions, issue-315]
 ---
@@ -105,7 +105,7 @@ Faustformel: Ein Name, der als JavaScript-Bezeichner allein stehend wie eine Var
 **Wichtig:** Für Wetter-Icons (Sonne, Regen, Schnee, Gewitter usw.) ausschließlich
 `<WIcon kind="..." />` aus `$lib/components/ui/wicon` verwenden. Lucide-Wetter-Icons
 (`Cloud`, `Sun`, `CloudRain`, …) dürfen in der App-UI NICHT direkt importiert werden.
-WIcon ist in `docs/specs/modules/issue_322_wicon_komponente.md` spezifiziert.
+WIcon ist in `docs/specs/_archive/modules/issue_322_wicon_komponente.md` spezifiziert.
 
 Kreuzreferenz: AP-009 (Emojis als Icons verboten), AP-005 (kein Icon-Überfluss).
 ```

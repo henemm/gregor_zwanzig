@@ -3,7 +3,7 @@ entity_id: issue_508_workflow_gate_none_verdict
 type: module
 created: 2026-06-01
 updated: 2026-06-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [workflow, infra, gate]
 ---

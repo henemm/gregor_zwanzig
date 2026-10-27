@@ -3,7 +3,7 @@ entity_id: fix_1708_b2_trips_pfad_rueckbau
 type: module
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.1"
 tags: [tests, issue-1708, trips-pfad, rueckbau]
 ---

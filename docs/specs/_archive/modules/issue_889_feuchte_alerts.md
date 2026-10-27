@@ -3,7 +3,7 @@ entity_id: issue_889_feuchte_alerts
 type: bugfix
 created: 2026-06-26
 updated: 2026-06-26
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, metrics, weather-change-detection]
 ---

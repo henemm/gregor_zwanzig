@@ -1,0 +1,89 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/2346-s2
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 32 items
+
+tests/unit/test_e2e_compare_paritaet_waechter.py F...................    [ 62%]
+tests/unit/test_e2e_positivliste_ratschen_bindung.py ...........F        [100%]
+
+=================================== FAILURES ===================================
+__________ test_echter_baum_hat_keine_unbegruendete_compare_only_spec __________
+
+    def test_echter_baum_hat_keine_unbegruendete_compare_only_spec():
+        befunde = pruefe_compare_specs(_echter_baum(), ALTLAST)
+>       assert befunde == [], "Paritaets-Verstoesse in frontend/e2e/:\n" + "\n".join(befunde)
+E       AssertionError: Paritaets-Verstoesse in frontend/e2e/:
+E         bug-626-compare-menu-actions.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hub-kopf-einmal.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hub-name-region-profil.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hub-save-chip.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-mobile-vervollstaendigung.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-send-dialog-target.staging.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-tab-bar.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E       assert ['bug-626-com...t fehlt', ...] == []
+E         
+E         Left contains 7 more items, first extra item: 'bug-626-compare-menu-actions.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt'
+E         Use -v to get more diff
+
+tests/unit/test_e2e_compare_paritaet_waechter.py:149: AssertionError
+____________ test_echte_ci_yml_und_positivliste_sind_exakt_gebunden ____________
+
+    def test_echte_ci_yml_und_positivliste_sind_exakt_gebunden():
+        """AC-6 am Wirkort: die echten Repo-Dateien erfuellen die Bindung.
+    
+        GIVEN `ci.yml` und `ci_e2e_specs.txt` im Worktree-Stand (Pfadregel #1409)
+        WHEN die Bindung darauf geprueft wird
+        THEN meldet sie keinen Verstoss -- der eigentliche Waechter: rot, sobald eine
+             PR die Liste erweitert ohne `E2E_MIN_SPECS` nachzuziehen.
+        """
+        verstoesse = pruefe_schwellen_bindung(CI_YML.read_text(encoding="utf-8"),
+                                              POSITIVLISTE.read_text(encoding="utf-8"))
+>       assert verstoesse == [], "auseinandergelaufen:\n  " + "\n  ".join(verstoesse)
+E       AssertionError: auseinandergelaufen:
+E           E2E_MIN_SPECS=64 weicht von der Positivliste ab: 68 Eintraege. Gefordert ist EXAKTE Gleichheit -- eine zu niedrige Schwelle ist das F006-Loch (Liste waechst, Schwelle steht), eine zu hohe blockiert jeden PR grundlos.
+E       assert ['E2E_MIN_SPE...PR grundlos.'] == []
+E         
+E         Left contains one more item: 'E2E_MIN_SPECS=64 weicht von der Positivliste ab: 68 Eintraege. Gefordert ist EXAKTE Gleichheit -- eine zu niedrige Schwelle ist das F006-Loch (Liste waechst, Schwelle steht), eine zu hohe blockiert jeden PR grundlos.'
+E         Use -v to get more diff
+
+tests/unit/test_e2e_positivliste_ratschen_bindung.py:184: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_waechst_nicht_ueber_den_einfuehrungsstand
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_ist_nicht_leer
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[altmuster]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[hub_kinds]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_neue_compare_spec_ohne_kopf_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_mit_zu_kurzer_begruendung_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_kurzer_marker_ist_auch_mit_schleife_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_hinter_zeile_30_zaehlt_nicht
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_in_zeile_30_zaehlt_noch
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_umgehung_per_dateiname_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trips_url]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trip_tab]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[schleife]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_spec_ohne_compare_bezug_ist_nicht_betroffen
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_deckt_verstoss
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_toter_altlast_eintrag_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_konformer_altlast_eintrag_ist_rot
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/hub-cross-user-write-block.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/compare-editor-autosave-user-isolation.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_jeder_positivlisten_eintrag_existiert
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_kein_spec_schreibt_in_den_versionierten_baum
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_filter_c_kriterium_ist_geeicht
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[36-38-True-nennt0]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[40-38-True-nennt1]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[38-38-False-nennt2]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[3-3-False-nennt3]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[5-3-True-nennt4]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[None-38-True-nennt5]
+FAILED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_hat_keine_unbegruendete_compare_only_spec
+FAILED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_echte_ci_yml_und_positivliste_sind_exakt_gebunden
+========================= 2 failed, 30 passed in 0.89s =========================

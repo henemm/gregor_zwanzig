@@ -1,0 +1,17 @@
+{
+  "_kommentar": "Geteilte Fallzeilen-Tabelle fuer #2422 S3 (Python, Go, TS lesen DIESELBE Datei per relativem Pfad). Regel: report_config fehlt => beide Slots aktiv (Versand) bzw. flache Felder null; enabled=false ist Master und schaltet BEIDE Slots ab; enabled fehlt => an; ein Per-Slot-bool schaltet NUR seinen Slot; nicht-bool/null => Rueckfall auf enabled. slot_* = Ergebnis der Slot-Regel (Versand, Alarm-Vorlauf, Anzeige); flat_* = abgeleitetes flaches Trip-Feld (null = nicht abgeleitet, weil ohne report_config).",
+  "faelle": [
+    {"name": "ohne_report_config", "report_config": null, "slot_morning": true, "slot_evening": true, "flat_morning": null, "flat_evening": null},
+    {"name": "altdaten_enabled_true_ohne_per_slot", "report_config": {"enabled": true}, "slot_morning": true, "slot_evening": true, "flat_morning": true, "flat_evening": true},
+    {"name": "altdaten_enabled_false_ohne_per_slot", "report_config": {"enabled": false}, "slot_morning": false, "slot_evening": false, "flat_morning": false, "flat_evening": false},
+    {"name": "leerer_block_enabled_fehlt_ist_an", "report_config": {}, "slot_morning": true, "slot_evening": true, "flat_morning": true, "flat_evening": true},
+    {"name": "abend_aus", "report_config": {"enabled": true, "morning_enabled": true, "evening_enabled": false}, "slot_morning": true, "slot_evening": false, "flat_morning": true, "flat_evening": false},
+    {"name": "morgen_aus", "report_config": {"enabled": true, "morning_enabled": false, "evening_enabled": true}, "slot_morning": false, "slot_evening": true, "flat_morning": false, "flat_evening": true},
+    {"name": "beide_aus_enabled_true", "report_config": {"enabled": true, "morning_enabled": false, "evening_enabled": false}, "slot_morning": false, "slot_evening": false, "flat_morning": false, "flat_evening": false},
+    {"name": "beide_aus_enabled_false", "report_config": {"enabled": false, "morning_enabled": false, "evening_enabled": false}, "slot_morning": false, "slot_evening": false, "flat_morning": false, "flat_evening": false},
+    {"name": "gesamtschalter_aus_ueberstimmt_per_slot_an", "report_config": {"enabled": false, "morning_enabled": true, "evening_enabled": true}, "slot_morning": false, "slot_evening": false, "flat_morning": false, "flat_evening": false},
+    {"name": "nur_abend_gesetzt_an", "report_config": {"enabled": true, "evening_enabled": true}, "slot_morning": true, "slot_evening": true, "flat_morning": true, "flat_evening": true},
+    {"name": "nur_morgen_gesetzt_aus", "report_config": {"enabled": true, "morning_enabled": false}, "slot_morning": false, "slot_evening": true, "flat_morning": false, "flat_evening": true},
+    {"name": "nicht_bool_wird_als_nicht_gesetzt_gelesen", "report_config": {"enabled": true, "morning_enabled": "ja", "evening_enabled": null}, "slot_morning": true, "slot_evening": true, "flat_morning": true, "flat_evening": true}
+  ]
+}

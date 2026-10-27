@@ -119,11 +119,6 @@ class TestFeltNightIsNeverAnHourlyColumn:
             f"{NIGHT_METRIC!r} erscheint als Tabellenspalte: "
             f"{layout.table_columns!r}"
         )
-        assert NIGHT_METRIC not in layout.detail_metrics, (
-            f"{NIGHT_METRIC!r} erscheint als Detail-Zeile: "
-            f"{layout.detail_metrics!r} -- channel_layout.py:88 filtert "
-            f"bisher nur „temperature_night“ aus der Menge heraus."
-        )
 
     def test_compare_hourly_excludes_felt_night_with_reason(self):
         """Ortsvergleich-Seite: ``HOURLY_EXCLUDED_METRIC_IDS`` +

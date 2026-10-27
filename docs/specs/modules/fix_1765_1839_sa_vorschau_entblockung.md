@@ -259,7 +259,7 @@ dieses Workflows.
 
 ## Acceptance Criteria
 
-- **AC-1 (Kernzusicherung — der Dienst bleibt während einer Vorschau erreichbar):** Given eine
+- **AC-1:** (Kernzusicherung — der Dienst bleibt während einer Vorschau erreichbar) Given eine
   Vorschau (Trip- oder Vergleichs-) wird gerade im Python-Core berechnet / When während dieser
   laufenden Berechnung `/api/health` aufgerufen wird / Then antwortet `/api/health`
   durchgehend innerhalb von 2 Sekunden mit Erfolg — nicht erst nach Abschluss der Vorschau.
@@ -267,7 +267,7 @@ dieses Workflows.
   - Test: Kern-Test mit einer künstlich langsamen Vorschau-Stub-Funktion; `/health` wird
     nebenläufig aus einem zweiten Thread abgefragt, während die Vorschau läuft.
 
-- **AC-2 (Vollständigkeit der Klasse — kein blockierender Handler bleibt übrig):** Given die
+- **AC-2:** (Vollständigkeit der Klasse — kein blockierender Handler bleibt übrig) Given die
   vollständig gebaute FastAPI-Anwendung mit allen registrierten Routen / When jede Route
   darauf geprüft wird, ob ihr Handler eine Koroutine ist (`inspect.iscoroutinefunction`) /
   Then ist **kein** Route-Handler mehr eine Koroutine, mit genau einer Ausnahme: der
@@ -276,7 +276,7 @@ dieses Workflows.
     Anwendung, nicht am Quelltext — sonst würde nur die Schreibweise geprüft, nicht die
     Wirkung.
 
-- **AC-3 (keine Verhaltensänderung der Vorschau-Inhalte):** Given dieselbe Anfrage an einen der
+- **AC-3:** (keine Verhaltensänderung der Vorschau-Inhalte) Given dieselbe Anfrage an einen der
   13 umgestellten Endpunkte mit denselben Eingaben und denselben Fixture-Daten wie vor der
   Umstellung / When die Anfrage nach der Umstellung erneut gestellt wird / Then sind
   Statuscode und Antwortkörper identisch — sowohl im Erfolgsfall als auch in den
@@ -286,7 +286,7 @@ dieses Workflows.
     verwandte Preview-Tests) bleibt vollständig grün, ergänzt um einen Fehlerfall-Test je
     Statuscode, falls die Bestandssuite eine der drei Fehlerformen noch nicht abdeckt.
 
-- **AC-4 (Zeitzonen-Datenbank wird bei gleichzeitigem Zugriff nur einmal geladen):** Given
+- **AC-4:** (Zeitzonen-Datenbank wird bei gleichzeitigem Zugriff nur einmal geladen) Given
   zwei Threads rufen gleichzeitig zum allerersten Mal eine Funktion auf, die eine Zeitzone zu
   Koordinaten auflöst (`tz_for_coords()` bzw. `location_tz()`) / When beide Aufrufe exakt
   gleichzeitig auf den noch leeren Zustand treffen / Then wird die zugrunde liegende

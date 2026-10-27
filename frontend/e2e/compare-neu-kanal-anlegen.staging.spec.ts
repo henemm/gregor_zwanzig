@@ -42,7 +42,7 @@ const WEG = 'pop_max_pct';
 
 /**
  * Freischalt-Kette der Anlege-Seite bis zum Reiter „Wetter-Metriken":
- * Name -> mind. 2 Orte -> Wetter-Metriken (compareNewLogic.unlockedTabs).
+ * Name -> mind. 2 Orte -> Wetter-Metriken (shared/anlegeLockEngine.ts, Vorderteil in CompareNewEditor).
  *
  * 🔴 #1423-Warteregel: der Metrik-Block ist waehrend des Katalog-Ladens
  * bewusst aus dem DOM entfernt (WeatherMetricsTab.svelte:1204-1207) — deshalb
@@ -75,12 +75,12 @@ async function oeffneAnlegeUebersicht(
 	// bedienbar. Ohne diese Zusicherung bliebe ein Klick auf den gesperrten
 	// Knopf wirkungslos und der Fehlschlag traefe erst spaeter eine
 	// Metrik-Zusicherung — mit falscher Ursache.
-	const weiter = page.getByTestId('compare-editor-continue-metriken');
+	const weiter = page.getByTestId('compare-editor-continue-wetter-metriken');
 	await expect(
 		weiter, 'Freischaltung: "Wetter-Metriken" bleibt trotz zwei gewaehlter Orte gesperrt'
 	).toBeEnabled({ timeout: 15_000 });
 	await weiter.click();
-	await expect(page.getByTestId('compare-editor-tab-metriken')).toHaveAttribute('data-active', 'true');
+	await expect(page.getByTestId('compare-editor-tab-wetter-metriken')).toHaveAttribute('data-active', 'true');
 
 	const panel = page.locator('[data-testid="weather-metrics-tab-vergleich"]:visible').first();
 	await expect(panel).toBeVisible({ timeout: 20_000 });
@@ -96,12 +96,12 @@ async function oeffneAnlegeUebersicht(
 /**
  * Rest der Kette (Wertebereiche -> Alarme -> Versand) und „Briefing
  * aktivieren". Jeder Reiterbesuch schaltet den naechsten frei (*Visited-Flags,
- * compareNewLogic.ts:32-46); erst der Versand-Besuch macht den
- * Aktivieren-Knopf bedienbar (canActivate). Liefert die ID des angelegten
+ * anlegeLockEngine.ts tailUnlocked); erst der Versand-Besuch macht den
+ * Aktivieren-Knopf bedienbar (canFinish). Liefert die ID des angelegten
  * Vergleichs und traegt ihn zur Bereinigung ein.
  */
 async function briefingAktivieren(page: Page): Promise<string> {
-	await page.getByTestId('compare-editor-continue-idealwerte').click();
+	await page.getByTestId('compare-editor-continue-wertebereiche').click();
 	await page.getByTestId('compare-editor-continue-alarme').click();
 	await page.getByTestId('compare-editor-continue-versand').click();
 

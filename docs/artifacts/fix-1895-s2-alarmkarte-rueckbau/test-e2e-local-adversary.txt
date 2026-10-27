@@ -1,0 +1,1834 @@
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:31:39 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 29: 
+[WebServer] 30:   let { data } = $props();
+[WebServer] 31:   let presets: ComparePreset[] = $state(data.presets ?? []);
+[WebServer]                                                 ^
+[WebServer] 32: 
+[WebServer] 33:   // Issue #1277 — Desktop-Übersicht über das geteilte ListTable-Organism.
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/+layout.svelte:145:6 This reference only captures the initial value of `darkMode`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 143:   if (browser) {
+[WebServer] 144:     darkMode = localStorage.getItem('gz-dark') === '1';
+[WebServer] 145:     if (darkMode) applyDarkMode(true);
+[WebServer]                      ^
+[WebServer] 146: 
+[WebServer] 147:     iosHinweisSichtbar = iosHinweisFaellig();
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/+layout.svelte:156:15 This reference only captures the initial value of `data`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 154:     passkeyAngebotSichtbar = passkeyAngebotFaellig({
+[WebServer] 155:       marker: new URLSearchParams(window.location.search).has(ANGEBOT_MARKER),
+[WebServer] 156:       hasPasskey: data.hasPasskey === true,
+[WebServer]                            ^
+[WebServer] 157:       dismissed: data.passkeyPromptDismissed === true,
+[WebServer] 158:       webauthnFaehig: isWebAuthnSupported()
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/+layout.svelte:157:14 This reference only captures the initial value of `data`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 155:       marker: new URLSearchParams(window.location.search).has(ANGEBOT_MARKER),
+[WebServer] 156:       hasPasskey: data.hasPasskey === true,
+[WebServer] 157:       dismissed: data.passkeyPromptDismissed === true,
+[WebServer]                           ^
+[WebServer] 158:       webauthnFaehig: isWebAuthnSupported()
+[WebServer] 159:     });
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/account/+page.svelte:28:26 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 26:   let { data } = $props();
+[WebServer] 27: 
+[WebServer] 28:   let displayName = $state(data.profile?.display_name ?? '');
+[WebServer]                                    ^
+[WebServer] 29:   let mailTo = $state(data.profile?.mail_to ?? '');
+[WebServer] 30:   let smsTo = $state(data.profile?.sms_to ?? '');
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/account/+page.svelte:29:21 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 27: 
+[WebServer] 28:   let displayName = $state(data.profile?.display_name ?? '');
+[WebServer] 29:   let mailTo = $state(data.profile?.mail_to ?? '');
+[WebServer]                               ^
+[WebServer] 30:   let smsTo = $state(data.profile?.sms_to ?? '');
+[WebServer] 31:   let telegramConnected = $state(!!data.profile?.telegram_chat_id);
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/account/+page.svelte:30:20 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 28:   let displayName = $state(data.profile?.display_name ?? '');
+[WebServer] 29:   let mailTo = $state(data.profile?.mail_to ?? '');
+[WebServer] 30:   let smsTo = $state(data.profile?.sms_to ?? '');
+[WebServer]                              ^
+[WebServer] 31:   let telegramConnected = $state(!!data.profile?.telegram_chat_id);
+[WebServer] 32:   let telegramChatIdSuffix = $state(
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/account/+page.svelte:31:34 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 29:   let mailTo = $state(data.profile?.mail_to ?? '');
+[WebServer] 30:   let smsTo = $state(data.profile?.sms_to ?? '');
+[WebServer] 31:   let telegramConnected = $state(!!data.profile?.telegram_chat_id);
+[WebServer]                                            ^
+[WebServer] 32:   let telegramChatIdSuffix = $state(
+[WebServer] 33:     data.profile?.telegram_chat_id
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/account/+page.svelte:33:2 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 31:   let telegramConnected = $state(!!data.profile?.telegram_chat_id);
+[WebServer] 32:   let telegramChatIdSuffix = $state(
+[WebServer] 33:     data.profile?.telegram_chat_id
+[WebServer]             ^
+[WebServer] 34:       ? '...' + data.profile.telegram_chat_id.slice(-3)
+[WebServer] 35:       : ''
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/account/+page.svelte:34:13 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 32:   let telegramChatIdSuffix = $state(
+[WebServer] 33:     data.profile?.telegram_chat_id
+[WebServer] 34:       ? '...' + data.profile.telegram_chat_id.slice(-3)
+[WebServer]                         ^
+[WebServer] 35:       : ''
+[WebServer] 36:   );
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/account/+page.svelte:48:38 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 46: 
+[WebServer] 47:   // Issue #344 — Wetter-Profile (User-MetricPresets)
+[WebServer] 48:   let presets = $state<MetricPreset[]>(data.metricPresets ?? []);
+[WebServer]                                                ^
+[WebServer] 49:   let editingId = $state<string | null>(null);
+[WebServer] 50:   let editName = $state('');
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/account/+page.svelte:61:29 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 59:   // `data`/`PageData` und verschwindet bei Reload, weil das Backend nur den
+[WebServer] 60:   // Hash haelt, nie den Klartext erneut liefert.
+[WebServer] 61:   let linkCodeExists = $state(data.premiumSmsLinkCodeExists);
+[WebServer]                                       ^
+[WebServer] 62:   let linkCodeValue = $state<string | null>(null);
+[WebServer] 63:   let linkCodeBusy = $state(false);
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/account/+page.svelte:628:4 A form label must be associated with a control
+[WebServer] https://svelte.dev/e/a11y_label_has_associated_control[39m
+[WebServer] 626: 
+[WebServer] 627:       <div class="space-y-2">
+[WebServer] 628:         <label class="text-sm font-medium">Telegram</label>
+[WebServer]                                                                 ^
+[WebServer] 629:         {#if telegramConnected}
+[WebServer] 630:           <div class="flex items-center gap-3">
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/login/+page.svelte:49:23 This reference only captures the initial value of `form`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 47:   });
+[WebServer] 48: 
+[WebServer] 49:   let username = $state(form?.username ?? '');
+[WebServer]                                 ^
+[WebServer] 50: 
+[WebServer] 51:   // Issue #2247 — Passkey als erster Anmeldeweg auf dem Handy.
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/locations/+page.svelte:20:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 18:   let { data } = $props();
+[WebServer] 19: 
+[WebServer] 20:   let locations: Location[] = $state(data.locations);
+[WebServer]                                              ^
+[WebServer] 21:   let refetching = $state(false);
+[WebServer] 22:   async function refetchLocations() {
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/compare/[id]/+page.svelte:49:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 47:   // $state-Spiegel, exakt das Muster aus CompareTabs.svelte (`currentPreset
+[WebServer] 48:   // = $state<ComparePreset>(preset)` + Resync-$effect auf Prop-Referenz).
+[WebServer] 49:   let currentPreset = $state(data.preset);
+[WebServer]                                      ^
+[WebServer] 50:   $effect(() => {
+[WebServer] 51:     currentPreset = data.preset;
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/compare/[id]/+page.svelte:63:61 This reference only captures the initial value of `data`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 61:   // shared/alarmeVergleichSpeicherung.ts.
+[WebServer] 62:   // Issue #2276 S2: mit Kennung — ein 412 wird zu „Nochmal speichern“ (conflict).
+[WebServer] 63:   const hubSaveCtl = createSaveStatus({ typ: 'vergleich', id: data.preset.id });
+[WebServer]                                                                       ^
+[WebServer] 64: 
+[WebServer] 65:   // Issue #2316 Scheibe A (AC-9): derselbe Speicher-Wächter wie /trips/[id] —
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/compare/[id]/+page.svelte:139:23 This reference only captures the initial value of `currentPreset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 137:   // $effect in CompareTabs.svelte:821-826 currentPreset resynct (Cross-Tab-
+[WebServer] 138:   // Datenverlust-Schutz, AC-5). NIE ein Feld in-place mutieren.
+[WebServer] 139:   let editName = $state(currentPreset.name);
+[WebServer]                                           ^
+[WebServer] 140:   let nameSaving = $state(false);
+[WebServer] 141:   let isEditingName = $state(false);
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/compare/[id]/+page.svelte:144:26 This reference only captures the initial value of `currentPreset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 142:   let nameSaveError: string | null = $state(null);
+[WebServer] 143: 
+[WebServer] 144:   let editRegion = $state((currentPreset.display_config?.region as string) ?? '');
+[WebServer]                                              ^
+[WebServer] 145:   let regionSaving = $state(false);
+[WebServer] 146:   let isEditingRegion = $state(false);
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/compare/new/+page.svelte:21:38 This reference only captures the initial value of `data`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 19:   const state = new CompareWizardState();
+[WebServer] 20:   setContext('compare-wizard-state', state);
+[WebServer] 21:   setContext('compare-wizard-profile', data.profile ?? null);
+[WebServer]                                                ^
+[WebServer] 22: </script>
+[WebServer] 23: 
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/trips/[id]/+page.svelte:24:25 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 22:   // Trip in lokales $state heben, damit Status-Updates (Pause/Archive)
+[WebServer] 23:   // reaktiv ohne Page-Reload sichtbar werden.
+[WebServer] 24:   let trip = $state<Trip>(data.trip);
+[WebServer]                                   ^
+[WebServer] 25: 
+[WebServer] 26:   // Issue #1395 S3: den Stempel aus der Server-Naht in die Registry uebernehmen.
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/trips/[id]/+page.svelte:43:57 This reference only captures the initial value of `trip`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 41: 
+[WebServer] 42:   // Issue #758: SaveStatus-Controller — eine Instanz pro Trip-Seite (kein Singleton!).
+[WebServer] 43:   const tripSaveCtl = createSaveStatus({ typ: 'trip', id: trip.id });
+[WebServer]                                                                   ^
+[WebServer] 44: 
+[WebServer] 45:   // Issue #758: Flush ausstehender Auto-Saves vor Navigation (AC-5).
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:27:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 25:   let { data } = $props();
+[WebServer] 26: 
+[WebServer] 27:   let trips: Trip[] = $state(data.trips);
+[WebServer]                                      ^
+[WebServer] 28:   let refetching = $state(false);
+[WebServer] 29:   async function refetchTrips() {
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:466:3 Buttons and links should either contain text or have an `aria-label`, `aria-labelledby` or `title` attribute
+[WebServer] https://svelte.dev/e/a11y_consider_explicit_label[39m
+[WebServer] 464:     <div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-appbar" style="position: relative; align-items: center; height: 52px; padding: 0 4px; border-bottom: 1px solid var(--g-rule-soft); background: var(--g-paper); flex-shrink: 0; z-index: 10;">
+[WebServer] 465:       <!-- Back-Button -->
+[WebServer] 466:       <button type="button" onclick={makeCancelHandler()}
+[WebServer]                     ^
+[WebServer] 467:         style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); flex-shrink: 0;">
+[WebServer] 468:         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:589:6 A form label must be associated with a control
+[WebServer] https://svelte.dev/e/a11y_label_has_associated_control[39m
+[WebServer] 587: 
+[WebServer] 588:           <div style="margin-bottom: 18px;">
+[WebServer] 589:             <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
+[WebServer]                          ^
+[WebServer] 590:               Tour-Name <span style="color: var(--g-bad);">*</span>
+[WebServer] 591:             </label>
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:594:7 Avoid using autofocus
+[WebServer] https://svelte.dev/e/a11y_autofocus[39m
+[WebServer] 592:             <input type="text" value={name} oninput={makeNameHandler()}
+[WebServer] 593:               placeholder="z.B. Karnischer Höhenweg 2026"
+[WebServer] 594:               autofocus
+[WebServer]                             ^
+[WebServer] 595:               data-testid="trip-new-name-input-desktop"
+[WebServer] 596:               style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; font-family: var(--g-font-sans); border: 1.5px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card); color: var(--g-ink); outline: none;" />
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:600:6 A form label must be associated with a control
+[WebServer] https://svelte.dev/e/a11y_label_has_associated_control[39m
+[WebServer] 598: 
+[WebServer] 599:           <div style="margin-bottom: 18px;">
+[WebServer] 600:             <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
+[WebServer]                          ^
+[WebServer] 601:               Region
+[WebServer] 602:               <span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional · max 50</span>
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:611:6 A form label must be associated with a control
+[WebServer] https://svelte.dev/e/a11y_label_has_associated_control[39m
+[WebServer] 609: 
+[WebServer] 610:           <div style="margin-bottom: 18px;">
+[WebServer] 611:             <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
+[WebServer]                          ^
+[WebServer] 612:               Startdatum <span style="color: var(--g-bad);">*</span>
+[WebServer] 613:             </label>
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:627:6 A form label must be associated with a control
+[WebServer] https://svelte.dev/e/a11y_label_has_associated_control[39m
+[WebServer] 625:           {#if !isMobileViewport}
+[WebServer] 626:           <div style="margin-bottom: 18px;">
+[WebServer] 627:             <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
+[WebServer]                          ^
+[WebServer] 628:               Aktivitätstyp
+[WebServer] 629:               <span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional</span>
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/compare/CompareTile.svelte:88:0 noninteractive element cannot have nonnegative tabIndex value
+[WebServer] https://svelte.dev/e/a11y_no_noninteractive_tabindex[39m
+[WebServer] 86: </script>
+[WebServer] 87: 
+[WebServer] 88: <div
+[WebServer]         ^
+[WebServer] 89:   class={'compare-tile' + (className ? ' ' + className : '')}
+[WebServer] 90:   data-testid="compare-tile-{sub.id}"
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/compare-new/CompareNewEditor.svelte:138:32 This reference only captures the initial value of `groups`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 136: 
+[WebServer] 137:   // ── Gruppen (App-Group-Entity #301) — lazy beim ERSTEN Orte-Besuch ─────────
+[WebServer] 138:   let ceGroups = $state<Group[]>(groups ?? []);
+[WebServer]                                             ^
+[WebServer] 139:   let ceGroupsLoadStarted = groups !== undefined;
+[WebServer] 140:   async function ceLoadGroups(): Promise<void> {
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/compare-new/CompareNewEditor.svelte:139:27 This reference only captures the initial value of `groups`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 137:   // ── Gruppen (App-Group-Entity #301) — lazy beim ERSTEN Orte-Besuch ─────────
+[WebServer] 138:   let ceGroups = $state<Group[]>(groups ?? []);
+[WebServer] 139:   let ceGroupsLoadStarted = groups !== undefined;
+[WebServer]                                        ^
+[WebServer] 140:   async function ceLoadGroups(): Promise<void> {
+[WebServer] 141:     try {
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/ui/sidebar/BottomNav.svelte:62:5 `<svelte:component>` is deprecated in runes mode — components are dynamic by default
+[WebServer] https://svelte.dev/e/svelte_component_deprecated[39m
+[WebServer] 60:       >
+[WebServer] 61:         <span class="bottom-nav__icon inline-flex">
+[WebServer] 62:           <svelte:component this={item.icon} class="size-6" />
+[WebServer]                                                                   ^
+[WebServer] 63:         </span>
+[WebServer] 64:         <span class="bottom-nav__label">{item.label}</span>
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/ui/sidebar/KontoSheet.svelte:59:5 `<svelte:component>` is deprecated in runes mode — components are dynamic by default
+[WebServer] https://svelte.dev/e/svelte_component_deprecated[39m
+[WebServer] 57:       {#each links as l (l.href)}
+[WebServer] 58:         <a href={l.href} data-testid={l.testid} class="konto__zeile" onclick={onClose}>
+[WebServer] 59:           <svelte:component this={l.icon} class="size-[22px] shrink-0" />
+[WebServer]                                                                              ^
+[WebServer] 60:           <span class="konto__label">{l.label}</span>
+[WebServer] 61:           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:26:19 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 24:   }
+[WebServer] 25: 
+[WebServer] 26:   let name = $state(location?.name ?? '');
+[WebServer]                                 ^
+[WebServer] 27:   let lat = $state(location?.lat ?? 47.0);
+[WebServer] 28:   let lon = $state(location?.lon ?? 11.0);
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:27:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 25: 
+[WebServer] 26:   let name = $state(location?.name ?? '');
+[WebServer] 27:   let lat = $state(location?.lat ?? 47.0);
+[WebServer]                                ^
+[WebServer] 28:   let lon = $state(location?.lon ?? 11.0);
+[WebServer] 29:   let dmsInput = $state('');
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:28:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 26:   let name = $state(location?.name ?? '');
+[WebServer] 27:   let lat = $state(location?.lat ?? 47.0);
+[WebServer] 28:   let lon = $state(location?.lon ?? 11.0);
+[WebServer]                                ^
+[WebServer] 29:   let dmsInput = $state('');
+[WebServer] 30: 
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:49:25 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 47:     }
+[WebServer] 48:   }
+[WebServer] 49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[WebServer]                                       ^
+[WebServer] 50:   let region = $state(location?.region ?? '');
+[WebServer] 51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:50:21 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 48:   }
+[WebServer] 49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[WebServer] 50:   let region = $state(location?.region ?? '');
+[WebServer]                                   ^
+[WebServer] 51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[WebServer] 52:   let activityProfile = $state<ActivityProfile | ''>(location?.activity_profile ?? '');
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:51:26 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[WebServer] 50:   let region = $state(location?.region ?? '');
+[WebServer] 51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[WebServer]                                        ^
+[WebServer] 52:   let activityProfile = $state<ActivityProfile | ''>(location?.activity_profile ?? '');
+[WebServer] 53:   let groupId = $state(location?.group_id ?? '');
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:52:52 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 50:   let region = $state(location?.region ?? '');
+[WebServer] 51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[WebServer] 52:   let activityProfile = $state<ActivityProfile | ''>(location?.activity_profile ?? '');
+[WebServer]                                                                  ^
+[WebServer] 53:   let groupId = $state(location?.group_id ?? '');
+[WebServer] 54:   let error = $state('');
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:53:22 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[WebServer] 52:   let activityProfile = $state<ActivityProfile | ''>(location?.activity_profile ?? '');
+[WebServer] 53:   let groupId = $state(location?.group_id ?? '');
+[WebServer]                                    ^
+[WebServer] 54:   let error = $state('');
+[WebServer] 55: 
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/compare/LocationNewModal.svelte:220:5 Visible, non-interactive element `<div>` with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+[WebServer] https://svelte.dev/e/a11y_click_events_have_key_events[39m
+[WebServer] 218:         {#each ACTIVITY_PROFILE_OPTIONS as profile}
+[WebServer] 219:           {@const isActive = activeProfile === profile.value}
+[WebServer] 220:           <div
+[WebServer]                    ^
+[WebServer] 221:             onclick={() => { activeProfile = profile.value; }}
+[WebServer] 222:             style="padding:12px 14px; border:1.5px solid {isActive ? 'var(--g-accent)' : 'var(--g-rule-soft)'}; background:{isActive ? 'var(--g-accent-tint)' : 'var(--g-card-alt)'}; border-radius:var(--g-r-3); cursor:pointer;"
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/compare/LocationNewModal.svelte:220:5 `<div>` with a click handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 218:         {#each ACTIVITY_PROFILE_OPTIONS as profile}
+[WebServer] 219:           {@const isActive = activeProfile === profile.value}
+[WebServer] 220:           <div
+[WebServer]                    ^
+[WebServer] 221:             onclick={() => { activeProfile = profile.value; }}
+[WebServer] 222:             style="padding:12px 14px; border:1.5px solid {isActive ? 'var(--g-accent)' : 'var(--g-rule-soft)'}; background:{isActive ? 'var(--g-accent-tint)' : 'var(--g-card-alt)'}; border-radius:var(--g-r-3); cursor:pointer;"
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/mobile/Sheet.svelte:89:2 Visible, non-interactive element `<div>` with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+[WebServer] https://svelte.dev/e/a11y_click_events_have_key_events[39m
+[WebServer] 87:     style:overflow="hidden"
+[WebServer] 88:   >
+[WebServer] 89:     <div
+[WebServer]             ^
+[WebServer] 90:       data-testid="sheet-handle"
+[WebServer] 91:       onclick={onHandleToggle}
+[WebServer] [33m5:31:08 PM [vite-plugin-svelte] src/lib/components/mobile/Sheet.svelte:89:2 `<div>` with a click handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 87:     style:overflow="hidden"
+[WebServer] 88:   >
+[WebServer] 89:     <div
+[WebServer]             ^
+[WebServer] 90:       data-testid="sheet-handle"
+[WebServer] 91:       onclick={onHandleToggle}
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/organisms/HomeHeroTrip.svelte:93:5 '#' is not a valid href attribute
+[WebServer] https://svelte.dev/e/a11y_invalid_attribute[39m
+[WebServer] 91:       </div>
+[WebServer] 92:     </div>
+[WebServer] 93:     <a href="#" style:font-size="12px" style:color="var(--g-ink-3)" style:text-decoration="none" style:font-family="var(--g-font-mono)">Trip öffnen →</a>
+[WebServer]                    ^
+[WebServer] 94:   </div>
+[WebServer] 95: </Card>
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/trip-detail/TripHeader.svelte:35:23 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 33:   // AC-6 — Inline Trip-Name-Bearbeitung (kein separater /edit-Screen mehr)
+[WebServer] 34:   // #713 — toggle: nur via Stift-Icon editierbar (kein dauerhaftes Eingabefeld)
+[WebServer] 35:   let editName = $state(trip.name);
+[WebServer]                                 ^
+[WebServer] 36:   let nameSaving = $state(false);
+[WebServer] 37:   let isEditingName = $state(false);
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/trip-detail/TripHeader.svelte:251:1 Unused CSS selector ".header-actions"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 249:     font-variant-numeric: tabular-nums;
+[WebServer] 250:   }
+[WebServer] 251:   .header-actions {
+[WebServer]                       ^
+[WebServer] 252:     display: flex;
+[WebServer] 253:     gap: 0.5rem;
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/trip-detail/TripHeader.svelte:257:1 Unused CSS selector ".briefing-msg"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 255:     flex-shrink: 0;
+[WebServer] 256:   }
+[WebServer] 257:   .briefing-msg {
+[WebServer]                     ^
+[WebServer] 258:     margin: 0;
+[WebServer] 259:     font-size: var(--g-text-sm);
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/organisms/HomeHeroCompare.svelte:95:5 '#' is not a valid href attribute
+[WebServer] https://svelte.dev/e/a11y_invalid_attribute[39m
+[WebServer] 93:       </div>
+[WebServer] 94:     </div>
+[WebServer] 95:     <a href="#" style:font-size="12px" style:color="var(--g-ink-3)" style:text-decoration="none" style:font-family="var(--g-font-mono)">Vergleich öffnen →</a>
+[WebServer]                    ^
+[WebServer] 96:   </div>
+[WebServer] 97: </Card>
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/organisms/MetricOffShelf.svelte:36:19 This reference only captures the initial value of `defaultOpen`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 34:   }: Props = $props();
+[WebServer] 35: 
+[WebServer] 36:   let open = $state(defaultOpen);
+[WebServer]                                    ^
+[WebServer] 37: 
+[WebServer] 38:   // Group by category
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:70:12 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 68:     $props();
+[WebServer] 69: 
+[WebServer] 70:   const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
+[WebServer]                         ^
+[WebServer] 71: 
+[WebServer] 72:   // Issue #2276 S3: EINZIGER Speicherweg des vergleich-Zweigs im Hub (Muster
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:91:2 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 89:   // Stand — analog Desktop (CorridorEditor.svelte), gilt fuer beide Kontexte.
+[WebServer] 90:   const originalLevels = (
+[WebServer] 91:     context === 'vergleich'
+[WebServer]                ^
+[WebServer] 92:       ? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
+[WebServer] 93:       : trip?.display_config?.metric_alert_levels
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:93:5 This reference only captures the initial value of `trip`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 91:     context === 'vergleich'
+[WebServer] 92:       ? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
+[WebServer] 93:       : trip?.display_config?.metric_alert_levels
+[WebServer]                 ^
+[WebServer] 94:   ) ?? {} as Record<string, SensLevel>;
+[WebServer] 95:   const originalActiveMetricKeys: string[] =
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:96:2 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 94:   ) ?? {} as Record<string, SensLevel>;
+[WebServer] 95:   const originalActiveMetricKeys: string[] =
+[WebServer] 96:     context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
+[WebServer]                ^
+[WebServer] 97: 
+[WebServer] 98:   const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:98:30 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer]  96:     context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
+[WebServer]  97: 
+[WebServer]  98:   const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
+[WebServer]                                            ^
+[WebServer]  99:   function computeInitialCompare(defs: CompareMetricDef[]): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
+[WebServer] 100:     if (!isFreshCompareCreate) return buildComparePool(ws?.corridors ?? [], defs);
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:373:6 `<div>` with a pointerdown handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 371:           {#if row.max == null}<span class="cem-open cem-open-right">offen ▸</span>{/if}
+[WebServer] 372:           {#if row.min != null}
+[WebServer] 373:             <div class="cem-handle" style="left:{leftPct}%" onpointerdown={(e) => onHandleDown(e, row.metric, 'min')}></div>
+[WebServer]                                                                                                                                  ^
+[WebServer] 374:           {/if}
+[WebServer] 375:           {#if row.max != null}
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:376:6 `<div>` with a pointerdown handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 374:           {/if}
+[WebServer] 375:           {#if row.max != null}
+[WebServer] 376:             <div class="cem-handle" class:mark={row.mark} style="left:{rightPct}%" onpointerdown={(e) => onHandleDown(e, row.metric, 'max')}></div>
+[WebServer]                                                                                                                                                         ^
+[WebServer] 377:           {/if}
+[WebServer] 378:         </div>
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:515:1 Unused CSS selector ".cem-effect.notify.on"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 513:   .cem-effects { display: flex; gap: 8px; margin-top: 12px; }
+[WebServer] 514:   .cem-effect { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: var(--g-r-3, 10px); cursor: pointer; font-size: 14px; font-weight: 600; background: transparent; color: var(--g-ink-4); border: 1px solid var(--g-rule); }
+[WebServer] 515:   .cem-effect.notify.on { color: var(--g-warn, #8a6210); border-color: var(--g-warn, #8a6210); background: rgba(192, 138, 26, 0.12); }
+[WebServer]                             ^
+[WebServer] 516:   .cem-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
+[WebServer] 517:   .cem-effect.disabled { opacity: 0.4; cursor: not-allowed; }
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:517:1 Unused CSS selector ".cem-effect.disabled"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 515:   .cem-effect.notify.on { color: var(--g-warn, #8a6210); border-color: var(--g-warn, #8a6210); background: rgba(192, 138, 26, 0.12); }
+[WebServer] 516:   .cem-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
+[WebServer] 517:   .cem-effect.disabled { opacity: 0.4; cursor: not-allowed; }
+[WebServer]                            ^
+[WebServer] 518:   .cem-remove-row { display: flex; justify-content: flex-end; margin-top: 8px; }
+[WebServer] 519:   .cem-remove { background: transparent; border: none; padding: 6px 2px; color: var(--g-ink-4); cursor: pointer; font-size: 11.5px; }
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:57:12 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 55:     $props();
+[WebServer] 56: 
+[WebServer] 57:   const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
+[WebServer]                         ^
+[WebServer] 58: 
+[WebServer] 59:   // Issue #2276 S3: EINZIGER Speicherweg des vergleich-Zweigs im Hub (Muster
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:79:2 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 77:   // beide Kontexte (sonst zombie-Level nach mehrfachem notify-Toggle, F002/Slice4).
+[WebServer] 78:   const originalLevels = (
+[WebServer] 79:     context === 'vergleich'
+[WebServer]                ^
+[WebServer] 80:       ? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
+[WebServer] 81:       : trip?.display_config?.metric_alert_levels
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:81:5 This reference only captures the initial value of `trip`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 79:     context === 'vergleich'
+[WebServer] 80:       ? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
+[WebServer] 81:       : trip?.display_config?.metric_alert_levels
+[WebServer]                 ^
+[WebServer] 82:   ) ?? {} as Record<string, SensLevel>;
+[WebServer] 83: 
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:89:2 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 87:   // zweiter Hinzufuegen-Klick faelschlich wieder "neu" wirken.
+[WebServer] 88:   const originalActiveMetricKeys: string[] =
+[WebServer] 89:     context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
+[WebServer]                ^
+[WebServer] 90: 
+[WebServer] 91:   // Team-Lead-Korrektur (PO-Linie „nichts Neues erfinden — wie heute"):
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:95:30 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 93:   // Step3Idealwerte aus dem Aktivitaetsprofil — sonst startet der Editor im
+[WebServer] 94:   // Create-Fluss leer (UX-Verschlechterung ggü. heute).
+[WebServer] 95:   const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
+[WebServer]                                           ^
+[WebServer] 96:   function computeInitialCompare(defs: CompareMetricDef[]): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
+[WebServer] 97:     if (!isFreshCompareCreate) return buildComparePool(ws?.corridors ?? [], defs);
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:394:7 `<div>` with a pointerdown handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 392:             {#if row.max == null}<span class="ce-open ce-open-right">offen ▸</span>{/if}
+[WebServer] 393:             {#if row.min != null}
+[WebServer] 394:               <div class="ce-handle" style="left:{leftPct}%" onpointerdown={(e) => onHandleDown(e, row.metric, 'min')}></div>
+[WebServer]                                                                                                                                   ^
+[WebServer] 395:             {/if}
+[WebServer] 396:             {#if row.max != null}
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:397:7 `<div>` with a pointerdown handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 395:             {/if}
+[WebServer] 396:             {#if row.max != null}
+[WebServer] 397:               <div class="ce-handle" class:mark={row.mark} style="left:{rightPct}%" onpointerdown={(e) => onHandleDown(e, row.metric, 'max')}></div>
+[WebServer]                                                                                                                                                          ^
+[WebServer] 398:             {/if}
+[WebServer] 399:           </div>
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:524:1 Unused CSS selector ".ce-effect.notify.on"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 522:   .ce-effects { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+[WebServer] 523:   .ce-effect { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: transparent; color: var(--g-ink-4); border: 1px solid var(--g-rule); cursor: pointer; }
+[WebServer] 524:   .ce-effect.notify.on { color: var(--g-warn); border-color: var(--g-warn); background: rgba(192, 138, 26, 0.12); }
+[WebServer]                            ^
+[WebServer] 525:   .ce-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
+[WebServer] 526:   .ce-effect.disabled { opacity: 0.4; cursor: not-allowed; }
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:526:1 Unused CSS selector ".ce-effect.disabled"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 524:   .ce-effect.notify.on { color: var(--g-warn); border-color: var(--g-warn); background: rgba(192, 138, 26, 0.12); }
+[WebServer] 525:   .ce-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
+[WebServer] 526:   .ce-effect.disabled { opacity: 0.4; cursor: not-allowed; }
+[WebServer]                           ^
+[WebServer] 527:   .ce-remove { background: transparent; border: none; color: var(--g-ink-4); font-size: 11px; cursor: pointer; padding: 0; }
+[WebServer] 528:   .ce-pool { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 14px 20px; border-top: 1px dashed var(--g-rule-soft); }
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:168:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 166:   // Legacy-Fallback identisch zur Pipeline (trip_alert.py): nil -> Ist-Verhalten.
+[WebServer] 167:   let officialWarningsEnabled = $state<boolean>(
+[WebServer] 168:     trip?.official_warnings?.enabled ?? trip?.official_alert_triggers_enabled !== false
+[WebServer]              ^
+[WebServer] 169:   );
+[WebServer] 170:   const displayOfficialWarningsEnabled = $derived(
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:168:38 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 166:   // Legacy-Fallback identisch zur Pipeline (trip_alert.py): nil -> Ist-Verhalten.
+[WebServer] 167:   let officialWarningsEnabled = $state<boolean>(
+[WebServer] 168:     trip?.official_warnings?.enabled ?? trip?.official_alert_triggers_enabled !== false
+[WebServer]                                                  ^
+[WebServer] 169:   );
+[WebServer] 170:   const displayOfficialWarningsEnabled = $derived(
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:213:2 This reference only captures the initial value of `metricLevels`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 211:   // buildAlarmeSaveFn.
+[WebServer] 212:   let routeMetricLevels = $state<Record<AlertMetric, SensLevel>>(
+[WebServer] 213:     metricLevels ?? ({} as Record<AlertMetric, SensLevel>)
+[WebServer]                      ^
+[WebServer] 214:   );
+[WebServer] 215:   const effectiveMetricLevels = $derived(
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:241:72 This reference only captures the initial value of `existingChannels`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 239:   // Save unten (buildAlarmeSaveFn), NICHT mehr ueber einen eigenen
+[WebServer] 240:   // schedule()-Aufruf im Container.
+[WebServer] 241:   let routeChannelState = $state<AlertChannelState>(resolveAlertChannels(existingChannels));
+[WebServer]                                                                                               ^
+[WebServer] 242:   const displayChannelState = $derived<AlertChannelState>(
+[WebServer] 243:     context === 'vergleich'
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:304:50 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 302: 
+[WebServer] 303:   // ── (e)/(f) Cooldown/Stille Stunden — route: lokaler State, vergleich: wiz.* ─
+[WebServer] 304:   let cooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
+[WebServer]                                                             ^
+[WebServer] 305:   let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
+[WebServer] 306:   let quietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:305:44 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 303:   // ── (e)/(f) Cooldown/Stille Stunden — route: lokaler State, vergleich: wiz.* ─
+[WebServer] 304:   let cooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
+[WebServer] 305:   let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
+[WebServer]                                                       ^
+[WebServer] 306:   let quietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
+[WebServer] 307: 
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:306:42 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 304:   let cooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
+[WebServer] 305:   let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
+[WebServer] 306:   let quietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
+[WebServer]                                                     ^
+[WebServer] 307: 
+[WebServer] 308:   // ── AC-12/F001: EIN $effect, EINE konsolidierte Payload-Funktion (nur route) ─
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:230:4 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 228:   // — channels wird als unbekanntes Feld durchgereicht, daher Cast über unknown.
+[WebServer] 229:   let channels: ChannelConfig = $state(
+[WebServer] 230:     ((trip?.display_config as unknown as Record<string, unknown>)?.channels as ChannelConfig | undefined)
+[WebServer]                ^
+[WebServer] 231:       ?? { email: true, telegram: true, sms: false }
+[WebServer] 232:   );
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:234:40 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 232:   );
+[WebServer] 233:   // Issue #614: Telegram Kurzform-Toggle (SMS-Tages-Max als Anhang).
+[WebServer] 234:   let telegramKurzform = $state<boolean>(trip?.display_config?.telegram_kurzform ?? false);
+[WebServer]                                                   ^
+[WebServer] 235:   // Issue #1117: Amtliche Warnungen im E-Mail-Briefing (zweiter Einstiegspunkt neben
+[WebServer] 236:   // Alerts-Tab). Default true matcht den Backend-Default.
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:237:45 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 235:   // Issue #1117: Amtliche Warnungen im E-Mail-Briefing (zweiter Einstiegspunkt neben
+[WebServer] 236:   // Alerts-Tab). Default true matcht den Backend-Default.
+[WebServer] 237:   let officialAlertsEnabled = $state<boolean>(trip?.official_alerts_enabled ?? true);
+[WebServer]                                                        ^
+[WebServer] 238:   // Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
+[WebServer] 239:   const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder', 'snow_depth', 'snowfall_limit'];
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:247:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 245:   // Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter (analog BriefingScheduleTab).
+[WebServer] 246:   let reportConfig = $state<ReportConfig>(
+[WebServer] 247:     trip?.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
+[WebServer]              ^
+[WebServer] 248:   );
+[WebServer] 249: 
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:247:50 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 245:   // Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter (analog BriefingScheduleTab).
+[WebServer] 246:   let reportConfig = $state<ReportConfig>(
+[WebServer] 247:     trip?.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
+[WebServer]                                                              ^
+[WebServer] 248:   );
+[WebServer] 249: 
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:1021:39 This reference only captures the initial value of `reportConfig`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 1019:   // OHNE dass der Nutzer etwas geaendert hat; der rohe String-/Referenz-
+[WebServer] 1020:   // Vergleich wertete das faelschlich als Aenderung.
+[WebServer] 1021:   let _lastReportConfig: ReportConfig = reportConfig;
+[WebServer]                                                           ^
+[WebServer] 1022:   $effect(() => {
+[WebServer] 1023:     const cur = reportConfig;
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte:151:2 Elements with the 'dialog' interactive role must have a tabindex value
+[WebServer] https://svelte.dev/e/a11y_interactive_supports_focus[39m
+[WebServer] 149:   >
+[WebServer] 150:     <!-- Dialog-Container -->
+[WebServer] 151:     <div
+[WebServer]              ^
+[WebServer] 152:       data-testid="save-preset-dialog"
+[WebServer] 153:       role="dialog"
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte:151:2 Visible, non-interactive element `<div>` with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+[WebServer] https://svelte.dev/e/a11y_click_events_have_key_events[39m
+[WebServer] 149:   >
+[WebServer] 150:     <!-- Dialog-Container -->
+[WebServer] 151:     <div
+[WebServer]              ^
+[WebServer] 152:       data-testid="save-preset-dialog"
+[WebServer] 153:       role="dialog"
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte:178:6 Avoid using autofocus
+[WebServer] https://svelte.dev/e/a11y_autofocus[39m
+[WebServer] 176:             maxlength="40"
+[WebServer] 177:             placeholder="Mein Wandern-Preset"
+[WebServer] 178:             autofocus
+[WebServer]                           ^
+[WebServer] 179:             required
+[WebServer] 180:             style="padding:10px 12px;font-size:15px;background:var(--g-card);border:1px solid var(--g-rule);border-radius:4px;font:inherit;width:100%;box-sizing:border-box"
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte:265:1 Unused CSS selector ".will-save-box hr"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 263:     cursor: pointer;
+[WebServer] 264:   }
+[WebServer] 265:   .will-save-box hr {
+[WebServer]                         ^
+[WebServer] 266:     border: none;
+[WebServer] 267:     border-top: 1px solid var(--g-ink-faint);
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/trip-detail/TripTabs.svelte:61:35 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 59: 
+[WebServer] 60:   // Lokale Kopie der Etappen für den Stages-Tab (EditStagesSection braucht $bindable).
+[WebServer] 61:   let localStages = $state<Stage[]>(trip?.stages ?? []);
+[WebServer]                                             ^
+[WebServer] 62:   let activityType = $state<ActivityType | undefined>(trip?.activity);
+[WebServer] 63: 
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/trip-detail/TripTabs.svelte:62:53 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 60:   // Lokale Kopie der Etappen für den Stages-Tab (EditStagesSection braucht $bindable).
+[WebServer] 61:   let localStages = $state<Stage[]>(trip?.stages ?? []);
+[WebServer] 62:   let activityType = $state<ActivityType | undefined>(trip?.activity);
+[WebServer]                                                               ^
+[WebServer] 63: 
+[WebServer] 64:   // Issue #302 — Auto-Badges aus Trip ableiten (Etappenanzahl + enabled Alerts).
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/trip-detail/WaypointsPanel.svelte:22:61 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 20: 
+[WebServer] 21:   // State
+[WebServer] 22:   let localStages = $state<Stage[]>(JSON.parse(JSON.stringify(trip.stages)));
+[WebServer]                                                                       ^
+[WebServer] 23:   let activeStageId = $state<string>(trip.stages.find((s) => !isPauseStage(s))?.id ?? '');
+[WebServer] 24:   let activeWaypointId = $state<string | null>(null);
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/trip-detail/WaypointsPanel.svelte:23:36 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 21:   // State
+[WebServer] 22:   let localStages = $state<Stage[]>(JSON.parse(JSON.stringify(trip.stages)));
+[WebServer] 23:   let activeStageId = $state<string>(trip.stages.find((s) => !isPauseStage(s))?.id ?? '');
+[WebServer]                                              ^
+[WebServer] 24:   let activeWaypointId = $state<string | null>(null);
+[WebServer] 25:   let saving = $state(false);
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:196:63 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 194:   // Uebersicht-/Vorschau-Tab lesen bewusst weiterhin `preset` direkt
+[WebServer] 195:   // (bekannte, akzeptierte Stale-Anzeige, s. Fix-Vorgabe Scope).
+[WebServer] 196:   let currentPreset = $state<ComparePreset>(snapshotForRollback(preset));
+[WebServer]                                                                            ^
+[WebServer] 197: 
+[WebServer] 198:   // Fix-Loop 1 (F002, Adversary CRITICAL): EINE gemeinsame Serialisierungs-
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:209:47 This reference only captures the initial value of `currentPreset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 207:   // Startet aus currentPreset.location_ids, wird bei Drag/Entfernen/Hinzufügen
+[WebServer] 208:   // sofort im UI aktualisiert und per PUT persistiert (Rollback bei Fehler).
+[WebServer] 209:   let currentLocationIds = $state<string[]>([...currentPreset.location_ids]);
+[WebServer]                                                                   ^
+[WebServer] 210:   const orteCount = $derived(currentLocationIds.length);
+[WebServer] 211:   // Fix-Loop 2 (F003-Analogie): zuletzt ERFOLGREICH persistierter Orte-Stand,
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:216:46 This reference only captures the initial value of `currentLocationIds`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 214:   // in der Queue bereits erfolgreichen Edit zurueckfallen statt auf einen
+[WebServer] 215:   // aelteren, beim Funktionsaufruf gelesenen Stand.
+[WebServer] 216:   let lastPersistedLocationIds: string[] = [...currentLocationIds];
+[WebServer]                                                                       ^
+[WebServer] 217: 
+[WebServer] 218:   // Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:626:2 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 624:   // previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
+[WebServer] 625:   let previousSchedule = $state<string>(
+[WebServer] 626:     preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+[WebServer]                ^
+[WebServer] 627:   );
+[WebServer] 628:   let localSchedule = $state<string>(preset.schedule ?? 'manual');
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:626:32 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 624:   // previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
+[WebServer] 625:   let previousSchedule = $state<string>(
+[WebServer] 626:     preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+[WebServer]                                              ^
+[WebServer] 627:   );
+[WebServer] 628:   let localSchedule = $state<string>(preset.schedule ?? 'manual');
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:626:51 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 624:   // previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
+[WebServer] 625:   let previousSchedule = $state<string>(
+[WebServer] 626:     preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+[WebServer]                                                                 ^
+[WebServer] 627:   );
+[WebServer] 628:   let localSchedule = $state<string>(preset.schedule ?? 'manual');
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:626:83 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 624:   // previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
+[WebServer] 625:   let previousSchedule = $state<string>(
+[WebServer] 626:     preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+[WebServer]                                                                                                 ^
+[WebServer] 627:   );
+[WebServer] 628:   let localSchedule = $state<string>(preset.schedule ?? 'manual');
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:628:36 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 626:     preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+[WebServer] 627:   );
+[WebServer] 628:   let localSchedule = $state<string>(preset.schedule ?? 'manual');
+[WebServer]                                                 ^
+[WebServer] 629: 
+[WebServer] 630:   // Liefert true/false statt zu werfen — der Hub-eigene CTA-Klick ignoriert
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/trip-detail/waypoints/EtappenStrip.svelte:120:4 Visible, non-interactive element `<div>` with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+[WebServer] https://svelte.dev/e/a11y_click_events_have_key_events[39m
+[WebServer] 118:       {#if i < stages.length - 1 && onPauseInsert}
+[WebServer] 119:         <!-- svelte-ignore a11y_no_static_element_interactions -->
+[WebServer] 120:         <div
+[WebServer]                  ^
+[WebServer] 121:           data-testid="etappen-strip-pause-after-{i}"
+[WebServer] 122:           style="flex-shrink:0; width:{hoverGap === i ? 56 : 8}px; min-height:88px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:width 140ms ease;"
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/edit/ProfileSheetEmbedded.svelte:73:35 This reference only captures the initial value of `snapPosition`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 71:   // Issue #1158 — merkt sich die zuletzt aktive Nicht-collapsed-Stufe, damit
+[WebServer] 72:   // die Griffleiste beim Ausklappen dorthin zurueckkehrt statt immer auf 'half'.
+[WebServer] 73:   let lastActiveSnap = $state<Snap>(snapPosition === 'collapsed' ? 'half' : snapPosition);
+[WebServer]                                                     ^
+[WebServer] 74:   $effect(() => {
+[WebServer] 75:     if (snapPosition !== 'collapsed') lastActiveSnap = snapPosition;
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/edit/ProfileSheetEmbedded.svelte:73:75 This reference only captures the initial value of `snapPosition`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 71:   // Issue #1158 — merkt sich die zuletzt aktive Nicht-collapsed-Stufe, damit
+[WebServer] 72:   // die Griffleiste beim Ausklappen dorthin zurueckkehrt statt immer auf 'half'.
+[WebServer] 73:   let lastActiveSnap = $state<Snap>(snapPosition === 'collapsed' ? 'half' : snapPosition);
+[WebServer]                                                                                             ^
+[WebServer] 74:   $effect(() => {
+[WebServer] 75:     if (snapPosition !== 'collapsed') lastActiveSnap = snapPosition;
+[WebServer] [33m5:31:09 PM [vite-plugin-svelte] src/lib/components/trip-detail/waypoints/ProfileEditor.svelte:121:2 `<rect>` with a click handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 119:   {#if onProfileAdd}
+[WebServer] 120:     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+[WebServer] 121:     <rect
+[WebServer]            ^
+[WebServer] 122:       data-testid="profile-add-area"
+[WebServer] 123:       x="0"
+[WebServer] [33m5:31:10 PM [vite-plugin-svelte] src/lib/components/alert-rules-editor/AlertRuleRow.svelte:45:36 This reference only captures the initial value of `rule`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 43: 
+[WebServer] 44:   let editing = $state(false);
+[WebServer] 45:   let draft = $state<AlertRule>({ ...rule });
+[WebServer]                                              ^
+[WebServer] 46:   let kebabOpen = $state(false);
+[WebServer] 47: 
+[WebServer] [33m5:31:10 PM [vite-plugin-svelte] src/lib/components/alert-rules-editor/AlertRuleRow.svelte:280:1 Unused CSS selector ".kebab-dropdown button"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 278:     padding: var(--g-s-1) 0;
+[WebServer] 279:   }
+[WebServer] 280:   .kebab-dropdown button {
+[WebServer]                              ^
+[WebServer] 281:     display: block;
+[WebServer] 282:     width: 100%;
+[WebServer] [33m5:31:10 PM [vite-plugin-svelte] src/lib/components/alert-rules-editor/AlertRuleRow.svelte:291:1 Unused CSS selector ".kebab-dropdown button:hover"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 289:     color: var(--g-ink);
+[WebServer] 290:   }
+[WebServer] 291:   .kebab-dropdown button:hover {
+[WebServer]                                    ^
+[WebServer] 292:     background: var(--g-surface-raised);
+[WebServer] 293:   }
+[WebServer] [33m5:31:10 PM [vite-plugin-svelte] src/lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte:24:36 This reference only captures the initial value of `value`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 22:   let { value, onChange }: Props = $props();
+[WebServer] 23: 
+[WebServer] 24:   let mode = $state<'open' | 'date'>(value === null ? 'open' : 'date');
+[WebServer]                                               ^
+[WebServer] 25: 
+[WebServer] 26:   function selectOpen() {
+[WebServer] [33m5:31:10 PM [vite-plugin-svelte] src/lib/components/trip-detail/HubOverview.svelte:26:45 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 24:   );
+[WebServer] 25: 
+[WebServer] 26:   let selectedStageId = $state<string | null>(trip.stages?.[0]?.id ?? null);
+[WebServer]                                                       ^
+[WebServer] 27: 
+[WebServer] 28:   // Issue #1223 — Risiko-Ampel je Etappe, clientseitig/lazy im Cockpit-Tab.
+[WebServer] [33m5:31:10 PM [vite-plugin-svelte] src/lib/components/trip-detail/BriefingScheduleTab.svelte:26:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 24: 
+[WebServer] 25:   let reportConfig = $state<ReportConfig>(
+[WebServer] 26:     trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
+[WebServer]             ^
+[WebServer] 27:   );
+[WebServer] 28: 
+[WebServer] [33m5:31:10 PM [vite-plugin-svelte] src/lib/components/trip-detail/BriefingScheduleTab.svelte:26:49 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 24: 
+[WebServer] 25:   let reportConfig = $state<ReportConfig>(
+[WebServer] 26:     trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
+[WebServer]                                                            ^
+[WebServer] 27:   );
+[WebServer] 28: 
+[WebServer] [33m5:31:10 PM [vite-plugin-svelte] src/lib/components/trip-detail/BriefingScheduleTab.svelte:82:39 This reference only captures the initial value of `reportConfig`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 80:   //     "Nicht gespeichert"-Anzeige statt stillem Verlust (AC-6/AC-7), falls
+[WebServer] 81:   //     die Gesten-Erfassung eine Aenderung mal nicht einfaengt (F003/F004-Klasse).
+[WebServer] 82:   let _lastReportConfig: ReportConfig = reportConfig;
+[WebServer]                                                         ^
+[WebServer] 83:   $effect(() => {
+[WebServer] 84:     const cur = reportConfig;
+[WebServer] [33m5:31:10 PM [vite-plugin-svelte] src/lib/components/briefings-tab/BriefingsTab.svelte:9:28 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer]  7: 
+[WebServer]  8:   let reportConfig = $state<ReportConfig>(
+[WebServer]  9:     JSON.parse(JSON.stringify(trip.report_config ?? {}))
+[WebServer]                                       ^
+[WebServer] 10:   );
+[WebServer] 11:   let saving = $state(false);
+[WebServer] [33m5:31:10 PM [vite-plugin-svelte] src/lib/components/trip-detail/waypoints/StageCard.svelte:70:0 noninteractive element cannot have nonnegative tabIndex value
+[WebServer] https://svelte.dev/e/a11y_no_noninteractive_tabindex[39m
+[WebServer] 68: 
+[WebServer] 69: <!-- svelte-ignore a11y_click_events_have_key_events -->
+[WebServer] 70: <div
+[WebServer]         ^
+[WebServer] 71:   data-testid={isPause ? `stage-card-pause-${index}` : `stage-card-${index}`}
+[WebServer] 72:   style="
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/account/+page.svelte:28:26 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 26:   let { data } = $props();
+[WebServer] 27: 
+[WebServer] 28:   let displayName = $state(data.profile?.display_name ?? '');
+[WebServer]                                    ^
+[WebServer] 29:   let mailTo = $state(data.profile?.mail_to ?? '');
+[WebServer] 30:   let smsTo = $state(data.profile?.sms_to ?? '');
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/account/+page.svelte:29:21 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 27: 
+[WebServer] 28:   let displayName = $state(data.profile?.display_name ?? '');
+[WebServer] 29:   let mailTo = $state(data.profile?.mail_to ?? '');
+[WebServer]                               ^
+[WebServer] 30:   let smsTo = $state(data.profile?.sms_to ?? '');
+[WebServer] 31:   let telegramConnected = $state(!!data.profile?.telegram_chat_id);
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/account/+page.svelte:30:20 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 28:   let displayName = $state(data.profile?.display_name ?? '');
+[WebServer] 29:   let mailTo = $state(data.profile?.mail_to ?? '');
+[WebServer] 30:   let smsTo = $state(data.profile?.sms_to ?? '');
+[WebServer]                              ^
+[WebServer] 31:   let telegramConnected = $state(!!data.profile?.telegram_chat_id);
+[WebServer] 32:   let telegramChatIdSuffix = $state(
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/account/+page.svelte:31:34 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 29:   let mailTo = $state(data.profile?.mail_to ?? '');
+[WebServer] 30:   let smsTo = $state(data.profile?.sms_to ?? '');
+[WebServer] 31:   let telegramConnected = $state(!!data.profile?.telegram_chat_id);
+[WebServer]                                            ^
+[WebServer] 32:   let telegramChatIdSuffix = $state(
+[WebServer] 33:     data.profile?.telegram_chat_id
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/account/+page.svelte:33:2 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 31:   let telegramConnected = $state(!!data.profile?.telegram_chat_id);
+[WebServer] 32:   let telegramChatIdSuffix = $state(
+[WebServer] 33:     data.profile?.telegram_chat_id
+[WebServer]             ^
+[WebServer] 34:       ? '...' + data.profile.telegram_chat_id.slice(-3)
+[WebServer] 35:       : ''
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/account/+page.svelte:34:13 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 32:   let telegramChatIdSuffix = $state(
+[WebServer] 33:     data.profile?.telegram_chat_id
+[WebServer] 34:       ? '...' + data.profile.telegram_chat_id.slice(-3)
+[WebServer]                         ^
+[WebServer] 35:       : ''
+[WebServer] 36:   );
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/account/+page.svelte:48:38 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 46: 
+[WebServer] 47:   // Issue #344 — Wetter-Profile (User-MetricPresets)
+[WebServer] 48:   let presets = $state<MetricPreset[]>(data.metricPresets ?? []);
+[WebServer]                                                ^
+[WebServer] 49:   let editingId = $state<string | null>(null);
+[WebServer] 50:   let editName = $state('');
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/account/+page.svelte:61:29 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 59:   // `data`/`PageData` und verschwindet bei Reload, weil das Backend nur den
+[WebServer] 60:   // Hash haelt, nie den Klartext erneut liefert.
+[WebServer] 61:   let linkCodeExists = $state(data.premiumSmsLinkCodeExists);
+[WebServer]                                       ^
+[WebServer] 62:   let linkCodeValue = $state<string | null>(null);
+[WebServer] 63:   let linkCodeBusy = $state(false);
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/account/+page.svelte:628:4 A form label must be associated with a control
+[WebServer] https://svelte.dev/e/a11y_label_has_associated_control[39m
+[WebServer] 626: 
+[WebServer] 627:       <div class="space-y-2">
+[WebServer] 628:         <label class="text-sm font-medium">Telegram</label>
+[WebServer]                                                                 ^
+[WebServer] 629:         {#if telegramConnected}
+[WebServer] 630:           <div class="flex items-center gap-3">
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/compare/+page.svelte:31:39 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 29: 
+[WebServer] 30:   let { data } = $props();
+[WebServer] 31:   let presets: ComparePreset[] = $state(data.presets ?? []);
+[WebServer]                                                 ^
+[WebServer] 32: 
+[WebServer] 33:   // Issue #1277 — Desktop-Übersicht über das geteilte ListTable-Organism.
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/+layout.svelte:145:6 This reference only captures the initial value of `darkMode`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 143:   if (browser) {
+[WebServer] 144:     darkMode = localStorage.getItem('gz-dark') === '1';
+[WebServer] 145:     if (darkMode) applyDarkMode(true);
+[WebServer]                      ^
+[WebServer] 146: 
+[WebServer] 147:     iosHinweisSichtbar = iosHinweisFaellig();
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/+layout.svelte:156:15 This reference only captures the initial value of `data`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 154:     passkeyAngebotSichtbar = passkeyAngebotFaellig({
+[WebServer] 155:       marker: new URLSearchParams(window.location.search).has(ANGEBOT_MARKER),
+[WebServer] 156:       hasPasskey: data.hasPasskey === true,
+[WebServer]                            ^
+[WebServer] 157:       dismissed: data.passkeyPromptDismissed === true,
+[WebServer] 158:       webauthnFaehig: isWebAuthnSupported()
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/+layout.svelte:157:14 This reference only captures the initial value of `data`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 155:       marker: new URLSearchParams(window.location.search).has(ANGEBOT_MARKER),
+[WebServer] 156:       hasPasskey: data.hasPasskey === true,
+[WebServer] 157:       dismissed: data.passkeyPromptDismissed === true,
+[WebServer]                           ^
+[WebServer] 158:       webauthnFaehig: isWebAuthnSupported()
+[WebServer] 159:     });
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/compare/[id]/+page.svelte:49:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 47:   // $state-Spiegel, exakt das Muster aus CompareTabs.svelte (`currentPreset
+[WebServer] 48:   // = $state<ComparePreset>(preset)` + Resync-$effect auf Prop-Referenz).
+[WebServer] 49:   let currentPreset = $state(data.preset);
+[WebServer]                                      ^
+[WebServer] 50:   $effect(() => {
+[WebServer] 51:     currentPreset = data.preset;
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/compare/[id]/+page.svelte:63:61 This reference only captures the initial value of `data`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 61:   // shared/alarmeVergleichSpeicherung.ts.
+[WebServer] 62:   // Issue #2276 S2: mit Kennung — ein 412 wird zu „Nochmal speichern“ (conflict).
+[WebServer] 63:   const hubSaveCtl = createSaveStatus({ typ: 'vergleich', id: data.preset.id });
+[WebServer]                                                                       ^
+[WebServer] 64: 
+[WebServer] 65:   // Issue #2316 Scheibe A (AC-9): derselbe Speicher-Wächter wie /trips/[id] —
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/compare/[id]/+page.svelte:139:23 This reference only captures the initial value of `currentPreset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 137:   // $effect in CompareTabs.svelte:821-826 currentPreset resynct (Cross-Tab-
+[WebServer] 138:   // Datenverlust-Schutz, AC-5). NIE ein Feld in-place mutieren.
+[WebServer] 139:   let editName = $state(currentPreset.name);
+[WebServer]                                           ^
+[WebServer] 140:   let nameSaving = $state(false);
+[WebServer] 141:   let isEditingName = $state(false);
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/compare/[id]/+page.svelte:144:26 This reference only captures the initial value of `currentPreset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 142:   let nameSaveError: string | null = $state(null);
+[WebServer] 143: 
+[WebServer] 144:   let editRegion = $state((currentPreset.display_config?.region as string) ?? '');
+[WebServer]                                              ^
+[WebServer] 145:   let regionSaving = $state(false);
+[WebServer] 146:   let isEditingRegion = $state(false);
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/compare/new/+page.svelte:21:38 This reference only captures the initial value of `data`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 19:   const state = new CompareWizardState();
+[WebServer] 20:   setContext('compare-wizard-state', state);
+[WebServer] 21:   setContext('compare-wizard-profile', data.profile ?? null);
+[WebServer]                                                ^
+[WebServer] 22: </script>
+[WebServer] 23: 
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/trips/+page.svelte:27:28 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 25:   let { data } = $props();
+[WebServer] 26: 
+[WebServer] 27:   let trips: Trip[] = $state(data.trips);
+[WebServer]                                      ^
+[WebServer] 28:   let refetching = $state(false);
+[WebServer] 29:   async function refetchTrips() {
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/trips/[id]/+page.svelte:24:25 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 22:   // Trip in lokales $state heben, damit Status-Updates (Pause/Archive)
+[WebServer] 23:   // reaktiv ohne Page-Reload sichtbar werden.
+[WebServer] 24:   let trip = $state<Trip>(data.trip);
+[WebServer]                                   ^
+[WebServer] 25: 
+[WebServer] 26:   // Issue #1395 S3: den Stempel aus der Server-Naht in die Registry uebernehmen.
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/trips/[id]/+page.svelte:43:57 This reference only captures the initial value of `trip`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 41: 
+[WebServer] 42:   // Issue #758: SaveStatus-Controller — eine Instanz pro Trip-Seite (kein Singleton!).
+[WebServer] 43:   const tripSaveCtl = createSaveStatus({ typ: 'trip', id: trip.id });
+[WebServer]                                                                   ^
+[WebServer] 44: 
+[WebServer] 45:   // Issue #758: Flush ausstehender Auto-Saves vor Navigation (AC-5).
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/locations/+page.svelte:20:36 This reference only captures the initial value of `data`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 18:   let { data } = $props();
+[WebServer] 19: 
+[WebServer] 20:   let locations: Location[] = $state(data.locations);
+[WebServer]                                              ^
+[WebServer] 21:   let refetching = $state(false);
+[WebServer] 22:   async function refetchLocations() {
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/routes/login/+page.svelte:49:23 This reference only captures the initial value of `form`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 47:   });
+[WebServer] 48: 
+[WebServer] 49:   let username = $state(form?.username ?? '');
+[WebServer]                                 ^
+[WebServer] 50: 
+[WebServer] 51:   // Issue #2247 — Passkey als erster Anmeldeweg auf dem Handy.
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/ui/sidebar/BottomNav.svelte:62:5 `<svelte:component>` is deprecated in runes mode — components are dynamic by default
+[WebServer] https://svelte.dev/e/svelte_component_deprecated[39m
+[WebServer] 60:       >
+[WebServer] 61:         <span class="bottom-nav__icon inline-flex">
+[WebServer] 62:           <svelte:component this={item.icon} class="size-6" />
+[WebServer]                                                                   ^
+[WebServer] 63:         </span>
+[WebServer] 64:         <span class="bottom-nav__label">{item.label}</span>
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/compare-new/CompareNewEditor.svelte:138:32 This reference only captures the initial value of `groups`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 136: 
+[WebServer] 137:   // ── Gruppen (App-Group-Entity #301) — lazy beim ERSTEN Orte-Besuch ─────────
+[WebServer] 138:   let ceGroups = $state<Group[]>(groups ?? []);
+[WebServer]                                             ^
+[WebServer] 139:   let ceGroupsLoadStarted = groups !== undefined;
+[WebServer] 140:   async function ceLoadGroups(): Promise<void> {
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/compare-new/CompareNewEditor.svelte:139:27 This reference only captures the initial value of `groups`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 137:   // ── Gruppen (App-Group-Entity #301) — lazy beim ERSTEN Orte-Besuch ─────────
+[WebServer] 138:   let ceGroups = $state<Group[]>(groups ?? []);
+[WebServer] 139:   let ceGroupsLoadStarted = groups !== undefined;
+[WebServer]                                        ^
+[WebServer] 140:   async function ceLoadGroups(): Promise<void> {
+[WebServer] 141:     try {
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/ui/sidebar/KontoSheet.svelte:59:5 `<svelte:component>` is deprecated in runes mode — components are dynamic by default
+[WebServer] https://svelte.dev/e/svelte_component_deprecated[39m
+[WebServer] 57:       {#each links as l (l.href)}
+[WebServer] 58:         <a href={l.href} data-testid={l.testid} class="konto__zeile" onclick={onClose}>
+[WebServer] 59:           <svelte:component this={l.icon} class="size-[22px] shrink-0" />
+[WebServer]                                                                              ^
+[WebServer] 60:           <span class="konto__label">{l.label}</span>
+[WebServer] 61:           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:26:19 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 24:   }
+[WebServer] 25: 
+[WebServer] 26:   let name = $state(location?.name ?? '');
+[WebServer]                                 ^
+[WebServer] 27:   let lat = $state(location?.lat ?? 47.0);
+[WebServer] 28:   let lon = $state(location?.lon ?? 11.0);
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:27:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 25: 
+[WebServer] 26:   let name = $state(location?.name ?? '');
+[WebServer] 27:   let lat = $state(location?.lat ?? 47.0);
+[WebServer]                                ^
+[WebServer] 28:   let lon = $state(location?.lon ?? 11.0);
+[WebServer] 29:   let dmsInput = $state('');
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:28:18 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 26:   let name = $state(location?.name ?? '');
+[WebServer] 27:   let lat = $state(location?.lat ?? 47.0);
+[WebServer] 28:   let lon = $state(location?.lon ?? 11.0);
+[WebServer]                                ^
+[WebServer] 29:   let dmsInput = $state('');
+[WebServer] 30: 
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:49:25 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 47:     }
+[WebServer] 48:   }
+[WebServer] 49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[WebServer]                                       ^
+[WebServer] 50:   let region = $state(location?.region ?? '');
+[WebServer] 51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:50:21 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 48:   }
+[WebServer] 49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[WebServer] 50:   let region = $state(location?.region ?? '');
+[WebServer]                                   ^
+[WebServer] 51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[WebServer] 52:   let activityProfile = $state<ActivityProfile | ''>(location?.activity_profile ?? '');
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:51:26 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 49:   let elevationM = $state(location?.elevation_m ?? 2000);
+[WebServer] 50:   let region = $state(location?.region ?? '');
+[WebServer] 51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[WebServer]                                        ^
+[WebServer] 52:   let activityProfile = $state<ActivityProfile | ''>(location?.activity_profile ?? '');
+[WebServer] 53:   let groupId = $state(location?.group_id ?? '');
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:52:52 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 50:   let region = $state(location?.region ?? '');
+[WebServer] 51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[WebServer] 52:   let activityProfile = $state<ActivityProfile | ''>(location?.activity_profile ?? '');
+[WebServer]                                                                  ^
+[WebServer] 53:   let groupId = $state(location?.group_id ?? '');
+[WebServer] 54:   let error = $state('');
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/LocationForm.svelte:53:22 This reference only captures the initial value of `location`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 51:   let bergfexSlug = $state(location?.bergfex_slug ?? '');
+[WebServer] 52:   let activityProfile = $state<ActivityProfile | ''>(location?.activity_profile ?? '');
+[WebServer] 53:   let groupId = $state(location?.group_id ?? '');
+[WebServer]                                    ^
+[WebServer] 54:   let error = $state('');
+[WebServer] 55: 
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:466:3 Buttons and links should either contain text or have an `aria-label`, `aria-labelledby` or `title` attribute
+[WebServer] https://svelte.dev/e/a11y_consider_explicit_label[39m
+[WebServer] 464:     <div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-appbar" style="position: relative; align-items: center; height: 52px; padding: 0 4px; border-bottom: 1px solid var(--g-rule-soft); background: var(--g-paper); flex-shrink: 0; z-index: 10;">
+[WebServer] 465:       <!-- Back-Button -->
+[WebServer] 466:       <button type="button" onclick={makeCancelHandler()}
+[WebServer]                     ^
+[WebServer] 467:         style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); flex-shrink: 0;">
+[WebServer] 468:         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:589:6 A form label must be associated with a control
+[WebServer] https://svelte.dev/e/a11y_label_has_associated_control[39m
+[WebServer] 587: 
+[WebServer] 588:           <div style="margin-bottom: 18px;">
+[WebServer] 589:             <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
+[WebServer]                          ^
+[WebServer] 590:               Tour-Name <span style="color: var(--g-bad);">*</span>
+[WebServer] 591:             </label>
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:594:7 Avoid using autofocus
+[WebServer] https://svelte.dev/e/a11y_autofocus[39m
+[WebServer] 592:             <input type="text" value={name} oninput={makeNameHandler()}
+[WebServer] 593:               placeholder="z.B. Karnischer Höhenweg 2026"
+[WebServer] 594:               autofocus
+[WebServer]                             ^
+[WebServer] 595:               data-testid="trip-new-name-input-desktop"
+[WebServer] 596:               style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; font-family: var(--g-font-sans); border: 1.5px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card); color: var(--g-ink); outline: none;" />
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:600:6 A form label must be associated with a control
+[WebServer] https://svelte.dev/e/a11y_label_has_associated_control[39m
+[WebServer] 598: 
+[WebServer] 599:           <div style="margin-bottom: 18px;">
+[WebServer] 600:             <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
+[WebServer]                          ^
+[WebServer] 601:               Region
+[WebServer] 602:               <span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional · max 50</span>
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:611:6 A form label must be associated with a control
+[WebServer] https://svelte.dev/e/a11y_label_has_associated_control[39m
+[WebServer] 609: 
+[WebServer] 610:           <div style="margin-bottom: 18px;">
+[WebServer] 611:             <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
+[WebServer]                          ^
+[WebServer] 612:               Startdatum <span style="color: var(--g-bad);">*</span>
+[WebServer] 613:             </label>
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/trip-new/TripNewEditor.svelte:627:6 A form label must be associated with a control
+[WebServer] https://svelte.dev/e/a11y_label_has_associated_control[39m
+[WebServer] 625:           {#if !isMobileViewport}
+[WebServer] 626:           <div style="margin-bottom: 18px;">
+[WebServer] 627:             <label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
+[WebServer]                          ^
+[WebServer] 628:               Aktivitätstyp
+[WebServer] 629:               <span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional</span>
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/compare/LocationNewModal.svelte:220:5 Visible, non-interactive element `<div>` with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+[WebServer] https://svelte.dev/e/a11y_click_events_have_key_events[39m
+[WebServer] 218:         {#each ACTIVITY_PROFILE_OPTIONS as profile}
+[WebServer] 219:           {@const isActive = activeProfile === profile.value}
+[WebServer] 220:           <div
+[WebServer]                    ^
+[WebServer] 221:             onclick={() => { activeProfile = profile.value; }}
+[WebServer] 222:             style="padding:12px 14px; border:1.5px solid {isActive ? 'var(--g-accent)' : 'var(--g-rule-soft)'}; background:{isActive ? 'var(--g-accent-tint)' : 'var(--g-card-alt)'}; border-radius:var(--g-r-3); cursor:pointer;"
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/compare/LocationNewModal.svelte:220:5 `<div>` with a click handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 218:         {#each ACTIVITY_PROFILE_OPTIONS as profile}
+[WebServer] 219:           {@const isActive = activeProfile === profile.value}
+[WebServer] 220:           <div
+[WebServer]                    ^
+[WebServer] 221:             onclick={() => { activeProfile = profile.value; }}
+[WebServer] 222:             style="padding:12px 14px; border:1.5px solid {isActive ? 'var(--g-accent)' : 'var(--g-rule-soft)'}; background:{isActive ? 'var(--g-accent-tint)' : 'var(--g-card-alt)'}; border-radius:var(--g-r-3); cursor:pointer;"
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/compare/CompareTile.svelte:88:0 noninteractive element cannot have nonnegative tabIndex value
+[WebServer] https://svelte.dev/e/a11y_no_noninteractive_tabindex[39m
+[WebServer] 86: </script>
+[WebServer] 87: 
+[WebServer] 88: <div
+[WebServer]         ^
+[WebServer] 89:   class={'compare-tile' + (className ? ' ' + className : '')}
+[WebServer] 90:   data-testid="compare-tile-{sub.id}"
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/mobile/Sheet.svelte:89:2 Visible, non-interactive element `<div>` with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+[WebServer] https://svelte.dev/e/a11y_click_events_have_key_events[39m
+[WebServer] 87:     style:overflow="hidden"
+[WebServer] 88:   >
+[WebServer] 89:     <div
+[WebServer]             ^
+[WebServer] 90:       data-testid="sheet-handle"
+[WebServer] 91:       onclick={onHandleToggle}
+[WebServer] [33m5:31:13 PM [vite-plugin-svelte] src/lib/components/mobile/Sheet.svelte:89:2 `<div>` with a click handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 87:     style:overflow="hidden"
+[WebServer] 88:   >
+[WebServer] 89:     <div
+[WebServer]             ^
+[WebServer] 90:       data-testid="sheet-handle"
+[WebServer] 91:       onclick={onHandleToggle}
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte:151:2 Elements with the 'dialog' interactive role must have a tabindex value
+[WebServer] https://svelte.dev/e/a11y_interactive_supports_focus[39m
+[WebServer] 149:   >
+[WebServer] 150:     <!-- Dialog-Container -->
+[WebServer] 151:     <div
+[WebServer]              ^
+[WebServer] 152:       data-testid="save-preset-dialog"
+[WebServer] 153:       role="dialog"
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte:151:2 Visible, non-interactive element `<div>` with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+[WebServer] https://svelte.dev/e/a11y_click_events_have_key_events[39m
+[WebServer] 149:   >
+[WebServer] 150:     <!-- Dialog-Container -->
+[WebServer] 151:     <div
+[WebServer]              ^
+[WebServer] 152:       data-testid="save-preset-dialog"
+[WebServer] 153:       role="dialog"
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte:178:6 Avoid using autofocus
+[WebServer] https://svelte.dev/e/a11y_autofocus[39m
+[WebServer] 176:             maxlength="40"
+[WebServer] 177:             placeholder="Mein Wandern-Preset"
+[WebServer] 178:             autofocus
+[WebServer]                           ^
+[WebServer] 179:             required
+[WebServer] 180:             style="padding:10px 12px;font-size:15px;background:var(--g-card);border:1px solid var(--g-rule);border-radius:4px;font:inherit;width:100%;box-sizing:border-box"
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte:265:1 Unused CSS selector ".will-save-box hr"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 263:     cursor: pointer;
+[WebServer] 264:   }
+[WebServer] 265:   .will-save-box hr {
+[WebServer]                         ^
+[WebServer] 266:     border: none;
+[WebServer] 267:     border-top: 1px solid var(--g-ink-faint);
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/WaypointsPanel.svelte:22:61 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 20: 
+[WebServer] 21:   // State
+[WebServer] 22:   let localStages = $state<Stage[]>(JSON.parse(JSON.stringify(trip.stages)));
+[WebServer]                                                                       ^
+[WebServer] 23:   let activeStageId = $state<string>(trip.stages.find((s) => !isPauseStage(s))?.id ?? '');
+[WebServer] 24:   let activeWaypointId = $state<string | null>(null);
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/WaypointsPanel.svelte:23:36 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 21:   // State
+[WebServer] 22:   let localStages = $state<Stage[]>(JSON.parse(JSON.stringify(trip.stages)));
+[WebServer] 23:   let activeStageId = $state<string>(trip.stages.find((s) => !isPauseStage(s))?.id ?? '');
+[WebServer]                                              ^
+[WebServer] 24:   let activeWaypointId = $state<string | null>(null);
+[WebServer] 25:   let saving = $state(false);
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/TripTabs.svelte:61:35 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 59: 
+[WebServer] 60:   // Lokale Kopie der Etappen für den Stages-Tab (EditStagesSection braucht $bindable).
+[WebServer] 61:   let localStages = $state<Stage[]>(trip?.stages ?? []);
+[WebServer]                                             ^
+[WebServer] 62:   let activityType = $state<ActivityType | undefined>(trip?.activity);
+[WebServer] 63: 
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/TripTabs.svelte:62:53 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 60:   // Lokale Kopie der Etappen für den Stages-Tab (EditStagesSection braucht $bindable).
+[WebServer] 61:   let localStages = $state<Stage[]>(trip?.stages ?? []);
+[WebServer] 62:   let activityType = $state<ActivityType | undefined>(trip?.activity);
+[WebServer]                                                               ^
+[WebServer] 63: 
+[WebServer] 64:   // Issue #302 — Auto-Badges aus Trip ableiten (Etappenanzahl + enabled Alerts).
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/TripHeader.svelte:35:23 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 33:   // AC-6 — Inline Trip-Name-Bearbeitung (kein separater /edit-Screen mehr)
+[WebServer] 34:   // #713 — toggle: nur via Stift-Icon editierbar (kein dauerhaftes Eingabefeld)
+[WebServer] 35:   let editName = $state(trip.name);
+[WebServer]                                 ^
+[WebServer] 36:   let nameSaving = $state(false);
+[WebServer] 37:   let isEditingName = $state(false);
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/TripHeader.svelte:251:1 Unused CSS selector ".header-actions"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 249:     font-variant-numeric: tabular-nums;
+[WebServer] 250:   }
+[WebServer] 251:   .header-actions {
+[WebServer]                       ^
+[WebServer] 252:     display: flex;
+[WebServer] 253:     gap: 0.5rem;
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/TripHeader.svelte:257:1 Unused CSS selector ".briefing-msg"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 255:     flex-shrink: 0;
+[WebServer] 256:   }
+[WebServer] 257:   .briefing-msg {
+[WebServer]                     ^
+[WebServer] 258:     margin: 0;
+[WebServer] 259:     font-size: var(--g-text-sm);
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:230:4 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 228:   // — channels wird als unbekanntes Feld durchgereicht, daher Cast über unknown.
+[WebServer] 229:   let channels: ChannelConfig = $state(
+[WebServer] 230:     ((trip?.display_config as unknown as Record<string, unknown>)?.channels as ChannelConfig | undefined)
+[WebServer]                ^
+[WebServer] 231:       ?? { email: true, telegram: true, sms: false }
+[WebServer] 232:   );
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:234:40 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 232:   );
+[WebServer] 233:   // Issue #614: Telegram Kurzform-Toggle (SMS-Tages-Max als Anhang).
+[WebServer] 234:   let telegramKurzform = $state<boolean>(trip?.display_config?.telegram_kurzform ?? false);
+[WebServer]                                                   ^
+[WebServer] 235:   // Issue #1117: Amtliche Warnungen im E-Mail-Briefing (zweiter Einstiegspunkt neben
+[WebServer] 236:   // Alerts-Tab). Default true matcht den Backend-Default.
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:237:45 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 235:   // Issue #1117: Amtliche Warnungen im E-Mail-Briefing (zweiter Einstiegspunkt neben
+[WebServer] 236:   // Alerts-Tab). Default true matcht den Backend-Default.
+[WebServer] 237:   let officialAlertsEnabled = $state<boolean>(trip?.official_alerts_enabled ?? true);
+[WebServer]                                                        ^
+[WebServer] 238:   // Issue #624: konfigurierbare Schwellwerte pro Metrik (nur threshold-fähige).
+[WebServer] 239:   const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder', 'snow_depth', 'snowfall_limit'];
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:247:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 245:   // Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter (analog BriefingScheduleTab).
+[WebServer] 246:   let reportConfig = $state<ReportConfig>(
+[WebServer] 247:     trip?.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
+[WebServer]              ^
+[WebServer] 248:   );
+[WebServer] 249: 
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:247:50 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 245:   // Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter (analog BriefingScheduleTab).
+[WebServer] 246:   let reportConfig = $state<ReportConfig>(
+[WebServer] 247:     trip?.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
+[WebServer]                                                              ^
+[WebServer] 248:   );
+[WebServer] 249: 
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/WeatherMetricsTab.svelte:1021:39 This reference only captures the initial value of `reportConfig`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 1019:   // OHNE dass der Nutzer etwas geaendert hat; der rohe String-/Referenz-
+[WebServer] 1020:   // Vergleich wertete das faelschlich als Aenderung.
+[WebServer] 1021:   let _lastReportConfig: ReportConfig = reportConfig;
+[WebServer]                                                           ^
+[WebServer] 1022:   $effect(() => {
+[WebServer] 1023:     const cur = reportConfig;
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/organisms/HomeHeroCompare.svelte:95:5 '#' is not a valid href attribute
+[WebServer] https://svelte.dev/e/a11y_invalid_attribute[39m
+[WebServer] 93:       </div>
+[WebServer] 94:     </div>
+[WebServer] 95:     <a href="#" style:font-size="12px" style:color="var(--g-ink-3)" style:text-decoration="none" style:font-family="var(--g-font-mono)">Vergleich öffnen →</a>
+[WebServer]                    ^
+[WebServer] 96:   </div>
+[WebServer] 97: </Card>
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/organisms/HomeHeroTrip.svelte:93:5 '#' is not a valid href attribute
+[WebServer] https://svelte.dev/e/a11y_invalid_attribute[39m
+[WebServer] 91:       </div>
+[WebServer] 92:     </div>
+[WebServer] 93:     <a href="#" style:font-size="12px" style:color="var(--g-ink-3)" style:text-decoration="none" style:font-family="var(--g-font-mono)">Trip öffnen →</a>
+[WebServer]                    ^
+[WebServer] 94:   </div>
+[WebServer] 95: </Card>
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/organisms/MetricOffShelf.svelte:36:19 This reference only captures the initial value of `defaultOpen`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 34:   }: Props = $props();
+[WebServer] 35: 
+[WebServer] 36:   let open = $state(defaultOpen);
+[WebServer]                                    ^
+[WebServer] 37: 
+[WebServer] 38:   // Group by category
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:196:63 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 194:   // Uebersicht-/Vorschau-Tab lesen bewusst weiterhin `preset` direkt
+[WebServer] 195:   // (bekannte, akzeptierte Stale-Anzeige, s. Fix-Vorgabe Scope).
+[WebServer] 196:   let currentPreset = $state<ComparePreset>(snapshotForRollback(preset));
+[WebServer]                                                                            ^
+[WebServer] 197: 
+[WebServer] 198:   // Fix-Loop 1 (F002, Adversary CRITICAL): EINE gemeinsame Serialisierungs-
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:209:47 This reference only captures the initial value of `currentPreset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 207:   // Startet aus currentPreset.location_ids, wird bei Drag/Entfernen/Hinzufügen
+[WebServer] 208:   // sofort im UI aktualisiert und per PUT persistiert (Rollback bei Fehler).
+[WebServer] 209:   let currentLocationIds = $state<string[]>([...currentPreset.location_ids]);
+[WebServer]                                                                   ^
+[WebServer] 210:   const orteCount = $derived(currentLocationIds.length);
+[WebServer] 211:   // Fix-Loop 2 (F003-Analogie): zuletzt ERFOLGREICH persistierter Orte-Stand,
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:216:46 This reference only captures the initial value of `currentLocationIds`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 214:   // in der Queue bereits erfolgreichen Edit zurueckfallen statt auf einen
+[WebServer] 215:   // aelteren, beim Funktionsaufruf gelesenen Stand.
+[WebServer] 216:   let lastPersistedLocationIds: string[] = [...currentLocationIds];
+[WebServer]                                                                       ^
+[WebServer] 217: 
+[WebServer] 218:   // Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:626:2 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 624:   // previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
+[WebServer] 625:   let previousSchedule = $state<string>(
+[WebServer] 626:     preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+[WebServer]                ^
+[WebServer] 627:   );
+[WebServer] 628:   let localSchedule = $state<string>(preset.schedule ?? 'manual');
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:626:32 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 624:   // previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
+[WebServer] 625:   let previousSchedule = $state<string>(
+[WebServer] 626:     preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+[WebServer]                                              ^
+[WebServer] 627:   );
+[WebServer] 628:   let localSchedule = $state<string>(preset.schedule ?? 'manual');
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:626:51 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 624:   // previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
+[WebServer] 625:   let previousSchedule = $state<string>(
+[WebServer] 626:     preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+[WebServer]                                                                 ^
+[WebServer] 627:   );
+[WebServer] 628:   let localSchedule = $state<string>(preset.schedule ?? 'manual');
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:626:83 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 624:   // previousSchedule initialisiert aus Backend-Feld (überlebt Reload).
+[WebServer] 625:   let previousSchedule = $state<string>(
+[WebServer] 626:     preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+[WebServer]                                                                                                 ^
+[WebServer] 627:   );
+[WebServer] 628:   let localSchedule = $state<string>(preset.schedule ?? 'manual');
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/compare/CompareTabs.svelte:628:36 This reference only captures the initial value of `preset`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 626:     preset.previous_schedule || ((preset.schedule && preset.schedule !== 'manual') ? preset.schedule : 'daily')
+[WebServer] 627:   );
+[WebServer] 628:   let localSchedule = $state<string>(preset.schedule ?? 'manual');
+[WebServer]                                                 ^
+[WebServer] 629: 
+[WebServer] 630:   // Liefert true/false statt zu werfen — der Hub-eigene CTA-Klick ignoriert
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:57:12 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 55:     $props();
+[WebServer] 56: 
+[WebServer] 57:   const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
+[WebServer]                         ^
+[WebServer] 58: 
+[WebServer] 59:   // Issue #2276 S3: EINZIGER Speicherweg des vergleich-Zweigs im Hub (Muster
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:79:2 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 77:   // beide Kontexte (sonst zombie-Level nach mehrfachem notify-Toggle, F002/Slice4).
+[WebServer] 78:   const originalLevels = (
+[WebServer] 79:     context === 'vergleich'
+[WebServer]                ^
+[WebServer] 80:       ? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
+[WebServer] 81:       : trip?.display_config?.metric_alert_levels
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:81:5 This reference only captures the initial value of `trip`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 79:     context === 'vergleich'
+[WebServer] 80:       ? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
+[WebServer] 81:       : trip?.display_config?.metric_alert_levels
+[WebServer]                 ^
+[WebServer] 82:   ) ?? {} as Record<string, SensLevel>;
+[WebServer] 83: 
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:89:2 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 87:   // zweiter Hinzufuegen-Klick faelschlich wieder "neu" wirken.
+[WebServer] 88:   const originalActiveMetricKeys: string[] =
+[WebServer] 89:     context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
+[WebServer]                ^
+[WebServer] 90: 
+[WebServer] 91:   // Team-Lead-Korrektur (PO-Linie „nichts Neues erfinden — wie heute"):
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:95:30 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 93:   // Step3Idealwerte aus dem Aktivitaetsprofil — sonst startet der Editor im
+[WebServer] 94:   // Create-Fluss leer (UX-Verschlechterung ggü. heute).
+[WebServer] 95:   const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
+[WebServer]                                           ^
+[WebServer] 96:   function computeInitialCompare(defs: CompareMetricDef[]): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
+[WebServer] 97:     if (!isFreshCompareCreate) return buildComparePool(ws?.corridors ?? [], defs);
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:394:7 `<div>` with a pointerdown handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 392:             {#if row.max == null}<span class="ce-open ce-open-right">offen ▸</span>{/if}
+[WebServer] 393:             {#if row.min != null}
+[WebServer] 394:               <div class="ce-handle" style="left:{leftPct}%" onpointerdown={(e) => onHandleDown(e, row.metric, 'min')}></div>
+[WebServer]                                                                                                                                   ^
+[WebServer] 395:             {/if}
+[WebServer] 396:             {#if row.max != null}
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:397:7 `<div>` with a pointerdown handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 395:             {/if}
+[WebServer] 396:             {#if row.max != null}
+[WebServer] 397:               <div class="ce-handle" class:mark={row.mark} style="left:{rightPct}%" onpointerdown={(e) => onHandleDown(e, row.metric, 'max')}></div>
+[WebServer]                                                                                                                                                          ^
+[WebServer] 398:             {/if}
+[WebServer] 399:           </div>
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:524:1 Unused CSS selector ".ce-effect.notify.on"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 522:   .ce-effects { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+[WebServer] 523:   .ce-effect { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: transparent; color: var(--g-ink-4); border: 1px solid var(--g-rule); cursor: pointer; }
+[WebServer] 524:   .ce-effect.notify.on { color: var(--g-warn); border-color: var(--g-warn); background: rgba(192, 138, 26, 0.12); }
+[WebServer]                            ^
+[WebServer] 525:   .ce-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
+[WebServer] 526:   .ce-effect.disabled { opacity: 0.4; cursor: not-allowed; }
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditor.svelte:526:1 Unused CSS selector ".ce-effect.disabled"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 524:   .ce-effect.notify.on { color: var(--g-warn); border-color: var(--g-warn); background: rgba(192, 138, 26, 0.12); }
+[WebServer] 525:   .ce-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
+[WebServer] 526:   .ce-effect.disabled { opacity: 0.4; cursor: not-allowed; }
+[WebServer]                           ^
+[WebServer] 527:   .ce-remove { background: transparent; border: none; color: var(--g-ink-4); font-size: 11px; cursor: pointer; padding: 0; }
+[WebServer] 528:   .ce-pool { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 14px 20px; border-top: 1px dashed var(--g-rule-soft); }
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:70:12 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 68:     $props();
+[WebServer] 69: 
+[WebServer] 70:   const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
+[WebServer]                         ^
+[WebServer] 71: 
+[WebServer] 72:   // Issue #2276 S3: EINZIGER Speicherweg des vergleich-Zweigs im Hub (Muster
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:91:2 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 89:   // Stand — analog Desktop (CorridorEditor.svelte), gilt fuer beide Kontexte.
+[WebServer] 90:   const originalLevels = (
+[WebServer] 91:     context === 'vergleich'
+[WebServer]                ^
+[WebServer] 92:       ? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
+[WebServer] 93:       : trip?.display_config?.metric_alert_levels
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:93:5 This reference only captures the initial value of `trip`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 91:     context === 'vergleich'
+[WebServer] 92:       ? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
+[WebServer] 93:       : trip?.display_config?.metric_alert_levels
+[WebServer]                 ^
+[WebServer] 94:   ) ?? {} as Record<string, SensLevel>;
+[WebServer] 95:   const originalActiveMetricKeys: string[] =
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:96:2 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 94:   ) ?? {} as Record<string, SensLevel>;
+[WebServer] 95:   const originalActiveMetricKeys: string[] =
+[WebServer] 96:     context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
+[WebServer]                ^
+[WebServer] 97: 
+[WebServer] 98:   const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:98:30 This reference only captures the initial value of `context`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer]  96:     context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
+[WebServer]  97: 
+[WebServer]  98:   const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
+[WebServer]                                            ^
+[WebServer]  99:   function computeInitialCompare(defs: CompareMetricDef[]): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
+[WebServer] 100:     if (!isFreshCompareCreate) return buildComparePool(ws?.corridors ?? [], defs);
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:373:6 `<div>` with a pointerdown handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 371:           {#if row.max == null}<span class="cem-open cem-open-right">offen ▸</span>{/if}
+[WebServer] 372:           {#if row.min != null}
+[WebServer] 373:             <div class="cem-handle" style="left:{leftPct}%" onpointerdown={(e) => onHandleDown(e, row.metric, 'min')}></div>
+[WebServer]                                                                                                                                  ^
+[WebServer] 374:           {/if}
+[WebServer] 375:           {#if row.max != null}
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:376:6 `<div>` with a pointerdown handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 374:           {/if}
+[WebServer] 375:           {#if row.max != null}
+[WebServer] 376:             <div class="cem-handle" class:mark={row.mark} style="left:{rightPct}%" onpointerdown={(e) => onHandleDown(e, row.metric, 'max')}></div>
+[WebServer]                                                                                                                                                         ^
+[WebServer] 377:           {/if}
+[WebServer] 378:         </div>
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:515:1 Unused CSS selector ".cem-effect.notify.on"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 513:   .cem-effects { display: flex; gap: 8px; margin-top: 12px; }
+[WebServer] 514:   .cem-effect { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: var(--g-r-3, 10px); cursor: pointer; font-size: 14px; font-weight: 600; background: transparent; color: var(--g-ink-4); border: 1px solid var(--g-rule); }
+[WebServer] 515:   .cem-effect.notify.on { color: var(--g-warn, #8a6210); border-color: var(--g-warn, #8a6210); background: rgba(192, 138, 26, 0.12); }
+[WebServer]                             ^
+[WebServer] 516:   .cem-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
+[WebServer] 517:   .cem-effect.disabled { opacity: 0.4; cursor: not-allowed; }
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/corridor-editor/CorridorEditorMobile.svelte:517:1 Unused CSS selector ".cem-effect.disabled"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 515:   .cem-effect.notify.on { color: var(--g-warn, #8a6210); border-color: var(--g-warn, #8a6210); background: rgba(192, 138, 26, 0.12); }
+[WebServer] 516:   .cem-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
+[WebServer] 517:   .cem-effect.disabled { opacity: 0.4; cursor: not-allowed; }
+[WebServer]                            ^
+[WebServer] 518:   .cem-remove-row { display: flex; justify-content: flex-end; margin-top: 8px; }
+[WebServer] 519:   .cem-remove { background: transparent; border: none; padding: 6px 2px; color: var(--g-ink-4); cursor: pointer; font-size: 11.5px; }
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:168:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 166:   // Legacy-Fallback identisch zur Pipeline (trip_alert.py): nil -> Ist-Verhalten.
+[WebServer] 167:   let officialWarningsEnabled = $state<boolean>(
+[WebServer] 168:     trip?.official_warnings?.enabled ?? trip?.official_alert_triggers_enabled !== false
+[WebServer]              ^
+[WebServer] 169:   );
+[WebServer] 170:   const displayOfficialWarningsEnabled = $derived(
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:168:38 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 166:   // Legacy-Fallback identisch zur Pipeline (trip_alert.py): nil -> Ist-Verhalten.
+[WebServer] 167:   let officialWarningsEnabled = $state<boolean>(
+[WebServer] 168:     trip?.official_warnings?.enabled ?? trip?.official_alert_triggers_enabled !== false
+[WebServer]                                                  ^
+[WebServer] 169:   );
+[WebServer] 170:   const displayOfficialWarningsEnabled = $derived(
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:213:2 This reference only captures the initial value of `metricLevels`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 211:   // buildAlarmeSaveFn.
+[WebServer] 212:   let routeMetricLevels = $state<Record<AlertMetric, SensLevel>>(
+[WebServer] 213:     metricLevels ?? ({} as Record<AlertMetric, SensLevel>)
+[WebServer]                      ^
+[WebServer] 214:   );
+[WebServer] 215:   const effectiveMetricLevels = $derived(
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:241:72 This reference only captures the initial value of `existingChannels`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 239:   // Save unten (buildAlarmeSaveFn), NICHT mehr ueber einen eigenen
+[WebServer] 240:   // schedule()-Aufruf im Container.
+[WebServer] 241:   let routeChannelState = $state<AlertChannelState>(resolveAlertChannels(existingChannels));
+[WebServer]                                                                                               ^
+[WebServer] 242:   const displayChannelState = $derived<AlertChannelState>(
+[WebServer] 243:     context === 'vergleich'
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:304:50 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 302: 
+[WebServer] 303:   // ── (e)/(f) Cooldown/Stille Stunden — route: lokaler State, vergleich: wiz.* ─
+[WebServer] 304:   let cooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
+[WebServer]                                                             ^
+[WebServer] 305:   let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
+[WebServer] 306:   let quietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:305:44 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 303:   // ── (e)/(f) Cooldown/Stille Stunden — route: lokaler State, vergleich: wiz.* ─
+[WebServer] 304:   let cooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
+[WebServer] 305:   let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
+[WebServer]                                                       ^
+[WebServer] 306:   let quietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
+[WebServer] 307: 
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/AlarmeTab.svelte:306:42 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 304:   let cooldownMinutes = $state<number | undefined>(trip?.alert_cooldown_minutes ?? undefined);
+[WebServer] 305:   let quietFrom = $state<string | undefined>(trip?.alert_quiet_from ?? undefined);
+[WebServer] 306:   let quietTo = $state<string | undefined>(trip?.alert_quiet_to ?? undefined);
+[WebServer]                                                     ^
+[WebServer] 307: 
+[WebServer] 308:   // ── AC-12/F001: EIN $effect, EINE konsolidierte Payload-Funktion (nur route) ─
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/waypoints/ProfileEditor.svelte:121:2 `<rect>` with a click handler must have an ARIA role
+[WebServer] https://svelte.dev/e/a11y_no_static_element_interactions[39m
+[WebServer] 119:   {#if onProfileAdd}
+[WebServer] 120:     <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+[WebServer] 121:     <rect
+[WebServer]            ^
+[WebServer] 122:       data-testid="profile-add-area"
+[WebServer] 123:       x="0"
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/alert-rules-editor/AlertRuleRow.svelte:45:36 This reference only captures the initial value of `rule`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 43: 
+[WebServer] 44:   let editing = $state(false);
+[WebServer] 45:   let draft = $state<AlertRule>({ ...rule });
+[WebServer]                                              ^
+[WebServer] 46:   let kebabOpen = $state(false);
+[WebServer] 47: 
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/alert-rules-editor/AlertRuleRow.svelte:280:1 Unused CSS selector ".kebab-dropdown button"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 278:     padding: var(--g-s-1) 0;
+[WebServer] 279:   }
+[WebServer] 280:   .kebab-dropdown button {
+[WebServer]                              ^
+[WebServer] 281:     display: block;
+[WebServer] 282:     width: 100%;
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/alert-rules-editor/AlertRuleRow.svelte:291:1 Unused CSS selector ".kebab-dropdown button:hover"
+[WebServer] https://svelte.dev/e/css_unused_selector[39m
+[WebServer] 289:     color: var(--g-ink);
+[WebServer] 290:   }
+[WebServer] 291:   .kebab-dropdown button:hover {
+[WebServer]                                    ^
+[WebServer] 292:     background: var(--g-surface-raised);
+[WebServer] 293:   }
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/briefings-tab/BriefingsTab.svelte:9:28 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer]  7: 
+[WebServer]  8:   let reportConfig = $state<ReportConfig>(
+[WebServer]  9:     JSON.parse(JSON.stringify(trip.report_config ?? {}))
+[WebServer]                                       ^
+[WebServer] 10:   );
+[WebServer] 11:   let saving = $state(false);
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/BriefingScheduleTab.svelte:26:2 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 24: 
+[WebServer] 25:   let reportConfig = $state<ReportConfig>(
+[WebServer] 26:     trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
+[WebServer]             ^
+[WebServer] 27:   );
+[WebServer] 28: 
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/BriefingScheduleTab.svelte:26:49 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 24: 
+[WebServer] 25:   let reportConfig = $state<ReportConfig>(
+[WebServer] 26:     trip.report_config ? JSON.parse(JSON.stringify(trip.report_config)) : {}
+[WebServer]                                                            ^
+[WebServer] 27:   );
+[WebServer] 28: 
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/BriefingScheduleTab.svelte:82:39 This reference only captures the initial value of `reportConfig`. Did you mean to reference it inside a closure instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 80:   //     "Nicht gespeichert"-Anzeige statt stillem Verlust (AC-6/AC-7), falls
+[WebServer] 81:   //     die Gesten-Erfassung eine Aenderung mal nicht einfaengt (F003/F004-Klasse).
+[WebServer] 82:   let _lastReportConfig: ReportConfig = reportConfig;
+[WebServer]                                                         ^
+[WebServer] 83:   $effect(() => {
+[WebServer] 84:     const cur = reportConfig;
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/HubOverview.svelte:26:45 This reference only captures the initial value of `trip`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 24:   );
+[WebServer] 25: 
+[WebServer] 26:   let selectedStageId = $state<string | null>(trip.stages?.[0]?.id ?? null);
+[WebServer]                                                       ^
+[WebServer] 27: 
+[WebServer] 28:   // Issue #1223 — Risiko-Ampel je Etappe, clientseitig/lazy im Cockpit-Tab.
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/trip-detail/waypoints/EtappenStrip.svelte:120:4 Visible, non-interactive element `<div>` with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+[WebServer] https://svelte.dev/e/a11y_click_events_have_key_events[39m
+[WebServer] 118:       {#if i < stages.length - 1 && onPauseInsert}
+[WebServer] 119:         <!-- svelte-ignore a11y_no_static_element_interactions -->
+[WebServer] 120:         <div
+[WebServer]                  ^
+[WebServer] 121:           data-testid="etappen-strip-pause-after-{i}"
+[WebServer] 122:           style="flex-shrink:0; width:{hoverGap === i ? 56 : 8}px; min-height:88px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:width 140ms ease;"
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte:24:36 This reference only captures the initial value of `value`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 22:   let { value, onChange }: Props = $props();
+[WebServer] 23: 
+[WebServer] 24:   let mode = $state<'open' | 'date'>(value === null ? 'open' : 'date');
+[WebServer]                                               ^
+[WebServer] 25: 
+[WebServer] 26:   function selectOpen() {
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/edit/ProfileSheetEmbedded.svelte:73:35 This reference only captures the initial value of `snapPosition`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 71:   // Issue #1158 — merkt sich die zuletzt aktive Nicht-collapsed-Stufe, damit
+[WebServer] 72:   // die Griffleiste beim Ausklappen dorthin zurueckkehrt statt immer auf 'half'.
+[WebServer] 73:   let lastActiveSnap = $state<Snap>(snapPosition === 'collapsed' ? 'half' : snapPosition);
+[WebServer]                                                     ^
+[WebServer] 74:   $effect(() => {
+[WebServer] 75:     if (snapPosition !== 'collapsed') lastActiveSnap = snapPosition;
+[WebServer] [33m5:31:14 PM [vite-plugin-svelte] src/lib/components/edit/ProfileSheetEmbedded.svelte:73:75 This reference only captures the initial value of `snapPosition`. Did you mean to reference it inside a derived instead?
+[WebServer] https://svelte.dev/e/state_referenced_locally[39m
+[WebServer] 71:   // Issue #1158 — merkt sich die zuletzt aktive Nicht-collapsed-Stufe, damit
+[WebServer] 72:   // die Griffleiste beim Ausklappen dorthin zurueckkehrt statt immer auf 'half'.
+[WebServer] 73:   let lastActiveSnap = $state<Snap>(snapPosition === 'collapsed' ? 'half' : snapPosition);
+[WebServer]                                                                                             ^
+[WebServer] 74:   $effect(() => {
+[WebServer] 75:     if (snapPosition !== 'collapsed') lastActiveSnap = snapPosition;
+[WebServer] [33m5:31:15 PM [vite-plugin-svelte] src/lib/components/trip-detail/waypoints/StageCard.svelte:70:0 noninteractive element cannot have nonnegative tabIndex value
+[WebServer] https://svelte.dev/e/a11y_no_noninteractive_tabindex[39m
+[WebServer] 68: 
+[WebServer] 69: <!-- svelte-ignore a11y_click_events_have_key_events -->
+[WebServer] 70: <div
+[WebServer]         ^
+[WebServer] 71:   data-testid={isPause ? `stage-card-pause-${index}` : `stage-card-${index}`}
+[WebServer] 72:   style="
+[WebServer] [33m[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugins. Here is a breakdown:
+[WebServer]   - vite-plugin-sveltekit-guard (78%)
+[WebServer]   - vite-plugin-sveltekit-virtual-modules (6%)
+[WebServer]   - vite-plugin-svelte:compile (6%)
+[WebServer]   - vite-plugin-svelte:load-custom (5%)
+[WebServer] See https://rolldown.rs/options/checks#plugintimings for more details.
+[WebServer] [39m
+[WebServer] [33m[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugins. Here is a breakdown:
+[WebServer]   - vite-plugin-sveltekit-guard (80%)
+[WebServer]   - vite-plugin-svelte:compile (6%)
+[WebServer]   - vite-plugin-sveltekit-virtual-modules (4%)
+[WebServer]   - vite-plugin-svelte:load-custom (3%)
+[WebServer] See https://rolldown.rs/options/checks#plugintimings for more details.
+[WebServer] [39m
+
+Running 7 tests using 1 worker
+
+  ✓  1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (724ms)
+  ✓  2 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:174:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Boeen: weder Δ-Schwelle noch Zeitfenster, weiterhin keine Modus-Karten (AC-1) (2.2s)
+  ✓  3 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:203:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Metrik-Wechsel: auch Gewitter und Temperatur (Änderung) ohne Schwelle und Zeitfenster (AC-1) (2.1s)
+  ✓  4 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:227:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Weder Δ-Schwelle noch Zeitfenster noch Absolut-Feld — fuer KEINE Metrik (AC-1) (2.8s)
+  ✓  5 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:262:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Neue Regel erscheint ohne Wert und ohne Pille (AC-7, AC-2) (2.0s)
+  ✓  6 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:289:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Speichern erhaelt genau eine Regel — ohne Wert, ohne Pille (AC-2, AC-5) (2.1s)
+  ✓  7 [tests] › e2e/gewitter-absolutregel-gesperrt.spec.ts:351:2 › #1895 Schritt 2: Δ-Schwelle, Zeitfenster und Wert-Anzeige sind zurueckgebaut › Kanal-Chips ueberleben den Rueckbau und schalten weiterhin um (AC-5) (2.1s)
+
+  7 passed (30.4s)

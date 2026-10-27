@@ -3,7 +3,7 @@ entity_id: bug_332_approval_hook_session_id
 type: bugfix
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, workflow, tooling, hooks, session-registry, parallel-workflows, issue-332]
 ---

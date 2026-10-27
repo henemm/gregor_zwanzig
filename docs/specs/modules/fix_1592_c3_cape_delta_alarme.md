@@ -3,7 +3,7 @@ entity_id: fix_1592_c3_cape_delta_alarme
 type: module
 created: 2026-08-08
 updated: 2026-08-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [cape, alarme, delta, modellschwelle, issue-1592]
 ---
@@ -136,7 +136,7 @@ Ortsvergleichs-**Alarm**pfad trägt eine echte Herkunft (`compare_location_weath
 
 ## Acceptance Criteria
 
-- **AC-1 (Der Kernfall: CAPE-Alarme erreichen Frankreich):** Given eine Etappe auf Korsika
+- **AC-1:** (Der Kernfall: CAPE-Alarme erreichen Frankreich) Given eine Etappe auf Korsika
   (42.22/9.05, Gebiet FR) mit Herkunft `meteofrance_arome` und Empfindlichkeitsstufe
   „standard" / When das CAPE-Tagesmaximum gegenüber dem Δ-Anker um 250 J/kg steigt / Then
   entsteht eine CAPE-Alarmzeile (umgerechnete Schwelle 180), während heute keine entsteht
@@ -144,51 +144,51 @@ Ortsvergleichs-**Alarm**pfad trägt eine echte Herkunft (`compare_location_weath
   - Test: Aufruf über `detect_changes()` mit echten `SegmentWeatherData`; geprüft wird die
     Existenz des `WeatherChange` für `cape_max_jkg`, nicht ein Zwischenwert.
 
-- **AC-2 (Gegenprobe — die Schwelle verschwindet nicht):** Given dieselbe Etappe und Stufe /
+- **AC-2:** (Gegenprobe — die Schwelle verschwindet nicht) Given dieselbe Etappe und Stufe /
   When das CAPE-Maximum um nur 150 J/kg steigt / Then entsteht **keine** CAPE-Alarmzeile
   (150 < 180).
   - Test: derselbe Aufruf, leere Ergebnisliste für `cape_max_jkg`. Ohne diesen Fall wäre
     AC-1 auch von einer Implementierung erfüllt, die immer auslöst.
 
-- **AC-3 (Unbekannte Herkunft schweigt, statt zu behaupten):** Given eine Etappe, deren
+- **AC-3:** (Unbekannte Herkunft schweigt, statt zu behaupten) Given eine Etappe, deren
   `cape_model_id` `None` ist (unbekanntes Modell oder Herkunft über Segmentgrenzen uneinig) /
   When das CAPE-Maximum um 5000 J/kg springt / Then entsteht **keine** CAPE-Alarmzeile —
   „keine Aussage", nicht „unauffällig".
   - Test: `detect_changes()` liefert kein `cape_max_jkg`-Ereignis; Gegenprobe mit gesetzter
     Herkunft liefert eines.
 
-- **AC-4 (Kein Gebiet, keine Aussage):** Given eine Etappe mit bekannter Herkunft, aber
+- **AC-4:** (Kein Gebiet, keine Aussage) Given eine Etappe mit bekannter Herkunft, aber
   Koordinaten außerhalb jedes geeichten Gebiets bzw. einer Kombination ohne Eichwert / When
   ein beliebig großer CAPE-Sprung auftritt / Then entsteht **keine** CAPE-Alarmzeile.
   - Test: über `detect_changes()` mit einer nachweislich nicht in `CAPE_THRESHOLDS_JKG`
     enthaltenen Kombination.
 
-- **AC-5 (Der Alarmtext nennt die Schwelle, die wirklich galt):** Given der Alarm aus AC-1 /
+- **AC-5:** (Der Alarmtext nennt die Schwelle, die wirklich galt) Given der Alarm aus AC-1 /
   When die Alarmzeile gerendert wird / Then nennt sie 180 J/kg als Schwelle und stuft das
   Ereignis als „über Schwelle" ein — nicht 600 und nicht „unter Schwelle".
   - Test: `WeatherChange.threshold == 180.0` **und** `over_thr()` des Renderer-Modells
     liefert `True` für das daraus gebaute Ereignis. Prüfort ist der Renderer, nicht nur das
     Ereignis.
 
-- **AC-6 (Die Dringlichkeit folgt der umgerechneten Schwelle):** Given die Etappe aus AC-1 /
+- **AC-6:** (Die Dringlichkeit folgt der umgerechneten Schwelle) Given die Etappe aus AC-1 /
   When das CAPE-Maximum um 400 J/kg steigt / Then ist die Alarmstufe MAJOR (400/180 = 2,2 ≥ 2,0),
   während heute überhaupt kein Alarm entstünde (400 < 600).
   - Test: `WeatherChange.severity is ChangeSeverity.MAJOR`.
 
-- **AC-7 (Der Ortsvergleich erbt die Wirkung, ohne eigenen Code):** Given ein Ortsvergleich
+- **AC-7:** (Der Ortsvergleich erbt die Wirkung, ohne eigenen Code) Given ein Ortsvergleich
   mit einem Ort in Frankreich, Herkunft `meteofrance_arome`, Stufe „standard" / When das
   CAPE-Maximum dieses Ortes um 250 J/kg steigt / Then entsteht eine Abweichungsmeldung für
   diesen Ort.
   - Test: über den Compare-Auswertungspfad (`DeviationAlertEngine`), nicht über eine
     Trip-Attrappe — beweist die geteilte Wirkung.
 
-- **AC-8 (Keine andere Metrik ändert ihr Verhalten):** Given identische Eingaben für
+- **AC-8:** (Keine andere Metrik ändert ihr Verhalten) Given identische Eingaben für
   Windböen, Niederschlag, Frischschnee und Nullgradgrenze / When `detect_changes()` vor und
   nach der Änderung läuft / Then sind Auslösung, Schwelle und Alarmstufe dieser Metriken
   byte-identisch.
   - Test: A/B-Vergleich gegen den Basis-Commit für die nicht betroffenen Metriken.
 
-- **AC-9 (Die Anzeige behauptet keine Zahl, die nirgends wirkt):** Given der Alarme-Reiter im
+- **AC-9:** (Die Anzeige behauptet keine Zahl, die nirgends wirkt) Given der Alarme-Reiter im
   Trip-Editor mit CAPE auf „standard" / When der Nutzer die Schwellenspalte liest / Then ist
   erkennbar, dass 600 J/kg ein Richtwert ist, der je Wettermodell und Gebiet umgerechnet wird
   — bei allen anderen Metriken bleibt die Anzeige unverändert.

@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 
 UTC = ZoneInfo("UTC")
 
+# seven.io liefert Journal-Zeitstempel in Berliner Ortszeit ohne Zone (Eingangs-
+# Eigenschaft des Anbieters, keine Ausgabezone; #2327).
+SEVEN_IO_JOURNAL_TZ = ZoneInfo("Europe/Berlin")
+
 _tf_instance = None
 _tf_lock = Lock()
 
@@ -133,6 +137,14 @@ def local_hour(dt: datetime, tz: ZoneInfo) -> int:
 def local_fmt(dt: datetime, tz: ZoneInfo, fmt: str = "%H:%M") -> str:
     """UTC datetime → formatted string in local timezone."""
     return local_dt(dt, tz).strftime(fmt)
+
+
+def day_offset(now_utc: datetime, target_utc: datetime, tz: ZoneInfo) -> int:
+    """Kalendertage zwischen ``now_utc`` und ``target_utc`` in der Ortszeit
+    ``tz`` (0 = derselbe Tag, 1 = naechster Tag, ...). Issue #2009: macht
+    einen ueber Mitternacht rutschenden Onset-Zeitpunkt eindeutig -- ``%H:%M``
+    allein (``local_fmt``) ist an der Tagesgrenze mehrdeutig."""
+    return (local_dt(target_utc, tz).date() - local_dt(now_utc, tz).date()).days
 
 
 def tz_abbrev(dt: datetime, tz: ZoneInfo) -> str:

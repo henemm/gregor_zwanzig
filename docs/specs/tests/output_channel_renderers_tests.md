@@ -3,7 +3,7 @@ entity_id: output_channel_renderers_tests
 type: tests
 created: 2026-04-27
 updated: 2026-04-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, output, pipeline, refactor, epic-render-pipeline]
 parent: output_channel_renderers

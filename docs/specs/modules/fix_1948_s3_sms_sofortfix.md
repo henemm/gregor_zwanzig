@@ -3,7 +3,7 @@ entity_id: fix_1948_s3_sms_sofortfix
 type: bugfix
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, sms, format]
 ---
@@ -15,6 +15,7 @@ tags: [alarm, sms, format]
 > „entfernen statt umformulieren"). Deren Notations-ACs (`@HH:MM`-Umformulierung
 > im Kopf) sind durch diese Spec vollständig überholt; die alte Spec-Datei ist
 > im Repo nicht mehr vorhanden.
+> **Verweisziel existiert nicht** (Doku-Audit 2026-10-21): `fix_1948_1939_alarm_sms_referenzzeitpunkt.md` wurde nie committet und ist auch in der Git-Historie nicht auffindbar; es gibt keinen Nachfolgenamen.
 
 ## Approval
 

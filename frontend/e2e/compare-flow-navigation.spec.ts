@@ -278,27 +278,21 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Desktop (AC-25–
 		// Coordinator-Punkt 3), statt blind weiterzuspringen.
 		// Epic #1301 F2a: neue Freischalt-Kette — Wertebereiche ist erst nach Besuch
 		// des NEUEN Wetter-Metriken-Tabs frei (echter Klick, kein goto).
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').click();
-		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible');
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').click();
+		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible');
 		await idealwerteTab.click();
 		await expect(idealwerteTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 
-		const layoutTab = page.locator('[data-testid="compare-editor-tab-layout"]:visible');
-		await layoutTab.click();
-		await expect(layoutTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
-
-		// Issue #1258 Scheibe S4 (E1/E2, AC-28): "alarme" ist reguläre Station
-		// zwischen "layout" und "versand" — "versand" bleibt ohne Alarme-Besuch
-		// gesperrt.
+		// Issue #1258 Scheibe S4 (E1/E2, AC-28): "alarme" ist reguläre Station.
+		// Issue #1743: kein Schritt "versand" mehr — Alarme ist der letzte
+		// Schritt, sein Besuch schaltet "Briefing aktivieren" frei.
+		const activateBtn = page.locator('[data-testid="compare-editor-activate"]:visible');
+		await expect(activateBtn).toBeDisabled();
 		const alarmeTab = page.locator('[data-testid="compare-editor-tab-alarme"]:visible');
 		await alarmeTab.click();
 		await expect(alarmeTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
+		await expect(page.locator('[data-testid="compare-editor-tab-versand"]')).toHaveCount(0);
 
-		const versandTab = page.locator('[data-testid="compare-editor-tab-versand"]:visible');
-		await versandTab.click();
-		await expect(versandTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
-
-		const activateBtn = page.locator('[data-testid="compare-editor-activate"]:visible');
 		await expect(activateBtn).toBeEnabled({ timeout: 10_000 });
 		await activateBtn.click();
 
@@ -356,10 +350,10 @@ test.describe('Issue #1256 Scheibe 2: Compare-Fluss Klickpfade Mobile (AC-25, AC
 		await page.goto('/compare');
 		await page.waitForLoadState('networkidle');
 
-		// Unter 900px rendert routes/compare/+page.svelte den mobilen
-		// Kachel-Stack (<a href="/compare/{id}">), das Desktop-Grid bleibt via
-		// CSS ausgeblendet, aber im DOM vorhanden — :visible ist Pflicht.
-		const tile = page.locator(`[data-testid="compare-tile-${id}"]:visible`);
+		// Unter 900px rendert routes/compare/+page.svelte den mobilen Kachel-Stack
+		// (Issue #2278: geteilte SubscriptionCard, Tipp navigiert), das Desktop-Grid bleibt via
+		// CSS ausgeblendet, aber im DOM vorhanden.
+		const tile = page.getByTestId(`subscription-card-${id}`);
 		await expect(tile).toBeVisible({ timeout: 10_000 });
 		await tile.click();
 
@@ -402,8 +396,8 @@ test.describe('Issue #1256 Scheibe 3: Hub-Header-Kebab Lifecycle (AC-5, KL-7, AC
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// ── AC-5: Hub-Kebab bei pausiertem Vergleich = [Aktivieren, Archivieren, Bearbeiten, Löschen] ──
-	test('AC-5: Hub-Header-Kebab (pausierter Vergleich) zeigt Aktivieren/Archivieren/Bearbeiten/Löschen', async ({
+	// ── AC-5: Hub-Kebab bei pausiertem Vergleich = [Fortsetzen, Archivieren, Löschen] (Issue #2278, AC-12) ──
+	test('AC-5: Hub-Header-Kebab (pausierter Vergleich) zeigt Fortsetzen/Archivieren/Löschen', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -414,21 +408,21 @@ test.describe('Issue #1256 Scheibe 3: Hub-Header-Kebab Lifecycle (AC-5, KL-7, AC
 		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
 
-		const kebabTrigger = page.locator('button[aria-label="Weitere Aktionen"]:visible').first();
+		const kebabTrigger = page.getByTestId('subscription-kebab');
 		await expect(kebabTrigger).toBeVisible({ timeout: 10_000 });
 		await kebabTrigger.click();
 
-		// Lifecycle-Vertrag: "Archivieren" erreichbar (KL-7), "Bearbeiten" seit #1261 ergänzt.
-		await expect(page.getByRole('menuitem', { name: 'Aktivieren' })).toBeVisible({ timeout: 5_000 });
+		// Lifecycle-Vertrag (subscriptionActions, Fläche 'hub'): "Archivieren" erreichbar (KL-7).
+		await expect(page.getByRole('menuitem', { name: 'Fortsetzen' })).toBeVisible({ timeout: 5_000 });
 		await expect(page.getByRole('menuitem', { name: 'Archivieren' })).toBeVisible({ timeout: 5_000 });
 		await expect(page.getByRole('menuitem', { name: 'Löschen' })).toBeVisible({ timeout: 5_000 });
-		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).toBeVisible({ timeout: 5_000 });
 
-		// Listen-exklusive Aktionen dürfen im Hub-Header weiterhin NICHT auftauchen.
-		await expect(page.getByRole('menuitem', { name: 'Vorschau öffnen' })).not.toBeVisible();
-		await expect(page.getByRole('menuitem', { name: 'Briefing jetzt senden' })).not.toBeVisible();
+		// Listen-exklusive Aktionen (und "Bearbeiten": der Hub IST die Bearbeiten-Fläche) fehlen im Hub-Menü.
+		await expect(page.getByRole('menuitem', { name: 'Bearbeiten' })).not.toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Vorschau' })).not.toBeVisible();
+		await expect(page.getByRole('menuitem', { name: 'Senden' })).not.toBeVisible();
 
-		await expect(page.getByRole('menuitem')).toHaveCount(4);
+		await expect(page.getByRole('menuitem')).toHaveCount(3);
 
 		await page.keyboard.press('Escape');
 	});
@@ -445,7 +439,7 @@ test.describe('Issue #1256 Scheibe 3: Hub-Header-Kebab Lifecycle (AC-5, KL-7, AC
 		await page.goto(`/compare/${id}`);
 		await page.waitForLoadState('networkidle');
 
-		const kebabTrigger = page.locator('button[aria-label="Weitere Aktionen"]:visible').first();
+		const kebabTrigger = page.getByTestId('subscription-kebab');
 		await expect(kebabTrigger).toBeVisible({ timeout: 10_000 });
 		await kebabTrigger.click();
 
@@ -573,12 +567,14 @@ test.describe('Issue #1256 Scheibe 4: Editor-Layout-Tab = geteilter LayoutTab-Or
 
 		// Epic #1301 F2a: neue Freischalt-Kette — Wertebereiche ist erst nach Besuch
 		// des NEUEN Wetter-Metriken-Tabs frei (echter Klick, kein goto).
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').click();
-		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible');
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').click();
+		const idealwerteTab = page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible');
 		await idealwerteTab.click();
 		await expect(idealwerteTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 
-		const layoutTab = page.locator('[data-testid="compare-editor-tab-layout"]:visible');
+		// #1360: der Layout-Reiter ist aufgelöst — die Stundenverlauf-Steuerung
+		// lebt im Reiter Wetter-Metriken (WeatherMetricsTab → CompareHourlyLayoutControls).
+		const layoutTab = page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible');
 		await layoutTab.click();
 		await expect(layoutTab).toHaveAttribute('data-active', 'true', { timeout: 5_000 });
 	}
@@ -671,8 +667,13 @@ test.describe('Issue #1256 Fix-Loop 1 (F001): Editor öffnet bestehenden Verglei
 // dem Editor-Organism. Sollte der PO "denselben Organism" im Hub wörtlich
 // meinen, widerspricht das dem aktuellen Spec-Text und braucht eine
 // Spec-Klarstellung vor Phase 6 (s. Bericht).
-test.describe('Issue #1256 Scheibe 4 (Hub): Layout-Tab bleibt daten-konsistenter Summary-Tab', () => {
-	test('Hub-Layout-Tab bleibt erreichbar und rendert KEIN Organism-Duplikat (Ansehen-only laut Spec-Zielmodell)', async ({
+//
+// Stand #2287: Der Hub-Layout-Reiter ist seit #1360 aufgeloest; sein Inhalt
+// (Stundenverlauf) lebt im Reiter Wetter-Metriken, der seit #1703 S8 auch den
+// LayoutTab-Organism enthaelt — die fruehere „kein Organism"-Aussage ist damit
+// gegenstandslos. Geprueft wird das heutige Verhalten des alten Deep-Links.
+test.describe('Issue #1256 Scheibe 4 (Hub) → #1360/#2287: alter Layout-Deep-Link', () => {
+	test('?tab=layout landet in Wetter-Metriken, URL wird auf ?tab=wetter-metriken bereinigt', async ({
 		page
 	}) => {
 		const suffix = Date.now();
@@ -683,12 +684,10 @@ test.describe('Issue #1256 Scheibe 4 (Hub): Layout-Tab bleibt daten-konsistenter
 		await page.goto(`/compare/${id}?tab=layout`);
 		await page.waitForLoadState('networkidle');
 
-		const panel = page.locator('[data-testid="compare-detail-panel-layout"]:visible');
+		const panel = page.locator('[data-testid="compare-detail-panel-wetter-metriken"]:visible');
 		await expect(panel).toBeVisible({ timeout: 10_000 });
-		// Summary-Tab bleibt Ansehen-only laut Spec-Zielmodell — kein
-		// eingebetteter LayoutTab-Organism im Hub (Unterschied zu Orte/
-		// Idealwerte/Versand, die ab Scheibe 6/7 inline editierbar werden).
-		await expect(page.locator('[data-testid="layout-tab"]')).toHaveCount(0);
+		await expect(page.locator('[data-testid="compare-detail-panel-layout"]')).toHaveCount(0);
+		await expect.poll(() => new URL(page.url()).searchParams.get('tab')).toBe('wetter-metriken');
 	});
 });
 

@@ -50,7 +50,7 @@ mit maximal einem Klick — ohne in Tabs suchen zu müssen.
 | `frontend/src/lib/components/ui/Dot.svelte` | Design-System | Status-Indikatoren in Card-Rows (on/off/warn) |
 | `frontend/src/lib/api.ts` | Utility | POST `/api/scheduler/trip-reports?hour=18` für Test-Briefing |
 | `frontend/src/lib/types.ts` | TypeScript | `Trip`, `Stage`, `AlertRule` — keine Änderung nötig |
-| `docs/specs/modules/epic_135_step2_trip_detail_actions.md` | Spec (vorhanden) | Pause/Archivieren-Logik bleibt unverändert, wandert nur in Danger-Zone |
+| `docs/specs/_archive/modules/epic_135_step2_trip_detail_actions.md` | Spec (vorhanden) | Pause/Archivieren-Logik bleibt unverändert, wandert nur in Danger-Zone |
 | `frontend/e2e/trip-detail-tabs.spec.ts` | E2E-Test | Tab-Label-Anpassungen (Zeilen 5–10) |
 | `frontend/e2e/trip-detail-actions.spec.ts` | E2E-Test | Pause/Archiv-Buttons in Danger-Zone (testids identisch) |
 
@@ -285,7 +285,7 @@ Unterhalb von `<TripTabs>` einfügen:
 ```
 
 Pause/Archivieren/Löschen-Handler: unverändert aus Epic #135 Step 2
-(`docs/specs/modules/epic_135_step2_trip_detail_actions.md`). Nur die
+(`docs/specs/_archive/modules/epic_135_step2_trip_detail_actions.md`). Nur die
 Render-Position wechselt von Header-Bereich in Danger-Zone.
 
 ## Expected Behavior

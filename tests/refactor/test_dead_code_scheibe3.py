@@ -41,6 +41,8 @@ def _go_binary() -> str | None:
 # ein Go-File noch das geloeschte internal/compare-Paket, schlaegt der Build
 # hart fehl (undefined symbol / package does not exist).
 
+# Kalter go build/Toolchain-Lauf auf dem CI-Runner braucht >30 s (CI 2026-09-09, zweimal reproduziert) — deklarierte Ausnahme gemaess pyproject.toml
+@pytest.mark.timeout(120)
 def test_go_module_builds_after_dead_code_removal():
     """AC-1/AC-2: Repo kompiliert nach dem Umzug/der Loeschung fehlerfrei.
 

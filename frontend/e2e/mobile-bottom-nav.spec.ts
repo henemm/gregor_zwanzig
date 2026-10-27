@@ -2,19 +2,18 @@
 //
 // Spec: docs/specs/modules/issue_267_mobile_bottom_nav.md (AC-1 bis AC-7)
 //
-// TDD RED: Diese Tests MÜSSEN FEHLSCHLAGEN, weil BottomNav.svelte und
-// TopAppBar.svelte noch nicht existieren und die Sidebar noch kein
-// data-testid="bottom-nav" / "top-app-bar" hat.
+// Mobile-Shell S2 (docs/design-requests/mobile_shell_ohne_topbar.md): kein
+// fixer Balken oben mehr, kein Hamburger-Drawer. Konto/Abmelden liegen im
+// Konto-Sheet, das der Konto-Kreis rechts neben der Tabbar oeffnet.
 //
-// TestID-Inventar (wird in Implementation angelegt):
-//   bottom-nav                    — BottomNav-Container (fixed, 64px)
+// TestID-Inventar:
+//   bottom-nav                    — BottomNav-Container (schwebend, 64px)
 //   bottom-nav-item-home          — Link zu /
 //   bottom-nav-item-trips         — Link zu /trips
 //   bottom-nav-item-compare       — Link zu /compare
 //   bottom-nav-item-archive       — Link zu /archiv
-//   top-app-bar                   — TopAppBar-Container (mobile only)
-//   top-app-bar-hamburger         — Hamburger-Button
-//   top-app-bar-toggle-dark       — Dark-Mode-Toggle
+//   konto-kreis                   — User-Badge neben der Tabbar (mobile only)
+//   konto-sheet                   — Konto-Sheet (Konto · Status · Dunkel · Export · Abmelden)
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -27,18 +26,19 @@ test.describe('Issue #267: Mobile Bottom-Navigation', () => {
 		await login(page);
 	});
 
-	// ─── AC-1: TopAppBar sichtbar auf Mobile ────────────────────────────────
-	test('AC-1: TopAppBar ist auf Mobile-Viewport sichtbar (< 900px)', async ({ page }) => {
+	// ─── AC-1: Konto-Kreis sichtbar auf Mobile, kein fixer Balken oben ──────
+	test('AC-1: Konto-Kreis ist auf Mobile-Viewport sichtbar, kein Top-Balken (< 900px)', async ({ page }) => {
 		/**
 		 * GIVEN: User ist eingeloggt
 		 * WHEN:  Viewport ist 375×667 px (Mobile)
-		 * THEN:  TopAppBar mit data-testid="top-app-bar" ist sichtbar
+		 * THEN:  Konto-Kreis (data-testid="konto-kreis") ist sichtbar,
+		 *        ein fixer Balken oben (top-app-bar) existiert nicht mehr
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto('/');
 
-		const topBar = page.getByTestId('top-app-bar');
-		await expect(topBar).toBeVisible();
+		await expect(page.getByTestId('konto-kreis')).toBeVisible();
+		await expect(page.getByTestId('top-app-bar')).toHaveCount(0);
 	});
 
 	// ─── AC-1b: Desktop-Sidebar NICHT sichtbar auf Mobile ───────────────────
@@ -116,29 +116,27 @@ test.describe('Issue #267: Mobile Bottom-Navigation', () => {
 		await expect(homeItem).toHaveAttribute('aria-current', 'page');
 	});
 
-	// ─── AC-4: Drawer zeigt nur sekundäre Items ──────────────────────────────
-	test('AC-4: Drawer zeigt Konto und Logout, KEINE Workspace-Nav-Links', async ({ page }) => {
+	// ─── AC-4: Konto-Sheet zeigt nur sekundäre Items ────────────────────────
+	test('AC-4: Konto-Sheet zeigt Konto und Logout, KEINE Workspace-Nav-Links', async ({ page }) => {
 		/**
 		 * GIVEN: User ist eingeloggt, Mobile-Viewport
-		 * WHEN:  User öffnet Hamburger-Drawer
-		 * THEN:  Drawer hat Konto + Logout, KEINE Links zu /trips, /compare, /locations
+		 * WHEN:  User tippt den Konto-Kreis neben der Tabbar
+		 * THEN:  Konto-Sheet hat Einstellungen + Abmelden, KEINE Links zu /trips, /compare
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto('/');
 
-		await page.getByTestId('top-app-bar-hamburger').click();
+		await page.getByTestId('konto-kreis').click();
+		const sheet = page.getByTestId('konto-sheet');
+		await expect(sheet).toBeVisible();
 
 		// Sekundäre Items müssen vorhanden sein
-		await expect(page.locator('a[href="/account"]').first()).toBeVisible();
-		await expect(page.locator('button[type="submit"]').filter({ hasText: 'Abmelden' })).toBeVisible();
+		await expect(sheet.locator('a[href="/account"]')).toBeVisible();
+		await expect(sheet.locator('button[type="submit"]').filter({ hasText: 'Abmelden' })).toBeVisible();
 
-		// Workspace-Nav DARF NICHT im Drawer sein
-		// (Diese Links sind jetzt in der BottomNav, nicht im Drawer)
-		const drawerTripsLink = page.locator('[data-testid="mobile-drawer"] a[href="/trips"]');
-		await expect(drawerTripsLink).toHaveCount(0);
-
-		const drawerCompareLink = page.locator('[data-testid="mobile-drawer"] a[href="/compare"]');
-		await expect(drawerCompareLink).toHaveCount(0);
+		// Workspace-Nav DARF NICHT im Sheet sein (die Links leben in der BottomNav)
+		await expect(sheet.locator('a[href="/trips"]')).toHaveCount(0);
+		await expect(sheet.locator('a[href="/compare"]')).toHaveCount(0);
 	});
 
 	// ─── AC-5: Safe-Area / Content nicht unter BottomNav ────────────────────
@@ -186,7 +184,8 @@ test.describe('Issue #267: Mobile Bottom-Navigation', () => {
 		await page.goto('/');
 
 		const sidebar = page.getByTestId('desktop-sidebar');
-		await expect(sidebar.locator('a[href="/"]')).toBeVisible();
+		// `nav a` — die Wordmark der Sidebar verlinkt ebenfalls auf "/".
+		await expect(sidebar.locator('nav a[href="/"]')).toBeVisible();
 		await expect(sidebar.locator('a[href="/trips"]')).toBeVisible();
 		await expect(sidebar.locator('a[href="/compare"]')).toBeVisible();
 		await expect(sidebar.locator('a[href="/archiv"]')).toBeVisible();

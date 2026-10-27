@@ -3,7 +3,7 @@ entity_id: fix_1726_ruhezeit_und_zaehler_ortszone
 type: bugfix
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
+status: implemented
 workflow: fix-1726-ruhezeit-ortszone
 version: "1.1"
 tags: [issue-1726, epic-1722, timezone, adr-0051, adr-0044, alert-daily-limit, quiet-hours, compare, scheduler]
@@ -329,7 +329,7 @@ Endpunkts selbst ändert sich dadurch NICHT.
 
 `AlertQuietHoursCard.svelte` bekommt eine neue Prop (Text, nicht Zeitzonen-Berechnung — die
 Karte kennt keine `ZoneInfo`-Logik, das bleibt Backend-Domäne). `shared/AlarmeTab.svelte`
-(`:429`/`:431`) übergibt sie kontextabhängig: beim Trip „der Tour", beim Vergleich „des ersten
+(`:429`/`:431`) übergibt sie kontextabhängig: beim Trip „der Trip", beim Vergleich „des ersten
 Orts" — EIN geteilter Baustein (Trip/Compare-Teilungsregel), keine zweite Komponente.
 
 ### F. ADR-0044 Fortschreibung
@@ -393,14 +393,14 @@ Issue zeigen (AC-14).
 
 ## Acceptance Criteria
 
-- **AC-1 (Ruhezeit östlich von Wien wird in der ECHTEN Ortszeit geprüft):** Given ein Trip mit
+- **AC-1:** (Ruhezeit östlich von Wien wird in der ECHTEN Ortszeit geprüft) Given ein Trip mit
   Wegpunkt in `Pacific/Auckland` und Ruhezeit 22:00–07:00 / When ein Wetter-Abweichungs-Alarm zu
   einem Zeitpunkt ansteht, der in Auckland innerhalb des Ruhezeit-Fensters, in Wien aber tagsüber
   liegt / Then wird der Alarm unterdrückt — heute ginge er durch, weil die Prüfung fälschlich
   gegen Wien läuft. Wirkt in `deviation_alert_engine.py:84-143`, verdrahtet über
   `trip_alert.py:229/688`.
 
-- **AC-2 (Ruhezeit westlich von Wien wird in der ECHTEN Ortszeit geprüft):** Given derselbe
+- **AC-2:** (Ruhezeit westlich von Wien wird in der ECHTEN Ortszeit geprüft) Given derselbe
   Aufbau mit Wegpunkt in `America/Los_Angeles` / When ein Alarm zu einem Zeitpunkt ansteht, der
   in Los Angeles innerhalb, in Wien aber ausserhalb des Ruhezeit-Fensters liegt / Then wird der
   Alarm unterdrückt.
@@ -425,13 +425,13 @@ Issue zeigen (AC-14).
   `compare_alert.py:176`/`compare_official_alert.py:119`/`compare_radar_alert.py:131`, Grundlage
   ist `order_locations_by_ids` (#1359).
 
-- **AC-5 (#1479 bleibt gewahrt — kein Programmabsturz durch den neuen Zonen-Parameter):** Given
+- **AC-5:** (#1479 bleibt gewahrt — kein Programmabsturz durch den neuen Zonen-Parameter) Given
   ein unbrauchbarer Ruhezeit-Wert (`"25:00"`, `"abc"`, ein Nicht-String) / When die Ruhezeit an
   irgendeiner der sieben Stellen geprüft wird / Then gilt weiterhin „keine Ruhezeit gesetzt"
   statt eine Ausnahme durchzureichen — auch mit dem zusätzlichen Zonen-Parameter unverändert.
   Wirkt `deviation_alert_engine.py:109-139`.
 
-- **AC-6 (Tageszähler resettet zur ORTS-Mitternacht, nicht zur Wiener):** Given ein Trip/Preset
+- **AC-6:** (Tageszähler resettet zur ORTS-Mitternacht, nicht zur Wiener) Given ein Trip/Preset
   in einer Zone östlich von Wien (`Pacific/Auckland`) UND eines westlich (`America/Los_Angeles`)
   / When ein Alarm knapp VOR bzw. knapp NACH der jeweiligen Orts-Mitternacht ausgelöst wird,
   während in Wien noch derselbe bzw. bereits ein anderer Kalendertag gilt / Then zählt der Alarm
@@ -447,7 +447,7 @@ Issue zeigen (AC-14).
   Objekte in drei Zonen hat, bekommt das Kontingent dreimal) ist Teil dieser Zusicherung, kein
   verstecktes Nebenprodukt.
 
-- **AC-8 (Bestandsdaten bleiben beim Rollout erhalten — kein Kontingent-Leck):** Given ein
+- **AC-8:** (Bestandsdaten bleiben beim Rollout erhalten — kein Kontingent-Leck) Given ein
   bestehender Zähler im ALTEN Schema (`{"date": ..., "count": N}`, keine Zonenkennung) liegt
   bereits auf der Festplatte, mit einem Zählerstand ungleich 0 für den heutigen Wiener Tag / When
   der neue Code diesen Zähler zum ersten Mal für einen Trip/Ortsvergleich in `Europe/Vienna`
@@ -473,24 +473,24 @@ Issue zeigen (AC-14).
   am Frühjahrstag (23 Ortsstunden) ohne vorzeitigen Reset, am Herbsttag (25 Ortsstunden, Stunde 02
   existiert zweimal) ohne doppelten Reset.
 
-- **AC-11 (Oberfläche nennt die Zonen-Basis der Ruhezeit):** Given der Alarme-Reiter zeigt die
+- **AC-11:** (Oberfläche nennt die Zonen-Basis der Ruhezeit) Given der Alarme-Reiter zeigt die
   Ruhezeit-Karte, einmal im Trip-Kontext und einmal im Ortsvergleichs-Kontext / When die Karte
   angezeigt wird / Then benennt sie die Ortszeit-Basis unterschiedlich — beim Trip „Ortszeit der
-  Tour", beim Vergleich „Ortszeit des ersten Orts" — statt wie bisher gar keine Zone zu nennen.
+  Trip", beim Vergleich „Ortszeit des ersten Orts" — statt wie bisher gar keine Zone zu nennen.
   Wirkt `AlertQuietHoursCard.svelte`, gemountet aus `shared/AlarmeTab.svelte:429/431` als EIN
   geteilter Baustein für beide Kontexte.
 
-- **AC-12 (ADR-0044 nachgezogen):** Given ADR-0044 listet `alert_daily_limit` und
+- **AC-12:** (ADR-0044 nachgezogen) Given ADR-0044 listet `alert_daily_limit` und
   `deviation_alert_engine` unter „Bewusst NICHT betroffen (feste Zone ist dort Absicht)" / When
   diese Scheibe live ist / Then ist dieser Abschnitt fortgeschrieben — beide Module stehen nicht
   mehr als Ausnahme, sondern folgen der Ortszone wie die übrigen bereits umgesetzten Bereiche.
 
-- **AC-13 (Wächter-Restliste schrumpft um genau die vier zugehörigen Einträge):** Given die vier
+- **AC-13:** (Wächter-Restliste schrumpft um genau die vier zugehörigen Einträge) Given die vier
   Einträge `:622`, `:623`, `:630`, `:635` in `tests/test_output_timezone_guard.py` / When diese
   Scheibe live ist / Then findet der Scanner diese Stellen nicht mehr, die vier Einträge sind aus
   `KNOWN_VIOLATIONS` entfernt, und `test_known_violations_only_shrink()` bleibt grün.
 
-- **AC-14 (Fehlzuordnung im Blockkommentar korrigiert):** Given der Blockkommentar bei
+- **AC-14:** (Fehlzuordnung im Blockkommentar korrigiert) Given der Blockkommentar bei
   `tests/test_output_timezone_guard.py:593` weist derzeit ALLE 53 Bestandseinträge — auch die
   ~25 Muster-A-Funde, die tatsächlich #1727 zugeordnet sind — pauschal #1726 zu / When diese
   Scheibe schliesst / Then ist der Kommentar so korrigiert, dass er die verbleibenden
@@ -591,7 +591,7 @@ sieben Ruhezeit-Stellen stillschweigend ignorieren, Zähler-Migration durch Repl
   Orte), der „unauflösbare Zone"-Fall aber schon. Hier bewusst NICHT mitrepariert (die Kopfzeile
   ist Darstellung, nicht Alarm-Entscheidung, und ein UTC-Zeitstempel dort ist sichtbar falsch
   statt still wirksam). Zu buchen als eigener Eintrag für den Team-Lead.
-- **Die Oberfläche nennt einen Referenzpunkt, keinen konkreten Zonennamen.** „Ortszeit der Tour"/
+- **Die Oberfläche nennt einen Referenzpunkt, keinen konkreten Zonennamen.** „Ortszeit der Trip"/
   „Ortszeit des ersten Orts" sagt WOVON die Zeit abhängt, nicht WELCHE IANA-Zone konkret gilt
   (z. B. „Europe/Paris"). Eine genauere Beschriftung wäre möglich, ist aber nicht Teil dieser
   Scheibe (kein PO-Auftrag dafür vorliegend).

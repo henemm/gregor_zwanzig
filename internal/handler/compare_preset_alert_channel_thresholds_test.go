@@ -76,9 +76,11 @@ func TestUpdateComparePreset_AlertChannelThresholdsPreservedWhenBodyOmitsIt(t *t
 		t.Fatalf("SaveComparePresets: %v", err)
 	}
 
-	// PUT-Body OHNE alert_channel_thresholds — nur "name" geaendert (Muster
-	// compare_preset_official_warnings_test.go: der Preset-PUT ist ein
-	// Voll-Ersetzen, Pflichtfelder muessen im Body erneut stehen).
+	// PUT-Body OHNE alert_channel_thresholds — nur "name" geaendert. Die
+	// Pflichtfelder stehen aus Testbequemlichkeit mit im Rumpf (Muster
+	// compare_preset_official_warnings_test.go), nicht aus Zwang: seit #2285
+	// laeuft der Preset-PUT durch einen Merge-Kernel und wuerde sie auch
+	// weglassen lassen (Beleg: compare_preset_single_field_patch_test.go).
 	body := map[string]interface{}{
 		"name":         "AC9-Test (umbenannt)",
 		"schedule":     "manual",

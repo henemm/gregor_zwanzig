@@ -3,7 +3,7 @@ vier Pakete (P1a/P1b/P2/P4).
 
 SPEC: docs/specs/modules/rework_1460_t1_relevanzfilter.md (AC-34)
 
-Zwei Nutzer (`alice`, `bob`) mit strukturell identischen Touren/Vergleichen:
+Zwei Nutzer (`alice`, `bob`) mit strukturell identischen Trips/Vergleichen:
 gleiche Wertebereiche, gleiche Empfindlichkeitsstufen, gleiche amtliche Warnung
 an denselben Koordinaten. Jeder Melde-Gedaechtnis- und Protokoll-Effekt muss
 ausschliesslich im Verzeichnis des jeweiligen Nutzers landen.
@@ -22,9 +22,11 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
+from app.config import Settings
 from app.models import (
     Corridor,
     ForecastMeta,
@@ -43,6 +45,19 @@ from app.trip import Stage, Trip, Waypoint
 from services.official_alerts.models import OfficialAlert
 
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
+
+def _settings() -> Settings:
+    """Dummy-SMTP, damit can_send_email() ohne Host-.env True ist."""
+    # #1196 Klasse C (Vorbild Batch 4 / test_issue_883): ohne Settings baut der
+    # Service Settings() aus der Umgebung, und can_send_email() ist nur mit
+    # Host-.env True -- auf dem CI-Runner lief jeder Fall in "No alert channel
+    # configured". Dummy-SMTP + mail_sink (DI-Naht) ersetzen den Versand;
+    # test.invalid ist RFC-2606-reserviert, es wird nie gedialt.
+    return Settings(
+        smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+        mail_to="empfaenger@example.com",
+    )
 
 # Pfadregel #1409: Pruefling relativ zur Testdatei, nicht ueber den Hauptrepo-Pfad.
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
@@ -92,11 +107,11 @@ def _data(**summary_kwargs) -> SegmentWeatherData:
 
 
 def _identical_trip() -> Trip:
-    """Strukturell identische Tour fuer beide Nutzer: gleicher Wertebereich
+    """Strukturell identische Trip fuer beide Nutzer: gleicher Wertebereich
     (P1a), gleiche Empfindlichkeitsstufen fuer Boeen und Gewitter (P1b),
     amtliche Warnungen aktiv (P4)."""
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(LAT, LON),
         waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
     )
     trip = Trip(
@@ -127,7 +142,7 @@ def _identical_trip() -> Trip:
 def _save_cached(user_id: str, cached: list[SegmentWeatherData]) -> None:
     from services.weather_snapshot import WeatherSnapshotService
 
-    WeatherSnapshotService(user_id=user_id).save_dated(TRIP_ID, date.today(), cached)
+    WeatherSnapshotService(user_id=user_id).save_dated(TRIP_ID, ortstag(LAT, LON), cached)
 
 
 def _state_dir(user_id: str) -> Path:
@@ -174,7 +189,7 @@ def _sources_backup():
 def test_ac34_melde_gedaechtnis_und_protokoll_bleiben_nutzergetrennt():
     """AC-34.
 
-    GIVEN zwei Nutzer (alice, bob) mit strukturell identischen Touren — gleiche
+    GIVEN zwei Nutzer (alice, bob) mit strukturell identischen Trips — gleiche
           Wertebereiche, gleiche Empfindlichkeitsstufen, dieselbe amtliche
           Warnung an denselben Koordinaten
     WHEN  die Auswertung (Wertebereich, Empfindlichkeitsstufe, amtliche Warnung,
@@ -186,7 +201,6 @@ def test_ac34_melde_gedaechtnis_und_protokoll_bleiben_nutzergetrennt():
     from services.official_alerts import register_official_alert_source
     from services.trip_alert import TripAlertService
     from services.trip_report_scheduler import TripReportSchedulerService
-    from app.config import Settings
 
     alice, bob = _user_pair()
     _clean_user(alice)
@@ -211,7 +225,7 @@ def test_ac34_melde_gedaechtnis_und_protokoll_bleiben_nutzergetrennt():
         # ── Schritt 1: nur alice laeuft ──────────────────────────────────────
         mail_alice: list = []
         svc_alice = TripAlertService(
-            user_id=alice, mail_sink=lambda subject, body: mail_alice.append((subject, body)),
+            settings=_settings(), user_id=alice, mail_sink=lambda subject, body: mail_alice.append((subject, body)),
         )
         notices_alice = svc_alice.check_official_alert_triggers(trip_alice)
         assert len(notices_alice) == 1, (
@@ -238,7 +252,7 @@ def test_ac34_melde_gedaechtnis_und_protokoll_bleiben_nutzergetrennt():
         # Die Entprellung von alice darf bob NICHT stumm schalten.
         mail_bob: list = []
         svc_bob = TripAlertService(
-            user_id=bob, mail_sink=lambda subject, body: mail_bob.append((subject, body)),
+            settings=_settings(), user_id=bob, mail_sink=lambda subject, body: mail_bob.append((subject, body)),
         )
         notices_bob = svc_bob.check_official_alert_triggers(trip_bob)
         assert len(notices_bob) == 1, (
@@ -276,7 +290,7 @@ def test_ac34_melde_gedaechtnis_und_protokoll_bleiben_nutzergetrennt():
 def test_ac34b_wertebereich_wirkt_bei_beiden_nutzern_gleich_nicht():
     """AC-34 (P1a-Anteil).
 
-    GIVEN zwei Nutzer mit identischer Tour, deren EINZIGE eingestellte
+    GIVEN zwei Nutzer mit identischer Trip, deren EINZIGE eingestellte
           Alarmquelle ein gerissener Wertebereich ist
     WHEN  der Alarm-Lauf fuer beide Nutzer nacheinander laeuft
     THEN  bleibt es bei BEIDEN still und in KEINEM der beiden Verzeichnisse
@@ -289,7 +303,7 @@ def test_ac34b_wertebereich_wirkt_bei_beiden_nutzern_gleich_nicht():
     _clean_user(bob)
     try:
         stage = Stage(
-            id="T1", name="Tag 1", date=date.today(),
+            id="T1", name="Tag 1", date=ortstag(LAT, LON),
             waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
         )
         cached = [_data(gust_max_kmh=25.0)]
@@ -309,7 +323,7 @@ def test_ac34b_wertebereich_wirkt_bei_beiden_nutzern_gleich_nicht():
 
             mails: list = []
             svc = TripAlertService(
-                user_id=user_id, mail_sink=lambda subject, body: mails.append((subject, body)),
+                settings=_settings(), user_id=user_id, mail_sink=lambda subject, body: mails.append((subject, body)),
             )
             sent = svc.check_and_send_alerts(trip, cached, fresh_weather=cached)
 

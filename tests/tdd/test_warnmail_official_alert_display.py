@@ -38,6 +38,7 @@ from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
 from services.official_alerts.models import OfficialAlert
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 UTC = timezone.utc
 FR_ALLDAY_FROM = datetime(2026, 7, 10, 0, 0, tzinfo=UTC)
@@ -197,7 +198,7 @@ class _CapturingTelegramOutput:
     Bot-API-Call. `_dispatch_alert_message` ist der einzige Aufrufer, der
     hier relevant ist -- Signatur spiegelt `TelegramOutput.send`."""
 
-    def __init__(self, settings):
+    def __init__(self, settings, recipient=None):
         self.settings = settings
 
     def send(self, subject, body, parse_mode=None, suppress_subject_line=False,
@@ -231,7 +232,7 @@ def test_f002_dispatch_alert_message_embedded_plain_telegram_use_display_label(m
         smtp_pass="x", mail_to="to@test.invalid",
         telegram_bot_token="test-token", telegram_chat_id="12345",
     )
-    svc = ns.NotificationService(settings, "tdd-warnmail-f002")
+    svc = ns.NotificationService(settings, mit_profil_chat("tdd-warnmail-f002", settings))
 
     ev = AlertEvent(
         metric_id="wind", value_from=20.0, value_to=48.0, threshold=15.0,
@@ -706,7 +707,7 @@ def test_ac6_dispatch_alert_message_embeds_wb_banner_not_raw_p(monkeypatch):
         smtp_host="smtp.test.invalid", smtp_user="t@test.invalid",
         smtp_pass="x", mail_to="to@test.invalid",
     )
-    svc = ns.NotificationService(settings, "tdd-warnmail-ac6")
+    svc = ns.NotificationService(settings, mit_profil_chat("tdd-warnmail-ac6", settings))
 
     ev = AlertEvent(
         metric_id="wind", value_from=20.0, value_to=48.0, threshold=15.0,

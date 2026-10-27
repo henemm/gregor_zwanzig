@@ -8,7 +8,6 @@
 // RED-Erwartung (vor Implementation):
 //   - +page.svelte hat kein Pill-Import und noch alte rounded-full-Klassen → FAIL
 //   - PresetHeader.svelte hat kein Field-Import und noch alte label-Markup → FAIL
-//   - GroupSection.svelte hat kein data-slot="dot" fuer Locations → FAIL
 //
 // Ausfuehrung:
 //   cd frontend && node --experimental-strip-types --test \
@@ -23,7 +22,6 @@ import { join } from 'node:path';
 const ROOT = fileURLToPath(new URL('../../../../../', import.meta.url)); // -> frontend/
 
 const PAGE = join(ROOT, 'src/routes/compare/+page.svelte');
-const GROUP_SECTION = join(ROOT, 'src/lib/components/compare/GroupSection.svelte');
 
 // ── AC-1 + AC-5: +page.svelte — ChipBtn → Pill ────────────────────────────
 //
@@ -77,37 +75,6 @@ test.skip('AC-1: Mobile Chip-Buttons haben aria-pressed (obsolet durch #439)', (
 // PresetHeader.svelte wurde mit Issue #1215 (Dead-Code Scheibe 3) gelöscht —
 // die zugehörigen Migrations-Tests (Field-Import, <Field>-Wrapper, Label-
 // Klasse, beide data-testids) entfallen mit der Komponente.
-
-// ── AC-3: GroupSection.svelte — FocusBadge → data-slot="dot" ─────────────
-
-test('AC-3: GroupSection.svelte rendert data-slot="dot" INNERHALB des {#each locations}-Blocks', () => {
-	const src = readFileSync(GROUP_SECTION, 'utf-8');
-	// Pruefen dass data-slot="dot" in Kombination mit loc.activity_profile vorkommt
-	// (nicht nur der Gruppen-Header-Dot der group.default_profile nutzt)
-	assert.match(
-		src,
-		/loc\.activity_profile[\s\S]{0,300}data-slot="dot"|data-slot="dot"[\s\S]{0,300}loc\.activity_profile/,
-		'GroupSection muss data-slot="dot" im {#each locations}-Block (mit loc.activity_profile) enthalten'
-	);
-});
-
-test('AC-3: GroupSection Profil-Dot nutzt profileSignature(...).accent als background', () => {
-	const src = readFileSync(GROUP_SECTION, 'utf-8');
-	assert.match(
-		src,
-		/profileSignature\([^)]*\)\.accent/,
-		'GroupSection Profil-Dot muss profileSignature(...).accent als Hintergrundfarbe nutzen'
-	);
-});
-
-test('AC-3: GroupSection Profil-Dot hat title-Attribut mit eyebrow-Label', () => {
-	const src = readFileSync(GROUP_SECTION, 'utf-8');
-	assert.match(
-		src,
-		/profileSignature\([^)]*\)\.eyebrow/,
-		'GroupSection Profil-Dot muss profileSignature(...).eyebrow als title haben'
-	);
-});
 
 // ── AC-6: Page-lokale Komposita unveraendert ───────────────────────────────
 // Issue #1256 Scheibe 1 (2026-07-13): AutoReportsOverview.svelte wurde als

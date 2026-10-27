@@ -120,7 +120,7 @@ class TestAC1NullMeansNoAlerts:
         from services.trip_alert import TripAlertService
 
         trip = _trip(metric_alert_levels=None, alert_preset=None, enabled_metrics=None)
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         detector = service._select_change_detector(trip)
 
         assert _detector_is_noop(detector), (
@@ -139,7 +139,7 @@ class TestAC1NullMeansNoAlerts:
         from services.trip_alert import TripAlertService
 
         trip = _trip(metric_alert_levels=None, alert_preset=None, enabled_metrics=["gust"])
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         detector = service._select_change_detector(trip)
 
         gust = _detector_thresholds(detector).get("gust_max_kmh")
@@ -166,7 +166,7 @@ class TestAC1NullMeansNoAlerts:
         from services.trip_alert import TripAlertService
 
         trip = _trip(metric_alert_levels={}, alert_preset=None, enabled_metrics=["gust", "temperature"])
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         detector = service._select_change_detector(trip)
 
         assert not _detector_is_noop(detector), (
@@ -214,7 +214,7 @@ class TestAC3NoFallbackCalls:
 
         calls = self._spy(monkeypatch, "from_display_config")
         trip = _trip(metric_alert_levels=None, alert_preset=None, enabled_metrics=["gust"])
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         service._select_change_detector(trip)
 
         assert calls["count"] == 0, (
@@ -228,7 +228,7 @@ class TestAC3NoFallbackCalls:
 
         calls = self._spy(monkeypatch, "from_trip_config")
         trip = _trip(metric_alert_levels=None, alert_preset=None, enabled_metrics=["gust"])
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         service._select_change_detector(trip)
 
         assert calls["count"] == 0, (
@@ -256,7 +256,7 @@ class TestAC3NoFallbackCalls:
         monkeypatch.setattr(ap, "expand_preset", wrapper)
 
         trip = _trip(metric_alert_levels=None, alert_preset="standard", enabled_metrics=[])
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         service._select_change_detector(trip)
 
         assert calls["count"] == 0, (
@@ -286,7 +286,7 @@ class TestAC7ConfiguredTripStillFires:
             alert_preset=None,
             enabled_metrics=["gust"],
         )
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         detector = service._select_change_detector(trip)
 
         thresholds = _detector_thresholds(detector)
@@ -308,7 +308,7 @@ class TestAC7ConfiguredTripStillFires:
             alert_preset=None,
             enabled_metrics=["gust"],
         )
-        service = TripAlertService()
+        service = TripAlertService(user_id="default")
         detector = service._select_change_detector(trip)
 
         assert not _detector_is_noop(detector), (

@@ -3,7 +3,7 @@ entity_id: fix_1752_radar_folgt_alarm_kanaelen
 type: module
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [radar, nowcast, alarm, channel, trip, alert_rules]
 ---

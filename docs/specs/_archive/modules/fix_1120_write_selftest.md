@@ -3,7 +3,7 @@ entity_id: fix_1120_write_selftest
 type: bugfix
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 workflow: fix-1120-write-selftest
 ---
 

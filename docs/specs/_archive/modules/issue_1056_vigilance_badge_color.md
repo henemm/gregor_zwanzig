@@ -3,7 +3,7 @@ entity_id: issue_1056_vigilance_badge_color
 type: module
 created: 2026-07-10
 updated: 2026-07-10
-status: draft
+status: implemented
 version: "2.0"
 tags: [bug, official-alerts, email-renderer, design-tokens]
 ---

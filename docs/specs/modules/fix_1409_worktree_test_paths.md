@@ -3,7 +3,7 @@ entity_id: fix_1409_worktree_test_paths
 type: bugfix
 created: 2026-07-28
 updated: 2026-07-28
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, worktree, gates, infrastructure]
 ---
@@ -60,7 +60,7 @@ in `src/`, `api/`, `internal/` oder `frontend/`.
 | `.claude/hooks/design_fidelity_diff.py` | Prüfling | löst Soll-Bilder + Artefaktziel zusätzlich über `Path(".")` relativ zum `cwd` auf (Zeilen 292-294) — deshalb Drei-Konstanten-Split |
 | `.claude/hooks/pre_issue_close_design_gate.py` | Prüfling | liest `CLAUDE_PROJECT_DIR`, kein harter Hauptrepo-Pfad |
 | `docs/specs/modules/fix_1382_deploy_gate_evidence.md` | Spec | Dieselbe Fehlerfamilie (Schreibweg ≠ Leseweg) |
-| `docs/specs/modules/issue_784_staging_gate_worktree_head.md` | Spec | Worktree-HEAD vs. Hauptrepo-HEAD |
+| `docs/specs/_archive/modules/issue_784_staging_gate_worktree_head.md` | Spec | Worktree-HEAD vs. Hauptrepo-HEAD |
 | `docs/context/fix-1409-worktree-pfade.md` | Kontext | Vollständige Bestandsaufnahme, Klassifikation A/B/C, PO-Schnitt |
 
 ## Implementation Details
@@ -202,37 +202,37 @@ braucht daher einen eigenen `pytest.mark.timeout`-Override, wie in
 
 Referenz je AC. Alle Läufe erfolgen über `uv run pytest <datei>` im Sitzungs-Worktree.
 
-- **AC-1 (Mail-Validator-Stelle):**
+- **AC-1:** (Mail-Validator-Stelle)
   - Input: `tests/tdd/test_issue_862_849_col_labels.py` nach Pfadfix; unveränderte Worktree-Kopie von `briefing_mail_validator.py`.
   - Vorgehen: `uv run pytest tests/tdd/test_issue_862_849_col_labels.py -v` ausführen; anschließend prüfen, dass `_load_validator()` den Pfad über `_REPO_ROOT` (worktree-relativ) auflöst, nicht über den String `/home/hem/gregor_zwanzig/...`.
   - Erwarteter Output: Bestehende Tests (u.a. `test_thunder_col_label_is_thdr`) bleiben grün; kein harter Hauptrepo-Pfad mehr im Quelltext (`grep -n '/home/hem/gregor_zwanzig' tests/tdd/test_issue_862_849_col_labels.py` liefert keinen Treffer).
 
-- **AC-2 (`prod_selftest.py`-Stelle):**
+- **AC-2:** (`prod_selftest.py`-Stelle)
   - Input: `tests/tdd/test_prod_selftest_730.py` nach Pfadfix.
   - Vorgehen: `uv run pytest tests/tdd/test_prod_selftest_730.py -v -m staging` ausführen (Marker `staging`, dialt real); Quelltext-Diff prüfen, dass Zeile 30 (`PROD_SELFTEST`) worktree-relativ ist und Zeile 31 (`REPO_DIR`) unverändert bleibt.
   - Erwarteter Output: `test_ac1`…`test_ac4` bleiben grün; `_head_sha()` liefert weiterhin einen validen Commit-Hash über `REPO_DIR`.
 
-- **AC-3 (`email_spec_validator.py`-Stelle):**
+- **AC-3:** (`email_spec_validator.py`-Stelle)
   - Input: `tests/tdd/test_issue_465_workflow_optimierung.py` nach Pfadfix und Löschung von `test_ac3`/`WORKFLOW_PY`.
   - Vorgehen: `uv run pytest tests/tdd/test_issue_465_workflow_optimierung.py -v` ausführen; Testlauf-Output auf DeprecationWarnings mit Hauptrepo-Pfad prüfen.
   - Erwarteter Output: `test_ac10_email_validator_creates_yaml_log` bleibt grün; keine Warnung mit `/home/hem/gregor_zwanzig/.claude/hooks/email_spec_validator.py` im Log.
 
-- **AC-4 (Design-Fidelity-Stellen, Drei-Konstanten-Split):**
+- **AC-4:** (Design-Fidelity-Stellen, Drei-Konstanten-Split)
   - Input: `tests/tdd/test_issue_603_design_fidelity_gate.py` und `tests/tdd/test_622_fidelity_pre_actions.py` nach Pfadfix.
   - Vorgehen: `uv run pytest tests/tdd/test_issue_603_design_fidelity_gate.py tests/tdd/test_622_fidelity_pre_actions.py -v` ausführen (Timeout-Override `180s` bleibt aktiv); Quelltext-Diff prüfen, dass der Prüfling über `_REPO_ROOT` läuft, während Soll-Bilder, Artefakt-Ablage und `cwd` gemeinsam über die Hauptrepo-Konstante `MAIN_REPO` laufen (der Bildvergleich löst seine Datenpfade über `Path(".")` relativ zum `cwd` auf).
   - Erwarteter Output: Beide Dateien laufen unverändert grün gegenüber dem Stand vor dieser Lieferung; kein neuer Fehlschlag beim Soll-Bild-Abgleich.
 
-- **AC-5 (`test_ac3`-Löschung ohne Grün-Lücke):**
+- **AC-5:** (`test_ac3`-Löschung ohne Grün-Lücke)
   - Input: `tests/tdd/test_issue_465_workflow_optimierung.py` nach Löschung.
   - Vorgehen: `grep -n WORKFLOW_PY tests/tdd/test_issue_465_workflow_optimierung.py` ausführen (erwartet: kein Treffer); danach vollen Testlauf der Datei ausführen und Testanzahl vorher/nachher vergleichen (minus genau ein Test).
   - Erwarteter Output: Kein `WORKFLOW_PY`-Treffer mehr; verbleibender Test (`test_ac10_...`) grün; Testanzahl um exakt 1 reduziert, keine sonstige Veränderung der Collection.
 
-- **AC-6 (Wirkungsnachweis/Mutations-Beleg):**
+- **AC-6:** (Wirkungsnachweis/Mutations-Beleg)
   - Input: `tests/tdd/test_worktree_path_resolution_effect.py` (neu), zwei Exemplare (glatter Fall `briefing_mail_validator.py`, gemischter Fall `design_fidelity_diff.py`).
   - Vorgehen: `uv run pytest tests/tdd/test_worktree_path_resolution_effect.py -v` ausführen. Je Exemplar: Lauf 1 gegen unveränderte `tmp_path`-Hook-Kopie, Lauf 2 gegen gezielt gebrochene Kopie derselben Datei.
   - Erwarteter Output: Lauf 1 grün, Lauf 2 rot, für beide Exemplare. Schlägt Lauf 2 fälschlich grün fehl (weil der Test heimlich die Hauptrepo-Kopie lädt), gilt der Nachweis als nicht erbracht.
 
-- **AC-7 (Klasse-B/C-Begründungskommentare, keine Regression):**
+- **AC-7:** (Klasse-B/C-Begründungskommentare, keine Regression)
   - Input: Klasse-B/C-Dateien mit unverändert festem Pfad, u.a. `test_issue_348_parallel_workspaces.py`, `test_issue_1004_startzeit_ssot.py`.
   - Vorgehen: `uv run pytest tests/tdd/test_issue_348_parallel_workspaces.py tests/tdd/test_issue_1004_startzeit_ssot.py -v` ausführen; anschließend Sichtprüfung, dass an jeder betroffenen Fundstelle ein Ein-Satz-Begründungskommentar steht.
   - Erwarteter Output: Beide Tests laufen unverändert grün (keine Verhaltensänderung); Kommentar ist an der jeweiligen Zeile vorhanden und benennt den Grund (Suchmuster bzw. Fallback-Reihenfolge).

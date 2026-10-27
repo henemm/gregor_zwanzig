@@ -3,7 +3,8 @@ entity_id: layout_tab_vergleich
 type: feature
 created: 2026-07-12
 updated: 2026-07-12
-status: draft
+status: superseded
+superseded_by: "docs/specs/modules/compare_layout_tab_dissolution.md"
 workflow: feat-1232-layout-tab
 ---
 

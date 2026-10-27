@@ -23,7 +23,8 @@ import imaplib
 import re
 import sys
 import time
-from datetime import date, time as dt_time
+from datetime import time as dt_time
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -74,7 +75,7 @@ STUBAI_WAYPOINTS = [
 @pytest.fixture
 def test_trip():
     """Create a test trip with today's date and real Stubai coordinates."""
-    today = date.today()
+    today = ortstag(47.11, 11.31)
     stage = Stage(
         id="T1",
         name="Etappe 1: Neustift - Franz-Senn-Huette",
@@ -106,8 +107,8 @@ def segments_from_trip(test_trip):
     """Convert test trip to TripSegments (the way the scheduler does it)."""
     from services.trip_report_scheduler import TripReportSchedulerService
 
-    service = TripReportSchedulerService()
-    today = date.today()
+    service = TripReportSchedulerService(user_id="default")
+    today = ortstag(47.11, 11.31)
     segments = service._convert_trip_to_segments(test_trip, today)
     normal = [s for s in segments if s.segment_id != "Ziel"]
     assert len(normal) == 2, f"Expected 2 normal segments from 3 waypoints, got {len(normal)}"
@@ -129,7 +130,7 @@ class TestTripCreationAndSegments:
     def test_trip_roundtrip(self, test_trip):
         """Trip can be loaded back from disk with correct data."""
         trip_path = get_briefings_dir("default") / f"{TEST_TRIP_ID}.json"
-        loaded = load_trip(trip_path)
+        loaded = load_trip(trip_path, user_id="default")
         assert loaded.id == TEST_TRIP_ID
         assert loaded.name == TEST_TRIP_NAME
         assert len(loaded.stages) == 1
@@ -189,7 +190,7 @@ class TestWeatherFetch:
         """Weather data is fetched for all segments with plausible values."""
         from services.trip_report_scheduler import TripReportSchedulerService
 
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         weather_data = service._fetch_weather(segments_from_trip)
 
         assert len(weather_data) > 0, "No weather data returned"
@@ -219,7 +220,7 @@ class TestReportFormatting:
     def _get_weather_data(self, segments_from_trip):
         """Helper: fetch real weather for segments."""
         from services.trip_report_scheduler import TripReportSchedulerService
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         return service._fetch_weather(segments_from_trip)
 
     def test_email_html_contains_trip_name(self, segments_from_trip):
@@ -271,7 +272,8 @@ class TestReportFormatting:
         # β2: Subject nutzt deutschen ReportType-Label "Morgen" statt "Morning Report"
         assert "Morgen" in report.email_subject
         # Datum als Stage-Substitut wenn keine Stage-Bezeichnung verfügbar
-        assert date.today().strftime("%d.%m.%Y") in report.email_subject
+        # #2314: Datum der Segmente aus segments_from_trip (Ortstag)
+        assert ortstag(47.11, 11.31).strftime("%d.%m.%Y") in report.email_subject
 
     def test_sms_format_compact(self, segments_from_trip):
         """SMS is <=160 chars and follows the v2.0 token wire format
@@ -315,7 +317,7 @@ class TestEmailDelivery:
 
         # 1. Fetch weather
         from services.trip_report_scheduler import TripReportSchedulerService
-        service = TripReportSchedulerService(settings)
+        service = TripReportSchedulerService(settings, user_id="default")
         weather = service._fetch_weather(segments_from_trip)
         assert len(weather) > 0, "No weather data"
 
@@ -403,7 +405,7 @@ class TestReportConfigPersistence:
 
         # Reload from disk
         trip_path = get_briefings_dir("default") / f"{TEST_TRIP_ID}.json"
-        loaded = load_trip(trip_path)
+        loaded = load_trip(trip_path, user_id="default")
 
         assert loaded.report_config is not None
         assert loaded.report_config.trip_id == TEST_TRIP_ID
@@ -419,7 +421,7 @@ class TestReportConfigPersistence:
     def test_trip_without_config_loads_none(self, test_trip):
         """Trip without report_config loads as None."""
         trip_path = get_briefings_dir("default") / f"{TEST_TRIP_ID}.json"
-        loaded = load_trip(trip_path)
+        loaded = load_trip(trip_path, user_id="default")
         assert loaded.report_config is None
 
 
@@ -431,14 +433,15 @@ class TestSchedulerIntegration:
     """Test the scheduler service with a real trip.
 
     Scheibe 2c (#1211) Feinschnitt: die Klasse trug bislang einen kompletten
-    `@pytest.mark.email`, obwohl nur test_scheduler_send_reports wirklich
-    dialt (_get_active_trips() liest ausschliesslich lokale Trip-Dateien,
-    kein Netzcall). Marker daher method-genau statt klassenweit."""
+    `@pytest.mark.email`, obwohl nur der (seit #1405 S4b entfernte)
+    Versandtest wirklich dialte (_get_active_trips() liest ausschliesslich
+    lokale Trip-Dateien, kein Netzcall). Marker daher method-genau statt
+    klassenweit."""
 
     def test_scheduler_finds_active_trip(self, test_trip):
         """Scheduler identifies test trip as active for today (morning)."""
         from services.trip_report_scheduler import TripReportSchedulerService
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
 
         # #1724: die Auswahl braucht den Zeitpunkt (Ortstag je Trip).
         from datetime import datetime as _dt2, timezone as _tz2
@@ -448,15 +451,7 @@ class TestSchedulerIntegration:
             f"Test trip not found in active trips: {active_ids}"
         )
 
-    @pytest.mark.email
-    @pytest.mark.live  # Dialt real bzw. fail-soft-Fetch (#1211 Scheibe 2c) -- nur via -m live
-    def test_scheduler_send_reports(self, test_trip, settings):
-        """Scheduler sends report for test trip (full E2E)."""
-        if not settings.can_send_email():
-            pytest.skip("SMTP not configured")
-
-        from services.trip_report_scheduler import TripReportSchedulerService
-        service = TripReportSchedulerService(settings)
-
-        sent = service.send_reports("morning")
-        assert sent >= 1, f"Expected at least 1 report sent, got {sent}"
+    # #1405 S4b (AC-16/AC-23): ``test_scheduler_send_reports`` entfernt --
+    # ``TripReportSchedulerService.send_reports`` war toter Code ohne
+    # Produktionsaufrufer und ist geloescht. Der stuendliche Versand laeuft
+    # ueber ``send_due_reports`` -> ``run_briefing_dispatch``.

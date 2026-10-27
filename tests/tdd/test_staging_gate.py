@@ -33,7 +33,14 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _HOOKS_SRC = _REPO_ROOT / ".claude" / "hooks"
 
 STAGING_GATE = _HOOKS_SRC / "staging_gate.py"
-REPO_DIR = Path("/home/hem/gregor_zwanzig")
+# #1196 Klasse C Teil 4: derselbe Fehler wie oben (Kommentar #1096/#1327)
+# war hier stehengeblieben -- REPO_DIR trug noch den hartkodierten
+# Hauptrepo-Pfad und riss auf dem CI-Runner (und in jedem Worktree ohne
+# /home/hem/gregor_zwanzig) mit FileNotFoundError ab, bevor irgendein
+# Gate-Verhalten geprueft wurde. _REPO_ROOT (testdatei-relativ) ist dieselbe
+# echte Git-Arbeitskopie -- die git-Befehle unten (HEAD, ls-files) liefern
+# hier dieselbe Antwort wie im Hauptrepo.
+REPO_DIR = _REPO_ROOT
 
 
 def _head_sha() -> str:
@@ -47,6 +54,15 @@ def _head_sha() -> str:
 def _run_gate(args: list[str], env_extra: dict | None = None) -> tuple[int, str, str]:
     env = os.environ.copy()
     env["GZ_ACTIVE_WORKFLOW"] = "issue-521-staging-validator"
+    # #1196 Klasse C Teil 4: write_verdict() ruft IMMER (GZ_SKIP_E2E_GATE wirkt
+    # hier nicht, s. Kommentar oben Zeile 69) den Telegram-Live-Gate (#686) auf,
+    # der die ECHTE Commit-Historie von REPO_DIR (HEAD~1..HEAD) auf Telegram-
+    # Pfade prueft. Diese Datei testet nicht das Telegram-Gate selbst -- ohne
+    # Stub-Chat-ID waere das Ergebnis vom zufaelligen Zustand der echten
+    # Projekthistorie abhaengig (mal gruen, mal rot, je nachdem was der jeweils
+    # letzte reale Commit beruehrt). Herkunftssperre #1476-Muster: Stub-Wert
+    # bedienen, nicht umgehen.
+    env.setdefault("GZ_TELEGRAM_TEST_CHAT_ID", "12345")
     if env_extra:
         env.update(env_extra)
     result = subprocess.run(

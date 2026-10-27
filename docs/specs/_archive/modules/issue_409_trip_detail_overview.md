@@ -3,7 +3,7 @@ entity_id: issue_409_trip_detail_overview
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, svelte, trip-detail, overview, layout, issue-409]
 ---
@@ -51,7 +51,7 @@ Nicht geändert:
 
 | Abhängigkeit | Art | Zweck |
 |---|---|---|
-| `frontend/src/lib/components/trip-detail/FullProfile.svelte` | Svelte-Komponente (vorhanden) | Props: `{ trip, selectedStageId, onSelectStage, now? }` — SVG-Höhenprofil der gesamten Tour |
+| `frontend/src/lib/components/trip-detail/FullProfile.svelte` | Svelte-Komponente (vorhanden) | Props: `{ trip, selectedStageId, onSelectStage, now? }` — SVG-Höhenprofil der gesamten Trip |
 | `frontend/src/lib/components/trip-detail/StageList.svelte` | Svelte-Komponente (vorhanden) | Props: `{ trip, selectedStageId, onSelectStage, now? }` — Liste aller Etappen-Cards |
 | `frontend/src/lib/components/trip-detail/BriefingPreviewCard.svelte` | Svelte-Komponente (vorhanden) | `data-testid="right-card-briefings"` — rechte Spalte Karte 1 |
 | `frontend/src/lib/components/trip-detail/WeatherMetricsPreviewCard.svelte` | Svelte-Komponente (vorhanden) | `data-testid="right-card-weather"` — rechte Spalte Karte 2 |
@@ -60,7 +60,7 @@ Nicht geändert:
 | `frontend/src/lib/utils/rightColumn.ts` | Utility (vorhanden) | `getReportSchedule(trip)` → `ReportSchedule` mit morning/evening/enabled-Feldern |
 | `frontend/src/lib/utils/fullProfile.ts` | Utility (vorhanden) | `getActiveStageId(trip, now)` → `string \| null` — aktive Etappe des heutigen Tages |
 | `frontend/src/lib/utils/tripStats.ts` | Utility (vorhanden) | `computeTripStats(trip)` → `{ stages, kmTotal, ascentM }` |
-| `frontend/src/lib/utils/tripStatus.ts` | Utility (vorhanden) | `deriveTripStatus(trip, now)` → `'planned' \| 'active' \| 'paused' \| 'archived'` — **erweitert durch `docs/specs/modules/fix_1271_status_zeitformat.md` (2026-07-16) um `draft`/`finished` (6 Zustände)** |
+| `frontend/src/lib/utils/tripStatus.ts` | Utility (vorhanden) | `deriveTripStatus(trip, now)` → `'planned' \| 'active' \| 'paused' \| 'archived'` — **erweitert durch `docs/specs/_archive/modules/fix_1271_status_zeitformat.md` (2026-07-16) um `draft`/`finished` (6 Zustände)** |
 | `frontend/src/lib/utils/alertMetricLabels.ts` | Utility (vorhanden) | `ALERT_METRIC_LABELS`, `normalizeAlertMetric()` — Labels + Icons für Alert-Metriken in AlertsPreviewCard |
 | `frontend/src/lib/types.ts` | TypeScript | `Trip`, `Stage`, `AlertRule` — keine Änderung nötig |
 | `frontend/e2e/issue-302-trip-detail-redesign.spec.ts` | E2E-Test | AC-4a–4d werden mit `test.skip` + Kommentar superseded markiert |

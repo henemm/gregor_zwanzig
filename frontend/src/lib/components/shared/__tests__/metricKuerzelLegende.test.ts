@@ -40,7 +40,7 @@
 //   * massgeblich ist `gerenderteIds` — die Groessen, die der Reihenfolge-
 //     Block WIRKLICH zeigt (aktive Zeilen + Aus-Gruppe). Weder der volle
 //     Backend-Katalog (Adversary F001: 29 Katalog- gegen 9 gerenderte
-//     Groessen in einer frischen Tour) noch der rohe Kuerzel-Katalog
+//     Groessen in einer frischen Trip) noch der rohe Kuerzel-Katalog
 //     (Messung M1: `cape`/`CP` ist selectable=False und nie eine Marke).
 //   * je (Groesse, Kuerzel) ein Eintrag; Groessen ohne Kuerzel oder ohne Label
 //     entfallen.
@@ -147,7 +147,7 @@ function vergleichPaar(): { kuerzelById: Record<string, string[]>; metricById: R
 
 /** Die im Reihenfolge-Block gerenderte Menge des TRIPS. Genommen wird die
  *  Anlege-Vorbelegung (`trip_default_enabled`) — das ist die Auswahl, die eine
- *  frische Tour wirklich zeigt, und sie ist eine echte Teilmenge des Katalogs
+ *  frische Trip wirklich zeigt, und sie ist eine echte Teilmenge des Katalogs
  *  (Adversary F001). Nichts hier ist getippt: die Ids kommen aus /api/metrics. */
 function gerendertRoute(zusaetzlich: string[] = []): string[] {
 	const metricById = tripMetricById();
@@ -330,7 +330,7 @@ describe('AC-1: kein Kuerzel bleibt ohne Erklaertext', () => {
 			`AC-1 FAIL: die Legende erklaert ${JSON.stringify(fremd)} (Groesse ` +
 				`"${draussen}"), obwohl diese Groesse im Reihenfolge-Block nicht steht. ` +
 				`Genau so entsteht Rauschen: 20 von 29 Katalog-Groessen sind in einer ` +
-				`frischen Tour nicht gewaehlt (Adversary F001).`
+				`frischen Trip nicht gewaehlt (Adversary F001).`
 		);
 	});
 
@@ -392,36 +392,43 @@ describe('AC-2: der Trip-Editor erklaert die sechs Temperatur-/Windchill-Groesse
 });
 
 describe('AC-2a: der Ortsvergleich entdoppelt nicht nach Kuerzel', () => {
-	test('`D` und `TF` bekommen je zwei Zeilen, unterschieden durch die Auswertung', async () => {
+	test('`D` und `L` je einmal, kein Kuerzel doppelt (#2417 AC-12/AC-29)', async () => {
 		const { kuerzelById, metricById } = vergleichPaar();
 		const gerendert = gerendertVergleich();
 		const eintraege = await baue(gerendert, kuerzelById, metricById);
-		for (const kuerzel of ['D', 'TF']) {
+		// #2417 AC-29 (Spec feat_2417_kurzform_englisch.md v1.1): die Auswahl
+		// traegt als `sms_code` das Kuerzel, das die Ortsvergleich-SMS wirklich
+		// zeigt (ueber `kuerzel_metric_id`) — „Temperatur max" `D`, „Temperatur
+		// min" `L`. Frueher standen beide auf dem Kuerzel von `temperature`
+		// (Messung M2: `D` zweimal); diese Doppelung entfaellt.
+		for (const kuerzel of ['D', 'L']) {
 			const zeilen = gerendert.filter((k) => (kuerzelById[k] ?? []).includes(kuerzel));
-			// Positivkontrolle zu Messung M2 — ohne Doppelbelegung prueft der Rest nichts.
 			assert.equal(
-				zeilen.length, 2,
-				`Messung M2 gilt nicht mehr: "${kuerzel}" steht auf ${zeilen.length} ` +
-					`Katalogzeilen (${zeilen.join(', ')}). AC-2a neu fassen, nicht den Test.`
+				zeilen.length, 1,
+				`#2417 AC-29 FAIL: "${kuerzel}" steht auf ${zeilen.length} statt genau einer ` +
+					`Katalogzeile (${zeilen.join(', ')}).`
 			);
-			const treffer = eintraege.filter((e) => e.kuerzel === kuerzel);
 			assert.equal(
-				treffer.length, 2,
-				`AC-2a FAIL: "${kuerzel}" erscheint ${treffer.length}-mal statt zweimal. ` +
-					`Eine Entdopplung nach Kuerzel bricht die Zusicherung „dieselbe Quelle wie ` +
-					`die Marken" — die Marken zeigen das Kuerzel an BEIDEN Zeilen.`
+				eintraege.filter((e) => e.kuerzel === kuerzel).length, 1,
+				`#2417 AC-29 FAIL: "${kuerzel}" erscheint nicht genau einmal in der Legende.`
 			);
-			for (const key of zeilen) {
-				const auswertung = String(metricById[key].aggregation_label ?? '');
-				assert.equal(
-					treffer.filter((t) => t.bedeutung.includes(auswertung)).length, 1,
-					`AC-2a FAIL: die Auswertung ${JSON.stringify(auswertung)} (${key}) ist in ` +
-						`der Legende nicht genau einmal ablesbar. Ohne sie sind die beiden ` +
-						`"${kuerzel}"-Zeilen nicht unterscheidbar: ` +
-						`${JSON.stringify(treffer.map((t) => t.bedeutung))}`
-				);
+		}
+		const zeilenJeKuerzel = new Map<string, string[]>();
+		for (const id of Object.keys(kuerzelById)) {
+			for (const k of kuerzelById[id] ?? []) {
+				zeilenJeKuerzel.set(k, [...(zeilenJeKuerzel.get(k) ?? []), id]);
 			}
 		}
+		assert.deepEqual(
+			[...zeilenJeKuerzel].filter(([, ids]) => ids.length > 1), [],
+			'#2417 AC-29 FAIL: dasselbe Kuerzel auf mehreren Vergleichszeilen.'
+		);
+		const legendeZaehler = new Map<string, number>();
+		for (const e of eintraege) legendeZaehler.set(e.kuerzel, (legendeZaehler.get(e.kuerzel) ?? 0) + 1);
+		assert.deepEqual(
+			[...legendeZaehler].filter(([, n]) => n > 1), [],
+			'#2417 AC-29 FAIL: Kuerzel mehrfach in der Vergleichs-Legende.'
+		);
 		// Der Editor zeigt das ROHE Kuerzel; erst die zugestellte SMS haengt das
 		// Auswertungszeichen an (comparison.py:647-650, Messung M2b). Die Legende
 		// bildet das Editor-Vokabular ab — `D`, nicht `D+`/`D-`.
@@ -1044,7 +1051,9 @@ const EINBETTUNGEN = [
 			compareCatalog: toCompareSelectionEntries({ metrics: live().compare } as never),
 			buckets: { primary: gerendertRoute(SECHS), secondary: [], off: [] },
 			channelBuckets: {}, activeChannel: 'email', compareChannel: 'email',
-			friendlyMap: {}, highlight: null, wiz: undefined, trip: undefined
+			friendlyMap: {}, highlight: null, trip: undefined,
+			// #2276 S6g: die Trip-Einbettung bekommt keine Vergleichs-Wertprops.
+			activeMetricKeys: undefined, channelActiveMetricKeys: undefined
 		})
 	},
 	{
@@ -1058,25 +1067,42 @@ const EINBETTUNGEN = [
 			buckets: { primary: [], secondary: [], off: [] },
 			channelBuckets: {}, activeChannel: 'email', compareChannel: 'email',
 			friendlyMap: {}, highlight: null,
-			wiz: { activeMetricKeys: gerendertVergleich(), channelActiveMetricKeys: {} }
+			// #2276 S6g: Wertprops statt `wiz` — derselbe Zustand, ohne Zustandsobjekt.
+			activeMetricKeys: gerendertVergleich(), channelActiveMetricKeys: {}
 		})
 	},
 	{
-		name: 'Ausblick (CompareOutlookLayoutControls)',
-		datei: () => join(SHARED, 'CompareOutlookLayoutControls.svelte'),
+		name: 'Ausblick (OutlookLayoutControls)',
+		datei: () => join(SHARED, 'OutlookLayoutControls.svelte'),
 		waehle: () => true,
+		// #1848 A3: der Ausblick erbt die Grundauswahl seiner Flaeche und
+		// bekommt sie als Prop (`grundauswahl`). Ohne Saat waere sie im
+		// Instance-Script nicht herleitbar, und die Herleitung von
+		// `materializedOutlookKeys` (die daraus entsteht) schluege fehl.
+		// Gesaet wird die ECHTE Vergleichs-Grundauswahl -- dieselbe Menge, die
+		// WeatherMetricsTab.svelte am Ortsvergleich-Mount durchreicht.
+		// #2232: die Marken kommen jetzt als Prop aus `/api/sms-symbols` (die
+		// Flaeche laedt sie nicht selbst — zwei Ladewege waeren zwei Quellen).
+		// Gesaet wird DIESELBE Abbildung, die WeatherMetricsTab durchreicht.
 		saat: () => ({
 			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
-			metricKeys: null
+			metricKeys: null,
+			grundauswahl: gerendertVergleich(),
+			smsSymbols: tripKuerzelById()
 		})
 	},
 	{
 		name: 'Stundenverlauf (CompareHourlyLayoutControls)',
-		datei: () => join(SHARED, 'CompareHourlyLayoutControls.svelte'),
+		datei: () => join(SHARED, '..', 'compare', 'CompareHourlyLayoutControls.svelte'),
 		waehle: () => true,
+		// #2232: s. Ausblick oben — Marken als Prop, nicht selbst geladen.
+		// #2276 S6b: die Flaeche arbeitet auf Wertprops statt auf `wiz` —
+		// `metricKeys: null` ist dasselbe „nie eingestellt", nur ohne
+		// Zustandsobjekt.
 		saat: () => ({
 			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
-			wiz: { hourlyMetricKeys: null }
+			metricKeys: null,
+			smsSymbols: tripKuerzelById()
 		})
 	}
 ] as const;

@@ -49,6 +49,7 @@ from app.config import Settings
 from output.channels import telegram as telegram_mod
 from output.channels.base import OutputConfigError
 from output.channels.telegram import TelegramOutput
+from tests.helpers.telegram_empfaenger import antwort_im_update
 
 PROD_BOT_TOKEN = "prod-bot-token-abc123"
 TEST_BOT_TOKEN = "staging-bot-token-xyz789"
@@ -150,7 +151,7 @@ def test_token_guard_blocks_mismatched_bot_token_before_transport(method_name, m
         telegram_chat_id=TEST_CHAT_ID,
         telegram_test_chat_id=TEST_CHAT_ID,
     )
-    output = TelegramOutput(settings)
+    output = antwort_im_update(settings, TEST_CHAT_ID)
 
     with pytest.raises(OutputConfigError):
         _invoke(output, method_name, TEST_CHAT_ID)
@@ -186,7 +187,7 @@ def test_token_guard_fails_closed_without_test_bot_token(method_name, monkeypatc
         telegram_chat_id=TEST_CHAT_ID,
         telegram_test_chat_id=TEST_CHAT_ID,
     )
-    output = TelegramOutput(settings)
+    output = antwort_im_update(settings, TEST_CHAT_ID)
 
     with pytest.raises(OutputConfigError):
         _invoke(output, method_name, TEST_CHAT_ID)
@@ -232,7 +233,7 @@ def test_chat_argument_guard_blocks_wrong_target_chat(method_name, monkeypatch):
         telegram_chat_id=TEST_CHAT_ID,
         telegram_test_chat_id=TEST_CHAT_ID,
     )
-    output = TelegramOutput(settings)
+    output = antwort_im_update(settings, PROD_CHAT_ID)
     wrong_chat_id = PROD_CHAT_ID  # weicht von telegram_test_chat_id ab
 
     with pytest.raises(OutputConfigError):
@@ -278,7 +279,7 @@ def test_guards_pass_through_matching_test_config(method_name, monkeypatch):
         "noch nicht bzw. traegt nicht den Test-Bot-Token"
     )
 
-    output = TelegramOutput(settings)
+    output = antwort_im_update(settings, TEST_CHAT_ID)
 
     with pytest.raises(AssertedNetworkTouch):
         _invoke(output, method_name, TEST_CHAT_ID)
@@ -363,7 +364,7 @@ def test_guards_are_noop_in_production_mode(method_name, monkeypatch):
         telegram_bot_token=PROD_BOT_TOKEN,
         telegram_chat_id=PROD_CHAT_ID,
     )
-    output = TelegramOutput(settings)
+    output = antwort_im_update(settings, PROD_CHAT_ID)
 
     # Direkter No-Op-Beweis -- schlaegt heute mit AttributeError fehl, weil
     # diese Guard-Methoden vor #1363 noch nicht existieren.
@@ -423,7 +424,7 @@ def test_existing_1288_chat_guard_unchanged(monkeypatch):
         "noch nicht bzw. traegt nicht den Test-Bot-Token"
     )
 
-    output = TelegramOutput(settings)
+    output = antwort_im_update(settings, PROD_CHAT_ID)
 
     with pytest.raises(OutputConfigError) as exc_info:
         output.send("Betreff", "Testnachricht")

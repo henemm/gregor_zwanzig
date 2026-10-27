@@ -50,6 +50,7 @@ from output.renderers.compare_outlook_metric_ids import resolve_trip_outlook_met
 from output.renderers.email import render_email
 from output.renderers.email.helpers import (
     NO_HOURLY_COLUMN_METRIC_IDS,
+    _effective_format_mode,
     build_friendly_keys,
 )
 from output.tokens.dto import MetricSpec, TokenLine
@@ -135,7 +136,20 @@ class TripReportFormatter:
             # Issue #434: kanal-bewusste Auflösung (per_report > per_channel > global).
             active_metrics = dc.get_metrics_for_channel("email", report_type)
             # Force enabled=True on all active metrics so downstream guards don't skip them
-            active_metrics = [dataclasses.replace(mc, enabled=True) for mc in active_metrics]
+            # Issue #2422 S3 (AC-16): Layout-Eintraege tragen keine
+            # Erwaehnungsschwelle -- die globale (KL-4, wie in der SMS) wird
+            # uebernommen; ein am Layout-Eintrag gesetzter Wert gewinnt.
+            _globale_schwelle = {
+                mc.metric_id: mc.sms_threshold for mc in _dc_uncollapsed.metrics
+            }
+            active_metrics = [
+                dataclasses.replace(
+                    mc, enabled=True,
+                    sms_threshold=(mc.sms_threshold if mc.sms_threshold is not None
+                                   else _globale_schwelle.get(mc.metric_id)),
+                )
+                for mc in active_metrics
+            ]
             dc = dataclasses.replace(dc, metrics=active_metrics)
         self._tz = tz or ZoneInfo("UTC")
         self._exposed_sections = exposed_sections
@@ -298,7 +312,9 @@ class TripReportFormatter:
             report_type=report_type,
             tz=self._tz,
             trip_name=trip_name,
-            friendly_keys=self._friendly_keys,
+            # #2429 (B3): Telegram zeigt SEINE Roh/Einfach-Wahl, nicht die der
+            # (kollabierten) E-Mail.
+            friendly_keys=build_friendly_keys(_dc_telegram),
             stability_result=stability_result,
             multi_day_trend=effective_trend,
             outlook_state=outlook_state,
@@ -320,7 +336,8 @@ class TripReportFormatter:
         )
 
         from output.renderers.sms_trip import (
-            SMSTripFormatter, SMS_MULTI_SYMBOLS_BY_METRIC, SMS_NULLFORM_METRIC_IDS,
+            SMSTripFormatter, SMS_FORMAT_MODE_METRIC_IDS,
+            SMS_MULTI_SYMBOLS_BY_METRIC, SMS_NULLFORM_METRIC_IDS,
             SMS_SYMBOL_BY_METRIC, build_extended_metric_specs,
         )
         # Issue #1575 Scheibe 3: die MENGE der SMS-Metriken kommt aus der
@@ -334,16 +351,16 @@ class TripReportFormatter:
         # metric_id -> Index-Zuordnung fuer die Nutzer-Position abgeleitet.
         _sms_metrics_ordered = _dc_uncollapsed.get_metrics_for_channel("sms", report_type)
         sms_metric_ids = {m.metric_id for m in _sms_metrics_ordered}
-        # Aktivierungs-Gate (DEC-2): position wird NUR gesetzt, wenn eine
-        # SMS-spezifische Kaskadenebene antwortet -- bei 'global' bleibt
-        # jede Spec ohne position, der Builder faellt vollstaendig auf die
-        # bisherige POSITIONAL-Sortierung zurueck (Byte-Identitaet, AC-2).
-        _sms_cascade_source = _dc_uncollapsed.cascade_source_for_channel("sms", report_type)
-        _sms_position_by_metric: dict[str, int] = (
-            {m.metric_id: i for i, m in enumerate(_sms_metrics_ordered)}
-            if _sms_cascade_source in ("per_report", "per_channel")
-            else {}
-        )
+        # Fix #2422 S2a (B9): das fruehere Aktivierungs-Gate (DEC-2 aus
+        # fix_1677_sms_reihenfolge.md) hat position NUR gesetzt, wenn eine
+        # SMS-spezifische Kaskadenebene antwortet -- bei 'global' fiel die
+        # Ausgabe auf die feste POSITIONAL-Sortierung zurueck, obwohl der
+        # Editor die globale Reihenfolge zeigte. PO-Entscheid 2026-09-27:
+        # die Editor-Reihenfolge wirkt IMMER, unabhaengig von der Kaskaden-
+        # quelle -- DEC-2 gilt als abgeloest.
+        _sms_position_by_metric: dict[str, int] = {
+            m.metric_id: i for i, m in enumerate(_sms_metrics_ordered)
+        }
         _global_metrics = {m.metric_id: m for m in _dc_uncollapsed.metrics}
         # Issue #624: konfigurierte Schwellwerte aus MetricConfig ableiten.
         _sms_thr = {
@@ -397,8 +414,16 @@ class TripReportFormatter:
         # bekamen aktive der 14 Metriken KEINE Spec -> builder.py's
         # `if spec is None and not samples: continue` liess sie bei fehlenden
         # Daten komplett entfallen statt die Null-Form (§9) zu rendern.
+        # Issue #2422 S6 (B2): Roh/Einfach je SMS-Metrik -- aufgeloest ueber
+        # dieselbe Funktion wie die E-Mail (_effective_format_mode), aber aus
+        # der SMS-Kaskade; nur Groessen mit SMS-Einfachform (Katalog-Konstante).
+        _sms_format_by_metric = {
+            m.metric_id: _effective_format_mode(m)
+            for m in _sms_metrics_ordered
+            if m.metric_id in SMS_FORMAT_MODE_METRIC_IDS
+        }
         _disabled_sms_specs += build_extended_metric_specs(
-            active_metric_ids, _sms_position_by_metric,
+            active_metric_ids, _sms_position_by_metric, _sms_format_by_metric,
         )
         # Issue #1410 §6: die Temperatur-Token erscheinen NUR bei aktivierter
         # Metrik -- dasselbe Pruefmuster wie oben fuer SD/SL. Anders als dort
@@ -743,6 +768,8 @@ class TripReportFormatter:
         Values outside segment window are annotated with "nachts".
         Precip/POP/CAPE: from segment-only aggregated values.
         """
+        from output.metric_format import thunder_low_statement_sentence
+
         highlights = []
 
         # Thunder (segment hours only)
@@ -754,8 +781,24 @@ class TripReportFormatter:
             for dp in seg_data.timeseries.data:
                 if sh <= dp.ts.hour <= eh and dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
                     elev = int(seg_data.segment.start_point.elevation_m or 0)
+                    # Issue #2176: LOW ist keine Ereignisbehauptung mehr,
+                    # sondern die Luftmassen-Aussage MIT ihrem CAPE-Wert
+                    # (Spec AC-2: der Zahlenwert steht AN der Aussage, nicht
+                    # nur in der ohnehin vorher bestehenden Stundentabellen-
+                    # Spalte; die 1000-J/kg-Highlight-Schwelle weiter unten
+                    # bedient einen anderen Zweck und bleibt unveraendert).
+                    # ⚡ bleibt hier Metrik-Kennzeichner der Zeile, steht aber
+                    # nicht mehr vor einer Ereignisaussage.
+                    if dp.thunder_level == ThunderLevel.LOW:
+                        _kopf = thunder_low_statement_sentence(
+                            "lang",
+                            getattr(dp, "thunder_level_signals", None),
+                            getattr(dp, "cape_jkg", None),
+                        )
+                    else:
+                        _kopf = "Gewitter möglich"
                     highlights.append(
-                        f"⚡ Gewitter möglich ab {local_fmt(dp.ts, self._tz)} "
+                        f"⚡ {_kopf} ab {local_fmt(dp.ts, self._tz)} "
                         f"({'am Ziel' if seg_data.segment.segment_id == 'Ziel' else f'Segment {seg_data.segment.segment_id}'}, >{elev}m)"
                     )
                     break
@@ -909,7 +952,9 @@ class TripReportFormatter:
         # Issue #1474 (AC-12): deutsches Wort statt generischem englischen
         # Fallback ("Thunderstorm") -- die einzige LOW-Instanz im ganzen
         # System (s. Spec Known Limitations).
-        (RiskType.THUNDERSTORM, RiskLevel.LOW): "⚠️ Gewitter leicht",
+        # Issue #2176: LOW traegt keine Gewitter-Ereignisbehauptung mehr --
+        # dieselbe Umstellung wie `sms_trip._SMS_RISK_LABELS`.
+        (RiskType.THUNDERSTORM, RiskLevel.LOW): "⚠️ Luftmasse leicht",
         (RiskType.WIND, RiskLevel.HIGH): "⚠️ Storm",
         (RiskType.WIND, RiskLevel.MODERATE): "⚠️ High Wind",
         (RiskType.RAIN, RiskLevel.HIGH): "⚠️ Heavy Rain",

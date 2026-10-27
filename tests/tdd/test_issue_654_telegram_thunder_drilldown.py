@@ -15,9 +15,9 @@ GitHub Issue: #654
 """
 from __future__ import annotations
 
-import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -40,6 +40,7 @@ from services.trip_command_processor import (
     InboundMessage,
     TripCommandProcessor,
 )
+from tests.helpers.verlauf_abdeckung import abgedeckte_stunden
 
 # ---------------------------------------------------------------------------
 # Fixe Zeitstempel — unabhängig vom laufenden Datum
@@ -49,8 +50,31 @@ TODAY = date(2026, 9, 10)
 RECEIVED_AT = datetime(2026, 9, 10, 8, 0, tzinfo=timezone.utc)
 
 _TRIP_ID = "test-654-drilldown"
-_TRIP_NAME = "Drilldown-Test-Tour"
+_TRIP_NAME = "Drilldown-Test-Trip"
 _USER_ID = "default"
+
+# Der Wegpunkt liegt auf Korsika -> Europe/Paris, also NIE UTC.
+_TRIP_TZ = ZoneInfo("Europe/Paris")
+
+
+def _erwartete_stunden() -> list[str]:
+    """Die zwoelf Ortszeit-Stunden des Antwortfensters.
+
+    Issue #2185: die urspruengliche Nachweisform von AC-1 ("mindestens sechs
+    HH:MM-Zeilen, je Uhrzeit eine") ist mit der Wechselpunkt-Verdichtung
+    unvereinbar — ein Verlauf mit einem einzigen Wechselpunkt liefert kuenftig
+    zwei Zeilen. Sie ist durch die staerkere ABDECKUNGS-Zusicherung abgeloest
+    (Spec ``feat_2185_verlauf_wechselpunkte.md`` AC-7, PO-Entscheid):
+    verglichen wird nicht mehr die Zeilenzahl, sondern welche Stunden die
+    Antwort tatsaechlich abdeckt. Das faengt zusaetzlich einen verschluckten
+    oder doppelt gezaehlten Zeitpunkt, den die alte Form durchgewunken haette.
+
+    Unabhaengig vom Prueflingsweg gebildet: aus dem awaren ``RECEIVED_AT``.
+    """
+    return [
+        (RECEIVED_AT + timedelta(hours=i)).astimezone(_TRIP_TZ).strftime("%H:%M")
+        for i in range(12)
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -175,17 +199,20 @@ def test_ac1_dd_thunder_today_returns_hourly_list(env):
     assert result.success is True, f"Erwartet success=True, body: {result.confirmation_body!r}"
 
     body = result.confirmation_body
-    # Mindestens 6 Zeilen mit HH:MM
-    time_lines = [ln for ln in body.splitlines() if re.search(r"\d{2}:\d{2}", ln)]
-    assert len(time_lines) >= 6, (
-        f"Erwartet ≥6 HH:MM-Zeilen, gefunden {len(time_lines)}:\n{body}"
+    # Abdeckung statt Zeilenzahl (Issue #2185, s. `_erwartete_stunden`).
+    assert abgedeckte_stunden(body) == _erwartete_stunden(), (
+        f"Der Verlauf muss genau die zwoelf Stunden des Antwortfensters "
+        f"abdecken, abgedeckt: {abgedeckte_stunden(body)}\n{body}"
     )
 
-    # Mindestens eines der Stufen-Labels muss vorkommen
-    label_keywords = ["keins", "mäßig", "hoch", "⚪", "🟡", "🔴"]
+    # Mindestens eines der Stufen-Labels muss vorkommen (Issue #2010: kanonische
+    # Woerter "kein"/"mittel", nicht "keins"/"mäßig").
+    label_keywords = ["kein", "mittel", "hoch", "⚪", "🟡", "🔴"]
     assert any(kw in body for kw in label_keywords), (
         f"Keine Stufen-Labels in:\n{body}"
     )
+    assert "mäßig" not in body, f"'mäßig' (Wortdrift #2010) noch im Body:\n{body}"
+    assert "keins" not in body, f"'keins' (Wortdrift #2010) noch im Body:\n{body}"
 
 
 # ---------------------------------------------------------------------------
@@ -284,7 +311,8 @@ def test_ac1_dd_thunder_direct_key_also_works(env):
         f"Direkter dd_thunder_today-Key: Erwartet success=True, body: {result.confirmation_body!r}"
     )
     body = result.confirmation_body
-    time_lines = [ln for ln in body.splitlines() if re.search(r"\d{2}:\d{2}", ln)]
-    assert len(time_lines) >= 6, (
-        f"Erwartet ≥6 HH:MM-Zeilen, gefunden {len(time_lines)}:\n{body}"
+    # Abdeckung statt Zeilenzahl (Issue #2185, s. `_erwartete_stunden`).
+    assert abgedeckte_stunden(body) == _erwartete_stunden(), (
+        f"Der direkte Key muss dieselbe Abdeckung liefern, abgedeckt: "
+        f"{abgedeckte_stunden(body)}\n{body}"
     )

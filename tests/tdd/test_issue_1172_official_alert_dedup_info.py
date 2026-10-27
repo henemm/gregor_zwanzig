@@ -148,8 +148,9 @@ def test_shared_plain_renderer_unchanged():
 # Test-Postfach, KEIN Mock, KEIN Resend) und den zugestellten Plain-Body per
 # IMAP (GZ_TEST_IMAP_*) verifizieren. Muster: test_issue_1087_trip_official_alerts
 # (_poll_imap_for_marker, _write_user_profile) und test_issue_1150 (@pytest.mark.email
-# + settings.can_send_email()-Skip). Der user_id enthaelt "tdd" -> is_test_user_id()
-# erzwingt in with_user_profile() den for_testing()-Pfad (Stalwart statt Resend).
+# + settings.can_send_email()-Skip). Das Profil traegt is_test_user:true (#2152) ->
+# is_test_user_id() erzwingt in with_user_profile() den for_testing()-Pfad
+# (Stalwart statt Resend).
 # ---------------------------------------------------------------------------
 
 # Haute-Corse (Korsika) — passend zum region_label. Reale Koordinaten, damit
@@ -165,8 +166,9 @@ def _write_test_profile(user_id: str) -> None:
     profile_dir.mkdir(parents=True, exist_ok=True)
     import json
 
+    # Issue #2152: Testkonto-Status ueber das Profilfeld, nicht ueber "tdd" im Namen.
     (profile_dir / "user.json").write_text(
-        json.dumps({"mail_to": "gregor-test@henemm.com"}), encoding="utf-8"
+        json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True}), encoding="utf-8"
     )
 
 

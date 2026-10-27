@@ -3,7 +3,7 @@ entity_id: issue_764_compare_forecast_hours
 type: module
 created: 2026-06-12
 updated: 2026-06-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, preset, persistence, bug]
 ---

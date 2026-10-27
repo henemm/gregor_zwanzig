@@ -1,7 +1,8 @@
 <script lang="ts">
 	// Issue #578 — Sidebar 1:1 nach brand-kit.jsx::BrandSidebar (Zeilen 266–351).
 	// Desktop: Inline-Styles + eigene SVG-Icons (kein Lucide, kein Tailwind im aside).
-	// Mobile: Slide-in-Drawer bleibt funktional (Lucide im Footer erlaubt).
+	// Mobile: kein Drawer mehr (Mobile-Shell S2) — Konto/Abmelden liegen im
+	// Konto-Sheet (ui/sidebar/KontoSheet.svelte), das die Tabbar oeffnet.
 	import UserIcon from '@lucide/svelte/icons/user';
 	import MonitorIcon from '@lucide/svelte/icons/monitor';
 	import ChevronUp from '@lucide/svelte/icons/chevron-up';
@@ -9,17 +10,18 @@
 	import MoonIcon from '@lucide/svelte/icons/moon';
 	import SunIcon from '@lucide/svelte/icons/sun';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
+	import { t } from '$lib/i18n';
 
 	interface SidebarProps {
 		userId: string | null | undefined;
 		displayName?: string | null | undefined;
+		isAdmin?: boolean;
 		currentPath: string;
 		darkMode: boolean;
 		ontoggleDark: () => void;
-		mobileMenuOpen: boolean;
 	}
 
-	let { userId, displayName, currentPath, darkMode, ontoggleDark, mobileMenuOpen = $bindable(false) }: SidebarProps = $props();
+	let { userId, displayName, isAdmin = false, currentPath, darkMode, ontoggleDark }: SidebarProps = $props();
 
 	// Issue #642 — Anzeigename hat Vorrang vor dem Login-Namen.
 	const shownName = $derived((displayName && displayName.trim()) || userId || '');
@@ -27,12 +29,20 @@
 	let userMenuOpen = $state(false);
 
 	// Nav-Items fest nach JSX BRAND_NAV_ITEMS (brand-kit.jsx Zeile 259–264).
-	const navItems = [
+	const baseNavItems = [
 		{ id: 'home',    href: '/',        label: 'Startseite',     icon: 'home'    },
 		{ id: 'trips',   href: '/trips',   label: 'Meine Trips',    icon: 'trip'    },
 		{ id: 'compare', href: '/compare', label: 'Orts-Vergleich', icon: 'compare' },
 		{ id: 'archive', href: '/archiv',  label: 'Archiv',         icon: 'archive' },
+		// Issue #2521 S3 — Hilfeseite (BottomNav bleibt unveraendert).
+		{ id: 'hilfe',   href: '/hilfe',   label: t('nav.hilfe'),   icon: 'hilfe'   },
 	];
+	// Issue #2155 S4 — Eintrag nur fuer Admins (Komfort; Go bleibt die Sperre).
+	const navItems = $derived(
+		isAdmin
+			? [...baseNavItems, { id: 'admin', href: '/admin', label: 'Admin', icon: 'admin' }]
+			: baseNavItems
+	);
 
 	// Bestimme aktives Item per href-Match (wie bisher currentPath).
 	function isActive(href: string): boolean {
@@ -40,22 +50,11 @@
 		return currentPath.startsWith(href);
 	}
 
-	function closeMobileMenu() { mobileMenuOpen = false; }
 	function closeUserMenu() { userMenuOpen = false; }
 	function userInitial(id: string | null | undefined): string {
 		return (id ?? '?').charAt(0).toUpperCase();
 	}
 </script>
-
-<!-- Mobile overlay backdrop — z-50 damit Backdrop VOR Drawer liegt (AC-9-Fix). -->
-{#if mobileMenuOpen}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="fixed inset-0 z-50 bg-black/50 desktop:hidden"
-		onclick={closeMobileMenu}
-		onkeydown={(e) => e.key === 'Escape' && closeMobileMenu()}
-	></div>
-{/if}
 
 <!--
   DESKTOP: Statische aside mit Inline-Styles 1:1 nach brand-kit.jsx::BrandSidebar.
@@ -88,6 +87,7 @@
 			{@const active = isActive(item.href)}
 			<a
 				href={item.href}
+				data-testid="nav-{item.id}"
 				style="
 					display: flex;
 					align-items: center;
@@ -130,6 +130,19 @@
 						stroke-width="1.7" stroke-linejoin="round">
 						<rect x="3" y="5" width="18" height="4" rx="1"/>
 						<path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/>
+					</svg>
+				{:else if item.icon === 'hilfe'}
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+						stroke={active ? 'var(--g-accent)' : 'var(--g-ink-3)'}
+						stroke-width="1.7" stroke-linecap="round">
+						<circle cx="12" cy="12" r="9"/>
+						<path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/>
+					</svg>
+				{:else if item.icon === 'admin'}
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+						stroke={active ? 'var(--g-accent)' : 'var(--g-ink-3)'}
+						stroke-width="1.7" stroke-linejoin="round">
+						<path d="M12 3l8 3v6c0 4.5-3.2 8.3-8 9-4.8-.7-8-4.5-8-9V6z"/>
 					</svg>
 				{/if}
 				<span style="flex: 1;">{item.label}</span>
@@ -201,66 +214,3 @@
 		{/if}
 	</div>
 </aside>
-
-<!-- MOBILE: Slide-in Drawer — z-[55] damit Drawer VOR Backdrop (z-50) liegt, TopAppBar z-[60] bleibt oben -->
-<nav
-	data-testid="mobile-drawer"
-	class="fixed z-[55] h-full w-60 flex-col bg-sidebar text-sidebar-foreground p-4 transition-transform duration-200 desktop:hidden
-	{mobileMenuOpen ? 'flex translate-x-0' : 'hidden -translate-x-full'}"
->
-	<div class="mb-6"><Wordmark size="md" /></div>
-
-	<!-- Mobile: Nav-Items -->
-	{#each navItems as item}
-		<a
-			href={item.href}
-			class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent"
-			class:bg-sidebar-accent={isActive(item.href)}
-			onclick={closeMobileMenu}
-		>
-			{item.label}
-		</a>
-	{/each}
-
-	<!-- Mobile drawer: Secondary items (Lucide erlaubt hier laut Spec) -->
-	<div class="flex flex-col gap-1 mt-2">
-		<a
-			href="/account"
-			class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent"
-			onclick={closeMobileMenu}
-		>
-			<UserIcon class="size-4 shrink-0 opacity-70" />
-			Konto
-		</a>
-		<a
-			href="/account#system-status"
-			class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent"
-			onclick={closeMobileMenu}
-		>
-			<MonitorIcon class="size-4 shrink-0 opacity-70" />
-			System-Status
-		</a>
-		<button
-			onclick={() => { ontoggleDark(); closeMobileMenu(); }}
-			class="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-sidebar-accent text-left"
-		>
-			{#if darkMode}
-				<SunIcon class="size-4 opacity-70" />
-				Light Mode
-			{:else}
-				<MoonIcon class="size-4 opacity-70" />
-				Dark Mode
-			{/if}
-		</button>
-	</div>
-
-	<!-- Mobile Footer: Logout -->
-	<div class="mt-auto border-t border-border/50 pt-3">
-		<form method="POST" action="/logout">
-			<button type="submit" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive hover:bg-destructive/10">
-				<LogOut class="size-4 opacity-70" />
-				Abmelden
-			</button>
-		</form>
-	</div>
-</nav>

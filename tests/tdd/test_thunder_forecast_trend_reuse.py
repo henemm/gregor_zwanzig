@@ -62,7 +62,7 @@ class TestTrendReuseNoDoubleFetch:
         THEN:  +1 Level HIGH mit "04:00" im Text, +2 Level NONE — und KEIN
                Crash, d.h. kein zweiter Fetch (Doppel-Fetch vermieden)
         """
-        fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+        fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
             None, _TARGET, now_utc=datetime.now(timezone.utc), tz=None,
             multi_day_trend=_trend_rows(),
         )
@@ -100,7 +100,7 @@ class TestTrendReuseNoDoubleFetch:
                 "hourly_thunder": (HourlyValue(hour=15, value=3.0),),
             },
         ]
-        fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+        fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
             None, _TARGET, now_utc=datetime.now(timezone.utc), tz=None,
             multi_day_trend=rest_day_trend,
         )

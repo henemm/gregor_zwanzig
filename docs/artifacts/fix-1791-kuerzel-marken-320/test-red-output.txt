@@ -1,0 +1,122 @@
+
+Running 8 tests using 1 worker
+
+  ✓  1 [setup] › e2e/kuerzel-marken-sichtbar.staging.setup.ts:15:1 › authenticate via API (staging) — issue_1719_s4_kuerzel_marken (122ms)
+  ✓  2 [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:405:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-5: jede Zeile traegt beide Marken, die Kurzform mit ALLEN Kuerzeln (1.8s)
+  ✘  3 [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:460:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-10/AC-11: in allen 14 Aufloesungen erfuellt jede Marke jeder Zeile alle Bedingungen (10.7s)
+  ✓  4 [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:532:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-12: in der Bruchzone kuerzt der Name, nie eine Marke (2.2s)
+  ✘  5 [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:597:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-13: dieselbe Zusicherung im Vergleichs-Editor (10.5s)
+  ✓  6 [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:685:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-14: die Ziehgeste sortiert weiterhin um und speichert (3.2s)
+  ✘  7 [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:734:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-3: bei 320px liegen Umschalter und "Aus" unter dem Label und funktionieren (1.5s)
+  ✓  8 [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:765:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-5: bei 901px steht .controls neben dem Label, nicht darunter (1.6s)
+
+
+  1) [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:460:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-10/AC-11: in allen 14 Aufloesungen erfuellt jede Marke jeder Zeile alle Bedingungen 
+
+    Error: AC-10/AC-11 FAIL — 1 Verletzungen:
+      320x568 (Kleines Handy) · thunder · Marke "Kurzform" ("Kurzform TH TH+"): 1 Text beschnitten: scrollWidth 47 > clientWidth 41
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  - 1[39m
+    [31m+ Received  + 3[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "320x568 (Kleines Handy) · thunder · Marke \"Kurzform\" (\"Kurzform TH TH+\"): 1 Text beschnitten: scrollWidth 47 > clientWidth 41",[39m
+    [31m+ ][39m
+
+      515 | 			alleBefunde,
+      516 | 			`AC-10/AC-11 FAIL — ${alleBefunde.length} Verletzungen:\n  ` + alleBefunde.join('\n  ')
+    > 517 | 		).toEqual([]);
+          | 		  ^
+      518 | 	});
+      519 |
+      520 | 	// ── AC-12 ───────────────────────────────────────────────────────────────
+        at /home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/frontend/e2e/kuerzel-marken-sichtbar.staging.spec.ts:517:5
+
+    Error Context: test-results/kuerzel-marken-sichtbar.st-5a01c-eder-Zeile-alle-Bedingungen-tests/error-context.md
+
+    Error Context: test-results/kuerzel-marken-sichtbar.st-5a01c-eder-Zeile-alle-Bedingungen-tests/error-context.md
+
+  2) [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:597:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-13: dieselbe Zusicherung im Vergleichs-Editor 
+
+    Error: AC-13 FAIL — 14 Verletzungen im Vergleichs-Editor:
+      320x568 (Kleines Handy) · wind · Marke "Mail" ("Mail Wind"): 1 Text beschnitten: scrollWidth 27 > clientWidth 9
+      320x568 (Kleines Handy) · wind · Marke "Kurzform" ("Kurzform W"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9
+      320x568 (Kleines Handy) · precipitation · Marke "Mail" ("Mail Rain"): 1 Text beschnitten: scrollWidth 23 > clientWidth 9
+      320x568 (Kleines Handy) · precipitation · Marke "Kurzform" ("Kurzform R"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9
+      320x568 (Kleines Handy) · thunder · Marke "Mail" ("Mail Thdr"): 1 Text beschnitten: scrollWidth 25 > clientWidth 9
+      320x568 (Kleines Handy) · thunder · Marke "Kurzform" ("Kurzform TH TH+"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9
+      320x568 (Kleines Handy) · gust · Marke "Mail" ("Mail Gust"): 1 Text beschnitten: scrollWidth 25 > clientWidth 9
+      320x568 (Kleines Handy) · gust · Marke "Kurzform" ("Kurzform G"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9
+      320x568 (Kleines Handy) · rain_probability · Marke "Mail" ("Mail Rain%"): 1 Text beschnitten: scrollWidth 31 > clientWidth 9
+      320x568 (Kleines Handy) · rain_probability · Marke "Kurzform" ("Kurzform PR"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9
+      320x568 (Kleines Handy) · wind · Marke "Mail" ("Mail Wind"): 1 Text beschnitten: scrollWidth 27 > clientWidth 9
+      320x568 (Kleines Handy) · wind · Marke "Kurzform" ("Kurzform W"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9
+      320x568 (Kleines Handy) · sunshine · Marke "Mail" ("Mail Sun"): 1 Text beschnitten: scrollWidth 22 > clientWidth 9
+      320x568 (Kleines Handy) · sunshine · Marke "Kurzform" ("Kurzform SU"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  -  1[39m
+    [31m+ Received  + 16[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "320x568 (Kleines Handy) · wind · Marke \"Mail\" (\"Mail Wind\"): 1 Text beschnitten: scrollWidth 27 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · wind · Marke \"Kurzform\" (\"Kurzform W\"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · precipitation · Marke \"Mail\" (\"Mail Rain\"): 1 Text beschnitten: scrollWidth 23 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · precipitation · Marke \"Kurzform\" (\"Kurzform R\"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · thunder · Marke \"Mail\" (\"Mail Thdr\"): 1 Text beschnitten: scrollWidth 25 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · thunder · Marke \"Kurzform\" (\"Kurzform TH TH+\"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · gust · Marke \"Mail\" (\"Mail Gust\"): 1 Text beschnitten: scrollWidth 25 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · gust · Marke \"Kurzform\" (\"Kurzform G\"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · rain_probability · Marke \"Mail\" (\"Mail Rain%\"): 1 Text beschnitten: scrollWidth 31 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · rain_probability · Marke \"Kurzform\" (\"Kurzform PR\"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · wind · Marke \"Mail\" (\"Mail Wind\"): 1 Text beschnitten: scrollWidth 27 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · wind · Marke \"Kurzform\" (\"Kurzform W\"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · sunshine · Marke \"Mail\" (\"Mail Sun\"): 1 Text beschnitten: scrollWidth 22 > clientWidth 9",[39m
+    [31m+   "320x568 (Kleines Handy) · sunshine · Marke \"Kurzform\" (\"Kurzform SU\"): 1 Text beschnitten: scrollWidth 47 > clientWidth 9",[39m
+    [31m+ ][39m
+
+      679 | 			`AC-13 FAIL — ${alleBefunde.length} Verletzungen im Vergleichs-Editor:\n  ` +
+      680 | 				alleBefunde.join('\n  ')
+    > 681 | 		).toEqual([]);
+          | 		  ^
+      682 | 	});
+      683 |
+      684 | 	// ── AC-14 ───────────────────────────────────────────────────────────────
+        at /home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/frontend/e2e/kuerzel-marken-sichtbar.staging.spec.ts:681:5
+
+    Error Context: test-results/kuerzel-marken-sichtbar.st-95f83-herung-im-Vergleichs-Editor-tests/error-context.md
+
+    Error Context: test-results/kuerzel-marken-sichtbar.st-95f83-herung-im-Vergleichs-Editor-tests/error-context.md
+
+  3) [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:734:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-3: bei 320px liegen Umschalter und "Aus" unter dem Label und funktionieren 
+
+    Error: AC-3 FAIL: .controls beginnt bei y=269.875, .label-cell endet bei y=322.75 — die Bedienelemente liegen nicht unter dem Label
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThanOrEqual[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: >= [32m321.75[39m
+    Received:    [31m269.875[39m
+
+      753 | 			`AC-3 FAIL: .controls beginnt bei y=${geo.controlsTop}, .label-cell endet bei y=${geo.labelBottom} — ` +
+      754 | 				`die Bedienelemente liegen nicht unter dem Label`
+    > 755 | 		).toBeGreaterThanOrEqual(geo.labelBottom - 1);
+          | 		  ^
+      756 |
+      757 | 		const vorher = await kanal.locator('[data-testid="wm2-reihenfolge-row"]').count();
+      758 | 		await zeile.locator('.btn-aus').click();
+        at /home/hem/gregor_zwanzig/.claude/worktrees/logical-bouncing-newt/frontend/e2e/kuerzel-marken-sichtbar.staging.spec.ts:755:5
+
+    Error Context: test-results/kuerzel-marken-sichtbar.st-24ae7-dem-Label-und-funktionieren-tests/error-context.md
+
+    Error Context: test-results/kuerzel-marken-sichtbar.st-24ae7-dem-Label-und-funktionieren-tests/error-context.md
+
+  3 failed
+    [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:460:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-10/AC-11: in allen 14 Aufloesungen erfuellt jede Marke jeder Zeile alle Bedingungen 
+    [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:597:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-13: dieselbe Zusicherung im Vergleichs-Editor 
+    [tests] › e2e/kuerzel-marken-sichtbar.staging.spec.ts:734:2 › Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite › AC-3: bei 320px liegen Umschalter und "Aus" unter dem Label und funktionieren 
+  5 passed (36.1s)

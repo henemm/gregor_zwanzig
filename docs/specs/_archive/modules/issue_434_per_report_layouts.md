@@ -3,7 +3,7 @@ entity_id: issue_434_per_report_layouts
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [backend, data-model, per-report, channel-layouts, issue-434]
 ---
@@ -24,7 +24,7 @@ Erweitert das in #429 eingeführte `per_channel_layouts`-Datenmodell um eine zwe
 - **Dateien (geändert):**
   - `src/app/models.py` — `UnifiedWeatherDisplayConfig` um `per_report_layouts`-Feld erweitern; `get_metrics_for_channel()` um erste Kaskadenebene ergänzen
   - `src/app/loader.py` — `_parse_display_config()` um `channel_layouts_per_report`-Zweig erweitern; `_trip_to_dict()` und die beiden weiteren Serialisierungsstellen um `per_channel_layouts` und `per_report_layouts` ergänzen
-  - `src/formatters/trip_report.py` — Aufruf `get_metrics_for_report_type()` auf `get_metrics_for_channel("email", report_type)` umstellen (Bug-Fix)
+  - `src/output/renderers/trip_report.py` — Aufruf `get_metrics_for_report_type()` auf `get_metrics_for_channel("email", report_type)` umstellen (Bug-Fix)
   - `frontend/src/lib/types.ts` — neues Interface `ChannelLayoutsPerReport` + `DisplayConfig` additiv erweitern
 
 > **Schicht-Hinweis:** Primär Python-Backend (`src/app/`). `internal/model/trip.go` bleibt **unverändert** — `Trip.DisplayConfig` ist `map[string]interface{}` und reicht `channel_layouts_per_report` verbatim durch.
@@ -38,7 +38,7 @@ Erweitert das in #429 eingeführte `per_channel_layouts`-Datenmodell um eine zwe
 | `_parse_display_config` (`src/app/loader.py`) | Python-Funktion (vorhanden, wird erweitert) | Parst `channel_layouts_per_report`-Zweig aus JSON |
 | `_trip_to_dict` (`src/app/loader.py`) | Python-Funktion (vorhanden, wird gefixt) | Schreibt `per_channel_layouts` und `per_report_layouts` zurück in den Dict (latenter Serialisierungs-Bug seit #429) |
 | `get_metrics_for_channel` (`src/app/models.py`) | Python-Methode (vorhanden, #429) | Erhält neue erste Kaskadenebene: per_report schlägt per_channel schlägt global |
-| `trip_report.py:73` (`src/formatters/trip_report.py`) | Python-Aufrufstelle (vorhanden, wird gefixt) | Bug: ruft bisher `get_metrics_for_report_type()` statt `get_metrics_for_channel("email", ...)` auf |
+| `trip_report.py:73` (`src/output/renderers/trip_report.py`) | Python-Aufrufstelle (vorhanden, wird gefixt) | Bug: ruft bisher `get_metrics_for_report_type()` statt `get_metrics_for_channel("email", ...)` auf |
 | `DisplayConfig` / `ChannelLayouts` (`frontend/src/lib/types.ts`) | TypeScript-Interfaces (vorhanden, werden erweitert) | `DisplayConfig` erhält `channel_layouts_per_report?: ChannelLayoutsPerReport`; neues Interface hinzufügen |
 | Issue #429 per_channel_layouts | Upstream-Feature (live) | Zweite Kaskadenebene, die #434 ergänzt; Fallback-Logik von #429 bleibt unverändert |
 
@@ -169,7 +169,7 @@ if dc.per_report_layouts is not None:
 
 `_metric_config_to_dict()` ist eine neue private Hilfsfunktion, die ein `MetricConfig`-Objekt in einen serialisierbaren Dict umwandelt (vermeidet Duplikation über alle 3 Serialisierungsstellen).
 
-### 4. Email-Renderer-Fix (`src/formatters/trip_report.py`)
+### 4. Email-Renderer-Fix (`src/output/renderers/trip_report.py`)
 
 Bug-Fix an Zeile 73 (eine Zeile):
 

@@ -3,7 +3,7 @@ entity_id: fix_1448_s3_telegram_openmeteo
 type: bugfix
 created: 2026-08-01
 updated: 2026-08-01
-status: draft
+status: implemented
 version: "1.1"
 tags: [telegram, openmeteo, zeitbudget, alerts]
 ---
@@ -404,7 +404,7 @@ Mock, kein Mock-Theater.
     zweites Mal für dieselbe Nachricht aufgerufen; die tatsächlich
     verwendete Wartezeit überschreitet den Cap nicht.
 
-- **AC-6 (PO-Rückmeldung 2026-08-01, Kern des Tickets):** Given ein
+- **AC-6:** (PO-Rückmeldung 2026-08-01, Kern des Tickets) Given ein
   lokaler HTTP-Server nimmt die Verbindung für einen **einzelnen**
   `_request`-Aufruf an, antwortet aber nie — OHNE dass ein Wechsel zum
   nächsten Modell-Kandidaten stattfindet / When `_request(endpoint,

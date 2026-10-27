@@ -6,11 +6,13 @@ Runs on localhost:8000 (internal only).
 """
 import logging
 import os
+import secrets
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
-from api.routers import config, compare, forecast, gpx, health, internal, notify, preview, scheduler, validator, webhook
+from api.routers import briefings_send, config, compare, forecast, gpx, health, internal, notify, preview, scheduler, validator, webhook
 from app.config import Settings
 from app.egress_guard import install_egress_guard
 from output.channels.telegram import TelegramOutput
@@ -108,9 +110,69 @@ app.include_router(compare.router)
 app.include_router(notify.router)
 app.include_router(internal.router)
 app.include_router(preview.router)
+app.include_router(briefings_send.router)  # Issue #2280
 app.include_router(validator.router)
 app.include_router(webhook.router)
 
 if os.environ.get("GZ_ENV") == "staging":
     from api.routers import debug as _debug_router
     app.include_router(_debug_router.router)
+
+
+# ---------------------------------------------------------------------------
+# Issue #2142 — Core-Auth: der Python-Core erzwingt das gemeinsame Geheimnis
+# ---------------------------------------------------------------------------
+
+CORE_AUTH_HEADER = "X-GZ-Core-Auth"
+
+# Einzige Ausnahme (AC-8): Go ruft /health selbst ohne Header ab und
+# ci-stack.sh pollt ihn als Boot-Pruefung, bevor irgendetwas konfiguriert sein
+# kann. Der Endpoint liefert keine Nutzerdaten.
+CORE_AUTH_EXEMPT_PATHS = frozenset({"/health"})
+
+
+def _core_shared_secret() -> str:
+    """Das im Prozess konfigurierte gemeinsame Geheimnis, zur Anfragezeit gelesen.
+
+    Zuerst die Umgebung (so kommt es in Prod/Staging und im CI-Stack an, und
+    das ohne pydantic-Aufbau je Anfrage), sonst ueber ``Settings`` — dort
+    greift zusaetzlich die ``.env``-Quelle. Bewusst KEIN Zwischenspeicher: ein
+    einmal gemerkter Wert wuerde die Fail-closed-Zusicherung an einen
+    Prozesszustand binden, der beim Start zufaellig galt.
+    """
+    from_env = os.environ.get("GZ_CORE_SHARED_SECRET")
+    if from_env:
+        return from_env
+    return Settings().core_shared_secret or ""
+
+
+@app.middleware("http")
+async def enforce_core_auth(request, call_next):  # noqa: ANN001
+    """Jede Anfrage ausser ``/health`` muss das gemeinsame Geheimnis tragen.
+
+    Middleware statt ``lifespan``-Hook: der ``lifespan`` laeuft unter
+    ``TestClient(app)`` ohne ``with``-Block NICHT — eine Pruefung dort waere
+    fuer den groessten Teil der Testsuite unwirksam. Die Middleware greift bei
+    jedem Request, unabhaengig vom Lifespan-Zustand.
+
+    Fail-closed (AC-9): ist gar kein Geheimnis konfiguriert, antwortet der Core
+    mit 503 statt unauthentifiziert durchzulassen — dasselbe Muster wie
+    ``telegram_webhook.go`` ("webhook not configured").
+    """
+    if request.url.path in CORE_AUTH_EXEMPT_PATHS:
+        return await call_next(request)
+
+    expected = _core_shared_secret()
+    if not expected:
+        logger.error(
+            "GZ_CORE_SHARED_SECRET ist im Python-Core nicht gesetzt — jede Anfrage wird mit 503 abgewiesen (#2142)"
+        )
+        return JSONResponse(
+            status_code=503, content={"detail": "core shared secret not configured"}
+        )
+
+    presented = request.headers.get(CORE_AUTH_HEADER, "")
+    if not secrets.compare_digest(presented, expected):
+        return JSONResponse(status_code=401, content={"detail": "unauthorized"})
+
+    return await call_next(request)

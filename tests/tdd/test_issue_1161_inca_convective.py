@@ -73,7 +73,7 @@ def test_ac1_inca_merges_convective_flag_from_sidecar(monkeypatch):
     def fake_fetch_nowcast(self, lat, lon):
         return ts
 
-    def fake_openmeteo_15(self, lat, lon, models=None):
+    def fake_openmeteo_15(self, lat, lon, models=None, elevation_m=None):
         # Sidecar-Frame 2 Min nach dem INCA-Frame, konvektiv (WMO 95).
         return [RadarFrame(timestamp=inca_ts + timedelta(minutes=2), precip_mm_h=2.0, is_convective=True)]
 
@@ -123,7 +123,7 @@ def test_ac2_inca_non_convective_sidecar_unchanged(monkeypatch):
     def fake_fetch_nowcast(self, lat, lon):
         return ts
 
-    def fake_openmeteo_15(self, lat, lon, models=None):
+    def fake_openmeteo_15(self, lat, lon, models=None, elevation_m=None):
         calls.append((lat, lon))
         # Sidecar-Frame vorhanden, aber nicht konvektiv (WMO 61 = Regen, kein Gewitter).
         return [RadarFrame(timestamp=inca_ts + timedelta(minutes=1), precip_mm_h=1.0, is_convective=False)]
@@ -173,7 +173,7 @@ def test_ac3_inca_sidecar_failure_sets_convective_checked_false(monkeypatch):
     def fake_fetch_nowcast(self, lat, lon):
         return ts
 
-    def failing_openmeteo_15(self, lat, lon, models=None):
+    def failing_openmeteo_15(self, lat, lon, models=None, elevation_m=None):
         # Realer Fail-Soft-Vertrag von _fetch_openmeteo_15: leere Liste bei Fehler.
         return []
 
@@ -207,11 +207,15 @@ def test_ac3_inca_sidecar_failure_sets_convective_checked_false(monkeypatch):
 def test_ac4_inca_live_get_nowcast_has_convective_checked_field():
     """AC-4: echter Aufruf ohne DI gegen die produktive Source-Chain (Wien) liefert
     ein NowcastResult mit gesetztem `convective_checked`-Feld (bool)."""
+    from providers.base import ProviderRequestError
     from providers.geosphere import GeoSphereProvider
     from services.radar_service import RadarNowcastService
 
-    if GeoSphereProvider().fetch_nowcast(_WIEN_LAT, _WIEN_LON) is None:
-        pytest.skip("GeoSphere INCA API nicht erreichbar (fetch_nowcast -> None)")
+    try:
+        if GeoSphereProvider().fetch_nowcast(_WIEN_LAT, _WIEN_LON) is None:
+            pytest.skip("GeoSphere INCA API nicht erreichbar (fetch_nowcast -> None)")
+    except ProviderRequestError as e:
+        pytest.skip(f"GeoSphere INCA API nicht erreichbar (Status {e.status_code})")
 
     result = RadarNowcastService().get_nowcast(_WIEN_LAT, _WIEN_LON)
 

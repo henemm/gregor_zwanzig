@@ -1,11 +1,19 @@
 // E2E — Issue #370: Brand-Bibliothek `lib/brand/` (Berg+Blitz-Glyph + Wordmark-Lockup)
 //
-// Spec: docs/specs/modules/issue_370_brand_library.md (AC-1 bis AC-8)
+// Spec: docs/specs/modules/issue_370_brand_library.md (AC-1 bis AC-8, Nummerierung
+// dieser Datei) -- die drei Tests, die auf die Glyph-GEOMETRIE zielen, wurden fuer
+// Issue #2341 (Spec docs/specs/modules/brand_icon_silhouette.md) umgeschrieben: die
+// alte Kontur-Linie (stroke) ist einer gefuellten Silhouette (fill) gewichen, der
+// Blitz ist 1,35x groesser. Referenzen auf "AC-N (Issue #2341)" in dieser Datei
+// meinen die ACs der NEUEN Spec, nicht die Nummerierung dieser Datei.
 // Epic: #368 Atomic-Design-Migration; schliesst zugleich #279 (Sidebar-Glyph).
 //
-// TDD RED: Diese Tests MÜSSEN FEHLSCHLAGEN, weil weder die Brand-Komponenten
-// (frontend/src/lib/brand/) noch der Berg+Blitz-Glyph existieren und die
-// Showcase-Route /_design die Brand-Demo-Container noch nicht enthält.
+// TDD RED (Issue #2341): Die Tests unten mit "(Issue #2341)" im Titel MÜSSEN
+// FEHLSCHLAGEN, weil BrandIcon/BrandIconSquare noch die alte Kontur-Geometrie
+// rendern (stroke statt fill, kein vergroesserter Blitz, Nebenkante/Horizont noch
+// vorhanden). Diese Datei ist Teil der Live-E2E-Schicht (CLAUDE.md, "Zwei
+// Schichten") -- lokal geschrieben, ausgefuehrt/verifiziert ueber den CI-e2e-Job
+// bzw. /e2e-verify gegen Staging, nicht per lokalem Ad-hoc-Stack.
 //
 // KEINE Mocks (Projekt-Regel). Echte E2E gegen den Preview-Build.
 
@@ -14,9 +22,11 @@ import { login } from './helpers.js';
 
 const DESKTOP_VIEWPORT = { width: 1440, height: 900 };
 
-// Byte-genaue SVG-Pfad-`d`-Attribute aus brand-kit.jsx (Spec §AC-2).
+// Alte Kontur-Geometrie (bis Issue #2341) -- bleibt hier als Referenz fuer den
+// Vorher/Nachher-Vergleich in den umgeschriebenen Tests stehen.
 const D_BLITZ = 'M48 11 L41 23 L45 23 L43 29 L50 17 L46 17 Z';
 const D_BERGKAMM = 'M3 54 L18 22 L29 38 L38 26 L52 50 L61 54 Z';
+const D_NEBENKANTE = 'M3 54 L18 22 L25 32';
 
 test.describe('Issue #370 — Brand-Bibliothek lib/brand/', () => {
 	// ─── AC-5 (Kern, #279): Sidebar zeigt Glyph, Wordmark navigiert zu / ─────
@@ -65,27 +75,31 @@ test.describe('Issue #370 — Brand-Bibliothek lib/brand/', () => {
 		await expect(wordmark).toContainText('zwanzig');
 	});
 
-	// ─── AC-2: Glyph-SVG enthält byte-genau die zwei Brand-Pfade ─────────────
-	test('AC-2: brand-icon SVG enthält byte-genaue Blitz- und Bergkamm-Pfade', async ({ page }) => {
+	// ─── AC-1 (Issue #2341): Bergkamm ist Fill-Silhouette, Blitz 1,35x groesser ──
+	test('AC-1 (Issue #2341): brand-icon zeigt Fill-Silhouette + vergroesserten Blitz', async ({ page }) => {
 		/**
 		 * GIVEN: BrandIcon (via brand-wordmark) im Showcase
 		 * WHEN:  Der SVG-Quelltext inspiziert wird
-		 * THEN:  Zwei <path> mit exakt den d-Attributen aus brand-kit.jsx —
-		 *        der Blitz (D_BLITZ) und der Bergkamm (D_BERGKAMM).
+		 * THEN:  Der Bergkamm-Pfad (D_BERGKAMM, geometrisch unveraendert) traegt
+		 *        ein fill-Attribut und KEIN stroke-Attribut mehr (Silhouette statt
+		 *        Kontur), und der Blitz-Pfad (D_BLITZ) sitzt in einer <g> mit
+		 *        einem transform, der "scale(1.35)" enthaelt.
 		 */
 		await page.goto('/_design');
 
 		const icon = page.getByTestId('brand-icon').first();
 		await expect(icon).toBeVisible();
 
-		// Alle d-Attribute der path-Elemente aus dem DOM lesen.
-		const dValues = await icon.locator('path').evaluateAll((paths) =>
-			paths.map((p) => p.getAttribute('d'))
-		);
+		const bergkamm = icon.locator(`path[d="${D_BERGKAMM}"]`);
+		await expect(bergkamm).toHaveCount(1);
+		await expect(bergkamm).toHaveAttribute('fill', /.+/);
+		await expect(bergkamm).not.toHaveAttribute('stroke', /.+/);
 
-		// Byte-genauer Vergleich (keine andere Geometrie zulässig).
-		expect(dValues).toContain(D_BLITZ);
-		expect(dValues).toContain(D_BERGKAMM);
+		const blitzGroupTransform = await icon
+			.locator(`g:has(path[d="${D_BLITZ}"])`)
+			.first()
+			.getAttribute('transform');
+		expect(blitzGroupTransform ?? '').toContain('scale(1.35)');
 	});
 
 	// ─── AC-3: icon="only" → nur Glyph, kein gregor/zwanzig-Text ─────────────
@@ -171,5 +185,71 @@ test.describe('Issue #370 — Brand-Bibliothek lib/brand/', () => {
 
 		// Keine Laufzeit-Fehler durch unbekannte Props.
 		expect(pageErrors).toEqual([]);
+	});
+
+	// ─── AC-2 (Issue #2341): BrandIconSquare ohne Nebenkante/Horizont ────────
+	test('AC-2 (Issue #2341): brand-icon-square hat keine Nebenkante und keine Horizontlinie mehr', async ({ page }) => {
+		/**
+		 * GIVEN: BrandIconSquare (Groesse >=32px) im Showcase
+		 * WHEN:  Das SVG-DOM inspiziert wird
+		 * THEN:  Weder ein <path> mit D_NEBENKANTE noch ein <line>-Element mit
+		 *        y1="58" existiert -- beide Zusatzelemente der alten Kontur-Optik
+		 *        sind ersatzlos entfernt.
+		 *
+		 * BrandIconSquare wird laut docs/context/fix-2341-pwa-logo.md NUR im
+		 * `_design-system`-Showcase eingebunden (nicht live im Produkt, auch
+		 * nicht auf `/_design` -- dort gibt es nur BrandWordmark/BrandIcon).
+		 * Korrektur nach CI-Fehlschlag: vorher stand hier faelschlich
+		 * `/_design` (Copy-Paste aus den AC-1-Tests), obwohl der Kommentar
+		 * direkt darunter schon immer die richtige Route nannte.
+		 */
+		await page.goto('/_design-system');
+
+		// BrandIconSquare traegt keinen eigenen data-testid; die Panel-Caption
+		// "Favicon · Avatar · App-Icon" (siehe _design-system/+page.svelte) ist
+		// die stabile Verankerung fuer den umgebenden Container mit den vier
+		// Groessen-Beispielen (>=32px zeigten bislang Nebenkante + Horizont).
+		const panel = page.locator('div', { hasText: 'Favicon · Avatar · App-Icon' }).first();
+		await expect(panel).toBeVisible();
+
+		await expect(panel.locator(`path[d="${D_NEBENKANTE}"]`)).toHaveCount(0);
+		await expect(panel.locator('line[y1="58"]')).toHaveCount(0);
+	});
+
+	// ─── AC-3 (Issue #2341): favicon.svg ist randfuellende Fill-Silhouette ───
+	test('AC-3 (Issue #2341): favicon.svg zeigt eine durchgehend gefuellte Bergflaeche', async ({ page }) => {
+		/**
+		 * GIVEN: /favicon.svg wird als <img> im Browser gerendert
+		 * WHEN:  Ein Pixel INNERHALB der Bergkamm-Flaeche (Punkt (30,45) im
+		 *        64x64-ViewBox, auf 256x256 hochskaliert) per Canvas ausgelesen wird
+		 * THEN:  Der Pixel traegt durchgehend die Ink-Farbe (#1a1a18 = rgb(26,26,24)),
+		 *        nicht die Hintergrundfarbe mit duenner Umrandung wie bei einer
+		 *        Kontur-Linie -- echte Bildinhalts-Pruefung, kein SVG-Quelltext-Match.
+		 *
+		 * `page.setContent()` navigiert NICHT zur baseURL: eine relative
+		 * `src="/favicon.svg"` laedt gegen `about:blank` nie (1. CI-Fehlschlag,
+		 * Pixel [0,0,0]); eine ABSOLUTE URL laedt zwar, gilt dem Dokument aber
+		 * als Cross-Origin und tainted den Canvas (2. CI-Fehlschlag,
+		 * SecurityError bei getImageData). Deshalb zuerst auf eine echte Seite
+		 * navigieren (etabliert den App-Origin) und Bild+Canvas komplett
+		 * IM BROWSER same-origin aufbauen -- kein DOM-Element im Test noetig.
+		 */
+		await page.goto('/');
+
+		const rgb = await page.evaluate(async () => {
+			const img = new Image();
+			img.src = '/favicon.svg';
+			await img.decode();
+			const canvas = document.createElement('canvas');
+			canvas.width = 256;
+			canvas.height = 256;
+			const ctx = canvas.getContext('2d')!;
+			ctx.drawImage(img, 0, 0, 256, 256);
+			// Punkt (30,45) im 64x64-ViewBox -> Faktor 4 -> (120,180)
+			const data = ctx.getImageData(120, 180, 1, 1).data;
+			return [data[0], data[1], data[2]];
+		});
+
+		expect(rgb).toEqual([26, 26, 24]);
 	});
 });

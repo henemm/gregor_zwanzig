@@ -3,7 +3,7 @@ entity_id: issue_429_channel_layouts_tests
 type: tests
 created: 2026-05-28
 updated: 2026-05-28
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, backend, data-model, channel-layouts, issue-429, epic-428]
 parent: issue_429_channel_layouts
@@ -18,9 +18,9 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_429_channel_layouts.md`. Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-7). AC-8 (TypeScript-Typen) wird durch ein separates Frontend-Test-Artefakt abgedeckt — sobald die Frontend-Edits in PR 1 erfolgen.
+Test-Manifest für `docs/specs/_archive/modules/issue_429_channel_layouts.md`. Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-7). AC-8 (TypeScript-Typen) wird durch ein separates Frontend-Test-Artefakt abgedeckt — sobald die Frontend-Edits in PR 1 erfolgen.
 
-Parent-Spec: `docs/specs/modules/issue_429_channel_layouts.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_429_channel_layouts.md` v1.0
 
 ## Source
 

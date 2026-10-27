@@ -1,8 +1,9 @@
 # ADR-NNNN: <Kurzer, prägnanter Titel der Entscheidung>
 
-- **Status:** Vorgeschlagen | Akzeptiert | Abgelöst durch ADR-XXXX | Zurückgezogen
+- **Status:** Vorgeschlagen | Akzeptiert | Abgelöst durch ADR-XXXX | Teilweise abgelöst durch ADR-XXXX (Teil) | Zurückgezogen
 - **Datum:** YYYY-MM-DD
 - **Bezug:** GitHub-Issue #N, Spec/Doc-Pfad (sofern vorhanden)
+- **Ergänzt durch:** ADR-XXXX (…) — optional, nachgetragen, sobald ein späteres ADR dieses ergänzt/fortschreibt
 
 ## Kontext
 

@@ -3,7 +3,7 @@ entity_id: issue_1216_embedded_warnblock
 type: module
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, email, compare, trip-briefing, alert-trigger, convergence]
 ---

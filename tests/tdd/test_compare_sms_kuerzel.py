@@ -30,13 +30,14 @@ from __future__ import annotations
 import re
 from datetime import date, datetime
 
-from app.metric_catalog import get_sms_code
+from app.metric_catalog import kurzform_kuerzel
 from app.models import ForecastDataPoint, ThunderLevel
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.metric_format import format_value
 from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.comparison import (
-    _PLAIN_ROWS_BY_ID, _sms_aggregation_sign, _sms_gsm7_safe, render_compare_sms,
+    _PLAIN_ROWS_BY_ID, _RENDERER_TO_CATALOG_METRIC_ID, _sms_gsm7_safe,
+    render_compare_sms,
 )
 from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
@@ -122,29 +123,30 @@ def _result(locations: list[LocationResult]) -> ComparisonResult:
 
 
 def _sms_cell_text(loc_result: LocationResult, renderer_id: str) -> str | None:
-    """Erwartete SMS-Zelle ("Kuerzel[+/-] Wert") fuer `renderer_id`, berechnet
-    ueber DIESELBEN Bausteine, die die Spec (Implementation Details Punkt 3)
-    fuer die Implementierung vorschreibt: `get_sms_code()` fuer das Kuerzel,
+    """Erwartete SMS-Zelle ("Kuerzel Wert") fuer `renderer_id`, berechnet ueber
+    DIESELBEN Bausteine, die die Spec (Implementation Details Punkt 3) fuer die
+    Implementierung vorschreibt: `get_sms_code()` fuer das Kuerzel,
     `_PLAIN_ROWS`/`_metric_value` fuer Wert+Formatierung (identisch zum
     Klartext-Teil derselben Mail -- keine zweite Werte-/Formatierungsquelle).
-    Das Auswertungszeichen (Adversary-Fund Runde 3, PO-Entscheidung
-    2026-07-29: `+`/`-` bei Groessen mit mehr als einer Auswertung im
-    Ortsvergleich, z.B. `temp_max`/`temp_min`) kommt ueber die PRODUKTIONS-
-    Funktion `_sms_aggregation_sign`. Der Wert wird ueber die PRODUKTIONS-
-    Funktion `_sms_gsm7_safe` GSM-7-saniert (Adversary-Fund Runde 4,
-    PO-Entscheidung 2026-07-30: kein Grad-Zeichen im SMS-Pfad) -- kein
-    zweites, im Test erratenes Zeichen-/Sanitierungs-Vokabular. `None` = kein
-    Wert ODER kein Kuerzel vorhanden (Zelle entfaellt)."""
-    metric_id = RENDERER_TO_METRIC_ID[renderer_id]
-    code = get_sms_code(metric_id)
+    Der Wert wird ueber die PRODUKTIONS-Funktion `_sms_gsm7_safe` GSM-7-saniert
+    (Adversary-Fund Runde 4, PO-Entscheidung 2026-07-30: kein Grad-Zeichen im
+    SMS-Pfad) -- kein zweites, im Test erratenes Zeichen-/Sanitierungs-
+    Vokabular. `None` = kein Wert ODER kein Kuerzel vorhanden (Zelle entfaellt).
+
+    Issue #2232: das Auswertungszeichen (`+`/`-`, PO-Entscheidung 2026-07-29)
+    ist ERSATZLOS entfallen -- Hoechst- und Tiefstwert sind seitdem ueber ihr
+    EIGENES Kuerzel unterscheidbar (`D`/`L`, `FD`/`FL`, identisch zur
+    Trip-SMS). Die Kuerzel-Kennung kommt aus der Produktions-Tabelle
+    `_RENDERER_TO_CATALOG_METRIC_ID` (`kuerzel_metric_id ?? metric_id`), nicht
+    aus einer im Test nachgebauten Aufloesung."""
+    code = kurzform_kuerzel(_RENDERER_TO_CATALOG_METRIC_ID[renderer_id])
     if not code:
         return None
     _, _label, fmt = _PLAIN_ROWS_BY_ID[renderer_id]
     value = _metric_value(loc_result, renderer_id)
     if value is None:
         return None
-    sign = _sms_aggregation_sign(renderer_id)
-    return f"{code}{sign} {_sms_gsm7_safe(fmt(value))}"
+    return f"{code} {_sms_gsm7_safe(fmt(value))}"
 
 
 def _location_part(sms: str, name: str) -> str:
@@ -521,7 +523,7 @@ def test_regression_original_six_metrics_values_unchanged_in_sms():
 # ---------------------------------------------------------------------------
 
 def test_every_compare_metric_has_nonempty_sms_code():
-    """AC-8: jede der 26 Compare-Groessen liefert ueber `get_sms_code()`
+    """AC-8: jede der 26 Compare-Groessen liefert ueber `kurzform_kuerzel()`
     (angewandt auf ihre zugrundeliegende Katalog-Metrik-ID) ein NICHT-LEERES
     Kuerzel -- keine Groesse soll ihr Kuerzel je aus einer zur Laufzeit
     abgeleiteten Bezeichnung gewinnen muessen.
@@ -531,66 +533,110 @@ def test_every_compare_metric_has_nonempty_sms_code():
     wind_direction, precip_type, cloud_low, cloud_mid, cloud_high,
     cloud_total, pressure, sunshine (Spec Implementation Details Punkt 3,
     Tabelle)."""
+    # Issue #2232: gemessen wird die Kennung, die das Kuerzel TATSAECHLICH
+    # traegt (`kuerzel_metric_id ?? metric_id`) -- fuer die Temperatur-Familie
+    # ist das seit dieser Scheibe eine andere als die Auflösungs-Kennung.
     missing = [
-        (renderer_id, metric_id)
-        for renderer_id, metric_id in RENDERER_TO_METRIC_ID.items()
-        if not get_sms_code(metric_id)
+        (renderer_id, _RENDERER_TO_CATALOG_METRIC_ID[renderer_id])
+        for renderer_id in RENDERER_TO_METRIC_ID
+        if not kurzform_kuerzel(_RENDERER_TO_CATALOG_METRIC_ID[renderer_id])
     ]
     assert not missing, (
         f"{len(missing)} von {len(RENDERER_TO_METRIC_ID)} Compare-Renderer-"
-        f"IDs liefern kein Katalog-Kuerzel ueber get_sms_code(): {missing!r} "
+        f"IDs liefern kein Katalog-Kuerzel ueber kurzform_kuerzel(): {missing!r} "
         "-- jede der 26 Groessen muss ein nicht-leeres Kuerzel liefern "
         "(AC-8)."
     )
 
 
 # ---------------------------------------------------------------------------
-# Adversary-Fund (Runde 3, #1362 S5b): dieselbe Katalog-Groesse in MEHREREN
-# Auswertungen (Hoechst-/Tiefstwert) teilt sich sonst ein Kuerzel -- "D 33°C
-# D 17°C" ist ohne Zeichen nicht unterscheidbar (im Staging-Nachweis gefunden,
-# echte Innsbruck-SMS). PO-Entscheidung 2026-07-29: `+` fuer Hoechst-, `-` fuer
-# Tiefstwert, IMMER wenn die Groesse im Ortsvergleich mehr als eine Auswertung
-# anbietet -- nicht nur bei gleichzeitiger Auswahl beider.
+# AC-1/AC-2 (#2232) -- Hoechst- und Tiefstwert tragen EIGENE Kuerzel
+#
+# Vorgeschichte: bis 2026-09-09 trug der Ortsvergleich fuer beide Richtungen
+# dasselbe Register-Kuerzel und unterschied sie ueber ein angehaengtes
+# `+`/`-` (`_sms_aggregation_sign`, PO-Entscheidung 2026-07-29). Die Trip-SMS
+# sendete fuer dieselben Groessen laengst `D`/`L` bzw. `FD`/`FL`. Zwei Kanaele,
+# zwei Kuerzel fuer dieselbe Groesse -- der Empfaenger konnte sie nicht als
+# dieselbe Groesse erkennen. Ab #2232 loest der Vergleich ueber
+# `kuerzel_metric_id` auf und sendet dieselben Kuerzel wie der Trip; das
+# Vorzeichen entfaellt ersatzlos (es kostete zusaetzlich SMS-Budget).
 # ---------------------------------------------------------------------------
 
-def test_max_and_min_of_same_metric_carry_distinguishing_sign():
-    """Auswahl mit Hoechst- UND Tiefsttemperatur -> beide Zellen tragen
-    dasselbe Kuerzel ('D'), aber unterscheidbare Zeichen ('D+'/'D-') --
-    RED-Grund: ohne Zeichen waeren beide Zellen identisch ('D 33°C D 17°C'),
-    der Empfaenger kann nicht erkennen, welcher Wert welcher ist."""
+def test_ac1_hoechst_und_tiefsttemperatur_tragen_d_und_l_ohne_vorzeichen():
+    """AC-1: die Zelle fuer Tageshoechst traegt `D 24`, die fuer Tagestiefst
+    `L 9` -- nie `D+24`/`D-9`."""
     name = "Innsbruck"
     loc = LocationResult(
-        location=_loc("a", name), temp_max=33.0, temp_min=17.0,
+        location=_loc("a", name), temp_max=24.0, temp_min=9.0,
     )
     sms = render_compare_sms(
         _result([loc]), enabled_metrics=["temp_max", "temp_min"],
     )
     part = _location_part(sms, name)
 
-    cell_max = _sms_cell_text(loc, "temp_max")
-    cell_min = _sms_cell_text(loc, "temp_min")
-    assert cell_max and cell_min, "Testaufbau defekt: beide Zellen brauchen Werte+Kuerzel"
+    assert "D 24" in part, (
+        f"Der Ortsteil {part!r} zeigt fuer die Tageshoechsttemperatur nicht "
+        f"`D 24`. Ganze SMS: {sms!r}"
+    )
+    assert "L 9" in part, (
+        f"Der Ortsteil {part!r} zeigt fuer die Tagestiefsttemperatur nicht "
+        f"`L 9`. Ganze SMS: {sms!r}"
+    )
+    for verboten in ("D+", "D-"):
+        assert verboten not in part, (
+            f"Das Auswertungszeichen {verboten!r} steht noch im Ortsteil "
+            f"{part!r} -- es ist mit #2232 ersatzlos entfallen."
+        )
 
-    assert cell_max != cell_min, (
-        f"Hoechst- und Tiefstwert-Zelle sind identisch ({cell_max!r}) -- nicht "
-        f"unterscheidbar. Ortsteil: {part!r}"
+
+def test_ac2_gefuehlte_hoechst_und_tiefsttemperatur_tragen_fd_und_fl():
+    """AC-2: die gefuehlten Zellen tragen `FD`/`FL`, niemals `TF+`/`TF-`."""
+    name = "Innsbruck"
+    loc = LocationResult(
+        location=_loc("a", name), wind_chill_max=21.0, wind_chill_min=7.0,
     )
-    assert cell_max.startswith("D+ "), (
-        f"Hoechstwert-Zelle muss mit 'D+ ' beginnen, war {cell_max!r}."
+    sms = render_compare_sms(
+        _result([loc]), enabled_metrics=["wind_chill_max", "wind_chill_min"],
     )
-    assert cell_min.startswith("D- "), (
-        f"Tiefstwert-Zelle muss mit 'D- ' beginnen, war {cell_min!r}."
+    part = _location_part(sms, name)
+
+    assert "FD 21" in part and "FL 7" in part, (
+        f"Der Ortsteil {part!r} zeigt nicht beide gefuehlten Zellen "
+        f"(`FD 21`, `FL 7`). Ganze SMS: {sms!r}"
     )
-    assert cell_max in part and cell_min in part, (
-        f"Ortsteil {part!r} enthaelt nicht beide unterscheidbaren Zellen "
-        f"({cell_max!r}, {cell_min!r})."
+    for verboten in ("TF+", "TF-", "TF "):
+        assert verboten not in part, (
+            f"Das alte Kuerzel/Zeichen {verboten!r} steht noch im Ortsteil "
+            f"{part!r}. `TF` bleibt ausschliesslich dem Alarm-Pfad vorbehalten "
+            "(Stundenwert-Schwelle), nicht der Tagesauswertung."
+        )
+
+
+def test_ac1_ac2_beide_richtungen_bleiben_unterscheidbar():
+    """Regressionsschutz zum ersetzten Vorzeichen-Test: der Grund fuer `+`/`-`
+    war, dass `D 24 D 9` nicht zuordenbar waere. Mit eigenen Kuerzeln bleibt
+    die Unterscheidbarkeit erhalten -- ohne Zeichen und ohne Budget-Kosten."""
+    loc = LocationResult(
+        location=_loc("a", "Innsbruck"), temp_max=33.0, temp_min=17.0,
+        wind_chill_max=30.0, wind_chill_min=14.0,
+    )
+    zellen = [
+        _sms_cell_text(loc, mid)
+        for mid in ("temp_max", "temp_min", "wind_chill_max", "wind_chill_min")
+    ]
+    assert all(zellen), f"Testaufbau defekt: nicht alle Zellen haben Werte ({zellen!r})"
+    kuerzel = [z.split(" ", 1)[0] for z in zellen]
+    assert len(set(kuerzel)) == 4, (
+        f"Die vier Zellen tragen nur {len(set(kuerzel))} verschiedene Kuerzel "
+        f"({kuerzel!r}) -- Hoechst- und Tiefstwert waeren nicht zuordenbar."
     )
 
 
 def test_single_aggregation_metrics_carry_no_sign():
     """Regressionsschutz: Groessen mit GENAU EINER Auswertung im Ortsvergleich
-    (z.B. UV-Index, Regensumme, Nullgradgrenze) bleiben ohne Zeichen -- dort
-    ist nichts mehrdeutig, jedes Zeichen kostet SMS-Budget.
+    (z.B. UV-Index, Regensumme, Nullgradgrenze) tragen kein Zeichen -- dort war
+    nie etwas mehrdeutig. Seit #2232 gilt das fuer JEDE Groesse; dieser Test
+    haelt den Fall fest, der schon vorher zeichenfrei war.
 
     Issue #1585: Traeger-Groesse von "cape_max" auf "freezing_level"
     gewechselt -- CAPE wird nicht mehr ausgeliefert. Beide haben genau eine
@@ -613,19 +659,3 @@ def test_single_aggregation_metrics_carry_no_sign():
             f"Auswertungszeichen: {cell!r}."
         )
         assert cell in part, f"Ortsteil {part!r} enthaelt {cell!r} nicht."
-
-
-def test_ambiguous_metrics_derived_from_catalog_are_exactly_temperature_and_wind_chill():
-    """Dokumentiert den Code-ermittelten Befund (PO-Auftrag: 'ermittle am Code,
-    nicht aus meiner Aufzaehlung'): genau die Katalog-Groessen, die im
-    Ortsvergleich MEHR ALS EINE Auswertung anbieten, brauchen ein
-    Auswertungszeichen. Bricht laut, wenn eine zukuenftige Katalog-Erweiterung
-    eine dritte mehrdeutige Groesse einfuehrt, ohne dass das bewusst
-    entschieden wurde."""
-    from output.renderers.comparison import _AMBIGUOUS_CATALOG_METRIC_IDS
-
-    assert _AMBIGUOUS_CATALOG_METRIC_IDS == frozenset({"temperature", "wind_chill"}), (
-        f"Erwartet genau {{'temperature', 'wind_chill'}} als Katalog-Groessen mit "
-        f"mehreren Ortsvergleich-Auswertungen, gefunden: "
-        f"{sorted(_AMBIGUOUS_CATALOG_METRIC_IDS)}."
-    )

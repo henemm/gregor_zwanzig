@@ -1,12 +1,30 @@
-"""Internal Read-Only Endpoints für Tooling/Validator (Issue #115).
+"""Interne Endpunkte für Tooling/Validator und für den Go-Prozess (Issue #115).
 
 Spec: docs/specs/modules/validator_internal_loaded_endpoint.md
+Spec: docs/specs/modules/forecast_go_pfad_kontingent.md (#2391)
 
 Macht den Python-Loader-Output für den External Validator (Issue #110)
 direkt beobachtbar. Nicht versionsstabil, nicht für Frontend/Endbenutzer.
+
+Seit #2391 nicht mehr ausschliesslich read-only: die
+Kontingent-Reservierung (``POST /api/_internal/forecast-budget/reserve``)
+bucht im Erfolgsfall in den Tageszaehler (ADR-0076). Alle Routen dieses
+Moduls liegen hinter ``X-GZ-Core-Auth`` (ADR-0062, Middleware in
+``api/main.py``).
 """
+import logging
+import math
+import os
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+
+from app.config import Settings
+from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
+from output.channels.recipient import SmsRecipient
+from output.channels.sms import SMSOutput
 
 # Issue #1308: Frueher gab es hier ein echtes Modul-Duplikat -- der
 # /loaded-Endpoint importierte ``src.app.loader`` (eigenes Modul-Objekt,
@@ -21,7 +39,11 @@ from fastapi.responses import JSONResponse
 from app.loader import load_all_trips as _legacy_load_all_trips, _trip_to_dict
 from app.loader import load_all_trips
 from providers.base import get_provider
+# Bare-Import wie oben (#1308): der Monkeypatch auf die Klassenkonstante
+# DAILY_BUDGET trifft nur dann dieselbe Klasse, die dieser Endpunkt benutzt.
+from services.forecast_budget import ForecastBudgetGate
 from services.stage_weather import compute_stage_weather
+from services import sms_daily_limit
 
 router = APIRouter()
 
@@ -74,7 +96,7 @@ def stages_weather(
         return JSONResponse(status_code=404, content={"error": "not_found"})
 
     try:
-        results = compute_stage_weather(trip, provider)
+        results = compute_stage_weather(trip, provider, user_id=user_id)
     except Exception:
         # F001 (Adversary, Issue #1212): Last-Resort-Guard -- falls trotz der
         # Pro-Stage-Guards in compute_stage_weather doch etwas Unerwartetes
@@ -82,3 +104,191 @@ def stages_weather(
         # einem ungefangenen 500 crashen (AC-5).
         return JSONResponse(status_code=500, content={"error": "store_error"})
     return {"results": results}
+
+
+# --- Kontingent-Reservierung fuer den Go-Forecast-Pfad (Issue #2391) --------
+
+# Ein Forecast-Abruf ueber den Go-Pfad kostet mindestens zwei Upstream-Calls
+# (doRequest fuer die Vorhersage + fetchUVData, beide laufen unbedingt). Die
+# Zahl ist bewusst eine Konstante HIER und keine Groesse auf der Leitung: ein
+# Query-Parameter "units" liesse Handler und Gate auseinanderdriften, weil der
+# Core dann jede vom Aufrufer geschickte Zahl annaehme, statt selbst zu wissen,
+# was ein Forecast-Abruf kostet (Spec, "Implementation Details").
+EINHEITEN_JE_FORECAST_ABRUF = 2
+
+
+def _sekunden_bis_utc_mitternacht(jetzt: datetime | None = None) -> int:
+    """Wartezeit bis zum Zaehler-Reset an der UTC-Tagesgrenze.
+
+    Der Tageszaehler wird an der UTC-Mitternacht zurueckgesetzt
+    (``ForecastBudgetGate._load_for_today``) — jeder kuerzere Wert waere eine
+    Luege gegenueber dem Aufrufer, jeder laengere unnoetig. Aufgerundet und auf
+    mindestens 1 geklemmt, damit ein Aufruf knapp vor der Grenze nie 0 nennt.
+    """
+    jetzt = jetzt or datetime.now(timezone.utc)
+    naechste = (jetzt + timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return max(1, int(math.ceil((naechste - jetzt).total_seconds())))
+
+
+@router.post("/api/_internal/forecast-budget/reserve")
+def reserve_forecast_budget(user_id: str = Query(...), priority: str = Query(...)):
+    """Prueft und bucht das Tageskontingent eines Forecast-Abrufs in EINEM
+    Aufruf — der Weg, ueber den der Go-Handler ``/api/forecast`` an dasselbe
+    Gate andockt, ohne es in Go nachzubauen (ADR-0076, Issue #2391).
+
+    ``user_id`` ist Pflicht-Parameter OHNE Default (ADR-0003/ADR-0075 Punkt 4):
+    ein Ersatzwert wie ``"default"`` buchte auf ein fremdes Konto. ``priority``
+    ist bewusst ein freier String und kein ``Literal`` — das Gate kennt die
+    zulaessigen Werte, und eine Typeinschraenkung hier verdoppelte diese
+    Kenntnis.
+
+    Erlaubter und abgelehnter Weg sind zwei DISJUNKTE Zweige: eine Ablehnung
+    bucht nichts.
+    """
+    gate = ForecastBudgetGate(user_id)
+    # Issue #1539 S1b: Pruefen + Buchen atomar in EINEM reserve() -- parallele
+    # Anfragen (Go-Scheduler) koennen das Restbudget so nicht ueberbuchen.
+    # Die Einheiten gehen in einem Zug in den globalen und den Nutzer-Topf;
+    # reserve() traegt die user_id wie record_call() in "active_users" ein.
+    if not gate.reserve(priority, units=EINHEITEN_JE_FORECAST_ABRUF):
+        return {
+            "allowed": False,
+            "retry_after_s": _sekunden_bis_utc_mitternacht(),
+        }
+
+    # Auf dem Go-Pfad gibt es keinen Antwort-Cache — jeder durchgelassene
+    # Abruf ist faktisch ein Miss. Ohne diese Buchung luege die Cache-Hit-Quote
+    # in /api/scheduler/status nach oben.
+    gate.record_cache_miss()
+    return {"allowed": True}
+
+
+class SmsVerificationCodeRequest(BaseModel):
+    """Nutzlast des Go-Prozesses fuer den SMS-Bestaetigungscode (#2406, §8)."""
+
+    user_id: str
+    to: str
+    code: str
+
+
+@router.post("/api/_internal/sms/verification-code")
+def send_sms_verification_code(req: SmsVerificationCodeRequest):
+    """Verschickt EINE Bestaetigungs-SMS — Issue #2406, Spec §8.
+
+    Go erzeugt und prueft den Code, Python bleibt der einzige seven.io-Transport
+    (ADR-0062/ADR-0076); ein zweiter Client in Go waere die Abweichung.
+
+    Issue #1412 S4b: ``req.to`` ist keine freie Eingabe mehr. Der Empfaenger
+    ``SmsRecipient.verification`` bindet ihn an die zu beweisende Nummer aus
+    der frischen ``user.json`` (``pending_sms_to`` sonst ``sms_to``, Go schreibt
+    sie vor diesem Aufruf), der Kanal verlangt strikt E.164. Die
+    ``is_test_user``/``env == "staging"``-Sandbox-Weiche aus
+    ``with_user_profile`` bleibt erhalten.
+    """
+    settings = Settings().with_user_profile(req.user_id)
+    if not (settings.sms_gateway_url and settings.seven_api_key):
+        return JSONResponse(status_code=422, content={"error": "sms_not_configured"})
+    try:
+        recipient = SmsRecipient.verification(req.user_id, req.to)
+        SMSOutput(settings, recipient=recipient).send(
+            "", f"Dein Gregor20-Bestaetigungscode: {req.code}",
+        )
+    except ChannelBlockedError as e:
+        return JSONResponse(
+            status_code=403,
+            content={"error": "sms_recipient_blocked", "reason_code": e.reason_code},
+        )
+    except (OutputConfigError, OutputError):
+        # Der Code bleibt in Go gueltig — der Nutzer kann "erneut senden".
+        return JSONResponse(status_code=502, content={"error": "sms_send_failed"})
+    return {"status": "sent"}
+
+
+@router.get("/api/_internal/sms/daily-usage")
+def sms_daily_usage(user_id: str = Query(...)):
+    """Tageskontingent-Anzeige fuer /account (S4b, Issue #2412). `user_id` ohne
+    Default -- ein Ersatzwert wie "default" zeigte ein fremdes Konto."""
+    return sms_daily_limit.get_daily_usage(user_id, datetime.now(timezone.utc))
+
+
+@router.get("/api/_internal/next-briefings")
+def next_briefings(
+    user_id: str = Query(..., min_length=1),
+    trip_id: str | None = Query(None),
+    preset_id: str | None = Query(None),
+):
+    """Naechstes Briefing je Trip und Ortsvergleich DIESES Nutzers (#1969).
+
+    Rein lesend, nichts wird persistiert (ADR-0051 Regel 1). Geladen wird
+    ausschliesslich aus dem Verzeichnis von ``user_id`` (kein ``"default"``) —
+    eine fremde ``trip_id``/``preset_id`` findet dort nichts und fehlt
+    deshalb in der Antwort. Bewusst keine geschlossene Schluesselmenge oben
+    (#2346 ergaenzt ``last_briefing``).
+    """
+    from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
+    from services.briefing_slots import BriefingSlotStore
+    from services.next_briefing import next_compare_briefing, next_trip_briefing
+
+    jetzt = datetime.now(timezone.utc)
+    nur_trip, nur_preset = trip_id is not None, preset_id is not None
+    trips: dict = {}
+    compare: dict = {}
+    if not nur_preset:
+        store = BriefingSlotStore(user_id)
+        for trip in load_all_trips(user_id):
+            if nur_trip and trip.id != trip_id:
+                continue
+            _je_objekt(trips, trip.id, lambda: next_trip_briefing(trip, jetzt, store))
+    if not nur_trip:
+        orte = {loc.id: loc for loc in load_all_locations(user_id)}
+        for preset in load_compare_presets(user_id=user_id, strict=False):
+            if nur_preset and preset.id != preset_id:
+                continue
+            _je_objekt(compare, preset.id, lambda: next_compare_briefing(
+                compare_preset_to_dict(preset), orte, jetzt,
+            ))
+    _letzte_einfuegen(user_id, trips, compare)
+    return {"trips": trips, "compare": compare}
+
+
+def _letzte_einfuegen(user_id: str, trips: dict, compare: dict) -> None:
+    """#2346 S4: ``last_briefing`` (ISO oder ``None``) je Objekt aus dem Briefing-Log
+    DIESES Nutzers — einmal je Anfrage gelesen, fail-soft (dann ``None``)."""
+    try:
+        from services.briefing_log import letzte_briefings
+        letzte = letzte_briefings(user_id)
+    except Exception:
+        logging.getLogger(__name__).exception("next-briefings: Briefing-Log nicht lesbar")
+        letzte = {}
+    for art, ziel in (("trip", trips), ("compare", compare)):
+        for objekt_id, nb in ziel.items():
+            if isinstance(nb, dict):
+                nb["last_briefing"] = letzte.get((art, objekt_id))
+
+
+def _je_objekt(ziel: dict, objekt_id: str, ableitung) -> None:
+    """Ein Objekt, dessen Ableitung scheitert, fehlt in der Antwort (Frontend
+    zeigt „—", AC-19) — es reisst die Antwort fuer die uebrigen nicht mit."""
+    try:
+        ziel[objekt_id] = ableitung()
+    except Exception:
+        logging.getLogger(__name__).exception("next-briefings: Ableitung fuer %s gescheitert", objekt_id)
+
+
+class _SeedDailyUsage(BaseModel):
+    user_id: str
+    sms: int | None = Field(default=None, ge=0, le=1000)
+    premium_sms: int | None = Field(default=None, ge=0, le=1000)
+
+
+@router.post("/api/_internal/sms/seed-daily-usage")
+def sms_seed_daily_usage(body: _SeedDailyUsage):
+    """Staging-Testwerkzeug (Issue #2423): Tageszaehler setzen. Ausserhalb
+    `GZ_ENV=staging` 404 -- zur Anfragezeit ausgewertet, nicht beim Import."""
+    if os.environ.get("GZ_ENV") != "staging":
+        raise HTTPException(status_code=404, detail="Not Found")
+    return sms_daily_limit.seed_daily_usage(
+        body.user_id, body.sms, body.premium_sms, datetime.now(timezone.utc)
+    )

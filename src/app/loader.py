@@ -13,8 +13,13 @@ import re
 import uuid
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
+from output.channels.seven_io_base import mask_number
+from services.file_lock import atomic_write_json, exclusive_lock
+from app.metric_catalog import (
+    normalize_outlook_metric_formats, normalize_outlook_metric_ids,
+)
 from app.models import (
     AlertMetric,
     AlertRule,
@@ -94,6 +99,12 @@ def _friendly_from_mode(mode: str) -> bool:
     "raw" -> False, every other mode -> True (backward-compat for older readers).
     """
     return mode != "raw"
+
+
+def _bool_oder_none(wert: object) -> Optional[bool]:
+    """Issue #2422 S3 (AC-21): nur ein echtes JSON-bool gilt als gesetzt —
+    null, Zeichenkette oder Zahl fallen fail-safe auf "nicht gesetzt"."""
+    return wert if isinstance(wert, bool) else None
 
 
 def _clamped_day_window(
@@ -271,6 +282,10 @@ def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
         official_warnings=data.get("official_warnings"),
         send_telegram=data.get("send_telegram"),
         send_sms=data.get("send_sms"),
+        # Issue #2293 Scheibe S2: explizit durchreichen (auch als None) —
+        # Modellparitaet zu Go, kein neuer Leser (siehe models.py).
+        send_premium_sms=data.get("send_premium_sms"),
+        alert_channels=data.get("alert_channels"),
         morning_enabled=data.get("morning_enabled"),
         morning_time=data.get("morning_time"),
         evening_enabled=data.get("evening_enabled"),
@@ -284,6 +299,9 @@ def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
         # (auch als None -> Default 4/19 in day_window.resolve_configured_window).
         day_window_start_hour=data.get("day_window_start_hour"),
         day_window_end_hour=data.get("day_window_end_hour"),
+        # Issue #1895 S1: explizit durchreichen (auch als None) — Paritaet zu
+        # _parse_trip; ohne diese Zeile bliebe das benannte Feld dauerhaft None.
+        alert_metric_channels=data.get("alert_metric_channels"),
         raw=dict(data),
     )
 
@@ -310,10 +328,13 @@ def load_compare_presets(
 
     `strict=True` (Adversary-Fix F001/F002): eine korrupte Datei wirft
     `LoaderError` mit der Original-Parse-Fehlermeldung statt fail-soft zu
-    ueberspringen. Noetig fuer `send_compare_preset` (Einzelversand, #627) und
-    `run_compare_presets_daily`, die die urspruengliche Fehlerdiagnose
-    (HTTP-404-Detail bzw. ERROR-Log) bewahren; die 3 Alert-Services bleiben
-    beim partial-toleranten Default.
+    ueberspringen. Noetig fuer `send_compare_preset` (Einzelversand, #627),
+    der die urspruengliche Fehlerdiagnose (HTTP-404-Detail) bewahrt; die
+    Alert-Services und seit Fix #2286 (AC-5) auch der Cron-Dispatch
+    (`run_compare_presets_daily`) nutzen den partial-toleranten Default.
+    Fix #2286: im toleranten Modus wird auch ein lesbares, aber strukturell
+    kaputtes Vergleichs-Preset (``compare_preset_from_dict`` wirft) mit
+    WARNING uebersprungen statt den ganzen Lauf zu kippen.
     """
     if data_root is None:
         data_root = get_data_root()
@@ -335,7 +356,15 @@ def load_compare_presets(
         # bleiben load_all_trips vorbehalten (keine Doppelklassifizierung).
         if data.get("kind") != "vergleich":
             continue
-        presets.append(compare_preset_from_dict(data))
+        # Issue #1981: Alt-Vokabular nur im Speicher normalisieren (raw + Feld).
+        if "display_config" in data:
+            data = {**data, "display_config": _migrate_preset_display_config(data["display_config"])}
+        try:
+            presets.append(compare_preset_from_dict(data))
+        except Exception as e:
+            if strict:
+                raise
+            logger.warning("Skipping corrupt briefing %s for %s: %s", path.name, user_id, e)
     return presets
 
 
@@ -394,7 +423,7 @@ _DATA_ROOT: str | None = None
 def load_trip(
     source: Union[str, Path, Dict[str, Any]],
     data_dir: Optional[Union[str, Path]] = None,
-    user_id: str = "default",
+    user_id: str | None = None,
 ) -> Optional[Trip]:
     """
     Load a Trip from a JSON file or a dict.
@@ -412,15 +441,19 @@ def load_trip(
     Args:
         source: Path to the JSON file, a trip ID (with ``data_dir``), or a dict.
         data_dir: Optional base data directory; activates trip-ID resolution.
-        user_id: User namespace under ``data_dir`` (default: "default").
+        user_id: User namespace under ``data_dir``; required together with
+            ``data_dir`` (#2151 Scheibe C: no silent fallback to "default").
 
     Returns:
         Trip object, or None if resolved via ``data_dir`` and not found.
 
     Raises:
         LoaderError: If the file cannot be loaded or is invalid
+        ValueError: If ``data_dir`` is given without ``user_id``
     """
     if data_dir is not None and not isinstance(source, dict):
+        if not user_id:
+            raise ValueError("load_trip: data_dir given without user_id (#2151)")
         path = Path(data_dir) / "users" / user_id / "briefings" / f"{source}.json"
         if not path.exists():
             return None
@@ -477,6 +510,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
                 confirmed=wp_data.get("confirmed"),
                 suggestion_reason=wp_data.get("suggestion_reason"),
                 arrival_override=wp_data.get("arrival_override"),
+                # Issue #2036 — gemessene Wegstrecke erhalten. Fehlender
+                # Schluessel -> None ("nicht gemessen"), NICHT 0.0.
+                distance_from_start_km=wp_data.get("distance_from_start_km"),
             )
             waypoints.append(waypoint)
 
@@ -568,6 +604,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         report_config = TripReportConfig(
             trip_id=rc_data.get("trip_id", data["id"]),
             enabled=rc_data.get("enabled", True),
+            # Issue #2422 S3: nur echte bool, alles andere = "nicht gesetzt".
+            morning_enabled=_bool_oder_none(rc_data.get("morning_enabled")),
+            evening_enabled=_bool_oder_none(rc_data.get("evening_enabled")),
             morning_time=time.fromisoformat(rc_data.get("morning_time", "07:00:00")),
             evening_time=time.fromisoformat(rc_data.get("evening_time", "18:00:00")),
             send_email=rc_data.get("send_email", True),
@@ -612,20 +651,28 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     # Issue #205: Alert Rules — either directly from JSON or migrated from legacy.
     alert_rules = _migrate_legacy_alert_rules(data)
 
+    # Issue #1895 S2: die Kanalzuordnung wandert beim Laden von der Regel auf
+    # die Metrik (kopierend, RMW mit Merge) — erst dadurch bekommt der Leser
+    # im Alarm-Pfad fuer Bestandsdaten ueberhaupt etwas zu lesen.
+    alert_metric_channels = _migrate_rule_channels_to_metric_channels(
+        alert_rules, data.get("alert_metric_channels"),
+    )
+
     # Issue #1231 (Slice 1): Corridors — additiv neben alert_rules, kein
     # Legacy-Migrationspfad in Slice 1 (s. scripts/migrate_1231_corridors.py, Slice 2).
     corridors = [_corridor_from_dict(c) for c in (data.get("corridors") or [])]
 
     # Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder aus dem bereits
-    # geparsten `report_config` ABLEITEN (Dual-Read). `report_config.enabled`
-    # ist der EINZIGE Schalter (kein getrenntes morning/evening-Flag) -> steuert
-    # beide abgeleiteten *_enabled-Felder, verifiziert gegen
-    # trip_report_scheduler._get_active_trips (rc.enabled gated dort ebenfalls
-    # morning UND evening gleichermassen). report_config bleibt Single Source.
+    # geparsten `report_config` ABLEITEN (Dual-Read). Issue #2422 S3: die
+    # *_enabled-Felder folgen `slot_aktiv()` — derselben Regel, mit der
+    # trip_report_scheduler den Versand je Slot entscheidet (`enabled` ist
+    # Master, sonst der Einzel-Schalter, fehlt er: aktiv). Ohne report_config
+    # bleiben sie None. report_config bleibt Single Source.
+    from app.models import slot_aktiv
     morning_time = report_config.morning_time.isoformat() if report_config else None
     evening_time = report_config.evening_time.isoformat() if report_config else None
-    morning_enabled = report_config.enabled if report_config else None
-    evening_enabled = report_config.enabled if report_config else None
+    morning_enabled = slot_aktiv(report_config, "morning") if report_config else None
+    evening_enabled = slot_aktiv(report_config, "evening") if report_config else None
     send_email = report_config.send_email if report_config else None
     send_sms = report_config.send_sms if report_config else None
     send_telegram = report_config.send_telegram if report_config else None
@@ -642,6 +689,10 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         "alert_channels",
         # Issue #1461 S3b-2a: additives Geschwisterfeld, None = Startwert LOW.
         "alert_channel_thresholds",
+        # Issue #1895 S1: metrik-genaue Kanal-Schicht (ADR-0077), None = erbt
+        # den Abo-weiten Kanal-Satz. Ohne diesen Eintrag landet der Key im
+        # generischen extra-Auffangnetz und das benannte Feld bliebe leer.
+        "alert_metric_channels",
         # Issue #1250 Scheibe 4 Fix-Loop F002 (Adversary BROKEN): diese Top-
         # Level-Keys sind ABGELEITET (nicht autoritativ). Fehlten sie in
         # KNOWN_TOP_LEVEL, wuerde ein zuvor persistierter Alt-Wert ueber den
@@ -686,6 +737,10 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         # Issue #1461 S3b-2a: explizit durchreichen (auch als None) -> None
         # bleibt Startwert "LOW" je Kanal (s. Trip.alert_channel_thresholds).
         alert_channel_thresholds=data.get("alert_channel_thresholds"),
+        # Issue #1895 S1: explizit durchreichen (auch als None) -> None bleibt
+        # "erbt den Abo-weiten Kanal-Satz" (s. Trip.alert_metric_channels).
+        # S2: der Wert ist bereits um die Regel-Kanaele ergaenzt (s.o.).
+        alert_metric_channels=alert_metric_channels,
         extra=extra,  # Issue #991: unmodellierte Top-Level-Keys
         # Issue #1250 Scheibe 4: abgeleitete flache Slot-/Kanal-Felder (Dual-Read)
         morning_time=morning_time,
@@ -717,21 +772,115 @@ def _normalize_legacy_mode(mc_data: Dict[str, Any]) -> tuple[Optional[str], bool
     return mode, mc_data.get("use_friendly_format", True)
 
 
-def _migrate_metric_alert_levels(levels: Any) -> Any:
-    """Issue #959: snow_line → freezing_level (Read-Modify-Write, kein Datenverlust).
+# Issue #1981: Alt-Schluessel (Summary-Vokabular) -> Alarm-Name. None = verwerfen.
+# Deckungsgleich mit Go (internal/store/trip.go `legacyAlertLevelKeys`).
+_ALT_ALERT_LEVEL_KEYS: Dict[str, Optional[str]] = {
+    "temp_max_c": "temperature_max",
+    "temp_min_c": "temperature_min",
+    "gust_max_kmh": "wind_gust",
+    "precip_sum_mm": "precipitation_sum",
+    "visibility_min_m": "visibility",
+    "cape_max_jkg": "cape",
+    "thunder_level_max": "thunder_level",
+    "wind_max_kmh": "wind_change",
+    "snow_line": "freezing_level",  # Issue #959
+    "wind_chill_min_c": None,
+}
 
-    Nullgradgrenze ist zu EINER Alert-Metrik (freezing_level) konsolidiert. Alt-
-    persistierte Trips mit `metric_alert_levels.snow_line` werden beim Laden
-    umbenannt — bestehendes Dict kopieren, nur diesen Key verschieben, alle
-    anderen Felder unangetastet lassen (BUG-DATALOSS-GR221-Lehre). Ein bereits
-    vorhandener freezing_level-Eintrag gewinnt (kein Überschreiben).
+
+def _migrate_metric_alert_levels(levels: Any) -> Any:
+    """Issues #959/#1981: Alt-Schluessel in `metric_alert_levels` -> Alarm-Namen.
+
+    Read-Modify-Write auf einer Kopie (BUG-DATALOSS-GR221-Lehre): nur Alt-
+    Schluessel werden verschoben bzw. verworfen, alle anderen bleiben
+    unveraendert. Ein bereits vorhandener Neu-Schluessel gewinnt. Idempotent.
     """
-    if not isinstance(levels, dict) or "snow_line" not in levels:
+    if not isinstance(levels, dict) or not any(k in levels for k in _ALT_ALERT_LEVEL_KEYS):
         return levels
     migrated = dict(levels)
-    value = migrated.pop("snow_line")
-    migrated.setdefault("freezing_level", value)
+    for alt, neu in _ALT_ALERT_LEVEL_KEYS.items():
+        if alt not in migrated:
+            continue
+        value = migrated.pop(alt)
+        if neu is not None:
+            migrated.setdefault(neu, value)
     return migrated
+
+
+def _migrate_preset_display_config(dc: Any) -> Any:
+    """Issue #1981: Alt-Vokabular in display_config.metric_alert_levels (nur im Speicher)."""
+    if not isinstance(dc, dict) or "metric_alert_levels" not in dc:
+        return dc
+    levels = _migrate_metric_alert_levels(dc["metric_alert_levels"])
+    if levels is dc["metric_alert_levels"]:
+        return dc
+    return {**dc, "metric_alert_levels": levels}
+
+
+def _ist_waehlbare_katalog_groesse(metric_id: str) -> bool:
+    """`selectable`-Flag einer Katalog-Groesse, fail-soft. Eine Katalog-Luecke
+    darf das LADEN eines Trips nie sprengen (schlimmer als im Alarm-Pfad)."""
+    from app.metric_catalog import get_metric
+
+    try:
+        return bool(get_metric(metric_id).selectable)
+    except Exception:
+        return False
+
+
+def _katalog_ids_fuer_alarm_metrik(metric: Any) -> tuple:
+    """Issue #1895 S2: `AlertMetric` -> Katalog-`metric_id`s mit
+    Waehlbarkeits-Tie-Break (AC-18).
+
+    `_ALERT_METRIC_TO_CATALOG_ID` ist eins-zu-vielen. Bei mehreren Kandidaten
+    gewinnen die WAEHLBAREN (`TEMPERATURE_MIN` ⇒ nur `temperature`;
+    `temperature_cold` ist `selectable=False` und koennte im Editor nie
+    angeboten werden). Sind mehrere waehlbar, entstehen ALLE (`SNOW_LINE` ⇒
+    `snowfall_limit` UND `freezing_level`, #961-OR-Politik). Bei genau einem
+    Kandidaten gewinnt dieser, auch wenn er nicht waehlbar ist.
+    """
+    from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID
+
+    ids = tuple(_ALERT_METRIC_TO_CATALOG_ID.get(metric) or ())
+    if len(ids) <= 1:
+        return ids
+    waehlbar = tuple(i for i in ids if _ist_waehlbare_katalog_groesse(i))
+    return waehlbar or ids
+
+
+def _migrate_rule_channels_to_metric_channels(
+    alert_rules: List[AlertRule], bestehend: Any,
+) -> Optional[Dict[str, Any]]:
+    """Issue #1895 S2: `alert_rules[].channels` -> `alert_metric_channels`.
+
+    Die Kanalzuordnung hing an der falschen Entitaet (Regel statt Metrik,
+    #1895). Beim Laden wandert sie auf die Metrik — KOPIEREND, `alert_rules`
+    bleibt unberuehrt (Rueckbau erst S4).
+
+    Read-Modify-Write mit MERGE (BUG-DATALOSS-GR221, #102): ein bereits
+    persistierter Eintrag gewinnt und bleibt unangetastet, die Migration
+    ergaenzt nur fehlende Metriken (AC-22). Regeln:
+
+    * nur AKTIVIERTE Regeln (`enabled`) liefern einen Beitrag — eine heute
+      wirkungslose Regel darf durch die Migration nicht aktiv werden (AC-20);
+    * eine LEERE Kanalliste bedeutet "erbt" und erzeugt KEINEN Schluessel,
+      insbesondere kein `{}` (das laese sich als Override ins Leere, AC-19);
+    * mehrere Regeln auf derselben `metric_id` werden UNIONIERT — eine Union
+      kann nicht unterdruecken (AC-18);
+    * bleibt nichts uebrig, bleibt das Feld ungesetzt (AC-21, Pendant zum
+      `omitempty` der Go-Seite).
+    """
+    migriert: Dict[str, set] = {}
+    for rule in alert_rules or []:
+        if not rule.enabled or not rule.channels:
+            continue
+        for metric_id in _katalog_ids_fuer_alarm_metrik(rule.metric):
+            migriert.setdefault(metric_id, set()).update(rule.channels)
+
+    ergebnis: Dict[str, Any] = dict(bestehend) if isinstance(bestehend, dict) else {}
+    for metric_id, kanaele in migriert.items():
+        ergebnis.setdefault(metric_id, {ch: True for ch in sorted(kanaele)})
+    return ergebnis or None
 
 
 def _coerce_metric_entry(entry: Any) -> Any:
@@ -945,7 +1094,15 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         telegram_kurzform=data.get("telegram_kurzform", False),
         alert_preset=data.get("alert_preset"),  # Issue #846
         metric_alert_levels=_migrate_metric_alert_levels(data.get("metric_alert_levels")),  # Issue #946/#959
-        outlook_metrics=data.get("outlook_metrics"),  # Issue #1720 S1
+        # Issue #1720 S1 / #1848 A2: beim Lesen auf reine Kennungen
+        # normalisieren -- Bestandsdateien halten die Paar-Altform, und zwei
+        # Paare derselben Groesse (Tief UND Hoch) sind EINE Kennung. `None`
+        # (Feld fehlt) und `[]` (bewusst geleert) bleiben unterscheidbar.
+        outlook_metrics=normalize_outlook_metric_ids(data.get("outlook_metrics")),
+        # Issue #2049: paralleles Feld, dieselbe Drei-Werte-Semantik. Nicht-
+        # faehige Kennungen und nicht-boolesche Werte fallen beim Lesen heraus.
+        outlook_metric_formats=normalize_outlook_metric_formats(
+            data.get("outlook_metric_formats")),
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 
@@ -1135,8 +1292,20 @@ def get_data_root() -> Path:
 # hinter dem Go-Proxy (der injiziert die Session-Kennung, proxy.go).
 VALID_USER_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
+# Issue #2140 Scheibe 2: Zulassungsmuster fuer ENTITAETS-Kennungen (Trip, Ort,
+# Ortsvergleichs-Preset). MUSS deckungsgleich bleiben mit der kanonischen
+# Go-Quelle internal/store/pathsafe.go (``ValidEntityIDRe``) — Paritaets-Test:
+# tests/unit/test_entity_id_pattern_parity.py.
+#
+# Bewusst KEINE ASCII-Whitelist wie bei Nutzer-Kennungen, sondern eine reine
+# Pfadsegment-Pruefung: Bestandsorte tragen Diakritika (``hochfügen``,
+# ``pollença``) und muessen erreichbar bleiben. Erstes Zeichen weder "." noch
+# Trenner noch NUL (deckt "", ".", "..", ".hidden" ab), alle weiteren Zeichen
+# kein Trenner und kein NUL.
+VALID_ENTITY_ID_RE = re.compile(r"^[^./\\\x00][^/\\\x00]*$")
 
-def get_data_dir(user_id: str = "default") -> Path:
+
+def get_data_dir(user_id: str) -> Path:
     """Get the data directory for a user.
 
     Honors the module-level ``_DATA_ROOT`` override (used in tests) and,
@@ -1153,12 +1322,12 @@ def get_data_dir(user_id: str = "default") -> Path:
     return get_data_root() / "users" / user_id
 
 
-def get_locations_dir(user_id: str = "default") -> Path:
+def get_locations_dir(user_id: str) -> Path:
     """Get the locations directory for a user."""
     return get_data_dir(user_id) / "locations"
 
 
-def get_briefings_dir(user_id: str = "default") -> Path:
+def get_briefings_dir(user_id: str) -> Path:
     """Get the briefings directory for a user (Issue #1250 Cutover, ADR-0023).
     Seit S7a leben route-Entitäten (Trips) hier; seit S7b (AC-31) leben auch
     vergleich-Entitäten (ComparePresets) hier als per-Datei
@@ -1168,7 +1337,7 @@ def get_briefings_dir(user_id: str = "default") -> Path:
     return get_data_dir(user_id) / "briefings"
 
 
-def get_snapshots_dir(user_id: str = "default") -> Path:
+def get_snapshots_dir(user_id: str) -> Path:
     """Get the weather snapshots directory for a user."""
     return get_data_dir(user_id) / "weather_snapshots"
 
@@ -1180,10 +1349,11 @@ def list_all_user_ids(data_dir: str | None = None) -> list[str]:
         data_dir: Root data directory (default: get_data_root())
 
     Returns:
-        Sorted list of user_id strings (excludes entries starting with 'test' or '_'),
-        with real users sorted before remaining test-classified users
-        (is_test_user_id, z.B. tg-live-e2e/tdd-*) — deterministischer Lookup-Vorrang
-        unabhängig von der Dateisystem-Iterationsreihenfolge.
+        Sorted list of user_id strings (excludes technical entries starting with '_'),
+        with real users sorted before test-classified users (is_test_user_id:
+        Profilfeld is_test_user oder tg-live-e2e — Issue #2152, kein
+        Namens-Vorfilter mehr) — deterministischer Lookup-Vorrang unabhängig
+        von der Dateisystem-Iterationsreihenfolge.
     """
     from app.config import is_test_user_id
 
@@ -1194,60 +1364,146 @@ def list_all_user_ids(data_dir: str | None = None) -> list[str]:
         return []
     names = sorted(
         d.name for d in users_root.iterdir()
-        if d.is_dir()
-        and not d.name.startswith("_")
-        and not d.name.startswith("test")
+        if d.is_dir() and not d.name.startswith("_")
     )
     real = [n for n in names if not is_test_user_id(n, data_dir=data_dir)]
     test = [n for n in names if is_test_user_id(n, data_dir=data_dir)]
     return real + test
 
 
+def is_user_disabled(user_id: str, data_dir: str | None = None) -> bool:
+    """True, wenn das Konto gesperrt ist (``"disabled": true`` in user.json).
+
+    Liest die Datei bei jedem Aufruf frisch (Issue #2155 S3, AC-13): eine
+    Sperre wirkt sofort, ohne Neustart. Python schreibt das Flag nie (Go-Modell
+    ``json:"disabled,omitempty"``). Fehlt Key oder Datei, ist das Konto nicht
+    gesperrt (fail-soft wie ``is_test_user_id``).
+    """
+    root = Path(data_dir) if data_dir is not None else get_data_root()
+    try:
+        profile = json.loads((root / "users" / user_id / "user.json").read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return isinstance(profile, dict) and profile.get("disabled") is True
+
+
 def lookup_user_by_email(email: str, data_dir: str | None = None) -> str | None:
-    """Find user_id whose mail_to matches the given email address (case-insensitive).
+    """Find user_id whose CONFIRMED EFFECTIVE contact address matches (case-insensitive).
+
+    Wirksame Kontaktadresse = ``mail_to``, ersatzweise ``email``; ein Treffer
+    zaehlt nur bei gesetztem ``email_verified_at`` (Issue #2147 Scheibe B2,
+    Pendant zu Go ``ResolveAddressOwner``). Eine ausstehende Adressaenderung
+    (``pending_contact_address``) steht nie in ``mail_to``/``email`` und ordnet
+    daher nie zu.
+
+    Eindeutigkeit ist Pflicht (Issue #2143, analog #2141): tragen ZWEI echte
+    Nutzer dieselbe mail_to-Adresse (Bestandsdaten/Fehlkonfiguration), gibt es
+    keine zulaessige Zuordnung -- die Funktion liefert None und protokolliert
+    die Kollision, statt den ersten Treffer zu nehmen (Adress-Uebernahme).
+
+    Mehrdeutigkeit gilt nur unter ECHTEN Nutzern: der Vorrang des echten
+    Kontos vor Test-Nutzern (Issue #1013) bleibt erhalten.
 
     Args:
         email: Sender email address to match against user profiles
         data_dir: Root data directory (default: get_data_root())
 
     Returns:
-        Matching user_id or None if no match found
+        Matching user_id or None if no match found or the match is ambiguous
     """
+    from app.config import is_test_user_id
+
     if data_dir is None:
         data_dir = str(get_data_root())
+
+    real_matches: list[str] = []
+    test_matches: list[str] = []
     for uid in list_all_user_ids(data_dir):
         profile_path = Path(data_dir) / "users" / uid / "user.json"
-        if profile_path.exists():
-            try:
-                profile = json.loads(profile_path.read_text(encoding="utf-8"))
-                if profile.get("mail_to", "").lower() == email.lower():
-                    return uid
-            except Exception:
-                continue
+        if not profile_path.exists():
+            continue
+        try:
+            profile = json.loads(profile_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if not isinstance(profile, dict) or not profile.get("email_verified_at"):
+            continue
+        effective = (profile.get("mail_to") or "").strip() or (profile.get("email") or "")
+        if effective.strip().lower() != email.strip().lower():
+            continue
+        if is_test_user_id(uid, data_dir=data_dir):
+            test_matches.append(uid)
+        else:
+            real_matches.append(uid)
+
+    if len(real_matches) > 1:
+        logger.error(
+            "Email-Adresse %s ist mehrdeutig — keine Zuordnung. "
+            "Kollidierende Nutzer: %s (Issue #2143)",
+            email,
+            ", ".join(real_matches),
+        )
+        return None
+    if real_matches:
+        return real_matches[0]
+    if test_matches:
+        return test_matches[0]
     return None
 
 
 def lookup_user_by_telegram_chat_id(chat_id: str, data_dir: str | None = None) -> str | None:
     """Find user_id whose telegram_chat_id matches the given chat_id (int/str-tolerant).
 
+    Eindeutigkeit ist Pflicht (Issue #2141): tragen ZWEI echte Nutzer dieselbe
+    Chat-ID (Bestandsdaten aus der Zeit vor dem Fix), gibt es keine zulässige
+    Zuordnung — die Funktion liefert None und protokolliert die Kollision. Der
+    Aufrufer läuft damit in den bestehenden "kein Treffer"-Pfad, der den
+    Registrierungs-Hinweis verschickt; eine Exception bliebe im Chat stumm.
+
+    Mehrdeutigkeit gilt nur unter ECHTEN Nutzern: der Vorrang des echten
+    Kontos vor Test-Nutzern (Issue #1013) bleibt erhalten.
+
     Args:
         chat_id: Telegram chat ID to match (compared as strings)
         data_dir: Root data directory (default: get_data_root())
 
     Returns:
-        Matching user_id or None if no match found
+        Matching user_id or None if no match found or the match is ambiguous
     """
+    from app.config import is_test_user_id
+
     if data_dir is None:
         data_dir = str(get_data_root())
+
+    real_matches: list[str] = []
+    test_matches: list[str] = []
     for uid in list_all_user_ids(data_dir):
         profile_path = Path(data_dir) / "users" / uid / "user.json"
-        if profile_path.exists():
-            try:
-                profile = json.loads(profile_path.read_text(encoding="utf-8"))
-                if str(profile.get("telegram_chat_id", "")) == str(chat_id):
-                    return uid
-            except Exception:
-                continue
+        if not profile_path.exists():
+            continue
+        try:
+            profile = json.loads(profile_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if str(profile.get("telegram_chat_id", "")) != str(chat_id):
+            continue
+        if is_test_user_id(uid, data_dir=data_dir):
+            test_matches.append(uid)
+        else:
+            real_matches.append(uid)
+
+    if len(real_matches) > 1:
+        logger.error(
+            "Telegram-Chat-ID %s ist mehrdeutig — keine Zuordnung. "
+            "Kollidierende Nutzer: %s (Issue #2141)",
+            mask_number(chat_id),
+            ", ".join(real_matches),
+        )
+        return None
+    if real_matches:
+        return real_matches[0]
+    if test_matches:
+        return test_matches[0]
     return None
 
 
@@ -1255,12 +1511,12 @@ def lookup_user_by_telegram_chat_id(chat_id: str, data_dir: str | None = None) -
 # Location CRUD
 # =============================================================================
 
-def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
+def load_all_locations(user_id: str) -> List[SavedLocation]:
     """
     Load all locations for a user.
 
     Args:
-        user_id: User identifier (default: "default")
+        user_id: User identifier
 
     Returns:
         List of SavedLocation objects
@@ -1301,13 +1557,13 @@ def load_all_locations(user_id: str = "default") -> List[SavedLocation]:
     return locations
 
 
-def save_location(location: SavedLocation, user_id: str = "default") -> Path:
+def save_location(location: SavedLocation, user_id: str) -> Path:
     """
     Save a location to JSON file.
 
     Args:
         location: SavedLocation object to save
-        user_id: User identifier (default: "default")
+        user_id: User identifier
 
     Returns:
         Path to the saved file
@@ -1364,13 +1620,13 @@ def save_location(location: SavedLocation, user_id: str = "default") -> Path:
     return path
 
 
-def delete_location(location_id: str, user_id: str = "default") -> None:
+def delete_location(location_id: str, user_id: str) -> None:
     """
     Delete a location file.
 
     Args:
         location_id: ID of the location to delete
-        user_id: User identifier (default: "default")
+        user_id: User identifier
     """
     path = get_locations_dir(user_id) / f"{location_id}.json"
     if path.exists():
@@ -1382,7 +1638,7 @@ def delete_location(location_id: str, user_id: str = "default") -> None:
 # =============================================================================
 
 def load_all_trips(
-    user_id: str = "default",
+    user_id: str,
     include_archived: bool = False,
 ) -> List[Trip]:
     """
@@ -1394,7 +1650,7 @@ def load_all_trips(
     they stay reachable via ``load_compare_presets`` (AC-30).
 
     Args:
-        user_id: User identifier (default: "default")
+        user_id: User identifier
         include_archived: When False (default), trips with archived_at set are
             excluded. Set True for shortcode deduplication (Bug #824).
 
@@ -1458,6 +1714,10 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
                 wp_dict["suggestion_reason"] = wp.suggestion_reason
             if wp.arrival_override:
                 wp_dict["arrival_override"] = wp.arrival_override
+            # Issue #2036 — `is not None` statt truthy: 0.0 km ist ein
+            # gueltiger Etappenstart und muss persistiert werden.
+            if wp.distance_from_start_km is not None:
+                wp_dict["distance_from_start_km"] = wp.distance_from_start_km
             waypoints_data.append(wp_dict)
 
         stage_dict = {
@@ -1524,6 +1784,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     if trip.alert_channel_thresholds is not None:
         data["alert_channel_thresholds"] = trip.alert_channel_thresholds
 
+    # Issue #1895 S1: additiv, RMW — None (keine metrik-genaue Zuordnung) bleibt
+    # ungeschrieben, damit Bestandstrips byte-gleich bleiben (Pendant zu
+    # omitempty auf der Go-Seite).
+    if trip.alert_metric_channels is not None:
+        data["alert_metric_channels"] = trip.alert_metric_channels
+
     # Serialize weather config (Feature 2.6 legacy, preserved for migration)
     if trip.weather_config:
         data["weather_config"] = {
@@ -1557,8 +1823,17 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             # bekaeme jeder Trip nach dem ersten Speichern ein explizites
             # `outlook_metrics` und "nie gesetzt" (sieben feste Spalten) waere
             # von "bewusst geleert" (Block entfaellt) nicht mehr zu trennen.
-            **({"outlook_metrics": dc.outlook_metrics}
+            # Issue #1848 A2: geschrieben wird die KENNUNGSFORM. Ein Bestands-
+            # Trip, der nur weitergespeichert wird, verlaesst damit die
+            # Paar-Altform -- das bedingte `is not None` bleibt unberuehrt.
+            **({"outlook_metrics": normalize_outlook_metric_ids(dc.outlook_metrics)}
                if dc.outlook_metrics is not None else {}),
+            # Issue #2049: ebenfalls BEDINGT -- ein unbedingt geschriebenes
+            # leeres Mapping machte "nie eingestellt" von "alles auf Roh"
+            # ununterscheidbar (dieselbe Begruendung wie eine Zeile darueber).
+            **({"outlook_metric_formats":
+                normalize_outlook_metric_formats(dc.outlook_metric_formats)}
+               if dc.outlook_metric_formats is not None else {}),
         }
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
         if dc.per_channel_layouts is not None:
@@ -1650,6 +1925,12 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             "skip_next": trip.report_config.skip_next,
             "updated_at": trip.report_config.updated_at.isoformat(),
         }
+        # Issue #2422 S3: Einzel-Slot-Schalter nur schreiben wenn gesetzt
+        # (additiv wie sms_threshold #624) — fehlend bleibt fehlend, kein null.
+        for _slot_key in ("morning_enabled", "evening_enabled"):
+            _slot_wert = getattr(trip.report_config, _slot_key)
+            if _slot_wert is not None:
+                data["report_config"][_slot_key] = _slot_wert
 
     # Issue #1250 Scheibe 4 Fix-Loop F002 (Adversary BROKEN): flache Slot-/
     # Kanal-Felder + end_date werden IMMER emittiert (auch als None), NICHT
@@ -1680,7 +1961,7 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
 
 def save_trip(
     trip: Trip,
-    user_id: str = "default",
+    user_id: str,
     data_dir: Optional[Union[str, Path]] = None,
 ) -> Path:
     """
@@ -1702,52 +1983,98 @@ def save_trip(
 
     Args:
         trip: Trip object to save
-        user_id: User identifier (default: "default")
+        user_id: User identifier
         data_dir: Optional base data directory override.
 
     Returns:
         Path to the saved file
     """
-    import dataclasses
-    from core.naismith import compute_stage_arrivals
+    briefings_dir = _briefings_dir_for(user_id, data_dir)
+    path = briefings_dir / f"{trip.id}.json"
+    # #2158: unter der gemeinsamen Sperre (ADR-0083) frisch lesen + atomar
+    # schreiben; Parse-Fehler wirft statt die Datei mit existing={} zu ersetzen.
+    with exclusive_lock(path):
+        _write_trip_locked(trip, path, _read_existing_locked(path))
+    return path
 
-    # Issue #802: Compute-on-Save — arrival_calculated für jede Stage berechnen.
-    trip = dataclasses.replace(
-        trip,
-        stages=[compute_stage_arrivals(s, trip.activity) for s in trip.stages],
-    )
 
+def _briefings_dir_for(user_id: str, data_dir: Optional[Union[str, Path]]) -> Path:
     if data_dir is not None:
         briefings_dir = Path(data_dir) / "users" / user_id / "briefings"
     else:
         briefings_dir = get_briefings_dir(user_id)
     briefings_dir.mkdir(parents=True, exist_ok=True)
+    return briefings_dir
 
-    path = briefings_dir / f"{trip.id}.json"
+
+def _read_existing_locked(path: Path) -> dict:
+    """Liest den Bestand UNTER der Sperre. Fehlt die Datei: ``{}``. Nicht
+    parsebar: ``TripFileCorrupt`` (Datei bleibt unveraendert, #2158 AC-9)."""
+    if not path.exists():
+        return {}
+    try:
+        existing = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError) as e:
+        raise TripFileCorrupt(f"Trip-Datei {path} nicht lesbar: {e}") from e
+    if not isinstance(existing, dict):
+        raise TripFileCorrupt(f"Trip-Datei {path} ist kein JSON-Objekt")
+    return existing
+
+
+def _write_trip_locked(trip: Trip, path: Path, existing: dict) -> None:
+    """Compute-on-Save + RMW-Merge + atomarer Schreibvorgang (Sperre gehalten)."""
+    import dataclasses
+    from core.naismith import compute_stage_arrivals
+
+    # Issue #802: Compute-on-Save — arrival_calculated für jede Stage
+    # berechnen (bit-genau zu Go store.SaveTrip).
+    trip = dataclasses.replace(
+        trip,
+        stages=[compute_stage_arrivals(s, trip.activity) for s in trip.stages],
+    )
     python_data = _trip_to_dict(trip)
     # Issue #1250 Scheibe 7a (AC-26): jede Python-save_trip-Schreiboperation
-    # ist per Definition eine route-Entität -- kind wird unbedingt gesetzt,
-    # unabhängig vom Vorzustand des Aufrufers (analog Go store.SaveTrip).
+    # ist per Definition eine route-Entität.
     python_data["kind"] = "route"
-
-    # Issue #805: RMW-Merge — vorhandene JSON laden und Python-bekannte Felder überlagern.
-    # Bewahrt Go-geschriebene und Legacy-Felder die Python nicht modelliert
-    # (z.B. display_config.channels, report_config.send_signal, multi_day_trend_morning/evening).
-    existing: dict = {}
-    if path.exists():
-        try:
-            existing = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    data = _deep_merge_preserve_unknown(existing, python_data)
-
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-    return path
+    # Issue #805: RMW-Merge — Go-geschriebene und Legacy-Felder bleiben erhalten.
+    atomic_write_json(path, _deep_merge_preserve_unknown(existing, python_data))
 
 
-def delete_trip(trip_id: str, user_id: str = "default") -> None:
+class TripFileCorrupt(LoaderError):
+    """Trip-Datei ist beschaedigt/halb geschrieben — nichts wurde geschrieben."""
+
+
+class TripNotFound(LoaderError):
+    """Trip-Datei fehlt oder ist ein Vergleich (kein Trip)."""
+
+
+def update_trip(
+    user_id: str,
+    trip_id: str,
+    mutate: Callable[[Trip], Optional[Trip]],
+    data_dir: Optional[Union[str, Path]] = None,
+) -> Trip:
+    """Gesperrtes Read-Modify-Write eines Trips (#2158, ADR-0083).
+
+    Sperre auf ``briefings/<id>.json.lock`` (dieselbe Datei wie Go), Trip
+    FRISCH lesen, ``mutate(trip)`` anwenden (In-Place oder neues Trip-Objekt
+    zurueckgeben), atomar schreiben. Wirft ``LockTimeout`` (Frist),
+    ``TripFileCorrupt`` (Datei unveraendert) oder ``TripNotFound``; eine
+    Ausnahme aus ``mutate`` bricht ohne Schreiben ab.
+    """
+    path = _briefings_dir_for(user_id, data_dir) / f"{trip_id}.json"
+    with exclusive_lock(path):
+        existing = _read_existing_locked(path)
+        if not existing or existing.get("kind") == "vergleich":
+            raise TripNotFound(f"Trip {trip_id} nicht gefunden")
+        fresh = _parse_trip(existing.get("trip", existing))
+        result = mutate(fresh)
+        updated = result if result is not None else fresh
+        _write_trip_locked(updated, path, existing)
+    return updated
+
+
+def delete_trip(trip_id: str, user_id: str) -> None:
     """
     Delete a trip file.
 
@@ -1761,7 +2088,7 @@ def delete_trip(trip_id: str, user_id: str = "default") -> None:
 
     Args:
         trip_id: ID of the trip to delete
-        user_id: User identifier (default: "default")
+        user_id: User identifier
     """
     path = get_briefings_dir(user_id) / f"{trip_id}.json"
     if not path.exists():

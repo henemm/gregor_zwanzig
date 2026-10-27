@@ -3,7 +3,7 @@ entity_id: feat_1944_warn_mitschnitt_herkunft
 type: feature
 created: 2026-08-18
 updated: 2026-08-18
-status: draft
+status: implemented
 workflow: feat-1944-warn-mitschnitt-luecken
 version: "1.0"
 tags: [alarm, observability, official_alerts]
@@ -264,6 +264,10 @@ werden strukturell (geladen + Feldvergleich) statt per String-Suche geprüft.
   - Test: bestehende Renderer-Fixture-Läufe (unverändert, da `official_alerts.py:1896-2104`
     nicht angefasst wird) vor/nach der Implementierung strukturell vergleichen (Diff auf dem
     gerenderten String, nicht auf dem Vorhandensein einer Teilzeichenkette).
+  (abgelöst durch #2417 AC-27, 28.09.2026: Warn-Kürzel `W` (wind_gust) wird zu `WG`,
+  weil `W` mit dem Wetter-Kürzel `wind` kollidierte — sichtbare, gewollte Änderung des
+  Snapshot-Fixtures `tests/fixtures/official_alert_render_snapshot_1944.json`
+  `trip_sms`/`compare_sms`, alle übrigen Kanäle bleiben byte-identisch.)
 
 - **AC-9:** Given die bestehenden Sonderpfade von `cached_fetch()` (Netzwerk-Ausnahme,
   gecachter Fehlschlag mit `data=None`, `not_covered_statuses`, `self_throttled`-Rückzug),
@@ -323,7 +327,7 @@ verifiziert:
 2. **Zu grobe Körnung.** Der Mitschnitt-`source_key` ist der konstante Dienstname
    (`warn_egress.py:394`, z.B. immer `"vigilance"`), während der eigentliche
    Zwischenspeicher-`cache_key` provider-spezifisch pro Koordinate gerundet ist. Liegen zwei
-   Touren im selben 15-Minuten-Prüftakt bei derselben Quelle (z.B. zwei GeoSphere-Orte), teilen
+   Trips im selben 15-Minuten-Prüftakt bei derselben Quelle (z.B. zwei GeoSphere-Orte), teilen
    sich ihre Mitschnitte denselben `source_key` — ein Zeitfenster-Lookup fände beide und müsste
    den jüngeren wählen, in rund der Hälfte der Fälle den FREMDEN. Das verletzt die
    Randbedingung „falsche Zuordnung ist schlimmer als keine" im Regelbetrieb, nicht nur

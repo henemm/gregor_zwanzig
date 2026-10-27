@@ -46,6 +46,13 @@
 		cursor: grab;
 		border-radius: var(--g-radius-xs, 3px);
 	}
+	/* #2601: Touch — 44px Trefferfläche, Layout bleibt (negativer Rand) */
+	@media (max-width: 899px), (pointer: coarse) {
+		.drag-handle {
+			padding: 14px;
+			margin: -14px;
+		}
+	}
 	.drag-handle:active {
 		cursor: grabbing;
 	}

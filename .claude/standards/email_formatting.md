@@ -2,6 +2,10 @@
 
 **Domain:** Email Report Formatting for Gregor Zwanziger
 
+> **Maßgeblich:** `docs/reference/renderer_email_spec.md` (Renderer) und
+> `docs/reference/mail_validators.md` (Validatoren je Mail-Pfad). Die Beispiele unten stammen
+> aus der MVP-Ära; bei Abweichung gelten die beiden Referenzen.
+
 ## Email Structure
 
 All weather report emails MUST follow this structure:
@@ -178,20 +182,21 @@ Before sending, validate:
 
 ## E2E Test Requirements
 
-Email tests MUST:
-1. Send real email via SMTP
+Live-E2E-Mail-Tests (nur `/e2e-verify`, Stalwart-Testpostfach `gregor-test@henemm.com`, nie Gmail) MUST:
+1. Send real email via SMTP (Staging)
 2. Retrieve via IMAP
 3. Parse HTML content
 4. Verify table structure
 5. Check data values (plausibility)
 6. Verify debug consistency
 
-**Use validator:**
+**Use the path-specific validator** (wrong validator on a path can never pass):
+- Trip-Briefing (`X-GZ-Mail-Type: trip-briefing`): `uv run python3 .claude/hooks/briefing_mail_validator.py`
+- Orts-Vergleich (`X-GZ-Mail-Type: compare`):
 ```bash
 uv run python3 .claude/hooks/email_spec_validator.py
 ```
 
-**Reference:** `tests/tdd/test_html_email.py::TestRealGmailE2E`
 
 ## Common Issues
 
@@ -214,5 +219,5 @@ uv run python3 .claude/hooks/email_spec_validator.py
 ## References
 
 - Email Spec: `docs/reference/renderer_email_spec.md`
-- Real E2E Tests: `tests/tdd/test_html_email.py`
+- Mail-Validatoren: `docs/reference/mail_validators.md`
 - SMTP Mailer Spec: `docs/specs/_archive/modules/smtp_mailer.md` (archiviert mit #1412 S3a; der aktive Mailversand liegt in `src/output/channels/email.py`)

@@ -1,7 +1,7 @@
 ---
 issue: "#925"
 workflow: bug-925-rain-timing
-status: draft
+status: implemented
 created: 2026-06-30
 ---
 
@@ -15,7 +15,7 @@ per-Stunde-Logik des Trend-Pfads (`_build_stage_trend`) angleicht. Token-Format
 
 ## Kontext
 
-`src/formatters/sms_trip.py::build_forecast` baut je Etappe genau **ein**
+`src/output/renderers/sms_trip.py::build_forecast` baut je Etappe genau **ein**
 Sample: `HourlyValue(local_hour(seg.start_time), agg.precip_sum_mm)` — Wert =
 Etappen-Summe, Stunde = Etappen-Start. Die E-Mail-Stundentabelle zeigt dagegen
 pro Stunde `precip_1h_mm`. Ergebnis: SMS `R5.1@10` (Summe @ Etappenstart) vs.

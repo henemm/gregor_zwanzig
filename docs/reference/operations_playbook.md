@@ -155,6 +155,11 @@ Genau daran blockierte das Gate am 2026-08-08 **jede** Frontend-Auslieferung.
 | Anmeldung der Anwendung, Ziel **Staging** | `GZ_AUTH_*` | `/home/hem/gregor_zwanzig_staging/.env` |
 | Anmeldung der Anwendung, sonst | `GZ_AUTH_*` | lokale `.env` |
 
+**`GZ_USER_ID` ist davon unabhängig und hat seit #2151 Scheibe B keine Voreinstellung mehr**
+(vorher automatisch `"default"`). Ohne gesetzte `GZ_USER_ID` legt der Go-Server beim Start kein
+Seed-Konto an — bereits existierende Nutzerordner unter `data/users/` bleiben davon unberührt.
+Gesetzt wird sie aktuell nur in `frontend/e2e/ci-stack.sh` (Wert `admin`, aus `ci.yml`).
+
 Der Staging-Pfad steht als Modul-Attribut `e2e_frontend_browser_gate.STAGING_ENV_PATH`
 und ist per Umgebungsvariable **`GZ_STAGING_ENV_PATH`** überschreibbar. Rangfolge:
 bereits gesetzte Umgebungsvariable > Staging-`.env` (nur bei Staging-Ziel) >
@@ -219,6 +224,14 @@ gegen Staging (Schritt 3 oben) — der Selbsttest bestätigt hier nur „Prod le
 korrekt auf Login um", nicht „Feature funktioniert". Siehe Spec Issue #564 und #1353 für
 technische Details.
 
+**Selbsttest im CI-Pfad (#2047 S2b, ADR-0085):** Liefert die CI aus (Gate `open`), ruft sie danach per ssh
+`cd /home/hem/gregor_zwanzig && python3 .claude/hooks/prod_selftest.py` auf. Exit ≠ 0 macht den Job
+rot. Ohne Workflow-Variable landet der Bericht unter `docs/artifacts/unknown/`. Das Deploy-Skript
+ist idempotent: Steht `deployed_commit` schon auf `origin/main`, meldet es „bereits ausgeliefert"
+und startet nichts neu (Notausgang `GZ_FORCE_REDEPLOY=1`). CI und `/70-deploy` können denselben
+Stand also gefahrlos beide ausliefern. Der Job `deploy` ist per
+`concurrency: {group: prod-deploy, cancel-in-progress: false}` serialisiert.
+
 ---
 
 ## Liefer-Workflow — Detailablauf (PR statt Direkt-Push, PO-go 2026-08-05)
@@ -228,12 +241,38 @@ dessen CI-Ampel (alle 5 Checks) auf dem letzten Stand grün ist. Danach in diese
 
 | Schritt | Was | Wie |
 |---|---|---|
-| 1 | Branch + PR + Merge | `git push -u origin <branch>` → `gh pr create --fill` → Ampel grün → `gh pr merge --merge` |
+| 1 | Branch + PR + Merge | `git push -u origin <branch>` → `gh pr create --fill` → Ampel grün → `gh pr merge --merge --delete-branch` |
 | 2 | Auto-Deploy auf Staging abwarten (~5 Min) | Cron `*/5` ruft `auto-deploy-gregor-staging.sh` |
 | 3 | Staging-Validierung | siehe Definition unten |
 | 4 | Prod-Deploy | `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
 | 4b | Post-Deploy-Selftest | `python3 .claude/hooks/prod_selftest.py` (Commit/Health/AC-Attestation) — nur Exit 0 fährt weiter |
 | 5 | Issue schließen | `gh issue close <N>` — nur wenn 4b Exit 0 |
+
+**Seit #2142 zusätzliche Pflicht-Voraussetzung vor Schritt 4:** `GZ_CORE_SHARED_SECRET`
+(≥32 Zeichen, identischer Wert in beiden Prozessen) muss von Hand in der `.env` **beider**
+Umgebungen (Staging **und** Produktion) eingetragen sein, **bevor** der neue Stand live geht.
+Fehlt die Variable, beendet sich die Go-API beim Start (Fail-Fast), und der Python-Core
+weist ohne gesetztes Geheimnis jede Anfrage außer `/health` mit `503` ab. Siehe
+`docs/adr/0062-python-core-authentifiziert-gegenueber-go.md`.
+
+**Seit #2159** gilt dasselbe Geheimnis auch für die internen Go-Endpunkte
+(`/api/internal/premium-sms-learn`, `/api/internal/telegram-connect`): Der Python-Core
+sendet es als `X-GZ-Core-Auth`; ohne Geheimnis auf Go-Seite antworten sie `503`, bei
+fehlendem/falschem Header `401`. Der SMS-Leser hält bei 401/403/503 seinen Lesezeiger.
+Die Go-Basis-URL liest Python aus `GZ_GO_API_URL` (Default `http://localhost:8090`, im
+Python-`/health` als `go_api_url` sichtbar). Prod braucht keinen Eintrag; Staging muss
+`GZ_GO_API_URL=http://localhost:8091` in `/home/hem/gregor_zwanzig_staging/.env` setzen
+(sonst adressiert Staging-Python die Produktions-Go-API auf 8090).
+
+**Seit #2272 zusätzliche Pflicht-Voraussetzung vor Schritt 4:** `GZ_PUBLIC_HOST` muss vor
+dem Prod-Deploy dieses Fixes zusätzlich in `/home/hem/gregor_zwanzig/.env`
+(`https://gregor20.henemm.com`) und in `/home/hem/gregor_zwanzig_staging/.env`
+(`https://staging.gregor20.henemm.com`) eingetragen sein — dieselbe Variable, die die
+Go-API bereits seit #2200/#2130 liest, jetzt zusätzlich vom Python-Core (`GZ_PUBLIC_HOST`,
+`env_prefix="GZ_"`, `src/app/config.py`) konsumiert. Anders als Go (Prod-Default) reagiert
+der Python-Core fail-closed: Fehlt die Variable, lässt er in Trip-Report-Mails und
+Telegram-Antworten den Host-/Link-Anteil ersatzlos weg, statt auf die Produktionsadresse
+zurückzufallen. Siehe `docs/specs/modules/public_host.md`.
 
 `systemctl restart` allein **reicht nie** — `deploy-gregor-prod.sh` macht `flock-Lock → hart
 auf origin/main syncen (Daten unberührt, WIP gesichert) → Go-Binary bauen → Frontend bauen →
@@ -306,6 +345,131 @@ andere Session fertig ist". Diese Pattsituation existiert nicht mehr — der Dep
 Code hart auf `origin/main` (untracked Live-Daten unberührt, echte uncommittete WIP wird vorher
 als stash-Commit + `deploy-safety/*`-Tag gesichert).
 
+### WIP-Sicherung: zwei Stellen, ein Muster (#2047)
+
+Der Haupt-Checkout `/home/hem/gregor_zwanzig` wird nur noch vom Prod-Deploy hart auf
+`origin/main` zurückgesetzt. Er sichert uncommittete getrackte Arbeit vorher ab:
+
+| Wo | Skript | Tag-Präfix |
+|---|---|---|
+| Prod-Deploy | `henemm-infra/scripts/deploy-gregor-prod.sh:149-161` | `deploy-safety/<UTC-Zeitstempel>` |
+
+Bis #2047 resettete zusätzlich der CI-Schritt „Staging-Verdict schreiben (CI smoke)" bei
+jedem Merge nach `main`. Seit Scheibe 2 (2026-10-06) gibt es diesen Schritt nicht mehr: der
+CI-Job `deploy` schreibt kein Verdict und führt kein `git reset` aus. Stattdessen läuft
+`scripts/ci_prod_gate.sh` auf dem Server-Checkout: `git fetch`, dann
+`staging_gate.py --check --expected-commit origin/main`, Ausgabe `PROD_GATE=open|closed`.
+Der Job hängt an allen sechs Ampel-Checks. Prod-Deploy und Erfolgs-Telegram laufen nur bei
+`open`. Bei `closed` bleibt der Job grün, der Deploy-Schritt wird übersprungen, und die
+Job-Summary verweist auf `/70-deploy` Schritt 4 (manueller Deploy vom Server nach
+`/e2e-verify`) — das ist der Normalfall, kein Fehler. Schlägt der `git fetch` fehl, ist der
+Job rot. `scripts/wip_safety.sh` bleibt als eigenständiges Skript erhalten.
+
+**Wiederherstellen:**
+
+```bash
+git -C /home/hem/gregor_zwanzig tag --list 'deploy-safety/*'   # Sicherungspunkte auflisten
+git -C /home/hem/gregor_zwanzig stash apply <TAG>              # zurückholen
+```
+
+Die Meldung des Deploy-Laufs nennt den fertigen Befehl bereits.
+
+**Drei Eigenheiten, die man kennen muss:**
+
+- `git stash create`, **nicht** `stash push` — der Arbeitsbaum wird mit anderen Sessions
+  geteilt und darf sich durch die Sicherung nicht bewegen. Der Tag verankert das Objekt,
+  sonst sammelt die GC es ein.
+- **Untrackte Dateien sind nicht abgedeckt** — beabsichtigt: `git reset --hard` fasst sie
+  ebenfalls nicht an, die Abdeckung ist deckungsgleich mit dem Schaden.
+- **Schlägt die Sicherung fehl, bricht der Deploy ab, bevor der Reset läuft.** Ein roter
+  Deploy kann also bedeuten: „hier lag ungesicherte Arbeit". Zeigt ein
+  gleichnamiger Tag auf *dasselbe* Objekt, gilt die Arbeit als gesichert und der Lauf geht
+  weiter — nur bei abweichendem Objekt wird abgebrochen.
+
+`scripts/wip_safety.sh` ist eigenständig aufrufbar (`bash scripts/wip_safety.sh <repo-dir>`)
+und durch `tests/test_wip_safety.py` gegen echte Wegwerf-Repos abgesichert.
+
+---
+
+## Betriebs-Backup der Nutzerdaten und Restore (#2145)
+
+Nicht zu verwechseln mit den Snapshots des Pre-Edit-Hooks `data_schema_backup.py` (weiter
+oben) — die greifen nur am Entwicklerrechner vor Schema-Edits. Der folgende Abschnitt
+beschreibt die **Betriebs**-Sicherung der Produktivdaten fremder Nutzer.
+
+### Was gesichert wird
+
+| | |
+|---|---|
+| Quelle | `/var/lib/gregor` (Prod) und `/var/lib/gregor-staging` — beide Datenwurzeln seit #1595 |
+| Wann | **täglich 3:00**, Cron des Users `hem`, `henemm-infra/scripts/backup.sh` |
+| Lokal | `/home/hem/backups/gregor-data_<datum>.tar.gz`, Retention 30 Tage |
+| Off-site | restic, verschlüsselt, auf den Heimserver über WireGuard (10.10.0.2), **append-only** |
+| Mitgesichert | Server-Config und alle `.env`-Dateien der Projekte |
+| Überwachung | BetterStack-Heartbeat 451531 „Backup (täglich)", Periode 24 h + 2 h Toleranz |
+
+Der Heartbeat wird **nur** gepingt, wenn lokales *und* Off-site-Backup durchliefen — und
+sonntags zusätzlich der Restore-Test. „Backup ok" heißt hier also *wiederherstellbar*, nicht
+bloß *geschrieben*. Bleibt der Ping aus, alarmiert BetterStack.
+
+### RPO und RTO
+
+- **RPO (maximaler Datenverlust): 24 Stunden.** Ein Ausfall um 2:59 verliert einen Tag
+  Nutzerarbeit — Trips, Orte, Empfänger, Kontoänderungen. Bis 2026-09-08 waren es 7 Tage.
+- **RTO Datenrückholung: unter 2 Minuten**, gemessen im Restore-Test (27 MB über VPN,
+  entschlüsseln und entpacken).
+- **RTO Gesamtwiederherstellung: geschätzt 15–30 Minuten** — Dienste stoppen, Baum ersetzen,
+  Rechte richten, Dienste starten. **Nicht durchgespielt**; nur die Datenrückholung ist
+  nachgewiesen. Wer das belastbar braucht, muss es einmal auf Staging fahren.
+
+### Wiederherstellen (Ernstfall)
+
+Der Restore-Test unten macht die Schritte 1–3 bereits nachweislich; für den Ernstfall
+kommen nur Dienststopp und das Ersetzen des Baums dazu.
+
+```bash
+# 1. Snapshot suchen (als root, restic-Zugangsdaten liegen in /etc/henemm/restic.env)
+sudo bash -c 'set -a; . /etc/henemm/restic.env; set +a; restic snapshots --tag offsite'
+
+# 2. Zurückholen — NIE direkt über den Live-Baum, immer erst daneben
+sudo bash -c 'set -a; . /etc/henemm/restic.env; set +a; \
+  restic restore <snapshot-id> --target /var/tmp/restore'
+
+# 3. Archiv entpacken und ansehen, BEVOR irgendetwas ersetzt wird
+sudo tar xzf /var/tmp/restore/home/hem/backups/gregor-data_<datum>.tar.gz -C /var/tmp/restore
+sudo ls /var/tmp/restore/var/lib/gregor/users     # sind alle Nutzer da?
+
+# 4. Erst jetzt Dienste stoppen und den Baum ersetzen
+sudo systemctl stop gregor-python gregor-api gregor-frontend
+sudo mv /var/lib/gregor /var/lib/gregor.kaputt-$(date -u +%FT%TZ)
+sudo mv /var/tmp/restore/var/lib/gregor /var/lib/gregor
+sudo systemctl start gregor-python gregor-api gregor-frontend
+```
+
+**Den defekten Baum verschieben, nicht löschen.** Er ist der einzige Träger dessen, was seit
+dem letzten Backup entstanden ist, und die einzige Grundlage für die Frage, was überhaupt
+kaputtging.
+
+### Restore-Test
+
+`sudo bash /home/hem/henemm-infra/scripts/restore-test-gregor.sh` — läuft sonntags automatisch
+aus `backup.sh`, jederzeit auch von Hand. Er holt den jüngsten Off-site-Snapshot zurück,
+entschlüsselt und entpackt ihn in ein temporäres Verzeichnis (das in jedem Ausgang wieder
+verschwindet) und prüft:
+
+1. Ist der Snapshot jünger als 48 h?
+2. Lässt er sich entschlüsseln und entpacken?
+3. Ist **jedes** Nutzerverzeichnis des Live-Baums enthalten, mit mindestens 80 % seiner
+   Dateien? Der Prozentsatz lässt Zuwachs seit dem Backup zu, nicht Verlust.
+4. Sind alle wiederhergestellten JSON-Dateien parsebar?
+
+Punkt 3 ist der eigentliche Zweck. Ein Archiv, das ein Nutzerverzeichnis verloren hat, bleibt
+groß und besteht jede Größenschwelle — genau der Fehler aus henemm-infra#184. **Überschreibt
+nichts**, Staging bleibt unberührt.
+
+Stand 2026-09-08: bestanden, 4 Nutzer, 320 JSON-Dateien. Die Fangkraft ist gegengeprüft — mit
+einem gelöschten Nutzerverzeichnis und einer beschädigten JSON-Datei wird der Test rot.
+
 ---
 
 ## Daten-Schema-Reworks — Anti-Pattern-Codebeispiele
@@ -336,13 +500,38 @@ einem Stash überlebt haben.
 
 1. **Pre-Snapshot:** Hook `data_schema_backup.py` erstellt automatisch ein tar.gz von
    `data/users/` nach `.backups/data-pre-rework-<ts>.tar.gz` bevor eine Schema-Datei editiert
-   wird (Retention: 20 Stück).
+   wird (Retention: 20 Stück). **Achtung (Audit 2026-10-21):** in `.claude/settings.json` ist der
+   Hook nicht eingetragen — „automatisch" gilt nur, falls das Plugin ihn verdrahtet. Manueller
+   Aufruf und Hintergrund: `docs/reference/gates_und_ratschen.md` → „Aktive Hooks".
 2. **Migration mit Test:** Bei Feldumbenennung/-removal: Migration-Skript schreiben +
    Roundtrip-Test (load alt → migrate → load neu → assert keine Daten-Diff)
 3. **Post-Verifikation:** Nach Deploy alle Trips/Locations/Subscriptions im Frontend laden,
    Stage-/Waypoint-Counts gegen Pre-Snapshot vergleichen
 4. **Bei Datenverlust:** Sofortiges Rollback aus `.backups/`, Root-Cause in
    `docs/project/known_issues.md` dokumentieren
+
+---
+
+## Sperrdateien `briefings/*.json.lock` (#2158, ADR-0083)
+
+Neben jeder Trip-/Compare-Preset-Datei liegt eine Sperrdatei `<id>.json.lock`, die Go und
+Python per `flock` teilen. Sie ist **keine Nutzerdatei**: Listen filtern nur `*.json`, Export
+und `scripts/cleanup_1708c_dead_trips.py` überspringen `*.lock`. Beim Sichten von
+`briefings/` also nicht als Datenrest werten. (Der ADR trifft keine Aussage zum Löschen von
+Hand — nicht ohne Not anfassen; `flock` gilt nur auf lokalem Dateisystem.) Dauert eine
+Sperre über ~5 s, antwortet die API mit 503 + `Retry-After`.
+
+## Beschädigte `briefing_slots.json` / `briefing_log.json` (#2231)
+
+Ist die Versand-Vermerk-Datei (`briefing_slots.json`) oder das Versandprotokoll
+(`briefing_log.json`) eines Nutzers unlesbar, repariert der nächste Sammellauf das selbst:
+die kaputte Datei wird byte-identisch als `<datei>.corrupt-<UTC-Zeitstempel>` im selben
+Nutzerverzeichnis beiseitegelegt, eine neue gültige Datei (Vermerke mit Marker
+`rebuilt_from_log_at`) entsteht, und eine ERROR-Logzeile nennt beide Pfade. Das Versandprotokoll
+dient dabei als Zeuge gegen Doppelversand. Die `.corrupt-*`-Dateien bleiben zur Ursachenanalyse
+liegen und werden nicht automatisch gelöscht; sie sind keine Nutzerdaten-Reste. Manuelles
+Reparieren ist nicht nötig. Lock-freie Leser reparieren nie (sie antworten weiter fail-closed).
+Spec: `docs/specs/modules/fix_2231_slot_reparatur.md`.
 
 ---
 
@@ -462,6 +651,88 @@ Details (Read-Modify-Write-Prinzip, Restrisiken R1/R2, AC-Zuordnung): Spec
 
 ---
 
+## Eingefrorene Kurzform-Kind-Metriken bereinigen (#2454)
+
+Bestandsdateien, die vor dem Editor-Fix in Issue #2454 gespeichert wurden, können
+`wind_chill_day_low`/`_day_high`/`_night` bzw. `temperature_day_low`/`_day_high`/`_night`
+(die abgeleiteten Kurzform-Kind-Größen hinter FD/FL/FN) noch **explizit `enabled:false`**
+tragen, obwohl der Elter (`wind_chill`/`temperature`) aktiv ist — der Editor hatte fehlende
+Kind-Einträge beim Speichern unbemerkt als `enabled:false` festgeschrieben und damit die
+Elter→Kind-Ableitung des Loaders (`_append_derived_metrics`) dauerhaft blockiert: die
+gewählte „Gefühlte Temperatur" wirkte in SMS/Premium-SMS/Telegram-Kurzform still ins Leere.
+
+**Rollout-Reihenfolge (zwingend):** Erst der Editor-Fix per `deploy-gregor-prod.sh`
+ausliefern, **ERST DANACH** die Migration gegen den Bestand fahren — würde die Migration
+vor dem Editor-Fix laufen, friert ein Speichern im noch alten Editor die gerade bereinigten
+Kind-Einträge sofort wieder ein. Läuft **je Host** (zuerst Staging, danach Produktion), als
+User `claude-gregor`, gegen `data/users`, immer zuerst der Dry-Run:
+
+```bash
+uv run python3 scripts/migrate_2454_derived_children.py --root data/users              # Dry-Run (Default)
+uv run python3 scripts/migrate_2454_derived_children.py --root data/users --execute    # Backup + Schreiben
+```
+
+**Immer zuerst den Dry-Run lesen.** Das Script ist idempotent — ein zweiter Lauf über
+bereits migrierte Daten erzeugt einen leeren Plan und schreibt nichts; tritt das
+eingefrorene Muster nach der Nachmessung erneut auf (z. B. ein Browser-Tab mit altem,
+noch ungeladenem Editor-Code speichert zwischen Deploy und Migrationslauf), ist ein
+erneuter Migrationslauf gefahrlos. Backup: tar.gz nach `.backups/migrate-2454-<timestamp>.tar.gz`
+vor jedem `--execute`-Lauf. Read-Modify-Write: entfernt werden AUSSCHLIESSLICH die drei
+Kind-Einträge einer Elterngröße, und auch nur, wenn ALLE DREI vollständig eingefroren sind
+(explizit `enabled:false`, kein `bucket`, `order` fehlend/`0`) UND der Elter `enabled:true`
+ist — weicht auch nur eines der drei Kinder ab (echte Einzelabwahl), bleibt die GESAMTE
+Liste unverändert (kein Teil-Abbau). Geprüft werden alle drei Fundstellen je Trip-Datei
+(`kind != "vergleich"`): global (`display_config.metrics`), jede
+`display_config.channel_layouts.<kanal>`, jede
+`display_config.channel_layouts_per_report.<report>.<kanal>`. Ortsvergleiche
+(`kind="vergleich"`) werden nie angefasst. Alle anderen Felder — auch dem Skript
+unbekannte Zukunftsfelder — bleiben erhalten.
+
+**Exit-Codes:**
+
+| Code | Bedeutung |
+|------|-----------|
+| 0 | Erfolg — inkl. leerem Plan beim idempotenten Wiederholungslauf und beim reinen Dry-Run |
+| 1 | `--root` existiert nicht/kein Verzeichnis, Backup fehlgeschlagen, oder mindestens eine Datei konnte nicht geschrieben werden (Details in den `Error:`-Zeilen der Ausgabe) |
+
+**Nachmessung vor Issue-Close:** struktureller Diff der betroffenen Produktions-Datei
+(z. B. KHW 403, `/var/lib/gregor/users/henning/briefings/5f534011.json`) vorher/nachher —
+es dürfen sich ausschließlich die eingefrorenen Kind-Einträge je betroffener Liste
+unterscheiden, sonst nichts; anschließend erzeugte Kurzform (SMS/Premium-SMS) für den
+betroffenen Trip muss FD/FL bzw. FN enthalten.
+
+Details (Regeltabelle, Adversary-Findings, AC-Zuordnung): Spec
+`docs/specs/bugfix/bug_2454_kurzform_gefuehlte_temperatur.md`.
+
+---
+
+## E-Mail-Bestätigung rückwirkend nachtragen (#2304, S1 aus #2271/#2146)
+
+Einmaliger Nachtrag-Lauf, der Bestandskonten ohne `email_verified_at` (angelegt, bevor der
+Self-Service-Bestätigungsflow existierte) als bestätigt markiert — Vorbereitung der künftigen
+Login-Pflicht (#2271), damit niemand durch sie ausgesperrt wird. Strukturelles Vorbild:
+`scripts/migrate_1219_email_verified.py`, anders als dort aber **keine** feste Positivliste,
+sondern alle Konten unter `--root` ohne gesetztes Feld. Läuft **je einmal** gegen **beide**
+Datenwurzeln:
+
+```bash
+uv run python3 scripts/backfill_2271_email_verified.py --root /var/lib/gregor/users            # Prod, Dry-Run (Default)
+uv run python3 scripts/backfill_2271_email_verified.py --root /var/lib/gregor/users --execute   # Prod, Backup + Schreiben
+uv run python3 scripts/backfill_2271_email_verified.py --root /var/lib/gregor-staging/users            # Staging, Dry-Run (Default)
+uv run python3 scripts/backfill_2271_email_verified.py --root /var/lib/gregor-staging/users --execute   # Staging, Backup + Schreiben
+```
+
+**Immer zuerst den Dry-Run lesen.** Das Script ist idempotent — ein zweiter Lauf über bereits
+migrierte Daten erzeugt einen leeren Plan und schreibt nichts. Backup: tar.gz des gesamten
+Baums unter `--root` nach `.backups/` entsteht automatisch vor jedem `--execute`-Lauf, der
+tatsächlich Konten ändert. Read-Modify-Write: nur `email_verified_at` wird ergänzt, alle
+anderen Felder (Trips, Empfänger, Passwort-Hash, Passkeys etc.) bleiben unangetastet.
+
+Details (Selbstheilung bei Magic-Link/OAuth, neue Resend-/Staging-Testweg-Endpunkte,
+Acceptance Criteria): Spec `docs/specs/modules/email_verify_vorbereitung_2304.md`.
+
+---
+
 ## „Versand gemeldet, Postfach leer" — zuerst den Empfänger nachsehen (#1847)
 
 Diese Falle hat sich **viermal** wiederholt (#1351, #1403, #1782, #1847) und jedes Mal
@@ -492,7 +763,12 @@ Es gibt **drei** Postfächer: `gregor-test@` (Test-/Gate-Mails), `gregor-staging
 `/home/hem/gregor_zwanzig_staging/data/` — der Ordner dort ist stillgelegter Altbestand.
 Der pro Nutzer abweichende Empfänger steht in
 `/var/lib/gregor-staging/users/<uid>/user.json` als `mail_to` und **überschreibt** das
-globale `GZ_MAIL_TO` aus der `.env`.
+globale `GZ_MAIL_TO` aus der `.env`. **Fehlt `mail_to`/`telegram_chat_id`/`sms_to` im
+Profil, gibt es seit Issue #2144 KEINEN Fallback mehr auf das globale `GZ_MAIL_TO`/
+`GZ_TELEGRAM_CHAT_ID`/`GZ_SMS_TO`:** der betroffene Kanal wird für diesen Nutzer sauber
+übersprungen (`ChannelBlockedError` mit `reason_code` `email_no_recipient` /
+`telegram_no_chat_id` / `sms_no_recipient`, protokolliert statt an eine fremde Adresse
+zugestellt).
 
 ```bash
 systemctl cat gregor-python-staging | grep GZ_DATA_DIR      # Wurzel feststellen
@@ -546,3 +822,124 @@ Versand.
 Diese drei Bausteine zusammen liefern denselben Erkenntnisgewinn wie ein
 synthetischer Testversand — ohne dessen Risiko (Kunst-User im Scheduler,
 Test-Postfach über Resend, Kontingent-Verbrauch).
+
+## Vorhersage-Mitschnitt auslesen und abschalten (#2030)
+
+Seit #2030 schreibt der Python-Kern an der Verbrauchsstelle jedes Segment-Aggregats
+(`SegmentWeatherService._aggregate_for_segment`) mit, **was das System zu diesem Zeitpunkt für
+diesen Ort und dieses Zeitfenster erwartete**. Zweck ist die Nachbereitung eines Vorfalls wie
+#2020 („wann sprang die Vorhersage von 7,4 auf 29,4 mm?") — es gibt bewusst keinen Leser, kein
+Auswerte-Skript und keine UI dazu.
+
+**Ablage:** `<Datenwurzel>/diagnostics/forecast_capture_YYYY-MM-DD.jsonl` — Prod
+`/var/lib/gregor`, Staging `/var/lib/gregor-staging`. Eine Datei je Kalendertag, JSONL,
+angehängt. Aufbewahrung **30 Tage**; ältere Tagesdateien räumt der Writer selbst weg, ausgelöst
+beim ersten Schreibvorgang nach einem Datumswechsel. Nachbardateien im selben Ordner
+(`openmeteo_calls.jsonl`, `enrichment_calls.jsonl`) sind davon nicht betroffen.
+
+**Volumen:** rund 1 MB/Tag. Geschrieben wird nur, wenn sich ein alarmrelevanter Wert gegenüber
+dem letzten Stand desselben Orts und Zeitfensters geändert hat (`grund: "aenderung"`) oder der
+letzte Eintrag über 60 Minuten zurückliegt (`grund: "takt"`). Der erzwungene Takt ist die
+Grundlage der Auswertung: **eine fehlende Zeile bedeutet Fehler oder nicht abgerufener Ort**,
+nicht „unverändert".
+
+**Auswerten** — Verlauf einer Koordinate über einen Tag, Zeitpunkt gegen Regenmenge:
+
+```bash
+jq -r 'select(.lat==46.6 and .lon==12.9)
+       | [.written_at, .grund, .werte.precip_sum_mm, .werte.thunder_level_max] | @tsv' \
+   /var/lib/gregor/diagnostics/forecast_capture_2026-08-23.jsonl
+```
+
+`written_at` ist der Verbrauchszeitpunkt, `fetched_at` der tatsächliche Abrufzeitpunkt des Werts
+(bei `cache_hit: true` der ursprüngliche, nicht der Verbrauchszeitpunkt) — der Abstand beider
+zeigt, wie alt die Vorhersage war, auf der eine Entscheidung beruhte. Die Zeile trägt **keine
+Trip-Kennung**; die Zuordnung läuft über Koordinate und Fensterzeiten.
+
+**Abschalten ohne Deploy:** `GZ_FORECAST_CAPTURE=0` in der Unit setzen und den Dienst neu
+starten. Damit entfallen Dateizugriff und Health-Eintrag vollständig; ohne die Variable ist der
+Mitschnitt **an**. Das ist die Rückzugsoption, wenn der Mitschnitt in Produktion auffällt.
+
+**Ausfall sehen:** `/api/scheduler/status.enrichment_health` führt den Pfad `forecast_capture`
+(höchstens eine Meldung je 15 Minuten). Der Endpunkt ist seit #2155 S2 nur noch mit
+Header `X-GZ-Status-Token` (Env `GZ_STATUS_TOKEN`) abrufbar — `check-gregor20.sh` muss
+ihn mitsenden (Rollout-Reihenfolge: ADR-0079). Wächst der Abstand `now − last_success_at`, während
+Briefings weiterlaufen, schreibt der Mitschnitt nicht mehr — die Wetterausgabe ist davon
+unberührt, der Mitschnitt ist durchgehend fail-soft.
+
+## Scheduler-Läufe: Zeitlimit-Abbrüche und Laufdauer diagnostizieren (#1539 S0/S1a)
+
+- **Zuständigkeit:** Go löst aus (`internal/scheduler/scheduler.go`, einzige Zeitsteuerung, Status
+  in `gregor-api`), Python führt aus (`POST /api/scheduler/*`, Logs in `gregor-python`, kein eigener
+  Timer). Ein Job, der nicht *startet*, ist ein Go-Befund; einer, der startet und scheitert, meist
+  ein Python-Befund. Jobtabelle: `docs/features/architecture.md` → „Scheduler-Zuständigkeit“.
+- **Status:** `/api/scheduler/status` (Token-Header wie oben) zeigt je Job `last_run.duration_s` und
+  bei Fan-out-Jobs den Block `deadline_aborts` (`total`, `last_at`, `last_skipped`, `counting_since`).
+  Der Zähler liegt im Speicher und steht nach jedem Deploy/Neustart auf 0 (`counting_since`
+  nennt den Start). `check-gregor20.sh` (henemm-infra) warnt, sobald `deadline_aborts.total` wächst.
+- **Log (Python-Kern):** je Route die Zeile „`<dienst>: Lauf beendet nach Xs fuer user_id=…`"; der
+  Trip-Alarm loggt zusätzlich die Dauer je Trip/Etappe. So lässt sich ein langsamer Nutzer finden.
+- **Alarm-Protokoll:** Zustandsdateien (alert_log, alert_state, Wetter-Snapshots, Open-Meteo-
+  Verfügbarkeits-Cache) werden atomar geschrieben. Gelingt die Sperre für `alert_log` nicht
+  rechtzeitig, steht im ERROR-Log der **vollständige Eintrag**, und der Zähler
+  `alert_log_lost_entries` steigt — der Eintrag lässt sich aus dem Log nachtragen.
+
+## Antwortzeit der Befehle diagnostizieren (#2439)
+
+- **Journal:** Jeder Befehl (E-Mail, Telegram, Premium-SMS — normale SMS hat keinen Befehlseingang)
+  schreibt eine Zeile
+  `befehl=… kanal=… trip=… dauer_ms=…` (ohne personenbezogene Inhalte). Auslesen:
+  `journalctl -u gregor-python | grep "dauer_ms="` (Staging: `gregor-python-staging`, mit `sudo -n`).
+  Der Briefing-Bau loggt zusätzlich Phasenzeiten, so lässt sich ein langsamer Schritt finden.
+- **Beschleunigung:** DWD-Gewitter-Tagesfenster (Zieltag/Nacht/+1/+2) werden vor dem Hauptabruf mit
+  höchstens 2 gleichzeitig vorgewärmt (Fehler nur im Log); die Segmentschleife in `_fetch_weather`
+  läuft parallel über `services/parallel_fetch.fetch_ordered`. Der DWD-Punkt-Fenster-Cache hält
+  2048 statt 512 URLs (~28 MB Speicher).
+- **Monitoring:** `check-gregor20.sh` (henemm-infra) schlägt Alarm, wenn `push.missed_total` eines
+  Befehls-Eingangs steigt (siehe `docs/runbooks/inbound-webhooks.md`).
+
+### Staging-Messlauf auslösen (`staging_messlauf.py`, #2439)
+
+Der Treiber löst auf **Staging** seriell alle Befehlsserien aus, die
+`tests/e2e/test_push_eingang_befehle_staging.py` danach aus dem Journal auswertet. Er wertet selbst
+nichts aus (keine Schwellen, kein Urteil). Spec: `docs/specs/modules/feat_2439_staging_messtreiber.md`.
+
+- **Zuerst der Probelauf** (ca. 15–20 min): `python3 .claude/tools/staging_messlauf.py --nur-probelauf`
+  löst nur die drei Probeläufe aus (Korsika HEUTE, DE HEUTE, Ortswechsel, DE MORGEN), räumt
+  Trips und Wegwerf-Nutzer auf und schreibt bei Exit 0 **nichts** auf stdout (keine Env-Zeilen).
+  Exit 0 heißt: die Kälte ist auf Staging belegbar, der volle Lauf lohnt sich.
+- **Aufruf** (Laufzeit ca. 2–2,5 h, Fortschritt auf stderr):
+  ```bash
+  eval "$(python3 .claude/tools/staging_messlauf.py)"   # setzt die drei Env-Werte nur bei Exit 0
+  GZ_STAGING_E2E=1 uv run pytest tests/e2e/test_push_eingang_befehle_staging.py
+  ```
+  stdout enthält bei Exit 0 genau `GZ_STAGING_MESSLAUF_SEIT=<ISO-UTC>`, `GZ_STAGING_TRIP_DE=<id>`,
+  `GZ_STAGING_TRIP_KORSIKA=<id>` (passen zu `trip=` der Dauerzeilen). Zugangsdaten kommen aus
+  `/home/hem/gregor_zwanzig_staging/.env` plus `GZ_*`-Umgebung; nichts davon wird ausgegeben.
+- **Exit-Codes:** `0` vollständig ausgelöst · `1` Befund (Probelauf warm, „Telegram nicht
+  verknüpfbar", Abbruch, Aufräumen gescheitert — Nutzer-Kennung steht in der Meldung) · `2`
+  Umgebungsfehler/Sperre (fehlende Env, Staging nicht erreichbar, Zeitfenster 23:45–00:15 Wien bzw.
+  Laufzeit über Mitternacht, Nicht-Staging-Adresse).
+- **Ablauf:** Wegwerf-Nutzer `gzp-<tag>` + genau 2 Trips (DE, Korsika) → Telegram-Verknüpfung
+  (`/start TOKEN` als Webhook-Update, bestätigt per `telegram-status`) → Probelauf (Korsika HEUTE,
+  DE HEUTE, dann Ortswechsel per Read-Modify-Write, dann DE MORGEN — ohne Wechsel läse MORGEN den
+  von HEUTE gewärmten Cache; jeder Lauf wird sofort geprüft, DE ohne `downloads>0` im Journal ⇒
+  Exit 1, keine Serie) → E-Mail- und
+  Telegram-Kurzbefehle je 5× → DE 5×HEUTE+5×MORGEN, vor jedem Lauf neuer Ort per Read-Modify-Write
+  → Korsika 3×HEUTE+3×MORGEN mit >600 s Abstand → HEUTE-dann-HELP-Paar per E-Mail. Aufräumen
+  (Trips, Antwortmails, Nutzer) läuft immer, auch bei Abbruch.
+- **Korsika auf Staging nur über die Ersatzquelle `eu_direct`:** `egress_guard` sperrt Météo-France
+  auf Staging, `fr_direct` ist dort nie kalt messbar. Gegen `https://staging.gregor20.henemm.com`
+  verlangt der Treiber für Korsika deshalb nur eine Antwort (Dauerzeile), keinen `fr_direct`-Kaltlauf,
+  und weist die Ersatzquelle auf stderr offen aus. Die Kaltmessung `fr_direct` < 60 s ist
+  Prod-Aufgabe (`feat_2439_befehle_antwortzeit` AC-5). Hinweis: über die lokale Basis
+  `http://127.0.0.1:8091` verlangt der Treiber weiter `fr_direct` und meldet Korsika dort als Befund.
+- **Messvorbehalt Telegram:** gemessen wird nur die Verarbeitung (Webhook-Eingang bis Dauerzeile)
+  und der schnelle Sendefehler an die erkennbar ungültige `chat_id` `gzp-ungueltig-<tag>` — keine
+  echte Zustellung. Telegram HEUTE/MORGEN wird auf Staging nicht ausgelöst (NOT_MEASURABLE).
+- **Basis-Adresse:** Standard ist `https://staging.gregor20.henemm.com` — das Sitzungs-Cookie ist
+  `Secure` und kommt über `http://127.0.0.1:8091` nie zurück. Abweichend nur per
+  `GZ_STAGING_BASE_URL`.
+- **Niemals Produktion:** nur `127.0.0.1:8091`/`staging.gregor20.henemm.com` (Go) und
+  `127.0.0.1:8001` (Kern) sind erlaubt; Port 8090/8000 und `gregor20.henemm.com` werden vor jeder
+  Anfrage mit Exit 2 abgelehnt. Kein Sammelversand, nur die eigenen zwei Trips.

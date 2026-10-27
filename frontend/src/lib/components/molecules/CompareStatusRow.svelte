@@ -7,18 +7,20 @@
 
 	import type { ComparePreset } from '$lib/types.js';
 	import { Dot } from '$lib/components/atoms';
-	import { deriveNextSend } from '$lib/utils/cockpitHelpers568.js';
-	import { formatNextSend, presetChannels } from '$lib/components/compare/subscriptionHelpers.js';
+	import { presetChannels } from '$lib/components/compare/subscriptionHelpers.js';
+	// Issue #1969 (AC-23/AC-24): nächster Versand = Backend-Wert, keine eigene Rechnung.
+	import { formatNextBriefing, type NextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
 
 	interface Props {
 		preset: ComparePreset;
 		dense?: boolean;
+		/** Backend-Wert aus GET /api/next-briefings (compare[preset.id]); fehlt ⇒ „—". */
+		nextBriefing?: NextBriefing | null;
 	}
 
-	let { preset, dense = false }: Props = $props();
+	let { preset, dense = false, nextBriefing }: Props = $props();
 
-	const now = new Date();
-	const nextSend = $derived(deriveNextSend(preset, now));
+	const nextSendText = $derived(formatNextBriefing(nextBriefing, 'vergleich'));
 	// Issue #1452 (AC-8): Chips zeigen Kanal-Label ("Email"/"Telegram"/"SMS")
 	// aus der zentralen Ableitung — nie mehr die rohe Empfaenger-Adresse.
 	const channels = $derived(presetChannels(preset));
@@ -59,7 +61,7 @@
 
 	<!-- Nächster Versand Mono-Text -->
 	<span style:font-family="var(--g-font-mono)" style:font-size="11px" style:color="var(--g-ink-3)" style:white-space="nowrap">
-		{formatNextSend(nextSend)}
+		{nextSendText}
 	</span>
 
 	<!-- Kanal-Chips -->

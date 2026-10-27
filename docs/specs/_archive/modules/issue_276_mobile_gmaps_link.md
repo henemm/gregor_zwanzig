@@ -3,7 +3,7 @@ entity_id: issue_276_mobile_gmaps_link
 type: bugfix
 created: 2026-05-20
 updated: 2026-05-20
-status: complete
+status: implemented
 version: "1.0"
 tags: [resolver, google-maps, geocoding, nominatim, backend, bugfix]
 ---

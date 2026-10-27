@@ -1,3 +1,10 @@
+---
+entity_id: fix_1315_preview_night_block
+type: fast
+created: 2026-07-22
+status: implemented
+---
+
 # Mini-Spec: #1315 — Vorschau zeigt „Nacht am Ziel" (Vorschau = Versand)
 
 - **Status:** Draft
@@ -40,10 +47,10 @@ Verletzt „Vorschau = Versand" (gleiche Klasse wie #1297, Gewitter-Vorschau).
   Stunden, wie sie die versendete Mail zeigen würde.
 - **AC-2:** Given `show_night_block=false`, When die Vorschau gerendert wird, Then
   erscheint KEINE Nacht-Sektion (Parität mit Versand).
-- **AC-3 (Konsolidierung):** Given der Fix, Then existiert die Nacht-Wetter-Beschaffung
+- **AC-3:** (Konsolidierung) Given der Fix, Then existiert die Nacht-Wetter-Beschaffung
   als EINE geteilte Funktion, die Scheduler und Vorschau nutzen (kein dupliziertes
   `_fetch_night_weather`); das Scheduler-Versandverhalten ist unverändert (Bestandstests grün).
-- **AC-4 (Test):** Given der Fix, When der Kern-Test läuft, Then reproduziert er, dass
+- **AC-4:** (Test) Given der Fix, When der Kern-Test läuft, Then reproduziert er, dass
   die Vorschau die Nacht-Sektion enthält, wenn `show_night_block` + Nacht-Daten vorliegen —
   rot vor Fix, grün nach Fix.
 

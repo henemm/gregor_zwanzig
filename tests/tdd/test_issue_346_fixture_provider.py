@@ -105,7 +105,8 @@ def test_ac5_timestamps_restamped_to_today():
 # ---------- AC-6: PreviewService rendert ohne echten Open-Meteo-Call ----------
 
 def test_ac6_preview_renders_without_real_api_call(monkeypatch, tmp_path):
-    """AC-6: render_email_preview läuft mit gesetzter ENV-Var offline (kein open-meteo-Call).
+    """AC-6: die E-Mail-Vorschau (``_build_report``, seit #1743 ohne Huelle)
+    läuft mit gesetzter ENV-Var offline (kein open-meteo-Call).
 
     #1708 B1: die Trip-Fixture wird selbst in der isolierten Datenwurzel
     angelegt statt im toten trips/-Pfad gesucht (dort ist sie unter Isolation
@@ -135,8 +136,9 @@ def test_ac6_preview_renders_without_real_api_call(monkeypatch, tmp_path):
     monkeypatch.setattr(cl, "DIAGNOSTICS_PATH", log_path, raising=False)
 
     from services.preview_service import PreviewService
+    from tests.helpers.trip_vorschau_bericht import trip_email_html
 
-    html = PreviewService().render_email_preview(tid, user_id=uid, report_type="morning")
+    html = trip_email_html(PreviewService(), tid, user_id=uid, report_type="morning")
     assert html and "<" in html, "Vorschau muss nicht-leeres HTML liefern"
 
     # Beweis: kein einziger Abruf gegen die echte Open-Meteo-API

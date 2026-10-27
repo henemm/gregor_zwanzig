@@ -41,6 +41,7 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 from services.notification_service import NotificationService, TripReportRequest
+from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
 
 
 # ---------------------------------------------------------------------------
@@ -186,8 +187,17 @@ def _settings(telegram_base_port: int, sms_port: int) -> Settings:
     return Settings(
         telegram_bot_token="test-bot-token",
         telegram_chat_id="99999",
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout schaltet
+        # TelegramOutput auf die Test-Chat-ID um bzw. bricht ohne sie ab.
+        # Explizit auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196).
+        telegram_test_chat_id="99999",
         sms_gateway_url=f"http://127.0.0.1:{sms_port}/api/sms",
         seven_api_key="test-stub-key",
+        # Issue #1476: seven.io-Kanaele verlangen aus einem Testlauf den
+        # Sandbox-Key; identisch zum Stub-Key, damit kein GZ_SEVEN_SANDBOX_KEY
+        # aus einer Host-.env noetig ist (#1196).
+        seven_sandbox_key="test-stub-key",
         sms_to="+49000000000",
         sms_from=None,
     )
@@ -218,7 +228,17 @@ class TestAC2KurzstilRedirectsSmsTextToTelegram:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
 
             settings = _settings(tg_stub.port, sms_stub.port)
-            svc = NotificationService(settings=settings, user_id="tdd-1260-briefing")
+            _uid = "tdd-1260-briefing"
+            # Issue #2412 S4a Nachbesserung: ohne `user.json` faellt das neue
+            # SMS-Tageslimit-Gate auf Tier "free" (Cap 0) zurueck und wuerde
+            # den SMS-Versand dieses Tests faelschlich sperren -- Muster
+            # `test_sms_tageslimit.py::_nutzer_anlegen`.
+            from app.loader import get_data_dir
+
+            _d = get_data_dir(_uid)
+            _d.mkdir(parents=True, exist_ok=True)
+            (_d / "user.json").write_text(json.dumps({"id": _uid, "tier": "standard"}))
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele(_uid, settings))
 
             # RED: TripReportConfig(telegram_style="kurzform") wirft hier TypeError.
             trip = _make_trip(telegram_style="kurzform")
@@ -272,7 +292,7 @@ class TestAC1RichRemainsBubbleList:
             monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
 
             settings = _settings(tg_stub.port, _free_port())
-            svc = NotificationService(settings=settings, user_id="tdd-1260-briefing")
+            svc = NotificationService(settings=settings, user_id=mit_profil_kanaele("tdd-1260-briefing", settings))
 
             # RED: TripReportConfig(telegram_style="rich") wirft hier TypeError,
             # solange das Feld noch nicht existiert.

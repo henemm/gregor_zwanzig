@@ -3,7 +3,8 @@ entity_id: issue_777_geosphere_nowcast_falsy_tests
 type: tests
 created: 2026-06-12
 updated: 2026-06-12
-spec: docs/specs/modules/issue_777_geosphere_nowcast_falsy.md
+status: implemented
+spec: docs/specs/_archive/modules/issue_777_geosphere_nowcast_falsy.md
 issue: 777
 ---
 

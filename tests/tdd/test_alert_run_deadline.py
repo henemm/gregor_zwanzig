@@ -29,10 +29,11 @@ import logging
 import re
 import time
 import uuid
-from datetime import date
+from tests.helpers.ortstag import ortstag
 
 import pytest
 
+from app.config import Settings
 from app.loader import save_trip
 from app.models import (
     ForecastMeta,
@@ -49,6 +50,20 @@ from services import trip_alert
 from services.trip_alert import TripAlertService
 
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+
+
+def _settings() -> Settings:
+    """Dummy-SMTP, damit can_send_email() ohne Host-.env True ist."""
+    # #1196 Klasse C (Vorbild Batch 4 / test_issue_883): ohne Settings baut der
+    # Service Settings() aus der Umgebung, und can_send_email() ist nur mit
+    # Host-.env True -- auf dem CI-Runner lief jeder Fall in "No alert channel
+    # configured". Dummy-SMTP + mail_sink (DI-Naht) ersetzen den Versand;
+    # test.invalid ist RFC-2606-reserviert, es wird nie gedialt.
+    return Settings(
+        smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+        mail_to="empfaenger@example.com",
+    )
+
 
 LAT, LON = 47.0, 11.0
 
@@ -113,7 +128,7 @@ def _weather_data(idx: int | str = 1, *, lat: float = LAT, lon: float = LON, **s
 def _save_cached(user_id: str, trip_id: str, cached: list[SegmentWeatherData]) -> None:
     from services.weather_snapshot import WeatherSnapshotService
 
-    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, date.today(), cached)
+    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, ortstag(LAT, LON), cached)
 
 
 def _active_trip(trip_id: str, *, lat: float = LAT, lon: float = LON) -> Trip:
@@ -123,7 +138,7 @@ def _active_trip(trip_id: str, *, lat: float = LAT, lon: float = LON) -> Trip:
     ``{"enabled": False}`` laesst check_official_alert_triggers() sofort
     leer zurueckkehren)."""
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(lat, lon),
         waypoints=[Waypoint(id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0)],
     )
     trip = Trip(id=trip_id, name="Deadline-Test-Trip", stages=[stage])
@@ -141,7 +156,7 @@ def _official_trigger_trip(trip_id: str, *, lat: float = LAT, lon: float = LON) 
     -- "noch nicht migrierter Bestandstrip", Fallback auf aktiv), analog
     ``_minimal_trip`` in test_issue_1088."""
     stage = Stage(
-        id="T1", name="Tag 1", date=date.today(),
+        id="T1", name="Tag 1", date=ortstag(lat, lon),
         waypoints=[Waypoint(id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0)],
     )
     trip = Trip(id=trip_id, name="Amtliche-Warnung-Trip", stages=[stage], official_warnings=None)
@@ -212,15 +227,15 @@ def _setup_slow_trips(
 
 
 # ---------------------------------------------------------------------------
-# AC-1 -- ueberschrittene Obergrenze stoppt weitere Touren, nachweislich ueber
+# AC-1 -- ueberschrittene Obergrenze stoppt weitere Trips, nachweislich ueber
 # Nicht-Aufruf der Pruef-Funktion (nicht nur ueber einen Zaehler).
 # ---------------------------------------------------------------------------
 
 def test_deadline_exceeded_stops_checking_remaining_trips(monkeypatch):
     """AC-1: Given der Lauf hat die Zeitobergrenze bereits ueberschritten,
     waehrend noch weitere Trips in der Liste stehen / When die Schleife die
-    naechste Tour erreichen wuerde / Then wird diese und jede weitere
-    verbleibende Tour NICHT mehr geprueft -- bewiesen ueber Nicht-Aufruf von
+    naechste Trip erreichen wuerde / Then wird diese und jede weitere
+    verbleibende Trip NICHT mehr geprueft -- bewiesen ueber Nicht-Aufruf von
     check_and_send_alerts fuer mindestens einen Trip.
 
     RED (heute): ``check_all_trips()`` hat keine Deadline-Pruefung, ruft
@@ -230,7 +245,7 @@ def test_deadline_exceeded_stops_checking_remaining_trips(monkeypatch):
     user_id, trips, calls = _setup_slow_trips(
         monkeypatch, trip_count=6, sleep_per_trip_s=0.05, deadline_s=0.08,
     )
-    service = TripAlertService(user_id=user_id, mail_sink=lambda *_: None)
+    service = TripAlertService(settings=_settings(), user_id=user_id, mail_sink=lambda *_: None)
 
     result = service.check_all_trips()
 
@@ -299,7 +314,7 @@ def test_full_run_matches_legacy_alert_count_with_zero_skipped():
     """AC-3: Given ein Alarm-Lauf fuer einen Nutzer schliesst innerhalb der
     Zeitobergrenze vollstaendig ab / When der Lauf endet / Then ist die
     Anzahl versendeter Alarme identisch zum heutigen ``int``-Rueckgabewert
-    UND keine Tour wird uebersprungen (``skipped: 0``).
+    UND keine Trip wird uebersprungen (``skipped: 0``).
 
     Regressions-Kontrolle: der eigentliche Alarm-Versand (2 echte,
     voneinander unabhaengige amtliche Alarme ueber die bestehende
@@ -334,6 +349,7 @@ def test_full_run_matches_legacy_alert_count_with_zero_skipped():
         register_official_alert_source(_CoveringOfficialAlertSource(lat, lon, alert))
 
     service = TripAlertService(
+        settings=_settings(),
         user_id=user_id,
         mail_sink=lambda subject, body: mail_calls.append((subject, body)),
     )
@@ -349,7 +365,7 @@ def test_full_run_matches_legacy_alert_count_with_zero_skipped():
         f"{getattr(result, 'alerts_sent', '<fehlt>')!r} != {len(trips)}"
     )
     assert result.checked == len(trips)
-    assert result.skipped == 0, f"Vollstaendiger Lauf darf keine Tour uebersprungen haben: {getattr(result, 'skipped', '<fehlt>')!r}"
+    assert result.skipped == 0, f"Vollstaendiger Lauf darf keine Trip uebersprungen haben: {getattr(result, 'skipped', '<fehlt>')!r}"
     assert result.hit_deadline is False
 
 
@@ -360,7 +376,7 @@ def test_full_run_matches_legacy_alert_count_with_zero_skipped():
 def test_deadline_abort_logs_warning_with_threshold_checked_and_skipped(monkeypatch, caplog):
     """AC-4: Given ein Alarm-Lauf wird durch die Zeitobergrenze abgebrochen /
     When der Abbruch eintritt / Then wird eine WARNING-Zeile geschrieben, die
-    die Obergrenze, die Anzahl geprueft und die Anzahl uebersprungener Touren
+    die Obergrenze, die Anzahl geprueft und die Anzahl uebersprungener Trips
     nennt.
 
     RED (heute): es gibt keine Deadline-Pruefung, also auch keine
@@ -370,7 +386,7 @@ def test_deadline_abort_logs_warning_with_threshold_checked_and_skipped(monkeypa
     user_id, trips, calls = _setup_slow_trips(
         monkeypatch, trip_count=5, sleep_per_trip_s=0.05, deadline_s=deadline_s,
     )
-    service = TripAlertService(user_id=user_id, mail_sink=lambda *_: None)
+    service = TripAlertService(settings=_settings(), user_id=user_id, mail_sink=lambda *_: None)
 
     with caplog.at_level(logging.WARNING, logger="trip_alert"):
         service.check_all_trips()
@@ -416,7 +432,7 @@ def test_full_run_logs_info_with_total_duration(caplog):
     trip = _active_trip("trip-info-full")
     save_trip(trip, user_id=user_id)
     _save_cached(user_id, trip.id, [_weather_data(1, precip_sum_mm=2.0)])
-    service = TripAlertService(user_id=user_id, mail_sink=lambda *_: None)
+    service = TripAlertService(settings=_settings(), user_id=user_id, mail_sink=lambda *_: None)
 
     with caplog.at_level(logging.INFO, logger="trip_alert"):
         service.check_all_trips()
@@ -439,7 +455,7 @@ def test_aborted_run_logs_info_with_total_duration(monkeypatch, caplog):
     user_id, trips, calls = _setup_slow_trips(
         monkeypatch, trip_count=5, sleep_per_trip_s=0.05, deadline_s=0.08,
     )
-    service = TripAlertService(user_id=user_id, mail_sink=lambda *_: None)
+    service = TripAlertService(settings=_settings(), user_id=user_id, mail_sink=lambda *_: None)
 
     with caplog.at_level(logging.INFO, logger="trip_alert"):
         service.check_all_trips()

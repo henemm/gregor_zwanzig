@@ -18,10 +18,8 @@ Fuehre die Tests aus und fasse die Ergebnisse **kurz und verstaendlich** zusamme
 
 ## Vorgehen
 
-1. **Test-Kommando ermitteln:**
-   - Pruefe `package.json` (npm/yarn/pnpm)
-   - Pruefe `Makefile` oder `justfile`
-   - Pruefe Projekt-Typ (iOS: xcodebuild, Python: pytest, etc.)
+1. **Test-Kommando ermitteln:** siehe „Projekt-spezifische Kommandos" unten. Der Auftrag
+   nennt die Testdateien — **ohne benannte Dateien kein Python-Lauf** (#1477).
 
 2. **Tests ausfuehren:**
    - Verwende das passende Test-Kommando
@@ -53,39 +51,17 @@ Betroffene Dateien:
 
 ## Projekt-spezifische Kommandos
 
-### JavaScript/TypeScript
 ```bash
-npm test
-# oder
-yarn test
-# oder
-pnpm test
+# Python-Core — NUR benannte Dateien; `uv run pytest` ohne Dateien ist gesperrt (#1477)
+uv run pytest --tb=short -q tests/<pfad>/test_<verhalten>.py [...]
+# Go-API
+go test ./internal/<paket>/...
+# Frontend (SvelteKit, node --test)
+cd frontend && npm test -- <datei>
 ```
 
-### Python
-```bash
-pytest -v
-# oder
-python -m pytest
-```
-
-### Go
-```bash
-go test ./...
-```
-
-### Rust
-```bash
-cargo test
-```
-
-### iOS/macOS (xcodebuild)
-```bash
-xcodebuild test \
-  -project [PROJECT].xcodeproj \
-  -scheme "[SCHEME]" \
-  -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
-```
+Live-Tests (Marker `live`/`email`/`staging`) laufen nicht hier, sondern nur in `/e2e-verify`.
+Immer im eigenen Worktree ausfuehren, nie gegen den festen Hauptrepo-Pfad.
 
 ## Wichtig
 

@@ -63,7 +63,7 @@
 				style:text-overflow="ellipsis"
 			>{target}</div>
 			{#if sub}
-				<div style:font-size="10px" style:color="var(--g-ink-3)" style:margin-top="2px">{sub}</div>
+				<div style:font-size="11px" style:color="var(--g-ink-3)" style:margin-top="2px">{sub}</div>
 			{/if}
 		</div>
 		<Switch checked={active} onchange={onToggle} disabled={onToggle === undefined} size="lg" tone="good" />

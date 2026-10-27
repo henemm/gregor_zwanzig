@@ -68,6 +68,11 @@ from tenacity import (
 # dieselbe Groesse (`cin_ml`), gemeinsame Quelle der Wahrheit statt zweier
 # Konstanten, die auseinanderlaufen koennten.
 from providers.dwd import CIN_ML_LOWER_SENTINEL
+from providers.http import (
+    capped_timeout_or_raise,
+    make_deadline_before_hook,
+    stop_at_deadline,
+)
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -302,17 +307,48 @@ class DwdEuDirectProvider:
     def name(self) -> str:
         return "eu_direct"
 
+    def _fetch_deadline_seconds(self) -> float:
+        """Fristdauer je ``_request``-Aufruf, gelesen zur AUFRUFZEIT.
+
+        #2302 Scheibe B: der geteilte ``before``-Hook (``providers/http.py``)
+        loest ueber den NAMEN dieser Methode auf, nie ueber ihren Wert — so
+        wirkt ein Laufzeit-Patch des Modul-Globals unveraendert. Dieser
+        Provider hat nur EIN Budget (kein `fetch_forecast`), also genuegt ein
+        einziger Accessor.
+        """
+        return THUNDER_FETCH_DEADLINE_SECONDS
+
     @retry(
-        stop=stop_after_attempt(RETRY_ATTEMPTS),
+        stop=stop_after_attempt(RETRY_ATTEMPTS) | stop_at_deadline,
         wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
         retry=retry_if_exception(_is_retryable_error),
+        before=make_deadline_before_hook("_fetch_deadline_seconds"),
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    def _request(self, url: str) -> bytes:
+    def _request(self, url: str, deadline_at: Optional[float] = None) -> bytes:
         """GET mit Retry (500/502/503/504 + Verbindungsfehler, 5 Versuche,
-        2-60 s Backoff; 4xx bleibt sichtbar, ADR-0018)."""
-        response = self._client.get(url)
+        2-60 s Backoff; 4xx bleibt sichtbar, ADR-0018).
+
+        #2302 Scheibe B: zusaetzlich durch `THUNDER_FETCH_DEADLINE_SECONDS`
+        begrenzt — sowohl der HTTP-Timeout jedes einzelnen Versuchs als auch
+        die gesamte Wiederholkette dieses Aufrufs sind auf die Restzeit bis
+        `deadline_at` gedeckelt.
+
+        Args:
+            deadline_at: Absolute monotone Frist. `fetch_thunder_signals_named`
+                reicht ihre lokal gebildete Frist ueber `_thunder_point`
+                durch; fehlt sie, bildet der geteilte `before`-Hook sie selbst
+                aus `_fetch_deadline_seconds()`.
+        """
+        request_timeout = capped_timeout_or_raise(
+            provider_name=self.name,
+            base_timeout=TIMEOUT,
+            deadline_at=deadline_at,
+            budget_label="THUNDER_FETCH_DEADLINE_SECONDS",
+            budget_seconds=THUNDER_FETCH_DEADLINE_SECONDS,
+        )
+        response = self._client.get(url, timeout=request_timeout)
         if response.status_code in RETRY_STATUS_CODES:
             response.raise_for_status()  # loest Retry via HTTPStatusError aus
         response.raise_for_status()      # nicht-retryable Fehler (4xx)
@@ -321,6 +357,7 @@ class DwdEuDirectProvider:
     def _thunder_point(
         self, param: str, lat: float, lon: float, ziel: datetime,
         kandidaten: List[datetime], zustand: Dict[str, object],
+        deadline_at: Optional[float] = None,
     ) -> Optional[float]:
         """EIN Punktwert zum absoluten Zeitpunkt `ziel`.
 
@@ -336,7 +373,9 @@ class DwdEuDirectProvider:
             if ttt < 0 or ttt > THUNDER_MAX_TIMESTEP:
                 return None
             try:
-                raw = self._request(_build_url(lauf, ttt, param))
+                raw = self._request(
+                    _build_url(lauf, ttt, param), deadline_at=deadline_at
+                )
             except httpx.HTTPStatusError as e:
                 weiterer_kandidat = (
                     e.response.status_code == 404
@@ -410,6 +449,7 @@ class DwdEuDirectProvider:
                     reihe[offset] = self._thunder_point(
                         param, lat, lon, base + timedelta(hours=offset),
                         kandidaten, zustand,
+                        deadline_at=deadline_at,
                     )
                 ergebnis[_SIGNAL_KEYS[param]] = reihe
         except Exception:

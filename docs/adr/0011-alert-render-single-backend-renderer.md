@@ -2,7 +2,7 @@
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-06-29
-- **Bezug:** GitHub-Issue #914 (Issue 27), `docs/context/alert-mail-design.md`, ADR-0007 (Daten statt Empfehlungen), ADR-0009 (Alerts als Abweichungs-Wächter)
+- **Bezug:** GitHub-Issue #914 (Issue 27), `docs/context/alert-mail-design.md` (gelöscht mit #1340, Git-Historie), ADR-0007 (Daten statt Empfehlungen), ADR-0009 (Alerts als Abweichungs-Wächter)
 
 ## Kontext
 
@@ -101,6 +101,74 @@ gemeldet und wäre nach dem ersten Lauf taub gewesen — verworfen, Begründung 
 „Verworfene Alternativen".
 
 Status unverändert **Akzeptiert**. Spec: `docs/specs/modules/fix_1856_e7_metrik_listen_waechter.md`.
+
+## Nachtrag 2026-09-09 (#2232, Rev. 2) — die Kürzel-Quelle wird geteilt, die Auflösung nicht
+
+Nachtrag E7 („bewusst verschiedene Kürzel-Quellen für Trip und Ortsvergleich") wird für die
+Temperatur-Familie (`temperature_day_high/low`, `wind_chill_day_high/low`) **widerrufen** —
+aber nur für die **Kürzel-Identität**, nicht für die Auflösungs-Identität.
+
+Anlass ist die gemessene Nutzerauswirkung: die Trip-SMS sendete `L`/`D` bzw. `FL`/`FD`, die
+Vergleichs-SMS für dieselben Größen `D-`/`D+` bzw. `TF-`/`TF+`, und der Vergleichs-Editor zeigte
+für Tageshöchst- und Tagestiefsttemperatur zweimal dieselbe Marke `D`. Der oben festgehaltene
+Verzicht auf eine Gleichheitsprüfung über die Wege hinweg hat genau diesen Widerspruch gedeckt.
+
+**Geteilt ab #2232:** Trip und Ortsvergleich lösen das gesendete Kürzel über dieselbe Quelle auf
+(`metric_catalog.kurzform_kuerzel()` → `sms_multi_symbols`, sonst `sms_code`; für die
+Editor-Marke derselbe Weg über `/api/sms-symbols`). Der Vergleich adressiert sie über das neue
+Feld `kuerzel_metric_id` am Katalogeintrag (`compare_metric_catalog.py`). Das `+`/`-`-Vorzeichen
+der Vergleichs-SMS (PO-Vorgabe 2026-07-29) entfällt ersatzlos — die beiden Richtungen sind über
+ihr eigenes Kürzel unterscheidbar. Spec #1719 S4 Requirement 3 („Die Quelle richtet sich nach der
+Fläche") gilt für die Kürzel-Quelle dieser Familie nicht mehr.
+
+**Getrennt bleibt:** die Auflösungs-Identität (`metric_id`, Wertberechnung, Fensterung,
+Alarm-Zuordnung, Ausblick-Filterung, Persistenz-Schlüssel). Der Trip fenstert über
+`collect_hiking_window_points()` (Gehzeit entlang der Route), der Ortsvergleich über
+`resolve_configured_window()` (04–19) — verschiedene Zahlen unter derselben Kennung wären
+Falschinformation. Eine erste Fassung dieser Scheibe wollte beide Identitäten über ein gemeinsames
+`metric_id` vereinheitlichen; das wurde umgesetzt und gemessen: **101 zusätzlich rote Tests**,
+darunter stiller Verlust gespeicherter Metrik-Auswahl im Paar-Format (ADR-0037) und im
+Ausblick-Kennungsformat (#1848 A2) sowie der Wegfall der Temperaturspalte im Trip-Ausblick.
+Verworfen zugunsten der getrennten Identitäten (Weg A).
+
+**Verbleibende, weiterhin gültige Ausnahmen:**
+
+- `wind_chill.sms_code="TF"` bleibt eine eigenständige Größe für Alarm-SMS/Telegram
+  (Stundenwert-Schwelle), keine Tagesauswertung.
+- Die Gehzeit-Exklusivität aus #1848 Scheibe C bleibt vollständig gewahrt: der Ortsvergleich
+  bietet keine der vier Gehzeit-Kennungen als eigene Größe an. Ein Modul-Import-Assert
+  (`compare_metric_catalog.assert_kuerzel_identity()`) erzwingt, dass `kuerzel_metric_id` nie
+  auf eine Kennung zeigt, die der Vergleich selbst führt.
+- `temperature_day_high.sms_code` bleibt **leer**: `sms_code` ist global eindeutig (drei
+  Wächter), und `"D"` ist bereits von `temperature` belegt (Alarm-Pfad). Das gesendete Kürzel
+  steht für diese Größe ausschließlich in `sms_multi_symbols` — deshalb `kurzform_kuerzel()`
+  statt `get_sms_code()` im Vergleichs-Renderer.
+
+Die in E7 verworfene Gleichheitsprüfung über die Wege hinweg gibt es ab #2232 doch — als
+`tests/unit/test_sms_kuerzel_trip_gleich_vergleich.py`, beschränkt auf die Frage „sendet dieselbe
+Größe auf beiden Wegen dasselbe Kürzel?" und ohne die Tagesauswertungs-/Stundenwert-Fälle, die E7
+zu Recht ausgenommen hatte.
+
+Status unverändert **Akzeptiert**. Spec:
+`docs/specs/modules/fix_2232_kuerzel_ein_modell_trip_vergleich.md`.
+
+## Nachtrag 2026-09-30 (#2422 S6) — `TF` ist auch im Trip der Stundenwert der gefühlten Temperatur
+
+`TF` ist die Stunden-Extrem-Größe der Eltern-Metrik `wind_chill` und wird jetzt **auch von
+der Trip-Kurzform** gesendet (SMS, Premium-SMS, Telegram-Kurzform): Klasse (b) „Invers-Min",
+`TF<Tiefstwert in ganzen °C>@<Stunde>` über das Tagesfenster (`day_window_start_hour`–
+`end_hour`), Nullform `TF-`, Datenlücke `TF?`. Der Wert entsteht aus der neuen Laufzeit-Serie
+`DailyForecast.wind_chill_hourly` (Tagesfenster-Zeitreihe wie Regen/Wind, ohne `> 0`-Filter,
+Dedup je Stunde mit Tiefstwert). `TF` fällt beim Kürzen als Erstes der Komfort-Zusatzangaben
+(`("TF", "FN", "FL", "FD")`).
+
+**Löst ab:** „`TF` entfällt im Trip-Kontext" (#2454 AC-6/AC-7, `codes_text(vergleich=False)`)
+und den Satz aus Nachtrag E7 „Trip-SMS sendet `FK`/`FD`/`WC`, Vergleichs-/Alarm-SMS `TF`" —
+die Trip-SMS sendet zusätzlich `TF` (Stundenwert). `WC` bleibt ersatzlos entfallen
+(#1887 E6a). `TF` und `FL` messen dieselbe physikalische Größe über **verschiedene Fenster**
+(Tagesfenster mit Uhrzeit gegen Gehzeit-Fenster); sind beide gewählt, werden beide gesendet,
+keines wird unterdrückt. Die Ortsvergleichs-SMS ist unverändert. Status von ADR-0011
+unverändert „Akzeptiert".
 
 ## Nachtrag 2026-08-06 (#923)
 

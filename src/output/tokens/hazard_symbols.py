@@ -12,17 +12,41 @@ from __future__ import annotations
 
 # hazard -> internationales SMS-Kuerzel. Die Reihenfolge ist zugleich die
 # Sortier-Reihenfolge bei gleicher Warnstufe (Spec Abschnitt 2).
+# Issue #2417 AC-27: TS/FO/RA/WG/AB statt TH/FL/HR/W/CL -- die alten Kuerzel
+# glichen Wetter-Kuerzeln bzw. dem Meteo-France-Baustein (ein Kuerzel = eine
+# Bedeutung, ueberall).
 HAZARD_SMS_SYMBOLS: dict[str, str] = {
-    "thunderstorm": "TH",
-    "flood": "FL",
-    "rain": "HR",
-    "wind_gust": "W",
+    "thunderstorm": "TS",
+    "flood": "FO",
+    "rain": "RA",
+    "wind_gust": "WG",
     "snow": "SN",
+    "avalanche": "AW",
+    # Issue #1441 (ADR-0089): amtlicher Lawinen-Lagebericht, EAWS-Stufe 1-5 als
+    # Ziffer (`AV4`, kein L/M/H) -- `AV` gehoert EXKLUSIV dieser Gefahrenart.
+    "avalanche_bulletin": "AV",
     "black_ice": "IC",
     "extreme_heat": "HT",
     "extreme_cold": "CD",
     "wildfire_risk": "FR",
-    "access_ban": "CL",
+    "access_ban": "AB",
+}
+
+# Issue #2417 AC-23: EINZIGE Definitionsstelle der Bedeutung je Warn-Kuerzel
+# (Schluessel = hazard wie oben) -- CODES (en) und KUERZEL (de) lesen hier.
+HAZARD_BEDEUTUNG_EN: dict[str, str] = {
+    "thunderstorm": "storm", "flood": "flood", "rain": "heavy rain",
+    "wind_gust": "wind", "snow": "snow", "avalanche": "avalanche",
+    "avalanche_bulletin": "avalanche level", "black_ice": "ice",
+    "extreme_heat": "heat", "extreme_cold": "cold", "wildfire_risk": "fire",
+    "access_ban": "closure",
+}
+HAZARD_BEDEUTUNG_DE: dict[str, str] = {
+    "thunderstorm": "Gewitter", "flood": "Hochwasser", "rain": "Starkregen",
+    "wind_gust": "Wind", "snow": "Schnee", "avalanche": "Lawine",
+    "avalanche_bulletin": "Lawinenstufe", "black_ice": "Glätte",
+    "extreme_heat": "Hitze", "extreme_cold": "Kälte", "wildfire_risk": "Waldbrand",
+    "access_ban": "Sperrung",
 }
 
 # Katalog-Reihenfolge als Sortier-Index (Gleichstand bei der Warnstufe).
@@ -32,6 +56,9 @@ HAZARD_ORDER: dict[str, int] = {h: i for i, h in enumerate(HAZARD_SMS_SYMBOLS)}
 # `L` (gelb) bleibt strukturell erhalten, ist durch MIN_SMS_LEVEL aber nie
 # sichtbar (Known Limitation der Spec).
 LEVEL_LETTERS: dict[int, str] = {2: "L", 3: "M", 4: "H"}
+# Issue #2417: Bedeutung der Stufen-Buchstaben (Werte, keine Kuerzel).
+STUFE_BEDEUTUNG_EN: dict[str, str] = {"L": "low", "M": "mid", "H": "high"}
+STUFE_BEDEUTUNG_DE: dict[str, str] = {"L": "niedrig", "M": "mittel", "H": "hoch"}
 
 # Sicherheits-Filter: nur orange (3) und rot (4) erreichen SMS/Telegram.
 MIN_SMS_LEVEL = 3
@@ -56,7 +83,11 @@ def sms_symbol_for(hazard: str) -> str:
         return symbol
     letters = "".join(ch for ch in (hazard or "").upper() if ch.isascii() and ch.isalpha())
     candidate = letters[:2] or "XX"
-    taken = set(HAZARD_SMS_SYMBOLS.values())
+    # Issue #2417: auch die Kurzform-Kuerzel des Builders sind belegt (seit
+    # AC-27 ist z. B. 'TH' kein Warn-, sondern nur noch ein Wetter-Kuerzel).
+    from output.tokens.builder import STD_SYMBOLS
+
+    taken = set(HAZARD_SMS_SYMBOLS.values()) | {s.rstrip(":") for s in STD_SYMBOLS}
     if candidate not in taken:
         return candidate
     candidate = letters[:3]
@@ -66,5 +97,27 @@ def sms_symbol_for(hazard: str) -> str:
 
 
 # Binaere Gefahren ohne Schweregrad — erscheinen als blankes Kuerzel ohne
-# Doppelpunkt/Stufe (`CL`, nicht `CL:H`) und tragen nie eine Stunde.
+# Doppelpunkt/Stufe (`AB`, nicht `AB:H`) und tragen nie eine Stunde.
 LEVELLESS_HAZARDS = frozenset({"access_ban"})
+
+# Issue #1441: Gefahrenarten mit eigener Ziffern-Skala -- Token `{Kuerzel}{Ziffer}`
+# (`AV4`), ohne Doppelpunkt, ohne L/M/H und ohne Stunde. `LEVEL_LETTERS` und
+# `MIN_SMS_LEVEL` bleiben davon unberuehrt.
+NUMERIC_LEVEL_HAZARDS = frozenset({"avalanche_bulletin"})
+
+
+def alert_entry_token_parts(symbol: str, level: str, hour: "int | None") -> tuple[str, str]:
+    """EINE Grammatik fuer ein Warnblock-Tripel `(Kuerzel, Stufe, Stunde)` aus
+    `official_alerts_to_sms_entries` -> `(Token-Symbol, Token-Wert)`; geteilt von
+    Trip-SMS (`builder._official_alerts`) und Ortsvergleich-SMS
+    (`comparison._official_alert_sms_marker`), Issue #1441:
+
+    - ohne Stufe (`access_ban`)       -> `("AB", "")`        -> `AB`
+    - Ziffern-Skala (Lagebericht)     -> `("AV", "4")`       -> `AV4`
+    - L/M/H-Stufe, optional Stunde    -> `("TS:", "H@14")`   -> `TS:H@14`
+    """
+    if not level:
+        return symbol, ""
+    if level.isdigit():
+        return symbol, level
+    return f"{symbol}:", (level if hour is None else f"{level}@{hour}")

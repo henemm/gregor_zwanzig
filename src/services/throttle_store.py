@@ -22,7 +22,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-from services.file_lock import LOCK_TIMEOUT_SECONDS, acquire_exclusive
+from services.file_lock import (
+    LOCK_TIMEOUT_SECONDS, acquire_exclusive, open_lock_file, share_state_file,
+)
 
 logger = logging.getLogger("throttle_store")
 
@@ -49,7 +51,11 @@ class ThrottleStore:
       belegt; eine Wiederverwendung ließe die beiden Alarmarten einander
       gegenseitig unterdrücken.
 
-    Struktur der Datei: ``{scope: {key: iso_timestamp}}``.
+    Struktur der Datei:
+    ``{scope: {key: {"at": iso, "precip_mm": float|null, "urgency": str|null}}}``
+    (Issue #2065, ``urgency`` seit #2050 S3c). Bestandseintraege im Alt-Format
+    ``{scope: {key: iso}}`` und im #2065-Zwischenformat (ohne ``urgency``)
+    bleiben lesbar.
     """
 
     def __init__(self, user_id: str, data_dir: Optional[Path] = None) -> None:
@@ -68,6 +74,32 @@ class ThrottleStore:
         data = self._load()
         return self._parse(data.get(scope, {}).get(key))
 
+    def last_sent_with_precip(
+        self, scope: str, key: str
+    ) -> tuple[Optional[datetime], Optional[float]]:
+        """Zeitpunkt UND zuletzt gemeldete Menge (Issue #2065).
+
+        Bewusst eine EIGENE Lesemethode statt einer Ueberladung von
+        `last_sent()`: dessen 15+ Aufrufer erwarten ein `datetime`, nicht ein
+        Paar. Bei einem Alt-Eintrag (reiner ISO-String, keine Mengenangabe)
+        ist die Menge `None` — der Aufrufer entscheidet konservativ."""
+        raw = self._load().get(scope, {}).get(key)
+        return self._parse(raw), self._parse_precip(raw)
+
+    def last_sent_with_urgency(
+        self, scope: str, key: str
+    ) -> tuple[Optional[datetime], Optional[str]]:
+        """Zeitpunkt UND Dringlichkeit, mit der die Sperre gebucht wurde
+        (Issue #2050 S3c).
+
+        Schwester von `last_sent_with_precip()` und aus demselben Grund eine
+        eigene Methode: die 15+ Aufrufer von `last_sent()` erwarten ein
+        `datetime`, kein Paar. Bei einem Alt-Eintrag (reiner ISO-String) und
+        bei einem #2065-Eintrag ohne Dringlichkeit ist der zweite Wert `None`
+        — der Aufrufer entscheidet dann konservativ (kein Durchbruch)."""
+        raw = self._load().get(scope, {}).get(key)
+        return self._parse(raw), self._parse_urgency(raw)
+
     def is_throttled(
         self, scope: str, key: str, cooldown_minutes: Optional[int], now: datetime
     ) -> bool:
@@ -81,8 +113,33 @@ class ThrottleStore:
             return False
         return now - last < timedelta(minutes=cooldown_minutes)
 
-    def record(self, scope: str, key: str, now: datetime) -> None:
-        self._update(lambda data: data.setdefault(scope, {}).__setitem__(key, now.isoformat()))
+    def record(
+        self, scope: str, key: str, now: datetime,
+        precip_mm: Optional[float] = None,
+        urgency: Optional[str] = None,
+    ) -> None:
+        """Issue #2065/#2050 S3c: geschrieben wird ausschliesslich das neue
+        Format `{"at": iso, "precip_mm": float|null, "urgency": str|null}`.
+        Aufrufer ohne Mengenangabe (z.B. der Kurzfristhinweis im Briefing)
+        bzw. ohne Dringlichkeit (der amtliche Zweig, `trip_alert.py:2480`)
+        hinterlassen `null` — daraus entsteht spaeter keine Vergleichsbasis.
+
+        `urgency` steht bewusst HINTER `precip_mm`: alle bestehenden Aufrufer
+        uebergeben hoechstens drei Positionsargumente, ein Einschub davor
+        verschoebe die Mengenangabe still."""
+        eintrag = {
+            "at": now.isoformat(),
+            "precip_mm": float(precip_mm) if precip_mm is not None else None,
+            "urgency": str(urgency) if urgency is not None else None,
+        }
+        self._update(lambda data: data.setdefault(scope, {}).__setitem__(key, eintrag))
+
+    def keys(self, scope: str) -> list[str]:
+        """Issue #1405 S1: alle Schluessel eines Scopes (rein lesend, additiv;
+        der Fehlversuchs-Backoff braucht sie fuer den toleranzbasierten
+        Nowcast-Abgleich und das Aufraeumen abgelaufener Eintraege)."""
+        eintraege = self._load().get(scope, {})
+        return list(eintraege) if isinstance(eintraege, dict) else []
 
     def clear(self, scope: str, key: str) -> None:
         def _op(data: dict) -> None:
@@ -107,6 +164,7 @@ class ThrottleStore:
         )
         try:
             with os.fdopen(fd, "w") as f:
+                share_state_file(f.fileno())
                 f.write(json.dumps(data, indent=2))
             os.replace(tmp_name, self._path)
         except OSError:
@@ -133,7 +191,7 @@ class ThrottleStore:
         blanket `except Exception`."""
         self._dir.mkdir(parents=True, exist_ok=True)
         lock_path = str(self._path) + _LOCK_SUFFIX
-        fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+        fd = open_lock_file(lock_path)
         try:
             start = time.monotonic()
             if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
@@ -159,6 +217,10 @@ class ThrottleStore:
 
     @staticmethod
     def _parse(raw: object) -> Optional[datetime]:
+        # Issue #2065: zwei Eintragsformen -- Bestandsdaten tragen den reinen
+        # ISO-String, neue Eintraege ein Objekt mit `at` und `precip_mm`.
+        if isinstance(raw, dict):
+            raw = raw.get("at")
         if not raw or not isinstance(raw, str):
             return None
         try:
@@ -168,6 +230,27 @@ class ThrottleStore:
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt
+
+    @staticmethod
+    def _parse_precip(raw: object) -> Optional[float]:
+        """Menge aus einem Eintrag — `None` fuer Alt-Eintraege (reiner
+        String) und fuer neue Eintraege ohne Mengenangabe (Issue #2065)."""
+        if not isinstance(raw, dict):
+            return None
+        wert = raw.get("precip_mm")
+        if isinstance(wert, bool) or not isinstance(wert, (int, float)):
+            return None
+        return float(wert)
+
+    @staticmethod
+    def _parse_urgency(raw: object) -> Optional[str]:
+        """Dringlichkeit aus einem Eintrag — `None` fuer Alt-Eintraege (reiner
+        String), fuer #2065-Eintraege ohne das Feld und fuer bewusst ohne
+        Dringlichkeit gebuchte Sperren (Issue #2050 S3c)."""
+        if not isinstance(raw, dict):
+            return None
+        wert = raw.get("urgency")
+        return wert if isinstance(wert, str) and wert else None
 
     # --- Migration (lazy, idempotent, beim ersten Zugriff pro Nutzer) ---
 

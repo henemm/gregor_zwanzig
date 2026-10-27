@@ -1,5 +1,5 @@
-"""MeteoAlarmFeedSource — kontingentfreier CAP-Feed fuer Italien+Oesterreich
-(Issue #1445 S1/S3).
+"""MeteoAlarmFeedSource — kontingentfreier CAP-Feed fuer Italien, Oesterreich
+und Deutschland (Issue #1445 S1/S3, #1681).
 
 Ersetzt den kontingentierten EDR-Index-Weg (``meteoalarm.py``) durch
 ``feeds.meteoalarm.org`` -- eine Momentaufnahme ALLER aktuell gueltigen
@@ -30,7 +30,7 @@ from typing import Literal, Optional
 
 import httpx
 
-from services.official_alerts import geosphere_warn, warn_egress
+from services.official_alerts import dwd_zones, geosphere_warn, warn_egress
 from services.official_alerts.department_mapper import lookup_department
 from services.official_alerts.dpc import _zone_at
 from services.official_alerts.meteoalarm import _group_and_map_info_entries
@@ -51,7 +51,13 @@ FEED_BASE_URL = "https://feeds.meteoalarm.org"
 _FEED_PATHS: dict[str, str] = {
     "IT": "/api/v1/warnings/feeds-italy",
     "AT": "/api/v1/warnings/feeds-austria",
+    "DE": "/api/v1/warnings/feeds-germany",
 }
+# Issue #1681: Geocode-Art je Land -- DE ordnet ueber die DWD-``WARNCELLID``
+# zu (1:1 im Feed, traegt die eingecheckte Kreisgeometrie), IT/AT ueber EMMA.
+_GEOCODE_NAME: dict[str, str] = {"IT": "EMMA_ID", "AT": "EMMA_ID", "DE": "WARNCELLID"}
+# Kuesten-/Seezellen (Praefix 501) liegen bewusst nicht in der Kreisgeometrie.
+_DE_COAST_PREFIX = "501"
 TIMEOUT = 15.0  # ~1,4-2,4 MB, kein gzip (Spec Antrag) -- grosszuegiger als schlanke JSON-Quellen
 # Modul-Cache, Konvention analog dpc._cache -- SCHLUESSEL ist der Laender-Code
 # (S3 Implementation Details Punkt 1): ein AT-Abruf und ein IT-Abruf bleiben
@@ -80,6 +86,14 @@ def _zone_for_point(lat: float, lon: float) -> Optional[str]:
         return None
     prefix = zone_code.split("-", 1)[0]
     return _REGION_PREFIX_TO_EMMA.get(prefix)
+
+
+def _zone_for_point_de(lat: float, lon: float) -> Optional[str]:
+    """Punkt -> DWD-``WARNCELLID`` ueber die eingecheckte Kreisgeometrie
+    (Issue #1681). EINE Funktion fuer ``covers()`` UND ``fetch()`` (Spec
+    Implementation Details Punkt 2) -- ``None`` heisst "nicht in Deutschland"
+    (bzw. Kuesten-/Seegebiet), also nicht zustaendig."""
+    return dwd_zones.warncell_at(lat, lon)
 
 
 def _ist_auswertbare_gemeindenr(gemeindenr: object) -> bool:
@@ -142,15 +156,32 @@ def _zone_for_point_at(lat: float, lon: float) -> tuple[Optional[str], bool]:
     return "AT" + str(gemeindenr)[:3], False
 
 
-def _info_entries_from_alert(alert: dict) -> list[dict]:
+def _area_desc(areas: list, zone: Optional[str], geocode_name: str) -> Optional[str]:
+    """``areaDesc`` des Gebiets, dessen Geocode die abgefragte Zone ist --
+    ein DE-Alert nennt oft mehrere Kreise; ohne ``zone`` (IT/AT, unveraendert)
+    das erste Gebiet."""
+    if not areas:
+        return None
+    if zone is not None:
+        for area in areas:
+            if any(g.get("valueName") == geocode_name and str(g.get("value")) == zone
+                   for g in area.get("geocode") or []):
+                return area.get("areaDesc")
+    return areas[0].get("areaDesc")
+
+
+def _info_entries_from_alert(
+    alert: dict, zone: Optional[str] = None, geocode_name: str = "EMMA_ID",
+) -> list[dict]:
     """Baut aus einem Feed-``alert``-Objekt (``info[]``) dieselbe normalisierte
     Info-Struktur wie ``meteoalarm._collect_cap_info_entries`` fuer den
-    XML-Weg -- Voraussetzung fuer die geteilte Gruppieren/Mappen-Funktion."""
+    XML-Weg -- Voraussetzung fuer die geteilte Gruppieren/Mappen-Funktion.
+    Issue #1681: ``responseType`` wird mitgefuehrt (AllClear-Filter im
+    geteilten Umsetzer)."""
     entries: list[dict] = []
     for info in alert.get("info") or []:
         params = {p.get("valueName"): p.get("value") for p in info.get("parameter") or []}
-        areas = info.get("area") or []
-        area_desc = areas[0].get("areaDesc") if areas else None
+        area_desc = _area_desc(info.get("area") or [], zone, geocode_name)
         entries.append({
             "lang": info.get("language") or "",
             "event": info.get("event"),
@@ -160,20 +191,44 @@ def _info_entries_from_alert(alert: dict) -> list[dict]:
             "area_desc": area_desc,
             "level_raw": params.get("awareness_level"),
             "type_raw": params.get("awareness_type"),
+            "response_type": info.get("responseType"),
         })
     return entries
 
 
-def _emma_ids_for_alert(alert: dict) -> set[str]:
-    """Alle EMMA-Zonen-IDs, die dieser Warnung zugeordnet sind (ueber jeden
-    ``info[].area[].geocode[]`` mit ``valueName == "EMMA_ID"``)."""
+def _emma_ids_for_alert(alert: dict, geocode_name: str = "EMMA_ID") -> set[str]:
+    """Alle Zonen-IDs, die dieser Warnung zugeordnet sind (ueber jeden
+    ``info[].area[].geocode[]`` mit ``valueName == geocode_name``; Issue
+    #1681: ``WARNCELLID`` fuer DE, sonst ``EMMA_ID``)."""
     ids: set[str] = set()
     for info in alert.get("info") or []:
         for area in info.get("area") or []:
             for geocode in area.get("geocode") or []:
-                if geocode.get("valueName") == "EMMA_ID" and geocode.get("value"):
-                    ids.add(geocode["value"])
+                if geocode.get("valueName") == geocode_name and geocode.get("value"):
+                    ids.add(str(geocode["value"]))
     return ids
+
+
+_de_drift_checked: dict = {}
+
+
+def _log_de_warncell_drift(feed: dict) -> None:
+    """Drift-Waechter (Issue #1681, AC-9): jede ``WARNCELLID`` im Feed, die
+    weder in der eingecheckten Kreisgeometrie liegt noch eine bekannte
+    Kuestenzelle (``501...``) ist, landet im Warn-Dienst-Journal. Laeuft auf
+    dem Auswertungspfad (auch bei Cache-Treffer). Kein Ausfall-Signal.
+    Einmal je Feed-Momentaufnahme, nicht je Wegpunkt (sonst flutet eine
+    Tour mit N Punkten das Journal N-fach)."""
+    if _de_drift_checked.get("feed") is feed:  # Referenz statt id(): keine Wiederverwendung
+        return
+    _de_drift_checked["feed"] = feed
+    for warning in feed.get("warnings") or []:
+        alert = warning.get("alert") if isinstance(warning, dict) else None
+        if not isinstance(alert, dict) or not isinstance(alert.get("info"), list):
+            continue
+        for cell in _emma_ids_for_alert(alert, "WARNCELLID"):
+            if cell not in dwd_zones.KNOWN_WARNCELLIDS and not cell.startswith(_DE_COAST_PREFIX):
+                warn_egress.log_zone_drift("meteoalarm_feed:DE", cell, True, "unknown_warncell")
 
 
 def _parse_feed(resp: httpx.Response) -> dict:
@@ -215,7 +270,7 @@ def _get_cached_feed(country: str) -> Optional[dict]:
     )
 
 
-def _alerts_for_zone(feed: dict, zone: str) -> list[OfficialAlert]:
+def _alerts_for_zone(feed: dict, zone: str, country: str = "IT") -> list[OfficialAlert]:
     """Wertet eine Feed-Momentaufnahme fuer EINE Zone aus -- geteilter
     Malformations-/Reihenfolge-Schutz (F003/F005 aus S1) fuer BEIDE Laender,
     EIN Codepfad (S3 Implementation Details Punkt 2, letzter Absatz)."""
@@ -234,12 +289,15 @@ def _alerts_for_zone(feed: dict, zone: str) -> list[OfficialAlert]:
         # Liste, koennen wir die betroffenen Zonen unabhaengig von sonstiger
         # Malformation ermitteln.
         if info_is_list:
-            emma_ids = _emma_ids_for_alert(alert)
+            geocode_name = _GEOCODE_NAME.get(country, "EMMA_ID")
+            emma_ids = _emma_ids_for_alert(alert, geocode_name)
             if emma_ids:
                 if zone in emma_ids:
-                    alerts.extend(
-                        _group_and_map_info_entries(_info_entries_from_alert(alert))
-                    )
+                    # DE: areaDesc des abgefragten Kreises (mehrere je Alert).
+                    area_zone = zone if country == "DE" else None
+                    alerts.extend(_group_and_map_info_entries(
+                        _info_entries_from_alert(alert, area_zone, geocode_name)
+                    ))
                 # sonst: nachweislich eine ANDERE Zone -- geht uns nichts an.
                 continue
             # info ist eine Liste, traegt aber KEIN einziges Geocode --
@@ -278,7 +336,7 @@ class MeteoAlarmFeedSource:
     Abrufweg aendert sich. Ein Code, zwei Instanzen ueber den
     Konstruktor-Parameter ``country``."""
 
-    def __init__(self, country: Literal["IT", "AT"]) -> None:
+    def __init__(self, country: Literal["IT", "AT", "DE"]) -> None:
         self.country = country
 
     @property
@@ -314,6 +372,9 @@ class MeteoAlarmFeedSource:
         strenger als jede einzelne."""
         if self.country == "AT":
             return _INCA_LAT_MIN <= lat <= _INCA_LAT_MAX and _INCA_LON_MIN <= lon <= _INCA_LON_MAX
+        if self.country == "DE":
+            # Issue #1681: dieselbe Zonenfunktion wie fetch() -- keine Bbox.
+            return _zone_for_point_de(lat, lon) is not None
         if lookup_department(lat, lon) is not None:
             return False
         return _zone_for_point(lat, lon) is not None
@@ -330,6 +391,18 @@ class MeteoAlarmFeedSource:
             if zone is None:
                 # Fall 1: ZAMG antwortet "nicht zustaendig" (404) -- kein
                 # Ausfall, einfach keine oesterreichischen Warnungen hier.
+                # Issue #1681: nicht zustaendig => kompensiert keinen Ausfall.
+                warn_egress.mark_not_covered()
+                return []
+        elif self.country == "DE":
+            zone = _zone_for_point_de(lat, lon)
+            if zone is None:
+                # Ausland/See: konsistent mit covers() -- nicht zustaendig,
+                # kein Ausfall (AC-4). Ueber die Registry unerreichbar
+                # (base.py ruft fetch() nur nach covers() == True mit
+                # derselben Zonenfunktion) -- bleibt nur, damit direkte
+                # Aufrufe keinen 5-MB-Feedabruf ausloesen; daher bewusst
+                # KEIN mark_not_covered() (Adversary F001).
                 return []
         else:
             zone = _zone_for_point(lat, lon)
@@ -349,4 +422,6 @@ class MeteoAlarmFeedSource:
         feed = _get_cached_feed(self.country)
         if feed is None:
             return []
-        return _alerts_for_zone(feed, zone)
+        if self.country == "DE":
+            _log_de_warncell_drift(feed)
+        return _alerts_for_zone(feed, zone, self.country)

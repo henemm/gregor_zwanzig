@@ -19,7 +19,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 import {
@@ -29,8 +30,15 @@ import {
 	addRow,
 	ROUTE_CTX_DEFAULTS,
 	ROUTE_METRIC_DEFS,
+	ORDINAL_ENUM,
 	type RouteMetricDef,
 } from '../corridorEditorState.ts';
+
+// AC-6 Test A: Zielstufen der Migration werden gegen die kanonische Enum-
+// Quelle abgeleitet, nicht gegen eigene Zahlenliterale — eine zusaetzliche
+// Stufe in ORDINAL_ENUM verschiebt die Bedeutung nicht still.
+const MED_ORDINAL = ORDINAL_ENUM.indexOf('MED');
+const HIGH_ORDINAL = ORDINAL_ENUM.indexOf('HIGH');
 
 const MODULE_SPECIFIER = '../compareMetricCatalogLoader.ts';
 
@@ -550,21 +558,33 @@ describe('Scheibe B / AC-4: Standardwert einer neu hinzugefuegten Gewitter-Zeile
 });
 
 describe('Scheibe B / AC-3: Alt-Korridore werden beim Laden umgeschluesselt und umgerechnet', () => {
-	// Prozent -> Stufe (Spec § Implementation Details Punkt 3):
-	//   null -> null · 0|1|2 unveraendert · 0-33 -> 0 · 34-66 -> 1 · 67-100 -> 2
-	const MIGRATION_CASES: Array<{ from: [number | null, number | null]; to: [number | null, number | null]; why: string }> = [
-		{ from: [null, 40], to: [null, 1], why: 'die alte Vorgabe "bis 40 %" wird "bis mittel"' },
-		{ from: [null, 0], to: [null, 0], why: '0 ist bereits ordinal (kein) und bleibt' },
-		{ from: [null, 1], to: [null, 1], why: '1 ist bereits ordinal (mittel) und bleibt' },
-		{ from: [null, 2], to: [null, 2], why: '2 ist bereits ordinal (hoch) und bleibt' },
+	// Prozent -> Stufe (Spec § Implementation Details Punkt 1, #2012-Korrektur):
+	//   null -> null · JEDE Zahl als Prozent gedeutet (kein "schon ordinal"-
+	//   Sonderzweig mehr) · 0-33 -> 0 (kein) · 34-66 -> 2 (mittel) · 67-100 -> 3 (hoch)
+	//   Stufe 1 ("leicht") ist ueber die Migration nie erreichbar (Spec Punkt 4).
+	const MIGRATION_CASES: Array<{
+		from: [number | null, number | null];
+		to: [number | null, number | null];
+		why: string;
+		word?: string;
+	}> = [
+		{ from: [null, 40], to: [null, MED_ORDINAL], why: 'die alte Vorgabe "bis 40 %" wird "bis mittel" (AC-1)', word: 'mittel' },
+		{ from: [null, 0], to: [null, 0], why: '0 Prozent liegt im ersten Drittel -> kein' },
+		{
+			from: [null, 1],
+			to: [null, 0],
+			why: 'der einzige Produktivwert (1 Prozent) liegt im ersten Drittel -> kein, NICHT mehr "bereits ordinal (mittel)" (AC-2)',
+			word: 'kein',
+		},
+		{ from: [null, 2], to: [null, 0], why: '2 Prozent liegt im ersten Drittel -> kein, NICHT mehr "bereits ordinal (hoch)"' },
 		{ from: [null, 33], to: [null, 0], why: 'oberes Ende des ersten Drittels -> kein' },
-		{ from: [null, 34], to: [null, 1], why: 'unteres Ende des zweiten Drittels -> mittel' },
-		{ from: [null, 66], to: [null, 1], why: 'oberes Ende des zweiten Drittels -> mittel' },
-		{ from: [null, 67], to: [null, 2], why: 'unteres Ende des dritten Drittels -> hoch' },
-		{ from: [null, 100], to: [null, 2], why: 'Prozent-Maximum -> hoch' },
+		{ from: [null, 34], to: [null, MED_ORDINAL], why: 'unteres Ende des zweiten Drittels -> mittel' },
+		{ from: [null, 66], to: [null, MED_ORDINAL], why: 'oberes Ende des zweiten Drittels -> mittel' },
+		{ from: [null, 67], to: [null, HIGH_ORDINAL], why: 'unteres Ende des dritten Drittels -> hoch' },
+		{ from: [null, 100], to: [null, HIGH_ORDINAL], why: 'Prozent-Maximum -> hoch (AC-3, Stufe "hoch" erstmals erreichbar)', word: 'hoch' },
 		{ from: [null, null], to: [null, null], why: 'beidseitig offen bleibt beidseitig offen' },
-		{ from: [50, null], to: [1, null], why: 'auch die Untergrenze wird umgerechnet' },
-		{ from: [0, 100], to: [0, 2], why: 'beide Grenzen unabhaengig voneinander' },
+		{ from: [50, null], to: [MED_ORDINAL, null], why: 'auch die Untergrenze wird umgerechnet' },
+		{ from: [0, 100], to: [0, HIGH_ORDINAL], why: 'beide Grenzen unabhaengig voneinander (AC-5)' },
 	];
 
 	for (const c of MIGRATION_CASES) {
@@ -588,6 +608,15 @@ describe('Scheibe B / AC-3: Alt-Korridore werden beim Laden umgeschluesselt und 
 				false,
 				'AC-3 FAIL: die Zeile traegt noch den alten Prozent-Schluessel'
 			);
+			// AC-1/AC-2: das ANGEZEIGTE Stufenwort pruefen, nicht nur den nackten
+			// Index — der Alt-Test blieb seit #1474 gruen, weil er nur Zahlen verglich.
+			if (c.word != null && c.to[1] != null) {
+				assert.equal(
+					row!.ordinalLabels?.[c.to[1] as number],
+					c.word,
+					`AC-1/AC-2 FAIL: angezeigtes Stufenwort fuer Index ${c.to[1]} ist nicht "${c.word}"`
+				);
+			}
 		});
 	}
 
@@ -626,7 +655,7 @@ describe('Scheibe B / AC-3: Alt-Korridore werden beim Laden umgeschluesselt und 
 		);
 		assert.equal(gewitter.length, 1, `AC-3 FAIL: ${gewitter.length} Gewitter-Eintraege gespeichert statt genau einem`);
 		assert.equal(gewitter[0].metric, 'thunder_level_max');
-		assert.deepEqual(gewitter[0].range, [null, 1]);
+		assert.deepEqual(gewitter[0].range, [null, MED_ORDINAL]);
 		assert.equal(gewitter[0].notify, true, 'notify/mark der Alt-Zeile muessen erhalten bleiben');
 		assert.equal(gewitter[0].mark, true);
 		// Die Nachbar-Zeile bleibt unberuehrt.
@@ -662,3 +691,91 @@ describe('Scheibe B / AC-3: Alt-Korridore werden beim Laden umgeschluesselt und 
 		assert.equal(row!.max, 40, 'die 40 km/h Boeen-Grenze darf nicht zu einer Stufe verrechnet werden');
 	});
 });
+
+// AC-6 Test A-2 (F001-Fix, Adversary-Mutation): Test A oben vergleicht das
+// Migrationsergebnis gegen MED_ORDINAL/HIGH_ORDINAL — beides Werte, die die
+// Testdatei SELBST per ORDINAL_ENUM.indexOf(...) berechnet und die mit dem
+// heutigen Stand ['NONE','LOW','MED','HIGH'] zufaellig mit den Zahlenliteralen
+// 2/3 uebereinstimmen. Ein Produktivcode, der `return (1 + 1);` /
+// `return (1 + 2);` statt `ORDINAL_ENUM.indexOf('MED'|'HIGH')` zurueckgibt,
+// bleibt fuer Test A unsichtbar, weil BEIDE Seiten denselben Zahlenwert
+// liefern. Dieser Test verschiebt die kanonische Skala selbst (eine
+// eingeschobene Zwischenstufe VOR 'MED' verschiebt MED UND HIGH je um +1
+// Index) und importiert eine Kopie des Moduls mit der verschobenen Skala
+// dynamisch — nur eine echte `ORDINAL_ENUM.indexOf(...)`-Kopplung liefert
+// dann noch die richtigen, neuen Indizes.
+describe('AC-6 Test A-2: die Migration folgt einer VERSCHOBENEN ORDINAL_ENUM (Kopplungsnachweis)', () => {
+	const CORRIDOR_STATE_PATH = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'corridorEditorState.ts');
+	const ENUM_LINE = "export const ORDINAL_ENUM = ['NONE', 'LOW', 'MED', 'HIGH'] as const;";
+	const SHIFTED_ENUM_LINE = "export const ORDINAL_ENUM = ['NONE', 'LOW', 'SEVERE', 'MED', 'HIGH'] as const;";
+	// F003 (Adversary Runde 2): die temporaere Modulkopie darf NICHT in
+	// corridor-editor/ selbst liegen -- genau diesen Ordner scannt
+	// thunderScaleLocalCopyGuard.test.ts unter Regel A/P/C als Produktivcode.
+	// Bricht dieser Testprozess vor dem `finally` hart ab (CI-Timeout,
+	// SIGKILL), bleibt die Kopie liegen und der Waechter meldet sie
+	// faelschlich als neuen lokalen ORDINAL_ENUM-Nachbau -- ein fälschlich
+	// blockierendes Gate fuer eine ANDERE Sitzung. Ablage daher im eigenen
+	// __tests__-Verzeichnis: istTestdatei() in thunderScaleLocalCopyGuard
+	// schliesst jeden Pfad mit "__tests__" von der A/P/C-Scanflaeche aus
+	// (nur Regel D laeuft dort, und die verlangt eine Paritaets-BEHAUPTUNG im
+	// Kommentar, die diese Datei nicht traegt). corridorEditorState.ts
+	// importiert ausschliesslich ueber die $lib/*-Aliasse (global per
+	// test-lib-loader.mjs aufgeloest, nicht relativ zum Dateiort) -- die
+	// Ablage im __tests__-Ordner aendert an der Aufloesbarkeit nichts.
+	const TMP_PATH = resolve(
+		dirname(fileURLToPath(import.meta.url)),
+		`corridorEditorState.__tmp_ac6_shifted_${process.pid}.ts`
+	);
+
+	test('eine vor "MED" eingeschobene Stufe verschiebt MED (2->3) UND HIGH (3->4) — die Migration muss folgen', async () => {
+		const original = readFileSync(CORRIDOR_STATE_PATH, 'utf-8');
+		assert.ok(
+			original.includes(ENUM_LINE),
+			'Testannahme verletzt: ORDINAL_ENUM-Deklaration in corridorEditorState.ts hat sich veraendert — Test anpassen'
+		);
+		const shiftedSource = original.replace(ENUM_LINE, SHIFTED_ENUM_LINE);
+		writeFileSync(TMP_PATH, shiftedSource, 'utf-8');
+		try {
+			const mod: typeof import('../corridorEditorState.ts') = await import(pathToFileURL(TMP_PATH).href);
+			const shiftedMed = mod.ORDINAL_ENUM.indexOf('MED' as never);
+			const shiftedHigh = mod.ORDINAL_ENUM.indexOf('HIGH' as never);
+			assert.equal(shiftedMed, 3, 'Testannahme verletzt: MED verschiebt sich nicht wie erwartet von 2 auf 3');
+			assert.equal(shiftedHigh, 4, 'Testannahme verletzt: HIGH verschiebt sich nicht wie erwartet von 3 auf 4');
+
+			const extraDefs = await routeExtraDefs();
+			const rowMed = mod
+				.buildRoutePool([{ metric: 'thunder_level', range: [null, 40], notify: true, mark: true }], undefined, extraDefs)
+				.rows.find((r) => r.metric === 'thunder_level_max');
+			assert.ok(rowMed, 'AC-6 FAIL: die migrierte Zeile fehlt in der verschobenen Skala (MED-Fall)');
+			assert.equal(
+				rowMed!.max,
+				shiftedMed,
+				'AC-6 FAIL: "bis 40%" migriert nicht auf den NEUEN Index von MED (3) — die Migration ' +
+					'haengt an einer festen Zahl statt an ORDINAL_ENUM.indexOf(\'MED\')'
+			);
+
+			const rowHigh = mod
+				.buildRoutePool([{ metric: 'thunder_level', range: [null, 100], notify: true, mark: true }], undefined, extraDefs)
+				.rows.find((r) => r.metric === 'thunder_level_max');
+			assert.ok(rowHigh, 'AC-6 FAIL: die migrierte Zeile fehlt in der verschobenen Skala (HIGH-Fall)');
+			assert.equal(
+				rowHigh!.max,
+				shiftedHigh,
+				'AC-6 FAIL: "bis 100%" migriert nicht auf den NEUEN Index von HIGH (4) — die Migration ' +
+					'haengt an einer festen Zahl statt an ORDINAL_ENUM.indexOf(\'HIGH\')'
+			);
+		} finally {
+			rmSync(TMP_PATH, { force: true });
+		}
+	});
+});
+
+// AC-6 Test B (reiner Quelltext-Scan auf percentBoundToOrdinal()) ist mit
+// #2012-Adversary-Runde-2/F002 ersatzlos entfernt: sechs Mutationen fanden
+// keinen Fall, den Test B fing und Test A-2 oben (Verhaltensprüfung gegen
+// eine VERSCHOBENE ORDINAL_ENUM) nicht auch fing — Test B blockierte
+// zugleich korrekten, aequivalenten Code (z. B. eine ausgelagerte Konstante
+// `const MED_STAGE = ORDINAL_ENUM.indexOf('MED'); return MED_STAGE;`) als
+// Falsch-Positiv. Test A-2 traegt die Zusicherung jetzt allein — Nachweis
+// (3 Mutationen, alle von Test A-2 gefangen) in
+// docs/specs/modules/fix_2012_gewitter_stufen_migration.md, AC-6.

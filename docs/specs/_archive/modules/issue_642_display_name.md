@@ -3,7 +3,7 @@ entity_id: issue_642_display_name
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [auth, profile, user, frontend, go-api]
 ---

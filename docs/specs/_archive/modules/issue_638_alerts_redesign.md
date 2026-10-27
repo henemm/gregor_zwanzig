@@ -3,7 +3,7 @@ entity_id: issue_638_alerts_redesign
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, frontend, backend, schema, channels, severity]
 ---

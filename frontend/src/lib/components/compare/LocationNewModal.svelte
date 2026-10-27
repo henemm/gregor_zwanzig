@@ -8,7 +8,7 @@
 
 	import type { ActivityProfile } from '$lib/types.js';
 	import { ACTIVITY_PROFILE_OPTIONS } from '$lib/types.js';
-	import { api } from '$lib/api.js';
+	import { api, ZEITLIMIT_ORT_AUFLOESEN_MS } from '$lib/api.js';
 	import { Eyebrow, Pill, KV, TopoBg, Btn, Card } from '$lib/components/atoms';
 
 	interface Props {
@@ -41,7 +41,10 @@
 		if (!importInput.trim() || resolving) return;
 		resolving = true;
 		try {
-			const result = await api.post<ResolveResult>('/api/locations/resolve', { input: importInput });
+			// #2361: eigenes Budget 40 s (Resolver bis ca. 30 s), s. api.ts.
+			const result = await api.post<ResolveResult>('/api/locations/resolve', { input: importInput }, {
+				zeitlimitMs: ZEITLIMIT_ORT_AUFLOESEN_MS
+			});
 			resolvedPreview = result;
 			if (result.suggested_name && !nameInput.trim()) nameInput = result.suggested_name;
 		} catch {

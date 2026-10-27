@@ -92,7 +92,7 @@ test.describe('Issue #1728 Scheibe 2: "05 — Auswertungen" entfällt, fünf neu
 		const id = tripId('ac7');
 		await createTrip(request, id);
 		try {
-			await page.goto(`/trips/${id}?tab=weather`);
+			await page.goto(`/trips/${id}?tab=wetter-metriken`);
 			await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 
 			// Eyebrow-Überschrift "05 — Auswertungen" darf nicht mehr vorkommen.
@@ -114,7 +114,7 @@ test.describe('Issue #1728 Scheibe 2: "05 — Auswertungen" entfällt, fünf neu
 		const id = tripId('ac1to5');
 		await createTrip(request, id);
 		try {
-			await page.goto(`/trips/${id}?tab=weather`);
+			await page.goto(`/trips/${id}?tab=wetter-metriken`);
 			await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 			await expect(page.getByText('04 — Schwellwerte', { exact: false })).toBeVisible();
 
@@ -161,7 +161,7 @@ test.describe('Issue #1728 Scheibe 2: "05 — Auswertungen" entfällt, fünf neu
 		const putAbwahl = await request.put(`/api/trips/${id}`, { data: withoutFN });
 		expect(putAbwahl.ok()).toBeTruthy();
 		try {
-			await page.goto(`/trips/${id}?tab=weather`);
+			await page.goto(`/trips/${id}?tab=wetter-metriken`);
 			await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 
 			await expect(

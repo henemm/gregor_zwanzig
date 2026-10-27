@@ -59,10 +59,11 @@ def test_ac5_1474b_nur_leicht_loest_den_uhrzeit_satz_am_standard_trip_aus():
     result = _pill_for_metric("thunder", {}, _dps_only_low(), tz=TZ)
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
-    # #1493: der Satz traegt jetzt das Stufenwort ("Gewitter leicht ab
-    # HH:00") -- die Aussage dieses Tests (Satz erscheint bei reinem LOW)
-    # bleibt, das erwartete Zeichenmuster zieht mit.
-    assert "Gewitter leicht ab" in text, (
+    # #1493 trug das Stufenwort nach ("Gewitter leicht ab HH:00"); #2176 nimmt
+    # die Ereignisbehauptung heraus. Die Aussage dieses Tests (der Uhrzeit-Satz
+    # erscheint schon bei reinem LOW) bleibt, das Zeichenmuster zieht mit --
+    # die Stunde ist mitgebunden, sonst bliebe von der Schwellenaussage nichts.
+    assert "Schwaches Signal (leicht) ab 12:00" in text, (
         "Der Uhrzeit-Satz muss am Standard-Trip schon bei reinem 'leicht' "
         f"(LOW) erscheinen. Erhalten: {text!r}"
     )

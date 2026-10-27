@@ -3,7 +3,7 @@ entity_id: ampel_schwellen_renderer
 type: module
 created: 2026-07-29
 updated: 2026-07-29
-status: draft
+status: implemented
 version: "1.0"
 tags: [ampel, schwellen, renderer, issue-1377, epic-1374]
 ---
@@ -265,7 +265,7 @@ im Ortsvergleich bzw. unverändert), Gewitter (bewusst ausgenommen, s.
 
 ## Acceptance Criteria
 
-- **AC-1 (Regenwahrscheinlichkeit):** Given eine Regenwahrscheinlichkeit von 45 % /
+- **AC-1:** (Regenwahrscheinlichkeit) Given eine Regenwahrscheinlichkeit von 45 % /
   When Trip-Stundentabelle und Ortsvergleichs-Matrix für denselben Wert gerendert
   werden / Then zeigen beide „gelb" — heute zeigt die Trip-Zelle bei 45 % noch
   keine Farbe (Schwelle erst ab 50 %), der Ortsvergleich bereits gelb (Schwelle
@@ -273,7 +273,7 @@ im Ortsvergleich bzw. unverändert), Gewitter (bewusst ausgenommen, s.
   - Test: Renderer-Aufruf für Trip-Zelle und für `compare_html._sev_pop(45)` mit
     demselben Erwartungswert `"yellow"` bzw. dem entsprechenden Compare-Tag
 
-- **AC-2 (Regen):** Given 1,5 mm Niederschlag in einer Stunde / When Trip-Zelle,
+- **AC-2:** (Regen) Given 1,5 mm Niederschlag in einer Stunde / When Trip-Zelle,
   Ortsvergleichs-Matrix und Ausblick-Tabelle für denselben Wert gerendert werden /
   Then zeigen alle drei „gelb" — heute zeigt der Ausblick bei 1,5 mm noch keine
   Farbe (Schwelle erst ab 2 mm), Trip-Zelle und Vergleich zeigen schon gelb
@@ -281,21 +281,21 @@ im Ortsvergleich bzw. unverändert), Gewitter (bewusst ausgenommen, s.
   - Test: drei Renderer-Aufrufe (Zelle, `_sev_rain`, `render_outlook_table`) mit
     identischem Eingabewert und identischer erwarteter Stufe
 
-- **AC-3 (Wind):** Given 35 km/h Wind / When Trip-Zelle und Ortsvergleichs-Matrix
+- **AC-3:** (Wind) Given 35 km/h Wind / When Trip-Zelle und Ortsvergleichs-Matrix
   für denselben Wert gerendert werden / Then zeigen beide „gelb" — heute zeigt die
   Trip-Zelle „orange" (eigene Schwelle >30 km/h), der Ortsvergleich bereits „gelb"
   (Katalog-Schwelle, seit #1214 migriert).
   - Test: Renderer-Aufruf für die Trip-Zelle bei 35 km/h liefert dieselbe Stufe wie
     `severity_for("wind", 35) == "yellow"`
 
-- **AC-4 (Sichtweite):** Given eine Sichtweite von 1500 m / When Trip-Zelle und
+- **AC-4:** (Sichtweite) Given eine Sichtweite von 1500 m / When Trip-Zelle und
   Ortsvergleichs-Matrix für denselben Wert gerendert werden / Then zeigen beide
   „gelb" — heute zeigt die Trip-Zelle „gelb" (eigene Schwelle <2000 m), der
   Ortsvergleich aber „orange" (eigene Schwelle <3000 m).
   - Test: Renderer-Aufruf für die Trip-Zelle bei 1500 m und `_sev_visibility(1500)`
     liefern dieselbe Stufe
 
-- **AC-5 (Temperatur/gefühlte Temperatur):** Given 32 °C gemessene und 32 °C
+- **AC-5:** (Temperatur/gefühlte Temperatur) Given 32 °C gemessene und 32 °C
   gefühlte Temperatur / When die Klartext-Kachel und die Ortsvergleichs-Matrix für
   denselben Wert gerendert werden / Then zeigen alle drei (Kachel-Temperatur,
   Kachel-gefühlte-Temperatur, Vergleichs-Zelle) „orange" — heute bleibt die Kachel
@@ -305,14 +305,14 @@ im Ortsvergleich bzw. unverändert), Gewitter (bewusst ausgenommen, s.
     `_pill_for_metric("wind_chill", …)` zurückgelieferte Tönung entspricht „orange",
     nicht der bisherigen `_PILL_NEUTRAL_TONE`
 
-- **AC-6 (Ausblick folgt Stundentabelle):** Given ein Ausblick-Tag mit 1,5 mm
+- **AC-6:** (Ausblick folgt Stundentabelle) Given ein Ausblick-Tag mit 1,5 mm
   Niederschlag / When die Ausblick-Tabelle gerendert wird / Then ist die
   Niederschlags-Zelle „gelb" statt wie bisher ungefärbt — identisch zur
   entsprechenden Stundentabellen-Zelle desselben Werts.
   - Test: `render_outlook_table`-Aufruf mit precip_mm=1.5; Zellhintergrund ist
     nicht mehr leer
 
-- **AC-7 (Gewitter unverändert durch diese Umstellung):** Given ein
+- **AC-7:** (Gewitter unverändert durch diese Umstellung) Given ein
   Trip-Briefing und ein Ortsvergleich mit identischer Gewitterlage (z.B. Stufe
   „hoch") / When beide Mails gerendert werden / Then ist die Gewitter-Färbung
   in beiden exakt wie vor dieser Änderung — Gewitter ist ausdrücklich nicht
@@ -339,7 +339,7 @@ im Ortsvergleich bzw. unverändert), Gewitter (bewusst ausgenommen, s.
     `_row_risk` (Punkt), dieser Workflow für die Zell-Tönung (noch nicht
     committet).
 
-- **AC-8 (Metriken ohne Schwellen bleiben neutral — Regressionsschutz):** Given
+- **AC-8:** (Metriken ohne Schwellen bleiben neutral — Regressionsschutz) Given
   eine Größe ohne hinterlegte Warnschwellen im Katalog (z.B. Taupunkt oder
   Sonnenscheindauer) / When die Klartext-Kachel dafür gerendert wird / Then bleibt
   sie neutral — sie wird nie grün eingefärbt, obwohl ein gültiger Messwert
@@ -352,7 +352,7 @@ im Ortsvergleich bzw. unverändert), Gewitter (bewusst ausgenommen, s.
     niemals eine Ampel-Tönung; zusätzlich `severity_for("dewpoint", …) is None`
     und `severity_for("sunshine", …) is None`
 
-- **AC-9 (Golden-Mails):** Given die fünf bestehenden Mail-Schnappschüsse in
+- **AC-9:** (Golden-Mails) Given die fünf bestehenden Mail-Schnappschüsse in
   `tests/golden/email/` / When sie nach der Änderung neu erzeugt werden / Then
   unterscheiden sie sich ausschließlich in den fünf in „Sichtbare Wirkung"
   genannten Größen (Regenwahrscheinlichkeit, Regen, Wind, Sichtweite, Temperatur/
@@ -360,7 +360,7 @@ im Ortsvergleich bzw. unverändert), Gewitter (bewusst ausgenommen, s.
   - Test: Golden-Vergleich; jede Abweichung außerhalb dieser fünf Größen lässt den
     Test fehlschlagen
 
-- **AC-10 (`_row_risk` bekommt einen direkten Test):** Given zwei Testzeilen — eine
+- **AC-10:** (`_row_risk` bekommt einen direkten Test) Given zwei Testzeilen — eine
   mit 25 km/h Wind und sonst unauffälligen Werten, eine mit exakt 30 km/h Böen und
   sonst unauffälligen Werten / When der Risiko-Punkt am Zeilenende für beide
   berechnet wird / Then zeigt die erste künftig „unauffällig" statt wie bisher

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import date as date_type
 from datetime import datetime, time, timedelta, timezone
-from typing import Any
+from typing import Any, Optional
 
 from app.models import (
     ChangeSeverity,
@@ -25,7 +25,11 @@ from app.profile import ActivityProfile
 from app.trip import Trip
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.alert.model import AlertMessage, OnsetEvent
-from output.renderers.alert.project import to_alert_message
+from output.renderers.alert.project import (
+    event_end_display,  # Issue #2051 S1
+    location_sharpness_display, source_reach_display,  # Issue #2051 S3
+    to_alert_message,
+)
 from output.renderers.alert.render import (
     render_email,
     render_sms,
@@ -33,10 +37,14 @@ from output.renderers.alert.render import (
     render_telegram,
 )
 from output.renderers.email.compare_html import render_compare_html
-from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC
+from app.metric_catalog import SMS_FORMAT_MODE_METRIC_IDS
+from output.renderers.sms_trip import (
+    SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC, sms_format_fields,
+)
 from output.tokens.builder import build_token_line
 from output.tokens.dto import DailyForecast, HourlyValue, MetricSpec, NormalizedForecast
 from output.tokens.render import render_line_with_survivors
+from services.rain_extent import RainZone  # Issue #2051 S2b
 from utils.timezone import local_fmt, tz_for_coords
 
 
@@ -89,6 +97,8 @@ def _stub_segment(seg_time: Any) -> SegmentWeatherData:
 def render_alert_preview(
     trip_obj: Trip,
     body: Any,
+    *,
+    user_id: Optional[str] = None,
 ) -> dict:
     """Render alert preview across all channels.
 
@@ -96,6 +106,11 @@ def render_alert_preview(
     Issue #1948 Scheibe S2: ``official`` (Zweig b) und ``nowcast_frames``
     (Zweig c) sind zwei weitere exklusive Payload-Typen neben ``onset``
     und ``changes`` — der Router garantiert bereits Vier-Wege-Exklusivitaet.
+
+    Issue #1737 (Spec v1.1 Schritt 8): ``user_id`` ist die ECHTE Nutzer-
+    Kennung des Auth-Kontexts. Nur mit ihr beschafft der ``changes``-Zweig
+    Anker und frische Reihe serverseitig (wie der Versand) und zeigt
+    Stundenzeilen; ``None`` = keine Stundenreihen (nie ``"default"``).
     """
     if getattr(body, "official", None):
         return _render_official_preview(trip_obj, body.official)
@@ -103,7 +118,10 @@ def render_alert_preview(
         return _render_nowcast_replay(trip_obj, body.nowcast_frames)
 
     alert_tz = _alert_tz_for_trip(trip_obj)
-    stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
+    # Issue #2020 Scheibe 2: dieselbe Referenzzeit fuer Stand-Zeile und
+    # Zeitbezug der Vorschau (Muster `notification_service`).
+    now_utc = datetime.now(timezone.utc)
+    stand_at = local_fmt(now_utc, alert_tz)
     has_onset = body.onset is not None
 
     if has_onset:
@@ -115,6 +133,72 @@ def render_alert_preview(
             is_convective=body.onset.is_convective,
             intensity_label=body.onset.intensity_label,
             source_label=body.onset.source_label,
+            # #1948 S5 (AC-15): die Segment-Kennung des Payloads erreicht das
+            # Event -- sonst faellt der Ortskopf auf "km N-M" zurueck.
+            segment_id=getattr(body.onset, "segment_id", None),
+            # Issue #2046: Mengenangabe der Kurznachricht. `getattr`, weil
+            # dieser Zweig sowohl den API-Payload (`OnsetPayload`) als auch
+            # den Replay-SimpleNamespace bedient -- Muster `segment_id` o.
+            onset_precip_mm=getattr(body.onset, "onset_precip_mm", None),
+            # Issue #2054: Tagesbezug des Beginns UND seine Darstellung --
+            # ohne beides zeigt die Vorschau eine andere Schreibweise als der
+            # Versand. `getattr` aus demselben Grund wie oben.
+            onset_day_offset=getattr(body.onset, "onset_day_offset", 0),
+            onset_weekday=getattr(body.onset, "onset_weekday", None),
+            # Issue #2051 S1: Ende-Angabe des Payloads, `getattr` aus
+            # demselben Grund wie oben (API-Payload UND Replay-Namespace).
+            event_end_time=getattr(body.onset, "event_end_time", None),
+            event_end_day_offset=getattr(
+                body.onset, "event_end_day_offset", 0,
+            ),
+            event_end_weekday=getattr(  # Issue #2054
+                body.onset, "event_end_weekday", None,
+            ),
+            # Issue #2051 S1 (Spec v1.1): der R4-Waechter waehlt die
+            # Ende-Textform -- er muss den Renderer auch auf dem Vorschauweg
+            # erreichen, sonst zeigt die Vorschau eine andere Aussage als der
+            # Versand.
+            event_ongoing_beyond_horizon=getattr(
+                body.onset, "event_ongoing_beyond_horizon", False,
+            ),
+            # Issue #2050 S2b: der Laufend-Zustand entscheidet ueber die
+            # BEGINN-Angabe ("laeuft bereits" statt "in N Min") und muss den
+            # Renderer deshalb auch hier erreichen. Der Vorschauweg ist das,
+            # womit beim Ausrollen geprueft wird -- zeigte er eine andere
+            # Aussage als der Versand, pruefte die Verifikation etwas, das so
+            # nie beim Nutzer ankommt, und meldete gruen (AC-14b).
+            already_running=getattr(body.onset, "already_running", False),
+            # Issue #2051 S3: Reichweite/Guete des Payloads, `getattr` aus
+            # demselben Grund wie oben (API-Payload UND Replay-Namespace).
+            source_reach_time=getattr(body.onset, "source_reach_time", None),
+            source_reach_day_offset=getattr(
+                body.onset, "source_reach_day_offset", 0,
+            ),
+            location_sharpness_limit_time=getattr(
+                body.onset, "location_sharpness_limit_time", None,
+            ),
+            location_sharpness_limit_day_offset=getattr(
+                body.onset, "location_sharpness_limit_day_offset", 0,
+            ),
+            # Issue #2051 S2b: Ausdehnung des Payloads. Ohne diese beiden
+            # Felder zeigte die Vorschau in KEINEM Kanal eine Zonenangabe --
+            # genau die Luecke, die die S2a-Lieferung als "nicht gemessen"
+            # gebucht hat (R4).
+            km_measured=getattr(body.onset, "km_measured", False),
+            rain_zones=tuple(
+                RainZone(
+                    km_from=z.km_from, km_to=z.km_to,
+                    onset_minutes=z.onset_minutes,
+                    event_end_minutes=z.event_end_minutes,
+                )
+                for z in getattr(body.onset, "rain_zones", [])
+            ),
+            # Issue #2050 S4b-2: die ausgefallene Gewitterpruefung. `getattr`
+            # aus demselben Grund wie oben (API-Payload UND Replay-Namespace);
+            # der Default `True` haelt Alt-Clients ohne das Feld stumm.
+            convective_checked=getattr(
+                body.onset, "convective_checked", True,
+            ),
         )
         msg = AlertMessage(
             trip_short=trip_obj.name,
@@ -137,10 +221,9 @@ def render_alert_preview(
             )
             for c in body.changes
         ]
-        segments = [_stub_segment(st) for st in body.segment_times]
-        msg = to_alert_message(
-            changes, segments, trip_obj.name,
-            tz=alert_tz, stand_at=stand_at,
+        msg = _deviation_preview_message(
+            trip_obj, changes, body.segment_times, user_id=user_id,
+            tz=alert_tz, stand_at=stand_at, now_utc=now_utc,
         )
 
     subject = render_subject(msg)
@@ -154,6 +237,36 @@ def render_alert_preview(
         "telegram": telegram,
         "sms": sms,
     }
+
+
+def _deviation_preview_message(
+    trip_obj: Trip, changes: list, segment_times: list, *,
+    user_id: Optional[str], tz, stand_at: str, now_utc: datetime,
+) -> AlertMessage:
+    """Issue #1737: Abweichungs-Vorschau. Liegen Anker und frische Reihe des
+    Nutzers vor, laeuft die Projektion wie in ``send_deviation_alert`` (echte
+    Segmente, Anker, Anzeigemodus des Trips) -- die Stundenzeilen entstehen
+    nur aus diesen Reihen, die Ereignisse aus den synthetischen ``changes``.
+    Sonst die Platzhalter-Segmente wie bisher (ohne Stundenzeilen)."""
+    from services.alert_preview_hours import trip_preview_series
+    from services.notification_service import (
+        _alert_format_modes, _alert_indicator_keys,
+    )
+
+    anchor, fresh = (None, None)
+    if user_id:
+        anchor, fresh = trip_preview_series(trip_obj, user_id=user_id, now_utc=now_utc)
+    if not fresh:
+        return to_alert_message(
+            changes, [_stub_segment(st) for st in segment_times], trip_obj.name,
+            tz=tz, stand_at=stand_at, now_utc=now_utc,
+        )
+    return to_alert_message(
+        changes, fresh, trip_obj.name, tz=tz, stand_at=stand_at, now_utc=now_utc,
+        anchor_segments=anchor,
+        format_modes=_alert_format_modes(trip_obj.display_config),
+        indicator_keys=_alert_indicator_keys(trip_obj.display_config),
+    )
 
 
 def _parse_official_dt(value: "str | None") -> "datetime | None":
@@ -202,12 +315,12 @@ def _render_official_preview(trip_obj: Trip, payloads: list) -> dict:
     )
     plain = render_official_alert_mail_plain(
         dto_notices, source_label=source_label, stand_at=stand_at,
-        tz=alert_tz, context_label=trip_obj.name,
+        tz=alert_tz, context_label=trip_obj.name, source_url=source_url,
     )
     telegram = render_official_alert_telegram(
         dto_notices, prefix=trip_obj.name, source_label=source_label, tz=alert_tz,
     )
-    sms = render_official_alert_sms(dto_notices, sms_prefix=trip_obj.name, tz=alert_tz)
+    sms = render_official_alert_sms(dto_notices, tz=alert_tz)
     return {
         "subject": subject, "email_html": html, "email_plain": plain,
         "telegram": telegram, "sms": sms,
@@ -233,16 +346,35 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
     svc = RadarNowcastService()
     now = datetime.now(timezone.utc)
     result = svc._derive_result(frames, body_nf.source, now=now)
-    if result.onset_minutes is None:
+    # Issue #2050 S2b: ein bereits laufendes Ereignis IST ein Ereignis, auch
+    # ohne kuenftigen Beginn -- sonst meldete die Vorschau "kein Onset",
+    # waehrend der Versandweg alarmiert (AC-14b).
+    if result.onset_minutes is None and not result.already_running:
         return {
             "onset_detected": False, "subject": None, "email_html": None,
             "email_plain": None, "telegram": None, "sms": None,
         }
 
     alert_tz = _alert_tz_for_trip(trip_obj)
-    onset_time = now + timedelta(minutes=result.onset_minutes)
+    onset_time = now + timedelta(minutes=result.onset_minutes or 0)
+    _end_time, _end_offset, _end_ongoing, _end_weekday = event_end_display(
+        now, result, alert_tz,
+    )
+    # Issue #2051 S3: Reichweite und Guete-Grenzzeit aus DEMSELBEN
+    # `_derive_result`-Ergebnis, ueber dieselben geteilten Fassungen wie
+    # der Ende-Wert oben -- der Replay-Weg muss dieselbe Aussage zeigen wie
+    # der Produktivpfad (Muster event_end_display, AC-10).
+    _reach_time, _reach_offset = source_reach_display(now, result, alert_tz)
+    _sharp_time, _sharp_offset = location_sharpness_display(
+        now, result.onset_minutes, getattr(result, "event_end_minutes", None),
+        alert_tz,
+    )
     onset_ns = SimpleNamespace(
-        onset_minutes=result.onset_minutes,
+        onset_minutes=result.onset_minutes or 0,
+        # Issue #2050 S2b: aus DEMSELBEN `_derive_result`-Ergebnis wie alles
+        # andere -- die Vorschau sagt damit "laeuft bereits", wo der Versand
+        # es sagt.
+        already_running=result.already_running,
         onset_time=local_fmt(onset_time, alert_tz)[-5:],  # "HH:MM"-Anteil
         km_from=body_nf.km_from, km_to=body_nf.km_to,
         is_convective=result.is_convective,
@@ -251,6 +383,28 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
             result.source, result.source,
         ),
         cooldown_display=None,
+        segment_id=getattr(body_nf, "segment_id", None),
+        # Issue #2046: aus DEMSELBEN `_derive_result`-Ergebnis wie
+        # onset_minutes/intensity_label -- der Replay-Weg muss dieselbe Zahl
+        # zeigen wie der Produktivpfad (AC-10).
+        onset_precip_mm=result.onset_precip_mm,
+        # Issue #2051 S1: Ende aus DEMSELBEN `_derive_result`-Ergebnis, ueber
+        # die geteilte Anzeigefassung -- samt R4-Waechter, der die Textform
+        # waehlt. Der Replay-Weg zeigt damit exakt dasselbe wie der
+        # Produktivpfad.
+        event_end_time=_end_time,
+        event_end_day_offset=_end_offset,
+        event_end_weekday=_end_weekday,  # Issue #2054
+        event_ongoing_beyond_horizon=_end_ongoing,
+        # Issue #2051 S3: additiv, analog event_end_* oben.
+        source_reach_time=_reach_time,
+        source_reach_day_offset=_reach_offset,
+        location_sharpness_limit_time=_sharp_time,
+        location_sharpness_limit_day_offset=_sharp_offset,
+        # Issue #2050 S4b-2: aus DEMSELBEN Dienst, der auch die Frames
+        # ausgewertet hat -- faellt der INCA-Gewitter-Beiabruf aus, sagt der
+        # Replay-Weg dasselbe wie der Versand (AC-7).
+        convective_checked=result.convective_checked,
     )
     out = render_alert_preview(
         trip_obj, SimpleNamespace(onset=onset_ns, official=None, nowcast_frames=None),
@@ -322,6 +476,16 @@ SMS_FIDELITY_SAMPLE_FORECAST = NormalizedForecast(
             wind_chill_min_c=-18.0, wind_chill_max_c=24.0,
             night_wind_chill_min_c=-21.0,
             wind_chill_c=-18.0,
+            # #2422 S6 (B1): Stunden-Serie der gefuehlten Temperatur, damit die
+            # Vorschau bei aktivem wind_chill einen echten 'TF<°C>@<h>' zeigt
+            # statt der Nullform 'TF-'.
+            wind_chill_hourly=tuple(
+                HourlyValue(h, v) for h, v in zip(
+                    range(6, 18),
+                    (-18.0, -17.0, -14.0, -10.0, -6.0, -3.0,
+                     0.0, 2.0, 4.0, 1.0, -4.0, -9.0),
+                )
+            ),
             rain_hourly=tuple(
                 HourlyValue(h, v) for h, v in zip(
                     range(6, 18),
@@ -382,16 +546,34 @@ def _symbols_for_metric(metric_id: str) -> tuple[str, ...]:
     return (sym,) if sym else ()
 
 
-def build_sms_fidelity_specs(metric_ids: list[str]) -> list[MetricSpec]:
+def build_sms_fidelity_specs(
+    metric_ids: list[str], format_by_metric: Optional[dict[str, str]] = None,
+) -> list[MetricSpec]:
     """Disabled-Specs fuer alle nicht angefragten SMS-Symbole -- Spiegel von
     trip_report.py:283-307 (Bug #944/#1415), hier mit `metric_ids` (Editor-
     Auswahl) statt `dc.metrics` (Trip-Konfiguration) als Aktivmenge."""
     active_metric_ids = set(metric_ids)
-    specs: list[MetricSpec] = [
+    # Issue #2422 S6 (B2): Roh/Einfach je Metrik wie im Versandpfad -- sonst
+    # weicht die Vorschau vom echten SMS-Text ab (dieselbe Helferfunktion).
+    format_specs: list[MetricSpec] = [
+        MetricSpec(
+            symbol=SMS_SYMBOL_BY_METRIC[metric_id],
+            enabled=metric_id in active_metric_ids,
+            **sms_format_fields(metric_id, format_by_metric),
+        )
+        for metric_id in (format_by_metric or {})
+        if metric_id in SMS_FORMAT_MODE_METRIC_IDS and metric_id in SMS_SYMBOL_BY_METRIC
+    ]
+    format_symbols = {s.symbol for s in format_specs}
+    specs: list[MetricSpec] = list(format_specs) + [
         MetricSpec(symbol=sym, enabled=False)
         for metric_id, sym in SMS_SYMBOL_BY_METRIC.items()
-        if metric_id not in active_metric_ids
+        if metric_id not in active_metric_ids and sym not in format_symbols
     ]
+    # 'TF' entsteht nie ohne MetricSpec (needs_spec): bei aktivem wind_chill
+    # braucht die Vorschau eine ausdrueckliche aktive Spec (#2422 S6).
+    if "wind_chill" in active_metric_ids:
+        specs.append(MetricSpec(symbol=SMS_SYMBOL_BY_METRIC["wind_chill"], enabled=True))
     specs += [
         MetricSpec(symbol=sym, enabled=metric_id in active_metric_ids)
         for metric_id, syms in SMS_MULTI_SYMBOLS_BY_METRIC.items()

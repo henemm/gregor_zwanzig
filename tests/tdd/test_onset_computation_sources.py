@@ -173,7 +173,7 @@ def test_gewitterbeginn_zaehlt_ab_der_untersten_stufe():
     vier Stunden nach dem tatsaechlichen liegt.
     """
     punkte = _mit_stufen([
-        _dp(8, cape=200.0), _dp(10, cape=400.0), _dp(14, cape=800.0),
+        _dp(8, cape=200.0), _dp(10, cape=400.0), _dp(14, cape=1500.0),
     ])
     stufen = {p.ts.hour: p.thunder_level for p in punkte}
     assert stufen[10] == ThunderLevel.LOW, (

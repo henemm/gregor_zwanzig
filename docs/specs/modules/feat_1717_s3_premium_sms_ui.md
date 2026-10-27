@@ -3,7 +3,7 @@ entity_id: feat_1717_s3_premium_sms_ui
 type: module
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, premium, garmin, seven-io, channel, frontend, go-api]
 ---
@@ -13,6 +13,8 @@ tags: [sms, premium, garmin, seven-io, channel, frontend, go-api]
      (feat_1676_s2a_premium_sms_versand.md, live). Nachfolger: S2b/#1701
      (Alarm-/Vergleichspfad), S2c/#1702 (Kostenstelle), #1533 (Generalprobe
      auf dem Geraet). Kontext-Grundlage: docs/context/feat-1717-s3-premium-sms-ui.md. -->
+
+> Teilweise abgelöst durch [ADR-0095](../../adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md) (2026-10-21): „drei Kanäle“ (u. a. AC-12, Abschnitt zum bestehenden Klicktest) gilt nicht mehr als Soll — Premium-SMS ist der vierte gleichrangige Kanal, inklusive Alarm (CLAUDE.md, Kanäle).
 
 # Premium-SMS in der Oberfläche — S3
 
@@ -25,7 +27,7 @@ tags: [sms, premium, garmin, seven-io, channel, frontend, go-api]
 
 Premium-SMS (Garmin inReach), seit S2a ein vollwertiger vierter Versandkanal, wird für den
 Nutzer im Trip-Editor sichtbar und selbst schaltbar — inklusive der von S1 gelernten
-Rückadresse und ihres Alters. Auf Tour soll nicht länger rätselhaft bleiben, ob der Kanal aus
+Rückadresse und ihres Alters. Auf Trip soll nicht länger rätselhaft bleiben, ob der Kanal aus
 ist, noch keine Rückadresse gelernt wurde oder sie verfallen ist — das Backend unterscheidet
 diese drei Fälle bereits (S2a, `ChannelBlockedError.reason_code`), die Oberfläche zeigt sie
 bislang nirgends.

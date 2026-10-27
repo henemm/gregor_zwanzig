@@ -72,6 +72,38 @@ describe('AC-6: die vier toten Bauteile und der tote E2E-Test existieren nicht m
 	});
 });
 
+// #1743 (Spec feat_1743_reiter_aufraeumen §10, AC-28/AC-33): Totcode der Briefing-Vorschau entfaellt.
+const DEAD_1743 = [
+	join(TRIP_DETAIL_DIR, 'PreviewCard.svelte'),
+	join(TRIP_DETAIL_DIR, 'BriefingPreviewCard.svelte'),
+	join(TRIP_DETAIL_DIR, '..', 'shared', 'layout-tab', 'LTComparePreview.svelte'),
+	join(TRIP_DETAIL_DIR, '..', 'shared', 'PreviewTab.svelte'),
+	join(TRIP_DETAIL_DIR, '..', 'shared', 'previewLoader.ts')
+];
+
+describe('#1743: Briefing-Vorschau-Totcode existiert nicht mehr', () => {
+	for (const path of DEAD_1743) {
+		test(`${path.split('/').pop()} existiert nicht mehr`, () => {
+			assert.equal(existsSync(path), false, `${path} existiert noch — Briefing-Vorschau entfaellt ersatzlos (#1743).`);
+		});
+	}
+
+	test('trip-detail/index.ts exportiert PreviewCard und BriefingPreviewCard nicht mehr', () => {
+		const src = readFileSync(INDEX_TS, 'utf-8');
+		const sf = ts.createSourceFile(INDEX_TS, src, ts.ScriptTarget.Latest, true);
+		const reste: string[] = [];
+		sf.forEachChild((node) => {
+			if (ts.isExportDeclaration(node)) {
+				const text = node.getText(sf);
+				for (const name of ['PreviewCard', 'BriefingPreviewCard']) {
+					if (new RegExp(`\\b${name}\\b`).test(text)) reste.push(name);
+				}
+			}
+		});
+		assert.deepEqual(reste, [], `trip-detail/index.ts exportiert noch: ${reste.join(', ')}`);
+	});
+});
+
 describe('AC-7: rightColumn.ts hat die vier aufruferlosen Helfer verloren, getReportSchedule bleibt', () => {
 	function parseRightColumn(): { sf: ts.SourceFile; src: string } {
 		const src = readFileSync(RIGHT_COLUMN_TS, 'utf-8');
@@ -110,7 +142,7 @@ describe('AC-7: rightColumn.ts hat die vier aufruferlosen Helfer verloren, getRe
 	test('getReportSchedule und der Typ ReportSchedule sind weiterhin exportiert', () => {
 		const { src } = parseRightColumn();
 		// doc-compliance-test: Export-Vertrag der beiden weiter benötigten Symbole
-		// (BriefingPreviewCard.svelte, TripHeader.svelte, TripEditView.svelte).
+		// (BriefingPreviewCard.svelte, TripHeader.svelte).
 		assert.match(src, /export\s+function\s+getReportSchedule\s*\(/, 'export function getReportSchedule fehlt');
 		assert.match(src, /export\s+interface\s+ReportSchedule\b/, 'export interface ReportSchedule fehlt');
 	});

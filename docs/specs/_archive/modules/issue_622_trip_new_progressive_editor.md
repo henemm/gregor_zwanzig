@@ -1,4 +1,4 @@
-# Spec: Neue Tour anlegen — Progressive Tab Editor (#622)
+# Spec: Neue Trip anlegen — Progressive Tab Editor (#622)
 
 **Status:** Freigegeben für Umsetzung — **Desktop-Scope** (PO 2026-06-07). Blocker #587/#616/#617 sind live.
 **Issue:** #622 (`trip-new-progressive-editor`)
@@ -7,7 +7,7 @@
 
 ## Kernkonzept
 
-**Kein separater Wizard.** „Neue Tour anlegen" ist der **Erstellen-Modus desselben Tab-Editors** wie „Trip bearbeiten" — mit **sequenziellem Freischalt-Zustand** (Tabs öffnen progressiv). Route `/trips/new`.
+**Kein separater Wizard.** „Neue Trip anlegen" ist der **Erstellen-Modus desselben Tab-Editors** wie „Trip bearbeiten" — mit **sequenziellem Freischalt-Zustand** (Tabs öffnen progressiv). Route `/trips/new`.
 
 ### Tab-Struktur (6 Tabs, Freischalt-Logik 1:1 aus `TN_unlocked`/`TN_doneSet`)
 
@@ -20,7 +20,7 @@
 | 5 | Briefing-Zeitplan | Wetter-Tab besucht | nein | Tab besucht |
 | 6 | Alerts | Zeitplan-Tab besucht | nein | — |
 
-Wegpunkte + Wetter schalten **gleichzeitig** frei (beide nach allen GPX). Gesperrter Tab-Klick → Flash + Tooltip „Gesperrt — <lockHint>". „Tour speichern" erst aktiv, wenn Zeitplan besucht (`done.has("zeitplan")`).
+Wegpunkte + Wetter schalten **gleichzeitig** frei (beide nach allen GPX). Gesperrter Tab-Klick → Flash + Tooltip „Gesperrt — <lockHint>". „Trip speichern" erst aktiv, wenn Zeitplan besucht (`done.has("zeitplan")`).
 
 ### Wichtige Datenmodell-Änderung
 - **GPX pro Etappe** statt Gesamt-Trip-GPX. Jede Etappe hat ihre eigene `.gpx`.
@@ -47,11 +47,11 @@ bisheriges Edit-Verhalten) — kein Bruch des Edit-Flows. **Backend: kein Schema
 
 ## Acceptance Criteria
 
-**AC-1:** Given ein eingeloggter Nutzer öffnet `/trips/new`, When die Seite lädt, Then erscheint der Tab-Editor (Sidebar + Breadcrumb „Trips / Neue Tour" + Hero „Neue Tour anlegen" + Fortschrittsbalken) mit 6 Tabs — **kein** mehrstufiger Wizard-Stepper.
+**AC-1:** Given ein eingeloggter Nutzer öffnet `/trips/new`, When die Seite lädt, Then erscheint der Tab-Editor (Sidebar + Breadcrumb „Trips / Neue Trip" + Hero „Neue Trip anlegen" + Fortschrittsbalken) mit 6 Tabs — **kein** mehrstufiger Wizard-Stepper.
 
 **AC-2:** Given der Erstellen-Modus, When noch keine Vorbedingung erfüllt ist, Then sind nur erlaubte Tabs klickbar (Route offen, Rest gesperrt mit ⊘ + Tooltip), exakt nach der Freischalt-Logik der Tabelle; ein Klick auf einen gesperrten Tab wechselt NICHT, sondern zeigt den Flash/Tooltip.
 
-**AC-3:** Given der Route-Tab, When der Nutzer Tour-Name + Startdatum ausfüllt, Then wird „Etappen anlegen →" aktiv, der Etappen-Tab schaltet frei, und die Hero-Überschrift zeigt den Namen (sonst „Noch kein Name"). Region ist optional (max 50). Datum-Feld ist `type=date`.
+**AC-3:** Given der Route-Tab, When der Nutzer Trip-Name + Startdatum ausfüllt, Then wird „Etappen anlegen →" aktiv, der Etappen-Tab schaltet frei, und die Hero-Überschrift zeigt den Namen (sonst „Noch kein Name"). Region ist optional (max 50). Datum-Feld ist `type=date`.
 
 **AC-4:** Given der Etappen-&-GPX-Tab, When der Nutzer Etappen anlegt/benennt und **je Etappe eine GPX-Datei** hochlädt, Then zeigt jede Zeile T-Nummer · Name (inline editierbar) · Auto-Datum (Start + Index) · GPX-Slot · Entfernen; „X/Y GPX geladen" zählt korrekt; Wegpunkte + Wetter schalten erst frei, wenn **alle** Etappen eine GPX haben.
 
@@ -59,7 +59,7 @@ bisheriges Edit-Verhalten) — kein Bruch des Edit-Flows. **Backend: kein Schema
 
 **AC-6:** Given die Tabs Wetter-Metriken, Briefing-Zeitplan und Alerts, When sie geöffnet werden, Then rendern sie **dieselben Komponenten** wie der Bearbeiten-Modus (`WetterMetrikenTabV2` mit Roh/Einfach ohne Detail, `TE2_ZeitplanTab`, `TE2_AlertsTab`); der im Wetter-Tab gesetzte Kanal-Zustand fließt in Zeitplan + Alerts (kein Signal — nur Email/Telegram/SMS).
 
-**AC-7:** Given der Anlege-Flow ist vollständig (Zeitplan besucht), When der Nutzer „Tour speichern" klickt, Then wird eine Tour mit Name, Region, Startdatum, Etappen (Namen + Auto-Daten), Etappen-GPX, Wetter-Metrik-Konfig, Zeitplan und Alerts angelegt und persistiert (Read-Modify-Write, keine Daten gehen verloren); vorher ist „Tour speichern" deaktiviert mit Hinweis „Zeitplan einrichten zum Speichern".
+**AC-7:** Given der Anlege-Flow ist vollständig (Zeitplan besucht), When der Nutzer „Trip speichern" klickt, Then wird eine Trip mit Name, Region, Startdatum, Etappen (Namen + Auto-Daten), Etappen-GPX, Wetter-Metrik-Konfig, Zeitplan und Alerts angelegt und persistiert (Read-Modify-Write, keine Daten gehen verloren); vorher ist „Trip speichern" deaktiviert mit Hinweis „Zeitplan einrichten zum Speichern".
 
 **AC-8:** Given der alte Wizard, When der neue Flow live ist, Then ist `/trips/new` der Progressive-Tab-Editor und der alte 5-Schritt-Wizard (`screen-trip-wizard.jsx`-Pendant im Frontend) wird nicht mehr verwendet (deprecated/entfernt) — kein paralleler Anlege-Pfad (PO: „ein Trip-Pfad").
 

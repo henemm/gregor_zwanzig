@@ -3,7 +3,7 @@ entity_id: bug_338_openmeteo_call_counter_tests
 type: tests
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, observability, open-meteo, api-limit, diagnostics, issue-338]
 parent: bug_338_openmeteo_call_counter
@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest fuer den Diagnose-Zaehler aus
-`docs/specs/modules/bug_338_openmeteo_call_counter.md`. Jeder pytest-Test mappt
+`docs/specs/_archive/modules/bug_338_openmeteo_call_counter.md`. Jeder pytest-Test mappt
 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_338_openmeteo_call_counter.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_338_openmeteo_call_counter.md` v1.0
 
 ## Source
 

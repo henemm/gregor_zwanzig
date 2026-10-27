@@ -61,7 +61,8 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const tabs = ['overview', 'stages', 'weather', 'briefings', 'alerts', 'preview'];
+		// Issue #1743: 5 Reiter, versand/vorschau entfallen.
+		const tabs = ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'];
 		for (const tab of tabs) {
 			const trigger = page.getByTestId(`trip-detail-tab-${tab}`);
 			// Im DOM vorhanden
@@ -83,7 +84,7 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const tabs = ['overview', 'stages', 'weather', 'briefings', 'alerts', 'preview'];
+		const tabs = ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'];
 		for (const tab of tabs) {
 			const trigger = page.getByTestId(`trip-detail-tab-${tab}`);
 			const whiteSpace = await trigger.evaluate((el) => getComputedStyle(el).whiteSpace);
@@ -91,23 +92,25 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		}
 	});
 
-	test('AC-2b: "Etappen & Wegpunkte" Tab ist nicht höher als eine Zeile auf Mobile', async ({
+	test('AC-2b: "Etappen & Wegpunkte" Tab ist einzeilige 44px-Pill auf Mobile', async ({
 		page
 	}) => {
 		/**
 		 * GIVEN: Viewport ist 375×667 px (Mobile)
 		 * WHEN:  Trip-Detail-Seite geladen
-		 * THEN:  Höhe des "stages"-Triggers ist < 40px (einzeilig)
-		 *        Bei Umbruch wäre er ~44px+ (2 Zeilen à ~14px + Padding)
+		 * THEN:  Höhe des "stages"-Triggers entspricht der 44px-Pill des
+		 *         MTabBar (Mobile Usability Paket 2, Spec
+		 *         mobile_tab_leisten_mtabbar — Touch-Trigger ≥44px, fest
+		 *         statt prozentual). Ein umgebrochener Zweizeiler wäre ~60px+;
+		 *         das Einzeilige selbst sichert AC-2 (white-space: nowrap).
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const stagesTab = page.getByTestId('trip-detail-tab-stages');
+		const stagesTab = page.getByTestId('trip-detail-tab-etappen');
 		const height = await stagesTab.evaluate((el) => el.getBoundingClientRect().height);
-		// Einzeilig: Padding (0.375rem × 2 = ~12px) + Line-Height (~20px) ≈ 32px
-		// Zweizeilig wäre ≈ 44px+
-		expect(height, `"Etappen & Wegpunkte"-Tab ist ${height}px hoch (Umbruch?)`).toBeLessThan(40);
+		expect(height, `"Etappen & Wegpunkte"-Tab ist ${height}px hoch (Erwartung: 44px-Pill)`).toBeGreaterThanOrEqual(44);
+		expect(height, `"Etappen & Wegpunkte"-Tab ist ${height}px hoch (Umbruch?)`).toBeLessThanOrEqual(50);
 	});
 
 	// ─── AC-3: Aktiver Tab als Pill dargestellt ──────────────────────────────
@@ -120,7 +123,7 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const activeTab = page.getByTestId('trip-detail-tab-overview');
+		const activeTab = page.getByTestId('trip-detail-tab-uebersicht');
 		await expect(activeTab).toHaveAttribute('data-state', 'active');
 
 		const bgColor = await activeTab.evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -139,7 +142,7 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const activeTab = page.getByTestId('trip-detail-tab-overview');
+		const activeTab = page.getByTestId('trip-detail-tab-uebersicht');
 		const color = await activeTab.evaluate((el) => getComputedStyle(el).color);
 		// --g-paper: #f6f4ee = rgb(246, 244, 238)
 		expect(color, `Aktiver Tab hat Textfarbe "${color}" statt hell (g-paper)`).toMatch(
@@ -156,7 +159,7 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const inactiveTab = page.getByTestId('trip-detail-tab-stages');
+		const inactiveTab = page.getByTestId('trip-detail-tab-etappen');
 		await expect(inactiveTab).toHaveAttribute('data-state', 'inactive');
 
 		const bgColor = await inactiveTab.evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -176,7 +179,7 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await page.setViewportSize(DESKTOP_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const activeTab = page.getByTestId('trip-detail-tab-overview');
+		const activeTab = page.getByTestId('trip-detail-tab-uebersicht');
 		await expect(activeTab).toHaveAttribute('data-state', 'active');
 
 		const borderBottom = await activeTab.evaluate(

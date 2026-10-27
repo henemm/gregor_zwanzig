@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
+from contextlib import contextmanager
 from datetime import date as date_type
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -42,6 +43,7 @@ from app.trip import Stage, Trip, Waypoint
 from app.user import SavedLocation
 
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+from tests.helpers.ortstag import ortstag
 from tests.helpers.compare_briefings import write_compare_briefings
 
 def preset_root() -> Path:
@@ -101,7 +103,16 @@ def clean_uid(user_id: str) -> None:
 def write_user_tier(user_id: str, tier: str) -> None:
     d = get_data_dir(user_id)
     d.mkdir(parents=True, exist_ok=True)
-    (d / "user.json").write_text(json.dumps({"id": user_id, "tier": tier}))
+    # #1412 S4a: Read-Modify-Write -- ein zuvor eingetragener Profil-Chat
+    # (tests.helpers.telegram_empfaenger) bleibt erhalten.
+    datei = d / "user.json"
+    try:
+        profil = json.loads(datei.read_text()) if datei.exists() else {}
+    except ValueError:
+        profil = {}
+    profil = profil if isinstance(profil, dict) else {}
+    profil.update({"id": user_id, "tier": tier})
+    datei.write_text(json.dumps(profil))
 
 
 # ───────────────────────────────── Settings ─────────────────────────────────
@@ -205,6 +216,37 @@ def radar_service(frame_source) -> object:
     from services.radar_service import RadarNowcastService
 
     return RadarNowcastService(frame_source=frame_source)
+
+
+def aufzeichnender_radar_dienst(frame_source) -> object:
+    """Echte ``RadarNowcastService``-UNTERKLASSE, die nur mitschreibt — kein
+    Mock: ``get_nowcast()`` ruft ``super()`` auf, die gesamte
+    Entscheidungslogik (Cache, Region, ``_derive_result``) laeuft unveraendert.
+
+    Warum nicht der ``frame_source``-Seam: der bekommt nur ``(lat, lon)``. Die
+    HOEHE (``elevation_m``, seit #1991 Teil der Abfrage) ist dort strukturell
+    unsichtbar. Geteilt von ``test_issue_822_radar_nowcast_segment.py`` (#2017)
+    und ``test_alarm_szenario_messpunkt_position.py`` (#2261 Sz.8). Klasse
+    innerhalb der Funktion: ``RadarNowcastService`` wird erst zur Laufzeit
+    importiert.
+    """
+    from services.radar_service import RadarNowcastService
+
+    class _Aufzeichnend(RadarNowcastService):
+        def __init__(self, fs) -> None:
+            super().__init__(frame_source=fs)
+            self.calls: list[dict] = []
+
+        def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None, deadline_at=None):
+            self.calls.append({
+                "lat": lat, "lon": lon, "elevation_m": elevation_m,
+                "priority": priority,
+            })
+            return super().get_nowcast(
+                lat, lon, elevation_m=elevation_m, priority=priority,
+            )
+
+    return _Aufzeichnend(frame_source)
 
 
 def reset_radar_cache() -> None:
@@ -403,7 +445,7 @@ def make_trip(
 
     Issue #1697: ``stage_date``/``lat``/``lon``/``arrival_start``/
     ``arrival_end``/``extra_stages`` sind ADDITIV — alle Defaults sind
-    bit-identisch zum bisherigen Verhalten (``date.today()``,
+    bit-identisch zum bisherigen Verhalten (Ortstag der Etappe, #2314,
     ``TRIP_LAT``/``TRIP_LON``, 00:00–23:59, keine zweite Etappe). Bestehende
     Aufrufer (``test_nowcast_suppression_logging.py``,
     ``test_trip_radar_nowcast_gate_migration.py``) bleiben unveraendert
@@ -411,7 +453,8 @@ def make_trip(
     dienen Faellen, die eine ANDERE Etappe/einen zweiten Tag brauchen (z.B.
     #1697 AC-1/AC-3/AC-5: Ortsdatum weicht vom Serverdatum ab).
     """
-    day = stage_date if stage_date is not None else date_type.today()
+    # #2314: Ortstag der Etappen-Koordinaten, nicht Prozesstag (ADR-0044).
+    day = stage_date if stage_date is not None else ortstag(lat, lon)
     stage = trip_stage(
         "S1", day, lat, lon, arrival_start=arrival_start, arrival_end=arrival_end,
     )
@@ -432,6 +475,48 @@ def make_trip(
     trip.alert_quiet_from = quiet_from
     trip.alert_quiet_to = quiet_to
     return trip
+
+
+@contextmanager
+def frozen_active_window(hour_utc: int = 12):
+    """Gestellte Uhr, nicht Wanduhr (#2050, Vorbild #2017 Scheibe B in
+    ``test_issue_822_radar_nowcast_segment.py``): fuer Aufrufer, die einen
+    ``make_trip()``-Trip ueber das PRODUKTIVE ``app.loader.save_trip()``
+    speichern — nicht den verkuerzten ``save_trip()`` dieser Datei.
+
+    ``app.loader.save_trip()`` fuehrt Compute-on-Save aus (Issue #802):
+    ``arrival_start``/``arrival_end`` aus ``make_trip()`` werden dabei
+    VERWORFEN und ``compute_stage_arrivals()`` rechnet WP0/WP1 stattdessen ab
+    einem Default-Start 08:00 Ortszeit per Naismith neu. Bei den
+    Default-Koordinaten dieser Datei (``TRIP_LAT``/``TRIP_LON``, Reykjavik,
+    ganzjaehrig UTC+0) ergibt das 08:00-11:22. Das anschliessende
+    Ziel-Segment (``src/services/trip_segments.py``) verlaengert die
+    Abdeckung bis zum Ende des Default-Tagesfensters (Stunde 19 inklusive ->
+    20:00 Ortszeit exklusiv), eine Vorschau deckt alles VOR 08:00 ab —
+    luecklos aktiv ist damit NUR ``[08:00, 20:00)`` Ortszeit. Ausserhalb
+    davon (20:00-24:00) liefert ``resolve_current_segment()`` ``None`` und
+    ``check_radar_alerts()`` bricht vor dem Nowcast-Abruf ab — abhaengig
+    davon, wann die Testsuite laeuft (gemessen 2026-08-21, #2050: CI-Lauf um
+    19:38 UTC gruen, derselbe Testfall um 20:40 UTC rot).
+
+    Dieser Helfer stellt die Uhr auf ``hour_utc:00`` UTC HEUTE — der Default
+    (12 Uhr) liegt mittig im garantiert aktiven Fenster, unabhaengig von der
+    tatsaechlichen Wanduhr beim Testlauf. Wie in der Vorbild-Datei wird NICHT
+    aus der Wanduhr gerechnet (das waere genau das Anti-Muster, das
+    ``test_fixture_wallclock_ratchet.py`` bewacht) — der Ankerpunkt ist ein
+    fester, weit von beiden Fensterkanten entfernter Wert.
+    """
+    from freezegun import freeze_time
+
+    # #2314 D2: der Ankertag folgt dem Ortstag der Standard-Koordinaten
+    # dieser Datei (TRIP_LAT/TRIP_LON, Reykjavik, ganzjaehrig UTC+0), nicht
+    # dem Prozesstag — sonst zielt der Anker unter einer Gestern-Zone
+    # (GZ_TEST_PROCESS_TZ) auf den falschen Kalendertag.
+    anker = datetime.combine(
+        ortstag(TRIP_LAT, TRIP_LON), datetime.min.time(), tzinfo=TRIP_ZONE,
+    ) + timedelta(hours=hour_utc)
+    with freeze_time(anker):
+        yield anker
 
 
 def save_trip(trip: Trip, user_id: str) -> None:

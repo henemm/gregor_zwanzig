@@ -31,11 +31,17 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+# Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
+# COLLECT statt beim Testlauf und kontaminierte os.environ ohne Teardown).
+# Autouse-Fixture fordert stattdessen die geteilte `dotenv_env`-Fixture aus
+# tests/conftest.py an, bevor JEDER Test dieser Datei laeuft.
+@pytest.fixture(autouse=True)
+def _dotenv(dotenv_env):
+    yield
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +60,8 @@ def _write_trip(user_id: str, trip_id: str, name: str, stages: list[dict]) -> Pa
     trips_dir = _data_users(user_id) / "trips"
     trips_dir.mkdir(parents=True, exist_ok=True)
     profile = _data_users(user_id) / "user.json"
-    profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld (Test-SMTP statt Resend).
+    profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True}))
     trip_path = trips_dir / f"{trip_id}.json"
     trip_path.write_text(json.dumps({
         "id": trip_id,
@@ -128,7 +135,7 @@ def past_only_trip():
 
 def _load_trip(user_id: str, trip_id: str):
     from app.loader import load_trip
-    return load_trip(_data_users(user_id) / "trips" / f"{trip_id}.json")
+    return load_trip(_data_users(user_id) / "trips" / f"{trip_id}.json", user_id=user_id)
 
 
 # ---------------------------------------------------------------------------

@@ -30,7 +30,8 @@ from __future__ import annotations
 
 import sys
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 # Pfadregel #1409: Pruefling relativ zur eigenen Testdatei aufloesen.
@@ -45,9 +46,26 @@ from tests.helpers.trip_outlook_selection import (  # noqa: E402
 )
 
 LAT, LON = 46.65, 12.85
-NIEDERSCHLAG = {"metric_id": "precipitation", "aggregation": "sum"}
-BOEEN = {"metric_id": "gust", "aggregation": "max"}
-SCHNEEHOEHE = {"metric_id": "snow_depth", "aggregation": "max"}
+# #1848 A2: Auswahl-Bausteine sind reine Kennungen (vorher Paare, #1373).
+NIEDERSCHLAG = "precipitation"
+BOEEN = "gust"
+SCHNEEHOEHE = "snow_depth"
+# #2098 AC-13: ACC steht seit der Behebung als fest angehaengte Zusatzspalte
+# HINTER der Auswahl -- ausserhalb des Metrik-Systems, damit ADR-0005/#710
+# (Confidence nicht waehlbar) unberuehrt bleibt. Die Zusicherung dieser Datei
+# bleibt unveraendert scharf: die Kopfzeile wird weiterhin VOLLSTAENDIG
+# verglichen, die Zusatzspalte ist Teil der Erwartung statt aus ihr
+# herausgefiltert.
+_ACC = "ACC"
+
+# #2136/ADR-0068: Spaltenkoepfe tragen seither `MetricDefinition.col_label`,
+# nicht mehr den deutschen Compare-Katalog-Langnamen -- abgeleitet statt
+# zweimal getippt.
+from app.metric_catalog import get_metric  # noqa: E402
+
+NIEDERSCHLAG_LABEL = get_metric(NIEDERSCHLAG).col_label
+BOEEN_LABEL = get_metric(BOEEN).col_label
+SCHNEEHOEHE_LABEL = get_metric(SCHNEEHOEHE).col_label
 
 _MAIL_FIELDS: dict = {
     "smtp_host": "dummy.invalid", "smtp_port": 587,
@@ -78,7 +96,7 @@ def _settings(user_id: str):
 def _trip(*, outlook_metrics, enabled_ids=None, leere_grundauswahl=False,
           email_layout_ids=None, report_overrides=None,
           trend_reports=("evening",), ohne_nachtblock=False):
-    """Tour mit fuenf Etappen ab heute: der Abendbericht zielt auf MORGEN
+    """Trip mit fuenf Etappen ab heute: der Abendbericht zielt auf MORGEN
     (``_get_target_date``), der Ausblick zeigt die drei Etappen danach.
 
     ``email_layout_ids``: setzt ein E-Mail-eigenes Kanal-Layout
@@ -93,7 +111,7 @@ def _trip(*, outlook_metrics, enabled_ids=None, leere_grundauswahl=False,
     from app.trip import Stage, Trip, Waypoint
 
     trip_id = f"trip-1720-{uuid.uuid4().hex[:8]}"
-    heute = date.today()
+    heute = ortstag(LAT, LON)
     # #1709: feste Ankunftszeiten statt Naismith-Self-Heal
     # (trip_segments.py:125-127) — die Zeiten selbst tragen keine
     # Pruefaussage dieser Datei, sie muessen nur ueberhaupt gesetzt sein.
@@ -147,7 +165,7 @@ def _fixture_scheduler_klasse():
     )
     from services.trip_report_scheduler import TripReportSchedulerService
 
-    heute = date.today()
+    heute = ortstag(LAT, LON)
     # RED-Korrektur (#1720 S1, GREEN-Phase): der Abendbericht zielt auf MORGEN
     # (heute+1), der Ausblick zeigt die drei Etappen DANACH -- also heute+2,
     # +3, +4. Der Index wurde gegen ``heute`` gerechnet und rotierte die drei
@@ -249,7 +267,9 @@ def test_ac2_zugestellte_html_mail_zeigt_genau_die_gewaehlten_spalten():
     assert OUTLOOK_EYEBROW in html, (
         "Die zugestellte Mail enthaelt gar keinen Ausblick-Block (AC-2)."
     )
-    assert html_outlook_headers(html) == ["Tag", "Niederschlag", "Böen"], (
+    assert html_outlook_headers(html) == [
+        "Tag", NIEDERSCHLAG_LABEL, BOEEN_LABEL, _ACC,
+    ], (
         f"Kopfzeile {html_outlook_headers(html)!r} -- die sieben festen "
         "Spalten (N/D/R/PR/Wind/Böen/Gew) waeren der unveraenderte Zustand."
     )
@@ -271,7 +291,9 @@ def test_ac3_zugestellter_klartext_zeigt_dieselben_spalten_wie_das_html():
         "Der Klartext-Teil der zugestellten Mail hat keinen Ausblick (AC-3)."
     )
     kopf = html_outlook_headers(html)[1:]
-    assert kopf == ["Niederschlag", "Böen"], f"Vorbedingung (AC-2): {kopf!r}"
+    assert kopf == [NIEDERSCHLAG_LABEL, BOEEN_LABEL, _ACC], (
+        f"Vorbedingung (AC-2): {kopf!r}"
+    )
     zeile = block.splitlines()[1]
     positionen = [zeile.find(label) for label in kopf]
     assert all(p >= 0 for p in positionen), (
@@ -321,12 +343,12 @@ def test_ac14_manipulierte_auswahl_erreicht_die_zugestellte_mail_nicht():
                  enabled_ids={"precipitation"})
     html, plain = _zugestellte_teile(trip)
 
-    assert html_outlook_headers(html) == ["Tag", "Niederschlag"], (
+    assert html_outlook_headers(html) == ["Tag", NIEDERSCHLAG_LABEL, _ACC], (
         f"Kopfzeile {html_outlook_headers(html)!r}: die zugestellte Mail zeigt "
         "eine Groesse ausserhalb der Grundauswahl (AC-14)."
     )
     block = plain_outlook_block(plain)
-    assert block is not None and "Schneehöhe" not in block, (
+    assert block is not None and SCHNEEHOEHE_LABEL not in block, (
         f"Der Klartext-Teil zeigt die verbotene Groesse:\n{block}\n(AC-14)"
     )
     assert [z[1] for z in html_outlook_body_rows(html)] == [
@@ -349,7 +371,9 @@ def test_ac15_globale_abwahl_entfernt_die_spalte_im_naechsten_lauf():
     trip = _trip(outlook_metrics=[NIEDERSCHLAG, BOEEN],
                  enabled_ids={"precipitation", "gust"})
     html_vorher, _ = _zugestellte_teile(trip)
-    assert html_outlook_headers(html_vorher) == ["Tag", "Niederschlag", "Böen"], (
+    assert html_outlook_headers(html_vorher) == [
+        "Tag", NIEDERSCHLAG_LABEL, BOEEN_LABEL, _ACC,
+    ], (
         f"Vorbedingung von AC-15: {html_outlook_headers(html_vorher)!r}"
     )
 
@@ -358,12 +382,12 @@ def test_ac15_globale_abwahl_entfernt_die_spalte_im_naechsten_lauf():
             mc.enabled = False
 
     html_nachher, plain_nachher = _zugestellte_teile(trip)
-    assert html_outlook_headers(html_nachher) == ["Tag", "Niederschlag"], (
+    assert html_outlook_headers(html_nachher) == ["Tag", NIEDERSCHLAG_LABEL, _ACC], (
         "Nach der globalen Abwahl von 'Böen' zeigt die Vorschau die Spalte "
         f"weiterhin: {html_outlook_headers(html_nachher)!r} (AC-15)."
     )
     block = plain_outlook_block(plain_nachher)
-    assert block is not None and "Böen" not in block, (
+    assert block is not None and BOEEN_LABEL not in block, (
         f"Der Klartext zeigt die abgewaehlte Groesse weiter:\n{block}\n(AC-15)"
     )
 
@@ -378,7 +402,7 @@ def test_ac16_leere_grundauswahl_schneidet_auch_die_zugestellte_mail_nicht():
     html, _ = _zugestellte_teile(trip)
 
     assert html_outlook_headers(html) == [
-        "Tag", "Niederschlag", "Böen", "Schneehöhe",
+        "Tag", NIEDERSCHLAG_LABEL, BOEEN_LABEL, SCHNEEHOEHE_LABEL, _ACC,
     ], (
         f"Kopfzeile {html_outlook_headers(html)!r}: bei leerer Grundauswahl "
         "wurde geschnitten -- Totalausfall fuer jeden Altbestand (AC-16)."
@@ -430,14 +454,16 @@ def test_ac17_eigenes_email_kanal_layout_schneidet_die_vorschau_nicht():
 
     html, plain = _zugestellte_teile(trip)
 
-    assert html_outlook_headers(html) == ["Tag", "Niederschlag", "Böen"], (
+    assert html_outlook_headers(html) == [
+        "Tag", NIEDERSCHLAG_LABEL, BOEEN_LABEL, _ACC,
+    ], (
         f"Kopfzeile {html_outlook_headers(html)!r}: 'Böen' ist global aktiv "
         "und ausdruecklich gewaehlt, faellt aber wegen des E-Mail-eigenen "
         "Kanal-Layouts aus der Vorschau -- der Ausblick hat keine "
         "Kanal-Ebene (AC-17)."
     )
     block = plain_outlook_block(plain)
-    assert block is not None and "Böen" in block, (
+    assert block is not None and BOEEN_LABEL in block, (
         f"Der Klartext-Teil zeigt die Groesse nicht:\n{block}\n(AC-17)"
     )
 
@@ -461,7 +487,9 @@ def test_ac17_ueberschrift_und_zahl_bleiben_bei_engem_kanal_layout_gepaart():
                  email_layout_ids={"gust"})
     html, _ = _zugestellte_teile(trip)
 
-    assert html_outlook_headers(html) == ["Tag", "Niederschlag", "Böen"], (
+    assert html_outlook_headers(html) == [
+        "Tag", NIEDERSCHLAG_LABEL, BOEEN_LABEL, _ACC,
+    ], (
         f"Kopfzeile {html_outlook_headers(html)!r} (AC-17)."
     )
     zeilen = html_outlook_body_rows(html)
@@ -504,7 +532,9 @@ def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
                  report_overrides={"gust": {"evening_enabled": False}},
                  trend_reports=("morning", "evening"), ohne_nachtblock=True)
     html_versand, _ = _zugestellte_teile(trip, report_type="morning")
-    assert html_outlook_headers(html_versand) == ["Tag", "Niederschlag", "Böen"], (
+    assert html_outlook_headers(html_versand) == [
+        "Tag", NIEDERSCHLAG_LABEL, BOEEN_LABEL, _ACC,
+    ], (
         f"Vorbedingung: {html_outlook_headers(html_versand)!r} (AC-17)."
     )
 
@@ -513,7 +543,7 @@ def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
     sched_mod.TripReportSchedulerService = _fixture_scheduler_klasse()
     try:
         report, *_ = PreviewService(settings=settings)._build_report(
-            trip, date.today(), "morning", now_utc=datetime.now(timezone.utc),
+            trip, ortstag(LAT, LON), "morning", now_utc=datetime.now(timezone.utc),
         )
     finally:
         sched_mod.TripReportSchedulerService = original
@@ -529,23 +559,71 @@ def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
     )
 
 
-def test_bestandstrip_behaelt_die_sieben_festen_spalten_in_der_zugestellten_mail():
+def test_bestandstrip_zeigt_die_grundauswahl_in_der_zugestellten_mail():
     """AC-1 (ganze Kette, Bestandsschutz): ohne gesetzte Vorschau-Auswahl
-    stehen weiterhin die sieben festen Spalten samt ACC in der Tabelle.
+    steht der Ausblick weiterhin in der zugestellten Mail -- mit den Groessen
+    der Grundauswahl UND der fest angehaengten ACC-Spalte dahinter.
 
-    Mutation 1 am Wirkort (``resolve_outlook_metrics(...) or []``): der
-    Ausblick verschwaende fuer 100 % der heutigen Trips. Dieser Test ist der
-    einzige hier, der schon vor der Lieferung gruen ist -- und muss es
-    BLEIBEN.
+    Bewachte Fehlerklasse unveraendert (Mutation 1 am Wirkort,
+    ``resolve_outlook_metrics(...) or []``): der Ausblick verschwaende fuer
+    100 % der heutigen Trips. Nur das ZIEL des Rueckfalls ist seit #1848 A3
+    die Grundauswahl statt der sieben festen Spalten (AC-3 dort,
+    PO-Freigabe 2026-08-21).
+
+    🔴 #2098 (AC-13) nimmt EINE Nebenfolge von #1848 A3 bewusst zurueck:
+    dieser Test verlangte bis hierher, dass die Kopfzeile NICHT auf "ACC"
+    endet -- das Verschwinden der ACC-Spalte im Trip-Normalfall war eine
+    akzeptierte, testverankerte Nebenwirkung des Wechsels auf den
+    konfigurierbaren Renderer-Zweig. Der PO hat sie als Fehler gemeldet
+    (#2098 Befund B, Freigabe 2026-08-23). Die uebrige A3-Absicht bleibt
+    unveraendert gueltig: die Grundauswahl ersetzt die feste
+    Sieben-Spalten-Liste (Zusicherung darunter unveraendert). ACC kehrt
+    NICHT als achte Katalog-Spalte zurueck, sondern als fest angehaengte
+    Zusatzspalte HINTER der Grundauswahl -- ausserhalb der Metrik-Auswahl,
+    damit ADR-0005/#710 (Confidence nicht waehlbar) unberuehrt bleibt.
     """
-    html, plain = _zugestellte_teile(_trip(outlook_metrics=None))
+    trip = _trip(outlook_metrics=None)
+    html, plain = _zugestellte_teile(trip)
 
-    assert html_outlook_headers(html) == [
-        "Tag", "N", "D", "R", "PR", "Wind", "Böen", "Gew", "ACC",
-    ], (
-        f"Kopfzeile {html_outlook_headers(html)!r}: ein Trip ohne Auswahl "
-        "zeigt nicht mehr die sieben festen Spalten (AC-1)."
+    kopf = html_outlook_headers(html)
+    assert kopf and kopf[0] == "Tag" and len(kopf) > 1, (
+        f"Kopfzeile {kopf!r}: der Ausblick eines Bestandstrips ist leer oder "
+        "fehlt ganz (AC-1)."
     )
-    assert plain_outlook_block(plain) is not None, (
+    # #2136/ADR-0068: der feste Pfad-1-Kopf traegt seither ebenfalls
+    # `col_label` -- ein getipptes Literal mit den abgeloesten Kuerzeln waere
+    # nie mehr treffbar (jede echte Regression liefe an dieser Negativprobe
+    # vorbei). Die Erwartung wird deshalb aus derselben Ableitung wie Pfad 1
+    # selbst gerechnet, nicht getippt.
+    from tests.tdd.test_compare_outlook_metric_selection import (
+        erwartete_pfad1_kopfzeile,
+    )
+
+    pfad1_kopf = erwartete_pfad1_kopfzeile()[1:] + ["ACC"]
+    assert kopf[1:] != pfad1_kopf, (
+        "Der Ausblick zeigt weiterhin die abgeloesten sieben festen Spalten "
+        f"statt der Grundauswahl: {kopf!r} (#1848 A3, AC-3)."
+    )
+    assert kopf[-1] == "ACC" and len(kopf) > 2, (
+        f"Kopfzeile {kopf!r}: die zugestellte Mail zeigt keine ACC-Spalte "
+        "hinter der Grundauswahl (#2098 AC-13 -- show_acc wird im "
+        "konfigurierbaren Zweig nicht gelesen)."
+    )
+    klartext = plain_outlook_block(plain)
+    assert klartext is not None, (
         "Der Klartext-Ausblick eines Bestandstrips fehlt vollstaendig (AC-1)."
+    )
+    # Notiz-Fortsetzungszeilen ("    ↳ …", outlook.py:311-313) gehoeren zur
+    # Zeile darueber und tragen keine Spalten -- geprueft werden die
+    # WERTZEILEN.
+    wertzeilen = [z for z in klartext.splitlines()[1:]
+                  if z.strip() and not z.lstrip().startswith("↳")]
+    assert wertzeilen, (
+        f"Der Klartext-Ausblick hat gar keine Wertzeile:\n{klartext}\n(AC-1)"
+    )
+    ohne_acc = [z for z in wertzeilen if "ACC" not in z]
+    assert not ohne_acc, (
+        f"Diese Klartext-Ausblick-Zeilen fuehren kein ACC: {ohne_acc!r} "
+        "(#2098 AC-13/Befund C -- der Farbpunkt des HTML braucht im Klartext "
+        "ein Wort)."
     )

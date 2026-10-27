@@ -46,6 +46,11 @@ func validateLocation(loc model.Location) error {
 	if loc.ID == "" {
 		return fmt.Errorf("id required")
 	}
+	// Issue #2140 Scheibe 2: die Kennung landet ueber SaveLocation in einem
+	// Dateipfad — ein Trenner darin bricht aus dem Nutzerverzeichnis aus.
+	if !store.ValidEntityID(loc.ID) {
+		return fmt.Errorf("invalid id")
+	}
 	if loc.Name == "" {
 		return fmt.Errorf("name required")
 	}
@@ -104,6 +109,13 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 		now := time.Now().UTC()
 		loc.CreatedAt = &now
 
+		// Issue #2482: Mengen-Quote — Validierung und Dubletten-409 (conflict)
+		// oben haben Vorrang; Orte zaehlen alle (kein Archiv).
+		defer s.LockQuota()()
+		if !quotaAllows(w, r, s, quotaLocations) {
+			return
+		}
+
 		if err := s.SaveLocation(loc); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(500)
@@ -121,7 +133,11 @@ func UpdateLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
+		defer s.LockLocation(id)() // #2158
 		existing, err := s.LoadLocation(id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -176,7 +192,11 @@ func PatchLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 
+		defer s.LockLocation(id)() // #2158
 		existing, err := s.LoadLocation(id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -232,6 +252,9 @@ func LocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
 		loc, err := s.LoadLocation(id)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -254,6 +277,34 @@ func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		if rejectInvalidEntityID(w, id) {
+			return
+		}
+
+		defer s.LockLocation(id)() // #2158
+
+		// #2216: Ort in einem Ortsvergleich -> nicht loeschen, Namen melden.
+		used, err := s.ComparePresetsUsingLocation(id)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(500)
+			w.Write([]byte(`{"error":"store_error"}`))
+			return
+		}
+		if len(used) > 0 {
+			type ref struct {
+				ID   string `json:"id"`
+				Name string `json:"name"`
+			}
+			refs := make([]ref, 0, len(used))
+			for _, p := range used {
+				refs = append(refs, ref{ID: p.ID, Name: p.Name})
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(409)
+			json.NewEncoder(w).Encode(map[string]any{"error": "location_in_use", "compare_presets": refs})
+			return
+		}
 
 		if err := s.DeleteLocation(id); err != nil {
 			w.Header().Set("Content-Type", "application/json")

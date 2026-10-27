@@ -37,6 +37,7 @@ NACHWEISLICH entstehen muss, nicht nur behauptet werden darf.
 """
 from __future__ import annotations
 
+import re
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -49,7 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from bs4 import BeautifulSoup  # noqa: E402
 
-from app.metric_catalog import build_default_display_config  # noqa: E402
+from app.metric_catalog import build_default_display_config, get_metric  # noqa: E402
 from app.model_registry import (  # noqa: E402
     cape_ladder_thresholds_jkg, lpi_thresholds_jkg,
 )
@@ -142,12 +143,28 @@ def _heutige_etappe() -> SegmentWeatherData:
     )
 
 
-def _mail(zeilen: list[dict], *, report_config: TripReportConfig | None = None):
+def _dc_ohne_grundauswahl():
+    """``display_config`` OHNE Grundauswahl -- ADR-0050 D4, "kein Maximum".
+
+    #1848 A3: der Ausblick erbt sonst die Grundauswahl und rendert ueber den
+    konfigurierbaren Zweig, der seine Zellentexte aus ``stage["cells"]``
+    liest. Hand-gebaute Alt-Zeilen (``_AC5_ALT_ZEILE``) tragen die nicht --
+    gegen sie stuende dort ueberall "-". Fuer den Bestandsschutz-Test des
+    FESTEN Zweigs ist das die richtige Vorbedingung, nicht ein Umweg um den
+    Befund: ohne Grundauswahl bleibt der feste Zweig produktiv in Kraft.
+    """
+    dc = build_default_display_config()
+    dc.metrics = []
+    return dc
+
+
+def _mail(zeilen: list[dict], *, report_config: TripReportConfig | None = None,
+          display_config=None):
     """Das ECHTE Trip-Briefing ueber den produktiven Formatierer -- Pruefort
     = Wirkort."""
     return TripReportFormatter().format_email(
         [_heutige_etappe()], "Test-Trip", "evening",
-        display_config=build_default_display_config(), tz=_TZ,
+        display_config=display_config or build_default_display_config(), tz=_TZ,
         stage_name="Etappe A", multi_day_trend=zeilen,
         report_config=report_config,
     )
@@ -178,6 +195,41 @@ def _kompakt_ausblick_zeile(text: str, ueberschrift: str = _AUSBLICK_UEBERSCHRIF
     return zeilen[0]
 
 
+def _gewitter_kopf() -> str:
+    """Beschriftung der Gewitter-Spalte -- abgeleitet, nicht getippt.
+
+    #2136/ADR-0068: beide Ausblick-Pfade tragen seither denselben
+    ``MetricDefinition.col_label`` ("Thdr") -- der vormalige Katalogname
+    "Gewitter" (#1848 A3) ist damit entfallen (Muster
+    ``tests/tdd/test_thunder_origin_outlook.py::_gewitter_kopf``)."""
+    return get_metric("thunder").col_label
+
+
+def _gewitterfeld(zeile: str) -> str:
+    """Die Gewitterspalte einer Kompakt-Ausblick-Zeile, spaltengenau.
+
+    🔴 #1848 A3: das Gewitterfeld ist nicht mehr zwangslaeufig das LETZTE der
+    Zeile. Seit der Ausblick die Grundauswahl erbt, rendert der Trip ueber den
+    konfigurierbaren Zweig (``Thdr Tleicht@16  Cloud -  …``); der
+    feste Zweig (``… 25    Tleicht@16``) bleibt fuer Trips ohne Grundauswahl
+    in Kraft. Beide Formen werden hier auf DASSELBE Feld reduziert, damit die
+    Zusicherungen unveraendert am Zellentext haengen und nicht an dessen
+    Position.
+
+    Spaltengrenze ist der zwei-Zeichen-Zwischenraum (``"  ".join`` bzw. die
+    Feldpolsterung des festen Zweigs); INNERHALB des Gewitterfelds stehen nur
+    einfache Leerzeichen (``" - nachts hoch @2"``, ``" (hoch @15)"``).
+
+    #2136/ADR-0068: das Feld-Praefix ist seither `col_label` ("Thdr"), nicht
+    mehr der deutsche Katalog-Langname ("Gewitter")."""
+    praefix = f"{_gewitter_kopf()} "
+    felder = re.split(r"\s{2,}", zeile.rstrip())
+    beschriftet = [f for f in felder if f.startswith(praefix)]
+    if beschriftet:
+        return beschriftet[0][len(praefix):]
+    return felder[-1]
+
+
 # ---------------------------------------------------------------------------
 # AC-1 bis AC-4: die vier Verzweigungen von resolve_thunder_day_branch()
 # ---------------------------------------------------------------------------
@@ -197,10 +249,10 @@ def test_tagesgewitter_erscheint_trotz_leerem_24h_aggregat():
     bericht = _mail([zeile], report_config=_KOMPAKT)
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
     # #1493: der Tagesteil traegt jetzt die Onset-Stunde (`@16`).
-    assert ausblick.endswith("Tleicht@16"), (
+    # #2176: bei LOW faellt das Ereignissymbol "⚡" (ASCII-gefaltet "T") weg.
+    assert _gewitterfeld(ausblick) == "leicht@16", (
         f"Die Kompakt-Ausblick-Zeile muss auf das Tagesgewitter 'leicht' "
-        f"(ASCII-gefaltet 'Tleicht@16') enden, nicht auf das leere 24h-Aggregat: "
-        f"{ausblick!r}")
+        f"enden, nicht auf das leere 24h-Aggregat: {ausblick!r}")
 
 
 def test_kein_tagesgewitter_trotz_aggregat_high():
@@ -208,45 +260,54 @@ def test_kein_tagesgewitter_trotz_aggregat_high():
     Tagesfenster leer, das Gewitterereignis (hoch, 2 Uhr) liegt vollstaendig
     in der Nacht / When die Kurzformat-Mail gerendert wird / Then zeigt der
     Tagesteil explizit 'kein Gewitter' (ASCII-gefaltet 'T-'), nicht das
-    faelschlich uebernommene Aggregat 'HIGH'; der Nachtteil zeigt das echte
-    Nachtgewitter mit Uhrzeit.
+    faelschlich uebernommene Aggregat 'HIGH'.
 
-    Heute (RED): die Zeile liest ``tok['thunder_plain']`` == ``_THUNDER_MAP
-    ["HIGH"]["plain"]`` == '⚡HIGH' -> ASCII 'THIGH', ohne jeden Nachtzusatz
-    (den es im Kompaktformat vor dieser Scheibe strukturell nie gab).
+    ⚠️ NACHTTEIL ENTFAELLT (PO-Entscheid 2026-08-14, bestaetigt 2026-08-21,
+    #1848 A3): bis dahin folgte hier '- nachts hoch @2'. Die 3-Tages-Vorschau
+    zeigt seither ausschliesslich das TAGESFENSTER -- der Entscheid galt
+    vorher nur fuer den Metrik-Zweig (fix_1841 AC-3) und gilt seit A3 fuer
+    alle Trips, weil der feste Zweig als Normalfall entfaellt. Die hier
+    bewachte Fehlerklasse ist unveraendert: das 24h-Aggregat darf kein
+    Tagesgewitter erfinden.
     """
     zeile = _stage(hourly_thunder=(_hv(2, 3.0),), thunder="HIGH")
     bericht = _mail([zeile], report_config=_KOMPAKT)
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
-    assert ausblick.endswith("T- - nachts hoch @2"), (
+    assert _gewitterfeld(ausblick) == "T-", (
         f"Der Tagesteil muss explizit 'kein Gewitter' zeigen (nicht das "
-        f"Aggregat 'HIGH'), gefolgt vom echten Nachtgewitter mit Uhrzeit: "
-        f"{ausblick!r}")
+        f"Aggregat 'HIGH'): {ausblick!r}")
     assert "HIGH" not in ausblick, (
         f"Das faelschlich uebernommene Aggregat 'HIGH' darf in der Zeile "
         f"nicht mehr auftauchen: {ausblick!r}")
 
 
-def test_nachtgewitter_erscheint_mit_uhrzeit_im_kompaktformat():
-    """AC-3: Given eine Etappe mit Tagesgewitter 'mittel' 14 Uhr UND
-    Nachtgewitter 'hoch' 0 Uhr (Fall B aus #1653) / When die Kurzformat-Mail
-    gerendert wird / Then enthaelt die zugestellte, ASCII-gefaltete Zeile
-    sowohl den Tagesteil als auch einen Nachtzusatz der exakten Form
-    '- nachts hoch @0' (Bindestrich statt '·' nach der Faltung) -- eine
-    Nachtangabe, die im Kompaktformat vor dieser Scheibe strukturell nie
-    erschien.
+def test_nachtgewitter_erscheint_nicht_im_kompakt_ausblick():
+    """⚠️ AC-3 UMGEDREHT (PO-Entscheid 2026-08-14, bestaetigt 2026-08-21,
+    #1848 A3).
 
-    Exakte Wortlaut-Pruefung (kein loses ``in``-'nachts'): faengt Mutation
-    (e) der Spec (entferntes Leerzeichen vor '@').
+    Bis dahin lautete die Zusicherung -- und der Testname --
+    "Nachtgewitter erscheint mit Uhrzeit im Kompaktformat": die Zeile trug
+    einen Nachtzusatz der exakten Form '- nachts hoch @0'. Die 3-Tages-
+    Vorschau zeigt seit A3 ausschliesslich das TAGESFENSTER; die
+    #1653/#1671-Nachtangabe ist aus allen VIER Ausblick-Darstellungen
+    entfernt. Der Geltungsbereich bleibt strikt die Vorschau -- Tages-
+    Briefing, Stundenverlauf und Alarme fuehren den Tag/Nacht-Split weiter.
+
+    Given eine Etappe mit Tagesgewitter 'mittel' 14 Uhr UND Nachtgewitter
+    'hoch' 0 Uhr (Fall B aus #1653) / When die Kurzformat-Mail gerendert wird
+    / Then zeigt die Zeile NUR den Tagesteil mit Onset-Stunde -- keinen
+    Nachtzusatz, und insbesondere nicht die staerkere Nachtstufe.
     """
     zeile = _stage(hourly_thunder=(_hv(14, 2.0), _hv(0, 3.0)), thunder="MED")
     bericht = _mail([zeile], report_config=_KOMPAKT)
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
-    # #1493: Tagesteil mit Onset-Stunde, Nachtzusatz unveraendert.
-    assert ausblick.endswith("Tmittel@14 - nachts hoch @0"), (
-        f"Tagesteil 'Tmittel@14' und Nachtzusatz '- nachts hoch @0' (mit "
-        f"Leerzeichen vor '@') muessen exakt so am Ende der Zeile stehen: "
-        f"{ausblick!r}")
+    # #1493: Tagesteil mit Onset-Stunde -- der bleibt.
+    assert _gewitterfeld(ausblick) == "Tmittel@14", (
+        f"Erwartet ausschliesslich den Tagesteil 'Tmittel@14' ohne "
+        f"Nachtzusatz: {ausblick!r}")
+    assert "nachts" not in ausblick and "hoch" not in ausblick, (
+        f"Die Vorschau darf weder eine Nachtangabe noch die Nachtstufe "
+        f"'hoch' zeigen: {ausblick!r}")
 
 
 def test_kein_gewitter_tag_und_nacht_zeigt_explizites_none():
@@ -265,7 +326,7 @@ def test_kein_gewitter_tag_und_nacht_zeigt_explizites_none():
     zeile = _stage(hourly_thunder=(_hv(10, 0.0), _hv(22, 0.0)), thunder="HIGH")
     bericht = _mail([zeile], report_config=_KOMPAKT)
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
-    assert ausblick.endswith("T-"), (
+    assert _gewitterfeld(ausblick) == "T-", (
         f"Ohne Gewitter in Tag- und Nachtfenster muss die Zeile explizit "
         f"'T-' zeigen (nicht das Aggregat 'HIGH'): {ausblick!r}")
     assert "nachts" not in ausblick, (
@@ -299,7 +360,7 @@ def test_tagesgewitter_eskalation_zeigt_spitzenstufe_im_kompaktformat():
     bericht = _mail([zeile], report_config=_KOMPAKT)
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
     # #1493: Erst-Stufe mit Onset-Stunde, Peak-Zusatz unveraendert.
-    assert ausblick.endswith("Tleicht@5 (hoch @15)"), (
+    assert _gewitterfeld(ausblick) == "Tleicht@5 (hoch @15)", (
         f"Die Kompakt-Ausblick-Zeile muss die Erst-Stufe 'leicht' UND den "
         f"Peak-Zusatz '(hoch @15)' zeigen -- die Eskalation innerhalb des "
         f"Tagesfensters darf nicht auf die schwaechere Erst-Stufe "
@@ -338,7 +399,7 @@ def test_unzerlegbarer_tagestoken_faellt_auf_kein_gewitter_zurueck():
     zeile = _stage(hourly_thunder=(_hv(5, 4.0),), thunder="HIGH")
     bericht = _mail([zeile], report_config=_KOMPAKT)
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
-    assert ausblick.endswith("T-"), (
+    assert _gewitterfeld(ausblick) == "T-", (
         f"Ein gesetzter, aber unzerlegbarer Tages-Token muss auf das "
         f"explizite 'kein Gewitter'-Zeichen 'T-' zurueckfallen (nicht "
         f"abstuerzen und nicht das Aggregat 'HIGH' zeigen): {ausblick!r}")
@@ -361,7 +422,15 @@ def test_unzerlegbarer_tagestoken_faellt_auf_kein_gewitter_zurueck():
 # Issue #1488 Scheibe B: Sollwert neu aufgezeichnet -- das Aggregatwort kommt
 # jetzt aus THUNDER_LABEL_DE ("mittel" statt "MED"). Geprueft bleibt die
 # Zweigwahl (Rueckfall auf `thunder_plain` ohne Stundenreihe), nicht das Vokabular.
-_AC5_ALT_ZEILE_SOLL = "Mi  Alte Etappe                9-21C   1.5mm NW22  Tmittel"
+# Issue #1848 Scheibe A1: Sollwert erneut aufgezeichnet -- der Temperatur-Spannen-
+# Trenner ist vom Bindestrich auf den Schraegstrich gewechselt ("9-21C" -> "9/21C").
+# Grund: PO-Entscheid 2026-08-20, EIN Trenner ueber alle Klartext-Flaechen; der
+# Bindestrich ist bei Minusgraden zugleich Trenner und Vorzeichen und damit nicht
+# eindeutig lesbar. Gleiche Lage wie bei #1488 oben (MED -> mittel): geaendert hat
+# sich das VOKABULAR, nicht die hier bewachte Zweigwahl -- der Rueckfall auf
+# `thunder_plain` ohne Stundenreihe bleibt am abschliessenden "Tmittel" ablesbar
+# und unveraendert geprueft.
+_AC5_ALT_ZEILE_SOLL = "Mi  Alte Etappe                9/21C   1.5mm NW22  Tmittel"
 
 _AC5_ALT_ZEILE = dict(
     weekday="Mi", name="Alte Etappe", note=None,
@@ -385,7 +454,14 @@ def test_ohne_stundenreihe_bleibt_kurzformat_unveraendert():
     der Implementierung gruen BLEIBEN -- ein rot werdender Lauf hier heisst,
     dass sich das Alt-Verhalten veraendert hat.
     """
-    bericht = _mail([_AC5_ALT_ZEILE], report_config=_KOMPAKT)
+    # #1848 A3: ausdruecklich OHNE Grundauswahl gerendert (ADR-0050 D4) --
+    # genau der Fall, den dieser Bestandsschutz bewacht: der feste Zweig, auf
+    # den ein Alt-Aufrufer ohne Stundenreihe und ohne Grundauswahl faellt. Der
+    # aufgezeichnete Sollwert bleibt damit unveraendert gueltig, statt zu
+    # einer Zeile aus lauter "-" nachgezogen zu werden (die Alt-Zeile traegt
+    # keine `cells`, die der konfigurierbare Zweig fuellen wuerde).
+    bericht = _mail([_AC5_ALT_ZEILE], report_config=_KOMPAKT,
+                    display_config=_dc_ohne_grundauswahl())
     ausblick = _kompakt_ausblick_zeile(bericht.email_plain)
     assert ausblick == _AC5_ALT_ZEILE_SOLL, (
         f"Ohne Stundenreihe darf sich die Kompakt-Ausblick-Zeile NICHT "
@@ -435,9 +511,15 @@ def _mit_herkunft_ausblick_zeile() -> dict:
     return zeile
 
 
-def _gew_zelle(html: str, kopf: str = "Gew") -> str:
+def _gew_zelle(html: str, kopf: "str | None" = None) -> str:
     """Der Text der Gewitter-Zelle der Ausblick-Tabelle aus fertigem
-    Mail-HTML (Muster tests/tdd/test_thunder_origin_outlook.py::_gew_zelle)."""
+    Mail-HTML (Muster tests/tdd/test_thunder_origin_outlook.py::_gew_zelle).
+
+    ``kopf`` (Default ``None`` -> ``_gewitter_kopf()``, `col_label` "Thdr"):
+    #2136/ADR-0068 -- seither dieselbe Beschriftung in BEIDEN Ausblick-Pfaden,
+    der vormalige Katalogname "Gewitter" (#1848 A3) ist entfallen."""
+    if kopf is None:
+        kopf = _gewitter_kopf()
     suppe = BeautifulSoup(html, "html.parser")
     tabellen = [
         t for t in suppe.find_all("table")

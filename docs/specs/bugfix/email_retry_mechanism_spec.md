@@ -3,7 +3,7 @@ entity_id: email_retry_mechanism
 type: bugfix
 created: 2026-02-03
 updated: 2026-02-03
-status: draft
+status: implemented
 version: "1.0"
 workflow: "Bugfix: Email Retry Mechanism"
 tags: [email, retry, resilience, smtp]
@@ -25,7 +25,7 @@ Implementiere automatische Wiederholungsversuche (Retry-Mechanismus) für E-Mail
 
 ### Affected Files
 
-- `src/outputs/email.py` - Add retry decorator and apply to send() method
+- `src/output/channels/email.py` - Add retry decorator and apply to send() method
 - `tests/tdd/test_html_email.py` - Add new test class for retry scenarios
 
 ### Estimated Changes
@@ -44,7 +44,7 @@ Implementiere automatische Wiederholungsversuche (Retry-Mechanismus) für E-Mail
 
 Erstelle einen Decorator `retry_on_network_error`, der automatische Wiederholungsversuche bei Netzwerk-Fehlern durchführt.
 
-**Location:** `src/outputs/email.py` (nach imports, vor EmailOutput-Klasse)
+**Location:** `src/output/channels/email.py` (nach imports, vor EmailOutput-Klasse)
 
 ```python
 import time
@@ -112,7 +112,7 @@ def retry_on_network_error(max_retries: int = 3, backoff_base: int = 5):
 
 ### 2. Decorator auf send() anwenden
 
-**Location:** `src/outputs/email.py:61` (vor `def send`)
+**Location:** `src/output/channels/email.py:61` (vor `def send`)
 
 ```python
 @retry_on_network_error(max_retries=3, backoff_base=5)
@@ -149,14 +149,14 @@ def send(
 
 ### 3. Imports ergänzen
 
-**Location:** `src/outputs/email.py:8` (nach `import smtplib`)
+**Location:** `src/output/channels/email.py:8` (nach `import smtplib`)
 
 ```python
 import time
 import logging
 ```
 
-**Location:** `src/outputs/email.py:18` (nach OutputConfigError import)
+**Location:** `src/output/channels/email.py:18` (nach OutputConfigError import)
 
 ```python
 logger = logging.getLogger(__name__)
@@ -486,7 +486,7 @@ def test_retry_logging(self, mock_settings, caplog):
 | `smtplib.SMTP` | Standard Library | SMTP-Client für E-Mail-Versand |
 | `time.sleep()` | Standard Library | Wartezeit zwischen Retries |
 | `logging` | Standard Library | Logging von Retry-Versuchen |
-| `src/outputs/base.py:OutputError` | Internal | Exception für E-Mail-Fehler |
+| `src/output/channels/base.py:OutputError` | Internal | Exception für E-Mail-Fehler |
 
 ## Known Limitations
 

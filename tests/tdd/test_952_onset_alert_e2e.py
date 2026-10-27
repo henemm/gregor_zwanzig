@@ -42,6 +42,7 @@ from app.config import Settings
 from app.models import TripReportConfig
 
 from tests.tdd._telegram_live_fixture import live_telegram_enabled
+from tests.helpers.telegram_empfaenger import antwort_im_update
 from tests.tdd.test_952_onset_alert_fidelity import (
     _GuaranteedWetRadar, _trip_with_active_segment,
 )
@@ -214,7 +215,6 @@ def test_ac9_onset_alert_real_telegram_delivery_bold_no_subject_duplicate():
     '[Betreff]'-Duplikat. Sofortiger Cleanup via delete_message()."""
     from output.renderers.alert.model import AlertMessage, OnsetEvent
     from output.renderers.alert.render import render_subject, render_telegram
-    from output.channels.telegram import TelegramOutput
 
     onset = OnsetEvent(
         onset_minutes=12, onset_time="14:35", km_from=5.0, km_to=18.0,
@@ -233,7 +233,7 @@ def test_ac9_onset_alert_real_telegram_delivery_bold_no_subject_duplicate():
         telegram_bot_token=os.environ["GZ_TELEGRAM_BOT_TOKEN"],
         telegram_chat_id=chat_id,
     )
-    output = TelegramOutput(settings)
+    output = antwort_im_update(settings, chat_id)
 
     # RED vor Fix: send() kennt parse_mode/suppress_subject_line nicht -> TypeError.
     message_id = output.send(

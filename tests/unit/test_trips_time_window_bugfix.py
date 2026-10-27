@@ -234,7 +234,7 @@ class TestSchedulerInterpolation:
         stage = _make_stage_without_time_windows()
         trip = Trip(id="gr221", name="GR221 Mallorca", stages=[stage])
 
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         segments = service._convert_trip_to_segments(trip, date(2026, 2, 15))
 
         # BUG: Currently returns [] because all waypoints skip
@@ -254,7 +254,7 @@ class TestSchedulerInterpolation:
         stage = _make_stage_without_time_windows()
         trip = Trip(id="gr221", name="GR221 Mallorca", stages=[stage])
 
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         segments = service._convert_trip_to_segments(trip, date(2026, 2, 15))
 
         assert len(segments) > 0, "No segments created"
@@ -285,7 +285,7 @@ class TestSchedulerInterpolation:
         )
         trip = Trip(id="test", name="Test", stages=[stage])
 
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         segments = service._convert_trip_to_segments(trip, date(2026, 2, 15))
 
         normal = [s for s in segments if s.segment_id != "Ziel"]
@@ -325,7 +325,7 @@ class TestSchedulerInterpolation:
             ],
         )
 
-        service = TripReportSchedulerService()
+        service = TripReportSchedulerService(user_id="default")
         segs_steep = service._convert_trip_to_segments(
             Trip(id="steep", name="Steep", stages=[stage_steep]), date(2026, 2, 15))
         segs_flat = service._convert_trip_to_segments(

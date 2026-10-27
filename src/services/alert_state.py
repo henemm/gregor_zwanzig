@@ -28,6 +28,8 @@ import json
 import logging
 from pathlib import Path
 
+from services.file_lock import atomic_write_json
+
 logger = logging.getLogger("alert_state")
 
 # Issue #1460 (P2): Schlüsselraum der amtlichen Warnungen. Einzige Quelle für
@@ -44,10 +46,35 @@ OFFICIAL_ALERT_KEY_PREFIX = "official_alert:"
 EVENT_IDENTITY_KEY_PREFIX = "event_identity:"
 
 
+def prune_expired_official(state: dict, now) -> bool:
+    """Issue #1441 S2 (AC-9): entfernt ``official_alert:``-Eintraege, deren
+    ``valid_to`` vor ``now`` liegt (planmaessiger Ablauf ist keine
+    Entwarnung, der Eintrag wird nur aufgeraeumt). Eintraege ohne bzw. mit
+    unlesbarem ``valid_to`` bleiben -- im Zweifel behalten. Liefert, ob sich
+    ``state`` geaendert hat."""
+    from datetime import datetime, timezone
+
+    expired = []
+    for key, entry in state.items():
+        if not key.startswith(OFFICIAL_ALERT_KEY_PREFIX) or not isinstance(entry, dict):
+            continue
+        try:
+            valid_to = datetime.fromisoformat(entry.get("valid_to") or "")
+        except (TypeError, ValueError):
+            continue
+        if valid_to.tzinfo is None:
+            valid_to = valid_to.replace(tzinfo=timezone.utc)
+        if valid_to < now:
+            expired.append(key)
+    for key in expired:
+        del state[key]
+    return bool(expired)
+
+
 class AlertStateService:
     """Lädt/speichert/löscht das Alert-Melde-Gedächtnis pro Trip (mandantengetrennt)."""
 
-    def __init__(self, user_id: str = "default") -> None:
+    def __init__(self, user_id: str) -> None:
         self._user_id = user_id
         # Issue #1265: get_data_dir() statt hartkodiertem "data/users/..." --
         # respektiert die pytest-Isolation (tests/conftest.py, #1133).
@@ -74,7 +101,7 @@ class AlertStateService:
         """Persist the alert-state dict for an entity."""
         try:
             self._state_dir.mkdir(parents=True, exist_ok=True)
-            self._path(entity_id).write_text(json.dumps(state, indent=2))
+            atomic_write_json(self._path(entity_id), state)
         except OSError as e:
             logger.error(f"Failed to save alert_state for {entity_id}: {e}")
 

@@ -201,7 +201,7 @@ def test_ac5_ohne_versuch_bleibt_die_sperre_bestehen(nutzer):
 def test_ac5_anker_vom_vortag_beendet_die_heutige_sperre_nicht(nutzer):
     """AC-5 (Zuordnung zum Slot): Ein Briefing-Versuch von GESTERN darf die
     heutige Sperre nicht beenden — sonst waere die Sperre ab dem zweiten
-    Betriebstag jeder Tour dauerhaft wirkungslos, ohne dass irgendein Test
+    Betriebstag jeder Trip dauerhaft wirkungslos, ohne dass irgendein Test
     umkippt.
 
     Eine Implementierung, die nur „gibt es ueberhaupt einen Anker?" fragt,
@@ -357,7 +357,7 @@ def test_ac6_anker_eines_fremden_gegenstands_beendet_die_sperre_nicht(nutzer):
 
     Ohne diesen Fall waere eine Implementierung, die den Anker nur nach
     ``user_id`` nachschlaegt, formal AC-5-konform — und liesse bei jedem
-    Briefing irgendeiner Tour saemtliche Doppel-Meldungen des Nutzers durch.
+    Briefing irgendeiner Trip saemtliche Doppel-Meldungen des Nutzers durch.
     """
     from services.alert_briefing_anchor import record_briefing_sent
 

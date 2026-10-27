@@ -1,8 +1,9 @@
 # ADR-0006: Keine gemockten Tests; echte E2E-Verifikation gegen Staging
 
-- **Status:** Akzeptiert
+- **Status:** Teilweise abgelöst durch [ADR-0094](0094-zwei-test-schichten-kern-und-live-e2e.md) — abgelöst ist nur Entscheidung Punkt 1 „echte Mails/echte API-Calls in allen Mail-/API-Tests“ (jetzt: deterministischer Kern mit aufgezeichneten Fixtures + Live-E2E-Schicht); Mock-Theater-Verbot, Dateiinhalt-Verbot, Bug-Nachweis aus Nutzersicht und Punkt 2 (E2E gegen Staging, Deploy-Gate) gelten weiter
 - **Datum:** 2026-04-26 (E2E-gegen-Staging-Grundsatz, Issue #339)
-- **Bezug:** `CLAUDE.md` → „KEINE MOCKED TESTS", „E2E-Verifikation"; GitHub-Issues #339, #521, #564
+- **Bezug:** `CLAUDE.md` → „Test-Politik: Zwei Schichten", „E2E-Verifikation & Deploy" (vormals „KEINE MOCKED TESTS", „E2E-Verifikation"); GitHub-Issues #339, #521, #564
+- **Ergänzt durch:** [ADR-0054](0054-playwright-e2e-in-ci-ampel-positivliste.md) (schreibt fort), [ADR-0085](0085-ci-auto-deploy-nur-mit-echtem-e2e-verify-nachweis.md) (ergänzt)
 
 ## Kontext
 

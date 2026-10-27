@@ -60,17 +60,20 @@ export function formatStageNumber(index: number): string {
  * Pausentag-Heuristik: Etappe ohne Wegpunkte zaehlt als Pause.
  * Kein neues Modellfeld — UI-Logik aus Master-Spec §3.2.
  *
- * Ausnahme (Issue #559 AC-2): Eine Etappe mit einem konkreten Namen (nicht 'Pause'
- * und nicht leer) gilt NICHT als Pause — auch wenn sie noch keine Wegpunkte hat.
- * Betrifft Vorlage-Etappen aus fromTemplate(), die namentlich belegt sind aber
- * noch keine Wegpunkte besitzen.
+ * Ausnahme (Issue #559 AC-2): Eine Etappe mit einem konkreten Namen (nicht
+ * 'Pause', nicht 'Pausentag' und nicht leer) gilt NICHT als Pause — auch wenn
+ * sie noch keine Wegpunkte hat. Betrifft Vorlage-Etappen aus fromTemplate(),
+ * die namentlich belegt sind aber noch keine Wegpunkte besitzen.
+ * #2496 F3: 'Pausentag' ist seitdem explizites Pause-Synonym — die
+ * Desktop-Anlage (handlePauseInsert) schreibt ihn schon, mobil seit F3 auch.
  */
 export function isPauseStage(stage: Pick<Stage, 'waypoints' | 'name'>): boolean {
 	if (!stage.waypoints || stage.waypoints.length === 0) {
-		// Benannte Etappe (nicht leer, nicht 'Pause') ist keine Pause —
-		// z.B. Vorlage-Etappen aus fromTemplate() mit Namen aber noch ohne Wegpunkte.
+		// Benannte Etappe (nicht leer, nicht 'Pause'/'Pausentag') ist keine
+		// Pause — z.B. Vorlage-Etappen aus fromTemplate() mit Namen aber noch
+		// ohne Wegpunkte.
 		const name = stage.name?.trim() ?? '';
-		if (name.length > 0 && name !== 'Pause') return false;
+		if (name.length > 0 && name !== 'Pause' && name !== 'Pausentag') return false;
 		return true;
 	}
 	return false;

@@ -53,6 +53,19 @@ _REASON_LABELS = {
     "below_channel_threshold": "unter deiner Schwelle",
     "premium_sms_no_reply_address": "keine Rückadresse gelernt",
     "premium_sms_reply_address_stale": "Rückadresse veraltet",
+    # #2050 S3b: Doppel-Alarm-Guard (#818) — dieselbe Größe desselben
+    # Abschnitts wurde eben schon gemeldet.
+    "double_alert_guard": "Wiederholung derselben Meldung",
+    # #2050 S4a: die Wetterquelle war nicht erreichbar — ohne Beschriftung
+    # stuende der rohe Code in der Mail.
+    "data_unavailable": "Wetterdaten nicht verfügbar",
+    # #2050 S4c: der Abweichungs-Zweig entdoppelt jetzt an derselben
+    # quellenuebergreifenden Ereignis-Identitaet wie Radar/amtlich (analog
+    # `double_alert_guard`) — ohne eigenen Eintrag fiele der Grund auf
+    # "Versand fehlgeschlagen" zurueck, wo bewusst entdoppelt wurde.
+    "event_duplicate": "bereits als anderes Ereignis gemeldet",
+    # #2050 Sz.12: der Wächter war blind (Untergrund steht im Protokoll).
+    "no_reference_basis": "Kein Alarm möglich: keine gültige Vergleichsbasis",
 }
 
 # #1750 E2: Einsortierung je Grund in einen der zwei Bloecke. Ein Vorfall mit
@@ -67,6 +80,20 @@ _REASON_BLOCK = {
     "cooldown": "withheld",
     "daily_limit": "withheld",
     "below_channel_threshold": "withheld",
+    # #2050 S3b: Nutzer-Absicht (der Wiederholungsschutz ist gewollt), kein
+    # Zustellfehler — ohne diesen Eintrag fiele der Grund per Default auf
+    # "failed" und die Mail behauptete einen Fehler, wo keiner war.
+    "double_alert_guard": "withheld",
+    # #2050 S4a: ein Quellenausfall ist KEINE Nutzereinstellung — "so hast du
+    # es eingestellt" waere schlicht falsch. Der Eintrag steht hier trotz des
+    # gleichlautenden Default (`.get(reason, "failed")`), weil die Einordnung
+    # eine Entscheidung ist und nicht dem Zufall eines Rueckfalls ueberlassen
+    # bleiben darf.
+    "data_unavailable": "failed",
+    # #2050 S4c: Nutzer-Absicht wie `double_alert_guard`, kein Zustellfehler.
+    "event_duplicate": "withheld",
+    # #2050 Sz.12: kein Nutzer-Rückhalt, sondern ein blinder Wächter.
+    "no_reference_basis": "failed",
 }
 
 _TRIGGER_LABELS = {

@@ -3,7 +3,7 @@ entity_id: fix_1708_c_tote_ablage_loeschen
 type: feature
 created: 2026-08-17
 updated: 2026-08-17
-status: draft
+status: implemented
 version: "1.1"
 tags: [cleanup, issue-1708, trips-pfad, prod-selftest]
 ---

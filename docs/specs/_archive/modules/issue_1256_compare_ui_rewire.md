@@ -3,7 +3,7 @@ entity_id: issue_1256_compare_ui_rewire
 type: feature
 created: 2026-07-13
 updated: 2026-07-13
-status: draft
+status: implemented
 version: "1.2"
 tags: [compare, ui-fidelity, design-handoff-4, epic-1230, frontend]
 workflow: feat-1256-compare-ui-rewire
@@ -154,9 +154,9 @@ der Abweichungen und ist unabhängig auslieferbar.
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `CLAUDE.md` § „Trip/Ortsvergleich-Code-Teilung" (Zeilen 248-255, frisch committed auf `main`) | Konvention/Invariante | PO-Vorgabe „möglichst viel Code zwischen Trip und Ortsvergleich teilen" als prüfbare Invariante — bindend für JEDE neue Komponente dieser Spec (Constraints, AC-40) |
-| Issue #1250 (`docs/specs/modules/issue_1250_briefing_subscription.md`) | Spec | Chassis-Konvergenz; Scheibe 2 dort bringt `paused_at` additiv. Bis dahin nutzen S3/S8 dieser Spec die bestehende `computePauseToggle`-Logik (`subscriptionHelpers.ts`) — kein Doppel-Touch der Pause-Semantik in dieser Spec. |
+| Issue #1250 (`docs/specs/_archive/modules/issue_1250_briefing_subscription.md`) | Spec | Chassis-Konvergenz; Scheibe 2 dort bringt `paused_at` additiv. Bis dahin nutzen S3/S8 dieser Spec die bestehende `computePauseToggle`-Logik (`subscriptionHelpers.ts`) — kein Doppel-Touch der Pause-Semantik in dieser Spec. |
 | Issue #866 | Issue | Vorheriger Editor-Arbeitsstrang (Cross-Link, keine offene Abhängigkeit — Editor-Tabs sind bereits auf dem in dieser Spec vorausgesetzten Stand) |
-| `docs/specs/modules/issue_1231_korridor_editor.md` | Spec | `CorridorEditor context="vergleich"` — Editor-Tab „Wertebereiche" konsumiert diesen Organism bereits fertig. Scheibe 6 (Hub-Idealwerte-Inline-Edit) bettet denselben Organism in den Hub ein (Entscheidung s. Implementation Details, löst das frühere Offen-Risiko „bespoke vs. reuse" auf). |
+| `docs/specs/_archive/modules/issue_1231_korridor_editor.md` | Spec | `CorridorEditor context="vergleich"` — Editor-Tab „Wertebereiche" konsumiert diesen Organism bereits fertig. Scheibe 6 (Hub-Idealwerte-Inline-Edit) bettet denselben Organism in den Hub ein (Entscheidung s. Implementation Details, löst das frühere Offen-Risiko „bespoke vs. reuse" auf). |
 | `docs/specs/modules/layout_tab_vergleich.md` | Spec | Deckt den bereits gebauten, aber noch nicht in den Compare-Editor verdrahteten `LayoutTab`/`LTComparePreview`-Organism ab (#1232 Scheibe 3a) — Scheibe 4 dieser Spec verdrahtet ihn |
 | Handoff-4-Zip | Design-Artefakt | `/home/hem/gregor_zwanzig/claude-code-handoff/Gregor-Zwanzig-handoff-4.zip` — kanonische JSX-Quelle für Optik, entpackter Arbeitsstand im Session-Scratchpad `handoff4/` |
 | `Gregor 20 - Ortsvergleich Fluss.html` | Design-Artefakt | Kanonische Verdrahtungs-Quelle 1 (Navigation/Lebenszyklus), Zeilen 69-127 |

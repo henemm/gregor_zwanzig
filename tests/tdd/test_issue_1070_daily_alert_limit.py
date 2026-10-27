@@ -61,6 +61,7 @@ from app.loader import get_data_dir
 from app.trip import Stage, Trip, Waypoint
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 # Koordinaten im GR20-Gebiet (Korsika) — identisch zu test_issue_827
 LAT, LON = 42.20, 9.10
@@ -101,12 +102,24 @@ def _today_str(zone: ZoneInfo) -> str:
     return datetime.now(timezone.utc).astimezone(zone).date().isoformat()
 
 
-def _seed_daily_counter(uid: str, count: int, zone: ZoneInfo = TRIP_ZONE) -> None:
+def _seed_daily_counter(
+    uid: str, count: int, zone: ZoneInfo = TRIP_ZONE,
+    *, max_urgency_sent: str | None = None,
+) -> None:
+    """Zaehlerstand vorbelegen.
+
+    ``max_urgency_sent`` (Issue #2050 S3b): die hoechste heute in dieser Zone
+    bereits ZUGESTELLTE Dringlichkeit. Seit S3b darf eine Lage, die sie ECHT
+    uebersteigt, das erschoepfte Budget einmal je Tag und Zone durchbrechen —
+    ein Zaehler OHNE dieses Feld gilt dabei als „nichts ueber LOW verschickt"
+    und ist damit durchbrechbar. Wer die HARTE Unterdrueckung messen will,
+    muss den Wert also mitgeben."""
+    eintrag: dict = {"date": _today_str(zone), "count": count}
+    if max_urgency_sent is not None:
+        eintrag["max_urgency_sent"] = max_urgency_sent
     path = _counter_path(uid)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(
-        {"zones": {str(zone): {"date": _today_str(zone), "count": count}}}
-    ))
+    path.write_text(json.dumps({"zones": {str(zone): eintrag}}))
 
 
 # ═══════════════════ Modul-Ebene: services.alert_daily_limit ════════════════
@@ -314,7 +327,20 @@ def test_ac1_radar_alert_suppressed_when_free_daily_limit_reached():
     RED: `check_radar_alerts()` prüft an der Recording-Stelle (~Zeile 832 ff.)
     noch kein Tageslimit-Gate — der Alert wird trotz ausgeschöpftem Free-Limit
     tatsächlich versendet (`mail_calls` wird gefüllt statt leer zu bleiben).
+
+    Issue #2050 S3b (Szenario 7) hat dieses AC für den ESKALATIONSFALL
+    abgelöst: übersteigt die Lage die höchste heute in dieser Zone bereits
+    zugestellte Stufe, bricht sie das erschöpfte Budget einmal je Tag und Zone
+    (Spec `feat_2050_s3b_budget_und_unterdrueckungsgrund.md`, AC-15). Hier
+    gemessen wird deshalb weiterhin der NORMALFALL — und zwar ohne jede
+    Annahme über die Lage: die Vergleichsbasis wird auf die HÖCHSTE Stufe der
+    produktiven Skala gesetzt (`highest_urgency(...)`, kein Literal). Über ihr
+    gibt es nichts mehr, `exceeds(x, "HIGH")` ist für jedes x False — eine
+    Eskalation ist damit konstruktiv ausgeschlossen, unabhängig davon, was
+    `_wet_frames` liefert. Den Durchbruchsfall halten AC-15 bis AC-17 in
+    `tests/tdd/test_daily_budget_escalation.py` fest.
     """
+    from services import alert_urgency
     from services.radar_service import RadarNowcastService
     from services.trip_alert import TripAlertService
 
@@ -323,7 +349,9 @@ def test_ac1_radar_alert_suppressed_when_free_daily_limit_reached():
     _clean_user(uid)
     try:
         _write_user_tier(uid, "free")
-        _seed_daily_counter(uid, 2)
+        _seed_daily_counter(uid, 2, max_urgency_sent=alert_urgency.highest_urgency(
+            "LOW", "MODERATE", "HIGH",
+        ))
 
         trip = _make_trip(trip_id, send_email=True, send_telegram=False)
         _save_trip(trip, uid)
@@ -335,7 +363,7 @@ def test_ac1_radar_alert_suppressed_when_free_daily_limit_reached():
         svc = TripAlertService(
             settings=settings,
             throttle_hours=0,
-            user_id=uid,
+            user_id=mit_profil_chat(uid, settings),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=lambda subject, body: mail_calls.append((subject, body)),
         )
@@ -446,7 +474,7 @@ def telegram_sink(monkeypatch):
 
 
 def _settings_telegram_only() -> Settings:
-    return Settings(telegram_bot_token="test-token", telegram_chat_id="test-chat")
+    return Settings(telegram_bot_token="test-token", telegram_chat_id="424200")  # #1412 S4a: numerisch (AC-6)
 
 
 def _segment(segment_id: int | str = 1) -> TripSegment:
@@ -541,7 +569,7 @@ def test_ac5_cross_path_daily_limit_shared_between_radar_and_deviation(telegram_
             svc = TripAlertService(
                 settings=email_settings,
                 throttle_hours=0,
-                user_id=uid,
+                user_id=mit_profil_chat(uid, email_settings),
                 radar_service=RadarNowcastService(frame_source=_wet_frames),
                 mail_sink=lambda subject, body: None,
             )
@@ -566,7 +594,7 @@ def test_ac5_cross_path_daily_limit_shared_between_radar_and_deviation(telegram_
         fresh = [_weather_data(precip_sum_mm=18.0)]
 
         dev_svc = TripAlertService(
-            settings=_settings_telegram_only(), throttle_hours=0, user_id=uid,
+            settings=_settings_telegram_only(), throttle_hours=0, user_id=mit_profil_chat(uid, _settings_telegram_only()),
         )
         dev_result = dev_svc.check_and_send_alerts(dev_trip, cached, fresh_weather=fresh)
 
@@ -616,7 +644,7 @@ def test_ac6_radar_gate_passes_but_no_channel_delivered_leaves_counter_unchanged
         svc = TripAlertService(
             settings=settings,
             throttle_hours=0,
-            user_id=uid,
+            user_id=mit_profil_chat(uid, settings),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=lambda subject, body: mail_calls.append((subject, body)),
         )
@@ -663,7 +691,7 @@ def test_ac2_wiring_standard_limit_allows_fourth_blocks_fifth():
         svc = TripAlertService(
             settings=_make_settings_with_email(),
             throttle_hours=0,
-            user_id=uid,
+            user_id=mit_profil_chat(uid, _make_settings_with_email()),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=lambda subject, body: mail_calls.append((subject, body)),
         )
@@ -682,7 +710,7 @@ def test_ac2_wiring_standard_limit_allows_fourth_blocks_fifth():
         svc_5th = TripAlertService(
             settings=_make_settings_with_email(),
             throttle_hours=0,
-            user_id=uid,
+            user_id=mit_profil_chat(uid, _make_settings_with_email()),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=lambda subject, body: mail_calls_5th.append((subject, body)),
         )
@@ -716,7 +744,7 @@ def test_ac3_wiring_premium_no_limit():
         svc = TripAlertService(
             settings=_make_settings_with_email(),
             throttle_hours=0,
-            user_id=uid,
+            user_id=mit_profil_chat(uid, _make_settings_with_email()),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=lambda subject, body: mail_calls.append((subject, body)),
         )
@@ -754,7 +782,7 @@ def test_ac6_deviation_gate_passes_but_no_channel_delivered_leaves_counter_uncha
         svc = TripAlertService(
             settings=_make_settings_with_email(),
             throttle_hours=0,
-            user_id=uid,
+            user_id=mit_profil_chat(uid, _make_settings_with_email()),
         )
         result = svc.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
@@ -822,6 +850,7 @@ class _ScriptedComparePointSource:
     def fetch(
         self, point_id: str, lat: float, lon: float,
         start_hour: int | None = None, end_hour: int | None = None,
+        elevation_m: int | None = None, user_id: str | None = None,
     ):
         from services.point_weather import PointWeatherData
 
@@ -853,7 +882,7 @@ def test_ac1_1555_free_tier_first_forecast_change_alert_delivered_at_reduced_bou
         cached = [_weather_data(precip_sum_mm=2.0)]
         fresh = [_weather_data(precip_sum_mm=18.0)]
 
-        svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=uid)
+        svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=mit_profil_chat(uid, _settings_telegram_only()))
         result = svc.check_and_send_alerts(dev_trip, cached, fresh_weather=fresh)
 
         assert result is True, (
@@ -893,7 +922,7 @@ def test_ac2_1555_free_tier_forecast_change_suppressed_but_nowcast_still_deliver
         dev_trip = _deviation_trip(f"trip-dev-{uid}")
         cached = [_weather_data(precip_sum_mm=2.0)]
         fresh = [_weather_data(precip_sum_mm=18.0)]
-        dev_svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=uid)
+        dev_svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=mit_profil_chat(uid, _settings_telegram_only()))
         dev_result = dev_svc.check_and_send_alerts(dev_trip, cached, fresh_weather=fresh)
 
         assert dev_result is False, (
@@ -912,7 +941,7 @@ def test_ac2_1555_free_tier_forecast_change_suppressed_but_nowcast_still_deliver
         radar_svc = TripAlertService(
             settings=_make_settings_with_email(),
             throttle_hours=0,
-            user_id=uid,
+            user_id=mit_profil_chat(uid, _make_settings_with_email()),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=lambda subject, body: mail_calls.append((subject, body)),
         )
@@ -950,7 +979,7 @@ def test_ac3_1555_standard_tier_forecast_change_suppressed_but_nowcast_still_del
         dev_trip = _deviation_trip(f"trip-dev-{uid}")
         cached = [_weather_data(precip_sum_mm=2.0)]
         fresh = [_weather_data(precip_sum_mm=18.0)]
-        dev_svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=uid)
+        dev_svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=mit_profil_chat(uid, _settings_telegram_only()))
         dev_result = dev_svc.check_and_send_alerts(dev_trip, cached, fresh_weather=fresh)
 
         assert dev_result is False, (
@@ -968,7 +997,7 @@ def test_ac3_1555_standard_tier_forecast_change_suppressed_but_nowcast_still_del
         radar_svc = TripAlertService(
             settings=_make_settings_with_email(),
             throttle_hours=0,
-            user_id=uid,
+            user_id=mit_profil_chat(uid, _make_settings_with_email()),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=lambda subject, body: mail_calls.append((subject, body)),
         )
@@ -1005,7 +1034,7 @@ def test_ac4_1555_premium_tier_unlimited_for_both_forecast_change_and_nowcast(te
         dev_trip = _deviation_trip(f"trip-dev-{uid}")
         cached = [_weather_data(precip_sum_mm=2.0)]
         fresh = [_weather_data(precip_sum_mm=18.0)]
-        dev_svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=uid)
+        dev_svc = TripAlertService(settings=_settings_telegram_only(), throttle_hours=0, user_id=mit_profil_chat(uid, _settings_telegram_only()))
         dev_result = dev_svc.check_and_send_alerts(dev_trip, cached, fresh_weather=fresh)
 
         assert dev_result is True, f"AC-4: Premium forecast_change trotz count=6 muss zugestellt werden, got {dev_result}"
@@ -1019,7 +1048,7 @@ def test_ac4_1555_premium_tier_unlimited_for_both_forecast_change_and_nowcast(te
         radar_svc = TripAlertService(
             settings=_make_settings_with_email(),
             throttle_hours=0,
-            user_id=uid,
+            user_id=mit_profil_chat(uid, _make_settings_with_email()),
             radar_service=RadarNowcastService(frame_source=_wet_frames),
             mail_sink=lambda subject, body: mail_calls.append((subject, body)),
         )

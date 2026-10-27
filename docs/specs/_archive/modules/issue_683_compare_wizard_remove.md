@@ -3,7 +3,7 @@ entity_id: issue_683_compare_wizard_remove
 type: rework
 created: 2026-06-11
 updated: 2026-06-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, cleanup, dead-code, frontend, wizard]
 ---

@@ -3,7 +3,7 @@ entity_id: bug_270_compare_mobile
 type: bugfix
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, mobile, compare, bottom-sheet, sticky, svelte, frontend, issue-270]
 ---

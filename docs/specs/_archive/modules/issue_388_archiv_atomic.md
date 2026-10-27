@@ -16,7 +16,7 @@ tags: [frontend, archiv, atomic-design, phase2, table, ssr, svelte5, issue-388]
 
 ## Purpose
 
-Die Route `/archiv` ist bislang ein leerer Placeholder (Eyebrow + EmptyState). Sie wird zur vollständigen tabellarischen Listenansicht archivierter Touren ausgebaut, exakt nach Vorlage `screen-archive.jsx`. Gleichzeitig werden alle Inline-Helper (`ArchiveSortTab`, `ArchiveAction`) durch Library-Bausteine aus der Atomic-Bibliothek ersetzt — `Segmented` (atoms) für den Sort-Tab und `Btn variant="quiet" size="icon-sm"` (atoms) für Aktions-Buttons. Die Seite liefert damit den dritten Migrations-Schritt in Epic #368 Phase 2 (nach Home #386 und Trips #387) und verifiziert das Listen-Tabellen-Pattern mit der Atomic-Bibliothek.
+Die Route `/archiv` ist bislang ein leerer Placeholder (Eyebrow + EmptyState). Sie wird zur vollständigen tabellarischen Listenansicht archivierter Trips ausgebaut, exakt nach Vorlage `screen-archive.jsx`. Gleichzeitig werden alle Inline-Helper (`ArchiveSortTab`, `ArchiveAction`) durch Library-Bausteine aus der Atomic-Bibliothek ersetzt — `Segmented` (atoms) für den Sort-Tab und `Btn variant="quiet" size="icon-sm"` (atoms) für Aktions-Buttons. Die Seite liefert damit den dritten Migrations-Schritt in Epic #368 Phase 2 (nach Home #386 und Trips #387) und verifiziert das Listen-Tabellen-Pattern mit der Atomic-Bibliothek.
 
 > **Schicht-Hinweis:** Alle Änderungen liegen im Frontend-Layer (`frontend/src/routes/archiv/`). Go-API (`/api/trips`) und Python-Backend sind read-only konsumiert, nicht verändert.
 
@@ -34,8 +34,8 @@ Die Route `/archiv` ist bislang ein leerer Placeholder (Eyebrow + EmptyState). S
 |--------|------|---------|
 | `frontend/src/lib/components/ui/segmented/Segmented.svelte` | Atom (vorhanden) | Sort-Tabs (Neueste / Genauigkeit / Etappen) — ersetzt Inline-`ArchiveSortTab` aus screen-archive.jsx; Props: `options[]`, `selected`, `onselect` |
 | `frontend/src/lib/components/ui/btn/Btn.svelte` | Atom (vorhanden) | Aktions-Buttons je Zeile — ersetzt Inline-`ArchiveAction`; `variant="quiet"`, `size="icon-sm"` mit Lucide-Icon als Slot |
-| `frontend/src/lib/components/molecules/Stat.svelte` | Molecule (vorhanden) | Stats-Strip (Touren / Briefings / Alarme / Forecast-Treffer); `layout="inline"`, `tone="accent"` für Treffer-Wert |
-| `frontend/src/lib/components/ui/eyebrow/Eyebrow.svelte` | Atom (vorhanden) | Eyebrow-Text "Workspace · Vergangene Touren" |
+| `frontend/src/lib/components/molecules/Stat.svelte` | Molecule (vorhanden) | Stats-Strip (Trips / Briefings / Alarme / Forecast-Treffer); `layout="inline"`, `tone="accent"` für Treffer-Wert |
+| `frontend/src/lib/components/ui/eyebrow/Eyebrow.svelte` | Atom (vorhanden) | Eyebrow-Text "Workspace · Vergangene Trips" |
 | `frontend/src/lib/types.ts` | TypeScript-Typ (vorhanden, read-only) | `Trip`-Interface mit `archived_at?: string` |
 | `$env/dynamic/private` (SvelteKit) | Framework-Built-in | `GZ_API_BASE`-Env für Go-API-URL im SSR-Loader |
 | `@lucide/svelte/icons/history` | Lucide-Icon | Briefing-Verlauf-Button in `ArchiveRow`; Import als `HistoryIcon` |
@@ -64,7 +64,7 @@ Kein einziges Hex-Literal bleibt in der Svelte-Ausgabe — ausschließlich CSS-T
 
 ### 1. SSR-Loader `+page.server.ts` (neu)
 
-Analog zu `trips/+page.server.ts`, aber filtert auf archivierte Touren:
+Analog zu `trips/+page.server.ts`, aber filtert auf archivierte Trips:
 
 ```ts
 import { env } from '$env/dynamic/private';
@@ -143,10 +143,10 @@ const totalAlerts    = $derived(0);  // no alerts_triggered count field yet
 
 1. **Header:** `<Eyebrow>`, H1 "Archiv", Beschreibungstext — token-basiert, kein Inline-Hex
 2. **Toolbar:** Search-Input (rounded-pill, SearchIcon links) + `<Segmented options={SORT_OPTIONS} selected={sort} onselect={(v) => sort = v}>`
-3. **Stats-Strip:** 4× `<Stat layout="inline">` — Touren, Briefings gesendet (`—`), Forecast-Treffer Ø (`—`), Alarme ausgelöst (`—`)
+3. **Stats-Strip:** 4× `<Stat layout="inline">` — Trips, Briefings gesendet (`—`), Forecast-Treffer Ø (`—`), Alarme ausgelöst (`—`)
 4. **Tabelle:** Card-Wrapper (padding=0), Kopfzeile mit 6-spaltigem Grid (`1.7fr 0.7fr 1.1fr 0.9fr 1.6fr auto`), dann `{#each filtered}` → `<ArchiveRow>`
 5. **Empty-State-Zeile:** bei `filtered.length === 0` ein zentrierter `<p>`
-6. **Footer:** `{filtered.length} von {data.trips.length} archivierten Touren · auto-archiviert nach Tour-Ende`
+6. **Footer:** `{filtered.length} von {data.trips.length} archivierten Trips · auto-archiviert nach Trip-Ende`
 
 ### 3. Page-lokale Komponenten (bleiben page-lokal, DELIVERY-NOTE §1)
 
@@ -189,7 +189,7 @@ Die JSX-Vorlage enthält mehrere Inline-Hex-Farben. Diese dürfen **nicht** in S
 ## Expected Behavior
 
 - **Input:** SvelteKit SSR-Load-Aufruf auf `/archiv`; Go-API liefert Trip-Array (gefiltert auf `archived_at != null`)
-- **Output:** Vollständig gerenderte Tabellenansicht mit Header, Toolbar (Suche + Sort-Tabs), Stats-Strip, Tabelle mit einer Zeile pro archivierten Tour, Footer-Zähler
+- **Output:** Vollständig gerenderte Tabellenansicht mit Header, Toolbar (Suche + Sort-Tabs), Stats-Strip, Tabelle mit einer Zeile pro archivierten Trip, Footer-Zähler
 - **Reaktivität:**
   - Search-Input: `query`-State → `filtered`-Derived → Tabelle aktualisiert sich ohne Reload
   - Sort-Tabs: `sort`-State → `filtered`-Derived neu sortiert; `Segmented` zeigt aktive Auswahl via `data-active`
@@ -198,10 +198,10 @@ Die JSX-Vorlage enthält mehrere Inline-Hex-Farben. Diese dürfen **nicht** in S
 
 ## Acceptance Criteria
 
-- **AC-1:** Given die Route `/archiv` wird ohne archivierte Touren aufgerufen / When der SSR-Loader `GET /api/trips` aufruft und keine Tour mit `archived_at != null` zurückkommt / Then rendert die Seite die Tabellen-Kopfzeile und den Footer-Hinweis "0 von 0 archivierten Touren", kein EmptyState-Platzhalter, kein JS-Fehler
+- **AC-1:** Given die Route `/archiv` wird ohne archivierte Trips aufgerufen / When der SSR-Loader `GET /api/trips` aufruft und keine Trip mit `archived_at != null` zurückkommt / Then rendert die Seite die Tabellen-Kopfzeile und den Footer-Hinweis "0 von 0 archivierten Trips", kein EmptyState-Platzhalter, kein JS-Fehler
   - Test: (populated after /tdd-red)
 
-- **AC-2:** Given die Route `/archiv` mit mindestens einer archivierten Tour / When die Seite geladen ist und der Nutzer einen Suchbegriff ins Search-Input eingibt / Then filtert die Tabelle reaktiv (via `$derived`) ohne Seiten-Reload und zeigt nur Touren, deren Name den Suchbegriff enthält (case-insensitive), der Footer-Zähler aktualisiert sich entsprechend
+- **AC-2:** Given die Route `/archiv` mit mindestens einer archivierten Trip / When die Seite geladen ist und der Nutzer einen Suchbegriff ins Search-Input eingibt / Then filtert die Tabelle reaktiv (via `$derived`) ohne Seiten-Reload und zeigt nur Trips, deren Name den Suchbegriff enthält (case-insensitive), der Footer-Zähler aktualisiert sich entsprechend
   - Test: (populated after /tdd-red)
 
 - **AC-3:** Given die Archiv-Tabelle ist sichtbar / When der Nutzer auf den "Genauigkeit"-Sort-Tab klickt / Then wechselt `Segmented` optisch auf `data-active="true"` für "Genauigkeit", die `sort`-Variable ist `"accuracy"`, und die Tabelle behält die bestehende Reihenfolge (da kein Backend-Feld; kein Crash, keine Umsortierung)
@@ -216,7 +216,7 @@ Die JSX-Vorlage enthält mehrere Inline-Hex-Farben. Diese dürfen **nicht** in S
 - **AC-6:** Given der SSR-Loader auf `/archiv` und das Go-API antwortet nicht innerhalb von 5 Sekunden / When der Fetch mit `AbortSignal.timeout(5000)` abbricht / Then wird die Seite mit leerer Trip-Liste gerendert (fail-soft), kein unbehandelter Promise-Rejection, HTTP-Status der Seite bleibt 200
   - Test: (populated after /tdd-red)
 
-- **AC-7:** Given eine `ArchiveRow` mit einer Tour, die `alerts > 0` hat / When die Zeile gerendert wird / Then ist ein Alert-Zähler-Text (`· N alert(s)`) in `--g-accent`-Farbe sichtbar neben dem Touren-Namen; bei `alerts === 0` ist kein Alert-Text sichtbar
+- **AC-7:** Given eine `ArchiveRow` mit einer Trip, die `alerts > 0` hat / When die Zeile gerendert wird / Then ist ein Alert-Zähler-Text (`· N alert(s)`) in `--g-accent`-Farbe sichtbar neben dem Trips-Namen; bei `alerts === 0` ist kein Alert-Text sichtbar
   - Test: (populated after /tdd-red)
 
 ## Known Limitations

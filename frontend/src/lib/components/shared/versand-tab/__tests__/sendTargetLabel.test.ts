@@ -86,9 +86,19 @@ describe('AC-2: Zusatzkanaele nur, wenn im Vergleich aktiviert UND im Konto hint
 		assert.ok(text.includes(MAIL), `E-Mail fehlt im Ziel-Text: "${text}" (AC-2b).`);
 	});
 
-	test('(c) SMS aktiviert und Nummer erlaubt hinterlegt → SMS steht im Ziel-Text', () => {
+	test('(c) SMS aktiviert und Nummer erlaubt UND bestaetigt hinterlegt → SMS steht im Ziel-Text', () => {
+		// Issue #2406: "hinterlegt" reicht seither nicht mehr — nur eine per Code
+		// BEWIESENE Nummer ist ein Versandziel (Sperre in config.py). Ohne
+		// `sms_verified` nennte der Dialog ein Ziel, an das nichts zugestellt
+		// wuerde — genau die Falschaussage aus #1471 in neuer Form.
 		const { text } = sendTargetLabel(
-			{ mail_to: MAIL, email_verified: true, sms_to: '+49150000000', sms_allowed: true },
+			{
+				mail_to: MAIL,
+				email_verified: true,
+				sms_to: '+49150000000',
+				sms_allowed: true,
+				sms_verified: true
+			},
 			{ send_sms: true }
 		);
 		assert.match(text, /sms/i, `SMS ist aktiviert und hinterlegt, fehlt aber: "${text}" (AC-2c).`);

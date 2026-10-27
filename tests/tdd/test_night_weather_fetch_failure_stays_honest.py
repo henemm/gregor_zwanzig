@@ -87,7 +87,7 @@ class TestFetchNightWeatherProviderFailureReturnsNone:
     def test_provider_error_returns_none_not_last_segment_timeseries(self):
         last_segment = _last_segment()
 
-        result = fetch_night_weather(last_segment, provider=_ThrowingProvider())
+        result = fetch_night_weather(last_segment, provider=_ThrowingProvider(), user_id="nutzer_nacht")
 
         assert result is None, (
             f"Erwartet None bei Abruf-Fehler, erhalten: {result!r} -- "
@@ -117,7 +117,7 @@ class TestFetchNightWeatherFailureFlowsThroughRealRenderPath:
         segments = [_last_segment(arrival_hour=12)]  # Ankunft 12:00 -> Luecke moeglich
         tz = ZoneInfo("UTC")
 
-        night_weather = fetch_night_weather(segments[0], provider=_ThrowingProvider())
+        night_weather = fetch_night_weather(segments[0], provider=_ThrowingProvider(), user_id="nutzer_nacht")
         assert night_weather is None, "Vorbedingung: Providerfehler muss None liefern (AC-1)"
 
         has_gap = compute_has_gap(segments, night_weather, tz)
@@ -160,7 +160,7 @@ class TestFetchNightWeatherFailureIsConsistentAcrossCallers:
         )
 
         last_segment = _last_segment()
-        result = TripReportSchedulerService()._fetch_night_weather(last_segment)
+        result = TripReportSchedulerService(user_id="default")._fetch_night_weather(last_segment)
 
         assert result is None, (
             f"Scheduler-Delegator lieferte {result!r} statt None bei "
@@ -172,7 +172,7 @@ class TestFetchNightWeatherFailureIsConsistentAcrossCallers:
         ``preview_service.py:217`` es tut."""
         last_segment = _last_segment()
 
-        result = fetch_night_weather(last_segment, provider=_ThrowingProvider())
+        result = fetch_night_weather(last_segment, provider=_ThrowingProvider(), user_id="nutzer_nacht")
 
         assert result is None, (
             f"Direkter Aufruf (Vorschau-Muster) lieferte {result!r} statt "
@@ -190,8 +190,8 @@ class TestFetchNightWeatherFailureIsConsistentAcrossCallers:
         )
 
         last_segment = _last_segment()
-        scheduler_result = TripReportSchedulerService()._fetch_night_weather(last_segment)
-        preview_result = fetch_night_weather(last_segment, provider=_ThrowingProvider())
+        scheduler_result = TripReportSchedulerService(user_id="default")._fetch_night_weather(last_segment)
+        preview_result = fetch_night_weather(last_segment, provider=_ThrowingProvider(), user_id="nutzer_nacht")
 
         assert scheduler_result is None
         assert preview_result is None

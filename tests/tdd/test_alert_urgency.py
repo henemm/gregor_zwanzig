@@ -45,6 +45,7 @@ from tests.helpers.alert_log_fixtures import (
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 _GUST_STANDARD_THRESHOLD_KMH = 20.0
 
@@ -53,7 +54,7 @@ def _service(user_id: str, sink: list, **kwargs):
     from services.trip_alert import TripAlertService
 
     return TripAlertService(
-        settings=settings_email_only(), user_id=user_id, throttle_hours=0,
+        settings=settings_email_only(), user_id=mit_profil_chat(user_id, settings_email_only()), throttle_hours=0,
         mail_sink=lambda subject, body: sink.append((subject, body)), **kwargs,
     )
 
@@ -78,7 +79,7 @@ def _official_alert(*, level: int, region_label: str = "Testregion"):
 # ═══════════════════════════ E2 — Amtliche Warnung ═══════════════════════
 
 def test_official_red_level_logs_high():
-    """AC-1 GIVEN eine rote amtliche Warnung (level=4) loest fuer eine Tour
+    """AC-1 GIVEN eine rote amtliche Warnung (level=4) loest fuer eine Trip
     einen Standalone-Alarm aus WHEN protokolliert wird THEN steht 'HIGH' im
     neuesten Eintrag -- vorher stand dort fest 'MODERATE'."""
     uid = fresh_user("ac1461-1")
@@ -222,7 +223,7 @@ def _run_radar(uid: str, *, frame_source) -> dict:
 
 
 def test_convective_radar_logs_high():
-    """AC-5 GIVEN ein Radar-Alarm mit is_convective=True fuer eine Tour WHEN
+    """AC-5 GIVEN ein Radar-Alarm mit is_convective=True fuer eine Trip WHEN
     protokolliert wird THEN steht 'HIGH' im Eintrag -- weiterhin, aber jetzt
     aus is_convective abgeleitet statt aus einer Konstante.
 
@@ -237,7 +238,7 @@ def test_convective_radar_logs_high():
 
 def test_moderate_rain_radar_logs_moderate():
     """AC-6 GIVEN ein Radar-Alarm mit is_convective=False und Label
-    'Maessiger Regen' (2.5 mm/h) fuer eine Tour WHEN protokolliert wird THEN
+    'Maessiger Regen' (2.5 mm/h) fuer eine Trip WHEN protokolliert wird THEN
     steht 'MODERATE' im Eintrag -- vorher stand dort fest 'HIGH'."""
     entry = _run_radar(fresh_user("ac1461-6"), frame_source=_frames_with_rate(2.5, is_convective=False))
     assert entry.get("severity") == "MODERATE", (
@@ -248,7 +249,7 @@ def test_moderate_rain_radar_logs_moderate():
 
 def test_light_rain_radar_logs_low():
     """AC-7 GIVEN ein Radar-Alarm mit Label 'Leichter Regen' (0.5 mm/h,
-    is_convective=False) fuer eine Tour WHEN protokolliert wird THEN steht
+    is_convective=False) fuer eine Trip WHEN protokolliert wird THEN steht
     'LOW' im Eintrag -- exakt der in der Analyse benannte Fall (Nieselregen
     in 19 Minuten, bisher faelschlich HIGH)."""
     entry = _run_radar(fresh_user("ac1461-7"), frame_source=_frames_with_rate(0.5, is_convective=False))
@@ -686,7 +687,7 @@ def _telegram_trip(trip_id: str) -> Trip:
 
 
 def test_channel_dispatch_unaffected_by_severity_change(monkeypatch):
-    """AC-14 (E6, Verhaltensneutralitaet des Versands) GIVEN eine Tour mit
+    """AC-14 (E6, Verhaltensneutralitaet des Versands) GIVEN eine Trip mit
     aktivem E-Mail- und Telegram-Kanal und einer Δ-Aenderung, die einen
     Alarm ausloest WHEN der Alarm laeuft THEN wird die E-Mail-Senke GENAU
     EINMAL und die Telegram-Senke GENAU EINMAL aufgerufen, die SMS-Senke
@@ -716,7 +717,7 @@ def test_channel_dispatch_unaffected_by_severity_change(monkeypatch):
         monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub_1.base_url)
         mails_1: list = []
         svc_1 = TripAlertService(
-            settings=settings, user_id="tdd-1461-ac14a", throttle_hours=0,
+            settings=settings, user_id=mit_profil_chat("tdd-1461-ac14a", settings), throttle_hours=0,
             mail_sink=lambda subject, body: mails_1.append((subject, body)),
         )
         result_1 = svc_1._send_alert(
@@ -740,7 +741,7 @@ def test_channel_dispatch_unaffected_by_severity_change(monkeypatch):
         monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub_2.base_url)
         mails_2: list = []
         svc_2 = TripAlertService(
-            settings=settings, user_id="tdd-1461-ac14b", throttle_hours=0,
+            settings=settings, user_id=mit_profil_chat("tdd-1461-ac14b", settings), throttle_hours=0,
             mail_sink=lambda subject, body: mails_2.append((subject, body)),
         )
         sent_2 = svc_2._send_official_alert_only(
@@ -760,7 +761,7 @@ def test_channel_dispatch_unaffected_by_severity_change(monkeypatch):
 
 def test_entries_count_and_target_list_unchanged_when_severity_changes():
     """AC-15 (E7, D4 -- Eintragszahl und Ziel-Liste unveraendert) GIVEN eine
-    Tour hat vor dieser Scheibe N Eintraege in 'entries' WHEN zusaetzlich ein
+    Trip hat vor dieser Scheibe N Eintraege in 'entries' WHEN zusaetzlich ein
     amtlicher Alarm (level=4) protokolliert wird, der vor dieser Scheibe als
     'MODERATE' in 'entries' gelandet waere THEN liegt der neue Eintrag
     weiterhin in 'entries' (nicht 'not_delivered'), die Anzahl steigt um
@@ -811,12 +812,12 @@ def test_entries_count_and_target_list_unchanged_when_severity_changes():
 
 def test_two_users_official_alert_severity_isolated():
     """AC-16 (Mandantentrennung, zwei Nutzer) GIVEN zwei Nutzer A und B,
-    jeweils mit einer eigenen Tour und je einer roten amtlichen Warnung
+    jeweils mit einer eigenen Trip und je einer roten amtlichen Warnung
     (level=4) im selben Testlauf, isoliert ueber app.loader.get_data_dir
     (kein gemeinsamer data_dir) WHEN beide Alarme protokolliert werden THEN
     traegt Nutzer As alert_log.json einen Eintrag mit severity='HIGH' fuer
-    seine eigene Tour, Nutzer Bs eigene, getrennt gescopte Datei traegt
-    ebenfalls 'HIGH' fuer seine eigene Tour -- keine Vermischung von Werten
+    seine eigene Trip, Nutzer Bs eigene, getrennt gescopte Datei traegt
+    ebenfalls 'HIGH' fuer seine eigene Trip -- keine Vermischung von Werten
     oder Dateien zwischen den beiden data/users/<user_id>/-Verzeichnissen,
     kein Rueckfall auf 'default'."""
     alice, bob = fresh_user("ac1461-16-alice"), fresh_user("ac1461-16-bob")
@@ -840,10 +841,10 @@ def test_two_users_official_alert_severity_isolated():
         f"Je Nutzer genau ein Eintrag erwartet: alice={log_alice}, bob={log_bob}"
     )
     assert log_alice["entries"][0].get("entity_id") == "trip-alice", (
-        f"Alice' Protokoll muss nur ihre eigene Tour zeigen: {log_alice!r}"
+        f"Alice' Protokoll muss nur ihre eigene Trip zeigen: {log_alice!r}"
     )
     assert log_bob["entries"][0].get("entity_id") == "trip-bob", (
-        f"Bobs Protokoll muss nur seine eigene Tour zeigen: {log_bob!r}"
+        f"Bobs Protokoll muss nur seine eigene Trip zeigen: {log_bob!r}"
     )
     assert log_alice["entries"][0].get("severity") == "HIGH", (
         f"Alice' Eintrag muss 'HIGH' tragen: {log_alice!r}"
@@ -855,3 +856,51 @@ def test_two_users_official_alert_severity_isolated():
         "Alice und Bob duerfen NICHT dasselbe Datenverzeichnis teilen "
         f"(Rueckfall auf 'default'?): {get_data_dir(alice)} == {get_data_dir(bob)}"
     )
+
+
+# ═══════════════════ #1441 — Lawinen-Lagebericht (EAWS 1-5) ═══════════════
+# SPEC: docs/specs/modules/avalanche_report_bulletin.md (AC-14, AC-18)
+# Alerts kommen aus dem echten Parser auf aufgezeichneten Bulletins
+# (tests/fixtures/avalanche_report/); die Dringlichkeit folgt dem abgeleiteten
+# `level` (1,2,3,4,4) ueber die bestehende Abbildung -- nur Stufe 1 braucht eine
+# eigene Zuordnung (sonst `LEVEL_LETTERS.get(1, "H")` = HIGH).
+def _lagebericht(stufe: int):
+    from tests.helpers.avalanche_report_support import parse_alert
+
+    quelle = {
+        1: ("2026-03-01_AT-02_de_CAAMLv6.json", "AT-02-05-02"),
+        2: ("2026-03-01_AT-07_de_CAAMLv6.json", "AT-07-29-02"),
+        3: ("2026-01-30_AT-07_de_CAAMLv6.json", "AT-07-28"),
+        4: ("2026-02-20_AT-07_de_CAAMLv6.json", "AT-07-25"),
+        5: ("derived/2026-02-20_AT-07_de_CAAMLv6_DERIVED_very_high.json", "AT-07-25"),
+    }[stufe]
+    return parse_alert(*quelle)
+
+
+def test_1441_stufe_1_ist_nicht_high():
+    """AC-14: Stufe 1 (gering) darf nicht ueber den konservativen HIGH-Rueckfall laufen."""
+    import services.alert_urgency as alert_urgency
+
+    assert alert_urgency.urgency_from_official_level(1) == "LOW"
+
+
+def test_1441_lagebericht_stufe_1_aus_dem_bulletin_ist_nicht_high():
+    import services.alert_urgency as alert_urgency
+
+    assert alert_urgency.urgency_from_official_level(_lagebericht(1).level) == "LOW"
+
+
+def test_1441_lagebericht_stufen_2_bis_5_folgen_dem_abgeleiteten_level():
+    import services.alert_urgency as alert_urgency
+
+    assert [alert_urgency.urgency_from_official_level(_lagebericht(n).level) for n in (2, 3, 4, 5)] == [
+        "LOW", "MODERATE", "HIGH", "HIGH",
+    ]
+
+
+def test_1441_bestehender_rueckfall_fuer_unbekannte_stufen_bleibt_high():
+    """Regressionswache (bewusst schon heute gruen): AC-3 von #1461."""
+    import services.alert_urgency as alert_urgency
+
+    assert alert_urgency.urgency_from_official_level(9) == "HIGH"
+    assert alert_urgency.urgency_from_official_level(4) == "HIGH"

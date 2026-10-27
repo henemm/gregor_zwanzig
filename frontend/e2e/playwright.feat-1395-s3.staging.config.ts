@@ -26,7 +26,7 @@ export default defineConfig({
 	testDir: '.',
 	timeout: 180_000,
 	retries: 0,
-	// Serialisiert: die Faelle legen eigene Test-Touren an und raeumen sie wieder
+	// Serialisiert: die Faelle legen eigene Test-Trips an und raeumen sie wieder
 	// ab; parallele Worker wuerden sich beim Aufraeum-Kontrollfall gegenseitig
 	// Reste vorwerfen.
 	workers: 1,

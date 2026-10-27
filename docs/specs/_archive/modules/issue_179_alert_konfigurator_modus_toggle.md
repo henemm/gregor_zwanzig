@@ -3,13 +3,16 @@ entity_id: issue_179_alert_konfigurator_modus_toggle
 type: module
 created: 2026-05-18
 updated: 2026-05-18
-status: draft
+status: superseded
+superseded_by: "#2277"
 version: "1.0"
 issue: 179
 tags: [alert-rules, alert-konfigurator, modus-toggle, mode-card, frontend, svelte, issue-179]
 ---
 
 # Issue #179 — Alert-Konfigurator: Modus-Toggle (Δ / Absolut / Beides)
+
+> Abgelöst durch #1895/#2277 (Modus-Auswahl und `AlertRulesEditor` rückgebaut, `13af5db93`/`cf98d76f8`).
 
 ## Approval
 

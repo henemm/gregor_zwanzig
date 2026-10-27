@@ -1,7 +1,7 @@
 ---
 entity: issue_583_archiv_1to1
 type: feature
-status: draft
+status: implemented
 created: 2026-06-04
 issue: 583
 epic: 575

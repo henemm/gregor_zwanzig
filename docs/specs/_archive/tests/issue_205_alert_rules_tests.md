@@ -3,7 +3,7 @@ entity_id: issue_205_alert_rules_tests
 type: tests
 created: 2026-05-14
 updated: 2026-05-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, data-model, migration, alerts, issue-205]
 parent: issue_205_alert_rules
@@ -19,10 +19,10 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest für die Implementierung aus
-`docs/specs/modules/issue_205_alert_rules.md`. Jeder pytest- bzw. Go-Test
+`docs/specs/_archive/modules/issue_205_alert_rules.md`. Jeder pytest- bzw. Go-Test
 mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_205_alert_rules.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_205_alert_rules.md` v1.0
 
 ## Source
 

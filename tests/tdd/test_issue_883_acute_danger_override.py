@@ -31,7 +31,7 @@ from __future__ import annotations
 import json
 import shutil
 import uuid
-from datetime import date as date_type, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -40,6 +40,7 @@ from app.models import TripReportConfig
 from app.trip import Stage, Trip, Waypoint
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
+from tests.helpers.ortstag import ortstag
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
@@ -62,12 +63,25 @@ def _convective_frames(lat: float, lon: float) -> list:
 
 
 def _nonconvective_frames(lat: float, lon: float) -> list:
-    """Regen-Frames (onset in 5 Min) ohne Konvektion → is_convective=False."""
+    """Regen-Frames (onset in 5 Min) ohne Konvektion → is_convective=False.
+
+    Issue #2020: die Ueberholungs-Pruefung (#2020 Scheibe 1) kann hier
+    strukturell nie greifen -- seit dem F008-Fix-Loop (2026-08-21,
+    Adversary-Runde 3) NICHT mehr weil die Rate unter
+    HEAVY_RAIN_THRESHOLD_MM_H bliebe (die Regel liest max_rate_mm_h dort
+    gar nicht mehr), sondern weil die akkumulierte Menge im 60-Min-
+    Vergleichsfenster (~1,25 mm) unter der absoluten Relevanz-Untergrenze
+    _OVERTAKE_MIN_ABSOLUTE_MM (2,0 mm) bleibt. Mit den frueheren 4.0/8.0
+    mm/h wuerde die reale Menge die Briefing-Ankuendigung (1,2 mm)
+    inzwischen um mehr als das Doppelte uebersteigen und den Alarm auch
+    OHNE Konvektions-Override ausloesen -- der Test wuerde dann nicht mehr
+    zeigen, dass die konvektive Bedingung eine EIGENSTAENDIGE Ausnahme ist.
+    """
     from providers.brightsky import RadarFrame
     now = datetime.now(timezone.utc)
     return [
-        RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=4.0, is_convective=False),
-        RadarFrame(timestamp=now + timedelta(minutes=20), precip_mm_h=8.0, is_convective=False),
+        RadarFrame(timestamp=now + timedelta(minutes=5), precip_mm_h=2.0, is_convective=False),
+        RadarFrame(timestamp=now + timedelta(minutes=20), precip_mm_h=3.0, is_convective=False),
     ]
 
 
@@ -149,7 +163,9 @@ def _write_snapshot(user_id: str, trip_id: str, segment_id, hourly_precip: dict)
     """
     from app.loader import get_snapshots_dir
 
-    today = date_type.today()
+    # #2314 D2: target_date folgt dem Ortstag der Trip-Koordinaten
+    # (trip_local_today, ADR-0044), nicht dem Prozesstag.
+    today = ortstag(LAT, LON)
     snapshots_dir = get_snapshots_dir(user_id)
     snapshots_dir.mkdir(parents=True, exist_ok=True)
     now_utc = datetime.now(timezone.utc)
@@ -214,10 +230,20 @@ def _ensure_real_user_dir(uid: str) -> None:
 
 
 def _new_service(uid: str, frames, captured: list):
+    from app.config import Settings
     from services.trip_alert import TripAlertService
     from services.radar_service import RadarNowcastService
+    # #1196 Klasse C (Vorbild Batch 4, test_feature_656_radar_nowcast): ohne
+    # Settings baut der Service Settings() aus der Umgebung, und
+    # can_send_email() ist nur mit Host-.env True — auf dem CI-Runner lief
+    # jeder Override-Fall in "No channel configured; skipping radar alert"
+    # (count=0). Dummy-SMTP + mail_sink (DI-Naht) ersetzen den Versand.
+    settings = Settings(
+        smtp_host="test.invalid", smtp_user="u", smtp_pass="p",
+        mail_to="empfaenger@example.com",
+    )
     return TripAlertService(
-        throttle_hours=2, user_id=uid,
+        throttle_hours=2, user_id=uid, settings=settings,
         radar_service=RadarNowcastService(frame_source=frames),
         mail_sink=lambda subject, body: captured.append((subject, body)),
     )
@@ -270,7 +296,14 @@ def test_ac2_nonconvective_announced_rain_stays_suppressed():
     """AC-2: GUARD — Briefing 1.2 mm + nicht-konvektiv → kein Alert (Δ-Modell bleibt).
 
     Beweist: Override greift NUR bei Konvektion, nicht bei normalem angekündigtem Regen.
+
+    Issue #2020 (Team-Lead-Review): zusaetzlicher Nachweis, dass der
+    Unterdrueckungs-Zweig tatsaechlich durchlaufen wurde (nicht nur durch
+    einen fruehen `radar_alert_due()`-Ausstieg umgangen) -- ein
+    `REASON_NOWCAST`-Protokoll-Eintrag mit `briefing_announced:`-Grund
+    (#2020 AC-6).
     """
+    from services import alert_log
     from services.alert_state import AlertStateService
 
     uid = f"tdd-883-ac2-{uuid.uuid4().hex[:6]}"
@@ -292,6 +325,13 @@ def test_ac2_nonconvective_announced_rain_stays_suppressed():
         state = AlertStateService(uid).load(trip_id)
         assert "radar_throttle" not in state, (
             "AC-2: kein radar_throttle erwartet (kein Alert gesendet)."
+        )
+
+        incidents = alert_log.read_undelivered(uid, entity_id=trip_id, entity_type="trip")
+        gate_reasons = {r for i in incidents if i.trigger == alert_log.REASON_NOWCAST for r in i.reasons}
+        assert any(r.startswith("briefing_announced:") for r in gate_reasons), (
+            f"AC-2/#2020: erwarte einen 'briefing_announced:'-Protokoll-Eintrag als "
+            f"Nachweis, dass die Briefing-Sperre tatsaechlich griff. Gefunden: {gate_reasons!r}."
         )
     finally:
         _clean_user(uid)
@@ -418,10 +458,10 @@ def test_ac5_override_respects_quiet_hours():
     Der Override durchbricht nur die Briefing-Unterdrückung, nicht die Quiet Hours.
 
     🔴 Issue #1726: Dieser Test baute sein Ruhezeit-Fenster bis dahin über
-    `Europe/Vienna` — obwohl die Tour auf ISLAND liegt (`LAT`/`LON` = 64.0/
+    `Europe/Vienna` — obwohl die Trip auf ISLAND liegt (`LAT`/`LON` = 64.0/
     -22.0, `Atlantic/Reykjavik`, UTC+0). Er war nur deshalb grün, weil der
     Prüfling denselben falschen Bezug benutzte; das ist der Fehler dieses
-    Issues, im Test selbst. Das Fenster kommt jetzt aus der ORTSZONE der Tour
+    Issues, im Test selbst. Das Fenster kommt jetzt aus der ORTSZONE der Trip
     — abgeleitet aus ihren eigenen Koordinaten, nicht erneut angenommen. Die
     Zusicherung („der Override durchbricht die Nachtruhe nicht") ist
     unverändert; sie wird jetzt an der Zone gemessen, an der sie wirkt.

@@ -3,7 +3,7 @@ entity_id: fix_1796_official_alert_gsm7_extension
 type: bugfix
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [sms, gsm7, alert, bugfix]
 ---
@@ -112,7 +112,7 @@ dort wird der reaktivierte, parametrisierte Test ergänzt (alle 9 Zeichen aus
 ## Expected Behavior
 
 - **Input:** Trip-Name mit mindestens einem GSM-7-Extension-Zeichen (z.B.
-  `"KHW [Test]"`, `"Tour~Nord"`, `"Weg|Nord"`), als `sms_prefix` an
+  `"KHW [Test]"`, `"Trip~Nord"`, `"Weg|Nord"`), als `sms_prefix` an
   `render_official_alert_sms()` übergeben.
 - **Output:** Gerenderte SMS enthält ausschließlich Zeichen aus dem
   GSM-7-Basisalphabet (GSM 03.38), geprüft über `assert_gsm7_clean()`
@@ -132,7 +132,7 @@ dort wird der reaktivierte, parametrisierte Test ergänzt (alle 9 Zeichen aus
     diesem Zeichen rendert und `assert_gsm7_clean()` auf das Ergebnis
     anwendet — kein Dateiinhalt-Check.
 
-- **AC-2 (Regression):** Given ein Trip-Name mit bereits gefalteten Umlauten
+- **AC-2:** (Regression) Given ein Trip-Name mit bereits gefalteten Umlauten
   und Diakritika (`"Höhenweg Świnica"`) / When derselbe amtliche Alarm wie
   bisher gerendert wird / Then bleibt das Ergebnis byte-identisch zum
   bisherigen Verhalten.
@@ -140,8 +140,8 @@ dort wird der reaktivierte, parametrisierte Test ergänzt (alle 9 Zeichen aus
     `tests/tdd/test_trip_sms_gsm7_charset.py::test_official_alert_sms_stays_gsm7_clean_for_every_hazard_and_umlaut_trip_name`
     bleibt unverändert grün (keine Anpassung nötig).
 
-- **AC-3 (Bug-Nachweis aus dem Issue):** Given die drei im Issue #1796
-  genannten Beispiel-Trip-Namen (`"KHW [Test]"`, `"Tour~Nord"`,
+- **AC-3:** (Bug-Nachweis aus dem Issue) Given die drei im Issue #1796
+  genannten Beispiel-Trip-Namen (`"KHW [Test]"`, `"Trip~Nord"`,
   `"Weg|Nord"`) / When jeweils eine amtliche Alarm-SMS gerendert wird / Then
   ist das Ergebnis GSM-7-sauber (`assert_gsm7_clean()` besteht für alle
   drei).

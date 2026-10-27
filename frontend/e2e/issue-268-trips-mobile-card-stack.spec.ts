@@ -5,14 +5,18 @@
 // TDD RED: Diese Tests MÜSSEN FEHLSCHLAGEN, weil das Card-Stack-Layout und
 // das Bottom-Sheet noch nicht implementiert sind.
 //
-// TestID-Inventar (wird in Implementation angelegt):
+// TestID-Inventar (Issue #2278: geteilte Bausteine SubscriptionCard / SubscriptionActionSheet):
 //   trip-card-stack               — Mobile Card-Stack Container (desktop:hidden)
-//   trip-card                     — Einzelne Trip-Card (pro Trip)
-//   trip-card-menu-btn            — ···-Button (≥ 44×44px Touch-Target)
-//   trip-action-sheet             — Bottom-Sheet Panel (role="dialog")
+//   subscription-card-{id}        — Einzelne Karte (data-kind="trip")
+//   subscription-card-menu-{id}   — ···-Button (≥ 44×44px Touch-Target)
+//   subscription-action-{id}      — Eintraege im Aktionsblatt (Blatt-Wurzel traegt data-snap)
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
+
+const KARTE = '[data-testid^="subscription-card-"][data-kind="trip"]';
+const MENUE_KNOPF = '[data-testid^="subscription-card-menu-"]';
+const BLATT = '[data-snap]';
 
 const MOBILE_VIEWPORT = { width: 375, height: 667 };
 const DESKTOP_VIEWPORT = { width: 1440, height: 900 };
@@ -36,7 +40,7 @@ test.describe('Issue #268: Mobile Card-Stack für Trips-Liste', () => {
 		const cardStack = page.getByTestId('trip-card-stack');
 		await expect(cardStack).toBeVisible({ timeout: 5000 });
 
-		const firstCard = cardStack.getByTestId('trip-card').first();
+		const firstCard = cardStack.locator(KARTE).first();
 		if (await firstCard.isVisible({ timeout: 3000 }).catch(() => false)) {
 			await expect(firstCard).toBeVisible();
 		}
@@ -68,24 +72,26 @@ test.describe('Issue #268: Mobile Card-Stack für Trips-Liste', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto('/trips');
 
-		const firstCard = page.getByTestId('trip-card').first();
+		const firstCard = page.locator(KARTE).first();
 		if (!(await firstCard.isVisible({ timeout: 3000 }).catch(() => false))) {
 			test.skip();
 			return;
 		}
 
-		const menuBtn = firstCard.getByTestId('trip-card-menu-btn');
+		const menuBtn = firstCard.locator(MENUE_KNOPF);
 		await menuBtn.click();
 
-		const sheet = page.getByTestId('trip-action-sheet');
+		const sheet = page.locator(BLATT);
 		await expect(sheet).toBeVisible({ timeout: 3000 });
 
-		await expect(sheet.getByText('Report-Konfiguration')).toBeVisible();
-		await expect(sheet.getByText('Wetter-Konfiguration')).toBeVisible();
-		await expect(sheet.getByText('Bearbeiten')).toBeVisible();
-		await expect(sheet.getByText('Test Morgen-Report')).toBeVisible();
-		await expect(sheet.getByText('Test Abend-Report')).toBeVisible();
-		await expect(sheet.getByText('Löschen')).toBeVisible();
+		// Issue #2278: Aktionen aus der einen Quelle subscriptionActions (Status aktiv/pausiert, Flaeche mobil).
+		await expect(sheet.getByTestId('subscription-action-send')).toHaveText('Senden');
+		// Issue #1743: Aktion „Vorschau" entfaellt.
+		await expect(sheet.getByTestId('subscription-action-preview')).toHaveCount(0);
+		await expect(sheet.getByTestId('subscription-action-alarms')).toHaveText('Alarme');
+		await expect(sheet.getByTestId('subscription-action-weather')).toHaveText('Wetter-Metriken');
+		await expect(sheet.getByTestId('subscription-action-edit')).toHaveText('Bearbeiten');
+		await expect(sheet.getByTestId('subscription-action-delete')).toHaveText('Löschen');
 	});
 
 	// ─── AC-3: Backdrop schließt Bottom-Sheet ───────────────────────────────
@@ -98,15 +104,15 @@ test.describe('Issue #268: Mobile Card-Stack für Trips-Liste', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto('/trips');
 
-		const firstCard = page.getByTestId('trip-card').first();
+		const firstCard = page.locator(KARTE).first();
 		if (!(await firstCard.isVisible({ timeout: 3000 }).catch(() => false))) {
 			test.skip();
 			return;
 		}
 
-		await firstCard.getByTestId('trip-card-menu-btn').click();
+		await firstCard.locator(MENUE_KNOPF).click();
 
-		const sheet = page.getByTestId('trip-action-sheet');
+		const sheet = page.locator(BLATT);
 		await expect(sheet).toBeVisible({ timeout: 3000 });
 
 		// Backdrop ist außerhalb des Sheets – Klick auf linke obere Ecke
@@ -125,14 +131,14 @@ test.describe('Issue #268: Mobile Card-Stack für Trips-Liste', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto('/trips');
 
-		const firstCard = page.getByTestId('trip-card').first();
+		const firstCard = page.locator(KARTE).first();
 		if (!(await firstCard.isVisible({ timeout: 3000 }).catch(() => false))) {
 			test.skip();
 			return;
 		}
 
-		const contentBtn = firstCard.getByTestId('trip-card-content-btn');
-		await contentBtn.click();
+		// Issue #2278: die ganze Karte ist der Navigationsbereich (kein eigener Inhalt-Knopf mehr).
+		await firstCard.click({ position: { x: 24, y: 24 } });
 
 		await page.waitForURL(/\/trips\/.+/, { timeout: 5000 });
 		expect(page.url()).toMatch(/\/trips\/.+/);
@@ -148,18 +154,18 @@ test.describe('Issue #268: Mobile Card-Stack für Trips-Liste', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto('/trips');
 
-		const firstCard = page.getByTestId('trip-card').first();
+		const firstCard = page.locator(KARTE).first();
 		if (!(await firstCard.isVisible({ timeout: 3000 }).catch(() => false))) {
 			test.skip();
 			return;
 		}
 
-		await firstCard.getByTestId('trip-card-menu-btn').click();
+		await firstCard.locator(MENUE_KNOPF).click();
 
-		const sheet = page.getByTestId('trip-action-sheet');
+		const sheet = page.locator(BLATT);
 		await expect(sheet).toBeVisible({ timeout: 3000 });
 
-		await sheet.getByText('Löschen').click();
+		await sheet.getByTestId('subscription-action-delete').click();
 
 		// Sheet muss geschlossen sein
 		await expect(sheet).not.toBeVisible({ timeout: 3000 });
@@ -209,13 +215,13 @@ test.describe('Issue #268: Mobile Card-Stack für Trips-Liste', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto('/trips');
 
-		const firstCard = page.getByTestId('trip-card').first();
+		const firstCard = page.locator(KARTE).first();
 		if (!(await firstCard.isVisible({ timeout: 3000 }).catch(() => false))) {
 			test.skip();
 			return;
 		}
 
-		const menuBtn = firstCard.getByTestId('trip-card-menu-btn');
+		const menuBtn = firstCard.locator(MENUE_KNOPF);
 		const box = await menuBtn.boundingBox();
 
 		expect(box).not.toBeNull();

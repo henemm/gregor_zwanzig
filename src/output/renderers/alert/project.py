@@ -12,10 +12,16 @@ from datetime import datetime, timedelta, timezone
 from app.metric_catalog import (
     _METRICS, ONSET_AGGREGATION, get_cmp, metric_and_aggregation_for_field,
 )
-from utils.timezone import local_fmt, resolve_location_tz
-from .model import (
-    AlertEvent, AlertMessage, CorridorEvent, OnsetEvent, OnsetShiftEvent,
+from utils.timezone import (
+    _as_utc, day_offset, local_dt, local_fmt, resolve_location_tz,
 )
+from .model import (
+    AlertEvent, AlertMessage, OnsetEvent, OnsetShiftEvent,
+)
+# Issue #2020 Scheibe 2: EIN Wochentagskuerzel-Erzeuger fuer die Kurzform --
+# derselbe, den die amtliche Warnung schon benutzt (kein Nachbau).
+from .official_alerts import _de_weekday_short
+from .hours import affected_hours
 from .segments import normalize_segment_id
 
 logger = logging.getLogger("alert_project")
@@ -27,6 +33,92 @@ logger = logging.getLogger("alert_project")
 # sinnlosen km-0-0-Spanne. Benannte Konstante statt Freitext, damit ein
 # Auseinanderdriften von Setz- und Lesestelle sichtbar bricht.
 COMPARE_RADAR_SOURCE = "compare-radar"
+
+
+def event_end_display(
+    now_utc: datetime, nowcast, tz,
+) -> tuple[str | None, int, bool, str | None]:
+    """Anzeigefassung des Ereignis-Endes (Issue #2051 S1):
+    `("HH:MM", Versatz, Untergrenze?, Wochentagskuerzel)`.
+
+    EINE Fassung fuer BEIDE Onset-Pfade (Trip-Radar-Alarm und
+    Ortsvergleich-Buendel, ADR-0021) — zwei Kopien dieser vier Zeilen wuerden
+    genau so auseinanderlaufen wie die Uhrzeit-/Tagesbezugs-Ableitung des
+    Beginns es koennte.
+
+    `(None, 0, False)` heisst "es gibt kein Ende" — das Nowcast-Ergebnis
+    traegt keines (kein Beginn erkannt, keine Frames).
+
+    Das dritte Feld ist der R4-Waechter `event_ongoing_beyond_horizon`. Seit
+    dem PO-Entscheid vom 2026-08-22 (Spec v1.1) unterdrueckt er die
+    Ende-Angabe NICHT mehr, sondern waehlt ihre FORM: `True` heisst "der
+    genannte Zeitpunkt ist eine belegte Untergrenze, kein bekanntes Ende".
+    Er reist deshalb GEMEINSAM mit der Uhrzeit — eine Textstelle, die nur die
+    Uhrzeit bekaeme, wuerde eine Untergrenze als bekanntes Ende ausgeben und
+    damit das Gegenteil der Datenlage behaupten (AC-20).
+
+    Der Tagesversatz stammt aus dem ENDE-Zeitpunkt, nicht vom Beginn: Beginn
+    23:50 und Ende 00:40 liegen an verschiedenen Kalendertagen.
+
+    Issue #2054: das vierte Feld ist die DARSTELLUNG desselben Versatzes fuer
+    die Kurzform -- das Wochentagskuerzel in DERSELBEN Zone `tz`, aus der auch
+    der Versatz stammt (ein aus der UTC-Zeit gebildetes Kuerzel laege kurz
+    nach Ortsmitternacht um einen Tag daneben). `None` bei Versatz 0.
+    """
+    end_minutes = getattr(nowcast, "event_end_minutes", None)
+    if end_minutes is None:
+        return None, 0, False, None
+    ongoing = bool(getattr(nowcast, "event_ongoing_beyond_horizon", False))
+    end_dt = now_utc + timedelta(minutes=end_minutes)
+    offset = day_offset(now_utc, end_dt, tz)
+    weekday = _de_weekday_short(local_dt(end_dt, tz)) if offset else None
+    return local_fmt(end_dt, tz), offset, ongoing, weekday
+
+
+def source_reach_display(now_utc: datetime, nowcast, tz) -> tuple[str | None, int]:
+    """Anzeigefassung der Reichweite der Quelle (Issue #2051 S3):
+    `("HH:MM", Versatz)` oder `(None, 0)`.
+
+    EINE Fassung fuer BEIDE Onset-Pfade (Muster `event_end_display`).
+    `(None, 0)`, wenn keine Reichweite bekannt ist (`source_reach_minutes is
+    None` -- keine Beobachtung im Fenster) ODER `event_ongoing_beyond_horizon`
+    gesetzt ist (E5) -- die S1-Untergrenzenform (`Regen mindestens bis
+    HH:MM`) traegt die Reichweiten-Aussage in diesem Fall bereits implizit;
+    eine zusaetzliche Reichweiten-Angabe waere Dopplung.
+    """
+    reach_minutes = getattr(nowcast, "source_reach_minutes", None)
+    if reach_minutes is None:
+        return None, 0
+    if bool(getattr(nowcast, "event_ongoing_beyond_horizon", False)):
+        return None, 0
+    reach_dt = now_utc + timedelta(minutes=reach_minutes)
+    return local_fmt(reach_dt, tz), day_offset(now_utc, reach_dt, tz)
+
+
+def location_sharpness_display(
+    now_utc: datetime, onset_minutes: int | None, event_end_minutes: int | None, tz,
+) -> tuple[str | None, int]:
+    """Anzeigefassung der Guete-Grenzzeit (Issue #2051 S3): `("HH:MM",
+    Versatz)` der Grenzzeit `now + LOCATION_SHARPNESS_LIMIT_MIN` oder
+    `(None, 0)`, wenn WEDER `onset_minutes` NOCH `event_end_minutes` jenseits
+    der Grenze liegen (oder beide `None` sind).
+
+    Die Entscheidung wird HIER getroffen (E4) -- der Renderer prueft
+    anschliessend nur noch auf `None`, keine zweite Schwellpruefung dort
+    (sonst zwei Wahrheiten, Muster AC-20). Liest die Grenze bei JEDEM
+    Aufruf ueber die Modulreferenz, bindet sie NICHT beim Import (AC-16,
+    Laufzeit-Drift-Schutz -- Muster `RADAR_ONSET_THRESHOLD_MIN`)."""
+    import services.radar_service as radar_service_mod
+
+    limit = radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN
+    jenseits = (
+        (onset_minutes is not None and onset_minutes > limit)
+        or (event_end_minutes is not None and event_end_minutes > limit)
+    )
+    if not jenseits:
+        return None, 0
+    limit_dt = now_utc + timedelta(minutes=limit)
+    return local_fmt(limit_dt, tz), day_offset(now_utc, limit_dt, tz)
 
 
 def _resolve_metric_id(field: str, direction: str) -> str:
@@ -51,17 +143,39 @@ def _resolve_metric_id(field: str, direction: str) -> str:
     )
 
 
+def _trip_segment(entry):
+    """`SegmentWeatherData` ODER blankes `TripSegment` -> `TripSegment`
+    (Issue #2036). Beide Bauformen kommen an: der Aenderungspfad reicht
+    Wetterdaten herein, ein Aufrufer kann auch die nackten Segmente
+    liefern. Ohne diese Normalisierung endet die zweite Bauform im
+    `except`-Zweig und der Treffer verschwindet stumm."""
+    return getattr(entry, "segment", entry)
+
+
 def _find_segment(segments, segment_id: str):
     """Referenziertes Segment. Bei nicht auflösbarer/leerer segment_id Fallback
     auf das erste Segment (kein Crash im Versandpfad — der Detector liefert
     nicht immer eine exakte segment_id)."""
     match = next(
-        (s for s in segments if str(s.segment.segment_id) == str(segment_id)),
+        (s for s in segments
+         if str(_trip_segment(s).segment_id) == str(segment_id)),
         segments[0] if segments else None,
     )
     if match is None:
         raise KeyError(f"Kein Segment für segment_id={segment_id!r}")
     return match
+
+
+def _hail_flag_for(metric_id: str, entry) -> bool | None:
+    """Hagel-Kennzeichen fuer ein Alarm-Ereignis (Issue #2205).
+
+    Nur die Gewitter-Metrik traegt eine Hagelaussage. Quelle ist das
+    Segment-Aggregat (`SegmentWeatherData.aggregated.hail_flag`, dieselbe
+    Punktmenge wie `thunder_level_max`). Ein blanker `TripSegment`-Eintrag
+    ohne Aggregat liefert `None` -> keine Hagelaussage."""
+    if metric_id != "thunder":
+        return None
+    return getattr(getattr(entry, "aggregated", None), "hail_flag", None)
 
 
 def _fmt_occurred_at(value, tz) -> str | None:
@@ -110,7 +224,12 @@ def _onset_shift_text(delta_seconds: float) -> str:
 def _to_onset_shift_event(
     ch, *, tz, km_from: float, km_to: float,
     segment_id: str | None = None, location_label: str | None = None,
+    km_measured: bool = False,   # Issue #2036
+    now_utc=None,                # Issue #2020 Scheibe 2
+    stage_number: int | None = None,  # Issue #2122
 ) -> OnsetShiftEvent:
+    to_utc = datetime.fromtimestamp(ch.new_value, timezone.utc)
+    to_offset, to_past, _weekday = _when_fields(to_utc, now_utc, tz)
     metric_id, _aggregation = metric_and_aggregation_for_field(ch.metric)
     return OnsetShiftEvent(
         metric_id=metric_id,
@@ -119,12 +238,114 @@ def _to_onset_shift_event(
         shift_text=_onset_shift_text(ch.delta),
         km_from=km_from, km_to=km_to,
         segment_id=segment_id, location_label=location_label,
+        km_measured=km_measured,  # Issue #2036
+        to_day_offset=to_offset, to_is_past=to_past,
+        stage_number=stage_number,  # Issue #2122
     )
 
 
+# --- Issue #2020 Scheibe 2: Tagesbezug + Blickrichtung ----------------------
+
+def _when_fields(target_utc, now_utc, tz) -> tuple[int, bool, str | None]:
+    """(Tagesversatz, vergangen?, DE-Wochentagskuerzel) einer Zeitangabe.
+
+    EINE Stelle fuer alle drei Groessen, damit Kalendertag und
+    Vergangenheits-Kennzeichen nie aus verschiedenen Zonen stammen. Ohne
+    Referenzzeit (Aufrufer ohne `now_utc`) bleibt alles auf dem neutralen
+    Bestandswert -- der Renderer schreibt dann wie bisher die nackte Uhrzeit.
+    """
+    if target_utc is None or now_utc is None:
+        return 0, False, None
+    target_utc = _as_utc(target_utc)
+    now_utc = _as_utc(now_utc)
+    offset = day_offset(now_utc, target_utc, tz)
+    weekday = _de_weekday_short(local_dt(target_utc, tz)) if offset else None
+    return offset, target_utc < now_utc, weekday
+
+
+def _remaining_fields(eintrag, ch, now_utc, tz) -> dict:
+    """Restmenge/Ende/Fensterende EINES Niederschlags-Summen-Ereignisses.
+
+    `eintrag` ist der ROHE Eintrag aus `_find_segment()` -- also die
+    `SegmentWeatherData` mit ihrer Stundenreihe, NICHT das ueber
+    `_trip_segment()` normalisierte `TripSegment` (Issue #2036). Ein blanker
+    Segment-Eintrag traegt keine Reihe und faellt unten
+    still auf "nicht bestimmbar" zurueck -- richtig, weil dort nichts zu
+    rechnen ist.
+
+    Gerechnet wird in `weather_change_detection._precip_remaining()` -- also
+    an derselben Stelle und mit demselben Segmentfenster wie die "staerkste
+    Stunde" (`_peak_occurred_at()`), bindende Invariante der Spec. HIER
+    passiert nur die Umrechnung in Ortszeit und der Tagesbezug.
+
+    Leeres dict = das Ereignis behaelt seinen "staerkste Stunde"-Kopf und
+    sagt ueber die Restmenge nichts. Das gilt fuer alle drei Faelle, in denen
+    es nichts zu sagen GIBT: andere Metrik, keine Referenzzeit -- und
+    `remaining_mm is None`, also "nicht bestimmbar" (keine Stundenreihe,
+    Provider-Fehler; z. B. der Vorschau-Stub des Validators). Der Mangelfall
+    wird bewusst NUR in `_precip_remaining()` entschieden, nicht hier noch
+    einmal parallel: zwei Stellen wuerden auseinanderlaufen, und ein
+    unbestimmbares Ergebnis darf unter keinen Umstaenden als `0.0` (=
+    "es kommt nachweislich nichts mehr") beim Renderer ankommen.
+    """
+    if ch.metric != "precip_sum_mm" or now_utc is None:
+        return {}
+    from services.weather_change_detection import _precip_remaining
+
+    remaining_mm, ends_at = _precip_remaining(eintrag, now_utc)
+    if remaining_mm is None:
+        return {}
+    ende_offset, _ende_past, ende_weekday = _when_fields(ends_at, now_utc, tz)
+    fenster_offset, _f_past, _f_weekday = _when_fields(
+        eintrag.segment.end_time, now_utc, tz,
+    )
+    return {
+        "remaining_mm": remaining_mm,
+        "remaining_until_time": _fmt_occurred_at(ends_at, tz),
+        "remaining_until_day_offset": ende_offset,
+        "remaining_until_weekday": ende_weekday,
+        "window_end_time": local_fmt(_as_utc(eintrag.segment.end_time), tz),
+        "window_end_day_offset": fenster_offset,
+    }
+
+
+def _hour_fields(metric_id, ch, fresh_ts, anchor_ts, tz, window=None) -> dict:
+    """Stundenzeilen-Felder eines Ereignisses (Issue #1737) -- EINE Stelle fuer
+    Trip UND Ortsvergleich. Best-effort: scheitert die Berechnung (Metrik ohne
+    numerische Stundengroesse), bleibt das Ereignis ohne Zeilen -- der Alarm
+    selbst geht trotzdem raus."""
+    try:
+        return affected_hours(
+            metric_id, fresh_ts, anchor_ts, threshold=ch.threshold,
+            value_from=ch.old_value, tz=tz, window=window,
+        )
+    except Exception:
+        logger.warning("Stundenzeilen fuer %s nicht bestimmbar", metric_id, exc_info=True)
+        return {}
+
+
+def _anchor_entry(anchor_segments, segment_id):
+    """ALTE Reihe DESSELBEN Segments (strikt per Kennung, kein Rueckfall auf das
+    erste Segment -- eine fremde Etappe waere eine falsche Alt-Reihe)."""
+    return next(
+        (s for s in anchor_segments or []
+         if str(_trip_segment(s).segment_id) == str(segment_id)),
+        None,
+    )
+
+
+def _segment_window(eintrag):
+    """(Start, Ende) des Segments in UTC; `None` ohne Zeiten (dann alle Stunden)."""
+    seg = _trip_segment(eintrag)
+    if getattr(seg, "start_time", None) is None or getattr(seg, "end_time", None) is None:
+        return None
+    return _as_utc(seg.start_time), _as_utc(seg.end_time)
+
+
 def to_alert_message(
-    changes, segments, trip_name, *, tz, stand_at, corridor_hits=None,
-    reference_at=None,
+    changes, segments, trip_name, *, tz, stand_at,
+    reference_at=None, now_utc=None, stage_number=None,
+    anchor_segments=None, format_modes=None, indicator_keys=None,
 ) -> AlertMessage:
     """WeatherChange-Events → kanonische AlertMessage. source bei Deviation = None.
 
@@ -132,128 +353,89 @@ def to_alert_message(
     in ORTSZEIT formatiert — je Event aus den Koordinaten SEINER Etappe
     (`TripSegment.start_point`), `tz` ist Fallback ohne Koordinaten.
 
-    Issue #1444 S1: `corridor_hits` (optional, `list[CorridorHit]`) buendelt
-    Schwellen-Treffer desselben Laufs in DIESELBE Nachricht (Muster #1088) --
-    `changes` kann dabei leer sein (Korridor als einzige Alarmquelle, AC-5).
+    Issue #2020 Scheibe 2: `now_utc` ist die REFERENZZEIT des Versands --
+    ohne sie kann niemand entscheiden, welche Stunde noch bevorsteht. Aus ihr
+    entstehen Tagesversatz und Vergangenheits-Kennzeichen jeder Zeitangabe
+    sowie die Restmenge des Niederschlags-Summen-Ereignisses. Sie wird
+    UEBERGEBEN, nie hier von der Systemuhr gelesen (AC-13); `None` laesst die
+    Ausgabe byte-identisch zum Bestand.
+
+    Issue #2122: `stage_number` ist additiv, optional (Muster `now_utc` o.).
+    Vom Aufrufer bereits ueber `Trip.get_stage_for_date()` aufgeloest -- reist
+    unveraendert auf JEDES erzeugte `AlertEvent`/`OnsetShiftEvent`
+    durch. `None` laesst die Ausgabe byte-identisch (AC-8).
+
+    Issue #1737: `anchor_segments` (ALTE Reihe, Anker) und `format_modes`
+    (Kanal -> {col_key: Modus}) sind additiv. Aus beiden Reihen entstehen die
+    Stundenzeilen je Ereignis; ohne Stundenreihe bleibt die Ausgabe gleich.
     """
     events: list[AlertEvent] = []
     onset_events: list[OnsetShiftEvent] = []
     for ch in changes:
-        match = _find_segment(segments, ch.segment_id)
-        km_from = match.segment.start_point.distance_from_start_km
-        km_to = match.segment.end_point.distance_from_start_km
+        # Issue #2036 normalisiert auf das `TripSegment` (km, Kennung, Zone);
+        # Issue #2020 Scheibe 2 braucht daneben den ROHEINTRAG, weil Restmenge
+        # und Fensterende aus der Stundenreihe der `SegmentWeatherData`
+        # entstehen -- die das normalisierte Segment nicht mehr traegt.
+        eintrag = _find_segment(segments, ch.segment_id)
+        match = _trip_segment(eintrag)
+        km_from = match.start_point.distance_from_start_km
+        km_to = match.end_point.distance_from_start_km
+        # Issue #2036: Herkunft der Spanne (gemessen vs. Luftlinie) reist mit.
+        km_measured = bool(getattr(match, "distance_measured", False))
         # Issue #1468: Beginn-Verschiebungen tragen einen ZEITPUNKT und gehen
         # deshalb NICHT durch den Zahlen-Formatierer (s. `OnsetShiftEvent`).
         if _is_onset_change(ch):
             onset_events.append(_to_onset_shift_event(
-                ch, tz=_tz_for_location(match.segment.start_point, tz),
+                ch, tz=_tz_for_location(match.start_point, tz),
                 km_from=km_from, km_to=km_to,
-                segment_id=normalize_segment_id(match.segment.segment_id),
+                segment_id=normalize_segment_id(match.segment_id),
+                km_measured=km_measured,
+                now_utc=now_utc,
+                stage_number=stage_number,
             ))
             continue
         metric_id = _resolve_metric_id(ch.metric, ch.direction)
         cmp = get_cmp(metric_id)
         if not cmp:
             raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")
+        ev_tz = _tz_for_location(match.start_point, tz)
+        occ_offset, occ_past, occ_weekday = _when_fields(
+            ch.occurred_at, now_utc, ev_tz,
+        )
         events.append(AlertEvent(
             metric_id=metric_id, value_from=ch.old_value, value_to=ch.new_value,
             threshold=ch.threshold, cmp=cmp,
-            occurred_at=_fmt_occurred_at(
-                ch.occurred_at, _tz_for_location(match.segment.start_point, tz)
-            ),
+            occurred_at=_fmt_occurred_at(ch.occurred_at, ev_tz),
             km_from=km_from, km_to=km_to,
+            occurred_day_offset=occ_offset, occurred_is_past=occ_past,
+            occurred_weekday=occ_weekday,
+            **_remaining_fields(eintrag, ch, now_utc, ev_tz),
             # Issue #1744 A1: die Kennung der TATSAECHLICH aufgeloesten Etappe
             # (nicht `ch.segment_id` — `_find_segment` faellt bei nicht
             # aufloesbarer Kennung auf das erste Segment zurueck, und der Alarm
             # muss den Ort nennen, den er auch km-seitig meint).
-            segment_id=normalize_segment_id(match.segment.segment_id),
+            segment_id=normalize_segment_id(match.segment_id),
+            km_measured=km_measured,  # Issue #2036
+            stage_number=stage_number,  # Issue #2122
+            hail_flag=_hail_flag_for(metric_id, eintrag),  # Issue #2205
+            **_hour_fields(
+                metric_id, ch, getattr(eintrag, "timeseries", None),
+                getattr(_anchor_entry(anchor_segments, match.segment_id), "timeseries", None),
+                ev_tz, _segment_window(eintrag),
+            ),
         ))
-    corridor_events = (
-        to_corridor_events(corridor_hits, segments, tz=tz) if corridor_hits else ()
-    )
     return AlertMessage(
         trip_short=trip_name, stand_at=stand_at, events=tuple(events), source=None,
-        corridor_events=corridor_events,
         onset_shift_events=tuple(onset_events), reference_at=reference_at,
+        format_modes=dict(format_modes or {}),
+        indicator_keys=dict(indicator_keys or {}),
     )
 
 
-def _resolve_corridor_metric_id(alert_metric: str, direction: str) -> str:
-    """Korridor-Metrik (BEIDE Namensraeume) → Katalog metric_id fuer
-    Beschriftung/Einheit/Kuerzel (Issue #1444 S1, F001-Fix; S2a Namensraum).
-
-    Die Aufloesung des Summary-Felds kommt aus
-    `services.corridor_threshold.resolve_corridor_summary_field()` -- DIESELBE
-    Funktion, die der Waechter benutzt. Zwei Kopien wuerden bedeuten, dass ein
-    im Waechter erkannter Treffer bei der Projektion erneut verschluckt wird.
-
-    Loest ueber das SUMMARY-FIELD auf (wie `_resolve_metric_id()` fuer den
-    Delta-Pfad) statt ueber `_ALERT_METRIC_TO_CATALOG_ID` -- das Feld ist die
-    praezisere Quelle: `SNOW_LINE` mappt dort auf ZWEI Katalog-IDs
-    (`snowfall_limit`/`freezing_level`, Issue #961 OR-Policy fuer die
-    Wetter-Tab-Aktivierung, BEIDE mit cmp='unter'), obwohl die
-    Korridor-Auswertung ausschliesslich `freezing_level_m` liest (Issue #959).
-    Ueber das Feld ist das unzweideutig EIN Treffer -- der alte Weg ueber die
-    AlertMetric-Enum-Mehrdeutigkeit warf hier `ValueError` (F001, GEFUNDEN
-    von der Adversary-Pruefung: stiller Total-Ausfall der Tour in JEDEM Lauf).
-
-    Bleibt ein Feld dennoch mehrdeutig (nur `temp_min_c` ->
-    temperature/temperature_cold), bevorzugt eine cmp-Uebereinstimmung die
-    Beschriftung -- NUR ein Label-Tie-Break, NIE eine Fehlerquelle: ohne
-    Treffer faellt die Funktion auf den ERSTEN Kandidaten zurueck statt zu
-    werfen. Die tatsaechliche Richtung der Meldung kommt beim Rendern aus
-    `CorridorHit.direction`, NICHT aus dieser Katalog-cmp (die beschreibt die
-    STANDARDRICHTUNG DER METRIK, nicht die Richtung EINES EINZELNEN Treffers).
-    """
-    from services.corridor_threshold import resolve_corridor_summary_field
-
-    field = resolve_corridor_summary_field(alert_metric)
-    if not field:
-        raise KeyError(f"Unbekannte Korridor-Metrik: {alert_metric!r}")
-    candidates = [m for m in _METRICS if field in m.summary_fields.values()]
-    if not candidates:
-        raise KeyError(f"Unbekanntes summary_field für Korridor-Projektion: {field!r}")
-    if len(candidates) == 1:
-        return candidates[0].id
-    want = "über" if direction == "above" else "unter"
-    for m in candidates:
-        if m.cmp == want:
-            return m.id
-    return candidates[0].id
-
-
-def to_corridor_events(hits, segments, *, tz) -> tuple[CorridorEvent, ...]:
-    """`CorridorHit`-Liste (`services.corridor_threshold`) → `CorridorEvent`-Tupel
-    (Issue #1444 S1). Eigener Render-Vertrag, kein `WeatherChange`-Umweg.
-
-    F001-Haertung: ein einzelner nicht projizierbarer Treffer darf die ganze
-    Nachricht nicht verschlucken (ADR-0018: ausweichen ja, kaschieren nein --
-    sichtbar protokolliert, aber der Rest der Nachricht inkl. eines
-    gleichzeitig vorliegenden Aenderungs-Alarms wird trotzdem zugestellt).
-    """
-    events: list[CorridorEvent] = []
-    for hit in hits:
-        try:
-            metric_id = _resolve_corridor_metric_id(hit.metric, hit.direction)
-            match = _find_segment(segments, hit.segment_id)
-            events.append(CorridorEvent(
-                metric_id=metric_id, value=hit.value, bound=hit.bound,
-                direction=hit.direction,
-                occurred_at=_fmt_occurred_at(
-                    hit.occurred_at, _tz_for_location(match.segment.start_point, tz)
-                ),
-                km_from=match.segment.start_point.distance_from_start_km,
-                km_to=match.segment.end_point.distance_from_start_km,
-            ))
-        except Exception as e:
-            logger.warning(
-                "Korridor-Treffer nicht projizierbar, uebersprungen: "
-                "metric=%r segment_id=%r: %s", hit.metric, hit.segment_id, e,
-            )
-    return tuple(events)
-
-
-def to_multi_point_alert_message(groups, *, tz, stand_at, reference_at=None) -> AlertMessage:
+def to_multi_point_alert_message(
+    groups, *, tz, stand_at, reference_at=None, anchor_points=None, format_modes=None,
+    indicator_keys=None,
+) -> AlertMessage:
     """WeatherChange-Events MEHRERER gleichzeitig betroffener Vergleichs-Orte
     (Issue #1170, AC-7-Bündelung) → EINE kanonische AlertMessage.
 
@@ -274,6 +456,10 @@ def to_multi_point_alert_message(groups, *, tz, stand_at, reference_at=None) -> 
     nur das nachrichtenweite `AlertMessage.location_label` (Footer/Where)
     ist gesetzt — sonst zeigt der Mehr-Metrik-Zweig von `render_email` einen
     redundanten Orts-Präfix vor JEDER Metrik-Zeile (Issue #1170 Finding F007).
+
+    Issue #1737: `anchor_points` (`{Ortsname: PointWeatherData}`, ALTE Reihe
+    je Ort) und `format_modes` sind additiv; die frische Reihe steht in
+    `point.timeseries`. Dieselbe Stundenzeilen-Logik wie der Trip-Pfad.
     """
     events: list[AlertEvent] = []
     onset_events: list[OnsetShiftEvent] = []
@@ -299,12 +485,19 @@ def to_multi_point_alert_message(groups, *, tz, stand_at, reference_at=None) -> 
                 occurred_at=_fmt_occurred_at(ch.occurred_at, point_tz),
                 km_from=0.0, km_to=0.0,
                 location_label=location_name if multi else None,
+                **_hour_fields(
+                    metric_id, ch, getattr(point, "timeseries", None),
+                    getattr((anchor_points or {}).get(location_name), "timeseries", None),
+                    point_tz,
+                ),
             ))
     collective_label = ", ".join(name for name, _changes, _point in groups)
     return AlertMessage(
         trip_short=collective_label, stand_at=stand_at, events=tuple(events), source=None,
         location_label=collective_label,
         onset_shift_events=tuple(onset_events), reference_at=reference_at,
+        format_modes=dict(format_modes or {}),
+        indicator_keys=dict(indicator_keys or {}),
     )
 
 
@@ -377,8 +570,14 @@ def to_multi_location_onset_alert_message(
     normalized = [
         (g[0], g[1], g[2]) if len(g) == 3 else (g[0], None, g[1]) for g in groups
     ]
+    # Issue #2050 S2b: ein Ort, an dem es GERADE regnet, gehoert in das
+    # Buendel -- auch wenn kein kuenftiger Beginn bestimmbar ist. Bis hierher
+    # entschied allein `onset_minutes is not None`, und damit fiel genau der
+    # laufende Ort still heraus, bevor sein `OnsetEvent` ueberhaupt gebaut
+    # wurde (Bruchstelle 4).
     valid_groups = [
-        (name, loc, nc) for name, loc, nc in normalized if nc.onset_minutes is not None
+        (name, loc, nc) for name, loc, nc in normalized
+        if nc.onset_minutes is not None or getattr(nc, "already_running", False)
     ]
     if not valid_groups:
         raise ValueError(
@@ -389,14 +588,72 @@ def to_multi_location_onset_alert_message(
     now = datetime.now(timezone.utc)
     events: list[OnsetEvent] = []
     for location_name, loc, nc in valid_groups:
-        onset_time = local_fmt(
-            now + timedelta(minutes=nc.onset_minutes), _tz_for_location(loc, tz),
+        # Issue #2009: Zone JE ORT aufloesen und den Tagesbezug in DERSELBEN
+        # Zone bilden — ein Buendel kann Orte in verschiedenen Zonen tragen,
+        # eine gemeinsame Zone waere fuer alle bis auf einen still falsch.
+        loc_tz = _tz_for_location(loc, tz)
+        # Issue #2050 S2b: laeuft das Ereignis bereits und ist kein kuenftiger
+        # Beginn bestimmbar, ist der Bezugszeitpunkt JETZT -- `timedelta(
+        # minutes=None)` waere ein Absturz (Bruchstelle 3). `onset_minutes`
+        # faellt dann auf 0 zurueck; gelesen wird es in diesem Fall nirgends,
+        # weil jede Textform auf `already_running` verzweigt.
+        _laufend = getattr(nc, "already_running", False)
+        onset_dt = now + timedelta(minutes=nc.onset_minutes or 0)
+        _end_time, _end_offset, _end_ongoing, _end_weekday = event_end_display(
+            now, nc, loc_tz,
+        )
+        # Issue #2054: Versatz und Kuerzel aus DEMSELBEN Zeitpunkt und
+        # DERSELBEN Ortszone -- zwei Herleitungen koennten auseinanderlaufen.
+        _onset_offset = day_offset(now, onset_dt, loc_tz)
+        # Issue #2051 S3: Reichweite und Guete-Grenzzeit JE ORT in DERSELBEN
+        # Ortszone wie Beginn/Ende (`loc_tz`), ueber dieselben geteilten
+        # Fassungen wie der Trip-Pfad (ADR-0021).
+        _reach_time, _reach_offset = source_reach_display(now, nc, loc_tz)
+        _sharp_time, _sharp_offset = location_sharpness_display(
+            now, nc.onset_minutes, getattr(nc, "event_end_minutes", None), loc_tz,
         )
         events.append(OnsetEvent(
-            onset_minutes=nc.onset_minutes, onset_time=onset_time,
+            already_running=_laufend,
+            onset_minutes=nc.onset_minutes or 0,
+            onset_time=local_fmt(onset_dt, loc_tz),
             km_from=0.0, km_to=0.0, is_convective=nc.is_convective,
             intensity_label=nc.intensity_label, source_label=nc.source,
             location_label=location_name if multi else None,
+            onset_day_offset=_onset_offset,
+            onset_weekday=(
+                _de_weekday_short(local_dt(onset_dt, loc_tz))
+                if _onset_offset else None
+            ),
+            # Issue #2046: die Mengenangabe der Kurznachricht kommt im
+            # Ortsvergleich-Buendel aus DEMSELBEN NowcastResult wie im
+            # Trip-Pfad -- sonst entstuende hier eine stille Luecke, weil
+            # dieser Pfad sein OnsetEvent selbst baut (ADR-0021: Trip und
+            # Ortsvergleich teilen die Ausgabe).
+            onset_precip_mm=nc.onset_precip_mm,
+            # Issue #2051 S1: Ende und sein EIGENER Tagesbezug in DERSELBEN
+            # Ortszone wie der Beginn (`loc_tz`) -- ein Buendel kann Orte in
+            # verschiedenen Zonen tragen. Geteilte Fassung `event_end_display`,
+            # dieselbe, die der Trip-Pfad benutzt (ADR-0021).
+            event_end_time=_end_time,
+            event_end_day_offset=_end_offset,
+            event_end_weekday=_end_weekday,  # Issue #2054
+            # Issue #2051 S1 (Spec v1.1): der R4-Waechter waehlt die TEXTFORM
+            # des Endes (Untergrenze vs. bekanntes Ende) und muss den Renderer
+            # deshalb erreichen -- er darf nicht mehr stromaufwaerts in einem
+            # fehlenden Ende aufgeloest werden (AC-5/AC-20).
+            event_ongoing_beyond_horizon=_end_ongoing,
+            # Issue #2051 S3: additiv, ueber dieselben geteilten Fassungen.
+            source_reach_time=_reach_time,
+            source_reach_day_offset=_reach_offset,
+            location_sharpness_limit_time=_sharp_time,
+            location_sharpness_limit_day_offset=_sharp_offset,
+            # Issue #2050 S4b-2: die ausgefallene Gewitterpruefung erreicht den
+            # Renderer auch auf DIESEM Pfad -- er baut sein `OnsetEvent` selbst,
+            # ohne den Umweg ueber `RadarAlertRequest`. Ohne diese Zeile waere
+            # der Ortsvergleich still leiser als der Trip (AC-6). Punkt 2
+            # (Messluecken) ist hier gegenstandslos: dieser Pfad kennt keine
+            # Ausdehnung (`km_from=km_to=0.0`, nie `rain_zones`).
+            convective_checked=getattr(nc, "convective_checked", True),
         ))
     trip_short = (
         ", ".join(name for name, _loc, _nc in valid_groups)

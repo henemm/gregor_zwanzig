@@ -3,7 +3,7 @@ entity_id: issue_667_snapshot_hourly_clip_fix_tests
 type: tests
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [weather-snapshot, drilldown, persistence, bugfix, tdd]
 ---
@@ -18,7 +18,7 @@ tags: [weather-snapshot, drilldown, persistence, bugfix, tdd]
 
 TDD-Test-Inventar für die Entfernung des Stunden-Clips in
 `weather_snapshot.py::_serialize_segment`. Modul-Spec:
-`docs/specs/modules/issue_667_snapshot_hourly_clip_fix.md`.
+`docs/specs/_archive/modules/issue_667_snapshot_hourly_clip_fix.md`.
 
 Alle Tests beweisen Nutzerverhalten über **echte Datei-I/O** (Snapshot speichern via
 `WeatherSnapshotService`, neu laden, Telegram-`process()`) — **keine** Mocks, keine

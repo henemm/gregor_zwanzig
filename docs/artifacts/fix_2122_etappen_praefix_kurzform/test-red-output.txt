@@ -1,0 +1,625 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/feat-2051-s2b
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 11 items
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py FFFFFFFFFFF             [100%]
+
+=================================== FAILURES ===================================
+_______ test_ac1_deviation_alert_prefix_derived_from_trip_stage_position _______
+
+    def test_ac1_deviation_alert_prefix_derived_from_trip_stage_position():
+        """AC-1: der Abweichungs-Alarm traegt das Etappen-Praefix der HEUTIGEN
+        Etappe, ABGELEITET aus dem echten Trip ueber den echten Ausloesepfad
+        (`NotificationService.send_deviation_alert`) — die Zahl 3 steht NIRGENDS
+        als Literal im Testaufbau, sie ergibt sich allein aus der Position von
+        `date.today()` unter den 5 Etappen-Daten von `_multi_stage_trip()`.
+        """
+        trip = _multi_stage_trip()
+        stub = _SevenIoStub()
+        try:
+            svc = NotificationService(
+                settings=_settings_sms_only(stub.port),
+                user_id=f"tdd-2122-ac1-{uuid.uuid4().hex[:6]}",
+            )
+            svc.send_deviation_alert(
+                trip=trip, weather=[_segment_weather_data()], changes=[_change()],
+                effective_channels={"sms"},
+            )
+            assert len(stub.received) == 1, (
+                f"Setup-Kontrolle: erwartet genau eine SMS, erhalten: {stub.received!r}"
+            )
+            text = stub.received[0]["text"]
+>           assert text.startswith("S3 "), (
+                "AC-1: der Abweichungs-Alarm muss mit dem Praefix der heutigen "
+                "Etappe beginnen (3. von 5 Etappen, aus dem Trip abgeleitet, "
+                f"nicht literal gesetzt). Gemessen: {text!r}"
+            )
+E           AssertionError: AC-1: der Abweichungs-Alarm muss mit dem Praefix der heutigen Etappe beginnen (3. von 5 Etappen, aus dem Trip abgeleitet, nicht literal gesetzt). Gemessen: 'Seg 1: R2->30'
+E           assert False
+E            +  where False = <built-in method startswith of str object at 0x72df29b7f970>('S3 ')
+E            +    where <built-in method startswith of str object at 0x72df29b7f970> = 'Seg 1: R2->30'.startswith
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:283: AssertionError
+_______ test_ac2_radar_alert_shares_same_stage_prefix_as_deviation_alert _______
+
+    def test_ac2_radar_alert_shares_same_stage_prefix_as_deviation_alert():
+        """AC-2: ein Radar-/Nowcast-Alarm DERSELBEN (heutigen) Etappe traegt
+        dasselbe Etappen-Praefix wie der Abweichungs-Alarm."""
+        trip = _multi_stage_trip()
+        stub = _SevenIoStub()
+        try:
+            uid = f"tdd-2122-ac2-{uuid.uuid4().hex[:6]}"
+            svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=uid)
+            svc.send_deviation_alert(
+                trip=trip, weather=[_segment_weather_data()], changes=[_change()],
+                effective_channels={"sms"},
+            )
+            try:
+>               req = RadarAlertRequest(
+                    onset_minutes=12, onset_time="14:35", km_from=5.0, km_to=18.0,
+                    is_convective=False, intensity_label="leichter Regen",
+                    source_label="Radar (DWD)", tz=TZ, segment_date=date.today(),
+                )
+E               TypeError: RadarAlertRequest.__init__() got an unexpected keyword argument 'segment_date'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:315: TypeError
+
+The above exception was the direct cause of the following exception:
+
+    def test_ac2_radar_alert_shares_same_stage_prefix_as_deviation_alert():
+        """AC-2: ein Radar-/Nowcast-Alarm DERSELBEN (heutigen) Etappe traegt
+        dasselbe Etappen-Praefix wie der Abweichungs-Alarm."""
+        trip = _multi_stage_trip()
+        stub = _SevenIoStub()
+        try:
+            uid = f"tdd-2122-ac2-{uuid.uuid4().hex[:6]}"
+            svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=uid)
+            svc.send_deviation_alert(
+                trip=trip, weather=[_segment_weather_data()], changes=[_change()],
+                effective_channels={"sms"},
+            )
+            try:
+                req = RadarAlertRequest(
+                    onset_minutes=12, onset_time="14:35", km_from=5.0, km_to=18.0,
+                    is_convective=False, intensity_label="leichter Regen",
+                    source_label="Radar (DWD)", tz=TZ, segment_date=date.today(),
+                )
+            except TypeError as exc:
+>               raise AssertionError(
+                    "RadarAlertRequest traegt kein additives 'segment_date'-Feld "
+                    f"(Spec, notification_service.py). Ursprungsfehler: {exc}"
+                ) from exc
+E               AssertionError: RadarAlertRequest traegt kein additives 'segment_date'-Feld (Spec, notification_service.py). Ursprungsfehler: RadarAlertRequest.__init__() got an unexpected keyword argument 'segment_date'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:321: AssertionError
+_______________ test_ac3_onset_shift_alert_carries_stage_prefix ________________
+
+    def test_ac3_onset_shift_alert_carries_stage_prefix():
+        """AC-3: eine Beginn-Verschiebung (`OnsetShiftEvent`, ueber den echten
+        Onset-Zweig von `to_alert_message`) traegt das Etappen-Praefix."""
+        trip = _multi_stage_trip()
+        now = datetime.now(UTC)
+        later = now + timedelta(hours=2)
+        change = WeatherChange(
+            metric="thunder_onset_utc", old_value=now.timestamp(),
+            new_value=later.timestamp(), delta=(later - now).total_seconds(),
+            threshold=1800.0, severity=ChangeSeverity.MODERATE, direction="increase",
+            segment_id="1", occurred_at=later,
+        )
+        stub = _SevenIoStub()
+        try:
+            svc = NotificationService(
+                settings=_settings_sms_only(stub.port),
+                user_id=f"tdd-2122-ac3-{uuid.uuid4().hex[:6]}",
+            )
+            svc.send_deviation_alert(
+                trip=trip, weather=[_segment_weather_data()], changes=[change],
+                effective_channels={"sms"},
+            )
+            assert len(stub.received) == 1
+            text = stub.received[0]["text"]
+>           assert text.startswith("S3 "), (
+                f"AC-3: die Beginn-Verschiebung muss das Etappen-Praefix tragen, "
+                f"gemessen: {text!r}"
+            )
+E           AssertionError: AC-3: die Beginn-Verschiebung muss das Etappen-Praefix tragen, gemessen: 'Seg 1: TH18:02 2 h später'
+E           assert False
+E            +  where False = <built-in method startswith of str object at 0x72df29bbaaf0>('S3 ')
+E            +    where <built-in method startswith of str object at 0x72df29bbaaf0> = 'Seg 1: TH18:02 2 h später'.startswith
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:369: AssertionError
+_________________ test_ac4_corridor_alert_carries_stage_prefix _________________
+
+    def test_ac4_corridor_alert_carries_stage_prefix():
+        """AC-4: ein reiner Schwellen-Treffer (`CorridorEvent`, ueber
+        `to_corridor_events`/`corridor_hits`) traegt das Etappen-Praefix VOR der
+        Ortsangabe. Der Korridor-Kopf traegt (anders als der Δ-Kopf) zusaetzlich
+        den Trip-Namen (`_render_sms_corridor_only`, `render.py:1613-1615`) — die
+        Spec verlangt nur "vor der Ortsangabe" (AC-4-Wortlaut), nicht zwingend am
+        Textanfang. Geprueft wird deshalb die relative Position ('S3' VOR der
+        Ortsangabe 'Seg 1:'), nicht `startswith`.
+        """
+        trip = _multi_stage_trip()
+        hit = CorridorHit(
+            metric="wind_gust", value=90.0, bound=70.0, direction="above",
+            segment_id="1", occurred_at=datetime.now(UTC),
+        )
+        stub = _SevenIoStub()
+        try:
+            svc = NotificationService(
+                settings=_settings_sms_only(stub.port),
+                user_id=f"tdd-2122-ac4-{uuid.uuid4().hex[:6]}",
+            )
+            svc.send_deviation_alert(
+                trip=trip, weather=[_segment_weather_data()], changes=[],
+                corridor_hits=[hit], effective_channels={"sms"},
+            )
+            assert len(stub.received) == 1
+            text = stub.received[0]["text"]
+>           assert "S3" in text and "Seg 1:" in text, (
+                f"AC-4: der Korridor-Alarm muss das Etappen-Praefix 'S3' UND die "
+                f"gewohnte Ortsangabe 'Seg 1:' tragen, gemessen: {text!r}"
+            )
+E           AssertionError: AC-4: der Korridor-Alarm muss das Etappen-Praefix 'S3' UND die gewohnte Ortsangabe 'Seg 1:' tragen, gemessen: 'TDD 2122 Trip Seg 1: !G90@16'
+E           assert ('S3' in 'TDD 2122 Trip Seg 1: !G90@16')
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:405: AssertionError
+_______ test_ac5_official_alert_carries_stage_prefix_from_rolling_anchor _______
+
+    def test_ac5_official_alert_carries_stage_prefix_from_rolling_anchor():
+        """AC-5: eine amtliche Warnung ueber `send_official_alert` traegt das
+        Etappen-Praefix des Tages, dem der TATSAECHLICH verwendete rollierende
+        Anker entstammt (`WeatherSnapshotService.alarm_anchor_target_date`) —
+        hier der heutige Tag, ueber einen echten gespeicherten Anker."""
+        trip = _multi_stage_trip()
+        uid = f"tdd-2122-ac5-{uuid.uuid4().hex[:6]}"
+        _clean_user(uid)
+        stub = _SevenIoStub()
+        try:
+            weather = [_segment_weather_data()]
+            snap_svc = WeatherSnapshotService(user_id=uid)
+            # Anker fuer mehrere plausible Kanalnamen hinterlegen — welchen genau
+            # `send_official_alert` liest, legt die Implementierung fest (Spec
+            # nennt nur "des tatsaechlich verwendeten Ankers").
+            for channel in ("sms", "email", "telegram", "premium_sms"):
+                snap_svc.save_alarm_anchor(trip.id, date.today(), weather, channel)
+    
+            alert = OfficialAlert(
+                source="geosphere_warn", hazard="thunderstorm", level=2,
+                label="Gewitter", valid_from=datetime.now(UTC),
+                valid_to=datetime.now(UTC) + timedelta(hours=3),
+                region_label="Test-Region",
+            )
+            svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=uid)
+            svc.send_official_alert(
+                trip=trip, notices=[(alert, ["1"])], effective_channels={"sms"},
+            )
+            assert len(stub.received) == 1, (
+                f"Setup-Kontrolle: erwartet genau eine SMS, erhalten: {stub.received!r}"
+            )
+            text = stub.received[0]["text"]
+>           assert text.startswith("S3 "), (
+                "AC-5: die amtliche Warnung muss mit dem Etappen-Praefix des "
+                f"verwendeten Ankertags beginnen, gemessen: {text!r}"
+            )
+E           AssertionError: AC-5: die amtliche Warnung muss mit dem Etappen-Praefix des verwendeten Ankertags beginnen, gemessen: 'Seg 1: !TH:L 16:02-19:02'
+E           assert False
+E            +  where False = <built-in method startswith of str object at 0x72df29be0850>('S3 ')
+E            +    where <built-in method startswith of str object at 0x72df29be0850> = 'Seg 1: !TH:L 16:02-19:02'.startswith
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:451: AssertionError
+_________ test_ac6_radar_alert_uses_segment_date_not_wall_clock_today __________
+
+segment_date = datetime.date(2026, 8, 29)
+
+    def _req(segment_date):
+        try:
+>           return RadarAlertRequest(
+                onset_minutes=12, onset_time="14:35", km_from=5.0, km_to=18.0,
+                is_convective=False, intensity_label="leichter Regen",
+                source_label="Radar (DWD)", tz=TZ, segment_date=segment_date,
+            )
+E           TypeError: RadarAlertRequest.__init__() got an unexpected keyword argument 'segment_date'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:476: TypeError
+
+The above exception was the direct cause of the following exception:
+
+    def test_ac6_radar_alert_uses_segment_date_not_wall_clock_today():
+        """AC-6: ein Radar-Alarm, dessen Segment aus der Nacht des VORTAGS stammt,
+        nennt die Etappe des Vortags — nicht die von heute. Gegenprobe im selben
+        Test: derselbe Trip, aber `segment_date=today`, nennt die heutige Etappe.
+        """
+        trip = _multi_stage_trip()  # heute = 3. Etappe, Vortag = 2. Etappe
+        vortag = date.today() - timedelta(days=1)
+        stub = _SevenIoStub()
+        try:
+            uid = f"tdd-2122-ac6-{uuid.uuid4().hex[:6]}"
+            svc = NotificationService(settings=_settings_sms_only(stub.port), user_id=uid)
+    
+            def _req(segment_date):
+                try:
+                    return RadarAlertRequest(
+                        onset_minutes=12, onset_time="14:35", km_from=5.0, km_to=18.0,
+                        is_convective=False, intensity_label="leichter Regen",
+                        source_label="Radar (DWD)", tz=TZ, segment_date=segment_date,
+                    )
+                except TypeError as exc:
+                    raise AssertionError(
+                        "RadarAlertRequest traegt kein additives 'segment_date'-Feld. "
+                        f"Ursprungsfehler: {exc}"
+                    ) from exc
+    
+            svc.send_radar_alert(
+>               trip=trip, request=_req(vortag), source="Radar (DWD)",
+                                   ^^^^^^^^^^^^
+                cooldown_display="2 Stunden", effective_channels={"sms"},
+            )
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:488: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+segment_date = datetime.date(2026, 8, 29)
+
+    def _req(segment_date):
+        try:
+            return RadarAlertRequest(
+                onset_minutes=12, onset_time="14:35", km_from=5.0, km_to=18.0,
+                is_convective=False, intensity_label="leichter Regen",
+                source_label="Radar (DWD)", tz=TZ, segment_date=segment_date,
+            )
+        except TypeError as exc:
+>           raise AssertionError(
+                "RadarAlertRequest traegt kein additives 'segment_date'-Feld. "
+                f"Ursprungsfehler: {exc}"
+            ) from exc
+E           AssertionError: RadarAlertRequest traegt kein additives 'segment_date'-Feld. Ursprungsfehler: RadarAlertRequest.__init__() got an unexpected keyword argument 'segment_date'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:482: AssertionError
+__________ test_ac7_message_spanning_two_stages_shows_range_then_list __________
+
+    def test_ac7_message_spanning_two_stages_shows_range_then_list():
+        """AC-7: Bausteine zweier Etappen in EINER Nachricht — benachbart wird
+        als Bereich (`S5-6`), nicht benachbart als Aufzaehlung (`S5,7`)
+        dargestellt; nie eine einzelne (falsche) Etappe."""
+        try:
+>           e1 = _gust_event(1.0, 2.0, "1", "11:00", stage_number=5)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:518: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+km_from = 1.0, km_to = 2.0, segment_id = '1', occurred_at = '11:00'
+extra = {'stage_number': 5}
+
+    def _gust_event(km_from: float, km_to: float, segment_id: str, occurred_at: str,
+                     **extra) -> AlertEvent:
+        """Ein `AlertEvent`, DIREKT konstruiert (kein `to_alert_message`-Umweg) —
+        fuer Tests, die den Renderer isoliert pruefen (AC-7/AC-8/AC-9/AC-10)."""
+>       return AlertEvent(
+            metric_id="gust", value_from=30.0, value_to=80.0, threshold=20.0,
+            cmp="über", occurred_at=occurred_at, km_from=km_from, km_to=km_to,
+            segment_id=segment_id, **extra,
+        )
+E       TypeError: AlertEvent.__init__() got an unexpected keyword argument 'stage_number'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:252: TypeError
+
+The above exception was the direct cause of the following exception:
+
+    def test_ac7_message_spanning_two_stages_shows_range_then_list():
+        """AC-7: Bausteine zweier Etappen in EINER Nachricht — benachbart wird
+        als Bereich (`S5-6`), nicht benachbart als Aufzaehlung (`S5,7`)
+        dargestellt; nie eine einzelne (falsche) Etappe."""
+        try:
+            e1 = _gust_event(1.0, 2.0, "1", "11:00", stage_number=5)
+            e2 = _gust_event(3.0, 4.0, "2", "11:30", stage_number=6)
+        except TypeError as exc:
+>           raise AssertionError(
+                f"AlertEvent traegt kein additives 'stage_number'-Feld: {exc}"
+            ) from exc
+E           AssertionError: AlertEvent traegt kein additives 'stage_number'-Feld: AlertEvent.__init__() got an unexpected keyword argument 'stage_number'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:521: AssertionError
+_______ test_ac8_missing_stage_on_one_event_suppresses_the_whole_prefix ________
+
+    def test_ac8_missing_stage_on_one_event_suppresses_the_whole_prefix():
+        """AC-8: fehlt bei MINDESTENS EINEM Ereignis die Etappen-Nummer, erscheint
+        GAR KEIN Praefix — der Text bleibt byte-identisch zum Bestand.
+    
+        BESTAND (gemessen PRE-FIX am 2026-08-30 mit dem aktuellen `render_sms()`,
+        zwei `AlertEvent`s ohne `stage_number`-Kenntnis, Segmente '1' und '2'):
+            'Seg 1-2: G30->80@11 G30->80@11'
+    
+        Positivkontrolle im selben Testkoerper: tragen BEIDE Ereignisse
+        (benachbart) eine Etappe, ERSCHEINT das Praefix 'S5-6 ' VOR demselben,
+        sonst unveraenderten Bestandstext — das AUSBLEIBEN oben ist also
+        nachweislich keine tote/wirkungslose Pruefung.
+        """
+        BESTAND = "Seg 1-2: G30->80@11 G30->80@11"
+    
+        e1_no_stage = _gust_event(1.0, 2.0, "1", "11:00")
+        e2_no_stage = _gust_event(3.0, 4.0, "2", "11:30")
+        msg_none = AlertMessage(
+            trip_short="X", stand_at="10:00", events=(e1_no_stage, e2_no_stage), source=None,
+        )
+        text_none = render_sms(msg_none)
+        assert text_none == BESTAND, (
+            f"Setup-Kontrolle: ohne jede Etappen-Nummer bleibt der Bestandstext "
+            f"unveraendert, gemessen: {text_none!r}"
+        )
+    
+        try:
+>           e1_with_stage = _gust_event(1.0, 2.0, "1", "11:00", stage_number=5)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:570: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+km_from = 1.0, km_to = 2.0, segment_id = '1', occurred_at = '11:00'
+extra = {'stage_number': 5}
+
+    def _gust_event(km_from: float, km_to: float, segment_id: str, occurred_at: str,
+                     **extra) -> AlertEvent:
+        """Ein `AlertEvent`, DIREKT konstruiert (kein `to_alert_message`-Umweg) —
+        fuer Tests, die den Renderer isoliert pruefen (AC-7/AC-8/AC-9/AC-10)."""
+>       return AlertEvent(
+            metric_id="gust", value_from=30.0, value_to=80.0, threshold=20.0,
+            cmp="über", occurred_at=occurred_at, km_from=km_from, km_to=km_to,
+            segment_id=segment_id, **extra,
+        )
+E       TypeError: AlertEvent.__init__() got an unexpected keyword argument 'stage_number'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:252: TypeError
+
+The above exception was the direct cause of the following exception:
+
+    def test_ac8_missing_stage_on_one_event_suppresses_the_whole_prefix():
+        """AC-8: fehlt bei MINDESTENS EINEM Ereignis die Etappen-Nummer, erscheint
+        GAR KEIN Praefix — der Text bleibt byte-identisch zum Bestand.
+    
+        BESTAND (gemessen PRE-FIX am 2026-08-30 mit dem aktuellen `render_sms()`,
+        zwei `AlertEvent`s ohne `stage_number`-Kenntnis, Segmente '1' und '2'):
+            'Seg 1-2: G30->80@11 G30->80@11'
+    
+        Positivkontrolle im selben Testkoerper: tragen BEIDE Ereignisse
+        (benachbart) eine Etappe, ERSCHEINT das Praefix 'S5-6 ' VOR demselben,
+        sonst unveraenderten Bestandstext — das AUSBLEIBEN oben ist also
+        nachweislich keine tote/wirkungslose Pruefung.
+        """
+        BESTAND = "Seg 1-2: G30->80@11 G30->80@11"
+    
+        e1_no_stage = _gust_event(1.0, 2.0, "1", "11:00")
+        e2_no_stage = _gust_event(3.0, 4.0, "2", "11:30")
+        msg_none = AlertMessage(
+            trip_short="X", stand_at="10:00", events=(e1_no_stage, e2_no_stage), source=None,
+        )
+        text_none = render_sms(msg_none)
+        assert text_none == BESTAND, (
+            f"Setup-Kontrolle: ohne jede Etappen-Nummer bleibt der Bestandstext "
+            f"unveraendert, gemessen: {text_none!r}"
+        )
+    
+        try:
+            e1_with_stage = _gust_event(1.0, 2.0, "1", "11:00", stage_number=5)
+        except TypeError as exc:
+>           raise AssertionError(
+                f"AlertEvent traegt kein additives 'stage_number'-Feld: {exc}"
+            ) from exc
+E           AssertionError: AlertEvent traegt kein additives 'stage_number'-Feld: AlertEvent.__init__() got an unexpected keyword argument 'stage_number'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:572: AssertionError
+_____________ test_ac9_compare_alert_never_carries_a_stage_prefix ______________
+
+    def test_ac9_compare_alert_never_carries_a_stage_prefix():
+        """AC-9: ein Alarm aus dem ECHTEN Ortsvergleich-Pfad
+        (`to_multi_point_alert_message`) traegt NIE ein Etappen-Praefix — Text
+        byte-identisch zum gemessenen Bestand.
+    
+        Positivkontrolle im selben Testkoerper: derselbe Renderer zeigt bei einem
+        direkt mit `stage_number` konstruierten Ereignis sehr wohl ein Praefix —
+        das Ausbleiben oben liegt also am Ortsvergleich-Pfad, nicht an einem toten
+        Renderer.
+        """
+        groups = [
+            ("Graz", [_change(new_value=30.0)], _gpx(47.07, 15.44)),
+            ("Wien", [_change(new_value=45.0)], _gpx(48.21, 16.37)),
+        ]
+        msg = to_multi_point_alert_message(groups, tz=TZ, stand_at="04.08. 08:00")
+        for e in msg.events:
+            assert getattr(e, "stage_number", None) is None, (
+                "AC-9 Setup-Kontrolle: der Ortsvergleich-Pfad darf NIE eine "
+                f"Etappen-Nummer setzen, gefunden: {getattr(e, 'stage_number', 'FEHLT')!r}"
+            )
+        text = render_sms(msg, location_positions={"Graz": 1, "Wien": 2})
+        assert text == "2:+R45 1:+R30", (
+            "AC-9: byte-identisch zum gemessenen Bestand (PRE-FIX, gemessen "
+            f"2026-08-30 ueber `to_multi_point_alert_message`), gemessen: {text!r}"
+        )
+    
+        try:
+>           e_with_stage = _gust_event(1.0, 2.0, "1", "11:00", stage_number=5)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:630: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+km_from = 1.0, km_to = 2.0, segment_id = '1', occurred_at = '11:00'
+extra = {'stage_number': 5}
+
+    def _gust_event(km_from: float, km_to: float, segment_id: str, occurred_at: str,
+                     **extra) -> AlertEvent:
+        """Ein `AlertEvent`, DIREKT konstruiert (kein `to_alert_message`-Umweg) —
+        fuer Tests, die den Renderer isoliert pruefen (AC-7/AC-8/AC-9/AC-10)."""
+>       return AlertEvent(
+            metric_id="gust", value_from=30.0, value_to=80.0, threshold=20.0,
+            cmp="über", occurred_at=occurred_at, km_from=km_from, km_to=km_to,
+            segment_id=segment_id, **extra,
+        )
+E       TypeError: AlertEvent.__init__() got an unexpected keyword argument 'stage_number'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:252: TypeError
+
+The above exception was the direct cause of the following exception:
+
+    def test_ac9_compare_alert_never_carries_a_stage_prefix():
+        """AC-9: ein Alarm aus dem ECHTEN Ortsvergleich-Pfad
+        (`to_multi_point_alert_message`) traegt NIE ein Etappen-Praefix — Text
+        byte-identisch zum gemessenen Bestand.
+    
+        Positivkontrolle im selben Testkoerper: derselbe Renderer zeigt bei einem
+        direkt mit `stage_number` konstruierten Ereignis sehr wohl ein Praefix —
+        das Ausbleiben oben liegt also am Ortsvergleich-Pfad, nicht an einem toten
+        Renderer.
+        """
+        groups = [
+            ("Graz", [_change(new_value=30.0)], _gpx(47.07, 15.44)),
+            ("Wien", [_change(new_value=45.0)], _gpx(48.21, 16.37)),
+        ]
+        msg = to_multi_point_alert_message(groups, tz=TZ, stand_at="04.08. 08:00")
+        for e in msg.events:
+            assert getattr(e, "stage_number", None) is None, (
+                "AC-9 Setup-Kontrolle: der Ortsvergleich-Pfad darf NIE eine "
+                f"Etappen-Nummer setzen, gefunden: {getattr(e, 'stage_number', 'FEHLT')!r}"
+            )
+        text = render_sms(msg, location_positions={"Graz": 1, "Wien": 2})
+        assert text == "2:+R45 1:+R30", (
+            "AC-9: byte-identisch zum gemessenen Bestand (PRE-FIX, gemessen "
+            f"2026-08-30 ueber `to_multi_point_alert_message`), gemessen: {text!r}"
+        )
+    
+        try:
+            e_with_stage = _gust_event(1.0, 2.0, "1", "11:00", stage_number=5)
+        except TypeError as exc:
+>           raise AssertionError(
+                f"AlertEvent traegt kein additives 'stage_number'-Feld: {exc}"
+            ) from exc
+E           AssertionError: AlertEvent traegt kein additives 'stage_number'-Feld: AlertEvent.__init__() got an unexpected keyword argument 'stage_number'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:632: AssertionError
+_________ test_ac10_prefix_survives_truncation_and_length_budget_holds _________
+
+    def test_ac10_prefix_survives_truncation_and_length_budget_holds():
+        """AC-10: bei einem kuenstlich kleinen Laengenlimit (harter
+        Sicherungsschnitt) bleibt das (zweistellige) Etappen-Praefix VOLLSTAENDIG
+        erhalten, und `len(text) <= limit` gilt weiterhin."""
+        try:
+>           events = tuple(
+                _gust_event(float(i), float(i + 1), str(i + 1), f"{11 + i}:00", stage_number=12)
+                for i in range(5)
+            )
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:652: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_alert_etappen_praefix_kurzform.py:653: in <genexpr>
+    _gust_event(float(i), float(i + 1), str(i + 1), f"{11 + i}:00", stage_number=12)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+km_from = 0.0, km_to = 1.0, segment_id = '1', occurred_at = '11:00'
+extra = {'stage_number': 12}
+
+    def _gust_event(km_from: float, km_to: float, segment_id: str, occurred_at: str,
+                     **extra) -> AlertEvent:
+        """Ein `AlertEvent`, DIREKT konstruiert (kein `to_alert_message`-Umweg) —
+        fuer Tests, die den Renderer isoliert pruefen (AC-7/AC-8/AC-9/AC-10)."""
+>       return AlertEvent(
+            metric_id="gust", value_from=30.0, value_to=80.0, threshold=20.0,
+            cmp="über", occurred_at=occurred_at, km_from=km_from, km_to=km_to,
+            segment_id=segment_id, **extra,
+        )
+E       TypeError: AlertEvent.__init__() got an unexpected keyword argument 'stage_number'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:252: TypeError
+
+The above exception was the direct cause of the following exception:
+
+    def test_ac10_prefix_survives_truncation_and_length_budget_holds():
+        """AC-10: bei einem kuenstlich kleinen Laengenlimit (harter
+        Sicherungsschnitt) bleibt das (zweistellige) Etappen-Praefix VOLLSTAENDIG
+        erhalten, und `len(text) <= limit` gilt weiterhin."""
+        try:
+            events = tuple(
+                _gust_event(float(i), float(i + 1), str(i + 1), f"{11 + i}:00", stage_number=12)
+                for i in range(5)
+            )
+        except TypeError as exc:
+>           raise AssertionError(
+                f"AlertEvent traegt kein additives 'stage_number'-Feld: {exc}"
+            ) from exc
+E           AssertionError: AlertEvent traegt kein additives 'stage_number'-Feld: AlertEvent.__init__() got an unexpected keyword argument 'stage_number'
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:657: AssertionError
+________ test_ac11_all_three_short_channels_carry_the_same_stage_prefix ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x72df2975c2f0>
+
+    def test_ac11_all_three_short_channels_carry_the_same_stage_prefix(monkeypatch):
+        """AC-11: SMS, Premium-SMS und Telegram-Kurzform desselben Alarms tragen
+        denselben Text — inklusive Etappen-Praefix. Geprueft an einem echten
+        `send_deviation_alert`-Aufruf mit allen drei Kurz-Kanaelen aktiv."""
+        import output.channels.telegram as tg_module
+    
+        trip = _multi_stage_trip()
+        sms_stub = _SevenIoStub()
+        tg_stub = _TelegramStub()
+        try:
+            monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", tg_stub.base_url)
+            svc = NotificationService(
+                settings=_settings_all_short_channels(sms_stub.port),
+                user_id=f"tdd-2122-ac11-{uuid.uuid4().hex[:6]}",
+            )
+            svc.send_deviation_alert(
+                trip=trip, weather=[_segment_weather_data()], changes=[_change()],
+                effective_channels={"sms", "telegram", "premium_sms"},
+                telegram_style="kurzform",
+            )
+            assert len(sms_stub.received) == 2, (
+                "Setup-Kontrolle: erwartet je eine SMS- und eine "
+                f"Premium-SMS-Anfrage, erhalten: {sms_stub.received!r}"
+            )
+            assert len(tg_stub.sent) == 1, (
+                f"Setup-Kontrolle: erwartet genau eine Telegram-Nachricht, "
+                f"erhalten: {tg_stub.sent!r}"
+            )
+            sms_texts = {r["text"] for r in sms_stub.received}
+            telegram_text = tg_stub.sent[0].get("text")
+            assert len(sms_texts) == 1, (
+                f"Setup-Kontrolle: SMS und Premium-SMS muessen denselben Text "
+                f"tragen, gemessen: {sms_texts!r}"
+            )
+            assert sms_texts == {telegram_text}, (
+                "AC-11: SMS/Premium-SMS und Telegram-Kurzform muessen "
+                f"byte-identisch sein — SMS/Premium={sms_texts!r}, "
+                f"Telegram={telegram_text!r}"
+            )
+>           assert telegram_text.startswith("S3 "), (
+                f"AC-11: der gemeinsame Text muss das Etappen-Praefix tragen, "
+                f"gemessen: {telegram_text!r}"
+            )
+E           AssertionError: AC-11: der gemeinsame Text muss das Etappen-Praefix tragen, gemessen: 'Seg 1: R2->30'
+E           assert False
+E            +  where False = <built-in method startswith of str object at 0x72df297aa8b0>('S3 ')
+E            +    where <built-in method startswith of str object at 0x72df297aa8b0> = 'Seg 1: R2->30'.startswith
+
+tests/tdd/test_alert_etappen_praefix_kurzform.py:714: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:190 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '99999' auf Test-Chat-ID '-5369694790' umgeschaltet.
+=========================== short test summary info ============================
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac1_deviation_alert_prefix_derived_from_trip_stage_position
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac2_radar_alert_shares_same_stage_prefix_as_deviation_alert
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac3_onset_shift_alert_carries_stage_prefix
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac4_corridor_alert_carries_stage_prefix
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac5_official_alert_carries_stage_prefix_from_rolling_anchor
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac6_radar_alert_uses_segment_date_not_wall_clock_today
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac7_message_spanning_two_stages_shows_range_then_list
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac8_missing_stage_on_one_event_suppresses_the_whole_prefix
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac9_compare_alert_never_carries_a_stage_prefix
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac10_prefix_survives_truncation_and_length_budget_holds
+FAILED tests/tdd/test_alert_etappen_praefix_kurzform.py::test_ac11_all_three_short_channels_carry_the_same_stage_prefix
+============================== 11 failed in 5.17s ==============================

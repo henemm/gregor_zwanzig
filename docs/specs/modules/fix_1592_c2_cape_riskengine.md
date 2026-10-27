@@ -3,7 +3,7 @@ entity_id: fix_1592_c2_cape_riskengine
 type: bugfix
 created: 2026-08-08
 updated: 2026-08-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, cape, risk-engine, model-registry, deckelung, issue-1592]
 ---
@@ -270,7 +270,7 @@ Limitations). Nach Teil 1 bleiben als Kalibrierungslücken nur noch `icon_d2 × 
 
 ## Acceptance Criteria
 
-- **AC-1 (Eichlücke geschlossen, mit Begründung):** Given die Punktliste des Gebiets FR enthält
+- **AC-1:** (Eichlücke geschlossen, mit Begründung) Given die Punktliste des Gebiets FR enthält
   jetzt zwei Referenzpunkte (Korsika zuerst, dann die französischen Alpen) / When das Eichskript
   für `icon_d2 × FR` läuft und am ersten Punkt keine Werte findet / Then versucht es den zweiten
   Punkt, findet dort Werte, und die committete Eichtabelle `CAPE_THRESHOLDS_JKG` trägt einen
@@ -290,7 +290,7 @@ Limitations). Nach Teil 1 bleiben als Kalibrierungslücken nur noch `icon_d2 × 
     versehentlich die Reihenfolge vertauschen oder einen anderen Punkt zuerst prüfen, fiele
     dieser Test durch.
 
-- **AC-3 (Kernfall — genau eine Zählung statt zwei):** Given ein Segment mit hohem CAPE (2500
+- **AC-3:** (Kernfall — genau eine Zählung statt zwei) Given ein Segment mit hohem CAPE (2500
   J/kg), dessen Fusions-Ergebnis „leicht" ist (`thunder_level_max == ThunderLevel.LOW`) / When
   `RiskEngine.assess_segment()` aufgerufen wird / Then enthält das Ergebnis **genau ein**
   `Risk(THUNDERSTORM, …)` der Stufe `LOW` — vorher enthielt es zusätzlich ein
@@ -298,7 +298,7 @@ Limitations). Nach Teil 1 bleiben als Kalibrierungslücken nur noch `icon_d2 × 
   - Test: über die echte Einstiegsfunktion `RiskEngine().assess_segment()`, nicht über eine
     interne Hilfsmethode.
 
-- **AC-4 (Gegenprobe zur Deckelung — funktioniert für jeden CAPE-Wert):** Given ein Segment mit
+- **AC-4:** (Gegenprobe zur Deckelung — funktioniert für jeden CAPE-Wert) Given ein Segment mit
   einem extrem hohen CAPE-Wert (z. B. 50000 J/kg) und `thunder_level_max == ThunderLevel.LOW` /
   When `assess_segment()` aufgerufen wird / Then erzeugt die RiskEngine kein
   `Risk(THUNDERSTORM, …)` über der Stufe, die `thunder_level_max` vorgibt — unabhängig davon, wie
@@ -306,14 +306,14 @@ Limitations). Nach Teil 1 bleiben als Kalibrierungslücken nur noch `icon_d2 × 
   - Test: CAPE=50000 mit `thunder_level_max=LOW` liefert weiterhin nur `LOW`, niemals
     `MODERATE`/`HIGH`.
 
-- **AC-5 (Abstain — fehlende Fusions-Aussage erzeugt kein Alarm-Risiko):** Given ein Segment mit
+- **AC-5:** (Abstain — fehlende Fusions-Aussage erzeugt kein Alarm-Risiko) Given ein Segment mit
   vorhandenem CAPE-Wert (z. B. 2500 J/kg oder 1500 J/kg), aber `thunder_level_max is None`
   („keine Aussage") / When `assess_segment()` aufgerufen wird / Then enthält das Ergebnis **kein**
   `Risk(THUNDERSTORM, …)` — vorher lieferte derselbe Fall `HIGH` bzw. `MODERATE`.
   - Test: CAPE=2500 und CAPE=1500, jeweils mit `thunder_level_max=None`, liefern in beiden
     Fällen keine `THUNDERSTORM`-Risiken.
 
-- **AC-6 (generischer Katalogpfad bleibt für die übrigen sechs Metriken unverändert):** Given die
+- **AC-6:** (generischer Katalogpfad bleibt für die übrigen sechs Metriken unverändert) Given die
   bestehenden Regeln für Wind, Böe, Niederschlag, Regenwahrscheinlichkeit, Wind-Chill und
   Sichtweite in `_check_catalog_metric()` / When das Streichen der CAPE-Regel implementiert wird
   / Then verhalten sich alle sechs übrigen Aufrufer unverändert — dieselben Eingaben liefern
@@ -322,7 +322,7 @@ Limitations). Nach Teil 1 bleiben als Kalibrierungslücken nur noch `icon_d2 × 
     Niederschlag, Regenwahrscheinlichkeit, Wind-Chill, Sichtweite bleibt unverändert grün (kein
     neuer Test nötig, Regressionsnachweis über den unveränderten Bestand).
 
-- **AC-7 (tote Konfiguration entfernt):** Given `MetricDefinition` für `"cape"` trug bisher
+- **AC-7:** (tote Konfiguration entfernt) Given `MetricDefinition` für `"cape"` trug bisher
   `risk_thresholds={"medium": 1000.0, "high": 2000.0}` / When die CAPE-Regel aus der RiskEngine
   gestrichen ist / Then ist `get_metric("cape").risk_thresholds` entfernt oder leer, und kein
   Produktivpfad liest den Wert mehr (`display_thresholds`, `highlight_threshold` bleiben

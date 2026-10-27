@@ -189,6 +189,51 @@ def test_trip_briefing_sms_stays_gsm7_clean_with_dense_token_line():
     assert_gsm7_clean(full, "Trip-Briefing-SMS (ungekuerzt, alle Token)")
 
 
+def test_trip_briefing_sms_einfach_modi_bleiben_gsm7_rein_und_tragen_stufen_token():
+    """#2422 S6 (AC-9): der GSM-7-Waechter deckt auch die EINFACH-Modi ab.
+
+    Wolken (``CT``/``CL``/``CM``/``CH``) tragen
+    ``format_mode="symbol"`` (Einfach) UND das Emoji-``friendly_label`` des Katalogs
+    -- der bisherige Einfach-Zweig des Builders gaebe dieses Emoji aus (nicht GSM-7,
+    UCS-2-Kostenverdopplung). Erwartet: ASCII-Stufe ``CT:BKN@...`` (Doppelpunkt im
+    Kuerzel, #1824 B), weder Emoji noch Zahl.
+
+    Vakuum-Schutz: die Einfach-Stufen MUESSEN im ungekuerzten Text stehen
+    (``CT:``/``CL:``/``CM:``/``CH:``) -- sonst prueft der Waechter nur
+    Zahlen. (#2422 S6b: CAPE hat keine Einfachform mehr.) Bug-Nachweis: heute steht dort das Emoji-Label (oder die Zahl), der
+    Waechter wird ROT, sobald es im Text steht bzw. die Stufe fehlt."""
+    from app.metric_catalog import get_metric
+    from output.tokens.dto import MetricSpec
+
+    specs = [
+        MetricSpec(
+            symbol=sym, enabled=True, format_mode="symbol", use_friendly_format=True,
+            friendly_label=get_metric(mid).friendly_label or "",
+        )
+        for sym, mid in (
+            ("CT", "cloud_total"), ("CL", "cloud_low"), ("CM", "cloud_mid"),
+            ("CH", "cloud_high"),
+        )
+    ]
+    formatter = SMSTripFormatter()
+    kwargs = dict(
+        report_type="evening", tz=_UTC, night_weather=_night(),
+        thunder_forecast={"+1": {"level": "HIGH", "hour": 15, "hail": True}},
+        stage_name="Świnica", sms_alert_min_level=3, disabled_specs=specs,
+    )
+    sms = formatter.format_sms([_dense_segment()], **kwargs)
+    full = formatter.format_sms([_dense_segment()], max_length=2000, **kwargs)
+
+    fehlend = [sym for sym in ("CT:", "CL:", "CM:", "CH:") if sym not in full]
+    assert not fehlend, (
+        f"AC-9 (S6): die Einfach-Stufen-Token {fehlend} stehen nicht im "
+        f"ungekuerzten Text {full!r} -- der Waechter pruefte sonst nur Zahlen."
+    )
+    assert_gsm7_clean(sms, "Trip-Briefing-SMS Einfach-Modi (Versandtext, 160 Zeichen)")
+    assert_gsm7_clean(full, "Trip-Briefing-SMS Einfach-Modi (ungekuerzt)")
+    assert len(sms) <= 160
+
+
 def test_stage_prefix_folds_non_gsm7_letters_on_its_own():
     """``_sms_stage_prefix`` einzeln geprueft, ohne Umweg ueber ``format_sms``.
 
@@ -206,27 +251,30 @@ def test_stage_prefix_folds_non_gsm7_letters_on_its_own():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("hazard", sorted(HAZARD_SMS_SYMBOLS))
-def test_official_alert_sms_stays_gsm7_clean_for_every_hazard_and_umlaut_trip_name(
+def test_official_alert_sms_stays_gsm7_clean_for_every_hazard_and_umlaut_scope(
     hazard: str,
 ):
     """Jede Katalog-Gefahr, uniforme UND gemischte Warnstufe -- ``_ascii()``/
     ``fold_ascii()`` faltet Buchstaben, deshalb kein Fund erwartet
     (Regressionsschutz).
 
-    Der Trip-Name traegt Umlaute UND ein Diakritikum ausserhalb des
-    GSM-7-Basisalphabets (`Ś`, U+015A). Der Umlaut allein wuerde diese
-    Zusicherung wertlos machen: `ö` IST GSM-7-nativ, ein Ausfall von
-    ``fold_ascii()`` (alert/render.py:706) bliebe damit unentdeckt."""
-    prefix = "Höhenweg Świnica".replace(" ", "")  # notification_service.py:873 exakt
+    FORTGESCHRIEBEN (#1948 S5): der Trip-Name (``sms_prefix``) ist ersatzlos
+    entfallen. Der nutzereingegebene Text erreicht die amtliche Alarm-SMS jetzt
+    ueber den ORTSKOPF (``sms_scope``) -- dort sitzt dieselbe Fehlerklasse, und
+    dorthin wandert diese Zusicherung. Der Ort traegt Umlaute UND ein
+    Diakritikum ausserhalb des GSM-7-Basisalphabets (`Ś`, U+015A). Der Umlaut
+    allein wuerde die Zusicherung wertlos machen: `ö` IST GSM-7-nativ, ein
+    Ausfall von ``fold_ascii()`` (alert/render.py:706) bliebe unentdeckt."""
+    ort = "Höhenweg Świnica"
     uniform = render_official_alert_sms(
-        [_notice(hazard, 4), _notice("wind_gust", 4, "E2")], sms_prefix=prefix,
+        [_notice(hazard, 4, ort), _notice("wind_gust", 4, ort)],
     )
     gemischt = render_official_alert_sms(
-        [_notice(hazard, 4), _notice("wind_gust", 3, "E2")], sms_prefix=prefix,
+        [_notice(hazard, 4, ort), _notice("wind_gust", 3, "E2")],
     )
     for text, stufe in ((uniform, "uniforme Stufe"), (gemischt, "gemischte Stufe")):
-        assert text.startswith("HoehenwegSwinica "), (
-            f"Trip-Name wurde nicht gefaltet ({hazard}, {stufe}): {text[:25]!r}"
+        assert "Hoehenweg Swinica" in text, (
+            f"Ortsname wurde nicht gefaltet ({hazard}, {stufe}): {text!r}"
         )
         assert_gsm7_clean(text, f"amtlicher Alarm ({hazard}, {stufe})")
 
@@ -236,25 +284,25 @@ def test_official_alert_sms_stays_gsm7_clean_for_every_hazard_and_umlaut_trip_na
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("ext_char", list(GSM7_EXTENDED_TWO_SEPTET_CHARS))
-def test_official_alert_sms_filters_gsm7_extension_char_in_trip_name(ext_char: str):
+def test_official_alert_sms_filters_gsm7_extension_char_in_scope(ext_char: str):
     """fix_1796 AC-1: jedes der 9 GSM-7-Extension-Zeichen (Form-Feed, ^ { } \\
-    [ ~ ] | €) im Trip-Namen darf die gerenderte amtliche Alarm-SMS nicht
-    verlassen -- sonst schaltet der Betreiber die GANZE SMS still auf UCS-2
-    um (67 statt 153 Zeichen je Teil, 3GPP TS 23.040). Diese Zeichen sind
-    GSM-7-KODIERBAR (daher kein Fund fuer die reine `_GSM7_CHARSET`-Pruefung
-    im Compare-Waechter), kosten aber je zwei Septets -- eine stille
-    Budget-Verletzung, die `_ascii()` heute nicht abfaengt."""
-    prefix = f"Tour{ext_char}Nord"
-    sms = render_official_alert_sms([_notice("thunderstorm", 4)], sms_prefix=prefix)
+    [ ~ ] | €) im nutzereingegebenen Text darf die gerenderte amtliche
+    Alarm-SMS nicht verlassen -- sonst schaltet der Betreiber die GANZE SMS
+    still auf UCS-2 um (67 statt 153 Zeichen je Teil, 3GPP TS 23.040). Diese
+    Zeichen sind GSM-7-KODIERBAR (daher kein Fund fuer die reine
+    `_GSM7_CHARSET`-Pruefung im Compare-Waechter), kosten aber je zwei
+    Septets -- eine stille Budget-Verletzung, die `_ascii()` nicht abfaengt.
+
+    FORTGESCHRIEBEN (#1948 S5): Eintrittstor ist der ORTSKOPF (``sms_scope``)
+    statt des entfallenen Trip-Namens."""
+    sms = render_official_alert_sms([_notice("thunderstorm", 4, f"Trip{ext_char}Nord")])
     assert_gsm7_clean(sms, f"amtlicher Alarm (Extension-Zeichen {ext_char!r})")
 
 
-@pytest.mark.parametrize("trip_name", ["KHW [Test]", "Tour~Nord", "Weg|Nord"])
-def test_official_alert_sms_with_gsm7_extension_char_in_trip_name(trip_name: str):
+@pytest.mark.parametrize("ortsname", ["KHW [Test]", "Trip~Nord", "Weg|Nord"])
+def test_official_alert_sms_with_gsm7_extension_char_in_scope(ortsname: str):
     """fix_1796 AC-3 (Bug-Nachweis): die drei in Issue #1796 gemessenen
-    Beispiel-Trip-Namen, direkt aus dem Issue uebernommen -- reproduziert den
-    urspruenglich gemeldeten Fund."""
-    sms = render_official_alert_sms(
-        [_notice("thunderstorm", 4)], sms_prefix=trip_name.replace(" ", ""),
-    )
-    assert_gsm7_clean(sms, f"amtlicher Alarm (Trip-Name {trip_name!r})")
+    Beispiel-Namen, direkt aus dem Issue uebernommen -- reproduziert den
+    urspruenglich gemeldeten Fund, jetzt am Ortskopf statt am Trip-Namen."""
+    sms = render_official_alert_sms([_notice("thunderstorm", 4, ortsname)])
+    assert_gsm7_clean(sms, f"amtlicher Alarm (Ortsname {ortsname!r})")

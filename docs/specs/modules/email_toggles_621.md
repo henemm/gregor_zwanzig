@@ -3,7 +3,7 @@ entity_id: email_toggles_621
 type: module
 created: 2026-06-06
 updated: 2026-06-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [output, email, config, issue-621]
 ---
@@ -29,7 +29,7 @@ aus #613 (bereits live).
 - **File:** `src/output/renderers/email/html.py` (`render_html`) — Gating der HTML-Blöcke
 - **File:** `src/output/renderers/email/plain.py` (`render_plain`) — Gating der Plain-Blöcke
 - **File:** `src/output/renderers/email/__init__.py` (`render_email`) — kwarg-Durchreichung
-- **File:** `src/formatters/trip_report.py` (`format_email`) — Toggles aus `report_config` lesen + weiterreichen
+- **File:** `src/output/renderers/trip_report.py` (`format_email`) — Toggles aus `report_config` lesen + weiterreichen
 - **File:** `src/services/trip_report_scheduler.py` + `src/services/preview_service.py` — `trip.report_config` übergeben
 - **Schicht:** Python-Backend. Go (`internal/model/trip.go`) speichert `report_config` als opaques `map[string]interface{}` und merged Top-Level (Issue #99) → **kein Go-Change nötig**.
 

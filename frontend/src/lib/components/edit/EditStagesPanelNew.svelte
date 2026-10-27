@@ -17,9 +17,6 @@
 	import ProfileEditor from '$lib/components/trip-detail/waypoints/ProfileEditor.svelte';
 	import WaypointCard from '$lib/components/trip-detail/waypoints/WaypointCard.svelte';
 	import PauseStageView from '$lib/components/trip-detail/waypoints/PauseStageView.svelte';
-	import MapControl from './MapControl.svelte';
-	import ProfileSheetEmbedded from './ProfileSheetEmbedded.svelte';
-	import StageSelectSheet from './StageSelectSheet.svelte';
 	import StageDateField from './StageDateField.svelte';
 	import StageTimeField from './StageTimeField.svelte';
 	import { computeCascadeDelta, consecutiveDates, formatDeDate } from './cascade.ts';
@@ -28,9 +25,20 @@
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
 	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
+	import { baueTripSpeicherung } from '$lib/components/shared/tripSpeicherung';
+	import { erstelleEtappenStand } from '$lib/components/shared/etappenSpeicherstand';
+	import { isPauseStage } from '$lib/components/shared/wizardHelpers';
+	import { merkeNutzlast } from '$lib/stores/nutzlastStand';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
+	// Mobile Usability Paket 1 (Spec mobile_stages_tab_listen_only, Iteration 1):
+	// PO-Entscheid F5 (2026-09-22, Variante B) — Karte + Höhenprofil entfallen
+	// auf Mobile ersatzlos. Der Mobile-Zweig rendert Desktop-Hinweis + Liste.
+	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
+	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
+	import StageCardM from '$lib/components/mobile/StageCardM.svelte';
+	import { fetchStageRisk, type StageRisk } from '$lib/utils/stageRisk';
 
 	interface Props {
 		stages: Stage[];
@@ -40,8 +48,10 @@
 		onTripUpdate?: (updated: Trip) => void;
 		/** Issue #758: SaveStatus controller from +page.svelte. When provided, removes explicit save button. */
 		saveController?: SaveStatus;
+		/** Unten belegte Hoehe (px, ohne Safe-Area); fehlt ⇒ schwebende BottomNav. */
+		bottomReservePx?: number;
 	}
-	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate, saveController }: Props = $props();
+	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate, saveController, bottomReservePx }: Props = $props();
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
@@ -49,106 +59,56 @@
 	let addModeHint = $state(false);
 	// Bug #708 — Etappen-Löschen mit Bestätigungs-Dialog (kein sofortiges Löschen)
 	let pendingRemoveStageId = $state<string | null>(null);
-	let mobileSnap = $state<'collapsed' | 'peek' | 'half' | 'full'>('half');
-	let mobileSizeKey = $state(0);
-	let stageSheetOpen = $state(false);
 
-	// Issue #963 — Map-First-Reorder: `.mobile-editor` sitzt jetzt (per CSS `order`,
-	// s. Style-Block) direkt unter der Tab-Leiste. Seine Höhe wird zur Laufzeit
-	// berechnet (Mount + resize/orientationchange) aus der gemessenen Oberkante
-	// (Breadcrumb/TripHeader/Tab-Leiste davor) UND der reservierten BottomNav-Zone
-	// (64px + Safe-Area) darunter.
-	//
-	// Adversary-Fund F004 (Fix-Loop 3, CRITICAL): ein simples CSS
-	// `max(FLOOR, calc(100dvh - offset - BottomNav))` schießt über die BottomNav-
-	// Zone hinaus, sobald `calc(...)` positiv, aber kleiner als FLOOR ist — das
-	// passiert bereits im STANDARD-Viewport 390×844 bei langen Trip-Namen (kein
-	// Rand-Fall!), weil ein längerer TripHeader-Titel die Oberkante weiter nach
-	// unten schiebt. Deshalb wird die Höhe hier bewusst in JS bedingt berechnet
-	// statt blind zu clampen:
-	//   - Ist genug Platz da (available > 0): exakt diesen Wert nutzen — er endet
-	//     per Definition an der BottomNav-Oberkante, kann sie also nie überdecken.
-	//   - Ist gar kein Platz da (available ≤ 0, z.B. Querformat auf schmalen
-	//     Handys/sehr kurzer Portrait-Viewport, F001/F002): Fallback auf
-	//     MOBILE_EDITOR_MIN_HEIGHT_PX — dort ist die BottomNav wegen des riesigen
-	//     Chrome-Offsets ohnehin schon nicht ohne Scrollen erreichbar (Known
-	//     Limitations in der Spec), ein Floor macht das nicht schlimmer.
-	let mobileEditorEl = $state<HTMLDivElement | null>(null);
-	let mobileEditorHeightPx = $state(400);
-	// F002: 45% Freiraum oberhalb des 'half'-Sheets (Default-Snap) = 90px bei
-	// 200px Floor, komfortabel über der `add-waypoint`-Unterkante (56px, +34px Marge).
-	const MOBILE_EDITOR_MIN_HEIGHT_PX = 200;
-	const BOTTOM_NAV_HEIGHT_PX = 64; // app.css `.mobile-scroll-pad` padding-bottom (ohne Safe-Area)
+	// Mobile Usability Paket 1 — Viewport-Weiche für den Listen-only-Zweig.
+	// Muster: TripTabs.svelte (matchMedia 899px). Desktop-Zweig unverändert.
+	let isMobileViewport = $state(false);
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 899px)');
+		isMobileViewport = mq.matches;
+		const onChange = (e: MediaQueryListEvent) => { isMobileViewport = e.matches; };
+		mq.addEventListener('change', onChange);
+		return () => mq.removeEventListener('change', onChange);
+	});
 
-	// Liest `env(safe-area-inset-bottom)` als px-Zahl aus (Notch-Geräte) — CSS
-	// `env()` ist in JS nicht direkt abfragbar, daher kurzzeitige Mess-Sonde.
-	function getSafeAreaBottomPx(): number {
-		const probe = document.createElement('div');
-		probe.style.cssText =
-			'position:fixed;bottom:0;left:0;height:env(safe-area-inset-bottom);width:0;visibility:hidden;pointer-events:none;';
-		document.body.appendChild(probe);
-		const h = probe.getBoundingClientRect().height;
-		probe.remove();
-		return h;
+	// F7: pro Etappen-Karte aufklappbare Wegpunkt-Zeilen — eine Karte offen,
+	// Tap auf dieselbe klappt wieder zu.
+	let expandedStageId = $state<string | null>(null);
+	function toggleStageExpanded(stageId: string): void {
+		expandedStageId = expandedStageId === stageId ? null : stageId;
 	}
 
+	// F3: „+ Etappe" öffnet die Wahl Etappe/Pausentag (ersetzt den
+	// Desktop-Hover-Gap PauseInsertGap, der mobil nicht bedienbar war).
+	// #2496 F3: Der Pausentag heißt jetzt wie auf dem Desktop 'Pausentag' —
+	// isPauseStage() erkennt den Namen als Pause-Synonym; frühere Anlagen
+	// mit leerem Namen gelten weiter als Pause.
+	let addChoiceOpen = $state(false);
+	function handleMobileAddPause(): void {
+		if (cascadeBusy) return;
+		stages = [...stages, { id: newId(), name: 'Pausentag', date: '', waypoints: [] }];
+		speichereBaulicheAenderung();
+	}
+
+	// Risiko-Ampel je Etappe für die StageCardM (lazy, fail-soft) — gleiche
+	// Datenquelle wie HubOverview/TripStageRow (#1223), kein eigener Endpoint.
+	let stageRisk: Record<string, StageRisk> = $state({});
 	$effect(() => {
-		if (!browser || !mobileEditorEl) return;
-		const el = mobileEditorEl;
-		function measure(): void {
-			const offset = el.getBoundingClientRect().top;
-			const available = window.innerHeight - offset - BOTTOM_NAV_HEIGHT_PX - getSafeAreaBottomPx();
-			mobileEditorHeightPx = available > 0 ? available : MOBILE_EDITOR_MIN_HEIGHT_PX;
-		}
-		measure();
-		window.addEventListener('resize', measure);
-		window.addEventListener('orientationchange', measure);
-		return () => {
-			window.removeEventListener('resize', measure);
-			window.removeEventListener('orientationchange', measure);
-		};
+		if (!tripId) return;
+		const id = tripId;
+		fetchStageRisk(id).then((m) => {
+			if (id === tripId) stageRisk = m;
+		});
 	});
 
-	// Bug #1375 Fix-Loop 1 (Staging-Befund): der auf Mobil fixierte Kaskaden-Banner
-	// darf die Kartensteuerelemente (#963: `top:12px` im Kartenblock) NIE verdecken.
-	// Auf Staging steht mehr Chrome über der Karte, dadurch rutschten Pille und
-	// Wegpunkt-Button genau in das Band am unteren Rand, das der Banner belegte —
-	// beide lagen formal im Ausschnitt, waren real aber unklickbar.
-	// Regel: passt der Banner ÜBER die Steuerelemente (Unterkante 8px über deren
-	// Oberkante, Oberkante noch unter der TopAppBar), wird er dort verankert; sonst
-	// bleibt er unten über der BottomNav — dann liegt der Kartenblock nämlich im
-	// oberen Bildschirmbereich und die Steuerelemente sind weit vom unteren Rand
-	// entfernt. Damit ist Überlappungsfreiheit in beiden Fällen konstruktiv
-	// garantiert, unabhängig von Chrome-Höhe und Scrollposition.
-	const MAP_CONTROLS_TOP_PX = 12; // .stage-switcher-pill / .map-control: top:12px
-	const CASCADE_GAP_PX = 8;
-	const TOP_APP_BAR_PX = 56; // app.css `.mobile-scroll-pad` padding-top
-	let cascadeEl = $state<HTMLDivElement | null>(null);
-	let cascadeBottomPx = $state(BOTTOM_NAV_HEIGHT_PX + CASCADE_GAP_PX);
+	// SortableList (ADR-0024) meldet ID-Reihenfolgen; der Streifen arbeitet
+	// mit Stage[]. Adapter — die Sortier-Logik selbst bleibt unverändert.
+	function handleMobileReorder(newOrder: string[]): void {
+		const byId = new Map(stages.map((s) => [s.id, s]));
+		const reordered = newOrder.map((id) => byId.get(id)).filter((s): s is Stage => !!s);
+		if (reordered.length === stages.length) handleStagesReorder(reordered);
+	}
 
-	$effect(() => {
-		if (!browser || !mobileEditorEl || !cascadeEl) return;
-		const mapEl = mobileEditorEl;
-		const bannerEl = cascadeEl;
-		function place(): void {
-			const controlsTop = mapEl.getBoundingClientRect().top + MAP_CONTROLS_TOP_PX;
-			const bannerBottomY = controlsTop - CASCADE_GAP_PX;
-			const fitsAbove = bannerBottomY - bannerEl.offsetHeight >= TOP_APP_BAR_PX;
-			cascadeBottomPx = fitsAbove
-				? window.innerHeight - bannerBottomY
-				: BOTTOM_NAV_HEIGHT_PX + CASCADE_GAP_PX + getSafeAreaBottomPx();
-		}
-		place();
-		window.addEventListener('resize', place);
-		window.addEventListener('orientationchange', place);
-		// Capture-Phase: fängt auch das Scrollen des `main`-Containers (nicht window).
-		window.addEventListener('scroll', place, true);
-		return () => {
-			window.removeEventListener('resize', place);
-			window.removeEventListener('orientationchange', place);
-			window.removeEventListener('scroll', place, true);
-		};
-	});
 
 	// Bug #1393 R4: `payload` erlaubt applyCascade(), einen NOCH NICHT übernommenen
 	// Stand zu schreiben und ihn erst nach Bestätigung in `stages` zu heben.
@@ -157,7 +117,7 @@
 		saving = true;
 		saveError = null;
 		try {
-			const updatedTrip = await api.put<Trip>(`/api/trips/${tripId}`, { stages: payload });
+			const updatedTrip = await etappenStand.direktClient.put<Trip>(`/api/trips/${tripId}`, { stages: payload });
 			saveSuccess = true;
 			setTimeout(() => { saveSuccess = false; }, 3000);
 			onTripUpdate?.(updatedTrip);
@@ -181,11 +141,23 @@
 	// und drehte ein inzwischen bestätigtes Kaskadenergebnis wieder zurück.
 	// Änderung liegt komplett in dieser Funktion; der Speicher-Regler
 	// (`SaveStatus`) bleibt unangetastet, andere Nutzer sind nicht betroffen.
+	// #2347 S2 (AC-6/AC-13): scheitert ein Auto-Save, fallen die Etappen sichtbar auf den
+	// zuletzt vom Server BESTAETIGTEN Stand zurueck. Merker + Rollback-Entscheidung liegen
+	// svelte-frei in etappenSpeicherstand.ts (node:test); hier nur die Verdrahtung.
+	const etappenStand = erstelleEtappenStand<Stage>({
+		start: stages ?? [],
+		client: api,
+		imWiederholen: () => saveController?.imWiederholen ?? false,
+		zuruecksetzen: (stand) => {
+			stages = stand;
+			if (!stages.some((s) => s.id === activeStageId)) activeStageId = stages[0]?.id ?? '';
+		}
+	});
 	function buildStagesSave(): SaveFn {
-		return async (init) => {
-			const updatedTrip = await api.put<Trip>(`/api/trips/${tripId}`, { stages }, init);
-			onTripUpdate?.(updatedTrip);
-		};
+		// Rumpf als Funktion: `stages` wird erst beim Ausloesen gelesen (R6-F001).
+		return baueTripSpeicherung<Trip>(
+			etappenStand.autoSaveClient, tripId!, () => ({ stages }), (updatedTrip) => onTripUpdate?.(updatedTrip), 'etappen'
+		);
 	}
 	function scheduleSave(): void {
 		if (!saveController || !tripId) return;
@@ -199,16 +171,16 @@
 		saveController.defer(buildStagesSave());
 	}
 
-	// Pausentag = Etappe ohne Wegpunkte (Spec-Definition §5/AC-10).
-	const isPause = (s: Stage): boolean => s.waypoints.length === 0;
-
+	// #2496 F3: dieselbe Heuristik wie StageCardM/PauseStageView (isPauseStage)
+	// — ersetzt die lokale Kopie „nur Wegpunkte zählen" (#559-Fall: benannte
+	// Vorlagen-Etappen ohne Wegpunkte gelten jetzt überall als normale Etappe).
 	let activeStageId = $state<string>(
-		stages.find((s) => !isPause(s))?.id ?? stages[0]?.id ?? ''
+		stages.find((s) => !isPauseStage(s))?.id ?? stages[0]?.id ?? ''
 	);
 	let activeWaypointId = $state<string | null>(null);
 
 	const activeStage = $derived(stages.find((s) => s.id === activeStageId) ?? null);
-	const activeIsPause = $derived(activeStage ? isPause(activeStage) : false);
+	const activeIsPause = $derived(activeStage ? isPauseStage(activeStage) : false);
 	const activeStageIndex = $derived(stages.findIndex((s) => s.id === activeStageId));
 	const prevStage = $derived(activeStageIndex > 0 ? stages[activeStageIndex - 1] : null);
 	const nextStage = $derived(
@@ -418,7 +390,8 @@
 				const ctrl = new AbortController();
 				const capTimer = setTimeout(() => ctrl.abort(), CASCADE_WRITE_TIMEOUT_MS);
 				try {
-					const updatedTrip = await api.put<Trip>(
+					// #2347 S2: direktClient merkt den bestaetigten Stand (Kaskade OHNE Rollback, #1393 R4).
+					const updatedTrip = await etappenStand.direktClient.put<Trip>(
 						`/api/trips/${tripId!}`,
 						{ stages: withTargets(stages) },
 						{ signal: ctrl.signal },
@@ -439,6 +412,17 @@
 						onTripUpdate?.(updatedTrip);
 					}
 				} catch (e: unknown) {
+					if ((e as { status?: number })?.status === 412) {
+						// Issue #1433 Fix-Loop: Konflikt statt Sackgasse. Das alte If-Match bleibt bis
+						// „Nochmal speichern" stehen — ein zurueckgestellter Vorgang scheiterte sonst
+						// immer wieder. Die Kaskade ist die Antwort des Nutzers: sie bleibt stehen
+						// (Seitenstand = Server ⊕ ausstehende Nutzlast) und der Eintrag 'etappen' liest
+						// beim Retry den lebenden Stand. Kein `init` (das Abbruch-Signal gilt nur hier).
+						stages = withTargets(stages);
+						cascade = { ...active, done: true };
+						saveController.meldeKonflikt(merkeNutzlast(buildStagesSave(), { stages }), e);
+						return;
+					}
 					// R6-F002: der Abbruch nach der Obergrenze braucht eine Meldung, die
 					// erklärt, was los ist — „Speichern fehlgeschlagen" allein sagt dem
 					// Nutzer im Funkloch nichts.
@@ -471,16 +455,17 @@
 		}
 	}
 
-	function dismissCascade(): void {
+	// Rückgabe: true, wenn hier selbst geschrieben wurde (Signal für den Helfer).
+	function dismissCascade(): boolean {
 		// „Nur diese Etappe" ist die ANTWORT — erst jetzt wird geschrieben. Beim
 		// „Schließen" des Erfolgs-Streifens (cascade.done) gibt es nichts zu speichern.
 		// Adversary F004: läuft eine Kaskaden-Anwendung, hier NICHT dazwischenfunken —
 		// sonst kämpfen zwei Schreibvorgänge. Ein Doppeltipp auf diesen Knopf ist
 		// unkritisch: synchron, `cascade` wird vor jeder Weitergabe genullt (e2e AC-10).
-		if (cascadeBusy) return;
+		if (cascadeBusy) return false;
 		const open = cascade !== null && !cascade.done;
 		cascade = null;
-		if (!open) return;
+		if (!open) return false;
 
 		// Bug #1389 F006: UNBEDINGT schreiben. Ein fehlgeschlagener Kaskaden-Versuch
 		// hat den zurückgestellten Save abgeräumt (applyCascade → cancel()) — das
@@ -497,6 +482,7 @@
 		} else {
 			void save();
 		}
+		return true;
 	}
 
 	// Bug #1393 F001/F002: fällt die LETZTE Folge-Etappe weg — gelöscht oder vor
@@ -505,8 +491,24 @@
 	// über null Etappen zu verlangen und den zurückgestellten Speichervorgang
 	// liegenzulassen. Also wie „Nur diese Etappe" behandeln — wegräumen UND
 	// schreiben (Bug #1389 F006: nie still verwerfen).
-	function settleMootCascade(): void {
-		if (cascade && !cascade.done && cascadeFollowers.length === 0) dismissCascade();
+	function settleMootCascade(): boolean {
+		if (cascade && !cascade.done && cascadeFollowers.length === 0) return dismissCascade();
+		return false;
+	}
+
+	// #2213/#2288: gemeinsamer Abschluss jeder baulichen Handlung (Ablegen, Hinzufügen,
+	// Löschen, Pausentag, Profil-Klick, Wegpunkt umbenennen/löschen). Kein Controller
+	// oder keine tripId (Knopf-Modus, Neuanlage): nichts. Rückfrage weiter offen:
+	// neu vormerken. Sonst sofort schreiben — außer settleMootCascade hat es schon getan.
+	function speichereBaulicheAenderung(): void {
+		const geschrieben = settleMootCascade();
+		if (!saveController || !tripId) return;
+		if (cascade && !cascade.done) {
+			deferSave();
+		} else if (!geschrieben) {
+			saveController.cancel();
+			void saveController.doSave(buildStagesSave());
+		}
 	}
 
 	// EtappenStrip-Handler
@@ -518,15 +520,16 @@
 	function handleStagesReorder(reordered: Stage[]): void {
 		if (cascadeBusy) return;
 		// Bug #1393 R2-F002: hier NICHT über die Rückfrage entscheiden. Der Streifen
-		// meldet jede Zwischenposition während des Ziehens; streifte die Karte
-		// unterwegs die letzte Stelle, wurde die Rückfrage mitten in der Geste als
-		// „Nur diese Etappe" beantwortet und geschrieben — die Absicht des Nutzers
-		// stillschweigend umgedeutet, noch bevor er die Maus losließ. Bewertet wird
-		// erst beim Ablegen (`onReorderEnd`).
+		// meldet die neue Reihenfolge erst beim Ablegen (SortableList: nur finalize,
+		// #2288) — nie eine Zwischenposition. Früher (natives HTML5-Drag) kam jede
+		// Zwischenposition; die Rückfrage wurde dann mitten in der Geste beantwortet.
+		// `cascadeBusy` bleibt als zweite Linie; bewertet wird in `onReorderEnd`.
 		stages = reordered;
 	}
 	function handleReorderEnd(): void {
-		settleMootCascade();
+		// Wie handleStagesReorder: waehrend des Kaskaden-Schreibens wurde nichts uebernommen.
+		if (cascadeBusy) return;
+		speichereBaulicheAenderung();
 	}
 	function handleStageActivate(stageId: string): void {
 		if (stageId === activeStageId) return;
@@ -540,6 +543,7 @@
 		const updated = [...stages];
 		updated.splice(afterIndex + 1, 0, newPause);
 		stages = updated;
+		speichereBaulicheAenderung();
 	}
 	// Bug #708 — Etappe entfernen: erst Dialog zeigen, dann per confirmRemoveStage löschen.
 	function confirmRemoveStage(): void {
@@ -557,31 +561,27 @@
 		// Löschen (er würde die Etappe wiederauferstehen lassen) und wird deshalb mit
 		// dem aktuellen Stand neu aufgesetzt statt verworfen — verwerfen wäre der
 		// stille Datenverlust aus F006.
-		if (cascade?.stageId === stageId) {
-			cascade = null;
-		} else {
-			// Bug #1393 F001: eine FOLGE-Etappe ist verschwunden. Die Rückfrage bleibt
-			// gültig — sie zählt und rechnet live weiter, es entsteht keine Lücke.
-			// Nur wenn dadurch gar nichts mehr dahinter liegt, ist sie gegenstandslos.
-			settleMootCascade();
-		}
+		// Bug #1393 F001: bei einer FOLGE-Etappe bleibt die Rückfrage gültig; nur wenn
+		// dahinter nichts mehr liegt, löst der Helfer sie auf (settleMootCascade).
+		if (cascade?.stageId === stageId) cascade = null;
 		// Bug #1393 R5: das Neu-Anmelden gilt für JEDE gelöschte Etappe, nicht nur für
 		// die auslösende. Ein zurückgestellter Speichervorgang (etwa nach einem
 		// fehlgeschlagenen Kaskaden-Versuch) trägt sonst weiter den Stand VOR dem
 		// Löschen und lässt die Etappe beim nächsten Flush wiederauferstehen.
-		if (saveController?.hasPending) deferSave();
+		speichereBaulicheAenderung();
 		pendingRemoveStageId = null;
 	}
 	function handleAddStage(): void {
 		if (cascadeBusy) return; // R5-F001
 		const newStage: Stage = { id: newId(), name: 'Neue Etappe', date: '', waypoints: [] };
 		stages = [...stages, newStage];
+		speichereBaulicheAenderung();
 	}
 
 	// Profil-Klick → interpolierten Wegpunkt einfügen.
 	// Issue #503: KEIN suggested-Flag mehr — alle Wegpunkte sind gleichwertig.
 	function handleProfileAdd(fraction: number): void {
-		if (!activeStage) return;
+		if (cascadeBusy || !activeStage) return;
 		const { lat, lon, elevation_m, insertAfterIndex } = interpolateWaypoint(
 			activeStage.waypoints,
 			fraction
@@ -601,23 +601,11 @@
 		});
 		activeWaypointId = newWp.id;
 		addModeHint = false;
+		speichereBaulicheAenderung();
 	}
 
 	function handleWaypointActivate(waypointId: string): void {
 		activeWaypointId = waypointId;
-	}
-
-	function handleMapClick(lat: number, lon: number): void {
-		if (!activeStage || activeIsPause) return;
-		const stage = activeStage;
-		const newWp: Waypoint = { id: newId(), name: '', lat, lon, elevation_m: 0 };
-		stages = stages.map((s) =>
-			s.id !== stage.id ? s : { ...s, waypoints: [...s.waypoints, newWp] }
-		);
-		activeWaypointId = newWp.id;
-		// Bug #1194 — fehlender Save-Trigger: ohne dies wird ein per Kartentipp
-		// angelegter Wegpunkt nie gespeichert und geht bei Reload verloren.
-		if (saveController) scheduleSave(); else void save();
 	}
 
 	// Waypoint-Mutations (Factory-Pattern fuer WaypointCard-Callbacks).
@@ -636,6 +624,7 @@
 
 	function makeRenameHandler(stageId: string, waypointId: string) {
 		return function handleRename() {
+			if (cascadeBusy) return;
 			const newName = prompt('Neuer Name:');
 			if (!newName) return;
 			stages = stages.map((s) =>
@@ -646,13 +635,16 @@
 							waypoints: s.waypoints.map((w) => (w.id !== waypointId ? w : { ...w, name: newName }))
 						}
 			);
+			speichereBaulicheAenderung();
 		};
 	}
 	function makeDeleteHandler(stageId: string, waypointId: string) {
 		return function handleDelete() {
+			if (cascadeBusy) return;
 			stages = stages.map((s) =>
 				s.id !== stageId ? s : { ...s, waypoints: s.waypoints.filter((w) => w.id !== waypointId) }
 			);
+			speichereBaulicheAenderung();
 		};
 	}
 </script>
@@ -667,10 +659,8 @@
 			<div
 				class="cascade-prompt"
 				data-testid="cascade-strip"
-				bind:this={cascadeEl}
-				style="--gz-cascade-bottom: {cascadeBottomPx}px"
 			>
-				<!-- Bug #1393: kein „Tourstart" mehr (es kann jede Etappe sein) und kein
+				<!-- Bug #1393: kein „Trip-Start" mehr (es kann jede Etappe sein) und kein
 				     „derselbe Betrag" (es wird lückenlos durchdatiert). -->
 				<p>
 					<strong>Diese Etappe liegt jetzt am {formatDeDate(cascade.anchorDate)}.</strong>
@@ -690,8 +680,6 @@
 			<div
 				class="cascade-done"
 				data-testid="cascade-done"
-				bind:this={cascadeEl}
-				style="--gz-cascade-bottom: {cascadeBottomPx}px"
 			>
 				<Dot tone="success" />
 				<span>
@@ -704,6 +692,79 @@
 {/snippet}
 
 <div data-testid="edit-stages-panel" class="flex flex-col gap-4">
+	{#if isMobileViewport}
+		<!-- Mobile Usability Paket 1 (PO-Entscheid F5, 2026-09-22): Listen-only.
+		     Karte/Profil/Sheet entfallen ersatzlos; Hinweis + vertikale Liste.
+		     F2: Kaskaden-Banner rendert als normale Zeile über der Liste —
+		     kein position:fixed mehr (Karten-Viewport existiert nicht mehr). -->
+		<div class="mobile-stages" data-testid="mobile-stages-list">
+			<div class="desktop-hint" data-testid="desktop-hint">
+				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+				<p><strong>Karte &amp; Höhenprofil</strong> sind am Desktop verfügbar. Das Gesamt-Höhenprofil bleibt im Übersichts-Tab.</p>
+			</div>
+			<div class="mobile-list-head">
+				<span class="mobile-list-eyebrow">{stages.length} Etappen · ziehen zum Sortieren</span>
+				<!-- F3: „+ Etappe" öffnet die Wahl Etappe/Pausentag (ersetzt den
+				     Desktop-Hover-Gap, der mobil nicht bedienbar war). Die Wahl
+				     steht als eigene Zeile im Fluss — nichts überlappt, keine
+				     Koordinaten-Races beim Tap. -->
+				<button
+					type="button"
+					class="mobile-add-btn"
+					data-testid="mobile-add-stage"
+					aria-expanded={addChoiceOpen}
+					onclick={() => { addChoiceOpen = !addChoiceOpen; }}
+					disabled={cascadeBusy}
+				>
+					+ Etappe
+				</button>
+			</div>
+			{#if addChoiceOpen}
+				<div class="mobile-add-choice" data-testid="mobile-add-choice" role="menu">
+					<button type="button" role="menuitem" onclick={() => { handleAddStage(); addChoiceOpen = false; }}>Etappe</button>
+					<button type="button" role="menuitem" onclick={() => { handleMobileAddPause(); addChoiceOpen = false; }}>Pausentag</button>
+				</div>
+			{/if}
+			{@render cascadeBanner()}
+			<SortableList
+				items={stages.map((s) => s.id)}
+				onDndReorder={handleMobileReorder}
+				onDndReorderEnd={handleReorderEnd}
+				ariaLabel="Etappen, Reihenfolge"
+				itemLabel={(id, i) => `${i + 1}. ${stages.find((s) => s.id === id)?.name || 'Pausentag'}`}
+				zoneClass="stage-cardm-zone"
+				flipDurationMs={150}
+			>
+				{#snippet row(id: string, i: number)}
+					{@const stage = stages.find((s) => s.id === id)}
+					{#if stage}
+						<!-- F7: Tap auf die Karte klappt die Wegpunkt-Zeilen auf/zu. -->
+						<div
+							class="stage-cardm-row"
+							data-testid="stage-cardm-row"
+							role="button"
+							tabindex="0"
+							aria-expanded={expandedStageId === stage.id}
+							onclick={() => toggleStageExpanded(stage.id)}
+							onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleStageExpanded(stage.id); } }}
+						>
+							<DragHandle />
+							<StageCardM
+								{stage}
+								index={i}
+								risk={stageRisk[stage.id]}
+								open={expandedStageId === stage.id}
+								{activityType}
+								isFirst={i === 0}
+								onDateChange={(d) => handleDateChange(stage.id, d)}
+								onStartTimeChange={(t) => handleStartTimeChange(stage.id, t)}
+							/>
+						</div>
+					{/if}
+				{/snippet}
+			</SortableList>
+		</div>
+	{:else}
 	<!-- EtappenStrip (volle Breite, eigene Navigations-Achse) -->
 	<EtappenStrip
 		{stages}
@@ -716,60 +777,6 @@
 		onRemoveStage={(id) => { if (!cascadeBusy) pendingRemoveStageId = id; }}
 		onAddStage={handleAddStage}
 	/>
-
-	{#if activeStage && !activeIsPause}
-		<!-- Issue #963: Map-First-Reorder — auf Mobil per CSS `order` (Style-Block)
-		     direkt unter die Tab-Leiste vorgezogen, vor EtappenStrip/Etappen-Header/
-		     Cascade-Strip. Höhe = JS-berechnet aus gemessener Oberkante + BottomNav-
-		     Reservierung, siehe $effect + MOBILE_EDITOR_MIN_HEIGHT_PX/BOTTOM_NAV_HEIGHT_PX
-		     (F001/F002/F004). -->
-		<div
-			class="mobile-editor"
-			data-testid="mobile-editor"
-			bind:this={mobileEditorEl}
-			style="height: {mobileEditorHeightPx}px"
-		>
-			<div class="mobile-map-wrap" style="position:relative;width:100%;height:100%;z-index:0">
-				{#key activeStageId}
-					<MapCanvas
-						stage={activeStage}
-						{activeWaypointId}
-						onWaypointActivate={handleWaypointActivate}
-						onMapClick={handleMapClick}
-						sizeKey={mobileSizeKey}
-						fillHeight={true}
-					/>
-				{/key}
-				<!-- EtappenSwitcher-Pill oben links (AC-3/AC-4) -->
-				<button
-					type="button"
-					class="stage-switcher-pill"
-					data-testid="stage-switcher-pill"
-					onclick={() => { stageSheetOpen = true; }}
-				>
-					{activeStageIndex + 1} / {stages.length} · {activeStage.name}
-				</button>
-				<MapControl onAddWaypoint={() => { addModeHint = true; }} />
-			</div>
-			<ProfileSheetEmbedded
-				stage={activeStage}
-				{activeWaypointId}
-				snapPosition={mobileSnap}
-				onWaypointActivate={handleWaypointActivate}
-				onProfileAdd={handleProfileAdd}
-				onSnapChange={(snap) => { mobileSnap = snap; mobileSizeKey++; }}
-			/>
-			{#if stageSheetOpen}
-				<StageSelectSheet
-					{stages}
-					activeIndex={activeStageIndex}
-					open={true}
-					onSelect={(i) => { handleStageActivate(stages[i].id); stageSheetOpen = false; }}
-					onClose={() => { stageSheetOpen = false; }}
-				/>
-			{/if}
-		</div>
-	{/if}
 
 	{#if activeStage}
 		{#if activeIsPause}
@@ -842,7 +849,7 @@
 					{/if}
 
 					<!-- Profil-Card (Höhenprofil) -->
-					<div class="editor-card editor-card--padded" data-testid="profile-card">
+					<div class="editor-card editor-card--padded" class:cascade-locked={cascadeBusy} aria-busy={cascadeBusy ? 'true' : undefined} data-testid="profile-card">
 						<div class="editor-card-header editor-card-header--inline">
 							<Eyebrow>Höhenprofil · synchron mit Karte</Eyebrow>
 						</div>
@@ -866,7 +873,7 @@
 							+ auf Route
 						</Btn>
 					</div>
-					<div class="sidebar-list">
+					<div class="sidebar-list" class:cascade-locked={cascadeBusy} aria-busy={cascadeBusy ? 'true' : undefined}>
 						{#each activeStage.waypoints as waypoint, i (waypoint.id)}
 							<WaypointCard
 								{waypoint}
@@ -899,6 +906,7 @@
 			{#if saveError}<span class="save-err">{saveError}</span>{/if}
 		</div>
 	{/if}
+	{/if}
 </div>
 
 <!-- Bug #708 — Bestätigungs-Dialog für Etappen-Löschen -->
@@ -928,7 +936,7 @@
 		gap: 8px;
 	}
 
-	/* Issue #498 — Cascade-Strip (Tourstart-Verschiebung Folge-Etappen?) */
+	/* Issue #498 — Cascade-Strip (Trip-Start-Verschiebung Folge-Etappen?) */
 	.cascade-prompt,
 	.cascade-done {
 		display: flex;
@@ -1006,6 +1014,11 @@
 		color: var(--g-ink);
 		margin-top: 2px;
 	}
+	/* #2213: sichtbar gesperrt, solange die Kaskade angewendet wird */
+	.cascade-locked {
+		opacity: 0.5;
+		pointer-events: none;
+	}
 	.sidebar-list {
 		display: flex;
 		flex-direction: column;
@@ -1020,68 +1033,6 @@
 		margin: 0;
 	}
 
-	/* Issue #542: Mobile-Editor — Vollbild-Karte + Bottom-Sheet */
-	.mobile-editor {
-		display: none;
-		position: relative;
-	}
-
-	.stage-switcher-pill {
-		position: absolute;
-		top: 12px;
-		left: 12px;
-		z-index: 20;
-		padding: 6px 14px;
-		background: var(--g-card);
-		border: 1px solid var(--g-rule);
-		border-radius: 20px;
-		box-shadow: var(--g-shadow-2, 0 2px 6px rgba(26, 26, 24, 0.12));
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--g-ink);
-		cursor: pointer;
-		white-space: nowrap;
-		font-family: var(--g-font-mono, 'JetBrains Mono', monospace);
-	}
-
-	/* Mobile: zeige Mobile-Editor, verstecke Desktop-Grid.
-	   Issue #963 — Map-First-Reorder: `order:-1` zieht `.mobile-editor` innerhalb
-	   des flex-col-Containers (`edit-stages-panel`) vor EtappenStrip/Etappen-Header/
-	   Cascade-Strip, ohne die DOM-Reihenfolge (und damit die Desktop-Darstellung)
-	   zu verändern — auf Desktop bleibt `.mobile-editor` ohnehin `display:none`. */
-	@media (max-width: 899px) {
-		.mobile-editor {
-			display: block;
-			order: -1;
-		}
-		.editor-grid {
-			display: none;
-		}
-		/* Bug #1375 — Kaskaden-Rückfrage auf Mobil sichtbar halten.
-		   Der Streifen steckt im Inhalts-Wrapper (padding 20/40/60), der als
-		   regulärer Flex-Block hinter der per `order:-1` vorgezogenen Karte
-		   einsortiert wird — er landete dadurch bei y≈1300px, weit unter dem
-		   844px-Viewport, und wurde nie gesehen. Statt den DOM umzubauen (das
-		   verschöbe den Desktop-Ort) wird er auf Mobil zum fixen Banner:
-		   unabhängig von der Scrollposition im Bildschirmausschnitt.
-		   Fix-Loop 1 (Staging-Befund): die Unterkante liefert `--gz-cascade-bottom`
-		   aus dem Platzierungs-$effect oben — der Banner weicht den Karten-
-		   steuerelementen (#963, top:12px) nach oben aus, statt sie zu verdecken.
-		   Der Fallback-Wert gilt nur, falls das Skript (noch) nicht gemessen hat. */
-		.cascade-prompt,
-		.cascade-done {
-			position: fixed;
-			left: 8px;
-			right: 8px;
-			bottom: var(--gz-cascade-bottom, calc(72px + env(safe-area-inset-bottom)));
-			z-index: 62; /* über Bottom-Sheet (61) und BottomNav (50) */
-			flex-direction: column;
-			align-items: stretch;
-			/* --g-accent-tint ist transluzent (8%) — über der Karte unlesbar. */
-			background: var(--g-card);
-			box-shadow: 0 6px 20px rgba(26, 26, 24, 0.18);
-		}
-	}
 	.save-bar {
 		display: flex;
 		align-items: center;
@@ -1118,5 +1069,99 @@
 		line-height: 1;
 		color: var(--g-ink-3);
 		padding: 0 4px;
+	}
+
+	/* ── Mobile Usability Paket 1 — Listen-only-Mobile-Zweig ──
+	   Desktop-Hinweis bewusst NEUTRAL (--g-card-alt/--g-rule, kein Accent):
+	   reine Info ohne Call-to-Action (Charter §6, AP-015), statisch. */
+	.mobile-stages {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-3);
+		padding: var(--g-s-3) var(--g-s-4) var(--g-s-4);
+	}
+	.desktop-hint {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--g-s-3);
+		padding: var(--g-s-3);
+		background: var(--g-card-alt);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-3);
+		color: var(--g-ink-3);
+		font-size: var(--g-text-sm);
+		line-height: 1.45;
+	}
+	.desktop-hint p {
+		margin: 0;
+		color: var(--g-ink-2);
+	}
+	.mobile-list-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--g-s-3);
+	}
+	.mobile-list-eyebrow {
+		font-family: var(--g-font-mono);
+		font-size: var(--g-text-xs);
+		font-weight: 600;
+		letter-spacing: var(--g-track-caps);
+		text-transform: uppercase;
+		color: var(--g-ink-muted);
+	}
+	.mobile-add-btn {
+		min-height: 44px;
+		padding: 0 var(--g-s-4);
+		background: transparent;
+		border: 1px dashed var(--g-rule);
+		border-radius: var(--g-r-3);
+		color: var(--g-ink-3);
+		font-family: var(--g-font-mono);
+		font-size: var(--g-text-xs);
+		font-weight: 600;
+		letter-spacing: var(--g-track-wide);
+		text-transform: uppercase;
+		cursor: pointer;
+	}
+	.mobile-add-btn:hover {
+		border-color: var(--g-accent);
+		color: var(--g-accent);
+	}
+	/* F3 — Wahl Etappe/Pausentag als eigene Zeile im Fluss (nicht überlappend). */
+	.mobile-add-choice {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: var(--g-s-2);
+	}
+	.mobile-add-choice button {
+		min-height: 44px;
+		padding: 0 var(--g-s-4);
+		background: var(--g-card);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-3);
+		text-align: center;
+		font-size: var(--g-text-sm);
+		font-weight: 500;
+		color: var(--g-ink);
+		cursor: pointer;
+	}
+	.mobile-add-choice button:hover {
+		border-color: var(--g-accent);
+		color: var(--g-accent);
+	}
+	.stage-cardm-row {
+		display: flex;
+		align-items: stretch;
+		gap: var(--g-s-2);
+	}
+	.stage-cardm-row :global(.drag-handle) {
+		align-self: stretch;
+		min-width: 44px;
+		min-height: 44px;
+	}
+	.stage-cardm-row :global(.stage-cardm) {
+		flex: 1;
+		min-width: 0;
 	}
 </style>

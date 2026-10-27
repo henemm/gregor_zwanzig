@@ -3,10 +3,12 @@ entity_id: go_provider_openmeteo
 type: module
 created: 2026-04-13
 updated: 2026-04-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [migration, go, provider, weather, open-meteo, regional-models, bugfix]
 ---
+
+> Teilweise abgelöst durch [ADR-0004](../../adr/0004-signal-channel-removed.md) (2026-06-06): „SMS / Signal Channel Formatter“ (Non-Goals) — einen Signal-Kanal gibt es nicht mehr (#610).
 
 # M2: OpenMeteo Provider (Go native)
 

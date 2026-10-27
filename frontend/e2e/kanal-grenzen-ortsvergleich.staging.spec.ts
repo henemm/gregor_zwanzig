@@ -1,7 +1,8 @@
 // E2E (Staging) — Issue #1719 Scheibe 3, AC-6: der Ortsvergleich nennt in
 // drei geteilten Bausteinen ebenfalls die echte Zeichengrenze, keine
-// Wertung — Versand-Reiter (VTBriefingChannels), Alarme-Reiter
-// (AlertChannelPicker), SMS-Vorschau (CompareSmsPreview).
+// Wertung — Versand-Abschnitt (VTBriefingChannels, seit #1743 im Reiter
+// Wetter-Metriken), Alarme-Reiter (AlertChannelPicker). Die SMS-Vorschau
+// entfiel mit #1743.
 //
 // Spec: docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md AC-6.
 //   Zuordnungstabelle: Commit 3da43cad (Bündel `kanal-grenzen-ortsvergleich`).
@@ -109,8 +110,9 @@ test.describe('Issue #1719 S3 AC-6: Ortsvergleich nennt überall die echte SMS-Z
 	}) => {
 		const id = await createComparePreset(page, Date.now());
 		await openCompareDetail(page, id);
-		await page.getByTestId('compare-detail-tab-versand').click();
-		const panel = page.getByTestId('compare-detail-panel-versand');
+		// Issue #1743: Versand-Inhalt steht im Reiter Wetter-Metriken (Abschnitt #versand).
+		await page.getByTestId('compare-detail-tab-wetter-metriken').click();
+		const panel = page.getByTestId('versand-abschnitt');
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 
 		// Der Wrapper-Block der SMS-Zeile (Checkbox + Status + Hinweistext).
@@ -176,37 +178,30 @@ test.describe('Issue #1719 S3 AC-6: Ortsvergleich nennt überall die echte SMS-Z
 		}
 	});
 
-	test('SMS-Vorschau (CompareSmsPreview): Zeichenzähler rechnet gegen 153, nicht 140', async ({ page }) => {
-		const id = await createComparePreset(page, Date.now() + 2);
-		// Staging-Fund (2026-08-11): `getByTestId(...)` ohne `:visible`-Filter +
-		// Tab-Wechsel per Klick (ohne vorherige `?tab=vorschau`-Navigation) traf
-		// den SMS-Kanal-Umschalter nicht zuverlässig — "compare-preview-sms"
-		// blieb unauffindbar, obwohl das Backend (verifiziert per direktem
-		// API-Aufruf gegen denselben Preset-Payload) einen echten, nicht-leeren
-		// SMS-Text lieferte. Umgestellt auf das bewährte Muster aus
-		// compare-mobile-vervollstaendigung.spec.ts (Issue #1256 Scheibe 8b
-		// AC-1, exakt dieselbe Kanal-Umschalter-Interaktion, dort stabil grün):
-		// Tab per URL-Query vorwählen, zusätzlich per Klick bestätigen,
-		// durchgängig `:visible`-gefilterte Locators, SMS-Button-Sichtbarkeit
-		// VOR dem Klick abwarten.
-		await page.goto(`/compare/${id}?tab=vorschau`);
-		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-vorschau"]:visible').click();
-		const panel = page.locator('[data-testid="compare-detail-panel-vorschau"]:visible');
-		await expect(panel).toBeVisible({ timeout: 10_000 });
+	// Der Fall „SMS-Vorschau: Zeichenzaehler gegen 153" entfaellt mit dem
+	// Vorschau-Reiter (Issue #1743, Briefing-Vorschau ersatzlos zurueckgebaut).
+});
 
-		const smsBtn = panel.getByRole('button', { name: 'SMS' });
-		await expect(smsBtn).toBeVisible({ timeout: 10_000 });
-		await smsBtn.click();
-		const smsPreview = panel.locator('[data-testid="compare-preview-sms"]');
-		await expect(smsPreview).toBeVisible({ timeout: 15_000 });
-		await expect(
-			smsPreview,
-			'AC-6 FAIL: die SMS-Vorschau muss gegen 153 Zeichen zaehlen (COMPARE_SMS_MAX ist heute ' +
-				'faelschlich 140, CompareSmsPreview.svelte:15)'
-		).toContainText('153');
-		await expect(smsPreview, 'AC-6 FAIL: die SMS-Vorschau darf nicht gegen 140 Zeichen zaehlen').not.toContainText(
-			'/140 Zeichen'
-		);
-	});
+// Issue #2438 AC-2: derselbe Abwahl-Hinweis im Ortsvergleich-Editor, vom selben Baustein.
+test.describe('Issue #2438 AC-2: Ortsvergleich zeigt den Abwahl-Hinweis je Kanal-Reiter', () => {
+	for (const kanal of ['email', 'telegram', 'sms']) {
+		test(`Kanal-Reiter ${kanal}`, async ({ page }) => {
+			await page.setViewportSize({ width: 1280, height: 900 });
+			const id = await createComparePreset(page, Date.now());
+			await openCompareDetail(page, id);
+			await page.getByTestId('compare-detail-tab-wetter-metriken').click();
+			await page.getByTestId(`channel-tab-${kanal}`).click();
+			const hinweis = page
+				.getByTestId('weather-metrics-vergleich-reihenfolge')
+				.getByTestId('wm2-aus-hinweis');
+			await expect(hinweis).toBeVisible({ timeout: 10_000 });
+			await expect(hinweis).toHaveText(
+				'Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.'
+			);
+			// AC-3: im Ausblick-Block (nur E-Mail) steht kein Abwahl-Hinweis.
+			await expect(
+				page.getByTestId('weather-metrics-ausblick').getByTestId('wm2-aus-hinweis')
+			).toHaveCount(0);
+		});
+	}
 });

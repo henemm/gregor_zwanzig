@@ -40,7 +40,13 @@ EXPECTED_PLAIN = (
     'Regen in 12 Min\n\nRadar-Nowcast\n\nWo & wann: km 5–18 · ab 14:35\n'
     'Intensität: leichter Regen\nQuelle: Radar (DWD)\n\n'
     'Stand: heute 14:23\n'
-    'Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden.'
+    # Issue #2018 Teil C (AC-C2): bewusst aktualisiertes Golden — der
+    # Cooldown-Satz sagt jetzt, dass er NUR quelleneigen gilt. Der bestehende
+    # Wortlaut bleibt darin unangetastet, ergänzt wird ausschließlich der
+    # Quellen-Zusatz.
+    'Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. '
+    'Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift '
+    'dieser Cooldown nicht.'
     # ADR-0034 (löst #1241 ab): geteilte Herkunfts-Fußzeile (radar-alert)
     # zeigt die reale Quelle (OnsetEvent.source_label), nie mehr
     # Renderer-Pfad + Commit-Hash.
@@ -79,8 +85,12 @@ EXPECTED_HTML = (
     '</tr></table></div>'
     '<div style="border-left:4px solid #c45a2a;padding:8px 12px;margin-top:12px;'
     'font-family:\'Inter Tight\', -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, '
+    # Issue #2018 Teil C (AC-C2): dieselbe eine Aussage wie in EXPECTED_PLAIN,
+    # nur in der HTML-Darstellung — der Zusatz sitzt IM SELBEN Cooldown-Block,
+    # nicht in einem eigenen (analog: im Klartext dieselbe Zeile).
     'sans-serif;color:#5c5a52;">Cooldown: Du erhältst diese Warnung höchstens einmal in '
-    '2 Stunden.</div>'
+    '2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift '
+    'dieser Cooldown nicht.</div>'
     '<p style="color:#5c5a52;margin-top:16px;font-family:\'Inter Tight\', -apple-system, '
     'BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">'
     'Stand: heute 14:23</p>'

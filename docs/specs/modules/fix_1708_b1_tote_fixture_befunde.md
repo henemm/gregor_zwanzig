@@ -3,7 +3,7 @@ entity_id: fix_1708_b1_tote_fixture_befunde
 type: module
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, issue-1708, trips-pfad, stillgelegte-tests]
 ---

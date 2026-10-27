@@ -3,12 +3,15 @@ entity_id: bug720_tripeditview_spread_fix
 type: bugfix
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: superseded
+superseded_by: "#2277"
 version: "1.0"
 tags: [frontend, trip, data-integrity, partial-update, tripeditview]
 ---
 
 # Bug #720 — TripEditView: { ...trip, ... } Anti-Pattern entfernen
+
+> Abgelöst durch #2277 S3 (`TripEditView.svelte` rückgebaut, `cf98d76f8`, 2026-10-01).
 
 ## Approval
 

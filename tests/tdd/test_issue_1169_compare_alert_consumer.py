@@ -210,6 +210,7 @@ class _ScriptedWeatherSource:
     def fetch(
         self, point_id: str, lat: float, lon: float,
         start_hour: int | None = None, end_hour: int | None = None,
+        elevation_m: int | None = None, user_id: str | None = None,
     ):
         return _point(point_id, point_id, lat, lon, precip_sum_mm=self._values.get(point_id, 0.0))
 
@@ -604,8 +605,9 @@ def test_ac6_cooldown_and_state_dedup_suppress_repeat_email_only_channel(telegra
     Zeitpunkt wird Telegram/SMS bedient — nicht weil Compare-Alerts E-Mail-only
     wären (das galt bis #1467 S2 AG4), sondern weil DIESES Preset kein
     Kanal-Opt-in trägt: `send_telegram`/`send_sms` fehlen im Preset-Dict, und
-    ein fehlender Schlüssel gilt nie als „an" (Resolver
-    `compare_alert_channels.effective_compare_channels`, Spec-Risiko R4).
+    ein fehlender Schlüssel gilt nie als „an" (geteilte Alarm-Auflösung
+    `services.alert_channels.effective_alert_channels` seit Issue #2279 S1,
+    Spec-Risiko R4).
     Telegram ist dabei technisch konfiguriert — es scheitert also am Opt-in,
     nicht an der Fähigkeit.
 
@@ -753,9 +755,12 @@ def test_ac7_trip_alert_rendering_unchanged():
     # `location_label` nie — steht oben unveraendert und gilt weiter.
     assert subject == "[GR20] Segment 1 · ↑ Niedersch: 2,0 mm→18,0 mm", subject
     assert plain == (
-        "Niedersch +800% seit dem Briefing\n\n"
-        "↑ +800 % · Änderung über deiner Alarm-Schwelle (10,0 mm)\n\n"
-        "Niedersch · mm: 2,0 mm ↑ 18,0 mm +800 %\n"
+        # Issue #1948 S6 (AC-9): H1 nennt Von-/Bis-Wert statt der entfallenen
+        # berechneten Prozent-Änderung.
+        "Niedersch 2,0 mm → 18,0 mm seit dem Briefing\n\n"
+        # AC-8: kein berechnetes Δ% mehr im Verdikt-Badge.
+        "↑ Änderung über deiner Alarm-Schwelle (10,0 mm)\n\n"
+        "Niedersch · mm: 2,0 mm ↑ 18,0 mm\n"
         "Änderung 16,0 mm: über Alarm-Schwelle 10,0 mm ✗\n"
         "Wo & wann: Segment 1\n\n"
         "Stand: heute 14:00 · verglichen mit dem letzten Briefing"
@@ -769,7 +774,10 @@ def test_ac7_trip_alert_rendering_unchanged():
     ), plain
     assert telegram_text == (
         "<b>GR20 · Segment 1 · ↑ Niedersch</b>\n"
-        "Niedersch · Schwelle 10,0 mm · 2,0 mm ↑ 18,0 mm · Änderung über"
+        "Niedersch · Schwelle 10,0 mm · 2,0 mm ↑ 18,0 mm · Änderung über\n"
+        # Issue #1948 S6 (AC-11): Telegram fuehrt seither dieselbe Stand-
+        # Zeile wie die E-Mail (reference_at ist hier None -> Rueckfalltext).
+        "Stand: heute 14:00 · verglichen mit dem letzten Briefing"
     ), telegram_text
 
 

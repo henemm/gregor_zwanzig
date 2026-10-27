@@ -3,7 +3,7 @@ entity_id: night_temp_evening_only
 type: module
 created: 2026-07-23
 updated: 2026-07-28
-status: draft
+status: implemented
 version: "1.1"
 tags: [renderer, tokens, sms, telegram, compact-summary, night-weather, epic-1319]
 ---

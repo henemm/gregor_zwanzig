@@ -3,7 +3,7 @@ entity_id: feat_1459_alert_protokoll
 type: module
 created: 2026-08-02
 updated: 2026-08-18
-status: draft
+status: implemented
 version: "1.7"
 tags: [alerts, logging, trips, compare, epic-1458]
 ---
@@ -25,7 +25,7 @@ Wochen keine Gewitter-Warnung" belegbar, noch laesst sich der Erfolg der Folge-S
 Ortsvergleich heute **gar nicht** (B1-Befund, `docs/context/feat-1459-alert-protokoll.md`).
 
 **Harte Nebenbedingung (D4, PO-Entscheidung 2026-08-02):** Die Cockpit-Kachel „Alarme ·
-letzte 24 h" und die Archiv-Statistik „Alarme je Tour" duerfen sich fuer Bestandstouren
+letzte 24 h" und die Archiv-Statistik „Alarme je Trip" duerfen sich fuer Bestands-Trips
 durch diese Scheibe **um keine einzige Zahl** aendern. #1459 ist ein internes Protokoll,
 kein Anzeige-Feature.
 
@@ -103,31 +103,31 @@ verdrei­fachen. Kanaele werden deshalb als **Listen innerhalb EINES Eintrags** 
 wie heute. `encoding/json` in Go ignoriert unbekannte Felder — keine Go-Aenderung
 noetig oder gewuenscht in dieser Scheibe.
 
-### D3 — Tour- und Vergleichs-Eintraege unterscheiden, ohne `AlertCountByTrip()` zu veraendern
+### D3 — Trip- und Vergleichs-Eintraege unterscheiden, ohne `AlertCountByTrip()` zu veraendern
 
 **Entscheidung:** Vergleichs-Eintraege (die tatsaechlich versendet wurden, s. D4) lassen
-`trip_id` **leer** (`""`) und tragen stattdessen ein neues Feld `preset_id`. Tour-Eintraege
+`trip_id` **leer** (`""`) und tragen stattdessen ein neues Feld `preset_id`. Trip-Eintraege
 spiegeln das: `preset_id` bleibt leer.
 
 **Begruendung:** `AlertCountByTrip()` bucketet `counts[e.TripID]++` — ein leerer String
-landet unter dem Schluessel `""`, den **keine echte Tour** jemals abfragt (Trip-IDs sind
-nie leer). Fuer alle bestehenden Touren ist die Zaehlung dadurch **bit-identisch** zu
+landet unter dem Schluessel `""`, den **keine echte Trip** jemals abfragt (Trip-IDs sind
+nie leer). Fuer alle bestehenden Trips ist die Zaehlung dadurch **bit-identisch** zu
 heute: nur neu hinzukommende Vergleichs-Eintraege erzeugen den neuen `""`-Bucket, kein
 bestehender Bucket wird veraendert. Die Alternative — `trip_id` fuer Vergleichs-Eintraege
 mit der Preset-ID zu befuellen — wuerde eine zweite, mit echten Trip-IDs kollisions­faehige
 Kennung in dasselbe Feld zwingen (heute kollisionsfrei nur per Zufall der ID-Generierung)
-und `AlertCountByTrip()` liesse Vergleiche unbemerkt als Tour-Alarme mitzaehlen, sobald
+und `AlertCountByTrip()` liesse Vergleiche unbemerkt als Trip-Alarme mitzaehlen, sobald
 irgendwann doch gezaehlt wird. Ein eigenes Feld ist die einzige Variante, die **strukturell**
 garantiert, dass sich an der bestehenden Zaehlung nichts aendert — nicht nur zufaellig,
 solange keine ID kollidiert.
 
 **Reichweite dieser Regel:** D3 schuetzt ausschliesslich `AlertCountByTrip()`
-(Archiv-Statistik „Alarme je Tour"), NICHT die Cockpit-Kachel — die zaehlt unabhaengig von
+(Archiv-Statistik „Alarme je Trip"), NICHT die Cockpit-Kachel — die zaehlt unabhaengig von
 `trip_id` ungefiltert **alle** Eintraege der letzten 24h (`internal/handler/cockpit.go:36-42`
 `LoadAlertLog()` → 24h-Fenster → `len(alerts)`, kein Trip-Bezug). Ein Vergleichs-Eintrag mit
 `trip_id=""` erhoeht die Cockpit-Zahl also weiterhin um 1 — das ist hier **gewollt**: Ein
 tatsaechlich versendeter Ortsvergleichs-Alarm ist ein neues, echtes Ereignis, das vorher
-(B1) komplett unsichtbar war. Fuer bestehende Touren aendert sich dadurch nichts, weil
+(B1) komplett unsichtbar war. Fuer bestehende Trips aendert sich dadurch nichts, weil
 Vergleichs-Presets nie zuvor Eintraege erzeugt haben — es gibt keinen „alten" Wert, der sich
 verschieben koennte.
 
@@ -138,12 +138,12 @@ Eintrag mit `trip_id` gesetzt und `channels_sent: []`, sobald ein Versand komple
 fehlschlug ("kein Kanal erreichbar", obwohl der Nutzer welche aktiv hat). Zwei Effekte
 waeren dadurch unbeabsichtigt entstanden:
 
-1. `AlertCountByTrip()` haette diesen Fehlschlag als echten Alarm der Tour mitgezaehlt
-   (`trip_id` war ja gesetzt) — die Archiv-Zahl „Alarme je Tour" haette sich fuer eine
-   bestehende Tour erhoeht, obwohl der Nutzer NICHTS bekommen hat.
+1. `AlertCountByTrip()` haette diesen Fehlschlag als echten Alarm der Trip mitgezaehlt
+   (`trip_id` war ja gesetzt) — die Archiv-Zahl „Alarme je Trip" haette sich fuer eine
+   bestehende Trip erhoeht, obwohl der Nutzer NICHTS bekommen hat.
 2. Die Cockpit-Kachel „Alarme · letzte 24h" zaehlt ungefiltert ALLE Eintraege im
    24h-Fenster (`cockpit.go:36-42`) — auch ein Eintrag mit `trip_id=""` haette diese Zahl
-   erhoeht. D3s Trick (leeres `trip_id`) schuetzt **nur** die Pro-Tour-Statistik, nicht die
+   erhoeht. D3s Trick (leeres `trip_id`) schuetzt **nur** die Pro-Trip-Statistik, nicht die
    Kachel.
 
 Der Δ-Pfad schrieb bisher **ausdruecklich nur nach erfolgreichem Versand**
@@ -168,7 +168,7 @@ heutiges Zaehlverhalten unveraendert bei (er schreibt weiterhin nur bei Erfolg i
 ignoriert wie ein unbekanntes Feld INNERHALB eines Objekts (dieselbe Garantie, die D2
 bereits fuer neue Felder nutzt, nur eine Ebene hoeher). Go sieht `not_delivered` **nie** —
 weder die Cockpit-Kachel noch `AlertCountByTrip()` koennen sich dadurch aendern, fuer
-KEINE Tour, unabhaengig von `trip_id`.
+KEINE Trip, unabhaengig von `trip_id`.
 
 **Aufteilungsregel in `append_entry()`:**
 
@@ -194,7 +194,7 @@ woertlich: *„Send errors on a configured channel are logged but do NOT suppres
 
 Damit waren AC-10 (v1.3) und AC-11 **nicht gleichzeitig erfuellbar**: AC-10 haette einen
 Fall aus `entries` herausgenommen, der heute darin landet — die Cockpit-Zahl waere fuer
-Bestandstouren **gesunken**, genau der Effekt, den AC-11/D4 verhindern sollen. Belegt
+Bestands-Trips **gesunken**, genau der Effekt, den AC-11/D4 verhindern sollen. Belegt
 wurde der Widerspruch durch den Bestandstest
 `tests/tdd/test_914_slice4_alert_sms_dispatch.py::test_ac3_sms_http_error_logged_email_still_delivers`,
 der das heutige Kriterium seit #914 festschreibt.
@@ -218,7 +218,7 @@ gilt `sent_channels` auch als Erreichbarkeits-Angabe (Direktaufrufer, AC-11/AC-1
 
 Ein Eintrag in `entries` (egal ob voller Erfolg oder Teil-Erfolg wie AC-9) verhaelt sich
 **exakt wie heute** fuer Δ-Pfad und Radar-Pfad: nur bei mindestens einem erfolgreichen
-Kanal wird ueberhaupt geschrieben — die Anzahl der `entries` fuer eine bestehende Tour
+Kanal wird ueberhaupt geschrieben — die Anzahl der `entries` fuer eine bestehende Trip
 aendert sich durch diese Scheibe nicht. `not_delivered`-Eintraege duerfen den echten
 `trip_id`/`preset_id` tragen (kein D3-Trick noetig — Go liest den Key ohnehin nie), das
 gibt der spaeteren Auswertung (#1461) die volle Zuordenbarkeit.
@@ -408,7 +408,7 @@ dedupliziert und sortiert.
 
 | Konstante | Bedeutung | Fundstelle(n) |
 |---|---|---|
-| `REASON_CHANNEL_DISABLED` | Kanal ist fuer diese Tour/dieses Preset nicht eingeschaltet | `trip_alert.py:1213 _effective_alert_channels()`, `compare_official_alert.py:198 _effective_channels()` |
+| `REASON_CHANNEL_DISABLED` | Kanal ist fuer diese Trip/dieses Preset nicht eingeschaltet | `trip_alert.py:1213 _effective_alert_channels()`, `compare_official_alert.py:198 _effective_channels()` |
 | `REASON_DELIVERY_FAILED` | Kanal war aktiv, Best-Effort-Versand ist technisch nicht angekommen | `NotificationResult.sent_channels` vs. `effective_channels`-Differenz |
 | `REASON_QUIET_HOURS` | Ruhezeiten aktiv | `trip_alert.py:581 _is_quiet_hours`, `deviation_alert_engine.py:243` |
 | `REASON_DAILY_LIMIT` | Tages-Obergrenze erreicht | `alert_daily_limit.py:53 is_allowed` |
@@ -428,7 +428,7 @@ keinem Aufrufer gesetzt — bewusste Entscheidung, s.u.
 
 > ⚠️ **Fuer die beiden Nowcast-Pfade geschlossen seit Issue #1467 Scheibe S3**
 > (2026-08-08). `src/services/alert_gate.py::check_nowcast_gate()` protokolliert
-> Ruhezeit/Cooldown/Tageslimit-Unterdrueckungen jetzt fuer Tour-Radar UND
+> Ruhezeit/Cooldown/Tageslimit-Unterdrueckungen jetzt fuer Trip-Radar UND
 > Vergleichs-Nowcast ueber `alert_log.append_suppressed_entry()`
 > (`REASON_QUIET_HOURS`/`REASON_COOLDOWN`/`REASON_DAILY_LIMIT`, Ziel-Liste
 > `not_delivered`, D4 bleibt gewahrt). Fuer Vorhersage-Aenderungsalarm und
@@ -444,17 +444,17 @@ gewesen waere:
 
 | Pfad | Ruhezeit | Cooldown | Tageslimit | Auslöser zu dem Zeitpunkt bekannt? |
 |---|---|---|---|---|
-| Tour Δ+Grenzwert (`check_and_send_alerts`, `:202/:207/:212`) | vor Auswertung | vor Auswertung | vor Auswertung | **nein** |
-| Tour Radar (`check_radar_alerts`, `:840/:849/:854`) | vor `get_nowcast()` | vor `get_nowcast()` | vor `get_nowcast()` | **nein** |
-| Tour amtlich (`_send_official_alert_only`, `:1188/:1191/:1194`) | nach `check_official_alert_triggers()` (Aufrufer, `:510`) | dito | dito | **ja** |
+| Trip Δ+Grenzwert (`check_and_send_alerts`, `:202/:207/:212`) | vor Auswertung | vor Auswertung | vor Auswertung | **nein** |
+| Trip Radar (`check_radar_alerts`, `:840/:849/:854`) | vor `get_nowcast()` | vor `get_nowcast()` | vor `get_nowcast()` | **nein** |
+| Trip amtlich (`_send_official_alert_only`, `:1188/:1191/:1194`) | nach `check_official_alert_triggers()` (Aufrufer, `:510`) | dito | dito | **ja** |
 | Vergleich Δ (`compare_alert.py:112/:118`) | — (kein Ruhezeit-Gate) | vor `_detect_triggered_locations()` | vor Detect | **nein** |
 | Vergleich Radar (`compare_radar_alert.py:92/:103`) | nach `_detect_triggered_locations()` | vor Detect | — (kein Tageslimit-Gate) | gemischt |
 | Vergleich amtlich (`compare_official_alert.py:107/:125`) | vor `_detect()` | — (kein Cooldown, s. Docstring) | nach `_detect()` | gemischt |
 
 Zeile „Vergleich Radar" beschreibt den Stand vor #1467 S3: seit dieser Scheibe laufen
-Ruhezeit/Sperrzeit/Tageslimit dort — wie bei „Tour Radar" — VOR `_detect_triggered_locations()`
+Ruhezeit/Sperrzeit/Tageslimit dort — wie bei „Trip Radar" — VOR `_detect_triggered_locations()`
 ueber den geteilten `alert_gate.check_nowcast_gate()`, und ein Tageslimit-Gate existiert
-jetzt ebenfalls. Die uebrigen vier Zeilen (Δ/amtlich, Tour wie Vergleich) sind unveraendert.
+jetzt ebenfalls. Die uebrigen vier Zeilen (Δ/amtlich, Trip wie Vergleich) sind unveraendert.
 
 **Entscheidung:** In dieser Scheibe wird **nur** die Nicht-Zustellung „Auslöser war
 bekannt, aber kein Kanal hat sie erreicht" protokolliert — das ist an **allen sechs**
@@ -474,7 +474,7 @@ Umordnung**. Ruhezeit/Cooldown/Tageslimit-Unterdrueckung bleibt in dieser Scheib
    mindestens einen Kanal fuer Alarme aktiv) und trotzdem kein Kanal etwas bekommen hat,
    entsteht JETZT ein Eintrag in `data["not_delivered"]` (D4) mit `channels_sent: []`.
    Genau dieser Fall — „aktiv gewollt, aber nichts kam an" — ist der Kern der
-   Sicherheitsleine, OHNE die Cockpit-Kachel oder die Pro-Tour-Statistik zu veraendern.
+   Sicherheitsleine, OHNE die Cockpit-Kachel oder die Pro-Trip-Statistik zu veraendern.
 3. **Kein Eintrag**, wenn `effective_channels` leer ist (der Nutzer hat gar keinen Kanal
    fuer Alarme eingeschaltet) — das ist kein Verlust, sondern die bewusste Einstellung des
    Nutzers; ein Eintrag dafuer waere Log-Rauschen ohne Erkenntniswert.
@@ -503,7 +503,7 @@ Konfigurierbarkeit.)
 
 Das ersetzt an allen sechs Aufrufstellen den bisherigen Unterschied „Erfolg loggen /
 Misserfolg nicht loggen" durch EINEN einheitlichen Aufruf — Fehlerpfade brauchen keinen
-Sonderfall mehr, UND die Cockpit-/Archiv-Zahlen bleiben fuer bestehende Touren unberuehrt.
+Sonderfall mehr, UND die Cockpit-/Archiv-Zahlen bleiben fuer bestehende Trips unberuehrt.
 
 ### Funktionssignatur
 
@@ -561,8 +561,8 @@ immer (leere Liste, wenn nicht zutreffend) fuer ein einheitliches Eintrags-Schem
 | `trip_alert.py:978` | `nowcast` | `metrics = register_pairs_for_nowcast(result.is_convective)`; `hazards = []` | unveraendert (`1`, `"HIGH"`) |
 | `trip_alert.py:1210` | `official_alert` | `metrics = []`; `hazards = hazards_from_official_alerts([a for a, _ in official_notices])` | unveraendert (`len(official_notices)`, `"MODERATE"`) |
 | `compare_alert.py` (neu, nach `notif_result`) | `forecast_change` | `metrics = register_pairs_from_changes(alle .changes ueber triggered)`; `hazards = []` | `sum(len(t["changes"]) for t in triggered)`; Severity via `DeviationAlertEngine._highest_severity()` ueber alle Changes gebuendelt (Baustein existiert bereits, `deviation_alert_engine.py:256`) |
-| `compare_radar_alert.py` (neu) | `nowcast` | `metrics = register_pairs_for_nowcast(...)` je getriggertem Ort, dedupliziert (kann `("thunder","max")` UND `("precipitation","sum")` gleichzeitig enthalten, wenn Orte gemischt konvektiv/nicht sind); `hazards = []` | `len(triggered)`, `"HIGH"` (Muster Tour-Radar) |
-| `compare_official_alert.py` (neu) | `official_alert` | `metrics = []`; `hazards = hazards_from_official_alerts([a for a, _ in tagged_alerts])` | `len(tagged_alerts)`, `"MODERATE"` (Muster Tour-amtlich) |
+| `compare_radar_alert.py` (neu) | `nowcast` | `metrics = register_pairs_for_nowcast(...)` je getriggertem Ort, dedupliziert (kann `("thunder","max")` UND `("precipitation","sum")` gleichzeitig enthalten, wenn Orte gemischt konvektiv/nicht sind); `hazards = []` | `len(triggered)`, `"HIGH"` (Muster Trip-Radar) |
+| `compare_official_alert.py` (neu) | `official_alert` | `metrics = []`; `hazards = hazards_from_official_alerts([a for a, _ in tagged_alerts])` | `len(tagged_alerts)`, `"MODERATE"` (Muster Trip-amtlich) |
 
 `_evaluate_one_location()` (`compare_alert.py:170`) muss dafuer `result.severity`
 zusaetzlich in das zurueckgegebene Dict aufnehmen (heute nur `changes`) — Ein-Zeilen-Zusatz.
@@ -681,19 +681,19 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
 
 ## Expected Behavior
 
-- **Input:** ein Alarm-Versandversuch (Tour oder Ortsvergleich) mit mindestens einem
+- **Input:** ein Alarm-Versandversuch (Trip oder Ortsvergleich) mit mindestens einem
   aktiven Kanal, inkl. der zugrundeliegenden Register-Paare/Hazards — unabhaengig davon,
   ob der Versand gelang.
 - **Output:** genau ein zusaetzlicher Eintrag in `alert_log.json` des betroffenen Nutzers,
   additiv zu bestehenden Eintraegen, in `entries` (mindestens ein Kanal erfolgreich) oder
   `not_delivered` (kein Kanal erfolgreich, D4).
 - **Side effects:** keine — reine Anhaengung (Read-Modify-Write ueber die volle Datei,
-  wie im Bestand). Fuer bestehende Touren aendert sich weder die Cockpit-Kachel „Alarme ·
-  letzte 24h" noch die Archiv-Statistik „Alarme je Tour" (D4).
+  wie im Bestand). Fuer bestehende Trips aendert sich weder die Cockpit-Kachel „Alarme ·
+  letzte 24h" noch die Archiv-Statistik „Alarme je Trip" (D4).
 
 ## Acceptance Criteria
 
-- **AC-1:** Given eine Tour-Vorhersage-Aenderung am Boeen-Feld (`change.metric =
+- **AC-1:** Given eine Trip-Vorhersage-Aenderung am Boeen-Feld (`change.metric =
   "gust_max_kmh"`, dem Register-Paar `("gust","max")` entsprechend) wird erfolgreich
   versendet / When der Eintrag geschrieben wird / Then enthaelt `metrics` genau
   `[{"metric_id": "gust", "aggregation": "max"}]`, `hazards` ist leer, `reason` ist
@@ -724,7 +724,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   leer, `reason` ist `"official_alert"`.
   - Test: `_send_official_alert_only()` mit einer `OfficialAlert(hazard="thunderstorm", ...)`.
 
-- **AC-5 (reihenfolge-unabhaengige Vorrangregel, O1-Nachbesserung):** Given die
+- **AC-5:** (reihenfolge-unabhaengige Vorrangregel, O1-Nachbesserung) Given die
   Registry-Reihenfolge von `temperature` und `temperature_cold` waere gegenueber der
   heutigen Reihenfolge in `_METRICS` vertauscht / When
   `metric_and_aggregation_for_field("temp_min_c")` aufgerufen wird / Then liefert die
@@ -737,7 +737,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     mit dem Aufruf ohne `_registry`-Override (heutige Reihenfolge) vergleichen — beide
     liefern `("temperature", "min")`.
 
-- **AC-6 (Ratchet gegen neue Mehrdeutigkeit, O1-Nachbesserung):** Given die vollstaendige
+- **AC-6:** (Ratchet gegen neue Mehrdeutigkeit, O1-Nachbesserung) Given die vollstaendige
   Registry `_METRICS` / When jedes Summary-Feld, das in mehr als einem Eintrag vorkommt,
   durch `metric_and_aggregation_for_field()` aufgeloest wird / Then liefert die Funktion
   fuer JEDES dieser Felder ein Ergebnis ungleich `None` (= genau ein `selectable=True`-
@@ -754,14 +754,14 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   - Test: `check_and_send_alerts()` mit gleichzeitigem `WeatherChange` und `CorridorHit`;
     Eintraege in `alert_log.json["entries"]` vor/nach zaehlen (Delta = 1, nicht 2).
 
-- **AC-8:** Given eine Tour hat nur E-Mail fuer Alarme aktiv (Telegram/SMS aus) und der
+- **AC-8:** Given eine Trip hat nur E-Mail fuer Alarme aktiv (Telegram/SMS aus) und der
   Versand gelingt / When protokolliert wird / Then steht `"email"` in `channels_sent`,
   `"telegram"` und `"sms"` stehen je mit `reason="channel_disabled"` in
   `channels_not_sent`, der Eintrag liegt in `entries`.
   - Test: Trip mit `alert_channels={"email": true, "telegram": false, "sms": false}`,
     Mail-Sink erfolgreich, Log-Eintrag auf beide Listen und Ziel-Array pruefen.
 
-- **AC-9:** Given eine Tour hat E-Mail UND Telegram fuer Alarme aktiv, der E-Mail-Versand
+- **AC-9:** Given eine Trip hat E-Mail UND Telegram fuer Alarme aktiv, der E-Mail-Versand
   gelingt, der Telegram-Versand schlaegt best-effort fehl (z.B. API-Fehler) / When
   protokolliert wird / Then steht `"email"` in `channels_sent`, `"telegram"` steht mit
   `reason="delivery_failed"` in `channels_not_sent`, und der Eintrag liegt (weil mindestens
@@ -770,19 +770,19 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   - Test: `NotificationService` mit fehlschlagendem Telegram-Sink, erfolgreichem
     Mail-Sink; Log-Eintrag UND Ziel-Array pruefen.
 
-- **AC-10 (neu gefasst in v1.4, s. D4-Nachtrag):** Given ein Alarm-Versandversuch, bei dem
+- **AC-10:** (neu gefasst in v1.4, s. D4-Nachtrag) Given ein Alarm-Versandversuch, bei dem
   **kein Kanal eine funktionierende Konfiguration** hat (`NotificationResult.sent` ist
   False), obwohl `effective_channels` nicht leer ist / When protokolliert wird / Then
   landet GENAU EIN Eintrag in `alert_log.json["not_delivered"]` (NICHT in `entries`) mit
   `channels_sent: []`. Heute entstuende in diesem Fall **gar kein** Eintrag — die Meldung
   verschwaende spurlos.
-  - Test: Tour mit `alert_channels={"email": true, ...}`, aber `Settings` ohne
+  - Test: Trip mit `alert_channels={"email": true, ...}`, aber `Settings` ohne
     funktionierende Mail-Konfiguration (`can_send_email() is False`); Telegram global
     konfiguriert, damit der Eingangs-Waechter von `check_and_send_alerts()` nicht schon
     vorher abbricht, auf Trip-Ebene aber abgeschaltet (kein Netz). `entries` unveraendert,
     `not_delivered` um einen Eintrag gewachsen.
 
-- **AC-15 (neu in v1.4):** Given ein Alarm, bei dem mindestens ein Kanal konfiguriert ist,
+- **AC-15:** (neu in v1.4) Given ein Alarm, bei dem mindestens ein Kanal konfiguriert ist,
   aber **kein einziger tatsaechlich zustellt** (beide Transporte scheitern) / When
   protokolliert wird / Then liegt der Eintrag in `entries` — Ist-Verhalten, die Zahl
   bleibt unveraendert — und traegt `channels_sent: []` sowie fuer jeden Kanal einen
@@ -792,13 +792,13 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   - Test: `NotificationService` mit werfendem `mail_sink` und scheiterndem Telegram-
     Transport; `entries` um einen Eintrag gewachsen, `not_delivered` leer.
 
-- **AC-11 (D4 — Anzeige-Unveraendertheit, PO-Kernforderung):** Given eine Tour hat vor
+- **AC-11:** (D4 — Anzeige-Unveraendertheit, PO-Kernforderung) Given eine Trip hat vor
   dieser Aenderung N erfolgreiche Alarm-Eintraege in `entries` / When zusaetzlich ein
-  komplett fehlgeschlagener Versand fuer dieselbe Tour protokolliert wird / Then bleibt
-  die Anzahl der `entries`-Eintraege dieser Tour bei N — der fehlgeschlagene Versand
+  komplett fehlgeschlagener Versand fuer dieselbe Trip protokolliert wird / Then bleibt
+  die Anzahl der `entries`-Eintraege dieser Trip bei N — der fehlgeschlagene Versand
   erscheint ausschliesslich in `not_delivered`. Das entspricht bit-identisch dem, was
   `AlertCountByTrip()` (zaehlt nur `entries`) und die Cockpit-Kachel (zaehlt `entries` im
-  24h-Fenster) fuer diese Tour heute und nach der Aenderung liefern.
+  24h-Fenster) fuer diese Trip heute und nach der Aenderung liefern.
   - Test: vorab N Eintraege in `entries` fuer `trip_id="X"` schreiben, einen
     `append_entry()`-Aufruf mit `channels_sent=[]`/`effective_channels={"email"}` fuer
     dieselbe `trip_id="X"` ausfuehren, `len(entries fuer trip_id="X")` vorher/nachher
@@ -813,7 +813,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     `CompareOfficialAlertService.check_all_compare_presets()` mit einem triggernden Preset;
     `alert_log.json["entries"]` vorher leer, danach 3 Eintraege mit `trip_id=""`.
 
-- **AC-13 (Mandantentrennung):** Given zwei verschiedene Nutzer (`user_id="alice"`,
+- **AC-13:** (Mandantentrennung) Given zwei verschiedene Nutzer (`user_id="alice"`,
   `user_id="bob"`) loesen je einen Alarm aus / When beide protokolliert werden / Then
   landet jeder Eintrag ausschliesslich in der `alert_log.json` seines eigenen Nutzers
   (`data/users/alice/alert_log.json` bzw. `.../bob/...`), niemals in der des jeweils
@@ -822,7 +822,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     parallel einen Alarm ausloesen lassen, beide Dateien lesen, Kreuz-Kontamination
     ausschliessen.
 
-- **AC-14 (Bestandsdaten):** Given eine bestehende `alert_log.json` mit einem
+- **AC-14:** (Bestandsdaten) Given eine bestehende `alert_log.json` mit einem
   Alt-Eintrag in `entries`, der ausschliesslich die vier heutigen Felder traegt (kein
   `metrics`, kein `hazards`, kein `reason`, keine Kanal-Listen, kein `not_delivered`-Key
   ueberhaupt vorhanden) / When ein neuer Eintrag angehaengt wird / Then bleibt der
@@ -832,7 +832,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     schreiben, `append_entry()` aufrufen, `json.loads()` auf Alt-Eintrag-Feldgleichheit +
     Eintragszahl pruefen.
 
-- **AC-16 (neu in v1.5, aus Adversary-Finding F001):** Given eine Tour hat **keinen**
+- **AC-16:** (neu in v1.5, aus Adversary-Finding F001) Given eine Trip hat **keinen**
   Kanal fuer Alarme eingeschaltet (`effective_channels` ist leer), es liegt aber ein
   ausloesender Befund vor / When der Protokoll-Aufruf erfolgt / Then entsteht **weder** in
   `entries` **noch** in `not_delivered` ein Eintrag — die Protokoll-Datei wird gar nicht
@@ -849,14 +849,14 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     bleiben, wenn die Lage die Schreibfunktion nie erreicht (Waechter-Falle #1435 E3a).
     Nachgewiesen rot bei entfernter Guard-Klausel, gruen mit ihr.
 
-- **AC-17 (neu in v1.6, #1954 — Wert der Vorhersage-Aenderung):** Given eine
-  Tour-Vorhersage-Aenderung am Boeen-Feld mit `old_value=20.0`, `new_value=60.0` / When der
+- **AC-17:** (neu in v1.6, #1954 — Wert der Vorhersage-Aenderung) Given eine
+  Trip-Vorhersage-Aenderung am Boeen-Feld mit `old_value=20.0`, `new_value=60.0` / When der
   Eintrag geschrieben wird / Then enthaelt das zugehoerige `metrics`-Dict zusaetzlich
   `"value": 60.0` und `"previous_value": 20.0`.
   - Test: `WeatherChange(metric="gust_max_kmh", old_value=20.0, new_value=60.0, ...)` durch
     `check_and_send_alerts()` schleusen, den neuesten Eintrag pruefen.
 
-- **AC-18 (neu in v1.6, #1954 — Extremwert bei Mehrfachtreffer):** Given zwei
+- **AC-18:** (neu in v1.6, #1954 — Extremwert bei Mehrfachtreffer) Given zwei
   `WeatherChange`-Objekte fuer dieselbe Groesse in einem Lauf (`abs(delta)` unterschiedlich
   gross) / When protokolliert wird / Then entsteht **EIN** Register-Eintrag fuer diese
   Groesse, dessen `value`/`previous_value` von der `WeatherChange` mit dem groessten
@@ -865,7 +865,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     `register_pairs_from_changes()`/`check_and_send_alerts()` schleusen; Eintragszahl bleibt
     1 (AC-7 unveraendert), `value` entspricht dem groesseren `abs(delta)`.
 
-- **AC-19 (neu in v1.6, #1954 — Wert nicht Teil des Dedupe-Schluessels):** Given zwei
+- **AC-19:** (neu in v1.6, #1954 — Wert nicht Teil des Dedupe-Schluessels) Given zwei
   `WeatherChange`-Objekte derselben Groesse mit fast gleichem, aber nicht identischem Wert
   (z.B. `new_value=59.9` und `new_value=60.1`) / When protokolliert wird / Then bleibt es bei
   **EINEM** Register-Eintrag (kein Zerfall in zwei Eintraege durch Fliesskomma-Rauschen).
@@ -874,7 +874,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   - Test: `register_pairs_from_changes()` mit den beiden Szenarien aufrufen, Eintragszahl in
     `metrics` pruefen.
 
-- **AC-20 (neu in v1.6, #1954 — Nowcast bleibt ohne Wert):** Given ein Radar-Alarm mit
+- **AC-20:** (neu in v1.6, #1954 — Nowcast bleibt ohne Wert) Given ein Radar-Alarm mit
   `is_convective=True` / When protokolliert wird / Then enthaelt das zugehoerige
   `metrics`-Dict WEDER den Schluessel `value` NOCH `previous_value` — die Felder fehlen
   vollstaendig, sie sind nicht auf `0`/`null` gesetzt.
@@ -883,7 +883,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     dieselbe Naht nutzt bereits `tests/tdd/test_alert_log_metrics.py`), den Log-Eintrag auf
     Abwesenheit beider Schluessel pruefen (`"value" not in metrics_dict`).
 
-- **AC-21 (neu in v1.6, #1954 — Bestandsdaten ohne Wert bleiben lesbar):** Given eine
+- **AC-21:** (neu in v1.6, #1954 — Bestandsdaten ohne Wert bleiben lesbar) Given eine
   bestehende `alert_log.json` mit einem Alt-Eintrag, dessen `metrics`-Dicts nur
   `metric_id`/`aggregation` tragen (kein `value`, kein `previous_value`, Spec-Stand v1.5)
   / When ein neuer Eintrag angehaengt wird / Then bleibt der Alt-Eintrag byte-fuer-Feld
@@ -891,7 +891,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   - Test: Datei mit Alt-Eintrag im v1.5-Schema vorab schreiben, `append_entry()` aufrufen,
     `json.loads()` auf Alt-Eintrag-Feldgleichheit pruefen.
 
-- **AC-22 (neu in v1.6, #1954 — Leseseite bleibt zweigliedrig):** Given ein Alt- oder
+- **AC-22:** (neu in v1.6, #1954 — Leseseite bleibt zweigliedrig) Given ein Alt- oder
   Neu-Eintrag mit gesetztem `value`/`previous_value` in `alert_log.json` / When
   `undelivered_incidents()` ihn liest / Then bleibt `UndeliveredIncident.metrics` weiterhin
   `tuple[tuple[str, str], ...]` — die Wert-Felder werden NICHT extrahiert und erreichen den
@@ -900,14 +900,14 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
     tragen; `UndeliveredIncident.metrics` bleibt ein reines `(metric_id, aggregation)`-Tupel
     ohne Wert-Anteil.
 
-- **AC-23 (neu in v1.6, #1954 — Unterdrueckte Meldung bleibt ohne Wert):** Given
+- **AC-23:** (neu in v1.6, #1954 — Unterdrueckte Meldung bleibt ohne Wert) Given
   `append_suppressed_entry()` wird fuer eine unterdrueckte Nowcast-Meldung aufgerufen / When
   der Eintrag geschrieben wird / Then bleibt `"metrics": []` — unveraendert gegenueber dem
   Bestand vor #1954.
   - Test: `append_suppressed_entry()` aufrufen, `metrics`-Feld des geschriebenen Eintrags auf
     leere Liste pruefen.
 
-- **AC-24 (neu in v1.6, #1954 — toter Korridor-Pfad traegt Wert ohne Vorwert):** Given ein
+- **AC-24:** (neu in v1.6, #1954 — toter Korridor-Pfad traegt Wert ohne Vorwert) Given ein
   `CorridorHit` mit `value=45.0` / When `register_pairs_from_corridor_hits()` protokolliert
   / Then enthaelt das zugehoerige `metrics`-Dict `"value": 45.0`, aber **keinen**
   `previous_value`-Schluessel (ein `CorridorHit` hat keinen Vorwert) und keinen
@@ -925,7 +925,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   Auswertung, die Scheibe 2 des Epic #1458 ohnehin umsetzt. Bis dahin bleibt eine Luecke:
   eine durch Ruhezeit/Cooldown/Tageslimit unterdrueckte, aber tatsaechlich faellige Meldung
   erscheint dort nicht im Protokoll (auch nicht in `not_delivered`). **Fuer die beiden
-  Nowcast-Pfade (Tour-Radar, Vergleichs-Nowcast) ist diese Luecke seit Issue #1467
+  Nowcast-Pfade (Trip-Radar, Vergleichs-Nowcast) ist diese Luecke seit Issue #1467
   Scheibe S3 geschlossen** — `alert_gate.check_nowcast_gate()` kennt den Ausloeser bereits
   vor der Datenbeschaffung und protokolliert die Unterdrueckung ueber
   `alert_log.append_suppressed_entry()`, s. O3.
@@ -996,7 +996,7 @@ fuer dieses Schema-Dokument relevante Ausschnitt:
   AC-24 neu, jetzt **24 ACs**.
 - 2026-08-08: O3-Hinweis praezisiert (Issue #1467 Scheibe S3, Doku-Nachzug) — die
   Nicht-Protokollierung von Ruhezeit/Cooldown/Tageslimit ist fuer die beiden
-  Nowcast-Pfade (Tour-Radar, Vergleichs-Nowcast) geschlossen (`alert_gate.py`,
+  Nowcast-Pfade (Trip-Radar, Vergleichs-Nowcast) geschlossen (`alert_gate.py`,
   `alert_log.append_suppressed_entry()`). Fuer Vorhersage-Aenderungsalarm und amtliche
   Warnung bleibt die Luecke unveraendert offen. Kein Code in dieser Spec geaendert,
   Vorbehalt (Epic #1458 Scheibe 2) bleibt bestehen.

@@ -3,7 +3,7 @@ entity_id: fix_949_950_html_mail_test_staleness
 type: module
 created: 2026-07-02
 updated: 2026-07-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [test-staleness, html-mail, regression]
 ---

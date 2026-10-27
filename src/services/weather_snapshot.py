@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import date, datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
 from app.loader import get_snapshots_dir
+from services.file_lock import atomic_write_json
 from app.models import (
     ForecastDataPoint,
     ForecastMeta,
@@ -57,6 +59,11 @@ _HOURLY_ENUM_FIELDS: dict[str, type] = {
     "precip_type": PrecipType,
 }
 
+# Issue #1987: erkennt den DATIERTEN Snapshot `{trip_id}_{YYYY-MM-DD}.json` —
+# und nur ihn. Trennt die Aufraeumung von den Nachbardateien desselben Trips
+# (rollierende Alarm-Anker), s. `_prune_dated_snapshots`.
+_DATED_SUFFIX = re.compile(r"_\d{4}-\d{2}-\d{2}\.json$")
+
 # Provider string → Provider enum mapping
 _PROVIDER_MAP: dict[str, Provider] = {p.value.lower(): p for p in Provider}
 _PROVIDER_MAP.update({p.value: p for p in Provider})
@@ -65,7 +72,7 @@ _PROVIDER_MAP.update({p.value: p for p in Provider})
 class WeatherSnapshotService:
     """Persist and load aggregated weather snapshots as JSON files."""
 
-    def __init__(self, user_id: str = "default") -> None:
+    def __init__(self, user_id: str) -> None:
         self._user_id = user_id
         self._snapshots_dir = get_snapshots_dir(user_id)
 
@@ -102,7 +109,7 @@ class WeatherSnapshotService:
             }
 
             filepath = self._snapshots_dir / f"{trip_id}.json"
-            filepath.write_text(json.dumps(snapshot, indent=2))
+            atomic_write_json(filepath, snapshot)
             logger.info(f"Snapshot saved: {trip_id}")
         except Exception as e:
             logger.warning(f"Failed to save snapshot {trip_id}: {e}")
@@ -129,7 +136,7 @@ class WeatherSnapshotService:
             }
 
             filepath = self._snapshots_dir / f"{trip_id}_{target_date.isoformat()}.json"
-            filepath.write_text(json.dumps(snapshot, indent=2))
+            atomic_write_json(filepath, snapshot)
             logger.info(f"Dated snapshot saved: {filepath.name}")
         except Exception as e:
             logger.warning(f"Failed to save dated snapshot {trip_id} {target_date}: {e}")
@@ -141,8 +148,20 @@ class WeatherSnapshotService:
         self,
         trip_id: str,
         target_date: date,
+        *,
+        segment_fetched_at: bool = False,
     ) -> Optional[List[SegmentWeatherData]]:
-        """Load dated forecast snapshot from {trip_id}_{YYYY-MM-DD}.json."""
+        """Load dated forecast snapshot from {trip_id}_{YYYY-MM-DD}.json.
+
+        `segment_fetched_at=True` liefert je Segment seinen EIGENEN
+        Erhebungszeitpunkt statt des Schreibzeitpunkts der Datei (Issue #2050
+        S6, E-1). Bewusst opt-in und per Vorgabe AUS: derselbe Wert speist
+        ueber `trip_alert._check_deviation_alerts()` den nutzersichtbaren
+        Referenz-Zeitpunkt im Alarm-Footer (#1916), und `format_reference_at()`
+        verzweigt am KALENDERTAG — eine Verschiebung um Minuten ueber
+        Mitternacht machte aus "07:00" ein "gestern 23:55 Uhr". Diese Scheibe
+        ist rein additiv und darf keine Anzeige verschieben; die
+        Protokoll-Ableitung fragt den genaueren Wert deshalb ausdruecklich an."""
         filepath = self._snapshots_dir / f"{trip_id}_{target_date.isoformat()}.json"
 
         if not filepath.exists():
@@ -164,7 +183,10 @@ class WeatherSnapshotService:
                         segment=segment,
                         timeseries=timeseries,
                         aggregated=aggregated,
-                        fetched_at=snapshot_at,
+                        fetched_at=(
+                            _segment_fetched_at(seg_data, snapshot_at)
+                            if segment_fetched_at else snapshot_at
+                        ),
                         provider=provider,
                     )
                 )
@@ -174,10 +196,24 @@ class WeatherSnapshotService:
             return None
 
     def _prune_dated_snapshots(self, trip_id: str) -> None:
-        """Delete oldest dated snapshots for trip_id, keeping max 7."""
-        pattern = f"{trip_id}_*.json"
+        """Delete oldest dated snapshots for trip_id, keeping max 7.
+
+        Issue #1987: Das Glob-Muster `{trip_id}_*.json` erfasst NICHT nur die
+        datierten Snapshots, sondern jede Nachbardatei desselben Trips — also
+        auch die rollierenden Alarm-Anker. Gemessen: von vier kanalscharfen
+        Ankern (`{trip_id}_alarm_anchor_{channel}.json`) ueberlebten nach acht
+        Briefing-Laeufen genau EINER; die uebrigen drei fuellten das
+        7er-Kontingent und wurden als "aelteste" geloescht. Getroffen haette
+        es bevorzugt die Kanaele, die laenger nichts zugestellt bekommen haben
+        (aeltester mtime) — exakt jene, deren eigenen Stand dieses Ticket
+        erhalten soll. Deshalb greift die Aufraeumung jetzt ausschliesslich
+        auf Dateien mit echtem Datums-Suffix.
+        """
         dated_files = sorted(
-            self._snapshots_dir.glob(pattern),
+            (
+                p for p in self._snapshots_dir.glob(f"{trip_id}_*.json")
+                if _DATED_SUFFIX.search(p.name)
+            ),
             key=lambda p: (p.stat().st_mtime, p.name),
         )
         for old_file in dated_files[:-7]:
@@ -187,17 +223,42 @@ class WeatherSnapshotService:
             except OSError as e:
                 logger.warning(f"Failed to prune dated snapshot {old_file}: {e}")
 
+    def _alarm_anchor_path(self, trip_id: str, channel: str) -> Path:
+        """Ablageort des rollierenden Alarm-Ankers dieses Kanals (Issue #1987).
+
+        Faellt auf die KANALLOSE Altdatei `{trip_id}_alarm_anchor.json`
+        zurueck, solange der Kanal noch keine eigene besitzt (AC-5): der
+        Bestand vor dieser Scheibe bleibt damit ohne Migrationsskript als
+        Vergleichsbasis lesbar. Die Ableitung sitzt bewusst hier statt in den
+        drei Methoden — sonst faelle der Rueckfall in einer von ihnen
+        irgendwann auseinander.
+        """
+        kanalscharf = self._snapshots_dir / f"{trip_id}_alarm_anchor_{channel}.json"
+        if kanalscharf.exists():
+            return kanalscharf
+        return self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
+
     def save_alarm_anchor(
         self,
         trip_id: str,
         target_date: date,
         segments: List[SegmentWeatherData],
+        channel: str,
     ) -> None:
         """Rollierender Alarm-Anker (Issue #1916, ADR-0056) — EIGENER,
-        undatierter Speicherort (EIN File je Trip, ueberschrieben statt
-        aufgehaeuft), getrennt von `save_dated()`/`load_dated()`: ein
+        undatierter Speicherort (EIN File je Trip UND Kanal, ueberschrieben
+        statt aufgehaeuft), getrennt von `save_dated()`/`load_dated()`: ein
         rollierender Schreibvorgang darf die eingefrorene Briefing-Referenz
-        der Radar-Unterdrueckung (#818/#1667) niemals veraendern (AC-11)."""
+        der Radar-Unterdrueckung (#818/#1667) niemals veraendern (AC-11).
+
+        Issue #1987 (S1): `channel` ist PFLICHT und hat bewusst KEINEN
+        Vorgabewert — dasselbe Muster wie `tagesgleicher_anker_noetig` aus
+        #1661. Ein vergessenes Argument mit stillschweigendem Default
+        erzeugte eine Kanal-Verwechslung, die kein Test faengt, solange nur
+        EIN Kanal konfiguriert ist. Geschrieben wird ausschliesslich die
+        kanalscharfe Datei; die kanallose Altdatei bleibt liegen und
+        veraltet (sie dient nur noch als Lese-Rueckfall).
+        """
         try:
             self._snapshots_dir.mkdir(parents=True, exist_ok=True)
 
@@ -212,18 +273,22 @@ class WeatherSnapshotService:
                 ],
             }
 
-            filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
-            filepath.write_text(json.dumps(snapshot, indent=2))
-            logger.info(f"Alarm anchor saved: {trip_id}")
+            filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor_{channel}.json"
+            atomic_write_json(filepath, snapshot)
+            logger.info(f"Alarm anchor saved: {trip_id} ({channel})")
         except Exception as e:
-            logger.warning(f"Failed to save alarm anchor {trip_id}: {e}")
+            logger.warning(f"Failed to save alarm anchor {trip_id} ({channel}): {e}")
 
-    def load_alarm_anchor(self, trip_id: str) -> Optional[List[SegmentWeatherData]]:
-        """Rollierenden Alarm-Anker laden (Issue #1916) — s. `save_alarm_anchor`."""
-        filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
+    def load_alarm_anchor(
+        self, trip_id: str, channel: str,
+    ) -> Optional[List[SegmentWeatherData]]:
+        """Rollierenden Alarm-Anker DIESES Kanals laden (Issue #1916/#1987)
+        — s. `save_alarm_anchor` und `_alarm_anchor_path` (Rueckfall auf die
+        kanallose Altdatei, AC-5)."""
+        filepath = self._alarm_anchor_path(trip_id, channel)
 
         if not filepath.exists():
-            logger.debug(f"No alarm anchor for {trip_id}")
+            logger.debug(f"No alarm anchor for {trip_id} ({channel})")
             return None
 
         try:
@@ -247,19 +312,24 @@ class WeatherSnapshotService:
                 )
             return result
         except (json.JSONDecodeError, ValueError, KeyError, OSError) as e:
-            logger.warning(f"Corrupt alarm anchor {trip_id}: {e}")
+            logger.warning(f"Corrupt alarm anchor {trip_id} ({channel}): {e}")
             return None
 
-    def alarm_anchor_target_date(self, trip_id: str) -> Optional[date]:
-        """Gespeicherten Tagesbezug des rollierenden Alarm-Ankers lesen
-        (Issue #1916, AC-10) — analog `load_target_date()` fuer den
-        undatierten Rueckfall."""
-        filepath = self._snapshots_dir / f"{trip_id}_alarm_anchor.json"
+    def alarm_anchor_target_date(self, trip_id: str, channel: str) -> Optional[date]:
+        """Gespeicherten Tagesbezug des rollierenden Alarm-Ankers DIESES
+        Kanals lesen (Issue #1916, AC-10; Issue #1987) — analog
+        `load_target_date()` fuer den undatierten Rueckfall. Liest dieselbe
+        Datei wie `load_alarm_anchor()` (inkl. Altdatei-Rueckfall), sonst
+        koennte die Tagesgrenze einen anderen Anker pruefen als den, der
+        tatsaechlich verwendet wird."""
+        filepath = self._alarm_anchor_path(trip_id, channel)
         try:
             data = json.loads(filepath.read_text())
             return date.fromisoformat(str(data["target_date"]))
         except (json.JSONDecodeError, ValueError, KeyError, TypeError, OSError) as e:
-            logger.debug(f"No readable target_date in alarm anchor {trip_id}: {e}")
+            logger.debug(
+                f"No readable target_date in alarm anchor {trip_id} ({channel}): {e}"
+            )
             return None
 
     def load_target_date(self, trip_id: str) -> Optional[date]:
@@ -391,6 +461,27 @@ def _deserialize_summary(data: dict) -> SegmentWeatherSummary:
     return SegmentWeatherSummary(**kwargs)
 
 
+def _segment_fetched_at(seg_data: dict, snapshot_at: datetime) -> datetime:
+    """Erhebungszeitpunkt DIESES Segments (Issue #2050 S6, E-1): der
+    mitgeschriebene eigene Wert, sonst der Schreibzeitpunkt der Datei --
+    Bestandsdateien ohne das additive Feld verhalten sich unveraendert.
+
+    Bewusst NUR ueber `load_dated(segment_fetched_at=True)` erreichbar, also
+    allein fuer die Protokoll-Ableitung: dort fragt E-1, auf welchen Abruf
+    sich der Briefing-Vergleich beruft. Ueberall sonst -- rollierender
+    Alarm-Anker, undatierter Rueckfall, Alarm-Footer (#1916) -- bemisst sich
+    der Zeitpunkt weiter am SCHREIBzeitpunkt der Datei (Tagesgrenze #823,
+    Ceiling-Fallback #1987)."""
+    roh = seg_data.get("fetched_at")
+    if not roh:
+        return snapshot_at
+    try:
+        wert = datetime.fromisoformat(roh)
+    except (TypeError, ValueError):
+        return snapshot_at
+    return wert if wert.tzinfo else wert.replace(tzinfo=timezone.utc)
+
+
 def _serialize_segment(seg: SegmentWeatherData) -> dict:
     """Serialize a single SegmentWeatherData to dict, with optional hourly."""
     entry: dict = {
@@ -406,6 +497,11 @@ def _serialize_segment(seg: SegmentWeatherData) -> dict:
         "end_elevation_m": seg.segment.end_point.elevation_m,
         "end_distance_from_start_km": seg.segment.end_point.distance_from_start_km,
         "distance_km": seg.segment.distance_km,
+        # Issue #2036: Herkunft der km-Spanne (gemessen vs. Luftlinie) gehoert
+        # MIT in den Anker -- aus einem geladenen Segment entsteht sonst still
+        # wieder eine ungemessene Ortsangabe. `False` bleibt weg, damit
+        # Bestands-Anker byte-identisch bleiben.
+        **({"distance_measured": True} if seg.segment.distance_measured else {}),
         "ascent_m": seg.segment.ascent_m,
         "descent_m": seg.segment.descent_m,
         "duration_hours": seg.segment.duration_hours,
@@ -421,6 +517,16 @@ def _serialize_segment(seg: SegmentWeatherData) -> dict:
             ) if v is not None
         },
         "aggregated": _serialize_summary(seg.aggregated),
+        # Issue #2050 S6 (E-1): der EIGENE Erhebungszeitpunkt dieses Segments.
+        # Bis hierher ging er beim Laden verloren (alle Segmente erbten den
+        # Schreibzeitpunkt der Datei) -- damit war der Zeitpunkt, auf den sich
+        # ein Briefing-Vergleich beruft, nachtraeglich nicht mehr belegbar.
+        # Additiv: fehlt der Schluessel (Bestandsdateien), gilt weiter der
+        # Schreibzeitpunkt.
+        **(
+            {"fetched_at": seg.fetched_at.isoformat()}
+            if seg.fetched_at is not None else {}
+        ),
     }
     if seg.timeseries is not None:
         hourly = []
@@ -492,4 +598,7 @@ def _reconstruct_segment(seg_data: dict) -> TripSegment:
         # Alt-Anker ohne die Felder laden dadurch unveraendert.
         day_window_start_hour=seg_data.get("day_window_start_hour"),
         day_window_end_hour=seg_data.get("day_window_end_hour"),
+        # Issue #2036: fehlender Schluessel -> False (Alt-Anker sind
+        # unvermessen und zeigen weiter die Segmentnummer).
+        distance_measured=bool(seg_data.get("distance_measured", False)),
     )

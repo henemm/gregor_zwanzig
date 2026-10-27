@@ -1,0 +1,69 @@
+# Adversary Dialog — feat-2050-s4b-messluecken-protokoll
+
+Spec: docs/specs/modules/feat_2050_s4b_messluecken_protokoll.md
+Datum: 2026-08-23
+Iteration: 1 / 3
+Testlauf: `uv run pytest tests/tdd/test_radar_messluecken_protokoll.py tests/tdd/test_regen_ausdehnung_zonenbildung.py tests/tdd/test_regen_ausdehnung_textstellen.py -v` → 27 passed, 0 failed (12 in der neuen Datei + 4 Zonenbildung + 11 Textstellen)
+
+## Checkliste
+
+- [x] AC-1: Lücke am mittleren von drei Zonenpunkten — Beweis: `test_luecke_in_der_mitte_haelt_zahl_und_km_lage_fest`, Wertevergleich gegen aus der Geometrie abgeleitete km-Lage
+- [x] AC-2: alle Folgepunkte ausgefallen (Extremfall, points_measured=1, 5× gap_km) — Beweis: `test_alle_folgepunkte_ausgefallen_ist_der_extremfall`
+- [x] AC-3: echter Ein-Kilometer-Befund vom Extremfall strukturell unterscheidbar — Beweis: `test_echter_befund_ein_kilometer_ist_vom_extremfall_unterscheidbar`, Nebeneinander-Vergleich bei identischem Text
+- [x] AC-4: `measurement_gaps` immer vorhanden, auch ohne Lücke — Beweis: `test_luecken_feld_ist_auch_ohne_luecke_vorhanden`, mit Positivkontrolle (derselbe Aufbau MIT Lücke füllt gap_km)
+- [x] AC-5: geworfene Ausnahme erscheint als Lücke — Beweis: `test_geworfene_ausnahme_erscheint_als_luecke`
+- [x] AC-6: `throttled=True` erscheint als Lücke — Beweis: `test_throttled_erscheint_als_luecke`
+- [x] AC-7: `data_unavailable=True` erscheint als Lücke — Beweis: `test_data_unavailable_erscheint_als_luecke`
+- [x] AC-8: Ausfall am ersten Messpunkt erzeugt keine Ausdehnungszeile (Positivkontrolle je Ausfallweg) — Beweis: `test_ausfall_am_ersten_punkt_erzeugt_keine_ausdehnungszeile`, R3-Begründung am Code verifiziert (`check_radar_alerts` `continue`t vor `_zonen_ergebnisse`-Existenz bzw. vor `radar_alert_due()`)
+- [x] AC-9: gescheiterte Ableitung kostet den Alarm nicht, nur `measurement_gaps` fehlt — Beweis: `test_scheiternde_luecken_ableitung_kostet_den_alarm_nicht`; Mutation 7 (gemeinsamer Auffang statt eigenem) macht genau diesen Test rot
+- [x] AC-10: Mandantentrennung, zwei echte `user_id` (uuid4, kein `"default"`) — Beweis: `test_zwei_nutzer_teilen_sich_keinen_luecken_eintrag`
+- [x] AC-11: Alteinträge ohne `measurement_gaps` bleiben byte-identisch (Read-Modify-Write) — Beweis: `test_alteintrag_ohne_messluecken_feld_bleibt_unveraendert`, `_append()` in `src/services/alert_log.py:521-533` unverändert
+- [x] AC-12: Regression — `rain_extent.py` unangetastet, beide S2a-Wächter grün — Beweis: `git diff --name-only` enthält `rain_extent.py` nicht; `test_ac11_datenloser_punkt_faellt_aus_der_zonenbildung_heraus` und `test_e4_punkt_ohne_frames_trennt_die_nasszone_nicht` grün
+
+## Findings
+
+### F001: Forwarding von `measurement_gaps` in `append_suppressed_entry()` war ungetestet
+- **Severity:** HIGH
+- **Category:** edge_case
+- **Evidence:** src/services/alert_log.py:638 (Forwarding-Zeile `measurement_gaps=measurement_gaps,` im `_apply_e1_fields(...)`-Aufruf von `append_suppressed_entry()`); reale Erreichbarkeit über die Aufrufstellen src/services/trip_alert.py:1994 (briefing_announced-Unterdrückung) und src/services/trip_alert.py:2199 (Identitäts-/Cooldown-Gate), beide rufen `alert_log.append_suppressed_entry(..., **_e1)` NACH Berechnung von `_e1`
+- **Description:** Runde 1: das Entfernen der Forwarding-Zeile in `append_suppressed_entry()` (String-Mutation, externe Sicherungskopie, md5-Rücknahme belegt) ließ die volle Zielsuite (26 Tests) grün — kein einziger Test prüfte den Suppressed-Pfad (`not_delivered`) auf `measurement_gaps`. Die vorbestehende Datei `tests/tdd/test_alert_log_unterdrueckung_groessen.py` (#2050 S6) deckt zwar `not_delivered`-Einträge ab, aber ohne Bezug zu `measurement_gaps` (grep leer). Implementierung war zu diesem Zeitpunkt korrekt — reine Testlücke, kein Spec-Verstoß im Code.
+- **Remediation:** GESCHLOSSEN in Runde 2. Neuer Test `test_unterdrueckter_alarm_haelt_die_luecke_genauso_fest` (`tests/tdd/test_radar_messluecken_protokoll.py:829-844`) fährt den `briefing_announced`-Unterdrückungspfad und prüft den `not_delivered`-Eintrag mit derselben Wertprüfung (`_pruefe_luecken(..., eintrag=eintrag)`) wie der zugestellte Pfad. Eigenständig gegengeprüft (siehe Runde 2): Mutation an alert_log.py:638 selbst wiederholt → jetzt genau 1 Test rot (der neue); zwei zusätzliche Wert-Mutationen (`points_measured`, `gap_km`-Index) isoliert gegen nur diesen Test ausgeführt → beide rot, mit falschem WERT in der Fehlermeldung, keine reine Präsenzprüfung. Pfadwahl (`briefing_announced` statt früherer Gates über `_protokolliere_radar_unterdrueckung()`, das `measurement_gaps` konstruktiv nie mitgibt, `trip_alert.py:1438-1465`) am Produktivcode verifiziert, nicht nur am Testkommentar geglaubt.
+
+## Mutations-Gegenprobe — 10 dokumentierte Mutations-Ausführungen (Pflicht laut CLAUDE.md)
+
+Alle Mutationen per String-Ersetzung mit externer Sicherungskopie im Scratchpad, jede Rücknahme per `diff`/`md5sum` byte-identisch belegt. Produktivcode am Ende beider Runden unverändert (`trip_alert.py` md5 `eb82f1e7cf1145794416d5a814afb113`, `alert_log.py` md5 `8eae988afe5c2c3769f5083f9bb5aeee`).
+
+| # | Runde | Mutation | Ort | Ergebnis |
+|---|---|---|---|---|
+| 1 | 1 | `points_measured = len(ergebnisse)` statt Differenz | trip_alert.py:207 | 9 Tests rot — falscher WERT, nicht nur Abwesenheit |
+| 2 | 1 | `gap_km`-Rundung auf 2 statt 1 Nachkommastelle | trip_alert.py:201 | 1 Test rot (AC-1); übrige Tests landen zufällig auf identischen Rundungswerten bei dieser Geometrie — dokumentierter Nebenbefund, kein Finding, da real gefangen |
+| 3 | 1 | `gap_km`-Index verschoben (`punkte[i+1]`) | trip_alert.py:200-203 | 9 Tests rot |
+| 4 | 1 | Feld nur bei vorhandener Lücke setzen | trip_alert.py:204-210 | 2 Tests rot (AC-3, AC-4) |
+| 5 | 1 | `"measurement_gaps": dict` aus `_E1_FIELD_TYPES` entfernt | alert_log.py:342 | 15 Tests rot (harter KeyError-Crash statt fail-soft — vorbestehende Design-Eigenschaft von `_apply_e1_fields()`, nicht S4b-spezifisch, kein eigenes Finding) |
+| 6 | 1 | Forwarding `measurement_gaps=measurement_gaps` in `append_suppressed_entry()` entfernt | alert_log.py:638 | **0 Tests rot → F001** |
+| 7 | 1 | Eigenen `except` durch gemeinsamen `return {}` ersetzt | trip_alert.py:269-274 | 1 Test rot (AC-9, exakt der dafür gebaute Test) |
+| 8 | 1 | Aufrufstelle `punkte=_punkte, zonen_ergebnisse=_zonen_ergebnisse` entfernt | trip_alert.py:1954-1957 | 10 Tests rot |
+| 9 | 1 | `_zonen_messwert`: throttled/data_unavailable nicht mehr als Lücke werten | trip_alert.py:170-175 | 10 Tests rot, inkl. S2a-Regressionswächter `test_e4_punkt_ohne_frames_trennt_die_nasszone_nicht` |
+| 10 | 2 | Mutation 6 wiederholt (nach Testergänzung), eigenständig, nicht auf Selbstbericht verlassen | alert_log.py:638 | **1 Test rot** (der neue `test_unterdrueckter_alarm_haelt_die_luecke_genauso_fest`) — F001 geschlossen |
+
+Ergänzend in Runde 2 (nicht separat gezählt, da Wiederholung von #1/#3 isoliert gegen nur den neuen Test): `points_measured`-Falschberechnung und `gap_km`-Indexverschiebung erneut ausgeführt, jeweils NUR gegen `test_unterdrueckter_alarm_haelt_die_luecke_genauso_fest` — beide rot mit falschem Wert am `not_delivered`-Eintrag, bestätigt dass der neue Test am WERT prüft, nicht nur an der Präsenz.
+
+## Referenzfeger-Beurteilung (Runde 2)
+
+Verzicht auf vollen Referenzfeger trägt: Produktivcode (`trip_alert.py`, `alert_log.py`) ist zwischen Runde 1 und Runde 2 byte-identisch (md5 oben), einzige Änderung war `tests/tdd/test_radar_messluecken_protokoll.py`. `grep -rln "test_radar_messluecken_protokoll" tests/ --include="*.py"` findet außer der Datei selbst keinen Treffer — keine fremde Testdatei importiert Helfer daraus, ein Referenzfeger hätte strukturell nichts zu finden.
+
+## Dialog
+
+### Runde 1
+**Adversary:** 9 Mutationsfamilien gegen die uncommittete Implementierung (`trip_alert.py`/`alert_log.py`, +71/−2) durchgespielt, AC-1..AC-12 einzeln mit Code-Referenz geprüft, `rain_extent.py`-Unangetastetheit per `git diff --name-only` verifiziert.
+**Implementierer:** —
+**Bewertung:** BROKEN — F001 (Forwarding in `append_suppressed_entry()` ungetestet), sonst 11/12 ACs PROVEN, 8/9 Mutationsfamilien robust gefangen.
+
+### Runde 2
+**Adversary:** Mutation 6 eigenständig wiederholt (nicht auf Selbstbericht verlassen), Pfadwahl des neuen Tests am Produktivcode verifiziert (`_protokolliere_radar_unterdrueckung()` vs. die zwei `**_e1`-Aufrufstellen), zwei isolierte Wert-Mutationen gegen den neuen Test, Referenzfeger-Verzicht per `grep` bestätigt.
+**Implementierer:** Testdatei um `test_unterdrueckter_alarm_haelt_die_luecke_genauso_fest` ergänzt (`tests/tdd/test_radar_messluecken_protokoll.py`, +152/−15), Produktivcode unverändert (md5-Nachweis).
+**Bewertung:** VERIFIED — F001 geschlossen, 12/12 ACs PROVEN, alle 10 dokumentierten Mutations-Ausführungen gefangen, 27/27 Tests grün.
+
+## Verdict
+**VERIFIED**
+Offene Punkte: 0 / 12

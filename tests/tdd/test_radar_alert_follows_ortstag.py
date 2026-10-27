@@ -1,11 +1,11 @@
-"""TDD RED — Issue #1697: Alarm-Pfad folgt dem Ortstag der Tour, nicht der
+"""TDD RED — Issue #1697: Alarm-Pfad folgt dem Ortstag der Trip, nicht der
 Serveruhr (Kette A, ``TripAlertService.check_radar_alerts``).
 
 SPEC: docs/specs/modules/fix_1697_ortstag_statt_servertag.md (AC-1 … AC-5)
 
 RED-Grund heute (gemessen):
 - ``check_radar_alerts()`` bestimmt "welcher Tag ist heute" ueber
-  ``date_type.today()`` (Serveruhr) statt ueber die Ortszeit der Tour
+  ``date_type.today()`` (Serveruhr) statt ueber die Ortszeit der Trip
   (``services.trip_day.trip_local_today`` — Modul existiert noch nicht).
   Weicht Ortsdatum und Serverdatum voneinander ab, findet
   ``convert_trip_to_segments()`` keine Etappe -> leere Segmentliste ->
@@ -54,6 +54,30 @@ Testpolitik (CLAUDE.md "Test-Politik: Zwei Schichten"):
 - Uhr: ``freeze_time`` (freezegun). Isolation: ``tests/conftest.py::
   _isolate_data_root`` (autouse, #1133) — keine manuelle Aufraeumung noetig.
 
+Angepasst 2026-08-21 (Issue #2017 Scheibe B, SPEC:
+docs/specs/modules/fix_2017_nowcast_messpunkt.md): Der Nowcast-Abruf erfolgt
+nicht mehr am START-Punkt des gewaehlten Segments, sondern an der zur Mitte
+des Vorwarnfensters (`jetzt + RADAR_MEASURE_OFFSET_MIN`, seit #2261 A-1 von der
+Schwelle entkoppelt) interpolierten
+Position darauf. Die Nachweis-Strategie dieser Datei ist unveraendert
+("Wirkung ueber Koordinaten, nicht ueber einen Alarm-Zaehler") — nur der
+erwartete Punkt wandert von `start_point` auf die Strecke des Segments.
+
+🔴 Warum das die #1697-Zusicherung NICHT schwaecht: Ein blosses "der Punkt
+liegt irgendwo auf dem Segment" waere zu lax — bei einer Ganztags-Etappe ist
+der Endpunkt des Geh-Segments zugleich der Ort des Ziel-Segments, eine
+Verwechslung der beiden bliebe unbemerkt. `_assert_messpunkt()` prueft
+deshalb ZWEI Stufen: (1) der Punkt liegt auf der Strecke der ERWARTETEN
+Etappe, (2) er liegt an genau der Stelle, die dem Zieloffset entspricht.
+Stufe 2 ist so scharf wie die frueher gepruefte Gleichheit mit `start_point`
+— eine falsch gewaehlte Etappe oder ein falscher Ortstag ergibt einen anderen
+Punkt und faellt weiterhin durch (Gegenproben:
+docs/artifacts/fix-2017-nowcast-messpunkt-b/gegenprobe-ortstag.txt).
+Die erwartete Etappe wird dabei weiterhin UNABHAENGIG vom Pruefling
+aufgebaut (`convert_trip_to_segments()` auf den explizit benannten
+Kalendertag + `_aktives_segment()`), nie ueber `resolve_current_segment()` —
+sonst prueefte der Test die Vorrangkette gegen sich selbst.
+
 Erweitert 2026-08-11 (Issue #1667 Scheibe S3, SPEC:
 docs/specs/modules/fix_1667_s3_tagesuebergreifende_segmente.md) um die
 tagesuebergreifende Segment-Auswahl — eigener Abschnitt am Dateiende, dieselben
@@ -98,7 +122,7 @@ CORSICA_LAT, CORSICA_LON = 42.20, 9.10
 REYKJAVIK_LAT, REYKJAVIK_LON = 64.1466, -21.9426
 # America/Los_Angeles (UTC-7 im August) — F002: NEGATIVER Versatz, das
 # Serverdatum laeuft dem Ortstag VORAUS (date.today() = Ortstag D + 1) —
-# genau die Richtung, in der die Ueberwachung etwas VERLIERT (Tour gilt
+# genau die Richtung, in der die Ueberwachung etwas VERLIERT (Trip gilt
 # faelschlich als abgelaufen).
 LOS_ANGELES_LAT, LOS_ANGELES_LON = 34.0522, -118.2437
 
@@ -160,6 +184,93 @@ def _aktives_segment(segments, now_utc):
     return None
 
 
+def _zieloffset_minuten() -> int:
+    """Messpunkt-Offset — der Zeitpunkt, fuer den seit #2017 gemessen wird
+    (bis #2261 das halbe Vorwarnfenster, 55 // 2 = 27).
+
+    Ueber die MODUL-Referenz gelesen, nie als `from ... import` gebunden: eine
+    beim Import gebundene Kopie liefe still an einem Nachziehen der Quelle
+    vorbei. Seit #2261 A-1 eigene Konstante `RADAR_MEASURE_OFFSET_MIN` (27),
+    nicht mehr aus der Schwelle (jetzt = Quell-Horizont 180) berechnet.
+    """
+    from services import radar_service as radar_service_mod
+
+    return radar_service_mod.RADAR_MEASURE_OFFSET_MIN
+
+
+def _messpunkt_der_etappe(segment, now_utc):
+    """``((lat, lon), Zeitanteil)`` — der Punkt auf ``segment``, an dem seit
+    #2017 gemessen wird.
+
+    ANALYTISCH aus den Segmentgrenzen gerechnet, bewusst OHNE Aufruf von
+    ``services.trip_segments.position_at_time()``: der Erwartungswert darf
+    nicht aus dem Pruefling stammen, sonst machte er jede Verfaelschung mit.
+    """
+    at = now_utc + timedelta(minutes=_zieloffset_minuten())
+    spanne = (segment.end_time - segment.start_time).total_seconds()
+    sp, ep = segment.start_point, segment.end_point
+    if spanne <= 0:
+        return (sp.lat, sp.lon), 0.0
+    p = max(0.0, min(1.0, (at - segment.start_time).total_seconds() / spanne))
+    return (sp.lat + p * (ep.lat - sp.lat), sp.lon + p * (ep.lon - sp.lon)), p
+
+
+def _liegt_auf_etappe(punkt, segment, tol: float = 1e-6) -> bool:
+    """Liegt ``punkt`` auf der Strecke ``start_point``→``end_point`` (Enden
+    eingeschlossen)? Ortsfeste Ziel-Segmente (Start == Ende) verlangen exakte
+    Gleichheit."""
+    lat, lon = punkt
+    sp, ep = segment.start_point, segment.end_point
+    dlat, dlon = ep.lat - sp.lat, ep.lon - sp.lon
+    if abs(dlat) < 1e-12 and abs(dlon) < 1e-12:
+        return abs(lat - sp.lat) <= tol and abs(lon - sp.lon) <= tol
+    t = (lat - sp.lat) / dlat if abs(dlat) >= abs(dlon) else (lon - sp.lon) / dlon
+    if not (-tol <= t <= 1.0 + tol):
+        return False
+    return abs(sp.lat + t * dlat - lat) <= tol and abs(sp.lon + t * dlon - lon) <= tol
+
+
+def _assert_messpunkt(calls, erwartet, now_utc, *, label: str, alternative: str = "") -> None:
+    """Zweistufiger Nachweis, dass der Nowcast an der ERWARTETEN Etappe
+    gemessen wurde (s. Modul-Docstring, #1697 → #2017).
+
+    Stufe 1 trennt "falsche Etappe/falscher Ortstag" von Stufe 2 "richtige
+    Etappe, falsche Stelle darauf" — zwei verschiedene Befunde, zwei
+    verschiedene Meldungen.
+
+    Issue #2051 S2a: die Aufrufzahl ist eine OBERGRENZE statt einer festen 1
+    (Spec-Abschnitt "Abgeloeste Zusicherung") — entlang der Reststrecke der
+    aktiven Etappe werden bis zu ``RADAR_ZONE_MAX_POINTS`` Punkte abgefragt.
+    Die Aussage dieser Datei bleibt unberuehrt: JEDER dieser Punkte muss auf
+    der erwarteten Etappe liegen, und der ERSTE ist unveraendert der
+    #2017-Messpunkt. Die Obergrenze kommt ueber die Modulreferenz, nicht als
+    Literal (Drift-Schutz #2009-Muster).
+    """
+    from services.trip_segments import RADAR_ZONE_MAX_POINTS
+
+    assert 1 <= len(calls) <= RADAR_ZONE_MAX_POINTS, (
+        f"{label}: erwartet waren 1 bis {RADAR_ZONE_MAX_POINTS} Nowcast-"
+        f"Abrufe an der Etappe {erwartet.segment_id!r} (Deckel #2051 S2a), "
+        f"erhalten {len(calls)}: {calls!r}. {alternative}"
+    )
+    punkt = calls[0]
+    sp, ep = erwartet.start_point, erwartet.end_point
+    for i, kandidat in enumerate(calls):
+        assert _liegt_auf_etappe(kandidat, erwartet), (
+            f"{label}: der Abrufpunkt {kandidat!r} (Nr. {i}) liegt nicht auf "
+            f"der erwarteten Etappe {erwartet.segment_id!r} "
+            f"(({sp.lat}, {sp.lon}) → ({ep.lat}, {ep.lon})). {alternative}"
+        )
+    soll, p = _messpunkt_der_etappe(erwartet, now_utc)
+    assert punkt == pytest.approx(soll, abs=1e-6), (
+        f"{label}: der Abrufpunkt {punkt!r} liegt zwar auf der erwarteten "
+        f"Etappe {erwartet.segment_id!r}, aber an der falschen Stelle — "
+        f"erwartet {soll!r} (Zeitanteil p={p:.4f} zum Zieloffset "
+        f"+{_zieloffset_minuten()} min, #2017). ({sp.lat}, {sp.lon}) waere der "
+        f"Segment-Startpunkt, also der Messpunkt VOR #2017."
+    )
+
+
 # ══════════════════════════════════ AC-1 ══════════════════════════════════
 
 
@@ -170,6 +281,15 @@ def test_ac1_auckland_koordinatennachweis():
     RED-Symptom heute: ``today = date.today()`` = SD findet die D-Etappe
     nicht, ``convert_trip_to_segments()`` liefert ``[]``, der Trip wird per
     ``continue`` uebersprungen — 0 Aufrufe statt der D-Koordinaten.
+
+    #1697 → #2017: Die Zusicherung ist unveraendert "der Abruf gehoert zur
+    D-Etappe". Bis #2017 wurde sie als Gleichheit mit deren Startpunkt
+    (``AUCKLAND_LAT/LON``) geprueft; seither ist der Messpunkt die zur
+    Fenstermitte interpolierte Position AUF dieser Etappe. Der Nachweis
+    laeuft deshalb ueber ``_assert_messpunkt()``: der Punkt muss auf der
+    D-Etappe liegen UND an der Stelle, die dem Zieloffset entspricht. Wird
+    die falsche (oder gar keine) Etappe gewaehlt, faellt der Test genauso wie
+    vorher — der Startpunkt bleibt darin als Kontrast benannt.
     """
     from zoneinfo import ZoneInfo
 
@@ -187,6 +307,14 @@ def test_ac1_auckland_koordinatennachweis():
         trip = make_trip(trip_id, stage_date=d_ort, lat=AUCKLAND_LAT, lon=AUCKLAND_LON)
         save_trip(trip, uid)
 
+        # Erwartete Etappe UNABHAENGIG vom Pruefling: die Segmente des
+        # ORTSDATUMS D, aktives/naechstes daraus. Kein
+        # `resolve_current_segment()` — das ist der Pruefling selbst.
+        erwartet = _aktives_segment(convert_trip_to_segments(trip, d_ort), now_utc)
+        assert erwartet is not None, (
+            f"Testvoraussetzung: am Ortsdatum {d_ort} muss ein Segment aktiv sein"
+        )
+
         svc = TripAlertService(
             settings=settings_email_only(), user_id=uid, throttle_hours=2,
             radar_service=radar_service(frame_source),
@@ -199,10 +327,14 @@ def test_ac1_auckland_koordinatennachweis():
         f"calls={frame_source.calls!r}. RED: `today = date.today()` findet "
         "die D-Etappe nicht, der Trip wird uebersprungen."
     )
-    lat, lon = frame_source.calls[0]
-    assert lat == pytest.approx(AUCKLAND_LAT) and lon == pytest.approx(AUCKLAND_LON), (
-        f"AC-1: Abruf-Koordinaten {frame_source.calls[0]!r} passen nicht zur "
-        f"D-Etappe ({AUCKLAND_LAT}, {AUCKLAND_LON})"
+    _assert_messpunkt(
+        frame_source.calls, erwartet, now_utc,
+        label=f"AC-1 (Ortsdatum {d_ort}, Serverdatum {sd})",
+        alternative=(
+            f"Die D-Etappe beginnt bei ({AUCKLAND_LAT}, {AUCKLAND_LON}); ein "
+            f"Abruf woanders bedeutet, dass ein anderer Kalendertag gewaehlt "
+            f"wurde."
+        ),
     )
 
 
@@ -218,6 +350,21 @@ def test_ac2_bestandsschutz_korsika_ausserhalb_der_randzeit(hour_utc):
     Dieser Test ist — wie AC-3/AC-5/AC-7 in #818 — bereits VOR der
     Implementierung gruen (Guard-Test): fuer diese 22 Stichproben stimmen
     alte und neue Formel ueberein.
+
+    #1697 → #2017: Der Bestandsschutz gilt der SEGMENTWAHL, nicht dem
+    Abrufpunkt — die Koordinate war nur sein Stellvertreter. Seit #2017 wird
+    auf der GLEICHEN Etappe an einer anderen Stelle gemessen, deshalb wandert
+    der Erwartungswert von ``erwartet.start_point`` auf den zum Zieloffset
+    interpolierten Punkt DERSELBEN Etappe (``_assert_messpunkt()``). Die
+    Referenz ``erwartet`` kommt weiterhin aus der ALTEN Formel
+    (``convert_trip_to_segments(trip, date.today())`` + ``_aktives_segment``),
+    die Bestandsschutz-Aussage ist damit unveraendert.
+
+    🔴 Warum hier die zweite Stufe von ``_assert_messpunkt()`` gebraucht wird:
+    Die Ganztags-Etappe erzeugt ein Geh-Segment UND ein ortsfestes
+    Ziel-Segment, dessen Ort exakt der ENDPUNKT des Geh-Segments ist. Ein
+    blosses "der Punkt liegt auf dem Geh-Segment" koennte die beiden nicht
+    unterscheiden; die Stelle auf der Strecke kann es.
 
     Bewusst die GANZTAGS-Etappe (``make_trip``-Default 00:00-23:59), nicht
     die realistische 08:00-16:00-Etappe aus AC-3: nur so ist bei JEDER der
@@ -256,11 +403,13 @@ def test_ac2_bestandsschutz_korsika_ausserhalb_der_randzeit(hour_utc):
         f"AC-2 bei {zeitpunkt}: kein Nowcast-Abruf erfolgt, erwartet war ein "
         f"aktives Segment an ({erwartet.start_point.lat}, {erwartet.start_point.lon})"
     )
-    lat, lon = frame_source.calls[0]
-    assert lat == pytest.approx(erwartet.start_point.lat) and lon == pytest.approx(erwartet.start_point.lon), (
-        f"AC-2 bei {zeitpunkt}: Abruf-Koordinaten {frame_source.calls[0]!r} "
-        f"weichen von der alten Formel ({erwartet.start_point.lat}, "
-        f"{erwartet.start_point.lon}) ab — Bestandsschutz verletzt"
+    _assert_messpunkt(
+        frame_source.calls, erwartet, now_utc,
+        label=f"AC-2 bei {zeitpunkt} (Bestandsschutz)",
+        alternative=(
+            "Die alte `date.today()`-Formel waehlt genau diese Etappe — ein "
+            "Abruf ausserhalb bedeutet, dass die neue Formel hier abweicht."
+        ),
     )
 
 
@@ -609,7 +758,7 @@ def _wetter_mit_boe(boe_kmh: float, segment_id: str = "1"):
 
 def test_f001_delta_anker_wird_unter_ortstag_gesucht_nicht_servertag():
     """F001-Fix: ``_get_cached_weather()`` (Delta-Alarm-Pfad) sucht den
-    DATIERTEN Anker unter dem ORTSTAG D der Tour, nicht dem Serverdatum SD.
+    DATIERTEN Anker unter dem ORTSTAG D der Trip, nicht dem Serverdatum SD.
 
     Aufbau wie AC-1/AC-5 (Auckland, Ortsdatum D weicht vom Serverdatum SD
     ab, ``freeze_time("2026-08-10T13:00:00+00:00")``): Schnappschuss NUR
@@ -680,7 +829,7 @@ def test_f001_delta_anker_wird_unter_ortstag_gesucht_nicht_servertag():
 #
 # Hauptfall bewusst NEGATIVER Versatz (Los Angeles, UTC-7): das ist die
 # gefaehrliche Richtung — das Serverdatum laeuft dem Ortstag VORAUS
-# (``date.today()`` = Ortstag D + 1), die Tour gilt an ihrem LETZTEN
+# (``date.today()`` = Ortstag D + 1), die Trip gilt an ihrem LETZTEN
 # Ortstag D deshalb faelschlich schon als abgelaufen und wird nie wieder
 # geprueft (Original-Fehlerbild).
 #
@@ -696,12 +845,12 @@ def test_f001_delta_anker_wird_unter_ortstag_gesucht_nicht_servertag():
 
 
 def test_f002_ablauf_filter_prueft_den_letzten_ortstag_noch(caplog):
-    """F002-Fix: ``check_all_trips()`` filtert abgelaufene Touren ueber den
-    ORTSTAG der Tour, nicht das Serverdatum.
+    """F002-Fix: ``check_all_trips()`` filtert abgelaufene Trips ueber den
+    ORTSTAG der Trip, nicht das Serverdatum.
 
     Hauptfall: Trip mit ``end_date == D`` (Ortstag, Los Angeles) unter einer
     gestellten Uhr, zu der ``date.today()`` bereits ``D+1`` waere -> der
-    Trip MUSS an D noch geprueft werden (WARNUNG "obwohl die Tour laeuft"
+    Trip MUSS an D noch geprueft werden (WARNUNG "obwohl der Trip laeuft"
     erscheint, statt eines stillen Ablauf-Skips).
 
     Gegenprobe im selben Test: ein Trip, dessen ``end_date`` D-1 ist (nach
@@ -746,15 +895,15 @@ def test_f002_ablauf_filter_prueft_den_letzten_ortstag_noch(caplog):
         return caplog.text
 
     log_heute = _lauf(end_date_ist_heute=True)
-    assert "obwohl die Tour laeuft" in log_heute, (
+    assert "obwohl der Trip laeuft" in log_heute, (
         "F002: Trip mit end_date == Ortstag D haette den Ablauf-Filter "
-        "passieren muessen (WARNUNG 'obwohl die Tour laeuft' erwartet). "
+        "passieren muessen (WARNUNG 'obwohl der Trip laeuft' erwartet). "
         f"Log:\n{log_heute}"
     )
     caplog.clear()
 
     log_abgelaufen = _lauf(end_date_ist_heute=False)
-    assert "obwohl die Tour laeuft" not in log_abgelaufen, (
+    assert "obwohl der Trip laeuft" not in log_abgelaufen, (
         "F002 (Gegenprobe): ein tatsaechlich abgelaufener Trip (end_date == "
         "D-1) darf NICHT als 'laufend' behandelt werden — sonst ist der "
         f"Ablauf-Filter selbst wirkungslos. Log:\n{log_abgelaufen}"
@@ -825,6 +974,13 @@ def test_heutiges_segment_gewinnt_gegen_noch_aktives_vortagssegment():
     - 01:00 UTC (Gegenprobe) ist die ROTE Haelfte: heute nichts aktiv, gestern
       laeuft seg1 noch. Heute waehlt der Code die Vorschau auf die 03:00-Etappe,
       der Horizont-Guard (120 min > 60) unterdrueckt sie -> 0 Abrufe.
+
+    #1697/#1667 S3 → #2017: Die Zusicherung — WELCHE Etappe gewaehlt wird —
+    bleibt unveraendert; nur der Punkt darauf wandert (Fenstermitte statt
+    Startpunkt). Beide Erwartungen kommen weiterhin aus dem EXPLIZIT
+    benannten Kalendertag (heute bzw. gestern), nicht aus
+    ``resolve_current_segment()`` — die Vorrangkette ist der Pruefling und
+    darf ihre eigene Erwartung nicht liefern.
     """
     heute = date_type(2026, 8, 11)
     heute_lat = REYKJAVIK_LAT + 1.0
@@ -839,21 +995,47 @@ def test_heutiges_segment_gewinnt_gegen_noch_aktives_vortagssegment():
         )
 
     with freeze_time("2026-08-11T04:00:00+00:00"):
-        fs_ueberlappung, _ = _radar_lauf(fresh_uid("s3ac1-ueber"), _trip("trip-s3ac1-a"))
-    assert fs_ueberlappung.calls == pytest.approx([(heute_lat, REYKJAVIK_LON)]), (
-        f"S3 AC-1: abgefragt wurde {fs_ueberlappung.calls!r}, erwartet war genau "
-        f"ein Abruf am HEUTIGEN Segment ({heute_lat}, {REYKJAVIK_LON}) — das "
-        f"ebenfalls aktive gestrige Ziel {ZIEL_GESTERN!r} darf nicht gewinnen."
+        now_ueber = datetime.now(timezone.utc)
+        trip_ueber = _trip("trip-s3ac1-a")
+        erwartet_heute = _aktives_segment(
+            convert_trip_to_segments(trip_ueber, heute), now_ueber,
+        )
+        assert erwartet_heute is not None, (
+            "Testvoraussetzung: um 04:00 UTC muss heute ein Segment aktiv sein"
+        )
+        fs_ueberlappung, _ = _radar_lauf(fresh_uid("s3ac1-ueber"), trip_ueber)
+    _assert_messpunkt(
+        fs_ueberlappung.calls, erwartet_heute, now_ueber,
+        label="S3 AC-1 (Ueberlappung 04:00 UTC)",
+        alternative=(
+            f"Die HEUTIGE Etappe beginnt bei ({heute_lat}, {REYKJAVIK_LON}); "
+            f"das ebenfalls aktive gestrige Ziel {ZIEL_GESTERN!r} darf nicht "
+            f"gewinnen."
+        ),
     )
 
     with freeze_time("2026-08-11T01:00:00+00:00"):
-        fs_nur_gestern, _ = _radar_lauf(fresh_uid("s3ac1-gestern"), _trip("trip-s3ac1-b"))
-    assert fs_nur_gestern.calls == pytest.approx([(REYKJAVIK_LAT, REYKJAVIK_LON)]), (
-        "S3 AC-1 (Gegenprobe): um 01:00 UTC laeuft nur noch seg1 der GESTRIGEN "
-        f"Etappe ({REYKJAVIK_LAT}, {REYKJAVIK_LON}) — genau dort steht der "
-        f"Wanderer. Abgefragt wurde {fs_nur_gestern.calls!r}. RED: der Code kennt "
-        "nur den heutigen Kalendertag; seine Vorschau auf die 03:00-Etappe faellt "
-        "in den Horizont-Guard."
+        now_gestern = datetime.now(timezone.utc)
+        trip_gestern = _trip("trip-s3ac1-b")
+        erwartet_gestern = _aktives_segment(
+            convert_trip_to_segments(trip_gestern, heute - timedelta(days=1)),
+            now_gestern,
+        )
+        assert erwartet_gestern is not None, (
+            "Testvoraussetzung: um 01:00 UTC muss seg1 der GESTRIGEN Etappe "
+            "noch laufen"
+        )
+        fs_nur_gestern, _ = _radar_lauf(fresh_uid("s3ac1-gestern"), trip_gestern)
+    _assert_messpunkt(
+        fs_nur_gestern.calls, erwartet_gestern, now_gestern,
+        label="S3 AC-1 (Gegenprobe 01:00 UTC)",
+        alternative=(
+            f"Um 01:00 UTC laeuft nur noch seg1 der GESTRIGEN Etappe (ab "
+            f"({REYKJAVIK_LAT}, {REYKJAVIK_LON})) — genau dort ist der "
+            f"Wanderer. RED-Symptom war: der Code kennt nur den heutigen "
+            f"Kalendertag, seine Vorschau auf die 03:00-Etappe faellt in den "
+            f"Horizont-Guard (0 Abrufe)."
+        ),
     )
 
 

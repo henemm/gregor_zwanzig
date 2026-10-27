@@ -3,7 +3,7 @@ entity_id: issue_670_inbound_keywords
 type: module
 created: 2026-06-09
 updated: 2026-06-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [inbound, email, telegram, scheduler, trip_command_processor, mandantentrennung]
 ---

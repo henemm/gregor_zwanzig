@@ -3,10 +3,12 @@ entity_id: feat_1703_s8_compare_kanal_tabs
 type: feature
 created: 2026-08-13
 updated: 2026-08-13
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, backend, compare, metrik-kaskade, adr-0050, adr-0053, issue-1703]
 ---
+
+> Teilweise abgelöst durch [ADR-0095](../../adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md) (2026-10-21): „alle drei Kanäle“ (Purpose) gilt nicht mehr als Soll — Premium-SMS ist der vierte gleichrangige Kanal, inklusive Alarm (CLAUDE.md, Kanäle).
 
 # #1703 Scheibe 8 — Compare-Kanal-Tabs für die Übersichtstabelle
 
@@ -29,6 +31,15 @@ Python-Seite je etwas anderes als eine flache Liste las. Diese Scheibe liefert d
 Stundenverlauf (`hourly_metrics`) und Ausblick (`outlook_metrics`) bleiben in dieser Scheibe
 **bewusst global** — eigene, getrennt gespeicherte Auswahllisten, keine Kanal-Ebene. Das ist
 eine Schnitt-Entscheidung (Analyse-Phase, PO-freigegeben 2026-08-13), keine Auslassung.
+
+> 🔴 **Nachtrag 2026-08-21 (Issue #1848 Scheibe A3):** „Global" für den
+> Ausblick hieß bis dahin auch „unabhängig von der Grundauswahl der
+> Fläche" — das ist seither nicht mehr so. Der Ausblick bleibt ohne
+> Kanal-Ebene (dieser Punkt gilt fort), erbt aber jetzt die Grundauswahl und
+> darf nur noch abwählen, exakt wie ein Kanal-Reiter. Details:
+> `docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md`,
+> [ADR-0059](../../adr/0059-compare-ausblick-erbt-grundauswahl.md) (löst
+> ADR-0053 Punkt 1 für den Ausblick ab). Der Stundenverlauf ist unberührt.
 
 ## Source
 

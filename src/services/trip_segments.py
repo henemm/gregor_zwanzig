@@ -17,13 +17,24 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import app.day_window as day_window
 from app.day_window import resolve_configured_window
 from app.models import GPXPoint, TripSegment
-from utils.geo import haversine_km
+from utils.geo import haversine_km, point_to_segment_m
 from utils.timezone import local_dt, to_utc, tz_for_coords
 
 if TYPE_CHECKING:
     from app.trip import Trip
 
 logger = logging.getLogger("trip_segments")
+
+# Issue #2036: Zugabe der Plausibilitaetspruefung (gemessene Spanne gegen
+# Luftlinie). Deckt die Rundung persistierter km-Werte ab -- alles darueber
+# ist ein Nachbearbeitungs-Artefakt und macht die Etappe unvermessen.
+_MEASURED_SLACK_KM = 0.01
+
+# Issue #2051 S2a: Abstand ueber der INCA-Zellgroesse (1 km), Deckel deckt bis
+# zu 12 km Reststrecke ab (ueber dem Etappen-Median 9,2 km). Downstream-Leser
+# referenzieren die MODUL-Variable, kein Bindezeit-Import (Drift-Schutz #2009).
+RADAR_ZONE_POINT_SPACING_KM = 2.0
+RADAR_ZONE_MAX_POINTS = 6
 
 
 def _parse_hhmm(value: str) -> Optional[time]:
@@ -105,6 +116,67 @@ def _interpolate_missing_times(known_times: List[Optional[time]]) -> List[Option
     return result
 
 
+def stage_measured_distances(waypoints: List) -> Optional[List[float]]:
+    """Gemessene Wegstrecke je Wegpunkt, auf den Etappenstart normiert
+    (Issue #2036, AC-8/AC-9/AC-14) -- oder ``None``, wenn die Etappe als
+    UNVERMESSEN gilt.
+
+    Eine Etappe ist nur dann vermessen, wenn
+
+    1. JEDER ihrer Wegpunkte einen Wert traegt. ``0.0`` ist dabei eine
+       gueltige Messung (Etappenstart), ``None`` heisst "nicht gemessen" --
+       ein einziges ``None`` macht die ganze Etappe unvermessen (AC-14);
+    2. die Werte STRIKT monoton steigen; und
+    3. jede Teilstrecke mindestens so gross ist wie die Luftlinie zwischen
+       den beiden Wegpunkten -- ein Track kann nie kuerzer sein als die
+       direkte Verbindung (AC-8).
+
+    Verletzt EIN Paar die Regel, gilt die GESAMTE Etappe als unvermessen;
+    eine teilweise vermessene Etappe waere eine Ortsangabe, die an einer
+    Stelle stimmt und an der naechsten still falsch ist.
+
+    Die Normierung auf den Etappenstart ist PO-Vorgabe: "jeder Tag zaehlt
+    neu seine Kilometer" -- auch wenn die Messung aus einer durchlaufenden
+    Gesamt-GPX ueber alle Etappen stammt (AC-9).
+    """
+    values = [getattr(wp, "distance_from_start_km", None) for wp in waypoints]
+    if not values or any(v is None for v in values):
+        return None
+    for i in range(len(values) - 1):
+        span = values[i + 1] - values[i]
+        if span <= 0:  # nicht strikt monoton
+            return None
+        luftlinie = haversine_km(
+            waypoints[i].lat, waypoints[i].lon,
+            waypoints[i + 1].lat, waypoints[i + 1].lon,
+        )
+        # 10 m Zugabe faengt die Rundung gespeicherter Werte ab, nicht mehr.
+        if span + _MEASURED_SLACK_KM < luftlinie:
+            return None
+    base = values[0]
+    return [v - base for v in values]
+
+
+def measured_segment_km(segments) -> dict:
+    """Gemessene km-Spanne je Segment-Kennung (Issue #2036) -- NUR fuer
+    Segmente, deren Distanz aus echter Wegstrecke stammt.
+
+    Speist die Ortsangabe der amtlichen Warnung aus DERSELBEN Quelle wie
+    Nowcast- und Abweichungsalarm (Teilungs-Invariante #1744, AC-3).
+    Nimmt ``SegmentWeatherData`` ODER blanke ``TripSegment`` entgegen.
+    """
+    result: dict = {}
+    for entry in segments or ():
+        seg = getattr(entry, "segment", entry)
+        if not getattr(seg, "distance_measured", False):
+            continue
+        result[str(seg.segment_id)] = (
+            seg.start_point.distance_from_start_km,
+            seg.end_point.distance_from_start_km,
+        )
+    return result
+
+
 def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegment]:
     """Convert Trip waypoints to TripSegment DTOs for a given date.
 
@@ -168,6 +240,10 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
 
     cumulative_time = default_start
     cumulative_dist_km = 0.0
+    # Issue #2036: gemessene, auf den Etappenstart normierte Wegstrecke --
+    # `None`, wenn die Etappe unvermessen ist. Dann bleibt ALLES beim
+    # bisherigen Luftlinien-Verhalten (Terminschutz AC-10).
+    measured = stage_measured_distances(waypoints)
 
     for i in range(len(waypoints) - 1):
         wp1 = waypoints[i]
@@ -223,6 +299,17 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
         elev2 = wp2.elevation_m if wp2.elevation_m else 0
         elev_diff = elev2 - elev1
         dist_km = haversine_km(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
+        # Issue #2036: gemessene Spanne schlaegt Luftlinie -- aber NUR wenn
+        # die ganze Etappe vermessen ist. `km_start`/`km_end` sind die Werte,
+        # die spaeter als Ortsangabe erscheinen duerfen.
+        if measured is not None:
+            km_start = measured[i]
+            km_end = measured[i + 1]
+            seg_dist_km = round(km_end - km_start, 1)
+        else:
+            km_start = cumulative_dist_km
+            km_end = cumulative_dist_km + round(dist_km, 1)
+            seg_dist_km = round(dist_km, 1)
 
         # Issue #1468 (E2): das Auswertungsfenster der Tour reist mit dem
         # Segment -- jeder spaetere Aggregations-Aufrufer erbt es dadurch.
@@ -232,24 +319,25 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
                 lat=wp1.lat,
                 lon=wp1.lon,
                 elevation_m=float(elev1),
-                distance_from_start_km=cumulative_dist_km,
+                distance_from_start_km=km_start,
             ),
             end_point=GPXPoint(
                 lat=wp2.lat,
                 lon=wp2.lon,
                 elevation_m=float(elev2),
-                distance_from_start_km=cumulative_dist_km + round(dist_km, 1),
+                distance_from_start_km=km_end,
             ),
             start_time=start_dt,
             end_time=end_dt,
             duration_hours=duration_hours,
-            distance_km=round(dist_km, 1),
+            distance_km=seg_dist_km,
             ascent_m=float(max(0, elev_diff)),
             descent_m=float(max(0, -elev_diff)),
             day_window_start_hour=_win_start,
             day_window_end_hour=_win_end,
+            distance_measured=measured is not None,  # Issue #2036
         )
-        cumulative_dist_km += round(dist_km, 1)
+        cumulative_dist_km = km_end
         segments.append(segment)
 
     # Destination segment (Zielort)
@@ -324,6 +412,9 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
                 elevation_m=elev,
                 distance_from_start_km=cumulative_dist_km,
             ),
+            # Issue #2036: Das Ziel-Segment traegt km_from == km_to und behaelt
+            # deshalb im Renderer sein "🏁 Ziel" (AC-4) -- das Flag sagt nur,
+            # WOHER die Zahl stammt.
             start_time=arrival_time,
             end_time=dest_end_time,
             duration_hours=(dest_end_time - arrival_time).total_seconds() / 3600,
@@ -336,6 +427,7 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
             # in ORTSZEIT filtert und nicht am Segment-Ende haengt.
             day_window_start_hour=_win_start,
             day_window_end_hour=_win_end,
+            distance_measured=measured is not None,  # Issue #2036
         )
         segments.append(destination_segment)
 
@@ -411,3 +503,384 @@ def resolve_current_segment(
 
     preview = select_active_segment(segments_today, now_utc)
     return (preview, today) if preview is not None else None
+
+
+# Issue #2017: die Vorwaertssuche laedt hoechstens EINEN Folgetag nach. Die im
+# Betrieb verwendeten Zieloffsets sind <= 90 Minuten (NOWCAST_HORIZON_MIN // 2),
+# ein zweiter Tagessprung ist damit strukturell unerreichbar.
+#
+# Die Zahl ist eine OBERGRENZE, kein Richtwert: jeder zusaetzliche Tag kostet
+# eine weitere ``convert_trip_to_segments()``-Konversion pro Aufruf und wuerde
+# die Position eines Wanderers ueber eine ganze Nacht hinweg fortschreiben, statt
+# ihn an der Unterkunft zu belassen. Beide Enden sind bewacht:
+# ``test_ac6_crosses_day_boundary`` faellt bei 0, ``test_forward_search_stops_
+# after_one_lookahead_day`` bei >= 2. Wer die Zahl erhoeht, braucht dafuer einen
+# Aufrufer mit einem Zieloffset > 1 Tag — den gibt es heute nicht.
+_LOOKAHEAD_DAYS = 1
+
+
+def _interpolate_point(seg: TripSegment, at: datetime) -> GPXPoint:
+    """Linear zwischen ``seg.start_point`` und ``seg.end_point`` nach dem
+    Zeitanteil von ``at``.
+
+    Dieselbe Naeherung wie die Zeit-Interpolation in
+    ``_interpolate_missing_times()`` — dort fuer Zeiten, hier fuer Geometrie.
+    """
+    span_s = (seg.end_time - seg.start_time).total_seconds()
+    p = 0.0 if span_s <= 0 else (at - seg.start_time).total_seconds() / span_s
+    # DEFENSIV, heute unerreichbar (Adversary F003): beide Aufrufstellen in
+    # ``position_at_time()`` schliessen ueber die Verzweigung davor bereits
+    # ``p < 0`` bzw. ``p > 1`` aus. Die Klemme bleibt trotzdem stehen, weil
+    # Scheibe B (#2017 Wiring) neue Aufrufer bringt und ein ungeklemmter
+    # Fortschritt dort still EXTRAPOLIEREN wuerde — eine Position weit vor oder
+    # hinter der Etappe, die kein Aufrufer als Fehler erkennen koennte.
+    # Das Grenzverhalten von ``position_at_time()`` selbst bewacht
+    # ``test_ac11_boundary_clamp_regression`` (Vorschau-Zweig unten,
+    # Fail-soft-Klemmung oben) — NICHT diese Zeile.
+    p = max(0.0, min(1.0, p))
+
+    a, b = seg.start_point, seg.end_point
+    if a.elevation_m is None and b.elevation_m is None:
+        elev = None
+    else:
+        elev_a = a.elevation_m if a.elevation_m is not None else b.elevation_m
+        elev_b = b.elevation_m if b.elevation_m is not None else a.elevation_m
+        elev = elev_a + p * (elev_b - elev_a)
+
+    return GPXPoint(
+        lat=a.lat + p * (b.lat - a.lat),
+        lon=a.lon + p * (b.lon - a.lon),
+        elevation_m=elev,
+        distance_from_start_km=(
+            a.distance_from_start_km
+            + p * (b.distance_from_start_km - a.distance_from_start_km)
+        ),
+    )
+
+
+def _fix_points(
+    trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+    user_id: Optional[str],
+) -> Optional[List[Tuple[GPXPoint, datetime]]]:
+    """Punkte ab einem gueltigen GPS-Fix (Issue #2327, ADR-0102) -- oder
+    ``None``, dann gilt unveraendert die Planposition.
+
+    Gueltig nur mit ``user_id`` (nie nutzeruebergreifend), fuer denselben
+    Trip und dasselbe Etappen-Datum und solange die Etappe laeuft -- auch
+    in einer geplanten Rast (Segment ohne Strecke). Erst nach Ankunft
+    (Ziel-Segment) oder am Folgetag faellt die Quelle auf die Planposition
+    zurueck (Spec AC-5).
+
+    Der Fix friert die Position NICHT ein (Spec AC-4, Changelog 26.10.): bei
+    ``at <= observed_at`` ist der erste Punkt der gesnappte Fix selbst,
+    danach wandert er nach Plan-Tempo weiter (``_fix_fortschreiben``) und
+    endet spaetestens am Etappenende. Die Folgepunkte laufen wie bei
+    ``points_from_km()`` ab dieser Position entlang der Reststrecke; ihre
+    Durchgangszeiten sind die Planzeiten, um denselben Versatz verschoben.
+    """
+    if not user_id or not isinstance(active.segment_id, int):
+        return None
+    from services.position_fix import load_position_fix
+
+    fix = load_position_fix(user_id, getattr(trip, "id", None), segment_date)
+    if fix is None:
+        return None
+    bewegt = [
+        s for s in convert_trip_to_segments(trip, segment_date)
+        if isinstance(s.segment_id, int) and s.distance_km > 0.0
+    ]
+    treffer = _fix_auf_segment(fix, bewegt)
+    if treffer is None:
+        return None
+    seg, frac = treffer
+    vorlauf = _seit_meldung(fix, at)
+    if vorlauf > timedelta(0):
+        seg, frac = _fix_fortschreiben(bewegt, seg, frac, vorlauf)
+        start = _lerp_point(seg.start_point, seg.end_point, frac)
+    else:
+        auf_linie = _lerp_point(seg.start_point, seg.end_point, frac)
+        start = GPXPoint(
+            lat=fix["lat"], lon=fix["lon"], elevation_m=auf_linie.elevation_m,
+            distance_from_start_km=auf_linie.distance_from_start_km,
+        )
+    rest_km = (1.0 - frac) * seg.distance_km
+    if rest_km < RADAR_ZONE_POINT_SPACING_KM:
+        return [(start, at)]
+    anzahl = min(RADAR_ZONE_MAX_POINTS, int(rest_km // RADAR_ZONE_POINT_SPACING_KM) + 1)
+    # Plan-Restzeit ab der Position (Planzeit, nicht Wanduhr), auf ``at`` verschoben.
+    restzeit = (1.0 - frac) * (seg.end_time - seg.start_time)
+    ergebnis = [(start, at)]
+    for i in range(1, anzahl):
+        anteil = (i * RADAR_ZONE_POINT_SPACING_KM) / rest_km
+        ergebnis.append((_lerp_point(start, seg.end_point, anteil), at + anteil * restzeit))
+    return ergebnis
+
+
+def _fix_auf_segment(
+    fix: dict, bewegt: List[TripSegment],
+) -> Optional[Tuple[TripSegment, float]]:
+    """Bewegtes Segment, dessen Strecke dem Fix am naechsten liegt, und der
+    Streckenanteil ``frac`` des Lotfusspunkts darauf (Issue #2327)."""
+    best = None
+    for seg in bewegt:
+        d_m, frac = point_to_segment_m(
+            fix["lat"], fix["lon"], seg.start_point.lat, seg.start_point.lon,
+            seg.end_point.lat, seg.end_point.lon,
+        )
+        if best is None or d_m < best[0]:
+            best = (d_m, frac, seg)
+    return None if best is None else (best[2], best[1])
+
+
+def _seit_meldung(fix: dict, at: datetime) -> timedelta:
+    """Zeit zwischen Meldung (``observed_at`` des Fixes) und ``at``; nie
+    negativ -- vor dem Meldezeitpunkt wird nicht rueckwaerts gerechnet.
+    Unlesbarer Zeitstempel -> 0 (der Fix gilt dann unveraendert)."""
+    try:
+        gemeldet = datetime.fromisoformat(str(fix.get("observed_at")))
+        return max(at - gemeldet, timedelta(0))
+    except (TypeError, ValueError):
+        return timedelta(0)
+
+
+def _fix_fortschreiben(
+    bewegt: List[TripSegment], seg: TripSegment, frac: float, vorlauf: timedelta,
+) -> Tuple[TripSegment, float]:
+    """Fix-Position um ``vorlauf`` Plan-Tempo entlang der Strecke weiterschieben
+    (Issue #2327, AC-4): der Fix entspricht der Planzeit ``seg.start_time +
+    frac * Segmentdauer``; von dort laeuft die Planzeit um ``vorlauf`` weiter
+    -- dieselbe Segment-Zeitgeometrie wie ``_interpolate_point()``, kein
+    zweites Zeitmodell, keine km-Skala. Begrenzt auf das Etappenende (Ende
+    des letzten bewegten Segments des Etappen-Datums)."""
+    planzeit = seg.start_time + frac * (seg.end_time - seg.start_time) + vorlauf
+    for kandidat in bewegt:
+        if planzeit <= kandidat.end_time:
+            span_s = (kandidat.end_time - kandidat.start_time).total_seconds()
+            p = 0.0 if span_s <= 0 else (planzeit - kandidat.start_time).total_seconds() / span_s
+            return kandidat, max(0.0, min(1.0, p))
+    return bewegt[-1], 1.0
+
+
+def position_at_time(
+    trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+    *, user_id: Optional[str] = None,
+) -> GPXPoint:
+    """Interpolierte Position innerhalb/nach dem aktiven Segment zum Zeitpunkt `at`.
+
+    Onset-frei (#2017): `at` ist ein FESTER Zeitpunkt (Fenstermitte), kein aus
+    dem Nowcast-Ergebnis abgeleiteter — sonst Zirkelschluss (siehe Spec).
+
+    Die Segmentwahl bleibt beim Aufrufer: ``active``/``segment_date`` kommen
+    unveraendert aus ``resolve_current_segment()`` bzw. der lokalen Auswahl in
+    ``trip_report_scheduler.py``. Geteilt wird ausschliesslich die
+    Positionsberechnung.
+
+    Fail-soft: der Aufrufer bekommt in JEDEM Fall einen ``GPXPoint`` — laeuft
+    ``at`` ueber alle bekannten Segmente hinaus, wird auf den zuletzt
+    erreichten ``end_point`` geklemmt und der Grund geloggt.
+
+    Die Hoehe wird roh interpoliert (keine Rundung) — die Normalisierung auf
+    ganze Meter fuer ``get_nowcast(elevation_m=...)`` wohnt an der Aufrufstelle.
+
+    Issue #2327 (ADR-0102): mit ``user_id`` und gueltigem GPS-Fix ist das
+    Ergebnis der gesnappte Fix, ab dem Meldezeitpunkt nach Plan-Tempo
+    fortgeschrieben und auf das Etappenende begrenzt (``_fix_points``);
+    ohne ``user_id`` bleibt alles bit-identisch zum Stand davor.
+    """
+    fix_punkte = _fix_points(trip, active, segment_date, at, user_id)
+    if fix_punkte is not None:
+        return fix_punkte[0][0]
+
+    # 1. Ortsfestes Ziel-Segment: dort bewegt sich der Wanderer nicht.
+    if not isinstance(active.segment_id, int) or active.distance_km == 0.0:
+        return active.start_point
+
+    # 2. Vorschau-Zweig: noch nicht losgelaufen → Fortschritt 0.
+    if at <= active.start_time:
+        return active.start_point
+
+    # 3. Innerhalb des aktiven Segments.
+    if at <= active.end_time:
+        return _interpolate_point(active, at)
+
+    # 4. Vorwaertssuche ueber Segment- und Tagesgrenze. Bereits durchlaufene
+    #    Segmente werden ueber ihr Ende erkannt, nicht ueber Objektidentitaet —
+    #    ``active`` stammt aus einer frueheren Konversion und ist mit den hier
+    #    frisch erzeugten Segmenten wertgleich, nicht identisch.
+    last_end_time = active.end_time
+    last_end_point = active.end_point
+    for day_offset in range(_LOOKAHEAD_DAYS + 1):
+        day = segment_date + timedelta(days=day_offset)
+        for seg in convert_trip_to_segments(trip, day):
+            # ``<=`` und nicht ``<``: der Gleichstand ist der Regelfall, denn
+            # beim ersten Durchlauf trifft die Liste ``active`` selbst wieder —
+            # dessen Ende IST ``last_end_time``. Mit ``<`` bliebe genau dieses
+            # Segment stehen; folgenlos waere das, weil ``at > last_end_time``
+            # gilt und es damit weder ``at`` enthalten (``at > seg.end_time``)
+            # noch nach ``at`` beginnen kann — es wuerde nur ``last_end_point``
+            # auf seinen eigenen, unveraenderten Wert setzen. Das ist kein
+            # Zufall, sondern erschoepfend: die Segmente EINES Tages haben
+            # strikt steigende Enden (jedes endet, wo das naechste beginnt;
+            # nicht vorwaerts laufende Paare fallen im Kollaps-Guard oben raus),
+            # und Segmente verschiedener Tage koennen zeitlich nicht
+            # zusammenfallen. Ein zweites Segment mit demselben Ende, aber einem
+            # ANDEREN Endpunkt — der einzige Fall, in dem die Wahl sichtbar
+            # wuerde — kann hier also nicht auftreten (Adversary F001).
+            if seg.end_time <= last_end_time:
+                continue  # liegt vollstaendig hinter uns
+            if at < seg.start_time:
+                # 5. Luecke zwischen zwei Segmenten (Tagesende/Unterkunft):
+                #    der Wanderer bleibt am zuletzt erreichten Punkt.
+                logger.debug(
+                    "position_at_time: %s liegt in der Luecke vor Segment %s "
+                    "(%s) — klemme auf letzten Endpunkt",
+                    at.isoformat(), seg.segment_id, day.isoformat(),
+                )
+                return last_end_point
+            if at <= seg.end_time:
+                return _interpolate_point(seg, at)
+            last_end_time = seg.end_time
+            last_end_point = seg.end_point
+
+    # 5. Fail-soft: kein Folgesegment, kein Folgetag (Tour zu Ende, Ruhetag
+    #    ohne Stage, uebersprungene Segmentkette) — klemmen statt werfen.
+    logger.warning(
+        "position_at_time: %s liegt hinter dem letzten bekannten Segment "
+        "(Trip %s, ab %s, %d Tag(e) vorausgeschaut) — klemme auf letzten "
+        "Endpunkt (%.4f, %.4f)",
+        at.isoformat(), getattr(trip, "id", "?"), segment_date.isoformat(),
+        _LOOKAHEAD_DAYS, last_end_point.lat, last_end_point.lon,
+    )
+    return last_end_point
+
+
+def _lerp_point(a: GPXPoint, b: GPXPoint, frac: float) -> GPXPoint:
+    """Punkt zwischen ``a`` und ``b`` beim Streckenanteil ``frac`` (Issue #2051
+    S2a). Dieselbe lineare Naeherung wie ``_interpolate_point()`` — dort nach
+    dem Zeitanteil, hier nach dem Streckenanteil."""
+    frac = max(0.0, min(1.0, frac))
+    if a.elevation_m is None and b.elevation_m is None:
+        elev = None
+    else:
+        elev_a = a.elevation_m if a.elevation_m is not None else b.elevation_m
+        elev_b = b.elevation_m if b.elevation_m is not None else a.elevation_m
+        elev = elev_a + frac * (elev_b - elev_a)
+    return GPXPoint(
+        lat=a.lat + frac * (b.lat - a.lat),
+        lon=a.lon + frac * (b.lon - a.lon),
+        elevation_m=elev,
+        distance_from_start_km=(
+            a.distance_from_start_km
+            + frac * (b.distance_from_start_km - a.distance_from_start_km)
+        ),
+    )
+
+
+def _remaining_km(active: TripSegment, at: datetime) -> float:
+    """Reststrecke der AKTIVEN Etappe ab ``at`` (Issue #2051 S2a).
+
+    Ueber den Zeitanteil des Segments, nicht ueber die Luftlinie zum Endpunkt:
+    ``distance_km`` ist auf vermessenen Etappen die echte Wegstrecke, eine
+    Luftlinie waere dort systematisch zu kurz. Liegt ``at`` hinter dem
+    Segmentende (die Vorwaertssuche von ``position_at_time()`` greift dann),
+    ist die Reststrecke 0 — es bleibt beim heutigen Einzelabruf.
+    """
+    if not isinstance(active.segment_id, int) or active.distance_km <= 0.0:
+        return 0.0
+    span_s = (active.end_time - active.start_time).total_seconds()
+    p = 0.0 if span_s <= 0 else (at - active.start_time).total_seconds() / span_s
+    p = max(0.0, min(1.0, p))
+    return (1.0 - p) * active.distance_km
+
+
+def points_along_remaining_route(
+    trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+    *, user_id: Optional[str] = None,
+) -> List[GPXPoint]:
+    """Bis zu ``RADAR_ZONE_MAX_POINTS`` Punkte im Abstand
+    ``RADAR_ZONE_POINT_SPACING_KM`` entlang der Reststrecke der AKTIVEN Etappe
+    ab ``at`` (Issue #2051 S2a).
+
+    Der ERSTE Punkt ist unveraendert ``position_at_time()`` — der heutige
+    Messpunkt (#2017). Liegt die Reststrecke unter dem Punktabstand, bleibt es
+    bei genau diesem einen Punkt, das Verhalten ist dann bit-identisch zum
+    Stand vor dieser Scheibe.
+
+    Die Platzierung der Folgepunkte laeuft ueber die Geometrie (lineare
+    Interpolation zum Endpunkt), nicht ueber ``distance_from_start_km`` —
+    unvermessene Etappen tragen dort keine echte Wegstrecke, gemessen wird
+    aber ueberall (E3). Die km-Zahl einer Zone erscheint erst im Text, wenn
+    die Etappe vermessen ist.
+
+    Issue #2261: duenne Huelle um ``points_with_passage_times()`` — EINE
+    Geometrie, keine zweite Kopie, die abdriften koennte.
+    """
+    return [
+        p for p, _t in points_with_passage_times(trip, active, segment_date, at, user_id=user_id)
+    ]
+
+
+def points_with_passage_times(
+    trip: "Trip", active: TripSegment, segment_date: date, at: datetime,
+    *, user_id: Optional[str] = None,
+) -> List[Tuple[GPXPoint, datetime]]:
+    """Dieselben Punkte wie ``points_along_remaining_route()``, je Punkt mit
+    der Durchgangszeit laut Zeitplan (Issue #2261 A-1, R3 — Messort zur
+    Ereigniszeit).
+
+    Annahme wie ``_remaining_km()``: lineare Zeitinterpolation ueber den
+    Streckenanteil. ``t0 = max(at, active.start_time)``, ``p_k = t0 +
+    Anteil_k * (active.end_time - t0)`` mit ``Anteil_k = k * Punktabstand /
+    Reststrecke`` (0 fuer den ersten Punkt). Quelle ist die Planposition --
+    AUSSER ein plausibler GPS-Fix aus einer Premium-SMS liegt fuer diesen
+    Nutzer, Trip und dieses Etappen-Datum vor (Issue #2327, ADR-0102): dann
+    beginnen die Punkte am gesnappten Fix, ab dem Meldezeitpunkt nach
+    Plan-Tempo fortgeschrieben und auf das Etappenende begrenzt
+    (``_fix_points``).
+    """
+    fix_punkte = _fix_points(trip, active, segment_date, at, user_id)
+    if fix_punkte is not None:
+        return fix_punkte
+    start = position_at_time(trip, active, segment_date, at)
+    t0 = max(at, active.start_time)
+    rest_km = _remaining_km(active, at)
+    if rest_km < RADAR_ZONE_POINT_SPACING_KM:
+        return [(start, t0)]
+    anzahl = min(
+        RADAR_ZONE_MAX_POINTS,
+        int(rest_km // RADAR_ZONE_POINT_SPACING_KM) + 1,
+    )
+    restzeit = active.end_time - t0
+    ergebnis = [(start, t0)]
+    for i in range(1, anzahl):
+        anteil = (i * RADAR_ZONE_POINT_SPACING_KM) / rest_km
+        ergebnis.append(
+            (_lerp_point(start, active.end_point, anteil), t0 + anteil * restzeit)
+        )
+    return ergebnis
+
+
+def points_from_km(
+    trip: "Trip", active: TripSegment, segment_date: date, start_km: float,
+) -> List[GPXPoint]:
+    """Wie ``points_along_remaining_route()``, aber der Startpunkt ist die vom
+    Nutzer genannte, STAGE-kumulative Kilometrierung (Issue #2051 S4, E5) --
+    nicht die Planposition. Aufrufer prueft VORHER ``active.distance_measured``
+    und die Bereichsgrenzen ``[active.start_point.distance_from_start_km,
+    active.end_point.distance_from_start_km]`` (E5); diese Funktion nimmt
+    ``start_km`` innerhalb dieses Bereichs als gegeben an."""
+    seg_start_km = active.start_point.distance_from_start_km
+    seg_end_km = active.end_point.distance_from_start_km
+    frac = (
+        (start_km - seg_start_km) / (seg_end_km - seg_start_km)
+        if seg_end_km > seg_start_km else 0.0
+    )
+    start = _lerp_point(active.start_point, active.end_point, frac)
+    rest_km = seg_end_km - start_km
+    if rest_km < RADAR_ZONE_POINT_SPACING_KM:
+        return [start]
+    anzahl = min(RADAR_ZONE_MAX_POINTS, int(rest_km // RADAR_ZONE_POINT_SPACING_KM) + 1)
+    return [start] + [
+        _lerp_point(start, active.end_point, (i * RADAR_ZONE_POINT_SPACING_KM) / rest_km)
+        for i in range(1, anzahl)
+    ]

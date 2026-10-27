@@ -5,31 +5,36 @@
 	// Slice 3 (context="route"): ersetzt AlertsTab.svelte + AlertMetricLevelTable.svelte
 	// im Trip-Editor — sofortiges PUT je Aenderung ueber saveController.
 	// Slice 4 (context="vergleich"): ersetzt Step3Idealwerte.svelte im
-	// Compare-Editor (Wizard Step 3 UND Editor-Tab, PO-B) — schreibt REAKTIV in
-	// die compare-wizard-state-Runen (ws.corridors/idealRanges/activeMetricKeys/
-	// metricAlertLevels); die eigentliche Persistenz uebernimmt der bestehende
-	// "Speichern"-Button/Dirty-Flow von CompareEditor.svelte (kein eigenes PUT).
+	// Compare-Editor. Issue #2276 S6d: der Baustein liest/schreibt KEINEN
+	// Wizard-Zustand mehr, sondern meldet jede Aenderung ueber seine vier
+	// Rueckrufe nach oben (corridors/idealRanges/activeMetricKeys/
+	// metricAlertLevels); im Hub speichert er zusaetzlich selbst (S3).
 	//
 	// Band-Drag (Pointer-Capture, Port aus JSX-Zeilen 107-179): testbarer Kern
 	// (Pointer->Wert, Clamping) liegt in corridorEditorState.ts, hier nur die
 	// duenne DOM-Event-Verdrahtung (PO-Vorgabe: Geste muss funktionieren) —
 	// funktioniert unveraendert auch fuer den Ordinal-Modus (scale=[0,2], step=1).
-	import { getContext } from 'svelte';
-	import { Eyebrow } from '$lib/components/atoms';
+	import { untrack } from 'svelte';
+	import { Eyebrow } from '$lib/components/atoms'; import Infobox from '$lib/components/molecules/Infobox.svelte'; import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
 	import { api } from '$lib/api';
-	import { toCompareProfile, type Trip, type SensLevel, type Corridor } from '$lib/types';
+	import { baueTripSpeicherung } from '../tripSpeicherung.ts';
+	import { toCompareProfile, type ActivityProfile, type Trip, type SensLevel, type Corridor, type ComparePreset } from '$lib/types';
+	import {
+		corridorZustandsBruecke,
+		erstelleWertebereicheVergleichSpeicherung,
+		wertebereicheVergleichSpeicherungAktiv
+	} from './wertebereicheVergleichSpeicherung.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
 		saveGateDecision, supportsMark, countEffectiveMarks, type CorridorRowState,
 		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
-		type RouteMetricDef, type CompareMetricDef, type ProfileKey,
+		type RouteMetricDef, type CompareMetricDef, type ProfileKey, type IdealRange,
 	} from './corridorEditorState.ts';
 	import { loadCompareMetricCatalog, loadRouteExtraMetricDefs } from './compareMetricCatalogLoader.ts';
-	// Issue #1366 F002: `ws.activeMetricKeys` ist jetzt `string[] | null` ("nie
+	// Issue #1366 F002: `activeMetricKeys` ist `string[] | null` ("nie
 	// eingestellt" vs. "bewusst leer") -- materialisiert lesen, NIE roh
 	// spreaden/an buildCompareCorridorSavePayload durchreichen (das wuerde
 	// `null` still zu `[]` = "bewusst leer" machen).
@@ -37,38 +42,111 @@
 
 	interface Props {
 		context?: 'route' | 'vergleich';
+		/** Issue #2277 S2a: Anlege-Modus fuer context="route" (/trips/new) —
+		 *  schaltet den Selbst-Speicher-Pfad (PUT via saveController) ab, meldet
+		 *  Aenderungen stattdessen ausschliesslich ueber onCorridorsChange. */
+		createMode?: boolean; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
 		trip?: Trip;
 		onTripUpdate?: (t: Trip) => void;
 		saveController?: SaveStatus;
+		/** Issue #2276 S3: der vergleich-Zweig speichert selbst (Hub). Ohne `preset`
+		 *  (Anlege-Seite) bleibt der Zweig inaktiv. */
+		preset?: ComparePreset;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
+		onCompareUpdate?: (updated: ComparePreset) => void;
+		/** Issue #2276 S6d: der vergleich-Zweig bekommt seinen Stand als WERTPROPS
+		 *  statt aus `getContext('compare-wizard-state')`. Das Buendel baut
+		 *  `compare/corridorPropsAus.ts`; alle drei Vergleichs-Mounts speisen es
+		 *  identisch ein, der route-Zweig laesst es weg. */
+		corridors?: Corridor[];
+		idealRanges?: Record<string, IdealRange>;
+		/** `null` = nie eingestellt (Vorgabemenge), `[]` = bewusst leer (#1366 F002). */
+		activeMetricKeys?: string[] | null;
+		metricAlertLevels?: Record<string, string>;
+		/** Anlege-Merkmale des Wizards — sie steuern allein den Profil-Prefill. */
+		isEditMode?: boolean;
+		activityProfile?: ActivityProfile | null;
+		onCorridorsChange?: (v: Corridor[]) => void;
+		onIdealRangesChange?: (v: Record<string, IdealRange>) => void;
+		onActiveMetricKeysChange?: (v: string[] | null) => void;
+		onMetricAlertLevelsChange?: (v: Record<string, string>) => void;
 	}
-	let { context = 'route', trip, onTripUpdate, saveController }: Props = $props();
+	let {
+		context = 'route',
+		createMode = false, showInfobox = false,
+		trip,
+		onTripUpdate,
+		saveController,
+		preset,
+		enqueueHubWrite,
+		onCompareUpdate,
+		corridors,
+		idealRanges,
+		activeMetricKeys,
+		metricAlertLevels,
+		isEditMode,
+		activityProfile,
+		onCorridorsChange,
+		onIdealRangesChange,
+		onActiveMetricKeysChange,
+		onMetricAlertLevelsChange
+	}: Props = $props();
 
-	const ws = context === 'vergleich' ? getContext<CompareWizardState>('compare-wizard-state') : undefined;
+	// Issue #2276 S6d: der Speicherweg braucht eine lebendige, mutierbare
+	// Referenz — das Diff-Gate liest bei jedem Melden frisch, der Rollback
+	// schreibt feldweise zurueck. Die Bruecke bildet genau das aus den Wertprops
+	// nach, ohne den Wizard-Zustand zu kennen.
+	const corridorZustand = corridorZustandsBruecke(
+		() => ({ corridors, idealRanges, activeMetricKeys, metricAlertLevels }),
+		(feld, wert) => {
+			if (feld === 'corridors') onCorridorsChange?.(wert as Corridor[]);
+			else if (feld === 'idealRanges') onIdealRangesChange?.(wert as Record<string, IdealRange>);
+			else if (feld === 'activeMetricKeys') onActiveMetricKeysChange?.(wert as string[] | null);
+			else if (feld === 'metricAlertLevels')
+				onMetricAlertLevelsChange?.(wert as Record<string, string>);
+		}
+	);
+
+	// Issue #2276 S3: EINZIGER Speicherweg des vergleich-Zweigs im Hub (Muster
+	// AlarmeTab, S2). Baseline beim Mount — CompareTabs mountet erst nach der
+	// Hydration (Design Punkt 6). Anlege-Seite/Trip: inaktiv (AC-9, AC-12).
+	const vergleichSpeicherung = untrack(() =>
+		wertebereicheVergleichSpeicherungAktiv({ context, zustand: corridorZustand, preset, saveController })
+			? erstelleWertebereicheVergleichSpeicherung({
+					client: api,
+					zustand: corridorZustand,
+					preset: () => preset!,
+					enqueueHubWrite: (fn) => (enqueueHubWrite ? enqueueHubWrite(fn) : fn()),
+					onCompareUpdate: (updated) => onCompareUpdate?.(updated),
+					saveController: saveController!
+				})
+			: null
+	);
 
 	// AC-10: "zuletzt bekannte Stufe" bezieht sich auf den beim Mount geladenen
 	// Stand, nicht auf einen laufenden Zwischenstand dieser Session — gilt fuer
 	// beide Kontexte (sonst zombie-Level nach mehrfachem notify-Toggle, F002/Slice4).
-	const originalLevels = (
-		context === 'vergleich'
-			? (ws?.metricAlertLevels as Record<string, SensLevel> | undefined)
-			: trip?.display_config?.metric_alert_levels
-	) ?? {} as Record<string, SensLevel>;
+	const originalLevels: Record<string, SensLevel> =
+		(metricAlertLevels as Record<string, SensLevel> | undefined) ??
+		trip?.display_config?.metric_alert_levels ??
+		{};
 
 	// F002-Fix (Adversary CRITICAL, Slice 4): frozen Mount-Snapshot von
 	// active_metrics — Bestandserhalt beim "+ Metrik hinzufuegen" (s. add()).
 	// Analog originalLevels: NICHT der laufende Zwischenstand, sonst wuerde ein
 	// zweiter Hinzufuegen-Klick faelschlich wieder "neu" wirken.
-	const originalActiveMetricKeys: string[] =
-		context === 'vergleich' ? [...materializeActiveMetricKeys(ws?.activeMetricKeys ?? null)] : [];
+	const originalActiveMetricKeys: string[] = [
+		...materializeActiveMetricKeys(activeMetricKeys ?? null)
+	];
 
 	// Team-Lead-Korrektur (PO-Linie „nichts Neues erfinden — wie heute"):
 	// Wizard-Create (kein Edit, noch keine Corridors) prefillt wie das alte
 	// Step3Idealwerte aus dem Aktivitaetsprofil — sonst startet der Editor im
 	// Create-Fluss leer (UX-Verschlechterung ggü. heute).
-	const isFreshCompareCreate = context === 'vergleich' && !ws?.isEditMode && (ws?.corridors ?? []).length === 0;
+	const isFreshCompareCreate = context === 'vergleich' && !isEditMode && (corridors ?? []).length === 0;
 	function computeInitialCompare(defs: CompareMetricDef[]): { rows: CorridorRowState[]; poolLeft: CompareMetricDef[]; unknownCorridors: Corridor[] } {
-		if (!isFreshCompareCreate) return buildComparePool(ws?.corridors ?? [], defs);
-		const profileKey = ws?.activityProfile ? (toCompareProfile(ws.activityProfile) as ProfileKey) : 'ALLGEMEIN';
+		if (!isFreshCompareCreate) return buildComparePool(corridors ?? [], defs);
+		const profileKey = activityProfile ? (toCompareProfile(activityProfile) as ProfileKey) : 'ALLGEMEIN';
 		const prefillRows = buildComparePrefillRows(profileKey, defs);
 		const poolLeft = defs.filter((d) => !prefillRows.some((r) => r.metric === d.metric));
 		return { rows: prefillRows, poolLeft, unknownCorridors: [] };
@@ -160,6 +238,20 @@
 			});
 	});
 
+	// Issue #2277 S2a (AC-7): im Anlege-Modus ist der Reiter dauerhaft gemountet,
+	// bevor der Nutzer den Wetter-Metriken-Reiter je besucht hat — der einmalige
+	// Lade-Effekt oben wuerde das "+ Metrik"-Angebot sonst auf dem Zufalls-
+	// Zeitpunkt des ersten Katalog-Ladens einfrieren. Dieser Effekt rechnet
+	// `poolLeft` bei jeder Aenderung der Metriken-Auswahl neu — mit dem
+	// AKTUELLEN `rows`-Stand (NICHT trip?.corridors, der bleibt im Anlege-Modus
+	// immer leer), damit bereits eingestellte Zeilen erhalten bleiben.
+	$effect(() => {
+		if (!createMode || routeExtraDefs === null) return;
+		const corridorsNow = buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors).corridors;
+		const rebuilt = buildRoutePool(corridorsNow, trip?.display_config?.metrics, routeExtraDefs);
+		poolLeft = rebuilt.poolLeft;
+	});
+
 	const validation = $derived(validateCorridorRows(rows));
 	// Issue #1425 (S2 Teil 2, Scheibe C, AC-3): zaehlt nur Marken, deren Schalter
 	// im aktuellen Kontext ueberhaupt sichtbar ist (geteilte Entscheidung
@@ -172,30 +264,30 @@
 	// Alarme (AC-2/AC-3).
 	function buildSaveFn() {
 		const payload = buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors);
-		return async () => {
-			const updated = await api.put<Trip>(`/api/trips/${trip!.id}`, {
-				corridors: payload.corridors,
-				display_config: trip!.display_config,
-			});
-			onTripUpdate?.(updated);
-		};
+		// #2317 Baustein 1: die Entlade-Option (keepalive) erreicht den PUT.
+		// Issue #1433: Teilfeld — nur `corridors`, kein display_config (Spec §2.2).
+		return baueTripSpeicherung<Trip>(
+			api,
+			trip!.id,
+			() => ({ corridors: payload.corridors }),
+			(updated) => onTripUpdate?.(updated), 'wertebereiche'
+		);
 	}
 
-	// Slice 4: kein eigenes PUT — schreibt das Dual-Write-Ergebnis reaktiv in
-	// die wiz-Runen. CompareEditor.svelte's bestehender dirty-Vergleich
-	// (JSON.stringify(wiz.corridors) u.a.) erkennt die Aenderung, der
-	// "Speichern"-Button persistiert sie wie jedes andere Feld.
+	// Issue #2276 S6d: meldet das Dual-Write-Ergebnis ueber die vier Rueckrufe
+	// nach oben. Auf der Anlege-Seite haelt der Wizard den Stand und speichert
+	// ihn mit "Briefing aktivieren"; im Hub meldet `maybeSchedule()` zusaetzlich
+	// der eigenen Orchestrierung (S3).
 	function syncToWizard() {
-		if (!ws) return;
 		const payload = buildCompareCorridorSavePayload(rows, removedMetrics, {
-			idealRanges: ws.idealRanges,
-			activeMetricKeys: materializeActiveMetricKeys(ws.activeMetricKeys),
-			metricAlertLevels: ws.metricAlertLevels as Record<string, SensLevel | undefined>,
+			idealRanges: idealRanges ?? {},
+			activeMetricKeys: materializeActiveMetricKeys(activeMetricKeys ?? null),
+			metricAlertLevels: metricAlertLevels as Record<string, SensLevel | undefined>,
 		}, unknownCorridors);
-		ws.corridors = payload.corridors;
-		ws.idealRanges = payload.idealRanges;
-		ws.activeMetricKeys = payload.activeMetricKeys;
-		ws.metricAlertLevels = payload.metricAlertLevels;
+		onCorridorsChange?.(payload.corridors);
+		onIdealRangesChange?.(payload.idealRanges);
+		onActiveMetricKeysChange?.(payload.activeMetricKeys);
+		onMetricAlertLevelsChange?.(payload.metricAlertLevels);
 	}
 
 	// Issue #1350 Teil 3: der Fresh-Create-Prefill fuer den vergleich-Zweig
@@ -210,11 +302,31 @@
 	// auf "dirty" setzen — widerspruechlich neben dem Fehlerbanner sonst.
 	function maybeSchedule() {
 		if (context === 'vergleich') {
-			if (saveGateDecision(rows) === 'schedule') syncToWizard();
+			// Issue #2276 S3: genau EIN Auslöser — nach dem Spiegeln in den Wizard-
+			// Zustand meldet der Editor die Änderung an die eigene Orchestrierung
+			// (Diff-Gate, Queue, Rückmeldung, Rollback in wertebereicheVergleichSpeicherung.ts).
+			// Anlege-Seite: kein Speicherweg hier, Speichern über wiz.saveNewPreset().
+			if (saveGateDecision(rows) === 'schedule') {
+				syncToWizard();
+				vergleichSpeicherung?.aenderungMelden();
+			} else {
+				// #2215: der vorgemerkte Save des letzten gueltigen Stands (Orchestrierung) darf
+				// den ungueltigen Zwischenstand nicht als „Gespeichert" melden. Anlege-Seite: kein Controller.
+				saveController?.setUnsavedInput();
+			}
+			return;
+		}
+		// Issue #2277 S2a: Anlege-Modus (/trips/new) — kein PUT auf eine noch
+		// nicht existierende Trip-ID. Aenderungen fliessen ausschliesslich ueber
+		// onCorridorsChange nach oben in CreateTripState.corridors.
+		if (createMode) {
+			if (saveGateDecision(rows) === 'schedule') {
+				onCorridorsChange?.(buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors).corridors);
+			}
 			return;
 		}
 		if (saveGateDecision(rows) === 'schedule') saveController?.schedule(buildSaveFn());
-		else saveController?.setDirty();
+		else saveController?.setUnsavedInput();
 	}
 
 	function patch(metric: string, p: Partial<Pick<CorridorRowState, 'min' | 'max' | 'notify' | 'mark'>>) {
@@ -263,11 +375,11 @@
 
 <svelte:window onpointermove={onWindowPointerMove} onpointerup={onWindowPointerUp} />
 
-<div class="corridor-editor" data-testid="corridor-editor-{context}">
+<div class="corridor-editor" data-testid="corridor-editor-{context}">{#if showInfobox}<Infobox reiter="wertebereiche" {context} />{/if}
 	{#if context === 'vergleich' && compareDefsError}
 		<!-- Issue #1350 Teil 3 (AC-4): sichtbarer Fehlerzustand statt still
 		     leerem Editor bei Endpoint-Ausfall -- kein Pool, keine Zeilen. -->
-		<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<p class="ce-error" role="alert" data-testid="corridor-editor-vergleich-load-error">
 			{compareDefsError}
 		</p>
@@ -278,16 +390,16 @@
 			onclick={() => (compareDefsError = null)}
 		>Wiederholen</button>
 	{:else if context === 'vergleich' && compareDefs === null}
-		<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-vergleich-loading">Lade Metriken…</p>
 	{:else if context === 'route' && routeExtraDefs === null}
 		<!-- Issue #1425 (AC-6): erkennbarer Ladezustand, statt kurz nur die alten
 		     6 Metriken zu zeigen und die uebrigen nachpoppen zu lassen. -->
-		<Eyebrow>Wertebereiche</Eyebrow>
+		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-route-loading">Lade Metriken…</p>
 	{:else}
 	{#if context === 'vergleich'}
-		<Eyebrow>Wertebereiche · Idealbereiche</Eyebrow>
+		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<h2 class="ce-h2">Sag mir, welche Werte dir ideal sind</h2>
 		<p class="ce-lead">
 			Ein Wertebereich je Metrik legt deinen Idealbereich fest. Werte im Bereich werden im
@@ -298,10 +410,10 @@
 		     Sofort-Meldung, die er nicht ausloest — `corridor.notify` hat keinen
 		     Leser, die Alarme kommen ausschliesslich aus
 		     display_config.metric_alert_levels (Reiter Alarme, seit #1371). -->
-		<Eyebrow>Wertebereiche</Eyebrow>
+		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<h2 class="ce-h2">Sag mir, welche Werte für dich passen</h2>
 		<p class="ce-lead">
-			Ein Wertebereich je Metrik legt fest, welche Werte du auf der Tour noch akzeptierst. Werte im
+			Ein Wertebereich je Metrik legt fest, welche Werte du auf der Trip noch akzeptierst. Werte im
 			Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im
 			Reiter Alarme ein.
 		</p>
@@ -498,6 +610,8 @@
 	.ce-ordinal-group { display: inline-flex; gap: 4px; }
 	.ce-ordinal-btn { padding: 3px 8px; font-size: 11px; border-radius: var(--g-r-2, 4px); border: 1px solid var(--g-rule); background: transparent; color: var(--g-ink-3); cursor: pointer; }
 	.ce-ordinal-btn.on { border-color: var(--g-accent); color: var(--g-accent-deep); background: var(--g-accent-tint); }
+	/* #2521 S1: Ueberschrift + ⓘ in einer Zeile (Eyebrow ist display:block). */
+	.ce-eyebrow-row { display: flex; align-items: center; gap: 4px; }
 	@media (max-width: 899px) {
 		.corridor-editor { padding: 1rem; max-width: 100%; }
 	}

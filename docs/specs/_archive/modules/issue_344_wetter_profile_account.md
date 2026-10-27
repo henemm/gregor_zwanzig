@@ -3,7 +3,7 @@ entity_id: issue_344_wetter_profile_account
 type: module
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, account, weather, ui, svelte, metric-presets]
 parent_epic: 304

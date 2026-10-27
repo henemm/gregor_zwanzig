@@ -125,26 +125,26 @@ end = local_fmt(seg.end_time, tz)
 
 ## Expected Behavior
 
-- **Input:** `NormalizedForecast` mit Segmenten, deren `start_time`/`end_time` als UTC-`datetime`-Objekte vorliegen; `tz: ZoneInfo` wird durch den bestehenden Renderer-Stack übergeben (z.B. `ZoneInfo("Europe/Paris")` für GR20-Touren)
+- **Input:** `NormalizedForecast` mit Segmenten, deren `start_time`/`end_time` als UTC-`datetime`-Objekte vorliegen; `tz: ZoneInfo` wird durch den bestehenden Renderer-Stack übergeben (z.B. `ZoneInfo("Europe/Paris")` für GR20-Trips)
 - **Output:** Alle Segment-Header-Uhrzeiten in E-Mail (HTML + Plaintext) und Schmalformat zeigen die lokale Uhrzeit; Tabellen-Zeilen darunter waren bereits korrekt und bleiben unverändert — kein Versatz mehr sichtbar
-- **Side effects:** Keine. `local_fmt` ist eine reine Funktion ohne Seiteneffekte. Für UTC-Touren (tz=UTC) ist das Ergebnis identisch zu vorher.
+- **Side effects:** Keine. `local_fmt` ist eine reine Funktion ohne Seiteneffekte. Für UTC-Trips (tz=UTC) ist das Ergebnis identisch zu vorher.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein Nutzer in CEST (UTC+2) mit einer Tour in Frankreich / When eine E-Mail mit Segment-Headern gerendert wird / Then zeigen Ziel-Header, normale Segment-Header und die Nacht-Sektion dieselben Uhrzeiten wie die Tabellen-Zeilen darunter (kein 2-Stunden-Versatz zwischen Header und Tabelleninhalt)
+- **AC-1:** Given ein Nutzer in CEST (UTC+2) mit einer Trip in Frankreich / When eine E-Mail mit Segment-Headern gerendert wird / Then zeigen Ziel-Header, normale Segment-Header und die Nacht-Sektion dieselben Uhrzeiten wie die Tabellen-Zeilen darunter (kein 2-Stunden-Versatz zwischen Header und Tabelleninhalt)
   - Test: `tests/tdd/test_issue_397_segment_timezone.py::test_render_plain_segment_header_local_time_cest`
 
-- **AC-2:** Given eine Tour mit Wetteränderungen, die `build_segment_label` aufruft / When der Renderer `html.py` oder `plain.py` ein Wetteränderungs-Label baut / Then enthält das Label die lokale Uhrzeit statt UTC (z.B. "10:00–12:00" statt "08:00–10:00" in CEST)
+- **AC-2:** Given eine Trip mit Wetteränderungen, die `build_segment_label` aufruft / When der Renderer `html.py` oder `plain.py` ein Wetteränderungs-Label baut / Then enthält das Label die lokale Uhrzeit statt UTC (z.B. "10:00–12:00" statt "08:00–10:00" in CEST)
   - Test: `tests/tdd/test_issue_397_segment_timezone.py::test_build_segment_label_local_time_cest`
 
-- **AC-3:** Given `narrow.py` rendert eine Schmalformat-Ausgabe (Signal/Telegram) für eine CEST-Tour / When Segment-Zeiten in der Ausgabe erscheinen / Then zeigen `start` und `end` lokale Uhrzeiten, weil `local_fmt` korrekt importiert und aufgerufen wird
+- **AC-3:** Given `narrow.py` rendert eine Schmalformat-Ausgabe (Signal/Telegram) für eine CEST-Trip / When Segment-Zeiten in der Ausgabe erscheinen / Then zeigen `start` und `end` lokale Uhrzeiten, weil `local_fmt` korrekt importiert und aufgerufen wird
   - Test: `tests/tdd/test_issue_397_segment_timezone.py::test_render_narrow_segment_header_local_time_cest`
 
 ## Known Limitations
 
-- **`report_date`-Formatierung unberührt:** `report_date = ...strftime("%d.%m.%Y")` betrifft nur das Datum (keine Uhrzeitproblematik für Standard-Touren) und wird nicht geändert.
+- **`report_date`-Formatierung unberührt:** `report_date = ...strftime("%d.%m.%Y")` betrifft nur das Datum (keine Uhrzeitproblematik für Standard-Trips) und wird nicht geändert.
 - **Legacy-Methoden in `trip_report.py`:** Toter Code mit analogen `.strftime`-Aufrufen auf UTC-Zeitstempeln; wird in separaten Issues #398 und #399 adressiert, nicht im Scope dieses Fixes.
-- **Kein echter E2E-Netzwerktest:** Der Korrektheitsbeweis basiert auf Unit-Tests mit UTC-Datetimes und bekannten Offsets; eine echte IMAP-Verifikation mit CEST-Tour würde ein Staging-Fixture in Nicht-UTC-Zeitzone erfordern.
+- **Kein echter E2E-Netzwerktest:** Der Korrektheitsbeweis basiert auf Unit-Tests mit UTC-Datetimes und bekannten Offsets; eine echte IMAP-Verifikation mit CEST-Trip würde ein Staging-Fixture in Nicht-UTC-Zeitzone erfordern.
 
 ## Out of Scope
 

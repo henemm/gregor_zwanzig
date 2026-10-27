@@ -91,6 +91,16 @@ type Waypoint struct {
 	Origin          string  `json:"origin,omitempty"`           // "manual" | "algorithmic"; leer = "manual"
 	Confirmed       *bool   `json:"confirmed,omitempty"`        // *bool: false bleibt serialisierbar, nur nil wird ausgelassen
 	ArrivalOverride *string `json:"arrival_override,omitempty"` // User-Override "HH:MM"
+	// Issue #2036 — gemessene Wegstrecke vom Etappenstart [km] aus dem
+	// Original-GPX-Track. *float64: 0.0 ist ein gueltiger Etappenstart und
+	// muss serialisierbar bleiben, nur nil ("nicht gemessen") faellt weg.
+	// Ohne dieses Feld wischt der erste Editor-Save den vom Python-Kern
+	// geschriebenen Wert stumm weg (Praezedenzfall suggestion_reason).
+	DistanceFromStartKm *float64 `json:"distance_from_start_km,omitempty"`
+	// Issue #2058 — Begruendung des algorithmischen Wegpunktvorschlags
+	// (Python-Kern schreibt sie). Ohne dieses Feld verwirft der erste
+	// Editor-Save den Wert stumm; bewacht durch trip_schema_drift_test.go.
+	SuggestionReason string `json:"suggestion_reason,omitempty"`
 }
 
 type Stage struct {
@@ -149,6 +159,16 @@ type Trip struct {
 	// "LOW" je Kanal), gesetzt = Feld-Level-Merge innerhalb des Unterobjekts
 	// (Pflicht, s. internal/handler/trip.go).
 	AlertChannelThresholds *AlertChannelThresholdsConfig `json:"alert_channel_thresholds,omitempty"`
+	// AlertMetricChannels — Issue #1895 Scheibe S1 (Epic #1230), metrik-genaue
+	// Kanal-Schicht neben AlertChannels (je Abo) und AlertChannelThresholds
+	// (je Kanal). Schluessel = Metrikname, Wert = Kanal-Repraesentation, in S1
+	// bewusst unvalidiert (ADR-0077). nil / fehlender Metrik-Eintrag = die
+	// Metrik erbt den Abo-weiten Kanal-Satz — S1 hat keinen Leser, das Feld
+	// ist damit verhaltensneutral. Typ map[string]interface{} (nicht Struct),
+	// damit der Teil-PUT ueber mergeConfigMap eine Ebene tief mergt und nicht
+	// alle uebrigen Metriken blind ersetzt (Muster DisplayConfig,
+	// internal/handler/trip.go).
+	AlertMetricChannels map[string]interface{} `json:"alert_metric_channels,omitempty"`
 	// Issue #1250 Scheibe 4: additive flache Slot-/Kanal-Felder + EndDate,
 	// ABGELEITET aus ReportConfig/Stages bei jedem Load (store.normalizeTrip)
 	// — nicht autoritativ, ReportConfig bleibt die einzige Wahrheit fuer den

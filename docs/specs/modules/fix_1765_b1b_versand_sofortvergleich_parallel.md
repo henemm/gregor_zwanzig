@@ -3,7 +3,7 @@ entity_id: fix_1765_b1b_versand_sofortvergleich_parallel
 type: module
 created: 2026-08-16
 updated: 2026-08-16
-status: approved
+status: implemented
 version: "1.0"
 tags: [issue-1765, ortsvergleich, nebenlaeufigkeit, versand]
 ---

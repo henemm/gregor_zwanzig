@@ -1,0 +1,131 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/2346-s2
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 30 items
+
+tests/unit/test_e2e_compare_paritaet_waechter.py F..................     [ 63%]
+tests/unit/test_e2e_positivliste_ratschen_bindung.py F..........         [100%]
+
+=================================== FAILURES ===================================
+__________ test_echter_baum_hat_keine_unbegruendete_compare_only_spec __________
+
+    def test_echter_baum_hat_keine_unbegruendete_compare_only_spec():
+        befunde = pruefe_compare_specs(_echter_baum(), ALTLAST)
+>       assert befunde == [], "Paritaets-Verstoesse in frontend/e2e/:\n" + "\n".join(befunde)
+E       AssertionError: Paritaets-Verstoesse in frontend/e2e/:
+E         bug-626-compare-menu-actions.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-active-metrics-format.staging.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-alarm-config.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-alarme-speichert-selbst.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-alarme-wertprops.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-cross-user-write-block.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-detail-edit-entry.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-edit-redirect.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-editor-autosave-user-isolation.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-editor-autosave.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-editor-fidelity-s8d.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-editor-slice1.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-editor-slice3.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-editor-slice4.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-flow-navigation.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hourly-metric-order.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hub-briefing-times.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hub-fidelity-s8c.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hub-inline-edit.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hub-kopf-einmal.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hub-name-region-profil.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hub-save-chip.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-hub-versand-inline.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-konfliktschutz-zwei-kontexte.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-layout-tab-dissolution.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-legacy-fields-survive-save.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-metric-order.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-mobile-vervollstaendigung.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-neu-kanal-anlegen.staging.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-new-vorlage.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-outlook-metric-selection.staging.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-radar-toggle.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-send-dialog-target.staging.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-stundenverlauf-wertprops.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-tab-bar.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-uebersicht-kanal-bedienung.staging.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-uebersicht-kanal-persistenz.staging.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-versand-speichert-selbst.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-wertebereiche-speichert-selbst.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-wertebereiche-wertprops.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         compare-wetter-metriken-speichert-selbst.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         feat-1461-s3b2b-compare-kanal-schwelle.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         fix-1350-compare-metric-select.staging.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         fix-1350t3-compare-threshold-source.staging.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         issue-1080-compare-new-url.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         issue-1093-compare-layout-crash.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         issue-682-compare-editor-mobile.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt
+E         kanal-grenzen-ortsvergleich.staging.spec.ts: Regel 2: steuert den Compare-Hub-Reiter (compare-detail-tab) an, hat aber kein Trip-Gegenstueck, keine kind-Schleife und keinen `gz-eigenstaendig:`-Kopf (Umgehung per Dateiname)
+E         versand-tab-vergleich.spec.ts: Regel 2: steuert den Compare-Hub-Reiter (compare-detail-tab) an, hat aber kein Trip-Gegenstueck, keine kind-Schleife und keinen `gz-eigenstaendig:`-Kopf (Umgehung per Dateiname)
+E       assert ['bug-626-com...t fehlt', ...] == []
+E         
+E         Left contains 49 more items, first extra item: 'bug-626-compare-menu-actions.spec.ts: Regel 1: Compare-Spec ohne kind-Schleife (HUB_KINDS) und ohne `gz-eigenstaendig:`-Kopf -- Trip-Pendant fehlt'
+E         Use -v to get more diff
+
+tests/unit/test_e2e_compare_paritaet_waechter.py:104: AssertionError
+_ test_positivliste_enthaelt_mandantentrennungs_spec[e2e/hub-cross-user-write-block.spec.ts] _
+
+spec = 'e2e/hub-cross-user-write-block.spec.ts'
+
+    @pytest.mark.parametrize("spec", MANDANTEN_SPECS)
+    def test_positivliste_enthaelt_mandantentrennungs_spec(spec):
+        """AC-1: beide gemessen gruenen Mandanten-Specs stehen auf der Positivliste.
+    
+        GIVEN beide im 51er-Diagnoselauf (2026-08-14) vollstaendig gruen, einzige
+              Klasse fuer die CLAUDE.md-Pflicht "zwei Nutzer"
+        WHEN die Positivliste gelesen wird
+        THEN steht der Eintrag darin -- und die Datei existiert wirklich (ein
+             Phantom-Name laesst den CI-Job an der Existenzpruefung scheitern).
+        """
+        assert (REPO / PLAYWRIGHT_CWD / spec).is_file(), f"Spec-Datei fehlt: {spec}"
+        gelistet = _liste_zeilen(POSITIVLISTE.read_text(encoding="utf-8"))
+>       assert spec in gelistet, (
+            f"{spec} fehlt auf der Positivliste ({len(gelistet)} Eintraege) -- "
+            f"gemessen gruen, aber ungelistet bewacht die Mandantentrennung niemand.")
+E       AssertionError: e2e/hub-cross-user-write-block.spec.ts fehlt auf der Positivliste (63 Eintraege) -- gemessen gruen, aber ungelistet bewacht die Mandantentrennung niemand.
+E       assert 'e2e/hub-cross-user-write-block.spec.ts' in ['e2e/alert-table-mobile-visibility.spec.ts', 'e2e/bug-274-safe-area-insets.spec.ts', 'e2e/bug-703-login-ratelimit.spe...ge-delete-confirm.spec.ts', 'e2e/compare-alarme-speichert-selbst.spec.ts', 'e2e/compare-alarme-wertprops.spec.ts', ...]
+
+tests/unit/test_e2e_positivliste_ratschen_bindung.py:94: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_waechst_nicht_ueber_den_einfuehrungsstand
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_ist_nicht_leer
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[altmuster]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_gedeckte_compare_spec_ist_konform[hub_kinds]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_neue_compare_spec_ohne_kopf_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_mit_zu_kurzer_begruendung_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_kurzer_marker_ist_auch_mit_schleife_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_marker_hinter_zeile_30_zaehlt_nicht
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_umgehung_per_dateiname_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trips_url]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[trip_tab]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[schleife]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_hub_spec_mit_trip_gegenstueck_ist_konform[kopf]
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_spec_ohne_compare_bezug_ist_nicht_betroffen
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_altlast_deckt_verstoss
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_toter_altlast_eintrag_ist_rot
+PASSED tests/unit/test_e2e_compare_paritaet_waechter.py::test_konformer_altlast_eintrag_ist_rot
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/compare-editor-autosave-user-isolation.spec.ts]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_kein_spec_schreibt_in_den_versionierten_baum
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_filter_c_kriterium_ist_geeicht
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[36-38-True-nennt0]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[40-38-True-nennt1]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[38-38-False-nennt2]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[3-3-False-nennt3]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[5-3-True-nennt4]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_schwellen_bindung_synthetisch[None-38-True-nennt5]
+PASSED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_echte_ci_yml_und_positivliste_sind_exakt_gebunden
+FAILED tests/unit/test_e2e_compare_paritaet_waechter.py::test_echter_baum_hat_keine_unbegruendete_compare_only_spec
+FAILED tests/unit/test_e2e_positivliste_ratschen_bindung.py::test_positivliste_enthaelt_mandantentrennungs_spec[e2e/hub-cross-user-write-block.spec.ts]
+========================= 2 failed, 28 passed in 1.02s =========================

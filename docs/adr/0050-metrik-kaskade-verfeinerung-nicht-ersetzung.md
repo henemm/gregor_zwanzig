@@ -6,6 +6,7 @@
   `docs/specs/modules/fix_1719_s1_kaskade_pruefstand.md`; ergänzt ADR-0049
   (Kanalliste E-Mail · Telegram · SMS · Premium-SMS) um die Kaskadensemantik
   zwischen Grundauswahl und Kanal-Layout, die ADR-0049 nicht behandelt
+- **Ergänzt durch:** [ADR-0053](0053-compare-kanal-eigene-metrikauswahl-uebersicht.md) (schreibt fort), [ADR-0055](0055-trip-ausblick-waehlbare-spalten.md) (schreibt fort), [ADR-0059](0059-compare-ausblick-erbt-grundauswahl.md) (schreibt fort)
 
 ## Kontext
 

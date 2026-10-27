@@ -3,7 +3,7 @@ entity_id: fix_1348_warn_kompensation
 type: module
 created: 2026-08-09
 updated: 2026-08-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [official-alerts, safety, issue-1348]
 ---
@@ -114,7 +114,7 @@ wörtlich "PO-Entscheid 2026-07-23, STRENG").
   - Test: bestehender Test `test_non_covering_is_available` bleibt
     unverändert grün.
 
-- **AC-5 (Realpfad AT, PO-Vorfall):** Given die heute registrierten
+- **AC-5:** (Realpfad AT, PO-Vorfall) Given die heute registrierten
   AT-Quellen `GeoSphereWarnSource` (liefert erfolgreich, echter Objekt-Pfad)
   und `MeteoAlarmFeedSource("AT")` (Egress-Block simuliert real-blockiert,
   fail-soft `[]` ohne Exception) für einen österreichischen Punkt / When der
@@ -124,7 +124,7 @@ wörtlich "PO-Entscheid 2026-07-23, STRENG").
     (kein Double), analog zum bestehenden Muster mit
     `GeoSphereWarnSource`/Egress-Guard.
 
-- **AC-6 (Realpfad IT/Südtirol, reale heutige Quellenlage):** Given die
+- **AC-6:** (Realpfad IT/Südtirol, reale heutige Quellenlage) Given die
   heute registrierten IT-Quellen `MeteoAlarmFeedSource("IT")`
   (real-blockiert, fail-soft `[]`) und `DpcSource` (liefert erfolgreich,
   auch leer) für einen Südtirol-Punkt / When der Status berechnet wird /
@@ -134,7 +134,7 @@ wörtlich "PO-Entscheid 2026-07-23, STRENG").
   - Test: neuer Realpfad-Test, echte Klassen, PO-Entscheid 2026-08-09
     (reale Lage statt Alt-Beispiel).
 
-- **AC-7 (Regression, unverändert bestehender Realpfad-Test):** Given eine
+- **AC-7:** (Regression, unverändert bestehender Realpfad-Test) Given eine
   einzelne, im Egress-Wächter blockierte Quelle (`GeoSphereWarnSource`,
   isolierte Registry mit nur dieser einen Quelle) / When der Status
   berechnet wird / Then `unavailable=True` — bleibt der bestehende

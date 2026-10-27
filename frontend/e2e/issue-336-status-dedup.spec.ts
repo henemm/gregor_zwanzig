@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Issue #336 — Doppelte Status-Anzeige im Tour-Kopf bereinigen.
+ * Issue #336 — Doppelte Status-Anzeige im Trip-Kopf bereinigen.
  * Spec: docs/specs/modules/issue_336_status_dedup.md
  *
- * RED: Der Tour-Kopf rendert Status doppelt — Versalien-Präfix "AKTIV" (in
+ * RED: Der Trip-Kopf rendert Status doppelt — Versalien-Präfix "AKTIV" (in
  *      `.status-text`, ohne Testid) + Pill "Aktiv". Es gibt noch keinen
  *      `trip-detail-status-supplement`-Span → AC-1/AC-4 schlagen fehl, das
  *      "AKTIV"-Präfix ist vorhanden → AC-2 schlägt fehl.
@@ -18,13 +18,13 @@ import { test, expect } from '@playwright/test';
 const ACTIVE_TRIP_ID = 'e2e-cockpit-test';
 const PAUSED_TRIP_ID = 'e2e-336-paused';
 
-test.describe('Issue #336 — Status-Dedup im Tour-Kopf', () => {
+test.describe('Issue #336 — Status-Dedup im Trip-Kopf', () => {
 	test.use({ storageState: 'playwright/.auth/admin.json' });
 
 	// AC-1: Zusatztext lebt im getesteten Supplement-Span, ohne Versalien-Präfix.
 	test('AC-1: Supplement zeigt Zusatz ("läuft seit") ohne "AKTIV"-Präfix', async ({ page }) => {
 		/**
-		 * GIVEN: aktive Tour wird geöffnet
+		 * GIVEN: aktive Trip wird geöffnet
 		 * WHEN: die Status-Zeile gerendert wird
 		 * THEN: [data-testid="trip-detail-status-supplement"] enthält den Zusatz
 		 *       und NICHT das Versalien-Präfix "AKTIV"
@@ -37,10 +37,10 @@ test.describe('Issue #336 — Status-Dedup im Tour-Kopf', () => {
 	});
 
 	// AC-2: Status erscheint genau einmal — Pill bleibt, Versalien-Präfix ist weg.
-	test('AC-2: Pill zeigt "Aktiv", Tour-Kopf enthält kein "AKTIV"-Präfix mehr', async ({ page }) => {
+	test('AC-2: Pill zeigt "Aktiv", Trip-Kopf enthält kein "AKTIV"-Präfix mehr', async ({ page }) => {
 		/**
-		 * GIVEN: aktive Tour wird geöffnet
-		 * WHEN: der Tour-Kopf gerendert wird
+		 * GIVEN: aktive Trip wird geöffnet
+		 * WHEN: der Trip-Kopf gerendert wird
 		 * THEN: Pill `trip-detail-status-badge` enthält "Aktiv", und im Kopf
 		 *       taucht das Versalien-Präfix "AKTIV" nicht mehr auf
 		 */
@@ -49,7 +49,7 @@ test.describe('Issue #336 — Status-Dedup im Tour-Kopf', () => {
 		await expect(badge).toBeVisible();
 		await expect(badge).toContainText('Aktiv');
 
-		// Versalien-Präfix darf nirgends im Tour-Kopf mehr stehen (Dedup).
+		// Versalien-Präfix darf nirgends im Trip-Kopf mehr stehen (Dedup).
 		const header = page.locator('header.trip-header');
 		await expect(header).not.toContainText('AKTIV');
 	});
@@ -57,7 +57,7 @@ test.describe('Issue #336 — Status-Dedup im Tour-Kopf', () => {
 	// AC-4: Zusatz ist gedämpfter Sekundärtext (--g-ink-muted), nicht Status-Accent.
 	test('AC-4: Supplement nutzt gedämpfte Sekundärfarbe (= .meta-line)', async ({ page }) => {
 		/**
-		 * GIVEN: der Tour-Kopf wird gerendert
+		 * GIVEN: der Trip-Kopf wird gerendert
 		 * WHEN: der Zusatz-Span dargestellt wird
 		 * THEN: dessen color entspricht --g-ink-muted (gleiche Farbe wie die
 		 *       bereits gedämpfte Meta-Zeile), nicht der Accent-Statusfarbe
@@ -76,14 +76,14 @@ test.describe('Issue #336 — Status-Dedup im Tour-Kopf', () => {
 		expect(supplementColor).toBe(metaColor);
 	});
 
-	// AC-3: Regressions-Guard — Pill bleibt bei pausierter Tour sichtbar/korrekt.
-	test('AC-3: pausierte Tour zeigt Pill "Pausiert" ohne "PAUSIERT"-Präfix', async ({
+	// AC-3: Regressions-Guard — Pill bleibt bei pausierter Trip sichtbar/korrekt.
+	test('AC-3: pausierte Trip zeigt Pill "Pausiert" ohne "PAUSIERT"-Präfix', async ({
 		page,
 		request
 	}) => {
 		/**
-		 * GIVEN: eine pausierte Tour
-		 * WHEN: der Tour-Kopf gerendert wird
+		 * GIVEN: eine pausierte Trip
+		 * WHEN: der Trip-Kopf gerendert wird
 		 * THEN: Pill `trip-detail-status-badge` enthält "Pausiert", kein Versalien-Präfix
 		 */
 		const today = new Date().toISOString().slice(0, 10);

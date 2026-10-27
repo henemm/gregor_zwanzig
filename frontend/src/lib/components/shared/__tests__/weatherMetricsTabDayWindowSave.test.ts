@@ -101,7 +101,10 @@ describe('Staging-Fund AC-5: scheduleReportConfigOnlySave() schreibt AUSSCHLIESS
 	test('der Funktionskoerper enthaelt keinen Aufruf auf /weather-config', () => {
 		const body = functionBody('scheduleReportConfigOnlySave');
 		assert.ok(!/weather-config/.test(body), `scheduleReportConfigOnlySave() darf /weather-config nicht ansprechen:\n${body}`);
-		assert.match(body, /api\.put<Trip>\(`\/api\/trips\/\$\{trip!\.id\}`/, 'scheduleReportConfigOnlySave() muss /api/trips/{id} (report_config) schreiben');
+		// Fix-Loop 3 (#1433): der PUT laeuft ueber `baueTripSpeicherung` (reicht `init` an den PUT
+		// durch, haengt die gesendete Nutzlast an die Funktion) — Pfad `/api/trips/{id}`.
+		assert.match(body, /baueTripSpeicherung<Trip>\(\s*api,\s*trip!\.id,/, 'scheduleReportConfigOnlySave() muss /api/trips/{id} (report_config) schreiben');
+		assert.match(body, /schedule\(baueTripSpeicherung/, 'scheduleReportConfigOnlySave(): die Speicherfunktion kommt aus baueTripSpeicherung (#2317: `init` wird durchgereicht)');
 	});
 
 	test('der ambiente $effect (reagiert auf JEDE reportConfig-Aenderung) ruft scheduleReportConfigOnlySave(), nicht scheduleAutoSave()', () => {

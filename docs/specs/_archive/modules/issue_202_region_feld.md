@@ -3,7 +3,7 @@ entity_id: issue_202_region_feld
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: "1.0"
 issues: [202]
 tags: [trip, region, go, typescript, sveltekit, frontend, wizard, trip-detail, issue-202]

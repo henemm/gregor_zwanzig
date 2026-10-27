@@ -97,7 +97,7 @@ def test_fallback_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
 
     seg = _segment(_tomorrow_points({2: ThunderLevel.LOW}),
                    thunder_level_max=ThunderLevel.LOW)
-    fc = TripReportSchedulerService()._build_thunder_forecast(seg, _TODAY, tz=_UTC)
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(seg, _TODAY, tz=_UTC)
     entry = (fc or {}).get("+1")
     assert entry is not None, "Vorschau-Eintrag fuer morgen fehlt ganz"
     assert entry["level"] == ThunderLevel.NONE, (
@@ -107,7 +107,7 @@ def test_fallback_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
     # #1651: die TAGES-Aussage bleibt die Entwarnung, das Nachtgewitter wird
     # nun aber angehaengt genannt statt verschwiegen.
     assert entry["text"] == (
-        "Kein Gewitter erwartet, nachts leichtes Gewitter ab 02:00"
+        "Kein Gewitter erwartet, nachts schwaches Signal (leicht) ab 02:00"
     ), entry["text"]
 
 
@@ -121,14 +121,14 @@ def test_fallback_ab_stunde_kommt_aus_dem_fenster():
         _tomorrow_points({2: ThunderLevel.LOW, 4: ThunderLevel.LOW}),
         thunder_level_max=ThunderLevel.LOW,
     )
-    fc = TripReportSchedulerService()._build_thunder_forecast(seg, _TODAY, tz=_UTC)
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast(seg, _TODAY, tz=_UTC)
     entry = (fc or {}).get("+1")
     assert entry is not None
     assert entry["level"] == ThunderLevel.LOW
     # #1651: "ab 04:00" ist und bleibt die Tages-Aussage; die 02:00 erscheinen
     # ausschliesslich im angehaengten Nacht-Halbsatz.
     assert entry["text"] == (
-        "Leichtes Gewitter möglich ab 04:00, nachts leichtes Gewitter ab 02:00"
+        "Schwaches Signal (leicht) ab 04:00, nachts schwaches Signal (leicht) ab 02:00"
     ), entry["text"]
     assert entry["hour"] == 4, entry
 
@@ -155,7 +155,7 @@ def test_trend_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
     from services.trip_report_scheduler import TripReportSchedulerService
 
     row = _trend_row({2: ThunderLevel.LOW}, ThunderLevel.LOW)
-    fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         None, _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
@@ -165,7 +165,7 @@ def test_trend_nachtgewitter_ausserhalb_fenster_ist_entwarnung():
     )
     assert entry["hour"] is None, entry
     assert entry["text"] == (
-        "Kein Gewitter erwartet, nachts leichtes Gewitter ab 02:00"
+        "Kein Gewitter erwartet, nachts schwaches Signal (leicht) ab 02:00"
     ), entry["text"]
 
 
@@ -175,14 +175,14 @@ def test_trend_ab_stunde_kommt_aus_dem_fenster():
     from services.trip_report_scheduler import TripReportSchedulerService
 
     row = _trend_row({2: ThunderLevel.LOW, 19: ThunderLevel.LOW}, ThunderLevel.LOW)
-    fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         None, _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
     assert entry is not None
     assert entry["level"] == ThunderLevel.LOW
     assert entry["text"] == (
-        "Leichtes Gewitter möglich ab 19:00, nachts leichtes Gewitter ab 02:00"
+        "Schwaches Signal (leicht) ab 19:00, nachts schwaches Signal (leicht) ab 02:00"
     ), entry["text"]
 
 
@@ -201,7 +201,7 @@ class _StubTrip:
     """Echtes Datenobjekt (kein Mock): nur die Zugriffe, die
     _build_thunder_forecast_from_trend_or_fetch auf dem Trip macht.
 
-    #1727 S5b: seit der Rueckfall-Pfad den ORTSTAG der Tour bestimmt
+    #1727 S5b: seit der Rueckfall-Pfad den ORTSTAG der Trip bestimmt
     (`trip_local_today` -> `anchor_tz` -> `display_tz`), sind es drei statt
     zwei — `stages` und `get_stage_for_date` kommen dazu. Ohne Etappen faellt
     die Zonenaufloesung auf UTC (`trip_day.trip_tz`); dieser Test misst das
@@ -225,7 +225,7 @@ def test_konfiguriertes_fenster_wird_beachtet():
     from services.trip_report_scheduler import TripReportSchedulerService
 
     row = _trend_row({5: ThunderLevel.LOW}, ThunderLevel.LOW)
-    fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         _StubTrip(6, 18), _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
@@ -234,7 +234,7 @@ def test_konfiguriertes_fenster_wird_beachtet():
     # #1651: das KONFIGURIERTE Fenster bestimmt auch, was "ausserhalb" ist --
     # 05:00 liegt vor Fensterbeginn 06:00 und wird deshalb angehaengt genannt.
     assert entry["text"] == (
-        "Kein Gewitter erwartet, nachts leichtes Gewitter ab 05:00"
+        "Kein Gewitter erwartet, nachts schwaches Signal (leicht) ab 05:00"
     ), entry["text"]
 
 
@@ -245,10 +245,10 @@ def test_mitternachts_fenster_wrap_zaehlt_nachtstunden():
     from services.trip_report_scheduler import TripReportSchedulerService
 
     row = _trend_row({23: ThunderLevel.LOW}, ThunderLevel.LOW)
-    fc = TripReportSchedulerService()._build_thunder_forecast_from_trend_or_fetch(
+    fc = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(
         _StubTrip(22, 2), _TODAY, _NOW_UTC, _UTC, multi_day_trend=[row],
     )
     entry = (fc or {}).get("+1")
     assert entry is not None
     assert entry["level"] == ThunderLevel.LOW
-    assert entry["text"] == "Leichtes Gewitter möglich ab 23:00", entry["text"]
+    assert entry["text"] == "Schwaches Signal (leicht) ab 23:00", entry["text"]

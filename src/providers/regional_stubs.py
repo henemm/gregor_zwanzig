@@ -92,6 +92,7 @@ class GeoSphereDirectProvider:
                 start=start,
                 end=end,
                 include_cloud_layers=False,
+                elevation_m=location.elevation_m,
             )
         except httpx.HTTPStatusError as e:
             raise ProviderRequestError(

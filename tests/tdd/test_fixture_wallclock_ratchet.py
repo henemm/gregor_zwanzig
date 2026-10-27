@@ -38,7 +38,8 @@ zugleich auftreten:
 1. **Wanduhr-Etappendatum** — ein Aufruf ``<jetzt>.date()`` (Empfaenger ist
    ein Name, der mit ``now``/``jetzt``/``heute`` beginnt, oder direkt ein
    ``datetime.now(...)``/``utcnow()``/``today()``-Aufruf) oder
-   ``date.today()`` / ``datetime.today()`` / ``date_type.today()``.
+   ``date.today()`` / ``datetime.today()`` / ``date_type.today()`` oder
+   ``ortstag(lat, lon)`` ohne ``now_utc=`` (#2314).
 2. **Ungeklemmte Ankunftszeit** — ein Aufruf ``X.strftime("%H:%M")``, bei dem
    ``X`` (ggf. ueber ein zwischengeschaltetes ``.astimezone(...)``) ein
    ``BinOp`` ist, in dem ein ``timedelta(...)`` vorkommt. Gemeldet wird die
@@ -134,6 +135,8 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
+import pytest
+
 # Wurzel DIESES Checkouts (Worktree) — bewusst nicht das Hauptrepo (#1409):
 # der Waechter muss den Baum pruefen, in dem gerade gearbeitet wird.
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -188,18 +191,14 @@ _HEUTE_TRAEGER = {"date", "datetime", "date_type", "datetime_type"}
 #    arrival_local` und deckt damit auch die W1-vs-W2-Sequenz ab.
 #
 # 2) test_starkregen_kurzfristhinweis.py::_trip_with_segment_offset
-#    Die Pruefaussage IST die exakte Vorlaufzeit: 90 Minuten (jenseits von
-#    NOWCAST_HORIZON_MIN=60) darf keinen Nowcast-Abruf ausloesen, 30 Minuten
-#    schon. Jede Klemmung wuerde 90 auf weniger stauchen und den Test ins
-#    Gegenteil verkehren. „Segmentbeginn exakt +90 min, auf dem Etappentag" ist
-#    aber unrepraesentierbar, sobald weniger als 90 Minuten des lokalen Tages
-#    uebrig sind — der erste Wegpunkt MUSS auf dem Etappentag liegen
-#    (`wp_days[0]` ist strukturell 0), und ein Etappendatum ist genau ein
-#    Kalendertag. Keine Zeitzone loest das: sie verschiebt das Fenster nur.
-#    Die Datei erkennt das selbst und ueberspringt an der Grenze laut
-#    (`pytest.skip`) — sie ist dort also nicht still falsch, sondern
-#    hoerbar abwesend. Ein echter Fix braeuchte tagesuebergreifende Etappen,
-#    also Produktivcode — Gegenstand von #1667 S3, nicht von S1.
+#    ERLEDIGT und aus der Liste entfernt (#2096). Die Fixture leitete ihr
+#    Etappendatum aus der Wanduhr ab und uebersprang sich an der
+#    Mitternachtsgrenze laut selbst (`pytest.skip`) — hoerbar abwesend statt
+#    still falsch, aber eben auch: abends bewachte sie nichts. Beide Aufrufer
+#    stellen die Uhr jetzt fest (`freeze_time`); damit entfaellt sowohl der
+#    Skip als auch die Wanduhr-Ableitung des Etappendatums, und der Scanner
+#    findet die Funktion nicht mehr. Der Shrink-Waechter unten hat den
+#    veralteten Eintrag prompt gemeldet — genau seine Aufgabe.
 #
 # 🔴 Der Shrink-Waechter unten faengt nur VERALTETE Eintraege, nicht neue
 # unbegruendete: eine Ausnahmeliste kann sich strukturell nicht selbst gegen
@@ -211,7 +210,6 @@ _HEUTE_TRAEGER = {"date", "datetime", "date_type", "datetime_type"}
 # Format je Eintrag: (repo-relativer Pfad, Funktionsname)
 KNOWN_VIOLATIONS: frozenset[tuple[str, str]] = frozenset({
     ("tests/unit/test_alarm_zeitfenster_ziel.py", "_radar_mails_fuer_spaetankunft"),
-    ("tests/tdd/test_starkregen_kurzfristhinweis.py", "_trip_with_segment_offset"),
 })
 
 
@@ -253,6 +251,32 @@ def _ist_wanduhr_traeger(node: ast.AST) -> bool:
     return False
 
 
+_UTC_TAG_GESCHWISTER = {"ortstag", "utc_tag"}
+
+
+def _ist_ortstag_ohne_gepinnte_uhr(node: ast.Call) -> bool:
+    """``ortstag(lat, lon)`` (#2314) bzw. ``utc_tag()`` (#2314 Durchgang 2)
+    liest ohne ``now_utc=`` die Wanduhr — derselbe Wanduhr-Tag wie
+    ``date.today()``, nur einmal in der Ortszone (``ortstag``) und einmal am
+    UTC-Tag (``utc_tag``). Ohne diesen Zweig waere einer der beiden Helfer
+    ein generischer Bypass der Ratsche.
+
+    Gepinnt ist die Uhr nur, wenn ``now_utc=`` gesetzt ist UND sein Ausdruck
+    selbst keinen Wanduhr-Traeger enthaelt (Adversary F004:
+    ``now_utc=datetime.now(timezone.utc)`` bzw. ``now_utc=jetzt`` las die
+    Wanduhr genauso und wurde als gepinnt durchgewunken). Erkannt wird mit
+    derselben ``_ist_wanduhr_traeger()``-Logik wie beim ``.date()``-Empfaenger,
+    auch in zusammengesetzten Ausdruecken (``jetzt + timedelta(...)``)."""
+    f = node.func
+    name = f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else None
+    if name not in _UTC_TAG_GESCHWISTER:
+        return False
+    uhr = next((k.value for k in node.keywords if k.arg == "now_utc"), None)
+    if uhr is None:
+        return True
+    return any(_ist_wanduhr_traeger(n) for n in ast.walk(uhr))
+
+
 def _ist_wanduhr_datum(node: ast.AST) -> bool:
     """``now.date()``, ``date.today()``, ``datetime.today()``,
     ``date_type.today()`` — und ``stage_date()``.
@@ -269,6 +293,8 @@ def _ist_wanduhr_datum(node: ast.AST) -> bool:
     """
     if not isinstance(node, ast.Call):
         return False
+    if _ist_ortstag_ohne_gepinnte_uhr(node):
+        return True
     if isinstance(node.func, ast.Name) and node.func.id == "stage_date":
         return True
     if not isinstance(node.func, ast.Attribute):
@@ -700,6 +726,91 @@ def test_scanner_erkennt_date_today_als_etappendatum(tmp_path):
     """Nicht nur ``now.date()``, auch ``date.today()`` ist ein Wanduhr-Datum."""
     _attrappe(tmp_path, _fall("datum-aus-date-today"))
     assert len(scan_wallclock_arrival_fixtures(tmp_path)) == 1
+
+
+def _fall_ortstag(datum_ausdruck: str) -> str:
+    """Der ``date.today()``-Fall, Etappendatum durch ``datum_ausdruck`` ersetzt."""
+    quelltext = _fall("datum-aus-date-today")
+    assert quelltext.count("date.today()") == 1
+    return quelltext.replace("date.today()", datum_ausdruck)
+
+
+def test_scanner_erkennt_ortstag_ohne_now_utc_als_etappendatum(tmp_path):
+    """#2314: ``ortstag(lat, lon)`` liest die Wanduhr — kein Bypass der Ratsche."""
+    _attrappe(tmp_path, _fall_ortstag("ortstag(47.0, 11.0)"))
+    funde = scan_wallclock_arrival_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+
+
+def test_scanner_schweigt_bei_ortstag_mit_gepinnter_uhr(tmp_path):
+    """Kehrseite: mit ``now_utc=`` ist die Uhr gepinnt — kein Wanduhr-Datum."""
+    _attrappe(tmp_path, _fall_ortstag("ortstag(47.0, 11.0, now_utc=FEST)"))
+    funde = scan_wallclock_arrival_fixtures(tmp_path)
+    assert funde == [], f"Falsch-Positiv bei gepinnter Uhr: {[f.ref for f in funde]}"
+
+
+@pytest.mark.parametrize("uhr", [
+    "datetime.now(timezone.utc)",
+    "now_utc",
+    "now_utc - timedelta(hours=1)",
+])
+def test_scanner_erkennt_ortstag_mit_wanduhr_als_now_utc(tmp_path, uhr):
+    """Adversary F004: ``now_utc=`` mit einem Wanduhr-Ausdruck ist NICHT gepinnt
+    — direkt, ueber die Zwischenvariable ``now_utc = datetime.now(...)`` der
+    Vorlage und in einer Rechnung darauf."""
+    _attrappe(tmp_path, _fall_ortstag(f"ortstag(47.0, 11.0, now_utc={uhr})"))
+    funde = scan_wallclock_arrival_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+
+
+def test_scanner_schweigt_bei_ortstag_mit_literalem_zeitpunkt(tmp_path):
+    """Kehrseite zu F004: ein literal gebauter Zeitpunkt ist gepinnt."""
+    _attrappe(tmp_path, _fall_ortstag(
+        "ortstag(47.0, 11.0, now_utc=datetime(2026, 9, 14, 23, tzinfo=timezone.utc))"
+    ))
+    funde = scan_wallclock_arrival_fixtures(tmp_path)
+    assert funde == [], f"Falsch-Positiv bei literalem Zeitpunkt: {[f.ref for f in funde]}"
+
+
+# ═══════ AC-10 (#2314 Durchgang 2): utc_tag() darf kein unbewachter Bypass sein ═══════
+#
+# Gespiegelt am ortstag-Paar oben (test_scanner_erkennt_ortstag_ohne_now_utc_
+# als_etappendatum / test_scanner_schweigt_bei_ortstag_mit_gepinnter_uhr):
+# `utc_tag()` (Spec fix_2314_nachtfenster_utc_tag, neu in tests/helpers/
+# ortstag.py, kommt erst mit /50) liest ohne `now_utc=` ebenfalls die
+# Wanduhr -- der Scanner muss ihn deshalb GENAUSO behandeln wie
+# `ortstag(lat, lon)` ohne `now_utc=`, sonst waere `utc_tag()` ein
+# unbewachter Bypass dieser Ratsche (Spec, Abschnitt "Wanduhr-Ratsche
+# #1667"). `_fall_ortstag()` ist bewusst generisch (ersetzt nur den
+# `date.today()`-Ausdruck in der Vorlage) und funktioniert deshalb
+# unveraendert auch mit `utc_tag(...)`-Ausdruecken.
+
+def test_scanner_erkennt_utc_tag_ohne_now_utc_als_etappendatum(tmp_path):
+    """#2314 D2, AC-10: `utc_tag()` ohne `now_utc=` liest die Wanduhr --
+    muss wie `ortstag(...)` ohne `now_utc=` ein Fund sein.
+
+    ROT heute: `_ist_ortstag_ohne_gepinnte_uhr()` (Zeile ~254) kennt nur den
+    Funktionsnamen ``"ortstag"``, nicht ``"utc_tag"`` -- der Scanner meldet
+    deshalb 0 statt der erwarteten 1 Fundstelle, bis /50 die Erkennung um
+    `utc_tag` erweitert."""
+    _attrappe(tmp_path, _fall_ortstag("utc_tag()"))
+    funde = scan_wallclock_arrival_fixtures(tmp_path)
+    assert len(funde) == 1, f"erwartet 1 Fund, bekommen: {[f.ref for f in funde]}"
+
+
+def test_scanner_schweigt_bei_utc_tag_mit_gepinnter_uhr(tmp_path):
+    """Kehrseite: mit `now_utc=` ist die Uhr gepinnt -- kein Wanduhr-Datum.
+
+    Heute bereits GRUEN, aber NICHT diskriminierend: der Scanner kennt
+    `utc_tag` ueberhaupt noch nicht (s. Test oben) und schweigt deshalb bei
+    JEDEM `utc_tag(...)`-Aufruf, ob gepinnt oder nicht -- dieser Test kann
+    momentan nicht von einem echten Falsch-Positiv unterscheiden, ob er aus
+    dem richtigen Grund gruen ist. Erst nach /50 (utc_tag() wird erkannt)
+    wird er zur echten Gegenprobe; der `erkennt`-Test oben traegt bis dahin
+    den RED-Nachweis fuer AC-10 alleine."""
+    _attrappe(tmp_path, _fall_ortstag("utc_tag(now_utc=FEST)"))
+    funde = scan_wallclock_arrival_fixtures(tmp_path)
+    assert funde == [], f"Falsch-Positiv bei gepinnter Uhr: {[f.ref for f in funde]}"
 
 
 # ═══════════════════════════ Regel-Budget ═══════════════════════════

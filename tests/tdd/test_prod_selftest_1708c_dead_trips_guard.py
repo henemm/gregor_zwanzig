@@ -21,11 +21,28 @@ nicht -> AttributeError.
 """
 from __future__ import annotations
 
+import json
+from urllib.parse import urlparse
+
 from tests.tdd.conftest import (
     _init_evidence_free_repo,
     _load_prod_selftest_module,
     _make_e2e_verified,
 )
+
+
+def _health_ok_body(mod) -> bytes:
+    """Payload einer erfolgreichen /api/health-Antwort.
+
+    Seit #2130 prueft `_check_health()` zusaetzlich `webauthn_rpid` gegen den
+    Prod-Hostnamen -- ohne dieses Feld liefert die Health-Kulisse FAIL und
+    verfaelscht das hier eigentlich gepruefte Verdict. Der erwartete Wert wird
+    aus `mod.PROD_BASE` ABGELEITET, damit er bei einem Wechsel der Prod-Adresse
+    nicht still falsch wird.
+    """
+    return json.dumps(
+        {"status": "ok", "webauthn_rpid": urlparse(mod.PROD_BASE).hostname}
+    ).encode("utf-8")
 
 
 def test_fail_when_legacy_trips_dir_still_exists(tmp_path):
@@ -102,7 +119,7 @@ def test_verdict_becomes_fail_when_guard_fails(tmp_path, monkeypatch):
     head = _init_evidence_free_repo(root)
     monkeypatch.setattr(mod, "REPO_DIR", root)
     monkeypatch.setattr(
-        mod, "_http_get", lambda url, follow_redirects=False: (200, b'{"status": "ok"}', "")
+        mod, "_http_get", lambda url, follow_redirects=False: (200, _health_ok_body(mod), "")
     )
     monkeypatch.setattr(
         mod,
@@ -136,7 +153,7 @@ def test_verdict_unchanged_when_guard_passes(tmp_path, monkeypatch):
     head = _init_evidence_free_repo(root)
     monkeypatch.setattr(mod, "REPO_DIR", root)
     monkeypatch.setattr(
-        mod, "_http_get", lambda url, follow_redirects=False: (200, b'{"status": "ok"}', "")
+        mod, "_http_get", lambda url, follow_redirects=False: (200, _health_ok_body(mod), "")
     )
     monkeypatch.setattr(
         mod,

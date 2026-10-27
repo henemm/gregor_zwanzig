@@ -3,7 +3,7 @@ entity_id: issue_1142_geosphere_direct_fallback
 type: module
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, geosphere, openmeteo, reliability, fallback, routing, briefing]
 ---
@@ -44,7 +44,7 @@ Der in #1141 verdrahtete Stub `at_direct` (wirft immer `ProviderNotImplementedEr
 | `direct_provider_for` (region_routing.py:40-46) | function | Gate für `at_direct` — bleibt unverändert; empirisch bestätigt, dass die AT-Box vollständig innerhalb der GeoSphere-Coverage liegt |
 | `ProviderRequestError`/`ProviderNotFoundError`/`ProviderNotImplementedError` (base.py:75-104) | class | müssen am Seam (openmeteo.py) alle drei so gefangen werden, dass `last_error` propagiert |
 | `get_provider`/`register_provider` (base.py:111-172) | function | bestehende Registry, Umhängen des `at_direct`-Eintrags |
-| `docs/specs/modules/issue_1141_cross_provider_routing.md` | spec | Vorgänger-Slice — Routing-Unterbau, Stub, Seam |
+| `docs/specs/_archive/modules/issue_1141_cross_provider_routing.md` | spec | Vorgänger-Slice — Routing-Unterbau, Stub, Seam |
 | `docs/specs/modules/api_retry.md` | spec | GeoSphere Retry-Verhalten (502/503/504, 5 Versuche) — bleibt unverändert (AC-4) |
 | `comparison_engine`/`radar_service`/Trip-Services (nutzen `get_provider("geosphere")` direkt) | consumer | dürfen durch dieses Slice NICHT beeinflusst werden — Grund für den dünnen Adapter statt Verhaltensänderung an `GeoSphereProvider` |
 

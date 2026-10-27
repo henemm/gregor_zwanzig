@@ -3,7 +3,7 @@ entity_id: issue_371_atoms
 type: module
 created: 2026-05-25
 updated: 2026-05-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, atomic-design, atoms, epic-368, issue-371, components]
 ---

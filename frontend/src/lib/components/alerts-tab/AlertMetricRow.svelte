@@ -4,8 +4,7 @@
 
 	import type { AlertMetric } from '$lib/types';
 	import { ALERT_METRIC_LABELS } from '$lib/utils/alertMetricLabels';
-	import { DELTA_ONLY_METRICS } from '$lib/components/alert-rules-editor/alertRuleDefaults';
-	import type { MetricRowState } from './alertMetricTable.ts';
+	import { DELTA_ONLY_METRICS, type MetricRowState } from './alertMetricTable.ts';
 	import { Select } from '$lib/components/ui/select';
 
 	let {

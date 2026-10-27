@@ -18,9 +18,9 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
-from app.loader import _parse_trip, get_briefings_dir
+from app.loader import VALID_ENTITY_ID_RE, _parse_trip, get_briefings_dir
 from app.metric_catalog import format_metric_value
 from app.models import UnifiedWeatherDisplayConfig
 from app.trip import Trip
@@ -49,6 +49,12 @@ def _load_trip_raw(user_id: str, trip_id: str) -> Optional[dict]:
     kind-spezifische Weiterverarbeitung passiert downstream: der Trip-Pfad
     (`_load_trip_for_validator`) lehnt vergleich explizit ab.
     """
+    # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau, spiegelt
+    # store.ValidEntityID auf der Go-Seite. Behandelt wie "nicht vorhanden"
+    # (None -> 404 am Endpunkt), damit der Aufrufer eine Ausbruchs-Kennung
+    # nicht von einem existierenden Briefing unterscheiden kann.
+    if not VALID_ENTITY_ID_RE.match(trip_id):
+        return None
     path = get_briefings_dir(user_id) / f"{trip_id}.json"
     if not path.exists():
         return None
@@ -223,7 +229,20 @@ class SegmentTimePayload(BaseModel):
     end: str    # "HH:MM"
 
 
+class RainZonePayload(BaseModel):
+    """Issue #2051 S2b: eine zusammenhaengend nasse Zone der Reststrecke --
+    Feldspiegel von ``RainZone`` (services/rain_extent.py:26)."""
+    km_from: float
+    km_to: float
+    onset_minutes: int
+    event_end_minutes: int | None = None
+
+
 class OnsetPayload(BaseModel):
+    """Issue #1948 S5 (AC-15, Vorbedingung aus S4): `segment_id` additiv
+    nachgezogen -- `OfficialAlertPayload` transportiert die Segment-Kennung
+    ueber `segment_ids` schon heute, dieser Zweig fiel ohne sie auf den
+    km-Rueckfall zurueck."""
     onset_minutes: int
     onset_time: str
     km_from: float
@@ -232,6 +251,47 @@ class OnsetPayload(BaseModel):
     intensity_label: str
     source_label: str
     cooldown_display: str | None = None
+    segment_id: str | None = None
+    # Issue #2046: Mengenangabe der Onset-Kurznachricht (mm der Stunde ab dem
+    # Beginn), additiv und optional -- Muster `segment_id` o. Ohne sie rendert
+    # der Vorschauweg die zahlenlose Alt-Form.
+    onset_precip_mm: float | None = None
+    # Issue #2054: Tagesbezug des Beginns und seine Darstellung in der
+    # Kurzform, additiv und optional -- Muster `onset_precip_mm` o. Ohne die
+    # Felder verwirft pydantic sie STILL und die Vorschau zeigt einen
+    # Zeitpunkt von heute, wo der Versand einen von morgen meldet.
+    onset_day_offset: int = 0
+    onset_weekday: str | None = None
+    # Issue #2051 S1: Ende des Ereignisses ("HH:MM") und sein eigener
+    # Tagesbezug, additiv und optional -- Muster `onset_precip_mm` o. Ohne sie
+    # rendert der Vorschauweg die Ausweichform ohne Ende.
+    event_end_time: str | None = None
+    event_end_day_offset: int = 0
+    event_end_weekday: str | None = None  # Issue #2054
+    # Issue #2051 S1 (Spec v1.1): der R4-Waechter braucht ein EIGENES Feld --
+    # seit der Umkehr auf die Untergrenzen-Form loest ihn die erzeugende Seite
+    # nicht mehr in einem fehlenden Ende auf, er waehlt die Textform. Ohne das
+    # Feld zeigte die Vorschau im Waechterfall die falsche der beiden Formen
+    # und damit nicht mehr das, was der Produktivpfad sendet.
+    event_ongoing_beyond_horizon: bool = False
+    # Issue #2051 S3: Reichweite der Quelle und Guete-Grenzzeit, additiv und
+    # optional -- Muster `event_end_time` o. Ohne sie zeigt der Vorschauweg
+    # keine dieser beiden Angaben (Vorwarnung analog #2046 F002/S1).
+    source_reach_time: str | None = None
+    source_reach_day_offset: int = 0
+    location_sharpness_limit_time: str | None = None
+    location_sharpness_limit_day_offset: int = 0
+    # Issue #2051 S2b: raeumliche Ausdehnung, additiv und optional -- Muster
+    # `event_end_time` o. Pydantic verwirft unbekannte Schluessel STILL
+    # (#2046 F002): ohne diese beiden Felder zeigte die Vorschau in keinem
+    # Kanal eine Zonenangabe, obwohl der Payload sie traegt.
+    km_measured: bool = False
+    rain_zones: list[RainZonePayload] = Field(default_factory=list)
+    # Issue #2050 S4b-2: hat die Gewitterpruefung stattgefunden? Additiv,
+    # Default `True` -- Muster `event_ongoing_beyond_horizon` o. Pydantic
+    # verwirft unbekannte Schluessel STILL (#2046 F002): ohne dieses Feld
+    # zeigte die Vorschau den Sachverhalt nie, obwohl der Payload ihn traegt.
+    convective_checked: bool = True
 
 
 class OfficialAlertPayload(BaseModel):
@@ -262,6 +322,9 @@ class NowcastFramesPayload(BaseModel):
     frames: list[NowcastFramePayload]
     km_from: float = 0.0
     km_to: float = 0.0
+    # #1948 S5 (AC-15): wie `OnsetPayload` -- ohne Segment-Kennung nennt der
+    # Frame-Replay nur den km-Rueckfall statt des Segments.
+    segment_id: str | None = None
 
 
 class AlertPreviewBody(BaseModel):
@@ -309,7 +372,40 @@ def alert_preview(
         if not body.segment_times:
             body.segment_times = _synthesize_segment_times(trip_obj, body.changes)
 
-    return render_alert_preview(trip_obj, body)
+    # Issue #1737: echte user_id -> Stundenreihen der Vorschau nutzergebunden.
+    return render_alert_preview(trip_obj, body, user_id=user_id)
+
+
+@router.post("/api/briefings/{entity_id}/alert-preview")
+def briefing_alert_preview(
+    entity_id: str,
+    body: dict,
+    kind: str = Query(..., description="route | vergleich (Pflicht, ADR-0023)"),
+    user_id: str = Query(...),
+):
+    """Issue #2283 S4 (AC-16): kind-neutrale Alarm-Vorschau.
+
+    `kind=route` ist ein Delegate auf `alert_preview` (Body und Antwort wie
+    `POST /api/trips/{id}/alert-preview`). `kind=vergleich` rendert ueber
+    dieselben Versand-Projektionen wie der Orts-Vergleich-Alarm
+    (`compare_alert_preview_service`). Beide Loader sind user-scoped.
+    """
+    if kind == "route":
+        try:
+            trip_body = AlertPreviewBody.model_validate(body)
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail=e.errors(include_url=False))
+        return alert_preview(entity_id, trip_body, user_id=user_id)
+    if kind != "vergleich":
+        raise HTTPException(status_code=400, detail="kind_required")
+    from services.compare_alert_preview_service import render_compare_alert_preview
+
+    try:
+        return render_compare_alert_preview(entity_id, user_id=user_id, body=body)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except (KeyError, TypeError, ValueError) as e:
+        raise HTTPException(status_code=422, detail=f"Ungültiger Alarm-Körper: {e}")
 
 
 def _real_segment_ids_for_today(trip_obj: Trip) -> set[str]:

@@ -107,6 +107,14 @@ func (p *OpenMeteoProvider) doRequest(ctx context.Context, reqURL string) ([]byt
 	return nil, fmt.Errorf("all %d retries exhausted: %w", p.cfg.Retries, lastErr)
 }
 
+// setUnits schreibt die Einheiten explizit in die Query (Issue #1994, Audit B-04),
+// statt sich auf die API-Defaults zu verlassen.
+func setUnits(params url.Values) {
+	params.Set("wind_speed_unit", "kmh")
+	params.Set("temperature_unit", "celsius")
+	params.Set("precipitation_unit", "mm")
+}
+
 // buildForecastURL constructs the API URL for a model.
 func (p *OpenMeteoProvider) buildForecastURL(m RegionalModel, lat, lon float64, start, end time.Time) string {
 	params := url.Values{}
@@ -116,6 +124,7 @@ func (p *OpenMeteoProvider) buildForecastURL(m RegionalModel, lat, lon float64, 
 	params.Set("timezone", "UTC")
 	params.Set("start_date", start.Format("2006-01-02"))
 	params.Set("end_date", end.Format("2006-01-02"))
+	setUnits(params)
 	return fmt.Sprintf("%s%s?%s", p.cfg.BaseURL, m.Endpoint, params.Encode())
 }
 
@@ -294,6 +303,7 @@ func (p *OpenMeteoProvider) fetchUVData(ctx context.Context, lat, lon float64, s
 	params.Set("timezone", "UTC")
 	params.Set("start_date", start.Format("2006-01-02"))
 	params.Set("end_date", end.Format("2006-01-02"))
+	setUnits(params)
 
 	reqURL := fmt.Sprintf("%s/v1/air-quality?%s", p.cfg.AQURL, params.Encode())
 	body, err := p.doRequest(ctx, reqURL)

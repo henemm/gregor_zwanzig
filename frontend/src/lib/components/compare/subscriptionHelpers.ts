@@ -136,6 +136,27 @@ export function isRuntimeExceeded(p: ComparePreset): boolean {
 	return end.getTime() < today.getTime();
 }
 
+/**
+ * Issue #2278 (AC-2): Filter-Pille eines Ortsvergleichs. Gleiche Regel wie beim Trip
+ * (`deriveTripStatus`): Enddatum vor heute = "fertig" (auch wenn die Auto-Pause schon griff).
+ * Ortsvergleiche haben kein Startdatum, "geplant" gibt es daher nicht. Entwuerfe: nur unter "Alle".
+ * `end_date` fehlt beim Lesen oder ist "" (Schreibweise) — beides = kein Enddatum.
+ */
+export function compareFilterStatus(
+	p: ComparePreset,
+	now: Date = new Date()
+): 'aktiv' | 'pausiert' | 'fertig' | null {
+	const status = deriveStatusFromPreset(p);
+	if (status === 'draft') return null;
+	if (p.end_date) {
+		const end = new Date(`${p.end_date}T00:00:00`);
+		const heute = new Date(now);
+		heute.setHours(0, 0, 0, 0);
+		if (!isNaN(end.getTime()) && end.getTime() < heute.getTime()) return 'fertig';
+	}
+	return status === 'paused' ? 'pausiert' : 'aktiv';
+}
+
 /** ComparePreset → "N Orte" */
 export function presetLocationsLabel(p: ComparePreset): string {
 	return `${p.location_ids.length} ${p.location_ids.length === 1 ? 'Ort' : 'Orte'}`;
@@ -241,12 +262,18 @@ export function relativeLastSent(iso: string | undefined): string {
  * an (auch leer) — der Kanal-Umschalter zeigte Telegram/SMS darum unabhängig
  * vom echten Opt-in an. Signal hat kein Opt-in-Feld und kann damit strukturell
  * nicht mehr auftauchen (statt über eine Allowlist gefiltert zu werden).
+ *
+ * Issue #2229 (AC-1): Premium-SMS wird aus `send_premium_sms` abgeleitet
+ * (Opt-in, nicht Zustellbarkeit — die meldet der Versand-Tab).
  */
 export function presetChannels(preset: ComparePreset): string[] {
 	// E-Mail ohne Opt-out (KL-6) → immer aktiv, unabhängig von `empfaenger`.
 	const result: string[] = ['Email'];
 	if (preset.send_telegram === true) result.push('Telegram');
 	if (preset.send_sms === true) result.push('SMS');
+	// Issue #2229 (AC-1): Premium-SMS ist vierter Versandkanal (ADR-0049) und
+	// folgt wie Telegram/SMS dem Opt-in — Muster `_home/cockpitHelpers.ts`.
+	if (preset.send_premium_sms === true) result.push('Premium-SMS');
 	return result;
 }
 
@@ -262,56 +289,8 @@ export function channelNamesLabel(preset: ComparePreset): string {
 	return channels.length === 0 ? '—' : channels.join(' · ');
 }
 
-export type CompareAction = { id: string; label: string; danger?: boolean };
-
-export function compareActions(status: CompareStatus): CompareAction[] {
-	if (status === 'draft') {
-		return [
-			{ id: 'setup', label: 'Setup fortsetzen' },
-			{ id: 'delete', label: 'Löschen', danger: true }
-		];
-	}
-	// Issue #626: Toggle-Label kontextabhängig; Issue #627: 'send' wieder aufgenommen.
-	// Issue #1256 Scheibe 1: 'archive' entfernt (Soll molecules.jsx:1018-1027) —
-	// Archivieren ist ab Scheibe 3 exklusiv Teil der Hub-Header-Lifecycle-Liste
-	// (compareLifecycleActions()), nicht mehr Teil des Listen-Kebabs.
-	const pauseLabel = status === 'paused' ? 'Aktivieren' : 'Pausieren';
-	return [
-		{ id: 'pause', label: pauseLabel },
-		{ id: 'send', label: 'Briefing jetzt senden' },
-		{ id: 'preview', label: 'Vorschau öffnen' },
-		{ id: 'edit', label: 'Bearbeiten' },
-		{ id: 'delete', label: 'Löschen', danger: true }
-	];
-}
-
-// Issue #1256 Scheibe 3 — Hub-Header-Kebab: NUR Lebenszyklus-Aktionen
-// (Pausieren/Aktivieren, Archivieren, Löschen), analog `CHub_lifecycleActions`
-// (`screen-compare-detail.jsx:27-33`). Bearbeiten/Vorschau/Senden bleiben
-// exklusiv über Tabs bzw. die Primäraktion erreichbar (AC-5). Löst KL-7 auf:
-// "Archivieren" wandert komplett hierher, weg vom Listen-Kebab (Scheibe 1).
-export function compareLifecycleActions(status: CompareStatus): CompareAction[] {
-	if (status === 'draft') {
-		return [{ id: 'trash', label: 'Entwurf löschen', danger: true }];
-	}
-	const toggle =
-		status === 'active' ? { id: 'pause', label: 'Pausieren' } : { id: 'resume', label: 'Aktivieren' };
-	return [toggle, { id: 'archive', label: 'Archivieren' }, { id: 'trash', label: 'Löschen', danger: true }];
-}
-
-// Epic #1273 Slice S3 — UMKEHRUNG des #1261-(a)-Verhaltens: compareDetailActions()
-// liefert kein "Bearbeiten" mehr. #1261 hatte "Bearbeiten" in den Desktop-Detail-
-// Kebab aufgenommen, weil der Nutzer keinen anderen Einstieg zur alten /edit-Seite
-// fand. Seit S2 (Name/Region/Aktivitaetsprofil INLINE auf dem Hub editierbar) und
-// S3 (die alte /edit-Route ist nur noch ein Redirect auf den Hub) IST der Hub die
-// Bearbeiten-Flaeche — ein "Bearbeiten"-Eintrag im eigenen Kebab waere zirkulaer.
-// Die Funktion bleibt als duenner Alias auf compareLifecycleActions() bestehen,
-// die Trennung existiert nur noch aus Aufrufer-Kompatibilitaetsgruenden (Desktop-
-// Hub-Kebab, routes/compare/[id]/+page.svelte), nicht mehr aus Verhaltensgruenden.
-// Spec: docs/specs/modules/feat_1273_s3_redirect.md (AC-5).
-export function compareDetailActions(status: CompareStatus): CompareAction[] {
-	return compareLifecycleActions(status);
-}
+// Issue #2278: die Aktionslisten (compareActions/compareLifecycleActions/compareDetailActions)
+// sind durch die EINE Quelle `subscriptionActions` (shared/subscriptionActions.ts) ersetzt.
 
 // Issue #1229 — Compare-Hub Briefing-Zeiten (Slot-basiert statt Rhythmus-Sprache).
 // Spec: docs/specs/modules/issue_1229_monitor_hub.md (AC-3, Edge Cases)

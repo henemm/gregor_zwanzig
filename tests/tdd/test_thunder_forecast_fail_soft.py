@@ -97,7 +97,7 @@ class TestThunderForecastFailSoft:
 
         from datetime import datetime, timezone
 
-        collected = TripReportSchedulerService()._collect_future_stage_weather(
+        collected = TripReportSchedulerService(user_id="default")._collect_future_stage_weather(
             trip, today, now_utc=datetime.now(timezone.utc),
         )
 
@@ -116,7 +116,7 @@ class TestThunderForecastFailSoft:
         # Aus leerer Sammlung wird thunder_forecast None (wie in der
         # Aufrufstelle: `... if future_stage_weather else None`).
         thunder_forecast = (
-            TripReportSchedulerService()._build_thunder_forecast(
+            TripReportSchedulerService(user_id="default")._build_thunder_forecast(
                 [], date.today(), tz=None,
             )
         )

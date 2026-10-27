@@ -3,7 +3,7 @@ entity_id: issue_1009_1019_inbound_reader_robustness
 type: module
 created: 2026-07-07
 updated: 2026-07-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [inbound, email, telegram, robustness, security, multi-user]
 ---
@@ -52,7 +52,7 @@ Schwachstellen ab, ohne deren Grundarchitektur zu verändern.
 | `loader.lookup_user_by_telegram_chat_id` (`src/app/loader.py`) | intern | Liefert `None` bei unbekanntem Chat — Basis für #1019-Gate |
 | `Settings.with_user_profile(user_id)` (`src/app/config.py`) | intern | Liefert globale Settings zurück, wenn `user.json` fehlt (Grund für das Datenleck-Risiko bei `"default"`) |
 | `docs/adr/0003-multi-tenant-isolation.md` | ADR | Grundsatzentscheidung gegen `"default"`-Fallback in authentifizierten Pfaden; thematisch einschlägig, formal nicht verletzt (Inbound ist unauthentifiziert) |
-| `docs/specs/modules/issue_572_multi_user_inbound_routing.md` | Spec | Ursprungs-Spec des `"default"`-Fallbacks (AC-3/AC-4, freigegeben 2026-06-03) — wird durch diese Spec ergänzt, nicht ersetzt |
+| `docs/specs/_archive/modules/issue_572_multi_user_inbound_routing.md` | Spec | Ursprungs-Spec des `"default"`-Fallbacks (AC-3/AC-4, freigegeben 2026-06-03) — wird durch diese Spec ergänzt, nicht ersetzt |
 
 ## Implementation Details
 

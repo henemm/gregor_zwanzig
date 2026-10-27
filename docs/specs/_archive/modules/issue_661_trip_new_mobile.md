@@ -8,7 +8,7 @@ version: "1.0"
 tags: [frontend, mobile, trip-new, design-compliance, epic-622]
 ---
 
-# Spec: Neue Tour anlegen — Mobile-Parität /trips/new (#661, #622 AC-9)
+# Spec: Neue Trip anlegen — Mobile-Parität /trips/new (#661, #622 AC-9)
 
 ## Approval
 
@@ -60,7 +60,7 @@ bzw. Desktop-/Mobile-Markup **parallel gerendert** und per `display:none` umgesc
 ```
 
 - **Kopf:** Desktop-Breadcrumb-Zeile bleibt (`.tn-desktop`); mobil `TopAppBar` (title=aktiver Tab-Label,
-  eyebrow=Tour-Name, leftIcon=back→`/trips`, right=„Speichern" — aktiv nur wenn `ready`).
+  eyebrow=Trip-Name, leftIcon=back→`/trips`, right=„Speichern" — aktiv nur wenn `ready`).
 - **Fortschritt:** mobil flex:1-Segmente + „N/4" (`TNM_Progress`).
 - **TabBar:** scrollbar, `min-height:44px`, gesperrter Tab-Tap → `Toast` 2s (statt Desktop-Flash).
 - **Route-Tab:** `MField`/`MInput`, native `<input type=date>` (16px), Floating-CTA `position:fixed`/absolute.
@@ -82,13 +82,13 @@ bzw. Desktop-/Mobile-Markup **parallel gerendert** und per `display:none` umgesc
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein eingeloggter Nutzer öffnet `/trips/new` auf einem Mobile-Viewport (≤899px) / When die Seite geladen ist / Then zeigt eine obere App-Leiste den Titel des aktiven Tabs, als Eyebrow den Tour-Namen (oder „Neue Tour") und rechts eine „Speichern"-Aktion, **während** die Desktop-Breadcrumb-Zeile („Trips / Neue Tour" + Abbrechen/Speichern) nicht sichtbar ist.
+- **AC-1:** Given ein eingeloggter Nutzer öffnet `/trips/new` auf einem Mobile-Viewport (≤899px) / When die Seite geladen ist / Then zeigt eine obere App-Leiste den Titel des aktiven Tabs, als Eyebrow den Trip-Namen (oder „Neue Trip") und rechts eine „Speichern"-Aktion, **während** die Desktop-Breadcrumb-Zeile („Trips / Neue Trip" + Abbrechen/Speichern) nicht sichtbar ist.
   - Test: Playwright @375×667, `/trips/new` — App-Leisten-„Speichern" sichtbar, Desktop-Breadcrumb-Container `hidden`/`display:none` (computed).
 
-- **AC-2:** Given der Mobile-Viewport mit gesperrtem Tab (z.B. „Etappen" ohne Tour-Name) / When der Nutzer den gesperrten Tab antippt / Then erscheint ein kurzer Toast-Hinweis mit dem Lock-Grund und der aktive Tab wechselt **nicht**; die TabBar ist horizontal scrollbar und jedes Tab-Ziel ist ≥44px hoch.
+- **AC-2:** Given der Mobile-Viewport mit gesperrtem Tab (z.B. „Etappen" ohne Trip-Name) / When der Nutzer den gesperrten Tab antippt / Then erscheint ein kurzer Toast-Hinweis mit dem Lock-Grund und der aktive Tab wechselt **nicht**; die TabBar ist horizontal scrollbar und jedes Tab-Ziel ist ≥44px hoch.
   - Test: Playwright @375 — Tap auf gesperrtes „Etappen" → Toast sichtbar, `activeTab` bleibt „Route"; Tab-`boundingBox().height ≥ 44`.
 
-- **AC-3:** Given der Mobile-Viewport, Route-Tab / When er rendert / Then sind Tour-Name-, Region- und Startdatum-Eingaben volle Breite gestapelt (kein horizontaler Overflow) und der primäre Weiter-CTA schwebt am unteren Rand; nach Eingabe von Name **und** Startdatum wird der CTA aktiv und führt in den Etappen-Tab.
+- **AC-3:** Given der Mobile-Viewport, Route-Tab / When er rendert / Then sind Trip-Name-, Region- und Startdatum-Eingaben volle Breite gestapelt (kein horizontaler Overflow) und der primäre Weiter-CTA schwebt am unteren Rand; nach Eingabe von Name **und** Startdatum wird der CTA aktiv und führt in den Etappen-Tab.
   - Test: Playwright @375 — Inputs `clientWidth ≤ viewport`, Floating-CTA `position:fixed/absolute` am unteren Rand; Name+Datum eintippen → CTA klickbar → `activeTab`=„etappen".
 
 - **AC-4:** Given der Mobile-Viewport, Etappen-Tab / When er rendert / Then werden Etappen als vertikale Karten dargestellt (kein Desktop-Grid), jede mit T-Badge, antippbarem Namensfeld, Auto-Datum und voll­breitem GPX-Slot; Tippen auf den Namen öffnet ein Bottom-Sheet zur Namenseingabe, und die Übernahme schreibt den Namen in die Karte zurück.
@@ -100,7 +100,7 @@ bzw. Desktop-/Mobile-Markup **parallel gerendert** und per `display:none` umgesc
 - **AC-6:** Given der Mobile-Viewport / When der Nutzer die Tabs Wetter-Metriken, Briefing-Zeitplan und Alerts öffnet / Then passt der Inhalt jeweils in die 375px-Breite ohne horizontalen Overflow (Wetter nutzt das #618-Muster FAB+Sheet; Zeitplan/Alerts mobiles Padding) — kein Element ist breiter als der Viewport.
   - Test: Playwright @375 — je Tab `document.scrollingElement.scrollWidth ≤ innerWidth + 1`; Wetter-FAB „So kommt es an" sichtbar.
 
-- **AC-7:** Given der Mobile-Viewport mit erfüllten Pflichtschritten (Name+Datum, GPX, Wetter besucht, Zeitplan besucht) / When der Nutzer „Speichern" in der App-Leiste auslöst / Then wird die Tour mit **genau einem** `POST /api/trips` angelegt und auf `/trips/{id}` navigiert — identische Persistenz wie Desktop (gleicher Payload inkl. Etappen/Wegpunkte).
+- **AC-7:** Given der Mobile-Viewport mit erfüllten Pflichtschritten (Name+Datum, GPX, Wetter besucht, Zeitplan besucht) / When der Nutzer „Speichern" in der App-Leiste auslöst / Then wird die Trip mit **genau einem** `POST /api/trips` angelegt und auf `/trips/{id}` navigiert — identische Persistenz wie Desktop (gleicher Payload inkl. Etappen/Wegpunkte).
   - Test: Playwright @375 gegen Staging — kompletter Flow bis „Speichern", Netzwerk zeigt **einen** `POST /api/trips`, danach URL `/trips/<neueId>`; angelegter Trip im Backend prüfbar.
 
 - **AC-8:** Given ein Desktop-Viewport (≥900px) / When `/trips/new` rendert / Then ist das Layout gegenüber dem Live-Desktop unverändert (Breadcrumb-Kopf, Etappen-Grid, max-width-Container) und **kein** Mobile-Element (App-Leiste, Floating-CTA, Toast-TabBar) ist sichtbar.

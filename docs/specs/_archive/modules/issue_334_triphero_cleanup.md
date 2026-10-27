@@ -3,7 +3,7 @@ entity_id: issue_334_triphero_cleanup
 type: module
 created: 2026-05-24
 updated: 2026-05-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [cleanup, dead-code, frontend, trip-detail]
 ---
@@ -89,12 +89,12 @@ tags: [cleanup, dead-code, frontend, trip-detail]
 - **AC-8:** Given das geänderte Frontend / When `cd frontend && npm run build` (bzw. `svelte-check`) ausgeführt wird / Then schließt der Lauf ohne Fehler ab (keine gebrochenen Importe durch die Entfernung)
   - Test: Befehls-Verifikation in Phase 6/Validate (`npm run build`) — bewusst NICHT in der pytest-Suite, um den pre_commit_gate-Volllauf nicht zu verlangsamen
 
-- **AC-9:** Given die verbliebenen Util-Tests / When `cd frontend && node --experimental-strip-types --test src/lib/utils/tripHero.test.ts` ausgeführt wird / Then ist der Exit-Code 0 (überlebende Funktionen weiterhin korrekt — Regressions-Guard)
+- **AC-9:** Given die verbliebenen Util-Tests / When `cd frontend && node --experimental-strip-types --test frontend/src/lib/utils/tripHero.test.ts` ausgeführt wird / Then ist der Exit-Code 0 (überlebende Funktionen weiterhin korrekt — Regressions-Guard)
   - Test: Befehls-Verifikation in Phase 6/Validate (`node --test`) — bewusst NICHT in der pytest-Suite
 
 ## Known Limitations
 
-- Die historische Feature-Spec `docs/specs/modules/epic_135_step3_trip_hero.md` bleibt als Dokumentation erhalten (kein Löschen von Specs).
+- Die historische Feature-Spec `docs/specs/_archive/modules/epic_135_step3_trip_hero.md` bleibt als Dokumentation erhalten (kein Löschen von Specs).
 - Das Screenshot-Artefakt ist binär und zählt nicht zum LoC-Delta; seine Entfernung ist Hygiene, nicht testkritisch.
 - Scope: ~455 LoC-Delta (fast ausschließlich Löschungen) → `loc_limit_override = 500` für diesen Workflow gesetzt.
 

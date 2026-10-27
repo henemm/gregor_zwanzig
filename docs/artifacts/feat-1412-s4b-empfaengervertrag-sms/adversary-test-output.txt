@@ -1,0 +1,1035 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 149 items
+
+tests/tdd/test_sms_recipient_contract.py ............................... [ 20%]
+...............................................                          [ 52%]
+tests/test_sms_verification_code_endpoint.py .....                       [ 55%]
+tests/unit/test_premium_sms_versand.py .............                     [ 64%]
+tests/test_sms_versand_nur_bestaetigte_nummer.py ........                [ 69%]
+tests/tdd/test_sms_tageslimit.py ....................................... [ 95%]
+......                                                                   [100%]
+
+==================================== PASSES ====================================
+_____________ test_ac1_sms_ohne_empfaenger_wird_geblockt_ohne_http _____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer None blockiert (sms_no_recipient): kein belegter Empfaenger uebergeben.
+___________ test_ac1_premium_ohne_empfaenger_wird_geblockt_ohne_http ___________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer None blockiert (premium_sms_no_reply_address): kein belegter Empfaenger uebergeben.
+__________ test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[sms] __________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer None blockiert (sms_no_recipient): kein belegter Empfaenger uebergeben.
+______ test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[premium_sms] ______
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer None blockiert (premium_sms_no_reply_address): kein belegter Empfaenger uebergeben.
+____ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[unbestaetigt] ____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+_____ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[abweichend] _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+________ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[leer] ________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+____ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[kein_profil] _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+___ test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[fehlt] ____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-ohne-profil-fehlt blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+___ test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[kaputt] ___
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-ohne-profil-kaputt blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+______ test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[sms] ______
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_recipient_mismatch): Ziel weicht vom belegten Empfaenger ab.
+__ test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[premium_sms] __
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_recipient_mismatch): Ziel weicht vom belegten Empfaenger ab.
+___________ test_ac4_block_im_dienst_verbraucht_keinen_drosselplatz ____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:997 No-data hint SMS failed for Trip-kunde-b: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-b').
+_ test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[fehlend-premium_sms_no_reply_address] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_no_reply_address)
+_ test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[zukunft-premium_sms_reply_address_stale] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_reply_address_stale)
+_ test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[31_tage-premium_sms_reply_address_stale] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_reply_address_stale)
+_ test_ac5_alarm_buchung_registriert_den_unveraenderten_code[fehlend-premium_sms_no_reply_address] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:1430 Official alert premium-sms failed for Amt-trip-ac5: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_ac5_alarm_buchung_registriert_den_unveraenderten_code[31_tage-premium_sms_reply_address_stale] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_reply_address_stale)
+ERROR    services.notification_service:notification_service.py:1430 Official alert premium-sms failed for Amt-trip-ac5: [premium_sms] gelernte Rueckadresse ist veraltet: zuletzt vor 31 Tagen gelernt, erlaubt sind 30 Tage. Garmin kann die Nummer inzwischen einem fremden Geraet zugeteilt haben — Versand abgebrochen, bis sich das Geraet wieder meldet.
+___________ test_ac6_code_geht_nur_an_die_eigene_ausstehende_nummer ____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+_______ test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[fremd] ________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-a blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+_____ test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[ohne_plus] ______
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-a blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+____ test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[kein_profil] _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-ohne-profil blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+__ test_ac7_verification_gibt_es_nur_am_sms_typ_und_nur_fuer_die_profilnummer __
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-a blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-a blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+___ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-abc] ___
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-12; DROP] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-123456] __
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-1234567890123456] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-+49 151 12a4567] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-491511234567] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+0151123456] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+__ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-abc] __
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-12; DROP] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567890123456] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+____ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-abc] _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+__ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-12; DROP] __
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+__ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567] ___
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567890123456] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-+0170000000001] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+________ test_ac11_befehlsantwort_ueber_den_echten_reader[erfolgreich] _________
+------------------------------ Captured log call -------------------------------
+WARNING  services.trip_command_processor:trip_command_processor.py:1588 No trip found for name: '' (user: 'kunde-a')
+WARNING  services.trip_command_processor:trip_command_processor.py:1588 No trip found for name: '' (user: 'kunde-a')
+_______ test_ac11_befehlsantwort_ueber_den_echten_reader[kollision_409] ________
+------------------------------ Captured log call -------------------------------
+WARNING  services.inbound_sms_reader:inbound_sms_reader.py:298 premium-sms-learn abgelehnt (HTTP 409) fuer maskierte Nummer **********001: {"error":"premium_number_collision"}
+________ test_ac14_herkunftssperre_schaltet_weiter_auf_den_sandbox_key _________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:171 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+_ test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[ohne_empfaenger] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer None blockiert (sms_no_recipient): kein belegter Empfaenger uebergeben.
+____ test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[unfoermig] ____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_______ test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[sms] _______
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:997 No-data hint SMS failed for Trip-kunde-b: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-b').
+___ test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[premium_sms] ___
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:1013 No-data hint Premium-SMS blockiert für Trip-kunde-b: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+____ test_endpunkt_adressiert_nie_die_im_profil_gespeicherte_fremde_nummer _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer intsms2 blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+_____________ test_empty_reply_to_blocks_send_with_visible_reason ______________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer tdd-1676-noreply blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:846 Premium-SMS nicht versendet für Premium-SMS tdd-1676-noreply: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+___________________ test_reply_to_older_than_ttl_blocks_send ___________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer tdd-1676-stale blockiert (premium_sms_reply_address_stale)
+ERROR    services.notification_service:notification_service.py:846 Premium-SMS nicht versendet für Premium-SMS tdd-1676-stale: [premium_sms] gelernte Rueckadresse ist veraltet: zuletzt vor 30 Tagen gelernt, erlaubt sind 30 Tage. Garmin kann die Nummer inzwischen einem fremden Geraet zugeteilt haben — Versand abgebrochen, bis sich das Geraet wieder meldet.
+________ test_standard_tier_gets_no_premium_sms_when_weather_data_fails ________
+------------------------------ Captured log call -------------------------------
+WARNING  trip_report_scheduler:trip_report_scheduler.py:1790 All-failed weather data for trip trip-tdd-1676-outage-standard
+________ test_outage_hint_names_the_reason_when_premium_sms_is_blocked _________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer tdd-1676-outage-noreply blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:1013 No-data hint Premium-SMS blockiert für Premium-SMS tdd-1676-outage-noreply: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+____________ test_the_two_block_cases_carry_distinct_machine_codes _____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer tdd-1676-code-empty blockiert (premium_sms_no_reply_address)
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer tdd-1676-code-stale blockiert (premium_sms_reply_address_stale)
+______________ test_ac1b_versandpfad_blockt_unbestaetigte_nummer _______________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer ac1b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+_________ test_ac8_fremde_nummer_bleibt_fuer_das_fremde_konto_gesperrt _________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer ac8b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+_________ test_ac4_garmin_antwort_darf_die_reply_reserve_ausschoepfen __________
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2230 Premium-SMS confirmation blocked: SMS-Tageslimit erreicht
+______ test_ac7_rollback_bei_transportfehler_und_unveraendert_bei_sperre _______
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:819 SMS send failed for Trip-trip-smslimit-ac7-9f023502: Transport kaputt
+______ test_f001_kaputte_zaehlerdatei_ist_fail_open[fremder-wert-im-feld] ______
+------------------------------ Captured log call -------------------------------
+WARNING  sms_daily_limit:sms_daily_limit.py:78 SMS-Tageslimit: unlesbarer Zaehlerwert 'abc' fuer 'sms' -- als 0 behandelt (fail-open)
+_ test_f001_kaputte_zaehlerdatei_ist_fail_open[unendlicher-zaehlerwert-f001c] __
+------------------------------ Captured log call -------------------------------
+WARNING  sms_daily_limit:sms_daily_limit.py:78 SMS-Tageslimit: unlesbarer Zaehlerwert inf fuer 'sms' -- als 0 behandelt (fail-open)
+___ test_f001_kaputte_zaehlerdatei_ist_fail_open[user-json-als-liste-f001b] ____
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:39 user.json for smslimit-f001-ab88d4b6 at /tmp/pytest-of-hem/pytest-3218/data_root125/users/smslimit-f001-ab88d4b6/user.json is not a JSON object (list) -- treated as empty profile
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-ab88d4b6 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 1/4 send failed for Trip-trip-smslimit-f001-ab88d4b6: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-ab88d4b6'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-ab88d4b6 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 2/4 send failed for Trip-trip-smslimit-f001-ab88d4b6: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-ab88d4b6'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-ab88d4b6 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 3/4 send failed for Trip-trip-smslimit-f001-ab88d4b6: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-ab88d4b6'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-ab88d4b6 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 4/4 send failed for Trip-trip-smslimit-f001-ab88d4b6: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-ab88d4b6'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-ab88d4b6 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:951 Telegram incomplete-briefing hint failed: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-ab88d4b6'.
+___ test_f001_kaputte_zaehlerdatei_ist_fail_open[user-json-als-skalar-f001b] ___
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:39 user.json for smslimit-f001-f156b6ae at /tmp/pytest-of-hem/pytest-3218/data_root126/users/smslimit-f001-f156b6ae/user.json is not a JSON object (int) -- treated as empty profile
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-f156b6ae -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 1/4 send failed for Trip-trip-smslimit-f001-f156b6ae: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-f156b6ae'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-f156b6ae -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 2/4 send failed for Trip-trip-smslimit-f001-f156b6ae: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-f156b6ae'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-f156b6ae -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 3/4 send failed for Trip-trip-smslimit-f001-f156b6ae: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-f156b6ae'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-f156b6ae -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 4/4 send failed for Trip-trip-smslimit-f001-f156b6ae: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-f156b6ae'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-f156b6ae -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:951 Telegram incomplete-briefing hint failed: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-f156b6ae'.
+________ test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-liste-f009] _________
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:60 user.json tier value ['hack'] for smslimit-f001-5b7e5126 is not a known tier -- treated as 'free'
+_________ test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-zahl-f009] _________
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:60 user.json tier value 42 for smslimit-f001-2375bb0e is not a known tier -- treated as 'free'
+______ test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-unbekannt-f009] _______
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:60 user.json tier value 'gold' for smslimit-f001-ef20be85 is not a known tier -- treated as 'free'
+__ test_f002_rollback_bei_transportfehler_an_weiteren_sendestellen[radar_sms] __
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2038 Radar alert sms failed for trip-smslimit-f002radar_sms-8951025a: Transport kaputt
+_ test_f002_rollback_bei_transportfehler_an_weiteren_sendestellen[official_alert_premium_sms] _
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:1430 Official alert premium-sms failed for Official-trip-smslimit-f002official_alert_premium_sms-0cd820bb: Transport kaputt
+____ test_f006_standard_nutzer_bekommt_keine_garmin_antwort_per_premium_sms ____
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2230 Premium-SMS confirmation blocked: SMS-Tageslimit erreicht
+_______ test_f008_dauerhafter_oeffnungs_oder_schreibfehler_ist_fail_open _______
+------------------------------ Captured log call -------------------------------
+WARNING  sms_daily_limit:sms_daily_limit.py:166 SMS-Tageslimit: Sperrdatei /tmp/pytest-of-hem/pytest-3218/data_root141/users/smslimit-f008a-7bf0b641/sms_daily_count.json.lock nicht erreichbar (Simulierter Oeffnungsfehler (F008 Szenario A)) -- Pruefung uebersprungen (fail-open)
+WARNING  sms_daily_limit:sms_daily_limit.py:194 SMS-Tageslimit: Schreiben von /tmp/pytest-of-hem/pytest-3218/data_root141/users/smslimit-f008b-d7ecfb32/sms_daily_count.json fehlgeschlagen (Simulierter Schreibfehler (F008 Szenario B)) -- Reservierung nicht persistiert, Versand bleibt zugelassen (fail-open)
+WARNING  sms_daily_limit:sms_daily_limit.py:251 SMS-Tageslimit: Rollback-Schreiben von /tmp/pytest-of-hem/pytest-3218/data_root141/users/smslimit-f008c-d82f8a4c/sms_daily_count.json fehlgeschlagen (Simulierter Rollback-Schreibfehler (F008 Szenario C)) -- Zaehlerstand bleibt unveraendert (fail-open)
+ERROR    services.notification_service:notification_service.py:819 SMS send failed for Trip-trip-smslimit-f008c-d82f8a4c: Transport kaputt (F008 Szenario C)
+_______ test_f009a_tier_validierung_faellt_fail_closed_auf_free_zurueck ________
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:60 user.json tier value ['hack'] for smslimit-f009a-9aaced5a is not a known tier -- treated as 'free'
+WARNING  user_tier:user_tier.py:60 user.json tier value ['hack'] for smslimit-f009a-9aaced5a is not a known tier -- treated as 'free'
+WARNING  user_tier:user_tier.py:60 user.json tier value ['hack'] for smslimit-f009a-9aaced5a is not a known tier -- treated as 'free'
+WARNING  user_tier:user_tier.py:60 user.json tier value ['hack'] for smslimit-f009a-9aaced5a is not a known tier -- treated as 'free'
+_______________ test_f009b_werfender_tier_lookup_ist_fail_closed _______________
+------------------------------ Captured log call -------------------------------
+WARNING  sms_daily_limit:sms_daily_limit.py:151 SMS-Tageslimit: Tier-/Cap-Ermittlung fuer smslimit-f009b-052c9218 fehlgeschlagen (Simulierter Tier-/Cap-Lookup-Fehler (F009b)) -- fail-closed, Kontingent gilt als erschoepft
+=========================== short test summary info ============================
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac1_sms_ohne_empfaenger_wird_geblockt_ohne_http
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac1_premium_ohne_empfaenger_wird_geblockt_ohne_http
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[unbestaetigt]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[abweichend]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[leer]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[kein_profil]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac2_bestaetigte_nummer_wird_frisch_aus_dem_profil_gelesen
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[fehlt]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[kaputt]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac4_dienst_mit_model_copy_nummer_von_a_sendet_fuer_b_nur_an_b
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac4_ausgang_fuer_b_ignoriert_settings_nummer_von_a
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac4_block_im_dienst_verbraucht_keinen_drosselplatz
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[fehlend-premium_sms_no_reply_address]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[zukunft-premium_sms_reply_address_stale]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[31_tage-premium_sms_reply_address_stale]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_frische_rueckadresse_aus_dem_profil_wird_bedient
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_alarm_buchung_registriert_den_unveraenderten_code[fehlend-premium_sms_no_reply_address]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_alarm_buchung_registriert_den_unveraenderten_code[31_tage-premium_sms_reply_address_stale]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac6_code_geht_nur_an_die_eigene_ausstehende_nummer
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[fremd]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[ohne_plus]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[kein_profil]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac7_verification_gibt_es_nur_am_sms_typ_und_nur_fuer_die_profilnummer
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-abc]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-12; DROP]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-123456]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-1234567890123456]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-+49 151 12a4567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-491511234567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+0151123456]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-abc]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-12; DROP]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567890123456]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-abc]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-12; DROP]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567890123456]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-+0170000000001]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[+49 151 123-45 67]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[(0151) 123 4567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[0041-79-000 00 01]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[1234567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[+491511234567890]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[briefing-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[briefing-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[kein_daten_hinweis-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[kein_daten_hinweis-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[amtswarnung-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[amtswarnung-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich_amtswarnung-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich_amtswarnung-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_trip-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_trip-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_trip-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_trip-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac11_befehlsantwort_ueber_den_echten_reader[erfolgreich]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac11_befehlsantwort_ueber_den_echten_reader[kollision_409]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab[sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab[premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer[sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer[premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_sandbox_guard_im_testmodus_bleibt_wirksam
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_herkunftssperre_schaltet_weiter_auf_den_sandbox_key
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[ohne_empfaenger]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[unfoermig]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[premium_sms]
+PASSED tests/test_sms_verification_code_endpoint.py::test_endpunkt_versendet_code_an_die_uebergebene_nummer
+PASSED tests/test_sms_verification_code_endpoint.py::test_endpunkt_adressiert_nie_die_im_profil_gespeicherte_fremde_nummer
+PASSED tests/test_sms_verification_code_endpoint.py::test_endpunkt_meldet_fehlende_sms_konfiguration_mit_422
+PASSED tests/test_sms_verification_code_endpoint.py::test_endpunkt_meldet_transportfehler_mit_502
+PASSED tests/test_sms_verification_code_endpoint.py::test_endpunkt_behaelt_die_staging_sandbox_weiche
+PASSED tests/unit/test_premium_sms_versand.py::test_sender_is_fixed_number_regardless_of_sms_from
+PASSED tests/unit/test_premium_sms_versand.py::test_recipient_comes_from_learned_reply_to_not_sms_to
+PASSED tests/unit/test_premium_sms_versand.py::test_empty_reply_to_blocks_send_with_visible_reason
+PASSED tests/unit/test_premium_sms_versand.py::test_reply_to_older_than_ttl_blocks_send
+PASSED tests/unit/test_premium_sms_versand.py::test_reply_to_just_within_ttl_still_sends
+PASSED tests/unit/test_premium_sms_versand.py::test_text_matches_sms_text_verbatim_under_extreme_weather
+PASSED tests/unit/test_premium_sms_versand.py::test_standard_tier_never_triggers_premium_sms_send
+PASSED tests/unit/test_premium_sms_versand.py::test_standard_tier_gets_no_premium_sms_when_weather_data_fails
+PASSED tests/unit/test_premium_sms_versand.py::test_outage_hint_names_the_reason_when_premium_sms_is_blocked
+PASSED tests/unit/test_premium_sms_versand.py::test_saving_a_trip_without_the_flag_keeps_a_stored_true
+PASSED tests/unit/test_premium_sms_versand.py::test_premium_sms_and_sms_are_independently_switchable
+PASSED tests/unit/test_premium_sms_versand.py::test_channel_name_premium_sms_resolves_to_the_premium_channel
+PASSED tests/unit/test_premium_sms_versand.py::test_the_two_block_cases_carry_distinct_machine_codes
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac1a_unbestaetigte_nummer_erreicht_settings_nicht
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac1a_nummer_ohne_bestaetigungsfeld_erreicht_settings_nicht
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac1a_bestaetigte_nummer_kommt_durch
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac1b_versandpfad_blockt_unbestaetigte_nummer
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac1b_versandpfad_laesst_bestaetigte_nummer_durch
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac8_fremde_nummer_bleibt_fuer_das_fremde_konto_gesperrt
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac12_getrimmter_profilwert_bleibt_gegen_ungetrimmte_backfill_kopie_sendefaehig
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac12_ungetrimmter_altbestand_wird_getrimmt_durchgereicht
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac1_briefing_sms_wird_bei_erreichtem_briefing_kontingent_gesperrt
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac2_alarm_reserve_erlaubt_9_und_10_sperrt_die_11
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac3_sms_und_premium_sms_fuehren_getrennte_kontingente
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac4_garmin_antwort_darf_die_reply_reserve_ausschoepfen
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac5_utc_mitternacht_setzt_das_tageskontingent_zurueck
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac5_release_reservation_am_tageswechsel_ist_ein_no_op
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac6_mandantentrennung_zwischen_zwei_nutzern
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac7_rollback_bei_transportfehler_und_unveraendert_bei_sperre
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac8_bestehendes_alarm_frequenz_limit_bleibt_unveraendert_wirksam
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac9_zwei_gleichzeitige_reservierungen_am_limit_ueberschreiten_das_cap_nie
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[radar_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[radar_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[compare_briefing_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[compare_official_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[compare_official_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[no_data_hint_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[no_data_hint_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[official_alert_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[fremder-wert-im-feld]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[nicht-json]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[unendlicher-zaehlerwert-f001c]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[user-json-als-liste-f001b]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[user-json-als-skalar-f001b]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-liste-f009]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-zahl-f009]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-unbekannt-f009]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f002_rollback_bei_transportfehler_an_weiteren_sendestellen[radar_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f002_rollback_bei_transportfehler_an_weiteren_sendestellen[official_alert_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f003_premium_sms_alarm_reserve_erlaubt_13_bis_15_sperrt_16
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[radar_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[radar_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[compare_official_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[compare_official_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[official_alert_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[official_alert_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f005_vienna_zeit_kurz_nach_mitternacht_zaehlt_noch_zum_utc_vortag
+PASSED tests/tdd/test_sms_tageslimit.py::test_f006_standard_nutzer_bekommt_keine_garmin_antwort_per_premium_sms
+PASSED tests/tdd/test_sms_tageslimit.py::test_f008_dauerhafter_oeffnungs_oder_schreibfehler_ist_fail_open
+PASSED tests/tdd/test_sms_tageslimit.py::test_f009a_tier_validierung_faellt_fail_closed_auf_free_zurueck
+PASSED tests/tdd/test_sms_tageslimit.py::test_f009b_werfender_tier_lookup_ist_fail_closed
+PASSED tests/tdd/test_sms_tageslimit.py::test_kein_kontingent_sperrt_ohne_dateisystem_eingriff[free-sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_kein_kontingent_sperrt_ohne_dateisystem_eingriff[free-premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_kein_kontingent_sperrt_ohne_dateisystem_eingriff[standard-premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_kein_kontingent_ohne_nutzerordner_legt_keinen_ordner_an[sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_kein_kontingent_ohne_nutzerordner_legt_keinen_ordner_an[premium_sms]
+============================= 149 passed in 15.09s =============================
+
+=== Zusatzlauf (live-markierte, Paritaet, Einzel-Waehlpunkt) ===
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 60 items / 8 deselected / 52 selected
+
+tests/tdd/test_issue_608_sms_seven_io.py .....ss                         [ 13%]
+tests/tdd/test_channel_origin_guard_parity.py .......                    [ 26%]
+tests/tdd/test_egress_single_dial_point.py ............................. [ 82%]
+.....                                                                    [ 92%]
+tests/test_premium_sms_reply_future_timestamp.py ....                    [100%]
+
+==================================== PASSES ====================================
+_______ TestSmsConfigValidation.test_missing_sms_to_raises_config_error ________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer None blockiert (sms_no_recipient): kein belegter Empfaenger uebergeben.
+___________ test_email_test_origin_switches_away_from_prod_recipient ___________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@henemm.com'] auf gregor-test@henemm.com umgeschaltet.
+_________________ test_sms_test_origin_switches_to_sandbox_key _________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:171 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+_____________ test_premium_sms_test_origin_switches_to_sandbox_key _____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:171 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+_______________ test_future_reply_at_blocks_without_gateway_call _______________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-rueckadresse blockiert (premium_sms_reply_address_stale)
+______________________ test_naive_future_reply_at_blocks _______________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-rueckadresse blockiert (premium_sms_reply_address_stale)
+_________________ test_old_reply_at_still_blocks_with_ttl_text _________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-rueckadresse blockiert (premium_sms_reply_address_stale)
+=========================== short test summary info ============================
+PASSED tests/tdd/test_issue_608_sms_seven_io.py::TestGetChannelSms::test_get_channel_sms_no_import_error
+PASSED tests/tdd/test_issue_608_sms_seven_io.py::TestGetChannelSms::test_get_channel_sms_implements_protocol
+PASSED tests/tdd/test_issue_608_sms_seven_io.py::TestGetChannelSms::test_sms_channel_name
+PASSED tests/tdd/test_issue_608_sms_seven_io.py::TestSmsConfigValidation::test_missing_api_key_raises_config_error
+PASSED tests/tdd/test_issue_608_sms_seven_io.py::TestSmsConfigValidation::test_missing_sms_to_raises_config_error
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_email_test_origin_switches_away_from_prod_recipient
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_email_production_origin_delivers_unchanged
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_sms_test_origin_switches_to_sandbox_key
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_sms_test_origin_without_sandbox_key_hard_aborts
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_sms_production_origin_delivers_unchanged
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_premium_sms_test_origin_switches_to_sandbox_key
+PASSED tests/tdd/test_channel_origin_guard_parity.py::test_premium_sms_test_origin_without_sandbox_key_hard_aborts
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac5_genau_eine_verbindungsstelle_im_ausgelieferten_stand
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac5_der_eine_erlaubte_ausgang_existiert_wirklich
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ausnahmenliste_ist_im_ausgelieferten_stand_leer
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_verbindung_ausserhalb_des_erlaubten_orts_wird_namentlich_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_erlaubte_stelle_in_der_attrappe_wird_nicht_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_umgehungsformen_werden_erkannt[alias-import smtplib as s\n\n\ndef dial_ueber_alias(host, port):\n    return s.SMTP(host, port)\n-s.SMTP-dial_ueber_alias]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_umgehungsformen_werden_erkannt[direktimport-from smtplib import SMTP\n\n\ndef dial_ueber_direktimport(host, port):\n    return SMTP(host, port)\n-SMTP-dial_ueber_direktimport]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_umgehungsformen_werden_erkannt[ssl-import smtplib\n\n\nclass Versender:\n    def zustellen(self, host):\n        return smtplib.SMTP_SSL(host, 465)\n-smtplib.SMTP_SSL-Versender.zustellen]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_ausnahme_klassen_sind_keine_fundstellen
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_zu_viele_ausnahmen_werden_rot
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_abgelaufene_frist_wird_rot
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_zu_kurze_begruendung_zaehlt_nicht
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_aufgeloeste_ausnahme_muss_entfernt_werden
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_pruefdatum_ist_maschinell_auffindbar
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac6_repo_wurzel_ist_der_eigene_baum
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_httpx_post_nur_an_den_erlaubten_ausgaengen
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_beide_erlaubten_httpx_ausgaenge_existieren
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_httpx_ausnahmen_unter_dem_deckel_und_befristet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[alias]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[async_client_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[client_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[direkt]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[direkt_alias]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[direkt_client_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[modul]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[request_method_kw]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[request_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_jede_httpx_post_form_wird_namentlich_gemeldet[stream_post]
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_get_und_router_dekoratoren_sind_keine_fundstellen
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_erlaubte_ausgaenge_in_attrappe_werden_nicht_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_post_in_send_statt_post_wird_gemeldet
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_vierte_httpx_ausnahme_reisst_den_deckel
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_abgelaufene_httpx_ausnahme_wird_rot
+PASSED tests/tdd/test_egress_single_dial_point.py::test_ac7_pruefdatum_steht_in_gates_und_ratschen
+PASSED tests/test_premium_sms_reply_future_timestamp.py::test_future_reply_at_blocks_without_gateway_call
+PASSED tests/test_premium_sms_reply_future_timestamp.py::test_naive_future_reply_at_blocks
+PASSED tests/test_premium_sms_reply_future_timestamp.py::test_past_reply_at_still_sends
+PASSED tests/test_premium_sms_reply_future_timestamp.py::test_old_reply_at_still_blocks_with_ttl_text
+SKIPPED [2] tests/tdd/test_issue_608_sms_seven_io.py:143: Live-Test benötigt SMS_API_KEY + SMS_TO in .env (seven.io Credentials). Eintragen und Test erneut ausführen.
+================= 50 passed, 2 skipped, 8 deselected in 6.95s ==================
+
+
+=== Re-Verify nach Fix-Loop 1 (Runde 3): Vertragsdatei + 4 Begleitdateien ===
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/majestic-dazzling-knuth
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 172 items
+
+tests/tdd/test_sms_recipient_contract.py ............................... [ 18%]
+......................................................................   [ 58%]
+tests/test_sms_verification_code_endpoint.py .....                       [ 61%]
+tests/unit/test_premium_sms_versand.py .............                     [ 69%]
+tests/test_sms_versand_nur_bestaetigte_nummer.py ........                [ 73%]
+tests/tdd/test_sms_tageslimit.py ....................................... [ 96%]
+......                                                                   [100%]
+
+==================================== PASSES ====================================
+_____________ test_ac1_sms_ohne_empfaenger_wird_geblockt_ohne_http _____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer None blockiert (sms_no_recipient): kein belegter Empfaenger uebergeben.
+___________ test_ac1_premium_ohne_empfaenger_wird_geblockt_ohne_http ___________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer None blockiert (premium_sms_no_reply_address): kein belegter Empfaenger uebergeben.
+__________ test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[sms] __________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer None blockiert (sms_no_recipient): kein belegter Empfaenger uebergeben.
+______ test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[premium_sms] ______
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer None blockiert (premium_sms_no_reply_address): kein belegter Empfaenger uebergeben.
+____ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[unbestaetigt] ____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+_____ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[abweichend] _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+________ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[leer] ________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+____ test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[kein_profil] _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+___ test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[fehlt] ____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-ohne-profil-fehlt blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+___ test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[kaputt] ___
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-ohne-profil-kaputt blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+______ test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[sms] ______
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_recipient_mismatch): Ziel weicht vom belegten Empfaenger ab.
+__ test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[premium_sms] __
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_recipient_mismatch): Ziel weicht vom belegten Empfaenger ab.
+___________ test_ac4_block_im_dienst_verbraucht_keinen_drosselplatz ____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:997 No-data hint SMS failed for Trip-kunde-b: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-b').
+_ test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[fehlend-premium_sms_no_reply_address] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_no_reply_address)
+_ test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[zukunft-premium_sms_reply_address_stale] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_reply_address_stale)
+_ test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[31_tage-premium_sms_reply_address_stale] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_reply_address_stale)
+_ test_ac5_alarm_buchung_registriert_den_unveraenderten_code[fehlend-premium_sms_no_reply_address] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:1430 Official alert premium-sms failed for Amt-trip-ac5: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_ac5_alarm_buchung_registriert_den_unveraenderten_code[31_tage-premium_sms_reply_address_stale] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_reply_address_stale)
+ERROR    services.notification_service:notification_service.py:1430 Official alert premium-sms failed for Amt-trip-ac5: [premium_sms] gelernte Rueckadresse ist veraltet: zuletzt vor 31 Tagen gelernt, erlaubt sind 30 Tage. Garmin kann die Nummer inzwischen einem fremden Geraet zugeteilt haben — Versand abgebrochen, bis sich das Geraet wieder meldet.
+___________ test_ac6_code_geht_nur_an_die_eigene_ausstehende_nummer ____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+_______ test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[fremd] ________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-a blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+_____ test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[ohne_plus] ______
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-a blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+____ test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[kein_profil] _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-ohne-profil blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+__ test_ac7_verification_gibt_es_nur_am_sms_typ_und_nur_fuer_die_profilnummer __
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-a blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-a blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+___ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-abc] ___
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-12; DROP] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-123456] __
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-1234567890123456] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-+49 151 12a4567] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-491511234567] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+0151123456] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+__ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-abc] __
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-12; DROP] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567890123456] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+____ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-abc] _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+__ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-12; DROP] __
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+__ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567] ___
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567890123456] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_ test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-+0170000000001] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 premium_sms-Versand fuer Nutzer kunde-b blockiert (premium_sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+________ test_ac11_befehlsantwort_ueber_den_echten_reader[erfolgreich] _________
+------------------------------ Captured log call -------------------------------
+WARNING  services.trip_command_processor:trip_command_processor.py:1588 No trip found for name: '' (user: 'kunde-a')
+WARNING  services.trip_command_processor:trip_command_processor.py:1588 No trip found for name: '' (user: 'kunde-a')
+_______ test_ac11_befehlsantwort_ueber_den_echten_reader[kollision_409] ________
+------------------------------ Captured log call -------------------------------
+WARNING  services.inbound_sms_reader:inbound_sms_reader.py:298 premium-sms-learn abgelehnt (HTTP 409) fuer maskierte Nummer **********001: {"error":"premium_number_collision"}
+________ test_ac14_herkunftssperre_schaltet_weiter_auf_den_sandbox_key _________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:171 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+_ test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[ohne_empfaenger] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer None blockiert (sms_no_recipient): kein belegter Empfaenger uebergeben.
+____ test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[unfoermig] ____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-b blockiert (sms_invalid_number): Empfaengernummer hat keine gueltige Form.
+_______ test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[sms] _______
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:997 No-data hint SMS failed for Trip-kunde-b: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-b').
+___ test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[premium_sms] ___
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:1013 No-data hint Premium-SMS blockiert für Trip-kunde-b: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[briefing-sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-f001-7c55fa blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:819 SMS send failed for Trip-trip-kunde-f001-7c55fa: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-f001-7c55fa').
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[briefing-premium_sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-f001-715b89 blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:846 Premium-SMS nicht versendet für Trip-trip-kunde-f001-715b89: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[kein_daten_hinweis-sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-f001-bd2ad0 blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:997 No-data hint SMS failed for Trip-trip-kunde-f001-bd2ad0: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-f001-bd2ad0').
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[kein_daten_hinweis-premium_sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-f001-aa7ea9 blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:1013 No-data hint Premium-SMS blockiert für Trip-trip-kunde-f001-aa7ea9: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[amtswarnung-sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-f001-5c2aa6 blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:1408 Official alert sms failed for Amt-trip-kunde-f001-5c2aa6: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-f001-5c2aa6').
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[amtswarnung-premium_sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-f001-e15b68 blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:1430 Official alert premium-sms failed for Amt-trip-kunde-f001-e15b68: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[ortsvergleich-sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-f001-c183e5 blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:1540 Compare report sms failed for 'Ortsvergleich': [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-f001-c183e5').
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[ortsvergleich-premium_sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-f001-4ff9a4 blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:1567 Compare report premium_sms failed for 'Ortsvergleich': [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[ortsvergleich_amtswarnung-sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-f001-1a3ac3 blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:1779 Compare official alert sms failed for Vergleich S4b: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-f001-1a3ac3').
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[ortsvergleich_amtswarnung-premium_sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-f001-f7403b blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:1811 Compare official alert premium-sms failed for Vergleich S4b: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[alarm_trip-sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-f001-e51ef2 blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:2040 SMS alert failed for Protokoll-Trip: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-f001-e51ef2').
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[alarm_trip-premium_sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-f001-2e44a3 blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:2040 Premium-SMS alert failed for Protokoll-Trip: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[alarm_ortsvergleich-sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-f001-c7a63a blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:2040 SMS alert failed for Ort 1: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-f001-c7a63a').
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[alarm_ortsvergleich-premium_sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-f001-d6c8ce blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:2040 Premium-SMS alert failed for Ort 1: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[regen_radar_trip-sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-f001-23f475 blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:2038 Radar alert sms failed for trip-kunde-f001-23f475: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-f001-23f475').
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[regen_radar_trip-premium_sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-f001-37f11c blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:2038 Radar alert premium_sms failed for trip-kunde-f001-37f11c: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[regen_radar_ortsvergleich-sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-f001-94f7a4 blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+ERROR    services.notification_service:notification_service.py:2038 Radar alert sms failed for Vergleichsort: [sms] keine bestaetigte SMS-Nummer im Profil (Nutzer 'kunde-f001-94f7a4').
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[regen_radar_ortsvergleich-premium_sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-f001-4c0868 blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:2038 Radar alert premium_sms failed for Vergleichsort: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_ test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[befehlsantwort-premium_sms] _
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-f001-f0824e blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:2240 Failed to send premium-sms confirmation: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+______________ test_f002_logs_nennen_die_nutzer_id_nie_die_nummer ______________
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:220 sms fuer Nutzer kunde-a ueber seven.io gesendet
+INFO     output.channels.seven_io_base:seven_io_base.py:220 premium_sms fuer Nutzer kunde-b ueber seven.io gesendet
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer None blockiert (sms_no_recipient): kein belegter Empfaenger uebergeben.
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer kunde-f002 blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+WARNING  output.channels.seven_io_base:seven_io_base.py:105 sms-Versand fuer Nutzer kunde-a blockiert (sms_recipient_mismatch): Ziel weicht vom belegten Empfaenger ab.
+_______ test_f004_frist_der_rueckadresse_ist_genau_30_tage[alter1-True] ________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer kunde-b blockiert (premium_sms_reply_address_stale)
+____ test_endpunkt_adressiert_nie_die_im_profil_gespeicherte_fremde_nummer _____
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer intsms2 blockiert (sms_verification_number_not_bound): Nummer ist nicht die zu bestaetigende Nummer des Profils
+_____________ test_empty_reply_to_blocks_send_with_visible_reason ______________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer tdd-1676-noreply blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:846 Premium-SMS nicht versendet für Premium-SMS tdd-1676-noreply: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+___________________ test_reply_to_older_than_ttl_blocks_send ___________________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer tdd-1676-stale blockiert (premium_sms_reply_address_stale)
+ERROR    services.notification_service:notification_service.py:846 Premium-SMS nicht versendet für Premium-SMS tdd-1676-stale: [premium_sms] gelernte Rueckadresse ist veraltet: zuletzt vor 30 Tagen gelernt, erlaubt sind 30 Tage. Garmin kann die Nummer inzwischen einem fremden Geraet zugeteilt haben — Versand abgebrochen, bis sich das Geraet wieder meldet.
+________ test_standard_tier_gets_no_premium_sms_when_weather_data_fails ________
+------------------------------ Captured log call -------------------------------
+WARNING  trip_report_scheduler:trip_report_scheduler.py:1790 All-failed weather data for trip trip-tdd-1676-outage-standard
+________ test_outage_hint_names_the_reason_when_premium_sms_is_blocked _________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer tdd-1676-outage-noreply blockiert (premium_sms_no_reply_address)
+ERROR    services.notification_service:notification_service.py:1013 No-data hint Premium-SMS blockiert für Premium-SMS tdd-1676-outage-noreply: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+____________ test_the_two_block_cases_carry_distinct_machine_codes _____________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer tdd-1676-code-empty blockiert (premium_sms_no_reply_address)
+WARNING  output.channels.recipient:recipient.py:196 Premium-SMS fuer Nutzer tdd-1676-code-stale blockiert (premium_sms_reply_address_stale)
+______________ test_ac1b_versandpfad_blockt_unbestaetigte_nummer _______________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer ac1b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+_________ test_ac8_fremde_nummer_bleibt_fuer_das_fremde_konto_gesperrt _________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.recipient:recipient.py:163 SMS fuer Nutzer ac8b blockiert (sms_no_recipient): keine bestaetigte SMS-Nummer im Profil
+_________ test_ac4_garmin_antwort_darf_die_reply_reserve_ausschoepfen __________
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2230 Premium-SMS confirmation blocked: SMS-Tageslimit erreicht
+______ test_ac7_rollback_bei_transportfehler_und_unveraendert_bei_sperre _______
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:819 SMS send failed for Trip-trip-smslimit-ac7-24b17077: Transport kaputt
+______ test_f001_kaputte_zaehlerdatei_ist_fail_open[fremder-wert-im-feld] ______
+------------------------------ Captured log call -------------------------------
+WARNING  sms_daily_limit:sms_daily_limit.py:78 SMS-Tageslimit: unlesbarer Zaehlerwert 'abc' fuer 'sms' -- als 0 behandelt (fail-open)
+_ test_f001_kaputte_zaehlerdatei_ist_fail_open[unendlicher-zaehlerwert-f001c] __
+------------------------------ Captured log call -------------------------------
+WARNING  sms_daily_limit:sms_daily_limit.py:78 SMS-Tageslimit: unlesbarer Zaehlerwert inf fuer 'sms' -- als 0 behandelt (fail-open)
+___ test_f001_kaputte_zaehlerdatei_ist_fail_open[user-json-als-liste-f001b] ____
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:39 user.json for smslimit-f001-2c439673 at /tmp/pytest-of-hem/pytest-3271/data_root148/users/smslimit-f001-2c439673/user.json is not a JSON object (list) -- treated as empty profile
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-2c439673 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 1/4 send failed for Trip-trip-smslimit-f001-2c439673: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-2c439673'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-2c439673 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 2/4 send failed for Trip-trip-smslimit-f001-2c439673: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-2c439673'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-2c439673 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 3/4 send failed for Trip-trip-smslimit-f001-2c439673: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-2c439673'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-2c439673 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 4/4 send failed for Trip-trip-smslimit-f001-2c439673: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-2c439673'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-2c439673 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:951 Telegram incomplete-briefing hint failed: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-2c439673'.
+___ test_f001_kaputte_zaehlerdatei_ist_fail_open[user-json-als-skalar-f001b] ___
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:39 user.json for smslimit-f001-cd2ac4f9 at /tmp/pytest-of-hem/pytest-3271/data_root149/users/smslimit-f001-cd2ac4f9/user.json is not a JSON object (int) -- treated as empty profile
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-cd2ac4f9 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 1/4 send failed for Trip-trip-smslimit-f001-cd2ac4f9: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-cd2ac4f9'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-cd2ac4f9 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 2/4 send failed for Trip-trip-smslimit-f001-cd2ac4f9: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-cd2ac4f9'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-cd2ac4f9 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 3/4 send failed for Trip-trip-smslimit-f001-cd2ac4f9: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-cd2ac4f9'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-cd2ac4f9 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:892 Telegram bubble 4/4 send failed for Trip-trip-smslimit-f001-cd2ac4f9: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-cd2ac4f9'.
+WARNING  output.channels.recipient:recipient.py:71 Telegram: kein Chat im Profil von Nutzer smslimit-f001-cd2ac4f9 -- Versand blockiert (telegram_no_chat_id)
+ERROR    services.notification_service:notification_service.py:951 Telegram incomplete-briefing hint failed: [telegram] kein Telegram-Chat im Profil von Nutzer 'smslimit-f001-cd2ac4f9'.
+________ test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-liste-f009] _________
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:60 user.json tier value ['hack'] for smslimit-f001-8eb2b7a9 is not a known tier -- treated as 'free'
+_________ test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-zahl-f009] _________
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:60 user.json tier value 42 for smslimit-f001-19f73ea0 is not a known tier -- treated as 'free'
+______ test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-unbekannt-f009] _______
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:60 user.json tier value 'gold' for smslimit-f001-5974c426 is not a known tier -- treated as 'free'
+__ test_f002_rollback_bei_transportfehler_an_weiteren_sendestellen[radar_sms] __
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2038 Radar alert sms failed for trip-smslimit-f002radar_sms-9b3aed61: Transport kaputt
+_ test_f002_rollback_bei_transportfehler_an_weiteren_sendestellen[official_alert_premium_sms] _
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:1430 Official alert premium-sms failed for Official-trip-smslimit-f002official_alert_premium_sms-97c6bf83: Transport kaputt
+____ test_f006_standard_nutzer_bekommt_keine_garmin_antwort_per_premium_sms ____
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:2230 Premium-SMS confirmation blocked: SMS-Tageslimit erreicht
+_______ test_f008_dauerhafter_oeffnungs_oder_schreibfehler_ist_fail_open _______
+------------------------------ Captured log call -------------------------------
+WARNING  sms_daily_limit:sms_daily_limit.py:166 SMS-Tageslimit: Sperrdatei /tmp/pytest-of-hem/pytest-3271/data_root164/users/smslimit-f008a-4eda215b/sms_daily_count.json.lock nicht erreichbar (Simulierter Oeffnungsfehler (F008 Szenario A)) -- Pruefung uebersprungen (fail-open)
+WARNING  sms_daily_limit:sms_daily_limit.py:194 SMS-Tageslimit: Schreiben von /tmp/pytest-of-hem/pytest-3271/data_root164/users/smslimit-f008b-819dc82c/sms_daily_count.json fehlgeschlagen (Simulierter Schreibfehler (F008 Szenario B)) -- Reservierung nicht persistiert, Versand bleibt zugelassen (fail-open)
+WARNING  sms_daily_limit:sms_daily_limit.py:251 SMS-Tageslimit: Rollback-Schreiben von /tmp/pytest-of-hem/pytest-3271/data_root164/users/smslimit-f008c-de769fc6/sms_daily_count.json fehlgeschlagen (Simulierter Rollback-Schreibfehler (F008 Szenario C)) -- Zaehlerstand bleibt unveraendert (fail-open)
+ERROR    services.notification_service:notification_service.py:819 SMS send failed for Trip-trip-smslimit-f008c-de769fc6: Transport kaputt (F008 Szenario C)
+_______ test_f009a_tier_validierung_faellt_fail_closed_auf_free_zurueck ________
+------------------------------ Captured log call -------------------------------
+WARNING  user_tier:user_tier.py:60 user.json tier value ['hack'] for smslimit-f009a-bc2b3692 is not a known tier -- treated as 'free'
+WARNING  user_tier:user_tier.py:60 user.json tier value ['hack'] for smslimit-f009a-bc2b3692 is not a known tier -- treated as 'free'
+WARNING  user_tier:user_tier.py:60 user.json tier value ['hack'] for smslimit-f009a-bc2b3692 is not a known tier -- treated as 'free'
+WARNING  user_tier:user_tier.py:60 user.json tier value ['hack'] for smslimit-f009a-bc2b3692 is not a known tier -- treated as 'free'
+_______________ test_f009b_werfender_tier_lookup_ist_fail_closed _______________
+------------------------------ Captured log call -------------------------------
+WARNING  sms_daily_limit:sms_daily_limit.py:151 SMS-Tageslimit: Tier-/Cap-Ermittlung fuer smslimit-f009b-1bfc8d9a fehlgeschlagen (Simulierter Tier-/Cap-Lookup-Fehler (F009b)) -- fail-closed, Kontingent gilt als erschoepft
+=========================== short test summary info ============================
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac1_sms_ohne_empfaenger_wird_geblockt_ohne_http
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac1_premium_ohne_empfaenger_wird_geblockt_ohne_http
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac1_einziger_ausgang_post_blockt_ohne_empfaenger[premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[unbestaetigt]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[abweichend]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[leer]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac2_unbestaetigte_leere_oder_fehlende_nummer_blockt[kein_profil]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac2_bestaetigte_nummer_wird_frisch_aus_dem_profil_gelesen
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[fehlt]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac3_ohne_lesbares_profil_erhaelt_die_betreibernummer_nichts[kaputt]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac4_dienst_mit_model_copy_nummer_von_a_sendet_fuer_b_nur_an_b
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac4_ausgang_fuer_b_ignoriert_settings_nummer_von_a
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac4_abweichendes_payload_ziel_blockt_im_einzigen_ausgang[premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac4_block_im_dienst_verbraucht_keinen_drosselplatz
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[fehlend-premium_sms_no_reply_address]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[zukunft-premium_sms_reply_address_stale]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_fehlende_kuenftige_oder_alte_rueckadresse_blockt_mit_bestehendem_code[31_tage-premium_sms_reply_address_stale]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_frische_rueckadresse_aus_dem_profil_wird_bedient
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_alarm_buchung_registriert_den_unveraenderten_code[fehlend-premium_sms_no_reply_address]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac5_alarm_buchung_registriert_den_unveraenderten_code[31_tage-premium_sms_reply_address_stale]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac6_code_geht_nur_an_die_eigene_ausstehende_nummer
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[fremd]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[ohne_plus]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac6_fremde_unfoermige_oder_profillose_nummer_blockt[kein_profil]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac7_verification_gibt_es_nur_am_sms_typ_und_nur_fuer_die_profilnummer
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-abc]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-12; DROP]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-123456]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-1234567890123456]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[sms_profil-+49 151 12a4567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-491511234567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+0151123456]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-abc]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-12; DROP]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[verification-+1234567890123456]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-abc]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-12; DROP]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-1234567890123456]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac8_unfoermige_nummer_blockt_vor_jedem_http_versuch[premium-+0170000000001]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[+49 151 123-45 67]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[(0151) 123 4567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[0041-79-000 00 01]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[1234567]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac9_tolerant_gespeicherte_bestandsnummer_geht_byteidentisch_raus[+491511234567890]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[briefing-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[briefing-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[kein_daten_hinweis-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[kein_daten_hinweis-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[amtswarnung-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[amtswarnung-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich_amtswarnung-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[ortsvergleich_amtswarnung-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_trip-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_trip-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[alarm_ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_trip-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_trip-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac10_kein_produktiver_aufrufer_verstummt[regen_radar_ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac11_befehlsantwort_ueber_den_echten_reader[erfolgreich]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac11_befehlsantwort_ueber_den_echten_reader[kollision_409]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab[sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac12_get_channel_ohne_nutzer_lehnt_mit_klarer_meldung_ab[premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer[sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac13_zwei_nutzer_abwechselnd_erreichen_nur_ihre_eigene_nummer[premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_sandbox_guard_im_testmodus_bleibt_wirksam
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_herkunftssperre_schaltet_weiter_auf_den_sandbox_key
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[ohne_empfaenger]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_empfaengerpruefung_laeuft_vor_herkunft_und_guards[unfoermig]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_ac14_geblockter_versuch_verbraucht_keinen_drosselplatz[premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[briefing-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[briefing-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[kein_daten_hinweis-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[kein_daten_hinweis-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[amtswarnung-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[amtswarnung-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[ortsvergleich_amtswarnung-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[ortsvergleich_amtswarnung-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[alarm_trip-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[alarm_trip-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[alarm_ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[alarm_ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[regen_radar_trip-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[regen_radar_trip-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[regen_radar_ortsvergleich-sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[regen_radar_ortsvergleich-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f001_block_an_jedem_aufrufer_gibt_die_reservierung_frei_und_bricht_nicht_ab[befehlsantwort-premium_sms]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f002_logs_nennen_die_nutzer_id_nie_die_nummer
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f003_empfaenger_sind_nur_ueber_die_fabriken_erzeugbar
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f004_frist_der_rueckadresse_ist_genau_30_tage[alter0-False]
+PASSED tests/tdd/test_sms_recipient_contract.py::test_f004_frist_der_rueckadresse_ist_genau_30_tage[alter1-True]
+PASSED tests/test_sms_verification_code_endpoint.py::test_endpunkt_versendet_code_an_die_uebergebene_nummer
+PASSED tests/test_sms_verification_code_endpoint.py::test_endpunkt_adressiert_nie_die_im_profil_gespeicherte_fremde_nummer
+PASSED tests/test_sms_verification_code_endpoint.py::test_endpunkt_meldet_fehlende_sms_konfiguration_mit_422
+PASSED tests/test_sms_verification_code_endpoint.py::test_endpunkt_meldet_transportfehler_mit_502
+PASSED tests/test_sms_verification_code_endpoint.py::test_endpunkt_behaelt_die_staging_sandbox_weiche
+PASSED tests/unit/test_premium_sms_versand.py::test_sender_is_fixed_number_regardless_of_sms_from
+PASSED tests/unit/test_premium_sms_versand.py::test_recipient_comes_from_learned_reply_to_not_sms_to
+PASSED tests/unit/test_premium_sms_versand.py::test_empty_reply_to_blocks_send_with_visible_reason
+PASSED tests/unit/test_premium_sms_versand.py::test_reply_to_older_than_ttl_blocks_send
+PASSED tests/unit/test_premium_sms_versand.py::test_reply_to_just_within_ttl_still_sends
+PASSED tests/unit/test_premium_sms_versand.py::test_text_matches_sms_text_verbatim_under_extreme_weather
+PASSED tests/unit/test_premium_sms_versand.py::test_standard_tier_never_triggers_premium_sms_send
+PASSED tests/unit/test_premium_sms_versand.py::test_standard_tier_gets_no_premium_sms_when_weather_data_fails
+PASSED tests/unit/test_premium_sms_versand.py::test_outage_hint_names_the_reason_when_premium_sms_is_blocked
+PASSED tests/unit/test_premium_sms_versand.py::test_saving_a_trip_without_the_flag_keeps_a_stored_true
+PASSED tests/unit/test_premium_sms_versand.py::test_premium_sms_and_sms_are_independently_switchable
+PASSED tests/unit/test_premium_sms_versand.py::test_channel_name_premium_sms_resolves_to_the_premium_channel
+PASSED tests/unit/test_premium_sms_versand.py::test_the_two_block_cases_carry_distinct_machine_codes
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac1a_unbestaetigte_nummer_erreicht_settings_nicht
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac1a_nummer_ohne_bestaetigungsfeld_erreicht_settings_nicht
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac1a_bestaetigte_nummer_kommt_durch
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac1b_versandpfad_blockt_unbestaetigte_nummer
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac1b_versandpfad_laesst_bestaetigte_nummer_durch
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac8_fremde_nummer_bleibt_fuer_das_fremde_konto_gesperrt
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac12_getrimmter_profilwert_bleibt_gegen_ungetrimmte_backfill_kopie_sendefaehig
+PASSED tests/test_sms_versand_nur_bestaetigte_nummer.py::test_ac12_ungetrimmter_altbestand_wird_getrimmt_durchgereicht
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac1_briefing_sms_wird_bei_erreichtem_briefing_kontingent_gesperrt
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac2_alarm_reserve_erlaubt_9_und_10_sperrt_die_11
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac3_sms_und_premium_sms_fuehren_getrennte_kontingente
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac4_garmin_antwort_darf_die_reply_reserve_ausschoepfen
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac5_utc_mitternacht_setzt_das_tageskontingent_zurueck
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac5_release_reservation_am_tageswechsel_ist_ein_no_op
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac6_mandantentrennung_zwischen_zwei_nutzern
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac7_rollback_bei_transportfehler_und_unveraendert_bei_sperre
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac8_bestehendes_alarm_frequenz_limit_bleibt_unveraendert_wirksam
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac9_zwei_gleichzeitige_reservierungen_am_limit_ueberschreiten_das_cap_nie
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[radar_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[radar_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[compare_briefing_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[compare_official_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[compare_official_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[no_data_hint_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[no_data_hint_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_ac10_jede_uebrige_sendestelle_wird_bei_erreichtem_kontingent_gesperrt[official_alert_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[fremder-wert-im-feld]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[nicht-json]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[unendlicher-zaehlerwert-f001c]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[user-json-als-liste-f001b]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[user-json-als-skalar-f001b]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-liste-f009]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-zahl-f009]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f001_kaputte_zaehlerdatei_ist_fail_open[tier-unbekannt-f009]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f002_rollback_bei_transportfehler_an_weiteren_sendestellen[radar_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f002_rollback_bei_transportfehler_an_weiteren_sendestellen[official_alert_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f003_premium_sms_alarm_reserve_erlaubt_13_bis_15_sperrt_16
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[radar_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[radar_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[compare_official_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[compare_official_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[official_alert_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f004_alert_stellen_zaehlen_mit_alarm_cap_nicht_briefing_cap[official_alert_premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_f005_vienna_zeit_kurz_nach_mitternacht_zaehlt_noch_zum_utc_vortag
+PASSED tests/tdd/test_sms_tageslimit.py::test_f006_standard_nutzer_bekommt_keine_garmin_antwort_per_premium_sms
+PASSED tests/tdd/test_sms_tageslimit.py::test_f008_dauerhafter_oeffnungs_oder_schreibfehler_ist_fail_open
+PASSED tests/tdd/test_sms_tageslimit.py::test_f009a_tier_validierung_faellt_fail_closed_auf_free_zurueck
+PASSED tests/tdd/test_sms_tageslimit.py::test_f009b_werfender_tier_lookup_ist_fail_closed
+PASSED tests/tdd/test_sms_tageslimit.py::test_kein_kontingent_sperrt_ohne_dateisystem_eingriff[free-sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_kein_kontingent_sperrt_ohne_dateisystem_eingriff[free-premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_kein_kontingent_sperrt_ohne_dateisystem_eingriff[standard-premium_sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_kein_kontingent_ohne_nutzerordner_legt_keinen_ordner_an[sms]
+PASSED tests/tdd/test_sms_tageslimit.py::test_kein_kontingent_ohne_nutzerordner_legt_keinen_ordner_an[premium_sms]
+============================= 172 passed in 15.05s =============================

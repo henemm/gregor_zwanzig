@@ -94,3 +94,30 @@ def test_flood_kurzchip_farbe_eskaliert_mit_der_stufe():
         f"Stufe 2 (gelb) und Stufe 4 (rot) muessen unterschiedliche Farben "
         f"ergeben, beide lieferten severity={severity_low!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# #1430 -- Lawine (MeteoAlarm Typ 9)
+# ---------------------------------------------------------------------------
+def _lawine_alert(level: int = 3) -> OfficialAlert:
+    return OfficialAlert(
+        source="meteoalarm", hazard="avalanche", level=level,
+        label="9; avalanche", region_label="Villach",
+    )
+
+
+def test_1430_lawine_hat_deutsche_bezeichnung_statt_rohlabel():
+    from output.renderers.alert.official_alerts import _hazard_display
+
+    typ, _sms = _hazard_display(_lawine_alert())
+    assert typ == "Lawine", f"erhalten {typ!r}"
+
+
+def test_1430_lawine_kurzchip_text_und_schwere_je_stufe():
+    from output.renderers.email.compare_html import _warn_short
+
+    erwartet = {2: "caution", 3: "warn", 4: "danger"}
+    for level, sev in erwartet.items():
+        text, severity = _warn_short(_lawine_alert(level))
+        assert text == "Lawine", f"Stufe {level}: Chip-Text {text!r}"
+        assert severity == sev, f"Stufe {level}: Severity {severity!r}, erwartet {sev!r}"

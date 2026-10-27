@@ -223,7 +223,7 @@ def test_ac4_telegram_no_crash_when_pop_max_pct_is_none():
 
 
 # ---------------------------------------------------------------------------
-# AC-5: Keine extra Metriken → keine Detail-Zeile in Telegram
+# AC-5 (#1741 AC-2): Keine extra Metriken -> keine Kappungshinweis-Zeile
 # ---------------------------------------------------------------------------
 
 def test_ac5_telegram_no_detail_line_when_only_temp_and_wind():
@@ -231,7 +231,9 @@ def test_ac5_telegram_no_detail_line_when_only_temp_and_wind():
     AC-5: Given display_config nur mit temperature + wind
     When render_telegram_bubbles(...) aufgerufen wird (Issue #1001)
     Then keine col_label-Detail-Zeile (Rain%, Gust, etc. fehlen weiterhin —
-    #1001 verwendet ohnehin nur noch compact_label, nie col_label)
+    #1001 verwendet ohnehin nur noch compact_label, nie col_label) UND
+    (#1741 AC-2, umgebaut) keine Kappungshinweis-Zeile -- 2 aktive
+    primary-Metriken bleiben unter dem 7er-Tabellenlimit, demoted_count==0.
     """
     from src.output.renderers.narrow import render_telegram_bubbles
 
@@ -247,6 +249,9 @@ def test_ac5_telegram_no_detail_line_when_only_temp_and_wind():
     result = "\n".join(b.text for b in bubbles)
     assert "Rain%" not in result, f"Unerwartetes 'Rain%' in Output:\n{result}"
     assert "Gust" not in result, f"Unerwartetes 'Gust' in Output:\n{result}"
+    assert "weitere Wettergrößen nur als Tageswert" not in result, (
+        f"#1741 AC-2: Kappungshinweis erscheint trotz demoted_count==0:\n{result}"
+    )
 
 
 # ---------------------------------------------------------------------------

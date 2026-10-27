@@ -3,7 +3,7 @@ entity_id: issue_833_mail_gate_structural
 type: module
 created: 2026-06-21
 updated: 2026-06-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, qa-gate, mail, playwright, hooks]
 workflow: gate-833-mail-validator-structural

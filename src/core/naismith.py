@@ -107,6 +107,15 @@ def compute_stage_arrivals(stage: "Stage", activity: str) -> "Stage":
     else:
         start_str = None
 
+    # Issue #2082: EINE Regel fuer "ist diese Etappe vermessen" -- die
+    # kanonische aus `stage_measured_distances` (strikte Monotonie UND
+    # Plausibilitaet gegen die Luftlinie, je Etappe alles-oder-nichts).
+    # Import in der Funktion: `core` soll nicht beim Laden an `services`
+    # haengen (Muster wie in `services/track_resolution.py`).
+    from services.trip_segments import stage_measured_distances
+
+    measured = stage_measured_distances(stage.waypoints)
+
     cur = float(_parse_start_minutes(start_str))
     new_waypoints = []
 
@@ -116,7 +125,10 @@ def compute_stage_arrivals(stage: "Stage", activity: str) -> "Stage":
             new_waypoints.append(new_wp)
         else:
             prev = stage.waypoints[i - 1]
-            dist = haversine_km(prev.lat, prev.lon, wp.lat, wp.lon)
+            if measured is not None:
+                dist = measured[i] - measured[i - 1]
+            else:
+                dist = haversine_km(prev.lat, prev.lon, wp.lat, wp.lon)
             d_elev = float((wp.elevation_m or 0) - (prev.elevation_m or 0))
             asc = max(0.0, d_elev)
             desc = max(0.0, -d_elev)

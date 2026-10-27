@@ -19,7 +19,7 @@ const TRIP_ID = 'e2e-cockpit-test';
 
 test('AC-1: EtappenStrip zeigt StageCards für alle 3 Etappen', async ({ page }) => {
 	await page.goto(`/trips/${TRIP_ID}#stages`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 	await expect(page.getByTestId('etappen-strip')).toBeVisible();
 	await expect(page.getByTestId('stage-card-0')).toBeVisible();
 	await expect(page.getByTestId('stage-card-1')).toBeVisible();
@@ -32,7 +32,7 @@ test('AC-1: EtappenStrip zeigt StageCards für alle 3 Etappen', async ({ page })
 
 test('AC-5: MapCanvas zeigt Routenlinie mit stroke var(--g-accent)', async ({ page }) => {
 	await page.goto(`/trips/${TRIP_ID}#stages`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 	const canvas = page.getByTestId('map-canvas');
 	await expect(canvas).toBeVisible();
 	const polyline = canvas.locator('polyline');
@@ -69,7 +69,7 @@ test('AC-6: WaypointPin für suggested Waypoint zeigt Bestätigen-Button', async
 		}
 	});
 	await page.goto(`/trips/${TRIP_ID}#stages`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 	// WaypointCard für suggested zeigt Bestätigen-Button
 	await expect(page.getByTestId('waypoint-confirm-0')).toBeVisible();
 });
@@ -104,7 +104,7 @@ test('AC-10: suggested Waypoint zeigt Bestätigen + Verwerfen Buttons', async ({
 		}
 	});
 	await page.goto(`/trips/${TRIP_ID}#stages`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 	await expect(page.getByTestId('waypoint-confirm-0')).toBeVisible();
 	await expect(page.getByTestId('waypoint-reject-0')).toBeVisible();
 });
@@ -140,7 +140,7 @@ test('AC-11: manueller Waypoint zeigt Umbenennen + Löschen, kein Bestätigen', 
 		}
 	});
 	await page.goto(`/trips/${TRIP_ID}#stages`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 	await expect(page.getByTestId('waypoint-rename-0')).toBeVisible();
 	await expect(page.getByTestId('waypoint-delete-0')).toBeVisible();
 	await expect(page.getByTestId('waypoint-confirm-0')).not.toBeVisible();
@@ -152,7 +152,7 @@ test('AC-11: manueller Waypoint zeigt Umbenennen + Löschen, kein Bestätigen', 
 
 test('AC-12: Speichern-Button schickt PUT /api/trips/:id', async ({ page }) => {
 	await page.goto(`/trips/${TRIP_ID}#stages`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 	const saveBtn = page.getByTestId('waypoints-save-btn');
 	await expect(saveBtn).toBeVisible();
 	// PUT-Request abfangen
@@ -194,7 +194,7 @@ test('AC-13: Pausetag zeigt PauseStageView statt MapCanvas', async ({ page }) =>
 		}
 	});
 	await page.goto(`/trips/${TRIP_ID}#stages`);
-	await page.getByTestId('trip-detail-tab-stages').click();
+	await page.getByTestId('trip-detail-tab-etappen').click();
 	// Pausetag-Kachel anklicken (Index 1)
 	await page.getByTestId('stage-card-pause-1').click();
 	await expect(page.getByTestId('pause-stage-view')).toBeVisible();

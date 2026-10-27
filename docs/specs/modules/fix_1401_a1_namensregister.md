@@ -3,7 +3,7 @@ entity_id: fix_1401_a1_namensregister
 type: bugfix
 created: 2026-07-27
 updated: 2026-07-27
-status: draft
+status: implemented
 workflow: fix-1401-namensregister-a
 version: "1.0"
 tags: [compare, metric-catalog, naming, trip-compare-sharing]

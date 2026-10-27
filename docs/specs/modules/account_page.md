@@ -10,6 +10,8 @@ tags: [sveltekit, auth, account, profile, f61]
 
 # F61 — SvelteKit Account-Seite
 
+> Hinweis: Signal-Kanal entfernt durch ADR-0004 / #610 — alle Signal-Anteile dieser Spec sind gegenstandslos.
+
 ## Approval
 
 - [x] Approved

@@ -3,7 +3,7 @@ entity_id: bug_558_weekly_schedule_lost
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, compare-hub, versand-tab, schedule, weekly, issue-558]
 ---

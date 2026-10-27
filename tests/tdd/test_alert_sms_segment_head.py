@@ -169,7 +169,12 @@ def test_ac8_sms_buendelkopf_traegt_zusammengefasste_segmentsprache():
     msg = _delta_msg(e_gust, e_visibility, e_precip)
     sms = render_sms(msg)
 
-    assert sms.startswith("Segment 2-3, Ziel: "), f"SMS-Kopf: {sms!r}"
+    # FORTGESCHRIEBEN (#1948 S5, AC-14): der SMS-Kopf kuerzt "Segment" zu
+    # "Seg" (`_ascii_alert_location`) -- EINE geteilte Ortssprache fuer alle
+    # Alarm-SMS-Zweige, waehrend Betreff/E-Mail "Segment" weiter ausschreiben.
+    # Die hier bewachte Zusicherung (EIN gebuendelter Kopf ueber die
+    # zusammengefasste Segmentliste) ist davon unberuehrt.
+    assert sms.startswith("Seg 2-3, Ziel: "), f"SMS-Kopf: {sms!r}"
     assert ":checkered_flag:" not in sms, f"Ziel-Emoji transliteriert: {sms!r}"
 
     tokens = _TOKEN_RE.findall(sms)

@@ -8,7 +8,7 @@ import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { api } from '../api.ts';
-import { clearEtagRegistry, getKnownEtag, setKnownEtag } from '../etagRegistry.ts';
+import { clearEtagRegistry, getKnownEtag, istKonflikt, setKnownEtag } from '../etagRegistry.ts';
 import { extractMessage } from '../stores/saveStatusStore.svelte.ts';
 import {
 	createFakeTripServer,
@@ -31,7 +31,7 @@ const lastCall = () => server.calls[server.calls.length - 1];
 describe('Trichter: Stempel aufnehmen und mitschicken', () => {
 	test('test_get_capturesEtagFromResponse', async () => {
 		// GIVEN: der Server liefert bei GET einen ETag (S2 AC-1)
-		// WHEN: die Tour ueber den Trichter geladen wird
+		// WHEN: die Trip ueber den Trichter geladen wird
 		await api.get('/api/trips/gr20');
 
 		// THEN: hat sich das Frontend den Stand gemerkt — genau den, den der
@@ -40,7 +40,7 @@ describe('Trichter: Stempel aufnehmen und mitschicken', () => {
 	});
 
 	test('test_put_attachesIfMatch_whenStampKnown', async () => {
-		// GIVEN: eine Tour wurde geladen, der Stand ist bekannt
+		// GIVEN: eine Trip wurde geladen, der Stand ist bekannt
 		await api.get('/api/trips/gr20');
 		const stampFromGet = getKnownEtag('gr20');
 		assert.ok(stampFromGet, 'Vorbedingung: GET muss einen Stand hinterlassen');
@@ -56,7 +56,7 @@ describe('Trichter: Stempel aufnehmen und mitschicken', () => {
 	});
 
 	test('test_put_omitsIfMatch_whenStampUnknown', async () => {
-		// GIVEN: fuer diese Tour ist in dieser Sitzung kein Stand bekannt
+		// GIVEN: fuer diese Trip ist in dieser Sitzung kein Stand bekannt
 		assert.equal(getKnownEtag('unbekannt'), undefined);
 
 		// WHEN: gespeichert wird
@@ -69,7 +69,7 @@ describe('Trichter: Stempel aufnehmen und mitschicken', () => {
 	});
 
 	test('test_put_capturesNewEtagFromWriteResponse', async () => {
-		// GIVEN: eine geladene Tour
+		// GIVEN: eine geladene Trip
 		await api.get('/api/trips/gr20');
 		const stampFromGet = getKnownEtag('gr20');
 
@@ -86,7 +86,7 @@ describe('Trichter: Stempel aufnehmen und mitschicken', () => {
 	});
 
 	test('test_weatherConfigPath_sharesStampWithTripPath', async () => {
-		// GIVEN: der Stempel gehoert zur TOUR, nicht zur Adresse — beide Pfade
+		// GIVEN: der Stempel gehoert zum TRIP, nicht zur Adresse — beide Pfade
 		// beschreiben dieselbe Datei.
 		await api.get('/api/trips/gr20');
 
@@ -95,7 +95,7 @@ describe('Trichter: Stempel aufnehmen und mitschicken', () => {
 
 		// THEN: wurde derselbe Registry-Eintrag benutzt und fortgeschrieben
 		assert.equal(lastCall().path, '/api/trips/gr20/weather-config');
-		assert.ok(lastCall().ifMatch, 'auch der weather-config-PUT traegt den Stand der Tour');
+		assert.ok(lastCall().ifMatch, 'auch der weather-config-PUT traegt den Stand der Trip');
 		assert.equal(getKnownEtag('gr20'), server.etagOf('gr20'));
 	});
 });
@@ -119,7 +119,7 @@ describe('Trichter: Header-Zusammenfuehrung', () => {
 
 describe('Trichter: Pfadfilter', () => {
 	test('test_put_neverAttachesIfMatch_onStateOrWaypointPaths', async () => {
-		// GIVEN: der Stand der Tour ist bekannt
+		// GIVEN: der Stand der Trip ist bekannt
 		await api.get('/api/trips/gr20');
 		assert.ok(getKnownEtag('gr20'));
 
@@ -142,7 +142,7 @@ describe('Trichter: Pfadfilter', () => {
 		// (siehe Block "Trichter: Ortsvergleich (S6)" unten) — hier wird nur
 		// noch geprueft, dass ein UNBEKANNTER Compare-Preset-Stand (kein
 		// vorheriges GET fuer 'abc') ebenfalls kein If-Match traegt, exakt wie
-		// bei einer unbekannten Tour (AC-7-Analogon).
+		// bei einer unbekannten Trip (AC-7-Analogon).
 		await api.put('/api/locations/korsika', { name: 'Korsika' });
 		assert.equal(lastCall().ifMatch, null);
 
@@ -150,7 +150,7 @@ describe('Trichter: Pfadfilter', () => {
 
 		// THEN: kein If-Match, und die Eintraege fremder Ressourcen bleiben
 		// unberuehrt. Der Orts-Vergleich selbst fuehrt seit S6 einen Eintrag —
-		// aus der Schreib-Antwort, exakt wie eine Tour (siehe
+		// aus der Schreib-Antwort, exakt wie eine Trip (siehe
 		// test_put_capturesNewEtagFromWriteResponse oben).
 		assert.equal(lastCall().ifMatch, null);
 		assert.equal(getKnownEtag('gr20'), '"irgendwas"');
@@ -174,7 +174,7 @@ describe('Trichter: Ortsvergleich (S6)', () => {
 		// WHEN: das Preset ueber den Trichter geladen wird
 		await api.get('/api/compare/presets/cp-abc');
 
-		// THEN: hat sich das Frontend den Stand gemerkt — exakt wie bei einer Tour
+		// THEN: hat sich das Frontend den Stand gemerkt — exakt wie bei einer Trip
 		assert.equal(getKnownEtag('cp-abc'), server.etagOf('cp-abc'));
 	});
 
@@ -207,7 +207,7 @@ describe('Trichter: Ortsvergleich (S6)', () => {
 	});
 
 	test('test_tripAndComparePresetStamps_doNotCollide_evenWithSameSuffix', async () => {
-		// GIVEN: eine Tour und ein Compare-Preset, deren IDs sich nur im
+		// GIVEN: eine Trip und ein Compare-Preset, deren IDs sich nur im
 		// `cp-`-Praefix unterscheiden (echter Namensraum, kein Test-Artefakt —
 		// `newComparePresetID()` erzeugt IDs immer mit diesem Praefix)
 		await api.get('/api/trips/abc');
@@ -275,22 +275,27 @@ describe('Trichter: Fehlerobjekt (AC-8)', () => {
 		assert.ok(!/412/.test(message), 'der rohe Statuscode darf nicht in der Meldung landen');
 	});
 
-	test('test_412_discardsStampSoNextAttemptGoesThrough', async () => {
+	// Issue #1433 (AC-18, bewusst umgeschrieben): bis #1433 verwarf `api.ts` den Stempel
+	// nach einem 412 und der naechste Versuch lief OHNE Vorbedingung durch — das
+	// ueberschrieb die Fremdaenderung. Jetzt bleibt der Stempel stehen (Konflikt-Sperre).
+	// Die Umschreibung erzwingen AC-18 (nach einem 412 kein unbedingtes Schreiben) und
+	// AC-24 (die zementierte Altzusicherung wird ins Gegenteil gedreht); die neue Fassung
+	// ist STAERKER als die alte (altes If-Match + erneutes 412).
+	test('test_412_keepsStampAndMarksConflict_nextAttemptCarriesStaleIfMatch', async () => {
 		// GIVEN: eine Ablehnung wegen veraltetem Stand
 		await rejectedWithStaleStamp();
+		const stamp = getKnownEtag('gr20');
 
-		// THEN: ist der gemerkte Stand verworfen — sonst scheiterte jeder weitere
-		// Versuch endlos am selben Wert und der Nutzer kaeme ohne Neuladen nicht
-		// mehr heraus.
-		assert.equal(getKnownEtag('gr20'), undefined);
+		// THEN: der gemerkte Stand bleibt, die Ressource ist im Konflikt
+		assert.ok(stamp, 'der Stempel darf nach einem 412 nicht verworfen werden');
+		assert.equal(istKonflikt('gr20'), true);
 
 		// WHEN: erneut gespeichert wird
-		await api.put('/api/trips/gr20', { name: 'X' });
+		await assert.rejects(api.put('/api/trips/gr20', { name: 'X' }), (e: { status?: number }) => e.status === 412);
 
-		// THEN: geht der Versuch ohne Vorbedingung durch (einmal melden, dann
-		// nicht mehr im Weg stehen).
-		assert.equal(lastCall().ifMatch, null);
-		assert.equal(lastCall().status, 200);
+		// THEN: der Versuch traegt das alte If-Match und wird wieder abgelehnt
+		assert.equal(lastCall().ifMatch, stamp);
+		assert.equal(lastCall().status, 412);
 	});
 
 	test('test_nonPreconditionError_keepsStamp', async () => {

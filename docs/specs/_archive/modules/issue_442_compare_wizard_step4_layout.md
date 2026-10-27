@@ -3,12 +3,14 @@ entity_id: issue_442_compare_wizard_step4_layout
 type: module
 created: 2026-05-29
 updated: 2026-05-29
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, wizard, svelte, stepper, layout-editor, compare, issue-442, epic-440]
 ---
 
 # Issue #442 — Compare-Wizard Step 4 Layout
+
+> Abgelöst/entfernt durch ADR-0032 / #683 (Compare-Wizard entfernt, `3bb5161a4`, 2026-06-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

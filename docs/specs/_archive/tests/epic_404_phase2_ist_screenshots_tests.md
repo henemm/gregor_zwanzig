@@ -3,7 +3,7 @@ entity_id: epic_404_phase2_ist_screenshots_tests
 type: tests
 created: 2026-05-27
 updated: 2026-05-27
-status: active
+status: implemented
 version: "1.0"
 tags: [tests, playwright, screenshots, audit, staging, epic-404]
 parent: epic_404_phase2_ist_screenshots
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/epic_404_phase2_ist_screenshots.md`.
+Test-Manifest für `docs/specs/_archive/modules/epic_404_phase2_ist_screenshots.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/epic_404_phase2_ist_screenshots.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/epic_404_phase2_ist_screenshots.md` v1.0
 
 ## Source
 

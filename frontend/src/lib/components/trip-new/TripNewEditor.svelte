@@ -10,12 +10,18 @@
 	import { onMount, untrack } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { api } from '$lib/api.js';
-	import { Eyebrow, Btn, Input, TopoBg } from '$lib/components/atoms';
-	import WeatherMetricsTab from '$lib/components/shared/WeatherMetricsTab.svelte';
-	import VersandTab from '$lib/components/shared/VersandTab.svelte';
-	import EditReportConfigSection from '$lib/components/edit/EditReportConfigSection.svelte';
+	import { Eyebrow, Btn, Input, TopoBg, PageHeader } from '$lib/components/atoms';
+	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
+	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
+	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
-	import { AlertRulesEditor } from '$lib/components/organisms';
+	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
+	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
+	import Infobox from '$lib/components/molecules/Infobox.svelte';
+	import type { ChannelKind, ChannelThreshold } from '$lib/components/shared/alarme-tab/alertChannelState';
+	import { deriveActiveAlertMetricsForTrip } from '$lib/components/shared/alarme-tab/tripAlertMetricsFromCatalog';
+	import type { MetricCatalog } from '$lib/components/trip-detail/metricsEditor';
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import MInput from '$lib/components/mobile/MInput.svelte';
@@ -23,17 +29,27 @@
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import Select from '$lib/components/ui/select/Select.svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import type { Trip, ReportConfig, AlertRule, WeatherConfigMetric, Stage, Waypoint, ActivityType } from '$lib/types';
+	import type { Trip, ReportConfig, WeatherConfigMetric, Stage, Waypoint, ActivityType, AlertMetric, SensLevel, Corridor } from '$lib/types';
 	import {
 		type TabId,
 		type CreateTripState,
+		type CreateTripAlarmState,
+		initialCreateTripAlarmState,
+		applyAlarmChannelToggle,
+		applyAlarmThresholdChange,
+		applyAlarmMetricLevelChange,
 		unlockedTabs,
 		doneTabs,
 		stageDate,
 		progressCount,
+		PROGRESS_STEPS,
 		canSave,
 		buildCreateTripPayload,
+		ergaenzeStandardwerteReportConfig,
+		ergaenzeVersandStandard,
 	} from './tripNewLogic.ts';
+	import { canFinishMitStandardwerten } from '$lib/components/shared/anlegeLockEngine';
+	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
 
 	// ── Test-Seam (Issue #1738, Muster `profileOverride` aus #1510) ──────────
 	// Der gesamte Anlege-Zustand lebt in internem `$state`; `isMobileViewport`
@@ -50,6 +66,10 @@
 		name?: string;
 		startDate?: string;
 		stageNames?: string[];
+		// #2277 S4: Besuchs-Flags vorbelegen (Wirkstelle der Reiterleiste testbar).
+		wtVisited?: boolean;
+		wbVisited?: boolean;
+		alVisited?: boolean;
 	}
 	let { stateOverride }: { stateOverride?: TripNewStateOverride } = $props();
 	// Einmal-Lesung beim Erzeugen (untrack, wie `profileOverride` in
@@ -57,15 +77,15 @@
 	// reaktiver Bezug.
 	const seed: TripNewStateOverride = untrack(() => stateOverride ?? {});
 
-	// ── Tab-Definitionen (1:1 TN_TAB_DEFS) ──────────────────────────────────
-	const TAB_DEFS: { id: TabId; label: string; lockHint: string | null; optional: boolean }[] = [
-		{ id: 'route',     label: 'Route',            lockHint: null,                             optional: false },
-		{ id: 'etappen',   label: 'Etappen & GPX',    lockHint: 'erst Tour-Name + Startdatum',    optional: false },
-		{ id: 'wegpunkte', label: 'Wegpunkte prüfen', lockHint: 'erst alle GPX hochladen',        optional: true  },
-		{ id: 'metriken',  label: 'Wetter-Metriken',  lockHint: 'erst alle GPX hochladen',        optional: false },
-		{ id: 'zeitplan',  label: 'Briefing-Zeitplan',lockHint: 'erst Wetter-Metriken öffnen',    optional: false },
-		{ id: 'alerts',    label: 'Alerts',            lockHint: 'erst Zeitplan öffnen',           optional: false },
-	];
+	// ── Tab-Definitionen — Issue #1743: aus der EINEN Reiter-Definition
+	// (`subscriptionTabs.anlegeKette`), keine Zweitliste. Versand ist kein Schritt
+	// mehr, sondern der Abschnitt unten im Schritt Wetter-Metriken.
+	const TAB_DEFS = anlegeKette('trip').map((t) => ({
+		id: t.id as TabId,
+		label: t.label,
+		lockHint: t.lockHint ?? null,
+		optional: t.optional ?? false,
+	}));
 
 	// ── Lokaler Anlege-State ──────────────────────────────────────────────────
 	let name = $state(seed.name ?? '');
@@ -87,13 +107,30 @@
 	let weatherMetrics = $state<WeatherConfigMetric[]>([]);
 	let channels = $state(seed.channels ?? { email: true, telegram: true, sms: false });
 	let reportConfig = $state<ReportConfig | undefined>(seed.reportConfig);
-	let alertRules = $state<AlertRule[]>([]);
+	// Issue #2277 S1 — Alarm-Schatten-State fuer den geteilten AlarmeTab (createMode).
+	// Fliesst bewusst NICHT in stubTrip ein (neue trip-Referenz je Klick = Effekt-Schleife).
+	let alarm = $state<CreateTripAlarmState>(initialCreateTripAlarmState());
+	// Issue #2277 S2a — Wertebereiche-Schatten-State fuer den geteilten
+	// CorridorEditor (createMode). Fliesst bewusst NICHT in stubTrip ein
+	// (dieselbe Effekt-Schleifen-Gefahr wie beim Alarm-Schatten-State oben).
+	let corridors = $state<Corridor[]>([]);
+	// Metrik-Katalog fuer die Alarm-Metrik-Zeilen (fail-soft, Muster WeatherMetricsTab).
+	let metricsCatalog = $state<MetricCatalog>({});
+	// #2521 S3: Voraussetzung fuer „Mit Standardwerten speichern" (defaultsBereit):
+	// Metrik-Katalog geladen UND Standardauswahl vom Wetter-Metriken-Reiter
+	// gemeldet (gesetzt in handleWeatherMetricsChange).
+	let catalogLoaded = $state(false);
+	onMount(() => {
+		api.get<MetricCatalog>('/api/metrics').then((c) => { metricsCatalog = c; }).catch(() => {});
+	});
+	const activeAlertMetrics = $derived(deriveActiveAlertMetricsForTrip(weatherMetrics, metricsCatalog));
 	// Issue #674 — Aktivitätstyp aus WeatherMetricsTab übernehmen (Fahrrad/Wanderer).
 	let selectedActivity = $state<ActivityType | undefined>(undefined);
 
 	// Visited-Flags (Tab-Besuch setzt done)
-	let wtVisited = $state(false);
-	let ztVisited = $state(false);
+	let wtVisited = $state(seed.wtVisited ?? false);
+	let wbVisited = $state(seed.wbVisited ?? false);
+	let alVisited = $state(seed.alVisited ?? false);
 
 	let activeTab = $state<TabId>(seed.activeTab ?? 'route');
 
@@ -120,7 +157,7 @@
 	// Jahr und ist dafür unbrauchbar.
 	const stubTrip = $derived<Trip>({
 		id: '__new__',
-		name: name || 'Neue Tour',
+		name: name || 'Neue Trip',
 		stages: buildEditorStages(),
 		activity: selectedActivity,
 		display_config: { channels, metrics: weatherMetrics } as unknown as Trip['display_config'],
@@ -136,12 +173,17 @@
 
 	// ── Abgeleitete Zustandsgrößen ────────────────────────────────────────────
 	const etDone = $derived(stages.length > 0 && stages.every(s => s.gpx !== null));
-	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, ztVisited));
-	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, ztVisited));
+	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited));
+	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited));
 	const ready = $derived(canSave(done));
+	// #2521 S3: eigenes Gate des Standardwerte-Knopfs (Bestandsknopf bleibt an `ready`).
+	const standardwerteFrei = $derived(canFinishMitStandardwerten({
+		pflichtErfuellt: name.trim().length > 0 && !!startDate && etDone,
+		defaultsBereit: catalogLoaded,
+		bestandFrei: ready,
+	}));
 	const gpxCount = $derived(stages.filter(s => s.gpx !== null).length);
 	const progressN = $derived(progressCount(done));
-	const activeAlertChannels = $derived((['email', 'telegram', 'sms'] as const).filter((c) => channels[c]));
 
 	// Flash-State für gesperrte Tabs
 	let flashTab = $state<TabId | null>(null);
@@ -210,7 +252,7 @@
 
 	// Mobile Wegpunkte CTA: weiter zu metriken (Factory-Pattern)
 	function makeMobileWegpunkteContinueHandler() {
-		return () => switchTab('metriken');
+		return () => switchTab('wetter-metriken');
 	}
 
 	function switchTab(id: TabId) {
@@ -222,8 +264,9 @@
 		// damit ein erneuter Klick auf den bereits aktiven Tab keine ungespeicherten
 		// Wegpunkt-Edits verwirft.
 		if (id === 'wegpunkte' && prev !== 'wegpunkte') editorStages = buildEditorStages();
-		if (id === 'metriken') wtVisited = true;
-		if (id === 'zeitplan') ztVisited = true;
+		if (id === 'wetter-metriken') wtVisited = true;
+		if (id === 'wertebereiche') wbVisited = true;
+		if (id === 'alarme') alVisited = true;
 	}
 
 	// ── Stage-Brücke: lokaler Create-State ⇄ EditStagesPanelNew (Issue #658) ──
@@ -328,11 +371,10 @@
 	}
 
 	// ── Sprung aus dem geteilten VersandTab (Issue #1738) ─────────────────────
-	// VTLaufzeitRoute meldet den Sprungwunsch unter dem Trip-Detail-Tabnamen
-	// 'stages'; im Anlege-Flow heißt derselbe Tab 'etappen'.
+	// Issue #2287: Hub und Anlege-Flow fuehren dieselbe Kennung 'etappen'.
 	function makeVersandJumpHandler() {
 		return function doJump(tab: string) {
-			if (tab === 'stages' || tab === 'etappen') switchTab('etappen');
+			if (tab === 'etappen') switchTab('etappen');
 		};
 	}
 	const onVersandJump = makeVersandJumpHandler();
@@ -346,6 +388,9 @@
 	// Rückkanal analog handleChannelsChange — ohne ihn verwirft der Anlege-
 	// Dialog die sichtbar angehakte Auswahl still beim Speichern.
 	function handleWeatherMetricsChange(m: WeatherConfigMetric[]) {
+		// #2521 S3: der Reiter meldet erst nach SEINEM Katalog-Laden — erst dann
+		// liegt die Standard-Metrikauswahl vor (defaultsBereit des Standardwerte-Knopfs).
+		catalogLoaded = true;
 		// Fix-Loop 2 (Staging-Befund effect_update_depth_exceeded): defensiv
 		// zusaetzlich zum Effect-Scope-Fix in WeatherMetricsTab.svelte --
 		// inhaltsgleicher Aufruf darf KEINE neue Array-Referenz erzeugen, sonst
@@ -360,7 +405,7 @@
 	// ── Tagesfenster-Änderung aus WeatherMetricsTab (Issue #1775) ─────────────
 	// Rückkanal analog handleChannelsChange/handleWeatherMetricsChange —
 	// additiv mergen statt Feld für Feld separat zu halten, da reportConfig
-	// hier bereits das EINE Objekt ist, das auch EditReportConfigSection per
+	// hier bereits das EINE Objekt ist, das auch MailInhaltCard per
 	// bind:reportConfig haelt.
 	function handleDayWindowChange(w: { day_window_start_hour: number; day_window_end_hour: number }) {
 		// Fix-Loop 2 (Staging-Regression #1775 nach Merge): gleiche Fehlerklasse
@@ -376,9 +421,25 @@
 		reportConfig = { ...(reportConfig ?? {}), ...w };
 	}
 
+	// ── Wertebereiche-Rueckruf aus CorridorEditor (Issue #2277 S2a) ───────────
+	// Muster handleChannelsChange: reine Uebernahme, kein Inhaltsgleichheits-
+	// Guard noetig (corridors fliesst nicht in stubTrip zurueck).
+	function handleCorridorsChange(c: Corridor[]) { corridors = [...c]; }
+
+	// ── Alarm-Rueckrufe aus AlarmeTab (Issue #2277 S1) ────────────────────────
+	// Delta-Logik liegt in tripNewLogic.ts (gleicher Code wie im Payload-Test).
+	function handleAlarmChannelToggle(kind: ChannelKind) { alarm = applyAlarmChannelToggle(alarm, kind); }
+	function handleAlarmThresholdChange(kind: ChannelKind, level: ChannelThreshold) { alarm = applyAlarmThresholdChange(alarm, kind, level); }
+	function handleAlarmMetricLevelChange(metric: AlertMetric, level: SensLevel) { alarm = applyAlarmMetricLevelChange(alarm, metric, level); }
+	function handleAlarmOfficialWarningsChange(an: boolean) { alarm = { ...alarm, officialWarningsEnabled: an }; }
+	function handleAlarmCooldownChange(minuten: number | undefined) { alarm = { ...alarm, cooldownMinutes: minuten }; }
+	function handleAlarmQuietHoursChange(von: string | undefined, bis: string | undefined) { alarm = { ...alarm, quietFrom: von, quietTo: bis }; }
+
 	// ── Speichern ─────────────────────────────────────────────────────────────
-	async function buildAndSave(): Promise<string | null> {
-		if (!ready || saving || savedTripId) return null;
+	// #2521 S3: `mitStandardwerten` = Weg des Standardwerte-Knopfs — eigenes Gate
+	// statt `ready`, report_config wie nach unveraendertem Durchklicken ergaenzt.
+	async function buildAndSave(mitStandardwerten = false): Promise<string | null> {
+		if (!(mitStandardwerten ? standardwerteFrei : ready) || saving || savedTripId) return null;
 		saveError = null;
 		saving = true;
 		// Issue #658 — etwaige offene Editor-Edits vor dem POST in den State holen.
@@ -391,8 +452,11 @@
 				stages: stages.map(s => ({ id: s.id, name: s.name, waypoints: s.waypoints })),
 				weatherMetrics,
 				channels,
-				reportConfig,
-				alertRules: alertRules.length > 0 ? alertRules : undefined,
+				// #1743 AC-21: Standard-Versandeinstellungen entstehen im Speicherweg,
+				// auch wenn der Versand-Abschnitt nie beruehrt wurde.
+				reportConfig: mitStandardwerten ? ergaenzeStandardwerteReportConfig(reportConfig) : ergaenzeVersandStandard(reportConfig),
+				alarm,
+				corridors,
 				activity: selectedActivity,
 			};
 			const payload = buildCreateTripPayload(state);
@@ -429,79 +493,66 @@
 		return () => { intentionalCancel = true; goto('/trips'); };
 	}
 
+	function makeStandardwerteHandler() {
+		return async function doSaveStandardwerte() {
+			if (!standardwerteFrei) return;
+			const id = await buildAndSave(true);
+			if (id) await goto(`/trips/${id}`);
+		};
+	}
+
 	const onSave = makeSaveHandler();
+	const onStandardwerte = makeStandardwerteHandler();
 	const onCancel = makeCancelHandler();
+
+	// Die Karte im Wegpunkte-Reiter muss ueber dem Speichern-Footer enden (Attribution).
+	let mobileTreeEl = $state<HTMLDivElement | null>(null);
+	let mobileFooterHeightPx = $state(0);
+	$effect(() => {
+		const footer = mobileTreeEl?.querySelector<HTMLElement>('[data-testid="tn-mobile-footer"]');
+		if (!footer) return;
+		const ro = new ResizeObserver(() => { mobileFooterHeightPx = footer.offsetHeight; });
+		ro.observe(footer);
+		return () => ro.disconnect();
+	});
 </script>
 
 <div data-testid="trip-new-editor" style="display: flex; min-height: 100%; background: var(--g-paper);">
-	<main style="flex: 1; position: relative; overflow-y: auto; overflow-x: hidden;">
+	<!-- Kein eigener Scroll-Container (clip statt hidden/auto): sonst greift das
+	     sticky des Speichern-Footers nie, weil dieses main mit dem Inhalt waechst. -->
+	<main style="flex: 1; min-width: 0; position: relative; overflow-x: clip; display: flex; flex-direction: column;">
 		<TopoBg opacity={0.12} />
 
-		<!-- Breadcrumb + Aktionen (Desktop only) -->
-		<div class="tn-desktop" data-testid="tn-desktop-breadcrumb" style="position: relative; padding: 14px 40px; border-bottom: 1px solid var(--g-rule-soft); display: flex; justify-content: space-between; align-items: center;">
-			<div class="mono" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em;">
-				<span style="opacity: 0.6;">Trips</span>
-				<span style="margin: 0 8px;">/</span>
-				<span style="color: var(--g-ink);">Neue Tour</span>
-			</div>
-			<div style="display: flex; gap: 8px; align-items: center;">
-				{#if !ready}
-					<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4);">Zeitplan einrichten zum Speichern</span>
-				{/if}
-				<button type="button" onclick={onCancel}
-					style="padding: 6px 12px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
-					Abbrechen
-				</button>
-				<button type="button" onclick={onSave} disabled={!ready || saving}
-					data-testid="trip-new-save-btn"
-					style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-ink); color: var(--g-paper); font-size: 13px; font-weight: 500; cursor: {ready && !saving ? 'pointer' : 'not-allowed'}; opacity: {ready && !saving ? 1 : 0.4};">
-					{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Trip speichern'}
-				</button>
-			</div>
+		<!-- Kopfleiste Desktop: Zurück über den geteilten PageHeader (onCancel ⇒ kein Autosave) -->
+		<div class="tn-desktop" data-testid="tn-desktop-breadcrumb" style="position: relative; padding: 0 40px;">
+			<PageHeader back={{ href: '/trips', label: 'Trips', onclick: onCancel }} compact />
 		</div>
 
-		<!-- Mobile App-Leiste (Mobile only, Issue #661) -->
-		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-appbar" style="position: relative; align-items: center; height: 52px; padding: 0 4px; border-bottom: 1px solid var(--g-rule-soft); background: var(--g-paper); flex-shrink: 0; z-index: 10;">
-			<!-- Back-Button -->
-			<button type="button" onclick={makeCancelHandler()}
-				style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); flex-shrink: 0;">
-				<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M19 12H5M12 5l-7 7 7 7"/>
-				</svg>
-			</button>
-			<!-- Titel-Gruppe -->
-			<div style="flex: 1; min-width: 0; padding: 0 8px; display: flex; flex-direction: column; justify-content: center;">
-				<div class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-					{name.trim() || 'Neue Tour'}
-				</div>
-				<div style="font-size: 15px; font-weight: 600; color: var(--g-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-					{TAB_DEFS.find(t => t.id === activeTab)?.label ?? 'Route'}
-				</div>
-			</div>
-			<!-- Speichern-Button -->
-			<button type="button" onclick={makeSaveHandler()}
-				data-testid="tn-mobile-save"
-				disabled={!ready || saving}
-				style="height: 44px; padding: 0 14px; border: none; background: transparent; color: {ready ? 'var(--g-accent)' : 'var(--g-ink-4)'}; font-weight: 600; font-size: 14px; cursor: {ready ? 'pointer' : 'default'}; font-family: var(--g-font-sans); flex-shrink: 0;">
-				{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Speichern'}
-			</button>
+		<!-- Kopfleiste Mobile (Issue #661): gleiche Bauart wie /compare/new -->
+		<div class="tn-mobile" data-testid="tn-mobile-appbar" style="position: relative; padding: 0 16px; background: var(--g-paper); flex-shrink: 0; z-index: 10;">
+			<PageHeader
+				back={{ href: '/trips', label: 'Trips', onclick: onCancel }}
+				eyebrow={name.trim() || 'Neue Trip'}
+				title={TAB_DEFS.find(t => t.id === activeTab)?.label ?? 'Route'}
+				compact
+			/>
 		</div>
 
 		<!-- Hero (Desktop only) -->
 		<div class="tn-desktop" style="position: relative; padding: 20px 40px 14px;">
-			<Eyebrow>Neue Tour anlegen</Eyebrow>
+			<Eyebrow>Neue Trip anlegen</Eyebrow>
 			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0 0; line-height: 1.1; color: {name.trim() ? 'var(--g-ink)' : 'var(--g-ink-4)'};">
 				{name.trim() || 'Noch kein Name'}
 			</h1>
 			<!-- Fortschrittsbalken (TN_Progress) -->
 			<div style="display: flex; align-items: center; gap: 10px; margin-top: 7px;">
 				<div style="display: flex; gap: 3px;">
-					{#each ['route', 'etappen', 'metriken', 'zeitplan'] as step}
-						<div style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
+					{#each PROGRESS_STEPS as step}
+						<div style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 					{/each}
 				</div>
-				<span class="mono" style="font-size: 10.5px; color: var(--g-ink-4); letter-spacing: 0.04em;">
-					{progressN === 0 ? 'Noch nichts eingerichtet' : `${progressN} / 4 Abschnitte eingerichtet`}
+				<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.04em;">
+					{progressN === 0 ? 'Noch nichts eingerichtet' : `${progressN} / ${PROGRESS_STEPS.length} Abschnitte eingerichtet`}
 				</span>
 			</div>
 		</div>
@@ -509,11 +560,11 @@
 		<!-- Mobile Fortschrittsbalken (TNM_Progress, Issue #661) -->
 		<div class="tn-mobile tn-mobile-flex" style="align-items: center; gap: 8px; padding: 8px 16px 0;">
 			<div style="display: flex; gap: 3px; flex: 1;">
-				{#each ['route', 'etappen', 'metriken', 'zeitplan'] as step}
-					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step as TabId) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
+				{#each PROGRESS_STEPS as step}
+					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 				{/each}
 			</div>
-			<span class="mono" style="font-size: 10px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/4</span>
+			<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/{PROGRESS_STEPS.length}</span>
 		</div>
 
 		<!-- Tab-Bar (Desktop only, TN_TabBar) -->
@@ -532,20 +583,20 @@
 					style="padding: 12px 16px; cursor: {isOpen ? 'pointer' : 'not-allowed'}; font-size: 13px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; display: flex; align-items: center; gap: 5px; white-space: nowrap; opacity: {isOpen ? 1 : 0.34}; transition: opacity 250ms, color 200ms; transform: {flashTab === t.id ? 'translateX(2px)' : 'none'}; user-select: none;">
 					{t.label}
 					{#if t.optional && isOpen}
-						<span class="mono" style="font-size: 9px; font-weight: 600; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.10); color: var(--g-accent-deep); text-transform: uppercase;">optional</span>
+						<span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.10); color: var(--g-accent-deep); text-transform: uppercase;">optional</span>
 					{/if}
 					{#if isDone}
-						<span style="font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 3px; background: rgba(61,107,58,0.12); color: var(--g-good); font-family: var(--g-font-mono);">✓</span>
+						<span style="font-size: 11px; font-weight: 700; padding: 2px 5px; border-radius: 3px; background: rgba(61,107,58,0.12); color: var(--g-good); font-family: var(--g-font-mono);">✓</span>
 					{/if}
 					{#if !isOpen}
-						<span style="font-size: 10px; color: var(--g-ink-4); font-family: var(--g-font-mono); opacity: 0.7;">⊘</span>
+						<span style="font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); opacity: 0.7;">⊘</span>
 					{/if}
 				</div>
 			{/each}
 		</div>
 
 		<!-- Mobile Tab-Bar (TNM_TabBar, Issue #661) -->
-		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-tabbar" style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0;">
+		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-tabbar" style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);">
 			{#each TAB_DEFS as t}
 				{@const isActive = t.id === activeTab}
 				{@const isOpen = unlocked.has(t.id)}
@@ -558,10 +609,10 @@
 					style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {isOpen ? 'pointer' : 'default'}; font-size: 14px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {isOpen ? 1 : 0.35};">
 					{t.label}
 					{#if t.optional && isOpen}
-						<span class="mono" style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">opt</span>
+						<span class="mono" style="font-size: 11px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">opt</span>
 					{/if}
 					{#if !isOpen}
-						<span class="mono" style="font-size: 10px; opacity: 0.8;">⊘</span>
+						<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>
 					{/if}
 				</button>
 			{/each}
@@ -577,17 +628,18 @@
 		<!-- ══════════════════════════════════════════════════════
 		     Desktop Tab-Inhalt (Issue #622, Slice 1)
 		     ══════════════════════════════════════════════════════ -->
-		<div class="tn-desktop">
+		<div class="tn-desktop" style="flex: 1 0 auto; display: flex; flex-direction: column;">
+		<div style="flex: 1 0 auto;">
 		{#if activeTab === 'route'}
 			<!-- Route-Tab (TN_RouteTab) -->
 			<div style="position: relative; padding: 28px 40px 60px;">
 				<TopoBg opacity={0.10} />
 				<div style="position: relative; max-width: 640px;">
-					<Eyebrow style="margin-bottom: 14px;">Tour-Grunddaten</Eyebrow>
+					<Eyebrow style="margin-bottom: 14px;">Trip-Grunddaten</Eyebrow>
 
 					<div style="margin-bottom: 18px;">
 						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
-							Tour-Name <span style="color: var(--g-bad);">*</span>
+							Trip-Name <span style="color: var(--g-bad);">*</span>
 						</label>
 						<input type="text" value={name} oninput={makeNameHandler()}
 							placeholder="z.B. Karnischer Höhenweg 2026"
@@ -599,7 +651,7 @@
 					<div style="margin-bottom: 18px;">
 						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
 							Region
-							<span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional · max 50</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional · max 50</span>
 						</label>
 						<input type="text" value={region} oninput={makeRegionHandler()}
 							placeholder="z.B. Karnische Alpen"
@@ -626,7 +678,7 @@
 					<div style="margin-bottom: 18px;">
 						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
 							Aktivitätstyp
-							<span class="mono" style="font-size: 10px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">optional</span>
 						</label>
 						<Select data-testid="activity-dropdown"
 							value={selectedActivity ?? ''}
@@ -654,7 +706,7 @@
 
 					<div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--g-rule); display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
 						{#if !name.trim()}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">⊘ Tour-Name fehlt</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">⊘ Trip-Name fehlt</span>
 						{:else if !startDate}
 							<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">⊘ Startdatum fehlt</span>
 						{/if}
@@ -686,7 +738,7 @@
 								{gpxCount} / {stages.length} GPX geladen
 							</span>
 							{#if startDate}
-								<span class="mono" style="font-size: 10px; color: var(--g-ink-4);">
+								<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">
 									Start: {stageDate(startDate, 0)?.replace(/\.$/, '')}
 								</span>
 							{/if}
@@ -696,7 +748,7 @@
 					<!-- Spaltenheader -->
 					<div style="display: grid; grid-template-columns: 36px 1fr 60px minmax(170px, 200px) 28px; gap: 10px; padding: 0 14px 5px;">
 						{#each ['', 'Etappenname', 'Datum', 'GPX-Datei', ''] as h}
-							<span class="mono" style="font-size: 10px; color: var(--g-ink-4); letter-spacing: 0.06em; text-transform: uppercase;">{h}</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.06em; text-transform: uppercase;">{h}</span>
 						{/each}
 					</div>
 
@@ -706,7 +758,7 @@
 							{@const hasGpx = s.gpx !== null}
 							<div style="display: grid; grid-template-columns: 36px 1fr 60px minmax(170px, 200px) 28px; gap: 10px; align-items: center; padding: 8px 14px; background: var(--g-card); border: 1px solid {hasGpx ? 'rgba(61,107,58,0.2)' : 'var(--g-rule)'}; border-radius: var(--g-r-2); transition: border-color 200ms;">
 								<!-- T-Badge -->
-								<span class="mono" style="font-size: 10px; font-weight: 700; text-align: center; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 4px; border-radius: 999px;">
+								<span class="mono" style="font-size: 11px; font-weight: 700; text-align: center; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 4px; border-radius: 999px;">
 									T{String(idx + 1).padStart(2, '0')}
 								</span>
 
@@ -727,8 +779,8 @@
 											<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5.5 4,8 8.5,2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
 										</span>
 										<div style="flex: 1; min-width: 0;">
-											<div class="mono" style="font-size: 10px; font-weight: 600; color: var(--g-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{s.gpx.file}</div>
-											<div class="mono" style="font-size: 9.5px; color: var(--g-ink-3);">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
+											<div class="mono" style="font-size: 11px; font-weight: 600; color: var(--g-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{s.gpx.file}</div>
+											<div class="mono" style="font-size: 11px; color: var(--g-ink-3);">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
 										</div>
 										<button type="button" onclick={makeGpxRemoveHandler(s.id)} title="GPX entfernen"
 											style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 13px; padding: 1px 3px; line-height: 1; flex-shrink: 0;">×</button>
@@ -738,7 +790,7 @@
 										<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-4)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
 											<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
 										</svg>
-										<span class="mono" style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--g-ink-4); white-space: nowrap;">GPX hochladen</span>
+										<span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--g-ink-4); white-space: nowrap;">GPX hochladen</span>
 										<input type="file" accept=".gpx" style="display: none;" onchange={makeGpxUploadHandler(idx, s.id)} />
 									</label>
 								{/if}
@@ -781,7 +833,7 @@
 
 					<div style="padding-top: 20px; border-top: 1px solid var(--g-rule); display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
 						{#if etDone}
-							<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+							<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
 								style="padding: 8px 16px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
 								Wetter direkt →
 							</button>
@@ -799,6 +851,8 @@
 		{:else if activeTab === 'wegpunkte'}
 			<!-- Wegpunkte-Tab (Issue #658) — Info-Banner + eingebetteter Editor + Footer -->
 			<div style="position: relative;">
+				<!-- Issue #2521 S1 (AC-4): Infobox oben im optionalen Reiter. -->
+				{#if !isMobileViewport}<div style="padding: 14px 40px 0;"><Infobox reiter="wegpunkte" context="route" /></div>{/if}
 				<!-- Info-Banner (1:1 TN_WegpunkteTab) -->
 				<div style="padding: 14px 40px; background: var(--g-card); border-bottom: 1px solid var(--g-rule-soft); display: flex; justify-content: space-between; align-items: center; gap: 24px;">
 					<div style="flex: 1;">
@@ -811,11 +865,11 @@
 						</div>
 					</div>
 					<div style="display: flex; gap: 8px; flex-shrink: 0;">
-						<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+						<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
 							style="padding: 6px 12px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
 							Überspringen →
 						</button>
-						<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+						<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
 							style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
 							Wegpunkte übernehmen →
 						</button>
@@ -828,39 +882,17 @@
 
 				<!-- Footer (1:1 TN_WegpunkteTab) -->
 				<div style="padding: 20px 40px; border-top: 1px solid var(--g-rule); background: var(--g-card); display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
-					<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+					<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
 						style="padding: 8px 16px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
 						Überspringen
 					</button>
-					<button type="button" onclick={makeEtappenContinueHandler('metriken')}
+					<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
 						style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: var(--g-accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
 						Wegpunkte übernehmen →
 					</button>
 				</div>
 			</div>
 
-		{:else if activeTab === 'zeitplan'}
-			<!-- Zeitplan-Tab — Issue #1738: Kanäle + Zeitplan + Laufzeit kommen aus
-			     dem geteilten VersandTab (context="route", Teilungsregel/Epic #1230).
-			     EditReportConfigSection bleibt nur noch für die Mail-Inhalt-Karte
-			     (showChannels/showSchedule=false, Muster WeatherMetricsTab.svelte).
-			     Damit hängt kein Versandkanal mehr an der Wetter-Metrik-Auswahl.
-			     Das isMobileViewport-Gate hält — wie bei WeatherMetricsTab unten —
-			     nur EINE Instanz im DOM: zwei gleichzeitig gemountete Instanzen
-			     halten je einen eigenen Schnappschuss von report_config und
-			     überschreiben sich gegenseitig (Last-Write-Wins, Fix-Loop 4). -->
-			{#if !isMobileViewport}
-			<div style="padding: 32px 40px 60px; max-width: 720px;">
-				<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} />
-				<EditReportConfigSection bind:reportConfig mode="create" showChannels={false} showSchedule={false} />
-			</div>
-			{/if}
-
-		{:else if activeTab === 'alerts'}
-			<!-- Alerts-Tab: reuse AlertRulesEditor mit bind:rules -->
-			<div style="padding: 32px 40px 60px;">
-				<AlertRulesEditor bind:rules={alertRules} activeChannels={activeAlertChannels} />
-			</div>
 		{/if}
 
 		<!-- Wetter-Tab: reuse WeatherMetricsTab im createMode -->
@@ -877,22 +909,78 @@
 		     Inhaltsgleichheitspruefung (Fix-Loop 2/3) bleiben als Zusatzschutz
 		     bestehen (Resize-Grenzfall: Tab kann kurzzeitig neu mounten). -->
 		{#if !isMobileViewport}
-		<div style:display={activeTab === 'metriken' ? '' : 'none'}>
-			<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+		<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
+			<!-- Issue #1743: geteilter Baustein „Wetter-Metriken + Versand" (createMode,
+			     kein PUT). Der Versand-Abschnitt haelt den report_config-Blob per
+			     bind:reportConfig; die Mail-Inhalt-Karte folgt darunter (im createMode
+			     blendet WeatherMetricsTab sie aus). -->
+			<WetterMetrikenVersandPanel context="route" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
+			<div style="padding: 0 40px 60px; max-width: 720px;">
+				<MailInhaltCard bind:reportConfig />
+			</div>
 		</div>
 		{/if}
+
+		<!-- Issue #2277 S2a — geteilter CorridorEditor (createMode, kein PUT),
+		     Muster WeatherMetricsTab/AlarmeTab: EINE dauerhafte Instanz (Desktop
+		     XOR Mobile), Sichtbarkeit ueber style:display. -->
+		{#if !isMobileViewport}
+		<div style:display={activeTab === 'wertebereiche' ? '' : 'none'}>
+			<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} onCorridorsChange={handleCorridorsChange} />
+		</div>
+		{/if}
+
+		<!-- Issue #2277 S1 — geteilter AlarmeTab (createMode, kein PUT), Muster
+		     WeatherMetricsTab: EINE dauerhafte Instanz (Desktop XOR Mobile),
+		     Sichtbarkeit ueber style:display, damit der interne State beim
+		     Tab-Wechsel erhalten bleibt. Kanal-Wertprops bewusst NICHT gesetzt. -->
+		{#if !isMobileViewport}
+		<div style:display={activeTab === 'alarme' ? '' : 'none'}>
+			<div style="padding: 32px 40px 60px;">
+				<AlarmeTab context="route" trip={stubTrip} createMode={true} showInfobox={true}
+					officialWarningsEnabled={alarm.officialWarningsEnabled}
+					onOfficialWarningsChange={handleAlarmOfficialWarningsChange}
+					cooldownMinutes={alarm.cooldownMinutes}
+					onCooldownChange={handleAlarmCooldownChange}
+					quietFrom={alarm.quietFrom}
+					quietTo={alarm.quietTo}
+					onQuietHoursChange={handleAlarmQuietHoursChange}
+					onChannelToggle={handleAlarmChannelToggle}
+					onThresholdChange={handleAlarmThresholdChange}
+					activeMetrics={activeAlertMetrics}
+					onMetricLevelChange={handleAlarmMetricLevelChange}
+				/>
+			</div>
+		</div>
+		{/if}
+		</div>
+
+		<!-- Speichern (geteilter Sticky-Footer; BottomNav ist auf Anlege-Seiten ausgeblendet) -->
+		<EditorStickyFooter context="route" navClearance={false} testid="tn-desktop-footer">
+			<div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+				{#if !ready}
+					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="trip-new-standardwerte-btn" />
+				{/if}
+				<button type="button" onclick={onSave} disabled={!ready || saving}
+					data-testid="trip-new-save-btn"
+					style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-ink); color: var(--g-paper); font-size: 13px; font-weight: 500; cursor: {ready && !saving ? 'pointer' : 'not-allowed'}; opacity: {ready && !saving ? 1 : 0.4};">
+					{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Trip speichern'}
+				</button>
+			</div>
+		</EditorStickyFooter>
 		</div><!-- /.tn-desktop -->
 
 		<!-- ══════════════════════════════════════════════════════
 		     Mobile Tab-Inhalt (Issue #661, AC-9)
 		     CSS-only Switch: .tn-mobile sichtbar bei ≤899px.
 		     ══════════════════════════════════════════════════════ -->
-		<div class="tn-mobile" style="position: relative; min-height: 100vh;">
+		<div class="tn-mobile tn-mobile-flex" bind:this={mobileTreeEl} style="position: relative; min-height: 100vh; flex: 1 0 auto; flex-direction: column;">
+		<div style="flex: 1 0 auto;">
 
 			{#if activeTab === 'route'}
 				<!-- Mobile Route-Tab (TNM_RouteTab) -->
 				<div style="position: relative; padding: 16px 16px 88px;">
-					<MField label="Tour-Name">
+					<MField label="Trip-Name">
 						<!-- data-testid geteilt: Desktop-Input im .tn-desktop ist display:none auf ≤899px,
 						     dieser hier ist sichtbar → Playwright findet genau diesen einen sichtbaren. -->
 						<div style="display: flex; align-items: center; gap: 10px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); padding: 0 14px; min-height: 48px;">
@@ -945,7 +1033,7 @@
 					<div data-testid="tn-mobile-route-cta" style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10;">
 						<MBtn block variant={name.trim() && startDate ? 'primary' : 'quiet'} size="xl"
 							onclick={makeMobileRouteContinueHandler()}>
-							{name.trim() && startDate ? 'Etappen anlegen →' : (!name.trim() ? 'Tour-Name eingeben' : 'Startdatum wählen')}
+							{name.trim() && startDate ? 'Etappen anlegen →' : (!name.trim() ? 'Trip-Name eingeben' : 'Startdatum wählen')}
 						</MBtn>
 					</div>
 				</div>
@@ -968,7 +1056,7 @@
 							<div data-testid="tn-mobile-stage-card" style="background: var(--g-card); border: 1px solid {s.gpx ? 'rgba(61,107,58,0.2)' : 'var(--g-rule)'}; border-radius: var(--g-r-3); overflow: hidden; transition: border-color 200ms;">
 								<!-- Header-Zeile -->
 								<div style="display: flex; align-items: center; padding: 11px 14px 7px; gap: 10px;">
-									<span class="mono" style="font-size: 10px; font-weight: 700; flex-shrink: 0; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 6px; border-radius: 999px;">
+									<span class="mono" style="font-size: 11px; font-weight: 700; flex-shrink: 0; color: var(--g-accent-deep); background: var(--g-accent-tint); padding: 2px 6px; border-radius: 999px;">
 										T{String(idx + 1).padStart(2, '0')}
 									</span>
 									<button type="button" data-testid="tn-mobile-stage-name"
@@ -997,7 +1085,7 @@
 											</div>
 											<div style="flex: 1; min-width: 0;">
 												<div class="mono" style="font-size: 12px; font-weight: 600; color: var(--g-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{s.gpx.file}</div>
-												<div class="mono" style="font-size: 10.5px; color: var(--g-ink-3); margin-top: 1px;">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
+												<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 1px;">{s.gpx.km} km · ↑{s.gpx.asc} m</div>
 											</div>
 											<button type="button" onclick={makeGpxRemoveHandler(s.id)}
 												style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 18px; padding: 4px 6px; line-height: 1; min-height: 44px; flex-shrink: 0;">×</button>
@@ -1039,7 +1127,7 @@
 					{#if etDone}
 						<div style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
 							<MBtn block variant="primary" size="xl" onclick={makeEtappenContinueHandler('wegpunkte')}>Wegpunkte prüfen →</MBtn>
-							<MBtn block variant="ghost" size="lg" onclick={makeEtappenContinueHandler('metriken')}>Direkt zu Wetter</MBtn>
+							<MBtn block variant="ghost" size="lg" onclick={makeEtappenContinueHandler('wetter-metriken')}>Direkt zu Wetter</MBtn>
 						</div>
 					{/if}
 				</div>
@@ -1073,12 +1161,14 @@
 			{:else if activeTab === 'wegpunkte'}
 				<!-- Mobile Wegpunkte-Tab: eingebetteter Editor mit eigenem Mobile-Layout (L1) -->
 				<div style="position: relative; padding: 0 0 80px;">
+					<!-- Issue #2521 S1 (AC-4): Infobox oben im optionalen Reiter. -->
+					{#if isMobileViewport}<div style="padding: 12px 16px 0;"><Infobox reiter="wegpunkte" context="route" /></div>{/if}
 					<div style="padding: 12px 16px; background: var(--g-accent-tint); border-bottom: 1px solid var(--g-accent-rule);">
-						<div class="mono" style="font-size: 10.5px; color: var(--g-accent-deep); line-height: 1.55;">
+						<div class="mono" style="font-size: 11px; color: var(--g-accent-deep); line-height: 1.55;">
 							Wegpunkte automatisch berechnet. Namen anpassen oder überspringen.
 						</div>
 					</div>
-					<EditStagesPanelNew bind:stages={editorStages} showSave={false} />
+					<EditStagesPanelNew bind:stages={editorStages} showSave={false} bottomReservePx={mobileFooterHeightPx || undefined} />
 					<!-- Floating CTAs -->
 					<div style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
 						<MBtn block variant="primary" size="xl" onclick={makeMobileWegpunkteContinueHandler()}>Wegpunkte übernehmen →</MBtn>
@@ -1086,21 +1176,6 @@
 					</div>
 				</div>
 
-			{:else if activeTab === 'zeitplan'}
-				<!-- Mobile Zeitplan-Tab: Wrapper mit mobilem Padding.
-				     Issue #1738 — geteilter VersandTab, XOR zum Desktop-Mount oben. -->
-				{#if isMobileViewport}
-				<div style="padding: 16px 16px 60px;">
-					<VersandTab context="route" trip={stubTrip} bind:reportConfig onJump={onVersandJump} />
-					<EditReportConfigSection bind:reportConfig mode="create" showChannels={false} showSchedule={false} />
-				</div>
-				{/if}
-
-			{:else if activeTab === 'alerts'}
-				<!-- Mobile Alerts-Tab: Wrapper mit mobilem Padding -->
-				<div style="padding: 16px 16px 60px;">
-					<AlertRulesEditor bind:rules={alertRules} activeChannels={activeAlertChannels} />
-				</div>
 			{/if}
 
 			<!-- Mobile Wetter-Tab: WeatherMetricsTab (bereits mobil, #618) -->
@@ -1109,8 +1184,40 @@
 			     display ausgeblendet). Fix-Loop 4 (s. Desktop-Mount oben): per
 			     isMobileViewport-Gate nur EINE Instanz im DOM (Desktop XOR Mobile). -->
 			{#if isMobileViewport}
-			<div style:display={activeTab === 'metriken' ? '' : 'none'}>
-				<WeatherMetricsTab trip={stubTrip} createMode={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} />
+			<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
+				<!-- Issue #1743: geteilter Baustein, XOR zum Desktop-Mount oben. -->
+				<WetterMetrikenVersandPanel context="route" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
+				<div style="padding: 0 16px 60px;">
+					<MailInhaltCard bind:reportConfig />
+				</div>
+			</div>
+			{/if}
+
+			<!-- Issue #2277 S2a — Mobile CorridorEditor, XOR zum Desktop-Mount oben. -->
+			{#if isMobileViewport}
+			<div style:display={activeTab === 'wertebereiche' ? '' : 'none'}>
+				<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} onCorridorsChange={handleCorridorsChange} />
+			</div>
+			{/if}
+
+			<!-- Issue #2277 S1 — Mobile AlarmeTab, XOR zum Desktop-Mount oben. -->
+			{#if isMobileViewport}
+			<div style:display={activeTab === 'alarme' ? '' : 'none'}>
+				<div style="padding: 16px 16px 60px;">
+					<AlarmeTab context="route" trip={stubTrip} createMode={true} showInfobox={true}
+						officialWarningsEnabled={alarm.officialWarningsEnabled}
+						onOfficialWarningsChange={handleAlarmOfficialWarningsChange}
+						cooldownMinutes={alarm.cooldownMinutes}
+						onCooldownChange={handleAlarmCooldownChange}
+						quietFrom={alarm.quietFrom}
+						quietTo={alarm.quietTo}
+						onQuietHoursChange={handleAlarmQuietHoursChange}
+						onChannelToggle={handleAlarmChannelToggle}
+						onThresholdChange={handleAlarmThresholdChange}
+						activeMetrics={activeAlertMetrics}
+						onMetricLevelChange={handleAlarmMetricLevelChange}
+					/>
+				</div>
 			</div>
 			{/if}
 
@@ -1120,7 +1227,19 @@
 					<Toast kind="info" msg={lockToastMsg} />
 				</div>
 			{/if}
+		</div>
 
+			<!-- Speichern (geteilter Sticky-Footer; BottomNav ist auf Anlege-Seiten ausgeblendet) -->
+			<EditorStickyFooter context="route" navClearance={false} testid="tn-mobile-footer">
+				{#if !ready}
+					<div style="display: flex; justify-content: center; margin-bottom: 8px;">
+						<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="tn-mobile-standardwerte" />
+					</div>
+				{/if}
+				<MBtn block variant={ready ? 'primary' : 'quiet'} size="xl" disabled={!ready || saving} onclick={onSave} testid="tn-mobile-save">
+					{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Speichern'}
+				</MBtn>
+			</EditorStickyFooter>
 		</div><!-- /.tn-mobile -->
 
 	</main>

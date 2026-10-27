@@ -17,12 +17,13 @@ sondern die reale httpx-Klasse mit aufgezeichneten Daten.
 """
 from __future__ import annotations
 
-from datetime import date, time
+from datetime import time
 
 import httpx
 import pytest
 
 from services.radar_service import NowcastResult, RadarNowcastService
+from tests.helpers.ortstag import ortstag, utc_tag
 
 # Atlantik: ausserhalb ALLER fuenf Bounding-Boxen (RADOLAN/INCA/DPC/AROME-FR/
 # ICON-D2, radar_service.py:28-58) -- identische Koordinate wie
@@ -116,7 +117,7 @@ def _write_budget(calls_openmeteo: int) -> None:
     path = get_data_root() / "diagnostics" / "forecast_budget.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "date": date.today().isoformat(),
+        "date": utc_tag().isoformat(),  # #2314 D2: Produkt liest den Zaehler am UTC-Tag
         "calls": {"openmeteo": calls_openmeteo},
         "cache_hits": 0, "cache_misses": 0,
     }
@@ -245,7 +246,15 @@ def test_format_now_text_shows_data_gap_hint_not_false_all_clear():
 
 def test_format_now_text_dry_result_wording_unchanged():
     """AC-7: der Normalfall (echt trocken, Fehlerfeld False) bleibt
-    zeichenidentisch zum bisherigen Wortlaut."""
+    zeichenidentisch zum bisherigen Wortlaut.
+
+    Issue #2051 S1 (AC-18) schreibt den Goldstring an EINER Stelle fort: die
+    Stundenzahl leitet sich seither zur Laufzeit aus `_NOWCAST_HORIZON_MIN`
+    (180) ab und lautet damit "3 Stunden" statt der zuvor doppelt gepflegten
+    "2 Stunden". Die Zusicherung DIESES Tests bleibt unveraendert -- geprueft
+    wird weiter, dass der echte Trockenfall NICHT in den
+    "nicht moeglich"-Zweig aus #1628 rutscht.
+    """
     result = NowcastResult(
         onset_minutes=None, intensity_label="Kein Niederschlag",
         source="minutely_15", frames=[], data_unavailable=False,
@@ -255,7 +264,7 @@ def test_format_now_text_dry_result_wording_unchanged():
     text = svc.format_now_text(result, include_source=False)
 
     assert text == (
-        "Kein Niederschlag.\nIn den nächsten 2 Stunden kein Regen erwartet."
+        "Kein Niederschlag.\nIn den nächsten 3 Stunden kein Regen erwartet."
     ), f"AC-7: Normalfall-Wortlaut darf sich nicht aendern, tatsaechlich: {text!r}"
 
 
@@ -337,8 +346,14 @@ class _RecordingRadarService:
         self._real = RadarNowcastService()
         self.results: list[NowcastResult] = []
 
-    def get_nowcast(self, lat, lon, priority: str = "user_briefing") -> NowcastResult:
-        result = self._real.get_nowcast(lat, lon, priority=priority)
+    def get_nowcast(
+        self, lat, lon, elevation_m=None, priority: str = "user_briefing",
+        user_id=None, deadline_at=None,
+    ) -> NowcastResult:
+        result = self._real.get_nowcast(
+            lat, lon, elevation_m=elevation_m, priority=priority, user_id=user_id,
+            deadline_at=deadline_at,
+        )
         self.results.append(result)
         return result
 
@@ -355,7 +370,9 @@ def test_both_alarm_paths_receive_data_unavailable_flag():
     from services.compare_radar_alert import CompareRadarAlertService
     from services.trip_alert import TripAlertService
 
-    today = date.today()
+    # #2314 D2: TripAlertService prueft Segmente gegen den Ortstag der
+    # Trip-Koordinaten (trip_local_today, ADR-0044), nicht den Prozesstag.
+    today = ortstag(_ATLANTIC_LAT, _ATLANTIC_LON)
     trip = Trip(
         id="ac8-fetch-failure-trip", name="AC8 Fetch Failure Trip",
         stages=[Stage(
@@ -368,7 +385,7 @@ def test_both_alarm_paths_receive_data_unavailable_flag():
             ],
         )],
     )
-    save_trip(trip)
+    save_trip(trip, user_id="default")
 
     trip_wrapper = _RecordingRadarService()
     trip_svc = TripAlertService(user_id="default", radar_service=trip_wrapper)

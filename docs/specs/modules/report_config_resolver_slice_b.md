@@ -3,7 +3,7 @@ entity_id: report_config_resolver_slice_b
 type: refactor
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [reporting, email, compare, config, resolver, rework]
 ---

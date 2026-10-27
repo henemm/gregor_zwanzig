@@ -3,7 +3,7 @@ entity_id: bug_569_edit_silent_fail
 type: module
 created: 2026-06-03
 updated: 2026-06-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [harness, bug, hooks]
 ---

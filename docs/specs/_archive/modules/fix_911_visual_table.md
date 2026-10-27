@@ -1,7 +1,7 @@
 ---
 issue: "#911"
 workflow: fix-911-visual-table
-status: draft
+status: implemented
 created: 2026-06-30
 adr: docs/design-requests/issue_911_mail_vorschau/screen-output-preview.jsx (maßgeblich)
 ---

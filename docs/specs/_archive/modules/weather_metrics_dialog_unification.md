@@ -202,7 +202,7 @@ Visuelle Regression (Dialog-Breite): manuell via Browser-Test, kein automatisier
 
 - `docs/specs/modules/weather_metrics_ux.md` v1.1 (APPROVED) — 5-Spalten-Layout, Friendly-Toggle
 - `docs/specs/modules/weather_config.md` v2.3 (APPROVED) — MetricConfig-Felder
-- `docs/specs/modules/sms_format.md` v2.0 (APPROVED) — Alert = Opt-in (`change_threshold`)
+- `docs/reference/sms_format.md` v2.0 (APPROVED) — Alert = Opt-in (`change_threshold`)
 - `docs/specs/modules/output_token_builder.md` v1.0 (APPROVED, Epic #96 β1) — Wird Friendly/Alert/M/A zur Laufzeit konsumieren
 
 ## Known Limitations

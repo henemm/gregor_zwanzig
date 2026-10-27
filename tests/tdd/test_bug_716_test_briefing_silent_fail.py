@@ -16,9 +16,10 @@ Tests prüfen VERHALTEN — keine Mocks:
   AC-3 (IMAP E2E): @pytest.mark.email — echter Versand + IMAP-Verifikation
     → prüft Ende-zu-Ende: Trip mit Etappe → SMTP → gregor-test@henemm.com → IMAP
 
-  AC-4 (Frontend): +page.svelte liest detail-Feld aus Fehler-Response
-    → aktuell: kein detail-Parsing im handleTestBriefing → TEST SCHLÄGT FEHL (RED)
-    # doc-compliance-test
+  AC-4 (Frontend): Dateiinhalt-Pruefung von +page.svelte entfernt (Issue #2278 —
+    die Logik liegt in $lib/utils/sendOutcome.ts). Verhaltensnachweis jetzt:
+    frontend/src/lib/utils/sendOutcome.test.ts (422 -> detail, 500 -> generisch)
+    und frontend/e2e/issue-767-768-test-briefing.spec.ts (AC-1..AC-3 im Browser).
 """
 
 from __future__ import annotations
@@ -30,14 +31,17 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SVELTE_PAGE = (
-    REPO_ROOT / "frontend" / "src" / "routes" / "trips" / "[id]" / "+page.svelte"
-)
+
+
+# Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
+# COLLECT statt beim Testlauf und kontaminierte os.environ ohne Teardown).
+# Autouse-Fixture fordert stattdessen die geteilte `dotenv_env`-Fixture aus
+# tests/conftest.py an, bevor JEDER Test dieser Datei laeuft.
+@pytest.fixture(autouse=True)
+def _dotenv(dotenv_env):
+    yield
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +69,11 @@ def user_no_stages(tmp_path):
 
     # User-Profil: mail_to auf gregor-test setzen → with_user_profile übernimmt
     user_profile = get_data_dir(user_id) / "user.json"
-    user_profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld, nicht ueber "tdd" im Namen
+    # — sonst waehlt with_user_profile() die Prod-Credentials (Resend).
+    user_profile.write_text(
+        json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True})
+    )
 
     # Issue #904: Trip wirklich ohne Etappen → Endpoint muss 422 liefern.
     trip_path = trips_dir / f"{trip_id}.json"
@@ -105,7 +113,11 @@ def user_with_tomorrow_stage(tmp_path):
     trips_dir.mkdir(parents=True, exist_ok=True)
 
     user_profile = get_data_dir(user_id) / "user.json"
-    user_profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld, nicht ueber "tdd" im Namen
+    # — sonst waehlt with_user_profile() die Prod-Credentials (Resend).
+    user_profile.write_text(
+        json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True})
+    )
 
     # Trip mit echter GR20-Etappe (Korsika) für morgen
     trip_path = trips_dir / f"{trip_id}.json"
@@ -284,7 +296,7 @@ class TestAC3RealImapVerification:
 
         # Trip laden
         trip_path = REPO_ROOT / "data" / "users" / user_id / "briefings" / f"{trip_id}.json"
-        trip = load_trip(trip_path)
+        trip = load_trip(trip_path, user_id=user_id)
 
         # Unique Marker im Trip-Namen damit wir die Mail im IMAP finden
         unique_marker = uuid.uuid4().hex[:8]
@@ -328,59 +340,4 @@ class TestAC3RealImapVerification:
         assert found, (
             f"E-Mail mit Marker '{unique_marker}' nach 60s nicht in gregor-test INBOX gefunden. "
             "Versand schlägt still fehl oder IMAP-Verbindung defekt."
-        )
-
-
-# ---------------------------------------------------------------------------
-# AC-4: Frontend liest detail-Feld aus Fehler-Response
-# ---------------------------------------------------------------------------
-
-
-class TestAC4FrontendShowsDetailMessage:
-    """
-    AC-4 — +page.svelte zeigt konkrete Fehlermeldung aus API-detail.
-
-    # doc-compliance-test
-    """
-
-    def _svelte_src(self) -> str:
-        return SVELTE_PAGE.read_text(encoding="utf-8")
-
-    def test_handleTestBriefing_reads_detail_from_error_response(self):
-        """
-        GIVEN: +page.svelte handleTestBriefing Funktion
-        WHEN: API antwortet mit 4xx + {"detail": "..."}
-        THEN: Frontend liest body.detail und zeigt es im Fehler-Toast
-
-        Nachweis: Quelltext enthält Parsing von body.detail (oder response.json()).
-        RED: aktuell enthält handleTestBriefing kein response.json()-Parsing für Fehler.
-        """
-        src = self._svelte_src()
-        # Nach dem Fix: handleTestBriefing muss response.json() aufrufen und
-        # body.detail in einem State speichern
-        has_detail_read = (
-            "body.detail" in src
-            or ("res.json" in src and "detail" in src)
-        )
-        assert has_detail_read, (
-            "BUG #716 AC-4: handleTestBriefing liest kein 'detail'-Feld aus der Fehler-Response.\n"
-            "Erwartet: body.detail oder res.json() + detail-Variable in +page.svelte.\n"
-            "Aktueller Code zeigt nur generisches 'Fehler beim Senden'."
-        )
-
-    def test_error_span_can_render_dynamic_message(self):
-        """
-        GIVEN: +page.svelte Fehler-Span
-        WHEN: testBriefingMessage State existiert
-        THEN: Fehler-Span rendert den State-Inhalt (kein statischer String)
-
-        # doc-compliance-test
-        RED: aktuell ist die Fehlermeldung hart kodiert.
-        """
-        src = self._svelte_src()
-        # Nach dem Fix: test-briefing-error Span rendert eine State-Variable
-        # Nicht mehr: <span ...>Fehler beim Senden</span>
-        assert "testBriefingMessage" in src, (
-            "BUG #716 AC-4: Kein 'testBriefingMessage' State in +page.svelte gefunden.\n"
-            "Fehler-Toast muss dynamisch aus API-Response befüllt werden."
         )

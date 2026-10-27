@@ -1,0 +1,78 @@
+F.FFF...FFF..FFF                                                         [100%]
+=================================== FAILURES ===================================
+_________________ test_ac1_shared_threshold_drives_both_paths __________________
+tests/tdd/test_radar_onset_threshold_variance.py:90: in test_ac1_shared_threshold_drives_both_paths
+    assert sent_trip_base == 1, (
+E   AssertionError: Voraussetzung: bei Default-Schwelle 55 muss Onset 38 im Trip-Pfad ausloesen, erhalten 0
+E   assert 0 == 1
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:303 Ziel-Segment: Ankunft 2026-08-20T23:59:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+_____________ test_ac2_trip_variance_over_grid_values[23min-alarm] _____________
+tests/tdd/test_radar_onset_threshold_variance.py:163: in test_ac2_trip_variance_over_grid_values
+    assert sent == expected, (
+E   AssertionError: Onset 23 Min bei Schwelle 55: erwartet 1 Alarm(e), erhalten 0
+E   assert 0 == 1
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:303 Ziel-Segment: Ankunft 2026-08-20T23:59:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+_____________ test_ac2_trip_variance_over_grid_values[38min-alarm] _____________
+tests/tdd/test_radar_onset_threshold_variance.py:163: in test_ac2_trip_variance_over_grid_values
+    assert sent == expected, (
+E   AssertionError: Onset 38 Min bei Schwelle 55: erwartet 1 Alarm(e), erhalten 0
+E   assert 0 == 1
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:303 Ziel-Segment: Ankunft 2026-08-20T23:59:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+_____________ test_ac2_trip_variance_over_grid_values[53min-alarm] _____________
+tests/tdd/test_radar_onset_threshold_variance.py:163: in test_ac2_trip_variance_over_grid_values
+    assert sent == expected, (
+E   AssertionError: Onset 53 Min bei Schwelle 55: erwartet 1 Alarm(e), erhalten 0
+E   assert 0 == 1
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:303 Ziel-Segment: Ankunft 2026-08-20T23:59:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+___________ test_ac3_compare_variance_over_grid_values[23min-alarm] ____________
+tests/tdd/test_radar_onset_threshold_variance.py:197: in test_ac3_compare_variance_over_grid_values
+    assert sent == expected, (
+E   AssertionError: Onset 23 Min bei Schwelle 55: erwartet 1 Alarm(e), erhalten 0
+E   assert 0 == 1
+___________ test_ac3_compare_variance_over_grid_values[38min-alarm] ____________
+tests/tdd/test_radar_onset_threshold_variance.py:197: in test_ac3_compare_variance_over_grid_values
+    assert sent == expected, (
+E   AssertionError: Onset 38 Min bei Schwelle 55: erwartet 1 Alarm(e), erhalten 0
+E   assert 0 == 1
+___________ test_ac3_compare_variance_over_grid_values[53min-alarm] ____________
+tests/tdd/test_radar_onset_threshold_variance.py:197: in test_ac3_compare_variance_over_grid_values
+    assert sent == expected, (
+E   AssertionError: Onset 53 Min bei Schwelle 55: erwartet 1 Alarm(e), erhalten 0
+E   assert 0 == 1
+_______________ test_ac4_email_and_telegram_show_day_on_rollover _______________
+tests/tdd/test_alert_onset_day_rollover.py:55: in test_ac4_email_and_telegram_show_day_on_rollover
+    rollover_event = _onset_event(onset_time="00:23", onset_day_offset=1)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_alert_onset_day_rollover.py:37: in _onset_event
+    return OnsetEvent(**fields)
+           ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: OnsetEvent.__init__() got an unexpected keyword argument 'onset_day_offset'
+____________________ test_ac5_sms_token_carries_day_suffix _____________________
+tests/tdd/test_alert_onset_day_rollover.py:104: in test_ac5_sms_token_carries_day_suffix
+    rollover_event = _onset_event(onset_time="00:23", onset_day_offset=1)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tdd/test_alert_onset_day_rollover.py:37: in _onset_event
+    return OnsetEvent(**fields)
+           ^^^^^^^^^^^^^^^^^^^^
+E   TypeError: OnsetEvent.__init__() got an unexpected keyword argument 'onset_day_offset'
+_______________ test_ac6_segment_end_guard_suppresses_late_onset _______________
+tests/tdd/test_radar_alert_segment_end_guard.py:107: in test_ac6_segment_end_guard_suppresses_late_onset
+    assert sent == 1, (
+E   AssertionError: Segment endet erst in 90 Min, Onset liegt bei 53 Min (davor) -- Kontrollfall muss weiterhin regulaer ausloesen, erhalten: 0
+E   assert 0 == 1
+=========================== short test summary info ============================
+FAILED tests/tdd/test_radar_onset_threshold_variance.py::test_ac1_shared_threshold_drives_both_paths
+FAILED tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[23min-alarm]
+FAILED tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[38min-alarm]
+FAILED tests/tdd/test_radar_onset_threshold_variance.py::test_ac2_trip_variance_over_grid_values[53min-alarm]
+FAILED tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[23min-alarm]
+FAILED tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[38min-alarm]
+FAILED tests/tdd/test_radar_onset_threshold_variance.py::test_ac3_compare_variance_over_grid_values[53min-alarm]
+FAILED tests/tdd/test_alert_onset_day_rollover.py::test_ac4_email_and_telegram_show_day_on_rollover
+FAILED tests/tdd/test_alert_onset_day_rollover.py::test_ac5_sms_token_carries_day_suffix
+FAILED tests/tdd/test_radar_alert_segment_end_guard.py::test_ac6_segment_end_guard_suppresses_late_onset
+10 failed, 6 passed in 1.32s

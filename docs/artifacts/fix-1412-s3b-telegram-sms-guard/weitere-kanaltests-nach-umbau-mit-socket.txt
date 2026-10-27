@@ -1,0 +1,1257 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/epic-2138-triage
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 636 items / 8 deselected / 628 selected
+
+tests/tdd/test_alert_addendum_sms.py ...............                     [  2%]
+tests/tdd/test_channel_metric_matrix.py ................................ [  7%]
+.............................................................s.......... [ 18%]
+........................................................................ [ 30%]
+........................................................................ [ 41%]
+........................................................................ [ 53%]
+........................................................................ [ 64%]
+........................................................................ [ 76%]
+..................                                                       [ 79%]
+tests/tdd/test_issue_1069_tier_channel_gating.py .........               [ 80%]
+tests/tdd/test_kurzform_zeigt_gefuehlte_temperatur.py ....               [ 81%]
+tests/tdd/test_onset_shift_alert.py ..........                           [ 82%]
+tests/tdd/test_telegram_html_escaping.py ....                            [ 83%]
+tests/test_premium_sms_reply_future_timestamp.py ....                    [ 84%]
+tests/unit/test_premium_sms_versand.py .............                     [ 86%]
+tests/tdd/test_952_onset_alert_fidelity.py ....................          [ 89%]
+tests/tdd/test_alarm_abweichung_kette.py ...                             [ 89%]
+tests/tdd/test_alert_sms_location_positions.py .........                 [ 91%]
+tests/tdd/test_issue_1001_telegram_bubbles.py .......s...sss..s          [ 93%]
+tests/tdd/test_issue_645_telegram_outputerror_arity.py .                 [ 94%]
+tests/tdd/test_telegram_kurzstil_compare_official_alert.py .....         [ 94%]
+tests/tdd/test_telegram_kurzstil_trip_alert.py .........                 [ 96%]
+tests/tdd/test_telegram_kurzstil_trip_briefing.py ..                     [ 96%]
+tests/unit/test_alert_channel_premium_sms.py ..........                  [ 98%]
+tests/unit/test_compare_alert_premium_sms.py ....                        [ 98%]
+tests/unit/test_logging_configuration.py .......                         [100%]
+
+==================================== PASSES ====================================
+________ test_ac_b1_nachtrag_wird_zugestellt_und_traegt_die_bezugszeile ________
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T23:59:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T23:59:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+_________ test_ac8_non_selectable_metrics_stay_out_unless_exempt[cape] _________
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_metric_ids:compare_metric_ids.py:187 resolve_enabled_metrics: ['cape_max_jkg'] ohne Renderer-Mapping oder zentral nicht waehlbar — Auswahl wird ignoriert statt angezeigt (vgl. #1285/#1296, #1585)
+__________ test_kaskade_s2_ac11_premium_sms_forwards_the_cut_sms_text __________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:145 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+_________ test_ac_s7_5_versand_traegt_je_kanal_eine_eigene_reihenfolge _________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:12:33,142 INFO scheduler.dispatch: Compare preset cp-s7-dispatch sent to ***@example.invalid (top_ort=Innsbruck)
+------------------------------ Captured log call -------------------------------
+INFO     scheduler.dispatch:scheduler_dispatch_service.py:670 Compare preset cp-s7-dispatch sent to ***@example.invalid (top_ort=Innsbruck)
+______ TestAC2StandardTierKeepsSms.test_standard_tier_user_still_gets_sms ______
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:12:58,085 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+_____ TestAC8RadarAlertRespectsTier.test_free_tier_radar_alert_gets_no_sms _____
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:12:59,202 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:12:59,203 WARNING trip_alert: No channel configured; skipping radar alert for trip-radar-tdd-1069-radar-free
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_alert:trip_alert.py:2486 No channel configured; skipping radar alert for trip-radar-tdd-1069-radar-free
+_ TestAC8RadarAlertRespectsTier.test_standard_tier_radar_alert_still_gets_sms __
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:12:59,734 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:12:59,735 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:12:59,755 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+_____ test_ac13_premium_sms_wire_text_matches_sms_text_and_contains_fd_fl ______
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:02,216 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+______ test_ac5_bestandsanker_ohne_onset_felder_laedt_und_alarmiert_nicht ______
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:03,527 INFO services.weather_snapshot: Alarm anchor saved: trip-neu (email)
+------------------------------ Captured log call -------------------------------
+INFO     services.weather_snapshot:weather_snapshot.py:277 Alarm anchor saved: trip-neu (email)
+_____ test_ac9_beginn_alarm_erreicht_alle_vier_kanaele_in_beiden_flaechen ______
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:03,553 WARNING output.channels.seven_io_base: Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+2026-10-06 15:13:03,570 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+2026-10-06 15:13:03,584 WARNING output.channels.seven_io_base: Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+2026-10-06 15:13:03,602 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:145 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+WARNING  output.channels.seven_io_base:seven_io_base.py:145 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+_______________ test_standalone_alert_sends_with_html_parse_mode _______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:04,161 INFO output.channels.telegram: Telegram message sent (subject='[Zone A & B] gesamte Route · ORANGE Zugang eingeschränkt — Zone A & B (Fr)')
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Zone A & B] gesamte Route · ORANGE Zugang eingeschränkt — Zone A & B (Fr)')
+________________ test_compare_alert_sends_with_html_parse_mode _________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:04,712 INFO output.channels.telegram: Telegram message sent (subject='[Le Var] alle Orte · ORANGE Zugang eingeschränkt — Zone A & B (Fr)')
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Le Var] alle Orte · ORANGE Zugang eingeschränkt — Zone A & B (Fr)')
+_________ test_send_falls_back_without_parse_mode_on_400_and_delivers __________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:05,260 WARNING output.channels.telegram: Telegram API rejected HTML payload (status 400), retrying without parse_mode (subject='Betreff')
+2026-10-06 15:13:05,286 WARNING output.channels.telegram: Telegram 400-fallback (no parse_mode) delivered (subject='Betreff')
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:501 Telegram API rejected HTML payload (status 400), retrying without parse_mode (subject='Betreff')
+WARNING  output.channels.telegram:telegram.py:540 Telegram 400-fallback (no parse_mode) delivered (subject='Betreff')
+________________________ test_past_reply_at_still_sends ________________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:06,869 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+______________ test_sender_is_fixed_number_regardless_of_sms_from ______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:08,139 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+____________ test_recipient_comes_from_learned_reply_to_not_sms_to _____________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:08,890 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+_____________ test_empty_reply_to_blocks_send_with_visible_reason ______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:09,615 ERROR services.notification_service: Premium-SMS nicht versendet für Premium-SMS tdd-1676-noreply: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:668 Premium-SMS nicht versendet für Premium-SMS tdd-1676-noreply: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+___________________ test_reply_to_older_than_ttl_blocks_send ___________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:10,146 ERROR services.notification_service: Premium-SMS nicht versendet für Premium-SMS tdd-1676-stale: [premium_sms] gelernte Rueckadresse ist veraltet: zuletzt vor 30 Tagen gelernt, erlaubt sind 30 Tage. Garmin kann die Nummer inzwischen einem fremden Geraet zugeteilt haben — Versand abgebrochen, bis sich das Geraet wieder meldet.
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:668 Premium-SMS nicht versendet für Premium-SMS tdd-1676-stale: [premium_sms] gelernte Rueckadresse ist veraltet: zuletzt vor 30 Tagen gelernt, erlaubt sind 30 Tage. Garmin kann die Nummer inzwischen einem fremden Geraet zugeteilt haben — Versand abgebrochen, bis sich das Geraet wieder meldet.
+__________________ test_reply_to_just_within_ttl_still_sends ___________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:10,672 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+__________ test_text_matches_sms_text_verbatim_under_extreme_weather ___________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:11,437 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+______________ test_standard_tier_never_triggers_premium_sms_send ______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:12,166 INFO output.channels.seven_io_base: sms an …111 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …111 ueber seven.io gesendet
+________ test_standard_tier_gets_no_premium_sms_when_weather_data_fails ________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:12,714 INFO trip_report_scheduler: Generating evening report for trip: Premium-SMS tdd-1676-outage-standard
+2026-10-06 15:13:12,715 WARNING trip_report_scheduler: All-failed weather data for trip trip-tdd-1676-outage-standard
+2026-10-06 15:13:12,745 INFO output.channels.seven_io_base: sms an …111 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     trip_report_scheduler:trip_report_scheduler.py:1348 Generating evening report for trip: Premium-SMS tdd-1676-outage-standard
+WARNING  trip_report_scheduler:trip_report_scheduler.py:1496 All-failed weather data for trip trip-tdd-1676-outage-standard
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …111 ueber seven.io gesendet
+________ test_outage_hint_names_the_reason_when_premium_sms_is_blocked _________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:13,297 ERROR services.notification_service: No-data hint Premium-SMS blockiert für Premium-SMS tdd-1676-outage-noreply: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:835 No-data hint Premium-SMS blockiert für Premium-SMS tdd-1676-outage-noreply: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+____________ test_premium_sms_and_sms_are_independently_switchable _____________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:14,229 INFO output.channels.seven_io_base: sms an …111 ueber seven.io gesendet
+2026-10-06 15:13:14,451 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+2026-10-06 15:13:14,669 INFO output.channels.seven_io_base: sms an …111 ueber seven.io gesendet
+2026-10-06 15:13:14,686 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …111 ueber seven.io gesendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …111 ueber seven.io gesendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+_ TestAC3IntensityLabelNoSentenceDuplicate.test_email_intensity_line_is_exact_short_label _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:16,291 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:16,291 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+_ TestF002IntensityLabelLowercaseViaRealMapping.test_email_intensity_line_lowercased_from_real_intensity_to_text _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:16,312 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:16,312 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T20:00:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+___________ test_kanalmatrix_und_schwelle_konsistent_bis_zum_versand ___________
+----------------------------- Captured stderr call -----------------------------
+2026-04-05 07:30:00,000 INFO trip_alert: Detected 1 significant changes for trip trip-tdd-2422s4-ac1-b5d1f3
+2026-04-05 07:30:00,000 INFO output.channels.seven_io_base: premium_sms an …008 ueber seven.io gesendet
+2026-04-05 07:30:00,000 INFO trip_alert: Alert sent for trip Golden Abweichungsalarm-Kette (#2422 S4): 1 changes detected via channels=['premium_sms']
+2026-04-05 07:30:00,000 INFO services.weather_snapshot: Alarm anchor saved: trip-tdd-2422s4-ac1-b5d1f3 (premium_sms)
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:740 Detected 1 significant changes for trip trip-tdd-2422s4-ac1-b5d1f3
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …008 ueber seven.io gesendet
+INFO     trip_alert:trip_alert.py:2910 Alert sent for trip Golden Abweichungsalarm-Kette (#2422 S4): 1 changes detected via channels=['premium_sms']
+INFO     services.weather_snapshot:weather_snapshot.py:277 Alarm anchor saved: trip-tdd-2422s4-ac1-b5d1f3 (premium_sms)
+______ test_cooldown_und_quiet_hours_unterdruecken_den_alarm[quiet_hours] ______
+----------------------------- Captured stderr call -----------------------------
+2026-04-05 07:30:00,000 INFO trip_alert: Detected 1 significant changes for trip trip-tdd-2422s4-ac6-quiet_hours-4fabc1
+2026-04-05 07:30:00,000 INFO output.channels.telegram: Telegram message sent (subject='[Golden Abweichungsalarm-Kette (#2422 S4)] Segment 1 · ↑ Niedersch: 2,0 mm→18,0 mm')
+2026-04-05 07:30:00,000 INFO trip_alert: Alert sent for trip Golden Abweichungsalarm-Kette (#2422 S4): 1 changes detected via channels=['telegram']
+2026-04-05 07:30:00,000 INFO services.weather_snapshot: Alarm anchor saved: trip-tdd-2422s4-ac6-quiet_hours-4fabc1 (telegram)
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:740 Detected 1 significant changes for trip trip-tdd-2422s4-ac6-quiet_hours-4fabc1
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Golden Abweichungsalarm-Kette (#2422 S4)] Segment 1 · ↑ Niedersch: 2,0 mm→18,0 mm')
+INFO     trip_alert:trip_alert.py:2910 Alert sent for trip Golden Abweichungsalarm-Kette (#2422 S4): 1 changes detected via channels=['telegram']
+INFO     services.weather_snapshot:weather_snapshot.py:277 Alarm anchor saved: trip-tdd-2422s4-ac6-quiet_hours-4fabc1 (telegram)
+_______ test_cooldown_und_quiet_hours_unterdruecken_den_alarm[cooldown] ________
+----------------------------- Captured stderr call -----------------------------
+2026-04-05 07:30:00,000 INFO trip_alert: Detected 1 significant changes for trip trip-tdd-2422s4-ac6-cooldown-2301db
+2026-04-05 07:30:00,000 INFO output.channels.telegram: Telegram message sent (subject='[Golden Abweichungsalarm-Kette (#2422 S4)] Segment 1 · ↑ Niedersch: 2,0 mm→18,0 mm')
+2026-04-05 07:30:00,000 INFO trip_alert: Alert sent for trip Golden Abweichungsalarm-Kette (#2422 S4): 1 changes detected via channels=['telegram']
+2026-04-05 07:30:00,000 INFO services.weather_snapshot: Alarm anchor saved: trip-tdd-2422s4-ac6-cooldown-2301db (telegram)
+2026-04-05 09:35:00,000 INFO trip_alert: Detected 1 significant changes for trip trip-tdd-2422s4-ac6-cooldown-2301db
+2026-04-05 09:35:00,000 INFO output.channels.telegram: Telegram message sent (subject='[Golden Abweichungsalarm-Kette (#2422 S4)] Segment 1 · ↑ Niedersch: 2,0 mm→30,0 mm')
+2026-04-05 09:35:00,000 INFO trip_alert: Alert sent for trip Golden Abweichungsalarm-Kette (#2422 S4): 1 changes detected via channels=['telegram']
+2026-04-05 09:35:00,000 INFO services.weather_snapshot: Alarm anchor saved: trip-tdd-2422s4-ac6-cooldown-2301db (telegram)
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:740 Detected 1 significant changes for trip trip-tdd-2422s4-ac6-cooldown-2301db
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Golden Abweichungsalarm-Kette (#2422 S4)] Segment 1 · ↑ Niedersch: 2,0 mm→18,0 mm')
+INFO     trip_alert:trip_alert.py:2910 Alert sent for trip Golden Abweichungsalarm-Kette (#2422 S4): 1 changes detected via channels=['telegram']
+INFO     services.weather_snapshot:weather_snapshot.py:277 Alarm anchor saved: trip-tdd-2422s4-ac6-cooldown-2301db (telegram)
+INFO     trip_alert:trip_alert.py:740 Detected 1 significant changes for trip trip-tdd-2422s4-ac6-cooldown-2301db
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Golden Abweichungsalarm-Kette (#2422 S4)] Segment 1 · ↑ Niedersch: 2,0 mm→30,0 mm')
+INFO     trip_alert:trip_alert.py:2910 Alert sent for trip Golden Abweichungsalarm-Kette (#2422 S4): 1 changes detected via channels=['telegram']
+INFO     services.weather_snapshot:weather_snapshot.py:277 Alarm anchor saved: trip-tdd-2422s4-ac6-cooldown-2301db (telegram)
+_______ test_k1_bundled_two_location_sms_carries_only_the_values_no_head _______
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:16,817 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+_____________ test_k2_single_location_sms_carries_no_location_name _____________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:17,387 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+____ test_k3_position_numbers_come_from_configured_list_not_from_hit_order _____
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:17,958 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+________ test_k4_deleted_location_lets_the_following_positions_move_up _________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:18,507 WARNING compare_alert: Compare-Alert: Ort loc-geloescht nicht aufloesbar fuer Preset cp-k4-gap-0d0197
+2026-10-06 15:13:18,527 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+WARNING  compare_alert:compare_alert.py:511 Compare-Alert: Ort loc-geloescht nicht aufloesbar fuer Preset cp-k4-gap-0d0197
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+___________ test_regression_trip_deviation_alert_sms_text_unchanged ____________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:19,099 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+_____________ test_regression_trip_radar_alert_sms_text_unchanged ______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:19,670 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+____________ test_regression_compare_radar_alert_sms_text_unchanged ____________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:20,237 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+_ TestAC7PreviewEndpointBubbles.test_telegram_preview_endpoint_returns_bubbles_alongside_body _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:20,892 INFO track_resolution: Track-Aufloesung: Etappe 2d108fe0 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:20,895 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:20,897 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:20,898 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:20,900 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:20,902 WARNING services.segment_weather: Failed to fetch night weather: Cannot compute metrics from empty timeseries
+2026-10-06 15:13:20,939 INFO track_resolution: Track-Aufloesung: Etappe 9304b7c5 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:20,941 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:20,943 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:20,944 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:20,946 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:20,946 WARNING trip_report_scheduler: Failed to build trend for stage 9304b7c5: All segments have errors, cannot aggregate
+2026-10-06 15:13:21,049 INFO track_resolution: Track-Aufloesung: Etappe 7c409dd6 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:21,051 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,053 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,054 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,056 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,056 WARNING trip_report_scheduler: Failed to build trend for stage 7c409dd6: All segments have errors, cannot aggregate
+2026-10-06 15:13:21,092 INFO track_resolution: Track-Aufloesung: Etappe 6f5959a4 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:21,094 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,096 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,097 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,099 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,099 WARNING trip_report_scheduler: Failed to build trend for stage 6f5959a4: All segments have errors, cannot aggregate
+2026-10-06 15:13:21,134 INFO track_resolution: Track-Aufloesung: Etappe 9304b7c5 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:21,135 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,136 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,137 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,137 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,172 INFO track_resolution: Track-Aufloesung: Etappe 7c409dd6 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:21,173 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,174 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,174 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,175 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+------------------------------ Captured log call -------------------------------
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 2d108fe0 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+WARNING  services.segment_weather:segment_weather.py:553 Failed to fetch night weather: Cannot compute metrics from empty timeseries
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 9304b7c5 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+WARNING  trip_report_scheduler:trip_report_scheduler.py:2784 Failed to build trend for stage 9304b7c5: All segments have errors, cannot aggregate
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 7c409dd6 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+WARNING  trip_report_scheduler:trip_report_scheduler.py:2784 Failed to build trend for stage 7c409dd6: All segments have errors, cannot aggregate
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 6f5959a4 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+WARNING  trip_report_scheduler:trip_report_scheduler.py:2784 Failed to build trend for stage 6f5959a4: All segments have errors, cannot aggregate
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 9304b7c5 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 7c409dd6 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+_ TestAC7PreviewEndpointBubbles.test_preview_service_render_telegram_preview_returns_bubbles _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:21,248 INFO track_resolution: Track-Aufloesung: Etappe 2d108fe0 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:21,250 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,252 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,254 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,255 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,258 WARNING services.segment_weather: Failed to fetch night weather: Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,292 INFO track_resolution: Track-Aufloesung: Etappe 9304b7c5 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:21,294 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,296 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,297 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,299 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,299 WARNING trip_report_scheduler: Failed to build trend for stage 9304b7c5: All segments have errors, cannot aggregate
+2026-10-06 15:13:21,334 INFO track_resolution: Track-Aufloesung: Etappe 7c409dd6 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:21,336 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,338 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,340 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,342 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,342 WARNING trip_report_scheduler: Failed to build trend for stage 7c409dd6: All segments have errors, cannot aggregate
+2026-10-06 15:13:21,378 INFO track_resolution: Track-Aufloesung: Etappe 6f5959a4 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:21,380 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,382 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,383 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,385 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,385 WARNING trip_report_scheduler: Failed to build trend for stage 6f5959a4: All segments have errors, cannot aggregate
+2026-10-06 15:13:21,420 INFO track_resolution: Track-Aufloesung: Etappe 9304b7c5 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:21,420 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,421 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,421 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,422 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,457 INFO track_resolution: Track-Aufloesung: Etappe 7c409dd6 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+2026-10-06 15:13:21,458 ERROR trip_report_scheduler: Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,458 ERROR trip_report_scheduler: Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,459 ERROR trip_report_scheduler: Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+2026-10-06 15:13:21,459 ERROR trip_report_scheduler: Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+------------------------------ Captured log call -------------------------------
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 2d108fe0 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+WARNING  services.segment_weather:segment_weather.py:553 Failed to fetch night weather: Cannot compute metrics from empty timeseries
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 9304b7c5 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+WARNING  trip_report_scheduler:trip_report_scheduler.py:2784 Failed to build trend for stage 9304b7c5: All segments have errors, cannot aggregate
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 7c409dd6 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+WARNING  trip_report_scheduler:trip_report_scheduler.py:2784 Failed to build trend for stage 7c409dd6: All segments have errors, cannot aggregate
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 6f5959a4 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+WARNING  trip_report_scheduler:trip_report_scheduler.py:2784 Failed to build trend for stage 6f5959a4: All segments have errors, cannot aggregate
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 9304b7c5 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+INFO     track_resolution:track_resolution.py:371 Track-Aufloesung: Etappe 7c409dd6 von Trip gr221-mallorca nachtraeglich vermessen (4 Wegpunkte, persist=False)
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 1 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 2 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment 3 after 1 attempt(s): Cannot compute metrics from empty timeseries
+ERROR    trip_report_scheduler:trip_report_scheduler.py:2360 Weather fetch failed for segment Ziel after 1 attempt(s): Cannot compute metrics from empty timeseries
+_ TestF002ActColumnsCallbackNoLongerDead.test_act_columns_callback_maps_to_body_and_returns_informative_result _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:21,468 WARNING services.trip_command_processor: No trip found for name: 'F002 Test' (user: 'tdd-1001-f002')
+------------------------------ Captured log call -------------------------------
+WARNING  services.trip_command_processor:trip_command_processor.py:1410 No trip found for name: 'F002 Test' (user: 'tdd-1001-f002')
+________________ test_http_error_path_raises_clean_outputerror _________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:21,486 WARNING output.channels.telegram: Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…345' auf Test-Chat-ID '-5369694790' umgeschaltet.
+2026-10-06 15:13:21,502 ERROR output.channels.telegram: Telegram send failed: [Errno 111] Connection refused
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.telegram:telegram.py:222 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- Ziel-Chat von '…345' auf Test-Chat-ID '-5369694790' umgeschaltet.
+ERROR    output.channels.telegram:telegram.py:519 Telegram send failed: [Errno 111] Connection refused
+_ TestAC5CompareOfficialKurzstil.test_kurzform_telegram_body_equals_official_sms _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:21,539 INFO output.channels.telegram: Telegram message sent (subject='[Korsika-Vergleich] alle Orte · ORANGE Gewitter & Sturm <stark> (Fr)')
+2026-10-06 15:13:21,557 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Korsika-Vergleich] alle Orte · ORANGE Gewitter & Sturm <stark> (Fr)')
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+_ TestAC5CompareOfficialKurzstil.test_rich_sends_html_official_compare_telegram _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:22,118 INFO output.channels.telegram: Telegram message sent (subject='[Korsika-Vergleich] alle Orte · ORANGE Gewitter & Sturm <stark> (Fr)')
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Korsika-Vergleich] alle Orte · ORANGE Gewitter & Sturm <stark> (Fr)')
+_ TestAC3DeviationAlertKurzstil.test_kurzform_trip_path_sends_plaintext_no_parse_mode _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:23,223 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] Segment 1 · ↑ Temp: 18,0 °C→26,0 °C')
+2026-10-06 15:13:23,223 INFO trip_alert: Alert sent for trip Kurzstil-Trip: 1 changes detected via channels=['telegram']
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] Segment 1 · ↑ Temp: 18,0 °C→26,0 °C')
+INFO     trip_alert:trip_alert.py:2910 Alert sent for trip Kurzstil-Trip: 1 changes detected via channels=['telegram']
+______ TestAC3DeviationAlertKurzstil.test_rich_trip_path_still_sends_html ______
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:23,790 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] Segment 1 · ↑ Temp: 18,0 °C→26,0 °C')
+2026-10-06 15:13:23,790 INFO trip_alert: Alert sent for trip Kurzstil-Trip: 1 changes detected via channels=['telegram']
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] Segment 1 · ↑ Temp: 18,0 °C→26,0 °C')
+INFO     trip_alert:trip_alert.py:2910 Alert sent for trip Kurzstil-Trip: 1 changes detected via channels=['telegram']
+__ TestAC3DeviationAlertKurzstil.test_kurzform_telegram_body_equals_sms_body ___
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:24,356 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] Segment 1 · ↑ Temp: 18,0 °C→26,0 °C')
+2026-10-06 15:13:24,376 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] Segment 1 · ↑ Temp: 18,0 °C→26,0 °C')
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+_ TestAC4OfficialAlertKurzstil.test_kurzform_telegram_body_equals_official_sms _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:24,914 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] Segment 1 · ORANGE Gewitter & Sturm <stark> (Fr)')
+2026-10-06 15:13:24,932 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] Segment 1 · ORANGE Gewitter & Sturm <stark> (Fr)')
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+_____ TestAC4OfficialAlertKurzstil.test_rich_sends_html_official_telegram ______
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:25,499 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] Segment 1 · ORANGE Gewitter & Sturm <stark> (Fr)')
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] Segment 1 · ORANGE Gewitter & Sturm <stark> (Fr)')
+_ TestGuardCompareDeviationUnaffected.test_compare_deviation_defaults_to_rich __
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:26,066 INFO output.channels.telegram: Telegram message sent (subject='[Ort A] Ort A · ↑ Temp: 18,0 °C→26,0 °C')
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Ort A] Ort A · ↑ Temp: 18,0 °C→26,0 °C')
+_ TestIssue2018AddendumReachesKurzstilTelegram.test_kurzform_telegram_body_equals_sms_body_inklusive_nachtrag _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:26,638 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] 🏁 Ziel · Gewitter in 25 Min')
+2026-10-06 15:13:26,656 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] 🏁 Ziel · Gewitter in 25 Min')
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+_ TestIssue2018AddendumReachesKurzstilTelegram.test_s6_zusicherungen_gelten_auch_mit_gesetztem_nachtrag _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:27,194 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] 🏁 Ziel · Gewitter in 25 Min')
+2026-10-06 15:13:27,213 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] 🏁 Ziel · Gewitter in 25 Min')
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+_ TestAC2KurzstilRedirectsSmsTextToTelegram.test_kurzform_sends_single_sms_text_to_telegram _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:27,943 INFO output.channels.seven_io_base: sms an …000 ueber seven.io gesendet
+2026-10-06 15:13:27,961 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] 01.05.2026 — Abend')
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …000 ueber seven.io gesendet
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] 01.05.2026 — Abend')
+____ TestAC1RichRemainsBubbleList.test_rich_style_still_sends_html_bubbles _____
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:28,685 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] 01.05.2026 — Abend')
+2026-10-06 15:13:28,703 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] 01.05.2026 — Abend')
+2026-10-06 15:13:28,721 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] 01.05.2026 — Abend')
+2026-10-06 15:13:28,739 INFO output.channels.telegram: Telegram message sent (subject='[Kurzstil-Trip] 01.05.2026 — Abend')
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] 01.05.2026 — Abend')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] 01.05.2026 — Abend')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] 01.05.2026 — Abend')
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Kurzstil-Trip] 01.05.2026 — Abend')
+____ test_radar_alert_reaches_premium_sms_when_no_other_channel_configured _____
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:29,260 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:29,271 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:29,289 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+____________ test_deviation_alert_reaches_premium_sms_when_opted_in ____________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:29,828 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+2026-10-06 15:13:29,828 INFO trip_alert: Alert sent for trip Premium-Alarm-Trip: 1 changes detected via channels=['premium_sms']
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+INFO     trip_alert:trip_alert.py:2910 Alert sent for trip Premium-Alarm-Trip: 1 changes detected via channels=['premium_sms']
+______________ test_radar_alert_reaches_premium_sms_when_opted_in ______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:30,377 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:30,382 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:30,400 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+__________ test_legacy_trip_inherits_premium_sms_from_briefing_config __________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:30,967 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+2026-10-06 15:13:30,967 INFO trip_alert: Alert sent for trip Premium-Alarm-Trip: 1 changes detected via channels=['premium_sms']
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+INFO     trip_alert:trip_alert.py:2910 Alert sent for trip Premium-Alarm-Trip: 1 changes detected via channels=['premium_sms']
+_________________ test_official_trip_alert_reaches_premium_sms _________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:31,533 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+___________ test_standard_tier_never_reaches_premium_sms_via_alerts ____________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:32,125 INFO output.channels.seven_io_base: premium_sms an …321 ueber seven.io gesendet
+2026-10-06 15:13:32,125 INFO trip_alert: Alert sent for trip Premium-Alarm-Trip: 1 changes detected via channels=['premium_sms']
+2026-10-06 15:13:32,149 INFO output.channels.seven_io_base: premium_sms an …321 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …321 ueber seven.io gesendet
+INFO     trip_alert:trip_alert.py:2910 Alert sent for trip Premium-Alarm-Trip: 1 changes detected via channels=['premium_sms']
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …321 ueber seven.io gesendet
+_________ test_standard_tier_never_reaches_premium_sms_via_radar_path __________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:32,699 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:32,703 WARNING trip_alert: No channel configured; skipping radar alert for trip-f001-radar-10158c
+2026-10-06 15:13:32,720 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:32,723 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:32,741 INFO output.channels.seven_io_base: premium_sms an …321 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_alert:trip_alert.py:2486 No channel configured; skipping radar alert for trip-f001-radar-10158c
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …321 ueber seven.io gesendet
+__________ test_failed_premium_sms_does_not_abort_remaining_channels ___________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:33,315 INFO output.channels.telegram: Telegram message sent (subject='[Premium-Alarm-Trip] Segment 1 · ↑ Böen: 20 km/h→45 km/h')
+2026-10-06 15:13:33,335 INFO output.channels.seven_io_base: sms an …111 ueber seven.io gesendet
+2026-10-06 15:13:33,336 ERROR services.notification_service: Premium-SMS alert failed for Premium-Alarm-Trip: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.telegram:telegram.py:487 Telegram message sent (subject='[Premium-Alarm-Trip] Segment 1 · ↑ Böen: 20 km/h→45 km/h')
+INFO     output.channels.seven_io_base:seven_io_base.py:191 sms an …111 ueber seven.io gesendet
+ERROR    services.notification_service:notification_service.py:1823 Premium-SMS alert failed for Premium-Alarm-Trip: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_______ test_deviation_alarm_run_logs_specific_premium_sms_block_reason ________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:34,369 INFO trip_alert: Detected 1 significant changes for trip trip-f002-dev-2f7f2d
+2026-10-06 15:13:34,371 ERROR services.notification_service: Premium-SMS alert failed for Protokoll-Trip: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+2026-10-06 15:13:34,372 INFO trip_alert: Alert sent for trip Protokoll-Trip: 1 changes detected via channels=['email', 'premium_sms']
+2026-10-06 15:13:34,373 INFO services.weather_snapshot: Alarm anchor saved: trip-f002-dev-2f7f2d (email)
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:740 Detected 1 significant changes for trip trip-f002-dev-2f7f2d
+ERROR    services.notification_service:notification_service.py:1823 Premium-SMS alert failed for Protokoll-Trip: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+INFO     trip_alert:trip_alert.py:2910 Alert sent for trip Protokoll-Trip: 1 changes detected via channels=['email', 'premium_sms']
+INFO     services.weather_snapshot:weather_snapshot.py:277 Alarm anchor saved: trip-f002-dev-2f7f2d (email)
+_________ test_radar_alarm_run_logs_specific_premium_sms_block_reason __________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:34,392 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:34,399 WARNING trip_segments: Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+2026-10-06 15:13:34,400 ERROR services.notification_service: Radar alert premium_sms failed for trip-f002-radar-4f1cd7: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-06T19:43:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+ERROR    services.notification_service:notification_service.py:1821 Radar alert premium_sms failed for trip-f002-radar-4f1cd7: [premium_sms] keine gelernte Rueckadresse vorhanden — das Geraet hat sich noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist kein Empfaenger bekannt.
+_______________ test_compare_deviation_alert_reaches_premium_sms _______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:34,438 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+_________________ test_compare_radar_alert_reaches_premium_sms _________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:35,008 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+_______________ test_compare_official_alert_reaches_premium_sms ________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:35,576 INFO output.channels.seven_io_base: premium_sms an …345 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …345 ueber seven.io gesendet
+_______ test_standard_tier_never_reaches_premium_sms_via_compare_alerts ________
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:36,173 INFO output.channels.seven_io_base: premium_sms an …321 ueber seven.io gesendet
+2026-10-06 15:13:36,194 INFO output.channels.seven_io_base: premium_sms an …321 ueber seven.io gesendet
+2026-10-06 15:13:36,213 INFO output.channels.seven_io_base: premium_sms an …321 ueber seven.io gesendet
+2026-10-06 15:13:36,236 INFO output.channels.seven_io_base: premium_sms an …321 ueber seven.io gesendet
+2026-10-06 15:13:36,255 INFO output.channels.seven_io_base: premium_sms an …321 ueber seven.io gesendet
+------------------------------ Captured log call -------------------------------
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …321 ueber seven.io gesendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …321 ueber seven.io gesendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …321 ueber seven.io gesendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …321 ueber seven.io gesendet
+INFO     output.channels.seven_io_base:seven_io_base.py:191 premium_sms an …321 ueber seven.io gesendet
+_ test_configure_logging_bogus_level_falls_back_to_info_without_raising[VOELLIGER_UNSINN] _
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:36,767 WARNING api.main: GZ_LOG_LEVEL='VOELLIGER_UNSINN' ist kein gueltiger Log-Level, falle zurueck auf INFO (#1447)
+___ test_configure_logging_bogus_level_falls_back_to_info_without_raising[] ____
+----------------------------- Captured stderr call -----------------------------
+2026-10-06 15:13:36,770 WARNING api.main: GZ_LOG_LEVEL='' ist kein gueltiger Log-Level, falle zurueck auf INFO (#1447)
+=========================== short test summary info ============================
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b1_nachtrag_wird_zugestellt_und_traegt_die_bezugszeile
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b3_voll_telegram_traegt_bezugszeile_vor_dem_detailtext
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b3_voll_telegram_ohne_nachtrag_bleibt_unveraendert
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b4_sms_beginnt_mit_nachtrags_praefix_und_bleibt_sonst_gleich
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b4_sms_ohne_nachtrag_traegt_kein_praefix
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b6_premium_sms_traegt_dasselbe_praefix_wie_die_sms
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b7_laengster_realistischer_nachtragsfall_bleibt_im_zeichenbudget
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b7_nachtrag_haelt_auch_ein_kleines_uebergebenes_limit_ein
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b8_gewoehnliche_nowcast_meldung_bleibt_auf_allen_kanaelen_gleich
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b8_gebuendelte_nowcast_mail_bleibt_gleich
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b9_gewoehnlicher_alarm_traegt_kein_nachtrags_token
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b11_praefix_literal_enthaelt_keinen_bindestrich
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b11_nachtrag_und_stufen_rueckfall_bleiben_gleichzeitig_lesbar
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b12_official_alert_notice_traegt_kein_nachtrags_feld
+PASSED tests/tdd/test_alert_addendum_sms.py::test_ac_b12_amtliche_warnung_nach_nowcast_bleibt_unmarkierter_vollalarm
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[temperature_night]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[temperature_day_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[temperature_day_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[wind_chill]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[wind_chill_night]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[wind_chill_day_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[wind_chill_day_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[humidity]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[dewpoint]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[wind_direction]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[rain_probability]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[precip_type]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[cloud_total]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[cloud_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[cloud_mid]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[cloud_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[visibility]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[sunshine]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[uv_index]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[pressure]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[snow_depth]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac13_email_column_selection_and_order[fresh_snow]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[temperature_night]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[temperature_day_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[temperature_day_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[wind_chill]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[wind_chill_night]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[wind_chill_day_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[wind_chill_day_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[humidity]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[dewpoint]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[wind_direction]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[rain_probability]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[precip_type]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[cloud_total]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[cloud_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[cloud_mid]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[cloud_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[visibility]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[sunshine]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[uv_index]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[pressure]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[snow_depth]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac14_telegram_rich_selection_and_order[fresh_snow]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[temperature_night]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[temperature_day_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[temperature_day_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[wind_chill]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[wind_chill_night]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[wind_chill_day_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[wind_chill_day_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[humidity]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[dewpoint]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[wind_direction]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[rain_probability]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[precip_type]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[cloud_total]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[cloud_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[cloud_mid]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[cloud_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[visibility]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[sunshine]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[uv_index]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[pressure]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[snow_depth]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac15_sms_kurzform_selection_deselection_and_order[fresh_snow]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac1_confidence_absent_from_mail_telegram_compare
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac2_cape_absent_from_mail_telegram_compare_and_alert
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac3_temperature_cold_cold_alarm_stays_active
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac5_temperature_cold_mail_column_via_remaining_fallback
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac6_temperature_cold_hourly_duplicate_characterization
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac7_temperature_cold_absent_from_compare_catalog
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac8_non_selectable_metrics_stay_out_unless_exempt[confidence]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac8_non_selectable_metrics_stay_out_unless_exempt[cape]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac2_fixture_loaded_via_real_loader_reproduces_cascade
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac3_fixture_is_anonymized
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac4_sms_deselect_as_enabled_false_wins_over_global
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac5_sms_deselect_as_omission_matches_enabled_false
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac6_wind_chill_contradiction_baseline_stays_green
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac7_sms_channel_must_not_add_globally_disabled_metric
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac8_all_wind_chill_symbols_toggle_together
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac9_fixture_carries_full_catalog_width
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac10_target_metrics_are_not_no_token_exceptions
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac11_premium_sms_has_no_own_cascade_level
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_f002_sms_global_fallback_is_not_restricted_by_email_layout
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_ac12_sms_order_is_applied_not_positional
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac2_sms_deselect_cannot_affect_email_or_telegram_source
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac3_telegram_own_layer_intersects_base_selection
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac4_telegram_without_own_layer_follows_base_not_email
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac5_telegram_own_layer_shows_real_value_not_dash
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac5b_evening_override_forces_real_telegram_value
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac6_email_stays_within_own_selection_at_horizon_none_stage
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac7_empty_base_selection_does_not_cut_sms_channel
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac8_per_report_layer_cuts_against_global_not_per_channel
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac9_evening_disabled_globally_excludes_from_evening_sms
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac10_editor_sequence_global_deselect_after_channel_snapshot
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac11_premium_sms_forwards_the_cut_sms_text
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac12_derived_night_metric_survives_the_cut
+PASSED tests/tdd/test_channel_metric_matrix.py::test_kaskade_s2_ac13_telegram_overview_respects_evening_enabled_without_own_layer
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[cape]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[fresh_snow]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[temperature_cold]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[visibility]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_1_alarm_beschriftung_in_betreff_mail_telegram[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[cape]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[fresh_snow]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[temperature_cold]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[visibility]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_kuerzel_als_eigenstaendiger_token[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_praefix_gegenprobe[temperature-thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_2_sms_praefix_gegenprobe[temperature_cold-thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_3_soll_menge_wird_gerechnet_und_ist_plausibel
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[ohne-einheit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[%]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[J/kg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[h]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[hPa]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[km]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[km/h]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[m]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[mm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[\xb0]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_4_handled_units_deckt_sich_mit_der_katalog_formatierung[\xb0C]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_5_gewitter_allein_ohne_prozentzeichen
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_5_gewitter_gebuendelt_ohne_prozentzeichen
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[cape]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[fresh_snow]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[temperature_cold]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[visibility]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_uebrige_groessen_behalten_ihre_katalog_einheit[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_6_prozentzeichen_bleibt_wo_die_einheit_es_verlangt
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_7_doppeldeutige_beschriftung_ist_benannt
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s1_7_gleichnamige_groessen_trennt_nur_die_kurznachricht[Temp-metric_ids0]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[snow_depth:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[fresh_snow:sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[sunshine:sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[wind:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[cloud_total:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[visibility:min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[precipitation:sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[uv_index:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[temperature:None]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[thunder:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[gust:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[freezing_level:min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[rain_probability:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[wind_direction:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[wind_chill:None]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[humidity:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[dewpoint:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[snowfall_limit:min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[precip_type:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[cloud_low:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[cloud_mid:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[cloud_high:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_jede_waehlbare_groesse_ergibt_genau_eine_spalte[pressure:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_1_html_und_klartext_zeigen_dieselbe_spaltenmenge
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_2_soll_menge_wird_gerechnet_und_ist_plausibel
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_3_keine_zwei_spalten_mit_gleicher_beschriftung
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[snow_depth:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[fresh_snow:sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[sunshine:sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[wind:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[cloud_total:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[visibility:min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[precipitation:sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[uv_index:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[temperature:None]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[thunder:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[gust:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[freezing_level:min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[rain_probability:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[wind_direction:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[wind_chill:None]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[humidity:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[dewpoint:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[snowfall_limit:min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[precip_type:max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[cloud_low:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[cloud_mid:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[cloud_high:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_jede_zelle_traegt_einen_wert[pressure:avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_4_keine_gewitterstufe_ist_kein_fehlwert
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_5_beide_tagesaggregationen_fuellen_dieselben_felder
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_6_bereits_gefuellte_zellen_behalten_ihre_werte
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_7_mindestgroesse_faengt_groessere_streichungen
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_7_groessenanker_faengt_die_einzelne_streichung
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_8_die_fuenf_neuen_felder_tragen_den_gerechneten_wert
+PASSED tests/tdd/test_channel_metric_matrix.py::test_s2_zellenseiten_haelt_negative_werte_aus
+PASSED tests/tdd/test_channel_metric_matrix.py::test_s2_zellenseiten_fehlende_seite_bleibt_als_strich_sichtbar
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s2_8_ausblick_zelle_zeigt_den_gerechneten_wert
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_1_email_compact_selection[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_1_email_compact_selection[wind_chill]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_1_email_compact_selection[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_1_email_compact_selection[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_1_email_compact_selection[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_1_email_compact_selection[rain_probability]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_1_email_compact_selection[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_1_email_compact_selection[cloud_total]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_1_email_compact_selection[humidity]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_1_email_compact_selection[sunshine]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_2_email_compact_fallback_on_empty_selection
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_3_email_compact_confidence_absent
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_5_mobile_compact_rows_no_own_selection_logic
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6_compact_summary_positivlist_selection[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6_compact_summary_positivlist_selection[temperature_night]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6_compact_summary_positivlist_selection[wind_chill]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6_compact_summary_positivlist_selection[wind_chill_night]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6_compact_summary_positivlist_selection[cloud_total]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6_compact_summary_positivlist_selection[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6_compact_summary_positivlist_selection[rain_probability]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6_compact_summary_positivlist_selection[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6_compact_summary_positivlist_selection[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6_compact_summary_positivlist_selection[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_6b_compact_summary_wind_direction_is_noop
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[temperature_day_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[temperature_day_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[wind_chill_day_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[wind_chill_day_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[humidity]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[dewpoint]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[precip_type]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[cloud_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[cloud_mid]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[cloud_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[visibility]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[sunshine]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[uv_index]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[pressure]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[snow_depth]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_7_compact_summary_nichtscope_metrics_never_appear[fresh_snow]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_8_10_compact_summary_non_selectable_absent[confidence]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_8_10_compact_summary_non_selectable_absent[temperature_cold]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_8_10_compact_summary_non_selectable_absent[cape]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[temperature_night]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[temperature_day_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[temperature_day_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[wind_chill]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[wind_chill_night]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[wind_chill_day_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[wind_chill_day_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[humidity]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[dewpoint]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[wind_direction]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[rain_probability]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[precip_type]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[cloud_total]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[cloud_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[cloud_mid]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[cloud_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[visibility]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[sunshine]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[uv_index]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[pressure]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[snow_depth]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_12_telegram_narrow_selection[fresh_snow]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_13_telegram_narrow_no_fallback_on_empty_selection
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s4_14_telegram_narrow_confidence_absent
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_1_soll_menge_gerechnet_und_vollstaendig
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert[temp_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert[wind_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert[cloud_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert[sunny_hours]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert[snow_depth_cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert[snow_new_cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert[precip_sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert[pop_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert[uv_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_2_die_zehn_ungeprueften_zeilen_zeigen_den_gerechneten_wert[visibility_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_3_engine_feld_hat_vorrang_vor_live_ableitung[precip_sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_3_engine_feld_hat_vorrang_vor_live_ableitung[pop_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron[cloud_avg-cloud_total]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron[dewpoint_avg-temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron[gust_max-wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron[snow_depth_cm-snow_depth]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron[sunny_hours-sunshine]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron[temp_max-temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron[temp_min-temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron[wind_chill_max-temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron[wind_chill_min-temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_4_formatierung_katalog_und_uebersicht_bleiben_synchron[wind_max-wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_5_fehlzeichen_html_em_dash_klartext_hyphen[temp_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_5_fehlzeichen_html_em_dash_klartext_hyphen[cloud_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_6_abhaengigkeits_anker_auf_die_15_bereits_gedeckten_zeilen[tests.tdd.test_thunder_low_output_channels]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_6_abhaengigkeits_anker_auf_die_15_bereits_gedeckten_zeilen[tests.test_wind_chill_max_selectable]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_6_abhaengigkeits_anker_auf_die_15_bereits_gedeckten_zeilen[tests.unit.test_compare_extra_daily_metrics]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s5_6_abhaengigkeits_anker_auf_die_15_bereits_gedeckten_zeilen[tests.unit.test_compare_metric_parity]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_1_soll_menge_gerechnet_und_vakuumgeschuetzt
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_1b_vakuum_schutz_schlaegt_bei_leerem_katalog_an
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[snow_depth_cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[snow_new_cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[sunny_hours]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[wind_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[cloud_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[visibility_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[precip_sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[uv_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[temp_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[thunder_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[temp_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[gust_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[pop_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[wind_direction_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[wind_chill_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[wind_chill_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[humidity_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[dewpoint_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[precip_type]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[cloud_low_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[cloud_mid_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[cloud_high_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_2_compare_html_folgt_der_reihenfolge[pressure_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[snow_depth_cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[snow_new_cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[sunny_hours]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[wind_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[cloud_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[visibility_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[precip_sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[uv_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[temp_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[thunder_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[temp_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[gust_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[pop_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[wind_direction_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[wind_chill_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[wind_chill_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[humidity_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[dewpoint_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[precip_type]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[cloud_low_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[cloud_mid_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[cloud_high_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge[pressure_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_4_altbestand_html_und_klartext_divergieren_charakterisiert
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_5_versand_traegt_je_kanal_eine_eigene_reihenfolge
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_5b_vorschau_zeigt_dieselbe_reihenfolge_wie_der_versand
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_5c_telegram_vergleich_faengt_praefix_kollision
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_5d_telegram_vergleich_faengt_die_wolken_kollision[paar]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_5d_telegram_vergleich_faengt_die_wolken_kollision[tripel]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge[wind_chill]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge[rain_probability]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge[cloud_total]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge[humidity]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge[sunshine]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6b_pilleninhalt_bleibt_bei_katalogordnung_bytegleich
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[temperature]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[wind_chill]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[humidity]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[dewpoint]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[wind]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[gust]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[wind_direction]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[precipitation]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[rain_probability]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[thunder]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[precip_type]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[cloud_total]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[cloud_low]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[cloud_mid]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[cloud_high]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[visibility]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[sunshine]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[uv_index]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[pressure]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[snow_depth]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge[fresh_snow]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_7b_zwei_reihenfolge_quellen_in_einem_renderer
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[snow_depth_cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[snow_new_cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[sunny_hours]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[wind_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[cloud_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[visibility_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[precip_sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[uv_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[temp_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[thunder_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[temp_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[gust_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[pop_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[wind_direction_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[wind_chill_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[wind_chill_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[humidity_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[dewpoint_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[precip_type]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[cloud_low_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[cloud_mid_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[cloud_high_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge[pressure_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[snow_depth_cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[snow_new_cm]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[sunny_hours]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[wind_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[cloud_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[visibility_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[precip_sum]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[uv_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[temp_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[thunder_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[temp_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[gust_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[freezing_level]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[pop_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[wind_direction_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[wind_chill_min]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[wind_chill_max]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[humidity_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[dewpoint_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[snowfall_limit]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[precip_type]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[cloud_low_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[cloud_mid_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[cloud_high_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8b_compare_sms_folgt_der_reihenfolge[pressure_avg]
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_8c_kappung_folgt_der_reihenfolge_und_wird_zum_inhaltsfehler
+PASSED tests/tdd/test_channel_metric_matrix.py::test_ac_s7_9_kompakt_zusammenfassung_hat_keine_reihenfolge_achse
+PASSED tests/tdd/test_issue_1069_tier_channel_gating.py::TestAC1FreeTierBlocksSms::test_free_tier_user_gets_no_sms
+PASSED tests/tdd/test_issue_1069_tier_channel_gating.py::TestAC2StandardTierKeepsSms::test_standard_tier_user_still_gets_sms
+PASSED tests/tdd/test_issue_1069_tier_channel_gating.py::TestAC7MissingTierFieldBehavesAsFree::test_missing_tier_field_equals_free
+PASSED tests/tdd/test_issue_1069_tier_channel_gating.py::TestUserTierModule::test_sms_allowed_matches_tier_table
+PASSED tests/tdd/test_issue_1069_tier_channel_gating.py::TestAC8AlertChannelsRespectTier::test_free_tier_briefing_inherited_sms_is_stripped
+PASSED tests/tdd/test_issue_1069_tier_channel_gating.py::TestAC8AlertChannelsRespectTier::test_free_tier_explicit_rule_channel_sms_is_stripped
+PASSED tests/tdd/test_issue_1069_tier_channel_gating.py::TestAC8AlertChannelsRespectTier::test_standard_tier_keeps_sms_in_both_paths
+PASSED tests/tdd/test_issue_1069_tier_channel_gating.py::TestAC8RadarAlertRespectsTier::test_free_tier_radar_alert_gets_no_sms
+PASSED tests/tdd/test_issue_1069_tier_channel_gating.py::TestAC8RadarAlertRespectsTier::test_standard_tier_radar_alert_still_gets_sms
+PASSED tests/tdd/test_kurzform_zeigt_gefuehlte_temperatur.py::TestAc3bLoaderUndRendererZeigenFdFl::test_frozen_layout_shows_neither_fd_nor_fl
+PASSED tests/tdd/test_kurzform_zeigt_gefuehlte_temperatur.py::TestAc3bLoaderUndRendererZeigenFdFl::test_clean_layout_shows_fd_and_fl_in_sms_channel
+PASSED tests/tdd/test_kurzform_zeigt_gefuehlte_temperatur.py::test_ac13_fixture_migration_loader_renderer_yields_fd_fl
+PASSED tests/tdd/test_kurzform_zeigt_gefuehlte_temperatur.py::test_ac13_premium_sms_wire_text_matches_sms_text_and_contains_fd_fl
+PASSED tests/tdd/test_onset_shift_alert.py::test_ac1_gewitterbeginn_zwei_stunden_frueher_loest_genau_einen_alarm_aus
+PASSED tests/tdd/test_onset_shift_alert.py::test_ac1_starkregenbeginn_zwei_stunden_frueher_loest_genau_einen_alarm_aus
+PASSED tests/tdd/test_onset_shift_alert.py::test_ac2_zwei_stunden_spaeter_meldet_nicht_zwei_stunden_frueher_schon
+PASSED tests/tdd/test_onset_shift_alert.py::test_ac3_verschiebung_ueber_mitternacht_ist_zwei_stunden_spaeter
+PASSED tests/tdd/test_onset_shift_alert.py::test_ac4_briefing_und_alarmbasis_nennen_dieselbe_onset_stunde
+PASSED tests/tdd/test_onset_shift_alert.py::test_ac5_bestandsanker_ohne_onset_felder_laedt_und_alarmiert_nicht
+PASSED tests/tdd/test_onset_shift_alert.py::test_ac6_erstes_auftauchen_erzeugt_keinen_beginn_alarm
+PASSED tests/tdd/test_onset_shift_alert.py::test_ac7_protokoll_fuehrt_stufe_und_beginn_als_zwei_register_paare
+PASSED tests/tdd/test_onset_shift_alert.py::test_ac8_alarmtext_nennt_uhrzeiten_und_richtungswort
+PASSED tests/tdd/test_onset_shift_alert.py::test_ac9_beginn_alarm_erreicht_alle_vier_kanaele_in_beiden_flaechen
+PASSED tests/tdd/test_telegram_html_escaping.py::test_telegram_notice_lines_escape_ampersand_and_angle_brackets
+PASSED tests/tdd/test_telegram_html_escaping.py::test_standalone_alert_sends_with_html_parse_mode
+PASSED tests/tdd/test_telegram_html_escaping.py::test_compare_alert_sends_with_html_parse_mode
+PASSED tests/tdd/test_telegram_html_escaping.py::test_send_falls_back_without_parse_mode_on_400_and_delivers
+PASSED tests/test_premium_sms_reply_future_timestamp.py::test_future_reply_at_blocks_without_gateway_call
+PASSED tests/test_premium_sms_reply_future_timestamp.py::test_naive_future_reply_at_blocks
+PASSED tests/test_premium_sms_reply_future_timestamp.py::test_past_reply_at_still_sends
+PASSED tests/test_premium_sms_reply_future_timestamp.py::test_old_reply_at_still_blocks_with_ttl_text
+PASSED tests/unit/test_premium_sms_versand.py::test_sender_is_fixed_number_regardless_of_sms_from
+PASSED tests/unit/test_premium_sms_versand.py::test_recipient_comes_from_learned_reply_to_not_sms_to
+PASSED tests/unit/test_premium_sms_versand.py::test_empty_reply_to_blocks_send_with_visible_reason
+PASSED tests/unit/test_premium_sms_versand.py::test_reply_to_older_than_ttl_blocks_send
+PASSED tests/unit/test_premium_sms_versand.py::test_reply_to_just_within_ttl_still_sends
+PASSED tests/unit/test_premium_sms_versand.py::test_text_matches_sms_text_verbatim_under_extreme_weather
+PASSED tests/unit/test_premium_sms_versand.py::test_standard_tier_never_triggers_premium_sms_send
+PASSED tests/unit/test_premium_sms_versand.py::test_standard_tier_gets_no_premium_sms_when_weather_data_fails
+PASSED tests/unit/test_premium_sms_versand.py::test_outage_hint_names_the_reason_when_premium_sms_is_blocked
+PASSED tests/unit/test_premium_sms_versand.py::test_saving_a_trip_without_the_flag_keeps_a_stored_true
+PASSED tests/unit/test_premium_sms_versand.py::test_premium_sms_and_sms_are_independently_switchable
+PASSED tests/unit/test_premium_sms_versand.py::test_channel_name_premium_sms_resolves_to_the_premium_channel
+PASSED tests/unit/test_premium_sms_versand.py::test_the_two_block_cases_carry_distinct_machine_codes
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC1EmailOnsetDesignFidelity::test_badge_h1_datablock_cooldown_footer_and_absence_of_ad_hoc_html
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC1EmailOnsetDesignFidelity::test_cooldown_box_absent_when_not_set
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC1EmailOnsetDesignFidelity::test_fourth_briefing_datablock_line
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC2KmRoundingConsistentAcrossChannels::test_all_four_channels_show_identical_rounded_km
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC4TelegramBoldBothBranches::test_onset_uses_html_bold_tag_not_markdown_asterisks
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC4TelegramBoldBothBranches::test_deviation_uses_html_bold_tag_not_markdown_asterisks
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC8RendererParity::test_subject_no_crash_nonempty_km_format[None]
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC8RendererParity::test_subject_no_crash_nonempty_km_format[Radar (DWD)]
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC8RendererParity::test_email_no_crash_nonempty[None]
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC8RendererParity::test_email_no_crash_nonempty[Radar (DWD)]
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC8RendererParity::test_telegram_no_crash_nonempty[None]
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC8RendererParity::test_telegram_no_crash_nonempty[Radar (DWD)]
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC8RendererParity::test_sms_no_crash_nonempty[None]
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC8RendererParity::test_sms_no_crash_nonempty[Radar (DWD)]
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC3IntensityLabelNoSentenceDuplicate::test_email_intensity_line_is_exact_short_label
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestF002IntensityLabelLowercaseViaRealMapping::test_email_intensity_line_lowercased_from_real_intensity_to_text
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestAC7AlertPreviewOnsetPayload::test_post_alert_preview_with_onset_payload_returns_onset_render
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestIssue2018AddendumEmailLine::test_einzel_zweig_traegt_bezugszeile_in_plain_und_html
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestIssue2018AddendumEmailLine::test_buendel_zweig_traegt_bezugszeile_in_plain_und_html
+PASSED tests/tdd/test_952_onset_alert_fidelity.py::TestIssue2018AddendumEmailLine::test_ohne_bezug_bleibt_die_mail_byte_identisch_ohne_leerzeile
+PASSED tests/tdd/test_alarm_abweichung_kette.py::test_kanalmatrix_und_schwelle_konsistent_bis_zum_versand
+PASSED tests/tdd/test_alarm_abweichung_kette.py::test_cooldown_und_quiet_hours_unterdruecken_den_alarm[quiet_hours]
+PASSED tests/tdd/test_alarm_abweichung_kette.py::test_cooldown_und_quiet_hours_unterdruecken_den_alarm[cooldown]
+PASSED tests/tdd/test_alert_sms_location_positions.py::test_k1_bundled_two_location_sms_carries_only_the_values_no_head
+PASSED tests/tdd/test_alert_sms_location_positions.py::test_k1_multi_location_sms_has_no_head_at_all
+PASSED tests/tdd/test_alert_sms_location_positions.py::test_k2_single_location_sms_carries_no_location_name
+PASSED tests/tdd/test_alert_sms_location_positions.py::test_k3_position_numbers_come_from_configured_list_not_from_hit_order
+PASSED tests/tdd/test_alert_sms_location_positions.py::test_k4_deleted_location_lets_the_following_positions_move_up
+PASSED tests/tdd/test_alert_sms_location_positions.py::test_k3_sms_token_binds_position_to_location_name_not_to_token_order
+PASSED tests/tdd/test_alert_sms_location_positions.py::test_regression_trip_deviation_alert_sms_text_unchanged
+PASSED tests/tdd/test_alert_sms_location_positions.py::test_regression_trip_radar_alert_sms_text_unchanged
+PASSED tests/tdd/test_alert_sms_location_positions.py::test_regression_compare_radar_alert_sms_text_unchanged
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC2SegmentBubbleTable::test_segment_bubble_has_real_table_with_matching_header
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC2SegmentBubbleTable::test_segment_table_never_exceeds_eight_columns
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC3KurzuebersichtAlleMetriken::test_all_ten_metrics_in_overview_bubble_regardless_of_kurzform_flag
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC6RegressionHeaderPreserved::test_kopf_bubble_contains_tripname_reporttype_and_date
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC10KurzformFlagWirkungslos::test_bubble_lists_identical_for_both_flag_values
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC9TableWidthLimitStructural::test_segment_table_lines_respect_tg_table_width
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC5ReportCarriesBubbleFields::test_tripreport_accepts_telegram_bubbles_and_actions_markup
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC4CallbackPauseRoundtrip::test_act_pause_callback_body_matches_text_pause_result
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC7PreviewEndpointBubbles::test_telegram_preview_endpoint_returns_bubbles_alongside_body
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestAC7PreviewEndpointBubbles::test_preview_service_render_telegram_preview_returns_bubbles
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestF001OverviewThunderMatchesFooterWorstValue::test_overview_thunder_line_shows_worst_not_last_segment
+PASSED tests/tdd/test_issue_1001_telegram_bubbles.py::TestF002ActColumnsCallbackNoLongerDead::test_act_columns_callback_maps_to_body_and_returns_informative_result
+PASSED tests/tdd/test_issue_645_telegram_outputerror_arity.py::test_http_error_path_raises_clean_outputerror
+PASSED tests/tdd/test_telegram_kurzstil_compare_official_alert.py::TestAC5CompareOfficialKurzstil::test_kurzform_telegram_body_equals_official_sms
+PASSED tests/tdd/test_telegram_kurzstil_compare_official_alert.py::TestAC5CompareOfficialKurzstil::test_rich_sends_html_official_compare_telegram
+PASSED tests/tdd/test_telegram_kurzstil_compare_official_alert.py::TestAC6RegularCompareStaysEmailOnly::test_effective_channels_ignores_telegram_style
+PASSED tests/tdd/test_telegram_kurzstil_compare_official_alert.py::TestAC6RegularCompareStaysEmailOnly::test_email_only_dispatch_never_touches_telegram_or_sms
+PASSED tests/tdd/test_telegram_kurzstil_compare_official_alert.py::TestEffectiveTelegramStyleResolver::test_reads_display_config_and_defaults_rich
+PASSED tests/tdd/test_telegram_kurzstil_trip_alert.py::TestAC3DeviationAlertKurzstil::test_kurzform_trip_path_sends_plaintext_no_parse_mode
+PASSED tests/tdd/test_telegram_kurzstil_trip_alert.py::TestAC3DeviationAlertKurzstil::test_rich_trip_path_still_sends_html
+PASSED tests/tdd/test_telegram_kurzstil_trip_alert.py::TestAC3DeviationAlertKurzstil::test_kurzform_telegram_body_equals_sms_body
+PASSED tests/tdd/test_telegram_kurzstil_trip_alert.py::TestAC4OfficialAlertKurzstil::test_kurzform_telegram_body_equals_official_sms
+PASSED tests/tdd/test_telegram_kurzstil_trip_alert.py::TestAC4OfficialAlertKurzstil::test_rich_sends_html_official_telegram
+PASSED tests/tdd/test_telegram_kurzstil_trip_alert.py::TestGuardCompareDeviationUnaffected::test_compare_deviation_defaults_to_rich
+PASSED tests/tdd/test_telegram_kurzstil_trip_alert.py::TestTelegramStyleResolver::test_resolver_reads_report_config_and_defaults_rich
+PASSED tests/tdd/test_telegram_kurzstil_trip_alert.py::TestIssue2018AddendumReachesKurzstilTelegram::test_kurzform_telegram_body_equals_sms_body_inklusive_nachtrag
+PASSED tests/tdd/test_telegram_kurzstil_trip_alert.py::TestIssue2018AddendumReachesKurzstilTelegram::test_s6_zusicherungen_gelten_auch_mit_gesetztem_nachtrag
+PASSED tests/tdd/test_telegram_kurzstil_trip_briefing.py::TestAC2KurzstilRedirectsSmsTextToTelegram::test_kurzform_sends_single_sms_text_to_telegram
+PASSED tests/tdd/test_telegram_kurzstil_trip_briefing.py::TestAC1RichRemainsBubbleList::test_rich_style_still_sends_html_bubbles
+PASSED tests/unit/test_alert_channel_premium_sms.py::test_radar_alert_reaches_premium_sms_when_no_other_channel_configured
+PASSED tests/unit/test_alert_channel_premium_sms.py::test_deviation_alert_reaches_premium_sms_when_opted_in
+PASSED tests/unit/test_alert_channel_premium_sms.py::test_radar_alert_reaches_premium_sms_when_opted_in
+PASSED tests/unit/test_alert_channel_premium_sms.py::test_legacy_trip_inherits_premium_sms_from_briefing_config
+PASSED tests/unit/test_alert_channel_premium_sms.py::test_official_trip_alert_reaches_premium_sms
+PASSED tests/unit/test_alert_channel_premium_sms.py::test_standard_tier_never_reaches_premium_sms_via_alerts
+PASSED tests/unit/test_alert_channel_premium_sms.py::test_standard_tier_never_reaches_premium_sms_via_radar_path
+PASSED tests/unit/test_alert_channel_premium_sms.py::test_failed_premium_sms_does_not_abort_remaining_channels
+PASSED tests/unit/test_alert_channel_premium_sms.py::test_deviation_alarm_run_logs_specific_premium_sms_block_reason
+PASSED tests/unit/test_alert_channel_premium_sms.py::test_radar_alarm_run_logs_specific_premium_sms_block_reason
+PASSED tests/unit/test_compare_alert_premium_sms.py::test_compare_deviation_alert_reaches_premium_sms
+PASSED tests/unit/test_compare_alert_premium_sms.py::test_compare_radar_alert_reaches_premium_sms
+PASSED tests/unit/test_compare_alert_premium_sms.py::test_compare_official_alert_reaches_premium_sms
+PASSED tests/unit/test_compare_alert_premium_sms.py::test_standard_tier_never_reaches_premium_sms_via_compare_alerts
+PASSED tests/unit/test_logging_configuration.py::test_configure_logging_default_level_is_info_and_installs_formatter
+PASSED tests/unit/test_logging_configuration.py::test_configure_logging_level_controllable_via_env_debug
+PASSED tests/unit/test_logging_configuration.py::test_configure_logging_bogus_level_falls_back_to_info_without_raising[VOELLIGER_UNSINN]
+PASSED tests/unit/test_logging_configuration.py::test_configure_logging_bogus_level_falls_back_to_info_without_raising[]
+PASSED tests/unit/test_logging_configuration.py::test_configure_logging_warning_level_suppresses_info_line
+PASSED tests/unit/test_logging_configuration.py::test_telegram_bot_token_never_appears_in_log_output_default_level
+PASSED tests/unit/test_logging_configuration.py::test_telegram_bot_token_never_appears_in_log_output_debug_level
+SKIPPED [1] tests/tdd/test_channel_metric_matrix.py:717: 'temperature_cold' ist ueber _SELECTABLE_GATE_EXEMPT ausgenommen -- der Sollzustand steht in AC-3 bis AC-7, nicht in dieser generischen Regel
+SKIPPED [1] tests/tdd/test_issue_1001_telegram_bubbles.py:359: GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)
+SKIPPED [1] tests/tdd/test_issue_1001_telegram_bubbles.py:569: GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)
+SKIPPED [1] tests/tdd/test_issue_1001_telegram_bubbles.py:615: GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)
+SKIPPED [1] tests/tdd/test_issue_1001_telegram_bubbles.py:655: GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)
+SKIPPED [1] tests/tdd/test_issue_1001_telegram_bubbles.py:895: GZ_TELEGRAM_LIVE=1 nicht gesetzt — Live-Sends nur opt-in (#1014)
+=========== 622 passed, 6 skipped, 8 deselected in 172.13s (0:02:52) ===========

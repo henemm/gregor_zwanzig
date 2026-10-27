@@ -1,0 +1,10 @@
+{
+ "beschreibung": "AC-12: ein Etappentag ohne gueltige Mitschnitt-Stufe (None, keine Aussage) -- darf im Ergebnis nicht zu ThunderLevel.NONE kollabieren.",
+ "herkunft": "konstruiert nach Spec AC-12",
+ "mitschnitt_tageswerte": {
+  "2026-09-03": {"cape_max_jkg": null, "thunder_level_max": null}
+ },
+ "archiv_niederschlag_je_tag": {
+  "2026-09-03": {"niederschlag_mm": 5.0, "schauer_mm": 0.0}
+ }
+}

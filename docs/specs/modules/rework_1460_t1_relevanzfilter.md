@@ -3,7 +3,7 @@ entity_id: rework_1460_t1_relevanzfilter
 type: refactor
 created: 2026-08-02
 updated: 2026-08-03
-status: draft
+status: implemented
 version: "1.2"
 tags: [alerts, trip, compare, epic-1458, adr-0040-ablösung]
 ---
@@ -26,7 +26,7 @@ aufwärts (Verschärfung) noch abwärts (Entwarnung); beide Richtungen melden k�
 je Stufe. (P2) Das
 Melde-Gedächtnis wird beim Briefing-Versand nicht mehr vollständig gelöscht — nur der
 Änderungs-Raum, nicht der Raum der amtlichen Warnungen, die dadurch heute jedes Mal ihre Entprellung
-verlieren. (P4) Amtliche Warnungen bekommen für Tour UND Ortsvergleich einen echten Zeit-**und**-
+verlieren. (P4) Amtliche Warnungen bekommen für Trip UND Ortsvergleich einen echten Zeit-**und**-
 Ort-Bezug, statt wie heute jede irgendwann gültige Warnung an jeder Etappen-Koordinate sofort zu
 melden — unabhängig davon, ob der Nutzer zur Gültigkeitszeit dort überhaupt ist. Diese Scheibe ist
 reiner Python-Kern-Code (kein Go, kein Frontend) und bereitet die Zusammenführung der vier
@@ -249,7 +249,7 @@ wird nicht angefasst.
 | P1a | **Weniger Alarme** — beabsichtigt (Wertebereich war ohnehin nie eine legitime Alarm-Quelle laut ADR-0009), aber ein Trip, der bisher ausschließlich über Korridore alarmiert wurde, alarmiert nach dieser Scheibe **gar nicht mehr**. AC-1 macht das explizit sichtbar statt es stillschweigend geschehen zu lassen. |
 | P1b | **Mehr Alarme** bei Gewitter — in BEIDEN Richtungen (heute stumm bei genau einem Stufensprung, aufwärts wie abwärts). Harmlos, das ist der Zweck der Reparatur (B4). Die zusätzlichen Entwarnungs-Meldungen (PO-go 2026-08-03) sind gewollt und beim Nutzer nie mehr als eine je Stufenwechsel; das Tageslimit (`alert_daily_limit`) bleibt die Obergrenze. Kein Risiko für andere Metriken (AC-18 sichert die stetigen Größen ausdrücklich ab). |
 | P2 | Falsch geschnitten → **Alarm-Stau** (ein amtlicher Zustand wird als „neu" erneut gemeldet, obwohl er es nicht ist) — harmlos im Vergleich zur heutigen Lage, aber sichtbar in AC-22. |
-| P4 | **Alarm-Verlust** — die gefährlichste Richtung, und der Punkt, an dem eine frühere Fassung dieser Spec selbst zu eng geschnitten war (auf ein einzelnes Segment verengt, Team-Lead-Korrektur 2026-08-02). AC-25 ist das entscheidende Gegen-Beispiel: eine relevante Warnung für ein SPÄTERES Segment darf nicht verloren gehen. AC-24/AC-26 beweisen die Fenster-Grenzfälle am aktiven Segment, AC-27/AC-28 dass ein Ruhetag bzw. eine Etappen-Pause spätere Segmente NICHT ausschließt, AC-29 den vollständigen Touren-Abschluss, AC-31/AC-32 die Ortsvergleichs-Fenstergrenzen. |
+| P4 | **Alarm-Verlust** — die gefährlichste Richtung, und der Punkt, an dem eine frühere Fassung dieser Spec selbst zu eng geschnitten war (auf ein einzelnes Segment verengt, Team-Lead-Korrektur 2026-08-02). AC-25 ist das entscheidende Gegen-Beispiel: eine relevante Warnung für ein SPÄTERES Segment darf nicht verloren gehen. AC-24/AC-26 beweisen die Fenster-Grenzfälle am aktiven Segment, AC-27/AC-28 dass ein Ruhetag bzw. eine Etappen-Pause spätere Segmente NICHT ausschließt, AC-29 den vollständigen Trips-Abschluss, AC-31/AC-32 die Ortsvergleichs-Fenstergrenzen. |
 
 ## Prüfung mit zwei Nutzern
 
@@ -357,13 +357,13 @@ die Semantik unabhängig vom Live-Provider), aber ein Prüfpunkt für die Spec v
   Gewitter" (Spiegelbild von AC-9).
   - Test: Fixture `old=HIGH`, `new=MED`, Stufe „entspannt", KEINE `WeatherChange`.
 
-- **AC-18 (Regressionsschutz stetige Größen):** Given eine kontinuierliche Metrik (z. B. Böen,
+- **AC-18:** (Regressionsschutz stetige Größen) Given eine kontinuierliche Metrik (z. B. Böen,
   Schwelle 20 km/h bei „standard"), When sich der Wert seit dem Snapshot um exakt 20 km/h ändert,
   Then bleibt das heutige Verhalten unverändert: `abs(delta) > threshold` mit striktem `>` — bei
   genau 20 km/h wird KEIN Alarm ausgelöst (keine Auswirkung von P1b auf nicht-ordinale Felder).
   - Test: bestehende Δ-Fixture für `gust_max_kmh` mit Δ=20.0 unverändert grün; zusätzlich Δ=20.01 löst aus (Grenzfall-Nachweis, dass die generische Logik unangetastet blieb).
 
-- **AC-19 (Fixture statt Live-Provider):** Given eine aufgezeichnete `SegmentWeatherSummary`-Fixture
+- **AC-19:** (Fixture statt Live-Provider) Given eine aufgezeichnete `SegmentWeatherSummary`-Fixture
   mit `thunder_level_max=ThunderLevel.MED` als Wert (nicht durch einen Live-`_parse_thunder_level()`-
   Aufruf erzeugt, da dieser MED nie liefert), When AC-4 bis AC-17 gegen diese Fixture laufen, Then
   verhalten sie sich exakt nach der Tabelle in „Implementation Details" — in BEIDEN Richtungen und
@@ -378,14 +378,14 @@ die Semantik unabhängig vom Live-Provider), aber ein Prüfpunkt für die Spec v
   erhalten, der Änderungs-Eintrag wird gelöscht.
   - Test: `alert_state.json` mit beiden Schlüsseln vorab schreiben, `reset()` aufrufen, danach `load()` prüfen: amtlicher Schlüssel vorhanden mit unveränderten Werten, Änderungs-Schlüssel fehlt.
 
-- **AC-21 (nutzersichtbar):** Given eine Tour mit einer bereits gemeldeten Wetter-Änderung, When
+- **AC-21:** (nutzersichtbar) Given eine Trip mit einer bereits gemeldeten Wetter-Änderung, When
   danach das reguläre Briefing versendet wird und derselbe (unveränderte) Wert erneut geprüft
   wird, Then wird KEINE erneute Meldung ausgelöst — der Briefing-Snapshot selbst ist jetzt der
   Vergleichsanker, nicht der gelöschte Alt-Zustand. Die früher beobachtete zweimal-täglich-
   Wiederholung nach jedem Briefing entfällt.
   - Test: End-to-End über `TripReportSchedulerService` mit anschließendem `TripAlertService.check_and_send_alerts()`-Lauf gegen denselben Wert; kein zweiter Alarm.
 
-- **AC-22 (die eigentliche B1-Reparatur):** Given eine amtliche Warnung wurde bereits gemeldet
+- **AC-22:** (die eigentliche B1-Reparatur) Given eine amtliche Warnung wurde bereits gemeldet
   (State-Eintrag vorhanden), When danach das reguläre Briefing versendet und anschließend
   dieselbe (nicht eskalierte) Warnung erneut abgerufen wird, Then wird sie NICHT erneut gemeldet —
   die Entprellung bleibt über den Briefing-Reset hinweg wirksam.
@@ -404,7 +404,7 @@ die Semantik unabhängig vom Live-Provider), aber ein Prüfpunkt für die Spec v
   — ihr Gültigkeitsbeginn liegt nach dem Ende von dessen Zeitfenster (`window_end = segment.end_time`).
   - Test: Segment-Fixture mit `end_time = jetzt+2h`, `OfficialAlert(valid_from=jetzt+3 Tage)` an dessen Koordinate, `check_official_alert_triggers()` liefert für dieses Segment keinen Treffer.
 
-- **AC-25 (wichtigstes AC dieses Pakets):** Given derselbe Trip hat ein SPÄTERES Segment (z. B.
+- **AC-25:** (wichtigstes AC dieses Pakets) Given derselbe Trip hat ein SPÄTERES Segment (z. B.
   Etappe 5), auf dem der Nutzer in 3 Tagen sein wird, und dieselbe amtliche Warnung liegt an
   DESSEN Koordinaten (`valid_from` in 3 Tagen, innerhalb von dessen Zeitfenster), When der Check
   läuft, Then WIRD die Warnung gemeldet — zugeordnet zu diesem späteren Segment. Ohne dieses AC
@@ -416,14 +416,14 @@ die Semantik unabhängig vom Live-Provider), aber ein Prüfpunkt für die Spec v
   für dieses Segment gemeldet.
   - Test: gleiche Fixture wie AC-24, aber `valid_from=jetzt+1h` → Treffer.
 
-- **AC-27 (kein Segment heute schließt spätere nicht aus):** Given ein Ruhetag ohne Etappe für
+- **AC-27:** (kein Segment heute schließt spätere nicht aus) Given ein Ruhetag ohne Etappe für
   HEUTE, aber mit regulären KÜNFTIGEN Segmenten im Cache (z. B. morgen und übermorgen), When der
   Check läuft, Then wird für das fehlende heutige Segment nichts geprüft (keine Koordinate dafür
   vorhanden), aber die künftigen Segmente werden UNVERÄNDERT mit ihren eigenen Fenstern geprüft —
   ein Ruhetag schließt spätere Etappen nicht aus.
   - Test: gecachte Wetterdaten ohne Eintrag für heute, aber mit Einträgen für morgen/übermorgen; `OfficialAlert` an den Koordinaten von morgen, innerhalb von dessen Fenster → wird gemeldet.
 
-- **AC-28 (Etappen-Pause schließt spätere Segmente nicht aus):** Given der aktuelle Zeitpunkt liegt
+- **AC-28:** (Etappen-Pause schließt spätere Segmente nicht aus) Given der aktuelle Zeitpunkt liegt
   zwischen dem Ende von Segment 1 und dem Start von Segment 2 desselben Tages (eine Pause), When
   der Check läuft, Then bleibt Segment 2 (und jedes spätere Segment) UNVERÄNDERT mit seinem eigenen
   Zeitfenster prüfbar — die Pause zwischen zwei Etappen schließt nachfolgende Segmente NICHT aus
@@ -431,12 +431,12 @@ die Semantik unabhängig vom Live-Provider), aber ein Prüfpunkt für die Spec v
   gewollt, s. Implementation Details).
   - Test: Segment 1 endet vor `jetzt`, Segment 2 beginnt nach `jetzt`; Warnung an Segment-2-Koordinaten innerhalb von dessen Fenster → Treffer, trotz der Lücke.
 
-- **AC-29 (letzter Tourtag):** Given der letzte Tourtag, das letzte Segment ist bereits beendet
+- **AC-29:** (letzter Trip-Tag) Given der letzte Trip-Tag, das letzte Segment ist bereits beendet
   (`end_time < jetzt`) und kein weiteres Segment existiert, When der Check läuft, Then wird kein
   amtlicher Alarm mehr ausgewertet — Ergebnis leer.
   - Test: Trip mit `end_date`=gestern bzw. letztes Segment `end_time` in der Vergangenheit, `[]` erwartet.
 
-- **AC-30 (fail-safe unverändert):** Given eine amtliche Warnung ohne `valid_from`/`valid_to`,
+- **AC-30:** (fail-safe unverändert) Given eine amtliche Warnung ohne `valid_from`/`valid_to`,
   When das neue Zeitfenster angewendet wird, Then bleibt sie trotzdem erhalten (unverändertes
   `filter_alerts_to_window()`-Verhalten, `official_alerts/base.py:59-87`).
   - Test: `OfficialAlert(valid_from=None, valid_to=None, ...)` durch den vollen Trip-Pfad schleusen, Warnung erscheint im Ergebnis trotz gesetztem Fenster.
@@ -453,7 +453,7 @@ die Semantik unabhängig vom Live-Provider), aber ein Prüfpunkt für die Spec v
   (z. B. 14 Uhr Ortszeit), When der Check läuft, Then WIRD sie gemeldet.
   - Test: identische Fixture mit `valid_from=heute 14:00 Ortszeit`, Treffer erscheint.
 
-- **AC-33 (Ortsvergleich prüft weiterhin alle Orte):** Given ein Preset mit drei Orten, von denen
+- **AC-33:** (Ortsvergleich prüft weiterhin alle Orte) Given ein Preset mit drei Orten, von denen
   nur einer eine im Tagesfenster liegende Warnung hat, When der Check läuft, Then werden weiterhin
   ALLE drei Orte geprüft (keine Einschränkung auf einen „aktiven Ort" — anders als beim Trip gibt
   es kein Segment-Konzept), nur die eine im Fenster liegende Warnung wird gemeldet.

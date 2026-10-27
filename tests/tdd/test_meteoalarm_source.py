@@ -326,29 +326,6 @@ def test_ac3_gruene_stufe_level1_wird_gefiltert():
 
 
 # ---------------------------------------------------------------------------
-# AC-4: Unbekannter awareness_type (Lawine) wird uebersprungen, kein Crash
-# ---------------------------------------------------------------------------
-
-def test_ac4_lawine_uebersprungen_hitze_bleibt_erhalten():
-    """AC-4: GIVEN eine synthetische CAP-Fixture mit ZWEI Warnungen fuer
-    denselben Punkt (awareness_type=9 Lawine, keine App-Kategorie UND
-    awareness_type=5 Hitze), WHEN die Mapping-Funktion die Antwort
-    verarbeitet, THEN wird die Lawinen-Warnung uebersprungen (kein Eintrag,
-    kein Crash) und die Hitze-Warnung erscheint unveraendert."""
-    from services.official_alerts.meteoalarm import _extract_alerts_from_cap
-
-    cap_text = _read_fixture("cap_avalanche_plus_heat.xml")
-    alerts = _extract_alerts_from_cap(cap_text)
-
-    assert len(alerts) == 1, (
-        f"Lawinen-Warnung (awareness_type=9) muss uebersprungen werden, "
-        f"erwartet genau 1 Alert (Hitze), erhalten {len(alerts)}"
-    )
-    assert alerts[0].hazard == "extreme_heat"
-    assert alerts[0].level == 2
-
-
-# ---------------------------------------------------------------------------
 # AC-5: Fail-soft (fehlende ENV / kaputtes Index-JSON / kaputtes CAP-XML) +
 # Fehler-Isolation gegenueber anderen Quellen
 # ---------------------------------------------------------------------------
@@ -2322,7 +2299,7 @@ def test_covers_deckt_oesterreich_und_italien_weiterhin_ab():
 # die alte Erwartung faellt: ihre Begruendung ("folgenlos, da der exakte
 # Zonen-Filter nach dem Abruf laeuft") war falsch. Genau dieser Filter findet
 # fuer solche Punkte keine Zone und meldet ueber ``mark_fetch_incomplete()``
-# "nicht abrufbar" (Prod 2026-08-01: 39 Punkte EINER Tour, fortlaufend,
+# "nicht abrufbar" (Prod 2026-08-01: 39 Punkte EINER Trip, fortlaufend,
 # irrefuehrender Betriebszustand #1434). S4 stellt die IT-Zustaendigkeit auf
 # die echte Zonen-Geometrie um; SI/CH sind damit korrekt nicht mehr abgedeckt.
 

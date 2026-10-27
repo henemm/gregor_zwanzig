@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/henemm/gregor-api/internal/fsmode"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -16,6 +17,9 @@ func (s *Store) LocationsDir() string {
 }
 
 func (s *Store) LoadLocations() ([]model.Location, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	dir := s.LocationsDir()
 
 	entries, err := os.ReadDir(dir)
@@ -59,6 +63,13 @@ func (s *Store) LoadLocations() ([]model.Location, error) {
 }
 
 func (s *Store) LoadLocation(id string) (*model.Location, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return nil, ErrInvalidEntityID
+	}
 	path := filepath.Join(s.LocationsDir(), id+".json")
 
 	data, err := os.ReadFile(path)
@@ -78,8 +89,17 @@ func (s *Store) LoadLocation(id string) (*model.Location, error) {
 }
 
 func (s *Store) SaveLocation(loc model.Location) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join. LocationsDir()
+	// liegt wie briefingsDir() zwei Ebenen unter data/users/ — eine Kennung
+	// wie "../../bob/user" schriebe sonst in ein fremdes Nutzerverzeichnis.
+	if !ValidEntityID(loc.ID) {
+		return ErrInvalidEntityID
+	}
 	dir := s.LocationsDir()
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
 	}
 
@@ -92,6 +112,13 @@ func (s *Store) SaveLocation(loc model.Location) error {
 }
 
 func (s *Store) DeleteLocation(id string) error {
+	if err := s.requireUser(); err != nil {
+		return err
+	}
+	// Issue #2140 Scheibe 2: Segment-Pruefung VOR jedem Join.
+	if !ValidEntityID(id) {
+		return ErrInvalidEntityID
+	}
 	path := filepath.Join(s.LocationsDir(), id+".json")
 	err := os.Remove(path)
 	if os.IsNotExist(err) {

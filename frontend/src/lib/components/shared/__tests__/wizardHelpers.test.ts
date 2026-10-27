@@ -65,6 +65,16 @@ test('isPauseStage: mit Wegpunkten → false', () => {
 	assert.equal(isPauseStage(stage), false);
 });
 
+// #2496 F3: 'Pausentag' ist Pause-Synonym (Desktop-Anlage schreibt ihn schon);
+// #559-Regel gilt weiter fuer alle anderen Namen.
+test('isPauseStage: Pausentag ohne Wegpunkte → true (#2496 F3)', () => {
+	assert.equal(isPauseStage({ name: 'Pausentag', waypoints: [] }), true);
+});
+
+test('isPauseStage: benannte Vorlagen-Etappe ohne Wegpunkte → false (#559 unverändert)', () => {
+	assert.equal(isPauseStage({ name: 'Zustieg', waypoints: [] }), false);
+});
+
 test('addDays: 2026-05-09 + 1 Tag → 2026-05-10', () => {
 	assert.equal(addDays('2026-05-09', 1), '2026-05-10');
 });

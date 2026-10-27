@@ -35,8 +35,12 @@ func comparePresetEtagRouter(s *store.Store) *chi.Mux {
 	return r
 }
 
-// comparePresetPutBody ist ein vollstaendiger PUT-Rumpf (der Preset-PUT ist ein
-// Voll-Ersetzen, kein Patch — Pflichtfelder muessen mit).
+// comparePresetPutBody ist ein vollstaendiger PUT-Rumpf. Vollstaendig aus
+// Testbequemlichkeit, nicht aus Zwang: seit #2285 laeuft der Preset-PUT durch
+// einen Merge-Kernel und wuerde auch ein Teil-Update ohne Pflichtfelder
+// annehmen (Beleg: compare_preset_single_field_patch_test.go). Fuer die Tests
+// hier bleibt der volle Rumpf richtig — sie pruefen If-Match/ETag, nicht den
+// Merge.
 func comparePresetPutBody(name string) string {
 	return `{"name":"` + name + `","location_ids":["loc-1","loc-2"],"schedule":"daily",` +
 		`"profil":"ALLGEMEIN","hour_from":6,"hour_to":18,"empfaenger":["test@example.com"]}`

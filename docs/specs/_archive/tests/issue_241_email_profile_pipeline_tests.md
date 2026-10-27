@@ -3,7 +3,7 @@ entity_id: issue_241_email_profile_pipeline_tests
 type: tests
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, email, activity-profile, issue-241]
 parent: issue_241_email_profile_pipeline
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_241_email_profile_pipeline.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_241_email_profile_pipeline.md`.
 Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_241_email_profile_pipeline.md` v1.0.0
+Parent-Spec: `docs/specs/_archive/modules/issue_241_email_profile_pipeline.md` v1.0.0
 
 ## Source
 

@@ -16,12 +16,15 @@ SPEC: docs/specs/modules/radar_nowcast.md
 """
 from __future__ import annotations
 
+import bisect
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Callable, Optional
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 from services import alert_input_capture
@@ -46,6 +49,14 @@ _AROME_FR_LAT_MAX = 51.5
 _AROME_FR_LON_MIN = -5.5
 _AROME_FR_LON_MAX = 10.0
 
+# Korsika bounding box (real gemessene AROME-FR-Ausdehnung, Issue #1761).
+# Eigenstaendig -- NICHT durch Verkleinern von _ITALY_RADAR_* geloest,
+# wegen der Kopplung zu DpcSource.covers() (official_alerts/dpc.py).
+_CORSICA_LAT_MIN = 41.30
+_CORSICA_LAT_MAX = 43.11
+_CORSICA_LON_MIN = 8.39
+_CORSICA_LON_MAX = 9.60
+
 # Italien-Radar bounding box (IT — Zustaendigkeitsgebiet, kein Anbietername:
 # Werte aus #1162 uebernommen, seit #1648 bedient von ARPAE ICON-2I)
 _ITALY_RADAR_LAT_MIN = 36.0
@@ -68,16 +79,103 @@ _NOWCAST_HORIZON_MIN = 180
 # Issue #1439: oeffentlicher Alias, damit der Scheduler-Zeitfenster-Guard
 # dieselbe Zahl referenziert statt eine zweite Kopie zu pflegen.
 NOWCAST_HORIZON_MIN = _NOWCAST_HORIZON_MIN
+
+# Issue #2020: extrahierte Schwelle -- war Inline-Literal in intensity_to_text().
+# Dieselbe Zahl, die die Ueberholungs-Pruefung in trip_alert.py als
+# Relevanz-Untergrenze auf max_rate_mm_h referenziert (keine zweite,
+# unabhaengige Zahl).
+HEAVY_RAIN_THRESHOLD_MM_H = 4.0
+
+# Issue #2020: eigenes, auf eine Stunde begrenztes Vergleichsfenster fuer die
+# Mengen-Ueberholungspruefung -- bewusst NICHT _NOWCAST_HORIZON_MIN (180 Min),
+# sonst wuerde ein Drei-Stunden-Wert gegen einen Ein-Stunden-Briefingwert
+# verglichen (precip_1h_mm).
+_OVERTAKE_COMPARE_WINDOW_MIN = 60
+
+# Issue #2020 Fix-Loop 2 (Adversary-Runde 2, F006/F007): feste Obergrenze fuer
+# die Deckung EINES Frames im Vergleichsfenster -- ersetzt die globale
+# Kadenz-Schaetzung (_infer_frame_cadence, entfernt). 15 Minuten ist das
+# GROEBSTE in Produktion vorkommende Raster (INCA, AROME-FR, ICON-D2, ARPAE,
+# `minutely_15`); RADOLAN liefert 5 Minuten. Ein Frame darf nie fuer mehr Zeit
+# einstehen, als das groebste Raster hergibt -- unabhaengig davon, was andere
+# Frames irgendwo in der Liste an Abstaenden aufweisen (das war die Schwaeche
+# jeder globalen Schaetzung, ob Minimum oder Median: ferne Frames konnten die
+# Deckung naher Frames nach oben oder unten verfaelschen).
+_MAX_FRAME_COVERAGE = timedelta(minutes=15)
+
+# Issue #2046: Laenge des Mengenfensters AB DEM BEGINN (Anzeige-Zahl der
+# Onset-Kurznachricht). Bewusst ein EIGENER Name neben
+# _OVERTAKE_COMPARE_WINDOW_MIN, obwohl beide heute 60 sind: die beiden Fenster
+# haben verschiedene Bezugspunkte (Beginn vs. jetzt) und verschiedene Zwecke
+# (Anzeige vs. Ueberholungsregel) -- ein geteilter Name wuerde die naechste
+# Aenderung des einen still auf das andere durchschlagen lassen.
+_ONSET_PRECIP_WINDOW_MIN = 60
+
+# Issue #2009: einzige Quelle der Onset-Alarmschwelle, ersetzt die bisher
+# doppelt gepflegten Literale in trip_alert.py und compare_radar_alert.py
+# (ADR-0021 — Trip und Ortsvergleich teilen den Code).
+#
+# Issue #2261 Teil A, PO-Entscheid A-1 (2026-08-21): der Radar-Alarm meldet
+# SO FRUEH WIE MOEGLICH. Keine kuenstliche Untergrenze — die einzige Grenze
+# ist die Reichweite der Quelle (`NOWCAST_HORIZON_MIN`), daher abgeleitet
+# statt als zweite Zahl gepflegt. Die Ortsschaerfe jenseits ~60 Min wird
+# nicht durch Schweigen behandelt, sondern ueber die Guetekennzeichnung
+# ausgewiesen (`LOCATION_SHARPNESS_LIMIT_MIN`, #2051 S3). Die fruehere
+# Festlegung aus `fix_2009_nowcast_vorlauf` ist abgeloest
+# (feat_2261_a1_radar_vorlauf).
+#
+# BEWUSST NUR EIN NAME — kein privates `_RADAR_ONSET_THRESHOLD_MIN` daneben.
+# Ein zweiter, privater Name laedt dazu ein, ihn zu benutzen — und wer ihn
+# benutzt, bindet den Wert beim Import und umgeht damit den Laufzeit-
+# Drift-Schutz aus #2009 AC-1: die Aufrufer in trip_alert.py/
+# compare_radar_alert.py lesen absichtlich ueber die MODUL-Referenz
+# (`radar_service_mod.RADAR_ONSET_THRESHOLD_MIN`), damit ein Auseinanderlaufen
+# der beiden Pfade auffaellt statt still zu bleiben.
+RADAR_ONSET_THRESHOLD_MIN = NOWCAST_HORIZON_MIN
 _DRY_THRESHOLD_MM_H = 0.1
+
+# Issue #2051 S3 (E2): eigener Name neben RADAR_ONSET_THRESHOLD_MIN --
+# jene ist eine AUSLOESESCHWELLE (feuert der Alarm?, seit #2261 = Horizont),
+# diese 60 eine GUETE-GRENZE (wie belastbar ist die Ortsangabe?): jenseits
+# ~60 Min sinkt die Ortsschaerfe des INCA-Extrapolationsprodukts deutlich.
+# Seit #2261 zugleich Grenze "vergleichbare Menge" und Grenze "Uhrzeit statt
+# Restminuten" im Kopf. Downstream-Leser (render.py,
+# starkregen_hint.py, project.py) referenzieren die MODUL-Variable
+# (`radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN`), nie ein Import zur
+# Bindezeit -- Laufzeit-Drift-Schutz wie bei RADAR_ONSET_THRESHOLD_MIN.
+LOCATION_SHARPNESS_LIMIT_MIN = 60
+
+# Issue #2261 (A-1, R2): Zeitversatz des ERSTEN Messpunkts ab jetzt. Bis
+# #2261 aus der Schwelle berechnet (`55 // 2`); mit der Schwelle auf dem
+# Horizont waere der Messpunkt auf +90 gewandert und mit dem Briefing-Offset
+# (`NOWCAST_HORIZON_MIN // 2`) zusammengefallen. Eigener Wert, bewusst NICHT
+# aus der Schwelle abgeleitet; der erste Messpunkt bleibt bit-identisch.
+RADAR_MEASURE_OFFSET_MIN = 27
+
+# Issue #2261 (A-1, R3): Toleranz des Aufenthaltsfensters eines Messpunkts.
+# Regen an Punkt k ist nur faellig, solange er beginnt, bevor der Nutzer laut
+# Zeitplan den Folgepunkt plus diese Toleranz erreicht hat (Planposition bzw.
+# gemeldeter GPS-Fix, nach Plan-Tempo fortgeschrieben — wer schneller/langsamer
+# geht, verschiebt sich dagegen).
+RADAR_PASSAGE_TOLERANCE_MIN = 30
 
 # Issue #1461 S3a: benannte Intensitaets-Label-Konstanten statt Inline-Strings
 # in intensity_to_text() -- alert_urgency.py vergleicht gegen diese Konstanten
 # statt gegen Zeichenketten-Duplikate (E3). Wortlaut unveraendert.
+# Issue #2205: der Hagel-Wortlaut gilt nur noch fuer WMO 96/99; Code 95
+# (Gewitter ohne Hagel) traegt INTENSITY_CONVECTIVE_NO_HAIL.
 INTENSITY_CONVECTIVE = "Starker Hagel/Gewitter"
+INTENSITY_CONVECTIVE_NO_HAIL = "Gewitter"
 INTENSITY_HEAVY = "Starker Regen"
 INTENSITY_MODERATE = "Mäßiger Regen"
 INTENSITY_LIGHT = "Leichter Regen"
 INTENSITY_DRY = "Kein Niederschlag"
+# #2417 Kurzform englisch: englische Fassung derselben Stufen.
+_INTENSITY_EN = {
+    INTENSITY_CONVECTIVE: "Heavy hail/storm", INTENSITY_CONVECTIVE_NO_HAIL: "Storm",
+    INTENSITY_HEAVY: "Heavy rain", INTENSITY_MODERATE: "Moderate rain",
+    INTENSITY_LIGHT: "Light rain", INTENSITY_DRY: "No precipitation",
+}
 
 HTTPX_TIMEOUT = 8.0
 
@@ -102,6 +200,82 @@ class NowcastResult:
                                      # (Issue #1628 S1). Pure observability signal --
                                      # radar_alert_due() treats onset_minutes=None
                                      # identically either way.
+    max_rate_mm_h: float = 0.0      # Issue #2020: Spitzenrate im 60-Min-
+                                     # Vergleichsfenster (compare_window, s.
+                                     # _OVERTAKE_COMPARE_WINDOW_MIN) -- NICHT
+                                     # das 180-Min-Nowcast-Fenster (Adversary-
+                                     # Fund F001, 2026-08-21: ein spaeter,
+                                     # unabhaengiger Starkregen-Ausbruch darf
+                                     # eine Ueberholung fuer ganz anderen,
+                                     # schwachen Nahregen nicht legitimieren).
+                                     # BEWUSST beschreibend (F008, PO-Entscheid
+                                     # 2026-08-21): die Ueberholungsregel in
+                                     # trip_alert.py liest dieses Feld NICHT
+                                     # mehr -- ihre Relevanz-Untergrenze haengt
+                                     # jetzt an window_precip_mm
+                                     # (_OVERTAKE_MIN_ABSOLUTE_MM), weil eine
+                                     # Spitzenrate anhaltenden, nicht-spitzen
+                                     # Regen strukturell aussperrte. Das Feld
+                                     # bleibt fuer Beobachtbarkeit/Tests
+                                     # (intensity_label-Nachbarwert) erhalten,
+                                     # absichtlich ohne Regel-Leser -- kein
+                                     # vergessener Anschluss.
+    window_precip_mm: float = 0.0   # Issue #2020: akkumulierte Menge in der ERSTEN
+                                     # STUNDE ab jetzt (eigenes Fenster, s.
+                                     # _OVERTAKE_COMPARE_WINDOW_MIN) -- vergleichbar
+                                     # mit precip_1h_mm im Briefing.
+    onset_precip_mm: Optional[float] = None
+    # Issue #2046: akkumulierte Menge der 60 Minuten AB DEM BEGINN (nicht ab
+    # jetzt wie window_precip_mm) -- Grundlage der SMS-Mengenangabe. `None`,
+    # wenn `onset_minutes` `None` ist ODER im Fenster ab dem Beginn keine
+    # Frames liegen. Eigenes Fenster, aber DIESELBE Akkumulationsmechanik wie
+    # window_precip_mm (gemeinsamer Rechenkern `_accumulate_precip_mm`:
+    # Frame-Dedup, _MAX_FRAME_COVERAGE-Deckel, Fensterende als harte Grenze).
+    # Der Alarm feuert bis RADAR_ONSET_THRESHOLD_MIN (Horizont) Minuten vor dem
+    # Beginn -- das Fenster ab jetzt deckt dann fast nur Trockenzeit ab und
+    # untertriebe die Menge systematisch. BEWUSST beschreibend: kein Leser in
+    # radar_alert_due()/der #2020-Ueberholungsregel.
+    already_running: bool = False
+    # Issue #2050 S2b: laeuft das Ereignis zum Abfragezeitpunkt BEREITS? True,
+    # wenn das Frame, dessen Deckung `now` enthaelt, ueber der Trockenschwelle
+    # liegt. Additiv NEBEN `onset_minutes`, nicht an dessen Stelle -- der
+    # Beginn behaelt seine Rolle als Torwaechter und Dedup-Bestandteil. Gilt
+    # unabhaengig davon, ob der Regen in ein kuenftiges Frame hineindauert
+    # (`onset_minutes` gesetzt) oder in der laufenden Viertelstunde endet
+    # (`onset_minutes is None`); nur im zweiten Fall traegt S2b zusaetzlich
+    # das Ende bei, weil #2051 es dort per AC-19 offen laesst.
+    event_end_minutes: Optional[int] = None
+    # Issue #2051 S1: Minuten ab jetzt bis zum Ende des zusammenhaengenden
+    # nassen Blocks, analog `onset_minutes`. `None`, wenn `onset_minutes`
+    # `None` ist -- ohne Beginn gibt es kein Ende, das behauptet werden
+    # koennte. AUSNAHME seit #2050 S2b: laeuft das Ereignis bereits, ist das
+    # Ende auch ohne Beginn bestimmbar (Deckungsgrenze des laufenden Frames). Abgeleitet aus DENSELBEN `frames` (kein zweiter Quellenabruf).
+    # Die DAUER ist stets `event_end_minutes - onset_minutes` und wird
+    # absichtlich NICHT als drittes Feld gespeichert -- eine zweite Quelle der
+    # Wahrheit koennte auseinanderlaufen.
+    event_ongoing_beyond_horizon: bool = False
+    # Issue #2051 S1, R4-Waechter: die Frames bzw. der 180-Min-Horizont sind
+    # ausgegangen, waehrend der letzte bekannte Frame noch nass war. `False`
+    # heisst "das echte Ende ist bekannt" -- konsistent mit
+    # throttled/data_unavailable als Beobachtbarkeits-Signal.
+    #
+    # Bei `True` rendern alle sieben Textstellen die UNTERGRENZEN-Form
+    # (`Regen mindestens bis HH:MM` bzw. ` >@HH:MM`) statt der Normalform
+    # (`letzter Regen gegen HH:MM` / `@HH:MM`) -- Spec-Fassung 1.1,
+    # PO-Entscheid 2026-08-22. Der urspruengliche Entwurf 1.0 liess die
+    # Ende-Angabe hier ersatzlos WEG (Muster #2046 fuer die fehlende Menge);
+    # das verwarf eine wahre Aussage, denn `event_end_minutes` traegt in
+    # beiden Waechter-Faellen eine BEOBACHTETE Zahl -- die Reichweite der
+    # Quelle bzw. den letzten bekannten nassen Frame. Als Untergrenze genannt
+    # behauptet sie kein Ende und unterschlaegt zugleich nichts.
+    source_reach_minutes: Optional[int] = None
+    # Issue #2051 S3: Minuten ab jetzt bis zum Ende der Deckung des LETZTEN
+    # gelieferten Frames, gedeckelt am 180-Min-Horizont. NICHT dasselbe wie
+    # der Horizont selbst -- die Quelle kann frueher enden (Datenluecke,
+    # kuerzeres Produkt). `None` nur, wenn im Nowcast-Fenster ueberhaupt
+    # keine Frames vorliegen (throttled/data_unavailable/echte
+    # Providerluecke) -- ein durchgehend TROCKENES Fenster hat trotzdem eine
+    # Reichweite (bis zu 180).
 
 
 def _offline_fixture_active() -> bool:
@@ -109,6 +283,176 @@ def _offline_fixture_active() -> bool:
     Aktivierungsregel wie providers/base.py:144. EIN Schalter fuer den
     gesamten Radar-Pfad, kein separater Radar-Env-Var (ADR-0033 Punkt 3)."""
     return bool(os.environ.get("GZ_TEST_FIXTURE_DIR", "").strip())
+
+
+def _accumulate_precip_mm(
+    frames: list, all_ts_sorted: list, start: datetime, end: datetime,
+) -> float:
+    """Akkumulierte Niederschlagsmenge (mm) im Zeitfenster [`start`, `end`).
+
+    Issue #2046: der bisher in `_derive_result` inline stehende Rechenkern des
+    #2020-Mengenfensters, unveraendert, nur um Fensterstart/-ende
+    parametrisiert. GEMEINSAM genutzt von `window_precip_mm` (ab jetzt) und
+    `onset_precip_mm` (ab dem Beginn) -- eine zweite Kopie wuerde beide
+    Mechaniken auseinanderlaufen lassen.
+
+    Die Mechanik im Einzelnen (Herleitung s. #2020, Adversary-Runden 2/3):
+      * Dedup auf EINEN Eintrag je Zeitstempel; bei widerspruechlichen Werten
+        gewinnt der HOEHERE (F010 -- sonst zaehlt derselbe Zeitabschnitt aus
+        Providerwiederholung/Sidecar-Merge doppelt).
+      * Dauer JE Frame aus seinem eigenen naechsten Nachbarn in der
+        VOLLSTAENDIGEN Frame-Liste (`all_ts_sorted`), nie aus einer globalen
+        Kadenz-Schaetzung (F006/F007).
+      * Gedeckelt auf `_MAX_FRAME_COVERAGE` UND nie ueber `end` hinaus: ein
+        einzelner Frame nach Datenausfall darf nicht bis zum Fensterende
+        gestreckt werden. Fehlende Frames machen die Menge dadurch eher zu
+        klein als zu gross (bewusst konservativ).
+      * Fenstergrenze ausschliessend (`<`): ein Frame exakt auf `end` bekaeme
+        ueber `frame_end` ohnehin Dauer null.
+    """
+    by_ts: dict[datetime, float] = {}
+    for frame in frames:
+        if not (start <= frame.timestamp < end):
+            continue
+        existing = by_ts.get(frame.timestamp)
+        if existing is None or frame.precip_mm_h > existing:
+            by_ts[frame.timestamp] = frame.precip_mm_h
+
+    total = 0.0
+    for ts, rate in sorted(by_ts.items()):
+        next_idx = bisect.bisect_right(all_ts_sorted, ts)
+        next_ts_full = (
+            all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted) else end
+        )
+        frame_end = min(next_ts_full, ts + _MAX_FRAME_COVERAGE, end)
+        duration_h = max(0.0, (frame_end - ts).total_seconds() / 3600.0)
+        total += rate * duration_h
+    return total
+
+
+def _derive_wet_block_end(
+    frames: list, all_ts_sorted: list, onset_ts: datetime, horizon: datetime,
+) -> tuple[datetime, bool]:
+    """Ende des zusammenhaengenden nassen Blocks ab `onset_ts` (Issue #2051 S1).
+
+    Rueckgabe `(end_ts, ongoing_beyond_horizon)`. Bewusst ein GESCHWISTER von
+    `_accumulate_precip_mm` und nicht dessen Erweiterung: dort wird in einem
+    BEKANNTEN Fenster summiert, hier wird die Fenstergrenze erst gesucht.
+    Dieselbe Deckungsmechanik, KEINE neue Toleranzzahl.
+
+    Die drei Abbruchgruende im Einzelnen:
+      * Trockenframe (`precip_mm_h < _DRY_THRESHOLD_MM_H`): eine
+        QUELLENAUSSAGE "hier hat es aufgehoert" -- der Block endet real, am
+        letzten tatsaechlich nassen Frame. Nicht ueberbruecken, sonst
+        verschmelzen zwei getrennte Ereignisse zu einer ueberlangen Dauer.
+      * Luecke groesser als die Deckung eines Frames (`_MAX_FRAME_COVERAGE`):
+        keine Beobachtung, aber DANACH wieder eine -- das Ende liegt an der
+        Deckungsgrenze, nicht am naechsten wieder nassen Frame.
+      * Deckung reicht bis an den Horizont ODER es folgt gar keine
+        Beobachtung mehr: das echte Ende ist unbekannt (R4) ->
+        `ongoing_beyond_horizon=True`. Der zurueckgegebene Zeitpunkt ist dann
+        nur die Reichweite der Beobachtung -- kein behauptbares Ende, aber
+        eine BELEGTE UNTERGRENZE. Die Textkonsumenten nennen ihn deshalb in
+        der Untergrenzen-Form (`Regen mindestens bis HH:MM` / ` >@HH:MM`)
+        statt ihn wegzulassen (Spec-Fassung 1.1, PO-Entscheid 2026-08-22).
+    """
+    # Dedup je Zeitstempel wie in `_accumulate_precip_mm` (hoeherer Wert
+    # gewinnt) -- sonst entschiede bei Providerwiederholung/Sidecar-Merge die
+    # Reihenfolge darueber, ob ein Zeitpunkt als nass oder trocken gilt.
+    by_ts: dict[datetime, float] = {}
+    for frame in frames:
+        if not (onset_ts <= frame.timestamp <= horizon):
+            continue
+        existing = by_ts.get(frame.timestamp)
+        if existing is None or frame.precip_mm_h > existing:
+            by_ts[frame.timestamp] = frame.precip_mm_h
+
+    last_wet_ts = onset_ts
+    for ts, rate in sorted(by_ts.items()):
+        if rate < _DRY_THRESHOLD_MM_H:
+            return last_wet_ts, False
+        last_wet_ts = ts
+
+        # Deckung DIESES Frames -- dieselbe Rechnung wie in
+        # `_accumulate_precip_mm`: eigener naechster Nachbar aus der
+        # VOLLSTAENDIGEN Frame-Liste, gedeckelt auf `_MAX_FRAME_COVERAGE`, nie
+        # ueber das Fensterende hinaus.
+        coverage_end = min(ts + _MAX_FRAME_COVERAGE, horizon)
+        next_idx = bisect.bisect_right(all_ts_sorted, ts)
+        next_ts = all_ts_sorted[next_idx] if next_idx < len(all_ts_sorted) else None
+
+        if coverage_end >= horizon and (next_ts is None or next_ts > horizon):
+            # Der Block reicht bis an den Horizont der Quelle -- und zwar nur
+            # dann, wenn wirklich KEIN Frame mehr innerhalb des Fensters
+            # folgt (#2075). Ohne die zweite Bedingung kippt ein Frame, das
+            # kurz vor dem Horizont endet (`coverage_end >= horizon` durch
+            # die Deckelung auf `horizon`, obwohl noch ein Nachbar folgt),
+            # diesen Zweig faelschlich in "ongoing" und meldet die
+            # Untergrenzen-Form statt des echten, belegten Endes.
+            return horizon, True
+        if next_ts is None:
+            # Zeitreihe abgeschnitten, letzter bekannter Frame noch nass.
+            return coverage_end, True
+        if next_ts > coverage_end:
+            # Luecke groesser als die Deckung -- danach folgt zwar wieder eine
+            # Beobachtung, aber die dazwischenliegende Zeit ist unbeobachtet.
+            return coverage_end, False
+
+    # Unerreichbar, solange `all_ts_sorted` aus denselben `frames` stammt: ein
+    # nahtlos anschliessender naechster Frame innerhalb des Fensters ist auch
+    # ein Schleifen-Element. Ohne nassen Frame (leeres Fenster) bleibt der
+    # Beginn selbst das Ende.
+    return last_wet_ts, False
+
+
+def _laufendes_frame(frames: list, now: datetime):
+    """Das Frame, dessen Gueltigkeitsintervall `now` enthaelt, plus dessen
+    Deckungsende -- oder `None` (Issue #2050 S2b, B-1).
+
+    Frames tragen den SLOT-START (15-Min-Raster :00/:15/:30/:45) und gelten
+    VORWAERTS -- dieselbe Konvention, nach der `_accumulate_precip_mm` seit
+    #2020 seine Mengen rechnet. Deshalb liegt das Frame der LAUFENDEN
+    Viertelstunde immer vor `now` und faellt aus dem Zukunftsfenster
+    (`f.timestamp >= now`) heraus; genau daran scheiterte bisher jede Aussage
+    ueber ein bereits laufendes Ereignis.
+
+    Keine neue Toleranzzahl: Dedup je Zeitstempel wie dort ("hoeherer Wert
+    gewinnt"), Deckung bis zum eigenen naechsten Nachbarn, spaetestens nach
+    `_MAX_FRAME_COVERAGE`. Reicht sie nicht bis `now` (Datenluecke), gibt es
+    kein laufendes Bild -- dann `None` statt einer Hochrechnung.
+
+    Rueckgabe: `(timestamp, rate_mm_h, is_convective, deckung_ende, hail)`.
+    """
+    by_ts: dict[datetime, float] = {}
+    konvektiv: dict[datetime, bool] = {}
+    hagel: dict[datetime, bool] = {}
+    for f in frames:
+        vorhanden = by_ts.get(f.timestamp)
+        if vorhanden is None or f.precip_mm_h > vorhanden:
+            by_ts[f.timestamp] = f.precip_mm_h
+            konvektiv[f.timestamp] = bool(f.is_convective)
+            hagel[f.timestamp] = bool(getattr(f, "hail", False))
+    reihe = sorted(by_ts.items())
+    for i, (ts, rate) in enumerate(reihe):
+        if ts > now:
+            break
+        deckung_ende = ts + _MAX_FRAME_COVERAGE
+        if i + 1 < len(reihe) and reihe[i + 1][0] < deckung_ende:
+            deckung_ende = reihe[i + 1][0]
+        if ts <= now < deckung_ende:
+            return ts, rate, konvektiv[ts], deckung_ende, hagel[ts]
+    return None
+
+
+class RadarDeadlineExceeded(Exception):
+    """Die Zeitgrenze des Alarmlaufs ist abgelaufen, bevor eine weitere
+    Quelle der Kette begonnen wurde (Epic #2261 A-2 S2, ADR-0082). Kein
+    Quellenausfall und keine Entwarnung: der Aufrufer wertet nichts aus."""
+
+
+def _raise_if_deadline(deadline_at: Optional[float]) -> None:
+    if deadline_at is not None and time.monotonic() >= deadline_at:
+        raise RadarDeadlineExceeded("Zeitgrenze des Alarmlaufs erreicht")
 
 
 class RadarNowcastService:
@@ -137,6 +481,7 @@ class RadarNowcastService:
         self._cache = cache
         self._openmeteo_unavailable_this_call = False
         self._budget_throttled_this_call = False
+        self._inca_unavailable_this_call = False
         self._priority = "user_briefing"
         self._budget_gate = None
 
@@ -144,14 +489,17 @@ class RadarNowcastService:
     # Public API
     # ------------------------------------------------------------------
 
-    def intensity_to_text(self, mm_per_h: float, is_convective: bool = False) -> str:
+    def intensity_to_text(
+        self, mm_per_h: float, is_convective: bool = False, hail: bool = False,
+    ) -> str:
         """Map mm/h rate to German intensity label.
 
         Convective flag (thunderstorm/hail WMO 95/96/99) overrides all rate-based
-        stages — even at very low precipitation rates.
+        stages — even at very low precipitation rates. Issue #2205: only hail
+        (WMO 96/99) carries the hail wording; 95 is plain "Gewitter".
         """
         if is_convective:
-            return INTENSITY_CONVECTIVE
+            return INTENSITY_CONVECTIVE if hail else INTENSITY_CONVECTIVE_NO_HAIL
         # Guard: NaN or non-numeric input → treat as dry
         if not isinstance(mm_per_h, (int, float)) or mm_per_h != mm_per_h:
             return INTENSITY_DRY
@@ -159,7 +507,7 @@ class RadarNowcastService:
             return INTENSITY_DRY
         if mm_per_h < 1.0:
             return INTENSITY_LIGHT
-        if mm_per_h < 4.0:
+        if mm_per_h < HEAVY_RAIN_THRESHOLD_MM_H:
             return INTENSITY_MODERATE
         return INTENSITY_HEAVY
 
@@ -167,7 +515,15 @@ class RadarNowcastService:
         """Return True if WMO weather code indicates convective activity (thunderstorm/hail)."""
         return code in (95, 96, 99)
 
-    def get_nowcast(self, lat: float, lon: float, priority: str = "user_briefing") -> NowcastResult:
+    def _is_hail_weathercode(self, code) -> bool:
+        """Issue #2205: True only for WMO 96/99 (Gewitter mit Hagel), not 95."""
+        return code in (96, 99)
+
+    def get_nowcast(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None,
+        priority: str = "user_briefing", user_id: Optional[str] = None,
+        deadline_at: Optional[float] = None,
+    ) -> NowcastResult:
         """
         Fetch frames (cache-first) and derive nowcast result.
 
@@ -177,18 +533,31 @@ class RadarNowcastService:
         Issue #1329 C2: `priority` steuert die Drosselung des internen
         open-meteo-Funnels ueber den geteilten `ForecastBudgetGate`
         ("polling" fuer Scheduler-Checks, "user_briefing" -- Default, nie
-        gedrosselt -- fuer Nutzeraktionen wie `/jetzt`). Der Cache-Lookup
+        gedrosselt -- fuer Nutzeraktionen wie `/jetzt`).
+
+        Issue #2387: `user_id` bucht den Verbrauch zusaetzlich in den
+        Budget-Topf DIESES Nutzers und entscheidet damit im Band zwischen
+        Schwelle und 100%, ob dieser Aufruf gedrosselt wird. Der Cache-Lookup
         selbst ist von `priority` unabhaengig; die Ableitung
         (`_derive_result`) laeuft bei Cache-Hit UND -Miss immer frisch
         relativ zur aktuellen (bzw. injizierten) Zeit -- der Cache liefert
         nie ein fertiges Ergebnis (Lehre aus Adversary-Fund F001, Scheibe C).
+
+        Epic #2261 A-2 S2: `deadline_at` (absolute `time.monotonic()`-Marke)
+        wird vor JEDER Quelle der Kette geprueft; abgelaufen =>
+        `RadarDeadlineExceeded`, nichts im Cache. `None` = unveraendert.
         """
         self._convective_checked = True
         self._openmeteo_unavailable_this_call = False
         self._budget_throttled_this_call = False
+        self._inca_unavailable_this_call = False
         self._priority = priority
         from services.forecast_budget import ForecastBudgetGate
-        self._budget_gate = ForecastBudgetGate()
+        # Issue #2387: die Kennung entscheidet, WEN eine erreichte Schwelle
+        # trifft. `None` heisst ausdruecklich "unattributiert" (bewusst
+        # nutzerfreie Provider-Schicht, ADR-0075 Punkt 4) -- dann gilt das
+        # Bestandsverhalten: drosseln ab Schwelle, nie eine Befreiung.
+        self._budget_gate = ForecastBudgetGate(user_id)
         now = self._now_fn()
 
         # Adversary-Fund F001 (Issue #1329 C2, BROKEN-Verdict behoben): der
@@ -198,10 +567,11 @@ class RadarNowcastService:
         # faelschlich einen Eintrag der jeweils anderen Region teilen.
         region = _region_bucket(lat, lon)
 
-        cached = self._cache.get(lat, lon, region, now=now)
+        cached = self._cache.get(lat, lon, region, now=now, elevation_m=elevation_m)
         if cached is not None:
             self._budget_gate.record_cache_hit()
             _capture_nowcast_frames(lat, lon, cached.frames, cached.source)
+            self._convective_checked = cached.convective_checked  # Issue #2464
             return self._derive_result(cached.frames, cached.source, now=now)
 
         self._budget_gate.record_cache_miss()
@@ -210,13 +580,42 @@ class RadarNowcastService:
             frames = self._frame_source(lat, lon)
             source = "radar"
         else:
-            frames, source = self._fetch_frames_with_fallback(lat, lon)
+            frames, source = self._fetch_frames_with_fallback(
+                lat, lon, elevation_m, deadline_at=deadline_at,
+            )
 
         if frames:
-            self._cache.put(lat, lon, region, frames, source, now=now)
+            self._cache.put(
+                lat, lon, region, frames, source, now=now, elevation_m=elevation_m,
+                convective_checked=self._convective_checked,
+            )
 
         _capture_nowcast_frames(lat, lon, frames, source)
-        return self._derive_result(frames, source, now=now)
+        result = self._derive_result(frames, source, now=now)
+
+        # Issue #1581 Scheibe 2: Health-Journal des Nowcast-Pfades. Der Aufruf
+        # steht bewusst HIER im Miss-Zweig und NICHT in `_derive_result()` --
+        # das laeuft bei Cache-Treffer UND -Fehltreffer, ein dort platzierter
+        # Aufruf buchte jeden Treffer als lebendigen Abruf und liesse einen aus
+        # dem Cache weiterbedienten Dauerausfall gesund aussehen (Spec AC-9).
+        # Die Unterscheidung throttled (eigene Budget-Drosselung) vs.
+        # data_unavailable (echter Anbieterausfall) existiert bereits im
+        # Feldpaar von NowcastResult und wird hier nur abgebildet -- eine
+        # Vermengung liesse das externe Auswertungsskript einen selbst
+        # gewaehlten Rueckzug als Fremdausfall eskalieren (AC-8/AC-10).
+        from providers.enrichment_health import (
+            OUTCOME_FALLBACK, OUTCOME_OK, OUTCOME_SELF_THROTTLED,
+            OUTCOME_UNAVAILABLE, PATH_RADAR_NOWCAST, log_enrichment_call,
+        )
+        if result.throttled:
+            log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_SELF_THROTTLED)
+        elif result.data_unavailable:
+            log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_UNAVAILABLE)
+        elif self._inca_unavailable_this_call:
+            log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_FALLBACK, source)
+        else:
+            log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_OK)
+        return result
 
     # Human-readable source labels (single source of truth — used by
     # format_now_text and by the body-builder in trip_alert.check_radar_alerts).
@@ -243,8 +642,10 @@ class RadarNowcastService:
         *,
         tz: Optional[ZoneInfo] = None,
         include_source: bool = True,
+        englisch: bool = False,
     ) -> str:
-        """Format nowcast result as German text.
+        """Format nowcast result as German text (``englisch``: #2417,
+        Kurzform-Kanaele, GSM-7-sauber).
 
         Issue #822: optionaler ``tz``-Parameter (Tour-Zeitzone aus tz_for_coords).
         Wenn gesetzt, wird die Onset-Zeit in dieser TZ formatiert statt in der
@@ -256,8 +657,16 @@ class RadarNowcastService:
         Verhalten, alle anderen Caller bleiben unberührt.
         """
         lines: list[str] = []
+        if englisch:
+            return self._format_now_text_en(result, tz=tz, include_source=include_source)
 
-        if result.onset_minutes is None:
+        # Issue #2050 S2b: ein bereits laufendes Ereignis geht in den Zweig
+        # unten, auch wenn kein kuenftiger Beginn bestimmbar ist -- sonst
+        # antwortet `/jetzt` mit der Entwarnung "kein Regen erwartet",
+        # waehrend es regnet.
+        if result.onset_minutes is None and not getattr(
+            result, "already_running", False
+        ):
             if result.data_unavailable:
                 # Issue #1628 S3: bei einem echten Fetch-Fehler ist
                 # `intensity_label` (frames=[] -> "Kein Niederschlag") und der
@@ -268,27 +677,85 @@ class RadarNowcastService:
                 lines.append("Bitte selbst beobachten.")
             else:
                 lines.append(result.intensity_label + ".")
-                lines.append("In den nächsten 2 Stunden kein Regen erwartet.")
+                # Issue #2051 S1 (AC-18): die Stundenzahl haengt am
+                # tatsaechlich geprueften Horizont und ist KEINE zweite,
+                # unabhaengige Zahl -- genau diese Doppelpflege hat die Drift
+                # erzeugt (der Satz sagte "2 Stunden", waehrend #1945 den
+                # Horizont laengst auf 180 Min angehoben hatte).
+                lines.append(
+                    f"In den nächsten {_NOWCAST_HORIZON_MIN // 60} Stunden "
+                    f"kein Regen erwartet."
+                )
         else:
             now = datetime.now(tz=timezone.utc)
-            onset_time = now + timedelta(minutes=result.onset_minutes)
-            if tz is not None:
-                # Issue #1402: local_dt() statt rohem .astimezone(tz) --
-                # geht ueber den zentralen Naiv-Guard (hier zwar bereits
-                # aware, aber konsistent mit dem EINEN Umrechner).
-                from utils.timezone import local_dt
 
-                time_str = local_dt(onset_time, tz).strftime("%H:%M")
-            else:
+            def _hhmm(moment: datetime) -> str:
+                if tz is not None:
+                    # Issue #1402: local_dt() statt rohem .astimezone(tz) --
+                    # geht ueber den zentralen Naiv-Guard (hier zwar bereits
+                    # aware, aber konsistent mit dem EINEN Umrechner).
+                    from utils.timezone import local_dt
+
+                    return local_dt(moment, tz).strftime("%H:%M")
                 # Kein tz uebergeben (Fail-soft-Pfad, Wächter-abgesichert
-                # fuer Produktivcode) -- onset_time ist bereits UTC-aware,
+                # fuer Produktivcode) -- `moment` ist bereits UTC-aware,
                 # NICHT das argumentlose .astimezone() nutzen (deutet sonst
                 # die Prozess-Zeitzone des Servers statt ehrlich UTC).
-                time_str = onset_time.strftime("%H:%M")
-            lines.append(
-                f"{result.intensity_label} ab ca. {time_str}"
-                f" (in ~{result.onset_minutes} Min)."
+                return moment.strftime("%H:%M")
+
+            if getattr(result, "already_running", False):
+                # Issue #2050 S2b: kein Beginn, sondern der Zustand. Die
+                # Ende-Angabe unten haengt unveraendert dahinter -- eine
+                # zweite Ende-Weiche waere eine zweite Wahrheit.
+                satz = f"{result.intensity_label} läuft bereits"
+            else:
+                time_str = _hhmm(now + timedelta(minutes=result.onset_minutes))
+                satz = (
+                    f"{result.intensity_label} ab ca. {time_str}"
+                    f" (in ~{result.onset_minutes} Min)"
+                )
+            # Issue #2051 S1 (AC-14): das Ende desselben Ereignisses, aus
+            # DEMSELBEN `now` wie der Beginn abgeleitet. Der R4-Waechter
+            # waehlt seit Spec v1.1 (PO-Entscheid 2026-08-22) die FORM statt
+            # die Angabe zu unterdruecken: bei abgeschnittener Zeitreihe ist
+            # der Zeitpunkt eine belegte Untergrenze, kein bekanntes Ende.
+            # Wortgleich mit `format_starkregen_hint` (dort dieselbe Weiche),
+            # damit E-Mail und Kommando-Antwort keine zwei Dialekte sprechen.
+            if result.event_end_minutes is not None:
+                _end_str = _hhmm(
+                    now + timedelta(minutes=result.event_end_minutes)
+                )
+                if result.event_ongoing_beyond_horizon:
+                    satz += f", Regen mindestens bis {_end_str}"
+                else:
+                    satz += f", letzter Regen gegen {_end_str}"
+            # Issue #2051 S3 (E5): Reichweite additiv hinter dem Ende, aber
+            # NICHT bei gesetztem R4-Waechter -- die Untergrenzenform traegt
+            # die Reichweiten-Aussage bereits implizit.
+            if (
+                result.source_reach_minutes is not None
+                and not result.event_ongoing_beyond_horizon
+            ):
+                _reach_str = _hhmm(
+                    now + timedelta(minutes=result.source_reach_minutes)
+                )
+                satz += f" · Radar reicht bis {_reach_str}"
+            # Issue #2051 S3 (E4): Guete-Grenze -- ausgeloest, wenn Beginn
+            # ODER Ende jenseits der Grenze liegen. Genannt wird die
+            # GRENZZEIT selbst (now + LOCATION_SHARPNESS_LIMIT_MIN), nicht
+            # der betroffene Wert.
+            _limit = LOCATION_SHARPNESS_LIMIT_MIN
+            _jenseits_guete = (
+                (result.onset_minutes is not None and result.onset_minutes > _limit)
+                or (
+                    result.event_end_minutes is not None
+                    and result.event_end_minutes > _limit
+                )
             )
+            if _jenseits_guete:
+                _guete_str = _hhmm(now + timedelta(minutes=_limit))
+                satz += f" · Ortsangabe ab {_guete_str} unscharf"
+            lines.append(satz + ".")
 
         if result.convective_checked is False:
             lines.append("Gewitter-Check nicht verfügbar.")
@@ -298,55 +765,121 @@ class RadarNowcastService:
 
         return "\n".join(lines)
 
+    def _format_now_text_en(
+        self, result: NowcastResult, *, tz: Optional[ZoneInfo], include_source: bool,
+    ) -> str:
+        """Englische, GSM-7-saubere Fassung von ``format_now_text`` (#2417
+        Abschnitt H) -- dieselben Aussagen, ohne ``·``/``~``."""
+        from utils.timezone import local_dt
+
+        now = datetime.now(tz=timezone.utc)
+        label = _INTENSITY_EN.get(result.intensity_label, result.intensity_label)
+
+        def _hhmm(minuten: int) -> str:
+            moment = now + timedelta(minutes=minuten)
+            return (local_dt(moment, tz) if tz is not None else moment).strftime("%H:%M")
+
+        lines: list[str] = []
+        laeuft = getattr(result, "already_running", False)
+        if result.onset_minutes is None and not laeuft:
+            if result.data_unavailable:
+                lines += ["Short-term rain check not possible right now.",
+                          "Please watch the sky yourself."]
+            else:
+                lines += [f"{label}.", "No rain expected in the next "
+                          f"{_NOWCAST_HORIZON_MIN // 60} hours."]
+        else:
+            satz = (f"{label} ongoing" if laeuft else
+                    f"{label} from about {_hhmm(result.onset_minutes)} "
+                    f"(in {result.onset_minutes} min)")
+            if result.event_end_minutes is not None:
+                ende = _hhmm(result.event_end_minutes)
+                satz += (f", rain at least until {ende}"
+                         if result.event_ongoing_beyond_horizon
+                         else f", last rain around {ende}")
+            lines.append(satz + ".")
+        if result.convective_checked is False:
+            lines.append("Storm check not available.")
+        if include_source:
+            quelle = self.source_label(result.source).replace("Italien", "Italy")
+            lines.append(f"Source: {quelle}.")
+        return "\n".join(lines)
+
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
 
     def _fetch_frames_with_fallback(
-        self, lat: float, lon: float
+        self, lat: float, lon: float, elevation_m: Optional[int] = None,
+        deadline_at: Optional[float] = None,
     ) -> tuple[list, str]:
         """Try source chain; return (frames, source_label)."""
         if _within_radolan(lat, lon):
-            frames = self._fetch_brightsky(lat, lon)
+            _raise_if_deadline(deadline_at)
+            frames = self._fetch_brightsky(lat, lon, elevation_m)
             if frames:
                 return frames, "radar"
 
         if _within_inca(lat, lon):
-            frames = self._fetch_geosphere_inca(lat, lon)
+            _raise_if_deadline(deadline_at)
+            frames = self._fetch_geosphere_inca(lat, lon, elevation_m)
             if frames:
                 return frames, "INCA"
 
+        if _within_corsica(lat, lon):
+            _raise_if_deadline(deadline_at)
+            frames = self._fetch_corsica_arome_fr(lat, lon, elevation_m)
+            if frames:
+                return frames, "AROME-FR"
+
         if _within_italy_radar(lat, lon):
-            frames = self._fetch_italy_arpae(lat, lon)
+            _raise_if_deadline(deadline_at)
+            frames = self._fetch_italy_arpae(lat, lon, elevation_m)
             if frames:
                 return frames, "ARPAE-2I"
 
         if _within_arome_france(lat, lon):
-            frames = self._fetch_arome_france_hd(lat, lon)
+            _raise_if_deadline(deadline_at)
+            frames = self._fetch_arome_france_hd(lat, lon, elevation_m)
             if frames:
                 return frames, "AROME-FR"
 
         if _within_icon_d2(lat, lon):
-            frames = self._fetch_icon_d2(lat, lon)
+            _raise_if_deadline(deadline_at)
+            frames = self._fetch_icon_d2(lat, lon, elevation_m)
             if frames:
                 return frames, "ICON-D2"
 
-        frames = self._fetch_openmeteo_minutely15(lat, lon)
+        _raise_if_deadline(deadline_at)
+
+        frames = self._fetch_openmeteo_minutely15(lat, lon, elevation_m)
         return frames, "minutely_15"
 
-    def _fetch_brightsky(self, lat: float, lon: float) -> list:
+    def _fetch_brightsky(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         if _offline_fixture_active():
             # Issue #1329 C2 Abschnitt 8: kein Netz zu BrightSky im Offline-Modus.
             return []
         try:
             from providers.brightsky import BrightSkyProvider
-            provider = BrightSkyProvider()
-            return provider.fetch_radar(lat, lon)
+            frames = BrightSkyProvider().fetch_radar(lat, lon)
         except Exception as e:
             logger.warning(f"BrightSky failed, falling back: {e}")
             return []
+        if not frames:
+            return []  # Issue #2464: kein Sidecar ohne Frames
+        # Issue #2464: Konvektions-Sidecar wie INCA (Open-Meteo best_match = ICON-D2).
+        sidecar = self._fetch_openmeteo_15(lat, lon, elevation_m=elevation_m)
+        if sidecar:
+            self._merge_convective(frames, sidecar)
+        else:
+            self._convective_checked = False  # ADR-0018: nie als "kein Gewitter" kaschieren
+        return frames
 
-    def _fetch_geosphere_inca(self, lat: float, lon: float) -> list:
+    def _fetch_geosphere_inca(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         if _offline_fixture_active():
             # Issue #1329 C2 Abschnitt 8: kein Netz zu GeoSphere im Offline-Modus
             # (auch der Sidecar-open-meteo-Call unten wird dadurch nie erreicht).
@@ -357,6 +890,10 @@ class RadarNowcastService:
             provider = GeoSphereProvider()
             ts = provider.fetch_nowcast(lat, lon)
             if not ts or not ts.data:
+                # Issue #2218 C5-37 (ADR-0018): eine leere INCA-Antwort ist ein
+                # Ausfall, kein "ok" — Trockenwetter liefert Nullframes, nie [].
+                logger.warning("GeoSphere INCA returned no data points, falling back")
+                self._inca_unavailable_this_call = True
                 return []
             frames = []
             for dp in ts.data:
@@ -367,7 +904,7 @@ class RadarNowcastService:
                 frames.append(RadarFrame(timestamp=ts_val, precip_mm_h=mm_h))
             # Convective sidecar: INCA carries no thunderstorm/hail field, so reuse the
             # global Open-Meteo best_match nowcast solely for the is_convective flag.
-            sidecar = self._fetch_openmeteo_15(lat, lon)
+            sidecar = self._fetch_openmeteo_15(lat, lon, elevation_m=elevation_m)
             if sidecar:
                 self._merge_convective(frames, sidecar)
             else:
@@ -376,7 +913,31 @@ class RadarNowcastService:
             return frames
         except Exception as e:
             logger.warning(f"GeoSphere INCA failed, falling back: {e}")
+            self._inca_unavailable_this_call = True
             return []
+
+    def _fetch_corsica_arome_fr(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
+        """AROME-FR-Niederschlag (1,5 km) fuer Korsika, Gewitter/Hagel per
+        ARPAE-Sidecar. AROME-FR liefert an Korsika-Koordinaten strukturell
+        KEINEN weather_code (Live-Befund 2026-09-20, Issue #1761) -- ohne
+        Sidecar waere is_convective/hail fuer JEDEN Frame False, obwohl
+        Niederschlag korrekt anliegt. ARPAE deckt denselben Punkt geometrisch
+        ab und fuehrt weather_code nativ; hier NUR als Sidecar genutzt, NICHT
+        als Fallback-Quelle (PO-Entscheidung 2026-09-20).
+        """
+        frames = self._fetch_arome_france_hd(lat, lon, elevation_m)
+        if not frames:
+            return frames
+        sidecar = self._fetch_italy_arpae(lat, lon, elevation_m)
+        if sidecar:
+            self._merge_convective(frames, sidecar)
+        else:
+            # ADR-0018 / Muster aus _fetch_geosphere_inca: ein gescheiterter
+            # Sidecar-Call darf NIE lautlos als "kein Gewitter" gelten.
+            self._convective_checked = False
+        return frames
 
     def _merge_convective(self, inca_frames: list, sidecar_frames: list) -> None:
         """Merge is_convective from nearest sidecar frame (<=5 min) into INCA frames."""
@@ -387,24 +948,36 @@ class RadarNowcastService:
             )
             if abs(nearest.timestamp - frame.timestamp) <= tolerance:
                 frame.is_convective = nearest.is_convective
+                frame.hail = getattr(nearest, "hail", False)
 
-    def _fetch_openmeteo_minutely15(self, lat: float, lon: float) -> list:
-        return self._fetch_openmeteo_15(lat, lon)
+    def _fetch_openmeteo_minutely15(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
+        return self._fetch_openmeteo_15(lat, lon, elevation_m=elevation_m)
 
-    def _fetch_arome_france_hd(self, lat: float, lon: float) -> list:
+    def _fetch_arome_france_hd(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         """Fetch AROME-HD (1.5 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
-        return self._fetch_openmeteo_15(lat, lon, models="arome_france_hd")
+        return self._fetch_openmeteo_15(lat, lon, models="arome_france_hd", elevation_m=elevation_m)
 
-    def _fetch_icon_d2(self, lat: float, lon: float) -> list:
+    def _fetch_icon_d2(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         """Fetch DWD ICON-D2 (~2 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
-        return self._fetch_openmeteo_15(lat, lon, models="icon_d2")
+        return self._fetch_openmeteo_15(lat, lon, models="icon_d2", elevation_m=elevation_m)
 
-    def _fetch_italy_arpae(self, lat: float, lon: float) -> list:
+    def _fetch_italy_arpae(
+        self, lat: float, lon: float, elevation_m: Optional[int] = None
+    ) -> list:
         """Fetch ARPAE ICON-2I (2 km) minutely_15 nowcast via Open-Meteo. Fail-soft -> []."""
-        return self._fetch_openmeteo_15(lat, lon, models="italia_meteo_arpae_icon_2i")
+        return self._fetch_openmeteo_15(
+            lat, lon, models="italia_meteo_arpae_icon_2i", elevation_m=elevation_m
+        )
 
     def _fetch_openmeteo_15(
-        self, lat: float, lon: float, models: Optional[str] = None
+        self, lat: float, lon: float, models: Optional[str] = None,
+        elevation_m: Optional[int] = None,
     ) -> list:
         """Shared Open-Meteo minutely_15 fetch/parse. Optional explicit model. Fail-soft -> [].
 
@@ -424,6 +997,9 @@ class RadarNowcastService:
             return []
         if _offline_fixture_active():
             return self._load_radar_fixture_frames()
+        if self._budget_gate is None:  # Direktaufruf ausserhalb get_nowcast (Issue #2464)
+            from services.forecast_budget import ForecastBudgetGate
+            self._budget_gate = ForecastBudgetGate(None)
         if not self._budget_gate.allow(self._priority):
             self._budget_throttled_this_call = True
             self._openmeteo_unavailable_this_call = True
@@ -431,14 +1007,19 @@ class RadarNowcastService:
         try:
             import httpx
             from providers.brightsky import RadarFrame
-            model_param = f"&models={models}" if models else ""
-            url = (
-                f"https://api.open-meteo.com/v1/forecast"
-                f"?latitude={lat}&longitude={lon}"
-                f"{model_param}"
-                f"&minutely_15=precipitation,weather_code"
-                f"&timezone=UTC&forecast_minutely_15=96"
-            )
+            # Issue #1991 (N1-Nachbesserung): Query-Koordinaten/-Hoehe ueber
+            # den EINZIGEN produktiven Erbauer aus openmeteo.py -- kein
+            # eigener Dict-/Zuweisungs-Aufbau mehr an dieser Stelle
+            # (AST-Waechter tests/test_openmeteo_callsite_elevation_guard.py).
+            from providers.openmeteo import _koordinaten_params
+
+            query = _koordinaten_params(lat, lon, elevation_m)
+            if models:
+                query["models"] = models
+            query["minutely_15"] = "precipitation,weather_code"
+            query["timezone"] = "UTC"
+            query["forecast_minutely_15"] = 96
+            url = "https://api.open-meteo.com/v1/forecast?" + urlencode(query)
             self._budget_gate.record_call()  # unmittelbar vor dem echten Fetch
             with httpx.Client(timeout=HTTPX_TIMEOUT) as client:
                 resp = client.get(url)
@@ -467,7 +1048,10 @@ class RadarNowcastService:
                 mm_h = float(raw) * 4.0
                 code = wcodes[i] if i < len(wcodes) else None
                 is_convective = self._is_convective_weathercode(code)
-                frames.append(RadarFrame(timestamp=dt, precip_mm_h=mm_h, is_convective=is_convective))
+                frames.append(RadarFrame(
+                    timestamp=dt, precip_mm_h=mm_h, is_convective=is_convective,
+                    hail=self._is_hail_weathercode(code),
+                ))
             return frames
         except Exception as e:
             logger.warning(f"Open-Meteo minutely_15 (models={models}) failed: {e}")
@@ -510,7 +1094,10 @@ class RadarNowcastService:
                 ts = base + timedelta(minutes=offset_min)
                 is_convective = self._is_convective_weathercode(code)
                 frames.append(
-                    RadarFrame(timestamp=ts, precip_mm_h=float(precip), is_convective=is_convective)
+                    RadarFrame(
+                        timestamp=ts, precip_mm_h=float(precip), is_convective=is_convective,
+                        hail=self._is_hail_weathercode(code),
+                    )
                 )
             return frames
         except Exception as e:
@@ -536,21 +1123,53 @@ class RadarNowcastService:
 
         # onset_minutes: first frame with precip >= threshold
         onset_minutes: Optional[int] = None
+        # Issue #2046: der EXAKTE Zeitstempel desselben Frames -- Fensterstart
+        # der Mengenrechnung ab dem Beginn. Bewusst nicht aus `onset_minutes`
+        # zurueckgerechnet: das ist der GERUNDETE Anzeigewert, und ein Aufrunden
+        # (delta 49.6 -> 50) wuerde den Beginn-Frame aus seinem eigenen Fenster
+        # herausschieben.
+        onset_ts: Optional[datetime] = None
         for frame in sorted(window, key=lambda f: f.timestamp):
             if frame.precip_mm_h >= _DRY_THRESHOLD_MM_H:
                 delta = (frame.timestamp - now).total_seconds() / 60.0
                 onset_minutes = max(0, round(delta))
+                onset_ts = frame.timestamp
                 break
 
-        # Max rate in window
+        # Issue #2050 S2b: laeuft das Ereignis JETZT? Das entscheidende Frame
+        # liegt per Konstruktion VOR `now` und ist in `window` nicht enthalten.
+        _laufend = _laufendes_frame(frames, now)
+        already_running = bool(
+            _laufend is not None and _laufend[1] >= _DRY_THRESHOLD_MM_H
+        )
+
+        # Max rate im 180-Min-Nowcast-Fenster -- speist NUR intensity_label
+        # (Anzeige). NICHT die Ueberholungspruefung: das NowcastResult-Feld
+        # max_rate_mm_h wird weiter unten separat aus dem 60-Min-Vergleichs-
+        # fenster gebildet (Adversary-Fund F001, 2026-08-21), damit Raten-
+        # und Mengenfenster deckungsgleich sind.
+        #
+        # Issue #2050 S2b: das LAUFENDE Frame zaehlt fuer die Anzeige mit.
+        # Ohne es bliebe von einem Ereignis, das in der laufenden
+        # Viertelstunde endet, "Kein Niederschlag" uebrig -- der Alarm saehe
+        # den Satz "Kein Niederschlag laeuft bereits" und liefe in der
+        # NIEDRIGSTEN Dringlichkeitsstufe, waehrend es schuettet.
         max_rate = max((f.precip_mm_h for f in window), default=0.0)
+        if already_running:
+            max_rate = max(max_rate, _laufend[1])
 
         # Convective flag: any wet frame in window with convective indicator
         is_convective = any(
             f.is_convective for f in window if f.precip_mm_h >= _DRY_THRESHOLD_MM_H
-        )
+        ) or bool(already_running and _laufend[2])
+        # Issue #2205: Hagel (WMO 96/99) nach derselben Regel wie is_convective.
+        hail = any(
+            getattr(f, "hail", False) for f in window if f.precip_mm_h >= _DRY_THRESHOLD_MM_H
+        ) or bool(already_running and _laufend[4])
 
-        intensity_label = self.intensity_to_text(max_rate, is_convective=is_convective)
+        intensity_label = self.intensity_to_text(
+            max_rate, is_convective=is_convective, hail=hail,
+        )
 
         # Issue #1329 C2 AC-6: throttled=True nur wenn KEINE Frames geliefert
         # wurden UND die Ursache eine Budget-Drosselung war (nicht "echt kein
@@ -570,6 +1189,129 @@ class RadarNowcastService:
             and not frames
         )
 
+        # Issue #2020: eigenes 60-Min-Vergleichsfenster fuer die Mengen-
+        # Ueberholungspruefung (NICHT das 180-Min-Nowcast-Fenster oben -- das
+        # waere ein 3h-Wert gegen einen 1h-Briefingwert). Dauer JE Frame aus
+        # seiner UNMITTELBAREN NACHBARSCHAFT in der VOLLSTAENDIGEN Frame-Liste
+        # (Adversary-Runde 2, F006/F007, 2026-08-21: eine GLOBALE Kadenz-
+        # Schaetzung -- ob Minimum oder Median -- laesst sich immer durch
+        # Frames ausserhalb des Vergleichsfensters verfaelschen, in beide
+        # Richtungen. Ein Frame darf daher nur ueber seinen eigenen naechsten
+        # Nachbarn hinausreichen, NIE ueber eine globale Kennzahl). Zusaetzlich
+        # gedeckelt auf `_MAX_FRAME_COVERAGE` (groebstes Produktivraster) UND
+        # NIE ueber das Fensterende (compare_horizon) hinaus: ein einzelner
+        # Frame nach Datenausfall/Drosselung darf nicht bis zum vollen
+        # Fensterende gestreckt werden -- sonst wuerde ein einziges Radarbild
+        # zu einem hochgerechneten Alarm. Fehlende Frames machen die Menge
+        # dadurch eher zu klein als zu gross (bewusst konservative Richtung,
+        # Spec "Known Limitations").
+        compare_horizon = now + timedelta(minutes=_OVERTAKE_COMPARE_WINDOW_MIN)
+        all_ts_sorted = sorted({f.timestamp for f in frames})
+        # Issue #2020 Adversary-Runde 3, F012: die Fenstergrenze ist bewusst
+        # ausschliessend (`<`, nicht `<=`). Fuer die Mengenrechnung ist das
+        # folgenlos -- ein Frame exakt auf `compare_horizon` bekaeme ueber
+        # `frame_end = min(..., compare_horizon)` ohnehin Dauer null.
+        # Beobachtbar waere der Unterschied nur ueber `compare_window_max_rate_mm_h`
+        # (max() ueber genau diese gefilterte Menge) -- und dieses Feld ist
+        # seit #2020/F008 rein beschreibend, ohne Leser in der Alarmregel.
+        # Sobald max_rate_mm_h wieder in eine Entscheidung eingeht, braucht
+        # diese Grenze einen eigenen Test.
+        compare_window = sorted(
+            (f for f in frames if f.timestamp >= now and f.timestamp < compare_horizon),
+            key=lambda f: f.timestamp,
+        )
+
+        # Der Rechenkern (Frame-Dedup mit "hoeherer Wert gewinnt", Dauer je
+        # Frame aus dem eigenen Nachbarn, _MAX_FRAME_COVERAGE-Deckel,
+        # Fensterende als harte Grenze) steht seit #2046 in
+        # `_accumulate_precip_mm` -- unveraendert, nur um die Fenstergrenzen
+        # parametrisiert, damit die Mengenzahl AB DEM BEGINN dieselbe Mechanik
+        # benutzt und nicht als zweite Kopie davon abdriften kann.
+        window_precip_mm = _accumulate_precip_mm(
+            frames, all_ts_sorted, now, compare_horizon,
+        )
+
+        # Issue #2046: Anzeige-Menge der Onset-Kurznachricht -- 60 Minuten AB
+        # DEM BEGINN statt ab jetzt. DIESELBE `frames`-Liste, kein zweiter
+        # Quellen-Abruf (AC-12); veraendert weder onset_minutes noch
+        # window_precip_mm noch max_rate_mm_h.
+        onset_precip_mm: Optional[float] = None
+        if onset_ts is not None:
+            _onset_window_end = onset_ts + timedelta(minutes=_ONSET_PRECIP_WINDOW_MIN)
+            # Issue #2261 (A-1, AC-7): reicht das Fenster ab dem Beginn ueber
+            # den Quell-Horizont hinaus, ist die Menge dort abgeschnitten und
+            # zu klein -- dann KEINE Mengenangabe (an der Quelle, alle vier
+            # Kanaele lesen dasselbe Feld). Intensitaet bleibt unberuehrt.
+            if _onset_window_end <= horizon:
+                onset_precip_mm = _accumulate_precip_mm(
+                    frames, all_ts_sorted, onset_ts, _onset_window_end,
+                )
+
+        # Issue #2051 S1: Ende des zusammenhaengenden nassen Blocks aus
+        # DERSELBEN `frames`-Liste (kein zweiter Quellenabruf) -- der Nutzer
+        # erfaehrt bisher nur, WANN es anfaengt. Ohne Beginn kein Ende.
+        event_end_minutes: Optional[int] = None
+        event_ongoing_beyond_horizon = False
+        if onset_ts is not None:
+            _end_ts, event_ongoing_beyond_horizon = _derive_wet_block_end(
+                frames, all_ts_sorted, onset_ts, horizon,
+            )
+            event_end_minutes = max(
+                0, round((_end_ts - now).total_seconds() / 60.0)
+            )
+        elif already_running:
+            # Issue #2050 S2b: genau die Luecke, die AC-19 von #2051 offen
+            # laesst ("ohne Beginn kein Ende") -- das Ereignis laeuft, hoert
+            # aber in der laufenden Viertelstunde auf, ein kuenftiger Beginn
+            # ist deshalb nicht bestimmbar. Der nasse Block besteht dann aus
+            # dem laufenden Frame, dessen ZEITSTEMPEL per Konstruktion in der
+            # Vergangenheit liegt. Genannt wird darum seine DECKUNGSGRENZE --
+            # dieselbe Konvention, die der Untergrenzen-Zweig von #2051 schon
+            # verwendet. Der Frame-Zeitstempel waere eine Aussage ueber die
+            # Vergangenheit im Gewand einer Auskunft ueber die Zukunft: der
+            # Wanderer stuende im Regen und laese, dass er vorbei ist.
+            _end_ts, event_ongoing_beyond_horizon = _derive_wet_block_end(
+                frames, all_ts_sorted, _laufend[0], horizon,
+            )
+            event_end_minutes = max(
+                0, round((max(_end_ts, _laufend[3]) - now).total_seconds() / 60.0)
+            )
+
+        # Issue #2020 Adversary-Fund F001: max_rate_mm_h fuer die
+        # Ueberholungspruefung MUSS aus demselben Fenster stammen wie
+        # window_precip_mm (60 Min compare_window), sonst legitimiert ein
+        # spaeter, voellig unabhaengiger Starkregen-Ausbruch (z. B. bei
+        # +150 Min, weit ausserhalb des Vergleichsfensters) die Ueberholung
+        # fuer ganz anderen, schwachen Nahregen. `max_rate` oben (180 Min)
+        # bleibt unveraendert fuer intensity_label -- NUR dieses Feld
+        # wechselt das Fenster.
+        compare_window_max_rate_mm_h = max(
+            (f.precip_mm_h for f in compare_window), default=0.0
+        )
+
+        # Issue #2051 S3 (E1): Reichweite der Quelle -- unabhaengig vom
+        # Regen-Zustand, deshalb NICHT an onset_ts/event_end gekoppelt. Der
+        # LETZTE Frame in `window` (dem 180-Min-Nowcast-Fenster) liefert
+        # seine eigene Deckung nach exakt derselben Mechanik wie
+        # `_accumulate_precip_mm`/`_derive_wet_block_end`: naechster
+        # Nachbar aus der VOLLSTAENDIGEN Frame-Liste (oder der Horizont,
+        # wenn keiner folgt), gedeckelt auf `_MAX_FRAME_COVERAGE`, nie ueber
+        # den Horizont hinaus. `window` leer -> `None` (keine Beobachtung,
+        # nicht "Reichweite null").
+        source_reach_minutes: Optional[int] = None
+        if window:
+            _last_reach_ts = max(f.timestamp for f in window)
+            _next_idx = bisect.bisect_right(all_ts_sorted, _last_reach_ts)
+            _next_ts_full = (
+                all_ts_sorted[_next_idx] if _next_idx < len(all_ts_sorted) else horizon
+            )
+            _reach_end = min(
+                _next_ts_full, _last_reach_ts + _MAX_FRAME_COVERAGE, horizon,
+            )
+            source_reach_minutes = max(
+                0, round((_reach_end - now).total_seconds() / 60.0)
+            )
+
         return NowcastResult(
             onset_minutes=onset_minutes,
             intensity_label=intensity_label,
@@ -579,6 +1321,13 @@ class RadarNowcastService:
             convective_checked=self._convective_checked,
             throttled=throttled,
             data_unavailable=data_unavailable,
+            max_rate_mm_h=compare_window_max_rate_mm_h,
+            window_precip_mm=window_precip_mm,
+            onset_precip_mm=onset_precip_mm,  # Issue #2046
+            already_running=already_running,  # Issue #2050 S2b
+            event_end_minutes=event_end_minutes,  # Issue #2051 S1
+            event_ongoing_beyond_horizon=event_ongoing_beyond_horizon,  # #2051 S1
+            source_reach_minutes=source_reach_minutes,  # Issue #2051 S3
         )
 
 
@@ -600,6 +1349,13 @@ def _within_italy_radar(lat: float, lon: float) -> bool:
     return (
         _ITALY_RADAR_LAT_MIN <= lat <= _ITALY_RADAR_LAT_MAX
         and _ITALY_RADAR_LON_MIN <= lon <= _ITALY_RADAR_LON_MAX
+    )
+
+
+def _within_corsica(lat: float, lon: float) -> bool:
+    return (
+        _CORSICA_LAT_MIN <= lat <= _CORSICA_LAT_MAX
+        and _CORSICA_LON_MIN <= lon <= _CORSICA_LON_MAX
     )
 
 
@@ -640,6 +1396,8 @@ def _region_bucket(lat: float, lon: float) -> str:
         return "radolan"
     if _within_inca(lat, lon):
         return "inca"
+    if _within_corsica(lat, lon):
+        return "corsica"
     if _within_italy_radar(lat, lon):
         return "italy_radar"
     if _within_arome_france(lat, lon):

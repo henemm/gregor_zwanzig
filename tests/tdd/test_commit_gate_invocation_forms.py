@@ -11,12 +11,8 @@ Geprueft wird die WIRKUNG am Ort der Zusicherung, nicht nur die Erkennung:
 * `renderer_mail_gate` blockt eine gestagte Mail-Inhalts-Datei ohne Nachweis
   auch dann, wenn der Commit als `git -C /pfad commit` geschrieben ist —
   und blockt einen `grep`, der die Zeichenfolge nur nennt, NICHT mehr.
-* `auto_restart_server` startet den Dienst bei einem Diagnose-Kommando
-  (`git log --oneline | grep -c " commit "`) NICHT mehr neu.
 
-Keine Mocks: echte Hook-Subprozesse, echtes git-Repo, echte Dateien. Der
-Server-Neustart wird nicht abgefangen, sondern ueber PATH-Stubs sichtbar und
-folgenlos gemacht.
+Keine Mocks: echte Hook-Subprozesse, echtes git-Repo, echte Dateien.
 """
 
 from __future__ import annotations
@@ -253,48 +249,6 @@ def test_pendant_gate_blockt_keine_blosse_erwaehnung(tmp_path):
     assert proc.returncode == 0, (
         f"Blosse Erwaehnung blockiert: rc={proc.returncode} err={proc.stderr!r}"
     )
-
-
-# --------------------------------------------------------------------- #
-# auto_restart_server — kein Neustart bei Diagnose-Kommandos
-# --------------------------------------------------------------------- #
-
-def _stub_path(tmp_path: Path) -> tuple[Path, Path]:
-    """PATH-Verzeichnis mit protokollierenden Stubs statt echter Systembefehle."""
-    stub_dir = tmp_path / "stubbin"
-    stub_dir.mkdir(parents=True, exist_ok=True)
-    log = tmp_path / "restart_calls.log"
-    for name in ("sudo", "systemctl", "fuser", "uv"):
-        script = stub_dir / name
-        script.write_text(f'#!/bin/sh\necho "$0 $@" >> "{log}"\nexit 1\n')
-        script.chmod(0o755)
-    return stub_dir, log
-
-
-def _run_restart_hook(tmp_path: Path, command: str) -> str:
-    hook = _hookbin(tmp_path, "auto_restart_server.py")
-    stub_dir, log = _stub_path(tmp_path)
-    env = {"PATH": f"{stub_dir}:{os.environ.get('PATH', '')}"}
-    _run_hook(hook, command, tmp_path, extra_env=env)
-    return log.read_text() if log.exists() else ""
-
-
-@pytest.mark.parametrize("command", [
-    'git log --oneline | grep -c " commit "',
-    'grep -rn "git commit" .claude/hooks/',
-])
-def test_diagnose_kommando_startet_keinen_dienst_neu(tmp_path, command):
-    """Ein Lesebefehl darf keinen `sudo systemctl restart` des Dienstes ausloesen."""
-    calls = _run_restart_hook(tmp_path, command)
-    assert calls == "", (
-        f"Diagnose-Kommando loeste einen Dienst-Neustart aus: {calls!r}"
-    )
-
-
-def test_echter_commit_startet_weiterhin_neu(tmp_path):
-    """Gegenprobe: der Hook wird nicht einfach funktionslos."""
-    calls = _run_restart_hook(tmp_path, 'git -C /tmp/x commit -m "wip"')
-    assert calls.strip(), "Hook reagiert auf einen echten Commit gar nicht mehr"
 
 
 # --------------------------------------------------------------------- #

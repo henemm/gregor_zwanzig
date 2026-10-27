@@ -3,7 +3,7 @@ entity_id: issue_432_step3_step5_polish_tests
 type: tests
 created: 2026-05-28
 updated: 2026-05-28
-status: draft
+status: deprecated
 version: "1.0"
 tags: [tests, frontend, wizard, step3, step5, issue-432, epic-428]
 parent: issue_432_step3_step5_polish
@@ -12,15 +12,17 @@ phase: phase5_tdd_red
 
 # Issue #432 — Step 3 Wetter-Umbau + Step 5 Reports (Tests)
 
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
+
 ## Approval
 
 - [x] Approved
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_432_step3_step5_polish.md`. Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-15). Reine Source-Inspection-Tests (`readFileSync`) — kein Svelte-Renderer, kein Mock. Konsistent mit dem etablierten Pattern aus Issues #429, #430+#431.
+Test-Manifest für `docs/specs/_archive/modules/issue_432_step3_step5_polish.md`. Jeder Test mappt auf ein Acceptance Criterion der Parent-Spec (AC-1..AC-15). Reine Source-Inspection-Tests (`readFileSync`) — kein Svelte-Renderer, kein Mock. Konsistent mit dem etablierten Pattern aus Issues #429, #430+#431.
 
-Parent-Spec: `docs/specs/modules/issue_432_step3_step5_polish.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_432_step3_step5_polish.md` v1.0
 
 ## Source
 

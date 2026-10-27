@@ -3,7 +3,7 @@ entity_id: bug_401_segment_localtime_tests
 type: tests
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "2.0"
 tags: [tests, timezone, scheduler, segment, alert, cest, utc, bug-400, bug-401]
 parent: bug_401_segment_localtime
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_401_segment_localtime.md` (kombiniert #400 + #401).
+Test-Manifest für `docs/specs/_archive/modules/bug_401_segment_localtime.md` (kombiniert #400 + #401).
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/bug_401_segment_localtime.md` v1.1
+Parent-Spec: `docs/specs/_archive/modules/bug_401_segment_localtime.md` v1.1
 
 Source-Inspection-Ansatz (kein Mock): `trip_alert.py` und `trip_report_scheduler.py` haben
 viele Deps (SMTP, Provider). Geprüft wird der relevante Quelltext + eine echte CEST→UTC-Konvertierung.
@@ -47,7 +47,7 @@ viele Deps (SMTP, Provider). Geprüft wird der relevante Quelltext + eine echte 
 | `segment_start_time_is_true_utc_for_cest_location` | AC-4 | `_convert_trip_to_segments` gibt UTC 06:00 zurück (nicht 08:00) für CEST 08:00-Eingabe |
 | `segment_header_shows_configured_local_departure_time` | AC-4 | `render_plain`-Header zeigt "08:00" nach korrekter UTC-Konvertierung |
 | `hourly_filter_selects_cest_correct_window` | AC-4 | `_extract_hourly_rows` selektiert UTC 6–8 (= CEST 8–10), nicht UTC 8–10 |
-| `utc_location_segment_unchanged` | AC-4 | UTC-Tour (Reykjavik): `start_time.hour = 8` — keine Regression |
+| `utc_location_segment_unchanged` | AC-4 | UTC-Trip (Reykjavik): `start_time.hour = 8` — keine Regression |
 
 ## Test-Ausführung
 

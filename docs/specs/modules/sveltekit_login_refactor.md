@@ -3,7 +3,7 @@ entity_id: sveltekit_login_refactor
 type: module
 created: 2026-04-15
 updated: 2026-04-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [sveltekit, auth, login, f13]
 ---

@@ -425,12 +425,15 @@ def test_ac6_widerspruchsfreiheit_kurzfassung_und_stundentabelle():
         tz=TZ,
     )
 
-    # Kurzfassung/Prosa meldet ein Gewitter für diese Stunde (unverändertes
-    # Verhalten, s. Spec 'Known Limitations' -- die Erwähnungsschwelle wird
-    # hier NICHT angefasst).
-    assert "möglich" in report.email_html or "möglich" in report.email_plain, (
-        f"Voraussetzung des Tests nicht erfüllt: die Kurzfassung erwähnt kein "
-        f"Gewitter. HTML-Ausschnitt: {report.email_html[:800]!r}"
+    # Kurzfassung/Prosa meldet die Stunde (unverändertes Verhalten, s. Spec
+    # 'Known Limitations' -- die Erwähnungsschwelle wird hier NICHT angefasst).
+    # #2176: bei LOW ist das nicht mehr "… möglich", sondern die
+    # Luftmassen-Aussage. Erwähnt wird die Stunde weiterhin -- genau darum
+    # geht es hier, denn sonst schwiege die Prosa zum gelben Ampelkreis.
+    erwaehnung = "Schwaches Signal"
+    assert erwaehnung in report.email_html or erwaehnung in report.email_plain, (
+        f"Voraussetzung des Tests nicht erfüllt: die Kurzfassung erwähnt die "
+        f"LOW-Stunde nicht. HTML-Ausschnitt: {report.email_html[:800]!r}"
     )
 
     row = _hour_row_html(report.email_html, local_hour_str)

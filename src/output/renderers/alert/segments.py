@@ -90,19 +90,36 @@ def _renderable_segment_ids(segment_ids) -> list[str]:
 
 def format_alert_location(
     location_label: str | None, segment_ids, km_from: float, km_to: float,
+    km_measured: bool = False,
 ) -> str:
     """Die Ortsangabe eines Alarms — DIE gemeinsame Aufloesungsreihenfolge
-    (Issue #1744 AC-3):
+    (Issue #1744 AC-3, erweitert um Issue #2036):
 
     1. `location_label` gesetzt   -> Ortsname (Ortsvergleich, unveraendert)
-    2. Segment-Kennung(en) da     -> `format_segment_reference`
-    3. sonst                      -> `km {von}–{bis}` (Rueckfall, Altdaten)
+    2. GEMESSENE km-Spanne        -> `km {von}-{bis}` (Issue #2036 AC-1)
+    3. Segment-Kennung(en) da     -> `format_segment_reference`
+    4. sonst                      -> `km {von}–{bis}` (Rueckfall, Altdaten)
 
-    Stufe 3 ist kein Notnagel, sondern AC-7: ein Alarm ohne Segment-Kennung
-    muss weiterhin einen Ort nennen und versendet werden.
+    Stufe 4 ist kein Notnagel, sondern AC-7 aus #1744: ein Alarm ohne
+    Segment-Kennung muss weiterhin einen Ort nennen und versendet werden.
+
+    `km_measured` (Issue #2036, Default aus): NUR wenn die Spanne aus echter
+    GPX-Wegstrecke stammt, darf sie die Segmentnummer verdraengen — eine aus
+    Luftlinie geschaetzte Zahl waere glaubwuerdig aussehender Unsinn (AC-13).
+    Faellt Start und Ende auf denselben ganzen Kilometer zusammen, ist die
+    Spanne keine Information mehr ("km 20-20"); dann gilt weiter die
+    Segment-Sprache, insbesondere das Etappenziel "🏁 Ziel" (AC-4).
+
+    Schreibweise mit Leerzeichen und ASCII-Bindestrich (`km 12-20`, AC-5):
+    der Rueckfall auf Stufe 4 behaelt seinen Halbgeviertstrich, damit
+    Bestandsausgaben byte-identisch bleiben.
     """
     if location_label:
         return location_label
+    if km_measured and km_from is not None and km_to is not None:
+        a, b = int(round(km_from)), int(round(km_to))
+        if a != b:
+            return f"km {a}-{b}"
     ids = _renderable_segment_ids(segment_ids)
     if ids:
         reference = format_segment_reference(ids)

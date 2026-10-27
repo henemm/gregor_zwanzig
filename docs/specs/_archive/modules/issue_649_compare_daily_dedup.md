@@ -3,7 +3,7 @@ entity_id: issue_649_compare_daily_dedup
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [rework, compare, scheduler, dry]
 ---

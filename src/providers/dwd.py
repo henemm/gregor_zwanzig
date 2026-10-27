@@ -33,12 +33,21 @@ from __future__ import annotations
 import bz2
 import logging
 import math
+import threading
 import time
+import contextvars
+from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor, wait
+from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import httpx
+import numpy as np
 from rasterio.io import MemoryFile
+from rasterio.transform import rowcol
+from rasterio.windows import Window
 from tenacity import (
     before_sleep_log,
     retry,
@@ -49,6 +58,17 @@ from tenacity import (
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from providers.base import ProviderRequestError, ThunderSourceUnavailableError
+from providers.enrichment_health import (
+    OUTCOME_FALLBACK,
+    OUTCOME_OK,
+    PATH_THUNDER_BUDGET,
+    log_enrichment_call,
+)
+from providers.http import (
+    capped_timeout_or_raise,
+    make_deadline_before_hook,
+    stop_at_deadline,
+)
 
 if TYPE_CHECKING:
     from app.config import Location
@@ -56,6 +76,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger("dwd")
 
 BASE_URL = "https://opendata.dwd.de/weather/nwp/icon-d2/grib/"
+# #2439: Produktionswert, festgehalten fuer die Test-Naht des Vorwaermens
+# (Kernsuite mit Fixture-Verzeichnis und unveraendertem BASE_URL: kein Netz).
+PRODUKTIV_BASE_URL = BASE_URL
 TIMEOUT = 30.0
 
 RETRY_ATTEMPTS = 5
@@ -130,6 +153,20 @@ THUNDER_RUN_FALLBACK_STAGES = 2
 # 000..048, stuendlich). Darueber hinaus wird gar nicht erst abgerufen.
 THUNDER_MAX_TIMESTEP = 48
 
+# #2554: Gewitter-Downloads bekommen einen eigenen, strengeren Abrufweg -- bei
+# langsamem DWD (Stoerung 12.10.: 151-170s je Abruf) verbrannte der Grund-
+# Timeout (30s, 5 Versuche) das 150s-Budget nach 1-2 Zeitpunkten. Ein haengender
+# Einzelabruf kostet hoechstens THUNDER_REQUEST_TIMEOUT, ein ReadTimeout wird
+# NICHT wiederholt. Je Zeitpunkt laufen bis zu THUNDER_PARALLEL_DOWNLOADS
+# Downloads gleichzeitig (Reihenfolge der Groessen bleibt, #1531 AC-7).
+THUNDER_REQUEST_TIMEOUT = 10.0
+THUNDER_RETRY_ATTEMPTS = 2
+THUNDER_PARALLEL_DOWNLOADS = 5
+# #2439: Vorwaermen der Tagesfenster (hoechstens so viele FENSTER gleichzeitig,
+# jedes Fenster nutzt intern weiter THUNDER_PARALLEL_DOWNLOADS) und Gesamtfrist.
+THUNDER_PREWARM_PARALLEL_WINDOWS = 2
+THUNDER_PREWARM_DEADLINE_SECONDS = 40.0
+
 
 def _is_retryable_error(exception: BaseException) -> bool:
     """1:1-Muster meteofrance.py: retryable bei 500/502/503/504 +
@@ -139,6 +176,15 @@ def _is_retryable_error(exception: BaseException) -> bool:
     if isinstance(exception, (httpx.ConnectError, httpx.ReadTimeout)):
         return True
     return False
+
+
+def _is_thunder_retryable_error(exception: BaseException) -> bool:
+    """#2554: wie `_is_retryable_error`, aber OHNE ReadTimeout -- ein Server,
+    der THUNDER_REQUEST_TIMEOUT lang geschwiegen hat, erholt sich innerhalb des
+    Abrufs selten; ein zweiter Versuch wuerde den Haenger verdoppeln."""
+    if isinstance(exception, httpx.HTTPStatusError):
+        return exception.response.status_code in RETRY_STATUS_CODES
+    return isinstance(exception, httpx.ConnectError)
 
 
 def _vector_to_speed_kmh(u: float, v: float) -> float:
@@ -230,19 +276,186 @@ def _read_point_value(
             row = min(max(row, 0), dataset.height - 1)
             col = min(max(col, 0), dataset.width - 1)
             wert = float(dataset.read(1)[row, col])
-            sentinel = (
-                float(dataset.nodata)
-                if dataset.nodata is not None
-                else THUNDER_FILL_VALUE
-            )
-            if wert >= sentinel:
-                return None
-            if param == "cin_ml" and wert <= CIN_ML_LOWER_SENTINEL:
-                return None
-            return wert
+            return _filtere_fuellwert(wert, _sentinel_of(dataset), param)
     except Exception:
         logger.warning("GRIB2-Parsing fehlgeschlagen", exc_info=True)
         return None
+
+
+def _sentinel_of(dataset) -> float:
+    """Fuellwert-Grenze: `dataset.nodata`, sonst der bekannte Sentinel (#1354)."""
+    return float(dataset.nodata) if dataset.nodata is not None else THUNDER_FILL_VALUE
+
+
+def _filtere_fuellwert(wert: float, sentinel: float, param: Optional[str]) -> Optional[float]:
+    """Gemeinsame Fuellwert-Regeln fuer Direkt- und Fenster-Lesen (#1354, #1531):
+    ein Fuellwert wird ZENTRAL zu `None`, nie als Messwert durchgereicht."""
+    if wert >= sentinel:
+        return None
+    if param == "cin_ml" and wert <= CIN_ML_LOWER_SENTINEL:
+        return None
+    return wert
+
+
+# --- Punkt-Fenster-Cache (#2465) ---------------------------------------------
+# Jede ICON-D2-Rasterdatei deckt das GANZE Modellgebiet ab; die Segmente eines
+# Trips unterscheiden sich nur im Pixel. Ohne Cache lud und entpackte jedes
+# Segment dieselben ~217 Dateien erneut (gemessen 2026-09-30: 1302 GETs / 866 MB
+# je Trip-Lauf bei 217 eindeutigen URLs) — der Alarmlauf riss sein 90-s-Budget
+# und pruefte stundenlang nur 2 von 4 Trips.
+#
+# Gecacht wird NICHT die Datei (komprimiert bis 665 kB, entpackt 7 MB: 217 Stueck
+# waeren 144 MB bzw. 1,6 GB), sondern je URL nur ein kleiner Pixel-Ausschnitt
+# um den angefragten Punkt (41x41 Pixel float64 = 13,4 kB, gemessen; Obergrenze
+# 512 URLs x 8 Ausschnitte = ca. 55 MB). Die URL haengt NICHT vom Standort ab
+# (Lauf/Parameter/Zeitschritt), 512 reichen also fuer ~2 Modelllaeufe; die
+# Ausschnitte je URL fangen raeumlich getrennte Trips ab (ein Ausschnitt deckt
+# ~0,8 Grad, ~90 km). Bei mehr als 8 weit entfernten Gruppen je URL arbeitet der
+# Cache gegen die LRU (zyklischer Zugriff) — dann laeuft es wie vor dem Fix.
+# float64 bleibt bewusst: nur so sind
+# die Werte bit-identisch zum Direktlesen. Das spart Download UND
+# Entpacken (gemessen ~59 ms je Datei). Alle Segmente eines Trips liegen im
+# selben Gebiet und bedienen sich aus demselben Ausschnitt; ein weit entfernter
+# Punkt legt einen zweiten Ausschnitt an. Werte sind bit-identisch zum
+# Direktlesen (`_read_point_value`) — dieselben Pixel, dieselben Fuellwert-Regeln.
+#
+# Nur ERFOLGE werden gecacht (Fehlschlaege/404 nie: ein noch nicht veroeffent-
+# lichter Lauf kann spaeter erscheinen). Die URL kodiert Lauf, Parameter und
+# Zeitschritt; eine veroeffentlichte Datei aendert sich nicht -> kein TTL noetig,
+# alte Laeufe altern ueber die LRU-Begrenzung aus.
+_RASTER_WINDOW_HALF = 20
+# #2439: 512 -> 2048 URLs (ein Trip braucht ~415 Dateien; parallele Alarm- und
+# Ortsvergleichslaeufe duerften den Vorwaerm-Bestand sonst mitten im Lauf
+# verdraengen). Ein Ausschnitt je URL ~13,5 kB: 2048 URLs ~ 28 MB. Damit auch
+# der Worst Case (8 Ausschnitte je URL) hart begrenzt bleibt, gilt zusaetzlich ein
+# Gesamtbudget an Ausschnitten ueber alle URLs: 2800 x 13,5 kB ~ 38 MB (< 40 MB).
+_RASTER_CACHE_MAX_URLS = 2048
+_RASTER_CACHE_MAX_WINDOWS_PER_URL = 8
+_RASTER_CACHE_MAX_WINDOWS_TOTAL = 2800
+
+
+@dataclass(frozen=True, eq=False)
+class _RasterWindow:
+    """Pixel-Ausschnitt einer Rasterdatei samt Georeferenz. `eq=False`: Identitaet
+    statt Feldvergleich — ein `==` ueber die numpy-Arrays wirft bei unter-
+    schiedlichen Formen einen ValueError."""
+
+    array: "np.ndarray"
+    row0: int
+    col0: int
+    transform: object
+    height: int
+    width: int
+    sentinel: float
+
+    def _cell(self, lat: float, lon: float) -> Optional[Tuple[int, int]]:
+        """Index im Ausschnitt oder None, wenn der Punkt ausserhalb liegt.
+        Gleiche Zuordnung und Randklemmung wie `_read_point_value`."""
+        row, col = rowcol(self.transform, lon, lat)
+        row = min(max(int(row), 0), self.height - 1)
+        col = min(max(int(col), 0), self.width - 1)
+        i, j = row - self.row0, col - self.col0
+        if 0 <= i < self.array.shape[0] and 0 <= j < self.array.shape[1]:
+            return i, j
+        return None
+
+    def contains(self, lat: float, lon: float) -> bool:
+        return self._cell(lat, lon) is not None
+
+    def value_at(self, lat: float, lon: float, param: Optional[str]) -> Optional[float]:
+        cell = self._cell(lat, lon)
+        if cell is None:
+            return None
+        return _filtere_fuellwert(float(self.array[cell]), self.sentinel, param)
+
+
+def _decode_window(
+    compressed: bytes, lat: float, lon: float,
+) -> Optional[_RasterWindow]:
+    """Entpackt die Datei EINMAL und behaelt nur den Ausschnitt um (lat, lon).
+    Parsing-Fehler -> None (nicht cachebar), wie `_read_point_value`."""
+    try:
+        raw = bz2.decompress(compressed)
+        with MemoryFile(raw) as memfile, memfile.open() as dataset:
+            row, col = dataset.index(lon, lat)
+            row = min(max(row, 0), dataset.height - 1)
+            col = min(max(col, 0), dataset.width - 1)
+            row0 = max(row - _RASTER_WINDOW_HALF, 0)
+            col0 = max(col - _RASTER_WINDOW_HALF, 0)
+            row1 = min(row + _RASTER_WINDOW_HALF + 1, dataset.height)
+            col1 = min(col + _RASTER_WINDOW_HALF + 1, dataset.width)
+            array = dataset.read(
+                1, window=Window(col0, row0, col1 - col0, row1 - row0)
+            )
+            return _RasterWindow(
+                array=array, row0=row0, col0=col0, transform=dataset.transform,
+                height=dataset.height, width=dataset.width,
+                sentinel=_sentinel_of(dataset),
+            )
+    except Exception:
+        logger.warning("GRIB2-Parsing fehlgeschlagen", exc_info=True)
+        return None
+
+
+class _PointWindowCache:
+    """Prozessweiter, begrenzter LRU-Cache: URL -> Pixel-Ausschnitte (#2465).
+    Thread-sicher (Briefing- und Alarm-Lauf teilen sich den Prozess)."""
+
+    def __init__(
+        self,
+        max_urls: int = _RASTER_CACHE_MAX_URLS,
+        max_windows_per_url: int = _RASTER_CACHE_MAX_WINDOWS_PER_URL,
+        max_windows_total: int = _RASTER_CACHE_MAX_WINDOWS_TOTAL,
+    ) -> None:
+        self._max_urls = max_urls
+        self._max_windows = max_windows_per_url
+        self._max_total = max_windows_total
+        self._lock = threading.Lock()
+        self._data: "OrderedDict[str, List[_RasterWindow]]" = OrderedDict()
+
+    def find(self, url: str, lat: float, lon: float) -> Optional[_RasterWindow]:
+        with self._lock:
+            fenster = self._data.get(url)
+            if fenster is None:
+                return None
+            self._data.move_to_end(url)
+            for index, kandidat in enumerate(fenster):
+                if kandidat.contains(lat, lon):
+                    # Treffer = juengst benutzt: ans Ende, damit die Verdraengung
+                    # innerhalb einer URL LRU ist und nicht FIFO.
+                    fenster.append(fenster.pop(index))
+                    return kandidat
+            return None
+
+    def put(self, url: str, window: _RasterWindow) -> None:
+        with self._lock:
+            liste = self._data.setdefault(url, [])
+            # Zwei Laeufe, die gleichzeitig danebengreifen (Briefing + Alarm um
+            # :00), legen sonst denselben Ausschnitt doppelt ab und verbrauchen
+            # zwei der wenigen Plaetze je URL.
+            if any(w.row0 == window.row0 and w.col0 == window.col0 for w in liste):
+                self._data.move_to_end(url)
+                return
+            liste.append(window)
+            if len(liste) > self._max_windows:
+                del liste[0]
+            self._data.move_to_end(url)
+            while len(self._data) > self._max_urls or (
+                len(self._data) > 1
+                and sum(len(w) for w in self._data.values()) > self._max_total
+            ):
+                self._data.popitem(last=False)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._data.clear()
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._data)
+
+
+_RASTER_CACHE = _PointWindowCache()
 
 
 def _precip_series_from_cumulative(
@@ -288,6 +501,9 @@ def _precip_series_from_cumulative(
     return result
 
 
+_BUDGET_ENDE = object()  # Marke: Budget war vor dem Download erschoepft (#2554)
+
+
 def _thunder_budget_erschoepft(deadline_at: float) -> bool:
     """Zeitgrenze der Gewitter-Anreicherung (Spec AC-4), fest gebildet und vor
     JEDEM Einzel-Call geprueft — auch vor dem Anker-Abruf."""
@@ -299,6 +515,39 @@ def _thunder_budget_erschoepft(deadline_at: float) -> bool:
         THUNDER_FETCH_DEADLINE_SECONDS,
     )
     return True
+
+
+_EINZELFLUG_SPERRE = threading.Lock()
+_EINZELFLUG: Dict[str, list] = {}  # URL -> [Lock, Nutzerzahl]
+_bilanz = threading.local()  # letzte Fenster-Bilanz des aufrufenden Threads
+
+
+@contextmanager
+def _einzelflug(url: str):
+    """#2439 (AC-8): je URL laedt hoechstens EIN Thread; wer wartet, findet danach
+    den Cache-Eintrag. Verhindert doppelte Downloads bei ueberlappenden Fenstern."""
+    with _EINZELFLUG_SPERRE:
+        eintrag = _EINZELFLUG.setdefault(url, [threading.Lock(), 0])
+        eintrag[1] += 1
+    # Wartezeit begrenzt (F006): haengt der Lader (z. B. ein Vorwaerm-Thread), laedt
+    # der Wartende nach hoechstens einer Anfragezeit selbst -- nie unbegrenzt.
+    erworben = eintrag[0].acquire(timeout=THUNDER_REQUEST_TIMEOUT)
+    try:
+        yield
+    finally:
+        if erworben:
+            eintrag[0].release()
+        with _EINZELFLUG_SPERRE:
+            eintrag[1] -= 1
+            if eintrag[1] == 0:
+                _EINZELFLUG.pop(url, None)
+
+
+def _thunder_zaehle(zustand: Dict[str, object], schluessel: str) -> None:
+    """#2554: Zaehler `versucht`/`fehlgeschlagen` werden aus mehreren Threads
+    erhoeht; `+= 1` ist nicht atomar, deshalb hinter dem Lock des Abrufs."""
+    with zustand["lock"]:  # type: ignore[attr-defined]
+        zustand[schluessel] = int(zustand[schluessel]) + 1
 
 
 class DwdDirectProvider:
@@ -313,20 +562,77 @@ class DwdDirectProvider:
     def name(self) -> str:
         return "de_direct"
 
+    def _fetch_deadline_seconds(self) -> float:
+        """Fristdauer je ``_request``-Aufruf, gelesen zur AUFRUFZEIT.
+
+        #2302 Scheibe B: der geteilte ``before``-Hook (``providers/http.py``)
+        loest ueber den NAMEN dieser Methode auf, nie ueber ihren Wert — so
+        wirkt ein Laufzeit-Patch des Modul-Globals unveraendert. Liefert IMMER
+        die WEITERE Huelle (``FETCH_DEADLINE_SECONDS``, 180s), NIE
+        ``THUNDER_FETCH_DEADLINE_SECONDS`` (150s) — sonst wuerde ein
+        vergessenes Durchreichen den Gewitterpfad heimlich verkuerzen statt
+        (im schlimmsten Fall) den Grundpfad heimlich zu verlaengern.
+        """
+        return FETCH_DEADLINE_SECONDS
+
     @retry(
-        stop=stop_after_attempt(RETRY_ATTEMPTS),
+        stop=stop_after_attempt(RETRY_ATTEMPTS) | stop_at_deadline,
         wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
         retry=retry_if_exception(_is_retryable_error),
+        before=make_deadline_before_hook("_fetch_deadline_seconds"),
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
-    def _request(self, url: str) -> bytes:
+    def _request(self, url: str, deadline_at: Optional[float] = None) -> bytes:
         """GET-Request mit Retry-Logik (500/502/503/504 + Connection-Errors,
-        5 Versuche, 2-60s Backoff, ADR-0018: 4xx bleibt sichtbar)."""
-        response = self._client.get(url)
+        5 Versuche, 2-60s Backoff, ADR-0018: 4xx bleibt sichtbar).
+
+        #2302 Scheibe B: zusaetzlich durch ``FETCH_DEADLINE_SECONDS`` bzw.
+        ``THUNDER_FETCH_DEADLINE_SECONDS`` begrenzt — sowohl der HTTP-Timeout
+        jedes einzelnen Versuchs als auch die gesamte Wiederholkette dieses
+        Aufrufs sind auf die Restzeit bis ``deadline_at`` gedeckelt.
+
+        Args:
+            deadline_at: Absolute monotone Frist. Aufrufer reichen ihre
+                bereits lokal gebildete Frist durch (``_fetch_series``, der
+                Gewitterpfad ueber ``_thunder_point``); fehlt sie, bildet der
+                geteilte ``before``-Hook sie selbst aus
+                ``_fetch_deadline_seconds()``.
+        """
+        request_timeout = capped_timeout_or_raise(
+            provider_name=self.name,
+            base_timeout=TIMEOUT,
+            deadline_at=deadline_at,
+            budget_label="FETCH_DEADLINE_SECONDS",
+            budget_seconds=FETCH_DEADLINE_SECONDS,
+        )
+        response = self._client.get(url, timeout=request_timeout)
         if response.status_code in RETRY_STATUS_CODES:
             response.raise_for_status()  # loest Retry via HTTPStatusError aus
         response.raise_for_status()  # nicht-retryable Fehler (4xx)
+        return response.content
+
+    @retry(
+        stop=stop_after_attempt(THUNDER_RETRY_ATTEMPTS) | stop_at_deadline,
+        wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
+        retry=retry_if_exception(_is_thunder_retryable_error),
+        before=make_deadline_before_hook("_fetch_deadline_seconds"),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True,
+    )
+    def _thunder_request(self, url: str, deadline_at: Optional[float] = None) -> bytes:
+        """#2554: GET fuer Gewitter-Raster -- eigener Timeout
+        (`THUNDER_REQUEST_TIMEOUT`), `THUNDER_RETRY_ATTEMPTS` Versuche, kein
+        Retry bei ReadTimeout. Frist wie `_request` auf `deadline_at` gedeckelt."""
+        request_timeout = capped_timeout_or_raise(
+            provider_name=self.name,
+            base_timeout=THUNDER_REQUEST_TIMEOUT,
+            deadline_at=deadline_at,
+            budget_label="FETCH_DEADLINE_SECONDS",
+            budget_seconds=FETCH_DEADLINE_SECONDS,
+        )
+        response = self._client.get(url, timeout=request_timeout)
+        response.raise_for_status()  # 5xx -> Retry (HTTPStatusError), 4xx sichtbar
         return response.content
 
     def _fetch_series(
@@ -345,13 +651,14 @@ class DwdDirectProvider:
                     "ueberschritten",
                 )
             url = _build_url(run, offset, param)
-            raw = self._request(url)
+            raw = self._request(url, deadline_at=deadline_at)
             values[offset] = _read_point_value(raw, lat, lon, param)
         return values
 
     def _thunder_point(
         self, param: str, lat: float, lon: float, ziel: datetime,
         kandidaten: List[datetime], zustand: Dict[str, object],
+        deadline_at: Optional[float] = None,
     ) -> Optional[float]:
         """EIN Punktwert eines Gewittersignals zum absoluten Zeitpunkt `ziel`.
 
@@ -366,9 +673,18 @@ class DwdDirectProvider:
             ttt = int((ziel - lauf).total_seconds() // 3600)
             if ttt < 0 or ttt > THUNDER_MAX_TIMESTEP:
                 return None
-            zustand["versucht"] = int(zustand["versucht"]) + 1
+            _thunder_zaehle(zustand, "versucht")
+            url = _build_url(lauf, ttt, param)
+            # #2465: Treffer im Punkt-Fenster-Cache — kein Download, kein
+            # Entpacken. Die Datei existiert (sonst laege kein Fenster vor),
+            # der Lauf gilt damit als bestaetigt.
+            gecacht = _RASTER_CACHE.find(url, lat, lon)
+            if gecacht is not None:
+                _thunder_zaehle(zustand, "cache_treffer")
+                zustand["bestaetigt"] = True
+                return gecacht.value_at(lat, lon, param)
             try:
-                raw = self._request(_build_url(lauf, ttt, param))
+                fenster = self._thunder_lade(url, lat, lon, deadline_at, zustand)
             except httpx.HTTPStatusError as e:
                 weiterer_kandidat = (
                     e.response.status_code == 404
@@ -376,7 +692,7 @@ class DwdDirectProvider:
                     and int(zustand["index"]) < len(kandidaten) - 1
                 )
                 if not weiterer_kandidat:
-                    zustand["fehlgeschlagen"] = int(zustand["fehlgeschlagen"]) + 1
+                    _thunder_zaehle(zustand, "fehlgeschlagen")
                     logger.warning(
                         "Gewittersignal '%s' +%dh nicht abrufbar: %s",
                         param, ttt, e,
@@ -390,19 +706,36 @@ class DwdDirectProvider:
                 )
                 continue
             except Exception as e:
-                zustand["fehlgeschlagen"] = int(zustand["fehlgeschlagen"]) + 1
+                _thunder_zaehle(zustand, "fehlgeschlagen")
                 logger.warning(
                     "Gewittersignal '%s' +%dh nicht abrufbar: %s", param, ttt, e
                 )
                 return None
             zustand["bestaetigt"] = True
-            wert = _read_point_value(raw, lat, lon, param)
+            if fenster is None:
+                return None  # Parsing-Fehler: nicht cachen
+            return fenster.value_at(lat, lon, param)
+
+    def _thunder_lade(
+        self, url: str, lat: float, lon: float,
+        deadline_at: Optional[float], zustand: Dict[str, object],
+    ) -> Optional[_RasterWindow]:
+        """Ein Fenster laden und cachen (hoechstens ein Download je URL, AC-8).
+        Wirft wie `_thunder_request`; `None` = Parsing-Fehler."""
+        with _einzelflug(url):
+            gecacht = _RASTER_CACHE.find(url, lat, lon)
+            if gecacht is not None:
+                _thunder_zaehle(zustand, "cache_treffer")
+                return gecacht
+            _thunder_zaehle(zustand, "downloads")
+            raw = self._thunder_request(url, deadline_at=deadline_at)
             # AC-2: "keine Aussage" ist nicht "keine Gefahr" — der Fuellwert
             # ausserhalb des Modellgebiets wird NIE durchgereicht und NIE 0.
-            # Seit #1354 filtert ihn `_read_point_value` zentral zu None.
-            if wert is None:
-                return None
-            return wert
+            # Seit #1354 filtert ihn `_filtere_fuellwert` zentral zu None.
+            fenster = _decode_window(raw, lat, lon)
+            if fenster is not None:
+                _RASTER_CACHE.put(url, fenster)
+            return fenster
 
     def fetch_thunder_signals_named(
         self,
@@ -434,7 +767,11 @@ class DwdDirectProvider:
         # UnboundLocalError den "wirft NIE"-Vertrag dieser Methode brechen.
         zustand: Dict[str, object] = {
             "index": 0, "bestaetigt": False, "versucht": 0, "fehlgeschlagen": 0,
+            "lock": threading.Lock(),  # #2554: schuetzt die Zaehler
+            "downloads": 0, "cache_treffer": 0,  # #2439: Journalzeile je Fenster
         }
+        t_fenster = time.monotonic()
+        abgebrochen = False  # Budget-Ende (#2554: auch fuer die Journalzeile)
         try:
             now = datetime.now(timezone.utc)
             # Nullpunkt der Offsets: das gewuenschte Zeitfenster, nie vor dem
@@ -448,6 +785,11 @@ class DwdDirectProvider:
             # Zeitgrenze fest, nicht rollend (Lehre #1448): EINMAL je Abruf
             # gebildet, dann vor JEDEM Einzel-Call geprueft.
             deadline_at = time.monotonic() + THUNDER_FETCH_DEADLINE_SECONDS
+            # #2439: ein Vorwaerm-Thread endet spaetestens mit der Vorwaerm-Frist
+            # (kein Nachlaeufer, der spaeter in den Cache schreibt).
+            frist = getattr(_bilanz, "frist", None)
+            if frist is not None:
+                deadline_at = min(deadline_at, frist)
             roh_je_param: Dict[str, Dict[int, Optional[float]]] = {
                 param: {} for param in THUNDER_PARAMS
             }
@@ -461,7 +803,6 @@ class DwdDirectProvider:
             # Bezugszeitpunkt praktisch immer Stunden nach dem Lauf liegt --
             # wird er echt abgerufen: EIN zusaetzlicher Call je kumuliertem
             # Signal, VOR dem eigentlichen Zeitschritt-Abruf unten.
-            abgebrochen = False
             for param in THUNDER_PARAMS:
                 if param not in THUNDER_CUMULATIVE_PARAMS or not offsets or not (base > run):
                     continue
@@ -470,6 +811,7 @@ class DwdDirectProvider:
                     break
                 anker_je_param[param] = self._thunder_point(
                     param, lat, lon, base, kandidaten, zustand,
+                    deadline_at=deadline_at,
                 )
             # #1531 AC-7: je ZEITSCHRITT ALLE Signale in THUNDER_PARAMS-
             # Reihenfolge abrufen (nicht je Signal alle Zeitschritte) --
@@ -478,18 +820,49 @@ class DwdDirectProvider:
             # kritischsten Signale VORN platziert (Spec Implementation
             # Details Punkt 2): die hinteren Signale sollen bei Budget-Ende
             # ausfallen, nicht die hinteren Zeitschritte EINES Signals.
+            # #2554: je Zeitpunkt laufen die Groessen parallel (Aufgaben in
+            # THUNDER_PARAMS-Reihenfolge, Einsortieren ueber die Groesse). Solange
+            # noch kein Lauf bestaetigt ist, wird nacheinander abgerufen, damit
+            # der Lauf-Rueckfall (404) nicht zwischen Threads racet.
+            def hole(param: str, offset: int) -> Optional[float]:
+                if _thunder_budget_erschoepft(deadline_at):
+                    return _BUDGET_ENDE
+                wert = self._thunder_point(
+                    param, lat, lon, base + timedelta(hours=offset),
+                    kandidaten, zustand, deadline_at=deadline_at,
+                )
+                # Ohne Wert erst an/nach der Frist beendet: der Download wurde
+                # durch das Budget abgeschnitten (kein 404/Fehler davor).
+                if wert is None and time.monotonic() >= deadline_at:
+                    return _BUDGET_ENDE
+                return wert
+
             if not abgebrochen:
-                for offset in offsets:
-                    if abgebrochen:
-                        break
-                    for param in THUNDER_PARAMS:
-                        if _thunder_budget_erschoepft(deadline_at):
-                            abgebrochen = True
+                with ThreadPoolExecutor(
+                    max_workers=THUNDER_PARALLEL_DOWNLOADS
+                ) as pool:
+                    for offset in offsets:
+                        offen = list(THUNDER_PARAMS)
+                        while offen and not zustand["bestaetigt"]:
+                            param = offen.pop(0)
+                            wert = hole(param, offset)
+                            if wert is _BUDGET_ENDE:
+                                abgebrochen = True
+                                break
+                            roh_je_param[param][offset] = wert
+                        if abgebrochen:
                             break
-                        roh_je_param[param][offset] = self._thunder_point(
-                            param, lat, lon, base + timedelta(hours=offset),
-                            kandidaten, zustand,
-                        )
+                        futures = [(p, pool.submit(hole, p, offset)) for p in offen]
+                        for param, future in futures:
+                            wert = future.result()
+                            if wert is _BUDGET_ENDE:
+                                # Hintere Groessen dieses Zeitpunkts verwerfen:
+                                # nie fehlt eine vordere bei vorhandener hinterer.
+                                abgebrochen = True
+                                break
+                            roh_je_param[param][offset] = wert
+                        if abgebrochen:
+                            break
             for param in THUNDER_PARAMS:
                 kumuliert = param in THUNDER_CUMULATIVE_PARAMS
                 ergebnis[param] = (
@@ -505,11 +878,75 @@ class DwdDirectProvider:
         # der neue Ausnahmetyp nicht vom generischen `except Exception:`
         # darueber verschluckt wird -- er soll zum Aufrufer (thunder_enrichment)
         # durchschlagen.
+        log_enrichment_call(
+            PATH_THUNDER_BUDGET,
+            OUTCOME_FALLBACK if abgebrochen else OUTCOME_OK,
+            "icon_d2_budget_erschoepft" if abgebrochen else None,
+        )
         versucht = int(zustand["versucht"])
         fehlgeschlagen = int(zustand["fehlgeschlagen"])
+        # #2439 (AC-2): Abschlusszeile je Fenster, auch beim Totalausfall.
+        _bilanz.letzte = (
+            int(zustand["downloads"]), int(zustand["cache_treffer"]),
+            bool(zustand["bestaetigt"]),
+        )
+        logger.info(
+            "dwd_fenster fenster_s=%.2f downloads=%d cache_treffer=%d",
+            time.monotonic() - t_fenster, _bilanz.letzte[0], _bilanz.letzte[1],
+        )
         if versucht > 0 and fehlgeschlagen == versucht:
             raise ThunderSourceUnavailableError(self.name, versucht)
         return ergebnis
+
+    def _prewarm_one(self, location: "Location", fenster: tuple, frist: float) -> bool:
+        """Ein Tagesfenster laden (Ergebnis verworfen); False = Fehlschlag."""
+        _bilanz.letzte = (0, 0, False)
+        _bilanz.frist = frist
+        try:
+            self.fetch_thunder_signals_named(location, fenster[0], fenster[1])
+        except Exception:
+            return False
+        finally:
+            _bilanz.frist = None
+        return bool(_bilanz.letzte[2])
+
+    def prewarm_windows(
+        self,
+        location: "Location",
+        windows,
+        *,
+        max_parallel: Optional[int] = None,
+    ) -> None:
+        """#2439 (AC-6/8/9): laedt die Fenster (start, end) -- GENAU die Argumente
+        des spaeteren Hauptabrufs -- mit hoechstens `max_parallel` gleichzeitigen
+        Fenstern in den Cache, verwirft das Ergebnis und blockiert bis zum Ende
+        (Join, Frist `THUNDER_PREWARM_DEADLINE_SECONDS`). Wirft NIE."""
+        fenster_liste = list(windows)
+        if not fenster_liste:
+            return
+        pool = None
+        try:
+            pool = ThreadPoolExecutor(
+                max_workers=max_parallel or THUNDER_PREWARM_PARALLEL_WINDOWS,
+                thread_name_prefix="dwd-prewarm",
+            )
+            frist = time.monotonic() + THUNDER_PREWARM_DEADLINE_SECONDS
+            futures = [
+                pool.submit(contextvars.copy_context().run, self._prewarm_one, location, f, frist)
+                for f in fenster_liste
+            ]
+            fertig, _offen = wait(futures, timeout=max(frist - time.monotonic(), 0.0))
+            gut = sum(1 for f in fertig if f.result())
+            if gut < len(fenster_liste):
+                logger.warning(
+                    "Vorwärmen fehlgeschlagen: %d von %d Fenstern ohne Daten",
+                    len(fenster_liste) - gut, len(fenster_liste),
+                )
+        except Exception:
+            logger.warning("Vorwärmen fehlgeschlagen", exc_info=True)
+        finally:
+            if pool is not None:
+                pool.shutdown(wait=False, cancel_futures=True)
 
     def fetch_thunder_signals(
         self,

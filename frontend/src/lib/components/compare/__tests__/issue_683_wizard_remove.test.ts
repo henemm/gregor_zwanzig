@@ -252,7 +252,7 @@ test('F2b AC-1: compareEditorLogic.ts (Alt-Editor-Lock-Engine) existiert nicht m
 	assert.strictEqual(
 		existsSync(EDITOR_LOGIC_FILE),
 		false,
-		`compareEditorLogic.ts muss gelöscht sein (Epic #1301 F2b, abgelöst durch compareNewLogic.ts), existiert aber noch: ${EDITOR_LOGIC_FILE}`
+		`compareEditorLogic.ts muss gelöscht sein (Epic #1301 F2b, abgelöst durch den geteilten Kern shared/anlegeLockEngine.ts), existiert aber noch: ${EDITOR_LOGIC_FILE}`
 	);
 });
 
@@ -265,7 +265,7 @@ test('F2b AC-1: compareAutosave.ts (Alt-Editor-Autosave) existiert nicht mehr', 
 });
 
 test('F2b AC-1: Keine Produktionsdatei importiert CompareEditor.svelte, compareEditorLogic oder compareAutosave', () => {
-	// Wortgrenzen/exakte Import-Pfade, damit CompareNewEditor / compareNewLogic
+	// Wortgrenzen/exakte Import-Pfade, damit CompareNewEditor / anlegeLockEngine
 	// (F2a-Nachfolger) NICHT fälschlich matchen.
 	const EDITOR_SVELTE_IMPORT_RE = /import[^;]*(?<![A-Za-z])CompareEditor\.svelte['"]/;
 	const EDITOR_LOGIC_IMPORT_RE = /import[^;]*compareEditorLogic(\.ts)?['"]/;

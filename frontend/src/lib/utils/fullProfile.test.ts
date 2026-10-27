@@ -236,6 +236,141 @@ test('buildProfilePoints > alle Punkte haben definierte numerische x und y', () 
 });
 
 // =============================================================================
+// TDD RED: Issue #2110 — Track-Distanz statt Haversine, wenn eine Etappe
+// vollstaendig vermessen ist (distance_from_start_km je Wegpunkt).
+// Spec: docs/specs/modules/fix_2110_gui_gpx_km.md (AC-4)
+// `distance_from_start_km` existiert im `Waypoint`-Type noch NICHT (kommt in
+// Phase 6) — hier als lockeres Objekt-Literal gesetzt, `wp()` liefert den Rest.
+// =============================================================================
+
+test('AC-4: vollstaendig vermessene Etappe nutzt Track-Distanz fuer x-Werte + Boundaries, unvermessene Nachbaretappe bleibt Haversine, Cursor an der Grenze konsistent', () => {
+	const s1w1 = { ...wp('w1', 47.0, 11.0, 800), distance_from_start_km: 0 };
+	const s1w2 = { ...wp('w2', 47.001, 11.0, 900), distance_from_start_km: 3.0 };
+	const s1w3 = { ...wp('w3', 47.002, 11.0, 850), distance_from_start_km: 8.0 };
+	// Haversine (47.0,11.0)→(47.001,11.0)→(47.002,11.0) ≈ 0.22 km gesamt —
+	// deutlich kleiner als die gesetzte Track-Distanz 8.0 km.
+
+	// Etappe 2: unvermessen (kein distance_from_start_km) → bleibt Haversine.
+	const s2w1 = wp('w4', 47.1, 11.1, 700);
+	const s2w2 = wp('w5', 47.11, 11.11, 650);
+
+	const trip = tripWith({
+		stages: [
+			stage('s1', '2026-05-11', [s1w1, s1w2, s1w3]),
+			stage('s2', '2026-05-12', [s2w1, s2w2])
+		]
+	});
+
+	const points = buildProfilePoints(trip);
+	assert.equal(points.length, 5);
+
+	// Innerhalb s1: Track-Differenzen statt Haversine.
+	assert.ok(Math.abs(points[0].x - 0) < 1e-6, `w1 x sollte 0 sein, war ${points[0].x}`);
+	assert.ok(
+		Math.abs(points[1].x - 3.0) < 1e-6,
+		`w2 x sollte Track-Distanz 3.0 km sein (Haversine wäre ~0.11 km), war ${points[1].x}`
+	);
+	assert.ok(
+		Math.abs(points[2].x - 8.0) < 1e-6,
+		`w3 x sollte Track-Distanz 8.0 km sein (Haversine wäre ~0.22 km), war ${points[2].x}`
+	);
+
+	// Etappengrenze s1→s2 (w3→w4): bleibt Haversine-basiert, Cursor läuft
+	// aber konsistent weiter (kein Sprung, kein Reset auf 0).
+	assert.ok(points[3].x > points[2].x, 'x-Cursor muss an der Etappengrenze monoton weiterlaufen');
+
+	// Innerhalb s2 (unvermessen): Differenz bleibt Haversine-basiert.
+	const s2SegmentHaversine = points[4].x - points[3].x;
+	assert.ok(s2SegmentHaversine > 0 && s2SegmentHaversine < 5, 'Segment innerhalb s2 muss Haversine-Größenordnung haben (~1-2 km), nicht Track-Distanz');
+
+	const boundaries = computeStageBoundaries(trip);
+	const s1Boundary = boundaries.find((b) => b.stageId === 's1');
+	assert.notEqual(s1Boundary, undefined);
+	assert.ok(
+		Math.abs(s1Boundary!.xStart - 0) < 1e-6 && Math.abs(s1Boundary!.xEnd - 8.0) < 1e-6,
+		`s1-Boundary sollte xStart=0, xEnd=8.0 sein (Track-Distanz), war xStart=${s1Boundary!.xStart}, xEnd=${s1Boundary!.xEnd}`
+	);
+});
+
+test('AC-4: Grenzsegment zwischen ZWEI vollstaendig vermessenen Etappen bleibt Haversine (distance_from_start_km ist etappen-relativ)', () => {
+	// Etappe 1: vollstaendig vermessen, Track-Distanz 0 → 3.0 → 8.0 km.
+	// Koordinaten eng beieinander (~0.11 km je Segment) → Track ≠ Haversine.
+	const s1w1 = { ...wp('w1', 47.0, 11.0, 800), distance_from_start_km: 0 };
+	const s1w2 = { ...wp('w2', 47.001, 11.0, 900), distance_from_start_km: 3.0 };
+	const s1w3 = { ...wp('w3', 47.002, 11.0, 850), distance_from_start_km: 8.0 };
+
+	// Etappe 2: EBENFALLS vollstaendig vermessen — und ihr Zaehler startet wieder
+	// bei 0. Eine Differenz ueber die Etappengrenze hinweg (0 − 8.0 = −8.0) waere
+	// unsinnig; ohne den `i > 0`-Guard griffe der Code zudem auf wps[-1] zu (NaN).
+	const s2w1 = { ...wp('w4', 47.5, 11.0, 700), distance_from_start_km: 0 };
+	const s2w2 = { ...wp('w5', 47.501, 11.0, 650), distance_from_start_km: 4.0 };
+	const s2w3 = { ...wp('w6', 47.502, 11.0, 600), distance_from_start_km: 9.0 };
+
+	const trip = tripWith({
+		stages: [
+			stage('s1', '2026-05-11', [s1w1, s1w2, s1w3]),
+			stage('s2', '2026-05-12', [s2w1, s2w2, s2w3])
+		]
+	});
+
+	const points = buildProfilePoints(trip);
+	assert.equal(points.length, 6);
+
+	// Innerhalb s1: Track-Distanz (Abgrenzung — nur das Grenzsegment ist betroffen).
+	assert.ok(Math.abs(points[0].x - 0) < 1e-6, `w1 x sollte 0 sein, war ${points[0].x}`);
+	assert.ok(Math.abs(points[1].x - 3.0) < 1e-6, `w2 x sollte 3.0 sein, war ${points[1].x}`);
+	assert.ok(Math.abs(points[2].x - 8.0) < 1e-6, `w3 x sollte 8.0 sein, war ${points[2].x}`);
+
+	// Grenzsegment w3 (47.002, 11.0) → w4 (47.5, 11.0): gleiche Laenge, dLat = 0.498°
+	// → Haversine = 6371.0088 km × 0.498 × π/180 ≈ 55.375 km.
+	const boundarySegment = points[3].x - points[2].x;
+	assert.equal(
+		Number.isFinite(boundarySegment),
+		true,
+		`Grenzsegment muss endlich sein (NaN = Zugriff auf wps[-1]), war ${boundarySegment}`
+	);
+	assert.ok(
+		Math.abs(boundarySegment - 55.375) < 0.02,
+		`Grenzsegment muss Haversine ≈ 55.375 km sein, war ${boundarySegment}`
+	);
+	// Explizit NICHT aus distance_from_start_km abgeleitet: weder −8.0 (0 − 8.0)
+	// noch 0 (gleicher Zaehlerstand) noch 8.0 (Betrag davon).
+	assert.ok(
+		Math.abs(boundarySegment - -8.0) > 1e-6 &&
+			Math.abs(boundarySegment - 0) > 1e-6 &&
+			Math.abs(boundarySegment - 8.0) > 1e-6,
+		`Grenzsegment darf keine distance_from_start_km-Differenz sein, war ${boundarySegment}`
+	);
+	// Cursor laeuft monoton weiter (eine dfs-Differenz waere negativ gewesen).
+	assert.ok(points[3].x > points[2].x, 'x-Cursor muss an der Etappengrenze monoton steigen');
+
+	// Innerhalb s2: wieder Track-Distanz, relativ zum Etappenstart (0 → 4.0 → 9.0).
+	assert.ok(
+		Math.abs(points[4].x - points[3].x - 4.0) < 1e-6,
+		`Segment w4→w5 sollte Track-Distanz 4.0 km sein (Haversine wäre ~0.11 km), war ${points[4].x - points[3].x}`
+	);
+	assert.ok(
+		Math.abs(points[5].x - points[3].x - 9.0) < 1e-6,
+		`Segment w4→w6 sollte Track-Distanz 9.0 km sein (Haversine wäre ~0.22 km), war ${points[5].x - points[3].x}`
+	);
+
+	// Gleiche Regel in computeStageBoundaries. Dort wird `xStart` VOR der inneren
+	// Schleife gesetzt, das Grenzsegment faellt also in die Spanne von s2:
+	//   s2.xStart = 8.0 (s1-Track-Ende), s2.xEnd = 8.0 + 55.375 + 9.0.
+	const boundaries = computeStageBoundaries(trip);
+	const s2Boundary = boundaries.find((b) => b.stageId === 's2');
+	assert.notEqual(s2Boundary, undefined);
+	assert.ok(
+		Math.abs(s2Boundary!.xStart - 8.0) < 1e-6,
+		`s2.xStart sollte das s1-Track-Ende 8.0 km sein, war ${s2Boundary!.xStart}`
+	);
+	assert.ok(
+		Math.abs(s2Boundary!.xEnd - s2Boundary!.xStart - (55.375 + 9.0)) < 0.02,
+		`s2-Spanne sollte 55.375 km (Grenz-Haversine) + 9.0 km (s2-Track) sein, war ${s2Boundary!.xEnd - s2Boundary!.xStart}`
+	);
+});
+
+// =============================================================================
 // computeStageBoundaries
 // =============================================================================
 

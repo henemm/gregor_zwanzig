@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/henemm/gregor-api/internal/fsmode"
 )
 
 // writeFileLogged schreibt data nach path und loggt einen Schreibfehler
@@ -26,10 +28,10 @@ func writeFileLogged(path string, data []byte) error {
 
 // writeFileAtomic schreibt in eine tmp-Datei IM ZIELVERZEICHNIS (gleiche
 // Dateisystem-Ebene -- sonst waere rename kein atomarer Wechsel, sondern
-// Kopieren) und tauscht sie per os.Rename ein. Rechte bleiben 0644
-// (os.CreateTemp legt 0600 an, darum explizit vor dem Umbenennen setzen --
-// umask-unabhaengig). Der tmp-Name beginnt mit "." und endet NICHT auf
-// ".json", damit ein Rest niemals von den *.json-Scans (LoadTrips,
+// Kopieren) und tauscht sie per os.Rename ein. Rechte sind fsmode.FileMode
+// (0660, Issue #2624: Gruppen-Schreibrecht unter Default-ACL; os.CreateTemp
+// legt 0600 an, darum explizit vor dem Umbenennen setzen -- umask-unabhaengig).
+// Der tmp-Name beginnt mit "." und endet NICHT auf ".json", damit ein Rest niemals von den *.json-Scans (LoadTrips,
 // LoadComparePresets, Python-Loader) eingesammelt wird. Auf jedem Fehlerpfad
 // wird die tmp-Datei entfernt; die bisherige Zieldatei bleibt unversehrt.
 func writeFileAtomic(path string, data []byte) error {
@@ -47,7 +49,7 @@ func writeFileAtomic(path string, data []byte) error {
 		os.Remove(tmp)
 		return err
 	}
-	if err := os.Chmod(tmp, 0644); err != nil {
+	if err := os.Chmod(tmp, fsmode.FileMode); err != nil {
 		os.Remove(tmp)
 		return err
 	}

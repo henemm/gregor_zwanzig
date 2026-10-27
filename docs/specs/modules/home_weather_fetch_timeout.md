@@ -7,13 +7,13 @@
 
 ## Problem & Produkt-Entscheidung
 
-`frontend/src/routes/+page.server.ts` holt im SSR-Loader Live-Wetter für die Hero-Tour (`await fetch(.../stages/weather)`) — ohne Timeout → `/` hängt bis ~57 s, wenn der Wetter-Endpoint langsam ist.
+`frontend/src/routes/+page.server.ts` holt im SSR-Loader Live-Wetter für die Hero-Trip (`await fetch(.../stages/weather)`) — ohne Timeout → `/` hängt bis ~57 s, wenn der Wetter-Endpoint langsam ist.
 
 **PO-Direktive (2026-05-26):** Live-Wetter auf der **Website** anzuzeigen ist **nicht der Zweck** der App — Wetter wird über Briefings (E-Mail/SMS) ausgeliefert. Website-Seiten zeigen standardmäßig **keine** teuer live geladenen Wetterdaten; aktuelle Daten nur **auf Anforderung**.
 
 ## Lösung
 
-Den **Live-Wetter-Abruf aus dem Home-Loader entfernen** (nicht nur ein Timeout). Die Startseite rendert dann sofort aus den vorhandenen Tour-/Etappen-Daten.
+Den **Live-Wetter-Abruf aus dem Home-Loader entfernen** (nicht nur ein Timeout). Die Startseite rendert dann sofort aus den vorhandenen Trip-/Etappen-Daten.
 
 - `+page.server.ts`: Wetter-Fetch entfernen; Loader liefert wieder nur `trips` + `subscriptions` (Stand vor #386, fail-soft `.catch` bleibt).
 - `+page.svelte`: Der Hero zeigt Trip/Etappe/Route (Name, Region, Etappe, km/↑/↓, Höhenprofil, Etappen-Streifen) **ohne** Live-Wetter/Risk. Die Wetter-/Risk-Anzeige rendert bereits konditional (seit #386) → bei fehlenden Daten einfach nicht sichtbar. **Kein Fake-/Demo-Wetter** im Hero (irreführend). Markup bleibt dormant für eine spätere „aktuelles Wetter auf Anforderung"-Funktion.
@@ -26,7 +26,7 @@ Den **Live-Wetter-Abruf aus dem Home-Loader entfernen** (nicht nur ein Timeout).
 
 **AC-2:** Given ein (auch langsamer/hängender) Wetter-Endpoint, When `/` authentifiziert geladen wird, Then ist die Ladezeit schnell und unabhängig vom Wetterdienst (Ziel < 3 s; RED-Beleg = vorherige 57,3 s).
 
-**AC-3:** Given die Hero-Tour, When `/` rendert, Then erscheinen Trip-/Etappen-/Routen-Infos (inkl. Höhenprofil + Etappen-Streifen) korrekt **ohne** Live-Wetter/Risk-Pill; kein Crash, kein irreführendes Fake-Wetter.
+**AC-3:** Given die Hero-Trip, When `/` rendert, Then erscheinen Trip-/Etappen-/Routen-Infos (inkl. Höhenprofil + Etappen-Streifen) korrekt **ohne** Live-Wetter/Risk-Pill; kein Crash, kein irreführendes Fake-Wetter.
 
 **AC-4:** Given `trips`/`subscriptions`, When der Loader läuft, Then unverändert geliefert (bestehendes fail-soft); Leerzustand/„Weitere Trips"/Archiv wie gehabt.
 

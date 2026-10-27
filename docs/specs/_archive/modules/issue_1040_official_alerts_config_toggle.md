@@ -4,6 +4,7 @@ type: module
 created: 2026-07-06
 updated: 2026-07-07
 status: superseded
+superseded_by: "docs/specs/_archive/modules/issue_1040_alerts_toggle.md"
 version: "1.0"
 tags: [compare, alerts, official-alerts, config]
 ---
@@ -15,7 +16,7 @@ tags: [compare, alerts, official-alerts, config]
 > `Step4Layout.svelte` als Ort der Checkbox — implementiert wurde stattdessen
 > `official_alerts_enabled` (Engine-Parameter) und die Checkbox in `Step5Versand.svelte`
 > (Vorbild `ChannelToggle`, nicht `Step4Layout.svelte`). Die verbindliche, implementierte Spec ist
-> **`docs/specs/modules/issue_1040_alerts_toggle.md`**. Diese Datei bleibt nur als
+> **`docs/specs/_archive/modules/issue_1040_alerts_toggle.md`**. Diese Datei bleibt nur als
 > Analyse-Historie erhalten, nicht als aktuelle Referenz.
 
 ## Approval

@@ -161,12 +161,11 @@ test.describe('Trip Edit View (Issue #91 / #494)', () => {
 
 		// Auf Mobile zeigt /trips Card-Stack statt Tabelle.
 		await page.goto('/trips');
-		const card = page.locator(`[data-testid="trip-card"]:has-text("${SEED_TRIP_NAME}")`).first();
+		// Issue #2278: geteilte SubscriptionCard + SubscriptionActionSheet
+		const card = page.locator(`[data-testid^="subscription-card-"][data-kind="trip"]:has-text("${SEED_TRIP_NAME}")`).first();
 		await expect(card).toBeVisible();
-		await card.locator('[data-testid="trip-card-menu-btn"]').click();
-		const sheet = page.getByTestId('trip-action-sheet');
-		await expect(sheet).toBeVisible();
-		await sheet.getByRole('button', { name: /Bearbeiten/i }).click();
+		await card.locator('[data-testid^="subscription-card-menu-"]').click();
+		await page.getByTestId('subscription-action-edit').click();
 		await page.waitForURL(/\/trips\/[^/]+\/edit/);
 
 		await expect(page.getByTestId('edit-tabs')).toBeVisible();

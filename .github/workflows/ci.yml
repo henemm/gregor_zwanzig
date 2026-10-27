@@ -126,8 +126,16 @@ jobs:
     env:
       # Abgesenkt 2026-08-04 (#1196): 70/171 -> 36/141 nach Typ-Drift-Bereinigung
       # der Compare-Editor-Tests + Entfernung toter CSS-Regeln in CompareTabs.
-      BASELINE_ERRORS: 36
-      BASELINE_WARNINGS: 141
+      # Abgesenkt 2026-09-19 (#2276 S4): 141 -> 132 Warnings (Wegfall der zwei
+      # historischen Wrapper-Divs im Wetter-Metriken-Reiter, Errors unveraendert
+      # bei 36 — die zwei neuen Kern-Test-Fehler kamen von einem fehlenden
+      # `as unknown as`-Bruecken-Cast, gefixt statt die Baseline anzuheben).
+      # Abgesenkt 2026-09-24 (#2276 S6g, AC-10): 36 -> 34 Errors — `localSchedule`
+      # in CompareTabs.svelte wird vor seine erste Nutzung gezogen (behebt beide
+      # "used before its declaration"/"used before being assigned"-Fehler auf
+      # derselben Zeile in einem Aufwasch).
+      BASELINE_ERRORS: 34
+      BASELINE_WARNINGS: 132
     defaults:
       run:
         working-directory: frontend
@@ -206,13 +214,13 @@ jobs:
       # diese Zahl allein, sondern der Existenzpruefungs-Schritt weiter
       # unten (vor dem Playwright-Lauf).
       #
-      # 🔴 ZWEI Playwright-Aufrufe, deshalb ZWEI Schwellen (#1771 S3).
+      # 🔴 MEHRERE Playwright-Aufrufe, deshalb mehrere Schwellen (#1771 S3).
       # bug-703-login-ratelimit.spec.ts feuert absichtlich 32 Logins ab
       # (frontend/e2e/bug-703-login-ratelimit.spec.ts:27, BURST + 2) und
       # verbraucht damit das IP-Limit aus internal/router/router.go:45
       # (NewIPRateLimiter(30, time.Hour)) fuer den ganzen Job. Playwright
       # sortiert Dateien ALPHABETISCH (unabhaengig von der CLI-Reihenfolge);
-      # bug-703 liegt auf Position 3 von 46 (45 Listen-Dateien + global.setup;
+      # bug-703 liegt auf Position 3 von 49 (48 Listen-Dateien + global.setup;
       # vor Block B waren es 3 von 39). Jede spaeter laufende Datei mit
       # EIGENEM Login laeuft danach in "Login B fehlgeschlagen: 429" -- also
       # ausgerechnet die zwei Mandantentrennungs-Tests, die diese Scheibe
@@ -229,9 +237,55 @@ jobs:
       # alle den storageState (login() in helpers.ts:97-106 kehrt sofort
       # zurueck, wenn die Sitzung schon steht), holen sich also keinen
       # eigenen Login -- nachgemessen in denselben 3 Zyklen, 0 unexpected.
-      E2E_MIN_SPECS: 46     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test)
-      E2E_MIN_EXECUTED_HAUPT: 224      # Hauptlauf: 44 Dateien + global.setup -- exakt belegt, kein Puffer
-      E2E_MIN_EXECUTED_RATELIMIT: 3    # Zweitlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
+      # Weil bug-703 das Kontingent fuer die restliche Stunde leerfaehrt und
+      # es innerhalb eines Jobs nicht wieder aufgefuellt wird, laeuft dieser
+      # Aufruf ZULETZT -- siehe Reihenfolge-Absatz beim PWA-Aufruf.
+      #
+      # 🔴 ZWEITER Aufruf ab #2128: die PWA-Strecke (`--project=pwa`).
+      # Sie laeuft NICHT ueber die Positivliste, sondern ueber die feste
+      # Projektzuordnung in frontend/playwright.config.ts. Zwei unabhaengige
+      # Gruende, beide zwingend:
+      #   1) Ratschen-Filter A (docs/reference/gates_und_ratschen.md,
+      #      "e2e-Ratsche") schliesst jede Datei mit `waitForTimeout` aus.
+      #      pwa-update-und-abmelden.spec.ts hat 11 solcher Stellen,
+      #      pwa-grundausstattung.spec.ts 2, pwa-offline-sperre-und-mandant.spec.ts
+      #      2, pwa-offline-ansicht-mit-stand.spec.ts 1, pwa-update-erkennung.spec.ts
+      #      (Issue #2316) 7 -- sie sind dort unvermeidbar (Nachlauf-Beobachtung:
+      #      "die Seite hat NICHT nochmal neu geladen", "der wartende Worker
+      #      hat NICHT uebernommen" -- ein Ausbleiben laesst sich nicht
+      #      erwarten, nur abwarten). Aufnahme in die Positivliste waere ein
+      #      Ratschen-Verstoss.
+      #   2) Alle fuenf Dateien brauchen `serviceWorkers: 'allow'`. Das ist eine
+      #      PROJEKT-Einstellung; die Bestandsstrecke laeuft bewusst mit
+      #      'block' (AC-16), damit der seit #2128 auf jeder Seite
+      #      registrierte Worker ihr Verhalten nicht veraendert.
+      # Der Schutz gegen "Datei verschwindet klaglos" haengt hier nicht an der
+      # Existenzpruefung der Liste, sondern an E2E_MIN_EXECUTED_PWA: faellt
+      # eine der fuenf Dateien weg, sinkt `expected` unter 61 und das Gate
+      # wird rot.
+      #
+      # 🔴 REIHENFOLGE IST KRITISCH: PWA VOR bug-703 (gemessen 2026-09-06).
+      # Frueher lief die PWA-Strecke zuletzt, mit der Begruendung, sie hole
+      # sich gar keinen eigenen Login (global.setup ueberspringt ihn bei
+      # gueltiger playwright/.auth/admin.json). Das war falsch und hat die
+      # Ampel rot gemacht: die PWA-Strecke widerruft in "AC-11: Auf allen
+      # Geraeten abmelden" ABSICHTLICH alle Sitzungen -- also auch die in
+      # admin.json -- und stellt sie im datei-eigenen `test.afterAll`
+      # (pwa-update-und-abmelden.spec.ts) mit GENAU EINEM echten Login wieder
+      # her, damit spaetere Aufrufe nicht in den Auth-Guard laufen. Lief
+      # bug-703 davor, war das IP-Kontingent (30/Stunde,
+      # internal/router/router.go:45) leer und dieser eine Login lief in 429;
+      # Playwright haengt den Hook-Fehler an das zuletzt gelaufene Ergebnis
+      # desselben Workers -- gemeldet wurde also ein roter Testfall, der
+      # selbst gar nichts damit zu tun hatte. Innerhalb einer Stunde fuellt
+      # sich das Kontingent nicht wieder auf, ein Retry hilft nicht.
+      # bug-703 selbst haengt an KEINEM Vorlauf (sein Kopfkommentar fordert
+      # nur AC-3 vor AC-2 INNERHALB der Datei, per test.describe.serial) --
+      # er muss nur ZULETZT laufen.
+      E2E_MIN_SPECS: 68     # Ratsche: Zahl DATEIEN auf der Positivliste -- EXAKT, nicht mindestens (Kern-Test). 57 = 48 + mobile-bottom-nav-floating (Mobile-Shell S1) + mobile-konto-sheet (S2) + compare-alarme-speichert-selbst (#2276 S2) + compare-wertebereiche-speichert-selbst (#2276 S3) + compare-wetter-metriken-speichert-selbst (#2276 S4) + compare-versand-speichert-selbst (#2276 S5) + compare-stundenverlauf-wertprops (#2276 S6b) + compare-alarme-wertprops (#2276 S6c) + systemhinweise-unter-konto-sheet (#2370) + compare-wertebereiche-wertprops (#2276 S6d). Zusammenfuehrung der Ratschen aus #2373 und #2276-Kette beim Merge-Konflikt: 51 (Merge-Basis vor beiden Straengen) + 1 (#2370) + 5 (#2276 S3-S6c) = 57, per direkter Zeilenzaehlung der Positivliste gegengeprueft. 58 = 57 + 1 (#2276 S6d, Rebase auf #2373 am 2026-09-22). 59 = 58 + compare-konfliktschutz-zwei-kontexte (#2375). 60 = 59 + kurzform-gefuehlte-temperatur-kind-mitnahme (Bug #2454) -- Rebase auf origin/main (3cb47e5e) am 2026-09-30, Zusammenfuehrung der Ratschen aus #2375 und Bug #2454 beim Merge-Konflikt: per direkter Zeilenzaehlung von `.github/ci_e2e_specs.txt` (`grep -c '^e2e/'`) gegengeprueft. 58 = 60 - 2 (PR #2495, Mobile-Usability F5: issue-951-sheet-bottomnav + mobile-editor-controls-viewport ersatzlos gestrichen, Speclist gepflegt). 59 = 58 + konto-loeschdialog-mobil-ueberlauf (#2160 Fix-Loop), Rebase auf origin/main nach PR #2495 am 2026-10-04, per `grep -c '^e2e/'` gegengeprueft. 60 = 59 + trip-hub-kopf-region-aktivitaet (#2284 S2), Merge origin/main in #2284 S2 am 2026-10-04 (HEAD-Zweig hatte 61 inkl. der zwei von PR #2495 gestrichenen Dateien -- ueberholt), per `grep -c '^e2e/'` gegengeprueft. 61 = 60 + send-in-flight-guard (#2124 Fix-Loop F001), per `grep -c '^e2e/'` gegengeprueft. 62 = 61 + begriff-erklaerung (#2521 S1, in RED aufgenommen; Filter B 3x im CI-Hauptlauf des PR gemessen), per `grep -c '^e2e/'` gegengeprueft. 63 = 62 + langlaeufer-zeitbudget-wirkort (#2361 Fix-Loop 2), per `grep -c '^e2e/'` gegengeprueft. 64 = 63 - compare-cross-user-write-block + hub-cross-user-write-block (Umbenennung/Erweiterung auf Trip + Vergleich) + hub-versand-autosave-chip (#2347 S1, Epic #2345 P6), per `grep -c '^e2e/'` gegengeprueft. 68 = 64 - 1 (Trip-Namens-Speicherfehler-Spec, Faelle nach hub-kopf-bearbeiten) + hub-kopf-aufbau + hub-kopf-bearbeiten + hub-list-menu + hub-save-chip + hub-tab-bar (#2347 S2), per `grep -c '^e2e/'` gegengeprueft.
+      E2E_MIN_EXECUTED_HAUPT: 451      # Hauptlauf: 67 Dateien + global.setup -- exakt belegt, kein Puffer. 287 = 255 (Merge-Basis, Stand #2276 S2: 252 + 3) + 6 (systemhinweise-unter-konto-sheet, #2370: 4 Faelle + AC-2 x2 Viewports) + 26 (#2276 S3-S6c: 281 - 255, aus den beiden Zweig-Endstaenden 261/#2370 bzw. 281/#2276-S6c hergeleitet). Zusammenfuehrung der Ratschen aus #2373 und #2276-Kette beim Merge-Konflikt 2026-09-22 -- erste Bestaetigung durch den CI-Hauptlauf auf diesem PR: weicht die Zahl ab, meldet `e2e` das rot, bevor etwas nach `main` geht. 291 = 287 + 4 (compare-wertebereiche-wertprops, #2276 S6d: per `npx playwright test --list` 5 gelistete Faelle minus global.setup), Rebase auf #2373 am 2026-09-22 -- erste Bestaetigung durch den CI-Hauptlauf auf dem PR. Zusammenfuehrung der Ratschen aus #2375 und Bug #2454 beim Merge-Konflikt 2026-09-30 -- NICHT arithmetisch aus den beiden Zweig-Endstaenden addiert, sondern direkt am zusammengefuehrten Stand nachgemessen: `npx playwright test --list` ueber die vollstaendige Hauptlauf-Auswahl (Positivliste ohne bug-703, 59 Dateien) liefert 317 Faelle (inkl. global.setup) -- erste Bestaetigung durch den CI-Hauptlauf auf diesem PR. 304 = 317 - 13 (PR #2495: `npx playwright test --list` ueber die zwei gestrichenen Speclist-Dateien = 13 Faelle, nachgemessen am 2026-10-03; Setup-Zaehler bleibt im Hauptlauf enthalten). 306 = 304 + 2 (konto-loeschdialog-mobil-ueberlauf, #2160 Fix-Loop: 2 Faelle; vor dem Rebase 317 + 2 = 319 im Zielverbund 3x nachgemessen) -- erste Bestaetigung durch den CI-Hauptlauf auf dem PR. 334 = 306 + 28 (trip-hub-kopf-region-aktivitaet, #2284 S2): Merge origin/main in #2284 S2 am 2026-10-04 -- NICHT aus den Zweig-Endstaenden addiert (HEAD 337 enthielt die von PR #2495 gestrichenen Faelle), sondern direkt nachgemessen: `npx playwright test --list` ueber die 59 Hauptlauf-Dateien (Positivliste ohne bug-703) liefert `Total: 334 tests in 60 files` (inkl. global.setup). 338 = 334 + 4 (RED v1.3 #2284 S2: AC-13 jetzt 3 Faelle statt 1 + AC-18 vier Faelle minus entfallene Altfaelle, direkt per `npx playwright test --list` ueber die 59 Hauptlauf-Dateien nachgemessen: `Total: 338 tests in 60 files`), am Stand fc64d04a1 nachgemessen. 344 = 338 + 6 (send-in-flight-guard, #2124 Fix-Loop F001: 6 Faelle), direkt nachgemessen: `npx playwright test --list` ueber die 60 Hauptlauf-Dateien (Positivliste ohne bug-703) liefert `Total: 344 tests in 61 files` (inkl. global.setup). 363 = 344 + 19 (begriff-erklaerung, #2521 S1: 19 Faelle), direkt nachgemessen in /60-validate am 2026-10-12: `npx playwright test --list` ueber die 61 Hauptlauf-Dateien (Positivliste ohne bug-703) liefert `Total: 363 tests in 62 files` (inkl. global.setup) -- erste Bestaetigung durch den CI-Hauptlauf auf dem PR. 368 = 363 + 5 (langlaeufer-zeitbudget-wirkort, #2361 Fix-Loop 2: 5 Faelle) -- Bestaetigung durch den CI-Hauptlauf dieses PR. 367 = Umstellung #1743 (Reiter Versand/Vorschau entfallen: Briefing-Vorschau-Faelle in email-preview-header/langlaeufer-zeitbudget-wirkort entfernt, neue Alt-Kennungs-Faelle in hub-reiter-alt-kennungen-umleitung liegen ausserhalb der Positivliste), direkt nachgemessen am 2026-10-22: `npx playwright test --list` ueber die Positivliste ohne bug-703 liefert `Total: 367 tests in 63 files` (inkl. global.setup). 367 = unveraendert nach #1743 Fix-Loop F003 (Vorschau-Reste CompareChatBubble/CompareChannelSwitch/compareVorschau entfernt, keine Positivlisten-Spec verliert einen Fall), erneut nachgemessen am 2026-10-22: `Total: 367 tests in 63 files`. 369 = 367 + 2 (hub-versand-autosave-chip, AC-1 je kind) + 2 (hub-cross-user-write-block, AC-2 je kind) - 1 (compare-cross-user-write-block entfaellt) - 1 (AC-1 aus compare-versand-speichert-selbst nach hub-versand-autosave-chip verschoben; der Versand-Anhang aus trip-hub-kopf-region-aktivitaet AC-11 aendert die Fallzahl nicht) (#2347 S1), direkt nachgemessen am 2026-10-26: `npx playwright test --list` ueber die Positivliste ohne bug-703 liefert `Total: 369 tests in 64 files` (inkl. global.setup). 451 = 369 + 19 (hub-tab-bar) + 20 (hub-kopf-bearbeiten) + 16 (hub-kopf-aufbau) + 20 (hub-list-menu) + 12 (hub-save-chip) - 3 (Trip-Namens-Speicherfehler-Spec entfaellt, Faelle in hub-kopf-bearbeiten) - 2 (AC-11 Trip/Vergleich aus trip-hub-kopf-region-aktivitaet nach hub-save-chip SC-5/SC-6) (#2347 S2), direkt nachgemessen am 2026-10-26: `npx playwright test --list` ueber die Positivliste ohne bug-703 (67 Dateien) liefert `Total: 451 tests in 68 files` (inkl. global.setup).
+      E2E_MIN_EXECUTED_PWA: 61         # Zweitlauf: 60 Faelle in 5 PWA-Dateien (Issue #2316: pwa-update-erkennung.spec.ts neu; Issue #2317: +1 Fall AC-6 dort, statisch aus --list abgeleitet) + global.setup -- kein Puffer
+      E2E_MIN_EXECUTED_RATELIMIT: 3    # Drittlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
@@ -348,12 +402,55 @@ jobs:
         # leer aufgeloeste Ausdrucks-Zuweisung waere zwar fail-closed, aber
         # als "Schwelle fehlt" schwer zu deuten.
         run: E2E_MIN_EXECUTED="$E2E_MIN_EXECUTED_HAUPT" python3 .github/scripts/e2e_gate.py /tmp/e2e-report.json
-      - name: Playwright-Specs ausfuehren (Zweitlauf, nur bug-703)
+      - name: Playwright-Specs ausfuehren (Zweitlauf, PWA-Strecke --project=pwa)
+        # ZWEITER Aufruf, Begruendung ausfuehrlich im env-Block oben:
+        # die PWA-Nachweise brauchen `serviceWorkers: 'allow'` (Projekt-
+        # Einstellung, nicht per Datei-Argument setzbar) und duerfen wegen
+        # Ratschen-Filter A (waitForTimeout) nicht auf die Positivliste.
+        # Deshalb Auswahl ueber die feste Projektzuordnung statt ueber eine
+        # Dateiliste. Die Bestandsstrecke bleibt davon unberuehrt: Projekt
+        # `tests` ignoriert pwa-*.spec.ts, `--project=pwa` beruehrt die
+        # Positivliste nicht.
+        #
+        # 🔴 Reihenfolge VOR dem bug-703-Drittlauf ist KRITISCH, nicht
+        # Geschmack -- diese Strecke braucht genau EINEN freien Login.
+        # Die frueher hier stehende Begruendung ("global.setup.ts loggt sich
+        # bei gueltiger admin.json gar nicht ein, kann also nicht in 429
+        # laufen") war falsch: sie beschreibt nur global.setup und uebersieht
+        # den datei-eigenen `test.afterAll` in
+        # pwa-update-und-abmelden.spec.ts. Der Nachweis "AC-11: Auf allen
+        # Geraeten abmelden" widerruft ABSICHTLICH alle Sitzungen -- also
+        # auch die in playwright/.auth/admin.json --, und der Hook stellt sie
+        # mit einem echten Login wieder her. Lief bug-703 vorher, war das
+        # IP-Kontingent (30/Stunde, internal/router/router.go:45) leer, der
+        # Login lief in 429 und die Ampel wurde rot (gemessen 2026-09-06:
+        # expected=26 unexpected=1, der Hook-Fehler an AC-24 gehaengt).
+        # Innerhalb einer Stunde fuellt sich das Kontingent nicht wieder auf.
+        # NICHT hinter bug-703 zurueckschieben.
+        if: steps.specs.outputs.mode == 'positivliste'
+        working-directory: frontend
+        env:
+          CI: "1"
+        # Gleiches Muster wie oben: `|| true` faengt nur den Playwright-
+        # Exit-Code ab, damit der Report GESCHRIEBEN wird -- bewertet wird
+        # ausschliesslich im naechsten Schritt durch e2e_gate.py (unexpected
+        # == 0, skipped == 0, expected >= Schwelle). Ein Fehlschlag macht die
+        # Ampel dort wirklich rot; ein fehlender/unlesbarer Report ebenfalls
+        # (fail-closed im Gate-Skript).
+        run: npx playwright test --project=pwa --reporter=json > /tmp/e2e-report-pwa.json || true
+      - name: E2E-Gate auswerten (Zweitlauf, PWA)
+        if: steps.specs.outputs.mode == 'positivliste'
+        run: E2E_MIN_EXECUTED="$E2E_MIN_EXECUTED_PWA" python3 .github/scripts/e2e_gate.py /tmp/e2e-report-pwa.json
+      - name: Playwright-Specs ausfuehren (Drittlauf, nur bug-703)
         # Eigener Aufruf, damit das von bug-703 absichtlich verbrannte
         # Login-Kontingent (30/Stunde je IP) den Hauptlauf nicht mehr
-        # erreicht -- A/B-Beleg im env-Block oben. Der Zweitlauf laeuft
-        # NACH dem Hauptlauf; die Reihenfolge innerhalb eines Aufrufs
-        # liesse sich nicht steuern (Playwright sortiert alphabetisch).
+        # erreicht -- A/B-Beleg im env-Block oben. Er laeuft ZULETZT: nach
+        # ihm ist das Kontingent fuer die restliche Stunde leer, jeder
+        # spaetere echte Login liefe in 429 (siehe PWA-Zweitlauf oben). Die
+        # Reihenfolge innerhalb eines Aufrufs liesse sich nicht steuern
+        # (Playwright sortiert alphabetisch) -- daher der eigene Aufruf.
+        # bug-703 selbst braucht KEINEN Vorlauf: sein Kopfkommentar fordert
+        # nur AC-3 vor AC-2 innerhalb der Datei (test.describe.serial).
         if: steps.specs.outputs.mode == 'positivliste'
         working-directory: frontend
         env:
@@ -361,7 +458,7 @@ jobs:
         run: |
           [ -s /tmp/e2e-specs-ratelimit.txt ] || { echo "FEHLER: bug-703-login-ratelimit.spec.ts steht nicht mehr auf der Positivliste -- dann sind beide Schwellen neu zu messen und dieser Schritt zu entfernen."; exit 1; }
           npx playwright test --reporter=json $(cat /tmp/e2e-specs-ratelimit.txt) > /tmp/e2e-report-ratelimit.json || true
-      - name: E2E-Gate auswerten (Zweitlauf)
+      - name: E2E-Gate auswerten (Drittlauf, bug-703)
         if: steps.specs.outputs.mode == 'positivliste'
         run: E2E_MIN_EXECUTED="$E2E_MIN_EXECUTED_RATELIMIT" python3 .github/scripts/e2e_gate.py /tmp/e2e-report-ratelimit.json
       - name: Vermessungslauf -- Zusammenfassung (nicht bewertend, AC-8)
@@ -411,9 +508,15 @@ jobs:
           retention-days: 7
 
   deploy:
-    needs: [test, lint]
+    # C4-71 (#2047 S2): Deploy haengt an allen sechs Ampel-Checks.
+    needs: [test, lint, go-test, frontend-test, svelte-check, e2e]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # #2047 S2b: zwei Merges liefern nie gleichzeitig aus; ein laufender
+    # Deploy wird nie abgebrochen (der naechste reiht sich ein).
+    concurrency:
+      group: prod-deploy
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -453,36 +556,91 @@ jobs:
           [ "$HEALTH" = "200" ] || { echo "HEALTH $HEALTH != 200"; exit 1; }
           echo "Staging Smoke: OK"
 
-      - name: Staging-Verdict schreiben (CI smoke)
+      # #2047 Scheibe 2: Die CI schreibt KEINEN Staging-Nachweis mehr und resettet
+      # den Haupt-Checkout nicht. Sie liefert nur aus, wenn fuer origin/main bereits
+      # ein echter /e2e-verify-Nachweis vorliegt (oder der Stand docs-only ist).
+      # Einmal pruefen, nicht warten: /e2e-verify laeuft nach dem Merge laenger als
+      # dieser Job — der Normalfall ist /70-deploy Schritt 4. Das Skript wird aus
+      # origin/main bezogen (Henne-Ei beim ersten Rollout), `mktemp` statt festem
+      # /tmp-Pfad (weitere lokale Accounts auf dem Server).
+      - name: Prod-Gate pruefen
+        id: gate
         run: |
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
-          cat > /tmp/ci_e2e_findings.json << 'EOF'
-          [{"ac":"ROOT","status":"PASS","url":"/","evidence":"HTTP 200/302"},{"ac":"HEALTH","status":"PASS","url":"/api/health","evidence":"HTTP 200"}]
-          EOF
-          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no \
-            /tmp/ci_e2e_findings.json \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/ci_e2e_findings.json
-          # Issue #1031 Root Cause: staging_gate verlangt bei Telegram-berührenden
-          # Changes einen Live-Test (#686 AC-5) — dafür müssen die Staging-Bot-Creds
-          # (GZ_TELEGRAM_TEST_CHAT_ID etc.) aus der Server-seitigen Staging-.env
-          # gesourct sein, sonst verweigert das Gate das Verdict und der Deploy
-          # fällt auf eine veraltete Singleton-Attestation zurück.
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+          set +e
+          OUT=$(ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "cd /home/hem/gregor_zwanzig && git fetch origin 2>/dev/null && git reset --hard origin/main && set -a && . /home/hem/gregor_zwanzig_staging/.env && set +a && GZ_TELEGRAM_LIVE=1 python3 .claude/hooks/staging_gate.py --write-verdict 'VERIFIED: CI smoke test (ROOT+HEALTH) passed' --findings-json /tmp/ci_e2e_findings.json; rm -f /tmp/ci_e2e_findings.json"
-          rm -f /tmp/deploy_key /tmp/ci_e2e_findings.json
+            "cd /home/hem/gregor_zwanzig && t=\$(mktemp /tmp/ci_prod_gate.XXXXXX) && git fetch origin 2>/dev/null && git show origin/main:scripts/ci_prod_gate.sh > \"\$t\" && bash \"\$t\" /home/hem/gregor_zwanzig; rc=\$?; rm -f \"\$t\"; exit \$rc")
+          RC=$?
+          set -e
+          rm -f /tmp/deploy_key
+          echo "$OUT"
+          GATE=$(echo "$OUT" | grep -E '^PROD_GATE=(open|closed)$' | tail -n 1 || true)
+          if [ "$RC" -ne 0 ] || [ -z "$GATE" ]; then
+            echo "::error::Prod-Gate lieferte keine Entscheidung (rc=$RC) — Fetch/Skriptfehler"
+            exit 1
+          fi
+          if [ "$GATE" = "PROD_GATE=open" ]; then
+            echo "open=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "open=false" >> "$GITHUB_OUTPUT"
+          fi
 
+      - name: Prod-Deploy uebersprungen (kein Nachweis)
+        if: steps.gate.outputs.open != 'true'
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          MSG="Kein /e2e-verify-Nachweis fuer ${SHA} — Prod-Deploy ueber /70-deploy Schritt 4"
+          echo "::notice::$MSG"
+          echo "### Prod-Deploy uebersprungen" >> "$GITHUB_STEP_SUMMARY"
+          echo "$MSG" >> "$GITHUB_STEP_SUMMARY"
+
+      # #2047 S2b: Das Deploy-Skript ist idempotent — steht der Stand schon live
+      # (z. B. per /70-deploy aus der Session), meldet es "bereits ausgeliefert"
+      # und startet nichts neu. Die Ausgabe laeuft live ins Log und wird danach
+      # auf genau dieses Literal geprueft (Kopplung mit henemm-infra
+      # scripts/deploy-gregor-prod.sh). Der Skript-Exitcode bleibt massgeblich.
       - name: Deploy zu Produktion via SSH
+        id: deploy
+        if: steps.gate.outputs.open == 'true'
         run: |
           echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
+          LOG=$(mktemp)
+          set +e
           ssh -i /tmp/deploy_key \
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=10 \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh"
+            "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh" 2>&1 | tee "$LOG"
+          EXIT=${PIPESTATUS[0]}
+          set -e
+          rm -f /tmp/deploy_key
+          if grep -qF "bereits ausgeliefert" "$LOG"; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+          rm -f "$LOG"
+          exit $EXIT
+
+      # #2047 S2b: Post-Deploy-Selbsttest auch im CI-Pfad (wie /70-deploy 4b).
+      # Exit != 0 macht den Job rot — nichts verschlucken.
+      - name: Post-Deploy-Selbsttest Produktion
+        if: success() && steps.gate.outputs.open == 'true'
+        run: |
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          set +e
+          ssh -i /tmp/deploy_key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=10 \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            "cd /home/hem/gregor_zwanzig && python3 .claude/hooks/prod_selftest.py"
           EXIT=$?
+          set -e
           rm -f /tmp/deploy_key
           exit $EXIT
 
@@ -493,8 +651,10 @@ jobs:
       # entschaerft zugleich die Script-Injection ueber Commit-Messages;
       # json.dumps macht jeden Inhalt transportsicher. Nur die erste
       # Message-Zeile — mehr liest auf dem Handy niemand.
+      # Drei Meldungen, die sich ausschliessen (#2047 S2b): deployed /
+      # bereits ausgeliefert / FEHLGESCHLAGEN; bei geschlossenem Gate keine.
       - name: Telegram — Deploy erfolgreich (HENEMM Server)
-        if: success()
+        if: success() && steps.gate.outputs.open == 'true' && steps.deploy.outputs.already != 'true'
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
@@ -506,6 +666,26 @@ jobs:
           first = lines[0] if lines else ""
           sha = os.environ["SHA"][:7]
           print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": "gregor20 deployed: %s %s" % (sha, first)}))
+          EOF
+          )
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" > /dev/null
+
+      - name: Telegram — Stand war schon live (HENEMM Server)
+        if: success() && steps.gate.outputs.open == 'true' && steps.deploy.outputs.already == 'true'
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
+          SHA: ${{ github.sha }}
+        run: |
+          BODY=$(python3 - <<'EOF'
+          import json, os
+          lines = (os.environ.get("COMMIT_MSG") or "").splitlines()
+          first = lines[0] if lines else ""
+          sha = os.environ["SHA"][:7]
+          text = "gregor20 bereits ausgeliefert (kein Neustart): %s %s" % (sha, first)
+          print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": text}))
           EOF
           )
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \

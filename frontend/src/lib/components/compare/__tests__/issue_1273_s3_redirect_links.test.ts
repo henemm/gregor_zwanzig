@@ -25,7 +25,8 @@ import { join, dirname } from 'node:path';
 // __tests__ → compare → components → lib → src
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 
-const COMPARE_KACHEL = join(SRC, 'routes', '_home', 'CompareKachel.svelte');
+// #2346 S2: CompareKachel ist durch die gemeinsame SubscriptionKachel ersetzt.
+const COMPARE_KACHEL = join(SRC, 'routes', '_home', 'SubscriptionKachel.svelte');
 const COMPARE_LIST = join(SRC, 'routes', 'compare', '+page.svelte');
 const HOME = join(SRC, 'routes', '+page.svelte');
 const HUB = join(SRC, 'routes', 'compare', '[id]', '+page.svelte');
@@ -34,12 +35,12 @@ const read = (p: string) => readFileSync(p, 'utf8');
 
 // ── AC-2: 7 externe Linkziele zeigen nicht mehr auf /edit ─────────────────────
 
-describe('AC-2: Home-Kachel-Kebab (CompareKachel.svelte) zielt auf den Hub, nicht /edit', () => {
-	test('kein "sub.id + \'/edit\'"-Ziel mehr', () => {
+describe('AC-2: Home-Kachel-Kebab (SubscriptionKachel.svelte) zielt auf den Hub, nicht /edit', () => {
+	test('kein "\'/edit\'"-Ziel mehr', () => {
 		const src = read(COMPARE_KACHEL);
 		assert.ok(
-			!src.includes("sub.id + '/edit'"),
-			'CompareKachel.svelte darf nicht mehr auf /compare/{id}/edit navigieren — Ziel ist der Hub'
+			!src.includes("'/edit'"),
+			'SubscriptionKachel.svelte darf nicht mehr auf /compare/{id}/edit navigieren — Ziel ist der Hub'
 		);
 	});
 });
@@ -80,18 +81,20 @@ describe('AC-3: Schnellaktionen nutzen ?tab= statt Hash-Anker', () => {
 	test('kein #idealwerte / #schedule mehr in routes/+page.svelte', () => {
 		const src = read(HOME);
 		assert.ok(!src.includes('#idealwerte'), 'Hash-Anker #idealwerte muss durch ?tab=idealwerte ersetzt sein');
-		assert.ok(!src.includes('#schedule'), 'Hash-Anker #schedule muss durch ?tab=versand ersetzt sein');
+		assert.ok(!src.includes('#schedule'), 'Hash-Anker #schedule muss durch ?tab=wetter-metriken#versand ersetzt sein');
 	});
 
-	test('?tab=idealwerte und ?tab=versand sind vorhanden', () => {
+	test('?tab=wertebereiche und ?tab=wetter-metriken#versand sind vorhanden (neue Kennungen, Feature #2287, #1743)', () => {
 		const src = read(HOME);
 		assert.ok(
-			src.includes('?tab=idealwerte'),
-			'Schnellaktion "Ideal-Werte ändern" muss auf /compare/{id}?tab=idealwerte zeigen'
+			src.includes('?tab=wertebereiche'),
+			'Schnellaktion "Ideal-Werte ändern" muss auf /compare/{id}?tab=wertebereiche zeigen'
 		);
+		assert.ok(!src.includes('?tab=idealwerte'), 'Alt-Kennung ?tab=idealwerte darf nicht mehr erzeugt werden');
+		// #1743 AC-23: der Reiter Versand entfaellt — der Zeitplan liegt unter Wetter-Metriken (#versand)
 		assert.ok(
-			src.includes('?tab=versand'),
-			'Schnellaktion "Briefing-Zeitplan" muss auf /compare/{id}?tab=versand zeigen'
+			src.includes('?tab=wetter-metriken#versand'),
+			'Schnellaktion "Briefing-Zeitplan" muss auf /compare/{id}?tab=wetter-metriken#versand zeigen'
 		);
 	});
 
@@ -103,17 +106,25 @@ describe('AC-3: Schnellaktionen nutzen ?tab= statt Hash-Anker', () => {
 	// dass die Links so AUSSEHEN). `resolveCompareTab` ist dieselbe Funktion,
 	// die CompareTabs.svelte für `initialTab` verwendet (compareTabsResolve.ts,
 	// Single Source of Truth) — kein Duplikat der Logik, echter Aufruf.
-	test('resolveCompareTab("idealwerte") und ("versand") lösen NICHT auf "uebersicht" zurück', async () => {
-		const { resolveCompareTab } = await import('../compareTabsResolve.ts');
+	test('Feature #2287/#1743: "idealwerte" → "wertebereiche", "versand" → "wetter-metriken" (Anker), "wetter-metriken" ist neu, nie "uebersicht"', async () => {
+		const { resolveTab } = await import('../../shared/subscriptionTabs.ts');
+		const resolveCompareTab = (v: string): string => resolveTab('vergleich', v).tab;
 		assert.equal(
 			resolveCompareTab('idealwerte'),
-			'idealwerte',
-			'CompareTabs muss ?tab=idealwerte als gültigen Tab akzeptieren, nicht auf uebersicht zurückfallen'
+			'wertebereiche',
+			'CompareTabs muss ?tab=idealwerte (Alt-Link) auf wertebereiche umleiten, nicht auf uebersicht zurückfallen'
 		);
-		assert.equal(
-			resolveCompareTab('versand'),
-			'versand',
-			'CompareTabs muss ?tab=versand als gültigen Tab akzeptieren, nicht auf uebersicht zurückfallen'
+		// #1743 AC-3: ?tab=versand ist Alt-Link → Wetter-Metriken mit Anker #versand
+		assert.deepEqual(resolveTab('vergleich', 'versand'), {
+			tab: 'wetter-metriken',
+			legacy: true,
+			known: true,
+			anchor: 'versand'
+		});
+		assert.deepEqual(
+			resolveTab('vergleich', 'wetter-metriken'),
+			{ tab: 'wetter-metriken', legacy: false, known: true },
+			'das Schnellaktions-Ziel muss ohne Legacy-Umweg aufloesen (AC-23)'
 		);
 		// Gegenprobe: ein ungültiger Wert faellt weiterhin auf uebersicht zurueck
 		// (Regressionsschutz — kein zu freizuegiges resolve()).

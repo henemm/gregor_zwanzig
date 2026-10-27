@@ -3,7 +3,7 @@ entity_id: fix_1671_kompaktmail_ausblick_tagesfenster
 type: bugfix
 created: 2026-08-14
 updated: 2026-08-14
-status: approved
+status: implemented
 version: "1.0"
 tags: [gewitter, ausblick, tag-nacht, compact, issue-1671]
 ---
@@ -483,3 +483,13 @@ Entscheidungsfrage, sondern eine Pflicht des bestehenden, un-
 ## Changelog
 
 - 2026-08-14: Initial spec created
+- 2026-08-21 (Issue #1848 Scheibe A3): Die hier hergestellte Tag/Nacht-Quelle
+  für die Kurzformat-Mail wird für die **3-Tages-Vorschau** abgelöst — sie
+  zeigt seither nur noch das Tagesfenster, die Nachtangabe (`thunder_night_token`)
+  entfällt ersatzlos in allen vier Ausblick-Darstellungen (dehnt `fix_1841`
+  AC-3 auf alle Trips aus, dreifach PO-bestätigt). Für Tages-Briefing,
+  Stundenverlauf und Alarme gilt der hier beschriebene Tag/Nacht-Split
+  unverändert fort. Details:
+  `docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md`
+  (Changelog-Eintrag „Implementierung"), Zellenbau jetzt in
+  `src/output/renderers/email/thunder_branch.py`.

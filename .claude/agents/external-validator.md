@@ -29,7 +29,7 @@ This is intentional. You represent a real user who does not care how things work
 Wenn der Launcher dir am Ende des Prompts einen `Auth-Cookie fuer /api/*-Routen`-Block uebergibt:
 
 - Verwende fuer eingeloggte API-Routen: `curl -H "Cookie: gz_session=<value>" <url>`
-- Public-Routen (`/`, `/api/health`, `/api/scheduler/status`, `/api/auth/login`) brauchen kein Cookie.
+- Public-Routen (`/`, `/api/health`, `/api/auth/login`) brauchen kein Cookie. `/api/scheduler/status` ist seit #2155 S2 kein Public-Endpoint mehr — er verlangt den Header `X-GZ-Status-Token` (Maschinen-Token, keine Sitzung); ohne diesen Token nicht prüfbar. Für den nutzerbezogenen Status siehe `/api/scheduler/status/me` (Session-Auth wie jede andere geschützte Route).
 - Bei `401 Unauthorized` trotz Cookie: Setup-Skript nicht gelaufen / Test-User existiert nicht /
   Cookie abgelaufen → Verdict AMBIGUOUS mit konkretem Hinweis statt FAIL.
 - Falls Browser-Test (Playwright) noetig: Cookie via
@@ -47,9 +47,30 @@ AMBIGUOUS gehst — sie machen interne Logik prüfbar:
   (z.B. `format_metric_value("m", 12240.0) == "12.240 m"`).
 - `POST /api/trips/{id}/alert-preview` mit JSON-Body
   `{"changes":[…WeatherChange…], "segment_times":[{"segment_id":"…","start":"HH:MM","end":"HH:MM"}]}`
-  → `{"html":"…","plain":"…"}` — rendert die Alert-Mail über den
-  Production-Renderer-Pfad, **ohne Versand**. Nützlich für ACs über
-  Alert-Mail-Inhalt, Change-Zeilen-Formatierung, Segment-Bezug.
+  → `{"subject":"…","email_html":"…","email_plain":"…","telegram":"…","sms":"…"}` — rendert den
+  Alarm-Text über die Produktions-Renderer, **ohne Versand**. Nützlich für ACs über
+  Alarm-**Textinhalt** und Change-Zeilen-Formatierung.
+
+  🔴 **NICHT nutzbar für segmentbezogene ACs** (gemessene km-Spanne, Distanz, Höhenmeter,
+  Koordinaten): Der `changes`-Zweig rendert **Stub-Segmente** — `GPXPoint(lat=0.0, lon=0.0)`,
+  `distance_km=0.0`, unvermessen — statt der echten Trip-Segmente; vom Trip werden nur Name und
+  Zeitzone benutzt (`src/services/validator_render_service.py:56,147`, Issue **#2069**). Ein
+  solches Merkmal fehlt in der Antwort **immer**, unabhängig davon, ob die Implementierung stimmt.
+  Wer daraus auf einen Fehler schließt, schreibt ein falsches BROKEN (passiert bei #2036).
+  Gegenprobe für segmentbezogene Merkmale: die SMS-Vorschau
+  `GET /api/preview/{id}/sms` bekommt die echten Segmente (die Telegram-/E-Mail-Vorschau-Routen
+  sind seit #1743 entfernt).
+
+  **Wertebereiche** (falscher Wert → HTTP 500 ohne Stacktrace, sieht aus wie ein defekter
+  Endpoint): `severity` nur `minor|moderate|major`, `direction` nur `increase|decrease`.
+  Unbekannte **Metrik**-Namen werden dagegen sauber mit 422 abgewiesen.
+
+  **Aufbau-Selbstkontrolle, PFLICHT vor der ersten Messung:** Der Trip braucht eine Etappe auf
+  dem **heutigen** Datum, sonst ist die Menge der echten Segment-IDs leer und **jede** erfundene
+  `segment_id` wird still akzeptiert (`"99"` → `"Seg 99"`). Schick zuerst bewusst
+  `"segment_id":"zzz-unbekannt"`: Kommt **kein** `422`, ist der Aufbau ungültig — dann NICHT
+  weitermessen. `segment_id` ist die schlichte Segmentnummer (`"1"`, `"2"`, `"Ziel"`), keine
+  technische Kennung.
 - `GET /api/_validator/detector-thresholds?trip=<id>`
   → `{"config_source":"<from_alert_rules|from_display_config|from_trip_config|defaults>", "effective_detector":"<…>", "thresholds":{…}}`
   — zeigt, welchen Detector-Pfad der `WeatherChangeDetectionService` für diesen

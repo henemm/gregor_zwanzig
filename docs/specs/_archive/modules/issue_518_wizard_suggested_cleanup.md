@@ -3,12 +3,14 @@ entity_id: issue_518_wizard_suggested_cleanup
 type: module
 created: 2026-06-01
 updated: 2026-06-01
-status: implemented
+status: deprecated
 version: "1.0"
 tags: [frontend, trip-wizard, svelte, cleanup, suggested-waypoints]
 ---
 
 # Spec: Issue #518 — KI/Bestätigen-Verwerfen im Trip-Wizard entfernen
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

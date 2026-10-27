@@ -3,7 +3,7 @@ entity_id: fix_1329_c2_radar_nowcast_cache
 type: module
 created: 2026-07-20
 updated: 2026-07-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [radar, nowcast, cache, budget, quota, openmeteo, alert]
 ---
@@ -228,6 +228,8 @@ def __init__(
 `datetime.now(tz=timezone.utc)` — Default-Verhalten unverändert
 (Produktionscode ruft weiterhin die echte Uhr), Tests können eine
 kontrollierte Zeitquelle injizieren.
+
+> Nachtrag 2026-10-01 (#2464): `RadarCacheEntry`/`put` speichern zusätzlich `convective_checked`; ein Cache-Treffer liefert den gespeicherten Wert aus (vorher immer `True`, alle Regionen).
 
 ### 3. `get_nowcast` — Cache- und Budget-Einbindung
 

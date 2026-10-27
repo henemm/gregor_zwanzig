@@ -13,6 +13,7 @@
 
 import type { Trip, ComparePreset } from '../types.ts';
 import { tripStatus } from './tripStatus.ts';
+import { reportSlotAktiv } from './reportSlotAktiv.ts';
 
 export type SetupStep = { label: string; done: boolean };
 
@@ -26,7 +27,7 @@ export function dayProgress(dayX: number, dayY: number): number {
 }
 
 /**
- * Sortiert die Stage-Datumsstrings einer Tour aufsteigend (ISO-Datum =
+ * Sortiert die Stage-Datumsstrings einer Trip aufsteigend (ISO-Datum =
  * lexikographisch == chronologisch). Leerer Output, wenn nichts gesetzt.
  */
 function stageDates(trip: Trip): string[] {
@@ -57,9 +58,9 @@ export function setupStepTrip(trip: Trip): SetupStep[] {
 	const hasLayout =
 		dc.preset_name != null || dc.channel_layouts != null || dc.channel_layouts_per_report != null;
 
-	const rc = trip.report_config ?? {};
-	const morning = rc.morning_enabled === true;
-	const evening = rc.evening_enabled === true;
+	// Issue #2422 S3 (N2): dieselbe Slot-Regel wie der Versand.
+	const morning = reportSlotAktiv(trip.report_config, 'morning');
+	const evening = reportSlotAktiv(trip.report_config, 'evening');
 
 	return [
 		{ label: 'Route', done: stages.length >= 1 },
@@ -130,7 +131,7 @@ function isoDay(now: Date): string {
 }
 
 /**
- * Nächste geplante Tour: erster Trip mit Status != 'aktiv' und Start-Datum
+ * Nächste geplante Trip: erster Trip mit Status != 'aktiv' und Start-Datum
  * ≥ heute, sortiert nach frühestem Startdatum. Null, wenn nichts passt.
  */
 export function nextPlannedTrip(trips: Trip[], now: Date): Trip | null {
@@ -233,47 +234,7 @@ export function primarySendSlot(preset: ComparePreset): SlotTime | null {
 	return slots.reduce((a, b) => (a.hour * 60 + a.minute <= b.hour * 60 + b.minute ? a : b));
 }
 
-/**
- * Berechnet den naechsten Versand-Zeitstempel aus den echten Versand-Slots.
- * - 'daily': naechster bevorstehender aktiver Slot (heute, sonst morgen)
- * - 'weekly': naechster passender Wochentag (preset.weekday, 0=Montag) zur Slot-Zeit
- * - 'manual': null
- * - kein aktiver Slot: null
- *
- * Issue #1268 (AC-9): liest NICHT mehr `hour_from` — das war der Start des
- * Bewertungs-Zeitfensters, nicht die Versandzeit (Anzeige log: 09:00 statt
- * 07:00). Versand-Wahrheit sind `morning_time`/`evening_time` (types.ts:304).
- */
-export function deriveNextSend(preset: ComparePreset, now: Date): Date | null {
-	if (!preset || preset.schedule === 'manual') return null;
-	const slots = resolvePresetSlots(preset);
-	if (slots.length === 0) return null;
-
-	const at = (dayOffset: number, slot: SlotTime): Date =>
-		new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, slot.hour, slot.minute, 0, 0);
-
-	const earliest = (candidates: Date[]): Date =>
-		candidates.reduce((a, b) => (a <= b ? a : b));
-
-	if (preset.schedule === 'daily' || (preset.schedule as string) === 'daily_evening') {
-		// Heute, sofern der Slot noch bevorsteht — sonst derselbe Slot morgen.
-		return earliest(slots.map((s) => (now < at(0, s) ? at(0, s) : at(1, s))));
-	}
-
-	if (preset.schedule === 'weekly') {
-		const targetWeekday = preset.weekday; // 0=Montag
-		if (targetWeekday == null) return null;
-		// JS: 0=Sonntag, 1=Montag... convert: preset 0=Mon → JS 1=Mon
-		const jsWeekday = (targetWeekday + 1) % 7;
-		const daysUntil = (jsWeekday - now.getDay() + 7) % 7;
-		return earliest(
-			slots.map((s) =>
-				// Am Zieltag selbst zaehlt nur ein noch bevorstehender Slot,
-				// sonst erst in einer Woche.
-				daysUntil === 0 && now >= at(0, s) ? at(7, s) : at(daysUntil, s)
-			)
-		);
-	}
-
-	return null;
-}
+// Issue #1969 (AC-24): `deriveNextSend` ist entfernt — den naechsten Versand
+// rechnet ausschliesslich das Backend (GET /api/next-briefings, Anzeige ueber
+// shared/versand-tab/nextBriefingText.ts). `resolvePresetSlots`/`primarySendSlot`
+// bleiben: sie tragen das Zeitplan-Label (`presetTileScheduleLabel`, Startseite).

@@ -1,4 +1,4 @@
-"""Touren-SMS: die drei Schnee-Kuerzel folgen dem zentralen Wetter-Register.
+"""Trips-SMS: die drei Schnee-Kuerzel folgen dem zentralen Wetter-Register.
 
 SPEC: docs/specs/modules/fix_1435_e3b_sms_kuerzel.md (#1435 Etappe E3b).
 
@@ -422,7 +422,11 @@ def test_ac5_wintersport_block_order_unchanged():
     Fix #1887 E6 Scheibe A: 'WC' folgte hier bislang auf AV, ist aber
     ERSATZLOS entfallen (PO-Entscheid) -- der Block schrumpft von 5 auf 4
     Positionen, die relative Reihenfolge der verbleibenden vier bleibt
-    unangetastet."""
+    unangetastet.
+
+    #1441: 'AV' ist kein Wintersport-Token mehr (Lawinenstufe nur noch aus dem
+    amtlichen Lagebericht im !-Warnblock) -- der Block ist SD, NS24+, SL; ein
+    AV-Token darf hier gar nicht mehr erscheinen."""
     rendered = _line(_winter_day()).render(400)
     tokens = _tokens(rendered)
 
@@ -434,13 +438,16 @@ def test_ac5_wintersport_block_order_unchanged():
             f"AC-5: Token mit Praefix {prefix!r} fehlt in {rendered!r}"
         )
 
-    order = [_index(p) for p in ("SD", "NS24+", "SL", "AV")]
+    order = [_index(p) for p in ("SD", "NS24+", "SL")]
+    assert not any(tok.startswith("AV") for tok in tokens), (
+        f"#1441: _wintersport() darf kein AV-Token mehr bauen: {rendered!r}"
+    )
     assert order == sorted(order), (
-        "AC-5: Wintersport-Block nicht in der Reihenfolge SD, NS24+, SL, AV. "
+        "AC-5: Wintersport-Block nicht in der Reihenfolge SD, NS24+, SL. "
         f"Positionen={order!r} Zeile={rendered!r}"
     )
     # Der Block ist zusammenhaengend und steht am Ende der Zeile (§2).
-    assert order == list(range(order[0], order[0] + 4)), (
+    assert order == list(range(order[0], order[0] + 3)), (
         f"AC-5: Wintersport-Block ist nicht mehr zusammenhaengend: {rendered!r}"
     )
     assert order[-1] == len(tokens) - 1, (
@@ -511,7 +518,10 @@ def test_ac6_drop_order_positions_of_snow_symbols_unchanged():
     assert DROP_ORDER[0] == "DBG", (
         f"AC-6: Kopf der Drop-Reihenfolge veraendert: {DROP_ORDER!r}"
     )
-    tail_symbols = ["AV", "SL", "NS24+", "SD", "Z:", "MAX", "M:"]
+    # #1441: 'AV' ist ein Warnblock-Token (Lagebericht) und faellt mit den
+    # amtlichen Warnungen zuletzt -- es steht nicht mehr in DROP_ORDER.
+    assert "AV" not in DROP_ORDER, f"#1441: AV darf nicht frueh fallen: {DROP_ORDER!r}"
+    tail_symbols = ["SL", "NS24+", "SD", "Z:", "MAX", "M:"]
     tail_indices = [DROP_ORDER.index(sym) for sym in tail_symbols]
     assert tail_indices == sorted(tail_indices), (
         "AC-6: die relative Kuerzungs-Reihenfolge der Bestandssymbole hat "
@@ -670,10 +680,12 @@ def test_ac1_wind_chill_reports_three_symbols_without_wc():
         f"AC-1: die gefuehlten Tages-Kuerzel haengen falsch: {ist} statt "
         f"{erwartet}"
     )
-    assert "wind_chill" not in by_id, (
-        "AC-4: 'wind_chill' fuehrt weiterhin einen Eintrag in "
-        f"/api/sms-symbols, obwohl 'WC' ersatzlos entfallen ist: "
-        f"{by_id.get('wind_chill')!r}"
+    # #2422 S6 (B1, PO-Entscheid V1): 'WC' bleibt entfallen, aber ``wind_chill``
+    # traegt das Stundenwert-Kuerzel 'TF' (Trip-Kurzform) und steht deshalb
+    # WIEDER in /api/sms-symbols -- mit genau diesem einen Kuerzel.
+    assert by_id.get("wind_chill") == ["TF"], (
+        "AC-4 (S6): 'wind_chill' muss in /api/sms-symbols mit ['TF'] stehen "
+        f"('WC' bleibt entfallen): {by_id.get('wind_chill')!r}"
     )
 
     night_entries = [m for m in metrics if m["metric_id"] == "wind_chill_night"]
@@ -773,10 +785,13 @@ def test_ac6_endpoint_reports_eleven_metrics_total():
     # fix_1887_e6a_sms_kuerzel_register.md): 29 -> 28. 'WC' entfaellt
     # ERSATZLOS (verdoppelte nachweislich 'FK') -- "wind_chill" fuehrt seither
     # wie "temperature" kein eigenes Kuerzel mehr: 29 - 1 = 28.
-    assert len(metrics) == 28, (
-        f"AC-6: erwarte 28 Metrik-Eintraege (8 Register + 14 neue + "
-        f"6 Kuerzel-Traeger der Temperatur-Familie, thunder nur einmal "
-        f"gezaehlt), gefunden {len(metrics)}: {metrics!r}"
+    # #2422 S6 (B1, PO-Entscheid V1): 28 -> 29. "wind_chill" fuehrt wieder ein
+    # Kuerzel ('TF', Stundenwert der gefuehlten Temperatur) und steht damit
+    # WIEDER im Endpoint (AC-4, siehe test_ac1_wind_chill_...): 28 + 1 = 29.
+    assert len(metrics) == 29, (
+        f"AC-6: erwarte 29 Metrik-Eintraege (8 Register + 14 neue + "
+        f"7 Kuerzel-Traeger der Temperatur-Familie inkl. wind_chill/TF, "
+        f"thunder nur einmal gezaehlt), gefunden {len(metrics)}: {metrics!r}"
     )
     by_metric = {m["metric_id"]: m["sms_symbols"] for m in metrics}
     assert by_metric.get("temperature_day_low") == ["L"], (

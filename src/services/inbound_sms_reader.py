@@ -2,8 +2,8 @@
 Inbound SMS Reader — seven.io Journal-Polling fuer den Premium-SMS-Rueckkanal.
 
 Issue #1676 Scheibe S1: holt eingehende SMS aus dem seven.io-Journal ab,
-erkennt darunter Garmin-inReach-Nachrichten am Kennzeichen `inreachlink.com`
-und meldet die Absendernummer an den internen Go-Endpunkt
+erkennt die an die Dienstnummer gerichteten Nachrichten am `to`-Feld (Issue
+#2323) und meldet die Absendernummer an den internen Go-Endpunkt
 `POST /api/internal/premium-sms-learn`, der die eigentliche Nutzer-Aufloesung
 (R3) und Persistenz uebernimmt (Go bleibt einziger Schreiber von `user.json`).
 
@@ -41,24 +41,119 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
 
 from app.config import Settings
-from app.loader import get_data_root
+from app.loader import (
+    compare_preset_to_dict,
+    get_data_root,
+    load_all_trips,
+    load_compare_presets,
+)
 from app.origin_guard import classify_origin
+from utils.timezone import SEVEN_IO_JOURNAL_TZ, to_utc
+from services.file_lock import share_state_file
+from services.notification_service import NotificationService
+from services.trip_command_processor import (
+    CommandResult,
+    InboundMessage,
+    TripCommandProcessor,
+    befehl_markieren,
+    befehl_messung,
+    match_leading_name,
+)
+# Eigener, NICHT durch Tests ersetzbarer Name fuer die zustandslose
+# Klassifizierung (Issue #2417): `TripCommandProcessor` selbst wird in
+# Tests durch einen Recorder ersetzt, der laut eigenem Vertrag nur
+# `.process()` abfaengt und keine Parse-Logik nachbildet
+# (tests/unit/test_inbound_sms_reply_learning.py::_CommandProcessorRecorder).
+from services.trip_command_processor import TripCommandProcessor as _ParseNurProcessor
+from lib.go_internal import post_internal
+from services.trip_selection import ZIELLOS_SCHLUESSEL, resolve_command_target
 
 logger = logging.getLogger(__name__)
 
 JOURNAL_URL = "https://gateway.seven.io/api/journal/inbound"
-LEARN_ENDPOINT = "http://localhost:8090/api/internal/premium-sms-learn"
+LEARN_PATH = "/api/internal/premium-sms-learn"
 GARMIN_MARKER = "inreachlink.com"
+# Issue #2323: bewusst EIGENE Konstante, nicht aus premium_sms.py importiert --
+# sonst folgte dieses Gate einer Aenderung der Absendernummer stillschweigend.
+SERVICE_NUMBER = "4916092172595"
 DRYRUN_ENV_VAR = "GZ_PREMIUM_SMS_POLL_DRYRUN"
 
 _DEDUP_POINTER_NAME = "premium_sms_inbound.json"
+
+# Issue #2323: Gestalt des Verknuepfungs-Codes -- fester Praefix "XX" + 3
+# Buchstaben (ohne I/L/O) + 3 Ziffern (ohne 0/1), Gross-/Kleinschreibung egal.
+# Go-Pendant: internal/handler/premium_sms_link_code.go::generatePremiumSmsLinkCode.
+_LINK_CODE_PATTERN = re.compile(r"^XX[A-HJKMNP-Z]{3}[2-9]{3}$", re.IGNORECASE)
+
+
+def split_link_code(text: str) -> tuple[str, str]:
+    """Zerlegt den Nutzertext einer Garmin-Nachricht in (Code, Befehl).
+
+    Issue #2154 Scheibe A, D9 -- die EINZIGE Stelle, an der zerlegt wird:
+    sowohl der Payload-Aufbau des Lernaufrufs als auch `_verarbeite_befehl`
+    rufen diese Funktion. Zwei getrennte Zerlegungen drifteten
+    auseinander, und der Code landete dann als erstes Wort im ausgefuehrten
+    Befehl (groesstes Bruchrisiko dieses Umbaus).
+
+    Der Nutzertext steht VOR dem Kennzeichen, danach folgen der von Garmin
+    erzeugte Link und die Koordinaten (Beleg #1676 S1). Steht davor ein Wort in
+    der Code-Gestalt, ist es der Verknuepfungs-Code; sonst gibt es keinen.
+
+    Der feste Praefix "XX" (Issue #2323) macht die Gestalt eindeutig -- kein
+    Steuerbefehl beginnt so. Die frueher noetige Ausnahme fuer RUHETAG/STRECKE
+    (sieben Zeichen aus dem alten Code-Alphabet) entfaellt damit.
+
+    Der Code wird beim Zurueckgeben grossgeschrieben, damit er zum
+    ausschliesslich gross erzeugten und case-sensitiv per bcrypt verglichenen
+    Go-Hash passt (Issue #2323 F001): case-insensitive Eingabe -- ein per
+    Satellit kleingeschrieben abgetippter Code wuerde sonst erkannt, aber vom
+    Lern-Endpunkt immer abgelehnt -- und normalisierter Versand. Der
+    Befehlstext bleibt unveraendert.
+    """
+    befehl = text.split(GARMIN_MARKER, 1)[0].strip()
+    teile = befehl.split(maxsplit=1)
+    if teile and _LINK_CODE_PATTERN.match(teile[0]):
+        return teile[0].upper(), (teile[1].strip() if len(teile) > 1 else "")
+    return "", befehl
+
+
+_POSITION_PATTERN = re.compile(r"\(\s*([-+]?\d+\.\d+)\s*,\s*([-+]?\d+\.\d+)\s*\)")
+
+
+def extract_position(text: str) -> tuple[float, float] | None:
+    """Koordinaten ``(lat, lon)`` aus einer Garmin-Nachricht (Issue #2327).
+
+    Steht neben :func:`split_link_code`, zerlegt aber NICHT den Befehlstext:
+    gelesen wird die LETZTE Klammer ``(<Zahl>, <Zahl>)`` mit Dezimalpunkt.
+    Ohne Klammer, mit Unsinn darin oder ausserhalb ``|lat| <= 90`` /
+    ``|lon| <= 180`` -> ``None``; der Befehl laeuft dann unveraendert weiter.
+    """
+    treffer = _POSITION_PATTERN.findall(text or "")
+    if not treffer:
+        return None
+    lat, lon = (float(v) for v in treffer[-1])
+    if abs(lat) > 90.0 or abs(lon) > 180.0:
+        return None
+    return lat, lon
+
+
+def _journal_time(message: dict) -> datetime:
+    """Zeitstempel des Journal-Eintrags (seven.io: Europe/Berlin ohne Zone),
+    sonst der Verarbeitungszeitpunkt (Spec "Offene Punkte", #2327)."""
+    try:
+        naiv = datetime.strptime(str(message.get("timestamp")), "%Y-%m-%d %H:%M:%S")
+        return to_utc(naiv.replace(tzinfo=SEVEN_IO_JOURNAL_TZ))
+    except (TypeError, ValueError):
+        return datetime.now(timezone.utc)
 
 
 def _origin() -> str:
@@ -83,6 +178,11 @@ class InboundSmsReader:
         # ab (Hausnorm run_briefing_dispatch), statt bedingungslos "ok" zu
         # melden.
         self.last_failed_count = 0
+        # Issue #2154 AC-11: bewusste Ablehnungen (4xx) sind KEINE
+        # voruebergehenden Fehlschlaege, duerfen aber auch nicht als "ok"
+        # durchgehen -- ein dauerhaft ausgesperrter Nutzer bliebe sonst
+        # unsichtbar. Eigener Zaehler, getrennt von last_failed_count.
+        self.last_rejected_count = 0
 
     def poll_and_process(self, settings: Settings) -> int:
         """Holt neue Journal-Eintraege, meldet erkannte Garmin-Nachrichten.
@@ -90,9 +190,11 @@ class InboundSmsReader:
         Returns: Anzahl in diesem Lauf ECHT gelernter Rueckadressen (im
         Dry-Run strukturell immer 0, s. Spec Schritt 9/11). Die Anzahl
         vorruebergehend fehlgeschlagener Lernaufrufe steht danach in
-        `self.last_failed_count` (Fix F001).
+        `self.last_failed_count` (Fix F001), die Zahl bewusst abgelehnter
+        Lernaufrufe in `self.last_rejected_count` (Issue #2154 AC-11).
         """
         self.last_failed_count = 0
+        self.last_rejected_count = 0
 
         origin = _origin()
         dry_run = False
@@ -115,17 +217,20 @@ class InboundSmsReader:
         if not settings.seven_api_key:
             return 0
 
-        learned, failed = self._poll_journal(settings, dry_run)
+        learned, failed, rejected = self._poll_journal(settings, dry_run)
         self.last_failed_count = failed
+        self.last_rejected_count = rejected
         return learned
 
-    def _poll_journal(self, settings: Settings, dry_run: bool) -> tuple[int, int]:
+    def _poll_journal(self, settings: Settings, dry_run: bool) -> tuple[int, int, int]:
         """Kern des Polls: iteriert das Journal, meldet erkannte
-        Garmin-Nachrichten. Gibt `(gelernt, fehlgeschlagen)` zurueck --
-        Hausnorm `dispatch_orchestrator.run_briefing_dispatch()` (Fix F001).
+        Garmin-Nachrichten. Gibt `(gelernt, fehlgeschlagen, abgelehnt)` zurueck
+        -- Hausnorm `dispatch_orchestrator.run_briefing_dispatch()` (Fix F001),
+        um den Ablehnungszaehler erweitert (Issue #2154 AC-11).
 
-        Der Dedup-Zeiger wandert fuer Nachrichten OHNE Kennzeichen und fuer
-        Garmin-Nachrichten mit Erfolg ODER bewusster Ablehnung (HTTP 4xx).
+        Der Dedup-Zeiger wandert fuer Nachrichten an eine ANDERE Nummer als die
+        Dienstnummer und fuer gemeldete Nachrichten mit Erfolg ODER bewusster
+        Ablehnung (HTTP 4xx).
         Bei einem VORUEBERGEHENDEN Fehlschlag (Netzwerk/Timeout/5xx) bricht
         die Schleife ab, BEVOR der Zeiger ueber diese (und alle in diesem
         Journal-Fenster nachfolgenden) Nachrichten hinwegwandert -- der
@@ -136,7 +241,7 @@ class InboundSmsReader:
 
         messages = self._fetch_journal(settings.seven_api_key)
         if messages is None:
-            return 0, 0  # Netz-/HTTP-Fehler -- last_seen_id bleibt unveraendert
+            return 0, 0, 0  # Netz-/HTTP-Fehler -- last_seen_id bleibt unveraendert
 
         parsed: list[tuple[int, dict]] = []
         for m in messages:
@@ -156,23 +261,34 @@ class InboundSmsReader:
 
         learned = 0
         failed = 0
+        rejected = 0
         max_seen = last_seen_id
         for msg_id, message in new_messages:
             text = message.get("text", "") or ""
-            if GARMIN_MARKER not in text:
+            # Issue #2323: das Gate haengt am strukturell immer vorhandenen
+            # Ziel-Feld, nicht mehr am abschaltbaren Garmin-Kartenlink im Text.
+            # Ueber Annahme/Ablehnung entscheidet allein der Go-Lern-Endpunkt.
+            if message.get("to") != SERVICE_NUMBER:
                 max_seen = max(max_seen, msg_id)
                 continue
 
             sender = message.get("from", "")
+            # Issue #2154: der Code wird NUR mitgeschickt, wenn im Text auch
+            # einer steht -- ein leerer Wert waere kein "fehlender Code" und
+            # kippte den Entscheidungsbaum im Go-Endpunkt.
+            link_code, _ = split_link_code(text)
             payload: dict = {"from": sender}
+            if link_code:
+                payload["code"] = link_code
             if dry_run:
                 payload["dry_run"] = True
             try:
-                response = httpx.post(LEARN_ENDPOINT, json=payload, timeout=5)
+                response = post_internal(LEARN_PATH, json=payload, timeout=5)
             except Exception as e:
                 failed += 1
                 logger.warning(
-                    "premium-sms-learn fehlgeschlagen (Netzwerk) fuer maskierte "
+                    "premium-sms-learn fehlgeschlagen (Netzwerk oder Geheimnis "
+                    "nicht konfiguriert) fuer maskierte "
                     "Nummer %s: %s -- Zeiger bleibt stehen (Fix F001).",
                     _mask(sender), e,
                 )
@@ -189,10 +305,31 @@ class InboundSmsReader:
                     )
                 else:
                     learned += 1
-            elif 400 <= response.status_code < 500:
-                # Bewusste Ablehnung (z.B. 409 Mehrdeutigkeit, AC-5) --
-                # abschliessende Entscheidung, kein Wiederholungsgrund.
+                    # Issue #2184: der Text VOR dem Kennzeichen ist ein Befehl.
+                    # Eigenes, NACHGELAGERTES try/except: der Dedup-Zeiger steht
+                    # oben bereits fest, und ein Verarbeitungsfehler ist kein
+                    # voruebergehender Lernfehler (F001) -- er darf `failed`
+                    # nicht erhoehen, sonst kippt der Go-Scheduler-Status von
+                    # "ok" auf "partial" (AC-6).
+                    try:
+                        with befehl_messung("premium_sms"):
+                            self._verarbeite_befehl(
+                                settings, text, sender, response,
+                                observed_at=_journal_time(message),
+                            )
+                    except Exception as e:
+                        logger.warning(
+                            "Premium-SMS-Kommandoverarbeitung fehlgeschlagen "
+                            "fuer maskierte Nummer %s: %s -- Lernvorgang bleibt "
+                            "erfolgreich (AC-6).", _mask(sender), e,
+                        )
+            elif 400 <= response.status_code < 500 and response.status_code not in (401, 403):
+                # Bewusste Ablehnung (409 fehlender/ungueltiger Code, 429
+                # Ratebremse) -- abschliessende Entscheidung (401/403 sind
+                # Fehlkonfiguration des Geheimnisses, #2159: vorruebergehend), kein
+                # Wiederholungsgrund, aber sichtbar (Issue #2154 AC-11).
                 max_seen = max(max_seen, msg_id)
+                rejected += 1
                 logger.warning(
                     "premium-sms-learn abgelehnt (HTTP %d) fuer maskierte "
                     "Nummer %s: %s", response.status_code, _mask(sender),
@@ -209,7 +346,129 @@ class InboundSmsReader:
                 break  # vorruebergehend: naechster Lauf versucht diese Nachricht erneut
 
         self._save_last_seen_id(data_root, max_seen)
-        return learned, failed
+        return learned, failed, rejected
+
+    def _verarbeite_befehl(
+        self, settings: Settings, text: str, sender: str, response,
+        *, observed_at: datetime | None = None,
+    ) -> None:
+        """Issue #2184 (Epic #2133 S4): den Befehlstext einer Garmin-Nachricht
+        verarbeiten und die Antwort per Premium-SMS zurueckschicken.
+
+        Der Nutzer kommt aus der Erfolgsantwort des Lern-Endpunkts. Fehlt der
+        Schluessel oder ist er leer, wird NICHT verarbeitet und schon gar nicht
+        auf den Mandanten "default" zurueckgefallen (AC-9,
+        Cross-User-Datenleck-Verbot) -- der 200er-Vertrag des Go-Endpunkts wird
+        nicht stillschweigend vorausgesetzt.
+        """
+        user_id = (response.json() or {}).get("user_id") or ""
+        if not user_id:
+            logger.warning(
+                "premium-sms-learn antwortete mit HTTP 200 ohne verwertbare "
+                "user_id fuer maskierte Nummer %s -- keine "
+                "Kommandoverarbeitung (AC-9).", _mask(sender),
+            )
+            return
+
+        # Dieselbe Zerlegung wie beim Payload-Aufbau (Issue #2154 D9) -- ohne
+        # sie landete der Verknuepfungs-Code als erstes Wort im ausgefuehrten
+        # Befehl (AC-12).
+        _, befehl = split_link_code(text)
+        now_utc = datetime.now(timezone.utc)
+        # Issue #2327 (ADR-0102): Koordinaten erst NACH der Zuordnung und VOR
+        # der Befehlsantwort aufnehmen -- sonst misst z.B. "Jetzt" nicht am Fix.
+        position = extract_position(text)
+        if position is not None:
+            self._nimm_fix_auf(user_id, position, observed_at or now_utc, sender)
+            if not befehl:
+                return  # reine Positions-SMS: keine bezahlte Antwort (Entscheidung 2)
+        user_settings = settings.with_user_profile(user_id)
+
+        # Issue #2282 Abschnitt 2/4: Satelliten-Text traegt normalerweise
+        # keinen Namen (jedes Zeichen kostet), kann aber einem Trip/Vergleich
+        # explizit vorangestellt sein -- dieselbe geteilte Auswahlregel wie
+        # im Telegram-Reader.
+        trips = load_all_trips(user_id)
+        presets = [compare_preset_to_dict(p) for p in load_compare_presets(user_id)]
+
+        named = match_leading_name(befehl, trips, presets)
+        if named is not None:
+            name_prefix, rest, name_kind, name_ziel = named
+            # Kind/Objekt kommen aus demselben Namens-Treffer wie
+            # prefix/rest -- keine zweite Suche (Adversary F001-Nachtrag).
+            resolved_kind = "vergleich" if name_kind == "vergleich" else None
+            resolved_preset_id = name_ziel.get("id") if name_kind == "vergleich" else None
+            result = TripCommandProcessor().process(InboundMessage(
+                trip_name=name_prefix, body=rest, sender=sender,
+                channel="premium_sms", received_at=now_utc, user_id=user_id,
+                resolved_kind=resolved_kind, resolved_preset_id=resolved_preset_id,
+            ))
+        else:
+            # Issue #2417 (AC-18): dieselbe klassifizierte Zielaufloesung wie
+            # der Telegram-Reader -- die Befehlsklasse entscheidet VOR jeder
+            # Trip-/Vergleichsauswahl, ob ueberhaupt eine noetig ist. Vorher
+            # rief dieser Zweig `resolve_active_target` unklassifiziert fuer
+            # JEDEN Befehl auf und blockierte z.B. "hilfe" bei Trip+Vergleich
+            # mit einer Rueckfrage (B1).
+            key, _value = _ParseNurProcessor()._parse_command(befehl)
+            if key in ZIELLOS_SCHLUESSEL:
+                # hilfe/kuerzel/columns (AC-15, #2417 AC-3): keine
+                # Zielaufloesung noetig. Die englische HELP-/CODES-Kurzform
+                # waehlt `process()` selbst (Kanal premium_sms, AC-4).
+                result = TripCommandProcessor().process(InboundMessage(
+                    trip_name="", body=befehl, sender=sender,
+                    channel="premium_sms", received_at=now_utc, user_id=user_id,
+                ))
+            else:
+                ziel = resolve_command_target(
+                    key, trips, presets, now_utc, channel="premium_sms",
+                )
+                if ziel.kind is None:
+                    befehl_markieren(key)
+                    # AC-5/AC-17: identischer Text wie Telegram, kein
+                    # `process()`-Aufruf.
+                    hinweis = CommandResult(
+                        success=False, command="mehrdeutig",
+                        confirmation_subject="Hinweis", confirmation_body=ziel.text,
+                    )
+                    NotificationService(
+                        user_settings, user_id=user_id,
+                    ).send_command_reply_premium_sms(hinweis, user_settings)
+                    return
+                if ziel.kind == "route":
+                    inbound = InboundMessage(
+                        trip_name=ziel.target.name, body=befehl, sender=sender,
+                        channel="premium_sms", received_at=now_utc, user_id=user_id,
+                    )
+                else:
+                    preset = ziel.target
+                    inbound = InboundMessage(
+                        trip_name=preset.get("name", ""), body=befehl, sender=sender,
+                        channel="premium_sms", received_at=now_utc, user_id=user_id,
+                        resolved_kind="vergleich", resolved_preset_id=preset.get("id"),
+                    )
+                result = TripCommandProcessor().process(inbound)
+
+        # `heute`/`morgen` haben das Briefing selbst schon per Premium-SMS
+        # verschickt -- eine zweite, kostenpflichtige Satelliten-SMS daneben
+        # waere die Bestaetigung des Briefings (AC-10).
+        if not result.suppress_email_reply:
+            NotificationService(
+                user_settings, user_id=user_id,
+            ).send_command_reply_premium_sms(result, user_settings)
+
+    @staticmethod
+    def _nimm_fix_auf(user_id: str, position, observed_at: datetime, sender: str) -> None:
+        """Fix aufnehmen, fail-soft: ein Fehler kostet nie die Befehlsantwort."""
+        from services.position_fix import record_position_fix
+
+        try:
+            record_position_fix(user_id, position[0], position[1], observed_at)
+        except Exception as e:
+            logger.warning(
+                "GPS-Fix fuer maskierte Nummer %s nicht aufgenommen: %s",
+                _mask(sender), e,
+            )
 
     def _fetch_journal(self, api_key: str) -> list[dict] | None:
         """GET journal/inbound. None bei Fehler (fail-soft, Schritt 5)."""
@@ -250,6 +509,7 @@ class InboundSmsReader:
         fd, tmp_path = tempfile.mkstemp(dir=directory, prefix=".premium_sms_inbound_")
         try:
             with os.fdopen(fd, "w") as f:
+                share_state_file(f.fileno())
                 json.dump({"last_seen_id": last_seen_id}, f)
             os.rename(tmp_path, path)
         except Exception:

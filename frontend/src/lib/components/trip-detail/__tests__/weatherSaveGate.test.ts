@@ -49,7 +49,7 @@ describe('Zeile 2 der Entscheidungstabelle: Katalog geladen, keine Nutzergeste �
 			decision,
 			'skip',
 			'F001: ein Schreibzugriff ohne echte Nutzergeste darf nie stattfinden — unabhängig davon, ob der ' +
-				'Payload leer wäre oder nicht (z.B. Normalisierungs-Rückschreiben von EditReportConfigSection beim Mounten)'
+				'Payload leer wäre oder nicht (z.B. Normalisierungs-Rückschreiben von MailInhaltCard beim Mounten)'
 		);
 	});
 });

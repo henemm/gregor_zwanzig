@@ -3,7 +3,7 @@ entity_id: rework_1210_testsuite_s1
 type: module
 created: 2026-07-17
 updated: 2026-07-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [testing, pytest, infrastructure, live-leak-guard]
 ---

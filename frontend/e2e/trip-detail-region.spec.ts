@@ -108,7 +108,7 @@ test.describe('Issue #202 — Region-Feld: Hero + Wizard', () => {
 		// Aktivitätsprofil wählen
 		await page.getByTestId('trip-wizard-step1-chip-trekking').click();
 		// Name
-		await page.getByTestId('trip-wizard-step1-name').fill('Mallorca Tour');
+		await page.getByTestId('trip-wizard-step1-name').fill('Mallorca Trip');
 		// Region setzen
 		await page.getByTestId('trip-wizard-step1-region').fill('Mallorca');
 		// Startdatum

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/debug", tags=["debug"])
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/trigger-radar-alert")
-def trigger_radar_alert(user_id: str = "default"):
+def trigger_radar_alert(user_id: str = Query(...)):
     """Staging-only: loest echten Radar-Alert-Pfad aus, sendet an gregor-test@henemm.com.
 
     Ablauf (analog check_radar_alerts(), ohne Throttle-Check):

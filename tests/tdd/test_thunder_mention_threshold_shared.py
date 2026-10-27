@@ -105,8 +105,10 @@ def test_ac5_prosa_pille_meldet_gewitter_ab_leicht_am_standard_trip():
     result = _pill_for_metric("thunder", {}, _dps_only_low(), tz=TZ)
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
-    # #1493: der Satz traegt jetzt das Stufenwort ("Gewitter leicht ab ...").
-    assert "Gewitter leicht ab" in text, (
+    # #1493 trug das Stufenwort nach, #2176 nimmt die Ereignisbehauptung
+    # heraus. Geprueft bleibt die Schwelle: der Uhrzeit-Satz erscheint bei
+    # reinem LOW -- die Stunde ist deshalb mitgebunden.
+    assert "Schwaches Signal (leicht) ab 12:00" in text, (
         "AC-5: Ein Trip ohne eigene Gewitter-Schwelle muss den Uhrzeit-Satz "
         f"schon bei reinem 'leicht' zeigen. Erhalten: {text!r}"
     )

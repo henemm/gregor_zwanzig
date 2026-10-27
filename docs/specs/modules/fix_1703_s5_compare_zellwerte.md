@@ -3,7 +3,7 @@ entity_id: fix_1703_s5_compare_zellwerte
 type: module
 created: 2026-08-12
 updated: 2026-08-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [metrics, compare, overview, matrix-test, epic-1703]
 ---

@@ -3,7 +3,7 @@ entity_id: sms_daywindow_aggregation
 type: feature
 created: 2026-07-19
 updated: 2026-07-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [gewitter, sms, compact_summary, telegram, email-pillen, adr-0025, issue-1317, epic-1319, tagesfenster]
 ---
@@ -184,7 +184,7 @@ bleiben bei der Wanderzeit-Logik (Scheibe D), die Skalen-Trennung (`thunder_ordi
 
 ## Acceptance Criteria
 
-- **AC-1 (gemeldeter Fall #1317, Morgen-Report):** Given ein Morgen-Report (Erzeugung ~07:00),
+- **AC-1:** (gemeldeter Fall #1317, Morgen-Report) Given ein Morgen-Report (Erzeugung ~07:00),
   dessen `night_weather` nach der heutigen Ankunft (12:00) ein Gewitter um 14:00 enthält / When
   `TripReportFormatter.format_email(report_type="morning")` mit `segments` und `night_weather`
   aufgerufen wird / Then zeigen SMS-`TH:`-Token, Kurzzusammenfassungssatz, Metriken-Pille und
@@ -192,14 +192,14 @@ bleiben bei der Wanderzeit-Logik (Scheibe D), die Skalen-Trennung (`thunder_ordi
   alle vier schweigen, obwohl die Tabelle das 14:00-Gewitter zeigt).
   - Test: `format_email(report_type="morning")`-Aufruf mit Bug-Fixture; rot vor Fix, grün danach.
 
-- **AC-2 (gleicher Fall, Abend-Report):** Given denselben Fall wie AC-1, aber ein Abend-Report
+- **AC-2:** (gleicher Fall, Abend-Report) Given denselben Fall wie AC-1, aber ein Abend-Report
   (der berichtete Tag ist „morgen") / When `format_email(report_type="evening")` aufgerufen wird
   / Then zeigen alle vier Kurzformen das Gewitter für den berichteten (morgigen) Tag — der
   Bezugstag-Mechanismus (`TH:` = berichteter Tag) bleibt dabei unverändert korrekt.
   - Test: `format_email(report_type="evening")`-Aufruf mit derselben Fixture wie AC-1, verschoben
     auf den Folgetag.
 
-- **AC-3 (Begleitwerte konsistent):** Given denselben Fall wie AC-1, wobei die 14:00-Stunde in
+- **AC-3:** (Begleitwerte konsistent) Given denselben Fall wie AC-1, wobei die 14:00-Stunde in
   `night_weather` zusätzlich Regen (>0,2 mm), Regenwahrscheinlichkeit (>20%) und Böen (>20 km/h)
   trägt / When alle vier Kanäle gerendert werden / Then zeigen SMS `R`/`PR`/`G`, die
   Kurzzusammenfassung und die Regen-/Wind-Pille ebenfalls Werte für 14:00 (kein „Gewitter ohne
@@ -207,7 +207,7 @@ bleiben bei der Wanderzeit-Logik (Scheibe D), die Skalen-Trennung (`thunder_ordi
   - Test: echter Aufruf der vier Einstiegsfunktionen mit einer Zeitreihe, die um 14:00 alle vier
     Metriken gleichzeitig über der Schwelle trägt; Assert auf alle betroffenen Token/Sätze.
 
-- **AC-4 (Konsistenz-Invariante):** Given denselben Fall wie AC-1 / When SMS, Kurzzusammenfassung,
+- **AC-4:** (Konsistenz-Invariante) Given denselben Fall wie AC-1 / When SMS, Kurzzusammenfassung,
   Pille, Telegram-Fußzeile **und** die Detailtabelle „Nacht am Ziel" aus demselben
   `format_email()`-Aufruf erzeugt werden / Then melden alle fünf Ausgaben übereinstimmend ein
   Gewitter für 14:00 (keine widerspricht einer anderen) — Fortführung von ADR-0025 auf das
@@ -215,17 +215,17 @@ bleiben bei der Wanderzeit-Logik (Scheibe D), die Skalen-Trennung (`thunder_ordi
   - Test: ein einziger `format_email()`-Aufruf, Assert über alle fünf Ausgabefelder des
     `TripReport` hinweg.
 
-- **AC-5 (obere Fenstergrenze, Ausschluss):** Given ein Gewitter in `night_weather` um 20:00
+- **AC-5:** (obere Fenstergrenze, Ausschluss) Given ein Gewitter in `night_weather` um 20:00
   (außerhalb 04–19, aber innerhalb Ankunft→06:00) / When alle vier Kanäle gerendert werden / Then
   löst diese Stunde **kein** Gewitter-Token/keine Gewitter-Pille aus.
   - Test: Fixture mit Ereignis exakt um 20:00; Assert, dass keiner der vier Kanäle es zeigt.
 
-- **AC-6 (obere Fenstergrenze, Einschluss):** Given dasselbe Szenario wie AC-5, aber das Ereignis
+- **AC-6:** (obere Fenstergrenze, Einschluss) Given dasselbe Szenario wie AC-5, aber das Ereignis
   liegt um 18:00 (innerhalb 04–19) / When alle vier Kanäle gerendert werden / Then zeigen alle
   vier das Gewitter für 18:00.
   - Test: Fixture mit Ereignis exakt um 18:00; Assert, dass alle vier Kanäle es zeigen.
 
-- **AC-7 (untere Fenstergrenze, vor Aufbruch):** Given eine Etappe mit Aufbruch um 08:00 und
+- **AC-7:** (untere Fenstergrenze, vor Aufbruch) Given eine Etappe mit Aufbruch um 08:00 und
   einem Gewitter um 05:00 (vor Aufbruch, aber innerhalb 04–19) in der bereits vorhandenen,
   ungefilterten Zeitreihe des ersten Segments / When alle vier Kanäle gerendert werden / Then
   zeigen alle vier das Gewitter für 05:00; ein Ereignis um 03:00 (außerhalb 04–19) wird dagegen
@@ -233,7 +233,7 @@ bleiben bei der Wanderzeit-Logik (Scheibe D), die Skalen-Trennung (`thunder_ordi
   - Test: zwei Fixture-Varianten (Ereignis 05:00 vs. 03:00) gegen dieselben vier
     Einstiegsfunktionen; Assert auf Ein-/Ausschluss.
 
-- **AC-8 (Regressionsschutz Wanderzeit):** Given eine Etappe ohne jedes Ereignis vor Aufbruch oder
+- **AC-8:** (Regressionsschutz Wanderzeit) Given eine Etappe ohne jedes Ereignis vor Aufbruch oder
   nach Ankunft (alles Wetter liegt innerhalb der bisherigen Wanderzeit-Fensterung) / When alle
   vier Kanäle gerendert werden / Then bleibt das Ergebnis identisch zum Vorzustand, und die
   bestehenden ADR-0025-Testsuiten (u. a. zu #1275, SMS-`TH:`/`TH+:`, Telegram-Fußzeile,
@@ -241,7 +241,7 @@ bleiben bei der Wanderzeit-Logik (Scheibe D), die Skalen-Trennung (`thunder_ordi
   - Test: bestehende ADR-0025-Bestandstests unverändert grün nach dem Fix; zusätzliche
     Regressions-Fixture ohne Frühe-/Spät-Ereignis liefert bit-identische Ausgabe.
 
-- **AC-9 (fehlendes night_weather → fail-soft):** Given `night_weather is None` (z. B.
+- **AC-9:** (fehlendes night_weather → fail-soft) Given `night_weather is None` (z. B.
   `dc.show_night_block == False`, kein Zielsegment oder kein Nacht-Fetch) / When einer der vier
   Kanäle gerendert wird / Then verhält sich der Kanal wie reine Segment-Fensterung im Fenster
   04–19 (kein Absturz, kein fehlender Report), ohne Ziel-Stunden nach Ankunft.

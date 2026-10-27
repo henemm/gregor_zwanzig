@@ -3,7 +3,7 @@ entity_id: issue_684_alert_email_guard_tests
 type: tests
 created: 2026-06-09
 updated: 2026-06-09
-status: approved
+status: implemented
 version: "1.0"
 tags: [alert, deliverability, email-guard, multi-channel]
 ---

@@ -678,6 +678,13 @@ class TestF003PresetWeekdayForwarding:
     durchgereicht werden (render_compare_email -> render_compare_html)."""
 
     def test_f003_weekday_kommt_im_abo_footer_an(self):
+        # Issue #1969: der Fuss liest das ganze Preset (`preset=`); die frueheren
+        # Parameter preset_schedule/preset_weekday sind entfallen. Zusicherung
+        # unveraendert: der Wochentag erreicht den Fuss -- jetzt zusaetzlich
+        # daran gemessen, dass das genannte Datum ein Mittwoch (2) ist.
+        import re
+        from datetime import datetime as _dt
+
         from app.user import Schedule
         from output.renderers.comparison import render_compare_email
 
@@ -685,8 +692,10 @@ class TestF003PresetWeekdayForwarding:
         html_body, _text_body = render_compare_email(
             result,
             profile=ActivityProfile.ALLGEMEIN,
-            preset_schedule=Schedule.WEEKLY,
-            preset_weekday=2,
+            preset={
+                "schedule": Schedule.WEEKLY.value, "weekday": 2,
+                "location_ids": [lr.location.id for lr in result.locations],
+            },
         )
 
         assert "Nächster Versand" in html_body, "Abo-Footer-Sektion 'Nächster Versand' fehlt"
@@ -696,4 +705,9 @@ class TestF003PresetWeekdayForwarding:
             "Bei schedule=WEEKLY + gesetztem weekday darf der Abo-Footer NICHT auf "
             "den '—'-Platzhalter zurueckfallen (F003: weekday muss bis "
             "render_compare_html() durchgereicht werden)"
+        )
+        datum = re.search(r"(\d{2}\.\d{2}\.\d{4}) \d{2}:00", window)
+        assert datum, f"Fuss nennt keinen Termin TT.MM.JJJJ HH:00: {window!r}"
+        assert _dt.strptime(datum.group(1), "%d.%m.%Y").weekday() == 2, (
+            f"weekday=2 (Mittwoch) kam nicht im Fuss an: {datum.group(1)}"
         )

@@ -3,7 +3,7 @@ entity_id: issue_1113_partial_outage_guard
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [briefing, scheduler, weather, incident, bug]
 ---

@@ -126,7 +126,10 @@ def test_ac2_multi_event_telegram_rows_are_distinguishable_by_segment():
 
     msg = _three_thunder_events_trip_path()
     telegram_text = render_telegram(msg)
-    metric_line = telegram_text.split("\n")[-1]
+    # Issue #1948 S6 (AC-11): render_telegram() haengt seither eine Stand-
+    # Zeile als LETZTE Zeile an -- die Metrik-Zeile ist seither die
+    # zweitletzte Zeile, nicht mehr die letzte.
+    metric_line = telegram_text.split("\n")[-2]
 
     for segment in ("Segment 4", "Segment 5", "Segment 6"):
         assert segment in metric_line, (

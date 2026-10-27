@@ -3,7 +3,7 @@ entity_id: issue_215_sprint3_list_routes
 type: module
 created: 2026-05-13
 updated: 2026-05-13
-status: draft
+status: implemented
 version: "1.0"
 parent_spec: epic_133_design_system
 issues: [215]

@@ -110,13 +110,13 @@ def _teile(zelle: str) -> tuple[str, set[str]]:
 def _alpen_und_korsika() -> tuple[LocationResult, LocationResult]:
     """Zwei Orte auf "hoch" ueber VERSCHIEDENE Zutaten (Spec AC-1).
 
-    Alpenort: CAPE 1500 J/kg bei schwacher Hemmung (CIN 5) -- ueber der
-    obersten Sprosse der icon_d2/DE_ALPEN-Leiter. Korsikaort: Blitzdichte
+    Alpenort: CAPE 3000 J/kg bei schwacher Hemmung (CIN 5) -- ueber der
+    obersten Sprosse der icon_d2/DE_ALPEN-Leiter (2500 J/kg, #2178). Korsikaort: Blitzdichte
     0,5/km2 ueber der obersten Sprosse ihrer Leiter; FR hat keine
     LPI-Kalibrierung und kein CAPE, dort traegt also nur die Dichte.
     """
     return (
-        _ort("Alpenort", 47.0, 12.0, [_dp(14, cape=1500.0, cin=5.0)]),
+        _ort("Alpenort", 47.0, 12.0, [_dp(14, cape=3000.0, cin=5.0)]),
         _ort("Korsikaort", 42.0, 9.0, [_dp(14, dichte=0.5)], modell="meteofrance_arome"),
     )
 
@@ -171,7 +171,7 @@ def test_ac2_beide_tragenden_zutaten_werden_genannt():
     Hoechststufe, When die Gewitter-Zeile gerendert wird, Then werden BEIDE
     kommagetrennt genannt -- es wird kein Gewinner gekuert."""
     html, _ = _mail(_ort("Beideort", 47.0, 12.0,
-                         [_dp(14, cape=1500.0, cin=5.0, lpi=60.0)]))
+                         [_dp(14, cape=3000.0, cin=5.0, lpi=60.0)]))
     assert _teile(_html_zellen(html)[0]) == ("hoch", {"CAPE", "Blitzpotenzial"}), (
         f"Beide Traeger der Hoechststufe muessen erscheinen: {_html_zellen(html)[0]!r}")
 
@@ -191,7 +191,7 @@ def test_ac2_eine_schwaechere_zutat_derselben_stunde_wird_nicht_mitgenannt():
     gar nicht hergibt.
     """
     html, _ = _mail(_ort("Mischort", 47.0, 12.0,
-                         [_dp(14, code=ThunderLevel.LOW, cape=1500.0, cin=5.0)]))
+                         [_dp(14, code=ThunderLevel.LOW, cape=3000.0, cin=5.0)]))
     assert _html_zellen(html)[0] == "hoch · CAPE", (
         f"Nur die Zutat AUF der Hoechststufe darf erscheinen -- der "
         f"Wettercode traegt hier nur 'leicht': {_html_zellen(html)[0]!r}")
@@ -204,7 +204,7 @@ def test_ac3_stufe_kein_bekommt_keinen_herkunfts_zusatz():
     ueber der Leiter) seine Herkunft sehr wohl zeigt."""
     html, _ = _mail(
         _ort("Ruhigort", 47.0, 12.0, [_dp(14, cape=100.0, cin=5.0)]),
-        _ort("Sturmort", 47.0, 12.0, [_dp(14, cape=1500.0, cin=5.0)]),
+        _ort("Sturmort", 47.0, 12.0, [_dp(14, cape=3000.0, cin=5.0)]),
     )
     ruhig_zelle, sturm_zelle = _html_zellen(html)
     assert "·" not in ruhig_zelle, (
@@ -219,7 +219,7 @@ def test_ac6_hagel_hinweis_und_herkunft_stehen_nebeneinander():
     When die E-Mail gerendert wird, Then stehen beide Zusaetze nebeneinander,
     ohne dass einer den anderen verdraengt."""
     html, _ = _mail(_ort("Hagelort", 47.0, 12.0,
-                         [_dp(14, cape=1500.0, cin=5.0, hail=True)]))
+                         [_dp(14, cape=3000.0, cin=5.0, hail=True)]))
     assert _html_zellen(html)[0] == "hoch · CAPE · Hagel: ja", (
         f"Herkunft UND Hagel-Hinweis muessen erscheinen (Herkunft vor Hagel, "
         f"Spec D8): {_html_zellen(html)[0]!r}")
@@ -248,7 +248,7 @@ def test_ac10_tagesmaximum_vereinigt_die_zutaten_mehrerer_stunden():
     # DE_ALPEN auf (thunder_region_for), dessen Leiter unveraendert 1/30/50
     # ist -- 60.0 J/kg bleibt dort unabhaengig von #1678 HIGH.
     html, _ = _mail(_ort("Zweiort", 47.0, 12.0,
-                         [_dp(14, cape=1500.0, cin=5.0), _dp(18, lpi=60.0)]))
+                         [_dp(14, cape=3000.0, cin=5.0), _dp(18, lpi=60.0)]))
     assert _teile(_html_zellen(html)[0]) == ("hoch", {"CAPE", "Blitzpotenzial"}), (
         f"Das Tagesaggregat muss die Traeger ALLER Stunden mit der "
         f"Hoechststufe vereinigen: {_html_zellen(html)[0]!r}")
@@ -298,11 +298,11 @@ def test_ac12_bei_abweichung_von_engine_wert_und_stunden_keine_herkunft():
     Gegenprobe im selben Test (Spec-Pflicht): stimmen Engine-Wert und
     Stundenwert ueberein, erscheint die Herkunft sehr wohl.
     """
-    # CAPE 800 J/kg bei schwacher Hemmung -> MED ueber die icon_d2-Leiter.
+    # CAPE 1500 J/kg bei schwacher Hemmung -> MED ueber die icon_d2-Leiter.
     html, _ = _mail(
-        _ort("Driftort", 47.0, 12.0, [_dp(14, cape=800.0, cin=5.0)],
+        _ort("Driftort", 47.0, 12.0, [_dp(14, cape=1500.0, cin=5.0)],
              thunder_level_max=ThunderLevel.HIGH),
-        _ort("Einigort", 47.0, 12.0, [_dp(14, cape=800.0, cin=5.0)],
+        _ort("Einigort", 47.0, 12.0, [_dp(14, cape=1500.0, cin=5.0)],
              thunder_level_max=ThunderLevel.MED),
     )
     drift_zelle, einig_zelle = _html_zellen(html)

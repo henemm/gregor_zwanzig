@@ -21,7 +21,7 @@ Tages faellt ganztaegig aus (AC-9).
 Test-Politik (kein Mock-Theater):
 
 * Der Versandfehler wird **nicht** durch ein werfendes Double erzeugt, sondern
-  durch eine echte, unzulaessige Kanal-Konfiguration: E-Mail ist fuer die Tour
+  durch eine echte, unzulaessige Kanal-Konfiguration: E-Mail ist fuer die Trip
   eingeschaltet, die SMTP-Zugangsdaten sind aber unvollstaendig. Es laeuft der
   ECHTE Guard im echten `EmailOutput` und wirft den ECHTEN `OutputConfigError`
   — dieselbe Ausnahmeklasse, aus demselben Modul, auf demselben Weg wie am
@@ -84,6 +84,8 @@ from app.models import (
 from app.trip import Stage, Trip, Waypoint
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
 from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
+from tests.helpers.ortstag import ortstag
+from tests.helpers.sms_empfaenger import mit_profil_kanaele  # #1412 S4a+S4b
 
 # Pfadregel #1409: Pruefling relativ zur Testdatei aufloesen, nie ueber einen
 # festen Hauptrepo-Pfad — sonst pruefte dieser Test aus dem Worktree die
@@ -178,15 +180,15 @@ def _data(segment_id: int | str = 1, *, segment: TripSegment | None = None,
 def _trip(trip_id: str, *, with_levels: bool = False,
           stage_offsets: tuple[int, ...] = (0,), send_email: bool = True,
           send_sms: bool = False, send_telegram: bool = False) -> Trip:
-    """Tour mit einer Etappe HEUTE und scharfem E-Mail-Kanal.
+    """Trip mit einer Etappe HEUTE und scharfem E-Mail-Kanal.
 
     `stage_offsets` (#1662 AC-4): zusaetzliche Etappentage relativ zu heute —
-    `(-1, 0)` ergibt eine Tour, die GESTERN schon lief. Nur damit laesst sich
+    `(-1, 0)` ergibt eine Trip, die GESTERN schon lief. Nur damit laesst sich
     ein Vermerk mit gestrigem Zieltag pruefen, ohne dass er schon an der
     bestehenden "keine Segmente"-Regel (`:392-395`) verfaellt.
     """
     # #1667 S1 / #1697: wanduhr-robuste Ankunftszeit + Ortstag statt roher
-    # date.today() ohne arrival_calculated — sonst greift ab ~17:00 UTC der
+    # Wanduhr ohne arrival_calculated — sonst greift ab ~17:00 UTC der
     # Naismith-Default 08:00 und das Ziel-Segment endet am Tagesfenster-Ende
     # (19:00 Ortszeit) VOR dem Testlauf.
     heute = stage_date(LAT, LON)
@@ -270,7 +272,7 @@ def _run_failing_briefing(user_id: str, trip: Trip, *, gust: float = 25.0,
     from output.channels.base import OutputConfigError
 
     scheduler = _fixture_scheduler(gust)(
-        settings=_settings_email_broken(), user_id=user_id,
+        settings=_settings_email_broken(), user_id=mit_profil_kanaele(user_id, _settings_email_broken()),
     )
     with pytest.raises(OutputConfigError) as excinfo:
         scheduler._send_trip_report_outcome(
@@ -306,7 +308,7 @@ def test_ac1_versandfehler_schreibt_datierten_und_undatierten_snapshot_trotzdem(
     _run_failing_briefing(uid, trip, gust=25.0)
 
     svc = _snapshots(uid)
-    dated = svc.load_dated(trip.id, date.today())
+    dated = svc.load_dated(trip.id, ortstag(LAT, LON))
     undated = svc.load(trip.id)
 
     assert dated is not None, (
@@ -351,8 +353,8 @@ def test_ac3_versandfehler_zaehlt_weiterhin_als_fehlschlag_und_wird_protokollier
     trip = _trip(f"trip-1629-ac3-{uuid.uuid4().hex[:6]}")
     settings = _settings_email_broken()
 
-    strategy = TripDispatchStrategy(settings=settings, user_id=uid)
-    strategy._service = _fixture_scheduler(25.0)(settings=settings, user_id=uid)
+    strategy = TripDispatchStrategy(settings=settings, user_id=mit_profil_kanaele(uid, settings))
+    strategy._service = _fixture_scheduler(25.0)(settings=settings, user_id=mit_profil_kanaele(uid, settings))
 
     with caplog.at_level(logging.ERROR, logger="dispatch_orchestrator"):
         # Issue #1725: `collect_due` liefert (trip, report_type, ORTSTAG) —
@@ -416,7 +418,7 @@ def test_ac4_versandfehler_setzt_melde_gedaechtnis_wie_ein_unerreichbarer_kanal_
     )
     AlertStateService(user_id=uid_b).save(trip_b.id, dict(vorher))
     outcome_b = _fixture_scheduler(25.0)(
-        settings=settings_email_and_failing_telegram(), user_id=uid_b,
+        settings=settings_email_and_failing_telegram(), user_id=mit_profil_kanaele(uid_b, settings_email_and_failing_telegram()),
     )._send_trip_report_outcome(trip_b, "morning", on_demand=False)
     assert outcome_b == "channels_unreachable", (
         "Vorbedingung: der Vergleichslauf muss ehrlich als nicht zugestellt "
@@ -459,7 +461,7 @@ def test_ac5_ad_hoc_versandfehler_laesst_anker_und_gedaechtnis_unberuehrt():
     uid = _fresh_user("ac5")
     trip = _trip(f"trip-1629-ac5-{uuid.uuid4().hex[:6]}")
 
-    _snapshots(uid).save_dated(trip.id, date.today(), [_data(1, gust_max_kmh=20.0)])
+    _snapshots(uid).save_dated(trip.id, ortstag(LAT, LON), [_data(1, gust_max_kmh=20.0)])
     vorher = {
         "gust_max_kmh:1": {"last_reported_value": 42.0, "reported_at": "x"},
         "official_alert:region:Gailtal:thunderstorm:none:none": {
@@ -470,7 +472,7 @@ def test_ac5_ad_hoc_versandfehler_laesst_anker_und_gedaechtnis_unberuehrt():
 
     _run_failing_briefing(uid, trip, gust=48.0, on_demand=True)
 
-    dated = _snapshots(uid).load_dated(trip.id, date.today())
+    dated = _snapshots(uid).load_dated(trip.id, ortstag(LAT, LON))
     assert dated is not None and dated[0].aggregated.gust_max_kmh == pytest.approx(20.0), (
         "Der Ad-hoc-Abruf darf den Δ-Anker auch im Fehlerfall nicht "
         f"ueberschreiben, gefunden: {dated and dated[0].aggregated.gust_max_kmh!r} "
@@ -512,7 +514,7 @@ class _FixedOfficialAlertSource:
 def _official_alert_today():
     from services.official_alerts import OfficialAlert
 
-    day = date.today()
+    day = ortstag(LAT, LON)
     valid_from = datetime(day.year, day.month, day.day, tzinfo=timezone.utc)
     return OfficialAlert(
         source="tdd-1629", hazard="thunderstorm", level=2,
@@ -577,7 +579,13 @@ def test_ac6_versandfehler_vermerkt_amtliche_warnung_nicht_als_gemeldet(monkeypa
                 telegram_test_bot_token="", telegram_test_chat_id="",
                 sms_gateway_url="", seven_api_key="", sms_to="",
             ),
-            user_id=uid_ok,
+            user_id=mit_profil_kanaele(uid_ok, Settings(
+                smtp_host="dummy.invalid", smtp_user="dummy", smtp_pass="dummy",
+                mail_to="dummy@example.com",
+                telegram_bot_token="", telegram_chat_id="",
+                telegram_test_bot_token="", telegram_test_chat_id="",
+                sms_gateway_url="", seven_api_key="", sms_to="",
+            )),
         )._send_trip_report_outcome(trip_ok, "morning", on_demand=False)
         assert outcome_ok == "sent", (
             f"Gegenprobe: der gelingende Versand muss 'sent' liefern ({outcome_ok!r})"
@@ -689,7 +697,7 @@ def test_ac7_defekter_diagnose_schreiber_verdeckt_die_versandausnahme_nicht():
     # sofort auffallen.
     _run_failing_briefing(uid, trip, gust=25.0)
 
-    assert _snapshots(uid).load_dated(trip.id, date.today()) is not None, (
+    assert _snapshots(uid).load_dated(trip.id, ortstag(LAT, LON)) is not None, (
         "Auch bei defektem Diagnose-Schreiber muss der Wetter-Snapshot des "
         "Tages entstehen — der Diagnose-Eintrag ist fail-soft, der Anker nicht "
         "(AC-7)"
@@ -751,7 +759,7 @@ def test_ac9_alarm_lauf_desselben_tages_prueft_nach_gescheitertem_briefing_regul
     _snapshots(uid).save(
         trip.id,
         [_data(1, segment=_segment(1, day_offset=-1), gust_max_kmh=25.0)],
-        date.today() - timedelta(days=1),
+        ortstag(LAT, LON) - timedelta(days=1),
     )
 
     _run_failing_briefing(uid, trip, gust=25.0)
@@ -759,7 +767,7 @@ def test_ac9_alarm_lauf_desselben_tages_prueft_nach_gescheitertem_briefing_regul
     monkeypatch.setattr(sw_mod, "SegmentWeatherService", _FixedSegmentWeatherService)
     meldungen: list = []
     alert_svc = TripAlertService(
-        settings=_settings_mail_sink(), user_id=uid,
+        settings=_settings_mail_sink(), user_id=mit_profil_kanaele(uid, _settings_mail_sink()),
         mail_sink=lambda subject, body: meldungen.append(subject),
     )
 
@@ -817,12 +825,12 @@ def test_ac10_fehler_vor_dem_versand_schreibt_keinen_anker():
             raise RuntimeError("Wetterabruf gescheitert (#1629 AC-10)")
 
     scheduler = _BrokenWeatherScheduler(
-        settings=_settings_email_broken(), user_id=uid,
+        settings=_settings_email_broken(), user_id=mit_profil_kanaele(uid, _settings_email_broken()),
     )
     with pytest.raises(RuntimeError):
         scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
-    assert _snapshots(uid).load_dated(trip.id, date.today()) is None, (
+    assert _snapshots(uid).load_dated(trip.id, ortstag(LAT, LON)) is None, (
         "Ein Fehler VOR dem Versand darf keinen datierten Anker erzeugen — "
         "sonst vergleicht der Alarm gegen eine Referenz, die nie ein Briefing "
         "war (AC-10)"
@@ -843,7 +851,7 @@ def test_ac10_fehler_vor_dem_versand_schreibt_keinen_anker():
 # SPEC: docs/specs/modules/fix_1662_versandfehler_nachliefern.md (AC-1..AC-13).
 # Fortsetzung von #1629: der Anker ueberlebt seither einen Versandfehler, das
 # Briefing selbst aber nicht — es wird nirgends vorgemerkt und nie nachgeholt
-# (07./08.08.2026: zwei verlorene Briefings derselben Tour).
+# (07./08.08.2026: zwei verlorene Briefings derselben Trip).
 #
 # Test-Politik wie oben: kein Mock-Theater. Der Fehlschlag entsteht am ECHTEN
 # Konfigurations-Guard des echten E-Mail-Kanals (`_settings_email_broken`),
@@ -910,7 +918,7 @@ def _seed_marker(user_id: str, trip: Trip, *, reason: str | None,
     entry: dict = {
         "trip_id": trip.id,
         "report_type": report_type,
-        "date": (target_date or date.today()).isoformat(),
+        "date": (target_date or ortstag(LAT, LON)).isoformat(),
         "slot_hour": slot_hour,
         "failed_segment_ids": list(failed_segment_ids or []),
         "attempts": 0,
@@ -1027,8 +1035,8 @@ def _strategy(user_id: str, settings: Settings, *, gust: float = 25.0):
     Kompositionsnaht (Haus-Muster, s. AC-3 oben)."""
     from services.dispatch_orchestrator import TripDispatchStrategy
 
-    strategy = TripDispatchStrategy(settings=settings, user_id=user_id)
-    strategy._service = _fixture_scheduler(gust)(settings=settings, user_id=user_id)
+    strategy = TripDispatchStrategy(settings=settings, user_id=mit_profil_kanaele(user_id, settings))
+    strategy._service = _fixture_scheduler(gust)(settings=settings, user_id=mit_profil_kanaele(user_id, settings))
     return strategy
 
 
@@ -1068,7 +1076,7 @@ def test_versandfehler_ohne_zweitkanal_wird_zur_nachlieferung_vorgemerkt():
         "Nachliefer-Vermerk — das Briefing ist ersatzlos verloren "
         f"(#1662 AC-1). Vorhanden: {_pending_markers(uid)!r}"
     )
-    assert marker.get("trip_id") == trip.id, f"Falsche Tour im Vermerk: {marker!r}"
+    assert marker.get("trip_id") == trip.id, f"Falsche Trip im Vermerk: {marker!r}"
     assert marker.get("failed_segment_ids") == [], (
         "Ein Versandfehler betrifft keinen Wetterabschnitt — die Liste muss "
         f"leer sein, sonst zieht der Vorlauf die Wetterdaten-Logik: {marker!r}"
@@ -1168,7 +1176,7 @@ def test_nachgeliefertes_briefing_nennt_den_gescheiterten_versand_als_grund(monk
 def test_vermerk_mit_vergangenem_zieltag_verfaellt_ohne_zustellversuch(monkeypatch):
     """#1662 AC-4.
 
-    GIVEN ein Versandfehler-Vermerk, dessen Zieltag GESTERN liegt (die Tour
+    GIVEN ein Versandfehler-Vermerk, dessen Zieltag GESTERN liegt (die Trip
           lief gestern schon, es gaebe also sehr wohl Etappen-Daten).
     WHEN  der stuendliche Vorlauf laeuft.
     THEN  verfaellt der Vermerk ohne weiteren Zustellversuch — ein
@@ -1184,7 +1192,7 @@ def test_vermerk_mit_vergangenem_zieltag_verfaellt_ohne_zustellversuch(monkeypat
     trip = _trip(f"trip-1662-ac4-{uuid.uuid4().hex[:6]}", stage_offsets=(-1, 0))
     save_trip(trip, user_id=uid)
     _seed_marker(uid, trip, reason="dispatch_error",
-                 target_date=date.today() - timedelta(days=1))
+                 target_date=ortstag(LAT, LON) - timedelta(days=1))
 
     zugestellt = _recording_email(monkeypatch)
     _strategy(uid, _settings_email_ok()).pre_pass(now_utc=_zeitpunkt_ortsstunde(9), due=[])
@@ -1205,7 +1213,7 @@ def test_vermerk_mit_vergangenem_zieltag_verfaellt_ohne_zustellversuch(monkeypat
 def test_gelingender_regulaerer_versand_macht_den_vermerk_gegenstandslos(monkeypatch):
     """#1662 AC-5.
 
-    GIVEN ein Versandfehler-Vermerk und dieselbe Tour ist zur aktuellen Stunde
+    GIVEN ein Versandfehler-Vermerk und dieselbe Trip ist zur aktuellen Stunde
           regulaer faellig; der regulaere Versand gelingt.
     WHEN  der stuendliche Lauf (Vorlauf + regulaerer Slot) durch ist.
     THEN  erhielt der Nutzer GENAU EINE Nachricht, und der Vermerk ist weg.
@@ -1261,7 +1269,7 @@ def test_gelingender_regulaerer_versand_macht_den_vermerk_gegenstandslos(monkeyp
 def test_erneut_gescheiterter_regulaerer_versand_haelt_den_vermerk_am_leben():
     """#1662 AC-6.
 
-    GIVEN ein Versandfehler-Vermerk, die Tour ist zur aktuellen Stunde regulaer
+    GIVEN ein Versandfehler-Vermerk, die Trip ist zur aktuellen Stunde regulaer
           faellig, und der regulaere Versand scheitert erneut.
     WHEN  der Lauf beendet ist.
     THEN  bleibt ein Versandfehler-Vermerk bestehen, sodass die naechste Stunde
@@ -1348,7 +1356,7 @@ def test_email_fehler_reisst_sms_und_telegram_nicht_mehr_mit(monkeypatch):
 
     sms_out, telegram_out = _recording_sms_and_telegram(monkeypatch)
     scheduler = _fixture_scheduler(25.0)(
-        settings=_settings_email_broken_sms_telegram_scharf(), user_id=uid,
+        settings=_settings_email_broken_sms_telegram_scharf(), user_id=mit_profil_kanaele(uid, _settings_email_broken_sms_telegram_scharf()),
     )
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
@@ -1397,7 +1405,7 @@ def test_unerwartete_telegram_stoerung_bricht_den_versandlauf_nicht_ab(monkeypat
     )
     settings = Settings(**{**_DUMMY_EMAIL_FIELDS, **_TELEGRAM_FIELDS})
     assert settings.can_send_email() and settings.can_send_telegram()
-    scheduler = _fixture_scheduler(25.0)(settings=settings, user_id=uid)
+    scheduler = _fixture_scheduler(25.0)(settings=settings, user_id=mit_profil_kanaele(uid, settings))
 
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
@@ -1450,11 +1458,11 @@ def test_wetterfehler_vermerk_behaelt_die_segment_schnittmengen_regel(monkeypatc
             ]
 
     settings = _settings_email_ok()
-    scheduler = _AllSegmentsFailing(settings=settings, user_id=uid)
+    scheduler = _AllSegmentsFailing(settings=settings, user_id=mit_profil_kanaele(uid, settings))
     segment_ids = [
-        str(s.segment_id) for s in scheduler._convert_trip_to_segments(trip, date.today())
+        str(s.segment_id) for s in scheduler._convert_trip_to_segments(trip, ortstag(LAT, LON))
     ]
-    assert segment_ids, "Vorbedingung: die Tour muss heute Abschnitte haben"
+    assert segment_ids, "Vorbedingung: die Trip muss heute Abschnitte haben"
     _seed_marker(uid, trip, reason=None, failed_segment_ids=segment_ids)
 
     zugestellt = _recording_email(monkeypatch)
@@ -1495,7 +1503,7 @@ def test_versandfehler_schreibt_anker_diagnose_UND_vermerk():
 
     _run_failing_briefing(uid, trip, gust=25.0)
 
-    assert _snapshots(uid).load_dated(trip.id, date.today()) is not None, (
+    assert _snapshots(uid).load_dated(trip.id, ortstag(LAT, LON)) is not None, (
         "REGRESSION #1629: der datierte Wetter-Anker fehlt (#1662 AC-11)"
     )
     journal = _dispatch_failure_journal(uid)
@@ -1560,7 +1568,7 @@ def test_gescheiterte_email_neben_gelungener_sms_bleibt_in_der_diagnose(monkeypa
 
     sms_out, _ = _recording_sms_and_telegram(monkeypatch)
     scheduler = _fixture_scheduler(25.0)(
-        settings=_settings_email_broken_sms_telegram_scharf(), user_id=uid,
+        settings=_settings_email_broken_sms_telegram_scharf(), user_id=mit_profil_kanaele(uid, _settings_email_broken_sms_telegram_scharf()),
     )
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
@@ -1580,14 +1588,14 @@ def test_gescheiterte_email_neben_gelungener_sms_bleibt_in_der_diagnose(monkeypa
     zeilen = [z for z in journal.read_text(encoding="utf-8").splitlines() if z.strip()]
     import json as _json
     assert any(_json.loads(z).get("entity_id") == trip.id for z in zeilen), (
-        f"Kein Diagnose-Eintrag fuer diese Tour: {zeilen!r} (#1662 AC-13)"
+        f"Kein Diagnose-Eintrag fuer diese Trip: {zeilen!r} (#1662 AC-13)"
     )
 
 
 # ═════════════ #1662 AC-1, Zweitkanal-Luecke (Adversary-Befund F001) ══════════
 #
 # AC-1 sagt "kein einziger konfigurierter Kanal hat zugestellt" und nennt
-# E-Mail ausdruecklich nur als Beispiel ("z.B."). Ist E-Mail fuer eine Tour gar
+# E-Mail ausdruecklich nur als Beispiel ("z.B."). Ist E-Mail fuer eine Trip gar
 # nicht eingeschaltet und der EINZIGE konfigurierte Kanal scheitert, verlaesst
 # den Versand keine Ausnahme (SMS und Telegram sind fail-soft) — der Vermerk
 # haengt aber bis hierher allein am `except`-Zweig. Ergebnis: `sent_channels`
@@ -1621,7 +1629,7 @@ def _settings_nur_sms_scharf() -> Settings:
 def test_sms_only_ohne_zustellung_wird_zur_nachlieferung_vorgemerkt():
     """#1662 AC-1 (Adversary F001) — SMS ist der einzige Kanal und scheitert.
 
-    GIVEN eine Tour ohne E-Mail-Versand, deren einziger konfigurierter Kanal
+    GIVEN eine Trip ohne E-Mail-Versand, deren einziger konfigurierter Kanal
           SMS ist, und der SMS-Gateway ist nicht erreichbar.
     WHEN  der Versandlauf beendet ist (er wirft dabei KEINE Ausnahme — SMS ist
           fail-soft, die Zustellbilanz bleibt leer).
@@ -1637,7 +1645,7 @@ def test_sms_only_ohne_zustellung_wird_zur_nachlieferung_vorgemerkt():
                  send_email=False, send_sms=True)
 
     scheduler = _fixture_scheduler(25.0)(
-        settings=_settings_nur_sms_scharf(), user_id=uid,
+        settings=_settings_nur_sms_scharf(), user_id=mit_profil_kanaele(uid, _settings_nur_sms_scharf()),
     )
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
@@ -1651,7 +1659,7 @@ def test_sms_only_ohne_zustellung_wird_zur_nachlieferung_vorgemerkt():
         "Nachliefer-Vermerk fehlt und das Briefing ist ersatzlos verloren "
         f"(#1662 AC-1). Vorhanden: {_pending_markers(uid)!r}"
     )
-    assert marker.get("trip_id") == trip.id, f"Falsche Tour im Vermerk: {marker!r}"
+    assert marker.get("trip_id") == trip.id, f"Falsche Trip im Vermerk: {marker!r}"
     assert marker.get("failed_segment_ids") == [], (
         "Ein Versandfehler betrifft keinen Wetterabschnitt — die Liste muss "
         f"leer sein, sonst zieht der Vorlauf die Wetterdaten-Logik: {marker!r}"
@@ -1663,7 +1671,7 @@ def test_telegram_only_ohne_zustellung_wird_vorgemerkt_und_bleibt_unerreichbar(
 ):
     """#1662 AC-1 (Adversary F001) — Telegram ist der einzige Kanal.
 
-    GIVEN eine Tour ohne E-Mail- und ohne SMS-Versand, deren einziger
+    GIVEN eine Trip ohne E-Mail- und ohne SMS-Versand, deren einziger
           konfigurierter Kanal Telegram ist, und der Telegram-Transport
           scheitert bei jeder Nachricht.
     WHEN  der Versandlauf beendet ist.
@@ -1686,7 +1694,7 @@ def test_telegram_only_ohne_zustellung_wird_vorgemerkt_und_bleibt_unerreichbar(
     settings = Settings(**{**_BROKEN_EMAIL_FIELDS, **_TELEGRAM_FIELDS})
     assert settings.can_send_telegram() is True
     assert settings.can_send_email() is False and settings.can_send_sms() is False
-    scheduler = _fixture_scheduler(25.0)(settings=settings, user_id=uid)
+    scheduler = _fixture_scheduler(25.0)(settings=settings, user_id=mit_profil_kanaele(uid, settings))
 
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 
@@ -1703,13 +1711,13 @@ def test_telegram_only_ohne_zustellung_wird_vorgemerkt_und_bleibt_unerreichbar(
         "Vermerk wird das Briefing nie nachgeholt "
         f"(#1662 AC-1). Vorhanden: {_pending_markers(uid)!r}"
     )
-    assert marker.get("trip_id") == trip.id, f"Falsche Tour im Vermerk: {marker!r}"
+    assert marker.get("trip_id") == trip.id, f"Falsche Trip im Vermerk: {marker!r}"
 
 
-def test_tour_ganz_ohne_kanal_wird_nicht_zur_nachlieferung_vorgemerkt():
+def test_trip_ganz_ohne_kanal_wird_nicht_zur_nachlieferung_vorgemerkt():
     """#1662 AC-1, Gegenprobe zur Abgrenzung (Mutations-Fund M3).
 
-    GIVEN eine Tour, fuer die GAR KEIN Kanal eingeschaltet ist.
+    GIVEN eine Trip, fuer die GAR KEIN Kanal eingeschaltet ist.
     WHEN  der Versandlauf beendet ist.
     THEN  entsteht KEIN Vermerk — hier ist nichts ausgefallen, es war nichts
           vorgesehen; eine Nachlieferung haette kein Ziel und liesse den
@@ -1726,7 +1734,7 @@ def test_tour_ganz_ohne_kanal_wird_nicht_zur_nachlieferung_vorgemerkt():
                     trip.report_config.send_telegram)), "Vorbedingung: kein Kanal"
 
     scheduler = _fixture_scheduler(25.0)(
-        settings=_settings_email_broken(), user_id=uid,
+        settings=_settings_email_broken(), user_id=mit_profil_kanaele(uid, _settings_email_broken()),
     )
     outcome = scheduler._send_trip_report_outcome(trip, "morning", on_demand=False)
 

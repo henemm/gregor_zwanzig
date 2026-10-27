@@ -2,8 +2,8 @@
 entity_id: radar_nowcast_france
 type: module
 created: 2026-06-11
-updated: 2026-06-11
-status: draft
+updated: 2026-09-20
+status: implemented
 version: "1.0"
 tags: [providers, alerts, weather, nowcast, radar, france, europe]
 ---
@@ -105,6 +105,8 @@ Koordinate außerhalb DE/AT liegt. Jeder Schritt ist fail-soft (Exception/Leeran
 - **AC-4:** Given AROME-`minutely_15`-Daten, die einen konvektiven WMO-Code (95/96/99) für einen nassen Frame im Nowcast-Fenster führen / When `RadarNowcastService` daraus ein Ergebnis ableitet / Then ist `result.is_convective == True` und `intensity_to_text` liefert "Starker Hagel/Gewitter" — d.h. der hochauflösende AROME-`weather_code` speist das Gewitter-Signal (kein separater Blitz-Feed nötig).
   - Test: Deterministischer Test, der reale `RadarFrame`-Objekte (konstruiert aus AROME-Feldwerten inkl. `is_convective=True`, kein `Mock`) durch `_derive_result`/`intensity_to_text` führt → `is_convective` propagiert, Intensitäts-String korrekt. Ergänzend ein echter Fetch gegen die AROME-Koordinate, der die Parse-Struktur (`weather_code` vorhanden) belegt.
 
+> Nachtrag 2026-09-15 (#2205, ADR-0069): Konvektiver Frame ohne Hagel (Wettercode 95) trägt jetzt das Label „Gewitter" (`INTENSITY_CONVECTIVE_NO_HAIL`); „Starker Hagel/Gewitter" nur noch bei Wettercode 96/99 (`RadarFrame.hail`).
+
 ## AC-Test-Mapping (Test-Plan)
 
 | AC | Testfunktion |
@@ -136,3 +138,4 @@ Testdatei: `tests/tdd/test_feature_734_arome_france_nowcast.py` (mock-frei).
 ## Changelog
 
 - 2026-06-11: Initial spec created (Issue #734) — AROME-HD explizit für Frankreich-Box; ICON-D2 ausgegliedert nach #761
+- 2026-09-20: Die seit 2026-06-11 behauptete Korsika-Zuordnung zu AROME-FR wird mit Issue #1761 erstmals real eingelöst — bis dahin griff die (größere) Italien-Radar-Box vor der Frankreich-Box, sodass Korsika faktisch nie über AROME-FR lief. Neu ist eine eigene, vorgeschaltete Korsika-Box (`_within_corsica`) plus ARPAE-ICON-2I-Sidecar für `is_convective`/`hail`, weil AROME-FR an Korsika-Koordinaten strukturell keinen `weather_code` liefert (das sah die ursprüngliche AC-1-Fassung noch nicht vor). Siehe `docs/specs/modules/fix_1761_korsika_arome_sidecar.md`.

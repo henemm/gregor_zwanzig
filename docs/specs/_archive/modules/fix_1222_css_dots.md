@@ -3,7 +3,7 @@ entity_id: fix_1222_css_dots
 type: module
 created: 2026-07-10
 updated: 2026-07-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, renderer, ampel, design]
 ---

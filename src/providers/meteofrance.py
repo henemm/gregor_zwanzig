@@ -58,6 +58,11 @@ from tenacity import (
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from providers import thunder_routing
 from providers.base import ProviderRequestError, ThunderSourceUnavailableError
+from providers.http import (
+    capped_timeout_or_raise,
+    make_deadline_before_hook,
+    stop_at_deadline,
+)
 # Zustaendigkeit der GRUNDVORHERSAGE. Fuer die Gewitter-Anreicherung BEWUSST
 # NICHT mehr befragt (Spec AC-12): dort entscheidet `thunder_routing`, weil die
 # Zustaendigkeit groessenabhaengig ist (Oesterreich: Schnee von GeoSphere,
@@ -194,6 +199,27 @@ PRECIP_COVERAGE = "TOTAL_PRECIPITATION__GROUND_OR_WATER_SURFACE"
 LIGHTNING_COVERAGE = (
     "AVERAGE_LIGHTNING_STRIKE_DENSITY_OVER_3HOURS__GROUND_OR_WATER_SURFACE"
 )
+
+# #1507 S5c (Epic #1419, Block C von #2257): Hagel-Rohwert fuer FR/Korsika.
+# Live gegen die API verifiziert (2026-09-20, `GetCapabilities`: 481 Treffer;
+# `DescribeCoverage` von
+# `HAIL__GROUND_OR_WATER_SURFACE___2026-09-16T00.00.00Z_PT1H` liefert
+# `<ows:Title>Total hail precipitation</ows:Title>`, Feldname
+# `HAIL__GROUND_OR_WATER_SURFACE`, uom `kg kg-1` — ein Massenanteil
+# (Mischungsverhaeltnis), KEINE Dichte wie bei der Blitzdichte oben und
+# KEINE kumulierte Graupelmenge wie beim DWD-Pendant
+# `hail_potential_grau_gsp`. Deshalb ein eigenes Feld, kein Zusammenlegen
+# (#1419 Abs. 3.1).
+#
+# BEWUSST NICHT `GRAUPEL__GROUND_OR_WATER_SURFACE`: der Dienst fuehrt diesen
+# Namen ebenfalls, aber als `<ows:Title>Total graupel precipitation</ows:Title>`
+# — Graupel ist eine ANDERE Niederschlagsform als Hagel. Nur `HAIL__...`
+# trifft die fachliche Absicht dieser Scheibe.
+#
+# Anders als die Blitzdichte traegt diese Coverage ein Perioden-Suffix
+# (`_PT1H`, wie der Niederschlag) — s. `HAIL_COVERAGE_SUFFIX`.
+HAIL_COVERAGE = "HAIL__GROUND_OR_WATER_SURFACE"
+HAIL_COVERAGE_SUFFIX = "_PT1H"
 
 # #1457 S2a FIX, AC-3/AC-4: der Sicherheitsabstand fuer die GRUNDVORHERSAGE
 # (Temperatur/Wind/Niederschlag, `_latest_run`-Default unten) bleibt bei 3h —
@@ -418,20 +444,57 @@ class MeteoFranceDirectProvider:
     def name(self) -> str:
         return "fr_direct"
 
+    def _fetch_deadline_seconds(self) -> float:
+        """Fristdauer je ``_request``-Aufruf, gelesen zur AUFRUFZEIT.
+
+        #2302: der geteilte ``before``-Hook (``providers/http.py``) loest
+        ueber den NAMEN dieser Methode auf, nie ueber ihren Wert — so wirkt
+        ein Laufzeit-Patch des Modul-Globals unveraendert.
+        """
+        return FETCH_DEADLINE_SECONDS
+
     @retry(
-        stop=stop_after_attempt(RETRY_ATTEMPTS),
+        stop=stop_after_attempt(RETRY_ATTEMPTS) | stop_at_deadline,
         wait=wait_exponential(multiplier=1, min=RETRY_WAIT_MIN, max=RETRY_WAIT_MAX),
         retry=retry_if_exception(_is_retryable_error),
+        before=make_deadline_before_hook("_fetch_deadline_seconds"),
         before_sleep=before_sleep_log(logger, logging.WARNING),
         reraise=True,
     )
     def _request(
         self, coverage_id: str, lat: float, lon: float,
         height: Optional[int], time_str: str,
+        deadline_at: Optional[float] = None,
     ) -> bytes:
         """GetCoverage-Request mit Retry-Logik (SPEC: api_retry.md-Muster,
-        502/503/504 + Connection-Errors, 5 Versuche, 2-60s Backoff)."""
-        return self._request_once(coverage_id, lat, lon, height, time_str)
+        502/503/504 + Connection-Errors, 5 Versuche, 2-60s Backoff).
+
+        #2302 Scheibe A: zusaetzlich durch ``FETCH_DEADLINE_SECONDS``
+        begrenzt — sowohl der HTTP-Timeout jedes einzelnen Versuchs als auch
+        die gesamte Wiederholkette dieses Aufrufs sind auf die Restzeit bis
+        ``deadline_at`` gedeckelt. Vorher pruefte nur ``_fetch_series``
+        ZWISCHEN zwei Aufrufen; ein einzelner haengender Aufruf konnte seine
+        vollen ``RETRY_ATTEMPTS`` Versuche plus vier Wartepausen (2-60s)
+        durchlaufen, ganz gleich wie viel Budget noch uebrig war.
+
+        Args:
+            deadline_at: Absolute monotone Frist. ``_fetch_series`` reicht
+                die Frist der SERIE durch — sie gilt damit ueber alle Abrufe
+                der Serie gemeinsam, statt dass jeder Abruf eine frische
+                volle Frist bekaeme. Fehlt sie, bildet der geteilte
+                ``before``-Hook sie selbst: die Absicherung haengt NICHT
+                daran, dass eine Aufrufstelle sie durchreicht.
+        """
+        request_timeout = capped_timeout_or_raise(
+            provider_name=self.name,
+            base_timeout=TIMEOUT,
+            deadline_at=deadline_at,
+            budget_label="FETCH_DEADLINE_SECONDS",
+            budget_seconds=FETCH_DEADLINE_SECONDS,
+        )
+        return self._request_once(
+            coverage_id, lat, lon, height, time_str, timeout=request_timeout
+        )
 
     def _request_once(
         self, coverage_id: str, lat: float, lon: float,
@@ -505,7 +568,14 @@ class MeteoFranceDirectProvider:
                     "ueberschritten",
                 )
             time_str = (run + timedelta(hours=offset)).strftime("%Y-%m-%dT%H:%M:%SZ")
-            raw = self._request(coverage_id, lat, lon, height, time_str)
+            # #2302: die Frist der SERIE ausdruecklich durchreichen (als
+            # Keyword — der `before`-Hook setzt denselben Namen in `kwargs`).
+            # Sonst bekaeme jeder einzelne Abruf eine frische volle Frist,
+            # und die Serienfrist waere wieder nur eine Pruefung ZWISCHEN den
+            # Abrufen.
+            raw = self._request(
+                coverage_id, lat, lon, height, time_str, deadline_at=deadline_at
+            )
             values[offset] = _read_point_value(raw, lat, lon)
         return values
 
@@ -514,6 +584,7 @@ class MeteoFranceDirectProvider:
         location: "Location",
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
+        deadline_at: Optional[float] = None,
     ) -> Dict[int, Optional[float]]:
         """#1457 S2a: erwartete Blitzdichte je Stunden-Offset (Blitze je km^2
         und 3h, Coverage `LIGHTNING_COVERAGE`). Best effort, fail-soft — wirft NIE.
@@ -536,17 +607,47 @@ class MeteoFranceDirectProvider:
         Fuehrt den Sammelabruf mit einem einzigen Ort aus (AC-9): EIN
         Abrufweg, der nicht auseinanderdriften kann.
         """
-        alle = self.fetch_thunder_signals_multi([location], start, end)
+        alle = self.fetch_thunder_signals_multi(
+            [location], start, end, deadline_at=deadline_at
+        )
         return alle.get(_ort_schluessel(location), {})
 
-    def fetch_thunder_signals_multi(
+    def _fetch_coverage_signals_multi(
         self,
+        coverage_base: str,
         locations: List["Location"],
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
+        coverage_suffix: str = "",
+        signal_label: str = "Blitzdichte",
+        deadline_at: Optional[float] = None,
     ) -> Dict[str, Dict[int, Optional[float]]]:
-        """#1457 S2a AC-9: Blitzdichte fuer MEHRERE Orte aus EINEM gemeinsamen
-        Abfragefenster. Best effort, fail-soft — wirft NIE.
+        """#1457 S2a AC-9 / #1507 S5c: EINE Coverage fuer MEHRERE Orte aus
+        EINEM gemeinsamen Abfragefenster. Best effort, fail-soft — wirft NIE
+        (Ausnahme: `ThunderSourceUnavailableError` bei Totalausfall, s. unten).
+
+        #1507 S5c: die Sammelabruf-Mechanik (Rechteck-Gruppierung, geteilter
+        Zwischenspeicher, Lauf-Rueckfallstufen, Zeitbudget, fail-soft) ist
+        NICHT an die Blitzdichte gebunden — der Coverage-Teil ist
+        parametrisiert, damit der Hagel-Rohwert (`HAIL_COVERAGE`) denselben
+        Weg nutzt statt ihn zu duplizieren. `fetch_thunder_signals_multi` und
+        `fetch_hail_signals_multi` sind duenne Wrapper darum.
+
+        Args:
+            coverage_base: Coverage-Name OHNE Lauf-Teil.
+            coverage_suffix: Perioden-Suffix hinter dem Lauf. Die Blitzdichte
+                traegt keines (die 3h-Mittelung steckt im Namen), der Hagel
+                wie der Niederschlag `_PT1H`. Eine fest verdrahtete
+                `f"{base}___{lauf}"`-Form wuerde dem Hagel einen beim Dienst
+                NICHT existierenden Namen geben (S2a-Lehre `LITOTA3`: jeder
+                Abruf endet dann lautlos in 404).
+            signal_label: nur fuer Protokollzeilen.
+            deadline_at: gemeinsames Zeitbudget des Anreicherungslaufs
+                (#1507 AC-5). Ohne Angabe bildet der Aufruf sich seine eigene
+                Frist aus `THUNDER_FETCH_DEADLINE_SECONDS` — bestehende
+                Aufrufer bleiben damit unveraendert. `fetch_forecast` reicht
+                EINE gemeinsame Frist an Blitzdichte UND Hagel durch, damit
+                die Anreicherung insgesamt kein zweites Vollbudget verbraucht.
 
         Warum sammeln (Regelkonformitaet, nicht Geschwindigkeit): Meteo-France
         begrenzt pro Minute (Annahme 100/min, Ueberschreitung -> HTTP 429).
@@ -592,6 +693,18 @@ class MeteoFranceDirectProvider:
         # zaehlt NICHT als Versuch -- er ist keine frische Abfrage.
         versucht = 0
         fehlgeschlagen = 0
+        # #2439: Kalt-Signal je Abruf (Vorlage `dwd_fenster`); eigener Praefix,
+        # damit die DWD-Auswertung die Zeile nicht als DWD-Download zaehlt.
+        t_fenster = time.monotonic()
+        downloads = 0
+        cache_treffer = 0
+
+        def _fenster_zeile() -> None:
+            logger.info(
+                "fr_direct_fenster fenster_s=%.2f downloads=%d cache_treffer=%d",
+                time.monotonic() - t_fenster, downloads, cache_treffer,
+            )
+
         try:
             now = datetime.now(timezone.utc)
             # `run` bleibt der 3h-Lauf (unveraendert) und damit der Nullpunkt
@@ -605,11 +718,15 @@ class MeteoFranceDirectProvider:
             offsets = _thunder_offsets(base, end)
             lauf_kandidaten = _thunder_run_candidates(now)
             lauf_index = 0
-            coverage_id = f"{LIGHTNING_COVERAGE}___{_run_str(lauf_kandidaten[0])}"
+            coverage_id = (
+                f"{coverage_base}___{_run_str(lauf_kandidaten[0])}"
+                f"{coverage_suffix}"
+            )
             rueckfall_protokolliert = False  # AC-7: einmal je Lauf, nicht je Stunde
             # Zeitgrenze fest, nicht rollend (Lehre #1448): EINMAL je Abruf
             # gebildet, dann vor jedem Einzel-Call geprueft.
-            deadline_at = time.monotonic() + THUNDER_FETCH_DEADLINE_SECONDS
+            if deadline_at is None:
+                deadline_at = time.monotonic() + THUNDER_FETCH_DEADLINE_SECONDS
             speicher = get_shared_thunder_window_cache()
             for gruppe in _thunder_gruppen(zustaendig):
                 bbox = _thunder_rechteck(gruppe)
@@ -626,17 +743,21 @@ class MeteoFranceDirectProvider:
                     # aelteren Lauf kann nie einen Treffer eines anderen Laufs
                     # liefern (AC-8).
                     raw = speicher.get(coverage_id, time_str, bbox)
+                    if raw is not None:
+                        cache_treffer += 1
                     if raw is None:
                         # Zeitgrenze im INNERSTEN Schritt (Lehre #1448): vor
                         # JEDEM Einzelabruf, nicht nur um die Schleife herum.
                         restzeit = deadline_at - time.monotonic()
                         if restzeit <= 0:
                             logger.warning(
-                                "Blitzdichte-Budget (%.0fs) erschoepft — "
+                                "%s-Budget (%.0fs) erschoepft — "
                                 "Anreicherung bricht ab, Grundvorhersage "
                                 "unberuehrt",
+                                signal_label,
                                 THUNDER_FETCH_DEADLINE_SECONDS,
                             )
+                            _fenster_zeile()
                             return ergebnis
                         while True:
                             versucht += 1
@@ -646,6 +767,7 @@ class MeteoFranceDirectProvider:
                                     gruppe[0].longitude, None, time_str,
                                     bbox=bbox, timeout=restzeit,
                                 )
+                                downloads += 1
                                 break
                             except httpx.HTTPStatusError as e:
                                 # #1457 S2a Fix, AC-4: der gewaehlte Lauf
@@ -658,10 +780,23 @@ class MeteoFranceDirectProvider:
                                 )
                                 if not weiterer_kandidat:
                                     fehlgeschlagen += 1
-                                    logger.warning(
-                                        "Blitzdichte +%dh nicht abrufbar: %s",
-                                        offset, e,
-                                    )
+                                    # #1993: 429 (Meteo-France-Rate-Limit)
+                                    # erkennbar von echtem Datenausfall
+                                    # unterscheiden -- gleiche Behandlung
+                                    # (raw = None, kein Retry), nur die
+                                    # Log-Aussage weicht ab.
+                                    if e.response.status_code == 429:
+                                        logger.warning(
+                                            "%s +%dh gedrosselt "
+                                            "(429) — Meteo-France-Limit "
+                                            "erreicht",
+                                            signal_label, offset,
+                                        )
+                                    else:
+                                        logger.warning(
+                                            "%s +%dh nicht abrufbar: %s",
+                                            signal_label, offset, e,
+                                        )
                                     raw = None
                                     break
                                 if not rueckfall_protokolliert:  # AC-7
@@ -674,24 +809,27 @@ class MeteoFranceDirectProvider:
                                     rueckfall_protokolliert = True
                                 lauf_index += 1
                                 coverage_id = (
-                                    f"{LIGHTNING_COVERAGE}___"
+                                    f"{coverage_base}___"
                                     f"{_run_str(lauf_kandidaten[lauf_index])}"
+                                    f"{coverage_suffix}"
                                 )
                                 restzeit = deadline_at - time.monotonic()
                                 if restzeit <= 0:
                                     logger.warning(
-                                        "Blitzdichte-Budget (%.0fs) "
+                                        "%s-Budget (%.0fs) "
                                         "erschoepft — Anreicherung bricht "
                                         "ab, Grundvorhersage unberuehrt",
+                                        signal_label,
                                         THUNDER_FETCH_DEADLINE_SECONDS,
                                     )
+                                    _fenster_zeile()
                                     return ergebnis
                                 continue
                             except Exception as e:
                                 fehlgeschlagen += 1
                                 logger.warning(
-                                    "Blitzdichte +%dh nicht abrufbar: %s",
-                                    offset, e,
+                                    "%s +%dh nicht abrufbar: %s",
+                                    signal_label, offset, e,
                                 )
                                 raw = None
                                 break
@@ -705,16 +843,69 @@ class MeteoFranceDirectProvider:
                         schluessel = _ort_schluessel(loc)
                         ergebnis[schluessel][offset] = werte[schluessel]
         except Exception:
-            logger.warning("Blitzdichte-Abruf fehlgeschlagen", exc_info=True)
+            logger.warning("%s-Abruf fehlgeschlagen", signal_label, exc_info=True)
+            _fenster_zeile()
             return {schluessel: {} for schluessel in ergebnis}
         # #1492 S2a Implementation Details Punkt 3: NACH dem try/except, damit
         # der neue Ausnahmetyp nicht vom generischen `except Exception:`
         # darueber verschluckt wird -- er soll zum Aufrufer (thunder_enrichment)
         # durchschlagen. Die budgetbedingten Fruehausstiege oben (`return
         # ergebnis`) pruefen bewusst NICHT auf Ausfall (Known Limitations 1).
+        _fenster_zeile()
         if versucht > 0 and fehlgeschlagen == versucht:
             raise ThunderSourceUnavailableError(self.name, versucht)
         return ergebnis
+
+    def fetch_thunder_signals_multi(
+        self,
+        locations: List["Location"],
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        deadline_at: Optional[float] = None,
+    ) -> Dict[str, Dict[int, Optional[float]]]:
+        """#1457 S2a AC-9: Blitzdichte (`LIGHTNING_COVERAGE`) je Stunden-Offset
+        fuer mehrere Orte. Duenner Wrapper um
+        `_fetch_coverage_signals_multi` (#1507 S5c) — die gesamte Mechanik
+        steht dort, damit Blitzdichte und Hagel nicht auseinanderdriften.
+
+        KEIN `coverage_suffix`: die 3-Stunden-Mittelung steckt bereits im
+        Namen der Groesse (s. Kommentar bei `LIGHTNING_COVERAGE`).
+
+        Returns:
+            `{Ortsname: {Stunden-Offset ab `start`: Blitzdichte oder None}}`.
+        """
+        return self._fetch_coverage_signals_multi(
+            LIGHTNING_COVERAGE, locations, start, end,
+            signal_label="Blitzdichte", deadline_at=deadline_at,
+        )
+
+    def fetch_hail_signals_multi(
+        self,
+        locations: List["Location"],
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
+        deadline_at: Optional[float] = None,
+    ) -> Dict[str, Dict[int, Optional[float]]]:
+        """#1507 S5c: Hagel-ROHWERT (`HAIL_COVERAGE`, "Total hail
+        precipitation", uom `kg kg-1`) je Stunden-Offset fuer mehrere Orte.
+
+        Derselbe Abrufweg wie die Blitzdichte (geteiltes Rechteck, geteilter
+        Zwischenspeicher, geteiltes Zeitbudget `THUNDER_FETCH_DEADLINE_SECONDS`
+        — AC-5: BEWUSST keine eigene Hagel-Deadline-Konstante), nur mit
+        anderer Coverage und dem Perioden-Suffix `_PT1H`.
+
+        AC-2: fehlender Wert bleibt `None`, NIE `0` — "keine Aussage" ist
+        nicht "kein Hagel". AC-3/AC-4: der Rohwert wird NICHT zu `hail_flag`
+        verrechnet; diese Klasse liest und setzt `hail_flag` nirgends.
+
+        Returns:
+            `{Ortsname: {Stunden-Offset ab `start`: Hagel-Rohwert oder None}}`.
+        """
+        return self._fetch_coverage_signals_multi(
+            HAIL_COVERAGE, locations, start, end,
+            coverage_suffix=HAIL_COVERAGE_SUFFIX,
+            signal_label="Hagel-Rohwert", deadline_at=deadline_at,
+        )
 
     def fetch_forecast(
         self,
@@ -761,10 +952,46 @@ class MeteoFranceDirectProvider:
         # fail-soft"). Ohne dieses Fangen wuerde die oben versprochene
         # Zusage brechen und die GESAMTE Vorhersage (inkl. Grunddaten)
         # verloren gehen, obwohl nur das Blitzfeld betroffen ist.
+        #
+        # #1507 S5c AC-5: EINE gemeinsame Frist fuer die GESAMTE Anreicherung
+        # (Blitzdichte UND Hagel). Wuerde jeder der beiden Abrufe sich seine
+        # eigene Frist bilden, verbrauchte die Anreicherung zwei volle
+        # Budgets hintereinander — genau der Verdopplungseffekt, den die Spec
+        # ausschliesst. Reicht die gemeinsame Restzeit nicht mehr, bricht nur
+        # die Anreicherung ab; die Grundvorhersage oben ist da bereits fertig.
+        anreicherung_deadline = time.monotonic() + THUNDER_FETCH_DEADLINE_SECONDS
         try:
-            thunder = self.fetch_thunder_signals(location) if enrich_thunder else {}
+            thunder = (
+                self.fetch_thunder_signals(
+                    location, deadline_at=anreicherung_deadline
+                )
+                if enrich_thunder
+                else {}
+            )
         except ThunderSourceUnavailableError:
             thunder = {}
+
+        # #1507 S5c AC-2/AC-3/AC-4: zweiter Coverage-Abruf fuer den
+        # Hagel-ROHWERT, derselbe Weg und dasselbe Budget. Derselbe Schalter
+        # `enrich_thunder` (die Spec sieht keinen eigenen Toggle vor). Der
+        # Wert landet ausschliesslich im eigenen Feld `hail_potential_mf` —
+        # `hail_flag` wird hier weder gelesen noch gesetzt (AC-4:
+        # `fr_direct` fuehrt strukturell keinen `wmo_code`, eine
+        # Cross-Provider-Fusion ist NICHT Teil dieser Scheibe).
+        # Das Fangen ist aus demselben Grund noetig wie oben: der geteilte
+        # Sammelabruf wirft bei Totalausfall der Quelle — ohne den Fang
+        # ginge die GESAMTE Vorhersage verloren, obwohl nur das Hagelfeld
+        # betroffen ist.
+        try:
+            hail = (
+                self.fetch_hail_signals_multi(
+                    [location], deadline_at=anreicherung_deadline
+                ).get(_ort_schluessel(location), {})
+                if enrich_thunder
+                else {}
+            )
+        except ThunderSourceUnavailableError:
+            hail = {}
 
         data_points: List[ForecastDataPoint] = []
         for offset in FORECAST_HOURS:
@@ -785,6 +1012,10 @@ class MeteoFranceDirectProvider:
                     precip_1h_mm=precip_mm,
                     # AC-2: fehlender Wert -> None, NIEMALS 0.
                     lightning_density_per_km2_3h=thunder.get(offset),
+                    # #1507 S5c AC-2/AC-3: reiner Rohwert in EIGENEM Feld,
+                    # fehlender Wert -> None, NIEMALS 0. Keine Ableitung,
+                    # keine Kombination mit `hail_flag`.
+                    hail_potential_mf=hail.get(offset),
                 )
             )
 

@@ -3,7 +3,7 @@ entity_id: fix_1926_metrik_kuerzel_englisch
 type: module
 created: 2026-08-17
 updated: 2026-08-17
-status: draft
+status: implemented
 version: "1.0"
 tags: [bug, metric-catalog, adr-0042, sms, telegram, i18n]
 ---

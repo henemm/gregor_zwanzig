@@ -7,71 +7,8 @@ from __future__ import annotations
 
 
 
-# =============================================================================
-# AC-1 + AC-2: Modul-Singleton in scheduler.py
-# =============================================================================
-
-def test_scheduler_has_module_level_telegram_reader():
-    """
-    GIVEN: scheduler module imported
-    WHEN: accessing _telegram_reader attribute
-    THEN: attribute exists at module level
-    """
-    import api.routers.scheduler as sched
-
-    assert hasattr(sched, '_telegram_reader'), (
-        "_telegram_reader muss auf Modulebene in scheduler.py existieren"
-    )
-
-
-def test_trigger_reuses_reader_instance(monkeypatch):
-    """
-    GIVEN: _telegram_reader singleton with _offset=42
-    WHEN: trigger_inbound_telegram() is called (telegram not configured → returns skipped)
-    THEN: The singleton is NOT replaced with a new instance (_offset still 42)
-    """
-    import api.routers.scheduler as sched
-    from services.inbound_telegram_reader import InboundTelegramReader
-
-    if sched._telegram_reader is None:
-        sched._telegram_reader = InboundTelegramReader()
-    sched._telegram_reader._offset = 42
-
-    class FakeSettings:
-        def can_send_telegram(self):
-            return False
-
-    monkeypatch.setattr('api.routers.scheduler.Settings', FakeSettings)
-
-    sched.trigger_inbound_telegram()
-
-    assert sched._telegram_reader._offset == 42, (
-        "Offset darf nicht auf 0 zurückgesetzt werden — selbe Instanz muss verwendet werden"
-    )
-
-
-def test_no_new_reader_instance_on_each_call(monkeypatch):
-    """
-    GIVEN: _telegram_reader singleton exists
-    WHEN: trigger_inbound_telegram() is called twice
-    THEN: Both calls use the same instance (object identity)
-    """
-    import api.routers.scheduler as sched
-
-    class FakeSettings:
-        def can_send_telegram(self):
-            return False
-
-    monkeypatch.setattr('api.routers.scheduler.Settings', FakeSettings)
-
-    sched.trigger_inbound_telegram()
-    reader_after_first = sched._telegram_reader
-    sched.trigger_inbound_telegram()
-    reader_after_second = sched._telegram_reader
-
-    assert reader_after_first is reader_after_second, (
-        "trigger_inbound_telegram darf nicht bei jedem Aufruf eine neue Instanz erzeugen"
-    )
+# AC-1 + AC-2 (Modul-Singleton _telegram_reader / Offset-Persistenz) entfallen:
+# der Poll-Pfad samt Endpoint /inbound-telegram ist entfernt (#1369).
 
 
 # =============================================================================

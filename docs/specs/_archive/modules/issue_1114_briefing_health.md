@@ -3,7 +3,7 @@ entity_id: issue_1114_briefing_health
 type: module
 created: 2026-07-08
 updated: 2026-07-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [go, scheduler, monitoring, briefing, privacy]
 ---

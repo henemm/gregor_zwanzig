@@ -3,7 +3,7 @@ entity_id: issue_205_followup_read_path_tests
 type: tests
 created: 2026-05-14
 updated: 2026-05-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, go, read-path, follow-up-205]
 parent: issue_205_followup_read_path

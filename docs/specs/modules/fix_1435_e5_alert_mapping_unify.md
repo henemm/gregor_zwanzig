@@ -3,7 +3,7 @@ entity_id: fix_1435_e5_alert_mapping_unify
 type: refactor
 created: 2026-08-05
 updated: 2026-08-05
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-catalog, alerts, cross-stack, codegen, register, drift-prevention]
 workflow: fix-1435-e5-alert-mapping
@@ -253,7 +253,7 @@ inhaltlich mit Python übereinstimmt.
     Ausgabedateien parsen und gegen `catalog_id_to_alert_metrics()` sowie
     gegeneinander vergleichen (Kernschicht, kein Netz).
 
-- **AC-2 (Mutations-Gegenprobe, PFLICHT):** Given eine der beiden
+- **AC-2:** (Mutations-Gegenprobe, PFLICHT) Given eine der beiden
   eingecheckten generierten Dateien wird lokal (nicht committet) so verändert,
   dass sie nicht mehr zur aktuellen Python-Quelle passt — ODER die
   Python-Quelle wird geändert, ohne das Skript erneut laufen zu lassen / When
@@ -325,7 +325,7 @@ inhaltlich mit Python übereinstimmt.
     unverändert) bleiben grün; zusätzlich eine Assertion, dass die generierte
     Datei `"temperature_cold"` und `"thunder"` als Schlüssel führt.
 
-- **AC-8 (`# doc-compliance-test`):** Given die Kommentare in
+- **AC-8:** (`# doc-compliance-test`) Given die Kommentare in
   `internal/model/trip.go:230-231` und
   `src/services/weather_change_detection.py` behaupten fälschlich, der
   bestehende Test decke die Go-Kopie inhaltlich ab bzw. Go rufe die

@@ -3,7 +3,7 @@ entity_id: issue_1971_legacy_preset_alarm_fallback
 type: module
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [alarm, ortsvergleich, bug]
 ---
@@ -327,6 +327,7 @@ hinter #1971, nicht nur den heutigen Symptomfall.
   `Le Var` selbst hat `active_metrics` gesetzt und wird von dieser Änderung
   nicht berührt. Der Vokabular-Defekt wird separat als **Issue #1981**
   geführt; wird er dort behoben, entfällt diese Limitation von selbst.
+  **Behoben durch #1981 (2026-10-08):** Loader in Go und Python normalisiert Alt-Schlüssel (Summary-Vokabular wie `temp_max_c`, `gust_max_kmh`, `cape_max_jkg`) auf Laden zu Alarm-Namen, sodass die gespeicherte Stufe gilt und Abwahl wirkt.
 
 ## Architektur-Entscheidung (ADR)
 

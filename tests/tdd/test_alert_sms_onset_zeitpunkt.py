@@ -39,6 +39,12 @@ from output.renderers.alert.render import (
 _ZEITPUNKT_TOKEN_RE = re.compile(r"\b(TH|R)@(\d{1,2}):(\d{2})\b")
 # Countdown-Token des Alt-Formats (`TH!8` / `R!25`) — darf nirgends mehr stehen.
 _COUNTDOWN_TOKEN_RE = re.compile(r"\b(TH|R)!\d+")
+# FORTGESCHRIEBEN (Issue #2046, AC-1/AC-5/AC-11): dieselbe Zusicherung, aber
+# mit optionalem Mengen-Zwischenteil. Nur der ECHTE Einspeiseweg unten leitet
+# eine Menge aus den Frames ab und nennt sie im Token (`R0.6@17:32`); alle
+# Goldstring-Faelle dieser Datei setzen `onset_precip_mm` nicht und bleiben
+# unveraendert zahlenlos — genau die Regressions-Invariante aus AC-11.
+_ZEITPUNKT_TOKEN_MIT_MENGE_RE = re.compile(r"\b(TH|R)(?:\d+\.\d)?@(\d{1,2}):(\d{2})\b")
 
 
 def _onset_event(**kw) -> OnsetEvent:
@@ -202,7 +208,7 @@ def test_ac3_endpunkt_replay_liefert_zeitpunkt_token_ueber_den_echten_einspeisew
     finally:
         shutil.rmtree(Path("data/users") / user_id, ignore_errors=True)
 
-    match = _ZEITPUNKT_TOKEN_RE.search(sms)
+    match = _ZEITPUNKT_TOKEN_MIT_MENGE_RE.search(sms)
     assert match, f"Endpunkt-SMS traegt kein '<Kuerzel>@HH:MM'-Token: {sms!r}"
     assert match.group(1) == "R", (
         f"Nicht-konvektiver Frame muss ein 'R@'-Token liefern: {sms!r}"

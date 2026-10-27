@@ -93,7 +93,7 @@ def _trip_preset_with_top_n(trip_id: str, **extra) -> dict:
     """
     base: dict = {
         "id": trip_id,
-        "name": f"Tour {trip_id}",
+        "name": f"Trip {trip_id}",
         "kind": "route",
         "stages": [],
         "display_config": {

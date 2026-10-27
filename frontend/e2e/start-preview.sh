@@ -15,4 +15,9 @@ export NODE_ENV=test
 # Prod-Default (localhost:8090) zurück -- der eigentliche Bug hinter #1284.
 # ${GZ_API_BASE:-...} respektiert einen bereits von außen gesetzten Wert.
 export GZ_API_BASE="${GZ_API_BASE:-http://localhost:8091}"
+# Issue #2130: der Preview-Server laeuft auf Port 4173, go-webauthn prueft
+# Origins exakt INKLUSIVE Port. Ohne 4173 in der Liste lehnt der Go-Server
+# jede Passkey-Zeremonie des lokalen E2E-Laufs ab. Der Go-Server selbst
+# bekommt dieselbe Konfiguration in e2e/ci-stack.sh.
+export GZ_WEBAUTHN_RP_ORIGINS="${GZ_WEBAUTHN_RP_ORIGINS:-http://localhost:4173,http://localhost:5173}"
 npm run build && npm run preview -- --port 4173

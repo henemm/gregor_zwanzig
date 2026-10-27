@@ -1,6 +1,6 @@
 ---
 issue: "#592 + #593"
-status: approved
+status: implemented
 created: 2026-06-04
 ---
 

@@ -24,7 +24,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
 const TRIP_ID = 'e2e-1719-s2-kaskade';
 
 // Vorab-normalisierter report_config-Blob (exakt wie layout-tab-route.spec.ts):
-// verhindert, dass EditReportConfigSections Mount-Effekt einen Auto-Save mit
+// verhindert, dass MailInhaltCards Mount-Effekt einen Auto-Save mit
 // noch-leeren buckets schedult und die Metriken-Seed überschreibt.
 const REPORT_CONFIG = {
 	enabled: true,
@@ -94,8 +94,8 @@ test.describe('Issue #1719 S2 AC-10 Test B: Grundauswahl-Abwahl schneidet SMS-Ka
 		request
 	}) => {
 		await createTrip(request);
-		await page.goto(`/trips/${TRIP_ID}?tab=weather`);
-		await page.getByTestId('trip-detail-tab-weather').click();
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
 		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({

@@ -1,6 +1,9 @@
 # ADR-0053: Der Ortsvergleich bekommt kanal-eigene Metrikauswahl für die Übersichtstabelle zurück (löst ADR-Bezug aus #1287/#1291/#1351 ab)
 
-- **Status:** Akzeptiert
+- **Status:** Teilweise abgelöst durch [ADR-0059](0059-compare-ausblick-erbt-grundauswahl.md)
+  (Punkt 1: Ausblick — bindet den Ausblick beider Flächen an die Grundauswahl).
+  Für die Übersichtstabelle (Punkte 2–4 dieses ADR) und den Stundenverlauf
+  (Punkt 1, Teil „Stundenverlauf") gilt dieses ADR unverändert.
 - **Datum:** 2026-08-13
 - **Bezug:** Issue #1703 Scheibe 8, Spec
   `docs/specs/modules/feat_1703_s8_compare_kanal_tabs.md` (AC-S8-1 bis
@@ -52,6 +55,15 @@ in dieser Scheibe bewusst global — eigene, getrennt gespeicherte
 Auswahllisten ohne Kanal-Ebene (Scheiben-Schnitt, kein Widerspruch zur
 Kaskaden-Zusage aus ADR-0050, weil diese sich auf Kanäle bezieht, nicht auf
 Ausgabeflächen).
+
+> **Nachtrag 2026-08-21 (Issue #1848 Scheibe A3) — Ausblick abgelöst.**
+> „Global" band hier nicht nur „ohne Kanal-Ebene", sondern auch „ohne
+> Bindung an die Grundauswahl der Fläche" — der Ausblick führte eine
+> unabhängige zweite Auswahl. [ADR-0059](0059-compare-ausblick-erbt-grundauswahl.md)
+> bindet den Ausblick beider Flächen (Trip und Ortsvergleich) an die
+> Grundauswahl (ADR-0050 Regeln 1–4) und schafft die zweite Auswahl ab.
+> **Der Stundenverlauf ist von diesem Nachtrag nicht betroffen** — für ihn
+> gilt dieser Punkt unverändert fort.
 
 **2. Die Bedingung, die den Rückfall diesmal verhindert: die ganze Kette,
 nicht nur die Oberfläche.** Diese Scheibe liefert Oberfläche, Speicherweg,

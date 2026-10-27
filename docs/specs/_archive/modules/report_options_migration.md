@@ -31,7 +31,7 @@ JSON file and was therefore silently lost on reload.
 - **UI (source, checkboxes to remove):** `src/web/pages/weather_config.py`
 - **UI (target, checkboxes to add):** `src/web/pages/report_config.py`
 - **Scheduler consumer:** `src/services/trip_report_scheduler.py`
-- **Formatter consumer:** `src/formatters/trip_report.py`
+- **Formatter consumer:** `src/output/renderers/trip_report.py`
 - **Test fixture:** `tests/integration/test_wind_exposition_pipeline.py`
 
 ## Dependencies
@@ -338,7 +338,7 @@ keep `show_compact_summary: bool = False`.
 | `src/web/pages/report_config.py` | Add "Report-Optionen" section (3 checkboxes); extend `make_save_handler` | ~35 |
 | `src/web/pages/weather_config.py` | Remove "Report-Optionen" section (3 checkboxes + label + separator); simplify `make_save_handler` | ~-20 |
 | `src/services/trip_report_scheduler.py` | Read `multi_day_trend_reports` from `report_config` with fallback; patch `display_config.show_compact_summary` | ~10 |
-| `src/formatters/trip_report.py` | No change (reads `dc.show_compact_summary` — satisfied via scheduler patch) | 0 |
+| `src/output/renderers/trip_report.py` | No change (reads `dc.show_compact_summary` — satisfied via scheduler patch) | 0 |
 | `tests/integration/test_wind_exposition_pipeline.py` | Remove `multi_day_trend_reports` from `_FakeDisplayConfig` | ~-2 |
 | **Total** | | **~43 net** |
 

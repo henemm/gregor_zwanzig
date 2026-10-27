@@ -1,0 +1,214 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts
+
+TAP version 13
+# Subtest: AC-8 — die Ausblick-Auswahl zeigt je Groesse einen einzigen Eintrag
+    # Subtest: die Vorbelegung („nie eingestellt") fuehrt Temperatur genau einmal
+    not ok 1 - die Vorbelegung („nie eingestellt") fuehrt Temperatur genau einmal
+      ---
+      duration_ms: 1.161276
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:162:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Die Ausblick-Auswahl zeigt 2 Eintraege fuer die Temperatur (angezeigt: ["temp_min_c","temp_max_c","precip_sum_mm","pop_max_pct","wind_max_kmh","gust_max_kmh","thunder_level_max"]). AC-8 verlangt EINEN einzigen Eintrag „Temperatur" statt getrennter Kaestchen fuer Minimum und Maximum — die Oberflaeche verspricht sonst eine Halbauswahl, die das Backend nach A2 gar nicht mehr speichern kann (Kontext, Abschnitt ZUSCHNITT-VERSCHIEBUNG).
+        
+        2 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 2
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:166:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: ein Klick auf „Temperatur" waehlt die Groesse ab, statt einen weiteren Eintrag anzuhaengen
+    not ok 2 - ein Klick auf „Temperatur" waehlt die Groesse ab, statt einen weiteren Eintrag anzuhaengen
+      ---
+      duration_ms: 0.363966
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:184:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Nach dem Klick auf „Temperatur" steht die Groesse weiterhin in der Auswahl: ["temp_min_c","temp_max_c","precip_sum_mm","pop_max_pct","wind_max_kmh","gust_max_kmh","thunder_level_max","temperature"] (vorher: ["temp_min_c","temp_max_c","precip_sum_mm","pop_max_pct","wind_max_kmh","gust_max_kmh","thunder_level_max"]). Anzeige und Umschalt-Pfad muessen dasselbe Vokabular sprechen (#1366 F001) — sonst fuegt ein Klick auf den einen sichtbaren Eintrag einen zusaetzlichen hinzu, statt ihn abzuwaehlen (AC-8).
+        
+        3 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 3
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:188:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: gefuehlte Temperatur verhaelt sich wie die Temperatur — ein Eintrag, ein Klick
+    not ok 3 - gefuehlte Temperatur verhaelt sich wie die Temperatur — ein Eintrag, ein Klick
+      ---
+      duration_ms: 3.858311
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:204:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Ein Klick auf „Gefühlte Temperatur" ergab ["wind_chill_min_c","wind_chill_max_c","precip_sum_mm","wind_chill"] statt ['precipitation'] (Ausgangslage: ["wind_chill_min_c","wind_chill_max_c","precip_sum_mm"]). Auch diese Groesse traegt zwei Auswertungen und muss als EIN Eintrag gefuehrt werden, den EIN Klick vollstaendig abwaehlt (AC-8).
+        + actual - expected
+        
+          [
+        +   'wind_chill_min_c',
+        +   'wind_chill_max_c',
+        +   'precip_sum_mm',
+        +   'wind_chill'
+        -   'precipitation'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'precipitation'
+      actual:
+        0: 'wind_chill_min_c'
+        1: 'wind_chill_max_c'
+        2: 'precip_sum_mm'
+        3: 'wind_chill'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:220:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 1 - AC-8 — die Ausblick-Auswahl zeigt je Groesse einen einzigen Eintrag
+  ---
+  duration_ms: 6.095415
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:161:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: Lesepfad — gespeicherte Paare werden zu je einer Kennung
+    # Subtest: Bestands-Preset mit Temperatur min UND max zeigt einen einzigen Eintrag; die Drei-Werte-Semantik bleibt
+    not ok 1 - Bestands-Preset mit Temperatur min UND max zeigt einen einzigen Eintrag; die Drei-Werte-Semantik bleibt
+      ---
+      duration_ms: 0.746191
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:234:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Die geladene Ausblick-Auswahl lautet ["temp_min_c","temp_max_c","precip_sum_mm"] statt ['temperature', 'precipitation']. Tief und Hoch derselben Groesse muessen beim Lesen zu EINEM Eintrag werden, sonst erscheint „Temperatur" doppelt in der Auswahl (AC-2/AC-8).
+        + actual - expected
+        
+          [
+        +   'temp_min_c',
+        +   'temp_max_c',
+        +   'precip_sum_mm'
+        -   'temperature',
+        -   'precipitation'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'temperature'
+        1: 'precipitation'
+      actual:
+        0: 'temp_min_c'
+        1: 'temp_max_c'
+        2: 'precip_sum_mm'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:246:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+not ok 2 - Lesepfad — gespeicherte Paare werden zu je einer Kennung
+  ---
+  duration_ms: 0.916127
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:233:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: Schreibpfad — display_config.outlook_metrics fuehrt reine Kennungen
+    # Subtest: Hub-Speichern konstruiert kein Paar-Objekt — und laesst active_metrics unberuehrt
+    not ok 1 - Hub-Speichern konstruiert kein Paar-Objekt — und laesst active_metrics unberuehrt
+      ---
+      duration_ms: 1.155828
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:281:2'
+      failureType: 'testCodeFailure'
+      error: 'Der Ausblick-Schreibweg hat aus der Auswahl Paar-Objekte gebaut: [{"metric_id":"temperature","aggregation":"max"},{"metric_id":"precipitation","aggregation":"sum"}]. Nach A2 speichert der Ausblick ausschliesslich Zeichenketten — die Auswertung leitet der Katalog serverseitig ab (AC-1).'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:301:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Neuanlage konstruiert kein Paar-Objekt und haelt die Drei-Werte-Semantik
+    not ok 2 - Neuanlage konstruiert kein Paar-Objekt und haelt die Drei-Werte-Semantik
+      ---
+      duration_ms: 0.676376
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:323:2'
+      failureType: 'testCodeFailure'
+      error: 'Die Neuanlage hat Paar-Objekte gebaut: [{"metric_id":"temperature","aggregation":"max"},{"metric_id":"gust","aggregation":"max"}] (AC-1).'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:338:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 3 - Schreibpfad — display_config.outlook_metrics fuehrt reine Kennungen
+  ---
+  duration_ms: 2.119285
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/next-ticket-0818/frontend/src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts:273:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..3
+# tests 6
+# suites 3
+# pass 0
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 209.579967
+
+# ---- Laufkopf (nachtraeglich angehaengt) ----
+# Befehl: cd frontend && npm test -- src/lib/components/compare/__tests__/outlookMetricIdSelection.test.ts
+# ("npm test" ist der CI-Befehl des Checks frontend-test, .github/workflows/ci.yml:110;
+#  ohne Pfadargument sammelt der node:test-Runner alle **/*.test.ts ein -- die Datei
+#  laeuft im Vollauf als Top-Level-Test 432/433/434 mit.)
+# node exit code: 1

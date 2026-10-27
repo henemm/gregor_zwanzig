@@ -13,8 +13,10 @@ Defines all available weather metrics with:
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Optional
 
 logger = logging.getLogger(__name__)
@@ -93,6 +95,11 @@ class MetricDefinition:
     # Gesetzt auf genau 7 Groessen mit expliziter Rangfolge (Reihenfolge der
     # Sieben-ID-Liste in DEFAULT_TRIP_METRIC_IDS, trip_metric_ids.py).
     trip_default_rank: Optional[int] = None
+    # Issue #2417 AC-23: EINZIGE Definitionsstelle der Bedeutung jedes
+    # Wetter-Kuerzels (Schluessel = Kuerzel wie in der SMS, ohne Grammatik-
+    # Doppelpunkt). CODES (en) und KUERZEL (de) lesen sie zur Laufzeit.
+    kuerzel_bedeutung_en: dict[str, str] = field(default_factory=dict)
+    kuerzel_bedeutung_de: dict[str, str] = field(default_factory=dict)
 
     @property
     def has_friendly_format(self) -> bool:
@@ -112,6 +119,7 @@ _METRICS: list[MetricDefinition] = [
     # === TEMPERATURE ===
     MetricDefinition(
         id="temperature", label_de="Temperatur", unit="°C",
+        kuerzel_bedeutung_en={"T": "temp"}, kuerzel_bedeutung_de={"T": "Temperatur"},
         dp_field="t2m_c", category="temperature",
         default_aggregations=("min", "max", "avg"),
         compact_label="T", col_key="temp", col_label="Temp",
@@ -129,7 +137,9 @@ _METRICS: list[MetricDefinition] = [
             "yellow": 28.0, "orange": 31.0, "red": 34.0,
             "yellow_lt": 0.0, "orange_lt": -5.0, "red_lt": -15.0,
         },
-        sms_code="D", decimals=0, cmp="über", alert_label="Temp",
+        # #2417 AC-12: "T" statt "D" -- "D" bedeutet in der SMS allein den
+        # Tageshoechstwert (temperature_day_high).
+        sms_code="T", decimals=0, cmp="über", alert_label="Temp",
         trip_default_rank=1,  # Issue #1552: Trip-Anlege-Standard, Rang 1
     ),
     # Issue #914: Internal-only entry for AlertMetric.TEMPERATURE_MIN (Kältealarm).
@@ -143,7 +153,9 @@ _METRICS: list[MetricDefinition] = [
         compact_label="TN", col_key="temp_cold", col_label="TmpMin",
         providers={"openmeteo": True, "geosphere": True},
         summary_fields={"min": "temp_min_c"},
-        sms_code="N", decimals=0, cmp="unter", alert_label="Temp",
+        # #2417 AC-28: "T" statt "N" (N = Nachtwert). Dieselbe Temperatur wie
+        # "temperature"; eigene Kuerzel-Bedeutung entfaellt bewusst.
+        sms_code="T", decimals=0, cmp="unter", alert_label="Temp",
         selectable=False,
     ),
     # Issue #1484: Nacht-Tiefsttemperatur am Etappenziel als EIGENE waehlbare
@@ -157,6 +169,7 @@ _METRICS: list[MetricDefinition] = [
     # bleibt temperature_cold).
     MetricDefinition(
         id="temperature_night", label_de="Nacht-Tiefsttemperatur", unit="°C",
+        kuerzel_bedeutung_en={"N": "night"}, kuerzel_bedeutung_de={"N": "Nacht"},
         dp_field="t2m_c", category="temperature",
         default_aggregations=("min",),
         compact_label="TN", col_key="temp_night", col_label="Night",
@@ -183,6 +196,7 @@ _METRICS: list[MetricDefinition] = [
     # Dinge mit aehnlichem Namen, in getrennten Namensraeumen.
     MetricDefinition(
         id="temperature_day_low", label_de="Tages-Tiefsttemperatur (Gehzeit)",
+        kuerzel_bedeutung_en={"L": "day min"}, kuerzel_bedeutung_de={"L": "Tagestiefstwert"},
         unit="°C", dp_field="t2m_c", category="temperature",
         default_aggregations=("min",),
         compact_label="L", col_key="temp_day_low", col_label="DayMin",
@@ -192,14 +206,26 @@ _METRICS: list[MetricDefinition] = [
     ),
     # Wie temperature_day_low, Gegenrichtung. Fix #1887 E6 Scheibe A (AC-3):
     # der DEC-8-Kompromiss "TD" ist aufgehoben, nicht nur verschoben -- "TD"
-    # erreichte KEINEN der beiden get_sms_code()-Leser (comparison.py:647,
-    # alert/render.py:93) und war damit ein toter Wert. Das tatsaechlich
-    # gesendete Kuerzel "D" traegt jetzt ausschliesslich sms_multi_symbols;
-    # sms_code ist leer.
+    # erreichte KEINEN der beiden get_sms_code()-Leser und war damit ein toter
+    # Wert.
+    # Fix #2232: sms_code bleibt LEER -- gemessen (2026-09-09), nicht
+    # uebersehen. Der Ortsvergleich erreicht diese Groesse seit #2232 sehr wohl
+    # (ueber compare_metric_catalog.kuerzel_metric_id), der frueher hier
+    # vermerkte Grund ("kein get_sms_code()-Leser") ist also entfallen. Ein
+    # sms_code="D" waere aber eine Doppelvergabe mit "temperature" (sms_code
+    # "D", gelesen vom Alarm-Pfad alert/render.py::_code) und liesse drei
+    # bestehende Eindeutigkeits-Waechter rot werden. Das gesendete Kuerzel
+    # steht stattdessen weiterhin ausschliesslich in sms_multi_symbols und wird
+    # ueber kurzform_kuerzel() aufgeloest -- DIESELBE Rangfolge, die auch
+    # /api/sms-symbols und compact_label benutzen.
     # 🔴 Gehzeit-Fensterung (collect_hiking_window_points()), NICHT das
-    # Tagesfenster 04-19 von temperature_min/temperature_max.
+    # Tagesfenster 04-19 von temperature_min/temperature_max. Das gilt fuer den
+    # WERT; das KUERZEL "D" ("Tageshoechst") trifft auf beide Fenster zu und
+    # wird deshalb geteilt -- die Kennung selbst bleibt trip-exklusiv
+    # (#1848 Scheibe C).
     MetricDefinition(
         id="temperature_day_high", label_de="Tages-Höchsttemperatur (Gehzeit)",
+        kuerzel_bedeutung_en={"D": "day max"}, kuerzel_bedeutung_de={"D": "Tageshöchstwert"},
         unit="°C", dp_field="t2m_c", category="temperature",
         default_aggregations=("max",),
         compact_label="D", col_key="temp_day_high", col_label="DayMax",
@@ -211,6 +237,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="wind_chill", label_de="Gefühlte Temperatur", unit="°C",
+        kuerzel_bedeutung_en={"TF": "feels like"}, kuerzel_bedeutung_de={"TF": "gefühlt"},
         dp_field="wind_chill_c", category="temperature",
         default_aggregations=("min", "max"),
         compact_label="TF", col_key="felt", col_label="Feels",
@@ -246,6 +273,7 @@ _METRICS: list[MetricDefinition] = [
     # "wind_chill") entfaellt ERSATZLOS -- verdoppelte nachweislich "FK".
     MetricDefinition(
         id="wind_chill_night", label_de="Gefühlte Nacht-Tiefsttemperatur",
+        kuerzel_bedeutung_en={"FN": "N feels like"}, kuerzel_bedeutung_de={"FN": "N gefühlt"},
         unit="°C", dp_field="wind_chill_c", category="temperature",
         default_aggregations=("min",),
         compact_label="TFN", col_key="felt_night", col_label="NightF",
@@ -269,6 +297,7 @@ _METRICS: list[MetricDefinition] = [
     # Tagesfenster 04-19 von temperature_min/temperature_max.
     MetricDefinition(
         id="wind_chill_day_low",
+        kuerzel_bedeutung_en={"FL": "L feels like"}, kuerzel_bedeutung_de={"FL": "L gefühlt"},
         label_de="Gefühlte Tages-Tiefsttemperatur (Gehzeit)",
         unit="°C", dp_field="wind_chill_c", category="temperature",
         default_aggregations=("min",),
@@ -280,6 +309,7 @@ _METRICS: list[MetricDefinition] = [
     # Tagesfenster 04-19 von temperature_min/temperature_max.
     MetricDefinition(
         id="wind_chill_day_high",
+        kuerzel_bedeutung_en={"FD": "D feels like"}, kuerzel_bedeutung_de={"FD": "D gefühlt"},
         label_de="Gefühlte Tages-Höchsttemperatur (Gehzeit)",
         unit="°C", dp_field="wind_chill_c", category="temperature",
         default_aggregations=("max",),
@@ -289,6 +319,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="humidity", label_de="Luftfeuchtigkeit", unit="%",
+        kuerzel_bedeutung_en={"HU": "humidity"}, kuerzel_bedeutung_de={"HU": "Luftfeuchte"},
         dp_field="humidity_pct", category="temperature",
         default_aggregations=("avg",),
         compact_label="H", col_key="humidity", col_label="Humid",
@@ -302,6 +333,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="dewpoint", label_de="Taupunkt", unit="°C",
+        kuerzel_bedeutung_en={"DP": "dew point"}, kuerzel_bedeutung_de={"DP": "Taupunkt"},
         dp_field="dewpoint_c", category="temperature",
         default_aggregations=("avg",),
         # Issue #1453: "Cond°" benannte keine Groesse (Taupunkt ist kein
@@ -318,6 +350,7 @@ _METRICS: list[MetricDefinition] = [
     # === WIND ===
     MetricDefinition(
         id="wind", label_de="Wind", unit="km/h",
+        kuerzel_bedeutung_en={"W": "wind km/h"}, kuerzel_bedeutung_de={"W": "Wind km/h"},
         dp_field="wind10m_kmh", category="wind",
         default_aggregations=("max",),
         compact_label="W", col_key="wind", col_label="Wind",
@@ -338,6 +371,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="gust", label_de="Böen", unit="km/h",
+        kuerzel_bedeutung_en={"G": "gusts"}, kuerzel_bedeutung_de={"G": "Böen"},
         dp_field="gust_kmh", category="wind",
         default_aggregations=("max",),
         compact_label="G", col_key="gust", col_label="Gust",
@@ -359,6 +393,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="wind_direction", label_de="Windrichtung", unit="°",
+        kuerzel_bedeutung_en={"WD": "wind dir"}, kuerzel_bedeutung_de={"WD": "Windrichtung"},
         dp_field="wind_direction_deg", category="wind",
         default_aggregations=("avg",),
         compact_label="WD", col_key="wind_dir", col_label="WDir",
@@ -375,6 +410,7 @@ _METRICS: list[MetricDefinition] = [
     # === PRECIPITATION ===
     MetricDefinition(
         id="precipitation", label_de="Niederschlag", unit="mm",
+        kuerzel_bedeutung_en={"R": "rain mm"}, kuerzel_bedeutung_de={"R": "Regen mm"},
         dp_field="precip_1h_mm", category="precipitation",
         default_aggregations=("sum",),
         compact_label="R", col_key="precip", col_label="Rain",
@@ -394,6 +430,8 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="rain_probability", label_de="Regenwahrscheinlichkeit", unit="%",
+        kuerzel_bedeutung_en={"PR": "rain %"},
+        kuerzel_bedeutung_de={"PR": "Regenwahrscheinlichkeit %"},
         dp_field="pop_pct", category="precipitation",
         default_aggregations=("max",),
         compact_label="P%", col_key="pop", col_label="Rain%",
@@ -416,6 +454,8 @@ _METRICS: list[MetricDefinition] = [
     # Aggregation/Vorhersage-Hinweis (build_confidence_hint, SMS-Symbol) erhalten.
     MetricDefinition(
         id="confidence", label_de="Sicherheit", unit="%",
+        kuerzel_bedeutung_en={"C": "confidence"},
+        kuerzel_bedeutung_de={"C": "Vorhersage-Verlässlichkeit"},
         dp_field="confidence_pct", category="atmosphere",
         default_aggregations=("min",),
         compact_label="Conf", col_key="confidence", col_label="Conf",
@@ -426,6 +466,8 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="thunder", label_de="Gewitter", unit="",
+        kuerzel_bedeutung_en={"TH": "thunder", "TH+": "next stage"},
+        kuerzel_bedeutung_de={"TH": "Gewitter", "TH+": "Gewitter Folge-Etappe"},
         dp_field="thunder_level", category="precipitation",
         default_aggregations=("max",),
         compact_label="⚡", col_key="thunder", col_label="Thdr",
@@ -448,6 +490,8 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="cape", label_de="Gewitterenergie (CAPE)", unit="J/kg",
+        kuerzel_bedeutung_en={"CP": "storm energy"},
+        kuerzel_bedeutung_de={"CP": "Gewitterenergie"},
         dp_field="cape_jkg", category="precipitation",
         default_aggregations=("max",),
         compact_label="CP", col_key="cape", col_label="CAPE",
@@ -481,6 +525,8 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="snowfall_limit", label_de="Schneefallgrenze", unit="m",
+        kuerzel_bedeutung_en={"SL": "snow line m"},
+        kuerzel_bedeutung_de={"SL": "Schneefallgrenze m"},
         dp_field="snowfall_limit_m", category="precipitation",
         default_aggregations=("min", "max"),
         compact_label="SL", col_key="snow_limit", col_label="SnowL",
@@ -493,6 +539,8 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="precip_type", label_de="Niederschlagsart", unit="",
+        kuerzel_bedeutung_en={"PT": "precip type"},
+        kuerzel_bedeutung_de={"PT": "Niederschlagsart"},
         dp_field="precip_type", category="precipitation",
         default_aggregations=("max",),
         compact_label="PT", col_key="precip_type", col_label="PType",
@@ -506,6 +554,8 @@ _METRICS: list[MetricDefinition] = [
     # === ATMOSPHERE ===
     MetricDefinition(
         id="cloud_total", label_de="Bewölkung", unit="%",
+        kuerzel_bedeutung_en={"CT": "clouds total"},
+        kuerzel_bedeutung_de={"CT": "Bewölkung gesamt"},
         dp_field="cloud_total_pct", category="atmosphere",
         default_aggregations=("avg",),
         compact_label="C", col_key="cloud", col_label="Cloud",
@@ -523,6 +573,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="cloud_low", label_de="Tiefe Wolken", unit="%",
+        kuerzel_bedeutung_en={"CL": "clouds low"}, kuerzel_bedeutung_de={"CL": "Bewölkung tief"},
         dp_field="cloud_low_pct", category="atmosphere",
         default_aggregations=("avg",),
         compact_label="CL", col_key="cloud_low", col_label="CldLow",
@@ -538,6 +589,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="cloud_mid", label_de="Mittelhohe Wolken", unit="%",
+        kuerzel_bedeutung_en={"CM": "clouds mid"}, kuerzel_bedeutung_de={"CM": "Bewölkung mittel"},
         dp_field="cloud_mid_pct", category="atmosphere",
         default_aggregations=("avg",),
         compact_label="CM", col_key="cloud_mid", col_label="CldMid",
@@ -553,6 +605,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="cloud_high", label_de="Hohe Wolken", unit="%",
+        kuerzel_bedeutung_en={"CH": "clouds high"}, kuerzel_bedeutung_de={"CH": "Bewölkung hoch"},
         dp_field="cloud_high_pct", category="atmosphere",
         default_aggregations=("avg",),
         compact_label="CH", col_key="cloud_high", col_label="CldHi",
@@ -568,6 +621,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="visibility", label_de="Sichtweite", unit="m",
+        kuerzel_bedeutung_en={"VS": "visibility"}, kuerzel_bedeutung_de={"VS": "Sicht"},
         dp_field="visibility_m", category="atmosphere",
         default_aggregations=("min",),
         compact_label="V", col_key="visibility", col_label="Visib",
@@ -593,6 +647,7 @@ _METRICS: list[MetricDefinition] = [
     MetricDefinition(
         # #1401 A1: "Sonnenstunden" benennt die Einheit (h) korrekt (PO-Freigabe).
         id="sunshine", label_de="Sonnenstunden", unit="h",
+        kuerzel_bedeutung_en={"SU": "sun h"}, kuerzel_bedeutung_de={"SU": "Sonnenstunden"},
         dp_field="dni_wm2", category="atmosphere",
         default_aggregations=("sum",),
         compact_label="☀", col_key="sunshine", col_label="Sun",
@@ -612,6 +667,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="uv_index", label_de="UV-Index", unit="",
+        kuerzel_bedeutung_en={"UV": "index"}, kuerzel_bedeutung_de={"UV": "UV-Index"},
         dp_field="uv_index", category="atmosphere",
         default_aggregations=("max",),
         compact_label="UV", col_key="uv", col_label="UV",
@@ -627,6 +683,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="pressure", label_de="Luftdruck", unit="hPa",
+        kuerzel_bedeutung_en={"HP": "pressure"}, kuerzel_bedeutung_de={"HP": "Luftdruck"},
         dp_field="pressure_msl_hpa", category="atmosphere",
         default_aggregations=("avg",),
         # Issue #1453: "hPa" war die Einheit, nicht der Name der Groesse.
@@ -644,6 +701,7 @@ _METRICS: list[MetricDefinition] = [
     # === WINTER ===
     MetricDefinition(
         id="freezing_level", label_de="Nullgradgrenze", unit="m",
+        kuerzel_bedeutung_en={"FZ": "0C level m"}, kuerzel_bedeutung_de={"FZ": "Nullgradgrenze m"},
         dp_field="freezing_level_m", category="winter",
         default_aggregations=("min", "max"),
         compact_label="FZ", col_key="freeze_lvl", col_label="0°Line",
@@ -658,6 +716,7 @@ _METRICS: list[MetricDefinition] = [
     ),
     MetricDefinition(
         id="snow_depth", label_de="Schneehöhe", unit="cm",
+        kuerzel_bedeutung_en={"SD": "snow depth"}, kuerzel_bedeutung_de={"SD": "Schneehöhe"},
         dp_field="snow_depth_cm", category="winter",
         default_aggregations=("max",),
         compact_label="SD", col_key="snow_depth", col_label="SnowH",
@@ -665,10 +724,12 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"max": "snow_depth_cm"},
         default_change_threshold=10.0,
-        sms_code="SD", decimals=0, cmp="über", alert_label="Schnee",
+        sms_code="SD", decimals=0, cmp="über", alert_label="Schneehöhe",  # #2417 AC-26
     ),
     MetricDefinition(
         id="fresh_snow", label_de="Neuschnee", unit="cm",
+        kuerzel_bedeutung_en={"NS24+": "new snow 24h"},
+        kuerzel_bedeutung_de={"NS24+": "Neuschnee 24h"},
         dp_field="snow_new_24h_cm", category="winter",
         default_aggregations=("sum",),
         compact_label="NS", col_key="fresh_snow", col_label="NewSn",
@@ -683,7 +744,7 @@ _METRICS: list[MetricDefinition] = [
         # nicht ueber get_sms_code()). Neuschnee != Altschnee fuer eine
         # Tourenentscheidung. "NS" = derselbe Wert wie der bestehende
         # compact_label dieser Metrik (kollisionsfrei, mnemonisch).
-        sms_code="NS", decimals=0, cmp="über", alert_label="Schnee",
+        sms_code="NS", decimals=0, cmp="über", alert_label="Neuschnee",  # #2417 AC-26
         # Issue #1927 v1.1: erstmals display_thresholds fuer Neuschnee,
         # abgeleitet aus den SLF/EAWS "kritischen Neuschneemengen" (europ.
         # Lawinen-Gefahrenskala): 10-20 cm/24h (unguenstig), 20-30 cm
@@ -721,6 +782,18 @@ _METRICS: list[MetricDefinition] = [
 # _SMS_SYMBOL_METRIC_IDS UND in trip_report.py's disabled-only-Schleife -- das
 # Auseinanderdriften war genau die Ursache des Fix-Loop-Bugs (Root-Cause:
 # aktive Metriken bekamen NIE eine MetricSpec, nur abgewaehlte).
+# Issue #2422 S6 (B2): EINE Quelle fuer "diese Groesse hat in SMS/Premium-SMS/
+# Telegram-Kurzform zwei Formen (Roh = Zahl, Einfach = GSM-7-Stufe)". Sie speist
+# den SMS-Builder (Einfachform nur hier), den SMS-Reiter im Editor
+# (`/api/metrics` Feld `sms_format_capable`) und das Test-Orakel. Alle anderen
+# Groessen haben in der SMS genau EINE Form (Gewitter 'TH:' ist bereits die
+# Stufe, 'WD:' der Sektor, 'SU' eine Tagessumme, Ampel-Groessen bleiben Zahl).
+# Issue #2422 S6b: NUR waehlbare Groessen -- `cape` ist seit #1585
+# selectable=False und im Editor/Layout nicht erreichbar, daher hier nicht gefuehrt.
+SMS_FORMAT_MODE_METRIC_IDS: frozenset = frozenset({
+    "cloud_total", "cloud_low", "cloud_mid", "cloud_high",
+})
+
 SMS_NULLFORM_METRIC_IDS: tuple[str, ...] = (
     "humidity",
     "dewpoint",
@@ -747,6 +820,10 @@ _SMS_SYMBOL_METRIC_IDS: tuple[str, ...] = (
     "snow_depth",
     "snowfall_limit",
     "fresh_snow",
+    # Issue #2422 S6 (B1, PO-Entscheid V1): die gefuehlte Temperatur traegt im
+    # Trip das Stundenwert-Kuerzel 'TF' (Klasse (b) Invers-Min, Tagesfenster).
+    # 'WC' bleibt ersatzlos entfallen (#1887 E6a).
+    "wind_chill",
     # Issue #1660 Scheibe B: 14 waehlbare Metriken, bisher ohne SMS-Token.
     # Alle 1:1 (kein Kuerzel-Mehrfach wie wind_chill) -> gehoeren in diese
     # Register-Ableitung, NICHT in SMS_MULTI_SYMBOLS_BY_METRIC (DEC-1).
@@ -833,20 +910,12 @@ SMS_MULTI_SYMBOLS_BY_METRIC: dict[str, tuple[str, ...]] = {
 # `gz-eigenstaendig` aus #1481 B). Ein Eintrag ohne Satz ist keine Ausnahme --
 # der Wächter tests/unit/test_telegram_kuerzel_folgt_register.py besteht auf
 # einer lesbaren Begründung.
-COMPACT_LABEL_EXCEPTIONS: dict[str, str] = {
-    "temperature": (
-        "Die Telegram-Zelle zeigt einen STUNDENWERT. Das Register führt für "
-        "diese Größe Tagesauswertungen ('K' Tagestiefst, 'D' Tageshöchst) — "
-        "ein Spaltenkopf 'Tageshöchst' wäre über einem Stundenwert eine "
-        "falsche Aussage."
-    ),
-    "wind_chill": (
-        "Wie 'temperature': die Zelle zeigt einen Stundenwert, das Register "
-        "führt Tagesauswertungen ('FK'/'FD' Tiefst/Höchst der gefühlten "
-        "Temperatur). Fix #1887 E6 Scheibe A: das frühere Wintersport-"
-        "Kürzel 'WC' entfällt ersatzlos (verdoppelte 'FK')."
-    ),
-}
+# #2417 AC-12: "temperature" entfaellt -- mit sms_code "T" stimmen Register
+# und Telegram-Kuerzel ueberein.
+# #2422 S6 (B1): ``wind_chill`` steht nicht mehr darin -- mit dem Trip-Kurzform-
+# Kuerzel 'TF' (SMS_SYMBOL_BY_METRIC) stimmen Register und Telegram-Spaltenkopf
+# ueberein. Die benannte Liste bleibt als (leere) Struktur bestehen.
+COMPACT_LABEL_EXCEPTIONS: dict[str, str] = {}
 
 
 def _kurzform_kuerzel(metric_id: str, sms_code: str) -> Optional[str]:
@@ -954,6 +1023,82 @@ def available_aggregations(metric_id: object) -> list[str]:
     return [a for a in _AGGREGATION_ORDER if a in definition.summary_fields]
 
 
+def normalize_outlook_metric_ids(stored: object) -> Optional[list[str]]:
+    """Gespeicherte Ausblick-Auswahl -> reine Kennungen (Issue #1848 A2).
+
+    Versteht BEIDE Speicherformen und zwar dauerhaft, nicht als
+    Uebergangskruecke: reine Kennungen (``"temperature"``, das Format seit A2)
+    und die Paar-Altform (``{"metric_id": ..., "aggregation": ...}``, ADR-0037).
+    Zwei Paare derselben Groesse (Tief UND Hoch) werden zu EINER Kennung --
+    die Auswertungen leitet der Katalog ab, sie sind kein Speicherinhalt mehr.
+
+    Reine Elementform-Normalisierung OHNE Katalogpruefung: sie gehoert hierher
+    (Vokabular), die Existenzpruefung dagegen in den Aufloeser des
+    Renderpfades. Reihenfolge des ersten Auftretens bleibt erhalten (kein
+    ``set``), ``None`` heisst "kein Array" und traegt die Drei-Werte-Semantik
+    unveraendert weiter.
+    """
+    if not isinstance(stored, list):
+        return None
+    kennungen: list[str] = []
+    for eintrag in stored:
+        if isinstance(eintrag, str):
+            metric_id: object = eintrag
+        elif isinstance(eintrag, dict):
+            metric_id = eintrag.get("metric_id")
+        else:
+            metric_id = None
+        if isinstance(metric_id, str) and metric_id not in kennungen:
+            kennungen.append(metric_id)
+    return kennungen
+
+
+# Issue #2049: die Groessen, die im 3-Tages-Ausblick eine Einfach-Form haben.
+# EINE Quelle fuer BEIDE Seiten: das Frontend macht die Sichtbarkeit des
+# Roh/Einfach-Umschalters daran fest (`outlookFriendlyCapability.ts`, gegen
+# diese Liste per Drift-Test verglichen), das Backend die Formatierungs-
+# verzweigung (`compare_outlook_metric_ids._friendly_outlook_text`). Damit kann
+# keine Groesse einen sichtbaren, aber wirkungslosen Umschalter zeigen (AC-4) --
+# genau der Bug, der #2049 ausgeloest hat.
+#
+# NICHT enthalten und warum (Spec "Metrik-Matrix"): `thunder` zeigt roh bereits
+# das Stufenwort · `temperature`/`wind_chill` haben produktweit keine
+# Einfach-Form · `cape` kommt im Ausblick strukturell nicht vor
+# (`selectable=False`) · `visibility` bewusst nicht (#814 AC-5).
+OUTLOOK_FRIENDLY_CAPABLE: frozenset = frozenset({
+    "wind_direction", "cloud_total", "cloud_low", "cloud_mid", "cloud_high",
+    "wind", "gust", "precipitation", "rain_probability", "sunshine",
+})
+
+
+def outlook_friendly_capable(metric_id: object) -> bool:
+    """Hat diese Groesse im Ausblick eine Einfach-Form? (Issue #2049, AC-3)"""
+    return isinstance(metric_id, str) and metric_id in OUTLOOK_FRIENDLY_CAPABLE
+
+
+def normalize_outlook_metric_formats(stored: object) -> Optional[dict[str, bool]]:
+    """Gespeicherte Roh/Einfach-Zuordnung des Ausblicks -> geprueftes Mapping.
+
+    Ladepfad-Haelfte der Speicherform ``display_config.outlook_metric_formats``
+    (Issue #2049, AC-1) -- Sibling von ``outlook_metrics``, das dadurch eine
+    reine ``list[str]`` bleibt (keine Rueckkehr zur Objektform, #1848 A2).
+
+    Dieselbe Drei-Werte-Semantik wie ``normalize_outlook_metric_ids()``:
+    ``None`` heisst "kein Mapping" (nie eingestellt), ein leeres Mapping heisst
+    "nichts auf Einfach gestellt".
+
+    Verworfen wird alles, was einen wirkungslosen Zustand einschleppen wuerde:
+    nicht-boolesche Werte (der Umschalter kennt nur zwei Stellungen) und
+    Kennungen ausserhalb von ``OUTLOOK_FRIENDLY_CAPABLE`` -- fuer die gibt es
+    im Ausblick gar keinen Umschalter, ein gespeichertes Flag koennte also nur
+    aus einem Fehler stammen und nie etwas bewirken.
+    """
+    if not isinstance(stored, dict):
+        return None
+    return {k: v for k, v in stored.items()
+            if isinstance(v, bool) and outlook_friendly_capable(k)}
+
+
 def aggregation_label_de(aggregation: object) -> str:
     """Deutsche Beschriftung einer Auswertung (``""`` wenn unbekannt)."""
     return _AGGREGATION_LABELS_DE.get(aggregation, "") if isinstance(aggregation, str) else ""
@@ -978,6 +1123,54 @@ def get_all_metrics() -> list[MetricDefinition]:
     Use _METRICS directly when internal iteration over all metrics is needed.
     """
     return [m for m in _METRICS if m.selectable]
+
+
+def normalize_command_word(word: str) -> str:
+    """Normalisiert ein getipptes Abrufwort (Issue #2134).
+
+    Kleingeschrieben, ``%`` -> ``pct``, ``°`` getilgt, uebrige
+    Nicht-Alphanumerik getilgt. Die ``%``-Regel ist keine Kosmetik: ohne sie
+    fielen ``Rain`` (precipitation) und ``Rain%`` (rain_probability) auf
+    dasselbe Wort zusammen. ``0°Line`` -> ``0line``.
+    """
+    w = (word or "").strip().lower().replace("%", "pct").replace("°", "")
+    return re.sub(r"[^a-z0-9]", "", w)
+
+
+def metric_command_words() -> dict[str, str]:
+    """Normalisiertes Abrufwort -> ``metric.id`` (Issue #2134).
+
+    Einzige Quelle des Ad-hoc-Abrufvokabulars. Speist sich ausschliesslich aus
+    ``get_all_metrics()`` und erbt damit die ``selectable=False``-Filterung
+    (``confidence`` #710, ``temperature_cold``, ``cape``) — eine eigene
+    Iteration ueber ``_METRICS`` wuerde diese Regel ein zweites Mal
+    formulieren, also genau die Doppelpflege einfuehren, die dieses Ticket
+    abschafft.
+
+    Erste Schreibweise ist die Tabellenueberschrift ``col_label`` (PO-Vorgabe
+    1), zweite der ``sms_code`` — er macht schwer tippbare Kuerzel wie
+    ``0°Line`` ueber ``FZ`` erreichbar. Die Ueberschrift gewinnt bei Gleichheit
+    (``setdefault`` in zwei Durchlaeufen), damit ein kuenftiges Kuerzel keine
+    bestehende Ueberschrift verdraengt.
+    """
+    woerter: dict[str, str] = {}
+    for metric in get_all_metrics():
+        wort = normalize_command_word(metric.col_label)
+        if wort:
+            woerter.setdefault(wort, metric.id)
+    for metric in get_all_metrics():
+        wort = normalize_command_word(metric.sms_code)
+        if wort:
+            woerter.setdefault(wort, metric.id)
+    # #2417 AC-13/AC-15: was man in der SMS liest, kann man zuruecksenden --
+    # dritte Schreibweise sind die gesendeten Symbole (``D``, ``N``, ``NS24+``).
+    for metric in get_all_metrics():
+        gesendet = (*metric.sms_multi_symbols, SMS_SYMBOL_GRAMMAR.get(metric.id, ""))
+        for symbol in gesendet:
+            wort = normalize_command_word(symbol)
+            if wort:
+                woerter.setdefault(wort, metric.id)
+    return woerter
 
 
 def get_metrics_by_category(category: str) -> list[MetricDefinition]:
@@ -1246,6 +1439,52 @@ def get_sms_code(metric_id: str) -> str:
     """
     m = _METRICS_BY_ID.get(metric_id)
     return m.sms_code if m is not None else ""
+
+
+
+def kurzform_kuerzel(
+    metric_id: str,
+    *,
+    mehrfach_symbole: Optional[Mapping[str, tuple[str, ...]]] = None,
+    sms_codes: Optional[Mapping[str, str]] = None,
+) -> str:
+    """Das Kuerzel, das die Kurzform (SMS/Premium-SMS) fuer diese Groesse
+    TATSAECHLICH sendet -- ``""`` wenn sie keines fuehrt (#2232).
+
+    Rangfolge identisch zu ``/api/sms-symbols::_symbols_for`` und
+    ``_kurzform_kuerzel`` (oben): Mehrfach-Token haben Vorrang, davon benennt
+    das ERSTE die Groesse; ``":"`` trennt nur eine Stufenangabe ab und gehoert
+    nicht zum Kuerzel. Erst danach greift ``sms_code``.
+
+    Warum es diese Funktion neben ``get_sms_code()`` gibt: ``sms_code`` ist
+    global eindeutig (drei Waechter, u. a.
+    ``test_sms_token_symbol_register_ratchet.py::
+    test_register_kuerzel_bezeichnen_je_genau_eine_groesse``) und deshalb fuer
+    Groessen, die ein Kuerzel mit ihrer Elterngroesse TEILEN, nicht besetzbar:
+    ``temperature_day_high`` sendet dasselbe ``D`` wie ``temperature``, weil
+    beide "Tageshoechst" bedeuten -- nur ueber verschiedene Fenster (Gehzeit
+    vs. 04-19, #1848 Scheibe C). Genau diese Groessen fuehren ihr Kuerzel in
+    ``sms_multi_symbols``. Wer das gesendete Kuerzel braucht (Vergleichs-SMS,
+    Editor-Marke), fragt hier; wer die eindeutige Registerkennung braucht
+    (Alarm-Pfad), fragt ``get_sms_code()``.
+
+    ``mehrfach_symbole``/``sms_codes`` injizieren Registerkopien (Muster
+    ``compare_metric_catalog.kuerzel_identity_violations(entries=...)``).
+    Gebraucht wird das fuer den Wirkungsnachweis der RANGFOLGE: im echten
+    Register traegt keine Groesse zugleich ein ``sms_code`` UND ein davon
+    ABWEICHENDES ``sms_multi_symbols[0]``, eine Vertauschung der beiden Zweige
+    waere dort also unbeobachtbar (Adversary-Fund F001). Ueber die Parameter
+    laesst sich genau so ein divergierender Datenpunkt vorlegen -- ohne
+    ``patch()`` auf Modulglobale.
+    """
+    mehrfach = (
+        SMS_MULTI_SYMBOLS_BY_METRIC if mehrfach_symbole is None else mehrfach_symbole
+    ).get(metric_id)
+    if mehrfach:
+        return mehrfach[0].rstrip(":")
+    if sms_codes is None:
+        return get_sms_code(metric_id)
+    return sms_codes.get(metric_id, "")
 
 
 def get_decimals(metric_id: str) -> int:

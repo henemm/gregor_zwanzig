@@ -46,8 +46,19 @@ beforeEach(() => {
 
 afterEach(() => server.restore());
 
-/** Instanz OHNE Konstruktor-Aufruf — s. Begründung im Modulkommentar. */
-function createTestInstance(tripId?: string): SaveStatus {
+/**
+ * Instanz OHNE Konstruktor-Aufruf — s. Begründung im Modulkommentar.
+ *
+ * Issue #2276 S1: zweiter Parameter `resourceKind`. `new SaveStatus(kennung)`
+ * setzt ihn ab dieser Scheibe aus `NachladeKennung.typ` (`'trip'|'vergleich'`).
+ * Alle bestehenden Aufrufe MIT Kennung geben ihn jetzt explizit mit — sonst
+ * liefe die ab S1 striktere `retryConflict()`-Wächterbedingung
+ * (`!this._resourceKind`) still in ein Kein-Op und die bestehenden
+ * Regressionsfälle wären fälschlich grün, ohne noch etwas zu prüfen.
+ * Die beiden Fälle OHNE Kennung (ganz unten) behalten bewusst beide Felder
+ * `undefined` — dort ist das Kein-Op genau das geprüfte Verhalten.
+ */
+function createTestInstance(tripId?: string, resourceKind?: 'trip' | 'vergleich'): SaveStatus {
 	const inst = Object.create(SaveStatus.prototype) as SaveStatus;
 	const internals = inst as unknown as Record<string, unknown>;
 	internals.state = 'idle';
@@ -59,6 +70,7 @@ function createTestInstance(tripId?: string): SaveStatus {
 	// Issue #1395 S4: neue Konstruktor-Felder, die `new SaveStatus(tripId)`
 	// setzen würde.
 	internals._tripId = tripId;
+	internals._resourceKind = resourceKind;
 	internals._lastFailed = null;
 	return inst;
 }
@@ -68,7 +80,7 @@ const getCalls = () => server.calls.filter((c) => c.method === 'GET');
 
 describe('AC-1 (Vorbedingung): ein 412 mit bekannter tripId wird als Konflikt erkannt, nicht als generischer Fehler', () => {
 	test('test_doSave_412WithTripId_entersConflictState_remembersFailedSave', async () => {
-		const c = createTestInstance('gr20');
+		const c = createTestInstance('gr20', 'trip');
 		let calls = 0;
 		const failing = async () => {
 			calls++;
@@ -90,7 +102,7 @@ describe('AC-1 (Vorbedingung): ein 412 mit bekannter tripId wird als Konflikt er
 
 describe('AC-1: "Nochmal speichern" frischt den ETag zuerst auf und wiederholt danach denselben Speichervorgang', () => {
 	test('test_retryConflict_refreshesEtagThenResendsOriginalSaveFn_inOrder', async () => {
-		// GIVEN: die Tour ist geladen, dann schreibt jemand anderes vorbei an der
+		// GIVEN: die Trip ist geladen, dann schreibt jemand anderes vorbei an der
 		// Registry (server-seitig neuer Stand, unser Client weiß es noch nicht).
 		await api.get('/api/trips/gr20');
 		await server.handler('/api/trips/gr20', {
@@ -99,7 +111,7 @@ describe('AC-1: "Nochmal speichern" frischt den ETag zuerst auf und wiederholt d
 			body: JSON.stringify({ name: 'fremd' })
 		});
 
-		const c = createTestInstance('gr20');
+		const c = createTestInstance('gr20', 'trip');
 		await c.doSave(() => api.put('/api/trips/gr20', { name: 'lokal' }).then(() => undefined));
 		assert.equal(c.state, 'conflict', 'Vorbedingung: der erste Versuch muss mit einem echten 412 scheitern');
 
@@ -141,7 +153,7 @@ describe('AC-2: gelingt der Retry, zeigt der Anzeiger wieder "Gespeichert"', () 
 			body: JSON.stringify({ name: 'fremd' })
 		});
 
-		const c = createTestInstance('gr20');
+		const c = createTestInstance('gr20', 'trip');
 		await c.doSave(() => api.put('/api/trips/gr20', { name: 'lokal' }).then(() => undefined));
 		assert.equal(c.state, 'conflict');
 
@@ -166,7 +178,7 @@ describe('AC-3: ein weiterer fremder Schreibvorgang zwischen Refresh und Retry d
 			body: JSON.stringify({ name: 'fremd 1' })
 		});
 
-		const c = createTestInstance('gr20');
+		const c = createTestInstance('gr20', 'trip');
 		await c.doSave(() => api.put('/api/trips/gr20', { name: 'lokal' }).then(() => undefined));
 		assert.equal(c.state, 'conflict', 'Vorbedingung: erster Versuch scheitert');
 
@@ -202,7 +214,7 @@ describe('AC-3: ein weiterer fremder Schreibvorgang zwischen Refresh und Retry d
 
 describe('AC-4: generische Fehler (kein 412) bekommen keinen Konflikt-Zustand', () => {
 	test('test_doSave_genericErrorStatus_setsErrorState_notConflict', async () => {
-		const c = createTestInstance('gr20');
+		const c = createTestInstance('gr20', 'trip');
 		const failing = async () => {
 			const err: ApiError = { error: 'validation_failed', status: 400 };
 			throw err;
@@ -216,7 +228,7 @@ describe('AC-4: generische Fehler (kein 412) bekommen keinen Konflikt-Zustand', 
 
 describe('Wiedereintritts-Schutz: ein zweiter Klick während eines laufenden Retries darf nichts doppelt auslösen', () => {
 	test('test_retryConflict_noOpWhenStateIsNotConflict', async () => {
-		const c = createTestInstance('gr20');
+		const c = createTestInstance('gr20', 'trip');
 		assert.equal(c.state, 'idle');
 
 		await c.retryConflict();
@@ -235,7 +247,7 @@ describe('Refresh selbst schlägt fehl: kein automatischer zweiter Versuch (Know
 			body: JSON.stringify({ name: 'fremd' })
 		});
 
-		const c = createTestInstance('gr20');
+		const c = createTestInstance('gr20', 'trip');
 		await c.doSave(() => api.put('/api/trips/gr20', { name: 'lokal' }).then(() => undefined));
 		assert.equal(c.state, 'conflict');
 
@@ -248,7 +260,10 @@ describe('Refresh selbst schlägt fehl: kein automatischer zweiter Versuch (Know
 			(globalThis as { fetch: unknown }).fetch = realFetch;
 		}
 
-		assert.equal(c.state, 'error', 'ein gescheiterter Refresh muss in den generischen Fehlerzustand fallen');
+		// Fix-Loop 1 (#1433, F004): umgeschrieben — statt in den Fehlerzustand zu fallen (dort gibt es
+		// keinen Wiederholen-Knopf und die Eingabe waere verwaist), bleibt „Nochmal speichern" stehen;
+		// nichts wird gesendet. Die Eintraege bleiben erhalten (Test trip_retry_fehlerpfade_kein_verlust).
+		assert.equal(c.state, 'conflict', 'ein gescheiterter Refresh laesst die Konflikt-Anzeige (Wiederholen-Knopf) stehen');
 		assert.equal(
 			putCalls().length,
 			2,
@@ -286,5 +301,196 @@ describe('AC-6: eine SaveStatus-Instanz ohne tripId verhält sich exakt wie vor 
 
 		assert.equal(c.state, 'conflict', 'ohne tripId darf retryConflict() den Zustand nicht verändern');
 		assert.equal(server.calls.length, 0, 'ohne tripId darf retryConflict() keine Netzanfrage auslösen');
+	});
+});
+
+// ════════════════════ Issue #2276 Scheibe S1 — AC-2 / AC-5 ═══════════════════
+//
+// Spec: docs/specs/modules/rework_2276_s1_netz_und_fundament.md § AC-2, AC-5
+//
+// Heutiger Stand (RED-Grund): `retryConflict()` ruft fest
+// `refreshTripEtag(this._tripId)` → `GET /api/trips/${id}`. Für einen
+// Ortsvergleich geht der Refresh damit an die FALSCHE Adresse.
+//
+// Warum die Pfad-Assertion der ganze Beweis ist: der Ersatz-Server führt
+// seine Fingerabdrücke — wie die echte `etagRegistry.ts` — unter der reinen
+// KENNUNG, nicht unter dem Pfad. `/api/trips/x` und
+// `/api/compare/presets/x` treffen deshalb denselben Eintrag; der Retry-PUT
+// gelingt heute also auch über den falschen Pfad mit 200. Ein Test, der nur
+// „der Retry gelingt" prüft, wäre schon vor dem Fix grün und bewiese nichts.
+// (Dieser geteilte Schlüsselraum ist kein Fehler des Ersatz-Servers, sondern
+// die getreue Abbildung des echten — er ist als eigener Befund gebucht,
+// s. Spec § Known Limitations.)
+//
+// Die Ressourcenart wird ÜBERGEBEN, nie aus der Kennung abgeleitet. Deshalb
+// zwei getrennte Testfälle mit verschieden geformten Kennungen: nur so ist
+// die Mutation „Pfadwahl über `id.startsWith('cp-')`" (AC-5.2) von der
+// Mutation „fester Trip-Pfad" (AC-5.1) unterscheidbar — bei der ersten bleibt
+// der `cp-`-Fall grün und NUR der Alt-Kennungs-Fall wird rot.
+
+/** Konflikt herstellen und „Nochmal speichern" auslösen — für einen Ortsvergleich. */
+async function konfliktUndWiederholen(id: string): Promise<SaveStatus> {
+	const pfad = `/api/compare/presets/${id}`;
+	// GIVEN: der Ortsvergleich ist geladen, dann schreibt jemand anderes daran
+	// vorbei (server-seitig neuer Stand, unser Client weiß es noch nicht).
+	await api.get(pfad);
+	await server.handler(pfad, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ name: 'fremd' })
+	});
+
+	const c = createTestInstance(id, 'vergleich');
+	await c.doSave(() => api.put(pfad, { name: 'lokal' }).then(() => undefined));
+	assert.equal(c.state, 'conflict', 'Vorbedingung: der erste Versuch muss mit einem echten 412 scheitern');
+
+	// WHEN: der Nutzer „Nochmal speichern" auslöst.
+	await c.retryConflict();
+	return c;
+}
+
+describe('AC-2/AC-5 (#2276 S1): "Nochmal speichern" frischt einen Ortsvergleich mit ALT-Kennung (ohne cp--Präfix) an der richtigen Adresse auf', () => {
+	test('test_retryConflict_vergleich_altKennungOhnePraefix_refreshesComparePresetPath', async () => {
+		// Kennungsform aus dem Produktivbestand: `zillertal-t-glich` — ein Slug
+		// ohne Präfix. Genau dieser Fall ist heute kaputt und wäre mit der
+		// verworfenen Präfix-Ableitung ebenfalls kaputt geblieben.
+		const id = 'zillertal-t-glich';
+
+		const c = await konfliktUndWiederholen(id);
+
+		// THEN (der eigentliche Prüfling): der Refresh-GET ging an die
+		// Ortsvergleich-Adresse, nicht an die Trip-Adresse.
+		const letzterGet = getCalls().at(-1);
+		assert.ok(letzterGet, 'Vorbedingung: der Retry muss überhaupt einen Refresh-GET ausgelöst haben');
+		assert.equal(
+			letzterGet.path,
+			`/api/compare/presets/${id}`,
+			'der Refresh eines Ortsvergleichs muss an /api/compare/presets/{id} gehen — ' +
+				'/api/trips/{id} ist die Adresse einer Trip und für eine Alt-Kennung ohne cp--Präfix ' +
+				'genauso falsch wie für jede andere'
+		);
+		assert.ok(
+			!getCalls().some((g) => g.path.startsWith('/api/trips/')),
+			'kein einziger Refresh darf an /api/trips/ gehen, wenn die übergebene Ressourcenart "vergleich" ist'
+		);
+
+		// Und der wiederholte Speichervorgang gelingt mit dem frischen Stand.
+		assert.equal(putCalls().at(-1)?.status, 200, 'mit dem frischen Stand muss der wiederholte Speichervorgang gelingen');
+		assert.equal(c.state, 'idle', 'nach erfolgreichem Retry muss der Anzeiger wieder "Gespeichert" zeigen');
+	});
+});
+
+describe('AC-2/AC-5 (#2276 S1): dasselbe gilt für einen Ortsvergleich mit cp--Kennung', () => {
+	test('test_retryConflict_vergleich_cpKennung_refreshesComparePresetPath', async () => {
+		// Neu erzeugte Presets tragen das Präfix (`newComparePresetID()`).
+		// Dieser Fall bliebe auch mit der verworfenen Präfix-Ableitung grün —
+		// er belegt die zweite Bestandsform, nicht die Zusicherung selbst.
+		const id = 'cp-eb6ba0b239d90e37';
+
+		const c = await konfliktUndWiederholen(id);
+
+		const letzterGet = getCalls().at(-1);
+		assert.ok(letzterGet, 'Vorbedingung: der Retry muss überhaupt einen Refresh-GET ausgelöst haben');
+		assert.equal(
+			letzterGet.path,
+			`/api/compare/presets/${id}`,
+			'der Refresh eines Ortsvergleichs muss an /api/compare/presets/{id} gehen'
+		);
+
+		assert.equal(putCalls().at(-1)?.status, 200, 'mit dem frischen Stand muss der wiederholte Speichervorgang gelingen');
+		assert.equal(c.state, 'idle', 'nach erfolgreichem Retry muss der Anzeiger wieder "Gespeichert" zeigen');
+	});
+});
+
+// ════════════════════ Issue #1433 — bewusst umgeschrieben/ergaenzt ═══════════
+//
+// Spec: docs/specs/bugfix/trip_mehrreiter_konfliktschutz.md — §4 Punkt 2, 4, 5,
+//       AC-2, AC-3, AC-19, AC-24.
+//
+// Bis #1433 hielt der Controller GENAU EINEN gescheiterten Speichervorgang
+// (`_lastFailed` = Einzelwert); jeder weitere `doSave`/`schedule` ueberschrieb
+// ihn oder loeschte den Konflikt. Jetzt: `_lastFailed` ist eine Liste (ein
+// Eintrag je Reiter/Schreiber), „Nochmal speichern" holt den Trip per GET und
+// fuehrt ALLE Eintraege erneut aus, jeder Eintrag haelt nur seine Eigenfelder
+// (idempotent). Die Eintraege sind hier einfache `api.put`-Funktionen mit
+// UNTERSCHIEDLICHEN Rumpfen — der Test bindet sich nicht an die Listenform,
+// sondern an ihre Wirkung (welche Rumpfe beim Server ankommen).
+//
+// Dedup-Schluessel (ein Eintrag je Reiter) ist in der Spec nicht festgelegt und
+// hier bewusst NICHT geprueft (s. Uebergabebericht).
+describe('#1433: Liste statt Einzel-_lastFailed — „Nochmal speichern" fuehrt ALLE Eintraege aus', () => {
+	async function zweiKonflikte(): Promise<{ c: SaveStatus }> {
+		// GIVEN: Stand bekannt, Fremdschreiber aendert, dann scheitern ZWEI Speichervorgaenge
+		await api.get('/api/trips/gr20');
+		await server.handler('/api/trips/gr20', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name: 'fremd' })
+		});
+		const c = createTestInstance('gr20', 'trip');
+		await c.doSave(() => api.put('/api/trips/gr20', { activity: 'von A' }).then(() => undefined));
+		assert.equal(c.state, 'conflict', 'Vorbedingung: Reiter A scheitert');
+		await c.doSave(() => api.put('/api/trips/gr20', { region: 'von B' }).then(() => undefined));
+		return { c };
+	}
+
+	test('nach dem Konflikt von A bleibt der Zustand `conflict`, auch wenn B speichern will', async () => {
+		const { c } = await zweiKonflikte();
+		assert.equal(c.state, 'conflict', 'AC-2: Konfliktanzeige bleibt nach dem Speichern in B');
+	});
+
+	test('retryConflict sendet BEIDE gescheiterten Rumpfe erneut (A und B), nicht nur den letzten', async () => {
+		const { c } = await zweiKonflikte();
+		const vor = putCalls().length;
+
+		await c.retryConflict();
+
+		const neu = putCalls().slice(vor).map((p) => JSON.stringify(p.anfrage));
+		assert.ok(neu.includes(JSON.stringify({ activity: 'von A' })), `der Rumpf von Reiter A fehlt beim Retry, gesehen: ${neu.join(' | ')}`);
+		assert.ok(neu.includes(JSON.stringify({ region: 'von B' })), `der Rumpf von Reiter B fehlt beim Retry, gesehen: ${neu.join(' | ')}`);
+		assert.ok(putCalls().slice(vor).every((p) => p.status === 200), 'alle Wiederholungen muessen durchgehen');
+		assert.equal(c.state, 'idle', 'danach „Gespeichert"');
+	});
+
+	test('der Retry holt den Trip ZUERST (GET), danach laufen die Wiederholungen mit dem frischen Stempel', async () => {
+		const { c } = await zweiKonflikte();
+		const vor = putCalls().length;
+		const getsVor = getCalls().length;
+		const etagVorRetry = server.etagOf('gr20');
+
+		await c.retryConflict();
+
+		assert.equal(getCalls().length, getsVor + 1, 'genau ein Refresh-GET (nicht je Eintrag einer)');
+		const get = getCalls().at(-1)!;
+		const retries = putCalls().slice(vor);
+		assert.ok(retries.length >= 2);
+		assert.ok(retries[0].startedAt >= get.finishedAt, 'AC-19: GET kommt vor den eigenen Aenderungen');
+		assert.equal(retries[0].ifMatch, etagVorRetry, 'die erste Wiederholung traegt den frisch geholten Stempel');
+	});
+
+	test('trifft der Retry erneut auf einen Konflikt, gehen die Eintraege NICHT verloren (zweiter Retry schreibt beide)', async () => {
+		let getVerzug = 0;
+		boot((method) => (method === 'GET' ? getVerzug : 0));
+		const { c } = await zweiKonflikte();
+
+		getVerzug = 40;
+		const erster = c.retryConflict(); // GET unterwegs …
+		await new Promise((r) => setTimeout(r, 10));
+		await server.handler('/api/trips/gr20', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name: 'fremd 2' })
+		}); // … und ein weiterer Fremdschreiber
+		await erster;
+		assert.equal(c.state, 'conflict', 'Vorbedingung: der Retry scheitert erneut');
+
+		const vor = putCalls().length;
+		getVerzug = 0; // kein Verzug mehr
+		await c.retryConflict();
+
+		const neu = putCalls().slice(vor).map((p) => JSON.stringify(p.anfrage));
+		assert.ok(neu.includes(JSON.stringify({ activity: 'von A' })), 'Eintrag A ging beim ersten Retry verloren');
+		assert.ok(neu.includes(JSON.stringify({ region: 'von B' })), 'Eintrag B ging beim ersten Retry verloren');
+		assert.equal(c.state, 'idle');
 	});
 });

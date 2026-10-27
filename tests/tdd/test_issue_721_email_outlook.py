@@ -115,15 +115,24 @@ class TestAC1OutlookHeadIsStability:
 
         pos_outlook = html.find("Ausblick")
         pos_label = html.find("WECHSELHAFT")
-        # #911: Ausblick-Block ist jetzt OutlookTable; die Legende ist eindeutige
-        # Signatur die erst NACH der Tabelle erscheint (einmaliger String).
-        # #1720 S1 (AC-8): der Anker heisst "N Tagestief" statt "N Nacht-Tief" --
-        # die Spalte zeigt das Tages-Minimum im Wanderfenster, nie ein
-        # naechtliches Tief. Geprueft wird hier weiterhin die REIHENFOLGE.
-        pos_table = html.find("N Tagestief")
+        # #911: Ausblick-Block ist jetzt OutlookTable.
+        # #2136/ADR-0068 (Adversary F001): der Pfad-1-Altbestand-Legendenblock
+        # ("N Tagestief · D Tag-Hoch °C · ...") ist entfernt -- er stand
+        # frueher DIREKT NACH der Ausblick-Tabelle und diente hier als
+        # eindeutiger "nach der Tabelle"-Anker. Die Spaltenlegende kommt
+        # seither ausschliesslich aus der geteilten Fusszeile
+        # (`build_column_legend(..., outlook_active=True)`), weit hinter der
+        # Tabelle -- als Anker fuer "VOR der Etappen-Tabelle" waere sie
+        # tautologisch (praktisch alles im Mailkoerper steht vor der
+        # Fusszeile). Anker ist deshalb jetzt die Ausblick-Tabelle selbst
+        # (das erste `<table` nach dem Ausblick-Marker): AC-1 verlangt, dass
+        # das Wetterlage-Label ALS KOPF IM Ausblick-Block steht, also vor der
+        # Tabelle -- genau das misst dieser Anker direkt, nicht nur indirekt
+        # ueber einen spaeteren String.
+        pos_table = html.find("<table", pos_outlook)
         assert pos_outlook != -1, "Ausblick-Block fehlt"
         assert pos_label != -1, "Großwetterlage-Label fehlt im Output"
-        assert pos_table != -1, "Ausblick-Tabellen-Legende 'N Tagestief' fehlt"
+        assert pos_table != -1, "Ausblick-Tabelle fehlt"
         # Reihenfolge: Ausblick-Marker → Wetterlage → Tabellen-Legende
         assert pos_outlook < pos_label < pos_table, (
             f"Reihenfolge falsch: outlook={pos_outlook}, label={pos_label}, "

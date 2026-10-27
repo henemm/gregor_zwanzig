@@ -3,7 +3,7 @@ entity_id: heartbeat_url_rotation
 type: bugfix
 created: 2026-05-03
 updated: 2026-05-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [security, bugfix, secrets, scheduler, betterstack, mq, issue-118]
 ---

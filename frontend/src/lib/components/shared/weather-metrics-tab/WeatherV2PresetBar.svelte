@@ -115,7 +115,7 @@
 		margin-left: 5px;
 		padding: 1px 5px;
 		border-radius: 3px;
-		font-size: 10px;
+		font-size: 11px;
 		font-family: var(--g-font-mono, monospace);
 		font-weight: 600;
 		letter-spacing: 0.04em;

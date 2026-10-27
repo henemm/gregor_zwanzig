@@ -21,6 +21,7 @@ Features (rechtzeitige Warnung vor Verschaerfung). Das Tageslimit
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -34,6 +35,8 @@ from output.renderers.alert.official_alerts import (
     official_alert_state_key,
 )
 from services import alert_channel_threshold, alert_daily_limit, alert_log
+from services import alert_retry_backoff
+from services.throttle_store import ThrottleStore
 import services.alert_urgency as alert_urgency
 from services.alert_gate import (
     check_briefing_imminent,
@@ -42,20 +45,24 @@ from services.alert_gate import (
     record_event_identity,
     resolve_hazard_class,
 )
+from services.alert_check_state import report_unit_failure
 from services.alert_state import AlertStateService
-from services.compare_alert_channels import (
-    effective_compare_channels,
-    effective_compare_telegram_style,
-)
+from services.alert_channels import effective_alert_channels
+from services.compare_alert_channels import effective_compare_telegram_style
 from services.compare_alert_guard import is_silenced
 from services.compare_preset_access import (
     load_compare_alert_presets,
     notification_service_for_preset,
 )
-from services.compare_slot_scheduler import presets_due_for_hour
+from services.compare_slot_scheduler import due_or_raise, presets_due_for_hour
 from services.notification_service import NotificationService
-from services.official_alerts import get_official_alerts_for_location
-from utils.timezone import first_resolvable_tz
+from services.alert_state import prune_expired_official
+from services.official_alert_allclear import (
+    AllClearQuery, allclear_settled, apply_official_allclears, detect_official_allclear,
+    reported_meta,
+)
+from services.official_alerts import collect_source_queries, get_official_alerts_for_location
+from utils.timezone import first_resolvable_tz, local_dt
 
 logger = logging.getLogger("compare_official_alert")
 
@@ -72,6 +79,10 @@ def _effective_telegram_style(preset: dict) -> str:
     return effective_compare_telegram_style(preset)
 
 
+#: Issue #1405 S1: Backoff-Scope des amtlichen Ortsvergleich-Alarms (dieser
+#: Pfad kennt sonst keine Sperrzeit im ``ThrottleStore``).
+_RETRY_SCOPE = "compare_official"
+
 class CompareOfficialAlertService:
     """Wertet amtliche Warnungen je Compare-Preset/Ort aus und versendet EINEN
     gebuendelten Standalone-Alarm (Orts-Scope) bei neuen/eskalierten Treffern."""
@@ -79,7 +90,8 @@ class CompareOfficialAlertService:
     def __init__(
         self,
         settings: Optional[Settings] = None,
-        user_id: str = "default",
+        *,
+        user_id: str,
         mail_sink: Optional[object] = None,
         sms_sink: Optional[object] = None,
         telegram_sink: Optional[object] = None,
@@ -90,12 +102,39 @@ class CompareOfficialAlertService:
         self._sms_sink = sms_sink
         self._telegram_sink = telegram_sink
 
+    # Issue #2217: Zahl der im letzten Lauf gescheiterten Presets (Router -> failed).
+    last_failed_count: int = 0
+    # Issue #1539 S0: Messung des letzten Laufs (Router -> checked/duration_s).
+    last_checked_count: int = 0
+    last_duration_s: float = 0.0
+
     def check_all_compare_presets(self) -> int:
+        started_at = time.monotonic()
+        sent, self.last_failed_count = self._check_all_counted()
+        self.last_duration_s = time.monotonic() - started_at
+        logger.info(
+            f"compare_official_alert: Lauf beendet nach {self.last_duration_s:.3f}s fuer "
+            f"user_id={self._user_id} (checked={self.last_checked_count} "
+            f"alerts_sent={sent} failed={self.last_failed_count})"
+        )
+        return sent
+
+    def _check_all_counted(self) -> tuple[int, int]:
         presets = self._load_presets()
+        self.last_checked_count = len(presets)
         if not presets:
-            return 0
+            return 0, 0
         all_locations = {loc.id: loc for loc in load_all_locations(user_id=self._user_id)}
-        return sum(1 for preset in presets if self._check_one_preset(preset, all_locations))
+        sent = failed = 0
+        for preset in presets:
+            try:
+                if self._check_one_preset(preset, all_locations):
+                    sent += 1
+            except Exception:
+                # Issue #2217: ein kaputtes Preset reisst die Folge-Presets nicht mit.
+                report_unit_failure("Compare-Amtlich-Alarmlauf", preset.get("id", ""))
+                failed += 1
+        return sent, failed
 
     def _check_one_preset(self, preset: dict, all_locations: dict) -> bool:
         preset_id = preset.get("id", "")
@@ -146,14 +185,32 @@ class CompareOfficialAlertService:
         # `is_silenced` bleibt bewusst AUSSERHALB des Bausteins (AC-9): Trips
         # kennen den Riegel nicht, und ein pausierter Trip soll weiter
         # alarmieren (#995).
-        if not check_official_alert_gate(
+        # Issue #2050 S3b (Szenario 10, AC-9, Luecke E3 spiegelbildlich zum
+        # Trip): der Grund lag hier schon immer vor — bis dahin verwarf ihn
+        # der Aufrufer mitsamt dem `GateResult`.
+        gate = check_official_alert_gate(
             user_id=self._user_id,
             quiet_from=preset.get("alert_quiet_from"),
             quiet_to=preset.get("alert_quiet_to"),
             context_label=preset_id,
             now=datetime.now(timezone.utc),
             zone=zone,
-        ).allowed:
+        )
+        if not gate.allowed:
+            # Absicherung je Preset, nicht um den Stapellauf (Muster `fix_1479`).
+            try:
+                alert_log.append_suppressed_entry(
+                    self._user_id, entity_id=preset_id, entity_type="compare",
+                    reason=alert_log.REASON_OFFICIAL_ALERT,
+                    gate_reason=gate.reason,
+                    effective_channels=self._effective_channels(preset),
+                )
+            except Exception as e:
+                logger.error(
+                    "Compare-Amtlich: Unterdrueckungs-Protokoll fuer Preset %s "
+                    "fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), "
+                    "nur der Protokoll-Eintrag fehlt.", preset_id, e, gate.reason,
+                )
             return False
 
         # Issue #1594: dieselbe Stufe wie im Vergleichs-Aenderungspfad, gleiche
@@ -165,7 +222,7 @@ class CompareOfficialAlertService:
         if check_briefing_imminent(
             user_id=self._user_id, entity_id=preset_id, entity_type="compare",
             now=datetime.now(timezone.utc), zone=zone,
-            briefing_due_at=lambda moment: bool(
+            briefing_due_at=lambda moment: due_or_raise(
                 presets_due_for_hour([preset], all_locations, moment)
             ),
         ):
@@ -177,8 +234,10 @@ class CompareOfficialAlertService:
             return False
 
         sources = (official_warnings or {}).get("sources") or None
+        self._pending_allclears = []
         tagged_alerts, per_location_new = self._detect(preset_id, locs, sources)
-        if not tagged_alerts:
+        allclears = list(self._pending_allclears)  # Issue #1441 S2
+        if not tagged_alerts and not allclears:
             return False
 
         now = datetime.now(timezone.utc)
@@ -223,11 +282,19 @@ class CompareOfficialAlertService:
                 if alert in for_loc:
                     for_loc.remove(alert)
                 try:
+                    # Issue #2050 S6 (E-1): dieser Zweig steht INNERHALB der
+                    # `for loc_id in loc_ids`-Schleife -- Warnung und Ort sind
+                    # hier je EIN Wert, `measurement_point` ist deshalb IMMER
+                    # eindeutig (kein `unique_or_none` noetig).
                     alert_log.append_suppressed_entry(
                         self._user_id, entity_id=preset_id, entity_type="compare",
                         reason=alert_log.REASON_OFFICIAL_ALERT,
                         gate_reason=identity_gate.reason,
                         effective_channels=effective_channels,
+                        event_at=alert.valid_from.isoformat() if alert.valid_from else None,
+                        event_end_at=alert.valid_to.isoformat() if alert.valid_to else None,
+                        measurement_point={"location_id": loc_id},
+                        source=alert.source,
                     )
                 except Exception as e:
                     logger.error(
@@ -238,7 +305,7 @@ class CompareOfficialAlertService:
                     )
             if remaining_loc_ids:
                 filtered_alerts.append((alert, remaining_loc_ids))
-        if not filtered_alerts:
+        if not filtered_alerts and not allclears:
             return False
         tagged_alerts = filtered_alerts
 
@@ -247,43 +314,86 @@ class CompareOfficialAlertService:
         # Argument, also NACH dem Versand) -- `split_by_threshold()` braucht
         # sie davor. `effective_channels` bleibt fuers Protokoll ROH (rote
         # Linie #638), nur der tatsaechliche Versand (`allowed`) wird gefiltert.
+        # Issue #1441 S2 (AC-4): Stapel-Max ueber Warnungen UND alte Stufen der
+        # Entwarnungen.
         severity = alert_urgency.highest_urgency(*[
             alert_urgency.urgency_from_official_level(a.level)
             for a, _loc_ids in tagged_alerts
+        ], *[
+            alert_urgency.urgency_from_official_transition(ac.old_level, ac.new_level)
+            for ac, _loc_ids in allclears
         ])
         allowed, suppressed = alert_channel_threshold.split_by_threshold(
             effective_channels, severity, preset.get("alert_channel_thresholds"),
         )
+        # Issue #1405 S1 (ADR-0086): Fehlversuchs-Backoff je Ereignis (Ort +
+        # Meldungs-Kennung) -- geteilter Baustein wie im amtlichen Trip-Pfad.
+        retry_store = ThrottleStore(self._user_id)
+        retry_fp = alert_retry_backoff.event_fingerprint(preset_id, [*(
+            f"{loc_id}/{part}"
+            for alert, loc_ids in tagged_alerts
+            for part in alert_retry_backoff.official_alert_parts([alert])
+            for loc_id in loc_ids
+        ), *(f"{loc_ids[0]}/allclear:{ac.key}:{ac.new_rank}" for ac, loc_ids in allclears)])
+        if alert_retry_backoff.backoff_active(retry_store, _RETRY_SCOPE, retry_fp):
+            return False
         result = notification_service.send_multi_location_official_alert(
             preset.get("name", preset_id), locs, tagged_alerts,
             allowed,
             _effective_telegram_style(preset),
             mail_sink=self._mail_sink, sms_sink=self._sms_sink,
-            telegram_sink=self._telegram_sink,
+            telegram_sink=self._telegram_sink, allclears=[ac for ac, _l in allclears],
         )
+        # Issue #2050 S6 (E-1): Ereigniszeit/Messpunkt/Quelle nur, wenn ALLE
+        # Warnungen dieses Eintrags uebereinstimmen (`unique_or_none`) --
+        # amtliche Warnungen kennen strukturell keine Vorwarnzeit und keine
+        # Vergleichsbasis (analog Trip).
+        _e1_event_at_dt = alert_log.unique_or_none(
+            a.valid_from for a, _loc_ids in tagged_alerts
+        )
+        _e1_event_at = _e1_event_at_dt.isoformat() if _e1_event_at_dt is not None else None
+        _e1_event_end_at_dt = alert_log.unique_or_none(
+            a.valid_to for a, _loc_ids in tagged_alerts
+        )
+        _e1_event_end_at = (
+            _e1_event_end_at_dt.isoformat() if _e1_event_end_at_dt is not None else None
+        )
+        _e1_loc_id = alert_log.unique_or_none(
+            loc_id for _a, loc_ids in tagged_alerts for loc_id in loc_ids
+        )
+        _e1_measurement_point = (
+            {"location_id": _e1_loc_id} if _e1_loc_id is not None else None
+        )
+        _e1_source = alert_log.unique_or_none(a.source for a, _loc_ids in tagged_alerts)
         # Issue #1459: die Gefahrenart steht in `hazards`, nicht in `metrics` (O1).
         alert_log.append_entry(
             self._user_id, entity_id=preset_id, entity_type="compare",
-            changes_count=len(tagged_alerts),
+            changes_count=len(tagged_alerts) + len(allclears),
             severity=severity,
             hazards=alert_log.hazards_from_official_alerts(
-                [a for a, _loc_ids in tagged_alerts]
+                [a for a, _loc_ids in tagged_alerts] + [ac.alert for ac, _l in allclears]
             ),
             reason=alert_log.REASON_OFFICIAL_ALERT,
             effective_channels=effective_channels,
             sent_channels=result.delivered_channels,
-            reachable_channels=result.sent_channels,
+            reachable_channels=result.attempted_channels,
             below_threshold_channels=suppressed,
             blocked_reason_codes=result.blocked_reason_codes,
+            event_at=_e1_event_at, event_end_at=_e1_event_end_at,
+            measurement_point=_e1_measurement_point, source=_e1_source,
             # Issue #1944: derselbe geteilte Baustein wie im Trip-Pfad.
             **alert_log.capture_kwargs_from_alerts(
                 [a for a, _loc_ids in tagged_alerts]
             ),
         )
-        if not result.sent:
+        if not alert_retry_backoff.settle(
+            retry_store, _RETRY_SCOPE, retry_fp, result.delivery_outcome,
+        ):
             return False
 
         self._record_state(preset_id, per_location_new)
+        if allclear_settled(result):
+            self._apply_allclears(preset_id, allclears)
         alert_daily_limit.increment(self._user_id, now, zone)
         # Issue #1917 S4b-2 (F001-Symmetrie): NUR nach erfolgreicher
         # Zustellung. Gefahrenarten ausserhalb des `wet`-Kanons
@@ -301,7 +411,7 @@ class CompareOfficialAlertService:
                     window_start=alert.valid_from, window_end=alert.valid_to,
                     now=datetime.now(timezone.utc),
                 )
-        return True
+        return result.sent
 
     def _detect(
         self, preset_id: str, locs: list, sources: Optional[list[str]] = None
@@ -325,18 +435,13 @@ class CompareOfficialAlertService:
         keine Etappen — die Menge der geprueften Orte bleibt deshalb
         unveraendert die des Presets (AC-33), nur die Zeit kommt hinzu."""
         now = datetime.now(timezone.utc)
-        raw = [
-            (alert, [loc.id])
-            for loc in locs
-            for alert in get_official_alerts_for_location(
-                loc.lat, loc.lon,
-                window_start=now,
-                window_end=self._day_window_end(preset_id, loc, now),
-                now=now,
-            )
-        ]
+        raw, queries_by_loc = self._fetch_locations(preset_id, locs, now)
         if sources:
-            raw = [(alert, loc_ids) for alert, loc_ids in raw if alert.source in sources]
+            # Issue #1441: Quellenname = Teil vor dem ersten ':' (Lagebericht
+            # `avalanche_report:AT-07` -> `avalanche_report`); Quellen ohne ':'
+            # verhalten sich unveraendert.
+            raw = [(alert, loc_ids) for alert, loc_ids in raw
+                   if alert.source.split(":", 1)[0] in sources]
         deduped = dedupe_official_alerts(raw)
 
         state_svc_by_loc = {loc.id: AlertStateService(user_id=self._user_id) for loc in locs}
@@ -364,9 +469,39 @@ class CompareOfficialAlertService:
                     changed_locs.add(loc_id)
             if is_new:
                 new_or_escalated.append((alert, loc_ids))
+        # Issue #1441 S2: GC + Entwarnungs-Erkennung je Ort (eigenes Gedaechtnis).
+        self._pending_allclears = []
+        self._pending_meta = {}
+        for loc_id, state in state_by_loc.items():
+            queries = queries_by_loc.get(loc_id, [])
+            self._pending_meta[loc_id] = reported_meta(queries)
+            pruned = prune_expired_official(state, now)
+            allclears, absent_changed = detect_official_allclear(state, queries, now)
+            self._pending_allclears.extend((ac, [loc_id]) for ac in allclears)
+            if pruned or absent_changed:
+                changed_locs.add(loc_id)
         for loc_id in changed_locs:
             state_svc_by_loc[loc_id].save(f"{preset_id}:{loc_id}", state_by_loc[loc_id])
         return new_or_escalated, per_location_new
+
+    def _fetch_locations(self, preset_id: str, locs: list, now: datetime) -> tuple[list, dict]:
+        """Abruf je Ort; Issue #1441 S2: Pro-Quelle-Ergebnis desselben Abrufs
+        (``collect_source_queries``) als ``AllClearQuery`` je Ort."""
+        raw: list = []
+        queries_by_loc: dict = {}
+        for loc in locs:
+            sink: list = []
+            window_end = self._day_window_end(preset_id, loc, now)
+            with collect_source_queries(sink):
+                alerts = list(get_official_alerts_for_location(
+                    loc.lat, loc.lon, window_start=now, window_end=window_end, now=now,
+                ))
+            raw.extend((alert, [loc.id]) for alert in alerts)
+            queries_by_loc[loc.id] = [AllClearQuery(
+                scope=loc.id, scope_ids=(loc.id,), window_start=now, window_end=window_end,
+                sources=sink[-1].sources if sink else None, shown=tuple(alerts),
+            )]
+        return raw, queries_by_loc
 
     def _day_window_end(self, preset_id: str, loc, now: datetime) -> datetime:
         """Issue #1460 (P4): Ende des HEUTIGEN Tagesfensters dieses Ortes, in
@@ -393,8 +528,8 @@ class CompareOfficialAlertService:
         start_hour, end_hour = resolve_configured_window(
             preset.get("day_window_start_hour"), preset.get("day_window_end_hour")
         )
-        tz = tz_for_coords(loc.lat, loc.lon) or timezone.utc
-        local_now = now.astimezone(tz)
+        tz = tz_for_coords(loc.lat, loc.lon)
+        local_now = local_dt(now, tz)
         end_utc = day_window.window_end_utc_exclusive(local_now.date(), end_hour, tz)
         if start_hour > end_hour and end_utc <= now:
             end_utc = day_window.window_end_utc_exclusive(
@@ -404,22 +539,39 @@ class CompareOfficialAlertService:
 
     def _record_state(self, preset_id: str, per_location_new: dict) -> None:
         now_iso = datetime.now(timezone.utc).isoformat()
+        meta_by_loc = getattr(self, "_pending_meta", {}) or {}
         for loc_id, alerts in per_location_new.items():
             entity_id = f"{preset_id}:{loc_id}"
             state_svc = AlertStateService(user_id=self._user_id)
             state = state_svc.load(entity_id)
+            meta = meta_by_loc.get(loc_id, {})
             for alert in alerts:
                 key = official_alert_state_key(alert)
-                state[key] = official_alert_state_entry(alert, now_iso)
+                state[key] = official_alert_state_entry(
+                    alert, now_iso, source=(meta.get(key) or {}).get("source"), scope=[loc_id],
+                )
             state_svc.save(entity_id, state)
 
+    def _apply_allclears(self, preset_id: str, allclears: list) -> None:
+        """Issue #1441 S2: nach Zustellung senken bzw. Tombstone setzen (je Ort)."""
+        now = datetime.now(timezone.utc)
+        for ac, loc_ids in allclears:
+            for loc_id in loc_ids:
+                entity_id = f"{preset_id}:{loc_id}"
+                state_svc = AlertStateService(user_id=self._user_id)
+                state = state_svc.load(entity_id)
+                if apply_official_allclears(state, [ac], now):
+                    state_svc.save(entity_id, state)
+
     def _effective_channels(self, preset: dict) -> set[str]:
-        """Duenner Wrapper (Issue #1467 S2 AG1) — delegiert an den geteilten
-        Resolver `services.compare_alert_channels.effective_compare_channels`.
-        Aufruf ueber den Modul-Namensraum (`coa_module.effective_compare_channels`
-        entspricht hier dem Modulattribut), damit Tests das Symbol im
-        VERBRAUCHENDEN Modul patchen koennen (AC-3a)."""
-        return effective_compare_channels(preset, self._settings, self._user_id)
+        """Duenner Wrapper (Issue #2279 S1) — delegiert an die geteilte
+        Alarm-Auflösung `services.alert_channels.effective_alert_channels`
+        (vormals eine gleichnamige, jetzt entfernte Funktion in
+        `compare_alert_channels.py`). Aufruf ueber den Modul-Namensraum
+        (`coa_module.effective_alert_channels` entspricht hier dem
+        Modulattribut), damit Tests das Symbol im VERBRAUCHENDEN Modul
+        patchen koennen (AC-6)."""
+        return effective_alert_channels(preset, self._settings, self._user_id)
 
     def _notification_service_for(self, preset: dict) -> NotificationService:
         """Duenner Wrapper (Issue #1467 S4a) auf den geteilten Helfer

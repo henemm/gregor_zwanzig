@@ -188,3 +188,49 @@ export function loadRouteExtraMetricDefs(): Promise<RouteMetricDef[]> {
 export function loadCompareSelectionEntries(): Promise<CompareSelectionEntry[]> {
 	return fetchCompareMetricCatalogOnce().then(toCompareSelectionEntries);
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// Issue #1911: Gewitter-Schwellenliste (ThresholdMetricRow) abgeleitet aus
+// dem Katalog-Feld `ordinalLabels` statt hart codiert in WeatherMetricsTab.svelte.
+// ════════════════════════════════════════════════════════════════════════
+
+export interface ThunderThresholdLevel {
+	id: string;
+	label: string;
+	float: number;
+}
+
+/**
+ * Reiner, testbarer Mapper: `ordinalLabels` (Katalog-Eintrag `thunder_level_max`,
+ * z.B. ["kein","leicht","mittel","hoch"]) -> waehlbare Alarmschwellen. Die
+ * Nullstufe (Index 0, "kein") wird verworfen — "ab Stufe kein alarmieren" ist
+ * keine sinnvolle Einstellung (Kontext B1). `float` = Ordinalindex im
+ * Katalog-Array (1/2/3 fuer leicht/mittel/hoch) — wertgleich zum vorherigen
+ * Literal, Bestandsdaten-kritisch (AC-2). Kein Absturz bei leerem/fehlendem
+ * Katalog (AC-7).
+ */
+export function deriveThunderThresholdLevels(
+	ordinalLabels: string[] | undefined
+): ThunderThresholdLevel[] {
+	if (!ordinalLabels || ordinalLabels.length === 0) return [];
+	return ordinalLabels.slice(1).map((label, index) => ({
+		id: label,
+		label: label.charAt(0).toUpperCase() + label.slice(1),
+		float: index + 1
+	}));
+}
+
+/**
+ * Kapselt die GANZE Naht Katalog -> Gewitter-Schwellenliste (Adversary-Runde
+ * 2, Findings F003/F004): Katalog-Suche nach `thunder_level_max` UND Aufruf
+ * von `deriveThunderThresholdLevels(...)` in EINER testbaren Funktion statt
+ * verstreut im Template (WeatherMetricsTab.svelte), wo nur AST-Formpruefung
+ * moeglich war. Fehlender Eintrag/fehlende/leere/`undefined` `ordinalLabels`
+ * -> leeres Array, kein Absturz (AC-7).
+ */
+export function thunderThresholdLevelsFromCatalog(
+	entries: CompareSelectionEntry[]
+): ThunderThresholdLevel[] {
+	const entry = (entries ?? []).find((e) => e.metric === 'thunder_level_max');
+	return deriveThunderThresholdLevels(entry?.ordinalLabels);
+}

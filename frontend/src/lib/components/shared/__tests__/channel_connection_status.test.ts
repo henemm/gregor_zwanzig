@@ -43,8 +43,16 @@ test('#1258 AC-21: Telegram ohne chat_id -> neutral/"nicht verbunden"', () => {
 	assert.deepEqual(status.telegram, { tone: 'neutral', label: 'nicht verbunden' });
 });
 
-test('#1258 AC-21: SMS hinterlegt und Tier erlaubt -> good/"hinterlegt"', () => {
-	const status = channelConnectionStatus({ sms_to: '+491511234567', sms_allowed: true });
+test('#1258 AC-21: SMS hinterlegt (und seit #2406 bestaetigt) -> good/"hinterlegt"', () => {
+	// Issue #2406: "hinterlegt" gilt seither nur noch fuer eine per Code
+	// BEWIESENE Nummer — eine bloss eingetragene meldet
+	// "eingetragen, unbestätigt" (sms_unbestaetigt_kanalstatus.test.ts).
+	// Die Aussage dieses Falls (Nummer da, Tarif erlaubt) bleibt unberuehrt.
+	const status = channelConnectionStatus({
+		sms_to: '+491511234567',
+		sms_allowed: true,
+		sms_verified: true
+	});
 	assert.deepEqual(status.sms, { tone: 'good', label: 'hinterlegt' });
 });
 

@@ -1,22 +1,37 @@
-"""TDD RED — Issue #1916, AC-Gruppe B ("Rollierende Basis"), AC-6..AC-8.
+"""TDD RED — Issue #1916, AC-Gruppe B ("Rollierende Basis"), AC-6.
 
-SPEC: docs/specs/modules/trip_alert.md v3.0, ADR-0056.
+SPEC: docs/specs/modules/trip_alert.md v3.0, ADR-0056;
+docs/specs/modules/fix_1987_kanal_anker.md (S1).
 
-Dritter, rollierender Anker-Typ mit Hybrid-Schreibtrigger: (a) bei jedem
-tatsaechlich versendeten Alarm, (b) opportunistisch beim Ueberschreiten der
-4h-Alterungs-Ceiling. Kern-Schicht, deterministisch: ``cached_weather``/
-``fresh_weather`` werden DIREKT an ``check_and_send_alerts()`` uebergeben
-(Vorbild ``test_alert_channel_threshold.py:409-412``) -- der Schreibpfad ist
-Teil dieser Methode selbst (Spec-Tabelle: "trip_alert.py MODIFY ... neuer
-Schreibpfad nach jedem Check-Lauf"), unabhaengig davon, wie ``cached``
-zustande kam.
+Dritter, rollierender Anker-Typ. Kern-Schicht, deterministisch:
+``cached_weather``/``fresh_weather`` werden DIREKT an
+``check_and_send_alerts()`` uebergeben (Vorbild
+``test_alert_channel_threshold.py:409-412``) -- der Schreibpfad ist Teil
+dieser Methode selbst, unabhaengig davon, wie ``cached`` zustande kam.
 
-Angenommene API (Spec Zeile 69, "z.B."): ``WeatherSnapshotService.
-save_alarm_anchor()``/``load_alarm_anchor()``, Rueckgabetyp wie die
-Geschwistermethoden ``load()``/``load_dated()``
-(``Optional[list[SegmentWeatherData]]``). Aendert die Implementierung die
-Namen, betrifft das nur die Aufrufstellen hier, nicht die Zusicherungen
-selbst.
+**Issue #1987 (S1) hat den Hybrid-Trigger halbiert.** ADR-0056 kannte zwei
+Schreibtrigger: (a) tatsaechlicher Alarmversand, (b) opportunistische
+Auffrischung beim Ueberschreiten der 4h-Ceiling, auch ohne Alarm. Trigger
+(b) ist mit der Zustellungsbindung von #1987 begrifflich unmoeglich geworden
+-- er lief im Zweig "kein Alarm gefeuert", also ohne jede
+``delivered_channels``-Information, und schrieb damit einen Stand fort, den
+kein Empfaenger je bekommen hat (Spec #1987, "Bewusste Abkehr von
+Alt-Verhalten", zweite Abkehr). Die frueheren AC-7/AC-8-Tests dieser Datei
+haben genau diesen Trigger geprueft und sind deshalb ERSETZT durch
+``test_ohne_alarm_wird_kein_rollierender_anker_mehr_geschrieben`` unten --
+die Umkehrung derselben Naht. Dasselbe gilt fuer den frueheren
+``_effective_anchor_age()``-Regressionstest: die Methode existiert nicht
+mehr, sie hatte nur den entfallenen Schreibtrigger zu bedienen.
+
+Die Schutzwirkung gegen eine veraltete Vergleichsbasis ist NICHT entfallen,
+sie wandert in den Lesepfad: ein gealterter Kanal-Merker wird dort nicht
+mehr als Kandidat herangezogen, die Kette faellt fuer diesen Kanal auf den
+Tier-1-Briefing-Anker zurueck. Bewacht in
+``test_alert_channel_anchor_ceiling_fallback.py`` (#1987 AC-4).
+
+API seit #1987: ``save_alarm_anchor()``/``load_alarm_anchor()`` tragen
+``channel`` als PFLICHT-Parameter, je Kanal eine eigene Datei
+``{trip_id}_alarm_anchor_{channel}.json``.
 """
 from __future__ import annotations
 
@@ -35,18 +50,35 @@ def _aware(dt: datetime) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def _dienst(user_id: str):
+    """Alarm-Dienst mit gesetzter Transportnaht.
+
+    Issue #1987 (S1): der rollierende Anker rueckt seither NUR fuer
+    tatsaechlich ZUGESTELLTE Kanaele vor. Ohne die ``mail_sink``-Naht
+    scheitert der E-Mail-Versand am Egress-Waechter, ``delivered_channels``
+    bliebe leer und es entstuende gar kein Anker -- kein Mock, dieselbe
+    Naht wie in ``test_alert_anchor_day_guard``.
+    """
+    from services.trip_alert import TripAlertService
+
+    return TripAlertService(
+        settings=settings_email_only(), user_id=user_id,
+        mail_sink=lambda subject, body: None,
+    )
+
+
 def test_ac6_erfolgreicher_alarmversand_schreibt_rollierenden_anker():
     """AC-6: Trigger (a) -- ein tatsaechlich versendeter Alarm schreibt einen
     frischen rollierenden Anker, unabhaengig von einem vorherigen Briefing.
 
-    HEUTE ROT: ``load_alarm_anchor()`` existiert nicht -> AttributeError.
+    Seit #1987 kanalscharf: geschrieben wird der Merker des Kanals, der den
+    Alarm zugestellt bekommen hat (hier E-Mail).
     """
-    from services.trip_alert import TripAlertService
     from services.weather_snapshot import WeatherSnapshotService
 
     user_id, trip_id = f"tdd-1916-ac6-{uuid.uuid4().hex[:8]}", "trip-ac6"
     trip = gust_alert_trip(trip_id)
-    svc = TripAlertService(settings=settings_email_only(), user_id=user_id)
+    svc = _dienst(user_id)
     vor_lauf = datetime.now(timezone.utc)
 
     ausgeloest = svc.check_and_send_alerts(
@@ -55,7 +87,7 @@ def test_ac6_erfolgreicher_alarmversand_schreibt_rollierenden_anker():
     )
 
     assert ausgeloest, "Fixtur-Schutz: das massive Delta muss ausloesen."
-    anker = WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id)
+    anker = WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id, "email")
     assert anker, (
         "AC-6: nach einem tatsaechlich versendeten Alarm MUSS ein "
         "rollierender Anker existieren -- unabhaengig von einem Briefing."
@@ -66,133 +98,55 @@ def test_ac6_erfolgreicher_alarmversand_schreibt_rollierenden_anker():
     )
 
 
-def test_ac7_ueberschrittene_ceiling_schreibt_opportunistisch_ohne_alarm():
-    """AC-7: Trigger (b) -- 5h alter Anker + unterschwelliges Δ: trotz
-    ausbleibendem Alarm wird opportunistisch ein frischer Anker geschrieben.
+def test_ohne_alarm_wird_kein_rollierender_anker_mehr_geschrieben():
+    """Nachfolger der frueheren AC-7/AC-8 (#1916 Trigger b), Issue #1987 S1.
 
-    HEUTE ROT: ``load_alarm_anchor()`` existiert nicht -> AttributeError.
-    """
-    from services.trip_alert import TripAlertService
-    from services.weather_snapshot import WeatherSnapshotService
+    GIVEN einen 5 h alten rollierenden Merker (weit ausserhalb der
+          4h-Ceiling) und ein unterschwelliges Delta.
+    WHEN  der Check-Lauf ohne ausgeloesten Alarm endet.
+    THEN  bleibt der Merker UNVERAENDERT -- der opportunistische
+          Ceiling-Schreibtrigger ist ersatzlos entfallen. In diesem Zweig
+          wurde nichts versendet, es gibt also keine ``delivered_channels``;
+          ein hier geschriebener Merker waere ein Stand, den kein Empfaenger
+          je zugestellt bekam (#1987, E1/AC-2).
 
-    user_id, trip_id = f"tdd-1916-ac7-{uuid.uuid4().hex[:8]}", "trip-ac7"
-    trip = gust_alert_trip(trip_id)
-    svc = TripAlertService(settings=settings_email_only(), user_id=user_id)
-    vor_lauf = datetime.now(timezone.utc)
-    alter_anker = vor_lauf - timedelta(hours=5)
+    Diese Zusicherung ist die Umkehrung der frueheren AC-7/AC-8 an derselben
+    Naht: eine Mutation, die den Ceiling-Schreibtrigger wieder einbaut, wird
+    hier rot. Dass die Alterung dadurch nicht wirkungslos wird, sondern beim
+    LESEN greift, bewacht ``test_alert_channel_anchor_ceiling_fallback.py``
+    (#1987 AC-4).
 
-    ausgeloest = svc.check_and_send_alerts(
-        trip, [_wetter(10.0, alter_anker)],
-        fresh_weather=[_wetter(12.0, vor_lauf)],
-    )
-
-    assert not ausgeloest, "Fixtur-Schutz: das Delta (2 km/h) darf NICHT ausloesen."
-    anker = WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id)
-    assert anker, (
-        "AC-7: trotz fehlendem Alarm muss die Ueberschreitung der 4h-Ceiling "
-        "opportunistisch einen frischen rollierenden Anker schreiben."
-    )
-    assert _aware(anker[0].fetched_at) >= vor_lauf, (
-        "AC-7: der opportunistisch geschriebene Anker muss den AKTUELLEN "
-        f"Wetterstand tragen (fetched_at={anker[0].fetched_at})."
-    )
-
-
-def test_ac8_lange_ausfallserie_wird_automatisch_binnen_ceiling_aufgefrischt():
-    """AC-8 (End-to-End-Symptomnachweis): mehrere Check-Laeufe in Folge, JEDER
-    MIT DEMSELBEN ~28h alten (nie erneuerten) Briefing-Anker als ``cached`` --
-    simuliert einen ueber Stunden ausgefallenen Briefing-Versand (#1897).
-    Nach spaetestens einem Lauf liegt das rollierende Anker-Alter innerhalb
-    der 4h-Ceiling -- das urspruengliche #1916-Symptom (~24h alte Basis)
-    tritt nicht mehr auf.
-
-    HEUTE ROT: ``load_alarm_anchor()`` existiert nicht -> AttributeError.
-    """
-    from services.trip_alert import TripAlertService
-    from services.weather_snapshot import WeatherSnapshotService
-
-    user_id, trip_id = f"tdd-1916-ac8-{uuid.uuid4().hex[:8]}", "trip-ac8"
-    trip = gust_alert_trip(trip_id)
-    svc = TripAlertService(settings=settings_email_only(), user_id=user_id)
-    snap_svc = WeatherSnapshotService(user_id=user_id)
-    uralter_anker = datetime.now(timezone.utc) - timedelta(hours=28)
-
-    for _ in range(3):
-        svc.check_and_send_alerts(
-            trip, [_wetter(10.0, uralter_anker)],
-            fresh_weather=[_wetter(12.0, datetime.now(timezone.utc))],
-        )
-
-    anker = snap_svc.load_alarm_anchor(trip_id)
-    assert anker, "AC-8: nach mehreren Laeufen MUSS ein rollierender Anker existieren."
-    alter = datetime.now(timezone.utc) - _aware(anker[0].fetched_at)
-    assert alter <= timedelta(hours=4, minutes=5), (
-        f"AC-8: die 4h-Ceiling muss eingehalten sein (gemessen: "
-        f"{alter.total_seconds() / 3600:.2f} h) -- sonst besteht das "
-        f"urspruengliche #1916-Symptom (~24h alte Basis) weiter."
-    )
-
-
-def test_effective_anchor_age_waehlt_den_juengeren_anker_nicht_den_aelteren():
-    """Regressionstest (Fix-Loop F002 zu #1916): `_effective_anchor_age()`
-    MUSS den JUENGEREN der beiden Anker (Briefing- ODER rollierender Anker)
-    waehlen -- nicht den aelteren. Sonst wuerde eine frische Vergleichsbasis
-    faelschlich als "veraltet" behandelt und der rollierende Anker
-    unnoetig ueberschrieben.
-
-    Mutations-Gegenprobe (Fix-Loop-Befund): `max(candidates)` -> `min(candidates)`
-    in `_effective_anchor_age()` wurde von KEINEM der bestehenden AC-6..AC-9-
-    Tests gefangen, weil kein Test beide Anker gleichzeitig mit
-    unterschiedlichem Alter am Aufrufpunkt konstruiert. Dieser Test tut genau
-    das: ein ALTER rollierender Anker (5h, ausserhalb der Ceiling) UND eine
-    FRISCHE `cached_weather`-Vergleichsbasis (30 Min, innerhalb der Ceiling)
-    gleichzeitig -- der juengere (30 Min) muss den Ausschlag geben.
-
-    `save_alarm_anchor()` schreibt bewusst IMMER die Schreibzeit als
-    `snapshot_at` (nicht das uebergebene `fetched_at` der Segmente, s.
-    AC-6/AC-7: "der Anker muss den AKTUELLEN Wetterstand tragen"). Um einen
-    5h ALTEN rollierenden Anker zu simulieren, wird `snapshot_at` deshalb NACH
-    dem Schreiben direkt in der Datei zurueckdatiert -- reine Testdaten-
-    Manipulation der Persistenz (Vorbild: `test_alert_anchor_radar_isolation.py`
-    liest/prueft dieselbe Art von Datei direkt), kein Mock/Patch des Prueflings.
+    Die Rueckdatierung von ``snapshot_at`` ist reine Testdaten-Manipulation
+    der Persistenz (``save_alarm_anchor()`` schreibt immer die Schreibzeit),
+    kein Mock/Patch des Prueflings.
     """
     import json
 
     from app.loader import get_snapshots_dir
-    from services.trip_alert import TripAlertService
     from services.weather_snapshot import WeatherSnapshotService
 
-    user_id, trip_id = f"tdd-1916-f002-{uuid.uuid4().hex[:8]}", "trip-f002"
+    user_id, trip_id = f"tdd-1987-kein-b-{uuid.uuid4().hex[:8]}", "trip-kein-b"
     trip = gust_alert_trip(trip_id)
-    svc = TripAlertService(settings=settings_email_only(), user_id=user_id)
     snap_svc = WeatherSnapshotService(user_id=user_id)
+    alt = datetime.now(timezone.utc) - timedelta(hours=5)
+    snap_svc.save_alarm_anchor(trip_id, date.today(), [_wetter(10.0, alt)], "email")
+    pfad = get_snapshots_dir(user_id) / f"{trip_id}_alarm_anchor_email.json"
+    daten = json.loads(pfad.read_text())
+    daten["snapshot_at"] = alt.isoformat()
+    pfad.write_text(json.dumps(daten, indent=2))
+    vorher = snap_svc.load_alarm_anchor(trip_id, "email")[0].fetched_at
+    assert vorher == alt, "Fixtur-Schutz: die Rueckdatierung muss greifen."
 
-    # ALTER rollierender Anker (5h) -- ausserhalb der 4h-Ceiling fuer sich allein.
-    alter_rollierender_anker_zeit = datetime.now(timezone.utc) - timedelta(hours=5)
-    snap_svc.save_alarm_anchor(trip_id, date.today(), [_wetter(10.0, alter_rollierender_anker_zeit)])
-    anchor_path = get_snapshots_dir(user_id) / f"{trip_id}_alarm_anchor.json"
-    anchor_data = json.loads(anchor_path.read_text())
-    anchor_data["snapshot_at"] = alter_rollierender_anker_zeit.isoformat()
-    anchor_path.write_text(json.dumps(anchor_data))
-    vor_lauf = snap_svc.load_alarm_anchor(trip_id)[0].fetched_at
-    assert vor_lauf == alter_rollierender_anker_zeit, "Fixtur-Schutz: Rueckdatierung muss greifen."
-
-    # FRISCHE Vergleichsbasis (30 Min) als `cached_weather` -- der juengere
-    # der beiden Anker, MUSS die Ceiling-Entscheidung tragen.
-    frischer_anker_zeit = datetime.now(timezone.utc) - timedelta(minutes=30)
-    ausgeloest = svc.check_and_send_alerts(
-        trip, [_wetter(10.0, frischer_anker_zeit)],
-        fresh_weather=[_wetter(12.0, datetime.now(timezone.utc))],  # 2 km/h, unterschwellig
+    ausgeloest = _dienst(user_id).check_and_send_alerts(
+        trip, [_wetter(10.0, datetime.now(timezone.utc) - timedelta(minutes=30))],
+        fresh_weather=[_wetter(12.0, datetime.now(timezone.utc))],
     )
 
     assert not ausgeloest, "Fixtur-Schutz: das Delta (2 km/h) darf NICHT ausloesen."
-    nach_lauf = snap_svc.load_alarm_anchor(trip_id)[0].fetched_at
-    assert nach_lauf == vor_lauf, (
-        "F002: der rollierende Anker darf NICHT ueberschrieben werden, wenn "
-        "der JUENGERE der beiden Anker (hier: der 30 Min alte "
-        "cached_weather-Anker) noch innerhalb der 4h-Ceiling liegt -- "
-        "unabhaengig vom Alter des ALTEN rollierenden Ankers. Ein `min()` "
-        "statt `max()` in `_effective_anchor_age()` waehlt faelschlich den "
-        f"AELTEREN Anker und macht diesen Test rot (vorher: {vor_lauf}, "
-        f"nachher: {nach_lauf})."
+    nachher = snap_svc.load_alarm_anchor(trip_id, "email")[0].fetched_at
+    assert nachher == vorher, (
+        "Ohne Alarmversand darf KEIN rollierender Anker fortgeschrieben "
+        "werden -- auch nicht, wenn der bestehende Merker die 4h-Ceiling "
+        f"ueberschreitet (#1987: Trigger (b) entfaellt ersatzlos). Vorher: "
+        f"{vorher}, nachher: {nachher}."
     )

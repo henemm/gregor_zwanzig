@@ -3,7 +3,7 @@ entity_id: fix_1703_s3_selectable_metrics
 type: module
 created: 2026-08-10
 updated: 2026-08-10
-status: draft
+status: implemented
 version: "1.0"
 tags: [metrics, selectable, matrix-test, epic-1703, non-selectable]
 ---
@@ -200,7 +200,7 @@ direkt aus `app.models` (wie es der Produktivcode auch tut).
 
 ## Acceptance Criteria
 
-- **AC-1 (confidence — nirgends, trotz `summary_fields`):** Given
+- **AC-1:** (confidence — nirgends, trotz `summary_fields`) Given
   `confidence.selectable=False`, `default_enabled=False`, KEIN `sms_code`,
   KEIN `alert_label`, aber `summary_fields={"min": "confidence_pct_min"}` /
   When ein Trip mit `MetricConfig(metric_id="confidence", enabled=True)`
@@ -231,7 +231,7 @@ direkt aus `app.models` (wie es der Produktivcode auch tut).
     Mail-Spaltenreihenfolge-Assertion dieses AC rot werden (s. „Prüfhinweis
     für den Adversary").
 
-- **AC-3 (temperature_cold — Kältealarm MUSS aktiv bleiben, Trip-Pfad):**
+- **AC-3:** (temperature_cold — Kältealarm MUSS aktiv bleiben, Trip-Pfad)
   Given ein Trip mit `temperature_cold` in Default-Konfiguration (Dataclass-
   Default `enabled=True`, kein `default_enabled` gesetzt — s.
   `build_default_display_config()`) / When
@@ -312,7 +312,7 @@ direkt aus `app.models` (wie es der Produktivcode auch tut).
     (kein Bug-Fix-Test, reine Charakterisierung des heutigen Verhaltens —
     Vorbild AC-2 in `fix_1677_sms_reihenfolge.md`, dort für Byte-Identität).
 
-- **AC-7 (temperature_cold — Compare-Katalog bleibt strukturell leer):**
+- **AC-7:** (temperature_cold — Compare-Katalog bleibt strukturell leer)
   Given `get_compare_metric_catalog()`/das rohe `COMPARE_METRIC_CATALOG` /
   When beide auf `metric_id=="temperature_cold"` geprüft werden / Then
   taucht kein Eintrag auf — nicht weil ein `.selectable`-Filter ihn

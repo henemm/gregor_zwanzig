@@ -3,7 +3,7 @@ entity_id: issue_392_category_labels_centralize
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: approved
+status: implemented
 version: "1.0"
 tags: [refactoring, frontend, metricsEditor, WeatherMetricsTab, WeatherConfigDialog, deduplication, issue-392]
 ---
@@ -24,7 +24,7 @@ tags: [refactoring, frontend, metricsEditor, WeatherMetricsTab, WeatherConfigDia
 
 **Geänderte Dateien:**
 - `frontend/src/lib/components/trip-detail/metricsEditor.ts` — `CATEGORY_LABELS` als `export const` nach `CATEGORY_ORDER` (Zeile 53) einfügen
-- `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` — Inline-Definitionen von `CATEGORY_LABELS`, `CATEGORY_ORDER`, `INDICATOR_MAP`, `indicatorCapable` entfernen; Import aus `metricsEditor.ts` um diese vier Namen erweitern
+- `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` — Inline-Definitionen von `CATEGORY_LABELS`, `CATEGORY_ORDER`, `INDICATOR_MAP`, `indicatorCapable` entfernen; Import aus `metricsEditor.ts` um diese vier Namen erweitern
 - `frontend/src/lib/components/WeatherConfigDialog.svelte` — Inline-Definitionen von `CATEGORY_LABELS`, `CATEGORY_ORDER` entfernen; neuen Import aus `$lib/components/trip-detail/metricsEditor.ts` hinzufügen
 
 > **Schicht-Hinweis:** Ausschliesslich Frontend-Schicht (`frontend/src/`). Kein Go-API-, kein Python-Backend-Code betroffen.
@@ -34,12 +34,12 @@ tags: [refactoring, frontend, metricsEditor, WeatherMetricsTab, WeatherConfigDia
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `frontend/src/lib/components/trip-detail/metricsEditor.ts` | TypeScript-Modul | Single Source of Truth für Metriken-Logik; enthält bereits `CATEGORY_ORDER`, `INDICATOR_MAP`, `indicatorCapable`, `autoAssign`, `move`, `reorder`, `buildWeatherConfigMetrics` |
-| `frontend/src/lib/components/trip-detail/WeatherMetricsTab.svelte` | Svelte-Komponente | Haupteditor für Wetter-Metriken im Trip-Detail; importiert aus `metricsEditor.ts`; gibt `CATEGORY_LABELS` als Prop `categoryLabels` an `BucketSectionOff` weiter |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | Svelte-Komponente | Haupteditor für Wetter-Metriken im Trip-Detail; importiert aus `metricsEditor.ts`; gibt `CATEGORY_LABELS` als Prop `categoryLabels` an `BucketSectionOff` weiter |
 | `frontend/src/lib/components/WeatherConfigDialog.svelte` | Svelte-Komponente | Dialog zur Wetter-Konfiguration; verwendete bisher eigene Inline-`CATEGORY_LABELS` mit abweichendem `winter`-Label |
 | `frontend/src/lib/components/trip-detail/BucketSectionOff.svelte` | Svelte-Komponente (read-only) | Empfängt `categoryLabels` als Prop — kein Änderungsbedarf |
 | `frontend/src/lib/components/trip-detail/TablePreview.svelte` | Svelte-Komponente (read-only) | Empfängt `categoryOrder` und `indicatorCapable` als Props — kein Änderungsbedarf |
 | `frontend/src/lib/components/trip-detail/BucketSection.svelte` | Svelte-Komponente (read-only) | Empfängt `indicatorCapable` als Prop — kein Änderungsbedarf |
-| `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` | Svelte-Komponente (read-only) | Empfängt `indicatorCapable` als Prop — kein Änderungsbedarf |
+| `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` | Svelte-Komponente (read-only) | Empfängt `indicatorCapable` als Prop — kein Änderungsbedarf |
 
 ## Implementation Details
 

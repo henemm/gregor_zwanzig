@@ -3,7 +3,7 @@
 // Spec: docs/specs/modules/fix_970_971_1011_e2e_ui_drift.md (Bündel I, AC-4)
 //
 // Reale Ziel-Oberfläche der Checkbox: Neuanlegen-Formular /trips/new, Tab
-// „Briefing-Zeitplan" (TripNewEditor → EditReportConfigSection, showMailContent
+// „Briefing-Zeitplan" (TripNewEditor → MailInhaltCard, showMailContent
 // default true). Auf der Trip-Detail-Seite ist der Mail-Inhalt-Block via
 // showMailContent={false} ohnehin ausgeblendet.
 //
@@ -48,9 +48,10 @@ async function openNewTripZeitplan(page: Page) {
 	}
 
 	await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-	await tabbar.getByRole('tab', { name: /Zeitplan/ }).click({ force: true });
+	// Issue #1743: kein Schritt Versand mehr — die Mail-Inhalt-Karte steht im
+	// Schritt Wetter-Metriken (oben aktiviert).
 
-	// EditReportConfigSection wird sowohl im .tn-desktop- als auch im .tn-mobile-Baum
+	// MailInhaltCard wird sowohl im .tn-desktop- als auch im .tn-mobile-Baum
 	// gemountet (CSS-Media-Query-Toggle statt {#if}) — beide Instanzen stehen
 	// gleichzeitig im DOM. Daher hier wie bei den GPX-Inputs auf .tn-mobile scopen,
 	// sonst meldet Playwright einen Strict-Mode-Verstoß (2 Treffer).

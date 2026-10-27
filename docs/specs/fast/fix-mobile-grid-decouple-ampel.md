@@ -1,3 +1,10 @@
+---
+entity_id: fix_mobile_grid_decouple_ampel
+type: fast
+created: 2026-07-22
+status: implemented
+---
+
 # Mini-Spec: Handy-Tabellengitter vom Ampel-Modus entkoppeln
 
 - **Status:** Draft

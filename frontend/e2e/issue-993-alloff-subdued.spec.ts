@@ -14,7 +14,7 @@
 // Team-Lead-Vorgabe): nicht-leere displayMetrics, alle Stufen 'off' ->
 // .extra-cards bleibt weiterhin subdued (bestehendes Verhalten unveraendert).
 //
-// Muster: alert-bundle-958ff.spec.ts (Seed via API, ?tab=alerts, echter
+// Muster: alert-bundle-958ff.spec.ts (Seed via API, ?tab=wertebereiche, echter
 // Klick-/Navigationspfad ueber Trip-Detailseite, kein DB-Read).
 
 import { expect, test, type Page } from '@playwright/test';
@@ -79,7 +79,7 @@ test.describe('Fix #993 — allOff nicht vacuously true bei leerer displayMetric
 			metric_alert_levels: {}
 		});
 		try {
-			await page.goto(`/trips/${id}?tab=alerts`);
+			await page.goto(`/trips/${id}?tab=wertebereiche`);
 			await expect(page.getByTestId('alerts-tab')).toBeVisible();
 			// Bestaetigt den leeren displayMetrics-Zustand (kein Onboarding, keine Tabelle).
 			await expect(page.getByTestId('alerts-no-metrics')).toBeVisible();
@@ -103,7 +103,7 @@ test.describe('Fix #993 — allOff nicht vacuously true bei leerer displayMetric
 			metric_alert_levels: { wind_gust: 'off' }
 		});
 		try {
-			await page.goto(`/trips/${id}?tab=alerts`);
+			await page.goto(`/trips/${id}?tab=wertebereiche`);
 			await expect(page.getByTestId('alerts-tab')).toBeVisible();
 			await expect(page.getByTestId('alert-metric-row-wind_gust')).toBeVisible();
 

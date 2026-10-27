@@ -3,7 +3,7 @@ entity_id: issue_640_trend_threshold_times
 type: module
 created: 2026-06-07
 updated: 2026-06-07
-status: draft
+status: implemented
 version: "1.0"
 tags: [reports, trend, telegram, email, sms, thresholds, timing]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_1161_inca_convective
 type: feature
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [providers, alerts, weather, nowcast, radar, convective, inca, geosphere]
 ---

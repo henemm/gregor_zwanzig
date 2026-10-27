@@ -1,3 +1,10 @@
+---
+entity_id: email_retry_mechanism
+type: bugfix
+created: 2026-02-03
+status: implemented
+---
+
 # Bug: E-Mail-Versand schlägt bei temporären Netzwerk-Fehlern fehl
 
 **Status:** Analysis Complete
@@ -16,7 +23,7 @@ E-Mail-Versand schlägt bei temporären DNS/Netzwerk-Fehlern komplett fehl, ohne
 ## Location
 
 **Primär:**
-- `src/outputs/email.py:117-125` - EmailOutput.send() ohne Retry-Logik
+- `src/output/channels/email.py:117-125` - EmailOutput.send() ohne Retry-Logik
 
 **Sekundär:**
 - `src/web/scheduler.py:154-155` - Exception Handling ohne Retry
@@ -130,7 +137,7 @@ def send(self, subject: str, body: str, ...) -> None:
 
 ## Affected Files
 
-1. `src/outputs/email.py` - Retry-Decorator + send() Änderung
+1. `src/output/channels/email.py` - Retry-Decorator + send() Änderung
 2. `tests/tdd/test_html_email.py` - Tests erweitern (Retry-Szenarien)
 
 ## Risk Assessment

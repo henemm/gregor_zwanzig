@@ -3,12 +3,12 @@
 - **Created:** 2026-06-07
 - **Issue:** #645
 - **Type:** bug
-- **Scope:** Backend (`src/outputs/telegram.py`)
+- **Scope:** Backend (`src/output/channels/telegram.py`)
 
 ## Problem
 
-`src/outputs/telegram.py` konstruiert `OutputError` an drei Stellen (Z. 54/57/60) mit nur **einem**
-Positionsargument. `OutputError.__init__(self, channel, message)` (`src/outputs/base.py:55`) verlangt
+`src/output/channels/telegram.py` konstruiert `OutputError` an drei Stellen (Z. 54/57/60) mit nur **einem**
+Positionsargument. `OutputError.__init__(self, channel, message)` (`src/output/channels/base.py:55`) verlangt
 **zwei**. Im Fehlerpfad eines ausgehenden Telegram-Sends (HTTP-Status ≠ 200, Timeout, Netzwerkfehler)
 entsteht dadurch:
 

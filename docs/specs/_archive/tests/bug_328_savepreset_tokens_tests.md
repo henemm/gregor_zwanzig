@@ -3,7 +3,7 @@ entity_id: bug_328_savepreset_tokens_tests
 type: tests
 created: 2026-05-22
 updated: 2026-05-22
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, bugfix, design-system, css-tokens, font-size, hex-color, ap-007, ap-010, frontend, issue-328]
 parent: bug_328_savepreset_tokens
@@ -18,11 +18,11 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/bug_328_savepreset_tokens.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_328_savepreset_tokens.md`.
 Jeder pytest-Test mappt auf ein Acceptance Criterion der Parent-Spec. Die Tests lesen die
 echte Datei `SavePresetDialog.svelte` (keine Mocks).
 
-Parent-Spec: `docs/specs/modules/bug_328_savepreset_tokens.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/bug_328_savepreset_tokens.md` v1.0
 
 ## Source
 

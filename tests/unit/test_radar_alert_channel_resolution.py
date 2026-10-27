@@ -124,7 +124,7 @@ def _radar_trip(
     Konstruktion beschreibbare ``Trip``-Felder (``app/trip.py:192,214,219``);
     dasselbe Muster nutzt ``test_alert_channel_premium_sms.py::_base_trip``.
     """
-    # Issue #1726: Ortszone der TOUR (Island), nicht Wien.
+    # Issue #1726: Ortszone des TRIPS (Island), nicht Wien.
     quiet_from, quiet_to = (
         quiet_window_now(zone=TRIP_ZONE) if quiet
         else quiet_window_elsewhere(zone=TRIP_ZONE)

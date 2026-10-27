@@ -15,6 +15,8 @@ package handler
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"crypto/subtle"
 	"io"
 	"log"
 	"net/http"
@@ -43,7 +45,7 @@ func TelegramWebhookHandler(pythonCoreURL string) http.HandlerFunc {
 			http.Error(w, "webhook not configured", http.StatusServiceUnavailable)
 			return
 		}
-		if r.Header.Get("X-Telegram-Bot-Api-Secret-Token") != secret {
+		if !secretEqual(r.Header.Get("X-Telegram-Bot-Api-Secret-Token"), secret) {
 			n := rejectedWebhookRequests.Add(1)
 			log.Printf("[telegram-webhook] 403 rejected (count=%d, remote=%s)", n, r.RemoteAddr)
 			http.Error(w, "forbidden", http.StatusForbidden)
@@ -61,7 +63,16 @@ func TelegramWebhookHandler(pythonCoreURL string) http.HandlerFunc {
 		// und ein Retry-Sturm ausgeschlossen ist. Fehler beim Forward werden geloggt
 		// und ändern die 200-Antwort an Telegram nicht — Telegram soll nie retrien.
 		url := pythonCoreURL + "/api/internal/telegram-webhook"
-		resp, err := client.Post(url, "application/json", bytes.NewReader(body))
+		fwd, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		fwd.Header.Set("Content-Type", "application/json")
+		// Issue #2142 (AC-10): Python prüft das Telegram-Secret ein zweites Mal
+		// (Defense in Depth) — ohne diesen Header antwortet der Core mit 403.
+		fwd.Header.Set("X-Telegram-Bot-Api-Secret-Token", secret)
+		resp, err := client.Do(fwd)
 		if err != nil {
 			log.Printf("[telegram-webhook] forward error: %v", err)
 		} else {
@@ -71,4 +82,10 @@ func TelegramWebhookHandler(pythonCoreURL string) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusOK)
 	}
+}
+
+// secretEqual vergleicht konstantzeitig (sha256 + ConstantTimeCompare, #2159).
+func secretEqual(got, want string) bool {
+	a, b := sha256.Sum256([]byte(got)), sha256.Sum256([]byte(want))
+	return subtle.ConstantTimeCompare(a[:], b[:]) == 1
 }

@@ -1,0 +1,72 @@
+vet exit 0
+=== go test -run TestPanicInRecordRun ===
+=== RUN   TestPanicInRecordRun_RecordedAsErrorAndLockReleased
+    scheduler_panic_test.go:51: panic propagated out of recordRun: boom
+--- FAIL: TestPanicInRecordRun_RecordedAsErrorAndLockReleased (0.00s)
+FAIL
+FAIL	github.com/henemm/gregor-api/internal/scheduler	0.006s
+FAIL
+exit 1
+=== go test -run TestPanicInUserCall_ReturnsError ===
+=== RUN   TestPanicInUserCall_ReturnsErrorImmediatelyAndReleasesMarker
+panic: boom in user call
+
+goroutine 23 [running]:
+github.com/henemm/gregor-api/internal/scheduler.(*panickingRoundTripper).RoundTrip(0xc00012cf20, 0xc00016ea00)
+	/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/internal/scheduler/scheduler_panic_test.go:37 +0x89
+net/http.send(0xc00016e8c0, {0xa26b80, 0xc00012cf20}, {0xc000062a01?, 0x4a44b3?, 0xd355e0?})
+	/home/hem/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/http/client.go:259 +0x5e2
+net/http.(*Client).send(0xc00019ec30, 0xc00016e8c0, {0x41a054?, 0x1b?, 0xd355e0?})
+	/home/hem/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/http/client.go:180 +0x91
+net/http.(*Client).do(0xc00019ec30, 0xc00016e8c0)
+	/home/hem/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/http/client.go:729 +0x9c9
+net/http.(*Client).Do(...)
+	/home/hem/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/http/client.go:587
+net/http.(*Client).Post(0xc00019ec30, {0xc00016a440?, 0x0?}, {0x90108f, 0x10}, {0x0?, 0x0?})
+	/home/hem/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/http/client.go:867 +0x145
+github.com/henemm/gregor-api/internal/scheduler.(*Scheduler).triggerEndpointForUser(0xc0001c4100, {0x908411, 0x1b}, {0x8fbc41, 0x3})
+	/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/internal/scheduler/scheduler.go:937 +0xb4
+github.com/henemm/gregor-api/internal/scheduler.(*Scheduler).callUserWithBudget.func2()
+	/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/internal/scheduler/scheduler.go:484 +0x65
+created by github.com/henemm/gregor-api/internal/scheduler.(*Scheduler).callUserWithBudget in goroutine 21
+	/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/internal/scheduler/scheduler.go:483 +0x234
+FAIL	github.com/henemm/gregor-api/internal/scheduler	0.009s
+FAIL
+exit 1
+=== go test -run TestPanicInUserCall_OtherUsers ===
+=== RUN   TestPanicInUserCall_OtherUsersStillServed
+2026/10/06 19:49:14 [scheduler] /api/scheduler/trip-reports?user_id=alice → 200
+panic: boom in user call
+
+goroutine 50 [running]:
+github.com/henemm/gregor-api/internal/scheduler.(*panickingRoundTripper).RoundTrip(0xc0001acf20, 0xc0002a2280)
+	/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/internal/scheduler/scheduler_panic_test.go:37 +0x89
+net/http.send(0xc0002a2140, {0xa26b80, 0xc0001acf20}, {0xc000112a01?, 0x4a44b3?, 0xd355e0?})
+	/home/hem/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/http/client.go:259 +0x5e2
+net/http.(*Client).send(0xc00021ec60, 0xc0002a2140, {0x41a054?, 0x1b?, 0xd355e0?})
+	/home/hem/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/http/client.go:180 +0x91
+net/http.(*Client).do(0xc00021ec60, 0xc0002a2140)
+	/home/hem/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/http/client.go:729 +0x9c9
+net/http.(*Client).Do(...)
+	/home/hem/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/http/client.go:587
+net/http.(*Client).Post(0xc00021ec60, {0xc0002b8000?, 0x0?}, {0x90108f, 0x10}, {0x0?, 0x0?})
+	/home/hem/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.25.0.linux-amd64/src/net/http/client.go:867 +0x145
+github.com/henemm/gregor-api/internal/scheduler.(*Scheduler).triggerEndpointForUser(0xc000244100, {0x908411, 0x1b}, {0xc000194a25, 0x3})
+	/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/internal/scheduler/scheduler.go:937 +0xb4
+github.com/henemm/gregor-api/internal/scheduler.(*Scheduler).callUserWithBudget.func2()
+	/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/internal/scheduler/scheduler.go:484 +0x65
+created by github.com/henemm/gregor-api/internal/scheduler.(*Scheduler).callUserWithBudget in goroutine 21
+	/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/internal/scheduler/scheduler.go:483 +0x234
+FAIL	github.com/henemm/gregor-api/internal/scheduler	0.012s
+FAIL
+exit 1
+=== go test -run TestTriggerResponseBody_FailedIsHardError ===
+=== RUN   TestTriggerResponseBody_FailedIsHardErrorNotPartial
+=== RUN   TestTriggerResponseBody_FailedIsHardErrorNotPartial/partial_failed
+=== RUN   TestTriggerResponseBody_FailedIsHardErrorNotPartial/ok_failed
+--- PASS: TestTriggerResponseBody_FailedIsHardErrorNotPartial (0.00s)
+    --- PASS: TestTriggerResponseBody_FailedIsHardErrorNotPartial/partial_failed (0.00s)
+    --- PASS: TestTriggerResponseBody_FailedIsHardErrorNotPartial/ok_failed (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/scheduler	0.011s
+exit 0

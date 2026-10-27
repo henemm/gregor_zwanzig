@@ -3,12 +3,14 @@ entity_id: issue_718_compare_editor_slice4_validierung
 type: module
 created: 2026-06-10
 updated: 2026-06-10
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, compare, editor, validation, epic-677]
 ---
 
 # Compare-Editor Slice 4 — Validierungsmeldungen für Idealwerte (Issue #718)
+
+> Abgelöst/entfernt durch ADR-0032 / #1301 (Alt-Editor `CompareEditor.svelte` ersatzlos gelöscht, `db0ca26b8`, 2026-07-19) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

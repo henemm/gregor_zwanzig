@@ -81,12 +81,14 @@ def test_telegram_can_send_false_no_chat_id():
 
 
 def test_telegram_output_factory():
-    """GIVEN get_channel WHEN requesting telegram THEN returns TelegramOutput."""
-    from output.channels.base import get_channel
+    """GIVEN get_channel WHEN requesting telegram THEN klare Ablehnung (#1412
+    S4a): die Debug-CLI hat keinen belegten Empfaenger."""
+    import pytest
+    from output.channels.base import OutputConfigError, get_channel
     from app.config import Settings
     settings = Settings(telegram_bot_token="123:ABC", telegram_chat_id="12345")
-    channel = get_channel("telegram", settings)
-    assert channel.name == "telegram"
+    with pytest.raises(OutputConfigError, match="Telegram"):
+        get_channel("telegram", settings)
 
 
 # =============================================================================

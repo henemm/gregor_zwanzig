@@ -180,6 +180,8 @@ PO-freigegeben 2026-07-28, Änderungsbudget 2800).
 """
 from __future__ import annotations
 
+import functools as _functools
+
 import ast
 from collections import Counter
 from collections.abc import Iterable
@@ -255,6 +257,9 @@ _PURE_COMPUTATION_MODULES = {"math"}
 # Stellen, davon 15 Persistenz-Helfer — ein `save()`, das jeden Fehler
 # schluckt, ist ein verwandtes, aber anderes Problem (AC-13b).
 _CHANNEL_OUTPUT_CLASSES = {"EmailOutput", "TelegramOutput", "SMSOutput"}
+# #1412 S4a: `NotificationService` baut `TelegramOutput` nur noch ueber diese
+# Fabrik-Methoden (Empfaengervertrag) -- derselbe Ausgabeaufruf, andere Form.
+_CHANNEL_OUTPUT_FACTORIES = {"_telegram_output", "_telegram_reply"}
 
 # Übergebene Sink-Parameter (`mail_sink(...)`, `telegram_sink(...)`,
 # `sms_sink(...)`) sind die zweite zugelassene Form eines Ausgabeaufrufs.
@@ -273,6 +278,31 @@ _WEBHOOK_ACK_LOCATION = "api/routers/webhook.py::telegram_webhook::0"
 _WEBHOOK_ACK_JUSTIFICATION = (
     "Protokoll-Empfangsbestätigung an Telegram, kein fachlicher Erfolgsstatus "
     "— verhindert Retry-Sturm (dokumentiert im Docstring, Z. 54f.)"
+)
+
+# Zwei rein informative, schreibfreie Kommando-Antworten (Issue #2272). Sie
+# wurden erst durch die Public-Host-Auflösung zu Klasse-1-Funden: vorher gab es
+# gar keinen Aufruf vor dem `return` (wie `api/routers/health.py`, AC-16).
+_SHOW_COLUMNS_INFO_LOCATION = (
+    "src/services/trip_command_processor.py::_show_columns_info::0"
+)
+_SHOW_CONFIG_LOCATION = "src/services/trip_command_processor.py::_show_config::0"
+_SHOW_HELP_LOCATION = "src/services/trip_command_processor.py::_show_help::0"
+_SHOW_HELP_FOR_KIND_LOCATION = (
+    "src/services/trip_command_processor.py::_show_help_for_kind::0"
+)
+_SHOW_STATUS_LOCATION = "src/services/trip_command_processor.py::_show_status::0"
+_TEXT_ANTWORT_JUSTIFICATION = (
+    "Reine Text-Antwort aus der Trip-Konfiguration ohne Wetterabruf, ohne "
+    "Schreiben und ohne Fehlerausgang — es gibt nichts, was success abbilden "
+    "koennte (#1405 S4a, Praezedenz _show_columns_info/_show_config); "
+    "_show_status nutzt nur das Tagesdatum und die Etappenliste"
+)
+_PUBLIC_HOST_INFO_JUSTIFICATION = (
+    "Rein informative Antwort ohne Fehlerpfad, kein fachlicher Erfolgsstatus "
+    "— resolve_public_host/resolve_public_url liefert None nur bei nicht "
+    "konfiguriertem GZ_PUBLIC_HOST (fail-closed) und ändert damit allein den "
+    "Text, nie ob das Kommando verarbeitet wurde (dokumentiert im Docstring)"
 )
 
 
@@ -543,11 +573,23 @@ def _failure_counter_names(scope: ast.AST) -> set[str]:
     ``except``, ``failed`` im ``return``. Die Attrappe aus AC-8 hat genau das
     nicht: ``failed = 0``, ins Tupel geschrieben, nie erhöht. Am Rückgabetyp
     ist sie von der Hausnorm nicht zu unterscheiden — an dieser Menge schon.
+
+    **Fehlausgangs-Zweig (#1405 S4b, AC-17):** zusätzlich zählt ein Name, der
+    im ``else``/``elif`` eines ``if`` hochgezählt wird, dessen Rumpf einen
+    GESCHWISTER-Erfolgszähler erhöht — einen Zähler desselben Funktionsraums,
+    der in die Rückgabe fließt (``if ok: sent += 1`` / ``else: failed += 1``).
+    Ein beliebiges ``else: failed += 1`` genügt NICHT: ohne gemeldeten
+    Erfolgszähler im ``if``-Rumpf ist ``failed`` kein Gegenstück.
     """
     names: set[str] = set()
+    returned = _returned_names(scope)
     for node in _walk_local(*scope.body):
         for handler in getattr(node, "handlers", []) or []:
             names |= _incremented_names(*handler.body)
+        if isinstance(node, ast.If) and node.orelse:
+            siblings = _incremented_names(*node.body) & returned
+            if siblings:
+                names |= _incremented_names(*node.orelse) - siblings
     return names
 
 
@@ -599,7 +641,7 @@ def _find_constant_success_violations(path: Path) -> dict[str, str]:
     * **Ausschluss „except divergiert":** enthält ein ``except``-Handler der
       Funktion selbst ein ``return`` mit einem ANDEREN Wert, ist der Status
       doch an den Ausgang gekoppelt → kein Fund. Belegt korrekt
-      ausgeschlossen: ``channel_test_service.py:42`` (Handler liefert
+      ausgeschlossen: ``channel_test_service.py:78`` (Handler liefert
       ``{"error": ...}``), ``forecast_budget.py:102`` und
       ``official_alerts/meteoalarm_budget.py:143`` (Handler liefert
       ``"status": "unavailable"``) — AC-5.
@@ -1300,6 +1342,11 @@ def _dispatches_on_a_channel(scope: ast.AST) -> bool:
     verwiesen (#1199).
     """
     for node in _walk_local(*scope.body):
+        if (
+            isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+            and node.func.attr in _CHANNEL_OUTPUT_FACTORIES
+        ):
+            return True
         if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)):
             continue
         if node.func.id in _CHANNEL_OUTPUT_CLASSES:
@@ -1379,6 +1426,18 @@ def _find_violations(path: Path) -> dict[str, str]:
 
 
 def _all_violations() -> dict[str, str]:
+    """Gecachter Mantel um ``_all_violations_berechnen()`` -- Kopie je Aufruf.
+
+    CI-Rot 2026-10-22 (Familie B): der Scan der Produktionsflaeche ist pro
+    Lauf deterministisch (dieselben Dateien, dasselbe Ergebnis), wurde aber von
+    jedem Test dieser Datei neu gerechnet. Einmal rechnen, allen liefern;
+    die synthetischen Wirkungsnachweise gehen weiter ueber ``_find_violations(path)``
+    und sind davon unberuehrt."""
+    return dict(_all_violations_berechnen())
+
+
+@_functools.cache
+def _all_violations_berechnen() -> dict[str, str]:
     """Alle fünf Detektoren über die gesamte Scanfläche, zu EINEM Dict vereint.
 
     GREEN muss liefern:
@@ -1465,21 +1524,13 @@ def _finding_location_counts(found: dict[str, str]) -> dict[str, int]:
 # meldet die Zeile des `return`, Klasse 2 die der Iteration, Klasse 3 und 4
 # die der `def`-Anweisung (die Spec-Tabelle nennt teils die `def`-Zeile).
 #
-# 42 Einträge für 34 Funktionsschlüssel — gegenüber der Spec-Erwartung (33
-# Schlüssel, 40 Treffer, plus Webhook-Ack in INTENTIONAL_CONSTANT_SUCCESS) zwei
-# von Hand nachgelesene Zuwächse mit je derselben Mechanik wie eine belegte
-# Fundstelle (Begründung steht beim jeweiligen Eintrag). Keine Verbreiterung
-# der Signatur; die Bestandsaufnahme war unvollständig wie in Hälfte A.
-# (B13 mit #1407, B2 mit #1447 und B14b — drei Schlüssel — mit #1459 aus der
-# Restliste entfernt: alle Funde wurden repariert (B13 geloescht, B2 leitet
-# den Status jetzt ab, B14b liefert und verwertet jetzt `bool`) — der
-# Scanner findet dort nichts mehr, die Ratsche ist entsprechend kleiner.
-# B14b mit #1459 aus SPEC_LISTED_FINDINGS entfernt (drei Schlüssel, Soll 36/43
-# -> 33/40): _dispatch_compare_official_{email,telegram,sms} liefern jetzt
-# `bool` statt gar keinen Rückgabewert, und send_compare_official_alert()
-# WERTET ihn aus — er füllt `failed_channels`. Vorher wurde das `False`
-# weggeworfen, ein gescheiterter Ortsvergleich-Versand galt als Erfolg; genau
-# das war der Mangel. Der Scanner findet dort nichts mehr.)
+# Ist-Stand (#1405 S4b): die Restliste ist LEER — 0 Einträge, 0
+# Funktionsschlüssel. Alle Funde der Bestandsaufnahme B1–B21 sind repariert
+# oder als toter Code gelöscht; die letzten 8 Einträge fielen mit S4b
+# (8 -> 0). Je Fund steht der Entfernungsnachweis als Kommentar im Rumpf
+# unten. Frühere Zählstände dieser Liste sind Geschichte und gelten nicht
+# mehr. Die Ratsche kann jetzt nur noch durch einen NEUEN Fund rot werden
+# (test_no_unlisted_success_status_findings).
 # ---------------------------------------------------------------------------
 KNOWN_VIOLATIONS: dict[str, str] = {
     # --- B3–B8: sieben Trigger-Endpunkte, ein Muster. Fällt der Service für
@@ -1492,75 +1543,33 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # aus AlertCheckRunResult.hit_deadline ab (status="partial" bei
     # Zeitobergrenze, sonst "ok") statt ihn fest zu setzen — der Scanner
     # findet an dieser Stelle nichts mehr, der Eintrag entfaellt mit ihr.
-    "api/routers/scheduler.py::trigger_compare_alert_checks::0": (
-        "B3 (#1405) — trigger_compare_alert_checks: dito (Deviation)."
-    ),
-    "api/routers/scheduler.py::trigger_radar_alert_checks::0": (
-        "B4 (#1405) — trigger_radar_alert_checks: dito (Radar)."
-    ),
-    "api/routers/scheduler.py::trigger_compare_radar_alert_checks::0": (
-        "B5 (#1405) — trigger_compare_radar_alert_checks: dito."
-    ),
-    "api/routers/scheduler.py::trigger_compare_official_alert_checks::0": (
-        "B6 (#1405) — trigger_compare_official_alert_checks: dito."
-    ),
-    "api/routers/scheduler.py::trigger_inbound::0": (
-        "B7 (#1405) — trigger_inbound: dito; der 'skipped'-Zweig ist korrekt."
-    ),
-    "api/routers/scheduler.py::trigger_inbound_telegram::0": (
-        "B8 (#1405) — trigger_inbound_telegram: dito, Feld heißt 'processed'."
-    ),
+    # B3 entfernt (#1405 S4b) — trigger_compare_alert_checks leitet den
+    # Status aus failed/notice_failed ab ("partial" statt fest "ok").
+    # B4/B5 entfernt (#2261 A-2 S2) — die Radar-Endpunkte leiten den Status
+    # jetzt aus AlertCheckRunResult.hit_deadline ab (_radar_run_response).
+    # B6 entfernt (#2286) — Endpoint /compare-official-alert-checks geloescht,
+    # der amtliche Teil laeuft in trigger_compare_alert_checks (B3) mit.
+    # B7 entfernt (#1405 S4b) — trigger_inbound meldet failed (aus
+    # reader.last_failed_count) und leitet den Status daraus ab.
+    # B8 entfernt (#1369) — Endpoint /inbound-telegram samt Poll-Pfad geloescht.
     # --- B13 entfernt (#1407): die Funktion war toter Code (Legacy-Pfad
     # #1131) und wurde ersatzlos geloescht statt angeschlossen — der Scanner
     # findet an dieser Stelle nichts mehr, der Eintrag entfaellt mit ihr.
-    # --- B1: der #1403-Fall. Der Nutzer liest "Testmail verschickt", obwohl
-    # nie etwas losgeschickt wurde ("no_channels" fällt bis zu sent=True durch).
-    "api/routers/scheduler.py::send_test_trip_report::0": (
-        "B1 (#1403/#1405) — send_test_trip_report: 'sent': True trotz outcome."
-    ),
-    # --- B11/B11b/B11c: die drei Compare-Alarmprüfer. Bei allen dreien heißt
-    # eine 0 "nichts zu melden" ODER "alles kaputt" — kein Fehlerzähler.
-    "src/services/compare_alert.py::check_all_compare_presets::0": (
-        "B11 (#1405) — check_all_compare_presets: sent gezaehlt, kein Gegenzähler."
-    ),
-    "src/services/compare_official_alert.py::check_all_compare_presets::0": (
-        "B11c (#1405) — check_all_compare_presets: sum(genexp) ohne try/except."
-    ),
-    "src/services/compare_radar_alert.py::check_all_compare_presets::0": (
-        "B11b (#1405) — check_all_compare_presets: über _check_one_preset(...)."
-    ),
-    # --- B19/B20: die beiden Inbound-Reader. In Spec-Version 1.1 fälschlich
-    # als "kein Fund" geführt (E4).
-    "src/services/inbound_email_reader.py::poll_and_process::0": (
-        "B19 (#1405) — poll_and_process: processed hoch, except nur logger.error."
-    ),
-    "src/services/inbound_telegram_reader.py::poll_and_process::0": (
-        "B20 (#1405) — poll_and_process: dito über _process_update(...)."
-    ),
-    # --- B21: Klasse 4 im Versandkontext, bei der E2-Verifikation gefunden.
-    # Strukturell nicht von B14b zu unterscheiden.
-    "src/services/notification_service.py::_send_telegram_incomplete_hint::0": (
-        "B21 (#1405) — _send_telegram_incomplete_hint: TelegramOutput, kein Signal."
-    ),
-    # --- B14a: Marker vor der Tat, drei Kanäle. NotificationResult.sent=True
-    # heißt damit "konfiguriert", nicht "zugestellt" (#684 AC-3, #656).
-    "src/services/notification_service.py::send_official_alert::0": (
-        "B14a (#1405/#684) — send_official_alert: append('email') vor dem try."
-    ),
-    "src/services/notification_service.py::send_official_alert::1": (
-        "B14a (#1405/#684) — send_official_alert: dito, Telegram."
-    ),
-    "src/services/notification_service.py::send_official_alert::2": (
-        "B14a (#1405/#684) — send_official_alert: dito, SMS."
-    ),
-    # Issue #1701 (S2b, D7): vierter Kanal Premium-SMS (Garmin inReach) --
-    # bewusste Ratschen-Anhebung 3->4, NICHT die Buchung hinter den `try`
-    # verschoben (s. Spec D7). `sent_channels`="versucht" bleibt getrennt von
-    # `reachable_channels`="erreichbar" -- dieselbe Marker-vor-der-Tat-Semantik
-    # wie die drei Bestandskanaele.
-    "src/services/notification_service.py::send_official_alert::3": (
-        "B14a (#1405/#684, #1701 D7) — send_official_alert: dito, Premium-SMS."
-    ),
+    # --- B1 entfernt (#1405 S1, ADR-0086): send_test_trip_report leitet
+    # "sent" jetzt aus outcome == "sent" ab — der Scanner findet dort nichts mehr.
+    # B11/B11b/B11c entfernt (#2217) — die drei Compare-Alarmprüfer zählen
+    # gescheiterte Presets jetzt in `failed` (Gegenzähler je Einheit).
+    # --- B19 entfernt (#1405 S4b): der IMAP-Durchgang (_poll_inbox) zaehlt
+    # Verarbeitungs-, Antwort- und IMAP-/Netzfehler in `failed`, das ueber
+    # last_failed_count beim Router ankommt.
+    # B20 entfernt (#1369) — Telegram-poll_and_process geloescht.
+    # --- B21 entfernt (#1405 S4b): _send_telegram_incomplete_hint,
+    # send_command_reply_email und _send_service_error_email liefern `bool`;
+    # die Aufrufer werten es aus (NotificationResult.notice_failures ->
+    # notice_failed bzw. failed des Posteingang-Laufs).
+    # --- B14a entfernt (#1405 S1, ADR-0086): send_official_alert trägt
+    # sent_channels erst NACH erfolgreichem Send ein (im try), den Versuch in
+    # attempted_channels NACH dem try/except — kein Marker mehr vor der Tat.
     # --- B14b ENTFERNT (#1459, 2026-08-02): die drei Compare-Versandhelfer
     # _dispatch_compare_official_{email,telegram,sms} hatten keine Rückmeldung —
     # der Aufrufer buchte den Erfolg auf den bloßen Umstand, dass er sie
@@ -1582,108 +1591,24 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # Restliste blieb stehen, weil ihr zeilenbasierter Schlüssel damals
     # ohnehin schon 13-fach rot war und der echte Fortschritt darin unterging.
     # Genau dagegen ist #1466 gebaut.
-    # --- B14c: dasselbe Marker-vor-der-Tat-Muster im gemeinsamen
-    # Alarm-Versandweg (Änderungs-, Radar- und amtliche Alarme).
-    "src/services/notification_service.py::_dispatch_alert_message::0": (
-        "B14c (#1405/#684) — _dispatch_alert_message: append('email') vor dem try."
-    ),
-    "src/services/notification_service.py::_dispatch_alert_message::1": (
-        "B14c (#1405/#684) — _dispatch_alert_message: dito, Telegram."
-    ),
-    "src/services/notification_service.py::_dispatch_alert_message::2": (
-        "B14c (#1405/#684) — _dispatch_alert_message: dito, SMS."
-    ),
-    # Issue #1701 (S2b, D7): vierter Kanal Premium-SMS, dieselbe Begruendung
-    # wie bei send_official_alert::3 oben.
-    "src/services/notification_service.py::_dispatch_alert_message::3": (
-        "B14c (#1405/#684, #1701 D7) — _dispatch_alert_message: dito, Premium-SMS."
-    ),
-    "src/services/notification_service.py::send_command_reply_email::0": (
-        "B21 (#1405) — send_command_reply_email: EmailOutput, keine Rückmeldung."
-    ),
-    "src/services/notification_service.py::_send_service_error_email::0": (
-        "B21 (#1405) — _send_service_error_email: EmailOutput, nacktes return (S-9)."
-    ),
-    # --- B12: top_ort/actual_empfaenger sind abgeleitet und stehen im selben
-    # Dict — der Erfolgs-Schlüssel daneben ist trotzdem hartkodiert.
-    "src/services/scheduler_dispatch_service.py::send_compare_preset::0": (
-        "B12 (#1405) — send_compare_preset: 'status': 'ok' fest."
-    ),
-    # --- B9/B10: die beiden Trip-Alarmprüfer.
-    "src/services/trip_alert.py::check_all_trips::0": (
-        "B9 (#1405) — check_all_trips: alerts_sent ohne Gegenzähler, return int."
-    ),
-    "src/services/trip_alert.py::check_radar_alerts::0": (
-        "B10 (#1405) — check_radar_alerts: sent ohne Gegenzähler."
-    ),
-    # --- B18: dateiweites Muster, zehn Funktionen, 13 Treffer. Reparatur (S4)
-    # am Stück: EINE Entscheidung darüber, was CommandResult.success bedeutet
-    # (Antwort verfasst vs. zugrundeliegende Aktion erfolgreich).
-    "src/services/trip_command_processor.py::_handle_query::0": (
-        "B18 (#1405) — _handle_query (glance): nach self._fmt_glance(...)."
-    ),
-    "src/services/trip_command_processor.py::_handle_query::1": (
-        "B18 (#1405) — _handle_query (heute_gewitter): nach _fmt_gewitter(...)."
-    ),
-    "src/services/trip_command_processor.py::_handle_query::2": (
-        "B18 (#1405) — _handle_query (timeline_heute): nach _fmt_timeline(...)."
-    ),
-    "src/services/trip_command_processor.py::_handle_query::3": (
-        "B18 (#1405) — _handle_query (timeline_morgen): dito."
-    ),
-    # --- B16: outcome wird geprüft, der Text variiert korrekt — nur `success`
-    # bleibt in BEIDEN Ausgängen True (zweiter Treffer: s. Kopfkommentar).
-    "src/services/trip_command_processor.py::_trigger_on_demand::0": (
-        "B16 (#1405) — _trigger_on_demand: success=True trotz outcome != 'sent'."
-    ),
-    "src/services/trip_command_processor.py::_trigger_on_demand::1": (
-        "B16 (#1405) — _trigger_on_demand: Erfolgsausgang, ohne Bezug auf outcome."
-    ),
-    "src/services/trip_command_processor.py::_handle_drilldown::0": (
-        "B18 (#1405) — _handle_drilldown: nach WeatherExtractor(...).drilldown()."
-    ),
-    "src/services/trip_command_processor.py::_handle_hours_drilldown::0": (
-        "B18 (#1405) — _handle_hours_drilldown: nach vier drilldown(...)-Abrufen."
-    ),
-    "src/services/trip_command_processor.py::_apply_ruhetag::0": (
-        "B18 (#1405) — _apply_ruhetag: nach unzugewiesenem save_trip(...)."
-    ),
-    # --- B15: das Ergebnis wird nicht einmal entgegengenommen.
-    "src/services/trip_command_processor.py::_trigger_report::0": (
-        "B15 (#1405) — _trigger_report: send_test_report(...) unzugewiesen."
-    ),
-    "src/services/trip_command_processor.py::_show_status::0": (
-        "B18 (#1405) — _show_status: matcht über das triviale date.today(). "
-        "Bewusst aufgenommen (Arbeitsvorrat, keine Vorab-Filterung) — die "
-        "Signatur ist syntaktisch, nicht risikobewusst (Spec 'Offene Punkte' 3)."
-    ),
-    "src/services/trip_command_processor.py::_apply_pause::0": (
-        "B18 (#1405) — _apply_pause: nach unzugewiesenem save_trip(...)."
-    ),
-    "src/services/trip_command_processor.py::_apply_skip::0": (
-        "B18 (#1405) — _apply_skip: dito."
-    ),
-    "src/services/trip_command_processor.py::_show_now::0": (
-        "B18 (#1405) — _show_now: nach svc.get_nowcast(...)/format_now_text(...)."
-    ),
-    "src/services/trip_command_processor.py::_cancel_trip::0": (
-        "B18 (#1405) — _cancel_trip: nach bedingtem, unzugewiesenem save_trip(...)."
-    ),
-    "src/services/trip_command_processor.py::_resume_trip::0": (
-        "B18 (#1405) — _resume_trip: dito."
-    ),
-    # --- B17 + der eine neue Fundort: beide zählen ohne Gegenzähler.
-    "src/services/trip_report_scheduler.py::send_reports::0": (
-        "B17 (#1405) — send_reports: sent_count ohne Gegenzähler, return int."
-    ),
-    "src/services/trip_report_scheduler.py::_process_pending_markers::0": (
-        "NEU (#1405, beim Bau des Wächters nachgelesen) — "
-        "_process_pending_markers: delivered += 1 nur bei outcome == 'sent', "
-        "kein Gegenzähler, return delivered. Der Wert fließt in "
-        "dispatch_orchestrator.pre_pass direkt in den sent-Tally — eine "
-        "gescheiterte Nachlieferung ist dort von einer nicht fälligen nicht "
-        "zu unterscheiden. Gleiche Mechanik wie B17."
-    ),
+    # --- B14c entfernt (#1405 S1, ADR-0086): _dispatch_alert_message, gleiche
+    # Reparatur wie send_official_alert (sent_channels im try nach dem Send,
+    # attempted_channels nach dem try/except).
+    # --- B12 entfernt (#2280 S1, Spec feat_2280_handversand_endpoint AC-11):
+    # send_compare_preset leitet "status" aus dem echten Versand-Ausgang ab.
+    # B9/B10 entfernt (#2217) — die beiden Trip-Alarmprüfer zählen gescheiterte
+    # Trips jetzt in AlertCheckRunResult.failed (Gegenzähler je Einheit).
+    # --- B18 entfernt (#1405 S4a, Spec feat_1405_s4a_befehlsantwort_erfolg_wirkung):
+    # alle 21 Trip-Schluessel in trip_command_processor.py. 18 repariert
+    # (Klasse A: Speichern -> divergierender except / `fortgesetzt`; Klasse B:
+    # Wetterabruf -> `success` und Text am selben Befund), 3 reine Text-
+    # Antworten (_show_help, _show_help_for_kind, _show_status) als genehmigte
+    # Ausnahmen in INTENTIONAL_CONSTANT_SUCCESS gefuehrt.
+    # --- B17 entfernt (#1405 S4b): send_reports war toter Code und wurde
+    # geloescht (Praezedenz B13/#1407).
+    # _process_pending_markers entfernt (#1405 S4b): liefert (delivered,
+    # failed), Einordnung wie dispatch_one; pre_pass bucht beide Werte.
+    # Damit ist die Restliste leer (S4b: 8 -> 0).
 }
 
 
@@ -1694,8 +1619,9 @@ KNOWN_VIOLATIONS: dict[str, str] = {
 # macht die Ratsche NICHT rot; ein Eintrag ohne nichtleere Begründung dagegen
 # schon (AC-14).
 #
-# Genau EIN Eintrag, und der Scanner meldet die Stelle tatsächlich (AC-14
-# prüft beides): `telegram_webhook` ist strukturell ein Klasse-1-Fund —
+# Der Scanner meldet jede Stelle tatsächlich (AC-14 prüft beides). Erster
+# Eintrag: `telegram_webhook`; seit #1405 S4a kommen die Text-Antworten
+# `_show_help`/`_show_help_for_kind`/`_show_status` hinzu (siehe unten). `telegram_webhook` ist strukturell ein Klasse-1-Fund —
 # `_reader._process_update(update, settings)` steht als unzugewiesener Aufruf
 # im try, der Handler protokolliert nur, danach folgt ein festes
 # {"status": "ok"}. Fachlich ist das trotzdem richtig: die 200-Antwort ist
@@ -1710,6 +1636,12 @@ KNOWN_VIOLATIONS: dict[str, str] = {
 # ---------------------------------------------------------------------------
 INTENTIONAL_CONSTANT_SUCCESS: dict[str, str] = {
     _WEBHOOK_ACK_LOCATION: _WEBHOOK_ACK_JUSTIFICATION,
+    _SHOW_COLUMNS_INFO_LOCATION: _PUBLIC_HOST_INFO_JUSTIFICATION,
+    _SHOW_CONFIG_LOCATION: _PUBLIC_HOST_INFO_JUSTIFICATION,
+    # #1405 S4a (AC-15/AC-18): genau diese drei Klasse-C-Funktionen.
+    _SHOW_HELP_LOCATION: _TEXT_ANTWORT_JUSTIFICATION,
+    _SHOW_HELP_FOR_KIND_LOCATION: _TEXT_ANTWORT_JUSTIFICATION,
+    _SHOW_STATUS_LOCATION: _TEXT_ANTWORT_JUSTIFICATION,
 }
 
 
@@ -1770,46 +1702,29 @@ INTENTIONAL_CONSTANT_SUCCESS: dict[str, str] = {
 # beschlossen und dort nachgezogen, nicht still hier.
 # ---------------------------------------------------------------------------
 SPEC_LISTED_FINDINGS: dict[str, int] = {
-    # B1 — der #1403-Fall: "no_channels" fällt durch bis "sent": True
-    "api/routers/scheduler.py::send_test_trip_report": 1,
+    # B1 entfernt (#1405 S1, ADR-0086) — send_test_trip_report leitet
+    # "sent" aus outcome == "sent" ab, der Scanner findet dort nichts mehr.
     # B2 entfernt (#1447 S1) — trigger_alert_checks leitet den Status jetzt
     # aus AlertCheckRunResult.hit_deadline ab, der Scanner findet dort nichts
     # mehr.
-    # B3 — dito (Compare-Deviation)
-    "api/routers/scheduler.py::trigger_compare_alert_checks": 1,
-    # B4 — dito (Radar)
-    "api/routers/scheduler.py::trigger_radar_alert_checks": 1,
-    # B5 — dito (Compare-Radar)
-    "api/routers/scheduler.py::trigger_compare_radar_alert_checks": 1,
-    # B6 — dito (Compare-Amtlich)
-    "api/routers/scheduler.py::trigger_compare_official_alert_checks": 1,
-    # B7 — dito (Inbound E-Mail)
-    "api/routers/scheduler.py::trigger_inbound": 1,
-    # B8 — dito, Feld heißt "processed" (Inbound Telegram)
-    "api/routers/scheduler.py::trigger_inbound_telegram": 1,
-    # B9 — try/except je Trip, nur alerts_sent hoch, return int
-    "src/services/trip_alert.py::check_all_trips": 1,
-    # B10 — analoges Muster im Radar-Pfad, return sent (int)
-    "src/services/trip_alert.py::check_radar_alerts": 1,
-    # B11 — try/except je Ort, nur sent gezählt
-    "src/services/compare_alert.py::check_all_compare_presets": 1,
-    # B11b — gleiches Muster, Nowcast-Fehler je Ort nur im logger.error
-    "src/services/compare_radar_alert.py::check_all_compare_presets": 1,
-    # B11c — sum(1 for ... if ...) ohne jeden Fehlerzähler und ohne try/except
-    "src/services/compare_official_alert.py::check_all_compare_presets": 1,
-    # B12 — top_ort/actual_empfaenger zugewiesen, "status" trotzdem festes "ok"
-    "src/services/scheduler_dispatch_service.py::send_compare_preset": 1,
+    # B3 entfernt (#1405 S4b) — Status aus failed/notice_failed abgeleitet.
+    # B4/B5 entfernt (#2261 A-2 S2) — Radar-Endpunkte leiten den Status aus
+    # AlertCheckRunResult.hit_deadline ab, der Scanner findet dort nichts mehr.
+    # B6 entfernt (#2286) — Endpoint geloescht, in B3 aufgegangen.
+    # B7 entfernt (#1405 S4b) — trigger_inbound meldet failed + Status.
+    # B8 entfernt (#1369) — Endpoint /inbound-telegram samt Poll-Pfad geloescht.
+    # B9/B10/B11/B11b/B11c entfernt (#2217) — Trip- und Compare-Alarmprüfer
+    # schotten jede Einheit ab und zählen Ausfälle in `failed`.
+    # B12 entfernt (#2280 S1, AC-11) — send_compare_preset leitet "status"
+    # aus dem echten Versand-Ausgang ab, der Scanner findet dort nichts mehr.
     # B13 entfernt (#1407) — toter Compare-Heartbeat wurde geloescht statt
     # angeschlossen, der Scanner findet dort nichts mehr.
-    # B14a — sent_channels.append() vor dem try, jetzt VIER Kanäle
-    # (email/telegram/sms/premium_sms). Issue #1701 (S2b, D7): von 3 auf 4
-    # angehoben, NICHT die Buchung hinter den `try` verschoben — die Spec
-    # trifft diese Entscheidung ausdrücklich (Nachzugpflicht dieses
-    # Kommentars).
-    "src/services/notification_service.py::send_official_alert": 4,
-    # B14c — dito, jetzt VIER Kanäle; genutzt von Änderungs-, Radar- und
-    # amtlichen Alarmen. Issue #1701 (S2b, D7).
-    "src/services/notification_service.py::_dispatch_alert_message": 4,
+    # B14a/B14c entfernt (#1405 S1, ADR-0086) — send_official_alert und
+    # _dispatch_alert_message tragen sent_channels erst nach erfolgreichem
+    # Send ein und attempted_channels NACH dem try/except. Die bisherige
+    # Ratschen-Anhebung 3->4 aus #1701 D7 entfällt damit ganz (-2 Schlüssel,
+    # -8 Treffer); der Detektor 1c ist unverändert (AC-27 belegt, dass er ein
+    # attempted_channels.append VOR dem try weiterhin meldet).
     # B14b entfernt (#1459, 2026-08-02) — die drei Helfer
     # _dispatch_compare_official_{email,telegram,sms} liefern jetzt `bool`, und
     # send_compare_official_alert() WERTET den Rueckgabewert aus (fuellt daraus
@@ -1817,71 +1732,20 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # weggeworfen: ein gescheiterter Ortsvergleich-Versand galt als Erfolg —
     # genau der Mangel, den diese drei Eintraege gefuehrt haben. Der Scanner
     # findet dort nichts mehr, die Ratsche ist entsprechend kleiner.
-    # B15 — send_test_report() unzugewiesen, danach bedingungslos success=True
-    "src/services/trip_command_processor.py::_trigger_report": 1,
-    # B16 — outcome geprüft, Text variiert korrekt, success=True aber nicht
-    "src/services/trip_command_processor.py::_trigger_on_demand": 1,
-    # B17 — toter Code, sent_count ohne Gegenzähler, return int
-    "src/services/trip_report_scheduler.py::send_reports": 1,
-    # --- B18 (NEU Version 1.2, E3): dateiweites Muster in ----------------
-    # trip_command_processor.py. Zehn Funktionsschlüssel, 13 Treffer,
-    # dieselbe Mechanik wie B15/B16 — ein abgeleiteter oder unzugewiesener
-    # Aufruf, danach ein hartkodiertes success=True im
-    # CommandResult-Konstruktor, das den abgeleiteten Wert nicht
-    # referenziert. Reparatur (S4) sinnvollerweise am Stück: EINE
-    # Entscheidung darüber, was CommandResult.success bedeuten soll
-    # (Antwort erfolgreich verfasst vs. zugrundeliegende Aktion erfolgreich).
-    # B18 — vier unabhängige Zweige (glance / heute_gewitter /
-    # timeline_heute / timeline_morgen), je nach einem Renderer-Aufruf
-    # (self._fmt_glance/_fmt_gewitter/_fmt_timeline). VIER Treffer: ein
-    # Scanner, der die def-Zeile als Schlüssel nimmt, ließe alle vier auf
-    # einen Eintrag zusammenfallen und käme hier nie über 1.
-    "src/services/trip_command_processor.py::_handle_query": 4,
-    # B18 — res = WeatherExtractor(user_id).drilldown(...)
-    "src/services/trip_command_processor.py::_handle_drilldown": 1,
-    # B18 — r_temp = ex.drilldown(...) (plus drei weitere Ableitungen)
-    "src/services/trip_command_processor.py::_handle_hours_drilldown": 1,
-    # B18 — save_trip(new_trip, user_id) unzugewiesen
-    "src/services/trip_command_processor.py::_apply_ruhetag": 1,
-    # B18 — today = date.today(): trivialer Aufruf, matcht trotzdem
-    # (Signatur ist syntaktisch, nicht risikobewusst — Spec "Offene
-    # Punkte" 3; Arbeitsvorrat statt Vorab-Filterung)
-    "src/services/trip_command_processor.py::_show_status": 1,
-    # B18 — save_trip(new_trip, user_id) unzugewiesen
-    "src/services/trip_command_processor.py::_apply_pause": 1,
-    # B18 — dito
-    "src/services/trip_command_processor.py::_apply_skip": 1,
-    # B18 — result = svc.get_nowcast(...), body = svc.format_now_text(...)
-    "src/services/trip_command_processor.py::_show_now": 1,
-    # B18 — save_trip(new_trip, user_id), bedingt und unzugewiesen
-    "src/services/trip_command_processor.py::_cancel_trip": 1,
-    # B18 — dito
-    "src/services/trip_command_processor.py::_resume_trip": 1,
-    # --- B19/B20 (NEU Version 1.2, E4): die beiden Inbound-Reader --------
-    # In Version 1.1 fälschlich als "kein Fund, bereits erfolgsbereinigt"
-    # geführt. "processed zählt nur tatsächlich Verarbeitetes" ist fachlich
-    # richtig, aber KEIN strukturelles Ausschlusskriterium für Klasse 2 —
-    # beiden fehlt der Gegenzähler für den Fehlerfall (AC-18).
-    # B19 — for uid in uids: processed += self._process_single(...),
-    # except Exception: logger.error(...), return processed
-    "src/services/inbound_email_reader.py::poll_and_process": 1,
-    # B20 — identisches Muster über self._process_update(...)
-    "src/services/inbound_telegram_reader.py::poll_and_process": 1,
-    # --- B21 (NEU Version 1.2): Klasse 4 im Versandkontext ---------------
-    # Bei der Verifikation der E2-Einschränkung gefunden: strukturell nicht
-    # von B14b zu unterscheiden (try/except, Logger-only-Handler, kein
-    # return mit Wert, Kanal-Ausgabeaufruf im eigenen Rumpf). SECHS statt
-    # der erwarteten drei Klasse-4-Treffer — aufgenommen statt durch eine
-    # Verengung zur Zahlenkosmetik wegdefiniert.
-    # B21 — ruft TelegramOutput(...).send(...), keine Rückmeldung an
-    # send_trip_report
-    "src/services/notification_service.py::_send_telegram_incomplete_hint": 1,
-    # B21 — ruft EmailOutput(...).send(...), keine Rückmeldung an den
-    # Inbound-Reader
-    "src/services/notification_service.py::send_command_reply_email": 1,
-    # B21 — ruft EmailOutput(...).send(...) nach einem is_sms_only-Vorspann
-    # mit nacktem return (zählt nach S-9 NICHT als Rückmeldung)
-    "src/services/notification_service.py::_send_service_error_email": 1,
+    # B15/B16 entfernt (#1405 S1, ADR-0086) — _trigger_report wertet
+    # send_test_report_outcome aus, _trigger_on_demand leitet success aus
+    # outcome ab; der Scanner findet dort nichts mehr.
+    # B17 entfernt (#1405 S4b) — toter Code geloescht.
+    # --- B18 entfernt (#1405 S4a): alle zehn Trip-Funktionsschluessel (13
+    # Treffer) in trip_command_processor.py sind repariert bzw. (Klasse C)
+    # als genehmigte Ausnahme gefuehrt, der Scanner meldet dort nichts
+    # Offenes mehr. AC-17-Prueffolge unten laeuft ueber die uebrigen Schluessel.
+    # --- B19 entfernt (#1405 S4b): der IMAP-Durchgang zaehlt Fehlschlaege
+    # in `failed` (except-Handler) und meldet sie ueber last_failed_count.
+    # B20 entfernt (#1369) — Telegram-poll_and_process geloescht.
+    # --- B21 entfernt (#1405 S4b): _send_telegram_incomplete_hint,
+    # send_command_reply_email, _send_service_error_email liefern `bool`,
+    # die Aufrufer werten es aus.
 }
 
 
@@ -1927,11 +1791,25 @@ def test_scanner_finds_every_spec_listed_finding():
     # gekürzte Tabelle würde sonst hinter einem grünen Scan verschwinden,
     # und genau das ist der Weg, auf dem Wächter still ihre Schärfe
     # verlieren (Test-Politik: Schwellen nie anpassen, damit etwas grün wird).
-    assert len(SPEC_LISTED_FINDINGS) == 33 and sum(SPEC_LISTED_FINDINGS.values()) == 42, (
-        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 33 "
-        "Funktionsschlüssel, Summe 42 — Version 1.2 minus B13, #1407, minus "
+    # #1405 S1 (ADR-0086): minus B1, B14a (4), B14c (4), B15, B16
+    # -> 21 Schlüssel, Summe 24 (vorher 26/35).
+    # #1369: B8 (trigger_inbound_telegram) und B20 (Telegram-poll_and_process)
+    # durch Löschen des Poll-Pfads entfallen (Mechanik wie B13)
+    # -> 19 Schlüssel, Summe 22.
+    # #1405 S4a: minus B18 (zehn Funktionsschluessel, 13 Treffer) -> 9 / 9.
+    # #2280 S1 (AC-11): minus B12 (send_compare_preset) -> 8 / 8.
+    # #2286 (AC-9): minus B6 (Endpoint compare-official-alert-checks
+    # geloescht, in B3 aufgegangen) -> 7 / 7.
+    # #1405 S4b: minus B3, B7, B17, B19, B21 (drei Schluessel) -> 0 / 0.
+    assert len(SPEC_LISTED_FINDINGS) == 0 and sum(SPEC_LISTED_FINDINGS.values()) == 0, (
+        "SPEC_LISTED_FINDINGS weicht von der Spec-Tabelle ab (erwartet 0 "
+        "Funktionsschlüssel, Summe 0 — Version 1.2 minus B13, #1407, minus "
         "B2, #1447, minus B14b (drei Schlüssel), #1459, plus zweimal +1 fuer "
-        "den vierten Kanal Premium-SMS, #1701 D7). Ist: "
+        "den vierten Kanal Premium-SMS, #1701 D7, minus B4/B5, #2261 A-2 S2, "
+        "minus B9/B10/B11/B11b/B11c, #2217, minus B1/B14a/B14c/B15/B16, "
+        "#1405 S1 ADR-0086, minus B8/B20, #1369 Poll-Pfad geloescht, minus B18 (zehn "
+        "Schluessel, 13 Treffer), #1405 S4a, minus B12, #2280 S1, minus B6, #2286, "
+        "minus B3/B7/B17/B19/B21, #1405 S4b). Ist: "
         f"{len(SPEC_LISTED_FINDINGS)} Schlüssel, Summe "
         f"{sum(SPEC_LISTED_FINDINGS.values())}"
     )
@@ -1975,22 +1853,10 @@ def test_scanner_finds_every_spec_listed_finding():
         f"behandelt (S-8). Code reference: {b18_missing}"
     )
 
-    # --- AC-18: B19/B20, die beiden Inbound-Reader als Klasse-2-Fund ------
-    inbound_expected = [
-        "src/services/inbound_email_reader.py::poll_and_process",
-        "src/services/inbound_telegram_reader.py::poll_and_process",
-    ]
-    inbound_missing = sorted(
-        location for location in inbound_expected if hit_counts.get(location, 0) < 1
-    )
-    assert not inbound_missing, (
-        "AC-18: die beiden Inbound-Reader werden nicht als Klasse-2-Fund "
-        "erkannt. Sie waren in Spec-Version 1.1 fälschlich als 'kein Fund' "
-        "geführt — 'processed zählt nur tatsächlich Verarbeitetes' ist "
-        "fachlich richtig, aber kein strukturelles Ausschlusskriterium: "
-        "beiden fehlt der Gegenzähler für den Fehlerfall, der except-Zweig "
-        f"ruft nur logger.error(...). Code reference: {inbound_missing}"
-    )
+    # --- AC-18 (B19/B20, Inbound-Reader) entfaellt (#1405 S4b): B20 ging mit
+    # dem Poll-Pfad (#1369), B19 ist repariert — der IMAP-Durchgang hat jetzt
+    # einen Gegenzaehler. Die Erkennungsfaehigkeit fuer dieses Muster bewachen
+    # die synthetischen Klasse-2-Wirkungsnachweise.
 
 
 def test_no_unlisted_success_status_findings():
@@ -2242,10 +2108,10 @@ def test_scanner_ignores_diverging_except_return_in_synthetic_file(tmp_path):
 
     Zwei belegte Bauformen aus dem eigenen Bestand:
 
-    1. ``channel_test_service.send_test_message`` (Z. 12-45): ``{"status":
-       "ok"}`` (Z. 42) wird nur erreicht, wenn ``output.send()`` ohne
+    1. ``channel_test_service.send_test_message`` (Z. 41-80): ``{"status":
+       "ok"}`` (Z. 78) wird nur erreicht, wenn ``output.send()`` ohne
        Ausnahme durchgelaufen ist; der Handler liefert ``{"error": str(exc)}``
-       (Z. 43f.).
+       (Z. 79f.).
     2. ``ForecastBudgetGate.snapshot`` (Z. 87-113): ``"status": "ok"``
        (Z. 102) im ``try``, ``"status": "unavailable"`` (Z. 112) im
        ``except``. Identisch gebaut ist
@@ -2463,6 +2329,102 @@ def test_scanner_detects_pre_try_success_marker_in_synthetic_file(tmp_path):
         "send_trip_report und send_compare_report) wurde als Fund gemeldet — "
         "der Detektor wertet die Reihenfolge nicht aus und wäre damit nie "
         f"grün zu bekommen. Fundliste: {good_found}"
+    )
+
+
+def test_pre_try_detector_flags_attempted_channels_only_before_try(tmp_path):
+    """AC-27 (#1405 S1, ADR-0086): GIVEN der Detektor 1c zählt jedes nackte
+    ``<Name>.append(...)`` vor einem riskanten ``try`` — unabhängig vom Namen
+    der Sammlung / WHEN ``attempted_channels`` ("Kanal betreten") befüllt wird
+    / THEN ist ein ``attempted_channels.append`` VOR dem ``try`` weiterhin ein
+    Fund (Detektor nicht gelockert, kein Namens-Schlupfloch für das neue
+    Feld), und dasselbe ``append`` NACH dem ``try/except``-Block ist keiner.
+
+    Das ist die Bauform, die ADR-0086 für ``send_official_alert`` und
+    ``_dispatch_alert_message`` vorschreibt: ``sent_channels.append`` im
+    ``try`` nach dem Send, ``attempted_channels.append`` nach dem Block.
+    Ohne diese Gegenprobe könnte die Reparatur den Marker bloß umbenennen
+    und B14a/B14c verschwänden aus der Restliste, ohne behoben zu sein.
+    """
+    header = (
+        "import logging\n"
+        "\n"
+        "from output.channels.email import EmailOutput\n"
+        "from output.channels.telegram import TelegramOutput\n"
+        "\n"
+        "logger = logging.getLogger(__name__)\n"
+        "\n"
+        "\n"
+    )
+
+    before_file = tmp_path / "synthetic_attempted_before_try.py"
+    before_file.write_text(
+        header
+        + "def _dispatch_alert_message(settings, subject, plain, html, channels):\n"
+        "    sent_channels = []\n"
+        "    attempted_channels = []\n"
+        "\n"
+        "    if 'email' in channels and settings.can_send_email():\n"
+        "        attempted_channels.append('email')\n"
+        "        try:\n"
+        "            EmailOutput(settings).send(subject=subject, body=html, plain_text_body=plain)\n"
+        "            sent_channels.append('email')\n"
+        "        except Exception as e:\n"
+        "            logger.error('Email alert failed: %s', e)\n"
+        "\n"
+        "    if 'telegram' in channels and settings.can_send_telegram():\n"
+        "        attempted_channels.append('telegram')\n"
+        "        try:\n"
+        "            TelegramOutput(settings).send(subject=subject, body=plain)\n"
+        "            sent_channels.append('telegram')\n"
+        "        except Exception as e:\n"
+        "            logger.error('Telegram alert failed: %s', e)\n"
+        "\n"
+        "    return sent_channels, attempted_channels\n",
+        encoding="utf-8",
+    )
+    before_found = _find_pre_try_success_marker_violations(before_file)
+    assert len(before_found) == 2, (
+        "AC-27: ein attempted_channels.append VOR dem riskanten try muss je "
+        "Kanal ein Klasse-1c-Fund sein (der Detektor ist namensunabhängig) — "
+        f"erwartet 2 Treffer, gefunden {len(before_found)}: {before_found}"
+    )
+    assert all(
+        kind == f"{KIND_PRE_TRY_SUCCESS_MARKER}::_dispatch_alert_message"
+        for kind in before_found.values()
+    ), f"AC-27: unerwartete Fund-Art: {before_found}"
+
+    after_file = tmp_path / "synthetic_attempted_after_try.py"
+    after_file.write_text(
+        header
+        + "def _dispatch_alert_message(settings, subject, plain, html, channels):\n"
+        "    sent_channels = []\n"
+        "    attempted_channels = []\n"
+        "\n"
+        "    if 'email' in channels and settings.can_send_email():\n"
+        "        try:\n"
+        "            EmailOutput(settings).send(subject=subject, body=html, plain_text_body=plain)\n"
+        "            sent_channels.append('email')\n"
+        "        except Exception as e:\n"
+        "            logger.error('Email alert failed: %s', e)\n"
+        "        attempted_channels.append('email')\n"
+        "\n"
+        "    if 'telegram' in channels and settings.can_send_telegram():\n"
+        "        try:\n"
+        "            TelegramOutput(settings).send(subject=subject, body=plain)\n"
+        "            sent_channels.append('telegram')\n"
+        "        except Exception as e:\n"
+        "            logger.error('Telegram alert failed: %s', e)\n"
+        "        attempted_channels.append('telegram')\n"
+        "\n"
+        "    return sent_channels, attempted_channels\n",
+        encoding="utf-8",
+    )
+    after_found = _find_pre_try_success_marker_violations(after_file)
+    assert not after_found, (
+        "AC-27: attempted_channels.append NACH dem try/except (die von "
+        "ADR-0086 vorgeschriebene Bauform) wurde als Klasse-1c-Fund gemeldet "
+        f"— die Reparatur wäre nie grün zu bekommen. Fundliste: {after_found}"
     )
 
 
@@ -2774,6 +2736,99 @@ def test_scanner_ignores_house_norm_sent_failed_tuple_in_synthetic_file(tmp_path
         "Die Hausnorm ((sent, failed) mit echtem Fehlerzähler) wurde "
         f"fälschlich als teilerfolg-blind gezählt: {found}"
     )
+
+
+def test_scanner_accepts_sibling_else_failure_counter_in_synthetic_file(tmp_path):
+    """#1405 S4b AC-17 (positiv): ein Gegenzähler im FEHLAUSGANGS-Zweig zählt.
+
+    Die Funktion zählt Erfolge im ``if``-Rumpf (``sent += 1``) und Fehlschläge
+    im zugehörigen ``else`` (``failed += 1``), beide fließen in die Rückgabe —
+    ganz ohne ``try/except``. Das ist die Hausnorm in ihrer zweiten Form, die
+    der Docstring von ``_find_partial_success_blind_violations`` verspricht
+    („``except``-Handler oder Fehlausgangs-Zweig"). Kein Fund.
+
+    RED heute: ``_failure_counter_names`` liest nur ``except``-Handler — der
+    Wächter meldet seine eigene Norm als Verstoß (Wächterfehler, Spec
+    Abschnitt 0: korrigieren, nicht umgehen; kein künstliches ``try/except``).
+    """
+    good_file = tmp_path / "synthetic_sibling_else_counter.py"
+    good_file.write_text(
+        "def deliver_all(service, items):\n"
+        "    sent = 0\n"
+        "    failed = 0\n"
+        "    for item in items:\n"
+        "        if service.deliver(item):\n"
+        "            sent += 1\n"
+        "        else:\n"
+        "            failed += 1\n"
+        "    return sent, failed\n",
+        encoding="utf-8",
+    )
+    found = _find_violations(good_file)
+    assert not found, (
+        "AC-17: ein Fehlerzähler im else-Zweig neben einem Geschwister-"
+        "Erfolgszähler (beide im Rückgabewert) ist ein echter Gegenzähler — "
+        f"fälschlich als teilerfolg-blind gezählt: {found}"
+    )
+
+
+def test_scanner_rejects_else_counter_without_sibling_success_counter(tmp_path):
+    """#1405 S4b AC-17 (negativ): ein beliebiges ``else: failed += 1`` genügt NICHT.
+
+    Zwei Nachbauten, beide MÜSSEN Klasse-2-Funde bleiben (Mutation „Wächter-Fix
+    auf jedes ``else`` verallgemeinern" macht diesen Test rot):
+
+    1. Der ``if``-Rumpf erhöht GAR keinen Zähler; der Erfolgszähler wächst
+       bedingungslos nach dem ``if`` — ``failed`` ist kein Gegenstück zu
+       ``sent``, ``sent`` zählt auch die Fehlschläge mit.
+    2. Der ``if``-Rumpf erhöht einen Zähler, der NICHT zurückgegeben wird
+       (``seen``) — kein Geschwister-Erfolgszähler im Sinne der Korrektur.
+
+    Die AC-8-Attrappe (``failed = 0``, nie erhöht) bleibt ein Fund — bewacht
+    von ``test_scanner_detects_tuple_shaped_decoy_without_real_failure_counter``.
+    In RED erwartet grün (Wächter gegen Überverallgemeinerung).
+    """
+    ohne_zaehler = tmp_path / "synthetic_else_without_sibling.py"
+    ohne_zaehler.write_text(
+        "import logging\n"
+        "\n"
+        "logger = logging.getLogger(__name__)\n"
+        "\n"
+        "\n"
+        "def deliver_all(service, items):\n"
+        "    sent = 0\n"
+        "    failed = 0\n"
+        "    for item in items:\n"
+        "        if service.deliver(item):\n"
+        "            logger.info('delivered %s', item)\n"
+        "        else:\n"
+        "            failed += 1\n"
+        "        sent += 1\n"
+        "    return sent, failed\n",
+        encoding="utf-8",
+    )
+    nicht_gemeldet = tmp_path / "synthetic_else_with_unreturned_sibling.py"
+    nicht_gemeldet.write_text(
+        "def deliver_all(service, items):\n"
+        "    sent = 0\n"
+        "    failed = 0\n"
+        "    seen = 0\n"
+        "    for item in items:\n"
+        "        if service.deliver(item):\n"
+        "            seen += 1\n"
+        "        else:\n"
+        "            failed += 1\n"
+        "        sent += 1\n"
+        "    return sent, failed\n",
+        encoding="utf-8",
+    )
+    for datei in (ohne_zaehler, nicht_gemeldet):
+        found = _find_violations(datei)
+        assert any(loc.endswith("::deliver_all") for loc in _finding_locations(found)), (
+            f"AC-17: {datei.name}: ein else-Zähler OHNE Geschwister-Erfolgszähler im "
+            f"if-Rumpf ist kein Gegenzähler und muss Fund bleiben: {found}"
+        )
+        assert all(kind.startswith(KIND_PARTIAL_SUCCESS_BLIND) for kind in found.values()), found
 
 
 # ---------------------------------------------------------------------------
@@ -3225,6 +3280,38 @@ def test_webhook_ack_is_documented_exception_not_silent_pass():
     )
 
 
+def test_public_host_info_exceptions_keep_their_wording():
+    """Dieselbe Wortlaut-Sperre wie beim Webhook-Ack, für die zwei
+    Public-Host-Ausnahmen aus #2272 (Spec-Entscheidung:
+    ``docs/specs/modules/public_host.md``, Known Limitations).
+
+    Ohne sie ist der Dict-Wert frei überschreibbar: ein Füllsatz an die Stelle
+    der Begründung, und die Ausnahme steht weiter, hat aber nichts mehr zu
+    sagen — genau der Mechanismus, an dem #1405 ``scheduler.py:54`` (B2)
+    verlor. Die Sperre bindet den Eintrag an eine benannte Konstante, deren
+    Wortlaut die Spec wörtlich führt; sie zu ändern heißt, die Spec-Aussage
+    zu ändern.
+    """
+    for location in (_SHOW_COLUMNS_INFO_LOCATION, _SHOW_CONFIG_LOCATION):
+        assert location in INTENTIONAL_CONSTANT_SUCCESS, (
+            "Die Public-Host-Ausnahme fehlt in INTENTIONAL_CONSTANT_SUCCESS — "
+            "ohne Eintrag taucht die Stelle bei jeder Prüfung erneut als "
+            f"vermeintlicher Fehlalarm auf. Code reference: {location}"
+        )
+        assert INTENTIONAL_CONSTANT_SUCCESS[location] == (
+            _PUBLIC_HOST_INFO_JUSTIFICATION
+        ), (
+            "Die Begründung weicht vom in der Spec festgelegten Wortlaut ab — "
+            "die Aussage 'informative Antwort ohne Fehlerpfad, kein fachlicher "
+            f"Erfolgsstatus' MUSS dastehen. Code reference: {location}"
+        )
+        assert location not in KNOWN_VIOLATIONS, (
+            "Die Stelle steht zugleich in KNOWN_VIOLATIONS — 'bewusst erlaubt' "
+            "und 'Reparatur ausstehend' schließen sich aus. Code reference: "
+            f"{location}"
+        )
+
+
 def test_intentional_exceptions_carry_nonempty_justification():
     """AC-14 (zweite Hälfte): jeder Eintrag in INTENTIONAL_CONSTANT_SUCCESS
     trägt eine nichtleere fachliche Begründung, und jeder Eintrag ist noch
@@ -3262,7 +3349,15 @@ def test_intentional_exceptions_carry_nonempty_justification():
 
 
 # Genehmigte Ausnahmen, fest verdrahtet — Zuwachs ist eine Spec-Entscheidung.
-_APPROVED_EXCEPTIONS = {_WEBHOOK_ACK_LOCATION}
+_APPROVED_EXCEPTIONS = {
+    _WEBHOOK_ACK_LOCATION,
+    _SHOW_COLUMNS_INFO_LOCATION,
+    _SHOW_CONFIG_LOCATION,
+    # #1405 S4a (AC-18): Spec-Entscheidung feat_1405_s4a_befehlsantwort_erfolg_wirkung.
+    _SHOW_HELP_LOCATION,
+    _SHOW_HELP_FOR_KIND_LOCATION,
+    _SHOW_STATUS_LOCATION,
+}
 
 
 def test_intentional_exception_list_cannot_grow():

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date as date_type, timezone
+from datetime import date as date_type
 from typing import TYPE_CHECKING, Optional
 
 from app.models import RiskLevel, SegmentWeatherData
@@ -21,6 +21,7 @@ from services.segment_weather import SegmentWeatherService
 from services.trip_segments import convert_trip_to_segments
 from services.weather_metrics import aggregate_stage
 from services.wind_exposition import WindExpositionService
+from utils.timezone import to_utc
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -49,17 +50,21 @@ def _segments_for_stage(trip: "Trip", stage) -> list:
     return convert_trip_to_segments(scoped_trip, stage.date)
 
 
-def _fetch_one(service: SegmentWeatherService, segment) -> Optional[SegmentWeatherData]:
+def _fetch_one(
+    service: SegmentWeatherService, segment, user_id: str,
+) -> Optional[SegmentWeatherData]:
     """Fetch Wetter fuer ein Segment; Fehler killen nur dieses Segment."""
     try:
-        return service.fetch_segment_weather(segment, enrich_ensemble=False)
+        return service.fetch_segment_weather(
+            segment, enrich_ensemble=False, user_id=user_id,
+        )
     except Exception:  # noqa: BLE001 -- pro Segment fangen, andere nicht killen
         return None
 
 
 def _to_utc_date(ts) -> date_type:
     if ts.tzinfo is not None:
-        return ts.astimezone(timezone.utc).date()
+        return to_utc(ts).date()
     return ts.date()
 
 
@@ -133,7 +138,9 @@ def _compute_one_stage(trip: "Trip", stage, segments: list, weather_list: list) 
     return {"weather_summary": weather_summary, "risk": risk_color}
 
 
-def compute_stage_weather(trip: "Trip", provider: "WeatherProvider") -> dict[str, Optional[dict]]:
+def compute_stage_weather(
+    trip: "Trip", provider: "WeatherProvider", *, user_id: str,
+) -> dict[str, Optional[dict]]:
     """Pro Stage in trip.stages: Wetter-Summary + Risiko (green/yellow/red).
 
     Leere Stage-ID -> Stage komplett uebersprungen. Fail-soft -> None bei
@@ -172,7 +179,9 @@ def compute_stage_weather(trip: "Trip", provider: "WeatherProvider") -> dict[str
     if flat:
         with ThreadPoolExecutor(max_workers=min(len(flat), 8)) as executor:
             future_to_idx = {
-                executor.submit(_fetch_one, services_by_stage[stage_id], seg): idx
+                executor.submit(
+                    _fetch_one, services_by_stage[stage_id], seg, user_id,
+                ): idx
                 for idx, (stage_id, seg) in enumerate(flat)
             }
             for future, idx in future_to_idx.items():

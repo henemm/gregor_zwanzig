@@ -40,7 +40,7 @@ func TestUpdateProfileSetsDisplayName(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
 	dir := writeUser642(t, s, "hugo", `{"id":"hugo","password_hash":"`+string(hash)+`"}`)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter, weitSmsLimiter)
 	body := `{"display_name":"Hugo Wanderer"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "hugo"))
@@ -73,7 +73,7 @@ func TestGetProfileReturnsDisplayName(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
 	writeUser642(t, s, "iris", `{"id":"iris","password_hash":"`+string(hash)+`","display_name":"Iris vom Berg"}`)
 
-	h := GetProfileHandler(s)
+	h := GetProfileHandler(s, nil)
 	req := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "iris"))
 	w := httptest.NewRecorder()
@@ -95,7 +95,7 @@ func TestUpdateProfileTrimsDisplayName(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
 	writeUser642(t, s, "jan", `{"id":"jan","password_hash":"`+string(hash)+`"}`)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter, weitSmsLimiter)
 	body := `{"display_name":"   Jan Tal   "}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "jan"))
@@ -118,7 +118,7 @@ func TestUpdateProfileClearsDisplayName(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
 	dir := writeUser642(t, s, "kara", `{"id":"kara","password_hash":"`+string(hash)+`","display_name":"Alter Name"}`)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter, weitSmsLimiter)
 	body := `{"display_name":"   "}` // nur Whitespace => leeren
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "kara"))
@@ -134,7 +134,7 @@ func TestUpdateProfileClearsDisplayName(t *testing.T) {
 		t.Errorf("expected display_name cleared, old value still present: %s", string(data))
 	}
 	// GET liefert keinen/leeren display_name
-	g := GetProfileHandler(s)
+	g := GetProfileHandler(s, nil)
 	gr := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	gr = gr.WithContext(middleware.ContextWithUserID(gr.Context(), "kara"))
 	gw := httptest.NewRecorder()
@@ -153,7 +153,7 @@ func TestUpdateProfileDisplayNameIsolatedPerUser(t *testing.T) {
 	writeUser642(t, s, "userA", `{"id":"userA","password_hash":"`+string(hash)+`","display_name":"A Original"}`)
 	dirB := writeUser642(t, s, "userB", `{"id":"userB","password_hash":"`+string(hash)+`","display_name":"B Original"}`)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter, weitSmsLimiter)
 	body := `{"display_name":"A Geändert"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "userA"))
@@ -173,7 +173,7 @@ func TestUpdateProfileDisplayNameIsolatedPerUser(t *testing.T) {
 	}
 
 	// B via GET unverändert
-	g := GetProfileHandler(s)
+	g := GetProfileHandler(s, nil)
 	gr := httptest.NewRequest("GET", "/api/auth/profile", nil)
 	gr = gr.WithContext(middleware.ContextWithUserID(gr.Context(), "userB"))
 	gw := httptest.NewRecorder()
@@ -191,7 +191,7 @@ func TestUpdateProfileRejectsTooLongDisplayName(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
 	dir := writeUser642(t, s, "lars", `{"id":"lars","password_hash":"`+string(hash)+`"}`)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter, weitSmsLimiter)
 	tooLong := strings.Repeat("x", 51)
 	body := `{"display_name":"` + tooLong + `"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
@@ -214,7 +214,7 @@ func TestUpdateProfileRejectsControlCharsInDisplayName(t *testing.T) {
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
 	writeUser642(t, s, "mona", `{"id":"mona","password_hash":"`+string(hash)+`"}`)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter, weitSmsLimiter)
 	body := `{"display_name":"Zeile1\nZeile2"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "mona"))
@@ -234,7 +234,7 @@ func TestUpdateProfilePreservesFieldsWithoutDisplayName(t *testing.T) {
 	dir := writeUser642(t, s, "nina",
 		`{"id":"nina","password_hash":"`+string(hash)+`","mail_to":"nina@old.example","sms_to":"+49KEEPME","telegram_chat_id":"777"}`)
 
-	h := UpdateProfileHandler(s, config.Config{})
+	h := UpdateProfileHandler(s, config.Config{}, weitMailLimiter, weitSmsLimiter)
 	body := `{"mail_to":"nina@new.example"}`
 	req := httptest.NewRequest("PUT", "/api/auth/profile", strings.NewReader(body))
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "nina"))

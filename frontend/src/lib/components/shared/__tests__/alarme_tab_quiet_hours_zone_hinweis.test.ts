@@ -1,5 +1,5 @@
 // TDD RED — Issue #1726 (AC-11): die Ruhezeit-Karte benennt ihre Zeit-Basis,
-// und zwar KONTEXTABHÄNGIG — beim Trip „Ortszeit der Tour", beim Ortsvergleich
+// und zwar KONTEXTABHÄNGIG — beim Trip „Ortszeit der Trip", beim Ortsvergleich
 // „Ortszeit des ersten Orts". Heute nennt sie gar keine Zone; ehrlich wäre
 // derzeit „Wiener Zeit" (Kontext-Dokument, Risiko 10).
 //
@@ -20,7 +20,7 @@
 // #1745 A), damit der Rendervorgang nicht am fehlenden Profil hängt.
 //
 // RED HEUTE: `AlertQuietHoursCard` hat keine Prop für die Zonen-Bezeichnung und
-// gibt in beiden Kontexten denselben Hinweistext aus — weder „Tour" noch
+// gibt in beiden Kontexten denselben Hinweistext aus — weder „Trip" noch
 // „erste" taucht im Kartenbereich auf, und beide Kontexte liefern dieselbe
 // Zeichenkette.
 //
@@ -35,6 +35,9 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+// Issue #2276 S6c: der geteilte Organismus liest im Vergleich reine Wertprops —
+// das Buendel baut dieselbe Funktion wie die drei Produktiv-Mounts.
+import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // __tests__ -> shared -> components -> lib -> src -> frontend
@@ -99,7 +102,7 @@ function renderVergleich(): string {
 	return render(AlarmeTab, {
 		props: {
 			context: 'vergleich',
-			wiz: wizStub(),
+			...alarmePropsAus(wizStub()),
 			catalog: [],
 			profileOverride: PROFIL
 		}
@@ -122,7 +125,7 @@ function quietCardHtml(body: string): string {
 }
 
 describe('#1726 AC-11 — Ruhezeit-Karte nennt ihre Zonen-Basis', () => {
-	test('Trip-Kontext nennt die Ortszeit der Tour', () => {
+	test('Trip-Kontext nennt die Ortszeit der Trip', () => {
 		const karte = quietCardHtml(renderRoute());
 
 		assert.match(
@@ -133,8 +136,8 @@ describe('#1726 AC-11 — Ruhezeit-Karte nennt ihre Zonen-Basis', () => {
 		);
 		assert.match(
 			karte,
-			/Tour/,
-			'Beim Trip ist die Bezugsgrösse die Tour ("Ortszeit der Tour").'
+			/Trip/,
+			'Beim Trip ist die Bezugsgrösse die Trip ("Ortszeit der Trip").'
 		);
 	});
 

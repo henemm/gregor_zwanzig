@@ -10,7 +10,7 @@
 
 	let { size = 'md', href = '/' }: Props = $props();
 
-	// Backward-Compat: kompakte sm-Variante (Mobile TopAppBar) zeigt keinen
+	// Kompakte sm-Variante (erste Zeile der mobilen Uebersicht) zeigt keinen
 	// Untertitel — wie die fruehere Wordmark-Logik ({#if size !== 'sm'}).
 	const caption = $derived(size === 'sm' ? null : undefined);
 </script>

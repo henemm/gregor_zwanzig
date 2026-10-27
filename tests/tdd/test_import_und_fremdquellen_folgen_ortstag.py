@@ -108,8 +108,8 @@ def test_ac1_gpx_rueckfalltag_folgt_der_zone_des_ersten_wegpunkts(tmp_path):
     """
     from services.gpx_processing import gpx_to_stage_data
 
-    now_utc = datetime(2026, 8, 19, 20, 0, 0, tzinfo=timezone.utc)
-    erwarteter_ortstag = date(2026, 8, 20)
+    now_utc = datetime(2026, 5, 1, 20, 0, 0, tzinfo=timezone.utc)
+    erwarteter_ortstag = date(2026, 5, 2)
     _anker(now_utc, KIRITIMATI_ZONE, erwarteter_ortstag)
 
     content = _mini_gpx_bytes(*KIRITIMATI)
@@ -282,7 +282,7 @@ def test_ac6_debug_trigger_radar_alert_today_folgt_trip_local_today(monkeypatch)
           Segmentwahl -- Henne-Ei, weil die Zone eigentlich aus dem noch
           unbekannten aktiven Segment kaeme),
     WHEN  ``today`` bestimmt wird,
-    THEN  ist das der ORTSTAG der Tour (``trip_local_today(trip, now_utc)``),
+    THEN  ist das der ORTSTAG der Trip (``trip_local_today(trip, now_utc)``),
           nicht der Servertag (``date_type.today()``).
 
     DI-Spion direkt auf ``convert_trip_to_segments`` (Lehre #1727 S5c: die
@@ -304,8 +304,8 @@ def test_ac6_debug_trigger_radar_alert_today_folgt_trip_local_today(monkeypatch)
     from app.loader import save_trip
     from app.trip import Stage, Trip, Waypoint
 
-    now_utc = datetime(2026, 8, 19, 20, 0, 0, tzinfo=timezone.utc)
-    erwarteter_ortstag = date(2026, 8, 20)
+    now_utc = datetime(2026, 5, 1, 20, 0, 0, tzinfo=timezone.utc)
+    erwarteter_ortstag = date(2026, 5, 2)
     _anker(now_utc, KIRITIMATI_ZONE, erwarteter_ortstag)
 
     user_id = "tdd-1727-s5d-debug"
@@ -352,7 +352,7 @@ def test_ac6_debug_trigger_radar_alert_today_folgt_trip_local_today(monkeypatch)
     assert calls, "convert_trip_to_segments() wurde nicht aufgerufen"
     assert calls[0] == erwarteter_ortstag, (
         f"trigger_radar_alert() rief convert_trip_to_segments() ZUERST mit "
-        f"today={calls[0]!r} auf -- erwartet den ORTSTAG der Tour "
+        f"today={calls[0]!r} auf -- erwartet den ORTSTAG der Trip "
         f"({erwarteter_ortstag.isoformat()}), nicht den Servertag "
         f"({now_utc.date().isoformat()})"
     )

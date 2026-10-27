@@ -3,7 +3,7 @@ entity_id: compare_location_summary
 type: module
 created: 2026-07-16
 updated: 2026-07-16
-status: draft
+status: implemented
 version: "2.1"
 workflow: feat-1278-compare-ort-zusammenfassung
 tags: [formatter, email, compare, shared-with-trip, data-model]
@@ -480,7 +480,7 @@ Eindruck einer Uhrzeit-Einschränkung erweckt.
 > unverändert weiter. Die folgende Fassung beschreibt den Stand **vor** dieser
 > Änderung und ist nur noch historisch zu lesen.
 
-- **AC-10 (HISTORISCH, abgelöst durch #1359 Scheibe 2):** Given ein Vergleich
+- **AC-10:** (HISTORISCH, abgelöst durch #1359 Scheibe 2) Given ein Vergleich
   mit mehreren Orten, When die Zusammenfassungs-Sektion erscheint, Then sind
   die Orte in der vom Nutzer konfigurierten Reihenfolge geordnet, identisch
   zur Reihenfolge in der Matrix darüber — es gibt keine Sortierung nach Score
@@ -662,7 +662,7 @@ Implementierung/Doku-Nachpflege (`docs-updater`), nicht des Spec-Writers.
   Vergabe-Historie dieser Spec: zuerst 0024 (falsch — durch #1272 belegt,
   Commit 450d9e6f, geteilter Sortier-Baustein), dann 0025 — beim Rebase
   stellte sich heraus, dass **0025 in `main` bereits doppelt vergeben** ist:
-  `docs/adr/0025-e2e-prod-network-unreachable-admin-loses-never-delete.md`
+  `docs/adr/0028-e2e-prod-network-unreachable-admin-loses-never-delete.md`
   (#1284) und `docs/adr/0025-eine-gewitter-quelle-fuer-alle-briefing-kanaele.md`
   (#1275) — zwei parallele Sessions haben dieselbe Nummer gezogen. Diese Spec
   weicht daher auf 0026 aus. Die Doppelvergabe von 0025 in `main` ist ein

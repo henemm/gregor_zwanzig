@@ -3,7 +3,7 @@ entity_id: issue_1346_silent_briefing_outage
 type: module
 created: 2026-07-23
 updated: 2026-07-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [scheduler, monitoring, heartbeat, observability, go]
 ---
@@ -16,7 +16,7 @@ tags: [scheduler, monitoring, heartbeat, observability, go]
 
 ## Purpose
 
-Ein Totalausfall des stündlichen Trip-Briefing-Versands (alle Touren scheitern am
+Ein Totalausfall des stündlichen Trip-Briefing-Versands (alle Trips scheitern am
 Wetterabruf) muss aktiv alarmieren statt still zu bleiben. Heute pingt der einzige
 überwachte Heartbeat nur am Ortsvergleich-Erfolg und verdeckt so einen kompletten
 Briefing-Ausfall; es gibt keine Betreiber-Meldung.

@@ -10,7 +10,7 @@
 //
 // Issue #1425 (S2 Teil 2, Scheibe B): Gewitter ist aus dieser Liste ausgezogen
 // (5 statt 6 fest verdrahtete Groessen) — es kommt jetzt ordinal aus dem
-// zentralen Katalog (`thunder_level_max`, kein/mittel/hoch). Spec:
+// zentralen Katalog (`thunder_level_max`, kein/leicht/mittel/hoch). Spec:
 // docs/specs/modules/fix_1425_s2b_gewitter_skala.md.
 //
 // AC-3: confidence_pct (selectable=false) darf hier nie auftauchen — trivial
@@ -117,19 +117,22 @@ export const ROUTE_CORRIDOR_CATALOG_IDS: Record<string, string[]> = Object.fromE
 );
 
 /**
- * Issue #1425 (S2 Teil 2, Scheibe B): eine Grenze des alten Prozent-Gewitter-
- * Korridors auf die Ordinalskala umrechnen. Beide Grenzen unabhaengig
- * voneinander (Spec § Implementation Details Punkt 3):
- *   null -> null · 0|1|2 -> unveraendert (schon ordinal) ·
- *   >2 als Prozent gedeutet: 0-33 -> 0 (kein), 34-66 -> 1 (mittel),
- *   67-100 -> 2 (hoch).
+ * Issue #1425 (S2 Teil 2, Scheibe B), korrigiert durch #2012: eine Grenze
+ * des alten Prozent-Gewitter-Korridors auf die Ordinalskala umrechnen. Beide
+ * Grenzen unabhaengig voneinander (Spec § Implementation Details Punkt 1).
+ * Jede Zahl wird als Prozent gedeutet — der alte "schon ordinal"-Sonderzweig
+ * (`v === 0 || v === 1 || v === 2`) entfaellt, weil der Alt-Schluessel
+ * `thunder_level` ausschliesslich Prozentwerte trug (Spec Punkt 3):
+ *   null -> null · 0-33 -> ORDINAL_ENUM.indexOf('NONE') (kein) ·
+ *   34-66 -> ORDINAL_ENUM.indexOf('MED') (mittel) ·
+ *   67-100 -> ORDINAL_ENUM.indexOf('HIGH') (hoch).
+ * Stufe "leicht" ist ueber die Migration nie erreichbar (Spec Punkt 4).
  */
 function percentBoundToOrdinal(v: number | null): number | null {
 	if (v == null) return null;
-	if (v === 0 || v === 1 || v === 2) return v;
-	if (v <= 33) return 0;
-	if (v <= 66) return 1;
-	return 2;
+	if (v <= 33) return ORDINAL_ENUM.indexOf('NONE');
+	if (v <= 66) return ORDINAL_ENUM.indexOf('MED');
+	return ORDINAL_ENUM.indexOf('HIGH');
 }
 
 /**

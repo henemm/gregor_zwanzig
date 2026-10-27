@@ -243,14 +243,14 @@ describe('#1435 E1a-2 AC-5: der Katalog kommt als Prop herein, nicht als Modul-G
 	});
 });
 
-describe('#1435 E1a-2 AC-7: der Touren-Zweig bleibt unberuehrt', () => {
+describe('#1435 E1a-2 AC-7: der Trips-Zweig bleibt unberuehrt', () => {
 	test('`context="route"` liest ausschliesslich die `activeMetrics`-Prop', () => {
 		const cond = derivedInit(parseFile(ALARME_TAB), 'effectiveActiveMetrics');
 		const namen = identifiers(cond.alternate);
 
 		assert.ok(
 			namen.has('activeMetrics'),
-			'Der Touren-Zweig liest nicht mehr die `activeMetrics`-Prop (AC-7).'
+			'Der Trips-Zweig liest nicht mehr die `activeMetrics`-Prop (AC-7).'
 		);
 		for (const verboten of [
 			'catalog',
@@ -261,7 +261,7 @@ describe('#1435 E1a-2 AC-7: der Touren-Zweig bleibt unberuehrt', () => {
 			assert.equal(
 				namen.has(verboten),
 				false,
-				`Der Touren-Zweig zieht \`${verboten}\` heran — fuer Touren darf sich inhaltlich ` +
+				`Der Trips-Zweig zieht \`${verboten}\` heran — fuer Trips darf sich inhaltlich ` +
 					'nichts aendern (AC-7, geteilter Baustein, Anti-Pattern #1170).'
 			);
 		}
@@ -276,7 +276,7 @@ describe('#1435 E1a-2 AC-7: der Touren-Zweig bleibt unberuehrt', () => {
 			assert.equal(
 				hasAttr(inst, 'catalog'),
 				false,
-				'Die Trip-Einbettung reicht einen Katalog durch — der Touren-Zweig braucht ' +
+				'Die Trip-Einbettung reicht einen Katalog durch — der Trips-Zweig braucht ' +
 					'keinen und darf sich durch diese Etappe nicht bewegen (AC-7).'
 			);
 			assert.deepEqual(
@@ -294,7 +294,7 @@ describe('#1435 E1a-2 AC-7: der Touren-Zweig bleibt unberuehrt', () => {
 				// Issue #1461 S3b-2a: legitime Erweiterung um
 				// `existingChannelThresholds` (Kanal-Schwelle, route-Speicherweg) --
 				// diese Zusicherung bewacht weiterhin, dass KEIN Katalog-Attribut
-				// (#1435-Scope) den Touren-Zweig erreicht.
+				// (#1435-Scope) den Trips-Zweig erreicht.
 				'Die Attribut-Liste der Trip-Einbettung hat sich unerwartet geaendert (AC-7).'
 			);
 		}

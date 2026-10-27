@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from tests.helpers.compare_briefings import write_compare_briefings
 from tests.helpers.compare_slot_time import utc_slot_for_manual_hour
@@ -56,6 +56,21 @@ def _make_preset(
         "top_ort_letzter_versand": None,
         "created_at": "2026-05-30T00:00:00Z",
     }
+
+
+def _ausloeser_tag() -> date:
+    """Kalendertag, an dem `run_compare_presets_daily(hour=6)` auslöst (#2314).
+
+    Der manuelle Auslöser verankert seinen Zeitpunkt in der Referenz-Zone
+    (dieselbe Umrechnung wie `utc_slot_for_manual_hour`); der Prozesstag
+    `date.today()` liegt nachts einen Tag daneben.
+    """
+    from zoneinfo import ZoneInfo
+
+    from services.dispatch_orchestrator import CompareDispatchStrategy
+
+    zone = ZoneInfo(CompareDispatchStrategy.MANUAL_TRIGGER_REFERENCE_ZONE)
+    return datetime.now(zone).date()
 
 
 def _write_presets(tmp_path: Path, user_id: str, presets: list[dict]) -> Path:
@@ -146,7 +161,7 @@ class TestWeeklyPresetDispatch:
         """
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
-        today_weekday = date.today().weekday()
+        today_weekday = _ausloeser_tag().weekday()
         preset = _due_in_utc(_make_preset(
             preset_id="cp-weekly-match",
             schedule="weekly",
@@ -194,7 +209,7 @@ class TestWeeklyPresetDispatch:
         """
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
-        today_weekday = date.today().weekday()
+        today_weekday = _ausloeser_tag().weekday()
         tomorrow_weekday = (today_weekday + 1) % 7
         _write_location(tmp_path, "default", "loc-ibk")
         preset = _make_preset(
@@ -234,7 +249,7 @@ class TestWeeklyPresetDispatch:
         """
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
-        today_weekday = date.today().weekday()
+        today_weekday = _ausloeser_tag().weekday()
         daily = _due_in_utc(_make_preset(
             preset_id="cp-daily-both",
             schedule="daily",
@@ -283,7 +298,7 @@ class TestWeeklyPresetDispatch:
         """
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
-        today_weekday = date.today().weekday()
+        today_weekday = _ausloeser_tag().weekday()
         tomorrow_weekday = (today_weekday + 1) % 7
         preset = _make_preset(
             preset_id="cp-weekly-never-today",

@@ -31,7 +31,7 @@ from services.trip_command_processor import (
     CommandResult, InboundMessage, TripCommandProcessor,
 )
 
-# Fixe Tour-Daten — bewusst Monat 08 / Werte ohne Datums-Kollision.
+# Fixe Trip-Daten — bewusst Monat 08 / Werte ohne Datums-Kollision.
 TODAY = date(2026, 8, 20)
 TOMORROW = date(2026, 8, 21)
 RECEIVED_AT = datetime(2026, 8, 20, 9, 0, tzinfo=timezone.utc)
@@ -226,7 +226,8 @@ def test_ac6_no_snapshot_hint_with_buttons(env):
 
 @pytest.mark.parametrize("text,expected_key", [
     ("/s", "glance"),
-    ("/status", "glance"),     # AC-1: /status-Alias auf Glance
+    ("/status", "status"),     # AC-28 (#2417): /status-Alias auf Glance entfaellt,
+                               # /status fuehrt jetzt wie nacktes "status" die Etappenliste aus.
     ("/h", "heute"),
     ("/m", "morgen"),
     ("/hg", "heute_gewitter"),

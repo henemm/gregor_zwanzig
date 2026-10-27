@@ -14,9 +14,11 @@
 	interface Props {
 		value?: string;
 		onchange?: (newValue: string) => void;
+		/** #2496: 'inline' = Label-los fuer Kartenkontext (mobile StageCardM). */
+		variant?: 'default' | 'inline';
 	}
 
-	let { value, onchange }: Props = $props();
+	let { value, onchange, variant = 'default' }: Props = $props();
 
 	// 08:00 wird nur angezeigt (displayValue), NICHT in stages geschrieben,
 	// solange der Nutzer nichts aendert (AC-4: alt-treu).
@@ -28,12 +30,18 @@
 	}
 </script>
 
-<div class="stage-time" data-testid="stage-start-time-field">
-	<span class="label">Startzeit</span>
-	<label class="box">
+{#if variant === 'inline'}
+	<label class="box inline" data-testid="stage-start-time-field">
 		<input type="time" value={displayValue} onchange={handleChange} />
 	</label>
-</div>
+{:else}
+	<div class="stage-time" data-testid="stage-start-time-field">
+		<span class="label">Startzeit</span>
+		<label class="box">
+			<input type="time" value={displayValue} onchange={handleChange} />
+		</label>
+	</div>
+{/if}
 
 <style>
 	.stage-time {
@@ -46,7 +54,7 @@
 
 	.label {
 		font-family: var(--g-font-data);
-		font-size: 10px;
+		font-size: 11px;
 		text-transform: uppercase;
 		letter-spacing: 0.06em;
 		color: var(--g-ink-muted);
@@ -73,5 +81,19 @@
 		font-variant-numeric: tabular-nums;
 		padding: 0;
 		min-width: 70px;
+	}
+
+	.box.inline {
+		min-width: 0;
+	}
+
+	/* #2601: Touch — kein iOS-Auto-Zoom (16px), Trefferhöhe >= 36px */
+	@media (max-width: 899px), (pointer: coarse) {
+		.box {
+			min-height: 36px;
+		}
+		.box input[type='time'] {
+			font-size: 16px;
+		}
 	}
 </style>

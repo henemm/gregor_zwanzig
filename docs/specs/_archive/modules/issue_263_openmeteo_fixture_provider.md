@@ -3,7 +3,7 @@ entity_id: issue_263_openmeteo_fixture_provider
 type: module
 created: 2026-05-20
 updated: 2026-05-20
-status: complete
+status: implemented
 version: "1.0"
 issue: 263
 tags: [go, provider, fixture, e2e, testing, openmeteo, playwright]

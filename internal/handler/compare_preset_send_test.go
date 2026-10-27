@@ -138,3 +138,20 @@ func TestComparePresetSend_PropagatesUpstreamError(t *testing.T) {
 		t.Errorf("expected upstream 422 to propagate, got %d (body=%q)", w.Code, w.Body.String())
 	}
 }
+
+// Issue #2124 AC-5: Lauf-Lock des Python-Core (409) erreicht den Client als 409
+// samt detail — nicht als 502/500 (sonst zeigt das Frontend „Ergebnis unklar").
+// Pendant zu TestSendTripReportProxyHandlerPropagates409.
+func TestComparePresetSend_Propagates409Conflict(t *testing.T) {
+	py, _ := startFakeComparePresetSendPython(t, 409, `{"detail":"Versand fuer cp-busy laeuft bereits - bitte warten"}`)
+
+	h := SendComparePresetHandler(py.URL)
+	w := dispatchComparePresetSend(h, "cp-busy", "alice", "")
+
+	if w.Code != http.StatusConflict {
+		t.Errorf("expected 409 to propagate from Python, got %d (body=%q)", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "laeuft bereits") {
+		t.Errorf("expected upstream detail body to pass through unchanged, got %q", w.Body.String())
+	}
+}

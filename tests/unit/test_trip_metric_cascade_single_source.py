@@ -48,24 +48,22 @@ from output.renderers.compare_outlook_metric_ids import (  # noqa: E402
     resolve_trip_outlook_metrics,
 )
 
-# Auswertung je Kennung im Ausblick-Neuformat (#1373). Alle Paare sind im
-# Compare-Katalog aufloesbar AUSSER ``confidence`` (selectable=False, dort gar
-# nicht gefuehrt) -- s. Hinweis im AC-3-Test.
-AGGREGATION = {
-    "precipitation": "sum",
-    "temperature": "max",
-    "gust": "max",
-    "wind": "max",
-    "snow_depth": "max",
-    "confidence": "min",
-}
+# Alle hier verwendeten Kennungen sind im Compare-Katalog aufloesbar AUSSER
+# ``confidence`` (selectable=False, dort gar nicht gefuehrt) -- s. Hinweis im
+# AC-3-Test.
+#
+# #1848 A2: die Ausblick-Auswahl speichert reine KENNUNGEN; die frueher hier
+# gefuehrte Auswertung je Kennung ist kein Speicherinhalt mehr, sondern wird
+# vom Katalog abgeleitet. Fuer die Zusicherung dieses Tests -- der
+# Kaskaden-Schnitt trifft in beiden Flaechen DIESELBE Kennungsmenge -- ist das
+# folgenlos: geschnitten wurde schon immer auf ``metric_id``.
 
 KANAL = "email"
 
 
 def _ausblick_auswahl(kennungen):
-    """Ausblick-Auswahl im Speicherformat ``{metric_id, aggregation}``."""
-    return [{"metric_id": k, "aggregation": AGGREGATION[k]} for k in kennungen]
+    """Ausblick-Auswahl im Speicherformat: reine Kennungen (#1848 A2)."""
+    return list(kennungen)
 
 
 def _dc(*, grundauswahl, kanal_layout=None, ausblick=None):
@@ -82,7 +80,7 @@ def _dc(*, grundauswahl, kanal_layout=None, ausblick=None):
         MetricConfig(metric_id=kennung, order=i, **felder)
         for i, (kennung, felder) in enumerate(grundauswahl)
     ]
-    dc = UnifiedWeatherDisplayConfig(trip_id="tour-1848", metrics=metrics)
+    dc = UnifiedWeatherDisplayConfig(trip_id="trip-1848", metrics=metrics)
     if kanal_layout is not None:
         dc.per_channel_layouts = {
             KANAL: [
@@ -119,7 +117,7 @@ def _ausblick_kennungen(dc, report_type):
         "Die Ausblick-Auswahl wurde gar nicht aufgeloest (None) -- dann "
         "vergleicht dieser Test zwei Flaechen, von denen eine leer ist."
     )
-    return {e["metric_id"] for e in aufgeloest}
+    return set(aufgeloest)
 
 
 # ═════════════════════════ AC-1 — abgewaehlte Groesse ═════════════════════════
@@ -191,7 +189,7 @@ def test_ac2_leere_grundauswahl_liefert_none_und_schneidet_in_keiner_flaeche():
     )
 
     ausblick = resolve_trip_outlook_metrics(dc, "morning")
-    assert [e["metric_id"] for e in (ausblick or [])] == eingabe, (
+    assert list(ausblick or []) == eingabe, (
         f"Ausblick: bei leerer Grundauswahl wurde geschnitten. Erwartet die "
         f"unveraenderte Auswahl {eingabe!r}, erhalten {ausblick!r} (D4, "
         "AC-16 aus #1720 S1)."
@@ -284,28 +282,37 @@ def test_ac4_morgen_override_schliesst_in_beiden_flaechen_identisch_aus():
 def test_ac5_fehlende_ausblick_auswahl_bleibt_none():
     """AC-5: GIVEN ein Trip MIT Grundauswahl, dessen Feld ``outlook_metrics``
     nicht gesetzt ist (``None``, Altbestand) / WHEN
-    ``resolve_trip_outlook_metrics()`` aufgerufen wird / THEN bleibt der
-    Rueckgabewert ``None`` -- der neue Schnitt greift nur auf einer bereits
-    aufgeloesten Liste und verwandelt "Feld fehlt" nicht in "leer".
+    ``resolve_trip_outlook_metrics()`` aufgerufen wird / THEN kommt die
+    GANZE Grundauswahl zurueck -- niemals ``[]``.
 
-    Explizit auf ``is None`` geprueft, nicht auf Falsy: die Verwechslung mit
-    ``[]`` ist genau der Fehler, der den Ausblick fuer 100 % der heutigen
-    Trips still abschalten wuerde.
+    ⚠️ NACHGEZOGEN durch #1848 A3 (AC-3, PO-Freigabe 2026-08-21): bis dahin
+    lieferte dieser Fall ``None`` ("Feld fehlt" -> die sieben festen
+    Spalten). Seither heisst "nie eingestellt" = "nichts abgewaehlt", und der
+    Ausblick zeigt exakt die Groessen des Trips.
+
+    Der Kern der Zusicherung ist unveraendert und bleibt der wichtige Teil:
+    das Ergebnis darf NICHT ``[]`` sein -- diese Verwechslung wuerde den
+    Ausblick-Block fuer 100 % der heutigen Trips still abschalten (ADR-0037
+    Drei-Werte-Semantik).
     """
     dc = _dc(
         grundauswahl=[("precipitation", {"enabled": True}),
                       ("gust", {"enabled": True})],
         ausblick=None,
     )
-    # Vorbedingung ueber die gemeinsame Quelle: ein Maximum IST definiert, der
-    # Schnitt waere also scharf -- er darf hier trotzdem nicht zuschlagen.
+    # Vorbedingung ueber die gemeinsame Quelle: ein Maximum IST definiert.
     assert _erlaubte_kennungen(dc, "morning") == {"precipitation", "gust"}
 
     ergebnis = resolve_trip_outlook_metrics(dc, "morning")
-    assert ergebnis is None, (
-        f"Erwartet None ('Feld fehlt' -> die bisherigen sieben festen "
-        f"Spalten), erhalten {ergebnis!r}. [] wuerde den Ausblick-Block ganz "
-        "abschalten (ADR-0037 Drei-Werte-Semantik)."
+    assert ergebnis != [], (
+        "Erwartet die Grundauswahl, erhalten []. [] heisst 'bewusst geleert' "
+        "und wuerde den Ausblick-Block ganz abschalten (ADR-0037 "
+        "Drei-Werte-Semantik)."
+    )
+    assert ergebnis is not None and set(ergebnis) == {"precipitation", "gust"}, (
+        f"Erwartet die GANZE Grundauswahl ['precipitation', 'gust'], erhalten "
+        f"{ergebnis!r}. ``None`` hiesse Rueckfall auf die sieben festen "
+        "Spalten -- genau das loest #1848 A3 ab (AC-3)."
     )
 
 

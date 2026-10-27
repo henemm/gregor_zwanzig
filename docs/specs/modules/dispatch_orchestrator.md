@@ -2,9 +2,9 @@
 entity_id: dispatch_orchestrator
 type: module
 created: 2026-07-16
-updated: 2026-07-16
-status: draft
-version: "1.0"
+updated: 2026-10-07
+status: implemented
+version: "1.1"
 tags: [dispatch, scheduler, trip, compare, refactor]
 ---
 
@@ -91,7 +91,7 @@ Divergenzen bleiben strikt in der Strategie gekapselt:
 | Feld/Methode | Trip (`route`) | Compare (`vergleich`) |
 |---|---|---|
 | `inter_mail_delay` | 2.0s | 0 |
-| `smtp_guard` | True, `(0,0)`-Early-Return | False (per-Preset) |
+| `smtp_guard` | True, `(0,0)`-Early-Return + WARNING-Log (#2286) | False (per-Preset, Sendefehler ⇒ `failed`) |
 | `pre_pass` | Catch-up-Marker-Verarbeitung | Auto-Pause-Loop |
 | `collect_due` | Morgen/Abend-Sammlung | `presets_due_for_hour` |
 | `dispatch_one` | delegiert an `NotificationService` (E-Mail+SMS+Telegram) | delegiert an `EmailOutput` direkt (E-Mail-only) |
@@ -188,7 +188,47 @@ Channel-Schicht `EmailOutput.send(mail_type=...)`.
     unverändert bleiben, keine Umbenennung von `TripReportSchedulerService`,
     `send_reports_for_hour`, `run_compare_presets_daily`, `send_one_compare_preset`).
 
+- **AC-6:** Given ein Trip hat Kanäle konfiguriert, aber keiner davon wird erreicht
+  (Ausgang `channels_unreachable`, niemand hat etwas erhalten) / When der stündliche
+  Trip-Versand (`POST /api/scheduler/trip-reports`) läuft / Then meldet der Endpunkt
+  `status: "partial"` mit `failed >= 1` und zählt diesen Trip nicht in `count`, sodass
+  `last_run.status` und der Heartbeat den Ausfall sichtbar machen statt fälschlich „ok".
+  - Test: `tests/test_dispatch_status_delivery.py` ruft den Endpunkt mit einem Trip auf,
+    dessen Versand `channels_unreachable` liefert, und prüft `status`/`count`/`failed`.
+
+- **AC-7:** Given ein Trip-Versand liefert den Ausgang `no_weather` (Wetterabruf komplett
+  ausgefallen) oder einen unbekannten Ausgangswert (#2231, Slot gesperrt) / When der
+  Trip-Versand über `/api/scheduler/trip-reports` läuft / Then zählt jeder dieser Fälle
+  als `failed` (Status `partial`) und nie als `sent`, weil „unbekannt" nicht „zugestellt" heißt.
+  - Test: `tests/test_dispatch_status_delivery.py`, je ein Fall für `no_weather` und für
+    einen unbekannten Ausgangswert am Endpunkt.
+
+- **AC-8:** Given ein Trip hat gar keinen Kanal konfiguriert (`no_channels`, „nichts
+  vorgesehen") oder keinen passenden Abschnitt (`no_stage`, z. B. Trip beendet) / When der
+  Trip-Versand über `/api/scheduler/trip-reports` läuft / Then wird dieser Trip weder als
+  `sent` noch als `failed` gezählt (`count` und `failed` bleiben unberührt, Status `ok`),
+  damit legitime Leerläufe keinen Dauer-Alarm auslösen und `count` nur echte Zustellungen zählt.
+  - Test: `tests/test_dispatch_status_delivery.py`, je ein Fall für `no_channels` und
+    `no_stage`; Erwartung `{"status": "ok", "count": 0, "failed": 0}`.
+
+- **AC-9:** Given zwei verschiedene Nutzer mit je einem Trip und unterschiedlichen Ausgängen
+  (`sent` beim einen, `channels_unreachable` beim anderen) / When für jeden Nutzer
+  `/api/scheduler/trip-reports?user_id=<id>` aufgerufen wird / Then bewertet jede Antwort
+  nur die Trips des jeweiligen Nutzers (Nutzer A `ok`/`count=1`, Nutzer B `partial`/`failed=1`),
+  und ein Ausgang `sent` zählt als zugestellt (`count` +1, Status `ok`).
+  - Test: `tests/test_dispatch_status_delivery.py` (Zwei-Nutzer-Test) mit
+    Mutations-Gegenprobe am Endpunkt: wird `channels_unreachable` im Produktivcode wieder
+    als `sent` gezählt, MUSS der Endpunkt-Test rot werden (nicht nur ein Strategie-Test).
+
 ## Known Limitations
+
+Dauer-`partial` bei unerreichbarem Trip (#2218 Scheibe A, **gewollte Sichtbarkeit**):
+Ist ein Trip dauerhaft unerreichbar, ruft das Nachholfenster stündlich erneut auf und jeder
+Lauf meldet `failed` (Status `partial`, Heartbeat setzt aus). Das ist beabsichtigt — der
+Nutzer soll den Dauerausfall sehen. Kein Drosseln und keine Deduplizierung in dieser Scheibe.
+Der Router (`api/routers/scheduler.py`, `partial` aus `failed > 0`) und der Go-Scheduler
+bleiben unverändert; `count` bedeutet ab jetzt „echte Zustellungen". Der `pre_pass`-
+Nachholzähler (`_process_pending_markers`) zählt weiterhin nur echte Nachlieferungen.
 
 Fünf bewusste Non-Goals (Tech-Lead-Entscheidung, durch AC-3 verhaltensneutral
 determiniert, nicht aus dem Code ableitbar):
@@ -256,6 +296,14 @@ Neue Tests in `tests/tdd/test_dispatch_orchestrator.py`:
   `run_compare_presets_daily` bleiben namens- und signaturgleich (Delegation,
   keine Relocation)
 
+Neu (#2218 Scheibe A, AC-6 bis AC-9): `tests/test_dispatch_status_delivery.py` —
+Endpunkt `/api/scheduler/trip-reports`, zwei Nutzer, je Ausgang (`sent`, `no_weather`,
+`channels_unreachable`, `no_channels`, `no_stage`, unbekannter Wert) plus Mutations-Gegenprobe
+am Endpunkt. Geänderte Produktivdatei: `src/services/dispatch_orchestrator.py`
+(`TripDispatchStrategy.dispatch_one` zählt nach Ausgang statt „alles außer `no_weather` = sent").
+Nachbar-Tests, die grün bleiben müssen: `tests/test_success_status_guard.py`,
+`tests/test_scheduler_unknown_outcome_locks_slot.py`.
+
 Bestehende Kern-Tests, die ohne Anpassung grün bleiben müssen (Sicherheitsnetz, AC-5):
 
 - `tests/tdd/test_compare_preset_slot_dispatch.py`
@@ -267,6 +315,12 @@ Bestehende Kern-Tests, die ohne Anpassung grün bleiben müssen (Sicherheitsnetz
 
 ## Changelog
 
+- 2026-10-07 (v1.1): Issue #2218 Scheibe A (Epic #2505, C4-53, Klasse #1405). Der Trip-
+  Versand meldete `status: "ok"`, obwohl bei `channels_unreachable` niemand etwas erhielt
+  (`dispatch_one` zählte alles außer `no_weather` als `sent`), was Monitoring/Heartbeat
+  abschaltete. Neu: `sent` ⇒ sent; `no_weather`, `channels_unreachable`, unbekannter Wert
+  ⇒ failed; `no_channels`/`no_stage` ⇒ neutral. Router/Go unverändert. ACs AC-6 bis AC-9
+  ergänzt; Dauer-`partial` als gewollte Sichtbarkeit in Known Limitations.
 - 2026-07-16: Initial spec created — Issue #1207
 - 2026-07-16: Non-Goal „Inter-Mail-Delay: Compare bleibt 0" revidiert
   (PO-Entscheidung). Compare erhält `inter_mail_delay = 2.0` wie Trip (#766),
@@ -288,3 +342,17 @@ Bestehende Kern-Tests, die ohne Anpassung grün bleiben müssen (Sicherheitsnetz
   `is_test_mode=True` und chat_id ≠ konfigurierter `telegram_test_chat_id`);
   `send_compare_report` re-raised `OutputConfigError` aus dem Telegram-Zweig
   gezielt (Interlock), transiente Fehler bleiben fail-soft.
+- 2026-10-21: Fix #2286 (`docs/specs/modules/fix_2286_compare_betrieb_health.md`).
+  **smtp_guard-Begründung (AC-11):** der Unterschied bleibt bewusst. Der Trip-Guard prüft die
+  **globale** SMTP-Konfiguration — fehlt sie, ist das ein Deploy-Fehler, den `/api/health` und
+  `prod_selftest` fangen; er liefert weiterhin `(0,0)`, schreibt aber jetzt ein WARNING-Log statt
+  still zu bleiben. Compare zählt pro Preset (Altverhalten #1207) und versendet an die Empfänger
+  des Nutzers; Sendefehler zählen dort als `failed`. „Kein SMTP ⇒ failed" würde CI ohne SMTP rot
+  machen. Die Begründung steht als Kommentar an beiden Strategien.
+  **Cron-`no_weather`-Regel (AC-4):** `send_one_compare_preset` wendet die Regel „alle Orte ohne
+  Wetterdaten ⇒ `no_weather`" jetzt auch im Cron an (vorher nur Handversand,
+  `weather_failure_as_outcome`): keine Mail aus lauter Fehlerzellen, der Preset zählt als `failed`
+  (ADR-0018). `weather_failure_as_outcome` steuert nur noch, ob eine **Ausnahme** des Wetterlaufs
+  zu `no_weather` wird. **Toleranter Lader (AC-5):** der Compare-Dispatch lädt mit
+  `load_compare_presets(strict=False)` — eine kaputte Datei in `briefings/` wird mit WARNING
+  übersprungen und zählt nicht als `failed`.

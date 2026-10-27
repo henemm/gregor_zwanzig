@@ -3,7 +3,8 @@ entity_id: fix_923b_wire_live_sms_preview
 type: bugfix
 created: 2026-08-06
 updated: 2026-08-06
-status: draft
+status: superseded
+superseded_by: "#1719 S3"
 version: "1.0"
 tags: [sms, fidelity-preview, trip-editor, dead-code-cleanup]
 ---

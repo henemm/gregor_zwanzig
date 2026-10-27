@@ -3,12 +3,12 @@ entity_id: telegram_send_pacing
 type: bug
 created: 2026-07-25
 updated: 2026-07-25
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, egress, rate-limit, notification_service]
 ---
 
-<!-- Issue #1370 — Telegram: stiller Verlust halber Briefings bei langen Touren -->
+<!-- Issue #1370 — Telegram: stiller Verlust halber Briefings bei langen Trips -->
 
 # Telegram Send Pacing — Drosselung, 429-Wiederholung, sichtbarer Unvollständig-Hinweis
 
@@ -18,7 +18,7 @@ tags: [telegram, egress, rate-limit, notification_service]
 
 ## Purpose
 
-Telegram-Briefings mit vielen Segmenten (lange Touren, viele Wegpunkte) senden
+Telegram-Briefings mit vielen Segmenten (lange Trips, viele Wegpunkte) senden
 mehrere Einzelnachrichten in schneller Folge an denselben Chat. Telegram
 drosselt ab ~20 Nachrichten/Minute pro Chat mit HTTP 429; der heutige Code
 erkennt das nicht als Drosselung, sondern bricht die Sendeserie mit `break`

@@ -1,7 +1,7 @@
 ---
 name: docs-updater
 description: Aktualisiert Dokumentation nach Code-Aenderungen
-model: sonnet
+model: haiku
 tools:
   - Read
   - Glob
@@ -31,26 +31,21 @@ Dieser Agent erwartet folgende Informationen:
 | Content Type | Location |
 |--------------|----------|
 | New features | `docs/features/[name].md` |
-| Solution attempts | `docs/project/solution_attempts.md` |
 | Lessons learned | `docs/reference/critical_lessons.md` |
-| Known issues | `docs/project/known_issues.md` |
-| Entity specs | `docs/specs/[type]/[entity_id].md` |
-| API reference | `docs/reference/api.md` |
-| Configuration | `docs/reference/config.md` |
+| Root-Cause-Analysen / Known issues | `docs/project/known_issues.md` |
+| Strategische Entscheidungen | `docs/project/strategic-directions.md` |
+| Grundsatzentscheidungen | `docs/adr/` (neues ADR, Index `docs/adr/README.md` mitziehen) |
+| Entity specs | `docs/specs/modules/[entity].md` |
+| API/DTOs | `docs/reference/api_contract.md` |
+| Gate-/Ratschen-Mechanik | `docs/reference/gates_und_ratschen.md` |
+
+**Offene Arbeit gehoert NICHT in Markdown** — Backlog ist ausschliesslich GitHub Issues.
 
 ## CLAUDE.md Rules
 
-CLAUDE.md darf NUR enthalten:
-- Project overview
-- Quick navigation links
-- Essential commands
-- High-level workflow summary
-
-CLAUDE.md darf NICHT enthalten:
-- Feature documentation (-> docs/features/)
-- Solution attempts (-> docs/project/)
-- Code examples >20 lines (-> docs/reference/)
-- Detailed configuration (-> docs/reference/)
+CLAUDE.md wird von diesem Agenten **nicht** editiert (geschuetzte Datei). Sie enthaelt nur
+Entscheidungen und Fakten, die man sonst nicht wissen kann; Detailmechanik gehoert nach
+`docs/reference/`. Aenderungsbedarf an CLAUDE.md im Output als Vorschlag melden.
 
 ## Update Workflow
 
@@ -74,9 +69,10 @@ Fuer jede betroffene Dok-Datei:
 3. Fuege Changelog-Eintraege hinzu (YYYY-MM-DD Format)
 4. Verifiziere dass Links noch funktionieren
 
-### Step 4: CHANGELOG.md
+### Step 4: Spec-Changelog
 
-Falls noch nicht geschehen, fuege einen Eintrag unter `[Unreleased]` hinzu.
+Im `## Changelog` der zugehoerigen Spec einen datierten Eintrag ergaenzen (das Repo fuehrt
+kein `CHANGELOG.md`).
 
 ## Documentation Standards
 
@@ -94,5 +90,5 @@ Fasse zusammen welche Docs aktualisiert wurden:
 Docs aktualisiert:
 - docs/specs/modules/auth.md - Implementation Details aktualisiert
 - docs/features/authentication.md - Neues Session-Handling dokumentiert
-- CHANGELOG.md - Eintrag unter [Unreleased] hinzugefuegt
+- docs/specs/modules/auth.md - Changelog-Eintrag ergaenzt
 ```

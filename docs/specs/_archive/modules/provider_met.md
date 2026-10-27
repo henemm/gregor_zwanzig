@@ -3,12 +3,14 @@ entity_id: provider_met
 type: module
 created: 2025-12-27
 updated: 2025-12-27
-status: draft
+status: deprecated
 version: "1.0"
 tags: [provider, weather, met-norway]
 ---
 
 # Provider: MET Norway
+
+> Abgelöst/entfernt durch ADR-0029 (Open-Meteo Standard-Provider; MET/MOSMIX nicht mehr im Code, ADR-0002 abgelöst).
 
 ## Approval
 

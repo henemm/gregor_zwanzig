@@ -55,11 +55,17 @@ Die FastAPI Scheduler-Endpoints sollen den `user_id` Query-Parameter lesen, den 
 
 ### Step 1: Scheduler-Endpoints (`api/routers/scheduler.py`)
 
-Alle 5 Endpoints erhalten `user_id: str = "default"` als Query-Parameter:
+> **Überholt (2026-09-19, Issue #2151 Scheibe A/C):** `user_id` ist inzwischen ein Pflicht-Parameter
+> ohne Default — die Codebeispiele unten zeigen den historischen Stand von 2026-04-16. Aktueller
+> Stand: `docs/reference/api_contract.md` (Abschnitt Multi-Tenant Behavior) und
+> `docs/specs/modules/fix_2151_default_fallbacks_scheibe_c.md`.
+
+Alle 5 Endpoints erhielten ursprünglich `user_id: str = "default"` als Query-Parameter (heute
+Pflicht-Parameter ohne Default, HTTP 422 bei fehlender Angabe):
 
 ```python
 @router.post("/morning-subscriptions")
-def trigger_morning(user_id: str = "default"):
+def trigger_morning(user_id: str):
     count = _run_subscriptions_by_schedule(Schedule.DAILY_MORNING, user_id)
     return {"status": "ok", "count": count}
 ```
@@ -75,6 +81,7 @@ Die Helper-Funktionen `_run_subscriptions_by_schedule` und `_run_weekly_subscrip
 ### Step 2: TripReportSchedulerService (`src/services/trip_report_scheduler.py`)
 
 ```python
+# Historischer Stand (2026-04-16); seit #2151 Scheibe C: `def __init__(self, settings=None, *, user_id: str)`
 def __init__(self, settings=None, user_id="default"):
     self._user_id = user_id
     # ...
@@ -85,6 +92,7 @@ In `send_reports_for_hour` und internen Methoden: `load_all_trips(user_id=self._
 ### Step 3: TripAlertService (`src/services/trip_alert.py`)
 
 ```python
+# Historischer Stand (2026-04-16); seit #2151 Scheibe C: `def __init__(self, settings=None, *, user_id: str, ...)`
 def __init__(self, settings=None, throttle_hours=2, user_id="default"):
     self._user_id = user_id
     self._throttle_file = Path(f"data/users/{user_id}/alert_throttle.json")
@@ -99,7 +107,9 @@ In `check_all_trips`: `load_all_trips(user_id=self._user_id)` statt `load_all_tr
 
 - **Input:** Go-Proxy sendet `POST /api/scheduler/morning-subscriptions?user_id=alice`
 - **Output:** Python laedt Subscriptions/Locations/Trips fuer User `alice` aus `data/users/alice/`
-- **Ohne user_id:** Default `"default"` — identisches Verhalten wie bisher
+- **Ohne user_id:** Historisch (bis #2151 Scheibe A/C) Default `"default"` — identisches Verhalten
+  wie bisher. Seit 2026-09-19 stattdessen: HTTP 422 (Endpoints) bzw. `TypeError` (Service-Konstruktoren),
+  kein impliziter Rückfall mehr.
 
 ## Known Limitations
 
@@ -109,3 +119,6 @@ In `check_all_trips`: `load_all_trips(user_id=self._user_id)` statt `load_all_tr
 ## Changelog
 
 - 2026-04-16: Initial spec (F13 Phase 3 — Python user_id Integration, GitHub Issue #12)
+- 2026-09-19: Als überholt markiert — `user_id="default"`-Defaults aus dieser Spec wurden durch
+  Issue #2151 (Scheiben A/B/C) entfernt; `user_id` ist seither überall Pflichtparameter ohne
+  impliziten Rückfall. Siehe `docs/specs/modules/fix_2151_default_fallbacks_scheibe_c.md`.

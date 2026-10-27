@@ -3,7 +3,7 @@ entity_id: feat_1406b_stundenverlauf_katalog
 type: feature
 created: 2026-08-01
 updated: 2026-08-01
-status: draft
+status: implemented
 version: "1.0"
 tags: [metric-catalog, compare, hourly, epic-1372, issue-1406, issue-1435]
 workflow: feat-1406b-stundenverlauf-katalog
@@ -34,7 +34,7 @@ Renderer-Spaltenliste). Diese Lieferung stellt Bedienfläche UND
 Auflösungspfad in einem Zug auf den Katalog um und führt die vier Stellen
 auf eine zusammen — sonst wächst genau das Muster, gegen das Epic #1372/
 Ticket #1435 antritt. Nach der Umstellung wählt der Nutzer im Stundenverlauf
-aus demselben Vorrat wie bei einer Tour.
+aus demselben Vorrat wie bei einer Trip.
 
 ## Source
 
@@ -289,7 +289,7 @@ Pflichtumfangs dieser Scheibe, nicht mehr ausgeklammert.
     (bzw. Nachfolgedatei, Name nach Verhalten) für die Leerauswahl-Regel,
     ergänzt um mindestens eine der 14 neuen Größen als Ab-/Anwahlfall.
 
-- **AC-4 (Bestandsschutz):** Given ein Ortsvergleich wurde vor dieser Änderung
+- **AC-4:** (Bestandsschutz) Given ein Ortsvergleich wurde vor dieser Änderung
   mit den alten Kurzschlüsseln gespeichert (z. B. `temp_c`, `wind_kmh`) / When
   er nach der Umstellung geladen und eine Mail dafür erzeugt wird / Then zeigt
   die Mail exakt dieselben Spalten wie vor der Umstellung — keine Migration,
@@ -318,7 +318,7 @@ Pflichtumfangs dieser Scheibe, nicht mehr ausgeklammert.
     aktiv, um zu belegen, dass der Merge nicht durch die Erweiterung gestört
     wird.
 
-- **AC-7 (Trip unberührt):** Given eine Tour (kein Ortsvergleich) mit
+- **AC-7:** (Trip unberührt) Given eine Trip (kein Ortsvergleich) mit
   Stundenverlauf in der Mail / When sie nach dieser Änderung gerendert wird /
   Then ist sie zeichengleich zu einer Mail vor der Änderung — diese Scheibe
   ändert `email/helpers.py`/`trip_report.py` nicht, Compare ruft weiterhin nur
@@ -328,7 +328,7 @@ Pflichtumfangs dieser Scheibe, nicht mehr ausgeklammert.
     aus Scheibe A) gegen ein bestehendes Golden — bleibt grün, ohne dass das
     Golden angepasst wird.
 
-- **AC-8 (Vorschau-Parität):** Given ein Nutzer betrachtet im Editor die
+- **AC-8:** (Vorschau-Parität) Given ein Nutzer betrachtet im Editor die
   Mail-Vorschau mit einer eingeschränkten Stundenverlauf-Auswahl / When die
   Vorschau gerendert wird / Then zeigt sie exakt dieselben Spalten wie die
   zugestellte Mail für dieselbe Auswahl — nicht mehr pauschal alle Spalten.
@@ -336,7 +336,7 @@ Pflichtumfangs dieser Scheibe, nicht mehr ausgeklammert.
     `hourly_metrics`-Feld; Spaltenmenge im Ergebnis-HTML entspricht der
     Auswahl, nicht der vollen Liste.
 
-- **AC-9 (Pflicht-Prüfer nimmt korrekte Mail ab):** Given eine zugestellte
+- **AC-9:** (Pflicht-Prüfer nimmt korrekte Mail ab) Given eine zugestellte
   Vergleichs-Mail enthält eine oder mehrere der 14 neu wählbaren Spalten /
   When `email_spec_validator.py` gegen diese Mail läuft / Then meldet er
   Exit 0 (keine „unbekannte Spalte"-Ablehnung); eine Mail mit einer
@@ -345,7 +345,7 @@ Pflichtumfangs dieser Scheibe, nicht mehr ausgeklammert.
     bestehender Negativtest mit einer nicht existierenden Spaltenbezeichnung
     (Exit ≠ 0, unverändert).
 
-- **AC-10 (Ratsche gegen Nachwachsen):** Given ein neuer vierter/fünfter
+- **AC-10:** (Ratsche gegen Nachwachsen) Given ein neuer vierter/fünfter
   Vokabular-Ort für die Zuordnung Stundenverlaufs-Schlüssel → Katalog-Größe
   entsteht künftig versehentlich wieder / When der Ratschen-Test läuft /
   Then schlägt er fehl und benennt die zusätzliche Fundstelle konkret — er
@@ -354,7 +354,7 @@ Pflichtumfangs dieser Scheibe, nicht mehr ausgeklammert.
   nicht fälschlich grün bleibt.
   - Test: neue Datei, s. „Wirksamkeitsnachweis der Ratsche".
 
-- **AC-11 (Sonnenschein sichtbar ausgenommen):** Given ein Nutzer öffnet die
+- **AC-11:** (Sonnenschein sichtbar ausgenommen) Given ein Nutzer öffnet die
   Grundauswahl des Stundenverlaufs / When er die Liste durchsieht / Then
   erscheint „Sonnenstunden" dort **mit sichtbarer Begründung nicht
   anwählbar** — nicht kommentarlos fehlend. Der Hinweis nennt den Grund
@@ -380,7 +380,7 @@ Pflichtumfangs dieser Scheibe, nicht mehr ausgeklammert.
   Fachliche Begründung der Ausnahme: Die Frage, die die stündliche
   Einstrahlung beantwortet (wie stark brennt die Sonne gerade), beantworten
   **Bewölkung** und **UV-Index** bereits — beide sind stündlich vorhanden und
-  für Tourenentscheidungen unmittelbar lesbar. Eine dritte Spalte mit
+  für Trip-Entscheidungen unmittelbar lesbar. Eine dritte Spalte mit
   „340 W/m²" brächte in einer Kurzübersicht keinen Zusatznutzen und schüfe
   eine Doppeldeutigkeit: dieselbe Größe hieße in der Tagesübersicht „Sonne
   in Stunden" und im Stundenverlauf „Watt pro Quadratmeter".
@@ -437,7 +437,7 @@ tatsächlich per IMAP zugestellte Mail liest, keine Vorschau-Antwort:
 1. Ein Test-Vergleich mit erweiterter Stundenverlauf-Auswahl (mindestens eine
    der 14 neuen Größen zusätzlich zu einer bestehenden) wird angelegt.
 2. **Ein** Testversand, Empfänger ausschließlich `gregor-test@henemm.com`
-   (kein Sammelversand über echte Touren — Kontingent-Schonung, #1329).
+   (kein Sammelversand über echte Trips — Kontingent-Schonung, #1329).
 3. IMAP-Abruf der zugestellten Mail.
 4. `.claude/hooks/email_spec_validator.py` gegen die zugestellte Mail —
    Exit 0 ist Pflichtbedingung für „E2E bestanden" (AC-9).
@@ -459,12 +459,12 @@ tatsächlich per IMAP zugestellte Mail liest, keine Vorschau-Antwort:
   Bildschirmen/in manchen Mail-Clients unhandlich werden. Kein Teil dieser
   Lieferung begrenzt die Anzahl aktiv gewählter Größen.
 - **Compare ruft `format_value`/`severity_for` nur AUF, importiert aber nicht
-  die Tour-Orchestrierung** (`dp_to_row`/`extract_hourly_rows` aus
+  die Trip-Orchestrierung** (`dp_to_row`/`extract_hourly_rows` aus
   `email/helpers.py`) — diese erwarten ein volles
   `UnifiedWeatherDisplayConfig`, das der Vergleich nicht hat. Geteilt ist die
   Formel, nicht die Aufrufsignatur. Ein künftiger Versuch, Compare direkt auf
   die Trip-Orchestrierung umzustellen, ist eine eigene, hier nicht
-  gelieferte Änderung mit Regressionsrisiko für die Tour-Mail.
+  gelieferte Änderung mit Regressionsrisiko für die Trip-Mail.
 - **`groupCompareCatalog()` entartet für den Stundenverlauf strukturell immer
   zum Ein-Options-Zweig** — der Baustein bringt hier keine funktionale
   Mehrfachauswahl (wie bei Temperatur im Ausblick), sondern ausschließlich

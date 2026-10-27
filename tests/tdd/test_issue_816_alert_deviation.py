@@ -53,6 +53,7 @@ from app.models import (
 )
 from app.trip import Stage, Trip, Waypoint
 import output.channels.telegram as telegram_mod
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 # ───────────────────────── echter Telegram-Socket-Sink (kein Mock) ──────────
@@ -136,7 +137,12 @@ def _settings_telegram_only() -> Settings:
     """Settings mit Telegram-Kanal (erfüllt can_send_telegram), kein SMTP."""
     return Settings(
         telegram_bot_token="test-token",
-        telegram_chat_id="test-chat",
+        telegram_chat_id="424200",  # #1412 S4a: numerisch (AC-6)
+        # Issue #1476 (Herkunftssperre): aus einem Testlauf-Checkout verlangt
+        # TelegramOutput die Test-Chat-ID, sonst bricht der Versand ab. Explizit
+        # auf die Stub-Chat-ID gesetzt, damit der Test NICHT von
+        # GZ_TELEGRAM_TEST_CHAT_ID aus einer Host-.env abhaengt (#1196 Klasse C).
+        telegram_test_chat_id="424200",
     )
 
 
@@ -241,7 +247,7 @@ def test_ac1_alert_does_not_overwrite_briefing_snapshot(
 
     # Frischer Wert weicht stark ab (Regen 18 mm, Δ=16 > Katalog-Schwelle 10)
     fresh = [_data(precip_sum_mm=18.0)]
-    service = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
     service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
@@ -276,7 +282,7 @@ def test_ac2_repeated_same_deviation_is_suppressed(telegram_sink, clean_user_dir
     _save_briefing_snapshot(user_id, trip.id, cached)
     fresh = [_data(precip_sum_mm=18.0)]
 
-    service = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     first = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
     assert first is True, "Erster Alert sollte versendet werden"
     assert telegram_sink.send_count() == 1, "Erster Lauf: genau ein Telegram-Versand"
@@ -285,7 +291,7 @@ def test_ac2_repeated_same_deviation_is_suppressed(telegram_sink, clean_user_dir
     assert state, "alert_state wurde nach erstem Alert nicht angelegt"
 
     # Zweiter Lauf, gleiche Abweichung, frischer Service (lädt alert_state von Platte)
-    service2 = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service2 = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     second = service2.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
     assert second is False, "Zweiter Alert mit gleicher Δ darf nicht versendet werden"
@@ -325,7 +331,7 @@ def test_ac3_escalation_triggers_new_alert_and_updates_state(
 
     # Frischer Wert 20 → |20 - 10| = 10 ≥ Threshold (Katalog-Default precip 10)
     fresh = [_data(precip_sum_mm=20.0)]
-    service = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     result = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
     assert result is True, "Eskalation (Δ ≥ Threshold zum zuletzt gemeldeten Wert) muss alerten"
@@ -356,7 +362,7 @@ def test_ac4_alert_state_is_tenant_isolated(telegram_sink, clean_user_dirs):
     _save_briefing_snapshot(user_a, trip_a.id, cached)
     fresh = [_data(precip_sum_mm=18.0)]
 
-    service_a = TripAlertService(settings=_settings_telegram_only(), user_id=user_a)
+    service_a = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_a, _settings_telegram_only()))
     service_a.check_and_send_alerts(trip_a, cached, fresh_weather=fresh)
 
     state_dir_a = get_data_dir(user_a) / "alert_state"
@@ -796,7 +802,7 @@ def test_ac8b_wind_gust_metric_level_trip_gets_delta_alert(telegram_sink, clean_
 
     # Frischer Wert: Böen 45 km/h → Δ=25 ≥ Standard-Schwelle 20 → Alert MUSS fallen
     fresh = [_data(gust_max_kmh=45.0)]
-    service = TripAlertService(settings=_settings_telegram_only(), user_id=user_id)
+    service = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     result = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
     assert result is True, (

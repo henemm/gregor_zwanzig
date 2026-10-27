@@ -3,7 +3,7 @@ entity_id: bug_505_speichern_bearbeiten
 type: bugfix
 created: 2026-06-02
 updated: 2026-06-02
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip-detail, header, edit-mode, svelte]
 ---

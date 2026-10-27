@@ -28,13 +28,51 @@ if TYPE_CHECKING:
     from datetime import tzinfo
     from app.models import SegmentWeatherSummary, ForecastDataPoint
 
-from app.metric_catalog import get_metric
+from app.metric_catalog import aggregation_label_de, get_metric
 from output.renderers.email.helpers import format_trend_tokens
 from output.renderers.email.thunder_branch import (
-    _thunder_token_parts, resolve_thunder_day_branch,
+    resolve_thunder_day_branch, thunder_cell_html, thunder_cell_plain,
+    thunder_column_index,
 )
 from output.renderers.email.design_tokens import FONT_DATA, tone_css
 from utils.geo import degrees_to_compass
+
+
+# ---------------------------------------------------------------------------
+# ACC-Stufen — EINE Quelle fuer Farbpunkt (HTML) und Wort (Klartext)
+# ---------------------------------------------------------------------------
+
+# Issue #2098 Befund C: der Farbpunkt ist im HTML der einzige Informations-
+# traeger, im Klartext braucht dieselbe Aussage ein Wort ("HTML=Normalfassung,
+# Farbe im HTML ⇒ WORT im Klartext"). Beide lesen dieselben vier Untergrenzen,
+# damit Wort und Punkt nicht auseinanderdriften koennen.
+# (Untergrenze | None = Restfall, Farbe, Klartext-Wort)
+_ACC_STUFEN = (
+    (80, "#2f8a3e", "hoch"),
+    (60, "#e3b008", "mittel"),
+    (40, "#e07b1a", "niedrig"),
+    (None, "#c52a22", "sehr niedrig"),
+)
+_ACC_KEIN_WERT = "–"
+ACC_LABEL = "ACC"
+
+
+def _acc_stufe(conf_pct) -> tuple[str, str] | None:
+    """(Farbe, Klartext-Wort) zu einer Prognose-Genauigkeit; ``None`` ohne Wert."""
+    try:
+        v = float(conf_pct)
+    except (TypeError, ValueError):
+        return None
+    for grenze, farbe, wort in _ACC_STUFEN:
+        if grenze is None or v >= grenze:
+            return farbe, wort
+    return None
+
+
+def _acc_wort(conf_pct) -> str:
+    """Klartext-Entsprechung des ACC-Farbpunkts (#2098 AC-6/AC-11/AC-12)."""
+    stufe = _acc_stufe(conf_pct)
+    return stufe[1] if stufe else _ACC_KEIN_WERT
 
 
 # ---------------------------------------------------------------------------
@@ -99,21 +137,12 @@ def render_outlook_table(
 
     # 4-stufiger ACC-Dot aus confidence_pct
     # hoch>=80=ok, mittel>=60=caution, niedrig>=40=warn, sehr_niedrig<40=danger
+    # #2098: Stufen aus `_ACC_STUFEN` -- dieselbe Quelle wie das Klartext-Wort.
     def _acc_dot(conf_pct) -> str:
-        if conf_pct is None:
-            return "–"
-        try:
-            v = float(conf_pct)
-        except (TypeError, ValueError):
-            return "–"
-        if v >= 80:
-            color = "#2f8a3e"
-        elif v >= 60:
-            color = "#e3b008"
-        elif v >= 40:
-            color = "#e07b1a"
-        else:
-            color = "#c52a22"
+        stufe = _acc_stufe(conf_pct)
+        if stufe is None:
+            return _ACC_KEIN_WERT
+        color = stufe[0]
         return (
             f'<span style="display:inline-block;width:10px;height:10px;'
             f'border-radius:50%;background:{color};"></span>'
@@ -125,6 +154,9 @@ def render_outlook_table(
         f'padding:6px 4px;text-align:center;font-family:{FONT_DATA};'
         f'font-size:10px;font-weight:600;color:#3a3835;white-space:nowrap;"'
     )
+    # #2098 Befund B: die ACC-Kopfzelle gilt fuer BEIDE Zweige -- der Trip
+    # laeuft seit #1848 A3 praktisch immer ueber den konfigurierbaren.
+    _acc_th = f'<th {_oh_style}>{ACC_LABEL}</th>' if show_acc else ""
     if metrics is not None:
         from output.renderers.compare_outlook_metric_ids import outlook_columns
 
@@ -132,54 +164,74 @@ def render_outlook_table(
         head = "".join(
             f'<th {_oh_style}>{_html.escape(c["label"])}</th>' for c in columns
         )
+        # #1848 A3: die Gewitter-Zelle entsteht aus DEMSELBEN Zellenbau wie im
+        # festen Zweig darunter (thunder_cell_html) -- `cells` traegt dort nur
+        # das Stufenwort, ohne Onset-Uhrzeit, Nachtanteil, Herkunft und Hagel.
+        gew_index = thunder_column_index(columns)
         body = ""
         for stage in rows:
             cells = stage.get("cells") or []
             # Issue #1849: Ampel-Hintergruende parallel zu den Zellentexten.
             cell_bg = stage.get("cell_bg") or []
+            texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
+            if gew_index is not None:
+                texte[gew_index] = thunder_cell_html(format_trend_tokens(stage), stage)
+            # #2098 Befund B: ACC HINTER den gewaehlten Spalten -- am
+            # `outlook_columns()`/`cells`-Mechanismus vorbei, damit
+            # `confidence` nie eine waehlbare Metrik wird (ADR-0005/#710).
+            # Kopf- und Datenzelle haengen an DEMSELBEN `show_acc`, ein
+            # Auseinanderlaufen von Beschriftung und Wert ist damit
+            # ausgeschlossen (AC-10).
+            acc_td = (
+                _otd(_acc_dot(stage.get("confidence_pct"))) if show_acc else ""
+            )
             body += (
                 '<tr>' + _otd(stage.get("weekday", "–"))
                 + "".join(
-                    _otd(_html.escape(cells[i] if i < len(cells) else "–"),
+                    _otd(_html.escape(text),
                          bg=cell_bg[i] if i < len(cell_bg) else "")
-                    for i in range(len(columns))
+                    for i, text in enumerate(texte)
                 )
+                + acc_td
                 + '</tr>'
             )
         return (
             '<table cellpadding="0" cellspacing="0" '
             'style="border-collapse:collapse;width:100%;'
             'border-top:2px solid #1d1c1a;">'
-            f'<thead><tr><th {_oh_style}>Tag</th>{head}</tr></thead>'
+            f'<thead><tr><th {_oh_style}>Tag</th>{head}{_acc_th}</tr></thead>'
             f'<tbody>{body}</tbody></table>'
         )
 
-    _acc_th = f'<th {_oh_style}>ACC</th>' if show_acc else ""
+    # #2136/ADR-0068: die sieben Standardfall-Kuerzel (bisher "N D R PR Wind
+    # Böen Gew") sind KEINE eigene Namensliste mehr, sondern aus demselben
+    # zentralen Register abgeleitet wie die Stunden-/Etappentabelle derselben
+    # Mail (`MetricDefinition.col_label`). Die beiden Temperatur-Spalten (bisher
+    # "N"/"D") sind der statische Kollisionsfall aus AC-7: eine nackte
+    # `col_label`-Ersetzung ergaebe zweimal "Temp" -- deshalb traegt jede ihr
+    # Auswertungs-Suffix (`aggregation_label_de`, dieselbe Wortquelle wie die
+    # Duplikat-Aufloesung in `outlook_columns()`). `Tag` bleibt unveraendert,
+    # ist kein Katalogfeld; die Spaltenzahl bleibt bei acht.
+    _temp_col_label = get_metric("temperature").col_label
+    _pfad1_labels = (
+        f"{_temp_col_label} {aggregation_label_de('min')}",
+        f"{_temp_col_label} {aggregation_label_de('max')}",
+        get_metric("precipitation").col_label,
+        get_metric("rain_probability").col_label,
+        get_metric("wind").col_label,
+        get_metric("gust").col_label,
+        get_metric("thunder").col_label,
+    )
     outlook_thead = (
         f'<thead><tr>'
         f'<th {_oh_style}>Tag</th>'
-        f'<th {_oh_style}>N</th>'
-        f'<th {_oh_style}>D</th>'
-        f'<th {_oh_style}>R</th>'
-        f'<th {_oh_style}>PR</th>'
-        f'<th {_oh_style}>Wind</th>'
-        f'<th {_oh_style}>Böen</th>'
-        f'<th {_oh_style}>Gew</th>'
-        f'{_acc_th}'
-        f'</tr></thead>'
+        + "".join(
+            f'<th {_oh_style}>{_html.escape(label)}</th>' for label in _pfad1_labels
+        )
+        + f'{_acc_th}'
+        + '</tr></thead>'
     )
 
-    # Issue #1474: LOW ("leicht") ergaenzt -- Wort aus der geteilten Quelle
-    # (metric_format.THUNDER_LABEL_DE, "geteilte Quelle statt Kopien").
-    # Str-Enum-Hash-Aequivalenz (s. metric_format.py): der rohe String-Key
-    # findet denselben Eintrag wie die ThunderLevel-Instanz.
-    from output.metric_format import THUNDER_LABEL_DE as _THUNDER_LABEL_DE
-    from output.metric_format import format_hail_note as _format_hail_note
-    _THUNDER_LEVEL_LABEL = {
-        "LOW": _THUNDER_LABEL_DE["LOW"],
-        "MED": _THUNDER_LABEL_DE["MED"],
-        "HIGH": _THUNDER_LABEL_DE["HIGH"],
-    }
     # Fix #1801 S1: MED/HIGH aus tone_css() (EINE Quelle); LOW bleibt bewusst
     # ein abweichender, eigener Gelbton ausserhalb des Ampel-Vokabulars
     # (Spec „Nicht-Ziele").
@@ -206,54 +258,13 @@ def render_outlook_table(
         hourly_gust = stage.get("hourly_gust") or ()
         gust_kmh = max((float(g.value) if hasattr(g, "value") else float(g)
                         for g in hourly_gust if g is not None), default=None)
-        # F002: Gew = Stufe + Uhrzeit (kein Fake-%), Hintergrund nach Level
+        # F002: Gew = Stufe + Uhrzeit (kein Fake-%), Hintergrund nach Level.
+        # #1848 A3: der Zellenbau (Tag/Nacht-Split #1653, Onset-Uhrzeit,
+        # Herkunft #1680 S5a, Hagel-Zusatz #1475) steht jetzt in
+        # `thunder_cell_html()` -- DIESELBE Quelle, die auch der
+        # konfigurierbare Zweig oben ruft.
         thunder_level = (stage.get("thunder", "NONE") or "NONE").upper()
-        # Issue #1653: Tag- und Nachtanteil getrennt, damit ein Nachtgewitter
-        # nicht mehr hinter dem staerkeren Tageswert verschwindet -- oder
-        # umgekehrt. Wort UND Uhrzeit des Tagesteils stammen aus demselben
-        # Token und damit aus demselben Fenster; vorher kam das Wort aus
-        # `stage["thunder"]` (auf die Gehzeit geklemmtes Aggregat) und nur die
-        # Uhrzeit aus dem Tagesfenster -- zwei Rechnungen, die nur meist
-        # uebereinstimmten: sagte das Aggregat "NONE", waehrend im Tagesfenster
-        # ein Gewitter lag, verschwand der Tagesteil ganz.
-        day_part = None
-        d_tok = tokens.get("thunder_day_token", "-")
-        _d = _thunder_token_parts(d_tok)
-        if _d:
-            day_part = f"{_d[0]} @{_d[1]}{_d[2]}"
-            # Issue #1680 S5a: die tragende Zutat unmittelbar hinter der
-            # Uhrzeit des Tagesteils -- vor Nacht- und Hagel-Zusatz (AC-1/AC-5).
-            _origin = tokens.get("thunder_day_origin")
-            if _origin:
-                day_part += f" · {_origin}"
-        elif not (stage.get("hourly_thunder") or ()) and thunder_level in (
-            "LOW", "MED", "HIGH",
-        ):
-            # Ohne jede Stundenreihe kann der Split nichts sagen -- dann wie
-            # bisher die Stufe des Aggregats ohne Uhrzeit (Alt-Fixtures).
-            day_part = _THUNDER_LEVEL_LABEL[thunder_level]
-
-        night_part = None
-        n_tok = tokens.get("thunder_night_token", "-")
-        _m = _thunder_token_parts(n_tok)
-        if _m:
-            night_part = f"nachts {_m[0]} @{_m[1]}{_m[2]}"
-
-        if day_part and night_part:
-            gew_str = f"{day_part} · {night_part}"
-        elif day_part:
-            gew_str = day_part
-        elif night_part:
-            gew_str = night_part
-        else:
-            gew_str = "–"
-
-        if gew_str != "–":
-            # Issue #1475 Nachbesserung (Punkt 4b): rein deskriptiver
-            # Hagel-Zusatz an der Gewitter-Zelle (ADR-0007, kein Rat).
-            _hail_note = _format_hail_note(stage.get("hail"))
-            if _hail_note:
-                gew_str += f" · {_hail_note}"
+        gew_str = thunder_cell_html(tokens, stage)
 
         n_str = f"{temp_min:.0f}°" if temp_min is not None else "–"
         d_str = f"{temp_max:.0f}°" if temp_max is not None else "–"
@@ -314,9 +325,11 @@ def render_outlook_plain(
 ) -> str:
     """Rendert den Klartext-Ausblick-Block.
 
-    ``show_acc`` existiert fuer Signatur-Symmetrie mit
-    ``render_outlook_table``; der Klartext-Ausblick zeigte schon im
-    Ist-Zustand keine ACC-Spalte, daher ohne Effekt.
+    ``show_acc`` haengt im konfigurierbaren Zweig (``metrics`` gesetzt) das
+    ACC-Wort hinter die gewaehlten Spalten -- die Klartext-Entsprechung des
+    HTML-Farbpunkts (#2098 Befund C). Der Altform-Zweig zeigte ACC noch nie
+    und bleibt unveraendert; ``show_acc=False`` (Ortsvergleich) laesst die
+    Spalte in beiden Zweigen entfallen.
 
     ``metrics`` (#1361): gesetzte Auswahl ersetzt die festen Wert-Tokens
     durch die gewaehlten Groessen. ``heading`` (#1368): Compare schreibt
@@ -333,12 +346,34 @@ def render_outlook_plain(
         if metrics is not None:
             from output.renderers.compare_outlook_metric_ids import outlook_columns
 
+            columns = outlook_columns(metrics)
             cells = stage.get("cells") or []
+            texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
+            # #1848 A3: Gewitterfeld aus DEMSELBEN Zellenbau wie der feste
+            # Zweig darunter -- mit Onset-Uhrzeit, Nachtanteil, Herkunft und
+            # Hagel statt bloss dem Stufenwort aus `cells`.
+            gew_index = thunder_column_index(columns)
+            if gew_index is not None:
+                texte[gew_index] = thunder_cell_plain(format_trend_tokens(stage), stage)
             values = "  ".join(
-                f"{c['label']} {cells[i] if i < len(cells) else '–'}"
-                for i, c in enumerate(outlook_columns(metrics))
+                [f"{c['label']} {texte[i]}" for i, c in enumerate(columns)]
+                # #2098 Befund C: der ACC-Farbpunkt des HTML ist fuer
+                # Klartext-Leser unsichtbar -- dieselbe Aussage als Wort,
+                # aus derselben Stufenquelle, an derselben Position
+                # (hinter den gewaehlten Spalten) wie im HTML.
+                + ([f"{ACC_LABEL} {_acc_wort(stage.get('confidence_pct'))}"]
+                   if show_acc else [])
             )
-            lines.append(f"{weekday:<3} {values}".rstrip())
+            # #1848 A3: Etappenname und Notiz stehen auch hier -- der feste
+            # Zweig darunter fuehrt beide seit jeher, und seit A3 laeuft JEDE
+            # Tour ueber diesen Zweig. Ohne sie verloere der Klartext-Ausblick
+            # die Zuordnung Zeile -> Etappe. `show_name=False` (Ortsvergleich,
+            # #1368) laesst das Feld wie bisher entfallen.
+            name_field = f"{stage.get('name', ''):<26} " if show_name else ""
+            lines.append(f"{weekday:<3} {name_field}{values}".rstrip())
+            note = stage.get("note")
+            if note:
+                lines.append(f"    ↳ {note}")
             continue
 
         tok = format_trend_tokens(stage)
@@ -346,66 +381,26 @@ def render_outlook_plain(
         # Precip str — zero decision from format_trend_tokens
         precip_str = tok["precip_str"]
 
-        # Issue #1653: das Tageswort stammt aus derselben Quelle wie in der
-        # HTML-Zelle -- `thunder_day_token` (nach Tagesfenster gefilterte
-        # Stundenreihe), nicht mehr aus `stage["thunder"]` ueber
-        # `tok['thunder_plain']` (auf die Gehzeit geklemmtes Aggregat). Zwei
-        # Rechnungen, die nur meist uebereinstimmten: sagte das Aggregat
-        # "NONE", waehrend im Tagesfenster ein Gewitter lag, verschwand es
-        # hier ganz -- und umgekehrt behauptete die Zeile ein Tagesgewitter,
-        # wenn das Aggregat eine Stufe trug, die Stundenreihe im Tagesfenster
-        # aber leer war.
-        # Issue #1671: Zweigwahl aus dem geteilten Helfer (identisch zu
-        # compact.py/narrow.py) -- nur die Formatierung bleibt hier lokal.
-        from output.renderers.email.helpers import _THUNDER_MAP
-        branch = resolve_thunder_day_branch(tok, stage)
-        # Der Helfer entscheidet nur ueber `thunder_day_token != "-"`; ob
-        # der Token tatsaechlich zerlegbar ist (`_THUNDER_TOKEN_RE`),
-        # bleibt Aufrufer-Sache -- ein gesetzter, aber unzerlegbarer Token
-        # fiel im Altcode auf denselben Zweig zurueck wie "none" (ein
-        # ungesetzter Token bedeutet immer auch keinen hourly_thunder-Wert
-        # dieser Stunde). Reines `if branch == "day": thunder_word = ...`
-        # ohne diesen Guard wuerde bei einem unzerlegbaren Token mit
-        # `_dm is None` abstuerzen (TypeError beim Subscript).
-        _dm = _thunder_token_parts(tok.get("thunder_day_token", "-")) if branch == "day" else None
-        if _dm:
-            # Issue #1493: die Onset-Stunde (`_dm[1]`) wurde hier bisher
-            # verworfen, obwohl HTML-Ausblickzelle, Telegram und SMS sie
-            # laengst fuehren -- Tag- und Nachtteil sprechen jetzt dieselbe
-            # Grammatik (loest AC-2 aus #1680 S5a ab).
-            thunder_word = f"⚡{_dm[0]}@{_dm[1]}{_dm[2]}"
-            # Issue #1680 S5a: derselbe Zusatz wie in der HTML-Zelle, aus
-            # demselben Token.
-            _origin = tok.get("thunder_day_origin")
-            if _origin:
-                thunder_word += f" · {_origin}"
-        elif branch in ("day", "none"):
-            # Stundenreihe da, im Tagesfenster aber kein Gewitter (bzw. ein
-            # gesetzter, aber unzerlegbarer Tages-Token).
-            thunder_word = _THUNDER_MAP["NONE"]["plain"]
-        else:
-            # Ohne jede Stundenreihe (Alt-Aufrufer, Compare) bleibt es beim
-            # Aggregatwort -- der Split kann dort nichts sagen.
-            thunder_word = tok["thunder_plain"]
+        # Issue #1653/#1493/#1680 S5a/#1475: Tageswort aus dem Tagesfenster
+        # mit Onset-Uhrzeit, Herkunft, Nacht- und Hagel-Zusatz. #1848 A3: der
+        # Zellenbau steht in `thunder_cell_plain()` -- DIESELBE Quelle, die
+        # auch der konfigurierbare Zweig oben ruft.
+        thunder_word = thunder_cell_plain(tok, stage)
 
+        # #2136/ADR-0068 (AC-4): jedes tatsaechlich gerenderte Token traegt
+        # das `col_label`-Praefix seiner Groesse -- dieselbe Quelle wie die
+        # Pfad-1-Kopfzeile des HTML-Ausblicks und die Stundentabelle derselben
+        # Mail. Die Temperatur-Spanne bleibt OHNE Auswertungs-Suffix: der
+        # Klartext fuehrt Tief/Hoch bereits als EIN Token zusammen (kein
+        # AC-7-Kollisionsfall, den gibt es nur bei zwei getrennten Spalten).
         name_field = f"{name:<26} " if show_name else ""
         line = (
-            f"{weekday:<3} {name_field}{tok['temp_str']:<8} "
-            f"{precip_str:<5} {tok['wind_str']:<5} {thunder_word}"
+            f"{weekday:<3} {name_field}"
+            f"{get_metric('temperature').col_label} {tok['temp_str']:<8} "
+            f"{get_metric('precipitation').col_label} {precip_str:<5} "
+            f"{get_metric('wind').col_label} {tok['wind_str']:<5} "
+            f"{get_metric('thunder').col_label} {thunder_word}"
         )
-        # Issue #1653: Nacht-Zusatz mit Uhrzeit -- die Klartext-Zeile zeigte
-        # bisher ausschliesslich das Tageswort, ein Nachtgewitter erschien
-        # dort nie.
-        _n_tok = tok.get("thunder_night_token", "-")
-        _nm = _thunder_token_parts(_n_tok)
-        if _nm:
-            line += f" · nachts {_nm[0]} @{_nm[1]}{_nm[2]}"
-        # Issue #1475 Nachbesserung (Punkt 4b): derselbe deskriptive
-        # Hagel-Zusatz wie in der HTML-Ausblick-Tabelle (geteilte Quelle).
-        from output.metric_format import format_hail_note
-        _note = format_hail_note(stage.get("hail"))
-        if _note:
-            line = f"{line} · {_note}"
         lines.append(line)
 
         note = stage.get("note")
@@ -444,6 +439,68 @@ def _metric_column_bg(col: dict, raw: object) -> str:
     return f"background:{tone_css(band)[0]};"
 
 
+
+# #1848 A1 (AC-1/AC-2/AC-3): Gehzeit-Fenster-Override je Summary-Feld.
+# `hiking_extrema` ist ein bereits fertiges hiking_field_min_max()-Mapping
+# (Vorbild sms_thresholds) -- dieselben Funktionen, die sms_trip.py fuer
+# D/FD nutzt (Issue #1417). Fail-soft: fehlt der Key oder ist
+# `hiking_extrema` None, bleibt das Etappenaggregat (AC-2). Berechnet wird
+# es entweder vom Aufrufer selbst UEBERGEBEN oder HIER aus `segments`
+# abgeleitet (s. `_resolve_hiking_extrema`) -- `trip_report_scheduler.py`
+# darf `output.renderers.day_window` nicht selbst importieren
+# (Architektur-Wache `test_scheduler_has_no_output_imports`), reicht daher
+# die rohen Segmente durch statt das Ergebnis vorzurechnen.
+_HIKING_FIELD_MAP = {
+    "temp_min_c": ("t2m_c", 0),
+    "temp_max_c": ("t2m_c", 1),
+    "wind_chill_min_c": ("wind_chill_c", 0),
+    "wind_chill_max_c": ("wind_chill_c", 1),
+}
+
+
+def _hiking_or_summary(
+    summary: "SegmentWeatherSummary", field: Optional[str], hiking_extrema: Optional[dict],
+) -> object:
+    """Wert fuer ``field`` aus dem Gehzeit-Fenster, wenn ein Override vorliegt
+    -- sonst faellt es fail-soft auf das Etappenaggregat zurueck (AC-2)."""
+    if field is None:
+        return None
+    hit = _HIKING_FIELD_MAP.get(field)
+    if hit is not None and hiking_extrema is not None:
+        extrema = hiking_extrema.get(hit[0])
+        if extrema is not None:
+            return extrema[hit[1]]
+    return getattr(summary, field, None)
+
+
+def _resolve_hiking_extrema(
+    hiking_extrema: Optional[dict], segments: Optional[list],
+) -> Optional[dict]:
+    """``hiking_extrema`` hat Vorrang; ohne es aber mit ``segments`` wird das
+    Gehzeit-Fenster HIER berechnet (``output.renderers.day_window`` ist ein
+    Renderer-Modul, der Import gehoert deshalb in diese Schicht, nicht in den
+    Zeitplaner). Segmentlose Teile (kein ``.segment``, nur Zeitreihe --
+    Test-Doubles) bleiben aussen vor statt die Berechnung abstuerzen zu
+    lassen."""
+    if hiking_extrema is not None or not segments:
+        return hiking_extrema
+    from output.renderers.day_window import (
+        collect_hiking_window_points, hiking_field_min_max,
+    )
+
+    usable = [s for s in segments if getattr(s, "segment", None) is not None]
+    hiking_points = collect_hiking_window_points(usable)
+    resolved = {
+        field: extrema
+        for field, extrema in (
+            ("t2m_c", hiking_field_min_max(hiking_points, "t2m_c")),
+            ("wind_chill_c", hiking_field_min_max(hiking_points, "wind_chill_c")),
+        )
+        if extrema is not None
+    }
+    return resolved or None
+
+
 def build_outlook_row(
     summary: "SegmentWeatherSummary",
     points: list["ForecastDataPoint"],
@@ -456,6 +513,9 @@ def build_outlook_row(
     report_type: Optional[str] = None,
     day_window_start_hour: Optional[int] = None,
     day_window_end_hour: Optional[int] = None,
+    hiking_extrema: Optional[dict] = None,
+    segments: Optional[list] = None,
+    outlook_metric_formats: Optional[dict] = None,
 ) -> dict:
     """Baut ein Ausblick-Row-Dict aus einer SegmentWeatherSummary + Punktliste.
 
@@ -489,19 +549,57 @@ def build_outlook_row(
     Zellen dieser Zeile koennen nicht nach einer anderen Regel entstehen als
     die Ueberschriften darueber. Ein ausdrueckliches ``metrics`` hat Vorrang
     (Compare-Pfad unveraendert).
+
+    ``hiking_extrema`` (#1848 A1, AC-1/AC-2/AC-3): optionales Mapping
+    ``{"t2m_c": (min, max, max_ts), "wind_chill_c": (...)}`` --
+    ``hiking_field_min_max()``-Ergebnisse aus dem Gehzeit-Fenster
+    (``collect_hiking_window_points()``), das der Aufrufer SELBST berechnet
+    (er kennt Segmente, diese Funktion nicht). Wirkt an BEIDEN Wertequellen:
+    ``temp_lo``/``temp_hi`` des festen Altform-Pfads UND ``getattr(summary,
+    col["field"])`` der ``cells``-Schleife des konfigurierbaren Pfads.
+    Fehlender Key/``None`` faellt fail-soft auf das Etappenaggregat zurueck.
+
+    ``outlook_metric_formats`` (#2049): Roh/Einfach je Ausblick-Groesse
+    (``{kennung: bool}``). Wie bei ``metrics`` hat die ausdrueckliche Uebergabe
+    Vorrang; ohne sie wird die Zuordnung aus ``trip_display_config``
+    aufgeloest, damit der Zeitplaner auch dafuer kein Renderer-Vokabular
+    braucht. Die ZELLEN entstehen hier genau einmal und speisen alle vier
+    Ausgabeorte -- deshalb ist dies die einzige Stelle, an der das Flag
+    ankommen muss (die Kopfzeilen der Renderer brauchen es nicht, ihre
+    Beschriftung aendert sich nicht).
+
+    ``segments`` (#1848 A1, Alternative zu ``hiking_extrema``): der Aufrufer
+    (``trip_report_scheduler.py``) hat ``seg_weather`` bereits vorliegen,
+    darf aber ``output.renderers.day_window`` selbst nicht importieren
+    (Architektur-Wache ``test_scheduler_has_no_output_imports``) -- reicht
+    daher die rohen Segmente durch, die Ableitung passiert HIER
+    (``_resolve_hiking_extrema``). Ein explizites ``hiking_extrema`` hat
+    Vorrang vor ``segments``.
     """
+    hiking_extrema = _resolve_hiking_extrema(hiking_extrema, segments)
     if metrics is None and trip_display_config is not None:
         from output.renderers.compare_outlook_metric_ids import (
             resolve_trip_outlook_metrics,
         )
 
         metrics = resolve_trip_outlook_metrics(trip_display_config, report_type)
+    if outlook_metric_formats is None and trip_display_config is not None:
+        # #2049: dieselbe Bauart wie `metrics` eine Zeile darueber -- der
+        # Zeitplaner reicht die ungekollabierte Konfiguration durch, die
+        # Aufloesung passiert in der Ausgabeschicht.
+        from output.renderers.compare_outlook_metric_ids import (
+            resolve_trip_outlook_formats,
+        )
+
+        outlook_metric_formats = resolve_trip_outlook_formats(trip_display_config)
     from output.metric_format import thunder_label_value
     from output.tokens.dto import HourlyValue
     from utils.timezone import local_hour as _lh
 
-    temp_lo = int(summary.temp_min_c) if summary.temp_min_c is not None else None
-    temp_hi = int(summary.temp_max_c) if summary.temp_max_c is not None else None
+    _temp_lo_raw = _hiking_or_summary(summary, "temp_min_c", hiking_extrema)
+    _temp_hi_raw = _hiking_or_summary(summary, "temp_max_c", hiking_extrema)
+    temp_lo = int(_temp_lo_raw) if _temp_lo_raw is not None else None
+    temp_hi = int(_temp_hi_raw) if _temp_hi_raw is not None else None
     precip_mm = float(summary.precip_sum_mm or 0.0)
     wind_kmh = int(summary.wind_max_kmh or 0)
     wind_dir = degrees_to_compass(getattr(summary, "wind_direction_avg_deg", None))
@@ -521,7 +619,12 @@ def build_outlook_row(
     # (eine Fensterauflösung, nicht zwei; Spec AC-9).
     _thunder_signals: list = []
     _hat_signale = False
+    # Issue #2205: Ortszeit-Stunden mit bestaetigtem Hagel -- Quelle fuer den
+    # Hagelzusatz im Nacht-Halbsatz der Gewitter-Vorschau (Trend-Weg).
+    _hail_hours: list = []
     for dp in points:
+        if getattr(dp, "hail_flag", None) is True:
+            _hail_hours.append(_lh(dp.ts, tz))
         lh = _lh(dp.ts, tz)
         if dp.precip_1h_mm is not None:
             _hourly_precip.append(HourlyValue(hour=lh, value=dp.precip_1h_mm))
@@ -589,12 +692,14 @@ def build_outlook_row(
         "hourly_thunder_signals": (
             tuple(_thunder_signals) if _hat_signale else None
         ),
+        # Issue #2205: ohne Hagelstunde bleibt das Row-Dict zeichengleich.
+        "hourly_hail": tuple(_hail_hours) or None,
     }
     row.update({k: v for k, v in optional.items() if v is not None})
 
     if metrics is not None:
         from output.renderers.compare_outlook_metric_ids import (
-            format_outlook_value, outlook_columns,
+            format_outlook_range_cell, format_outlook_value, outlook_columns,
         )
 
         # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 4): der Hagel-Wert
@@ -642,9 +747,22 @@ def build_outlook_row(
         # Gewitterspalte am oben (#1841) aufgeloesten Tagesfenster vorbeigehen.
         cells: list[str] = []
         cell_bg: list[str] = []
-        for col in outlook_columns(metrics):
+        for col in outlook_columns(metrics, outlook_metric_formats):
             ordinal = col.get("kind") == "ordinal"
-            raw = _thunder_value if ordinal else getattr(summary, col["field"], None)
+            # #1848 A1 (AC-4..AC-8): eine zusammengefuehrte Spannen-Spalte
+            # traegt `field_min`/`field_max` statt `field` -- BEIDE Seiten
+            # gehen (mit demselben Gehzeit-Fenster-Override wie der
+            # Einzelwert-Fall) in EINE Zelle "{min}/{max}".
+            if "field_min" in col or "field_max" in col:
+                raw_min = _hiking_or_summary(summary, col.get("field_min"), hiking_extrema)
+                raw_max = _hiking_or_summary(summary, col.get("field_max"), hiking_extrema)
+                cells.append(format_outlook_range_cell(raw_min, raw_max, col))
+                cell_bg.append(_metric_column_bg(col, raw_max))
+                continue
+            raw = (
+                _thunder_value if ordinal
+                else _hiking_or_summary(summary, col.get("field"), hiking_extrema)
+            )
             cells.append(format_outlook_value(
                 raw,
                 {**col, "hail": _hail,

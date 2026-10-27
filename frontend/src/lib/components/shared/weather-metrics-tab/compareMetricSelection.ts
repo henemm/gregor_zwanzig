@@ -20,6 +20,9 @@ export interface CompareSelectionEntry {
 	// Groesse, unveraendert aus der Katalogantwort durchgereicht.
 	col_label?: string;
 	sms_code?: string;
+	// Issue #2232: Kennung fuer den Nachschlag der Kurzform-Marke in
+	// `/api/sms-symbols` (s. types.ts CompareMetricCatalogEntry).
+	kuerzel_metric_id?: string;
 	// Issue #1406 Scheibe B: Stundenverlauf-Angaben, unveraendert aus der
 	// Katalogantwort durchgereicht (s. types.ts CompareMetricCatalogEntry).
 	hourlySelectable?: boolean;
@@ -27,6 +30,9 @@ export interface CompareSelectionEntry {
 	hourlyDefault?: boolean;
 	hourlyMergeOnly?: boolean;
 	hourly_legacy_keys?: string[];
+	// Issue #1911: Ordinal-Beschriftungen (z.B. Gewitter "kein"/"leicht"/
+	// "mittel"/"hoch"), unveraendert aus der Katalogantwort durchgereicht.
+	ordinalLabels?: string[];
 }
 
 /**
@@ -58,6 +64,11 @@ export function toCompareSelectionEntries(
 		// Nur ergaenzen, wenn der Endpoint sie liefert (deepEqual-Vertrag #1350).
 		...(m.col_label !== undefined ? { col_label: m.col_label } : {}),
 		...(m.sms_code !== undefined ? { sms_code: m.sms_code } : {}),
+		// #2232: Kuerzel-Kennung unveraendert durchreichen (deepEqual-Vertrag
+		// #1350: nur ergaenzen, wenn der Endpoint sie liefert).
+		...(m.kuerzel_metric_id !== undefined
+			? { kuerzel_metric_id: m.kuerzel_metric_id }
+			: {}),
 		// #1406 B: nur ergaenzen, wenn der Endpoint sie liefert — sonst braechen
 		// die strikten deepEqual-Vergleiche aus #1350 (AC-2).
 		...(m.hourlySelectable !== undefined ? { hourlySelectable: m.hourlySelectable } : {}),
@@ -68,7 +79,8 @@ export function toCompareSelectionEntries(
 		...(m.hourlyMergeOnly !== undefined ? { hourlyMergeOnly: m.hourlyMergeOnly } : {}),
 		...(m.hourly_legacy_keys !== undefined
 			? { hourly_legacy_keys: m.hourly_legacy_keys }
-			: {})
+			: {}),
+		...(m.ordinalLabels !== undefined ? { ordinalLabels: m.ordinalLabels } : {})
 	}));
 	// Issue #1373 (S2 Scheibe B): dieselbe geladene Katalogantwort ist die
 	// EINZIGE Quelle für die Übersetzung Auswahl-Schlüssel <-> Größe+Auswertung
@@ -143,6 +155,40 @@ export function normalizeStoredActiveMetrics(
 ): string[] | null {
 	if (!Array.isArray(stored)) return null;
 	return stored.map((item) => compareMetricKeyFromStored(item, catalog) ?? item) as string[];
+}
+
+/**
+ * Lesenormalisierung des AUSBLICKS (#1848 A2): gespeicherte Auswahl -> reine
+ * Kennungen, jede genau einmal, Reihenfolge des ersten Auftretens erhalten.
+ *
+ * Bewusst getrennt von `normalizeStoredActiveMetrics()`: die Übersichts-
+ * Grundauswahl (`active_metrics`) spricht weiterhin Katalog-Schlüssel und
+ * speichert Paare (ADR-0037). Der Ausblick dagegen speichert seit A2 die
+ * Kennung — Temperatur-Tief und -Hoch sind dort EIN Eintrag, weil sie in der
+ * Mail EINE Spannen-Spalte ergeben. Beide Formate werden gelesen: die
+ * Paar-Altform, der Katalog-Schlüssel eines Bestands-Presets und die Kennung
+ * selbst.
+ *
+ * `null` heißt „kein Array" (Feld fehlt → die sieben festen Spalten) und
+ * bleibt von `[]` („bewusst geleert") unterscheidbar.
+ */
+export function normalizeStoredOutlookMetrics(
+	stored: unknown,
+	catalog: CompareSelectionEntry[] = registeredCatalog
+): string[] | null {
+	if (!Array.isArray(stored)) return null;
+	const kennungen: string[] = [];
+	for (const item of stored) {
+		let metricId: string | null = null;
+		if (typeof item === 'string') {
+			metricId = catalog.find((e) => e.metric === item)?.metric_id ?? item;
+		} else if (item && typeof item === 'object') {
+			const { metric_id } = item as { metric_id?: unknown };
+			if (typeof metric_id === 'string') metricId = metric_id;
+		}
+		if (metricId !== null && !kennungen.includes(metricId)) kennungen.push(metricId);
+	}
+	return kennungen;
 }
 
 /**

@@ -1,3 +1,10 @@
+---
+entity_id: fix_1462_alarme_beispieltext
+type: fast
+created: 2026-08-06
+status: implemented
+---
+
 # Mini-Spec: #1462 — Beispiel-Warnung im Alarme-Reiter nennt den richtigen Auslöser
 
 **Issue:** #1462 (Alerts S4: Steuerung ausschliesslich im Reiter Alarme)

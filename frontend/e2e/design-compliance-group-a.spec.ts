@@ -98,11 +98,14 @@ test.describe('#529 Trip-Detail · Kanonische Tab-Namen (nav-map.jsx)', () => {
 
 	// Fix-Loop 2026-07-13 (F001): Label seit #736/Slice 6 "Versand" (nicht mehr
 	// "Briefing-Zeitplan" — das war der Zwischenstand vor #736).
-	test('AC-1b: Tab "briefings" heißt "Versand" (nicht "Reports & Kanäle")', async ({
+	// Issue #1743: kein Reiter "Versand" mehr — der Versand ist ein Abschnitt im
+	// Reiter Wetter-Metriken; auch der Alt-Name "Reports & Kanäle" bleibt weg.
+	test('AC-1b: kein Reiter "Versand" / "Reports & Kanäle" mehr (#1743)', async ({
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByRole('tab', { name: 'Versand' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Wetter-Metriken' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Versand' })).toHaveCount(0);
 		await expect(page.getByRole('tab', { name: 'Reports & Kanäle' })).not.toBeVisible();
 	});
 
@@ -142,11 +145,11 @@ test.describe('#528 Compare Hub · Header-Primäraktion', () => {
 	// von issue_1273_s3_redirect_links.test.ts AC-4. Der Test prüft daher
 	// jetzt den geltenden Stand: Primäraktion "Test senden" ja, redundante
 	// "Bearbeiten"-Affordanz nein.
-	test('AC-3: Aktives Preset zeigt "Test senden", keine redundante "Bearbeiten"-Affordanz', async ({
+	test('AC-3: Aktives Preset zeigt "Senden" (Issue #2278), keine redundante "Bearbeiten"-Affordanz', async ({
 		page
 	}) => {
 		await page.goto(`/compare/${activePresetId}`);
-		await expect(page.getByRole('button', { name: 'Test senden' })).toBeVisible();
+		await expect(page.getByTestId('subscription-hub-send')).toHaveText('Senden');
 		await expect(page.getByRole('link', { name: 'Bearbeiten' })).toHaveCount(0);
 	});
 });

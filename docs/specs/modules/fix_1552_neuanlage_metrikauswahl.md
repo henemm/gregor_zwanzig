@@ -3,7 +3,7 @@ entity_id: fix_1552_neuanlage_metrikauswahl
 type: bugfix
 created: 2026-08-06
 updated: 2026-08-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [trip, trip-new, weather-metrics, register, bugfix]
 ---

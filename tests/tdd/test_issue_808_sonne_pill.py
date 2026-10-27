@@ -120,11 +120,11 @@ class TestAC1SunshinePillPositiveMinutes:
         text, _tone = pills[0]
         assert text.startswith("Sonne "), f"Pille soll mit 'Sonne ' beginnen: {text!r}"
         import re
-        m = re.search(r"(\d+) min", text)
-        assert m, f"Keine Minutenzahl in Pille: {text!r}"
-        minutes = int(m.group(1))
-        assert minutes > 0, (
-            f"RED: 0 Minuten trotz sonniger Datenpunkte — hasattr-Bug nicht gefixt: {text!r}"
+        m = re.search(r"(\d+(?:\.\d+)?)h", text)
+        assert m, f"Keine Stundenzahl in Pille: {text!r}"
+        hours = float(m.group(1))
+        assert hours > 0, (
+            f"RED: 0 Stunden trotz sonniger Datenpunkte — hasattr-Bug nicht gefixt: {text!r}"
         )
 
 
@@ -185,7 +185,7 @@ class TestAC3DescentSegmentShowsDownArrow:
 
         text = render_plain(
             segments=[seg_data], seg_tables=[_SIMPLE_ROWS],
-            trip_name="Test-Tour", report_type="morning",
+            trip_name="Test-Trip", report_type="morning",
             dc=build_default_display_config(), night_rows=[],
             thunder_forecast=None, changes=None,
             stage_name=None, stage_stats=None, multi_day_trend=None,
@@ -231,7 +231,7 @@ class TestAC4AscentSegmentShowsUpArrow:
 
         text = render_plain(
             segments=[seg_data], seg_tables=[_SIMPLE_ROWS],
-            trip_name="Test-Tour", report_type="morning",
+            trip_name="Test-Trip", report_type="morning",
             dc=build_default_display_config(), night_rows=[],
             thunder_forecast=None, changes=None,
             stage_name=None, stage_stats=None, multi_day_trend=None,

@@ -3,7 +3,7 @@ entity_id: issue_234_dropdown_coverage
 type: module
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, ux, refactor, drift, data-loss]
 issue: 234
@@ -42,7 +42,7 @@ den TypeScript-Compiler an einer einzigen Stelle, statt die UI still abweichen
 zu lassen.
 
 Aufgedeckt vom Adversary-Validator während Issue #233 GREEN-Verifikation
-(Findings F001/F002), in `docs/specs/modules/issue_233_type_drift.md` als
+(Findings F001/F002), in `docs/specs/_archive/modules/issue_233_type_drift.md` als
 Out-of-Scope für #233 dokumentiert.
 
 ## Quelle / Source

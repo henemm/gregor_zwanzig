@@ -27,7 +27,6 @@ from __future__ import annotations
 import json
 import re
 import threading
-from datetime import date as date_type
 from datetime import datetime, timedelta
 from datetime import time as time_type
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -43,7 +42,7 @@ from output.renderers.alert.render import (
     render_email, render_subject, render_sms, render_telegram,
 )
 from output.channels import telegram as telegram_mod
-from output.channels.telegram import TelegramOutput
+from tests.helpers.telegram_empfaenger import profil_ausgang
 from services.radar_service import NowcastResult, RadarNowcastService
 
 from app.loader import get_data_dir
@@ -113,7 +112,7 @@ class _GuaranteedWetRadar(RadarNowcastService):
             source=source, is_convective=is_convective,
         )
 
-    def get_nowcast(self, lat: float, lon: float, priority: str = "user_briefing") -> NowcastResult:
+    def get_nowcast(self, lat: float, lon: float, elevation_m=None, priority: str = "user_briefing", user_id=None, deadline_at=None) -> NowcastResult:
         # Issue #1329 C2: RadarNowcastService.get_nowcast() akzeptiert seit
         # Scheibe C2 zusaetzlich `priority` (Call-Site trip_alert.py ruft
         # jetzt priority="polling" auf). Dieses Fake ignoriert die
@@ -155,9 +154,19 @@ def _trip_with_active_segment(trip_id: str, config: TripReportConfig) -> Trip:
     Alert möglich). `arrival_override` auf erstem/letztem Waypoint plus
     passende `stage.start_time` sorgt dafür, dass das Segment zur
     Testlaufzeit aktiv ist (`seg.start_time <= now_utc <= seg.end_time`).
+
+    Issue #2096: das Etappendatum stammt aus derselben ORTSZEIT, aus der
+    `_active_window()` das Fenster rechnet — nicht aus `date_type.today()`
+    (Systemdatum, UTC). Ab 22:00 UTC weichen beide bei Korsika (UTC+2) um
+    einen Tag ab; das Segment landete dann rund 24 Stunden in der
+    Vergangenheit und `check_radar_alerts()` lieferte 0 statt 1. Echte Trips
+    tragen echte `stage.date`-Werte und `trip_alert.py` löst „heute" über
+    `trip_local_today()` in Ortszeit auf (ADR-0044) — der Fehler saß allein
+    im Aufbau.
     """
     lat, lon = 42.20, 9.10
     start_str, end_str, start_time = _active_window(lat, lon)
+    ortsdatum = datetime.now(tz_for_coords(lat, lon)).date()
     wp0 = Waypoint(
         id="G1", name="Start", lat=lat, lon=lon, elevation_m=1000.0,
         time_window=TimeWindow(start=time_type(0, 0), end=time_type(23, 57)),
@@ -169,7 +178,7 @@ def _trip_with_active_segment(trip_id: str, config: TripReportConfig) -> Trip:
         arrival_override=end_str,
     )
     stage = Stage(
-        id="T1", name="Tag 1", date=date_type.today(),
+        id="T1", name="Tag 1", date=ortsdatum,
         start_time=start_time, waypoints=[wp0, wp1],
     )
     trip = Trip(id=trip_id, name="Onset-Fidelity-Trip", stages=[stage])
@@ -544,7 +553,10 @@ class TestAC6SmsOnlyRadarDispatch:
         # (sms_allowed() liefert bei fehlender user.json "free" = False). Dieser
         # Test prueft den SMS-Dispatch-Mechanismus selbst, nicht das Tier-Gating.
         get_data_dir(uid).mkdir(parents=True, exist_ok=True)
-        (get_data_dir(uid) / "user.json").write_text(json.dumps({"id": uid, "tier": "standard"}))
+        # Issue #2152: Testkonto-Status ueber das Profilfeld (statt "tdd" im Namen).
+        (get_data_dir(uid) / "user.json").write_text(
+            json.dumps({"id": uid, "tier": "standard", "is_test_user": True})
+        )
         stub = _SevenStub(body="100")
         try:
             config = TripReportConfig(
@@ -617,7 +629,7 @@ class TestAC4TelegramOutputHtmlParseMode:
     def test_send_with_new_params_has_html_parse_mode_and_no_subject_prefix(
         self, fake_telegram_bot,
     ):
-        output = TelegramOutput(_TELEGRAM_SETTINGS)
+        output = profil_ausgang(_TELEGRAM_SETTINGS, "nutzer-952", "99999")  # #1412 S4a
 
         # RED vor Fix: send() kennt parse_mode/suppress_subject_line nicht -> TypeError.
         output.send(
@@ -640,7 +652,7 @@ class TestAC5TelegramOutputBackwardCompatible:
         self, fake_telegram_bot,
     ):
         """Muss HEUTE UND nach dem Fix grün sein (Rückwärtskompatibilität)."""
-        output = TelegramOutput(_TELEGRAM_SETTINGS)
+        output = profil_ausgang(_TELEGRAM_SETTINGS, "nutzer-952", "99999")  # #1412 S4a
         output.send("Betreff 952", "Body")
 
         payload = fake_telegram_bot.last_payload
@@ -699,3 +711,120 @@ class TestAC7AlertPreviewOnsetPayload:
             )
         finally:
             _clean_user(uid)
+
+
+# ===========================================================================
+# Issue #2018 (Teil B, AC-B2): die Nowcast-E-Mail traegt die ausformulierte
+# Bezugszeile, wenn die Meldung ein NACHTRAG zu einer bereits zugestellten
+# amtlichen Warnung ist.
+#
+# SPEC: docs/specs/modules/alert_nachtragsmeldung.md, Abschnitt B3.
+# RED-Grund: `AlertMessage.addendum_reference` existiert nicht -> TypeError.
+# Additiv angehaengt; die bestehenden Faelle oben bleiben unangetastet.
+# ===========================================================================
+
+_ADDENDUM_LINE_2018 = "Ergänzung zur amtlichen Warnung von 16:15"
+
+
+def _onset_msg_2018(*, addendum_reference=_UNSET) -> AlertMessage:
+    """Einzel-Onset (`_render_email_onset`-Zweig). `addendum_reference` wird
+    nur uebergeben, wenn ein Aufrufer es setzt -- Muster `briefing_context`
+    oben (Modulkopf)."""
+    onset = OnsetEvent(
+        onset_minutes=25, onset_time="16:45", km_from=0.0, km_to=6.0,
+        is_convective=True, intensity_label="kräftiger Regen",
+        source_label="Radar (DWD)", segment_id="Ziel",
+        briefing_context="nicht angekündigt",
+    )
+    kwargs = dict(
+        trip_short="KHW 403", stand_at="16:20", events=(onset,),
+        source="Radar (DWD)", cooldown_display="2 Stunden",
+    )
+    if addendum_reference is not _UNSET:
+        kwargs["addendum_reference"] = addendum_reference
+    return AlertMessage(**kwargs)
+
+
+def _bundle_onset_msg_2018(*, addendum_reference=_UNSET) -> AlertMessage:
+    """Buendel-Onset (`_render_email_onset_multi`-Zweig, >1 Event)."""
+    first = OnsetEvent(
+        onset_minutes=20, onset_time="16:40", km_from=0.0, km_to=0.0,
+        is_convective=True, intensity_label="kräftiger Regen",
+        source_label="Radar (DWD)", location_label="Innsbruck",
+    )
+    second = OnsetEvent(
+        onset_minutes=35, onset_time="16:55", km_from=0.0, km_to=0.0,
+        is_convective=False, intensity_label="leichter Regen",
+        source_label="AROME-FR", location_label="Bozen",
+    )
+    kwargs = dict(
+        trip_short="Alpen", stand_at="16:20", events=(first, second),
+        source="Radar (DWD)", cooldown_display="2 Stunden",
+    )
+    if addendum_reference is not _UNSET:
+        kwargs["addendum_reference"] = addendum_reference
+    return AlertMessage(**kwargs)
+
+
+class TestIssue2018AddendumEmailLine:
+    def test_einzel_zweig_traegt_bezugszeile_in_plain_und_html(self):
+        """AC-B2 GIVEN eine Nowcast-Onset-Meldung mit gesetztem
+        ``addendum_reference``
+        WHEN ``render_email`` den Einzel-Zweig rendert
+        THEN steht die ausformulierte Zeile "Ergänzung zur amtlichen Warnung
+        von 16:15" als EIGENE Zeile im Plain-Text UND im HTML."""
+        html, plain = render_email(
+            _onset_msg_2018(addendum_reference=_ADDENDUM_LINE_2018),
+        )
+
+        assert _ADDENDUM_LINE_2018 in plain.splitlines(), (
+            "RED: die Bezugszeile fehlt als eigene Zeile im Plain-Text: "
+            f"{plain!r}"
+        )
+        assert _ADDENDUM_LINE_2018 in html, (
+            f"RED: die Bezugszeile fehlt im HTML: {html!r}"
+        )
+
+    def test_buendel_zweig_traegt_bezugszeile_in_plain_und_html(self):
+        """AC-B2 (Buendel-Zweig) GIVEN einen gebuendelten Mehr-Orte-Onset mit
+        gesetztem ``addendum_reference``
+        WHEN ``render_email`` rendert
+        THEN steht dieselbe Zeile in Plain-Text UND HTML -- der Buendel-Zweig
+        ist ein eigener Renderer und faellt sonst durch."""
+        html, plain = render_email(
+            _bundle_onset_msg_2018(addendum_reference=_ADDENDUM_LINE_2018),
+        )
+
+        assert _ADDENDUM_LINE_2018 in plain.splitlines(), (
+            "RED: die Bezugszeile fehlt im Buendel-Plain-Text: "
+            f"{plain!r}"
+        )
+        assert _ADDENDUM_LINE_2018 in html, (
+            f"RED: die Bezugszeile fehlt im Buendel-HTML: {html!r}"
+        )
+
+    def test_ohne_bezug_bleibt_die_mail_byte_identisch_ohne_leerzeile(self):
+        """AC-B2 (Gegenprobe) GIVEN dieselben Meldungen mit
+        ``addendum_reference=None``
+        WHEN die E-Mail gerendert wird
+        THEN sind HTML und Plain-Text byte-identisch zur Fassung OHNE das
+        Feld -- keine Zeile, keine LEERZEILE, kein leerer Absatz."""
+        for mit_none, ohne_feld in (
+            (_onset_msg_2018(addendum_reference=None), _onset_msg_2018()),
+            (
+                _bundle_onset_msg_2018(addendum_reference=None),
+                _bundle_onset_msg_2018(),
+            ),
+        ):
+            html_a, plain_a = render_email(mit_none)
+            html_b, plain_b = render_email(ohne_feld)
+            assert plain_a == plain_b, (
+                "Ein ungesetzter Nachtrag veraendert den Plain-Text.\n"
+                f"  {plain_a!r}\n  {plain_b!r}"
+            )
+            assert html_a == html_b, (
+                "Ein ungesetzter Nachtrag veraendert das HTML."
+            )
+            assert "Ergänzung zur amtlichen Warnung" not in plain_a, (
+                f"Bezugszeile ohne Bezug im Plain-Text: {plain_a!r}"
+            )

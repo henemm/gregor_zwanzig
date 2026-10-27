@@ -163,9 +163,10 @@ class TestAC5_FidelityWithDirectRenderPath:
         expected_telegram = render_official_alert_telegram(
             dto_notices, prefix=trip_obj.name, source_label=source_label, tz=alert_tz,
         )
-        expected_sms = render_official_alert_sms(
-            dto_notices, sms_prefix=trip_obj.name, tz=alert_tz,
-        )
+        # FORTGESCHRIEBEN (#1948 S5): `sms_prefix` (der Trip-Name) ist aus dem
+        # Renderer ersatzlos entfallen — auch im Preview-Pfad
+        # (`validator_render_service._render_official_preview`).
+        expected_sms = render_official_alert_sms(dto_notices, tz=alert_tz)
 
         def _strip_stand(text: str) -> str:
             """Neutralisiert 'Stand: heute HH:MM' -- Wanduhr-Ratsche: die

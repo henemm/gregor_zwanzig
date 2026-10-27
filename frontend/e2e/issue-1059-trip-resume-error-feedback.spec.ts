@@ -7,10 +7,17 @@
 // Ausführen: cd frontend && npx playwright test e2e/issue-1059-trip-resume-error-feedback.spec.ts \
 //   --config=e2e/playwright.issue-1059.staging.config.ts --reporter=list
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const TRIP_ID = 'e2e-1059-resume';
 const TRIP_NAME = 'E2E #1059 Resume Error Feedback';
+
+// #2278: Pausieren/Fortsetzen/Archivieren sind Eintraege des Hub-Lebenszyklus-Menues (Desktop-Dropdown
+// und mobiles Blatt teilen die Testids `subscription-action-<id>`).
+async function hubAktion(page: Page, id: string) {
+	await page.getByTestId('subscription-kebab').click();
+	await page.getByTestId(`subscription-action-${id}`).click();
+}
 
 const wp = (id: string, lat: number) => ({ id, name: id, lat, lon: 9.0, elevation_m: 800 });
 
@@ -47,14 +54,16 @@ test.describe('Issue #1059 — Fehler-Feedback bei Pause/Fortsetzen/Archivieren'
 		await request.patch(`/api/trips/${TRIP_ID}/state`, { data: { paused: true } });
 
 		await page.goto(`/trips/${TRIP_ID}`);
-		const pauseBtn = page.getByRole('button', { name: 'Fortsetzen' });
-		await expect(pauseBtn).toBeVisible();
+		// #2278: Lebenszyklus-Aktionen leben im Hub-Menue (kein Einzelknopf mehr); "Fortsetzen" ist dort sichtbar.
+		await page.getByTestId('subscription-kebab').click();
+		await expect(page.getByTestId('subscription-action-resume')).toBeVisible();
+		await page.keyboard.press('Escape');
 
 		// Netzwerk-Fehlersimulation: die echte Serverantwort für den nächsten PATCH wird
 		// durch eine 500-Antwort ersetzt — die Anwendungslogik selbst bleibt unangetastet.
 		await page.route('**/api/trips/*/state', (route) => route.fulfill({ status: 500, body: '{}' }));
 
-		await pauseBtn.click();
+		await hubAktion(page, 'resume');
 
 		const errorEl = page.getByTestId('trip-detail-action-error');
 		await expect(errorEl).toBeVisible();
@@ -66,7 +75,7 @@ test.describe('Issue #1059 — Fehler-Feedback bei Pause/Fortsetzen/Archivieren'
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByRole('button', { name: 'Archivieren' }).click();
+		await hubAktion(page, 'archive');
 
 		await page.route('**/api/trips/*/state', (route) =>
 			route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ detail: 'Trip has active alerts' }) })
@@ -86,10 +95,11 @@ test.describe('Issue #1059 — Fehler-Feedback bei Pause/Fortsetzen/Archivieren'
 		await request.patch(`/api/trips/${TRIP_ID}/state`, { data: { paused: true } });
 
 		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByRole('button', { name: 'Fortsetzen' }).click();
+		await hubAktion(page, 'resume');
 
 		await expect(page.getByTestId('trip-detail-action-error')).not.toBeVisible();
-		await expect(page.getByRole('button', { name: 'Pausieren' })).toBeVisible();
+		await page.getByTestId('subscription-kebab').click();
+		await expect(page.getByTestId('subscription-action-pause')).toBeVisible();
 	});
 
 	test('AC-4: Fehleranzeige verschwindet nach vorherigem Fehlschlag beim nächsten erfolgreichen Versuch', async ({
@@ -100,12 +110,12 @@ test.describe('Issue #1059 — Fehler-Feedback bei Pause/Fortsetzen/Archivieren'
 		await page.goto(`/trips/${TRIP_ID}`);
 
 		await page.route('**/api/trips/*/state', (route) => route.fulfill({ status: 500, body: '{}' }));
-		await page.getByRole('button', { name: 'Fortsetzen' }).click();
+		await hubAktion(page, 'resume');
 		await expect(page.getByTestId('trip-detail-action-error')).toBeVisible();
 
 		// Interception entfernen → nächster Versuch geht real durch.
 		await page.unroute('**/api/trips/*/state');
-		await page.getByRole('button', { name: 'Fortsetzen' }).click();
+		await hubAktion(page, 'resume');
 
 		await expect(page.getByTestId('trip-detail-action-error')).not.toBeVisible({ timeout: 8000 });
 	});
@@ -121,7 +131,7 @@ test.describe('Issue #1059 — Fehler-Feedback bei Pause/Fortsetzen/Archivieren'
 		// fetch() wirft, es gibt keinen HTTP-Response.
 		await page.route('**/api/trips/*/state', (route) => route.abort('failed'));
 
-		await page.getByRole('button', { name: 'Fortsetzen' }).click();
+		await hubAktion(page, 'resume');
 
 		const errorEl = page.getByTestId('trip-detail-action-error');
 		await expect(errorEl).toBeVisible();
@@ -140,7 +150,7 @@ test.describe('Issue #1059 — Fehler-Feedback bei Pause/Fortsetzen/Archivieren'
 			route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ detail: 'Pause not allowed now' }) })
 		);
 
-		await page.getByRole('button', { name: 'Fortsetzen' }).click();
+		await hubAktion(page, 'resume');
 
 		const errorEl = page.getByTestId('trip-detail-action-error');
 		await expect(errorEl).toBeVisible();

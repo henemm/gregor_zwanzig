@@ -25,7 +25,7 @@ Alpin, präzise, datenehrlich. Paper-Off-White als Bühne, Burnt-Orange als einz
 | `--g-surface-1` | `#edeae1` | Erhöhte Surface (Card, gehobener Bereich) |
 | `--g-surface-2` | `#e3dfd4` | Stark erhöhte Surface (Modal, Sticky-Bar) |
 | `--g-paper-deep` | `#ede9df` | Bottom-Navigation Hintergrund (leicht dunkler, Issue #267) |
-| `--g-rule-soft` | `rgba(26,26,24,0.08)` | Soft Border/Divider (TopAppBar, BottomNav, Issue #267) |
+| `--g-rule-soft` | `rgba(26,26,24,0.08)` | Soft Border/Divider (Sticky-Footer, Sheet-Zeilen, Issue #267) |
 
 **Design-Vision (nicht in `app.css` implementiert):** `--g-card`, `--g-card-alt`, `--g-rule` — wenn benötigt,
 eigener Issue.

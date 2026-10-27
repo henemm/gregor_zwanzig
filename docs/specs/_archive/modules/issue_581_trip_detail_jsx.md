@@ -62,7 +62,7 @@ Die Änderungen sind ausschließlich UI-seitig. Backend-API, Datenmodelle und Ro
 | `frontend/src/lib/utils/tripStats.ts` | Utility (vorhanden) | `computeTripStats(trip)` für Stats-Karte |
 | `frontend/src/lib/utils/rightColumn.ts` | Utility (vorhanden) | `getReportSchedule(trip)` für ReportLine-Daten |
 | `frontend/src/lib/types.ts` | TypeScript | `Trip`, `Stage`, `AlertRule` |
-| `docs/specs/modules/issue_487_trip_detail_overview_cards.md` | Abgelöste Spec | Vorgänger-Layout (4-Karten), wird durch HubOverview ersetzt |
+| `docs/specs/_archive/modules/issue_487_trip_detail_overview_cards.md` | Abgelöste Spec | Vorgänger-Layout (4-Karten), wird durch HubOverview ersetzt |
 
 ## Implementation Details
 

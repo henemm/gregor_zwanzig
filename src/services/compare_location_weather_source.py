@@ -29,6 +29,7 @@ import app.day_window as day_window
 from app.models import GPXPoint, TripSegment
 from services.point_weather import PointWeatherData, TripSegmentWeatherAdapter
 from services.segment_weather import SegmentWeatherService
+from utils.timezone import local_dt, to_utc
 
 logger = logging.getLogger("compare_location_weather_source")
 
@@ -37,10 +38,8 @@ def _window_bound(local_day: date, hour: int, tz: ZoneInfo) -> datetime:
     """Ortszeit-Stunde eines lokalen Kalendertags -> UTC. Seit #1599 nur noch
     fuer die UNTERgrenze — die Obergrenze baut
     `app.day_window.window_end_utc_exclusive()` (inklusive Endstunde)."""
-    return (
-        datetime.combine(local_day, time(hour))
-        .replace(tzinfo=tz)
-        .astimezone(timezone.utc)
+    return to_utc(
+        datetime.combine(local_day, time(hour)).replace(tzinfo=tz)
     )
 
 
@@ -57,6 +56,9 @@ class CompareLocationWeatherSource:
         end_hour: Optional[int] = None,
         target_date: Optional[date] = None,
         tage_ab_ortstag: Optional[int] = None,
+        elevation_m: Optional[int] = None,
+        *,
+        user_id: str,
     ) -> PointWeatherData:
         """Issue #1584 Scheibe C: das synthetische Segment deckt das
         TAGESFENSTER des laufenden lokalen Kalendertags am Ort ab, nicht mehr
@@ -91,6 +93,11 @@ class CompareLocationWeatherSource:
         ist ein Programmierfehler und scheitert laut (`ValueError`), statt
         still einen der beiden Wege gewinnen zu lassen.
 
+        Issue #2387: `user_id` ist Schluesselwort-PFLICHT ohne Default
+        (ADR-0003). Ein Default waere der stille Rueckfall, den diese
+        Zusicherung verbietet — der Verbrauch des Ortsvergleichs gehoert in
+        den Topf DES Nutzers, dessen Vergleich gerade geprueft wird.
+
         Der AUFGELOESTE Tag wird auf das Ergebnis gestempelt, damit der
         15-Minuten-Frisch-Abruf spaeter DENSELBEN Tag holen kann.
         """
@@ -115,7 +122,7 @@ class CompareLocationWeatherSource:
         # Der Kalendertag ist der LOKALE Tag am Ort, nicht der UTC-Tag —
         # sonst verschoebe sich das Fenster bei jedem Ort mit UTC-Versatz
         # (analog `trip_segments.py:264-268`).
-        local_today = now.astimezone(tz).date()
+        local_today = local_dt(now, tz).date()
         # Issue #1661 (B1): der angeforderte Tag gewinnt gegen den laufenden.
         # Der Versatz wird gegen den ORTSTAG gerechnet (F002) — nie gegen den
         # Systemtag des Aufrufers.
@@ -147,7 +154,9 @@ class CompareLocationWeatherSource:
             window_start = now.replace(minute=0, second=0, microsecond=0)
             window_end = window_start + timedelta(hours=1)
 
-        point = GPXPoint(lat=lat, lon=lon, elevation_m=None, distance_from_start_km=0.0)
+        # Issue #1991 (AC-6): Ort-Hoehe (SavedLocation.elevation_m) wird nicht
+        # mehr hart auf None gesetzt, sondern durchgereicht.
+        point = GPXPoint(lat=lat, lon=lon, elevation_m=elevation_m, distance_from_start_km=0.0)
         segment = TripSegment(
             segment_id=point_id,
             start_point=point,
@@ -174,6 +183,7 @@ class CompareLocationWeatherSource:
             enrich_ensemble=False,
             enrich_snow=False,
             priority="alert_check",  # Issue #1329 Teil 2
+            user_id=user_id,  # Issue #2387 -- Budget-Topf je Nutzer
         )
         point = TripSegmentWeatherAdapter.to_points([segment_weather])[0]
         # Issue #1661 (B1): den AUFGELOESTEN Tagesbezug mitgeben, wenn einer

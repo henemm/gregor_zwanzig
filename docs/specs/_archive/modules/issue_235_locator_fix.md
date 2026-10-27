@@ -3,7 +3,7 @@ entity_id: issue_235_locator_fix
 type: bugfix
 created: 2026-05-19
 updated: 2026-05-19
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, frontend, e2e, sveltekit, playwright, locations, strict-mode, issue-235]
 ---

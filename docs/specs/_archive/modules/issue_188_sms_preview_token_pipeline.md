@@ -3,7 +3,7 @@ entity_id: issue_188_sms_preview_token_pipeline
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: active
+status: implemented
 version: "1.0"
 tags: [backend, preview, sms, epic-140, wiring]
 ---

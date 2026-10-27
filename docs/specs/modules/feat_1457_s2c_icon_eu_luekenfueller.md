@@ -1,6 +1,6 @@
 ---
 entity_id: feat_1457_s2c_icon_eu_luekenfueller
-status: draft
+status: implemented
 type: module
 created: 2026-08-04
 updated: 2026-08-04
@@ -146,7 +146,7 @@ _SIGNAL_ZU_FELD-Tabelle) sind bereits vorhanden und ausreichend.
 
 ## Acceptance Criteria
 
-- **AC-1 (Wirkungs-Nachweis, Ende-zu-Ende):** Given eine Position außerhalb
+- **AC-1:** (Wirkungs-Nachweis, Ende-zu-Ende) Given eine Position außerhalb
   des FR- und DE_ALPEN-Gebiets (z. B. Madrid, 40,4 N / -3,7 O) / When eine
   Vorhersage über den **regulären** Weg abgerufen wird
   (`OpenMeteoProvider.fetch_forecast`, funktionierende Hauptquelle, kein
@@ -188,7 +188,7 @@ _SIGNAL_ZU_FELD-Tabelle) sind bereits vorhanden und ausreichend.
     Blitzpotenzial-Feld. Gegenprobe: Wird das Werfen im
     Anreicherungspfad zugelassen, muss der Test rot werden.
 
-- **AC-4 (eigenes, hergeleitetes Zeitbudget):** Given die ICON-EU-
+- **AC-4:** (eigenes, hergeleitetes Zeitbudget) Given die ICON-EU-
   Gewitterabrufe brauchen ungewöhnlich lange / When das eigene
   Zeitbudget der Anreicherung erschöpft ist / Then bricht **nur die
   Anreicherung** ab, die Grundvorhersage behält ihr eigenes,
@@ -220,7 +220,7 @@ _SIGNAL_ZU_FELD-Tabelle) sind bereits vorhanden und ausreichend.
     Änderung an `thunder_enrichment.py` erwartet — der Test beweist,
     dass das bereits gilt, ohne dass S2c dort etwas anfassen muss.
 
-- **AC-6 (Namensfallen-AC, PFLICHT, Live-Schicht):** Given der im
+- **AC-6:** (Namensfallen-AC, PFLICHT, Live-Schicht) Given der im
   Produktivcode hinterlegte DWD-ICON-EU-Parametername für Blitzpotenzial
   (als Konstante, nicht im Test wiederholt) / When gegen das echte
   DWD-Open-Data-Verzeichnis (`opendata.dwd.de`) geprüft wird / Then
@@ -248,7 +248,7 @@ _SIGNAL_ZU_FELD-Tabelle) sind bereits vorhanden und ausreichend.
     wird erst bei Implementierung gegen echte ICON-EU-Verfügbarkeit
     gemessen, nicht geraten.
 
-- **AC-8 (Routing-Reihenfolge ist tragend):** Given eine Position in
+- **AC-8:** (Routing-Reihenfolge ist tragend) Given eine Position in
   Frankreich UND eine Position in Deutschland/Alpen/Österreich / When die
   Gewitter-Zuständigkeit bestimmt wird, nachdem die neue Catch-all-Zeile
   `"EU_REST"` in `_REGIONS` ergänzt wurde / Then liefert
@@ -260,7 +260,7 @@ _SIGNAL_ZU_FELD-Tabelle) sind bereits vorhanden und ausreichend.
     neue Zeile vor FR/DE_ALPEN einsortiert, muss dieser Test rot werden
     (first-match-wins verschluckt sonst beide bestehenden Gebiete).
 
-- **AC-9 (gemeinsamer Weg bleibt frei von Provider-/Parameternamen):**
+- **AC-9:** (gemeinsamer Weg bleibt frei von Provider-/Parameternamen)
   Given der Anreicherungsweg `thunder_enrichment.py` / When nach dem
   Wortlaut der Datei gesucht wird / Then enthält sie **weder**
   `"eu_direct"` **noch** `"lpi_con_max"` als Zeichenkette.
@@ -270,7 +270,7 @@ _SIGNAL_ZU_FELD-Tabelle) sind bereits vorhanden und ausreichend.
     S2c hat den gemeinsamen Anschluss NICHT angefasst — nur Routing-
     Zeile und neue Provider-Klasse kamen hinzu.
 
-- **AC-10 (HISTORISCH, abgelöst durch #1474c):** Given das
+- **AC-10:** (HISTORISCH, abgelöst durch #1474c) Given das
   Blitzpotenzial-Feld ist für einen ICON-EU-Datenpunkt gefüllt / When
   Ausgaben gerendert werden (SMS, Trip-Briefing, `thunder_level`-Berechnung)
   / Then bleiben diese Ausgaben **unverändert** gegenüber dem Stand ohne

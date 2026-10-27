@@ -3,7 +3,7 @@ entity_id: issue_412_422_wizard_step4
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: deprecated
 version: "1.0"
 tags: [frontend, trip-wizard, channels, svelte, issue-412, issue-422, epic-404, mobile]
 ---
@@ -12,13 +12,15 @@ tags: [frontend, trip-wizard, channels, svelte, issue-412, issue-422, epic-404, 
 
 # Issue #412 + #422 — Trip-Wizard Step 4: Kanal-Karte mit Kontaktdaten + 24h-Uhrzeit
 
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
+
 ## Approval
 
 - [x] Approved
 
 ## Zweck
 
-Die letzte Seite des Tour-Assistenten (Schritt 4 „Reports/Briefings") bringt die Versandkanäle
+Die letzte Seite des Trip-Assistenten (Schritt 4 „Reports/Briefings") bringt die Versandkanäle
 auf das SOLL-Design des #404-Phase-3-Audits: Statt kleiner, in jeder Karte wiederholter Kanal-Tags
 gibt es **eine dedizierte Karte „DEINE KANÄLE"** mit je einer Zeile pro Kanal
 (E-Mail / Signal / Telegram / SMS), die die **hinterlegte Kontaktangabe** aus dem Nutzerprofil zeigt
@@ -41,7 +43,7 @@ und per Schalter (`Switch`) an-/abschaltbar ist. Zusätzlich wird die Uhrzeit-An
 | `frontend/src/routes/trips/new/+page.server.ts` | Profil via `GET /api/auth/profile` (Session-Cookie) laden, an Page reichen |
 | `frontend/src/routes/trips/new/+page.svelte` | `data.profile` empfangen, via `setContext('trip-wizard-profile', …)` bereitstellen |
 | `frontend/src/lib/components/trip-wizard/steps/Step4Reports.svelte` | Neue Karte „DEINE KANÄLE" (Switch + Kontakt je Kanal); wiederholte `channelRow()`-Chips aus Abend/Morgen/Warnungen-Karten entfernen; `lang="de"` + breiteres Zeit-Feld |
-| `frontend/src/lib/components/trip-wizard/wizardHelpers.ts` *(oder lokal in Step4Reports)* | `maskPhone()`-Helfer für `+49 151 ••• 8847` |
+| `frontend/src/lib/components/shared/wizardHelpers.ts` *(oder lokal in Step4Reports)* | `maskPhone()`-Helfer für `+49 151 ••• 8847` |
 
 **Nicht geänderte Dateien (bewusst):**
 - `frontend/src/lib/components/trip-wizard/wizardState.svelte.ts` — Default `evening.time='18:00'` ist bereits
@@ -108,7 +110,7 @@ und per Schalter (`Switch`) an-/abschaltbar ist. Zusätzlich wird die Uhrzeit-An
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein eingeloggter Nutzer mit hinterlegten Kontaktdaten / When er den Tour-Assistenten bis
+- **AC-1:** Given ein eingeloggter Nutzer mit hinterlegten Kontaktdaten / When er den Trip-Assistenten bis
   Schritt 4 öffnet / Then erscheint eine Karte „DEINE KANÄLE" mit genau vier Zeilen (E-Mail, Signal,
   Telegram, SMS), jede mit Kanal-Label, Kontaktangabe und einem `Switch`-Schalter.
   - Test: `frontend/src/lib/components/trip-wizard/__tests__/issue_412_422_step4.test.ts` (node:test, RED-Artefakt: `docs/artifacts/issue_412_422_wizard_step4/test-red-output.txt`)

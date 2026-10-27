@@ -3,7 +3,7 @@ entity_id: no_resend_for_tests
 type: tests
 created: 2026-05-10
 updated: 2026-05-10
-status: approved
+status: implemented
 version: "1.0"
 tags: [email, guardrail, resend, gmail]
 ---
@@ -24,7 +24,7 @@ durch Tests verbrannt wird und Zustellraten verfälscht werden.
 
 - **File:** `tests/unit/test_no_resend_for_tests.py`
 - **Implementation under test:** `src/app/config.py` (`Settings.is_test_mode`, `Settings.for_testing`,
-  `Settings.with_user_profile`) und `src/outputs/email.py` (`EmailOutput.__init__`)
+  `Settings.with_user_profile`) und `src/output/channels/email.py` (`EmailOutput.__init__`)
 
 ## Dependencies
 

@@ -11,14 +11,14 @@ Die Commands sind zweistellig; Deploy ist eine **eigene** Phase:
 
 | Command | Phase | PO-Eingriff |
 |---|---|---|
-| `/00-intake`, `/00-bug`, `/01-feature` | Einstieg/Klassifikation | — |
+| `/00-intake` (auch Bugs), `/01-feature` | Einstieg/Klassifikation | — |
 | `/10-context` | Kontext sammeln | — |
 | `/20-analyse` | Request verstehen, Codebase recherchieren | optional |
-| `/30-write-spec` | Spezifikation mit AC-N-Format | **Pflicht: ACs freigeben („go")** |
+| `/30-write-spec` | Spezifikation mit AC-N-Format | **Pflicht: ACs auf Deutsch freigeben (`approved`/`freigabe`)** |
 | `/40-tdd-red` | Fehlschlagende Tests (RED) | optional |
 | `/50-implement` | Implementieren (GREEN) + Adversary | — |
 | `/60-validate` | Validieren vor Commit | — |
-| `/70-deploy` | Staging-Verifikation + Prod-Deploy | **Pflicht: Tech-Lead-Brief + „go"** |
+| `/70-deploy` | Staging-Verifikation + Prod-Deploy | — (läuft autonom durch, **kein** Freigabe-Halt; Abbruch nur bei echtem Hard-Gate-Fehlschlag — CLAUDE.md → „Workflow") |
 | `/80-workflow`, `/82-test`, `/90-retro`, `/99-reset` | Verwaltung/Hilfsphasen | — |
 
 ## State & Enforcement
@@ -28,10 +28,15 @@ Die Commands sind zweistellig; Deploy ist eine **eigene** Phase:
   Umgebungsvariable `GZ_ACTIVE_WORKFLOW` (Symlink-Fallback deaktiviert).
 - **Hooks erzwingen den Ablauf** (Auswahl): `workflow_gate` (Phasen-Sequenz,
   AC-N-Pflicht), `qa_gate`/Adversary-Verdict-Gating, `renderer_mail_gate`
-  (#811), `e2e_commit_gate`, `nebenbefund_gate`, `test_naming_gate`.
+  (#811), `pendant_gate`, `touched_tests_gate`, `broad_test_run_gate`. `e2e_commit_gate`
+  blockiert seit #339 nichts mehr (nur Hinweis). `nebenbefund_gate` am Prüfdatum
+  2026-10-09 zurückgebaut (#1197 — Regel steht weiter in CLAUDE.md; der Eintrag in
+  `.claude/settings.json` ist ohne Datei ein No-op), `test_naming_gate` hat sich am selben
+  Datum selbst abgeschaltet. Vollständige Hook-Liste: `docs/reference/gates_und_ratschen.md`
+  → „Aktive Hooks".
   Gate-/Hook-Bugs gehören ins Plugin-Repo (agent-os-openspec).
 - Die verbindliche Kurzreferenz der Regeln (LoC-Limit, Execution-Log,
-  Token-Tracking, Trigger-Typen) steht in **CLAUDE.md → „Workflow-Tools v3"**.
+  Token-Tracking, Trigger-Typen) steht in **CLAUDE.md → „Workflow-State"**.
 
 ## Adversary Verification
 
@@ -47,4 +52,4 @@ Bug-Kontext, gegen Confirmation Bias).
 
 Main Context (Opus) ist reiner Orchestrierer und schreibt keinen Code;
 Implementierung macht der `developer`-Agent. Agentenliste mit Modellen:
-CLAUDE.md → „Agenten-Rollen und Modelle"; Definitionen: `.claude/agents/*.md`.
+CLAUDE.md → „Workflow" (Zeile „Agenten-Modelle"); Definitionen: `.claude/agents/*.md`.

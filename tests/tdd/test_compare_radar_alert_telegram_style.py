@@ -48,6 +48,7 @@ from app.user import SavedLocation
 import output.channels.telegram as tg_module
 
 from tests.helpers.compare_briefings import write_compare_briefings
+from tests.helpers.telegram_empfaenger import mit_profil_chat
 
 
 def _data_root_users() -> Path:
@@ -75,7 +76,7 @@ def _radar_preset(
     """Direktes Compare-Preset-Dict (Vorbild
     `test_compare_radar_alert.py::_radar_preset`), zusaetzlich mit
     `send_telegram=True` + `display_config.telegram_style` — genau die zwei
-    Felder, die `effective_compare_channels()`/`effective_compare_telegram_
+    Felder, die die Compare-Kanal-Auflösung / `effective_compare_telegram_
     style()` fuer diesen Test auswerten."""
     return {
         "id": preset_id,
@@ -179,7 +180,7 @@ class _TelegramStub:
 
 
 def _telegram_only_settings() -> Settings:
-    """Nur Telegram sendebereit — `effective_compare_channels()` nimmt zwar
+    """Nur Telegram sendebereit — die Compare-Kanal-Auflösung nimmt zwar
     immer `"email"` auf, aber ohne SMTP-Konfiguration schlaegt der E-Mail-
     Versuch lediglich fehl (Best-Effort, `_log_error`) und beeinflusst die
     Telegram-Assertions nicht.
@@ -234,7 +235,7 @@ class TestAC3CompareRadarAlertTelegramKurzstil:
             radar_service = RadarNowcastService(frame_source=frame_source)
 
             service = CompareRadarAlertService(
-                settings=_telegram_only_settings(), user_id=uid,
+                settings=_telegram_only_settings(), user_id=mit_profil_chat(uid, _telegram_only_settings()),
                 radar_service=radar_service,
             )
             sent = service.check_all_compare_presets()
@@ -296,7 +297,7 @@ class TestAC4CompareRadarAlertTelegramRichRegression:
             radar_service = RadarNowcastService(frame_source=frame_source)
 
             service = CompareRadarAlertService(
-                settings=_telegram_only_settings(), user_id=uid,
+                settings=_telegram_only_settings(), user_id=mit_profil_chat(uid, _telegram_only_settings()),
                 radar_service=radar_service,
             )
             sent = service.check_all_compare_presets()

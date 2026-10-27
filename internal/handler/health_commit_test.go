@@ -19,7 +19,7 @@ func TestHealthHandlerReturnsCommitField(t *testing.T) {
 	defer py.Close()
 
 	const testCommit = "abc1234def5678"
-	h := HealthHandler(py.URL, testCommit)
+	h := HealthHandler(py.URL, testCommit, "localhost")
 	req := httptest.NewRequest("GET", "/api/health", nil)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -44,7 +44,7 @@ func TestHealthHandlerReturnsCommitField(t *testing.T) {
 // AC-1: commit-Feld ist auch dann vorhanden, wenn Python-Core nicht erreichbar ist.
 func TestHealthHandlerCommitPresentWhenPythonDown(t *testing.T) {
 	const testCommit = "deadbeef12345678"
-	h := HealthHandler("http://127.0.0.1:19999", testCommit)
+	h := HealthHandler("http://127.0.0.1:19999", testCommit, "localhost")
 	req := httptest.NewRequest("GET", "/api/health", nil)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)

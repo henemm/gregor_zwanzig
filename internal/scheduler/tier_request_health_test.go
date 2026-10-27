@@ -266,3 +266,93 @@ func TestTierRequestHealthResponseContainsNoUserIdentifiers(t *testing.T) {
 		}
 	}
 }
+
+// ---- Issue #2436 (AC-7, AC-8) ----
+
+func newTierRequestSchedulerCfg(t *testing.T, tmpDir string, poEmail, smtpHost string, users map[string]string) *Scheduler {
+	t.Helper()
+	st := store.New(tmpDir, "default")
+	for uid, content := range users {
+		dir := filepath.Join(tmpDir, "users", uid)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "user.json"), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cfg := &config.Config{
+		PythonCoreURL: "http://localhost:8000", SchedulerTimezone: "Europe/Vienna",
+		PoEmail: poEmail, SMTPHost: smtpHost,
+	}
+	sched, err := New(cfg, st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sched
+}
+
+// AC-7: po_mail_configured nur wenn PO_EMAIL UND SMTP_HOST gesetzt sind.
+func TestTierRequestHealthPoMailConfigured(t *testing.T) {
+	cases := []struct {
+		name, po, host string
+		want           bool
+	}{
+		{"beides", "po@example.com", "smtp.example.com", true},
+		{"po fehlt", "", "smtp.example.com", false},
+		{"smtp fehlt", "po@example.com", "", false},
+		{"beides fehlt", "", "", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			sched := newTierRequestSchedulerCfg(t, t.TempDir(), c.po, c.host, nil)
+			th, _ := tierRequestHealthBlock(t, sched)
+			if got, ok := th["po_mail_configured"].(bool); !ok || got != c.want {
+				t.Errorf("po_mail_configured: want %v, got %v", c.want, th["po_mail_configured"])
+			}
+		})
+	}
+}
+
+// AC-8: zwei offene Antraege, einer gemeldet -> unnotified_count 1; keine Kennung.
+func TestTierRequestHealthUnnotifiedCountTwoUsers(t *testing.T) {
+	ts := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
+	gemeldet := `{"id":"gz2436-gemeldet","display_name":"gz2436-name-a","email":"gz2436-a@example.invalid","tier":"free","requested_tier":"standard","requested_at":"` + ts + `","requested_notified_at":"` + ts + `"}`
+	offen := `{"id":"gz2436-offen","display_name":"gz2436-name-b","email":"gz2436-b@example.invalid","tier":"free","requested_tier":"premium","requested_at":"` + ts + `"}`
+	keiner := `{"id":"gz2436-keiner","display_name":"gz2436-name-c","tier":"free"}`
+	sched := newTierRequestSchedulerCfg(t, t.TempDir(), "po@example.com", "smtp.example.com", map[string]string{
+		"gz2436-gemeldet": gemeldet, "gz2436-offen": offen, "gz2436-keiner": keiner,
+	})
+	th, raw := tierRequestHealthBlock(t, sched)
+	assertOpenCount(t, th, 2)
+	if got := th["unnotified_count"]; got != float64(1) {
+		t.Errorf("unnotified_count: want 1, got %v", got)
+	}
+	for _, leak := range []string{"gz2436", "name-a", "name-b", "example.invalid"} {
+		if strings.Contains(raw, leak) {
+			t.Errorf("Antwort darf %q nicht enthalten", leak)
+		}
+	}
+}
+
+// Haertung #2436 (Mutation "unnotified != nil" ueberlebte): der gemeldete und
+// der ungemeldete Antrag muessen einzeln unterschieden werden, nicht nur in der Summe.
+func TestTierRequestHealthUnnotifiedCountDistinguishesNotifiedFromNot(t *testing.T) {
+	ts := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
+	nur := func(notified bool) float64 {
+		doc := `{"id":"gz2436-x","tier":"free","requested_tier":"standard","requested_at":"` + ts + `"`
+		if notified {
+			doc += `,"requested_notified_at":"` + ts + `"`
+		}
+		doc += `}`
+		sched := newTierRequestSchedulerCfg(t, t.TempDir(), "po@example.com", "smtp.example.com", map[string]string{"gz2436-x": doc})
+		th, _ := tierRequestHealthBlock(t, sched)
+		return th["unnotified_count"].(float64)
+	}
+	if got := nur(true); got != 0 {
+		t.Errorf("gemeldeter Antrag: unnotified_count want 0, got %v", got)
+	}
+	if got := nur(false); got != 1 {
+		t.Errorf("ungemeldeter Antrag: unnotified_count want 1, got %v", got)
+	}
+}

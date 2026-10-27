@@ -3,7 +3,7 @@ entity_id: issue_414_mobile_alerts_modus_picker
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: draft
+status: implemented
 version: "1.0"
 issue: 414
 tags: [alerts-tab, frontend, mobile, modus-picker, fixed-footer, alertmetrictable, svelte, issue-414]

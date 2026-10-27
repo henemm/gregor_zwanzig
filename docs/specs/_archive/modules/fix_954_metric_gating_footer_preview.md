@@ -3,7 +3,7 @@ entity_id: fix_954_metric_gating_footer_preview
 type: module
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [telegram, sms, preview, metrics, bugfix]
 ---

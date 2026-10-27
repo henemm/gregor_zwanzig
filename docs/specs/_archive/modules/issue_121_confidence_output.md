@@ -3,7 +3,7 @@ entity_id: issue_121_confidence_output
 type: module
 created: 2026-05-15
 updated: 2026-05-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [forecast, confidence, sms, email, output, token-builder, metric-catalog]
 parent: forecast_confidence
@@ -26,7 +26,7 @@ Output-Schicht für die in Workflow 1 implementierten Konfidenz-Daten: SMS-Symbo
 ## Source
 
 - **Änderung:** `src/output/tokens/dto.py` — `DailyForecast` (Z. 20+): neues Optional-Feld `confidence_pct_min`
-- **Änderung:** `src/formatters/sms_trip.py` (Z. 79+) — `confidence_pct_min` aus `SegmentWeatherSummary` aggregieren und an `DailyForecast` übergeben
+- **Änderung:** `src/output/renderers/sms_trip.py` (Z. 79+) — `confidence_pct_min` aus `SegmentWeatherSummary` aggregieren und an `DailyForecast` übergeben
 - **Änderung:** `src/output/tokens/builder.py` (Z. 31–47, 127+) — `PRIORITY["C"]`, `POSITIONAL`-Eintrag, neue Token-Loop für C
 - **Änderung:** `src/app/metric_catalog.py` (nach Z. 157, neben `pop_pct`) — neue `MetricDefinition(id="confidence", ...)`
 - **Änderung:** `src/output/renderers/email/html.py` (nach Z. 221, vor `changes_html`-Block) — Klartext-Hinweis-Block
@@ -59,7 +59,7 @@ class DailyForecast:
     confidence_pct_min: Optional[int] = None  # Issue #121: worst-case confidence
 ```
 
-### 2) SMS-Adapter erweitern (`src/formatters/sms_trip.py`)
+### 2) SMS-Adapter erweitern (`src/output/renderers/sms_trip.py`)
 
 In der `segments_to_normalized_forecast()`-Funktion (Z. 79+): vor der `DailyForecast`-Konstruktion `confidence_pct_min` aus den Segmenten aggregieren:
 

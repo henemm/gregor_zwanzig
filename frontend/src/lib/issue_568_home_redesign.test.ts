@@ -52,10 +52,13 @@ test('#568 dayProgress: 0 von 0 → 0 % (kein Division-by-zero)', () => {
 	assert.strictEqual(dayProgress(0, 0), 0);
 });
 
-test('#568 setupStepTrip: leerer Trip → alle 5 Schritte offen', () => {
+test('#568 setupStepTrip: leerer Trip → Schritte 1-4 offen, Reports nach Slot-Regel', () => {
 	const steps = setupStepTrip(trip());
 	assert.strictEqual(steps.length, 5);
-	assert.ok(steps.every((s) => !s.done), 'Alle Schritte sollten offen sein');
+	assert.ok(steps.slice(0, 4).every((s) => !s.done), 'Schritte 1-4 sollten offen sein');
+	// Issue #2422 S3 (Verdikt N2): ein Trip ohne report_config bekommt sein
+	// Briefing (Versand-Regel reportSlotAktiv) — die Anzeige folgt derselben Regel.
+	assert.strictEqual(steps[4].done, true, 'Reports: ohne report_config liefert der Versand aus');
 });
 
 test('#568 setupStepTrip: Trip mit 1 Stage ohne Datum → nur Schritt 1 done', () => {

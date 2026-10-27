@@ -27,6 +27,11 @@ in `tests/fixtures/outlook_trip_parity/README.md`:
   * F004, Klartext, Zeile "Mo": "⚡MED" -> "⚡mittel"
   * F004, Klartext, Zeile "Di": "⚡–"   -> "⚡mittel"
 
+NACHGEFUEHRT (#1848 A1 AC-9, 2026-08-20): Klartext, Zeilen "Mo"/"Di", Temperatur-
+Feld: "9–21°C"/"11–19°C" -> "9/21°C"/"11/19°C" -- Altform-Klartext auf denselben
+Schraegstrich-Trenner wie die SMS-Schreibweise gezogen (vollstaendige Begruendung
+in ``tests/fixtures/outlook_trip_parity/README.md``).
+
 Beide Eingabezeilen tragen `hourly_thunder` mit "mittel" um 16 Uhr (im
 Tagesfenster 4-19), waehrend das Aggregat `thunder` einmal "MED" und einmal
 "NONE" sagt — zwei gegenlaeufige Quellen. Die alten Werte "–"/"⚡–" sind genau

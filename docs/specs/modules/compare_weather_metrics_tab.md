@@ -3,7 +3,7 @@ entity_id: compare_weather_metrics_tab
 type: module
 created: 2026-07-18
 updated: 2026-07-18
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, trip, shared, metrics, tab, corridor]
 ---

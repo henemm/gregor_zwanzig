@@ -52,6 +52,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 from tests.tdd.conftest import _init_evidence_free_repo, _load_prod_selftest_module
 
@@ -143,12 +144,19 @@ class _HealthOkRecorder:
 
     def __init__(self, mod):
         self._health_url = mod.HEALTH_URL
+        # Seit #2130 prueft _check_health() zusaetzlich webauthn_rpid gegen den
+        # Prod-Hostnamen; ohne dieses Feld waere die Kulisse kein erfolgreicher
+        # Health-Check mehr. Wert ABGELEITET aus mod.PROD_BASE, nie literal.
+        self._webauthn_rpid = urlparse(mod.PROD_BASE).hostname
         self.calls: list[str] = []
 
     def __call__(self, url: str, follow_redirects: bool = False):
         self.calls.append(url)
         if url == self._health_url:
-            return 200, b'{"status": "ok"}', ""
+            body = json.dumps(
+                {"status": "ok", "webauthn_rpid": self._webauthn_rpid}
+            ).encode("utf-8")
+            return 200, body, ""
         return 200, b"", ""
 
 

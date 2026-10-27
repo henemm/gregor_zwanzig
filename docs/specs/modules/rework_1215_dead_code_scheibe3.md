@@ -3,7 +3,7 @@ entity_id: rework_1215_dead_code_scheibe3
 type: module
 created: 2026-07-11
 updated: 2026-07-11
-status: draft
+status: implemented
 version: "1.1"
 tags: [cleanup, dead-code, go, compare-engine]
 ---

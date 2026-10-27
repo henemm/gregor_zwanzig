@@ -21,6 +21,10 @@ if TYPE_CHECKING:
     from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
+# Issue #2134: EINE Quelle fuer den Befehlssatz. Import-Richtung ist etabliert
+# und zirkelfrei (`renderers/narrow.py:52` holt sich ACTIONS_BUBBLE_BUTTONS aus
+# demselben Modul); die Gegenrichtung existiert nicht.
+from output.renderers.email.command_block import render_commands_plain
 from utils.timezone import local_fmt
 
 from output.renderers.day_window import (
@@ -324,13 +328,10 @@ def render_plain(
             if key in thunder_forecast:
                 fc = thunder_forecast[key]
                 icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
-                # Issue #1475 Nachbesserung (Punkt 4b): Hagel-Kennzeichen der
-                # Vorschau-Etappe aus dem neuen "hail"-Feld (Wurzelfix in
-                # _build_thunder_forecast). Rein deskriptiv (ADR-0007).
-                from output.metric_format import format_hail_note
-                _note = format_hail_note(fc.get("hail"))
-                _suffix = f" · {_note}" if _note else ""
-                _thunder_lines.append(f"  {fc['date']}: {icon}{fc['text']}{_suffix}")
+                # Issue #2205: der Hagel-Zusatz steht seit #2205 IN `fc['text']`
+                # (Tagesteil vor dem Nacht-Halbsatz, Zeitplaner) -- ein Suffix
+                # hinter der ganzen Zeile klebte am Nacht-Halbsatz bzw. doppelte.
+                _thunder_lines.append(f"  {fc['date']}: {icon}{fc['text']}")
         if _thunder_lines:
             lines.append("━━ Gewitter-Vorschau ━━")
             lines.extend(_thunder_lines)
@@ -361,18 +362,12 @@ def render_plain(
         lines.append(render_undelivered_plain(undelivered, tz=tz))
         lines.append("")
 
-    # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz)
+    # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz).
+    # Issue #2134: abgeleitet aus `_COMMAND_SPECS` — dieselbe Quelle wie die
+    # Erkennung, der HTML-Block und beide Fehlertexte. Vorher fehlte STRECKE
+    # hier und zusätzlich RUHETAG im HTML.
     lines.append("")
-    lines.append("── Antwort-Kommandos ──")
-    lines.append("  HEUTE / MORGEN       – Wetter heutige/morgige Etappe")
-    lines.append("  JETZT / NOW          – Nowcast Regen/Gewitter ~2h")
-    lines.append("  GEWITTER             – Gewittergefahr heutige Etappe")
-    lines.append("  RUHETAG [N]          – Etappen um N Tage verschieben")
-    lines.append("  STATUS               – Heute und kommende Etappen")
-    lines.append("  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen")
-    lines.append("  SKIP                 – Nächstes Briefing überspringen")
-    lines.append("  STOP / WEITER        – Briefings deaktivieren / reaktivieren")
-    lines.append("  HILFE / HELP         – Alle Befehle anzeigen")
+    lines.append(render_commands_plain("route"))
     lines.append("")
 
     all_rows = [r for tbl in seg_tables for r in tbl]
@@ -381,7 +376,13 @@ def render_plain(
         lines.append(legend_text)
     # Issue #1472: zweite Legenden-Zeile, die die englischen Spaltenkuerzel
     # aufloest (ADR-0042-Bedingung an der Stelle, an der gelesen wird).
-    column_legend_text = build_column_legend(all_rows) if all_rows else ""
+    # #2136/ADR-0068 (AC-5): zusaetzlich die im 3-Tages-Ausblick DERSELBEN
+    # Mail sichtbaren Kuerzel -- `outlook_active`/`_outlook_metrics` sind
+    # bereits weiter oben fuer den Ausblick-Block selbst aufgeloest.
+    column_legend_text = (
+        build_column_legend(all_rows, _outlook_metrics, outlook_active=outlook_active)
+        if all_rows or outlook_active else ""
+    )
     if column_legend_text:
         lines.append(column_legend_text)
     lines.append("-" * 60)

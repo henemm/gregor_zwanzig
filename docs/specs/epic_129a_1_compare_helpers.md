@@ -3,7 +3,7 @@ entity_id: epic_129a_1_compare_helpers
 type: refactor
 created: 2026-05-12
 updated: 2026-05-12
-status: draft
+status: implemented
 version: "1.0"
 tags: [refactor, tech-debt, epic-129, services-extraction]
 ---

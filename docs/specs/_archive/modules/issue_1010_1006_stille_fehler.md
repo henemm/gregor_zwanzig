@@ -3,7 +3,7 @@ entity_id: issue_1010_1006_stille_fehler
 type: bugfix
 created: 2026-07-04
 updated: 2026-07-04
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, trip-editor, auth, session, save]
 ---

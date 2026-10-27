@@ -37,9 +37,12 @@ Weil die Vorgabezeiten 07:00/18:00 Ortszeit bei drei Stunden Fälligkeitsfenster
 gelten, hängt das Ergebnis sonst an der Wanduhr: rot von 07–10 und 18–21 Uhr
 Ortszeit, grün dazwischen.
 
-Praktisch: `report_config.enabled = False` setzen (wird produktiv nur in
-`trip_report_scheduler.py:171` und `:891` gelesen, beide im Briefing-Pfad, nie
-im Alarmpfad). **Vor jeder solchen „Aus"-Flagge zählen, wo sie gelesen wird** —
+Praktisch: `report_config.enabled = False` setzen (seit #2422 S3 (2026-09-28)
+produktiv nur in `slot_aktiv` in `src/app/models.py` gelesen, aufgerufen aus
+`trip_report_scheduler.py` `_get_active_trips` und `trip_briefing_due_at` —
+beide im Briefing-Pfad, nie im Alarmpfad; `enabled=False` bleibt Master über
+beide Slots, die Einzel-Schalter `morning_enabled`/`evening_enabled` schalten
+nur ihren Slot ab). **Vor jeder solchen „Aus"-Flagge zählen, wo sie gelesen wird** —
 sonst macht der Fix den Test grün, indem er ihn entkernt.
 
 Gegenprobe, die etwas taugt: die Bedingung **herstellen** statt abwarten — eine
@@ -71,6 +74,68 @@ Drei Fallen dabei, alle teuer gelernt: je Datenpunkt ein **eigener Prozess**
 auswerten (sitzungsweites `freezegun` zerstört pydantic-v1-Importe und erzeugt
 Falsch-Positive); Uhrzeiten in der **Ortszone der Fixture** wählen, nicht in UTC.
 
+**Gegenmittel, nicht nur Messgerät** (seit #2096): `wanduhr_matrix.py` *findet* die
+Abhängigkeit, beseitigen lässt sie sich mit dem Uhr-Schalter. Die Session-Fixture
+`_gestellte_wanduhr` (`tests/conftest.py`) stellt die Uhr auf den Wert der
+Umgebungsvariablen `GZ_TEST_WALL_CLOCK_UTC`; die Ankerbestimmung liegt an **einer**
+Stelle in `tests/helpers/wanduhr.py` (`anker_aus()`), ihr Selbsttest in
+`tests/tdd/test_gestellte_wanduhr_schalter.py`.
+
+```
+GZ_TEST_WALL_CLOCK_UTC=23:55 uv run pytest <testdatei>   # HH:MM = heute, UTC
+GZ_TEST_WALL_CLOCK_UTC=2026-08-15T23:55 uv run pytest <testdatei>   # oder ISO-Stempel
+```
+
+Der Rückgabewert ist **immer** UTC-behaftet — ein naiver Wert würde von `freezegun` als
+Ortszeit gelesen und die Uhr auf einem Server in anderer Zone still um den Zonenversatz
+daneben stellen, ohne dass ein Lauf rot würde. Unbrauchbare Eingaben lösen `ValueError`
+aus, statt stillschweigend irgendeinen Zeitpunkt zu nehmen.
+
+Die zugehörige Falle beim Prüfen: ein Test, der einen tagesbezogenen Wert gegen einen
+nackten `HH:MM`-Anker hält, ist ab Mitternachtsüberlauf blind — er braucht den
+**Tagesbezug** (Wochentagskürzel) im Soll. Wächter dafür:
+`tests/tdd/test_tagesbezug_testwaechter.py`, `tests/tdd/test_tagesbezug_ueberlauf_spaetuhr.py`.
+
 Quelle: #1851 / `docs/specs/modules/fix_1851_alarm_tests_vorlaufsperre.md`;
 Werkzeug aus #1709 / `docs/specs/modules/fix_1709_wallclock_ratsche_indirekt.md`;
+Uhr-Schalter und Tagesbezug aus #2096 /
+`docs/specs/modules/fix_2096_tagesbezug_testwaechter.md`;
 Nebenbefund gebucht in #1199.
+
+## Fixture-Trips datieren nach dem Ortstag der Koordinaten, nie nach `date.today()`
+
+Test-Fixtures, die Trips/Anker/Schnappschüsse datieren, müssen den **Ortstag der
+Trip-Koordinaten** verwenden (`tests/helpers/ortstag.py` → `ortstag(lat, lon, *,
+now_utc=None)`, delegiert an `utils.timezone.tz_for_coords`, ADR-0044) — die
+Koordinaten des jeweils datierten Trips, nie pauschal irgendwelche. `date.today()`
+liefert den Tag der **Prozesszone** (CI: America/St_Johns), nicht den Ortstag,
+und weicht dort rund um Mitternacht UTC vom Produktverhalten ab. Ausnahme: Tests,
+die die Tagesberechnung selbst prüfen, brauchen eine gestellte Uhr plus einen
+Literal-Soll-Tag (sonst wird der Test tautologisch).
+
+Messgrenze (Stand Durchgang 1, #2314): Unter `GZ_TEST_WALL_CLOCK_UTC`/freezegun
+liefert `date.today()` den **UTC-Tag**, nicht den St.-John's-Tag — mit dem
+Uhr-Schalter allein war nur das Fenster 22:00–24:00 UTC nachstellbar.
+
+**Zweites Fenster 00:00–02:30 UTC (Durchgang 2, #2314):** Root-`conftest.py`
+bekam den additiven Env-Knopf `GZ_TEST_PROCESS_TZ` (Default `America/St_Johns`
+unverändert, #1402 bleibt in Kraft). Gesetzt auf eine „Gestern-Zone" (Prozesstag
+= UTC-Tag − 1, z. B. `Pacific/Marquesas`) macht er „Prozesstag ≠ UTC-Tag" **zu
+jeder Tageszeit** lokal herstellbar, statt auf den echten Nachtlauf zu warten.
+Selbstschutz: trägt die gewählte Zone gerade nicht, schlägt der Lauf sichtbar
+fehl statt still grün zu laufen. Neuer Helfer `tests/helpers/ortstag.py::
+utc_tag(*, now_utc=None)` (Geschwister von `ortstag()`) datiert Fixtures, die
+das Produkt am **UTC-Tag** verankert (`_today_utc`, `FixtureProvider`) —
+Familie A/C aus #2314; Familie B bleibt bei `ortstag(lat, lon)`.
+
+Falle: Modulweite Konstanten wie `NOW = datetime.now(...)` werden beim Laden des
+Moduls gesetzt, also vor der gestellten Uhr — zwei Uhren laufen gegeneinander
+(Beispiel #2314, `tests/tdd/test_official_alert_time_window.py`).
+
+Die Wanduhr-Ratsche `tests/tdd/test_fixture_wallclock_ratchet.py` (#1667) wertet
+`ortstag(...)`- **und `utc_tag(...)`-Aufrufe** ohne gepinntes `now_utc` gleichermaßen
+als Wanduhr-Abhängigkeit — `utc_tag()` ist damit kein unbewachter Bypass.
+
+Quelle Durchgang 2: `docs/specs/modules/fix_2314_nachtfenster_utc_tag.md`.
+
+Quelle: #2314 / `docs/specs/modules/fix_2314_ci_zeitzonen_riss.md`.

@@ -2,9 +2,9 @@
 entity_id: weather_change_detection
 type: module
 created: 2026-02-02
-updated: 2026-02-13
+updated: 2026-09-09
 status: draft
-version: "2.2"
+version: "2.3"
 tags: [story-2, weather, change-detection, alerts, metric-catalog, per-metric-config]
 ---
 
@@ -23,6 +23,12 @@ Detect significant weather changes by comparing cached (old) vs fresh (new) weat
 **v2.1 Change:** New `from_display_config()` factory creates detection service from per-metric alert settings in UnifiedWeatherDisplayConfig. Only metrics with `alert_enabled=True` are included. User-set `alert_threshold` overrides MetricCatalog default. `from_trip_config()` remains as legacy fallback.
 
 **v2.2 Change:** Thunder now has `default_change_threshold=1.0` and participates in change detection. Enum values (ThunderLevel) are converted to ordinals (NONE=0, MED=1, HIGH=2) before delta calculation. Skip-block for `thunder_level_max` removed. Detection map grows from 18 to 19 entries.
+
+**v2.3 (2026-09-09, Nachzug #2236 C3-74):** Kein neues Verhalten — diese Fassung zieht die Spec auf den
+Code-Stand nach, der seit v2.2 ueber rund zwei Dutzend Issues gewachsen ist (Absolut-/Schwellen-/
+Beginn-Weichen, ordinale Gefahrenstufen, Severity als Dringlichkeit statt Filter, 13 statt 19
+Eintraege in der Detection-Map). Was sich geaendert hat, steht gebuendelt in „Stand 2026-09-09
+(v2.3)" unter Implementation Details; die aelteren Abschnitte bleiben als Entwurfs-Historie stehen.
 
 ## Source
 
@@ -76,7 +82,7 @@ class MetricDefinition:
 | wind | `{"max":"wind_max_kmh"}` | 20.0 |
 | gust | `{"max":"gust_max_kmh"}` | 20.0 |
 | precipitation | `{"sum":"precip_sum_mm"}` | 10.0 |
-| thunder | `{"max":"thunder_level_max"}` | 1.0 (Enum→Ordinal: NONE=0, MED=1, HIGH=2) |
+| thunder | `{"max":"thunder_level_max"}` | 1.0 (Enum→Ordinal; seit #1474 vierstufig NONE=0/LOW=1/MED=2/HIGH=3 ueber `thunder_ordinal()`, s. v2.3) |
 | snowfall_limit | `{"min":"snowfall_limit_m"}` | 200.0 (seit #1391 — nimmt an der Erkennung teil) |
 | cloud_total | `{"avg":"cloud_avg_pct"}` | 30 |
 | cloud_low | `{"avg":"cloud_low_avg_pct"}` | None (Feld existiert seit #1392, aber keine Schwelle) |
@@ -327,7 +333,7 @@ DETECT_CHANGES(old_data, new_data):
 
 ### Backward Compatibility
 
-**Critical:** `get_change_detection_map()` produces 19 entries (original 16 + uv_index_max, snow_new_sum_cm, thunder_level_max). All 10 existing unit test **assertions** remain unchanged; only the test fixture constructor call changes from named params to no-args (proving catalog defaults match).
+**Critical:** `get_change_detection_map()` produces 19 entries (original 16 + uv_index_max, snow_new_sum_cm, thunder_level_max). *(Stand v2.2 — heute 13 Eintraege, s. „Stand 2026-09-09 (v2.3)".)* All 10 existing unit test **assertions** remain unchanged; only the test fixture constructor call changes from named params to no-args (proving catalog defaults match).
 
 **Test fixture change (Bug 2 fix):**
 ```python
@@ -337,6 +343,60 @@ service = WeatherChangeDetectionService(temp_threshold_c=5.0, wind_threshold_kmh
 # NEW (v2.0): catalog defaults (produces identical thresholds)
 service = WeatherChangeDetectionService()
 ```
+
+### Stand 2026-09-09 (v2.3 — was sich seit v2.2 geaendert hat)
+
+Nachzug aus #2236 (C3-74). Quelle ist der Code (`src/services/weather_change_detection.py`,
+`src/app/metric_catalog.py::get_change_detection_map`); Issue-Nummern sind die jeweilige Spec-Spur.
+
+**Fabriken und Regelquellen**
+- `from_alert_rules(rules)` (#205/#222 W1) ist der Produktivweg: baut den Detektor aus der
+  `AlertRule`-Liste des Trips (kind `delta`/`absolute`). `from_display_config()` (v2.1) und
+  `from_trip_config()` (v2.0) bleiben als Fallback.
+- Bruecke `AlertMetric → Katalog-ID` ist `_ALERT_METRIC_TO_CATALOG_ID` (#914 AC-2, Katalog als
+  einzige Quelle); der Wert ist seit #961 ein **Tupel** (OR-Policy, z. B. `SNOW_LINE →
+  ("snowfall_limit", "freezing_level")` als Uebergang zu #959). `catalog_id_to_alert_metrics()`
+  liefert die Umkehrung fuer das Go-Alarmvokabular (#1257).
+- Explizite DELTA-Regel schlaegt den ABSOLUTE-Seed (#816/#821); rein geseedete Felder sind
+  markiert, damit sie im Versandpfad (`include_absolute=False`) nicht mitlaufen. Feldgranulare
+  Backfill-Unterdrueckung (#961 F004).
+
+**Drei Erkennungs-Weichen statt einer**
+1. Delta (`abs(delta) > threshold`) — unveraendert der Kern.
+2. Niveau (#1460 P1b): Gefahrenstufen-Groessen (heute `thunder_level_max`) loesen ueber die
+   gewaehlte Empfindlichkeitsstufe aus (`_ordinal_change_triggers`), nicht ueber die Sprunggroesse.
+3. Beginn (#1468): `thunder_onset_utc` / `precip_heavy_onset_utc` tragen einen **Zeitpunkt**
+   (Epochensekunden, naiv = UTC); `_onset_change()` prueft ein richtungsabhaengiges Schwellenpaar.
+
+Dazu `_detect_absolute_changes()` (#222, im Versandpfad ausgeschlossen, #816) und
+`_detect_threshold_crossing_changes()` (#846 — Sichtweite feuert nur beim erstmaligen
+Unterschreiten, cmp „unter"; nicht Teil der Absolut-/Delta-Map, Testvertrag #917).
+
+**Metriken**
+- #846: FRESH_SNOW, CAPE, VISIBILITY (und HUMIDITY) als Alarm-Metriken; HUMIDITY ist seit #889 /
+  ADR-0010 Vorboten-Metrik **ohne** Field-Mapping — auch alt-persistierte Regeln erzeugen keinen
+  Change. Vorboten-Metriken (`is_precursor`) fehlen in der Detection-Map (#889/#914).
+- #959: Nullgradgrenze auf `freezing_level` konsolidiert (`freezing_level_m`, cmp „unter").
+- #1585: nicht waehlbare Groessen (`selectable=False`, heute `cape`) fallen aus der Detection-Map;
+  #1592 C3: CAPE-Aenderungsalarme rechnen die Empfindlichkeitsstufe in die modellabhaengige
+  Schwelle um (ADR-0048). #1601: Delta-Anker und frischer Wert stammen aus derselben Quelle.
+- Thunder-Ordinal seit #1474 vierstufig `{NONE:0, LOW:1, MED:2, HIGH:3}` ueber
+  `output.metric_format.thunder_ordinal()` (#1214 S6: kanonische Ordnungsquelle statt lokalem
+  Dict) — die v2.2-Angabe NONE=0/MED=1/HIGH=2 ist ueberholt.
+- Detection-Map heute **13** Eintraege (gemessen 2026-09-09): `freezing_level_m`, `gust_max_kmh`,
+  `precip_sum_mm`, `snow_depth_cm`, `snow_new_sum_cm`, `snowfall_limit_m` (#1391), `temp_avg_c`,
+  `temp_max_c`, `temp_min_c`, `thunder_level_max`, `uv_index_max`, `visibility_min_m`,
+  `wind_max_kmh`. Die Matrix oben (19, inkl. cloud/humidity/dewpoint/pressure/pop/cape) ist v2.2-Stand.
+
+**Severity und Zeit**
+- Severity ist **Label/Dringlichkeit, kein Filter** (#638, s. `weather_snapshot_service.md`). Seit
+  #1503 folgt sie dem Ausmass der Aenderung (`_classify_severity`) bzw. bei Niveau-Groessen dem
+  gefaehrlicheren der beiden Niveaus (`_ordinal_severity`); `rule.severity` (seit #946 konstant
+  WARNING) wird nicht gelesen.
+- `WeatherChange.occurred_at` liefert `_peak_occurred_at()` als **rohen** Zeitpunkt (#1386, naiv =
+  UTC; Deutung entdoppelt in #1402), kein fertiges „HH:MM".
+- #2020 S2: `_precip_remaining()` — Restmenge ab Versandzeit (`now_utc`) und letzte Regenstunde
+  fuer den Alarmtext.
 
 ## Expected Behavior
 
@@ -448,4 +508,5 @@ service = WeatherChangeDetectionService()
 - 2026-02-02: v1.0 - Initial spec for Feature 2.5
 - 2026-02-13: v2.0 - MetricCatalog bridge: summary_fields, default_change_threshold, get_change_detection_map(), from_trip_config() factory
 - 2026-02-13: v2.1 - Per-metric alert config: from_display_config() factory, uv_index + fresh_snow in detection matrix (18 entries), from_trip_config() deprecated
+- 2026-09-09: v2.3 - Nachzug #2236 (C3-74): Spec auf Code-Stand (drei Erkennungs-Weichen, from_alert_rules, ordinale Stufen, Severity = Dringlichkeit, 13-Eintraege-Map, vierstufiges Thunder-Ordinal); kein Verhaltens-Change
 - 2026-02-13: v2.2 - Thunder alerts: default_change_threshold=1.0, Enum→Ordinal conversion (NONE=0, MED=1, HIGH=2), skip-block removed, detection matrix now 19 entries

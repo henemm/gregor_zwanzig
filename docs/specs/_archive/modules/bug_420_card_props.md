@@ -3,7 +3,7 @@ entity_id: bug_420_card_props
 type: bugfix
 created: 2026-05-27
 updated: 2026-05-28
-status: active
+status: implemented
 version: "1.0"
 tags: [bugfix, frontend, atoms, design-system, card, issue-420]
 ---

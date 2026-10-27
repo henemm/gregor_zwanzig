@@ -3,7 +3,7 @@ entity_id: issue_811_mail_quality_gate
 type: module
 created: 2026-06-14
 updated: 2026-06-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [tooling, gate, mail, quality, enforcement]
 ---
@@ -64,7 +64,7 @@ Parametrisierung: format ∈ {full, compact} × modus ∈ {Einfach(use_friendly)
 Pro Fall: render_email(...) ECHT aufrufen → (html, plain).
 
 Begründung der Alert-Variante: Die Alert-/„Update"-Mail (Wetteränderung) läuft über
-format_email (src/formatters/trip_report.py:76) → DENSELBEN render_email → fmt_val/ampel_dot
+format_email (src/output/renderers/trip_report.py:76) → DENSELBEN render_email → fmt_val/ampel_dot
 wie das Briefing (Aufruf aus src/services/trip_alert.py:664). Sie hat damit exakt dasselbe
 #810-Risiko und muss vom Vertrag mit-abgedeckt werden — inkl. des zusätzlichen Änderungs-Blocks
 (html.py:230 `changes`). Der Radar-Alert (trip_alert.py:565, format_now_text) ist reiner Text
@@ -146,7 +146,7 @@ openspec.yaml protected_paths: Pattern "\.claude/hooks/renderer_mail_gate\.py$"
     `changes=None`; alert: `changes=[WeatherChange,...]`), Emoji-Scan der HTML-Datenzellen;
     ohne xfail-Marker reproduziert die Roh+full-Parametrisierung #810 RED.
 - **AC-2:** Given ein Commit, der `src/output/renderers/email/*`, `src/formatters/*` oder
-  `src/outputs/email.py` staged / When im aktiven Workflow KEIN gültiger Matrix-Test-Nachweis
+  `src/output/channels/email.py` staged / When im aktiven Workflow KEIN gültiger Matrix-Test-Nachweis
   ODER kein `briefing_mail_validator.py`-Erfolgsnachweis vorliegt / Then blockiert der Hook den
   Commit mit Exit 2 und nennt den fehlenden Nachweis.
   - Test: Echtes Temp-Git-Repo, Mail-Datei stagen, `renderer_mail_gate.py` als Subprozess mit

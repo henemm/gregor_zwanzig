@@ -3,7 +3,7 @@ entity_id: rework_1467_s4b_entdopplung
 type: refactor
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [alerts, trip, epic-1458, issue-1467, issue-1744, s4b, s4b-1, entdopplung]
 ---

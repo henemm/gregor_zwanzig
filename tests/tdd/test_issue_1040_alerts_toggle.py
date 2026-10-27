@@ -289,7 +289,13 @@ def _capture_official_alerts_enabled(preset: dict, location, tmp_path) -> object
     from services.scheduler_dispatch_service import send_one_compare_preset as _send_one_compare_preset
 
     user_id = preset["_user_id"]
-    settings = Settings().with_user_profile(user_id)
+    # #1196 Klasse C (Vorbild test_issue_764::_capture_forecast_hours):
+    # Empfaenger explizit statt aus der Host-.env erben -- send_one_compare_
+    # preset prueft settings.mail_to VOR dem Engine-Aufruf (#1452) und brach
+    # auf dem CI-Runner mit "kein Empfaenger" ab, bevor der beobachtete
+    # official_alerts_enabled-Wert erreicht wurde. Die Adresse wird nie
+    # angeschrieben: die Recording-Engine bricht vor SMTP ab.
+    settings = Settings(mail_to="empfaenger@example.com")
 
     original_engine = ce_mod.ComparisonEngine
 

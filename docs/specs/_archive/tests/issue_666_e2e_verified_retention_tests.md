@@ -3,7 +3,7 @@ entity_id: issue_666_e2e_verified_retention_tests
 type: tests
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, tooling, e2e-gate, retention, issue-666]
 parent: issue_666_e2e_verified_retention
@@ -23,7 +23,7 @@ Test-Manifest für Issue #666 (Retention des commit-getaggten Attestation-Verzei
 auf das in der Parent-Spec definierte Acceptance-Criterion, damit der
 Spec-Enforcement-Hook die Test-Entities auflösen kann.
 
-Parent-Spec: `docs/specs/modules/issue_666_e2e_verified_retention.md`.
+Parent-Spec: `docs/specs/_archive/modules/issue_666_e2e_verified_retention.md`.
 
 ## Source
 

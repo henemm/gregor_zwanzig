@@ -41,6 +41,16 @@ kappen würde die Vorschau kurz vor Mitternacht still auf Minuten schrumpfen las
 UTC-Zeitstempel. Die Ortszeit entsteht erst bei der Auswertung „welcher Tag" und bei der
 Beschriftung — nicht in den Daten.
 
+**Nicht betroffen: der SMS-/Premium-SMS-Kostendeckel (Issue #2412 S4a, 2026-09-24).**
+`src/services/sms_daily_limit.py` taktet den täglichen Versand-Zähler je Nutzer an der
+UTC-Mitternacht, nicht an der Ortszeit der Tour. Dieser Zähler ist eine reine
+Kosten-Referenzgröße pro Nutzerkonto (Vorbild `forecast_budget._today_utc`,
+`meteoalarm_budget._today_utc` unten unter „Bewusst NICHT betroffen"), kein wetter- oder
+tourfachlicher Kalendertag — eine Ortszeit-Bindung würde bei mehreren Zonen dasselbe
+Kontingent mehrfach gewähren, den genau vermiedenen Effekt aus #1726s Tageszähler-Umstellung.
+`test_ruhezeit_und_zaehler_folgen_der_ortszone.py` bewacht den ANDEREN, weiterhin
+ortszonengebundenen Alarm-Tageszähler (`alert_daily_limit.py`) und ist kein Gegenargument.
+
 ## Konsequenzen
 
 **Ein Ortstag hat nicht immer 24 Stunden.** An den Umstellungstagen sind es 23 oder 25, in
@@ -164,9 +174,30 @@ Regelverstoß — genau das war der Zustand vor #1697.
   `first_resolvable_tz(locations)`, demselben Muster wie der Compare-Versand seit S5b. Der
   Mail-Footer „Nächster Versand" (`compare_html.py::_compute_next_send`) übernimmt das in
   `render_compare_html` bereits aufgelöste `header_tz`, statt selbst ein zweites Mal
-  aufzulösen. Die siebte Fundstelle, `comparison_engine.py::dict_to_comparison_result`,
+  aufzulösen. (Stand 2026-10-24, #1969: `_compute_next_send` rechnet nicht mehr selbst, sondern
+  delegiert an die zentrale Ableitung `src/services/next_briefing.py`; die Ortszone bleibt
+  maßgeblich.) Die siebte Fundstelle, `comparison_engine.py::dict_to_comparison_result`,
   wurde NICHT korrigiert, sondern als toter Code (0 Aufrufer im gesamten Repo) ersatzlos
   entfernt.
+- **`raw_astimezone`-Formbereinigung, dritte Fundart des Wächters** (#1727 S5f, live
+  2026-08-19; S5g, live 2026-08-20): S5f führt den zentralen Helfer `to_utc()` in
+  `src/utils/timezone.py` ein und stellt 9 Fundstellen in `weather_cache.py`,
+  `segment_weather.py` und `trip_segments.py` darauf um (Register 43→34); der Ankunftstag am
+  Ziel bleibt bewusst bei `local_dt()` statt `to_utc()`, weil ein pauschaler Umbau dort einen
+  Westziel-Tagesverschiebungsfehler eingeführt hätte, wo heute keiner ist. S5g stellt die
+  restlichen 8 Fundstellen um — `alert_briefing_anchor.py`, `compare_location_weather_source.py`
+  (x2), `compare_official_alert.py`, `scheduler_dispatch_service.py`, `stage_weather.py`,
+  `trip_alert.py` (x2): fünf auf `to_utc()`, drei auf `local_dt()`/`local_fmt()`, weil sie in
+  die **Ortszone** rechnen (Register 34→26). Beide Scheiben sind reine Formbereinigung, kein
+  Bugfix — alle 17 Stellen rechneten schon vor dem Umbau korrekt.
+
+  S5g macht außerdem die Unterscheidung „noch offener Kandidat" vs. „bewusst so dauerhaft"
+  für alle 26 verbleibenden `KNOWN_VIOLATIONS`-Einträge maschinell prüfbar: jeder Wert trägt
+  seither ein Pflicht-Präfix (`DAUERHAFT` / `AUFRUFSEITE(#1402)` / `BEWUSST-UTC(#1345)`) mit
+  erzwungener Mindestbegründung. Die 4 `BEWUSST-UTC(#1345)`-Einträge sind dieselben Fälle, die
+  oben unter „Bewusst NICHT betroffen" bereits in Prosa stehen (`forecast_budget._today_utc`,
+  `meteoalarm_budget._today_utc`/`_now_ts`, `weather_extractor._to_naive_utc`) — die Kategorie
+  ersetzt die bisher ungeprüfte Prosa-Konvention, ist also kein Netto-Zuwachs an Regeln.
 
 **Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
 eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,

@@ -1,28 +1,42 @@
 <script lang="ts">
 	// Issue #491 — Compare-Preset Detail-Seite.
-	// Issue #493 — Mobile-Responsive: TopBar + MCompareActionSheet.
+	// Issue #493 — Mobile-Responsive: TopBar + SubscriptionActionSheet.
 	// Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): der mobile Bespoke-
 	// Block (2×2-5-Karten-Grid + flache Standort-Liste) entfaellt — CompareDetail
 	// wird jetzt GENAU EINMAL gemountet und versorgt Desktop UND Mobile; die
 	// Viewport-Umschaltung (4-Stat-2×2 statt 5-Stat-Leiste, CorridorEditorMobile
 	// im Idealwerte-Tab) passiert INNERHALB von CompareTabs (matchMedia).
-	import { Btn } from '$lib/components/atoms';
+	import { Btn, BackLink } from '$lib/components/atoms';
+	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
 	import CompareStatusPill from '$lib/components/compare/CompareStatusPill.svelte';
-	import CompareKebab from '$lib/components/compare/CompareKebab.svelte';
-	import { MCompareActionSheet } from '$lib/components/mobile';
+	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
+	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
+	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
+	import { subscriptionActions } from '$lib/components/shared/subscriptionActions.js';
+	import { deleteSubscription, sendSubscription, setArchived, SubscriptionExecError } from '$lib/components/shared/subscriptionExec.js';
 	import {
 		deriveStatusWithScheduleOverride,
 		presetProfileLabel,
-		compareDetailActions,
 		isRuntimeExceeded
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
+	import { browser } from '$app/environment';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { createSaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import { api } from '$lib/api';
-	import { ACTIVITY_PROFILE_OPTIONS, type ActivityProfile, type ComparePreset } from '$lib/types';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import { sichereAusstehendeSpeicherung } from '$lib/stores/ausstehendeSpeicherungSichern';
+	import { getContext, onMount } from 'svelte';
+	import { AKTIVE_SPEICHERUNG, type SpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
+	import {
+		inhaltsFassung,
+		starteNachladenNachEntladen,
+		vergleichNachladeQuelle
+	} from '$lib/stores/nachEntladenNachladen';
+	import { api, getMitFassung } from '$lib/api';
+	import { baueSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
+	import { adoptEtagBeiSeitenaufbau, adoptEtagFromPageLoad } from '$lib/etagRegistry';
+	import { ACTIVITY_PROFILE_OPTIONS, type ComparePreset } from '$lib/types';
+	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
 
 	let { data } = $props();
@@ -39,6 +53,14 @@
 	// $state-Spiegel, exakt das Muster aus CompareTabs.svelte (`currentPreset
 	// = $state<ComparePreset>(preset)` + Resync-$effect auf Prop-Referenz).
 	let currentPreset = $state(data.preset);
+	// Issue #2375: Seitenaufbau-ETag uebernehmen (Trip-Muster trips/[id]/+page.svelte),
+	// damit schon der ERSTE Schreibvorgang nach dem Laden `If-Match` traegt.
+	// Bewusst nur von `data` abhaengig, nicht vom lokalen `currentPreset`.
+	// Fix-Loop 1 (#1433, F003): frischer Seitenaufbau beendet einen offenen Konflikt (Paritaet zum Trip).
+	const seitenaufbauStempelUebernommen = browser && data.etag ? adoptEtagBeiSeitenaufbau(data.preset.id, data.etag) : false;
+	$effect(() => {
+		if (data.etag) adoptEtagFromPageLoad(data.preset.id, data.etag);
+	});
 	$effect(() => {
 		currentPreset = data.preset;
 	});
@@ -46,8 +68,82 @@
 	// Epic #1273 S1: SaveStatus-Controller fuer den Hub — eine Instanz pro
 	// Compare-Detail-Seite (kein Singleton!), analog tripSaveCtl in
 	// routes/trips/[id]/+page.svelte:22. Wird an CompareDetail/CompareTabs
-	// durchgereicht und dort manuell (nicht via schedule()) getrieben.
-	const hubSaveCtl = createSaveStatus();
+	// durchgereicht. Die meisten Commit-Handler (Orte/Wertebereiche/Versand/
+	// Aktiv-Status) treiben ihn weiterhin manuell (nicht via schedule()); der
+	// Alarme-Reiter speichert seit Issue #2276 S2 selbst ueber
+	// saveController.schedule() (analog dem Trip-Zweig), siehe
+	// shared/alarmeVergleichSpeicherung.ts.
+	// Issue #2276 S2: mit Kennung — ein 412 wird zu „Nochmal speichern“ (conflict).
+	const hubSaveCtl = createSaveStatus({ typ: 'vergleich', id: data.preset.id });
+
+	// Issue #2316 Scheibe A (AC-9): derselbe Speicher-Wächter wie /trips/[id] —
+	// vorher hatte der Hub gar keinen beforeNavigate-Wächter, eine getippte,
+	// noch nicht committete Änderung ging beim Neuladen verloren.
+	// Issue #2317 Baustein 3: mit Kennung — beim Entladen entsteht der Nachlade-Merker.
+	beforeNavigate((navigation) =>
+		sichereAusstehendeSpeicherung(navigation, hubSaveCtl, goto, { typ: 'vergleich', id: currentPreset.id })
+	);
+
+	// Issue #2317 Baustein 2: Anmeldung an der Anmeldestelle des Layouts (wie /trips/[id]).
+	const speicherAnmeldestelle = getContext<SpeicherAnmeldestelle | undefined>(AKTIVE_SPEICHERUNG);
+
+	// Issue #2317 Baustein 3: derselbe Nachlade-Baustein wie /trips/[id]. Ohne
+	// ETag im Seitenaufbau vergleicht er den Inhalt. Die Reiter (CompareTabs,
+	// Idealwerte) hydrieren ihren Zustand nur einmal aus `preset` — nach einer
+	// Uebernahme wird CompareDetail deshalb neu aufgebaut ({#key} unten), mit dem
+	// gerade offenen Reiter (CompareTabs schreibt ihn per replaceState in die
+	// Adresse, an SvelteKits `page.url` vorbei).
+	let uebernommeneFassung = $state(0);
+	let tabNachUebernahme = $state<string | null>(null);
+
+	// Fix-Loop 1 (#1433, F001/AC-20): „Nochmal speichern" gibt den per GET geholten
+	// Vergleich an die Seite, BEVOR es die Eintraege erneut sendet (Paritaet zu
+	// /trips/[id]); der Hub baut sich danach neu auf, mit dem offenen Reiter.
+	// Fix-Loop 2 (F101): anders als beim Trip wird `currentPreset` bei 'geholt' NICHT gesetzt —
+	// CompareTabs.svelte:717 hydriert den offenen Reiter reaktiv auf jede neue `preset`-
+	// Referenz neu und wuerde die sichtbare Eingabe mit dem GET-Stand ueberschreiben. Die
+	// AC-19-Uebernahme erfolgt in Compare erst nach vollem Retry-Erfolg ('wiederholt'):
+	// dann frisch holen (der GET-Stand von vorher enthielte die gerade gesendeten Felder
+	// nicht) und den Hub neu aufbauen. Scheitert dieser GET, bleibt der Hub unangetastet.
+	const abmeldenUebernahme = hubSaveCtl.registriereUebernahme((_stand, phase) => {
+		if (phase === 'wiederholt') void uebernehmeFrischenVergleich();
+	});
+
+	// Fix-Loop 3 (F207): der GET braucht Zeit. Kam danach etwas Neues (ausstehende/laufende
+	// Eingabe, anderer Speichervorgang ⇒ Stempel der Registry hat gewechselt), ist der
+	// geholte Stand AELTER als der Stempel — dann KEIN Neuaufbau (nie nur eines von beiden;
+	// Muster `uebernehmeNachStatusAenderung` der Trip-Seite).
+	async function uebernehmeFrischenVergleich(): Promise<void> {
+		try {
+			const frisch = await getMitFassung<ComparePreset>(`/api/compare/presets/${data.preset.id}`);
+			if (!frisch.inRegistry || hubSaveCtl.hasPending || hubSaveCtl.state !== 'idle') return;
+			tabNachUebernahme = new URL(window.location.href).searchParams.get('tab');
+			currentPreset = frisch.daten;
+			uebernommeneFassung += 1;
+		} catch {
+			/* kein Neuaufbau: der Reiter zeigt bereits die gespeicherte Eingabe */
+		}
+	}
+
+	onMount(() => {
+		const abmelden = speicherAnmeldestelle?.anmelden(hubSaveCtl);
+		const nachladen = starteNachladenNachEntladen<ComparePreset>({
+			kennung: { typ: 'vergleich', id: data.preset.id },
+			ctl: hubSaveCtl,
+			ausgelieferteFassung: inhaltsFassung(data.preset),
+			holen: vergleichNachladeQuelle<ComparePreset>(data.preset.id),
+			uebernehmen: (stand) => {
+				tabNachUebernahme = new URL(window.location.href).searchParams.get('tab');
+				currentPreset = stand;
+				uebernommeneFassung += 1;
+			}
+		});
+		return () => {
+			abmelden?.();
+			abmeldenUebernahme();
+			nachladen.stoppen();
+		};
+	});
 
 	// Staging-Fund SF-2 (CRITICAL, AC-37): der Hub (CompareTabs) haelt fuer die
 	// Aktivierungs-Karte einen eigenen `localSchedule`-Zustand und PUT-Pfad
@@ -73,104 +169,56 @@
 	// ueberschrittenem end_date gegriffen hat.
 	let runtimeExceeded = $derived(isRuntimeExceeded(currentPreset));
 	// Adversary-Finding F001: geguardetes Profil-Label für die mobile Kontext-
-	// Unterzeile (Muster CompareTile.svelte:62) — leer bei unbekanntem/fehlendem profil.
+	// Unterzeile (Muster SubscriptionCard.svelte) — leer bei unbekanntem/fehlendem profil.
 	let profileLabel = $derived(presetProfileLabel(currentPreset.profil));
 
-	// Epic #1273 S2 — Inline-Edit für Name/Region/Aktivitätsprofil im Hub
-	// (Feature-Parität zum alten CompareEditor). Muster: TripHeader.svelte:33-54.
-	// KRITISCH: Round-Trip-Spread beim PUT ({ ...currentPreset, <feld> }), sonst
-	// setzt der Go-Handler (compare_preset.go:259-297) location_ids/empfaenger/
-	// schedule/profil auf Zero-Value zurück (BUG-DATALOSS). Und: nach Erfolg
-	// currentPreset MIT NEUER OBJEKT-REFERENZ ersetzen, damit der defensive
-	// $effect in CompareTabs.svelte:821-826 currentPreset resynct (Cross-Tab-
-	// Datenverlust-Schutz, AC-5). NIE ein Feld in-place mutieren.
-	let editName = $state(currentPreset.name);
-	let nameSaving = $state(false);
-	let isEditingName = $state(false);
-	let nameSaveError: string | null = $state(null);
-
-	let editRegion = $state((currentPreset.display_config?.region as string) ?? '');
-	let regionSaving = $state(false);
-	let isEditingRegion = $state(false);
-	let regionSaveError: string | null = $state(null);
-
-	let profilSaving = $state(false);
-	let profilSaveError: string | null = $state(null);
-
-	function startNameEdit(): void {
-		editName = currentPreset.name;
-		nameSaveError = null;
-		isEditingName = true;
-	}
-	function cancelNameEdit(): void {
-		editName = currentPreset.name;
-		nameSaveError = null;
-		isEditingName = false;
-	}
-	async function saveName(): Promise<void> {
-		nameSaving = true;
-		nameSaveError = null;
-		try {
-			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				...currentPreset,
-				name: editName
-			});
-			currentPreset = updated;
-			isEditingName = false;
-		} catch (e: unknown) {
-			nameSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-		} finally {
-			nameSaving = false;
-		}
-	}
-
-	function startRegionEdit(): void {
-		editRegion = (currentPreset.display_config?.region as string) ?? '';
-		regionSaveError = null;
-		isEditingRegion = true;
-	}
-	function cancelRegionEdit(): void {
-		editRegion = (currentPreset.display_config?.region as string) ?? '';
-		regionSaveError = null;
-		isEditingRegion = false;
-	}
-	async function saveRegion(): Promise<void> {
-		regionSaving = true;
-		regionSaveError = null;
-		try {
-			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				...currentPreset,
-				display_config: { ...currentPreset.display_config, region: editRegion }
-			});
-			currentPreset = updated;
-			isEditingRegion = false;
-		} catch (e: unknown) {
-			regionSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-		} finally {
-			regionSaving = false;
-		}
-	}
-
-	async function saveProfil(value: ActivityProfile): Promise<void> {
-		profilSaving = true;
-		profilSaveError = null;
-		try {
-			const updated = await api.put<ComparePreset>(`/api/compare/presets/${currentPreset.id}`, {
-				...currentPreset,
-				profil: value
-			});
-			currentPreset = updated;
-		} catch (e: unknown) {
-			profilSaveError = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
-		} finally {
-			profilSaving = false;
-		}
+	// Issue #2284 S1 — Speicherweg des geteilten Kopfs (SubscriptionHeader).
+	// KRITISCH (#2375/#2381): NUR das eigene Feld senden ({ name } / { profil } /
+	// { display_config: { region } }), KEIN Spread von currentPreset — der Go-Handler
+	// mergt fehlende Felder als „unveraendert"; ein Spread der (hier veralteten)
+	// Seiten-Kopie schriebe Reiter-Werte anderer Tabs/desselben Tabs zurueck. Nach Erfolg
+	// currentPreset MIT NEUER OBJEKT-REFERENZ ersetzen (Resync in CompareTabs, AC-5).
+	// Issue #1433: eigener Konflikt-Eintrag je Kopf-Feld; ein 412 geht an den Controller
+	// („Nochmal speichern", Muster TripHeader) — sonst Sackgasse, weil das alte If-Match
+	// bis zum Retry stehen bleibt.
+	// Vertrag mit dem Baustein — drei Ausgaenge:
+	//   (a) gespeichert            ⇒ `schliessen()` (Feld zu), Promise erfuellt
+	//   (b) 412 an den Controller  ⇒ Promise erfuellt OHNE `schliessen()`: Feld bleibt offen,
+	//       keine eigene Meldung; `schliessen()` folgt, wenn „Nochmal speichern" gelingt
+	//   (c) jeder andere Fehler    ⇒ wirft, der Baustein zeigt die Meldung am Feld
+	const KOPF_RUMPF = {
+		name: (v: string) => ({ name: v }),
+		region: (v: string) => ({ display_config: { region: v } }),
+		profile: (v: string) => ({ profil: v })
+	};
+	const KOPF_SCHLUESSEL = { name: 'kopf-name', region: 'kopf-region', profile: 'kopf-profil' };
+	async function onSaveField(field: 'name' | 'region' | 'profile', value: string, schliessen: () => void): Promise<void> {
+		const pfad = `/api/compare/presets/${currentPreset.id}`;
+		const speichern = baueSpeicherung<ComparePreset>(api, pfad, KOPF_RUMPF[field](value), (updated) => {
+			// Waehrend „Nochmal speichern" NICHT uebernehmen: eine neue `preset`-Referenz baut
+			// die Reiter in CompareTabs neu auf, ueber Eingaben, die der Retry gleich noch
+			// sendet (F101). Der Neuaufbau folgt nach vollem Erfolg ('wiederholt').
+			if (!hubSaveCtl.imWiederholen) currentPreset = updated;
+			schliessen();
+		}, KOPF_SCHLUESSEL[field]);
+		await speichereKopfFeld(speichern, hubSaveCtl);
 	}
 
 	// Issue #517 — ?tab=-Query-Parameter lesen und an CompareDetail/CompareTabs weitergeben.
 	const initialTab = $derived(page.url.searchParams.get('tab') ?? 'uebersicht');
 
 	let actionSheetOpen = $state(false);
+	// Issue #2278 AC-12: Lebenszyklus-Menue wie beim Trip — Desktop = Dropdown, Mobil = Aktionsblatt.
+	let mobil = $state(false);
+	let sendDialogOpen = $state(false);
+	const lifecycle = $derived(currentPreset.archived_at != null ? 'archived' : status);
+	onMount(() => {
+		const mq = window.matchMedia('(max-width: 899px)');
+		const update = () => (mobil = mq.matches);
+		update();
+		mq.addEventListener('change', update);
+		return () => mq.removeEventListener('change', update);
+	});
 
 	// Issue #528 — Status-abhängige Header-Primäraktion.
 	let isSending = $state(false);
@@ -180,10 +228,10 @@
 		isSending = true;
 		sendMsg = null;
 		try {
-			const res = await fetch(`/api/compare/presets/${currentPreset.id}/send`, { method: 'POST' });
-			sendMsg = res.ok ? 'Test-Briefing gesendet' : 'Fehler beim Senden';
-		} catch {
-			sendMsg = 'Netzwerkfehler';
+			// Issue #2124/#2280: geteilter Laufzustand (compare:<id>) + Klassifikation,
+			// einheitlicher Ausloeser -> POST /api/briefings/{id}/send?kind=vergleich.
+			const o = await sendSubscription('vergleich', currentPreset.id);
+			sendMsg = o.kind === 'ok' ? (o.message || 'Test-Briefing gesendet') : o.message;
 		} finally {
 			isSending = false;
 		}
@@ -213,216 +261,161 @@
 		isPausing = false;
 	}
 
+	// Issue #2214: Bestaetigungsdialog fuer 'Loeschen' (State analog trips/[id]).
+	let deleteDialogOpen = $state(false);
+	let isDeleting = $state(false);
+
 	function handleAction(id: string) {
-		// Epic #1273 S3: der 'edit'/'setup'-Zweig entfiel — compareDetailActions()
-		// liefert kein 'edit' mehr und kein Aufrufer im Hub uebergibt 'edit'/'setup'.
+		// Epic #1273 S3: kein 'edit'/'setup' im Hub; die Aktionen stammen aus
+		// subscriptionActions('vergleich', status, 'hub') (Issue #2278).
 		if (id === 'pause' || id === 'resume') {
-			// 'resume' kommt aus compareDetailActions() (Hub-Header, #1256 S3 + #1261) —
-			// selbe Toggle-Aktion wie 'pause' aus compareActions() (Listen-Kebab).
+			// 'pause' und 'resume' sind dieselbe Toggle-Aktion.
 			void togglePause();
-		} else if (id === 'send') {
-			void handleTestSend();
-		} else if (id === 'preview') {
-			window.location.href = '/compare/' + currentPreset.id + '?tab=vorschau';
 		} else if (id === 'archive') {
 			void archivePreset();
-		} else if (id === 'delete' || id === 'trash') {
-			// 'trash' kommt aus compareDetailActions() (Hub-Header, #1256 S3 + #1261) —
-			// selbe Lösch-Aktion wie 'delete' aus compareActions() (Listen-Kebab).
-			void deletePreset();
+		} else if (id === 'unarchive') {
+			void unarchivePreset();
+		} else if (id === 'delete') {
+			// Issue #2214: erst Rueckfrage (ConfirmDialog, wie Trip-Hub), kein Sofort-DELETE.
+			deleteDialogOpen = true;
 		}
+	}
+
+	function handleDeleteCancel(): void {
+		deleteDialogOpen = false;
+	}
+
+	function handleDeleteDialogOpenChange(open: boolean): void {
+		deleteDialogOpen = open;
+	}
+
+	async function handleDeleteConfirm(): Promise<void> {
+		deleteDialogOpen = false;
+		await deletePreset();
 	}
 
 	async function archivePreset() {
 		try {
-			const res = await fetch(`/api/compare/presets/${currentPreset.id}/state`, {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ archived: true })
-			});
-			if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+			await setArchived('vergleich', currentPreset.id, true);
 			window.location.href = '/compare';
-		} catch {
-			sendMsg = 'Archivieren fehlgeschlagen.';
+		} catch (e) {
+			sendMsg = fehlerText(e, 'Archivieren fehlgeschlagen.');
+		}
+	}
+
+	// Nutzerverstaendliche Meldung: 4xx mit Server-Detail, sonst der feste Text (5xx/Netz).
+	function fehlerText(e: unknown, fest: string): string {
+		return e instanceof SubscriptionExecError && e.status < 500 && e.detail ? e.detail : fest;
+	}
+
+	async function unarchivePreset() {
+		try {
+			await setArchived('vergleich', currentPreset.id, false);
+			window.location.reload();
+		} catch (e) {
+			sendMsg = fehlerText(e, 'Reaktivieren fehlgeschlagen.');
 		}
 	}
 
 	async function deletePreset() {
+		isDeleting = true;
 		try {
-			const res = await fetch(`/api/compare/presets/${currentPreset.id}`, { method: 'DELETE' });
-			if (!res.ok) throw new Error(`DELETE failed: ${res.status}`);
+			await deleteSubscription('vergleich', currentPreset.id);
 			window.location.href = '/compare';
-		} catch {
-			sendMsg = 'Löschen fehlgeschlagen.';
+		} catch (e) {
+			sendMsg = fehlerText(e, 'Löschen fehlgeschlagen.');
+		} finally {
+			isDeleting = false;
 		}
 	}
 </script>
 
-<!-- Desktop-Layout (#491, #582) — full-width Header nach JSX-Vorlage -->
-<div class="hidden desktop:block" style="position: relative; padding: 22px 40px 0; border-bottom: 1px solid var(--g-rule)">
-	<!-- Breadcrumb (Issue #582 + Bug #589). Issue #1256 S8c (AC-10): App-weiter
-	     Extra-Krümel entfernt — Soll ist genau 2 Krümel (Soll: JSX:66-70). -->
-	<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px">
+<!-- Issue #2131 — eigener Seitentitel wie bei der Trip-Ansicht
+     (trips/[id]/+page.svelte). Ohne ihn traegt das Dokument nur den
+     Platzhalter aus app.html, und die Offline-Uebersicht listet jeden
+     Ortsvergleich als „Gregor Zwanzig". -->
+<svelte:head><title>{currentPreset.name} — Gregor Zwanzig</title></svelte:head>
+
+<!-- Hub-Kopf (#491, #493, #582; #2284 S1): EIN Markup für Desktop und Mobil.
+     Seiten-Chrome (Breadcrumb Desktop, BackLink Mobil, Aktionen) bleibt hier;
+     Name/Region/Profil liefert der geteilte SubscriptionHeader. -->
+<div class="flex flex-col gap-4 p-4 desktop:block desktop:pt-[22px] desktop:px-10 desktop:pb-0 desktop:[border-bottom:1px_solid_var(--g-rule)]" style="position: relative">
+	<!-- Breadcrumb (Issue #582 + Bug #589). Issue #1256 S8c (AC-10): genau 2 Krümel. -->
+	<div class="hidden desktop:flex" style="align-items: center; gap: 8px; margin-bottom: 12px">
 		<a href="/compare" style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-3); text-decoration: none" class="breadcrumb-link">ORTS-VERGLEICHE</a>
 		<span style="color: var(--g-ink-4); font-size: 11px">/</span>
 		<span style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4)">Hub</span>
 	</div>
+	<div class="desktop:hidden"><BackLink href="/compare" label="Vergleiche" ariaLabel="Zurück zur Übersicht" /></div>
 
-	<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 24px">
-		<div style="min-width: 0; flex: 1">
-			<div style="display: flex; align-items: center; gap: 12px">
-				{#if isEditingName}
-					<input type="text" data-testid="compare-hub-name-edit" bind:value={editName} aria-label="Name bearbeiten" style="font-size: 24px; font-weight: 600; padding: 4px 8px; border: 1px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card)" />
-					<Btn variant="ghost" size="sm" data-testid="compare-hub-name-save" disabled={nameSaving} onclick={saveName}>{nameSaving ? '…' : 'Umbenennen'}</Btn>
-					<Btn variant="ghost" size="sm" onclick={cancelNameEdit}>Abbrechen</Btn>
-				{:else}
-					<h1 style="font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; margin: 0">{currentPreset.name}</h1>
-					<button type="button" data-testid="compare-hub-name-edit-toggle" aria-label="Name bearbeiten" onclick={startNameEdit} style="display: inline-flex; padding: 4px; color: var(--g-ink-3); cursor: pointer"><PencilIcon size={15} /></button>
-				{/if}
-				<span style="flex-shrink: 0"><CompareStatusPill {status}/></span>
+	<div class="flex items-start gap-2 desktop:gap-6 desktop:justify-between">
+		<SubscriptionHeader
+			kind="vergleich"
+			name={currentPreset.name}
+			region={currentPreset.display_config?.region as string | undefined}
+			profile={currentPreset.profil}
+			profileOptions={ACTIVITY_PROFILE_OPTIONS}
+			{profileLabel}
+			regionMaxLength={60}
+			testidPrefix="compare-hub"
+			{onSaveField}
+			saveController={hubSaveCtl}
+		>
+			{#snippet eyebrow()}
+				<!-- Issue #1256 S8c (AC-12): Eyebrow nur mobil. -->
+				<span class="mono block desktop:hidden" style="font-size: 11px; color: var(--g-ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;">Orts-Vergleich · Hub</span>
+			{/snippet}
+			{#snippet badges()}
+				<span class="flex-shrink-0"><CompareStatusPill {status} /></span>
 				{#if runtimeExceeded}
-					<span data-testid="runtime-exceeded-hint" style="font-size: 12px; font-weight: 600; color: var(--g-bad)">Laufzeit überschritten</span>
+					<span data-testid="runtime-exceeded-hint" class="flex-shrink-0 text-[11px] desktop:text-xs" style="font-weight: 600; color: var(--g-bad)">Laufzeit überschritten</span>
 				{/if}
-			</div>
-			{#if nameSaveError}<div data-testid="compare-hub-name-save-error" role="alert" style="font-size: 13px; color: var(--g-bad); margin-top: 6px">{nameSaveError}</div>{/if}
-			<!-- Issue #1256 S8c (AC-11): profileLabel statt rohem preset.profil,
-			     Leerfeld-Absicherung analog Mobile-Unterzeile unten (Soll: JSX:78-80).
-			     Epic #1273 S2: Region inline editierbar. -->
-			<div style="font-size: 14px; color: var(--g-ink-3); margin: 8px 0 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
-				{#if isEditingRegion}
-					<input type="text" data-testid="compare-hub-region-edit" bind:value={editRegion} aria-label="Region bearbeiten" maxlength="60" style="font-size: 14px; padding: 3px 8px; border: 1px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card)" />
-					<Btn variant="ghost" size="sm" data-testid="compare-hub-region-save" disabled={regionSaving} onclick={saveRegion}>{regionSaving ? '…' : 'Speichern'}</Btn>
-					<Btn variant="ghost" size="sm" onclick={cancelRegionEdit}>Abbrechen</Btn>
-				{:else}
-					<span>{currentPreset.display_config?.region ?? '—'}</span>
-					<button type="button" data-testid="compare-hub-region-edit-toggle" aria-label="Region bearbeiten" onclick={startRegionEdit} style="display: inline-flex; padding: 2px; color: var(--g-ink-3); cursor: pointer"><PencilIcon size={13} /></button>
-					{#if profileLabel}<span>· {profileLabel}</span>{/if}<span>· {currentPreset.location_ids.length} {currentPreset.location_ids.length === 1 ? 'Ort' : 'Orte'}</span>
-				{/if}
-			</div>
-			{#if regionSaveError}<div data-testid="compare-hub-region-save-error" role="alert" style="font-size: 13px; color: var(--g-bad); margin-bottom: 6px">{regionSaveError}</div>{/if}
-			<!-- Epic #1273 S2: Aktivitätsprofil-Kacheln (Muster CompareEditor.svelte:1193-1233),
-			     sofortiger Commit pro Klick (kein Zwischenschritt). -->
-			<div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px">
-				{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
-					{@const sel = currentPreset.profil === opt.value}
-					<button
-						type="button"
-						data-testid={`compare-hub-profil-option-${opt.value}`}
-						data-selected={sel ? 'true' : 'false'}
-						disabled={profilSaving}
-						onclick={() => saveProfil(opt.value)}
-						style:padding="6px 12px"
-						style:font-size="13px"
-						style:cursor="pointer"
-						style:background={sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}
-						style:border={sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}
-						style:border-radius="var(--g-r-3)"
-						style:color={sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'}
-					>{opt.label}</button>
-				{/each}
-			</div>
-			{#if profilSaveError}<div data-testid="compare-hub-profil-save-error" role="alert" style="font-size: 13px; color: var(--g-bad); margin-bottom: 8px">{profilSaveError}</div>{/if}
-		</div>
+			{/snippet}
+			{#snippet meta()}
+				<!-- Orte-Anzahl je Viewport aus derselben Quelle wie vor #2284 S1:
+				     Desktop zählte die gespeicherten IDs, Mobil die aufgelösten Orte
+				     (weichen ab, wenn ein Ort gelöscht/nicht auflösbar ist). Getrennte
+				     testids je Viewport, damit jede Kopf-testid genau einmal im DOM steht (AC-8). -->
+				<span data-testid="compare-hub-orte-anzahl-desktop" class="hidden desktop:inline">{' · '}{currentPreset.location_ids.length} {currentPreset.location_ids.length === 1 ? 'Ort' : 'Orte'}</span>
+				<span data-testid="compare-hub-orte-anzahl-mobil" class="desktop:hidden">{' · '}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}</span>
+			{/snippet}
+		</SubscriptionHeader>
 
-		<div style="display: flex; gap: 8px; flex-shrink: 0">
+		<!-- Senden/Setup auf allen Breiten sichtbar (AC-3/AC-12, wie im Trip-Hub); mobil sitzt der Kebab daneben.
+		     mt-[25px] = Eyebrow (9px) + gap-4 (16px): Knopf steht auf Höhe der Namenszeile. -->
+		<div class="flex items-center mt-[25px] desktop:mt-0" style="gap: 8px; flex-shrink: 0">
 			{#if status === 'draft'}
-				<Btn variant="primary" onclick={() => { window.location.href = `?tab=versand`; }}>Setup abschließen</Btn>
+				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" onclick={() => { window.location.href = `?tab=wetter-metriken#versand`; }}>Setup abschließen</Btn>
 			{:else}
-				<Btn variant="primary" onclick={handleTestSend} disabled={isSending}>
-					{isSending ? 'Wird gesendet…' : 'Test senden'}
+				<!-- Senden ist der Primaerknopf und oeffnet den Sende-Dialog (AC-3/AC-12) -->
+				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" data-testid="subscription-hub-send" onclick={() => (sendDialogOpen = true)} disabled={isSending || lifecycle === 'archived'}>
+					{isSending ? 'Wird gesendet…' : 'Senden'}
 				</Btn>
-				<!-- Epic #1273 S3: Desktop-"Bearbeiten"-Button entfernt — der Hub selbst
-				     ist die Bearbeiten-Flaeche (Name/Region/Profil inline, Tabs). -->
 			{/if}
-			<CompareKebab {status} actions={compareDetailActions(status)} onSelect={handleAction} />
+			{#if !mobil}
+				<SubscriptionKebab data-testid="subscription-kebab" actions={subscriptionActions('vergleich', lifecycle, 'hub')} onSelect={handleAction} />
+			{/if}
+			{#if mobil}
+				<button
+					type="button"
+					class="flex flex-shrink-0 items-center justify-center min-h-[44px] min-w-[44px] rounded-md"
+					data-testid="subscription-kebab"
+					aria-label="Weitere Aktionen"
+					onclick={() => (actionSheetOpen = true)}
+				>
+					<MoreHorizontalIcon size={20} />
+				</button>
+			{/if}
 		</div>
 	</div>
 
+	<!-- sendMsg/pauseError wie bisher nur Desktop (mobil: Aktions-Sheet). -->
 	{#if sendMsg}
-		<div style="font-size: 14px; color: var(--g-ink-3); margin-bottom: 8px">{sendMsg}</div>
+		<div class="hidden desktop:flex" style="font-size: 14px; color: var(--g-ink-3); margin-bottom: 8px">{sendMsg}</div>
 	{/if}
 	{#if pauseError}
-		<div style="font-size: 14px; color: var(--g-bad); margin-bottom: 8px">{pauseError}</div>
+		<div class="hidden desktop:flex" style="font-size: 14px; color: var(--g-bad); margin-bottom: 8px">{pauseError}</div>
 	{/if}
-</div>
-
-<!-- Mobile-TopBar (#493) — bleibt bespoke Seiten-Chrome, s. Modulkommentar oben -->
-<div class="desktop:hidden flex flex-col gap-4 p-4">
-	<!-- Issue #1256 S8c (AC-12): mobile Eyebrow-Zeile über dem Preset-Namen
-	     (Soll: screen-compare-detail-mobile.jsx:51, Styling analog TopAppBar.svelte:56-61). -->
-	<span class="mono block" style="font-size: 9px; color: var(--g-ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;">Orts-Vergleich · Hub</span>
-	<div class="flex items-center gap-2 min-h-[44px]">
-		<a
-			href="/compare"
-			class="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md"
-			aria-label="Zurück zur Übersicht"
-		>
-			<ArrowLeftIcon size={20} />
-		</a>
-		<span class="flex-1 flex items-center gap-2 min-w-0">
-			{#if isEditingName}
-				<input type="text" data-testid="compare-hub-name-edit" bind:value={editName} aria-label="Name bearbeiten" class="min-w-0 flex-1 font-semibold px-2 py-1 rounded-md" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
-				<Btn variant="ghost" size="sm" data-testid="compare-hub-name-save" disabled={nameSaving} onclick={saveName}>{nameSaving ? '…' : 'OK'}</Btn>
-				<Btn variant="ghost" size="sm" onclick={cancelNameEdit}>×</Btn>
-			{:else}
-				<span class="font-semibold truncate">{currentPreset.name}</span>
-				<button type="button" data-testid="compare-hub-name-edit-toggle" aria-label="Name bearbeiten" onclick={startNameEdit} class="flex-shrink-0 flex items-center justify-center min-h-[44px] min-w-[44px]" style="color: var(--g-ink-3)"><PencilIcon size={16} /></button>
-			{/if}
-			<span class="flex-shrink-0"><CompareStatusPill {status} /></span>
-			{#if runtimeExceeded}
-				<span data-testid="runtime-exceeded-hint" class="flex-shrink-0" style="font-size: 11px; font-weight: 600; color: var(--g-bad)">Laufzeit überschritten</span>
-			{/if}
-		</span>
-		<!-- Epic #1273 S3: Mobile-Stift-Icon (Link auf /edit) entfernt — der Hub
-		     selbst ist die Bearbeiten-Flaeche. -->
-		<button
-			type="button"
-			class="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-md"
-			aria-label="Weitere Aktionen"
-			onclick={() => (actionSheetOpen = true)}
-		>
-			<MoreHorizontalIcon size={20} />
-		</button>
-	</div>
-
-	<!-- Kontext-Unterzeile (Fix 4, Design-Fidelity 2026-07) -->
-	<!-- Adversary-Finding F001: profileLabel geguardet (Muster CompareTile.svelte:174) —
-	     kein führender/doppelter " · " bei leerem/unbekanntem profil.
-	     Staging-Befund: {' · '} statt " · " im Markup — Svelte trimmt sonst das
-	     Leerzeichen vor {/if} weg ("Wandern ·0 Orte" statt "Wandern · 0 Orte"). -->
-	<div class="text-sm text-[var(--g-ink-3)] flex items-center gap-2 flex-wrap">
-		{#if isEditingRegion}
-			<input type="text" data-testid="compare-hub-region-edit" bind:value={editRegion} aria-label="Region bearbeiten" maxlength="60" class="min-w-0 flex-1 px-2 py-1 rounded-md text-sm" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
-			<Btn variant="ghost" size="sm" data-testid="compare-hub-region-save" disabled={regionSaving} onclick={saveRegion}>{regionSaving ? '…' : 'OK'}</Btn>
-			<Btn variant="ghost" size="sm" onclick={cancelRegionEdit}>×</Btn>
-		{:else}
-			<span>{currentPreset.display_config?.region ?? '—'}</span>
-			<button type="button" data-testid="compare-hub-region-edit-toggle" aria-label="Region bearbeiten" onclick={startRegionEdit} class="flex items-center" style="color: var(--g-ink-3)"><PencilIcon size={13} /></button>
-			{#if profileLabel}<span>{' · '}{profileLabel}</span>{/if}<span>{' · '}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}</span>
-		{/if}
-	</div>
-	{#if nameSaveError}<div data-testid="compare-hub-name-save-error" role="alert" class="text-sm" style="color: var(--g-bad)">{nameSaveError}</div>{/if}
-	{#if regionSaveError}<div data-testid="compare-hub-region-save-error" role="alert" class="text-sm" style="color: var(--g-bad)">{regionSaveError}</div>{/if}
-	<!-- Epic #1273 S2: Aktivitätsprofil-Kacheln (Mobile-Parität) -->
-	<div class="flex gap-2 flex-wrap">
-		{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
-			{@const sel = currentPreset.profil === opt.value}
-			<button
-				type="button"
-				data-testid={`compare-hub-profil-option-${opt.value}`}
-				data-selected={sel ? 'true' : 'false'}
-				disabled={profilSaving}
-				onclick={() => saveProfil(opt.value)}
-				class="rounded-md"
-				style:padding="6px 12px"
-				style:font-size="13px"
-				style:background={sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}
-				style:border={sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}
-				style:color={sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'}
-			>{opt.label}</button>
-		{/each}
-	</div>
-	{#if profilSaveError}<div data-testid="compare-hub-profil-save-error" role="alert" class="text-sm" style="color: var(--g-bad)">{profilSaveError}</div>{/if}
 </div>
 
 <!-- Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): CompareDetail wird
@@ -431,22 +424,53 @@
      hubPutQueue-Instanzen/doppelte testids (S4-F001-/S7-F004-Fehlerklasse).
      CompareTabs schaltet Monitoring-Streifen + Idealwerte-Tab intern via
      isMobileViewport (matchMedia) um. -->
-<CompareDetail
-	preset={currentPreset}
-	locations={data.locations}
-	{initialTab}
-	onScheduleChange={handleScheduleChange}
-	saveController={hubSaveCtl}
-	bind:this={compareDetailRef}
-/>
+{#key uebernommeneFassung}
+	<CompareDetail
+		preset={currentPreset}
+		locations={data.locations}
+		initialTab={tabNachUebernahme ?? initialTab}
+		onScheduleChange={handleScheduleChange}
+		saveController={hubSaveCtl}
+		bind:this={compareDetailRef}
+	/>
+{/key}
 
 <!-- Bottom-Sheet für mobile Aktionen (#493) -->
-<MCompareActionSheet
+<SubscriptionActionSheet
 	open={actionSheetOpen}
 	onClose={() => (actionSheetOpen = false)}
-	{status}
+	kind="vergleich"
+	status={lifecycle}
+	surface="hub"
 	onAction={handleAction}
-	presetName={currentPreset.name}
+	name={currentPreset.name}
+/>
+
+<!-- Issue #2278 AC-3: Senden erst nach Bestaetigung, Ziel aus dem Konto-Profil des angemeldeten Nutzers. -->
+<SendConfirmDialog
+	open={sendDialogOpen}
+	kind="vergleich"
+	profile={data.profile}
+	subscription={currentPreset}
+	running={isSending}
+	onConfirm={() => { sendDialogOpen = false; void handleTestSend(); }}
+	onCancel={() => (sendDialogOpen = false)}
+/>
+
+<!-- Issue #2214: Loeschen erst nach Bestaetigung (Muster trips/[id]/+page.svelte). -->
+<ConfirmDialog
+	open={deleteDialogOpen}
+	title="Vergleich endgültig löschen?"
+	description={'"' + currentPreset.name + '" wird unwiderruflich gelöscht.'}
+	confirmLabel="Löschen"
+	confirmVariant="destructive"
+	data-testid="compare-detail-delete-confirm-dialog"
+	cancelTestid="compare-detail-delete-confirm-cancel"
+	confirmTestid="compare-detail-delete-confirm-yes"
+	disabled={isDeleting}
+	onConfirm={handleDeleteConfirm}
+	onCancel={handleDeleteCancel}
+	onOpenChange={handleDeleteDialogOpenChange}
 />
 
 <style>

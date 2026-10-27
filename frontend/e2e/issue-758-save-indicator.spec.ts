@@ -54,7 +54,7 @@ function saveIndicator(page: Page) {
 }
 
 async function openStagesEditor(page: Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=stages`);
+	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
 	await expect(page.getByTestId('stage-date-field').first()).toBeVisible();
 }
@@ -137,8 +137,9 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 	test('AC-5: ausstehender Auto-Save flusht vor Navigation (kein Datenverlust)', async ({
 		page
 	}) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=briefings`);
-		const timeInput = page.getByTestId('report-morning-time');
+		// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken.
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken#versand`);
+		const timeInput = page.getByTestId('versand-abschnitt').getByTestId('report-morning-time');
 		await expect(timeInput).toBeVisible();
 		await expect(timeInput).toHaveValue('07:00');
 
@@ -170,7 +171,8 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 	// AC-7: In „Briefing" gibt es keinen expliziten Speichern-Button mehr; Änderungen
 	// speichern automatisch und der Indikator quittiert.
 	test('AC-7: Briefing-Tab ohne Speichern-Button — Auto-Save quittiert', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=briefings`);
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken#versand`);
+		await expect(page.getByTestId('versand-abschnitt')).toBeVisible();
 		// Der alte explizite Speichern-Button darf nicht mehr existieren.
 		await expect(page.getByTestId('briefings-save')).toHaveCount(0);
 		// Indikator ist vorhanden.
@@ -218,9 +220,12 @@ test.describe('Issue #758 — Ortsvergleich Speicher-Status', () => {
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle');
 
 		// Versand-Zeit ändern → Autosave.
-		await page.locator('[data-testid="compare-detail-tab-versand"]:visible').first().click();
+		// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken.
+		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
 		// Volle Stunde: report-morning-time ist eine Stunden-Auswahlliste (#1379).
-		const morningTime = page.locator('[data-testid="report-morning-time"]:visible').first();
+		const morningTime = page
+			.locator('[data-testid="versand-abschnitt"] [data-testid="report-morning-time"]:visible')
+			.first();
 		await expect(morningTime).toBeVisible({ timeout: 10_000 });
 		await morningTime.selectOption('05:00');
 		await morningTime.blur();

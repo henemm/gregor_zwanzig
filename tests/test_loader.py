@@ -254,7 +254,7 @@ class TestUserLoader:
                 },
                 {
                     "type": "trip",
-                    "name": "Weekend Tour",
+                    "name": "Weekend Trip",
                     "trip_file": "trips/weekend.json",
                     "trigger": "2_days_before",
                 },

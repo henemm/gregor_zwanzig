@@ -77,10 +77,10 @@
 		opacity: 1;
 	}
 
-	/* Mobile: über BottomNav (64px Höhe + safe-area). */
+	/* Mobile: über der schwebenden BottomNav (Oberkante = --g-nav-clearance). */
 	@media (max-width: 899px) {
 		.save-indicator {
-			bottom: calc(64px + env(safe-area-inset-bottom) + 8px);
+			bottom: calc(var(--g-nav-clearance) + var(--g-s-2));
 		}
 	}
 

@@ -3,7 +3,7 @@ entity_id: bug_272_ios_input_font_size
 type: bugfix
 created: 2026-05-20
 updated: 2026-05-20
-status: completed
+status: implemented
 version: "1.0"
 tags: [bugfix, ios, safari, mobile, font-size, zoom, tailwind, frontend, issue-272]
 ---
@@ -26,7 +26,7 @@ Die Komponente `input.svelte` macht es bereits korrekt mit `text-base md:text-sm
 
 **Geänderte Dateien:**
 - `frontend/src/app.css` — unlayered `@media (max-width: 767px)`-Regel am Ende der Datei (nach allen `@layer`-Blöcken) setzt `input, select, textarea { font-size: 16px }`
-- `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` — bestehender `<style>`-Block um Scoped `@media (max-width: 767px) { .field textarea { font-size: 16px } }` ergänzen
+- `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` — bestehender `<style>`-Block um Scoped `@media (max-width: 767px) { .field textarea { font-size: 16px } }` ergänzen
 
 **NICHT ändern:**
 - `frontend/src/lib/components/ui/input/input.svelte` — nutzt bereits `text-base md:text-sm` (korrekt)
@@ -39,7 +39,7 @@ Die Komponente `input.svelte` macht es bereits korrekt mit `text-base md:text-sm
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `frontend/src/app.css` | CSS-Datei | Single Source of Truth für globale Styles; unlayered Regeln gewinnen über `@layer`-Blocks ohne `!important` (Tailwind v4) |
-| `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` | Svelte-Komponente | Scoped CSS `.field textarea { font-size: 0.875rem }` hat Spezifität 0-1-1 → übersteuert globale Regel; braucht eigenen Mobile-Override |
+| `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` | Svelte-Komponente | Scoped CSS `.field textarea { font-size: 0.875rem }` hat Spezifität 0-1-1 → übersteuert globale Regel; braucht eigenen Mobile-Override |
 | Tailwind v4 (`@import "tailwindcss"`) | CSS-Framework | Unlayered Regeln in `app.css` gewinnen automatisch über alle `@layer utilities`-Definitionen — kein `!important` notwendig |
 
 ## Implementation Details
@@ -58,7 +58,7 @@ Die Regel wird **nach** dem letzten schließenden `}` aller `@layer`-Blöcke ein
 
 Dieser Selector greift auf alle Raw-HTML-Elemente dieser Typen in der gesamten Anwendung — ohne Ausnahme bei Desktop-Breakpoints (≥ 768 px), da die Regel nur unterhalb 767 px aktiv ist.
 
-### 2. `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` — Scoped Override
+### 2. `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` — Scoped Override
 
 Im bestehenden `<style>`-Block (ab Zeile ~163) am Ende folgende Regel ergänzen:
 
@@ -77,7 +77,7 @@ Die Spezifität dieser Scoped-Regel (0-1-1 durch `.field textarea`) ist identisc
 | Datei | Δ LoC | Zählt |
 |-------|--------|-------|
 | `frontend/src/app.css` | +4 | nein (Frontend-Asset) |
-| `frontend/src/lib/components/trip-detail/SavePresetDialog.svelte` | +4 | nein (Frontend-Asset) |
+| `frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte` | +4 | nein (Frontend-Asset) |
 | **Gesamt (zählend)** | **0** | **< 250 LoC-Limit** |
 
 ## Expected Behavior

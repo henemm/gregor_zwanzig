@@ -12,23 +12,163 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import contextvars
 import re
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, NamedTuple, Optional
 
-from app.loader import get_data_dir, get_snapshots_dir, load_all_trips, save_trip
+from app.loader import (
+    LoaderError,
+    get_data_dir,
+    get_snapshots_dir,
+    load_all_trips,
+    update_trip,
+)
+from services.file_lock import LockTimeout
+from app.metric_catalog import (
+    get_all_metrics,
+    get_metric,
+    kurzform_kuerzel,
+    metric_command_words,
+    normalize_command_word,
+)
 from app.trip import Stage, Trip
+from output.metric_format import (
+    PRECIP_TYPE_LABEL_DE,
+    THUNDER_LABEL_DE,
+    format_value,
+    thunder_ampel_band,
+    thunder_label_value,
+)
+from output.tokens.metrics import LEVELS as _STUFENBUCHSTABEN
 from services.trip_day import anchor_tz, display_tz, trip_local_now, trip_local_today
+from services.trip_selection import _gsm7_sicher
+from utils.ascii_fold import fold_ascii
+from utils.geo import degrees_to_compass
 from utils.timezone import UTC, local_dt, local_fmt, local_hour
 
+if TYPE_CHECKING:  # nur fuer die Typangabe — zur Laufzeit bleibt der
+    # Import von ``weather_extractor`` wie bisher call-time (Issue #1818).
+    from services.weather_extractor import TimelineResult
+
 logger = logging.getLogger(__name__)
+# #2439 (AC-1): Laufzeit-Journal, eine Zeile je Befehl -- ohne Texte/Adressen/Nummern.
+dauer_logger = logging.getLogger("befehl_dauer")
 
 
 def _norm(s: str) -> str:
     """Normalisiert Trip-Namen: Leerzeichen↔Unterstrich, Mehrfach-WS, lowercase."""
     return re.sub(r"\s+", " ", s.replace("_", " ")).strip().lower()
+
+
+def _norm_gefaltet(s: str) -> str:
+    """F004 (#2282 Fix-Loop 2): dieselbe Faltung wie die Premium-SMS-
+    Rueckfrage (``trip_selection._gsm7_sicher``, EINE Quelle), zusaetzlich
+    per ``_norm`` normalisiert. Nur als FALLBACK nach einem gescheiterten
+    exakten ``_norm``-Vergleich einzusetzen — sonst antwortet der Nutzer auf
+    den in einer Rueckfrage angezeigten, gefalteten Namen ("Zuerich" statt
+    "Zürich") und findet nichts (kostenpflichtige Rueckfrage-Endlosschleife)."""
+    return _norm(_gsm7_sicher(s))
+
+
+def _rest_ist_gueltiger_befehl(rest: str) -> bool:
+    """Adversary F002 (#2282 Fix-Loop 1): Gueltigkeits-Pruefung fuer den Rest
+    NACH einem moeglichen Namens-Praefix. Heisst ein Trip/Vergleich zufaellig
+    wie ein Steuerbefehl (z. B. "Pause"), darf ``match_leading_name`` das
+    Wort nicht als Name konsumieren, wenn gar kein eigener Befehl mehr
+    uebrigbleibt ODER der Rest fuer sich allein nicht erkennbar ist ("pause
+    2d" mit Trip "Pause": der Rest "2d" ist ohne den vorangestellten Namen
+    KEIN eigener Befehl -- die ganze Nachricht ist dann der Befehl, nicht
+    Name+Rest). Instanziert ``TripCommandProcessor`` nur zur Wiederverwendung
+    von ``_parse_command`` (zustandslos, keine Nebenwirkungen) -- keine
+    zweite Parse-Logik."""
+    if not rest:
+        return False
+    key, _value = TripCommandProcessor()._parse_command(rest)
+    if key is not None:
+        return True
+    return bool(_metric_id_for_word(_erstes_wort(rest)))
+
+
+def match_leading_name(
+    text: str, trips: list, presets: list[dict],
+) -> tuple[str, str, str | None, object] | None:
+    """Prueft, ob ``text`` mit dem (tolerant normalisierten) Namen eines
+    Trips oder Ortsvergleichs beginnt (Issue #2282 Abschnitt 2/4) — laengster
+    Treffer gewinnt, aber NUR wenn danach ein fuer sich gueltiger Befehl
+    folgt (Adversary F002, sonst Rueckfall auf die aktive Auswahl). Liefert
+    ``(Name-Praefix wie im Originaltext, Rest, kind, ziel)`` oder ``None``.
+
+    ``kind``/``ziel`` (Adversary F001-Nachtrag, Fix-Loop 2): derselbe
+    Namens-Treffer, der ohnehin fuer Praefix/Rest berechnet wird, traegt die
+    Kind-Zugehoerigkeit UND das getroffene Objekt gleich mit — der Reader
+    braucht das fuer die Lade-Nachrichten-Entscheidung UND kann
+    ``resolved_kind``/``resolved_preset_id`` direkt setzen, ohne eine zweite
+    Suchlogik zu bauen. ``kind`` ist ``"route"``/``"vergleich"`` bei
+    eindeutigem Treffer, sonst ``None`` (Namensgleichheit Trip<->Vergleich —
+    ``ziel`` ist dann ebenfalls ``None``, ``process()``/``_resolve_vergleich``
+    loest die Rueckfrage identisch zum aktiven-Auswahl-Pfad auf).
+    """
+    raw_words = text.strip().split()
+    if not raw_words:
+        return None
+    kandidaten: list[tuple[str, str, object]] = [
+        ("route", t.name, t) for t in trips if getattr(t, "name", "")
+    ] + [
+        ("vergleich", p.get("name", ""), p) for p in presets if p.get("name")
+    ]
+    if not kandidaten:
+        return None
+    max_len = max(len(_norm(n).split()) for _, n, _obj in kandidaten)
+    for wortzahl in range(min(max_len, len(raw_words)), 0, -1):
+        prefix = " ".join(raw_words[:wortzahl])
+        rest = " ".join(raw_words[wortzahl:])
+        exakt = [(k, obj) for k, n, obj in kandidaten if _norm(n) == _norm(prefix)]
+        if exakt:
+            if not _rest_ist_gueltiger_befehl(rest):
+                continue
+            kinds = {k for k, _obj in exakt}
+            kind, ziel = (kinds.pop(), exakt[0][1]) if len(kinds) == 1 else (None, None)
+            return prefix, rest, kind, ziel
+        # F004 (#2282 Fix-Loop 2): kein exakter Treffer -- gefaltete Form
+        # probieren (Antwort auf eine Premium-SMS-Rueckfrage, F003). Mehrere
+        # gefaltete Treffer sind mehrdeutig, NIE stillschweigend der erste.
+        fold_p = _norm_gefaltet(prefix)
+        gefaltet = [(k, obj) for k, n, obj in kandidaten if _norm_gefaltet(n) == fold_p]
+        if gefaltet and _rest_ist_gueltiger_befehl(rest):
+            kind, ziel = gefaltet[0] if len(gefaltet) == 1 else (None, None)
+            return prefix, rest, kind, ziel
+    return _praefix_treffer(raw_words, kandidaten, max_len)
+
+
+_MIN_PRAEFIX = 4
+
+
+def _ist_praefix(name: str, fold_p: str) -> bool:
+    """Bug #2615 (AC-8): gefalteter Eingabename (>= 4 Zeichen) ist Praefix
+    des gefalteten Kandidaten-Namens (gekuerzte Premium-SMS-Rueckfrage)."""
+    return len(fold_p) >= _MIN_PRAEFIX and _norm_gefaltet(name).startswith(fold_p)
+
+
+def _praefix_treffer(
+    raw_words: list[str], kandidaten: list[tuple[str, str, object]], max_len: int,
+) -> tuple[str, str, str | None, object] | None:
+    """Bug #2615 (AC-8): LETZTER Fallback nach exakt/gefaltet ueber alle
+    Wortzahlen -- eindeutiges Praefix mit gueltigem Befehls-Rest. Mehrere
+    Treffer sind mehrdeutig (``kind``/``ziel`` ``None``), nie der erste."""
+    for wortzahl in range(min(max_len, len(raw_words)), 0, -1):
+        prefix = " ".join(raw_words[:wortzahl])
+        rest = " ".join(raw_words[wortzahl:])
+        fold_p = _norm_gefaltet(prefix)
+        treffer = [(k, obj) for k, n, obj in kandidaten if _ist_praefix(n, fold_p)]
+        if treffer and _rest_ist_gueltiger_befehl(rest):
+            kind, ziel = treffer[0] if len(treffer) == 1 else (None, None)
+            return prefix, rest, kind, ziel
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -41,9 +181,19 @@ class InboundMessage:
     trip_name: str
     body: str
     sender: str
-    channel: str            # "email" or "sms"
+    channel: str            # "email", "telegram", "sms" oder "premium_sms"
     received_at: datetime
-    user_id: str = "default"
+    user_id: str
+    # Issue #2282 Abschnitt 3: additive Felder, Default None = Trip-Verhalten
+    # unveraendert. Ein Reader, der bereits eindeutig ueber
+    # ``trip_selection.resolve_active_target`` auf einen Ortsvergleich
+    # aufgeloest hat, setzt beide — ``process()`` sucht dann nicht erneut
+    # ueber den Namen (Namensgleichheits-Fall AC-7).
+    resolved_kind: str | None = None
+    resolved_preset_id: str | None = None
+    # #2417 AC-5: Telegram-Reader entscheidet die Antwortsprache (Stil des
+    # Ziels bzw. gesendetes Wort); Premium-SMS ist immer englisch.
+    englisch: bool = False
 
 
 @dataclass
@@ -75,7 +225,7 @@ class CommandResult:
 
 _COMMAND_PATTERN = re.compile(r"^###\s+(\S+?)(?:[:\s]\s*(.+))?$")
 
-_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now", "weiter", "pause", "skip"}
+_VALID_COMMANDS = {"ruhetag", "report", "startdatum", "abbruch", "status", "hilfe", "now", "weiter", "pause", "skip", "strecke", "kuerzel"}
 
 # Bare-keyword mapping (case-insensitive): keyword → internal key
 # Kanalübergreifender Grundbefehlssatz (Issue #731): HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE/PAUSE/SKIP
@@ -94,7 +244,250 @@ _BARE_KEYWORD_MAP = {
     "glance":   "glance",
     "pause":    "pause",
     "skip":     "skip",
+    "strecke":  "strecke",
+    "kuerzel":  "kuerzel",
+    "kürzel":   "kuerzel",
+    "startdatum": "startdatum",
+    "report":   "report",
 }
+
+# Issue #2134: EINE Quelle fuer den Steuerbefehlssatz — Hilfe, beide
+# Fehlertexte des Prozessors, der Telegram-Fehlertext und beide E-Mail-
+# Fussz. leiten ihren Text hieraus ab. Vorher waren das acht handgepflegte
+# Listen, von denen keine zwei uebereinstimmten (der Nutzer bekam je nach
+# Kanal und Fehlerweg eine andere Auskunft darueber, was er darf).
+# Aufbau je Eintrag: (Wort, Argumentform, Beschreibung, kinds). Aliase stehen
+# in der Beschreibung statt als eigener Eintrag — sie sind keine zweite
+# Faehigkeit. Issue #2282 Abschnitt 7: ``kinds`` ist die EINZIGE Quelle
+# sowohl fuer die Vergleichs-Hilfe als auch fuer die generische
+# Ablehnungsantwort "gibt es beim Ortsvergleich nicht" — keine zweite,
+# handgepflegte Liste.
+_ROUTE_ONLY = frozenset({"route"})
+_BEIDE_KINDS = frozenset({"route", "vergleich"})
+
+
+class _Befehl(NamedTuple):
+    """Ein Steuerbefehl (#2417 Kurzform englisch AC-1): Leser greifen per
+    Feldname zu. ``wirkung_en`` sagt, was zurueckkommt (keine
+    Wortuebersetzung); ``arg_en``/``wirkung_en_vergleich`` sind die
+    Kurzform-Argumentform bzw. die abweichende Vergleichs-Wirkung."""
+    wort: str
+    wort_en: str
+    arg: str
+    beschreibung_de: str
+    wirkung_en: str
+    kinds: frozenset
+    arg_en: str = ""
+    wirkung_en_vergleich: str = ""
+    #: #2282 S2: Beschreibung am Ortsvergleich (Hilfe, Mail-Befehlsblock);
+    #: gesetzt ⇒ dort auch ohne Argumentform.
+    beschreibung_de_vergleich: str = ""
+
+
+_COMMAND_SPECS: tuple[_Befehl, ...] = (
+    _Befehl("heute", "today", "", "Wetter der heutigen Etappe",
+            "today's stage weather", _BEIDE_KINDS, "", "today",
+            "Vergleich für heute jetzt senden"),
+    _Befehl("morgen", "tomorrow", "", "Wetter der morgigen Etappe",
+            "tomorrow's stage weather", _BEIDE_KINDS, "", "tomorrow",
+            "Vergleich für morgen jetzt senden"),
+    _Befehl("jetzt", "now", "", "Nowcast Regen/Gewitter nächste ~2h (auch NOW)",
+            "rain/storm next 2h", _ROUTE_ONLY),
+    _Befehl("gewitter", "storms", "", "Gewittergefahr heutige Etappe",
+            "storm risk today", _ROUTE_ONLY),
+    _Befehl("strecke", "route", "[km]", "Regen-Ereignisflächen entlang der Reststrecke",
+            "rain areas ahead", _ROUTE_ONLY, "km"),
+    _Befehl("ruhetag", "restday", "[N]", "Etappen um N Tage verschieben (Standard: 1)",
+            "shift stages n days", _ROUTE_ONLY, "n"),
+    _Befehl("status", "status", "", "Heute und kommende Etappen",
+            "today + next stages", _ROUTE_ONLY),
+    _Befehl("pause", "pause", "[2d / 12h]", "Briefings für Dauer unterbrechen",
+            "no briefings 2 days/12H", _BEIDE_KINDS, "2D", "no briefings until RESUME"),
+    _Befehl("skip", "skip", "", "Nächstes Briefing überspringen",
+            "skip next briefing", _ROUTE_ONLY),
+    _Befehl("stop", "stop", "", "Briefings dauerhaft deaktivieren (auch ABBRUCH)",
+            "end briefings", _ROUTE_ONLY),
+    _Befehl("weiter", "resume", "", "Briefings reaktivieren",
+            "restart briefings", _BEIDE_KINDS),
+    _Befehl("hilfe", "help", "", "Diese Hilfe anzeigen (auch HELP)",
+            "this list", _BEIDE_KINDS),
+    _Befehl("kuerzel", "codes", "", "Kürzel-Bedeutungen anzeigen (auch CODES)",
+            "code meanings", _BEIDE_KINDS),
+    _Befehl("startdatum", "startdate", "JJJJ-MM-TT",
+            "Startdatum des Trips setzen, alle Etappen verschieben",
+            "move start", _ROUTE_ONLY, "date"),
+    _Befehl("report", "report", "[morning / evening]",
+            "Briefing jetzt senden (Standard: morning)",
+            "send now", _BEIDE_KINDS, "evening", "all",
+            "Vergleich jetzt an alle Kanäle senden"),
+)
+
+# #2417 AC-2: die englischen Woerter wirken wie ihr deutsches Pendant --
+# abgeleitet aus DERSELBEN Quelle, keine dritte Wortliste.
+_BARE_KEYWORD_MAP.update({
+    s.wort_en: _BARE_KEYWORD_MAP.get(s.wort, s.wort) for s in _COMMAND_SPECS
+})
+
+
+def command_rows(kind: str = "route") -> list[tuple[str, str]]:
+    """(Befehl inkl. Argumentform, Beschreibung) je Eintrag — z.B.
+    ``("PAUSE [2d / 12h]", "Briefings für Dauer unterbrechen")``.
+
+    Bewusst eine FUNKTION und keine vorberechnete Konstante: alle Texte lesen
+    ``_COMMAND_SPECS`` zur Aufrufzeit, sonst waeren sie wieder
+    danebengeschriebene Kopien (Mutations-Gegenprobe AC-10).
+    """
+    # Ortsvergleich pausiert unbefristet (AC-29 #2417): PAUSE ohne Dauer.
+    # #2282 S2: REPORT/HEUTE/MORGEN mit eigenem Vergleichs-Wortlaut, ohne Argument.
+    vergleich = kind == "vergleich"
+    return [
+        (f"{s.wort.upper()} {'' if vergleich and (s.wort == 'pause' or s.beschreibung_de_vergleich) else s.arg}".strip(),
+         (s.beschreibung_de_vergleich if vergleich else "") or s.beschreibung_de)
+        for s in _COMMAND_SPECS if kind in s.kinds
+    ]
+
+
+def bare_keywords() -> frozenset[str]:
+    """Alle als Alleinwort erkannten Steuerbefehle, kleingeschrieben — inkl.
+    Aliase (NOW, HELP), die in ``_COMMAND_SPECS`` nur in der Beschreibung
+    stehen.
+
+    Gebraucht vom Premium-SMS-Reader (Issue #2154): dort muss ein
+    vorangestellter Verknuepfungs-Code vom Befehlstext getrennt werden, und
+    RUHETAG/STRECKE haben zufaellig genau die Code-Gestalt. Bewusst eine
+    Funktion auf ``_BARE_KEYWORD_MAP`` statt einer zweiten Liste — eine Kopie
+    drifteter beim naechsten neuen Befehl auseinander.
+    """
+    return frozenset(_BARE_KEYWORD_MAP)
+
+
+def command_overview(en: bool = False) -> str:
+    """Einzeilige Aufzaehlung des Befehlssatzes — fuer Fehlertexte."""
+    return ", ".join((s.wort_en if en else s.wort).upper() for s in _COMMAND_SPECS)
+
+
+def unknown_command_body(prefix: str, en: bool = False) -> str:
+    """Fehlertext bei unbekanntem Kommando — aus derselben Quelle wie die
+    Erkennung. Genutzt von beiden Fehlerwegen des Prozessors UND vom
+    Telegram-Reader; der Verweis auf HILFE traegt die Wetter-Groessen nach,
+    deren volle Katalogliste jede Fehlermeldung sprengen wuerde. ``en``
+    (#2417 Abschnitt H): englische Fassung fuer Kurzform-Kanaele."""
+    if en:
+        return (
+            f"{prefix}\nCommands: {command_overview(en=True)}\n"
+            "Weather codes: send a code (CODES lists them)."
+        )
+    return (
+        f"{prefix}\n"
+        f"Verfügbar: {command_overview()}\n"
+        "Wetter-Größen im Stundenverlauf: Kürzel senden (HILFE zeigt alle)."
+    )
+
+
+def hilfe_kurzform(kind: str = "route") -> str:
+    """HELP der Kurzform (#2417 AC-8): je Befehl ``wort_en`` + Wirkung, alles
+    aus ``_COMMAND_SPECS``; beim Ortsvergleich nur dessen ``kinds`` und die
+    unbefristete PAUSE (Vorgaenger-AC-29), ohne Kuerzel-Zeile."""
+    vergleich = kind == "vergleich"
+    zeilen = ["Commands (German works too):"]
+    for s in _COMMAND_SPECS:
+        if kind not in s.kinds or s.wort == "hilfe":
+            continue
+        arg = "" if vergleich else s.arg_en
+        wirkung = (s.wirkung_en_vergleich if vergleich else "") or s.wirkung_en
+        zeilen.append(f"{s.wort_en.upper()}{' ' + arg if arg else ''} - {wirkung}")
+    if not vergleich:
+        zeilen.append("Send a code (e.g. R) for its values.")
+    return "\n".join(zeilen)
+
+
+def premium_sms_kurzhilfe() -> str:
+    """Kompatibilitaets-Name: die Premium-SMS-Hilfe IST die HELP-Kurzform."""
+    return hilfe_kurzform("route")
+
+
+#: CODES/KUERZEL (#2417 AC-9/AC-10/AC-23): NUR Reihenfolge und Gruppierung
+#: der Kuerzel. Die Bedeutungen stehen ausschliesslich im Metrik-Katalog,
+#: in ``tokens/builder.py`` und ``tokens/hazard_symbols.py`` und werden zur
+#: Aufrufzeit gelesen. Ein Katalog-Kuerzel, das hier fehlt, wird hinten an
+#: "Weather" angehaengt statt verschluckt.
+_CODES_WETTER = (
+    ("T",), ("D",), ("N",), ("L",), ("TF",), ("FD", "FL", "FN"), ("R",), ("PR",),
+    ("TH",), ("TH+",), ("W",), ("G",), ("WD",), ("HU",), ("DP",), ("CP",), ("PT",),
+    ("SL",), ("NS24+",), ("CT", "CL", "CM", "CH"), ("VS",), ("SU",), ("UV",),
+    ("HP",), ("FZ",),
+)
+# Issue #1441: 'AV' steht als Warn-Kuerzel (Lagebericht) unter "Warnungen nach !".
+_CODES_WEITERE = (("SD",), ("C",), ("Z:", "MAX", "M:"))
+
+
+def _codes_gruppe(codes: tuple, bedeutung: dict) -> str:
+    """``CT/CL/CM/CH clouds total/low/mid/high`` -- gemeinsame Wortanfaenge
+    und -enden der Bedeutungen werden einmal genannt; ohne gemeinsamen Anfang,
+    aber mit gemeinsamem Ende: ``FD/FL/FN = D/L/N feels like``."""
+    kopf = ("" if all(c.endswith(":") for c in codes) else "/").join(codes)
+    teile = [bedeutung[c].split() for c in codes]
+    p = s = 0
+    if len(teile) > 1:
+        while all(len(t) > p + 1 for t in teile) and len({t[p] for t in teile}) == 1:
+            p += 1
+        while all(len(t) > p + s + 1 for t in teile) and len({t[-1 - s] for t in teile}) == 1:
+            s += 1
+    mitte = "/".join(" ".join(t[p:len(t) - s]) for t in teile)
+    rand = (" ".join(teile[0][:p]), mitte, " ".join(teile[0][len(teile[0]) - s:]))
+    return f"{kopf}{' = ' if s and not p else ' '}{' '.join(x for x in rand if x)}"
+
+
+def codes_text(en: bool, vergleich: bool = False) -> str:
+    """CODES (englisch) bzw. KUERZEL (deutsch) -- jedes Zeichen, das eine
+    Kurzform-SMS tragen kann, mit Bedeutung aus der jeweils EINEN Quelle.
+
+    Issue #2422 S6 (B1): "TF" (gefuehlte Temperatur, Stundenwert) steht in
+    Trip UND Ortsvergleich -- der Trip versendet ``TF<Tiefstwert>@<Stunde>``
+    jetzt ebenfalls und loest damit Bug #2454 AC-6/AC-7 ("TF entfaellt im
+    Trip") ab. ``vergleich`` bleibt als Parameter erhalten (Aufrufer), ohne
+    den Text noch zu veraendern."""
+    from app.metric_catalog import _METRICS
+    from output.tokens import builder
+    from output.tokens import hazard_symbols as hz
+
+    bed: dict[str, str] = {}
+    for m in _METRICS:
+        bed.update(m.kuerzel_bedeutung_en if en else m.kuerzel_bedeutung_de)
+    wetter_codes = _CODES_WETTER
+    geordnet = {c for g in wetter_codes + _CODES_WEITERE for c in g}
+    wetter = wetter_codes + tuple((c,) for c in bed if c not in geordnet)
+    bed.update(builder.BAUSTEIN_BEDEUTUNG_EN if en else builder.BAUSTEIN_BEDEUTUNG_DE)
+    formate = builder.FORMAT_BEDEUTUNG_EN if en else builder.FORMAT_BEDEUTUNG_DE
+    warn = hz.HAZARD_BEDEUTUNG_EN if en else hz.HAZARD_BEDEUTUNG_DE
+    stufe = hz.STUFE_BEDEUTUNG_EN if en else hz.STUFE_BEDEUTUNG_DE
+    alarme = ". ".join((
+        ", ".join(f"{sym} {warn[h]}" for h, sym in hz.HAZARD_SMS_SYMBOLS.items()),
+        _codes_gruppe(tuple(stufe), stufe),
+        _codes_gruppe((builder.VIGI_HR, builder.VIGI_TH), bed),
+        _codes_gruppe((builder.UNAVAILABLE_SYMBOL,), bed),
+    ))
+    k = ("Weather", "More", "Alerts after !") if en else ("Wetter", "Weitere", "Warnungen nach !")
+    return "\n".join(([] if en else ["Kürzel"]) + [
+        f"{k[0]}: {', '.join(_codes_gruppe(g, bed) for g in wetter)}.",
+        f"{k[1]}: {', '.join(_codes_gruppe(g, bed) for g in _CODES_WEITERE)}.",
+        f"Format: {', '.join(f'{z} {t}' for z, t in formate.items())}.",
+        f"{k[2]}: {alarme}.",
+    ])
+
+
+def telegram_englisch(*, ziel=None, wort: Optional[str] = None) -> bool:
+    """Antwortsprache auf Telegram (#2417 AC-5/Abschnitt H): mit Ziel dessen
+    ``telegram_style`` (Trip ``report_config``, Vergleich ``display_config``),
+    ohne Ziel das gesendete Wort (gleich lautende Woerter zaehlen englisch)."""
+    if ziel is not None:
+        if isinstance(ziel, dict):
+            stil = (ziel.get("display_config") or {}).get("telegram_style")
+        else:
+            stil = getattr(getattr(ziel, "report_config", None), "telegram_style", None)
+        return stil == "kurzform"
+    return _bereinigtes_bare_keyword(wort or "").lower() in {s.wort_en for s in _COMMAND_SPECS}
+
 
 _PAUSE_DURATION_RE = re.compile(r"^(\d+)\s*([dh]?)$")
 
@@ -132,14 +525,70 @@ _MORGEN_BUTTONS = {
     ]
 }
 
-_THUNDER_LABEL = {
-    "NONE": "kein",
-    # Issue #1474 Adversary-Folgeaudit: LOW fehlte -- fiel auf den
-    # Unbekannt-Fallback "?" zurueck, obwohl LOW ein bekannter Wert ist.
-    "LOW": "leicht",
-    "MED": "mäßig",
-    "HIGH": "hoch",
+# Kreis-Emoji je Ampelband der Stufe (`thunder_ampel_band`, metric_format.py) --
+# das Symbol stellt das Band dar, es ist keine zweite Stufen-Zuordnung.
+_BAND_EMOJI = {"green": "🟢", "yellow": "🟡", "orange": "🟠", "red": "🔴"}
+
+
+def _thunder_words() -> dict:
+    """Stufenname -> deutsches Wort, bei JEDEM Aufruf frisch aus
+    ``THUNDER_LABEL_DE`` abgeleitet (Issue #2010: die fruehere Wert-Kopie war
+    auf "mäßig"/"keins" abgedriftet)."""
+    return {level.name: label for level, label in THUNDER_LABEL_DE.items()}
+
+
+def _thunder_symbols() -> dict:
+    """Stufenname -> Kreis-Emoji, ueber das Ampelband der Stufe abgeleitet."""
+    return {
+        level.name: _BAND_EMOJI[thunder_ampel_band(level)]
+        for level in THUNDER_LABEL_DE
+    }
+
+
+# Issue #1818: der Hinweis, der die ehrliche Fehlanzeige begleitet — je Tag
+# das Kommando, das FUER DIESEN TAG ein Briefing ausloest. `/heute`/`/morgen`
+# versenden ein volles Briefing, schreiben aber KEINEN Anker
+# (`trip_report_scheduler.py:1495-1501`, #1007). Der Text sagt deshalb
+# ausschliesslich die ZUSTELLUNG des Briefings zu — ein Versprechen, dass sich
+# die Timeline-Ansicht danach fuelle, waere falsch und erzeugte eine
+# Frustschleife (Kontext-Risiko 5).
+_BRIEFING_HINWEIS = {
+    "today": "mit /heute wird dir das Briefing für heute sofort zugestellt",
+    "tomorrow": "mit /morgen wird dir das Briefing für morgen sofort zugestellt",
 }
+
+# Issue #1818 (Adversary-Finding F005): die Groessen, aus denen die vier
+# Formatierer ihre Tagesaussage bauen -- `_fmt_timeline` zeigt genau
+# temp_min_c/temp_max_c/wind_max_kmh/precip_sum_mm/thunder_level_max,
+# `_aggregate_day` aggregiert dieselben plus pop_max_pct (Buttons/Glance).
+# Ein Wegpunkt, der KEINE davon traegt, kann in keiner Ausgabe etwas anderes
+# als Fragezeichen erzeugen.
+_TAGESWERTE = (
+    "temp_min_c", "temp_max_c", "wind_max_kmh", "precip_sum_mm",
+    "thunder_level_max", "pop_max_pct",
+)
+
+
+def _traegt_tageswerte(point) -> bool:
+    """POSITIV-Kriterium (Issue #1818, F005): traegt dieser Wegpunkt
+    mindestens EINEN auswertbaren Tageswert?
+
+    Bewusst KEINE Negativliste bekannter Fehlerformen: `_fetch_weather`
+    erzeugt bei einem teilweise gescheiterten Abruf ein Segment mit
+    `SegmentWeatherSummary()` (alle Felder None) und `has_error=True`
+    (`trip_report_scheduler.py:2033-2043`) -- aber `has_error` ueberlebt die
+    Umrechnung in `TimelinePoint` gar nicht (dort steht nur `metrics`), und
+    kuenftige Ausfallformen saehen wieder anders aus. Geprueft wird deshalb,
+    was der Punkt LIEFERT, nicht woran er gescheitert ist.
+
+    Nicht gelesen werden die Nicht-Messgroessen der `SegmentWeatherSummary`
+    (`aggregation_config` traegt mit `{}` einen nicht-`None`-Default,
+    `cape_model_id` ist Herkunft, `wind_dir_deg_avg` ein Test-Alias) -- eine
+    generische "irgendein Feld ist gesetzt"-Pruefung wuerde den leeren
+    Platzhalter faelschlich als brauchbar durchwinken.
+    """
+    return any(getattr(point.metrics, feld, None) is not None
+               for feld in _TAGESWERTE)
 
 # Issue #1001: Aktionen-Bubble-Keyboard (Multi-Bubble-Telegram-Redesign).
 # Eigenes Praefix `act_` verhindert Kollision mit den `dd_*`/`tl_*`-Drilldown-
@@ -169,12 +618,9 @@ def _thunder_fmt(value, *, with_emoji: bool = True) -> str:
     Issue #1222 AC-6: E-Mail/SMS bekommen KEIN Kreis-Emoji (nur das Wort),
     Telegram bleibt byte-identisch mit Emoji.
     """
-    # Issue #1474 Adversary-Folgeaudit: LOW fehlte in beiden Karten -- fiel
-    # auf "· keine Daten" zurueck, obwohl LOW ein bekannter Wert ist.
-    _MAP_EMOJI = {
-        "NONE": "⚪ keins", "LOW": "🟢 leicht", "MED": "🟡 mäßig", "HIGH": "🔴 hoch",
-    }
-    _MAP_PLAIN = {"NONE": "keins", "LOW": "leicht", "MED": "mäßig", "HIGH": "hoch"}
+    _MAP_PLAIN = _thunder_words()
+    _symbole = _thunder_symbols()
+    _MAP_EMOJI = {k: f"{_symbole[k]} {wort}" for k, wort in _MAP_PLAIN.items()}
     if value is None:
         return "· keine Daten"
     key = value.value if hasattr(value, "value") else str(value)
@@ -214,22 +660,249 @@ def _hours_between(start: datetime, end: datetime) -> float:
     ).total_seconds() / 3600
 
 
-def _num_fmt(unit: str):
-    """Gibt einen Formatter zurück der numerische Werte mit Einheit formatiert."""
-    def _fmt(value, *, with_emoji: bool = True) -> str:
+# Issue #2134: die drei Callback-Token der Telegram-Buttons
+# (`dd_thunder_today` ...) sind BESTANDS-Token und muessen weiter aufloesen —
+# sie sind aber kein zweites Vokabular mehr: Feld, Einheit und Formatierer
+# kommen ab hier aus dem Katalog. Nur das Emoji bleibt hier, es ist eine reine
+# Darstellungszugabe der Button-Antwort ohne Entsprechung im Katalog.
+_DRILLDOWN_TOKEN_METRIC: dict[str, str] = {
+    "thunder": "thunder",
+    "wind":    "wind",
+    "precip":  "precipitation",
+}
+_DRILLDOWN_TOKEN_EMOJI: dict[str, str] = {
+    "thunder": "⛈️", "wind": "💨", "precip": "🌧",
+}
+
+
+def _metric_formatter(metric):
+    """Formatierer EINER Katalog-Groesse — die Wahl haengt an EIGENSCHAFTEN
+    des Eintrags, nicht an seiner Kennung (Spec "Formatierer folgt aus dem
+    Katalogeintrag").
+
+    Die erste Pruefung geht bewusst auf ``is_level`` und nicht auf
+    ``metric.id == "thunder"``: eine kuenftige zweite Stufengroesse wird damit
+    ohne Codeaenderung an dieser Stelle mitgetragen.
+    """
+    if metric.is_level:
+        return _thunder_fmt
+    if metric.dp_field == "wind_direction_deg":
+        def _compass(value, *, with_emoji: bool = True) -> str:
+            if value is None:
+                return "· keine Daten"
+            return degrees_to_compass(value)
+        return _compass
+    if metric.dp_field == "precip_type":
+        def _precip_type(value, *, with_emoji: bool = True) -> str:
+            if value is None:
+                return "· keine Daten"
+            name = value.value if hasattr(value, "value") else str(value)
+            name = name.rsplit(".", 1)[-1]
+            return PRECIP_TYPE_LABEL_DE.get(name, "· keine Daten")
+        return _precip_type
+    if metric.dp_field == "dni_wm2":
+        # Issue #2167: der Katalog fuehrt `sunshine` mit unit="h", das Rohfeld
+        # traegt aber W/m². Ohne diesen Zweig laeuft die Direktstrahlung
+        # unveraendert durch `format_value()` und wird als `781.5 h`
+        # beschriftet. `dni_to_sunny_fraction()` ist die EINE Umrechnung im
+        # Bestand — dieselbe, die das Briefing je Einzelstunde geht.
+        from app.config import Settings
+        from services.weather_metrics import WeatherMetricsService
+
+        # Band EINMAL je Abruf holen, nicht je Stundenzeile (24 Aufrufe).
+        _settings = Settings()
+        dni_min = _settings.sunny_dni_min_wm2
+        dni_max = _settings.sunny_dni_max_wm2
+
+        def _sonnenstunden(value, *, with_emoji: bool = True) -> str:
+            if value is None:
+                return "· keine Daten"
+            anteil = WeatherMetricsService.dni_to_sunny_fraction(
+                value, dni_min, dni_max
+            )
+            return format_value(metric.id, anteil)
+        return _sonnenstunden
+
+    def _katalog(value, *, with_emoji: bool = True) -> str:
         if value is None:
             return "· keine Daten"
-        if unit == "km/h":
-            return f"{round(float(value))} km/h"
-        return f"{float(value):.1f} {unit}"
-    return _fmt
+        return format_value(metric.id, value)
+    return _katalog
 
 
-_DRILLDOWN_METRICS: dict[str, tuple] = {
-    "thunder": ("thunder_level", "⛈️ Gewitter", _thunder_fmt),
-    "wind":    ("wind10m_kmh",   "💨 Wind",      _num_fmt("km/h")),
-    "precip":  ("precip_1h_mm",  "🌧 Niederschlag", _num_fmt("mm")),
-}
+def _metric_id_for_word(word: Optional[str]) -> Optional[str]:
+    """Katalog-Groesse zu einem getippten Wort (``None``, wenn keine)."""
+    if not word:
+        return None
+    return metric_command_words().get(normalize_command_word(word))
+
+
+def _erste_zeile(body: str) -> str:
+    """Erste nicht-leere Zeile, getrimmt."""
+    return next((z.strip() for z in (body or "").splitlines() if z.strip()), "")
+
+
+def _ohne_zitat(zeile: str) -> str:
+    """Streift NUR das Zitat-Praefix ab (Issue #2137).
+
+    Eigene Stufe, weil der Slash fuer den Telegram-Reader Bedeutung TRAEGT:
+    ``/status`` ist dort der Glance-Alias, nacktes ``status`` die
+    Etappenliste. Der Reader muss seine Slash-Kuerzel deshalb aufloesen,
+    BEVOR der Slash faellt — mit einer einzigen Funktion, die beides in einem
+    Zug erledigt, ginge diese Unterscheidung still verloren.
+    """
+    return re.sub(r"^[>\s]+", "", zeile)
+
+
+#: AC-20 (#2417): unsichtbare Zeichen, die ein Befehlswort umschliessen
+#: koennen, OHNE dass der Nutzer sie sieht -- BOM (Mail-Client haengt es
+#: gerne der ersten Zeile voran), Zero-Width-Space, Wortverbinder. Normaler
+#: Leerraum (inkl. NBSP) ist bereits durch ``str.split(None, ...)`` gedeckt
+#: (Python zaehlt NBSP als Leerraum), braucht also keinen Eintrag hier.
+_UNSICHTBARE_ZEICHEN = "﻿​⁠"
+#: Satzzeichen, die UNMITTELBAR ans Befehlswort angehaengt sein duerfen
+#: (z. B. "Heute.", "HILFE!", "hilfe?", "Hilfe,").
+_SATZZEICHEN_ENDE = ".,!?"
+
+
+def _bereinigtes_bare_keyword(token: str) -> str:
+    """Toleriert BOM/ZWSP/Wortverbinder sowie anhaengende Satzzeichen
+    UNMITTELBAR am Befehlswort (AC-20, #2417) -- ausschliesslich TILGEN,
+    danach muss das Restwort EXAKT ein bekanntes Schluesselwort sein. Kein
+    Praefix-Matching: "Hilfen"/"Heutegestern" bleiben deshalb unbekannt,
+    weil nach dem Tilgen kein Satzzeichen/keine Zeichen mehr uebrig sind, die
+    entfernt werden koennten."""
+    return token.strip(_UNSICHTBARE_ZEICHEN).rstrip(_SATZZEICHEN_ENDE)
+
+
+def _ohne_praefix(zeile: str) -> str:
+    """Streift fuehrende Zitat- und Slash-Zeichen ab (Issues #2137, #2120).
+
+    ``>`` entsteht, wenn der Nutzer aus seinem Mail-/Telegram-Client heraus auf
+    das Briefing antwortet (Zitat-Praefix); ``/`` empfiehlt der Produktivtext
+    ``_BRIEFING_HINWEIS`` woertlich (``/heute``, ``/morgen``) und Telegram
+    setzt es bei getippten Menuebefehlen selbst davor.
+
+    Bewusst KEIN pauschales ``lstrip(">/ ")``: das ``###``-Format bleibt
+    unangetastet (``> ### ruhetag: 2`` verliert nur das Zitatzeichen), und
+    hinter den Praefixen wird nichts durchgewunken — was danach kein Befehl
+    ist, bleibt keiner (Positivkontrolle AC-7).
+    """
+    ohne_zitat = _ohne_zitat(zeile)
+    if ohne_zitat.startswith("#"):
+        return ohne_zitat
+    return ohne_zitat.lstrip("/")
+
+
+def _traegt_werte(res) -> bool:
+    """Traegt ein ``DrilldownResult`` mindestens EINEN gemessenen Wert?
+
+    ``available`` allein genuegt nicht (Issue #2134, AC-4/AC-17): ``drilldown``
+    setzt es nur dann auf ``False``, wenn im Fenster gar kein Zeitpunkt liegt.
+    Fehlt bloss das FELD, kommen Punkte mit lauter ``None`` zurueck — genau der
+    Fall, der produktiv auftritt und bisher als stumme ``?``-Spalte
+    ausgeliefert wurde.
+    """
+    return bool(res.available) and any(p.value is not None for p in res.points)
+
+
+# ---------------------------------------------------------------------------
+# Kurzform-Verlauf (Issue #2207, Epic #2133 / S5)
+# ---------------------------------------------------------------------------
+
+#: Kanaele, die den Verlauf in KURZFORM statt als Langform bekommen. ``sms``
+#: hat heute keinen produktiven Eingang (Spec "Known Limitations"), steht hier
+#: aber mit drin, damit bei kuenftiger Aktivierung keine stille Luecke bleibt.
+_KURZFORM_KANAELE = ("premium_sms", "sms")
+
+#: Zeichenbudget einer Premium-SMS im GSM-7-Alphabet.
+_KURZFORM_MAX_ZEICHEN = 160
+
+
+def _ist_kurzform_kanal(channel: Optional[str]) -> bool:
+    """Bekommt dieser Anfrageweg die Kurzform (statt der Langform)?"""
+    return channel in _KURZFORM_KANAELE
+
+
+def _gruppiere_wechselpunkte(points, schluessel):
+    """Aufeinanderfolgende Stunden mit gleichem Anzeigetext verschmelzen.
+
+    Issue #2185 (S2) hat diese Verdichtung eingefuehrt, Issue #2207 (S5) sie
+    aus ``_format_drilldown`` herausgeloest: Lang- UND Kurzform rufen
+    denselben Helfer, damit die Gruppengrenzen strukturell nie auseinander
+    laufen koennen (AC-14). Fortsetzung nur bei einem Abstand von HOECHSTENS
+    einer Stunde — eine fehlende Stunde bricht die Gruppe, damit ein Bereich
+    nie Gueltigkeit fuer eine ungemessene Stunde behauptet (#2167).
+
+    Rueckgabe: Liste von ``(schluessel, [DrilldownPoint, ...])``.
+    """
+    groups: list[tuple[object, list]] = []
+    for pt in points:
+        key = schluessel(pt)
+        if groups and groups[-1][0] == key and (
+            pt.ts - groups[-1][1][-1].ts <= timedelta(hours=1)
+        ):
+            groups[-1][1].append(pt)
+        else:
+            groups.append((key, [pt]))
+    return groups
+
+
+def _kurzform_kuerzel(metric, folgetag: bool = False) -> str:
+    """Kuerzel einer Groesse fuer die Kurzform (AC-3/AC-6).
+
+    ``sms_code`` ist die Quelle; ist er leer (im Katalog genau
+    ``temperature_night`` und ``temperature_day_high``), tritt ``col_label``
+    an seine Stelle — keine zweite, eigene Abkuerzungsliste. Ein Verlauf des
+    Folgetags traegt ein ``+`` (Konvention wie ``TH+``), sonst waeren die
+    Stundenzahlen zwischen heute und morgen mehrdeutig.
+    """
+    return (kurzform_kuerzel(metric.id) or metric.col_label) + ("+" if folgetag else "")
+
+
+def _kurzform_wert(metric, value) -> str:
+    """Ein Verlaufswert in Kurzform: ohne Einheit, gerundet nach Katalog.
+
+    ``None`` heisst "Stunde liegt vor, traegt aber keinen Wert" und wird als
+    ``?`` ausgewiesen (``sms_format.md`` §4) — die Kurzform darf sie nicht
+    stillschweigend ueberspringen (AC-12).
+
+    Nicht-numerische Groessen kennt ``format_value`` nicht. Zwei von ihnen
+    fuehrt die Kurzform-Grammatik ausdruecklich (AC-5, ``sms_format.md``
+    §5a) und beide tragen dort dasselbe Kuerzel wie im Briefing:
+
+    * **Stufengroessen** (heute nur ``thunder``) den Stufenbuchstaben
+      ``-``/``L``/``M``/``H``. Die Zuordnung wird NICHT neu aufgeschrieben,
+      sondern kommt aus den beiden vorhandenen Quellen des Briefing-Pfads:
+      ``thunder_label_value()`` (``app/thunder_scale.py``, Render-Skala) und
+      ``tokens/metrics.LEVELS`` — dieselbe Kette, die das ``TH:``-Token baut.
+      Die Fallunterscheidung geht wie in ``_metric_formatter`` ueber
+      ``is_level``, nicht ueber ``metric.id``.
+    * **Windrichtung** das Himmelsrichtungs-Kuerzel (``W``, ``NW`` …) aus
+      ``degrees_to_compass()`` — genau der Helfer, den die Langform ueber
+      ``_metric_formatter`` benutzt, damit es keine zweite Umrechnung gibt.
+
+    Ohne diese beiden Zweige stuenden in der Kurzform ``270`` bzw. ``HIGH``:
+    laenger als die Langform (``W``/``hoch``) und ausserhalb der Grammatik.
+    Fuer alles weitere Nicht-Numerische (z.B. Niederschlagsart) bleibt es
+    beim Namen der Auspraegung.
+    """
+    if value is None:
+        return "?"
+    if metric.is_level:
+        return _STUFENBUCHSTABEN.get(thunder_label_value(value), "-")
+    if metric.dp_field == "wind_direction_deg":
+        return degrees_to_compass(value)
+    try:
+        return format_value(metric.id, value, style="bare")
+    except (TypeError, ValueError):
+        return str(getattr(value, "value", value)).rsplit(".", 1)[-1]
+
+
+def _erstes_wort(body: str) -> Optional[str]:
+    """Erstes getipptes Wort ohne Zitat-/Slash-Praefix (``None``, wenn leer)."""
+    teile = _ohne_praefix(_erste_zeile(body)).split(None, 1)
+    return teile[0] if teile else None
 
 
 # ---------------------------------------------------------------------------
@@ -237,13 +910,31 @@ _DRILLDOWN_METRICS: dict[str, tuple] = {
 # (mock-frei testbar, keine Seiteneffekte).
 # ---------------------------------------------------------------------------
 
-def _on_demand_failure_body(outcome: str, label: str, target_date: date) -> str:
+_ON_DEMAND_FAILURE_EN = {
+    "no_weather": "{label} ({d}): weather data not available right now - please try again later.",
+    "no_channels": "No channels active for this {o} - briefing not sent. "
+                   "Turn channels on in the {o} editor.",
+    "channels_unreachable": "Channel configured for this {o} but not reachable "
+                            "- briefing not sent. Check the connection.",
+    "already_in_progress": "{label} ({d}): already being sent - please wait a moment.",
+    "no_stage": "{label} ({d}): no stage planned",
+    "invalid_preset": "{label} ({d}): comparison not loadable or its places were deleted.",
+}
+
+
+def _on_demand_failure_body(outcome: str, label: str, target_date: date,
+                            en: bool = False, objekt: str = "Trip") -> str:
     """Formatiert den Antworttext für einen nicht-erfolgreichen On-Demand-Versand.
 
     outcome: "no_stage" | "no_weather" | "no_channels" | "channels_unreachable"
-    | "already_in_progress" (alles außer "sent").
+    | "already_in_progress" (alles außer "sent"). ``en``: #2417 Abschnitt H.
+    ``objekt`` (#2282 S2): "Trip" oder "Ortsvergleich" — dieselbe Tabelle.
     """
     human_date = f"{target_date:%d.%m.%Y}"
+    if en:
+        vorlage = _ON_DEMAND_FAILURE_EN.get(outcome, _ON_DEMAND_FAILURE_EN["no_stage"])
+        o = "trip" if objekt == "Trip" else "comparison"
+        return vorlage.format(label=label, d=human_date, o=o)
     if outcome == "no_weather":
         return (
             f"{label} ({human_date}): Wetterdaten aktuell nicht verfügbar — "
@@ -251,8 +942,8 @@ def _on_demand_failure_body(outcome: str, label: str, target_date: date) -> str:
         )
     if outcome == "no_channels":
         return (
-            "Keine Versandkanäle für diesen Trip aktiv — Briefing nicht "
-            "gesendet. Kanäle im Trip-Editor aktivieren."
+            f"Keine Versandkanäle für diesen {objekt} aktiv — Briefing nicht "
+            f"gesendet. Kanäle im {objekt}-Editor aktivieren."
         )
     # Issue #1403 AC-4: Versandweg konfiguriert, aber technisch nicht
     # erreichbar (z.B. Telegram ohne gültige Bot-Verbindung) — eigene
@@ -260,13 +951,16 @@ def _on_demand_failure_body(outcome: str, label: str, target_date: date) -> str:
     # verwechseln lässt.
     if outcome == "channels_unreachable":
         return (
-            "Versandweg für diesen Trip konfiguriert, aber nicht erreichbar "
+            f"Versandweg für diesen {objekt} konfiguriert, aber nicht erreichbar "
             "— Briefing nicht gesendet. Verbindung prüfen."
         )
     # Issue #1756 AC-9: Kollisionsfall (Lock belegt) darf nicht mit "keine
     # Etappe" verwechselt werden.
     if outcome == "already_in_progress":
         return f"{label} ({human_date}): Versand läuft bereits — bitte kurz warten."
+    if outcome == "invalid_preset":
+        return (f"{label} ({human_date}): Ortsvergleich nicht ladbar oder Orte "
+                "gelöscht — Orte im Ortsvergleich prüfen.")
     # "no_stage" (Default/Fallback)
     return f"{label} ({human_date}): Keine Etappe geplant"
 
@@ -298,8 +992,14 @@ def _fetch_and_save_snapshot(trip, user_id: str, today, tomorrow) -> None:
 
     try:
         scheduler = TripReportSchedulerService(user_id=user_id)
+        scheduler._last_converted_trip = None
         segments = scheduler._convert_trip_to_segments(trip, today)
+        if scheduler._last_converted_trip is not None:
+            trip = scheduler._last_converted_trip
+        scheduler._last_converted_trip = None
         segments_tomorrow = scheduler._convert_trip_to_segments(trip, tomorrow)
+        if scheduler._last_converted_trip is not None:
+            trip = scheduler._last_converted_trip
         all_segments = segments + segments_tomorrow
         if not all_segments:
             return
@@ -320,21 +1020,168 @@ def _fetch_and_save_snapshot(trip, user_id: str, today, tomorrow) -> None:
 # Processor
 # ---------------------------------------------------------------------------
 
+class _NothingToChange(Exception):
+    """Mutation findet auf dem frischen Trip nichts zu aendern (kein Schreiben)."""
+
+
+class _SpeicherFehler(Exception):
+    """#1405 S4a: Speichern gescheitert -- traegt die Fehlerantwort an den Nutzer."""
+
+    def __init__(self, result: "CommandResult"):
+        super().__init__(result.command)
+        self.result = result
+
+
+class _Messung:
+    """#2439: eine laufende Befehls-Messung (Eingang bis Uebergabe an den Versand)."""
+
+    def __init__(self, kanal: str) -> None:
+        self.kanal = kanal
+        self.t0 = time.monotonic()
+        self.name: Optional[str] = None
+        self.trip_id: Optional[str] = None
+
+
+_MESSUNG: contextvars.ContextVar[Optional[_Messung]] = contextvars.ContextVar(
+    "befehl_messung", default=None)
+
+
+def _befehlsname(key: Optional[str], value: Optional[str] = None) -> str:
+    """Befehlsname fuer das Journal -- NUR aus festen Woertern, nie Nutzertext
+    (F001): alles Unbekannte (Nummer, Adresse, Freitext) wird `UNKNOWN`."""
+    if key == "query":
+        key = (value or "").lower()
+    if key in ("hilfe", "kuerzel"):
+        return {"hilfe": "HELP", "kuerzel": "CODES"}[key]
+    erlaubt = _VALID_COMMANDS | _QUERY_KEYS | set(_BARE_KEYWORD_MAP.values())
+    if key in erlaubt:
+        return key.upper()
+    if key and (_HOURS_PATTERN.match(key) or _DRILLDOWN_PATTERN.match(key)):
+        return "DRILLDOWN"
+    return "UNKNOWN"
+
+
+def befehl_markieren(key: Optional[str], value: Optional[str] = None) -> None:
+    """Vermerkt den Befehl der laufenden Messung (fuer Zweige ohne `process()`,
+    z. B. Rueckfragen); ohne laufende Messung wirkungslos."""
+    m = _MESSUNG.get()
+    if m is not None:
+        m.name = _befehlsname(key, value)
+
+
+@contextmanager
+def befehl_messung(kanal: str):
+    """#2439 (AC-1, F002): umspannt die Verarbeitung EINER Nachricht im Eingang
+    (Reader) bis nach der Uebergabe der Antwort an den Versand-Provider. Beim
+    Verlassen entsteht GENAU EINE Dauer-Zeile -- aber nur, wenn die Nachricht ein
+    Befehl war (`process()` bzw. `befehl_markieren` hat ihn vermerkt)."""
+    if _MESSUNG.get() is not None:
+        yield
+        return
+    m = _Messung(kanal)
+    token = _MESSUNG.set(m)
+    try:
+        yield
+    finally:
+        _MESSUNG.reset(token)
+        if m.name is not None:
+            _schreibe_dauer(m.name, m.kanal, m.trip_id, m.t0)
+
+
+def _schreibe_dauer(name: str, kanal: str, trip_id: Optional[str], t0: float) -> None:
+    dauer_logger.info(
+        "befehl=%s kanal=%s trip=%s dauer_ms=%d",
+        name, kanal, trip_id or "-", round((time.monotonic() - t0) * 1000),
+    )
+
+
 class TripCommandProcessor:
     """Processes trip commands from any inbound channel."""
 
+    #: #2417: Antwortsprache der laufenden Nachricht (Premium-SMS immer
+    #: englisch, Telegram laut Reader, E-Mail deutsch).
+    _en = False
+
+    def _t(self, de: str, en: str) -> str:
+        return en if self._en else de
+
     def process(self, msg: InboundMessage) -> CommandResult:
-        """Parse, validate, and execute a trip command."""
+        """Parse, validate, and execute a trip command.
+
+        #1405 S4a: ein Programmfehler im Handler darf den Nutzer nicht ohne
+        Antwort lassen (Mail/SMS/Telegram verschicken jede Antwort) -- er
+        bleibt mit Traceback im Protokoll, der Nutzer bekommt eine kurze
+        Fehlerantwort. Bewusst KEIN "bitte erneut senden": skip/ruhetag/heute
+        sind nicht wiederholungsfest.
+        """
+        t0 = time.monotonic()
+        self._en = msg.englisch or msg.channel in _KURZFORM_KANAELE
+        try:
+            ergebnis = self._process(msg)
+        except Exception:
+            logger.exception(
+                "Kommando %r fuer Trip %r: unerwarteter Fehler", msg.body, msg.trip_name)
+            ergebnis = CommandResult(
+                success=False, command="error",
+                confirmation_subject=self._t("Befehl fehlgeschlagen", "Command failed"),
+                confirmation_body=self._t(
+                    "Befehl konnte nicht sicher ausgefuehrt werden. Bitte mit "
+                    "STATUS pruefen, bevor du ihn erneut sendest.",
+                    "Command could not be run safely. Please check with STATUS "
+                    "before you send it again."),
+                trip_name=msg.trip_name,
+            )
+        self._logge_dauer(msg, t0)
+        return ergebnis
+
+    def _logge_dauer(self, msg: InboundMessage, t0: float) -> None:
+        """#2439 (AC-1): Befehl und Trip fuer die Dauer-Zeile ermitteln. Laeuft eine
+        Reader-Messung (`befehl_messung`), schreibt SIE die Zeile nach der Uebergabe
+        an den Versand; sonst entsteht sie hier. Nie ein Nachrichtentext, keine
+        Adresse/Nummer/Chat-ID."""
+        try:
+            key, value = self._parse_command(msg.body)
+            if key is None and _metric_id_for_word(_erstes_wort(msg.body)):
+                name = "METRIK"
+            else:
+                name = _befehlsname(key, value)
+            trip_id = msg.resolved_preset_id
+            if not trip_id:
+                trip = self._find_trip(msg.trip_name, msg.user_id)
+                trip_id = trip.id if trip else None
+        except Exception:
+            name, trip_id = "UNKNOWN", None
+        m = _MESSUNG.get()
+        if m is not None:
+            m.name, m.trip_id = name, trip_id
+            return
+        _schreibe_dauer(name, msg.channel, trip_id, t0)
+
+    def _process(self, msg: InboundMessage) -> CommandResult:
+        """Eigentliche Verarbeitung von ``process`` (ohne Fehlerfang)."""
+        # Issue #2282 Abschnitt 5: die Vergleichs-Dispatch-Weiche laeuft VOR
+        # jedem Trip-Zweig (Drilldown/Query/Hilfe/Metrikwort/Dispatch) — der
+        # unveraenderte Trip-Pfad darunter bleibt byte-gleich.
+        vergleich = self._resolve_vergleich(msg)
+        if vergleich is not None:
+            return vergleich
+
         # 1. Parse command
         key, value = self._parse_command(msg.body)
 
         if key is None:
+            # Issue #2134: Steuerbefehle haben Vorrang (AC-20) — erst wenn
+            # KEINER greift, wird das Wort gegen das Metrik-Vokabular
+            # aufgeloest. Ein Steuerbefehl kann so nie verdraengt werden.
+            metrik = _metric_id_for_word(_erstes_wort(msg.body))
+            if metrik:
+                return self._metrik_antwort(metrik, msg)
             return CommandResult(
                 success=False, command="unknown",
-                confirmation_subject="Unbekannter Befehl",
-                confirmation_body=(
-                    "Befehlsformat: ### key: value\n"
-                    "Verfuegbar: ruhetag, report, startdatum, abbruch, status, hilfe"
+                confirmation_subject=self._t("Unbekannter Befehl", "Unknown command"),
+                confirmation_body=unknown_command_body(
+                    self._t("Befehlsformat: ### key: value", "Unknown command."),
+                    en=self._en,
                 ),
                 trip_name=msg.trip_name,
             )
@@ -400,11 +1247,16 @@ class TripCommandProcessor:
                     trip_name=msg.trip_name,
                     reply_markup=_GLANCE_BUTTONS,
                 )
-            return self._handle_query(trip, actual_query_key, msg.received_at, msg.user_id)
+            return self._handle_query(
+                trip, actual_query_key, msg.received_at, msg.user_id,
+                channel=msg.channel,
+            )
 
         # hilfe braucht keinen Trip-Lookup
         if key == "hilfe":
             return self._show_help()
+        if key == "kuerzel":
+            return self._show_codes()
 
         # Issue #1001 Adversary-Finding F002: "columns" (Aktionen-Bubble-Button
         # "📊 Spalten") braucht ebenfalls keinen Trip-Lookup — Spalten-Konfiguration
@@ -415,12 +1267,18 @@ class TripCommandProcessor:
             return self._show_columns_info()
 
         if key not in _VALID_COMMANDS:
+            # Auch hier zuerst die Steuerbefehle (oben), dann der Katalog: der
+            # Telegram-Reader kodiert ein getipptes Metrikwort als `### visib`.
+            metrik = _metric_id_for_word(key)
+            if metrik:
+                return self._metrik_antwort(metrik, msg)
             return CommandResult(
                 success=False, command=key,
-                confirmation_subject=f"[{msg.trip_name}] Unbekannter Befehl",
-                confirmation_body=(
-                    f"'{key}' ist kein gueltiger Befehl.\n"
-                    "Verfuegbar: ruhetag, report, startdatum, abbruch, status, hilfe"
+                confirmation_subject=self._t(
+                    f"[{msg.trip_name}] Unbekannter Befehl", f"[{msg.trip_name}] Unknown command"),
+                confirmation_body=unknown_command_body(
+                    self._t(f"'{key}' ist kein gueltiger Befehl.", "Unknown command."),
+                    en=self._en,
                 ),
                 trip_name=msg.trip_name,
             )
@@ -452,13 +1310,15 @@ class TripCommandProcessor:
         elif key == "status":
             return self._show_status(trip, msg.received_at)
         elif key == "now":
-            return self._show_now(trip, msg.received_at)
+            return self._show_now(trip, msg.received_at, msg.user_id)
         elif key == "weiter":
             return self._resume_trip(trip, msg.user_id)
         elif key == "pause":
             return self._apply_pause(trip, value, msg.user_id)
         elif key == "skip":
             return self._apply_skip(trip, msg.user_id)
+        elif key == "strecke":
+            return self._show_strecke(trip, value, msg.received_at, msg.user_id, msg.channel)
 
         # Should not reach here due to whitelist check above
         return CommandResult(
@@ -469,10 +1329,7 @@ class TripCommandProcessor:
 
     def _parse_command(self, body: str) -> tuple[Optional[str], Optional[str]]:
         """Parse first non-blank line for ### key: value OR bare KEYWORD format."""
-        first_line = next(
-            (line.strip() for line in body.splitlines() if line.strip()),
-            "",
-        )
+        first_line = _ohne_praefix(_erste_zeile(body))
         # ###-Pfad hat Vorrang
         match = _COMMAND_PATTERN.match(first_line)
         if match:
@@ -480,14 +1337,275 @@ class TripCommandProcessor:
         # Bare-keyword: erstes Token (case-insensitiv), Rest = value
         parts = first_line.split(None, 1)
         if parts:
-            keyword = parts[0].lower()
+            keyword = _bereinigtes_bare_keyword(parts[0]).lower()
             internal = _BARE_KEYWORD_MAP.get(keyword)
             if internal is not None:
                 rest = parts[1].strip() if len(parts) > 1 else None
                 return internal, rest or None
         return None, None
 
-    def _find_trip(self, trip_name: str, user_id: str = "default") -> Optional[Trip]:
+    # -----------------------------------------------------------------------
+    # Ortsvergleich — Issue #2282 Scheibe S1
+    # -----------------------------------------------------------------------
+
+    def _find_compare_preset(
+        self, name: str, user_id: str, *, mit_praefix: bool = True,
+    ) -> Optional[dict]:
+        """Toleranter Namensvergleich ueber die Ortsvergleiche des Mandanten
+        (Pendant zu ``_find_trip``, Abschnitt 4)."""
+        from app.loader import compare_preset_to_dict, load_compare_presets
+
+        presets = load_compare_presets(user_id)
+        query = _norm(name)
+        for preset in presets:
+            if _norm(preset.name) == query:
+                return compare_preset_to_dict(preset)
+        # F004 (#2282 Fix-Loop 2): gefaltete Form (Premium-SMS-Rueckfrage).
+        fold_q = _norm_gefaltet(name)
+        treffer = [p for p in presets if _norm_gefaltet(p.name) == fold_q]
+        if len(treffer) == 1:
+            return compare_preset_to_dict(treffer[0])
+        # Bug #2615 (AC-8): eindeutiges Praefix als LETZTER Fallback.
+        if not mit_praefix:
+            return None
+        treffer = [p for p in presets if _ist_praefix(p.name, fold_q)]
+        if len(treffer) == 1:
+            return compare_preset_to_dict(treffer[0])
+        return None
+
+    def _resolve_vergleich(self, msg: InboundMessage) -> Optional[CommandResult]:
+        """Loest auf, ob diese Nachricht einen Ortsvergleich meint (Abschnitt
+        3-5). ``None`` heisst: unveraenderter Trip-Pfad soll weiterlaufen.
+        """
+        if msg.resolved_kind == "vergleich" and msg.resolved_preset_id:
+            return self._dispatch_compare(msg, msg.resolved_preset_id, msg.trip_name)
+
+        trip_treffer = self._find_trip(msg.trip_name, msg.user_id)
+        # Bug #2615: exakter Trip-Treffer schlaegt ein Vergleichs-Praefix.
+        preset_treffer = self._find_compare_preset(
+            msg.trip_name, msg.user_id, mit_praefix=trip_treffer is None,
+        )
+
+        if trip_treffer and preset_treffer:
+            # AC-7: Namensgleichheit -> Rueckfrage statt stiller Trip-Wahl.
+            from services.trip_selection import resolve_active_target
+
+            erg = resolve_active_target(
+                [trip_treffer], [preset_treffer], msg.received_at, channel=msg.channel,
+                englisch=self._en,
+            )
+            return CommandResult(
+                success=False, command="mehrdeutig",
+                confirmation_subject=self._t("Mehrdeutig", "Ambiguous"),
+                confirmation_body=erg.text,
+                trip_name=msg.trip_name,
+            )
+        if preset_treffer and not trip_treffer:
+            return self._dispatch_compare(
+                msg, preset_treffer["id"], preset_treffer.get("name", msg.trip_name),
+            )
+        return None
+
+    def _dispatch_compare(
+        self, msg: InboundMessage, preset_id: str, name: str,
+    ) -> CommandResult:
+        """Vergleichs-Dispatch-Weiche (Abschnitt 5): pause/weiter/hilfe/
+        kuerzel und seit #2282 S2 report/heute/morgen (Versand); alle anderen
+        Befehle bekommen eine feste Ablehnungsantwort aus ``_COMMAND_SPECS``."""
+        key, value = self._parse_command(msg.body)
+        # Adversary F001 (#2282 Fix-Loop 1): Telegram kodiert JEDEN Query-Key
+        # (heute/morgen/glance/heute_gewitter/timeline_heute/timeline_morgen)
+        # unbedingt als "### query: <key>" (inbound_telegram_reader.py
+        # _command_body), unabhaengig vom Ziel-kind -- dieselbe Entpackung
+        # wie im Trip-Pfad (process():~742-747), sonst bleibt key=="query"
+        # stehen und der generische Ablehnungszweig zeigt das falsche Wort
+        # "query" statt des tatsaechlich gesendeten Befehls.
+        if key == "query" and value and value.lower() in _QUERY_KEYS:
+            key = value.lower()
+        if key == "hilfe":
+            return self._show_help_for_kind("vergleich")
+        if key == "kuerzel":
+            return self._show_codes(kind="vergleich")
+        if key in ("report", "heute", "morgen"):
+            return self._compare_versand(msg, key, preset_id, name)
+        if key == "pause":
+            return self._apply_compare_pause(preset_id, msg.user_id, name, bool(value))
+        if key == "weiter":
+            return self._resume_compare(preset_id, msg.user_id, name)
+        wort = key if key is not None else (_erstes_wort(msg.body) or msg.body.strip())
+        return self._compare_unavailable(wort, name)
+
+    def _show_help_for_kind(self, kind: str) -> CommandResult:
+        """Hilfe, gefiltert auf die kind-Menge aus ``_COMMAND_SPECS`` (Abschnitt
+        7, AC-12) — einzige Quelle, keine zweite handgepflegte Liste."""
+        if self._en:
+            return CommandResult(
+                success=True, command="hilfe", confirmation_subject="Help",
+                confirmation_body=hilfe_kurzform(kind),
+            )
+        zeilen = ["Verfügbare Befehle:", ""]
+        # AC-29 (#2417): Vergleichs-PAUSE ohne Dauer -- steckt in command_rows.
+        for label, beschreibung in command_rows(kind):
+            zeilen.append(f"  {label:<21} – {beschreibung}")
+        return CommandResult(
+            success=True, command="hilfe",
+            confirmation_subject="Hilfe",
+            confirmation_body="\n".join(zeilen),
+        )
+
+    def _show_codes(self, kind: str = "route") -> CommandResult:
+        """CODES/KUERZEL (#2417 AC-3/AC-9/AC-10) -- ziellos, Sprache laut
+        Kanal/Wort, Text vollstaendig aus ``codes_text``. Bug #2454 AC-6/AC-7:
+        ``kind`` steuert, ob "TF" erscheint (nur im aufgeloesten
+        Ortsvergleich, ``kind="vergleich"``)."""
+        return CommandResult(
+            success=True, command="kuerzel",
+            confirmation_subject=self._t("Kürzel", "Codes"),
+            confirmation_body=codes_text(self._en, vergleich=(kind == "vergleich")),
+        )
+
+    def _compare_ortstag(self, preset_id: str, msg: InboundMessage) -> date:
+        """Ortstag des Presets zum Eingangszeitpunkt (dieselbe Rechnung wie
+        der Cron, ``preset_ortstag``). Unbekanntes Preset ⇒ ``KeyError``."""
+        from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
+        from services.compare_slot_scheduler import preset_ortstag
+
+        preset = next((p for p in load_compare_presets(msg.user_id) if p.id == preset_id), None)
+        if preset is None:
+            raise KeyError(preset_id)
+        orte = {o.id: o for o in load_all_locations(user_id=msg.user_id)}
+        return preset_ortstag(compare_preset_to_dict(preset), orte, msg.received_at)
+
+    def _compare_versand(
+        self, msg: InboundMessage, key: str, preset_id: str, name: str,
+    ) -> CommandResult:
+        """report/heute/morgen am Vergleich (#2282 S2): EIN Pfad ueber den
+        Handversand ``send_compare_preset`` (Send-Lock "compare", on_demand).
+        ``report`` mehrkanalig mit Zieltag heute; ``heute``/``morgen`` nur auf
+        dem Anfragekanal, Zieltag = Ortstag des Presets + Versatz (ADR-0051).
+        Antworttexte aus denselben Tabellen wie beim Trip, Label Ortsvergleich."""
+        from services.scheduler_dispatch_service import send_compare_preset
+
+        zieltag = msg.received_at.date()
+        kw: dict = {}
+        try:
+            if key != "report":
+                versatz = 0 if key == "heute" else 1
+                zieltag = self._compare_ortstag(preset_id, msg) + timedelta(days=versatz)
+                kw = dict(restrict_to_channel=msg.channel, target_date=zieltag,
+                          tage_ab_ortstag=versatz)
+            erg = send_compare_preset(msg.user_id, preset_id, **kw)
+        except (KeyError, ValueError):
+            erg = {"status": "invalid_preset"}
+        outcome = "sent" if erg["status"] == "ok" else erg["status"]
+        if key == "report":
+            titel = (self._t("Report gesendet", "Report sent") if outcome == "sent"
+                     else self._t("Report nicht gesendet", "Report not sent"))
+            body = self._report_reply_body(outcome, "morning")
+        else:
+            titel = self._t(key.title(), "Today" if key == "heute" else "Tomorrow")
+            body = (self._t(f"{titel}-Briefing wird gesendet.", f"{titel} briefing is being sent.")
+                    if outcome == "sent" else _on_demand_failure_body(
+                        outcome, titel, zieltag, en=self._en, objekt="Ortsvergleich"))
+        fehlend = [*erg.get("fehlende_orte", []), *erg.get("orte_ohne_wetter", [])]
+        if fehlend:
+            body += "\n" + self._t("Ohne Daten: ", "No data: ") + ", ".join(fehlend)
+        return CommandResult(
+            success=outcome == "sent", command=key,
+            confirmation_subject=f"[{name}] {self._t('Ortsvergleich', 'Comparison')} {titel}",
+            confirmation_body=body, trip_name=name,
+            suppress_email_reply=outcome == "sent" and key != "report",
+        )
+
+    def _compare_unavailable(self, befehl: str, name: str) -> CommandResult:
+        """Generische Ablehnung fuer alle Trip-only-Befehle am Vergleich
+        (AC-11) — Wortlaut aus derselben Quelle (``_COMMAND_SPECS``-Filter)."""
+        if self._en:
+            intern = {_BARE_KEYWORD_MAP.get(s.wort, s.wort): s.wort_en for s in _COMMAND_SPECS}
+            wort = intern.get(befehl, befehl)
+            return CommandResult(
+                success=False, command=befehl,
+                confirmation_subject=f"[{name}] Command not available",
+                confirmation_body=f"'{wort}' is not available for location comparisons.",
+                trip_name=name,
+            )
+        return CommandResult(
+            success=False, command=befehl,
+            confirmation_subject=f"[{name}] Befehl nicht verfügbar",
+            confirmation_body=f"'{befehl}' gibt es beim Ortsvergleich nicht.",
+            trip_name=name,
+        )
+
+    def _apply_compare_pause(
+        self, preset_id: str, user_id: str, name: str, hatte_dauer: bool = False,
+    ) -> CommandResult:
+        """Pausiert einen Ortsvergleich unbefristet (AC-8) — ruft das
+        unveraenderte RMW-Vorbild ``save_compare_preset_pause`` auf, eine
+        mitgegebene Dauer wird nicht ausgewertet. AC-29 (#2417): war eine
+        Dauer (z. B. "pause 2d") angegeben, sagt die Antwort das ausdruecklich
+        — sonst wuerde das Vergleichs-Angebot (PAUSE ohne Dauer, s.
+        ``_show_help_for_kind``) dem tatsaechlichen Verhalten widersprechen."""
+        from services.scheduler_dispatch_service import save_compare_preset_pause
+
+        try:
+            if save_compare_preset_pause(user_id, preset_id) is False:
+                # #2158: Sperr-Fristablauf/Lesefehler -- nie "pausiert" behaupten.
+                raise _SpeicherFehler(self._compare_erneut_senden(name, "pause"))
+        except _SpeicherFehler as e:
+            return e.result
+        hinweis = self._t(
+            " Eine angegebene Dauer wird nicht ausgewertet.",
+            " A given duration is ignored.",
+        ) if hatte_dauer else ""
+        return CommandResult(
+            success=True, command="pause",
+            confirmation_subject=self._t(
+                f"[{name}] Ortsvergleich pausiert", f"[{name}] Comparison paused"),
+            confirmation_body=self._t(
+                f"Ortsvergleich '{name}' pausiert unbefristet, bis du WEITER "
+                f"sendest.{hinweis}",
+                f"Comparison '{name}' paused until you send RESUME.{hinweis}",
+            ),
+            trip_name=name,
+        )
+
+    def _compare_erneut_senden(self, name: str, command: str) -> CommandResult:
+        """#2158: Compare-Datei gerade gesperrt -- Fehler an den Nutzer."""
+        return CommandResult(
+            success=False, command=command,
+            confirmation_subject=self._t(
+                f"[{name}] Bitte erneut senden", f"[{name}] Please send again"),
+            confirmation_body=self._t(
+                "Befehl nicht ausgefuehrt: Der Ortsvergleich wird gerade "
+                "geaendert. Bitte in einer Minute erneut senden.",
+                "Command not executed: the comparison is being changed right "
+                "now. Please send it again in a minute."),
+            trip_name=name,
+        )
+
+    def _resume_compare(self, preset_id: str, user_id: str, name: str) -> CommandResult:
+        """Setzt einen pausierten Ortsvergleich fort (AC-9/AC-10)."""
+        from services.scheduler_dispatch_service import resume_compare_preset
+
+        status = resume_compare_preset(user_id, preset_id)
+        if status == "lock_timeout":
+            return self._compare_erneut_senden(name, "weiter")
+        fortgesetzt = status == "resumed"
+        return CommandResult(
+            success=fortgesetzt, command="weiter",
+            confirmation_subject=(
+                self._t(f"[{name}] Ortsvergleich fortgesetzt",
+                        f"[{name}] Comparison resumed") if fortgesetzt
+                else self._t(f"[{name}] Ortsvergleich", f"[{name}] Comparison")),
+            confirmation_body=(
+                self._t(f"Ortsvergleich '{name}' wieder aktiv.",
+                        f"Comparison '{name}' active again.") if fortgesetzt
+                else self._t(f"Ortsvergleich '{name}' ist nicht pausiert.",
+                             f"Comparison '{name}' is not paused.")),
+            trip_name=name,
+        )
+
+    def _find_trip(self, trip_name: str, user_id: str) -> Optional[Trip]:
         """Trip-Lookup: primär über GZ#-Shortcode, Fallback toleranter Namensvergleich."""
         trips = load_all_trips(user_id)
         first_token = trip_name.split()[0].upper() if trip_name.strip() else ""
@@ -499,6 +1617,11 @@ class TripCommandProcessor:
         for trip in trips:
             if _norm(trip.name) == query:
                 return trip
+        # F004 (#2282 Fix-Loop 2): gefaltete Form (Premium-SMS-Rueckfrage).
+        fold_q = _norm_gefaltet(trip_name)
+        treffer = [t for t in trips if _norm_gefaltet(t.name) == fold_q]
+        if len(treffer) == 1:
+            return treffer[0]
         logger.warning(f"No trip found for name: {trip_name!r} (user: {user_id!r})")
         return None
 
@@ -508,8 +1631,17 @@ class TripCommandProcessor:
 
     def _handle_query(
         self, trip: Trip, query_key: str, received_at: datetime, user_id: str,
+        *, channel: str | None = None,
     ) -> CommandResult:
         """Dispatch read-only query. Never mutates trip state.
+
+        Issue #2126: `channel` ist der Anfrageweg und steuert im
+        heute/morgen-Zweig den Briefing-Versand. Issue #2184: er geht
+        zusätzlich in die drei Formatierer, weil die Gewitter-Herkunft auf
+        SMS/Premium-SMS entfällt (PO-Abwahl, AC-8). Das
+        `report`-Kommando läuft über denselben Draht mit derselben
+        Herkunftskennung und bleibt bewusst mehrkanalig — deshalb sitzt die
+        Einschränkung hier und nicht am Nachrichteneingang in `process()`.
 
         Fix #1795 (ADR-0044): "heute"/"morgen" folgen dem ORTStag der Tour,
         nicht dem UTC-Tag von ``received_at`` — EINE Auflösung
@@ -530,63 +1662,103 @@ class TripCommandProcessor:
         # der Scheduler die Wetterdaten selbst holt (keine WeatherExtractor-
         # Timeline nötig).
         if query_key == "heute":
-            return self._trigger_on_demand(trip, "morning", "Heute", user_id)
+            return self._trigger_on_demand(
+                trip, "morning", "Heute", user_id, channel=channel,
+            )
         elif query_key == "morgen":
-            return self._trigger_on_demand(trip, "evening", "Morgen", user_id)
+            return self._trigger_on_demand(
+                trip, "evening", "Morgen", user_id, channel=channel,
+            )
 
         from services.weather_extractor import WeatherExtractor
         extractor = WeatherExtractor(user_id=user_id)
-        timeline = extractor.timeline(trip.id)
+        # Issue #2186: der Tageswert fuer "heute" gilt AB dem Anfragezeitpunkt.
+        timeline = extractor.timeline(trip.id, from_time=received_at)
 
         if not timeline.available:
             _fetch_and_save_snapshot(trip=trip, user_id=user_id, today=today, tomorrow=tomorrow)
-            timeline = extractor.timeline(trip.id)
+            timeline = extractor.timeline(trip.id, from_time=received_at)
 
-        if query_key == "glance":
-            body = self._fmt_glance(timeline, today, tomorrow, tz_heute, tz_morgen)
-            return CommandResult(
-                success=True, command="glance",
-                confirmation_subject=f"[{trip.name}] Glance",
-                confirmation_body=body,
-                trip_name=trip.name,
-                reply_markup=_GLANCE_BUTTONS,
-            )
-        elif query_key == "heute_gewitter":
-            body = self._fmt_gewitter(timeline, today, tz_heute)
-            return CommandResult(
-                success=True, command="heute_gewitter",
-                confirmation_subject=f"[{trip.name}] Gewitter heute",
-                confirmation_body=body,
-                trip_name=trip.name,
-            )
-        elif query_key == "timeline_heute":
-            body = self._fmt_timeline(timeline, today, "Heute", "today", tz_heute)
-            return CommandResult(
-                success=True, command="timeline_heute",
-                confirmation_subject=f"[{trip.name}] Timeline heute",
-                confirmation_body=body,
-                trip_name=trip.name,
-                reply_markup=self._timeline_buttons(timeline, today, "today", tz_heute),
-            )
-        elif query_key == "timeline_morgen":
-            body = self._fmt_timeline(timeline, tomorrow, "Morgen", "tomorrow", tz_morgen)
-            return CommandResult(
-                success=True, command="timeline_morgen",
-                confirmation_subject=f"[{trip.name}] Timeline morgen",
-                confirmation_body=body,
-                trip_name=trip.name,
-                reply_markup=self._timeline_buttons(timeline, tomorrow, "tomorrow", tz_morgen),
-            )
-        # Fallback (should not reach)
-        return CommandResult(
-            success=False, command=query_key,
-            confirmation_subject="Fehler",
-            confirmation_body="Unbekannter Query-Key.",
-            trip_name=trip.name,
+        # Fix #1818: der undatierte Anker traegt strukturell nur EINEN Tag —
+        # der jeweils fehlende wird, falls vorhanden, aus dem datierten
+        # Snapshot rein lesend ergaenzt (kein Abruf, kein Schreibvorgang).
+        timeline = self._mit_datiertem_rueckfall(
+            timeline, trip.id, user_id,
+            ((today, tz_heute), (tomorrow, tz_morgen)),
+            from_time=received_at,
         )
+
+        # Fallback (should not reach)
+        if query_key not in ("glance", "heute_gewitter", "timeline_heute",
+                             "timeline_morgen"):
+            return CommandResult(
+                success=False, command=query_key,
+                confirmation_subject="Fehler",
+                confirmation_body="Unbekannter Query-Key.",
+                trip_name=trip.name,
+            )
+
+        # #1405 S4a: EIN Return -- `success` und Text haengen am selben Befund
+        # ("Wetterdaten fuer den angefragten Tag fehlen", tagesgenau).
+        luecke_heute = self._wetterdaten_fehlen(timeline, trip, today, tz_heute)
+        luecke_morgen = self._wetterdaten_fehlen(timeline, trip, tomorrow, tz_morgen)
+        buttons = None
+        if query_key == "glance":
+            body = self._fmt_glance(timeline, today, tomorrow, tz_heute, tz_morgen,
+                                    trip=trip, channel=channel)
+            subject = f"[{trip.name}] Glance"
+            # Glance fragt zwei Tage: nur wenn KEIN Tag Daten traegt UND
+            # mindestens einer eine Luecke ist, fehlen die Daten.
+            agg_vorhanden = timeline.available and bool(
+                self._aggregate_day(timeline, today, tz_heute)
+                or self._aggregate_day(timeline, tomorrow, tz_morgen))
+            fehlen = not timeline.available or (
+                not agg_vorhanden and (luecke_heute or luecke_morgen))
+            buttons = _GLANCE_BUTTONS
+        elif query_key == "heute_gewitter":
+            body = self._fmt_gewitter(timeline, today, tz_heute, trip=trip,
+                                      channel=channel)
+            subject = self._t(f"[{trip.name}] Gewitter heute", f"[{trip.name}] Storms today")
+            fehlen = luecke_heute
+        elif query_key == "timeline_heute":
+            body = self._fmt_timeline(timeline, today, self._t("Heute", "Today"), "today",
+                                      tz_heute, trip=trip, channel=channel)
+            subject = f"[{trip.name}] Timeline {self._t('heute', 'today')}"
+            fehlen = luecke_heute
+            buttons = self._timeline_buttons(timeline, today, "today", tz_heute)
+        else:
+            body = self._fmt_timeline(timeline, tomorrow, self._t("Morgen", "Tomorrow"),
+                                      "tomorrow", tz_morgen, trip=trip, channel=channel)
+            subject = f"[{trip.name}] Timeline {self._t('morgen', 'tomorrow')}"
+            fehlen = luecke_morgen
+            buttons = self._timeline_buttons(timeline, tomorrow, "tomorrow", tz_morgen)
+        return CommandResult(
+            success=not fehlen, command=query_key,
+            confirmation_subject=subject,
+            confirmation_body=body,
+            trip_name=trip.name,
+            reply_markup=buttons,
+        )
+
+    def _wetterdaten_fehlen(self, timeline, trip: Trip, target_date: date, tz) -> bool:
+        """#1405 S4a: fehlen die Wetterdaten fuer ``target_date``?
+
+        Genau der Befund, der in den Formatierern den Ohne-Daten-Text waehlt:
+        gar kein Snapshot, oder fuer den Tag keine Punkte BEI geplanter Etappe
+        (Datenluecke, ``_tagesaussage_ohne_daten``). Ein Tag ohne Etappe ist
+        keine Datenluecke ("Keine Etappe geplant" stimmt).
+        """
+        if not timeline.available:
+            return True
+        if any(local_dt(p.arrival_time, tz).date() == target_date
+               for p in timeline.points):
+            return False
+        from services.trip_segments import convert_trip_to_segments
+        return bool(convert_trip_to_segments(trip, target_date))
 
     def _trigger_on_demand(
         self, trip: Trip, report_type: str, label: str, user_id: str,
+        *, channel: str | None = None,
     ) -> CommandResult:
         """Issue #1007: heute/morgen lösen das volle Tages-Briefing aus statt
         des bisherigen Einzeiler-Aggregats. Wiederverwendung des On-Demand-
@@ -599,26 +1771,35 @@ class TripCommandProcessor:
         `send_on_demand_report` benutzten Zieltag (`OnDemandErgebnis.zieltag`)
         — kein eigener, im Aufrufer aus `received_at` geratener `target_date`
         mehr (Nebengewinn: der Parameter entfaellt hier ersatzlos).
+
+        Issue #2126: `channel` (der Anfrageweg) wird als `restrict_to_channel`
+        durchgereicht — die Antwort geht ueber GENAU den Draht hinaus, ueber
+        den gefragt wurde, auch wenn er im Trip abgeschaltet ist.
         """
         from services.trip_report_scheduler import TripReportSchedulerService
         query_key = "heute" if report_type == "morning" else "morgen"
         buttons = _HEUTE_BUTTONS if report_type == "morning" else _MORGEN_BUTTONS
         service = TripReportSchedulerService(user_id=user_id)
-        ergebnis = service.send_on_demand_report(trip, report_type)
+        ergebnis = service.send_on_demand_report(
+            trip, report_type, restrict_to_channel=channel,
+        )
+        if self._en:  # #2417 Abschnitt H
+            label = {"Heute": "Today", "Morgen": "Tomorrow"}.get(label, label)
         if ergebnis.outcome != "sent":
             return CommandResult(
-                success=True, command=query_key,
+                success=ergebnis.outcome == "sent", command=query_key,
                 confirmation_subject=f"[{trip.name}] {label}",
                 confirmation_body=_on_demand_failure_body(
-                    ergebnis.outcome, label, ergebnis.zieltag,
+                    ergebnis.outcome, label, ergebnis.zieltag, en=self._en,
                 ),
                 trip_name=trip.name,
                 reply_markup=buttons,
             )
         return CommandResult(
-            success=True, command=query_key,
+            success=ergebnis.outcome == "sent", command=query_key,
             confirmation_subject=f"[{trip.name}] {label}",
-            confirmation_body=f"{label}-Briefing wird gesendet.",
+            confirmation_body=self._t(f"{label}-Briefing wird gesendet.",
+                                      f"{label} briefing is being sent."),
             trip_name=trip.name,
             reply_markup=buttons,
             suppress_email_reply=True,
@@ -644,7 +1825,12 @@ class TripCommandProcessor:
         """
         with_emoji = channel == "telegram"
         from services.weather_extractor import WeatherExtractor
-        field, header, fmt = _DRILLDOWN_METRICS[metric]
+        # Issue #2134: Feld/Formatierer/Beschriftung aus dem Katalog statt aus
+        # einer dritten Kurzliste. Das Emoji bleibt Button-Zugabe.
+        definition = get_metric(_DRILLDOWN_TOKEN_METRIC[metric])
+        field = definition.dp_field
+        header = f"{_DRILLDOWN_TOKEN_EMOJI[metric]} {definition.label_de}"
+        fmt = _metric_formatter(definition)
 
         from_time, hours, day_date, tz = self._day_window(trip, day_token, received_at)
 
@@ -664,27 +1850,127 @@ class TripCommandProcessor:
             )
             if hail_res.available:
                 hail_by_ts = {pt.ts: pt.value for pt in hail_res.points}
+        # #1405 S4a: EIN Return -- `res.available` waehlt Text UND `success`.
+        markup = None
         if not res.available:
+            subject = self._t(
+                f"[{trip.name}] Keine stündlichen Daten", f"[{trip.name}] No hourly data")
+            body = self._t(
+                "Keine stündlichen Daten verfügbar. "
+                "Bitte einen Report anfordern um aktuelle Daten zu laden.",
+                "No hourly data available. Please request a briefing to load data.",
+            )
+        else:
+            subject = self._t(f"[{trip.name}] {header} stündlich",
+                              f"[{trip.name}] {_kurzform_kuerzel(definition)}")
+            # #2417 AC-5: Telegram-Kurzform bekommt die sprachneutrale Kurzform.
+            if _ist_kurzform_kanal(channel) or self._en:
+                body = self._format_drilldown_kurzform(
+                    res, definition, tz, folgetag=(day_token == "tomorrow"),
+                )
+            else:
+                body = self._format_drilldown(
+                    res, header, fmt, tz, with_emoji=with_emoji, hail_by_ts=hail_by_ts,
+                )
+            back = "tl_today" if day_token == "today" else "tl_tomorrow"
+            markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
+        return CommandResult(
+            success=res.available,
+            command=f"dd_{metric}_{day_token}",
+            confirmation_subject=subject,
+            confirmation_body=body,
+            reply_markup=markup,
+            trip_name=trip.name,
+        )
+
+    def _metrik_antwort(self, metric_id: str, msg: InboundMessage) -> CommandResult:
+        """Ad-hoc-Abruf EINER Katalog-Groesse (Issue #2134)."""
+        trip = self._find_trip(msg.trip_name, msg.user_id)
+        if not trip:
             return CommandResult(
-                success=False,
-                command=f"dd_{metric}_{day_token}",
-                confirmation_subject=f"[{trip.name}] Keine stündlichen Daten",
+                success=False, command=f"metrik_{metric_id}",
+                confirmation_subject=f"[{msg.trip_name}] Trip nicht gefunden",
+                confirmation_body=f"Kein Trip mit Name '{msg.trip_name}' gefunden.",
+                trip_name=msg.trip_name,
+            )
+        return self._handle_metric_drilldown(
+            trip, metric_id, "today", msg.received_at, msg.user_id, msg.channel,
+        )
+
+    def _handle_metric_drilldown(
+        self, trip: Trip, metric_id: str, day_token: str,
+        received_at: datetime, user_id: str, channel: str = "telegram",
+    ) -> CommandResult:
+        """Stuendlicher Verlauf einer beliebigen waehlbaren Katalog-Groesse.
+
+        Gefuehrt heisst nicht gefuellt: liegt fuer die Groesse in diesem Gebiet
+        kein Stundenfeld vor, wird die Luecke BENANNT (AC-17) statt eine Spalte
+        aus Platzhaltern auszuliefern — der Nutzer koennte sonst nicht
+        unterscheiden, ob nichts gemessen wurde oder nichts los ist.
+        """
+        from services.weather_extractor import WeatherExtractor
+
+        metric = get_metric(metric_id)
+        from_time, hours, day_date, tz = self._day_window(
+            trip, day_token, received_at,
+        )
+        # #2417 AC-13: Groessen ohne Stundenverlauf im Katalog (D, N) liefern
+        # den Tageswert ueber den ganzen Ortstag, keinen Verlauf.
+        tageswert = not metric.sms_code and bool(metric.sms_multi_symbols)
+        if tageswert:
+            from_time = _local_midnight(day_date, tz)
+            hours = _hours_between(
+                from_time, _local_midnight(day_date + timedelta(days=1), tz))
+        res = WeatherExtractor(user_id).drilldown(
+            trip.id, metric.dp_field, from_time=from_time, hours=hours,
+        )
+        # #2417 Abschnitt H: Telegram-Kurzform bekommt dieselbe sprachneutrale
+        # Kurzform (eigene Pruefung, _KURZFORM_KANAELE bleibt unveraendert, AC-7).
+        kurzform = _ist_kurzform_kanal(channel) or self._en
+        betreff = f"[{trip.name}] " + (_kurzform_kuerzel(metric) if self._en else metric.label_de)
+        # #1405 S4a: `traegt` waehlt Ohne-Werte-Text UND `success` (ein Return).
+        traegt = _traegt_werte(res)
+        if traegt and tageswert:
+            werte = [p.value for p in res.points if p.value is not None]
+            wert = max(werte) if "max" in metric.default_aggregations else min(werte)
+            return CommandResult(
+                success=bool(werte), command=f"metrik_{metric_id}",
+                confirmation_subject=betreff,
                 confirmation_body=(
-                    "Keine stündlichen Daten verfügbar. "
-                    "Bitte einen Report anfordern um aktuelle Daten zu laden."
+                    f"{_kurzform_kuerzel(metric)}{_kurzform_wert(metric, wert)}" if kurzform
+                    else f"{metric.label_de} ({day_date:%d.%m.}): {format_value(metric.id, wert)}"
                 ),
                 trip_name=trip.name,
             )
-
-        body = self._format_drilldown(
-            res, header, fmt, tz, with_emoji=with_emoji, hail_by_ts=hail_by_ts,
-        )
-        back = "tl_today" if day_token == "today" else "tl_tomorrow"
-        markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
+        markup = None
+        if not traegt:
+            # Gefuehrt heisst nicht gefuellt — auch die Kurzform SAGT das
+            # (Issue #2207, AC-13), auf englisch wie der uebrige Kurztext.
+            subject = betreff
+            body = (
+                fold_ascii(f"{_kurzform_kuerzel(metric)} no data")
+                if kurzform else
+                f"{metric.label_de}: für diesen Ort und Zeitraum nicht "
+                f"verfügbar (keine stündlichen Werte vorhanden)."
+            )
+        else:
+            if kurzform:
+                body = self._format_drilldown_kurzform(
+                    res, metric, tz, folgetag=(day_token == "tomorrow"),
+                )
+            else:
+                body = self._format_drilldown(
+                    res, metric.label_de, _metric_formatter(metric), tz,
+                    with_emoji=(channel == "telegram"),
+                )
+            back = "tl_today" if day_token == "today" else "tl_tomorrow"
+            subject = betreff if self._en else f"[{trip.name}] {metric.label_de} stündlich"
+            markup = {"inline_keyboard": [
+                [{"text": "⬅️ Zurück", "callback_data": back}]
+            ]}
         return CommandResult(
-            success=True,
-            command=f"dd_{metric}_{day_token}",
-            confirmation_subject=f"[{trip.name}] {header} stündlich",
+            success=traegt, command=f"metrik_{metric_id}",
+            confirmation_subject=subject,
             confirmation_body=body,
             reply_markup=markup,
             trip_name=trip.name,
@@ -708,60 +1994,83 @@ class TripCommandProcessor:
 
         from_time, hours, today_date, tz = self._day_window(trip, day_token, received_at)
         if day_token == "today":
-            back_btn, back_cb, label = "⬅️ /heute", "heute", "Heute"
+            back_btn, back_cb, label = "⬅️ /heute", "heute", self._t("Heute", "Today")
         else:
-            back_btn, back_cb, label = "⬅️ /morgen", "morgen", "Morgen"
+            back_btn, back_cb, label = "⬅️ /morgen", "morgen", self._t("Morgen", "Tomorrow")
+
+        # Issue #2010: dieselbe abgeleitete Quelle wie `_thunder_fmt` statt
+        # einer eigenen Verzweigung mit eigenen Woertern. #2417: englisch die
+        # Stufenbedeutung aus hazard_symbols.
+        thunder_karte = _thunder_symbols() if with_emoji else _thunder_words()
+        if self._en:
+            thunder_karte = {k: self._stufe_en(k) for k in thunder_karte}
+
+        def _t_sym(value) -> str:
+            # `str(ThunderLevel.MED)` liefert je nach Python-Version "MED" oder
+            # "ThunderLevel.MED" -- beide Schreibweisen enden auf dem Stufennamen.
+            stufe = str(value).rsplit(".", 1)[-1]
+            # NONE bleibt eigener Zweig: die Stundenzeile zeigt einen Strich
+            # statt eines Wortes.
+            return "—" if stufe == "NONE" else thunder_karte.get(stufe, "—")
+
+        # (Name, Feld, Formatierer, Spaltenbreite, Fehlzeichen)
+        spalten = (
+            (self._t("Temperatur", "Temp"), "t2m_c", lambda v: f"{v:.0f}°C", 7, "?°C"),
+            ("Wind",        "wind10m_kmh",   lambda v: f"{v:.0f}km/h",  8, "?"),
+            (self._t("Regen", "Rain"), "precip_1h_mm", lambda v: f"{v:.1f}mm", 6, "?"),
+            (self._t("Gewitter", "Storms"), "thunder_level", _t_sym,    0, "—"),
+        )
 
         ex = WeatherExtractor(user_id)
-        r_temp  = ex.drilldown(trip.id, "t2m_c",        from_time=from_time, hours=hours)
-        r_wind  = ex.drilldown(trip.id, "wind10m_kmh",  from_time=from_time, hours=hours)
-        r_rain  = ex.drilldown(trip.id, "precip_1h_mm", from_time=from_time, hours=hours)
-        r_thund = ex.drilldown(trip.id, "thunder_level", from_time=from_time, hours=hours)
+        ergebnis = {
+            feld: ex.drilldown(trip.id, feld, from_time=from_time, hours=hours)
+            for _n, feld, _f, _b, _l in spalten
+        }
 
-        if not r_temp.available:
-            return CommandResult(
-                success=False,
-                command=f"dd_hours_{day_token}",
-                confirmation_subject=f"[{trip.name}] Keine stündlichen Daten",
-                confirmation_body=(
-                    "Keine stündlichen Daten verfügbar. "
-                    "Bitte einen Report anfordern um aktuelle Daten zu laden."
-                ),
-                trip_name=trip.name,
+        # Issue #2134 (AC-4): Abbruch nur noch, wenn ALLE Groessen fehlen. Der
+        # bisherige `if not r_temp.available: return` verdeckte Wind, Regen und
+        # Gewitter mit, obwohl sie separat abgerufen und per Zeitstempel
+        # gemappt werden — eine einzelne Luecke wird jetzt BENANNT.
+        nutzbar = [s for s in spalten if _traegt_werte(ergebnis[s[1]])]
+        fehlend = [s for s in spalten if s not in nutzbar]
+        # #1405 S4a: EIN Return -- `nutzbar` waehlt Text UND `success`.
+        markup = None
+        if not nutzbar:
+            subject = self._t(
+                f"[{trip.name}] Keine stündlichen Daten", f"[{trip.name}] No hourly data")
+            body = self._t(
+                "Keine stündlichen Daten verfügbar. "
+                "Bitte einen Report anfordern um aktuelle Daten zu laden.",
+                "No hourly data available. Please request a briefing to load data.",
             )
-
-        wind_map  = {p.ts: p.value for p in r_wind.points}  if r_wind.available  else {}
-        rain_map  = {p.ts: p.value for p in r_rain.points}  if r_rain.available  else {}
-        thund_map = {p.ts: p.value for p in r_thund.points} if r_thund.available else {}
-
-        lines = [f"📅 Stunden · {label} ({today_date:%d.%m})", ""]
-        for pt in r_temp.points:
-            h = f"{local_hour(pt.ts, tz):02d}"
-            temp = f"{pt.value:.0f}°C" if pt.value is not None else "?°C"
-            wind_val = wind_map.get(pt.ts)
-            wind = f"{wind_val:.0f}km/h" if wind_val is not None else "?"
-            rain_val = rain_map.get(pt.ts)
-            rain = f"{rain_val:.1f}mm" if rain_val is not None else "?"
-            thund_val = thund_map.get(pt.ts)
-            if thund_val is None or str(thund_val) in ("NONE", "ThunderLevel.NONE"):
-                t_sym = "—"
-            # Issue #1474 Adversary-Folgeaudit: LOW fiel bisher mangels
-            # eigenem Zweig in den ELSE-Fall und wurde faelschlich als
-            # starkes Gewitter (🔴/hoch) angezeigt.
-            elif str(thund_val) in ("LOW", "ThunderLevel.LOW"):
-                t_sym = "🟢" if with_emoji else "leicht"
-            elif str(thund_val) in ("MED", "ThunderLevel.MED"):
-                t_sym = "🟡" if with_emoji else "mäßig"
-            else:
-                t_sym = "🔴" if with_emoji else "hoch"
-            lines.append(f"{h}  {temp:<7} {wind:<8} {rain:<6} {t_sym}")
-
-        markup = {"inline_keyboard": [[{"text": back_btn, "callback_data": back_cb}]]}
+        else:
+            karte = {
+                feld: {p.ts: p.value for p in res.points}
+                for feld, res in ergebnis.items()
+            }
+            lines = [f"📅 {self._t('Stunden', 'Hours')} · {label} ({today_date:%d.%m})", ""]
+            for pt in ergebnis[nutzbar[0][1]].points:
+                zellen = []
+                for _name, feld, fmt, breite, leer in nutzbar:
+                    wert = karte[feld].get(pt.ts)
+                    zellen.append((leer if wert is None else fmt(wert)).ljust(breite))
+                h = f"{local_hour(pt.ts, tz):02d}"
+                lines.append(f"{h}  " + " ".join(zellen).rstrip())
+            if fehlend:
+                lines.append("")
+                lines.append(
+                    ", ".join(s[0] for s in fehlend)
+                    + self._t(": nicht verfügbar (keine Daten für diesen Zeitraum).",
+                              ": not available (no data for this period).")
+                )
+            subject = f"[{trip.name}] {self._t('Stunden', 'Hours')} {label}"
+            body = "\n".join(lines)
+            markup = {"inline_keyboard": [[{"text": back_btn, "callback_data": back_cb}]]}
         return CommandResult(
-            success=True,
+            success=bool(nutzbar),
             command=f"dd_hours_{day_token}",
-            confirmation_subject=f"[{trip.name}] Stunden {label}",
-            confirmation_body="\n".join(lines),
+            confirmation_subject=subject,
+            confirmation_body=body,
             reply_markup=markup,
             trip_name=trip.name,
         )
@@ -811,7 +2120,7 @@ class TripCommandProcessor:
         self, res, header: str, fmt, tz, with_emoji: bool = True,
         hail_by_ts: Optional[dict] = None,
     ) -> str:
-        """Formatiert DrilldownResult als stündliche Liste.
+        """Formatiert DrilldownResult als Verlauf mit WECHSELPUNKTEN.
 
         ``tz`` ist Pflicht (Issue #1402): ein Default wuerde die Ortszeit
         wieder still gegen die Prozess-Zeitzone tauschen.
@@ -820,19 +2129,199 @@ class TripCommandProcessor:
         das Hagel-Kennzeichen zu. Nur bei bestaetigtem Hagel (``True``) haengt
         der deskriptive Zusatz an — Stunden mit ``None``/``False`` bleiben
         zeichengleich (kein unbedingtes Anhaengen, ADR-0007 kein Rat).
+
+        Issue #2185 (Epic #2133, S2): aufeinanderfolgende Stunden mit
+        identischem ANZEIGETEXT verschmelzen zu einem Zeitbereich
+        ``HH:MM–HH:MM``. Gruppenschluessel ist der formatierte Text samt
+        Hagelnotiz, nicht der Rohwert — die Rundung des Formatierers IST die
+        Kategorie. Fortsetzung nur bei einem Abstand von HOECHSTENS einer
+        Stunde: eine fehlende Stunde bricht die Gruppe, damit ein Bereich nie
+        Gueltigkeit fuer eine ungemessene Stunde behauptet (#2167). Fehlende
+        Werte brauchen keine Sonderlogik — ``fmt(None, ...)`` liefert einen
+        eigenen Text und damit einen eigenen Schluessel. Eine Einzelstunde
+        bleibt zeichengleich zur alten Form; die letzte Gruppe wird wie jede
+        andere GESCHLOSSEN dargestellt, kein "ab HH:MM".
         """
         from output.metric_format import format_hail_note
 
         hail_by_ts = hail_by_ts or {}
-        lines = [f"{header} — stündlich"]
-        for pt in res.points:
-            time_str = local_fmt(pt.ts, tz)
-            line = f"{time_str}  {fmt(pt.value, with_emoji=with_emoji)}"
-            note = format_hail_note(hail_by_ts.get(pt.ts))
+        lines = [f"{header} — Verlauf"]
+        groups = _gruppiere_wechselpunkte(
+            res.points,
+            lambda pt: (
+                fmt(pt.value, with_emoji=with_emoji),
+                format_hail_note(hail_by_ts.get(pt.ts)) or "",
+            ),
+        )
+
+        for (text, note), pts in groups:
+            time_str = local_fmt(pts[0].ts, tz)
+            if len(pts) > 1:
+                time_str = f"{time_str}–{local_fmt(pts[-1].ts, tz)}"
+            line = f"{time_str}  {text}"
             if note:
                 line = f"{line} · {note}"
             lines.append(line)
         return "\n".join(lines)
+
+    def _format_drilldown_kurzform(
+        self, res, metric, tz, *, folgetag: bool = False,
+    ) -> str:
+        """Derselbe Verlauf wie ``_format_drilldown``, kurzformtauglich.
+
+        Issue #2207 (Epic #2133, S5): auf dem Satellitengeraet ist der
+        ausgeschriebene Langform-Text teuer und teils gar nicht darstellbar.
+        Diese Fassung sagt dasselbe mit Katalog-Kuerzel und
+        ``{wert}@{h}``/``{wert}@{h1}-{h2}``; die Wechselpunkt-Gruppen kommen
+        aus DEMSELBEN Helfer wie die Langform (AC-14). Grammatik und
+        Kuerzungsregel: ``docs/reference/sms_format.md`` §5a.
+
+        Der fertige Text laeuft durch ``fold_ascii()``, BEVOR gemessen wird
+        ("zuerst falten, dann kuerzen"): bliebe ein einziges GSM-7-fremdes
+        Zeichen stehen (Gedankenstrich, Gradzeichen, Umlaut aus einem
+        ``col_label``), kodierte das Gateway die ganze Nachricht in UCS-2 und
+        das Budget halbierte sich (AC-11). Passt die Zeile dann nicht in 160
+        Zeichen, fallen HINTERE GANZE Gruppen weg (nie ein Teil einer Gruppe,
+        nie eine aus der Mitte) und ein englischer Anhang benennt die Zahl
+        der nicht gezeigten Stunden — die Luecke wird genannt, nicht
+        verschwiegen (AC-8/AC-9).
+        """
+        kuerzel = _kurzform_kuerzel(metric, folgetag)
+        if not any(pt.value is not None for pt in res.points):
+            # "Gefuehrt heisst nicht gefuellt" (AC-13) gehoert HIERHER, nicht
+            # in eine dritte Kopie an einem der beiden Aufruforte: sonst
+            # antwortet derselbe Verlauf je nach Abrufweg verschieden. Der
+            # getippte Weg faengt den Fall schon vorher ab
+            # (``_traegt_werte``), der strukturierte Token ``dd_*`` lief
+            # bisher in eine Zeile voller ``?`` (Adversary-Fund F003).
+            return fold_ascii(f"{kuerzel} no data")
+        gruppen = _gruppiere_wechselpunkte(
+            res.points, lambda pt: _kurzform_wert(metric, pt.value),
+        )
+        tokens: list[str] = []
+        for text, pts in gruppen:
+            von = local_hour(pts[0].ts, tz)
+            spanne = f"{von}" if len(pts) == 1 else f"{von}-{local_hour(pts[-1].ts, tz)}"
+            tokens.append(f"{text}@{spanne}")
+        stunden = [len(pts) for _text, pts in gruppen]
+
+        gezeigt = len(tokens)
+        while True:
+            entfallen = sum(stunden[gezeigt:])
+            teile = [kuerzel, *tokens[:gezeigt]]
+            if entfallen:
+                teile.append(f"+{entfallen}h not shown")
+            zeile = fold_ascii(" ".join(teile))
+            if gezeigt == 0 or len(zeile) <= _KURZFORM_MAX_ZEICHEN:
+                return zeile
+            gezeigt -= 1
+
+    def _mit_datiertem_rueckfall(self, timeline: "TimelineResult", trip_id: str,
+                                 user_id: str, tage, *,
+                                 from_time: Optional[datetime] = None,
+                                 ) -> "TimelineResult":
+        """Gestufte Quellenaufloesung JE angefragtem Tag (Issue #1818).
+
+        Der undatierte Anker ``{trip_id}.json`` traegt strukturell nur EINEN
+        Tag: ``_write_briefing_anchor`` (``trip_report_scheduler.py:1505-1512``)
+        ueberschreibt ihn je Briefing-Lauf vollstaendig. Nach dem
+        Morgen-Briefing fehlt darin morgen, nach dem Abend-Briefing heute.
+
+        Reihenfolge (AC-4): der Anker hat Vorrang, sobald er fuer den Tag
+        AUSWERTBARE Werte traegt (`_traegt_tageswerte`, F005) — die blosse
+        Existenz eines Wegpunkts genuegt nicht, sonst gewaenne ein
+        inhaltsleerer Fehler-Platzhalter gegen echte Werte. Seit Issue #2220
+        (C5-38) faellt diese Entscheidung PRO PUNKT, nicht mehr pro Tag: nur
+        die einzelnen nicht-tragenden Anker-Punkte eines Tages werden gegen
+        den passenden Punkt des datierten Snapshots ersetzt (Zuordnung ueber
+        `label`, die Segment-ID — nicht `arrival_time`/Index, siehe Spec
+        Known Limitations #2); traegt weder Anker- noch Snapshot-Punkt,
+        entfaellt der Punkt. Kennt der Anker den Tag ueberhaupt nicht (leere
+        `tages_idx` — der undatierte Anker traegt strukturell nur EINEN Tag,
+        siehe oben), wird der Tag wie bisher vollstaendig aus dem datierten
+        Snapshot uebernommen. Der Snapshot ``{trip_id}_{YYYY-MM-DD}.json``
+        wird dabei rein LESEND nachgezogen — kein Netzabruf, kein
+        Schreibvorgang (AC-7). Der Tagesfilter ist derselbe wie in
+        ``_aggregate_day``/``_fmt_timeline`` (Ortstag, #1795), damit ein
+        Rueckfall-Wegpunkt nicht in einen fremden Tag rutscht.
+
+        ``tage`` ist eine Folge von ``(target_date, tz)``-Paaren. ``from_time``
+        geht unveraendert an ``timeline_dated()`` weiter (Issue #2186) — der
+        Rueckfall beantwortet dieselbe Frage wie der Anker und muss deshalb
+        dasselbe Fenster sehen.
+        """
+        if not timeline.available:
+            return timeline
+        from services.weather_extractor import WeatherExtractor
+        extractor = WeatherExtractor(user_id=user_id)
+        ergaenzt = []
+        verworfen: set[int] = set()
+        for target_date, tz in tage:
+            tages_idx = [i for i, p in enumerate(timeline.points)
+                         if local_dt(p.arrival_time, tz).date() == target_date]
+            fehlend = [i for i in tages_idx if not _traegt_tageswerte(timeline.points[i])]
+            # Fall (a): Anker traegt JEDEN Punkt des Tages — er gewinnt (AC-4),
+            # kein Netzabruf.
+            if tages_idx and not fehlend:
+                continue
+            datiert = extractor.timeline_dated(trip_id, target_date, from_time)
+            tages_snapshot = [
+                p for p in datiert.points
+                if local_dt(p.arrival_time, tz).date() == target_date
+            ]
+            if not tages_idx:
+                # Fall (b), der #1818-KERNFALL: der Anker kennt diesen Tag
+                # ueberhaupt nicht (strukturell nur EIN Tag pro Anker, siehe
+                # Docstring oben) — wie vor #2220 komplett aus dem Snapshot
+                # uebernehmen. NICHT mit Fall (c) zusammenlegen: `fehlend`
+                # waere hier immer leer und wuerde diesen Zweig faelschlich
+                # ueberspringen, ohne den Snapshot je zu holen.
+                ergaenzt.extend(p for p in tages_snapshot if _traegt_tageswerte(p))
+                continue
+            # Fall (c), der Mischfall (#2220 C5-38): nur die einzelnen
+            # nicht-tragenden Anker-Punkte werden ersetzt (bei Treffer) bzw.
+            # verworfen (sonst) — bleiben sie liegen, gewinnt „🌡 ?–? °C"
+            # gegen echte Werte, und wenn auch der Snapshot nichts hergibt,
+            # verdecken sie die ehrliche Datenluecken-Meldung.
+            snapshot_by_label = {p.label: p for p in tages_snapshot}
+            for i in fehlend:
+                verworfen.add(i)
+                ersatz = snapshot_by_label.get(timeline.points[i].label)
+                if ersatz is not None and _traegt_tageswerte(ersatz):
+                    ergaenzt.append(ersatz)
+        if not ergaenzt and not verworfen:
+            return timeline
+        return dataclasses.replace(
+            timeline,
+            points=[p for i, p in enumerate(timeline.points)
+                    if i not in verworfen] + ergaenzt,
+        )
+
+    def _tagesaussage_ohne_daten(self, trip: Optional[Trip], target_date: date,
+                                 day_token: str, *, zusatz: str = "") -> str:
+        """Was ueber ``target_date`` zu sagen ist, wenn KEINE Wetterdaten
+        vorliegen (Issue #1818).
+
+        Bisher sagten alle vier Formatierer pauschal „Keine Etappe geplant" —
+        eine Aussage ueber die TOURPLANUNG, obwohl das System nur etwas ueber
+        den DATENBESTAND weiss. ``convert_trip_to_segments`` beantwortet die
+        Planungsfrage netzfrei und rein tourplan-basiert (kein Wetter, kein
+        Schreibvorgang): nichtleere Liste = es gibt an diesem Tag eine Etappe.
+
+        ``trip=None`` (Direktaufruf eines Formatierers ohne Trip-Kontext)
+        behaelt das bisherige Verhalten bei — ohne Tourplan ist die
+        Unterscheidung nicht entscheidbar.
+        """
+        if trip is not None:
+            from services.trip_segments import convert_trip_to_segments
+            if convert_trip_to_segments(trip, target_date):
+                if self._en:
+                    return "no weather data yet - send TODAY/TOMORROW for a briefing."
+                hinweis = _BRIEFING_HINWEIS.get(day_token)
+                if hinweis:
+                    return f"noch keine Wetterdaten — {hinweis}."
+                return "noch keine Wetterdaten."
+        return "no stage planned." if self._en else f"Keine Etappe geplant{zusatz}"
 
     def _aggregate_day(self, timeline, target_date, tz) -> Optional[dict]:
         """Aggregiere Timeline-Punkte für target_date. None wenn keine Punkte.
@@ -883,12 +2372,21 @@ class TripCommandProcessor:
                 "thunder": thunder, "precip": precip, "pop": pop,
                 "hail_flag": hail_flag, "thunder_signals": thunder_signals}
 
-    def _fmt_day_agg(self, agg: dict, label: str) -> str:
-        """Formatiert Tages-Aggregat als kompakte Zeile."""
+    def _fmt_day_agg(self, agg: dict, label: str,
+                     *, channel: str | None = None) -> str:
+        """Formatiert Tages-Aggregat als kompakte Zeile.
+
+        Issue #2184: `channel` ist der Anfrageweg — Muster wie `with_emoji`
+        in `_handle_drilldown()`.
+        """
         t_max = f"{agg['temp_max']:.0f}" if agg['temp_max'] is not None else "?"
         t_min = f"{agg['temp_min']:.0f}" if agg['temp_min'] is not None else "?"
         wind = f"{agg['wind_max']:.0f}" if agg['wind_max'] is not None else "?"
-        thunder_label = _THUNDER_LABEL.get(agg['thunder'].value if agg['thunder'] else "NONE", "?")
+        if self._en:  # #2417 Abschnitt H: englisch, GSM-7, ohne Emoji
+            precip = f"{agg['precip']:.1f}" if agg.get('precip') else "0.0"
+            return (f"{label}: T {t_min}/{t_max}C, wind {wind} km/h, rain {precip}mm, "
+                    f"storms {self._stufe_en(agg['thunder'], agg.get('hail_flag'))}")
+        thunder_label = _thunder_words().get(agg['thunder'].value if agg['thunder'] else "NONE", "?")
         # Issue #1680 S3 (Spec D3, abgeloeste Entscheidung): die tragende(n)
         # Zutat(en) der oben gezeigten Tagesstufe -- aus DEMSELBEN Aggregat,
         # das auch `agg['thunder']` traegt (`_aggregate_day()`, EINE Rechnung
@@ -896,54 +2394,88 @@ class TripCommandProcessor:
         # Traeger (kein Gewitter, Alt-Schnappschuss ohne das Feld) bleibt die
         # Zeile zeichengleich zu bisher (AC-16). Denselben Schluessel und
         # denselben Textbaustein nutzt `_fmt_gewitter()` -- keine zweite
-        # Formulierung. KANAL: GLANCE erreicht ausschliesslich E-Mail und
-        # Telegram (`InboundMessage` hat genau diese zwei Erzeuger); einen
-        # SMS-/Premium-SMS-Kommandopfad gibt es nicht, die PO-Abwahl "SMS ohne
-        # Herkunft" greift hier strukturell.
+        # Formulierung. KANAL (Issue #2184): auf SMS und Premium-SMS bleibt die
+        # Herkunft weg -- PO-Abwahl (feat_1680_s5a AC-12, s5b AC-9). Seit S4
+        # gibt es einen Premium-SMS-Kommandopfad (`inbound_sms_reader`), die
+        # frueher rein strukturelle Sicherung ("InboundMessage hat nur zwei
+        # Erzeuger") traegt nicht mehr -- deshalb dieser echte Guard.
         from output.metric_format import thunder_signal_label
-        _traeger = agg.get("thunder_signals")
+        zeige_herkunft = channel not in ("sms", "premium_sms")
+        _traeger = agg.get("thunder_signals") if zeige_herkunft else None
         _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
         if _herkunft:
             thunder_label = f"{thunder_label} · {_herkunft}"
+        # Issue #2205 (AC-13/14): Hagelaussage aus DEMSELBEN Aggregat, nach der
+        # Herkunft -- wie `_fmt_gewitter()`, auf allen Kanaelen.
+        from output.metric_format import format_hail_note
+        _hagel = format_hail_note(agg.get("hail_flag"))
+        if _hagel:
+            thunder_label = f"{thunder_label} · {_hagel}"
         precip = f"{agg['precip']:.1f}" if agg.get('precip') else "0.0"
         return (
             f"{label}: 🌡 {t_min}–{t_max}°C  💨 {wind} km/h  "
             f"🌧 {precip}mm  ⛈ Gewitter: {thunder_label}"
         )
 
-    def _fmt_glance(self, timeline, today, tomorrow, tz_heute, tz_morgen) -> str:
+    def _stufe_en(self, thunder, hail_flag=None) -> str:
+        """Gewitterstufe englisch (Stufenbedeutung aus ``hazard_symbols``)."""
+        from output.tokens.hazard_symbols import STUFE_BEDEUTUNG_EN
+
+        wort = STUFE_BEDEUTUNG_EN.get(_kurzform_wert(get_metric("thunder"), thunder), "none")
+        return f"{wort}, hail" if hail_flag is True else wort
+
+    def _kein_snapshot(self) -> str:
+        return self._t(
+            "Kein Wetter-Snapshot verfügbar. "
+            "Bitte einen Report anfordern um aktuelle Daten zu laden.",
+            "No weather data available. Please request a briefing to load data.",
+        )
+
+    def _fmt_glance(self, timeline, today, tomorrow, tz_heute, tz_morgen,
+                    *, trip: Optional[Trip] = None,
+                    channel: str | None = None) -> str:
         """Fix #1795 AC-4: je Tag die Zone SEINER EIGENEN Etappe — ``tz_heute``
         für ``today``, ``tz_morgen`` für ``tomorrow`` (nicht eine gemeinsame
-        Zone für beide Tage)."""
+        Zone für beide Tage).
+
+        Fix #1818: ``trip`` trennt „keine Wetterdaten" von „keine Etappe"
+        (s. ``_tagesaussage_ohne_daten``) — je Zeile eigenstaendig, damit der
+        vorhandene Tag unveraendert aggregiert bleibt (AC-5)."""
         if not timeline.available:
-            return (
-                "Kein Wetter-Snapshot verfügbar. "
-                "Bitte einen Report anfordern um aktuelle Daten zu laden."
-            )
+            return self._kein_snapshot()
         agg_heute = self._aggregate_day(timeline, today, tz_heute)
         agg_morgen = self._aggregate_day(timeline, tomorrow, tz_morgen)
-        lines = ["🗓 Glance — heute & morgen", ""]
+        lines = [self._t("🗓 Glance — heute & morgen", "Glance - today & tomorrow"), ""]
+        l_heute = f"{self._t('heute', 'today')} ({today:%d.%m})"
+        l_morgen = f"{self._t('morgen', 'tomorrow')} ({tomorrow:%d.%m})"
         if agg_heute:
-            lines.append(self._fmt_day_agg(agg_heute, f"heute ({today:%d.%m})"))
+            lines.append(self._fmt_day_agg(agg_heute, l_heute, channel=channel))
         else:
-            lines.append(f"heute ({today:%d.%m}): Keine Etappe geplant")
+            lines.append(f"{l_heute}: " + self._tagesaussage_ohne_daten(
+                trip, today, "today"))
         if agg_morgen:
-            lines.append(self._fmt_day_agg(agg_morgen, f"morgen ({tomorrow:%d.%m})"))
+            lines.append(self._fmt_day_agg(agg_morgen, l_morgen, channel=channel))
         else:
-            lines.append(f"morgen ({tomorrow:%d.%m}): Keine Etappe geplant")
+            lines.append(f"{l_morgen}: " + self._tagesaussage_ohne_daten(
+                trip, tomorrow, "tomorrow"))
         return "\n".join(lines)
 
-    def _fmt_gewitter(self, timeline, today, tz) -> str:
+    def _fmt_gewitter(self, timeline, today, tz,
+                      *, trip: Optional[Trip] = None,
+                      channel: str | None = None) -> str:
+        """Fix #1818: ``trip`` trennt „keine Wetterdaten" von „keine Etappe"
+        (s. ``_tagesaussage_ohne_daten``); der Zusatz „— kein Gewitter-Status"
+        bleibt dem tatsaechlich etappenlosen Tag vorbehalten (AC-6)."""
         if not timeline.available:
-            return (
-                "Kein Wetter-Snapshot verfügbar. "
-                "Bitte einen Report anfordern um aktuelle Daten zu laden."
-            )
+            return self._kein_snapshot()
         agg = self._aggregate_day(timeline, today, tz)
         if not agg:
-            return f"Heute ({today:%d.%m}): Keine Etappe geplant — kein Gewitter-Status."
+            return f"{self._t('Heute', 'Today')} ({today:%d.%m}): " + self._tagesaussage_ohne_daten(
+                trip, today, "today", zusatz=" — kein Gewitter-Status.")
         thunder = agg["thunder"]
-        label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
+        if self._en:  # #2417 Abschnitt H
+            return f"Storm risk today ({today:%d.%m}): {self._stufe_en(thunder, agg.get('hail_flag'))}"
+        label = _thunder_words().get(thunder.value if thunder else "NONE", "?")
         # Issue #1475 S5a: derselbe geteilte Textbaustein wie in den Mail-
         # Renderern (#1481 DRY, call-time Import) -- rein deskriptiv NEBEN der
         # Gewitterstufe, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
@@ -955,19 +2487,26 @@ class TripCommandProcessor:
         # additiv VOR dem Hagel-Suffix, rein deskriptiv ohne Bewertung
         # (ADR-0007). Ohne Traeger (kein Gewitter, Alt-Schnappschuss ohne das
         # Feld) bleibt die Zeile zeichengleich zu bisher.
-        # KANAL: das GEWITTER-Kommando erreicht ausschliesslich E-Mail und
-        # Telegram -- `InboundMessage` hat genau diese zwei Erzeuger
-        # (inbound_email_reader.py, inbound_telegram_reader.py). Es gibt keinen
-        # SMS-/Premium-SMS-Kommandopfad, die PO-Abwahl "SMS ohne Herkunft"
-        # greift hier also strukturell, ohne Kanal-Unterscheidung.
-        traeger = agg.get("thunder_signals")
+        # KANAL (Issue #2184): auf SMS und Premium-SMS bleibt die Herkunft weg
+        # -- PO-Abwahl (feat_1680_s5a AC-12, s5b AC-9). Bis Scheibe S4 war das
+        # strukturell gesichert (`InboundMessage` hatte nur die zwei Erzeuger
+        # inbound_email_reader.py/inbound_telegram_reader.py); mit dem
+        # Premium-SMS-Kommandopfad aus `inbound_sms_reader.py` faellt diese
+        # Sicherung weg und wird durch diesen Guard ersetzt.
+        zeige_herkunft = channel not in ("sms", "premium_sms")
+        traeger = agg.get("thunder_signals") if zeige_herkunft else None
         herkunft = ", ".join(thunder_signal_label(n) for n in traeger or [])
         if herkunft:
             suffix = f" · {herkunft}{suffix}"
         return f"⛈ Gewitter heute ({today:%d.%m}): {label}{suffix}"
 
-    def _fmt_timeline(self, timeline, target_date, label: str, day_token: str, tz) -> str:
+    def _fmt_timeline(self, timeline, target_date, label: str, day_token: str, tz,
+                      *, trip: Optional[Trip] = None,
+                      channel: str | None = None) -> str:
         """Vertikale Timeline: pro Wegpunkt zwei Zeilen (Zeit/Höhe + Metriken).
+
+        Fix #1818: ``trip`` trennt „keine Wetterdaten" von „keine Etappe"
+        (s. ``_tagesaussage_ohne_daten``).
 
         Fix #1795: sowohl der Tagesfilter (``local_dt(...).date()``, AC-3) als
         auch die 🕐-Uhrzeit (``local_fmt``, AC-1/AC-5) laufen über die
@@ -975,16 +2514,18 @@ class TripCommandProcessor:
         ``:%H:%M`` auf dem UTC-Zeitstempel mehr.
         """
         if not timeline.available:
-            return (
+            return self._t(
                 "Kein Wetter-Snapshot verfügbar. "
-                "Bitte einen Report anfordern um aktuelle Wetterdaten zu laden."
+                "Bitte einen Report anfordern um aktuelle Wetterdaten zu laden.",
+                self._kein_snapshot(),
             )
         pts = sorted(
             [p for p in timeline.points if local_dt(p.arrival_time, tz).date() == target_date],
             key=lambda p: p.arrival_time,
         )
         if not pts:
-            return f"{label} ({target_date:%d.%m}): Keine Etappe geplant"
+            return f"{label} ({target_date:%d.%m}): " + self._tagesaussage_ohne_daten(
+                trip, target_date, day_token)
 
         lines = [f"📋 Timeline · {label} ({target_date:%d.%m})", ""]
         for p in pts:
@@ -998,7 +2539,12 @@ class TripCommandProcessor:
             wind = f"{m.wind_max_kmh:.0f}" if m.wind_max_kmh is not None else "?"
             precip = f"{m.precip_sum_mm:.1f}" if m.precip_sum_mm is not None else "0.0"
             thunder = m.thunder_level_max
-            t_label = _THUNDER_LABEL.get(thunder.value if thunder else "NONE", "?")
+            t_label = _thunder_words().get(thunder.value if thunder else "NONE", "?")
+            if self._en:  # #2417 AC-5: Stufe englisch, Herkunft/Hagel entfallen
+                t_label = self._stufe_en(thunder.value if thunder else "NONE")
+                lines.append(f"   🌡 {t_min}–{t_max} °C  💨 {wind} km/h  "
+                             f"🌧 {precip} mm  ⛈ {t_label}")
+                continue
             # Issue #1680 S3 (Spec D2): die tragende(n) Zutat(en) DIESES
             # Wegpunkts -- `thunder_level_max` UND `thunder_level_max_signals`
             # stammen aus DEMSELBEN `m` (`SegmentWeatherSummary`, von
@@ -1008,13 +2554,22 @@ class TripCommandProcessor:
             # globale Herkunft (AC-10). `getattr`, weil ein Alt-Schnappschuss
             # vor Scheibe 1/2 das Feld nicht kennt (AC-15): dann bleibt die
             # Zeile zeichengleich, ohne "unbekannt" und ohne leeren Trenner.
-            # KANAL: die Timeline erreicht nur E-Mail und Telegram (s. Hinweis
-            # in `_fmt_day_agg()`), SMS/Premium-SMS haben keinen Kommandopfad.
+            # KANAL (Issue #2184): auf SMS und Premium-SMS bleibt die Herkunft
+            # weg (PO-Abwahl, s. Hinweis in `_fmt_day_agg()`). Seit Scheibe S4
+            # gibt es einen Premium-SMS-Kommandopfad, der die frueher rein
+            # strukturelle Sicherung ersetzt.
             from output.metric_format import thunder_signal_label
-            _traeger = getattr(m, "thunder_level_max_signals", None)
+            zeige_herkunft = channel not in ("sms", "premium_sms")
+            _traeger = (getattr(m, "thunder_level_max_signals", None)
+                        if zeige_herkunft else None)
             _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
             if _herkunft:
                 t_label = f"{t_label} · {_herkunft}"
+            # Issue #2205 (AC-13/14): Hagel DIESES Wegpunkts, aus demselben `m`.
+            from output.metric_format import format_hail_note
+            _hagel = format_hail_note(getattr(m, "hail_flag", None))
+            if _hagel:
+                t_label = f"{t_label} · {_hagel}"
             lines.append(
                 f"   🌡 {t_min}–{t_max} °C  💨 {wind} km/h  "
                 f"🌧 {precip} mm  ⛈ {t_label}"
@@ -1054,7 +2609,7 @@ class TripCommandProcessor:
 
     def _apply_ruhetag(
         self, trip: Trip, value: Optional[str], command_date: date,
-        user_id: str = "default",
+        user_id: str,
     ) -> CommandResult:
         """Shift all stages after command_date by +N days (default: 1)."""
         shift_days = int(value) if value and value.isdigit() else 1
@@ -1063,54 +2618,91 @@ class TripCommandProcessor:
         if self._is_already_applied(trip.id, "ruhetag", command_date, user_id):
             return CommandResult(
                 success=False, command="ruhetag",
-                confirmation_subject=f"[{trip.name}] Ruhetag bereits eingetragen",
-                confirmation_body="Ruhetag wurde heute bereits eingetragen.",
+                confirmation_subject=self._t(
+                    f"[{trip.name}] Ruhetag bereits eingetragen", f"[{trip.name}] Rest day already set"),
+                confirmation_body=self._t("Ruhetag wurde heute bereits eingetragen.",
+                                          "A rest day was already added today."),
                 trip_name=trip.name,
             )
 
-        shifts: list[StageShift] = []
-        new_stages: list[Stage] = []
+        def _shift(current: Trip) -> tuple[list[StageShift], list[Stage]]:
+            shifts: list[StageShift] = []
+            new_stages: list[Stage] = []
+            for stage in current.stages:
+                if stage.date > command_date:
+                    new_date = stage.date + timedelta(days=shift_days)
+                    new_stages.append(dataclasses.replace(stage, date=new_date))
+                    shifts.append(StageShift(current.numbered_stage_label(stage, en=self._en), stage.date, new_date))
+                else:
+                    new_stages.append(stage)
+            return shifts, new_stages
 
-        for stage in trip.stages:
-            if stage.date > command_date:
-                new_date = stage.date + timedelta(days=shift_days)
-                new_stages.append(dataclasses.replace(stage, date=new_date))
-                shifts.append(StageShift(stage.name, stage.date, new_date))
-            else:
-                new_stages.append(stage)
-
+        shifts, _ = _shift(trip)
         if not shifts:
             return CommandResult(
                 success=False, command="ruhetag",
-                confirmation_subject=f"[{trip.name}] Keine Etappen",
-                confirmation_body="Keine zukuenftigen Etappen zum Verschieben.",
+                confirmation_subject=self._t(f"[{trip.name}] Keine Etappen", f"[{trip.name}] No stages"),
+                confirmation_body=self._t("Keine zukuenftigen Etappen zum Verschieben.",
+                                          "No future stages to shift."),
                 trip_name=trip.name,
             )
 
-        new_trip = dataclasses.replace(trip, stages=new_stages)
-        save_trip(new_trip, user_id)
-        self._delete_snapshot(trip.id, user_id)
-        self._append_command_log(trip.id, "ruhetag", command_date, user_id)
+        # #2158: Mutation auf dem FRISCH unter der Sperre gelesenen Trip.
+        applied: dict = {}
 
-        tage_wort = "Tag" if shift_days == 1 else "Tage"
-        lines = [f"Ruhetag eingetragen: +{shift_days} {tage_wort}.", ""]
-        lines.append("Verschobene Etappen:")
+        def _mutate(fresh: Trip) -> Trip:
+            fresh_shifts, fresh_stages = _shift(fresh)
+            if not fresh_shifts:
+                raise _NothingToChange()
+            applied["shifts"] = fresh_shifts
+            return dataclasses.replace(fresh, stages=fresh_stages)
+
+        try:
+            self._speichere(trip, user_id, "ruhetag", _mutate)
+        except _SpeicherFehler as e:
+            return e.result
+        except _NothingToChange:
+            return CommandResult(
+                success=False, command="ruhetag",
+                confirmation_subject=self._t(f"[{trip.name}] Keine Etappen", f"[{trip.name}] No stages"),
+                confirmation_body=self._t("Keine zukuenftigen Etappen zum Verschieben.",
+                                          "No future stages to shift."),
+                trip_name=trip.name,
+            )
+        shifts = applied["shifts"]
+        # AC-7: der Ruhetag IST gespeichert -- ein Fehler beim Nebenschaden
+        # (Snapshot loeschen, Befehls-Log) darf die Antwort nicht kippen.
+        try:
+            self._delete_snapshot(trip.id, user_id)
+            self._append_command_log(trip.id, "ruhetag", command_date, user_id)
+        except Exception as exc:
+            logger.warning(
+                "Ruhetag gespeichert, Nebenschaden (Snapshot/Befehls-Log) "
+                "fehlgeschlagen fuer Trip %s: %s", trip.id, exc)
+
+        tage_wort = self._t("Tag" if shift_days == 1 else "Tage",
+                            "day" if shift_days == 1 else "days")
+        lines = [self._t(f"Ruhetag eingetragen: +{shift_days} {tage_wort}.",
+                         f"Rest day added: +{shift_days} {tage_wort}."), ""]
+        lines.append(self._t("Verschobene Etappen:", "Shifted stages:"))
         for s in shifts:
             lines.append(
                 f"  {s.stage_name}: {s.old_date:%d.%m.%Y} -> {s.new_date:%d.%m.%Y}"
             )
         lines.append("")
-        lines.append("Naechster Report kommt planmaessig.")
+        lines.append(self._t("Naechster Report kommt planmaessig.",
+                             "Next briefing comes as scheduled."))
 
         return CommandResult(
             success=True, command="ruhetag",
-            confirmation_subject=f"[{trip.name}] Ruhetag bestaetigt",
+            confirmation_subject=self._t(
+                f"[{trip.name}] Ruhetag bestaetigt", f"[{trip.name}] Rest day confirmed"),
             confirmation_body="\n".join(lines),
             trip_name=trip.name, shifts=shifts,
         )
 
     def _trigger_report(
-        self, trip: Trip, value: Optional[str], user_id: str = "default",
+        self, trip: Trip, value: Optional[str], user_id: str,
     ) -> CommandResult:
         """Trigger an immediate morning/evening report."""
         report_type = (value or "morning").lower()
@@ -1124,24 +2716,62 @@ class TripCommandProcessor:
 
         from services.trip_report_scheduler import TripReportSchedulerService
         service = TripReportSchedulerService(user_id=user_id)
-        service.send_test_report(trip, report_type)
-
+        # Issue #1405 S1 (B15): das echte Ergebnis entscheidet ueber Antwort
+        # und Erfolg; eine Ausnahme wird zur Fehlermeldung statt zum Absturz.
+        try:
+            outcome = service.send_test_report_outcome(trip, report_type)
+        except Exception as e:  # noqa: BLE001 — Antwort statt Absturz (AC-23)
+            logger.error(f"report command failed for trip {trip.id}: {e}")
+            outcome = "error"
+        if outcome == "sent":
+            subject = self._t("Report gesendet", "Report sent")
+        else:
+            subject = self._t("Report nicht gesendet", "Report not sent")
         return CommandResult(
-            success=True, command="report",
-            confirmation_subject=f"[{trip.name}] Report gesendet",
-            confirmation_body=f"{report_type.title()} Report wird jetzt gesendet.",
+            success=outcome == "sent", command="report",
+            confirmation_subject=f"[{trip.name}] {subject}",
+            confirmation_body=self._report_reply_body(outcome, report_type),
             trip_name=trip.name,
         )
 
+    def _report_reply_body(self, outcome: str, report_type: str) -> str:
+        """Issue #1405 S1 (AC-22): eigener Klartext je Ergebnis; nur `sent`
+        meldet einen Versand."""
+        typ = report_type.title()
+        texte = {
+            "sent": (f"{typ} Report wird jetzt gesendet.",
+                     f"{typ} report is being sent now."),
+            "no_stage": (f"{typ} Report nicht gesendet: heute ist keine Etappe geplant.",
+                         f"{typ} report not sent: no stage planned for today."),
+            "no_weather": (f"{typ} Report nicht gesendet: keine Wetterdaten verfuegbar.",
+                           f"{typ} report not sent: no weather data available."),
+            "no_channels": (f"{typ} Report nicht gesendet: kein Versandweg aktiv.",
+                            f"{typ} report not sent: no delivery channel enabled."),
+            "channels_unreachable": (
+                f"{typ} Report nicht gesendet: Versandweg konfiguriert, aber nicht erreichbar.",
+                f"{typ} report not sent: delivery channel configured but unreachable."),
+            "already_in_progress": (
+                f"{typ} Report nicht gesendet: ein Versand laeuft bereits.",
+                f"{typ} report not sent: a delivery is already in progress."),
+            "invalid_preset": (
+                f"{typ} Report nicht gesendet: Ortsvergleich nicht ladbar oder Orte geloescht.",
+                f"{typ} report not sent: comparison not loadable or its places were deleted."),
+        }
+        de, en = texte.get(outcome, (
+            f"{typ} Report nicht gesendet: interner Fehler beim Ausloesen.",
+            f"{typ} report not sent: internal error while triggering."))
+        return self._t(de, en)
+
     def _shift_start(
-        self, trip: Trip, value: Optional[str], user_id: str = "default",
+        self, trip: Trip, value: Optional[str], user_id: str,
     ) -> CommandResult:
         """Shift all stages relative to a new start date."""
         if not value:
             return CommandResult(
                 success=False, command="startdatum",
                 confirmation_subject=f"[{trip.name}] Fehlendes Datum",
-                confirmation_body="Bitte Datum angeben: ### startdatum: YYYY-MM-DD",
+                confirmation_body=self._t("Bitte Datum angeben: STARTDATUM JJJJ-MM-TT",
+                                          "Please give a date: STARTDATE YYYY-MM-DD"),
                 trip_name=trip.name,
             )
         try:
@@ -1150,31 +2780,45 @@ class TripCommandProcessor:
             return CommandResult(
                 success=False, command="startdatum",
                 confirmation_subject=f"[{trip.name}] Ungueltiges Datum",
-                confirmation_body=f"'{value}' ist kein gueltiges Datum. Format: YYYY-MM-DD",
+                confirmation_body=self._t(
+                    f"'{value}' ist kein gueltiges Datum. Format: STARTDATUM JJJJ-MM-TT",
+                    f"'{value}' is not a valid date. Format: STARTDATE YYYY-MM-DD"),
                 trip_name=trip.name,
             )
 
-        old_start = trip.stages[0].date
-        delta = new_start - old_start
-        shifts = []
-        new_stages = []
-        for stage in trip.stages:
-            new_date = stage.date + delta
-            new_stages.append(dataclasses.replace(stage, date=new_date))
-            shifts.append(StageShift(stage.name, stage.date, new_date))
+        applied: dict = {}
 
-        new_trip = dataclasses.replace(trip, stages=new_stages)
-        save_trip(new_trip, user_id)
+        def _mutate(fresh: Trip) -> Trip:
+            old = fresh.stages[0].date
+            delta = new_start - old
+            shifts_: list[StageShift] = []
+            new_stages = []
+            for stage in fresh.stages:
+                new_date = stage.date + delta
+                new_stages.append(dataclasses.replace(stage, date=new_date))
+                shifts_.append(StageShift(fresh.numbered_stage_label(stage, en=self._en), stage.date, new_date))
+            applied["old_start"] = old
+            applied["shifts"] = shifts_
+            return dataclasses.replace(fresh, stages=new_stages)
+
+        try:
+            self._speichere(trip, user_id, "startdatum", _mutate)
+        except _SpeicherFehler as e:
+            return e.result
+        old_start, shifts = applied["old_start"], applied["shifts"]
         self._delete_snapshot(trip.id, user_id)
 
-        lines = [f"Startdatum verschoben: {old_start:%d.%m.%Y} -> {new_start:%d.%m.%Y}", ""]
-        lines.append("Neue Etappen-Daten:")
+        lines = [self._t(
+            f"Startdatum verschoben: {old_start:%d.%m.%Y} -> {new_start:%d.%m.%Y}",
+            f"Start date moved: {old_start:%d.%m.%Y} -> {new_start:%d.%m.%Y}",
+        ), ""]
+        lines.append(self._t("Neue Etappen-Daten:", "New stage dates:"))
         for s in shifts:
             lines.append(f"  {s.stage_name}: {s.new_date:%d.%m.%Y}")
 
         return CommandResult(
             success=True, command="startdatum",
-            confirmation_subject=f"[{trip.name}] Startdatum geaendert",
+            confirmation_subject=f"[{trip.name}] " + self._t("Startdatum geaendert", "Start date changed"),
             confirmation_body="\n".join(lines),
             trip_name=trip.name, shifts=shifts,
         )
@@ -1196,9 +2840,10 @@ class TripCommandProcessor:
         """
         today = trip_local_today(trip, now_utc)
         lines = [f"Status: {trip.name}", ""]
+        strich = "-" if self._en else "–"  # #2417 AC-30: GSM-7 auf Kurzform-Kanaelen
         for stage in trip.stages:
             if stage.date >= today:
-                lines.append(f"  {stage.date:%d.%m.%Y} – {stage.name}")
+                lines.append(f"  {stage.date:%d.%m.%Y} {strich} {trip.numbered_stage_label(stage, en=self._en)}")
         return CommandResult(
             success=True, command="status",
             confirmation_subject=f"[{trip.name}] Status",
@@ -1207,21 +2852,41 @@ class TripCommandProcessor:
         )
 
     def _show_help(self) -> CommandResult:
-        """Listet alle verfügbaren Befehle mit Syntax (Issue #731: abruf-zentriert)."""
-        body = (
-            "Verfügbare Befehle:\n\n"
-            "  HEUTE                 – Wetter der heutigen Etappe\n"
-            "  MORGEN                – Wetter der morgigen Etappe\n"
-            "  JETZT                 – Nowcast Regen/Gewitter nächste ~2h\n"
-            "  GEWITTER              – Gewittergefahr heutige Etappe\n"
-            "  RUHETAG [N]           – Etappen um N Tage verschieben (Standard: 1)\n"
-            "  STATUS                – Heute und kommende Etappen\n"
-            "  PAUSE [2d / 12h]      – Briefings für Dauer unterbrechen\n"
-            "  SKIP                  – Nächstes Briefing überspringen\n"
-            "  STOP                  – Briefings dauerhaft deaktivieren\n"
-            "  WEITER                – Briefings reaktivieren\n"
-            "  HILFE                 – Diese Hilfe anzeigen"
-        )
+        """Listet alle verfügbaren Befehle mit Syntax (Issue #731: abruf-zentriert).
+
+        Issue #2134: beide Blöcke sind ABGELEITET — die Steuerbefehle aus
+        ``_COMMAND_SPECS``, die Wetter-Größen aus ``get_all_metrics()``. Eine
+        neue Katalog-Größe erscheint damit ohne Codeänderung hier; eine
+        ``selectable=False``-Größe (``confidence``, #710) kann gar nicht
+        erscheinen. Kanalunabhängig identisch — auch per E-Mail (PO-Vorgabe 2).
+        #2417 AC-8: auf Kurzform-Kanaelen die englische HELP-Kurzform.
+        """
+        if self._en:
+            return self._show_help_for_kind("route")
+        zeilen = ["Verfügbare Befehle:", ""]
+        for label, beschreibung in command_rows():
+            zeilen.append(f"  {label:<21} – {beschreibung}")
+        zeilen += [
+            "",
+            "Wetter-Größen (Kürzel senden → Stundenverlauf):",
+            "",
+        ]
+        for metric in get_all_metrics():
+            einheit = metric.display_unit or metric.unit
+            # Zweitschreibweise nur zeigen, wenn sie eine ANDERE ist —
+            # `UV / UV` waere eine Auswahl ohne Unterschied.
+            zweit = (
+                metric.sms_code
+                if normalize_command_word(metric.sms_code)
+                not in ("", normalize_command_word(metric.col_label))
+                else ""
+            )
+            kuerzel = f"{metric.col_label} / {zweit}".rstrip(" /")
+            zeilen.append(
+                f"  {kuerzel:<16} – {metric.label_de}"
+                + (f" ({einheit})" if einheit else "")
+            )
+        body = "\n".join(zeilen)
         return CommandResult(
             success=True, command="hilfe",
             confirmation_subject="Hilfe",
@@ -1234,13 +2899,24 @@ class TripCommandProcessor:
         Spalten-Konfiguration hat keinen Inline-Telegram-Bearbeitungsflow
         (Spec Known Limitations) — ein informativer Hinweis statt eines
         stillen, unsichtbaren Nichts-Tuns.
+
+        ``success=True`` ist hier konstant und bewusst nicht vom Ausgang der
+        Host-Auflösung abhängig: liefert ``resolve_public_host`` ``None``
+        (GZ_PUBLIC_HOST nicht konfiguriert, fail-closed, #2272), ändert das
+        allein den Text, nie ob das Kommando verarbeitet wurde. Geführt als
+        Ausnahme in ``INTENTIONAL_CONSTANT_SUCCESS``
+        (``tests/test_success_status_guard.py``).
         """
+        from app.config import Settings, resolve_public_host
+
+        host = resolve_public_host(Settings())
         return CommandResult(
             success=True, command="columns",
             confirmation_subject="Spalten",
             confirmation_body=(
-                "Spalten-Konfiguration ist nur im Trip-Editor möglich:\n"
-                "https://gregor20.henemm.com"
+                f"Spalten-Konfiguration ist nur im Trip-Editor möglich:\n{host}"
+                if host
+                else "Spalten-Konfiguration ist nur im Trip-Editor möglich."
             ),
         )
 
@@ -1251,10 +2927,13 @@ class TripCommandProcessor:
         if not value:
             return CommandResult(
                 success=False, command="pause",
-                confirmation_subject=f"[{trip.name}] PAUSE: Dauer fehlt",
-                confirmation_body=(
+                confirmation_subject=self._t(
+                    f"[{trip.name}] PAUSE: Dauer fehlt", f"[{trip.name}] PAUSE: duration missing"),
+                confirmation_body=self._t(
                     "Bitte Dauer angeben, z.B. PAUSE 2d oder PAUSE 12h.\n"
-                    "Format: N d (Tage) oder N h (Stunden)."
+                    "Format: N d (Tage) oder N h (Stunden).",
+                    "Please give a duration, e.g. PAUSE 2d or PAUSE 12h.\n"
+                    "Format: N d (days) or N h (hours).",
                 ),
                 trip_name=trip.name,
             )
@@ -1293,16 +2972,24 @@ class TripCommandProcessor:
         else:
             delta = timedelta(days=n)
         paused_until = datetime.now(timezone.utc) + delta
-        new_rc = dataclasses.replace(trip.report_config, paused_until=paused_until)
-        new_trip = dataclasses.replace(trip, report_config=new_rc)
-        save_trip(new_trip, user_id)
+        try:
+            self._speichere(
+                trip, user_id, "pause",
+                lambda fresh: self._mit_report_config(fresh, paused_until=paused_until),
+            )
+        except _SpeicherFehler as e:
+            return e.result
         return CommandResult(
             success=True, command="pause",
-            confirmation_subject=f"[{trip.name}] Briefings pausiert",
-            confirmation_body=(
+            confirmation_subject=self._t(
+                f"[{trip.name}] Briefings pausiert", f"[{trip.name}] Briefings paused"),
+            confirmation_body=self._t(
                 f"Briefings für '{trip.name}' pausiert bis "
                 f"{paused_until.strftime('%d.%m.%Y %H:%M')} UTC.\n"
-                "Zum Fortsetzen: STOP (dauerhaft) oder warte bis die Pause abläuft."
+                "Zum Fortsetzen: STOP (dauerhaft) oder warte bis die Pause abläuft.",
+                f"Briefings for '{trip.name}' paused until "
+                f"{paused_until.strftime('%d.%m.%Y %H:%M')} UTC.\n"
+                "The pause ends by itself; STOP ends briefings for good.",
             ),
             trip_name=trip.name,
         )
@@ -1316,33 +3003,52 @@ class TripCommandProcessor:
                 confirmation_body="Für diesen Trip ist kein Berichts-Zeitplan konfiguriert.",
                 trip_name=trip.name,
             )
-        new_rc = dataclasses.replace(trip.report_config, skip_next=True)
-        new_trip = dataclasses.replace(trip, report_config=new_rc)
-        save_trip(new_trip, user_id)
+        try:
+            self._speichere(
+                trip, user_id, "skip",
+                lambda fresh: self._mit_report_config(fresh, skip_next=True),
+            )
+        except _SpeicherFehler as e:
+            return e.result
         return CommandResult(
             success=True, command="skip",
-            confirmation_subject=f"[{trip.name}] Nächster Versand übersprungen",
-            confirmation_body=(
+            confirmation_subject=self._t(
+                f"[{trip.name}] Nächster Versand übersprungen",
+                f"[{trip.name}] Next briefing skipped"),
+            confirmation_body=self._t(
                 f"Das nächste Briefing für '{trip.name}' wird übersprungen.\n"
-                "Danach läuft der Zeitplan wieder normal."
+                "Danach läuft der Zeitplan wieder normal.",
+                f"The next briefing for '{trip.name}' will be skipped.\n"
+                "After that the schedule runs as usual.",
             ),
             trip_name=trip.name,
         )
 
     def _show_config(self, trip: Trip) -> CommandResult:
-        """Return a link to trip settings — read-only, no save_trip."""
-        url = f"https://gregor20.henemm.com/trips/{trip.id}"
+        """Return a link to trip settings — read-only, no save_trip.
+
+        ``success=True`` ist hier konstant und bewusst nicht vom Ausgang der
+        Host-Auflösung abhängig: liefert ``resolve_public_url`` ``None``
+        (GZ_PUBLIC_HOST nicht konfiguriert, fail-closed, #2272), entfällt nur
+        die Link-Zeile, nie der Erfolg des Kommandos. Geführt als Ausnahme in
+        ``INTENTIONAL_CONSTANT_SUCCESS``
+        (``tests/test_success_status_guard.py``).
+        """
+        from app.config import Settings, resolve_public_url
+
+        url = resolve_public_url(Settings(), f"/trips/{trip.id}")
+        link_line = f"{url}\n" if url else ""
         return CommandResult(
             success=True, command="config",
             confirmation_subject=f"[{trip.name}] Trip-Einstellungen",
             confirmation_body=(
-                f"Einstellungen für '{trip.name}':\n{url}\n\n"
+                f"Einstellungen für '{trip.name}':\n{link_line}\n"
                 "Dort kannst du Zeitplan, Kanäle und Alarm-Schwellen anpassen."
             ),
             trip_name=trip.name,
         )
 
-    def _show_now(self, trip: Trip, now_utc: datetime) -> CommandResult:
+    def _show_now(self, trip: Trip, now_utc: datetime, user_id: str) -> CommandResult:
         """Fetch radar nowcast for today's stage position.
 
         Issue #1727 S5a (ADR-0044): der Standort haengt am ORTStag der Tour.
@@ -1353,6 +3059,10 @@ class TripCommandProcessor:
             trip: die Tour, deren heutiger Wegpunkt den Nowcast bestimmt.
             now_utc: Zeitpunkt der Abfrage (`msg.received_at`). Pflichtparameter
                 aus demselben Grund wie in :meth:`_show_status`.
+            user_id: echte Nutzerkennung (`msg.user_id`, Issue #2387).
+                Pflichtparameter ohne Default -- der Nowcast-Verbrauch des
+                `/jetzt`-Kommandos gehoert in den Budget-Topf DIESES
+                Nutzers (ADR-0003/ADR-0075), nicht in einen geratenen.
         """
         from services.radar_service import RadarNowcastService
         today = trip_local_today(trip, now_utc)
@@ -1360,58 +3070,308 @@ class TripCommandProcessor:
         if not stage or not stage.waypoints:
             return CommandResult(
                 success=False, command="now",
-                confirmation_subject=f"[{trip.name}] Kein heutiger Standort",
-                confirmation_body=(
+                confirmation_subject=self._t(
+                    f"[{trip.name}] Kein heutiger Standort", f"[{trip.name}] No stage today"),
+                confirmation_body=self._t(
                     "Keine heutige Etappe gefunden. "
                     "Aktueller Position/Standort unbekannt — "
-                    "bitte Etappenplan prüfen."
+                    "bitte Etappenplan prüfen.",
+                    "No stage found for today. Current position unknown - "
+                    "please check the stage plan.",
                 ),
                 trip_name=trip.name,
             )
-        wp = stage.waypoints[0]
+        # Issue #2052: gemessen wird am AUFENTHALTSORT, nicht am Etappenstart.
+        # Zielzeitpunkt ist bewusst `now_utc` selbst -- anders als Alarm-/
+        # Briefing-Pfad (#2017), die zur Fenstermitte einer VORWARNUNG messen.
+        # /jetzt ist eine Sofortabfrage nach dem Ort, an dem der Nutzer STEHT.
+        from services.trip_segments import position_at_time, resolve_current_segment
+
+        resolved = resolve_current_segment(trip, now_utc, today)
+        if resolved is not None:
+            active, segment_date = resolved
+            try:
+                pos = position_at_time(trip, active, segment_date, now_utc, user_id=user_id)
+            except Exception as e:
+                logger.error(
+                    "Jetzt-Befehl: Positionsbestimmung fuer Trip %s "
+                    "fehlgeschlagen (%s) -- falle zurueck auf den ersten "
+                    "Wegpunkt der Etappe.",
+                    trip.id, e,
+                )
+                pos = stage.waypoints[0]
+        else:
+            # Vorrangkette liefert None: der Etappentag ist abgelaufen (typ.
+            # nach 23:00 Ortszeit). Der Wanderer ist dann am Tagesziel, nicht
+            # am Etappenstart -- letzterer waere die volle Etappenlaenge daneben.
+            pos = stage.waypoints[-1]
+
+        # #1991: `elevation_m` geht roh in den Cache-Schluessel -- 1000 vs.
+        # 1000.0 sind sonst zwei Eintraege fuer denselben Punkt. Die
+        # Normalisierung wohnt deshalb hier an der Aufrufstelle.
+        elevation_m = (
+            int(round(pos.elevation_m)) if pos.elevation_m is not None else None
+        )
         svc = RadarNowcastService()
         # Issue #1329 C2: /jetzt ist eine Nutzeraktion -- explizit
         # user_briefing (Default, nie gedrosselt), zur Dokumentation der Absicht.
-        result = svc.get_nowcast(wp.lat, wp.lon, priority="user_briefing")
+        try:
+            result = svc.get_nowcast(
+                pos.lat, pos.lon, elevation_m=elevation_m, priority="user_briefing",
+                user_id=user_id,
+            )
+        except Exception as e:
+            # #1405 S4a (AC-12): Ausfall der Quelle -> Antwort statt Schweigen.
+            logger.warning(
+                "Jetzt-Befehl: Nowcast fuer Trip %s fehlgeschlagen (%s)", trip.id, e)
+            return self._nowcast_ausfall(trip, "now")
         # Issue #1402: ohne tz faellt format_now_text() auf das argumentlose
         # .astimezone() zurueck -- deutet die Onset-Zeit in der PROZESS-
         # Zeitzone des Servers statt der Ortszeit des Wegpunkts.
         from utils.timezone import tz_for_coords
 
-        body = svc.format_now_text(result, tz=tz_for_coords(wp.lat, wp.lon))
+        body = svc.format_now_text(
+            result, tz=tz_for_coords(pos.lat, pos.lon), englisch=self._en,
+        )
+        # #1405 S4a (AC-12 Ergaenzung): "Regen-Kurzfristpruefung aktuell nicht
+        # moeglich" (data_unavailable) ist KEIN Erfolg -- derselbe Befund waehlt
+        # in format_now_text den Text und hier den Status.
         return CommandResult(
-            success=True, command="now",
+            success=not getattr(result, "data_unavailable", False), command="now",
             confirmation_subject=f"[{trip.name}] Nowcast",
             confirmation_body=body,
             trip_name=trip.name,
             reply_markup={"inline_keyboard": [[{"text": "🔄 Aktualisieren", "callback_data": "now"}]]},
         )
 
-    def _cancel_trip(self, trip: Trip, user_id: str = "default") -> CommandResult:
-        """Disable report scheduling for the trip."""
-        if trip.report_config:
-            new_config = dataclasses.replace(trip.report_config, enabled=False)
-            new_trip = dataclasses.replace(trip, report_config=new_config)
-            save_trip(new_trip, user_id)
+    def _nowcast_text(self) -> str:
+        """#1405 S4a: ehrliche Antwort, wenn der Nowcast nichts geliefert hat."""
+        return self._t(
+            "Nowcast nicht verfügbar — Regen-Kurzfristprüfung aktuell nicht "
+            "möglich. Bitte selbst beobachten.",
+            "Nowcast not available - short-term rain check not possible right "
+            "now. Please watch the sky yourself.",
+        )
 
+    def _nowcast_ausfall(self, trip: Trip, command: str) -> CommandResult:
+        """#1405 S4a: Fehlerantwort fuer ``jetzt``/``strecke`` bei Quellenausfall."""
         return CommandResult(
-            success=True, command="abbruch",
-            confirmation_subject=f"[{trip.name}] Trip beendet",
-            confirmation_body=f"Reports fuer '{trip.name}' deaktiviert. Gute Heimreise!",
+            success=False, command=command,
+            confirmation_subject=f"[{trip.name}] Nowcast",
+            confirmation_body=self._nowcast_text(),
             trip_name=trip.name,
         )
 
-    def _resume_trip(self, trip: Trip, user_id: str = "default") -> CommandResult:
+    def _show_strecke(
+        self, trip: Trip, value: Optional[str], now_utc: datetime,
+        user_id: str, channel: str,
+    ) -> CommandResult:
+        """Regen-Ereignisflaechen entlang der Reststrecke (Issue #2051 S4).
+
+        Drei ehrliche Sonderfaelle VOR jedem Nowcast-Aufruf (E6): keine
+        aktive Etappe (wortgleich zu `_show_now`, AC-18), unvermessene
+        Kilometrierung (AC-17), ungueltiges km-Argument (AC-15/16). Der
+        erste Abfragepunkt faehrt `priority="user_briefing"` (nie
+        gedrosselt), die Folgepunkte `priority="polling"` und fallen
+        fail-soft aus (E1). Jede Antwort MIT Messung traegt zusaetzlich die
+        tatsaechlich geprueften km-Grenzen (E7).
+        """
+        from services.radar_service import RadarNowcastService
+        from services.rain_extent import derive_rain_zones
+        from services.track_resolution import backfill_stage_distances
+        from services.trip_alert import _zonen_messwert
+        from services.trip_segments import (
+            points_along_remaining_route, points_from_km, resolve_current_segment,
+        )
+        from utils.timezone import tz_for_coords
+
+        today = trip_local_today(trip, now_utc)
+        try:
+            trip = backfill_stage_distances(trip, user_id, today, persist=True)
+        except Exception as e:
+            # #1405 S4a (AC-14): Streckenlaengen nachtragen scheitert -> Antwort.
+            logger.warning(
+                "Strecke-Kommando: Streckenlaengen fuer Trip %s nicht "
+                "nachtragbar (%s)", trip.id, e)
+            return self._nowcast_ausfall(trip, "strecke")
+        resolved = resolve_current_segment(trip, now_utc, today)
+        if resolved is None:
+            return CommandResult(  # AC-18: wortgleich zu _show_now
+                success=False, command="strecke",
+                confirmation_subject=self._t(
+                    f"[{trip.name}] Kein heutiger Standort", f"[{trip.name}] No stage today"),
+                confirmation_body=self._t(
+                    "Keine heutige Etappe gefunden. "
+                    "Aktueller Position/Standort unbekannt — "
+                    "bitte Etappenplan prüfen.",
+                    "No stage found for today. Current position unknown - "
+                    "please check the stage plan.",
+                ),
+                trip_name=trip.name,
+            )
+        active, segment_date = resolved
+
+        if not active.distance_measured:
+            # AC-17: geprueft VOR jedem Nowcast-Aufruf -- kein Budget wird
+            # fuer eine Antwort verbraucht, die ohnehin nicht kommen kann.
+            body = self._t(
+                "Kilometrierung für die heutige Etappe nicht verfügbar — "
+                "keine Streckenangabe möglich."
+                if value is None else
+                "Kilometrierung für die heutige Etappe nicht verfügbar — "
+                "die km-Angabe kann nicht ausgewertet werden.",
+                "No distance data for today's stage - no route info possible."
+                if value is None else
+                "No distance data for today's stage - the km value cannot be used.",
+            )
+            return CommandResult(
+                success=False, command="strecke",
+                confirmation_subject=self._t(
+                    f"[{trip.name}] Kilometrierung fehlt", f"[{trip.name}] No distance data"),
+                confirmation_body=body,
+                trip_name=trip.name,
+            )
+
+        if value is not None:
+            # E5: Bereich [start_point-km, end_point-km] des aktiven
+            # Segments, oberer Rand eingeschlossen (AC-14). Ungueltige
+            # Eingaben werden abgelehnt, nicht geklemmt (AC-15/16).
+            seg_start_km = active.start_point.distance_from_start_km
+            seg_end_km = active.end_point.distance_from_start_km
+            try:
+                start_km = float(value)
+            except ValueError:
+                start_km = None
+            if start_km is None or not (seg_start_km <= start_km <= seg_end_km):
+                return CommandResult(
+                    success=False, command="strecke",
+                    confirmation_subject=self._t(
+                        f"[{trip.name}] Ungültige km-Angabe", f"[{trip.name}] Invalid km"),
+                    confirmation_body=self._t(
+                        "Ungültige km-Angabe. Gültiger Bereich für die "
+                        f"aktuelle Etappe: {int(round(seg_start_km))}"
+                        f"–{int(round(seg_end_km))} km.",
+                        f"Invalid km. Valid range for the current stage: "
+                        f"{int(round(seg_start_km))}-{int(round(seg_end_km))} km.",
+                    ),
+                    trip_name=trip.name,
+                )
+            points = points_from_km(trip, active, segment_date, start_km)
+        else:
+            points = points_along_remaining_route(
+                trip, active, segment_date, now_utc, user_id=user_id,
+            )
+
+        # E1: erster Punkt user_briefing (nie gedrosselt), Folgepunkte
+        # polling + fail-soft (Muster trip_alert.py:1748-1770).
+        svc = RadarNowcastService()
+        ergebnisse: list = []
+        for i, p in enumerate(points):
+            prio = "user_briefing" if i == 0 else "polling"
+            elevation_m = (
+                int(round(p.elevation_m)) if p.elevation_m is not None else None
+            )
+            try:
+                result = svc.get_nowcast(
+                    p.lat, p.lon, elevation_m=elevation_m, priority=prio,
+                    user_id=user_id,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Strecke-Kommando: Nowcast fuer Punkt %d (km %.1f) des "
+                    "Trips %s fehlgeschlagen (%s) -- der Punkt faellt aus "
+                    "der Ausdehnung heraus, das Kommando laeuft weiter.",
+                    i, p.distance_from_start_km, trip.id, e,
+                )
+                ergebnisse.append(None)
+                continue
+            ergebnisse.append(_zonen_messwert(result))
+
+        spanne = _geprueft_spanne(points, ergebnisse)
+        geprueft_zeile = (
+            self._t("Geprüft", "Checked")
+            + f": km {int(round(spanne[0]))}-{int(round(spanne[1]))}."
+            if spanne is not None else ""
+        )
+
+        # E1: fallen ALLE Folgepunkte aus, obwohl mehr als einer geplant
+        # war, gibt es keine km-Zonen-Angabe (AC-7) -- genau 1 geplanter
+        # Punkt ist dagegen der volle Messumfang, kein Ausfall (AC-6).
+        # #1405 S4a (AC-13): lieferte KEIN Punkt (auch der Startpunkt nicht)
+        # einen Wert, ist "Kein Regen" eine erfundene Entwarnung -- Text UND
+        # `success` haengen am selben Befund (`keine_daten`, ein Return).
+        keine_daten = all(e is None for e in ergebnisse)
+        folgepunkte = ergebnisse[1:]
+        if keine_daten:
+            body = self._nowcast_text()
+        elif len(points) > 1 and folgepunkte and all(e is None for e in folgepunkte):
+            body = self._t(
+                "Ausdehnung entlang der Reststrecke konnte nicht ermittelt "
+                "werden — nur der Startpunkt lieferte Daten.",
+                "Rain extent along the route could not be determined - only "
+                "the start point returned data.",
+            )
+            if geprueft_zeile:
+                body = f"{body} {geprueft_zeile}"
+        else:
+            zonen = tuple(derive_rain_zones(points, ergebnisse))
+            if not zonen:
+                body = self._t("Kein Regen entlang des geprüften Abschnitts erkannt.",
+                               "No rain found along the checked section.")
+            else:
+                tz = tz_for_coords(points[0].lat, points[0].lon)
+                body = (
+                    _fmt_strecke_email(zonen, tz, now_utc) if channel == "email"
+                    else _fmt_strecke_telegram(zonen, tz, now_utc, en=self._en)
+                )
+            if geprueft_zeile:
+                trenner = "\n" if zonen else " "
+                body = f"{body}{trenner}{geprueft_zeile}"
+        return CommandResult(
+            success=not keine_daten, command="strecke",
+            confirmation_subject=f"[{trip.name}] Strecke",
+            confirmation_body=body,
+            trip_name=trip.name,
+        )
+
+    def _cancel_trip(self, trip: Trip, user_id: str) -> CommandResult:
+        """Disable report scheduling for the trip."""
+        try:
+            if trip.report_config:
+                self._speichere(
+                    trip, user_id, "abbruch",
+                    lambda fresh: self._mit_report_config(fresh, enabled=False),
+                )
+        except _SpeicherFehler as e:
+            return e.result
+
+        return CommandResult(
+            success=True, command="abbruch",
+            confirmation_subject=self._t(f"[{trip.name}] Trip beendet", f"[{trip.name}] Trip ended"),
+            confirmation_body=self._t(
+                f"Reports fuer '{trip.name}' deaktiviert. Gute Heimreise!",
+                f"Briefings for '{trip.name}' turned off. Safe trip home!"),
+            trip_name=trip.name,
+        )
+
+    def _resume_trip(self, trip: Trip, user_id: str) -> CommandResult:
         """Reaktiviert den Report-Versand für den Trip (enabled=True via RMW)."""
-        if trip.report_config:
-            new_config = dataclasses.replace(trip.report_config, enabled=True)
-            new_trip = dataclasses.replace(trip, report_config=new_config)
-            save_trip(new_trip, user_id)
+        try:
+            if trip.report_config:
+                self._speichere(
+                    trip, user_id, "weiter",
+                    lambda fresh: self._mit_report_config(fresh, enabled=True),
+                )
+        except _SpeicherFehler as e:
+            return e.result
 
         return CommandResult(
             success=True, command="weiter",
-            confirmation_subject=f"[{trip.name}] Briefings reaktiviert",
-            confirmation_body=f"Reports fuer '{trip.name}' wieder aktiviert. Viel Erfolg auf der Tour!",
+            confirmation_subject=self._t(
+                f"[{trip.name}] Briefings reaktiviert", f"[{trip.name}] Briefings restarted"),
+            confirmation_body=self._t(
+                f"Reports fuer '{trip.name}' wieder aktiviert. Viel Erfolg auf der Tour!",
+                f"Briefings for '{trip.name}' active again. Enjoy the trip!"),
             trip_name=trip.name,
         )
 
@@ -1419,7 +3379,55 @@ class TripCommandProcessor:
     # Helpers
     # -----------------------------------------------------------------------
 
-    def _delete_snapshot(self, trip_id: str, user_id: str = "default") -> None:
+    @staticmethod
+    def _mit_report_config(fresh: Trip, **felder) -> Trip:
+        """Wendet nur die gewollten report_config-Felder auf den FRISCHEN Trip an."""
+        if fresh.report_config is None:
+            return fresh
+        return dataclasses.replace(
+            fresh, report_config=dataclasses.replace(fresh.report_config, **felder),
+        )
+
+    def _speichere(
+        self, trip: Trip, user_id: str, command: str, mutate,
+    ) -> None:
+        """#2158: Mutation gesperrt auf frischem Stand (``update_trip``).
+
+        Rueckkehr = gespeichert. Sonst ``_SpeicherFehler`` mit der Fehlerantwort
+        (#1405 S4a): Sperr-Fristablauf -> "bitte erneut senden" (nie still
+        verwerfen), beschaedigte/fehlende Datei -> definierter Fehler. Nie
+        ungesperrter Rueckfall.
+        """
+        try:
+            update_trip(user_id, trip.id, mutate)
+        except LockTimeout:
+            logger.warning("Kommando %s: Sperre fuer Trip %s nicht erhalten", command, trip.id)
+            raise _SpeicherFehler(CommandResult(
+                success=False, command=command,
+                confirmation_subject=self._t(
+                    f"[{trip.name}] Bitte erneut senden",
+                    f"[{trip.name}] Please send again"),
+                confirmation_body=self._t(
+                    "Befehl nicht ausgefuehrt: Der Trip wird gerade geaendert. "
+                    "Bitte in einer Minute erneut senden.",
+                    "Command not executed: the trip is being changed right now. "
+                    "Please send it again in a minute."),
+                trip_name=trip.name,
+            ))
+        except LoaderError as e:
+            logger.error("Kommando %s: Trip %s nicht speicherbar: %s", command, trip.id, e)
+            raise _SpeicherFehler(CommandResult(
+                success=False, command=command,
+                confirmation_subject=self._t(
+                    f"[{trip.name}] Nicht gespeichert", f"[{trip.name}] Not saved"),
+                confirmation_body=self._t(
+                    "Der Trip konnte nicht gespeichert werden. Bitte spaeter "
+                    "erneut senden.",
+                    "The trip could not be saved. Please send again later."),
+                trip_name=trip.name,
+            ))
+
+    def _delete_snapshot(self, trip_id: str, user_id: str) -> None:
         """Delete cached weather snapshot after date changes."""
         snapshot_path = get_snapshots_dir(user_id) / f"{trip_id}.json"
         try:
@@ -1429,11 +3437,11 @@ class TripCommandProcessor:
         except OSError as e:
             logger.error(f"Failed to delete snapshot {snapshot_path}: {e}")
 
-    def _get_command_log_path(self, user_id: str = "default") -> Path:
+    def _get_command_log_path(self, user_id: str) -> Path:
         """Get path to command_log.json."""
         return get_data_dir(user_id) / "command_log.json"
 
-    def _load_command_log(self, user_id: str = "default") -> list[dict]:
+    def _load_command_log(self, user_id: str) -> list[dict]:
         """Load command log entries."""
         path = self._get_command_log_path(user_id)
         if not path.exists():
@@ -1446,7 +3454,7 @@ class TripCommandProcessor:
 
     def _append_command_log(
         self, trip_id: str, command: str, command_date: date,
-        user_id: str = "default",
+        user_id: str,
     ) -> None:
         """Append entry to command log for idempotency tracking."""
         entries = self._load_command_log(user_id)
@@ -1463,7 +3471,7 @@ class TripCommandProcessor:
 
     def _is_already_applied(
         self, trip_id: str, command: str, command_date: date,
-        user_id: str = "default",
+        user_id: str,
     ) -> bool:
         """Check if command was already applied today (idempotency)."""
         for entry in self._load_command_log(user_id):
@@ -1474,3 +3482,74 @@ class TripCommandProcessor:
             ):
                 return True
         return False
+
+
+# ---------------------------------------------------------------------------
+# /strecke: Streckenspanne + Renderer (Issue #2051 S4, E3/E7)
+# ---------------------------------------------------------------------------
+
+def _geprueft_spanne(
+    punkte: list, ergebnisse: list,
+) -> Optional[tuple[float, float]]:
+    """km-Spanne der ERFOLGREICH abgefragten Punkte (nicht der geplanten,
+    Issue #2051 S4, E7). None, wenn kein einziger Punkt ein Ergebnis lieferte
+    (defensiv -- bei priority=user_briefing fuer den ersten Punkt in der
+    Praxis nicht erreichbar, s. E1)."""
+    kms = [
+        p.distance_from_start_km
+        for p, e in zip(punkte, ergebnisse) if e is not None
+    ]
+    if not kms:
+        return None
+    return (min(kms), max(kms))
+
+
+def _fmt_strecke_email(zonen: tuple, tz, now_utc: datetime) -> str:
+    """Tabellarische Zeile je Zone: km-Spanne, Zeitspanne, Intensitaet,
+    Quelle (Issue #2051 S4, E3). `now_utc` ist der Abrufzeitpunkt, gegen den
+    die relativen `onset_minutes`/`event_end_minutes` in absolute HH:MM
+    umgerechnet werden -- IMMER derselbe Wert, den `_show_strecke` fuer die
+    Nowcast-Abrufe verwendet hat, NIE `datetime.now()` (AC-23).
+
+    Quelle wird als Klartext ausgegeben (`RadarNowcastService.source_label()`,
+    Muster `trip_alert.py:2210/2316`) -- die rohe Quelle (`"radar"`, `"INCA"`)
+    ist ein interner Schluessel, kein Nutzertext (team-lead-Entscheidung: die
+    Klartext-Uebersetzung ist Teil von E2, keine Testanpassung darf sie
+    umgehen)."""
+    from services.radar_service import RadarNowcastService
+
+    svc = RadarNowcastService()
+    zeilen = []
+    for z in zonen:
+        beginn = local_fmt(now_utc + timedelta(minutes=z.onset_minutes), tz)
+        ende = (
+            local_fmt(now_utc + timedelta(minutes=z.event_end_minutes), tz)
+            if z.event_end_minutes is not None else "?"
+        )
+        zeilen.append(
+            f"km {int(round(z.km_from))}-{int(round(z.km_to))}: "
+            f"{beginn}-{ende}, {z.intensity_label}, {svc.source_label(z.source)}"
+        )
+    return "\n".join(zeilen)
+
+
+def _fmt_strecke_telegram(zonen: tuple, tz, now_utc: datetime, en: bool = False) -> str:
+    """Verdichtete Fassung: eine Zeile je Zone, km-Spanne, Zeitspanne,
+    Intensitaet -- ohne Quelle-Spalte (Platzgrund, Issue #2051 S4). Derselbe
+    Zeitanker-Vertrag wie `_fmt_strecke_email` (AC-23). ``en``: #2417,
+    Intensitaet englisch (Kurzform-Kanaele)."""
+    from services.radar_service import _INTENSITY_EN
+
+    zeilen = []
+    for z in zonen:
+        beginn = local_fmt(now_utc + timedelta(minutes=z.onset_minutes), tz)
+        ende = (
+            local_fmt(now_utc + timedelta(minutes=z.event_end_minutes), tz)
+            if z.event_end_minutes is not None else "?"
+        )
+        zeilen.append(
+            f"km {int(round(z.km_from))}-{int(round(z.km_to))}: "
+            f"{beginn}-{ende}, "
+            f"{_INTENSITY_EN.get(z.intensity_label, z.intensity_label) if en else z.intensity_label}"
+        )
+    return "\n".join(zeilen)

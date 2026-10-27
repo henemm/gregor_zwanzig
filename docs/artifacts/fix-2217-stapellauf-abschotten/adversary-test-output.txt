@@ -1,0 +1,1084 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 97 items
+
+tests/tdd/test_alarmlauf_einheit_abschottung.py ....................     [ 20%]
+tests/tdd/test_briefing_sammellauf_einheit_abschottung.py ........       [ 28%]
+tests/test_success_status_guard.py .....................                 [ 50%]
+tests/tdd/test_radar_alarmlauf_fairness.py ................              [ 67%]
+tests/unit/test_radar_alert_trip_isolation.py ....                       [ 71%]
+tests/tdd/test_compare_alert_briefing_imminent.py ............           [ 83%]
+tests/tdd/test_compare_official_alert.py ................                [100%]
+
+==================================== PASSES ====================================
+___________ test_trip_radar_kaputter_trip_reisst_folgetrip_nicht_mit ___________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,585 ERROR alert_check_state: Radar-Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 2212, in _check_radar_trips
+    if not (result is not None and result.throttled):
+                                   ^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'throttled'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Radar-Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 2212, in _check_radar_trips
+    if not (result is not None and result.throttled):
+                                   ^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'throttled'
+__________ test_unwetterlauf_kaputter_trip_reisst_folgetrip_nicht_mit __________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,014 INFO services.weather_snapshot: Dated snapshot saved: a-kaputt_2026-10-01.json
+2026-10-01 07:30:00,018 INFO services.weather_snapshot: Dated snapshot saved: b-heil_2026-10-01.json
+2026-10-01 07:30:00,042 ERROR alert_check_state: Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1128, in check_all_trips
+    cached = self._get_cached_weather(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_alarmlauf_einheit_abschottung.py", line 168, in _get_cached_weather
+    raise RuntimeError(f"Wetter-Anker von Trip {trip.id} unlesbar")
+RuntimeError: Wetter-Anker von Trip a-kaputt unlesbar
+2026-10-01 07:30:00,114 INFO trip_alert: check_all_trips: Lauf beendet nach 0.073s fuer user_id=tdd-2261s2-ac2-70d63f (checked=2 skipped=0 alerts_sent=1)
+------------------------------ Captured log call -------------------------------
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: a-kaputt_2026-10-01.json
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: b-heil_2026-10-01.json
+ERROR    alert_check_state:alert_check_state.py:119 Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1128, in check_all_trips
+    cached = self._get_cached_weather(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_alarmlauf_einheit_abschottung.py", line 168, in _get_cached_weather
+    raise RuntimeError(f"Wetter-Anker von Trip {trip.id} unlesbar")
+RuntimeError: Wetter-Anker von Trip a-kaputt unlesbar
+INFO     trip_alert:trip_alert.py:1194 check_all_trips: Lauf beendet nach 0.073s fuer user_id=tdd-2261s2-ac2-70d63f (checked=2 skipped=0 alerts_sent=1)
+_ test_ortsvergleich_abweichungslauf_kaputtes_preset_reisst_folgepreset_nicht_mit _
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,030 ERROR alert_check_state: Compare-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 199, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 249, in _check_one_preset
+    config = self._build_eval_config(preset, cooldown_minutes, all_locations)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 702, in _build_eval_config
+    (preset.get("display_config") or {}).get("metric_alert_levels")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 199, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 249, in _check_one_preset
+    config = self._build_eval_config(preset, cooldown_minutes, all_locations)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 702, in _build_eval_config
+    (preset.get("display_config") or {}).get("metric_alert_levels")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+__ test_ortsvergleich_radarlauf_kaputtes_preset_reisst_folgepreset_nicht_mit ___
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,036 ERROR alert_check_state: Compare-Radar-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 171, in check_all_compare_presets_run
+    if self._check_one_preset(preset, all_locations, deadline_at):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 411, in _check_one_preset
+    cooldown_display=_format_cooldown_display(cooldown_minutes),
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 103, in _format_cooldown_display
+    if cooldown_minutes % 60 == 0:
+       ~~~~~~~~~~~~~~~~~^~~~
+TypeError: not all arguments converted during string formatting
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Radar-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 171, in check_all_compare_presets_run
+    if self._check_one_preset(preset, all_locations, deadline_at):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 411, in _check_one_preset
+    cooldown_display=_format_cooldown_display(cooldown_minutes),
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 103, in _format_cooldown_display
+    if cooldown_minutes % 60 == 0:
+       ~~~~~~~~~~~~~~~~~^~~~
+TypeError: not all arguments converted during string formatting
+___ test_ortsvergleich_amtlich_kaputtes_preset_reisst_folgepreset_nicht_mit ____
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,034 ERROR alert_check_state: Compare-Amtlich-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 108, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 213, in _check_one_preset
+    sources = (official_warnings or {}).get("sources") or None
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Amtlich-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 108, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 213, in _check_one_preset
+    sources = (official_warnings or {}).get("sources") or None
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+___ test_trip_radar_grenzabbruch_nach_gescheitertem_trip_partial_und_failed ____
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,034 ERROR alert_check_state: Radar-Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 2212, in _check_radar_trips
+    if not (result is not None and result.throttled):
+                                   ^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'throttled'
+2026-10-01 07:30:00,035 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (45.0s) erreicht fuer user_id=tdd-2261s2-ac4t-d7fbf4 — checked=1 skipped=2 skipped_ids=['b-grenze', 'c-rest']
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Radar-Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 2212, in _check_radar_trips
+    if not (result is not None and result.throttled):
+                                   ^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'throttled'
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (45.0s) erreicht fuer user_id=tdd-2261s2-ac4t-d7fbf4 — checked=1 skipped=2 skipped_ids=['b-grenze', 'c-rest']
+____________ test_trip_radar_reiner_grenzabbruch_meldet_failed_null ____________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,838 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac4p-547d9e — checked=2 skipped=2 skipped_ids=['c', 'd']
+------------------------------ Captured log call -------------------------------
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac4p-547d9e — checked=2 skipped=2 skipped_ids=['c', 'd']
+_ test_ortsvergleich_radar_grenzabbruch_nach_gescheitertem_preset_partial_und_failed _
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,034 ERROR alert_check_state: Compare-Radar-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 171, in check_all_compare_presets_run
+    if self._check_one_preset(preset, all_locations, deadline_at):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 411, in _check_one_preset
+    cooldown_display=_format_cooldown_display(cooldown_minutes),
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 103, in _format_cooldown_display
+    if cooldown_minutes % 60 == 0:
+       ~~~~~~~~~~~~~~~~~^~~~
+TypeError: not all arguments converted during string formatting
+2026-10-01 07:30:00,037 WARNING compare_radar_alert: check_all_compare_presets (radar): Zeitobergrenze (45.0s) erreicht fuer user_id=tdd-2261s2-ac4c-a38e5e — checked=1 skipped=2 skipped_ids=['p-b-grenze', 'p-c-rest']
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Radar-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 171, in check_all_compare_presets_run
+    if self._check_one_preset(preset, all_locations, deadline_at):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 411, in _check_one_preset
+    cooldown_display=_format_cooldown_display(cooldown_minutes),
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 103, in _format_cooldown_display
+    if cooldown_minutes % 60 == 0:
+       ~~~~~~~~~~~~~~~~~^~~~
+TypeError: not all arguments converted during string formatting
+WARNING  compare_radar_alert:compare_radar_alert.py:191 check_all_compare_presets (radar): Zeitobergrenze (45.0s) erreicht fuer user_id=tdd-2261s2-ac4c-a38e5e — checked=1 skipped=2 skipped_ids=['p-b-grenze', 'p-c-rest']
+___________ test_kaputter_trip_rueckt_in_der_reihenfolge_nach_hinten ___________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,446 ERROR alert_check_state: Radar-Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 2212, in _check_radar_trips
+    if not (result is not None and result.throttled):
+                                   ^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'throttled'
+2026-10-01 07:30:00,850 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac5-9f16f6 — checked=2 skipped=2 skipped_ids=['c', 'd']
+2026-10-01 07:30:01,697 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac5-9f16f6 — checked=2 skipped=2 skipped_ids=['a-kaputt', 'b']
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Radar-Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 2212, in _check_radar_trips
+    if not (result is not None and result.throttled):
+                                   ^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'throttled'
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac5-9f16f6 — checked=2 skipped=2 skipped_ids=['c', 'd']
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac5-9f16f6 — checked=2 skipped=2 skipped_ids=['a-kaputt', 'b']
+_______________ test_log_trip_radar_nennt_trip_id_mit_stacktrace _______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,039 ERROR alert_check_state: Radar-Alarmlauf: Einheit a-kaputt-log fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 2212, in _check_radar_trips
+    if not (result is not None and result.throttled):
+                                   ^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'throttled'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Radar-Alarmlauf: Einheit a-kaputt-log fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 2212, in _check_radar_trips
+    if not (result is not None and result.throttled):
+                                   ^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'throttled'
+______________ test_log_unwetterlauf_nennt_trip_id_mit_stacktrace ______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,018 INFO services.weather_snapshot: Dated snapshot saved: a-kaputt-log_2026-10-01.json
+2026-10-01 07:30:00,021 INFO services.weather_snapshot: Dated snapshot saved: b-heil_2026-10-01.json
+2026-10-01 07:30:00,042 ERROR alert_check_state: Alarmlauf: Einheit a-kaputt-log fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1128, in check_all_trips
+    cached = self._get_cached_weather(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_alarmlauf_einheit_abschottung.py", line 168, in _get_cached_weather
+    raise RuntimeError(f"Wetter-Anker von Trip {trip.id} unlesbar")
+RuntimeError: Wetter-Anker von Trip a-kaputt-log unlesbar
+------------------------------ Captured log call -------------------------------
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: a-kaputt-log_2026-10-01.json
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: b-heil_2026-10-01.json
+ERROR    alert_check_state:alert_check_state.py:119 Alarmlauf: Einheit a-kaputt-log fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1128, in check_all_trips
+    cached = self._get_cached_weather(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_alarmlauf_einheit_abschottung.py", line 168, in _get_cached_weather
+    raise RuntimeError(f"Wetter-Anker von Trip {trip.id} unlesbar")
+RuntimeError: Wetter-Anker von Trip a-kaputt-log unlesbar
+________ test_log_ortsvergleich_amtlich_nennt_preset_id_mit_stacktrace _________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,029 ERROR alert_check_state: Compare-Amtlich-Alarmlauf: Einheit p-a-kaputt-log fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 108, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 213, in _check_one_preset
+    sources = (official_warnings or {}).get("sources") or None
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Amtlich-Alarmlauf: Einheit p-a-kaputt-log fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 108, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 213, in _check_one_preset
+    sources = (official_warnings or {}).get("sources") or None
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+_________ test_log_ortsvergleich_radar_nennt_preset_id_mit_stacktrace __________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,025 ERROR alert_check_state: Compare-Radar-Alarmlauf: Einheit p-a-kaputt-log fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 171, in check_all_compare_presets_run
+    if self._check_one_preset(preset, all_locations, deadline_at):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 411, in _check_one_preset
+    cooldown_display=_format_cooldown_display(cooldown_minutes),
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 103, in _format_cooldown_display
+    if cooldown_minutes % 60 == 0:
+       ~~~~~~~~~~~~~~~~~^~~~
+TypeError: not all arguments converted during string formatting
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Radar-Alarmlauf: Einheit p-a-kaputt-log fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 171, in check_all_compare_presets_run
+    if self._check_one_preset(preset, all_locations, deadline_at):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 411, in _check_one_preset
+    cooldown_display=_format_cooldown_display(cooldown_minutes),
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 103, in _format_cooldown_display
+    if cooldown_minutes % 60 == 0:
+       ~~~~~~~~~~~~~~~~~^~~~
+TypeError: not all arguments converted during string formatting
+_______ test_log_ortsvergleich_abweichung_nennt_preset_id_mit_stacktrace _______
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,028 ERROR alert_check_state: Compare-Alarmlauf: Einheit p-a-kaputt-log fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 199, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 249, in _check_one_preset
+    config = self._build_eval_config(preset, cooldown_minutes, all_locations)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 702, in _build_eval_config
+    (preset.get("display_config") or {}).get("metric_alert_levels")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Alarmlauf: Einheit p-a-kaputt-log fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 199, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 249, in _check_one_preset
+    config = self._build_eval_config(preset, cooldown_minutes, all_locations)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 702, in _build_eval_config
+    (preset.get("display_config") or {}).get("metric_alert_levels")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+_________________ test_zwei_nutzer_trip_radar_fehler_nur_bei_a _________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,045 ERROR alert_check_state: Radar-Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 2212, in _check_radar_trips
+    if not (result is not None and result.throttled):
+                                   ^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'throttled'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Radar-Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 2212, in _check_radar_trips
+    if not (result is not None and result.throttled):
+                                   ^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'throttled'
+_______________ test_zwei_nutzer_ortsvergleich_fehler_nur_bei_a ________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,034 ERROR alert_check_state: Compare-Amtlich-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 108, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 213, in _check_one_preset
+    sources = (official_warnings or {}).get("sources") or None
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Amtlich-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 108, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 213, in _check_one_preset
+    sources = (official_warnings or {}).get("sources") or None
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'
+_ test_trip_radar_deadline_ausserhalb_der_nowcast_handler_ist_partial_nicht_failed _
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,037 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (45.0s) erreicht fuer user_id=tdd-2261s2-f001-31b7c4 — checked=0 skipped=3 skipped_ids=['a', 'b', 'c']
+------------------------------ Captured log call -------------------------------
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (45.0s) erreicht fuer user_id=tdd-2261s2-f001-31b7c4 — checked=0 skipped=3 skipped_ids=['a', 'b', 'c']
+____ test_unwetterlauf_kaputter_trip_rueckt_in_der_reihenfolge_nach_hinten _____
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,012 INFO services.weather_snapshot: Dated snapshot saved: a-kaputt_2026-10-01.json
+2026-10-01 07:30:00,014 INFO services.weather_snapshot: Dated snapshot saved: b_2026-10-01.json
+2026-10-01 07:30:00,017 INFO services.weather_snapshot: Dated snapshot saved: c_2026-10-01.json
+2026-10-01 07:30:00,019 INFO services.weather_snapshot: Dated snapshot saved: d_2026-10-01.json
+2026-10-01 07:30:00,037 ERROR alert_check_state: Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1128, in check_all_trips
+    cached = self._get_cached_weather(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_alarmlauf_einheit_abschottung.py", line 844, in _get_cached_weather
+    raise RuntimeError("Wetter-Anker unlesbar")
+RuntimeError: Wetter-Anker unlesbar
+2026-10-01 07:30:00,676 WARNING trip_alert: check_all_trips: Zeitobergrenze (0.2s) ueberschritten fuer user_id=tdd-2261s2-f003-a34f98 — checked=2 skipped=2 skipped_ids=['c', 'd']
+2026-10-01 07:30:00,676 INFO trip_alert: check_all_trips: Lauf beendet nach 0.640s fuer user_id=tdd-2261s2-f003-a34f98 (checked=2 skipped=2 alerts_sent=1)
+2026-10-01 07:30:01,345 WARNING trip_alert: check_all_trips: Zeitobergrenze (0.2s) ueberschritten fuer user_id=tdd-2261s2-f003-a34f98 — checked=1 skipped=3 skipped_ids=['d', 'a-kaputt', 'b']
+2026-10-01 07:30:01,345 INFO trip_alert: check_all_trips: Lauf beendet nach 0.644s fuer user_id=tdd-2261s2-f003-a34f98 (checked=1 skipped=3 alerts_sent=1)
+------------------------------ Captured log call -------------------------------
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: a-kaputt_2026-10-01.json
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: b_2026-10-01.json
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: c_2026-10-01.json
+INFO     services.weather_snapshot:weather_snapshot.py:139 Dated snapshot saved: d_2026-10-01.json
+ERROR    alert_check_state:alert_check_state.py:119 Alarmlauf: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1128, in check_all_trips
+    cached = self._get_cached_weather(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_alarmlauf_einheit_abschottung.py", line 844, in _get_cached_weather
+    raise RuntimeError("Wetter-Anker unlesbar")
+RuntimeError: Wetter-Anker unlesbar
+WARNING  trip_alert:trip_alert.py:1189 check_all_trips: Zeitobergrenze (0.2s) ueberschritten fuer user_id=tdd-2261s2-f003-a34f98 — checked=2 skipped=2 skipped_ids=['c', 'd']
+INFO     trip_alert:trip_alert.py:1194 check_all_trips: Lauf beendet nach 0.640s fuer user_id=tdd-2261s2-f003-a34f98 (checked=2 skipped=2 alerts_sent=1)
+WARNING  trip_alert:trip_alert.py:1189 check_all_trips: Zeitobergrenze (0.2s) ueberschritten fuer user_id=tdd-2261s2-f003-a34f98 — checked=1 skipped=3 skipped_ids=['d', 'a-kaputt', 'b']
+INFO     trip_alert:trip_alert.py:1194 check_all_trips: Lauf beendet nach 0.644s fuer user_id=tdd-2261s2-f003-a34f98 (checked=1 skipped=3 alerts_sent=1)
+_ test_ortsvergleich_abweichung_unlesbare_faelligkeit_sperrt_alarm_und_zaehlt_failed _
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,025 ERROR alert_check_state: Compare-Briefing-Faelligkeit: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 169, in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_alarmlauf_einheit_abschottung.py", line 876, in _zone
+    raise RuntimeError("Zone nicht bestimmbar (Fehler-Injektion)")
+RuntimeError: Zone nicht bestimmbar (Fehler-Injektion)
+2026-10-01 07:30:00,026 ERROR alert_check_state: Compare-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 199, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 302, in _check_one_preset
+    if check_briefing_imminent(
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/alert_gate.py", line 358, in check_briefing_imminent
+    faellig_ab = _naechste_faelligkeit(now, briefing_due_at, vorlauf_minuten)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/alert_gate.py", line 252, in _naechste_faelligkeit
+    if briefing_due_at(moment):
+       ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 305, in <lambda>
+    briefing_due_at=lambda moment: due_or_raise(
+                                   ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 123, in due_or_raise
+    raise RuntimeError(f"Faelligkeitspruefung gescheitert fuer Preset {list(failed)}")
+RuntimeError: Faelligkeitspruefung gescheitert fuer Preset ['p-a-kaputt']
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Briefing-Faelligkeit: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 169, in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_alarmlauf_einheit_abschottung.py", line 876, in _zone
+    raise RuntimeError("Zone nicht bestimmbar (Fehler-Injektion)")
+RuntimeError: Zone nicht bestimmbar (Fehler-Injektion)
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 199, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 302, in _check_one_preset
+    if check_briefing_imminent(
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/alert_gate.py", line 358, in check_briefing_imminent
+    faellig_ab = _naechste_faelligkeit(now, briefing_due_at, vorlauf_minuten)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/alert_gate.py", line 252, in _naechste_faelligkeit
+    if briefing_due_at(moment):
+       ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_alert.py", line 305, in <lambda>
+    briefing_due_at=lambda moment: due_or_raise(
+                                   ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 123, in due_or_raise
+    raise RuntimeError(f"Faelligkeitspruefung gescheitert fuer Preset {list(failed)}")
+RuntimeError: Faelligkeitspruefung gescheitert fuer Preset ['p-a-kaputt']
+_ test_ortsvergleich_amtlich_unlesbare_faelligkeit_sperrt_alarm_und_zaehlt_failed _
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,029 ERROR alert_check_state: Compare-Briefing-Faelligkeit: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 169, in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_alarmlauf_einheit_abschottung.py", line 876, in _zone
+    raise RuntimeError("Zone nicht bestimmbar (Fehler-Injektion)")
+RuntimeError: Zone nicht bestimmbar (Fehler-Injektion)
+2026-10-01 07:30:00,029 ERROR alert_check_state: Compare-Amtlich-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 108, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 199, in _check_one_preset
+    if check_briefing_imminent(
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/alert_gate.py", line 358, in check_briefing_imminent
+    faellig_ab = _naechste_faelligkeit(now, briefing_due_at, vorlauf_minuten)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/alert_gate.py", line 252, in _naechste_faelligkeit
+    if briefing_due_at(moment):
+       ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 202, in <lambda>
+    briefing_due_at=lambda moment: due_or_raise(
+                                   ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 123, in due_or_raise
+    raise RuntimeError(f"Faelligkeitspruefung gescheitert fuer Preset {list(failed)}")
+RuntimeError: Faelligkeitspruefung gescheitert fuer Preset ['p-a-kaputt']
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Briefing-Faelligkeit: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 169, in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_alarmlauf_einheit_abschottung.py", line 876, in _zone
+    raise RuntimeError("Zone nicht bestimmbar (Fehler-Injektion)")
+RuntimeError: Zone nicht bestimmbar (Fehler-Injektion)
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Amtlich-Alarmlauf: Einheit p-a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 108, in _check_all_counted
+    if self._check_one_preset(preset, all_locations):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 199, in _check_one_preset
+    if check_briefing_imminent(
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/alert_gate.py", line 358, in check_briefing_imminent
+    faellig_ab = _naechste_faelligkeit(now, briefing_due_at, vorlauf_minuten)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/alert_gate.py", line 252, in _naechste_faelligkeit
+    if briefing_due_at(moment):
+       ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_official_alert.py", line 202, in <lambda>
+    briefing_due_at=lambda moment: due_or_raise(
+                                   ^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 123, in due_or_raise
+    raise RuntimeError(f"Faelligkeitspruefung gescheitert fuer Preset {list(failed)}")
+RuntimeError: Faelligkeitspruefung gescheitert fuer Preset ['p-a-kaputt']
+_______ test_ac11_kaputte_faelligkeitspruefung_haelt_folgetrip_nicht_auf _______
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:27,169 ERROR alert_check_state: Briefing-Sammellauf (Faelligkeit): Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_report_scheduler.py", line 614, in _collect_due_trips
+    if store.is_recorded_or_claimed(
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 172, in is_recorded_or_claimed
+    return self._log_bezeugt_versand(trip_id, slot, local_day, zone, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 404, in _log_bezeugt_versand
+    return self._log_traegt_versand(trip_id, slot, local_day, zone)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 447, in _log_traegt_versand
+    if local_dt(sent_at, zone or UTC).date() == local_day:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/timezone.py", line 125, in local_dt
+    return _as_utc(dt).astimezone(tz)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+OverflowError: date value out of range
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Briefing-Sammellauf (Faelligkeit): Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_report_scheduler.py", line 614, in _collect_due_trips
+    if store.is_recorded_or_claimed(
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 172, in is_recorded_or_claimed
+    return self._log_bezeugt_versand(trip_id, slot, local_day, zone, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 404, in _log_bezeugt_versand
+    return self._log_traegt_versand(trip_id, slot, local_day, zone)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 447, in _log_traegt_versand
+    if local_dt(sent_at, zone or UTC).date() == local_day:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/timezone.py", line 125, in local_dt
+    return _as_utc(dt).astimezone(tz)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+OverflowError: date value out of range
+_ test_ac12_kaputte_filterpruefung_wird_gezaehlt_geloggt_und_folgetrip_bedient _
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:27,197 ERROR alert_check_state: Briefing-Sammellauf (aktive Trips): Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_report_scheduler.py", line 975, in _get_active_trips
+    target_date = self._get_target_date(report_type, trip, now_utc)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_briefing_sammellauf_einheit_abschottung.py", line 220, in _get_target_date
+    raise RuntimeError("Zieltag nicht bestimmbar (Fehler-Injektion)")
+RuntimeError: Zieltag nicht bestimmbar (Fehler-Injektion)
+2026-10-07 05:28:27,198 ERROR alert_check_state: Briefing-Sammellauf (aktive Trips): Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_report_scheduler.py", line 975, in _get_active_trips
+    target_date = self._get_target_date(report_type, trip, now_utc)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_briefing_sammellauf_einheit_abschottung.py", line 220, in _get_target_date
+    raise RuntimeError("Zieltag nicht bestimmbar (Fehler-Injektion)")
+RuntimeError: Zieltag nicht bestimmbar (Fehler-Injektion)
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Briefing-Sammellauf (aktive Trips): Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_report_scheduler.py", line 975, in _get_active_trips
+    target_date = self._get_target_date(report_type, trip, now_utc)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_briefing_sammellauf_einheit_abschottung.py", line 220, in _get_target_date
+    raise RuntimeError("Zieltag nicht bestimmbar (Fehler-Injektion)")
+RuntimeError: Zieltag nicht bestimmbar (Fehler-Injektion)
+ERROR    alert_check_state:alert_check_state.py:119 Briefing-Sammellauf (aktive Trips): Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_report_scheduler.py", line 975, in _get_active_trips
+    target_date = self._get_target_date(report_type, trip, now_utc)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_briefing_sammellauf_einheit_abschottung.py", line 220, in _get_target_date
+    raise RuntimeError("Zieltag nicht bestimmbar (Fehler-Injektion)")
+RuntimeError: Zieltag nicht bestimmbar (Fehler-Injektion)
+_ test_ac13_skip_next_bleibt_bei_ausnahme_unverbraucht_und_wirkt_danach_einmal _
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:27,218 ERROR alert_check_state: Briefing-Sammellauf (Faelligkeit): Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_report_scheduler.py", line 614, in _collect_due_trips
+    if store.is_recorded_or_claimed(
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 172, in is_recorded_or_claimed
+    return self._log_bezeugt_versand(trip_id, slot, local_day, zone, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 404, in _log_bezeugt_versand
+    return self._log_traegt_versand(trip_id, slot, local_day, zone)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 447, in _log_traegt_versand
+    if local_dt(sent_at, zone or UTC).date() == local_day:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/timezone.py", line 125, in local_dt
+    return _as_utc(dt).astimezone(tz)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+OverflowError: date value out of range
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Briefing-Sammellauf (Faelligkeit): Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_report_scheduler.py", line 614, in _collect_due_trips
+    if store.is_recorded_or_claimed(
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 172, in is_recorded_or_claimed
+    return self._log_bezeugt_versand(trip_id, slot, local_day, zone, data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 404, in _log_bezeugt_versand
+    return self._log_traegt_versand(trip_id, slot, local_day, zone)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/briefing_slots.py", line 447, in _log_traegt_versand
+    if local_dt(sent_at, zone or UTC).date() == local_day:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/timezone.py", line 125, in local_dt
+    return _as_utc(dt).astimezone(tz)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+OverflowError: date value out of range
+________ test_ac14_kaputte_zonenbestimmung_haelt_folgepreset_nicht_auf _________
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:29,289 ERROR alert_check_state: Compare-Briefing-Faelligkeit: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 169, in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/timezone.py", line 93, in first_resolvable_tz
+    for location in locations:
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 170, in <genexpr>
+    (all_locations.get(lid) for lid in preset.get("location_ids") or []),
+     ^^^^^^^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Briefing-Faelligkeit: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 169, in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/timezone.py", line 93, in first_resolvable_tz
+    for location in locations:
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 170, in <genexpr>
+    (all_locations.get(lid) for lid in preset.get("location_ids") or []),
+     ^^^^^^^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+___________ test_ac14_kaputte_auto_pause_haelt_folgepreset_nicht_auf ___________
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:29,307 ERROR alert_check_state: Compare-Auto-Pause: Einheit 271828182 fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/scheduler_dispatch_service.py", line 128, in _auto_pause_expired_presets
+    save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/scheduler_dispatch_service.py", line 323, in save_compare_preset_pause
+    if not VALID_ENTITY_ID_RE.match(preset_id):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: expected string or bytes-like object, got 'int'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Auto-Pause: Einheit 271828182 fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/scheduler_dispatch_service.py", line 128, in _auto_pause_expired_presets
+    save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/scheduler_dispatch_service.py", line 323, in save_compare_preset_pause
+    if not VALID_ENTITY_ID_RE.match(preset_id):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: expected string or bytes-like object, got 'int'
+_ test_ac14_zonenbestimmung_wirft_andere_ausnahmeklasse_folgepreset_bleibt_faellig _
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:29,327 ERROR alert_check_state: Compare-Briefing-Faelligkeit: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 169, in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_briefing_sammellauf_einheit_abschottung.py", line 632, in _zone
+    raise RuntimeError("Zone nicht bestimmbar (Fehler-Injektion)")
+RuntimeError: Zone nicht bestimmbar (Fehler-Injektion)
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Briefing-Faelligkeit: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 169, in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_briefing_sammellauf_einheit_abschottung.py", line 632, in _zone
+    raise RuntimeError("Zone nicht bestimmbar (Fehler-Injektion)")
+RuntimeError: Zone nicht bestimmbar (Fehler-Injektion)
+_ test_ac14_pause_schreiben_wirft_andere_ausnahmeklasse_folgepreset_wird_pausiert _
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:29,346 ERROR alert_check_state: Compare-Auto-Pause: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/scheduler_dispatch_service.py", line 128, in _auto_pause_expired_presets
+    save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_briefing_sammellauf_einheit_abschottung.py", line 678, in _pause
+    raise RuntimeError("Pause nicht schreibbar (Fehler-Injektion)")
+RuntimeError: Pause nicht schreibbar (Fehler-Injektion)
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Auto-Pause: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/scheduler_dispatch_service.py", line 128, in _auto_pause_expired_presets
+    save_compare_preset_pause(user_id, preset.get("id", ""), data_root, now_iso)
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/tests/tdd/test_briefing_sammellauf_einheit_abschottung.py", line 678, in _pause
+    raise RuntimeError("Pause nicht schreibbar (Fehler-Injektion)")
+RuntimeError: Pause nicht schreibbar (Fehler-Injektion)
+______ test_ac10_zwei_nutzer_kaputtes_preset_bei_a_nutzer_b_voll_bedient _______
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:29,366 ERROR alert_check_state: Compare-Briefing-Faelligkeit: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 169, in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/timezone.py", line 93, in first_resolvable_tz
+    for location in locations:
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 170, in <genexpr>
+    (all_locations.get(lid) for lid in preset.get("location_ids") or []),
+     ^^^^^^^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Briefing-Faelligkeit: Einheit a-kaputt fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 169, in presets_due_for_hour
+    vor_ort = local_dt(now_utc, first_resolvable_tz(
+                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/timezone.py", line 93, in first_resolvable_tz
+    for location in locations:
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_slot_scheduler.py", line 170, in <genexpr>
+    (all_locations.get(lid) for lid in preset.get("location_ids") or []),
+     ^^^^^^^^^^^^^^^^^^^^^^
+TypeError: unhashable type: 'list'
+_______________ test_trip_radar_zwei_laeufe_decken_alle_trips_ab _______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,835 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac5-d72821 — checked=2 skipped=2 skipped_ids=['t-c', 't-d']
+2026-10-01 07:30:01,681 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac5-d72821 — checked=2 skipped=2 skipped_ids=['t-a', 't-b']
+------------------------------ Captured log call -------------------------------
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac5-d72821 — checked=2 skipped=2 skipped_ids=['t-c', 't-d']
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac5-d72821 — checked=2 skipped=2 skipped_ids=['t-a', 't-b']
+____________ test_compare_radar_zwei_laeufe_decken_alle_presets_ab _____________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,825 WARNING compare_radar_alert: check_all_compare_presets (radar): Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac6-3bddb7 — checked=2 skipped=2 skipped_ids=['p-c', 'p-d']
+2026-10-01 07:30:01,643 WARNING compare_radar_alert: check_all_compare_presets (radar): Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac6-3bddb7 — checked=2 skipped=2 skipped_ids=['p-a', 'p-b']
+------------------------------ Captured log call -------------------------------
+WARNING  compare_radar_alert:compare_radar_alert.py:191 check_all_compare_presets (radar): Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac6-3bddb7 — checked=2 skipped=2 skipped_ids=['p-c', 'p-d']
+WARNING  compare_radar_alert:compare_radar_alert.py:191 check_all_compare_presets (radar): Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac6-3bddb7 — checked=2 skipped=2 skipped_ids=['p-a', 'p-b']
+___________________ test_radar_endpunkte_melden_skipped_ids ____________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,839 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac7t-52ff55 — checked=2 skipped=2 skipped_ids=['e-c', 'e-d']
+2026-10-01 07:30:01,703 WARNING compare_radar_alert: check_all_compare_presets (radar): Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac7c-020e5f — checked=2 skipped=2 skipped_ids=['g-c', 'g-d']
+------------------------------ Captured log call -------------------------------
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac7t-52ff55 — checked=2 skipped=2 skipped_ids=['e-c', 'e-d']
+WARNING  compare_radar_alert:compare_radar_alert.py:191 check_all_compare_presets (radar): Zeitobergrenze (0.6s) erreicht fuer user_id=tdd-2261s2-ac7c-020e5f — checked=2 skipped=2 skipped_ids=['g-c', 'g-d']
+_________ test_deadline_abbruch_ist_keine_entwarnung_und_kein_ausfall __________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,085 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (45.0s) erreicht fuer user_id=tdd-2261s2-ac8-e19a9d — checked=0 skipped=1 skipped_ids=['trip-8']
+2026-10-01 07:30:00,109 ERROR trip_alert: Radar nowcast failed for trip trip-8: 503 Quelle
+------------------------------ Captured log call -------------------------------
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (45.0s) erreicht fuer user_id=tdd-2261s2-ac8-e19a9d — checked=0 skipped=1 skipped_ids=['trip-8']
+ERROR    trip_alert:trip_alert.py:2151 Radar nowcast failed for trip trip-8: 503 Quelle
+_________________________ test_radar_zustand_fail_open _________________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,034 WARNING alert_check_state: alert_last_checked_radar.json unlesbar (/tmp/pytest-of-hem/pytest-1435/data_root57/users/tdd-2261s2-ac13a-8bab17/alert_last_checked_radar.json): Expecting property name enclosed in double quotes: line 1 column 2 (char 1) — Reihenfolge nach Trip-ID
+2026-10-01 07:30:00,192 WARNING alert_check_state: alert_last_checked_radar.json: Sperre /tmp/pytest-of-hem/pytest-1435/data_root57/users/tdd-2261s2-ac13b-dddd05/alert_last_checked_radar.json.lock nicht erhalten — Stempel nicht gespeichert
+------------------------------ Captured log call -------------------------------
+WARNING  alert_check_state:alert_check_state.py:46 alert_last_checked_radar.json unlesbar (/tmp/pytest-of-hem/pytest-1435/data_root57/users/tdd-2261s2-ac13a-8bab17/alert_last_checked_radar.json): Expecting property name enclosed in double quotes: line 1 column 2 (char 1) — Reihenfolge nach Trip-ID
+WARNING  alert_check_state:alert_check_state.py:60 alert_last_checked_radar.json: Sperre /tmp/pytest-of-hem/pytest-1435/data_root57/users/tdd-2261s2-ac13b-dddd05/alert_last_checked_radar.json.lock nicht erhalten — Stempel nicht gespeichert
+_____________________ test_compare_radar_zustand_fail_open _____________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,028 WARNING alert_check_state: alert_last_checked_compare_radar.json unlesbar (/tmp/pytest-of-hem/pytest-1435/data_root58/users/tdd-2261s2-ac13c-719f6a/alert_last_checked_compare_radar.json): Expecting property name enclosed in double quotes: line 1 column 2 (char 1) — Reihenfolge nach Trip-ID
+------------------------------ Captured log call -------------------------------
+WARNING  alert_check_state:alert_check_state.py:46 alert_last_checked_compare_radar.json unlesbar (/tmp/pytest-of-hem/pytest-1435/data_root58/users/tdd-2261s2-ac13c-719f6a/alert_last_checked_compare_radar.json): Expecting property name enclosed in double quotes: line 1 column 2 (char 1) — Reihenfolge nach Trip-ID
+_________________ test_trip_radar_grenze_wirkt_im_ersten_abruf _________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,642 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (0.3s) erreicht fuer user_id=tdd-2261s2-f4a-316bd1 — checked=0 skipped=1 skipped_ids=['z-1']
+------------------------------ Captured log call -------------------------------
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (0.3s) erreicht fuer user_id=tdd-2261s2-f4a-316bd1 — checked=0 skipped=1 skipped_ids=['z-1']
+__________________ test_trip_radar_grenze_wirkt_am_zonenpunkt __________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:01,230 WARNING trip_alert: check_radar_alerts: Zeitobergrenze (1.05s) erreicht fuer user_id=tdd-2261s2-f1z-12b0e2 — checked=0 skipped=1 skipped_ids=['z-1']
+------------------------------ Captured log call -------------------------------
+WARNING  trip_alert:trip_alert.py:1894 check_radar_alerts: Zeitobergrenze (1.05s) erreicht fuer user_id=tdd-2261s2-f1z-12b0e2 — checked=0 skipped=1 skipped_ids=['z-1']
+______________ test_compare_radar_grenze_mitten_im_ortsvergleich _______________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,025 ERROR compare_radar_alert: Compare-Radar-Alert nowcast failed for mp/loc-mp-0: 503 Quelle
+2026-10-01 07:30:00,027 ERROR compare_radar_alert: Compare-Radar-Alert nowcast failed for mp/loc-mp-1: 503 Quelle
+2026-10-01 07:30:01,245 ERROR compare_radar_alert: Compare-Radar-Alert nowcast failed for mp/loc-mp-0: 503 Quelle
+2026-10-01 07:30:01,246 WARNING compare_radar_alert: check_all_compare_presets (radar): Zeitobergrenze (1.05s) erreicht fuer user_id=tdd-2261s2-f3-20a2bf — checked=0 skipped=1 skipped_ids=['mp']
+------------------------------ Captured log call -------------------------------
+ERROR    compare_radar_alert:compare_radar_alert.py:555 Compare-Radar-Alert nowcast failed for mp/loc-mp-0: 503 Quelle
+ERROR    compare_radar_alert:compare_radar_alert.py:555 Compare-Radar-Alert nowcast failed for mp/loc-mp-1: 503 Quelle
+ERROR    compare_radar_alert:compare_radar_alert.py:555 Compare-Radar-Alert nowcast failed for mp/loc-mp-0: 503 Quelle
+WARNING  compare_radar_alert:compare_radar_alert.py:191 check_all_compare_presets (radar): Zeitobergrenze (1.05s) erreicht fuer user_id=tdd-2261s2-f3-20a2bf — checked=0 skipped=1 skipped_ids=['mp']
+_________ test_compare_radar_endpunkt_meldet_abbruch_mitten_im_preset __________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:01,228 WARNING compare_radar_alert: check_all_compare_presets (radar): Zeitobergrenze (1.05s) erreicht fuer user_id=tdd-2261s2-f2ep-54e522 — checked=0 skipped=1 skipped_ids=['mp']
+------------------------------ Captured log call -------------------------------
+WARNING  compare_radar_alert:compare_radar_alert.py:191 check_all_compare_presets (radar): Zeitobergrenze (1.05s) erreicht fuer user_id=tdd-2261s2-f2ep-54e522 — checked=0 skipped=1 skipped_ids=['mp']
+________ test_compare_radar_ausfall_ort1_und_alarm_ort2_beides_wirksam _________
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,036 ERROR compare_radar_alert: Compare-Radar-Alert nowcast failed for mp/loc-mp-0: 503 Quelle
+------------------------------ Captured log call -------------------------------
+ERROR    compare_radar_alert:compare_radar_alert.py:555 Compare-Radar-Alert nowcast failed for mp/loc-mp-0: 503 Quelle
+____ test_compare_radar_ausfall_ort1_bleibt_bei_unerwartetem_fehler_an_ort2 ____
+----------------------------- Captured stderr call -----------------------------
+2026-10-01 07:30:00,024 ERROR compare_radar_alert: Compare-Radar-Alert nowcast failed for mp/loc-mp-0: 503 Quelle
+2026-10-01 07:30:00,024 ERROR alert_check_state: Compare-Radar-Alarmlauf: Einheit mp fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 171, in check_all_compare_presets_run
+    if self._check_one_preset(preset, all_locations, deadline_at):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 297, in _check_one_preset
+    triggered = self._detect_triggered_locations(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 569, in _detect_triggered_locations
+    if result.data_unavailable:
+       ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'data_unavailable'
+------------------------------ Captured log call -------------------------------
+ERROR    compare_radar_alert:compare_radar_alert.py:555 Compare-Radar-Alert nowcast failed for mp/loc-mp-0: 503 Quelle
+ERROR    alert_check_state:alert_check_state.py:119 Compare-Radar-Alarmlauf: Einheit mp fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 171, in check_all_compare_presets_run
+    if self._check_one_preset(preset, all_locations, deadline_at):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 297, in _check_one_preset
+    triggered = self._detect_triggered_locations(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/compare_radar_alert.py", line 569, in _detect_triggered_locations
+    if result.data_unavailable:
+       ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'object' object has no attribute 'data_unavailable'
+_____ test_radar_run_skips_broken_trip_and_still_checks_next_trip[ortstag] _____
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:50,421 ERROR alert_check_state: Radar-Alarmlauf: Einheit t2217-a-bb1a7c fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1932, in _check_radar_trips
+    today = trip_local_today(trip, now_utc)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 96, in trip_local_today
+    return trip_local_now(trip, now_utc).date()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 87, in trip_local_now
+    return local_dt(now_utc, anchor_tz(trip, now_utc))
+                             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 71, in anchor_tz
+    return display_tz(trip, local_dt(now_utc, UTC).date())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 52, in display_tz
+    return tz_for_coords(wp.lat, wp.lon)
+                         ^^^^^^
+AttributeError: 'NoneType' object has no attribute 'lat'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Radar-Alarmlauf: Einheit t2217-a-bb1a7c fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1932, in _check_radar_trips
+    today = trip_local_today(trip, now_utc)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 96, in trip_local_today
+    return trip_local_now(trip, now_utc).date()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 87, in trip_local_now
+    return local_dt(now_utc, anchor_tz(trip, now_utc))
+                             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 71, in anchor_tz
+    return display_tz(trip, local_dt(now_utc, UTC).date())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 52, in display_tz
+    return tz_for_coords(wp.lat, wp.lon)
+                         ^^^^^^
+AttributeError: 'NoneType' object has no attribute 'lat'
+_____ test_radar_run_skips_broken_trip_and_still_checks_next_trip[segment] _____
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:50,449 ERROR alert_check_state: Radar-Alarmlauf: Einheit t2217-a-9a82f1 fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1941, in _check_radar_trips
+    _resolved = self._resolve_alert_segment(trip, now_utc, today)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1759, in _resolve_alert_segment
+    return resolve_current_segment(trip, now_utc, today)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_segments.py", line 489, in resolve_current_segment
+    segments_today = convert_trip_to_segments(trip, today)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_segments.py", line 301, in convert_trip_to_segments
+    dist_km = haversine_km(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/geo.py", line 22, in haversine_km
+    d_lat = (lat2 - lat1) * rad
+             ~~~~~^~~~~~
+TypeError: unsupported operand type(s) for -: 'float' and 'NoneType'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Radar-Alarmlauf: Einheit t2217-a-9a82f1 fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1941, in _check_radar_trips
+    _resolved = self._resolve_alert_segment(trip, now_utc, today)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1759, in _resolve_alert_segment
+    return resolve_current_segment(trip, now_utc, today)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_segments.py", line 489, in resolve_current_segment
+    segments_today = convert_trip_to_segments(trip, today)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_segments.py", line 301, in convert_trip_to_segments
+    dist_km = haversine_km(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/geo.py", line 22, in haversine_km
+    d_lat = (lat2 - lat1) * rad
+             ~~~~~^~~~~~
+TypeError: unsupported operand type(s) for -: 'float' and 'NoneType'
+_____ test_radar_run_counts_broken_trip_as_failed_with_stacktrace[ortstag] _____
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:50,474 ERROR alert_check_state: Radar-Alarmlauf: Einheit t2217-a-5de1e3 fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1932, in _check_radar_trips
+    today = trip_local_today(trip, now_utc)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 96, in trip_local_today
+    return trip_local_now(trip, now_utc).date()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 87, in trip_local_now
+    return local_dt(now_utc, anchor_tz(trip, now_utc))
+                             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 71, in anchor_tz
+    return display_tz(trip, local_dt(now_utc, UTC).date())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 52, in display_tz
+    return tz_for_coords(wp.lat, wp.lon)
+                         ^^^^^^
+AttributeError: 'NoneType' object has no attribute 'lat'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Radar-Alarmlauf: Einheit t2217-a-5de1e3 fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1932, in _check_radar_trips
+    today = trip_local_today(trip, now_utc)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 96, in trip_local_today
+    return trip_local_now(trip, now_utc).date()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 87, in trip_local_now
+    return local_dt(now_utc, anchor_tz(trip, now_utc))
+                             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 71, in anchor_tz
+    return display_tz(trip, local_dt(now_utc, UTC).date())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_day.py", line 52, in display_tz
+    return tz_for_coords(wp.lat, wp.lon)
+                         ^^^^^^
+AttributeError: 'NoneType' object has no attribute 'lat'
+_____ test_radar_run_counts_broken_trip_as_failed_with_stacktrace[segment] _____
+----------------------------- Captured stderr call -----------------------------
+2026-10-07 05:28:50,551 ERROR alert_check_state: Radar-Alarmlauf: Einheit t2217-a-0ffcc5 fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1941, in _check_radar_trips
+    _resolved = self._resolve_alert_segment(trip, now_utc, today)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1759, in _resolve_alert_segment
+    return resolve_current_segment(trip, now_utc, today)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_segments.py", line 489, in resolve_current_segment
+    segments_today = convert_trip_to_segments(trip, today)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_segments.py", line 301, in convert_trip_to_segments
+    dist_km = haversine_km(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/geo.py", line 22, in haversine_km
+    d_lat = (lat2 - lat1) * rad
+             ~~~~~^~~~~~
+TypeError: unsupported operand type(s) for -: 'float' and 'NoneType'
+------------------------------ Captured log call -------------------------------
+ERROR    alert_check_state:alert_check_state.py:119 Radar-Alarmlauf: Einheit t2217-a-0ffcc5 fehlgeschlagen
+Traceback (most recent call last):
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1941, in _check_radar_trips
+    _resolved = self._resolve_alert_segment(trip, now_utc, today)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_alert.py", line 1759, in _resolve_alert_segment
+    return resolve_current_segment(trip, now_utc, today)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_segments.py", line 489, in resolve_current_segment
+    segments_today = convert_trip_to_segments(trip, today)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/services/trip_segments.py", line 301, in convert_trip_to_segments
+    dist_km = haversine_km(wp1.lat, wp1.lon, wp2.lat, wp2.lon)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hem/gregor_zwanzig/.claude/worktrees/melodic-prancing-cookie/src/utils/geo.py", line 22, in haversine_km
+    d_lat = (lat2 - lat1) * rad
+             ~~~~~^~~~~~
+TypeError: unsupported operand type(s) for -: 'float' and 'NoneType'
+=========================== short test summary info ============================
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_trip_radar_kaputter_trip_reisst_folgetrip_nicht_mit
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_unwetterlauf_kaputter_trip_reisst_folgetrip_nicht_mit
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_ortsvergleich_abweichungslauf_kaputtes_preset_reisst_folgepreset_nicht_mit
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_ortsvergleich_radarlauf_kaputtes_preset_reisst_folgepreset_nicht_mit
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_ortsvergleich_amtlich_kaputtes_preset_reisst_folgepreset_nicht_mit
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_trip_radar_grenzabbruch_nach_gescheitertem_trip_partial_und_failed
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_trip_radar_reiner_grenzabbruch_meldet_failed_null
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_ortsvergleich_radar_grenzabbruch_nach_gescheitertem_preset_partial_und_failed
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_kaputter_trip_rueckt_in_der_reihenfolge_nach_hinten
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_log_trip_radar_nennt_trip_id_mit_stacktrace
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_log_unwetterlauf_nennt_trip_id_mit_stacktrace
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_log_ortsvergleich_amtlich_nennt_preset_id_mit_stacktrace
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_log_ortsvergleich_radar_nennt_preset_id_mit_stacktrace
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_log_ortsvergleich_abweichung_nennt_preset_id_mit_stacktrace
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_zwei_nutzer_trip_radar_fehler_nur_bei_a
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_zwei_nutzer_ortsvergleich_fehler_nur_bei_a
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_trip_radar_deadline_ausserhalb_der_nowcast_handler_ist_partial_nicht_failed
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_unwetterlauf_kaputter_trip_rueckt_in_der_reihenfolge_nach_hinten
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_ortsvergleich_abweichung_unlesbare_faelligkeit_sperrt_alarm_und_zaehlt_failed
+PASSED tests/tdd/test_alarmlauf_einheit_abschottung.py::test_ortsvergleich_amtlich_unlesbare_faelligkeit_sperrt_alarm_und_zaehlt_failed
+PASSED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac11_kaputte_faelligkeitspruefung_haelt_folgetrip_nicht_auf
+PASSED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac12_kaputte_filterpruefung_wird_gezaehlt_geloggt_und_folgetrip_bedient
+PASSED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac13_skip_next_bleibt_bei_ausnahme_unverbraucht_und_wirkt_danach_einmal
+PASSED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac14_kaputte_zonenbestimmung_haelt_folgepreset_nicht_auf
+PASSED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac14_kaputte_auto_pause_haelt_folgepreset_nicht_auf
+PASSED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac14_zonenbestimmung_wirft_andere_ausnahmeklasse_folgepreset_bleibt_faellig
+PASSED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac14_pause_schreiben_wirft_andere_ausnahmeklasse_folgepreset_wird_pausiert
+PASSED tests/tdd/test_briefing_sammellauf_einheit_abschottung.py::test_ac10_zwei_nutzer_kaputtes_preset_bei_a_nutzer_b_voll_bedient
+PASSED tests/test_success_status_guard.py::test_scanner_finds_every_spec_listed_finding
+PASSED tests/test_success_status_guard.py::test_no_unlisted_success_status_findings
+PASSED tests/test_success_status_guard.py::test_known_violations_only_shrink
+PASSED tests/test_success_status_guard.py::test_scanner_detects_constant_success_from_call_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_diverging_except_return_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_pre_try_success_marker_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_partial_success_blind_loop_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_tuple_shaped_decoy_without_real_failure_counter
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_pure_computation_calls_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_house_norm_sent_failed_tuple_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_unwired_heartbeat_function_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_wired_heartbeat_call_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_unacknowledged_dispatch_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_acknowledged_dispatch_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_persistence_only_swallow_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_webhook_ack_is_documented_exception_not_silent_pass
+PASSED tests/test_success_status_guard.py::test_public_host_info_exceptions_keep_their_wording
+PASSED tests/test_success_status_guard.py::test_intentional_exceptions_carry_nonempty_justification
+PASSED tests/test_success_status_guard.py::test_intentional_exception_list_cannot_grow
+PASSED tests/test_success_status_guard.py::test_scan_scope_excludes_go_internal_tree
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_pure_liveness_endpoint
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_trip_radar_zwei_laeufe_decken_alle_trips_ab
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_trip_radar_reihenfolge_kommt_aus_radar_stempeln_nicht_aus_abweichungsdatei
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_compare_radar_zwei_laeufe_decken_alle_presets_ab
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_compare_radar_haelt_sich_an_den_gemeinsamen_store_und_seine_reihenfolge
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_radar_laeufe_legen_die_abweichungsdatei_nicht_an
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_radar_endpunkte_melden_skipped_ids
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_deadline_abbruch_ist_keine_entwarnung_und_kein_ausfall
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_radar_zustand_zwei_nutzer_nie_default
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_radar_zustand_fail_open
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_compare_radar_zustand_fail_open
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_trip_radar_grenze_wirkt_im_ersten_abruf
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_trip_radar_grenze_wirkt_am_zonenpunkt
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_compare_radar_grenze_mitten_im_ortsvergleich
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_compare_radar_endpunkt_meldet_abbruch_mitten_im_preset
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_compare_radar_ausfall_ort1_und_alarm_ort2_beides_wirksam
+PASSED tests/tdd/test_radar_alarmlauf_fairness.py::test_compare_radar_ausfall_ort1_bleibt_bei_unerwartetem_fehler_an_ort2
+PASSED tests/unit/test_radar_alert_trip_isolation.py::test_radar_run_skips_broken_trip_and_still_checks_next_trip[ortstag]
+PASSED tests/unit/test_radar_alert_trip_isolation.py::test_radar_run_skips_broken_trip_and_still_checks_next_trip[segment]
+PASSED tests/unit/test_radar_alert_trip_isolation.py::test_radar_run_counts_broken_trip_as_failed_with_stacktrace[ortstag]
+PASSED tests/unit/test_radar_alert_trip_isolation.py::test_radar_run_counts_broken_trip_as_failed_with_stacktrace[segment]
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac3_aenderungsalarm_schweigt_wenn_das_briefing_unmittelbar_bevorsteht
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac3_abend_slot_wirkt_wie_der_morgen_slot
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac7_abgelaufenes_end_date_ist_stumm_kein_abruf
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac7_abgeschaltete_slots_werden_nie_gesperrt
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac7_stillgelegte_presets_bleiben_wie_bisher_stumm[schedule_manual-kwargs0]
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac7_stillgelegte_presets_bleiben_wie_bisher_stumm[paused_at-kwargs1]
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac7_stillgelegte_presets_bleiben_wie_bisher_stumm[archived_at-kwargs2]
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac10_und_ac13_gesperrter_lauf_hinterlaesst_keine_spur
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac15_sperre_wirkt_nur_auf_die_eigenen_daten_des_nutzers
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac5_der_briefing_versuch_beendet_die_sperre[erfolgreich-True]
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac5_der_briefing_versuch_beendet_die_sperre[gescheitert-True]
+PASSED tests/tdd/test_compare_alert_briefing_imminent.py::test_ac5_der_briefing_versuch_beendet_die_sperre[ohne_versuch-False]
+PASSED tests/tdd/test_compare_official_alert.py::test_ac1_new_warning_triggers_one_bundled_alert_and_state
+PASSED tests/tdd/test_compare_official_alert.py::test_ac2_location_scope_dedup_and_free_chip
+PASSED tests/tdd/test_compare_official_alert.py::test_ac3_all_three_channels_dispatched_when_opted_in
+PASSED tests/tdd/test_compare_official_alert.py::test_f006_duplicate_names_partial_scope_not_all_locations
+PASSED tests/tdd/test_compare_official_alert.py::test_f005_duplicate_location_names_state_attributed_to_correct_id
+PASSED tests/tdd/test_compare_official_alert.py::test_f001_compare_alert_localizes_validity_to_location_timezone
+PASSED tests/tdd/test_compare_official_alert.py::test_ac4_dedup_then_escalation_refires
+PASSED tests/tdd/test_compare_official_alert.py::test_ac5_default_email_only
+PASSED tests/tdd/test_compare_official_alert.py::test_ac6_trigger_toggle_disabled_no_fetch
+PASSED tests/tdd/test_compare_official_alert.py::test_ac7_two_users_isolated
+PASSED tests/tdd/test_compare_official_alert.py::test_ac8_scheduler_endpoint_delegates
+PASSED tests/tdd/test_compare_official_alert.py::test_ac1_quiet_hours_suppresses_send_state_and_limit
+PASSED tests/tdd/test_compare_official_alert.py::test_ac2_quiet_hour_suppression_does_not_permanently_swallow_warning
+PASSED tests/tdd/test_compare_official_alert.py::test_ac3_manual_schedule_disabled_compare_suppresses_send
+PASSED tests/tdd/test_compare_official_alert.py::test_ac4_archived_preset_suppresses_send
+PASSED tests/tdd/test_compare_official_alert.py::test_ac5_active_daily_preset_still_sends_no_regression
+============================= 97 passed in 31.02s ==============================

@@ -3,7 +3,7 @@ entity_id: issue_278_form_controls_tests
 type: tests
 created: 2026-05-20
 updated: 2026-05-20
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, svelte5, ui-primitive, checkbox, select, design-system, issue-278]
 parent: issue_278_form_controls
@@ -18,12 +18,12 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_278_form_controls.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_278_form_controls.md`.
 Da Issue #278 rein Frontend ist (Svelte-Komponenten, kein Python-Code),
 prüfen die Tests Datei-Existenz und Inhalts-Invarianten der Svelte-Dateien
 sowie die vollständige Migration aller nativen Checkboxen und Selects.
 
-Parent-Spec: `docs/specs/modules/issue_278_form_controls.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_278_form_controls.md` v1.0
 
 ## Source
 

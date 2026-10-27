@@ -12,7 +12,13 @@
 //   npx playwright test --config=playwright.1461-s3b2b.staging.config.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation, createTestComparePreset, createTestTrip, cleanupTracked } from './helpers';
+import {
+	createTestLocation,
+	createTestComparePreset,
+	createTestTrip,
+	cleanupTracked,
+	registriereBestaetigtenZweitnutzer
+} from './helpers';
 
 function trackConsoleErrors(page: Page): string[] {
 	const errors: string[] = [];
@@ -119,6 +125,11 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 	});
 
 	// ── AC-15: Telegram/SMS-Schalter im Hub — Speicher-Bugfix ──────────────────
+	// Issue #2293 S2 (AC-4/AC-10 Entkopplung): der Alarme-Reiter-Klick schreibt
+	// seither `alert_channels.{telegram,sms}`, NIE mehr `send_telegram`/
+	// `send_sms` (Briefing-Felder des Versand-Reiters, Payload-Trennung gegen
+	// den Same-Tab-Race, Beleg-Kern-Test
+	// compare_alarm_versand_nutzlast_trennung.test.ts AC-10).
 	test('AC-15: Hub — Telegram- und SMS-Schalter speichern jetzt wirklich, Reload behält Stellung (vorher: Rücksprung-Bug)', async ({
 		page
 	}) => {
@@ -148,9 +159,18 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 		await telegramSwitch.click();
 		const putRes1 = await putPromise1;
 		expect(putRes1.ok(), `PUT nach Telegram-Switch fehlgeschlagen: ${putRes1.status()}`).toBeTruthy();
-		const body1 = putRes1.request().postDataJSON() as { send_telegram?: boolean };
-		expect(body1.send_telegram, 'PUT-Body enthält kein send_telegram — der bestätigte Speicher-Bug wäre noch da').toBeDefined();
-		expect(body1.send_telegram).toBe(telegramBefore === 'false');
+		// #2293 S2: der Alarme-Reiter-Klick trägt `alert_channels.telegram`, NIE
+		// mehr `send_telegram` (Briefing-Feld, bleibt vom Alarm-Klick unangetastet).
+		const body1 = putRes1.request().postDataJSON() as {
+			alert_channels?: Record<string, boolean>;
+			send_telegram?: boolean;
+		};
+		expect(body1.alert_channels, 'PUT-Body ohne alert_channels — der bestätigte Speicher-Bug wäre noch da').toBeTruthy();
+		expect(body1.alert_channels!.telegram).toBe(telegramBefore === 'false');
+		expect(
+			body1.send_telegram,
+			'#2293 S2 AC-4 FAIL: der Alarm-Kanal-Klick hat send_telegram (Briefing-Feld) mitgeschrieben.'
+		).toBeUndefined();
 		await expect(telegramSwitch).toHaveAttribute('aria-checked', telegramBefore === 'false' ? 'true' : 'false', {
 			timeout: 5_000
 		});
@@ -162,9 +182,16 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 		await smsSwitch.click();
 		const putRes2 = await putPromise2;
 		expect(putRes2.ok(), `PUT nach SMS-Switch fehlgeschlagen: ${putRes2.status()}`).toBeTruthy();
-		const body2 = putRes2.request().postDataJSON() as { send_sms?: boolean };
-		expect(body2.send_sms, 'PUT-Body enthält kein send_sms').toBeDefined();
-		expect(body2.send_sms).toBe(smsBefore === 'false');
+		const body2 = putRes2.request().postDataJSON() as {
+			alert_channels?: Record<string, boolean>;
+			send_sms?: boolean;
+		};
+		expect(body2.alert_channels, 'PUT-Body ohne alert_channels (sms)').toBeTruthy();
+		expect(body2.alert_channels!.sms).toBe(smsBefore === 'false');
+		expect(
+			body2.send_sms,
+			'#2293 S2 AC-4 FAIL: der Alarm-Kanal-Klick hat send_sms (Briefing-Feld) mitgeschrieben.'
+		).toBeUndefined();
 
 		// ── Reload — der eigentliche Beweis, kein Rücksprung ────────────────
 		await page.reload();
@@ -210,8 +237,8 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 			await lib.getByText(loc.name, { exact: true }).click();
 		}
 
-		await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
-		await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
 		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
 
 		// CompareNewEditor montiert .cm-desktop UND .cm-mobile gleichzeitig —
@@ -236,7 +263,7 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 		await (await thresholdBtnIn(desktop, 'telegram', 'HIGH')).click();
 		await expect(await thresholdBtnIn(desktop, 'telegram', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
 
-		await page.locator('[data-testid="compare-editor-tab-versand"]:visible').first().click();
+		// Issue #1743: Alarme ist der letzte Schritt — Aktivieren direkt von hier.
 
 		const [postRes] = await Promise.all([
 			page.waitForResponse(
@@ -304,8 +331,8 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 		// echte Klickpfad geht über den X-Knopf, aria-label "Schliessen").
 		await page.getByRole('button', { name: 'Schliessen' }).click();
 
-		await mobile.getByTestId('cm-mobile-tab-metriken').click({ force: true });
-		await mobile.getByTestId('cm-mobile-tab-idealwerte').click({ force: true });
+		await mobile.getByTestId('cm-mobile-tab-wetter-metriken').click({ force: true });
+		await mobile.getByTestId('cm-mobile-tab-wertebereiche').click({ force: true });
 		await mobile.getByTestId('cm-mobile-tab-alarme').click({ force: true });
 
 		const picker = mobile.getByTestId('alert-channel-picker');
@@ -353,16 +380,17 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 			await expect(page.getByTestId(`alert-channel-threshold-${kind}`)).toBeVisible({ timeout: 10_000 });
 		}
 
-		// Speichern über einen unbeteiligten Weg (Stages-Tab, Aktivität ändern) —
+		// Speichern über einen unbeteiligten Weg (Aktivität ändern — seit #2284 S2
+		// als Kachel im Trip-Kopf statt Auswahlliste im Stages-Tab) —
 		// AC-16 verlangt: Trip-Oberfläche öffnen und speichern, kein Fehler.
-		await page.goto(`/trips/${trip.id}?tab=stages`);
-		await expect(page.getByTestId('trip-detail-panel-stages')).toBeVisible({ timeout: 15_000 });
-		const activitySelect = page.getByTestId('edit-activity-dropdown');
-		await expect(activitySelect).toBeVisible({ timeout: 10_000 });
+		await page.goto(`/trips/${trip.id}?tab=etappen`);
+		await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 15_000 });
+		const activityTile = page.getByTestId('trip-profil-option-mtb');
+		await expect(activityTile).toBeVisible({ timeout: 10_000 });
 		const putPromise = page.waitForResponse(
 			(res) => res.url().includes(`/api/trips/${trip.id}`) && res.request().method() === 'PUT'
 		);
-		await activitySelect.selectOption('mtb');
+		await activityTile.click();
 		const putRes = await putPromise;
 		expect(putRes.ok(), `Trip-Speichern fehlgeschlagen: ${putRes.status()}`).toBeTruthy();
 		await page.screenshot({
@@ -417,14 +445,10 @@ test.describe('Issue #1461 S3b-2b: Kanal-Schwelle Ortsvergleiche', () => {
 			ctxB = await browser.newContext({ storageState: undefined });
 			const pageB = await ctxB.newPage();
 			const userB = `e2e1461s3b2b${suffix}`;
-			const reg = await pageB.request.post('/api/auth/register', {
-				data: { username: userB, password: 'Test1234!x', email: `${userB}@example.com` }
-			});
-			expect([200, 201].includes(reg.status()), `Registrierung B fehlgeschlagen: ${reg.status()}`).toBeTruthy();
-			const loginB = await pageB.request.post('/api/auth/login', {
-				data: { username: userB, password: 'Test1234!x' }
-			});
-			expect(loginB.ok(), `Login B fehlgeschlagen: ${loginB.status()}`).toBeTruthy();
+			// Issue #2271: registrieren → Token ueber AS angemeldete Sitzung holen →
+			// bestaetigen → erst dann anmelden. Ohne die Bestaetigung dazwischen
+			// antwortet der Login mit 403 (das Gate sitzt in issueSession).
+			await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, userB, 'Test1234!x');
 
 			// Nutzer B legt eigenen Ortsvergleich an — ohne eigene Schwelle: "gering".
 			const locB = await createTestLocation(pageB.request, { name: `S3b2b Mandant B ${suffix}`, lat: 48.3, lon: 12.4 });

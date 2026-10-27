@@ -46,9 +46,9 @@ async function openLayoutTab(page: Page, orteNamen: string[]): Promise<void> {
 
 	// Wetter-Metriken besuchen → Wertebereiche frei; Wertebereiche besuchen →
 	// Layout frei; dann Layout öffnen.
-	await page.locator('[data-testid="compare-editor-tab-metriken"]:visible').first().click();
-	await page.locator('[data-testid="compare-editor-tab-idealwerte"]:visible').first().click();
-	const layoutTab = page.locator('[data-testid="compare-editor-tab-layout"]:visible').first();
+	await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
+	await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
+	const layoutTab = page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first();
 	await expect(async () => {
 		await layoutTab.click();
 		await expect(
@@ -97,7 +97,7 @@ test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () =>
 		await metric.click();
 		// Klick darf den Editor nicht wegwerfen — der Layout-Tab bleibt aktiv.
 		await expect(
-			page.locator('[data-testid="compare-editor-tab-layout"]:visible').first()
+			page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first()
 		).toHaveAttribute('data-active', 'true');
 	});
 
@@ -122,7 +122,7 @@ test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () =>
 		await expect(page.locator('[data-testid="compare-editor"]:visible')).toBeVisible();
 		await page.locator('[data-testid="compare-editor-name"]').fill('LayoutTab Empty ' + Date.now());
 
-		const layoutTab = page.locator('[data-testid="compare-editor-tab-layout"]:visible').first();
+		const layoutTab = page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first();
 		await expect(layoutTab).toHaveAttribute('data-locked', 'true', { timeout: 8_000 });
 		await layoutTab.click();
 		await expect(

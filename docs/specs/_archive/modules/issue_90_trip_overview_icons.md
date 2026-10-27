@@ -3,7 +3,7 @@ entity_id: issue_90_trip_overview_icons
 type: module
 created: 2026-05-15
 updated: 2026-05-15
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, ui, trips, design-system]
 ---

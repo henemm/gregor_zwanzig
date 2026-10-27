@@ -8,7 +8,6 @@ ALLE Tests muessen FEHLSCHLAGEN, weil:
 - api/routers/notify.py existiert noch nicht
 - Der Endpoint POST /api/notify/test existiert noch nicht
 """
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -75,19 +74,78 @@ def test_notify_test_unknown_channel_returns_error():
     assert "error" in data, f"Erwarte error-Key bei unbekanntem Kanal, bekam: {data}"
 
 
-# -- Test 5: Gueltiger Kanal gibt status ok zurueck --
+# -- Test 5: user_id "default" sendet keine Testmail --
+# Abgeloest durch #2521 S2 / ADR-0092: vorher sendete dieser Test (Marker
+# ``email``) eine ECHTE Mail unter ``user_id="default"`` und erwartete
+# ``status: ok``. Neu sperrt der Dienst ``"default"`` -- es wird nicht mehr
+# gewaehlt, deshalb laeuft der Test ohne Marker im Kern, mit Aufzeichner am
+# SMTP-Rand und hermetischer Umgebung (keine Projekt-``.env``).
 
-# Dialt real (echter SMTP-Versand) -- #1211 Scheibe 2b Batch 3, nur via Marker ausfuehren.
-@pytest.mark.email
-def test_notify_test_email_returns_ok():
+def test_notify_test_email_mit_default_kennung_sendet_nichts(monkeypatch):
     """
-    GIVEN: Ein User mit konfigurierter E-Mail
-    WHEN: POST /api/notify/test mit channel=email
-    THEN: Response enthaelt {"status": "ok"}
+    GIVEN: Ein vollstaendiges, bestaetigtes Profil unter ``default`` und eine
+           globale Betreiber-Adresse
+    WHEN: POST /api/notify/test mit channel=email und user_id=default
+    THEN: Response enthaelt {"error": ...}, keine SMTP-Verbindung
+    """
+    import json
 
-    Hinweis: Dieser Test sendet eine ECHTE E-Mail.
-    Der Default-User muss mail_to konfiguriert haben.
-    """
+    from app.config import Settings
+    from app.loader import get_data_dir
+    from output.channels import email as email_mod
+
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+    for key, wert in {
+        "GZ_ENV": "production",
+        "GZ_IS_TEST_MODE": "false",
+        "GZ_SMTP_HOST": "versandkette-pruefung.henemm.com",
+        "GZ_SMTP_USER": "versandkette",
+        "GZ_SMTP_PASS": "kein-echtes-passwort",
+        "GZ_MAIL_FROM": "gregor_zwanzig@henemm.com",
+        "GZ_MAIL_TO": "betreiber-rueckfall@henemm.com",
+        "GZ_TEST_SMTP_HOST": "stalwart-pruefung.henemm.com",
+        "GZ_TEST_SMTP_USER": "gregor-test",
+        "GZ_TEST_SMTP_PASS": "kein-echtes-passwort",
+    }.items():
+        monkeypatch.setenv(key, wert)
+
+    verbindungen: list[str] = []
+
+    class _SmtpAufzeichner:
+        def __init__(self, host, port, timeout=None):
+            verbindungen.append(host)
+
+            class _Sock:
+                def settimeout(self, t):
+                    pass
+
+            self.sock = _Sock()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def starttls(self):
+            pass
+
+        def login(self, user, password):
+            pass
+
+        def sendmail(self, from_addr, to_addrs, msg):
+            pass
+
+    monkeypatch.setattr(email_mod.smtplib, "SMTP", _SmtpAufzeichner)
+    monkeypatch.setattr(email_mod, "running_origin", lambda module_file: "production")
+
+    ordner = get_data_dir("default")
+    ordner.mkdir(parents=True, exist_ok=True)
+    (ordner / "user.json").write_text(json.dumps({
+        "id": "default", "mail_to": "default-profil@henemm.com",
+        "email_verified_at": "2026-10-01T08:00:00Z",
+    }))
+
     from api.main import app
     client = TestClient(app)
     resp = client.post(
@@ -96,9 +154,10 @@ def test_notify_test_email_returns_ok():
         params={"user_id": "default"},
     )
     data = resp.json()
-    assert data.get("status") == "ok", (
-        f"Erwarte {{'status': 'ok'}}, bekam: {data}"
+    assert "error" in data and "status" not in data, (
+        f"Erwarte {{'error': ...}} fuer user_id=default, bekam: {data}"
     )
+    assert verbindungen == [], f"user_id=default darf nicht waehlen, gesehen {verbindungen!r}"
 
 
 # -- Test 6: Fehlender user_id Parameter --

@@ -1,3 +1,10 @@
+---
+entity_id: feat_873_snow_thresholds
+type: module
+created: 2026-06-24
+status: implemented
+---
+
 # Spec: #873 — Schneehöhe/Schneefallgrenze als SMS-Display-Filter
 
 ## Ziel
@@ -54,7 +61,7 @@ sichtbar und speicherbar.
 
 ## Technische Umsetzung
 
-### 1. `src/formatters/sms_trip.py`
+### 1. `src/output/renderers/sms_trip.py`
 
 `SMS_SYMBOL_BY_METRIC` um zwei Einträge ergänzen:
 ```python

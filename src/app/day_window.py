@@ -14,6 +14,8 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta, timezone, tzinfo
 from typing import TYPE_CHECKING, Optional
 
+from utils.timezone import to_utc
+
 if TYPE_CHECKING:  # pragma: no cover - nur fuer Typpruefer
     from app.models import TripSegment
 
@@ -84,6 +86,65 @@ def window_end_utc_exclusive(
     )
 
 
+def segment_window_points(
+    start_time: datetime, end_time: datetime, points,
+) -> list:
+    """Die Stundenpunkte, die zu GENAU diesem Segmentfenster gehoeren.
+
+    🔴 EINE Quelle fuer zwei Rechnungen (Issue #2020 Scheibe 2, Befunde
+    F001/F005). Aus dieser Punktmenge entsteht ueber
+    ``segment_weather._aggregate_for_segment()`` die Fenster-Gesamtmenge
+    ``SegmentWeatherSummary.precip_sum_mm`` -- und genau dieselbe Menge ist
+    ``WeatherChange.new_value``, von der der Abweichungsalarm seine Restmenge
+    ABZIEHT (``bereits_gefallen = new_value - remaining``). Laufen beide
+    Seiten ueber verschiedene Punktmengen, driftet die Differenz: sie wird
+    negativ oder die Restmenge uebersteigt die Gesamtmenge. Beide Kanten sind
+    in #2020 tatsaechlich aufgetreten, jede einzeln entdeckt -- deshalb steht
+    die Regel jetzt an EINER Stelle statt zweimal nebeneinander.
+
+    Regeln, unveraendert uebernommen aus dem bisherigen Inline-Filter in
+    ``_aggregate_for_segment()``:
+
+    * Grenzen und Punkte werden auf die volle Stunde gefloort (Issue #1334:
+      Vergleich ueber volle Zeitstempel statt nur die Stundenzahl -- ein
+      reiner Stundenvergleich zog sonst dieselbe Uhrzeit von JEDEM Tag der
+      Reihe).
+    * Die Endstunde ist EXKLUSIV (Bug #806): jede Stunde gehoert genau EINEM
+      Segment, sonst zaehlt die Randstunde in zwei Segmenten mit.
+    * Faellt ein Segment vollstaendig in eine Stunde (``start_floor ==
+      end_floor``, z. B. 14:10-14:40), waere das Fenster mit der
+      Exklusiv-Regel LEER. Dann gilt der Punkt AUF dieser Stunde (Bug #856).
+      Ohne diesen Zweig behauptete der Alarm bei kurzen Zwischensegmenten,
+      es sei alles gefallen und es komme nichts mehr -- beides falsch
+      (Befund F005). Kurze Segmente sind real: ``trip_segments`` kennt fuer
+      Zwischensegmente keine Mindestdauer, nur das Ziel-Segment hat eine.
+
+    ``to_utc()`` auf beiden Seiten: Hausnorm ist naive UTC
+    (``ForecastDataPoint.__post_init__``, #1345), Segmentgrenzen sind je nach
+    Aufrufer naiv ODER aware -- und ein aware Zeitstempel mit tzinfo != UTC
+    muss ERST umgerechnet werden, bevor er gestrippt wird (#1345, Adversary
+    F001 dort), sonst gilt die Ortszeit als Weltzeit.
+    """
+    start_floor = to_utc(start_time).replace(
+        minute=0, second=0, microsecond=0, tzinfo=None,
+    )
+    end_floor = to_utc(end_time).replace(
+        minute=0, second=0, microsecond=0, tzinfo=None,
+    )
+    treffer = []
+    for dp in points or ():
+        ts = getattr(dp, "ts", None)
+        if ts is None:
+            continue
+        ts = to_utc(ts).replace(tzinfo=None)
+        if (
+            (ts == start_floor) if start_floor == end_floor
+            else (start_floor <= ts < end_floor)
+        ):
+            treffer.append(dp)
+    return treffer
+
+
 def display_end_time(segment: "TripSegment") -> datetime:
     """Das ANZEIGE-Ende eines Segments — die letzte zum Segment gehoerende
     Stunde statt der exklusiven Alarm-Obergrenze (Issue #1599).
@@ -140,23 +201,39 @@ def night_addendum(
 
     Rueckgabe ``None``, wenn ausserhalb des Fensters kein Gewitter liegt
     (dann entsteht kein Zusatz).
+
+    Issue #2205 (AC-9/AC-10): Eintraege duerfen als drittes Element das
+    Hagel-Kennzeichen der Stunde tragen (``(Stunde, Stufe, hail_flag)``).
+    Rueckgabe ist dann ``(Stufe, Stunde, Hagel)``: Hagel ist ``True``, wenn
+    eine der Stunden mit der GEWINNENDEN Stufe -- dieselbe Menge, ueber die
+    ``hour`` gebildet wird -- Hagel meldet; sonst ``None``. ``night_hourly``
+    schlaegt ``own_hourly`` fuer Hagel auf genau den Stunden, auf denen es
+    auch die Stufe schlaegt (keine zwei Quellen fuer dieselbe Stunde,
+    #1498/#1653).
     """
     from app.models import ThunderLevel
     from app.thunder_scale import thunder_ordinal
 
-    def _peak_per_hour(pairs) -> dict:
+    def _peak_per_hour(entries) -> tuple[dict, dict]:
         peaks: dict = {}
-        for hour, level in pairs or ():
+        hail: dict = {}
+        for hour, level, *rest in entries or ():
             if level is None:
                 continue
             h = int(hour)
             prev = peaks.get(h)
             if prev is None or thunder_ordinal(level) > thunder_ordinal(prev):
                 peaks[h] = level
-        return peaks
+            if rest and rest[0] is True:
+                hail[h] = True
+        return peaks, hail
 
-    merged = _peak_per_hour(own_hourly)
-    merged.update(_peak_per_hour(night_hourly))
+    merged, merged_hail = _peak_per_hour(own_hourly)
+    night_peaks, night_hail = _peak_per_hour(night_hourly)
+    merged.update(night_peaks)
+    for h in night_peaks:
+        merged_hail.pop(h, None)
+    merged_hail.update(night_hail)
 
     outside = [
         (hour, level)
@@ -167,32 +244,50 @@ def night_addendum(
     if not outside:
         return None
     level = max((lv for _h, lv in outside), key=thunder_ordinal)
-    hour = min(h for h, lv in outside if lv == level)
-    return level, hour
+    peak_hours = [h for h, lv in outside if lv == level]
+    hour = min(peak_hours)
+    hail = True if any(merged_hail.get(h) for h in peak_hours) else None
+    return level, hour, hail
 
 
-# Wortschatz des Nacht-Zusatzes (#1651). Bewusste Abweichung vom Tagestext,
-# wo MED kein Adjektiv traegt („Gewitter moeglich ab HH:MM"): der Halbsatz
-# muss fuer sich lesbar sein -- ein „nachts Gewitter" ohne Stufe waere von
-# „Stufe unbekannt" nicht unterscheidbar.
-_NIGHT_ADDENDUM_WORD = {
-    "LOW": "leichtes",
-    "MED": "mittleres",
-    "HIGH": "starkes",
-}
-
-
-def format_night_addendum(level, hour: int) -> str:
+def format_night_addendum(level, hour: int, hail=None) -> str:
     """Der angehaengte Halbsatz zu einem ``night_addendum()``-Treffer.
 
     EINE Stelle fuer den Wortlaut: beide Bauwege des Vorschau-Satzes
     (Trend-Weg und Fetch-Weg) sind wortgleich, aber unabhaengiger Code --
     eine zweite Kopie wuerde driften.
+
+    Issue #2176: ``LOW`` hat hier kein Adjektiv mehr, sondern eine eigene,
+    ereignisfreie Aussage -- der Nacht-Halbsatz ist der einzige Ort, an dem
+    der Baustein MITTEN im Satz steht (deshalb klein geschrieben).
+
+    Issue #2205: ``hail`` (aus ``night_addendum()``) haengt bei bestaetigtem
+    Hagel die bestehende Hagelaussage an -- Wortlaut aus der EINEN Quelle
+    ``format_hail_note`` (Domaenenschicht ``app/thunder_scale.py``).
     """
-    word = _NIGHT_ADDENDUM_WORD.get(getattr(level, "name", str(level)))
+    from app.thunder_scale import format_hail_note
+
+    _note = format_hail_note(hail)
+    _suffix = f" · {_note}" if _note else ""
+    name = getattr(level, "name", str(level))
+    if name == "LOW":
+        from app.thunder_scale import thunder_low_statement
+
+        # Herkunft liegt an dieser Stelle nicht vor (der Nacht-Treffer traegt
+        # nur Stufe + Stunde) -- unbekannte Herkunft ist KEINE reine
+        # Luftmasse (Spec AC-4), der Baustein entscheidet das selbst.
+        return (f", nachts {thunder_low_statement('kurz', None)} "
+                f"ab {int(hour):02d}:00{_suffix}")
+    # Wortschatz des Nacht-Zusatzes (#1651), kanonisch seit #2028. Bewusste
+    # Abweichung vom Tagestext, wo MED kein Adjektiv traegt: der Halbsatz muss
+    # fuer sich lesbar sein. ThunderLevel ist ein str-Enum -- der Name trifft
+    # den Schluessel.
+    from app.thunder_scale import THUNDER_NIGHT_ADJECTIVE_DE
+
+    word = THUNDER_NIGHT_ADJECTIVE_DE.get(name)
     if word is None:
         return ""
-    return f", nachts {word} Gewitter ab {int(hour):02d}:00"
+    return f", nachts {word} Gewitter ab {int(hour):02d}:00{_suffix}"
 
 
 def hour_in_window(hour: int, start_hour: int, end_hour: int) -> bool:

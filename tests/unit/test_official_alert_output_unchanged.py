@@ -92,9 +92,10 @@ def render_all() -> dict:
         "trip_telegram": render_official_alert_telegram(
             trip_notices, prefix="Trip", source_label=quelle, tz=TZ,
         ),
-        "trip_sms": render_official_alert_sms(
-            trip_notices, sms_prefix="GZ", tz=TZ,
-        ),
+        # FORTGESCHRIEBEN (#1948 S5): `sms_prefix` (Trip-/Preset-Name) ist
+        # ersatzlos entfallen; der Schnappschuss wird fuer `trip_sms`/
+        # `compare_sms` bewusst neu erzeugt (kein Goldstring-Editieren).
+        "trip_sms": render_official_alert_sms(trip_notices, tz=TZ),
         "compare_subject": render_official_alert_subject(
             compare_notices, prefix="Vergleich",
         ),
@@ -104,9 +105,7 @@ def render_all() -> dict:
         "compare_telegram": render_official_alert_telegram(
             compare_notices, prefix="Vergleich", source_label=quelle, tz=TZ,
         ),
-        "compare_sms": render_official_alert_sms(
-            compare_notices, sms_prefix="GZ", tz=TZ,
-        ),
+        "compare_sms": render_official_alert_sms(compare_notices, tz=TZ),
     }
 
 

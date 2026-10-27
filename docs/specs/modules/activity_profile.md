@@ -3,7 +3,7 @@ entity_id: activity_profile
 type: module
 created: 2026-05-01
 updated: 2026-05-01
-status: active
+status: implemented
 version: "1.0"
 tags: [refactor, model, harmonization, profile]
 issue: 98
@@ -81,7 +81,7 @@ class ActivityProfile(str, Enum):
 
     WINTERSPORT     = "wintersport"      # Schnee/Lawinen
     WANDERN         = "wandern"          # Tieflagen-Wanderung (Scoring-Semantik)
-    SUMMER_TREKKING = "summer_trekking"  # Alpine Mehrtagestour (Aggregations-Semantik)
+    SUMMER_TREKKING = "summer_trekking"  # Alpine Mehrtages-Trip (Aggregations-Semantik)
     ALLGEMEIN       = "allgemein"        # Generischer Default
 ```
 

@@ -3,7 +3,7 @@ entity_id: issue_583_archive_demo_data_tests
 type: tests
 created: 2026-06-04
 updated: 2026-06-05
-status: draft
+status: implemented
 version: "1.1"
 tags: [tests, design-fidelity, issue-583, issue-611, epic-575]
 parent: issue_583_archiv_1to1
@@ -22,8 +22,8 @@ Test-Manifest für AC-1 von Issue #583 und AC-2 von Issue #611. Validiert dass d
 für den Validator-Account existiert, die richtigen 8 Trips schreibt, idempotent ist und
 archivierte Orts-Vergleiche (ComparePresets) mit `archived_at` + `location_ids` anlegt.
 
-Parent-Specs: `docs/specs/modules/issue_583_archiv_1to1.md`,
-`docs/specs/modules/issue_611_archiv_entruempeln.md`.
+Parent-Specs: `docs/specs/_archive/modules/issue_583_archiv_1to1.md`,
+`docs/specs/_archive/modules/issue_611_archiv_entruempeln.md`.
 
 ## Source
 

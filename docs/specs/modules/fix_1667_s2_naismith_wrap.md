@@ -3,7 +3,7 @@ entity_id: fix_1667_s2_naismith_wrap
 type: bugfix
 created: 2026-08-10
 updated: 2026-08-11
-status: draft
+status: implemented
 workflow: fix-1667-s2-naismith-wrap
 version: "1.2"
 tags: [issue-1667, naismith, midnight-wrap, cross-language-parity, arrival-time]
@@ -265,7 +265,7 @@ gefundener Wurzel) fällt in der Implementierung.
 
 ## Acceptance Criteria
 
-- **AC-1 (Eigenschaftsnachweis der Inertheit, ohne Wegpunkt-Fixture):**
+- **AC-1:** (Eigenschaftsnachweis der Inertheit, ohne Wegpunkt-Fixture)
   Given der volle Minutenbereich `0..1439` (jede Ankunft, die unter der
   alten 23:59-Klemme lag) / When für jeden Wert `m` in diesem Bereich sowohl
   die alte Klemmformel (`min(m, 1439)`, als Referenzimplementierung direkt
@@ -281,7 +281,7 @@ gefundener Wurzel) fällt in der Implementierung.
     Schleife über `range(1440)` bzw. `0..1439`; Assert Gleichheit zur lokal
     hinterlegten Referenzformel `min(m, 1439)` in jedem Iterationsschritt.
 
-- **AC-2 (Wirkungsbeleg am Segmentbau, strukturell statt zahlenwörtlich):**
+- **AC-2:** (Wirkungsbeleg am Segmentbau, strukturell statt zahlenwörtlich)
   Given eine im Testfile eingecheckte Wegpunkt-Fixture (Koordinaten frei
   wählbar, einzige Bedingung: die kumulierte Naismith-Gehzeit überschreitet
   ab `start_time=22:00` die Mitternachtsgrenze) / When
@@ -306,7 +306,7 @@ gefundener Wurzel) fällt in der Implementierung.
     Assert Delta-Gleichheit gegen den `start_time=08:00`-Lauf derselben
     Fixture (c).
 
-- **AC-3 (Cross-Language-Paritätstest an den vier Randfällen):** Given die
+- **AC-3:** (Cross-Language-Paritätstest an den vier Randfällen) Given die
   gemeinsame Fixture `tests/fixtures/naismith_hhmm_wrap.json` mit den
   Minutenwerten `1439/1440/1441/2879` / When `_format_hhmm` (Python),
   `formatHHMM` (Go) und `formatHHMM` (TS, neu exportiert) je mit denselben
@@ -320,7 +320,7 @@ gefundener Wurzel) fällt in der Implementierung.
     laden dieselbe JSON-Fixture und parametrisieren über deren Einträge;
     Assert Gleichheit je Eintrag in jeder der drei Suiten.
 
-- **AC-4 (Mutations-Gegenprobe, Pflicht):** Given der Modulo in
+- **AC-4:** (Mutations-Gegenprobe, Pflicht) Given der Modulo in
   `_format_hhmm` (Python) wird per Textersetzung (externe Sicherungskopie,
   keine `git checkout/stash/reset`) auf die alte Klemme
   `min(total_min, 24*60-1)` zurückgedreht / When der Segmentzahl-Test aus
@@ -334,7 +334,7 @@ gefundener Wurzel) fällt in der Implementierung.
     `pytest tests/tdd/test_naismith_midnight_wrap_segments.py::test_start_22_uhr_liefert_alle_segmente_ohne_plateau`
     ausführen; Assert `AssertionError`. Danach Originaltext wiederherstellen.
 
-- **AC-5 (Fremdzusicherung bleibt grün):** Given
+- **AC-5:** (Fremdzusicherung bleibt grün) Given
   `tests/unit/test_alarm_zeitfenster_ziel.py::test_mitternachtsfenster_22_2_klemmt_auf_mindestfenster`
   (PO-Entscheidung 2026-08-08, sitzt im `window_end <= arrival_time`-Guard
   aus #1584) / When dieser Test nach der S2-Änderung an `_format_hhmm`
@@ -346,7 +346,7 @@ gefundener Wurzel) fällt in der Implementierung.
   - Test: bestehenden Test unverändert im Kernlauf mitführen; Assert Exit
     0 ohne Anpassung an dieser Datei.
 
-- **AC-6 (bestehende Klemm-Tests umgeschrieben, nicht gelöscht):** Given
+- **AC-6:** (bestehende Klemm-Tests umgeschrieben, nicht gelöscht) Given
   die drei Tests, die heute explizit die 23:59-Klemme als Sollverhalten
   festschreiben
   (`test_issue_802_fahrrad_segment_zeit.py::test_ac3_python_naismith_matches_fixed_contract[C]`,

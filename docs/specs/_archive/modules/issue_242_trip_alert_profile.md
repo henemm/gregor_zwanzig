@@ -3,7 +3,7 @@ entity_id: issue_242_trip_alert_profile
 type: module
 created: 2026-05-17
 updated: 2026-05-17
-status: draft
+status: implemented
 version: 1.0.0
 tags: [email, activity-profile, trip-alert, issue-242, epic-236]
 parent: epic_236_email_design_system
@@ -45,7 +45,7 @@ Die gesamte Render-Infrastruktur (Helper `profile_signature.py`, Header-Markup, 
 |--------|------|---------|
 | `src/app/profile.py::ActivityProfile` | Enum | Profil-Wert |
 | `src/app/trip.py::AggregationConfig.profile` | Datenfeld | Quelle für den Wert |
-| `src/formatters/trip_report.py::format_email()` | Funktion | Empfänger des `profile`-kwargs (seit #241) |
+| `src/output/renderers/trip_report.py::format_email()` | Funktion | Empfänger des `profile`-kwargs (seit #241) |
 | `src/output/renderers/email/profile_signature.py` | Modul (#241) | Helper, bereits live |
 
 ## Implementation Details
@@ -83,7 +83,7 @@ report = self._formatter.format_email(
 |-------|--------|
 | `src/services/trip_alert.py` | +1 |
 | `tests/tdd/test_trip_alert_profile.py` (neu) | +~25 |
-| `docs/specs/modules/issue_242_trip_alert_profile.md` (neu, Doku) | 0 |
+| `docs/specs/_archive/modules/issue_242_trip_alert_profile.md` (neu, Doku) | 0 |
 | **Gesamt Code** | **~26 LoC** |
 
 Weit unter 250er-Limit.

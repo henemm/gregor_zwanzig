@@ -3,7 +3,7 @@ entity_id: register_rate_limit
 type: bugfix
 created: 2026-05-03
 updated: 2026-05-03
-status: draft
+status: implemented
 version: "1.0"
 tags: [security, bugfix, go-api, rate-limit, auth, issue-117]
 ---

@@ -3,7 +3,7 @@ entity_id: issue_1172_official_alert_dedup_info
 type: module
 created: 2026-07-09
 updated: 2026-07-09
-status: draft
+status: implemented
 version: "1.0"
 tags: [bugfix, alerts, official-alerts, notification, dedup]
 ---
@@ -204,7 +204,7 @@ unverändert.
   ersten Trip-Segments bzw. `trip.waypoints[0]` (Standalone-Pfad), nicht die exakten
   Koordinaten der jeweiligen Warnregion selbst (die `OfficialAlert` nicht als Feld
   trägt) — bei Trips, die mehrere Zeitzonen durchqueren, ist dies eine Näherung
-  („lokal zur Tour" statt „lokal zur Warnregion" im engsten Sinn). Für die
+  („lokal zur Trip" statt „lokal zur Warnregion" im engsten Sinn). Für die
   betroffenen Warnregionen (FR-Vigilance, AT-GeoSphere) liegt dies praktisch nie
   auseinander, da beide Quellen jeweils nur EINE Zeitzone abdecken.
 - SMS bleibt weiterhin ohne amtliche-Warnungs-Zusatztext (bestehende Nicht-Parität,

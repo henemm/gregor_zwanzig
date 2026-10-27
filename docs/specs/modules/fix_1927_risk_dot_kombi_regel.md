@@ -3,7 +3,7 @@ entity_id: fix_1927_risk_dot_kombi_regel
 type: bugfix
 created: 2026-08-19
 updated: 2026-08-19
-status: draft
+status: implemented
 version: "1.1"
 tags: [trip-briefing, html-renderer, risk-dot, metric-format]
 workflow: fix-1927-risk-dot-kombi-regel
@@ -132,24 +132,24 @@ statt weiterhin fälschlich Grün liefert.
 
 ## Acceptance Criteria
 
-- **AC-1 (Ablösung von AC-10):** Given eine Trip-Briefing-Stundenzeile mit genau einer
+- **AC-1:** (Ablösung von AC-10) Given eine Trip-Briefing-Stundenzeile mit genau einer
   gelben Einzelmetrik ohne Partner im Paar (z.B. `gust=30`, alle anderen Metriken grün) /
   When `_row_risk()` ausgewertet wird / Then liefert die Funktion den Level, der auf
   Punktfarbe Gelb mappt (NICHT mehr Orange wie vor dieser Änderung).
   - Test: `_row_risk({"gust": 30})` liefert künftig den Gelb-Level; ersetzt/überschreibt
     `test_ac10_row_risk_gust_30_becomes_achtung` in `test_renderer_katalog_schwellen.py`.
 
-- **AC-2 (Paar 1 — Niederschlag+Temperatur):** Given eine Zeile mit `precipitation` UND
+- **AC-2:** (Paar 1 — Niederschlag+Temperatur) Given eine Zeile mit `precipitation` UND
   `temp` beide auf Gelb-Schwelle / When `_row_risk()` ausgewertet wird / Then eskaliert
   die Zeile auf Orange (Vereisungsgefahr).
   - Test: Fixture mit beiden Metriken exakt auf Gelb-Schwelle erwartet Orange-Ergebnis.
 
-- **AC-3 (ENTFÄLLT in v1.1):** Ursprünglich Paar 2 (Niederschlag/PoP+Nullgradgrenze).
+- **AC-3:** (ENTFÄLLT in v1.1) Ursprünglich Paar 2 (Niederschlag/PoP+Nullgradgrenze).
   Gestrichen — `freezing_level` bekommt keine `display_thresholds`, siehe Non-Goals.
   Kein Ersatztest; ein evtl. vorhandener Test für dieses Paar wird gelöscht, nicht
   umgeschrieben.
 
-- **AC-4 (Paar 2 — Gewitter+Wind/Böen, v1.1 über echten Datenpfad erreichbar):** Given
+- **AC-4:** (Paar 2 — Gewitter+Wind/Böen, v1.1 über echten Datenpfad erreichbar) Given
   eine Trip-Briefing-Zeile mit `thunder=ThunderLevel.LOW` (bzw. String `"LOW"`) UND
   `wind`/`gust` auf Gelb-Schwelle, sonst harmlose Werte / When `_row_risk()` ausgewertet
   wird / Then eskaliert die Zeile auf Orange (`"watch"`).
@@ -161,31 +161,31 @@ statt weiterhin fälschlich Grün liefert.
   - Regression: `ThunderLevel.MED` alleinstehend bleibt `"watch"` (unverändert,
     `test_thunder_med_enum_becomes_at_least_watch` bleibt grün).
 
-- **AC-5 (Paar 3 — Sicht+Neuschnee, v1.1 mit belegter Schwelle):** Given eine Zeile mit
+- **AC-5:** (Paar 3 — Sicht+Neuschnee, v1.1 mit belegter Schwelle) Given eine Zeile mit
   `visibility` gelb UND `fresh_snow >= 10` (Gelb-Schwelle SLF/EAWS) / When `_row_risk()`
   ausgewertet wird / Then eskaliert die Zeile auf Orange (Weg unter Neuschnee nicht
   erkennbar, keine Fernsicht). `snow_depth` ist NICHT mehr Partner dieses Paares.
   - Test: Fixture mit `visibility` gelb + `fresh_snow=10.0` erwartet Orange-Ergebnis.
 
-- **AC-6 (Kein Partner, keine Eskalation):** Given eine Zeile, bei der nur eine Metrik
+- **AC-6:** (Kein Partner, keine Eskalation) Given eine Zeile, bei der nur eine Metrik
   eines der vier Paare gelb ist und der Partner grün oder ohne Wert bleibt / When
   `_row_risk()` ausgewertet wird / Then bleibt der Punkt Gelb, keine Eskalation auf Orange.
   - Test: Fixture mit z.B. `precipitation="yellow"`, `temp` grün erwartet Gelb-Ergebnis.
 
-- **AC-7 (Unabhängige Gelb-Kombination, keine Eskalation):** Given eine Zeile mit zwei
+- **AC-7:** (Unabhängige Gelb-Kombination, keine Eskalation) Given eine Zeile mit zwei
   gelben Metriken, die KEINEM der vier definierten Paare angehören (z.B. `uv_index` gelb
   UND `temp` gelb) / When `_row_risk()` ausgewertet wird / Then bleibt der Punkt Gelb,
   keine Eskalation.
   - Test: Fixture mit UV+Temp beide gelb erwartet Gelb-Ergebnis (kein Orange).
 
-- **AC-8 (Regression Rot/Grün unverändert):** Given bestehende Zeilen-Fixtures, die vor
+- **AC-8:** (Regression Rot/Grün unverändert) Given bestehende Zeilen-Fixtures, die vor
   dieser Änderung `"risk"` (rot) bzw. `"ok"` (grün) lieferten / When `_row_risk()` nach
   der Änderung ausgewertet wird / Then liefern dieselben Fixtures weiterhin Rot bzw.
   Grün, unverändert gegenüber dem Verhalten vor dieser Spec.
   - Test: Bestehende Rot-/Grün-Fixtures aus `test_renderer_katalog_schwellen.py` und
     `test_row_risk_gewitter.py` laufen unverändert grün durch.
 
-- **AC-9 (Windchill/Hitzeindex lösen keine zusätzliche Paar-Eskalation aus):** Given
+- **AC-9:** (Windchill/Hitzeindex lösen keine zusätzliche Paar-Eskalation aus) Given
   eine Zeile mit niedriger Temperatur und hohem Wind (Windchill-Fall) bzw. hoher
   Temperatur und hoher Luftfeuchtigkeit (Hitzeindex-Fall), wobei die kombinierte
   `felt`-Metrik bereits ihre eigene Ampel liefert / When `_row_risk()` ausgewertet wird /

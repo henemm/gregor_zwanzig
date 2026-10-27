@@ -38,13 +38,26 @@ const preconditionFailedDetail = "Der Stand wurde zwischenzeitlich an anderer St
 //   - sonst: RFC-7232-Liste, ein Treffer genuegt. Anfuehrungszeichen werden
 //     abgestreift, damit ein Client, der sie weglaesst, nicht faelschlich
 //     scheitert.
+//
+// Issue #2317 Fix-Loop 1 (AC-11): ein vorangestelltes `W/` (schwacher
+// Validator) wird VOR dem Anfuehrungszeichen-Trim entfernt. Ein gzip-faehiger
+// Proxy vor dem Server schwaecht den selbst erzeugten starken Fingerabdruck
+// beim Komprimieren automatisch ab (RFC 7232 §2.1) — jeder echte Client
+// (Browser, SvelteKit-SSR-`fetch`) bekommt also `ETag: W/"<fp>"` und reicht
+// genau das, wie vom Standard verlangt, unveraendert als `If-Match` zurueck.
+// Ohne dieses Abstreifen blieb ein passender Fingerabdruck durch den `W/`-
+// Rest ununterscheidbar von einem veralteten — jeder zweite Schreibvorgang
+// hinter einem gzip-Proxy scheiterte an einem FALSCHEN 412 (gemessen gegen
+// Staging: `Accept-Encoding: identity` -> `"<fp>"`, `gzip` -> `W/"<fp>"`).
 func ifMatchAllows(header, current string) bool {
 	header = strings.TrimSpace(header)
 	if header == "" || header == "*" {
 		return true
 	}
 	for _, part := range strings.Split(header, ",") {
-		if strings.Trim(strings.TrimSpace(part), `"`) == current {
+		part = strings.TrimSpace(part)
+		part = strings.TrimPrefix(part, "W/")
+		if strings.Trim(part, `"`) == current {
 			return true
 		}
 	}

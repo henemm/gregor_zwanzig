@@ -3,7 +3,7 @@ entity_id: issue_517_compare_hub
 type: module
 created: 2026-06-01
 updated: 2026-06-01
-status: draft
+status: implemented
 version: "1.0"
 issue: 517
 tags: [compare, frontend, svelte, detail-page, tabs, hub, epic-485]

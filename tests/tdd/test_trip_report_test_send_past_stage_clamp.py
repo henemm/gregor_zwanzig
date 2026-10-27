@@ -17,15 +17,22 @@ Logik und Outcome-Ableitung laufen unveraendert echt).
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import timedelta
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+# Issue #1196 Klasse B: kein modulweites `load_dotenv()` mehr (lief beim
+# COLLECT statt beim Testlauf und kontaminierte os.environ ohne Teardown).
+# Autouse-Fixture fordert stattdessen die geteilte `dotenv_env`-Fixture aus
+# tests/conftest.py an, bevor JEDER Test dieser Datei laeuft.
+@pytest.fixture(autouse=True)
+def _dotenv(dotenv_env):
+    yield
 
 
 # ---------------------------------------------------------------------------
@@ -38,6 +45,9 @@ def _data_users(user_id: str) -> Path:
     respektiert die pytest-Isolation (tests/conftest.py, #1133/#1265)."""
     from app.loader import get_data_dir
     return get_data_dir(user_id)
+
+
+_INNSBRUCK = (47.2692, 11.4041)
 
 
 def _innsbruck_waypoints() -> list[dict]:
@@ -55,7 +65,8 @@ def _write_trip(user_id: str, trip_id: str, stages: list[dict]) -> Path:
     briefings_dir = get_briefings_dir(user_id)
     briefings_dir.mkdir(parents=True, exist_ok=True)
     profile = _data_users(user_id) / "user.json"
-    profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com"}))
+    # Issue #2152: Testkonto-Status ueber das Profilfeld, nicht ueber "tdd" im Namen.
+    profile.write_text(json.dumps({"mail_to": "gregor-test@henemm.com", "is_test_user": True}))
     trip_path = briefings_dir / f"{trip_id}.json"
     trip_path.write_text(json.dumps({
         "id": trip_id,
@@ -73,7 +84,7 @@ def _write_trip(user_id: str, trip_id: str, stages: list[dict]) -> Path:
 
 def _load_trip(user_id: str, trip_id: str):
     from app.loader import load_trip
-    return load_trip(_data_users(user_id) / "briefings" / f"{trip_id}.json")
+    return load_trip(_data_users(user_id) / "briefings" / f"{trip_id}.json", user_id=user_id)
 
 
 @pytest.fixture
@@ -83,8 +94,9 @@ def past_only_trip():
     Open-Meteo-Vergangenheits-Request laeuft (Issue #1325 Root Cause)."""
     user_id = "tdd-1325-past"
     trip_id = "tdd-1325-past-trip"
-    early = (date.today() - timedelta(days=10)).isoformat()
-    late = (date.today() - timedelta(days=3)).isoformat()
+    heute = ortstag(*_INNSBRUCK)
+    early = (heute - timedelta(days=10)).isoformat()
+    late = (heute - timedelta(days=3)).isoformat()
     trip_path = _write_trip(
         user_id, trip_id,
         [
@@ -120,7 +132,9 @@ class _DateSensitiveOpenMeteoDouble:
     def fetch_forecast(self, location, start=None, end=None,
                         enrich_ensemble=True, enrich_snow=True):
         from providers.base import ProviderRequestError
-        today = date.today()
+        # #2314: das Produkt klemmt auf den Ortstag der Trip-Koordinaten
+        # (trip_local_today), nicht auf den Prozesstag.
+        today = ortstag(*_INNSBRUCK)
         if self._fail_for_today or start is None or start.date() != today:
             raise ProviderRequestError(
                 "openmeteo",
@@ -260,8 +274,8 @@ class TestAC3GenuineNoWeatherHonestOutcome:
         _patch_provider(monkeypatch, fail_for_today=True)
         _patch_email_transport(monkeypatch)
         # Haertung, kein Bugfix (Issue #1557): kein nachgewiesener Defekt.
-        # Ursache: `user_id` enthaelt "tdd" -> is_test_user_id() (config.py:
-        # 56-68) True -> with_user_profile() (:370) nimmt for_testing() als
+        # Ursache: Profil traegt is_test_user:true (#2152) -> is_test_user_id()
+        # True -> with_user_profile() nimmt for_testing() als
         # Basis -> SMTP kommt aus GZ_TEST_SMTP_*, NICHT den hier gesetzten
         # GZ_SMTP_*-Werten -- Route ist ueber diese Werte nicht falsifizierbar
         # (RED-Artefakt docs/artifacts/fix-1557-no-weather-outcome/

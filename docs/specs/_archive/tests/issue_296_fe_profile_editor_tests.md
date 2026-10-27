@@ -3,7 +3,7 @@ entity_id: issue_296_fe_profile_editor_tests
 type: tests
 created: 2026-05-23
 updated: 2026-05-23
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, frontend, sveltekit, naismith, arrival-times, waypoint, profile, issue-296]
 parent: issue_296_fe_profile_editor
@@ -19,13 +19,13 @@ phase: phase5_tdd_red
 ## Purpose
 
 Test-Manifest fuer den profil-basierten Trip-Editor aus
-`docs/specs/modules/issue_296_fe_profile_editor.md`. Unit-Tests (Node-Runner)
+`docs/specs/_archive/modules/issue_296_fe_profile_editor.md`. Unit-Tests (Node-Runner)
 pruefen die clientseitige Naismith-Live-Berechnung und die lineare
 Wegpunkt-Interpolation; E2E-Tests (Playwright) decken das Editor-Verhalten
 (keine Lat/Lon-Inputs, Profil + Pins, suggested/manuell, Profil-Klick,
 Ankunftszeiten, Detail-View-Regression, Pausentag) ab.
 
-Parent-Spec: `docs/specs/modules/issue_296_fe_profile_editor.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_296_fe_profile_editor.md` v1.0
 
 ## Source
 
@@ -93,8 +93,8 @@ ProfileEditor/WaypointCard-Props noch nicht existieren.
 ## Acceptance Criteria
 
 - **AC-T1:** Given die Test-Dateien existieren und Implementierung fehlt /
-  When `node --experimental-strip-types --test src/lib/utils/naismith.test.ts
-  src/lib/utils/waypointEditor.test.ts` laeuft /
+  When `node --experimental-strip-types --test frontend/src/lib/utils/naismith.test.ts
+  frontend/src/lib/utils/waypointEditor.test.ts` laeuft /
   Then schlagen die neuen Tests fehl (RED): naismith-Import-Fehler +
   `interpolateWaypoint` undefined.
 

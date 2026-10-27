@@ -64,10 +64,11 @@ from providers.base import ProviderNotFoundError, ProviderRequestError
 from providers.geosphere import RETRY_ATTEMPTS, GeoSphereProvider
 from providers.openmeteo import OpenMeteoProvider
 
-# Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
-# lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
-# Marker in den /e2e-verify-Lauf, nicht auf eine Ausnahmeliste.
-pytestmark = pytest.mark.live
+# Kern-Schicht (Test-Politik, CLAUDE.md): die Seam-Tests arbeiten mit lokalen
+# Fehler-Servern und laufen ohne Netz. Nur die zwei Tests, die real gegen die
+# GeoSphere-API dialen, tragen weiterhin ihren eigenen `live`-Marker. Der
+# modulweite Marker vom 2026-08-04 nahm auch die vier deterministischen
+# Waechter aus der Ampel -- #1196 Klasse A, 2026-09-08, offline nachgemessen.
 
 # Innsbruck (47.26, 11.39): bekannte AT-Koordinate, empirisch bestaetigt
 # (2026-07-09, echter Diagnose-Call gegen

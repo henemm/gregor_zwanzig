@@ -38,15 +38,24 @@ from tests.helpers.trip_outlook_channels import (  # noqa: E402
 # verwechselt (Spec, Pruefhinweis 2).
 AUSWAHL = [NIEDERSCHLAG, BOEEN]
 
+# #2136/ADR-0068: Kompakt-Mail und Telegram lesen dieselbe
+# `outlook_columns()`-Quelle wie Trip/Compare und erben deren Umstellung auf
+# `MetricDefinition.col_label` automatisch (Spec "Known Limitations" --
+# Kollateralwirkung, kein eigener Codepfad). Abgeleitet statt getippt.
+from app.metric_catalog import get_metric  # noqa: E402
+
+_NIEDERSCHLAG_LABEL = get_metric(NIEDERSCHLAG).col_label
+_BOEEN_LABEL = get_metric(BOEEN).col_label
+
 KOMPAKT_ERWARTET = [
-    "XX  Niederschlag 2.5 mm  Boeen 44 km/h",
-    "XX  Niederschlag 0.0 mm  Boeen 52 km/h",
-    "XX  Niederschlag 7.1 mm  Boeen 33 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL} 2.5 mm  {_BOEEN_LABEL} 44 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL} 0.0 mm  {_BOEEN_LABEL} 52 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL} 7.1 mm  {_BOEEN_LABEL} 33 km/h",
 ]
 TELEGRAM_ERWARTET = [
-    "XX  Niederschlag: 2.5 mm  Böen: 44 km/h",
-    "XX  Niederschlag: 0.0 mm  Böen: 52 km/h",
-    "XX  Niederschlag: 7.1 mm  Böen: 33 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL}: 2.5 mm  {_BOEEN_LABEL}: 44 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL}: 0.0 mm  {_BOEEN_LABEL}: 52 km/h",
+    f"XX  {_NIEDERSCHLAG_LABEL}: 7.1 mm  {_BOEEN_LABEL}: 33 km/h",
 ]
 
 
@@ -58,6 +67,20 @@ def _datenzeilen(block: str) -> list[str]:
 
 def _diff(erwartet: list[str], ist: list[str]) -> str:
     return "\nerwartet:\n" + "\n".join(erwartet) + "\nist:\n" + "\n".join(ist)
+
+
+def _altpfad_trip():
+    """Die Vorbedingung des AC-1-Bestandsschutzes: eine Trip, die den FESTEN
+    Ausblick zeigt.
+
+    ⚠️ #1848 A3 (PO-Freigabe 2026-08-21): dafuer genuegt ein fehlendes
+    ``outlook_metrics`` nicht mehr -- "nie eingestellt" heisst seither
+    "nichts abgewaehlt", und der Ausblick erbt die Grundauswahl. Der feste
+    Zweig bleibt fuer Trips OHNE Grundauswahl in Kraft (ADR-0050 D4); dort
+    bewachen die beiden Aufzeichnungen unveraendert weiter, dass "Feld fehlt"
+    nicht mit "bewusst geleert" verwechselt wird (Mutation 4). Die
+    Referenzdateien werden NICHT nachgezogen."""
+    return trip(outlook_metrics=None, enabled_ids=set())
 
 
 # ═════════════ AC-1 — Bestandsschutz gegen die aufgezeichnete Referenz ═══════
@@ -73,7 +96,7 @@ def test_ac1_kompakt_ausblick_ohne_auswahl_ist_byte_identisch_zur_referenz():
     Verglichen wird gegen eine DATEI, nicht gegen einen zweiten Aufruf
     desselben Codes im selben Lauf.
     """
-    body, _ = versendete_teile(trip(outlook_metrics=None))
+    body, _ = versendete_teile(_altpfad_trip())
     block = compact_outlook_block(body)
 
     assert block is not None, "Kein Ausblick in der Kompakt-Mail (AC-1)."
@@ -89,7 +112,7 @@ def test_ac1_telegram_ausblick_ohne_auswahl_ist_byte_identisch_zur_referenz():
     Kompakt-Mail und Telegram haben getrennte Renderer (``compact.py`` /
     ``narrow.py``) -- eine Aufzeichnung allein deckt den anderen nicht ab.
     """
-    _, bubbles = versendete_teile(trip(outlook_metrics=None))
+    _, bubbles = versendete_teile(_altpfad_trip())
     bubble = telegram_outlook_bubble(bubbles)
 
     assert bubble is not None, f"Keine Ausblick-Bubble: {bubbles!r} (AC-1)"
@@ -165,7 +188,7 @@ def test_ac4_leere_auswahl_entfernt_den_ausblick_in_beiden_kanaelen():
 
 
 def test_ac4_leere_auswahl_unterdrueckt_auch_den_zustands_fallback():
-    """AC-4 (zweiter Zweig): Given eine Tour, die mit dem Zieltag endet -- der
+    """AC-4 (zweiter Zweig): Given eine Trip, die mit dem Zieltag endet -- der
     Ausblick meldet dann den Zustand ``NO_STAGES`` statt Zeilen -- UND die
     Auswahl ist bewusst geleert / When beide Kanaele erzeugt werden / Then
     tritt AUCH der Zustands-Hinweis nicht an die Stelle des Blocks.
@@ -176,7 +199,7 @@ def test_ac4_leere_auswahl_unterdrueckt_auch_den_zustands_fallback():
     ganzen Abschnitt abgewaehlt, nicht nur die Spalten.
 
     Positivkontrolle voran: ohne sie waere die Abwesenheit unten kein Beweis,
-    sondern koennte heissen, dass diese Tourform gar keinen Fallback erzeugt.
+    sondern koennte heissen, dass diese Trip-Form gar keinen Fallback erzeugt.
     """
     body_alt, bubbles_alt = versendete_teile(
         trip(outlook_metrics=None, stage_count=2))

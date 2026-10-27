@@ -1,3 +1,10 @@
+---
+entity_id: fix_1197_prod_selftest_internal_url_skip
+type: module
+created: 2026-07-15
+status: implemented
+---
+
 # Spec: prod_selftest — interne/auth-geschützte URLs überspringen statt FAIL
 
 - **Issue:** #1197 (Sammel-Gate-Audit), Scheibe „prod_selftest interne/send-URLs"

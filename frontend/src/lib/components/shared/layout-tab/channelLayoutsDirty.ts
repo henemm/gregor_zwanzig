@@ -32,6 +32,7 @@ function normalizeChannel(metrics: WeatherConfigMetric[] | undefined): string {
 	return JSON.stringify(enabledOnly);
 }
 
+// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
 const CHANNELS = ['email', 'telegram', 'sms'] as const;
 
 /**

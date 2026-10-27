@@ -37,7 +37,7 @@ Wiederverwendet (kein Neubau, testids unverändert): `ChannelToggle`,
 
 **AC-4:** Given kein einziger Briefing-Kanal ist aktiv / When ich auf den Briefing-Zeitplan schaue / Then erscheint statt der Zeitplan-Karten die Warnbox „Kein Kanal aktiv" mit dem Hinweis, zuerst einen Kanal zu aktivieren.
 
-**AC-5:** Given der Trip hat Etappen mit Datumsangaben / When ich die Sektion „Laufzeit" ansehe / Then zeigt sie read-only „Läuft mit der Tour · endet <Enddatum aus letzter Etappe>" und der Button „Etappen öffnen →" wechselt in den Etappen-Tab; es gibt dort KEIN editierbares Datumsfeld.
+**AC-5:** Given der Trip hat Etappen mit Datumsangaben / When ich die Sektion „Laufzeit" ansehe / Then zeigt sie read-only „Läuft mit der Trip · endet <Enddatum aus letzter Etappe>" und der Button „Etappen öffnen →" wechselt in den Etappen-Tab; es gibt dort KEIN editierbares Datumsfeld.
 
 **AC-6:** Given der Trip-Editor ist geöffnet / When ich den Alerts-Tab öffne / Then enthält er nur noch Überschrift, Onboarding/Aktivierung und die Metrik-Level-Tabelle — Alert-Kanäle, Cooldown, Stille Stunden und Beispiel-Warnung erscheinen dort NICHT mehr, sondern vollständig und funktionsgleich im Briefings-Tab (Werte werden weiterhin persistiert wie bisher).
 

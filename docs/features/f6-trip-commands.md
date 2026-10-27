@@ -1,10 +1,36 @@
 # Trip-Befehle — Email-Reply & Telegram (F6)
 
-**Updated:** 2026-06-13 (Briefing-Mail lesbar: D/W/G-Kürzel aus E-Mail-Betreff entfernt — neu `[GZ#GRANK] Tag 3 — Morgen — Gewitter` ohne Zahlenkürzel); 2026-06-12 (Bug #775 — Trip-Shortcode-Routing: E-Mail-Betreff trägt neuen `[GZ#XXXX]`-Shortcode als primären Routing-Key, RFC-2047-Dekodierung, toleranter Whitespace-Lookup als Fallback); 2026-06-11 (Issue #731 — Befehlssatz vereinheitlicht: abruf-zentriert (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE), PAUSE/SKIP/CONFIG entfernt); 2026-06-08 (Issues #672/#671 — E2E-Pipeline-Tests + vollständiges Bot-Menü; #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
+**Hinweis (seit Issue #2282, Scheibe S1):** `PAUSE`/`WEITER`/`HILFE` sind über alle
+drei Eingangskanäle auch am **Ortsvergleich** ansprechbar — Details im Abschnitt
+„Ortsvergleich per Nachricht" unten.
 
-Gregor Zwanzig empfaengt Trip-Befehle ueber zwei Kanäle:
+**Updated:** 2026-09-28 (Issue #2417, Kurzform englisch — jeder Befehl bekommt ein
+englisches Wort (`TODAY`, `TOMORROW`, `STORMS`, `ROUTE`, `RESTDAY`, `RESUME`, `HELP`
+waren teils schon da, neu `CODES`/`KUERZEL`); die Antwortsprache folgt Kanal/Ziel statt
+der Eingabesprache (Premium-SMS immer englisch, E-Mail immer deutsch, Telegram nach
+`telegram_style`) — Details im neuen Abschnitt „Antwortsprache" unten); 2026-09-26 (Issue #2417 — bei aktivem Trip **und** Ortsvergleich(en)
+gehen alle Befehle außer `PAUSE`/`WEITER` jetzt direkt an den Trip statt in eine
+Rückfrage zu laufen, `HILFE` antwortet dabei sofort; neuer Hinweistext „kein
+aktives Ziel" für Trip-only-Befehle ohne aktiven Trip; Telegram-Bot-Menü zeigt
+jetzt alle 17 Befehle statt 7, `/status`-Alias auf `glance` entfernt); 2026-09-17
+(Issue #2282 Scheibe S1, Epic #2133/#1374 — Ortsvergleiche
+sind jetzt über alle drei Eingangskanäle für `PAUSE`/`WEITER`/`HILFE` ansprechbar;
+die aktive Auswahl ohne Namen und die `[Name]`-Erkennung im E-Mail-Betreff arbeiten
+kanaltyp-übergreifend); 2026-09-08 (Issue #2184, Epic #2133 Scheibe S4 — Premium-SMS ist jetzt
+ein dritter Eingangsweg: der vor dem Garmin-inReach-Kennzeichen `inreachlink.com`
+stehende Text wird als Befehl verarbeitet, die Antwort geht per Premium-SMS an die
+gelernte Rückadresse zurück; die Gewitter-Herkunft bleibt auf SMS/Premium-SMS wie
+bisher unterdrückt); 2026-08-23 (Issue #2051 Scheibe S4 — neues Abfrage-Kommando `STRECKE`/`/strecke`:
+Regen-Ereignisflächen entlang der Reststrecke des aktuell aktiven Wegabschnitts, erreichbar über
+Email und Telegram); 2026-06-13 (Briefing-Mail lesbar: D/W/G-Kürzel aus E-Mail-Betreff entfernt — neu `[GZ#GRANK] Tag 3 — Morgen — Gewitter` ohne Zahlenkürzel); 2026-06-12 (Bug #775 — Trip-Shortcode-Routing: E-Mail-Betreff trägt neuen `[GZ#XXXX]`-Shortcode als primären Routing-Key, RFC-2047-Dekodierung, toleranter Whitespace-Lookup als Fallback); 2026-06-11 (Issue #731 — Befehlssatz vereinheitlicht: abruf-zentriert (HEUTE/MORGEN/JETZT/GEWITTER/RUHETAG/STATUS/STOP/WEITER/HILFE), PAUSE/SKIP/CONFIG entfernt); 2026-06-08 (Issues #672/#671 — E2E-Pipeline-Tests + vollständiges Bot-Menü; #651/#653/#654/#655 — Telegram Tier-1/2/3 + Zoom-Navigation)
+
+Gregor Zwanzig empfaengt Trip-Befehle ueber drei Kanäle:
 - **Email:** Du antwortest auf einen bestehenden Report (alle 5 Minuten abgerufen)
 - **Telegram:** Du schreibst eine Nachricht oder klickst einen Button (Webhook-Push seit Issue #637)
+- **Premium-SMS** (Garmin inReach, seit Issue #2184): Du schreibst den Befehl in die
+  Garmin-Nachricht, vor den automatisch angehängten Link (Kennzeichen
+  `inreachlink.com`) — abgerufen im selben 5-Minuten-Poll wie der Rückadress-Lernlauf
+  (Issue #1676)
 
 ## Email: So funktioniert's
 
@@ -20,6 +46,33 @@ Gregor Zwanzig empfaengt Trip-Befehle ueber zwei Kanäle:
 1. Du sendest eine Nachricht an den Bot oder klickst einen Button in der Chat-Nachricht
 2. Der Bot verarbeitet den Befehl sofort (Webhook-Push)
 3. Der Bot antwortet mit einer Bestaetigung oder aktualisiert die Nachricht in-place (Zoom-Navigation)
+
+## Premium-SMS: So funktioniert's (Garmin inReach, seit Issue #2184)
+
+1. Du schreibst den Befehl in die Nachricht auf deinem Garmin-inReach-Gerät — Garmin hängt
+   automatisch einen Link plus Koordinaten an (Kennzeichen `inreachlink.com`)
+2. Gregor liest dein Gerät am Kennzeichen und deine Rückadresse per Absendernummer aus
+   (Voraussetzung: die Rückadresse ist bereits gelernt, s. `POST
+   /api/internal/premium-sms-learn`, Issue #1676 S1); nur der Text **vor** dem Kennzeichen
+   zählt als Befehl
+3. Gregor verarbeitet den Befehl über denselben `TripCommandProcessor` wie Email/Telegram
+   (kein eigener Trip-/Vergleichs-Bezug im Text nötig — die Auswahl folgt derselben
+   kanalneutralen Regel wie beim Telegram-Bot ohne Namen: aktiver Trip am Ortstag, sonst
+   der nächste zukünftige; hat der Nutzer stattdessen **keinen** aktiven Trip, aber genau
+   einen aktiven Ortsvergleich, wird dieser angesprochen — Details siehe „Ortsvergleich
+   per Nachricht" unten)
+4. Die Bestaetigung geht per Premium-SMS an deine gelernte Rückadresse zurück
+
+**Besonderheit:** Auf Premium-SMS (wie auf regulärem SMS) bleibt die Gewitter-Herkunft
+(„wegen hoher Blitzdichte" o.ä.) grundsätzlich unterdrückt — sie kostet Zeichen auf einem
+Kanal, der pro Zeichen Geld und Garmin-Kontingent kostet. Die Stufe selbst
+(„Gewitter: hoch") bleibt sichtbar. Details: `docs/features/gewitter-gesamtkonzept.md`,
+Spec `docs/specs/modules/feat_2184_s4_premium_sms_kommandoverarbeiter.md`.
+
+Nicht eindeutig zuordenbare Absender (Lernaufruf schlägt fehl, z. B. mehrere Kandidaten)
+und die allererste Verbindungsnachricht des Geräts ohne Befehlsabsicht lösen **keine**
+Verarbeitung bzw. dieselbe „Unbekannter Befehl"-Antwort wie auf den anderen Kanälen aus —
+kein stilles Verwerfen.
 
 ## Befehlsformat
 
@@ -43,6 +96,20 @@ Gross-/Kleinschreibung ist egal. Der Befehl muss in der **ersten nicht-leeren Ze
 
 ---
 
+## Antwortsprache (seit Issue #2417)
+
+Jeder Befehl hat seit Issue #2417 ein englisches Wort, das auf allen drei Kanälen wirkt — deutsch funktioniert weiterhin. Die **Antwortsprache** folgt aber nicht der Eingabesprache, sondern dem Kanal/Ziel:
+
+- **E-Mail** antwortet immer deutsch.
+- **Premium-SMS** antwortet immer englisch.
+- **Telegram** folgt dem `telegram_style` des aufgelösten Ziels (Trip oder Ortsvergleich): `kurzform` → englisch, sonst deutsch.
+- Bei **zielosen Befehlen** (`HILFE`/`HELP`, `KUERZEL`/`CODES`, ohne aufgelösten Trip/Ortsvergleich) folgt Telegram dem gesendeten Wort: `HELP`/`CODES` antworten englisch, `HILFE`/`KUERZEL` deutsch.
+- Ein **unbekannter Befehl** bekommt auf Telegram deutschen Text mit dem Zusatz „English: send HELP"; auf Premium-SMS ist er immer englisch.
+
+Details und Wortlaut: `docs/specs/modules/feat_2417_kurzform_englisch.md`.
+
+---
+
 ## Verfuegbare Befehle
 
 ### Abfrage-Befehle (Abruf-zentriert)
@@ -51,12 +118,14 @@ Diese Befehle zeigen Wetter-Informationen **ohne** Trip-State zu veraendern.
 
 | Befehl | Wirkung |
 |--------|--------|
-| `HEUTE` | Wetter der heutigen Etappe |
-| `MORGEN` | Wetter der morgigen Etappe |
+| `HEUTE` / `TODAY` | Wetter der heutigen Etappe |
+| `MORGEN` / `TOMORROW` | Wetter der morgigen Etappe |
 | `JETZT` / `NOW` | Nowcast (Regen/Gewitter naechste ~2h) |
-| `GEWITTER` | Gewittergefahr heutige Etappe (stuendlich) |
+| `GEWITTER` / `STORMS` | Gewittergefahr heutige Etappe (stuendlich) |
 | `STATUS` | Heute + kommende Etappen (ohne vergangene) |
+| `STRECKE` / `ROUTE` (auch `STRECKE <km>` / `ROUTE <km>`) | Regen-Ereignisflächen entlang der Reststrecke des aktuell aktiven Wegabschnitts (Issue #2051 S4) |
 | `HILFE` / `HELP` | Verfuegbare Befehle anzeigen |
+| `KUERZEL` / `CODES` | Kürzel-Legende (Wetter-Register, Warn-Kürzel, Format) — seit Issue #2417, siehe Abschnitt „Antwortsprache" unten |
 
 **Beispiel:**
 ```
@@ -67,15 +136,74 @@ Gregor antwortet mit dem Wetter fuer die heutige Etappe.
 
 ---
 
+### `STRECKE` — Regen-Ereignisflächen entlang der Reststrecke (Issue #2051 S4)
+
+Zeigt die Regen-Ereignisflächen entlang der Reststrecke des **aktuell aktiven
+Wegabschnitts** (nicht der ganzen Tagesetappe — siehe Grenze unten). Erreichbar über
+Email (Freitext `STRECKE` in der ersten Zeile), Telegram (Freitext `strecke` oder
+Slash `/strecke`) und Premium-SMS (Freitext `STRECKE` vor dem Garmin-Kennzeichen, seit
+Issue #2184). Seit Issue #2417 steht `/strecke` auch im Telegram-Bot-Menü (Details:
+`docs/features/architecture.md`, Abschnitt Telegram-Bot-Menü) — davor musste es
+getippt werden.
+
+**Ohne Argument:** Ausgangspunkt ist die aktuelle Position — ein gültiger GPS-Fix aus
+Premium-SMS (ADR-0102, seit 2026-10-26), sonst die Planposition.
+
+**Mit Argument** (`STRECKE 5` bzw. `/strecke 5`): Ausgangspunkt ist der selbst genannte
+km-Stand, bezogen auf die stage-kumulative Kilometrierung des aktiven Segments.
+Gültiger Bereich: `[Segment-Start-km, Segment-Ende-km]` (beide Ränder eingeschlossen),
+Dezimalwerte erlaubt. Werte außerhalb des Bereichs oder nicht-numerische Eingaben werden
+abgelehnt — kein Wetterabruf.
+
+**Antwort:**
+- Email: je Regen-Ereignisfläche eine Zeile mit km-Spanne, Zeitspanne, Intensität und
+  Quelle im Klartext (`Radar (DWD)`, `INCA (GeoSphere AT)`).
+- Telegram: dieselben Zeilen ohne Quelle-Spalte (Platzgrund).
+- Jede Antwort mit Messung schließt mit `Geprüft: km {von}-{bis}.` — der tatsächlich
+  geprüften Spanne (aus den erfolgreich abgefragten Punkten, nicht den geplanten).
+
+**Vier ehrliche Sonderfälle:**
+- Keine aktive Etappe/kein auflösbarer Standort — derselbe Text wie `JETZT` in derselben
+  Situation.
+- Kilometrierung für die Etappe nicht verfügbar (auch nach Nachrüst-Versuch) — keine
+  Streckenangabe möglich, kein Wetterabruf.
+- Kein Regen im geprüften Abschnitt erkannt — eigener Hinweistext samt geprüfter Spanne.
+  Nur bei tatsächlich gemessenen Punkten.
+- Nowcast ausgefallen oder alle Punkte ohne Messwert — Antwort „Nowcast nicht verfügbar"
+  (nie „Kein Regen erkannt"); gilt ebenso für `JETZT`. Seit #1405 S4a meldet
+  `CommandResult.success` nur bei tatsächlicher Wirkung `True`; gesperrter Trip/Ortsvergleich
+  („Befehl nicht ausgefuehrt … in einer Minute erneut senden") und Programmfehler
+  („konnte nicht sicher ausgefuehrt werden … mit STATUS pruefen") liefern `success=False`.
+
+**Bekannte Grenze:** Die Antwort deckt nur das aktuell aktive Wegpunkt-Segment ab, nicht
+die volle Resttagesetappe (Bestandsgrenze aus S2a/S2b im Alarm-Pfad — dieselben Bausteine
+`derive_rain_zones()`/`points_along_remaining_route()` — hier nur über die
+`Geprüft:`-Zeile sichtbar gemacht, nicht behoben). Kein regulärer SMS-Kanal (dafür gibt es
+keinen Inbound-Kommando-Pfad); über Premium-SMS (Garmin inReach, seit Issue #2184)
+funktioniert `STRECKE` wie jeder andere bekannte Befehl.
+
+**Beispiel:**
+```
+STRECKE
+```
+oder mit eigenem km-Stand:
+```
+STRECKE 5
+```
+
+Spec: `docs/specs/modules/feat_2051_s4_strecke_kommando.md`
+
+---
+
 ### Verwaltungs-Befehle
 
 Diese Befehle veraendern den Trip-Status.
 
 | Befehl | Syntax | Wirkung |
 |--------|--------|---------|
-| `RUHETAG` | `RUHETAG` oder `RUHETAG: 2` | Verschiebt zukuenftige Etappen um N Tage |
+| `RUHETAG` / `RESTDAY` | `RUHETAG` / `RESTDAY` oder `RUHETAG: 2` / `RESTDAY 2` | Verschiebt zukuenftige Etappen um N Tage |
 | `STOP` | `STOP` | Deaktiviert den Versand (Reporter pausieren) |
-| `WEITER` | `WEITER` | Reaktiviert den Versand (nach STOP) |
+| `WEITER` / `RESUME` | `WEITER` / `RESUME` | Reaktiviert den Versand (nach STOP) |
 
 **Beispiel — RUHETAG:**
 ```
@@ -118,6 +246,67 @@ WEITER
 
 Briefing-Reports sind wieder aktiv. Naechster Report kommt planmaessig.
 ```
+
+---
+
+## Ortsvergleich per Nachricht (seit Issue #2282, Scheibe S1)
+
+`PAUSE`, `WEITER`/`RESUME`, `HILFE`/`HELP` und (seit Issue #2417) `KUERZEL`/`CODES`
+sind über alle drei Eingangskanäle (Email, Telegram, Premium-SMS) auch für einen
+**Ortsvergleich** ansprechbar, nicht nur für einen Trip. Alle übrigen Befehle
+bleiben trip-exklusiv.
+
+**Adressierung ohne Namen** (Telegram/Premium-SMS) — seit Issue #2417 abgestuft nach
+Befehlsart (löst die vorherige pauschale Mehrdeutigkeits-Regel ab):
+
+- `HILFE`/`HELP` antwortet **immer sofort** mit der Befehlsübersicht, `KUERZEL`/`CODES`
+  (seit Issue #2417) ebenso sofort mit der Kürzel-Legende — beide ganz ohne
+  Trip-/Vergleichs-Auflösung, auch wenn Trip und Ortsvergleiche gleichzeitig aktiv
+  sind.
+- Alle übrigen Abfrage- und Verwaltungsbefehle (`HEUTE`, `MORGEN`, `REPORT`, `JETZT`,
+  `GEWITTER`, `STRECKE`, `RUHETAG`, `STATUS`, `SKIP`, `STOP`, Wetter-Kürzel,
+  Query-Keys) gehen bei einem aktiven Trip **immer direkt an diesen Trip** —
+  unabhängig davon, wie viele Ortsvergleiche daneben aktiv sind, und **ohne**
+  Rückfrage. Gibt es **keinen** aktiven Trip, aber ≥1 aktiven Ortsvergleich,
+  antwortet Gregor mit „Kein aktiver Trip. Dieser Befehl gilt nur für Trips, nicht
+  für Ortsvergleiche." — bewusst unterscheidbar vom Fall „gar nichts aktiv" unten.
+  **Ausnahme seit #2282 S2 (2026-10-22):** `REPORT`/`HEUTE`/`MORGEN` gelten auch am
+  Ortsvergleich (siehe Tabelle unten). Ohne Namen bei Trip **und** Vergleich fragt
+  Gregor deshalb zurück (wie `PAUSE`/`WEITER`); bei reinem Vergleichsnutzer wird der
+  Vergleich direkt angesprochen.
+- `PAUSE`/`WEITER` sind mehrdeutig (ebenso `REPORT`/`HEUTE`/`MORGEN` seit #2282 S2): Sind sowohl ein Trip als
+  auch mindestens ein Ortsvergleich aktiv, oder mehrere Ortsvergleiche gleichzeitig,
+  fragt Gregor zurück und zählt alle Kandidaten auf — es wird **kein** Befehl
+  ausgeführt, bis mit vorangestelltem Namen geantwortet wird (z. B. `Zermatt
+  pause`). Hat der Nutzer keinen aktiven Trip, aber genau einen aktiven (auch
+  bereits pausierten) Ortsvergleich, wird dieser direkt angesprochen.
+
+Gibt es weder einen aktiven Trip noch einen aktiven Ortsvergleich, lautet die
+Antwort auf allen Kanälen einheitlich „Kein aktiver Trip oder Ortsvergleich
+gefunden."
+
+**Adressierung mit Namen:** Ein vorangestellter Name (Telegram/Premium-SMS) bzw. das
+`[Name]` im Email-Betreff wird gegen Trips **und** Ortsvergleiche geprüft. Tragen ein
+Trip und ein Ortsvergleich desselben Nutzers zufällig denselben Namen, fragt Gregor
+ebenfalls zurück, statt still den Trip zu bevorzugen.
+
+**Verhalten am Ortsvergleich:**
+
+| Befehl | Wirkung |
+|--------|---------|
+| `PAUSE` | Pausiert den Ortsvergleich unbefristet (eine mitgegebene Dauer wie `PAUSE 2d` wird ignoriert) — Antwort: „... pausiert, bis du 'weiter' sendest." |
+| `WEITER` | Setzt einen pausierten Ortsvergleich fort — Antwort: „... wieder aktiv." War der Vergleich nicht pausiert: „... ist nicht pausiert." (keine Änderung) |
+| `HILFE` / `HELP` | Zeigt nur die am Ortsvergleich verfügbaren Befehle (`HEUTE`, `MORGEN`, `REPORT`, `PAUSE`, `WEITER`/`RESUME`, `HILFE`/`HELP`, `KUERZEL`/`CODES`; der Befehlsblock der Vergleichs-Mail nennt HEUTE/MORGEN/REPORT ebenfalls) — nicht die volle Trip-Befehlsliste |
+| `KUERZEL` / `CODES` | Kürzel-Legende (seit Issue #2417) — wie am Trip; „TF" (gefühlte Temperatur) steht seit Issue #2422 S6 (2026-10-01) auch in der Trip-Antwort, weil der Trip das Token jetzt versendet (zuvor seit #2454 dort ausgeblendet) |
+| `REPORT` | Seit #2282 S2: liefert das Vergleichs-Briefing auf **allen aktivierten Kanälen** (Handversand `on_demand`; Δ-Anker und reguläres Briefing bleiben unberührt) |
+| `HEUTE`, `MORGEN` | Seit #2282 S2: Vergleichs-Briefing **nur auf dem Anfragekanal**. `MORGEN` = Ortstag+1 im Abend-Slot; Ortstag über `preset_ortstag` (`compare_slot_scheduler.py`) wie im Cron. Kanal-Auflösung geteilt mit dem Trip (`resolve_restricted_channel_flags`, `src/services/user_tier.py`); Premium-SMS am Anfragekanal nur mit Premium-Tarif, sonst „nicht erreichbar". Fehlertexte aus denselben Tabellen wie beim Trip (Label „Ortsvergleich"), neuer Code `invalid_preset` |
+| alle übrigen (`STRECKE`, `SKIP`, `RUHETAG`, `STARTDATUM`, `STOP`, `JETZT`/`NOW`, `STATUS`, `GEWITTER`, Drilldowns, Metrikwörter) | „'<befehl>' gibt es beim Ortsvergleich nicht." |
+
+**Bekannte Grenze:** Die Pause-Semantik am Ortsvergleich unterscheidet sich bewusst
+vom Trip — unbefristet bis `WEITER`, keine Dauer, kein `STOP`-Verweis. Der Wortlaut
+ist deshalb nicht identisch mit der Trip-`PAUSE`-Bestätigung.
+
+Spec: `docs/specs/modules/feat_2282_ortsvergleich_eingangskanaele.md`; `REPORT`/`HEUTE`/`MORGEN`: `docs/specs/modules/feat_2282_s2_ortsvergleich_befehle_versand.md`
 
 ---
 
@@ -182,7 +371,7 @@ Ohne `GZ_INBOUND_ADDRESS` werden alle ungelesenen Emails geprueft (wie bisher).
 
 - Der Befehl muss in der **ersten nicht-leeren Zeile** stehen
 - Gross-/Kleinschreibung ist egal (`### RUHETAG` funktioniert auch)
-- Der Trip wird aus dem Email-Betreff erkannt: **Primär über den Shortcode** `[GZ#XXXX]`, falls nicht vorhanden fallback auf Namensvergleich (robust gegen Whitespace-Variationen)
+- Der Trip wird aus dem Email-Betreff erkannt: **Primär über den Shortcode** `[GZ#XXXX]`, falls nicht vorhanden fallback auf Namensvergleich (robust gegen Whitespace-Variationen). Seit Issue #2282 findet derselbe `[Name]`-Namensvergleich im Betreff auch einen **Ortsvergleich** — nur `PAUSE`/`WEITER`/`HILFE` wirken dort (siehe unten)
 - Nur Emails von deiner konfigurierten Adresse werden akzeptiert
 - Unbekannte Befehle werden mit einer Hilfe-Antwort beantwortet
 
@@ -205,6 +394,13 @@ Diese Befehle gibst du direkt als Telegram-Nachricht ein oder tappst sie aus dem
 | `/hilfe` | **hilfe** | ℹ️ Verfügbare Befehle |
 
 **Wichtig:** Telegram sendet getappte Menü-Befehle immer mit führendem Slash (z.B. `/glance`). Gregor kennt sowohl die kurzen Varianten (`/s`) als auch die vollständigen Menü-Namen (`/glance`) — beide funktionieren.
+
+**Seit Issue #2417 (AC-21) ist das Bot-Menü vollständig:** Zusätzlich zu den oben
+gelisteten Abfrage-Befehlen enthält es `strecke`, `ruhetag`, `status`, `pause`,
+`skip`, `stop`, `weiter` (insgesamt 17 Einträge). `/status` löst dabei **nicht**
+mehr — wie früher — `glance` aus, sondern liefert wie das nackte Wort `status`
+die Etappenliste; der Wetter-Überblick bleibt über `/glance` erreichbar.
+Vollständige, aktuelle Liste: `docs/features/architecture.md`.
 
 ### Welcher Tag ist „heute"? (ADR-0044)
 
@@ -240,7 +436,7 @@ Diese Zoom-Navigation ersetzt die Nachricht in-place — kein Nachrichten-Spam. 
 2. Klick auf „Timeline heute"
    Nachricht wird in-place aktualisiert → Timeline-Details mit Buttons je kritischer Metrik
 3. Klick auf „Gewitter stündlich"
-   Nachricht wird aktualisiert → stündliche Gewitter-Serie mit „Zurück"-Button
+   Nachricht wird aktualisiert → Gewitter-Verlauf mit „Zurück"-Button (Issue #2185: aufeinanderfolgende Stunden mit identischem Text werden zu einem Zeitbereich `HH:MM–HH:MM` zusammengefasst, statt jede Stunde einzeln zu listen)
 4. Klick auf „Zurück"
    Zurück zur Timeline-Übersicht
 ```
@@ -252,12 +448,14 @@ Diese Zoom-Navigation ersetzt die Nachricht in-place — kein Nachrichten-Spam. 
 Seit Issue #731 kannst du den Telegram-Bot mit den gleichen **bare Keywords** wie Email ansprechen:
 
 ```
-HEUTE
-MORGEN
+HEUTE (oder TODAY)
+MORGEN (oder TOMORROW)
 JETZT (oder NOW)
-GEWITTER
+GEWITTER (oder STORMS)
 STATUS
-HILFE
+STRECKE (auch STRECKE <km>, oder /strecke, oder ROUTE)
+HILFE (oder HELP)
+KUERZEL (oder CODES) — seit Issue #2417
 ```
 
 Der Bot antwortet direkt — kein Reload nötig.
@@ -271,10 +469,10 @@ Der Bot antwortet direkt — kein Reload nötig.
 Wie Email:
 
 ```
-RUHETAG
-RUHETAG: 2
+RUHETAG (oder RESTDAY)
+RUHETAG: 2 (oder RESTDAY 2)
 STOP
-WEITER
+WEITER (oder RESUME)
 ```
 
 Keine `###`-Präfixe nötig — Telegram erkennt die Befehle direkt.
@@ -296,3 +494,38 @@ Das Bot-Menü bietet zusätzlich strukturierte Abfragen (ähnlich Query-Keys), d
 | **hilfe** | ℹ️ Verfügbare Befehle |
 
 Klick den Button im Bot-Menü oder tippe `/glance`, `/heute_gewitter` etc.
+
+Seit Issue #2417 zeigt das Bot-Menü zusätzlich `strecke`, `ruhetag`, `status`,
+`pause`, `skip`, `stop`, `weiter` (siehe Hinweis oben unter „Telegram-Abfrage-Befehle").
+
+### Wenn für einen Tag keine Wetterdaten vorliegen (Issue #1818)
+
+Die vier Abfragen `timeline_heute`, `timeline_morgen`, `glance` und `heute_gewitter` lesen den
+undatierten Wetter-Anker `{trip_id}.json`. Der trägt strukturell nur **einen** Tag: jeder
+Briefing-Lauf überschreibt ihn komplett mit seinem eigenen `target_date` (Morgen-Lauf → heute,
+Abend-Lauf → morgen). Für den jeweils anderen Tag lösen die Abfragen deshalb gestuft auf:
+
+1. **Undatierter Anker** trägt für den Tag Punkte mit auswertbaren Tageswerten → diese gewinnen.
+2. Sonst **datierter Snapshot** `{trip_id}_{YYYY-MM-DD}.json` (`load_dated`) — rein lesend,
+   **ohne Wetterabruf**. Deckt strukturell die Abend-Hälfte: nach dem Abend-Briefing liegt der
+   fehlende Tag (heute) aus dem Morgen-Lauf datiert vor.
+3. Sonst **ehrliche Datenlücken-Meldung** mit Verweis auf `/heute` bzw. `/morgen`.
+
+**Wichtige Unterscheidung:** „Keine Etappe geplant" ist eine Aussage über die **Tourplanung** und
+erscheint nur, wenn `convert_trip_to_segments(trip, tag)` für den Tag wirklich leer ist (Ruhetag,
+Tag nach Tourende). Fehlen dagegen nur die **Daten**, sagt die Antwort das auch so — die frühere
+Vermengung beider Fälle war der Defekt aus #1818.
+
+Ein Punkt zählt nur als Abdeckung, wenn er mindestens eine auswertbare Tagesgröße trägt
+(`_traegt_tageswerte`). Inhaltsleere Platzhalter aus **teilweise** gescheiterten Abrufen
+verdrängen damit keine echten Werte mehr (Adversary-Befund F005).
+
+**Keine Schreibwirkung:** Diese Abfragen lösen keinen Wetterabruf aus und verändern keine
+Snapshot-Datei; die Ergänzung geschieht auf einer In-Memory-Kopie. Der undatierte Anker bleibt
+eintägig — er ist zugleich Vergleichsbasis des Abweichungs-Alarms (`briefing_backed`, ADR-0009),
+die dadurch strukturell unberührt bleibt.
+
+**Grenze:** Am Vormittag liegt für morgen weder im Anker noch datiert etwas vor (der datierte
+Snapshot für morgen entsteht erst im Abend-Briefing) — dort erscheint die Fehlanzeige. Das
+Kommando `/morgen` liefert dann ein volles Briefing, füllt aber die Timeline-Ansicht **nicht**:
+der On-Demand-Pfad schreibt bewusst keinen Anker (#1007).

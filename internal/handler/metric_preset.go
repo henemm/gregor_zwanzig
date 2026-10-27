@@ -150,6 +150,7 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
+		defer s.LockMetricPresets()() // #2158: Lesen+Schreiben unter einer Sperre
 		presets, err := s.LoadMetricPresets()
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
@@ -196,6 +197,7 @@ func DeleteMetricPresetHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
+		defer s.LockMetricPresets()() // #2158: Lesen+Schreiben unter einer Sperre
 		presets, err := s.LoadMetricPresets()
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
@@ -234,6 +236,7 @@ func PatchMetricPresetHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 
+		defer s.LockMetricPresets()() // #2158: Lesen+Schreiben unter einer Sperre
 		presets, err := s.LoadMetricPresets()
 		if err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})

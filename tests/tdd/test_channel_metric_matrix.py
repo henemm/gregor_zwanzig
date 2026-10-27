@@ -94,7 +94,7 @@ from bs4 import BeautifulSoup
 from app.loader import _parse_display_config
 from app.metric_catalog import (
     _METRICS, build_default_display_config, format_metric_value, get_all_metrics,
-    get_alert_label, get_cmp, get_metric, get_sms_code,
+    get_alert_label, get_cmp, get_metric, get_sms_code, summary_field_for,
 )
 from app.models import (
     AlertMetric, ForecastDataPoint, ForecastMeta, MetricConfig, NormalizedTimeseries,
@@ -105,7 +105,6 @@ from output.renderers.alert.model import AlertEvent, AlertMessage, side_label
 from output.renderers.alert.render import (
     _HANDLED_UNITS, render_email, render_sms, render_subject, render_telegram,
 )
-from output.channels.premium_sms import PremiumSmsOutput
 from output.renderers.channel_layout import (
     CHANNEL_LIMITS, VISIBILITY_GATE_IDS, render_for_channel,
 )
@@ -130,8 +129,8 @@ from tests.helpers.compare_order import (
     sms_index, sms_kuerzel, telegram_zellen, uebersichts_label,
 )
 from tests.helpers.outlook_columns import (
-    assert_soll_menge_ist_plausibel, compare_outlook_soll_paare,
-    compare_outlook_soll_spalten,
+    assert_soll_menge_ist_plausibel, compare_outlook_soll_kennungen,
+    compare_outlook_soll_paare, compare_outlook_soll_spalten,
 )
 from tests.tdd import _min_temp_felt_fixtures as F
 # Issue #1719 S2 AC-11: geteilter Premium-SMS-Stub (echter lokaler HTTP-
@@ -185,7 +184,12 @@ def _partner_of(metric_id: str) -> str:
 # ``temperature`` kein eigenes Kurzform-Kuerzel mehr; 'FK'/'FD' haengen an
 # ``wind_chill_day_low``/``_high``, die als eigene Parametrisierungen
 # geprueft werden.
-_SMS_WITHOUT_OWN_SYMBOL = {"temperature", "wind_chill"}
+# #2422 S6 (B1, PO-Entscheid V1): ``wind_chill`` traegt seit S6 selbst ein Trip-
+# Kurzform-Kuerzel ('TF', Stundenwert der gefuehlten Temperatur) und gehoert damit
+# ZURUECK in diese Matrix (Auswahl/Abwahl/Reihenfolge) -- nur ``temperature``
+# bleibt ohne eigenes Kuerzel. Der Test unten sagt es selbst: "dann gehoert es
+# zurueck in diese Matrix statt in die Ausnahme".
+_SMS_WITHOUT_OWN_SYMBOL = {"temperature"}
 
 # Die zwei Groessen, deren Kuerzel bei gemeinsamer Auswahl zu EINEM
 # Bereichs-Token verschmelzen (#1824: 'K3 D20' -> 'D3/20'). Sie duerfen
@@ -260,8 +264,17 @@ def test_ac13_email_column_selection_and_order(metric_id):
 
 
 def _telegram_cells(dc: UnifiedWeatherDisplayConfig) -> list[str]:
-    layout = render_for_channel("telegram", dc, "evening")
-    return layout.table_columns + layout.detail_metrics
+    """Prueft die Kaskaden-AUSWAHL fuer Telegram, nicht die Sichtbarkeit in
+    Tabelle/Kurzuebersicht (s. Kommentar bei ``test_ac4_*_telegram_table_
+    budget`` weiter unten) -- deshalb die rohe Kanal-Auswahl
+    (``get_metrics_for_channel``), nicht ``ChannelLayout.table_columns``
+    (das kappt bei 7 Slots). Die reinen Sichtbarkeits-Gates
+    (``VISIBILITY_GATE_IDS``) bleiben ausgenommen -- sie landen strukturell
+    nie in einem Bucket, unabhaengig von der Kaskade (#1741)."""
+    return [
+        m.metric_id for m in dc.get_metrics_for_channel("telegram", "evening")
+        if m.metric_id not in VISIBILITY_GATE_IDS
+    ]
 
 
 @pytest.mark.parametrize("metric_id", _ALL_METRIC_IDS)
@@ -332,7 +345,12 @@ def _representative_symbol(metric_id: str) -> str:
         return _RANGE_REPRESENTATIVE[metric_id]
     if metric_id in SMS_MULTI_SYMBOLS_BY_METRIC:
         return SMS_MULTI_SYMBOLS_BY_METRIC[metric_id][0]
-    return SMS_SYMBOL_BY_METRIC[metric_id]
+    symbol = SMS_SYMBOL_BY_METRIC.get(metric_id)
+    assert symbol is not None, (
+        f"{metric_id!r} fuehrt kein Kurzform-Kuerzel im Register (#2422 S6: "
+        f"wind_chill braucht 'TF' in SMS_SYMBOL_BY_METRIC)."
+    )
+    return symbol
 
 
 # sms_format.md §5: der Threshold+Peak-Block traegt '(' ')' und '%'
@@ -348,9 +366,15 @@ def _representative_symbol(metric_id: str) -> str:
 # Issue #1824 (A): zusaetzlich die Bereichsform ('D3/20', 'D-12/-4', 'D-/-',
 # 'D?/?') -- zwei Haelften, durch '/' getrennt.
 _RANGE_HALF = r"-?\d+|-|\?"
+# #2422 S6: zwei Erweiterungen der Wert-Grammatik -- (1) Einfach-Stufen mit
+# Doppelpunkt im Kuerzel (``CT:SCT@4``, ``CP:M@14``; Konvention #1824 B) -- die
+# Wolken-Groessen sind im Katalog-Default Einfach und erscheinen seit B2 als Stufe;
+# (2) optionales Minus vor Zahlen (``TF-3@6``, Invers-Min-Token mit negativem Wert).
+_STUFE = r"(?:CLR|FEW|SCT|BKN|OVC|[LMH]|-)"
 _GRAMMAR_SUFFIX = re.compile(
     rf"(?:(?:{_RANGE_HALF})/(?:{_RANGE_HALF})"
-    r"|(?:\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
+    rf"|:{_STUFE}(?:@\d+(?:\({_STUFE}@\d+\))?)?"
+    r"|(?:-?\d+(?:\.\d+)?%?|[LMH])(?:@\d+(?:\((?:-?\d+(?:\.\d+)?%?|[LMH])@\d+\))?)?|-|\?)$"
 )
 
 
@@ -869,8 +893,12 @@ def _kaskade_mail_headers(dc: UnifiedWeatherDisplayConfig, report_type: str = "e
 
 
 def _kaskade_telegram_cells(dc: UnifiedWeatherDisplayConfig, report_type: str = "evening") -> list[str]:
-    layout = render_for_channel("telegram", dc, report_type)
-    return layout.table_columns + layout.detail_metrics
+    """Kaskaden-AUSWAHL fuer Telegram (nicht Sichtbarkeit) -- s. Docstring
+    von ``_telegram_cells`` oben, gleiche Begruendung (#1741)."""
+    return [
+        m.metric_id for m in dc.get_metrics_for_channel("telegram", report_type)
+        if m.metric_id not in VISIBILITY_GATE_IDS
+    ]
 
 
 def _kaskade_sms_text(dc: UnifiedWeatherDisplayConfig, report_type: str = "evening") -> str:
@@ -974,7 +1002,13 @@ def test_kaskade_ac6_wind_chill_contradiction_baseline_stays_green():
     # ())` haelt die Schleife wirkungslos statt mit KeyError abzustuerzen --
     # sie hat nichts mehr zu pruefen, weil die Groesse kein Kuerzel mehr
     # traegt, das trotz Abwahl auftauchen koennte.
-    for symbol in SMS_MULTI_SYMBOLS_BY_METRIC.get("wind_chill", ()):
+    # #2422 S6 (B1): ``wind_chill`` traegt jetzt 'TF' (SMS_SYMBOL_BY_METRIC) -- die
+    # Schleife hat wieder etwas zu pruefen: trotz globaler AN-Wahl darf 'TF' im SMS-
+    # Text NICHT stehen, wenn der SMS-Kanal die Groesse abgewaehlt hat.
+    wc_symbole = tuple(SMS_MULTI_SYMBOLS_BY_METRIC.get("wind_chill", ())) + tuple(
+        s for s in (SMS_SYMBOL_BY_METRIC.get("wind_chill"),) if s
+    )
+    for symbol in wc_symbole:
         assert _first_index_starting_with(sms, symbol) is None, (
             f"AC-6: wind_chill-Symbol {symbol!r} erscheint trotz enabled:false im SMS-Kanal-Layout: {sms!r}"
         )
@@ -1674,7 +1708,11 @@ def test_kaskade_s2_ac11_premium_sms_forwards_the_cut_sms_text(
     settings = _prod_style_premium_sms_settings(
         premium_sms_stub.port, seven_sandbox_key="sandbox-key",
     )
-    PremiumSmsOutput(settings).send("Betreff", report.sms_text)
+    # #1412 S4b: Empfaenger = gelernte Rueckadresse aus dem Profil.
+    from tests.helpers.sms_empfaenger import mit_profil_rueckadresse, premium_ausgang
+
+    uid = mit_profil_rueckadresse("kunde-kaskade", settings)
+    premium_ausgang(settings, uid).send("Betreff", report.sms_text)
 
     assert len(premium_sms_stub.received) == 1, (
         f"Erwartet genau EINEN POST, bekommen: {premium_sms_stub.received!r}"
@@ -1804,7 +1842,7 @@ _GEWITTER_ID = _ALERT_METRIC_TO_CATALOG_ID[AlertMetric.THUNDER_LEVEL][0]
 _UNIT_PROBE_VALUE = 12.0
 _EINHEITEN_UNTER_BEOBACHTUNG = sorted({m.unit for m in _METRICS} | set(_HANDLED_UNITS))
 
-# Alarm-SMS-Tokengrammatik (render.py ``_sms_token`` / ``_sms_corridor_token``),
+# Alarm-SMS-Tokengrammatik (render.py ``_sms_token``),
 # vier Formen -- die Grammatik muss alle vier zerlegen, ohne zur Teilstring-
 # Suche zu verwaessern ('N' (temperature_cold) ist Wortanfang von 'NS'
 # (fresh_snow), s. AC-S1-2-Gegenprobe):
@@ -2294,6 +2332,13 @@ def test_ac_s1_7_gleichnamige_groessen_trennt_nur_die_kurznachricht(label, metri
             f"Vorbedingung: genau ein Token erwartet fuer {mid!r}, erkannt: {codes}"
         )
         kuerzel.append(codes[0])
+    # #2417 AC-28 (PO-Beschluss): die Kurznachricht trennt das Paar
+    # temperature/temperature_cold bewusst NICHT mehr -- der Kaelte-Alarm
+    # bewacht dieselbe Temperatur und traegt deshalb dasselbe 'T' ('N' ist
+    # allein der Nachtwert). Jedes andere gleichnamige Paar muss sie trennen.
+    if set(metric_ids) == {"temperature", "temperature_cold"}:
+        assert kuerzel == ["T", "T"], f"#2417 AC-28: beide Alarme tragen 'T': {kuerzel}"
+        return
     assert len(set(kuerzel)) == len(kuerzel), (
         f"AC-S1-7: allein die Kurznachricht trennt die gleichnamigen Groessen "
         f"{list(metric_ids)} -- hier tut sie es nicht: {kuerzel}"
@@ -2344,6 +2389,8 @@ _S2_KLARTEXT_UEBERSCHRIFT = "3-Tages-Ausblick"
 
 _S2_SOLL = compare_outlook_soll_spalten()
 _S2_SOLL_PAARE = compare_outlook_soll_paare()
+# #1848 A2: das Speicherformat der Bedienflaeche sind seither die Kennungen.
+_S2_SOLL_KENNUNGEN = compare_outlook_soll_kennungen()
 _S2_SOLL_IDS = [f"{s['metric_id']}:{s['aggregation']}" for s in _S2_SOLL]
 
 _S2_STARTTAG = date(2026, 7, 20)
@@ -2354,9 +2401,12 @@ _S2_TAGE = ((6.0, 18.0), (9.0, 27.0), (11.0, 23.0))
 # Klartext, an jedem der drei Tage) -- der ROTE Anteil von AC-S2-4. Die Liste
 # bleibt nach dem Fix stehen: sie begrenzt die Charakterisierung in AC-S2-6 auf
 # die 20 bereits gefuellten Zellen und bleibt der Beleg des roten Anteils.
+# #1848 A1: wind_chill_min_c/wind_chill_max_c teilen sich seit dem Merge
+# ebenfalls EINEN Soll-Eintrag -- dasselbe Tupel-Prinzip wie bei
+# _S2_UNVERAENDERTE_ZELLEN oben.
 _S2_DEFEKTE_FELDER = frozenset({
     "snow_depth_cm", "snow_new_sum_cm", "wind_direction_avg_deg",
-    "wind_chill_min_c", "wind_chill_max_c",
+    ("wind_chill_min_c", "wind_chill_max_c"),
 })
 
 
@@ -2410,7 +2460,7 @@ def _s2_mail(thunder_name: str = "MED") -> tuple[str, str]:
         created_at=datetime(2026, 7, 20, 4, 1),
     )
     return render_compare_email(
-        ergebnis, outlook_enabled=True, outlook_metrics=list(_S2_SOLL_PAARE),
+        ergebnis, outlook_enabled=True, outlook_metrics=list(_S2_SOLL_KENNUNGEN),
     )
 
 
@@ -2560,12 +2610,32 @@ def test_ac_s2_2_soll_menge_wird_gerechnet_und_ist_plausibel():
     # deckungsgleich, aber nicht per Konstruktion -- genau deshalb geprueft.
     from output.renderers.compare_outlook_metric_ids import resolve_outlook_metrics
 
-    aufgeloest = resolve_outlook_metrics(list(_S2_SOLL_PAARE))
-    assert aufgeloest is not None and len(aufgeloest) == len(_S2_SOLL), (
-        f"AC-S2-2: ``resolve_outlook_metrics()`` verwirft "
-        f"{len(_S2_SOLL) - len(aufgeloest or [])} der {len(_S2_SOLL)} "
-        "Katalog-Paare -- Katalog-Zugehoerigkeit und Feld-Aufloesung sind "
-        "auseinandergelaufen, die verworfenen Groessen haetten gar keine Spalte"
+    aufgeloest = resolve_outlook_metrics(list(_S2_SOLL_KENNUNGEN))
+    # #1848 A2: ``resolve_outlook_metrics()`` arbeitet auf KENNUNGS-Ebene --
+    # Massstab ist deshalb die Kennungsmenge. Die Zusicherung ist unveraendert
+    # (kein Eintrag der Soll-Auswahl darf verworfen werden) und dank
+    # Listenvergleich sogar schaerfer als die frueheren Laengen: auch eine
+    # veraenderte Reihenfolge faellt jetzt auf.
+    assert aufgeloest == list(_S2_SOLL_KENNUNGEN), (
+        f"AC-S2-2: ``resolve_outlook_metrics()`` liefert {aufgeloest!r} statt "
+        f"{list(_S2_SOLL_KENNUNGEN)!r} -- Katalog-Zugehoerigkeit und "
+        "Feld-Aufloesung sind auseinandergelaufen, die verworfenen Groessen "
+        "haetten gar keine Spalte"
+    )
+    # Die Paar-Ebene bleibt zusaetzlich bewacht: jede Soll-Kennung muss ueber
+    # den Katalog wieder auf ihre Paare fuehren, sonst waere die Umstellung
+    # auf Kennungen ein stiller Spaltenverlust.
+    from output.renderers.compare_outlook_metric_ids import derived_aggregations
+
+    abgeleitete_paare = [
+        {"metric_id": k, "aggregation": a}
+        for k in _S2_SOLL_KENNUNGEN for a in derived_aggregations(k)
+    ]
+    assert len(abgeleitete_paare) == len(_S2_SOLL_PAARE), (
+        f"AC-S2-2: aus den {len(_S2_SOLL_KENNUNGEN)} Soll-Kennungen leitet der "
+        f"Katalog {len(abgeleitete_paare)} Paare ab, der Katalog liefert aber "
+        f"{len(_S2_SOLL_PAARE)} -- die Kennungs-Umstellung (#1848 A2) hat "
+        "Auswertungen verloren"
     )
     kinds = Counter(s["kind"] for s in _S2_SOLL)
     assert kinds["ordinal"] >= 1 and kinds["enum"] >= 1 and kinds["range"] >= 1, (
@@ -2583,13 +2653,39 @@ def test_ac_s2_3_keine_zwei_spalten_mit_gleicher_beschriftung():
     Beschriftung. Die Unterscheidung entsteht dadurch, dass die Auswertung
     angehaengt wird, sobald derselbe Name mehrfach vorkommt -- die
     Vakuum-Gegenprobe stellt sicher, dass dieser Zweig ueberhaupt greift
-    (sonst prueft der Test eine Regel, die nie zur Anwendung kommt)."""
-    mehrfach = [n for n, anzahl in Counter(s["label"] for s in _S2_SOLL).items()
+    (sonst prueft der Test eine Regel, die nie zur Anwendung kommt).
+
+    #1848 A1 (PO-Entscheid 2026-08-20): die frueher EINZIGEN zwei mehrfach
+    vorkommenden Groessen (Temperatur, Gefuehlte Temperatur -- beide
+    min+max) werden seither zu je EINER Spannen-Spalte zusammengefuehrt
+    (``_merge_min_max_soll``) und loesen die Minimum-/Maximum-
+    Disambiguierung damit nicht mehr aus -- der reale Katalog liefert
+    heute keine Mehrfach-Beschriftung mehr. Die Vakuum-Gegenprobe braucht
+    deshalb einen synthetischen Katalog-Ausschnitt mit einer DRITTEN
+    Auswertung derselben Groesse (Vorbild fuer ein kuenftiges ``avg`` bei
+    Temperatur, Scheibe A3): min+max mergen weiterhin, die dritte bleibt
+    eine eigene, disambiguierte Spalte -- GENAU der Zweig, den dieser Test
+    bewacht.
+
+    🔴 Der synthetische Ausschnitt ist ABSICHTLICH synthetisch, keine
+    Verlegenheitsloesung: liefe die Vakuum-Gegenprobe stattdessen ueber den
+    REALEN Katalog, bewiese sie ab jetzt nur noch, dass der Merge wirkt --
+    der Ausschluss wuerde die Bedingung erzeugen, mit der er begruendet
+    ist, und die Disambiguierung waere totes, ungetestetes Recht (bis A3
+    tatsaechlich eine dritte Auswertung einfuehrt). NICHT auf den realen
+    Katalog "vereinfachen"."""
+    _temp_max_zeile = next(e for e in COMPARE_METRIC_CATALOG if e["key"] == "temp_max_c")
+    _synthetische_dritte_auswertung = {
+        **_temp_max_zeile, "key": "temp_avg_c_ac_s2_3_synthetisch", "aggregation": "avg",
+    }
+    synthetisch = list(COMPARE_METRIC_CATALOG) + [_synthetische_dritte_auswertung]
+    soll_synthetisch = compare_outlook_soll_spalten(entries=synthetisch)
+    mehrfach = [n for n, anzahl in Counter(s["label"] for s in soll_synthetisch).items()
                 if anzahl > 1]
     assert mehrfach, (
-        "Vakuum: keine Groesse kommt im Ausblick-Katalog mehrfach vor -- die "
-        "Auswertungs-Unterscheidung waere nie aktiv und dieser Test bewachte "
-        "nichts (gemessen 2026-08-11: 'Temperatur' und 'Gefuehlte Temperatur')"
+        "Vakuum: auch mit einer synthetischen dritten Auswertung derselben "
+        "Groesse kommt kein Label mehrfach vor -- die Auswertungs-"
+        "Unterscheidung waere nie aktiv und dieser Test bewachte nichts"
     )
 
     html, _ = _s2_mail()
@@ -2677,12 +2773,10 @@ _S2_NUR_TRIP_ERLAUBT = {
     ),
 }
 _S2_NUR_COMPARE_ERLAUBT = {
-    "hail_flag": (
-        "``compute_extended_metrics()`` baut ein NEUES Summary und kopiert "
-        "hail_flag nicht aus dem Basis-Aggregat mit (weather_metrics.py:774ff, "
-        "gesetzt wird es in compute_basis_metrics:459) -- eigener Befund an "
-        "derselben Naht, nicht Gegenstand dieser Scheibe"
-    ),
+    # Issue #2195: der bisherige "hail_flag"-Eintrag ist gegenstandslos --
+    # ``compute_extended_metrics()`` baut seither per ``dataclasses.replace()``
+    # auf dem Basis-Aggregat auf und verliert das Feld nicht mehr. Struktur
+    # bleibt stehen (leere Ausnahmeliste ist ein gueltiger Zustand).
 }
 
 
@@ -2754,10 +2848,21 @@ def test_ac_s2_5_beide_tagesaggregationen_fuellen_dieselben_felder():
 # 2026-08-11 am ersten Ausblickstag der Mail aus ``_s2_mail()``. Schluessel ist
 # der ``SegmentWeatherSummary``-Feldname (stabiler als die Beschriftung, die
 # AC-S2-1 ohnehin bewacht).
+#
+# #1848 A1: temp_min_c/temp_max_c teilen sich seit dem Merge EINEN
+# Soll-Eintrag mit ``summary_field`` als Tupel ``(min_feld, max_feld)``
+# (``_merge_min_max_soll``) -- der Schluessel hier zieht das nach, sonst
+# ginge die Mengen-Gleichheit unten NICHT auf (kein Zufallstreffer: ein
+# fehlender/verschwundener Soll-Eintrag faellt weiterhin auf, weil dann
+# GENAU dieses Tupel auf der einen Seite fehlt).
 _S2_UNVERAENDERTE_ZELLEN = {
     "sunny_hours": "4.0 h", "wind_max_kmh": "15 km/h", "cloud_avg_pct": "50 %",
     "visibility_min_m": "20000 m", "precip_sum_mm": "4.4 mm", "uv_index_max": "4",
-    "temp_max_c": "18 °C", "thunder_level_max": "mittel", "temp_min_c": "6 °C",
+    # #1848 A3: die Gewitter-Zelle des Ortsvergleich-Ausblicks entsteht jetzt
+    # aus DEMSELBEN Zellenbau wie sein fester Zweig (thunder_branch) und
+    # traegt deshalb die Onset-Uhrzeit (#1493). Vorher zeigten die beiden
+    # Compare-Renderpfade fuer dieselbe Stundenreihe Verschiedenes.
+    ("temp_min_c", "temp_max_c"): "6/18", "thunder_level_max": "mittel @4",
     "gust_max_kmh": "25 km/h", "freezing_level_m": "3000 m", "pop_max_pct": "55 %",
     "humidity_avg_pct": "70 %", "dewpoint_avg_c": "5 °C",
     "snowfall_limit_m": "2200 m", "precip_type_dominant": "Regen",
@@ -2977,16 +3082,115 @@ def _s2_zellenzahl(zelle: str) -> float:
     return float(treffer.group().replace(",", "."))
 
 
+def _s2_zellenseiten(zelle: str) -> tuple[str, str]:
+    """#1848 A1: zerlegt eine zusammengefuehrte Spannen-Zelle (``"min/max"``)
+    in ``(min_teil, max_teil)`` -- GENAU EIN Trenn-Schraegstrich erwartet,
+    sonst ``AssertionError`` statt stillem Vorbeigehen (haelt insbesondere
+    negative Werte wie ``"-12/-4"`` aus, ohne am fuehrenden Minuszeichen zu
+    splitten). Die fehlende Seite (``"13/-"``) bleibt als String ``"-"``
+    erhalten -- die Zahl-Interpretation ist Sache des Aufrufers, ein
+    stilles Ueberspringen hier waere selbst wieder ein verstummter
+    Schutz."""
+    teile = zelle.strip().split("/")
+    assert len(teile) == 2, (
+        f"Erwartet genau EINEN Trenner '/' in der Spannen-Zelle {zelle!r}, "
+        f"gefunden: {len(teile) - 1}"
+    )
+    return teile[0], teile[1]
+
+
+def test_s2_zellenseiten_haelt_negative_werte_aus():
+    """#1848 A1: ``-12/-4`` (AC-4) darf NICHT am fuehrenden Minuszeichen
+    splitten -- ein spaeterer Trennerwechsel oder eine naive
+    Split-Implementierung faellt hier auf, nicht erst live in AC-S2-8."""
+    assert _s2_zellenseiten("-12/-4") == ("-12", "-4")
+
+
+def test_s2_zellenseiten_fehlende_seite_bleibt_als_strich_sichtbar():
+    """#1848 A1 (AC-6): ``13/-`` -- die fehlende Seite bleibt der String
+    ``"-"``, wird NICHT stillschweigend uebersprungen oder als Zahl
+    interpretiert. ``_s2_seiten_wert`` MUSS an dieser Seite laut
+    scheitern (kein ``except``/``continue``, der den Fall verstummt) --
+    genau das ist die Zusicherung, kein Nebeneffekt."""
+    min_teil, max_teil = _s2_zellenseiten("13/-")
+    assert min_teil == "13"
+    assert max_teil == "-"
+    with pytest.raises(AssertionError):
+        _s2_seiten_wert("13/-", "max")
+
+
+def _s2_seite_von_feld(spalte: dict, feld: str) -> str:
+    """#1848 A1: ``"min"``/``"max"`` -- welche Seite der zusammengefuehrten
+    Spannen-Spalte ``spalte`` das Rohfeld ``feld`` besetzt. ``None``, wenn
+    ``spalte`` gar keine Spannen-Spalte ist (``summary_field`` kein Tupel)."""
+    if not isinstance(spalte["summary_field"], tuple):
+        return None
+    lo_feld, hi_feld = spalte["summary_field"]
+    if feld == lo_feld:
+        return "min"
+    if feld == hi_feld:
+        return "max"
+    raise AssertionError(
+        f"Feld {feld!r} gehoert nicht zur Spannen-Spalte {spalte['key']!r} "
+        f"({spalte['summary_field']!r})"
+    )
+
+
+def _s2_seiten_wert(zelle: str, seite: str) -> float:
+    """#1848 A1: der numerische Wert EINER Seite (``"min"``/``"max"``) einer
+    Spannen-Zelle -- fuer den Anti-Vertauschungs-Schutz AC-S2-8, der pro
+    Feld die EIGENE Seite prueft statt nur die fuehrende Zahl der Zelle
+    (die waere bei einer Spannen-Zelle immer die Min-Seite, egal welches
+    der beiden Felder gerade geprueft wird -- der Vertauschungs-Schutz
+    waere strukturell blind fuer die Max-Seite)."""
+    min_teil, max_teil = _s2_zellenseiten(zelle)
+    roh = {"min": min_teil, "max": max_teil}[seite]
+    treffer = _S2_ZELLENZAHL.match(roh.strip())
+    assert treffer is not None, (
+        f"AC-S2-8: die {seite}-Seite der Spannen-Zelle {zelle!r} traegt "
+        f"keine Zahl ({roh!r}) -- ohne Zahl ist der Wert nicht pruefbar"
+    )
+    return float(treffer.group().replace(",", "."))
+
+
 def test_ac_s2_8_ausblick_zelle_zeigt_den_gerechneten_wert():
     """AC-S2-8 (Wirkort): derselbe gerechnete Tageswert steht in der Zelle der
     ECHTEN Vergleichs-Mail -- HTML UND Klartext, an jedem der drei Tage. Der
     Nachweis an ``summarize_points()`` allein zeigte nur, dass das Aggregat
     stimmt, nicht dass der Nutzer den richtigen Wert sieht (Pruefort =
-    Wirkort)."""
+    Wirkort).
+
+    #1848 A1: wind_chill_min_c/wind_chill_max_c teilen sich seit dem Merge
+    EINE Spannen-Zelle (``"min/max"``) statt zweier eigener Spalten. Der
+    Anti-Vertauschungs-Schutz (Adversary-Finding F001) prueft deshalb NICHT
+    mehr nur die fuehrende Zahl der Zelle (die waere fuer beide Felder
+    identisch -- die Min-Seite -- und liesse eine Vertauschung von
+    Min/Max unsichtbar), sondern splittet die Zelle und prueft JEDE Seite
+    gegen ihren EIGENEN gerechneten Wert (``_s2_seiten_wert``). Mutations-
+    Gegenprobe (String-Ersetzung in weather_metrics.py, Sicherungskopie,
+    kein git-checkout/-stash/-reset): mit vertauschten wind_chill_min_c/
+    wind_chill_max_c-Zuweisungen wird dieser Test ROT -- Protokoll in der
+    Commit-Message."""
     erwartungen = _s2_erwartungen_je_ausblickstag()
     _s2_erwartungen_sind_unterscheidbar(erwartungen)
-    nach_feld = {s["summary_field"]: s for s in _S2_SOLL}
-    dezimalen = {e["key"]: e.get("decimals") or 0 for e in get_compare_metric_catalog()}
+    # #1848 A1: `summary_field` ist fuer gemergte Spalten ein Tupel beider
+    # Rohfelder -- BEIDE muessen auf dieselbe Spalte zeigen, damit
+    # `_S2_NEUE_FELDER_REGEL["wind_chill_min_c"]` UND
+    # `_S2_NEUE_FELDER_REGEL["wind_chill_max_c"]` dieselbe Zelle finden.
+    nach_feld: dict[str, dict] = {}
+    for s in _S2_SOLL:
+        felder = s["summary_field"] if isinstance(s["summary_field"], tuple) else (s["summary_field"],)
+        for f in felder:
+            nach_feld[f] = s
+    # #1848 A1: Schluessel MUSS der SegmentWeatherSummary-Feldname sein (wie
+    # `feld` unten aus `_S2_NEUE_FELDER_REGEL`) -- der Katalog-``key`` weicht
+    # fuer wind_direction_avg_deg vom Feldnamen ab (``key`` "wind_direction_
+    # deg"), und ein gemergter Soll-Eintrag hat gar keinen einzelnen ``key``
+    # mehr, der beide Seiten trueg.
+    dezimalen = {
+        summary_field_for(e["metric_id"], e["aggregation"]): e.get("decimals") or 0
+        for e in get_compare_metric_catalog()
+    }
 
     html, text = _s2_mail()
     kopf, zeilen = _s2_html_ausblick(html)
@@ -3000,17 +3204,21 @@ def test_ac_s2_8_ausblick_zelle_zeigt_den_gerechneten_wert():
     for nummer, (tag, soll) in enumerate(erwartungen):
         for feld, regel in _S2_NEUE_FELDER_REGEL.items():
             spalte = nach_feld[feld]
-            erwartet = round(soll[feld], dezimalen[spalte["key"]])
+            erwartet = round(soll[feld], dezimalen[feld])
+            seite = _s2_seite_von_feld(spalte, feld)
             for form, zelle in (
                 ("HTML", zeilen[nummer][kopf.index(spalte["ueberschrift"])]),
                 ("KLARTEXT", klartext[nummer][spalte["ueberschrift"]]),
             ):
-                assert _s2_zellenzahl(zelle) == erwartet, (
+                ist = _s2_seiten_wert(zelle, seite) if seite else _s2_zellenzahl(zelle)
+                assert ist == erwartet, (
                     f"AC-S2-8: die {form}-Zelle der Spalte "
                     f"{spalte['ueberschrift']!r} ({spalte['key']} -> "
-                    f"SegmentWeatherSummary.{feld}) zeigt am Ausblickstag {tag} "
-                    f"{zelle!r}; aus den Stundenwerten gerechnet ({regel}) "
-                    f"gehoert dort {erwartet!r} hin.\nSoll des Tages: {soll}\n"
+                    f"SegmentWeatherSummary.{feld}"
+                    f"{f', Seite {seite}' if seite else ''}) zeigt am "
+                    f"Ausblickstag {tag} {ist!r} (Zelle {zelle!r}); aus den "
+                    f"Stundenwerten gerechnet ({regel}) gehoert dort "
+                    f"{erwartet!r} hin.\nSoll des Tages: {soll}\n"
                     "Haeufigster Grund: vertauschte Zuweisungen in "
                     "summarize_points() -- bei Gefuehlter Temperatur "
                     "Minimum/Maximum zeigen dann beide Spalten einen "
@@ -4245,8 +4453,10 @@ def test_ac_s7_5b_vorschau_zeigt_dieselbe_reihenfolge_wie_der_versand(
 ):
     """AC-S7-5 (zweiter Leser derselben Optionen): die Vorschau MUSS je Kanal
     dieselbe Reihenfolge zeigen wie der Versand -- sonst verspricht der Editor
-    eine andere Zeilenfolge, als ankommt. Deckt die uebrigen fuenf der acht
-    Aufrufstellen (`compare_preview_service.py`)."""
+    eine andere Zeilenfolge, als ankommt. Deckt die uebrigen drei der sechs
+    Aufrufstellen (`compare_preview_service.py`: `render_all_channels` fuer
+    Telegram/SMS und `_render_email`; die Einzel-Huellen sind mit #1743
+    entfallen)."""
     from app.loader import get_data_dir, save_location
     from services.compare_preview_service import ComparePreviewService
     from tests.helpers.compare_briefings import write_compare_briefings
@@ -4259,14 +4469,6 @@ def test_ac_s7_5b_vorschau_zeigt_dieselbe_reihenfolge_wie_der_versand(
     payload = service.render_all_channels("cp-s7-preview", **args)
     for kanal, key in (("email", "email_html"), ("telegram", "telegram"), ("sms", "sms")):
         _s7_pruefe_kanal_reihenfolge(kanal, payload[key], f"Vorschau[{key}]")
-    _s7_pruefe_kanal_reihenfolge(
-        "telegram", service.render_telegram_preview("cp-s7-preview", **args),
-        "Vorschau render_telegram_preview",
-    )
-    _s7_pruefe_kanal_reihenfolge(
-        "sms", service.render_sms_preview("cp-s7-preview", **args),
-        "Vorschau render_sms_preview",
-    )
 
 
 def test_ac_s7_5c_telegram_vergleich_faengt_praefix_kollision():
@@ -4448,7 +4650,7 @@ _S7_PILLEN_BASIS_KATALOGORDNUNG = [
     "!! Gewitter mittel ab 11:00 - staerkste 11:00",
     "50% bewoelkt - Max 08:00",
     "Feuchte 55-55% - Max 08:00",
-    "Sonne 150 min",
+    "Sonne 2.5h",
 ]
 
 
@@ -4521,7 +4723,11 @@ def test_ac_s7_7_telegram_kurzuebersicht_folgt_der_reihenfolge(metric_id):
     """AC-S7-7: die Telegram-Kurzuebersicht-Bubble folgt der im
     Telegram-Kanal eingestellten Reihenfolge -- paarweise ueber alle
     waehlbaren Groessen."""
-    partner = "temperature" if metric_id == "wind" else "wind"
+    # #2422 S6 (B5): ``wind_direction`` neben ``wind`` ist in die Windzeile
+    # zusammengefuehrt und hat KEINE eigene Zeile (siehe
+    # test_telegram_windrichtung_ohne_geisterspalte.py). Seine Reihenfolge wird
+    # deshalb gegen einen Partner OHNE aktiven Wind geprueft (kein Merge).
+    partner = "temperature" if metric_id in ("wind", "wind_direction") else "wind"
     zeilen_a = _s4_kurzuebersicht(_s7_telegram_layout_dc([metric_id, partner]))
     zeilen_b = _s4_kurzuebersicht(_s7_telegram_layout_dc([partner, metric_id]))
     assert _s7_kurzuebersicht_index(zeilen_a, metric_id) < _s7_kurzuebersicht_index(

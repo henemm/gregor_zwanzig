@@ -1,3 +1,10 @@
+---
+entity_id: fix_1666_validator_basicauth
+type: fast
+created: 2026-08-10
+status: implemented
+---
+
 # Mini-Spec: fix-1666-validator-basicauth
 
 ## Was ändert sich

@@ -3,7 +3,7 @@ entity_id: safari_websocket_and_factory_fix
 type: bugfix
 created: 2026-02-11
 updated: 2026-02-12
-status: draft
+status: deprecated
 version: "1.1"
 tags: [ui, bugfix, safari, nicegui, websocket, factory-pattern]
 related_specs:
@@ -12,6 +12,8 @@ related_specs:
 ---
 
 # Safari WebSocket + Factory Pattern Fix
+
+> Abgelöst/entfernt durch ADR-0001 / #129 — die NiceGUI-UI unter `src/web/` wurde am 2026-05-15 ersatzlos entfernt; diese Spec ist nur noch historisch.
 
 ## Approval
 

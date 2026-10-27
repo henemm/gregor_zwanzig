@@ -3,7 +3,7 @@ entity_id: fix_1719_s2_kaskade_verfeinerung
 type: bugfix
 created: 2026-08-11
 updated: 2026-08-11
-status: draft
+status: implemented
 version: "1.0"
 tags: [metrics, cascade, adr-0050, issue-1719, telegram]
 ---
@@ -189,7 +189,7 @@ unangetastet (s. AC-6).
 
 ## Acceptance Criteria
 
-- **AC-1 (Kern — Kanal darf nicht hinzufügen):** Given eine Kanal-Ebene führt
+- **AC-1:** (Kern — Kanal darf nicht hinzufügen) Given eine Kanal-Ebene führt
   eine Metrik `enabled: true`, die in der globalen Grundauswahl `enabled:
   false` ist / When die drei Kanal-Renderpfade (E-Mail-Kopfzeile,
   Telegram-rich-Zellen, SMS-Text) über den echten Renderpfad laufen / Then
@@ -214,7 +214,7 @@ unangetastet (s. AC-6).
     `cascade_source_for_channel("email"/"telegram", …)` weiterhin `"global"`
     liefert (Beleg, dass der `global`-Zweig unangetastet blieb).
 
-- **AC-3 (Telegram MIT eigener Telegram-Ebene = Telegram ∩ Grundauswahl):**
+- **AC-3:** (Telegram MIT eigener Telegram-Ebene = Telegram ∩ Grundauswahl)
   Given eine Fixture-Variante mit `channel_layouts.telegram`, die eine global
   aktive Metrik abwählt / When `render_for_channel("telegram", dc,
   report_type)` läuft / Then fehlt die Metrik in `table_columns` +
@@ -244,7 +244,7 @@ unangetastet (s. AC-6).
     (Label/Zelle) prüfen, gegen eine Fixture-Variante mit
     `channel_layouts.email` ⊊ Grundauswahl und ohne `channel_layouts.telegram`.
 
-- **AC-5 (Telegram zeigt echten WERT, nicht „–"):** Given eine
+- **AC-5:** (Telegram zeigt echten WERT, nicht „–") Given eine
   Fixture-Variante, in der eine Metrik in `channel_layouts.telegram` AN und in
   `channel_layouts.email` AUS ist (beide Ebenen ⊊ Grundauswahl, aber
   unterschiedlich) / When der ECHTE Renderpfad (`format_email()` →
@@ -278,7 +278,7 @@ unangetastet (s. AC-6).
     Zelle zeigt „–" — genau das fängt dieser Test, AC-3/AC-4/AC-5 bleiben
     davon unberührt.
 
-- **AC-6 (E-Mail bleibt unverändert, insbesondere Etappen ab Tag 4):** Given
+- **AC-6:** (E-Mail bleibt unverändert, insbesondere Etappen ab Tag 4) Given
   ein Trip ohne Kanal-Widerspruch (E-Mail-Kanal-Ebene fehlt oder ist mit der
   Grundauswahl identisch) mit mindestens einer Etappe, für die
   `_allowed_col_keys_for_horizon()` `None` liefert (`html.py:924-947`,
@@ -307,7 +307,7 @@ unangetastet (s. AC-6).
     den unveränderten Stand aufgenommenes Soll-Artefakt (Golden File) der
     E-Mail-Ausgabe derselben Fixture.
 
-- **AC-7 (Leere/fehlende Grundauswahl schneidet nicht):** Given `dc.metrics ==
+- **AC-7:** (Leere/fehlende Grundauswahl schneidet nicht) Given `dc.metrics ==
   []` (leere globale Liste) UND eine SMS-Kanal-Ebene mit mehreren aktiven
   Einträgen / When `get_metrics_for_channel("sms", …)` läuft / Then bleibt die
   vollständige SMS-Kanal-Ebene unverändert erhalten — D4 greift, kein
@@ -328,7 +328,7 @@ unangetastet (s. AC-6).
     ergänzt (in der Basis-Fixture nicht vorhanden, 0 Bestandsträger laut
     Kontext-Dokument), Ziel-Metrik global aktiv + per_channel abweichend.
 
-- **AC-9 (Report-Typ-Flags wirken im Schnitt):** Given ein globaler Eintrag
+- **AC-9:** (Report-Typ-Flags wirken im Schnitt) Given ein globaler Eintrag
   mit `evening_enabled=False` für eine Metrik, deren SMS-Kanal-Eintrag
   `enabled: true` (ohne eigenen `evening_enabled`-Override) führt / When der
   SMS-Renderpfad für `report_type="evening"` läuft / Then fehlt die Metrik im
@@ -340,7 +340,7 @@ unangetastet (s. AC-6).
     einer kollisionssicheren Ziel-Metrik, SMS-Kanal-Eintrag unverändert aktiv;
     Assertion gegen `report.sms_text` für `report_type="evening"`.
 
-- **AC-10 (Editor-Sequenz aus K1 als Datenlage-AC):** Given eine SMS-Kanal-
+- **AC-10:** (Editor-Sequenz aus K1 als Datenlage-AC) Given eine SMS-Kanal-
   Ebene ist zunächst ein vollständiger Snapshot der Grundauswahl (identische
   Einträge/Zustände) — danach wird AUSSCHLIESSLICH der globale Eintrag einer
   Metrik auf `enabled: false` gesetzt, der SMS-Kanal-Eintrag bleibt
@@ -379,7 +379,7 @@ unangetastet (s. AC-6).
     Editor eine widersprüchliche Datenlage schreibt, ist hier
     Versuchsaufbau, nicht Fehler.
 
-- **AC-11 (SMS/Premium-SMS erben ohne eigene Änderung am Versandpfad):**
+- **AC-11:** (SMS/Premium-SMS erben ohne eigene Änderung am Versandpfad)
   Given `output/channels/premium_sms.py` sendet `report.sms_text` unverändert
   (Z. 19-21) UND `trip_report.py:295` liest die SMS-Kaskade unter dem
   Schlüssel `"sms"` / When AC-1 bis AC-2 sowie AC-9/AC-10 gegen `report.sms_text`

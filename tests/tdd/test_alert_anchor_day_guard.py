@@ -1,4 +1,4 @@
-"""TDD RED — Issue #1661 Teil A + C: der Abweichungs-Alarm einer Tour vergleicht
+"""TDD RED — Issue #1661 Teil A + C: der Abweichungs-Alarm einer Trip vergleicht
 gegen einen Anker vom FALSCHEN TAG, ohne es zu bemerken oder zu melden.
 
 SPEC: docs/specs/modules/fix_1661_anker_vom_falschen_tag.md — AC-1..AC-6,
@@ -9,7 +9,7 @@ Der Defekt in einem Satz: ``TripAlertService._get_cached_weather``
 (``src/services/trip_alert.py:509``) gibt den undatierten Rueckfall-Anker
 ``svc.load(trip.id)`` UNGEPRUEFT zurueck — obwohl in der Datei steht, fuer
 welchen Tag sie gilt (``target_date``). Am 08.08.2026 stammte sie vom Vortag;
-die Wache der Tour „KHW 403" lief 16 h ins Leere (~28 stille Laeufe).
+die Wache der Trip „KHW 403" lief 16 h ins Leere (~28 stille Laeufe).
 
 Kern-Schicht, deterministisch (kein Netz, kein Versand), mock-frei: echte
 JSON-Dateien unter der pytest-isolierten ``get_data_dir()``-Basis (#1133),
@@ -24,6 +24,7 @@ import json
 import logging
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 
 import pytest
@@ -108,7 +109,7 @@ def _wetter(boe_kmh: float) -> SegmentWeatherData:
 
 
 def boeen_trip(trip_id: str, tage: list[date]) -> Trip:
-    """Tour mit scharfer Boeen-Delta-Regel (Standard-Schwelle 20 km/h), Aufbau
+    """Trip mit scharfer Boeen-Delta-Regel (Standard-Schwelle 20 km/h), Aufbau
     wie ``alert_log_fixtures.gust_alert_trip`` — nur mit frei waehlbaren
     Etappentagen (AC-13/AC-14 unterscheiden sich genau darin)."""
     stages = [
@@ -118,7 +119,7 @@ def boeen_trip(trip_id: str, tage: list[date]) -> Trip:
         for i, tag in enumerate(tage, start=1)
     ]
     trip = Trip(
-        id=trip_id, name="Anker-Tour", stages=stages,
+        id=trip_id, name="Anker-Trip", stages=stages,
         official_warnings=None, corridors=[],
         display_config=UnifiedWeatherDisplayConfig(
             trip_id=trip_id,
@@ -152,7 +153,7 @@ def undatierten_anker_schreiben(
     from services.weather_snapshot import WeatherSnapshotService
 
     WeatherSnapshotService(user_id=user_id).save(
-        trip_id, [_wetter(ANKER_BOE_KMH)], date.today(),
+        trip_id, [_wetter(ANKER_BOE_KMH)], ortstag(LAT, LON),
     )
     pfad = get_snapshots_dir(user_id) / f"{trip_id}.json"
     daten = json.loads(pfad.read_text())
@@ -219,18 +220,18 @@ def test_ac1_anker_vom_vortag_wird_verworfen_und_gemeldet(caplog):
 
     GIVEN kein datierter Anker fuer heute und ein undatierter Rueckfall mit
     ``target_date`` von GESTERN
-    WHEN der Abweichungs-Alarm-Lauf fuer diese Tour startet
+    WHEN der Abweichungs-Alarm-Lauf fuer diese Trip startet
     THEN wird der Anker verworfen (``None``) UND es erscheint eine WARNUNG mit
-    Tour-Kennung und Grund „falscher Tag" statt eines stillen Durchlaufs.
+    Trip-Kennung und Grund „falscher Tag" statt eines stillen Durchlaufs.
 
     HEUTE ROT: ``trip_alert.py:509`` gibt ``svc.load()`` ungeprueft zurueck.
     """
     user_id, trip_id = nutzer(), "trip-1661-ac1"
-    gestern = date.today() - timedelta(days=1)
+    gestern = ortstag(LAT, LON) - timedelta(days=1)
     undatierten_anker_schreiben(user_id, trip_id, target_date=gestern)
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis is None, (
         f"AC-1: Der Rueckfall-Anker traegt target_date={gestern.isoformat()} "
@@ -241,7 +242,7 @@ def test_ac1_anker_vom_vortag_wird_verworfen_und_gemeldet(caplog):
     )
     treffer = warnungen_zu(caplog, trip_id)
     assert any(GRUND_FALSCHER_TAG in m or "falscher tag" in m.lower() for m in treffer), (
-        f"AC-1: Das Verwerfen muss SICHTBAR sein — WARNUNG mit Tour-Kennung "
+        f"AC-1: Das Verwerfen muss SICHTBAR sein — WARNUNG mit Trip-Kennung "
         f"({trip_id}) und Grund '{GRUND_FALSCHER_TAG}'. Gefunden: {treffer}"
     )
 
@@ -261,9 +262,9 @@ def test_ac1_wirkung_kein_alarm_gegen_den_anker_von_gestern(caplog):
     """
     user_id, trip_id = nutzer(), "trip-1661-ac1-wirkung"
     undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() - timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) - timedelta(days=1),
     )
-    save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
+    save_trip(boeen_trip(trip_id, [ortstag(LAT, LON)]), user_id=user_id)
 
     with caplog.at_level(logging.DEBUG):
         ergebnis, mails = alarm_lauf(user_id)
@@ -293,10 +294,10 @@ def test_ac2_regression_undatierter_anker_von_heute_bleibt_gueltig(caplog):
     ersten Tageslauf grundsaetzlich ins Leere), kein Ausnahmefall.
     """
     user_id, trip_id = nutzer(), "trip-1661-ac2"
-    undatierten_anker_schreiben(user_id, trip_id, target_date=date.today())
+    undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON))
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis, (
         "AC-2: Ein Rueckfall mit target_date=heute ist gueltig und muss "
@@ -327,7 +328,7 @@ def test_ac3_regression_fehlendes_datum_unter_26_stunden_bleibt_gueltig(caplog):
                                 alter=timedelta(hours=10))
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis, (
         "AC-3: Ein Anker ohne lesbares target_date, aber juenger als 26 h, "
@@ -356,7 +357,7 @@ def test_ac4_fehlendes_datum_ueber_26_stunden_wird_verworfen(caplog):
                                 alter=timedelta(hours=27))
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis is None, (
         "AC-4: Ein Anker ohne target_date und aelter als 26 h taugt nicht mehr "
@@ -365,7 +366,7 @@ def test_ac4_fehlendes_datum_ueber_26_stunden_wird_verworfen(caplog):
     )
     treffer = warnungen_zu(caplog, trip_id)
     assert any(GRUND_ZU_ALT in m or "zu alt" in m.lower() for m in treffer), (
-        f"AC-4: WARNUNG mit Tour-Kennung ({trip_id}) und Grund "
+        f"AC-4: WARNUNG mit Trip-Kennung ({trip_id}) und Grund "
         f"'{GRUND_ZU_ALT}' erwartet. Gefunden: {treffer}"
     )
     gruende = [z.get("reason") for z in diagnose_zeilen(user_id)]
@@ -397,9 +398,9 @@ def test_ac5_verworfener_anker_ruehrt_gedaechtnis_und_ankerdatei_nicht_an(caplog
 
     user_id, trip_id = nutzer(), "trip-1661-ac5"
     anker_pfad = undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() - timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) - timedelta(days=1),
     )
-    save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
+    save_trip(boeen_trip(trip_id, [ortstag(LAT, LON)]), user_id=user_id)
 
     gedaechtnis = {"gust:1": {"last_reported_value": 42.0,
                               "reported_at": datetime.now(timezone.utc).isoformat()}}
@@ -451,7 +452,7 @@ def test_ac6_regression_anzeigepfad_zeigt_denselben_snapshot_weiterhin():
 
     user_id, trip_id = nutzer(), "trip-1661-ac6"
     undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() - timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) - timedelta(days=1),
     )
 
     extractor = WeatherExtractor(user_id=user_id)
@@ -476,7 +477,7 @@ def test_ac11_verworfener_anker_erzeugt_diagnose_eintrag():
     GIVEN ein Anker wird verworfen (Fall „falscher Tag", AC-1)
     WHEN das passiert
     THEN entsteht in ``diagnostics/alert_anchor_rejected.jsonl`` eine Zeile mit
-    ``ts``, Tour-Kennung und Grund — nicht nur eine Logzeile, die im
+    ``ts``, Trip-Kennung und Grund — nicht nur eine Logzeile, die im
     Dauerrauschen untergeht (R5: ein Signal ohne Leser versandet).
 
     HEUTE ROT: ``record_alert_anchor_rejected`` gibt es noch nicht.
@@ -486,10 +487,10 @@ def test_ac11_verworfener_anker_erzeugt_diagnose_eintrag():
     """
     user_id, trip_id = nutzer(), "trip-1661-ac11"
     undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() - timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) - timedelta(days=1),
     )
 
-    cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+    cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     zeilen = diagnose_zeilen(user_id)
     assert zeilen, (
@@ -511,22 +512,22 @@ def test_ac11_verworfener_anker_erzeugt_diagnose_eintrag():
 
 # ════════════════════════════════ AC-13 ══════════════════════════════════════
 
-def test_ac13_laufende_tour_ohne_jeden_anker_eskaliert(caplog):
-    """AC-13 (Teil C — laufende Tour ohne jeden Anker eskaliert).
+def test_ac13_laufender_trip_ohne_jeden_anker_eskaliert(caplog):
+    """AC-13 (Teil C — laufende Trip ohne jeden Anker eskaliert).
 
-    GIVEN eine Tour mit ``start_date <= heute <= end_date``, aber weder
+    GIVEN eine Trip mit ``start_date <= heute <= end_date``, aber weder
     datierter noch undatierter Anker-Datei
     WHEN der Alarm-Lauf sie prueft
     THEN ist das ein Eskalationsfall: WARNUNG UND Diagnose-Eintrag mit
     ``reason="missing"`` — nicht nur eine leise Logzeile.
 
-    HEUTE ROT: es passiert gar nichts. Eine laufende Tour ohne jedes Briefing
+    HEUTE ROT: es passiert gar nichts. Eine laufende Trip ohne jedes Briefing
     bliebe komplett unsichtbar blind.
     """
     user_id, trip_id = nutzer(), "trip-1661-ac13"
-    trip = boeen_trip(trip_id, [date.today() - timedelta(days=1), date.today(),
-                                date.today() + timedelta(days=1)])
-    assert trip.start_date <= date.today() <= trip.end_date, "Fixtur-Schutz"
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON) - timedelta(days=1), ortstag(LAT, LON),
+                                ortstag(LAT, LON) + timedelta(days=1)])
+    assert trip.start_date <= ortstag(LAT, LON) <= trip.end_date, "Fixtur-Schutz"
 
     with caplog.at_level(logging.DEBUG):
         ergebnis = cached_weather(user_id, trip)
@@ -534,8 +535,8 @@ def test_ac13_laufende_tour_ohne_jeden_anker_eskaliert(caplog):
     assert ergebnis is None, "Fixtur-Schutz: es darf gar kein Anker da sein."
     treffer = warnungen_zu(caplog, trip_id)
     assert treffer, (
-        "AC-13: Eine LAUFENDE Tour ohne jeden Anker muss eine WARNUNG mit "
-        f"Tour-Kennung ({trip_id}) erzeugen — die Wache ist dort komplett "
+        "AC-13: Eine LAUFENDE Trip ohne jeden Anker muss eine WARNUNG mit "
+        f"Trip-Kennung ({trip_id}) erzeugen — die Wache ist dort komplett "
         "blind, und genau das soll auffallen."
     )
     gruende = [z.get("reason") for z in diagnose_zeilen(user_id)]
@@ -547,10 +548,10 @@ def test_ac13_laufende_tour_ohne_jeden_anker_eskaliert(caplog):
 
 # ════════════════════════════════ AC-14 ══════════════════════════════════════
 
-def test_ac14_noch_nicht_gestartete_tour_ohne_anker_bleibt_leise(caplog):
-    """AC-14 (Teil C — noch nicht gestartete Tour ist der harmlose Normalfall).
+def test_ac14_noch_nicht_gestarteter_trip_ohne_anker_bleibt_leise(caplog):
+    """AC-14 (Teil C — noch nicht gestartete Trip ist der harmlose Normalfall).
 
-    GIVEN eine Tour mit ``start_date > heute`` und weder datierter noch
+    GIVEN eine Trip mit ``start_date > heute`` und weder datierter noch
     undatierter Anker-Datei
     WHEN der Alarm-Lauf sie prueft
     THEN erscheint NUR eine sichtbare Logzeile (DEBUG-Ebene) — KEIN
@@ -561,24 +562,24 @@ def test_ac14_noch_nicht_gestartete_tour_ohne_anker_bleibt_leise(caplog):
     ``caplog``, nicht ueber Dateiinhalt-String-Suche.
 
     Scheitert bei zu aggressiver Eskalation: ohne diese Unterscheidung wuerde
-    JEDE noch nicht gestartete Tour taeglich Dauerrauschen erzeugen (#1199).
+    JEDE noch nicht gestartete Trip taeglich Dauerrauschen erzeugen (#1199).
     """
     user_id, trip_id = nutzer(), "trip-1661-ac14"
-    trip = boeen_trip(trip_id, [date.today() + timedelta(days=2)])
-    assert trip.start_date > date.today(), "Fixtur-Schutz"
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON) + timedelta(days=2)])
+    assert trip.start_date > ortstag(LAT, LON), "Fixtur-Schutz"
 
     with caplog.at_level(logging.DEBUG):
         ergebnis = cached_weather(user_id, trip)
 
     assert ergebnis is None, "Fixtur-Schutz: es darf gar kein Anker da sein."
     assert not diagnose_zeilen(user_id), (
-        "AC-14: Eine noch nicht gestartete Tour ohne Anker ist der harmlose "
+        "AC-14: Eine noch nicht gestartete Trip ohne Anker ist der harmlose "
         "Normalfall und darf KEINEN Diagnose-Eintrag erzeugen."
     )
     eigene = [r.getMessage() for r in caplog.records if r.name == "trip_alert"]
     assert [m for m in eigene if trip_id in m], (
         "AC-14: Der Fall muss trotzdem SICHTBAR sein — eine Logzeile des "
-        f"trip_alert-Loggers mit der Tour-Kennung ({trip_id}). Alle "
+        f"trip_alert-Loggers mit der Trip-Kennung ({trip_id}). Alle "
         f"trip_alert-Zeilen: {eigene}"
     )
     assert not warnungen_zu(caplog, trip_id), (
@@ -608,14 +609,14 @@ def test_ac15_diagnose_schreiber_scheitert_alarm_lauf_bricht_nicht_ab(caplog):
     """
     user_id, trip_id = nutzer(), "trip-1661-ac15"
     undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() - timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) - timedelta(days=1),
     )
     sperre = get_data_dir(user_id) / "diagnostics"
     sperre.parent.mkdir(parents=True, exist_ok=True)
     sperre.write_text("kein Verzeichnis, sondern eine Datei")
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis is None, (
         "AC-15: Auch mit defektem Diagnose-Schreiber muss der Anker vom "
@@ -652,7 +653,7 @@ def test_altersnetz_grenze_25h50_wird_noch_verwendet(caplog):
                                 alter=timedelta(hours=25, minutes=50))
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis, (
         "Ein Anker ohne target_date, 25 h 50 min alt, liegt INNERHALB der "
@@ -680,7 +681,7 @@ def test_altersnetz_grenze_26h10_wird_verworfen(caplog):
                                 alter=timedelta(hours=26, minutes=10))
 
     with caplog.at_level(logging.DEBUG):
-        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        ergebnis = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert ergebnis is None, (
         "Ein Anker ohne target_date, 26 h 10 min alt, liegt AUSSERHALB der "
@@ -694,12 +695,12 @@ def test_altersnetz_grenze_26h10_wird_verworfen(caplog):
     )
 
 
-# ═══════ Abgelaufene Tour im Meldepfad (Korrekturrunde 2026-08-10) ═══════════
+# ═══════ Abgelaufene Trip im Meldepfad (Korrekturrunde 2026-08-10) ═══════════
 
-def test_abgelaufene_tour_ohne_anker_bleibt_leise(caplog):
-    """AC-14-Schwester: eine ABGELAUFENE Tour ohne Anker eskaliert nicht.
+def test_abgelaufener_trip_ohne_anker_bleibt_leise(caplog):
+    """AC-14-Schwester: eine ABGELAUFENE Trip ohne Anker eskaliert nicht.
 
-    GIVEN eine Tour, deren Laufzeitraum vorbei ist (``end_date < heute``), und
+    GIVEN eine Trip, deren Laufzeitraum vorbei ist (``end_date < heute``), und
     weder datierte noch undatierte Anker-Datei
     WHEN der Alarm-Lauf sie prueft
     THEN bleibt es leise: KEIN Diagnose-Eintrag, KEINE WARNUNG — nur die
@@ -708,19 +709,19 @@ def test_abgelaufene_tour_ohne_anker_bleibt_leise(caplog):
     AC-14 bewacht bisher nur die eine Seite (``start_date > heute``). Ein
     verdrehter Vergleich in ``_report_missing_anchor`` (z.B. ``today <=
     end_date`` zu ``today <= start_date``) bliebe sonst unbemerkt und wuerde
-    jede laengst beendete Tour zur Dauer-Eskalation machen.
+    jede laengst beendete Trip zur Dauer-Eskalation machen.
     """
     user_id, trip_id = nutzer(), "trip-1661-abgelaufen"
-    trip = boeen_trip(trip_id, [date.today() - timedelta(days=5),
-                                date.today() - timedelta(days=4)])
-    assert trip.end_date < date.today(), "Fixtur-Schutz: die Tour muss vorbei sein."
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON) - timedelta(days=5),
+                                ortstag(LAT, LON) - timedelta(days=4)])
+    assert trip.end_date < ortstag(LAT, LON), "Fixtur-Schutz: die Trip muss vorbei sein."
 
     with caplog.at_level(logging.DEBUG):
         ergebnis = cached_weather(user_id, trip)
 
     assert ergebnis is None, "Fixtur-Schutz: es darf gar kein Anker da sein."
     assert not diagnose_zeilen(user_id), (
-        "Eine abgelaufene Tour ohne Anker ist genauso harmlos wie eine noch "
+        "Eine abgelaufene Trip ohne Anker ist genauso harmlos wie eine noch "
         "nicht gestartete (es laeuft dort schlicht keine Wache mehr) und darf "
         f"KEINEN Diagnose-Eintrag erzeugen: {diagnose_zeilen(user_id)}"
     )
@@ -755,9 +756,9 @@ class _FesteAmtlicheQuelle:
 def test_verworfener_delta_anker_schaltet_amtliche_warnung_NICHT_stumm(caplog):
     """Spec-Korrektur 2026-08-10 — gemessen am Wirkort ``check_all_trips()``.
 
-    GIVEN eine Tour mit amtlichem Trigger und einem Rueckfall-Anker vom
+    GIVEN eine Trip mit amtlichem Trigger und einem Rueckfall-Anker vom
     FALSCHEN TAG (genau die Lage einer bereits gebrieften, aber noch nicht
-    gestarteten Tour: ihr undatierter Anker traegt den Starttag)
+    gestarteten Trip: ihr undatierter Anker traegt den Starttag)
     WHEN der vollstaendige Alarm-Lauf laeuft
     THEN geht die amtliche Warnung trotzdem raus — verworfen wird NUR der
     Abweichungs-Vergleich.
@@ -773,9 +774,9 @@ def test_verworfener_delta_anker_schaltet_amtliche_warnung_NICHT_stumm(caplog):
 
     user_id, trip_id = nutzer(), "trip-1661-amtlich"
     undatierten_anker_schreiben(
-        user_id, trip_id, target_date=date.today() + timedelta(days=1),
+        user_id, trip_id, target_date=ortstag(LAT, LON) + timedelta(days=1),
     )
-    trip = boeen_trip(trip_id, [date.today()])
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON)])
     trip.official_alert_triggers_enabled = True
     save_trip(trip, user_id=user_id)
 
@@ -829,7 +830,7 @@ def abfrage_trip(trip_id: str) -> Trip:
     unter zwei Wegpunkten liefert ``convert_trip_to_segments`` GAR KEINE
     Segmente (``trip_segments.py:121-123``), die Abfrage schriebe dann keinen
     Snapshot. Vorbedingung, keine Zusicherung."""
-    trip = boeen_trip(trip_id, [date.today(), date.today() + timedelta(days=1)])
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON), ortstag(LAT, LON) + timedelta(days=1)])
     for stage in trip.stages:
         stage.waypoints.append(Waypoint(id=f"{stage.id}-Z", name="Ziel",
                                         lat=LAT + 0.1, lon=LON + 0.1,
@@ -879,7 +880,7 @@ def geometrie_weather(user_id: str, trip: Trip):
 def test_ac1_abfrage_anker_ohne_briefing_ist_keine_vergleichsbasis(caplog):
     """AC-1 (Bug-Nachweis am echten Abfrage-Pfad).
 
-    GIVEN eine Tour ohne jeden Snapshot (es lief nie ein Briefing) / WHEN der
+    GIVEN eine Trip ohne jeden Snapshot (es lief nie ein Briefing) / WHEN der
     Nutzer ``/glance`` sendet und danach der Abweichungs-Alarm laeuft / THEN
     wird der dabei entstandene Anker verworfen (``None``), sichtbar als WARNUNG.
     Vor dem Fix gruen durchgelaufen: er traegt ``target_date = heute`` und
@@ -920,7 +921,7 @@ def test_ac1_abfrage_anker_ohne_briefing_ist_keine_vergleichsbasis(caplog):
     )
     treffer = warnungen_zu(caplog, trip_id)
     assert any(GRUND_OHNE_BRIEFING in m or "briefing" in m.lower() for m in treffer), (
-        f"AC-1: WARNUNG mit Tour-Kennung ({trip_id}) und Grund "
+        f"AC-1: WARNUNG mit Trip-Kennung ({trip_id}) und Grund "
         f"'{GRUND_OHNE_BRIEFING}' erwartet. Gefunden: {treffer}"
     )
 
@@ -940,9 +941,9 @@ def test_ac1_wirkung_kein_abweichungsalarm_gegen_anker_ohne_briefing():
     Alarm raus.
     """
     user_id, trip_id = nutzer(), "trip-1699-ac1-wirkung"
-    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=date.today())
+    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON))
     herkunft_setzen(pfad, False)
-    save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
+    save_trip(boeen_trip(trip_id, [ortstag(LAT, LON)]), user_id=user_id)
 
     ergebnis, mails = alarm_lauf(user_id)
 
@@ -988,9 +989,9 @@ def _amtlicher_lauf_mit_anker_ohne_briefing(user_id: str, trip_id: str):
     from services.official_alerts import OfficialAlert, register_official_alert_source
 
     herkunft_setzen(
-        undatierten_anker_schreiben(user_id, trip_id, target_date=date.today()), False,
+        undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON)), False,
     )
-    trip = boeen_trip(trip_id, [date.today()])
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON)])
     trip.official_alert_triggers_enabled = True
     save_trip(trip, user_id=user_id)
 
@@ -1013,7 +1014,7 @@ def _amtlicher_lauf_mit_anker_ohne_briefing(user_id: str, trip_id: str):
 def test_ac3_amtliche_warnung_geht_trotz_anker_ohne_briefing_raus():
     """AC-3 (ZENTRALE NICHT-REGRESSION — heute schon korrekt, GRUEN).
 
-    GIVEN eine Tour mit amtlichem Trigger, deren einziger Anker NICHT
+    GIVEN eine Trip mit amtlichem Trigger, deren einziger Anker NICHT
     briefing-gestuetzt ist / WHEN der volle Alarm-Lauf laeuft / THEN geht die
     amtliche Warnung raus: fuer sie zaehlt nur die GEOMETRIE, und die ist bei
     einem Abfrage-Anker einwandfrei (``trip_alert.py:630-632``).
@@ -1044,7 +1045,7 @@ def test_ac3_amtliche_warnung_ueberlebt_auch_die_stufe_2_weiche():
     Ausstieg von Stufe 2 (``trip_alert.py:667-669``) gehaengte Herkunftspruefung
     bleibt unbemerkt.
 
-    GIVEN eine Tour mit amtlichem Trigger, einem GUELTIGEN rollierenden Anker
+    GIVEN eine Trip mit amtlichem Trigger, einem GUELTIGEN rollierenden Anker
     von heute (Stufe 2 greift) und einem undatierten Rueckfall mit
     ``briefing_backed=False`` / WHEN der amtliche Pfad die Geometrie holt /
     THEN liefert er sie — die amtliche Warnung wird ausgeloest.
@@ -1060,15 +1061,15 @@ def test_ac3_amtliche_warnung_ueberlebt_auch_die_stufe_2_weiche():
 
     user_id, trip_id = nutzer(), "trip-1699-ac3-stufe2"
     herkunft_setzen(
-        undatierten_anker_schreiben(user_id, trip_id, target_date=date.today()), False,
+        undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON)), False,
     )
-    trip = boeen_trip(trip_id, [date.today()])
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON)])
     trip.official_alert_triggers_enabled = True
     save_trip(trip, user_id=user_id)
     svc = WeatherSnapshotService(user_id=user_id)
-    svc.save_alarm_anchor(trip_id, date.today(), [_wetter(ANKER_BOE_KMH)])
+    svc.save_alarm_anchor(trip_id, ortstag(LAT, LON), [_wetter(ANKER_BOE_KMH)], "email")
 
-    assert svc.alarm_anchor_target_date(trip_id) == date.today(), (
+    assert svc.alarm_anchor_target_date(trip_id, "email") == ortstag(LAT, LON), (
         "Fixtur-Schutz: nur ein TAGESGLEICHER rollierender Anker laesst die "
         "Kette ueberhaupt in die Stufe-2-Weiche laufen."
     )
@@ -1097,7 +1098,7 @@ def test_ac3_amtliche_warnung_ueberlebt_auch_die_stufe_2_weiche():
     assert meldungen, (
         "AC-3: Fuer amtliche Warnungen zaehlt allein die GEOMETRIE — die "
         "liefert bei gueltigem rollierendem Anker die Stufe 2. Eine dort "
-        "angehaengte Herkunftspruefung wuerde jede Tour mit rollierendem Anker "
+        "angehaengte Herkunftspruefung wuerde jede Trip mit rollierendem Anker "
         "UND Abfrage-Rueckfall verstummen lassen (#1701)."
     )
 
@@ -1135,8 +1136,8 @@ def test_ac4_briefing_anker_bleibt_gueltig_und_alarmiert(caplog):
     ``test_ac1_wirkung_...``, ohne die dessen „kein Alarm" nichts bewiese.
     """
     user_id, trip_id = nutzer(), "trip-1699-ac4"
-    undatierten_anker_schreiben(user_id, trip_id, target_date=date.today())
-    trip = boeen_trip(trip_id, [date.today()])
+    undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON))
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON)])
     save_trip(trip, user_id=user_id)
 
     with caplog.at_level(logging.DEBUG):
@@ -1169,12 +1170,12 @@ def test_ac5_altbestand_ohne_herkunftsfeld_bleibt_gueltiger_anker(caplog):
     ``tests/integration/test_weather_snapshot.py``.
     """
     user_id, trip_id = nutzer(), "trip-1699-ac5"
-    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=date.today())
+    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON))
     herkunft_setzen(pfad, _ENTFERNEN)
     assert "briefing_backed" not in json.loads(pfad.read_text()), "Fixtur-Schutz"
 
     with caplog.at_level(logging.DEBUG):
-        segmente = cached_weather(user_id, boeen_trip(trip_id, [date.today()]))
+        segmente = cached_weather(user_id, boeen_trip(trip_id, [ortstag(LAT, LON)]))
 
     assert segmente and segmente[0].aggregated.gust_max_kmh == ANKER_BOE_KMH, (
         f"AC-5: Altbestand OHNE Herkunftsfeld gilt als briefing-gestuetzt. "
@@ -1189,7 +1190,7 @@ def test_ac5_altbestand_ohne_herkunftsfeld_bleibt_gueltiger_anker(caplog):
 def test_ac6_anzeigepfade_nach_abfrage_ohne_briefing_bleiben_vollstaendig():
     """AC-6 (REGRESSIONSSCHUTZ — Anzeige und Ankerwirkung sind getrennt, GRUEN).
 
-    GIVEN eine Tour ohne jeden Snapshot / WHEN der Nutzer ``/glance`` sendet /
+    GIVEN eine Trip ohne jeden Snapshot / WHEN der Nutzer ``/glance`` sendet /
     THEN antwortet das Kommando mit Daten UND ``WeatherExtractor.timeline()``
     zeigt denselben Snapshot (``available=True``) — obwohl der Alarm ihn
     verwirft. Bewacht die Trennung: die Herkunftspruefung gehoert in den
@@ -1243,7 +1244,7 @@ def test_ac7_regulaeres_briefing_heilt_den_abfrage_anker(caplog):
     vorher = len(diagnose_zeilen(user_id))
 
     WeatherSnapshotService(user_id=user_id).save(
-        trip_id, [_wetter(ANKER_BOE_KMH)], date.today(),
+        trip_id, [_wetter(ANKER_BOE_KMH)], ortstag(LAT, LON),
     )
 
     with caplog.at_level(logging.DEBUG):
@@ -1264,17 +1265,17 @@ def test_ac7_regulaeres_briefing_heilt_den_abfrage_anker(caplog):
 # Anker-Schreiber (200 km/h) statt der echten Abfrage: nur so ergaebe die
 # verworfene Basis ueberhaupt ein Delta, das Trigger (a) ausloesen WUERDE.
 def rollierender_anker_pfad(user_id: str, trip_id: str) -> Path:
-    return get_snapshots_dir(user_id) / f"{trip_id}_alarm_anchor.json"
+    return get_snapshots_dir(user_id) / f"{trip_id}_alarm_anchor_email.json"
 
 
 def _ac10_lauf(user_id: str, trip_id: str, *, herkunft):
-    """Tour, deren EINZIGE Basis der undatierte Anker ist (kein datierter, kein
+    """Trip, deren EINZIGE Basis der undatierte Anker ist (kein datierter, kein
     rollierender) — ``herkunft=False`` macht sie zum Abfrage-Anker."""
     herkunft_setzen(
-        undatierten_anker_schreiben(user_id, trip_id, target_date=date.today()),
+        undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON)),
         herkunft,
     )
-    save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
+    save_trip(boeen_trip(trip_id, [ortstag(LAT, LON)]), user_id=user_id)
     return alarm_lauf(user_id)
 
 
@@ -1298,7 +1299,7 @@ def test_ac10_positivkontrolle_gueltige_basis_schreibt_rollierenden_anker():
 
 
 def test_ac10_verworfene_basis_erzeugt_keinen_rollierenden_alarm_anker():
-    """AC-10 (Naht zu #1916): GIVEN eine Tour, deren einzige Vergleichsbasis in
+    """AC-10 (Naht zu #1916): GIVEN eine Trip, deren einzige Vergleichsbasis in
     Stufe 3 wegen ``not_briefing_backed`` faellt (kein Briefing-Anker, kein
     rollierender) / WHEN ``check_all_trips()`` laeuft / THEN entsteht KEIN
     rollierender Alarm-Anker — weder ueber Trigger (a) noch (b).
@@ -1313,7 +1314,7 @@ def test_ac10_verworfene_basis_erzeugt_keinen_rollierenden_alarm_anker():
 
     ergebnis, mails = _ac10_lauf(user_id, trip_id, herkunft=False)
 
-    assert WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id) is None, (
+    assert WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id, "email") is None, (
         "AC-10: Aus einer wegen fehlenden Briefings verworfenen Basis darf kein "
         "rollierender Alarm-Anker entstehen."
     )
@@ -1328,9 +1329,9 @@ def _dienst_mit_aufrufzaehler(user_id: str, mails: list):
     ueberschriebenen Methoden reichen unveraendert an ihre Originalfassung weiter,
     der Lauf bleibt der echte (kein Mock, keine Rueckgabe-Attrappe).
 
-    ``besucht`` haelt die REIHENFOLGE fest, in der der Lauf die Touren erreicht
+    ``besucht`` haelt die REIHENFOLGE fest, in der der Lauf die Trips erreicht
     (nur der Δ-Aufruf, nicht der amtliche) — ohne sie waere eine Aussage ueber
-    „laeuft nach einer verworfenen Tour weiter" von der zufaelligen Sortierung
+    „laeuft nach einer verworfenen Trip weiter" von der zufaelligen Sortierung
     aus ``load_all_trips()`` abhaengig."""
     from services.trip_alert import TripAlertService
 
@@ -1371,17 +1372,17 @@ def test_ac10_verworfene_basis_ruft_check_and_send_alerts_gar_nicht_erst_auf():
     ``cached_weather or []`` liesse die Zusicherung lautlos kippen, im
     Extremfall mit einem Alarm gegen eine LEERE Basis.
 
-    GIVEN zwei Touren im selben Lauf — die VERWORFENE zuerst, danach eine mit
+    GIVEN zwei Trips im selben Lauf — die VERWORFENE zuerst, danach eine mit
     gueltiger Basis / WHEN ``check_all_trips()`` laeuft / THEN steht nur die
     gueltige im Aufrufprotokoll, und der Lauf erreicht sie ueberhaupt. Die
-    zweite Tour ist die Positivkontrolle: ohne sie waere das Protokoll auch dann
+    zweite Trip ist die Positivkontrolle: ohne sie waere das Protokoll auch dann
     leer, wenn es ueberhaupt nichts mehr aufzeichnet.
 
     Die Reihenfolge ist die eigentliche Zusicherung (Fix-Loop F006): das
-    Verwerfen darf den Lauf nur fuer DIESE Tour beenden (``continue``), nicht
-    fuer alle folgenden (``break``). Kaeme die verworfene Tour zuletzt, waere
+    Verwerfen darf den Lauf nur fuer DIESE Trip beenden (``continue``), nicht
+    fuer alle folgenden (``break``). Kaeme die verworfene Trip zuletzt, waere
     ein Abbruch von einem Weiterlaufen nicht unterscheidbar. ``load_all_trips()``
-    liefert die Touren UNSORTIERT (``Path.glob()``, ``loader.py:1403``): die
+    liefert die Trips UNSORTIERT (``Path.glob()``, ``loader.py:1403``): die
     Reihenfolge ist umgebungsabhaengig und aus den Namen NICHT vorhersagbar —
     auch nicht alphabetisch. Die Namenswahl stellt sie hier guenstig, aber
     verlassen darf sich der Test darauf nicht: ``besucht[:1]`` prueft sie bei
@@ -1391,28 +1392,28 @@ def test_ac10_verworfene_basis_ruft_check_and_send_alerts_gar_nicht_erst_auf():
     verworfen, gueltig = "trip-1699-f002-a-verworfen", "trip-1699-f002-b-gueltig"
     user_id = nutzer()
     herkunft_setzen(
-        undatierten_anker_schreiben(user_id, verworfen, target_date=date.today()), False,
+        undatierten_anker_schreiben(user_id, verworfen, target_date=ortstag(LAT, LON)), False,
     )
-    undatierten_anker_schreiben(user_id, gueltig, target_date=date.today())
-    save_trip(boeen_trip(verworfen, [date.today()]), user_id=user_id)
-    save_trip(boeen_trip(gueltig, [date.today()]), user_id=user_id)
+    undatierten_anker_schreiben(user_id, gueltig, target_date=ortstag(LAT, LON))
+    save_trip(boeen_trip(verworfen, [ortstag(LAT, LON)]), user_id=user_id)
+    save_trip(boeen_trip(gueltig, [ortstag(LAT, LON)]), user_id=user_id)
 
     mails: list = []
     dienst = _dienst_mit_aufrufzaehler(user_id, mails)
     dienst.check_all_trips()
 
     assert dienst.besucht[:1] == [verworfen], (
-        "Fixtur-Schutz (F006): die VERWORFENE Tour muss zuerst drankommen, "
+        "Fixtur-Schutz (F006): die VERWORFENE Trip muss zuerst drankommen, "
         "sonst kann dieser Test einen Schleifen-Abbruch danach gar nicht sehen. "
         f"Besuchte Reihenfolge: {dienst.besucht}"
     )
     assert gueltig in dienst.besucht, (
-        "F006: Ein verworfener Anker legt NUR die betroffene Tour stumm — der "
+        "F006: Ein verworfener Anker legt NUR die betroffene Trip stumm — der "
         "Lauf muss mit der naechsten weitermachen (``continue``, nicht "
         f"``break``). Besuchte Reihenfolge: {dienst.besucht}"
     )
     assert gueltig in dienst.aufrufe, (
-        "Positivkontrolle: fuer die Tour mit gueltiger Basis MUSS "
+        "Positivkontrolle: fuer die Trip mit gueltiger Basis MUSS "
         f"check_and_send_alerts() laufen — sonst zaehlt das Protokoll nichts. "
         f"Aufgezeichnet: {dienst.aufrufe}"
     )
@@ -1434,11 +1435,12 @@ def test_ac10_abgelaufener_rollierender_anker_bleibt_unveraendert():
 
     user_id, trip_id = nutzer(), "trip-1699-ac10-bestand"
     herkunft_setzen(
-        undatierten_anker_schreiben(user_id, trip_id, target_date=date.today()), False,
+        undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON)), False,
     )
-    save_trip(boeen_trip(trip_id, [date.today()]), user_id=user_id)
+    save_trip(boeen_trip(trip_id, [ortstag(LAT, LON)]), user_id=user_id)
     WeatherSnapshotService(user_id=user_id).save_alarm_anchor(
-        trip_id, date.today() - timedelta(days=1), [_wetter(ANKER_BOE_KMH)],
+        trip_id, ortstag(LAT, LON) - timedelta(days=1), [_wetter(ANKER_BOE_KMH)],
+        "email",
     )
     pfad = rollierender_anker_pfad(user_id, trip_id)
     vorher = pfad.read_text()
@@ -1447,7 +1449,7 @@ def test_ac10_abgelaufener_rollierender_anker_bleibt_unveraendert():
 
     assert pfad.read_text() == vorher, (
         "AC-10: Der abgelaufene rollierende Anker darf aus einer verworfenen "
-        "Basis heraus nicht fortgeschrieben werden — sonst waere die Tour ab "
+        "Basis heraus nicht fortgeschrieben werden — sonst waere die Trip ab "
         "sofort dauerhaft gegen einen erfundenen Vergleichspunkt bewacht."
     )
 
@@ -1496,7 +1498,7 @@ def _amtliche_quelle(aktiv: bool):
 def test_torbedingung_matrix_basis_mal_amtliche_warnung(basis_gueltig, amtlich):
     """Die Torbedingung ueber BEIDE Achsen (Fix-Loop F002 + F005).
 
-    GIVEN eine Tour, deren Δ-Basis entweder briefing-gestuetzt oder wegen
+    GIVEN eine Trip, deren Δ-Basis entweder briefing-gestuetzt oder wegen
     ``not_briefing_backed`` verworfen ist, mit oder ohne vorliegende amtliche
     Warnung / WHEN ``check_all_trips()`` laeuft / THEN gilt fuer jede der vier
     Kombinationen:
@@ -1516,10 +1518,10 @@ def test_torbedingung_matrix_basis_mal_amtliche_warnung(basis_gueltig, amtlich):
 
     user_id = nutzer()
     trip_id = f"trip-1699-matrix-{int(basis_gueltig)}{int(amtlich)}"
-    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=date.today())
+    pfad = undatierten_anker_schreiben(user_id, trip_id, target_date=ortstag(LAT, LON))
     if not basis_gueltig:
         herkunft_setzen(pfad, False)
-    trip = boeen_trip(trip_id, [date.today()])
+    trip = boeen_trip(trip_id, [ortstag(LAT, LON)])
     trip.official_alert_triggers_enabled = amtlich
     save_trip(trip, user_id=user_id)
 
@@ -1539,7 +1541,7 @@ def test_torbedingung_matrix_basis_mal_amtliche_warnung(basis_gueltig, amtlich):
         f"{lage}: genau {1 if versand else 0} Versand erwartet, gezaehlt "
         f"{ergebnis.alerts_sent}, zugestellt {[s for s, _ in mails]}"
     )
-    rollierend = WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id)
+    rollierend = WeatherSnapshotService(user_id=user_id).load_alarm_anchor(trip_id, "email")
     assert (rollierend is not None) is basis_gueltig, (
         f"{lage}: ein rollierender Alarm-Anker darf NUR aus gueltiger Basis "
         f"entstehen (#1916 Trigger (a)) — ein amtlicher Alleinversand keinen."

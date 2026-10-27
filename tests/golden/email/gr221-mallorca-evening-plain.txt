@@ -13,7 +13,7 @@ GR221 Tag1: 18–19°C, gef. 12–13°C, ⛅, trocken, mäßiger Wind 19 km/h, B
   kein Regen
   kein Gewitter
   50% bewölkt · Max 11:00
-  Sonne 180 min
+  Sonne 3.0h
 
 ━━ Segment 1: km 0.0–0.0 | 11:00–16:00 | ↑200m → 900m ━━
   Time   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun   TmpMin 
@@ -27,15 +27,21 @@ GR221 Tag1: 18–19°C, gef. 12–13°C, ⛅, trocken, mäßiger Wind 19 km/h, B
 
 
 ── Antwort-Kommandos ──
-  HEUTE / MORGEN       – Wetter heutige/morgige Etappe
-  JETZT / NOW          – Nowcast Regen/Gewitter ~2h
+  HEUTE                – Wetter der heutigen Etappe
+  MORGEN               – Wetter der morgigen Etappe
+  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)
   GEWITTER             – Gewittergefahr heutige Etappe
-  RUHETAG [N]          – Etappen um N Tage verschieben
+  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke
+  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)
   STATUS               – Heute und kommende Etappen
   PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
   SKIP                 – Nächstes Briefing überspringen
-  STOP / WEITER        – Briefings deaktivieren / reaktivieren
-  HILFE / HELP         – Alle Befehle anzeigen
+  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben
+  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)
 
 Einheiten: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 Spalten: Temp = Temperatur · TmpMin = Tiefsttemperatur-Alarm · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · Thdr = Gewitter · SnowL = Schneefallgrenze · Cloud = Bewölkung · Sun = Sonnenstunden

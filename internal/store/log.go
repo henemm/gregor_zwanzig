@@ -7,11 +7,19 @@ import (
 )
 
 // BriefingLogEntry represents one briefing send event (Issue #393).
+//
+// Issue #2281: kind-neutral like AlertLogEntry (#1467). EntityID/EntityType
+// ("trip" | "compare") identify the briefing; TripID is still written for
+// trips (legacy readers) and omitted for compare entries. Kind is the SLOT
+// (morning | evening), not the briefing kind.
 type BriefingLogEntry struct {
-	TripID   string   `json:"trip_id"`
-	Kind     string   `json:"kind"`
-	SentAt   string   `json:"sent_at"`
-	Channels []string `json:"channels"`
+	EntityID   string   `json:"entity_id"`
+	EntityType string   `json:"entity_type"`
+	TripID     string   `json:"trip_id,omitempty"`
+	Kind       string   `json:"kind"`
+	SentAt     string   `json:"sent_at"`
+	Channels   []string `json:"channels"`
+	OnDemand   bool     `json:"on_demand"`
 }
 
 type briefingLogFile struct {
@@ -21,6 +29,9 @@ type briefingLogFile struct {
 // LoadBriefingLog reads the user's briefing_log.json. Returns an empty slice
 // if the file is missing or corrupt (fail-soft). Issue #393.
 func (s *Store) LoadBriefingLog() ([]BriefingLogEntry, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	path := filepath.Join(s.DataDir, "users", s.UserID, "briefing_log.json")
 	b, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -35,6 +46,16 @@ func (s *Store) LoadBriefingLog() ([]BriefingLogEntry, error) {
 	}
 	if f.Entries == nil {
 		return []BriefingLogEntry{}, nil
+	}
+	// Issue #2281 — read rule instead of file migration (same as LoadAlertLog,
+	// #1467): legacy entries only carry trip_id. The file is never rewritten.
+	for i := range f.Entries {
+		if f.Entries[i].EntityID == "" {
+			f.Entries[i].EntityID = f.Entries[i].TripID
+		}
+		if f.Entries[i].EntityType == "" {
+			f.Entries[i].EntityType = "trip"
+		}
 	}
 	return f.Entries, nil
 }
@@ -61,6 +82,9 @@ type alertLogFile struct {
 // LoadAlertLog reads the user's alert_log.json. Returns an empty slice if the
 // file is missing or corrupt (fail-soft). Issue #393.
 func (s *Store) LoadAlertLog() ([]AlertLogEntry, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	path := filepath.Join(s.DataDir, "users", s.UserID, "alert_log.json")
 	b, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -91,17 +115,21 @@ func (s *Store) LoadAlertLog() ([]AlertLogEntry, error) {
 	return f.Entries, nil
 }
 
-// BriefingCountByTrip returns a map[tripID]count of all briefing-log entries
-// per trip for the user-scoped store (Issue #396). Fail-soft: on load error it
-// returns an empty map and no error so the archive view never 500s.
-func (s *Store) BriefingCountByTrip() (map[string]int, error) {
+// BriefingCountByEntity returns a map["<type>:<id>"]count of all briefing-log
+// entries per entity for the user-scoped store (Issue #396, key form since
+// #2281 like AlertCountByEntity). Fail-soft: on load error it returns an empty
+// map and no error so the archive view never 500s.
+func (s *Store) BriefingCountByEntity() (map[string]int, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	entries, err := s.LoadBriefingLog()
 	if err != nil {
 		return map[string]int{}, nil
 	}
 	counts := make(map[string]int)
 	for _, e := range entries {
-		counts[e.TripID]++
+		counts[e.EntityType+":"+e.EntityID]++
 	}
 	return counts, nil
 }
@@ -114,6 +142,9 @@ func (s *Store) BriefingCountByTrip() (map[string]int, error) {
 // historical alert is counted (the 48h-retention was removed in the Python
 // writer). Fail-soft: on load error it returns an empty map and no error.
 func (s *Store) AlertCountByEntity() (map[string]int, error) {
+	if err := s.requireUser(); err != nil {
+		return nil, err
+	}
 	entries, err := s.LoadAlertLog()
 	if err != nil {
 		return map[string]int{}, nil

@@ -21,7 +21,7 @@ from zoneinfo import ZoneInfo
 
 from app.metric_catalog import (
     SMS_MULTI_SYMBOLS_BY_METRIC,  # noqa: F401  Re-Export, s. #1719 S4 unten
-    SMS_NULLFORM_METRIC_IDS, SMS_SYMBOL_BY_METRIC,
+    SMS_FORMAT_MODE_METRIC_IDS, SMS_NULLFORM_METRIC_IDS, SMS_SYMBOL_BY_METRIC,
 )
 from app.models import (
     ExposedSection, NormalizedTimeseries, PrecipType, RiskLevel, RiskType,
@@ -66,6 +66,7 @@ if TYPE_CHECKING:
 def build_extended_metric_specs(
     active_metric_ids: set[str],
     position_by_metric: Optional[dict[str, int]] = None,
+    format_by_metric: Optional[dict[str, str]] = None,
 ) -> list[MetricSpec]:
     """#1660 B Fix-Loop: MetricSpecs fuer die 14 erweiterten Metriken in BEIDEN
     Faellen (Muster #1410, wie schon SMS_MULTI_SYMBOLS_BY_METRIC unten fuer
@@ -86,9 +87,23 @@ def build_extended_metric_specs(
             symbol=SMS_SYMBOL_BY_METRIC[metric_id],
             enabled=metric_id in active_metric_ids,
             position=position_by_metric.get(metric_id),
+            **sms_format_fields(metric_id, format_by_metric),
         )
         for metric_id in SMS_NULLFORM_METRIC_IDS
     ]
+
+
+def sms_format_fields(
+    metric_id: str, format_by_metric: Optional[dict[str, str]],
+) -> dict:
+    """Issue #2422 S6 (B2): ``format_mode``/``use_friendly_format`` einer
+    MetricSpec -- NUR fuer Groessen mit SMS-Einfachform
+    (``SMS_FORMAT_MODE_METRIC_IDS``); alle anderen haben in der SMS eine Form.
+    ``format_by_metric`` = ``{metric_id: aufgeloester Modus}`` (je Metrik)."""
+    mode = (format_by_metric or {}).get(metric_id)
+    if mode is None or metric_id not in SMS_FORMAT_MODE_METRIC_IDS:
+        return {}
+    return {"format_mode": mode, "use_friendly_format": mode in ("symbol", "scale")}
 
 
 # RiskType → SMS risk label (German, ultra-compact). Used by format_alert_sms.
@@ -97,7 +112,13 @@ _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
     (RiskType.THUNDERSTORM, RiskLevel.MODERATE): "Gewitter",
     # Issue #1474 (AC-12): deutsches Wort statt generischem englischen
     # Fallback ("Thunderstorm").
-    (RiskType.THUNDERSTORM, RiskLevel.LOW): "Gewitter leicht",
+    # Issue #2176: KEINE Gewitteransage mehr -- "leicht" misst eine Luftmasse.
+    # Der EINZIGE Ort, an dem SMS/Premium-SMS bei LOW wortwoertlich "Gewitter"
+    # sagte (der `TH:L`-Token spricht das Wort nie aus). Das Stufenwort bleibt
+    # stehen: es ist der einzige SMS-Text mit Stufenwort ueberhaupt, ohne es
+    # waere #1474 AC-12 fuer diesen Kanal tot (Spec-Dependencies: AC-11 bleibt
+    # fuer das Stufenwort gueltig, nur nicht fuer die Ereignisaussage).
+    (RiskType.THUNDERSTORM, RiskLevel.LOW): "Luftmasse leicht",
     (RiskType.WIND, RiskLevel.HIGH): "Sturm",
     (RiskType.WIND, RiskLevel.MODERATE): "Wind",
     (RiskType.RAIN, RiskLevel.HIGH): "Regen",
@@ -291,6 +312,9 @@ def _segments_to_normalized_forecast(
     # Klasse (b): OHNE > 0-Filter (DEC-2b) — auch kleine/negative Werte gueltig.
     visibility_samples: list[HourlyValue] = []
     freezing_level_samples: list[HourlyValue] = []
+    # Issue #2422 S6 (B1): gefuehlte Temperatur im Tagesfenster, ebenfalls ohne
+    # ``> 0``-Filter (Klasse (b), negative Werte sind gueltig).
+    wind_chill_samples: list[HourlyValue] = []
     # Klasse (c): Rohdaten fuer die Tageswert-Ableitung nach der Schleife.
     wind_direction_samples: list[tuple[int, float, float]] = []  # (h, deg, speed)
     precip_types: list[PrecipType] = []
@@ -347,6 +371,8 @@ def _segments_to_normalized_forecast(
             visibility_samples.append(HourlyValue(lh, float(dp.visibility_m)))
         if dp.freezing_level_m is not None:
             freezing_level_samples.append(HourlyValue(lh, float(dp.freezing_level_m)))
+        if dp.wind_chill_c is not None:
+            wind_chill_samples.append(HourlyValue(lh, float(dp.wind_chill_c)))
         if dp.wind_direction_deg is not None:
             speed = float(dp.wind10m_kmh) if dp.wind10m_kmh is not None else 0.0
             wind_direction_samples.append((lh, float(dp.wind_direction_deg), speed))
@@ -412,6 +438,7 @@ def _segments_to_normalized_forecast(
     cloud_high_samples_d = _dedup_by_hour(cloud_high_samples)
     visibility_samples_d = _dedup_by_hour_min(visibility_samples)
     freezing_level_samples_d = _dedup_by_hour_min(freezing_level_samples)
+    wind_chill_samples_d = _dedup_by_hour_min(wind_chill_samples)
 
     # Klasse (c): Tageswerte nach der Schleife (§3 der Spec).
     wind_direction_sector = _dominant_wind_sector(wind_direction_samples)
@@ -422,6 +449,13 @@ def _segments_to_normalized_forecast(
     )
     pressure_avg_hpa = (
         sum(pressure_values) / len(pressure_values) if pressure_values else None
+    )
+
+    # Issue #1794: Fensterpunkte vorhanden, aber KEIN einziger mit belegtem
+    # `pop_pct` -> kein Messwert, nur Fehlbestand. Ein echtes 0 % (pop_pct == 0)
+    # zaehlt als Messwert und darf die Entwarnung "-" behalten.
+    pop_all_missing = bool(window_points) and all(
+        getattr(dp, "pop_pct", None) is None for dp in window_points
     )
 
     # Issue #121: worst-case daily confidence aggregation over segments.
@@ -460,6 +494,7 @@ def _segments_to_normalized_forecast(
         night_wind_chill_min_c=night_felt_min,
         rain_hourly=rain_samples_d,
         pop_hourly=pop_samples_d,
+        pop_all_missing=pop_all_missing,
         wind_hourly=wind_samples_d,
         gust_hourly=gust_samples_d,
         thunder_hourly=thunder_samples_d,
@@ -483,6 +518,7 @@ def _segments_to_normalized_forecast(
         cloud_high_hourly=cloud_high_samples_d,
         visibility_hourly=visibility_samples_d,
         freezing_level_hourly=freezing_level_samples_d,
+        wind_chill_hourly=wind_chill_samples_d,
         wind_direction_sector=wind_direction_sector,
         precip_type_dominant=precip_type_dominant,
         sunshine_hours=sunshine_hours,

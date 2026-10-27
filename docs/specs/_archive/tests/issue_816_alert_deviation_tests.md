@@ -3,7 +3,7 @@ entity_id: issue_816_alert_deviation_tests
 type: tests
 created: 2026-06-14
 updated: 2026-06-14
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, alert, deviation, alert-state, change-detection, epic-813, issue-816]
 parent: issue_816_alert_deviation_core
@@ -18,12 +18,12 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/issue_816_alert_deviation_core.md`.
+Test-Manifest für `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`.
 Jeder pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 Mock-frei (CLAUDE.md): echter Dateisystem-State unter `data/users/<user_id>/`,
 echte Service-Aufrufe, echter Telegram-Socket-Sink, echtes `build_mime_message`-MIME.
 
-Parent-Spec: `docs/specs/modules/issue_816_alert_deviation_core.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_816_alert_deviation_core.md` v1.0
 
 ## Source
 

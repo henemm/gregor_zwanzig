@@ -267,6 +267,14 @@ def test_repeated_findings_in_one_function_stay_separate(guard_name):
     per_function = Counter(_function_of(str(k)) for k in found)
     multi = {name: count for name, count in per_function.items() if count > 1}
 
+    if guard_name == "erfolg" and not multi:
+        # #1405 S4a: mit der Reparatur von ``_handle_query`` (vier Zweige) traegt
+        # im Erfolgs-Waechter keine Funktion mehr mehrere Funde. Die Ordinal-
+        # Faehigkeit des Scanners bleibt synthetisch bewacht
+        # (``test_success_status_guard.py``, Nachbau von B18 mit vier Treffern);
+        # die Schluessel selbst sind oben auf Funktions-/Ordinal-Anteil geprueft.
+        return
+
     assert multi, (
         f"Waechter '{guard_name}': keine einzige Funktion traegt mehr als "
         "einen Fund. Im Bestand gibt es diese Faelle nachweislich (14 Funde in "

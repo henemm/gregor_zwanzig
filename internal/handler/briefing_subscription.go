@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/henemm/gregor-api/internal/middleware"
-	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
@@ -55,8 +54,21 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 		// (LockBriefing) haengt an s.UserID. Siehe compare_preset.go.
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
+		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+			return
+		}
 
 		if kind == briefingKindRoute {
+			// Issue #2285 AC-4: Sperre + ETag symmetrisch zum vergleich-Zweig
+			// unten und zu GetTripHandler (trip.go) -- Sperre VOR LoadTrip,
+			// kein Selbst-Blockierer: dieser Zweig laedt selbst und
+			// delegiert NICHT an GetTripHandler.
+			unlockB, okB := lockBriefingOr503(w, s, id)
+			if !okB {
+				return
+			}
+			defer unlockB()
 			trip, err := s.LoadTrip(id)
 			if bailIf(w, err != nil, http.StatusInternalServerError, "store_error") {
 				return
@@ -65,6 +77,8 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 				return
 			}
 			trip.Kind = briefingKindRoute
+			fp, fpErr := s.BriefingFingerprint(id)
+			setETagHeader(w, fp, fpErr)
 			writeJSON(w, http.StatusOK, trip)
 			return
 		}
@@ -73,7 +87,11 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 		// Stempel zum ausgelieferten Rumpf (analog GetComparePresetHandler).
 		// Ausschliesslich im vergleich-Zweig: der route-Zweig oben laedt selbst
 		// und ist nicht Teil dieser Scheibe.
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		// Issue #1250 Scheibe 7b: per-Datei-Read ueber die neue Store-API
 		// (kind-Guard inklusive) statt Array-Scan.
@@ -212,11 +230,19 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
+		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
+		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+			return
+		}
 
 		// Ab hier gilt der volle Nebenlaeufigkeitsschutz des Preset-Schreibwegs:
 		// dieselbe Sperre und derselbe Fingerabdruck wie
 		// UpdateComparePresetHandler — sonst waere dieser Weg dessen Umgehung.
-		defer s.LockBriefing(id)()
+		unlockB, okB := lockBriefingOr503(w, s, id)
+		if !okB {
+			return
+		}
+		defer unlockB()
 
 		oldFp, fpErr := s.BriefingFingerprint(id)
 		if bailIf(w, fpErr != nil, http.StatusInternalServerError, "store_error") {
@@ -244,30 +270,13 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		merged, err := mergeBriefingPatch(original, patch)
+		// Issue #2285: derselbe Merge-Kernel wie UpdateComparePresetHandler
+		// (compare_preset.go) -- Server-Feld-Restauration, Legacy-Sentinels
+		// und Normalisierung leben jetzt an EINER Stelle statt zweimal.
+		preset, err := applyComparePresetPatch(original, id, patch, time.Now().UTC())
 		if bailIf(w, err != nil, http.StatusBadRequest, "bad_request") {
 			return
 		}
-		var preset model.ComparePreset
-		if bailIf(w, json.Unmarshal(merged, &preset) != nil, http.StatusBadRequest, "bad_request") {
-			return
-		}
-		// Server-verwaltete Felder: nie vom Patch ueberschreibbar, exakter
-		// gleicher Feldsatz wie UpdateComparePresetHandler.
-		preset.ID = id
-		preset.UserID = original.UserID
-		preset.CreatedAt = original.CreatedAt
-		preset.LetzterVersand = original.LetzterVersand
-		preset.TopOrtLetzterVersand = original.TopOrtLetzterVersand
-		preset.PausedAt = original.PausedAt
-		preset.ArchivedAt = original.ArchivedAt
-		// end_date:"" ist der explizite Loesch-Sentinel (analog compare_preset.go:408).
-		if preset.EndDate != nil && *preset.EndDate == "" {
-			preset.EndDate = nil
-		}
-		// F008: paused_at bei erstmaligem Pausieren materialisieren (analog compare_preset.go:402).
-		store.MaterializePausedAt(&preset, time.Now().UTC())
-		store.NormalizeComparePreset(&preset)
 		if err := validateComparePreset(preset); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})
 			return

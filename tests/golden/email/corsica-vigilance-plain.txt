@@ -13,7 +13,7 @@ Corsica E5: 18–20°C, gef. 12–13°C, ⛅, mäßiger Regen max 12:00, mäßig
   Regen ab 12:00 · 8 mm
   Gewitter hoch ab 04:00 · stärkste 04:00
   50% bewölkt · Max 12:00
-  Sonne 180 min
+  Sonne 3.0h
 
 ━━ Amtliche Warnungen ━━
   ⚠️ Amtliche Warnung: Extreme Hitze (Sa 11.07. · 12:00–20:00)
@@ -30,15 +30,21 @@ Corsica E5: 18–20°C, gef. 12–13°C, ⛅, mäßiger Regen max 12:00, mäßig
 
 
 ── Antwort-Kommandos ──
-  HEUTE / MORGEN       – Wetter heutige/morgige Etappe
-  JETZT / NOW          – Nowcast Regen/Gewitter ~2h
+  HEUTE                – Wetter der heutigen Etappe
+  MORGEN               – Wetter der morgigen Etappe
+  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)
   GEWITTER             – Gewittergefahr heutige Etappe
-  RUHETAG [N]          – Etappen um N Tage verschieben
+  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke
+  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)
   STATUS               – Heute und kommende Etappen
   PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
   SKIP                 – Nächstes Briefing überspringen
-  STOP / WEITER        – Briefings deaktivieren / reaktivieren
-  HILFE / HELP         – Alle Befehle anzeigen
+  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben
+  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)
 
 Einheiten: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 Spalten: Temp = Temperatur · TmpMin = Tiefsttemperatur-Alarm · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · Thdr = Gewitter · SnowL = Schneefallgrenze · Cloud = Bewölkung · Sun = Sonnenstunden

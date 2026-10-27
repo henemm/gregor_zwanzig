@@ -51,10 +51,10 @@ function namedImportsFrom(src: string, modulePath: string): string[] {
 
 // ── AC-1: Atom-/Molecule-Barrel-Importe ──────────────────────────────────────
 
-test('AC-1: Btn/Input/Dot/Eyebrow werden aus $lib/components/atoms importiert', () => {
+test('AC-1: Btn/Input/Eyebrow werden aus $lib/components/atoms importiert', () => {
 	const src = readPage();
 	const atoms = namedImportsFrom(src, '$lib/components/atoms');
-	for (const name of ['Btn', 'Input', 'Dot', 'Eyebrow']) {
+	for (const name of ['Btn', 'Input', 'Eyebrow']) {
 		assert.ok(
 			atoms.includes(name),
 			`${name} wird nicht aus '$lib/components/atoms' importiert (gefunden: ${atoms.join(', ') || 'keine'})`
@@ -78,22 +78,9 @@ test('AC-1: Btn/Input/Dot/Eyebrow werden NICHT mehr direkt aus ui/ importiert', 
 // #411 ersetzt <Stat layout="inline"> durch Inline-HTML mit --g-accent-Zahlen.
 // Neue Assertions für Stats-Strip: issue_411_413.test.ts
 
-test('AC-2: deriveTripStatus ist noch im Code (wird in statusTone/primaryLabel genutzt)', () => {
-	const src = readPage();
-	assert.ok(
-		src.includes('deriveTripStatus'),
-		'deriveTripStatus komplett entfernt — wird noch in statusTone()/primaryLabel() benötigt'
-	);
-});
-
-// ── AC-3: Farbige Status-Punkte in Mobile-Karten ─────────────────────────────
-// <Dot> bleibt im Mobile Card-Stack erhalten; <Stat> ist durch #411 entfernt.
-
-test('AC-3: <Dot> mit tone-Prop ist noch vorhanden (Mobile Card-Stack)', () => {
-	const src = readPage();
-	assert.ok(src.includes('<Dot'), 'Kein <Dot> mehr im Markup — Mobile-Karten nutzen status-Dots');
-	assert.ok(/<Dot[^>]*tone=/.test(src), '<Dot> ohne tone-Prop gefunden');
-});
+// AC-2 (deriveTripStatus in statusTone/primaryLabel) und AC-3 (<Dot tone> in der Inline-Karte) sind mit
+// #2278 abgeloest: statusTone/primaryLabel sind toter Code gewesen und entfernt, die mobile Karte ist
+// der geteilte SubscriptionCard (Status-Punkt dort, bewacht in organisms/__tests__/subscription_card.test.ts).
 
 // ── AC-4: durch #477 superseded ──────────────────────────────────────────────
 // Table/Dialog/Select/EmptyState/Checkbox wurden per #477+#486 aus +page.svelte

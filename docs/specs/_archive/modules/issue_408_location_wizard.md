@@ -3,12 +3,14 @@ entity_id: issue_408_location_wizard
 type: module
 created: 2026-05-27
 updated: 2026-05-27
-status: active
+status: deprecated
 version: "1.0"
 tags: [locations, wizard, frontend, svelte, issue-408]
 ---
 
 # Issue #408 — Locations-Seite: NewLocationWizard verdrahten
+
+> Abgelöst/entfernt durch ADR-0032 / #1215 (alter Trip-Wizard + NewLocationWizard gelöscht, `d7703708a`, 2026-07-11) — beschreibt keinen aktuellen Code.
 
 ## Approval
 

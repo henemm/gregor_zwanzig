@@ -3,7 +3,7 @@ entity_id: fix_1412_s2a_regelwerk_paritaet
 type: feature
 created: 2026-07-30
 updated: 2026-07-30
-status: draft
+status: implemented
 version: "1.0"
 tags: [mail, parity, guard, 1412]
 ---

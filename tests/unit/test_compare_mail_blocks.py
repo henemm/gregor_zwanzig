@@ -397,7 +397,7 @@ def test_telegram_and_sms_output_unchanged_by_summary_block_removal():
         "Zermatt\n   Temp max 16°C · Regen 3.0 mm"
     )
     recorded_sms = (
-        "Vergleich 08.07.: Andermatt D+ 16C R 3.0 mm; Zermatt D+ 16C R 3.0 mm"
+        "Vergleich 08.07.: Andermatt D 16C R 3.0 mm; Zermatt D 16C R 3.0 mm"
     )
 
     assert telegram == recorded_telegram, (

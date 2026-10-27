@@ -6,7 +6,7 @@ heute durchrutscht, weil der Validator die Mail nur als MIME-String prüft:
 
   AC-1  Render statt String — Mobile-Viewport fehlt → Gate rot (über validate_message)
   AC-3  Ebenen-Konsistenz   — Pills-Spitze ≠ Tabellen-Max → _check_layer_consistency
-  AC-4  Metrik-Plausibilität — „Sonne X min" ≠ Tabellen-Summe; „kein Regen" bei Regen
+  AC-4  Metrik-Plausibilität — „Sonne Xh" ≠ Tabellen-Summe; „kein Regen" bei Regen
   AC-5  Lokalisierung        — englische Spaltenköpfe (Gust/Rain/Sun) → _check_localization
   AC-6  Selbsttest des Gates — konstruierte defekte Mails → validate_message liefert Exit-1
 
@@ -205,9 +205,9 @@ class TestAC4MetricPlausibility:
     def test_sonne_pill_contradicts_zero_sun_table(self):
         mod = _load_validator()
         check = _require(mod, "_check_metric_plausibility")
-        # Pill „Sonne 120 min" aber Tabelle hat 0.0 h Sonne in jeder Stunde.
+        # Pill „Sonne 2.0h" aber Tabelle hat 0.0 h Sonne in jeder Stunde.
         html = (
-            _overview([_pill("Sonne 120 min")])
+            _overview([_pill("Sonne 2.0h")])
             + _table_resp(
                 [("10:00", "0.0 h"), ("11:00", "0.0 h"), ("12:00", "0.0 h")],
                 col_label="Sun", header_de="Sonne",
@@ -215,7 +215,7 @@ class TestAC4MetricPlausibility:
         )
         errors = check(html)
         assert errors, (
-            "‚Sonne 120 min' bei 0 h Sonne in der Tabelle muss rot melden (#808-Klasse)"
+            "‚Sonne 2.0h' bei 0 h Sonne in der Tabelle muss rot melden (#808-Klasse)"
         )
         assert any("Sonne" in e for e in errors), (
             f"Fehlermeldung soll Sonne benennen, bekam: {errors}"
@@ -240,9 +240,9 @@ class TestAC4MetricPlausibility:
     def test_sonne_pill_matches_table_passes(self):
         mod = _load_validator()
         check = _require(mod, "_check_metric_plausibility")
-        # Pill „Sonne 120 min" == 2.0 h Sonne in der Tabelle (1.0 + 1.0).
+        # Pill „Sonne 2.0h" == 2.0 h Sonne in der Tabelle (1.0 + 1.0).
         html = (
-            _overview([_pill("Sonne 120 min")])
+            _overview([_pill("Sonne 2.0h")])
             + _table_resp(
                 [("10:00", "1.0 h"), ("11:00", "1.0 h"), ("12:00", "0.0 h")],
                 col_label="Sun", header_de="Sonne",
@@ -362,7 +362,7 @@ def _defect_en_header() -> email.message.Message:
 
 def _defect_sonne() -> email.message.Message:
     html = _MOBILE_OK + '<div class="desktop-only">' + _overview(
-        [_pill("Sonne 180 min")]
+        [_pill("Sonne 3.0h")]
     ) + _table_resp(
         [("10:00", "0.0 h"), ("11:00", "0.0 h")], col_label="Sun", header_de="Sonne"
     ) + '</div>'
@@ -392,7 +392,7 @@ class TestAC6GateSelfVerification:
         "builder, label",
         [
             (_defect_en_header, "englischer Spaltenkopf Gust"),
-            (_defect_sonne, "Sonne 180 min bei 0 h Tabelle"),
+            (_defect_sonne, "Sonne 3.0h bei 0 h Tabelle"),
             (_defect_layer, "Böen 95 (Pill) vs. 30 (Tabelle)"),
             (_defect_kein_regen, "kein Regen bei 0.7 mm Tabelle"),
         ],

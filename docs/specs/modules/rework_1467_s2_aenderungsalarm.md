@@ -3,7 +3,7 @@ entity_id: rework_1467_s2_aenderungsalarm
 type: refactor
 created: 2026-08-03
 updated: 2026-08-04
-status: draft
+status: implemented
 version: "1.2"
 tags: [alerts, trip, compare, epic-1458, issue-1467, s2]
 ---

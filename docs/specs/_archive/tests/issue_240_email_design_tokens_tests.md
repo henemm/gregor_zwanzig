@@ -3,7 +3,7 @@ entity_id: issue_240_email_design_tokens_tests
 type: tests
 created: 2026-05-16
 updated: 2026-05-16
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, email, design-system, issue-240]
 parent: issue_240_email_design_tokens
@@ -18,10 +18,10 @@ phase: phase5_tdd_red
 
 ## Zweck
 
-Test-Manifest für `docs/specs/modules/issue_240_email_design_tokens.md`. Jeder
+Test-Manifest für `docs/specs/_archive/modules/issue_240_email_design_tokens.md`. Jeder
 pytest-Test mappt 1:1 auf ein Acceptance Criterion der Parent-Spec.
 
-Parent-Spec: `docs/specs/modules/issue_240_email_design_tokens.md` v1.0
+Parent-Spec: `docs/specs/_archive/modules/issue_240_email_design_tokens.md` v1.0
 
 ## Source
 

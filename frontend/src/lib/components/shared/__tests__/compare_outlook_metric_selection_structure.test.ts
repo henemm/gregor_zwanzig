@@ -1,29 +1,34 @@
-// TDD RED — Issue #1406 Scheibe A (Epic #1372 S4b Scheibe 2, Dach #1374).
+// Struktur-Waechter um den Ausblick-Block (OutlookLayoutControls.svelte).
 //
-// Der Ausblick-Auswahl-Block (`CompareOutlookLayoutControls.svelte:96-114`)
-// zeigt heute noch das alte, ungruppierte Vor-#1411-Muster (26 flache Zeilen,
-// „Temperatur" doppelt). Diese Datei weist strukturell nach, dass der Block
-// stattdessen ueber `groupCompareCatalog(catalog)` iteriert und je Gruppe
-// entweder eine einfache Checkbox-Zeile (eine Auswertung) oder
-// `AggregationMetricRow mode="multiple"` (mehrere Auswertungen) rendert —
-// exakt das Muster, das die Vergleichs-Uebersicht seit #1411 bereits zeigt
-// (`WeatherMetricsTab.svelte:918-948`).
+// HERKUNFT: Issue #1406 Scheibe A (Epic #1372 S4b Scheibe 2, Dach #1374),
+// fortgeschrieben in #1848 A2.
 //
-// Spec: docs/specs/modules/feat_1406a_ausblick_geteiltes_element.md
-//   § Implementation Details 1+2, AC-1..AC-5, AC-8, Test-Plan
-// Kontext: docs/context/feat-1406a-ausblick-geteiltes-element.md
+// 🔴 STAND #1848 A3 (Block A, Issue #2029): die Kaestchenliste des Ausblicks
+// ist ABGESCHAFFT. Damit entfallen die Zusicherungen dieser Datei, die ihre
+// Existenz und ihr Innenleben bewachten (AC-1 `{#each groupCompareCatalog(
+// catalog)}`, AC-2/AC-3/AC-4 „ein Kaestchen je Groesse, geschluesselt ueber
+// group.metric_id", AC-8 „die Ausblick-Zeile traegt ein eigenes Testid-
+// Praefix") — sie pruefen ein Verhalten, das die Spec ersatzlos gestrichen
+// hat, und stehen im direkten Widerspruch zu
+// `outlook_erbt_grundauswahl_structure.test.ts` (AC-1/AC-2/AC-12), das ihre
+// ABWESENHEIT zusichert. Nach der Kern-Testregel (CLAUDE.md: „sofort fixen
+// ODER loeschen, wenn er veraltetes Verhalten prueft") sind sie entfernt,
+// nicht auskommentiert.
+//
+// WAS BLEIBT — beides ist von Block A unberuehrt:
+//   1. der Reihenfolge-/„Aus"-Block (WeatherV2Reihenfolge), jetzt MIT
+//      offColumns/onRestore (AC-13-Abloesung, s. u.);
+//   2. die `testidPrefix`-Zusicherungen an AggregationMetricRow.svelte — die
+//      Komponente wird von der Vergleichs-UEBERSICHT weiterhin gemountet, und
+//      ihr Praefix-Vertrag (#1411/#1406, Adversary F001) gilt unveraendert.
+//
+// Spec: docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md
+//       docs/specs/modules/feat_1406a_ausblick_geteiltes_element.md (Herkunft)
 //
 // Grund fuer AST statt DOM: dieses Repo hat kein vitest/jsdom (package.json
 // "test": node --test). Der Test parst die betroffenen Komponenten mit dem
 // ECHTEN Svelte-5-Compiler und inspiziert den Template-/Instance-Script-AST
-// statt eines verbotenen Dateiinhalt-Vergleichs. Vorbild:
-// compare_hourly_layout_controls_structure.test.ts, officialAlertLegend.test.ts
-// (Instance-Script-AST-Zugriff `ast.instance.content.body`).
-//
-// AC-5 (Reihenfolge-/„Aus"-Block, WeatherV2Reihenfolge) ist laut Spec
-// NICHT-UMFANG dieser Lieferung — der zugehoerige Test ist deshalb
-// ausdruecklich als REGRESSIONSSCHUTZ gekennzeichnet und muss HEUTE BEREITS
-// GRUEN sein (bleibt es auch nach der Implementierung).
+// statt eines verbotenen Dateiinhalt-Vergleichs.
 //
 // Ausfuehrung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
@@ -37,7 +42,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const OUTLOOK_COMPONENT = join(here, '..', 'CompareOutlookLayoutControls.svelte');
+const OUTLOOK_COMPONENT = join(here, '..', 'OutlookLayoutControls.svelte');
 const AGGREGATION_ROW_COMPONENT = join(
 	here, '..', 'weather-metrics-tab', 'AggregationMetricRow.svelte'
 );
@@ -49,40 +54,6 @@ function parseComponent(path: string): any {
 }
 
 // ─── generische AST-Helfer (Vorbild: compare_hourly_layout_controls_structure.test.ts) ───
-
-/** Findet jeden `EachBlock`, dessen Iterations-Ausdruck EXAKT ein Aufruf
- *  `calleeName(argName)` ist — Beweis, dass ueber die Gruppierungsfunktion
- *  iteriert wird, nicht ueber eine hart kopierte/rohe Liste. */
-function findEachBlocksOverCall(subtree: unknown, calleeName: string, argName: string): any[] {
-	const found: any[] = [];
-	function visit(node: unknown): void {
-		if (node === null || typeof node !== 'object') return;
-		if (Array.isArray(node)) {
-			node.forEach(visit);
-			return;
-		}
-		const n = node as Record<string, any>;
-		if (n.type === 'EachBlock' && n.expression?.type === 'CallExpression') {
-			const callee = n.expression.callee;
-			const args = n.expression.arguments ?? [];
-			if (
-				callee?.type === 'Identifier' &&
-				callee.name === calleeName &&
-				args.length >= 1 &&
-				args[0]?.type === 'Identifier' &&
-				args[0].name === argName
-			) {
-				found.push(n);
-			}
-		}
-		for (const key of Object.keys(n)) {
-			if (key === 'parent') continue;
-			visit(n[key]);
-		}
-	}
-	visit(subtree);
-	return found;
-}
 
 /** Sammelt alle `Component`-Knoten mit gegebenem Namen im Subtree (Usage-Stelle,
  *  NICHT die Zieldatei — Svelte inlined fremde Komponenten nicht in den AST). */
@@ -96,29 +67,6 @@ function findComponentsNamed(subtree: unknown, name: string): any[] {
 		}
 		const n = node as Record<string, any>;
 		if (n.type === 'Component' && n.name === name) found.push(n);
-		for (const key of Object.keys(n)) {
-			if (key === 'parent') continue;
-			visit(n[key]);
-		}
-	}
-	visit(subtree);
-	return found;
-}
-
-/** Sammelt alle `RegularElement`-Knoten mit gegebenem Tag-Namen im Subtree.
- *  Component-Aufrufe (fremde Dateien) werden NICHT betreten — deren Innenleben
- *  gehoert nicht zu diesem AST (kein False-Positive durch AggregationMetricRow-
- *  interne Checkboxen). */
-function findElementsNamed(subtree: unknown, name: string): any[] {
-	const found: any[] = [];
-	function visit(node: unknown): void {
-		if (node === null || typeof node !== 'object') return;
-		if (Array.isArray(node)) {
-			node.forEach(visit);
-			return;
-		}
-		const n = node as Record<string, any>;
-		if (n.type === 'RegularElement' && n.name === name) found.push(n);
 		for (const key of Object.keys(n)) {
 			if (key === 'parent') continue;
 			visit(n[key]);
@@ -159,15 +107,20 @@ function findAllAttributesNamed(subtree: unknown, name: string): any[] {
 	return found;
 }
 
-/** Static-Text-Attribut, z. B. `mode="multiple"` (Svelte serialisiert das als
- *  `[{type:'Text', data:'multiple'}]`, KEIN Template-Literal). */
-function attrIsStaticText(attr: any, expected: string): boolean {
-	if (!attr) return false;
+/** Laeuft ueber ALLE Ausdruecke eines Attributs (ExpressionTag, Template-
+ *  Literal-Interpolation, Svelte-native `"prefix-{expr}"`-Mischform) und ruft
+ *  `visit` je Ausdrucks-Wurzel auf. Gemeinsame Grundlage der Ausdrucks-Helfer
+ *  unten — die Notation bleibt damit ueberall gleich egal. */
+function forEachAttributeExpression(attr: any, visit: (expr: unknown) => void): void {
+	if (!attr) return;
 	const value = attr.value;
 	if (Array.isArray(value)) {
-		return value.length === 1 && value[0]?.type === 'Text' && value[0].data === expected;
+		for (const part of value) {
+			if (part?.type === 'ExpressionTag') visit(part.expression);
+		}
+	} else if (value?.type === 'ExpressionTag') {
+		visit(value.expression);
 	}
-	return false;
 }
 
 /** Prueft rekursiv, ob IRGENDWO im Ausdrucks-Subtree eines Attributs (egal ob
@@ -194,33 +147,8 @@ function attributeReferencesIdentifier(attr: any, identifierName: string): boole
 			visitExpr(n[key]);
 		}
 	}
-	const value = attr.value;
-	if (Array.isArray(value)) {
-		for (const part of value) {
-			if (part?.type === 'ExpressionTag') visitExpr(part.expression);
-		}
-	} else if (value?.type === 'ExpressionTag') {
-		visitExpr(value.expression);
-	}
+	forEachAttributeExpression(attr, visitExpr);
 	return hit;
-}
-
-/** Prueft, ob ein Attributwert (welcher Notation auch immer) mit einem
- *  statischen Text-Praefix beginnt UND zusaetzlich `identifierName` referenziert
- *  — Beweis fuer `compare-layout-outlook-metric-${group.metric_id}`-artige
- *  Testids, unabhaengig von Template-Literal- vs. Svelte-Mischform-Notation. */
-function attributeHasPrefixAndIdentifier(attr: any, prefix: string, identifierName: string): boolean {
-	if (!attr) return false;
-	const value = attr.value;
-	if (Array.isArray(value)) {
-		const startsWithPrefix = value[0]?.type === 'Text' && value[0].data === prefix;
-		return startsWithPrefix && attributeReferencesIdentifier(attr, identifierName);
-	}
-	if (value?.type === 'ExpressionTag' && value.expression?.type === 'TemplateLiteral') {
-		const startsWithPrefix = value.expression.quasis?.[0]?.value?.raw === prefix;
-		return startsWithPrefix && attributeReferencesIdentifier(attr, identifierName);
-	}
-	return false;
 }
 
 /** Instance-Script-AST einer Komponente (Vorbild: officialAlertLegend.test.ts
@@ -230,173 +158,23 @@ function instanceBody(ast: any): any[] {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AC-1: Auswahl-Block iteriert `groupCompareCatalog(catalog)` (24 statt 26 Zeilen)
+// AC-5 (primaryColumns/onRemove/onDndReorder: REGRESSIONSSCHUTZ, bleibt GRUEN)
+// + AC-13-Abloesung (#1848 A3): offColumns/onRestore MUESSEN jetzt gesetzt
+// sein — umgedreht gegenueber dem urspruenglichen #1719-S3-Waechter.
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('AC-1: Ausblick-Auswahl-Block gruppiert ueber groupCompareCatalog(catalog)', () => {
-	test('CompareOutlookLayoutControls.svelte enthaelt `{#each groupCompareCatalog(catalog) as group}`', () => {
-		const ast = parseComponent(OUTLOOK_COMPONENT);
-		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
-		assert.ok(
-			eachBlocks.length >= 1,
-			'AC-1 FAIL (RED): CompareOutlookLayoutControls.svelte iteriert noch nicht ueber ' +
-				'`groupCompareCatalog(catalog)` — der Auswahl-Block zeigt noch die alte flache ' +
-				'`{#each catalog as entry}`-Liste (26 statt 24 Zeilen, „Temperatur" doppelt).'
-		);
-	});
-
-	test('Anti-Hand-Kopie: der Instance-Script importiert groupCompareCatalog statt eine eigene Gruppierung zu bauen', () => {
-		const ast = parseComponent(OUTLOOK_COMPONENT);
-		const imports = instanceBody(ast).filter((stmt) => stmt.type === 'ImportDeclaration');
-		const hit = imports.some(
-			(imp) =>
-				String(imp.source?.value ?? '').includes('compareAggregationGrouping') &&
-				(imp.specifiers ?? []).some(
-					(s: any) => s.imported?.name === 'groupCompareCatalog' || s.local?.name === 'groupCompareCatalog'
-				)
-		);
-		assert.ok(
-			hit,
-			'AC-1 FAIL (RED): kein Import von `groupCompareCatalog` aus `compareAggregationGrouping.ts` ' +
-				'im Instance-Script gefunden — Gefahr eines zweiten, eigenen Gruppierungs-Codes statt ' +
-				'Wiederverwendung des #1411-Bausteins.'
-		);
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════
-// AC-3: Einzel-Options-Gruppen (22 von 24) bleiben die einfache Checkbox-Zeile
-// ═══════════════════════════════════════════════════════════════════════════
-
-describe('AC-3: Einzel-Options-Gruppen rendern weiterhin nur eine einfache Checkbox, kein AggregationMetricRow', () => {
-	test('im Gruppierungs-Block existiert eine Checkbox-Zeile mit Testid-Praefix `compare-layout-outlook-metric-`, an `group` gebunden', () => {
-		const ast = parseComponent(OUTLOOK_COMPONENT);
-		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
-		assert.ok(
-			eachBlocks.length >= 1,
-			'AC-3 FAIL (RED): ohne den groupCompareCatalog-Block (AC-1) gibt es keine Gruppen, an denen ' +
-				'sich der Einzel-Options-Zweig pruefen liesse.'
-		);
-		if (eachBlocks.length === 0) return;
-
-		const checkboxTestids: any[] = [];
-		for (const block of eachBlocks) {
-			for (const el of findElementsNamed(block.body, 'label').concat(findElementsNamed(block.body, 'input'))) {
-				const testidAttr = findAttr(el, 'data-testid') ?? findAttr(el, 'testid');
-				if (testidAttr) checkboxTestids.push(testidAttr);
-			}
-		}
-		const matchFound = checkboxTestids.some((attr) =>
-			attributeHasPrefixAndIdentifier(attr, 'compare-layout-outlook-metric-', 'group')
-		);
-		assert.ok(
-			matchFound,
-			'AC-3 FAIL (RED): keine Checkbox-/Label-Zeile mit `compare-layout-outlook-metric-`-Testid, ' +
-				'die auf `group` (statt des alten `entry`) verweist, im Gruppierungs-Block gefunden.'
-		);
-	});
-
-	test('die Einzel-Checkbox bleibt am unveraenderten Handler `isOutlookMetricActive` haengen', () => {
-		const ast = parseComponent(OUTLOOK_COMPONENT);
-		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
-		assert.ok(eachBlocks.length >= 1, 'AC-3 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
-		if (eachBlocks.length === 0) return;
-
-		const inputs = eachBlocks.flatMap((block) => findElementsNamed(block.body, 'input'));
-		const checkedUsesHandler = inputs.some((input) => {
-			const checkedAttr = findAttr(input, 'checked');
-			return checkedAttr && attributeReferencesIdentifier(checkedAttr, 'isOutlookMetricActive');
-		});
-		assert.ok(
-			checkedUsesHandler,
-			'AC-3/AC-4 FAIL (RED): keine Checkbox im Gruppierungs-Block, deren `checked`-Attribut ' +
-				'`isOutlookMetricActive` (unveraenderter Handler, Zeilen 47-57) referenziert.'
-		);
-	});
-});
-
-// ═══════════════════════════════════════════════════════════════════════════
-// AC-2 / AC-4: Mehrfach-Options-Gruppen ueber AggregationMetricRow mode="multiple"
-// ═══════════════════════════════════════════════════════════════════════════
-
-describe('AC-2: Mehrfach-Options-Gruppen (Temperatur, gefuehlte Temperatur) ueber AggregationMetricRow mode="multiple"', () => {
-	test('im Gruppierungs-Block wird AggregationMetricRow mit mode="multiple" und options={group.options} aufgerufen', () => {
-		const ast = parseComponent(OUTLOOK_COMPONENT);
-		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
-		assert.ok(
-			eachBlocks.length >= 1,
-			'AC-2 FAIL (RED): ohne den groupCompareCatalog-Block (AC-1) gibt es keine Gruppe, in der ' +
-				'AggregationMetricRow mode="multiple" haengen koennte.'
-		);
-		if (eachBlocks.length === 0) return;
-
-		const rows = eachBlocks.flatMap((block) => findComponentsNamed(block.body, 'AggregationMetricRow'));
-		assert.ok(
-			rows.length >= 1,
-			'AC-2 FAIL (RED): kein `AggregationMetricRow`-Aufruf im Ausblick-Gruppierungs-Block gefunden.'
-		);
-		if (rows.length === 0) return;
-
-		const withMultipleMode = rows.filter((row) => attrIsStaticText(findAttr(row, 'mode'), 'multiple'));
-		assert.ok(
-			withMultipleMode.length >= 1,
-			'AC-2 FAIL (RED): kein AggregationMetricRow-Aufruf mit `mode="multiple"` im Ausblick.'
-		);
-
-		const withOptionsFromGroup = withMultipleMode.some((row) => {
-			const optionsAttr = findAttr(row, 'options');
-			return optionsAttr && attributeReferencesIdentifier(optionsAttr, 'group');
-		});
-		assert.ok(
-			withOptionsFromGroup,
-			'AC-2 FAIL (RED): `options`-Prop des AggregationMetricRow-Aufrufs verweist nicht auf `group` ' +
-				'(erwartet `options={group.options}`, die tatsaechlichen Katalog-Optionen der Gruppe).'
-		);
-	});
-});
-
-describe('AC-4: beide Zweige leiten checked/selectedChoiceIds weiterhin aus materializedOutlookKeys ab', () => {
-	test('AggregationMetricRow selectedChoiceIds={materializedOutlookKeys} — direkte Bindung, keine neue Zwischenvariable', () => {
-		const ast = parseComponent(OUTLOOK_COMPONENT);
-		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
-		assert.ok(eachBlocks.length >= 1, 'AC-4 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
-		if (eachBlocks.length === 0) return;
-
-		const rows = eachBlocks.flatMap((block) => findComponentsNamed(block.body, 'AggregationMetricRow'));
-		const wired = rows.some((row) => {
-			const attr = findAttr(row, 'selectedChoiceIds');
-			return attr && attributeReferencesIdentifier(attr, 'materializedOutlookKeys');
-		});
-		assert.ok(
-			wired,
-			'AC-4 FAIL (RED): kein AggregationMetricRow-Aufruf mit `selectedChoiceIds`, das ' +
-				'`materializedOutlookKeys` referenziert — die Mehrfach-Auswertung wuerde aus einer ' +
-				'anderen/neuen Quelle als die bisherige Checkbox-Liste lesen (Datenverlust-Risiko AC-4).'
-		);
-	});
-
-	// Die Einzel-Zweig-Haelfte von AC-4 (checked aus isOutlookMetricActive, das
-	// intern materializedOutlookKeys.includes(...) nutzt, Zeilen 47-51,
-	// UNVERAENDERT) ist bereits durch den AC-3-Test oben bewiesen — kein
-	// zweiter Nachweis derselben Kette noetig.
-});
-
-// ═══════════════════════════════════════════════════════════════════════════
-// AC-5 (REGRESSIONSSCHUTZ — bereits heute GRUEN, muss es bleiben)
-// ═══════════════════════════════════════════════════════════════════════════
-
-describe('AC-5 [REGRESSIONSSCHUTZ, bereits GRUEN]: Reihenfolge-/„Aus"-Block (WeatherV2Reihenfolge) bleibt unberuehrt', () => {
-	test('WeatherV2Reihenfolge wird weiterhin mit primaryColumns/onRemove/onDndReorder aufgerufen — Nicht-Umfang laut Spec', () => {
-		// Dieser Test prueft KEIN neues Verhalten dieser Lieferung. Er ist HEUTE
-		// bereits gruen (Issue #1361 Befund 2/#1368, `8fc4d210`, live 2026-07-27)
-		// und MUSS es nach der Implementierung von #1406 Scheibe A bleiben — die
-		// Spec grenzt die Zeilen 116-136 explizit als Nicht-Umfang ab.
+describe('AC-5 [primaryColumns/onRemove/onDndReorder REGRESSIONSSCHUTZ] + AC-1/AC-7 [#1848 A3, offColumns/onRestore]: Reihenfolge-/„Aus"-Block (WeatherV2Reihenfolge)', () => {
+	test('WeatherV2Reihenfolge wird weiterhin mit primaryColumns/onRemove/onDndReorder aufgerufen, UND jetzt zusaetzlich mit offColumns/onRestore (#1848 A3)', () => {
+		// Der primaryColumns/onRemove/onDndReorder-Teil prueft KEIN neues
+		// Verhalten: er ist seit #1361 Befund 2/#1368 (`8fc4d210`, live
+		// 2026-07-27) gruen und muss es bleiben — der Umbau des Auswahl-Blocks
+		// darf den Reihenfolge-Block nicht beschaedigen.
 		const ast = parseComponent(OUTLOOK_COMPONENT);
 		const rows = findComponentsNamed(ast.fragment, 'WeatherV2Reihenfolge');
 		assert.equal(
 			rows.length,
 			1,
-			`REGRESSION: erwartet genau einen WeatherV2Reihenfolge-Aufruf in CompareOutlookLayoutControls.svelte, ` +
+			`REGRESSION: erwartet genau einen WeatherV2Reihenfolge-Aufruf in OutlookLayoutControls.svelte, ` +
 				`gefunden ${rows.length}.`
 		);
 		const row = rows[0];
@@ -417,25 +195,32 @@ describe('AC-5 [REGRESSIONSSCHUTZ, bereits GRUEN]: Reihenfolge-/„Aus"-Block (W
 			onDndReorderAttr && attributeReferencesIdentifier(onDndReorderAttr, 'handleOutlookDndReorder'),
 			'REGRESSION: `onDndReorder` des WeatherV2Reihenfolge-Aufrufs wurde veraendert (AC-5 Nicht-Umfang-Verstoss).'
 		);
-		// Issue #1719 S3 (Adversary-Fund F001, BROKEN): "Aus ist ein Zustand"
-		// gilt NUR fuer den Trip-Kanal-Reiter (WeatherMetricsTab.svelte, route-
-		// Kontext) — diese Einbettung arbeitet auf einem flachen Array ohne
-		// Kanal-Ebene und hat bereits einen funktionierenden Rueckweg (Checkbox
-		// darueber). `offColumns`/`onRestore` sind OPTIONALE Props ohne
-		// Vorgabewert — die Naht ist die PROP-ANWESENHEIT (Spec Abschnitt 1),
-		// nicht ein `context`-String. Werden sie hier durchgereicht, entsteht
-		// eine ungewollte Aus-Gruppe im Ortsvergleich (AC-13-Verstoss).
-		assert.equal(
-			findAttr(row, 'offColumns'),
-			undefined,
-			'AC-13 FAIL: der Ausblick-Aufruf von WeatherV2Reihenfolge uebergibt jetzt `offColumns` — ' +
-				'das erzeugt eine Aus-Gruppe im Ortsvergleich, wo ADR-0050 Regel 4 nicht gilt.'
+		// 🔴 AC-13-ABLOESUNG (#1848 A3, PO-Entscheid 2026-08-21): die Begruendung
+		// von #1719 S3 -- der Ausblick habe "bereits einen funktionierenden
+		// Rueckweg (Checkbox darueber)" -- entfaellt mit A3 Block A: die
+		// Kaestchenliste selbst wird abgeschafft (s.
+		// outlook_erbt_grundauswahl_structure.test.ts, AC-1/AC-2). Ohne sie
+		// gibt es KEIN Kaestchen mehr, ueber das man etwas zurueckholen
+		// koennte -- die Aus-Gruppe von WeatherV2Reihenfolge UEBERNIMMT diese
+		// Rolle jetzt, exakt wie im Trip-Kanal-Reiter (ADR-0050 Regel 4 gilt ab
+		// A3 auch fuer den Ausblick, loest ADR-0053 Punkt 1 ab). Die
+		// Zusicherung ist deshalb UMGEDREHT, nicht geloescht: `offColumns`/
+		// `onRestore` MUESSEN jetzt gesetzt sein.
+		// SPEC: docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md
+		//   AC-1/AC-7, Mutations-Gegenprobe M-2.
+		const offColumnsAttr = findAttr(row, 'offColumns');
+		assert.ok(
+			offColumnsAttr,
+			'AC-1/AC-7 FAIL (#1848 A3): der Ausblick-Aufruf von WeatherV2Reihenfolge ' +
+				'uebergibt kein `offColumns` mehr — ohne die abgeschaffte Kaestchenliste ' +
+				'(AC-1) waere eine abgewaehlte Groesse nicht mehr zurueckholbar (ADR-0050 ' +
+				'Regel 4, loest AC-13 aus fix_1719_s3 ab).'
 		);
-		assert.equal(
-			findAttr(row, 'onRestore'),
-			undefined,
-			'AC-13 FAIL: der Ausblick-Aufruf von WeatherV2Reihenfolge uebergibt jetzt `onRestore` — ' +
-				'siehe offColumns-Befund oben, dieselbe Naht.'
+		const onRestoreAttr = findAttr(row, 'onRestore');
+		assert.ok(
+			onRestoreAttr,
+			'AC-1/AC-7 FAIL (#1848 A3): der Ausblick-Aufruf von WeatherV2Reihenfolge ' +
+				'uebergibt kein `onRestore` mehr — dieselbe Naht wie offColumns oben.'
 		);
 	});
 });
@@ -444,20 +229,19 @@ describe('AC-5 [REGRESSIONSSCHUTZ, bereits GRUEN]: Reihenfolge-/„Aus"-Block (W
 // AC-8: unterscheidbare data-testid zwischen Uebersicht und Ausblick
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('AC-8: Ausblick uebergibt einen testidPrefix ungleich dem Uebersichts-Default (kein doppeltes data-testid)', () => {
-	test('der Ausblick-Aufruf von AggregationMetricRow traegt eine testidPrefix-Prop', () => {
+describe('AC-8: AggregationMetricRow traegt durchgaengig einen testidPrefix (kein doppeltes data-testid)', () => {
+	test('der Ausblick mountet AggregationMetricRow nicht (mehr) — sonst braucht er wieder eine eigene testidPrefix-Prop', () => {
+		// #1848 A2 hatte den Mehrfach-Auswertungs-Zweig entfernt, A3 die ganze
+		// Kaestchenliste. Die Kollisionsgefahr entsteht damit gar nicht erst —
+		// diese Zusicherung haelt genau das fest.
 		const ast = parseComponent(OUTLOOK_COMPONENT);
-		const eachBlocks = findEachBlocksOverCall(ast.fragment, 'groupCompareCatalog', 'catalog');
-		assert.ok(eachBlocks.length >= 1, 'AC-8 FAIL (RED): kein groupCompareCatalog-Block (s. AC-1).');
-		if (eachBlocks.length === 0) return;
-
-		const rows = eachBlocks.flatMap((block) => findComponentsNamed(block.body, 'AggregationMetricRow'));
-		const withPrefix = rows.some((row) => findAttr(row, 'testidPrefix'));
-		assert.ok(
-			withPrefix,
-			'AC-8 FAIL (RED): kein AggregationMetricRow-Aufruf im Ausblick uebergibt eine ' +
-				'`testidPrefix`-Prop — ohne sie kollidiert das Testid mit dem der Uebersicht ' +
-				'(`aggregation-metric-row-temperature` doppelt im DOM).'
+		const rows = findComponentsNamed(ast.fragment, 'AggregationMetricRow');
+		assert.equal(
+			rows.length,
+			0,
+			'AC-8 FAIL: der Ausblick mountet wieder AggregationMetricRow — dann braucht er auch ' +
+				'wieder eine eigene `testidPrefix`-Prop, sonst kollidiert das Testid mit dem der ' +
+				'Uebersicht (`aggregation-metric-row-temperature` doppelt im DOM).'
 		);
 	});
 
@@ -476,8 +260,8 @@ describe('AC-8: Ausblick uebergibt einen testidPrefix ungleich dem Uebersichts-D
 		);
 		assert.ok(
 			hasTestidPrefix,
-			'AC-8 FAIL (RED): AggregationMetricRow.svelte destrukturiert `testidPrefix` noch nicht aus ' +
-				'den Props — der Ausblick kann der Komponente keinen abweichenden Testid-Praefix mitgeben.'
+			'AC-8 FAIL: AggregationMetricRow.svelte destrukturiert `testidPrefix` nicht mehr aus ' +
+				'den Props — ein zweiter Mounter kann der Komponente keinen abweichenden Testid-Praefix mitgeben.'
 		);
 	});
 
@@ -485,13 +269,11 @@ describe('AC-8: Ausblick uebergibt einen testidPrefix ungleich dem Uebersichts-D
 		// Adversary-Befund F001 (BROKEN, Gegenpruefung nach Green): der erste
 		// Test hier pruefte nur die NAMENTLICH bekannten Elemente `<tr>` und
 		// `<label class="multi-option">` — das `<td data-testid="aggregation-
-		// choices-{metricId}">` (Zeile 62) rutschte unbemerkt durch. Uebersicht
-		// und Ausblick zeigen auf derselben Seite beide eine Mehrfach-Gruppe
-		// fuer `temperature` ⇒ ohne Praefix zweimal `data-testid="aggregation-
-		// choices-temperature"` im DOM. Dieser Test erfasst deshalb JEDES
-		// `data-testid`-Attribut im gesamten Template (unabhaengig von Tag/Modus)
-		// und verlangt ausnahmslos einen `testidPrefix`-Bezug — faengt damit
-		// auch ein kuenftig hinzugefuegtes Element automatisch.
+		// choices-{metricId}">` (Zeile 62) rutschte unbemerkt durch. Dieser Test
+		// erfasst deshalb JEDES `data-testid`-Attribut im gesamten Template
+		// (unabhaengig von Tag/Modus) und verlangt ausnahmslos einen
+		// `testidPrefix`-Bezug — faengt damit auch ein kuenftig hinzugefuegtes
+		// Element automatisch.
 		const ast = parseComponent(AGGREGATION_ROW_COMPONENT);
 		const allTestidAttrs = findAllAttributesNamed(ast.fragment, 'data-testid');
 		assert.ok(
@@ -506,7 +288,7 @@ describe('AC-8: Ausblick uebergibt einen testidPrefix ungleich dem Uebersichts-D
 			`AC-8 FAIL: ${missing.length} von ${allTestidAttrs.length} \`data-testid\`-Attributen in ` +
 				'AggregationMetricRow.svelte referenzieren `testidPrefix` NICHT (u. a. das `<td data-testid=' +
 				'"aggregation-choices-{metricId}">`, Zeile 62, F001) — ohne durchgaengigen Praefix-Bezug ' +
-				'kollidiert mindestens ein Testid zwischen Uebersicht und Ausblick auf derselben Editor-Seite.'
+				'kollidiert mindestens ein Testid zwischen zwei Mountpunkten auf derselben Editor-Seite.'
 		);
 	});
 

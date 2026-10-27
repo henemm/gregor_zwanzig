@@ -237,6 +237,7 @@ class DpcSource:
     def fetch(self, lat: float, lon: float) -> list[OfficialAlert]:
         zone_code = _zone_at(lat, lon)
         if zone_code is None:
+            warn_egress.mark_not_covered()  # Issue #1681: Radar-Bbox ja, DPC-Zone nein
             return []
         bulletin = _get_cached_bulletin()
         if bulletin is None:

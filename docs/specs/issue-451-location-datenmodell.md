@@ -1,3 +1,10 @@
+---
+entity_id: issue_451_location_datenmodell
+type: module
+created: 2026-05-29
+status: implemented
+---
+
 # Spec: Issue #451 — Location-Datenmodell (Lücken schließen)
 
 **Status:** draft  

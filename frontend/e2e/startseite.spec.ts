@@ -13,9 +13,9 @@ test.describe('F76 Phase B: Startseite Kachel-Übersicht', () => {
 		 * THEN: Trip cards are shown with name and "N Etappen"
 		 */
 		await page.goto('/');
-		const section = page.locator('section', { hasText: 'Meine Touren' });
+		const section = page.locator('section', { hasText: 'Meine Trips' });
 		await expect(section).toBeVisible();
-		const cards = section.locator('[data-testid="trip-card"]');
+		const cards = section.locator('[data-testid^="subscription-card-"][data-kind="trip"]');
 		await expect(cards.first()).toBeVisible();
 		await expect(cards.first()).toContainText(/Etappen?/);
 	});
@@ -27,12 +27,13 @@ test.describe('F76 Phase B: Startseite Kachel-Übersicht', () => {
 		 * THEN: Subscription cards are shown with name and schedule label
 		 */
 		await page.goto('/');
-		const section = page.locator('section', { hasText: 'Orts-Vergleiche' });
-		await expect(section).toBeVisible();
-		const cards = section.locator('[data-testid="subscription-card"]');
+		// #2346 S2: Vergleichs-Kacheln stehen in der Card „Außerdem beobachtet" (div, keine section).
+		const cards = page.locator('[data-testid^="subscription-card-"][data-kind="vergleich"]');
 		await expect(cards.first()).toBeVisible();
-		// Schedule label like "tägl. 07:00" or "Do 18:00"
-		await expect(cards.first()).toContainText(/tägl\.|Mo|Di|Mi|Do|Fr|Sa|So/);
+		// Name ist ein echter Link auf den Vergleichs-Hub
+		await expect(cards.first().locator('a[href^="/compare/"]').first()).toBeVisible();
+		// Naechster Versand (Backend-Wert, z. B. "Do 07:00 (CEST)") oder "—"
+		await expect(cards.first().locator('[data-field="next-send"]')).toHaveText(/^nächster ((Mo|Di|Mi|Do|Fr|Sa|So) \d{2}:\d{2} \(|—$)|pausiert|beendet|manueller Versand|abgeschaltet|kein Termin/);
 	});
 
 	test('old stat-cards are gone', async ({ page }) => {
@@ -47,14 +48,14 @@ test.describe('F76 Phase B: Startseite Kachel-Übersicht', () => {
 		await expect(page.locator('[data-testid="stat-health"]')).toHaveCount(0);
 	});
 
-	test('shows CTA buttons for new tour and new comparison', async ({ page }) => {
+	test('shows CTA buttons for new trip and new comparison', async ({ page }) => {
 		/**
 		 * GIVEN: User is logged in and has data
 		 * WHEN: Startseite loads
-		 * THEN: CTA buttons "Neue Tour" and "Neuer Vergleich" are visible
+		 * THEN: CTA buttons "Neue Trip" and "Neuer Vergleich" are visible
 		 */
 		await page.goto('/');
-		await expect(page.locator('a', { hasText: 'Neue Tour' })).toBeVisible();
+		await expect(page.locator('a', { hasText: 'Neue Trip' })).toBeVisible();
 		await expect(page.locator('a', { hasText: 'Neuer Vergleich' })).toBeVisible();
 	});
 
@@ -65,7 +66,7 @@ test.describe('F76 Phase B: Startseite Kachel-Übersicht', () => {
 		 * THEN: Navigation to /trips occurs
 		 */
 		await page.goto('/');
-		const card = page.locator('[data-testid="trip-card"]').first();
+		const card = page.locator('[data-testid^="subscription-card-"][data-kind="trip"]').first();
 		await card.click();
 		await page.waitForURL('/trips');
 		expect(page.url()).toContain('/trips');
@@ -78,10 +79,12 @@ test.describe('F76 Phase B: Startseite Kachel-Übersicht', () => {
 		 * THEN: Navigation to /compare occurs
 		 */
 		await page.goto('/');
-		const card = page.locator('[data-testid="subscription-card"]').first();
-		await card.click();
-		await page.waitForURL('/compare');
-		expect(page.url()).toContain('/compare');
+		const card = page.locator('[data-testid^="subscription-card-"][data-kind="vergleich"]').first();
+		const id = (await card.getAttribute('data-testid'))!.replace('subscription-card-', '');
+		// Name-Link der Kachel fuehrt auf den Hub dieses Vergleichs
+		await card.locator(`a[href="/compare/${id}"]`).click();
+		await page.waitForURL(new RegExp(`/compare/${id}(\\?|$)`));
+		expect(page.url()).toContain(`/compare/${id}`);
 	});
 
 	test('heading says "Startseite" not "Übersicht"', async ({ page }) => {

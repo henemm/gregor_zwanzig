@@ -309,6 +309,41 @@ def test_gate_blocks_cd_redirect(tmp_path):
     assert "-C <pfad> commit" in ausgabe, f"Erlaubter Weg nicht genannt: {ausgabe}"
 
 
+def test_gate_cd_zeile_im_heredoc_ist_kein_cd_befehl(tmp_path):
+    """(#1636 F008) Unquotierter `git commit -F - <<EOF` mit einer
+    Nachrichtenzeile, die mit `cd` beginnt -> KEIN 'cd vor dem Commit'-Alarm;
+    ohne Geheimnis im Stand laesst das Gate den Commit durch (Exit 0)."""
+    repo = _wegwerf_repo(tmp_path)
+    _stage(repo, "notiz.txt", "harmlos\n")
+    kommando = "git commit -F - <<EOF\nfix: Pfad\ncd foo entfaellt\nEOF"
+    r = _hook(repo, kommando=kommando)
+    ausgabe = _text(r)
+    assert "enthaelt 'cd' vor dem Commit" not in ausgabe, ausgabe
+    assert r.returncode == 0, f"Heredoc-Zeile darf nicht blockieren: {ausgabe}"
+
+
+def test_gate_blocks_cd_nach_heredoc(tmp_path):
+    """(#1636 F008, Gegenprobe) Ein ECHTES `cd` nach einem Heredoc wird
+    weiterhin als Umlenkung erkannt und blockiert."""
+    haupt = _wegwerf_repo(tmp_path, mit_env=False)
+    ziel = _zweitrepo(tmp_path, "ziel_repo")
+    kommando = f"cat <<EOF > f\ninhalt\nEOF\ncd {ziel} && git commit -m 'x'"
+    r = _hook(haupt, kommando=kommando, cwd=haupt)
+    ausgabe = _text(r)
+    assert r.returncode == 2, f"echtes cd nach Heredoc haette blockieren muessen: {ausgabe}"
+    assert "enthaelt 'cd' vor dem Commit" in ausgabe, ausgabe
+
+
+def test_gate_blocks_kaputte_anfuehrungszeichen(tmp_path):
+    """(#1636 F009) Unbalancierte Anfuehrungszeichen -> Ziel nicht verlaesslich
+    bestimmbar -> BLOCKIERT (fail-closed), nicht lautlos durchgelassen."""
+    repo = _wegwerf_repo(tmp_path, mit_env=False)
+    r = _hook(repo, kommando="git commit -m 'kaputt")
+    ausgabe = _text(r)
+    assert r.returncode == 2, f"kaputte Quotes haetten blockieren muessen: {ausgabe}"
+    assert "nicht verlaesslich zerlegbar" in ausgabe, ausgabe
+
+
 def test_gate_blocks_git_dir_env_assignment(tmp_path):
     """(4/5 Umlenkungswege) `GIT_DIR=... GIT_WORK_TREE=... git commit` als
     Umgebungszuweisung -> Zeile 2: BLOCKIERT."""

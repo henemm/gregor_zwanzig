@@ -33,7 +33,7 @@ Teil des UX-Redesigns (#76), Eltern-Spec: `docs/specs/ux_redesign_navigation.md`
 ## Soll-Zustand
 
 ```
-Meine Touren                   Orts-Vergleiche
+Meine Trips                   Orts-Vergleiche
 
 ┌─────────────┐ ┌─────────────┐   ┌─────────────┐ ┌─────────────┐
 │ 🥾 GR20     │ │ 🥾 GR221    │   │ ⛷ Ski Tirol │ │ 🏄 Surf PT  │
@@ -42,7 +42,7 @@ Meine Touren                   Orts-Vergleiche
 │ Abend 18:00 │ │ Abend 18:00 │   │             │ │             │
 └─────────────┘ └─────────────┘   └─────────────┘ └─────────────┘
 
-              [+ Neue Tour]  [+ Neuer Vergleich]
+              [+ Neue Trip]  [+ Neuer Vergleich]
 ```
 
 Empty State (keine Trips UND keine Subscriptions):
@@ -50,7 +50,7 @@ Empty State (keine Trips UND keine Subscriptions):
 ```
 Willkommen bei Gregor 20
 
-[Erste Tour anlegen]  [Ersten Vergleich erstellen]
+[Erste Trip anlegen]  [Ersten Vergleich erstellen]
 ```
 
 ## Source
@@ -147,10 +147,10 @@ Wochentag-Kuerzel: `['So','Mo','Di','Mi','Do','Fr','Sa'][weekday]`.
     <EmptyState />
   {:else}
 
-    <!-- Sektion: Meine Touren (nur wenn trips.length > 0) -->
+    <!-- Sektion: Meine Trips (nur wenn trips.length > 0) -->
     {#if trips.length > 0}
       <section>
-        <h2>Meine Touren</h2>
+        <h2>Meine Trips</h2>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {#each trips as trip}
             <TripCard {trip} />
@@ -229,9 +229,9 @@ Klick auf Kachel navigiert zu `/compare`.
 ```svelte
 <div class="flex flex-col items-center gap-6 py-16 text-center">
   <h1 class="text-2xl font-bold">Willkommen bei Gregor 20</h1>
-  <p class="text-muted-foreground">Leg deine erste Tour oder deinen ersten Orts-Vergleich an.</p>
+  <p class="text-muted-foreground">Leg deine erste Trip oder deinen ersten Orts-Vergleich an.</p>
   <div class="flex gap-4">
-    <Button href="/trips"><PlusIcon class="mr-2 size-4" />Erste Tour anlegen</Button>
+    <Button href="/trips"><PlusIcon class="mr-2 size-4" />Erste Trip anlegen</Button>
     <Button variant="outline" href="/compare"><PlusIcon class="mr-2 size-4" />Ersten Vergleich erstellen</Button>
   </div>
 </div>
@@ -241,7 +241,7 @@ Klick auf Kachel navigiert zu `/compare`.
 
 ```svelte
 <div class="flex gap-3">
-  <Button href="/trips" size="sm"><PlusIcon class="mr-2 size-4" />Neue Tour</Button>
+  <Button href="/trips" size="sm"><PlusIcon class="mr-2 size-4" />Neue Trip</Button>
   <Button href="/compare" size="sm" variant="outline"><PlusIcon class="mr-2 size-4" />Neuer Vergleich</Button>
 </div>
 ```
@@ -257,7 +257,7 @@ Klick auf Kachel navigiert zu `/compare`.
 
 | Situation | Verhalten |
 |-----------|-----------|
-| Trips vorhanden, keine Subscriptions | Nur "Meine Touren"-Sektion + CTA-Zeile |
+| Trips vorhanden, keine Subscriptions | Nur "Meine Trips"-Sektion + CTA-Zeile |
 | Subscriptions vorhanden, keine Trips | Nur "Orts-Vergleiche"-Sektion + CTA-Zeile |
 | Trip ohne `stages` | Etappen-Zeile zeigt "0 Etappen", Datum-Zeile entfaellt |
 | Trip ohne `report_config` | Report-Zeile entfaellt |

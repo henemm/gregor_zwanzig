@@ -1,3 +1,10 @@
+---
+entity_id: fix_1425_s2c_banner_text
+type: fast
+created: 2026-07-31
+status: implemented
+---
+
 # Mini-Spec: fix-1425-s2c-banner-text
 
 **Issue:** #1425 Schritt 2 Teil 2, **Scheibe C** — der Wertebereiche-Reiter verspricht eine Wirkung, die es dort nicht gibt.

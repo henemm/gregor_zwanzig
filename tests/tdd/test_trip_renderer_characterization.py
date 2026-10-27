@@ -178,7 +178,31 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # Gesamtlaenge, keine Text-/Struktur-/Reihenfolgeaenderung. Klartext bleibt
 # byte-identisch (Farbe steckt nur im HTML). Alter Digest 1769ef8f…, neuer
 # 3aae0e13….
-_EXPECTED_SHA256 = "3aae0e13f34842a2edc3330373f63fca193b451e08e94273b17b2a2de924e0e7"
+#
+# Fix #1998 (2026-08-20): erneut fortgeschrieben, wieder AUSDRUECKLICH. Die
+# Sonne-Pille zeigte bislang "Sonne X min" statt der Katalog-Einheit Stunden
+# (unit="h", decimals=1) -- gefixt in helpers.py::_pill_for_metric. NACH-
+# GEMESSEN: einziger Unterschied im gerenderten Output dieses Fixtures ist
+# "Sonne 0.4h" statt "Sonne 24 min" (Direktvergleich HTML/Plain, s. PR #2014).
+# Alter Digest 3aae0e13…, neuer 66997d04….
+# Issue #2134 (2026-09-06): erneut fortgeschrieben, wieder AUSDRUECKLICH. Der
+# Fussz.-Block "Antwort-Kommandos" stammt in BEIDEN Fassungen (Klartext und
+# HTML) jetzt aus derselben Quelle `_COMMAND_SPECS` (PO-Vorgabe 3) statt aus
+# zwei divergierenden Listen -- STRECKE fehlte in beiden, RUHETAG zusaetzlich
+# im HTML. NACHGEMESSEN gegen den unveraenderten HEAD-Stand (Baum per
+# `git archive HEAD` ausgepackt, identisches Fixture gerendert): der HEAD-Lauf
+# reproduziert exakt den alten Digest 66997d04…; der Byte-Diff besteht im
+# Klartext aus genau den Zeilen des Kommando-Blocks und im HTML aus EINEM
+# zusammenhaengenden Bereich innerhalb der Kommando-Tabelle (Spalte 809 bis
+# -228 der einzigen geaenderten Zeile 55, Zeilenzahl unveraendert). Kein
+# Unterschied ausserhalb des Blocks. Alter Digest 66997d04…, neuer 3fc03b40….
+# #2417 AC-10/AC-6 (2026-09-28): Fussz.-Block "Antwort-Kommandos" traegt neu
+# eine KUERZEL-Zeile (deutscher Befehl fuer CODES, E-Mail bleibt deutsch).
+# NACHGEMESSEN gegen alle 5 Golden-Fixtures (tests/golden/email/regenerate.py,
+# vorher/nachher-Diff): einziger Unterschied ist genau diese eine zusaetzliche
+# Kommando-Zeile im Fussz.-Block, identisch fuer HTML und Klartext. Alter
+# Digest 3fc03b40…, neuer ea35bc56….
+_EXPECTED_SHA256 = "8116c66194b392e7ea8328ee8dc822e258974ad9641f05555c7b602f291f2c54"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

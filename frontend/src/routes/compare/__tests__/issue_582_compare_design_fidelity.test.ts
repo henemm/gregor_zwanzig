@@ -30,6 +30,7 @@ const COMPARE_DIR = join(ROUTES_COMPARE, '..', 'lib', 'components', 'compare');
 const LIST_PAGE    = join(ROUTES_COMPARE, 'compare', '+page.svelte');
 const HUB_PAGE     = join(ROUTES_COMPARE, 'compare', '[id]', '+page.svelte');
 const COMPARE_TABS = join(COMPARE_DIR, 'CompareTabs.svelte');
+const MTABBAR      = join(COMPARE_DIR, '..', 'mobile', 'MTabBar.svelte');
 
 // ═══════════════════════════════════════════════════════════════════
 // Block A — Compare-Liste
@@ -152,11 +153,16 @@ describe('AC-5: Compare-Hub — Tab-Buttons mit Underline statt Segmented', () =
 	});
 
 	test('AC-5b: CompareTabs hat Tab-Buttons mit border-bottom accent als Aktiv-Indikator', () => {
-		const src = readFileSync(COMPARE_TABS, 'utf-8');
+		// Mobile Usability Paket 2 (Spec mobile_tab_leisten_mtabbar): Die
+		// Tab-Leiste lebt im geteilten MTabBar-Baustein — der Aktiv-Indikator
+		// (border-bottom accent) wird dort gepflegt, CompareTabs rendert <MTabBar>.
+		const tabsSrc = readFileSync(COMPARE_TABS, 'utf-8');
+		assert.match(tabsSrc, /<MTabBar[\s>]/, 'CompareTabs.svelte rendert nicht mehr den MTabBar-Baustein');
+		const src = readFileSync(MTABBAR, 'utf-8');
 		assert.match(
 			src,
 			/border-bottom.*g-accent|g-accent.*border-bottom/,
-			'Tab-Buttons brauchen border-bottom: 2px solid var(--g-accent) für aktiven Tab — IST: nicht vorhanden'
+			'MTabBar braucht border-bottom: 2px solid var(--g-accent) für den aktiven Tab — IST: nicht vorhanden'
 		);
 	});
 
@@ -175,13 +181,16 @@ describe('AC-5: Compare-Hub — Tab-Buttons mit Underline statt Segmented', () =
 // ═══════════════════════════════════════════════════════════════════
 
 describe('AC-6: Übersicht-Tab — Monitoring-Streifen + SummaryCard-Grid', () => {
-	test('AC-6a: Verifikations-Hinweis hat border-left mit g-accent', () => {
+	// #1743 (AC-28): der Verifikations-Hinweis mit „Vorschau prüfen →" entfaellt samt
+	// Vorschau-Reiter; Zusicherung jetzt: kein Hinweis-Streifen mit Vorschau-Sprung mehr.
+	test('AC-6a (#1743): kein Verifikations-Hinweis mit Vorschau-Sprung mehr', () => {
 		const src = readFileSync(COMPARE_TABS, 'utf-8');
-		assert.match(
+		assert.doesNotMatch(
 			src,
-			/border-left.*3px.*g-accent|borderLeft.*3px.*g-accent/,
-			'Verifikations-Hinweis braucht border-left: 3px solid var(--g-accent) — Übersicht- und Vorschau-Tab'
+			/border-left:\s*3px solid var\(--g-accent\)/,
+			'Verifikations-Hinweis-Streifen (border-left 3px g-accent) steht noch im Hub'
 		);
+		assert.doesNotMatch(src, />\s*Vorschau prüfen/, 'Knopf „Vorschau prüfen" steht noch im Hub');
 	});
 
 	test('AC-6b: Übersicht-Tab hat SummaryCard mit "Bearbeiten →" Link', () => {
@@ -203,14 +212,6 @@ describe('AC-6: Übersicht-Tab — Monitoring-Streifen + SummaryCard-Grid', () =
 	});
 });
 
-describe('AC-7: Vorschau-Tab — ChannelSwitch + Email-Toggle + BriefingPreview', () => {
-	test('AC-7: Vorschau-Tab hat Email-View-Toggle Desktop/iPhone', () => {
-		const src = readFileSync(COMPARE_TABS, 'utf-8');
-		assert.match(
-			src,
-			/Desktop.*Inbox|iPhone.*Mail|desktop.*iphone/i,
-			'Vorschau-Tab muss Email-View-Toggle mit "Desktop-Inbox" und "iPhone-Mail" haben — IST: nicht vorhanden'
-		);
-	});
-});
+// AC-7 (Email-View-Toggle im Vorschau-Tab) entfaellt: der Vorschau-Reiter
+// entfiel mit #1743 ersatzlos.
 

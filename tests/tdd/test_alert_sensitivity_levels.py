@@ -379,7 +379,7 @@ def test_ac18b_stetige_groesse_meldet_knapp_ueber_der_schwelle():
 def test_ac18c_gewitter_semantik_beeinflusst_die_boeen_schwelle_nicht():
     """AC-18 (Nicht-Ansteckung).
 
-    GIVEN eine Tour-Konfiguration mit Gewitter UND Boeen auf "standard"
+    GIVEN eine Trip-Konfiguration mit Gewitter UND Boeen auf "standard"
     WHEN  die Boeen um exakt 20 km/h steigen und das Gewitter unveraendert
           bleibt
     THEN  bleibt die Boeen-Auswertung stumm — die Niveau-Semantik fuer Gewitter

@@ -33,7 +33,7 @@ export const SMS_TRIP_CHAR_LIMIT = 160;
 
 /** Beleg: src/output/renderers/channel_layout.py:45-54, GSM-7/UDH-Rechnung
  *  floor((140-6)*8/7). Gilt fuer den Ortsvergleich (VTBriefingChannels im
- *  vergleich-Kontext, CompareSmsPreview). */
+ *  vergleich-Kontext). */
 export const SMS_COMPARE_CHAR_LIMIT = 153;
 
 const CHANNEL_LABELS: Record<ChannelId, string> = {
@@ -68,6 +68,7 @@ export interface LtChannel {
  * korrekt 153 nennt — zwei sich widersprechende Aussagen auf einer Seite.
  */
 export function ltChannelsFor(smsCharLimit: number): LtChannel[] {
+	// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
 	return (['email', 'telegram', 'sms'] as ChannelId[]).map((id) => ({
 		id,
 		label: CHANNEL_LABELS[id],
@@ -115,6 +116,7 @@ export function ltOverflowAcrossChannels(
 	smsCharLimit: number
 ): Partial<Record<ChannelId, number>> {
 	const result: Partial<Record<ChannelId, number>> = {};
+	// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
 	for (const id of ['email', 'telegram', 'sms'] as ChannelId[]) {
 		const overflow = ltOverflowForLimit(ltLimitForChannel(id, smsCharLimit), colCount);
 		if (overflow !== undefined) result[id] = overflow;
@@ -146,4 +148,9 @@ export function ltCapNoteText(params: {
 		: `zu breit — max ${limit.value}, weiter vorne = sicherer`;
 	const countLabel = hasLabelColumn ? `${colCount} Spalten (Label + ${subject})` : `${colCount} ${subject}`;
 	return `${label}: ${countLabel} · ${fitText}`;
+}
+
+/** Issue #2438 (ADR-0050): Regel-Hinweis im Kanal-Reiter — reine Beschreibung. */
+export function ltKanalAbwahlHinweisText(): string {
+	return 'Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.';
 }

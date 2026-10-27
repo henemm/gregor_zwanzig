@@ -3,7 +3,7 @@ entity_id: fix_1697_radar_waechter_in_ci
 type: bugfix
 created: 2026-08-16
 updated: 2026-08-16
-status: draft
+status: implemented
 workflow: fix-1697-radar-waechter-in-ci
 ---
 

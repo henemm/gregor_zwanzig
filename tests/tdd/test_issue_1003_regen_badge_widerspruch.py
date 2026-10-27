@@ -7,7 +7,7 @@ keine EINZELNE Stunde die SMS-Erwaehnungsschwelle (0.2 mm/h) erreicht — auch
 wenn die bereits berechnete Tagessumme > 0 ist (z.B. Regen duenn ueber mehrere
 Stunden verteilt: 0.1 + 0.1 = 0.2 mm gesamt, keine Einzelstunde >= 0.2). Die
 Stundentabelle derselben Etappe zeigt in diesem Fall eine Regensumme > 0 —
-Widerspruch fuer den Leser bei tourenrelevanten Wetterentscheidungen.
+Widerspruch fuer den Leser bei trip-relevanten Wetterentscheidungen.
 
 Mock-frei: echte render_html()/render_plain()-Aufrufe mit echten
 ForecastDataPoint/SegmentWeatherData-Objekten (Muster aus #790/#795). Geprueft

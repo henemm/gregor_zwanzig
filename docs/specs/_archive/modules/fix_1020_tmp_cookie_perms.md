@@ -3,7 +3,7 @@ entity_id: fix_1020_tmp_cookie_perms
 type: module
 created: 2026-07-06
 updated: 2026-07-06
-status: draft
+status: implemented
 version: "1.0"
 tags: [security, tests, tmp]
 ---
@@ -62,7 +62,7 @@ with os.fdopen(fd, "w") as f:
 Identischer Patch in allen 5 Testdateien (Zeilen laut Analyse: 66, 107, 81, 63, 66). `import os`
 ist in allen 5 Dateien bereits vorhanden — kein neuer Import nötig.
 
-Für die 2 Doku-Beispiele (`docs/specs/modules/fix_698_validator_user_sync.md:93`,
+Für die 2 Doku-Beispiele (`docs/specs/_archive/modules/fix_698_validator_user_sync.md:93`,
 `docs/context/external-validator-auth.md:85`): `curl -c /tmp/...cookies.txt` durch eine
 umask-Subshell ersetzen, z.B. `(umask 077; curl -s -c /tmp/validator_cookies.txt ...)`, damit das
 Beispiel nicht weiter als unsichere Kopiervorlage dient.

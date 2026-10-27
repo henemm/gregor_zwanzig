@@ -68,12 +68,12 @@ def _two_gelb_full_route():
 def _mixed_orange_gelb():
     gewitter = _notice(
         _alert(3, "thunderstorm", "Gewitter", SA_ORANGE_FROM, SA_ORANGE_TO),
-        scope_label="Segment 3", sms_scope="S3",
+        scope_label="Segment 3", sms_scope="Seg 3",
         affected_chips=["Segment 3"], free_chips=["Segment 1", "Segment 2", "Ziel"],
     )
     hitze = _notice(
         _alert(2, "extreme_heat", "Hitze", FR_ALLDAY_FROM, FR_ALLDAY_TO),
-        scope_label="Segment 1", sms_scope="S1",
+        scope_label="Segment 1", sms_scope="Seg 1",
         affected_chips=["Segment 1"], free_chips=["Segment 2", "Segment 3", "Ziel"],
     )
     # Absichtlich unsortiert übergeben (GELB zuletzt) — der Renderer MUSS nach
@@ -147,9 +147,19 @@ def test_ac3_mixed_levels_highest_leads_all_channels():
     assert "höchste Stufe ORANGE" in telegram
     assert telegram.index("Gewitter") < telegram.index("Hitze")
 
-    sms = render_official_alert_sms(notices, sms_prefix="KHW403")
-    assert sms.index("TH") < sms.index("HT"), f"ORANGE(TH) muss vor GELB(HT) stehen: {sms!r}"
-    assert "ORANGE" in sms and "GELB" in sms
+    # FORTGESCHRIEBEN (#1948 S5): die Kurznachricht traegt die Stufe als
+    # BUCHSTABEN am Token (`TH:M`/`HT:L`) statt als Stufenwort. Die hier
+    # bewachte Zusicherung — die schwerere Warnung fuehrt — ist unveraendert.
+    # #2417 AC-27: Warn-Kuerzel "TH" (thunderstorm) -> "TS", weil "TH" mit dem
+    # Wetter-Kuerzel Gewitter (`TH:`/`TH+:`) kollidierte.
+    sms = render_official_alert_sms(notices)
+    assert sms.index("TS") < sms.index("HT"), f"ORANGE(TS) muss vor GELB(HT) stehen: {sms!r}"
+    assert "TS:M" in sms and "HT:L" in sms, (
+        f"Stufe gehoert als Buchstabe an den Token (M=orange, L=gelb): {sms!r}"
+    )
+    assert "ORANGE" not in sms and "GELB" not in sms, (
+        f"Die Stufenwoerter sind aus der SMS abgeloest: {sms!r}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -161,7 +171,7 @@ def test_ac4_partial_route_subject_and_strikethrough():
     )
     notice = _notice(
         _alert(2, "thunderstorm", "Gewitter", SA_FROM, SA_TO, region="St. Stefan im Gailtal"),
-        scope_label="Segment 2–4", sms_scope="nur S2-4",
+        scope_label="Segment 2–4", sms_scope="nur Seg 2-4",
         affected_chips=["Segment 2–4"], free_chips=["Segment 1", "Ziel"],
     )
     subject = render_official_alert_subject([notice], prefix="KHW 403")
@@ -200,10 +210,15 @@ def test_ac6_german_weekday_and_allday():
 # ---------------------------------------------------------------------------
 def test_ac5_sms_format_tokens():
     from output.renderers.alert.official_alerts import render_official_alert_sms
-    sms = render_official_alert_sms(_two_gelb_full_route(), sms_prefix="KHW403")
-    assert sms.startswith("KHW403 AMT GELB1/3:"), f"SMS-Kopf weicht ab: {sms!r}"
-    assert "HT" in sms and "TH" in sms
-    assert "ges.Route" in sms
+    # FORTGESCHRIEBEN (#1948 S5): Ortskopf statt Trip-Name + AMT-Sonderformat.
+    sms = render_official_alert_sms(_two_gelb_full_route())
+    # #2417 AC-27: Warn-Kuerzel "TH" (thunderstorm) -> "TS".
+    assert sms == "ges.Route: !HT:L Fr10.07. TS:L Sa15-21", (
+        f"SMS folgt dem PO-Zielbild '<Ort>: !<Kuerzel>:<Stufe> <Zeit> …': {sms!r}"
+    )
+    assert "AMT" not in sms and "KHW403" not in sms, (
+        f"AMT-Marker und Trip-Name sind ersatzlos entfallen: {sms!r}"
+    )
     assert len(sms) <= 140
     assert sms.isascii(), f"SMS muss reines ASCII/GSM-7 sein: {sms!r}"
     assert "→" not in sms and "🟡" not in sms
@@ -216,7 +231,10 @@ def test_ac5_sms_actually_dispatched():
     RED: `send_official_alert` kennt den Kwarg `sms_sink` noch nicht -> TypeError.
     """
     trip, notices = _dispatch_trip_and_notices()
+    import json
+
     from app.config import Settings
+    from app.loader import get_data_dir
     from services.notification_service import NotificationService
 
     settings = Settings(
@@ -225,7 +243,14 @@ def test_ac5_sms_actually_dispatched():
         sms_gateway_url="https://sms.test.invalid", seven_api_key="k",
         sms_to="+491700000000",
     )
-    svc = NotificationService(settings, "tdd-1216-ac5")
+    # Issue #2412 S4a Nachbesserung: ohne `user.json` faellt das neue
+    # SMS-Tageslimit-Gate auf Tier "free" (Cap 0) zurueck und wuerde diesen
+    # Dispatch faelschlich sperren -- Muster `test_sms_tageslimit.py::_nutzer_anlegen`.
+    _uid = "tdd-1216-ac5"
+    _d = get_data_dir(_uid)
+    _d.mkdir(parents=True, exist_ok=True)
+    (_d / "user.json").write_text(json.dumps({"id": _uid, "tier": "standard"}))
+    svc = NotificationService(settings, _uid)
     mail_calls: list = []
     sms_calls: list = []
     svc.send_official_alert(
@@ -236,7 +261,12 @@ def test_ac5_sms_actually_dispatched():
     assert len(sms_calls) == 1, f"Erwartet genau 1 SMS-Versand, erhalten: {sms_calls!r}"
     text = sms_calls[0]
     assert len(text) <= 140 and text.isascii()
-    assert "AMT" in text and "HT" in text
+    # FORTGESCHRIEBEN (#1948 S5): der Versandtext traegt den Ortskopf und die
+    # Token-Grammatik statt des AMT-Sonderformats.
+    assert "AMT" not in text, f"Versandtext traegt noch das AMT-Format: {text!r}"
+    assert text.startswith("ges.Route: !HT:L "), (
+        f"Versandtext muss mit Ortskopf + '!'-Token beginnen: {text!r}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +343,7 @@ def test_f001_telegram_and_sms_localize_to_trip_timezone():
     )
     notice = _notice(
         _alert(2, "thunderstorm", "Gewitter", EVENING_FROM, EVENING_TO),
-        scope_label="Segment 1", sms_scope="nur S1",
+        scope_label="Segment 1", sms_scope="nur Seg 1",
         affected_chips=["Segment 1"], free_chips=[],
     )
     html = render_official_alert_html(
@@ -327,7 +357,7 @@ def test_f001_telegram_and_sms_localize_to_trip_timezone():
     assert "Sa 11.07." in telegram, f"Telegram muss auf Trip-Zeitzone lokalisieren: {telegram!r}"
     assert "Fr 10.07." not in telegram, "Telegram zeigt rohe UTC statt lokaler Zeit (F001)"
 
-    sms = render_official_alert_sms([notice], sms_prefix="KHW403", tz=VIENNA)
+    sms = render_official_alert_sms([notice], tz=VIENNA)
     # Sa 00:00–22:00 lokal -> Kürzel 'Sa00-22', NICHT das UTC-basierte 'Fr22-20'.
     assert "Sa00-22" in sms, f"SMS muss lokalisieren: {sms!r}"
     assert "Fr22-20" not in sms
@@ -347,18 +377,22 @@ def test_f002_sms_graceful_truncation_no_mid_token_garble():
     notices = [
         _notice(
             _alert(lvl, hz, hz, SA_FROM, SA_TO),
-            scope_label=f"Segment {i+1}", sms_scope=f"S{i+1}",
+            scope_label=f"Segment {i+1}", sms_scope=f"Seg {i+1}",
             affected_chips=[f"Segment {i+1}"], free_chips=[],
         )
         for i, (hz, lvl) in enumerate(hazards)
     ]
-    sms = render_official_alert_sms(notices, sms_prefix="KHW403LANGERTOURNAME")
-    assert len(sms) <= 140
+    # FORTGESCHRIEBEN (#1948 S5): der lange Trip-Name als Ueberlauf-Treiber ist
+    # mit `sms_prefix` entfallen; das knappe Budget wird jetzt ueber `limit`
+    # hergestellt. Die bewachte Zusicherung — ganze Tokens droppen statt mitten
+    # im Token abzuschneiden — ist unveraendert.
+    sms = render_official_alert_sms(notices, limit=90)
+    assert len(sms) <= 90
     # Bei Overflow: sauberer '+N'-Auslassungsmarker am Ende, kein Token-Fragment.
     assert re.search(r"\+\d+$", sms), f"Erwartet '+N'-Marker bei Kürzung, erhalten: {sms!r}"
     # Kein abgeschnittenes Fragment: der Teil vor ' +N' endet mit vollständigem Segment-Token.
     head = re.sub(r" \+\d+$", "", sms)
-    assert re.search(r"S\d+$", head), f"SMS endet mit Token-Fragment statt vollständigem Token: {sms!r}"
+    assert re.search(r"Seg \d+$", head), f"SMS endet mit Token-Fragment statt vollständigem Token: {sms!r}"
 
 
 def test_f003_verdict_badge_singular_for_one_warning():
@@ -367,7 +401,7 @@ def test_f003_verdict_badge_singular_for_one_warning():
     from output.renderers.alert.official_alerts import render_official_alert_html
     notice = _notice(
         _alert(2, "thunderstorm", "Gewitter", SA_FROM, SA_TO),
-        scope_label="Segment 2–4", sms_scope="nur S2-4",
+        scope_label="Segment 2–4", sms_scope="nur Seg 2-4",
         affected_chips=["Segment 2–4"], free_chips=["Segment 1", "Ziel"],
     )
     html = render_official_alert_html(
@@ -420,7 +454,7 @@ def test_f006_day_crossing_shows_second_date_html_and_sms():
     )
     notice = _notice(
         _alert(2, "thunderstorm", "Gewitter", CROSS_FROM, CROSS_TO),
-        scope_label="Segment 1", sms_scope="nur S1",
+        scope_label="Segment 1", sms_scope="nur Seg 1",
         affected_chips=["Segment 1"], free_chips=[],
     )
     html = render_official_alert_html(
@@ -432,7 +466,7 @@ def test_f006_day_crossing_shows_second_date_html_and_sms():
     )
     assert "22:00" in html and "03:00" in html
 
-    sms = render_official_alert_sms([notice], sms_prefix="KHW403", tz=VIENNA)
+    sms = render_official_alert_sms([notice], tz=VIENNA)
     # Kompakt-Token trägt beide Wochentage: 'Fr22-Sa03', nicht 'Fr22-03'.
     assert "Fr22-Sa03" in sms, f"SMS-Token verschluckt das zweite Datum (F006): {sms!r}"
 

@@ -3,7 +3,7 @@ entity_id: compare_location_order
 type: module
 created: 2026-07-24
 updated: 2026-07-24
-status: draft
+status: implemented
 version: "1.0"
 tags: [compare, shared, locations, reihenfolge, bugfix]
 ---
@@ -268,7 +268,7 @@ bekommt nur einen zutreffenderen Namen und Inhalt).
     auslösen, per IMAP abrufen und die Orts-Reihenfolge in der Matrix
     gegen die konfigurierte Reihenfolge prüfen.
 
-- **AC-2 (Gegenprobe):** Given derselbe Ortsvergleich wie in AC-1 wird
+- **AC-2:** (Gegenprobe) Given derselbe Ortsvergleich wie in AC-1 wird
   anschließend auf eine andere Reihenfolge umgestellt (z. B. Innsbruck vor
   Zillertal vor Stubai) / When der Vergleich erneut verschickt wird / Then
   zeigt die neu zugestellte Mail exakt die neue Reihenfolge — die Mail

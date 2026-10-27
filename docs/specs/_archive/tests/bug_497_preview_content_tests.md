@@ -3,7 +3,7 @@ entity_id: bug_497_preview_content_tests
 type: tests
 created: 2026-05-31
 updated: 2026-05-31
-status: draft
+status: implemented
 version: "1.0"
 tags: [tests, preview, sms, fixture-provider, demo-mode, issue-497]
 parent: bug_497_preview_content
@@ -18,7 +18,7 @@ phase: phase5_tdd_red
 
 ## Purpose
 
-Test-Manifest für `docs/specs/modules/bug_497_preview_content.md`.
+Test-Manifest für `docs/specs/_archive/modules/bug_497_preview_content.md`.
 Prüft zwei Bugs: SMS-Präfix-Kürzung (Bug 1) und fehlende Fixture-Felder (Bug 2).
 Kein Mocking — conftest.py setzt GZ_TEST_FIXTURE_DIR automatisch (FixtureProvider).
 

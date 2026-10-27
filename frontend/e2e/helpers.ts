@@ -1,5 +1,6 @@
-import { type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { test as base, expect, type APIRequestContext, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import * as path from 'node:path';
+import { resolveE2EUser } from './testUser.ts';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Issue #1771 Scheibe 1: geteilte, zustandsbasierte Ziehgeste für
@@ -91,19 +92,219 @@ export async function dragDndZoneItem(page: Page, source: Locator, target: Locat
 }
 
 /**
+ * Touch-Variante von `dragDndZoneItem` (#2288 AC-10): zieht ein `.sortable-item`
+ * per ECHTEN Touch-Ereignissen (Chrome-DevTools-Protokoll
+ * `Input.dispatchTouchEvent`: touchStart → mehrere touchMove → touchEnd), nicht
+ * per Maus. Gleiche zustandsbasierte Wartestrategie wie `dragDndZoneItem`: erst
+ * zurück, wenn die `.sortable-zone` `finalize` gefeuert hat (#1771).
+ *
+ * Voraussetzung: Playwright-Kontext mit `hasTouch: true` (nur Chromium).
+ * Gibt zurück, um wie viele Pixel die Seite während der Geste gescrollt hat
+ * (`window.scrollY`-Delta) — eine Geste, die statt zu ziehen die Seite
+ * scrollt, ist genau der Fehler, den AC-10 ausschließen soll.
+ */
+export async function dragDndZoneItemTouch(
+	page: Page,
+	source: Locator,
+	target: Locator
+): Promise<{ pageScrolledY: number }> {
+	await source.scrollIntoViewIfNeeded();
+	await target.scrollIntoViewIfNeeded();
+
+	const zone = source
+		.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " sortable-zone ")]')
+		.last();
+	const zoneHandle = await zone.elementHandle();
+	if (!zoneHandle) throw new Error('dragDndZoneItemTouch: keine .sortable-zone-Ahnenzone gefunden');
+
+	const before = await zoneHandle.evaluate((el) => {
+		const marker = el as HTMLElement & { __gzFinalizeCount?: number };
+		if (marker.__gzFinalizeCount === undefined) {
+			marker.__gzFinalizeCount = 0;
+			el.addEventListener('finalize', () => {
+				marker.__gzFinalizeCount = (marker.__gzFinalizeCount ?? 0) + 1;
+			});
+		}
+		return marker.__gzFinalizeCount;
+	});
+
+	const sourceBox = await source.boundingBox();
+	const targetBox = await target.boundingBox();
+	if (!sourceBox || !targetBox) throw new Error('dragDndZoneItemTouch: source/target ohne BoundingBox');
+
+	const scrollBefore = await page.evaluate(() => window.scrollY);
+	const cdp = await page.context().newCDPSession(page);
+	const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x?: number, y?: number) =>
+		cdp.send('Input.dispatchTouchEvent', {
+			type,
+			touchPoints: type === 'touchEnd' ? [] : [{ x: x as number, y: y as number }]
+		});
+
+	const sx = sourceBox.x + sourceBox.width / 2;
+	const sy = sourceBox.y + sourceBox.height / 2;
+	const tx = targetBox.x + targetBox.width / 2;
+	const ty = targetBox.y + targetBox.height / 2;
+
+	await touch('touchStart', sx, sy);
+	// Erste Bewegung reißt sicher die 3px-Schwelle, damit dndzone den Drag erkennt.
+	for (let i = 1; i <= 6; i++) await touch('touchMove', sx, sy - 2 * i);
+	await page.waitForTimeout(120);
+	const steps = 15;
+	for (let i = 1; i <= steps; i++) {
+		await touch('touchMove', sx + ((tx - sx) * i) / steps, sy + ((ty - sy) * i) / steps);
+	}
+	await page.waitForTimeout(120);
+	await touch('touchEnd');
+	await cdp.detach().catch(() => {});
+
+	try {
+		await page.waitForFunction(
+			({ el, before }) =>
+				((el as HTMLElement & { __gzFinalizeCount?: number }).__gzFinalizeCount ?? 0) > before,
+			{ el: zoneHandle, before },
+			{ timeout: 5_000, polling: 100 }
+		);
+	} catch {
+		throw new Error(
+			'dragDndZoneItemTouch: kein finalize-Ereignis nach der Touch-Geste (#2288 AC-10) — svelte-dnd-action hat den Drag nicht committet'
+		);
+	}
+	const scrollAfter = await page.evaluate(() => window.scrollY);
+	return { pageScrolledY: Math.abs(scrollAfter - scrollBefore) };
+}
+
+/**
  * Login helper — authenticates via the login form and returns the page
  * with a valid session cookie set.
  */
 export async function login(page: Page) {
 	await page.goto('/');
 	if (!page.url().includes('/login')) return;
-	const user = process.env.GZ_E2E_USER ?? 'admin';
-	const pass = process.env.GZ_E2E_PASS ?? 'test1234';
+	const { user, pass } = resolveE2EUser();
 	await page.fill('input[name="username"]', user);
 	await page.fill('input[name="password"]', pass);
 	await page.click('button[type="submit"]');
-	await page.waitForURL('/');
+	// Issue #2248: die Anmeldung haengt einen Marker an die Zieladresse
+	// (`/?passkey_angebot=1`); der Pfad bleibt `/`.
+	await page.waitForURL((url) => url.pathname === '/');
 }
+
+/**
+ * Legt einen zweiten, sofort anmeldbaren Nutzer an (Issue #2271).
+ *
+ * Seit der Scharfschaltung des Login-Gates stellt `issueSession` nur noch fuer
+ * bestaetigte Adressen ein Merkmal aus. Ein zur Laufzeit registriertes Konto
+ * mit Zeitstempel-Suffix kann seine Bestaetigungsmail auf Staging nie empfangen
+ * (Egress-Sperre #1337) — ohne diesen Umweg waere jede Zwei-Nutzer-Spec
+ * strukturell nie wieder gruen.
+ *
+ * 🔴 Die Reihenfolge ist zwingend: registrieren → Token holen → bestaetigen →
+ * ERST DANN anmelden. Und das Token holt die BEREITS ANGEMELDETE fremde
+ * Sitzung (`adminRequest`), nicht der neue Nutzer: der Testweg ist
+ * anmeldepflichtig (staging_verify_token.go), und genau das kann das neue
+ * Konto in diesem Moment nicht. Moeglich ist es, weil der Handler die Kennung
+ * aus der Nutzlast nimmt und `email_verified_at` selbst nicht anfasst — das
+ * setzt weiterhin allein der regulaere Verifikations-Endpunkt.
+ *
+ * Braucht `GZ_ENV=staging` im Ziel-Stack (Staging und der isolierte
+ * CI-Stack erfuellen das, frontend/e2e/ci-stack.sh:66).
+ */
+export async function registriereBestaetigtenZweitnutzer(
+	adminRequest: APIRequestContext,
+	gastRequest: APIRequestContext,
+	username: string,
+	password: string
+): Promise<void> {
+	const reg = await gastRequest.post('/api/auth/register', {
+		data: { username, password, email: `${username}@example.com` }
+	});
+	if (![200, 201].includes(reg.status())) {
+		throw new Error(`Registrierung ${username} fehlgeschlagen: ${reg.status()} ${await reg.text()}`);
+	}
+
+	const tokenAntwort = await adminRequest.post('/api/auth/verify-email/staging-token', {
+		data: { username }
+	});
+	if (!tokenAntwort.ok()) {
+		throw new Error(
+			`Staging-Testweg antwortet ${tokenAntwort.status()} fuer ${username} — laeuft das Ziel mit GZ_ENV=staging, und ist die uebergebene Sitzung angemeldet?`
+		);
+	}
+	const { token } = (await tokenAntwort.json()) as { token?: string };
+	if (!token) throw new Error(`Staging-Testweg lieferte kein Token fuer ${username}`);
+
+	const bestaetigung = await gastRequest.post('/api/auth/verify-email', {
+		data: { user: username, token }
+	});
+	if (!bestaetigung.ok()) {
+		throw new Error(
+			`Bestaetigung ${username} fehlgeschlagen: ${bestaetigung.status()} ${await bestaetigung.text()}`
+		);
+	}
+
+	const login = await gastRequest.post('/api/auth/login', { data: { username, password } });
+	if (!login.ok()) {
+		throw new Error(`Login ${username} fehlgeschlagen: ${login.status()} ${await login.text()}`);
+	}
+}
+
+type Sitzung = Awaited<ReturnType<BrowserContext['storageState']>>;
+
+/**
+ * Issue #2278 AC-10: Spec-Basis fuer Versand-Specs, deren Nutzer ein ZUSTELLBARES Ziel braucht.
+ *
+ * Der Sende-Dialog sperrt "Senden" ohne `mail_to` (sendTargetLabel.ts). Der Env-Admin des
+ * CI-Stacks hat keins und bekommt auch keins per `PUT /api/auth/profile {mail_to}`: er ist
+ * bestaetigt, die neue Adresse landet als Pending-Adresse (auth.go, Zweig `default:` der
+ * Adressaenderung) samt Bestaetigungsmail. Deshalb EIN bestaetigter Zweitnutzer je Worker
+ * (Registrierungsbremse: 5/h je IP, router.go) — `page`/`context` laufen als dieser Nutzer, der
+ * Admin bleibt unberuehrt. Der Nutzer bekommt den Seed-Trip `e2e-cockpit-test` mit demselben
+ * Namen wie beim Admin (global.setup.ts), damit die Specs ihre Kennungen behalten. Der Versand
+ * selbst wird in den Specs per `page.route` abgefangen.
+ */
+export const testMitZustellbaremZiel = base.extend<object, { zustellbareSitzung: Sitzung }>({
+	storageState: ({ zustellbareSitzung }, use) => use(zustellbareSitzung),
+	zustellbareSitzung: [
+		async ({ browser }, use, workerInfo) => {
+			const baseURL = workerInfo.project.use.baseURL;
+			const neu = { baseURL, storageState: undefined, serviceWorkers: 'block' as const };
+			// Admin-Sitzung des Projekts (global.setup.ts) holt das Staging-Token.
+			const adminCtx = await browser.newContext({ ...neu, storageState: workerInfo.project.use.storageState });
+			const gastCtx = await browser.newContext(neu);
+			const username = `e2ezustellbar${Date.now()}w${workerInfo.workerIndex}`;
+			const kennwort = 'Test1234!x';
+			try {
+				await registriereBestaetigtenZweitnutzer(adminCtx.request, gastCtx.request, username, kennwort);
+			} finally {
+				await adminCtx.close();
+			}
+			const profil = await (await gastCtx.request.get('/api/auth/profile')).json();
+			expect(profil?.mail_to, 'Vorbedingung: Zweitnutzer hat ein zustellbares mail_to').toBeTruthy();
+			const heute = new Date().toISOString().slice(0, 10);
+			const morgen = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+			const trip = await gastCtx.request.post('/api/trips', {
+				data: {
+					id: 'e2e-cockpit-test',
+					name: 'E2E Cockpit Test Trip',
+					region: 'Korsika',
+					stages: [
+						{ id: 'e2e-stage-2', name: 'Heute', date: heute, waypoints: [
+							{ id: 'e2e-wp-2', name: 'Mitte', lat: 42.2, lon: 9.1, elevation_m: 1200 },
+							{ id: 'e2e-wp-3', name: 'Ziel', lat: 42.3, lon: 9.2, elevation_m: 600 }
+						] },
+						{ id: 'e2e-stage-3', name: 'Morgen', date: morgen, waypoints: [] }
+					],
+					report_config: { enabled: true, morning_time: '06:00:00', evening_time: '18:00:00' }
+				}
+			});
+			expect(trip.ok(), `Seed-Trip des Zweitnutzers: ${trip.status()}`).toBeTruthy();
+			await use(await gastCtx.storageState());
+			await gastCtx.request.post('/api/auth/account/delete', { data: { password: kennwort } }).catch(() => {});
+			await gastCtx.close();
+		},
+		{ scope: 'worker' }
+	]
+});
 
 /**
  * Eingabe-Vertrag fuer Trip-Wizard Step 1 (Sub-Spec #161 §9).
@@ -201,105 +402,6 @@ export async function fillStep3(page: Page, input: Step3Input = {}): Promise<voi
 	}
 
 	await page.getByTestId('trip-wizard-next').click();
-}
-
-/**
- * Eingabe-Vertrag fuer Trip-Wizard Step 4 (Sub-Spec #164 §8/§10).
- *
- * Default-Verhalten: keine Aenderungen — alle Toggles/Zeiten/Schwellwerte
- * bleiben auf defaultBriefingConfig. Helper klickt nur den Save-Button und
- * wartet auf Redirect nach `/trips/{id}` (sofern `expectSaveSuccess !== false`).
- *
- * SMS-Channel ist nicht konfigurierbar (disabled in der UI) und daher nicht
- * Teil des Channel-Inputs.
- */
-export interface Step4Input {
-	channels?: {
-		email?: boolean;
-		signal?: boolean;
-		telegram?: boolean;
-		// sms: nicht konfigurierbar (disabled)
-	};
-	reports?: {
-		morning?: { enabled?: boolean; time?: string };
-		evening?: { enabled?: boolean; time?: string };
-	};
-	// Issue #224: AlertRulesEditor ersetzt Thresholds.
-	alertRules?: import('../src/lib/types').AlertRule[];
-	/** default: true — wartet auf Redirect nach Save (`/trips/{id}`) */
-	expectSaveSuccess?: boolean;
-}
-
-/**
- * Step-4-Helper: optional Toggles/Zeiten/Schwellwerte setzen, dann Save klicken.
- * Voraussetzung: Wizard ist auf Step 4 (Step4Briefings gemountet).
- * Wartet zunaechst auf `trip-wizard-step4-container`.
- */
-export async function fillStep4(page: Page, input: Step4Input = {}): Promise<void> {
-	await page.getByTestId('trip-wizard-step4-container').waitFor({ state: 'visible' });
-
-	// --- Channels --------------------------------------------------------------
-	if (input.channels) {
-		const channels: Array<['email' | 'signal' | 'telegram', boolean | undefined]> = [
-			['email', input.channels.email],
-			['signal', input.channels.signal],
-			['telegram', input.channels.telegram]
-		];
-		for (const [ch, target] of channels) {
-			if (target === undefined) continue;
-			const toggle = page
-				.getByTestId(`trip-wizard-step4-channel-${ch}`)
-				.locator('input[type="checkbox"]');
-			const current = await toggle.isChecked();
-			if (current !== target) {
-				await toggle.click();
-			}
-		}
-	}
-
-	// --- Report-Toggles + Zeiten ----------------------------------------------
-	if (input.reports) {
-		const reports: Array<['morning' | 'evening', { enabled?: boolean; time?: string } | undefined]> =
-			[
-				['morning', input.reports.morning],
-				['evening', input.reports.evening]
-			];
-		for (const [rep, cfg] of reports) {
-			if (!cfg) continue;
-			if (cfg.enabled !== undefined) {
-				const toggle = page.getByTestId(`trip-wizard-step4-report-${rep}-toggle`);
-				const current = await toggle.isChecked();
-				if (current !== cfg.enabled) {
-					await toggle.click();
-				}
-			}
-			if (cfg.time !== undefined) {
-				await page.getByTestId(`trip-wizard-step4-report-${rep}-time`).fill(cfg.time);
-			}
-		}
-	}
-
-	// --- Alarmregeln (Issue #224 — AlertRulesEditor) --------------------------
-	if (input.alertRules) {
-		for (const rule of input.alertRules) {
-			await page.getByTestId('alert-rules-editor-add').click();
-			// Default-Rule wurde hinzugefuegt; auf Edit-Mode wechseln und befuellen.
-			const row = page.getByTestId('alert-rule-row').last();
-			await row.getByTestId('alert-rule-edit-btn').click();
-			const edit = page.getByTestId('alert-rule-edit').last();
-			await edit.getByTestId('alert-rule-metric').selectOption(rule.metric);
-			await edit.getByTestId('alert-rule-threshold').fill(String(rule.threshold));
-			await edit.getByTestId('alert-rule-severity').selectOption(rule.severity);
-			await edit.getByTestId('alert-rule-save').click();
-		}
-	}
-
-	// --- Save ------------------------------------------------------------------
-	await page.getByTestId('trip-wizard-save').click();
-
-	if (input.expectSaveSuccess !== false) {
-		await page.waitForURL(/\/trips\/[^/]+$/, { timeout: 10000 });
-	}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -482,4 +584,142 @@ export async function createTestTrip(request: APIRequestContext, opts: TestTripO
 	const body = (await res.json()) as { id: string; name: string };
 	registerForCleanup('trip', body.id);
 	return { id: body.id, name: body.name };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #2347 S1 (Epic #2345, Etappe P6): kind-Helfer für Paritäts-Specs —
+// EINE Spec prüft dieselbe Zusicherung für Trip- und Vergleichs-Hub per
+// Schleife über HUB_KINDS. Bewusst dünn: keine Assertions. Die gemeinsamen
+// Selektor-Unterschiede stehen seit #2347 S2 als HUB_SEL[kind] hier; nur
+// spec-eigene Abweichungen (z. B. hub-versand-autosave-chip) bleiben lokal.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** = `context`-Parameter der geteilten Bausteine. */
+export type HubKind = 'route' | 'vergleich';
+export const HUB_KINDS: readonly HubKind[] = ['route', 'vergleich'];
+
+const regexEscape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Selektor-/Feld-Unterschiede je kind (#2347 S2). Reines Konstanten-Objekt —
+ * keine Assertions, keine Wartelogik.
+ */
+export const HUB_SEL: Record<
+	HubKind,
+	{
+		/** Testid-Präfix des SubscriptionHeader. */
+		kopf: 'trip' | 'compare-hub';
+		/** Reiter `${reiter}-<id>`, Panel `${panel}-<id>`. */
+		reiter: string;
+		panel: string;
+		reiterListe: string;
+		/** kind-eigener Punkte-Reiter. */
+		punkteReiter: 'etappen' | 'orte';
+		/** Feld hinter dem Profil im gespeicherten Stand. */
+		profilFeld: 'activity' | 'profil';
+		/** gültiger, vom Seed-Startwert verschiedener Zielwert. */
+		profilWert: string;
+		liste: { url: string; zeile: (id: string) => string; menue: string };
+		hubUrl: (id: string) => RegExp;
+	}
+> = {
+	route: {
+		kopf: 'trip',
+		reiter: 'trip-detail-tab',
+		panel: 'trip-detail-panel',
+		reiterListe: 'trip-detail-tab-list',
+		punkteReiter: 'etappen',
+		profilFeld: 'activity',
+		profilWert: 'skitour',
+		liste: { url: '/trips', zeile: (id) => `trip-row-${id}`, menue: 'trip-row-menu-btn' },
+		hubUrl: (id) => new RegExp(`/trips/${regexEscape(id)}(\\?|$)`)
+	},
+	vergleich: {
+		kopf: 'compare-hub',
+		reiter: 'compare-detail-tab',
+		panel: 'compare-detail-panel',
+		reiterListe: 'compare-detail-tab-list',
+		punkteReiter: 'orte',
+		profilFeld: 'profil',
+		profilWert: 'wandern',
+		liste: { url: '/compare', zeile: (id) => `compare-tile-${id}`, menue: 'compare-row-kebab' },
+		hubUrl: (id) => new RegExp(`/compare/${regexEscape(id)}(\\?|$)`)
+	}
+};
+
+export interface SeededHub {
+	kind: HubKind;
+	id: string;
+	aufraeumen(): Promise<void>;
+}
+
+export const hubApiPath = (kind: HubKind, id: string): string =>
+	kind === 'route' ? `/api/trips/${id}` : `/api/compare/presets/${id}`;
+
+const hubWp = (id: string, lat: number, elevation_m: number) => ({ id, name: id, lat, lon: 9.0, elevation_m });
+
+function seedRumpf(kind: HubKind, suffix: string): Record<string, unknown> {
+	if (kind === 'route') {
+		return {
+			id: `e2e-gz-hub-${suffix}`,
+			name: `${E2E_TEST_PREFIX}Hub-Trip-${suffix}`,
+			stages: [
+				{ id: 's1', name: 'Tag 1', date: '2027-08-01', waypoints: [hubWp('a', 42.0, 800), hubWp('b', 42.04, 1200)] }
+			],
+			report_config: {
+				enabled: true,
+				morning_enabled: true,
+				evening_enabled: false,
+				morning_time: '06:00:00',
+				evening_time: '18:00:00'
+			}
+		};
+	}
+	return {
+		name: `${E2E_TEST_PREFIX}Hub-Vergleich-${suffix}`,
+		// Seed-Orte aus global.setup.ts
+		location_ids: ['e2e-loc-innsbruck', 'e2e-loc-stubai'],
+		schedule: 'daily',
+		profil: 'wandern',
+		hour_from: 7,
+		hour_to: 16,
+		empfaenger: ['hub-paritaet@example.com'],
+		morning_enabled: true,
+		morning_time: '06:00:00',
+		evening_enabled: false,
+		evening_time: '18:00:00'
+	};
+}
+
+/** Legt Trip bzw. Vergleich per REST an (Präfix E2E-GZ-, Versand 06:00); wirft bei !ok. */
+export async function seedHub(
+	request: APIRequestContext,
+	kind: HubKind,
+	opts: { extra?: Record<string, unknown> } = {}
+): Promise<SeededHub> {
+	const sammel = kind === 'route' ? '/api/trips' : '/api/compare/presets';
+	const res = await request.post(sammel, { data: { ...seedRumpf(kind, uniqueSuffix()), ...opts.extra } });
+	if (!res.ok()) {
+		throw new Error(`seedHub(${kind}) fehlgeschlagen: HTTP ${res.status()} — ${await res.text()}`);
+	}
+	const { id } = (await res.json()) as { id: string };
+	return { kind, id, aufraeumen: () => deleteById(request, kind === 'route' ? 'trip' : 'preset', id) };
+}
+
+/** Öffnet den Hub (+ ?tab=…, #hash) und wartet nur auf die sichtbare Reiterleiste. */
+export async function openHub(
+	page: Page,
+	kind: HubKind,
+	id: string,
+	opts: { tab?: string; hash?: string } = {}
+): Promise<void> {
+	const basis = kind === 'route' ? `/trips/${id}` : `/compare/${id}`;
+	await page.goto(`${basis}${opts.tab ? `?tab=${opts.tab}` : ''}${opts.hash ? `#${opts.hash}` : ''}`);
+	const prefix = kind === 'route' ? 'trip-detail-tab' : 'compare-detail-tab';
+	const reiter = page
+		.locator(opts.tab ? `[data-testid="${prefix}-${opts.tab}"]:visible` : `[data-testid^="${prefix}-"]:visible`)
+		.first();
+	await reiter.waitFor({ state: 'visible', timeout: 15_000 });
+	// Vergleich: Reiter zusätzlich anklicken (doppelte Knoten, Muster oeffneVersand).
+	if (kind === 'vergleich' && opts.tab) await reiter.click();
 }

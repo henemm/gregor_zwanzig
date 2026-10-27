@@ -32,14 +32,14 @@ Organisiert nach Datenstruktur. User muss selbst verstehen, wie Locations, Abos 
 
 ```
 Startseite       →  Kachel-Uebersicht (Trips + Orts-Vergleiche)
-├── Meine Touren →  Trip-Liste, Wizard, Wetter-Drill-Down
+├── Meine Trips →  Trip-Liste, Wizard, Wetter-Drill-Down
 ├── Orts-Vergleich → Sidebar (Orte in Gruppen) + Content (Vergleich/Auto-Reports)
 └── Konto        →  Kanaele, Passwort, System-Status, Account loeschen
 ```
 
 ## Zwei Kern-Use-Cases
 
-### UC1: Trip (Mehrtages-Tour)
+### UC1: Trip (Mehrtages-Trip)
 
 *"Ich wandere naechste Woche den GR20. Sag mir jeden Abend und jeden Morgen was ich wissen muss."*
 
@@ -79,22 +79,22 @@ Trips und Orts-Vergleiche als Cards nebeneinander. Jede Kachel zeigt Kern-Info a
 │ Stubaier #1 │ │ Peniche #1  │
 └─────────────┘ └─────────────┘
 
-       [+ Neue Tour]  [+ Neuer Vergl.]
+       [+ Neue Trip]  [+ Neuer Vergl.]
 ```
 
-- Klick auf Trip-Kachel → oeffnet Trip in "Meine Touren"
+- Klick auf Trip-Kachel → oeffnet Trip in "Meine Trips"
 - Klick auf Vergleichs-Kachel → oeffnet Vergleich in "Orts-Vergleich"
-- Schnellzugang zum Anlegen neuer Touren und Vergleiche
+- Schnellzugang zum Anlegen neuer Trips und Vergleiche
 
 ---
 
-## 2. Meine Touren
+## 2. Meine Trips
 
 ### Trip-Liste
 
 Bestehende Trip-Tabelle bleibt erhalten. Funktioniert bereits gut.
 
-### Wizard "Neue Tour anlegen" (4 Schritte)
+### Wizard "Neue Trip anlegen" (4 Schritte)
 
 Gefuehrter Ablauf ersetzt heutiges TripForm + GPX Upload + ReportConfig + WeatherConfig.
 
@@ -182,7 +182,7 @@ Morgen-Report  07:00  [E-Mail]
 Warnungen  ✓ aktiv
   Bei: Gewitter, Wind >60km/h
 
-          [Tour speichern]
+          [Trip speichern]
 ```
 
 ### Wetter-Drill-Down
@@ -279,7 +279,7 @@ Surf PT  woch. Donnerstag
 | Heute | Wird zu | Aenderung |
 |-------|---------|-----------|
 | Uebersicht | Startseite (Kacheln) | Redesign |
-| Trips | Meine Touren (Trip-Liste) | Umbenannt, Wizard statt Dialoge |
+| Trips | Meine Trips (Trip-Liste) | Umbenannt, Wizard statt Dialoge |
 | GPX Upload | Wizard Schritt 1 | Kein separater Nav-Punkt |
 | Locations | Orts-Vergleich → Sidebar | Teil des Vergleichs-Bereichs |
 | Compare | Orts-Vergleich → Content | Zusammengefuehrt |

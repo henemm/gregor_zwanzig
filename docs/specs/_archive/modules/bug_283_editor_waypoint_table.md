@@ -3,7 +3,7 @@ entity_id: bug_283_editor_waypoint_table
 type: bugfix
 created: 2026-05-21
 updated: 2026-05-21
-status: draft
+status: implemented
 version: "1.0"
 tags: [frontend, editor, waypoints, design-system, css-tokens, typography, accordion]
 ---

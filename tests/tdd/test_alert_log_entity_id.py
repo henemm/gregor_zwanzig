@@ -34,13 +34,13 @@ def _entries(user_id: str) -> list[dict]:
     return json.loads(_log_path(user_id).read_text())["entries"]
 
 
-# --- AC-1: Tour-Alarm trägt Kennung + Typ, keine Altfelder mehr --------------
+# --- AC-1: Trip-Alarm trägt Kennung + Typ, keine Altfelder mehr --------------
 
 def test_trip_alert_writes_entity_id_and_type():
     """
     GIVEN: kein Protokoll vorhanden
-    WHEN:  ein Tour-Alarm protokolliert wird
-    THEN:  der Eintrag trägt `entity_id` = Tour-Kennung und `entity_type` = "trip";
+    WHEN:  ein Trip-Alarm protokolliert wird
+    THEN:  der Eintrag trägt `entity_id` = Trip-Kennung und `entity_type` = "trip";
            `trip_id` und `preset_id` kommen nicht mehr vor
     """
     from services import alert_log

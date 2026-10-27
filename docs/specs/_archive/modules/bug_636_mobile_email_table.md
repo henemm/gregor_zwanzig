@@ -3,7 +3,7 @@ entity_id: bug_636_mobile_email_table
 type: module
 created: 2026-06-08
 updated: 2026-06-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [email, mobile, output, bug]
 ---

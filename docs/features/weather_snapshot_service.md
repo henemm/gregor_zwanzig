@@ -171,9 +171,15 @@ Die bestehenden Thresholds aus MetricCatalog:
 - Niederschlag: 10.0 mm
 - Boeen: 20.0 km/h
 
-Severity-Klassifikation:
+Severity-Klassifikation (`_classify_severity()`, Verhaeltnis Delta/Schwelle):
 - MINOR: 1.0x - <1.5x Threshold
-- MODERATE: 1.5x - <2.0x Threshold (→ Alert)
-- MAJOR: >=2.0x Threshold (→ Alert)
+- MODERATE: 1.5x - <2.0x Threshold
+- MAJOR: >=2.0x Threshold
 
-Nur MODERATE und MAJOR loesen Alerts aus.
+**Korrektur 2026-09-09 (#2236, C3-73):** Die Severity ist seit Issue #638 **nur ein Label,
+kein Filter.** `TripAlertService._filter_significant_changes()` reicht **jeden** Change einer
+aktiven, konfigurierten Regel durch. Die fruehere Aussage „Nur MODERATE und MAJOR loesen Alerts
+aus" beschrieb genau den MODERATE/MAJOR-Filter, der INFO/MINOR-Alarme still verschluckte
+(„Severity-Falle", #638) — wer ihn wieder einbaut, baut den Bug wieder ein. Seit #1503
+bestimmt die Severity die **Dringlichkeit** der Alarmmeldung (Ausmass der Aenderung bzw. bei
+Gefahrenstufen-Groessen das erreichte Niveau), nicht, ob gesendet wird.

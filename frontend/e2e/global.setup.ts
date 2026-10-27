@@ -2,6 +2,7 @@ import { test as setup, expect, request as playwrightRequest } from '@playwright
 import * as fs from 'fs';
 import { assertNotProdBaseURL, assertNotProdApiProxyTarget } from './prodUrlGuard';
 import { API_PROXY_TARGET, PROD_API_PROXY_TARGET } from './apiProxyTarget';
+import { resolveE2EUser } from './testUser.ts';
 
 const authFile = 'playwright/.auth/admin.json';
 const TRIP_ID = 'e2e-cockpit-test';
@@ -33,16 +34,18 @@ setup('authenticate and seed test data', async ({ page, baseURL }) => {
 	// (localhost:8090) -- also wird hier derselbe Default geprüft.
 	await assertNotProdApiProxyTarget(process.env.GZ_API_BASE ?? PROD_API_PROXY_TARGET);
 
-	const user = process.env.E2E_USER ?? 'admin';
-	const pass = process.env.E2E_PASS ?? 'test1234';
+	const { user, pass } = resolveE2EUser();
 
 	if (!isAuthFileValid()) {
 		await page.goto('/login');
 		await page.fill('input[name="username"]', user);
 		await page.fill('input[name="password"]', pass);
 		await page.click('button[type="submit"]');
-		await page.waitForURL('/');
-		await expect(page).toHaveURL('/');
+		// Issue #2248: die Anmeldung haengt seit dem Passkey-Angebot einen Marker
+		// an die Zieladresse (`/?passkey_angebot=1`). Der PFAD bleibt `/` — nur
+		// der exakte Adressvergleich traegt nicht mehr.
+		await page.waitForURL((url) => url.pathname === '/');
+		await expect(page).toHaveURL((url) => url.pathname === '/');
 		await page.context().storageState({ path: authFile });
 	} else {
 		await page.context().addCookies(

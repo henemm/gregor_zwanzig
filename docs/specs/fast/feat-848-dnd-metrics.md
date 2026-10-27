@@ -1,3 +1,10 @@
+---
+entity_id: feat_848_dnd_metrics
+type: fast
+created: 2026-06-23
+status: implemented
+---
+
 # Mini-Spec: feat-848-dnd-metrics
 
 ## Was ändert sich

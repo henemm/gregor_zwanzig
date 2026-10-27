@@ -60,7 +60,7 @@ def test_alert_rules_untouched_and_corridors_additive_empty(tmp_path: Path) -> N
     trip_path = tmp_path / "trip.json"
     trip_path.write_text(json.dumps(data, indent=2))
 
-    loaded = load_trip(trip_path)
+    loaded = load_trip(trip_path, user_id="default")
 
     # Bestehendes Verhalten (Issue #205) — darf durch #1231 nicht regredieren.
     assert len(loaded.alert_rules) == 2
@@ -94,7 +94,7 @@ def test_corridor_entry_roundtrips_lossless_with_open_bounds(tmp_path: Path) -> 
     trip_path = tmp_path / "trip.json"
     trip_path.write_text(json.dumps(data, indent=2))
 
-    loaded = load_trip(trip_path)
+    loaded = load_trip(trip_path, user_id="default")
 
     assert len(loaded.corridors) == 1
     loaded_corridor = loaded.corridors[0]
@@ -122,7 +122,7 @@ def test_corridor_entry_with_both_bounds_and_no_prio_roundtrips(tmp_path: Path) 
     trip_path = tmp_path / "trip.json"
     trip_path.write_text(json.dumps(data, indent=2))
 
-    loaded = load_trip(trip_path)
+    loaded = load_trip(trip_path, user_id="default")
 
     assert len(loaded.corridors) == 1
     loaded_corridor = loaded.corridors[0]
@@ -179,7 +179,7 @@ def test_unknown_legacy_fields_and_corridors_survive_roundtrip_together(tmp_path
     trip_path = tmp_path / "trip.json"
     trip_path.write_text(json.dumps(raw, indent=2))
 
-    loaded = load_trip(trip_path)
+    loaded = load_trip(trip_path, user_id="default")
 
     # corridors muss typed geladen werden, nicht in extra verschwinden.
     assert len(loaded.corridors) == 1
@@ -233,7 +233,7 @@ def test_corridor_notify_and_metric_alert_levels_survive_wertebereiche_range_onl
     trip_path = tmp_path / "trip.json"
     trip_path.write_text(json.dumps(_trip_to_dict(trip), indent=2))
 
-    loaded = load_trip(trip_path)
+    loaded = load_trip(trip_path, user_id="default")
     assert loaded.corridors[0].notify is True
     assert loaded.display_config.metric_alert_levels["wind_gust"] == "sensibel"
 
@@ -242,7 +242,7 @@ def test_corridor_notify_and_metric_alert_levels_survive_wertebereiche_range_onl
         metric="wind_gust", range=[None, 80.0], notify=loaded.corridors[0].notify, mark=loaded.corridors[0].mark,
     )
     trip_path.write_text(json.dumps(_trip_to_dict(loaded), indent=2))
-    reloaded = load_trip(trip_path)
+    reloaded = load_trip(trip_path, user_id="default")
 
     assert reloaded.corridors[0].range == [None, 80.0], "die Grenzaenderung muss ankommen"
     assert reloaded.corridors[0].notify is True, "#1371 AC-4 FAIL: notify hat sich veraendert"
@@ -288,7 +288,7 @@ def test_corridor_range_null_degrades_to_open_both_sides(tmp_path: Path) -> None
     """F002: `"range": null` darf den Trip nicht unladbar machen -> degradiert
     zu [None, None] (beidseitig offen)."""
     path = _write_trip_with_corridor(tmp_path, {"metric": "wind_gust", "range": None, "notify": True, "mark": False})
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="default")
     assert loaded.corridors[0].range == [None, None]
     assert len(loaded.alert_rules) == 1  # Isolation: Nachbarfelder unberuehrt
 
@@ -297,14 +297,14 @@ def test_corridor_range_single_element_pads_to_two(tmp_path: Path) -> None:
     """F002: `range: [5.0]` (nur 1 Element) darf nicht IndexError werfen ->
     fehlende Obergrenze wird als None ergaenzt."""
     path = _write_trip_with_corridor(tmp_path, {"metric": "wind_gust", "range": [5.0], "notify": False, "mark": True})
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="default")
     assert loaded.corridors[0].range == [5.0, None]
 
 
 def test_corridor_range_extra_elements_truncated_to_two(tmp_path: Path) -> None:
     """F002: `range: [1, 2, 3]` -> nur die ersten zwei Elemente zaehlen."""
     path = _write_trip_with_corridor(tmp_path, {"metric": "wind_gust", "range": [1, 2, 3], "notify": False, "mark": True})
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="default")
     assert loaded.corridors[0].range == [1.0, 2.0]
 
 
@@ -315,7 +315,7 @@ def test_corridor_range_numeric_strings_cast_to_float(tmp_path: Path) -> None:
     path = _write_trip_with_corridor(
         tmp_path, {"metric": "wind_gust", "range": ["10.0", "45.0"], "notify": True, "mark": False}
     )
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="default")
     assert loaded.corridors[0].range == [10.0, 45.0]
     assert all(isinstance(v, float) for v in loaded.corridors[0].range)
 
@@ -326,7 +326,7 @@ def test_corridor_range_non_numeric_values_degrade_to_none_not_crash(tmp_path: P
     das solche Werte nie persistiert bekommt und sonst mit Marshal-Error
     ablehnen wuerde — hier degradieren statt Totalausfall)."""
     path = _write_trip_with_corridor(tmp_path, {"metric": "wind_gust", "range": ["a", "b"], "notify": False, "mark": True})
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="default")
     assert loaded.corridors[0].range == [None, None]
 
 
@@ -334,7 +334,7 @@ def test_corridor_malformed_range_does_not_affect_alert_rules_or_legacy(tmp_path
     """Malformed corridor range darf alert_rules/unmodellierte Legacy-Felder
     nicht antasten (Read-Modify-Write bleibt scope-isoliert, BUG-DATALOSS-GR221)."""
     path = _write_trip_with_corridor(tmp_path, {"metric": "wind_gust", "range": None, "notify": True, "mark": False})
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="default")
     assert len(loaded.alert_rules) == 1
     assert loaded.alert_rules[0].threshold == 30.0
     assert loaded.extra.get("__reserved_future_field__") == {"nested": "value"}
@@ -348,7 +348,7 @@ def test_corridor_range_as_scalar_degrades_to_open_both_sides(tmp_path: Path, sc
     nicht mit TypeError crashen lassen -> degradiert zu [None, None],
     Trip bleibt ladbar."""
     path = _write_trip_with_corridor(tmp_path, {"metric": "wind_gust", "range": scalar_range, "notify": True, "mark": False})
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="default")
     assert loaded.corridors[0].range == [None, None]
     assert len(loaded.alert_rules) == 1  # Isolation: Nachbarfelder unberuehrt
 
@@ -360,5 +360,5 @@ def test_corridor_range_nan_and_infinity_degrade_to_none(tmp_path: Path) -> None
     path = _write_trip_with_corridor(
         tmp_path, {"metric": "wind_gust", "range": [float("nan"), float("inf")], "notify": False, "mark": True}
     )
-    loaded = load_trip(path)
+    loaded = load_trip(path, user_id="default")
     assert loaded.corridors[0].range == [None, None]

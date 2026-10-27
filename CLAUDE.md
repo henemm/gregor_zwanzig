@@ -11,8 +11,8 @@
 - **Zielgruppe:** Weitwanderer (z.B. GR20), eingeschraenkte Konnektivitaet
 - **Stack:** Python, uv, pytest
 - **Kanäle (vier):** E-Mail · Telegram · SMS · **Premium-SMS** (Garmin inReach, ADR-0049). Signal ist seit 2026-06-06 app-weit entfernt (#610) — kein `SignalOutput`/`signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`; Wiedereinführung müsste neu spezifiziert werden.
-- **🔴 Alle vier Kanäle sind gleichrangig relevant — kein Kanal ersetzt einen anderen.** PO-Vorgabe, mehrfach bekräftigt: Auf dem Karnischen Höhenweg gibt es **auf der Hütte nur Satellit** — und das ist genau die Zeit, zu der Briefings verschickt werden, weshalb dort **nur Premium-SMS** ankommt. **Auf dem Pass gibt es normalen Handyempfang, dort sind E-Mail und Telegram relevant** und werden gelesen. Wer daraus „E-Mail/Telegram sind für die Tour nachrangig" folgert, liegt falsch. Alarme müssen **alle** Kanäle erreichen (#1701).
-- **Premium-SMS-Reichweite:** als **Versandkanal** nur im **Trip-Briefing** verdrahtet (kein Ortsvergleich-Versand). Als **Alarm-Kanal** in **beiden** Flächen (Trip UND Ortsvergleich), für **alle** Alarmarten inklusive Regen-/Radar-Alarme — alles über dieselbe geteilte Kanal-Auflösung (Paritäts-Audit #1533).
+- **🔴 Alle vier Kanäle sind gleichrangig relevant — kein Kanal ersetzt einen anderen.** PO-Vorgabe, mehrfach bekräftigt; Empfangslage vom PO am **2026-09-05 korrigiert**: Die Empfangslage unterwegs ist **unvorhersehbar**. Auf der Hütte eher **WLAN als Satellit** — Satellit braucht freien Himmel und trägt im Gebäude nicht zuverlässig; auf dem Pass normaler Handyempfang, dort sind E-Mail und Telegram relevant und werden gelesen. Die frühere Fassung („auf der Hütte nur Satellit, dort kommt nur Premium-SMS an") war falsch. **Folge:** Weil nicht einmal der Wanderer vorher weiß, welcher Weg gerade trägt, kann es das System erst recht nicht wissen — **jeder Kanal muss jede Frage beantworten können**, nicht in derselben Form, aber mit demselben Inhalt (Epic #2133). Ein „der Nutzer schaltet unterwegs den Kanal um" löst nichts. Wer aus alldem „E-Mail/Telegram sind nachrangig" folgert, liegt falsch. Alarme müssen **alle** Kanäle erreichen (#1701).
+- **Premium-SMS-Reichweite:** als **Versandkanal** im **Trip-Briefing** UND im **Ortsvergleich-Briefing** verdrahtet (#2275). Als **Alarm-Kanal** in **beiden** Flächen (Trip UND Ortsvergleich), für **alle** Alarmarten inklusive Regen-/Radar-Alarme — alles über dieselbe geteilte Kanal-Auflösung (Paritäts-Audit #1533).
 - **Multi-User-Produkt:** mandantenfähig — jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger und Settings. Persistenz pro Nutzer unter `data/users/<user_id>/`. Isolation **konsequent** über `s.WithUser(middleware.UserIDFromContext(r.Context()))` (Go) bzw. `user_id`-Parameter (Python). **PFLICHT bei jedem nutzerbezogenen Endpoint:** echte `user_id` aus Auth-Kontext durchreichen, **niemals** auf `"default"` zurückfallen — das ist ein Cross-User-Datenleck. Jeder neue datenbewegende Endpoint MUSS mit **zwei verschiedenen Nutzern** getestet werden. Es gibt kein systemseitiges „an mich" — „senden" heißt immer „an die konfigurierten Empfänger dieses Nutzers".
 
 ## Architektur
@@ -24,7 +24,7 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
                         Auth/Store/Scheduler     Provider -> Risk Engine -> Renderer -> Channel
 ```
 
-- **Go-API** (`internal/`, `cmd/`): Auth/Sessions, Mandantentrennung, Persistenz (`data/users/<user_id>/`), Cron-Scheduler, Proxy zum Python-Core
+- **Go-API** (`internal/`, `cmd/`): Auth/Sessions, Mandantentrennung, Persistenz (`data/users/<user_id>/`), Cron-Taktgeber (`internal/scheduler/`, einzige Zeitsteuerung — ruft `POST /api/scheduler/*` des Python-Core auf, der die Fälligkeit je Trip/Vergleich entscheidet und versendet), Proxy zum Python-Core
 - **Python-Core** (`api/`, `src/`): Wetter-Domäne (Provider Open-Meteo + Fallbacks, Risk Engine, Aggregation), alle Kanal-Renderer/-Transporte, Alerts, Inbound-Handler
 - Die Legacy-CLI (`python -m src.app.cli`, Priorität CLI > ENV > config.ini) ist Debug-Werkzeug, nicht der Produktivpfad
 
@@ -38,6 +38,9 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
 | `docs/reference/gates_und_ratschen.md` | **Detailmechanik aller Gates/Ratschen** — bei Blockade hier nachsehen |
 | `docs/reference/mail_validators.md` | Plausibilitäts-Schwellen, Anti-Stale-Mechanik |
 | `docs/reference/decision_matrix.md` | Provider-Ist-Stand (Open-Meteo + Fallback-Kette) |
+| `docs/reference/sms_format.md` | SMS-Wire-Vertrag (SSOT für SMS/Premium-SMS-Tokens) |
+| `docs/reference/renderer_email_spec.md` | E-Mail-Renderer-Vertrag |
+| `docs/reference/telegram_format.md` · `premium_sms_format.md` | Format-Referenz Telegram bzw. Premium-SMS (inReach) |
 | `docs/features/epic-134-cockpit-dashboard.md` | Trip-Cockpit-Startseite |
 | `docs/adr/README.md` | Index der Architektur-Entscheidungen |
 | `docs/README.md` | Wegweiser durch docs/ (Referenz vs. Archiv) |
@@ -48,13 +51,13 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
 
 ## Workflow
 
-OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake`, `/00-bug`, `/01-feature`):
+OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake` — auch Bugs starten dort, `/00-bug` gibt es nicht mehr — und `/01-feature`):
 
 | Command | Purpose | PO-Eingriff |
 |---------|---------|-------------|
 | `/10-context` | Kontext sammeln | — |
 | `/20-analyse` | Request verstehen, Codebase recherchieren | Optional: 3-Satz-Zusammenfassung korrigieren |
-| `/30-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** ('go') |
+| `/30-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** (`approved`/`freigabe`) |
 | `/40-tdd-red` | Fehlschlagende Tests schreiben (RED) | Optional: AC-Test-Mapping lesen |
 | `/50-implement` | Implementieren (GREEN) + Adversary | — |
 | `/60-validate` | Validieren vor Commit | — |
@@ -68,16 +71,20 @@ OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake`, `/00-bug`
 
 **Fresh Eyes:** Bei UI-Änderungen prüft zusätzlich ein `fresh-eyes-inspector` Screenshots OHNE Bug-Kontext.
 
+**Rückfragen an den PO IMMER über das `AskUserQuestion`-Tool** — nie als Freitext-Frage am Ende einer Antwort (PO-Vorgabe 2026-10-08). Gilt auch für Spec-Freigaben.
+
 **Product Owner Pattern:** Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung geht an den Developer Agent (Opus, Worktree-Isolation). >10 Min ohne grüne Tests → `TaskStop` + Neustart mit präziserem Briefing; max 2 Versuche, danach Eskalation.
 
-**Agenten-Modelle:** `developer` Opus · `bug-intake`/`feature-planner`/`implementation-validator`/`spec-writer`/`fresh-eyes-inspector` Sonnet · `docs-updater`/`spec-validator`/Explore Haiku.
+**Agenten-Modelle:** `developer` (Plugin-Pendant `developer-agent`)/`user-story-planner` Opus · `bug-intake`/`bug-investigator`/`analysis-challenger`/`feature-planner`/`spec-writer`/`implementation-validator`/`staging-validator`/`external-validator`/`fresh-eyes-inspector` Sonnet · `docs-updater`/`spec-validator`/`test-runner`/Explore Haiku.
+
+**Herkunft der Befehle:** `/00-…` bis `/60-…` kommen aus dem Plugin agent-os-openspec; projekteigen in `.claude/commands/` sind nur `/70-deploy` (ersetzt das Plugin-Template), `/e2e-verify`, `/next-ticket`, `/radar`.
 
 ### Workflow-State
 
 | Was | Regel |
 |-----|-------|
 | **GZ_ACTIVE_WORKFLOW** | `export GZ_ACTIVE_WORKFLOW=<name>` ist die EINZIGE erlaubte Methode. **Symlink-Fallback ist deaktiviert** — `workflow.py` bricht FATAL ab ohne die Variable. Niemals `state['active_workflow']` lesen. Beim Agent-Spawn immer im Prompt übergeben. |
-| **Execution-Log vor `finish`** | `python3 .claude/hooks/workflow.py write-log success`, dann `workflow.py finish`. Ohne Log blockt der Hook. |
+| **Execution-Log vor `finish`** | `workflow.py write-log success`, dann `workflow.py finish`. Ohne Log blockt der Hook. `workflow.py`/`qa_gate.py`/`adversary_dialog.py` liegen im Plugin agent-os-openspec, **nicht** in `.claude/hooks/` (Plugin-Modus seit 465380c1e). |
 | **LoC-Limit 250/Workflow** | `workflow.py status` zeigt `LoC-Delta: +N/250`. Überschritten → `workflow.py set-field loc_limit_override 500`. `docs/`/`*.md`/`.gitignore` und generierte Dateien zählen nicht. |
 | **Adversary-Verdict Gating** | `AMBIGUOUS` → `workflow.py override-ambiguous "<Grund>"` (TTL 1h); `None`/`BROKEN` → `qa_gate.py`. Commit blockt ohne Verdict. |
 | **State-Ablage** | `.claude/workflows/<name>.json` (laufend) / `_archive/<name>.json` (abgeschlossen) |
@@ -117,12 +124,14 @@ Verifikation läuft **nach** dem Push gegen Staging (`https://staging.gregor20.h
 |---|---|
 | 1 | Arbeitsbranch pushen: `git push -u origin <branch>` (nie direkt `main`) |
 | 1b | PR eröffnen (`gh pr create --fill`), CI-Ampel abwarten — **alle 6 Checks grün** auf dem letzten Stand |
-| 1c | Mergen (`gh pr merge --merge`) — erst damit ist `main` aktualisiert |
+| 1c | Mergen (`gh pr merge --merge --delete-branch`) — erst damit ist `main` aktualisiert. `--delete-branch` räumt den Arbeitsbranch lokal **und** auf GitHub weg; ohne ihn wächst der Branch-Haufen wieder (20.09.: 312 lokale Branches, 278 davon Karteileichen, #1199) |
 | 2 | Auto-Deploy auf Staging abwarten (~5 Min, Cron `*/5`) |
 | 3 | Staging-Validierung |
 | 4 | Prod-Deploy: `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
 | 4b | Post-Deploy-Selftest: `python3 .claude/hooks/prod_selftest.py` — nur Exit 0 fährt weiter |
 | 5 | `gh issue close <N>` — nur wenn 4b Exit 0 |
+
+**Ein Merge ist kein Prod-Deploy:** der CI-Job `deploy` liefert nur bei vorliegendem `/e2e-verify`-Nachweis aus (`scripts/ci_prod_gate.sh` → `PROD_GATE=open`); sonst bleibt er grün/übersprungen und Schritt 4 (`/70-deploy`) liefert aus (#2047 S2).
 
 Wird ein Push nach `main` abgewiesen, ist das die Branch-Protection, kein Fehler. Ein PR ersetzt NICHT die Staging-Validierung — die Ampel bewacht Code-Gesundheit, Staging bewacht Verhalten.
 
@@ -144,12 +153,14 @@ Ratschen-Pflege (`ci_tdd_excludes.txt`, `ci_e2e_specs.txt`, Aufnahmefilter): `do
 
 ## Mail-Validatoren & Renderer-Gate (ZWINGEND)
 
-Zwei Mail-Pfade, zwei Gates. Falscher Validator auf einen Pfad → strukturell nie bestehbar → Gate-Erosion.
+Je Mail-Pfad ein eigener Validator. Falscher Validator auf einen Pfad → strukturell nie bestehbar → Gate-Erosion.
 
 | Mail-Pfad | Validator (PFLICHT vor „E2E bestanden") | Marker-Header |
 |---|---|---|
-| **Orts-Vergleich** (Vergleichsmatrix, Winner-Box, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
+| **Orts-Vergleich** (Vergleichstabelle, kein Score/Winner seit #1108, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
 | **Trip-Briefing** (`full`/`compact`, Stundentabellen) | `uv run python3 .claude/hooks/briefing_mail_validator.py` | `X-GZ-Mail-Type: trip-briefing` + `X-GZ-Format: full\|compact` |
+| **Amtliche Warnung** (Alarm-Mail) | `uv run python3 .claude/hooks/official_alert_mail_validator.py` | `X-GZ-Mail-Type: official-alert` |
+| **Radar-/Regen-Alarm** | `uv run python3 .claude/hooks/radar_alert_mail_validator.py` | `X-GZ-Mail-Type: radar-alert` |
 
 **Regeln:** gegen **echt zugestellte Staging-Mail** aus dem Stalwart-Test-Postfach (`gregor-test@henemm.com`, Creds `GZ_IMAP_*`, nie im Klartext) — kein Mock, kein Gmail. Geprüft wird Plausibilität, nicht bloße String-Presence. **Nur bei Exit 0** darf „E2E bestanden" gesagt werden.
 
@@ -169,7 +180,7 @@ Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN
 
 **Möglichst viel Code zwischen Trip und Ortsvergleich teilen; der Compare-Editor funktioniert wie der Trip-Editor.** Als prüfbare Invariante:
 
-- **Geteilt (EIN Code, Parameter `context="route"|"vergleich"`):** Editor-Rahmen (Progressive Tabs, Lock-Engine, Speichern/Verwerfen), Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell-Konvergenz (Epic #1230).
+- **Geteilt (EIN Code, Parameter `context="route"|"vergleich"`):** Editor-Rahmen (Progressive Tabs, Lock-Engine, Speichern/Verwerfen), Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell-Konvergenz (Epic #2345, Etappe P7 — vormals #1230).
 - **Anlegen folgt dem Trip-Muster:** `/trips/new` = Progressive-Tab-Anlege-Seite aus geteilten Bausteinen (`TripNewEditor`, #622); der alte 5-Schritt-Wizard ist dort abgeschafft. `/compare/new` bekommt dieselbe Bauart; `CompareEditor.svelte` + Compare-Wizard sind Alt-Bestand und fallen ersatzlos. **Es gibt keine offene Designfrage dazu — nicht erneut vorlegen.**
 - **Compare-eigen dürfen NUR sein:** Orte-Tab (statt Etappen), transponierte Übersicht (Orte = Spalten), Compare-Mail-Template.
 - **Default-Fehler:** Eine neue Compare-Komponente, zu der ein Trip-Pendant existiert (oder umgekehrt), ist ein Verstoß — Ausnahme nur mit dokumentierter Begründung in der Spec. Anti-Pattern: #1170.
@@ -177,7 +188,7 @@ Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN
 
 ## Confidence — NICHT wählbar als Metrik (Issue #710, Final)
 
-**`confidence_pct` ist KEINE pro-Etappe wählbare Wetter-Metrik** — eine Meta-Aussage über mehrtägige Ensemble-Divergenz, keine lokale Wettergröße. Darf ausschließlich erscheinen als: (1) Vorhersage-Verlässlichkeits-Hinweis im E-Mail-Textblock, (2) SMS-Token (C+/C~/C? für Sicherheit-Bands), (3) interne Aggregation/Scoring. **NIEMALS** im Trip-Editor, Wizard Step 3, Metrik-Auswahl oder als per-Etappe-Spalte.
+**`confidence_pct` ist KEINE pro-Etappe wählbare Wetter-Metrik** — eine Meta-Aussage über mehrtägige Ensemble-Divergenz, keine lokale Wettergröße. Darf ausschließlich erscheinen als: (1) Vorhersage-Verlässlichkeits-Hinweis im E-Mail-Textblock, (2) interne Aggregation/Scoring. Ein SMS-Token (`C+/C~/C?`) gibt es nicht (#2233). **NIEMALS** im Trip-Editor, Wizard Step 3, Metrik-Auswahl oder als per-Etappe-Spalte.
 
 **Implementierung:** `MetricDefinition.selectable=false`; GET `/api/metrics` filtert auf `selectable=true`. Alte Trips mit aktiviertem `confidence` laden still, die Metrik wird in Render-Pfaden ignoriert.
 
@@ -201,7 +212,7 @@ Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN
 - **Staging:** https://staging.gregor20.henemm.com — Systemd (`gregor-python-staging`, `gregor-api-staging`, `gregor-frontend-staging`)
 - **Infrastruktur-Repo:** `henemm/henemm-infra`. Server-Infos und Monitoring: `~/.claude/CLAUDE.md`.
 
-**Monitoring:** extern über `henemm-infra/check-gregor20.sh`. Status-Endpoint `/api/scheduler/status` (Port 8090) — pro Job `next_run`/`last_run`. **PFLICHT bei neuen Services/Schedulern:** `last_run`-Tracking im Status-Endpoint — kein Job ohne Observability.
+**Monitoring:** extern über `henemm-infra/check-gregor20.sh`. Status-Endpoint `/api/scheduler/status` (Port 8090) — pro Job `next_run`/`last_run`, seit #2155 S2 nur noch mit Header `X-GZ-Status-Token` (Env `GZ_STATUS_TOKEN`) erreichbar. **PFLICHT bei neuen Services/Schedulern:** `last_run`-Tracking im Status-Endpoint — kein Job ohne Observability.
 
 **Pre-Test-Validierung:** Vor jeder Testaufforderung an den User `python3 .claude/validate.py` (Syntax + Import geänderter Python-Dateien + Server-Startup); danach `--clear`. **NIEMALS „teste es" ohne vorherige Validierung.**
 

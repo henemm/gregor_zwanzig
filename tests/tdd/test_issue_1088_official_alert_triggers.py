@@ -25,6 +25,7 @@ import json
 import shutil
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from tests.helpers.ortstag import ortstag
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -154,7 +155,7 @@ def _save_cached(user_id: str, trip_id: str, cached: list[SegmentWeatherData]) -
 
     # Testfehler-Korrektur: reale Signatur ist save_dated(trip_id, target_date,
     # segments) — nicht (trip_id, segments, target_date).
-    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, date.today(), cached)
+    WeatherSnapshotService(user_id=user_id).save_dated(trip_id, ortstag(LAT, LON), cached)
 
 
 class _CountingOfficialAlertSource:
@@ -419,6 +420,7 @@ class TestAC5Bundling:
         """
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         user_id = _fresh_user("ac5")
         _clean_user(user_id)
@@ -442,8 +444,13 @@ class TestAC5Bundling:
             register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert))
 
             mail_calls: list = []
+            # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+            # settings= baut TripAlertService Settings() aus der Umgebung, und
+            # can_send_email() ist nur mit Host-.env True -- auf dem CI-Runner
+            # lief der Versand in "kein Alert-Kanal konfiguriert". Dummy-SMTP
+            # (settings_email_only) + mail_sink (DI-Naht) ersetzen den Versand.
             svc = TripAlertService(
-                user_id=user_id,
+                user_id=user_id, settings=settings_email_only(),
                 mail_sink=lambda subject, body: mail_calls.append((subject, body)),
             )
 
@@ -540,6 +547,7 @@ class TestF001OfficialTriggerViaCheckAllTrips:
         from app.loader import save_trip
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         user_id = _fresh_user("f001")
         _clean_user(user_id)
@@ -547,7 +555,7 @@ class TestF001OfficialTriggerViaCheckAllTrips:
         oa_base._REGISTERED_SOURCES.clear()
         try:
             stage = Stage(
-                id="T1", name="Tag 1", date=date.today(),
+                id="T1", name="Tag 1", date=ortstag(LAT, LON),
                 waypoints=[Waypoint(id="G1", name="Start", lat=LAT, lon=LON, elevation_m=1000.0)],
             )
             # Issue #1258: official_warnings=None (noch nicht migrierter
@@ -578,8 +586,13 @@ class TestF001OfficialTriggerViaCheckAllTrips:
             register_official_alert_source(counting_source)
 
             mail_calls: list = []
+            # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+            # settings= baut TripAlertService Settings() aus der Umgebung, und
+            # can_send_email() ist nur mit Host-.env True -- auf dem CI-Runner
+            # lief der Versand in "kein Alert-Kanal konfiguriert". Dummy-SMTP
+            # (settings_email_only) + mail_sink (DI-Naht) ersetzen den Versand.
             svc = TripAlertService(
-                user_id=user_id,
+                user_id=user_id, settings=settings_email_only(),
                 mail_sink=lambda subject, body: mail_calls.append((subject, body)),
             )
 
@@ -610,9 +623,18 @@ class TestF001OfficialTriggerViaCheckAllTrips:
 
 class TestAC7SmsWithoutParity:
     def test_sms_render_unaffected_email_gets_official_notice_appended(self):
-        """AC-7: SMS bleibt ohne Zusatztext für die amtliche Warnung (bewusste
-        Nicht-Parität, analog Slice-3-AC-6); die E-Mail (via mail_sink-DI-Seam,
-        kein echter Netzwerk-Call) enthält den Zusatz.
+        """AC-7: der reine Renderer `render_sms()`/`render_alert_sms()` bleibt
+        durch `official_notices` unangetastet — Aufruf ohne den Umweg über
+        `_dispatch_alert_message()` liefert byte-identische Ausgabe vor/nach
+        dem Dispatch-Aufruf; die E-Mail (via mail_sink-DI-Seam, kein echter
+        Netzwerk-Call) enthält den Zusatz.
+
+        Seit Issue #2422 S4 (Fix #1088) hängt `_dispatch_alert_message()`
+        selbst der von ihr gerenderten SMS einen kurzen Hinweistext an, wenn
+        `official_notices` vorliegt (s. `tests/tdd/
+        test_alarm_sms_paritaet_amtlicher_zusatz.py`) — das prüft dieser Test
+        NICHT, weil er den Renderer direkt aufruft statt den `sms_body`
+        auszulesen, den `_dispatch_alert_message()` tatsächlich versendet.
 
         RED: `_dispatch_alert_message()` kennt den Kwarg `official_notices`
         noch nicht -> TypeError.
@@ -721,7 +743,8 @@ class TestS4bEventIdentityWiring:
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
         from tests.helpers.nowcast_gate_fixtures import (
-            CountingFrameSource, make_trip, save_trip, settings_email_only, trip_alert_service,
+            CountingFrameSource, frozen_active_window, make_trip, save_trip,
+            settings_email_only, trip_alert_service,
         )
 
         results: list = []
@@ -739,20 +762,27 @@ class TestS4bEventIdentityWiring:
         oa_base._REGISTERED_SOURCES.clear()
         try:
             # ── Nowcast-Pfad ──
-            trip_nowcast = make_trip("trip-s4b-ac1-nowcast")
-            save_trip(trip_nowcast, uid)
-            raus = trip_alert_service(
-                uid, settings_email_only(), CountingFrameSource(onset_minutes=8),
-                lambda s, b: None,
-            ).check_radar_alerts()
-            assert raus == 1, f"Voraussetzung: der Nowcast muss zustellen ({raus!r})"
-            assert len(results) >= 1, (
-                "check_event_identity_gate wurde im Nowcast-Pfad nicht gerufen"
-            )
-            assert isinstance(results[-1], GateResult), (
-                f"Rueckgabewert muss eine echte GateResult-Instanz sein: "
-                f"{type(results[-1])!r}"
-            )
+            # #2242 (Ratsche gegen #2050): Bau, Speichern UND Pruefung unter
+            # DERSELBEN gestellten Uhr -- sonst kann `date.today()`
+            # (make_trip) um Mitternacht UTC von der Uhrzeit abweichen, die
+            # `check_radar_alerts()` beim Segment-Lookup ansetzt.
+            with frozen_active_window():
+                trip_nowcast = make_trip("trip-s4b-ac1-nowcast")
+                save_trip(trip_nowcast, uid)
+                raus = trip_alert_service(
+                    uid, settings_email_only(), CountingFrameSource(onset_minutes=8),
+                    # ADR-0086 (#1405): keyword-kompatible Senke -- `lambda s, b` warf
+                    # TypeError und galt nur unter "betreten = gesendet" als Versand.
+                    lambda subject=None, body=None, **_kw: None,
+                ).check_radar_alerts()
+                assert raus == 1, f"Voraussetzung: der Nowcast muss zustellen ({raus!r})"
+                assert len(results) >= 1, (
+                    "check_event_identity_gate wurde im Nowcast-Pfad nicht gerufen"
+                )
+                assert isinstance(results[-1], GateResult), (
+                    f"Rueckgabewert muss eine echte GateResult-Instanz sein: "
+                    f"{type(results[-1])!r}"
+                )
             results.clear()
 
             # ── amtlicher Pfad ──
@@ -763,7 +793,12 @@ class TestS4bEventIdentityWiring:
                 label="AC-1-Warnung",
             )
             register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert))
-            svc = TripAlertService(user_id=uid, mail_sink=lambda s, b: None)
+            # #1196 Klasse C Teil 4: Dummy-SMTP wie im Nowcast-Pfad oben --
+            # ohne settings= baut TripAlertService Settings() aus der Umgebung
+            # (can_send_email() nur mit Host-.env True).
+            # ADR-0086 (#1405): keyword-kompatible Senke -- `lambda s, b` warf
+            # TypeError und galt nur unter "betreten = gesendet" als Versand.
+            svc = TripAlertService(user_id=uid, settings=settings_email_only(), mail_sink=lambda subject=None, body=None, **_kw: None)
             notices = svc.check_official_alert_triggers(trip_amtlich)
             assert len(notices) == 1, "Voraussetzung: die amtliche Warnung muss neu sein"
 
@@ -793,7 +828,8 @@ class TestS4bEventIdentityWiring:
         import services.trip_alert as trip_alert_mod
         from services.alert_gate import check_event_identity_gate as _real_identity
         from tests.helpers.nowcast_gate_fixtures import (
-            CountingFrameSource, make_trip, save_trip, settings_email_only, trip_alert_service,
+            CountingFrameSource, frozen_active_window, make_trip, save_trip,
+            settings_email_only, trip_alert_service,
         )
 
         order: list[str] = []
@@ -808,20 +844,23 @@ class TestS4bEventIdentityWiring:
         uid = _fresh_user("s4b-ac12-nowcast")
         _clean_user(uid)
         try:
-            trip = make_trip("trip-s4b-ac12-nowcast")
-            save_trip(trip, uid)
+            # #2242 (Ratsche gegen #2050): s. Begruendung in
+            # test_ac1_beide_trip_pfade_rufen_denselben_baustein_auf.
+            with frozen_active_window():
+                trip = make_trip("trip-s4b-ac12-nowcast")
+                save_trip(trip, uid)
 
-            def _mail_sink(subject, body):
-                order.append("mail_sink")
+                def _mail_sink(subject, body):
+                    order.append("mail_sink")
 
-            raus = trip_alert_service(
-                uid, settings_email_only(), CountingFrameSource(onset_minutes=8), _mail_sink,
-            ).check_radar_alerts()
+                raus = trip_alert_service(
+                    uid, settings_email_only(), CountingFrameSource(onset_minutes=8), _mail_sink,
+                ).check_radar_alerts()
 
-            assert raus == 1, f"Voraussetzung: der Nowcast muss zustellen ({raus!r})"
-            assert order == ["check_nowcast_gate", "check_event_identity_gate", "mail_sink"], (
-                f"Falsche Aufruf-Reihenfolge: {order!r}"
-            )
+                assert raus == 1, f"Voraussetzung: der Nowcast muss zustellen ({raus!r})"
+                assert order == ["check_nowcast_gate", "check_event_identity_gate", "mail_sink"], (
+                    f"Falsche Aufruf-Reihenfolge: {order!r}"
+                )
         finally:
             _clean_user(uid)
 
@@ -842,6 +881,7 @@ class TestS4bEventIdentityWiring:
         from services.alert_gate import check_event_identity_gate as _real_identity
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         order: list[str] = []
         _order_spy(
@@ -876,7 +916,11 @@ class TestS4bEventIdentityWiring:
             def _mail_sink(subject, body):
                 order.append("mail_sink")
 
-            svc = _RecordingTripAlertService(user_id=uid, mail_sink=_mail_sink)
+            # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+            # settings= baut TripAlertService Settings() aus der Umgebung.
+            svc = _RecordingTripAlertService(
+                user_id=uid, settings=settings_email_only(), mail_sink=_mail_sink,
+            )
             notices = svc.check_official_alert_triggers(trip)
             assert len(notices) == 1, "Voraussetzung: die amtliche Warnung muss neu sein"
 
@@ -912,6 +956,7 @@ class TestS4bEventIdentityWiring:
         from services.alert_gate import record_event_identity
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         calls: list = []
         original = threshold_mod.split_by_threshold
@@ -942,7 +987,11 @@ class TestS4bEventIdentityWiring:
             )
             register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, alert))
 
-            svc = TripAlertService(user_id=uid, mail_sink=lambda s, b: None)
+            # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+            # settings= baut TripAlertService Settings() aus der Umgebung.
+            # ADR-0086 (#1405): keyword-kompatible Senke -- `lambda s, b` warf
+            # TypeError und galt nur unter "betreten = gesendet" als Versand.
+            svc = TripAlertService(user_id=uid, settings=settings_email_only(), mail_sink=lambda subject=None, body=None, **_kw: None)
             notices = svc.check_official_alert_triggers(trip)
             assert len(notices) == 1, "Voraussetzung: die Warnung muss als NEU erkannt werden"
 
@@ -999,6 +1048,7 @@ class TestS4bEventIdentityWiring:
         from services.alert_log import REASON_EVENT_DUPLICATE, REASON_OFFICIAL_ALERT
         from services.official_alerts import OfficialAlert, register_official_alert_source
         from services.trip_alert import TripAlertService
+        from tests.helpers.nowcast_gate_fixtures import settings_email_only
 
         uid = _fresh_user("s4b-ac17")
         _clean_user(uid)
@@ -1027,8 +1077,10 @@ class TestS4bEventIdentityWiring:
             register_official_alert_source(_CountingOfficialAlertSource(LAT, LON, eigenstaendig))
 
             mail_calls: list = []
+            # #1196 Klasse C Teil 4 (Vorbild Batch 4 / test_issue_883): ohne
+            # settings= baut TripAlertService Settings() aus der Umgebung.
             svc = TripAlertService(
-                user_id=uid,
+                user_id=uid, settings=settings_email_only(),
                 mail_sink=lambda subject, body: mail_calls.append((subject, body)),
             )
             notices = svc.check_official_alert_triggers(trip)
@@ -1117,29 +1169,32 @@ class TestS4bEventIdentityWiring:
         machen."""
         from services.alert_state import AlertStateService, EVENT_IDENTITY_KEY_PREFIX
         from tests.helpers.nowcast_gate_fixtures import (
-            CountingFrameSource, make_trip, save_trip, settings_no_channel_reachable,
-            trip_alert_service,
+            CountingFrameSource, frozen_active_window, make_trip, save_trip,
+            settings_no_channel_reachable, trip_alert_service,
         )
 
         uid = _fresh_user("s4b-f001-nowcast")
         _clean_user(uid)
         try:
-            trip = make_trip("trip-s4b-f001-nowcast")
-            save_trip(trip, uid)
-            raus = trip_alert_service(
-                uid, settings_no_channel_reachable(),
-                CountingFrameSource(onset_minutes=8), lambda s, b: None,
-            ).check_radar_alerts()
-            assert raus == 0, (
-                f"Voraussetzung: ohne erreichbaren Kanal darf kein Nowcast "
-                f"als zugestellt gelten ({raus!r})"
-            )
-            state = AlertStateService(user_id=uid).load(trip.id)
-            event_keys = [k for k in state if k.startswith(EVENT_IDENTITY_KEY_PREFIX)]
-            assert event_keys == [], (
-                f"Eine gescheiterte Nowcast-Zustellung darf keinen "
-                f"event_identity:-Eintrag hinterlassen: {event_keys!r}"
-            )
+            # #2242 (Ratsche gegen #2050): s. Begruendung in
+            # test_ac1_beide_trip_pfade_rufen_denselben_baustein_auf.
+            with frozen_active_window():
+                trip = make_trip("trip-s4b-f001-nowcast")
+                save_trip(trip, uid)
+                raus = trip_alert_service(
+                    uid, settings_no_channel_reachable(),
+                    CountingFrameSource(onset_minutes=8), lambda s, b: None,
+                ).check_radar_alerts()
+                assert raus == 0, (
+                    f"Voraussetzung: ohne erreichbaren Kanal darf kein Nowcast "
+                    f"als zugestellt gelten ({raus!r})"
+                )
+                state = AlertStateService(user_id=uid).load(trip.id)
+                event_keys = [k for k in state if k.startswith(EVENT_IDENTITY_KEY_PREFIX)]
+                assert event_keys == [], (
+                    f"Eine gescheiterte Nowcast-Zustellung darf keinen "
+                    f"event_identity:-Eintrag hinterlassen: {event_keys!r}"
+                )
         finally:
             _clean_user(uid)
 

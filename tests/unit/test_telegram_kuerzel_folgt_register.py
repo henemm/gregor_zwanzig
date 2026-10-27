@@ -20,10 +20,12 @@ zwei Faelle sind der Kern des gemeldeten Defekts ("das Badge nennt ein Kuerzel,
 das in keiner Trip-SMS auftaucht"), sie duerfen also nicht wegdefiniert werden.
 Fuer die uebrigen 23 Groessen faellt beides zusammen.
 
-Zwei benannte Ausnahmen bleiben (Spec Abschnitt 1): ``temperature`` (``T``) und
-``wind_chill`` (``TF``). Das Register fuehrt dort TAGESAUSWERTUNGEN (``K``/``D``
-bzw. ``FK``/``FD``/``WC``); die Telegram-Zelle zeigt einen STUNDENWERT — ein
-Spaltenkopf "Tageshoechst" waere dort eine falsche Aussage.
+Eine benannte Ausnahme bleibt: ``wind_chill`` (``TF``). Das Register fuehrt
+dort TAGESAUSWERTUNGEN (``FK``/``FD``); die Telegram-Zelle zeigt einen
+STUNDENWERT — ein Spaltenkopf "Tageshoechst" waere dort eine falsche Aussage.
+Die fruehere Ausnahme ``temperature`` (``T``) entfaellt mit #2417 (Spec
+``feat_2417_kurzform_englisch.md`` AC-12): ``temperature`` traegt jetzt selbst
+``sms_code="T"``, Register und Telegram stimmen ohne Ausnahme ueberein.
 
 KEINE Mocks, KEIN Dateiinhalt-Check: echte Model-Objekte, echter Renderaufruf
 (``render_telegram_bubbles``), Nutzersicht auf den Bubble-Text. Die Erwartung
@@ -285,27 +287,27 @@ def test_temperatur_und_gefuehlte_behalten_das_stundenkuerzel():
     )
 
 
-def test_ausnahmeliste_nennt_beide_temperaturen_mit_begruendung():
-    """AC-3 Gegenprobe / AC-2: die beiden Ausnahmen stehen NAMENTLICH und mit
-    Begruendung in einer Liste im Katalog — nicht als stiller Sonderfall im
-    Renderer. Ohne diese Liste ist "compact_label darf nicht wegdriften"
-    (Spec Abschnitt 2) nicht pruefbar."""
+def test_ausnahmeliste_ist_leer_seit_tf_im_trip_register_steht():
+    """AC-3 Gegenprobe / AC-2, umgeschrieben mit #2422 S6 (B1, PO-Entscheid V1):
+    die Ausnahmeliste im Katalog EXISTIERT weiter (benannt, nicht als stiller
+    Sonderfall im Renderer), fuehrt aber KEINE Groesse mehr. ``wind_chill`` steht
+    nicht mehr darin: mit dem Trip-Kurzform-Kuerzel ``TF`` (SMS_SYMBOL_BY_METRIC)
+    stimmen Register und Telegram-Spaltenkopf (``TF``) ueberein -- eine Ausnahme
+    ohne Abweichung waere ein toter Eintrag (dieselbe Regel wie #2417 AC-12 fuer
+    ``temperature``).
+
+    Ohne die Liste ist "compact_label darf nicht wegdriften" (Spec Abschnitt 2)
+    nicht pruefbar -- sie bleibt als (leere) Struktur im Katalog."""
     ausnahmen = _ausnahmeliste()
     assert ausnahmen is not None, (
         "AC-2/AC-3 FAIL: `app.metric_catalog` fuehrt keine benannte "
-        f"Ausnahmeliste (gesucht: {', '.join(_AUSNAHMELISTE_NAMEN)}). Solange "
-        "es sie nicht gibt, ist jede Abweichung zwischen Telegram- und "
-        "SMS-Kuerzel ununterscheidbar von einem Fluechtigkeitsfehler — genau "
-        "so ist der heutige Zustand entstanden."
+        f"Ausnahmeliste (gesucht: {', '.join(_AUSNAHMELISTE_NAMEN)})."
     )
     for metric_id in ("temperature", "wind_chill"):
-        assert metric_id in ausnahmen, (
-            f"AC-3 FAIL: '{metric_id}' fehlt in der Ausnahmeliste "
-            f"(enthalten: {sorted(ausnahmen)})."
-        )
-        assert len(str(ausnahmen[metric_id]).strip()) >= _MIN_BEGRUENDUNG, (
-            f"AC-3 FAIL: Ausnahme '{metric_id}' ohne Begruendung: "
-            f"{ausnahmen[metric_id]!r}"
+        assert metric_id not in ausnahmen, (
+            f"#2422 S6 FAIL: '{metric_id}' steht weiter in der Ausnahmeliste, "
+            f"obwohl Register und Telegram-Kopf uebereinstimmen (toter Eintrag; "
+            f"enthalten: {sorted(ausnahmen)})."
         )
 
 

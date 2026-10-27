@@ -3,7 +3,7 @@ entity_id: issue_573_charter_fix_cockpit
 type: module
 created: 2026-06-03
 updated: 2026-06-03
-status: approved
+status: implemented
 version: "1.0"
 tags: [frontend, home, cockpit, design-compliance, tokens, atoms]
 ---
@@ -93,7 +93,7 @@ Ersetze hand-styled `<a>` durch:
 
 Ersetze custom `<header>` durch `<PageHeader>`:
 ```svelte
-<PageHeader eyebrow="Übersicht · {todayPretty}" title="Deine Touren & Vergleiche" sub="...">
+<PageHeader eyebrow="Übersicht · {todayPretty}" title="Deine Trips & Vergleiche" sub="...">
   {#snippet right()}
     <Btn href="/compare" variant="ghost" size="sm">Neuer Vergleich</Btn>
     <Btn href="/trips/new" variant="primary" size="sm">+ Neuer Trip</Btn>

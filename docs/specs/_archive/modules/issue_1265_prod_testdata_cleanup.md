@@ -3,7 +3,7 @@ entity_id: issue_1265_prod_testdata_cleanup
 type: module
 created: 2026-07-16
 updated: 2026-07-16
-status: approved
+status: implemented
 ---
 
 # Issue #1265 — Prod-Testdaten-Altlasten aufräumen + Schutz vor Test-Artefakten

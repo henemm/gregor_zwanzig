@@ -142,7 +142,7 @@ def test_ac5_telegram_shows_unavailable_hint():
 # ---------------------------------------------------------------------------
 
 def test_ac1_no_stages_text_is_visible_and_calm():
-    """AC-1: Tourabschluss wird benannt — ohne Warn-/Danger-Optik."""
+    """AC-1: Trip-Abschluss wird benannt — ohne Warn-/Danger-Optik."""
     from output.renderers.email.design_tokens import G_BOX_DANGER_BG, G_DANGER
     from output.renderers.email.outlook_state_hint import (
         render_outlook_state_html, render_outlook_state_plain,
@@ -150,17 +150,17 @@ def test_ac1_no_stages_text_is_visible_and_calm():
 
     rep = _render(state="NO_STAGES")
     assert TEXT_NO_STAGES in rep.email_plain, (
-        f"Der Tourabschluss bleibt unerklaert:\n{rep.email_plain}"
+        f"Der Trip-Abschluss bleibt unerklaert:\n{rep.email_plain}"
     )
     assert TEXT_NO_STAGES in rep.email_html
 
     plain = render_outlook_state_plain(_state("NO_STAGES"))
     assert "⚠️" not in plain and "!!" not in plain, (
-        f"Ein normaler Tourabschluss ist keine Warnung, war: {plain!r}"
+        f"Ein normaler Trip-Abschluss ist keine Warnung, war: {plain!r}"
     )
     html = render_outlook_state_html(_state("NO_STAGES"))
     assert G_DANGER not in html and G_BOX_DANGER_BG not in html, (
-        "Ein normaler Tourabschluss darf nicht wie eine Stoerung aussehen."
+        "Ein normaler Trip-Abschluss darf nicht wie eine Stoerung aussehen."
     )
 
 

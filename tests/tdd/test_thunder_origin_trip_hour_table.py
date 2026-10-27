@@ -158,7 +158,7 @@ def test_ac1_pro_stunde_nennt_die_tragende_zutat():
     """AC-1: Given eine Stunde erreicht ihre Gewitterstufe ausschliesslich
     ueber CAPE, When die Vollmail gerendert wird, Then zeigt die
     Stundentabellen-Zeile im Klartextteil "· CAPE" neben der Stufe."""
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0) for h in (14, 15)],
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0) for h in (14, 15)],
                    start_h=6, end_h=16)
     bericht = _mail([seg])
     zeile = _zeile(bericht.email_plain, "14")
@@ -176,7 +176,7 @@ def test_ac2_telegram_rich_erbt_dieselbe_herkunft():
     zusammenhaengender Teilstring "· CAPE" gefordert, da der bestehende
     32-Zeichen-Hartumbruch (`narrow._wrap`) den Zusatz mitten im Wort trennen
     kann -- unveraendertes, nicht zu dieser Scheibe gehoerendes Verhalten."""
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0) for h in (14, 15)],
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0) for h in (14, 15)],
                    start_h=6, end_h=16)
     bericht = _mail([seg])
     segment_block = next(
@@ -192,7 +192,7 @@ def test_ac3_beide_zutaten_derselben_stunde_katalogreihenfolge():
     """AC-3: Given CAPE UND Blitzpotenzial erreichen in derselben Stunde
     gemeinsam die Hoechststufe, Then werden BEIDE in Katalogreihenfolge
     genannt -- kein Gewinner wird gekuert (PO-Auslegung (ii))."""
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0, lpi=60.0) for h in (14, 15)],
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0, lpi=60.0) for h in (14, 15)],
                    start_h=6, end_h=16)
     bericht = _mail([seg])
     zeile = _zeile(bericht.email_plain, "14")
@@ -226,7 +226,7 @@ def test_ac4_ohne_gewitter_bleibt_pro_stunde_zeichengleich():
         f"Eine Stunde ohne jedes Gewittersignal darf keinen ·-Zusatz "
         f"tragen: {zeile_ruhig!r}")
 
-    laut = _segment([_dp(h, cape=1500.0, cin=5.0) for h in (14, 15)],
+    laut = _segment([_dp(h, cape=3000.0, cin=5.0) for h in (14, 15)],
                     start_h=6, end_h=16)
     zeile_laut = _zeile(_mail([laut]).email_plain, "14")
     assert "· CAPE" in zeile_laut, (
@@ -239,7 +239,7 @@ def test_ac5_kohaerenz_pro_stunde_keine_vermischung_benachbarter_zeilen():
     verschiedene Zutaten, Then zeigt JEDE Zeile ausschliesslich die
     Zutat(en) IHRES EIGENEN Datenpunkts -- keine Vermischung."""
     seg = _segment(
-        [_dp(14, cape=1500.0, cin=5.0), _dp(15, dichte=0.005)],
+        [_dp(14, cape=3000.0, cin=5.0), _dp(15, dichte=0.005)],
         start_h=6, end_h=16,
     )
     bericht = _mail([seg])
@@ -261,7 +261,7 @@ def test_ac6_nacht_block_vereinigt_zutaten_zweier_datenpunkte():
     BEIDE -- nicht nur die eines einzelnen dp des Blocks."""
     formatter = TripReportFormatter()
     formatter._tz = _TZ
-    dpA = _dp(0, cape=1500.0, cin=5.0)
+    dpA = _dp(0, cape=3000.0, cin=5.0)
     dpB = _dp(1, lpi=60.0)
     text = _neue_nacht_zelle(formatter, [dpA, dpB])
     assert "CAPE" in text and "Blitzpotenzial" in text, (
@@ -274,7 +274,7 @@ def test_ac7_nacht_block_kein_leck_unterhalb_maximums():
     dritte Zutat NICHT in der Zeile."""
     formatter = TripReportFormatter()
     formatter._tz = _TZ
-    dpA = _dp(0, cape=1500.0, cin=5.0)
+    dpA = _dp(0, cape=3000.0, cin=5.0)
     dpB = _dp(1, lpi=60.0)
     dpC = _dp(1, dichte=0.005)
     text = _neue_nacht_zelle(formatter, [dpA, dpB, dpC])
@@ -308,7 +308,7 @@ def test_ac8_nacht_block_none_bleibt_zeichengleich():
         f"tragen: {ruhig_text!r}")
 
     laut_text = _neue_nacht_zelle(
-        formatter, [_dp(0, cape=1500.0, cin=5.0), _dp(1, lpi=60.0)])
+        formatter, [_dp(0, cape=3000.0, cin=5.0), _dp(1, lpi=60.0)])
     assert "CAPE" in laut_text and "Blitzpotenzial" in laut_text, (
         f"Gegenprobe gescheitert: ein Nachtblock MIT erreichter Stufe MUSS "
         f"die Herkunft zeigen, sonst beweist der 'ruhige' Block nichts: "
@@ -327,7 +327,7 @@ def test_ac9_ampel_kreis_modus_bleibt_unveraendert():
     Herkunfts-Indikator."""
     formatter = TripReportFormatter()
     formatter._tz = _TZ
-    dp = _dp(14, cape=1500.0, cin=5.0)
+    dp = _dp(14, cape=3000.0, cin=5.0)
     _reihe([dp])
     row = formatter._dp_to_row(dp, _dc())
     band = thunder_ampel_band(row["thunder"])
@@ -363,7 +363,7 @@ def test_ac11_sms_bleibt_ohne_herkunft():
     Gegenprobe im selben Test: die Mail DERSELBEN Fixture zeigt die
     Herkunft sehr wohl.
     """
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0) for h in (14, 15)],
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0) for h in (14, 15)],
                    start_h=6, end_h=16)
     bericht = _mail([seg])
 
@@ -410,7 +410,7 @@ def test_ac13_alt_schnappschuss_zeigt_stufe_ohne_herkunft():
     Gegenprobe im selben Test: derselbe Trip mit VOLLSTAENDIGEM Schnappschuss
     nennt die Zutat sehr wohl.
     """
-    seg = _segment([_dp(h, cape=1500.0, cin=5.0) for h in (14, 15)],
+    seg = _segment([_dp(h, cape=3000.0, cin=5.0) for h in (14, 15)],
                    start_h=6, end_h=16)
     WeatherSnapshotService(_USER).save(_TRIP_ID_SNAPSHOT, [seg], _TAG)
 

@@ -42,8 +42,20 @@ OUTLOOK_EYEBROW = "Ausblick · nächste 3 Tage"
 PLAIN_OUTLOOK_HEADING = "Nächste Etappen"
 
 # Legende des Legacy-Zweigs (html.py:1360-1366); #9a978d ist ihr Anker.
+# 🔴 #2136/ADR-0068 (Adversary F001): dieser Block ist im Produktivcode
+# entfernt -- ``html_outlook_legend()`` liefert seither immer ``None``. Bleibt
+# als Erkennungs-Regex stehen, damit ein versehentliches Wiederauftauchen
+# (z.B. Merge-Konflikt) messbar waere.
 _LEGEND_RE = re.compile(
     r'<div style="font-family:[^"]*font-size:9px;color:#9a978d;[^"]*">(.*?)</div>',
+    re.DOTALL,
+)
+# Geteilte Fusszeilen-Spaltenlegende (html.py:build_column_legend-Aufrufer,
+# `column_legend_text`) -- seit #2136/ADR-0068 die EINZIGE Quelle, die auch
+# die Ausblick-Kuerzel aufloest (Pfad 1 UND Pfad 2, `outlook_active=True`).
+_FOOTER_COLUMN_LEGEND_RE = re.compile(
+    r'<div style="font-size:10px;color:rgba\(255,255,255,0\.5\);margin-top:8px;">'
+    r'(Spalten:.*?)</div>',
     re.DOTALL,
 )
 _UNSET = object()
@@ -238,6 +250,22 @@ def mit_outlook_metrics(dc, outlook_metrics):
         ) from exc
 
 
+def mit_outlook_metric_formats(dc, formats):
+    """Setzt die Roh/Einfach-Zuordnung des Ausblicks -- mit sprechendem
+    RED-Fehler, solange das Feld in ``UnifiedWeatherDisplayConfig`` fehlt
+    (#2049, Spec Source: src/app/models.py:860)."""
+    try:
+        return dataclasses.replace(dc, outlook_metric_formats=formats)
+    except TypeError as exc:
+        raise AssertionError(
+            "UnifiedWeatherDisplayConfig kennt das Feld "
+            "'outlook_metric_formats' noch nicht (#2049, Spec Source: "
+            "src/app/models.py:860, Sibling von 'outlook_metrics'). Ohne "
+            "dieses Feld kann eine Roh/Einfach-Zuordnung je Ausblick-Groesse "
+            f"weder gespeichert noch gerendert werden.\nUrsprungsfehler: {exc}"
+        ) from exc
+
+
 def _segment_weather():
     from app.models import (
         ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
@@ -307,6 +335,14 @@ def html_outlook_legend(html: str) -> Optional[str]:
     return treffer.group(0) if treffer else None
 
 
+def html_footer_column_legend(html: str) -> Optional[str]:
+    """Die eine Zeile 'Spalten: ...' aus der Mail-Fusszeile (#2136/ADR-0068) --
+    Nachfolger von ``html_outlook_legend()`` fuer alles, was frueher der
+    Altbestand-Legendenblock (Pfad 1) erklaert hat."""
+    treffer = _FOOTER_COLUMN_LEGEND_RE.search(html)
+    return treffer.group(1) if treffer else None
+
+
 def _entkerne(zellen: list[str]) -> list[str]:
     return [re.sub(r"<[^>]+>", "", z).strip() for z in zellen]
 
@@ -354,13 +390,27 @@ def record_reference(force: bool = False) -> list[Path]:
 
     Schreibt ohne ``force`` NICHT ueber eine vorhandene Aufzeichnung: eine
     Referenz, die man bei rotem Test neu erzeugen kann, bewacht nichts.
+
+    #1848 A3: aufgezeichnet wird der FESTE Sieben-Spalten-Zweig -- er gilt
+    seither nur noch fuer Trips ganz ohne Grundauswahl (ADR-0050 D4). Der
+    Aufruf muss dieselbe Vorbedingung setzen wie die AC-1-Tests
+    (``test_trip_outlook_metric_selection._dc_altpfad()``), sonst zeichnete
+    er den konfigurierbaren Zweig auf und die Referenz bewachte etwas
+    anderes als der Test.
     """
-    html, plain = render_trip_mail(display_config(), outlook_rows())
+    html, plain = render_trip_mail(display_config(leere_grundauswahl=True),
+                                   outlook_rows())
     inhalte = {
         REFERENCE_TABLE: html_outlook_table(html),
         REFERENCE_LEGEND: html_outlook_legend(html),
         REFERENCE_PLAIN: plain_outlook_block(plain),
     }
+    # 🔴 ``outlook_legend.html`` traegt bewusst den ALTEN Wortlaut
+    # ("N Nacht-Tief"): ``test_ac1_bestandstrip_legende_...`` rechnet daraus
+    # das Soll ("N Tagestief") und prueft die AC-8-Korrektur damit gegen eine
+    # unabhaengige Quelle. Wer die Legende mit-aufzeichnet, laesst den Test
+    # die Korrektur gegen sich selbst pruefen -- er waere danach immer gruen.
+    inhalte.pop(REFERENCE_LEGEND, None)
     fehlend = [p.name for p, t in inhalte.items() if not t]
     if fehlend:
         raise RuntimeError(f"Kein Ausblick gerendert fuer: {fehlend} -- "

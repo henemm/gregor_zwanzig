@@ -8,7 +8,7 @@
 // Quelltext. Renderharness + Test-Seam: ./tripNewSsr.ts.
 //
 // RED heute:
-//   - AC-4: der Kanal-Block kommt aus EditReportConfigSection, die zweimal
+//   - AC-4: der Kanal-Block kommt aus die frühere Report-Config-Section (#2277 S5 entfernt), die zweimal
 //     gleichzeitig gemountet ist (TripNewEditor.svelte:800/:1036, CSS-only
 //     umgeschaltet) — Testids stehen doppelt bzw. (metrik-gegated) gar nicht.
 //   - AC-5: `versand-tab` existiert auf /trips/new ueberhaupt nicht.
@@ -17,6 +17,10 @@
 //   - AC-7: die Laufzeit-Anzeige gibt es nicht; `stubTrip.stages` ist zudem
 //     fest leer (TripNewEditor.svelte:86-93), sodass `computeTripEnd` auch nach
 //     dem Einbau kein Datum faende, wenn die Etappen nicht befuellt werden.
+//
+// Issue #1743 (feat_1743_reiter_aufraeumen, AC-8/AC-19): es gibt keinen Reiter „Versand" mehr — der
+// Versand-Inhalt steht als Abschnitt `versand-abschnitt` unten im Schritt Wetter-Metriken. Alle
+// Zusicherungen unten gelten unveraendert, gemessen im Schritt Wetter-Metriken.
 //
 // Ausfuehrung:
 //   cd frontend && node --experimental-strip-types --test \
@@ -38,14 +42,31 @@ const ALLE_AN = { email: true, telegram: true, sms: true };
 
 function zeitplan(extra: TripNewStateOverride = {}): string {
 	const html = renderTripNew({
-		activeTab: 'zeitplan',
+		activeTab: 'wetter-metriken',
 		isMobileViewport: false,
 		channels: ALLE_AN,
 		...extra
 	});
-	assertTabOffen(html, 'zeitplan');
+	assertTabOffen(html, 'wetter-metriken');
 	return html;
 }
+
+// ─── #1743 AC-19: Versand-Abschnitt unten im Schritt Wetter-Metriken ─────────
+
+describe('#1743 AC-19: der Versand-Abschnitt steht unten im Schritt Wetter-Metriken', () => {
+	for (const isMobileViewport of [false, true]) {
+		test(`versand_abschnitt_nach_wetter_metriken__${isMobileViewport ? 'mobil' : 'desktop'}`, () => {
+			const html = zeitplan({ isMobileViewport });
+			const iWm = html.indexOf('data-testid="infobox-wetter-metriken-route"');
+			const iAb = html.indexOf('data-testid="versand-abschnitt"');
+			assert.notEqual(iWm, -1, 'Messaufbau: Wetter-Metriken-Inhalt nicht gerendert');
+			assert.notEqual(iAb, -1, 'Kein Versand-Abschnitt (data-testid="versand-abschnitt") im Schritt Wetter-Metriken');
+			assert.equal(countTestid(html, 'versand-abschnitt'), 1, 'Versand-Abschnitt nicht genau einmal im Dokument');
+			assert.ok(iWm < iAb, 'Versand-Abschnitt steht nicht UNTER dem Wetter-Metriken-Inhalt');
+			assert.ok(html.indexOf('data-testid="versand-tab"') > iAb, 'Versand-Inhalt steht nicht im Versand-Abschnitt');
+		});
+	}
+});
 
 // ─── AC-4 ────────────────────────────────────────────────────────────────────
 

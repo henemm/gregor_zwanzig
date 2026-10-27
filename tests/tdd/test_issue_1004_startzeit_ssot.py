@@ -98,7 +98,7 @@ def test_ac1_bestandstrip_rendert_konfigurierte_startzeit():
     """AC-1: echter VOR dem Fix gespeicherter Trip (74de939c.json,
     Etappe 'nach Sassenberg', start_time=14:00, Import-Zeiten 07:00/09:00/11:00)
     → Segment 1 beginnt 14:00, Kaskade 14:21/14:46, nirgends mehr 07:00."""
-    trip = load_trip(_reference_trip_path())
+    trip = load_trip(_reference_trip_path(), user_id="default")
     assert trip is not None, "Bestandstrip konnte nicht geladen werden"
 
     segments = convert_trip_to_segments(trip, date(2026, 7, 3))
@@ -150,7 +150,7 @@ def test_ac2_persistenz_roundtrip_startzeit_aenderung(tmp_path):
 
     user_id = "tdd-1004-ac2"
     saved_path = save_trip(trip, user_id=user_id)
-    reloaded = load_trip(saved_path)
+    reloaded = load_trip(saved_path, user_id=user_id)
     assert reloaded is not None
 
     # Startzeit ändern wie der API-Schreibweg: Feld setzen + speichern
@@ -162,7 +162,7 @@ def test_ac2_persistenz_roundtrip_startzeit_aenderung(tmp_path):
     )
     save_trip(changed, user_id=user_id)
 
-    final = load_trip(saved_path)
+    final = load_trip(saved_path, user_id=user_id)
     assert final is not None
     assert final.stages[0].start_time == new_start, (
         "start_time hat den Persistenz-Roundtrip nicht überlebt"
@@ -200,7 +200,7 @@ def test_ac4_arrival_override_bleibt_massgeblich():
 
     user_id = "tdd-1004-ac4"
     saved_path = save_trip(trip, user_id=user_id)
-    reloaded = load_trip(saved_path)
+    reloaded = load_trip(saved_path, user_id=user_id)
     assert reloaded is not None
     assert reloaded.stages[0].waypoints[0].arrival_override == "13:37", (
         "arrival_override hat die Persistenz nicht überlebt"
@@ -249,7 +249,7 @@ def test_ac5_spaete_startzeit_alle_segmente_erhalten(caplog):
     trip = Trip(id="tdd-1004-ac5", name="AC5", stages=[stage])
 
     saved_path = save_trip(trip, user_id="tdd-1004-ac5")
-    reloaded = load_trip(saved_path)
+    reloaded = load_trip(saved_path, user_id="tdd-1004-ac5")
     assert reloaded is not None
 
     with caplog.at_level(logging.WARNING, logger="trip_segments"):
@@ -525,7 +525,7 @@ def test_1098_over_midnight_destination_arrival_next_day():
     trip = Trip(id="tdd-1098-mid", name="Mitternacht", stages=[stage])
 
     saved_path = save_trip(trip, user_id="tdd-1098-mid")
-    reloaded = load_trip(saved_path)
+    reloaded = load_trip(saved_path, user_id="tdd-1098-mid")
     assert reloaded is not None
 
     segments = convert_trip_to_segments(reloaded, trip_date)
@@ -579,7 +579,7 @@ def test_1098_normal_daytime_stays_same_day():
     trip = Trip(id="tdd-1098-day", name="Tag", stages=[stage])
 
     saved_path = save_trip(trip, user_id="tdd-1098-day")
-    reloaded = load_trip(saved_path)
+    reloaded = load_trip(saved_path, user_id="tdd-1098-day")
     assert reloaded is not None
 
     segments = convert_trip_to_segments(reloaded, trip_date)

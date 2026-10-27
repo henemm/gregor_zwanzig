@@ -57,6 +57,9 @@ RENDER_NEUTRAL: dict[str, str] = {
     "enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     "paused_until": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     "skip_next": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
+    # Issue #2422 S3: Einzel-Slot-Schalter, ausgewertet ueber slot_aktiv().
+    "morning_enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
+    "evening_enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     # Zeitplanung
     "morning_time": "Steuert WANN der Scheduler laeuft, nicht WAS gerendert wird.",
     "evening_time": "Steuert WANN der Scheduler laeuft, nicht WAS gerendert wird.",
@@ -191,11 +194,17 @@ class CompareRenderOptions:
     # `active_metrics`, #1373). `None` = Feld fehlt (Altbestand, bisherige
     # sieben Spalten), `[]` = bewusst leer (Block entfaellt).
     outlook_metrics: Optional[list[dict]] = None
+    # Issue #2049: Roh/Einfach je Ausblick-Groesse aus demselben
+    # display_config-Blob, `{kennung: bool}` (True = Einfach). Paralleles Feld
+    # zu `outlook_metrics`, das damit eine reine Kennungsliste bleibt. `None`
+    # = nie eingestellt; fehlende Kennung = Rohzahl (Default hart "Roh").
+    outlook_metric_formats: Optional[dict] = None
     # Issue #1703 Scheibe 8: kanal-eigene Auswahl der UEBERSICHTSTABELLE, je
     # Kanal bereits gegen die Grundauswahl geschnitten (ADR-0050 Regel 1/2 ueber
     # `resolve_channel_enabled_metrics`). Keys: "email"/"telegram"/"sms" --
-    # Compare-Briefing kennt strukturell nur diese drei (ADR-0049; Premium-SMS
-    # ist im Vergleich reiner Alarm-Kanal, #1745).
+    # Compare-Briefing kennt strukturell nur diese drei (ADR-0049): Premium-SMS
+    # ist seit #2275 auch im Vergleich Briefing-Kanal, hat aber keine eigene
+    # Metrik-Auswahl -- sie sendet den fertig gerenderten SMS-Text.
     #
     # BEWUSST ADDITIV: `enabled_metrics` daruerber behaelt Bedeutung UND Wert
     # (reine globale Aufloesung). Nur die zwei Leser dieses Objekts
@@ -206,6 +215,12 @@ class CompareRenderOptions:
     enabled_metrics_by_channel: dict[str, Optional[list[str]]] = field(
         default_factory=dict
     )
+    # Issue #1405 S3: je Kanal die Anzahl GEWAEHLTER Eintraege ohne Renderer-
+    # Zuordnung (Grundauswahl + Kanal-eigene, dedupliziert). Zentral nicht
+    # waehlbare und vom Kanal abgewaehlte Groessen zaehlen nicht. Die Renderer
+    # zeigen die Zahl (Hinweiszeile bzw. SMS-Zaehler `?N`), statt sie nur zu
+    # loggen. Lesestelle: `.get(kanal, 0)` (fehlender Eintrag = nichts fehlt).
+    unresolved_by_channel: dict[str, int] = field(default_factory=dict)
 
 
 def resolve_compare_time_window(preset: dict) -> tuple[int, int]:
@@ -246,9 +261,11 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     """
     from app.loader import _corridor_from_dict
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
-    from output.renderers.compare_outlook_metric_ids import resolve_outlook_metrics
+    from output.renderers.compare_outlook_metric_ids import (
+        resolve_compare_outlook_formats, resolve_compare_outlook_metrics,
+    )
     from output.renderers.compare_metric_ids import (
-        resolve_channel_enabled_metrics, resolve_enabled_metrics,
+        resolve_channel_enabled_metrics, resolve_enabled_metrics_report,
     )
     from output.renderers.email.compare_html import has_visible_hour_columns
 
@@ -284,20 +301,34 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         # schon aus hatte, bleibt unberuehrt.
         hourly_enabled = False
 
+    # Issue #1703 Scheibe 8: die Grundauswahl der Uebersichtstabelle wird EINMAL
+    # aufgeloest und dient doppelt -- als unveraendertes `enabled_metrics` UND
+    # als MAXIMUM, gegen das jede Kanal-Auswahl geschnitten wird (ADR-0050).
+    # Issue #1848 A3: dieselbe Menge ist jetzt auch das Maximum des Ausblicks
+    # (dritter Konsument, KEINE zweite Aufloesung) -- deshalb steht sie vor der
+    # Ausblick-Aufloesung darunter.
+    # Issue #1405 S3: dieselbe EINE Aufloesung liefert zusaetzlich die
+    # unmappbaren Eintraege -- sie werden je Kanal gezaehlt und sichtbar.
+    global_metrics, global_unresolved = resolve_enabled_metrics_report(
+        display_config.get("active_metrics"),
+    )
+    channel_raw = display_config.get("channel_active_metrics")
+
     # Issue #1361/#1368 (AC-8): eine bewusst geleerte Ausblick-Auswahl laesst
     # den ganzen Block entfallen -- eine Tagestabelle mit nur der Wochentag-
     # Spalte hat keinen Nutzwert (identische Kopplung wie beim Stundenverlauf
     # daruerber). Fehlendes Feld (None) bleibt unberuehrt.
-    resolved_outlook_metrics = resolve_outlook_metrics(display_config.get("outlook_metrics"))
+    # Issue #1848 A3 (AC-6): geklemmt wird gegen `global_metrics` -- der
+    # Ausblick erbt die Grundauswahl in BEIDEN Flaechen gleich (loest ADR-0053
+    # Punkt 1 ab). Nur eine ausdrueckliche Leerauswahl liefert weiterhin `[]`;
+    # ein Totalschnitt faellt auf die volle Grundauswahl zurueck (AC-10), der
+    # Block verschwindet also nicht stillschweigend.
+    resolved_outlook_metrics = resolve_compare_outlook_metrics(
+        display_config.get("outlook_metrics"), global_metrics,
+    )
     outlook_enabled = preset.get("outlook_enabled", True)
     if outlook_enabled and resolved_outlook_metrics == []:
         outlook_enabled = False
-
-    # Issue #1703 Scheibe 8: die Grundauswahl der Uebersichtstabelle wird EINMAL
-    # aufgeloest und dient doppelt -- als unveraendertes `enabled_metrics` UND
-    # als MAXIMUM, gegen das jede Kanal-Auswahl geschnitten wird (ADR-0050).
-    global_metrics = resolve_enabled_metrics(display_config.get("active_metrics"))
-    channel_raw = display_config.get("channel_active_metrics")
 
     return CompareRenderOptions(
         enabled_metrics=global_metrics,
@@ -306,8 +337,35 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         corridors=corridors or None,
         outlook_enabled=outlook_enabled,
         outlook_metrics=resolved_outlook_metrics,
+        # Issue #2049: dieselbe Regel wie im Trip (EINE Normalisierung, siehe
+        # resolve_compare_outlook_formats) -- nicht-faehige Kennungen und
+        # nicht-boolesche Werte fallen hier heraus, damit ein wirkungsloser
+        # Zustand gar nicht erst in den Renderpfad gelangt.
+        outlook_metric_formats=resolve_compare_outlook_formats(
+            display_config.get("outlook_metric_formats"),
+        ),
         enabled_metrics_by_channel={
             ch: resolve_channel_enabled_metrics(global_metrics, channel_raw, ch)
+            # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
+            for ch in ("email", "telegram", "sms")
+        },
+        unresolved_by_channel={
+            ch: _channel_unresolved_count(global_unresolved, channel_raw, ch)
+            # ADR-0049: Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
             for ch in ("email", "telegram", "sms")
         },
     )
+
+
+def _channel_unresolved_count(
+    global_unresolved: tuple[str, ...], channel_raw: object, channel: str,
+) -> int:
+    """Issue #1405 S3: Anzahl unmappbarer Eintraege fuer EINEN Kanal --
+    Grundauswahl plus Kanal-eigene Auswahl, dedupliziert nach Kennung."""
+    from output.renderers.compare_metric_ids import resolve_enabled_metrics_report
+
+    names = dict.fromkeys(global_unresolved)
+    if isinstance(channel_raw, dict) and channel in channel_raw:
+        _resolved, own = resolve_enabled_metrics_report(channel_raw.get(channel))
+        names.update(dict.fromkeys(own))
+    return len(names)

@@ -8,6 +8,7 @@
 	import LocationForm from '$lib/components/LocationForm.svelte';
 	import LocationNewModal from '$lib/components/compare/LocationNewModal.svelte';
 	import WeatherConfigDialog from '$lib/components/WeatherConfigDialog.svelte';
+	import { ortInUseHinweis, type OrtInUseHinweis } from '$lib/utils/ortLoeschenSperre';
 	import { EmptyState } from '$lib/components/ui/empty-state/index.js';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import MapPinIcon from '@lucide/svelte/icons/map-pin';
@@ -39,6 +40,7 @@
 	let deleteTarget: Location | null = $state(null);
 	let weatherTarget: Location | null = $state(null);
 	let error: string | null = $state(null);
+	let inUse: OrtInUseHinweis | null = $state(null);
 
 	async function handleSave(loc: Location) {
 		error = null;
@@ -67,13 +69,15 @@
 	async function handleDelete() {
 		if (!deleteTarget) return;
 		error = null;
+		inUse = null;
 		try {
 			await api.del(`/api/locations/${deleteTarget.id}`);
 			locations = locations.filter((l) => l.id !== deleteTarget!.id);
 			deleteTarget = null;
 		} catch (e: unknown) {
-			error = (e as { error?: string })?.error ?? 'Fehler beim Löschen';
-		}
+			inUse = ortInUseHinweis(e);
+			error = inUse ? null : ((e as { error?: string })?.error ?? 'Fehler beim Löschen');
+			}
 	}
 
 	function openCreate() {
@@ -116,7 +120,6 @@
 	{#if error}
 		<p class="text-sm text-destructive">{error}</p>
 	{/if}
-
 	{#if locations.length === 0}
 		<EmptyState icon={MapPinIcon} title="Keine Locations vorhanden" description="Füge Orte hinzu, um Wetterdaten abzurufen und zu vergleichen.">
 			<Btn variant="outline" onclick={openCreate}>Ort hinzufügen</Btn>
@@ -163,7 +166,7 @@
 							<div class="inline-flex gap-0.5">
 								<Btn variant="ghost" size="icon-sm" title="Wetter" onclick={() => (weatherTarget = loc)}><CloudSunIcon class="size-3.5" /></Btn>
 								<Btn variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(loc)}><PencilIcon class="size-3.5" /></Btn>
-								<Btn variant="ghost" size="icon-sm" title="Löschen" onclick={() => (deleteTarget = loc)}><Trash2Icon class="size-3.5" /></Btn>
+								<Btn variant="ghost" size="icon-sm" title="Löschen" onclick={() => { inUse = null; deleteTarget = loc; }}><Trash2Icon class="size-3.5" /></Btn>
 							</div>
 						</Table.Cell>
 					</Table.Row>
@@ -225,6 +228,14 @@
 				Möchtest du "{deleteTarget?.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
 			</Dialog.Description>
 		</Dialog.Header>
+		{#if inUse}
+			<p class="text-sm text-destructive" data-testid="ort-in-use-hinweis">
+				{inUse.text}
+				{#each inUse.links as l (l.href)}
+					<a href={l.href} class="underline ml-1">{l.name}</a>
+				{/each}
+			</p>
+		{/if}
 		<Dialog.Footer>
 			<Btn variant="outline" onclick={() => (deleteTarget = null)}>Abbrechen</Btn>
 			<Btn variant="destructive" onclick={handleDelete}>Löschen</Btn>
