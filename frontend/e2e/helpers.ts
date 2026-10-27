@@ -589,13 +589,63 @@ export async function createTestTrip(request: APIRequestContext, opts: TestTripO
 // ─────────────────────────────────────────────────────────────────────────────
 // Issue #2347 S1 (Epic #2345, Etappe P6): kind-Helfer für Paritäts-Specs —
 // EINE Spec prüft dieselbe Zusicherung für Trip- und Vergleichs-Hub per
-// Schleife über HUB_KINDS. Bewusst dünn: keine Assertions, Selektor-
-// Unterschiede stehen als HUB_SEL[kind] im jeweiligen Spec.
+// Schleife über HUB_KINDS. Bewusst dünn: keine Assertions. Die gemeinsamen
+// Selektor-Unterschiede stehen seit #2347 S2 als HUB_SEL[kind] hier; nur
+// spec-eigene Abweichungen (z. B. hub-versand-autosave-chip) bleiben lokal.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** = `context`-Parameter der geteilten Bausteine. */
 export type HubKind = 'route' | 'vergleich';
 export const HUB_KINDS: readonly HubKind[] = ['route', 'vergleich'];
+
+const regexEscape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Selektor-/Feld-Unterschiede je kind (#2347 S2). Reines Konstanten-Objekt —
+ * keine Assertions, keine Wartelogik.
+ */
+export const HUB_SEL: Record<
+	HubKind,
+	{
+		/** Testid-Präfix des SubscriptionHeader. */
+		kopf: 'trip' | 'compare-hub';
+		/** Reiter `${reiter}-<id>`, Panel `${panel}-<id>`. */
+		reiter: string;
+		panel: string;
+		reiterListe: string;
+		/** kind-eigener Punkte-Reiter. */
+		punkteReiter: 'etappen' | 'orte';
+		/** Feld hinter dem Profil im gespeicherten Stand. */
+		profilFeld: 'activity' | 'profil';
+		/** gültiger, vom Seed-Startwert verschiedener Zielwert. */
+		profilWert: string;
+		liste: { url: string; zeile: (id: string) => string; menue: string };
+		hubUrl: (id: string) => RegExp;
+	}
+> = {
+	route: {
+		kopf: 'trip',
+		reiter: 'trip-detail-tab',
+		panel: 'trip-detail-panel',
+		reiterListe: 'trip-detail-tab-list',
+		punkteReiter: 'etappen',
+		profilFeld: 'activity',
+		profilWert: 'skitour',
+		liste: { url: '/trips', zeile: (id) => `trip-row-${id}`, menue: 'trip-row-menu-btn' },
+		hubUrl: (id) => new RegExp(`/trips/${regexEscape(id)}(\\?|$)`)
+	},
+	vergleich: {
+		kopf: 'compare-hub',
+		reiter: 'compare-detail-tab',
+		panel: 'compare-detail-panel',
+		reiterListe: 'compare-detail-tab-list',
+		punkteReiter: 'orte',
+		profilFeld: 'profil',
+		profilWert: 'wandern',
+		liste: { url: '/compare', zeile: (id) => `compare-tile-${id}`, menue: 'compare-row-kebab' },
+		hubUrl: (id) => new RegExp(`/compare/${regexEscape(id)}(\\?|$)`)
+	}
+};
 
 export interface SeededHub {
 	kind: HubKind;

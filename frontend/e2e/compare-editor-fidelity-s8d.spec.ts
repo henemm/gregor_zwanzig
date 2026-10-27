@@ -16,7 +16,7 @@
 // AC-20 (Sharing-Invariante) ist bereits als Node-Source-Wächter in
 // compare_editor_mobile_fidelity.test.ts abgedeckt (läuft bei jedem
 // vitest/node-test-Durchlauf, kein Staging nötig) — hier nicht dupliziert.
-// Die migrierten Bestandssuiten (compare-mobile-vervollstaendigung.spec.ts,
+// Die migrierten Bestandssuiten (hub-list-menu.spec.ts/hub-tab-bar.spec.ts,
 // issue-682-compare-editor-mobile.spec.ts) laufen im selben Staging-Zyklus
 // separat weiter grün (eigene Config).
 

@@ -2,7 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import * as fs from 'fs';
 // Staging-Auth für Issue #1256 Scheibe S8c (Hub-Fidelity R2+R3). Analog
-// feat-1256-s8.staging.setup.ts: nginx-Basic-Auth = GZ_VALIDATOR_*, App-Login
+// hub-send-dialog-target.staging.setup.ts: nginx-Basic-Auth = GZ_VALIDATOR_*, App-Login
 // = GZ_AUTH_* (getrennte Layer) — eigener storageState statt Login pro
 // Testlauf (reference_staging_e2e_storagestate_login_rate_limit — 429).
 const authFile = 'playwright/.auth/staging-1256-s8c.json';

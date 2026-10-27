@@ -12,7 +12,7 @@
 // frontend/test-svelte-ssr-hooks.mjs) — kein Mock, kein Datei-Grep.
 // SSR führt keine Klick-Handler aus: Speicher-/Fehlerpfade (AC-1 … AC-5) und
 // die Region-Eingabe samt `maxlength` (AC-10, nur im Bearbeitungsmodus im DOM)
-// werden im E2E bewacht (frontend/e2e/compare-hub-kopf-einmal.spec.ts).
+// werden im E2E bewacht (frontend/e2e/hub-kopf-aufbau.spec.ts).
 //
 // RED HEUTE: `shared/subscription-header/SubscriptionHeader.svelte` existiert
 // nicht. Der Import steckt bewusst in `lade()`, damit jeder Test einzeln mit

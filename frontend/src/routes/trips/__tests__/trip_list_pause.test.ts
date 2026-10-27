@@ -8,7 +8,7 @@
 //
 // Pruefstand: AST (echter Svelte-Compiler) + Aufrufgraph des Instanz-Skripts — siehe
 // lib/components/shared/__tests__/aktionsmodellAst.ts. Kein DOM in der Kernsuite; das Durchklicken
-// bewachen Playwright `trips-list-aktionen.spec.ts` und `aktionsmodell-durchklick.spec.ts`.
+// bewachen Playwright `hub-list-menu.spec.ts` und `aktionsmodell-durchklick.spec.ts`.
 //
 // RED heute: TRIP_ACTIONS statt subscriptionActions, Alert-Konfiguration-Dialog, Inline-Karte/-Sheet,
 // toter Code (primaryLabel, handlePrimaryAction, handleArchive).

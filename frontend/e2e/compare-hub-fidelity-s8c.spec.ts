@@ -8,7 +8,7 @@
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
 //   npx playwright test --config=playwright.1256-s8c.staging.config.ts
 //
-// Muster: compare-mobile-vervollstaendigung.spec.ts (S8) — echte Klickpfade
+// Muster: hub-list-menu.spec.ts (vormals S8-Suite, #2347 S2) — echte Klickpfade
 // statt goto() wo ein Klick gefordert ist, eindeutige Testdaten-Namen mit
 // Date.now()-Suffix, afterEach-Cleanup. storageState-Login-Muster (kein
 // per-Test-Login — s. reference_staging_e2e_storagestate_login_rate_limit,
