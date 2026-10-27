@@ -35,19 +35,17 @@ KOPF_ZEILEN = 30
 PRUEFDATUM = date(2027, 1, 24)
 
 # Explizite Altlastliste (nur Dateinamen). Am ENDSTAND von S2 gemessen
-# (2026-10-26: 39 x Regel 1, 2 x Regel 2); darf nur schrumpfen (S4 leert sie).
+# (2026-10-26: 39 x Regel 1, 2 x Regel 2); S3a (2026-10-27): 6 Altdateien in
+# hub-*-Specs zusammengefuehrt, compare-editor-slice3 per gz-eigenstaendig:-Kopf
+# konform => 32 x Regel 1, 2 x Regel 2 = 34; darf nur schrumpfen (S4 leert sie).
 ALTLAST: frozenset[str] = frozenset({
     "compare-active-metrics-format.staging.spec.ts",
     "compare-alarm-config.spec.ts",
-    "compare-alarme-speichert-selbst.spec.ts",
-    "compare-alarme-wertprops.spec.ts",
     "compare-detail-edit-entry.spec.ts",
     "compare-edit-redirect.spec.ts",
-    "compare-editor-autosave-user-isolation.spec.ts",
     "compare-editor-autosave.spec.ts",
     "compare-editor-fidelity-s8d.spec.ts",
     "compare-editor-slice1.spec.ts",
-    "compare-editor-slice3.spec.ts",
     "compare-editor-slice4.spec.ts",
     "compare-flow-navigation.spec.ts",
     "compare-hourly-metric-order.spec.ts",
@@ -67,9 +65,6 @@ ALTLAST: frozenset[str] = frozenset({
     "compare-uebersicht-kanal-bedienung.staging.spec.ts",
     "compare-uebersicht-kanal-persistenz.staging.spec.ts",
     "compare-versand-speichert-selbst.spec.ts",
-    "compare-wertebereiche-speichert-selbst.spec.ts",
-    "compare-wertebereiche-wertprops.spec.ts",
-    "compare-wetter-metriken-speichert-selbst.spec.ts",
     "feat-1461-s3b2b-compare-kanal-schwelle.spec.ts",
     "fix-1350-compare-metric-select.staging.spec.ts",
     "fix-1350t3-compare-threshold-source.staging.spec.ts",
@@ -82,7 +77,7 @@ ALTLAST: frozenset[str] = frozenset({
 })
 # Literal, NICHT len(ALTLAST) -- sonst waechst die Obergrenze mit jedem neuen
 # Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken.
-ALTLAST_MAX = 41
+ALTLAST_MAX = 34
 
 _SCHLEIFE_RE = re.compile(
     r"\bHUB_KINDS\b"
