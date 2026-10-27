@@ -351,6 +351,7 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         },
         unresolved_by_channel={
             ch: _channel_unresolved_count(global_unresolved, channel_raw, ch)
+            # ADR-0049: Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
             for ch in ("email", "telegram", "sms")
         },
     )

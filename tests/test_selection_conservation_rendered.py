@@ -28,9 +28,6 @@ AC-3, -5, -7, -8(ohne Unmappbares), -9, -11, -16, -17, -20 .. -23.
 from __future__ import annotations
 
 import re
-from datetime import date
-
-import pytest
 
 from tests.tdd.test_compare_render_options_resolver import _make_comparison_result
 
