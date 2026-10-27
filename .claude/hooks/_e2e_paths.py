@@ -187,6 +187,40 @@ def _git_diff_names(base, target, repo_dir) -> "list[str] | None":
     return [f.strip() for f in result.stdout.splitlines() if f.strip()]
 
 
+_NOT_NEUTRAL_HEADERS = (
+    "new file mode", "deleted file mode", "rename from",
+    "similarity index", "Binary files",
+)
+
+
+def _git_diff_lines(base, target, repo_dir, path) -> "list[str] | None":
+    """+/- Zeilen von `git diff -U0 <base> <target> -- <path>` (#2630).
+
+    None bei git-Fehler (fail-closed beim Aufrufer). `[]` (nicht neutral) bei
+    Neuanlage/Löschung/Umbenennung/Binärdatei oder wenn der Pfad im Diff fehlt.
+    """
+    result = subprocess.run(
+        ["git", "diff", "-U0", base, target, "--", path],
+        capture_output=True, text=True, cwd=str(repo_dir),
+    )
+    if result.returncode != 0:
+        return None
+    in_header = True
+    lines: list[str] = []
+    for line in result.stdout.splitlines():
+        if in_header:
+            if line.startswith("@@"):
+                in_header = False
+            elif any(line.startswith(h) for h in _NOT_NEUTRAL_HEADERS):
+                return []
+            continue
+        if line.startswith("@@") or line.startswith("\\"):
+            continue
+        if line.startswith("+") or line.startswith("-"):
+            lines.append(line)
+    return lines
+
+
 def commit_exists(sha, repo_dir) -> bool:
     """Prüft per `git cat-file -e`, ob `sha` in repo_dir auflösbar ist.
 

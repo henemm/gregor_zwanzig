@@ -249,7 +249,13 @@ def _telegram_live_gate() -> int:
     # None bei fehlgeschlagenem Diff (z.B. kein HEAD~1), was unten konservativ
     # als potenziell Telegram-relevant behandelt wird (Issue #1121, AC-5).
     changed = _e2e_paths._git_diff_names("HEAD~1", "HEAD", _verified_repo_dir())
-    if changed is not None and not mod._scope_touches_telegram(changed):
+    # #2630: Zeilen-Diff je Telegram-Datei — reine Dateimodus-Änderung ist neutral.
+    # Helfer zur Aufrufzeit über _e2e_paths auflösen (patchbar, fail-closed bei None).
+    if changed is not None and not mod._scope_touches_telegram(
+        changed,
+        diff_reader=lambda p: _e2e_paths._git_diff_lines(
+            "HEAD~1", "HEAD", _verified_repo_dir(), p),
+    ):
         return 0
     if mod.gate(scope_touches_telegram=True, env=dict(os.environ)) != 0:
         _log(
