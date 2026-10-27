@@ -47,6 +47,7 @@ Alle Sperrdateien liegen **neben** ihrer Zustandsdatei (`<Pfad>.lock`); die Zust
 - Konstanten-Paket `internal/fsmode`, Umstellung aller oben genannten Go-Stellen.
 - Zweiter atomarer Schreiber (`scheduler/user_run_state.go`) als Pendant zu `store/write.go`.
 - Python-Sperrdateien (PO-Regel: Reste nie abspalten).
+- Python-Zustandsdateien, die per `tempfile.mkstemp` (Modus `0600`) + `os.replace` geschrieben werden (Adversary-Befund F-ADV-P1): `forecast_budget.py`, `briefing_slots.py`, `sms_daily_limit.py`, `throttle_store.py`, `alert_check_state.py`, `alert_daily_limit.py`, `official_alerts/meteoalarm_budget.py`, `position_fix.py`, `inbound_sms_reader.py` — gemeinsamer Helfer in `file_lock.py`, `fchmod(fd, LOCK_FILE_MODE)` auf die frische Temp-Datei vor `os.replace` (jede Datei ist je Schreibvorgang neu, daher kein EPERM-Risiko).
 - Tests der Kern-Schicht, Abnahme-Messung auf Staging, Gegenprobe auf Prod.
 
 ### Out of Scope
@@ -64,7 +65,7 @@ Alle Sperrdateien liegen **neben** ihrer Zustandsdatei (`<Pfad>.lock`); die Zust
 ## Estimated Scope
 
 - **LoC:** ca. +70/-35 produktiv (überwiegend Einzeiler), Tests ca. +150
-- **Files:** ca. 16 Go-Produktivdateien + 1 neue Konstanten-Datei + 8 Python-Dateien + 2-3 Testdateien
+- **Files:** ca. 16 Go-Produktivdateien + 1 neue Konstanten-Datei + 11 Python-Dateien (8 Sperrdatei-Stellen in 7 Modulen + `file_lock.py`-Helfer; plus `alert_daily_limit.py`, `position_fix.py`, `inbound_sms_reader.py` für AC-10) + 2-3 Testdateien
 - **Effort:** medium (mechanisch, aber Rechte-/Sicherheitsfläche in Prod). Falls das LoC-Limit 250 überschritten wird: `loc_limit_override`.
 
 ## Dependencies
@@ -114,6 +115,7 @@ Hinweis zur Umask: `os.MkdirAll`/`OpenFile` unterliegen der Prozess-Umask (Prod:
 1. **Go Modus-Test** (`internal/store/..._test.go`, Verhalten statt Quelltext): Store in `t.TempDir()`, `syscall.Umask(0o077)` temporär setzen (zurücksetzen per `t.Cleanup`), zwei Konten nacheinander mit `ProvisionUserDirs` anlegen, je Konto Trip, Location, Gruppe, Preset, Session, Einladung und Briefing-Lock schreiben; danach rekursiv `Stat().Mode().Perm()`: Verzeichnisse `0770`, Dateien `0660`. Zusätzlich dasselbe für Scheduler-`user_run_state`, Telegram-Token-Datei und Open-Meteo-Cache/Calllog (je im eigenen Paket-Test).
 2. **Go ACL-Test:** in `t.TempDir()` `setfacl -d -m g::rwX <dir>`, Konto anlegen, `getfacl` auswerten: `mask::rwx` bei Verzeichnissen, `mask::rw-` bei Dateien. `t.Skip` mit Begründung, wenn `setfacl`/`getfacl` fehlt oder das Dateisystem ACLs nicht unterstützt. **Ehrlich benannt: Dieser Skip-Pfad ist kein Gate** — auf einem Runner ohne ACL-Dateisystem wird der Test übersprungen und beweist dort nichts; die Modus-Zusicherung bewacht dann allein Test 1, die ACL-Wirkung die Staging-Messung.
 3. **Python Sperrdatei-Test** (`tests/...`): `syscall`-/`os.umask(0o077)` setzen, die Sperr-Pfade der 8 Stellen über ihre echten öffentlichen Aufrufe (z. B. `locked_json_rmw`, Throttle-/Slot-/Budget-Schreibpfad) in `tmp_path` auslösen, danach `os.stat(<datei>.lock).st_mode & 0o777 == 0o660`.
+3b. **Python Zustandsdatei-Test (AC-10)** (`tests/...`): Umask `0o077` setzen, die Schreibpfade der 9 mkstemp-Dienste (Forecast-Budget, Briefing-Slots, SMS-Tageslimit, Throttle, Alert-Check-Zustand, Alert-Tageslimit, MeteoAlarm-Budget, Position-Fix, Inbound-SMS) über ihre echten öffentlichen Aufrufe in `tmp_path` auslösen, danach `st_mode & 0o777 == 0o660` der Zustandsdatei (nicht der `.lock`-Datei).
 4. **Mutations-Gegenprobe (Adversary):** `FileMode` bzw. `DirMode` in je einem der Pfade (insbesondere `telegram_connect`, `briefing_lock`, `user_run_state`, `calllog`) per String-Ersetzung auf alten Wert zurückdrehen; jeder Rückdreher muss genau den zugehörigen Test rot machen.
 
 ## Acceptance Criteria
@@ -145,11 +147,15 @@ Hinweis zur Umask: `os.MkdirAll`/`OpenFile` unterliegen der Prozess-Umask (Prod:
 - **AC-9:** Given der Prod-Deploy ist erfolgt / When die `getfacl`-Gegenprobe auf `/var/lib/gregor/users` (neues oder frisch beschriebenes Konto) läuft / Then bleibt `claude-security` effektiv `r-x` (Dateien `r--`), die Gruppe `claude-gregor` ist `rwx`/`rw-` und `other` bleibt `---`, es öffnet sich also kein zusätzlicher Zugriff.
   - Test: Post-Deploy-Messung per `sudo -n -u claude-gregor getfacl`; Ausgabe im Deploy-Nachweis, Abweichung gilt als Hard-Gate-Fehler.
 
+- **AC-10:** Given Python-Dienste schreiben ihre Zustandsdateien (Forecast-Budget, Briefing-Slots, SMS-Tageslimit, Throttle, Alert-Check-Zustand, Alert-Tageslimit, MeteoAlarm-Budget, Position-Fix, Inbound-SMS) unter einer Default-ACL und Prozess-Umask `0077` / When die jeweilige Datei neu geschrieben wird / Then hat sie danach den Modus `0660` (nicht `0600`), sodass die ACL-Maske `rw-` bleibt und die Dienstgruppe die Datei lesen und schreiben kann.
+  - Test: Python-Test löst die echten Schreibpfade in `tmp_path` bei Umask `0077` aus und prüft `st_mode & 0o777 == 0o660` je Datei; keine Quelltext-Prüfung.
+
 ## Known Limitations
 
 - Bestehende Verzeichnisse bleiben `0755`, bis sie neu angelegt werden; die Reparatur der Bestandsverzeichnisse liegt bei der Infrastruktur (bereits erfolgt), nicht im Code.
 - Der ACL-Test ist auf Runnern ohne ACL-Dateisystem übersprungen (`t.Skip`) und dort **kein Gate**; die Modus-Tests (Umask `0077`) laufen immer.
 - Unter Prod-Umask `0077` entscheidet das explizite `Chmod` nach der Anlage (nicht der `MkdirAll`-Parameter allein) über den tatsächlichen Verzeichnismodus; deshalb Test mit gesetzter Umask.
+- Nur Dateien über `writeFileAtomic` bzw. den Scheduler-Zustand wandern beim nächsten Schreiben auf `0660`. Bereits bestehende Sperrdateien (Briefing-`.lock` `0600`, Python-`.lock` `0644`) sowie der bestehende Open-Meteo-Cache und das Calllog behalten ihren Modus, bis sie neu angelegt werden: `chmod` erfolgt bewusst nur bei Neuanlage, damit keine fremde Datei mit EPERM scheitert. Festgehalten durch `test_bestehende_sperrdatei_behaelt_modus_0644` und `TestDateimodi_BestehendeCacheUndJournalDateiBehaltenModus`.
 - Die Gruppen-Schreibbarkeit hängt davon ab, dass die Besitzergruppe korrekt gesetzt ist (Betrieb); der Code setzt sie nicht.
 
 ## Architektur-Entscheidung (ADR)
