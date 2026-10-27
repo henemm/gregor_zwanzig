@@ -67,10 +67,13 @@ class ComparePreviewService:
             ctx["result"],
             enabled_metrics=ctx["opts"].enabled_metrics_by_channel["telegram"],
             preset_name=ctx["name"],
+            # Issue #1405 S3: dieselbe Zahl wie im Versand (Vorschau luegt nicht).
+            unresolved_count=ctx["opts"].unresolved_by_channel.get("telegram", 0),
         )
         sms = render_compare_sms(
             ctx["result"],
             enabled_metrics=ctx["opts"].enabled_metrics_by_channel["sms"],
+            unresolved_count=ctx["opts"].unresolved_by_channel.get("sms", 0),
         )
         return {
             "subject": build_compare_preset_subject(ctx["name"], ctx["target_date"]),
@@ -162,6 +165,7 @@ class ComparePreviewService:
             # Issue #2049: Vorschau und Versand zeigen denselben Ausblick --
             # die Roh/Einfach-Zuordnung muss beide Wege gehen.
             outlook_metric_formats=opts.outlook_metric_formats,
+            unresolved_count=opts.unresolved_by_channel.get("email", 0),
         )
 
     def _load_preset(self, preset_id: str, *, user_id: str) -> dict:

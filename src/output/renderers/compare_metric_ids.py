@@ -141,6 +141,57 @@ def _non_selectable_keys() -> frozenset[str]:
     )
 
 
+def _non_selectable_names() -> frozenset[str]:
+    """Alle Namensformen zentral nicht waehlbarer Groessen (#710/#1405 S3):
+    Katalog-Kennung, Datenfeld, Spaltenschluessel und Tagesfelder -- z. B.
+    ``confidence``/``confidence_pct``. Eine gespeicherte Auswahl mit einer
+    dieser Formen ist KEINE Luecke (Art b), sondern bleibt still (nur Log)."""
+    from app.metric_catalog import _METRICS
+
+    names: set[str] = set(_non_selectable_keys())
+    shared: set[str] = set()
+    for m in _METRICS:
+        forms = {m.id, m.dp_field, m.col_key, *m.summary_fields.values()}
+        (shared if m.selectable else names).update(forms)
+    # Namensformen, die auch eine WAEHLBARE Groesse traegt (z. B. `t2m_c`),
+    # bleiben meldepflichtig -- sonst verschwaende eine echte Luecke still.
+    return frozenset(n for n in names - shared if n)
+
+
+def _unresolved_name(item: object, key: str | None) -> str:
+    """Stabile Kennung eines unaufloesbaren Eintrags (Dedup ueber Listen)."""
+    if key is not None:
+        return key
+    if isinstance(item, dict):
+        return str(item.get("metric_id"))
+    return repr(item)
+
+
+def resolve_enabled_metrics_report(
+    active_metrics: list[str | dict] | None,
+) -> tuple[list[str] | None, tuple[str, ...]]:
+    """Wie ``resolve_enabled_metrics``, liefert zusaetzlich die Kennungen der
+    gewaehlten Eintraege OHNE Renderer-Zuordnung (Issue #1405 S3, Art a).
+
+    Zentral nicht waehlbare Groessen (Art b, z. B. ``confidence_pct``, #710)
+    zaehlen NICHT dazu -- sie duerfen nie sichtbar werden, auch nicht als
+    Zahl. Die Log-Zeile bleibt unveraendert fuer beide Arten erhalten."""
+    resolved = resolve_enabled_metrics(active_metrics)
+    if resolved is None:
+        return None, ()
+    silent = _non_selectable_names()
+    unresolved: dict[str, None] = {}
+    for item in active_metrics:
+        key = _to_key(item)
+        if key is not None and key in FRONTEND_TO_RENDERER_METRIC_ID:
+            continue
+        name = _unresolved_name(item, key)
+        if name in silent:
+            continue
+        unresolved[name] = None
+    return resolved, tuple(unresolved)
+
+
 def resolve_enabled_metrics(
     active_metrics: list[str | dict] | None,
 ) -> list[str] | None:

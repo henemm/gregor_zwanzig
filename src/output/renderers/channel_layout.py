@@ -109,6 +109,19 @@ def telegram_metric_notice(demoted_count: int, *, context: str) -> str:
     )
 
 
+def selection_gap_notice(count: int, *, scope: str) -> str:
+    """Issue #1405 S3: EIN Wortlaut fuer "gewaehlte Groessen ohne Wert".
+
+    scope='ort' -> je Ort (Telegram, Wortlaut seit #1362 unveraendert);
+    scope='vergleich' -> tabellenweit (E-Mail HTML + Klartext). Leer bei
+    ``count <= 0``. Die SMS traegt stattdessen das Kuerzel ``?N``
+    (Wire-Vertrag sms_format.md §5b)."""
+    if count <= 0:
+        return ""
+    where = "an diesem Ort" if scope == "ort" else "in diesem Vergleich"
+    return f"… +{count} gewählte Wettergrößen ohne Wert {where}"
+
+
 def render_for_channel(
     channel: str, dc: "UnifiedWeatherDisplayConfig", report_type: str,
 ) -> ChannelLayout:

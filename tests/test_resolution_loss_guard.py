@@ -691,10 +691,7 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     "src/output/renderers/trip_report.py::_dp_to_row::0": (
         "A2 (#1405, vormals :482) — _dp_to_row: Stunden-Zeile-Spalte verschwindet."
     ),
-    "src/output/renderers/email/html.py::_allowed_col_keys_for_horizon::0": (
-        "A3 (#1405, vormals :721) — _allowed_col_keys_for_horizon: Spalte "
-        "fällt aus dem Horizont-Filter."
-    ),
+    # A3 BEHOBEN (#1405 S3): Verwerfen wird geloggt -> Eintrag entfernt
     # A4 lag bis Fix #1575 Scheibe 2 in render_html (_col_order-Bauschleife).
     # Die Schleife wurde nach helpers.py::resolve_metric_col_order extrahiert
     # (geteilter Helper mit plain.py) und in html.py durch einen Funktionsaufruf
@@ -846,8 +843,7 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     "src/output/renderers/trip_report.py::_aggregate_night_block": 1,
     # A2 — Stunden-Zeile-Spalte
     "src/output/renderers/trip_report.py::_dp_to_row": 1,
-    # A3 — Spalte aus Horizont-Filter
-    "src/output/renderers/email/html.py::_allowed_col_keys_for_horizon": 1,
+    # A3 BEHOBEN (#1405 S3): Verwerfen wird geloggt -> Eintrag entfernt
     # A4 — Spaltenreihenfolge/-sichtbarkeit der ganzen Mail (_col_order). Mit
     # Fix #1575 Scheibe 2 aus render_html nach helpers.py::resolve_metric_col_order
     # extrahiert (Spec-Tabelle nennt weiterhin html.py::render_html:782 — der

@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.36"
+version: "2.37"
 status: active
 created: 2025-12-27
-updated: 2026-10-21
+updated: 2026-10-27
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -563,6 +563,28 @@ mehrere Premium-SMS.
 
 ---
 
+## 5b. Ortsvergleich-SMS: Zähler `?N` für fehlende Größen (Issue #1405 S3)
+
+Die Ortsvergleich-SMS (`render_compare_sms`, auch Premium-SMS und Telegram-Kurzform —
+derselbe Text) trägt im **Ortsteil** einen Zähler `?N` (N ≥ 1), **nur wenn** mindestens
+eine gewählte Größe an diesem Ort keinen darstellbaren Wert hat oder ihr Schlüssel
+keine Renderer-Zuordnung besitzt (unmappbar → fehlt an jedem Ort). Position:
+unmittelbar nach den Wertzellen, **vor** dem optionalen `!`-Warn-Block, z. B.
+`Alpha D 20C W 10 km/h ?1` bzw. `Alpha D 20C ?2 !TH:M@14`.
+
+- **Abgrenzung:** `+N` bleibt der **Platzmangel**-Zähler (vorhandene, verdrängte Werte);
+  `?N` zählt **fehlende** Werte. Je Ort gilt: sichtbare Zellen + `+N` + `?N` = Anzahl
+  gewählter Größen. `?` bedeutet wie im Trip (§4) „keine Daten“.
+- **Normalfall unverändert:** ohne fehlende Größe steht weder `?` noch ein zusätzliches
+  Leerzeichen im Text (Zeichen für Zeichen wie vor v2.37).
+- **Budget:** Der Zähler ist fester Bestandteil der Budgetprüfung (153 Zeichen,
+  `CHANNEL_LIMITS["sms"]`) wie der Warn-Marker; die Wertzellen weichen ihm, nie umgekehrt.
+- **Nicht gezählt:** zentral nicht wählbare Größen (`selectable=False`, z. B.
+  `confidence_pct`, #710) und vom Kanal bewusst abgewählte Größen.
+- GSM-7: `?` und Ziffern sind Basiszeichen.
+
+---
+
 ## 6. Truncation-Strategie
 
 Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser **Reihenfolge** entfernt:
@@ -757,6 +779,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.34 | 2026-10-08 | **Confidence-Symbol `C+`/`C~`/`C?` gestrichen (Issue #2233, PO-Entscheid 2026-09-08).** Das Token war seit v2.1 spezifiziert, wurde aber nie erzeugt (`"C"` fehlt in `POSITIONAL`/`PRIORITY` von `src/output/tokens/builder.py`). §2-Zeile und §3.4b entfernt; keine Codeänderung. |
 | 2.35 | 2026-10-21 | Neuer §1a: Befehlseingang je Kanal (Ist-Stand) — normale SMS hat keinen Befehlseingang; Verweise auf `telegram_format.md` und `premium_sms_format.md`. Keine Formatänderung. |
 | 2.36 | 2026-10-21 | Neuer §3.4f: Abweichungs-Alarm-Token trägt die Zeitspanne `HH-HH` der betroffenen Stunden (ASCII-Bindestrich, GSM-7), Stufen-Tokens unverändert (Issue #1737). |
+| 2.37 | 2026-10-27 | Neuer §5b: Ortsvergleich-SMS trägt im Ortsteil den Zähler `?N` für gewählte, aber fehlende bzw. nicht darstellbare Größen (nach den Wertzellen, vor `!`); Normalfall unverändert (Issue #1405 S3, Spec `feat_1405_s3_mengenerhalt.md`). |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:
