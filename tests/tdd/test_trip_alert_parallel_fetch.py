@@ -126,11 +126,20 @@ class _RandProvider:
 def rand(monkeypatch):
     """Installiert einen ``_RandProvider`` als Open-Meteo-Provider; liefert
     eine Fabrik ``installiere(**kwargs) -> _RandProvider``."""
+    installiert: list[_RandProvider] = []
+
     def installiere(**kwargs) -> _RandProvider:
         prov = _RandProvider(**kwargs)
+        installiert.append(prov)
         monkeypatch.setattr("providers.base.get_provider", lambda name, _p=prov: prov)
         return prov
-    return installiere
+    yield installiere
+    # Nach einer Frist laeuft ein abgelaufener Abruf im Worker weiter (zulaessig,
+    # Spec "Known Limitations"). Sein spaeter Journal-Eintrag darf nicht in den
+    # naechsten Test fallen -> hier abwarten, solange noch ein Abruf aktiv ist.
+    ende = time.monotonic() + 5.0
+    while any(p._aktiv for p in installiert) and time.monotonic() < ende:
+        time.sleep(0.02)
 
 
 @pytest.fixture
@@ -611,3 +620,32 @@ def test_ac12_adr_0103_nennt_zahl_methode_stellschraube_und_pruefdatum():
     assert re.search(r"Open-?Meteo[^\n]*\b3\b", text), "Startwert 3 fuer Open-Meteo fehlt"
     index = (adr_dir / "README.md").read_text(encoding="utf-8")
     assert "0103" in index and "parallele-abrufe-semaphorenzahlen" in index
+
+
+# --------------------------------------------------------------------------- #
+# Adversary F001: Budget-Prioritaet und Anreicherungs-Verzicht im Worker
+# --------------------------------------------------------------------------- #
+def test_worker_ruft_mit_alarm_prioritaet_ohne_anreicherung_und_mit_echter_user_id(
+    rand, monkeypatch,
+):
+    """Die Alarm-Abrufe laufen im Worker weiter als ``alert_check`` (Budget-
+    Drosselung, Bug #288: keine Ensemble-/Schnee-Anreicherung) und mit der
+    user_id des Dienstes -- die Zeile wurde in den Worker verschoben."""
+    from services.segment_weather import SegmentWeatherService
+
+    rand()
+    gesehen: list[dict] = []
+    echt = SegmentWeatherService.fetch_segment_weather
+
+    def aufzeichnen(self, segment, *args, **kwargs):
+        gesehen.append(dict(kwargs))
+        return echt(self, segment, *args, **kwargs)
+
+    monkeypatch.setattr(SegmentWeatherService, "fetch_segment_weather", aufzeichnen)
+    nutzer = f"tdd-1539s3-prio-{uuid.uuid4().hex[:6]}"
+    _dienst(nutzer)._fetch_fresh_weather(_etappen([1, 2, 3]))
+    assert len(gesehen) == 3
+    for kw in gesehen:
+        assert kw["priority"] == "alert_check"
+        assert kw["enrich_ensemble"] is False and kw["enrich_snow"] is False
+        assert kw["user_id"] == nutzer
