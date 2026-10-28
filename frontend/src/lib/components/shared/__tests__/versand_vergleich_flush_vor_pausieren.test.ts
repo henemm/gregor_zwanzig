@@ -14,7 +14,7 @@
 // `handleVersandCommit` den Controller manuell, der generische Flush findet
 // dort nichts zu senden. Prüfort ≠ Wirkort: dass `handleToggleActive` den
 // Flush wirklich VOR dem PUT abwartet, misst
-// frontend/e2e/compare-versand-speichert-selbst.spec.ts.
+// frontend/e2e/hub-versand-speichert-selbst.spec.ts (VS-3/VS-3k, #2347 S3b).
 //
 // Mutations-Gegenprobe (Spec AC-7): den generischen `saveController.flush()`
 // in `handleToggleActive` entfernen ⇒ der Pausier-PUT trägt den alten Stand,

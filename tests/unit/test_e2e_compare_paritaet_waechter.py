@@ -38,7 +38,10 @@ PRUEFDATUM = date(2027, 1, 24)
 # Explizite Altlastliste (nur Dateinamen). Am ENDSTAND von S2 gemessen
 # (2026-10-26: 39 x Regel 1, 2 x Regel 2); S3a (2026-10-27): 6 Altdateien in
 # hub-*-Specs zusammengefuehrt, compare-editor-slice3 per gz-eigenstaendig:-Kopf
-# konform => 32 x Regel 1, 2 x Regel 2 = 34; darf nur schrumpfen (S4 leert sie).
+# konform => 32 x Regel 1, 2 x Regel 2 = 34; S3b (2026-10-28): Versand-Gruppe
+# (compare-versand-speichert-selbst, compare-hub-versand-inline,
+# compare-hub-briefing-times, versand-tab-vergleich) in hub-versand-*-Specs
+# zusammengefuehrt => 29 x Regel 1, 1 x Regel 2 = 30; darf nur schrumpfen (S4 leert sie).
 ALTLAST: frozenset[str] = frozenset({
     "compare-active-metrics-format.staging.spec.ts",
     "compare-alarm-config.spec.ts",
@@ -50,10 +53,8 @@ ALTLAST: frozenset[str] = frozenset({
     "compare-editor-slice4.spec.ts",
     "compare-flow-navigation.spec.ts",
     "compare-hourly-metric-order.spec.ts",
-    "compare-hub-briefing-times.spec.ts",
     "compare-hub-fidelity-s8c.spec.ts",
     "compare-hub-inline-edit.spec.ts",
-    "compare-hub-versand-inline.spec.ts",
     "compare-konfliktschutz-zwei-kontexte.spec.ts",
     "compare-layout-tab-dissolution.spec.ts",
     "compare-legacy-fields-survive-save.spec.ts",
@@ -65,7 +66,6 @@ ALTLAST: frozenset[str] = frozenset({
     "compare-stundenverlauf-wertprops.spec.ts",
     "compare-uebersicht-kanal-bedienung.staging.spec.ts",
     "compare-uebersicht-kanal-persistenz.staging.spec.ts",
-    "compare-versand-speichert-selbst.spec.ts",
     "feat-1461-s3b2b-compare-kanal-schwelle.spec.ts",
     "fix-1350-compare-metric-select.staging.spec.ts",
     "fix-1350t3-compare-threshold-source.staging.spec.ts",
@@ -74,13 +74,12 @@ ALTLAST: frozenset[str] = frozenset({
     "issue-682-compare-editor-mobile.spec.ts",
     # Regel 2 (Compare-Hub-Reiter ohne Trip-Gegenstueck, Umgehung per Dateiname)
     "kanal-grenzen-ortsvergleich.staging.spec.ts",
-    "versand-tab-vergleich.spec.ts",
 })
 # Literal, NICHT len(ALTLAST) -- sonst waechst die Obergrenze mit jedem neuen
 # Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken,
 # und zwar nur im selben Zug wie eine ALTLAST-Streichung: der Wert muss stets
 # gleich len(ALTLAST) sein (#2347 S3a, Adversary F001).
-ALTLAST_MAX = 34
+ALTLAST_MAX = 30
 
 _SCHLEIFE_RE = re.compile(
     r"\bHUB_KINDS\b"

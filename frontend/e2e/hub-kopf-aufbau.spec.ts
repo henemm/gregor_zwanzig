@@ -16,6 +16,8 @@
 //
 // KA-5 fängt JEDEN Sende-Abruf (`/api/briefings/<id>/send…`) per page.route ab
 // und beantwortet ihn selbst — es findet nie ein echter Versand statt.
+// KA-5b (#2347 S3b) ergänzt Desktop + „Körper ohne Empfänger" (Alt
+// compare-hub-versand-inline #2283; Spec feat_2347_s3b_paritaets_e2e.md „Frage 2").
 //
 // Läuft im isolierten CI-Stack (frontend/e2e/ci-stack.sh) bzw. gegen Staging,
 // Anmeldung über den storageState aus global.setup.ts (Admin-Sitzung).
@@ -364,6 +366,67 @@ for (const kind of HUB_KINDS) {
 				)
 				.toBe('stabil');
 			expect(sende[0], `KA-5: Sende-Abruf geht an diesen ${kind}`).toMatch(erwartet);
+		} finally {
+			await hub.aufraeumen();
+			for (const o of orte) await page.request.delete(`/api/locations/${o.id}`).catch(() => {});
+		}
+	});
+}
+
+// ─── KA-5b ─────────────────────────────────────────────────────────────────
+// #2347 S3b (Spec feat_2347_s3b_paritaets_e2e.md, „Frage 2", AC-5): schließt die
+// zwei Lücken von KA-5 gegenüber dem Alt-Fall #2283 aus compare-hub-versand-inline
+// (:384-419) — Desktop-Viewport und „der Sende-Abruf trägt KEINE Empfänger im
+// Körper" (kein systemseitiges „an mich": der Server sendet an die konfigurierten
+// Empfänger dieses Nutzers). Gleiche Vorbedingung wie KA-5 (Zweitnutzer).
+for (const kind of HUB_KINDS) {
+	testMitZustellbaremZiel(`KA-5b (${kind}): Desktop — Hub-Kopf-„Senden“ löst genau EINEN Sende-Abruf an diesen ${kind} aus, ohne Empfänger im Körper`, async ({
+		page
+	}) => {
+		await page.setViewportSize(DESKTOP);
+		// Seed-Besonderheit wie KA-5: der Zweitnutzer bekommt für den Vergleich eigene Orte.
+		const orte =
+			kind === 'vergleich'
+				? [await createTestLocation(page.request, { name: 'KA5b-A' }), await createTestLocation(page.request, { name: 'KA5b-B' })]
+				: [];
+		const hub = await seedKopf(page, kind, orte.length ? { location_ids: orte.map((o) => o.id) } : {});
+		try {
+			// Jeder Sende-Abruf wird abgefangen und selbst beantwortet — kein echter Versand.
+			const sende: { url: string; koerper: string }[] = [];
+			await page.route(/\/api\/briefings\/[^/]+\/send(\?|$)/, async (route) => {
+				sende.push({ url: route.request().url(), koerper: route.request().postData() ?? '' });
+				await route.fulfill({ status: 200, json: { status: 'queued' } });
+			});
+			const erwartet = new RegExp(`/api/briefings/${hub.id}/send\\?kind=${kind}(&report_type=(morning|evening))?$`);
+
+			await openHub(page, kind, hub.id, { tab: 'wetter-metriken' });
+			const panel = page.locator('[data-testid="versand-abschnitt"]:visible');
+			await expect(panel).toBeVisible({ timeout: 10_000 });
+			await expect(panel.getByRole('button', { name: /Test-Briefing/ })).toHaveCount(0);
+
+			const kopfSenden = page.locator('[data-testid="subscription-hub-send"]:visible');
+			await expect(kopfSenden).toBeVisible();
+			await kopfSenden.click();
+			await expect(page.getByTestId('send-confirm-dialog')).toBeVisible();
+			expect(sende.length, 'das Öffnen des Dialogs sendet nichts').toBe(0);
+			await page.getByTestId('send-confirm-yes').click();
+
+			let seit = 0;
+			await expect
+				.poll(
+					() => {
+						if (sende.length !== 1) {
+							seit = 0;
+							return sende.length;
+						}
+						seit ||= Date.now();
+						return Date.now() - seit >= 1_500 ? 'stabil' : 1;
+					},
+					{ message: 'KA-5b: „Senden“ im Hub-Kopf muss genau EINEN Sende-Abruf auslösen', timeout: 10_000, intervals: [200] }
+				)
+				.toBe('stabil');
+			expect(sende[0].url, `KA-5b: Sende-Abruf geht an diesen ${kind} (kind-Parameter)`).toMatch(erwartet);
+			expect(sende[0].koerper, 'der Sende-Abruf darf keine Empfänger vom Client mitschicken').not.toMatch(/@/);
 		} finally {
 			await hub.aufraeumen();
 			for (const o of orte) await page.request.delete(`/api/locations/${o.id}`).catch(() => {});

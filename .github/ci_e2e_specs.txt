@@ -140,6 +140,11 @@
 #   aufgenommenen Datei (beide Zahlen per `--list` ermittelt, nicht aus dem
 #   Lauf zurueckgerechnet; die 235 enthalten global.setup, vgl. F008 oben).
 # NICHT aufgenommen, Befund je Datei (fuer #1196, gemessen im selben Stack):
+#   (Nachtrag #2347 S3b, 2026-10-28: compare-hub-briefing-times und
+#   compare-hub-versand-inline sind geloescht und als geteilte, geratschte
+#   hub-versand-briefing-zeiten / hub-versand-inline-bearbeiten /
+#   hub-versand-speichert-selbst / hub-versand-aufbau aufgenommen -- je kind;
+#   F004 ist damit geratscht. Die beiden Befunde unten sind Historie.)
 #   compare-hub-briefing-times    4 von 9 Faellen rot: AC-2 (:82) Mobile-
 #                                 Briefings-Angabe "element(s) not found";
 #                                 AC-4 (:99) erwartet "Briefing-Zeiten",
@@ -184,6 +189,8 @@
 # compare-editor-fidelity-s8d) bleiben bewusst aussen vor.
 #
 # Aufnahme 2026-09-20 (#2276 S5): compare-versand-speichert-selbst.spec.ts
+# (seit #2347 S3b ersetzt durch hub-versand-speichert-selbst.spec.ts; die unten
+# genannte compare-hub-versand-inline durch hub-versand-inline-bearbeiten.spec.ts)
 # — analog S2/S3/S4-Praezedenz wird NUR die eine neue, eigene Spec dieser
 # Scheibe geratscht (Scope-Disziplin, Spec § Known Limitations). Die
 # vorbestehende compare-hub-versand-inline.spec.ts bleibt bewusst AUSSEN VOR:
@@ -379,6 +386,27 @@
 #             Auswahl: `Total: 479 tests in 68 files` (inkl. global.setup).
 #   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
 #
+# Aufnahme 2026-10-28 (#2347 S3b, Epic #2345 Etappe P6, Paritaets-E2E, Versand-Gruppe):
+# hub-versand-speichert-selbst (VS), hub-versand-inline-bearbeiten (VI, inkl.
+# Lost-Update F004 -- jetzt geratscht), hub-versand-aufbau (VA) und
+# hub-versand-briefing-zeiten (VB) -- je kind (Trip UND Vergleich) per Schleife
+# ueber HUB_KINDS. Ersetzen die Listenzeile compare-versand-speichert-selbst sowie
+# die nie gelisteten compare-hub-versand-inline, compare-hub-briefing-times und
+# versand-tab-vergleich (alle vier Dateien geloescht, 30 Altfaelle 1:1 zugeordnet:
+# Spec feat_2347_s3b_paritaets_e2e.md, Zuordnungstabelle + Changelog /50).
+# Zusaetzlich KA-5b in hub-kopf-aufbau und der Create-Flow-Fall in
+# compare-editor-slice3 (beide bereits gelistet).
+#   Filter A: kein waitForTimeout/test.skip/describe.skip/__dirname/Hauptrepo-
+#             Pfad in den vier Dateien (grep leer am RED-Stand und am Endstand).
+#   Filter B: 3 Zyklen mit je FRISCHEM isoliertem Stack (ci-stack.sh, Go 8097 /
+#             Py 8007, frische admin.json) ueber die sechs neuen/ergaenzten
+#             Dateien: 80/80, 80/80, 80/80 (2026-10-28). ZIELVERBUND am Endstand
+#             (Positivliste ohne bug-703, 70 Dateien) EINMAL lokal gefahren:
+#             expected=528, unexpected=0, skipped=0, flaky=0; e2e_gate.py gruen
+#             -- docs/artifacts/feat-2347-s3b-paritaets-e2e/test-green-output.txt.
+#             Fallzahl per `npx playwright test --list`: `Total: 528 tests in 71 files`.
+#   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
@@ -393,7 +421,6 @@ e2e/compare-konfliktschutz-zwei-kontexte.spec.ts
 e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-radar-toggle.spec.ts
 e2e/compare-stundenverlauf-wertprops.spec.ts
-e2e/compare-versand-speichert-selbst.spec.ts
 e2e/design-compliance-group-a.spec.ts
 e2e/design-system-lauf-a.spec.ts
 e2e/dnd-helper-finalize-wait.spec.ts
@@ -410,7 +437,11 @@ e2e/hub-kopf-bearbeiten.spec.ts
 e2e/hub-list-menu.spec.ts
 e2e/hub-save-chip.spec.ts
 e2e/hub-tab-bar.spec.ts
+e2e/hub-versand-aufbau.spec.ts
 e2e/hub-versand-autosave-chip.spec.ts
+e2e/hub-versand-briefing-zeiten.spec.ts
+e2e/hub-versand-inline-bearbeiten.spec.ts
+e2e/hub-versand-speichert-selbst.spec.ts
 e2e/hub-wertebereiche-speichert-selbst.spec.ts
 e2e/hub-wertebereiche-wertprops.spec.ts
 e2e/hub-wetter-metriken-speichert-selbst.spec.ts

@@ -18,7 +18,7 @@
 //
 // Grenze: dass CompareTabs.handleValueChange den Helfer wirklich aufruft,
 // prüft dieser Test nicht (Prüfort ≠ Wirkort) — das misst
-// frontend/e2e/compare-versand-speichert-selbst.spec.ts im Browser.
+// frontend/e2e/hub-versand-speichert-selbst.spec.ts (VS-1, #2347 S3b) im Browser.
 //
 // #1743 (Spec feat_1743_reiter_aufraeumen §10, AC-26): der Reiter „versand" entfällt; der
 // Versand-Abschnitt liegt im Reiter „wetter-metriken". Der Guard flusht deshalb beim Verlassen

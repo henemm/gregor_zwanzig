@@ -14,7 +14,7 @@
 // Grenze dieses Prüfstands: die Kennung `{typ:'vergleich', id}` entsteht in
 // routes/compare/[id]/+page.svelte (nicht mountbar). Hier wird der Controller
 // MIT Kennung gebaut; ob die Seite sie übergibt, ist nur gegen Staging messbar
-// (frontend/e2e/compare-versand-speichert-selbst.spec.ts, echter 412).
+// (frontend/e2e/hub-versand-speichert-selbst.spec.ts VS-2, echter 412, #2347 S3b).
 //
 // Mutations-Gegenprobe (Spec AC-6): Rollback auch bei 412 auslösen ⇒ die
 // Werte springen zurück ⇒ rot.

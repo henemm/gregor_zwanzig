@@ -13,7 +13,7 @@
 // werden sie hier geprüft. Dass das Markup keinen Wrapper-Div mehr trägt,
 // prüft compare/__tests__/versand_panel_ohne_wrapper_div.test.ts; dass die
 // Verdrahtung im Browser greift, die E2E-Spec
-// compare-versand-speichert-selbst.spec.ts.
+// hub-versand-speichert-selbst.spec.ts (#2347 S3b).
 //
 // Zielschnittstelle (existiert noch NICHT → RED per ERR_MODULE_NOT_FOUND):
 //

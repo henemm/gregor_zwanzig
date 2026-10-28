@@ -20,7 +20,8 @@
 // compare/__tests__/versand_panel_ohne_wrapper_div.test.ts.
 //
 // Was er NICHT leisten kann: den Klickpfad im Browser. Den misst
-// frontend/e2e/compare-versand-speichert-selbst.spec.ts (AC-1, AC-5).
+// frontend/e2e/hub-versand-autosave-chip.spec.ts (AC-1) und
+// frontend/e2e/hub-versand-speichert-selbst.spec.ts (VS-7) (#2347 S3b).
 //
 // Mutations-Gegenproben (Spec AC-1/AC-5):
 //   - `$effect`-Block ersatzlos löschen ⇒ rot (nichts meldet mehr).

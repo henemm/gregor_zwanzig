@@ -23,7 +23,7 @@
 // ein Flush nach dem eigenen PUT käme zu spät — der Pausier-PUT trüge dann
 // den alten Stand und die wartende Änderung ginge verloren.
 //
-// Den echten Klickpfad misst frontend/e2e/compare-versand-speichert-selbst.spec.ts (AC-7).
+// Den echten Klickpfad misst frontend/e2e/hub-versand-speichert-selbst.spec.ts (VS-3k, #2347 S3b).
 //
 // Mutations-Gegenproben (Spec AC-7):
 //   - `await saveController?.flush();` löschen ⇒ rot.
