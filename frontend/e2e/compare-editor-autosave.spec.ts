@@ -472,30 +472,8 @@ test.describe('Issue #1261 (b): Compare-Editor Autospeichern', () => {
 	// bucket-section-* leben nur im Wizard). Diese Abdeckung liegt im Wizard-
 	// migrierten sortable-list-shared.spec.ts. dragElementCenterTo bleibt Helper.
 
-	// ── AC-14: Versand-Tab löst unabhängig einen Auto-Save aus (Zeitplan) ────
-	test('AC-14 (Versand): Zeitplan-Änderung im Versand-Tab speichert automatisch', async ({ page }) => {
-		const suffix = Date.now();
-		const locA = await createLocation(page, `E2E 1261 AC14v A ${suffix}`, 48.4, 12.4);
-		const id = await createPresetWithLocations(page, `E2E 1261 AC14v ${suffix}`, [locA]);
-
-		await openEditor(page, id);
-		// Issue #1743: Versand-Inhalt steht im Reiter Wetter-Metriken (Abschnitt #versand).
-		await page.getByTestId('compare-detail-tab-wetter-metriken').click();
-
-		const put = page.waitForResponse(
-			(r) => r.url().includes(`/api/compare/presets/${id}`) && r.request().method() === 'PUT',
-			{ timeout: 5_000 }
-		);
-		// Volle Stunde: report-morning-time ist eine Stunden-Auswahlliste (#1379).
-		const morningTime = page.locator('[data-testid="report-morning-time"]:visible').first();
-		await expect(morningTime).toBeVisible({ timeout: 10_000 });
-		await morningTime.selectOption('05:00');
-		await morningTime.blur();
-		const putRes = await put;
-		expect(putRes.ok(), 'PUT (Versand) fehlgeschlagen: ' + putRes.status()).toBeTruthy();
-
-		const res = await page.request.get(`/api/compare/presets/${id}`);
-		const preset = await res.json();
-		expect(String(preset.morning_time ?? '')).toContain('05:00');
-	});
+	// #2347 S3b: Der Fall „AC-14 (Versand)" (Zeitplan-Änderung speichert
+	// automatisch) ist entfernt — geteilt und strenger für Trip UND Ortsvergleich
+	// gedeckt durch hub-versand-autosave-chip.spec.ts AC-1 (genau ein PUT, Chip,
+	// Server-Stand, Neuladen) und hub-versand-speichert-selbst.spec.ts VS-5.
 });

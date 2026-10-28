@@ -20,7 +20,7 @@
 // „Wrapper wirkungslos".
 //
 // Der echte Klick-/Speicherpfad wird zusätzlich gegen Staging bewiesen:
-// frontend/e2e/compare-versand-speichert-selbst.spec.ts.
+// frontend/e2e/hub-versand-speichert-selbst.spec.ts (#2347 S3b).
 //
 // RED HEUTE: `.hub-versand-wrap` existiert (CompareTabs.svelte:1148) und der
 // Mount von `VersandTab` trägt die drei neuen Props nicht — echte

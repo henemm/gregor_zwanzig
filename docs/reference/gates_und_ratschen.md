@@ -246,7 +246,7 @@ setzt die Trip/Ortsvergleich-Teilung für E2E-Specs durch, die die Pendant-Sperr
   weder `trip-detail-tab` noch `/trips/` noch eine kind-Schleife noch einen Kopf enthält, ist ein Verstoß.
 - **Ratschenmodus:** Altbestand steht als explizite Dateinamensliste `ALTLAST` (bei Einführung 48:
   46 × Regel 1, 2 × Regel 2; S2: 41 — 39 × Regel 1, 2 × Regel 2; S3a: 34 — 32 × Regel 1,
-  2 × Regel 2), `ALTLAST_MAX` = jeweiliger
+  2 × Regel 2; S3b: 30 — 29 × Regel 1, 1 × Regel 2), `ALTLAST_MAX` = jeweiliger
   Scheibenstand (Literal). Rot bei neuem Verstoß außerhalb der
   Liste, bei totem oder inzwischen konformem Eintrag („Eintrag entfernen") und bei Wachstum über
   `ALTLAST_MAX`. Fällt eine Spec weg (z. B. Löschscheibe #2243), muss ihr Eintrag im selben PR raus.

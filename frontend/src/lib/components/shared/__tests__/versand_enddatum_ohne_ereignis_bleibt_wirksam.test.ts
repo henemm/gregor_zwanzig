@@ -11,7 +11,7 @@
 // Auf Modulebene geprüft (wie AC-1): der Snapshot muss `endDate` führen, damit
 // ein reiner Feldwechsel ohne begleitendes DOM-Ereignis als Diff erkannt wird
 // und einen PUT auslöst. Prüfort ≠ Wirkort für die `$effect`-Verdrahtung
-// selbst — die misst frontend/e2e/compare-versand-speichert-selbst.spec.ts.
+// selbst — die misst frontend/e2e/hub-versand-speichert-selbst.spec.ts (VS-7, #2347 S3b).
 //
 // Mutations-Gegenprobe (Spec AC-5): `endDate` aus dem beobachteten Snapshot
 // nehmen ⇒ kein Diff ⇒ kein PUT ⇒ rot.

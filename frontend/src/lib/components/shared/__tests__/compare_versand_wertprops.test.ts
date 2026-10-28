@@ -24,8 +24,8 @@
 //   `vergleichSpeicherung` nennt, wirklich aus (`effekteVon()`). Gemessen
 //   wird, was der Code mit den Props TUT — nicht, ob ein Bezeichner im
 //   Quelltext steht. Der Wirkort „Browser" (Klick -> PUT -> Reload) ist damit
-//   NICHT abgedeckt; dafuer bleibt `compare-versand-speichert-selbst.spec.ts`
-//   (S5, unveraendert in der CI-Ampel) zustaendig (AC-7 der Spec).
+//   NICHT abgedeckt; dafuer ist `hub-versand-speichert-selbst.spec.ts`
+//   (seit #2347 S3b, in der CI-Ampel) zustaendig (AC-7 der Spec).
 //
 // 🔴 VAKUUM-FALLE, bewusst entschaerft: `wiz` wird EXPLIZIT als `undefined`
 // gesaet (nicht weggelassen) — solange der Quelltext `wiz` noch referenziert,

@@ -9,8 +9,9 @@ import { defineConfig } from '@playwright/test';
 // erzeugte App-Session (storageState), kein Pro-Test-UI-Login mehr. Das
 // verhindert den Login-Rate-Limit-Kollaps bei wiederholten Staging-Läufen.
 //
-// compare-hub-briefing-times ist bereits über playwright.1229-hub.staging.config.ts
-// abgedeckt und daher hier NICHT gelistet.
+// Die Versand-Specs (vormals versand-tab-vergleich, compare-hub-briefing-times)
+// sind seit #2347 S3b geteilte hub-versand-*-Specs auf der CI-Positivliste
+// und daher hier NICHT gelistet.
 const user = process.env.GZ_VALIDATOR_USER ?? 'admin';
 const pass = process.env.GZ_VALIDATOR_PASS ?? 'test1234';
 
@@ -34,7 +35,6 @@ export default defineConfig({
 				/compare-radar-toggle\.spec\.ts/,
 				/compare-alarm-config\.spec\.ts/,
 				/compare-legacy-fields-survive-save\.spec\.ts/,
-				/versand-tab-vergleich\.spec\.ts/,
 				/layout-tab-vergleich\.spec\.ts/,
 				/issue-718-idealwert-validation\.spec\.ts/
 			],

@@ -87,6 +87,21 @@ const VI_SEL: Record<
 	}
 };
 
+/** #2347 S3b Adversary F002: Reihenfolge der BEANTWORTETEN Schreibvorgänge —
+ *  zuerst der Feld-Schreibvorgang mit der neuen Uhrzeit, danach der
+ *  Status-Schreibvorgang (Übertragungsweg und Rumpf-Schlüssel je kind). */
+function pruefeFeldVorStatus(fertig: Request[], kind: HubKind, uhrzeit: RegExp): void {
+	const vi = VI_SEL[kind];
+	expect(fertig.length, 'genau zwei Schreibvorgänge: Feld, dann Status').toBe(2);
+	const [feld, status] = fertig;
+	expect(feld.method(), 'erster beantworteter Schreibvorgang ist der Feld-PUT').toBe('PUT');
+	expect(String(vi.morgen(feld.postDataJSON() as Stand)), 'der Feld-PUT trägt die neue Uhrzeit').toMatch(uhrzeit);
+	expect(status.method(), `zweiter Schreibvorgang ist der Status (${vi.statusMethode})`).toBe(vi.statusMethode);
+	const rumpf = status.postDataJSON() as Stand;
+	expect(Object.keys(rumpf).sort(), 'der zweite Schreibvorgang ist der Status-Rumpf').toEqual(vi.statusSchluessel);
+	expect(vi.statusPausiert(rumpf), 'der Status-Schreibvorgang pausiert').toBe(true);
+}
+
 /** Geordnetes Protokoll ALLER Schreibvorgänge auf das Objekt (PUT bzw. PATCH /state). */
 function protokolliereSchreiber(page: Page, pfad: string): { alle: Request[]; fertig: Request[] } {
 	const alle: Request[] = [];
@@ -347,6 +362,7 @@ for (const kind of HUB_KINDS) {
 					await expect(cta(page)).toHaveText('Aktivieren', { timeout: 10_000 });
 					await expect.poll(() => fertig.length, { timeout: 10_000 }).toBe(2);
 					await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+					pruefeFeldVorStatus(fertig, kind, /^10:00/);
 
 					await oeffneVersand(page, kind, hub.id);
 					await expect(morgenUhrzeit(page)).toHaveValue('10:00', { timeout: 10_000 });
@@ -374,6 +390,7 @@ for (const kind of HUB_KINDS) {
 
 				await expect.poll(() => fertig.length, { timeout: 10_000 }).toBe(2);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+				pruefeFeldVorStatus(fertig, kind, /^10:00/);
 
 				await oeffneVersand(page, kind, hub.id);
 				await expect(morgenUhrzeit(page), 'die Uhrzeit überlebt Pausieren und Neuladen').toHaveValue('10:00', { timeout: 10_000 });

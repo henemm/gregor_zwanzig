@@ -191,14 +191,27 @@ for (const kind of HUB_KINDS) {
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: vs.alarmSeed });
 			try {
-				const { beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
+				const { puts, beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
+				// #2347 S3b Adversary F001: Seiten-Uhr steuerbar machen. Läuft die Uhr
+				// frei, erfüllt der 700-ms-Entprell-Timer `beantwortet >= 1` auch OHNE
+				// Flush beim Reiterwechsel (Mutation blieb grün). Bei angehaltener Uhr
+				// feuert der Timer nie von selbst — ein Speicher-Aufruf kann dann NUR
+				// vom Flush des Reiterwechsels stammen. Gilt für beide kinds gleich.
+				await page.clock.install();
 				await oeffneVersand(page, kind, hub.id);
+				await page.clock.pauseAt(Date.now() + 5_000);
 
 				await morgenUhrzeit(page).selectOption('09:00');
-				// sofort, innerhalb des Entprell-Fensters, den Reiter wechseln
 				await page.locator(`[data-testid="${sel.reiter}-alarme"]:visible`).click();
 				await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
-				expect(beantwortet.length, 'die Versand-Änderung war beim Reiterwechsel noch nicht gesendet').toBeGreaterThanOrEqual(1);
+				await expect
+					.poll(() => beantwortet.length, {
+						message: 'die Versand-Änderung wurde beim Reiterwechsel nicht gesendet (Entprell-Uhr steht still)',
+						timeout: 5_000
+					})
+					.toBeGreaterThanOrEqual(1);
+				expect(puts.length, 'genau EIN Speicher-Aufruf durch den Flush, kein zweiter vom Timer').toBe(1);
+				await page.clock.resume();
 				expect(String(vs.morgen(beantwortet[0].postDataJSON() as Stand)), 'der erste PUT trägt die Versand-Änderung').toMatch(
 					/^09:00/
 				);

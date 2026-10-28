@@ -4,7 +4,7 @@
 Spec: docs/specs/modules/issue_1321_e2e_storagestate_migration.md
 
 AC-3 (struktureller Teilnachweis). Diese Tests pruefen per Quelltext-
-Introspektion, dass die sechs betroffenen Playwright-Spec-Dateien das alte
+Introspektion, dass die (seit #2347 S3b fuenf) betroffenen Playwright-Spec-Dateien das alte
 Pro-Test-UI-Login-Muster nicht mehr enthalten und die Staging-Config sie
 ausschliesslich im storageState-Projekt referenziert (CLAUDE.md-Ausnahme
 `# doc-compliance-test` fuer Quelltext-Introspektion statt Verhaltensnachweis).
@@ -24,14 +24,15 @@ MIGRATED_FILES = [
     "compare-radar-toggle.spec.ts",
     "compare-alarm-config.spec.ts",
     "compare-legacy-fields-survive-save.spec.ts",
-    "versand-tab-vergleich.spec.ts",
+    # versand-tab-vergleich.spec.ts entfaellt mit #2347 S3b (geteilt als
+    # hub-versand-aufbau/-speichert-selbst, Anmeldung per global.setup-storageState).
     "layout-tab-vergleich.spec.ts",
     "issue-718-idealwert-validation.spec.ts",
 ]
 
 
 def test_migrated_files_no_longer_import_or_call_login():  # doc-compliance-test
-    """AC-3: Keiner der sechs migrierten Testfaelle importiert/ruft noch login() auf."""
+    """AC-3: Keiner der migrierten Testfaelle importiert/ruft noch login() auf."""
     offenders = []
     for name in MIGRATED_FILES:
         text = (E2E_DIR / name).read_text(encoding="utf-8")
@@ -54,7 +55,7 @@ def test_config_no_longer_has_chromium_login_project():  # doc-compliance-test
 
 
 def test_config_storagestate_project_lists_all_migrated_files():  # doc-compliance-test
-    """AC-3: Das storageState-Projekt referenziert alle sechs migrierten Dateien.
+    """AC-3: Das storageState-Projekt referenziert alle migrierten Dateien.
 
     Toleriert beide gueltigen Regex-Schreibweisen fuer den Punkt (`.` oder `\\.`)
     - beides matcht den literalen Dateinamen, nur die Escaping-Strenge unterscheidet

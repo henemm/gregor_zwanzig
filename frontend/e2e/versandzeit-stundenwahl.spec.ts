@@ -3,7 +3,8 @@
 // laufende Backend, kein Mock.
 //
 // Spec: docs/specs/modules/versandzeit_stundenwahl.md (AC-1, AC-2, AC-4).
-// AC-3 (Ortsvergleich) deckt versand-tab-vergleich.spec.ts ab — derselbe
+// AC-3 (Ortsvergleich) deckt hub-versand-autosave-chip.spec.ts AC-1 (vergleich)
+// ab (vormals versand-tab-vergleich.spec.ts, #2347 S3b) — derselbe
 // geteilte Baustein VTSchedulePlan.
 //
 // Ausfuehren: cd frontend && npx playwright test e2e/versandzeit-stundenwahl.spec.ts
