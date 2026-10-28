@@ -15,7 +15,7 @@
 // grün). Auf Modulebene geprüft (wie AC-1): der kombinierte Snapshot muss ALLE
 // drei Felder tragen, damit ein reiner Feldwechsel — ohne Ziehgeste — als
 // Diff erkannt wird. Prüfort ≠ Wirkort für die tatsächliche `$effect`-
-// Verdrahtung: E2E-Spec compare-wetter-metriken-speichert-selbst.spec.ts.
+// Verdrahtung: E2E-Spec hub-wetter-metriken-speichert-selbst.spec.ts.
 //
 // Ausführen:
 //   cd frontend && npm test -- src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts

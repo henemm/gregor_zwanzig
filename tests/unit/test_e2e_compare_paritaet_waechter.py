@@ -13,7 +13,8 @@ Regeln (Spec `docs/specs/modules/feat_2347_s1_paritaets_e2e.md`, AC-3):
   (`compare-detail-tab`) ansteuert und weder `trip-detail-tab` noch `/trips/` noch eine
   kind-Schleife noch einen Kopf enthaelt, ist ein Verstoss.
 - Ratschenmodus: `ALTLAST` darf nur schrumpfen -- toter oder inzwischen konformer
-  Eintrag ist rot, ebenso `len(ALTLAST) > ALTLAST_MAX`.
+  Eintrag ist rot, ebenso `len(ALTLAST) != ALTLAST_MAX` (die Obergrenze muss dem
+  echten Stand entsprechen, sonst entsteht unbemerkt Wachstums-Spielraum).
 
 Pfadregel #1409: Pruefling relativ zu DIESER Datei aufgeloest.
 Pruefdatum (Regel-Budget): 2027-01-24 -- kein nachweisbarer Fang => Rueckbau.
@@ -76,7 +77,9 @@ ALTLAST: frozenset[str] = frozenset({
     "versand-tab-vergleich.spec.ts",
 })
 # Literal, NICHT len(ALTLAST) -- sonst waechst die Obergrenze mit jedem neuen
-# Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken.
+# Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken,
+# und zwar nur im selben Zug wie eine ALTLAST-Streichung: der Wert muss stets
+# gleich len(ALTLAST) sein (#2347 S3a, Adversary F001).
 ALTLAST_MAX = 34
 
 _SCHLEIFE_RE = re.compile(
@@ -148,6 +151,15 @@ def test_altlast_waechst_nicht_ueber_den_einfuehrungsstand():
     assert len(ALTLAST) <= ALTLAST_MAX, (
         f"ALTLAST hat {len(ALTLAST)} Eintraege, erlaubt sind hoechstens {ALTLAST_MAX} "
         f"-- neue Compare-only-Specs brauchen eine kind-Schleife oder einen Kopf")
+
+
+def test_altlast_obergrenze_entspricht_dem_echten_stand():
+    # Ohne Gleichheit liesse ein zu hoch stehendes ALTLAST_MAX stillen Spielraum
+    # fuer neue Altlast-Eintraege (Adversary F001).
+    assert len(ALTLAST) == ALTLAST_MAX, (
+        f"ALTLAST hat {len(ALTLAST)} Eintraege, ALTLAST_MAX steht auf {ALTLAST_MAX} "
+        f"-- ALTLAST_MAX muss dem echten Stand entsprechen und darf nur zusammen "
+        f"mit einer Streichung aus ALTLAST sinken (nie vorab hoeher stehen lassen)")
 
 
 def test_echter_baum_ist_nicht_leer():

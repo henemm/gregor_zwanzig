@@ -25,7 +25,7 @@ CI_YML = REPO / ".github" / "workflows" / "ci.yml"
 E2E_DIR = REPO / "frontend" / "e2e"
 PLAYWRIGHT_CWD = "frontend"  # Arbeitsordner des Playwright-Laufs
 MANDANTEN_SPECS = ("e2e/hub-cross-user-write-block.spec.ts",
-                   "e2e/compare-editor-autosave-user-isolation.spec.ts")
+                   "e2e/hub-editor-autosave-user-isolation.spec.ts")
 _PATH_RE = re.compile(r"""path:\s*['"`]([^'"`]+)['"`]""")
 # Nur die YAML-ZUWEISUNG zaehlt, nicht die Erwaehnung in Kommentar oder Shell
 # (`$E2E_MIN_SPECS`) -- sonst legte ein Kommentar die Schwelle fest.

@@ -6,6 +6,8 @@
 // /compare/new (Edit = 307-Redirect), Tabs progressiv frei (Name → ≥2 Orte → …).
 // BEFUND: Step3Idealwerte (compare-step3-*) wurde von #1231 durch den geteilten
 // CorridorEditor ersetzt — die Idealwerte-Tests prüfen gegen corridor-row-*.
+//
+// gz-eigenstaendig: Anlege-Wizard /compare/new hat kein Trip-Pendant mit denselben Kennungen (compare-editor-*, compare-step2-*); die Datei fällt mit #2243 (#2347 S4) ersatzlos, Wertebereiche je kind decken hub-wertebereiche-*.spec.ts ab.
 
 import { test, expect, type Page } from '@playwright/test';
 import { createTestLocation } from './helpers';

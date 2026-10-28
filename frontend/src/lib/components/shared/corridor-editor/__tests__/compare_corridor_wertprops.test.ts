@@ -21,7 +21,7 @@
 //   Bezeichner im Quelltext steht.
 //   Der Wirkort „Browser" (Klick -> PUT -> Neuladen) ist damit NICHT abgedeckt;
 //   dafuer sind AC-4 bis AC-7 zustaendig
-//   (`frontend/e2e/compare-wertebereiche-wertprops.spec.ts`).
+//   (`frontend/e2e/hub-wertebereiche-wertprops.spec.ts`).
 //
 // 🔴 ABWEICHUNG vom Wortlaut der Spec bei AC-2 — bewusst, mit Begruendung:
 //   Die Spec nennt als Messweg `effekteVon()` (Muster S6c, AC-4 von

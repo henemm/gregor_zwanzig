@@ -13,7 +13,7 @@
 // wird, dass die Wertebereiche-Orchestrierung so in diesen Takt passt, dass der
 // Pausier-PUT die Änderung trägt. Prüfort ≠ Wirkort: dass handleToggleActive
 // den Flush wirklich VOR dem PUT abwartet, misst die E2E-Spec
-// compare-wertebereiche-speichert-selbst.spec.ts (Mutation „flush entfernen").
+// hub-wertebereiche-speichert-selbst.spec.ts (Mutation „flush entfernen").
 //
 // Ausführen:
 //   cd frontend && npm test -- src/lib/components/shared/corridor-editor/__tests__/wertebereiche_vergleich_flush_vor_pausieren.test.ts

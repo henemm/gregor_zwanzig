@@ -30,7 +30,7 @@ export default defineConfig({
 			name: 'chromium-storagestate',
 			testMatch: [
 				/compare-editor-autosave\.spec\.ts/,
-				/compare-editor-autosave-user-isolation\.spec\.ts/,
+				/hub-editor-autosave-user-isolation\.spec\.ts/,
 				/compare-radar-toggle\.spec\.ts/,
 				/compare-alarm-config\.spec\.ts/,
 				/compare-legacy-fields-survive-save\.spec\.ts/,

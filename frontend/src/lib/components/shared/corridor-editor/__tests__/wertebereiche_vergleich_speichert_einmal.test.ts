@@ -15,7 +15,7 @@
 // Basis-Lesen, Queue, Rückmeldung und Rollback liegen im Modul und werden hier
 // geprüft. Prüfort ≠ Wirkort: dass Editor und CompareTabs das Modul wirklich
 // (und nur so) verdrahten und der Wrapper-Weg weg ist, misst die E2E-Spec
-// frontend/e2e/compare-wertebereiche-speichert-selbst.spec.ts.
+// frontend/e2e/hub-wertebereiche-speichert-selbst.spec.ts.
 //
 // Zielschnittstelle (existiert noch NICHT → RED per ERR_MODULE_NOT_FOUND):
 //

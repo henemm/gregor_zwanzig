@@ -66,7 +66,8 @@
 # 51er-Kandidatenverbund): compare-cross-user-write-block.spec.ts (seit
 # #2347 S1 umbenannt/erweitert zu hub-cross-user-write-block.spec.ts, Trip +
 # Vergleich, weiterhin genau EIN Zweit-Login) und
-# compare-editor-autosave-user-isolation.spec.ts -- die einzige Klasse im
+# compare-editor-autosave-user-isolation.spec.ts (seit #2347 S3a ersetzt durch
+# hub-editor-autosave-user-isolation.spec.ts, Trip + Vergleich) -- die einzige Klasse im
 # Korpus, die die CLAUDE.md-Pflicht "jeder datenbewegende Endpoint mit ZWEI
 # Nutzern" belegt. Beide brauchen einen eigenen Zweit-Login und waren genau
 # deshalb im ungeteilten Zielverbund rot (429) -- Anlass fuer den Split oben.
@@ -172,6 +173,8 @@
 # dort nicht auffuehren.
 #
 # Aufnahme 2026-09-19 (#2276 S4): compare-wetter-metriken-speichert-selbst.spec.ts
+# (seit #2347 S3a ersetzt durch hub-wetter-metriken-speichert-selbst.spec.ts; ebenso
+# die hier genannten S2/S3-Dateien durch hub-alarme-/hub-wertebereiche-speichert-selbst)
 # — analog S2/S3-Praezedenz (compare-alarme-speichert-selbst.spec.ts,
 # compare-wertebereiche-speichert-selbst.spec.ts) wird NUR die eine neue,
 # eigene Spec dieser Scheibe geratscht (Scope-Disziplin, Spec § Known
@@ -190,6 +193,7 @@
 # manuell gegen Staging, bevor die Scheibe abgeschlossen wird.
 #
 # Aufnahme 2026-09-21 (#2276 S6c): compare-alarme-wertprops.spec.ts
+# (seit #2347 S3a ersetzt durch hub-alarme-wertprops.spec.ts)
 # — analog S2/S3/S4/S5/S6b-Praezedenz wird NUR die eine neue, eigene Spec
 # dieser Scheibe geratscht (Scope-Disziplin). Sie traegt AC-2 der Spec
 # rework_2276_s6c_alarme.md: die Umstellung der Alarme-Flaeche des
@@ -213,6 +217,7 @@
 #             veraendert keine versionierte Datei.
 
 # Aufnahme 2026-09-22 (#2276 S6d): compare-wertebereiche-wertprops.spec.ts
+# (seit #2347 S3a ersetzt durch hub-wertebereiche-wertprops.spec.ts)
 # — analog S2/S3/S4/S5/S6b/S6c-Praezedenz wird NUR die eine neue, eigene Spec
 # dieser Scheibe geratscht (Scope-Disziplin). Sie traegt AC-4 bis AC-7 der Spec
 # rework_2276_s6d_wertebereiche.md: die Umstellung der Wertebereiche-Flaeche
@@ -349,16 +354,38 @@
 #             wechselhaft, von S2 nicht beruehrt).
 #   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
 #
+# Aufnahme 2026-10-27 (#2347 S3a, Epic #2345 Etappe P6, Paritaets-E2E):
+# hub-alarme-speichert-selbst (AS), hub-alarme-wertprops (AW),
+# hub-wertebereiche-speichert-selbst (WS), hub-wertebereiche-wertprops (WW, inkl.
+# AC-33/AC-34/F002 aus compare-hub-inline-edit), hub-wetter-metriken-speichert-
+# selbst (MS) und hub-editor-autosave-user-isolation (UI, weiterhin genau EIN
+# Zweit-Login, registriert in beforeAll fuer beide kinds) -- je kind (Trip UND
+# Vergleich) per Schleife ueber HUB_KINDS. Ersetzen die sechs Listenzeilen
+# compare-alarme-speichert-selbst, compare-alarme-wertprops, compare-wertebereiche-
+# speichert-selbst, compare-wertebereiche-wertprops, compare-wetter-metriken-
+# speichert-selbst und compare-editor-autosave-user-isolation (Dateien geloescht,
+# 30 Altfaelle 1:1 zugeordnet: docs/artifacts/feat-2347-s3a-paritaets-e2e/
+# zuordnung-alt-neu.md). compare-hub-inline-edit bleibt gelistet (nur Orte-Teil),
+# compare-editor-slice3 bleibt gelistet (gz-eigenstaendig:-Kopf).
+#   Filter A: kein waitForTimeout/test.skip/test.fixme/describe.skip/__dirname
+#             in den sechs Dateien (grep leer am Endstand in /50, 2026-10-27).
+#   Filter B: lokal gegen den isolierten CI-artigen Stack (ci-stack.sh, frische
+#             admin.json): alle sechs Dateien 59/59 gruen (Lauf 3), nach
+#             Nachschaerfung AW/MS 23/23 gruen (Lauf 4, frischer Stack) --
+#             docs/artifacts/feat-2347-s3a-paritaets-e2e/test-red-output.txt.
+#             Ein 3x-Lauf im ZIELVERBUND (67 Hauptlauf-Dateien) wurde lokal NICHT
+#             gefahren; ERSTE BESTAETIGUNG DURCH DEN CI-HAUPTLAUF AUF DEM PR.
+#             Fallzahl per `npx playwright test --list` ueber die Hauptlauf-
+#             Auswahl: `Total: 479 tests in 68 files` (inkl. global.setup).
+#   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
 e2e/bug-274-safe-area-insets.spec.ts
 e2e/bug-703-login-ratelimit.spec.ts
 e2e/bug-708-stage-delete-confirm.spec.ts
-e2e/compare-alarme-speichert-selbst.spec.ts
-e2e/compare-alarme-wertprops.spec.ts
 e2e/compare-detail-edit-entry.spec.ts
-e2e/compare-editor-autosave-user-isolation.spec.ts
 e2e/compare-editor-slice1.spec.ts
 e2e/compare-editor-slice3.spec.ts
 e2e/compare-hub-inline-edit.spec.ts
@@ -367,9 +394,6 @@ e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-radar-toggle.spec.ts
 e2e/compare-stundenverlauf-wertprops.spec.ts
 e2e/compare-versand-speichert-selbst.spec.ts
-e2e/compare-wertebereiche-speichert-selbst.spec.ts
-e2e/compare-wertebereiche-wertprops.spec.ts
-e2e/compare-wetter-metriken-speichert-selbst.spec.ts
 e2e/design-compliance-group-a.spec.ts
 e2e/design-system-lauf-a.spec.ts
 e2e/dnd-helper-finalize-wait.spec.ts
@@ -377,13 +401,19 @@ e2e/email-preview-header.spec.ts
 e2e/epic-138-block-b.spec.ts
 e2e/font-weights.spec.ts
 e2e/gewitter-absolutregel-gesperrt.spec.ts
+e2e/hub-alarme-speichert-selbst.spec.ts
+e2e/hub-alarme-wertprops.spec.ts
 e2e/hub-cross-user-write-block.spec.ts
+e2e/hub-editor-autosave-user-isolation.spec.ts
 e2e/hub-kopf-aufbau.spec.ts
 e2e/hub-kopf-bearbeiten.spec.ts
 e2e/hub-list-menu.spec.ts
 e2e/hub-save-chip.spec.ts
 e2e/hub-tab-bar.spec.ts
 e2e/hub-versand-autosave-chip.spec.ts
+e2e/hub-wertebereiche-speichert-selbst.spec.ts
+e2e/hub-wertebereiche-wertprops.spec.ts
+e2e/hub-wetter-metriken-speichert-selbst.spec.ts
 e2e/issue-1059-trip-resume-error-feedback.spec.ts
 e2e/issue-1071-tier-change-request.spec.ts
 e2e/issue-1093-unit.spec.ts

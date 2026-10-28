@@ -24,7 +24,7 @@
 //   `vergleichSpeicherung` nennt, wirklich aus (`effekteVon()`) und loest die
 //   Abwahl-Geste ueber den ECHTEN `onchange`-Ausdruck der Checkbox im Markup
 //   aus. Der Wirkort „Browser" (Klick -> PUT -> Reload) bleibt bei
-//   `compare-wetter-metriken-speichert-selbst.spec.ts` (AC-4 der Spec).
+//   `hub-wetter-metriken-speichert-selbst.spec.ts` (#2347 S3a; AC-4 der Spec).
 //
 // 🔴 VAKUUM-FALLE, bewusst entschaerft: `wiz` wird EXPLIZIT als `undefined`
 // gesaet (nicht weggelassen) — solange der Quelltext `wiz` noch referenziert,

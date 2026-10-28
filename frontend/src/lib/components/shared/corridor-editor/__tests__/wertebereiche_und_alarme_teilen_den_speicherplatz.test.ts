@@ -30,7 +30,7 @@
 // geprüft — plus dass die gleichzeitige Alarm-Stufe erhalten bleibt.
 //
 // Prüfort ≠ Wirkort: dass CompareTabs.handleValueChange den Guard wirklich
-// abwartet, misst die E2E-Spec compare-wertebereiche-speichert-selbst.spec.ts.
+// abwartet, misst die E2E-Spec hub-wertebereiche-speichert-selbst.spec.ts.
 //
 // Ausführen:
 //   cd frontend && npm test -- src/lib/components/shared/corridor-editor/__tests__/wertebereiche_und_alarme_teilen_den_speicherplatz.test.ts
