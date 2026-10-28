@@ -39,3 +39,18 @@ bewusst getragen.
   des 15-s-Timeouts erreicht, ist das Raster neu abzuwägen — ein Timeout erzeugt „nicht abrufbar"
   und darf nicht zum Normalfall werden. Jedes weitere Land braucht dieselbe Abwägung mit eigener
   Messung.
+
+## Lizenz-Prüfergebnis zur Feed-TTL (Nachtrag 2026-10-27, Issue #2266)
+
+Offener Prüfpunkt: Verträgt sich die Feed-TTL von 30 Minuten mit der EUMETNET-Weitergabe-Auflage
+für MeteoAlarm-Daten (kolportiert als „5–10 min Verzug“)?
+
+- **Keine Primärquelle:** Im Repo liegt keine Primärquelle für die EUMETNET-Auflage vor; auch die
+  Recherche lieferte nur die Aussage „Verzug gegenüber meteoalarm.eu möglich“, ohne Minutenangabe.
+  Die Auflage gilt daher als nicht abschließend verifiziert.
+- **Richtung der Auflage:** Soweit bekannt verlangt die Auflage einen Mindest-Verzug gegenüber der
+  Originalveröffentlichung. Ein Cache von 30 Minuten erfüllt einen solchen Mindest-Verzug (er liefert
+  mehr Verzug, nicht weniger); eine Obergrenze für den Verzug ist nicht belegt.
+- **Ergebnis:** Die TTL von 1800 s (`WARN_SUCCESS_TTL`) bleibt unverändert, ebenso das
+  Auffrischraster dieses ADR. Eine Änderung ohne Beleg würde ein neues ADR erfordern.
+  Wiedervorlage nur, wenn eine Primärquelle mit konkreter Auflage auftaucht.

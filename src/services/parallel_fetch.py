@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 DEFAULT_WORKERS = 8
-_DEFAULT_SLOTS = {"open_meteo": 3, "meteoalarm": 1, "meteo_france": 4}
+_DEFAULT_SLOTS = {"open_meteo": 3, "meteo_france": 4}
 _UNKNOWN_PROVIDER_SLOTS = 3
 
 _state_lock = threading.Lock()

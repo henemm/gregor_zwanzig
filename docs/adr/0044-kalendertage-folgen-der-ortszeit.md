@@ -45,7 +45,7 @@ Beschriftung — nicht in den Daten.
 `src/services/sms_daily_limit.py` taktet den täglichen Versand-Zähler je Nutzer an der
 UTC-Mitternacht, nicht an der Ortszeit der Tour. Dieser Zähler ist eine reine
 Kosten-Referenzgröße pro Nutzerkonto (Vorbild `forecast_budget._today_utc`,
-`meteoalarm_budget._today_utc` unten unter „Bewusst NICHT betroffen"), kein wetter- oder
+`meteoalarm_budget._today_utc` — historisch, mit #2266 zurückgebaut — unten unter „Bewusst NICHT betroffen"), kein wetter- oder
 tourfachlicher Kalendertag — eine Ortszeit-Bindung würde bei mehreren Zonen dasselbe
 Kontingent mehrfach gewähren, den genau vermiedenen Effekt aus #1726s Tageszähler-Umstellung.
 `test_ruhezeit_und_zaehler_folgen_der_ortszone.py` bewacht den ANDEREN, weiterhin
@@ -198,6 +198,8 @@ Regelverstoß — genau das war der Zustand vor #1697.
   oben unter „Bewusst NICHT betroffen" bereits in Prosa stehen (`forecast_budget._today_utc`,
   `meteoalarm_budget._today_utc`/`_now_ts`, `weather_extractor._to_naive_utc`) — die Kategorie
   ersetzt die bisher ungeprüfte Prosa-Konvention, ist also kein Netto-Zuwachs an Regeln.
+  (Nachtrag #2266: die beiden `meteoalarm_budget`-Einträge sind mit dem Rückbau des
+  MeteoAlarm-Tagesbudgets entfallen und historisch.)
 
 **Lehre für die Pflege dieser Liste:** Sie war nicht falsch, sondern **unvollständig** — und
 eine unvollständige Restliste liest sich wie eine vollständige. Wer hier etwas einträgt,
@@ -277,7 +279,7 @@ strukturell näher am `forecast_budget._today_utc`-Fall unten als an `massif_clo
 
 **Bewusst NICHT betroffen** (feste Zone ist dort Absicht, kein Verstoß):
 `forecast_budget._today_utc` und `meteoalarm_budget._today_utc` (Kontingent-Tageswechsel in
-UTC) sowie der manuelle `?hour=`-Testauslöser des Versand-Orchestrators
+UTC; letzteres historisch, mit #2266 zurückgebaut) sowie der manuelle `?hour=`-Testauslöser des Versand-Orchestrators
 (`CompareDispatchStrategy.MANUAL_TRIGGER_REFERENCE_ZONE`) — ein Ops-/Debug-Werkzeug ohne
 Preset-Bezug, für das „Stunde X" bei preset-eigenen Zonen keine EINE Bedeutung mehr hätte.
 Seit #1727 S5c außerdem `tools/weather_validation.py`s Punkt-Validierungsmodus (`:288`,

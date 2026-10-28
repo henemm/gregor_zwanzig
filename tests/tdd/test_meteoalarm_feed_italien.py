@@ -1220,54 +1220,9 @@ def test_ac6_nicht_mehr_im_feed_enthaltene_warnung_verschwindet_sofort(monkeypat
         server.shutdown()
 
 
-# ---------------------------------------------------------------------------
-# AC-7: ein AT-Indexfehlschlag darf das IT-Ergebnis nicht einfaerben
-# (Randbedingung 3 -- setzt voraus, dass MeteoAlarmSource.covers() italienische
-# Punkte nach dieser Scheibe nicht mehr zaehlt, Spec Implementation Details
-# Punkt 7).
-# ---------------------------------------------------------------------------
-
-def test_ac7_at_indexfehlschlag_faerbt_it_ergebnis_nicht_ein(monkeypatch):
-    """AC-7: GIVEN der bisherige kontingentierte Weg fuer Oesterreich faellt aus
-    (HTTP 503 auf jede AT-Indexseite), WHEN die amtlichen Warnungen fuer einen
-    italienischen Ort (Rom) ermittelt werden, THEN bleibt unavailable=False --
-    ein AT-Fehlschlag darf IT nicht mehr einfaerben."""
-    import services.official_alerts.base as oa_base
-    from services.official_alerts import get_official_alerts_with_status, meteoalarm, meteoalarm_feed
-
-    _assert_pruefling_aus_diesem_baum()
-    at_server = _JsonServer({}, fail_status=503)
-    it_server = _JsonServer(_load_sample_feed())
-    backup = list(oa_base._REGISTERED_SOURCES)
-    oa_base._REGISTERED_SOURCES.clear()
-    meteoalarm._index_cache.clear()
-    meteoalarm._geometry_cache.clear()
-    meteoalarm._cap_cache.clear()
-    try:
-        monkeypatch.setenv("GZ_METEOALARM_APIKEY", "dummy-test-token-1445-ac7")
-        monkeypatch.setenv("GZ_METEOALARM_DAILY_BUDGET", "100000")
-        monkeypatch.setattr(meteoalarm, "METEOALARM_BASE_URL", f"http://127.0.0.1:{at_server.port}")
-        monkeypatch.setattr(meteoalarm_feed, "FEED_BASE_URL", f"http://127.0.0.1:{it_server.port}")
-        oa_base._REGISTERED_SOURCES.append(meteoalarm.MeteoAlarmSource())
-        oa_base._REGISTERED_SOURCES.append(meteoalarm_feed.MeteoAlarmFeedSource("IT"))
-
-        alerts, unavailable = get_official_alerts_with_status(*ROM, now=TEST_NOW)
-
-        assert unavailable is False, (
-            f"ein AT-Indexfehlschlag darf das Ergebnis fuer einen italienischen "
-            f"Ort nicht als 'nicht abrufbar' einfaerben -- MeteoAlarmSource."
-            f"covers() muss italienische Punkte nach dieser Scheibe ausschliessen "
-            f"UND die Laenderliste in fetch() auf ('AT',) verengt sein. Erhalten: "
-            f"unavailable={unavailable}, alerts={alerts}"
-        )
-    finally:
-        at_server.shutdown()
-        it_server.shutdown()
-        oa_base._REGISTERED_SOURCES.clear()
-        oa_base._REGISTERED_SOURCES.extend(backup)
-        meteoalarm._index_cache.clear()
-        meteoalarm._geometry_cache.clear()
-        meteoalarm._cap_cache.clear()
+# AC-7 (#1445: AT-Indexfehlschlag des EDR-Wegs faerbt IT nicht ein) entfiel
+# mit dem Rueckbau der EDR-Klasse (#2266) -- es gibt keinen AT-Indexweg mehr,
+# der IT einfaerben koennte.
 
 
 # ---------------------------------------------------------------------------

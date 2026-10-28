@@ -3,7 +3,6 @@ package scheduler
 import (
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 	"time"
 
@@ -102,50 +101,10 @@ func TestWarnServiceHealthOmitsServiceWithoutAnyCalls(t *testing.T) {
 	}
 }
 
-// AC-6: meteoalarm_budget block appears independent of the journal's
-// self_throttled flag.
-func TestWarnServiceHealthDistinguishesSelfThrottleFromBudgetFile(t *testing.T) {
-	tmpDir := t.TempDir()
-	sched := newWarnServiceHealthTestScheduler(t, tmpDir)
-
-	now := time.Now().UTC().Format(time.RFC3339)
-	contents := `{"service":"meteoalarm:AT:p1","cache_hit":false,"ok":false,` +
-		`"self_throttled":false,"ts":"` + now + `"}` + "\n"
-	writeWarnServiceCallsJournal(t, tmpDir, contents)
-
-	futureReset := time.Now().UTC().Add(6 * time.Hour).Unix()
-	diagDir := filepath.Join(tmpDir, "diagnostics")
-	budgetPath := filepath.Join(diagDir, "meteoalarm_budget.json")
-	body := []byte(`{"date":"2026-07-30","calls":200,"observed_reset_ts":` +
-		strconv.FormatInt(futureReset, 10) + `}`)
-	if err := os.WriteFile(budgetPath, body, 0644); err != nil {
-		t.Fatalf("write meteoalarm_budget.json: %v", err)
-	}
-
-	health := sched.WarnServiceHealth()
-
-	meteoalarm, ok := health["meteoalarm"].(map[string]any)
-	if !ok {
-		t.Fatalf("meteoalarm key missing or wrong type: %v", health["meteoalarm"])
-	}
-	if got := meteoalarm["self_throttled"]; got != false {
-		t.Errorf("journal self_throttled: want false, got %v", got)
-	}
-
-	budget, ok := health["meteoalarm_budget"].(map[string]any)
-	if !ok {
-		t.Fatalf("meteoalarm_budget key missing or wrong type: %v", health["meteoalarm_budget"])
-	}
-	if got := budget["status"]; got != "ok" {
-		t.Errorf("meteoalarm_budget.status: want ok, got %v", got)
-	}
-	if got := budget["calls_today"]; got != float64(200) && got != 200 {
-		t.Errorf("meteoalarm_budget.calls_today: want 200, got %v", got)
-	}
-	if got, ok := budget["observed_reset_ts"].(float64); !ok || int64(got) != futureReset {
-		t.Errorf("meteoalarm_budget.observed_reset_ts: want %d, got %v", futureReset, budget["observed_reset_ts"])
-	}
-}
+// The former AC-6 test (meteoalarm_budget block next to self_throttled) was
+// removed with the budget mirror (#2266). Its successor, which asserts the
+// block is GONE while self_throttled is still passed through, lives in
+// warn_service_health_no_budget_test.go.
 
 // TDD RED: Issue #1434 S2 — Zonen-Drift im Status-Endpunkt (AC-5/AC-6/AC-7).
 //

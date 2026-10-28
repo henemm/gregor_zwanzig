@@ -82,12 +82,6 @@ def _alert_daily_limit(tmp_path):
     return ["alert_daily_count.json"]
 
 
-def _meteoalarm_budget(tmp_path):
-    from services.official_alerts.meteoalarm_budget import MeteoAlarmBudgetGate
-    MeteoAlarmBudgetGate(data_root=tmp_path).record_call()
-    return ["meteoalarm_budget.json"]
-
-
 def _position_fix(tmp_path):
     from services.position_fix import record_position_fix
     from tests.helpers.position_fix_fixtures import (
@@ -107,9 +101,11 @@ def _inbound_sms_reader(tmp_path):
     return ["premium_sms_inbound.json"]
 
 
+# Issue #2266: der MeteoAlarm-Budget-Schreibpfad ist mit dem Rueckbau der
+# EDR-Klasse entfallen.
 SCHREIBPFADE = [
     _forecast_budget, _briefing_slots, _sms_daily_limit, _throttle_store,
-    _alert_check_state, _alert_daily_limit, _meteoalarm_budget,
+    _alert_check_state, _alert_daily_limit,
     _position_fix, _inbound_sms_reader,
 ]
 

@@ -1,7 +1,7 @@
 """DpcSource — italienischer Zivilschutz (Protezione Civile), Issue #1427 S2.
 
 Dauerhaft additive amtliche Warnquelle fuer Italien (Gewitter/Hochwasser/
-Erdrutsch), ergaenzt MeteoAlarmSource (Hitze/Wind/Regen/Gewitter, aus Sicht
+Erdrutsch), ergaenzt MeteoAlarm (Feed-Weg, Hitze/Wind/Regen/Gewitter, aus Sicht
 der italienischen Luftwaffe) -- keine Zweitschrift, kein ``fallback_for``.
 
 Laufzeit liest NUR die ``.dbf`` aus dem oeffentlichen DPC-Zip (dBase-III,
@@ -51,7 +51,7 @@ FAILURE_CACHE_TTL = warn_egress.WARN_FAILURE_TTL
 _CACHE_KEY = "national"
 _cache: dict = {}
 
-# Injizierbarer Uhr-Haken (Konvention analog meteoalarm._WALL_CLOCK_FN) --
+# Injizierbarer Uhr-Haken (Konvention wie der fruehere MeteoAlarm-EDR-Uhrhaken) --
 # Default echte Wanduhr, Tests stellen ihn deterministisch.
 def _default_now() -> datetime:
     return datetime.now(timezone.utc)

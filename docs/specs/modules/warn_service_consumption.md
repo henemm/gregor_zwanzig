@@ -13,6 +13,11 @@ workflow: feat-1348-warn-consumption
 
 # Warn-Dienste: Verbrauch senken + sichtbar machen (Scheibe 2a von #1337)
 
+> **Teilweise zurückgebaut durch #2266 (2026-10-27):** Der MeteoAlarm-EDR-Abruf
+> (`api.meteoalarm.org`), das MeteoAlarm-Tagesbudget samt Go-Status-Block `meteoalarm_budget` und die
+> optionale 429-Retry-Policy (`RateLimitRetryPolicy`) in `warn_egress.py` existieren nicht mehr.
+> Der geteilte Egress-Kern (`cached_fetch`, TTL, 429-Backoff, Journal inkl. `self_throttled`) bleibt.
+
 ## Approval
 
 - [ ] Approved

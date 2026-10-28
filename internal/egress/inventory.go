@@ -30,10 +30,9 @@ var Inventory = map[string]Kind{
 	// Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
 	"warnungen.zamg.at": Blocked,
 	"api.brightsky.dev": TestAccess,
-	// Scheibe 2b #1348: Test/Staging erreichen echte Warn-APIs nicht mehr
-	"api.meteoalarm.org": Blocked,
-	// Issue #1445 S1: derselbe Anbieter, kontingentfreier Feed-Transport --
-	// Test/Staging duerfen auch diesen Warn-Host nicht real erreichen.
+	// Issue #1445 S1: kontingentfreier MeteoAlarm-Feed -- Test/Staging duerfen
+	// diesen Warn-Host nicht real erreichen. (Der fruehere kontingentierte
+	// EDR-Host desselben Anbieters ist mit #2266 zurueckgebaut.)
 	"feeds.meteoalarm.org":              Blocked,
 	"public-api.meteofrance.fr":         Blocked,
 	"www.risque-prevention-incendie.fr": Blocked,

@@ -51,9 +51,11 @@ from app.egress_guard import (
 # Die amtlichen Warn-Host, die von Test/Staging isoliert werden sollen. Issue
 # #1445 S1: der neue kontingentfreie Feed-Host muss GENAUSO deklariert BLOCKED
 # sein wie die kontingentierten Warn-APIs -- Test/Staging duerfen auch den
-# neuen Host nie real erreichen.
+# neuen Host nie real erreichen. Issue #2266: der kontingentierte EDR-Host
+# ist zurueckgebaut und steht nicht mehr im INVENTORY (ein Zugriff darauf
+# waere ein KeyError, keine Aussage -- Nachweis der Entfernung:
+# tests/tdd/test_meteoalarm_edr_rueckbau.py).
 WARN_HOSTS = [
-    "api.meteoalarm.org",
     "warnungen.zamg.at",
     "public-api.meteofrance.fr",
     "www.risque-prevention-incendie.fr",

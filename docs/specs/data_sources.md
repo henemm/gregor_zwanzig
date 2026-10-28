@@ -298,14 +298,22 @@ das wird hier nachgeholt. Zugleich wechselt der Bezugsweg.
 |-------|--------|-----------|
 | Amtliche Warnungen AT/IT (Ereignis, Warnstufe, Gefahrenart, Gueltigkeit, Gebiet) | approved | Quelle: `feeds.meteoalarm.org/api/v1/warnings/feeds-<land>`, ohne Auth, **ohne Mengenbegrenzung**, ein Abruf je Land und Auffrischung |
 | Zonen-Geometrie (Punkt-in-Flaeche) | approved | IT ueber eingecheckte DPC-Zonen, AT ueber die Gemeindenummer aus der ohnehin abgerufenen ZAMG-Antwort — keine zusaetzlichen Abrufe |
-| `api.meteoalarm.org` (EDR-Index, authentifiziert) | **abgeloest** | Mengenbegrenzt und nicht stationaer (durchgelassene Menge sank 138 → 95 → 64). Nicht mehr registriert; Code bleibt bis zum Aequivalenznachweis erhalten |
-| CAP-XML / Geometrie-Nachladen (`meteo.fra1.digitaloceanspaces.com`) | approved | praesigniert, auth-frei, zaehlt nicht gegen ein Kontingent |
+| `api.meteoalarm.org` (EDR-Index, authentifiziert) | **zurueckgebaut** | Mengenbegrenzt und nicht stationaer (durchgelassene Menge sank 138 → 95 → 64). Seit #1445 S3 nicht mehr registriert; mit #2266 zurueckgebaut (EDR-Klasse, Tagesbudget und Egress-Inventar-Eintrag entfernt, Aequivalenz ueber eingefrorene Snapshots im Kern-Test belegt) |
+| CAP-XML / Geometrie-Nachladen (`meteo.fra1.digitaloceanspaces.com`) | **entfallen** | praesigniert, auth-frei, zaehlt nicht gegen ein Kontingent. Wurde nur vom EDR-Weg nachgeladen; mit dessen Rueckbau (#2266) ohne Abruf |
 | MQTT-Echtzeitkanal (`mqtt.meteoalarm.org:8883`) | **noch nicht genutzt** | Zugang verifiziert, liefert aber keinen Bestand (keine Retained Messages). Als spaetere Ergaenzung vorgesehen, nicht als Ersatz |
 
 **Begruendung:** Gleicher Anbieter, gleiche Daten, anderer Transport. Der bisherige Weg sperrte
 uns taeglich fuer 24 h aus; amtliche Warnungen waren dadurch den groessten Teil des Tages
 veraltet — bei einem Sicherheitswerkzeug fuer Weitwanderungen nicht hinnehmbar. Der Feed liefert
 zusaetzlich eine laengere Rueckschau (5,8 Tage statt 23 h) und deutschsprachige Texte fuer AT.
+
+**Lizenz-Pruefergebnis zur Feed-TTL (Nachtrag 2026-10-27, #2266):** Geprueft wurde, ob die
+Feed-TTL von 30 Minuten zur EUMETNET-Weitergabe-Auflage passt (kolportiert als „5–10 min Verzug").
+Im Repo liegt keine Primaerquelle fuer diese Auflage vor; auch die Recherche nannte nur einen
+moeglichen Verzug gegenueber meteoalarm.eu, ohne Minutenangabe. Soweit bekannt verlangt die Auflage
+einen Mindest-Verzug; ein Cache von 30 Minuten erfuellt diesen Mindest-Verzug, und eine Obergrenze
+ist nicht belegt. Die TTL von 1800 s bleibt unveraendert (Entscheidung ADR-0074, dort im Abschnitt
+„Lizenz-Pruefergebnis"). Wiedervorlage nur, wenn eine Primaerquelle auftaucht.
 
 #### Antrag #3 (Nachtrag): Open-Meteo `minutely_15` — Radar-Nowcast
 

@@ -49,7 +49,9 @@ import pytest
 # bereits geladenen sys.path des Elternprozesses, ohne dass hier irgendein
 # Pfad manuell zusammengesetzt werden muss.
 
-_CASES = ["forecast_budget", "throttle_store", "meteoalarm_budget"]
+# Issue #2266: der dritte Fall (MeteoAlarm-Tagesbudget) ist mit dem Rueckbau
+# der EDR-Klasse entfallen.
+_CASES = ["forecast_budget", "throttle_store"]
 
 
 # ---------------------------------------------------------------------------
@@ -185,11 +187,6 @@ def _build_case(case_name: str, tmp_path: Path):
 
         obj = ThrottleStore("nutzer-s2-dateisperren", data_dir=tmp_path)
         module = importlib.import_module("services.throttle_store")
-    elif case_name == "meteoalarm_budget":
-        from services.official_alerts.meteoalarm_budget import MeteoAlarmBudgetGate
-
-        obj = MeteoAlarmBudgetGate(data_root=tmp_path)
-        module = importlib.import_module("services.official_alerts.meteoalarm_budget")
     else:  # pragma: no cover - Programmierfehler im Test selbst
         raise ValueError(case_name)
     lock_path = Path(str(obj._path) + ".lock")
@@ -207,8 +204,6 @@ def _assert_written(case_name: str, obj) -> None:
     state = json.loads(obj._path.read_text())
     if case_name == "forecast_budget":
         assert state["calls"].get("openmeteo", 0) == 1, state
-    elif case_name == "meteoalarm_budget":
-        assert state["calls"] == 1, state
     else:
         assert state["trip"]["etappe-1"], state
 

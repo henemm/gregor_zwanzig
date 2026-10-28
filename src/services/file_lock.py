@@ -2,7 +2,7 @@
 
 Fix #1448 Scheibe S2. Ersetzt `fcntl.flock(fd, fcntl.LOCK_EX)` ohne
 `LOCK_NB` und ohne Zeitgrenze in `forecast_budget.py`, `throttle_store.py`
-und `official_alerts/meteoalarm_budget.py` -- dort blockierte der Aufruf
+und dem (mit #2266 zurueckgebauten) MeteoAlarm-Budget -- dort blockierte der Aufruf
 bislang unbegrenzt, solange ein anderer Prozess dieselbe Sperrdatei haelt
 (die neue Job-Lauf-Grenze aus #1447 S1 und die Mail-Zeitgrenze aus S1
 dieser Scheibe erreichen das nie, weil die Sperre vorher haengt).
