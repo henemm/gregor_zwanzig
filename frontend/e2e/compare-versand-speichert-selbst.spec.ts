@@ -29,7 +29,7 @@
 //
 // #2375: der erste PUT nach SSR-Laden geht ohne If-Match durch — für den
 // 412-Fall (AC-6) speichert dieser Test deshalb ZUERST selbst, bevor er den
-// Konflikt provoziert (Muster compare-wetter-metriken-speichert-selbst.spec.ts).
+// Konflikt provoziert (Muster hub-wetter-metriken-speichert-selbst.spec.ts).
 //
 // Läuft im isolierten CI-Stack (frontend/e2e/ci-stack.sh), Anmeldung über den
 // gespeicherten storageState aus global.setup.ts. Presets tragen das Präfix

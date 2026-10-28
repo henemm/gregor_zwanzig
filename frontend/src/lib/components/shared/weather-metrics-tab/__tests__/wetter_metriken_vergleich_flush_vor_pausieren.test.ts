@@ -11,7 +11,7 @@
 // echten Bausteinen: `await saveController.flush()` → Pausier-PUT über
 // dieselbe Hub-Queue mit `buildToggleActivePutPayload`. Prüfort ≠ Wirkort:
 // dass handleToggleActive den Flush wirklich VOR dem PUT abwartet, misst die
-// E2E-Spec compare-wetter-metriken-speichert-selbst.spec.ts.
+// E2E-Spec hub-wetter-metriken-speichert-selbst.spec.ts.
 //
 // Ausführen:
 //   cd frontend && npm test -- src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_flush_vor_pausieren.test.ts

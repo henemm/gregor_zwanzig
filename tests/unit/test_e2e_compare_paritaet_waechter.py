@@ -13,7 +13,8 @@ Regeln (Spec `docs/specs/modules/feat_2347_s1_paritaets_e2e.md`, AC-3):
   (`compare-detail-tab`) ansteuert und weder `trip-detail-tab` noch `/trips/` noch eine
   kind-Schleife noch einen Kopf enthaelt, ist ein Verstoss.
 - Ratschenmodus: `ALTLAST` darf nur schrumpfen -- toter oder inzwischen konformer
-  Eintrag ist rot, ebenso `len(ALTLAST) > ALTLAST_MAX`.
+  Eintrag ist rot, ebenso `len(ALTLAST) != ALTLAST_MAX` (die Obergrenze muss dem
+  echten Stand entsprechen, sonst entsteht unbemerkt Wachstums-Spielraum).
 
 Pfadregel #1409: Pruefling relativ zu DIESER Datei aufgeloest.
 Pruefdatum (Regel-Budget): 2027-01-24 -- kein nachweisbarer Fang => Rueckbau.
@@ -35,19 +36,17 @@ KOPF_ZEILEN = 30
 PRUEFDATUM = date(2027, 1, 24)
 
 # Explizite Altlastliste (nur Dateinamen). Am ENDSTAND von S2 gemessen
-# (2026-10-26: 39 x Regel 1, 2 x Regel 2); darf nur schrumpfen (S4 leert sie).
+# (2026-10-26: 39 x Regel 1, 2 x Regel 2); S3a (2026-10-27): 6 Altdateien in
+# hub-*-Specs zusammengefuehrt, compare-editor-slice3 per gz-eigenstaendig:-Kopf
+# konform => 32 x Regel 1, 2 x Regel 2 = 34; darf nur schrumpfen (S4 leert sie).
 ALTLAST: frozenset[str] = frozenset({
     "compare-active-metrics-format.staging.spec.ts",
     "compare-alarm-config.spec.ts",
-    "compare-alarme-speichert-selbst.spec.ts",
-    "compare-alarme-wertprops.spec.ts",
     "compare-detail-edit-entry.spec.ts",
     "compare-edit-redirect.spec.ts",
-    "compare-editor-autosave-user-isolation.spec.ts",
     "compare-editor-autosave.spec.ts",
     "compare-editor-fidelity-s8d.spec.ts",
     "compare-editor-slice1.spec.ts",
-    "compare-editor-slice3.spec.ts",
     "compare-editor-slice4.spec.ts",
     "compare-flow-navigation.spec.ts",
     "compare-hourly-metric-order.spec.ts",
@@ -67,9 +66,6 @@ ALTLAST: frozenset[str] = frozenset({
     "compare-uebersicht-kanal-bedienung.staging.spec.ts",
     "compare-uebersicht-kanal-persistenz.staging.spec.ts",
     "compare-versand-speichert-selbst.spec.ts",
-    "compare-wertebereiche-speichert-selbst.spec.ts",
-    "compare-wertebereiche-wertprops.spec.ts",
-    "compare-wetter-metriken-speichert-selbst.spec.ts",
     "feat-1461-s3b2b-compare-kanal-schwelle.spec.ts",
     "fix-1350-compare-metric-select.staging.spec.ts",
     "fix-1350t3-compare-threshold-source.staging.spec.ts",
@@ -81,8 +77,10 @@ ALTLAST: frozenset[str] = frozenset({
     "versand-tab-vergleich.spec.ts",
 })
 # Literal, NICHT len(ALTLAST) -- sonst waechst die Obergrenze mit jedem neuen
-# Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken.
-ALTLAST_MAX = 41
+# Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken,
+# und zwar nur im selben Zug wie eine ALTLAST-Streichung: der Wert muss stets
+# gleich len(ALTLAST) sein (#2347 S3a, Adversary F001).
+ALTLAST_MAX = 34
 
 _SCHLEIFE_RE = re.compile(
     r"\bHUB_KINDS\b"
@@ -153,6 +151,15 @@ def test_altlast_waechst_nicht_ueber_den_einfuehrungsstand():
     assert len(ALTLAST) <= ALTLAST_MAX, (
         f"ALTLAST hat {len(ALTLAST)} Eintraege, erlaubt sind hoechstens {ALTLAST_MAX} "
         f"-- neue Compare-only-Specs brauchen eine kind-Schleife oder einen Kopf")
+
+
+def test_altlast_obergrenze_entspricht_dem_echten_stand():
+    # Ohne Gleichheit liesse ein zu hoch stehendes ALTLAST_MAX stillen Spielraum
+    # fuer neue Altlast-Eintraege (Adversary F001).
+    assert len(ALTLAST) == ALTLAST_MAX, (
+        f"ALTLAST hat {len(ALTLAST)} Eintraege, ALTLAST_MAX steht auf {ALTLAST_MAX} "
+        f"-- ALTLAST_MAX muss dem echten Stand entsprechen und darf nur zusammen "
+        f"mit einer Streichung aus ALTLAST sinken (nie vorab hoeher stehen lassen)")
 
 
 def test_echter_baum_ist_nicht_leer():

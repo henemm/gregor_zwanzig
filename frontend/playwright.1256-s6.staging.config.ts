@@ -4,6 +4,9 @@ import { defineConfig } from '@playwright/test';
 // 16/31/32/33/34). Config-Muster identisch zu playwright.1256-s2.staging.config.ts
 // (nginx-Basic-Auth = GZ_VALIDATOR_*, App-Login separat via geteiltem
 // Setup-Projekt — kein neuer Auth-Layer nötig, gleiches Staging-Konto).
+// Seit #2347 S3a trägt compare-hub-inline-edit nur noch den Orte-Teil
+// (AC-14/15/31/32); der Idealwerte-Teil (AC-33/34, F002) liegt je kind in
+// hub-wertebereiche-wertprops.spec.ts.
 const user = process.env.GZ_VALIDATOR_USER!;
 const pass = process.env.GZ_VALIDATOR_PASS!;
 

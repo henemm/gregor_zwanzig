@@ -6,7 +6,7 @@
 // Rollback bei 412 — Design-Entscheidung 7).
 //
 // Spec: docs/specs/modules/rework_2276_s4_wetter_metriken.md — AC-7
-// Nachweisschicht: Kern (hier) + E2E (compare-wetter-metriken-speichert-selbst.spec.ts).
+// Nachweisschicht: Kern (hier) + E2E (hub-wetter-metriken-speichert-selbst.spec.ts).
 //
 // Ausführen:
 //   cd frontend && npm test -- src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_vergleich_konflikt_nochmal_speichern.test.ts

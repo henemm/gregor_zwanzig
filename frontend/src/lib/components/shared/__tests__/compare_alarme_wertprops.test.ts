@@ -19,7 +19,7 @@
 //   Effekt-Ruempfe wirklich aus (`effekteVon()`). Gemessen wird, was der Code
 //   mit den Props TUT — nicht, ob ein Bezeichner im Quelltext steht.
 //   Der Wirkort „Browser" (Klick -> PUT -> Reload) ist damit NICHT abgedeckt;
-//   dafuer ist AC-2 zustaendig (`frontend/e2e/compare-alarme-wertprops.spec.ts`).
+//   dafuer ist AC-2 zustaendig (`frontend/e2e/hub-alarme-wertprops.spec.ts`).
 //
 // 🔴 VAKUUM-FALLE (Memory `fixture_legt_das_feld_selbst_...`, #2387): vier der
 // neuen Prop-Namen (`officialWarningsEnabled`, `cooldownMinutes`, `quietFrom`,

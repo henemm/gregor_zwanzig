@@ -14,7 +14,7 @@
 // Basis-Lesen, Queue, Rückmeldung und Rollback liegen im Modul und werden
 // hier geprüft. Prüfort ≠ Wirkort: dass WeatherMetricsTab/CompareTabs das
 // Modul wirklich (und nur so) verdrahten, misst die E2E-Spec
-// frontend/e2e/compare-wetter-metriken-speichert-selbst.spec.ts.
+// frontend/e2e/hub-wetter-metriken-speichert-selbst.spec.ts.
 //
 // Zielschnittstelle (existiert noch NICHT → RED):
 //
