@@ -79,7 +79,7 @@ ALTLAST: frozenset[str] = frozenset({
 # Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken,
 # und zwar nur im selben Zug wie eine ALTLAST-Streichung: der Wert muss stets
 # gleich len(ALTLAST) sein (#2347 S3a, Adversary F001).
-ALTLAST_MAX = 30
+ALTLAST_MAX = 29
 
 _SCHLEIFE_RE = re.compile(
     r"\bHUB_KINDS\b"
