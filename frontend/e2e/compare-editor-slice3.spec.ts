@@ -8,6 +8,11 @@
 // CorridorEditor ersetzt — die Idealwerte-Tests prüfen gegen corridor-row-*.
 //
 // gz-eigenstaendig: Anlege-Wizard /compare/new hat kein Trip-Pendant mit denselben Kennungen (compare-editor-*, compare-step2-*); die Datei fällt mit #2243 (#2347 S4) ersatzlos, Wertebereiche je kind decken hub-wertebereiche-*.spec.ts ab.
+//
+// #2347 S3b: der Fall „Create-Flow sendet die 5 Slot-Felder + official_warnings"
+// (Alt versand-tab-vergleich.spec.ts AC-6) steht hier, weil er zum Alt-Wizard gehört.
+// Übergabe an S4: die Nachfolge-Anlegeseite /compare/new (Trip-Muster) übernimmt
+// diese Zusicherung (Spec feat_2347_s3b_paritaets_e2e.md AC-11).
 
 import { test, expect, type Page } from '@playwright/test';
 import { createTestLocation } from './helpers';
@@ -208,5 +213,57 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 		const locationIds = (body.location_ids ?? []) as string[];
 		expect(locationIds).toContain(idA);
 		expect(locationIds).toContain(idB);
+	});
+
+	// ── Alt versand-tab-vergleich AC-6 (#2347 S3b): Create-Flow — POST-Body enthält
+	// die 5 Slot-Felder + official_warnings. Issue #1258 S4 (E1/E2, AC-28): die
+	// Tab-Kette enthält die reguläre Station "alarme".
+	test('Create-Flow sendet die 5 Slot-Felder + official_warnings im POST-Body an /api/compare/presets', async ({
+		page
+	}) => {
+		const suffix = Date.now();
+		const [locA, locB] = await Promise.all([
+			createTestLocation(page.request, { lat: 47.0, lon: 13.0, region: 'VersandVergleich-Region' }),
+			createTestLocation(page.request, { lat: 47.1, lon: 13.1, region: 'VersandVergleich-Region' })
+		]);
+
+		await page.goto('/compare/new');
+		await page.waitForLoadState('networkidle');
+		const d = page.locator('.cm-desktop');
+
+		await d.locator('[data-testid="compare-editor-name"]').fill('E2E-GZ-AC-6-Create-Flow-' + suffix);
+		await d.locator('[data-testid="compare-editor-tab-orte"]').click();
+		await d.locator('[data-testid="compare-step2-library"]').waitFor({ timeout: 8_000 });
+		await d.locator('[data-testid="compare-step2-library"]').getByText(locA.name, { exact: true }).click();
+		await d.locator('[data-testid="compare-step2-library"]').getByText(locB.name, { exact: true }).click();
+		// Epic #1301 F2a: Wetter-Metriken-Tab besuchen schaltet Wertebereiche frei (echter Klick).
+		await d.locator('[data-testid="compare-editor-tab-wetter-metriken"]').click();
+		await d.locator('[data-testid="compare-editor-tab-wertebereiche"]').click();
+		// Issue #1743: Alarme ist der letzte Schritt (Versand steht im Schritt Wetter-Metriken).
+		await d.locator('[data-testid="compare-editor-tab-alarme"]').click();
+
+		const [antwort] = await Promise.all([
+			page.waitForResponse(
+				(res) => new URL(res.url()).pathname === '/api/compare/presets' && res.request().method() === 'POST'
+			),
+			d.locator('[data-testid="compare-editor-activate"]').click()
+		]);
+		// Aufräumen des angelegten Vergleichs (Kontingent 2 aktive Vergleiche je Nutzer;
+		// die Datei steht auf der Positivliste, Folgefälle dürfen nicht an 409 scheitern).
+		const angelegt = ((await antwort.json().catch(() => ({}))) as { id?: string }).id;
+		try {
+			const body = antwort.request().postDataJSON() as Record<string, unknown>;
+
+			expect(body.morning_enabled).toBe(true);
+			expect(body.morning_time).toBe('07:00:00');
+			expect(body.evening_enabled).toBe(false);
+			expect(body.evening_time).toBe('18:00:00');
+			expect(body.end_date == null, 'end_date darf beim Create ohne Laufzeit-Auswahl fehlen/null sein').toBeTruthy();
+			// Issue #1258 S4 (AC-27, E3): official_warnings wird unconditional gesendet
+			// (F1-Neuanlage-Default false), kein sources-Key ohne Bestand.
+			expect(body.official_warnings).toEqual({ enabled: false });
+		} finally {
+			if (angelegt) await page.request.delete(`/api/compare/presets/${angelegt}`).catch(() => {});
+		}
 	});
 });
