@@ -1,0 +1,586 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/epic2138-1539
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 17 items
+
+tests/tdd/test_trip_alert_parallel_fetch.py FFFFFFFFFFFFF.FFF            [100%]
+
+=================================== FAILURES ===================================
+___ test_ac1_ergebnis_folgt_der_eingabereihenfolge_nicht_der_fertigstellung ____
+
+rand = <function rand.<locals>.installiere at 0x7f9cfc90c900>
+
+    def test_ac1_ergebnis_folgt_der_eingabereihenfolge_nicht_der_fertigstellung(rand):
+        """AC-1: Fuenf faellige Etappen, deren Abrufe in UMGEKEHRTER Reihenfolge
+        fertig werden (Etappe 1 am langsamsten) -> die Liste bleibt 1..5."""
+        prov = rand(verzoegerung={"1": 0.40, "2": 0.32, "3": 0.24, "4": 0.16, "5": 0.08})
+        dienst = _dienst()
+        wetter = dienst._fetch_fresh_weather(_etappen([1, 2, 3, 4, 5]))
+        assert _ids(wetter) == [1, 2, 3, 4, 5]
+>       _assert_gleichzeitig(prov)
+
+tests/tdd/test_trip_alert_parallel_fetch.py:257: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+prov = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cfda6d2b0>
+
+    def _assert_gleichzeitig(prov: _RandProvider) -> None:
+>       assert prov.max_gleichzeitig >= 2, (
+            f"Es lief nie mehr als {prov.max_gleichzeitig} Abruf gleichzeitig -- "
+            "die Etappen werden seriell abgerufen."
+        )
+E       AssertionError: Es lief nie mehr als 1 Abruf gleichzeitig -- die Etappen werden seriell abgerufen.
+E       assert 1 >= 2
+E        +  where 1 = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cfda6d2b0>.max_gleichzeitig
+
+tests/tdd/test_trip_alert_parallel_fetch.py:213: AssertionError
+___________ test_ac2_ausfall_einer_etappe_laesst_die_uebrigen_durch ____________
+
+rand = <function rand.<locals>.installiere at 0x7f9cfda52340>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7f9cfc95e900>
+
+    def test_ac2_ausfall_einer_etappe_laesst_die_uebrigen_durch(rand, caplog):
+        """AC-2: Etappe 2 scheitert -> 1, 3, 4 kommen, 2 fehlt, Stand (4, 1),
+        Fehler mit Etappe im Log."""
+        prov = rand(fehler={"2"}, standard_verzoegerung=0.15)
+        dienst = _dienst()
+        with caplog.at_level(logging.INFO):
+            wetter = dienst._fetch_fresh_weather(_etappen([1, 2, 3, 4]))
+        assert _ids(wetter) == [1, 3, 4]
+        assert dienst._fetch_stats == (4, 1)
+        fehlerzeilen = [
+            r.getMessage() for r in caplog.records
+            if r.levelno >= logging.ERROR and re.search(r"\b2\b", r.getMessage())
+        ]
+        assert len(fehlerzeilen) == 1 and "boom" in fehlerzeilen[0], fehlerzeilen
+>       _assert_gleichzeitig(prov)
+
+tests/tdd/test_trip_alert_parallel_fetch.py:278: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+prov = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cfe858770>
+
+    def _assert_gleichzeitig(prov: _RandProvider) -> None:
+>       assert prov.max_gleichzeitig >= 2, (
+            f"Es lief nie mehr als {prov.max_gleichzeitig} Abruf gleichzeitig -- "
+            "die Etappen werden seriell abgerufen."
+        )
+E       AssertionError: Es lief nie mehr als 1 Abruf gleichzeitig -- die Etappen werden seriell abgerufen.
+E       assert 1 >= 2
+E        +  where 1 = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cfe858770>.max_gleichzeitig
+
+tests/tdd/test_trip_alert_parallel_fetch.py:213: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3015 Etappe 1: Abruf in 0.188 s
+ERROR    trip_alert:trip_alert.py:3010 Failed to fetch fresh weather for segment 2: boom-2
+INFO     trip_alert:trip_alert.py:3015 Etappe 2: Abruf in 0.153 s
+INFO     trip_alert:trip_alert.py:3015 Etappe 3: Abruf in 0.172 s
+INFO     trip_alert:trip_alert.py:3015 Etappe 4: Abruf in 0.174 s
+_____ test_ac3_fristablauf_zaehlt_uebersprungene_als_gescheitert_mit_grund _____
+
+rand = <function rand.<locals>.installiere at 0x7f9cef7e53a0>, slot_eins = None
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7f9cef80ce60>
+
+    def test_ac3_fristablauf_zaehlt_uebersprungene_als_gescheitert_mit_grund(
+        rand, slot_eins, caplog,
+    ):
+        """AC-3: Ein Slot, Frist 0,45 s, jeder Abruf 0,3 s -> Etappe 1 passt, die
+        uebrigen werden uebersprungen. Jede fehlende Etappe: gescheitert gezaehlt,
+        nicht in der Liste, genau eine Fehlerzeile mit Grund -- nichts still."""
+        prov = rand(standard_verzoegerung=0.30)
+        dienst = _dienst()
+        dienst._run_deadline_at = time.monotonic() + 0.45
+        with caplog.at_level(logging.INFO):
+            wetter = dienst._fetch_fresh_weather(_etappen([1, 2, 3, 4]))
+        gelungen = _ids(wetter)
+>       assert set(gelungen) <= {1}, f"Nach Fristablauf darf nur Etappe 1 durch sein: {gelungen}"
+E       AssertionError: Nach Fristablauf darf nur Etappe 1 durch sein: [1, 2, 3, 4]
+E       assert {1, 2, 3, 4} <= {1}
+E         
+E         Extra items in the left set:
+E         2
+E         3
+E         4
+
+tests/tdd/test_trip_alert_parallel_fetch.py:296: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3015 Etappe 1: Abruf in 0.321 s
+INFO     trip_alert:trip_alert.py:3015 Etappe 2: Abruf in 0.328 s
+INFO     trip_alert:trip_alert.py:3015 Etappe 3: Abruf in 0.325 s
+INFO     trip_alert:trip_alert.py:3015 Etappe 4: Abruf in 0.334 s
+___________ test_ac4_alarmabrufe_in_workern_werden_als_alarm_gebucht ___________
+
+rand = <function rand.<locals>.installiere at 0x7f9cef7e5620>
+journal = <function journal.<locals>.lesen at 0x7f9cef7e4ea0>
+
+    def test_ac4_alarmabrufe_in_workern_werden_als_alarm_gebucht(rand, journal):
+        """AC-4: Jeder Worker-Abruf des Alarmpfads steht im Journal als "alarm",
+        keiner als "unbekannt"."""
+        prov = rand()
+        dienst = _dienst()
+        dienst._fetch_fresh_weather(_etappen([1, 2, 3, 4]))
+>       _assert_in_workern(prov)
+
+tests/tdd/test_trip_alert_parallel_fetch.py:321: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+prov = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cfccf6db0>
+hauptfaden = None
+
+    def _assert_in_workern(prov: _RandProvider, hauptfaden: int | None = None) -> None:
+        """Vorbedingung: die Upstream-Calls liefen in Worker-Threads, nicht im
+        Aufrufer-Thread (sonst bewacht der Test die Parallelisierung nicht)."""
+        haupt = hauptfaden if hauptfaden is not None else threading.get_ident()
+        assert prov.threads, "Setup: es gab keinen einzigen Upstream-Call"
+>       assert haupt not in prov.threads, (
+            "Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet "
+            "wird der Abruf ueber fetch_ordered in Worker-Threads."
+        )
+E       AssertionError: Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet wird der Abruf ueber fetch_ordered in Worker-Threads.
+E       assert 140312299528320 not in [140312299528320, 140312299528320, 140312299528320, 140312299528320]
+E        +  where [140312299528320, 140312299528320, 140312299528320, 140312299528320] = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cfccf6db0>.threads
+
+tests/tdd/test_trip_alert_parallel_fetch.py:202: AssertionError
+_____________ test_ac5_vorschauabrufe_in_workern_bleiben_vorschau ______________
+
+rand = <function rand.<locals>.installiere at 0x7f9cef7e6700>
+journal = <function journal.<locals>.lesen at 0x7f9cef7e65c0>
+
+    def test_ac5_vorschauabrufe_in_workern_bleiben_vorschau(rand, journal):
+        """AC-5: Ueber den Hilfsfaden der Vorschau (``_within``) und die Worker
+        bleibt die Herkunft "vorschau" -- NICHT "alarm" (feste Ueberschreibung
+        waere falsch) und nicht "unbekannt"."""
+        from providers.call_log import override_call_source
+        from services.alert_preview_hours import _within
+    
+        prov = rand()
+        dienst = _dienst()
+        cached = _etappen([1, 2, 3])
+        with override_call_source("vorschau"):
+            wetter = _within(time.monotonic() + ZEITSCHRANKE, dienst._fetch_fresh_weather, cached)
+        assert _ids(wetter) == [1, 2, 3]
+>       _assert_in_workern(prov)
+
+tests/tdd/test_trip_alert_parallel_fetch.py:344: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+prov = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cf9fa0bf0>
+hauptfaden = None
+
+    def _assert_in_workern(prov: _RandProvider, hauptfaden: int | None = None) -> None:
+        """Vorbedingung: die Upstream-Calls liefen in Worker-Threads, nicht im
+        Aufrufer-Thread (sonst bewacht der Test die Parallelisierung nicht)."""
+        haupt = hauptfaden if hauptfaden is not None else threading.get_ident()
+        assert prov.threads, "Setup: es gab keinen einzigen Upstream-Call"
+        assert haupt not in prov.threads, (
+            "Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet "
+            "wird der Abruf ueber fetch_ordered in Worker-Threads."
+        )
+        # Die Threads des Bausteins heissen "parallel-fetch_*" (ThreadPoolExecutor);
+        # Hilfsfaeden der Vorschau/Test-Threads zaehlen NICHT als Worker.
+        fremd = [n for n in prov.thread_namen if not n.startswith("parallel-fetch")]
+>       assert not fremd, f"Abrufe liefen nicht in Baustein-Workern: {fremd!r}"
+E       AssertionError: Abrufe liefen nicht in Baustein-Workern: ['ThreadPoolExecutor-0_0', 'ThreadPoolExecutor-0_0', 'ThreadPoolExecutor-0_0']
+E       assert not ['ThreadPoolExecutor-0_0', 'ThreadPoolExecutor-0_0', 'ThreadPoolExecutor-0_0']
+
+tests/tdd/test_trip_alert_parallel_fetch.py:209: AssertionError
+_______ test_ac6_gesetzte_laufgrenze_erreicht_den_baustein_unveraendert ________
+
+rand = <function rand.<locals>.installiere at 0x7f9cef7e7380>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9cef7df1d0>
+
+    def test_ac6_gesetzte_laufgrenze_erreicht_den_baustein_unveraendert(rand, monkeypatch):
+        """AC-6: ``_run_deadline_at`` gesetzt -> genau dieser Wert kommt an."""
+        rand()
+        spion = _FristSpion(monkeypatch)
+        dienst = _dienst()
+        frist = time.monotonic() + 123.0
+        dienst._run_deadline_at = frist
+        dienst._fetch_fresh_weather(_etappen([1, 2]))
+>       assert spion.fristen == [frist], (
+            f"Baustein-Aufrufe mit Fristen {spion.fristen!r}, erwartet [{frist}] "
+            "(fetch_ordered wurde nicht oder mit anderer Frist aufgerufen)."
+        )
+E       AssertionError: Baustein-Aufrufe mit Fristen [], erwartet [1018157.914677453] (fetch_ordered wurde nicht oder mit anderer Frist aufgerufen).
+E       assert [] == [1018157.914677453]
+E         
+E         Right contains one more item: 1018157.914677453
+E         Use -v to get more diff
+
+tests/tdd/test_trip_alert_parallel_fetch.py:361: AssertionError
+____ test_ac6_ohne_laufgrenze_gilt_eine_endliche_frist_von_etwa_60_sekunden ____
+
+rand = <function rand.<locals>.installiere at 0x7f9cef7e7600>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9cfc95f4a0>
+
+    def test_ac6_ohne_laufgrenze_gilt_eine_endliche_frist_von_etwa_60_sekunden(rand, monkeypatch):
+        """AC-6: kein Feld (Vorschau, Einzelaufruf) -> ~60 s ab Aufruf, nie unbegrenzt."""
+        rand()
+        spion = _FristSpion(monkeypatch)
+        dienst = _dienst()
+        vorher = time.monotonic()
+        dienst._fetch_fresh_weather(_etappen([1, 2]))
+>       assert len(spion.fristen) == 1, "fetch_ordered wurde nicht genau einmal aufgerufen"
+E       AssertionError: fetch_ordered wurde nicht genau einmal aufgerufen
+E       assert 0 == 1
+E        +  where 0 = len([])
+E        +    where [] = <tdd.test_trip_alert_parallel_fetch._FristSpion object at 0x7f9cfc95da30>.fristen
+
+tests/tdd/test_trip_alert_parallel_fetch.py:374: AssertionError
+____ test_ac6_check_all_trips_setzt_die_frist_und_setzt_sie_danach_zurueck _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9cef7ffa70>
+
+    def test_ac6_check_all_trips_setzt_die_frist_und_setzt_sie_danach_zurueck(monkeypatch):
+        """AC-6: Im Lauf steht ``_run_deadline_at`` ~ Lauf-Start + 180 s und wird
+        genau diese Frist an den Baustein gereicht; nach dem Lauf ist das Feld leer."""
+        user_id = f"tdd-1539s3-{uuid.uuid4().hex[:6]}"
+        dienst = _lauf_mit_trip(user_id)
+        spion = _FristSpion(monkeypatch, vorher=lambda: spion.dienst_feld.append(
+            getattr(dienst, "_run_deadline_at", None)))
+        vorher = time.monotonic()
+        dienst.check_all_trips()
+>       assert spion.fristen, "Der Alarmlauf rief fetch_ordered nie auf"
+E       AssertionError: Der Alarmlauf rief fetch_ordered nie auf
+E       assert []
+E        +  where [] = <tdd.test_trip_alert_parallel_fetch._FristSpion object at 0x7f9cfe85a300>.fristen
+
+tests/tdd/test_trip_alert_parallel_fetch.py:397: AssertionError
+___ test_ac6_laufgrenze_wird_auch_nach_einer_ausnahme_im_lauf_zurueckgesetzt ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9cef7fea80>
+
+    def test_ac6_laufgrenze_wird_auch_nach_einer_ausnahme_im_lauf_zurueckgesetzt(monkeypatch):
+        """AC-6: Eine Ausnahme, die ``check_all_trips`` verlaesst (BaseException
+        passiert die ``except Exception``-Handler der Trip-Schleife), laesst kein
+        Feld stehen -- sonst erbte der naechste Aufruf (Vorschau) die Alt-Frist."""
+        class Abbruch(BaseException):
+            pass
+    
+        user_id = f"tdd-1539s3-{uuid.uuid4().hex[:6]}"
+        dienst = _lauf_mit_trip(user_id)
+        spion = _FristSpion(monkeypatch, abbruch=Abbruch, vorher=lambda: spion.dienst_feld.append(
+            getattr(dienst, "_run_deadline_at", None)))
+>       with pytest.raises(Abbruch):
+E       Failed: DID NOT RAISE <class 'tdd.test_trip_alert_parallel_fetch.test_ac6_laufgrenze_wird_auch_nach_einer_ausnahme_im_lauf_zurueckgesetzt.<locals>.Abbruch'>
+
+tests/tdd/test_trip_alert_parallel_fetch.py:415: Failed
+___________ test_ac7_stand_und_ergebnis_entstehen_nur_im_hauptfaden ____________
+
+rand = <function rand.<locals>.installiere at 0x7f9cef7e7600>
+thread_fehler = []
+
+    def test_ac7_stand_und_ergebnis_entstehen_nur_im_hauptfaden(rand, thread_fehler):
+        """AC-7: ``_fetch_stats`` wird nur vom aufrufenden Thread geschrieben; ueber
+        viele Wiederholungen mit gemischtem Erfolg/Fehler stimmt der Stand immer
+        mit der Zahl faelliger und gescheiterter Etappen ueberein."""
+        haupt = threading.get_ident()
+        for wiederholung in range(25):
+            prov = rand(
+                fehler={"3", "6"}, standard_verzoegerung=0.002,
+                verzoegerung={"1": 0.01, "5": 0.01},
+            )
+            dienst = _SchreibWaechter(
+                settings=_settings(), user_id=f"tdd-1539s3-{uuid.uuid4().hex[:6]}",
+                mail_sink=lambda *_: None)
+            wetter = dienst._fetch_fresh_weather(_etappen([1, 2, 3, 4, 5, 6]))
+            assert set(dienst.__dict__["_schreiber"]) == {haupt}, (
+                f"Wiederholung {wiederholung}: _fetch_stats aus fremdem Thread geschrieben")
+            assert dienst._fetch_stats == (6, 2), (wiederholung, dienst._fetch_stats)
+            assert _ids(wetter) == [1, 2, 4, 5], (wiederholung, _ids(wetter))
+>           _assert_in_workern(prov, haupt)
+
+tests/tdd/test_trip_alert_parallel_fetch.py:453: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+prov = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cef80e270>
+hauptfaden = 140312299528320
+
+    def _assert_in_workern(prov: _RandProvider, hauptfaden: int | None = None) -> None:
+        """Vorbedingung: die Upstream-Calls liefen in Worker-Threads, nicht im
+        Aufrufer-Thread (sonst bewacht der Test die Parallelisierung nicht)."""
+        haupt = hauptfaden if hauptfaden is not None else threading.get_ident()
+        assert prov.threads, "Setup: es gab keinen einzigen Upstream-Call"
+>       assert haupt not in prov.threads, (
+            "Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet "
+            "wird der Abruf ueber fetch_ordered in Worker-Threads."
+        )
+E       AssertionError: Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet wird der Abruf ueber fetch_ordered in Worker-Threads.
+E       assert 140312299528320 not in [140312299528320, 140312299528320, 140312299528320, 140312299528320, 140312299528320, 140312299528320]
+E        +  where [140312299528320, 140312299528320, 140312299528320, 140312299528320, 140312299528320, 140312299528320] = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cef80e270>.threads
+
+tests/tdd/test_trip_alert_parallel_fetch.py:202: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    trip_alert:trip_alert.py:3010 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3010 Failed to fetch fresh weather for segment 6: boom-6
+______________ test_ac8_zwei_nutzer_gleichzeitig_bleiben_getrennt ______________
+
+rand = <function rand.<locals>.installiere at 0x7f9cef7e79c0>
+thread_fehler = []
+
+    def test_ac8_zwei_nutzer_gleichzeitig_bleiben_getrennt(rand, thread_fehler):
+        """AC-8: Zwei Nutzer rufen gleichzeitig ab -> jeder bucht seine Calls in den
+        eigenen Budget-Topf (je 3), nichts im Topf "default", keine Etappe des einen
+        im Ergebnis des anderen."""
+        from services.forecast_budget import ForecastBudgetGate
+    
+        prov = rand(standard_verzoegerung=0.05)
+        ua = f"tdd-1539s3-a-{uuid.uuid4().hex[:6]}"
+        ub = f"tdd-1539s3-b-{uuid.uuid4().hex[:6]}"
+        vorher_default = ForecastBudgetGate("default").snapshot().get("user_calls_today", 0)
+        treffpunkt = threading.Barrier(2)
+    
+        def lauf(user_id, ids):
+            treffpunkt.wait(timeout=ZEITSCHRANKE)
+            return _ids(_dienst(user_id)._fetch_fresh_weather(_etappen(ids)))
+    
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            fa = pool.submit(lauf, ua, [11, 12, 13])
+            fb = pool.submit(lauf, ub, [21, 22, 23])
+            ergebnis_a, ergebnis_b = fa.result(timeout=ZEITSCHRANKE), fb.result(timeout=ZEITSCHRANKE)
+    
+        assert ergebnis_a == [11, 12, 13]
+        assert ergebnis_b == [21, 22, 23]
+        assert ForecastBudgetGate(ua).snapshot()["user_calls_today"] == 3
+        assert ForecastBudgetGate(ub).snapshot()["user_calls_today"] == 3
+        assert ForecastBudgetGate("default").snapshot().get("user_calls_today", 0) == vorher_default, (
+            "Es wurde im Topf 'default' gebucht -- user_id ging im Worker verloren")
+>       _assert_in_workern(prov)
+
+tests/tdd/test_trip_alert_parallel_fetch.py:486: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+prov = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cef80c950>
+hauptfaden = None
+
+    def _assert_in_workern(prov: _RandProvider, hauptfaden: int | None = None) -> None:
+        """Vorbedingung: die Upstream-Calls liefen in Worker-Threads, nicht im
+        Aufrufer-Thread (sonst bewacht der Test die Parallelisierung nicht)."""
+        haupt = hauptfaden if hauptfaden is not None else threading.get_ident()
+        assert prov.threads, "Setup: es gab keinen einzigen Upstream-Call"
+        assert haupt not in prov.threads, (
+            "Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet "
+            "wird der Abruf ueber fetch_ordered in Worker-Threads."
+        )
+        # Die Threads des Bausteins heissen "parallel-fetch_*" (ThreadPoolExecutor);
+        # Hilfsfaeden der Vorschau/Test-Threads zaehlen NICHT als Worker.
+        fremd = [n for n in prov.thread_namen if not n.startswith("parallel-fetch")]
+>       assert not fremd, f"Abrufe liefen nicht in Baustein-Workern: {fremd!r}"
+E       AssertionError: Abrufe liefen nicht in Baustein-Workern: ['ThreadPoolExecutor-1_0', 'ThreadPoolExecutor-1_1', 'ThreadPoolExecutor-1_0', 'ThreadPoolExecutor-1_1', 'ThreadPoolExecutor-1_0', 'ThreadPoolExecutor-1_1']
+E       assert not ['ThreadPoolExecutor-1_0', 'ThreadPoolExecutor-1_1', 'ThreadPoolExecutor-1_0', 'ThreadPoolExecutor-1_1', 'ThreadPoolExecutor-1_0', 'ThreadPoolExecutor-1_1']
+
+tests/tdd/test_trip_alert_parallel_fetch.py:209: AssertionError
+_________ test_ac9_parallel_ruft_nicht_oefter_upstream_ab_als_seriell __________
+
+rand = <function rand.<locals>.installiere at 0x7f9cef8af420>
+
+    def test_ac9_parallel_ruft_nicht_oefter_upstream_ab_als_seriell(rand):
+        """AC-9: Gleiche Form (zwei Etappen am SELBEN Ort, zwei weitere) einmal
+        seriell (direkter Schleifenaufruf des echten Dienstes) und einmal ueber
+        ``_fetch_fresh_weather``: die Upstream-Calls am Provider-Rand sind
+        parallel <= seriell, und der parallele Lauf war wirklich parallel."""
+        from services.segment_weather import SegmentWeatherService
+    
+        def form():
+            basis = _neue_breite()
+            return [basis, basis, _neue_breite(), _neue_breite()]
+    
+        seriell = rand(standard_verzoegerung=0.05)
+        dienst_s = SegmentWeatherService(seriell)  # derselbe Provider-Rand wie im Betrieb
+        for etappe in _etappen([1, 2, 3, 4], breiten=form()):
+            dienst_s.fetch_segment_weather(
+                etappe.segment, enrich_ensemble=False, enrich_snow=False,
+                priority="alert_check", user_id="tdd-1539s3-seriell")
+        calls_seriell = len(seriell.aufrufe)
+    
+        parallel = rand(standard_verzoegerung=0.05)
+        _dienst()._fetch_fresh_weather(_etappen([1, 2, 3, 4], breiten=form()))
+        assert 0 < len(parallel.aufrufe) <= calls_seriell, (
+            f"parallel {len(parallel.aufrufe)} Calls, seriell {calls_seriell}")
+>       _assert_gleichzeitig(parallel)
+
+tests/tdd/test_trip_alert_parallel_fetch.py:515: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+prov = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cfc7b40b0>
+
+    def _assert_gleichzeitig(prov: _RandProvider) -> None:
+>       assert prov.max_gleichzeitig >= 2, (
+            f"Es lief nie mehr als {prov.max_gleichzeitig} Abruf gleichzeitig -- "
+            "die Etappen werden seriell abgerufen."
+        )
+E       AssertionError: Es lief nie mehr als 1 Abruf gleichzeitig -- die Etappen werden seriell abgerufen.
+E       assert 1 >= 2
+E        +  where 1 = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cfc7b40b0>.max_gleichzeitig
+
+tests/tdd/test_trip_alert_parallel_fetch.py:213: AssertionError
+_______ test_ac10_beendete_und_kuenftige_etappen_werden_nicht_abgerufen ________
+
+rand = <function rand.<locals>.installiere at 0x7f9cef8700e0>
+
+    def test_ac10_beendete_und_kuenftige_etappen_werden_nicht_abgerufen(rand):
+        """AC-10: Eine beendete und eine erst morgen beginnende Etappe werden weder
+        abgerufen noch in ``versucht`` gezaehlt; die beiden faelligen schon."""
+        import dataclasses
+    
+        jetzt = datetime.now(timezone.utc)
+        faellig = _etappen([2, 3])
+        beendet = _etappen([1])[0]
+        beendet = dataclasses.replace(beendet, segment=dataclasses.replace(
+            beendet.segment, start_time=jetzt - timedelta(hours=6), end_time=jetzt - timedelta(hours=2)))
+        morgen = _etappen([4])[0]
+        morgen = dataclasses.replace(morgen, segment=dataclasses.replace(
+            morgen.segment, start_time=jetzt + timedelta(hours=30), end_time=jetzt + timedelta(hours=34)))
+    
+        prov = rand(standard_verzoegerung=0.05)
+        dienst = _dienst()
+        wetter = dienst._fetch_fresh_weather([beendet, faellig[0], faellig[1], morgen])
+        assert _ids(wetter) == [2, 3]
+        assert sorted(prov.aufrufe) == ["2", "3"], prov.aufrufe
+        assert dienst._fetch_stats == (2, 0)
+>       _assert_in_workern(prov)
+
+tests/tdd/test_trip_alert_parallel_fetch.py:542: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+prov = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cef867e60>
+hauptfaden = None
+
+    def _assert_in_workern(prov: _RandProvider, hauptfaden: int | None = None) -> None:
+        """Vorbedingung: die Upstream-Calls liefen in Worker-Threads, nicht im
+        Aufrufer-Thread (sonst bewacht der Test die Parallelisierung nicht)."""
+        haupt = hauptfaden if hauptfaden is not None else threading.get_ident()
+        assert prov.threads, "Setup: es gab keinen einzigen Upstream-Call"
+>       assert haupt not in prov.threads, (
+            "Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet "
+            "wird der Abruf ueber fetch_ordered in Worker-Threads."
+        )
+E       AssertionError: Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet wird der Abruf ueber fetch_ordered in Worker-Threads.
+E       assert 140312299528320 not in [140312299528320, 140312299528320]
+E        +  where [140312299528320, 140312299528320] = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cef867e60>.threads
+
+tests/tdd/test_trip_alert_parallel_fetch.py:202: AssertionError
+__________ test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_ausfall __________
+
+rand = <function rand.<locals>.installiere at 0x7f9cef8707c0>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7f9cef83dbb0>
+
+    def test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_ausfall(rand, caplog):
+        """AC-11: Parallel, Etappe 2 scheitert -> fuer 1..4 je GENAU eine Zeile."""
+        prov = rand(fehler={"2"}, standard_verzoegerung=0.05)
+        dienst = _dienst()
+        with caplog.at_level(logging.INFO):
+            dienst._fetch_fresh_weather(_etappen([1, 2, 3, 4]))
+        for n in (1, 2, 3, 4):
+            assert len(_dauerzeilen(caplog, n)) == 1, (n, _dauerzeilen(caplog, n))
+>       _assert_in_workern(prov)
+
+tests/tdd/test_trip_alert_parallel_fetch.py:578: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+prov = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cef83eba0>
+hauptfaden = None
+
+    def _assert_in_workern(prov: _RandProvider, hauptfaden: int | None = None) -> None:
+        """Vorbedingung: die Upstream-Calls liefen in Worker-Threads, nicht im
+        Aufrufer-Thread (sonst bewacht der Test die Parallelisierung nicht)."""
+        haupt = hauptfaden if hauptfaden is not None else threading.get_ident()
+        assert prov.threads, "Setup: es gab keinen einzigen Upstream-Call"
+>       assert haupt not in prov.threads, (
+            "Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet "
+            "wird der Abruf ueber fetch_ordered in Worker-Threads."
+        )
+E       AssertionError: Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet wird der Abruf ueber fetch_ordered in Worker-Threads.
+E       assert 140312299528320 not in [140312299528320, 140312299528320, 140312299528320, 140312299528320]
+E        +  where [140312299528320, 140312299528320, 140312299528320, 140312299528320] = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cef83eba0>.threads
+
+tests/tdd/test_trip_alert_parallel_fetch.py:202: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3015 Etappe 1: Abruf in 0.081 s
+ERROR    trip_alert:trip_alert.py:3010 Failed to fetch fresh weather for segment 2: boom-2
+INFO     trip_alert:trip_alert.py:3015 Etappe 2: Abruf in 0.053 s
+INFO     trip_alert:trip_alert.py:3015 Etappe 3: Abruf in 0.091 s
+INFO     trip_alert:trip_alert.py:3015 Etappe 4: Abruf in 0.074 s
+______ test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_uebersprungenen ______
+
+rand = <function rand.<locals>.installiere at 0x7f9cef7e65c0>, slot_eins = None
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7f9cebb1dd60>
+
+    def test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_uebersprungenen(
+        rand, slot_eins, caplog,
+    ):
+        """AC-11: Auch uebersprungene (Frist) Etappen haben genau eine Zeile."""
+        prov = rand(standard_verzoegerung=0.30)
+        dienst = _dienst()
+        dienst._run_deadline_at = time.monotonic() + 0.45
+        with caplog.at_level(logging.INFO):
+            dienst._fetch_fresh_weather(_etappen([1, 2, 3, 4]))
+        for n in (1, 2, 3, 4):
+            assert len(_dauerzeilen(caplog, n)) == 1, (n, _dauerzeilen(caplog, n))
+>       _assert_in_workern(prov)
+
+tests/tdd/test_trip_alert_parallel_fetch.py:592: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+prov = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cebb1dd90>
+hauptfaden = None
+
+    def _assert_in_workern(prov: _RandProvider, hauptfaden: int | None = None) -> None:
+        """Vorbedingung: die Upstream-Calls liefen in Worker-Threads, nicht im
+        Aufrufer-Thread (sonst bewacht der Test die Parallelisierung nicht)."""
+        haupt = hauptfaden if hauptfaden is not None else threading.get_ident()
+        assert prov.threads, "Setup: es gab keinen einzigen Upstream-Call"
+>       assert haupt not in prov.threads, (
+            "Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet "
+            "wird der Abruf ueber fetch_ordered in Worker-Threads."
+        )
+E       AssertionError: Die Etappen werden im Aufrufer-Thread seriell abgerufen -- erwartet wird der Abruf ueber fetch_ordered in Worker-Threads.
+E       assert 140312299528320 not in [140312299528320, 140312299528320, 140312299528320, 140312299528320]
+E        +  where [140312299528320, 140312299528320, 140312299528320, 140312299528320] = <tdd.test_trip_alert_parallel_fetch._RandProvider object at 0x7f9cebb1dd90>.threads
+
+tests/tdd/test_trip_alert_parallel_fetch.py:202: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3015 Etappe 1: Abruf in 0.332 s
+INFO     trip_alert:trip_alert.py:3015 Etappe 2: Abruf in 0.322 s
+INFO     trip_alert:trip_alert.py:3015 Etappe 3: Abruf in 0.340 s
+INFO     trip_alert:trip_alert.py:3015 Etappe 4: Abruf in 0.327 s
+______ test_ac12_adr_0103_nennt_zahl_methode_stellschraube_und_pruefdatum ______
+
+    def test_ac12_adr_0103_nennt_zahl_methode_stellschraube_und_pruefdatum():
+        # doc-compliance-test
+        """AC-12: ADR-0103 legt Slotzahl 3, Messmethode (503/429, p50/p95, Prod-Journal),
+        die Stellschraube und das Pruefdatum 2027-01-26 fest; Index-Zeile vorhanden."""
+        adr_dir = WORKTREE / "docs" / "adr"
+        adr = adr_dir / "0103-parallele-abrufe-semaphorenzahlen.md"
+>       assert adr.exists(), f"{adr} fehlt"
+E       AssertionError: /home/hem/gregor_zwanzig/.claude/worktrees/epic2138-1539/docs/adr/0103-parallele-abrufe-semaphorenzahlen.md fehlt
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/epic2138-1539/docs/adr/0103-parallele-abrufe-semaphorenzahlen.md').exists
+
+tests/tdd/test_trip_alert_parallel_fetch.py:604: AssertionError
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac10_trip_ohne_faellige_etappe_meldet_null_null
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac1_ergebnis_folgt_der_eingabereihenfolge_nicht_der_fertigstellung
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac2_ausfall_einer_etappe_laesst_die_uebrigen_durch
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac3_fristablauf_zaehlt_uebersprungene_als_gescheitert_mit_grund
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac4_alarmabrufe_in_workern_werden_als_alarm_gebucht
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac5_vorschauabrufe_in_workern_bleiben_vorschau
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_gesetzte_laufgrenze_erreicht_den_baustein_unveraendert
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_ohne_laufgrenze_gilt_eine_endliche_frist_von_etwa_60_sekunden
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_check_all_trips_setzt_die_frist_und_setzt_sie_danach_zurueck
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_laufgrenze_wird_auch_nach_einer_ausnahme_im_lauf_zurueckgesetzt
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac7_stand_und_ergebnis_entstehen_nur_im_hauptfaden
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac8_zwei_nutzer_gleichzeitig_bleiben_getrennt
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac9_parallel_ruft_nicht_oefter_upstream_ab_als_seriell
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac10_beendete_und_kuenftige_etappen_werden_nicht_abgerufen
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_ausfall
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_uebersprungenen
+FAILED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac12_adr_0103_nennt_zahl_methode_stellschraube_und_pruefdatum
+========================= 16 failed, 1 passed in 8.47s =========================

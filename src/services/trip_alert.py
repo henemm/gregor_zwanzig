@@ -75,6 +75,11 @@ ALERT_RUN_DEADLINE_SECONDS = 180.0
 # Einzelschritt (180 + 8) < Go-radarWaitBudget 240 s; Cache-TTL <= Takt - Grenze.
 RADAR_RUN_DEADLINE_SECONDS = 45.0
 
+# Issue #1539 S3: Frist des parallelen Etappen-Abrufs, wenn kein Alarmlauf die
+# Lauf-Grenze gesetzt hat (Vorschau, Einzelaufruf) -- endlich, nie unbegrenzt
+# (ADR-0038); angelehnt an Open-Meteo FETCH_DEADLINE_SECONDS.
+FRESH_WEATHER_DEFAULT_DEADLINE_SECONDS = 60.0
+
 # Sperrzeit-Scope des Trip-Nowcast im geteilten `ThrottleStore` (#1213).
 # Ausschliesslich mit Trip-Kennungen belegt — der Vergleichs-Nowcast bekam mit
 # #1467 S3 deshalb einen eigenen Scope (`compare_radar`) statt diesen hier.
@@ -524,6 +529,10 @@ class TripAlertService:
         >>> print(f"Alert sent: {sent}")
     """
 
+    # Issue #1539 S3: Klassen-Default der Lauf-Frist -- auch per `__new__`
+    # erzeugte Instanzen (Bestandstests) haben keinen gesetzten Lauf.
+    _run_deadline_at: Optional[float] = None
+
     def __init__(
         self,
         settings: Optional[Settings] = None,
@@ -566,6 +575,9 @@ class TripAlertService:
         # Herkunft/Ort der gezeigten Warnungen (Gedaechtnis-Felder).
         self._pending_official_allclears: list = []
         self._official_meta: dict = {}
+        # Issue #1539 S3: Lauf-Frist (monotonic) fuer den parallelen
+        # Etappen-Abruf; nur waehrend check_all_trips gesetzt.
+        self._run_deadline_at: Optional[float] = None
 
     def _protokolliere_unterdrueckung(
         self, trip: "Trip", *, reason: str, gate_reason: Optional[str], **felder,
@@ -1140,6 +1152,9 @@ class TripAlertService:
             logger.warning(f"alert_last_checked.json: Reihenfolge nach Trip-ID ({e})")
 
         try:
+            # Issue #1539 S3: Lauf-Frist reist zum parallelen Etappen-Abruf;
+            # Zuruecksetzen im finally, auch bei Ausnahme.
+            self._run_deadline_at = deadline_at
             for trip in trips:
                 if time.monotonic() > deadline_at:
                     hit_deadline = True
@@ -1268,6 +1283,7 @@ class TripAlertService:
                         f"{time.monotonic() - trip_started_at:.3f} s"
                     )
         finally:
+            self._run_deadline_at = None
             if state_store is not None and reached:
                 try:
                     state_store.record(reached, known_ids)
@@ -2965,6 +2981,8 @@ class TripAlertService:
             Fresh weather data
         """
         from providers.base import get_provider
+        from providers.call_log import resolve_call_source
+        from services import parallel_fetch
         from services.segment_weather import SegmentWeatherService
 
         # OpenMeteo with automatic regional model selection
@@ -2973,52 +2991,89 @@ class TripAlertService:
         service = SegmentWeatherService(provider)
 
         now_utc = datetime.now(timezone.utc)
-
-        fresh_weather = []
-        versucht = gescheitert = 0
+        today_utc = now_utc.date()
         self._fetch_stats = (0, 0)
-        for cached in cached_weather:
-            segment_started_at = time.monotonic()
-            today_utc = now_utc.date()
-            if cached.segment.end_time < now_utc:
-                continue  # Bereits absolviert — überspringen
-            if cached.segment.start_time.date() > today_utc:
-                continue  # Beginnt erst morgen oder später — überspringen
-            versucht += 1
-            try:
-                # Issue #1329: der frühere `service._cache.clear()` erzwang
-                # bei JEDEM Alarm-Check einen Upstream-Fetch. Mit dem
-                # geteilten Cache (10-Minuten-TTL) ist das nicht mehr nötig
-                # -- die maximale Datenalterung ist bereits durch den TTL auf
-                # ≤ 10 Minuten begrenzt (AC-6), unabhängig davon, ob ein
-                # anderer Aufrufer (z.B. das letzte Briefing) denselben Ort
-                # kurz zuvor gefüllt hat. Bewusste Verhaltensänderung:
-                # vorher "garantiert taufrisch pro Check", nachher
-                # "garantiert ≤ 10 Min alt".
-                # Bug #288: Alert-Checks must NOT trigger ensemble-API calls
-                # (would consume the daily free-tier quota in ~30 minutes).
-                fresh = service.fetch_segment_weather(
-                    cached.segment,
-                    enrich_ensemble=False,
-                    enrich_snow=False,
-                    priority="alert_check",
-                    user_id=self._user_id,
-                )
-                fresh_weather.append(fresh)
-            except Exception as e:
+        # Zeitfilter seriell im Hauptfaden: bereits absolvierte und erst
+        # morgen oder spaeter beginnende Etappen werden nicht abgerufen.
+        faellig = [
+            cached for cached in cached_weather
+            if not cached.segment.end_time < now_utc
+            and not cached.segment.start_time.date() > today_utc
+        ]
+        # Issue #1539 S3: Herkunft HIER aufloesen (der Worker kennt den Frame
+        # `_fetch_fresh_weather` nicht) und im Worker per Override setzen.
+        abruf = self._segment_fetcher(service, resolve_call_source())
+        # Frist: Lauf-Grenze aus check_all_trips, sonst endlich (ADR-0038).
+        deadline_at = self._run_deadline_at
+        if deadline_at is None:
+            deadline_at = time.monotonic() + FRESH_WEATHER_DEFAULT_DEADLINE_SECONDS
+        fetch_started_at = time.monotonic()
+        outcomes = parallel_fetch.fetch_ordered(
+            faellig, abruf, provider="open_meteo", deadline_at=deadline_at,
+        )
+        fresh_weather, gescheitert = self._collect_fresh_weather(
+            outcomes, fetch_started_at)
+        self._fetch_stats = (len(faellig), gescheitert)
+        return fresh_weather
+
+    def _segment_fetcher(self, service, source: str):
+        """Worker-Funktion fuer EINE Etappe (#1539 S3): setzt die im Aufrufer
+        aufgeloeste Herkunft, ruft ab, misst die Dauer. Schreibt keinen
+        geteilten Zustand -- Ergebnis ``(fresh, fehler, dauer_s)``."""
+        from providers.call_log import override_call_source
+
+        user_id = self._user_id
+
+        def abruf(cached):
+            started_at = time.monotonic()
+            with override_call_source(source):
+                try:
+                    # Issue #1329: geteilter Cache (10-Min-TTL), kein clear().
+                    # Bug #288: Alert-Checks must NOT trigger ensemble-API calls.
+                    fresh = service.fetch_segment_weather(
+                        cached.segment,
+                        enrich_ensemble=False,
+                        enrich_snow=False,
+                        priority="alert_check",
+                        user_id=user_id,
+                    )
+                except Exception as e:  # Teilausfall: im Hauptfaden gezaehlt
+                    return None, e, time.monotonic() - started_at
+            return fresh, None, time.monotonic() - started_at
+
+        return abruf
+
+    def _collect_fresh_weather(self, outcomes, fetch_started_at: float):
+        """Wertet die Baustein-Ergebnisse seriell im Hauptfaden aus (#1539 S3).
+
+        Eingabereihenfolge bleibt erhalten; Fehler und uebersprungene Etappen
+        zaehlen als gescheitert, stehen laut im Log und fehlen im Ergebnis.
+        """
+        fresh_weather: List[SegmentWeatherData] = []
+        gescheitert = 0
+        for out in outcomes:
+            segment_id = out.item.segment.segment_id
+            fresh = err = None
+            if out.skipped is not None:
+                err = out.skipped  # "deadline" | "timeout"
+                dauer = time.monotonic() - fetch_started_at
+            elif out.error is not None:
+                err, dauer = out.error, time.monotonic() - fetch_started_at
+            else:
+                fresh, err, dauer = out.value
+            # Hausnorm (dispatch_orchestrator.py:71-77): Erfolg im Rumpf,
+            # Gegenzaehler ausschliesslich im Fehlausgangs-Zweig.
+            if err is None:
+                fresh_weather += [fresh]
+            else:
                 gescheitert += 1
                 logger.error(
                     f"Failed to fetch fresh weather for segment "
-                    f"{cached.segment.segment_id}: {e}"
+                    f"{segment_id}: {err}"
                 )
-            # Issue #1539 S0 (AC-7): Dauer je Etappen-Abruf.
-            logger.info(
-                f"Etappe {cached.segment.segment_id}: Abruf in "
-                f"{time.monotonic() - segment_started_at:.3f} s"
-            )
-
-        self._fetch_stats = (versucht, gescheitert)
-        return fresh_weather
+            # Issue #1539 S0 (AC-7): Dauer je Etappen-Abruf, genau eine Zeile.
+            logger.info(f"Etappe {segment_id}: Abruf in {dauer:.3f} s")
+        return fresh_weather, gescheitert
 
     def _send_alert(
         self,
