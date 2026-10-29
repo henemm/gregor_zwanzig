@@ -1,0 +1,389 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/epic2138-1539
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 100 items / 3 deselected / 97 selected
+
+tests/tdd/test_bundle_791_847_844_alerts.py ....                         [  4%]
+tests/tdd/test_bug_338_openmeteo_call_counter.py ...                     [  7%]
+tests/tdd/test_briefing_anchor_survives_dispatch_failure.py ............ [ 19%]
+.............                                                            [ 32%]
+tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py ............. [ 46%]
+.............................                                            [ 76%]
+tests/tdd/test_trip_alert_duration_logging.py ...                        [ 79%]
+tests/tdd/test_alert_run_deadline.py .......                             [ 86%]
+tests/unit/test_alert_data_freshness.py .                                [ 87%]
+tests/unit/test_forecast_cache_sharing.py ............                   [100%]
+
+=============================== warnings summary ===============================
+tests/tdd/test_bug_338_openmeteo_call_counter.py::test_ac2_trend_path_sets_source_trend
+tests/tdd/test_bug_338_openmeteo_call_counter.py::test_ac2_preview_path_sets_source_vorschau
+tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_sms_only_ohne_zustellung_wird_zur_nachlieferung_vorgemerkt
+  /home/hem/gregor_zwanzig/.claude/worktrees/epic2138-1539/.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:110: UserWarning: A test tried to use socket.getaddrinfo.
+    raise SocketBlockedError("A test tried to use socket.getaddrinfo.")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+____________________ test_ac2_trend_path_sets_source_trend _____________________
+------------------------------ Captured log call -------------------------------
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment Ziel after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 1 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+WARNING  openmeteo:openmeteo.py:819 Ensemble fetch failed: httpx egress blocked for host: ensemble-api.open-meteo.com
+WARNING  trip_report_scheduler:trip_report_scheduler.py:3087 Failed to build trend for stage s1: All segments have errors, cannot aggregate
+__________________ test_ac2_preview_path_sets_source_vorschau __________________
+------------------------------ Captured log call -------------------------------
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 2 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment Ziel after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 1 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 3 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+WARNING  services.segment_weather:segment_weather.py:619 Failed to fetch night weather: A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 2 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment Ziel after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 1 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 3 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+WARNING  openmeteo:openmeteo.py:819 Ensemble fetch failed: httpx egress blocked for host: ensemble-api.open-meteo.com
+WARNING  trip_report_scheduler:trip_report_scheduler.py:3087 Failed to build trend for stage 9304b7c5: All segments have errors, cannot aggregate
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 3 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment Ziel after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 2 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 1 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+WARNING  openmeteo:openmeteo.py:819 Ensemble fetch failed: httpx egress blocked for host: ensemble-api.open-meteo.com
+WARNING  trip_report_scheduler:trip_report_scheduler.py:3087 Failed to build trend for stage 7c409dd6: All segments have errors, cannot aggregate
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 1 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment Ziel after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 2 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 3 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+WARNING  openmeteo:openmeteo.py:819 Ensemble fetch failed: httpx egress blocked for host: ensemble-api.open-meteo.com
+WARNING  trip_report_scheduler:trip_report_scheduler.py:3087 Failed to build trend for stage 6f5959a4: All segments have errors, cannot aggregate
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 1 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment Ziel after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 2 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 3 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+WARNING  openmeteo:openmeteo.py:819 Ensemble fetch failed: httpx egress blocked for host: ensemble-api.open-meteo.com
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 3 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment Ziel after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 1 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+ERROR    trip_report_scheduler:trip_report_scheduler.py:199 Weather fetch failed for segment 2 after 1 attempt(s): A test tried to use socket.getaddrinfo.
+WARNING  openmeteo:openmeteo.py:819 Ensemble fetch failed: httpx egress blocked for host: ensemble-api.open-meteo.com
+_ test_ac1_versandfehler_schreibt_datierten_und_undatierten_snapshot_trotzdem __
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+_ test_ac3_versandfehler_zaehlt_weiterhin_als_fehlschlag_und_wird_protokolliert _
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+ERROR    dispatch_orchestrator:dispatch_orchestrator.py:117 Failed morning report for trip-1629-ac3-64dbae: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+_ test_ac4_versandfehler_setzt_melde_gedaechtnis_wie_ein_unerreichbarer_kanal_zurueck _
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 1/5 send failed for Anker-Trip #1629: [telegram] Test-Modus aktiv, aber es ist nicht der Test-Bot-Token (GZ_TELEGRAM_TEST_BOT_TOKEN) — Versand blockiert (Issue #1363).
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 2/5 send failed for Anker-Trip #1629: [telegram] Test-Modus aktiv, aber es ist nicht der Test-Bot-Token (GZ_TELEGRAM_TEST_BOT_TOKEN) — Versand blockiert (Issue #1363).
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 3/5 send failed for Anker-Trip #1629: [telegram] Test-Modus aktiv, aber es ist nicht der Test-Bot-Token (GZ_TELEGRAM_TEST_BOT_TOKEN) — Versand blockiert (Issue #1363).
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 4/5 send failed for Anker-Trip #1629: [telegram] Test-Modus aktiv, aber es ist nicht der Test-Bot-Token (GZ_TELEGRAM_TEST_BOT_TOKEN) — Versand blockiert (Issue #1363).
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 5/5 send failed for Anker-Trip #1629: [telegram] Test-Modus aktiv, aber es ist nicht der Test-Bot-Token (GZ_TELEGRAM_TEST_BOT_TOKEN) — Versand blockiert (Issue #1363).
+ERROR    services.notification_service:notification_service.py:964 Telegram incomplete-briefing hint failed: [telegram] Test-Modus aktiv, aber es ist nicht der Test-Bot-Token (GZ_TELEGRAM_TEST_BOT_TOKEN) — Versand blockiert (Issue #1363).
+WARNING  trip_report_scheduler:trip_report_scheduler.py:2036 Trip report NOT sent (configured channel unreachable): Anker-Trip #1629 (morning)
+____ test_ac5_ad_hoc_versandfehler_laesst_anker_und_gedaechtnis_unberuehrt _____
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+_____ test_ac6_versandfehler_vermerkt_amtliche_warnung_nicht_als_gemeldet ______
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+___ test_versandfehler_hinterlaesst_diagnose_spur_an_der_vereinbarten_stelle ___
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+___ test_ac7_defekter_diagnose_schreiber_verdeckt_die_versandausnahme_nicht ____
+------------------------------ Captured log call -------------------------------
+WARNING  forecast_budget:forecast_budget.py:462 Budget-Buchung in /tmp/pytest-of-hem/pytest-5044/data_root13/users/tdd-1629-ac7-fa4ae1/diagnostics/forecast_budget.json verloren ([Errno 17] File exists: '/tmp/pytest-of-hem/pytest-5044/data_root13/users/tdd-1629-ac7-fa4ae1/diagnostics')
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+WARNING  alert_briefing_anchor:alert_briefing_anchor.py:143 Diagnose-Spur zum gescheiterten Versand (trip-1629-ac7-326e13) nicht schreibbar: FileExistsError: [Errno 17] File exists: '/tmp/pytest-of-hem/pytest-5044/data_root13/users/tdd-1629-ac7-fa4ae1/diagnostics'
+_ test_ac9_alarm_lauf_desselben_tages_prueft_nach_gescheitertem_briefing_regulaer _
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+_____ test_versandfehler_ohne_zweitkanal_wird_zur_nachlieferung_vorgemerkt _____
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+_____ test_vorgemerkter_versandfehler_wird_im_naechsten_vorlauf_zugestellt _____
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+___ test_nachgeliefertes_briefing_nennt_den_gescheiterten_versand_als_grund ____
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+___ test_erneut_gescheiterter_regulaerer_versand_haelt_den_vermerk_am_leben ____
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+ERROR    dispatch_orchestrator:dispatch_orchestrator.py:117 Failed morning report for trip-1662-ac6-eb6f20: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+_________ test_ad_hoc_versandfehler_merkt_nichts_zur_nachlieferung_vor _________
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+___________ test_email_fehler_reisst_sms_und_telegram_nicht_mehr_mit ___________
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+______ test_unerwartete_telegram_stoerung_bricht_den_versandlauf_nicht_ab ______
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 1/5 send failed for Anker-Trip #1629: Telegram-Transport gestoert (#1662)
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 2/5 send failed for Anker-Trip #1629: Telegram-Transport gestoert (#1662)
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 3/5 send failed for Anker-Trip #1629: Telegram-Transport gestoert (#1662)
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 4/5 send failed for Anker-Trip #1629: Telegram-Transport gestoert (#1662)
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 5/5 send failed for Anker-Trip #1629: Telegram-Transport gestoert (#1662)
+ERROR    services.notification_service:notification_service.py:964 Telegram incomplete-briefing hint failed: Telegram-Transport gestoert (#1662)
+____________ test_versandfehler_schreibt_anker_diagnose_UND_vermerk ____________
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+_________________ test_vermerke_zweier_nutzer_bleiben_getrennt _________________
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+_____ test_gescheiterte_email_neben_gelungener_sms_bleibt_in_der_diagnose ______
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:795 E-Mail send failed for Anker-Trip #1629: [email] Incomplete SMTP configuration. Required: smtp_host, smtp_user, smtp_pass
+_______ test_sms_only_ohne_zustellung_wird_zur_nachlieferung_vorgemerkt ________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.seven_io_base:seven_io_base.py:171 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- SMS-Key auf den Sandbox-Key umgeschaltet.
+ERROR    services.notification_service:notification_service.py:828 SMS send failed for Anker-Trip #1629: A test tried to use socket.getaddrinfo.
+WARNING  trip_report_scheduler:trip_report_scheduler.py:2036 Trip report NOT sent (configured channel unreachable): Anker-Trip #1629 (morning)
+__ test_telegram_only_ohne_zustellung_wird_vorgemerkt_und_bleibt_unerreichbar __
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 1/5 send failed for Anker-Trip #1629: Telegram-Transport gestoert (F001)
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 2/5 send failed for Anker-Trip #1629: Telegram-Transport gestoert (F001)
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 3/5 send failed for Anker-Trip #1629: Telegram-Transport gestoert (F001)
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 4/5 send failed for Anker-Trip #1629: Telegram-Transport gestoert (F001)
+ERROR    services.notification_service:notification_service.py:901 Telegram bubble 5/5 send failed for Anker-Trip #1629: Telegram-Transport gestoert (F001)
+ERROR    services.notification_service:notification_service.py:964 Telegram incomplete-briefing hint failed: Telegram-Transport gestoert (F001)
+WARNING  trip_report_scheduler:trip_report_scheduler.py:2036 Trip report NOT sent (configured channel unreachable): Anker-Trip #1629 (morning)
+______ test_trip_ganz_ohne_kanal_wird_nicht_zur_nachlieferung_vorgemerkt _______
+------------------------------ Captured log call -------------------------------
+WARNING  trip_report_scheduler:trip_report_scheduler.py:2032 Trip report NOT sent (no channel configured): Anker-Trip #1629 (morning)
+______________________ test_ac3_stelle5_nowcast_schranke _______________________
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T10:59:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T10:59:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T10:59:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+_____ test_ac5_unbrauchbarer_ruhezeitwert_bleibt_keine_ruhezeit[stunde-25] _____
+------------------------------ Captured log call -------------------------------
+WARNING  services.deviation_alert_engine:deviation_alert_engine.py:130 Unbrauchbarer Ruhezeit-Wert fuer t-kaputt (alert_quiet_from='25:00', alert_quiet_to='07:00'): ValueError: hour must be in 0..23 — wird wie 'keine Ruhezeit gesetzt' behandelt.
+__ test_ac5_unbrauchbarer_ruhezeitwert_bleibt_keine_ruhezeit[kein-zeitformat] __
+------------------------------ Captured log call -------------------------------
+WARNING  services.deviation_alert_engine:deviation_alert_engine.py:130 Unbrauchbarer Ruhezeit-Wert fuer t-kaputt (alert_quiet_from='abc', alert_quiet_to='07:00'): ValueError: Invalid isoformat string: 'abc' — wird wie 'keine Ruhezeit gesetzt' behandelt.
+___ test_ac5_unbrauchbarer_ruhezeitwert_bleibt_keine_ruhezeit[kaputtes-ende] ___
+------------------------------ Captured log call -------------------------------
+WARNING  services.deviation_alert_engine:deviation_alert_engine.py:130 Unbrauchbarer Ruhezeit-Wert fuer t-kaputt (alert_quiet_from='22:00', alert_quiet_to='xx:yy'): ValueError: Invalid isoformat string: 'xx:yy' — wird wie 'keine Ruhezeit gesetzt' behandelt.
+___________ test_ac5_nicht_string_ruhezeitwert_bleibt_keine_ruhezeit ___________
+------------------------------ Captured log call -------------------------------
+WARNING  services.deviation_alert_engine:deviation_alert_engine.py:130 Unbrauchbarer Ruhezeit-Wert fuer t-int (alert_quiet_from=2200, alert_quiet_to='07:00'): TypeError: fromisoformat: argument must be str — wird wie 'keine Ruhezeit gesetzt' behandelt.
+____ test_ac15_kein_aufloesbarer_ort_ergibt_utc_und_einen_protokolleintrag _____
+------------------------------ Captured log call -------------------------------
+WARNING  utils.timezone:timezone.py:103 Keine aufloesbare Zeitzone fuer cp-ohne-zone — es gilt Weltzeit (UTC). Ruhezeit, Tageszaehler und Faelligkeit rechnen damit NICHT in der Ortszeit.
+_________________ test_trip_alarmlauf_loggt_dauerzeile_je_trip _________________
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3073 Etappe 1: Abruf in 0.020 s
+INFO     trip_alert:trip_alert.py:3073 Etappe 2: Abruf in 0.067 s
+INFO     trip_alert:trip_alert.py:3073 Etappe 3: Abruf in 0.067 s
+INFO     trip_alert:trip_alert.py:1281 Trip Dauerlog-Trip-Alpha: geprueft in 0.075 s
+INFO     trip_alert:trip_alert.py:1304 check_all_trips: Lauf beendet nach 0.076s fuer user_id=tdd-1539-dauer-795c51 (checked=1 skipped=0 alerts_sent=0)
+________________ test_trip_alarmlauf_loggt_dauerzeile_je_etappe ________________
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3073 Etappe 1: Abruf in 0.077 s
+INFO     trip_alert:trip_alert.py:3073 Etappe 2: Abruf in 0.049 s
+INFO     trip_alert:trip_alert.py:3073 Etappe 3: Abruf in 0.019 s
+INFO     trip_alert:trip_alert.py:1281 Trip Dauerlog-Trip-Alpha: geprueft in 0.087 s
+INFO     trip_alert:trip_alert.py:1304 check_all_trips: Lauf beendet nach 0.088s fuer user_id=tdd-1539-dauer-c1c216 (checked=1 skipped=0 alerts_sent=0)
+______________ test_dauermessung_aendert_das_gesamtergebnis_nicht ______________
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3073 Etappe 1: Abruf in 0.085 s
+INFO     trip_alert:trip_alert.py:3073 Etappe 2: Abruf in 0.118 s
+INFO     trip_alert:trip_alert.py:3073 Etappe 3: Abruf in 0.033 s
+INFO     trip_alert:trip_alert.py:1281 Trip Dauerlog-Trip-Alpha: geprueft in 0.127 s
+INFO     trip_alert:trip_alert.py:1304 check_all_trips: Lauf beendet nach 0.128s fuer user_id=tdd-1539-dauer-da3b3e (checked=1 skipped=0 alerts_sent=0)
+____________ test_deadline_exceeded_stops_checking_remaining_trips _____________
+------------------------------ Captured log call -------------------------------
+WARNING  trip_alert:trip_alert.py:1299 check_all_trips: Zeitobergrenze (0.08s) ueberschritten fuer user_id=tdd-1447-slow-e23f40 — checked=2 skipped=4 skipped_ids=['trip-2', 'trip-3', 'trip-4', 'trip-5']
+_ test_endpoint_reports_partial_status_checked_skipped_and_reason_on_deadline_abort _
+----------------------------- Captured stderr call -----------------------------
+2026-10-28 11:11:34,638 INFO services.weather_snapshot: Dated snapshot saved: trip-0_2026-10-28.json
+2026-10-28 11:11:34,643 INFO services.weather_snapshot: Dated snapshot saved: trip-1_2026-10-28.json
+2026-10-28 11:11:34,647 INFO services.weather_snapshot: Dated snapshot saved: trip-2_2026-10-28.json
+2026-10-28 11:11:34,652 INFO services.weather_snapshot: Dated snapshot saved: trip-3_2026-10-28.json
+2026-10-28 11:11:34,656 INFO services.weather_snapshot: Dated snapshot saved: trip-4_2026-10-28.json
+2026-10-28 11:11:34,756 INFO trip_alert: Trip Deadline-Test-Trip: geprueft in 0.052 s
+2026-10-28 11:11:34,807 INFO trip_alert: Trip Deadline-Test-Trip: geprueft in 0.051 s
+2026-10-28 11:11:34,808 WARNING trip_alert: check_all_trips: Zeitobergrenze (0.08s) ueberschritten fuer user_id=tdd-1447-slow-9c2d20 — checked=2 skipped=3 skipped_ids=['trip-2', 'trip-3', 'trip-4']
+2026-10-28 11:11:34,808 INFO trip_alert: check_all_trips: Lauf beendet nach 0.105s fuer user_id=tdd-1447-slow-9c2d20 (checked=2 skipped=3 alerts_sent=0)
+__________ test_full_run_matches_legacy_alert_count_with_zero_skipped __________
+----------------------------- Captured stderr call -----------------------------
+2026-10-28 11:11:34,828 INFO services.weather_snapshot: Dated snapshot saved: trip-0_2026-10-28.json
+2026-10-28 11:11:34,837 INFO services.weather_snapshot: Dated snapshot saved: trip-1_2026-10-28.json
+2026-10-28 11:11:34,899 INFO trip_alert: Etappe 1: Abruf in 0.020 s
+2026-10-28 11:11:34,914 INFO trip_alert: Trip Amtliche-Warnung-Trip: geprueft in 0.043 s
+2026-10-28 11:11:34,938 INFO trip_alert: Etappe 1: Abruf in 0.022 s
+2026-10-28 11:11:34,945 INFO trip_alert: Trip Amtliche-Warnung-Trip: geprueft in 0.032 s
+2026-10-28 11:11:34,946 INFO trip_alert: check_all_trips: Lauf beendet nach 0.076s fuer user_id=tdd-1447-full-8d64c1 (checked=2 skipped=0 alerts_sent=2)
+------------------------------ Captured log call -------------------------------
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-0_2026-10-28.json
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-1_2026-10-28.json
+INFO     trip_alert:trip_alert.py:3073 Etappe 1: Abruf in 0.020 s
+INFO     trip_alert:trip_alert.py:1281 Trip Amtliche-Warnung-Trip: geprueft in 0.043 s
+INFO     trip_alert:trip_alert.py:3073 Etappe 1: Abruf in 0.022 s
+INFO     trip_alert:trip_alert.py:1281 Trip Amtliche-Warnung-Trip: geprueft in 0.032 s
+INFO     trip_alert:trip_alert.py:1304 check_all_trips: Lauf beendet nach 0.076s fuer user_id=tdd-1447-full-8d64c1 (checked=2 skipped=0 alerts_sent=2)
+_____ test_deadline_abort_logs_warning_with_threshold_checked_and_skipped ______
+----------------------------- Captured stderr call -----------------------------
+2026-10-28 11:11:34,954 INFO services.weather_snapshot: Dated snapshot saved: trip-0_2026-10-28.json
+2026-10-28 11:11:34,959 INFO services.weather_snapshot: Dated snapshot saved: trip-1_2026-10-28.json
+2026-10-28 11:11:34,963 INFO services.weather_snapshot: Dated snapshot saved: trip-2_2026-10-28.json
+2026-10-28 11:11:34,967 INFO services.weather_snapshot: Dated snapshot saved: trip-3_2026-10-28.json
+2026-10-28 11:11:34,972 INFO services.weather_snapshot: Dated snapshot saved: trip-4_2026-10-28.json
+2026-10-28 11:11:35,093 WARNING trip_alert: check_all_trips: Zeitobergrenze (0.08s) ueberschritten fuer user_id=tdd-1447-slow-b91d91 — checked=2 skipped=3 skipped_ids=['trip-2', 'trip-3', 'trip-4']
+------------------------------ Captured log call -------------------------------
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-0_2026-10-28.json
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-1_2026-10-28.json
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-2_2026-10-28.json
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-3_2026-10-28.json
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-4_2026-10-28.json
+WARNING  trip_alert:trip_alert.py:1299 check_all_trips: Zeitobergrenze (0.08s) ueberschritten fuer user_id=tdd-1447-slow-b91d91 — checked=2 skipped=3 skipped_ids=['trip-2', 'trip-3', 'trip-4']
+_________________ test_full_run_logs_info_with_total_duration __________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-28 11:11:35,107 INFO services.weather_snapshot: Dated snapshot saved: trip-info-full_2026-10-28.json
+2026-10-28 11:11:35,173 INFO trip_alert: Etappe 1: Abruf in 0.037 s
+2026-10-28 11:11:35,175 INFO trip_alert: Trip Deadline-Test-Trip: geprueft in 0.046 s
+2026-10-28 11:11:35,175 INFO trip_alert: check_all_trips: Lauf beendet nach 0.046s fuer user_id=tdd-1447-info-full-33a9b7 (checked=1 skipped=0 alerts_sent=0)
+------------------------------ Captured log call -------------------------------
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-info-full_2026-10-28.json
+INFO     trip_alert:trip_alert.py:3073 Etappe 1: Abruf in 0.037 s
+INFO     trip_alert:trip_alert.py:1281 Trip Deadline-Test-Trip: geprueft in 0.046 s
+INFO     trip_alert:trip_alert.py:1304 check_all_trips: Lauf beendet nach 0.046s fuer user_id=tdd-1447-info-full-33a9b7 (checked=1 skipped=0 alerts_sent=0)
+________________ test_aborted_run_logs_info_with_total_duration ________________
+----------------------------- Captured stderr call -----------------------------
+2026-10-28 11:11:35,188 INFO services.weather_snapshot: Dated snapshot saved: trip-0_2026-10-28.json
+2026-10-28 11:11:35,194 INFO services.weather_snapshot: Dated snapshot saved: trip-1_2026-10-28.json
+2026-10-28 11:11:35,200 INFO services.weather_snapshot: Dated snapshot saved: trip-2_2026-10-28.json
+2026-10-28 11:11:35,205 INFO services.weather_snapshot: Dated snapshot saved: trip-3_2026-10-28.json
+2026-10-28 11:11:35,211 INFO services.weather_snapshot: Dated snapshot saved: trip-4_2026-10-28.json
+2026-10-28 11:11:35,283 INFO trip_alert: Trip Deadline-Test-Trip: geprueft in 0.051 s
+2026-10-28 11:11:35,335 INFO trip_alert: Trip Deadline-Test-Trip: geprueft in 0.052 s
+2026-10-28 11:11:35,336 WARNING trip_alert: check_all_trips: Zeitobergrenze (0.08s) ueberschritten fuer user_id=tdd-1447-slow-16ba4e — checked=2 skipped=3 skipped_ids=['trip-2', 'trip-3', 'trip-4']
+2026-10-28 11:11:35,336 INFO trip_alert: check_all_trips: Lauf beendet nach 0.105s fuer user_id=tdd-1447-slow-16ba4e (checked=2 skipped=3 alerts_sent=0)
+------------------------------ Captured log call -------------------------------
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-0_2026-10-28.json
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-1_2026-10-28.json
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-2_2026-10-28.json
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-3_2026-10-28.json
+INFO     services.weather_snapshot:weather_snapshot.py:140 Dated snapshot saved: trip-4_2026-10-28.json
+INFO     trip_alert:trip_alert.py:1281 Trip Deadline-Test-Trip: geprueft in 0.051 s
+INFO     trip_alert:trip_alert.py:1281 Trip Deadline-Test-Trip: geprueft in 0.052 s
+WARNING  trip_alert:trip_alert.py:1299 check_all_trips: Zeitobergrenze (0.08s) ueberschritten fuer user_id=tdd-1447-slow-16ba4e — checked=2 skipped=3 skipped_ids=['trip-2', 'trip-3', 'trip-4']
+INFO     trip_alert:trip_alert.py:1304 check_all_trips: Lauf beendet nach 0.105s fuer user_id=tdd-1447-slow-16ba4e (checked=2 skipped=3 alerts_sent=0)
+__ test_alarm_path_reuses_fresh_entry_and_refetches_stale_entry_without_clear __
+----------------------------- Captured stderr call -----------------------------
+2026-10-28 11:11:35,485 INFO trip_alert: Etappe alert-fresh: Abruf in 0.082 s
+2026-10-28 11:11:35,486 INFO trip_alert: Etappe alert-stale: Abruf in 0.049 s
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3073 Etappe alert-fresh: Abruf in 0.082 s
+INFO     trip_alert:trip_alert.py:3073 Etappe alert-stale: Abruf in 0.049 s
+_ test_end_to_end_real_call_paths_trip_alert_and_compare_share_cache_with_own_identity _
+----------------------------- Captured stderr call -----------------------------
+2026-10-28 11:11:35,887 INFO trip_alert: Etappe trip-real-leg-3h: Abruf in 0.032 s
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3073 Etappe trip-real-leg-3h: Abruf in 0.032 s
+=========================== short test summary info ============================
+PASSED tests/tdd/test_bundle_791_847_844_alerts.py::test_ac1_radar_alert_onset_in_local_time
+PASSED tests/tdd/test_bundle_791_847_844_alerts.py::test_ac2_ziel_segment_label_includes_stage
+PASSED tests/tdd/test_bundle_791_847_844_alerts.py::test_ac3_no_fetch_for_future_segments
+PASSED tests/tdd/test_bundle_791_847_844_alerts.py::test_ac3b_no_fetch_for_past_segments
+PASSED tests/tdd/test_bug_338_openmeteo_call_counter.py::test_ac2_trend_path_sets_source_trend
+PASSED tests/tdd/test_bug_338_openmeteo_call_counter.py::test_ac2_preview_path_sets_source_vorschau
+PASSED tests/tdd/test_bug_338_openmeteo_call_counter.py::test_ac4_analyze_script_breaks_down_by_source_endpoint_hour
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_ac1_versandfehler_schreibt_datierten_und_undatierten_snapshot_trotzdem
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_ac3_versandfehler_zaehlt_weiterhin_als_fehlschlag_und_wird_protokolliert
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_ac4_versandfehler_setzt_melde_gedaechtnis_wie_ein_unerreichbarer_kanal_zurueck
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_ac5_ad_hoc_versandfehler_laesst_anker_und_gedaechtnis_unberuehrt
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_ac6_versandfehler_vermerkt_amtliche_warnung_nicht_als_gemeldet
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_versandfehler_hinterlaesst_diagnose_spur_an_der_vereinbarten_stelle
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_ac7_defekter_diagnose_schreiber_verdeckt_die_versandausnahme_nicht
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_ac9_alarm_lauf_desselben_tages_prueft_nach_gescheitertem_briefing_regulaer
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_ac10_fehler_vor_dem_versand_schreibt_keinen_anker
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_versandfehler_ohne_zweitkanal_wird_zur_nachlieferung_vorgemerkt
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_vorgemerkter_versandfehler_wird_im_naechsten_vorlauf_zugestellt
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_nachgeliefertes_briefing_nennt_den_gescheiterten_versand_als_grund
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_vermerk_mit_vergangenem_zieltag_verfaellt_ohne_zustellversuch
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_gelingender_regulaerer_versand_macht_den_vermerk_gegenstandslos
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_erneut_gescheiterter_regulaerer_versand_haelt_den_vermerk_am_leben
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_ad_hoc_versandfehler_merkt_nichts_zur_nachlieferung_vor
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_email_fehler_reisst_sms_und_telegram_nicht_mehr_mit
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_unerwartete_telegram_stoerung_bricht_den_versandlauf_nicht_ab
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_wetterfehler_vermerk_behaelt_die_segment_schnittmengen_regel
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_versandfehler_schreibt_anker_diagnose_UND_vermerk
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_vermerke_zweier_nutzer_bleiben_getrennt
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_gescheiterte_email_neben_gelungener_sms_bleibt_in_der_diagnose
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_sms_only_ohne_zustellung_wird_zur_nachlieferung_vorgemerkt
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_telegram_only_ohne_zustellung_wird_vorgemerkt_und_bleibt_unerreichbar
+PASSED tests/tdd/test_briefing_anchor_survives_dispatch_failure.py::test_trip_ganz_ohne_kanal_wird_nicht_zur_nachlieferung_vorgemerkt
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac1_ruhezeit_oestlich_folgt_der_ortszeit_nicht_wien
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac2_ruhezeit_westlich_folgt_der_ortszeit_nicht_wien
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac3_stelle1_amtliche_warnung_vergleich
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac3_stelle2_wetterabweichung_trip
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac3_stelle3_geteilter_ruhezeit_adapter
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac3_stelle4_amtliche_warnung_trip
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac3_stelle5_nowcast_schranke
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac3_stelle6_wetterabweichung_vergleich
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac3_stelle7_engine_kern
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac4_ruhezeit_folgt_dem_ersten_ort_und_wandert_mit_der_reihenfolge
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac5_unbrauchbarer_ruhezeitwert_bleibt_keine_ruhezeit[stunde-25]
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac5_unbrauchbarer_ruhezeitwert_bleibt_keine_ruhezeit[kein-zeitformat]
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac5_unbrauchbarer_ruhezeitwert_bleibt_keine_ruhezeit[kaputtes-ende]
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac5_nicht_string_ruhezeitwert_bleibt_keine_ruhezeit
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac6_zaehler_resettet_an_auckland_mitternacht
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac6_zaehler_resettet_nicht_an_wiener_mitternacht
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac6_zaehler_resettet_an_los_angeles_mitternacht
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac6_zaehler_resettet_nicht_an_wiener_mitternacht_westlich
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac7_ausgeschoepfte_zone_blockiert_die_andere_nicht
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac7_alarm_in_einer_zone_verbraucht_die_andere_nicht
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac8_bestandszaehler_bleibt_beim_ersten_zugriff_erhalten
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac8_migration_faellt_nur_der_wiener_zone_zu
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac9_preset_ist_zur_eigenen_ortsstunde_faellig
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac9_zwei_presets_sind_zu_verschiedenen_weltzeiten_faellig
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac9_wiener_slotstunde_macht_fremde_presets_nicht_faellig
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac10_fruehjahrs_umstellungstag_hat_23_ortsstunden
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac10_herbst_umstellungstag_hat_25_ortsstunden
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac10_ruhezeit_stimmt_an_jeder_einzelnen_stunde_des_umstellungstags[fruehjahr]
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac10_ruhezeit_stimmt_an_jeder_einzelnen_stunde_des_umstellungstags[herbst]
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac10_zaehler_haelt_ueber_den_ganzen_umstellungstag[fruehjahr]
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac10_zaehler_haelt_ueber_den_ganzen_umstellungstag[herbst]
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac12_adr_0044_nennt_die_beiden_module_nicht_mehr_als_ausnahme
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac13_waechter_restliste_verliert_genau_die_vier_eintraege
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac14_blockkommentar_weist_die_muster_a_restliste_1727_zu
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac15_geloeschter_erster_ort_faellt_auf_den_naechsten_aufloesbaren
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_ac15_kein_aufloesbarer_ort_ergibt_utc_und_einen_protokolleintrag
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_f001_zweite_ruhezeit_pruefung_der_engine_nutzt_die_trip_zone
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_f002_anchor_tz_und_trip_tz_liefern_bei_diesem_trip_verschiedene_zonen
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_f002_ruhezeit_folgt_der_heutigen_etappe_nicht_der_ersten
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_f002_tageszaehler_folgt_der_heutigen_etappe_nicht_der_ersten
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_f003_amtlicher_vergleich_bucht_in_der_zone_die_er_auch_prueft
+PASSED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_f003_vergleichs_aenderungsalarm_bucht_in_der_zone_die_er_auch_prueft
+PASSED tests/tdd/test_trip_alert_duration_logging.py::test_trip_alarmlauf_loggt_dauerzeile_je_trip
+PASSED tests/tdd/test_trip_alert_duration_logging.py::test_trip_alarmlauf_loggt_dauerzeile_je_etappe
+PASSED tests/tdd/test_trip_alert_duration_logging.py::test_dauermessung_aendert_das_gesamtergebnis_nicht
+PASSED tests/tdd/test_alert_run_deadline.py::test_deadline_exceeded_stops_checking_remaining_trips
+PASSED tests/tdd/test_alert_run_deadline.py::test_endpoint_reports_partial_status_checked_skipped_and_reason_on_deadline_abort
+PASSED tests/tdd/test_alert_run_deadline.py::test_full_run_matches_legacy_alert_count_with_zero_skipped
+PASSED tests/tdd/test_alert_run_deadline.py::test_deadline_abort_logs_warning_with_threshold_checked_and_skipped
+PASSED tests/tdd/test_alert_run_deadline.py::test_full_run_logs_info_with_total_duration
+PASSED tests/tdd/test_alert_run_deadline.py::test_aborted_run_logs_info_with_total_duration
+PASSED tests/tdd/test_alert_run_deadline.py::test_deadline_constant_exists_and_is_monkeypatchable_to_milliseconds
+PASSED tests/unit/test_alert_data_freshness.py::test_alarm_path_reuses_fresh_entry_and_refetches_stale_entry_without_clear
+PASSED tests/unit/test_forecast_cache_sharing.py::test_same_coordinate_and_hour_different_segment_id_share_one_upstream_call
+PASSED tests/unit/test_forecast_cache_sharing.py::test_different_coordinate_causes_two_upstream_calls
+PASSED tests/unit/test_forecast_cache_sharing.py::test_different_hour_causes_two_upstream_calls
+PASSED tests/unit/test_forecast_cache_sharing.py::test_ttl_expiry_triggers_new_upstream_call_no_sleep
+PASSED tests/unit/test_forecast_cache_sharing.py::test_entry_within_ttl_is_served_from_cache
+PASSED tests/unit/test_forecast_cache_sharing.py::test_trip_and_compare_preset_at_same_location_share_one_upstream_call
+PASSED tests/unit/test_forecast_cache_sharing.py::test_second_caller_with_different_window_keeps_own_identity_and_aggregate
+PASSED tests/unit/test_forecast_cache_sharing.py::test_too_small_cached_window_forces_new_upstream_call_no_truncation
+PASSED tests/unit/test_forecast_cache_sharing.py::test_end_to_end_real_call_paths_trip_alert_and_compare_share_cache_with_own_identity
+PASSED tests/unit/test_forecast_cache_sharing.py::test_overnight_segment_excludes_same_hour_points_from_wrong_day
+PASSED tests/unit/test_forecast_cache_sharing.py::test_daytime_segment_excludes_end_hour_boundary
+PASSED tests/unit/test_forecast_cache_sharing.py::test_sub_hour_segment_includes_exact_start_hour_point
+================ 97 passed, 3 deselected, 3 warnings in 11.57s =================
