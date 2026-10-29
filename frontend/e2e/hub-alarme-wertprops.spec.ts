@@ -241,6 +241,43 @@ for (const kind of HUB_KINDS) {
 			});
 		}
 
+		// AW-2b — #2347 S3d (Alt compare-radar-toggle „default off on new preset"): Seed OHNE
+		// Auslöser-Feld. Der Reiter zeigt die kind-Vorgabe (Trip: Amtliche Warnungen AN,
+		// AlarmeTab.svelte:218-220; Vergleich: Radar-Alarm AUS), das Öffnen speichert nichts
+		// und der gespeicherte Stand bleibt unverändert. Die Vorgaben sind je kind verschieden
+		// (Spec „Kind-Kontraste"); gemeinsam ist: Öffnen ist kein Schreibvorgang.
+		test(`AW-2b (${kind}): Auslöser ohne gesetztes Feld zeigt die Vorgabe, Öffnen speichert nichts`, async ({ page }) => {
+			// Absichtlich KEIN aw.seed: das Auslöser-Feld darf im Seed nicht vorkommen.
+			const hub = await seedHub(page.request, kind);
+			try {
+				const vorher = await stand(page, kind, hub.id);
+				expect(
+					aw.ausloeserWert(vorher) ?? false,
+					'Vorbedingung: der Seed trägt den Auslöser nicht als „an" — sonst misst AW-2b nicht die Vorgabe.'
+				).toBe(false);
+				if (kind === 'route') {
+					expect(vorher.official_warnings, 'Vorbedingung: Seed ohne official_warnings').toBeUndefined();
+				}
+
+				const puts = zaehlePuts(page, hubApiPath(kind, hub.id));
+				await oeffneAlarme(page, kind, hub.id);
+				const schalter = kind === 'route' ? amtlichSchalter(page) : radarSchalter(page);
+				const vorgabeAn = kind === 'route'; // Trip: Vorgabe AN · Vergleich: Radar-Vorgabe AUS
+				await expect(
+					schalter,
+					`AW-2b FAIL: ohne gesetztes Feld muss der Auslöser auf der Vorgabe „${vorgabeAn ? 'an' : 'aus'}" stehen.`
+				).toBeChecked({ checked: vorgabeAn });
+
+				await bleibtBei(() => puts.length, 0, 1_500, 'AW-2b FAIL: das Öffnen des Reiters darf nichts speichern');
+				expect(
+					await stand(page, kind, hub.id),
+					'AW-2b FAIL: der gespeicherte Stand hat sich durch bloßes Öffnen verändert.'
+				).toEqual(vorher);
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+
 		// AW-3 — Alt AC-2 „Kanal, Kanal-Schwelle, Telegram-Kurzstil".
 		test(`AW-3 (${kind}): Kanal und Kanal-Schwelle wirken und überstehen das Neuladen`, async ({ page }) => {
 			const hub = await seedHub(page.request, kind, { extra: aw.seed });
