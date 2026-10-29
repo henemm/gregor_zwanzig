@@ -2,9 +2,14 @@ package handler
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 )
+
+// maxPreconditionDrainBytes begrenzt das Verwerfen des Rumpfes vor einer
+// 412-Antwort (siehe writePreconditionFailed).
+const maxPreconditionDrainBytes = 1 << 20
 
 // Nebenlaeufigkeitsschutz fuer die Briefing-Schreibpfade (Issue #1395 Scheibe S2).
 //
@@ -81,7 +86,18 @@ func setETagHeader(w http.ResponseWriter, fingerprint string, err error) {
 // Die Antwort traegt bewusst KEINEN ETag: der Client soll neu laden und dabei
 // den Stempel zusammen mit dem Inhalt holen, statt blind mit einem Stempel
 // weiterzuschreiben, dessen Inhalt er nie gesehen hat.
-func writePreconditionFailed(w http.ResponseWriter, detail string) {
+//
+// Issue #2347 S3c (F001): der Anfrage-Rumpf wird VOR der Antwort gelesen und
+// verworfen. Die Vorbedingung wird bewusst vor dem Dekodieren geprueft — kommt
+// die Anfrage aber mit `Connection: close` (Vite-/http-Proxy ohne Agent),
+// verwirft net/http den ungelesenen Rest nicht, sondern schliesst den Socket;
+// liegen dort noch Bytes, sendet der Kernel RST, und der Proxy macht aus dem
+// 412 ein 502 (gemessen: weather-config-Rumpf 4137 B, `write ECONNRESET`).
+// Obergrenze 1 MiB: groessere Ruempfe liest auch kein Handler.
+func writePreconditionFailed(w http.ResponseWriter, r *http.Request, detail string) {
+	if r.Body != nil {
+		_, _ = io.Copy(io.Discard, io.LimitReader(r.Body, maxPreconditionDrainBytes))
+	}
 	w.Header().Del("ETag")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusPreconditionFailed)

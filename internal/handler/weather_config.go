@@ -96,7 +96,7 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		}
 		// Vorbedingung VOR dem Dekodieren des Rumpfes (AC-5).
 		if !ifMatchAllows(r.Header.Get("If-Match"), oldFp) {
-			writePreconditionFailed(w, preconditionFailedDetail)
+			writePreconditionFailed(w, r, preconditionFailedDetail)
 			return
 		}
 		var cfg map[string]interface{}

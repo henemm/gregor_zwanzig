@@ -291,7 +291,10 @@
 # (bereits gelistet) + mobile-bottom-nav-floating.spec.ts (bereits gelistet).
 #
 # Aufnahme 2026-09-29 (#2375, loest #2381 mit): compare-konfliktschutz-zwei-
-# kontexte.spec.ts — traegt Test 9/10/11 bzw. AC-1 bis AC-6 und AC-14 der Spec
+# kontexte.spec.ts (seit #2347 S3c, 2026-10-29, geloescht und ersetzt durch
+# hub-konfliktschutz-zwei-kontexte.spec.ts [KS, je kind] und compare-orte-
+# konfliktschutz-zwei-kontexte.spec.ts [KO, gz-eigenstaendig:]; Beleg siehe
+# Aufnahme 2026-10-29 unten) — traegt Test 9/10/11 bzw. AC-1 bis AC-6 und AC-14 der Spec
 # docs/specs/bugfix/compare_konfliktschutz_teilfelder.md: „die fremde Aenderung
 # ueberlebt" wirkt erst im Zusammenspiel von Seitenaufbau-ETag, Teilfeld-
 # Nutzlast, 412-Pfad und Go-Merge, nur mit zwei Browser-Kontexten messbar.
@@ -407,6 +410,26 @@
 #             Fallzahl per `npx playwright test --list`: `Total: 528 tests in 71 files`.
 #   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
 #
+# Aufnahme 2026-10-29 (#2347 S3c, Epic #2345 Etappe P6, Konfliktschutz ueber zwei
+# Kontexte): hub-konfliktschutz-zwei-kontexte (KS-1 je Reiter Alarme/Wertebereiche/
+# Versand/Wetter-Metriken, KS-2 #2381 selber Tab, KS-3 Pausieren im Hub, KS-4
+# Pausieren auf der Listenseite -- je kind per HUB_KINDS, 14 Faelle) und
+# compare-orte-konfliktschutz-zwei-kontexte (KO-1, Orte-Tab, gz-eigenstaendig:,
+# 1 Fall). Ersetzen die Listenzeile compare-konfliktschutz-zwei-kontexte (geloescht,
+# 8 Altfaelle 1:1 zugeordnet: Spec feat_2347_s3c_paritaets_e2e.md, Zuordnungstabelle).
+# Zweiter Kontext = weiterer Kontext mit DEMSELBEN storageState (kein Zweit-Login).
+#   Filter A: kein waitForTimeout/test.skip/test.fixme/describe.skip/__dirname/
+#             Hauptrepo-Pfad in den zwei Dateien (grep leer am Endstand).
+#   Filter B: 3 Zyklen mit je FRISCHEM isoliertem Stack (ci-stack.sh, Go 8095 /
+#             Py 8005, frische admin.json) ueber die zwei neuen Dateien: 16/16,
+#             16/16, 16/16 (inkl. global.setup; Zyklus 1 zusaetzlich mit der
+#             Altdatei 24/24, 2026-10-29). ZIELVERBUND am Endstand (Positivliste
+#             ohne bug-703, 71 Dateien) EINMAL lokal gefahren: expected=535,
+#             unexpected=0, skipped=0, flaky=0; e2e_gate.py gruen
+#             -- docs/artifacts/feat-2347-s3c-paritaets-e2e/.
+#             Fallzahl per `npx playwright test --list`: `Total: 535 tests in 72 files`.
+#   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
@@ -417,8 +440,8 @@ e2e/compare-detail-edit-entry.spec.ts
 e2e/compare-editor-slice1.spec.ts
 e2e/compare-editor-slice3.spec.ts
 e2e/compare-hub-inline-edit.spec.ts
-e2e/compare-konfliktschutz-zwei-kontexte.spec.ts
 e2e/compare-legacy-fields-survive-save.spec.ts
+e2e/compare-orte-konfliktschutz-zwei-kontexte.spec.ts
 e2e/compare-radar-toggle.spec.ts
 e2e/compare-stundenverlauf-wertprops.spec.ts
 e2e/design-compliance-group-a.spec.ts
@@ -432,6 +455,7 @@ e2e/hub-alarme-speichert-selbst.spec.ts
 e2e/hub-alarme-wertprops.spec.ts
 e2e/hub-cross-user-write-block.spec.ts
 e2e/hub-editor-autosave-user-isolation.spec.ts
+e2e/hub-konfliktschutz-zwei-kontexte.spec.ts
 e2e/hub-kopf-aufbau.spec.ts
 e2e/hub-kopf-bearbeiten.spec.ts
 e2e/hub-list-menu.spec.ts

@@ -267,9 +267,25 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 // Pausieren: der Übertragungsweg unterscheidet sich je kind ENTWURFSGEMÄSS
 // (Spec Entscheidung 4/5): Trip PATCH …/state {paused} OHNE If-Match (strukturell
 // kein 412), Vergleich PUT {schedule, previous_schedule} MIT If-Match (⇒ 412).
-const KS_STATUS: Record<HubKind, { ersterWert: Stand; istPausiert: (s: Stand) => boolean }> = {
-	route: { ersterWert: { paused: true }, istPausiert: (s) => Boolean(s.paused_at) },
-	vergleich: { ersterWert: { schedule: 'manual', previous_schedule: 'daily' }, istPausiert: (s) => s.schedule === 'manual' }
+// `bestand`/`bestandSeed`: der Datenverlust-Check nach dem Pausieren gilt für BEIDE
+// kinds — nur die Liste heißt je kind anders (Trip `stages`, Seed 1 Etappe;
+// Vergleich `location_ids`, Seed 2 Orte; Kind-Kontraste „Pausieren im Hub"/„Orte").
+const KS_STATUS: Record<
+	HubKind,
+	{ ersterWert: Stand; istPausiert: (s: Stand) => boolean; bestand: (s: Stand) => unknown[]; bestandSeed: number }
+> = {
+	route: {
+		ersterWert: { paused: true },
+		istPausiert: (s) => Boolean(s.paused_at),
+		bestand: (s) => (s.stages as unknown[]) ?? [],
+		bestandSeed: 1
+	},
+	vergleich: {
+		ersterWert: { schedule: 'manual', previous_schedule: 'daily' },
+		istPausiert: (s) => s.schedule === 'manual',
+		bestand: (s) => (s.location_ids as unknown[]) ?? [],
+		bestandSeed: 2
+	}
 };
 
 /** Alle Schreibvorgänge eines Kontexts auf das Objekt (PUT) und seinen Status-Unterpfad (PATCH). */
@@ -411,6 +427,12 @@ for (const kind of HUB_KINDS) {
 					// Vergleich: PUT {schedule, previous_schedule} MIT If-Match ⇒ 412 ⇒ „Nochmal speichern".
 					await expect.poll(() => status(schreiberB.puts[0]), { timeout: 10_000 }).toBe(412);
 					expect(await schreiberB.puts[0].headerValue('if-match'), 'AC-1: If-Match aus dem Seitenaufbau').toBeTruthy();
+					// F002: auch der ERSTE Status-PUT trägt nur den Status — sonst würde ein Spread der
+					// veralteten Baseline im Einzel-Tab (gültiger Stempel) mit 200 angenommen (#2381-Klasse).
+					expect(Object.keys(schreiberB.puts[0].postDataJSON()).sort(), 'erster Status-PUT trägt nur den Status').toEqual([
+						'previous_schedule',
+						'schedule'
+					]);
 					await expect(anzeige(b)).toHaveAttribute('data-state', 'conflict', { timeout: 10_000 });
 					await anzeige(b).getByRole('button', { name: 'Nochmal speichern' }).click();
 					await expect(anzeige(b)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
@@ -434,7 +456,10 @@ for (const kind of HUB_KINDS) {
 				const stand = await serverStand(page, kind, hub.id);
 				expect(KS_STATUS[kind].istPausiert(stand), `${sel.kopf}: Status ist nicht pausiert`).toBe(true);
 				expect(stand.name, 'Pausieren im Hub hat den Namen von A überschrieben').toBe(nameA);
-				if (kind === 'route') expect((stand.stages as unknown[]).length, 'Pausieren darf keine Etappen verlieren').toBe(1);
+				// Datenverlust-Check für BEIDE kinds (kein kind-Zweig): Etappen bzw. Orte bleiben vollständig.
+				expect(KS_STATUS[kind].bestand(stand).length, 'Pausieren darf keine Etappen/Orte verlieren').toBe(
+					KS_STATUS[kind].bestandSeed
+				);
 			} finally {
 				await hub.aufraeumen();
 			}
