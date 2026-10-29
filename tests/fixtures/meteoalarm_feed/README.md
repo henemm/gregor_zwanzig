@@ -337,3 +337,27 @@ einen `TypeError`.
 - **Unverändert:** Jedes ausgewählte `warnings[]`-Element ist eine 1:1-Kopie
   aus dem Originalabruf (kein Feld umgeschrieben, keine Erfindung), kompakt
   serialisiert (~140 KB).
+
+## `feed_switzerland_sample.json` (Issue #1442, Scheibe S1)
+
+- **Herkunft:** `https://feeds.meteoalarm.org/api/v1/warnings/feeds-switzerland` (öffentlicher,
+  kontingentfreier CAP-Feed, kein Auth).
+- **Aufgezeichnet:** 2026-10-29 (Vollabruf 5,2 MB / 131 Einträge: 118 Alert, 13 Update, **kein**
+  Cancel; je Eintrag 5 Sprachblöcke en/de/fr/it/rm × 1 `info`; je Gebiet nur `areaDesc`,
+  `altitude`, `ceiling`, `polygon` — **kein Geocode**).
+- **Polygon-Form:** `area.polygon` ist eine Liste von Strings, ein String je Ring, Paare
+  `"lat,lon lat,lon …"` (Leerzeichen-getrennt).
+- **Reale, unveränderte Einträge (8):** Thalwil-Wetzikon (Zürich), Bern-Sense, Luzern-Alpnach,
+  Brienz-Interlaken, Basel (Alert + echtes Update `responseType: AllClear`, grün), Sarganserland,
+  Mendrisiotto (Bodenfrost, Höhenband 0–600 m). Lugano (Luganese) ist **bewusst nicht** enthalten
+  (Test „Punkt in der Schweiz ohne Treffer-Polygon").
+- **Synthetische Einträge (4), Kennung endet auf `.SYNTH-*`** — aus einem echten Eintrag abgeleitet,
+  weil der Feed sie nicht liefert (kein Cancel, kein Update mit vorhandenem Vorgänger, kein
+  Mehrfachring):
+  - `.SYNTH-CANCEL` — Cancel ohne `info`, `references` auf den Sarganserland-Alert.
+  - `.SYNTH-UPDATE` — Update zum Brienz-Interlaken-Alert, Stufe orange (3) statt gelb.
+  - `.SYNTH-LOCH` — Gebiet „Synthetisch Lochgebiet" (Grimsel-Raum) aus Außenring und Innenring (Loch),
+    Höhenband 1800–2500 m.
+  - `.SYNTH-KAPUTT` — an erster Stelle; `info` ist eine Liste, ein Gebiet trägt ein unlesbares Polygon.
+- **Test-Referenzzeitpunkte:** Wind `2026-10-25T12:00Z`, Bodenfrost `2026-10-29T02:00Z`.
+- **Größe:** ~390 KB (5 Sprachblöcke je Eintrag, Polygone unverändert).
