@@ -48,6 +48,10 @@ register_official_alert_source(MeteoAlarmFeedSource("AT"))
 # Ueberschneidung mit DPC. "Nicht zustaendig"-Antworten von AT/GeoSphere/DPC
 # kompensieren einen DE-Ausfall nicht (warn_egress.mark_not_covered, AC-3).
 register_official_alert_source(MeteoAlarmFeedSource("DE"))
+# Issue #1442 S1: MeteoAlarmFeedSource("CH") NACH DE, VOR DpcSource und SLF --
+# Gewitter-Tie-Break "zuerst registriert gewinnt" (#1427 S2); SLF liefert eine
+# andere Gefahrenart (avalanche_bulletin), Wetterwarnung steht vor der Lawine.
+register_official_alert_source(MeteoAlarmFeedSource("CH"))
 register_official_alert_source(DpcSource())
 # Issue #1441 (ADR-0089): Lawinen-Lagebericht als LETZTE Quelle -- eigene
 # Gefahrenart `avalanche_bulletin`, konkurriert mit keiner Bestandsquelle;
