@@ -266,7 +266,7 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 
 		// Vorbedingung VOR dem Merge: stimmt sie nicht, wird nichts geschrieben.
 		if !ifMatchAllows(r.Header.Get("If-Match"), oldFp) {
-			writePreconditionFailed(w, preconditionFailedDetail)
+			writePreconditionFailed(w, r, preconditionFailedDetail)
 			return
 		}
 

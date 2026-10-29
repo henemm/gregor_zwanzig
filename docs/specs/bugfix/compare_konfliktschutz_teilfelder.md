@@ -15,6 +15,8 @@ tags: [compare, ortsvergleich, konfliktschutz, etag, if-match, teilfelder, "#237
 
 - [ ] Approved
 
+> **Hinweis (#2347 S3c, 2026-10-29):** Die hier genannte E2E-Datei `compare-konfliktschutz-zwei-kontexte.spec.ts` ist gelöscht. Ihre Fälle (Test 9 je Reiter, Test 10, Test 11a/11b) prüft jetzt `frontend/e2e/hub-konfliktschutz-zwei-kontexte.spec.ts` für Trip UND Ortsvergleich; Test 9 (Orte) steht in `frontend/e2e/compare-orte-konfliktschutz-zwei-kontexte.spec.ts`. Zuordnung: `docs/specs/modules/feat_2347_s3c_paritaets_e2e.md`. Die Nennungen unten sind Historie.
+
 ## Purpose
 
 Im Ortsvergleich-Hub `/compare/[id]` geht beim gleichzeitigen Bearbeiten in zwei Tabs oder auf zwei Geräten eine fremde Änderung still verloren. Erstens speichert die erste Speicherung nach dem Laden ohne `If-Match` (Punkt 2 in #2375), zweitens sendet jeder Reiter (und der Kopf) den Gesamtstand aus einer lokalen, veralteten Basis, sodass auch „Nochmal speichern“ nach einem 412 den fremden Wert überschreibt (Punkt 1 in #2375, gleiche Ursache wie #2381). Diese Spec stellt beides auf Teilfeld-Nutzlasten (jeder Reiter sendet nur seine eigenen Felder) plus ETag-Übernahme beim Seitenaufbau um — nach dem Muster der Trip-Reiter.

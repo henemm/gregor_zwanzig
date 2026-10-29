@@ -41,7 +41,10 @@ PRUEFDATUM = date(2027, 1, 24)
 # konform => 32 x Regel 1, 2 x Regel 2 = 34; S3b (2026-10-28): Versand-Gruppe
 # (compare-versand-speichert-selbst, compare-hub-versand-inline,
 # compare-hub-briefing-times, versand-tab-vergleich) in hub-versand-*-Specs
-# zusammengefuehrt => 29 x Regel 1, 1 x Regel 2 = 30; darf nur schrumpfen (S4 leert sie).
+# zusammengefuehrt => 29 x Regel 1, 1 x Regel 2 = 30; S3c (2026-10-29):
+# compare-konfliktschutz-zwei-kontexte in hub-konfliktschutz-zwei-kontexte (HUB_KINDS)
+# und compare-orte-konfliktschutz-zwei-kontexte (gz-eigenstaendig:-Kopf) zerlegt
+# => 28 x Regel 1, 1 x Regel 2 = 29; darf nur schrumpfen (S4 leert sie).
 ALTLAST: frozenset[str] = frozenset({
     "compare-active-metrics-format.staging.spec.ts",
     "compare-alarm-config.spec.ts",
@@ -55,7 +58,6 @@ ALTLAST: frozenset[str] = frozenset({
     "compare-hourly-metric-order.spec.ts",
     "compare-hub-fidelity-s8c.spec.ts",
     "compare-hub-inline-edit.spec.ts",
-    "compare-konfliktschutz-zwei-kontexte.spec.ts",
     "compare-layout-tab-dissolution.spec.ts",
     "compare-legacy-fields-survive-save.spec.ts",
     "compare-metric-order.spec.ts",
@@ -79,7 +81,7 @@ ALTLAST: frozenset[str] = frozenset({
 # Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken,
 # und zwar nur im selben Zug wie eine ALTLAST-Streichung: der Wert muss stets
 # gleich len(ALTLAST) sein (#2347 S3a, Adversary F001).
-ALTLAST_MAX = 30
+ALTLAST_MAX = 29
 
 _SCHLEIFE_RE = re.compile(
     r"\bHUB_KINDS\b"

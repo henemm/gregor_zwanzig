@@ -413,7 +413,7 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// Vorbedingung VOR dem Dekodieren des Rumpfes: stimmt sie nicht, ist der
 		// Rumpf irrelevant und es wird nichts geschrieben (AC-5).
 		if !ifMatchAllows(r.Header.Get("If-Match"), oldFp) {
-			writePreconditionFailed(w, preconditionFailedDetail)
+			writePreconditionFailed(w, r, preconditionFailedDetail)
 			return
 		}
 
