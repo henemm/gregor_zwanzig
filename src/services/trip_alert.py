@@ -3061,14 +3061,16 @@ class TripAlertService:
                 err, dauer = out.error, time.monotonic() - fetch_started_at
             else:
                 fresh, err, dauer = out.value
-            if err is not None:
+            # Hausnorm (dispatch_orchestrator.py:71-77): Erfolg im Rumpf,
+            # Gegenzaehler ausschliesslich im Fehlausgangs-Zweig.
+            if err is None:
+                fresh_weather += [fresh]
+            else:
                 gescheitert += 1
                 logger.error(
                     f"Failed to fetch fresh weather for segment "
                     f"{segment_id}: {err}"
                 )
-            else:
-                fresh_weather.append(fresh)
             # Issue #1539 S0 (AC-7): Dauer je Etappen-Abruf, genau eine Zeile.
             logger.info(f"Etappe {segment_id}: Abruf in {dauer:.3f} s")
         return fresh_weather, gescheitert

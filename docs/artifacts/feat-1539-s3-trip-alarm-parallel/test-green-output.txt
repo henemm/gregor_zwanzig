@@ -1,0 +1,125 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/epic2138-1539
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 19 items
+
+tests/tdd/test_trip_alert_parallel_fetch.py ...................          [100%]
+
+==================================== PASSES ====================================
+___________ test_ac2_ausfall_einer_etappe_laesst_die_uebrigen_durch ____________
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.187 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 2: boom-2
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.187 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.215 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 4: Abruf in 0.183 s
+___ test_ac2_abbruch_ausserhalb_von_exception_zaehlt_als_ausfall_ohne_luecke ___
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.110 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.111 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: abbruch-3
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.113 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 4: Abruf in 0.111 s
+_____ test_ac3_fristablauf_zaehlt_uebersprungene_als_gescheitert_mit_grund _____
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.341 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 2: timeout
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.449 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: deadline
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.450 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 4: deadline
+INFO     trip_alert:trip_alert.py:3075 Etappe 4: Abruf in 0.450 s
+___________ test_ac7_stand_und_ergebnis_entstehen_nur_im_hauptfaden ____________
+------------------------------ Captured log call -------------------------------
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+__________ test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_ausfall __________
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.090 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 2: boom-2
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.063 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.095 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 4: Abruf in 0.074 s
+______ test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_uebersprungenen ______
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.319 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 2: timeout
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.449 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: deadline
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.449 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 4: deadline
+INFO     trip_alert:trip_alert.py:3075 Etappe 4: Abruf in 0.449 s
+=========================== short test summary info ============================
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac1_ergebnis_folgt_der_eingabereihenfolge_nicht_der_fertigstellung
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac2_ausfall_einer_etappe_laesst_die_uebrigen_durch
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac2_abbruch_ausserhalb_von_exception_zaehlt_als_ausfall_ohne_luecke
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac3_fristablauf_zaehlt_uebersprungene_als_gescheitert_mit_grund
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac4_alarmabrufe_in_workern_werden_als_alarm_gebucht
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac5_vorschauabrufe_in_workern_bleiben_vorschau
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_gesetzte_laufgrenze_erreicht_den_baustein_unveraendert
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_ohne_laufgrenze_gilt_eine_endliche_frist_von_etwa_60_sekunden
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_check_all_trips_setzt_die_frist_und_setzt_sie_danach_zurueck
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_laufgrenze_wird_auch_nach_einer_ausnahme_im_lauf_zurueckgesetzt
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac7_stand_und_ergebnis_entstehen_nur_im_hauptfaden
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac8_zwei_nutzer_gleichzeitig_bleiben_getrennt
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac9_parallel_ruft_nicht_oefter_upstream_ab_als_seriell
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac10_beendete_und_kuenftige_etappen_werden_nicht_abgerufen
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac10_trip_ohne_faellige_etappe_meldet_null_null
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_ausfall
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_uebersprungenen
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac12_adr_0103_nennt_zahl_methode_stellschraube_und_pruefdatum
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_worker_ruft_mit_alarm_prioritaet_ohne_anreicherung_und_mit_echter_user_id
+============================== 19 passed in 9.18s ==============================

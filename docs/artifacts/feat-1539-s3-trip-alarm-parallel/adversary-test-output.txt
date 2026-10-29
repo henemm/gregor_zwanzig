@@ -1,0 +1,221 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/epic2138-1539
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 84 items
+
+tests/tdd/test_trip_alert_parallel_fetch.py ..................           [ 21%]
+tests/test_success_status_guard.py ........................              [ 50%]
+tests/integration/test_trip_alert.py ..............                      [ 66%]
+tests/integration/test_trip_alert_stage_name.py ....                     [ 71%]
+tests/tdd/test_trip_alert_duration_logging.py ...                        [ 75%]
+tests/tdd/test_trip_alert_channel_precedence.py ....                     [ 79%]
+tests/tdd/test_trip_alert_profile.py .                                   [ 80%]
+tests/tdd/test_trip_alert_briefing_imminent.py ................          [100%]
+
+=============================== warnings summary ===============================
+tests/tdd/test_trip_alert_profile.py::test_ac1_trip_alert_uses_compact_renderer_not_format_email
+  /home/hem/gregor_zwanzig/.claude/worktrees/epic2138-1539/.venv/lib/python3.12/site-packages/pytest_socket/__init__.py:110: UserWarning: A test tried to use socket.getaddrinfo.
+    raise SocketBlockedError("A test tried to use socket.getaddrinfo.")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+___________ test_ac2_ausfall_einer_etappe_laesst_die_uebrigen_durch ____________
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.220 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 2: boom-2
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.220 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.220 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 4: Abruf in 0.195 s
+_____ test_ac3_fristablauf_zaehlt_uebersprungene_als_gescheitert_mit_grund _____
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.357 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 2: timeout
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.449 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: deadline
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.449 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 4: deadline
+INFO     trip_alert:trip_alert.py:3075 Etappe 4: Abruf in 0.449 s
+___________ test_ac7_stand_und_ergebnis_entstehen_nur_im_hauptfaden ____________
+------------------------------ Captured log call -------------------------------
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: boom-3
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 6: boom-6
+__________ test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_ausfall __________
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.093 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 2: boom-2
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.092 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.116 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 4: Abruf in 0.123 s
+______ test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_uebersprungenen ______
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.348 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 2: timeout
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.450 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 3: deadline
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.450 s
+ERROR    trip_alert:trip_alert.py:3070 Failed to fetch fresh weather for segment 4: deadline
+INFO     trip_alert:trip_alert.py:3075 Etappe 4: Abruf in 0.450 s
+_________________ test_trip_alarmlauf_loggt_dauerzeile_je_trip _________________
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.112 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.061 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.091 s
+INFO     trip_alert:trip_alert.py:1281 Trip Dauerlog-Trip-Alpha: geprueft in 0.120 s
+INFO     trip_alert:trip_alert.py:1304 check_all_trips: Lauf beendet nach 0.121s fuer user_id=tdd-1539-dauer-91a7bb (checked=1 skipped=0 alerts_sent=0)
+________________ test_trip_alarmlauf_loggt_dauerzeile_je_etappe ________________
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.092 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.053 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.033 s
+INFO     trip_alert:trip_alert.py:1281 Trip Dauerlog-Trip-Alpha: geprueft in 0.103 s
+INFO     trip_alert:trip_alert.py:1304 check_all_trips: Lauf beendet nach 0.104s fuer user_id=tdd-1539-dauer-ac9b53 (checked=1 skipped=0 alerts_sent=0)
+______________ test_dauermessung_aendert_das_gesamtergebnis_nicht ______________
+------------------------------ Captured log call -------------------------------
+INFO     trip_alert:trip_alert.py:3075 Etappe 1: Abruf in 0.090 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 2: Abruf in 0.043 s
+INFO     trip_alert:trip_alert.py:3075 Etappe 3: Abruf in 0.126 s
+INFO     trip_alert:trip_alert.py:1281 Trip Dauerlog-Trip-Alpha: geprueft in 0.137 s
+INFO     trip_alert:trip_alert.py:1304 check_all_trips: Lauf beendet nach 0.138s fuer user_id=tdd-1539-dauer-16243f (checked=1 skipped=0 alerts_sent=0)
+__________ test_ac1_trip_alert_uses_compact_renderer_not_format_email __________
+------------------------------ Captured log call -------------------------------
+WARNING  output.channels.email:email.py:725 Herkunftssperre (Issue #1476): Testlauf-Herkunft erkannt -- E-Mail-Empfaenger von ['***@henemm.com'] auf gregor-test@henemm.com umgeschaltet.
+ERROR    services.notification_service:notification_service.py:2058 Email alert failed for Skitour: A test tried to use socket.getaddrinfo.
+=========================== short test summary info ============================
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac1_ergebnis_folgt_der_eingabereihenfolge_nicht_der_fertigstellung
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac2_ausfall_einer_etappe_laesst_die_uebrigen_durch
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac3_fristablauf_zaehlt_uebersprungene_als_gescheitert_mit_grund
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac4_alarmabrufe_in_workern_werden_als_alarm_gebucht
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac5_vorschauabrufe_in_workern_bleiben_vorschau
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_gesetzte_laufgrenze_erreicht_den_baustein_unveraendert
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_ohne_laufgrenze_gilt_eine_endliche_frist_von_etwa_60_sekunden
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_check_all_trips_setzt_die_frist_und_setzt_sie_danach_zurueck
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac6_laufgrenze_wird_auch_nach_einer_ausnahme_im_lauf_zurueckgesetzt
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac7_stand_und_ergebnis_entstehen_nur_im_hauptfaden
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac8_zwei_nutzer_gleichzeitig_bleiben_getrennt
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac9_parallel_ruft_nicht_oefter_upstream_ab_als_seriell
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac10_beendete_und_kuenftige_etappen_werden_nicht_abgerufen
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac10_trip_ohne_faellige_etappe_meldet_null_null
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_ausfall
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac11_genau_eine_dauerzeile_je_etappe_auch_bei_uebersprungenen
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_ac12_adr_0103_nennt_zahl_methode_stellschraube_und_pruefdatum
+PASSED tests/tdd/test_trip_alert_parallel_fetch.py::test_worker_ruft_mit_alarm_prioritaet_ohne_anreicherung_und_mit_echter_user_id
+PASSED tests/test_success_status_guard.py::test_scanner_finds_every_spec_listed_finding
+PASSED tests/test_success_status_guard.py::test_no_unlisted_success_status_findings
+PASSED tests/test_success_status_guard.py::test_known_violations_only_shrink
+PASSED tests/test_success_status_guard.py::test_scanner_detects_constant_success_from_call_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_diverging_except_return_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_pre_try_success_marker_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_pre_try_detector_flags_attempted_channels_only_before_try
+PASSED tests/test_success_status_guard.py::test_scanner_detects_partial_success_blind_loop_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_tuple_shaped_decoy_without_real_failure_counter
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_pure_computation_calls_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_house_norm_sent_failed_tuple_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_accepts_sibling_else_failure_counter_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_rejects_else_counter_without_sibling_success_counter
+PASSED tests/test_success_status_guard.py::test_scanner_detects_unwired_heartbeat_function_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_wired_heartbeat_call_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_detects_unacknowledged_dispatch_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_acknowledged_dispatch_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_persistence_only_swallow_in_synthetic_file
+PASSED tests/test_success_status_guard.py::test_webhook_ack_is_documented_exception_not_silent_pass
+PASSED tests/test_success_status_guard.py::test_public_host_info_exceptions_keep_their_wording
+PASSED tests/test_success_status_guard.py::test_intentional_exceptions_carry_nonempty_justification
+PASSED tests/test_success_status_guard.py::test_intentional_exception_list_cannot_grow
+PASSED tests/test_success_status_guard.py::test_scan_scope_excludes_go_internal_tree
+PASSED tests/test_success_status_guard.py::test_scanner_ignores_pure_liveness_endpoint
+PASSED tests/integration/test_trip_alert.py::TestFilterSignificantChanges::test_filter_keeps_all_changes
+PASSED tests/integration/test_trip_alert.py::TestFilterSignificantChanges::test_filter_keeps_minor_changes
+PASSED tests/integration/test_trip_alert.py::TestFilterSignificantChanges::test_filter_empty_list
+PASSED tests/integration/test_trip_alert.py::TestThrottling::test_first_alert_not_throttled
+PASSED tests/integration/test_trip_alert.py::TestThrottling::test_second_alert_within_window_is_throttled
+PASSED tests/integration/test_trip_alert.py::TestThrottling::test_alert_after_window_not_throttled
+PASSED tests/integration/test_trip_alert.py::TestThrottling::test_clear_throttle
+PASSED tests/integration/test_trip_alert.py::TestThrottling::test_get_time_until_next_alert
+PASSED tests/integration/test_trip_alert.py::TestThrottling::test_get_time_until_next_alert_not_throttled
+PASSED tests/integration/test_trip_alert.py::TestDetectAllChanges::test_detect_changes_matching_segments
+PASSED tests/integration/test_trip_alert.py::TestDetectAllChanges::test_no_changes_when_similar
+PASSED tests/integration/test_trip_alert.py::TestAlertOnChangesConfig::test_alerts_disabled_returns_false
+PASSED tests/integration/test_trip_alert.py::TestAlertOnChangesConfig::test_alerts_enabled_does_not_block
+PASSED tests/integration/test_trip_alert.py::TestAlertOnChangesConfig::test_no_config_defaults_to_alerts_enabled
+PASSED tests/integration/test_trip_alert_stage_name.py::TestAC1SubjectContainsStageName::test_ac1_subject_contains_stage_name
+PASSED tests/integration/test_trip_alert_stage_name.py::TestAC2FallbackToDate::test_ac2_fallback_to_date_when_no_stage
+PASSED tests/integration/test_trip_alert_stage_name.py::TestAC3NoAsciiUmlauts::test_ac3_no_ascii_umlauts_in_svelte_files
+PASSED tests/integration/test_trip_alert_stage_name.py::TestAC4TripFormDeleted::test_ac4_tripform_deleted
+PASSED tests/tdd/test_trip_alert_duration_logging.py::test_trip_alarmlauf_loggt_dauerzeile_je_trip
+PASSED tests/tdd/test_trip_alert_duration_logging.py::test_trip_alarmlauf_loggt_dauerzeile_je_etappe
+PASSED tests/tdd/test_trip_alert_duration_logging.py::test_dauermessung_aendert_das_gesamtergebnis_nicht
+PASSED tests/tdd/test_trip_alert_channel_precedence.py::test_trip_alert_channels_legacy_unchanged
+PASSED tests/tdd/test_trip_alert_channel_precedence.py::test_trip_alert_channels_replaces_briefing_inheritance
+PASSED tests/tdd/test_trip_alert_channel_precedence.py::test_trip_alert_channels_rule_override_still_wins
+PASSED tests/tdd/test_trip_alert_channel_precedence.py::test_trip_alert_channels_sms_tier_gate
+PASSED tests/tdd/test_trip_alert_profile.py::test_ac1_trip_alert_uses_compact_renderer_not_format_email
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac1_aenderungsalarm_schweigt_wenn_das_briefing_unmittelbar_bevorsteht
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac2_amtliche_warnung_schweigt_wenn_das_briefing_unmittelbar_bevorsteht
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac8_trip_ohne_geplantes_briefing_wird_nie_gesperrt[paused_at]
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac8_trip_ohne_geplantes_briefing_wird_nie_gesperrt[enabled_false]
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac8_trip_ohne_geplantes_briefing_wird_nie_gesperrt[paused_until]
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac8_trip_ohne_geplantes_briefing_wird_nie_gesperrt[keine_etappe]
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac10_gesperrte_meldung_veraendert_keinen_zustand
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac13_gesperrte_meldung_erzeugt_keinen_protokolleintrag
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac11_sperrpruefung_verbraucht_skip_next_nicht
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac15_sperre_wirkt_nur_auf_die_eigenen_daten_des_nutzers
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac16_unterdrueckte_warnung_erscheint_im_folgenden_briefing
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac5_der_briefing_versuch_beendet_die_sperre[erfolgreich-True]
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac5_der_briefing_versuch_beendet_die_sperre[gescheitert-True]
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_ac5_der_briefing_versuch_beendet_die_sperre[ohne_versuch-False]
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_r6_gescheitertes_briefing_sperrt_nicht_das_ganze_nachholfenster[gescheitert-True]
+PASSED tests/tdd/test_trip_alert_briefing_imminent.py::test_r6_gescheitertes_briefing_sperrt_nicht_das_ganze_nachholfenster[ohne_versuch-False]
+======================== 84 passed, 1 warning in 17.39s ========================

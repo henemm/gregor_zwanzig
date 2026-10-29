@@ -287,6 +287,46 @@ def test_ac2_ausfall_einer_etappe_laesst_die_uebrigen_durch(rand, caplog):
     _assert_gleichzeitig(prov)
 
 
+class _Abbruch(BaseException):
+    """Keine ``Exception``: rutscht am Worker-``except`` vorbei bis zum Baustein."""
+
+
+class _AbbruchProvider(_RandProvider):
+    """Wie ``_RandProvider``, wirft aber fuer die Etappe ``abbruch`` ein ``_Abbruch``."""
+
+    def __init__(self, abbruch: str, **kwargs):
+        super().__init__(**kwargs)
+        self._abbruch = abbruch
+
+    def fetch_forecast(self, location, *args, **kwargs):
+        if location.name.rsplit(" ", 1)[-1] == self._abbruch:
+            raise _Abbruch(f"abbruch-{self._abbruch}")
+        return super().fetch_forecast(location, *args, **kwargs)
+
+
+def test_ac2_abbruch_ausserhalb_von_exception_zaehlt_als_ausfall_ohne_luecke(
+    monkeypatch, caplog,
+):
+    """AC-2/AC-3-Ergaenzung (F003): Given vier Etappen, deren Abruf fuer Etappe 3
+    eine BaseException (keine Exception) wirft; When ``_fetch_fresh_weather``
+    laeuft; Then Stand (4, 1), kein None im Ergebnis, 1, 2, 4 in Eingabe-
+    reihenfolge und eine Fehlerzeile mit Etappe 3 im Log."""
+    prov = _AbbruchProvider("3", standard_verzoegerung=0.05)
+    monkeypatch.setattr("providers.base.get_provider", lambda name, _p=prov: prov)
+    dienst = _dienst()
+    with caplog.at_level(logging.INFO):
+        wetter = dienst._fetch_fresh_weather(_etappen([1, 2, 3, 4]))
+    assert None not in wetter, wetter
+    assert _ids(wetter) == [1, 2, 4]
+    assert dienst._fetch_stats == (4, 1)
+    fehlerzeilen = [
+        r.getMessage() for r in caplog.records
+        if r.levelno >= logging.ERROR and re.search(r"\b3\b", r.getMessage())
+    ]
+    assert len(fehlerzeilen) == 1 and "abbruch-3" in fehlerzeilen[0], fehlerzeilen
+    _assert_in_workern(prov)
+
+
 # --------------------------------------------------------------------------- #
 # AC-3 Frist
 # --------------------------------------------------------------------------- #
