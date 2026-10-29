@@ -26,6 +26,7 @@ SPEC: docs/specs/modules/feat_1445_s3_oesterreich_feed.md, AC-1..AC-8
 from __future__ import annotations
 
 import logging
+import time
 from typing import Literal, Optional
 
 import httpx
@@ -33,8 +34,11 @@ import httpx
 from services.official_alerts import dwd_zones, geosphere_warn, warn_egress
 from services.official_alerts.department_mapper import lookup_department
 from services.official_alerts.dpc import _zone_at
+from services.official_alerts.geo_ray_cast import _point_in_ring
 from services.official_alerts.meteoalarm import _group_and_map_info_entries
 from services.official_alerts.models import OfficialAlert
+from services.official_alerts.region_mapper import RegionMapper
+from services.official_alerts.slf import REGIONS_FILE as _SLF_REGIONS_FILE
 from services.radar_service import (
     _INCA_LAT_MAX,
     _INCA_LAT_MIN,
@@ -52,6 +56,8 @@ _FEED_PATHS: dict[str, str] = {
     "IT": "/api/v1/warnings/feeds-italy",
     "AT": "/api/v1/warnings/feeds-austria",
     "DE": "/api/v1/warnings/feeds-germany",
+    # Issue #1442 S1: ohne Geocode -- Zuordnung per Punkt-in-Polygon.
+    "CH": "/api/v1/warnings/feeds-switzerland",
 }
 # Issue #1681: Geocode-Art je Land -- DE ordnet ueber die DWD-``WARNCELLID``
 # zu (1:1 im Feed, traegt die eingecheckte Kreisgeometrie), IT/AT ueber EMMA.
@@ -329,6 +335,148 @@ def _alerts_for_zone(feed: dict, zone: str, country: str = "IT") -> list[Officia
     return alerts
 
 
+# ── Schweiz (Issue #1442 S1): Punkt-in-Polygon statt Geocode ──────────────────
+# Lokale CH-Zustaendigkeit ueber die eingecheckten SLF-Regionspolygone (kein Netz).
+_ch_regions = RegionMapper(_SLF_REGIONS_FILE)
+# Ausgewerteter Feed (BBoxen, Ringe, Rueckzuege) je Momentaufnahme -- haengt per
+# Objekt-Referenz am gecachten Feed und lebt damit dessen 30-min-TTL mit.
+_ch_index_memo: dict = {}
+
+
+def _parse_ring(text: object) -> Optional[list[tuple[float, float]]]:
+    """CAP-Ring ``"lat,lon lat,lon ..."`` -> ``[(lon, lat), ...]`` (Reihenfolge
+    von ``_point_in_ring``); unlesbar oder < 3 Punkte -> ``None``."""
+    try:
+        ring = [(float(lon), float(lat))
+                for lat, lon in (pair.split(",") for pair in str(text).split())]
+    except ValueError:
+        return None
+    return ring if len(ring) >= 3 else None
+
+
+def _area_index(area: object) -> Optional[tuple]:
+    """``(areaDesc, bbox, rings)`` eines Gebiets; ``None`` ohne lesbaren Ring."""
+    if not isinstance(area, dict) or not isinstance(area.get("polygon"), list):
+        return None
+    rings = [r for r in (_parse_ring(t) for t in area["polygon"]) if r]
+    if not rings:
+        return None
+    lons = [p[0] for r in rings for p in r]
+    lats = [p[1] for r in rings for p in r]
+    return area.get("areaDesc"), (min(lons), min(lats), max(lons), max(lats)), rings
+
+
+def _referenced_ids(alert: dict) -> set[str]:
+    """CAP ``references`` (``"sender,identifier,sent ..."``) -> Kennungen."""
+    parts = (ref.split(",") for ref in str(alert.get("references") or "").split())
+    return {p[1] for p in parts if len(p) >= 2}
+
+
+def _alert_areas(alert: dict) -> list[tuple]:
+    """Alle lesbaren Gebiete eines Alerts; gleiche Polygone der Sprachbloecke
+    werden nur einmal gerechnet. Unlesbares Polygon -> Journal, kein Ausfall
+    (AC-9: faerbt keine anderen Orte ein)."""
+    seen: set = set()
+    areas: list[tuple] = []
+    for info in alert["info"]:
+        for area in (info.get("area") or []) if isinstance(info, dict) else []:
+            key = repr(area.get("polygon")) if isinstance(area, dict) else None
+            if key in seen:
+                continue
+            seen.add(key)
+            indexed = _area_index(area)
+            if indexed is None:
+                warn_egress.log_zone_drift("meteoalarm_feed:CH", None, True, "broken_polygon")
+            else:
+                areas.append(indexed)
+    return areas
+
+
+def _ch_index(feed: dict) -> dict:
+    """Wertet den CH-Feed EINMAL je Momentaufnahme aus (BBox-Vorfilter)."""
+    memo = _ch_index_memo.get("entry")  # EIN Schluessel: kein Paar-Race bei Parallelabruf
+    if memo is not None and memo[0] is feed:  # Referenz statt id(): keine Wiederverwendung
+        return memo[1]
+    entries: list[tuple] = []
+    superseded: set[str] = set()
+    broken = 0
+    for warning in feed.get("warnings") or []:
+        alert = warning.get("alert") if isinstance(warning, dict) else None
+        if isinstance(alert, dict) and alert.get("msgType") == "Cancel":
+            # Rueckzug: hebt nur auf, ist NIE selbst eine Warnung (auch mit info[]).
+            superseded |= _referenced_ids(alert)
+            continue
+        if not isinstance(alert, dict) or not isinstance(alert.get("info"), list):
+            # Nicht zuordenbar: nur Journal, KEIN Ausfall (Spec Punkt 5 -- ein
+            # einzelner Eintrag irgendwo im Land faerbt nicht jede Ortsabfrage ein).
+            broken += 1
+            warn_egress.log_zone_drift("meteoalarm_feed:CH", None, True, "broken_warning_entry")
+            continue
+        if alert.get("msgType") == "Update":
+            superseded |= _referenced_ids(alert)
+        areas = _alert_areas(alert)
+        if areas:
+            entries.append((alert, areas))
+        else:
+            broken += 1
+    # Spec Punkt 4: kaputte Eintraege OHNE einen einzigen verwertbaren -> unlesbar.
+    # Cancel ist neutral; ein leerer Feed bleibt "keine Warnung".
+    index = {"entries": entries, "superseded": superseded, "unreadable": broken > 0 and not entries}
+    _ch_index_memo["entry"] = (feed, index)
+    return index
+
+
+def _hit_area(areas: list[tuple], lat: float, lon: float) -> Optional[tuple]:
+    """Erstes Gebiet, das den Punkt enthaelt. Gerade-Ungerade-Regel ueber alle
+    Ringe: Punkt im Aussenring und nicht im Loch; disjunkte Mehrfachringe."""
+    for area in areas:
+        x0, y0, x1, y1 = area[1]
+        if x0 <= lon <= x1 and y0 <= lat <= y1 \
+                and sum(_point_in_ring(lat, lon, ring) for ring in area[2]) % 2 == 1:
+            return area
+    return None
+
+
+def _alerts_for_point_polygon(feed: dict, lat: float, lon: float) -> list[OfficialAlert]:
+    """CH-Gegenstueck zu ``_alerts_for_zone``: Punkt-in-Polygon gegen die
+    Feed-Gebiete; per ``Update``/``Cancel`` ersetzte Warnungen entfallen,
+    Hoehenband (``altitude``/``ceiling``) wird bewusst ignoriert."""
+    index = _ch_index(feed)
+    if index["unreadable"]:
+        warn_egress.mark_fetch_incomplete()
+        return []
+    alerts: list[OfficialAlert] = []
+    for alert, areas in index["entries"]:
+        if alert.get("identifier") in index["superseded"]:
+            continue
+        hit = _hit_area(areas, lat, lon)
+        if hit is None:
+            continue
+        entries = _info_entries_from_alert(alert)
+        for entry in entries:
+            entry["area_desc"] = hit[0]
+        alerts.extend(_group_and_map_info_entries(entries))
+    return alerts
+
+
+def _cached_ch_feed_without_network() -> Optional[dict]:
+    """Frischer CH-Feed aus dem Modul-Cache oder ``None`` -- nie ein Abruf."""
+    entry = _cache.get("CH")
+    if not warn_egress._is_fresh(entry, time.monotonic()):
+        return None
+    return entry.get("data")
+
+
+def _covers_ch(lat: float, lon: float) -> bool:
+    """SLF-Regionen, sonst Fallback: Punkt in einem gecachten Feed-Polygon."""
+    if _ch_regions.regions_at(lat, lon):
+        return True
+    feed = _cached_ch_feed_without_network()
+    if not isinstance(feed, dict):
+        return False
+    return any(_hit_area(areas, lat, lon) for _alert, areas in _ch_index(feed)["entries"])
+
+
 class MeteoAlarmFeedSource:
     """Feed-Bestandsquelle Italien+Oesterreich (#1445 S1/S3) -- erfuellt
     ``OfficialAlertSource`` (base.py:24). ``OfficialAlert.source`` bleibt
@@ -336,7 +484,7 @@ class MeteoAlarmFeedSource:
     Abrufweg aendert sich. Ein Code, zwei Instanzen ueber den
     Konstruktor-Parameter ``country``."""
 
-    def __init__(self, country: Literal["IT", "AT", "DE"]) -> None:
+    def __init__(self, country: Literal["IT", "AT", "DE", "CH"]) -> None:
         self.country = country
 
     @property
@@ -375,11 +523,16 @@ class MeteoAlarmFeedSource:
         if self.country == "DE":
             # Issue #1681: dieselbe Zonenfunktion wie fetch() -- keine Bbox.
             return _zone_for_point_de(lat, lon) is not None
+        if self.country == "CH":
+            # Issue #1442 S1: SLF-Regionen, Fallback gecachte Feed-Polygone.
+            return _covers_ch(lat, lon)
         if lookup_department(lat, lon) is not None:
             return False
         return _zone_for_point(lat, lon) is not None
 
     def fetch(self, lat: float, lon: float) -> list[OfficialAlert]:
+        if self.country == "CH":
+            return self._fetch_ch(lat, lon)
         if self.country == "AT":
             zone, fetch_failed = _zone_for_point_at(lat, lon)
             if fetch_failed:
@@ -425,3 +578,16 @@ class MeteoAlarmFeedSource:
         if self.country == "DE":
             _log_de_warncell_drift(feed)
         return _alerts_for_zone(feed, zone, self.country)
+
+    def _fetch_ch(self, lat: float, lon: float) -> list[OfficialAlert]:
+        """Drei Zustaende (Spec #1442 S1 Punkt 4): ausserhalb CH -> nicht
+        zustaendig; Feed nicht abrufbar -> ``cached_fetch`` meldet den Ausfall;
+        sonst Treffer oder "keine Warnung"."""
+        if not _covers_ch(lat, lon):
+            warn_egress.mark_not_covered()
+            return []
+        feed = _get_cached_feed("CH")
+        if feed is None:
+            warn_egress.mark_fetch_incomplete()
+            return []
+        return _alerts_for_point_polygon(feed, lat, lon)

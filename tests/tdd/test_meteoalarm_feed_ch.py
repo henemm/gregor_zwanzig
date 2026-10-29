@@ -417,7 +417,8 @@ def test_ac7_feedwarnung_und_slf_lawine_getrennt_registrierungsreihenfolge():
     slf = make_slf_source(SlfFixtureTransport(WINTER_MORGEN), clock)
     # Reihenfolge wie in der echten Registry: echte CH-Quelle, dann SLF mit Fixture-Transport.
     with _nur_quellen(_ch_quellen_in_registry()[0], slf):
-        alerts, unavailable = get_official_alerts_with_status(*LUZERN, now=TEST_NOW_WIND)
+        # SLF-Fixture gilt nur am 01.03.2026 -- Abfrage zu diesem Zeitpunkt (Wind liegt danach).
+        alerts, unavailable = get_official_alerts_with_status(*LUZERN, now=clock.now())
 
     wind = [a for a in alerts if a.hazard == "wind_gust"]
     lawine = [a for a in alerts if a.hazard == "avalanche_bulletin"]
@@ -538,3 +539,206 @@ def test_ac10_bestehende_laenderpfade_unveraendert():
     assert meteoalarm_feed._FEED_PATHS["AT"] == "/api/v1/warnings/feeds-austria"
     assert meteoalarm_feed._FEED_PATHS["DE"] == "/api/v1/warnings/feeds-germany"
     assert meteoalarm_feed._GEOCODE_NAME["DE"] == "WARNCELLID"
+
+
+# ─────────────── Fix-Loop 1: im Test abgeleitete SYNTHETISCHE Varianten ──────────────
+# Jede Variante entsteht aus der echten Fixture (README: "Im Test abgeleitete Varianten").
+
+_INTERLAKEN_ALERT = "2.49.0.0.756.0.CH.261024105001572f9f9653820dd2ce27"
+_THALWIL_ALERT = "2.49.0.0.756.0.CH.261024105010f4c5cc9633ee3dc5cc7e"
+
+
+def _eintrag(feed: dict, identifier: str) -> dict:
+    treffer = [w["alert"] for w in feed["warnings"] if w["alert"]["identifier"] == identifier]
+    assert len(treffer) == 1, f"Fixture-Eintrag {identifier} nicht eindeutig"
+    return treffer[0]
+
+
+def _setze_param(alert: dict, name: str, wert: str) -> None:
+    for info in alert["info"]:
+        for p in info["parameter"]:
+            if p["valueName"] == name:
+                p["value"] = wert
+
+
+def test_ac5_update_mit_niedrigerer_stufe_ersetzt_die_hoehere():
+    """AC-5 (F001): GIVEN Brienz-Interlaken fuehrt eine ORANGE Windwarnung (synthetisch aus der
+    gelben abgeleitet) UND ein Update auf GELB, WHEN ueber die Registry (Dedup hoechste Stufe)
+    abgefragt wird, THEN genau Stufe 2 -- die ersetzte orange Warnung darf nicht weiterleben."""
+    _assert_pruefling_aus_diesem_baum()
+    feed = _feed_ch()
+    _setze_param(_eintrag(feed, _INTERLAKEN_ALERT), "awareness_level", "3; orange; Severe")
+    _setze_param(_eintrag(feed, _INTERLAKEN_ALERT + ".SYNTH-UPDATE"), "awareness_level",
+                 "2; yellow; Moderate")
+    alerts, unavailable = _abruf(INTERLAKEN, feed=feed)
+    assert [a.level for a in alerts] == [2], f"Update-Stand gelb erwartet: {alerts}"
+    assert unavailable is False
+
+
+@pytest.mark.parametrize("name,punkt,stufe", [("zuerich", ZUERICH, 2), ("interlaken", INTERLAKEN, 3)])
+def test_ac9_eintrag_ohne_info_und_nicht_objekt_faerbt_nicht_als_ausfall(name, punkt, stufe):
+    """AC-9 (F002, Spec Impl. Details 5): GIVEN vor allen Eintraegen ein Alert OHNE ``info`` (kein
+    Cancel) und ein Eintrag, der kein Objekt ist, WHEN ein Punkt mit korrekter Warnung abgefragt
+    wird, THEN erhaelt er seine Warnung und KEINEN Ausfallhinweis."""
+    _assert_pruefling_aus_diesem_baum()
+    feed = _feed_ch()
+    feed["warnings"][:0] = [
+        {"alert": {"identifier": "x.SYNTH-OHNE-INFO", "msgType": "Alert"}},
+        "SYNTH-KEIN-OBJEKT",
+    ]
+    alerts, unavailable = _abruf(punkt, feed=feed)
+    assert [a.level for a in alerts] == [stufe], f"{name}: {alerts}"
+    assert unavailable is False
+
+
+def test_zwei_gefahrenarten_am_selben_punkt_kommen_beide_an():
+    """F003: GIVEN fuer Thalwil-Wetzikon zusaetzlich eine Gewitterwarnung (synthetisch aus der
+    Windwarnung abgeleitet), WHEN die Quelle direkt fuer Zuerich abgefragt wird, THEN liefert sie
+    BEIDE Warnungen (Wind und Gewitter)."""
+    _assert_pruefling_aus_diesem_baum()
+    from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
+
+    feed = _feed_ch()
+    gewitter = copy.deepcopy(_eintrag(feed, _THALWIL_ALERT))
+    gewitter["identifier"] = _THALWIL_ALERT + ".SYNTH-GEWITTER"
+    _setze_param(gewitter, "awareness_type", "3; thunderstorm")
+    feed["warnings"].append({"alert": gewitter})
+    _feed_vorbelegen("CH", feed)
+    hazards = sorted(a.hazard for a in MeteoAlarmFeedSource("CH").fetch(*ZUERICH))
+    assert hazards == ["thunderstorm", "wind_gust"], hazards
+
+
+def test_ac4_fallback_wertet_veralteten_cache_nicht_als_zustaendigkeit():
+    """F004: GIVEN der CH-Feed liegt nur noch ABGELAUFEN im Cache, WHEN ``covers()`` fuer
+    Mendrisiotto (nur ueber den Feed-Fallback zustaendig) laeuft, THEN nicht zustaendig.
+    Positivkontrolle: mit frischem Cache zustaendig."""
+    _assert_pruefling_aus_diesem_baum()
+    from services.official_alerts import meteoalarm_feed, warn_egress
+    from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
+
+    ch = MeteoAlarmFeedSource("CH")
+    _feed_vorbelegen("CH", _feed_ch())
+    assert ch.covers(*MENDRISIO) is True, "Positivkontrolle"
+    meteoalarm_feed._cache["CH"]["fetched_at"] = time.monotonic() - 2 * warn_egress.WARN_SUCCESS_TTL
+    assert ch.covers(*MENDRISIO) is False
+
+
+# ─────────────── Fix-Loop 2: unlesbarer Feed, Gemeindename, Ausland direkt ─────────────
+
+def _alle_areas(feed: dict):
+    for w in feed["warnings"]:
+        for info in w["alert"].get("info") or []:
+            yield from info.get("area") or []
+
+
+def _ohne_info(feed: dict) -> None:
+    for w in feed["warnings"]:
+        w["alert"].pop("info", None)
+
+
+def _polygon_umbenennen(feed: dict) -> None:
+    for area in _alle_areas(feed):
+        area["polygonX"] = area.pop("polygon")
+
+
+def _polygone_unlesbar(feed: dict) -> None:
+    for area in _alle_areas(feed):
+        area["polygon"] = ["kein,polygon x"]
+
+
+@pytest.mark.parametrize("verderben", [_ohne_info, _polygon_umbenennen, _polygone_unlesbar],
+                         ids=["alle-ohne-info", "polygon-schluessel-weg", "alle-polygone-unlesbar"])
+def test_ac3_feed_ohne_einen_verwertbaren_eintrag_meldet_nicht_abrufbar(verderben):
+    """AC-3 (F-N1, Spec Impl. Details 4 "unlesbar -> Ausfall"): GIVEN ein Feed MIT Eintraegen, von
+    denen (synthetisch verdorben) KEINER verwertbar ist, WHEN Zuerich abgefragt wird, THEN
+    ``unavailable=True`` statt einer scheinbar warnungsfreien Lage."""
+    _assert_pruefling_aus_diesem_baum()
+    feed = _feed_ch()
+    verderben(feed)
+    alerts, unavailable = _abruf(ZUERICH, feed=feed)
+    assert alerts == []
+    assert unavailable is True
+
+
+def test_ac2_leerer_feed_ist_keine_warnung_ohne_ausfall():
+    """AC-2 (F-N1 Abgrenzung): GIVEN ``{"warnings": []}`` (derzeit nichts gewarnt), WHEN Zuerich
+    abgefragt wird, THEN leere Liste UND ``unavailable=False``."""
+    _assert_pruefling_aus_diesem_baum()
+    alerts, unavailable = _abruf(ZUERICH, feed={"warnings": []})
+    assert alerts == []
+    assert unavailable is False
+
+
+def test_ac1_gemeindename_des_getroffenen_gebiets_im_ergebnis():
+    """AC-1 (M11): GIVEN die Thalwil-Wetzikon-Warnung nennt (synthetisch) ZWEI Gebiete, zuerst
+    Bern-Sense, dann Thalwil-Wetzikon, WHEN Zuerich abgefragt wird, THEN traegt die Warnung den
+    Namen des GETROFFENEN Gebiets (Thalwil-Wetzikon), nicht den des ersten."""
+    _assert_pruefling_aus_diesem_baum()
+    feed = _feed_ch()
+    bern = _eintrag(feed, "2.49.0.0.756.0.CH.2610241050205a8c8450515243035c5a")["info"][0]["area"][0]
+    for info in _eintrag(feed, _THALWIL_ALERT)["info"]:
+        info["area"] = [copy.deepcopy(bern)] + info["area"]
+    alerts, _ = _abruf(ZUERICH, feed=feed)
+    assert [a.region_label for a in alerts] == ["Thalwil-Wetzikon"], alerts
+
+
+def test_ac4_direkter_fetch_im_ausland_ohne_ausfall():
+    """AC-4 (M1): GIVEN Konstanz (DE), WHEN ``MeteoAlarmFeedSource("CH").fetch()`` DIREKT (ohne
+    Registry-Vorfilter) laeuft, THEN leere Liste, KEIN Ausfall, aber "nicht zustaendig"."""
+    _assert_pruefling_aus_diesem_baum()
+    from services.official_alerts import warn_egress
+    from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
+
+    _feed_vorbelegen("CH", _feed_ch())
+    with warn_egress.observe_fetch_failure() as status:
+        alerts = MeteoAlarmFeedSource("CH").fetch(*NACHBAR_PUNKTE["Konstanz"])
+    assert alerts == []
+    assert status["failed"] is False and status["not_covered"] is True
+
+
+# ─────────────── Fix-Loop 3: Cancel mit info, leerer Cancel, Registry vor DPC ──────────
+
+def _cancel_fuer(identifier: str, info) -> dict:
+    return {"alert": {
+        "identifier": identifier + ".SYNTH-CANCEL-ABGELEITET", "msgType": "Cancel", "info": info,
+        "references": f"meteoalarm.cap@meteoswiss.ch,{identifier},2026-10-24T10:50:27+02:00",
+    }}
+
+
+def test_ac5_cancel_mit_info_ist_nie_selbst_eine_warnung():
+    """AC-5 (F-N3): GIVEN ein (synthetischer) Cancel MIT ``info`` samt Gebiet, abgeleitet aus der
+    Thalwil-Wetzikon-Warnung und mit ``references`` auf sie, WHEN Zuerich abgefragt wird, THEN
+    erscheint weder das Original noch der Cancel -- leer und ohne Ausfall."""
+    _assert_pruefling_aus_diesem_baum()
+    feed = _feed_ch()
+    info = copy.deepcopy(_eintrag(feed, _THALWIL_ALERT)["info"])
+    feed["warnings"].append(_cancel_fuer(_THALWIL_ALERT, info))
+    alerts, unavailable = _abruf(ZUERICH, feed=feed)
+    assert alerts == [], f"aufgehoben, und der Cancel selbst ist keine Warnung: {alerts}"
+    assert unavailable is False
+
+
+def test_ac5_feed_nur_aus_cancels_mit_leerem_info_ist_kein_ausfall():
+    """AC-5 (F-N4): GIVEN ein Feed, der nur (synthetische) Cancels mit ``info: []`` enthaelt,
+    WHEN Zuerich abgefragt wird, THEN leere Liste und ``unavailable=False`` -- ein Rueckzug ist
+    kein kaputter Eintrag."""
+    _assert_pruefling_aus_diesem_baum()
+    feed = {"warnings": [_cancel_fuer(_THALWIL_ALERT, [])]}
+    alerts, unavailable = _abruf(ZUERICH, feed=feed)
+    assert alerts == []
+    assert unavailable is False
+
+
+def test_ac7_ch_feedquelle_steht_in_der_registry_vor_dpc():
+    """Spec Impl. Details 6 (F-N5): GIVEN die ECHTE Registry, WHEN die Reihenfolge gelesen wird,
+    THEN steht ``MeteoAlarmFeedSource("CH")`` VOR ``DpcSource`` (Gewitter-Tie-Break "zuerst
+    registriert gewinnt", #1427 S2)."""
+    _assert_pruefling_aus_diesem_baum()
+    import services.official_alerts.base as oa_base
+    from services.official_alerts.dpc import DpcSource
+
+    echte = list(oa_base._REGISTERED_SOURCES)
+    ch_idx = [i for i, s in enumerate(echte) if s in _ch_quellen_in_registry()]
+    dpc_idx = [i for i, s in enumerate(echte) if isinstance(s, DpcSource)]
+    assert len(ch_idx) == 1 and len(dpc_idx) == 1, (ch_idx, dpc_idx)
+    assert ch_idx[0] < dpc_idx[0], "Registrierungsreihenfolge: CH-Feed VOR DPC"

@@ -359,5 +359,14 @@ einen `TypeError`.
   - `.SYNTH-LOCH` — Gebiet „Synthetisch Lochgebiet" (Grimsel-Raum) aus Außenring und Innenring (Loch),
     Höhenband 1800–2500 m.
   - `.SYNTH-KAPUTT` — an erster Stelle; `info` ist eine Liste, ein Gebiet trägt ein unlesbares Polygon.
+- **Im Test abgeleitete Varianten (synthetisch, nicht in der Datei)** — `test_meteoalarm_feed_ch.py`
+  verändert eine Kopie der Fixture: Brienz-Interlaken-Alert auf Orange plus `.SYNTH-UPDATE` auf
+  Gelb (Herabstufung); vorangestellter Alert ohne `info` (`.SYNTH-OHNE-INFO`) und ein Nicht-Objekt-
+  Eintrag; Gewitter-Kopie des Thalwil-Wetzikon-Alerts (`.SYNTH-GEWITTER`, `awareness_type` 3);
+  ganz verdorbener Feed (alle `info` entfernt / `polygon`-Schlüssel überall umbenannt / alle
+  Polygone unlesbar) und leerer Feed `{"warnings": []}`; Thalwil-Wetzikon-Alert mit
+  vorangestelltem zweitem Gebiet (Bern-Sense-Polygon); Cancel **mit** `info` samt Gebiet
+  (`.SYNTH-CANCEL-ABGELEITET`, Kopie der Thalwil-Wetzikon-`info`, `references` auf sie) sowie ein
+  Feed nur aus einem solchen Cancel mit `info: []`.
 - **Test-Referenzzeitpunkte:** Wind `2026-10-25T12:00Z`, Bodenfrost `2026-10-29T02:00Z`.
 - **Größe:** ~390 KB (5 Sprachblöcke je Eintrag, Polygone unverändert).
