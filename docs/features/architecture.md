@@ -81,7 +81,8 @@ Idempotenz `briefing_slots.py`), rendert und versendet.
 | `premium_sms_poll` | `*/5` + Push-Kick `/api/webhooks/sms/{secret}` | `/inbound-sms` (seven.io-Journal) | global |
 | `data_write_selftest` | `*/15` | — (Go-intern, `probeDataWritable`) | — |
 
-Telegram-Eingang hat keinen Cron-Job: Push über `POST /api/webhooks/telegram/{secret}` (Go) →
+Telegram-Eingang hat keinen Cron-Job: Push über `POST /api/webhooks/telegram/inbound` (Go;
+Auth allein per Header `X-Telegram-Bot-Api-Secret-Token`, `{secret}`-Pfad nur Übergang, #1814) →
 `POST /api/internal/telegram-webhook` (Python). Status/Observability: `GET /api/scheduler/status`
 (Go). Manuelle Sofortversände (`/api/scheduler/trips/{id}/send`, `.../compare-presets/{id}/send`)
 laufen nicht über den Cron.
@@ -276,7 +277,7 @@ Auswertung aufruft. Specs:
 
 2. **Telegram-Handler** (`InboundTelegramReader._process_update()`)
    - **Empfängt Telegram-Updates per Webhook** (Push-basiert seit Issue #637; Polling entfernt)
-   - Go-Endpoint `/api/webhooks/telegram/{secret}` mit Secret-Header-Validierung → Python-Weiterleitung
+   - Go-Endpoint `/api/webhooks/telegram/inbound` mit Secret-Header-Validierung (einziger Auth-Träger) → Python-Weiterleitung; Alt-Route `/api/webhooks/telegram/{secret}` nur Übergang (#1814)
    - Extrahiert Chat-ID
    - `lookup_user_by_telegram_chat_id(chat_id)` → findet User-Profil
    - Fallback: `user_id = "default"` wenn kein User gefunden
