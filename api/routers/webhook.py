@@ -2,7 +2,8 @@
 Internal Telegram Webhook Endpoint — called by the Go gateway after secret-check.
 
 The public, secret-protected entrypoint lives in Go
-(`internal/handler/telegram_webhook.go`, route `/api/webhooks/telegram/{secret}`).
+(`internal/handler/telegram_webhook.go`, route `/api/webhooks/telegram/inbound`,
+secret via header `X-Telegram-Bot-Api-Secret-Token`, Issue #1814).
 Go forwards the raw Telegram-Update body here. This endpoint reuses the existing
 command processing (`InboundTelegramReader._process_update`) — no polling loop.
 

@@ -6,13 +6,16 @@ Der Telegram-Eingang läuft **push-basiert** über einen Webhook statt 30-Sekund
 
 ```
 Telegram  --POST-->  Go (öffentlich)                         -->  Python Core (intern)
-                     /api/webhooks/telegram/{secret}              /api/internal/telegram-webhook
+                     /api/webhooks/telegram/inbound               /api/internal/telegram-webhook
                      Secret-Header-Check + sofort 200             Idempotenz + Befehlsverarbeitung
 ```
 
-- **Auth-Träger** ist der HTTP-Header `X-Telegram-Bot-Api-Secret-Token`
-  (== ENV `TELEGRAM_WEBHOOK_SECRET` des Go-Prozesses). Der `{secret}`-Pfad ist nur
-  Defense-in-Depth-Routing, kein Schutz (verhindert Secret-Leak in Nginx-Logs).
+- **Registrierte URL** ist `/api/webhooks/telegram/inbound` — ohne Secret im Pfad (#1814).
+- **Einziger Auth-Träger** ist der HTTP-Header `X-Telegram-Bot-Api-Secret-Token`
+  (== ENV `TELEGRAM_WEBHOOK_SECRET` des Go-Prozesses). Der URL-Pfad wird nie gelesen.
+- **Übergang:** Die Alt-Route `/api/webhooks/telegram/{secret}` nimmt bis zur
+  Neuregistrierung beider Umgebungen weiter Updates an; sie wird danach entfernt und das
+  Secret rotiert (altes Secret lag im Pfad und steht ggf. in Logs).
 - Go antwortet Telegram **sofort 200** (fire-and-forget Forwarding) → kein Retry-Sturm.
 - Python dedupliziert `update_id` (in-memory Seen-Set) → keine Doppelausführung.
 
@@ -33,11 +36,20 @@ export TELEGRAM_BOT_TOKEN=...        # Prod-Bot
 export TELEGRAM_WEBHOOK_SECRET=...   # identisch zur Go-ENV
 export GZ_PUBLIC_BASE_URL=https://gregor20.henemm.com
 scripts/telegram_set_webhook.sh set
-scripts/telegram_set_webhook.sh info   # Status prüfen: url gesetzt, last_error_message leer
+scripts/telegram_set_webhook.sh info   # Auswertung ja/nein: URL endet auf /inbound, last_error_message leer
 ```
 
-`getWebhookInfo` (`info`) liefert `pending_update_count` und `last_error_message` —
-Basis für den BetterStack-Healthcheck (Alert bei Fehler/Stau).
+`set` und `info` geben weder das Secret noch eine URL mit Secret aus. `info` gibt die
+`getWebhookInfo`-Antwort **nicht roh** aus, sondern nur eine ja/nein-Auswertung (URL endet auf
+`/api/webhooks/telegram/inbound`, URL frei von Secret, `last_error_message` leer). Die rohe
+Antwort nie ins Ticket kopieren — eine Alt-Registrierung enthält das Secret in der URL.
+`info` endet auch bei „nein"-Zeilen mit Exit 0: Deploy und Betrieb müssen die ja/nein-Zeilen
+lesen und dürfen nicht auf den Exit-Code vertrauen. Ist `TELEGRAM_WEBHOOK_SECRET` nicht gesetzt,
+steht bei „URL frei von Secret" `übersprungen` — dann ist diese Prüfung nicht erfolgt.
+
+`getWebhookInfo` liefert `pending_update_count` und `last_error_message` — Basis für den
+BetterStack-Healthcheck (`henemm-infra/scripts/check-gregor20.sh`, eigener API-Aufruf; Alert bei
+Fehler/Stau).
 
 ## Rollback (Webhook → Polling)
 

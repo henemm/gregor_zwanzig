@@ -47,7 +47,9 @@ Der Stil wird je Trip/Vergleich über `report_config.telegram_style` gewählt: `
 Telegram **hat** einen Befehlseingang — push-basiert, kein Poll-Job (`inbound_telegram_poll`
 entfernt, #637/#1369).
 
-- **Weg:** Telegram → `POST /api/webhooks/telegram/{secret}` (Go, öffentlich, Secret-geschützt) →
+- **Weg:** Telegram → `POST /api/webhooks/telegram/inbound` (Go, öffentlich; einziger
+  Auth-Träger ist der Header `X-Telegram-Bot-Api-Secret-Token`, kein Secret im Pfad, #1814;
+  die Alt-Route `/api/webhooks/telegram/{secret}` besteht nur als Übergang) →
   `POST /api/internal/telegram-webhook` (Python, Dedupe über `update_id`) →
   `InboundTelegramReader._process_update`.
 - **Nutzerzuordnung:** über die Chat-ID (`lookup_user_by_telegram_chat_id`), nie Fallback auf

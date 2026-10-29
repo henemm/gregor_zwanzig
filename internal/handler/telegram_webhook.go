@@ -3,15 +3,17 @@ package handler
 // Telegram Inbound Webhook Gateway (Issue #637).
 //
 // Public, secret-protected entrypoint. Telegram pushes updates to
-// POST /api/webhooks/telegram/{secret}. After secret verification the raw body
-// is forwarded to the internal Python core (/api/internal/telegram-webhook).
+// POST /api/webhooks/telegram/inbound (Issue #1814). After secret verification
+// the raw body is forwarded to the internal Python core
+// (/api/internal/telegram-webhook).
 //
-// Tech-Lead-Abweichung: Secret wird über den HTTP-Header
-// X-Telegram-Bot-Api-Secret-Token geprüft (nicht über das URL-Segment) —
-// verhindert Secret-Leak in Nginx-Access-Logs. Das {secret}-Pfadsegment bleibt
-// als Defense-in-Depth-Routing erhalten, ist aber nicht der Auth-Träger.
+// Einziger Auth-Träger ist der HTTP-Header X-Telegram-Bot-Api-Secret-Token
+// (Konstantzeit-Vergleich gegen TELEGRAM_WEBHOOK_SECRET). Der URL-Pfad wird
+// nie gelesen. Die Alt-Route /api/webhooks/telegram/{secret} ist nur noch ein
+// Übergang bis zur Neuregistrierung beider Umgebungen und fällt danach weg.
 //
-// Spec: docs/specs/modules/telegram_webhook_inbound.md
+// Spec: docs/specs/modules/telegram_webhook_inbound.md,
+// docs/specs/modules/fix_1814_telegram_webhook_secret_nicht_im_pfad.md
 
 import (
 	"bytes"
