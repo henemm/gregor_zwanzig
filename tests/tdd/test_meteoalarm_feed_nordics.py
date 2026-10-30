@@ -590,7 +590,7 @@ def test_ac10_registrierungsreihenfolge_ch_no_se_vor_dpc():
     ("NO", ORANGE_NO, NOW_NO_OSLO),
     ("SE", KARLSTAD, NOW_SE),
 ])
-def test_ac11_warnung_erreicht_dieselben_kanaele_wie_at(land, punkt, now, art, premium_nutzer):
+def test_ac11_warnung_erreicht_dieselben_kanaele_wie_at(land, punkt, now, art, premium_nutzer):  # noqa: F811
     """AC-11: GIVEN eine orange Warnung aus NO bzw. SE (Feed ueber die echte Quelle) und eine
     orange AT-Warnung (Hitze Wien), UND ein Trip bzw. Ortsvergleich mit Empfaengern auf allen vier
     Kanaelen, WHEN die geteilte Alarm-Kanal-Aufloesung laeuft, THEN erreicht die Nord-Warnung
