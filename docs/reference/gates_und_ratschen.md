@@ -98,6 +98,17 @@ vier weitere — per Teilstring `"git commit"`, ob es überhaupt prüft; `git -C
 
 ## Pendant-Sperre (#1481 B, seit 2026-08-04)
 
+**Grundsatz (Volltext, aus `CLAUDE.md` „Trip/Ortsvergleich-Code-Teilung" ausgelagert, #2640; PO-Vorgabe, mehrfach bekräftigt):**
+Möglichst viel Code zwischen Trip und Ortsvergleich teilen; der Compare-Editor funktioniert wie der Trip-Editor. Als prüfbare Invariante:
+
+- **Geteilt (EIN Code, Parameter `context="route"|"vergleich"`):** Editor-Rahmen (Progressive Tabs, Lock-Engine, Speichern/Verwerfen), Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell-Konvergenz (Epic #2345, Etappe P7 — vormals #1230).
+- **Anlegen folgt dem Trip-Muster:** `/trips/new` = Progressive-Tab-Anlege-Seite aus geteilten Bausteinen (`TripNewEditor`, #622); der alte 5-Schritt-Wizard ist dort abgeschafft. `/compare/new` bekommt dieselbe Bauart; `CompareEditor.svelte` + Compare-Wizard sind Alt-Bestand und fallen ersatzlos. **Es gibt keine offene Designfrage dazu — nicht erneut vorlegen.**
+- **Compare-eigen dürfen NUR sein:** Orte-Tab (statt Etappen), transponierte Übersicht (Orte = Spalten), Compare-Mail-Template.
+- **Default-Fehler:** Eine neue Compare-Komponente, zu der ein Trip-Pendant existiert (oder umgekehrt), ist ein Verstoß — Ausnahme nur mit dokumentierter Begründung in der Spec. Anti-Pattern: #1170.
+- **Prüfung:** Bei jeder Editor-/Detail-Arbeit ist „hätte das ein geteilter Baustein sein müssen?" expliziter Adversary-/Review-Punkt. Die Pendant-Sperre (unten) setzt das für Neuanlagen am Commit durch.
+
+**Mechanik:**
+
 `pendant_gate.py` blockiert jeden Commit, der eine **neu angelegte** Datei in einem einseitigen
 Bereich enthält — `frontend/src/lib/components/{compare,compare-new,trip-detail,trip-new}/**` und
 `src/output/renderers/**/{compare_*,trip_*}.py` (rekursiv).
@@ -168,6 +179,19 @@ Konstanten-Joins; Fund = Ziel liegt per `git ls-files` als Datei im Repo; Prüfd
 Begründete Ausnahme als Kommentar **an der Zeile**: `# gz-main-path: <Begründung>` (mind. 15 sinnvolle
 Zeichen). Grenzen — u. a. tote Pfade und Ketten ab 26 Gliedern — in
 `docs/specs/modules/fix_1409b_repo_path_ratchet.md` unter „Known Limitations".
+
+## Test-Politik: Zwei Schichten (aus `CLAUDE.md` ausgelagert, #2640)
+
+Verboten bleibt **Mock-Theater**: `Mock()`/`patch()`/`MagicMock`, die nur die eigene Annahme zurückspiegeln, beweisen nichts. Ebenso verboten sind Dateiinhalt-Checks (`assert 'xyz' in file.read_text()`) als Verhaltensnachweis (Ausnahme: `# doc-compliance-test`).
+
+| Schicht | Was | Wann | Regel bei Rot |
+|---|---|---|---|
+| **Kern (deterministisch)** | ohne Netz/Live-Dienste/echte Postfächer; echte **aufgezeichnete** API-/Mail-Daten als versionierte Fixtures erwünscht | jeder Testlauf; Commit-Gate | MUSS 100 % grün sein: sofort fixen ODER löschen (wenn er veraltetes Verhalten prüft) — nie als „vorbestehend rot" liegenlassen |
+| **Live-E2E** | echte API-Calls, echte Staging-Mails via IMAP, Playwright gegen Staging (Marker `live`/`email`/`staging`) | nur `/e2e-verify` bzw. Deploy | Flake → Retry; erst reproduzierbares Scheitern ist ein Befund (→ #1199 bzw. #1196) |
+
+Bug-Nachweis: mindestens ein Test reproduziert den Bug aus Nutzersicht (rot vor Fix, grün nach Fix) — in der Live-Schicht, wenn er Staging braucht, sonst im Kern.
+
+**Testdateien nach Verhalten benennen** (`test_alert_throttle.py`), NICHT nach Issue-Nummer (Gate: „Testnamens-Gate" unten). **`uv run pytest` ohne benannte Testdateien ist gesperrt** — ein ungemarkerter Test genügt für echten Versand an Produktiv-Empfänger (#1477). Erlaubt: Dateien benennen · `--collect-only` · `--disable-socket` · Einmal-Freigabe, die **nur der User** durch Tippen von `override` erzeugt (Gate: „Breiter Testlauf gesperrt" unten). Ein Test löst seinen Prüfling **relativ zur eigenen Testdatei** auf, nie über den festen Hauptrepo-Pfad (sonst falsches Grün aus dem Worktree).
 
 ## Testnamens-Gate
 
