@@ -27,7 +27,7 @@ Mail: Header X-GZ-Lang ──> Validatoren bilden Erwartungen aus dem Python-Kat
 - **Ein Auflösungsweg je Schicht:** `resolve_user_lang(user_id)` (Python), `i18n.FromContext(ctx)` (Go), `locals.lang` (SvelteKit). Kein zweiter Weg, kein globaler Zustand (zwei Nutzer im selben Scheduler-Lauf).
 - **Kataloge:** flache, bereichs-präfixierte Schlüssel in JSON je Sprache **und Bereich**, damit Migrationspakete parallel ohne Dateikonflikt arbeiten. Platzhalter `{name}`, Plural `.one`/`.other`, Fallback Deutsch mit einmaligem Log. Paritätstest je Katalog.
 - **Ratschen:** je Schicht ein Test gegen hartkodierte Nutzertexte mit schrumpfender Allowlist (S4, P11, G5).
-- **Kurzform ist Platzform:** Telegram-Kurzstil und Premium-SMS behalten Kürzel + englische Befehlswörter unabhängig von der Sprache; nur Kürzel-Auflösung und Antworten folgen dem Nutzer (#2417 bleibt).
+- **Kurzform ist Platzform:** Telegram-Kurzstil und Premium-SMS bleiben für beide Kontosprachen vollständig englisch wie heute (#2417 AC-4); Nutzersprache wirkt nur in Langform-Kanälen (Spec P10).
 
 ## Ist-Stand (gemessen 2026-10-30)
 

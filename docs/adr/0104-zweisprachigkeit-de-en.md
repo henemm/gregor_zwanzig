@@ -50,9 +50,11 @@ Katalog statt Paraglide; Ablage als Epic + Sub-Issues + ADR.
    „Alarm-Kurzform" (`alert_label`/`alert_label_en`) werden sprachabhängig; die
    Dreier-Auflösung `Luftfeuchtigkeit · Humid · HU` bleibt in beiden Sprachen bestehen.
 5. **Kurzform ist Platzform, nicht Sprache.** Der Telegram-Kurzstil und der
-   Premium-SMS-Kanal (#2417, `self._en`) behalten Kürzel und englische Befehlswörter
-   unabhängig von der Nutzersprache; nur die Kürzel-Auflösung und die Antworttexte folgen
-   der Nutzersprache. Inbound-Befehle werden in beiden Sprachen verstanden.
+   Premium-SMS-Kanal (#2417, `self._en`) bleiben für `de`- und `en`-Nutzer **vollständig
+   englisch wie heute** (Kürzel, Befehlswörter, Kürzel-Legende, Kurzantworten; #2417 AC-4
+   „byte-gleich"). Die Nutzersprache wirkt nur in den Langform-Kanälen (E-Mail, Telegram
+   Normalstil, SMS-Freitext). Inbound-Befehle werden auf allen Kanälen in beiden Sprachen
+   verstanden (Festlegung Spec P10 #2673, konservative Lesart).
 6. **Formate:** 24-h-Uhr in beiden Sprachen; Datum DE `Fr 30.10.`, EN `Fri 30 Oct`;
    Dezimaltrennzeichen bleibt der Punkt (SMS-Verträglichkeit); Einheiten metrisch.
 7. **Wortwahl:** einfaches Englisch, Fachbegriffe wo sie der Klarheit dienen (PO, ADR-0042).
