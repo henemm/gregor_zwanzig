@@ -44,44 +44,31 @@ PRUEFDATUM = date(2027, 1, 24)
 # zusammengefuehrt => 29 x Regel 1, 1 x Regel 2 = 30; S3c (2026-10-29):
 # compare-konfliktschutz-zwei-kontexte in hub-konfliktschutz-zwei-kontexte (HUB_KINDS)
 # und compare-orte-konfliktschutz-zwei-kontexte (gz-eigenstaendig:-Kopf) zerlegt
-# => 28 x Regel 1, 1 x Regel 2 = 29; darf nur schrumpfen (S4 leert sie).
+# => 28 x Regel 1, 1 x Regel 2 = 29; S3d (2026-10-29): compare-eigener Rest -- 3 Altdateien
+# (radar-toggle, editor-autosave, metric-order) in hub-*-Specs zusammengefuehrt/geloescht,
+# 12 weitere per gz-eigenstaendig:-Kopf konform => 14; darf nur schrumpfen (S4 leert sie).
 ALTLAST: frozenset[str] = frozenset({
-    "compare-active-metrics-format.staging.spec.ts",
     "compare-alarm-config.spec.ts",
     "compare-detail-edit-entry.spec.ts",
     "compare-edit-redirect.spec.ts",
-    "compare-editor-autosave.spec.ts",
     "compare-editor-fidelity-s8d.spec.ts",
     "compare-editor-slice1.spec.ts",
     "compare-editor-slice4.spec.ts",
     "compare-flow-navigation.spec.ts",
-    "compare-hourly-metric-order.spec.ts",
     "compare-hub-fidelity-s8c.spec.ts",
-    "compare-hub-inline-edit.spec.ts",
     "compare-layout-tab-dissolution.spec.ts",
     "compare-legacy-fields-survive-save.spec.ts",
-    "compare-metric-order.spec.ts",
-    "compare-neu-kanal-anlegen.staging.spec.ts",
     "compare-new-vorlage.spec.ts",
-    "compare-outlook-metric-selection.staging.spec.ts",
-    "compare-radar-toggle.spec.ts",
-    "compare-stundenverlauf-wertprops.spec.ts",
-    "compare-uebersicht-kanal-bedienung.staging.spec.ts",
-    "compare-uebersicht-kanal-persistenz.staging.spec.ts",
     "feat-1461-s3b2b-compare-kanal-schwelle.spec.ts",
-    "fix-1350-compare-metric-select.staging.spec.ts",
-    "fix-1350t3-compare-threshold-source.staging.spec.ts",
     "issue-1080-compare-new-url.spec.ts",
     "issue-1093-compare-layout-crash.spec.ts",
-    "issue-682-compare-editor-mobile.spec.ts",
-    # Regel 2 (Compare-Hub-Reiter ohne Trip-Gegenstueck, Umgehung per Dateiname)
-    "kanal-grenzen-ortsvergleich.staging.spec.ts",
+    # Regel 2: seit S3d kein Eintrag mehr (kanal-grenzen-ortsvergleich traegt den Kopf)
 })
 # Literal, NICHT len(ALTLAST) -- sonst waechst die Obergrenze mit jedem neuen
 # Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken,
 # und zwar nur im selben Zug wie eine ALTLAST-Streichung: der Wert muss stets
 # gleich len(ALTLAST) sein (#2347 S3a, Adversary F001).
-ALTLAST_MAX = 29
+ALTLAST_MAX = 14
 
 _SCHLEIFE_RE = re.compile(
     r"\bHUB_KINDS\b"

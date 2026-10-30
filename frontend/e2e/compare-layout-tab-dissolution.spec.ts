@@ -36,7 +36,7 @@
 //   npx playwright test --config=playwright.compare-layout-tab-dissolution.staging.config.ts
 //
 // Die Config `frontend/playwright.compare-layout-tab-dissolution.staging.config.ts`
-// liegt daneben (1:1 nach `playwright.compare-metric-order.staging.config.ts`).
+// liegt daneben (1:1 nach `playwright.compare-hourly-metric-order.staging.config.ts`).
 // Kein `webServer`-Block: geprüft wird die auf Staging deployte App selbst.
 // WICHTIG: `GZ_API_BASE` zeigt per Default auf PRODUKTION (playwright.config.ts).
 // Deshalb baseURL in der Config explizit auf `GZ_SVELTE_BASE ??

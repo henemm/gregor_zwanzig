@@ -1,10 +1,11 @@
+// gz-eigenstaendig: Stundenverlauf-Steuerung existiert nur im Ortsvergleich (COMPARE_ONLY_SECTIONS in weatherMetricsTabSections.ts, #2346 S3: beim Trip ist die Mail-Haupttabelle selbst die Stundentabelle); zusaetzlich Anlege-Seite /compare/new des Alt-Editors
 // E2E (Staging) — Reihenfolge der Stundenverlauf-Metriken im Ortsvergleich,
 // Issue #1361 Befund 4/5 (S1-Rest von Epic #1372).
 //
 // Spec: Auftrag "S1-Rest #1361 umsetzen" (kein eigenes Spec-Dokument -- direkte
 // Team-Lead-Vorgabe, siehe AC-1..AC-5 dort).
 //
-// Warum Live-Schicht: analog compare-metric-order.spec.ts (#1359) — eine
+// Warum Live-Schicht: analog hub-metrik-reihenfolge-ziehen.spec.ts (#1359) — eine
 // Ziehgeste im DnD-Zonen-Widget lässt sich nicht sinnvoll ohne echten Browser
 // nachweisen, UND der eigentliche Beweis ist der PUT, nicht die Bildschirm-
 // Optik (Fallstrick 1 aus dem Auftrag): der Hub speichert über Event-Bubbling
@@ -35,7 +36,7 @@
 //   npx playwright test --config=playwright.compare-hourly-metric-order.staging.config.ts
 //
 // Config `frontend/playwright.compare-hourly-metric-order.staging.config.ts`
-// liegt daneben (1:1 nach playwright.compare-metric-order.staging.config.ts).
+// liegt daneben (1:1 nach playwright.compare-layout-tab-dissolution.staging.config.ts).
 // Anmeldung über gespeicherten Sitzungszustand (storageState), NICHT per
 // Test-Login (Token-Bucket 30/h, reference_staging_e2e_storagestate_login_rate_limit).
 // Testids `wm2-reihenfolge-row` kommen im Reiter Wetter-Metriken ZWEIMAL vor
@@ -152,15 +153,9 @@ async function openHubMetricsTab(page: Page, id: string): Promise<Locator> {
 	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
 	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
 	await expect(panel).toBeVisible({ timeout: 10_000 });
-	// Issue #1719 S3 (Adversary-Fund F001): "Aus ist ein Zustand" (ADR-0050
-	// Regel 4) gilt NUR für den Trip-Kanal-Reiter — weder die Übersichts- noch
-	// die Stundenverlauf-Einbettung von WeatherV2Reihenfolge im Ortsvergleich
-	// bekommen `offColumns` durchgereicht. Eine Aus-Gruppe darf hier nie
-	// entstehen.
-	await expect(
-		panel.getByTestId('wm2-aus-gruppe'),
-		'AC-13 FAIL: eine "Aus in diesem Kanal"-Gruppe darf im Ortsvergleich nicht entstehen'
-	).toHaveCount(0);
+	// #2347 S3d (Entscheidung 7): die frühere Vorbedingung „keine wm2-aus-gruppe im
+	// Ortsvergleich" ist entfallen — seit #1703 S8 gilt „Aus ist ein Zustand" auch in
+	// der Kanal-Karte des Vergleichs. Die Fälle prüfen ihre Zeilen im Stundenverlauf-Block.
 	return panel;
 }
 

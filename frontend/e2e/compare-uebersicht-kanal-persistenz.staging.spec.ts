@@ -1,3 +1,4 @@
+// gz-eigenstaendig: channel_active_metrics der transponierten Vergleichs-Uebersicht (Go-Merge ersetzt das Ganze), Hub-Mount CompareTabs.svelte -- erlaubte Compare-Eigenheit; Trip-Pendant: kanal-abwahl-bleibt-reversibel.staging.spec.ts
 // E2E (Staging) — #1703 Scheibe 8: Persistenz und Wirkung der kanal-eigenen
 // Metrikauswahl der Vergleichs-Uebersichtstabelle.
 // ACs: AC-S8-4, AC-S8-6, AC-S8-10, AC-S8-11.

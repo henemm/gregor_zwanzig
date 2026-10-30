@@ -350,10 +350,29 @@ for (const kind of HUB_KINDS) {
 						);
 					}
 
-					// „Nochmal speichern"
+					// „Nochmal speichern" — #2347 S3d (Alt feat-1395-s4-conflict-retry.staging):
+					// Protokoll ALLER Anfragen von B ab hier, um Reihenfolge und Stempel zu prüfen.
+					const protokollB: Request[] = [];
+					b.on('request', (r) => protokollB.push(r));
 					await anzeige(b).getByRole('button', { name: 'Nochmal speichern' }).click();
 					await expect(anzeige(b)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 					await expect.poll(() => putsB.length, { timeout: 10_000, message: 'der Wiederholungs-Vorgang wurde gesendet' }).toBe(1 + schritte);
+
+					// (a) Der Refresh-GET auf das Objekt geht VOR dem ersten Wiederholungs-PUT hinaus.
+					const idxRetry = protokollB.indexOf(putsB[1]);
+					const idxGet = protokollB.findIndex(
+						(r, i) => i < idxRetry && r.method() === 'GET' && new URL(r.url()).pathname === pfad
+					);
+					expect(idxRetry, 'Vorbedingung: der Wiederholungs-PUT steht im Protokoll von B').toBeGreaterThanOrEqual(0);
+					expect(
+						idxGet,
+						'KS-1 FAIL: „Nochmal speichern" wiederholt ohne vorherigen Refresh-GET auf das Objekt (Reihenfolge)'
+					).toBeGreaterThanOrEqual(0);
+					// (b) Der Wiederholungs-PUT trägt einen FRISCHEN If-Match (gesetzt, ≠ abgelehntem Stempel).
+					const stempelAlt = await putsB[0].headerValue('if-match');
+					const stempelNeu = await putsB[1].headerValue('if-match');
+					expect(stempelNeu, 'KS-1 FAIL: der Wiederholungs-PUT trägt keinen If-Match').toBeTruthy();
+					expect(stempelNeu, 'KS-1 FAIL: der Wiederholungs-PUT wiederholt den veralteten If-Match des abgelehnten PUT').not.toBe(stempelAlt);
 					for (const r of putsB.slice(1)) {
 						expect(await status(r), `der Wiederholungs-PUT ${new URL(r.url()).pathname} muss durchgehen`).toBe(200);
 						expect(Object.keys(r.postDataJSON() as Stand), 'der Wiederholungs-PUT darf `name` nicht tragen').not.toContain('name');
@@ -397,6 +416,20 @@ for (const kind of HUB_KINDS) {
 				const stand = await serverStand(page, kind, hub.id);
 				expect(stand.name).toBe(neuerName);
 				fall.pruefe(stand); // Kopf-Edit hat den eben gespeicherten Alarm-Wert zurückgeschrieben (#2381)?
+
+				// #2347 S3d (Alt compare-radar-toggle „preserved on unrelated save"): auch die ANZEIGE
+				// nach Neuladen trägt Name und umgelegten Auslöser (Server-Stand allein genügt nicht).
+				await openHub(page, kind, hub.id, { tab: fall.tab });
+				await fall.bereit(page);
+				const schalter =
+					kind === 'route'
+						? page.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"] input[type="checkbox"]').first()
+						: page.locator('[data-testid="alarme-radar-toggle"] input[type="checkbox"]').first();
+				// Trip: Seed an ⇒ umgelegt aus · Vergleich: Seed aus ⇒ umgelegt an
+				await expect(
+					schalter,
+					'KS-2 FAIL: nach Umbenennen + Neuladen zeigt der Auslöser den Vorgabewert statt des gespeicherten Standes'
+				).toBeChecked({ checked: kind === 'vergleich' });
 			} finally {
 				await hub.aufraeumen();
 			}

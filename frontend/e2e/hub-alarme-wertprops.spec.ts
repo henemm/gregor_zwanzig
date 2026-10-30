@@ -241,6 +241,44 @@ for (const kind of HUB_KINDS) {
 			});
 		}
 
+		// AW-2b — #2347 S3d (Alt compare-radar-toggle „default off on new preset"): Seed OHNE
+		// Auslöser-Feld; der Reiter zeigt die Vorgabe (Radar-Alarm AUS), das Öffnen speichert
+		// nichts und der gespeicherte Stand bleibt unverändert.
+		// NUR vergleich (PO-Entscheid #2347 S3d): der Trip-Zustand „official_warnings fehlt"
+		// ist über die API nicht herstellbar — die Neuanlage setzt bewusst enabled=false
+		// (#1258 AC-4 / PO-Entscheidung F1, internal/handler/trip.go), ein PUT ohne das Feld
+		// lässt es unverändert; das Feld fehlt nur bei Bestandsdaten auf der Platte. Die
+		// Trip-Hälfte (Vorgabe AN, Öffnen speichert nichts) prüft der Kern-Test
+		// frontend/src/lib/components/shared/__tests__/alarme_tab_trip_ohne_amtliche_warnungen_zeigt_an_und_speichert_nicht.test.ts.
+		if (kind === 'vergleich') {
+			test(`AW-2b (${kind}): Auslöser ohne gesetztes Feld zeigt die Vorgabe, Öffnen speichert nichts`, async ({ page }) => {
+				// Absichtlich KEIN aw.seed: das Auslöser-Feld darf im Seed nicht vorkommen.
+				const hub = await seedHub(page.request, kind);
+				try {
+					const vorher = await stand(page, kind, hub.id);
+					expect(
+						aw.ausloeserWert(vorher) ?? false,
+						'Vorbedingung: der Seed trägt den Radar-Alarm nicht als „an" — sonst misst AW-2b nicht die Vorgabe.'
+					).toBe(false);
+
+					const puts = zaehlePuts(page, hubApiPath(kind, hub.id));
+					await oeffneAlarme(page, kind, hub.id);
+					await expect(
+						radarSchalter(page),
+						'AW-2b FAIL: ohne gesetztes Feld muss der Radar-Alarm auf der Vorgabe „aus" stehen.'
+					).toBeChecked({ checked: false });
+
+					await bleibtBei(() => puts.length, 0, 1_500, 'AW-2b FAIL: das Öffnen des Reiters darf nichts speichern');
+					expect(
+						await stand(page, kind, hub.id),
+						'AW-2b FAIL: der gespeicherte Stand hat sich durch bloßes Öffnen verändert.'
+					).toEqual(vorher);
+				} finally {
+					await hub.aufraeumen();
+				}
+			});
+		}
+
 		// AW-3 — Alt AC-2 „Kanal, Kanal-Schwelle, Telegram-Kurzstil".
 		test(`AW-3 (${kind}): Kanal und Kanal-Schwelle wirken und überstehen das Neuladen`, async ({ page }) => {
 			const hub = await seedHub(page.request, kind, { extra: aw.seed });

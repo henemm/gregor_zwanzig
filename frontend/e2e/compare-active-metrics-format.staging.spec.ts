@@ -1,3 +1,4 @@
+// gz-eigenstaendig: Speicherformat display_config.active_metrics ({metric_id, aggregation}, #1373) ist Vergleichs-eigen, der Trip speichert display_config.metrics[]; die kind-neutralen Teile pruefen hub-wetter-metriken-speichert-selbst MS-1/MS-6/MS-7 je kind
 // E2E (Staging) — Issue #1373, S2 Scheibe B: Speicherformat der Metrik-Auswahl
 // eines Ortsvergleichs (`display_config.active_metrics`) ist Größe + Auswertung
 // (`[{"metric_id":"temperature","aggregation":"max"}, …]`).
@@ -35,7 +36,7 @@
 // Login über gespeicherten Sitzungszustand (storageState), NICHT per Test —
 // der Login ist auf 30/h gedeckelt
 // (reference_staging_e2e_storagestate_login_rate_limit).
-// Muster: compare-metric-order.spec.ts (PUT-Aufzeichnung, afterEach-Cleanup).
+// Muster: hub-metrik-reihenfolge-ziehen.spec.ts (PUT-Aufzeichnung, Aufraeumen im finally).
 
 import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
 import { createTestLocation } from './helpers';
@@ -138,7 +139,7 @@ async function openMetricsTab(page: Page, id: string): Promise<Locator> {
 	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 15_000 });
 	// SvelteKit liefert die Tab-Leiste server-gerendert VOR der Hydration aus —
 	// ein zu früher Klick geht spurlos verloren (Muster aus
-	// compare-metric-order.spec.ts).
+	// compare-hourly-metric-order.spec.ts).
 	await page.waitForLoadState('networkidle');
 	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
 	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');

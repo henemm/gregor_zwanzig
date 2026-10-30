@@ -8,7 +8,7 @@
 // Issue #1371: "Warnen" entfernt — "Markieren" bleibt ein echter `<button>`
 // in derselben Zeile, schreibt über denselben Autosave-Pfad, trägt denselben
 // #953-Kern. Zusätzlich AC-1-Live-Nachweis: kein "Warnen"-Bedienelement mehr
-// (Ortsvergleich-Pendant: compare-editor-autosave.spec.ts).
+// (Ortsvergleich-Pendant: hub-wertebereiche-speichert-selbst.spec.ts WS-8, je kind).
 // Ausführen: cd frontend && npx playwright test e2e/issue-953-alerts-autosave-tabswitch.spec.ts \
 //   --config=playwright.953.staging.config.ts --reporter=list
 
@@ -105,7 +105,7 @@ test.describe('issue_953 — Wertebereiche-Einstellung überlebt Tab-Klick', () 
 
 	// Issue #1371 AC-1 (Live-Nachweis Trip-Kontext): in der Wertebereiche-Zeile
 	// existiert kein "Warnen"-Bedienelement mehr — nur Markieren + "✕ entfernen"
-	// bleiben. Ortsvergleich-Pendant: compare-editor-autosave.spec.ts.
+	// bleiben. Ortsvergleich-Pendant: hub-wertebereiche-speichert-selbst.spec.ts WS-8.
 	test('AC-1 (Trip): kein "Warnen"-Bedienelement mehr in der Wertebereiche-Zeile', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}?tab=wertebereiche`);
 		await expect(page.getByTestId('corridor-editor-route')).toBeVisible();

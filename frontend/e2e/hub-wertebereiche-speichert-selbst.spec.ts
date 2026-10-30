@@ -381,6 +381,58 @@ for (const kind of HUB_KINDS) {
 			}
 		});
 
+		// WS-8 (#2347 S3d; Alt compare-editor-autosave AC-14 + AC-1/#1371) — fängt: Rückruf des
+		// Markieren-Knopfs am Mount fehlt (kein PUT), Mark-Wert nicht umgekehrt gespeichert,
+		// „Warnen"-Bedienelement wieder in der Zeile. Der Schalter ist der EINE geteilte
+		// CorridorEditor; nur Zeile und Ausgangswert sind je kind (WS_SEL) verschieden.
+		test(`WS-8 (${kind}): „Markieren" umlegen → genau EIN PUT, mark umgekehrt, überlebt Neuladen; kein „Warnen"`, async ({
+			page
+		}) => {
+			const hub = await seedHub(page.request, kind, { extra: ws.seed });
+			try {
+				const zeileId = ws.zeile;
+				const markVorher = korridore(await stand(page, kind, hub.id)).find((k) => k.metric === zeileId) as
+					| { mark?: boolean }
+					| undefined;
+				expect(markVorher, `Vorbedingung: der Seed trägt die Zeile ${zeileId}`).toBeDefined();
+				const startMark = markVorher?.mark === true;
+
+				const { puts } = zaehlePuts(page, hubApiPath(kind, hub.id));
+				const editor = await oeffneWertebereiche(page, kind, hub.id);
+				const zeile = editor.locator(`[data-testid="corridor-row-${zeileId}"]`);
+				const markieren = zeile.getByRole('button', { name: 'Markieren' });
+
+				// #1371: kein „Warnen"-Bedienelement; „Markieren" und „✕ entfernen" sind da.
+				await expect(zeile.getByRole('button', { name: 'Warnen' }), 'WS-8 FAIL: „Warnen" ist wieder in der Zeile (#1371)').toHaveCount(0);
+				await expect(markieren).toBeVisible();
+				await expect(zeile.getByRole('button', { name: '✕ entfernen' })).toBeVisible();
+				await expect(markieren).toHaveAttribute('aria-pressed', String(startMark));
+				expect(puts.length, 'Vorbedingung: das Öffnen des Reiters speichert nichts').toBe(0);
+
+				await markieren.click();
+				await expect(markieren, 'WS-8 FAIL: der Markieren-Knopf nimmt die Geste nicht an.').toHaveAttribute(
+					'aria-pressed',
+					String(!startMark)
+				);
+				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+				await expect
+					.poll(
+						async () => (korridore(await stand(page, kind, hub.id)).find((k) => k.metric === zeileId) as { mark?: boolean } | undefined)?.mark === true,
+						{ timeout: 15_000, message: 'WS-8 FAIL: der umgelegte Markieren-Wert steht nicht auf dem Server.' }
+					)
+					.toBe(!startMark);
+				await bleibtBei(() => puts.length, 1, 1_200, 'WS-8 FAIL: genau EIN PUT für die Markieren-Geste');
+
+				const neu = await oeffneWertebereiche(page, kind, hub.id);
+				await expect(
+					neu.locator(`[data-testid="corridor-row-${zeileId}"]`).getByRole('button', { name: 'Markieren' }),
+					'WS-8 FAIL: Markieren steht nach dem Neuladen wieder auf dem alten Wert.'
+				).toHaveAttribute('aria-pressed', String(!startMark));
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+
 		// WS-7 (Alt AC-11) — fängt: Teil-Nutzlast / fehlendes Bestandsfeld im PUT.
 		test(`WS-7 (${kind}): Korridor ändern → alle übrigen Einstellungen bleiben unverändert`, async ({ page }) => {
 			const hub = await seedHub(page.request, kind, { extra: ws.seed });

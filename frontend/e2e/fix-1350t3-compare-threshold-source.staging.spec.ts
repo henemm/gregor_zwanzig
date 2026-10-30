@@ -1,3 +1,4 @@
+// gz-eigenstaendig: Quelle des Vergleichs-Schwellen-Pools ist GET /api/compare/metrics (CompareMetricDef), der Trip nutzt das Metrik-Register -- der Pool je kind ist in hub-wertebereiche-speichert-selbst.spec.ts geprueft
 // Staging-Validierung (SKIZZE, noch nicht ausgeführt) — Issue #1350 Teil 3:
 // Schwellen-Editor des Ortsvergleichs (CorridorEditor/CorridorEditorMobile,
 // context="vergleich") bezieht seine CompareMetricDef-Objekte aus

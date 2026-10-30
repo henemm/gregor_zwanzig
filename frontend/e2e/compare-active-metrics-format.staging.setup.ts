@@ -2,7 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import * as fs from 'fs';
 // Staging-Auth für Issue #1373 S2 Scheibe B (Speicherformat der Metrik-Auswahl).
-// Muster identisch zu compare-metric-order.staging.setup.ts:
+// Muster identisch zu compare-hourly-metric-order.staging.setup.ts:
 // nginx-Basic-Auth = GZ_VALIDATOR_*, App-Login = GZ_AUTH_* (getrennte Layer),
 // eigener storageState statt Login pro Test (Token-Bucket 30/h → 429, s.
 // reference_staging_e2e_storagestate_login_rate_limit).

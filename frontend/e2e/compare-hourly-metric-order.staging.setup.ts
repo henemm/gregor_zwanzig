@@ -2,7 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import * as fs from 'fs';
 // Staging-Auth für die Stundenverlauf-Reihenfolge im Ortsvergleich (Issue
-// #1361 Befund 4/5). Muster identisch zu compare-metric-order.staging.setup.ts
+// #1361 Befund 4/5). Muster identisch zu compare-layout-tab-dissolution.staging.setup.ts
 // (#1359): nginx-Basic-Auth = GZ_VALIDATOR_*, App-Login = GZ_AUTH_* (getrennte
 // Layer), eigener storageState statt Login pro Test (Token-Bucket 30/h → 429,
 // s. reference_staging_e2e_storagestate_login_rate_limit).

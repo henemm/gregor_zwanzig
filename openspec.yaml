@@ -272,3 +272,8 @@ hooks:
     spec_enforcement: 20
     module_hooks: 50
     notification: 100
+
+# Herdr-Anbindung (#467): Auto-/clear nach korrekter Fusszeile (Opt-in)
+herdr:
+  auto_clear:
+    enabled: true
