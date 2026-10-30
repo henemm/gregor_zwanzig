@@ -64,7 +64,7 @@ from freezegun import freeze_time
 from app.loader import get_data_dir, save_location, save_trip
 from app.models import TripReportConfig
 from app.user import SavedLocation
-from services import alert_daily_limit, trip_alert
+from services import alert_daily_limit, parallel_fetch, trip_alert
 from services.radar_cache import RadarNowcastCacheService
 from services.radar_service import INTENSITY_DRY, NowcastResult, RadarNowcastService
 from services.throttle_store import ThrottleStore
@@ -842,7 +842,19 @@ def _ausfall_am_kettenende(svc, sleep_s: float) -> None:
     svc._fetch_openmeteo_minutely15 = _step
 
 
-def test_compare_radar_grenze_mitten_im_ortsvergleich(monkeypatch):
+@pytest.fixture
+def ein_open_meteo_slot(monkeypatch):
+    """#1539 S4: Test modelliert serielles Fristverbrauchen; 1 Slot stellt das
+    her (sonst starten alle Orte parallel vor der Frist)."""
+    monkeypatch.setenv("GZ_PARALLEL_FETCH_SLOTS_OPEN_METEO", "1")
+    parallel_fetch._reset_for_tests()
+    yield
+    if parallel_fetch._executor is not None:
+        parallel_fetch._executor.shutdown(wait=True)
+    parallel_fetch._reset_for_tests()
+
+
+def test_compare_radar_grenze_mitten_im_ortsvergleich(monkeypatch, ein_open_meteo_slot):
     """F001/F002/F003: Preset mit 2 Orten, Ort 1 laeuft durch und endet in
     einem Quellenausfall, die Grenze ist danach abgelaufen, Ort 2 beginnt keine
     Quelle (echte Kette wertet ``deadline_at`` aus). Das Preset ist nicht
@@ -884,7 +896,9 @@ def test_compare_radar_grenze_mitten_im_ortsvergleich(monkeypatch):
     )
 
 
-def test_compare_radar_endpunkt_meldet_abbruch_mitten_im_preset(monkeypatch, caplog):
+def test_compare_radar_endpunkt_meldet_abbruch_mitten_im_preset(
+    monkeypatch, caplog, ein_open_meteo_slot,
+):
     """F002: Endpunkt ``partial``/``deadline`` + WARNING mit der Preset-ID, wenn
     die Grenze mitten im Ortsvergleich (Ort 2) greift. Mutation:
     ``hit_deadline`` bei Abbruch nicht setzen ⇒ status „ok"."""

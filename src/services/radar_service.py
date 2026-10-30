@@ -17,6 +17,7 @@ SPEC: docs/specs/modules/radar_nowcast.md
 from __future__ import annotations
 
 import bisect
+import copy
 import logging
 import os
 import time
@@ -28,6 +29,7 @@ from urllib.parse import urlencode
 from zoneinfo import ZoneInfo
 
 from services import alert_input_capture
+from services.single_flight import SingleFlight
 
 logger = logging.getLogger("radar_service")
 
@@ -455,6 +457,65 @@ def _raise_if_deadline(deadline_at: Optional[float]) -> None:
         raise RadarDeadlineExceeded("Zeitgrenze des Alarmlaufs erreicht")
 
 
+# Issue #1539 S4: parallele Abrufe derselben Kachel teilen EINEN Upstream-Call.
+_KACHEL_FLUEGE = SingleFlight()
+_FLUG_WARTEZEIT_OHNE_FRIST_S = 30.0
+
+
+def nowcast_abrufer(dienst, *, user_id: Optional[str], deadline_at: Optional[float]):
+    """Issue #1539 S4: Worker-Funktion fuer ``parallel_fetch.fetch_ordered``.
+
+    Element = ``(lat, lon, elevation_m)``. Je Abruf eine EIGENE Dienst-Instanz
+    (``fuer_abruf``), damit sich die ``*_this_call``-Flags paralleler Abrufe nie
+    ueberschreiben; injizierte Fremd-Dienste (Test-DI) laufen unveraendert.
+    Schreibt keinen geteilten Zustand -- Auswertung im Hauptfaden."""
+    def abruf(punkt):
+        lat, lon, elevation_m = punkt
+        eigen = dienst.fuer_abruf() if type(dienst) is RadarNowcastService else dienst
+        return eigen.get_nowcast(
+            lat, lon, elevation_m=elevation_m, priority="polling",
+            user_id=user_id, deadline_at=deadline_at,
+        )
+    return abruf
+
+
+def hole_nowcasts(dienst, elemente: list, *, user_id: Optional[str],
+                  deadline_at: Optional[float], frist: float) -> list:
+    """Issue #1539 S4: Nowcasts aller ``(lat, lon, elevation_m)`` ueber
+    ``fetch_ordered`` (Provider ``open_meteo``), Ergebnis in Eingabereihenfolge.
+
+    Ist die Frist schon VOR dem Start abgelaufen, uebersprang der Baustein
+    sonst alles als "deadline"; stattdessen entscheidet -- wie im seriellen
+    Ablauf -- der Dienst selbst je Abruf (Cache-Treffer liefern, die Kette
+    wirft ``RadarDeadlineExceeded``, der hier im Hauptfaden hochgeht)."""
+    from services import parallel_fetch
+
+    abruf = nowcast_abrufer(dienst, user_id=user_id, deadline_at=deadline_at)
+    if not elemente or time.monotonic() < frist:
+        return parallel_fetch.fetch_ordered(
+            elemente, abruf, provider="open_meteo", deadline_at=frist,
+        )
+    outcomes = []
+    for i, element in enumerate(elemente):
+        out = parallel_fetch.FetchOutcome(index=i, item=element)
+        try:
+            out.value = abruf(element)
+        except RadarDeadlineExceeded:
+            raise
+        except Exception as exc:  # noqa: BLE001 -- Teilausfall steht im Outcome
+            out.error = exc
+        outcomes.append(out)
+    return outcomes
+
+
+def wirf_radar_grenze(outcomes) -> None:
+    """Issue #1539 S4: ein im Worker aufgetretener Grenzabbruch wird im
+    Hauptfaden neu geworfen -- weder Luecke noch Quellenausfall."""
+    for out in outcomes:
+        if isinstance(out.error, RadarDeadlineExceeded):
+            raise out.error
+
+
 class RadarNowcastService:
     """
     Coordinate-aware nowcasting service.
@@ -484,6 +545,13 @@ class RadarNowcastService:
         self._inca_unavailable_this_call = False
         self._priority = "user_briefing"
         self._budget_gate = None
+
+    def fuer_abruf(self) -> "RadarNowcastService":
+        """Issue #1539 S4: eigene Instanz fuer EINEN parallelen Abruf -- teilt
+        Cache, Bildquelle und Uhr, aber nie den Je-Aufruf-Zustand."""
+        kopie = copy.copy(self)
+        kopie._budget_gate = None
+        return kopie
 
     # ------------------------------------------------------------------
     # Public API
@@ -576,19 +644,9 @@ class RadarNowcastService:
 
         self._budget_gate.record_cache_miss()
 
-        if self._frame_source is not None:
-            frames = self._frame_source(lat, lon)
-            source = "radar"
-        else:
-            frames, source = self._fetch_frames_with_fallback(
-                lat, lon, elevation_m, deadline_at=deadline_at,
-            )
-
-        if frames:
-            self._cache.put(
-                lat, lon, region, frames, source, now=now, elevation_m=elevation_m,
-                convective_checked=self._convective_checked,
-            )
+        frames, source = self._abruf_einmal_je_kachel(
+            lat, lon, region, elevation_m, now, deadline_at,
+        )
 
         _capture_nowcast_frames(lat, lon, frames, source)
         result = self._derive_result(frames, source, now=now)
@@ -616,6 +674,56 @@ class RadarNowcastService:
         else:
             log_enrichment_call(PATH_RADAR_NOWCAST, OUTCOME_OK)
         return result
+
+    def _abruf_einmal_je_kachel(
+        self, lat: float, lon: float, region: str, elevation_m, now, deadline_at,
+    ) -> tuple:
+        """Issue #1539 S4: Single-flight um den Cache-Miss, Schluessel = gerundete
+        Kachel des Radar-Caches. Wartende uebernehmen Frames UND Je-Aufruf-Flags
+        des Leaders (ein Ausfall des Leaders darf beim Wartenden nicht zu
+        "trocken" werden); dessen Ausnahme (auch der Grenzabbruch) wird neu
+        geworfen. Wartezeit abgelaufen => selbst abrufen (fail-open)."""
+        def _leader() -> tuple:
+            # Zweiter Cache-Blick (Adversary F001): ein frueherer Leader kann
+            # zwischen unserem Miss und unserem Flug fertig geworden sein.
+            treffer = self._cache.get(lat, lon, region, now=now, elevation_m=elevation_m)
+            if treffer is not None:
+                self._convective_checked = treffer.convective_checked
+                return treffer.frames, treffer.source, (
+                    self._convective_checked, False, False, False,
+                )
+            if self._frame_source is not None:
+                frames, source = self._frame_source(lat, lon), "radar"
+            else:
+                frames, source = self._fetch_frames_with_fallback(
+                    lat, lon, elevation_m, deadline_at=deadline_at,
+                )
+            if frames:
+                self._cache.put(
+                    lat, lon, region, frames, source, now=now, elevation_m=elevation_m,
+                    convective_checked=self._convective_checked,
+                )
+            return frames, source, (
+                self._convective_checked, self._openmeteo_unavailable_this_call,
+                self._budget_throttled_this_call, self._inca_unavailable_this_call,
+            )
+
+        hoehe = int(round(elevation_m)) if elevation_m is not None else None
+        kachel = (id(self._cache), id(self._frame_source),
+                  round(lat, 4), round(lon, 4), region, hoehe)
+        warten = (deadline_at - time.monotonic() if deadline_at is not None
+                  else _FLUG_WARTEZEIT_OHNE_FRIST_S)
+        flug = _KACHEL_FLUEGE.run(kachel, _leader, wait_timeout_s=warten)
+        if flug.error is not None:
+            raise flug.error
+        # Drosselung ist eine Entscheidung je NUTZER (fairer Anteil): ein
+        # gedrosselter Leader darf sie nie an Wartende vererben.
+        if flug.timed_out or (not flug.is_leader and flug.value[2][2]):
+            return _leader()[:2]
+        frames, source, flags = flug.value
+        (self._convective_checked, self._openmeteo_unavailable_this_call,
+         self._budget_throttled_this_call, self._inca_unavailable_this_call) = flags
+        return frames, source
 
     # Human-readable source labels (single source of truth — used by
     # format_now_text and by the body-builder in trip_alert.check_radar_alerts).
@@ -1000,7 +1108,9 @@ class RadarNowcastService:
         if self._budget_gate is None:  # Direktaufruf ausserhalb get_nowcast (Issue #2464)
             from services.forecast_budget import ForecastBudgetGate
             self._budget_gate = ForecastBudgetGate(None)
-        if not self._budget_gate.allow(self._priority):
+        # Issue #1539 S4: Entscheidung + Buchung atomar (parallele Abrufe
+        # duerfen das Restbudget nicht ueberbuchen).
+        if not self._budget_gate.reserve(self._priority):
             self._budget_throttled_this_call = True
             self._openmeteo_unavailable_this_call = True
             return []
@@ -1020,7 +1130,6 @@ class RadarNowcastService:
             query["timezone"] = "UTC"
             query["forecast_minutely_15"] = 96
             url = "https://api.open-meteo.com/v1/forecast?" + urlencode(query)
-            self._budget_gate.record_call()  # unmittelbar vor dem echten Fetch
             with httpx.Client(timeout=HTTPX_TIMEOUT) as client:
                 resp = client.get(url)
                 resp.raise_for_status()

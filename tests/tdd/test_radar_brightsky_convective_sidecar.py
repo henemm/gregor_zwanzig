@@ -259,7 +259,10 @@ def test_ac2_sidecar_vom_budget_gate_gedrosselt(monkeypatch, _referenz):
     from services.forecast_budget import ForecastBudgetGate
 
     zaehler = _install_http(monkeypatch, _SIDECAR_CODES)
-    monkeypatch.setattr(ForecastBudgetGate, "allow", lambda self, priority, now=None: False)
+    # Issue #1539 S4: der Radar-Pfad bucht atomar ueber reserve().
+    monkeypatch.setattr(
+        ForecastBudgetGate, "reserve", lambda self, priority, units=1, now=None: False,
+    )
 
     result = _service().get_nowcast(_DE_LAT, _DE_LON)
 

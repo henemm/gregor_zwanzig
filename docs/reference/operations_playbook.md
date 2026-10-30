@@ -953,6 +953,11 @@ unberührt, der Mitschnitt ist durchgehend fail-soft.
   Verfügbarkeits-Cache) werden atomar geschrieben. Gelingt die Sperre für `alert_log` nicht
   rechtzeitig, steht im ERROR-Log der **vollständige Eintrag**, und der Zähler
   `alert_log_lost_entries` steigt — der Eintrag lässt sich aus dem Log nachtragen.
+- **Radar-Lauf parallel (#1539 S4, 2026-10-30):** Die Radar-Abrufe der Zonenpunkte und Orte laufen
+  nebeneinander. Ein übersprungener Abruf (`skipped`, Grund „deadline“ oder „timeout“) steht als eigene
+  Zeile im Log und zählt als gescheitert. Ein Grenzabbruch im Ortsvergleich erzeugt bewusst **keine**
+  Ausfall-Spur; die Laufzeit steht in `duration_s` des Radar-Laufs. Wirkung nur im Prod-Journal messbar
+  (auf Staging nicht messbar).
 
 ## Antwortzeit der Befehle diagnostizieren (#2439)
 

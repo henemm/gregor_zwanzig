@@ -1814,6 +1814,45 @@ class TripAlertService:
             self._radar_service = RadarNowcastService()
         return self._radar_service
 
+    def _radar_folgepunkte(self, radar_svc, punkte, deadline_at: float, trip_id) -> list:
+        """Issue #1539 S4: Nowcasts der Zonen-Folgepunkte PARALLEL
+        (``fetch_ordered``), ausgewertet im Hauptfaden in Eingabereihenfolge.
+
+        Je Punkt ohne verwertbares Ergebnis (Fehler, uebersprungen wegen Frist/
+        Zeitueberschreitung, Ausfall/Drosselung) eine Luecke ``None`` mit lauter
+        Logzeile samt Koordinate -- nie ein Abbruch (ADR-0038). Ein
+        ``RadarDeadlineExceeded`` im Worker wird hier neu geworfen."""
+        from services import radar_service as radar_service_mod
+
+        elemente = [
+            (_p.lat, _p.lon,
+             int(round(_p.elevation_m)) if _p.elevation_m is not None else None)
+            for _p in punkte
+        ]
+        outcomes = radar_service_mod.hole_nowcasts(
+            radar_svc, elemente, user_id=self._user_id,
+            deadline_at=deadline_at, frist=deadline_at,
+        )
+        radar_service_mod.wirf_radar_grenze(outcomes)
+        ergebnisse: list = []
+        for out in outcomes:
+            if out.skipped is not None:
+                grund = f"uebersprungen: {out.skipped} (Frist/Zeitgrenze des Laufs)"
+            elif out.error is not None:
+                grund = f"fehlgeschlagen: {out.error}"
+            elif _zonen_messwert(out.value) is None:
+                grund = "keine verwertbaren Daten (Ausfall/Drosselung)"
+            else:
+                ergebnisse.append(out.value)
+                continue
+            logger.warning(
+                "Radar alert: Nowcast fuer Zonenpunkt (%.4f, %.4f) des Trips %s "
+                "%s — der Punkt faellt aus der Ausdehnung heraus, der Alarm "
+                "laeuft weiter.", out.item[0], out.item[1], trip_id, grund,
+            )
+            ergebnisse.append(None)
+        return ergebnisse
+
     def clear_radar_throttle(self, trip_id: str) -> None:
         """Clear radar throttle for a trip (test helper)."""
         self._throttle_store.clear(_RADAR_THROTTLE_SCOPE, trip_id)
@@ -2305,36 +2344,15 @@ class TripAlertService:
                 # und darf den Alarm nicht kosten. `throttled`/`data_unavailable`
                 # sind derselbe Fall in Feldform — keine Frames, aber eben auch
                 # kein belegtes "trocken", das eine Zone trennen duerfte.
-                _zonen_ergebnisse: list = [_zonen_messwert(result)]
-                _grenze_erreicht = False
-                for _p in _punkte[1:]:
-                    try:
-                        _zonen_ergebnisse.append(
-                            _zonen_messwert(
-                                radar_svc.get_nowcast(
-                                    _p.lat, _p.lon,
-                                    elevation_m=(
-                                        int(round(_p.elevation_m))
-                                        if _p.elevation_m is not None else None
-                                    ),
-                                    priority="polling",
-                                    user_id=self._user_id,
-                                    deadline_at=deadline_at,
-                                )
-                            )
-                        )
-                    except RadarDeadlineExceeded:
-                        _grenze_erreicht = True
-                        break
-                    except Exception as e:
-                        logger.warning(
-                            "Radar alert: Nowcast fuer Zonenpunkt (%.4f, %.4f) des "
-                            "Trips %s fehlgeschlagen (%s) — der Punkt faellt aus "
-                            "der Ausdehnung heraus, der Alarm laeuft weiter.",
-                            _p.lat, _p.lon, trip.id, e,
-                        )
-                        _zonen_ergebnisse.append(None)
-                if _grenze_erreicht:
+                #
+                # Issue #1539 S4: die Folgepunkte laufen parallel
+                # (`_radar_folgepunkte`); ein Grenzabbruch im Worker wird im
+                # Hauptfaden neu geworfen und bricht die Einheit ab.
+                try:
+                    _zonen_ergebnisse: list = [_zonen_messwert(result)] + (
+                        self._radar_folgepunkte(radar_svc, _punkte[1:], deadline_at, trip.id)
+                    )
+                except RadarDeadlineExceeded:
                     self._abort_radar_unit(reached, progress, trip.id)
                     break
                 _rain_zones = tuple(
