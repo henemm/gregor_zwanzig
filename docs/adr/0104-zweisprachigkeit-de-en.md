@@ -1,6 +1,6 @@
 # ADR-0104: Zweisprachigkeit Deutsch/Englisch — Sprache am Nutzer, Kataloge je Schicht, Protokoll-Token nie übersetzen
 
-- **Status:** Vorgeschlagen (PO-Rückfragen beantwortet 2026-10-30; Freigabe in Paket S0 #2645)
+- **Status:** Akzeptiert (PO-Entscheidung 2026-10-30)
 - **Datum:** 2026-10-30
 - **Bezug:** Epic #2644, Plan `docs/features/epic-i18n-de-en.md`, Konventionen `docs/features/epic-i18n-de-en-konventionen.md`, Glossar `docs/reference/i18n_glossar.md`; löst die Streichung von #94 (2026-08-04) ab; ergänzt ADR-0042 (Namensform folgt der Platzgrenze), ADR-0095 (Kanal-Parität), ADR-0101 (Read-Modify-Write)
 - **Ergänzt durch:** —

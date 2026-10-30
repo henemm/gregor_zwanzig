@@ -1,6 +1,6 @@
 # i18n-Glossar Deutsch → Englisch (bindend, ADR-0104, Epic #2644)
 
-> Stand: 2026-10-30 (Erstliste aus der Planung, Freigabe in #2645). Regel: **ein** Begriff je Zeile,
+> Stand: 2026-10-30 (freigegeben mit #2645). Regel: **ein** Begriff je Zeile,
 > neue Fachwörter zuerst hier, dann in den Katalog. Einfaches Englisch, Fachbegriffe wo sie
 > der Klarheit dienen. **Verboten:** „Tour"/*tour* (Produktbegriff ist Trip).
 
@@ -86,6 +86,10 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | Bestätigungscode | Verification code |
 | Anzeigename | Display name |
 | Sprache | Language |
+| Benutzername | Username |
+| E-Mail | Email |
+| Hilfe | Help |
+| Testmail | Test email |
 
 ## Zeit und Format (ADR-0104 Nr. 6)
 
@@ -96,7 +100,7 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | heute / morgen / übermorgen | today / tomorrow / day after tomorrow |
 | vor 3 Min | 3 min ago |
 | Mo Di Mi Do Fr Sa So | Mon Tue Wed Thu Fri Sat Sun |
-| 12.5 (Punkt) | 12.5 (Punkt) |
+| 12.5 (Punkt) | 12.5 (point) |
 
 ## Inbound-Befehle (beide Sprachen werden verstanden, #2673)
 

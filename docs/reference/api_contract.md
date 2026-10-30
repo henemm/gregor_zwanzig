@@ -200,9 +200,9 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 | `/api/auth/passkey/register/public/finish` | POST |
 | `/api/auth/password` | PUT |
 | `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
-| `/api/auth/profile` | GET, PUT |
+| `/api/auth/profile` | GET, PUT (`language` seit #2646, s. „Nutzerprofil und Sprache“) |
 | `/api/auth/invite/check` | POST — öffentlich, rate-limited 30/h/IP, Token im Body; Vorab-Check einer Einladung (#2519) |
-| `/api/auth/register` | POST |
+| `/api/auth/register` | POST (optional `language` seit #2646) |
 | `/api/auth/reset-password` | POST |
 | `/api/auth/sms-daily-usage` | GET (Issue #2412, Sammel-Issue #2153 S4b — liefert das tägliche SMS-/Premium-SMS-Tageskontingent zur Anzeige auf /account; Fail-Soft 204 bei nicht erreichbarem Python-Core) |
 | `/api/auth/sms/resend` | POST (Issue #2406 — stellt den Bestätigungscode für die ausstehende Nummer erneut zu; Mengenbremse 3/h je Nutzer, sonst 429 mit `Retry-After`) |
@@ -4849,8 +4849,22 @@ Endpunkte: Sektion 0.5 (`/api/locations*`, `/api/groups*`).
 `data_source` und `created_at` nicht zurück (Replace statt Read-Modify-Write). Stand 2026-10-21 hat die
 Funktion in `src/`/`api/` keinen Aufrufer — schreibend ist allein die Go-API.
 
+## 26) Nutzerprofil und Sprache (Issue #2646, Epic #2644)
+
+Sprache ist Eigenschaft des Nutzers (ADR-0104). `language` wird aus dem Auth-Kontext des angemeldeten Nutzers gelesen und geschrieben, nie über einen Fallback `"default"`. Das Profil liefert `GET /api/auth/profile`; einen Endpunkt `/api/me` gibt es nicht.
+
+| Stelle | Feld / Verhalten |
+|---|---|
+| `GET /api/auth/profile` | `language`: `"de"` oder `"en"`, immer vorhanden. Ein Nutzer ohne gespeichertes Feld erhält `"de"` (ADR-0104 Nr. 9); `user.json` bleibt dabei unverändert |
+| `PUT /api/auth/profile` | `language` optional; nur `"de"` oder `"en"`. Anderer Wert (auch leer): 400 `{"error":"invalid_language"}`, nichts wird geschrieben. Merge-Schreibweise: Bestandsfelder bleiben (ADR-0101) |
+| `POST /api/auth/register` | `language` optional; fehlt es, bleibt das Feld unbestimmt (= `de`); ungültig: 400 `{"error":"invalid_language"}`, kein Konto |
+| Cookie `gz_lang` | Go setzt es bei Login, Registrierung und Profil-Update mit `language` (`Path=/`, `Max-Age=31536000`, `SameSite=Lax`, `Secure` bei https, nicht HttpOnly) |
+| `POST /lang` (nur SvelteKit-Frontend, nicht Go) | Formfeld `lang`; setzt `gz_lang` für Besucher (Paket #2648) |
+| Fehlerobjekt (Zielbild ab #2675) | `{"code": "...", "message": "..."}`; bis dahin bleibt `{"error": "..."}` |
+
 ## Changelog
 
+- 2026-10-30: Issue #2645 (S0, Doku) — Abschnitt 26 „Nutzerprofil und Sprache“: `language`, `invalid_language`, Cookie `gz_lang`.
 - 2026-10-24: Issue #2359 — Kennungsraum Trip/Ortsvergleich: `POST /api/trips` (neuer Abschnitt „Kennungs-Konflikt“) sowie Compare-Preset POST/PUT antworten bei belegter Kennung mit 409 `id_conflict` (statt 500 `store_error`).
 - 2026-10-21: Doku-Drift (kein Code) — Profil-DTO um `email_verified`, `sms_verified`, `pending_sms_to`,
   `telegram_chat_id` ergänzt; neuer Unterabschnitt „SMS-Nummer-Verifikation“ (#2406); `User`-Struct-Block
