@@ -59,24 +59,39 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 |---|---|---|
 | Temperatur | Temperature | Temp |
 | Gefühlte Temperatur | Feels-like temperature | Feels |
-| Windböen | Wind gusts | Gust |
-| Niederschlag | Precipitation | Prec |
-| Niederschlagswahrscheinlichkeit | Precipitation probability | PoP |
+| Böen | Wind gusts | Gust |
+| Niederschlag | Precipitation | Rain |
+| Regenwahrscheinlichkeit | Rain probability | Rain% |
 | Luftfeuchtigkeit | Humidity | Humid |
 | Taupunkt | Dew point | Dew |
 | Sichtweite | Visibility | Visib |
 | Bewölkung | Cloud cover | Cloud |
-| Gewitter | Thunderstorm | Thund |
+| Gewitter | Thunderstorm | Thdr |
 | Schneefallgrenze | Snow line | SnowL |
-| Schneehöhe | Snow depth | Snow |
+| Schneehöhe | Snow depth | SnowH |
 | Sonnenstunden | Sunshine hours | Sun |
 | UV-Index | UV index | UV |
+
+## Konto und Anmeldung
+
+| Deutsch | Englisch |
+|---|---|
+| Anmelden | Sign in |
+| Registrieren | Sign up |
+| Abmelden | Sign out |
+| Passwort | Password |
+| Passwort vergessen | Forgot password |
+| Passwort zurücksetzen | Reset password |
+| E-Mail bestätigen | Verify email |
+| Bestätigungscode | Verification code |
+| Anzeigename | Display name |
+| Sprache | Language |
 
 ## Zeit und Format (ADR-0104 Nr. 6)
 
 | Deutsch | Englisch |
 |---|---|
-| `Do 30.10.` | `Thu 30 Oct` |
+| `Fr 30.10.` | `Fri 30 Oct` |
 | 14:30 | 14:30 (24 h) |
 | heute / morgen / übermorgen | today / tomorrow / day after tomorrow |
 | vor 3 Min | 3 min ago |

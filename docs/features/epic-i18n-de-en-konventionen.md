@@ -13,11 +13,11 @@
 | Persistenz | `data/users/<id>/user.json` Feld `language` (top-level, String). Leer/fehlend = `de`. Go schreibt (Read-Modify-Write), Go und Python lesen |
 | Go: Reihenfolge | angemeldet: `user.Language` > Cookie `gz_lang` > `Accept-Language` > `de`; öffentlich: Cookie > `Accept-Language` > `de` |
 | Python | `resolve_user_lang(user_id) -> Lang` liest `user.json` über dieselbe Pfadlogik wie `src/app/config.py` (`get_data_dir()`); **einziger** Weg; keine Modul-/Prozess-globale Sprache |
-| SvelteKit | `hooks.server.ts`: Cookie `gz_lang` > `Accept-Language` > `de` → `event.locals.lang`; `transformPageChunk` ersetzt `%lang%` in `app.html`. `+layout.server.ts`: `lang = user?.language ?? locals.lang` → `data.lang`; `+layout.svelte` setzt den Store `locale` |
+| SvelteKit | `hooks.server.ts`: Cookie `gz_lang` > `Accept-Language` > `de` → `event.locals.lang`; `transformPageChunk` liest `event.locals.lang` erst beim Ersetzen von `%lang%` in `app.html`, damit der Layout-Loader (`lang = profil.language ?? locals.lang`, schreibt `locals.lang` zurück) für Angemeldete wirkt; `+layout.svelte` setzt den Store `locale`. Login-Action reicht `gz_lang` aus der Go-Antwort weiter |
 | Cookie `gz_lang` | Setzt **Go** bei Login, Register und Profil-Update (Wert = Nutzersprache), und das Frontend-Endpoint `POST /lang` für Besucher. `Path=/`, `Max-Age=31536000`, `SameSite=Lax`, `Secure` auf https, nicht HttpOnly (Frontend-Server liest es, Client braucht es nicht) |
 | Umschalter (Besucher) | `frontend/src/routes/lang/+server.ts` (`POST`, Formfeld `lang`, `redirect` zurück auf `Referer` oder `/`) |
 | Registrierung | Frontend sendet `language: data.lang`; Go validiert, speichert, setzt Cookie |
-| API-Vertrag | `/api/me` → `language` (String, `de`/`en`/leer); `PUT /api/auth/profile` nimmt `language`; Fehlerobjekt `{"code": "...", "message": "..."}` (Abschnitt 5) |
+| API-Vertrag | **Es gibt kein `/api/me`**: Profil ist `GET /api/auth/profile` → `language` (wirksame Sprache, `de` wenn Feld fehlt); `PUT /api/auth/profile` nimmt `language` (nur `de`/`en`, Kleinschreibung); Fehlerobjekt `{"code": "...", "message": "..."}` (Abschnitt 5) |
 
 ## 2. Katalog-Konventionen (alle drei Schichten)
 
@@ -41,7 +41,7 @@
 | Python | `src/i18n/messages/{de,en}/<bereich>.json` | `allgemein`, `mail`, `vergleich`, `alarm`, `warnung`, `telegram`, `sms`, `versand`, `inbound`, `api` |
 | Go | `internal/i18n/messages/{de,en}/<bereich>.json` | `fehler`, `auth`, `konto`, `fach`, `mail` |
 
-Die Import-/Ladelisten (`messages/de/index.ts`, Python-Loader, Go-`embed`) werden **im Kern-Paket vollständig** angelegt, damit Migrationspakete nur ihre eigene Bereichsdatei anfassen (kein Merge-Konflikt).
+Die Import-/Ladelisten (`messages/de/index.ts`, Python-Loader, Go-`embed`) werden **im Kern-Paket vollständig** angelegt, damit Migrationspakete nur ihre eigene Bereichsdatei anfassen (kein Merge-Konflikt). Da die Umsetzung in **einer** Sitzung nacheinander läuft, darf ein Paket Schlüssel in einer fremden Bereichsdatei **ergänzen** (nie umbenennen oder löschen), wenn der Text fachlich dorthin gehört (z. B. F2 und F3 in `home.json`). Allowlist-Einträge nennen konkrete Dateien oder Verzeichnisse mit `/`, keine losen Präfixe.
 
 ## 3. Frontend-Schnittstelle (`frontend/src/lib/i18n`)
 
@@ -53,21 +53,24 @@ export const locale: Writable<Lang>;                    // gesetzt in +layout.sv
 export const t: Readable<(key: MessageKey, params?: Record<string, string | number>) => string>;   // Svelte: {$t('key')}
 export const tn: Readable<(key: string, count: number, params?) => string>;                       // Plural: key ohne .one/.other
 export function tr(key: MessageKey, params?): string;   // für .ts-Module ohne Store-Kontext (liest get(locale))
+export function trFor(lang: Lang | undefined, key: MessageKey, params?): string;  // Server-Actions/Loader (kein geteilter Store auf dem Server); undefined → de
+export function trn(key: string, count: number, params?): string;              // Plural für .ts-Module (Gegenstück zu tn)
 // format.ts
-export function fmtDate(d: Date, lang: Lang, style: 'kurz' | 'lang'): string;   // kurz: 'Do 30.10.' | 'Thu 30 Oct'; lang: 'Donnerstag, 30. Oktober 2026' | 'Thursday, 30 October 2026'
+export function fmtDate(d: Date, lang: Lang, style: 'kurz' | 'lang'): string;   // kurz: 'Fr 30.10.' | 'Fri 30 Oct'; lang: 'Freitag, 30. Oktober 2026' | 'Friday, 30 October 2026'
 export function fmtTime(d: Date): string;                                       // '14:30' (24 h, beide)
-export function fmtWeekday(d: Date, lang: Lang, kurz?: boolean): string;        // 'Do' | 'Thu'
+export function fmtWeekday(d: Date, lang: Lang, kurz?: boolean): string;        // 'Fr' | 'Fri'
 export function fmtRelativeMinutes(min: number, lang: Lang): string;            // 'vor 3 Min' | '3 min ago' (tn)
 ```
 
 - In Svelte-Markup immer `{$t('bereich.x')}`; in `.ts` `tr(...)`. Dynamische Schlüssel nur mit Kommentar `// i18n-dynamic: <präfix>` (Verwender-Test).
+- Bestandskatalog (112 Schlüssel: `start` 30, `hilfe` 42, `onboarding` 19, `info` 9, `tip` 8, `telegram_kurzstil` 2, `nav` 1, `standardwerte` 1) wird in S2 **ohne Umbenennung** auf die Bereichsdateien verteilt (`info`/`tip`/`telegram_kurzstil`/`standardwerte` → `bausteine.json`, `onboarding` → `home.json`) und vollständig nach `en` übersetzt.
 - Metrik-Namen kommen aus `GET /api/metrics` (`label_de`, `label_en`, `alert_label`, `alert_label_en`); Auswahl über `metricLabel(def, lang)` in `$lib/i18n/metricLabel.ts` (F5). Fallback `label_de`.
-- Tests: Vitest; `locale.set('en')` im Test; Prüfung über `tr()`-Werte, nie über Literale.
+- Tests: `node:test` (kein Vitest im Repo): `cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test <datei>`; `locale.set('en')` im Test; Prüfung über `tr()`-Werte, nie über Literale.
 - `svelte-check` muss grün bleiben (unbekannter Schlüssel = Typfehler).
 
 ### Ratsche Frontend (S4)
 
-`frontend/src/lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts`: für jede `*.svelte` (ohne `__tests__/`, `routes/_design*`, `routes/email-preview-dev`) `<script>`/`<style>` entfernen, `{…}`-Ausdrücke entfernen, dann (a) Textknoten mit ≥ 2 Buchstaben `[A-Za-zÄÖÜäöüß]`, (b) statische Attributwerte von `title|aria-label|placeholder|alt|label` melden. Allowlist `frontend/src/lib/i18n/hardcode_allowlist.json` (Pfad-Präfixe). Ab F11 zusätzlich `*.ts` in `lib/utils`, `lib/stores`, `lib/api.ts` mit Heuristik „String-Literal mit Umlaut/ß oder Signalwort (`nicht`, `bitte`, `fehlgeschlagen`, `gespeichert`)".
+`frontend/src/lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts`: für jede `*.svelte` (ohne `__tests__/`, `routes/_design*`, `routes/email-preview-dev`) `<script>`/`<style>` entfernen, `{…}`-Ausdrücke entfernen, dann (a) Textknoten mit ≥ 2 Buchstaben `[A-Za-zÄÖÜäöüß]`, (b) statische Attributwerte von `title|aria-label|placeholder|alt|label` melden. Allowlist `frontend/src/lib/i18n/hardcode_allowlist.json` (Pfade relativ zu `frontend/src/`, Verzeichnisse mit `/` am Ende); beide Richtungen rot: Treffer ohne Eintrag **und** Eintrag ohne Treffer; Startstand per `--messen` erzeugen. Ab F11 zusätzlich `*.ts` in `lib/utils`, `lib/stores`, `lib/api.ts` mit Heuristik „String-Literal mit Umlaut/ß oder Signalwort (`nicht`, `bitte`, `fehlgeschlagen`, `gespeichert`)".
 
 ## 4. Python-Schnittstelle (`src/i18n`)
 
@@ -76,8 +79,8 @@ Lang = Literal["de", "en"]
 def t(key: str, lang: Lang = "de", /, **params: object) -> str
 def tn(key: str, count: int, lang: Lang = "de", /, **params: object) -> str
 def resolve_user_lang(user_id: str, data_dir: str | Path | None = None) -> Lang
-def fmt_date(d: date | datetime, lang: Lang, style: Literal["kurz", "lang"] = "kurz") -> str   # 'Do 30.10.' | 'Thu 30 Oct'
-def fmt_weekday(d: date | datetime, lang: Lang, kurz: bool = True) -> str                     # 'Do' | 'Thu'
+def fmt_date(d: date | datetime, lang: Lang, style: Literal["kurz", "lang"] = "kurz") -> str   # 'Fr 30.10.' | 'Fri 30 Oct'
+def fmt_weekday(d: date | datetime, lang: Lang, kurz: bool = True) -> str                     # 'Fr' | 'Fri'
 def fmt_time(d: datetime) -> str                                                               # '14:30'
 def relative_day(delta_days: int, lang: Lang) -> str                                           # heute/morgen/übermorgen | today/tomorrow/day after tomorrow
 ```
@@ -97,6 +100,7 @@ def relative_day(delta_days: int, lang: Lang) -> str                            
 | temperature_night | Nacht-Tiefsttemperatur | Night low | — |
 | temperature_day_low | Tages-Tiefsttemperatur (Gehzeit) | Daytime low (walking hours) | — |
 | temperature_day_high | Tages-Höchsttemperatur (Gehzeit) | Daytime high (walking hours) | — |
+| (alle weiteren Register-Einträge, z. B. `sunshine`, gefühlte Tages-Tiefst-/Höchsttemperatur) | laut `label_de` | nach demselben Muster (Glossar), P1 vervollständigt die Tabelle in der Spec | ≤ 12 Zeichen |
 | wind_chill | Gefühlte Temperatur | Feels-like temperature | — |
 | wind_chill_night | Gefühlte Nacht-Tiefsttemperatur | Feels-like night low | — |
 | humidity | Luftfeuchtigkeit | Humidity | Feuchte → Humidity |

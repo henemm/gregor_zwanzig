@@ -38,7 +38,7 @@ Katalog statt Paraglide; Ablage als Epic + Sub-Issues + ADR.
    Konto. Es gibt genau zwei Sprachen; weitere brauchen ein neues ADR.
 3. **Drei Kataloge, eine Technik:** flache, bereichs-präfixierte Schlüssel in JSON-Dateien
    je Sprache und Bereich (`frontend/src/lib/i18n/messages/{de,en}/<bereich>.json`,
-   `src/i18n/messages/{de,en}/<bereich>.json`, `internal/i18n/messages/{de,en}.json`);
+   `src/i18n/messages/{de,en}/<bereich>.json`, `internal/i18n/messages/{de,en}/<bereich>.json`);
    typisierter Zugriff `t(key, …)` mit `{name}`-Platzhaltern, Plural als `.one`/`.other`,
    Laufzeit-Fallback auf Deutsch mit einmaligem Log. **Keine neue Abhängigkeit**, kein
    Paraglide, kein gettext. Ein Paritätstest je Katalog erzwingt identische Schlüsselmengen.
@@ -53,7 +53,7 @@ Katalog statt Paraglide; Ablage als Epic + Sub-Issues + ADR.
    Premium-SMS-Kanal (#2417, `self._en`) behalten Kürzel und englische Befehlswörter
    unabhängig von der Nutzersprache; nur die Kürzel-Auflösung und die Antworttexte folgen
    der Nutzersprache. Inbound-Befehle werden in beiden Sprachen verstanden.
-6. **Formate:** 24-h-Uhr in beiden Sprachen; Datum DE `Do 30.10.`, EN `Thu 30 Oct`;
+6. **Formate:** 24-h-Uhr in beiden Sprachen; Datum DE `Fr 30.10.`, EN `Fri 30 Oct`;
    Dezimaltrennzeichen bleibt der Punkt (SMS-Verträglichkeit); Einheiten metrisch.
 7. **Wortwahl:** einfaches Englisch, Fachbegriffe wo sie der Klarheit dienen (PO, ADR-0042).
    Das Glossar `docs/reference/i18n_glossar.md` ist bindend; neue Begriffe zuerst dort.
