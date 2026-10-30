@@ -370,3 +370,63 @@ einen `TypeError`.
   Feed nur aus einem solchen Cancel mit `info: []`.
 - **Test-Referenzzeitpunkte:** Wind `2026-10-25T12:00Z`, Bodenfrost `2026-10-29T02:00Z`.
 - **Größe:** ~390 KB (5 Sprachblöcke je Eintrag, Polygone unverändert).
+
+---
+
+# Fixtures: MeteoAlarm-Feed Norwegen, Schweden, Finnland (Issue #1442, Scheibe S2)
+
+Alle drei Dateien: Herkunft `https://feeds.meteoalarm.org/api/v1/warnings/feeds-norway` bzw.
+`-sweden` / `-finland` (öffentlicher, kontingentfreier CAP-Feed, kein Auth). **Aufgezeichnet:
+2026-10-30** (Vollabrufe NO 362 KB / 52 Einträge, SE 402 KB / 28, FI 100 KB / 26). Reale Einträge
+sind 1:1-Kopien (`warnings[]`), kompakt serialisiert. Synthetische Einträge tragen die Kennung
+`….SYNTH-*`.
+
+## `feed_norway_sample.json` (12 Einträge)
+
+- **Sprachen:** `no` + `en-GB`; Polygone (`area.polygon`, Liste von Ring-Strings `"lat,lon …"`),
+  teils mit `altitude`/`ceiling`; kein Geocode. `areaDesc` unterscheidet sich zwischen den
+  Sprachblöcken („Skomvær" / „Skomvaer") — der Mapper darf nicht daran gruppieren.
+- **Real (8):** Flomfare gelb + orange (Ostland, 2 Ringe), Kuling Skomvær–Melbu (Lofoten, Höhenband
+  0–900 m), Høy vannstand Hordaland und Rogaland, Kuling Bodø–Lødingen, Kuling Støtt–Hekkingen,
+  Kansellert kulingvarsel (grün, `Update`).
+- **Synthetisch (4):** `.SYNTH-CANCEL` (Cancel, `references` auf die Lofoten-Kuling, ohne `info`),
+  `.SYNTH-UPDATE` (Update der echten Kuling-Warnung Bodø–Lødingen, `references` auf sie, `sent`
+  2026-10-25T09:00Z, Stufe orange; zuvor auf „Høy vannstand" Hordaland abgeleitet — das ist
+  `awareness_type` 7, Küstenereignis, und wird vom geteilten Mapper bewusst verworfen),
+  `.SYNTH-LOCH` (Außen- und Innenring
+  im Raum Dovre, Höhenband 900–1800), `.SYNTH-KAPUTT` (an erster Stelle, unlesbare Polygone).
+- Tromsø liegt bewusst in keinem Polygon („Punkt im Land ohne Treffer").
+- **Zeitstand beachten:** Die Aufzeichnung enthält Meldungen verschiedener Versandtage. Die Kuling
+  Støtt–Hekkingen (versandt 2026-10-28T15:00Z) überdeckt Bodø und die Lofoten; Tests mit `now`
+  am 25.10. werten den Feed deshalb über `_stand_bis(feed, now)` aus (nur Meldungen mit
+  `sent <= now`). „Høy vannstand" (Hordaland, Rogaland) ist Typ 7 und erzeugt keine Warnung.
+
+## `feed_sweden_sample.json` (9 Einträge)
+
+- **Sprachen:** `sv-SE` + `en-GB`; Polygone; kein Geocode.
+- **Die echte Aufzeichnung führte nur grüne Einträge** (`awareness_level` 1, `responseType`
+  `AllClear`). Real (6): Götaland (Malmö, Göteborg, Ystad), Värmland (Karlstad), Stockholm, Gotland,
+  Västernorrland, Jämtland-Berge — alle grün, also keine aktive Warnung (Malmö = „ruhig").
+- **Synthetisch (3), aus echten Einträgen abgeleitet:** `.SYNTH-GUL` (Stockholm, Stufe 2),
+  `.SYNTH-ORANGE` (Karlstad, Stufe 3), `.SYNTH-CANCEL` (Cancel auf die Gotland-Meldung).
+
+## `feed_finland_sample.json` (9 Einträge: 8 real, 1 synthetisch)
+
+- **Synthetisch (1, am Ende angehängt, Indizes 0–7 unverändert):** `.SYNTH-KYMENLAAKSO` — Kopie
+  des echten Eintrags 5 (Landwind, 27.10. 22:00Z–28.10. 03:00Z), Gebiet ersetzt durch `FI036`
+  Kymenlaakso. Zweck: Küstenort Kotka liegt in Landzone FI036 UND Seezone FI805; nur die
+  Landzone ist gewarnt (Gegenstück zu Helsinki, wo nur die Seezone FI806 gewarnt ist).
+
+- **Sprachen:** `fi-FI` + `sv-SE` + `en-GB`; **kein Polygon**, nur `geocode` `EMMA_ID`:
+  Landzonen `FI029` (Pohjanmaa), `FI032` (Varsinais-Suomi), `FI043` (Ahvenanmaa), Seegebiete
+  `FI801`–`FI813`. Die Einträge „Wind warning for land areas" teilen sich eine Kennung (`Update`
+  und `Alert`) — nicht als eindeutigen Schlüssel verwenden.
+- Auswahl: Seegebiete FI806 (Sturm), FI812/FI803 (Wellenhöhe orange), FI801/FI810/FI809, Land
+  FI032/FI029 und FI043/FI029, FI809, FI810/FI809.
+
+## Referenzzeitpunkte der Tests (UTC)
+
+NO Ostland `2026-10-25T12:00Z`, NO Lofoten/Bodø-Update `2026-10-25T20:00Z`, NO Bodø
+(Støtt–Hekkingen) `2026-10-28T16:00Z`, SE `2026-10-25T09:00Z`, FI Land `2026-10-27T20:00Z`
+(Turku, Eintrag 4) / `23:00Z` (Vaasa, Mariehamn, Eintrag 5 — versandt 22:00Z), FI See
+`2026-10-26T01:00Z`.
