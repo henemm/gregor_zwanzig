@@ -219,6 +219,10 @@ Die folgenden Quellen sind NICHT genehmigt:
 
 - Antrag #2, Zeile „Amtliche Warnungen CH" (Issue #1442 S1): Laenderscope Schweiz ueber den
   bereits genehmigten MeteoAlarm-Feed — PENDING bis zur Spec-Freigabe.
+- Antrag #2, Zeile „Amtliche Warnungen NO/SE/FI" (Issue #1442 S2): Laenderscope Norwegen,
+  Schweden, Finnland ueber denselben Feed — PENDING bis zur Spec-Freigabe
+  (`feat_1442_s2_meteoalarm_nordics.md`). Lizenz der eingecheckten FI-Zonengeometrie
+  (MeteoAlarm `geocodes.json`) ist noch ungeklaert, s. `src/services/official_alerts/data/README.md`.
 
 ### Genehmigte Antraege
 
@@ -299,6 +303,7 @@ das wird hier nachgeholt. Zugleich wechselt der Bezugsweg.
 |-------|--------|-----------|
 | Amtliche Warnungen AT/IT (Ereignis, Warnstufe, Gefahrenart, Gueltigkeit, Gebiet) | approved | Quelle: `feeds.meteoalarm.org/api/v1/warnings/feeds-<land>`, ohne Auth, **ohne Mengenbegrenzung**, ein Abruf je Land und Auffrischung |
 | Amtliche Warnungen CH (MeteoSchweiz, Issue #1442 S1) | **PENDING** (Freigabe mit Spec `feat_1442_s1_meteoalarm_ch.md`) | Gleicher Feed-Weg: `feeds.meteoalarm.org/api/v1/warnings/feeds-switzerland`, ohne Auth, kontingentfrei, kein neuer Host. **Kein** Tagesbudget, **kein** EDR (`api.meteoalarm.org`) — beides mit #2266 zurueckgebaut; nur 30-min-Cache (1800 s / 60 s). Zuordnung per Punkt-in-Polygon gegen die Gemeinde-Umrisse des Feeds (kein Geocode), Zustaendigkeit lokal ueber die SLF-Regionspolygone |
+| Amtliche Warnungen NO/SE/FI (MET Norway, SMHI, FMI, Issue #1442 S2) | **PENDING** (Freigabe mit Spec `feat_1442_s2_meteoalarm_nordics.md`) | Gleicher Feed-Weg: `feeds.meteoalarm.org/api/v1/warnings/feeds-norway` / `-sweden` / `-finland`, ohne Auth, kontingentfrei, kein neuer Host, kein Tagesbudget (Ticket-AC-2 gegenstandslos), nur 30-min-Cache (1800 s / 60 s). NO/SE: Punkt-in-Polygon gegen die Feed-Polygone, Zustaendigkeit lokal ueber aufgeweitete Natural-Earth-Landesumrisse (gemeinfrei). FI: `EMMA_ID` gegen eingecheckte MeteoAlarm-Zonengeometrie (`geocodes.json`, Lizenz ungeklaert) — kein Laufzeitzugriff auf FMI |
 | Zonen-Geometrie (Punkt-in-Flaeche) | approved | IT ueber eingecheckte DPC-Zonen, AT ueber die Gemeindenummer aus der ohnehin abgerufenen ZAMG-Antwort — keine zusaetzlichen Abrufe |
 | `api.meteoalarm.org` (EDR-Index, authentifiziert) | **zurueckgebaut** | Mengenbegrenzt und nicht stationaer (durchgelassene Menge sank 138 → 95 → 64). Seit #1445 S3 nicht mehr registriert; mit #2266 zurueckgebaut (EDR-Klasse, Tagesbudget und Egress-Inventar-Eintrag entfernt, Aequivalenz ueber eingefrorene Snapshots im Kern-Test belegt) |
 | CAP-XML / Geometrie-Nachladen (`meteo.fra1.digitaloceanspaces.com`) | **entfallen** | praesigniert, auth-frei, zaehlt nicht gegen ein Kontingent. Wurde nur vom EDR-Weg nachgeladen; mit dessen Rueckbau (#2266) ohne Abruf |

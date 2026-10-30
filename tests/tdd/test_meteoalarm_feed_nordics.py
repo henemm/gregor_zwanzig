@@ -69,9 +69,13 @@ _FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "meteoalarm_fe
 # ── Punkte (per Ray-Cast gegen die aufgezeichneten Feeds 2026-10-30 geprueft) ────────────────
 OSLO = (59.91, 10.75)             # NO: Flomfare gelb (Ostland, 2 Ringe)
 ORANGE_NO = (58.8, 9.4)           # NO: Flomfare ORANGE (Ostland), ausserhalb des gelben Polygons
-BERGEN = (60.39, 5.32)            # NO: Hoeh vannstand gelb + SYNTH-UPDATE (orange)
-STAVANGER = (58.97, 5.73)         # NO: Hoeh vannstand gelb
-BODOE = (67.28, 14.40)            # NO: Kuling gelb
+# Bergen/Stavanger liegen in "Hoeh vannstand"-Gebieten (awareness_type 7, Kuestenereignis). Der
+# geteilte CAP-Mapper verwirft Typ 7 BEWUSST (meteoalarm._DISCARDED_TYPES, gruen festgehalten in
+# test_meteoalarm_cap_mapper.py) -- dort entsteht keine Warnung; beide dienen nur als Randpunkte.
+BERGEN = (60.39, 5.32)            # NO: Hoeh vannstand (Typ 7, verworfen)
+STAVANGER = (58.97, 5.73)         # NO: Hoeh vannstand (Typ 7, verworfen)
+BODOE = (67.28, 14.40)            # NO: Kuling Bodoe-Loedingen gelb + SYNTH-UPDATE (orange); Kuling
+                                  #     Stoett-Hekkingen gelb (versandt 28.10.)
 LOFOTEN = (68.20, 13.60)          # NO: Kuling gelb (Skomvær-Melbu), Hoehenband 0-900 m; SYNTH-CANCEL
 TROMSOE = (69.65, 18.96)          # NO: im Fixture ohne Treffer-Polygon
 LOCH_AUSSEN = (61.85, 9.10)       # NO: synthetisches Lochgebiet, Aussenring
@@ -93,10 +97,12 @@ HELSINKI = (60.17, 24.94)
 # Referenzzeitpunkte (UTC) -- innerhalb der Gueltigkeit der jeweiligen Fixture-Eintraege.
 NOW_NO_OSLO = datetime(2026, 10, 25, 12, 0, tzinfo=timezone.utc)      # Flomfare 24./25.-26.10.
 NOW_NO_LOFOTEN = datetime(2026, 10, 25, 20, 0, tzinfo=timezone.utc)   # Kuling 25.10. 18:00-02:00
-NOW_NO_BERGEN = datetime(2026, 10, 26, 8, 0, tzinfo=timezone.utc)     # Hoeh vannstand 26.10. 06-12
+NOW_NO_STOETT = datetime(2026, 10, 28, 16, 0, tzinfo=timezone.utc)    # Kuling Stoett-Hekkingen,
+                                                                       # versandt 28.10. 15:00Z
 NOW_SE = datetime(2026, 10, 25, 9, 0, tzinfo=timezone.utc)            # SYNTH-GUL/-ORANGE 25.10.
 NOW_FI_LAND1 = datetime(2026, 10, 27, 20, 0, tzinfo=timezone.utc)     # FI032/FI029 (Update)
-NOW_FI_LAND2 = datetime(2026, 10, 27, 23, 0, tzinfo=timezone.utc)     # FI043/FI029 (Alert)
+NOW_FI_LAND2 = datetime(2026, 10, 27, 23, 0, tzinfo=timezone.utc)     # FI043/FI029 (Alert, versandt
+                                                                       # 27.10. 22:00Z)
 NOW_FI_SEE = datetime(2026, 10, 26, 1, 0, tzinfo=timezone.utc)        # FI806 Sturmwarnung
 
 _FEEDS = {"NO": "feed_norway_sample.json", "SE": "feed_sweden_sample.json",
@@ -150,6 +156,18 @@ def _eintrag(feed: dict, suffix: str) -> dict:
 def _infos(alert: dict) -> list:
     info = alert["info"]
     return info if isinstance(info, list) else [info]
+
+
+def _stand_bis(feed: dict, now: datetime) -> dict:
+    """Feed so, wie ein Abruf zum Zeitpunkt ``now`` ihn liefern konnte: ohne Meldungen, die erst
+    NACH ``now`` versandt wurden (die Aufzeichnung vom 30.10. enthaelt z. B. die Kuling-Warnung
+    Stoett-Hekkingen, versandt 28.10., deren Gebiet Lofoten und Bodoe ueberdeckt)."""
+    kopie = copy.deepcopy(feed)
+    kopie["warnings"] = [
+        w for w in kopie["warnings"]
+        if datetime.fromisoformat(w["alert"]["sent"].replace("Z", "+00:00")) <= now
+    ]
+    return kopie
 
 
 def _zeitraum(feed: dict, suffix: str) -> "tuple[datetime, datetime]":
@@ -211,8 +229,11 @@ def test_ac1_feedpfade_und_registrierung_no_se():
     ("NO", "oslo", OSLO, NOW_NO_OSLO, "261025105157.584959", "flood", 2,
      None),
     ("NO", "orange", ORANGE_NO, NOW_NO_OSLO, "261025105157.584960", "flood", 3, None),
-    ("NO", "stavanger", STAVANGER, NOW_NO_BERGEN, "073333.057", None, 2, None),
-    ("NO", "bodoe", BODOE, NOW_NO_LOFOTEN, "072757.041", "wind_gust", 2, None),
+    # Kein Stavanger-Fall: "Hoeh vannstand" ist awareness_type 7 (Kuestenereignis) und wird vom
+    # geteilten Mapper bewusst verworfen (meteoalarm._DISCARDED_TYPES) -- keine App-Warnung.
+    # Bodoe: now NACH dem Versand (28.10. 15:00Z) und in der Gueltigkeit der Kuling-Warnung
+    # Stoett-Hekkingen; Bodoe-Loedingen (25.10.) und ihr SYNTH-UPDATE sind dann abgelaufen.
+    ("NO", "bodoe", BODOE, NOW_NO_STOETT, "20261028145957.067", "wind_gust", 2, None),
     ("SE", "stockholm", STOCKHOLM, NOW_SE, "110179.SYNTH-GUL", "wind_gust", 2, None),
     ("SE", "karlstad", KARLSTAD, NOW_SE, "110147.SYNTH-ORANGE", "wind_gust", 3, None),
 ])
@@ -399,21 +420,24 @@ def test_ac5_cancel_nimmt_die_warnung_zurueck():
     ohne den Cancel ist sie da."""
     _assert_pruefling_aus_diesem_baum()
     assert _quelle("NO").covers(*LOFOTEN) is True
-    ohne_cancel = _ohne_eintrag(_feed("NO"), ".SYNTH-CANCEL")
+    stand = _stand_bis(_feed("NO"), NOW_NO_LOFOTEN)  # ohne die erst 28.10. versandte Meldung
+    ohne_cancel = _ohne_eintrag(stand, ".SYNTH-CANCEL")
     alerts, _ = _abruf("NO", LOFOTEN, NOW_NO_LOFOTEN, feed=ohne_cancel)
     assert len(alerts) == 1, f"Kontrolle: ohne Cancel genau eine Warnung, erhalten {alerts}"
 
-    alerts, unavailable = _abruf("NO", LOFOTEN, NOW_NO_LOFOTEN)
+    alerts, unavailable = _abruf("NO", LOFOTEN, NOW_NO_LOFOTEN, feed=stand)
     assert alerts == [], f"Cancel muss die Warnung zurueckgenommen haben: {alerts}"
     assert unavailable is False
 
 
 def test_ac5_update_ersetzt_die_vorgaengerwarnung_genau_einmal():
-    """AC-5: GIVEN eine gelbe Hoehenwasser-Warnung (Bergen) und ein ``Update`` (orange), das sie
-    per ``references`` ersetzt, WHEN die Warnungen ermittelt werden, THEN erscheint genau EINE
-    Warnung, orange -- die gelbe Vorgaengerin ist ersetzt, nicht zusaetzlich da."""
+    """AC-5: GIVEN eine gelbe Kuling-Warnung (Bodoe-Loedingen) und ein ``Update`` (orange), das
+    sie per ``references`` ersetzt, WHEN die Warnungen ermittelt werden, THEN erscheint genau EINE
+    Warnung, orange -- die gelbe Vorgaengerin ist ersetzt, nicht zusaetzlich da.
+    (Nicht auf "Hoeh vannstand": Kuestenereignisse, Typ 7, verwirft der Mapper bewusst.)"""
     _assert_pruefling_aus_diesem_baum()
-    alerts, unavailable = _abruf("NO", BERGEN, NOW_NO_BERGEN)
+    alerts, unavailable = _abruf("NO", BODOE, NOW_NO_LOFOTEN,
+                                 feed=_stand_bis(_feed("NO"), NOW_NO_LOFOTEN))
     assert len(alerts) == 1, f"genau eine Warnung erwartet: {alerts}"
     assert alerts[0].level == 3
     assert unavailable is False
@@ -430,7 +454,8 @@ def test_ac6_hoehenband_wird_ignoriert():
     bandgebiete = [a for a in _alle_areas(feed) if a.get("ceiling") is not None
                    and a.get("areaDesc") == "Skomvær - Melbu"]
     assert bandgebiete, "Aufbau: Fixture muss das Hoehenband-Gebiet tragen"
-    alerts, _ = _abruf("NO", LOFOTEN, NOW_NO_LOFOTEN, feed=_ohne_eintrag(feed, ".SYNTH-CANCEL"))
+    stand = _stand_bis(_ohne_eintrag(feed, ".SYNTH-CANCEL"), NOW_NO_LOFOTEN)
+    alerts, _ = _abruf("NO", LOFOTEN, NOW_NO_LOFOTEN, feed=stand)
     assert len(alerts) == 1
 
 
@@ -561,7 +586,8 @@ def test_ac10_registrierungsreihenfolge_ch_no_se_vor_dpc():
 
 @pytest.mark.parametrize("art", ["route", "vergleich"])
 @pytest.mark.parametrize("land,punkt,now", [
-    ("NO", BERGEN, NOW_NO_BERGEN),
+    # NO: echte orange Flomfare-Warnung (Typ 12) -- nicht "Hoeh vannstand" (Typ 7, verworfen).
+    ("NO", ORANGE_NO, NOW_NO_OSLO),
     ("SE", KARLSTAD, NOW_SE),
 ])
 def test_ac11_warnung_erreicht_dieselben_kanaele_wie_at(land, punkt, now, art, premium_nutzer):
@@ -618,7 +644,9 @@ def test_ac12_fi_feedpfad_und_registrierung():
 
 
 @pytest.mark.parametrize("name,punkt,now", [
-    ("vaasa_fi029", VAASA, NOW_FI_LAND1),
+    # Vaasa (FI029) steht in Eintrag 4 (bis 22:00Z) UND 5 (versandt/gueltig ab 22:00Z): now nach
+    # dem Versand von Eintrag 5, Eintrag 4 ist dann abgelaufen.
+    ("vaasa_fi029", VAASA, NOW_FI_LAND2),
     ("turku_fi032", TURKU, NOW_FI_LAND1),
     ("mariehamn_fi043", MARIEHAMN, NOW_FI_LAND2),
 ])
@@ -675,8 +703,41 @@ def test_ac12_fi_ausfall_und_ruhige_lage():
 def test_ac12_fi_text_aus_en_gb():
     """AC-7 fuer Finnland: Feed traegt ``fi-FI``/``sv-SE``/``en-GB`` -- der Text kommt aus ``en-GB``."""
     _assert_pruefling_aus_diesem_baum()
-    alerts, _ = _abruf("FI", VAASA, NOW_FI_LAND1)
+    alerts, _ = _abruf("FI", VAASA, NOW_FI_LAND2)  # nach Versand von Eintrag 5 (s. o.)
     assert len(alerts) == 1
-    info = {i["language"]: i for i in _infos(_feed("FI")["warnings"][4]["alert"])}
+    info = {i["language"]: i for i in _infos(_feed("FI")["warnings"][5]["alert"])}
     assert set(info) == {"fi-FI", "sv-SE", "en-GB"}
     assert alerts[0].label == info["en-GB"]["event"]
+
+
+KOTKA = (60.47, 26.95)  # Kuestenort: Landzone FI036 Kymenlaakso UND Seezone FI805
+
+
+@pytest.mark.parametrize("name,punkt,now,level", [
+    ("helsinki_seewarnung_fi806", HELSINKI, NOW_FI_SEE, 2),     # Sturm nur FI806 (echt)
+    ("kotka_landwarnung_fi036", KOTKA, NOW_FI_LAND2, 2),        # Landwind nur FI036 (SYNTH)
+])
+def test_ac12_fi_kuestenort_in_land_und_seezone_bekommt_beide_zonen(name, punkt, now, level):
+    """AC-12: GIVEN ein Kuestenort liegt in einer Land- UND einer Seezone, WHEN nur EINE der beiden
+    Zonen gewarnt ist, THEN erscheint die Warnung genau einmal -- egal ob Land- oder Seezone."""
+    _assert_pruefling_aus_diesem_baum()
+    assert _quelle("FI").covers(*punkt) is True
+    alerts, unavailable = _abruf("FI", punkt, now)
+    assert len(alerts) == 1 and alerts[0].level == level, alerts
+    assert unavailable is False
+
+
+def test_ac12_fi_unbekannte_zone_im_feed_meldet_drift(tmp_path, monkeypatch):
+    """Spec Known Limitations: eine Feed-Zone ohne eingecheckte Geometrie (FI804) landet als
+    ``unknown_zone`` im Warn-Journal (Service ``meteoalarm_feed:FI``)."""
+    from services.official_alerts import warn_egress
+
+    journal = tmp_path / "warn.jsonl"
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", journal)
+    feed = _feed("FI")
+    for info in _infos(feed["warnings"][2]["alert"]):
+        info["area"][0]["geocode"].append({"valueName": "EMMA_ID", "value": "FI804"})
+    _abruf("FI", HANKO_SEE, NOW_FI_SEE, feed=feed)
+    zeilen = [json.loads(z) for z in journal.read_text(encoding="utf-8").splitlines()]
+    assert any(z.get("service") == "meteoalarm_feed:FI" and z.get("zone_code") == "FI804"
+               and z.get("drift") == "unknown_zone" for z in zeilen), zeilen

@@ -390,9 +390,16 @@ sind 1:1-Kopien (`warnings[]`), kompakt serialisiert. Synthetische Einträge tra
   0–900 m), Høy vannstand Hordaland und Rogaland, Kuling Bodø–Lødingen, Kuling Støtt–Hekkingen,
   Kansellert kulingvarsel (grün, `Update`).
 - **Synthetisch (4):** `.SYNTH-CANCEL` (Cancel, `references` auf die Lofoten-Kuling, ohne `info`),
-  `.SYNTH-UPDATE` (Update der Hordaland-Warnung, Stufe orange), `.SYNTH-LOCH` (Außen- und Innenring
+  `.SYNTH-UPDATE` (Update der echten Kuling-Warnung Bodø–Lødingen, `references` auf sie, `sent`
+  2026-10-25T09:00Z, Stufe orange; zuvor auf „Høy vannstand" Hordaland abgeleitet — das ist
+  `awareness_type` 7, Küstenereignis, und wird vom geteilten Mapper bewusst verworfen),
+  `.SYNTH-LOCH` (Außen- und Innenring
   im Raum Dovre, Höhenband 900–1800), `.SYNTH-KAPUTT` (an erster Stelle, unlesbare Polygone).
 - Tromsø liegt bewusst in keinem Polygon („Punkt im Land ohne Treffer").
+- **Zeitstand beachten:** Die Aufzeichnung enthält Meldungen verschiedener Versandtage. Die Kuling
+  Støtt–Hekkingen (versandt 2026-10-28T15:00Z) überdeckt Bodø und die Lofoten; Tests mit `now`
+  am 25.10. werten den Feed deshalb über `_stand_bis(feed, now)` aus (nur Meldungen mit
+  `sent <= now`). „Høy vannstand" (Hordaland, Rogaland) ist Typ 7 und erzeugt keine Warnung.
 
 ## `feed_sweden_sample.json` (9 Einträge)
 
@@ -403,7 +410,12 @@ sind 1:1-Kopien (`warnings[]`), kompakt serialisiert. Synthetische Einträge tra
 - **Synthetisch (3), aus echten Einträgen abgeleitet:** `.SYNTH-GUL` (Stockholm, Stufe 2),
   `.SYNTH-ORANGE` (Karlstad, Stufe 3), `.SYNTH-CANCEL` (Cancel auf die Gotland-Meldung).
 
-## `feed_finland_sample.json` (8 Einträge, alle real)
+## `feed_finland_sample.json` (9 Einträge: 8 real, 1 synthetisch)
+
+- **Synthetisch (1, am Ende angehängt, Indizes 0–7 unverändert):** `.SYNTH-KYMENLAAKSO` — Kopie
+  des echten Eintrags 5 (Landwind, 27.10. 22:00Z–28.10. 03:00Z), Gebiet ersetzt durch `FI036`
+  Kymenlaakso. Zweck: Küstenort Kotka liegt in Landzone FI036 UND Seezone FI805; nur die
+  Landzone ist gewarnt (Gegenstück zu Helsinki, wo nur die Seezone FI806 gewarnt ist).
 
 - **Sprachen:** `fi-FI` + `sv-SE` + `en-GB`; **kein Polygon**, nur `geocode` `EMMA_ID`:
   Landzonen `FI029` (Pohjanmaa), `FI032` (Varsinais-Suomi), `FI043` (Ahvenanmaa), Seegebiete
@@ -414,6 +426,7 @@ sind 1:1-Kopien (`warnings[]`), kompakt serialisiert. Synthetische Einträge tra
 
 ## Referenzzeitpunkte der Tests (UTC)
 
-NO Ostland `2026-10-25T12:00Z`, NO Lofoten `2026-10-25T20:00Z`, NO Bergen/Stavanger
-`2026-10-26T08:00Z`, SE `2026-10-25T09:00Z`, FI Land `2026-10-27T20:00Z` / `23:00Z`, FI See
+NO Ostland `2026-10-25T12:00Z`, NO Lofoten/Bodø-Update `2026-10-25T20:00Z`, NO Bodø
+(Støtt–Hekkingen) `2026-10-28T16:00Z`, SE `2026-10-25T09:00Z`, FI Land `2026-10-27T20:00Z`
+(Turku, Eintrag 4) / `23:00Z` (Vaasa, Mariehamn, Eintrag 5 — versandt 22:00Z), FI See
 `2026-10-26T01:00Z`.
