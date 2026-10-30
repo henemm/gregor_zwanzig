@@ -52,6 +52,12 @@ register_official_alert_source(MeteoAlarmFeedSource("DE"))
 # Gewitter-Tie-Break "zuerst registriert gewinnt" (#1427 S2); SLF liefert eine
 # andere Gefahrenart (avalanche_bulletin), Wetterwarnung steht vor der Lawine.
 register_official_alert_source(MeteoAlarmFeedSource("CH"))
+# Issue #1442 S2: NO, SE, FI NACH CH, VOR DpcSource (gleicher Tie-Break). Keine
+# Nationalquelle ueberlappt; an Grenzpunkten liefert jede Quelle nur Warnungen
+# ihres eigenen Feed-Polygons bzw. ihrer EMMA-Zone -- keine Doppelanzeige.
+register_official_alert_source(MeteoAlarmFeedSource("NO"))
+register_official_alert_source(MeteoAlarmFeedSource("SE"))
+register_official_alert_source(MeteoAlarmFeedSource("FI"))
 register_official_alert_source(DpcSource())
 # Issue #1441 (ADR-0089): Lawinen-Lagebericht als LETZTE Quelle -- eigene
 # Gefahrenart `avalanche_bulletin`, konkurriert mit keiner Bestandsquelle;
