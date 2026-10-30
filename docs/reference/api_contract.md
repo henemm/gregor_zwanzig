@@ -4851,7 +4851,7 @@ Funktion in `src/`/`api/` keinen Aufrufer — schreibend ist allein die Go-API.
 
 ## 26) Nutzerprofil und Sprache (Issue #2646, Epic #2644)
 
-Sprache ist Eigenschaft des Nutzers (ADR-0104). `language` wird aus dem Auth-Kontext des angemeldeten Nutzers gelesen und geschrieben, nie über einen Fallback `"default"`. Das Profil liefert `GET /api/auth/profile`; einen Endpunkt `/api/me` gibt es nicht.
+Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. `language` wird aus dem Auth-Kontext des angemeldeten Nutzers gelesen und geschrieben, nie über einen Fallback `"default"`. Das Profil liefert `GET /api/auth/profile`; einen Endpunkt `/api/me` gibt es nicht.
 
 | Stelle | Feld / Verhalten |
 |---|---|
