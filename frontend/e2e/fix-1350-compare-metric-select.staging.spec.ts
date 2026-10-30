@@ -1,3 +1,4 @@
+// gz-eigenstaendig: Quelle der Vergleichs-Auswahlliste ist GET /api/compare/metrics, der Trip liest GET /api/metrics -- der Pool je kind ist in hub-wertebereiche-speichert-selbst.spec.ts geprueft
 // Staging-Validierung — Issue #1350 Teil 2: Compare-Metrik-Auswahlliste bezieht
 // ihre Einträge aus GET /api/compare/metrics statt aus dem statischen
 // Frontend-Import COMPARE_METRIC_DEFS.

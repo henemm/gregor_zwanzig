@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 // Staging-Verifikation Issue #1373 S2 Scheibe B (Speicherformat der
 // Metrik-Auswahl: Größe + Auswertung). Config-Muster identisch zu
-// playwright.compare-metric-order.staging.config.ts: nginx-Basic-Auth =
+// playwright.compare-hourly-metric-order.staging.config.ts: nginx-Basic-Auth =
 // GZ_VALIDATOR_*, App-Login separat über ein dediziertes Setup-Projekt (eigener
 // storageState statt Login pro Testlauf, s.
 // reference_staging_e2e_storagestate_login_rate_limit — 429-Rate-Limit).

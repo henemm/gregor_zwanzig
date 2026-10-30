@@ -169,6 +169,9 @@
 #                                 Vorbedingung: "AC-13 FAIL: eine 'Aus in
 #                                 diesem Kanal'-Gruppe darf im Ortsvergleich
 #                                 nicht entstehen", Expected 0 / Received 2.
+#                                 (Seit #2347 S3d geloescht; die Vorbedingung
+#                                 ist entfallen, Nachfolger je kind:
+#                                 hub-metrik-reihenfolge-ziehen.spec.ts.)
 # Hinweis zum Neuzugang (bewusst, kein Versehen): compare-hub-inline-edit.spec.ts:9
 # nennt `/home/hem/gregor_zwanzig` in einem AUSFUEHRUNGSHINWEIS-Kommentar, nicht
 # im Code -- die Datei liest daraus nichts (anders als
@@ -186,7 +189,8 @@
 # Limitations). Die fuenf begleitenden, bereits bestehenden Compare-E2E-
 # Specs (compare-metric-order, compare-hourly-metric-order,
 # compare-layout-tab-dissolution, compare-hub-fidelity-s8c,
-# compare-editor-fidelity-s8d) bleiben bewusst aussen vor.
+# compare-editor-fidelity-s8d) bleiben bewusst aussen vor. (compare-metric-order
+# seit #2347 S3d geloescht, ersetzt durch hub-metrik-reihenfolge-ziehen.spec.ts.)
 #
 # Aufnahme 2026-09-20 (#2276 S5): compare-versand-speichert-selbst.spec.ts
 # (seit #2347 S3b ersetzt durch hub-versand-speichert-selbst.spec.ts; die unten
@@ -430,6 +434,31 @@
 #             Fallzahl per `npx playwright test --list`: `Total: 535 tests in 72 files`.
 #   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
 #
+# Aufnahme 2026-10-29 (#2347 S3d, Epic #2345 Etappe P6, compare-eigener Rest):
+# hub-editor-autosave-gesten-gate (GG-1..GG-5 je kind, 10 Faelle) und
+# hub-metrik-reihenfolge-ziehen (RO-1/RO-2 je kind, 4 Faelle). Ersetzen die
+# Listenzeile compare-radar-toggle (geloescht; Faelle -> AW-2b vergleich in
+# hub-alarme-wertprops + KS-2 geschaerft, Trip-Haelfte der Vorgabe als Kern-Test)
+# sowie die nie gelisteten compare-editor-autosave, compare-metric-order und
+# feat-1395-s4-conflict-retry.staging (alle geloescht, Zuordnung: Spec
+# feat_2347_s3d_paritaets_e2e.md). Zusaetzlich WS-8 je kind in
+# hub-wertebereiche-speichert-selbst (bereits gelistet).
+#   Filter A: kein waitForTimeout/test.skip/test.fixme/describe.skip/__dirname/
+#             Hauptrepo-Pfad in den fuenf neuen/erweiterten Dateien (grep leer
+#             am Endstand).
+#   Filter B: 3 Zyklen mit je NEU GESTARTETEM isoliertem Stack (ci-stack.sh, Go 8197 /
+#             Py 8107, frische admin.json, --workers=1) ueber hub-alarme-wertprops,
+#             hub-editor-autosave-gesten-gate, hub-metrik-reihenfolge-ziehen,
+#             hub-wertebereiche-speichert-selbst, hub-konfliktschutz-zwei-kontexte:
+#             55/55, 55/55, 55/55 (inkl. global.setup, 2026-10-29); nach der
+#             Schaerfung von GG-2 (Speichern vor dem Verlassen, je kind) erneut
+#             55/55, 55/55, 55/55 (2026-10-30)
+#             -- docs/artifacts/feat-2347-s3d-paritaets-e2e/filter-b-zyklus-{1,2,3}.txt.
+#             Ein Lauf des GESAMTEN Zielverbunds wurde lokal NICHT gefahren;
+#             ERSTE BESTAETIGUNG DURCH DEN CI-HAUPTLAUF AUF DEM PR.
+#             Fallzahl per `npx playwright test --list`: `Total: 549 tests in 73 files`.
+#   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
@@ -442,7 +471,6 @@ e2e/compare-editor-slice3.spec.ts
 e2e/compare-hub-inline-edit.spec.ts
 e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-orte-konfliktschutz-zwei-kontexte.spec.ts
-e2e/compare-radar-toggle.spec.ts
 e2e/compare-stundenverlauf-wertprops.spec.ts
 e2e/design-compliance-group-a.spec.ts
 e2e/design-system-lauf-a.spec.ts
@@ -454,11 +482,13 @@ e2e/gewitter-absolutregel-gesperrt.spec.ts
 e2e/hub-alarme-speichert-selbst.spec.ts
 e2e/hub-alarme-wertprops.spec.ts
 e2e/hub-cross-user-write-block.spec.ts
+e2e/hub-editor-autosave-gesten-gate.spec.ts
 e2e/hub-editor-autosave-user-isolation.spec.ts
 e2e/hub-konfliktschutz-zwei-kontexte.spec.ts
 e2e/hub-kopf-aufbau.spec.ts
 e2e/hub-kopf-bearbeiten.spec.ts
 e2e/hub-list-menu.spec.ts
+e2e/hub-metrik-reihenfolge-ziehen.spec.ts
 e2e/hub-save-chip.spec.ts
 e2e/hub-tab-bar.spec.ts
 e2e/hub-versand-aufbau.spec.ts

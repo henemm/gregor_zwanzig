@@ -1,3 +1,4 @@
+// gz-eigenstaendig: nur der Orte-Tab (Drag, Hinzufuegen-Panel, Entfernen) ist uebrig -- erlaubte Compare-Eigenheit; der Wertebereich-Teil lebt kind-parametrisiert in hub-wertebereiche-wertprops WW-3a/b/c, Etappen-Pendant: hub-save-chip SC-2 und etappen-strip-sortieren.spec.ts
 // E2E (Staging) — Issue #1256 Scheibe 6: Hub-Orte-Tab Drag/Entfernen/
 // Add-Panel + eingebetteter CorridorEditor im Hub-Idealwerte-Tab
 // (AC-14, AC-15, AC-31, AC-32, AC-33, AC-34).

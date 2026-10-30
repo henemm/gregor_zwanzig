@@ -2,7 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import * as fs from 'fs';
 // Staging-Validierung Ortsvergleich-Ausblick (Metrik-Auswahl, Issue #1406
-// Scheibe A). Muster identisch zu compare-metric-order.staging.setup.ts:
+// Scheibe A). Muster identisch zu compare-hourly-metric-order.staging.setup.ts:
 // nginx-Basic-Auth = GZ_VALIDATOR_*, App-Login = GZ_AUTH_* (getrennte Layer),
 // eigener storageState statt Login pro Test (Token-Bucket 30/h).
 const authFile = 'playwright/.auth/staging-compare-outlook.json';

@@ -5,7 +5,8 @@
 // Spec: docs/specs/modules/feat_2347_s3b_paritaets_e2e.md § AC-1, AC-2, AC-9 (VS-1..VS-8)
 //
 // Ersetzt compare-versand-speichert-selbst.spec.ts (#2276 S5, nur Vergleich) und
-// Teile von compare-hub-versand-inline / versand-tab-vergleich / compare-editor-autosave:
+// Teile von compare-hub-versand-inline / versand-tab-vergleich / der Autosave-Spec des
+// Vergleichs (deren Rest seit #2347 S3d in hub-editor-autosave-gesten-gate.spec.ts):
 //   AC-4 Uhrzeit + Reiterwechsel + Alarm          → VS-1 (je kind)
 //   AC-6 412 → „Nochmal speichern"                 → VS-2 (je kind)
 //   AC-7 Uhrzeit + sofort pausieren (Karte)        → VS-3 Kebab (je kind) + VS-3k Karte (vergleich)
@@ -464,7 +465,8 @@ for (const kind of HUB_KINDS) {
 			}
 		});
 
-		// VS-5 (Versand-Hälfte aus Alt compare-editor-autosave AC-6) — fängt:
+		// VS-5 (Versand-Hälfte der alten Vergleichs-Autosave-Spec AC-6; die Punkte-Hälfte
+		// trägt seit #2347 S3d hub-editor-autosave-gesten-gate GG-5) — fängt:
 		// Doppel-Feuer je Aktion bzw. eine zweite Aktion, die nicht gespeichert wird.
 		test(`VS-5 (${kind}): zwei Versand-Aktionen nacheinander (Uhrzeit, dann Abend-Slot) → genau ZWEI PUTs, beide persistent`, async ({
 			page

@@ -1,3 +1,4 @@
+// gz-eigenstaendig: Ausblick-Auswahl des Ortsvergleichs im Hub aus dem Vergleichs-Katalog /api/compare/metrics (Paar-Altform-Normalisierung, Speichern ueber den Hub-Commit); der Trip koppelt den Ausblick an buckets.primary mit Trip-Auto-Save -- Trip-Pendant: trip-outlook-metric-selection.staging.spec.ts, ausblick-erbt-grundauswahl.staging.spec.ts
 // Staging-Validierung — Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl
 // (Issue #1406 Scheibe A). Auswahl-Block auf das gruppierte Muster von #1411
 // gehoben (24 statt 26 Zeilen). Namensregel (CLAUDE.md): Datei nach Verhalten

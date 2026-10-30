@@ -1,3 +1,4 @@
+// gz-eigenstaendig: Stundenverlauf-Steuerung existiert nur im Ortsvergleich (COMPARE_ONLY_SECTIONS in weatherMetricsTabSections.ts, #2346 S3: beim Trip ist die Mail-Haupttabelle selbst die Stundentabelle) -- kein Trip-Pendant moeglich
 // E2E — Issue #2276 Scheibe S6b (Epic #2345): die Stundenverlauf-Bedienflaeche
 // des Ortsvergleichs arbeitet auf reinen WERTPROPS + Rueckrufen statt auf dem
 // Zustandsobjekt `wiz`. Nachweis am Wirkort: Browser.

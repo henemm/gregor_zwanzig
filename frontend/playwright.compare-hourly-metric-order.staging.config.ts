@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 // Staging-Verifikation Issue #1361 Befund 4/5 (Stundenverlauf-Reihenfolge im
 // Ortsvergleich). Config-Muster identisch zu
-// playwright.compare-metric-order.staging.config.ts (#1359): nginx-Basic-Auth
+// playwright.compare-layout-tab-dissolution.staging.config.ts (#1359): nginx-Basic-Auth
 // = GZ_VALIDATOR_*, App-Login separat via dediziertem Setup-Projekt — eigener
 // storageState statt Login pro Testlauf, s.
 // reference_staging_e2e_storagestate_login_rate_limit (429-Rate-Limit).

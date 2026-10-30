@@ -1,3 +1,4 @@
+// gz-eigenstaendig: SMS-Grenzen sind wegabhaengig -- Vergleichs-Briefing 153 (src/output/renderers/channel_layout.py:49), Trip-Briefing 160 (src/output/renderers/trip_report.py:469), Alarm 140 (src/output/renderers/alert/render.py:1100) --, dazu der Abwahl-Hinweis je Kanal-Reiter der Vergleichs-Uebersicht (#2438); Trip-Pendant: kanal-grenzen-und-hinweise.staging.spec.ts
 // E2E (Staging) — Issue #1719 Scheibe 3, AC-6: der Ortsvergleich nennt in
 // drei geteilten Bausteinen ebenfalls die echte Zeichengrenze, keine
 // Wertung — Versand-Abschnitt (VTBriefingChannels, seit #1743 im Reiter

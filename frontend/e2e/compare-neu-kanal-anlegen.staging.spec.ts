@@ -1,3 +1,4 @@
+// gz-eigenstaendig: Anlege-Seite /compare/new mit POST-Weg und channel_active_metrics der transponierten Vergleichs-Uebersicht (Orte = Spalten); Trip-Kanal-Reiter: layout-tab-route.spec.ts und kanal-abwahl-bleibt-reversibel.staging.spec.ts
 // E2E (Staging) — #1703 Scheibe 8: kanal-eigene Metrikauswahl der
 // Vergleichs-Uebersicht auf der ANLEGE-Seite `/compare/new`.
 //

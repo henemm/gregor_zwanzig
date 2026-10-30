@@ -1,3 +1,4 @@
+// gz-eigenstaendig: Kanal-Reiter der transponierten Vergleichs-Uebersicht (Orte = Spalten; E-Mail/Telegram/SMS-Kappung) -- erlaubte Compare-Eigenheit; Trip-Pendant: kanal-grenzen-und-hinweise.staging.spec.ts
 // E2E (Staging) — #1703 Scheibe 8: Bedienung + Kappungs-Aussage der
 // kanal-eigenen Metrikauswahl der Vergleichs-Uebersichtstabelle.
 // ACs: AC-S8-3, AC-S8-5, AC-S8-9, AC-S8-12, AC-S8-13. AC-S8-7/AC-S8-8

@@ -62,7 +62,7 @@ ALTLAST: frozenset[str] = frozenset({
     "feat-1461-s3b2b-compare-kanal-schwelle.spec.ts",
     "issue-1080-compare-new-url.spec.ts",
     "issue-1093-compare-layout-crash.spec.ts",
-    # Regel 2 (Compare-Hub-Reiter ohne Trip-Gegenstueck, Umgehung per Dateiname)
+    # Regel 2: seit S3d kein Eintrag mehr (kanal-grenzen-ortsvergleich traegt den Kopf)
 })
 # Literal, NICHT len(ALTLAST) -- sonst waechst die Obergrenze mit jedem neuen
 # Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken,

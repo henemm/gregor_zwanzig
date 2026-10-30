@@ -204,7 +204,8 @@ Alle neuen Fälle: `for (const kind of HUB_KINDS) test(\`XX-n (${kind}): …\`)`
 ### Fälle
 
 **`hub-alarme-wertprops.spec.ts` (Erweiterung)**
-- **AW-2b (je kind):** Seed **ohne** Auslöser-Feld (`seedHub` ohne `official_warnings` bzw. `radar_alert_enabled`). Reiter Alarme öffnen ⇒ Auslöser zeigt die kind-Vorgabe (route: **an**, vergleich: **aus**, Tabelle „Kind-Kontraste"); `zaehlePuts` bleibt über das Stabilitätsfenster bei 0 (Öffnen speichert nichts); Server-Stand trägt das Feld weiterhin **nicht**.
+- **AW-2b (vergleich, E2E):** Seed **ohne** `radar_alert_enabled`. Reiter Alarme öffnen ⇒ Radar-Alarm zeigt die Vorgabe **aus**; `zaehlePuts` bleibt über das Stabilitätsfenster bei 0 (Öffnen speichert nichts); Server-Stand unverändert.
+- **AW-2b Trip-Hälfte (Kern-Test, PO-Entscheid in /50):** `frontend/src/lib/components/shared/__tests__/alarme_tab_trip_ohne_amtliche_warnungen_zeigt_an_und_speichert_nicht.test.ts` — Trip ohne `official_warnings` ⇒ Auslöser **an**, der Trip-Speicher-Effekt bereitet beim Öffnen keinen Speichervorgang vor (Gegenproben: gespeichertes `enabled=false` bzw. Altfeld `official_alert_triggers_enabled=false` ⇒ aus; echte Geste ⇒ genau ein Speichervorgang). Grund: der Zustand „Feld fehlt" ist für den Trip über die API nicht herstellbar (Neuanlage setzt bewusst `enabled=false`, #1258 AC-4 / PO-Entscheidung F1; PUT ohne Feld lässt es unverändert) — er existiert nur bei Bestandsdaten auf der Platte.
 
 **`hub-konfliktschutz-zwei-kontexte.spec.ts` (Schärfung, S3c-Zusicherungen bleiben)**
 - **KS-2 (je kind):** nach dem Kopf-Umbenennen zusätzlich `page.reload()`, Reiter Alarme öffnen, Auslöser steht auf `AW_SEL[kind].ausloeserNeu` (Anzeige, nicht nur Server-Stand).
@@ -227,7 +228,7 @@ Alle neuen Fälle: `for (const kind of HUB_KINDS) test(\`XX-n (${kind}): …\`)`
 ### Löschreihenfolge in /50
 
 1. Neue/erweiterte Specs schreiben; Trip-Fälle im CI-Stack messen (rot ⇒ Produktlücke, AC-16).
-2. Dreimal grün (Filter B, Zielverbund), `--list`-Fallzahl gegen Zuordnung abgleichen (AW-2b 2, WS-8 2, GG 10, RO 4 = 18 neue Fälle; Altfälle radar 3).
+2. Dreimal grün (Filter B, Zielverbund), `--list`-Fallzahl gegen Zuordnung abgleichen (AW-2b 1, WS-8 2, GG 10, RO 4 = 17 neue E2E-Fälle; Altfälle radar 3).
 3. Mutations-Gegenprobe je kind (Sicherungskopie extern, nur String-Ersetzung, nie `git checkout/stash/reset`).
 4. Erst bei Grün löschen: radar-toggle, editor-autosave, metric-order (+ Setup/Config), feat-1395-s4 (+ Setup/Config); im **selben Commit** `MIGRATED_FILES`, 1273-Config, Wächter, Ratsche.
 5. Köpfe setzen (G2/G3), Kommentar-Zeiger umhängen (G4), ALTLAST + `ALTLAST_MAX` gemeinsam 29 → 14.
@@ -249,7 +250,7 @@ Alle neuen Fälle: `for (const kind of HUB_KINDS) test(\`XX-n (${kind}): …\`)`
 
 ### Automated Tests (TDD RED)
 
-- [ ] Test 1: GIVEN ein Trip bzw. Ortsvergleich ohne gesetzten Alarm-Auslöser WHEN der Reiter Alarme geöffnet wird THEN steht die kind-Vorgabe da und es wird nichts gespeichert (AW-2b).
+- [ ] Test 1: GIVEN ein Trip bzw. Ortsvergleich ohne gesetzten Alarm-Auslöser WHEN der Reiter Alarme geöffnet wird THEN steht die kind-Vorgabe da und es wird nichts gespeichert (AW-2b vergleich als E2E; Trip-Hälfte als Kern-Test, PO-Entscheid in /50).
 - [ ] Test 2: GIVEN ein Hub WHEN der Name im Kopf geändert und neu geladen wird THEN steht der Auslöser weiter auf dem gesetzten Wert (KS-2 geschärft).
 - [ ] Test 3: GIVEN ein Korridor WHEN „Markieren" umgelegt wird THEN genau ein PUT, Stand umgekehrt, kein „Warnen" (WS-8).
 - [ ] Test 4: GIVEN ein Hub WHEN er ohne Geste geöffnet und verlassen wird THEN null PUT (GG-1); WHEN eine Geste und sofort Navigation THEN kein Datenverlust (GG-2); WHEN zwei Gesten bei langsamem Speichern THEN beide landen (GG-3); WHEN Punkte-Geste THEN ein Teilfeld-PUT (GG-4); WHEN zwei Aktionen THEN genau zwei PUTs (GG-5).
@@ -262,7 +263,7 @@ Alle neuen Fälle: `for (const kind of HUB_KINDS) test(\`XX-n (${kind}): …\`)`
 ## Acceptance Criteria
 
 - **AC-1:** (G1, Vorgabe des Alarm-Auslösers) Given ein Wegwerf-Trip und ein Wegwerf-Ortsvergleich, beide **ohne** gesetztes Auslöser-Feld (Amtliche Warnungen bzw. Radar-Alarm) / When der Reiter Alarme geöffnet wird / Then zeigt der Trip den Auslöser „Amtliche Warnungen" **an** und der Ortsvergleich den Radar-Alarm **aus**, das Öffnen löst keinen Speicher-Aufruf aus, und der gespeicherte Stand enthält das Feld weiterhin nicht — für Trip UND Ortsvergleich.
-  - Test: `hub-alarme-wertprops.spec.ts` (AW-2b, 2 Fälle).
+  - Test: `hub-alarme-wertprops.spec.ts` (AW-2b, 1 Fall: vergleich); Trip-Hälfte als Kern-Test `frontend/src/lib/components/shared/__tests__/alarme_tab_trip_ohne_amtliche_warnungen_zeigt_an_und_speichert_nicht.test.ts` (PO-Entscheid in /50: „Feld fehlt" ist für den Trip über die API nicht herstellbar, #1258 AC-4 / F1; Mutation `?? true`-Vorgabe bzw. Speichern beim Öffnen macht ihn rot).
   - Mutation (je kind getrennt): Vorgabe im Reiter umdrehen (Trip `?? true` auf `?? false` in `AlarmeTab.svelte:218-220`; Vergleich Radar-Vorgabe auf an) → AW-2b des kind rot; Reiter speichert beim Öffnen → AW-2b rot (PUT-Zähler > 0).
 - **AC-2:** (G1, Anzeige nach fremdem Speichern) Given ein Hub, in dem der Alarm-Auslöser per Geste umgelegt und gespeichert wurde / When anschließend nur der Name im Kopf geändert und die Seite neu geladen wird / Then trägt der Kopf-Aufruf genau `{ name }`, der Server-Stand den neuen Namen **und** den umgelegten Auslöser, und der Schalter im Reiter Alarme zeigt nach dem Neuladen den umgelegten Wert — für Trip UND Ortsvergleich. Die Datei `compare-radar-toggle.spec.ts` wird erst nach grünem Lauf gelöscht und alle drei Altfälle sind laut Zuordnung gedeckt.
   - Test: `hub-konfliktschutz-zwei-kontexte.spec.ts` (KS-2 geschärft, 2 Fälle), `hub-alarme-wertprops.spec.ts` (AW-2).
@@ -345,3 +346,4 @@ Alle neuen Fälle: `for (const kind of HUB_KINDS) test(\`XX-n (${kind}): …\`)`
 ## Changelog
 
 - 2026-10-29: Initial spec created (S3d, compare-eigener Rest). Entscheidungen am Code: Übersichts-Metrik-Reihenfolge ist geteilt (`WeatherV2Reihenfolge`, beide Kontexte) ⇒ kind-parametrisiert (RO) statt Kopf; Stundenverlauf ist Vergleich-only (`COMPARE_ONLY_SECTIONS`) ⇒ Köpfe, und `compare-stundenverlauf-wertprops` wird **nicht** gelöscht (kein MS-Fall deckt `hourly_metrics`); Radar-Fälle ⇒ AW-2b (Vorgabe) + KS-2 geschärft; Autosave-Fälle ⇒ GG (Trip-Entsprechung Etappen-Reiter) + WS-8; `feat-1395-s4` ⇒ KS-1 geschärft (GET vor Retry, frischer `If-Match`), dann gelöscht; acht `.staging`-Specs ⇒ Köpfe mit wahrer Begründung; veraltete Vorbedingung `wm2-aus-gruppe` = 0 entfernt; ALTLAST 29 → 14, `E2E_MIN_SPECS` erwartet 73 (per Zählung), HAUPT per `--list`.
+- 2026-10-29 (/50, PO-Entscheid): AW-2b (route) als E2E nicht erfüllbar — die Trip-Neuanlage setzt `official_warnings` bewusst auf `enabled=false` (#1258 AC-4 / PO-Entscheidung F1, `internal/handler/trip.go`), ein PUT ohne das Feld lässt es unverändert; „Feld fehlt" gibt es nur bei Bestandsdaten auf der Platte. Trip-Hälfte von AC-1 daher als Kern-Test (`alarme_tab_trip_ohne_amtliche_warnungen_zeigt_an_und_speichert_nicht.test.ts`), AW-2b in der E2E nur vergleich; neue E2E-Fälle 18 → 17. In /50 gemessen (Entscheidung 8): Zielfeld des Ziehens ist beim Trip `display_config.channel_layouts.email` (PUT `…/weather-config`), beim Vergleich `display_config.channel_active_metrics.email` im Register-Format; Trip-Punkte-Geste = Datum der letzten Etappe (die erste Etappe löst die Kaskaden-Rückfrage aus, #1389/#1393).

@@ -9,7 +9,7 @@
 // s. frontend/src/lib/components/ui/SaveIndicator.svelte) — nicht über Text-
 // Matching (i18n/Formulierungs-fragil). Echter Klick-Pfad (Tab-Klick statt
 // goto), keine Mocks. Vorbild: weather-metrics-tab-autosave.spec.ts (#1234) +
-// compare-editor-autosave.spec.ts (#1261).
+// hub-editor-autosave-gesten-gate.spec.ts (#1261, seit #2347 S3d je kind).
 //
 // NICHT lokal/gegen Staging ausgeführt in dieser Phase (GREEN) — reine
 // Struktur-/Lint-Prüfung. Ausführung erfolgt in der Staging-Verifikation:

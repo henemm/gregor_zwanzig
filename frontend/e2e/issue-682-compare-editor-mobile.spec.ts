@@ -1,3 +1,4 @@
+// gz-eigenstaendig: Mobil-Shell des alten Compare-Anlege-Editors (cm-mobile-*, CompareEditor/Wizard auf /compare/new, faellt mit Epic #2345 P7 ersatzlos); Trip-Pendant ist issue-661-trip-new-mobile.spec.ts, Mandantentrennung kind-uebergreifend in hub-cross-user-write-block.spec.ts
 // E2E — Issue #682 (Epic #677, Slice 5/6): Compare-Editor Mobile-Parität (≤899px)
 //
 // Spec: docs/specs/modules/issue_682_compare_editor_mobile.md

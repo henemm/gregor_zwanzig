@@ -23,24 +23,31 @@ const RO_SEL: Record<
 	{
 		seed: Record<string, unknown>;
 		start: [string, string, string];
-		/** Erwartete Reihenfolge nach „dritte Zeile vor die erste ziehen". */
+		/** Erwartete Reihenfolge nach „dritte Zeile vor die erste ziehen" (Zeilen-Kennungen der Karte). */
 		nachZug: [string, string, string];
+		/** Dieselbe Reihenfolge im gespeicherten Zielfeld (Kennungsraum des Servers, fest). */
+		serverNachZug: [string, string, string];
 		panel: string;
 		karte: string;
 	}
 > = {
 	route: {
+		// Metriken OHNE Auffächerung: `temperature` fächert in der Kanal-Karte in vier Zeilen
+		// auf (temperature, _night, _day_low, _day_high) — dann wäre „dritte Zeile" keine Seed-Metrik.
 		seed: {
 			display_config: {
 				metrics: [
-					{ metric_id: 'temperature', enabled: true, bucket: 'primary', order: 0 },
-					{ metric_id: 'wind', enabled: true, bucket: 'primary', order: 1 },
-					{ metric_id: 'precipitation', enabled: true, bucket: 'primary', order: 2 }
+					{ metric_id: 'wind', enabled: true, bucket: 'primary', order: 0 },
+					{ metric_id: 'precipitation', enabled: true, bucket: 'primary', order: 1 },
+					{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 2 }
 				]
 			}
 		},
-		start: ['temperature', 'wind', 'precipitation'],
-		nachZug: ['precipitation', 'temperature', 'wind'],
+		start: ['wind', 'precipitation', 'gust'],
+		nachZug: ['gust', 'wind', 'precipitation'],
+		// Zielfeld Trip (in /50 gemessen, Entscheidung 8): die Kanal-Karte schreibt über
+		// PUT …/weather-config nach `display_config.channel_layouts.email` (aktive Einträge, `order`).
+		serverNachZug: ['gust', 'wind', 'precipitation'],
 		panel: 'weather-metrics-tab',
 		karte: 'weather-metrics-kanal-reihenfolge'
 	},
@@ -48,6 +55,11 @@ const RO_SEL: Record<
 		seed: { display_config: { active_metrics: ['temp_max_c', 'wind_max_kmh', 'sunny_hours_h'] } },
 		start: ['temp_max_c', 'wind_max_kmh', 'sunny_hours_h'],
 		nachZug: ['sunny_hours_h', 'temp_max_c', 'wind_max_kmh'],
+		// Zielfeld Vergleich (in /50 gemessen, Entscheidung 8): die Kanal-Karte (E-Mail) schreibt
+		// `display_config.channel_active_metrics.email` im Register-Format {metric_id, aggregation}
+		// (#1373); `active_metrics` behält die Ausgangsreihenfolge. Kennungen hier fest:
+		// sunny_hours_h = sunshine/sum, temp_max_c = temperature/max, wind_max_kmh = wind/max.
+		serverNachZug: ['sunshine:sum', 'temperature:max', 'wind:max'],
 		panel: 'weather-metrics-tab-vergleich',
 		karte: 'weather-metrics-vergleich-reihenfolge'
 	}
@@ -59,18 +71,20 @@ async function stand(page: Page, kind: HubKind, id: string): Promise<Stand> {
 	return (await res.json()) as Stand;
 }
 
-/** Reihenfolge der aktiven Metriken im gespeicherten Stand (Zielfeld je kind). */
+/** Reihenfolge der E-Mail-Kanal-Auswahl im gespeicherten Stand (Zielfeld je kind, siehe RO_SEL). */
 function gespeicherteReihenfolge(kind: HubKind, s: Stand): string[] {
 	const dc = (s.display_config as Stand | undefined) ?? {};
 	if (kind === 'route') {
-		const metrics = (dc.metrics as Array<{ metric_id: string; enabled?: boolean; order?: number }> | undefined) ?? [];
-		return metrics
-			.filter((m) => m.enabled !== false)
+		const layouts = (dc.channel_layouts as Record<string, unknown> | undefined) ?? {};
+		const email = (layouts.email as Array<{ metric_id: string; enabled?: boolean; order?: number }> | undefined) ?? [];
+		return email
+			.filter((m) => m.enabled === true)
 			.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 			.map((m) => m.metric_id);
 	}
-	const aktiv = (dc.active_metrics as Array<string | { metric_id: string }> | undefined) ?? [];
-	return aktiv.map((m) => (typeof m === 'string' ? m : m.metric_id));
+	const kanal = (dc.channel_active_metrics as Record<string, unknown> | undefined) ?? {};
+	const email = (kanal.email as Array<string | { metric_id: string; aggregation?: string }> | undefined) ?? [];
+	return email.map((m) => (typeof m === 'string' ? m : `${m.metric_id}:${m.aggregation}`));
 }
 
 const zeilen = (karte: Locator) => karte.locator('[data-testid="wm2-reihenfolge-row"]');
@@ -135,7 +149,7 @@ for (const kind of HUB_KINDS) {
 						timeout: 10_000,
 						message: 'RO-1 FAIL: der Server trägt die neue Reihenfolge nicht'
 					})
-					.toEqual(ro.nachZug);
+					.toEqual(ro.serverNachZug);
 
 				// Neuladen zeigt sie unverändert.
 				const nachLaden = await oeffneKarte(page, kind, hub.id);

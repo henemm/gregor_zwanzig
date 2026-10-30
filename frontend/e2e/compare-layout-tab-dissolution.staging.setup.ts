@@ -3,7 +3,7 @@ import { assertNotProdBaseURL } from './prodUrlGuard';
 import * as fs from 'fs';
 // Staging-Auth für die Auflösung des Layout-Reiters im Ortsvergleich
 // (Issue #1360, Scheibe S1a von Epic #1372). Muster identisch zu
-// compare-metric-order.staging.setup.ts:
+// compare-hourly-metric-order.staging.setup.ts:
 //   nginx-Basic-Auth = GZ_VALIDATOR_*, App-Login = GZ_AUTH_* (getrennte Layer),
 //   eigener storageState statt Login pro Test (Token-Bucket 30/h → 429, s.
 //   reference_staging_e2e_storagestate_login_rate_limit).

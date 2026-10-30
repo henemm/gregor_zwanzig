@@ -9,7 +9,7 @@
 // F001 → GG-3 · AC-5 → GG-4 · AC-6 → GG-5 (AC-9/AC-10 → hub-save-chip SC-2/SC-4,
 // AC-14/AC-1 → WS-8, F003 → WS-2/WW-2/WW-3c bereits gedeckt).
 //
-// Kein fester Schlaf und kein waitForTimeout: „kein PUT" ist ein Stabilitätsfenster
+// Kein fester Schlaf: „kein PUT" ist ein Stabilitätsfenster
 // (`bleibtBei`), die Verzögerung des Speicherns ist ein `page.route`-Handler, die zweite
 // Geste startet erst nach `waitForRequest` des ersten PUT (kausal, nicht geraten).
 // Anmeldung über den storageState aus global.setup.ts (Admin-Sitzung), keine Registrierung.
@@ -84,30 +84,50 @@ async function oeffnePunkte(page: Page, kind: HubKind, id: string, anzahl: numbe
 	if (kind === 'vergleich') {
 		await expect(page.getByTestId('hub-orte-row')).toHaveCount(anzahl, { timeout: 10_000 });
 	} else {
+		// Trip: der Etappen-Reiter zeigt das Datumsfeld nur für die AKTIVE Etappe
+		// (EditStagesPanelNew); die Etappen selbst stehen als Karten im Etappen-Streifen.
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
-		await expect(page.getByTestId('stage-date-field')).toHaveCount(anzahl, { timeout: 10_000 });
+		await expect(page.locator('[data-testid="etappen-strip"] [data-testid^="stage-card-"]')).toHaveCount(anzahl, { timeout: 10_000 });
+		await expect(page.getByTestId('stage-date-field')).toHaveCount(1, { timeout: 10_000 });
 	}
 }
 
-/** Erste Punkte-Geste: Trip = Datum der ersten Etappe + blur · Vergleich = ersten Ort entfernen. */
+/** Trip: Etappe im Streifen anwählen, Datum setzen, blur. */
+async function etappenDatum(page: Page, index: number, datum: string): Promise<void> {
+	await page.getByTestId('etappen-strip').getByTestId(`stage-card-${index}`).click();
+	const feld = page.getByTestId('stage-date-field').locator('input[type="date"]');
+	await expect(feld).toHaveValue(TRIP_ZWEI_ETAPPEN.stages[index].date, { timeout: 10_000 });
+	await feld.fill(datum);
+	await feld.blur();
+}
+
+// Trip-Gesten (Produktverhalten, EditStagesPanelNew.handleDateChange, Bug #1389/#1393):
+// Ändert man das Datum einer Etappe, hinter der noch eine datierte Etappe liegt, erscheint
+// die Kaskaden-Rückfrage (`cascade-strip`) und geschrieben wird erst mit der Antwort. Die
+// LETZTE Etappe hat keine Folge-Etappen ⇒ sie speichert sofort. Darum ist die erste
+// Punkte-Geste das Datum der letzten (zweiten) Etappe; die zweite Geste ist das Datum der
+// ersten Etappe samt Antwort „Nur diese Etappe" (die Folge-Etappe behält ihr Datum).
+const TRIP_DATUM_ERSTE_GESTE = '2027-08-20'; // Etappe 2 (vorher 2027-08-02)
+const TRIP_DATUM_ZWEITE_GESTE = '2027-07-30'; // Etappe 1 (vorher 2027-08-01)
+
+/** Erste Punkte-Geste: Trip = Datum der letzten Etappe + blur · Vergleich = ersten Ort entfernen. */
 async function ersteGeste(page: Page, kind: HubKind): Promise<void> {
 	if (kind === 'vergleich') {
 		await page.getByTestId('hub-orte-remove').first().click();
 	} else {
-		const feld = page.getByTestId('stage-date-field').nth(0).locator('input[type="date"]');
-		await feld.fill('2027-08-20');
-		await feld.blur();
+		await etappenDatum(page, 1, TRIP_DATUM_ERSTE_GESTE);
 	}
 }
 
-/** Zweite, unabhängige Geste im selben Reiter: Trip = Datum der zweiten Etappe · Vergleich = nächsten Ort entfernen. */
+/** Zweite, unabhängige Geste im selben Reiter: Trip = Datum der ersten Etappe + „Nur diese Etappe" · Vergleich = nächsten Ort entfernen. */
 async function zweiteGeste(page: Page, kind: HubKind): Promise<void> {
 	if (kind === 'vergleich') {
 		await page.getByTestId('hub-orte-remove').first().click();
 	} else {
-		const feld = page.getByTestId('stage-date-field').nth(1).locator('input[type="date"]');
-		await feld.fill('2027-08-25');
-		await feld.blur();
+		await etappenDatum(page, 0, TRIP_DATUM_ZWEITE_GESTE);
+		const rueckfrage = page.getByTestId('cascade-strip');
+		await expect(rueckfrage, 'Kaskaden-Rückfrage muss erscheinen (Folge-Etappe vorhanden)').toBeVisible({ timeout: 10_000 });
+		await rueckfrage.getByRole('button', { name: 'Nur diese Etappe' }).click();
 	}
 }
 
@@ -165,26 +185,40 @@ for (const kind of HUB_KINDS) {
 			}
 		});
 
-		// GG-2 (Alt AC-8) — fängt: Navigation bricht den laufenden Speichervorgang ab / Flush entfällt.
+		// GG-2 (Alt AC-8) — fängt: Navigation bricht den laufenden Speichervorgang ab / das
+		// Speichern vor dem Verlassen der Seite (beforeNavigate-Flush) entfällt.
+		// Zwei Gesten: die Punkte-Geste (Vergleich: Ort entfernen schreibt SOFORT; Trip: Etappen-
+		// Datum schreibt entprellt) UND eine entprellt speichernde Geste (Versand-Uhrzeit im Reiter
+		// Wetter-Metriken, Entprellung des SaveStatus) — direkt danach wird wegnavigiert. Nur die
+		// entprellte Geste ist beim Verlassen noch ausstehend; sie landet nur, wenn der Hub vor dem
+		// Verlassen speichert (#2347 S3d, Adversary-Gegenprobe F-M10: ohne sie blieb der Flush
+		// des Vergleichs-Hubs unbewacht).
 		test(`GG-2 (${kind}): Punkte-Geste und SOFORT zur Liste → Änderung steht auf dem Server (kein Datenverlust)`, async ({
 			page
 		}) => {
 			const { hub } = await baueAuf(page, kind);
 			try {
 				await oeffnePunkte(page, kind, hub.id, anzahlPunkte(kind));
-				// Echte Race: Geste und sofort wegnavigieren, OHNE auf den PUT zu warten.
 				await ersteGeste(page, kind);
+
+				// Entprellt speichernde Geste, danach SOFORT weg — OHNE auf einen PUT zu warten.
+				await page.locator(`[data-testid="${sel.reiter}-wetter-metriken"]:visible`).first().click();
+				const zeit = page.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible');
+				await expect(zeit).toBeVisible({ timeout: 10_000 });
+				await zeit.selectOption('05:00');
 				await page.goto(sel.liste.url);
 
 				await expect
 					.poll(
 						async () => {
 							const s = await stand(page, kind, hub.id);
-							return kind === 'vergleich' ? ortIds(s).length : etappenDaten(s)[0];
+							if (kind === 'vergleich') return [ortIds(s).length, String(s.morning_time).slice(0, 5)];
+							const rc = (s.report_config as Stand | undefined) ?? {};
+							return [etappenDaten(s)[1], String(rc.morning_time).slice(0, 5)];
 						},
-						{ timeout: 10_000, message: 'GG-2 FAIL: die Änderung ging trotz sofortiger Navigation verloren' }
+						{ timeout: 10_000, message: 'GG-2 FAIL: eine Änderung ging trotz sofortiger Navigation verloren (kein Speichern vor dem Verlassen)' }
 					)
-					.toBe(kind === 'vergleich' ? 2 : '2027-08-20');
+					.toEqual(kind === 'vergleich' ? [2, '05:00'] : [TRIP_DATUM_ERSTE_GESTE, '05:00']);
 			} finally {
 				await hub.aufraeumen();
 			}
@@ -216,7 +250,7 @@ for (const kind of HUB_KINDS) {
 						},
 						{ timeout: 15_000, message: 'GG-3 FAIL: zweite Änderung während laufendem Speichern ging verloren' }
 					)
-					.toEqual(kind === 'vergleich' ? [orte[2]] : ['2027-08-20', '2027-08-25']);
+					.toEqual(kind === 'vergleich' ? [orte[2]] : [TRIP_DATUM_ZWEITE_GESTE, TRIP_DATUM_ERSTE_GESTE]);
 				await page.unroute(`**${pfad}`);
 			} finally {
 				await hub.aufraeumen();
@@ -245,12 +279,15 @@ for (const kind of HUB_KINDS) {
 					expect(koerper.location_ids, 'GG-4 FAIL: der Körper trägt die verbleibenden Orte nicht').toEqual([orte[1], orte[2]]);
 				} else {
 					expect(Object.keys(koerper), 'GG-4 FAIL: der Körper trägt das Teilfeld `stages` nicht').toContain('stages');
-					expect((koerper.stages as Array<{ date?: string }>)[0].date).toBe('2027-08-20');
+					expect((koerper.stages as Array<{ date?: string }>).map((e) => e.date)).toEqual([
+						TRIP_ZWEI_ETAPPEN.stages[0].date,
+						TRIP_DATUM_ERSTE_GESTE
+					]);
 				}
 
 				const s = await stand(page, kind, hub.id);
 				if (kind === 'vergleich') expect(ortIds(s)).toEqual([orte[1], orte[2]]);
-				else expect(etappenDaten(s)[0]).toBe('2027-08-20');
+				else expect(etappenDaten(s)).toEqual([TRIP_ZWEI_ETAPPEN.stages[0].date, TRIP_DATUM_ERSTE_GESTE]);
 			} finally {
 				await hub.aufraeumen();
 			}
@@ -281,7 +318,7 @@ for (const kind of HUB_KINDS) {
 					expect(ortIds(s), 'GG-5 FAIL: die Punkte-Änderung fehlt im Stand').toEqual([orte[1], orte[2]]);
 					expect(String(s.morning_time), 'GG-5 FAIL: die Versand-Uhrzeit fehlt im Stand').toMatch(/^05:00/);
 				} else {
-					expect(etappenDaten(s)[0], 'GG-5 FAIL: die Punkte-Änderung fehlt im Stand').toBe('2027-08-20');
+					expect(etappenDaten(s)[1], 'GG-5 FAIL: die Punkte-Änderung fehlt im Stand').toBe(TRIP_DATUM_ERSTE_GESTE);
 					const rc = (s.report_config as Stand | undefined) ?? {};
 					expect(String(rc.morning_time), 'GG-5 FAIL: die Versand-Uhrzeit fehlt im Stand').toMatch(/^05:00/);
 				}
