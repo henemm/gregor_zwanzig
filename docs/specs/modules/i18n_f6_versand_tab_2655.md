@@ -46,7 +46,7 @@ Der geteilte Versand-Tab (Trip und Ortsvergleich) ist für englischsprachige Nut
 | `frontend/src/lib/components/shared/versand-tab/nextBriefingText.ts` | MODIFY | Gründe, Wochentage, „wird übersprungen", „wird nachgeholt" |
 | `frontend/src/lib/components/shared/versand-tab/{nextBriefingLoad,naechstesBriefingLader.svelte,channelContactLabel,reportConfigPayload}.ts` | MODIFY | nur Nutzertexte, falls vorhanden (Kommentare und Logik nicht anfassen) |
 | `frontend/src/lib/components/shared/TelegramKurzstilToggle.svelte` | MODIFY | Checkbox-Beschriftung „Telegram im SMS-Kurzstil"; die Hinweise `telegram_kurzstil.hinweis_*` bestehen schon |
-| `frontend/src/lib/i18n/messages/en/<Bereichsdatei der telegram_kurzstil-Schlüssel>.json` | MODIFY | englische Texte der beiden bestehenden Schlüssel `telegram_kurzstil.hinweis_aktiv`, `.hinweis_inaktiv` sicherstellen |
+| `frontend/src/lib/i18n/messages/en/bausteine.json` | MODIFY | englische Texte der beiden bestehenden Schlüssel `telegram_kurzstil.hinweis_aktiv`, `.hinweis_inaktiv` sicherstellen |
 | `frontend/src/lib/i18n/hardcode_allowlist.json` | MODIFY | Einträge `shared/versand-tab`, `shared/TelegramKurzstilToggle`, `shared/versand*`, `shared/VersandTab.svelte` entfernen |
 | `frontend/src/lib/components/shared/versand-tab/__tests__/versand_tab_sprache.test.ts` | CREATE | Versand-Tab de/en, Trip und Vergleich, zwei Nutzer, Golden |
 | `frontend/src/lib/components/shared/versand-tab/__tests__/versand_texte_ohne_wertung_en.test.ts` | CREATE | englische Hinweise ohne wertende Wörter |

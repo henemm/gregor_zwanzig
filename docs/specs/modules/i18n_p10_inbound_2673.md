@@ -51,7 +51,7 @@ Wer unterwegs einen Befehl an Gregor schickt (E-Mail-Antwort, Telegram, Premium-
 | `tests/test_i18n_inbound_katalog_paritaet.py` | CREATE | Schlüssel- und Platzhalterparität des Bereichs `inbound`, Ratsche für die fünf Dateien (AC-8, `# doc-compliance-test`) |
 | `tests/golden/inbound/*.de.txt`, `tests/golden/inbound/*.en.txt` | CREATE | deutsche Golden-Dateien (vor der Umstellung geschrieben) und englische Review-Dateien |
 | `tests/fixtures/i18n_python_allowlist.json` | MODIFY | Einträge der fünf Quelldateien entfernen (Anlage durch P11 Teil 1, #2674) |
-| `tests/tdd/test_befehlsangebot_vollstaendig.py`, `tests/tdd/test_kommandoliste_einzelquelle.py`, `tests/tdd/test_kurzform_befehle_englisch.py`, `tests/test_hilfe_befehle_drift.py`, `tests/tdd/test_befehlsblock_trip_und_vvergleich_mail.py` | MODIFY (nur falls rot) | bestehende Drift-Tests lesen `_COMMAND_SPECS`-Felder per Namen; bleiben grün, weil `beschreibung_de`/`wirkung_en` byte-gleiche Werte behalten |
+| `tests/tdd/test_befehlsangebot_vollstaendig.py`, `tests/tdd/test_kommandoliste_einzelquelle.py`, `tests/tdd/test_kurzform_befehle_englisch.py`, `tests/test_hilfe_befehle_drift.py`, `tests/tdd/test_befehlsblock_trip_und_vergleich_mail.py` | MODIFY (nur falls rot) | bestehende Drift-Tests lesen `_COMMAND_SPECS`-Felder per Namen; bleiben grün, weil `beschreibung_de`/`wirkung_en` byte-gleiche Werte behalten |
 
 ## Estimated Scope
 
@@ -205,7 +205,7 @@ Plural-Beispiel `:2683-2686` (`tage_wort` und die Zeile `Ruhetag eingetragen: +N
 3. Englische Ausgaben derselben Fixture als `*.en.txt` einchecken (Review-Hilfe).
 4. **Token-Wächter:** `tests/test_metric_tokens_eingefroren.py` bleibt grün; P10 berührt weder `metric_catalog.py` noch `col_label`/`compact_label`/`sms_code`.
 5. **Renderer-Commit-Gate:** der Commit an `command_block.py` löst das Gate aus (`src/output/renderers/email/*.py`); vor dem Commit Modus-Matrix-Test und `briefing_mail_validator.py` bzw. `email_spec_validator.py` frisch grün.
-6. **Allowlist:** in `tests/fixtures/i18n_python_allowlist.json` die Pfade `src/services/trip_command_processor.py`, `src/services/inbound_telegram_reader.py`, `src/services/inbound_sms_reader.py`, `src/services/inbound_email_reader.py` und `src/services/trip_selection.py` entfernen. Deutsche Log-Zeilen (Umlaut oder Signalwort, z. B. `inbound_sms_reader.py:204-211, 252, 290, 322, 368, 469, 490, 516`, `inbound_telegram_reader.py:447, 631, 636, 652`, `trip_command_processor.py:1122`) tragen den Zeilenkommentar `# i18n-log` und werden nicht übersetzt (Logs bleiben deutsch).
+6. **Allowlist:** in `tests/fixtures/i18n_python_allowlist.json` die Pfade `src/services/trip_command_processor.py`, `src/services/inbound_telegram_reader.py`, `src/services/inbound_sms_reader.py`, `src/services/inbound_email_reader.py` und `src/services/trip_selection.py` entfernen. Deutsche Log-Zeilen (Umlaut oder Signalwort, z. B. `inbound_sms_reader.py:204-211, 252, 290, 322, 368, 469, 490, 516`, `inbound_telegram_reader.py:447, 631, 636, 652`, `trip_command_processor.py:2679-2681`) tragen den Zeilenkommentar `# i18n-log` und werden nicht übersetzt (Logs bleiben deutsch).
 7. **Mutations-Gegenproben (Adversary):** (a) `self._lang = "de"` fest verdrahten → AC-1 und AC-6 rot; (b) `_m` ohne `self._en`-Zweig → AC-3 rot; (c) `"cancel"` aus `_BARE_KEYWORD_MAP` entfernen → AC-5 rot; (d) ein deutsches Literal in `trip_selection.py` → AC-8 rot.
 
 ## Expected Behavior
