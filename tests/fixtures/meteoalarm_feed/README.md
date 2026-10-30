@@ -430,3 +430,20 @@ NO Ostland `2026-10-25T12:00Z`, NO Lofoten/Bodø-Update `2026-10-25T20:00Z`, NO 
 (Støtt–Hekkingen) `2026-10-28T16:00Z`, SE `2026-10-25T09:00Z`, FI Land `2026-10-27T20:00Z`
 (Turku, Eintrag 4) / `23:00Z` (Vaasa, Mariehamn, Eintrag 5 — versandt 22:00Z), FI See
 `2026-10-26T01:00Z`.
+
+## `feed_spain_sample.json` (13 Einträge: 8 real, 5 synthetisch) — Issue #1442 S3
+
+- **Herkunft:** `https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain` (AEMET, kontingentfrei),
+  Vollabruf 2026-10-30 (97 Einträge, **kein Polygon**, nur `EMMA_ID`; Sprachen `es-ES` + `en-GB`).
+- **Real (8, 1:1):** ES115 Regen gelb (`Update`, Mallorca Nord/Nordost, mit `references`), ES113
+  Regen gelb (Ibiza, abgelaufen), ES225 Regen gelb (`Update`, abgelaufen), ES206 Nebel gelb, ES125–127
+  Regen (Kanaren, `.PRP1…`; nur der erste Eintrag der Gruppe), Wind grün (169 Zonen), Küstenereignis grün
+  (Typ 7, 40 Seezonen), Lawinen grün.
+- **Synthetisch (5, aus dem echten ES115-Eintrag abgeleitet, Kennung `.SYNTH-*`, gültig
+  2026-10-31 00:00Z–23:59Z, versandt 2026-10-30 11:00Z):** `.SYNTH-ES114` (Sierra Tramontana, orange,
+  Regen — GR221), `.SYNTH-ES117` (Sur de Mallorca, gelb, Regen), `.SYNTH-ES874` (Costa Sur de
+  Mallorca, gelb, Wind — Küstenort = Land + See), `.SYNTH-ES233` (Grenzstreifen Hendaye, gelb),
+  `.SYNTH-ES182` (Grenzstreifen Bourg-Madame, gelb). Grund: am Aufzeichnungstag war für Mallorcas
+  GR221-Zonen außer ES115 nichts amtlich gewarnt.
+- **Referenzzeitpunkt der Tests:** `2026-10-31T09:00Z`.
+- **Test 7 (unbekannte Zone `ES999`)** wird im Test aus dem Fixture abgeleitet, nicht eingecheckt.
