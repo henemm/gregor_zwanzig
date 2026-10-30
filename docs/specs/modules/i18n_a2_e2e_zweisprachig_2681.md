@@ -3,7 +3,7 @@ entity_id: i18n_a2_e2e_zweisprachig_2681
 type: module
 created: 2026-10-30
 updated: 2026-10-30
-status: draft
+status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2681, e2e, model-sonnet]
 ---
@@ -14,7 +14,7 @@ tags: [i18n, epic-2644, issue-2681, e2e, model-sonnet]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO-Freigabe 2026-10-30)
 
 ## Purpose
 

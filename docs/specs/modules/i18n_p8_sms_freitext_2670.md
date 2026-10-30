@@ -3,7 +3,7 @@ entity_id: i18n_p8_sms_freitext_2670
 type: module
 created: 2026-10-30
 updated: 2026-10-30
-status: draft
+status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2670, python, docs, model-haiku]
 ---
@@ -14,7 +14,7 @@ tags: [i18n, epic-2644, issue-2670, python, docs, model-haiku]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO-Freigabe 2026-10-30)
 
 ## Purpose
 

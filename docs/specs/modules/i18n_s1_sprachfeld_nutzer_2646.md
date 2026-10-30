@@ -3,7 +3,7 @@ entity_id: i18n_s1_sprachfeld_nutzer_2646
 type: module
 created: 2026-10-30
 updated: 2026-10-30
-status: draft
+status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2646, go, python, model-sonnet]
 ---
@@ -14,7 +14,7 @@ tags: [i18n, epic-2644, issue-2646, go, python, model-sonnet]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO-Freigabe 2026-10-30)
 
 ## Purpose
 
