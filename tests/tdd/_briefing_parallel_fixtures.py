@@ -40,6 +40,7 @@ import threading
 import time
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from datetime import time as dt_time
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -529,8 +530,11 @@ def warn_trip(punkte: list, *, trip_id: Optional[str] = None):
         for i, (lat, lon) in enumerate(punkte)
     ]
     tid = trip_id or f"warn-{uuid.uuid4().hex[:6]}"
+    # Wanduhr-Ratsche (#1709): fester Etappenstart = Ankunft am ersten
+    # Wegpunkt (07:00 Ortszeit, Etappe morgen) -- gehaertet statt eingetragen.
     trip = Trip(id=tid, name="S5-Warnungen",
-                stages=[Stage(id="T1", name="Tag 1", date=tag, waypoints=wps)])
+                stages=[Stage(id="T1", name="Tag 1", date=tag, waypoints=wps,
+                              start_time=dt_time(7, 0))])
     trip.report_config = TripReportConfig(trip_id=tid, send_email=True)
     trip.alert_cooldown_minutes = 0
     return trip
