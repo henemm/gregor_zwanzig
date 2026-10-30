@@ -338,9 +338,10 @@ test('AC-5: compare/new/+page.svelte importiert NICHT mehr CompareWizard (Svelte
 
 // Aktualisiert (Epic #1273 Scheibe S3): /compare/[id]/edit ist seit S3 ein
 // reiner Redirect-Platzhalter auf den Hub (/compare/[id]) und rendert
-// CompareEditor nicht mehr — Muster analog e2e/compare-edit-redirect.spec.ts
-// AC-1 ("die alte CompareEditor-Seite darf nach dem Redirect nicht mehr
-// rendern"), hier als Source-Inspection-Gegenstück.
+// CompareEditor nicht mehr — Muster analog e2e/hub-list-menu.spec.ts LM-1b
+// (#2347 S4, je kind; vormals compare-edit-redirect AC-1: "die alte
+// CompareEditor-Seite darf nach dem Redirect nicht mehr rendern"), hier als
+// Source-Inspection-Gegenstück.
 test('AC-5 (aktualisiert Epic #1273 S3): compare/[id]/edit/+page.svelte importiert CompareEditor NICHT mehr (reiner Redirect-Platzhalter)', () => {
 	assert.ok(existsSync(ROUTE_EDIT), `Route-Datei fehlt: ${ROUTE_EDIT}`);
 	const src = readFileSync(ROUTE_EDIT, 'utf-8');

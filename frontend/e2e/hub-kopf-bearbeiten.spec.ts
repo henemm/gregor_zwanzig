@@ -521,3 +521,82 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 }
+
+// ─── KB-11 (#2347 S4) ──────────────────────────────────────────────────────
+// Ersatz für compare-legacy-fields-survive-save AC-3 (#1268 F003, Go ohne
+// RMW-Schutz) und trip-edit „data integrity". Feldmenge je kind (Kind-Kontraste
+// „KB-11 Bestandsfelder"): Trip weather_config/report_config/display_config/
+// avalanche_regions/aggregation + Etappenzahl, Vergleich hour_from/hour_to/
+// forecast_hours/empfaenger — alle mit NICHT-Default-Werten, sonst wäre ein
+// Nullen unsichtbar. Zusicherung gleich: zwei Kopf-Umbenennungen lassen alles
+// Übrige bitgleich.
+const KB11_BESTAND: Record<HubKind, Stand> = {
+	route: {
+		weather_config: { provider: 'e2e-kb11', extra_flag: true },
+		report_config: {
+			enabled: true,
+			morning_enabled: true,
+			evening_enabled: true,
+			morning_time: '05:30:00',
+			evening_time: '19:15:00'
+		},
+		display_config: { metrics: [{ metric_id: 'snow_depth', enabled: true, bucket: 'primary', order: 0 }] },
+		avalanche_regions: ['AT-07-14'],
+		aggregation: { profile: 'e2e-kb11' },
+		stages: [
+			{ id: 's1', name: 'Tag 1', date: '2027-08-01', waypoints: [{ id: 'a', name: 'a', lat: 42.0, lon: 9.0, elevation_m: 800 }] },
+			{ id: 's2', name: 'Tag 2', date: '2027-08-02', waypoints: [{ id: 'b', name: 'b', lat: 42.1, lon: 9.0, elevation_m: 900 }] }
+		]
+	},
+	vergleich: { hour_from: 10, hour_to: 14, forecast_hours: 72, empfaenger: ['kb11-bestand@example.com'] }
+};
+
+/** Bestandsfelder des kind aus dem Server-Stand (Trip zusätzlich die Etappenzahl). */
+function kb11Felder(kind: HubKind, s: Stand): Stand {
+	const felder = Object.fromEntries(
+		Object.keys(KB11_BESTAND[kind])
+			.filter((k) => k !== 'stages')
+			.map((k) => [k, s[k]])
+	);
+	return kind === 'route' ? { ...felder, etappen: (s.stages as unknown[] | undefined)?.length } : felder;
+}
+
+for (const kind of HUB_KINDS) {
+	test(`KB-11 (${kind}): zwei Umbenennungen im Kopf lassen alle Bestandsfelder bitgleich`, async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const hub = await seedHub(page.request, kind, { extra: { ...START[kind].extra, ...KB11_BESTAND[kind] } });
+		const pfad = hubApiPath(kind, hub.id);
+		try {
+			const vorher = await holeStand(page, kind, hub.id);
+			// Vorbedingung (AC-4): der Seed steht wirklich auf den Nicht-Default-Werten.
+			for (const [k, v] of Object.entries(KB11_BESTAND[kind])) {
+				if (k === 'stages') continue;
+				const meldung = `Vorbedingung: Seed-Feld „${k}" steht nicht auf dem Nicht-Default-Wert`;
+				// Objekte darf der Server um Standardschlüssel ergänzen; Skalare/Listen exakt.
+				if (v && typeof v === 'object' && !Array.isArray(v)) expect(vorher[k], meldung).toMatchObject(v as Stand);
+				else expect(vorher[k], meldung).toEqual(v);
+			}
+			if (kind === 'route') expect((vorher.stages as unknown[]).length, 'Vorbedingung: zwei Etappen').toBe(2);
+			const bestand = kb11Felder(kind, vorher);
+
+			await openHub(page, kind, hub.id);
+			for (const runde of [1, 2]) {
+				const neu = `E2E-GZ-KB11-${runde}-${Date.now()}`;
+				await sicht(page, kind, 'name-edit-toggle').click();
+				await sicht(page, kind, 'name-edit').fill(neu);
+				const put = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad, {
+					timeout: 15_000
+				});
+				await sicht(page, kind, 'name-save').click();
+				expect((await put).ok(), `KB-11: Umbenennung ${runde} scheitert`).toBeTruthy();
+				await expect(ueberschrift(page, kind)).toContainText(neu, { timeout: 5_000 });
+
+				const nachher = await holeStand(page, kind, hub.id);
+				expect(nachher.name, `KB-11: Name nach Umbenennung ${runde}`).toBe(neu);
+				expect(kb11Felder(kind, nachher), `KB-11: Bestandsfelder nach Umbenennung ${runde} nicht bitgleich`).toEqual(bestand);
+			}
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+}

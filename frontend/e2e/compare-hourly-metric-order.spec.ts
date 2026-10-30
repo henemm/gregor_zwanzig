@@ -18,7 +18,8 @@
 //
 // AC-1/AC-2/AC-3 → Hub. AC-4 → Anlege-Seite (`/compare/new`). AC-5 (keine
 // Regression der An/Aus-Auswahl) ist bereits durch
-// compare-layout-tab-dissolution.spec.ts AC-2 abgedeckt (Toggle + PUT) — hier
+// hub-wetter-metriken-speichert-selbst.spec.ts MS-2 + compare-stundenverlauf-wertprops.spec.ts
+// abgedeckt (Toggle + PUT; vormals compare-layout-tab-dissolution AC-2, #2347 S4) — hier
 // nur eine Gegenprobe, dass Ziehen UND Toggle nebeneinander funktionieren.
 //
 // AC-3 KORRIGIERT (Team-Lead-Gegencheck): KEINE Schnittlinie, da der
@@ -330,7 +331,7 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		// Test-Bug (Team-Lead-Fund): `createLocation()` liefert nur die ID
 		// (Promise<string>) — für die Orte-Bibliothek wird hier aber der
 		// ANZEIGENAME zum Anklicken gebraucht. Deshalb direkt `createTestLocation`
-		// (liefert {id, name}), analog compare-layout-tab-dissolution.spec.ts AC-6.
+		// (liefert {id, name}), analog hub-anlegen-ablauf.spec.ts (anlegenPflicht, Orte aus der Bibliothek).
 		const locA = await createTestLocation(page.request, {
 			name: `E2E 1361 New A ${suffix}`,
 			lat: 47.5,
@@ -365,7 +366,7 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		// wetter-metriken` ist ein HUB-Testid (CompareTabs.svelte) — die
 		// Anlege-Seite (CompareNewEditor.svelte) hat keinen solchen Panel-
 		// Wrapper, sie rendert WeatherMetricsTab direkt im `metriken`-Tab-
-		// Zweig. Analog compare-layout-tab-dissolution.spec.ts AC-6: direkt
+		// Zweig. Analog hub-anlegen-ablauf.spec.ts AN-12: direkt
 		// auf der Seite scopen, nicht über einen nicht existierenden Panel-Testid.
 		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
 		const hourly = page.locator('[data-testid="weather-metrics-stundenverlauf"]:visible').first();

@@ -229,7 +229,7 @@ nur mit Begründung im PR.
 ### e2e-Ratsche (umgekehrte Richtung)
 `.github/ci_e2e_specs.txt` ist eine **Positivliste** und darf nur WACHSEN — eine Ausschlussliste würde
 eine grüne Grundmenge voraussetzen, die eine Stichprobenmessung (30,6 % rot) widerlegt hat.
-Stand nach #1771 S3 (2026-08-14): 45 Dateien / 224 Testfälle; **Stand 2026-10-26 (#2347 S1) laut `.github/workflows/ci.yml`: `E2E_MIN_SPECS: 64` Dateien, `E2E_MIN_EXECUTED_HAUPT: 369` Testfälle** (dort ist jeder Zuwachs einzeln kommentiert).
+Stand nach #1771 S3 (2026-08-14): 45 Dateien / 224 Testfälle; **Stand 2026-10-30 (#2347 S4) laut `.github/workflows/ci.yml`: `E2E_MIN_SPECS: 72` Dateien (`grep -c '^e2e/' .github/ci_e2e_specs.txt`), `E2E_MIN_EXECUTED_HAUPT: 609` Testfälle** (per `npx playwright test --list` über die Positivliste ohne `bug-703` gemessen, `Total: 609 tests in 72 files` inkl. `global.setup`; 599 nach Teil A, +8 Ersatzfälle aus Teil D: AN-13, AN-14, AW-5c, SC-1b je kind, +2 aus Teil E: AN-15 je kind; dort ist jeder Zuwachs einzeln kommentiert).
 
 Aufnahme nur nach **Filter A** (strukturell) + **Filter B** (3× hintereinander grün) + **Filter C**
 (die Datei darf beim Laufen keine *versionierte* Datei verändern — 3 Specs schrieben Screenshots ohne
@@ -275,7 +275,17 @@ setzt die Trip/Ortsvergleich-Teilung für E2E-Specs durch, die die Pendant-Sperr
   Scheibenstand (Literal). Rot bei neuem Verstoß außerhalb der
   Liste, bei totem oder inzwischen konformem Eintrag („Eintrag entfernen") und bei Wachstum über
   `ALTLAST_MAX`. Fällt eine Spec weg (z. B. Löschscheibe #2243), muss ihr Eintrag im selben PR raus.
-  #2347 S2–S4 leeren die Liste.
+- **ALTLAST leer (S4, 2026-10-30):** `ALTLAST = frozenset()`, `ALTLAST_MAX = 0`. Acht Altdateien sind
+  gelöscht (Zusicherungen in `hub-anlegen-ablauf`, `hub-liste-seitenrahmen` und den erweiterten
+  `hub-*`-Specs), sechs tragen einen `gz-eigenstaendig:`-Kopf (`compare-new-vorlage`,
+  `issue-1080-compare-new-url`, `compare-layout-tab-dissolution`, `compare-flow-navigation`,
+  `compare-editor-fidelity-s8d`, `compare-hub-fidelity-s8c`). Jede neue Compare-only-Spec ist ab jetzt
+  sofort rot: entweder `HUB_KINDS`-Schleife oder ein Kopf, dessen Begründung **wahr** ist und das
+  Trip-Pendant nennt (ein Kopf ist kein Freibrief; er wird bei jeder Änderung der Datei mitgeprüft).
+- **Dokumentierte Vergleichs-Eigenheit außerhalb des CLAUDE.md-Katalogs:** die Übersicht des
+  Vergleichs-Hubs (Summary-Karten, mobiler Chevron-Stack, Status-Kurzform, Versand-Karte,
+  `CompareTabs.svelte`) hat keinen Gegenpart im Trip-Hub (`trip-detail/HubOverview.svelte`). Ihre Fälle
+  bleiben mit Kopf in `compare-hub-fidelity-s8c`; das Angleichen ist Produktarbeit, Nebenbefund #1199.
 
 Neue Paritäts-Specs nutzen die dünnen Helfer `HubKind`/`HUB_KINDS`/`seedHub`/`openHub`/`hubApiPath`
 (`frontend/e2e/helpers.ts`); Selektor-Unterschiede stehen als `HUB_SEL[kind]` im Spec, nicht im Helfer.

@@ -18,6 +18,7 @@ import {
 	doneTabs,
 	stageDate,
 	progressCount,
+	PROGRESS_STEPS,
 	canSave,
 	buildCreateTripPayload,
 	type CreateTripState,
@@ -385,14 +386,27 @@ describe('AC-1 (S2a, Kette nach S3): Wetter-Metriken → Wertebereiche → Alarm
 		);
 	});
 
-	test('progressCount: Wertebereiche ist kein eigenes Segment', () => {
+	// #2347 S4 (AN-2, AC-20) löst die alte Invariante „Wertebereiche ist kein
+	// eigenes Segment" ab: Trip und Vergleich zählen dieselben fünf Pflicht-
+	// Schritte der Anlege-Kette (ohne den optionalen „Wegpunkte prüfen").
+	test('progressCount: Wertebereiche ist ein eigenes Segment, Wegpunkte (optional) nicht', () => {
 		const ohneWb = new Set([...ALLE_SCHRITTE].filter((t) => t !== 'wertebereiche')) as Set<TabId>;
-		assert.equal(progressCount(ohneWb), progressCount(ALLE_SCHRITTE));
+		assert.equal(progressCount(ohneWb), progressCount(ALLE_SCHRITTE) - 1);
+		const ohneWp = new Set([...ALLE_SCHRITTE].filter((t) => t !== 'wegpunkte')) as Set<TabId>;
+		assert.equal(progressCount(ohneWp), progressCount(ALLE_SCHRITTE));
+	});
+
+	test('PROGRESS_STEPS: genau die fünf Pflicht-Schritte der Anlege-Kette in Reihenfolge', () => {
+		assert.deepEqual([...PROGRESS_STEPS], ['route', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme']);
 	});
 });
 
 describe('AC-2/AC-6 (S2a): buildCreateTripPayload traegt corridors', () => {
-	test('AC-6: ohne corridors im State → payload.corridors ist exakt [] (nie undefined/null)', () => {
+	// #2347 S4 (AC-20): die Aussage gilt dem Payload-Bau, nicht der Seite — die
+	// Anlege-Seite belegt corridors seit AC-20 ueber den CorridorEditor vor
+	// (buildRoutePrefillRows -> onCorridorsChange -> state.corridors); fehlt der
+	// State trotzdem (z.B. Katalog noch nicht geladen), bleibt es [] statt null.
+	test('AC-6: Payload-Bau ohne corridors im State → payload.corridors ist exakt [] (nie undefined/null)', () => {
 		const p = buildCreateTripPayload(baseTripState()) as { corridors?: unknown };
 		assert.ok('corridors' in p, 'AC-6 FAIL: payload hat kein corridors-Feld — der POST-Body liesse es weg');
 		assert.deepEqual(p.corridors, [], 'AC-6 FAIL: payload.corridors ist nicht []');

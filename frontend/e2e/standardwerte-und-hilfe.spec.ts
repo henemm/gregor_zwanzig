@@ -22,8 +22,8 @@
 //   cd frontend && npx playwright test e2e/standardwerte-und-hilfe.spec.ts --config playwright.config.ts
 
 import { test, expect, type Locator, type Page, type APIRequestContext } from '@playwright/test';
-import * as path from 'node:path';
 import {
+	anlegenPflicht,
 	cleanupTracked,
 	createTestLocation,
 	login,
@@ -33,7 +33,6 @@ import {
 
 const DESKTOP = { width: 1280, height: 900 };
 const MOBILE = { width: 375, height: 812 };
-const GPX = path.resolve('./e2e/fixtures/test-trip.gpx');
 // Issue #1743: kein Anlege-Schritt Versand mehr (Abschnitt im Schritt Wetter-Metriken).
 const TRIP_KETTE = [/Wetter/, /Wertebereiche/, /Alarme/];
 const VERGLEICH_KETTE = ['wetter-metriken', 'wertebereiche', 'alarme'] as const;
@@ -66,26 +65,9 @@ function tripTab(page: Page, mobil: boolean, name: RegExp): Locator {
 	return leiste.getByRole('tab', { name });
 }
 
-/** /trips/new: Name, Startdatum, je Etappe eine GPX (Pflichtangaben). */
+/** /trips/new: Name, Startdatum, je Etappe eine GPX (Pflichtangaben) — seit #2347 S4 aus helpers.ts. */
 async function tripPflicht(page: Page, mobil: boolean, name: string, datum: string): Promise<void> {
-	await page.setViewportSize(mobil ? MOBILE : DESKTOP);
-	await page.goto('/trips/new');
-	await expect(async () => {
-		await page.getByTestId(`trip-new-name-input-${mobil ? 'mobile' : 'desktop'}`).fill(name);
-		await (mobil ? page.getByTestId('trip-new-date-input') : page.locator('.tn-desktop input[type="date"]')).fill(datum);
-		await expect(tripTab(page, mobil, /Etappen/)).not.toHaveAccessibleName(/⊘/, { timeout: 500 });
-	}).toPass({ timeout: 10_000 });
-	await tripTab(page, mobil, /Etappen/).click({ force: mobil });
-	const eingaben = page.locator(`${mobil ? '.tn-mobile' : '.tn-desktop'} input[type="file"][accept=".gpx"]`);
-	await expect(eingaben.first()).toBeAttached();
-	let rest = await eingaben.count();
-	while (rest > 0) {
-		const geparst = page.waitForResponse((r) => r.url().includes('/api/gpx/parse'), { timeout: 30_000 });
-		await eingaben.first().setInputFiles(GPX);
-		await geparst;
-		rest -= 1;
-		await expect(eingaben).toHaveCount(rest);
-	}
+	await anlegenPflicht(page, 'route', { name, datum, mobil, viewport: mobil ? MOBILE : DESKTOP });
 }
 
 async function postId(page: Page, pfad: string, aktion: () => Promise<void>): Promise<string> {

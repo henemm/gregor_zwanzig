@@ -176,7 +176,7 @@ test.describe('Issue #682 — Compare-Editor Mobile-Parität', () => {
 		// Kein Aktivieren in einer App-Leiste mehr (Mobile-Shell S2)
 		await expect(page.getByTestId('top-app-bar-activate')).toHaveCount(0);
 		// Vor dem Versand-Reiter gibt es keinen Aktivieren-Knopf — erst dort
-		// sitzt er im Footer (siehe compare-editor-fidelity-s8d AC-15).
+		// sitzt er im Footer (siehe hub-anlegen-ablauf.spec.ts AN-9, je kind; #2347 S4).
 		await expect(page.getByTestId('cm-mobile-activate')).toHaveCount(0);
 	});
 

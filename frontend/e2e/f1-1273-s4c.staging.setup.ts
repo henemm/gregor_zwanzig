@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as fs from 'fs';
 // Staging-Auth für Epic #1273 Slice S4c (E2E-Migration Compare-Hub/Wizard).
-// Analog compare-edit-redirect.staging.setup.ts: nginx-Basic-Auth
+// Analog feat-1256-s2.staging.setup.ts: nginx-Basic-Auth
 // (GZ_VALIDATOR_*) UND App-Login (gz_session via GZ_AUTH_*) sind getrennte
 // Credential-Paare. Die storageState-basierten Tests dieser Slice teilen sich
 // EINEN storageState statt sich pro Test einzuloggen — sonst erschöpft die Suite

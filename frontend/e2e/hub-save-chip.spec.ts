@@ -10,6 +10,8 @@
 //   - trip-hub-kopf-region-aktivitaet.spec.ts AC-11 (Trip) :974 → SC-5,
 //     AC-11 (Vergleich) :1000 → SC-6
 //   Trip-Auslöser nach Vorbild issue-758-save-indicator.spec.ts AC-1 (bleibt bestehen).
+//   #2347 S4 Teil D: compare-flow-navigation F001 (Bestand mit channel_layouts öffnet
+//   ohne Ungespeichert) → SC-1b je kind.
 //
 // Kein fester Schlaf: „null PUTs" (SC-3) wird per `expect.poll` als Stabilitäts-
 // fenster geprüft (statt des festen 2-s-Schlafs des Altfalls, Zuordnung Zeile 33).
@@ -106,6 +108,67 @@ for (const kind of HUB_KINDS) {
 			await expect(chip(page)).toContainText('Gespeichert');
 			// Ohne :visible — ein zweiter, versteckter Chip zählt mit.
 			await expect(chip(page)).toHaveCount(1);
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+
+	// SC-1b — #2347 S4 Teil D: Alt compare-flow-navigation F001 „bestehender Vergleich MIT
+	// gesetzten channel_layouts öffnet ohne Ungespeichert-Anzeige" (Fix-Loop #1256: ein
+	// Katalog-Rewrite der Kanal-Layouts machte den Stand beim bloßen Öffnen schmutzig).
+	// Kein Kind-Kontrast: beide Arten tragen `display_config.channel_layouts` (Trip: echte
+	// Kanal-Auswahl, WeatherMetricsTab.svelte liest sie beim Laden zurück, #1575 S3;
+	// Vergleich: Bestandsfeld, das der Compare-Speicherpfad verwirft, compareEditorSave.ts
+	// #1351). Geöffnet wird der Reiter, der das Feld verarbeitet (Wetter-Metriken mit dem
+	// geteilten LayoutTab) — der Standard-Reiter allein würde den Fehlerweg nie betreten.
+	// Nur die Metrik-Kennung ist katalogbedingt je Art (Trip `gust`, Vergleich `wind_max_kmh`).
+	test(`SC-1b (${kind}): Bestand MIT channel_layouts im Reiter Wetter-Metriken öffnen ⇒ Chip idle, null PUTs, Feld unverändert`, async ({
+		page
+	}) => {
+		await page.setViewportSize(DESKTOP);
+		const metrik = kind === 'route' ? 'gust' : 'wind_max_kmh';
+		const eintrag = [{ metric_id: metrik, enabled: true, bucket: 'primary', order: 0 }];
+		const hub = await seedHub(page.request, kind, {
+			extra: { display_config: { channel_layouts: { email: eintrag, telegram: eintrag, sms: eintrag } } }
+		});
+		try {
+			const vorher = ((await stand(page, kind, hub.id)).display_config as Record<string, unknown> | undefined)
+				?.channel_layouts;
+			expect(
+				Object.keys((vorher as Record<string, unknown> | undefined) ?? {}),
+				'Vorbedingung: der Bestand trägt channel_layouts — sonst prüft SC-1b nichts.'
+			).toEqual(expect.arrayContaining(['email', 'telegram', 'sms']));
+
+			const puts = zaehlePuts(page, hubApiPath(kind, hub.id));
+			await openHub(page, kind, hub.id, { tab: 'wetter-metriken' });
+			await expect(
+				page.locator('[data-testid="layout-tab"]:visible').first(),
+				'SC-1b: der geteilte LayoutTab (Kanal-Umschalter) im Reiter Wetter-Metriken fehlt'
+			).toBeVisible({ timeout: 15_000 });
+			await expect(chip(page)).toBeVisible({ timeout: 10_000 });
+
+			// Stabilitätsfenster statt festem Schlaf (Alt: fester 2,5-s-Schlaf): in dieser Zeit
+			// hätte ein Rewrite-Effekt geschrieben bzw. den Chip umgestellt.
+			let seit = 0;
+			await expect
+				.poll(
+					async () => {
+						const zustand = `${puts.length}|${await chip(page).getAttribute('data-state')}`;
+						if (zustand !== '0|idle') {
+							seit = 0;
+							return zustand;
+						}
+						seit ||= Date.now();
+						return Date.now() - seit >= 2_500 ? 'stabil' : zustand;
+					},
+					{ message: 'SC-1b: Öffnen speichert oder macht den Chip schmutzig', timeout: 12_000, intervals: [200] }
+				)
+				.toBe('stabil');
+			await expect(chip(page)).not.toContainText('Nicht gespeichert');
+
+			const nachher = ((await stand(page, kind, hub.id)).display_config as Record<string, unknown> | undefined)
+				?.channel_layouts;
+			expect(nachher, 'SC-1b: channel_layouts hat sich durch bloßes Öffnen verändert').toEqual(vorher);
 		} finally {
 			await hub.aufraeumen();
 		}
