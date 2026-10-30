@@ -804,10 +804,11 @@ send_one_compare_preset() [scheduler_dispatch_service.py, nach Report-Versand]
 
 **Mandantentrennung:** `AlertStateService(user_id=...)`, `TripAlertService(user_id=...)` laden/speichern strikt unter `data/users/{user_id}/alert_state/` resp. `data/users/{user_id}/radar_alert_throttle.json`.
 
-**Abruf-Baustein (Issue #1539 S1b+S2, 2026-10-08, noch nicht in Produktionspfaden parallel verdrahtet):**
+**Abruf-Baustein (Issue #1539 S1b+S2, 2026-10-08; Verdrahtung: Segment-Wetter, Radar-Zonenpunkte Trip und Ortsvergleich ab S4, 2026-10-30):**
 - *Single-flight* (`src/services/single_flight.py`): parallele Abrufe desselben Schlüssels (Warn-Feeds über `warn_egress.cached_fetch`, Segment-Wetter) teilen sich EINEN Upstream-Abruf; Wartende bedienen ihre eigenen Senken und ihr eigenes Budget-Gate, die Wartefrist ist begrenzt, danach Fail-open-Selbstabruf.
 - *Atomares Budget-`reserve()`*: `forecast_budget.reserve()` (vormals auch `meteoalarm_budget.reserve()`, mit #2266 samt MeteoAlarm-EDR-Klasse zurückgebaut) entscheidet und bucht in EINER Dateisperre (kein Überbuchen bei Parallelität); ein Lock-Timeout ist laut (WARNING + Verlustzähler). `POST /api/_internal/forecast-budget/reserve` nutzt `reserve()`, Antwortform unverändert.
 - *`parallel_fetch`* (`src/services/parallel_fetch.py`): Ergebnisse in Eingabereihenfolge, Teilausfall isoliert, Slot-Semaphore je Provider, Deadline und Timeout unterscheidbar, verschachtelte Aufrufe laufen inline, `contextvars` werden je Aufgabe kopiert. Spec: `docs/specs/modules/feat_1539_s1b_s2_abruf_baustein.md`.
+- *Radar-Abrufe (#1539 S4, 2026-10-30, Spec `docs/specs/modules/feat_1539_s4_radar_parallel.md`):* Trip-Zonenpunkte (ab dem zweiten Punkt) und Ortsvergleich-Orte laufen über `fetch_ordered(provider="open_meteo")`. Je Abruf eine eigene `RadarNowcastService`-Instanz (eigene Flags, geteilter Radar-Cache); Single-flight um den Cache-Miss je Kachel; Open-Meteo-Budget atomar über `reserve()`. `RadarDeadlineExceeded` wird im Hauptfaden neu geworfen (Trip: Radar-Einheit abbrechen; Ortsvergleich: Preset gilt als nicht erreicht, ohne Ausfall-Eintrag). `skipped` (Frist/Zeitüberschreitung) zählt als gescheitert und wird geloggt.
 
 Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`, `docs/specs/_archive/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/modules/issue_883_acute_danger_override.md`, `docs/specs/modules/alarm_eingangsprotokoll.md`
 
