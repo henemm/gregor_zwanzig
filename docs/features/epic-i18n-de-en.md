@@ -1,8 +1,8 @@
 # Epic 2644: Zweisprachigkeit Deutsch/Englisch
 
-**Status:** Geplant (2026-10-30) — Umsetzung durch Agenten, Phase 0 mit Sonnet, Migrationspakete mit Haiku
+**Status:** Geplant (2026-10-30) — Specs geschrieben, warten auf Block-Freigabe; Umsetzung autonom in einer Sitzung (Kern Sonnet, Migration Haiku)
 **Epic Scope:** Web-UI, E-Mail, Telegram, SMS-/Premium-SMS-Freitext, Inbound-Befehle und -Antworten, Go-API-Meldungen, Konto-/Transaktions-Mails sprechen Deutsch **und** Englisch. Die Sprache ist eine Konto-Einstellung (`language`), vorbelegt aus dem Browser. Protokoll-Token, Kurzformen und Eigennamen werden nie übersetzt.
-**Grundsatz:** `docs/adr/0104-zweisprachigkeit-de-en.md` · **Glossar:** `docs/reference/i18n_glossar.md` · **Issues:** Epic #2644 mit 32 Sub-Issues (#2645–#2681)
+**Grundsatz:** `docs/adr/0104-zweisprachigkeit-de-en.md` · **Konventionen (verbindlich, schließt alle Entwurfsfragen):** `docs/features/epic-i18n-de-en-konventionen.md` · **Glossar:** `docs/reference/i18n_glossar.md` · **Issues:** Epic #2644 mit 32 Sub-Issues (#2645–#2681) · **Specs:** `docs/specs/modules/i18n_*.md` (Block-Freigabe, Abschnitt unten)
 **PO-Auftrag:** 2026-10-30 („Erstelle einen Plan, wie du Gregor Zwanzig multilingual erstellst … Umsetzung später durch Agenten mit Haiku, wenn ausreichend"); Rückfragen per `AskUserQuestion` beantwortet (Sprachwahl, Umfang, Technik, Ablage).
 
 ---
@@ -85,6 +85,48 @@ Mail: Header X-GZ-Lang ──> Validatoren bilden Erwartungen aus dem Python-Kat
 **Kritischer Pfad:** S0 → S1 → {S2 → S4 → F…; P1 → PV → P2… → P9b; G1 → G…} → A1 → A2.
 **Parallelität:** drei Worktrees (Frontend, Python, Go) nach Phase 0; Querbezug nur F5/F7 ← P1.
 **Modellwahl:** Sonnet für Kern, Validatoren, Inbound, E2E (10 Pakete); Haiku für 22 Migrationspakete. Adversary (`implementation-validator`) bleibt Sonnet. Haiku scheitert zweimal → Sonnet (Workflow-Regel).
+
+## Spezifikationen und Block-Freigabe (PO-Entscheid 2026-10-30)
+
+Alle 32 Specs liegen vor der Umsetzung in `docs/specs/modules/` (Format `_template.md`, ACs auf Deutsch,
+`created: 2026-10-30`). Der PO gibt sie **einmal im Block** frei: Kommentar `freigabe i18n-specs` im Epic #2644
+oder Häkchen `- [x] Approved` in den Dateien. Die erste Umsetzungs-Sitzung setzt daraufhin in allen Specs
+`- [x] Approved (PO-Freigabe <Datum>)` und `status: approved` in einem Commit. Danach läuft die Umsetzung ohne
+PO-Frage; einzige Unterbrechung ist ein gescheitertes Hard Gate (Konventionen Abschnitt 7).
+
+| Paket | Spec | Paket | Spec |
+|---|---|---|---|
+| S0 #2645 | `i18n_s0_adr_glossar_2645.md` | P2 #2664 | `i18n_p2_briefing_mail_html_2664.md` |
+| S1 #2646 | `i18n_s1_sprachfeld_nutzer_2646.md` | P3 #2665 | `i18n_p3_briefing_compact_plain_2665.md` |
+| S2 #2647 | `i18n_s2_frontend_sprachkern_2647.md` | P4 #2666 | `i18n_p4_vergleichs_mail_2666.md` |
+| S3 #2648 | `i18n_s3_sprachumschalter_konto_2648.md` | P5 #2667 | `i18n_p5_abweichungs_radar_alarme_2667.md` |
+| S4 #2649 | `i18n_s4_ratsche_frontend_2649.md` | P6 #2668 | `i18n_p6_amtliche_warnungen_2668.md` |
+| F1 #2650 | `i18n_f1_auth_routen_2650.md` | P7 #2669 | `i18n_p7_telegram_2669.md` |
+| F2 #2651 | `i18n_f2_hilfe_infobox_2651.md` | P8 #2670 | `i18n_p8_sms_freitext_2670.md` |
+| F3 #2652 | `i18n_f3_home_listen_2652.md` | P9a #2671 | `i18n_p9a_versand_schicht_2671.md` |
+| F4 #2653 | `i18n_f4_konto_admin_nav_2653.md` | P9b #2672 | `i18n_p9b_scheduler_orchestrierung_2672.md` |
+| F5 #2654 | `i18n_f5_wertebereiche_tab_2654.md` | P10 #2673 | `i18n_p10_inbound_2673.md` |
+| F6 #2655 | `i18n_f6_versand_tab_2655.md` | P11 #2674 | `i18n_p11_api_meldungen_ratsche_2674.md` |
+| F7 #2656 | `i18n_f7_alarme_tab_2656.md` | G1 #2675 | `i18n_g1_go_kern_2675.md` |
+| F8 #2657 | `i18n_f8_layout_korridor_2657.md` | G2 #2676 | `i18n_g2_go_handler_auth_2676.md` |
+| F9 #2658 | `i18n_f9_trip_flaechen_2658.md` | G3 #2677 | `i18n_g3_go_handler_fach_2677.md` |
+| F10 #2659 | `i18n_f10_vergleich_flaechen_2659.md` | G4 #2678 | `i18n_g4_go_mails_2678.md` |
+| F11 #2660 | `i18n_f11_bausteine_ts_2660.md` | G5 #2679 | `i18n_g5_ratsche_go_2679.md` |
+| F12 #2661 | `i18n_f12_frontend_abschluss_2661.md` | A1 #2680 | `i18n_a1_doku_2680.md` |
+| P1 #2662 | `i18n_p1_python_kern_metrik_2662.md` | A2 #2681 | `i18n_a2_e2e_zweisprachig_2681.md` |
+| PV #2663 | `i18n_pv_mail_validatoren_2663.md` | | |
+
+## Autonomer Ablauf (PO-Entscheid 2026-10-30: eine Sitzung, Pakete nacheinander)
+
+Vollständig in den Konventionen, Abschnitte 7–9. Kurzfassung:
+
+1. Nächstes Paket = erstes offenes in der **Reihenfolge** unten, dessen Abhängigkeiten geschlossen sind.
+2. Je Paket: `/01-feature <issue>` → `/10-context` → `/20-analyse` → `/30-write-spec` (vorhandene Spec nur validieren) → `/40-tdd` → `/50-implement` (Developer-Agent im Modell des Spec-Kopfs) → `/60-validate` (Adversary Sonnet) → PR/Merge → `/70-deploy` → `/clear`.
+3. Haiku scheitert zweimal → Sonnet. Hard Gate scheitert → Rollback, Kommentar in Paket-Issue und Epic, Halt.
+4. Englische Texte prüft der Adversary gegen das Glossar; kein PO-Review (PO-Entscheid).
+5. Zweiter Staging-Nutzer `en` entsteht autonom per Subadressierung und Register-API; Telegram-Prüfung per Sprach-Umschalten des Testnutzers (Konventionen Abschnitt 6).
+
+**Reihenfolge:** S0 → S1 → S2 → S4 → S3 → P1 → PV → G1 → F1 → F11 → F2 → F3 → F4 → F6 → F8 → F5 → F7 → F9 → F10 → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P9a → P9b → P10 → P11 → G2 → G3 → G4 → G5 → F12 → A1 → A2.
 
 ## Was jedes Haiku-Paket im Briefing braucht
 
