@@ -1730,40 +1730,7 @@ class TripReportSchedulerService:
         # den Senk-/Tombstone-Pfad nach Zustellung.
         official_queries: list = []
         if trip.official_alerts_enabled is not False:
-            seen_coords: set[tuple[float, float]] = set()
-            for sw in segment_weather:
-                if sw.has_error:
-                    continue
-                coord = (
-                    round(sw.segment.start_point.lat, 3),
-                    round(sw.segment.start_point.lon, 3),
-                )
-                if coord in seen_coords:
-                    continue
-                seen_coords.add(coord)
-                try:
-                    from services.official_alerts import (
-                        collect_source_queries, get_official_alerts_with_status,
-                    )
-                    _sink: list = []
-                    with collect_source_queries(_sink):
-                        sw.official_alerts, sw.official_alerts_unavailable = (
-                            get_official_alerts_with_status(
-                                *coord,
-                                window_start=segments[0].start_time,
-                                window_end=segments[-1].end_time,
-                            )
-                        )
-                    official_queries.extend(_briefing_queries(_sink, sw))
-                except Exception:
-                    logger.warning(
-                        "trip_report_scheduler: official_alerts nicht ladbar",
-                        exc_info=True,
-                    )
-                    sw.official_alerts = []
-                    # Issue #1348: unerwarteter Fehler (z.B. Import) -> im Zweifel
-                    # sicherheitsseitig warnen statt schweigen.
-                    sw.official_alerts_unavailable = True
+            official_queries = self._lade_amtliche_warnungen(segment_weather, segments)
 
         # Issue #1113: Schwelle statt binärem Totalausfall (#1012) —
         # _fetch_weather() liefert bei Provider-Fehlern pro Segment einen
@@ -2664,6 +2631,66 @@ class TripReportSchedulerService:
         except Exception:
             logger.warning("Vorwärmen fehlgeschlagen", exc_info=True)
 
+    def _lade_amtliche_warnungen(self, segment_weather, segments) -> list:
+        """#1539 S5: amtliche Warnungen je eindeutigem Segment-Startpunkt
+        parallel (Provider ``official_alerts``). Der Worker liefert nur
+        ``(alerts, unavailable, sink)``; Zuweisung an die Segmente und
+        ``official_queries`` entstehen im Hauptfaden in Koordinatenreihenfolge.
+        Fehler/``skipped`` -> ``[]`` + ``unavailable=True`` (#1348, nie Entwarnung)."""
+        ziele: list = []
+        seen_coords: set[tuple[float, float]] = set()
+        for sw in segment_weather:
+            if sw.has_error:
+                continue
+            coord = (
+                round(sw.segment.start_point.lat, 3),
+                round(sw.segment.start_point.lon, 3),
+            )
+            if coord in seen_coords:
+                continue
+            seen_coords.add(coord)
+            ziele.append((sw, coord))
+
+        official_queries: list = []
+        try:
+            from services.official_alerts import (
+                collect_source_queries, get_official_alerts_with_status,
+            )
+            from services.parallel_fetch import fetch_ordered
+
+            def _abruf(ziel):
+                _sink: list = []
+                with collect_source_queries(_sink):
+                    alerts, unavailable = get_official_alerts_with_status(
+                        *ziel[1],
+                        window_start=segments[0].start_time,
+                        window_end=segments[-1].end_time,
+                    )
+                return alerts, unavailable, _sink
+
+            ergebnisse = [
+                (out.item[0], out.value, out.skipped or out.error)
+                for out in fetch_ordered(
+                    ziele, _abruf, provider="official_alerts",
+                    deadline_at=time_module.monotonic() + FETCH_WEATHER_DEADLINE_SECONDS,
+                )
+            ]
+        except Exception as e:
+            ergebnisse = [(sw, None, e) for sw, _coord in ziele]
+        for sw, wert, grund in ergebnisse:
+            if grund is None:
+                sw.official_alerts, sw.official_alerts_unavailable, _sink = wert
+                official_queries.extend(_briefing_queries(_sink, sw))
+                continue
+            logger.warning(
+                "trip_report_scheduler: official_alerts nicht ladbar (%s)", grund,
+                exc_info=grund if isinstance(grund, BaseException) else None,
+            )
+            sw.official_alerts = []
+            # Issue #1348: unerwarteter Fehler -> sicherheitsseitig warnen.
+            sw.official_alerts_unavailable = True
+        return official_queries
+
     def _fetch_weather(
         self,
         segments: List[TripSegment],
@@ -2970,6 +2997,8 @@ class TripReportSchedulerService:
         failures: set = set()
         horizon_days: Optional[int] = None
         today = trip_local_today(trip, now_utc)
+        # #1539 S5 Phase 1 (seriell, Hauptfaden): Umwandlung + Trip-Fortschreibung.
+        vorbereitet: list = []
         for stage in future_stages[:3]:
             if not is_within_forecast_horizon(stage.date, today):
                 # Fix #1486: war logger.debug — im Betrieb unsichtbar.
@@ -2993,8 +3022,25 @@ class TripReportSchedulerService:
                     )
                     failures.add(OutlookState.UNAVAILABLE)
                     continue
+                vorbereitet.append((stage, segments, trip))
+            except Exception as e:
+                logger.warning(f"Failed to build trend for stage {stage.id}: {e}")
+                failures.add(OutlookState.UNAVAILABLE)
 
-                seg_weather = self._fetch_weather(segments)
+        # Phase 2 (parallel) + Phase 3 (seriell, Etappenreihenfolge).
+        for (stage, _segs, stage_trip), seg_weather, grund in self._abrufe_fuer_etappen(vorbereitet):
+            if isinstance(grund, str):
+                logger.warning(
+                    "Stage %s (%s): kein Ausblick — Abruf nicht abgeschlossen (%s)",
+                    stage.id, stage.date, grund,
+                )
+                failures.add(OutlookState.UNAVAILABLE)
+                continue
+            if grund is not None:
+                logger.warning(f"Failed to build trend for stage {stage.id}: {grund}")
+                failures.add(OutlookState.UNAVAILABLE)
+                continue
+            try:
                 if not seg_weather:
                     # Fix #1486: bisher voellig stumm.
                     logger.warning(
@@ -3003,12 +3049,6 @@ class TripReportSchedulerService:
                     )
                     failures.add(OutlookState.UNAVAILABLE)
                     continue
-
-                # fix-911-visual-table AC-4: Ensemble-Confidence auch für die
-                # Trend-/Ausblick-Etappen berechnen (Hauptpfad macht das in
-                # _enrich_ensemble_for_trip; ohne diesen Schritt blieb
-                # confidence_pct_min None → ACC-Spalte zeigte „–").
-                self._enrich_ensemble_for_trip(trip, seg_weather)
 
                 agg = aggregate_stage(seg_weather)
 
@@ -3037,7 +3077,7 @@ class TripReportSchedulerService:
 
                 # Resolve per-metric sms_threshold from trip display config (AC-2)
                 _sms_thr: dict = {}
-                dc = getattr(trip, "display_config", None)
+                dc = getattr(stage_trip, "display_config", None)
                 if dc is not None:
                     for mc in dc.metrics:
                         if mc.sms_threshold is not None:
@@ -3048,7 +3088,7 @@ class TripReportSchedulerService:
                 # Fenster trennt wie die Gewitter-Vorschau (#1651).
                 from app.day_window import resolve_configured_window
 
-                _rc = getattr(trip, "report_config", None)
+                _rc = getattr(stage_trip, "report_config", None)
                 _win_start, _win_end = resolve_configured_window(
                     getattr(_rc, "day_window_start_hour", None),
                     getattr(_rc, "day_window_end_hour", None),
@@ -3450,6 +3490,8 @@ class TripReportSchedulerService:
             target_date + timedelta(days=1),
             target_date + timedelta(days=2),
         }
+        # #1539 S5 Phase 1 (seriell, Hauptfaden): Umwandlung + Trip-Fortschreibung.
+        vorbereitet: list = []
         for stage in trip.get_future_stages(target_date):
             if stage.date not in wanted:
                 continue
@@ -3462,17 +3504,53 @@ class TripReportSchedulerService:
                     trip = self._last_converted_trip
                 if not segments:
                     continue
-                seg_weather = self._fetch_weather(segments)
-                if not seg_weather:
-                    continue
-                self._enrich_ensemble_for_trip(trip, seg_weather)
-                collected.extend(seg_weather)
+                vorbereitet.append((stage, segments, trip))
             except Exception as e:
                 logger.warning(
                     f"Thunder-forecast fetch failed for stage {stage.id}: {e}"
                 )
+        # Phase 2 (parallel) + Phase 3 (seriell, Etappenreihenfolge).
+        for (stage, _segs, _trip), seg_weather, grund in self._abrufe_fuer_etappen(vorbereitet):
+            if grund is not None:
+                logger.warning(
+                    f"Thunder-forecast fetch failed for stage {stage.id}: {grund}"
+                )
                 continue
+            if seg_weather:
+                collected.extend(seg_weather)
         return collected
+
+    def _abrufe_fuer_etappen(self, vorbereitet: list) -> list:
+        """#1539 S5: gemeinsamer Netzteil von Trend und Gewitter-Fallback.
+
+        ``vorbereitet``: ``(stage, segments, trip)`` je Etappe aus der seriellen
+        Phase 1 (``trip`` = Stand NACH dieser Etappe). Je Etappe laufen
+        ``_fetch_weather`` + ``_enrich_ensemble_for_trip`` parallel (Provider
+        ``open_meteo``, endliche Frist). Liefert in Eingabereihenfolge
+        ``(item, seg_weather | None, grund)``; ``grund`` ist ``None``, die
+        Ausnahme oder der ``skipped``-Grund (``deadline``/``timeout``)."""
+        from contextlib import nullcontext
+
+        from providers.call_log import override_call_source, resolve_call_source
+        from services.parallel_fetch import fetch_ordered
+
+        # Diagnose-Herkunft (#338) HIER aufloesen: der Worker kennt die Frames
+        # `_build_stage_trend`/`render_sms_preview` nicht (Muster S3).
+        quelle = resolve_call_source()
+
+        def _abruf(item):
+            _stage, segments, trip = item
+            with override_call_source(quelle) if quelle != "unbekannt" else nullcontext():
+                seg_weather = self._fetch_weather(segments)
+                if seg_weather:
+                    self._enrich_ensemble_for_trip(trip, seg_weather)
+            return seg_weather
+
+        ergebnisse = fetch_ordered(
+            vorbereitet, _abruf, provider="open_meteo",
+            deadline_at=time_module.monotonic() + FETCH_WEATHER_DEADLINE_SECONDS,
+        )
+        return [(out.item, out.value, out.skipped or out.error) for out in ergebnisse]
 
     def _build_thunder_forecast(
         self,
