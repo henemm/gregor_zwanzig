@@ -436,8 +436,9 @@ NO Ostland `2026-10-25T12:00Z`, NO Lofoten/Bodø-Update `2026-10-25T20:00Z`, NO 
 - **Herkunft:** `https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain` (AEMET, kontingentfrei),
   Vollabruf 2026-10-30 (97 Einträge, **kein Polygon**, nur `EMMA_ID`; Sprachen `es-ES` + `en-GB`).
 - **Real (8, 1:1):** ES115 Regen gelb (`Update`, Mallorca Nord/Nordost, mit `references`), ES113
-  Regen gelb (Ibiza, abgelaufen), ES225 Regen gelb (`Update`, abgelaufen), ES206 Nebel gelb, ES125–127
-  Regen (Kanaren, `.PRP1…`; nur der erste Eintrag der Gruppe), Wind grün (169 Zonen), Küstenereignis grün
+  Regen gelb (Ibiza, abgelaufen), ES225 Regen gelb (`Update`, abgelaufen), ES206 Nebel gelb, ES126
+  Regen gelb (Kanaren, `.PRP1…`; nur der erste Eintrag der Gruppe ES125–127, die Fixture trägt
+  davon nur `ES126`), Wind grün (169 Zonen), Küstenereignis grün
   (Typ 7, 40 Seezonen), Lawinen grün.
 - **Synthetisch (5, aus dem echten ES115-Eintrag abgeleitet, Kennung `.SYNTH-*`, gültig
   2026-10-31 00:00Z–23:59Z, versandt 2026-10-30 11:00Z):** `.SYNTH-ES114` (Sierra Tramontana, orange,

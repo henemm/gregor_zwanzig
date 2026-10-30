@@ -167,10 +167,18 @@ def _quellen_in_registry(land: str) -> list:
 
 # ───────────────────────────── AC-1 (Test 1) ─────────────────────────────────
 
-@pytest.mark.parametrize("name,punkt", [("soller", SOLLER), ("lluc", LLUC), ("sa_calobra", SA_CALOBRA)])
-def test_ac1_gr221_punkte_bekommen_tramontana_warnung(name, punkt):
+@pytest.mark.parametrize("name,punkt,anzahl", [
+    ("soller", SOLLER, 1),
+    # Lluc liegt roh in ES114, aber nur 0,016 Grad von ES116 und 0,041 Grad von ES115 entfernt;
+    # mit der gewollten 0,05-Aufweitung (Spec Punkt 4) trifft es auch ES115/ES116 und bekommt
+    # zusaetzlich die echte gelbe ES115-Warnung (Korrektur Developer, Geometrie-Pruefung S3).
+    ("lluc", LLUC, 2),
+    ("sa_calobra", SA_CALOBRA, 1),
+])
+def test_ac1_gr221_punkte_bekommen_tramontana_warnung(name, punkt, anzahl):
     """AC-1: GIVEN ein GR221-Punkt und eine aktive Warnung fuer ``ES114``, WHEN die amtlichen
-    Warnungen abgerufen werden, THEN erscheint genau diese Warnung mit Stufe, Art und Zeitraum."""
+    Warnungen abgerufen werden, THEN erscheint diese Warnung genau einmal mit Stufe, Art und
+    Zeitraum (Lluc: zusaetzlich genau einmal die echte ES115-Warnung der aufgeweiteten Nachbarzone)."""
     _assert_pruefling_aus_diesem_baum()
     from services.official_alerts import meteoalarm_feed
 
@@ -178,9 +186,16 @@ def test_ac1_gr221_punkte_bekommen_tramontana_warnung(name, punkt):
     assert _quelle().covers(*punkt) is True, "ES-Quelle muss hier zustaendig sein"
     alerts, unavailable = _abruf(punkt)
 
-    assert len(alerts) == 1, f"genau EINE Warnung erwartet, erhalten {alerts}"
-    a = alerts[0]
+    assert len(alerts) == anzahl, f"{anzahl} Warnung(en) erwartet, erhalten {alerts}"
     von, bis = _zeitraum(_feed(), ".SYNTH-ES114")
+    tramontana = [a for a in alerts if a.level == 3 and (a.valid_from, a.valid_to) == (von, bis)]
+    assert len(tramontana) == 1, f"ES114-Warnung genau einmal erwartet: {alerts}"
+    a = tramontana[0]
+    if anzahl == 2:
+        es115_von, es115_bis = _zeitraum(_feed(), "2PRP1311154648")
+        rest = [x for x in alerts if x is not a]
+        assert len(rest) == 1 and rest[0].level == 2, rest
+        assert (rest[0].valid_from, rest[0].valid_to) == (es115_von, es115_bis), rest
     assert a.level == 3 and a.source == "meteoalarm"
     assert a.label, "Ereignisbezeichnung darf nicht leer sein"
     assert a.hazard, "Gefahrenart darf nicht leer sein"
@@ -204,6 +219,11 @@ def test_ac2_kuestenpunkt_land_und_seezone_je_einmal(name, punkt):
     assert len({(a.hazard, a.valid_from, a.valid_to, a.region_label) for a in alerts}) == 2
     assert all(a.level == 2 and a.source == "meteoalarm" for a in alerts)
     assert unavailable is False
+    # Fix-Loop F001: die Quelle SELBST liefert jede Warnung genau einmal -- ohne den
+    # Quellen-Kollaps der Registry (#1086), der ein Doppel sonst verdecken wuerde.
+    direkt = _quelle().fetch(*punkt)
+    assert len(direkt) == 2, f"Quelle direkt: Land + See je EINMAL erwartet, erhalten {direkt}"
+    assert {a.region_label for a in direkt} == {"Sur de Mallorca", "Costa - Sur de Mallorca"}, direkt
 
 
 # ───────────────────────────── AC-3 (Test 3) ─────────────────────────────────
@@ -287,6 +307,28 @@ def test_ac7_unbekannte_zone_im_feed_meldet_drift(tmp_path, monkeypatch):
                and z.get("drift") == "unknown_zone" for z in zeilen), zeilen
 
 
+def test_ac7_drift_je_feed_nur_einmal_im_journal(tmp_path, monkeypatch):
+    """AC-7 (Fix-Loop F003): GIVEN derselbe Feed mit unbekannter Zone ``ES999``, WHEN zwei Punkte
+    (und derselbe Punkt erneut) innerhalb DIESER Feed-Momentaufnahme abgefragt werden, THEN steht
+    ``unknown_zone`` fuer ES999 genau EINMAL im Journal (Drift-Sperre je Land und Feed)."""
+    _assert_pruefling_aus_diesem_baum()
+    from services.official_alerts import warn_egress
+
+    journal = tmp_path / "warn.jsonl"
+    monkeypatch.setattr(warn_egress, "WARN_CALLS_PATH_OVERRIDE", journal)
+    feed = _feed()
+    for info in _infos(_eintrag(feed, ".SYNTH-ES114")):
+        info["area"].append({"areaDesc": "Zona inexistente",
+                             "geocode": [{"valueName": "EMMA_ID", "value": "ES999"}]})
+    _feed_vorbelegen("ES", feed)
+    for punkt in (SOLLER, SA_DRAGONERA, SOLLER):
+        assert _quelle().fetch(*punkt), f"Positivkontrolle: Warnung an {punkt}"
+    zeilen = [json.loads(z) for z in journal.read_text(encoding="utf-8").splitlines()]
+    treffer = [z for z in zeilen if z.get("service") == "meteoalarm_feed:ES"
+               and z.get("zone_code") == "ES999" and z.get("drift") == "unknown_zone"]
+    assert len(treffer) == 1, f"Drift je Feed genau EINMAL erwartet: {zeilen}"
+
+
 # ───────────────────────────── AC-8 (Test 8) ─────────────────────────────────
 
 def test_ac8_text_stammt_aus_en_gb():
@@ -337,6 +379,27 @@ def test_ac10_grenzstreifen_fr_genau_eine_es_warnung(name, punkt):
     alerts, unavailable = _abruf(punkt)
     assert len(alerts) == 1, f"genau EINE ES-Warnung erwartet: {alerts}"
     assert alerts[0].level == 2 and unavailable is False
+    # Fix-Loop F001: direkt an der Quelle (ohne Registry-Kollaps) genau EINE Warnung.
+    direkt = _quelle().fetch(*punkt)
+    assert len(direkt) == 1, f"Quelle direkt: genau EINE ES-Warnung erwartet, erhalten {direkt}"
+
+
+@pytest.mark.parametrize("name,punkt", [("perpignan", PERPIGNAN), ("tanger", TANGER)])
+def test_ac4_direkter_fetch_ausserhalb_meldet_nicht_zustaendig(name, punkt):
+    """AC-4 (Fix-Loop F002): GIVEN ein Punkt ausserhalb Spaniens, WHEN ``fetch()`` der ES-Quelle
+    DIREKT (ohne Registry/``covers()``-Vorfilter) aufgerufen wird, THEN leere Liste, im Sink
+    ``not_covered`` gesetzt und KEIN Ausfall (``failed`` bleibt False) -- auch bei kaputtem Feed."""
+    _assert_pruefling_aus_diesem_baum()
+    from services.official_alerts import warn_egress
+
+    assert _quelle().covers(*SOLLER) is True, "Positivkontrolle"
+    for feed in (_feed(), None):
+        _feed_vorbelegen("ES", feed)
+        with warn_egress.observe_fetch_failure() as status:
+            ergebnis = _quelle().fetch(*punkt)
+        assert ergebnis == []
+        assert status["not_covered"] is True, f"nicht zustaendig muss gemeldet werden: {status}"
+        assert status["failed"] is False, f"kein Ausfallhinweis ausserhalb Spaniens: {status}"
 
 
 def test_ac10_fr_jenseits_des_streifens_nicht_zustaendig():
@@ -391,7 +454,7 @@ def test_ac13_auszug_traegt_id_im_muster_und_mapper_laedt_alle():
     """AC-13: GIVEN der eingecheckte ES-Auszug, WHEN der Zonenweg ihn laedt, THEN traegt jede Zone
     ihre Kennung unter ``properties.id`` (``ES`` + 3 Ziffern), ``code`` fehlt, und der
     ``RegionMapper`` laedt alle Zonen."""
-    from services.region_mapper import RegionMapper
+    from services.official_alerts.region_mapper import RegionMapper
 
     assert _ZONEN_ES.is_file(), f"Zonendatei fehlt: {_ZONEN_ES}"
     daten = json.loads(_ZONEN_ES.read_text(encoding="utf-8"))
