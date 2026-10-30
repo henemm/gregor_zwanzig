@@ -199,7 +199,7 @@ Warn-Abruf; die Obergrenze setzt der `open_meteo`-Slot (3). Echte Nebenläufigke
 - **AC-4:** Given in den Etappen-Abrufen scheitert eine Etappe mit Ausnahme, eine liefert leeres Wetter, und beim
   Warn-Abruf scheitert eine Koordinate / When Trend, Fallback und Warnungen verarbeitet werden / Then entfällt im
   Trend nur die betroffene Etappe und der Zustand wird `UNAVAILABLE` (bleibt wenigstens eine Zeile, gilt `FOUND`),
-  im Fallback bleibt ein Provider-Fehler als Fehler-Platzhalter (`has_error=True`) erhalten wie bisher (kein Verhaltenswechsel; nur Ausnahme oder Fristablauf lassen die Etappe mit Warn-Log entfallen), die Warnung erhält `[]` mit `official_alerts_unavailable=True`
+  im Fallback entfällt die Etappe still mit Warn-Log, die Warnung erhält `[]` mit `official_alerts_unavailable=True`
   (nie Entwarnung), und die Totalausfall-Erkennung des Hauptlaufs verhält sich wie zuvor.
   - Test: `tests/tdd/test_briefing_parallel_fehler.py`; Fehler gezielt je Etappe/Koordinate am Provider-Rand,
     Zustand, Logzeilen und `unavailable`-Flag geprüft; Bestandstests zu #1486 (Ausblick-Zustände) und #1113
