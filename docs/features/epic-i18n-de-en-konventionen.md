@@ -149,6 +149,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, status int, code string,
 ```
 
 - Middleware `middleware.Lang` läuft **nach** Auth, lädt den Nutzer (Store) und legt die Sprache in den Kontext; öffentliche Routen nutzen Cookie/Header.
+- **Ist-Stand Go (Messung Spec G1–G5):** nur 57 deutsche Nutzertexte; rund 416 Fehlerstellen antworten heute schon mit englischen Codes im Feld `error` (`{"error":"invalid credentials"}`). `WriteError` schreibt deshalb übergangsweise `error` (= `code`) und `detail` zusätzlich zu `code`/`message`; Alt-Codes mit Leerzeichen werden snake_case; Suchkette `fehler.` → `auth.fehler.` → `konto.fehler.` → `fach.fehler.`.
 - Jede Fehlerantwort an den Client geht über `WriteError`; `code` ist stabil (snake_case) und wird in `docs/reference/api_contract.md` gelistet; das Frontend übersetzt bekannte Codes selbst (`fehler.code.<code>`), unbekannte zeigt es mit `message`.
 - Mails: Schlüssel je Zeile (`mail.verify.betreff`, `mail.verify.z1` …), **keine** `text/template`-Dateien je Sprache (Paritätstest bleibt einheitlich). Empfängersprache = `user.Lang()`; Admin-Mails an den Betreiber bleiben `de`.
 - Logs bleiben deutsch und tragen bei Umlauten den Zeilenkommentar `// i18n-log`.

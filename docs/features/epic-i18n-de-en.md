@@ -35,7 +35,7 @@ Mail: Header X-GZ-Lang ──> Validatoren bilden Erwartungen aus dem Python-Kat
 |---|---|
 | Frontend | 256 Svelte-Dateien; Katalog #2520 (`frontend/src/lib/i18n`, 112 Schlüssel, nur `de`, 9 Importeure); `app.html` fest `lang="de"`; deutsche Textzeilen: `components/shared/` ≈ 4.800, `compare/` ≈ 1.280, `routes/` ≈ 1.150, `trip-detail/` ≈ 700, `utils`+`stores` ≈ 700, Rest < 300 je Bereich |
 | Python | 535 deutsche Literale in `src/output` + `src/services`; `trip_report_scheduler.py` 171 · `trip_command_processor.py` 146 · `channels/email.py` 122 · `metric_catalog.py` 80 · `alert/official_alerts.py` 79 · `notification_service.py` 78 · `email/html.py` 71; 40× `%d.%m.`; `UserPreferences.language` ungenutzt |
-| Go | 471 deutsche Literale: `handler/` 282 · `mail/` 67 · `store/` 37 · `scheduler/` 30; `model.User` ohne Sprachfeld |
+| Go | Grobmessung 471 Literale mit Umlaut (inkl. Kommentare); Spec-Messung: nur **57 Nutzertexte**, ~416 Fehlerstellen antworten mit englischen Codes (`error`-Feld) — G2/G3 übersetzen überwiegend Codes → Katalog statt deutscher Altexte; `model.User` ohne Sprachfeld |
 | Inbound | #2417: `wort_en`, `kuerzel_bedeutung_en` vorhanden; `self._en` = Kurzform-Kanal |
 | Validatoren | 4 Mail-Validatoren mit 31 deutschen Literal-Erwartungen |
 | Entscheidungen | #94 gestrichen 2026-08-04 („lebt in ADR-0042 weiter"); #2520: eigener Katalog, kein Paraglide (2026-10-07) |
