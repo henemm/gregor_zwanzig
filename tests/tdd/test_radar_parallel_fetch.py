@@ -49,7 +49,7 @@ for _p in (str(ROOT), str(ROOT / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from app.loader import get_briefings_dir, get_data_dir, load_trip  # noqa: E402
+from app.loader import get_briefings_dir, load_trip  # noqa: E402
 from services import alert_log, parallel_fetch, trip_alert  # noqa: E402
 from services import radar_service as radar_service_mod  # noqa: E402
 from services.compare_radar_alert import CompareRadarAlertService  # noqa: E402
@@ -1017,8 +1017,10 @@ def test_ac9_compare_zwei_nutzer_gleichzeitig_getrennt(
 
     faeden = [threading.Thread(target=_lauf, args=(ua, orte_a)),
               threading.Thread(target=_lauf, args=(ub, orte_b))]
-    for f in faeden: f.start()
-    for f in faeden: f.join()
+    for f in faeden:
+        f.start()
+    for f in faeden:
+        f.join()
 
     assert not fehler, f"Thread-Fehler: {fehler!r}"
     assert not [c for c in rand.hauptabrufe() if c["thread"] in aufrufer], (
@@ -1135,8 +1137,10 @@ def test_ac9_trip_zwei_nutzer_gleichzeitig_getrennt(monkeypatch, uhr):
         reset_shared_radar_cache_for_tests()
         with freeze_time(_UHR_GESTELLT):
             faeden = [threading.Thread(target=_lauf, args=(u,)) for u in (ua, ub)]
-            for f in faeden: f.start()
-            for f in faeden: f.join()
+            for f in faeden:
+                f.start()
+            for f in faeden:
+                f.join()
 
         assert not fehler, f"Thread-Fehler: {fehler!r}"
         n_a = len([c for c in rand.hauptabrufe() if c["idx"] < len(soll_a)])
