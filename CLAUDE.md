@@ -1,273 +1,113 @@
 # CLAUDE.md - Gregor Zwanzig
 
-> Diese Datei wird bei **jeder** Modell-Anfrage mitgeladen. Sie enthält nur Entscheidungen und Fakten,
-> die man sonst nicht wissen kann. Detailmechanik von Gates, Ratschen und Betriebsabläufen steht in
-> `docs/reference/` und wird bei Bedarf gelesen — **nicht** hier einpflegen.
+> Wird bei **jeder** Modell-Anfrage mitgeladen: nur Entscheidungen und Fakten, die man sonst nicht wissen kann, je mit Verweis. Detailmechanik steht in `docs/reference/` (Wegweiser `docs/README.md`) und wird bei Bedarf gelesen, **nicht** hier einpflegen. Obergrenze 120 Zeilen / 12 KB (`tests/test_claude_md_budget.py`).
 
 ## Projekt-Ueberblick
 
-**Gregor Zwanzig** ist ein Headless-Service zur Normalisierung von Wetterdaten und Ausgabe als kompakte Reports (SMS <=160 Zeichen, E-Mail mit Tabellen).
+**Gregor Zwanzig** ist ein Headless-Service zur Normalisierung von Wetterdaten und Ausgabe als kompakte Reports (SMS <=160 Zeichen, E-Mail mit Tabellen). Zielgruppe: Weitwanderer (z.B. GR20) mit eingeschraenkter Konnektivitaet. Stack: Python, uv, pytest.
 
-- **Zielgruppe:** Weitwanderer (z.B. GR20), eingeschraenkte Konnektivitaet
-- **Stack:** Python, uv, pytest
-- **Kanäle (vier):** E-Mail · Telegram · SMS · **Premium-SMS** (Garmin inReach, ADR-0049). Signal ist seit 2026-06-06 app-weit entfernt (#610) — kein `SignalOutput`/`signal_text`/`send_signal`, kein `/api/preview/{trip}/signal`; Wiedereinführung müsste neu spezifiziert werden.
-- **🔴 Alle vier Kanäle sind gleichrangig relevant — kein Kanal ersetzt einen anderen.** PO-Vorgabe, mehrfach bekräftigt; Empfangslage vom PO am **2026-09-05 korrigiert**: Die Empfangslage unterwegs ist **unvorhersehbar**. Auf der Hütte eher **WLAN als Satellit** — Satellit braucht freien Himmel und trägt im Gebäude nicht zuverlässig; auf dem Pass normaler Handyempfang, dort sind E-Mail und Telegram relevant und werden gelesen. Die frühere Fassung („auf der Hütte nur Satellit, dort kommt nur Premium-SMS an") war falsch. **Folge:** Weil nicht einmal der Wanderer vorher weiß, welcher Weg gerade trägt, kann es das System erst recht nicht wissen — **jeder Kanal muss jede Frage beantworten können**, nicht in derselben Form, aber mit demselben Inhalt (Epic #2133). Ein „der Nutzer schaltet unterwegs den Kanal um" löst nichts. Wer aus alldem „E-Mail/Telegram sind nachrangig" folgert, liegt falsch. Alarme müssen **alle** Kanäle erreichen (#1701).
-- **Premium-SMS-Reichweite:** als **Versandkanal** im **Trip-Briefing** UND im **Ortsvergleich-Briefing** verdrahtet (#2275). Als **Alarm-Kanal** in **beiden** Flächen (Trip UND Ortsvergleich), für **alle** Alarmarten inklusive Regen-/Radar-Alarme — alles über dieselbe geteilte Kanal-Auflösung (Paritäts-Audit #1533).
-- **Multi-User-Produkt:** mandantenfähig — jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger und Settings. Persistenz pro Nutzer unter `data/users/<user_id>/`. Isolation **konsequent** über `s.WithUser(middleware.UserIDFromContext(r.Context()))` (Go) bzw. `user_id`-Parameter (Python). **PFLICHT bei jedem nutzerbezogenen Endpoint:** echte `user_id` aus Auth-Kontext durchreichen, **niemals** auf `"default"` zurückfallen — das ist ein Cross-User-Datenleck. Jeder neue datenbewegende Endpoint MUSS mit **zwei verschiedenen Nutzern** getestet werden. Es gibt kein systemseitiges „an mich" — „senden" heißt immer „an die konfigurierten Empfänger dieses Nutzers".
+- **Kanäle (vier):** E-Mail · Telegram · SMS · **Premium-SMS** (Garmin inReach, ADR-0049). Signal ist seit 2026-06-06 app-weit entfernt (#610, `docs/adr/0004-signal-channel-removed.md`); Wiedereinführung müsste neu spezifiziert werden.
+- **Alle vier Kanäle sind gleichrangig relevant, kein Kanal ersetzt einen anderen** (PO-Vorgabe). Die Empfangslage unterwegs ist **unvorhersehbar** (PO-Korrektur 2026-09-05: auf der Hütte eher WLAN als Satellit, auf dem Pass normaler Handyempfang). Daher muss **jeder Kanal jede Frage beantworten können**, mit demselben Inhalt (Epic #2133); Alarme erreichen **alle** Kanäle (#1701). Wer „E-Mail/Telegram sind nachrangig" folgert, liegt falsch. Volltext: `docs/adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md`.
+- **Premium-SMS-Reichweite:** als **Versandkanal** im **Trip-Briefing** UND im **Ortsvergleich-Briefing** verdrahtet (#2275); als **Alarm-Kanal** in Trip UND Ortsvergleich für **alle** Alarmarten inkl. Regen-/Radar-Alarme, über dieselbe geteilte Kanal-Auflösung (Paritäts-Audit #1533).
+- **Multi-User-Produkt:** jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger, Settings unter `data/users/<user_id>/`. Isolation über `s.WithUser(middleware.UserIDFromContext(r.Context()))` (Go) bzw. `user_id`-Parameter (Python). **PFLICHT:** echte `user_id` aus dem Auth-Kontext, **niemals** Fallback auf `"default"` (Cross-User-Datenleck). Jeder datenbewegende Endpoint wird mit **zwei verschiedenen Nutzern** getestet. „Senden" heißt immer „an die konfigurierten Empfänger dieses Nutzers", es gibt kein systemseitiges „an mich".
 
 ## Architektur
-
-Verteiltes System, drei Prozesse:
 
 ```
 SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Port 8000)
                         Auth/Store/Scheduler     Provider -> Risk Engine -> Renderer -> Channel
 ```
 
-- **Go-API** (`internal/`, `cmd/`): Auth/Sessions, Mandantentrennung, Persistenz (`data/users/<user_id>/`), Cron-Taktgeber (`internal/scheduler/`, einzige Zeitsteuerung — ruft `POST /api/scheduler/*` des Python-Core auf, der die Fälligkeit je Trip/Vergleich entscheidet und versendet), Proxy zum Python-Core
-- **Python-Core** (`api/`, `src/`): Wetter-Domäne (Provider Open-Meteo + Fallbacks, Risk Engine, Aggregation), alle Kanal-Renderer/-Transporte, Alerts, Inbound-Handler
-- Die Legacy-CLI (`python -m src.app.cli`, Priorität CLI > ENV > config.ini) ist Debug-Werkzeug, nicht der Produktivpfad
+Go-API (`internal/`, `cmd/`): Auth, Mandantentrennung, Persistenz, einziger Cron-Taktgeber (ruft `POST /api/scheduler/*`; der Python-Core entscheidet die Fälligkeit und versendet), Proxy. Python-Core (`api/`, `src/`): Wetter-Domäne, alle Kanal-Renderer/-Transporte, Alerts, Inbound. Die Legacy-CLI `python -m src.app.cli` (Priorität CLI > ENV > config.ini) ist Debug-Werkzeug. Details: `docs/features/architecture.md`.
 
 ## Wichtige Referenzen
 
-| Dokument | Beschreibung |
-|----------|--------------|
-| `docs/features/architecture.md` | Systemarchitektur (Backend + Frontend + Editoren) |
-| `docs/reference/api_contract.md` | Single Source of Truth: DTOs & Datenformate |
-| `docs/reference/operations_playbook.md` | Deploy, Rollback, Staging-Verdicts, Datenmigration |
-| `docs/reference/gates_und_ratschen.md` | **Detailmechanik aller Gates/Ratschen** — bei Blockade hier nachsehen |
-| `docs/reference/mail_validators.md` | Plausibilitäts-Schwellen, Anti-Stale-Mechanik |
-| `docs/reference/decision_matrix.md` | Provider-Ist-Stand (Open-Meteo + Fallback-Kette) |
-| `docs/reference/sms_format.md` | SMS-Wire-Vertrag (SSOT für SMS/Premium-SMS-Tokens) |
-| `docs/reference/renderer_email_spec.md` | E-Mail-Renderer-Vertrag |
-| `docs/reference/telegram_format.md` · `premium_sms_format.md` | Format-Referenz Telegram bzw. Premium-SMS (inReach) |
-| `docs/features/epic-134-cockpit-dashboard.md` | Trip-Cockpit-Startseite |
-| `docs/adr/README.md` | Index der Architektur-Entscheidungen |
-| `docs/README.md` | Wegweiser durch docs/ (Referenz vs. Archiv) |
+| Dokument | Inhalt |
+|---|---|
+| `docs/reference/api_contract.md` | SSOT: DTOs & Datenformate |
+| `docs/reference/operations_playbook.md` | Liefer-Workflow, Deploy, Rollback, Staging, Token-Budget, Betrieb |
+| `docs/reference/gates_und_ratschen.md` | Detailmechanik aller Gates/Ratschen, Test-Politik, Prüfdaten |
+| `docs/reference/workflow_und_agenten.md` | Workflow-Befehle, Agenten-Modelle, Workflow-State, Nebenbefund-Triage, Messaging |
+| `docs/reference/mail_validators.md` | alle Mail-Validatoren, Marker-Header, Schwellen |
+| `docs/reference/sms_format.md` · `telegram_format.md` · `premium_sms_format.md` · `renderer_email_spec.md` | Kanal-Formate |
+| `docs/reference/decision_matrix.md` · `design_system.md` | Provider-Ist-Stand · Design |
+| `docs/adr/README.md` | Architektur-Entscheidungen |
 
-**ADRs:** `docs/adr/` hält die Grundsatzentscheidungen fest — **vor Änderungen an Entscheidungsflächen** (Kanäle, Provider, Datenmodell/Persistenz, Auth, Editor-Paradigma, Test-/Deploy-Strategie) dort nachsehen. Eine dokumentierte Entscheidung wird nie still rückgängig gemacht: Abweichung ⇒ neues ADR (Status „Abgelöst durch"). Index↔Datei-Konsistenz erzwingt `tests/test_adr_index_drift.py`.
+**ADRs:** vor Änderungen an Entscheidungsflächen (Kanäle, Provider, Datenmodell, Auth, Editor-Paradigma, Test-/Deploy-Strategie) `docs/adr/` lesen. Eine Entscheidung wird nie still rückgängig gemacht: Abweichung ⇒ neues ADR („Abgelöst durch"); `tests/test_adr_index_drift.py` erzwingt Index-Konsistenz.
 
-**Specs:** Alle Module brauchen eine Spec vor der Implementierung. Template `docs/specs/_template.md`, Ablage `docs/specs/modules/[entity].md`. Jede Spec `created >= 2026-05-11` braucht `## Acceptance Criteria` mit `**AC-1:** Given.../When.../Then...` (>=30 Zeichen), sonst blockt `workflow_gate` Phase 6.
+**Specs:** jedes Modul braucht eine Spec vor der Implementierung (`docs/specs/_template.md`, Ablage `docs/specs/modules/[entity].md`). Specs `created >= 2026-05-11` brauchen `## Acceptance Criteria` mit `**AC-1:** Given.../When.../Then...` (>=30 Zeichen), sonst blockt `workflow_gate` Phase 6.
 
 ## Workflow
 
-OpenSpec-Workflow mit Adversary Verification (Einstiege: `/00-intake` — auch Bugs starten dort, `/00-bug` gibt es nicht mehr — und `/01-feature`):
+OpenSpec-Workflow (`/00-intake` auch für Bugs, `/01-feature`, dann `/10-context` bis `/70-deploy`); Befehle, Agenten-Modelle, Workflow-State und PO-Pattern: `docs/reference/workflow_und_agenten.md`.
 
-| Command | Purpose | PO-Eingriff |
-|---------|---------|-------------|
-| `/10-context` | Kontext sammeln | — |
-| `/20-analyse` | Request verstehen, Codebase recherchieren | Optional: 3-Satz-Zusammenfassung korrigieren |
-| `/30-write-spec` | Spezifikation erstellen | **Pflicht: ACs auf Deutsch freigeben** (`approved`/`freigabe`) |
-| `/40-tdd-red` | Fehlschlagende Tests schreiben (RED) | Optional: AC-Test-Mapping lesen |
-| `/50-implement` | Implementieren (GREEN) + Adversary | — |
-| `/60-validate` | Validieren vor Commit | — |
-| `/70-deploy` | Staging-Verifikation + Prod-Deploy | — (läuft autonom, **kein** Freigabe-Halt) |
+- **Freigabepflichtig ist allein die Spec** (ACs auf Deutsch, `approved`/`freigabe`). Deploy läuft danach ohne Halt durch (Staging-Poll → `/e2e-verify` → Prod-Deploy → Selftest → Issue-Close); ein „Tech-Lead-Brief" mit Bitte um 'go' ist dieselbe verbotene Prozessfrage. Einzige Unterbrechung: ein Hard Gate scheitert (Staging BROKEN, Selftest-Exit ≠ 0).
+- **Rückfragen an den PO IMMER über das `AskUserQuestion`-Tool**, nie als Freitext-Frage (PO-Vorgabe 2026-10-08).
+- **Main Context orchestriert und schreibt keinen Code**; Implementierung macht der Developer Agent im Worktree. Workflow-Variable ist `OPENSPEC_ACTIVE_WORKFLOW`, beim Agent-Spawn immer im Prompt übergeben.
+- **Adversary + Mutations-Gegenprobe sind PFLICHT:** der `implementation-validator` verfälscht die Implementierung gezielt; eine Verfälschung, die kein Test fängt, ist ein Finding (Leitfrage: ist die Zusicherung dort geprüft, wo sie WIRKT?). Mutationen nur per String-Ersetzung mit externer Sicherungskopie, **nie `git checkout/stash/reset`**. Ablauf: `.claude/agents/implementation-validator.md`.
 
-**Freigabepflichtig ist allein die Spec.** Deploy läuft ohne Halt durch: nach dem Merge zieht die Kette Staging-Poll → `/e2e-verify` → `deploy-gregor-prod.sh` → `prod_selftest.py` → Issue-Close **am Stück**. Der PO liest das Ergebnis danach, nicht vorher als Freigabe. Ein selbst formulierter „Tech-Lead-Brief" mit anschließender Bitte um 'go' ist dieselbe verbotene Prozessfrage in Freitextform. Einzige erlaubte Unterbrechung: ein echtes Hard Gate scheitert (Staging-Verdict BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund.
-
-**Adversary Verification:** Nach der Implementation führt ein unabhängiger `implementation-validator` (Sonnet) einen strukturierten Dialog, um die Implementierung aktiv zu brechen. Tri-State Verdict: VERIFIED / BROKEN / AMBIGUOUS. Details: `docs/features/openspec_workflow.md`. Bei Findings ist `Code reference: file:line` Pflicht.
-
-**🔴 Mutations-Gegenprobe ist PFLICHT, keine Kür.** Der Adversary muss die Implementierung gezielt verfälschen und melden, **welche Verfälschung KEIN Test fängt** — wird kein Test rot, ist das ein Finding. Ein grüner Testlauf beweist nur, dass die Tests durchlaufen, nicht dass sie etwas bewachen. Leitfrage: **Ist die Zusicherung an der Stelle geprüft, an der sie WIRKT — oder nur dort, wo der Code steht?** Ablauf und Mutations-Familien: `.claude/agents/implementation-validator.md`, Sektion „Step 3b". **Mutationen nur per String-Ersetzung mit externer Sicherungskopie — nie `git checkout/stash/reset`** (hat einmal die gesamte unkommittete Arbeit gelöscht).
-
-**Fresh Eyes:** Bei UI-Änderungen prüft zusätzlich ein `fresh-eyes-inspector` Screenshots OHNE Bug-Kontext.
-
-**Rückfragen an den PO IMMER über das `AskUserQuestion`-Tool** — nie als Freitext-Frage am Ende einer Antwort (PO-Vorgabe 2026-10-08). Gilt auch für Spec-Freigaben.
-
-**Product Owner Pattern:** Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung geht an den Developer Agent (Opus, Worktree-Isolation). >10 Min ohne grüne Tests → `TaskStop` + Neustart mit präziserem Briefing; max 2 Versuche, danach Eskalation.
-
-**Agenten-Modelle:** `developer` (Plugin-Pendant `developer-agent`)/`user-story-planner` Opus · `bug-intake`/`bug-investigator`/`analysis-challenger`/`feature-planner`/`spec-writer`/`implementation-validator`/`staging-validator`/`external-validator`/`fresh-eyes-inspector` Sonnet · `docs-updater`/`spec-validator`/`test-runner`/Explore Haiku.
-
-**Herkunft der Befehle:** `/00-…` bis `/60-…` kommen aus dem Plugin agent-os-openspec; projekteigen in `.claude/commands/` sind nur `/70-deploy` (ersetzt das Plugin-Template), `/e2e-verify`, `/next-ticket`, `/radar`.
-
-### Workflow-State
-
-| Was | Regel |
-|-----|-------|
-| **GZ_ACTIVE_WORKFLOW** | `export GZ_ACTIVE_WORKFLOW=<name>` ist die EINZIGE erlaubte Methode. **Symlink-Fallback ist deaktiviert** — `workflow.py` bricht FATAL ab ohne die Variable. Niemals `state['active_workflow']` lesen. Beim Agent-Spawn immer im Prompt übergeben. |
-| **Execution-Log vor `finish`** | `workflow.py write-log success`, dann `workflow.py finish`. Ohne Log blockt der Hook. `workflow.py`/`qa_gate.py`/`adversary_dialog.py` liegen im Plugin agent-os-openspec, **nicht** in `.claude/hooks/` (Plugin-Modus seit 465380c1e). |
-| **LoC-Limit 250/Workflow** | `workflow.py status` zeigt `LoC-Delta: +N/250`. Überschritten → `workflow.py set-field loc_limit_override 500`. `docs/`/`*.md`/`.gitignore` und generierte Dateien zählen nicht. |
-| **Adversary-Verdict Gating** | `AMBIGUOUS` → `workflow.py override-ambiguous "<Grund>"` (TTL 1h); `None`/`BROKEN` → `qa_gate.py`. Commit blockt ohne Verdict. |
-| **State-Ablage** | `.claude/workflows/<name>.json` (laufend) / `_archive/<name>.json` (abgeschlossen) |
-
-**Hooks erzwingen diesen Workflow** — Edit/Write auf geschützte Dateien ist blockiert. Blockiert ein Gate und die Meldung reicht nicht: `docs/reference/gates_und_ratschen.md`.
+**Hooks erzwingen diesen Workflow.** Blockiert ein Gate und die Meldung reicht nicht: `docs/reference/gates_und_ratschen.md`.
 
 ## Test-Politik: Zwei Schichten
 
-Verboten bleibt **Mock-Theater**: `Mock()`/`patch()`/`MagicMock`, die nur die eigene Annahme zurückspiegeln, beweisen nichts. Ebenso verboten sind Dateiinhalt-Checks (`assert 'xyz' in file.read_text()`) als Verhaltensnachweis (Ausnahme: `# doc-compliance-test`).
-
-| Schicht | Was | Wann | Regel bei Rot |
-|---|---|---|---|
-| **Kern (deterministisch)** | ohne Netz/Live-Dienste/echte Postfächer; echte **aufgezeichnete** API-/Mail-Daten als versionierte Fixtures erwünscht | jeder Testlauf; Commit-Gate | MUSS 100 % grün sein: sofort fixen ODER löschen (wenn er veraltetes Verhalten prüft) — nie als „vorbestehend rot" liegenlassen |
-| **Live-E2E** | echte API-Calls, echte Staging-Mails via IMAP, Playwright gegen Staging (Marker `live`/`email`/`staging`) | nur `/e2e-verify` bzw. Deploy | Flake → Retry; erst reproduzierbares Scheitern ist ein Befund (→ #1199 bzw. #1196) |
-
-Bug-Nachweis: mindestens ein Test reproduziert den Bug aus Nutzersicht (rot vor Fix, grün nach Fix) — in der Live-Schicht, wenn er Staging braucht, sonst im Kern.
-
-**Testdateien nach Verhalten benennen** (`test_alert_throttle.py`), NICHT nach Issue-Nummer. **`uv run pytest` ohne benannte Testdateien ist gesperrt** — ein ungemarkerter Test genügt für echten Versand an Produktiv-Empfänger (#1477). Erlaubt: Dateien benennen · `--collect-only` · `--disable-socket` · Einmal-Freigabe, die **nur der User** durch Tippen von `override` erzeugt. Ein Test löst seinen Prüfling **relativ zur eigenen Testdatei** auf, nie über den festen Hauptrepo-Pfad (sonst falsches Grün aus dem Worktree).
-
-Durchsetzung, Ausnahme-Syntax und Grenzen: `docs/reference/gates_und_ratschen.md`.
+Verboten ist **Mock-Theater** (`Mock()`/`patch()`/`MagicMock`, die nur die eigene Annahme spiegeln) und Dateiinhalt-Checks als Verhaltensnachweis (Ausnahme `# doc-compliance-test`). Die Kern-Schicht (deterministisch, ohne Netz) muss immer 100 % grün sein, die Live-E2E-Schicht läuft nur in `/e2e-verify`/Deploy; ein Bug wird erst aus Nutzersicht rot nachgewiesen. **`uv run pytest` ohne benannte Testdateien ist gesperrt** (#1477); Testdateien nach Verhalten benennen, Prüfling relativ zur Testdatei auflösen. Tabelle und Ausnahmen: `docs/reference/gates_und_ratschen.md`.
 
 ## E2E-Verifikation & Deploy
 
-Verifikation läuft **nach** dem Push gegen Staging (`https://staging.gregor20.henemm.com`) — **nie** durch lokalen Neustart des Live-Servers (= Produktion). Issue #339.
+Verifikation läuft **nach** dem Push gegen staging (`https://staging.gregor20.henemm.com`), **nie** durch lokalen Neustart des Live-Servers (= Produktion, #339). Prod-Deploy ist Hard Gate: braucht frischen Nachweis `.claude/e2e_verified/<sha>.json`; Issue-Close nur bei Selftest-Exit 0.
 
-**Ablauf:** Push → ~5 Min Staging-Auto-Deploy → `/e2e-verify` → `deploy-gregor-prod.sh` → Post-Deploy-Selftest → Issue close. Prod-Deploy ist Hard Gate: blockt ohne bestandenen, frischen Nachweis für den Zielstand (`.claude/e2e_verified/<sha>.json`, eine Datei je Stand).
+**Liefer-Workflow:** `main` ändert sich nur per Pull Request mit allen 6 CI-Checks grün (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`), Direkt-Push ist abgeschafft. PR, Merge (`gh pr merge --merge --delete-branch`) und Deploy (`deploy-gregor-prod.sh` + `prod_selftest.py`) macht Claude selbst, nie der PO (überstimmt bewusst die Vorlage von `/60-validate`). Merge-Regel, Schritte, Doku-Ausnahme und Verbote: `docs/reference/operations_playbook.md`.
 
-**VERBOTEN:** lokalen Live-Server stoppen/neustarten · Sammel-Versand über alle Touren (nur Test-Trip) · „E2E bestanden" ohne Staging-Verifikation sagen.
+## Mail-Validatoren & Renderer-Gate
 
-**Issue-Close nur bei Selftest-Exit 0.** Verdict-Ableitung, Rollback: `docs/reference/operations_playbook.md`. Gate-Mechanik (Frontend-Browser-Gate, Notausgänge, Zugangsdaten-Quellen): `docs/reference/gates_und_ratschen.md`.
+Je Mail-Pfad ein eigener Validator, gegen **echt zugestellte Staging-Mail** im Stalwart-Test-Postfach (kein Mock, kein Gmail). Falscher Validator auf einem Pfad ist strukturell nie bestehbar.
 
-### Liefer-Workflow (PFLICHT — PR statt Direkt-Push)
+- **Orts-Vergleich** (Vergleichstabelle, ≥3 Orte, `X-GZ-Mail-Type: compare`): `uv run python3 .claude/hooks/email_spec_validator.py`; „E2E bestanden" für den Orts-Vergleich nur bei Exit 0.
+- **Trip-Briefing** (`full`/`compact`): eigener `briefing_mail_validator.py`; amtliche Warnung: `official_alert_mail_validator.py`; Radar-/Regen-Alarm: `radar_alert_mail_validator.py`.
 
-**Direkt-Push auf `main` ist abgeschafft.** `main` ändert sich nur per Pull Request mit vollständig grüner CI-Ampel.
+Ein Renderer-Commit-Gate blockt Commits an Mail-Inhalts-Dateien bis Modus-Matrix-Test und Validator frisch grün sind. Details: `docs/reference/mail_validators.md`, `docs/reference/gates_und_ratschen.md`.
 
-| Schritt | Was |
-|---|---|
-| 1 | Arbeitsbranch pushen: `git push -u origin <branch>` (nie direkt `main`) |
-| 1b | PR eröffnen (`gh pr create --fill`), CI-Ampel abwarten — **alle 6 Checks grün** auf dem letzten Stand |
-| 1c | Mergen (`gh pr merge --merge --delete-branch`) — erst damit ist `main` aktualisiert. `--delete-branch` räumt den Arbeitsbranch lokal **und** auf GitHub weg; ohne ihn wächst der Branch-Haufen wieder (20.09.: 312 lokale Branches, 278 davon Karteileichen, #1199) |
-| 2 | Auto-Deploy auf Staging abwarten (~5 Min, Cron `*/5`) |
-| 3 | Staging-Validierung |
-| 4 | Prod-Deploy: `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
-| 4b | Post-Deploy-Selftest: `python3 .claude/hooks/prod_selftest.py` — nur Exit 0 fährt weiter |
-| 5 | `gh issue close <N>` — nur wenn 4b Exit 0 |
+## Design-Leitprinzip
 
-**Ein Merge ist kein Prod-Deploy:** der CI-Job `deploy` liefert nur bei vorliegendem `/e2e-verify`-Nachweis aus (`scripts/ci_prod_gate.sh` → `PROD_GATE=open`); sonst bleibt er grün/übersprungen und Schritt 4 (`/70-deploy`) liefert aus (#2047 S2).
-
-Wird ein Push nach `main` abgewiesen, ist das die Branch-Protection, kein Fehler. Ein PR ersetzt NICHT die Staging-Validierung — die Ampel bewacht Code-Gesundheit, Staging bewacht Verhalten.
-
-`systemctl restart` allein **reicht nie** — das Deploy-Script macht flock-Lock → hart auf `origin/main` syncen (Daten unberührt, WIP gesichert) → Go-Binary + Frontend bauen → alle 3 Services restarten → Smoke-Test. Ohne vollen Lauf entsteht Code-Drift (#113). Script ist **parallel-session-sicher** — Schritt 4 jederzeit aus jeder Session.
-
-**„Staging-validiert"** = mindestens HTTP-Smoke (`/` → 200/302, `/api/health` → 200) + geänderte Funktion durchgeklickt; bei Mail-Änderungen Test-Mail + IMAP-Verifikation; bei Scheduler-Änderungen `last_run` geprüft.
-
-**Ausnahme reine Doku-/Tooling-Änderungen** (nur `.md`/`docs/`/`.claude/`/`.gitignore`, kein Code in `src/`/`api/`/`internal/`/`frontend/`/`cmd/`): Schritt 3 entfällt, Schritt 4 entfällt solange der Drift-Monitor ruhig ist.
-
-### CI-Ampel & Merge-Regel
-
-Die 6 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`) sind die **CI-Ampel**.
-
-- **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 6 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
-- **Wird `main` trotzdem rot:** Drive-to-green hat Vorrang vor neuer Feature-Arbeit.
-- **Branch-Protection ist beschlossen:** der dokumentierte Weg auf `main` ist ausschließlich der PR-Liefer-Workflow. Den mechanischen Schalter setzt der PO; bis dahin gilt die Regel organisatorisch und ein Direkt-Push ist ein Regelverstoß, kein Versehen.
-
-Ratschen-Pflege (`ci_tdd_excludes.txt`, `ci_e2e_specs.txt`, Aufnahmefilter): `docs/reference/gates_und_ratschen.md`.
-
-## Mail-Validatoren & Renderer-Gate (ZWINGEND)
-
-Je Mail-Pfad ein eigener Validator. Falscher Validator auf einen Pfad → strukturell nie bestehbar → Gate-Erosion.
-
-| Mail-Pfad | Validator (PFLICHT vor „E2E bestanden") | Marker-Header |
-|---|---|---|
-| **Orts-Vergleich** (Vergleichstabelle, kein Score/Winner seit #1108, ≥3 Orte) | `uv run python3 .claude/hooks/email_spec_validator.py` | `X-GZ-Mail-Type: compare` |
-| **Trip-Briefing** (`full`/`compact`, Stundentabellen) | `uv run python3 .claude/hooks/briefing_mail_validator.py` | `X-GZ-Mail-Type: trip-briefing` + `X-GZ-Format: full\|compact` |
-| **Amtliche Warnung** (Alarm-Mail) | `uv run python3 .claude/hooks/official_alert_mail_validator.py` | `X-GZ-Mail-Type: official-alert` |
-| **Radar-/Regen-Alarm** | `uv run python3 .claude/hooks/radar_alert_mail_validator.py` | `X-GZ-Mail-Type: radar-alert` |
-
-**Regeln:** gegen **echt zugestellte Staging-Mail** aus dem Stalwart-Test-Postfach (`gregor-test@henemm.com`, Creds `GZ_IMAP_*`, nie im Klartext) — kein Mock, kein Gmail. Geprüft wird Plausibilität, nicht bloße String-Presence. **Nur bei Exit 0** darf „E2E bestanden" gesagt werden.
-
-Ein **Renderer-Commit-Gate** blockiert Commits an Mail-Inhalts-Dateien, bis Modus-Matrix-Test und Validator frisch grün sind — Details in `docs/reference/gates_und_ratschen.md`.
-
-## Design-Leitprinzipien (PO-bestätigt 2026-05-25)
-
-**Hoher Kontrast = Lesbarkeit.** Bei Konflikt zwischen „weicher Optik" und „klarer Lesbarkeit" gewinnt **Lesbarkeit** — das Produkt ist ein Briefing-Werkzeug für Wetter-/Tourenentscheidungen, Inhalt muss unter Zeitdruck lesbar sein. Steht über ästhetischen Präferenzen.
-
-- Karten = weiß (`--g-card #ffffff`) auf warmer Off-White-Page (`--g-paper #f6f4ee`). Kein beiges Card-on-beige.
-- Text-Kontrast mindestens WCAG-AA (4.5:1). `--g-ink-4` strikt nur Placeholder/Disabled, nie Captions/Help-Text/Daten-Labels (nur 2.85:1 auf Weiß).
-- Akzent-Farben sparsam, nie alleiniger Lesbarkeits-Träger — Form + Position + Mono-Strecke tragen mit.
-
-Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN.md`. Folge-Arbeit: Surface-Stack-Migration → Token-Rename → Atom-Migration (Epic #368).
+**Hoher Kontrast = Lesbarkeit** gewinnt gegen weiche Optik (WCAG-AA, PO-bestätigt 2026-05-25); Details: `docs/reference/design_system.md`.
 
 ## Trip/Ortsvergleich-Code-Teilung (PO-Vorgabe, mehrfach bekräftigt)
 
-**Möglichst viel Code zwischen Trip und Ortsvergleich teilen; der Compare-Editor funktioniert wie der Trip-Editor.** Als prüfbare Invariante:
-
-- **Geteilt (EIN Code, Parameter `context="route"|"vergleich"`):** Editor-Rahmen (Progressive Tabs, Lock-Engine, Speichern/Verwerfen), Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell-Konvergenz (Epic #2345, Etappe P7 — vormals #1230).
-- **Anlegen folgt dem Trip-Muster:** `/trips/new` = Progressive-Tab-Anlege-Seite aus geteilten Bausteinen (`TripNewEditor`, #622); der alte 5-Schritt-Wizard ist dort abgeschafft. `/compare/new` bekommt dieselbe Bauart; `CompareEditor.svelte` + Compare-Wizard sind Alt-Bestand und fallen ersatzlos. **Es gibt keine offene Designfrage dazu — nicht erneut vorlegen.**
-- **Compare-eigen dürfen NUR sein:** Orte-Tab (statt Etappen), transponierte Übersicht (Orte = Spalten), Compare-Mail-Template.
-- **Default-Fehler:** Eine neue Compare-Komponente, zu der ein Trip-Pendant existiert (oder umgekehrt), ist ein Verstoß — Ausnahme nur mit dokumentierter Begründung in der Spec. Anti-Pattern: #1170.
-- **Prüfung:** Bei jeder Editor-/Detail-Arbeit ist „hätte das ein geteilter Baustein sein müssen?" expliziter Adversary-/Review-Punkt. Eine **Pendant-Sperre am Commit** setzt das für Neuanlagen durch (`docs/reference/gates_und_ratschen.md`).
+Möglichst viel Code zwischen Trip und Ortsvergleich teilen; der Compare-Editor funktioniert wie der Trip-Editor. Geteilt (EIN Code, Parameter `context="route"|"vergleich"`): Editor-Rahmen, Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell (Epic #2345). Anlegen folgt dem Trip-Muster (`/trips/new` = `TripNewEditor`, #622; `/compare/new` gleich gebaut) — **keine offene Designfrage, nicht erneut vorlegen.** Compare-eigen dürfen NUR sein: Orte-Tab, transponierte Übersicht, Compare-Mail-Template. Eine neue Compare-Komponente mit Trip-Pendant (oder umgekehrt) ist ein Verstoß (Anti-Pattern #1170); Pendant-Sperre und Volltext: `docs/reference/gates_und_ratschen.md`.
 
 ## Confidence — NICHT wählbar als Metrik (Issue #710, Final)
 
-**`confidence_pct` ist KEINE pro-Etappe wählbare Wetter-Metrik** — eine Meta-Aussage über mehrtägige Ensemble-Divergenz, keine lokale Wettergröße. Darf ausschließlich erscheinen als: (1) Vorhersage-Verlässlichkeits-Hinweis im E-Mail-Textblock, (2) interne Aggregation/Scoring. Ein SMS-Token (`C+/C~/C?`) gibt es nicht (#2233). **NIEMALS** im Trip-Editor, Wizard Step 3, Metrik-Auswahl oder als per-Etappe-Spalte.
-
-**Implementierung:** `MetricDefinition.selectable=false`; GET `/api/metrics` filtert auf `selectable=true`. Alte Trips mit aktiviertem `confidence` laden still, die Metrik wird in Render-Pfaden ignoriert.
+`confidence_pct` ist KEINE pro-Etappe wählbare Metrik, sondern eine Meta-Aussage über Ensemble-Divergenz: nur als Verlässlichkeits-Hinweis im E-Mail-Textblock oder intern, kein SMS-Token (#2233), **NIEMALS** in Trip-Editor, Wizard, Metrik-Auswahl oder als Etappen-Spalte. Umsetzung: `MetricDefinition.selectable=false`, GET `/api/metrics` filtert; alte Trips mit `confidence` laden still, Render-Pfade ignorieren es.
 
 ## Daten-Schema-Reworks (PFLICHT!)
 
-**Bestandsdaten bei Persistenz-Änderungen MÜSSEN erhalten bleiben.** Regel: **Read-Modify-Write mit Merge** — bestehendes Objekt laden, nur geänderte Felder überschreiben. **Niemals Replace** (Client-unbekannte Felder gehen sonst verloren). Hintergrund: BUG-DATALOSS-GR221 (#102), 3 von 4 Stages verloren.
-
-**Schema-relevante Dateien:** `src/app/models.py`, `src/app/trip.py`, `src/app/loader.py`, `internal/model/*.go`, `internal/store/store.go` — Edits lösen automatisch den Pre-Snapshot-Hook `data_schema_backup.py` aus (tar.gz nach `.backups/`, Retention 20). Migration + Roundtrip-Test, Rollback, Anti-Pattern-Beispiele: `docs/reference/operations_playbook.md`.
+Bestandsdaten bleiben erhalten: **Read-Modify-Write mit Merge** (bestehendes Objekt laden, nur geänderte Felder überschreiben), **niemals Replace** (#102, BUG-DATALOSS-GR221). Edits an Schema-Dateien lösen den Pre-Snapshot-Hook `data_schema_backup.py` aus. Dateiliste, Migration, Anti-Pattern: `docs/reference/operations_playbook.md`.
 
 ## Backlog & Nebenbefunde
 
-**GitHub Issues ist die Single Source of Truth für offene Arbeit.** Neue Features → Label `enhancement`; Bugs → Label `bug`; fertig → Issue schließen. **NICHT in Markdown-Dateien planen.** Root-Cause-Analysen → `docs/project/known_issues.md`; strategische Entscheidungen → `docs/project/strategic-directions.md`.
-
-**Nebenbefund-Triage:** Nebenbefunde werden NICHT automatisch eigene Issues. **Eigenes Issue nur bei:** (a) nutzersichtbarem Fehlverhalten, (b) Datenverlust-/Sicherheitsrisiko, (c) fälschlich blockierendem Gate. **Alles andere** → Checkbox-Zeile im rollierenden Sammel-Issue **#1199**; Test-/Gate-Befunde in #1196/#1197. Einträge ohne PO-Bestätigung verfallen nach 30 Tagen. Adversary-Findings der Stufe LOW/kosmetisch sind per Default Sammel-Einträge.
-
-**Regel-Budget:** Jede neue Pflicht-Regel, jedes neue Gate, jeder neue Pflicht-Validator muss beim Einführen entweder **eine bestehende Regel ersetzen** oder ein **Prüfdatum (+90 Tage)** tragen. Am Prüfdatum: kein nachweisbarer Fang → Rückbau. Prüfdaten-Tabelle: `docs/reference/gates_und_ratschen.md`. Wirkmodell: `docs/analysis/backlog-spirale-2026-07.md`.
+**GitHub Issues ist die einzige Quelle für offene Arbeit** (`enhancement`/`bug`), nie Markdown-Planung. Nebenbefund-Triage (Sammel-Issue #1199) und Regel-Budget: jede neue Pflicht-Regel ersetzt eine alte oder trägt ein Prüfdatum (+90 Tage), siehe `docs/reference/workflow_und_agenten.md`.
 
 ## Betrieb
 
 - **Production:** https://gregor20.henemm.com — Systemd (`gregor-python.service`, `gregor-api`, `gregor-frontend`)
 - **Staging:** https://staging.gregor20.henemm.com — Systemd (`gregor-python-staging`, `gregor-api-staging`, `gregor-frontend-staging`)
-- **Infrastruktur-Repo:** `henemm/henemm-infra`. Server-Infos und Monitoring: `~/.claude/CLAUDE.md`.
 
-**Monitoring:** extern über `henemm-infra/check-gregor20.sh`. Status-Endpoint `/api/scheduler/status` (Port 8090) — pro Job `next_run`/`last_run`, seit #2155 S2 nur noch mit Header `X-GZ-Status-Token` (Env `GZ_STATUS_TOKEN`) erreichbar. **PFLICHT bei neuen Services/Schedulern:** `last_run`-Tracking im Status-Endpoint — kein Job ohne Observability.
-
-**Pre-Test-Validierung:** Vor jeder Testaufforderung an den User `python3 .claude/validate.py` (Syntax + Import geänderter Python-Dateien + Server-Startup); danach `--clear`. **NIEMALS „teste es" ohne vorherige Validierung.**
-
-**Session-Artefakte mit Tokens NIE weltlesbar nach /tmp** (Security #199): Cookiejars, `storageState`, Auth-Responses enthalten Session-Tokens. Verboten: `curl -c /tmp/xyz.txt` mit Default-Rechten. Stattdessen ins Session-Scratchpad (privat) schreiben ODER vorher `install -m 600 /dev/null <pfad>` bzw. `umask 077`. Playwright-`storageState` gehört nach `frontend/e2e/playwright/.auth/` (gitignored).
+Monitoring-Pflicht (`last_run`), Pre-Test-Validierung (`python3 .claude/validate.py`), Session-Artefakte nie weltlesbar nach /tmp: `docs/reference/operations_playbook.md`.
 
 ## Parallele Sessions & Token-Budget
 
-**Ein Projektordner = höchstens eine Claude-Session gleichzeitig.** Der Session-Wächter erzwingt bei einer zweiten Sitzung `EnterWorktree`:
+Ein Projektordner trägt höchstens eine Claude-Session; eine zweite arbeitet per `EnterWorktree` bzw. `.claude/tools/gz-workspace` isoliert und liefert unabhängig über `origin/main` aus. Kontext ist die teuerste Ressource: nach jedem Ticket `/clear`, Bash-Aufrufe bündeln, breit suchen delegieren, gezielt lesen; Details: `docs/reference/operations_playbook.md`.
 
-```bash
-bash .claude/tools/gz-workspace new <name>   # isolierter Klon auf Branch ws/<name>
-bash .claude/tools/gz-workspace list         # alle Workspaces mit Branch + uncommitted-Zähler
-bash .claude/tools/gz-workspace clean <name> # entfernen (nur wenn sauber; --force erzwingt)
-```
-
-Jede Session liefert **unabhängig** aus, Integrationspunkt ist `origin/main` — erreicht ausschließlich per PR mit grüner Ampel. **Verboten:** Deploy aufschieben „bis der Ordner sauber ist".
-
-**🔴 Kontext ist die teuerste Ressource (gemessen 2026-08-15).** 67 % des Token-Verbrauchs sind Wieder-Einlesen von Kontext, nicht erzeugter Text; Anfragen jenseits 200k Kontext machten 41 % der Anfragen und **66 % des Verbrauchs** aus. Daraus folgt, **unabhängig von der Auslastung**:
-
-- **Nach jedem abgeschlossenen Ticket `/clear`** — nicht erst, wenn es eng wird. Bei neuem Thema selbst vorschlagen.
-- **Bash-Aufrufe bündeln.** Jeder Aufruf ist ein voller Durchlauf mit dem gesamten bisherigen Kontext; drei zusammengehörige Kommandos in einem Aufruf kosten ein Drittel.
-- **Breit suchen heißt delegieren.** Fan-out-Suchen an einen Explore-Agenten geben — dessen gelesene Dateien landen nicht im Hauptkontext.
-- **Gezielt lesen** (`limit`/`offset`), nicht ganze Dateien „zur Sicherheit". Eine einmal gelesene Datei wird bei **jedem** folgenden Schritt erneut bezahlt.
-
-`context_budget_guard.py` (UserPromptSubmit-Hook) macht das sichtbar: ab 180k Kontext erscheint bei jeder Nutzereingabe eine `⚑`-Zeile mit Kontextgröße und bisherigen Sitzungskosten, ab 260k mit der Aufforderung, `/clear` **selbst** vorzuschlagen. Darunter schweigt er. Er blockiert nie.
-
-Detailablauf, WIP-Sicherung beim Deploy: `docs/reference/operations_playbook.md`.
-
-## Messaging
-
-Diese Instanz heißt `gregor`. Siehe `~/.claude/CLAUDE.md` → „Inter-Instance Messaging".
-
-**🔴 VERBOTEN: MQ-Nachrichten `gregor` → `gregor`.** Alle Parallelsitzungen dieses Projekts
-teilen sich dieselbe MQ-Adresse `gregor` — eine Nachricht an `gregor` landet also bei einem
-selbst, benachrichtigt aber den PO per Telegram. Das ist Lärm, kein Kanal (PO-Ansage
-2026-08-16).
-
-| Empfänger | Weg |
-|---|---|
-| **Andere Sitzung im selben Projekt** (paralleler Worktree/Tab) | `ListAgents` → `SendMessage({to: "<Name aus der Liste>", message: "…"})` — direkt, sofort, ohne PO-Benachrichtigung |
-| **Andere Instanz** (`infra`, `n8n`, `website`, `nightjet`, `security`) | `/home/hem/claude-mq/send.sh gregor <empfaenger> …` |
-
-MQ ist ausschließlich der **Instanz-übergreifende** Weg. Innerhalb von `gregor` gilt immer
-`SendMessage`.
+Diese Instanz heißt `gregor`. **VERBOTEN: MQ-Nachrichten `gregor` → `gregor`**; Sitzungen im selben Projekt nutzen `SendMessage`, MQ nur instanzübergreifend (`docs/reference/workflow_und_agenten.md`).
 
 # Compact instructions
 
-Diese Sektion wird von `/compact` automatisch als Zusammenfassungs-Anleitung gelesen — nie einen langen `/compact <Text>` tippen, einfaches `/compact` genügt.
-
-Bei aktivem OpenSpec-Workflow (`GZ_ACTIVE_WORKFLOW` gesetzt) beim Komprimieren IMMER bewahren:
+Wird von `/compact` als Zusammenfassungs-Anleitung gelesen; nie einen langen `/compact <Text>` tippen, einfaches `/compact` genügt. Bei aktivem Workflow (`OPENSPEC_ACTIVE_WORKFLOW` gesetzt) IMMER bewahren:
 
 - **Workflow-Identität:** Issue-Nummer, Workflow-Name, aktuelle Phase
-- **Spec & Akzeptanz:** freigegebene ACs, Designentscheidungen aus der Analyse-Phase
+- **Spec & Akzeptanz:** freigegebene ACs, Designentscheidungen aus der Analyse
 - **TDD-Stand:** rote Tests + warum (Bug-Reproduktion aus Nutzersicht), Source-/Test-Dateipfade, RED-Artefakt-Pfade, LoC-Limit
 - **Implementierung & QA:** geänderte Dateien, Adversary-Verdict, offene Fix-Loop-Punkte
 - **Deploy-relevant:** Scope (frontend-only vs. full-stack), `verified_commit`-Status, Staging-Verdict
 
-Verwerfen: rohe Tool-Output-Dumps, allgemeines Hin-und-Her, Implementierungs-Detail-Diskussionen, die bereits in Code/State-Dateien (`.claude/workflows/<name>.json`, `.claude/e2e_verified/<sha>.json`, `docs/artifacts/`) stehen.
+Verwerfen: rohe Tool-Output-Dumps, Hin-und-Her, Implementierungs-Detail-Diskussionen, die schon in `.claude/workflows/<name>.json`, `.claude/e2e_verified/<sha>.json` oder `docs/artifacts/` stehen.

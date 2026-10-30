@@ -237,7 +237,7 @@ Stand also gefahrlos beide ausliefern. Der Job `deploy` ist per
 ## Liefer-Workflow — Detailablauf (PR statt Direkt-Push, PO-go 2026-08-05)
 
 **Direkt-Push auf `main` ist abgeschafft** — `main` ändert sich nur per Pull Request,
-dessen CI-Ampel (alle 5 Checks) auf dem letzten Stand grün ist. Danach in dieser Reihenfolge:
+dessen CI-Ampel (alle 6 Checks) auf dem letzten Stand grün ist. Danach in dieser Reihenfolge:
 
 | Schritt | Was | Wie |
 |---|---|---|
@@ -247,6 +247,37 @@ dessen CI-Ampel (alle 5 Checks) auf dem letzten Stand grün ist. Danach in diese
 | 4 | Prod-Deploy | `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
 | 4b | Post-Deploy-Selftest | `python3 .claude/hooks/prod_selftest.py` (Commit/Health/AC-Attestation) — nur Exit 0 fährt weiter |
 | 5 | Issue schließen | `gh issue close <N>` — nur wenn 4b Exit 0 |
+
+Ausführlich (aus `CLAUDE.md` ausgelagert, #2640):
+
+| Schritt | Was |
+|---|---|
+| 1 | Arbeitsbranch pushen: `git push -u origin <branch>` (nie direkt `main`) |
+| 1b | PR eröffnen (`gh pr create --fill`), CI-Ampel abwarten — **alle 6 Checks grün** auf dem letzten Stand |
+| 1c | Mergen (`gh pr merge --merge --delete-branch`) — erst damit ist `main` aktualisiert. `--delete-branch` räumt den Arbeitsbranch lokal **und** auf GitHub weg; ohne ihn wächst der Branch-Haufen wieder (20.09.: 312 lokale Branches, 278 davon Karteileichen, #1199) |
+| 2 | Auto-Deploy auf Staging abwarten (~5 Min, Cron `*/5`) |
+| 3 | Staging-Validierung |
+| 4 | Prod-Deploy: `bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh` |
+| 4b | Post-Deploy-Selftest: `python3 .claude/hooks/prod_selftest.py` — nur Exit 0 fährt weiter |
+| 5 | `gh issue close <N>` — nur wenn 4b Exit 0 |
+
+**Ein Merge ist kein Prod-Deploy:** der CI-Job `deploy` liefert nur bei vorliegendem `/e2e-verify`-Nachweis aus (`scripts/ci_prod_gate.sh` → `PROD_GATE=open`); sonst bleibt er grün/übersprungen und Schritt 4 (`/70-deploy`) liefert aus (#2047 S2).
+
+Wird ein Push nach `main` abgewiesen, ist das die Branch-Protection, kein Fehler. Ein PR ersetzt NICHT die Staging-Validierung — die Ampel bewacht Code-Gesundheit, Staging bewacht Verhalten.
+
+**Wer liefert aus (PO-Vorgabe 2026-10-30):** PR, Merge und Deploy liegen bei Claude — nie „Du: mergen" an den PO. Die Vorlage von `/60-validate` aus dem Plugin agent-os-openspec sagt „Merge, PR bleiben beim PO"; das ist für dieses Projekt **bewusst überstimmt**. Die Plugin-Vorlage liegt außerhalb des Repos und bleibt unverändert, hier gilt die Projekt-Doku.
+
+**Verboten bei E2E/Deploy:** lokalen Live-Server stoppen/neustarten · Sammel-Versand über alle Trips (nur Test-Trip) · „E2E bestanden" ohne Staging-Verifikation sagen. **Issue-Close nur bei Selftest-Exit 0.**
+
+### CI-Ampel & Merge-Regel
+
+Die 6 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`) sind die **CI-Ampel**.
+
+- **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 6 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
+- **Wird `main` trotzdem rot:** Drive-to-green hat Vorrang vor neuer Feature-Arbeit.
+- **Branch-Protection ist beschlossen:** der dokumentierte Weg auf `main` ist ausschließlich der PR-Liefer-Workflow. Den mechanischen Schalter setzt der PO; bis dahin gilt die Regel organisatorisch und ein Direkt-Push ist ein Regelverstoß, kein Versehen.
+
+Ratschen-Pflege (`ci_tdd_excludes.txt`, `ci_e2e_specs.txt`, Aufnahmefilter): `docs/reference/gates_und_ratschen.md`.
 
 **Seit #2142 zusätzliche Pflicht-Voraussetzung vor Schritt 4:** `GZ_CORE_SHARED_SECRET`
 (≥32 Zeichen, identischer Wert in beiden Prozessen) muss von Hand in der `.env` **beider**
@@ -321,6 +352,25 @@ und andere Workspaces bleiben unberührt.
 Ordner, ruft Claude unaufgefordert `EnterWorktree` auf und arbeitet in der isolierten Kopie
 weiter — kein Beenden oder Neustart nötig, der Nutzer muss nichts tun.
 
+**Ein Projektordner = höchstens eine Claude-Session gleichzeitig.** Jede Session liefert
+**unabhängig** aus, Integrationspunkt ist `origin/main` — erreicht ausschließlich per PR mit
+grüner Ampel. **Verboten:** Deploy aufschieben „bis der Ordner sauber ist".
+
+### Token-Budget (aus `CLAUDE.md` ausgelagert, #2640)
+
+**Kontext ist die teuerste Ressource (gemessen 2026-08-15).** 67 % des Token-Verbrauchs sind
+Wieder-Einlesen von Kontext, nicht erzeugter Text; Anfragen jenseits 200k Kontext machten 41 %
+der Anfragen und **66 % des Verbrauchs** aus. Daraus folgt, **unabhängig von der Auslastung**:
+
+- **Nach jedem abgeschlossenen Ticket `/clear`** — nicht erst, wenn es eng wird. Bei neuem Thema selbst vorschlagen.
+- **Bash-Aufrufe bündeln.** Jeder Aufruf ist ein voller Durchlauf mit dem gesamten bisherigen Kontext; drei zusammengehörige Kommandos in einem Aufruf kosten ein Drittel.
+- **Breit suchen heißt delegieren.** Fan-out-Suchen an einen Explore-Agenten geben — dessen gelesene Dateien landen nicht im Hauptkontext.
+- **Gezielt lesen** (`limit`/`offset`), nicht ganze Dateien „zur Sicherheit". Eine einmal gelesene Datei wird bei **jedem** folgenden Schritt erneut bezahlt.
+
+`context_budget_guard.py` (UserPromptSubmit-Hook) macht das sichtbar: ab 180k Kontext erscheint
+bei jeder Nutzereingabe eine `⚑`-Zeile mit Kontextgröße und bisherigen Sitzungskosten, ab 260k
+mit der Aufforderung, `/clear` **selbst** vorzuschlagen. Darunter schweigt er. Er blockiert nie.
+
 ### Abschluss einer parallelen Session — NIE „ich warte auf die andere Session"
 
 Jede Session liefert **unabhängig** aus. Kein Warten aufeinander, keine Koordination über den
@@ -388,6 +438,20 @@ Die Meldung des Deploy-Laufs nennt den fertigen Befehl bereits.
 
 `scripts/wip_safety.sh` ist eigenständig aufrufbar (`bash scripts/wip_safety.sh <repo-dir>`)
 und durch `tests/test_wip_safety.py` gegen echte Wegwerf-Repos abgesichert.
+
+---
+
+## Betrieb: Monitoring, Pre-Test-Validierung, Session-Artefakte (aus `CLAUDE.md` ausgelagert, #2640)
+
+- **Production:** https://gregor20.henemm.com — Systemd (`gregor-python.service`, `gregor-api`, `gregor-frontend`)
+- **Staging:** https://staging.gregor20.henemm.com — Systemd (`gregor-python-staging`, `gregor-api-staging`, `gregor-frontend-staging`)
+- **Infrastruktur-Repo:** `henemm/henemm-infra`. Server-Infos und Monitoring: `~/.claude/CLAUDE.md`.
+
+**Monitoring:** extern über `henemm-infra/check-gregor20.sh`. Status-Endpoint `/api/scheduler/status` (Port 8090) — pro Job `next_run`/`last_run`, seit #2155 S2 nur noch mit Header `X-GZ-Status-Token` (Env `GZ_STATUS_TOKEN`) erreichbar. **PFLICHT bei neuen Services/Schedulern:** `last_run`-Tracking im Status-Endpoint — kein Job ohne Observability.
+
+**Pre-Test-Validierung:** Vor jeder Testaufforderung an den User `python3 .claude/validate.py` (Syntax + Import geänderter Python-Dateien + Server-Startup); danach `--clear`. **NIEMALS „teste es" ohne vorherige Validierung.**
+
+**Session-Artefakte mit Tokens NIE weltlesbar nach /tmp** (Security #199): Cookiejars, `storageState`, Auth-Responses enthalten Session-Tokens. Verboten: `curl -c /tmp/xyz.txt` mit Default-Rechten. Stattdessen ins Session-Scratchpad (privat) schreiben ODER vorher `install -m 600 /dev/null <pfad>` bzw. `umask 077`. Playwright-`storageState` gehört nach `frontend/e2e/playwright/.auth/` (gitignored).
 
 ---
 
@@ -475,7 +539,13 @@ einem gelöschten Nutzerverzeichnis und einer beschädigten JSON-Datei wird der 
 ## Daten-Schema-Reworks — Anti-Pattern-Codebeispiele
 
 Prinzip (steht in `CLAUDE.md`): **Read-Modify-Write mit Merge — bestehendes Objekt laden, nur
-explizit veränderte Felder überschreiben, Rest erhalten.** Niemals Replace.
+explizit veränderte Felder überschreiben, Rest erhalten.** Niemals Replace (Client-unbekannte
+Felder gehen sonst verloren). Hintergrund: BUG-DATALOSS-GR221 (#102), 3 von 4 Stages verloren.
+
+**Schema-relevante Dateien** (aus `CLAUDE.md` ausgelagert, #2640): `src/app/models.py`,
+`src/app/trip.py`, `src/app/loader.py`, `internal/model/*.go`, `internal/store/store.go` — Edits
+lösen automatisch den Pre-Snapshot-Hook `data_schema_backup.py` aus (tar.gz nach `.backups/`,
+Retention 20). Jede Persistenz-Änderung braucht Migration + Roundtrip-Test.
 
 **Anti-Pattern (verboten):**
 

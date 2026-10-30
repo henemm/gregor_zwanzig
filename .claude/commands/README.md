@@ -22,7 +22,7 @@ Freigabe-Halt**).
 
 ## Agenten
 
-Definitionen in `.claude/agents/*.md`; Modellzuordnung siehe `CLAUDE.md` → „Agenten-Modelle".
+Definitionen in `.claude/agents/*.md`; Modellzuordnung siehe `docs/reference/workflow_und_agenten.md` → „Agenten-Modelle".
 
 ## Workflow-State
 

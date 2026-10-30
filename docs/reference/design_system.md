@@ -15,6 +15,20 @@ Alpin, präzise, datenehrlich. Paper-Off-White als Bühne, Burnt-Orange als einz
 
 ---
 
+## Design-Leitprinzipien (PO-bestätigt 2026-05-25)
+
+> Aus `CLAUDE.md` ausgelagert (#2640); dort steht nur noch ein Satz mit Verweis hierher.
+
+**Hoher Kontrast = Lesbarkeit.** Bei Konflikt zwischen „weicher Optik" und „klarer Lesbarkeit" gewinnt **Lesbarkeit** — das Produkt ist ein Briefing-Werkzeug für Wetter-/Tourenentscheidungen, Inhalt muss unter Zeitdruck lesbar sein. Steht über ästhetischen Präferenzen.
+
+- Karten = weiß (`--g-card #ffffff`) auf warmer Off-White-Page (`--g-paper #f6f4ee`). Kein beiges Card-on-beige.
+- Text-Kontrast mindestens WCAG-AA (4.5:1). `--g-ink-4` strikt nur Placeholder/Disabled, nie Captions/Help-Text/Daten-Labels (nur 2.85:1 auf Weiß).
+- Akzent-Farben sparsam, nie alleiniger Lesbarkeits-Träger — Form + Position + Mono-Strecke tragen mit.
+
+Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN.md`. Folge-Arbeit: Surface-Stack-Migration → Token-Rename → Atom-Migration (Epic #368).
+
+---
+
 ## 1 · Farben
 
 ### Surfaces
