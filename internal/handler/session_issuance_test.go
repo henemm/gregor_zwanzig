@@ -644,7 +644,7 @@ func TestIssuingLoginPaths_IssueFourPartCookie(t *testing.T) {
 // mit genau diesem Körper, der OAuth-Redirect-Fluss ausschließlich über den
 // Location-Parameter — kein rohes JSON in einem Redirect-Fluss.
 const (
-	verweigerungsKoerper2271 = `{"error":"email_not_verified"}`
+	verweigerungsKoerper2271 = `{"code":"email_not_verified","detail":"Bitte bestätige zuerst deine E-Mail-Adresse.","error":"email_not_verified","message":"Bitte bestätige zuerst deine E-Mail-Adresse."}`
 	verweigerungsZiel2271    = "/login?error=email_not_verified"
 )
 
@@ -880,7 +880,7 @@ func TestDisabledAccount_AllIssuancePaths_Refuse403(t *testing.T) {
 				t.Errorf("AC-10/%s: gesperrtes Konto erwartet 403, bekommen %d: %s",
 					way.name, v.w.Code, v.w.Body.String())
 			}
-			if got := strings.TrimSpace(v.w.Body.String()); got != `{"error":"account_disabled"}` {
+			if got := strings.TrimSpace(v.w.Body.String()); got != `{"code":"account_disabled","detail":"Dieses Konto ist gesperrt.","error":"account_disabled","message":"Dieses Konto ist gesperrt."}` {
 				t.Errorf("AC-10/%s: Antwortkörper erwartet %s, bekommen %q",
 					way.name, `{"error":"account_disabled"}`, got)
 			}

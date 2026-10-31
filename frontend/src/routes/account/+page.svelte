@@ -319,8 +319,8 @@
 			confirmNewPassword = '';
 			setTimeout(() => (pwSuccessMsg = null), 4000);
 		} catch (e: unknown) {
-			const body = e as { error?: string };
-			if (body?.error === 'wrong password') {
+			const body = e as { error?: string; code?: string };
+			if (body?.code === 'wrong_password') {
 				pwErrorMsg = 'Aktuelles Passwort ist falsch';
 			} else {
 				pwErrorMsg = body?.error ?? 'Passwort ändern fehlgeschlagen';

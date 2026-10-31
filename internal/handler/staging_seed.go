@@ -47,30 +47,30 @@ func StagingSeedHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 		userID := middleware.UserIDFromContext(r.Context())
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&raw); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "validation_error")
+			WriteError(w, r, http.StatusBadRequest, "validation_error", nil)
 			return
 		}
 		tier := ""
 		_, hasTier := raw["tier"]
 		if hasTier {
 			if err := json.Unmarshal(raw["tier"], &tier); err != nil || (tier != "free" && tier != "standard" && tier != "premium") {
-				writeJSONError(w, http.StatusBadRequest, "validation_error")
+				WriteError(w, r, http.StatusBadRequest, "validation_error", nil)
 				return
 			}
 		}
 		sms, hasSms, okSms := seedCounter(raw, "sms")
 		prem, hasPrem, okPrem := seedCounter(raw, "premium_sms")
 		if !okSms || !okPrem {
-			writeJSONError(w, http.StatusBadRequest, "validation_error")
+			WriteError(w, r, http.StatusBadRequest, "validation_error", nil)
 			return
 		}
 		if !hasTier && !hasSms && !hasPrem {
-			writeJSONError(w, http.StatusBadRequest, "nothing_to_set")
+			WriteError(w, r, http.StatusBadRequest, "nothing_to_set", nil)
 			return
 		}
 		user, err := s.LoadUser(userID)
 		if err != nil || user == nil {
-			writeJSONError(w, http.StatusNotFound, "not_found")
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
@@ -86,20 +86,20 @@ func StagingSeedHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 			payload, _ := json.Marshal(body)
 			cr, err := client.Post(cfg.PythonCoreURL+"/api/_internal/sms/seed-daily-usage", "application/json", bytes.NewReader(payload))
 			if err != nil {
-				writeJSONError(w, http.StatusBadGateway, "core_unavailable")
+				WriteError(w, r, http.StatusBadGateway, "core_unavailable", nil)
 				return
 			}
 			defer cr.Body.Close()
 			var stand map[string]int
 			if cr.StatusCode/100 != 2 || json.NewDecoder(cr.Body).Decode(&stand) != nil {
-				writeJSONError(w, http.StatusBadGateway, "core_unavailable")
+				WriteError(w, r, http.StatusBadGateway, "core_unavailable", nil)
 				return
 			}
 			resp["sms"], resp["premium_sms"] = stand["sms"], stand["premium_sms"]
 		}
 		if hasTier {
 			if err := s.SetUserTier(userID, tier); err != nil {
-				writeJSONError(w, http.StatusInternalServerError, "internal error")
+				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 				return
 			}
 			user.Tier = tier

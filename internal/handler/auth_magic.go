@@ -81,8 +81,7 @@ func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFun
 			Email string `json:"email"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Email) == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
@@ -150,22 +149,19 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 			Code  string `json:"code"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
 		normalizedEmail := store.NormalizeEmailAddress(req.Email)
 		if normalizedEmail == "" || req.Code == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
 		val, ok := otpStore.Load(normalizedEmail)
 		if !ok {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"invalid_or_expired_code"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_or_expired_code", nil)
 			return
 		}
 		entry := val.(*otpEntry)
@@ -173,24 +169,21 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 		// Max-attempts gate runs BEFORE code comparison so leaked/correct
 		// codes cannot be exploited after the limit is reached.
 		if atomic.LoadInt32(&entry.attempts) >= 3 {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"max_attempts_exceeded"}`))
+			WriteError(w, r, http.StatusBadRequest, "max_attempts_exceeded", nil)
 			return
 		}
 
 		// TTL gate.
 		if time.Now().After(entry.expiresAt) {
 			otpStore.Delete(normalizedEmail)
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"invalid_or_expired_code"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_or_expired_code", nil)
 			return
 		}
 
 		// Code comparison — increment attempts on miss.
 		if entry.code != req.Code {
 			atomic.AddInt32(&entry.attempts, 1)
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"invalid_or_expired_code"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_or_expired_code", nil)
 			return
 		}
 
@@ -198,14 +191,13 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 		// proceeds — a concurrent second redemption gets the neutral 400
 		// (Issue #2147 AC-9).
 		if !otpStore.CompareAndDelete(normalizedEmail, entry) {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"invalid_or_expired_code"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_or_expired_code", nil)
 			return
 		}
 
 		unlock := store.LockEmailAddress(normalizedEmail)
 		defer unlock()
-		userID, ok := resolveMagicLinkAccount(w, s, normalizedEmail)
+		userID, ok := resolveMagicLinkAccount(w, r, s, normalizedEmail)
 		if !ok {
 			return
 		}
@@ -219,23 +211,22 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 // resolveMagicLinkAccount maps the proven address to exactly one account
 // (Issue #2147, Spec magic_link_adress_eindeutigkeit.md §4). The caller holds
 // store.LockEmailAddress. Returns false when a response was already written.
-func resolveMagicLinkAccount(w http.ResponseWriter, s *store.Store, address string) (string, bool) {
-	fail := func(status int, body string) (string, bool) {
-		w.WriteHeader(status)
-		w.Write([]byte(body))
+func resolveMagicLinkAccount(w http.ResponseWriter, r *http.Request, s *store.Store, address string) (string, bool) {
+	fail := func(status int, code string) (string, bool) {
+		WriteError(w, r, status, code, nil)
 		return "", false
 	}
 	owner, resolution, err := s.ResolveAddressOwner(address)
 	if err != nil {
 		log.Printf("magic-link: address resolution failed: %v", err)
-		return fail(http.StatusInternalServerError, `{"error":"internal error"}`)
+		return fail(http.StatusInternalServerError, "internal_error")
 	}
 	switch resolution {
 	case store.AddressFree:
 		user, err := createMagicLinkUser(s, address)
 		if err != nil {
 			log.Printf("magic-link: createMagicLinkUser error: %v", err)
-			return fail(http.StatusInternalServerError, `{"error":"internal error"}`)
+			return fail(http.StatusInternalServerError, "internal_error")
 		}
 		return user.ID, true
 	case store.AddressOwned:
@@ -262,7 +253,7 @@ func resolveMagicLinkAccount(w http.ResponseWriter, s *store.Store, address stri
 			// jeder anderen Mehrdeutigkeit).
 			if store.HasLoginCredentials(user) || store.EffectiveContactAddress(user) != address {
 				log.Printf("magic-link: takeover of account %s refused — account changed since assignment", owner.ID)
-				return fail(http.StatusBadRequest, `{"error":"invalid_or_expired_code"}`)
+				return fail(http.StatusBadRequest, "invalid_or_expired_code")
 			}
 			now := time.Now().UTC()
 			user.EmailVerifiedAt = &now
@@ -272,12 +263,12 @@ func resolveMagicLinkAccount(w http.ResponseWriter, s *store.Store, address stri
 		}
 		if err != nil {
 			log.Printf("magic-link: takeover of unconfirmed account %s failed: %v", owner.ID, err)
-			return fail(http.StatusInternalServerError, `{"error":"internal error"}`)
+			return fail(http.StatusInternalServerError, "internal_error")
 		}
 		return owner.ID, true
 	}
 	log.Printf("magic-link: address not uniquely assignable — login refused")
-	return fail(http.StatusBadRequest, `{"error":"invalid_or_expired_code"}`)
+	return fail(http.StatusBadRequest, "invalid_or_expired_code")
 }
 
 // createMagicLinkUser provisions a new user with ID format "m-{8hex}".

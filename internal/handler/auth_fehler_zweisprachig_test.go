@@ -229,3 +229,11 @@ func TestG2ZweiNutzerParallelJeEigeneSprache(t *testing.T) {
 		t.Errorf("AC-4: user.json eines Nutzers hat sich veraendert")
 	}
 }
+
+// fehlerCodeVon liefert das code-Feld einer Fehlerantwort (leer, wenn keins da ist).
+func fehlerCodeVon(w *httptest.ResponseRecorder) string {
+	var body map[string]any
+	_ = json.Unmarshal(w.Body.Bytes(), &body)
+	code, _ := body["code"].(string)
+	return code
+}

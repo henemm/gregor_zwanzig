@@ -23,12 +23,12 @@ func NotifyTestHandler(s *store.Store, pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
-			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid request")
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 		var in struct {
@@ -42,13 +42,13 @@ func NotifyTestHandler(s *store.Store, pythonURL string) http.HandlerFunc {
 		}
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, target, bytes.NewReader(reqBody))
 		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "proxy_error")
+			WriteError(w, r, http.StatusInternalServerError, "proxy_error", nil)
 			return
 		}
 		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
 		resp, err := client.Do(req)
 		if err != nil {
-			writeJSONError(w, http.StatusServiceUnavailable, "core_unavailable")
+			WriteError(w, r, http.StatusServiceUnavailable, "core_unavailable", nil)
 			return
 		}
 		defer resp.Body.Close()
