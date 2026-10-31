@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -62,8 +63,8 @@ func ProxyHandler(pythonURL, path string) http.HandlerFunc {
 		client := &http.Client{Timeout: 10 * time.Second}
 
 		url := pythonURL + path
-		if r.URL.RawQuery != "" {
-			url += "?" + r.URL.RawQuery
+		if q := stripUserIDQuery(r.URL.RawQuery); q != "" {
+			url += "?" + q
 		}
 
 		resp, err := client.Get(url)
@@ -83,6 +84,29 @@ func ProxyHandler(pythonURL, path string) http.HandlerFunc {
 		w.WriteHeader(resp.StatusCode)
 		io.Copy(w, resp.Body)
 	}
+}
+
+// stripUserIDQuery entfernt aus der Roh-Query alle Segmente, deren Schluessel
+// nach URL-Dekodierung exakt "user_id" ist (Issue #2163 Punkt 8: eine von
+// aussen gesetzte user_id erreicht den Core nie). Uebrige Segmente behalten
+// Reihenfolge und Kodierung; ohne Treffer bleibt die Roh-Query unveraendert.
+func stripUserIDQuery(raw string) string {
+	if raw == "" {
+		return raw
+	}
+	segs := strings.Split(raw, "&")
+	kept := make([]string, 0, len(segs))
+	for _, seg := range segs {
+		key, _, _ := strings.Cut(seg, "=")
+		if k, err := url.QueryUnescape(key); err == nil && k == "user_id" {
+			continue
+		}
+		kept = append(kept, seg)
+	}
+	if len(kept) == len(segs) {
+		return raw
+	}
+	return strings.Join(kept, "&")
 }
 
 // CompareProxyHandler proxies /api/compare to Python with a long timeout (60s)

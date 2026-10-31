@@ -15,14 +15,11 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
 func TestTelegramWebhookForwardsSecretHeaderToPythonCore(t *testing.T) {
 	const secret = "s3cr3t-2142"
-	os.Setenv("TELEGRAM_WEBHOOK_SECRET", secret)
-	defer os.Unsetenv("TELEGRAM_WEBHOOK_SECRET")
 
 	var coreHits int
 	var arrivedSecret string
@@ -33,7 +30,7 @@ func TestTelegramWebhookForwardsSecretHeaderToPythonCore(t *testing.T) {
 	}))
 	defer core.Close()
 
-	gateway := httptest.NewServer(TelegramWebhookHandler(core.URL))
+	gateway := httptest.NewServer(TelegramWebhookHandler(core.URL, secret))
 	defer gateway.Close()
 
 	body := `{"update_id":42,"message":{"chat":{"id":12345},"text":"status"}}`

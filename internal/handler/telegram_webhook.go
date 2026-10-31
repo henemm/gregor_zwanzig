@@ -22,7 +22,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"sync/atomic"
 	"time"
 )
@@ -37,11 +36,11 @@ func RejectedTelegramWebhookCount() int64 {
 }
 
 // TelegramWebhookHandler returns the public webhook gateway handler.
-// pythonCoreURL is the internal Python core base URL (config.PythonCoreURL).
-func TelegramWebhookHandler(pythonCoreURL string) http.HandlerFunc {
+// pythonCoreURL is the internal Python core base URL (config.PythonCoreURL);
+// secret is config.TelegramWebhookSecret (Issue #2163, leer = 503).
+func TelegramWebhookHandler(pythonCoreURL, secret string) http.HandlerFunc {
 	client := &http.Client{Timeout: 5 * time.Second}
 	return func(w http.ResponseWriter, r *http.Request) {
-		secret := os.Getenv("TELEGRAM_WEBHOOK_SECRET")
 		if secret == "" {
 			// fail-closed: kein offener Endpoint ohne konfiguriertes Secret.
 			http.Error(w, "webhook not configured", http.StatusServiceUnavailable)
