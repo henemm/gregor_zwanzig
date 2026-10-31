@@ -35,7 +35,8 @@ from output.renderers.alert.official_alerts import (
     official_alert_state_key,
 )
 from services import alert_channel_threshold, alert_daily_limit, alert_log
-from services import alert_retry_backoff
+from services import alert_retry_backoff, parallel_fetch
+from services.compare_alert import preset_deadline, run_deadline_from
 from services.throttle_store import ThrottleStore
 import services.alert_urgency as alert_urgency
 from services.alert_gate import (
@@ -79,6 +80,25 @@ def _effective_telegram_style(preset: dict) -> str:
     return effective_compare_telegram_style(preset)
 
 
+def _raise_first_failure(preset_id: str, outcomes: list) -> None:
+    """Issue #1539 S6: Fristablauf je Ort laut loggen, dann die erste
+    gescheiterte Eingabeposition als Ausnahme des Presets werfen."""
+    for out in outcomes:
+        if out.skipped:
+            logger.error(
+                "Compare-Amtlich-Alarm: Warn-Abruf fuer Preset %s / Ort %s nicht "
+                "abgeschlossen (Grund: %s)", preset_id, out.item[0].id, out.skipped,
+            )
+    for out in outcomes:
+        if out.error is not None:
+            raise out.error
+        if out.skipped:
+            raise RuntimeError(
+                f"Warn-Abruf fuer Preset {preset_id} / Ort {out.item[0].id} "
+                f"nicht abgeschlossen ({out.skipped})"
+            )
+
+
 #: Issue #1405 S1: Backoff-Scope des amtlichen Ortsvergleich-Alarms (dieser
 #: Pfad kennt sonst keine Sperrzeit im ``ThrottleStore``).
 _RETRY_SCOPE = "compare_official"
@@ -107,10 +127,16 @@ class CompareOfficialAlertService:
     # Issue #1539 S0: Messung des letzten Laufs (Router -> checked/duration_s).
     last_checked_count: int = 0
     last_duration_s: float = 0.0
+    # Issue #1539 S6: Lauf-Frist (absolut, monotonic); None = keine Lauf-Frist.
+    _run_deadline_at: Optional[float] = None
 
     def check_all_compare_presets(self) -> int:
         started_at = time.monotonic()
-        sent, self.last_failed_count = self._check_all_counted()
+        self._run_deadline_at = run_deadline_from(started_at)
+        try:
+            sent, self.last_failed_count = self._check_all_counted()
+        finally:
+            self._run_deadline_at = None
         self.last_duration_s = time.monotonic() - started_at
         logger.info(
             f"compare_official_alert: Lauf beendet nach {self.last_duration_s:.3f}s fuer "
@@ -486,16 +512,32 @@ class CompareOfficialAlertService:
 
     def _fetch_locations(self, preset_id: str, locs: list, now: datetime) -> tuple[list, dict]:
         """Abruf je Ort; Issue #1441 S2: Pro-Quelle-Ergebnis desselben Abrufs
-        (``collect_source_queries``) als ``AllClearQuery`` je Ort."""
-        raw: list = []
-        queries_by_loc: dict = {}
-        for loc in locs:
+        (``collect_source_queries``) als ``AllClearQuery`` je Ort.
+
+        Issue #1539 S6 dreiphasig: Tagesfenster seriell, NUR der Warn-Abruf
+        parallel (je Aufgabe eigene Senke), Zusammenfuehren seriell in
+        Eingabereihenfolge. Scheitert ein Ort, scheitert das Preset (nie eine
+        Teilmenge ohne Entwarnungs-Basis an `_detect`, ADR-0021)."""
+        auftraege = [(loc, self._day_window_end(preset_id, loc, now)) for loc in locs]
+
+        def abruf(auftrag):
+            loc, window_end = auftrag
             sink: list = []
-            window_end = self._day_window_end(preset_id, loc, now)
             with collect_source_queries(sink):
                 alerts = list(get_official_alerts_for_location(
                     loc.lat, loc.lon, window_start=now, window_end=window_end, now=now,
                 ))
+            return alerts, sink
+
+        outcomes = parallel_fetch.fetch_ordered(
+            auftraege, abruf, provider="official_alerts",
+            deadline_at=preset_deadline(self._run_deadline_at),
+        )
+        _raise_first_failure(preset_id, outcomes)
+        raw: list = []
+        queries_by_loc: dict = {}
+        for out in outcomes:
+            (loc, window_end), (alerts, sink) = out.item, out.value
             raw.extend((alert, [loc.id]) for alert in alerts)
             queries_by_loc[loc.id] = [AllClearQuery(
                 scope=loc.id, scope_ids=(loc.id,), window_start=now, window_end=window_end,
