@@ -274,7 +274,8 @@ func TestProfilePutSpracheMitDismissFlagSetztBeides(t *testing.T) {
 	}
 }
 
-// AC-5: Anmeldung setzt gz_lang mit der Nutzersprache (en bzw. de ohne Feld).
+// AC-5: Anmeldung setzt gz_lang mit der Nutzersprache. Seit #2675 (G1 AC-6)
+// nur bei gespeicherter Sprache; ohne Feld bleibt die Browser-Vorbelegung.
 func TestLoginSetztSprachCookie(t *testing.T) {
 	s := newTestStore(t)
 	hash, _ := bcrypt.GenerateFromPassword([]byte("geheim123"), bcrypt.MinCost)
@@ -293,7 +294,7 @@ func TestLoginSetztSprachCookie(t *testing.T) {
 		secure          bool
 	}{
 		{"lang-hans", "https://gregor20.henemm.com", "en", true},
-		{"lang-ida", "http://localhost:4173", "de", false},
+		{"lang-ida", "http://localhost:4173", "", false},
 	}
 	for _, tc := range cases {
 		h := LoginHandler(s, "test-secret-32-chars-long-enough", tc.host)
@@ -302,6 +303,12 @@ func TestLoginSetztSprachCookie(t *testing.T) {
 		h.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(body)))
 		if w.Code != http.StatusOK {
 			t.Fatalf("Login %s: Status %d: %s", tc.uid, w.Code, w.Body.String())
+		}
+		if tc.want == "" {
+			if c := langCookie(w); c != nil {
+				t.Errorf("G1 AC-6 (Login %s ohne Sprache): gz_lang=%q gesetzt", tc.uid, c.Value)
+			}
+			continue
 		}
 		langPruefeCookie(t, "AC-5 (Login "+tc.uid+")", w, tc.want, tc.secure)
 	}

@@ -1,0 +1,14 @@
+{
+  "fehler.not_found": "Not found.",
+  "fehler.unauthorized": "Please sign in.",
+  "fehler.forbidden": "You do not have permission to do this.",
+  "fehler.store_error": "The data could not be saved or loaded. Please try again later.",
+  "fehler.validation_error": "The input is invalid.",
+  "fehler.bad_request": "The request is invalid.",
+  "fehler.invalid_request": "The request is invalid.",
+  "fehler.internal_error": "Internal error. Please try again later.",
+  "fehler.kind_required": "Briefing kind is missing or invalid (allowed: route, vergleich)",
+  "fehler.rate_limit_exceeded": "Too many requests. Please try again later.",
+  "fehler.service_unavailable": "The service is currently unavailable.",
+  "fehler.unbekannt": "Unknown error ({code})."
+}
