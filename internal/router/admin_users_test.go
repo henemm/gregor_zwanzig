@@ -179,7 +179,17 @@ func auAssertJSONFehler(t *testing.T, w *httptest.ResponseRecorder, wantCode int
 		return
 	}
 	if wantBody != "" {
-		if got := strings.TrimSpace(w.Body.String()); got != wantBody {
+		// Issue #2676 (G2): Handler-Fehler laufen ueber WriteError und tragen
+		// {"code","message","error","detail"}; geprueft wird der code (= error
+		// im Uebergangsfeld). Antworten ohne code-Feld (RequireAdmin) bleiben exakt.
+		var erwartet, bekommen map[string]any
+		_ = json.Unmarshal([]byte(wantBody), &erwartet)
+		_ = json.Unmarshal(w.Body.Bytes(), &bekommen)
+		if code, ok := bekommen["code"]; ok {
+			if code != erwartet["error"] {
+				t.Errorf("%s: code erwartet %v, bekommen %v (%s)", kontext, erwartet["error"], code, w.Body.String())
+			}
+		} else if got := strings.TrimSpace(w.Body.String()); got != wantBody {
 			t.Errorf("%s: Body erwartet %s, bekommen %q", kontext, wantBody, got)
 		}
 	}
@@ -590,7 +600,7 @@ func TestAdminUsers_AC7_DisabledLogin_403WithoutCookie_WrongPasswordStays401(t *
 	}
 
 	falsch := auLogin(t, r, "alice", "falsch-falsch")
-	auAssertJSONFehler(t, falsch, http.StatusUnauthorized, `{"error":"invalid credentials"}`, "AC-7 gesperrt, falsches Passwort")
+	auAssertJSONFehler(t, falsch, http.StatusUnauthorized, `{"error":"invalid_credentials"}`, "AC-7 gesperrt, falsches Passwort")
 
 	// Zwei-Nutzer-Gegenprobe: bob meldet sich normal an.
 	if w := auLogin(t, r, "bob", auPasswort); w.Code != http.StatusOK || auSessionCookie(w) == nil {

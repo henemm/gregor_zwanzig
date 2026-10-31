@@ -130,10 +130,8 @@ func dispatchSmsVerificationCode(s *store.Store, cfg config.Config, userId, numb
 	}()
 }
 
-func smsFehler(w http.ResponseWriter, status int, code string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	fmt.Fprintf(w, `{"error":%q}`, code)
+func smsFehler(w http.ResponseWriter, r *http.Request, status int, code string) {
+	WriteError(w, r, status, code, nil)
 }
 
 // PostSmsVerifyHandler loest den Bestaetigungscode ein. Die Kennung kommt
@@ -146,25 +144,25 @@ func PostSmsVerifyHandler(s *store.Store) http.HandlerFunc {
 			Code string `json:"code"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			smsFehler(w, 400, "invalid request")
+			smsFehler(w, r, 400, "invalid_request")
 			return
 		}
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
-			smsFehler(w, 404, "not_found")
+			smsFehler(w, r, 404, "not_found")
 			return
 		}
 		rec, err := s.LoadSmsVerification(userId)
 		if err != nil || rec == nil ||
 			time.Now().After(rec.ExpiresAt) || rec.FailedAttempts >= smsCodeMaxVersuche {
-			smsFehler(w, 400, "code_expired")
+			smsFehler(w, r, 400, "code_expired")
 			return
 		}
 		// Nummernbindung (AC-4c): der Code beweist GENAU die Nummer, fuer die
 		// er ausgestellt wurde. Ohne diese Pruefung bestaetigte ein Code, der
 		// auf eine fremde Nummer zeigt, die Nummer des Kontos.
 		if rec.Number == "" || rec.Number != smsZielnummer(user) {
-			smsFehler(w, 400, "invalid_code")
+			smsFehler(w, r, 400, "invalid_code")
 			return
 		}
 		if bcrypt.CompareHashAndPassword([]byte(rec.CodeHash), []byte(req.Code)) != nil {
@@ -178,7 +176,7 @@ func PostSmsVerifyHandler(s *store.Store) http.HandlerFunc {
 			} else if err := s.SaveSmsVerification(userId, *rec); err != nil {
 				log.Printf("sms verification: attempt counter not persisted for %s: %v", userId, err)
 			}
-			smsFehler(w, 400, "invalid_code")
+			smsFehler(w, r, 400, "invalid_code")
 			return
 		}
 
@@ -191,7 +189,7 @@ func PostSmsVerifyHandler(s *store.Store) http.HandlerFunc {
 		user.SmsVerifiedNumber = user.SmsTo
 		user.SmsVerifiedAt = &now
 		if err := s.SaveUser(*user); err != nil {
-			smsFehler(w, 500, "store_error")
+			smsFehler(w, r, 500, "store_error")
 			return
 		}
 		if err := s.DeleteSmsVerification(userId); err != nil {
@@ -211,21 +209,21 @@ func PostSmsResendHandler(s *store.Store, cfg config.Config, limiter *MailFloodL
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
-			smsFehler(w, 404, "not_found")
+			smsFehler(w, r, 404, "not_found")
 			return
 		}
 		ziel := smsZielnummer(user)
 		if ziel == "" {
-			smsFehler(w, 400, "no_number")
+			smsFehler(w, r, 400, "no_number")
 			return
 		}
 		if !model.SmsAllowed(model.EffectiveTier(user.Tier)) {
-			smsFehler(w, 400, "sms_not_allowed")
+			smsFehler(w, r, 400, "sms_not_allowed")
 			return
 		}
 		if !limiter.Allow(userId, ziel) {
 			w.Header().Set("Retry-After", limiter.RetryAfterHeader())
-			smsFehler(w, 429, "rate_limit_exceeded")
+			smsFehler(w, r, 429, "rate_limit_exceeded")
 			return
 		}
 		dispatchSmsVerificationCode(s, cfg, userId, ziel)

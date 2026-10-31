@@ -34,18 +34,18 @@ func StagingSmsCodeHandler(s *store.Store) http.HandlerFunc {
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
-			smsFehler(w, 404, "not_found")
+			smsFehler(w, r, 404, "not_found")
 			return
 		}
 		ziel := smsZielnummer(user)
 		if ziel == "" {
-			smsFehler(w, 404, "no_number")
+			smsFehler(w, r, 404, "no_number")
 			return
 		}
 		code, err := issueSmsVerificationCode(s, userId, ziel)
 		if err != nil {
 			log.Printf("staging sms code: issuance failed for %s: %v", userId, err)
-			smsFehler(w, 500, "internal error")
+			smsFehler(w, r, 500, "internal_error")
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

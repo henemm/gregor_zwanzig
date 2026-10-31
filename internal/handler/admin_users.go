@@ -57,26 +57,22 @@ func adminJSON(w http.ResponseWriter, status int, body any) {
 	json.NewEncoder(w).Encode(body)
 }
 
-func adminError(w http.ResponseWriter, status int, code string) {
-	adminJSON(w, status, map[string]string{"error": code})
-}
-
 // adminTargetUser loest {id} auf ein existierendes Konto auf. Ungueltige ID
 // (Path-Traversal) und unbekanntes Konto liefern JSON-404; false = beantwortet.
 func adminTargetUser(w http.ResponseWriter, r *http.Request, s *store.Store) (*model.User, bool) {
 	id := chi.URLParam(r, "id")
 	if !store.ValidUserID(id) {
-		adminError(w, http.StatusNotFound, "not_found")
+		WriteError(w, r, http.StatusNotFound, "not_found", nil)
 		return nil, false
 	}
 	u, err := s.LoadUser(id)
 	if err != nil {
 		log.Printf("admin users: load %s failed: %v", id, err)
-		adminError(w, http.StatusInternalServerError, "store_error")
+		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 		return nil, false
 	}
 	if u == nil {
-		adminError(w, http.StatusNotFound, "not_found")
+		WriteError(w, r, http.StatusNotFound, "not_found", nil)
 		return nil, false
 	}
 	return u, true
@@ -87,7 +83,7 @@ func AdminListUsersHandler(s *store.Store, sched *scheduler.Scheduler) http.Hand
 	return func(w http.ResponseWriter, r *http.Request) {
 		ids, err := s.ListUserIDs()
 		if err != nil {
-			adminError(w, http.StatusInternalServerError, "store_error")
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		users := make([]AdminUser, 0, len(ids))
@@ -115,21 +111,21 @@ func AdminSetUserTierHandler(s *store.Store, sched *scheduler.Scheduler) http.Ha
 			Tier string `json:"tier"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			adminError(w, http.StatusBadRequest, "invalid_request")
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 		switch body.Tier {
 		case "free", "standard", "premium":
 		default:
-			adminError(w, http.StatusBadRequest, "invalid_tier")
+			WriteError(w, r, http.StatusBadRequest, "invalid_tier", nil)
 			return
 		}
 		if err := s.SetUserTierAdmin(u.ID, body.Tier); err != nil {
 			log.Printf("admin users: set tier %s failed: %v", u.ID, err)
-			adminError(w, http.StatusInternalServerError, "store_error")
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
-		adminRespondUser(w, s, sched, u.ID)
+		adminRespondUser(w, r, s, sched, u.ID)
 	}
 }
 
@@ -146,35 +142,35 @@ func AdminSetUserDisabledHandler(s *store.Store, sched *scheduler.Scheduler) htt
 			Disabled *bool `json:"disabled"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Disabled == nil {
-			adminError(w, http.StatusBadRequest, "invalid_request")
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 		if *body.Disabled && u.ID == middleware.UserIDFromContext(r.Context()) {
-			adminError(w, http.StatusConflict, "cannot_disable_self")
+			WriteError(w, r, http.StatusConflict, "cannot_disable_self", nil)
 			return
 		}
 		if err := s.SetUserDisabled(u.ID, *body.Disabled); err != nil {
 			log.Printf("admin users: set disabled %s failed: %v", u.ID, err)
-			adminError(w, http.StatusInternalServerError, "store_error")
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		if *body.Disabled {
 			if err := s.ClearSessions(u.ID); err != nil {
 				log.Printf("admin users: clear sessions %s failed: %v", u.ID, err)
-				adminError(w, http.StatusInternalServerError, "store_error")
+				WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 				return
 			}
 		}
-		adminRespondUser(w, s, sched, u.ID)
+		adminRespondUser(w, r, s, sched, u.ID)
 	}
 }
 
 // adminRespondUser antwortet mit dem frisch gelesenen Listeneintrag
 // (Read-after-Write: zeigt den Ist-Zustand).
-func adminRespondUser(w http.ResponseWriter, s *store.Store, sched *scheduler.Scheduler, id string) {
+func adminRespondUser(w http.ResponseWriter, r *http.Request, s *store.Store, sched *scheduler.Scheduler, id string) {
 	u, err := s.LoadUser(id)
 	if err != nil || u == nil {
-		adminError(w, http.StatusInternalServerError, "store_error")
+		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 		return
 	}
 	adminJSON(w, http.StatusOK, adminUserDTO(u, sched))

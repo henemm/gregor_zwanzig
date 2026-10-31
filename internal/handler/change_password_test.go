@@ -72,6 +72,9 @@ func TestChangePasswordHandler_WrongOldPassword(t *testing.T) {
 	if w.Code != 403 {
 		t.Fatalf("Expected 403, got %d: %s", w.Code, w.Body.String())
 	}
+	if code := fehlerCodeVon(w); code != "wrong_password" {
+		t.Errorf("Expected code wrong_password, got %q: %s", code, w.Body.String())
+	}
 }
 
 func TestChangePasswordHandler_NewPasswordTooShort(t *testing.T) {
