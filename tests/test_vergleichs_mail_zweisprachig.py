@@ -388,3 +388,81 @@ def test_legende_warnkuerzel_englisch():
     for key in ("mail.legende.risk_gruen", "mail.legende.risk_gelb",
                 "mail.legende.risk_orange", "mail.legende.risk_rot"):
         assert t(key, "en") in sichtbar(html_en), key
+
+
+# ------------------------------------- weitere Render-Wege (Mutations-Gegenprobe)
+
+
+def test_gewaehlte_metriken_uebersicht_englisch():
+    """Pfad mit gesetzter Auswahl (``enabled_metrics`` als Liste)."""
+    from app.metric_catalog import get_metric
+    from output.renderers.email.compare_html import render_compare_html
+
+    auswahl = ["precip_sum", "gust_max"]
+    html_en = render_compare_html(build_result(), enabled_metrics=auswahl, lang="en")
+    uebersicht = next(tab for tab in _tabellen(html_en)
+                      if len(tab) > 1 and tab[1][0] == t("vergleich.zeile.amtliche_warnungen", "en"))
+    assert [z[0] for z in uebersicht[2:]] == [
+        get_metric("precipitation").label("en"), get_metric("gust").label("en")]
+
+
+def test_ausblick_leere_auswahl_zeigt_zustand_englisch():
+    """Ausblick eingeschaltet, Auswahl bewusst leer -> benannter Zustand."""
+    from output.renderers.email.compare_html import render_compare_html
+    from output.renderers.email.outlook_state_hint import OutlookState, outlook_state_text
+
+    html_en = render_compare_html(build_result(mit_fehlerort=False), outlook_enabled=True,
+                                  outlook_metrics=[], lang="en")
+    vis = sichtbar(html_en)
+    assert outlook_state_text(OutlookState.UNAVAILABLE, lang="en") in vis
+    assert t("vergleich.ausblick.eyebrow", "en") in vis
+    assert t("vergleich.ausblick.titel", "en") in vis
+    assert t("vergleich.ausblick.eyebrow", "de") not in vis
+
+
+def test_spaltenlegende_des_ausblicks_englisch():
+    """Ohne Stundenspalten traegt die Spalten-Legende nur die Ausblick-Kuerzel."""
+    from output.renderers.email.compare_html import render_compare_html
+    from output.renderers.email.helpers import format_column_legend, outlook_legend_pairs
+
+    html_en = render_compare_html(build_result(mit_fehlerort=False), hourly_metrics=[],
+                                  outlook_enabled=True, lang="en")
+    erwartet = format_column_legend(outlook_legend_pairs(None, lang="en"), lang="en")
+    assert erwartet and erwartet in sichtbar(html_en)
+    assert erwartet != format_column_legend(outlook_legend_pairs(None))
+
+
+def test_kollisionszusatz_der_langform_englisch():
+    """``derive_row_labels`` (oeffentlich): gleicher Name, verschiedene Auswertung.
+    Im gerenderten Ortsvergleich kollidieren heute nur min/max (in beiden
+    Sprachen gleich), deshalb hier direkt am oeffentlichen Baustein."""
+    from app.metric_catalog import aggregation_label, get_metric
+    from output.renderers.email.compare_html import derive_row_labels
+
+    zeilen = [{"key": "a", "metric_id": "cloud_total", "aggregation": "avg"},
+              {"key": "b", "metric_id": "cloud_total", "aggregation": "sum"}]
+    name = get_metric("cloud_total").label("en")
+    assert [z["label"] for z in derive_row_labels(zeilen, form="long", lang="en")] == [
+        f"{name} {aggregation_label('avg', 'en')}", f"{name} {aggregation_label('sum', 'en')}"]
+    assert aggregation_label("avg", "en") != aggregation_label("avg", "de")
+
+
+def test_telegram_ueberlauf_degeneriert_englisch():
+    """Schon der erste Ortsblock sprengt 4096 Zeichen: Hinweis trotzdem englisch."""
+    from output.renderers.comparison import render_compare_telegram
+
+    result = build_result(mit_fehlerort=False)
+    riese = replace(result.locations[0], location=replace(
+        result.locations[0].location, name="Riesenname " * 500))
+    text = render_compare_telegram(replace(result, locations=[riese, result.locations[1]]),
+                                   lang="en")
+    assert len(text) <= 4096
+    assert text.endswith("\n" + t("vergleich.telegram.uebersprungen", "en", n=1))
+
+
+def test_vortag_unbekannte_kennung_faellt_auf_neutrales_wort():
+    """Schutz fuer kuenftige Kennungen ohne eigenes Richtungswort."""
+    from services.day_comparison import _direction_word
+
+    assert _direction_word("unbekannt", True, "en") == t("vergleich.vortag.anders", "en")
+    assert _direction_word("unbekannt", False, "de") == "anders"

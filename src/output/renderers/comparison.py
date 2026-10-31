@@ -853,14 +853,19 @@ def render_compare_telegram(
     text = _join_telegram(header, blocks)
     if max_chars is None or len(text) <= max_chars:
         return text
+    # Issue #2666: EIN Hinweis-Baustein in Nutzersprache fuer alle drei
+    # Stellen der Einpass-Logik (Laenge pruefen = Laenge anhaengen).
+    return _fit_telegram(header, blocks, max_chars, lambda n: _telegram_notice(n, lang))
 
-    # Ueberlauf: NICHT hart mitten im Wort schneiden (das ergaebe eine halbe
-    # Datenzeile, die wie ein vollstaendiger Wert aussieht). Stattdessen ganze
-    # ORTSBLOECKE behalten und den Verlust ausweisen — gleiche Einpass-Schleife
-    # mit mitgerechnetem Hinweis wie im SMS-Pfad (alert/render.py:521-529).
+
+def _fit_telegram(header: list[str], blocks: list[list[str]], max_chars: int, hinweis) -> str:
+    """Ueberlauf: NICHT hart mitten im Wort schneiden (das ergaebe eine halbe
+    Datenzeile, die wie ein vollstaendiger Wert aussieht). Stattdessen ganze
+    ORTSBLOECKE behalten und den Verlust ausweisen — gleiche Einpass-Schleife
+    mit mitgerechnetem Hinweis wie im SMS-Pfad (alert/render.py:521-529)."""
     kept: list[list[str]] = []
     for block in blocks:
-        notice = _telegram_notice(len(blocks) - len(kept) - 1, lang)
+        notice = hinweis(len(blocks) - len(kept) - 1)
         if len(_join_telegram(header, kept + [block]) + notice) <= max_chars:
             kept.append(block)
         else:
@@ -871,11 +876,11 @@ def render_compare_telegram(
         # Degeneration: schon der erste Ortsblock sprengt 4096 Zeichen. Dann an
         # der Wortgrenze kuerzen (letztes Sicherheitsnetz, geteilter Helfer
         # `_word_boundary_truncate`) statt mitten im Wort.
-        notice = _telegram_notice(omitted - 1, lang)
+        notice = hinweis(omitted - 1)
         body = _join_telegram(header, [blocks[0]])
         return _word_boundary_truncate(body, max(max_chars - len(notice), 0)) + notice
 
-    body = _join_telegram(header, kept) + _telegram_notice(omitted, lang)
+    body = _join_telegram(header, kept) + hinweis(omitted)
     return body if len(body) <= max_chars else _word_boundary_truncate(body, max_chars)
 
 
