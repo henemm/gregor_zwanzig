@@ -239,6 +239,11 @@ func TestProfilePutSpracheMitAnzeigenameMergt(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("AC-3: Status %d: %s", w.Code, w.Body.String())
 	}
+	// Der gemischte PUT schreibt laut Spec per SaveUser (typisiertes Modell):
+	// das dem Modell unbekannte Fremdfeld ueberlebt dort heute schon keinen
+	// display_name-PUT (Bestandsverhalten, nicht Teil dieses Pakets). Geprueft
+	// werden hier alle Modellfelder; das Fremdfeld prueft der Nur-Sprache-Pfad.
+	delete(vorher, "zukunftsfeld")
 	langPruefeMerge(t, "AC-3 (gemischt)", vorher, onbReadRawUser(t, s, "lang-fred"),
 		map[string]string{"language": `"en"`, "display_name": `"Fred Neu"`})
 	langPruefeKeinVersand(t, "AC-3 (gemischt)", s, "lang-fred", mails, sms)

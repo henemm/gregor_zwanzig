@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 from output.channels.seven_io_base import mask_number
 from services.file_lock import atomic_write_json, exclusive_lock
+from i18n import language_from_user_dict
 from app.metric_catalog import (
     normalize_outlook_metric_formats, normalize_outlook_metric_ids,
 )
@@ -1203,7 +1204,7 @@ def _parse_user(data: Dict[str, Any]) -> User:
     prefs_data = user_data.get("preferences", {})
     preferences = UserPreferences(
         units=prefs_data.get("units", "metric"),
-        language=prefs_data.get("language", "de"),
+        language=language_from_user_dict(user_data),
         wind_chill_warning=prefs_data.get("wind_chill_warning", -20),
         avalanche_level_warning=prefs_data.get("avalanche_level_warning", 3),
         wind_warning=prefs_data.get("wind_warning", 50),
