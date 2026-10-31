@@ -1,5 +1,6 @@
-"""MeteoAlarmFeedSource — kontingentfreier CAP-Feed fuer Italien, Oesterreich
-und Deutschland (Issue #1445 S1/S3, #1681).
+"""MeteoAlarmFeedSource — kontingentfreier CAP-Feed fuer Italien, Oesterreich,
+Deutschland (Issue #1445 S1/S3, #1681), die Schweiz, Norwegen, Schweden,
+Finnland, Spanien, Portugal, die Niederlande und Polen (Issue #1442 S1-S3a).
 
 Ersetzt den kontingentierten EDR-Index-Weg (``meteoalarm.py``) durch
 ``feeds.meteoalarm.org`` -- eine Momentaufnahme ALLER aktuell gueltigen
@@ -65,12 +66,17 @@ _FEED_PATHS: dict[str, str] = {
     "FI": "/api/v1/warnings/feeds-finland",
     # Issue #1442 S3: wie FI -- nur EMMA_ID, Zonengeometrie eingecheckt.
     "ES": "/api/v1/warnings/feeds-spain",
+    # Issue #1442 S3a: wie FI/ES -- nur EMMA_ID, Zonengeometrie eingecheckt.
+    "PT": "/api/v1/warnings/feeds-portugal",
+    "NL": "/api/v1/warnings/feeds-netherlands",
+    "PL": "/api/v1/warnings/feeds-poland",
 }
 # Issue #1681: Geocode-Art je Land -- DE ordnet ueber die DWD-``WARNCELLID``
-# zu (1:1 im Feed, traegt die eingecheckte Kreisgeometrie), IT/AT/FI/ES ueber EMMA.
+# zu (1:1 im Feed, traegt die eingecheckte Kreisgeometrie), alle anderen
+# Geocode-Laender (IT/AT/FI/ES/PT/NL/PL) ueber EMMA.
 _GEOCODE_NAME: dict[str, str] = {
     "IT": "EMMA_ID", "AT": "EMMA_ID", "DE": "WARNCELLID", "FI": "EMMA_ID",
-    "ES": "EMMA_ID",
+    "ES": "EMMA_ID", "PT": "EMMA_ID", "NL": "EMMA_ID", "PL": "EMMA_ID",
 }
 # Kuesten-/Seezellen (Praefix 501) liegen bewusst nicht in der Kreisgeometrie.
 _DE_COAST_PREFIX = "501"
@@ -289,18 +295,37 @@ def _get_cached_feed(country: str) -> Optional[dict]:
     )
 
 
+def _superseded_ids(feed: dict) -> frozenset[str]:
+    """Kennungen, die ein ``Update`` oder ``Cancel`` im Feed ersetzt bzw.
+    aufhebt (CAP ``references``; Gegenstueck zu ``_polygon_index``)."""
+    ids: set[str] = set()
+    for warning in feed.get("warnings") or []:
+        alert = warning.get("alert") if isinstance(warning, dict) else None
+        if isinstance(alert, dict) and alert.get("msgType") in ("Update", "Cancel"):
+            ids |= _referenced_ids(alert)
+    return frozenset(ids)
+
+
 def _alerts_for_zone(
     feed: dict, zone: "str | set[str]", country: str = "IT",
+    superseded: "frozenset[str] | None" = None,
 ) -> list[OfficialAlert]:
     """Wertet eine Feed-Momentaufnahme fuer EINE Zone aus -- geteilter
     Malformations-/Reihenfolge-Schutz (F003/F005 aus S1) fuer BEIDE Laender,
     EIN Codepfad (S3 Implementation Details Punkt 2, letzter Absatz).
     Issue #1442 S2: FI uebergibt eine Zonen-MENGE (Kuestenort liegt in Land-
-    UND Seezone); jede Warnung zaehlt trotzdem nur einmal."""
+    UND Seezone); jede Warnung zaehlt trotzdem nur einmal.
+    Issue #1442 S3a (AC-7): nur die Zonenlaender (``_fetch_zones``) uebergeben
+    ``superseded`` -- dann entfallen Rueckzuege (``Cancel``) und per
+    ``Update``/``Cancel`` ersetzte Fassungen; IT/AT/DE bleiben unveraendert."""
     zones = {zone} if isinstance(zone, str) else zone
     alerts: list[OfficialAlert] = []
     for warning in feed.get("warnings") or []:
         alert = warning.get("alert") or {}
+        if superseded is not None and (
+            alert.get("msgType") == "Cancel" or alert.get("identifier") in superseded
+        ):
+            continue
         info = alert.get("info")
         info_is_list = isinstance(info, list)
 
@@ -360,11 +385,12 @@ _DATA_DIR = Path(__file__).resolve().parent / "data"
 _ch_regions = RegionMapper(_SLF_REGIONS_FILE)
 _nordic_outlines = RegionMapper(_DATA_DIR / "meteoalarm_outlines_nordics.geojson.json")
 _POLYGON_COUNTRIES = ("CH", "NO", "SE")
-# Zonenlaender FI (Issue #1442 S2) und ES (S3): EMMA_ID-Zonengeometrie aus
-# MeteoAlarm-geocodes.json, EIN gemeinsamer Zonenweg (data/README.md).
+# Zonenlaender FI (Issue #1442 S2), ES (S3) und PT/NL/PL (S3a): EMMA_ID-
+# Zonengeometrie aus MeteoAlarm-geocodes.json, EIN gemeinsamer Zonenweg
+# (data/README.md).
 _zone_mappers: dict[str, RegionMapper] = {
     country: RegionMapper(_DATA_DIR / f"meteoalarm_zones_{country}.geojson.json")
-    for country in ("FI", "ES")
+    for country in ("FI", "ES", "PT", "NL", "PL")
 }
 # Ausgewerteter Feed (BBoxen, Ringe, Rueckzuege) je Land und Momentaufnahme --
 # haengt per Objekt-Referenz am gecachten Feed und lebt dessen 30-min-TTL mit.
@@ -518,7 +544,7 @@ def _covers_polygon(country: str, lat: float, lon: float) -> bool:
 
 
 def _zones_for_point(country: str, lat: float, lon: float) -> set[str]:
-    """Punkt -> ALLE getroffenen ``EMMA_ID`` eines Zonenlands (FI/ES;
+    """Punkt -> ALLE getroffenen ``EMMA_ID`` eines Zonenlands (FI/ES/PT/NL/PL;
     Kuestenort: Land- UND Seezone)."""
     return set(_zone_mappers[country].regions_at(lat, lon))
 
@@ -528,15 +554,16 @@ def _known_zones(country: str) -> set[str]:
 
 
 class MeteoAlarmFeedSource:
-    """Feed-Bestandsquelle Italien+Oesterreich (#1445 S1/S3) -- erfuellt
+    """Feed-Bestandsquelle (#1445 S1/S3, #1681, #1442) -- erfuellt
     ``OfficialAlertSource`` (base.py:24). ``OfficialAlert.source`` bleibt
     ``"meteoalarm"`` (Spec Implementation Details Punkt 8): nur der interne
     Abrufweg aendert sich. Ein Code, eine Instanz je Land ueber den
-    Konstruktor-Parameter ``country`` (IT/AT/DE/FI Zonenweg, CH/NO/SE
-    Punkt-in-Polygon, Issue #1442 S1/S2)."""
+    Konstruktor-Parameter ``country`` (IT/AT/DE eigene Zonenaufloesung,
+    FI/ES/PT/NL/PL gemeinsamer Zonenweg, CH/NO/SE Punkt-in-Polygon)."""
 
     def __init__(
-        self, country: Literal["IT", "AT", "DE", "CH", "NO", "SE", "FI", "ES"],
+        self,
+        country: Literal["IT", "AT", "DE", "CH", "NO", "SE", "FI", "ES", "PT", "NL", "PL"],
     ) -> None:
         self.country = country
 
@@ -652,9 +679,10 @@ class MeteoAlarmFeedSource:
         return _alerts_for_point_polygon(feed, lat, lon, self.country)
 
     def _fetch_zones(self, country: str, lat: float, lon: float) -> list[OfficialAlert]:
-        """Zonenlaender FI/ES (Spec #1442 S2 Punkt 7, S3 Punkt 1): Zonenweg
-        ueber ``EMMA_ID`` wie IT/AT/DE; keine Zone -> nicht zustaendig;
-        unbekannte Feed-Zonen -> Drift-Journal (``meteoalarm_feed:<Land>``)."""
+        """Zonenlaender FI/ES/PT/NL/PL (Spec #1442 S2 Punkt 7, S3 Punkt 1, S3a):
+        Zonenweg ueber ``EMMA_ID`` wie IT/AT/DE; keine Zone -> nicht zustaendig;
+        unbekannte Feed-Zonen -> Drift-Journal (``meteoalarm_feed:<Land>``);
+        ``Update``/``Cancel`` ersetzen ihre Vorgaenger (S3a AC-7)."""
         zones = _zones_for_point(country, lat, lon)
         if not zones:
             warn_egress.mark_not_covered()
@@ -664,4 +692,4 @@ class MeteoAlarmFeedSource:
             warn_egress.mark_fetch_incomplete()
             return []
         _log_unknown_zone_drift(feed, country, _known_zones(country), "unknown_zone")
-        return _alerts_for_zone(feed, zones, country)
+        return _alerts_for_zone(feed, zones, country, _superseded_ids(feed))

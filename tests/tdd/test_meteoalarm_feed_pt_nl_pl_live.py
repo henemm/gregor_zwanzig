@@ -11,6 +11,7 @@ Die drei Feeds tragen keine Polygone (nur ``EMMA_ID``): feste Repraesentativpunk
 """
 from __future__ import annotations
 
+import time
 from datetime import datetime, timezone
 
 import pytest
@@ -87,8 +88,13 @@ def test_ac14_echter_feed_liefert_warnung_fuer_gewarnte_zone(land):
     from services.official_alerts.meteoalarm_feed import MeteoAlarmFeedSource
 
     meteoalarm_feed._cache.clear()
+    # Zeitpruefung VOR dem SKIP-Zweig: der echte Netzabruf passiert HIER (danach Cache-Treffer),
+    # ein langsamer Abruf darf nie als SKIP durchgehen. +5 s Marge fuer das Parsen (NL ~1,4 MB).
+    start = time.monotonic()
     feed = meteoalarm_feed._get_cached_feed(land)
+    dauer = time.monotonic() - start
     assert feed is not None, f"echter {land}-Feed nicht abrufbar"
+    assert dauer <= meteoalarm_feed.TIMEOUT + 5, f"{land}-Feedabruf zu langsam: {dauer:.1f} s"
 
     jetzt = datetime.now(timezone.utc)
     zonen = _aktive_zonen(feed, land, jetzt)
@@ -100,9 +106,13 @@ def test_ac14_echter_feed_liefert_warnung_fuer_gewarnte_zone(land):
     quelle = MeteoAlarmFeedSource(land)
     backup = list(oa_base._REGISTERED_SOURCES)
     oa_base._REGISTERED_SOURCES[:] = [quelle]
+    start = time.monotonic()
     try:
         alerts, unavailable = get_official_alerts_with_status(*punkt, now=jetzt)
     finally:
         oa_base._REGISTERED_SOURCES[:] = backup
+    dauer = time.monotonic() - start
+    # +5 s Marge fuer das Parsen ueber dem Abruf-Timeout.
+    assert dauer <= meteoalarm_feed.TIMEOUT + 5, f"{land}-Abfrage zu langsam: {dauer:.1f} s"
     assert unavailable is False
     assert len(alerts) >= 1, f"mindestens 1 Warnung erwartet fuer {zonen[0]} {punkt}"

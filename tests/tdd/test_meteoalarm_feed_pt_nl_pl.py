@@ -5,7 +5,8 @@ AC-14; Test Plan Test 1-16). AC-14 / Test 16 (live): eigene Datei ``test_meteoal
 
 AC -> Testfunktion:
 
-- AC-1  (Test 1)  ``test_ac1_gewarnter_ort_bekommt_warnung_mit_stufe_art_zeitraum``
+- AC-1  (Test 1)  ``test_ac1_gewarnter_ort_bekommt_warnung_mit_stufe_art_zeitraum``,
+                  ``test_ac1_echte_pl_nebelwarnung_zakopane_wird_verworfen``
 - AC-2  (Test 2)  ``test_ac2_ruhige_lage_ist_keine_warnung_ohne_ausfall``
 - AC-3  (Test 3)  ``test_ac3_feed_ausfall_meldet_nicht_abrufbar``
 - AC-4  (Test 4)  ``test_ac4_land_kueste_und_rand_sind_zustaendig``,
@@ -97,7 +98,7 @@ UTRECHT = (52.09, 5.12)            # NL015, nur echte Gruenstufen -> ruhig
 # Polen
 WARSCHAU = (52.23, 21.01)          # PL1465, SYNTH gelb
 KRAKAU = (50.06, 19.94)            # PL1261 (+PL1206), SYNTH orange
-ZAKOPANE = (49.30, 19.95)          # PL1217, ECHTE gelbe Warnung (2544112)
+ZAKOPANE = (49.30, 19.95)          # PL1217, ECHTE gelbe NEBEL-Warnung (2544112) -> verworfen (#1430)
 DANZIG = (54.35, 18.65)            # PL2261, Stadt
 DANZIG_HAFEN = (54.42, 18.68)      # PL2261 (Land) + PL805 Coastal Zone East (See) (+PL801 Altzone)
 HEL = (54.61, 18.80)               # PL2211 + PL801
@@ -230,12 +231,11 @@ def _zonendatei(land: str) -> Path:
     ("NL", "amsterdam", AMSTERDAM, ".SYNTH-NL011", 2),
     ("PL", "warschau", WARSCHAU, ".SYNTH-PL1465", 2),
     ("PL", "krakau", KRAKAU, ".SYNTH-PL1261", 3),
-    ("PL", "zakopane_echt", ZAKOPANE, "2544112.PL1217", 2),
 ])
 def test_ac1_gewarnter_ort_bekommt_warnung_mit_stufe_art_zeitraum(land, name, punkt, suffix, stufe):
     """AC-1: GIVEN ein Ort in PT/NL/PL in einem Gebiet mit aktiver Warnung, WHEN die amtlichen
     Warnungen abgerufen werden, THEN erscheint genau diese Warnung mit Stufe, Ereignisart und
-    Gueltigkeitszeitraum (Zakopane: echte, unveraenderte IMGW-Warnung)."""
+    Gueltigkeitszeitraum."""
     _assert_pruefling_aus_diesem_baum()
     from services.official_alerts import meteoalarm_feed
 
@@ -252,6 +252,27 @@ def test_ac1_gewarnter_ort_bekommt_warnung_mit_stufe_art_zeitraum(land, name, pu
     assert (a.valid_from, a.valid_to) == (von, bis), (a, von, bis)
     assert a.region_label, "Gebietsbezeichnung darf nicht leer sein"
     assert unavailable is False
+
+
+def test_ac1_echte_pl_nebelwarnung_zakopane_wird_verworfen():
+    """AC-1 (Negativpruefung auf ECHTEN Daten, Korrektur Phase 6): GIVEN die echte, unveraenderte
+    IMGW-Warnung ``2544112.PL1217`` (Zakopane, gelb, ``awareness_type`` 4 Nebel) ist zum
+    Referenzzeitpunkt gueltig, WHEN fuer Zakopane abgerufen wird, THEN entsteht KEINE Warnung (Nebel
+    verwirft der geteilte Mapper bewusst, #1430) und KEIN Ausfallhinweis -- auch direkt an der Quelle."""
+    _assert_pruefling_aus_diesem_baum()
+    eintrag = _eintrag(_feed("PL"), "2544112.PL1217")
+    assert ".SYNTH-" not in eintrag["identifier"], "muss die echte Probe sein"
+    for info in eintrag["info"]:
+        params = {p["valueName"]: p["value"] for p in info["parameter"]}
+        assert params["awareness_type"].startswith("4;"), params
+        assert params["awareness_level"].startswith("2;"), params
+    von, bis = _zeitraum(_feed("PL"), "2544112.PL1217")
+    assert von <= _NOW["PL"] < bis, "Kontrolle: Nebelwarnung ist zum Referenzzeitpunkt gueltig"
+    assert _quelle("PL").covers(*ZAKOPANE) is True
+    alerts, unavailable = _abruf("PL", ZAKOPANE)
+    assert alerts == [] and unavailable is False, alerts
+    direkt, status = _direkt("PL", ZAKOPANE)
+    assert direkt == [] and status["failed"] is False, (direkt, status)
 
 
 # ───────────────────────────── AC-2 (Test 2) ─────────────────────────────────
@@ -435,16 +456,42 @@ def test_ac7_cancel_nimmt_warnung_zurueck(land, name, punkt):
     assert unavailable is False
 
 
+def test_ac7_cancel_mit_info_ist_nie_aktive_warnung():
+    """AC-7 (Adversary F001): GIVEN ein ``Cancel`` MIT vollstaendigem ``info[]`` (gelb, Wind, Zone
+    PT013 Coimbra, zum Referenzzeitpunkt gueltig), dessen Vorgaenger NICHT im Feed steht, WHEN fuer
+    Coimbra abgerufen wird, THEN erscheint der Rueckzug nicht als aktive Warnung -- weder ueber die
+    Registry noch direkt an der Quelle. Positivkontrolle: derselbe Eintrag als ``Alert`` ergibt
+    genau eine Warnung (der Rueckzug faellt also nicht aus anderem Grund heraus)."""
+    _assert_pruefling_aus_diesem_baum()
+    feed = _feed("PT")
+    cancel = _eintrag(feed, ".SYNTH-PT013-CANCEL-MIT-INFO")
+    assert cancel["msgType"] == "Cancel" and cancel["info"], "Fixture: Cancel MIT info"
+    ids = {w["alert"]["identifier"] for w in feed["warnings"]}
+    assert not {r.split(",")[1] for r in cancel["references"].split()} & ids, "Vorgaenger nicht im Feed"
+    assert _quelle("PT").covers(*COIMBRA) is True
+
+    als_alert = {"warnings": [dict(w, alert=dict(w["alert"], msgType="Alert"))
+                              if w["alert"] is cancel else w for w in feed["warnings"]]}
+    kontrolle, _ = _abruf("PT", COIMBRA, feed=als_alert)
+    assert len(kontrolle) == 1 and kontrolle[0].level == 2, kontrolle
+
+    alerts, unavailable = _abruf("PT", COIMBRA)
+    assert alerts == [] and unavailable is False, f"Rueckzug darf nicht aktiv sein: {alerts}"
+    direkt, status = _direkt("PT", COIMBRA)
+    assert direkt == [] and status["failed"] is False, (direkt, status)
+
+
 # ───────────────────────────── AC-8 (Test 8) ─────────────────────────────────
 
 @pytest.mark.parametrize("land,punkt,suffix,landessprache", [
     ("PT", FUNCHAL, "MD-10-1166", "pt-PT"),
     ("NL", AMSTERDAM, ".SYNTH-NL011", "nl-NL"),
-    ("PL", ZAKOPANE, "2544112.PL1217", "pl-PL"),
+    ("PL", WARSCHAU, ".SYNTH-PL1465", "pl-PL"),
 ])
 def test_ac8_text_stammt_aus_en_gb(land, punkt, suffix, landessprache):
-    """AC-8: GIVEN ein Eintrag mit Landessprache und ``en-GB`` (PT und PL: echte Eintraege), WHEN die
-    Warnung ausgegeben wird, THEN ist ihr Text vorhanden und stammt aus ``en-GB``."""
+    """AC-8: GIVEN ein Eintrag mit Landessprache und ``en-GB`` (PT: echter Eintrag; NL/PL:
+    synthetisch, die echte PL-Probe traegt keine auswertbare Warnart), WHEN die Warnung ausgegeben
+    wird, THEN ist ihr Text vorhanden und stammt aus ``en-GB``."""
     _assert_pruefling_aus_diesem_baum()
     eintrag = _eintrag(_feed(land), suffix)
     assert {i["language"] for i in eintrag["info"]} == {landessprache, "en-GB"}

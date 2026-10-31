@@ -146,3 +146,53 @@ Gleiche Quelle und gleiche **ungeklärte Lizenz** wie der FI-Auszug (gebündelt 
   `unknown_zone`); dann `geocodes.json` neu ziehen und mit denselben Parametern neu bauen.
 - **Verwendung:** `meteoalarm_feed._zones_for_point("ES", …)` für `covers()` UND `fetch()` von
   `MeteoAlarmFeedSource("ES")` (gemeinsamer Zonenweg `_fetch_zones` mit FI).
+
+## `meteoalarm_zones_{PT,NL,PL}.geojson.json` — MeteoAlarm-Warnzonen Portugal, Niederlande, Polen (`EMMA_ID`), Issue #1442 S3a
+
+Gleiche Quelle und gleiche **ungeklärte Lizenz** wie die FI- und ES-Auszüge (gebündelt im bestehenden
+Antrag in `docs/specs/data_sources.md`). Die drei Feeds (`feeds-portugal`, `feeds-netherlands`,
+`feeds-poland`) tragen keine Polygone, nur `EMMA_ID`.
+
+- **Herkunft:** MeteoAlarm `geocodes.json`, Google-Drive-Datei-ID `16s24hYHfYQhKMNcP1hpgQmg13Yb8j0hV`,
+  abgerufen am 2026-10-30, 39 256 854 Byte, sha256
+  `0c8fe7b9af4f86c72f1c28bb9cea02f673fee6d45d02681713e6ad3ebd615dd0` (identisch zur FI-/ES-Quelle,
+  vor dem Bau geprüft). Eingecheckt ist je Land nur der Auszug `type` = `EMMA_ID`, `code` mit
+  Länderpräfix; `properties.id` = `EMMA_ID` (umgeschrieben aus `code`), `properties.name` = Name laut
+  `geocodes.json` (unverändert; in PT lautet er bei allen Zonen nur „Portugal").
+
+  | Datei | Zonen | davon Wasser (unverändert) | Byte | sha256 |
+  |---|---|---|---|---|
+  | `meteoalarm_zones_PT.geojson.json` | 25 (Festland `PT005`–`PT022`, Azoren `PT001`–`PT003`, Madeira `PT023`–`PT026`) | keine | 34 769 | `9d4cb926bf592798a94875073503ef4d923e58db45451e2b328553e48c270b45` |
+  | `meteoalarm_zones_NL.geojson.json` | 20 (13 Provinzen `NL007`–`NL019` + 7 Wasserzonen) | 7: `NL801`–`NL805` Küstenstreifen (Vlissingen … Rottum), `NL806` Waddenzee, `NL807` IJsselmeer | 28 495 | `3ccb88e850c62ee2c5269da6450edc071e588349f39bbcf1114a1e21462ce8dd` |
+  | `meteoalarm_zones_PL.geojson.json` | 385 (380 Kreise/Powiats, **vierstellig** `PL0201`…`PL3263`, + 5 Seezonen) | 5: **dreistellig** `PL801`–`PL805` (Strefa brzegowa / Coastal Zone) | 241 503 | `1408601f0d2a9f75881195434af5b388e7584b6195d334e9238ad7b141cca72d` |
+
+- **Seezonen-Regel je Land** (gemessen an Code + Name in `geocodes.json`, NICHT die spanische Regel
+  „840–890"): PT hat keine Seezone; NL: Nummer ≥ 800; PL: nur die **dreistelligen** Nummern 8xx.
+  **Falle beim Neubau:** `PL0801`, `PL0805` usw. (vierstellig, Woiwodschaft Lubuskie) sind Landkreise
+  und werden aufgeweitet; nur `PL801`–`PL805` sind See.
+- **Bewusst verändert:** Landzonen **um 0,05° aufgeweitet** (`buffer(0.05)`) und mit
+  `simplify(0.005, preserve_topology=True)` vereinfacht; Wasserzonen unverändert. Alle Koordinaten auf
+  4 Nachkommastellen gerundet (wie FI/ES). Messung der Testorte (roh → gebaut): Den Helder Stadt
+  `NL011` → `NL011`+`NL019`; Hafen Den Helder (52,96/4,78) roh nur `NL806` → `NL011`+`NL019`+`NL806`;
+  West-Terschelling roh nur `NL806` → `NL019`+`NL806`; Hafen Danzig (54,42/18,68) roh nur
+  `PL801`+`PL805` → zusätzlich `PL2261`; Hel roh nur `PL801` → `PL2211`+`PL801`; Funchal `PT024` →
+  `PT023`+`PT024`; Lissabon `PT016` → `PT016`+`PT020`; Krakau `PL1261` → `PL1206`+`PL1261`. Alle
+  übrigen Land-, Küsten- und Grenzorte der Spec-Tabelle (Porto, Faro, Cabo da Roca, Elvas, Amsterdam,
+  Maastricht, Terschelling, Venlo, Baarle-Nassau, Warschau, Zakopane, Danzig, Słubice) liegen in ihrer
+  Rohzone. Grenzstreifen: Kaldenkirchen (DE) trifft aufgeweitet `NL012`, Frankfurt (Oder) `PL0805`;
+  Badajoz (ES), Madrid, Paris, Berlin, Prag, Vilnius liegen in keiner PT/NL/PL-Zone. Jede Warnung
+  zählt trotzdem nur einmal; das Nachbarland führt im Feed nur eigene Zonen.
+- **Skript-Parameter** (einmaliger Bau, shapely nur dafür, keine Laufzeit-Abhängigkeit; abgeleitet aus
+  dem ES-Skript mit Seezonen-Regel je Land):
+  `uv run --no-project --with shapely python -I build_zones.py geocodes.json <PT|NL|PL> out.json 0.05 0.005 4`
+  (Argumente: Quelle, Land, Ziel, Aufweitung in Grad, `simplify`-Toleranz, Nachkommastellen). Ausgabe
+  nach `id` sortiert. Wird eine Datei größer als 400 KB, `simplify` erhöhen.
+- **Beleg 1:1-Abgleich:** Live-Abrufe am 2026-10-30: `feeds-portugal` 5 Warnungen / 5 verschiedene
+  `EMMA_ID`, `feeds-netherlands` 754 / 15, `feeds-poland` 156 / 126; einzige Geocode-Art jeweils
+  `EMMA_ID`. Abgleich mit den Auszügen: 0 Feed-Zonen ohne Geometrie (PT 5/25, NL 15/20, PL 126/385).
+  Jede Zone der Fixtures `tests/fixtures/meteoalarm_feed/feed_{portugal,netherlands,poland}_sample.json`
+  ist enthalten (Test AC-11 `test_ac11_zonendatei_deckt_feed_zonen_vollstaendig`).
+- **Drift:** unbekannte Feed-Zone ⇒ Drift-Wächter (`log_zone_drift`, Service `meteoalarm_feed:<Land>`,
+  `unknown_zone`); dann `geocodes.json` neu ziehen und mit denselben Parametern neu bauen.
+- **Verwendung:** `meteoalarm_feed._zones_for_point("PT"|"NL"|"PL", …)` für `covers()` UND `fetch()` von
+  `MeteoAlarmFeedSource("PT"/"NL"/"PL")` (gemeinsamer Zonenweg `_fetch_zones` mit FI/ES).
