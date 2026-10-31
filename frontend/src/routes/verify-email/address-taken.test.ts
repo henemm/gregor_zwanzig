@@ -65,8 +65,10 @@ async function bestaetigen(status: number, koerper: string) {
 	const body = new FormData();
 	body.set('user', 'konto-ac17');
 	body.set('token', 'token-ac17');
+	// Issue #2650: SvelteKit liefert immer `locals` (Sprache aus hooks.server.ts).
 	const ereignis = {
-		request: new Request('http://localhost/verify-email', { method: 'POST', body })
+		request: new Request('http://localhost/verify-email', { method: 'POST', body }),
+		locals: { lang: 'de' }
 	};
 	const ergebnis = (await actions.default(
 		ereignis as unknown as Parameters<typeof actions.default>[0]

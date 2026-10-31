@@ -74,7 +74,10 @@ function einsetzen(vorlage: string, params: Record<string, string>): string {
 	return vorlage.replace(/\{([a-z0-9_]+)\}/g, (roh, name: string) => params[name] ?? roh);
 }
 
-const ERLAUBT = new Set(['Gregor', 'Zwanzig', 'DE', 'EN']);
+// Erlaubt sind Eigenname/Markenschriftzug (Wordmark: „gregor.zwanzig“, Zeile
+// „V0.20 · WETTER-BRIEFING") und der Sprachumschalter „DE | EN". Der Schriftzug
+// gehoert der gemeinsamen Marken-Komponente, nicht den Auth-Routen (Known Limitations #2650).
+const ERLAUBT = new Set(['Gregor', 'Zwanzig', 'gregor', 'zwanzig', 'WETTER', 'BRIEFING', 'DE', 'EN']);
 
 /**
  * Restwort-Pruefung (AC-1/AC-3): entfernt aus dem sichtbaren Text jeden englischen
@@ -88,7 +91,11 @@ export function restwoerter(html: string, params: Record<string, string> = {}, e
 		.filter(([schluessel]) => schluessel.startsWith('auth.'))
 		.map(([, wert]) => einsetzen(wert, params))
 		.sort((a, b) => b.length - a.length);
-	for (const wert of werte) rest = rest.split(wert).join(' ');
+	// Nur ganze Wörter entfernen: der Katalogwert „or“ darf nicht in „gregor“ treffen.
+	for (const wert of werte) {
+		const muster = new RegExp(`(?<![\\p{L}\\p{N}])${wert.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'gu');
+		rest = rest.replace(muster, ' ');
+	}
 	const frei = new Set([...ERLAUBT, ...erlaubt]);
 	return (rest.match(/[A-Za-zÄÖÜäöüß]{2,}/g) ?? []).filter((wort) => !frei.has(wort));
 }

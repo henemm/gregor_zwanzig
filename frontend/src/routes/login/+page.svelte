@@ -6,6 +6,7 @@
 	import SprachUmschalter from '$lib/components/ui/SprachUmschalter.svelte';
 	import { abmeldungLiegtVor, raeumeGeraetespeicher, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 	import { isWebAuthnSupported, loginWithPasskey, loginWithDiscoverablePasskey } from '$lib/passkey';
+	import { t, type MessageKey } from '$lib/i18n';
 
 	let { form, data }: { form: ActionData; data: { googleEnabled: boolean } } = $props();
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
@@ -15,19 +16,28 @@
 	// Neutral formuliert: keine Aussage, ob eine Adresse im System existiert.
 	// Unbekannte Codes zeigen nichts.
 	// Map statt Objekt-Literal: ein Code wie `constructor` traefe sonst
-	// Object.prototype.
-	const GOOGLE_FEHLERTEXTE = new Map<string, string>([
-		[
-			'oauth_link_failed',
-			'Die Anmeldung mit Google war nicht möglich. Bitte melde dich mit Passwort, Passkey oder E-Mail-Code an.'
-		],
-		['oauth_failed', 'Die Anmeldung mit Google hat nicht geklappt. Bitte versuche es noch einmal.'],
-		[
-			'email_not_verified',
-			'Deine E-Mail-Adresse ist noch nicht bestätigt. Bitte öffne den Link in der Bestätigungsmail — erst danach ist die Anmeldung möglich.'
-		]
+	// Object.prototype. Issue #2650: Code -> Katalogschluessel, Text entsteht bei der Anzeige.
+	const GOOGLE_FEHLER_SCHLUESSEL = new Map<string, MessageKey>([
+		['oauth_link_failed', 'auth.login.google_fehler_verknuepfung'],
+		['oauth_failed', 'auth.login.google_fehler_allgemein'],
+		['email_not_verified', 'auth.login.email_nicht_bestaetigt']
 	]);
-	const googleFehler = $derived(GOOGLE_FEHLERTEXTE.get($page.url.searchParams.get('error') ?? '') ?? null);
+	const googleFehler = $derived(
+		GOOGLE_FEHLER_SCHLUESSEL.get($page.url.searchParams.get('error') ?? '') ?? null
+	);
+	const googleFehlerText = $derived(googleFehler ? $t(googleFehler) : '');
+	// Issue #2650: Fehlercode der Login-Action -> Katalogschluessel. Unbekannte
+	// Codes zeigt die Seite unveraendert roh an (wie bisher).
+	const FORM_FEHLER_SCHLUESSEL = new Map<string, MessageKey>([
+		['Rate limit exceeded', 'auth.fehler.zu_viele_versuche'],
+		['Invalid credentials', 'auth.login.ungueltige_daten'],
+		['Username and password required', 'auth.login.pflichtfelder']
+	]);
+	const formFehlerText = $derived.by(() => {
+		const code = form?.error ?? '';
+		const schluessel = FORM_FEHLER_SCHLUESSEL.get(code);
+		return schluessel ? $t(schluessel) : code;
+	});
 
 	// Issue #2128 AC-11/AC-12 — Raeumen NUR nach einem echten Abmelde-Vorgang.
 	// Auf /login landet auch, wessen Sitzung abgelaufen ist oder wer die Seite
@@ -57,7 +67,7 @@
 	// ausgelieferten Seite (`window` gibt es dort nie) -- entstuende er erst im
 	// Browser, verschoebe sich beim Nachladen alles darunter.
 	let webAuthnFaehig = $state<boolean | null>(null);
-	let passkeyFehler = $state<string | null>(null);
+	let passkeyFehler = $state<MessageKey | null>(null);
 	let usernameFeld = $state<HTMLInputElement | null>(null);
 	// Laufende Autofill-Anbindung (Conditional UI). Wird NUR abgebrochen, wenn
 	// der Nutzer die manuelle Zeremonie startet -- ein zweiter credentials.get()
@@ -91,16 +101,16 @@
 		}
 	}
 
-	/** Rohe Zeremonie-Fehler in verstaendliches Deutsch uebersetzen (Muster: account/+page.svelte). */
-	function passkeyFehlertext(e: unknown): string {
+	/** Rohe Zeremonie-Fehler auf einen Katalogschluessel abbilden (Muster: account/+page.svelte). */
+	function passkeyFehlertext(e: unknown): MessageKey {
 		const name = (e as { name?: string })?.name;
 		// Abbruch, Zeitueberschreitung und "kein passender Passkey" meldet WebAuthn
 		// ABSICHTLICH als denselben NotAllowedError (Privacy-Design) -- getrennte
 		// Texte dafuer sind strukturell unmoeglich, siehe Spec "Known Limitations".
 		if (name === 'NotAllowedError' || name === 'AbortError') {
-			return 'Die Anmeldung mit Passkey wurde abgebrochen oder es stand kein passender Passkey bereit. Bitte versuche es noch einmal oder melde dich mit Passwort an.';
+			return 'auth.login.passkey_abgebrochen';
 		}
-		return 'Die Anmeldung mit Passkey hat nicht geklappt. Bitte versuche es noch einmal oder melde dich mit Passwort an.';
+		return 'auth.login.passkey_fehlgeschlagen';
 	}
 
 	async function mitPasskeyAnmelden(): Promise<void> {
@@ -132,7 +142,7 @@
 		<div class="flex justify-end"><SprachUmschalter /></div>
 		<div class="space-y-2 text-center">
 			<Wordmark size="lg" href="/" />
-			<p class="text-muted-foreground text-sm">Anmelden um fortzufahren</p>
+			<p class="text-muted-foreground text-sm">{$t('auth.login.untertitel')}</p>
 		</div>
 
 		{#if registered}
@@ -143,14 +153,13 @@
 				data-testid="login-registered-hint"
 				class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800"
 			>
-				Konto erfolgreich erstellt. Wir haben dir eine E-Mail geschickt — bitte bestätige darin
-				deine Adresse. Erst danach ist die Anmeldung möglich.
+				{$t('auth.login.registriert_hinweis')}
 			</div>
 		{/if}
 
 		{#if sessionExpired}
 			<div class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm" style="color: var(--g-bad);">
-				Sitzung abgelaufen — bitte neu anmelden.
+				{$t('auth.login.sitzung_abgelaufen')}
 			</div>
 		{/if}
 
@@ -160,7 +169,7 @@
 				class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm"
 				style="color: var(--g-bad);"
 			>
-				{googleFehler}
+				{googleFehlerText}
 			</div>
 		{/if}
 
@@ -171,7 +180,7 @@
 				data-testid="login-resend-confirmed"
 				class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800"
 			>
-				Die Bestätigungsmail ist erneut unterwegs. Bitte sieh auch im Spam-Ordner nach.
+				{$t('auth.login.erneut_gesendet')}
 			</div>
 		{/if}
 
@@ -185,8 +194,7 @@
 				style="color: var(--g-bad);"
 			>
 				<p>
-					Deine E-Mail-Adresse ist noch nicht bestätigt. Bitte öffne den Link in der
-					Bestätigungsmail — erst danach ist die Anmeldung möglich.
+					{$t('auth.login.email_nicht_bestaetigt')}
 				</p>
 				<form method="POST" action="?/resend">
 					<!-- Die Kennung reist verdeckt mit: der Nutzer hat sie gerade
@@ -197,13 +205,13 @@
 						data-testid="login-resend-submit"
 						class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
-						Bestätigungsmail erneut senden
+						{$t('auth.login.erneut_senden')}
 					</button>
 				</form>
 			</div>
 		{:else if form?.error}
 			<div class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm" style="color: var(--g-bad);">
-				{form.error === 'Rate limit exceeded' ? 'Zu viele Versuche — bitte in einigen Minuten erneut versuchen.' : form.error === 'Invalid credentials' ? 'Benutzername oder Passwort nicht korrekt.' : form.error === 'Username and password required' ? 'Bitte Benutzername und Passwort eingeben.' : form.error}
+				{formFehlerText}
 			</div>
 		{/if}
 
@@ -219,7 +227,7 @@
 			<div data-testid="login-passkey-area" class="flex h-14 items-center justify-center">
 				{#if webAuthnFaehig === false}
 					<p data-testid="login-passkey-hint" class="text-center text-sm text-muted-foreground">
-						Dieses Gerät unterstützt keine Passkeys — bitte melde dich mit Passwort an.
+						{$t('auth.login.passkey_nicht_unterstuetzt')}
 					</p>
 				{:else}
 					<button
@@ -228,7 +236,7 @@
 						onclick={mitPasskeyAnmelden}
 						class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
-						Mit Passkey anmelden
+						{$t('auth.login.passkey_anmelden')}
 					</button>
 				{/if}
 			</div>
@@ -238,7 +246,7 @@
 					class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm"
 					style="color: var(--g-bad);"
 				>
-					{passkeyFehler}
+					{$t(passkeyFehler)}
 				</div>
 			{/if}
 		</div>
@@ -247,7 +255,7 @@
 		     Resend-Formular zwei benannte Actions und keine `default` mehr. -->
 		<form method="POST" action="?/login" class="space-y-4">
 			<div class="space-y-2">
-				<label for="username" class="text-sm font-medium">Benutzername</label>
+				<label for="username" class="text-sm font-medium">{$t('auth.feld.benutzername')}</label>
 				<input
 					id="username"
 					name="username"
@@ -261,7 +269,7 @@
 			</div>
 
 			<div class="space-y-2">
-				<label for="password" class="text-sm font-medium">Passwort</label>
+				<label for="password" class="text-sm font-medium">{$t('auth.feld.passwort')}</label>
 				<input
 					id="password"
 					name="password"
@@ -275,7 +283,7 @@
 				type="submit"
 				class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				Anmelden
+				{$t('auth.anmelden')}
 			</button>
 		</form>
 		{#if data.googleEnabled}
@@ -284,26 +292,26 @@
 					<span class="w-full border-t border-input"></span>
 				</div>
 				<div class="relative flex justify-center text-xs uppercase">
-					<span class="bg-background px-2 text-muted-foreground">oder</span>
+					<span class="bg-background px-2 text-muted-foreground">{$t('auth.oder')}</span>
 				</div>
 			</div>
 			<a
 				href="/api/auth/google/init"
 				class="desktop:order-2 inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				Mit Google anmelden
+				{$t('auth.login.google_knopf')}
 			</a>
 		{/if}
 
 		<div class="desktop:order-3 space-y-2">
 			<a href="/register" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
-				Noch kein Konto? Konto erstellen
+				{$t('auth.login.zu_registrieren')}
 			</a>
 			<a href="/forgot-password" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
-				Passwort vergessen?
+				{$t('auth.login.zu_passwort_vergessen')}
 			</a>
 			<a href="/magic-link" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
-				Mit E-Mail-Code anmelden
+				{$t('auth.login.zu_magic_link')}
 			</a>
 		</div>
 	</div>
