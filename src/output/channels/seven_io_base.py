@@ -101,6 +101,8 @@ class SevenIoChannelBase:
         recipient = self._recipient
         user_id = getattr(recipient, "user_id", None)
 
+        # i18n-log (#2670): Sperrtexte sind Betreiber-/Ergebnistexte; die
+        # Nutzersicht laeuft ueber reason_code (send_outcomes.py, P9a).
         def _block(reason_code: str, text: str) -> ChannelBlockedError:
             logger.warning(
                 "%s-Versand fuer Nutzer %s blockiert (%s): %s",
@@ -109,11 +111,11 @@ class SevenIoChannelBase:
             return ChannelBlockedError(self.name, text, reason_code=reason_code)
 
         if not isinstance(recipient, self.RECIPIENT_TYPE):
-            raise _block(self.NO_RECIPIENT_REASON, "kein belegter Empfaenger uebergeben.")
+            raise _block(self.NO_RECIPIENT_REASON, "kein belegter Empfaenger uebergeben.")  # i18n-log
         if not recipient.well_formed():
-            raise _block(f"{self.name}_invalid_number", "Empfaengernummer hat keine gueltige Form.")
+            raise _block(f"{self.name}_invalid_number", "Empfaengernummer hat keine gueltige Form.")  # i18n-log
         if to != recipient.number:
-            raise _block(f"{self.name}_recipient_mismatch", "Ziel weicht vom belegten Empfaenger ab.")
+            raise _block(f"{self.name}_recipient_mismatch", "Ziel weicht vom belegten Empfaenger ab.")  # i18n-log
 
     def _origin(self) -> str:
         """Herkunft DIESES Kanal-Moduls (Issue #1476).
@@ -210,13 +212,13 @@ class SevenIoChannelBase:
 
         response = self._post(self._settings.sms_gateway_url, api_key, payload)
         if response.status_code != 200:
-            raise OutputError(
+            raise OutputError(  # i18n-log
                 self.name,
                 f"seven.io HTTP {response.status_code}: {response.text[:200]}",
             )
         status_code = response.text.strip()
         if status_code != "100":
-            raise OutputError(self.name, f"seven.io Fehler-Code: {status_code!r}")
+            raise OutputError(self.name, f"seven.io Fehler-Code: {status_code!r}")  # i18n-log
         logger.info(
             "%s fuer Nutzer %s ueber seven.io gesendet", self.name, self._recipient.user_id,
         )

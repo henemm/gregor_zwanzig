@@ -23,6 +23,7 @@ from app.metric_catalog import (
     SMS_MULTI_SYMBOLS_BY_METRIC,  # noqa: F401  Re-Export, s. #1719 S4 unten
     SMS_FORMAT_MODE_METRIC_IDS, SMS_NULLFORM_METRIC_IDS, SMS_SYMBOL_BY_METRIC,
 )
+from i18n import Lang, t
 from app.models import (
     ExposedSection, NormalizedTimeseries, PrecipType, RiskLevel, RiskType,
     SegmentWeatherData,
@@ -47,12 +48,17 @@ from output.tokens.dto import (
 _ETAPPE_RE = re.compile(r'^Etappe\s+(\d+)', re.IGNORECASE)
 
 
-def _sms_stage_prefix(name: str) -> str:
-    """'Etappe N: subtitle' -> 'E{N}' for compact SMS prefix."""
+def _sms_stage_prefix(name: str, fallback: Optional[str] = None) -> str:
+    """'Etappe N: subtitle' -> 'E{N}' for compact SMS prefix.
+
+    ``fallback`` ist das Rueckfallwort ohne Etappennamen (#2670: aus dem
+    Katalog ``sms.etappe.rueckfall`` in der Nutzersprache). ``E{N}`` und die
+    Etappen-Erkennung ``_ETAPPE_RE`` sind Kuerzel und bleiben sprachfrei.
+    """
     m = _ETAPPE_RE.match(name or "")
     if m:
         return f"E{m.group(1)}"
-    return fold_ascii(name or "Etappe")[:10].rstrip(":")
+    return fold_ascii(name or fallback or t("sms.etappe.rueckfall"))[:10].rstrip(":")
 
 if TYPE_CHECKING:
     from app.models import WeatherChange
@@ -561,6 +567,7 @@ class SMSTripFormatter:
         day_window_start_hour: int = DAY_WINDOW_START_HOUR,
         day_window_end_hour: int = DAY_WINDOW_END_HOUR,
         sms_alert_min_level: Optional[int] = None,
+        lang: Lang = "de",
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -568,7 +575,8 @@ class SMSTripFormatter:
             segments: SegmentWeatherData list (Story 2)
             max_length: max SMS length (sms_format.md §1, default 160)
             exposed_sections: kept for API parity (Risk-Pfad rebuild)
-            stage_name: prefix '{Name}: ' (v2.0 §2). Default: 'Etappe'.
+            stage_name: prefix '{Name}: ' (v2.0 §2). Default: Rueckfallwort
+                ``sms.etappe.rueckfall`` in ``lang`` ('Etappe'/'Stage').
             report_type: 'morning' or 'evening' (default 'evening').
             tz: Zielzeitzone für Stunden-Token (Bug #398). Default UTC
                 (abwärtskompatibel: UTC→UTC = keine Verschiebung).
@@ -588,6 +596,8 @@ class SMSTripFormatter:
                 eine Trip-Einstellung, z.B. Vorschau/direkter Testaufruf)
                 faellt auf den Startwert 'gering' (Stufe 2) zurueck --
                 NICHT auf das aeltere ``MIN_SMS_LEVEL`` (Stufe 3).
+            lang: Issue #2670 -- Nutzersprache; wirkt NUR auf das Etappen-
+                Rueckfallwort. Alle Token bleiben byte-identisch (ADR-0042).
 
         Returns:
             v2.0 wire-format string, ≤ max_length chars.
@@ -723,7 +733,9 @@ class SMSTripFormatter:
             forecast,
             config if config else None,
             report_type=report_type,
-            stage_name=_sms_stage_prefix(stage_name or "Etappe"),
+            stage_name=_sms_stage_prefix(
+                stage_name, fallback=t("sms.etappe.rueckfall", lang),
+            ),
         )
         return render_sms(token_line, max_length=max_length)
 
@@ -732,8 +744,14 @@ class SMSTripFormatter:
         changes: list["WeatherChange"],
         trip_name: str,
         max_length: int = 160,
+        *,
+        lang: Lang = "de",
     ) -> str:
-        """Format weather change alert as compact SMS (§A4 — unchanged)."""
+        """Format weather change alert as compact SMS (§A4 — unchanged).
+
+        ``lang`` (#2670): nur Platzform-Token (``ALERT:``, Kuerzel, Zahlen) --
+        die Ausgabe ist in beiden Sprachen byte-identisch.
+        """
         from app.metric_catalog import get_compact_label_for_field
 
         if not changes:

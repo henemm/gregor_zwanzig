@@ -70,6 +70,9 @@ class PremiumSmsOutput(SevenIoChannelBase):
 def check_reply_address(reply_to, reply_at) -> None:
     """Die gelernte Rueckadresse — oder ein benannter Abbruch.
 
+    i18n-log (#2670): die Sperrtexte sind Betreiber-/Ergebnistexte (deutsch);
+    die Nutzersicht laeuft ueber ``reason_code`` in ``send_outcomes.py`` (P9a).
+
     Issue #1412 S4b: aufgerufen von ``PremiumSmsRecipient.for_user`` mit den
     frisch aus ``user.json`` gelesenen Werten (nie aus den Settings). Jeder
     Abbruch traegt seinen Kurzschluessel mit, damit ein Aufrufer die zwei
@@ -78,7 +81,7 @@ def check_reply_address(reply_to, reply_at) -> None:
     if not reply_to or reply_at is None:
         raise ChannelBlockedError(
             "premium_sms",
-            "keine gelernte Rueckadresse vorhanden — das Geraet hat sich "
+            "keine gelernte Rueckadresse vorhanden — das Geraet hat sich "  # i18n-log
             "noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist "
             "kein Empfaenger bekannt.",
             reason_code=BLOCK_REASON_NO_REPLY_ADDRESS,
@@ -89,7 +92,7 @@ def check_reply_address(reply_to, reply_at) -> None:
         # die Verfallsfrist griffe nie. Ungueltig ⇒ sperren, nicht freigeben.
         raise ChannelBlockedError(
             "premium_sms",
-            "Zeitstempel der Rueckadresse liegt in der Zukunft "
+            "Zeitstempel der Rueckadresse liegt in der Zukunft "  # i18n-log
             f"({reply_at.isoformat()}) — ungueltig, Versand abgebrochen, "
             "bis sich das Geraet wieder meldet.",
             reason_code=BLOCK_REASON_REPLY_ADDRESS_STALE,
@@ -97,7 +100,7 @@ def check_reply_address(reply_to, reply_at) -> None:
     if age > PREMIUM_SMS_REPLY_TTL:
         raise ChannelBlockedError(
             "premium_sms",
-            "gelernte Rueckadresse ist veraltet: zuletzt vor "
+            "gelernte Rueckadresse ist veraltet: zuletzt vor "  # i18n-log
             f"{age.days} Tagen gelernt, erlaubt sind "
             f"{PREMIUM_SMS_REPLY_TTL.days} Tage. Garmin kann die Nummer "
             "inzwischen einem fremden Geraet zugeteilt haben — Versand "

@@ -789,3 +789,29 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 - Bestehende gregor-Specs:
   - `docs/specs/wintersport_extension.md` §5 (Wintersport-Tokens)
   - `docs/reference/renderer_email_spec.md` §2 (Token line is single source of truth)
+
+---
+
+## 13. Sprache: nur Klartext-Anteile
+
+*(Issue #2670, i18n P8, Epic #2644; ADR-0104, ADR-0042)*
+
+Die Sprache folgt der Konto-Sprache (ADR-0104). Token (`sms_code`, Zahlenformat,
+Trennzeichen, Reihenfolge, Stufenbuchstaben) sind ADR-0042 Klasse 1 und bleiben in
+beiden Sprachen **byte-identisch**; `Etappe N`-Namen werden weiter zu `E{N}`,
+Etappennamen des Nutzers bleiben unverändert.
+
+Klartext-Anteile sind nur:
+
+| Anteil | de | en | Schlüssel | Paket |
+|---|---|---|---|---|
+| Etappen-Rückfallwort (Trip ohne Etappennamen) | `Etappe` | `Stage` | `sms.etappe.rueckfall` | P8 (#2670) |
+| Nachtrags-Präfix der Alarm-SMS | `Erg ` | `Add ` | `alarm.sms.nachtrag_praefix` | P5 (#2667) |
+| Ortsvergleich-Kopf | `Vergleich` | `Compare` | `vergleich.sms.*` | P4 (#2666) |
+| Orts-Überlauf | ` +N Orte` | ` +N locs` | `vergleich.sms.orte_ueberlauf` | P4 (#2666) |
+
+Englische Klartexte sind **nie länger** als die deutschen (Katalog-Wächter
+`tests/test_sms_katalog_laenge.py` für jeden Schlüssel mit Namenssegment `sms`). Die
+Grenzen (Briefing 160, Alarm 140, Ortsvergleich 153) gelten in beiden Sprachen und
+werden von `tests/test_sms_sprachen_laenge_und_token.py` geprüft. Wochentagskürzel in
+Alarm-Token folgen der Nutzersprache (`Do15`/`Thu15`, siehe P5).

@@ -98,3 +98,14 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 | Journal-Poll, Dienstnummer-Filter, Code-Zerlegung | `src/services/inbound_sms_reader.py:85`, `:96`, `:193`, `:239`, `:316` |
 | Lern-Endpunkt (Go) | `internal/handler/premium_sms_connect.go:54`; TTL `internal/model/premium_sms.go:24` |
 | Push-Kick | `internal/handler/inbound_webhooks.go:98` |
+
+## 6. Sprache: nur Klartext-Anteile
+
+*(Issue #2670, i18n P8, Epic #2644; ADR-0104, ADR-0049)*
+
+Premium-SMS sendet **denselben Text** wie die SMS (`sms_format.md` §13): der Transport
+(`PremiumSmsOutput`) ergänzt und übersetzt nichts (`tests/test_premium_sms_text_unveraendert.py`).
+Die Befehlswörter des Rückkanals sind Platzform — englische Kurzbefehle bleiben
+(ADR-0104 Nr. 5). Die Antworttexte auf Befehle folgen der Nutzersprache (P10, #2673).
+Sperr- und Fehlertexte des Kanals (`check_reply_address`, `seven_io_base.py`) sind
+Betreiber-/Ergebnistexte (`# i18n-log`); ihre Nutzersicht regelt `send_outcomes.py` (P9a).
