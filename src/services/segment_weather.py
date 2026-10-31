@@ -268,7 +268,10 @@ class SegmentWeatherService:
             f"gemeldet={timeseries.meta.model_elevation_m}"
         )
         fetched_at = datetime.now(timezone.utc)
-        self._cache.put(segment, timeseries, enrich_ensemble, enrich_snow, model_id)
+        # Issue #2234: eine erfolgreiche, aber LEERE Reihe wird nicht gecacht --
+        # sonst bediente sie 10 Minuten lang jeden Folgeaufruf ohne Daten.
+        if timeseries.data:
+            self._cache.put(segment, timeseries, enrich_ensemble, enrich_snow, model_id)
         return _Raw("ok", timeseries, fetched_at)
 
     def _result_from_raw(

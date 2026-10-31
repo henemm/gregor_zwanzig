@@ -49,7 +49,7 @@ def _run_engine(raw_data: list[ForecastDataPoint]):
 
     original_fetch = ce_mod.fetch_forecast_for_location
 
-    def recorded_fetch(location, hours=96, settings=None):
+    def recorded_fetch(location, hours=96, settings=None, user_id=None):
         return {
             "location": location, "error": None, "forecast_hours": hours,
             "snow_source": None, "raw_data": raw_data,

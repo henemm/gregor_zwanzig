@@ -635,11 +635,21 @@ def test_ac8_preview_and_dispatch_never_throttled_above_95_percent(install_provi
     from services.forecast_budget import ForecastBudgetGate
 
     provider = install_provider(CountingFakeProvider())
+    # Fix-Loop F002: das Tagesbudget ist VOLL (Stufe 2, >= 100 %). Dort wird
+    # JEDE Prioritaet ausser ``user_briefing`` gedrosselt, unabhaengig vom
+    # fairen Anteil -- ein Abruf mit "alert_check"/"polling" kaeme fuer genau
+    # diesen Nutzer nicht mehr durch. Erst damit ist die Prioritaet dort
+    # geprueft, wo sie WIRKT (bei 96 % liesse Stufe 1 einen Nutzer unter
+    # seinem fairen Anteil auch mit "alert_check" durch).
     seed = ForecastBudgetGate(None)
-    assert seed.reserve("user_briefing", units=int(ForecastBudgetGate.DAILY_BUDGET * 0.96))
-    assert seed.snapshot()["usage_ratio"] > 0.95
+    assert seed.reserve("user_briefing", units=ForecastBudgetGate.DAILY_BUDGET)
+    assert seed.snapshot()["usage_ratio"] >= 1.0
 
     uid = _uid("tdd-2234-budget")
+    vorab = ForecastBudgetGate(uid)
+    assert not vorab.allow("alert_check"), "Vorbedingung: alert_check waere gedrosselt"
+    assert not vorab.allow("polling"), "Vorbedingung: polling waere gedrosselt"
+    assert vorab.allow("user_briefing")
     locations = _orte()
     preset = _lege_vergleich_an(uid, locations)
 
@@ -660,4 +670,110 @@ def test_ac8_preview_and_dispatch_never_throttled_above_95_percent(install_provi
     assert provider.call_count == 6, "AC-8: der Versand erreicht den Anbieter"
     assert _user_calls(uid) == 6, (
         f"AC-8: der Versand bucht ebenfalls ungedrosselt, tatsaechlich {_user_calls(uid)}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop F001: segment_id am geteilten Segment-Weg ist nutzerneutral
+# ---------------------------------------------------------------------------
+
+def _mitschnitt_zeilen(lat: float) -> list[dict]:
+    """Zeilen des Vorhersage-Mitschnitts (#2030) fuer eine Koordinate -- die
+    Stelle, an der die ``segment_id`` des geteilten Segment-Wegs dauerhaft
+    landet."""
+    import json
+
+    from app.loader import get_data_root
+    from services.forecast_capture import DATEI_PRAEFIX, UNTERORDNER
+
+    zeilen = []
+    for pfad in sorted((get_data_root() / UNTERORDNER).glob(f"{DATEI_PRAEFIX}*.jsonl")):
+        for roh in pfad.read_text(encoding="utf-8").splitlines():
+            zeile = json.loads(roh)
+            if abs(zeile["lat"] - lat) < 1e-6:
+                zeilen.append(zeile)
+    return zeilen
+
+
+def test_f001_segment_id_is_user_neutral_and_same_for_two_users(install_provider, monkeypatch):
+    from services.forecast_capture import reset_capture_state
+
+    monkeypatch.setenv("GZ_FORECAST_CAPTURE", "1")
+    reset_capture_state()
+    provider = install_provider(CountingFakeProvider())
+    uid_a, uid_b = _uid("tdd-2234-anna"), _uid("tdd-2234-ben")
+    ort_a = replace(_orte()[0], id="anna-ort-17", name="Annas Basislager")
+    ort_b = replace(_orte()[0], id="ben-ort-42", name="Bens Huettenziel")
+    _lege_vergleich_an(uid_a, [ort_a])
+    _lege_vergleich_an(uid_b, [ort_b])
+
+    _vorschau(uid_a)
+    reset_capture_state()  # Dedup leeren, damit auch der Treffer von B mitgeschnitten wird
+    _vorschau(uid_b)
+
+    assert provider.call_count == 1, (
+        "F001: derselbe Ort unter zwei Namen/IDs trifft denselben Cache-Eintrag, "
+        f"tatsaechlich {provider.call_count} Abrufe"
+    )
+    zeilen = _mitschnitt_zeilen(ort_a.lat)
+    assert len(zeilen) == 2, f"Je Vorschau eine Mitschnitt-Zeile erwartet, tatsaechlich {len(zeilen)}"
+    ids = {z["segment_id"] for z in zeilen}
+    assert len(ids) == 1, (
+        f"F001: beide Nutzer muessen dieselbe segment_id erzeugen, tatsaechlich {sorted(ids)}"
+    )
+    segment_id = ids.pop()
+    for fremd in (ort_a.name, ort_b.name, ort_a.id, ort_b.id, uid_a, uid_b, "Innsbruck"):
+        assert fremd not in segment_id, (
+            f"F001: segment_id {segment_id!r} enthaelt Nutzerbezogenes ({fremd!r})"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop F003: die uebergebenen hours bilden das Fenster (Sofortvergleich 48)
+# ---------------------------------------------------------------------------
+
+def test_f003_instant_compare_window_follows_requested_hours(install_provider):
+    from fastapi.testclient import TestClient
+
+    from api.main import app
+    from app.loader import save_location
+
+    provider = install_provider(CountingFakeProvider())
+    uid = _uid("tdd-2234-48h")
+    save_location(_orte()[0], user_id=uid)
+
+    vorher = datetime.now(timezone.utc)
+    resp = TestClient(app).get(
+        f"/api/compare?location_ids=*&user_id={uid}&forecast_hours=48"
+        f"&time_window_start={TIME_WINDOW[0]}&time_window_end={TIME_WINDOW[1]}"
+        f"&target_date={_target_date().isoformat()}"
+    )
+    assert resp.status_code == 200, resp.text
+    assert provider.windows, "Der Anbieter wurde gar nicht abgefragt"
+    _start, end = provider.windows[0]
+    assert end.date() == (vorher + timedelta(hours=48)).date(), (
+        "F003: das Fenster beim Anbieter muss aus den angeforderten 48 h gebildet "
+        f"werden, Ende tatsaechlich {end.isoformat()}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop F004: ohne user_id wird nie auf "default" gebucht
+# ---------------------------------------------------------------------------
+
+def test_f004_engine_without_user_id_never_books_default(install_provider):
+    from services.forecast_budget import ForecastBudgetGate
+
+    provider = install_provider(CountingFakeProvider())
+    global_vorher = ForecastBudgetGate(None).snapshot()["calls_today"]
+
+    _run_engine(_orte()[:1])
+
+    assert provider.call_count == 1
+    assert ForecastBudgetGate(None).snapshot()["calls_today"] == global_vorher + 1, (
+        "Der Abruf laeuft ueber das Budget-Gate (globaler Topf gebucht)"
+    )
+    assert _user_calls("default") == 0, (
+        "F004: ohne user_id darf der Abruf nie im Topf des Nutzers 'default' "
+        f"landen, tatsaechlich {_user_calls('default')}"
     )
