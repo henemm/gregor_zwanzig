@@ -201,3 +201,183 @@ def test_embedded_block_zaehlzeile_englisch():
     assert t("warnung.block.aktiv_stufe", "en", count=2, wort=t("warnung.stufe.orange", "en"),
              position=2) in k["embedded"]
     assert t("mail.herkunft.amtliche_warnung", "en") in k["embedded"]
+
+
+# ------------------------------- Randfaelle (Mutations-Gegenprobe, #2668)
+
+def _alarm(hazard="wind_gust", level=3, label="Sturm", source="geosphere_warn", **kw):
+    from services.official_alerts.models import OfficialAlert
+
+    return OfficialAlert(source=source, hazard=hazard, level=level, label=label, **kw)
+
+
+def _orte(n: int) -> dict[str, str]:
+    return {f"o{i}": f"Ort{i}" for i in range(n)}
+
+
+def _plain(notices, lang="en", **kw):
+    return oa.render_official_alert_mail_plain(
+        notices, source_label="GeoSphere Austria", stand_at=STAND, tz=TZ, lang=lang, **kw)
+
+
+_STUFE_KEY = {2: "gelb", 3: "orange", 4: "rot"}
+
+
+@pytest.mark.parametrize("level, position", [(2, "niedrigste"), (3, "mittlere"), (4, "hoechste")])
+def test_einheitliche_stufe_leiter_und_betreff_englisch(level, position):
+    notices = oa.build_official_alert_notices(None, [(_alarm(level=level), ["1"])], lang="en")
+    wort = t(f"warnung.stufe.{_STUFE_KEY[level]}", "en")
+    hinweis = t("warnung.stufe.von_drei", "en", position=t(f"warnung.stufe.position.{position}", "en"))
+    assert f"{t('warnung.kopf.warnstufe', 'en')}: {wort} ({hinweis})" in _plain(notices)
+    html = "\n".join(sichtbar(oa.render_official_alert_html(
+        notices, source_label="GeoSphere Austria", stand_at=STAND, tz=TZ, lang="en")))
+    assert hinweis in html
+    assert oa.render_official_alert_subject(notices, prefix=PREFIX, lang="en").startswith(
+        f"[{PREFIX}] Segment 1 · {wort} ")
+
+
+def test_stufe_eins_und_unbekannter_umfang_englisch():
+    notices = oa.build_official_alert_notices(None, [(_alarm(level=1), [])], lang="en")
+    unbekannt = t("warnung.zeit.unbekannt", "en")
+    assert notices[0].scope_label == unbekannt
+    assert notices[0].sms_scope == t("warnung.zeit.unbekannt", "de")
+    zeilen = oa.render_official_alert_notice_plain([(notices[0].alert, [])], TZ, lang="en")
+    assert zeilen[0].startswith(f"{t('warnung.stufe.gruen', 'en')} — ")
+    assert zeilen[1] == f"{t('warnung.zeile.region', 'en')}: {unbekannt}"
+    assert oa._format_validity(notices[0].alert, lang="en") == unbekannt
+
+
+def test_ortsvergleich_ohne_orte_und_voller_umfang_englisch():
+    leer = oa.build_compare_official_alert_notices(list(_orte(3)), _orte(3), [(_alarm(), [])], lang="en")
+    assert leer[0].scope_label == t("warnung.zeit.unbekannt", "en")
+    assert leer[0].sms_scope == t("warnung.zeit.unbekannt", "de")
+    voll = oa.build_compare_official_alert_notices(
+        list(_orte(3)), _orte(3),
+        [(_alarm(), list(_orte(3))), (_alarm("rain", 3, "Starkregen"), list(_orte(3)))], lang="en")
+    assert oa.render_official_alert_subject(voll, prefix=PREFIX, lang="en").startswith(
+        f"[{PREFIX}] {t('warnung.umfang.alle_orte', 'en')} · ")
+    assert t("warnung.satz.deckt_orte.other", "en") in _plain(voll)
+    assert voll[0].sms_scope == "alleOrte"
+
+
+@pytest.mark.parametrize("gesamt", [True, False])
+def test_viele_orte_als_mengenangabe_englisch(gesamt):
+    from dataclasses import replace
+
+    orte = _orte(4)
+    notices = oa.build_compare_official_alert_notices(list(orte), orte, [(_alarm(), ["o0", "o1", "o2"])],
+                                                      lang="en")
+    if not gesamt:
+        notices = [replace(n, scope_total=None) for n in notices]
+    menge = (t("vergleich.warn.n_von_m_orten", "en", n=3, gesamt=4) if gesamt
+             else t("warnung.umfang.anzahl_orte", "en", count=3))
+    assert f"[{PREFIX}] {menge} · " in oa.render_official_alert_subject(notices, prefix=PREFIX, lang="en")
+    typen = t("warnung.gefahr.wind_gust", "en")
+    assert t("warnung.kopf.gemeldet_fuer", "en", typen=typen, umfang=menge) in _plain(notices)
+
+
+def test_kritischere_warnung_bei_einheitlichem_umfang_englisch():
+    notices = oa.build_compare_official_alert_notices(
+        list(_orte(3)), _orte(3), [(_alarm(level=4), ["o1"]), (_alarm("rain", 2, "Starkregen"), ["o1"])],
+        lang="en")
+    satz = t("warnung.satz.kritischer", "en",
+             typ=f"{t('warnung.gefahr.wind_gust', 'en')} ({t('warnung.stufe.rot', 'en')})")
+    assert satz in _plain(notices)
+
+
+def test_teilstrecke_mit_km_angabe_und_freier_rest_englisch():
+    from dataclasses import replace
+
+    notices = oa.build_official_alert_notices(None, [(_alarm(), ["2"])], segment_km={"2": (3.0, 8.0)},
+                                              lang="en")
+    assert t("warnung.satz.nur_route", "en", ort=notices[0].scope_label) in _plain(notices)
+    frei = [replace(notices[0], free_chips=["Segment 1"])]
+    notiz = t("warnung.zeile.route_frei", "en", abschnitte="Segment 1")
+    assert notiz in _plain(frei)
+    html = oa.render_official_alert_html(frei, source_label="GeoSphere Austria", stand_at=STAND, tz=TZ,
+                                         lang="en")
+    assert notiz in sichtbar(html)
+
+
+def test_quellen_ohne_kennung_und_lawinendienste_englisch():
+    assert oa.official_alert_source_label(None, lang="en") == t("warnung.quelle.amtlich", "en")
+    assert oa.official_alert_source_label(None) == t("warnung.quelle.amtlich", "de")
+    assert oa.official_alert_source_label("avalanche_report", lang="en") == t("warnung.quelle.lawinendienste", "en")
+    assert oa.official_alert_source_label("avalanche_report") == t("warnung.quelle.lawinendienste", "de")
+
+
+def test_deutsche_gefahrenwoerter_fuer_bestandsimporteure():
+    """`_HAZARD_LABELS` speist den Gefahren-Katalog der API (`/api/sms-symbols`)."""
+    from api.routers.config import get_sms_symbols
+
+    labels = {h["hazard"]: h["label"] for h in get_sms_symbols()["hazards"]}
+    assert labels["thunderstorm"] == t("warnung.gefahr.thunderstorm", "de")
+    assert labels["wildfire_risk"] == t("warnung.gefahr.wildfire_risk", "de")
+
+
+def test_entwarnung_aus_deutschem_builder_englisch_gerendert():
+    """Notice in Builder-Sprache de, Darstellung en: die Gefahr folgt der Darstellung."""
+    from tests.helpers.amtliche_warnungen_fixture import allclears
+
+    de_ac = list(reversed(allclears(None)))  # "beendet" zuerst
+    assert de_ac[0].hazard_label == t("warnung.gefahr.extreme_heat", "de")
+    assert allclears("en")[0].hazard_label == t("warnung.gefahr.thunderstorm", "en")
+    hitze_en = t("warnung.gefahr.extreme_heat", "en")
+    betreff = oa.render_official_allclear_subject_part(de_ac, lang="en")
+    assert betreff == t("warnung.entwarnung.betreff", "en", gefahr=hitze_en,
+                        uebergang=t("warnung.entwarnung.beendet", "en")) + " " + t(
+        "warnung.kopf.weitere", "en", count=1)
+    assert oa.official_allclear_lines(de_ac, lang="en")[0].startswith(f"{hitze_en} · ")
+
+
+def test_entwarnung_im_ortsvergleich_ohne_orte():
+    from types import SimpleNamespace
+
+    ac = SimpleNamespace(kind="ended", alert=_alarm(), scope_ids=[], old_rank=3, new_rank=0,
+                         old_level=3, new_level=0)
+    n = oa.build_official_allclear_notices([ac], {}, lang="en")[0]
+    assert n.scope_label == t("warnung.umfang.ort", "en")
+    assert n.sms_scope == t("warnung.umfang.ort", "de")
+
+
+def test_ortsvergleich_banner_stufe_und_quelle_englisch():
+    from dataclasses import replace
+
+    from output.renderers.email.compare_html import render_compare_html
+    from tests.helpers.vergleichs_mail_fixture import build_result
+
+    result = build_result()
+    brand = _alarm("wildfire_risk", 4, "Waldbrand-Gefahr — Stufe 4", source="meteo_forets")
+    orte = [replace(loc, official_alerts=[brand]) if i == 0 else loc for i, loc in enumerate(result.locations)]
+    html = "\n".join(sichtbar(render_compare_html(replace(result, locations=orte), lang="en")))
+    stufe = t("warnung.stufe.rot", "en")
+    assert t("vergleich.warn.hoechste_stufe", "en", stufe=stufe, ort=orte[0].location.name) in html
+    assert oa.official_alert_source_label("meteo_forets", lang="en") in html
+
+
+def test_briefing_mail_warnblock_quelle_englisch():
+    from dataclasses import replace
+
+    from output.renderers.trip_report import TripReportFormatter
+    from tests.helpers.briefing_html_sprache_fixture import TZ as BTZ, _segment
+
+    brand = _alarm("wildfire_risk", 3, "Waldbrand-Gefahr — Stufe 3", source="meteo_forets")
+    seg = replace(_segment(), official_alerts=[brand])
+    report = TripReportFormatter().format_email([seg], "Corsica North", "morning", tz=BTZ, lang="en")
+    html = "\n".join(sichtbar(report.email_html))
+    assert oa.official_alert_source_label("meteo_forets", lang="en") in html
+    assert t("warnung.gefahr.wildfire_risk", "en") in html
+
+
+def test_briefing_telegram_warnung_voller_umfang_und_quelle_englisch():
+    from types import SimpleNamespace
+
+    from output.renderers.narrow import _official_alert_bubble
+    from tests.helpers.telegram_briefing_fixture import TZ as TTZ, _segment
+
+    brand = _alarm("wildfire_risk", 3, "Waldbrand-Gefahr — Stufe 3", source="meteo_forets")
+    segs = [_segment(1, (0.0, 8.4), (7, 12), [brand]), _segment("Ziel", (8.4, 14.2), (12, 16), [brand])]
+    trip = SimpleNamespace(all_waypoints=[0, 1], alert_channel_thresholds={})
+    text = _official_alert_bubble(segs, TTZ, trip, lang="en").text
+    assert f" · {t('warnung.umfang.gesamte_route', 'en')} · " in text
+    assert oa.official_alert_source_label("meteo_forets", lang="en") in text

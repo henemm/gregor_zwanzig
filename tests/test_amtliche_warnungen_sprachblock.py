@@ -68,6 +68,22 @@ def test_feed_weg_liefert_die_sprache_je_block():
     assert alert.label == EN_TEXT and alert.label_lang == "en"
 
 
+def test_erster_block_je_sprache_gewinnt_leerer_zaehlt_nicht():
+    alert = _group_and_map_info_entries(meteoalarm_eintraege(
+        ("en-GB", ""), ("de-AT", DE_TEXT), ("de-DE", "Gewitter Deutschland"), ("en-US", EN_TEXT),
+    ))[0]
+    assert dict(alert.label_by_lang) == {"de": DE_TEXT, "en": EN_TEXT}
+
+
+def test_en_block_ohne_typwort_zeigt_das_typwort():
+    """en-Blocktext ohne Gefahrenwort ("Severe weather") -> englisches Typ-Wort."""
+    alert = _group_and_map_info_entries(meteoalarm_eintraege(
+        ("de-DE", DE_TEXT), ("en-GB", "Severe weather warning")))[0]
+    plain = kanaele(alert, "en")["plain"]
+    assert "Severe weather warning" not in plain
+    assert f"{t('warnung.zeile.gefahr', 'en')}: {t('warnung.gefahr.thunderstorm', 'en')}" in plain
+
+
 def test_ac1_englisch_rahmen_und_en_block():
     k = kanaele(meteoalarm_gewitter(), "en")
     for kanal in ("html", "plain", "telegram"):

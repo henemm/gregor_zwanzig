@@ -141,11 +141,6 @@ _SOURCE_LABELS: dict[str, str] = {
     "vigilance": "Météo-France",
     "dwd": "DWD",
     "dwd_warn": "DWD",
-    # Waldbrand-Gefahrenstufen von Météo-France (services/official_alerts/meteo_forets.py).
-    "meteo_forets": t("warnung.quelle.waldbrand", "de"),
-    # Präfektur-Zugangssperren einzelner Wander-Massive bei akuter Waldbrandgefahr
-    # (services/official_alerts/massif_closure.py, Quelle risque-prevention-incendie.fr).
-    "massif_closure": t("warnung.quelle.zugangssperre", "de"),
     # MeteoAlarm-Feed feeds.meteoalarm.org (Österreich, Italien, Deutschland;
     # Issue #1445, EDR-Weg mit #2266 zurückgebaut).
     "meteoalarm": "MeteoAlarm",
@@ -161,15 +156,19 @@ _SOURCE_LABELS: dict[str, str] = {
     # Issue #1441 S2: Registry-Namen (Melde-Gedaechtnis `source`) -- eine reine
     # Entwarnungs-Mail nennt die Quelle ueber diesen Namen.
     "meteoalarm_feed": "MeteoAlarm",
-    "avalanche_report": t("warnung.quelle.lawinendienste", "de"),
     # Issue #1441 S3 (Antrag #7): SLF -- Registry-Name UND jede Region
     # `slf_bulletin:CH-xxxx` (Aufloesung ueber den Praefix, `_PREFIX_LABELS`).
     "slf_bulletin": "WSL-Institut für Schnee- und Lawinenforschung SLF",
 }
-# Issue #2668: Quellen mit beschreibendem Zusatz (Katalog); Behoerdennamen bleiben.
+# Issue #2668: Quellen mit beschreibendem Zusatz stehen im Katalog (in ``lang``);
+# Behoerdennamen oben bleiben in jeder Sprache.
 _SOURCE_KEYS: dict[str, str] = {
+    # Waldbrand-Gefahrenstufen von Météo-France (services/official_alerts/meteo_forets.py).
     "meteo_forets": "warnung.quelle.waldbrand",
+    # Präfektur-Zugangssperren einzelner Wander-Massive bei akuter Waldbrandgefahr
+    # (services/official_alerts/massif_closure.py, Quelle risque-prevention-incendie.fr).
     "massif_closure": "warnung.quelle.zugangssperre",
+    # Issue #1441 S2: Registry-Name der Lawinenwarndienste (reine Entwarnungs-Mail).
     "avalanche_report": "warnung.quelle.lawinendienste",
 }
 # Quellen, deren Regions-Kennungen ueber den Praefix vor dem ersten ":" aufgeloest werden.
@@ -272,16 +271,16 @@ def official_alert_authority_notes(alerts: "list[OfficialAlert]", *, lang: Lang 
     """Massgeblichkeits-Saetze der beteiligten Quellen (Issue #1441 S3),
     je Quelle einmal, in Reihenfolge der Warnungen.
 
-    Issue #2668: ausser in Deutsch (byte-gleich) zusaetzlich der Hinweis auf
-    die Quellsprache, wenn der ANGEZEIGTE Titel Behoerdentext einer anderen
-    Sprache ist (nicht das Katalog-Typ-Wort). Nur Langform, nie SMS."""
+    Issue #2668: zusaetzlich der Hinweis auf die Quellsprache, wenn der
+    ANGEZEIGTE Titel Behoerdentext einer anderen Sprache ist (nicht das
+    Katalog-Typ-Wort). Deutsch bleibt byte-gleich: `_display_parts` meldet fuer
+    Deutsch nie eine Quellsprache. Nur Langform, nie SMS."""
     keys = (_AUTHORITY_NOTES.get(str(a.source or "").split(":", 1)[0]) for a in alerts)
     notes = [t(k, lang) for k in keys if k]
-    if lang != "de":
-        for a in alerts:
-            code = _display_parts(a, lang)[1]
-            if code and code != lang:
-                notes.append(t("warnung.hinweis.quelltext_sprache", lang, sprache=_sprachname(code, lang)))
+    for a in alerts:
+        code = _display_parts(a, lang)[1]
+        if code and code != lang:
+            notes.append(t("warnung.hinweis.quelltext_sprache", lang, sprache=_sprachname(code, lang)))
     return list(dict.fromkeys(notes))
 
 
