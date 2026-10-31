@@ -24,12 +24,18 @@ const base = pathToFileURL(FRONTEND + '/').href;
 register(pathToFileURL(path.join(FRONTEND, 'test-env-dynamic-private-stub-hooks.mjs')).href, base);
 register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, base);
 register(pathToFileURL(path.join(HERE, 'app-navigation-stub-hooks.mjs')).href, base);
+// Zuletzt registriert => laeuft zuerst: zaehlt invalidateAll-Aufrufe.
+register(pathToFileURL(path.join(HERE, 'app-navigation-zaehler-hooks.mjs')).href, base);
 process.env.GZ_API_BASE = 'http://go-api.test';
 
 const modul = await import(pathToFileURL(path.join(SRC, 'lib/components/account/SpracheAuswahl.svelte')).href);
 const SpracheAuswahl = modul.default;
 const speichereSprache: (neu: 'de' | 'en') => Promise<{ meldung: string; fehler: string }> =
 	modul.speichereSprache;
+type Zustand = { meldung: string; fehler: string; laeuft: boolean };
+const waehleSprache: (auswahl: { value: string }, zustand: Zustand) => Promise<void> = modul.waehleSprache;
+const AccountPage = (await import(pathToFileURL(path.join(SRC, 'routes/account/+page.svelte')).href)).default;
+const g = globalThis as Record<string, unknown>;
 const { load: layoutLoad } = await import(pathToFileURL(path.join(SRC, 'routes/+layout.server.ts')).href);
 const { locale, trFor } = await import(pathToFileURL(path.join(SRC, 'lib/i18n/index.ts')).href);
 const { render } = await import('svelte/server');
@@ -75,6 +81,7 @@ beforeEach(() => {
 	putStatus = 200;
 	browserNutzer = 'user-a';
 	locale.set('de');
+	g.__gzInvalidateAllAufrufe = 0;
 });
 
 /** Echter Layout-Loader fuer einen angemeldeten Nutzer (Cookie-Lang = de). */
@@ -123,4 +130,62 @@ describe('AC-4: Speichern scheitert', () => {
 			assert.equal(await layoutLang('user-a'), 'de');
 		});
 	}
+});
+
+// --- Adversary-Findings F002/F003 -------------------------------------------
+const strip = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
+const leer = (): Zustand => ({ meldung: '', fehler: '', laeuft: false });
+const markup = (z: Zustand) => strip(render(SpracheAuswahl, { props: { anfang: z } }).body);
+const textIn = (html: string, rolle: string) =>
+	[...html.matchAll(new RegExp(`<[a-z]+\\b[^>]*role="${rolle}"[^>]*>([^<]*)<`, 'g'))].map((m) => m[1]);
+
+describe('F003: Auswahl-Handler und Rueckmeldung im Markup', () => {
+	test('Erfolg: genau ein invalidateAll, Rueckmeldung mit role="status", kein Alarm', async () => {
+		const auswahl = { value: 'en' };
+		const z = leer();
+		await waehleSprache(auswahl, z);
+		assert.equal(g.__gzInvalidateAllAufrufe, 1, 'invalidateAll nach Erfolg genau einmal');
+		assert.equal(auswahl.value, 'en');
+		assert.equal(z.laeuft, false);
+		const html = markup(z);
+		assert.deepEqual(textIn(html, 'status'), [trFor('en', 'konto.sprache.gespeichert')]);
+		assert.deepEqual(textIn(html, 'alert'), []);
+	});
+
+	for (const status of [400, 500]) {
+		test(`Fehler ${status}: kein invalidateAll, Auswahl zurueck auf de, Fehlertext mit role="alert"`, async () => {
+			putStatus = status;
+			const auswahl = { value: 'en' };
+			const z = leer();
+			await waehleSprache(auswahl, z);
+			assert.equal(g.__gzInvalidateAllAufrufe, 0, 'bei Fehler kein Neuladen');
+			assert.equal(auswahl.value, 'de', 'Auswahl muss auf die bisherige Sprache zurueck');
+			assert.equal(z.laeuft, false);
+			const html = markup(z);
+			assert.deepEqual(textIn(html, 'alert'), [trFor('de', 'konto.sprache.fehler')]);
+			assert.deepEqual(textIn(html, 'status'), []);
+		});
+	}
+
+	test('ohne Rueckmeldung: weder status noch alert im Markup', () => {
+		const html = markup(leer());
+		assert.deepEqual(textIn(html, 'alert'), []);
+		assert.deepEqual(textIn(html, 'status'), []);
+	});
+});
+
+describe('F002: die Kontoseite bindet die Sprachauswahl ein', () => {
+	test('SSR-Render von /account enthaelt genau eine Sprach-Karte', () => {
+		const html = render(AccountPage, {
+			props: {
+				data: {
+					profile: { id: 'user-a', display_name: 'Anna', email: 'a@example.org', mail_to: 'a@example.org',
+						email_verified: true, tier: 'free', created_at: '2026-09-01T10:00:00Z', passkeys: [] },
+					scheduler: null, health: null, templates: [], trips: [], comparePresets: [], locations: [], metricPresets: []
+				}
+			}
+		}).body;
+		assert.equal(html.split('data-testid="sprache-card"').length - 1, 1);
+		assert.equal(html.split('data-testid="sprache-auswahl"').length - 1, 1);
+	});
 });

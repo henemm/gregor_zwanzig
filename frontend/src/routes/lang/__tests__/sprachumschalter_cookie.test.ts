@@ -158,6 +158,15 @@ describe('AC-2: Negativfaelle', () => {
 		assert.equal(r.location, '/');
 	});
 
+	// F001: gleicher Ursprung, aber Pfad, den der Browser als fremden Host deutet.
+	for (const referer of ['http://localhost//evil.com/x', 'http://localhost/\\evil.com']) {
+		test(`Referer ${referer}: Rueckleitung auf / (keine offene Weiterleitung)`, async () => {
+			const r = await poste('en', referer);
+			assert.equal(r.status, 303);
+			assert.equal(r.location, '/');
+		});
+	}
+
 	test('fehlender Referer: Rueckleitung auf /', async () => {
 		const r = await poste('en', null);
 		assert.equal(r.location, '/');

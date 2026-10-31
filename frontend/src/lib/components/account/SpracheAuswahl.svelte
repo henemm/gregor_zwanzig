@@ -5,6 +5,7 @@
 	// die Oberflaeche, bei Fehler bleibt sie in der bisherigen Sprache.
 	import { api } from '$lib/api.js';
 	import { invalidateAll } from '$app/navigation';
+	import { get } from 'svelte/store';
 	import { locale, tr, type Lang } from '$lib/i18n';
 
 	export async function speichereSprache(neu: Lang): Promise<{ meldung: string; fehler: string }> {
@@ -17,26 +18,35 @@
 		await invalidateAll();
 		return { meldung: tr('konto.sprache.gespeichert'), fehler: '' };
 	}
+
+	export type SprachZustand = { meldung: string; fehler: string; laeuft: boolean };
+
+	/** Aenderung der Auswahl: speichern, Rueckmeldung setzen, bei Fehler Auswahl zuruecksetzen. */
+	export async function waehleSprache(auswahl: { value: string }, zustand: SprachZustand): Promise<void> {
+		const wert = auswahl.value;
+		if (wert !== 'de' && wert !== 'en') return;
+		zustand.laeuft = true;
+		const { meldung, fehler } = await speichereSprache(wert);
+		Object.assign(zustand, { meldung, fehler, laeuft: false });
+		// Fehler: Auswahl zeigt wieder die weiterhin gueltige Sprache.
+		if (fehler) auswahl.value = get(locale);
+	}
 </script>
 
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { t, locale as sprache } from '$lib/i18n';
 
-	let meldung = $state('');
-	let fehler = $state('');
-	let laeuft = $state(false);
-
-	async function geaendert(e: Event) {
-		const auswahl = e.currentTarget as HTMLSelectElement;
-		const wert = auswahl.value;
-		if (wert !== 'de' && wert !== 'en') return;
-		laeuft = true;
-		({ meldung, fehler } = await speichereSprache(wert));
-		laeuft = false;
-		// Fehler: Auswahl zeigt wieder die weiterhin gueltige Sprache.
-		if (fehler) auswahl.value = $sprache;
-	}
+	// `anfang` nur fuer SSR-Nachweise des Rueckmeldungs-Markups (Tests); die
+	// Kontoseite bindet die Komponente ohne Props ein.
+	let { anfang }: { anfang?: SprachZustand } = $props();
+	const zustand: SprachZustand = $state({
+		meldung: '',
+		fehler: '',
+		laeuft: false,
+		...untrack(() => anfang)
+	});
 </script>
 
 <Card.Root data-testid="sprache-card">
@@ -48,19 +58,19 @@
 			id="sprache"
 			aria-label={$t('konto.sprache.titel')}
 			value={$sprache}
-			disabled={laeuft}
-			onchange={geaendert}
+			disabled={zustand.laeuft}
+			onchange={(e) => waehleSprache(e.currentTarget, zustand)}
 			data-testid="sprache-auswahl"
 			class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 		>
 			<option value="de">{$t('konto.sprache.option_de')}</option>
 			<option value="en">{$t('konto.sprache.option_en')}</option>
 		</select>
-		{#if meldung}
-			<p class="text-sm" role="status" data-testid="sprache-gespeichert">{meldung}</p>
+		{#if zustand.meldung}
+			<p class="text-sm" role="status" data-testid="sprache-gespeichert">{zustand.meldung}</p>
 		{/if}
-		{#if fehler}
-			<p class="text-sm" role="alert" style="color: var(--g-bad);" data-testid="sprache-fehler">{fehler}</p>
+		{#if zustand.fehler}
+			<p class="text-sm" role="alert" style="color: var(--g-bad);" data-testid="sprache-fehler">{zustand.fehler}</p>
 		{/if}
 	</Card.Content>
 </Card.Root>

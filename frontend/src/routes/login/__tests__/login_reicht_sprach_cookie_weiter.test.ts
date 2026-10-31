@@ -79,6 +79,21 @@ describe('AC-6: Login reicht gz_lang weiter', () => {
 		assert.equal(c.find((x) => x.name === 'gz_lang')?.wert, 'de');
 	});
 
+	// F004: Secure gemaess Spec nur in Produktion (NODE_ENV=production).
+	for (const [nodeEnv, soll] of [['production', true], ['development', false]] as const) {
+		test(`NODE_ENV=${nodeEnv}: gz_lang secure=${soll}`, async () => {
+			const vorher = process.env.NODE_ENV;
+			process.env.NODE_ENV = nodeEnv;
+			try {
+				const c = await meldeAn([SESSION, 'gz_lang=en; Path=/']);
+				assert.equal(c.find((x) => x.name === 'gz_lang')?.opts.secure, soll);
+			} finally {
+				if (vorher === undefined) delete process.env.NODE_ENV;
+				else process.env.NODE_ENV = vorher;
+			}
+		});
+	}
+
 	test('ohne gz_lang in der Antwort: kein Sprach-Cookie', async () => {
 		const c = await meldeAn([SESSION]);
 		assert.deepEqual(
