@@ -2,13 +2,13 @@
 entity_id: i18n_p4_vergleichs_mail_2666
 type: module
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-10-31
 status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2666, python, model-haiku]
 ---
 
-# i18n P4: Ortsvergleich-Mail (HTML, Klartext, Telegram, SMS) zweisprachig
+# i18n P4: Ortsvergleich-Mail (HTML, Klartext, Telegram) zweisprachig
 
 **Issue:** #2666 · **Epic:** #2644 · **Modell:** Haiku · **Konventionen:** docs/features/epic-i18n-de-en-konventionen.md Abschnitt(e) 2, 4, 6 (und 9 für die Reihenfolge)
 
@@ -18,7 +18,9 @@ tags: [i18n, epic-2644, issue-2666, python, model-haiku]
 
 ## Purpose
 
-Wer einen Ortsvergleich abonniert hat und Englisch als Konto-Sprache gewählt hat, bekommt die Vergleichs-Mail (HTML und Klartext) sowie die Ortsvergleich-Nachrichten für Telegram und SMS in englischer Sprache: Überschriften, Zeilenbeschriftungen der Übersicht, Legende, Fußzeile und Hinweise. Die englischen Kurzformen der Stundentabelle (`col_label`, ADR-0042/0068) bleiben unverändert. Die deutsche Ausgabe bleibt byte-gleich zur heutigen Mail (Golden).
+Wer einen Ortsvergleich abonniert hat und Englisch als Konto-Sprache gewählt hat, bekommt die Vergleichs-Mail (HTML und Klartext) sowie die lange Ortsvergleich-Nachricht für Telegram in englischer Sprache: Überschriften, Zeilenbeschriftungen der Übersicht, Legende, Fußzeile und Hinweise. Die englischen Kurzformen der Stundentabelle (`col_label`, ADR-0042/0068) bleiben unverändert. Die deutsche Ausgabe bleibt byte-gleich zur heutigen Mail (Golden).
+
+> **PO-Korrektur 2026-10-31** (ADR-0104 „Präzisierung 2026-10-31“, `docs/features/epic-i18n-de-en.md`, hat Vorrang vor dem Rest dieser Spec): SMS und die kurze Telegram-Tokenform bleiben in **jeder** Sprache exakt wie bisher. `render_compare_sms` (inkl. SMS-Kopf `Vergleich {datum}:`, Überlaufhinweis ` +{n} Orte`, Zellwörter) und Premium-SMS sind **nicht** Teil dieses Pakets: kein `lang`, keine Katalogschlüssel dafür, SMS-Ausgabe byte-gleich in de und en. Zweisprachig wird nur der lange Ortsvergleich-Telegram-Text (`render_compare_telegram`, beschriftete Zeilen). Spalten-Kurzformen (`col_label`/`compact_label`/`sms_code`/Kürzel) bleiben unverändert.
 
 ## Source
 
@@ -30,14 +32,14 @@ Wer einen Ortsvergleich abonniert hat und Englisch als Konto-Sprache gewählt ha
 > **Querschnitts-Prüfpunkte:**
 > - **Trip/Ortsvergleich-Teilung:** Die geteilten Bausteine bleiben geteilt. Zeilenbeschriftung kommt wie im Trip aus dem Register über `derive_row_labels` (`metric.label(lang)`, `aggregation_label(aggregation, lang)`), nicht aus einer Compare-Kopie. Texte, die Trip und Ortsvergleich identisch brauchen (z. B. Hinweis „gewählte Wettergrößen ohne Wert“ in `channel_layout.py`), liegen in `allgemein.*`; compare-eigene Texte (Übersicht, Abo-Fuß, Kopfzeile) in `vergleich.*`. Kein neuer Trip-/Compare-Doppelbaustein.
 > - **Mandantentrennung:** Die Renderer sind reine Funktionen ohne Nutzerdaten-Zugriff und ohne Modul-Zustand. Die Sprache kommt als Parameter; AC-6 beweist, dass zwei aufeinanderfolgende Aufrufe (`en`, dann `de`) sich nicht beeinflussen. Die Auflösung `resolve_user_lang(user_id)` mit `user_id` aus dem Auth-Kontext macht P9b.
-> - **Kanäle:** Briefing-Inhalt des Ortsvergleichs. Alle vier Kanäle: E-Mail (HTML und Klartext, dieses Paket), Telegram (`render_compare_telegram`, dieses Paket), SMS (`render_compare_sms`, dieses Paket) und Premium-SMS (sendet denselben SMS-Text wie `render_compare_sms`, siehe `scheduler_dispatch_service.py:718-732`, und ist damit abgedeckt). Gleicher Inhalt, kanalgerechte Form; Kürzel und GSM-7-Regeln der SMS bleiben.
+> - **Kanäle:** Briefing-Inhalt des Ortsvergleichs. Alle vier Kanäle: E-Mail (HTML und Klartext, dieses Paket), Telegram (`render_compare_telegram`, dieses Paket); SMS (`render_compare_sms`) und Premium-SMS (sendet denselben SMS-Text, siehe `scheduler_dispatch_service.py:718-732`) bleiben laut PO-Korrektur 2026-10-31 in jeder Sprache byte-gleich und gehören nicht zu diesem Paket. Gleicher Inhalt, kanalgerechte Form; Kürzel und GSM-7-Regeln der SMS bleiben.
 
 ### Affected Files
 
 | Datei | CREATE/MODIFY | Zweck |
 |---|---|---|
 | `src/output/renderers/email/compare_html.py` | MODIFY | Alle Nutzertexte über `t(..., lang)`; `lang`-Parameter an `render_compare_html` und allen `_render_*`-Funktionen; `<html lang>` und `<title>` |
-| `src/output/renderers/comparison.py` | MODIFY | `lang` an `render_compare_email`, `render_comparison_text`, `render_compare_telegram`, `render_compare_sms`; `_PLAIN_ROWS`/`_DAILY_PLAIN_ROWS`: deutsches Label wird Katalog-Schlüssel |
+| `src/output/renderers/comparison.py` | MODIFY | `lang` an `render_compare_email`, `render_comparison_text`, `render_compare_telegram` (nicht `render_compare_sms`, PO-Korrektur 2026-10-31); `_PLAIN_ROWS`/`_DAILY_PLAIN_ROWS`: deutsches Label wird Katalog-Schlüssel |
 | `src/output/renderers/channel_layout.py` | MODIFY | `telegram_metric_notice` und `selection_gap_notice` bekommen `lang: Lang = "de"` (keyword-only) |
 | `src/app/thunder_scale.py` | MODIFY | Quelle der Gewitter-Wörter (Domänenschicht, #2176): `lang`-fähige Varianten `thunder_label(level, lang)`, `thunder_signal_label(name, lang="de")` (Zeile 136), `format_hail_note(hail_flag, lang="de")` (Zeile 42); `THUNDER_LABEL_DE` bleibt unverändert erhalten |
 | `src/output/metric_format.py` | MODIFY | Re-Export der neuen Funktionen aus `thunder_scale.py`; neu `precip_type_label(value, lang)` neben `PRECIP_TYPE_LABEL_DE` (Zeile 297, bleibt unverändert) |
@@ -92,14 +94,13 @@ def render_compare_html(result, *, ..., lang: Lang = "de") -> str
 def render_compare_email(result, *, ..., lang: Lang = "de") -> tuple[str, str]
 def render_comparison_text(result, profile=None, enabled_metrics=None, *, ..., lang: Lang = "de") -> str
 def render_compare_telegram(result, *, ..., lang: Lang = "de") -> str
-def render_compare_sms(result, *, ..., lang: Lang = "de") -> str
 def summarize_day_comparison(comparison, *, selected_metrics=None, lang: Lang = "de") -> str
 def derive_row_labels(rows, form="short", *, lang: Lang = "de") -> list[dict]
 def selection_gap_notice(count, *, scope, lang: Lang = "de") -> str
 def telegram_metric_notice(demoted_count, *, context, lang: Lang = "de") -> str
 ```
 
-Alle privaten `_render_*`/`_fmt_*`-Funktionen, die Text erzeugen (`_render_header`, `_render_section_head`-Aufrufer, `_render_legend`, `_render_abo_footer`, `_render_app_footer`, `_render_warn_banner`, `_render_outlook_unavailable`, `_render_location_outlook`, `_render_hour_table`, `_warn_short`, `_fmt_thunder`, `_fmt_precip_type`, `_telegram_notice`, `_telegram_no_data_notice`, `_sms_location_overflow_notice`) bekommen `lang` als Parameter und reichen ihn weiter. Keine Modul-Variable `_LANG`.
+Alle privaten `_render_*`/`_fmt_*`-Funktionen, die Text erzeugen (`_render_header`, `_render_section_head`-Aufrufer, `_render_legend`, `_render_abo_footer`, `_render_app_footer`, `_render_warn_banner`, `_render_outlook_unavailable`, `_render_location_outlook`, `_render_hour_table`, `_warn_short`, `_fmt_thunder`, `_fmt_precip_type`, `_telegram_notice`, `_telegram_no_data_notice`) bekommen `lang` als Parameter und reichen ihn weiter. Keine Modul-Variable `_LANG`.
 
 **Beispiel-Schlüssel (de wörtlich wie heute, en laut Glossar):**
 
@@ -119,12 +120,11 @@ Alle privaten `_render_*`/`_fmt_*`-Funktionen, die Text erzeugen (`_render_heade
 | `vergleich.warn.n_von_m_orten` | `{n} von {gesamt} Orten` | `{n} of {gesamt} locations` | compare_html.py:933 |
 | `vergleich.telegram.kopf_datum` | `Datum: {datum}` | `Date: {datum}` | comparison.py:758 |
 | `vergleich.telegram.uebersprungen` | `… +{n} weitere Orte (Telegram-Limit) — vollständig per E-Mail` | `… +{n} more locations (Telegram limit) — full version by email` | `_telegram_notice`, comparison.py:869 |
-| `vergleich.sms.orte_ueberlauf` | ` +{n} Orte` | ` +{n} locs` | `_sms_location_overflow_notice`, comparison.py:1115 |
 | `vergleich.zeile.regen` | `Regen` | `Rain` | `_DAILY_PLAIN_ROWS`, comparison.py:75 |
 | `allgemein.hinweis.gewaehlt_ohne_wert.vergleich` | `in diesem Vergleich` | `in this comparison` | `selection_gap_notice`, channel_layout.py:121 |
 | `vergleich.vortag.zusammenfassung` | `Vergleich zum Vortag: heute {woerter} als gestern` | `Compared with yesterday: today {woerter} than yesterday` | `summarize_day_comparison`, day_comparison.py:322 |
 
-Weitere Schlüssel nach demselben Muster: je ein Schlüssel für jede Legendenstufe (`vergleich.legende.unkritisch`/`achtung`/`warnung`/`gefahr` = `unkritisch`/`Achtung`/`Warnung`/`Gefahr` -> `OK`/`Caution`/`Warning`/`Danger`), Abo-Fuß (`Dieses Abo` -> `This subscription`, `Vergleich in App öffnen →` -> `Open comparison in app →`, `Abo bearbeiten` -> `Edit subscription`, `Orte ändern` -> `Change locations`, `Abmelden` -> `Unsubscribe`), Abschnittsköpfe (`ÜBERSICHT` -> `OVERVIEW`, `STUNDEN` -> `HOURLY`, `AUSBLICK` -> `OUTLOOK`, `Stundenverlauf · alle Orte` -> `Hourly view · all locations`, `← scrollen` -> `← scroll`), die 26 Zeilenlabels des Klartext/Telegram (`vergleich.zeile.<zeilenschlüssel>`), Telegram-Kopf (`ORTS-VERGLEICH — {name}` -> `LOCATION COMPARISON — {name}`, `Fehler: {fehler}` -> `Error: {fehler}`, `keine Werte` -> `no values`), `Keine Vergleichsdaten verfügbar.` -> `No comparison data available.`, SMS-Kopf (`Vergleich {datum}:` -> `Compare {datum}:`), `{name} n/a` bleibt (ASCII-Token, kein Katalog).
+Weitere Schlüssel nach demselben Muster: je ein Schlüssel für jede Legendenstufe (`vergleich.legende.unkritisch`/`achtung`/`warnung`/`gefahr` = `unkritisch`/`Achtung`/`Warnung`/`Gefahr` -> `OK`/`Caution`/`Warning`/`Danger`), Abo-Fuß (`Dieses Abo` -> `This subscription`, `Vergleich in App öffnen →` -> `Open comparison in app →`, `Abo bearbeiten` -> `Edit subscription`, `Orte ändern` -> `Change locations`, `Abmelden` -> `Unsubscribe`), Abschnittsköpfe (`ÜBERSICHT` -> `OVERVIEW`, `STUNDEN` -> `HOURLY`, `AUSBLICK` -> `OUTLOOK`, `Stundenverlauf · alle Orte` -> `Hourly view · all locations`, `← scrollen` -> `← scroll`), die 26 Zeilenlabels des Klartext/Telegram (`vergleich.zeile.<zeilenschlüssel>`), Telegram-Kopf (`ORTS-VERGLEICH — {name}` -> `LOCATION COMPARISON — {name}`, `Fehler: {fehler}` -> `Error: {fehler}`, `keine Werte` -> `no values`), `Keine Vergleichsdaten verfügbar.` -> `No comparison data available.`. SMS-Kopf, SMS-Überlauf und `{name} n/a` bleiben unverändert (PO-Korrektur 2026-10-31, kein Katalog).
 
 **Beispiel-Umstellung (compare_html.py, `_render_header`, Zeilen 1342 und 1385-1388), vorher:**
 
@@ -187,7 +187,7 @@ Achtung Namenskollision: die lokale Bool-Variable `lang` in `derive_row_labels` 
 ## Expected Behavior
 
 - **Input:** `ComparisonResult` (mindestens drei Orte), Render-Optionen wie bisher, zusätzlich `lang` (`"de"` oder `"en"`, Default `"de"`).
-- **Output:** HTML-Mail, Klartext, Telegram-Text und SMS-Text in der gewählten Sprache; bei `de` byte-gleich zur heutigen Ausgabe. Bei `en`: Überschriften, Übersichts-Zeilenbeschriftung (voller Registername, z. B. `Precipitation`), Legende, Abo-Fuß, Telegram-/SMS-Hinweise englisch; Stundentabellen-Spaltenköpfe (`Temp`, `Gust`, `Humid` …) und SMS-Kürzel unverändert; Datum `Thu, 29 Oct 2026`, Uhrzeit 24 h.
+- **Output:** HTML-Mail, Klartext und Telegram-Text in der gewählten Sprache; bei `de` byte-gleich zur heutigen Ausgabe; der SMS-Text ist in jeder Sprache byte-gleich zu heute (PO-Korrektur 2026-10-31). Bei `en`: Überschriften, Übersichts-Zeilenbeschriftung (voller Registername, z. B. `Precipitation`), Legende, Abo-Fuß, Telegram-Hinweise englisch; Stundentabellen-Spaltenköpfe (`Temp`, `Gust`, `Humid` …) und SMS-Kürzel unverändert; Datum `Thu, 29 Oct 2026`, Uhrzeit 24 h.
 - **Side effects:** Keine (reine Funktionen). Kein Modul-Zustand, kein Log außer dem einmaligen `i18n fallback`-Log des Kerns.
 
 ## Acceptance Criteria
@@ -201,8 +201,8 @@ Achtung Namenskollision: die lokale Bool-Variable `lang` in `derive_row_labels` 
 - **AC-3:** Given Sprache `de` / When die Mail, der Klartext, der Telegram-Text und der SMS-Text mit der Golden-Fixture gerendert werden / Then ist jede Ausgabe byte-gleich zu den vor der Umstellung eingecheckten `*.de.*`-Dateien.
   - Test: tests/golden/test_vergleichs_mail_golden.py — Byte-Vergleich HTML, Klartext, Telegram und SMS gegen `tests/golden/vergleichs_mail/*.de.*`.
 
-- **AC-4:** Given Sprache `en` und zwölf Orte / When der SMS-Text und der Telegram-Text gerendert werden / Then hält die SMS die Grenze `CHANNEL_LIMITS["sms"]["max_chars"]`, der Telegram-Text die Grenze 4096, und die Überlauf-Hinweise (`+N locs`, `more locations (Telegram limit)`) stehen am Ende; SMS-Kürzel und `n/a`-Token sind identisch zur deutschen Ausgabe.
-  - Test: tests/test_vergleichs_mail_zweisprachig.py — Längenprüfung für `en` und `de` mit zwölf Orten, Token-Vergleich der SMS-Zellen (Kürzel) zwischen den Sprachen.
+- **AC-4:** Given Sprache `en` und zwölf Orte / When der SMS-Text und der Telegram-Text gerendert werden / Then ist der SMS-Text in jeder Sprache byte-gleich zu heute (PO-Korrektur 2026-10-31) und hält die Grenze `CHANNEL_LIMITS["sms"]["max_chars"]`, der Telegram-Text hält die Grenze 4096, und der Telegram-Überlauf-Hinweis (`more locations (Telegram limit)`) steht am Ende.
+  - Test: tests/test_vergleichs_mail_zweisprachig.py — Längenprüfung für `en` und `de` mit zwölf Orten; SMS-Text eines en- und eines de-Nutzers gegen die Golden-SMS (byte-gleich).
 
 - **AC-5:** Given ein englischer Nutzer mit Trip-Briefing, in dem ein Vortag-Vergleich steht / When `summarize_day_comparison(..., lang="en")` aufgerufen wird / Then lautet die Zeile `Compared with yesterday: today warmer and wetter than yesterday` (Beispiel mit Wörtern aus dem Katalog), und mit `lang="de"` bleibt sie `Vergleich zum Vortag: heute wärmer und nasser als gestern`.
   - Test: tests/test_tagesvergleich_zeile_zweisprachig.py — baut ein `DayComparison` mit bekannten Deltas und prüft beide Sprachen sowie den Fall „ähnliches Wetter“ und die Leerauswahl (`""`).
@@ -219,7 +219,7 @@ Achtung Namenskollision: die lokale Bool-Variable `lang` in `derive_row_labels` 
 - Annahme: Die deutsche Datumszeile im Klartext (`%A`, serverabhängig) bleibt für `de` unverändert, damit der Golden byte-gleich bleibt; eine Korrektur wäre Verhaltensänderung und gehört nicht in dieses Epic.
 - Annahme: `src/services/comparison_scoring.py` hat keine Nutzertexte und bleibt unverändert; `compare_metric_catalog.py` bekommt nur zusätzliche Felder.
 - Annahme: `src/i18n/format.py` bekommt die kleine Ergänzung `fmt_date_numeric`, weil P1 nur `kurz`/`lang` kennt und die Kopfzeile ein Datum mit Jahr zeigt.
-- Annahme: Der SMS-Überlauf-Hinweis heißt `+N locs` (Platzform, ASCII, gleiche Länge wie `Orte`); die SMS-Kürzel selbst folgen ADR-0042 und bleiben.
+- PO-Korrektur 2026-10-31: SMS (`render_compare_sms`, Überlauf ` +N Orte`, Kopf, Zellwörter wie `PT Regen`) und Premium-SMS bleiben in jeder Sprache unverändert; die SMS-Kürzel folgen ADR-0042.
 - Annahme: `summarize_day_comparison` gehört laut Issue zu diesem Paket, obwohl die Zeile im Trip-Briefing steht (Aufrufer `html.py`, `plain.py`); die Aufrufe dort werden mit einer Zeile mitgeführt.
 - Die Auflösung der Sprache und die Durchreichung (Aufrufer in `scheduler_dispatch_service.py`, `compare_preview_service.py`) ist P9b; ohne P9b sendet das System weiter deutsch.
 - Neue Glossarbegriffe (Stundenverlauf, Abo, Übersicht) werden mit diesem Paket angehängt (nur Anhängen, keine Änderung bestehender Zeilen).
@@ -232,3 +232,4 @@ Achtung Namenskollision: die lokale Bool-Variable `lang` in `derive_row_labels` 
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-10-31: PO-Korrektur 2026-10-31 eingearbeitet: SMS/Premium-SMS ausgenommen (byte-gleich in jeder Sprache), AC-3/AC-4 SMS-Teil angepasst; sonst ACs unverändert.

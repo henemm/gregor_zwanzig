@@ -197,7 +197,7 @@ def _mime(name: str, *, subject: str, body: str, html: bool, plain: str | None,
     return msg.as_bytes()
 
 
-def _compare_eml() -> bytes:
+def _compare_eml(lang: str = "de") -> bytes:
     from datetime import date, datetime
 
     from app.models import ForecastDataPoint, ThunderLevel
@@ -224,9 +224,10 @@ def _compare_eml() -> bytes:
         locations=orte, time_window=(9, 16), target_date=date(2026, 10, 29),
         created_at=datetime(2026, 10, 29, 4, 0),
     )
-    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=True)
+    kw = {} if lang == "de" else {"lang": lang}  # de: Aufruf wie vor #2666
+    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=True, **kw)
     return _mime("compare", subject="[Golden] Ortsvergleich", body=html, html=True,
-                 plain=None, mail_type="compare", compare_hourly_enabled=True)
+                 plain=None, mail_type="compare", compare_hourly_enabled=True, lang=lang)
 
 
 def _briefing_eml(email_format: str, *, roh: bool = False, regen_mm: float = 0.0,
@@ -430,7 +431,8 @@ def warn_mail_de(alarme: list, allclear: list | None = None) -> bytes:
 def erzeuge_fixtures() -> list[Path]:
     FIXTURE_DIR.mkdir(parents=True, exist_ok=True)
     bauplan = {
-        "compare_de.eml": _compare_eml, "briefing_full_de.eml": lambda: _briefing_eml("full"),
+        "compare_de.eml": _compare_eml, "compare_en.eml": lambda: _compare_eml("en"),
+        "briefing_full_de.eml": lambda: _briefing_eml("full"),
         "briefing_compact_de.eml": lambda: _briefing_eml("compact"),
         "briefing_full_en.eml": lambda: _briefing_eml("full", lang="en"),
         "briefing_compact_en.eml": lambda: _briefing_eml("compact", lang="en"),
