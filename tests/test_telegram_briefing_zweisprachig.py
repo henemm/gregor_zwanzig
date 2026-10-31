@@ -49,7 +49,8 @@ def test_ac1_englische_ueberschriften_fusszeile_vortag_und_praefix():
     for key in ("telegram.kopf.zusammenfassung", "telegram.kopf.ausblick",
                 "telegram.kopf.aktionen"):
         _bubble(texts, t(key, "en"))
-    ueber = _bubble(texts, t("telegram.kopf.zusammenfassung", "en"))
+    # Prosa-Zeilen werden bei 56 Zeichen am Wort umbrochen (_TG_PROSE_WIDTH)
+    ueber = _bubble(texts, t("telegram.kopf.zusammenfassung", "en")).replace("\n", " ")
     fuss = " · ".join([
         t("telegram.fuss.luftmasse", "en", wort="leicht"),
         t("telegram.fuss.sicht", "en", wort=t("telegram.fuss.sicht_gut", "en")),

@@ -55,6 +55,8 @@ def treffer(quelle: str) -> list[tuple[int, str]]:
         if id(node) in docs or "# i18n-token" in zeilen[node.lineno - 1]:
             continue
         s = node.value
+        if re.fullmatch(r"telegram(\.[a-z0-9_]+){1,3}", s):
+            continue  # Katalog-Schluessel, kein Text
         if re.search(r"[äöüÄÖÜß]", s) or any(f in s for f in frags):
             found.append((node.lineno, s))
     return found

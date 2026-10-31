@@ -13,6 +13,7 @@ die Katalog-``compact_label`` gemappt.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from services.day_comparison import DayComparison
 
 from app.metric_catalog import get_metric
+from i18n import Lang, fmt_date, t, tn
 from app.models import SegmentWeatherData, StabilityResult, ThunderLevel, UnifiedWeatherDisplayConfig
 from utils.timezone import local_fmt, local_hour
 
@@ -223,6 +225,7 @@ def _tg_day_footer(
     has_gap: bool = False,
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
+    lang: Lang = "de",
 ) -> Optional[str]:
     """Fußzeile mit Tageswerten (AC-6): ⚡ kein|leicht|mittel|hoch · Sicht gut|… · 0°C-Grenze N m.
 
@@ -280,7 +283,7 @@ def _tg_day_footer(
         # Luftmassen-Beschriftung -- kanaltypisch kurz, ohne CAPE-Wert und
         # ohne Herkunft (Spec AC-1/AC-2-Ausnahme fuer Kurzformen).
         if max_thunder_sev == _thunder_severity(ThunderLevel.LOW):
-            parts.append(f"Luftmasse {thunder_word}")
+            parts.append(t("telegram.fuss.luftmasse", lang, wort=thunder_word))
         else:
             parts.append(f"⚡ {thunder_word}")
         # Issue #1475 S5a: Hagel-Kennzeichen rein deskriptiv NEBEN der
@@ -297,16 +300,16 @@ def _tg_day_footer(
     # Sicht
     if "visibility" in enabled and min_vis is not None:
         if min_vis >= 10000:
-            vis_word = "gut"
+            vis_word = t("telegram.fuss.sicht_gut", lang)
         elif min_vis >= 4000:
-            vis_word = "mäßig"
+            vis_word = t("telegram.fuss.sicht_maessig", lang)
         else:
-            vis_word = "schlecht"
-        parts.append(f"Sicht {vis_word}")
+            vis_word = t("telegram.fuss.sicht_schlecht", lang)
+        parts.append(t("telegram.fuss.sicht", lang, wort=vis_word))
 
     # 0°C-Grenze
     if "freezing_level" in enabled and rep_freeze is not None:
-        parts.append(f"0°C-Grenze {rep_freeze} m")
+        parts.append(t("telegram.fuss.nullgradgrenze", lang, hoehe=rep_freeze))
 
     if not parts:
         return None
@@ -315,6 +318,7 @@ def _tg_day_footer(
 
 def _tg_vortag_line(
     day_comparison: Optional["DayComparison"], report_type: str = "evening",
+    *, lang: Lang = "de",
 ) -> Optional[str]:
     """F6 (#752): Kompakte Vortag-Zeile für Telegram.
 
@@ -340,12 +344,12 @@ def _tg_vortag_line(
     # format_value wuerde runden und ein Leerzeichen einfuegen.
     # (Label, MetricDelta) pro Metrik je Segment einsammeln.
     _LABELS = [
-        ("precip_sum", "Regen", "mm"),
+        ("precip_sum", t("telegram.vortag.label_regen", lang), "mm"),
         ("wind_max", "Wind", "km/h"),
-        ("gust_max", "Böen", "km/h"),
+        ("gust_max", t("telegram.vortag.label_boeen", lang), "km/h"),
         ("temp_max", "Temp max", "°C"),
         ("temp_min", "Temp min", "°C"),
-        ("thunder", "Gewitter", ""),
+        ("thunder", t("telegram.vortag.label_gewitter", lang), ""),
     ]
     if report_type == "morning":
         _LABELS = [entry for entry in _LABELS if entry[0] != "temp_min"]
@@ -363,7 +367,7 @@ def _tg_vortag_line(
     if not collected:
         return None
 
-    collected.sort(key=lambda t: t[0], reverse=True)
+    collected.sort(key=lambda c: c[0], reverse=True)
     top = collected[:3]
 
     parts = []
@@ -373,7 +377,7 @@ def _tg_vortag_line(
             parts.append(f"{label} {sign}{delta}{unit}")
         else:
             parts.append(f"{label} {sign}{delta}")
-    return "Ggü. Vortag: " + ", ".join(parts)
+    return t("telegram.vortag.zeile", lang, liste=", ".join(parts))
 
 
 @dataclass(frozen=True)
@@ -388,6 +392,7 @@ class TelegramBubble:
 
 def _official_alert_bubble(
     segments: list[SegmentWeatherData], tz: ZoneInfo, trip: Optional["Trip"] = None,
+    *, lang: Lang = "de",
 ) -> Optional[TelegramBubble]:
     """Amtliche Warnungen als eigene Bubble (Issue #1318 Scheibe B, AC-8).
 
@@ -431,7 +436,7 @@ def _official_alert_bubble(
         official_alert_source_label(alert.source) for alert, _ in tagged
     ))
     return TelegramBubble(text=render_official_alert_telegram(
-        notices, prefix="Amtliche Warnung", source_label=" · ".join(sources), tz=tz,
+        notices, prefix=t("telegram.warnung.praefix", lang), source_label=" · ".join(sources), tz=tz,
     ))
 
 
@@ -563,7 +568,7 @@ def _overview_line(
     return f"{label} {value}"
 
 
-def _segment_mini_header(seg_data: SegmentWeatherData) -> str:
+def _segment_mini_header(seg_data: SegmentWeatherData, *, lang: Lang = "de") -> str:
     """``"{Bezeichnung} · {km-Range} · {Höhen-Range}"`` (Spec Implementation Details)."""
     seg = seg_data.segment
     km_range = (
@@ -571,13 +576,24 @@ def _segment_mini_header(seg_data: SegmentWeatherData) -> str:
         f"–{seg.end_point.distance_from_start_km:.1f} km"
     )
     height_range = f"↑{seg.ascent_m:.0f} m ↓{seg.descent_m:.0f} m"
-    label = "Ziel" if str(seg.segment_id) == "Ziel" else f"Segment {seg.segment_id}"
+    is_ziel = str(seg.segment_id) == "Ziel"  # i18n-token: Segment-ID, kein Text
+    label = t("telegram.segment.ziel", lang) if is_ziel else f"Segment {seg.segment_id}"
     return f"{label} · {km_range} · {height_range}"
+
+
+def _stage_day(stage: dict, lang: Lang) -> str:
+    """Tag der Ausblick-Zeile (#2669 AC-8): ``Do 30.10.``/``Thu 30 Oct`` aus dem
+    i18n-Kern, wenn die Zeile ihr Kalenderdatum traegt; sonst das alte Kuerzel."""
+    d = stage.get("date")
+    if isinstance(d, date):
+        return fmt_date(d, lang, "kurz")
+    return stage.get("weekday", "")
 
 
 def _outlook_lines(
     multi_day_trend: list[dict],
     outlook_metrics: Optional[list[dict]] = None,
+    *, lang: Lang = "de",
 ) -> list[str]:
     """3-Tage-Trend-Zeilen (Issue #623/#640-Rechenlogik, jetzt Ausblick-Bubble).
 
@@ -586,7 +602,7 @@ def _outlook_lines(
     die Positionsgarantie der festen Reihenfolge dann entfaellt. ``None``
     (Altbestand) laesst die Zeile byte-identisch.
     """
-    lines: list[str] = ["Ausblick"]
+    lines: list[str] = [t("telegram.kopf.ausblick", lang)]
     if outlook_metrics is not None:
         columns = outlook_columns(outlook_metrics)
         # #1848 A3: Gewitterteil aus DEMSELBEN Zellenbau wie der feste Zweig
@@ -594,7 +610,7 @@ def _outlook_lines(
         # Stufenwort ohne Token-Uhrzeit, Herkunft und Nachtanteil.
         gew_index = thunder_column_index(columns)
         for stage in multi_day_trend:
-            weekday = stage.get("weekday", "")
+            weekday = _stage_day(stage, lang)
             cells = stage.get("cells") or []
             texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
             if gew_index is not None:
@@ -611,7 +627,7 @@ def _outlook_lines(
         return lines
     for stage in multi_day_trend:
         tok = format_trend_tokens(stage)
-        weekday = stage.get("weekday", "")
+        weekday = _stage_day(stage, lang)
         pt, wt = tok["precip_token"], tok["wind_token"]
         precip_part = f"R{pt}" if pt != "-" else (tok["precip_str"] if tok["precip_str"] != "–" else "R–")
         wind_part = f"W{wt}" if wt != "-" else tok["wind_str"]
@@ -637,7 +653,7 @@ def _outlook_lines(
     return lines
 
 
-def render_telegram_incomplete_hint(missing_count: int) -> str:
+def render_telegram_incomplete_hint(missing_count: int, *, lang: Lang = "de") -> str:
     """Hinweis „Briefing unvollstaendig" (Issue #1370). Pure function.
 
     Bauart nach dem Vorbild des Nicht-abrufbar-Hinweises (#1348,
@@ -647,13 +663,7 @@ def render_telegram_incomplete_hint(missing_count: int) -> str:
     damit der Nutzer weiss, wie viel ihm entgeht.
     """
     count = max(1, int(missing_count))
-    teile = "Teil" if count == 1 else "Teile"
-    ist_sind = "ist" if count == 1 else "sind"
-    return (
-        f"⚠️ Briefing unvollständig — {count} {teile} des Briefings "
-        f"{ist_sind} nicht angekommen. Bitte fordere das Briefing gleich "
-        "noch einmal an."
-    )
+    return tn("telegram.hinweis.unvollstaendig", count, lang)
 
 
 def render_telegram_bubbles(
@@ -679,6 +689,7 @@ def render_telegram_bubbles(
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     starkregen_hint_text: Optional[str] = None,
+    lang: Lang = "de",
 ) -> list[TelegramBubble]:
     """Render die Telegram-Briefing-Bubble-Liste (Issue #1001). Pure function.
 
@@ -750,7 +761,7 @@ def render_telegram_bubbles(
 
     # 1b. Amtliche Warnungen (#1318 AC-8) — direkt nach dem Kopf, weil
     # sicherheitsrelevant. Ohne Warnung >= MIN_SMS_LEVEL entfaellt sie ganz.
-    warn_bubble = _official_alert_bubble(segments, tz, trip)
+    warn_bubble = _official_alert_bubble(segments, tz, trip, lang=lang)
     if warn_bubble is not None:
         bubbles.append(warn_bubble)
 
@@ -769,7 +780,7 @@ def render_telegram_bubbles(
         [sd for sd in segments if not sd.has_error], night_weather, tz,
         start_hour=day_window_start_hour, end_hour=day_window_end_hour,
     )
-    overview_lines: list[str] = ["Kurzübersicht"]
+    overview_lines: list[str] = [t("telegram.kopf.zusammenfassung", lang)]
     # Issue #1484: die Nacht-Untergrenze der T-Zeile folgt der EIGENEN
     # Groesse "temperature_night". Ohne aktive "temperature" bekommt sie
     # abends eine eigene Zeile mit dem Register-Kuerzel (TN).
@@ -834,6 +845,7 @@ def render_telegram_bubbles(
         has_gap=has_gap,
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour,
+        lang=lang,
     )
     if footer:
         overview_lines.append("")
@@ -847,7 +859,7 @@ def render_telegram_bubbles(
     # (`select_fallback_meta`) — keine kanal-eigene Auswahlregel mehr.
     for _fb_line in build_fallback_lines(select_fallback_meta(segments)):
         overview_lines.extend(_wrap(_esc(_fb_line), _TG_PROSE_WIDTH))
-    vortag_line = _tg_vortag_line(day_comparison, report_type)
+    vortag_line = _tg_vortag_line(day_comparison, report_type, lang=lang)
     if vortag_line:
         overview_lines.append("")
         overview_lines.extend(_wrap(_esc(vortag_line), _TG_PROSE_WIDTH))
@@ -865,10 +877,11 @@ def render_telegram_bubbles(
     for seg_data, rows in zip(segments, seg_tables):
         seg = seg_data.segment
         if seg_data.has_error:
-            bubbles.append(TelegramBubble(text=_esc(f"Seg {seg.segment_id}: keine Daten")))
+            bubbles.append(TelegramBubble(text=_esc(
+                t("telegram.segment.keine_daten", lang, id=seg.segment_id))))
             continue
 
-        text_lines = _wrap(_esc(_segment_mini_header(seg_data)), _TG_PROSE_WIDTH)
+        text_lines = _wrap(_esc(_segment_mini_header(seg_data, lang=lang)), _TG_PROSE_WIDTH)
         if layout.table_columns and rows:
             table_lines = _narrow_table(layout.table_columns, rows, fkeys, _TG_TABLE_WIDTH)
             escaped_table = "\n".join(_esc(ln) for ln in table_lines)
@@ -881,7 +894,7 @@ def render_telegram_bubbles(
     if outlook_metrics != []:
         if multi_day_trend:
             outlook = [_esc(ln) for ln in
-                       _outlook_lines(multi_day_trend, outlook_metrics)]
+                       _outlook_lines(multi_day_trend, outlook_metrics, lang=lang)]
             bubbles.append(TelegramBubble(text="\n".join(outlook)))
         elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
             # Fix #1486: der vierte, gern vergessene Ausgabeweg — Telegram liess
@@ -889,9 +902,11 @@ def render_telegram_bubbles(
             state_line = _esc(render_outlook_state_plain(
                 outlook_state, outlook_horizon_days,
             ))
-            bubbles.append(TelegramBubble(text="Ausblick\n" + state_line))
+            bubbles.append(TelegramBubble(
+                text=t("telegram.kopf.ausblick", lang) + "\n" + state_line))
 
     # 6. Aktionen-Bubble — einzige Bubble mit reply_markup.
-    bubbles.append(TelegramBubble(text="Aktionen", reply_markup=ACTIONS_BUBBLE_BUTTONS))
+    bubbles.append(TelegramBubble(
+        text=t("telegram.kopf.aktionen", lang), reply_markup=ACTIONS_BUBBLE_BUTTONS))
 
     return bubbles
