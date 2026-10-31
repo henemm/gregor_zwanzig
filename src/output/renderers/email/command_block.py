@@ -8,19 +8,23 @@ Trip- oder Compare-Renderer (Pendant-Regel).
 """
 from __future__ import annotations
 
+from i18n import Lang, t
 from output.renderers.email.design_tokens import FONT_DATA, G_HEADER_BG
 from services.trip_command_processor import command_rows
 
 
-def render_commands_plain(kind: str = "route") -> str:
-    """Klartext-Block: Kopfzeile plus eine Zeile je Befehl."""
-    zeilen = ["── Antwort-Kommandos ──"]
+def render_commands_plain(kind: str = "route", *, lang: Lang = "de") -> str:
+    """Klartext-Block: Kopfzeile plus eine Zeile je Befehl.
+
+    ``lang`` (Issue #2665) betrifft Kopfzeile, Eyebrow und Hinweis; die
+    Befehlszeilen aus ``command_rows`` stellt P10 (#2673) um."""
+    zeilen = [f"── {t('mail.befehle.titel', lang)} ──"]
     for label, beschreibung in command_rows(kind):
         zeilen.append(f"  {label:<20} – {beschreibung}")
     return "\n".join(zeilen)
 
 
-def render_commands_html(kind: str = "route") -> str:
+def render_commands_html(kind: str = "route", *, lang: Lang = "de") -> str:
     """HTML-Block (JSX EmailPreview L185-200): Befehlsgrid + Hinweis."""
     cmds = command_rows(kind)
     rows = []
@@ -43,12 +47,12 @@ def render_commands_html(kind: str = "route") -> str:
     )
     hint = (
         f'<div style="font-family:{FONT_DATA};font-size:10px;color:#b8b4a8;margin-top:10px;">'
-        f'Antworte auf diese E-Mail mit einem Schlüsselwort.</div>'
+        f'{t("mail.befehle.hinweis", lang)}</div>'
     )
     eyebrow = (
         f'<span style="font-family:{FONT_DATA};font-size:10px;'
         f'letter-spacing:0.12em;color:#9a978d;font-weight:600;'
-        f'text-transform:uppercase;">Antwort-Kommandos</span>'
+        f'text-transform:uppercase;">{t("mail.befehle.titel", lang)}</span>'
     )
     return (
         f'<div style="background:{G_HEADER_BG};border-bottom:1px solid #e6e1d3;'

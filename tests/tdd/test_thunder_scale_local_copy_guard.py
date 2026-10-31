@@ -145,6 +145,10 @@ _THUNDER_KWARGS = dict(
         # `day_window.py`, jetzt EINE kanonische Quelle.
         ("src/app/thunder_scale.py", "thunder_headline_sentence"),
         ("src/app/thunder_scale.py", "THUNDER_NIGHT_ADJECTIVE_DE"),
+        # #2665: englische Nacht-Adjektive als PARALLELE Tabelle derselben
+        # kanonischen Quelle (Spec i18n P3), Muster THUNDER_LABEL_EN.
+        ("src/app/thunder_scale.py", "THUNDER_NIGHT_ADJECTIVE_EN"),
+        ("src/app/thunder_scale.py", "_thunder_headline_sentence_en"),
         ("src/output/metric_format.py", "_THUNDER_AMPEL_BAND"),
     ),
 )

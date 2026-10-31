@@ -31,6 +31,7 @@ import html as _html
 from typing import Optional
 
 from app.models import OutlookState, TrendResult
+from i18n import Lang, t, tn
 
 __all__ = [
     "OutlookState",
@@ -42,10 +43,12 @@ __all__ = [
 ]
 
 
-_OUTLOOK_STATE_TEXT: dict[OutlookState, str] = {
-    OutlookState.NO_STAGES: "Keine weiteren Etappen — kein Ausblick.",
-    OutlookState.BEYOND_HORIZON: "Nächste Etappe liegt zu weit voraus (max. {n} Tage).",
-    OutlookState.UNAVAILABLE: "Vorhersage derzeit nicht abrufbar.",
+# Issue #2665: Katalog-Schluessel je Zustand (``mail.outlook_state.*``);
+# BEYOND_HORIZON ist ein Plural (``tn``), de bei 1 wie bisher "Tage".
+_OUTLOOK_STATE_KEY: dict[OutlookState, str] = {
+    OutlookState.NO_STAGES: "mail.outlook_state.keine_etappen",
+    OutlookState.BEYOND_HORIZON: "mail.outlook_state.zu_weit",
+    OutlookState.UNAVAILABLE: "mail.outlook_state.nicht_abrufbar",
 }
 
 
@@ -60,11 +63,11 @@ def outlook_state_should_warn(state: OutlookState) -> bool:
 
 
 def outlook_state_text(
-    state: OutlookState, horizon_days: Optional[int] = None,
+    state: OutlookState, horizon_days: Optional[int] = None, *, lang: Lang = "de",
 ) -> str:
     """Reiner Satz ohne Kanal-Verzierung. ``FOUND``/unbekannt → leer."""
-    template = _OUTLOOK_STATE_TEXT.get(state)
-    if template is None:
+    key = _OUTLOOK_STATE_KEY.get(state)
+    if key is None:
         return ""
     if state is OutlookState.BEYOND_HORIZON:
         n = horizon_days
@@ -73,15 +76,15 @@ def outlook_state_text(
             # hartkodierten Zahl — dieselbe Quelle wie der Guard im Scheduler.
             from providers.openmeteo import OPENMETEO_MAX_FORECAST_DAYS
             n = OPENMETEO_MAX_FORECAST_DAYS
-        return template.format(n=n)
-    return template
+        return tn(key, n, lang)
+    return t(key, lang)
 
 
 def render_outlook_state_html(
-    state: OutlookState, horizon_days: Optional[int] = None,
+    state: OutlookState, horizon_days: Optional[int] = None, *, lang: Lang = "de",
 ) -> str:
     """HTML-Fassung. Danger-Box NUR bei ``UNAVAILABLE`` (s. Modul-Docstring)."""
-    text = outlook_state_text(state, horizon_days)
+    text = outlook_state_text(state, horizon_days, lang=lang)
     if not text:
         return ""
 
@@ -95,7 +98,7 @@ def render_outlook_state_html(
             f'<div style="background:{G_BOX_DANGER_BG};'
             f'border-left:4px solid {G_DANGER};padding:12px;margin:8px 0;'
             f'border-radius:4px;font-family:{FONT_UI};">'
-            f'<strong style="color:{G_DANGER};font-size:14px;">Ausblick</strong>'
+            f'<strong style="color:{G_DANGER};font-size:14px;">{t("mail.ausblick.titel", lang)}</strong>'
             f'<p style="margin:4px 0 0 0;color:{G_INK_MUTED};font-size:13px;">'
             f'{escaped}</p></div>'
         )
@@ -110,10 +113,11 @@ def render_outlook_state_plain(
     horizon_days: Optional[int] = None,
     *,
     ascii_safe: bool = False,
+    lang: Lang = "de",
 ) -> str:
     """Einzeilige Text-Fassung. ``ascii_safe=True`` (compact.py) nutzt "!!"
     statt "⚠️" — beides NUR bei ``UNAVAILABLE``."""
-    text = outlook_state_text(state, horizon_days)
+    text = outlook_state_text(state, horizon_days, lang=lang)
     if not text:
         return ""
     if state is OutlookState.UNAVAILABLE:

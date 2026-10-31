@@ -1,0 +1,22 @@
+WEATHER BRIEFING
+Korsika Trail - Update Report
+Corsica E5
+11.07.2026
+
+== Metrics overview ==
+  18-20C - Max 17:00
+  feels 12.0-13.0C - Max 17:00
+  Wind >10 km/h from 04:00 - max 19 (17:00)
+  !!! Wind gusts >20 km/h from 04:00 - max 85 (12:00)
+  !! Rain from 12:00 - 8 mm
+  !!! Thunderstorm high from 04:00 - strongest 04:00
+  50% cloud cover - Max 12:00
+  Sun 3.0h
+
+== Warnings ==
+  ! Amtliche Warnung: Extreme Hitze (Sa 11.07. - 12:00-20:00)
+
+----------------------------------------
+Generated: 2026-04-28 12:00 UTC
+Data: openmeteo (arome_france)
+Stage briefing - compact - openmeteo

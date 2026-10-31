@@ -131,6 +131,7 @@ def render_email(
             day_window_end_hour=day_window_end_hour,
             trip_metrics_altbestand=trip_metrics_altbestand,
             undelivered=undelivered,
+            lang=lang,
         )
         return "", compact_text
 
@@ -213,6 +214,7 @@ def render_email(
         trip_metrics_altbestand=trip_metrics_altbestand,
         undelivered=undelivered,
         starkregen_hint_text=starkregen_hint_text,
+        lang=lang,
     )
     return html_body, plain_body
 

@@ -825,7 +825,7 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             teile = [label]
             signals = row.get("_thunder_signals") if row else None
             if signals:
-                teile.append(", ".join(thunder_signal_label(s) for s in signals))
+                teile.append(", ".join(thunder_signal_label(s, lang=lang) for s in signals))
             note = format_hail_note(row.get("_hail_flag") if row else None, lang=lang)
             if note:
                 teile.append(note)
@@ -1116,7 +1116,7 @@ def format_trend_tokens(stage: dict, *, lang: Lang = "de") -> dict:
         if hour_in_window(stunde, _win_start, _win_end)
     )
     thunder_day_origin = (
-        ", ".join(thunder_signal_label(s) for s in _day_carriers)
+        ", ".join(thunder_signal_label(s, lang=lang) for s in _day_carriers)
         if _day_carriers else None
     )
 

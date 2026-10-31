@@ -27,6 +27,8 @@ __all__ = [
     "thunder_label_value",
     "thunder_signal_label",
     "THUNDER_SIGNAL_LABEL_DE",
+    "THUNDER_SIGNAL_LABEL_EN",
+    "THUNDER_NIGHT_ADJECTIVE_EN",
     "union_of_max_carriers",
     "thunder_low_statement",
     "thunder_low_statement_sentence",
@@ -136,8 +138,18 @@ THUNDER_SIGNAL_LABEL_DE: dict[str, str] = {
     "modelllauf": "Modellläufe",
 }
 
+# Issue #2665: englische Parallel-Tabelle (kein Katalog-Import in die
+# Domaenenschicht, Waechter #1365). Gleiche Schluessel wie oben.
+THUNDER_SIGNAL_LABEL_EN: dict[str, str] = {
+    "wettercode": "Weather code",
+    "blitzdichte": "Lightning density",
+    "cape": "CAPE",
+    "blitzpotenzial": "Lightning potential",
+    "modelllauf": "Model runs",
+}
 
-def thunder_signal_label(name: str) -> str:
+
+def thunder_signal_label(name: str, *, lang: str = "de") -> str:
     """Deutsche Beschriftung EINER Fusions-Zutat (Issue #1680 S1).
 
     Exakt-Treffer zuerst, sonst der rohe Name selbst -- nie ein erfundener
@@ -145,7 +157,8 @@ def thunder_signal_label(name: str) -> str:
     Heuristik-Stufe, weil die Signalmenge geschlossen ist (vier feste
     Schluessel, kein Namensraum mit Praefix-Varianten).
     """
-    return THUNDER_SIGNAL_LABEL_DE.get(name, name)
+    tabelle = THUNDER_SIGNAL_LABEL_EN if lang == "en" else THUNDER_SIGNAL_LABEL_DE
+    return tabelle.get(name, name)
 
 
 def union_of_max_carriers(
@@ -269,6 +282,9 @@ def elevate_thunder_level_by_modelllauf(
 # re-exportiert ihn unveraendert.
 _LOW_KERN_REINE_LUFTMASSE = "instabile Luftmasse"
 _LOW_KERN_GEMISCHT = "schwaches Signal"
+# Issue #2665: englische Kernsaetze (Parallel-Tabelle, s. THUNDER_SIGNAL_LABEL_EN).
+_LOW_KERN_EN = {True: "unstable air mass", False: "weak signal"}
+_LOW_KERN_DE = {True: _LOW_KERN_REINE_LUFTMASSE, False: _LOW_KERN_GEMISCHT}
 
 
 # Geteilte deutsche Beschriftung (Issue #1474, "geteilte Quelle statt Kopien"
@@ -325,6 +341,8 @@ def thunder_low_statement(
     form: str,
     carriers: Optional[Iterable[str]],
     cape_jkg: Optional[float] = None,
+    *,
+    lang: str = "de",
 ) -> str:
     """Fertige LOW-Aussage OHNE Gewitterwort, herkunftsabhaengig (#2176).
 
@@ -347,11 +365,10 @@ def thunder_low_statement(
     """
     if form not in ("lang", "kurz"):
         raise ValueError(f"Unbekannte thunder_low_statement-Form: {form!r}")
-    kern = (
-        _LOW_KERN_REINE_LUFTMASSE if _thunder_low_is_pure_cape(carriers)
-        else _LOW_KERN_GEMISCHT
-    )
-    zusatz = [THUNDER_LABEL_DE[ThunderLevel.LOW]]
+    kern = (_LOW_KERN_EN if lang == "en" else _LOW_KERN_DE)[
+        _thunder_low_is_pure_cape(carriers)
+    ]
+    zusatz = [thunder_label(ThunderLevel.LOW, lang=lang)]
     if form == "lang" and cape_jkg is not None:
         zusatz.append(f"CAPE {cape_jkg:.0f} J/kg")
     return f"{kern} ({', '.join(zusatz)})"
@@ -361,6 +378,8 @@ def thunder_low_statement_sentence(
     form: str,
     carriers: Optional[Iterable[str]],
     cape_jkg: Optional[float] = None,
+    *,
+    lang: str = "de",
 ) -> str:
     """``thunder_low_statement()`` satzanfangs -- erster Buchstabe gross.
 
@@ -368,7 +387,7 @@ def thunder_low_statement_sentence(
     ``capitalize()`` wuerde den Rest KLEIN schreiben und aus
     "instabile Luftmasse" ein falsches "Instabile luftmasse" machen.
     """
-    text = thunder_low_statement(form, carriers, cape_jkg)
+    text = thunder_low_statement(form, carriers, cape_jkg, lang=lang)
     return text[:1].upper() + text[1:]
 
 
@@ -379,12 +398,19 @@ THUNDER_NIGHT_ADJECTIVE_DE: dict[ThunderLevel, str] = {
     ThunderLevel.MED: "mittleres",
     ThunderLevel.HIGH: "starkes",
 }
+# Issue #2665: englische Parallel-Tabelle (Nacht-Halbsatz, genutzt ab P9b).
+THUNDER_NIGHT_ADJECTIVE_EN: dict[ThunderLevel, str] = {
+    ThunderLevel.MED: "moderate",
+    ThunderLevel.HIGH: "strong",
+}
 
 
 def thunder_headline_sentence(
     level: ThunderLevel,
     when: Optional[str],
     carriers: Optional[Iterable[str]],
+    *,
+    lang: str = "de",
 ) -> str:
     """Satzkopf der Gewitter-Tagesaussage (#2028) -- EINE Quelle fuer den
     Trend-Weg und den Fetch-Weg des Schedulers.
@@ -393,6 +419,8 @@ def thunder_headline_sentence(
     ohne " ab ..."-Anhang). NONE traegt nie eine Uhrzeit. LOW delegiert an
     ``thunder_low_statement_sentence("kurz", carriers)`` (#2176).
     """
+    if lang == "en":
+        return _thunder_headline_sentence_en(level, when, carriers)
     if level == ThunderLevel.NONE:
         return "Kein Gewitter erwartet"
     if level == ThunderLevel.LOW:
@@ -402,3 +430,22 @@ def thunder_headline_sentence(
     else:
         kern = "Starkes Gewitter erwartet"
     return f"{kern} ab {when}" if when else kern
+
+
+def _thunder_headline_sentence_en(
+    level: ThunderLevel,
+    when: Optional[str],
+    carriers: Optional[Iterable[str]],
+) -> str:
+    """Englische Parallel-Fassung von ``thunder_headline_sentence`` (#2665) --
+    feste Saetze statt Katalog, weil die Domaenenschicht keinen ``src/i18n``-
+    Import kennt (Waechter #1365)."""
+    if level == ThunderLevel.NONE:
+        return "No thunderstorm expected"
+    if level == ThunderLevel.LOW:
+        kern = thunder_low_statement_sentence("kurz", carriers, lang="en")
+    elif level == ThunderLevel.MED:
+        kern = "Thunderstorm possible"
+    else:
+        kern = "Strong thunderstorm expected"
+    return f"{kern} from {when}" if when else kern

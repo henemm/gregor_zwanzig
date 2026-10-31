@@ -51,7 +51,7 @@ def _thunder_token_parts(token: Optional[str]):
     return m.group(1), m.group(2), peak_suffix
 
 
-def _token_is_pure_low(token: Optional[str]) -> bool:
+def _token_is_pure_low(token: Optional[str], lang: str = "de") -> bool:
     """Issue #2176: traegt der Token AUSSCHLIESSLICH die Stufe "leicht"?
 
     🔴 Der Peak-Zusatz MUSS mitgeprueft werden: ``leicht@5(hoch@15)`` ist der
@@ -60,13 +60,14 @@ def _token_is_pure_low(token: Optional[str]) -> bool:
     ⚡ vor einer ECHTEN HIGH-Ansage weg (Spec AC-6, Regressionsanker gegen
     Ueberkorrektur).
     """
-    from output.metric_format import THUNDER_LABEL_DE
     from app.models import ThunderLevel
+    from app.thunder_scale import thunder_label
 
     m = _THUNDER_TOKEN_RE.match(token or "")
     if not m:
         return False
-    leicht = THUNDER_LABEL_DE[ThunderLevel.LOW]
+    # Issue #2665: das Stufenwort im Token folgt ``lang`` (format_trend_tokens).
+    leicht = thunder_label(ThunderLevel.LOW, lang=lang)
     return m.group(1) == leicht and m.group(3) in (None, leicht)
 
 
@@ -142,7 +143,7 @@ def resolve_thunder_day_branch(tok: dict, stage: dict) -> str:
 # hineinliest, nimmt dort eine fremde Entscheidung zurueck.
 
 def _tagesteil(tok: dict, stage: dict, *, praefix: str, mit_uhrzeit: bool,
-               mit_herkunft: bool) -> str:
+               mit_herkunft: bool, lang: str = "de") -> str:
     """Der Tagesteil der Gewitter-Zelle -- EINE Zweigwahl fuer alle vier
     Ausgabeorte, nur die Schreibweise unterscheidet sich.
 
@@ -152,7 +153,11 @@ def _tagesteil(tok: dict, stage: dict, *, praefix: str, mit_uhrzeit: bool,
     (``mittel@14(hoch@18)``) und setzt deshalb ``mit_uhrzeit=False``.
     """
     from output.renderers.email.compare_html import _fmt_thunder
-    from output.renderers.email.helpers import _THUNDER_MAP
+    from output.renderers.email.helpers import _thunder_map
+
+    # Issue #2665: Stufenwoerter in Nutzersprache; ohne ``lang`` die
+    # Modulkonstante (deutsch), Telegram ruft weiter ohne ``lang``.
+    _THUNDER_MAP = _thunder_map(lang)
 
     branch = resolve_thunder_day_branch(tok, stage)
     # Der Zweig-Helfer entscheidet nur ueber ``thunder_day_token != "-"``; ob
@@ -166,7 +171,7 @@ def _tagesteil(tok: dict, stage: dict, *, praefix: str, mit_uhrzeit: bool,
         # Stufenwort -- bei einer reinen "leicht"-Zelle faellt es weg. Peak
         # mitgeprueft: `leicht@5(hoch@15)` behaelt es (Spec AC-6).
         _pfx = "" if praefix and _token_is_pure_low(
-            tok.get("thunder_day_token")
+            tok.get("thunder_day_token"), lang,
         ) else praefix
         teil = f"{_pfx}{parts[0]}{trenn}@{parts[1]}{parts[2]}"
         origin = tok.get("thunder_day_origin") if mit_herkunft else None
@@ -193,32 +198,36 @@ def _tagesteil(tok: dict, stage: dict, *, praefix: str, mit_uhrzeit: bool,
             return _THUNDER_MAP["LOW"]["word"]
         return tok["thunder_plain"]
 
+    if lang == "en" and level in ("LOW", "MED", "HIGH"):
+        return _THUNDER_MAP[level]["word"]
     return _fmt_thunder(getattr(ThunderLevel, level, ThunderLevel.NONE))
 
 
-def thunder_cell_html(tok: dict, stage: dict) -> str:
+def thunder_cell_html(tok: dict, stage: dict, *, lang: str = "de") -> str:
     """Gewitter-Zelle der HTML-Ausblick-Tabelle (extrahiert aus
     ``render_outlook_table``) -- ``mittel @14 (hoch @18) · CAPE`` plus
     Hagel-Zusatz (#1475). Ohne Gewitter im Tagesfenster der Strich."""
     from output.metric_format import format_hail_note
 
-    zelle = _tagesteil(tok, stage, praefix="", mit_uhrzeit=True, mit_herkunft=True)
-    note = format_hail_note(stage.get("hail"))
+    zelle = _tagesteil(tok, stage, praefix="", mit_uhrzeit=True, mit_herkunft=True,
+                       lang=lang)
+    note = format_hail_note(stage.get("hail"), lang=lang)
     return f"{zelle} · {note}" if note else zelle
 
 
-def thunder_cell_plain(tok: dict, stage: dict) -> str:
+def thunder_cell_plain(tok: dict, stage: dict, *, lang: str = "de") -> str:
     """Gewitterfeld der Klartext-Ausblick-Zeile (extrahiert aus
     ``render_outlook_plain``) -- ``⚡mittel@14 (hoch @18) · CAPE`` plus
     Hagel-Zusatz."""
     from output.metric_format import format_hail_note
 
-    feld = _tagesteil(tok, stage, praefix="⚡", mit_uhrzeit=False, mit_herkunft=True)
-    note = format_hail_note(stage.get("hail"))
+    feld = _tagesteil(tok, stage, praefix="⚡", mit_uhrzeit=False, mit_herkunft=True,
+                      lang=lang)
+    note = format_hail_note(stage.get("hail"), lang=lang)
     return f"{feld} · {note}" if note else feld
 
 
-def thunder_cell_compact(tok: dict, stage: dict) -> str:
+def thunder_cell_compact(tok: dict, stage: dict, *, lang: str = "de") -> str:
     """Gewitterspalte der Kompakt-Ausblick-Zeile (#1671).
 
     Wie ``thunder_cell_plain``, aber ohne Herkunfts- und ohne Hagel-Zusatz:
@@ -227,7 +236,8 @@ def thunder_cell_compact(tok: dict, stage: dict) -> str:
     eines Flags -- die Auslassung ist eine Produktentscheidung, keine
     Formatvariante.
     """
-    return _tagesteil(tok, stage, praefix="⚡", mit_uhrzeit=False, mit_herkunft=False)
+    return _tagesteil(tok, stage, praefix="⚡", mit_uhrzeit=False, mit_herkunft=False,
+                      lang=lang)
 
 
 def thunder_cell_telegram(tok: dict, stage: dict) -> str:

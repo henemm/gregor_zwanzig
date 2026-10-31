@@ -71,10 +71,16 @@ def _acc_stufe(conf_pct) -> tuple[str, str] | None:
     return None
 
 
-def _acc_wort(conf_pct) -> str:
-    """Klartext-Entsprechung des ACC-Farbpunkts (#2098 AC-6/AC-11/AC-12)."""
+def _acc_wort(conf_pct, lang: Lang = "de") -> str:
+    """Klartext-Entsprechung des ACC-Farbpunkts (#2098 AC-6/AC-11/AC-12).
+
+    Issue #2665: das Wort aus ``_ACC_STUFEN`` ist zugleich der Schluessel-
+    Rest im Katalog (``mail.acc.*``, de wortgleich); ``ACC_LABEL`` bleibt."""
     stufe = _acc_stufe(conf_pct)
-    return stufe[1] if stufe else _ACC_KEIN_WERT
+    if not stufe:
+        return _ACC_KEIN_WERT
+    # i18n-dynamic: mail.acc.
+    return _t(f"mail.acc.{stufe[1].replace(' ', '_')}", lang)
 
 
 # ---------------------------------------------------------------------------
@@ -182,7 +188,9 @@ def render_outlook_table(
             cell_bg = stage.get("cell_bg") or []
             texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
             if gew_index is not None:
-                texte[gew_index] = thunder_cell_html(format_trend_tokens(stage, lang=lang), stage)
+                texte[gew_index] = thunder_cell_html(
+                    format_trend_tokens(stage, lang=lang), stage, lang=lang,
+                )
             # #2098 Befund B: ACC HINTER den gewaehlten Spalten -- am
             # `outlook_columns()`/`cells`-Mechanismus vorbei, damit
             # `confidence` nie eine waehlbare Metrik wird (ADR-0005/#710).
@@ -271,7 +279,7 @@ def render_outlook_table(
         # `thunder_cell_html()` -- DIESELBE Quelle, die auch der
         # konfigurierbare Zweig oben ruft.
         thunder_level = (stage.get("thunder", "NONE") or "NONE").upper()
-        gew_str = thunder_cell_html(tokens, stage)
+        gew_str = thunder_cell_html(tokens, stage, lang=lang)
 
         n_str = f"{temp_min:.0f}°" if temp_min is not None else "–"
         d_str = f"{temp_max:.0f}°" if temp_max is not None else "–"
@@ -327,8 +335,9 @@ def render_outlook_plain(
     *,
     show_acc: bool = True,
     metrics: Optional[list] = None,
-    heading: str = "Nächste Etappen",
+    heading: Optional[str] = None,
     show_name: bool = True,
+    lang: Lang = "de",
 ) -> str:
     """Rendert den Klartext-Ausblick-Block.
 
@@ -344,7 +353,12 @@ def render_outlook_plain(
     ``show_name=False`` (#1368): laesst das feste 26-Zeichen-Etappennamen-
     Feld entfallen, das der Ortsvergleich nie befuellt. Alle drei sind per
     Default abgeschirmt -- der Trip-Aufruf bleibt byte-identisch.
+
+    ``lang`` (Issue #2665): Standard-Ueberschrift, Gewitterzelle und ACC-Wort
+    in Nutzersprache; ohne ``lang`` deutsch (Ortsvergleich bis P4).
     """
+    if heading is None:
+        heading = _t("mail.ausblick.naechste_etappen", lang)
     lines: list[str] = []
     lines.append("")
     lines.append(heading)
@@ -361,14 +375,16 @@ def render_outlook_plain(
             # Hagel statt bloss dem Stufenwort aus `cells`.
             gew_index = thunder_column_index(columns)
             if gew_index is not None:
-                texte[gew_index] = thunder_cell_plain(format_trend_tokens(stage), stage)
+                texte[gew_index] = thunder_cell_plain(
+                    format_trend_tokens(stage, lang=lang), stage, lang=lang,
+                )
             values = "  ".join(
                 [f"{c['label']} {texte[i]}" for i, c in enumerate(columns)]
                 # #2098 Befund C: der ACC-Farbpunkt des HTML ist fuer
                 # Klartext-Leser unsichtbar -- dieselbe Aussage als Wort,
                 # aus derselben Stufenquelle, an derselben Position
                 # (hinter den gewaehlten Spalten) wie im HTML.
-                + ([f"{ACC_LABEL} {_acc_wort(stage.get('confidence_pct'))}"]
+                + ([f"{ACC_LABEL} {_acc_wort(stage.get('confidence_pct'), lang)}"]
                    if show_acc else [])
             )
             # #1848 A3: Etappenname und Notiz stehen auch hier -- der feste
@@ -383,7 +399,7 @@ def render_outlook_plain(
                 lines.append(f"    ↳ {note}")
             continue
 
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, lang=lang)
         name = stage.get("name", "")
         # Precip str — zero decision from format_trend_tokens
         precip_str = tok["precip_str"]
@@ -392,7 +408,7 @@ def render_outlook_plain(
         # mit Onset-Uhrzeit, Herkunft, Nacht- und Hagel-Zusatz. #1848 A3: der
         # Zellenbau steht in `thunder_cell_plain()` -- DIESELBE Quelle, die
         # auch der konfigurierbare Zweig oben ruft.
-        thunder_word = thunder_cell_plain(tok, stage)
+        thunder_word = thunder_cell_plain(tok, stage, lang=lang)
 
         # #2136/ADR-0068 (AC-4): jedes tatsaechlich gerenderte Token traegt
         # das `col_label`-Praefix seiner Groesse -- dieselbe Quelle wie die

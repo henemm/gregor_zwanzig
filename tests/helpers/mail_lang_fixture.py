@@ -305,7 +305,7 @@ def _briefing_eml(email_format: str, *, roh: bool = False, regen_mm: float = 0.0
                      mail_format="full", lang=lang)
     return _mime("briefing_compact", subject="[GR20 Golden] Etappe 3 - Evening Report",
                  body=plain, html=False, plain=None, mail_type="trip-briefing",
-                 mail_format="compact")
+                 mail_format="compact", lang=lang)
 
 
 def briefing_mail(email_format: str = "full", *, lang: str = "de", **kw) -> bytes:
@@ -433,6 +433,7 @@ def erzeuge_fixtures() -> list[Path]:
         "compare_de.eml": _compare_eml, "briefing_full_de.eml": lambda: _briefing_eml("full"),
         "briefing_compact_de.eml": lambda: _briefing_eml("compact"),
         "briefing_full_en.eml": lambda: _briefing_eml("full", lang="en"),
+        "briefing_compact_en.eml": lambda: _briefing_eml("compact", lang="en"),
         "official_alert_de.eml": _official_alert_eml, "radar_alert_de.eml": _radar_alert_eml,
     }
     pfade = []
