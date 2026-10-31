@@ -122,20 +122,24 @@ def _display_config() -> UnifiedWeatherDisplayConfig:
     )
 
 
-def build_texts(**lang_kwarg: str) -> list[str]:
-    """Bubbles der Golden-Fixture als Textliste; ``lang`` optional durchgereicht."""
+def build_bubbles(*, trip_name: str = TRIP_NAME, **lang_kwarg: str) -> list:
+    """Bubbles der Golden-Fixture; ``lang`` optional durchgereicht."""
     alerts = [_alert()]
     segments = [
         _segment(1, (0.0, 8.4), (7, 12), alerts),
         _segment("Ziel", (8.4, 14.2), (12, 16), alerts),
     ]
-    bubbles = render_telegram_bubbles(
+    return render_telegram_bubbles(
         segments=segments, seg_tables=[_rows(range(7, 13)), _rows(range(12, 17))],
-        dc=_display_config(), report_type="morning", tz=TZ, trip_name=TRIP_NAME,
+        dc=_display_config(), report_type="morning", tz=TZ, trip_name=trip_name,
         multi_day_trend=_trend(date(2026, 10, 30)),
         day_comparison=_day_comparison(), **lang_kwarg,
     )
-    return [b.text for b in bubbles]
+
+
+def build_texts(*, trip_name: str = TRIP_NAME, **lang_kwarg: str) -> list[str]:
+    """Bubble-Texte der Golden-Fixture."""
+    return [b.text for b in build_bubbles(trip_name=trip_name, **lang_kwarg)]
 
 
 def golden_path(lang: str) -> Path:
