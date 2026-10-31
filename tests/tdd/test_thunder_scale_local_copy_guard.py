@@ -136,6 +136,10 @@ _THUNDER_KWARGS = dict(
         # kanonische Quelle, nur eine Schicht tiefer; `metric_format`
         # re-exportiert sie.
         ("src/app/thunder_scale.py", "THUNDER_LABEL_DE"),
+        # #2664: englische Stufenwoerter als PARALLELE Tabelle derselben
+        # kanonischen Quelle (Spec i18n P2) -- keine Kopie, sondern die
+        # zweite Sprache neben THUNDER_LABEL_DE.
+        ("src/app/thunder_scale.py", "THUNDER_LABEL_EN"),
         # #2028: Satzkopf der Tagesaussage (Trend- UND Fetch-Weg) und die
         # Nacht-Adjektive -- vorher je eine lokale Kopie im Scheduler bzw. in
         # `day_window.py`, jetzt EINE kanonische Quelle.

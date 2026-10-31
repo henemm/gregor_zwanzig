@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.metric_catalog import get_metric
+from i18n import Lang, fmt_weekday, t
 from app.models import (
     Corridor, SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
@@ -92,7 +93,9 @@ from output.renderers.email.design_tokens import (
 from output.renderers.email.outlook import render_outlook_table
 
 
-def render_stability_label_html(result: Optional["StabilityResult"]) -> str:
+def render_stability_label_html(
+    result: Optional["StabilityResult"], *, lang: Lang = "de",
+) -> str:
     """F12 / Issue #122: Rendert farbige WL-Box.
 
     Liefert leeren String wenn ``result`` None ist (kein Platzhalter,
@@ -109,21 +112,9 @@ def render_stability_label_html(result: Optional["StabilityResult"]) -> str:
     }
     c = colors[result.label]
 
-    texts = {
-        "STABIL": (
-            "Wetterlage: STABIL — Die Großwetterlage ist stabil. "
-            "Prognosen für die nächsten Etappen sind verlässlich."
-        ),
-        "WECHSELHAFT": (
-            "Wetterlage: WECHSELHAFT — Die Lage ist im Übergang. "
-            "Prognosen ab Tag 3 mit Vorsicht behandeln."
-        ),
-        "FRAGIL": (
-            "Wetterlage: FRAGIL — Schnelle Frontverlagerung möglich. "
-            "Prognosen ab Tag 2 konservativ planen."
-        ),
-    }
-    text = _html.escape(texts[result.label])
+    # Issue #2664: interner Wert bleibt STABIL/WECHSELHAFT/FRAGIL, der Text
+    # kommt in Nutzersprache aus dem Katalog.
+    text = _html.escape(t(f"mail.stabilitaet.{result.label.lower()}", lang))
 
     return (
         f'<div class="section" style="background:{c["bg"]};'
@@ -480,6 +471,7 @@ def _render_footer(
     column_legend_text: str = "",
     ampel_legend_html: str = "",
     trip_url: Optional[str] = None,
+    lang: Lang = "de",
 ) -> str:
     """JSX EmailPreview L201-212 — zweigeteilt: Brand-Zeile + Link-Zeile (AC-9)."""
     model_str = segments[0].timeseries.meta.model if segments[0].timeseries else "n/a"
@@ -496,7 +488,7 @@ def _render_footer(
         f'letter-spacing:0.06em;">GREGOR ZWANZIG</span>'
         f'<span style="font-family:{FONT_DATA};font-size:11px;color:#5a5750;margin:0 8px;">&middot;</span>'
         f'<span style="font-family:{FONT_DATA};font-size:11px;color:#9a978d;">'
-        f'{report_type.title()}-Briefing</span>'
+        f'{t("mail.kopf.briefing", lang, typ=report_type.title())}</span>'
         f'</div>'
         f'<div class="desktop-only" style="text-align:right;">'
         f'<span style="font-family:{FONT_DATA};font-size:11px;color:#9a978d;">'
@@ -506,18 +498,20 @@ def _render_footer(
     )
 
     # AC-11 (#901): Deep-Links wenn trip_url gesetzt; AC-10 (#901): Abmelden entfernt
+    _oeffnen = t("mail.fusszeile.trip_oeffnen", lang)
+    _zeitplan = t("mail.fusszeile.zeitplan", lang)
     if trip_url:
         _overview = (
             f'<a href="{trip_url}" style="font-family:{FONT_DATA};color:#c45a2a;'
-            f'text-decoration:none;">Trip-Übersicht öffnen →</a>'
+            f'text-decoration:none;">{_oeffnen}</a>'
         )
         _schedule = (
             f'<a href="{trip_url}/edit" style="font-family:{FONT_DATA};color:#9a978d;'
-            f'text-decoration:none;">Briefing-Zeitplan</a>'
+            f'text-decoration:none;">{_zeitplan}</a>'
         )
     else:
-        _overview = f'<span style="font-family:{FONT_DATA};color:#c45a2a;">Trip-Übersicht öffnen →</span>'
-        _schedule = f'<span style="font-family:{FONT_DATA};color:#9a978d;">Briefing-Zeitplan</span>'
+        _overview = f'<span style="font-family:{FONT_DATA};color:#c45a2a;">{_oeffnen}</span>'
+        _schedule = f'<span style="font-family:{FONT_DATA};color:#9a978d;">{_zeitplan}</span>'
 
     link_row = (
         '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #3a3835;'
@@ -558,7 +552,7 @@ def _render_footer(
     # (SSoT-Helper) -- Zeile 2 zeigt die echte Datenquelle (`provider_str`,
     # bereits lokal vorhanden), nicht mehr den internen Renderer-Pfad.
     origin_html = render_origin_footer_html(build_origin_footer(
-        "trip-briefing", "full", source=provider_str,
+        "trip-briefing", "full", source=provider_str, lang=lang,
     ))
     return (
         f'<div style="background:#1d1c1a;color:#9a978d;font-size:11px;'
@@ -665,6 +659,7 @@ def _render_html_table(
     indicator_keys: Optional[set[str]] = None,
     col_order: Optional[list[str]] = None,
     marks: Optional[dict[str, list[Corridor]]] = None,
+    lang: Lang = "de",
 ) -> str:
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
@@ -748,7 +743,7 @@ def _render_html_table(
             try:
                 cell = fmt_val(key, raw_val, friendly_keys=friendly_keys,
                                html=True, row=r, format_modes=format_modes,
-                               indicator_keys=indicator_keys)
+                               indicator_keys=indicator_keys, lang=lang)
             except (TypeError, ValueError):
                 cell = str(raw_val) if raw_val is not None else "–"
 
@@ -850,7 +845,7 @@ def _render_html_table(
     # tatsaechlich gerendert wurde. Rein deskriptiv (ADR-0007).
     hail_hint = (
         f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">'
-        f'* Doppelring bei Gewitter = Hagel möglich</p>'
+        f'{t("mail.legende.hagel", lang)}</p>'
         if hail_ring_rows else ""
     )
 
@@ -873,6 +868,7 @@ def _render_mobile_compact_rows(
     indicator_keys: Optional[set[str]] = None,
     col_order: Optional[list[str]] = None,
     marks: Optional[dict[str, list[Corridor]]] = None,
+    lang: Lang = "de",
 ) -> str:
     """fix-mobile-grid-decouple-ampel: Handy-Stundentabelle rendert IMMER als
     bordierte <table> (via _render_html_table), in overflow-x:auto gewickelt —
@@ -901,6 +897,7 @@ def _render_mobile_compact_rows(
         indicator_keys=indicator_keys,
         col_order=col_order,
         marks=marks,
+        lang=lang,
     )
     return (
         '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0;">'
@@ -980,9 +977,13 @@ def render_html(
     trip_metrics_altbestand: bool = True,
     undelivered: Optional[list] = None,
     starkregen_hint_text: Optional[str] = None,
+    lang: Lang = "de",
     **_ignored,
 ) -> str:
     """Render full HTML e-mail body. Pure function.
+
+    Issue #2664: ``lang`` (nur Schluesselwort) waehlt die Sprache aller
+    Beschriftungen dieses Renderers; Kuerzel/Spaltenkoepfe bleiben gleich.
 
     Issue #790: removed parameters (highlights, daylight, show_quick_take_tags,
     show_highlights, daily_summary_metrics, show_metrics_summary) are absorbed
@@ -1019,8 +1020,9 @@ def render_html(
 
     # Issue #884 AC-1: zweispaltiger Header mit G_HEADER_BG + Stats-Grid
     # Eyebrow: MORGEN-BRIEFING (report_type mapped)
-    _rt_map = {"morning": "MORGEN", "evening": "ABEND", "alert": "ALERT"}
-    _rt_upper = _rt_map.get(report_type, report_type.upper())
+    _rt_upper = (t(f"mail.kopf.art_{report_type}", lang)
+                 if report_type in ("morning", "evening", "alert")
+                 else report_type.upper())
     # Stage code from sub_header
     _stage_code = sub_header[:20] if sub_header else "–"
 
@@ -1029,14 +1031,18 @@ def render_html(
     if stage_stats and show_stage_stats:
         stat_cells = []
         if "distance_km" in stage_stats:
-            stat_cells.append(("Distanz", f"{stage_stats['distance_km']:.1f}", "km"))
+            stat_cells.append((t("mail.stats.distanz", lang),
+                               f"{stage_stats['distance_km']:.1f}", "km"))
         if "ascent_m" in stage_stats:
-            stat_cells.append(("Aufstieg", f"↑{stage_stats['ascent_m']:.0f}", "m"))
+            stat_cells.append((t("mail.stats.aufstieg", lang),
+                               f"↑{stage_stats['ascent_m']:.0f}", "m"))
         if "descent_m" in stage_stats:
-            stat_cells.append(("Abstieg", f"↓{stage_stats['descent_m']:.0f}", "m"))
+            stat_cells.append((t("mail.stats.abstieg", lang),
+                               f"↓{stage_stats['descent_m']:.0f}", "m"))
         if "max_elevation_m" in stage_stats:
-            stat_cells.append(("Max Höhe", str(int(stage_stats["max_elevation_m"])), "m"))
-        stat_cells.append(("Segmente", str(len(segments)), ""))
+            stat_cells.append((t("mail.stats.max_hoehe", lang),
+                               str(int(stage_stats["max_elevation_m"])), "m"))
+        stat_cells.append((t("mail.stats.segmente", lang), str(len(segments)), ""))
 
         _stat_width_pct = 100.0 / len(stat_cells)
         stat_tds = ""
@@ -1059,20 +1065,21 @@ def render_html(
     _stage_num = ""
     _route_title = stage_name or ""
     if stage_name:
-        m = _re.match(r"Etappe\s+(\d+)(?::\s+(.+))?", stage_name)
+        # Issue #2664: der Scheduler liefert bis P9b "Etappe N: ..."; die
+        # englische Form "Stage N: ..." wird ebenso zerlegt.
+        m = _re.match(r"(?:Etappe|Stage)\s+(\d+)(?::\s+(.+))?", stage_name)
         if m:
             _stage_num = m.group(1) or ""
             _route_title = m.group(2) or stage_name
 
     # Issue #890 / AC-2: Datum + Wochentag + Uhrzeit + Zeitzone.
-    _WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
     if sent_at is not None:
         # Issue #1402: local_dt() statt rohem .astimezone() -- ein naives
         # sent_at (Hausnorm UTC, #1345) wurde sonst als Prozess-Lokalzeit
         # gedeutet. tz_abbrev() statt hartkodiertem "MESZ" -- im Winter oder
         # außerhalb Mitteleuropas war das Kürzel schlicht falsch.
         _sent_local = local_dt(sent_at, tz)
-        wd = _WEEKDAY_ABBR[_sent_local.weekday()]
+        wd = fmt_weekday(_sent_local, lang)
         _date_str = (
             f"{wd} · {_sent_local.strftime('%d.%m.%Y')} · "
             f"{_sent_local.strftime('%H:%M')} {tz_abbrev(sent_at, tz)}"
@@ -1095,7 +1102,7 @@ def render_html(
         '<td style="vertical-align:top;padding-bottom:14px;border-right:none;'
         'border-bottom:none;">'
         + profile_eyebrow_html
-        + _eyebrow(f"{_rt_upper}-BRIEFING")
+        + _eyebrow(t("mail.kopf.eyebrow", lang, art=_rt_upper))
         + f'<h1 style="font-size:22px;font-weight:600;letter-spacing:-0.015em;'
         f'margin:4px 0 0 0;color:#1d1c1a;">{_route_title}</h1>'
         + f'<div style="font-family:{FONT_DATA};font-size:13px;color:#6b6962;margin-top:4px;">'
@@ -1108,12 +1115,12 @@ def render_html(
     if _stage_num and stage_total is not None:
         _stage_counter_html = (
             f'<div style="font-family:{FONT_DATA};font-size:12px;color:#6b6962;margin-top:2px;">'
-            f'Etappe {_stage_num} / {stage_total}</div>'
+            f'{t("mail.kopf.etappe_von", lang, nr=_stage_num, gesamt=stage_total)}</div>'
         )
     elif _stage_num:
         _stage_counter_html = (
             f'<div style="font-family:{FONT_DATA};font-size:12px;color:#6b6962;margin-top:2px;">'
-            f'Etappe {_stage_num}</div>'
+            f'{t("mail.kopf.etappe", lang, nr=_stage_num)}</div>'
         )
 
     right_col = (
@@ -1158,8 +1165,8 @@ def render_html(
         if seg_data.has_error:
             seg_html_parts.append(f"""
             <div style="background:{G_BOX_DANGER_BG};border-left:4px solid {G_DANGER};padding:12px;margin:8px 0;">
-                <strong style="color:{G_DANGER};">Segment {seg.segment_id}: Wetterdaten nicht verfuegbar</strong>
-                <p style="margin:4px 0 0 0;color:{G_INK_MUTED};font-size:13px;">Anbieter-Fehler nach 5 Versuchen</p>
+                <strong style="color:{G_DANGER};">{t("mail.segment.fehler_titel", lang, id=seg.segment_id)}</strong>
+                <p style="margin:4px 0 0 0;color:{G_INK_MUTED};font-size:13px;">{t("mail.segment.fehler_detail", lang)}</p>
             </div>""")
             continue
         # Issue #342: Horizont pro Etappe ableiten und erlaubte Spalten berechnen.
@@ -1182,9 +1189,9 @@ def render_html(
                 f'<div style="display:flex;justify-content:space-between;'
                 f'align-items:baseline;margin-bottom:10px;">'
                 f'<div>'
-                + _eyebrow("ANKUNFT · WETTER AM ZIEL", accent=True)
+                + _eyebrow(t("mail.ziel.eyebrow", lang), accent=True)
                 + f'<div style="font-size:16px;font-weight:600;margin-top:4px;">'
-                f'WETTER AM ZIEL</div>'
+                f'{t("mail.ziel.titel", lang)}</div>'
                 f'</div>'
                 f'<div style="font-family:{FONT_DATA};font-size:12px;color:#6b6962;">'
                 f'{ziel_time}</div>'
@@ -1196,6 +1203,7 @@ def render_html(
                     indicator_keys=indicator_keys,
                     col_order=_col_order,
                     marks=_marks,
+                    lang=lang,
                 )
                 + "</div>"
             )
@@ -1207,12 +1215,13 @@ def render_html(
                 indicator_keys=indicator_keys,
                 col_order=_col_order,
                 marks=_marks,
+                lang=lang,
             )
             mobile_div = (
                 f'<div class="mobile-compact" style="padding:0 16px;">'
                 f'<div style="font-size:12px;font-weight:600;color:{G_INK};'
                 f'border-bottom:2px solid {G_ACCENT};'
-                f'padding:10px 0 6px 0;margin-top:12px;">WETTER AM ZIEL</div>'
+                f'padding:10px 0 6px 0;margin-top:12px;">{t("mail.ziel.titel", lang)}</div>'
                 + compact_rows
                 + "</div>"
             )
@@ -1248,6 +1257,7 @@ def render_html(
                     indicator_keys=indicator_keys,
                     col_order=_col_order,
                     marks=_marks,
+                    lang=lang,
                 )
                 + "</div>"
             )
@@ -1265,6 +1275,7 @@ def render_html(
                 indicator_keys=indicator_keys,
                 col_order=_col_order,
                 marks=_marks,
+                lang=lang,
             )
             mobile_div = (
                 '<div class="mobile-compact" style="padding:0 16px;">'
@@ -1280,16 +1291,17 @@ def render_html(
         last_seg = segments[-1].segment
         night_hint = ""
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
-            night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">* Temperatur/Nullgradgrenze: Minimum im 2h-Block</p>'
+            night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">{t("mail.nacht.hinweis_minimum", lang)}</p>'
         night_elev = int(last_seg.end_point.elevation_m or 0)
-        night_header = f"🌙 Nacht am Ziel ({night_elev}m)"
-        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks)
+        night_header = "🌙 " + t("mail.nacht.am_ziel", lang, hoehe=night_elev)
+        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks, lang=lang)
         night_html = (
             '<div class="section desktop-only">'
             "<h3>" + night_header + "</h3>"
-            '<p style="color:' + G_INK_MUTED + ';font-size:13px">Ankunft '
-            + local_fmt(display_end_time(last_seg), tz) + " → Morgen 06:00</p>"
-            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks)
+            '<p style="color:' + G_INK_MUTED + ';font-size:13px">'
+            + t("mail.nacht.ankunft", lang, zeit=local_fmt(display_end_time(last_seg), tz))
+            + "</p>"
+            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks, lang=lang)
             + night_hint
             + "</div>"
             '<div class="mobile-compact" style="padding:0 16px">'
@@ -1326,7 +1338,7 @@ def render_html(
         if items:
             thunder_html = f"""
             <div class="section">
-                <h3>⚡ Gewitter-Vorschau</h3>
+                <h3>{t("mail.gewitter.vorschau", lang)}</h3>
                 <ul>{"".join(items)}</ul>
             </div>"""
 
@@ -1357,7 +1369,7 @@ def render_html(
         # (Trip/Compare-Teilungs-Invariante) -- show_acc=True bleibt
         # byte-identisch zum bisherigen Inline-Verhalten.
         outlook_table = render_outlook_table(multi_day_trend, show_acc=True,
-                                             metrics=_outlook_metrics)
+                                             metrics=_outlook_metrics, lang=lang)
 
         # Adversary F001 (#2136/ADR-0068): der frueher hier gepflegte
         # Altbestand-Kuerzel-Block (Pfad 1, "N Tagestief · D Tag-Hoch °C ...")
@@ -1370,29 +1382,28 @@ def render_html(
         outlook_legend = ""
 
         # AC-6 (#899): Context label (gesendet-Zeitstempel) bleibt erhalten
-        _weekday_de_short = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
         context_label_html = ""
         if sent_at is not None:
             # Issue #1402: local_dt() statt rohem .astimezone() -- s.
             # Begruendung oben bei der Kopfzeile.
             local_sent = local_dt(sent_at, tz)
-            wd_short = _weekday_de_short[local_sent.weekday()]
+            wd_short = fmt_weekday(local_sent, lang)
             time_str = local_sent.strftime("%H:%M")
             context_label_html = (
                 f'<div style="float:right;font-family:{FONT_DATA};'
                 f'font-size:9px;color:#9a958a;text-align:right;line-height:1.6">'
-                f'gesendet {wd_short} · {time_str}</div>'
+                f'{t("mail.ausblick.gesendet", lang, wochentag=wd_short, zeit=time_str)}</div>'
                 f'<div style="clear:both"></div>'
             )
 
         _outlook_stability_html = ""
         if show_outlook and show_stability and stability_result is not None:
-            _outlook_stability_html = render_stability_label_html(stability_result)
+            _outlook_stability_html = render_stability_label_html(stability_result, lang=lang)
 
         # AC-9 (#911): Eyebrow "Ausblick · nächste 3 Tage" über dem Ausblick-Block
         # AC-9 (#911): Eyebrow ZUERST, dann Stabilitäts-Label, dann Tabelle
         # (Reihenfolge: Ausblick-Eyebrow → Wetterlage → Etappen-Tabelle)
-        _outlook_eyebrow = _eyebrow("Ausblick · nächste 3 Tage")
+        _outlook_eyebrow = _eyebrow(t("mail.ausblick.eyebrow", lang))
         trend_html = (
             f'<div style="background:{G_HEADER_BG};padding:24px 28px 20px;">'
             + context_label_html
@@ -1408,7 +1419,7 @@ def render_html(
         # (Default None) behalten das alte Verhalten (Block entfaellt).
         trend_html = (
             f'<div style="background:{G_HEADER_BG};padding:16px 28px;">'
-            + _eyebrow("Ausblick · nächste 3 Tage")
+            + _eyebrow(t("mail.ausblick.eyebrow", lang))
             + render_outlook_state_html(outlook_state, outlook_horizon_days)
             + "</div>"
         )
@@ -1435,13 +1446,14 @@ def render_html(
             night_weather=night_weather, has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,
+            lang=lang,
         )
         # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
         _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)
         metrics_summary_html = (
             f'<div style="padding:14px 28px 18px;background:#fdfcf8;border-bottom:1px solid #e6e1d3;">'
             f'<p style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;'
-            f'color:{G_INK_MUTED};margin:0">Metriken-Überblick</p>'
+            f'color:{G_INK_MUTED};margin:0">{t("mail.pille.ueberschrift", lang)}</p>'
             f'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">{_chips_html}</div>'
             f'</div>'
         )
@@ -1503,7 +1515,8 @@ def render_html(
         if _has_vortag:
             # AC-1 (#911): accent=True → Orange #c45a2a wie TAGESLAGE
             # AC-2 (#911): Glyph steht NACH der Headline (Reihenfolge: Text, dann Glyph)
-            _vortag_eyebrow = _eyebrow(f"VORTAGESVERGLEICH {_trend_glyph}", accent=True)
+            _vortag_eyebrow = _eyebrow(t("mail.tageslage.vortag", lang, glyph=_trend_glyph),
+                                       accent=True)
             _vortag_div = (
                 '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0ece1;">'
                 + _vortag_eyebrow
@@ -1517,7 +1530,7 @@ def render_html(
         tageslage_html = (
             '<div style="padding:18px 28px 16px 12px;">'
             '<div style="border-left:2px solid #c45a2a;padding-left:14px;">'
-            + _eyebrow("TAGESLAGE", accent=True)
+            + _eyebrow(t("mail.tageslage.eyebrow", lang), accent=True)
             + _summary_div
             + _vortag_div
             + '</div>'
@@ -1527,7 +1540,7 @@ def render_html(
     # Issue #121 / AC-12 + AC-13: confidence hint
     confidence_hint_html = ""
     confidence_hint = build_confidence_hint(
-        segments, now=datetime.now(tz), tz=tz,
+        segments, now=datetime.now(tz), tz=tz, lang=lang,
     )
     if confidence_hint:
         confidence_hint_html = (
@@ -1541,7 +1554,7 @@ def render_html(
         stability_html = ""
         if not multi_day_trend:
             stability_html = render_stability_label_html(
-                stability_result if show_stability else None
+                stability_result if show_stability else None, lang=lang,
             )
     else:
         stability_html = ""
@@ -1555,7 +1568,7 @@ def render_html(
             ch_items.append(f"<li>{format_change_line(c, label)}</li>")
         changes_html = f"""
             <div class="section">
-                <h3>⚠️ Wetteränderungen</h3>
+                <h3>{t("mail.aenderungen.titel", lang)}</h3>
                 <ul>{"".join(ch_items)}</ul>
             </div>"""
 
@@ -1622,23 +1635,24 @@ def render_html(
     )
 
     all_rows = [r for tbl in seg_tables for r in tbl]
-    legend_text = build_units_legend(all_rows) if all_rows else ""
+    legend_text = build_units_legend(all_rows, lang=lang) if all_rows else ""
     # #2136/ADR-0068 (AC-5): die Trip-Legende loest zusaetzlich zu den
     # Stundentabellen-Kuerzeln auch die im 3-Tages-Ausblick DERSELBEN Mail
     # sichtbaren Kuerzel auf -- `outlook_active`/`_outlook_metrics` sind
     # bereits weiter oben fuer den Ausblick-Block selbst aufgeloest.
     column_legend_text = (
-        build_column_legend(all_rows, _outlook_metrics, outlook_active=outlook_active)
+        build_column_legend(all_rows, _outlook_metrics, outlook_active=outlook_active,
+                            lang=lang)
         if all_rows or outlook_active else ""
     )
 
     # AC-11 (#911): RISK-Legende als eigene Section vor dem Footer (helles #fbfaf6),
     # RISK-Präfix + CSS-Dots (border-radius:50%) statt Emoji-Kreise im dunklen Footer.
     _RISK_LEGEND_ITEMS = [
-        ("#2f8a3e", "unkritisch"),
-        ("#e3b008", "Achtung"),
-        ("#e07b1a", "Warnung"),
-        ("#c52a22", "Gefahr"),
+        ("#2f8a3e", t("mail.legende.risk_gruen", lang)),
+        ("#e3b008", t("mail.legende.risk_gelb", lang)),
+        ("#e07b1a", t("mail.legende.risk_orange", lang)),
+        ("#c52a22", t("mail.legende.risk_rot", lang)),
     ]
     _risk_dot_legend_items = "".join(
         f'<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;">'
@@ -1666,6 +1680,7 @@ def render_html(
         column_legend_text=column_legend_text,
         ampel_legend_html="",
         trip_url=trip_url,
+        lang=lang,
     )
 
     # AC-9 (#899): CSS-Palette für Konfidenz-Punkte — conditional on trend confidence data.
@@ -1684,8 +1699,10 @@ def render_html(
         )
         _conf_dot_css = f"\n        /* confidence dots: {_conf_rules} */"
 
+    # Issue #2664: Deutsch bleibt byte-gleich (Golden), nur Englisch traegt lang.
+    _html_tag = '<html lang="en">' if lang == "en" else "<html>"
     html = f"""<!DOCTYPE html>
-<html>
+{_html_tag}
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

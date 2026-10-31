@@ -181,18 +181,19 @@ _DATUM_KOPF = "Thu, 29 Oct 2026 06:00:00 +0200"
 
 
 def _mime(name: str, *, subject: str, body: str, html: bool, plain: str | None,
-          mail_type: str, mail_format: str | None = None, **extra) -> bytes:
+          mail_type: str, mail_format: str | None = None, lang: str = "de",
+          **extra) -> bytes:
     from output.channels.email import build_mime_message
 
     msg = build_mime_message(
         subject=subject, body=body, from_addr="gregor_zwanzig@henemm.com",
-        to_header="golden-de@henemm.com", reply_to=None, html=html,
+        to_header=f"golden-{lang}@henemm.com", reply_to=None, html=html,
         plain_text_body=plain, mail_type=mail_type, mail_format=mail_format,
-        message_id=f"<{name}.golden-de@henemm.com>", lang="de", **extra,
+        message_id=f"<{name}.golden-{lang}@henemm.com>", lang=lang, **extra,
     )
     msg.replace_header("Date", _DATUM_KOPF)
     if html:
-        msg.set_boundary(f"==golden-de-{name}==")
+        msg.set_boundary(f"==golden-{lang}-{name}==")
     return msg.as_bytes()
 
 
@@ -228,7 +229,8 @@ def _compare_eml() -> bytes:
                  plain=None, mail_type="compare", compare_hourly_enabled=True)
 
 
-def _briefing_eml(email_format: str, *, roh: bool = False, regen_mm: float = 0.0) -> bytes:
+def _briefing_eml(email_format: str, *, roh: bool = False, regen_mm: float = 0.0,
+                  lang: str = "de") -> bytes:
     from datetime import datetime, timezone
     from zoneinfo import ZoneInfo
 
@@ -295,14 +297,20 @@ def _briefing_eml(email_format: str, *, roh: bool = False, regen_mm: float = 0.0
         display_config=dc, night_rows=[dp_to_row(dp, dc, tz=tz) for dp in nacht_dps],
         multi_day_trend=trend, tz=tz, friendly_keys=set(), email_format=email_format,
         sent_at=datetime(2026, 10, 29, 4, 0, tzinfo=utc), stage_name="Etappe 3",
+        lang=lang,
     )
     if email_format == "full":
         return _mime("briefing_full", subject="[GR20 Golden] Etappe 3 - Evening Report",
                      body=html, html=True, plain=plain, mail_type="trip-briefing",
-                     mail_format="full")
+                     mail_format="full", lang=lang)
     return _mime("briefing_compact", subject="[GR20 Golden] Etappe 3 - Evening Report",
                  body=plain, html=False, plain=None, mail_type="trip-briefing",
                  mail_format="compact")
+
+
+def briefing_mail(email_format: str = "full", *, lang: str = "de", **kw) -> bytes:
+    """Trip-Briefing aus dem echten Renderer in ``lang`` (Issue #2664)."""
+    return _briefing_eml(email_format, lang=lang, **kw)
 
 
 def briefing_mail_de(email_format: str = "full", **kw) -> bytes:
@@ -424,6 +432,7 @@ def erzeuge_fixtures() -> list[Path]:
     bauplan = {
         "compare_de.eml": _compare_eml, "briefing_full_de.eml": lambda: _briefing_eml("full"),
         "briefing_compact_de.eml": lambda: _briefing_eml("compact"),
+        "briefing_full_en.eml": lambda: _briefing_eml("full", lang="en"),
         "official_alert_de.eml": _official_alert_eml, "radar_alert_de.eml": _radar_alert_eml,
     }
     pfade = []

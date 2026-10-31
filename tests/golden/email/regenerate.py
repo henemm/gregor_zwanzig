@@ -9,6 +9,10 @@ Fixtures neu ein und überschreibt die bestehenden Snapshot-Dateien
 Aufruf nach jeder ABSICHTLICHEN Renderer-Änderung:
 
     uv run python3 tests/golden/email/regenerate.py
+    uv run python3 tests/golden/email/regenerate.py --lang en   # Issue #2664
+
+Mit ``--lang en`` entstehen NUR die englischen ``*-html.en.txt``; die
+deutschen Dateien werden dabei nie ueberschrieben.
 
 Datetime wird — identisch zu conftest.py — auf 2026-04-28 12:00:00 UTC
 eingefroren und in den drei betroffenen Modulen direkt gepatcht
@@ -202,8 +206,8 @@ _TZ_MALLORCA = ZoneInfo("Europe/Madrid")
 _TZ_ARLBERG = ZoneInfo("Europe/Vienna")
 
 
-def _scenarios():
-    """Liefert (stem, report) je Referenz-Szenario."""
+def _scenarios(lang: str = "de"):
+    """Liefert (stem, report) je Referenz-Szenario (``lang``: Issue #2664)."""
     formatter = TripReportFormatter()
     cfg = build_default_display_config
 
@@ -218,7 +222,7 @@ def _scenarios():
     )
     yield "gr20-summer-evening", formatter.format_email(
         [seg1, seg2], "GR20", "evening",
-        display_config=cfg(), stage_name="GR20 E3", tz=_TZ_CORSICA,
+        display_config=cfg(), stage_name="GR20 E3", tz=_TZ_CORSICA, lang=lang,
     )
 
     # 2. GR20 Frühjahr Morning — kalt + Niederschlag
@@ -229,7 +233,7 @@ def _scenarios():
     )
     yield "gr20-spring-morning", formatter.format_email(
         [seg], "GR20", "morning",
-        display_config=cfg(), stage_name="GR20 E1", tz=_TZ_CORSICA,
+        display_config=cfg(), stage_name="GR20 E1", tz=_TZ_CORSICA, lang=lang,
     )
 
     # 3. GR221 Mallorca Evening — warm, breezy, kein Regen
@@ -240,7 +244,7 @@ def _scenarios():
     )
     yield "gr221-mallorca-evening", formatter.format_email(
         [seg], "GR221 Mallorca", "evening",
-        display_config=cfg(), stage_name="GR221 Tag1", tz=_TZ_MALLORCA,
+        display_config=cfg(), stage_name="GR221 Tag1", tz=_TZ_MALLORCA, lang=lang,
     )
 
     # 4. Arlberg Winter Morning — Schnee/Lawine
@@ -257,7 +261,7 @@ def _scenarios():
     yield "arlberg-winter-morning", formatter.format_email(
         [seg], "Arlberg Winter", "morning",
         display_config=cfg(), stage_name="Arlberg",
-        profile=ActivityProfile.WINTERSPORT, tz=_TZ_ARLBERG,
+        profile=ActivityProfile.WINTERSPORT, tz=_TZ_ARLBERG, lang=lang,
     )
 
     # 5. Korsika Vigilance Update — mit amtlicher Warnung (Issue #1216 AC-9):
@@ -281,11 +285,20 @@ def _scenarios():
     yield "corsica-vigilance", formatter.format_email(
         [seg], "Korsika Trail", "update",
         display_config=cfg(), stage_name="Corsica E5", changes=[], tz=_TZ_CORSICA,
+        lang=lang,
     )
 
 
 def main() -> None:
     _freeze_datetime()
+    if sys.argv[1:] == ["--lang", "en"]:
+        for stem, report in _scenarios(lang="en"):
+            en_path = GOLDEN_DIR / f"{stem}-html.en.txt"
+            en_path.write_text(report.email_html, encoding="utf-8")
+            print(f"[GESCHRIEBEN] {en_path.name}")
+        return
+    if sys.argv[1:]:
+        raise SystemExit(f"Unbekannte Option: {sys.argv[1:]} (erlaubt: --lang en)")
     for stem, report in _scenarios():
         html_path = GOLDEN_DIR / f"{stem}-html.txt"
         plain_path = GOLDEN_DIR / f"{stem}-plain.txt"

@@ -31,6 +31,8 @@ __all__ = [
     "thunder_low_statement",
     "thunder_low_statement_sentence",
     "THUNDER_LABEL_DE",
+    "THUNDER_LABEL_EN",
+    "thunder_label",
     "format_hail_note",
     "MODELLLAUF_ANHEBUNG_MIN_PCT",
     "MODELLLAUF_DAEMPFUNG_MAX_PCT",
@@ -39,7 +41,7 @@ __all__ = [
 ]
 
 
-def format_hail_note(hail_flag: Optional[bool]) -> Optional[str]:
+def format_hail_note(hail_flag: Optional[bool], *, lang: str = "de") -> Optional[str]:
     """Der EINE gemeinsame Anzeige-Textbaustein fuer das Hagel-Kennzeichen
     (Trip-/Compare-Mail-Renderer UND ``GEWITTER``-Kommando, #1481 DRY-Pflicht).
 
@@ -51,7 +53,9 @@ def format_hail_note(hail_flag: Optional[bool]) -> Optional[str]:
     dem Zeitplaner-Pfad und darf keine Darstellungsschicht importieren.
     """
     if hail_flag is True:
-        return "Hagel: ja"
+        # Issue #2664: zweite Sprache als feste Tabelle -- kein i18n-Import
+        # in die Domaenenschicht (Waechter #1365).
+        return "Hail: yes" if lang == "en" else "Hagel: ja"
     return None
 
 # Kanonische Ordnungsquelle fuer ThunderLevel (str-Enum ohne eigene Ordnung,
@@ -284,6 +288,22 @@ THUNDER_LABEL_DE: dict[ThunderLevel, str] = {
     ThunderLevel.MED: "mittel",
     ThunderLevel.HIGH: "hoch",
 }
+
+# Issue #2664: englische Stufenwoerter als PARALLELE Tabelle (Glossar
+# docs/reference/i18n_glossar.md) -- die Domaenenschicht importiert keinen
+# Katalog (Waechter #1365). Kurzformen/Token (SMS, Telegram) bleiben deutsch.
+THUNDER_LABEL_EN: dict[ThunderLevel, str] = {
+    ThunderLevel.NONE: "none",
+    ThunderLevel.LOW: "light",
+    ThunderLevel.MED: "medium",
+    ThunderLevel.HIGH: "high",
+}
+
+
+def thunder_label(level, *, lang: str = "de", default: str = "–") -> str:
+    """Stufenwort zu ``level`` in ``lang`` (jede Sprache ausser ``en`` = de)."""
+    tabelle = THUNDER_LABEL_EN if lang == "en" else THUNDER_LABEL_DE
+    return tabelle.get(level, default)
 
 
 def _thunder_low_is_pure_cape(carriers: Optional[Iterable[str]]) -> bool:
