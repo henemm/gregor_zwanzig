@@ -6,7 +6,7 @@
 // Kausalkette: docs/context/fix-1234-mount-autosave-metrics.md
 //
 // Nachweis über abgefangene Netzwerk-Requests (page.on('request') / page.route),
-// nicht über Optik. Setup/Login-Muster analog compare-flow-navigation.spec.ts +
+// nicht über Optik. Setup/Login-Muster analog compare-hub-fidelity-s8c.spec.ts +
 // playwright.1256-s2.staging.config.ts (storageState statt Login pro Test —
 // vermeidet das Staging-Auth-Rate-Limit, #703).
 //

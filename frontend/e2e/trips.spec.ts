@@ -28,7 +28,7 @@ test.describe('Trips Page (M3a)', () => {
 	// dedizierte trip-wizard-step1/2/3/4.spec.ts + trip-wizard-shell.spec.ts.
 	// Vollstaendige Entfernung des alten Wizards: Issue #190.
 
-	// 'edit trip navigates to wizard with pre-filled name' moved to trip-edit.spec.ts (Issue #91 — TripEditView replaces TripWizard for edit).
+	// 'edit trip navigates to wizard with pre-filled name' moved to hub-list-menu.spec.ts LM-1b + hub-kopf-bearbeiten.spec.ts KB-11 (#2347 S4; /edit ist Redirect in den Hub).
 
 	test('delete trip with confirmation', async ({ page }) => {
 		await page.goto('/trips');

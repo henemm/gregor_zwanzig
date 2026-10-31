@@ -7,7 +7,7 @@
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { TripHeader } from '$lib/components/organisms';
 	import { TripTabs } from '$lib/components/trip-detail';
-	import { Btn, TopoBg } from '$lib/components/atoms';
+	import { Btn, TopoBg, BackLink } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
 	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
@@ -298,6 +298,9 @@
 <main style="position: relative; overflow: hidden;">
 	<TopoBg opacity={0.14} />
 	<div class="breadcrumb-bar" data-testid="trip-detail-breadcrumb-bar">
+		<!-- #2347 S4 (KA-11): mobiler Zurück-Pfeil zur Liste wie im Vergleich-Hub
+		     (BackLink ariaLabel „Zurück zur Übersicht"); nur ≤899px, ohne Zeilenhöhe. -->
+		<div class="back-mobil"><BackLink href="/trips" label="" ariaLabel="Zurück zur Übersicht" /></div>
 		<div class="mono breadcrumb-path" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em;">
 			<a href="/trips" class="g-link-tap" style="opacity: 0.6; color: inherit; text-decoration: none;">Trips</a>
 			<span style="margin: 0 8px;">/</span>
@@ -422,8 +425,19 @@
 		gap: 8px;
 		flex-wrap: wrap;
 	}
+	.back-mobil {
+		display: none;
+	}
 		/* #2284 S2 (AC-13): mobil 44-px-Tippflaechen ohne Layout-Hoehe. */
 	@media (max-width: 899px) {
+		/* #2347 S4 (KA-11): 36-px-Pfeil mit negativem Block-Rand — die Zeile bleibt
+		   so hoch wie bisher (Etappen-Liste oben ≤ 474 px, trip-hub-kopf-region AC-13). */
+		.back-mobil {
+			display: flex;
+			flex-shrink: 0;
+			margin-block: -8px;
+			margin-right: -12px;
+		}
 		/* #2278 (AC-13): Pfad kuerzt mit Ellipsis statt "Senden" + Kebab in eine zweite Zeile zu schieben
 		   (390 px, langer Name: +33 px Kopfhoehe). Der volle Name steht im Titel darunter. */
 		.breadcrumb-path {

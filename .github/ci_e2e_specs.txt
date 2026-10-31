@@ -459,17 +459,45 @@
 #             Fallzahl per `npx playwright test --list`: `Total: 549 tests in 73 files`.
 #   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
 #
+# Aufnahme 2026-10-30 (#2347 S4, Epic #2345 Etappe P6, ALTLAST leer):
+# hub-anlegen-ablauf (AN-1..AN-11, AN-13..AN-15 je kind + AN-12 nur vergleich,
+# 29 Faelle; AN-13/AN-14 aus Teil D, AN-15 aus Teil E) und
+# hub-liste-seitenrahmen (HL-1..HL-5 je kind, 10 Faelle). Ersetzen die Listenzeilen
+# compare-detail-edit-entry (-> hub-list-menu LM-11/LM-12), compare-editor-slice1
+# (-> AN-1..AN-4) und compare-legacy-fields-survive-save (-> hub-kopf-bearbeiten
+# KB-11); alle drei Dateien geloescht, Zuordnung: Spec feat_2347_s4_paritaets_e2e.md.
+# issue-1093-unit bleibt (Nebenbefund #1199). Ergaenzt in bereits gelisteten
+# Dateien: LM-1b/LM-10b/LM-11/LM-12/LM-13, KA-10/KA-11, HT-11/HT-12, KB-11,
+# AW-3c/AW-5b, XU-3 (je kind). Teil D (Ersatzfaelle fuer in Teil A geloeschte
+# Aussagen, je kind): AW-5c in hub-alarme-wertprops (jetzt 16 Faelle), SC-1b in
+# hub-save-chip (jetzt 14 Faelle), AN-13/AN-14 in hub-anlegen-ablauf. Teil E
+# (Trip dem Vergleich angeglichen, Alt s8d AC-8/AC-17/AC-18): AN-14 prueft die
+# gesperrte CTA ohne Namen je kind (Fallzahl gleich), neu AN-15 Desktop-Weiter-Fuesse
+# je kind (+2).
+#   Filter A: kein waitForTimeout/test.skip/test.fixme/__dirname/Hauptrepo-Pfad/
+#             page.screenshot({path}) in den zwei neuen Dateien (grep leer am
+#             Stand der Teil-A-Umsetzung, 2026-10-30) und in den drei um Teil D
+#             erweiterten Dateien (grep leer, 2026-10-30; hub-anlegen-ablauf nach
+#             Teil E erneut grep leer, 2026-10-30).
+#   Filter B: AUSSTEHEND -- 3 Zyklen ueber die neuen/erweiterten Dateien im
+#             isolierten Stack sind bei Aufnahme NICHT gefahren; Nachweis vor dem
+#             Merge im Aufnahme-Kommentar nachtragen (gilt ebenso fuer die
+#             Teil-D-Faelle AN-13/AN-14/AW-5c/SC-1b und den Teil-E-Fall AN-15,
+#             ebenfalls NIE gefahren).
+#             Fallzahl per `npx playwright test --list` (Positivliste ohne bug-703,
+#             71 Dateien): `Total: 599 tests in 72 files` (Teil A), nach Teil D
+#             `Total: 607 tests in 72 files`, nach Teil E `Total: 609 tests in
+#             72 files` (inkl. global.setup).
+#   Filter C: kein `page.screenshot({path: ...})` in den Dateien.
+#
 # Hinzufuegen = Platz im `e2e`-Lauf (neuer Filter-B-Beleg noetig). Entfernen
 # nur bei Loeschung/Umbenennung der Datei.
 e2e/alert-table-mobile-visibility.spec.ts
 e2e/bug-274-safe-area-insets.spec.ts
 e2e/bug-703-login-ratelimit.spec.ts
 e2e/bug-708-stage-delete-confirm.spec.ts
-e2e/compare-detail-edit-entry.spec.ts
-e2e/compare-editor-slice1.spec.ts
 e2e/compare-editor-slice3.spec.ts
 e2e/compare-hub-inline-edit.spec.ts
-e2e/compare-legacy-fields-survive-save.spec.ts
 e2e/compare-orte-konfliktschutz-zwei-kontexte.spec.ts
 e2e/compare-stundenverlauf-wertprops.spec.ts
 e2e/design-compliance-group-a.spec.ts
@@ -481,6 +509,7 @@ e2e/font-weights.spec.ts
 e2e/gewitter-absolutregel-gesperrt.spec.ts
 e2e/hub-alarme-speichert-selbst.spec.ts
 e2e/hub-alarme-wertprops.spec.ts
+e2e/hub-anlegen-ablauf.spec.ts
 e2e/hub-cross-user-write-block.spec.ts
 e2e/hub-editor-autosave-gesten-gate.spec.ts
 e2e/hub-editor-autosave-user-isolation.spec.ts
@@ -488,6 +517,7 @@ e2e/hub-konfliktschutz-zwei-kontexte.spec.ts
 e2e/hub-kopf-aufbau.spec.ts
 e2e/hub-kopf-bearbeiten.spec.ts
 e2e/hub-list-menu.spec.ts
+e2e/hub-liste-seitenrahmen.spec.ts
 e2e/hub-metrik-reihenfolge-ziehen.spec.ts
 e2e/hub-save-chip.spec.ts
 e2e/hub-tab-bar.spec.ts

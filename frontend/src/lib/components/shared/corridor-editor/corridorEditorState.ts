@@ -816,3 +816,28 @@ export function openBoundValue(
 export function saveGateDecision(rows: CorridorRowState[]): 'schedule' | 'dirty' {
 	return validateCorridorRows(rows).valid ? 'schedule' : 'dirty';
 }
+
+/**
+ * Issue #2347 S4 (AC-20, Trip-Pendant zu `buildComparePrefillRows`): beim
+ * frischen Trip-Anlegen startet der Reiter Wertebereiche nicht leer, sondern
+ * mit den fest verdrahteten Route-Groessen der AKTIVEN Wetter-Metriken
+ * (Namensraum-Bruecke ROUTE_CORRIDOR_CATALOG_IDS) und deren defaultMin/defaultMax
+ * — exakt die Zeile, die "+ Metrik" fuer dieselbe Groesse anlegen wuerde
+ * (gebaut ueber buildRoutePool + addRow, kein Parallelcode).
+ * Nicht vorbelegt werden: Katalog-Zusatzgroessen (`extraDefs`, ungegated) und
+ * Groessen ohne jeden Startwert (beidseitig offen -> validateCorridorRows blockt).
+ */
+export function buildRoutePrefillRows(
+	activeCatalogMetrics: WeatherConfigMetric[] | undefined,
+	extraDefs: RouteMetricDef[] = []
+): CorridorRowState[] {
+	if (!activeCatalogMetrics || activeCatalogMetrics.length === 0) return [];
+	const pool = buildRoutePool([], activeCatalogMetrics, extraDefs);
+	let state = { rows: pool.rows, poolLeft: pool.poolLeft };
+	for (const def of pool.poolLeft) {
+		if (!ROUTE_METRIC_DEF_BY_ID.has(def.metric)) continue;
+		if (def.defaultMin == null && def.defaultMax == null) continue;
+		state = addRow(state.rows, state.poolLeft, def.metric, ROUTE_CTX_DEFAULTS);
+	}
+	return state.rows;
+}

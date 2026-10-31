@@ -2,7 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import * as fs from 'fs';
 // Staging-Auth-Setup fuer Issue #1745 Scheibe A (Premium-SMS als vierter
-// Alarm-Kanal). Muster: feat-1461-s3b2b.staging.setup.ts — API-Login (kein
+// Alarm-Kanal). Muster: f1-1273-s4c.staging.setup.ts — API-Login (kein
 // Formular-Login, vermeidet den /api/auth/login-Rate-Limiter bei
 // Mehrfachlaeufen), nginx-Basic-Auth (GZ_VALIDATOR_*) getrennt vom
 // App-Login (GZ_AUTH_*).

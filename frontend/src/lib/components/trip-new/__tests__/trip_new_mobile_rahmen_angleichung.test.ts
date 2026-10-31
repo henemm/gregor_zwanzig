@@ -24,6 +24,13 @@ import { renderTripNew, countTestid, outerHtml } from './tripNewSsr.ts';
 
 const DESKTOP = { activeTab: 'route', isMobileViewport: false };
 const MOBIL = { activeTab: 'route', isMobileViewport: true };
+// #2347 S4 (AN-9) löst „tn-mobile-save in jedem Schritt" ab: der mobile Abschluss
+// steht wie cm-mobile-activate im Vergleich erst im letzten Schritt Alarme im
+// Sticky-Footer. Die tn-mobile-save-Prüfungen rendern deshalb im Schritt Alarme.
+// Die Vorbelegung von activeTab ruft switchTab NICHT auf ⇒ alVisited bleibt
+// false, der Anfangszustand „nicht speicherbereit" bleibt erhalten.
+const DESKTOP_ALARME = { activeTab: 'alarme', isMobileViewport: false };
+const MOBIL_ALARME = { activeTab: 'alarme', isMobileViewport: true };
 
 const BUTTON_BACKLINK = /<button\b[^>]*data-testid="back-link"[^>]*>/g;
 const ANCHOR_BACKLINK = /<a\b[^>]*data-testid="back-link"[^>]*>/g;
@@ -119,7 +126,7 @@ describe('AC-4: Speichern wandert in je einen EditorStickyFooter (context="route
 		const d = renderTripNew(DESKTOP);
 		assert.equal(countTestid(d, 'trip-new-save-btn'), 1, 'AC-4 FAIL: trip-new-save-btn nicht genau 1×.');
 		assert.equal(countTestid(d, 'tn-mobile-appbar'), 1, 'AC-4 FAIL: Wrapper tn-mobile-appbar nicht genau 1×.');
-		const m = renderTripNew(MOBIL);
+		const m = renderTripNew(MOBIL_ALARME);
 		assert.equal(countTestid(m, 'tn-mobile-save'), 1, 'AC-4 FAIL: tn-mobile-save nicht genau 1×.');
 	});
 
@@ -137,7 +144,7 @@ describe('AC-4: Speichern wandert in je einen EditorStickyFooter (context="route
 	});
 
 	test('Mobil: tn-mobile-save sitzt NICHT mehr in der App-Leiste, sondern in einem route-Footer ohne has-nav', () => {
-		const html = renderTripNew(MOBIL);
+		const html = renderTripNew(MOBIL_ALARME);
 		assert.ok(
 			!outerHtml(html, 'tn-mobile-appbar').includes('data-testid="tn-mobile-save"'),
 			'AC-4 FAIL: tn-mobile-save steht weiterhin inline in der App-Leiste.'
@@ -150,7 +157,7 @@ describe('AC-4: Speichern wandert in je einen EditorStickyFooter (context="route
 	});
 
 	test('zwei getrennte Footer-Mounts (einer je Viewport-Zweig)', () => {
-		const html = renderTripNew(DESKTOP);
+		const html = renderTripNew(DESKTOP_ALARME);
 		const d = footerUm(html, 'trip-new-save-btn');
 		const m = footerUm(html, 'tn-mobile-save');
 		assert.notEqual(
@@ -170,7 +177,7 @@ describe('AC-4: Speichern ist gesperrt, solange der Trip nicht speicherbereit is
 
 	for (const testid of ['trip-new-save-btn', 'tn-mobile-save']) {
 		test(`${testid} trägt im Anfangszustand das Attribut disabled`, () => {
-			const tag = tagMitTestid(renderTripNew(DESKTOP), testid);
+			const tag = tagMitTestid(renderTripNew(testid === 'tn-mobile-save' ? DESKTOP_ALARME : DESKTOP), testid);
 			assert.match(tag, /^<button\b/, `${testid} ist kein <button>: ${tag}`);
 			assert.match(
 				tag,
@@ -211,19 +218,27 @@ describe('AC-8: Fade-Maske auf tn-mobile-tabbar (wörtlich wie cm-mobile-tabbar)
 
 describe('AC-9: Strukturwächter — vertragliche Testids je Render genau einmal', () => {
 	const TESTIDS = ['tn-mobile-appbar', 'tn-mobile-save', 'tn-desktop-breadcrumb', 'tn-mobile-tabbar'];
-	for (const [name, kombi] of [
-		['Desktop', DESKTOP],
-		['Mobil', MOBIL]
+	for (const [name, kombi, kombiAlarme] of [
+		['Desktop', DESKTOP, DESKTOP_ALARME],
+		['Mobil', MOBIL, MOBIL_ALARME]
 	] as const) {
 		for (const testid of TESTIDS) {
+			// tn-mobile-save nur im Schritt Alarme (AN-9), die übrigen im Schritt Route.
 			test(`${name}: ${testid} genau 1× (nie 0, nie 2)`, () => {
 				assert.equal(
-					countTestid(renderTripNew(kombi), testid),
+					countTestid(renderTripNew(testid === 'tn-mobile-save' ? kombiAlarme : kombi), testid),
 					1,
 					`AC-9 FAIL: ${testid} erscheint im ${name}-Render nicht genau einmal.`
 				);
 			});
 		}
+		test(`${name}: tn-mobile-save fehlt vor dem Schritt Alarme (AN-9)`, () => {
+			assert.equal(
+				countTestid(renderTripNew(kombi), 'tn-mobile-save'),
+				0,
+				'AN-9 FAIL: der mobile Abschluss steht schon im Schritt Route.'
+			);
+		});
 	}
 });
 

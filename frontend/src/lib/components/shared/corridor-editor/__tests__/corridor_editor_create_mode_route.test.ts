@@ -14,8 +14,10 @@
 // sind FunctionDeclarations des Instanz-Skripts und werden von `umgebungFuer()`
 // direkt auf `u` gebunden — die Tests rufen die ECHTEN Editor-Funktionen auf,
 // keine Nachbildung. Der Pool-Refresh liegt in einem `$effect` und wird ueber
-// `effekteVon(…, 'createMode')` eingesammelt (einziger Effekt, der den Prop
-// nennt — `'poolLeft'` wuerde auch die beiden Katalog-Lade-Effekte treffen).
+// `effekteVon(…, 'buildRoutePool')` eingesammelt (einziger Effekt, der den
+// Pool direkt neu rechnet — `'poolLeft'` wuerde auch die beiden Katalog-Lade-
+// Effekte treffen, `'createMode'` seit #2347 S4 AC-20 auch den Vorbelegungs-
+// Effekt, der unten ueber `'routePrefillDone'` eigens geprueft wird).
 //
 // Ausfuehren:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -45,6 +47,10 @@ interface Spione {
 	setDirty: unknown[][];
 	corridors: unknown[][];
 	gebaut: unknown[][];
+	/** #2347 S4 (Race): Aufrufe von onVorbelegungFertig. */
+	fertig: number;
+	/** Reihenfolge der Meldungen nach oben ('corridors' | 'fertig'). */
+	folge: string[];
 }
 
 /** Sentinel: `createMode` fehlt in der Saat GANZ — Aequivalent zum Trip-Hub-
@@ -79,10 +85,17 @@ function baueSaat(createMode: unknown, spione: Spione, metrics: unknown[] = NUR_
 		metricAlertLevels: undefined,
 		isEditMode: undefined,
 		activityProfile: undefined,
-		onCorridorsChange: (...a: unknown[]) => spione.corridors.push(a),
+		onCorridorsChange: (...a: unknown[]) => {
+			spione.corridors.push(a);
+			spione.folge.push('corridors');
+		},
 		onIdealRangesChange: undefined,
 		onActiveMetricKeysChange: undefined,
 		onMetricAlertLevelsChange: undefined,
+		onVorbelegungFertig: () => {
+			spione.fertig++;
+			spione.folge.push('fertig');
+		},
 		untrack: (fn: () => unknown) => fn(),
 		// Transport neutralisiert: der route-PUT wird nur VORBEREITET (Spion),
 		// nie abgeschickt.
@@ -97,7 +110,7 @@ function baueSaat(createMode: unknown, spione: Spione, metrics: unknown[] = NUR_
 }
 
 function neueSpione(): Spione {
-	return { schedule: [], setDirty: [], corridors: [], gebaut: [] };
+	return { schedule: [], setDirty: [], corridors: [], gebaut: [], fertig: 0, folge: [] };
 }
 
 /** Baut die Umgebung, prueft den Messaufbau und legt den Pool so an, wie ihn
@@ -230,7 +243,7 @@ describe('AC-7: Pool folgt der Wetter-Metriken-Auswahl, ohne eingestellte Zeilen
 		u.poolLeft = gesaet.poolLeft;
 		const rowsVorher: CorridorRowState[] = structuredClone(gesaet.rows);
 		const poolVorher = (u.poolLeft as { metric: string }[]).map((d) => d.metric);
-		const effekte = effekteVon(ast, quelle, u, 'createMode');
+		const effekte = effekteVon(ast, quelle, u, 'buildRoutePool');
 		return { u, effekte, rowsVorher, poolVorher };
 	}
 
@@ -243,7 +256,7 @@ describe('AC-7: Pool folgt der Wetter-Metriken-Auswahl, ohne eingestellte Zeilen
 		assert.equal(
 			effekte.length,
 			1,
-			`AC-7 FAIL: ${effekte.length} $effect-Ruempfe nennen \`createMode\` (erwartet: genau einer — ` +
+			`AC-7 FAIL: ${effekte.length} $effect-Ruempfe nennen \`buildRoutePool\` (erwartet: genau einer — ` +
 				'der Pool-Refresh im Anlege-Modus). Ohne ihn friert das "+ Metrik"-Angebot ein.'
 		);
 		(u.trip as Knoten).display_config = { metrics: BOEEN_UND_REGEN };
@@ -328,11 +341,11 @@ describe('AC-7: Pool folgt der Wetter-Metriken-Auswahl, ohne eingestellte Zeilen
 			'Messaufbau kaputt: die Zeile landet nicht wie erwartet in unknownCorridors.'
 		);
 
-		const effekte = effekteVon(ast, quelle, u, 'createMode');
+		const effekte = effekteVon(ast, quelle, u, 'buildRoutePool');
 		assert.equal(
 			effekte.length,
 			1,
-			`AC-7 FAIL: ${effekte.length} $effect-Ruempfe nennen \`createMode\` (erwartet: genau einer).`
+			`AC-7 FAIL: ${effekte.length} $effect-Ruempfe nennen \`buildRoutePool\` (erwartet: genau einer).`
 		);
 		(u.trip as Knoten).display_config = { metrics: BOEEN_UND_REGEN };
 		effekte[0]();
@@ -343,5 +356,166 @@ describe('AC-7: Pool folgt der Wetter-Metriken-Auswahl, ohne eingestellte Zeilen
 			'AC-7 FAIL (Datenverlust): der Pool-Refresh hat die Zeile mit der katalogfremden Metrik-ID ' +
 				'aus u.rows verloren — ein reiner Ueberschreib-Effekt darf NUR poolLeft neu berechnen.'
 		);
+	});
+});
+
+// Issue #2347 S4 (AC-20, E2E AN-6 route „Wertebereiche fehlen im POST"): der
+// Vergleich belegt beim frischen Anlegen Wertebereiche vor (isFreshCompareCreate
+// -> syncToWizard). Das Trip-Pendant ist ein $effect im ECHTEN Instanz-Skript
+// (Wirkort), eingesammelt ueber den nur von ihm genannten Bezeichner
+// `routePrefillDone`: sobald Zusatz-Katalog UND Wetter-Metriken-Auswahl da
+// sind, belegt er die Zeilen der aktiven Metriken vor und meldet sie GENAU
+// EINMAL ueber onCorridorsChange — nur im Anlege-Modus, nie bei Bestand.
+describe('AC-20: frisches Trip-Anlegen belegt Wertebereiche vor und meldet sie einmal', () => {
+	const ERWARTET = [
+		{ metric: 'wind_gust', range: [null, 70], notify: true, mark: false },
+		{ metric: 'precipitation_sum', range: [null, 5], notify: true, mark: false }
+	];
+
+	async function vorbelegung(createMode: unknown, metrics: unknown[] = BOEEN_UND_REGEN) {
+		const ed = await baueEditor(createMode, metrics);
+		const effekte = effekteVon(ed.ast, ed.quelle, ed.u, 'routePrefillDone');
+		assert.equal(effekte.length, 1, `Messaufbau: ${effekte.length} Effekte nennen routePrefillDone (erwartet 1).`);
+		return { ...ed, lauf: effekte[0] };
+	}
+
+	test('createMode=true: aktive Metriken ⇒ Zeilen mit Startwerten, genau EINE Meldung nach oben', async () => {
+		const { u, spione, lauf } = await vorbelegung(true);
+		lauf();
+		assert.deepEqual(
+			(u.rows as CorridorRowState[]).map((r) => [r.metric, r.min, r.max]),
+			[['wind_gust', null, 70], ['precipitation_sum', null, 5]],
+			'AC-20 FAIL: der Reiter Wertebereiche startet beim Trip-Anlegen nicht mit den aktiven Metriken.'
+		);
+		assert.equal(spione.corridors.length, 1, 'AC-20 FAIL: die Vorbelegung wurde nicht genau einmal gemeldet.');
+		assert.deepEqual(spione.corridors[0][0], ERWARTET, 'AC-20 FAIL: gemeldete Korridore weichen ab.');
+		const payload = buildCreateTripPayload({
+			name: 'Karnischer Höhenweg',
+			startDate: '2026-06-15',
+			stages: [{ id: 1, name: 'Toblach → Helmhotel' }],
+			channels: { email: true, telegram: false, sms: false },
+			corridors: spione.corridors[0][0]
+		} as CreateTripState);
+		assert.deepEqual((payload as { corridors?: unknown }).corridors, ERWARTET, 'AC-20 FAIL: Vorbelegung fehlt im POST.');
+
+		// Einmaligkeit: spaeteres Umschalten der Metriken belegt nicht erneut vor.
+		(u.trip as Knoten).display_config = { metrics: NUR_BOEEN };
+		u.rows = [];
+		lauf();
+		assert.equal(spione.corridors.length, 1, 'AC-20 FAIL: zweite Vorbelegung nach Metrik-Umschalten.');
+		assert.deepEqual(u.rows, [], 'AC-20 FAIL: zweite Vorbelegung ueberschreibt den Nutzerstand.');
+	});
+
+	test('wartet auf die Wetter-Metriken-Auswahl statt leer zu melden', async () => {
+		const { u, spione, lauf } = await vorbelegung(true);
+		// Wetter-Metriken-Reiter hat noch nichts gemeldet (stubTrip startet mit metrics: []).
+		(u.trip as Knoten).display_config = { metrics: [] };
+		lauf();
+		assert.deepEqual(u.rows, [], 'AC-20 FAIL: ohne gemeldete Metrik-Auswahl wurden Zeilen gesetzt.');
+		assert.equal(spione.corridors.length, 0, 'AC-20 FAIL: ohne Metrik-Auswahl wurde gemeldet.');
+		(u.trip as Knoten).display_config = { metrics: BOEEN_UND_REGEN };
+		lauf();
+		assert.deepEqual(spione.corridors.at(-1)?.[0], ERWARTET, 'AC-20 FAIL: nach eintreffender Auswahl keine Vorbelegung.');
+	});
+
+	test('wartet auf den Zusatz-Katalog (routeExtraDefs === null)', async () => {
+		const { u, spione, lauf } = await vorbelegung(true);
+		u.routeExtraDefs = null;
+		lauf();
+		assert.equal(spione.corridors.length, 0, 'AC-20 FAIL: Vorbelegung vor dem Katalog-Laden.');
+	});
+
+	test('Gegenprobe Trip-Hub (ohne createMode): keine Vorbelegung, keine Meldung', async () => {
+		const { u, spione, lauf } = await vorbelegung(CREATE_MODE_FEHLT);
+		lauf();
+		assert.deepEqual(u.rows, [], 'AC-20 FAIL: im Trip-Hub wurden Wertebereiche vorbelegt.');
+		assert.equal(spione.corridors.length + spione.schedule.length, 0, 'AC-20 FAIL: im Trip-Hub wurde gemeldet/gespeichert.');
+	});
+
+	test('Bestandsdaten bleiben: vorhandene trip.corridors bzw. schon eingestellte Zeilen ⇒ unberuehrt', async () => {
+		const bestand = await vorbelegung(true);
+		(bestand.u.trip as Knoten).corridors = [{ metric: 'snow_line', range: [1800, null], notify: false, mark: false }];
+		bestand.lauf();
+		assert.deepEqual(bestand.u.rows, [], 'AC-20 FAIL: Trip mit Korridoren wurde vorbelegt.');
+		assert.equal(bestand.spione.corridors.length, 0);
+
+		// Remount (Desktop <-> Mobil an der 900-px-Grenze): die neue Instanz bekommt
+		// den oben gehaltenen Stand als `corridors` und darf ihn nicht ueberschreiben.
+		const remount = await vorbelegung(true);
+		remount.u.corridors = [{ metric: 'wind_gust', range: [null, 90], notify: true, mark: false }];
+		remount.lauf();
+		assert.deepEqual(remount.u.rows, [], 'AC-20 FAIL: Remount belegt trotz gehaltenem Stand vor.');
+		assert.equal(remount.spione.corridors.length, 0, 'AC-20 FAIL: Remount ueberschreibt den gehaltenen Stand.');
+
+		const eingestellt = await vorbelegung(true);
+		eingestellt.u.add('wind_gust');
+		const vorher = structuredClone(eingestellt.u.rows);
+		const meldungen = eingestellt.spione.corridors.length;
+		eingestellt.lauf();
+		assert.deepEqual(eingestellt.u.rows, vorher, 'AC-20 FAIL: die Vorbelegung ueberschreibt eine eingestellte Zeile.');
+		assert.equal(eingestellt.spione.corridors.length, meldungen, 'AC-20 FAIL: zusaetzliche Meldung trotz Nutzerstand.');
+	});
+});
+
+// Issue #2347 S4 (AC-20, Race „Standardwerte-Trip vs. durchgeklickter Trip"): der
+// Standardwerte-Knopf im Trip-Anlegen darf erst freigeben, wenn die Vorbelegung
+// gelaufen ist. Der Editor meldet das ueber onVorbelegungFertig — GENAU EINMAL,
+// auf JEDEM Ausgang (sonst bleibt der Knopf dauerhaft gesperrt), und erst NACH
+// der Korridor-Meldung (sonst geht `corridors: []` raus).
+describe('AC-20 Race: Vorbelegung meldet „fertig" einmal, auf jedem Ausgang, nach den Korridoren', () => {
+	async function vorbelegung(metrics: unknown[] = BOEEN_UND_REGEN) {
+		const ed = await baueEditor(true, metrics);
+		const effekte = effekteVon(ed.ast, ed.quelle, ed.u, 'routePrefillDone');
+		assert.equal(effekte.length, 1, `Messaufbau: ${effekte.length} Effekte nennen routePrefillDone (erwartet 1).`);
+		return { ...ed, lauf: effekte[0] };
+	}
+
+	test('mit vorbelegten Zeilen: erst Korridore, dann „fertig" — und nur einmal', async () => {
+		const { spione, lauf } = await vorbelegung();
+		lauf();
+		assert.deepEqual(spione.folge, ['corridors', 'fertig'], 'Race FAIL: „fertig" nicht nach der Korridor-Meldung.');
+		lauf();
+		assert.equal(spione.fertig, 1, 'Race FAIL: „fertig" mehrfach gemeldet.');
+	});
+
+	test('Vorbelegung ergibt keine Zeile (Metrik abgewaehlt) ⇒ trotzdem „fertig", keine Korridore', async () => {
+		const { u, spione, lauf } = await vorbelegung();
+		(u.trip as Knoten).display_config = { metrics: [{ metric_id: 'gust', enabled: false }] };
+		lauf();
+		assert.equal(spione.corridors.length, 0, 'Messaufbau: Vorbelegung haette leer sein muessen.');
+		assert.equal(spione.fertig, 1, 'Race FAIL (Deadlock): leere Vorbelegung meldet nie „fertig".');
+	});
+
+	test('Bestand bzw. gehaltener Stand (Remount) ⇒ trotzdem „fertig", keine Korridore', async () => {
+		const bestand = await vorbelegung();
+		(bestand.u.trip as Knoten).corridors = [{ metric: 'snow_line', range: [1800, null], notify: false, mark: false }];
+		bestand.lauf();
+		assert.equal(bestand.spione.fertig, 1, 'Race FAIL (Deadlock): Bestand meldet nie „fertig".');
+		const remount = await vorbelegung();
+		remount.u.corridors = [{ metric: 'wind_gust', range: [null, 90], notify: true, mark: false }];
+		remount.lauf();
+		assert.equal(remount.spione.fertig, 1, 'Race FAIL (Deadlock): Remount meldet nie „fertig".');
+		assert.equal(remount.spione.corridors.length, 0);
+	});
+
+	test('Zusatz-Katalog gescheitert (Rueckfall routeExtraDefs = []) ⇒ Vorbelegung laeuft, „fertig" kommt', async () => {
+		// baueEditor setzt routeExtraDefs = [] — genau der Wert, den der catch-Zweig
+		// des Lade-Effekts nach einem Fehlschlag setzt.
+		const { u, spione, lauf } = await vorbelegung();
+		assert.deepEqual(u.routeExtraDefs, []);
+		lauf();
+		assert.equal(spione.fertig, 1, 'Race FAIL (Deadlock): Katalog-Fehler blockiert „fertig".');
+		assert.equal(spione.corridors.length, 1);
+	});
+
+	test('vor Katalog bzw. vor der Metrik-Auswahl: KEIN „fertig"', async () => {
+		const ohneKatalog = await vorbelegung();
+		ohneKatalog.u.routeExtraDefs = null;
+		ohneKatalog.lauf();
+		assert.equal(ohneKatalog.spione.fertig, 0, 'Race FAIL: „fertig" vor dem Zusatz-Katalog.');
+		const ohneAuswahl = await vorbelegung();
+		(ohneAuswahl.u.trip as Knoten).display_config = { metrics: [] };
+		ohneAuswahl.lauf();
+		assert.equal(ohneAuswahl.spione.fertig, 0, 'Race FAIL: „fertig" vor der Metrik-Auswahl.');
 	});
 });

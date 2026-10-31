@@ -120,6 +120,11 @@
 	// Metrik-Katalog geladen UND Standardauswahl vom Wetter-Metriken-Reiter
 	// gemeldet (gesetzt in handleWeatherMetricsChange).
 	let catalogLoaded = $state(false);
+	// #2347 S4 (AC-20, Race): die Wertebereiche-Vorbelegung des CorridorEditors
+	// wartet zusaetzlich auf dessen eigenen Katalog-Abruf. Erst wenn sie gelaufen
+	// ist (gesetzt in handleVorbelegungFertig), traegt „Mit Standardwerten
+	// speichern" dieselben Korridore wie der durchgeklickte Trip.
+	let wertebereicheVorbelegt = $state(false);
 	onMount(() => {
 		api.get<MetricCatalog>('/api/metrics').then((c) => { metricsCatalog = c; }).catch(() => {});
 	});
@@ -179,7 +184,9 @@
 	// #2521 S3: eigenes Gate des Standardwerte-Knopfs (Bestandsknopf bleibt an `ready`).
 	const standardwerteFrei = $derived(canFinishMitStandardwerten({
 		pflichtErfuellt: name.trim().length > 0 && !!startDate && etDone,
-		defaultsBereit: catalogLoaded,
+		// Ohne aktive Metrik gibt es nichts vorzubelegen (CorridorEditor bricht dann
+		// vor der Vorbelegung ab) — sonst bliebe der Knopf dauerhaft gesperrt.
+		defaultsBereit: catalogLoaded && (wertebereicheVorbelegt || weatherMetrics.length === 0),
 		bestandFrei: ready,
 	}));
 	const gpxCount = $derived(stages.filter(s => s.gpx !== null).length);
@@ -425,6 +432,9 @@
 	// Muster handleChannelsChange: reine Uebernahme, kein Inhaltsgleichheits-
 	// Guard noetig (corridors fliesst nicht in stubTrip zurueck).
 	function handleCorridorsChange(c: Corridor[]) { corridors = [...c]; }
+	// #2347 S4 (AC-20, Race): Vorbelegung gelaufen (mit oder ohne Zeilen) — erst
+	// jetzt gibt der Standardwerte-Knopf frei (defaultsBereit).
+	function handleVorbelegungFertig() { wertebereicheVorbelegt = true; }
 
 	// ── Alarm-Rueckrufe aus AlarmeTab (Issue #2277 S1) ────────────────────────
 	// Delta-Logik liegt in tripNewLogic.ts (gleicher Code wie im Payload-Test).
@@ -544,11 +554,11 @@
 			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0 0; line-height: 1.1; color: {name.trim() ? 'var(--g-ink)' : 'var(--g-ink-4)'};">
 				{name.trim() || 'Noch kein Name'}
 			</h1>
-			<!-- Fortschrittsbalken (TN_Progress) -->
-			<div style="display: flex; align-items: center; gap: 10px; margin-top: 7px;">
+			<!-- Fortschrittsbalken (TN_Progress); Kennungen wie compare-editor-progress (#2347 S4, AN-2) -->
+			<div data-testid="trip-new-progress" style="display: flex; align-items: center; gap: 10px; margin-top: 7px;">
 				<div style="display: flex; gap: 3px;">
 					{#each PROGRESS_STEPS as step}
-						<div style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
+						<div data-testid="trip-new-progress-segment" style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
 					{/each}
 				</div>
 				<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.04em;">
@@ -917,6 +927,10 @@
 			<WetterMetrikenVersandPanel context="route" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
 			<div style="padding: 0 40px 60px; max-width: 720px;">
 				<MailInhaltCard bind:reportConfig />
+				<!-- #2347 S4 (AC-20): Weiter-Fuß wie compare-editor-continue-wertebereiche im Vergleich. -->
+				<div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--g-rule); display: flex; justify-content: flex-end;">
+					<Btn data-testid="trip-new-continue-wertebereiche" variant="accent" size="md" onclick={makeEtappenContinueHandler('wertebereiche')}>Wertebereiche festlegen →</Btn>
+				</div>
 			</div>
 		</div>
 		{/if}
@@ -926,7 +940,11 @@
 		     XOR Mobile), Sichtbarkeit ueber style:display. -->
 		{#if !isMobileViewport}
 		<div style:display={activeTab === 'wertebereiche' ? '' : 'none'}>
-			<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} onCorridorsChange={handleCorridorsChange} />
+			<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} {corridors} onCorridorsChange={handleCorridorsChange} onVorbelegungFertig={handleVorbelegungFertig} />
+			<!-- #2347 S4 (AC-20): Weiter-Fuß wie compare-editor-continue-alarme im Vergleich. -->
+			<div style="padding: 0 40px 60px; display: flex; justify-content: flex-end;">
+				<Btn data-testid="trip-new-continue-alarme" variant="accent" size="md" onclick={makeEtappenContinueHandler('alarme')}>Alarme einrichten →</Btn>
+			</div>
 		</div>
 		{/if}
 
@@ -959,6 +977,8 @@
 		<EditorStickyFooter context="route" navClearance={false} testid="tn-desktop-footer">
 			<div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
 				{#if !ready}
+					<!-- #2347 S4 (AN-5): Hinweis am gesperrten Abschluss, wie „Alarme einrichten zum Aktivieren" im Vergleich -->
+					<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">Alarme einrichten zum Speichern</span>
 					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="trip-new-standardwerte-btn" />
 				{/if}
 				<button type="button" onclick={onSave} disabled={!ready || saving}
@@ -1027,14 +1047,6 @@
 						<div class="mono" style="font-size: 11px; color: var(--g-accent-deep); line-height: 1.6;">
 							GPX-Dateien lädst du im nächsten Schritt hoch — eine Datei pro Etappe.
 						</div>
-					</div>
-
-					<!-- Floating CTA -->
-					<div data-testid="tn-mobile-route-cta" style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10;">
-						<MBtn block variant={name.trim() && startDate ? 'primary' : 'quiet'} size="xl"
-							onclick={makeMobileRouteContinueHandler()}>
-							{name.trim() && startDate ? 'Etappen anlegen →' : (!name.trim() ? 'Trip-Name eingeben' : 'Startdatum wählen')}
-						</MBtn>
 					</div>
 				</div>
 
@@ -1122,14 +1134,6 @@
 							<span class="mono" style="font-size: 11px; color: var(--g-good);">✓ Alle GPX geladen — Wegpunkte werden berechnet.</span>
 						</div>
 					{/if}
-
-					<!-- Floating CTAs bei etDone -->
-					{#if etDone}
-						<div style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
-							<MBtn block variant="primary" size="xl" onclick={makeEtappenContinueHandler('wegpunkte')}>Wegpunkte prüfen →</MBtn>
-							<MBtn block variant="ghost" size="lg" onclick={makeEtappenContinueHandler('wetter-metriken')}>Direkt zu Wetter</MBtn>
-						</div>
-					{/if}
 				</div>
 
 				<!-- Stage-Name-Sheet (Bottom-Sheet)
@@ -1169,11 +1173,6 @@
 						</div>
 					</div>
 					<EditStagesPanelNew bind:stages={editorStages} showSave={false} bottomReservePx={mobileFooterHeightPx || undefined} />
-					<!-- Floating CTAs -->
-					<div style="position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
-						<MBtn block variant="primary" size="xl" onclick={makeMobileWegpunkteContinueHandler()}>Wegpunkte übernehmen →</MBtn>
-						<MBtn block variant="ghost" size="lg" onclick={makeMobileWegpunkteContinueHandler()}>Überspringen</MBtn>
-					</div>
 				</div>
 
 			{/if}
@@ -1196,7 +1195,7 @@
 			<!-- Issue #2277 S2a — Mobile CorridorEditor, XOR zum Desktop-Mount oben. -->
 			{#if isMobileViewport}
 			<div style:display={activeTab === 'wertebereiche' ? '' : 'none'}>
-				<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} onCorridorsChange={handleCorridorsChange} />
+				<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} {corridors} onCorridorsChange={handleCorridorsChange} onVorbelegungFertig={handleVorbelegungFertig} />
 			</div>
 			{/if}
 
@@ -1229,16 +1228,48 @@
 			{/if}
 		</div>
 
-			<!-- Speichern (geteilter Sticky-Footer; BottomNav ist auf Anlege-Seiten ausgeblendet) -->
+			<!-- Sticky-Footer (geteilter Baustein; BottomNav ist auf Anlege-Seiten ausgeblendet):
+			     Weiter-Aktion des Schritts, im letzten Schritt Alarme „Speichern" —
+			     gleich gebaut wie cm-mobile-cta im Vergleich (#2347 S4, AN-9). -->
 			<EditorStickyFooter context="route" navClearance={false} testid="tn-mobile-footer">
 				{#if !ready}
 					<div style="display: flex; justify-content: center; margin-bottom: 8px;">
 						<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="tn-mobile-standardwerte" />
 					</div>
 				{/if}
-				<MBtn block variant={ready ? 'primary' : 'quiet'} size="xl" disabled={!ready || saving} onclick={onSave} testid="tn-mobile-save">
-					{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Speichern'}
-				</MBtn>
+				{#if activeTab === 'alarme'}
+					<MBtn block variant={ready ? 'primary' : 'quiet'} size="xl" disabled={!ready || saving} onclick={onSave} testid="tn-mobile-save">
+						{saving ? 'Speichere…' : savedTripId ? 'Trip gespeichert' : 'Speichern'}
+					</MBtn>
+				{:else if activeTab === 'route'}
+					<div data-testid="tn-mobile-route-cta">
+						<!-- #2347 S4 (AC-20): gesperrt wie cm-mobile-cta im Vergleich — gleiche Bedingung wie der Handler. -->
+						<MBtn block variant={name.trim() && startDate ? 'primary' : 'quiet'} size="xl"
+							disabled={!(name.trim() && startDate)}
+							onclick={makeMobileRouteContinueHandler()}>
+							{name.trim() && startDate ? 'Etappen anlegen →' : (!name.trim() ? 'Trip-Name eingeben' : 'Startdatum wählen')}
+						</MBtn>
+					</div>
+				{:else if activeTab === 'etappen'}
+					{#if etDone}
+						<div style="display: flex; flex-direction: column; gap: 8px;">
+							<MBtn block variant="primary" size="xl" onclick={makeEtappenContinueHandler('wegpunkte')}>Wegpunkte prüfen →</MBtn>
+							<MBtn block variant="ghost" size="lg" onclick={makeEtappenContinueHandler('wetter-metriken')}>Direkt zu Wetter</MBtn>
+						</div>
+					{:else}
+						{@const restGpx = stages.length - gpxCount}
+						<MBtn block variant="quiet" size="xl" disabled>{stages.length === 0 ? 'Etappe hinzufügen' : `noch ${restGpx} GPX nötig`}</MBtn>
+					{/if}
+				{:else if activeTab === 'wegpunkte'}
+					<div style="display: flex; flex-direction: column; gap: 8px;">
+						<MBtn block variant="primary" size="xl" onclick={makeMobileWegpunkteContinueHandler()}>Wegpunkte übernehmen →</MBtn>
+						<MBtn block variant="ghost" size="lg" onclick={makeMobileWegpunkteContinueHandler()}>Überspringen</MBtn>
+					</div>
+				{:else if activeTab === 'wetter-metriken'}
+					<MBtn block variant="primary" size="xl" onclick={makeEtappenContinueHandler('wertebereiche')}>Wertebereiche festlegen →</MBtn>
+				{:else if activeTab === 'wertebereiche'}
+					<MBtn block variant="primary" size="xl" onclick={makeEtappenContinueHandler('alarme')}>Alarme einrichten →</MBtn>
+				{/if}
 			</EditorStickyFooter>
 		</div><!-- /.tn-mobile -->
 

@@ -15,6 +15,7 @@ import {
 } from '../shared/alarme-tab/alertChannelState.ts';
 import { tailUnlocked, tailDone, canFinish, progressCount as kernProgressCount, type TailIds } from '../shared/anlegeLockEngine.ts';
 import { buildAlarmeDeliveryPayload } from '../shared/alarme-tab/alarmeDeliveryPayload.ts';
+import { anlegeKette } from '../shared/subscriptionTabs.ts';
 import { baueReportConfigPayload, ladeReportZustand } from '../shared/versand-tab/reportConfigPayload.ts';
 import { ladeMailZustand } from '../shared/mailInhaltZustand.ts';
 
@@ -89,7 +90,12 @@ export function stageDate(startDate: string, offset: number): string | null {
 
 // #1743: Meilensteine ohne Versand — voll genau dann, wenn Speichern frei wird
 // (Alarme besucht). Die Fortschrittsbalken des Editors lesen DIESE Liste.
-export const PROGRESS_STEPS: readonly TabId[] = ['route', 'etappen', 'wetter-metriken', 'alarme'];
+// #2347 S4 (AN-2, AC-20): aus der EINEN Anlege-Kette abgeleitet wie beim
+// Vergleich — die Pflicht-Schritte (ohne den optionalen „Wegpunkte prüfen"),
+// also fünf Segmente inkl. Wertebereiche.
+export const PROGRESS_STEPS: readonly TabId[] = anlegeKette('trip')
+	.filter((t) => !t.optional)
+	.map((t) => t.id as TabId);
 
 export function progressCount(done: Set<TabId>): number {
 	return kernProgressCount(done, PROGRESS_STEPS);

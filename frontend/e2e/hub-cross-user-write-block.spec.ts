@@ -17,7 +17,15 @@
 // wird über Name und ETag des Eigentümer-GET belegt.
 
 import { test, expect, type APIRequestContext, type BrowserContext } from '@playwright/test';
-import { HUB_KINDS, hubApiPath, registriereBestaetigtenZweitnutzer, seedHub, type HubKind, type SeededHub } from './helpers';
+import {
+	ANLEGE_SEL,
+	HUB_KINDS,
+	hubApiPath,
+	registriereBestaetigtenZweitnutzer,
+	seedHub,
+	type HubKind,
+	type SeededHub
+} from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -74,5 +82,30 @@ for (const kind of HUB_KINDS) {
 		// nicht — ein Vergleich darauf wäre undefined === undefined).
 		expect(nachher.etag, 'Nachher-GET des Eigentümers liefert einen ETag').toBeTruthy();
 		expect(nachher.etag, 'ETag des Eigentümers unverändert').toBe(vorher.etag);
+	});
+}
+
+// XU-3 — #2347 S4 (feat_2347_s4_paritaets_e2e.md AC-13): Mandantentrennung beim
+// ANLEGEN. Nutzer A legt per POST (echte user_id aus der Sitzung) ein frisches
+// Objekt an; Nutzer B bekommt es weder per GET (404) noch in seiner Liste. Nutzt
+// den Zweitnutzer aus beforeAll — KEINE zusätzliche Registrierung (Bremse 5/h/IP) —
+// und das in beforeAll von A per POST angelegte Objekt (kein zweiter aktiver
+// Vergleich, Grenze 2 je Nutzer); aufgeräumt in afterAll.
+for (const kind of HUB_KINDS) {
+	test(`XU-3 (${kind}): von Nutzer A angelegtes Objekt ⇒ Nutzer B GET 404 und nicht in B's Liste`, async () => {
+		const neu = hubs.get(kind);
+		expect(neu, `Seed für ${kind} fehlt`).toBeTruthy();
+		const pfad = hubApiPath(kind, neu!.id);
+		const eigen = await ctxA.request.get(pfad);
+		expect(eigen.ok(), `Vorbedingung: Eigentümer liest ${pfad} (HTTP ${eigen.status()})`).toBeTruthy();
+
+		const fremd = await ctxB.request.get(pfad);
+		expect(fremd.status(), `GET von B auf ${pfad}`).toBe(404);
+
+		const sammel = ANLEGE_SEL[kind].postPfad;
+		const listeB = await ctxB.request.get(sammel);
+		expect(listeB.ok(), `GET ${sammel} (B) HTTP ${listeB.status()}`).toBeTruthy();
+		const ids = ((await listeB.json()) as Array<{ id: string }>).map((e) => e.id);
+		expect(ids, `Objekt von A steht in B's Liste ${sammel}`).not.toContain(neu!.id);
 	});
 }

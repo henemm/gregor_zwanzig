@@ -63,8 +63,11 @@ describe('AC-2: Trip-Reiterleiste reicht die Besuchs-Flags durch (etDone = false
 // AC-3 / #1743 AC-19: Speichern-Knopf (Desktop trip-new-save-btn, Mobil tn-mobile-save) haengt am
 // Alarme-Besuch — vor und nach dem Alarme-Besuch.
 function saveDisabled(over: TripNewStateOverride, mobile: boolean, testid: string): boolean {
+	// #2347 S4 (AN-9): tn-mobile-save steht erst im Schritt Alarme im Footer. Die
+	// Vorbelegung von activeTab ruft switchTab nicht auf ⇒ alVisited kommt allein
+	// aus `over`, die Zusicherung „haengt am Alarme-Besuch" bleibt unveraendert.
 	const html = renderTripNew({
-		isMobileViewport: mobile, activeTab: 'route',
+		isMobileViewport: mobile, activeTab: testid === 'tn-mobile-save' ? 'alarme' : 'route',
 		name: 'X', startDate: '2026-07-01', stageNames: ['E1'], ...over,
 	});
 	const m = html.match(new RegExp(`<button[^>]*data-testid="${testid}"[^>]*>`));

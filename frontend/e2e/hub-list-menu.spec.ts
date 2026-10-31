@@ -3,6 +3,10 @@
 //
 // Spec: docs/specs/modules/feat_2347_s2_paritaets_e2e.md § „hub-list-menu.spec.ts (LM)",
 // AC-4 (LM-1..LM-8) und AC-5 (LM-9, LM-10).
+// #2347 S4 (feat_2347_s4_paritaets_e2e.md AC-1..AC-3): LM-1b (nacktes /edit),
+// LM-10b (Archivieren im Hub-Blatt), LM-11 (aktives Blatt), LM-12 (Entwurf),
+// LM-13 (Desktop-Zeilenklick) — Ersatz für compare-edit-redirect, trip-edit,
+// compare-detail-edit-entry und Teile von compare-flow-navigation.
 //
 // Ersetzt (Zuordnung Zeilen 24-30, 35, 39, 53-55):
 //   die entfernte Compare-Listenmenü-Altdatei (AC-1..AC-7; Titel „5 Aktionen" war
@@ -308,6 +312,75 @@ test.describe('Listen-Menü (Desktop 1280)', () => {
 			}
 		});
 	}
+
+	// #2347 S4: Alt compare-edit-redirect AC-1 + trip-edit AC-1 (Zuordnung „Gelöscht:
+	// compare-edit-redirect"). Nur das nackte /edit: `?tab=` reicht nur der Trip durch
+	// (Befund 3), deshalb wird es bewusst nicht geprüft.
+	for (const kind of HUB_KINDS) {
+		test(`LM-1b (${kind}): nacktes /edit führt in den Hub — /edit weg, Reiterleiste da, kein Anlege-Editor`, async ({
+			page
+		}) => {
+			const hub = await seed(page.request, kind, 'aktiv');
+			try {
+				await page.goto(`${HUB_SEL[kind].liste.url}/${hub.id}/edit`);
+				await expect(page).toHaveURL(HUB_SEL[kind].hubUrl(hub.id), { timeout: 15_000 });
+				expect(new URL(page.url()).pathname, 'LM-1b: /edit steht noch in der Adresse').not.toMatch(/\/edit$/);
+				await expect(page.getByTestId(HUB_SEL[kind].reiterListe), 'LM-1b: Reiterleiste fehlt').toBeVisible({
+					timeout: 15_000
+				});
+				await expect(page.getByTestId('trip-new-editor'), 'LM-1b: Anlege-Editor gerendert').toHaveCount(0);
+				await expect(page.getByTestId('compare-editor'), 'LM-1b: Anlege-Editor gerendert').toHaveCount(0);
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+	}
+
+	// #2347 S4: Alt compare-detail-edit-entry AC-4 (Entwurf ohne „Bearbeiten").
+	for (const kind of HUB_KINDS) {
+		test(`LM-12 (${kind}): Entwurf — Hub-Kebab ohne „Bearbeiten"`, async ({ page }) => {
+			const hub = await seed(page.request, kind, 'entwurf');
+			try {
+				await openHub(page, kind, hub.id);
+				// Kind-Kontrast „LM-12 Entwurf" (Spec): der Knopf „Setup abschließen" existiert
+				// nur im Vergleichs-Hub (routes/compare/[id]/+page.svelte:388); der Trip-Hub hat
+				// keinen Draft-CTA. Die Kebab-Aussage unten gilt für beide Arten.
+				if (kind === 'vergleich') {
+					await expect(page.getByRole('button', { name: 'Setup abschließen' })).toBeVisible({ timeout: 10_000 });
+					await expect(page.locator('[data-testid="compare-detail-edit-button"]')).toHaveCount(0);
+				}
+				const mehr = page.locator('[data-testid="subscription-kebab"]:visible').first();
+				await expect(mehr).toBeVisible({ timeout: 10_000 });
+				await mehr.click();
+				const flaeche = page.getByRole('menu').or(page.locator('[data-snap]:visible'));
+				await expect(flaeche.first(), 'LM-12: Hub-Kebab öffnet nichts').toBeVisible({ timeout: 5_000 });
+				await expect(flaeche.first().getByText('Bearbeiten', { exact: true }), 'LM-12: „Bearbeiten" im Entwurfs-Kebab').toHaveCount(0);
+				await page.keyboard.press('Escape');
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+	}
+
+	// #2347 S4: Alt compare-flow-navigation AC-25 (Desktop-Klick auf Zeile/Kachel öffnet Detail).
+	for (const kind of HUB_KINDS) {
+		test(`LM-13 (${kind}): Desktop-Klick auf die Zeile öffnet den Hub dieses Eintrags`, async ({ page }) => {
+			const hub = await seed(page.request, kind, 'aktiv');
+			try {
+				const name = String((await serverStand(page.request, kind, hub.id)).name);
+				await oeffneListe(page, kind);
+				const z = zeile(page, kind, hub.id);
+				await expect(z).toBeVisible({ timeout: 15_000 });
+				await z.getByText(name, { exact: true }).first().click();
+				await expect(page, 'LM-13: Zeilen-Klick öffnet den Hub nicht').toHaveURL(HUB_SEL[kind].hubUrl(hub.id), {
+					timeout: 10_000
+				});
+				await expect(page.getByTestId(HUB_SEL[kind].reiterListe)).toBeVisible({ timeout: 15_000 });
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+	}
 });
 
 test.describe('Mobile Aktionen (390)', () => {
@@ -366,6 +439,73 @@ test.describe('Mobile Aktionen (390)', () => {
 				}
 
 				// Nur öffnen/lesen/schließen — keine Aktion auslösen.
+				await page.locator('button[aria-label="Schliessen"]:visible').click();
+				await expect(blatt).toHaveCount(0);
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+	}
+
+	// #2347 S4: Alt compare-flow-navigation KL-7 — LM-10 öffnet nur, hier wird archiviert.
+	for (const kind of HUB_KINDS) {
+		test(`LM-10b (${kind}): „Archivieren" im Hub-Blatt ⇒ PATCH …/state, Eintrag fehlt in der aktiven Liste, steht unter /archiv`, async ({
+			page
+		}) => {
+			const hub = await seed(page.request, kind, 'pausiert');
+			try {
+				const name = String((await serverStand(page.request, kind, hub.id)).name);
+				await openHub(page, kind, hub.id);
+				const mehr = page.locator('[data-testid="subscription-kebab"]:visible');
+				await expect(mehr).toBeVisible({ timeout: 10_000 });
+				await mehr.click();
+				const blatt = page.locator('[data-snap="half"]:visible');
+				await expect(blatt).toBeVisible({ timeout: 5_000 });
+
+				const pfad = `${hubApiPath(kind, hub.id)}/state`;
+				const schreibt = page.waitForResponse(
+					(r) => r.request().method() === 'PATCH' && new URL(r.url()).pathname === pfad,
+					{ timeout: 15_000 }
+				);
+				await blatt.locator('[data-testid^="subscription-action-"]', { hasText: 'Archivieren' }).click();
+				// Kind-Unterschied der Bedienung: der Trip-Hub fragt vor dem Archivieren nach
+				// (ConfirmDialog trip-detail-archive-confirm-dialog, routes/trips/[id]/+page.svelte),
+				// der Vergleichs-Hub archiviert sofort. Die Zusicherung (PATCH, Liste, Archiv) ist gleich.
+				if (kind === 'route') {
+					await page.getByTestId('trip-detail-archive-confirm-dialog').getByRole('button', { name: 'Archivieren' }).click();
+				}
+				const antwort = await schreibt;
+				expect(antwort.ok(), `LM-10b: PATCH ${pfad} HTTP ${antwort.status()}`).toBeTruthy();
+				expect(antwort.request().postDataJSON()).toEqual({ archived: true });
+
+				await page.setViewportSize(DESKTOP);
+				await oeffneListe(page, kind);
+				await expect(zeile(page, kind, hub.id), 'LM-10b: archivierter Eintrag steht noch in der Liste').toHaveCount(0);
+				await page.goto('/archiv');
+				await expect(page.getByText(name, { exact: true }).first(), 'LM-10b: Eintrag fehlt unter /archiv').toBeVisible({
+					timeout: 15_000
+				});
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+	}
+
+	// #2347 S4: Alt compare-detail-edit-entry AC-3 — LM-10 prüft nur den pausierten Zustand.
+	for (const kind of HUB_KINDS) {
+		test(`LM-11 (${kind}): mobiles Hub-Blatt eines aktiven Eintrags zeigt „Pausieren", kein „Bearbeiten"`, async ({
+			page
+		}) => {
+			const hub = await seed(page.request, kind, 'aktiv');
+			try {
+				await openHub(page, kind, hub.id);
+				const mehr = page.locator('[data-testid="subscription-kebab"]:visible');
+				await expect(mehr).toBeVisible({ timeout: 10_000 });
+				await mehr.click();
+				const blatt = page.locator('[data-snap="half"]:visible');
+				await expect(blatt).toBeVisible({ timeout: 5_000 });
+				await expect(blatt.locator('[data-testid^="subscription-action-"]', { hasText: 'Pausieren' })).toBeVisible();
+				await expect(blatt.getByText('Bearbeiten', { exact: true }), 'LM-11: „Bearbeiten" im Blatt').toHaveCount(0);
 				await page.locator('button[aria-label="Schliessen"]:visible').click();
 				await expect(blatt).toHaveCount(0);
 			} finally {

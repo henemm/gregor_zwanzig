@@ -255,14 +255,17 @@ const EINGEFROREN: readonly string[] = [
 	'corridor-editor/CorridorEditor.svelte:146',
 	'corridor-editor/CorridorEditor.svelte:189',
 	'corridor-editor/CorridorEditor.svelte:221',
-	'corridor-editor/CorridorEditor.svelte:304',
-	'corridor-editor/CorridorEditor.svelte:345',
-	'corridor-editor/CorridorEditor.svelte:379',
-	'corridor-editor/CorridorEditor.svelte:392',
-	'corridor-editor/CorridorEditor.svelte:395',
-	'corridor-editor/CorridorEditor.svelte:401',
-	'corridor-editor/CorridorEditor.svelte:422',
-	'corridor-editor/CorridorEditor.svelte:551',
+	// #2347 S4 (AC-20): die acht folgenden um 26 Zeilen verschoben (Trip-
+	// Vorbelegungs-Effekt eingefuegt, selbst KEINE neue context-Weiche);
+	// Bedingungstext unveraendert, unten in BLEIBT_MIT_INHALT gefesselt.
+	'corridor-editor/CorridorEditor.svelte:330',
+	'corridor-editor/CorridorEditor.svelte:371',
+	'corridor-editor/CorridorEditor.svelte:405',
+	'corridor-editor/CorridorEditor.svelte:418',
+	'corridor-editor/CorridorEditor.svelte:421',
+	'corridor-editor/CorridorEditor.svelte:427',
+	'corridor-editor/CorridorEditor.svelte:448',
+	'corridor-editor/CorridorEditor.svelte:577',
 	'corridor-editor/corridorEditorState.ts:297',
 	'versand-tab/VTSchedulePlan.svelte:55',
 	'versand-tab/VTSchedulePlan.svelte:83',
@@ -345,42 +348,42 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		folgt: 'loadRouteExtraMetricDefs()'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:304',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:330',
 		zeile: "if (context === 'vergleich') {",
 		folgt: 'vergleichSpeicherung?.aenderungMelden();'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:345',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:371',
 		zeile: "const next = context === 'vergleich'",
 		folgt: 'addCompareRow(rows, poolLeft'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:379',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:405',
 		zeile: "{#if context === 'vergleich' && compareDefsError}",
 		folgt: 'corridor-editor-vergleich-load-error'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:392',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:418',
 		zeile: "{:else if context === 'vergleich' && compareDefs === null}",
 		folgt: 'corridor-editor-vergleich-loading'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:395',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:421',
 		zeile: "{:else if context === 'route' && routeExtraDefs === null}",
 		folgt: 'corridor-editor-route-loading'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:401',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:427',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'class="ce-h2"'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:422',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:448',
 		zeile: "{#if context === 'route' && routeDefsFailed}",
 		folgt: 'corridor-editor-route-load-warning'
 	},
 	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:551',
+		eintrag: 'corridor-editor/CorridorEditor.svelte:577',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'corridor-editor-neutral-hint'
 	},
