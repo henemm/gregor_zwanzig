@@ -1,0 +1,28 @@
+
+----- betreff -----
+[GR20 Golden] Segment 3 · ↑ Böen: 45 km/h→72 km/h
+----- klartext -----
+Böen 45 km/h → 72 km/h seit dem Briefing
+
+↑ Änderung über deiner Alarm-Schwelle (20 km/h)
+
+Böen · km/h: 45 km/h ↑ 72 km/h
+Änderung 27 km/h: über Alarm-Schwelle 20 km/h ✗
+Wo & wann: Segment 3 · stärkste Stunde morgen 15:00
+14:00 | 40 → 66
+15:00 | 45 → 72
+betroffen 13:00–18:00
+
+Stand: heute 06:00 · verglichen mit gestern 17:03 Uhr
+
+Abweichungs-Alarm · Open-Meteo
+----- telegram -----
+<b>GR20 Golden · Segment 3 · ↑ Böen</b>
+Böen · Schwelle 20 km/h · 45 km/h ↑ 72 km/h · Änderung über
+Segment 3 · stärkste Stunde morgen 15:00
+14:00 | 40 → 66
+15:00 | 45 → 72
+betroffen 13:00–18:00
+Stand: heute 06:00 · verglichen mit gestern 17:03 Uhr
+----- sms -----
+S3 Seg 3: G45->72@Do15 13-18

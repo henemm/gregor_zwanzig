@@ -1,0 +1,20 @@
+
+----- betreff -----
+[Innsbruck, Lienz] Regen-Alarm: 2 Orte
+----- klartext -----
+Regen-Alarm: 2 Orte
+
+Radar-Nowcast
+
+Innsbruck · Regen in 25 Min: ab 06:25 · letzter Regen gegen 07:40 · Mäßiger Regen
+Lienz · Gewitter/Hagel läuft bereits: läuft bereits · Regen mindestens bis 08:10 · Gewitter
+
+Stand: heute 06:00 · Quelle: INCA, Radar (DWD)
+Cooldown: Du erhältst diese Warnung höchstens einmal in 90 Minuten. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.
+
+Regen-/Gewitter-Alarm · INCA
+----- telegram -----
+<b>Innsbruck, Lienz · km 0–12 · Regen in 25 Min</b>
+06:25 · letzter Regen gegen 07:40 · Mäßiger Regen · INCA
+----- sms -----
+Innsbruck: R2.5@6:25@7:40
