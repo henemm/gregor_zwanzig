@@ -58,6 +58,10 @@ register_official_alert_source(MeteoAlarmFeedSource("CH"))
 register_official_alert_source(MeteoAlarmFeedSource("NO"))
 register_official_alert_source(MeteoAlarmFeedSource("SE"))
 register_official_alert_source(MeteoAlarmFeedSource("FI"))
+# Issue #1442 S3: ES NACH FI, VOR DpcSource (gleicher Tie-Break "zuerst
+# registriert gewinnt", #1427 S2). Im FR-Grenzstreifen (Aufweitung 0,05 Grad)
+# steht VigilanceSource davor; der Quellen-Kollaps (#1086) bleibt unveraendert.
+register_official_alert_source(MeteoAlarmFeedSource("ES"))
 register_official_alert_source(DpcSource())
 # Issue #1441 (ADR-0089): Lawinen-Lagebericht als LETZTE Quelle -- eigene
 # Gefahrenart `avalanche_bulletin`, konkurriert mit keiner Bestandsquelle;
