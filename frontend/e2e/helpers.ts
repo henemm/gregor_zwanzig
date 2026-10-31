@@ -183,7 +183,7 @@ export async function login(page: Page) {
 	const { user, pass } = resolveE2EUser();
 	await page.fill('input[name="username"]', user);
 	await page.fill('input[name="password"]', pass);
-	await page.click('button[type="submit"]');
+	await page.click('form[action="?/login"] button[type="submit"]');
 	// Issue #2248: die Anmeldung haengt einen Marker an die Zieladresse
 	// (`/?passkey_angebot=1`); der Pfad bleibt `/`.
 	await page.waitForURL((url) => url.pathname === '/');

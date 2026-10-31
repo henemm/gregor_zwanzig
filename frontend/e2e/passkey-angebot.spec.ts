@@ -185,7 +185,7 @@ async function meldePasswortAn(page: Page, name: string): Promise<void> {
 	await page.goto('/login');
 	await page.fill('input[name="username"]', name);
 	await page.fill('input[name="password"]', PASSWORT);
-	await page.click('button[type="submit"]');
+	await page.click('form[action="?/login"] button[type="submit"]');
 	await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 15_000 });
 }
 

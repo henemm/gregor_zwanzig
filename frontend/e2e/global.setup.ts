@@ -40,7 +40,7 @@ setup('authenticate and seed test data', async ({ page, baseURL }) => {
 		await page.goto('/login');
 		await page.fill('input[name="username"]', user);
 		await page.fill('input[name="password"]', pass);
-		await page.click('button[type="submit"]');
+		await page.click('form[action="?/login"] button[type="submit"]');
 		// Issue #2248: die Anmeldung haengt seit dem Passkey-Angebot einen Marker
 		// an die Zieladresse (`/?passkey_angebot=1`). Der PFAD bleibt `/` — nur
 		// der exakte Adressvergleich traegt nicht mehr.

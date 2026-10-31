@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import type { ActionData } from './$types.js';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
+	import SprachUmschalter from '$lib/components/ui/SprachUmschalter.svelte';
 	import { abmeldungLiegtVor, raeumeGeraetespeicher, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 	import { isWebAuthnSupported, loginWithPasskey, loginWithDiscoverablePasskey } from '$lib/passkey';
 
@@ -128,6 +129,7 @@
 	     den Abstand an alle Geschwister AUSSER dem ersten in DOKUMENT-Reihenfolge;
 	     nach der Umsortierung per `desktop:order-*` saesse er am falschen Element. -->
 	<div class="flex w-full max-w-sm flex-col gap-6 p-6">
+		<div class="flex justify-end"><SprachUmschalter /></div>
 		<div class="space-y-2 text-center">
 			<Wordmark size="lg" href="/" />
 			<p class="text-muted-foreground text-sm">Anmelden um fortzufahren</p>

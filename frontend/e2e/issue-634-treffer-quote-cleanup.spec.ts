@@ -22,7 +22,7 @@ async function login(page) {
 	await page.goto(`${STAGING_URL}/login`);
 	await page.fill('input[name="username"]', VALIDATOR_USER);
 	await page.fill('input[name="password"]', VALIDATOR_PASS);
-	await page.click('button[type="submit"]');
+	await page.click('form[action="?/login"] button[type="submit"]');
 	await page.waitForURL((u) => !u.pathname.includes('/login'), { timeout: 15_000 });
 }
 

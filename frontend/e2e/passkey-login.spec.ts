@@ -81,7 +81,7 @@ test.describe('Passkey-Login-Anordnung (#2247)', () => {
 
 			const rect = await page.evaluate(() => {
 				const area = document.querySelector('[data-testid="login-passkey-area"]');
-				const form = document.querySelector('form');
+				const form = document.querySelector('form[action="?/login"]');
 				return {
 					areaTop: area ? area.getBoundingClientRect().top : null,
 					formTop: form ? form.getBoundingClientRect().top : null
@@ -106,7 +106,7 @@ test.describe('Passkey-Login-Anordnung (#2247)', () => {
 
 			const rect = await page.evaluate(() => {
 				const area = document.querySelector('[data-testid="login-passkey-area"]');
-				const form = document.querySelector('form');
+				const form = document.querySelector('form[action="?/login"]');
 				return {
 					areaTop: area ? area.getBoundingClientRect().top : null,
 					formBottom: form ? form.getBoundingClientRect().bottom : null
@@ -150,7 +150,7 @@ test.describe('Passkey-Login-Anordnung (#2247)', () => {
 
 			await page.fill('input[name="username"]', 'irrelevant');
 			await page.fill('input[name="password"]', 'irrelevant');
-			await expect(page.locator('button[type="submit"]')).toBeEnabled();
+			await expect(page.locator('form[action="?/login"] button[type="submit"]')).toBeEnabled();
 		});
 
 		test('AC-6: Passkey-Bereich ist in allen Zustaenden gleich hoch', async ({
@@ -201,7 +201,7 @@ test.describe('Passkey-Login-Anordnung (#2247)', () => {
 					return r.top >= 0 && r.bottom <= window.innerHeight && r.width > 0 && r.height > 0;
 				}
 				return {
-					form: imSichtbereich('form'),
+					form: imSichtbereich('form[action="?/login"]'),
 					google: imSichtbereich('a[href="/api/auth/google/init"]'),
 					magicLink: imSichtbereich('a[href="/magic-link"]')
 				};
@@ -453,7 +453,7 @@ test.describe('Passkey-Login-Anordnung (#2247)', () => {
 			).not.toMatch(/NotAllowedError|TypeError|undefined|invalid_credentials/);
 
 			// Passwort-Weg bleibt sofort bedienbar.
-			await expect(page.locator('button[type="submit"]')).toBeEnabled();
+			await expect(page.locator('form[action="?/login"] button[type="submit"]')).toBeEnabled();
 		});
 
 		test('AC-9b: Zeitueberschreitung zeigt eine verstaendliche deutsche Fehlermeldung', async ({
@@ -486,7 +486,7 @@ test.describe('Passkey-Login-Anordnung (#2247)', () => {
 				`Fehlermeldung ist technischer Rohtext ("${text}") statt Deutsch`
 			).not.toMatch(/NotAllowedError|TypeError|undefined|invalid_credentials/);
 
-			await expect(page.locator('button[type="submit"]')).toBeEnabled();
+			await expect(page.locator('form[action="?/login"] button[type="submit"]')).toBeEnabled();
 		});
 	});
 });

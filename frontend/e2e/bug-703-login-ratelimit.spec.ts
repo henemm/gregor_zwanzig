@@ -49,7 +49,7 @@ test.describe.serial('Bug #703: Login Rate-Limit Fehlermeldung', () => {
 		await page.goto('/login');
 		await page.fill('input[name="username"]', 'nonexistent_703_ac3');
 		await page.fill('input[name="password"]', 'wrongpassword_ac3');
-		await page.click('button[type="submit"]');
+		await page.click('form[action="?/login"] button[type="submit"]');
 
 		const errorBox = page.locator('.rounded-md.border-destructive, [style*="g-bad"]');
 		await expect(errorBox).toBeVisible({ timeout: 8_000 });
@@ -71,7 +71,7 @@ test.describe.serial('Bug #703: Login Rate-Limit Fehlermeldung', () => {
 		await page.goto('/login');
 		await page.fill('input[name="username"]', 'anyuser_703_ac2');
 		await page.fill('input[name="password"]', 'anypassword_703_ac2');
-		await page.click('button[type="submit"]');
+		await page.click('form[action="?/login"] button[type="submit"]');
 
 		const errorBox = page.locator('.rounded-md.border-destructive, [style*="g-bad"]');
 		await expect(errorBox).toBeVisible({ timeout: 8_000 });

@@ -35,7 +35,7 @@ test.describe('Issue #578: Sidebar 1:1 nach brand-kit.jsx', () => {
 		await page.goto(`${STAGING_URL}/login`);
 		await page.fill('input[name="username"]', VALIDATOR_USER);
 		await page.fill('input[name="password"]', VALIDATOR_PASS);
-		await page.click('button[type="submit"]');
+		await page.click('form[action="?/login"] button[type="submit"]');
 		await page.waitForURL((u) => !u.pathname.includes('/login'), { timeout: 15_000 });
 		await page.goto(STAGING_URL + '/');
 		await page.waitForLoadState('networkidle');
@@ -158,7 +158,7 @@ test.describe('Issue #578: Field-Molecule Token-Treue', () => {
 		// Login mit Falsch-Credentials triggert Error im Field
 		await page.fill('input[name="username"]', 'kein-user-578');
 		await page.fill('input[name="password"]', 'falsches-passwort');
-		await page.click('button[type="submit"]');
+		await page.click('form[action="?/login"] button[type="submit"]');
 
 		// Warte auf Error-Anzeige (egal welche Form)
 		const errorEl = page.locator('text=/falsch|fehlerhaft|ungültig|nicht/i').first();

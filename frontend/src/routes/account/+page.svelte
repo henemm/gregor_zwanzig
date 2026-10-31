@@ -19,6 +19,7 @@
 	import { profileSaveErrorMessage } from './profileSaveError';
 	import { lastRunDot } from './schedulerLastRun';
 	import PremiumSmsLinkCard from '$lib/components/account/PremiumSmsLinkCard.svelte';
+	import SpracheAuswahl from '$lib/components/account/SpracheAuswahl.svelte';
 	import {
 		shouldShowPremiumSmsLinkCard,
 		resolveGenerateClick,
@@ -653,6 +654,9 @@
 			</div>
 		</Card.Content>
 	</Card.Root>
+
+	<!-- Issue #2648 — Sprache: eigenes Feld, speichert nur { language }. -->
+	<SpracheAuswahl />
 
 	<Card.Root id="kanaele">
 		<Card.Header>

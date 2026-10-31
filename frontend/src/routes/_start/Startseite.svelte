@@ -3,6 +3,7 @@
 	// Katalog ($lib/i18n), Bausteine aus atoms/ui.
 	import { Card, Btn, Eyebrow, SectionH } from '$lib/components/atoms';
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
+	import SprachUmschalter from '$lib/components/ui/SprachUmschalter.svelte';
 	import { t } from '$lib/i18n';
 
 	const bilder = $derived([
@@ -18,7 +19,10 @@
 </svelte:head>
 
 <main class="start" data-testid="startseite">
-	<Wordmark size="md" />
+	<div class="kopf">
+		<Wordmark size="md" />
+		<SprachUmschalter />
+	</div>
 
 	<section class="hero">
 		<Eyebrow>{$t('start.hero.eyebrow')}</Eyebrow>
@@ -71,6 +75,12 @@
 		flex-direction: column;
 		gap: 24px;
 		overflow-x: hidden;
+	}
+	.kopf {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
 	}
 	h1 {
 		font-size: clamp(1.7rem, 6vw, 2.6rem);

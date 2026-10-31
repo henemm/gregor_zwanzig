@@ -44,7 +44,7 @@ export const load: PageServerLoad = async ({ url, request }) => {
 };
 
 export const actions = {
-	default: async ({ request }) => {
+	default: async ({ request, locals }) => {
 		const data = await request.formData();
 		const username = data.get('username')?.toString() ?? '';
 		const email = data.get('email')?.toString() ?? '';
@@ -60,7 +60,8 @@ export const actions = {
 		const resp = await fetch(`${API()}/api/auth/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
-			body: JSON.stringify({ username, password, email, ...(invite && { invite }) }),
+			// Issue #2648 — neue Konten uebernehmen die Sprache, die der Besucher sah.
+			body: JSON.stringify({ username, password, email, language: locals.lang, ...(invite && { invite }) }),
 		});
 
 		if (resp.ok) {

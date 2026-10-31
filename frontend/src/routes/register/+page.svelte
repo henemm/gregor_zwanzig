@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ActionData } from './$types.js';
+	import SprachUmschalter from '$lib/components/ui/SprachUmschalter.svelte';
 
 	import { TIER_LABELS } from '$lib/admin';
 	import type { UserTier } from '$lib/types';
@@ -22,6 +23,7 @@
 
 <div class="flex min-h-screen items-center justify-center bg-background">
 	<div class="w-full max-w-sm space-y-6 p-6">
+		<div class="flex justify-end"><SprachUmschalter /></div>
 		<div class="space-y-2 text-center">
 			<h1 class="text-2xl font-bold">Konto erstellen</h1>
 			<p class="text-muted-foreground text-sm">Benutzerdaten eingeben</p>
