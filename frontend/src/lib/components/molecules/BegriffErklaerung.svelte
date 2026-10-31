@@ -3,7 +3,7 @@
 	// Tippen/Klicken (oder Enter/Leertaste) oeffnet die Sprechblase, Esc oder
 	// Tippen daneben schliesst sie; Hover wird nicht vorausgesetzt.
 	// Spec: docs/specs/modules/begriff_erklaerung_infobox.md (Entscheidung 1, 9).
-	// Alle Texte kommen aus dem Katalog (t()), sichtbar ist nur das Zeichen ⓘ.
+	// Alle Texte kommen aus dem Katalog ($t()), sichtbar ist nur das Zeichen ⓘ.
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { t } from '$lib/i18n';
 	import { BEGRIFF_KEYS, type Begriff } from '$lib/components/shared/infoboxKeys';
@@ -17,8 +17,8 @@
 	let { begriff, suffix }: Props = $props();
 
 	const testid = $derived(suffix ? `begriff-erklaerung-${begriff}-${suffix}` : `begriff-erklaerung-${begriff}`);
-	const ariaLabel = $derived(t(BEGRIFF_KEYS[begriff].aria));
-	const erklaerung = $derived(t(BEGRIFF_KEYS[begriff].text));
+	const ariaLabel = $derived($t(BEGRIFF_KEYS[begriff].aria));
+	const erklaerung = $derived($t(BEGRIFF_KEYS[begriff].text));
 </script>
 
 <Popover.Root>

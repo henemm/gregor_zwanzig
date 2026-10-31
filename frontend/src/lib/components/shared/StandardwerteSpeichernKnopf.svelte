@@ -27,4 +27,4 @@
 	disabled={!aktiv}
 	{onclick}
 	style="padding: 6px 12px; min-height: 36px; border-radius: var(--g-r-2); border: 1px solid var(--g-ink); background: var(--g-card); color: var(--g-ink); font-size: 13px; font-weight: 500; cursor: {aktiv ? 'pointer' : 'not-allowed'}; opacity: {aktiv ? 1 : 0.4};"
->{t('standardwerte.knopf')}</button>
+>{$t('standardwerte.knopf')}</button>

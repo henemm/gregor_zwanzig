@@ -58,9 +58,9 @@
 	</span>
 	<p class="tks-sub">
 		{#if disabled}
-			{t('telegram_kurzstil.hinweis_inaktiv')}
+			{$t('telegram_kurzstil.hinweis_inaktiv')}
 		{:else}
-			{t('telegram_kurzstil.hinweis_aktiv')}
+			{$t('telegram_kurzstil.hinweis_aktiv')}
 		{/if}
 	</p>
 </div>

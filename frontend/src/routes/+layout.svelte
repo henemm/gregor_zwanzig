@@ -14,7 +14,7 @@
 	// BEWUSST ausserhalb des Chrome-Blocks: der Update-Hinweis gehoert auch auf
 	// die Anmeldeseite, die ohne Sidebar/BottomNav rendert.
 	import { initServiceWorkerUpdate } from '$lib/pwa/serviceWorkerUpdate';
-	import { setContext } from 'svelte';
+	import { setContext, untrack } from 'svelte';
 	import { AKTIVE_SPEICHERUNG, erzeugeSpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
 	// Issue #2131 — Offline-Ansicht mit Stand-Kennzeichnung.
 	import { afterNavigate } from '$app/navigation';
@@ -26,8 +26,18 @@
 	import { ANGEBOT_MARKER, passkeyAngebotFaellig } from '$lib/passkeyAngebot.js';
 	import { isWebAuthnSupported, registerPasskey } from '$lib/passkey';
 	import { api } from '$lib/api.js';
+	// Issue #2647 (i18n S2) — Oberflaechensprache aus data.lang.
+	import { locale } from '$lib/i18n';
 
 	let { children, data } = $props();
+
+	// Synchron VOR dem ersten Kind: wirkt beim Serverrendern (jede Anfrage setzt
+	// ihre eigene Sprache, das Rendern ist synchron). $effect.pre folgt
+	// Client-Navigationen.
+	locale.set(untrack(() => data.lang) ?? 'de');
+	$effect.pre(() => {
+		locale.set(data.lang ?? 'de');
+	});
 
 	let updateBereit = $state(false);
 	let updateFehlgeschlagen = $state(false);

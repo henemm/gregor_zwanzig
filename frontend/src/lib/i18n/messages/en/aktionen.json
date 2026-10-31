@@ -1,0 +1,5 @@
+{
+	"aktionen.zeit.vor_minuten.one": "{count} min ago",
+	"aktionen.zeit.vor_minuten.other": "{count} min ago",
+	"aktionen.zeit.gerade_eben": "just now"
+}
