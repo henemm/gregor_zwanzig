@@ -4,6 +4,7 @@
   „3-Tages-Ausblick" abgelöst durch ADR-0068** (2026-09-15)
 - **Datum:** 2026-08-02
 - **Bezug:** Issue #1453, Issue #1401 A2b (verursachend), Issue #862/#849 (bestätigt), Issue #1420/#1404 (Prüfer-Übergang, hier beendet), Spec `docs/specs/modules/fix_1453_namensformen.md`, Epic #1372
+- **Ergänzt durch:** ADR-0104 (Zweisprachigkeit: Klasse-2-Formen „voll" und „Alarm-Kurzform" werden sprachabhängig, Klasse 1 und `col_label` bleiben; Epic #2644)
 
 > **Teil-Ablösung (2026-09-15, ADR-0068, Issue #2136):** Die Zeile „3-Tages-Ausblick" in der
 > Klasse-2-Tabelle unten ordnete den Ausblick der Namensklasse „voll" (deutsch) zu. PO-Ansage
