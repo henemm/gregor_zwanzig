@@ -929,7 +929,10 @@ export interface AnlegenPflichtOpts {
 	viewport?: { width: number; height: number };
 	/** Nur der erste Schritt (Name; Trip zusätzlich Datum) — der Punkte-Schritt bleibt offen. */
 	nurKopf?: boolean;
-	/** Vergleich: zu wählende Orte (Standard: zwei frische Test-Orte, Präfix E2E-GZ-). */
+	/**
+	 * Vergleich: zu wählende Orte (Standard: zwei frische Test-Orte, Präfix E2E-GZ-).
+	 * Eigene Orte müssen vor dem Aufruf angelegt sein (die Bibliothek lädt beim goto).
+	 */
 	orte?: TestLocation[];
 }
 
@@ -943,6 +946,16 @@ export interface AnlegenPflichtOpts {
 export async function anlegenPflicht(page: Page, kind: HubKind, opts: AnlegenPflichtOpts): Promise<void> {
 	const mobil = opts.mobil ?? false;
 	if (opts.viewport) await page.setViewportSize(opts.viewport);
+	// Vergleich: die Orte-Bibliothek lädt der SSR-Loader von /compare/new
+	// (routes/compare/new/+page.server.ts) genau einmal beim Seitenaufruf — Test-Orte
+	// müssen daher VOR dem goto existieren, sonst stehen sie nie in der Bibliothek.
+	const orte =
+		kind === 'vergleich' && !opts.nurKopf
+			? (opts.orte ?? [
+					await createTestLocation(page.request, { lat: 47.1, lon: 11.2 }),
+					await createTestLocation(page.request, { lat: 47.2, lon: 11.3 })
+				])
+			: [];
 	await page.goto(ANLEGE_SEL[kind].url);
 	if (kind === 'route') {
 		const datum = opts.datum ?? new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
@@ -970,10 +983,6 @@ export async function anlegenPflicht(page: Page, kind: HubKind, opts: AnlegenPfl
 	await expect(page.getByTestId('compare-editor')).toBeVisible({ timeout: 15_000 });
 	await ANLEGE_SEL.vergleich.name(page, mobil).fill(opts.name);
 	if (opts.nurKopf) return;
-	const orte = opts.orte ?? [
-		await createTestLocation(page.request, { lat: 47.1, lon: 11.2 }),
-		await createTestLocation(page.request, { lat: 47.2, lon: 11.3 })
-	];
 	await ANLEGE_SEL.vergleich.reiter(page, 'orte', mobil).click();
 	if (mobil) {
 		await page.getByTestId('compare-step2-mobile-library-btn').click();

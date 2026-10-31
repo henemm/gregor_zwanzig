@@ -537,8 +537,11 @@ const KB11_BESTAND: Record<HubKind, Stand> = {
 			enabled: true,
 			morning_enabled: true,
 			evening_enabled: true,
-			morning_time: '05:30:00',
-			evening_time: '19:15:00'
+			// Volle Stunden: der Go-Schreibpfad kürzt Versandzeiten auf die Stunde
+			// (store.NormalizeReportConfigSlotTimes, #1280) — Minuten wären kein
+			// persistierbarer Wert. 05:00/19:00 ≠ Standard 07:00/18:00.
+			morning_time: '05:00:00',
+			evening_time: '19:00:00'
 		},
 		display_config: { metrics: [{ metric_id: 'snow_depth', enabled: true, bucket: 'primary', order: 0 }] },
 		avalanche_regions: ['AT-07-14'],

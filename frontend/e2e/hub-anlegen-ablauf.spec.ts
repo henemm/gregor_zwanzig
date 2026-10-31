@@ -341,6 +341,9 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 		}) => {
 			const name = einName('AN6');
 			const post = postMitschnitt(page, kind);
+			const vorherRes = await page.request.get(ANLEGE_SEL[kind].postPfad);
+			expect(vorherRes.ok(), `GET ${ANLEGE_SEL[kind].postPfad} HTTP ${vorherRes.status()}`).toBeTruthy();
+			const vorherIds = ((await vorherRes.json()) as Array<{ id: string }>).map((e) => e.id);
 			try {
 				await anlegenPflicht(page, kind, { name });
 
@@ -353,7 +356,7 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				// Compare-eigen (Kind-Kontraste AN-12/AN-6): Stundenverlauf steht nur im
 				// Vergleich (COMPARE_ONLY_SECTIONS, #2346 S3) — der Trip hat keinen Zweig.
 				if (kind === 'vergleich') {
-					const stunde = page.locator('.cm-desktop [data-testid="compare-layout-hourly-metric-temp_c"] input').first();
+					const stunde = page.locator('.cm-desktop [data-testid="compare-layout-hourly-metric-temperature"] input').first();
 					await expect(stunde).toBeVisible({ timeout: 10_000 });
 					await stunde.click();
 				}
@@ -372,7 +375,18 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				const antwort = await antwortKommt;
 				expect([200, 201], `AN-6: POST ${sel.postPfad} HTTP ${antwort.status()}`).toContain(antwort.status());
 				const rumpf = (antwort.request().postDataJSON() ?? {}) as Rumpf;
-				expect(rumpf.id, 'AN-6: der Anlege-POST darf keine id tragen').toBeUndefined();
+				const id = ((await antwort.json()) as { id: string }).id;
+				// Kind-Kontrast „AN-6 Anlege-id": der Trip vergibt die Kennung im Client
+				// (tripNewLogic.ts buildCreateTripPayload, newId()) und der Go-Anlegepfad
+				// verlangt sie im Rumpf (internal/handler/trip.go validateTrip: „id required").
+				// Zusicherung gleich: der POST legt ein NEUES Objekt an und überschreibt keins —
+				// Trip: frische, vorher unbekannte id = Antwort-id; Vergleich: Rumpf ohne id.
+				if (kind === 'route') {
+					expect(rumpf.id, 'AN-6: Anlege-POST des Trips ohne frische id').toBe(id);
+					expect(vorherIds, 'AN-6: Anlege-POST des Trips überschreibt ein bestehendes Objekt').not.toContain(id);
+				} else {
+					expect(rumpf.id, 'AN-6: der Anlege-POST darf keine id tragen').toBeUndefined();
+				}
 				expect(rumpf.name).toBe(name);
 				expect(AN_SEL[kind].metrikImRumpf(rumpf), 'AN-6: Metrik-Auswahl fehlt im POST').toBe(!warAn);
 				expect((rumpf.corridors as unknown[] | undefined)?.length ?? 0, 'AN-6: Wertebereiche fehlen im POST').toBeGreaterThan(0);
@@ -389,7 +403,6 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 					).toBeUndefined();
 				}
 
-				const id = ((await antwort.json()) as { id: string }).id;
 				await expect(page, 'AN-6: Seite landet nicht im Hub des NEUEN Objekts').toHaveURL(HUB_SEL[kind].hubUrl(id), {
 					timeout: 15_000
 				});
@@ -739,7 +752,9 @@ test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temp
 	// nur im LayoutTab, der die Reihenfolge-Karte trägt — kein eigener Kanal-Reiter, kein
 	// Anlege-Schritt „Layout"/„Versand", keine Layout-Vorschau; (2) der Anlege-POST und
 	// der Roundtrip tragen keine `channel_layouts`-Attrappe (AN-6, Zweig vergleich).
-	const reihenfolgeKarte = page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-reihenfolge"]');
+	// `has` wird relativ zur Hülle aufgelöst — das innere Locator-Stück darf daher
+	// kein `.cm-desktop`-Präfix tragen (der Vorfahr liegt AUSSERHALB der Hülle).
+	const reihenfolgeKarte = page.locator('[data-testid="weather-metrics-vergleich-reihenfolge"]');
 	const layoutHuelle = page.locator('.cm-desktop [data-testid="layout-tab"]').filter({ has: reihenfolgeKarte });
 	await expect(layoutHuelle, 'AN-12: der Kanal-Umschalter hängt nicht an der Reihenfolge-Karte').toHaveCount(1);
 	await expect(
