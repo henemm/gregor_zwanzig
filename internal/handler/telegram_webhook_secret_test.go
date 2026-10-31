@@ -9,14 +9,10 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
 func TestTelegramWebhookHandler_SecretMatrix(t *testing.T) {
-	os.Setenv("TELEGRAM_WEBHOOK_SECRET", "s3cr3t-lang-genug")
-	defer os.Unsetenv("TELEGRAM_WEBHOOK_SECRET")
-
 	cases := []struct {
 		name   string
 		set    bool
@@ -36,7 +32,7 @@ func TestTelegramWebhookHandler_SecretMatrix(t *testing.T) {
 			forwarded = true
 			w.WriteHeader(http.StatusOK)
 		}))
-		h := TelegramWebhookHandler(backend.URL)
+		h := TelegramWebhookHandler(backend.URL, "s3cr3t-lang-genug")
 		req := httptest.NewRequest("POST", "/api/webhooks/telegram/x", bytes.NewBufferString(`{"update_id":1}`))
 		if tc.set {
 			req.Header.Set("X-Telegram-Bot-Api-Secret-Token", tc.header)
