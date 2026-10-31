@@ -8,7 +8,7 @@ AC -> Testfunktion:
 - AC-1  (Test 1)  ``test_ac1_feedpfad_und_kein_neuer_egress_host``
 - AC-2  (Test 2)  ``test_ac2_belgische_orte_sind_zustaendig``, ``test_ac2_ausserhalb_schweigt_folgenlos``
 - AC-3  (Test 3)  ``test_ac3_arlon_und_benannte_orte_abgedeckt``, ``test_ac3_landgitter_luecken_hoechstens_0_1_prozent``
-- AC-4  (Test 4)  ``test_ac4_nuts2_only_trifft_nur_die_provinz``
+- AC-4  (Test 4)  ``test_ac4_nuts2_only_trifft_nur_die_provinz``, ``test_ac4_echte_kuesten_und_nebelwarnungen_verwirft_der_mapper``
 - AC-5  (Test 5)  ``test_ac5_emma_id_warnungen_bruessel_und_kueste``
 - AC-6  (Test 6)  ``test_ac6_brabant_tabelle_bruessel_leuven_wavre``
 - AC-7  (Test 7)  ``test_ac7_doppelkennung_genau_einmal``, ``test_ac7_ueberlappende_zonen_genau_einmal``
@@ -35,9 +35,10 @@ Kein Mock-Theater, kein Netz: der Modul-Cache wird mit der ECHTEN aufgezeichnete
 
 Fixture ``tests/fixtures/meteoalarm_feed/feed_belgium_sample.json``: sechs reale, unveraenderte Eintraege
 aus dem Vollabruf vom 2026-10-31 (beide Kennungsarten, ein ``Update``) plus SYNTHETISCHE Eintraege
-(Kennung ``.SYNTH-*``, aus einem echten Eintrag abgeleitet; Herkunft: README dort). Der echte Feed fuehrte am
-Aufzeichnungstag fast nur Nebel (verwirft der geteilte Mapper bewusst, #1430) -- die auswertbaren Warnungen
-stammen deshalb aus der echten Kuesten-Warnung (``coastalevent``) vom 26.10. und deren synthetischen Ableitungen.
+(Kennung ``.SYNTH-*``, aus einem echten Eintrag abgeleitet; Herkunft: README dort). Alle echten Eintraege sind
+Nebel (Typ 4) oder Kueste (Typ 7) -- beide verwirft der geteilte Mapper bewusst (#1430), keine echte Warnung
+ist also auswertbar (``test_ac4_echte_kuesten_und_nebelwarnungen_verwirft_der_mapper``). Die SYNTH-Ableitungen
+der echten Kuestenwarnung 1618968 tragen deshalb den unterstuetzten Typ ``1; wind``.
 
 Testorte folgen der Spec-Tabelle ("Der Developer verifiziert und justiert sie in der Umsetzung").
 """
@@ -257,6 +258,42 @@ def test_ac2_nachbarstaedte_liefern_keine_belgische_warnung(name, punkt):
     assert alerts == [] and unavailable is False, alerts
 
 
+@pytest.mark.parametrize("name,punkt,zone,nuts2,fremd_nuts2", [
+    ("aachen", AACHEN, "BE008", "BE33", "BE23"),   # Liege
+    ("lille", LILLE, "BE009", "BE25", "BE23"),     # West-Vlaanderen
+])
+def test_known_limitation_randueberlappung_nachbarstadt_erhaelt_warnung_der_grenzprovinz(
+        name, punkt, zone, nuts2, fremd_nuts2):
+    """KNOWN LIMITATION (Spec "Known Limitations", Adversary-Finding F001; bewusst in Kauf genommen,
+    Spec Implementation Details Punkt 7 "lieber eine Warnung zu viel"): durch die 0,1°-Aufweitung liegt
+    eine Stadt jenseits der Grenze im Randstreifen der angrenzenden Provinzzone. GIVEN eine (SYNTH)
+    Wind-Warnung fuer genau diese Provinz, WHEN fuer die Nachbarstadt abgerufen wird, THEN erhaelt sie
+    die belgische Warnung genau EINMAL und keinen Ausfallhinweis; eine Warnung einer anderen Provinz
+    bleibt dort stumm (Kontrolle). Aendert sich die Aufweitung, faellt dieser Test bewusst auf."""
+    _assert_pruefling_aus_diesem_baum()
+    from services.official_alerts import meteoalarm_feed
+
+    assert _quelle().covers(*punkt) is True, f"Kontrolle: {name} liegt im Randstreifen"
+    zonen = set(meteoalarm_feed._zone_mappers["BE"].regions_at(*punkt))
+    assert zonen == {zone}, f"Kontrolle: {name} muss genau in {zone} liegen: {zonen}"
+    assert _TABELLE[nuts2] == zone
+
+    def _feed_fuer(code: str) -> dict:
+        feed = _teil("SYNTH-BE23")
+        for info in _eintrag(feed, "SYNTH-BE23")["info"]:
+            info["area"][0]["geocode"] = [{"valueName": "NUTS2", "value": code}]
+        return feed
+
+    feed = _feed_fuer(nuts2)
+    alerts, unavailable = _abruf(punkt, feed)
+    assert len(alerts) == 1 and unavailable is False, (alerts, unavailable)
+    direkt, status = _direkt(punkt, feed)
+    assert len(direkt) == 1 and status["failed"] is False, (direkt, status)
+
+    kontrolle, unavailable = _abruf(punkt, _feed_fuer(fremd_nuts2))
+    assert kontrolle == [] and unavailable is False, kontrolle
+
+
 # ───────────────────────────── AC-3 (Test 3) ─────────────────────────────────
 
 def test_ac3_arlon_und_benannte_orte_abgedeckt():
@@ -325,29 +362,65 @@ def test_ac3_landgitter_luecken_hoechstens_0_1_prozent():
 # ───────────────────────────── AC-4 (Test 4) ─────────────────────────────────
 
 def test_ac4_nuts2_only_trifft_nur_die_provinz():
-    """AC-4: GIVEN die ECHTE Warnung 1618968 traegt nur ``NUTS2 = BE23`` (Oost-Vlaanderen), WHEN fuer
-    Gent abgerufen wird, THEN erscheint sie mit Stufe, Ereignisart und Zeitraum; fuer Namur und Eupen
+    """AC-4: GIVEN eine aus der ECHTEN BE23-Warnung 1618968 abgeleitete Warnung (``SYNTH-BE23``: nur
+    ``NUTS2 = BE23``, Oost-Vlaanderen, Typ Wind statt des verworfenen Kuesten-Typs), WHEN fuer Gent
+    abgerufen wird, THEN erscheint sie mit Stufe, Ereignisart und Zeitraum; fuer Namur, Eupen und Virton
     (andere Provinzen) erscheint sie nicht, ohne Ausfallhinweis."""
     _assert_pruefling_aus_diesem_baum()
-    suffix = "20261024195121.1618968"
+    suffix = "SYNTH-BE23"
     feed = _teil(suffix)
     eintrag = _eintrag(feed, suffix)
-    assert ".SYNTH-" not in eintrag["identifier"], "muss die echte Probe sein"
+    echt = _eintrag(_feed(), "20261024195121.1618968")
+    assert [g["valueName"] for i in echt["info"] for a in i["area"] for g in a["geocode"]] == ["NUTS2"] * 4
     assert [g["valueName"] for i in eintrag["info"] for a in i["area"] for g in a["geocode"]] == ["NUTS2"] * 4
+    assert {g["value"] for i in eintrag["info"] for a in i["area"] for g in a["geocode"]} == {"BE23"}
     von, bis = _zeitraum(feed, suffix)
-    assert von <= _NOW_ECHT < bis, "Kontrolle: Warnung ist zum Referenzzeitpunkt gueltig"
+    assert von <= _NOW < bis, "Kontrolle: Warnung ist zum Referenzzeitpunkt gueltig"
 
     assert _quelle().covers(*GENT) is True
-    alerts, unavailable = _abruf(GENT, feed, _NOW_ECHT)
+    alerts, unavailable = _abruf(GENT, feed)
     assert len(alerts) == 1, alerts
     assert alerts[0].level == 2 and alerts[0].source == "meteoalarm"
-    assert alerts[0].label and alerts[0].hazard and alerts[0].region_label
+    assert alerts[0].hazard == "wind_gust"
+    assert alerts[0].label and alerts[0].region_label
     assert (alerts[0].valid_from, alerts[0].valid_to) == (von, bis)
     assert unavailable is False
     for name, punkt in [("namur", NAMUR), ("eupen", EUPEN), ("virton", VIRTON)]:
         assert _quelle().covers(*punkt) is True
-        fremd, unavailable = _abruf(punkt, feed, _NOW_ECHT)
+        fremd, unavailable = _abruf(punkt, feed)
         assert fremd == [] and unavailable is False, (name, fremd)
+
+
+@pytest.mark.parametrize("suffix,punkt,now", [
+    ("20261024195121.1618968", GENT, _NOW_ECHT),      # echte Kuestenwarnung, NUTS2 BE23
+    ("20261024195121.1618969", (51.22, 4.40), _NOW_ECHT),  # echte Kuestenwarnung, NUTS2 BE21 (Antwerpen)
+    ("20261031060158.1619001", GENT, _NOW),           # echte Nebelwarnung, NUTS2 BE23
+    ("20261031060158.1618999", OSTENDE, _NOW),        # echte Nebelwarnung, EMMA_ID BE801
+    ("20261031060158.1619004", BRUESSEL, _NOW),       # echte Nebelwarnung, EMMA_ID BE004
+])
+def test_ac4_echte_kuesten_und_nebelwarnungen_verwirft_der_mapper(suffix, punkt, now):
+    """AC-4 (#1430): GIVEN eine ECHTE belgische Kuesten- (Typ 7) bzw. Nebelwarnung (Typ 4) aus der Probe,
+    WHEN fuer einen Ort in ihrer Zone abgerufen wird, THEN erscheint sie nicht (Typ bewusst nicht
+    unterstuetzt) und es entsteht kein Ausfallhinweis. Gegenprobe: derselbe Eintrag mit Typ Wind erscheint
+    dort -- die Zone wird also getroffen, verworfen wird allein wegen des Typs."""
+    _assert_pruefling_aus_diesem_baum()
+    feed = _teil(suffix)
+    eintrag = _eintrag(feed, suffix)
+    assert ".SYNTH-" not in eintrag["identifier"], "muss die echte Probe sein"
+    typen = {p["value"] for i in eintrag["info"] for p in i["parameter"] if p["valueName"] == "awareness_type"}
+    assert typen in ({"7; coastalevent"}, {"4; Fog"}), typen
+    von, bis = _zeitraum(feed, suffix)
+    assert von <= now < bis, "Kontrolle: Warnung ist zum Referenzzeitpunkt gueltig"
+    assert _quelle().covers(*punkt) is True
+    alerts, unavailable = _abruf(punkt, feed, now)
+    assert alerts == [] and unavailable is False, (suffix, alerts, unavailable)
+
+    for info in eintrag["info"]:
+        for p in info["parameter"]:
+            if p["valueName"] == "awareness_type":
+                p["value"] = "1; wind"
+    gegenprobe, unavailable = _abruf(punkt, feed, now)
+    assert len(gegenprobe) == 1 and gegenprobe[0].level == 2 and unavailable is False, (suffix, gegenprobe)
 
 
 # ───────────────────────────── AC-5 (Test 5) ─────────────────────────────────

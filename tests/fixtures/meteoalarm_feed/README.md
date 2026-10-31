@@ -530,10 +530,13 @@ CAP-konform ohne `info[]`. Zuordnung der Testorte zu den Zonen: `src/services/of
 - **Echte, unveränderte Einträge (6):** Küstenwarnung `…20261024195121.1618968` (nur `NUTS2` BE23, gelb,
   `coastalevent`) und `…1618969` (BE21); Nebel `…20261031060158.1619001` (BE23), `…1618999` (`EMMA_ID` BE801),
   `…1619004` (`EMMA_ID` BE004); ein `Update` `…20261031070505.1619011` (`EMMA_ID` BE004, grün).
-  Am Aufzeichnungstag war fast alles Nebel (verwirft der geteilte Mapper bewusst, #1430); auswertbar ist nur die
-  Küstenwarnung, deshalb die synthetischen Ableitungen.
-- **Synthetisch (Kennung `…SYNTH-*`, aus der echten Küstenwarnung 1618968 abgeleitet; nur Kennung, Stufe,
-  Zeitraum 30.10. 01:00 bis 01.11. 23:59 (+01:00) und Gebietskennung geändert, Texte unverändert):**
+  **Keine echte Warnung ist auswertbar:** alle echten Einträge sind Nebel (`4; Fog`) oder Küste
+  (`7; coastalevent`), beide verwirft der geteilte Mapper bewusst (#1430); belegt durch
+  `test_ac4_echte_kuesten_und_nebelwarnungen_verwirft_der_mapper`. Deshalb die synthetischen Ableitungen.
+- **Synthetisch (Kennung `…SYNTH-*`, aus der echten Küstenwarnung 1618968 abgeleitet; geändert sind nur
+  Kennung, Stufe, Zeitraum 30.10. 01:00 bis 01.11. 23:59 (+01:00), Gebietskennung und `awareness_type`
+  `7; coastalevent` → `1; wind` (unterstützter Typ); Texte unverändert, sie sprechen daher weiter von
+  „Sturmflut"):**
   `SYNTH-BE23`, `SYNTH-BE801`, `SYNTH-BE24`, `SYNTH-BE10`, `SYNTH-BE31` (Stufe gelb); `SYNTH-BE004-ORANGE`
   (`EMMA_ID` BE004, orange); `SYNTH-BE10-UND-BE004` (beide Kennungsarten in einer Fläche); `SYNTH-BE99`
   (unbekannter NUTS2-Code); `SYNTH-UPD-ALT-BE23` (gelb) + `SYNTH-UPD-NEU-BE23` (`Update`, orange, `references`

@@ -215,9 +215,11 @@ Umsetzung:
   im Test erzeugte Punktemenge (benannte Orte plus dichte Stichprobe innerhalb der Zonendatei-
   Hülle, Messwert und Referenz im README), nie eine eingecheckte GISCO-Geometrie. Arlon ist
   Pflichtort.
-- [ ] Test 4 (NUTS2-only trifft Provinz): BE23-Warnung der Probe ⇒ Gent erhält sie mit Stufe,
-  Ereignisart, Zeitraum; Ort in einer anderen Provinz (z. B. Namur oder Eupen) erhält sie NICHT, ohne
-  Ausfallhinweis.
+- [ ] Test 4 (NUTS2-only trifft Provinz): aus der echten BE23-Warnung abgeleitete, als SYNTH
+  gekennzeichnete Warnung mit unterstütztem Typ (Wind) ⇒ Gent erhält sie mit Stufe, Ereignisart,
+  Zeitraum; Ort in einer anderen Provinz (z. B. Namur oder Eupen) erhält sie NICHT, ohne
+  Ausfallhinweis. Zusätzlich: die echten Küsten- und Nebelwarnungen der Probe verwirft der Mapper
+  (#1430) ohne Ausfallhinweis; derselbe Eintrag mit Typ Wind erscheint (Gegenprobe).
 - [ ] Test 5 (EMMA_ID-Warnungen): BE004-Warnung der Probe ⇒ Brüssel, Leuven und Wavre erhalten sie;
   BE801-Warnung ⇒ Ostende, Knokke und Küste 5 km erhalten sie.
 - [ ] Test 6 (Brabant-Tabelle): synthetische Warnungen mit `NUTS2` BE24, BE10, BE31 ⇒ jeweils in
@@ -386,6 +388,11 @@ Umsetzung:
   (über BE801 hinaus) ist bewusst nicht abgedeckt.
 - **Grenzstreifen:** Wegen der Aufweitung kann `covers()` für BE und ein Nachbarland (NL, DE, FR, LU)
   wahr sein (Maastricht); folgenlos, weil jeder Feed nur Warnungen mit Zonen seines Landes führt.
+- **Randüberlappung bringt Nachbarstädten eine belgische Warnung:** Durch die 0,1°-Aufweitung liegen
+  Aachen in BE008 (Liège) und Lille in BE009 (West-Vlaanderen); eine Warnung dieser Grenzprovinz
+  erreicht sie dort genau einmal (kein Ausfallhinweis), Warnungen anderer Provinzen bleiben stumm. Bewusst
+  in Kauf genommen ("lieber eine Warnung zu viel", Punkt 7; Adversary-Finding F001), belegt durch
+  `test_known_limitation_randueberlappung_nachbarstadt_erhaelt_warnung_der_grenzprovinz`.
 - **Höhenband ignoriert** (wie übrige Länder): lieber eine Warnung zu viel als zu wenig.
 - **Lizenz von `geocodes.json` ungeklärt** (seit S2 offen): dokumentiertes Risiko, kein Blocker;
   BE kommt in den gebündelten Antrag. Die Klärung liegt beim PO, die Auslieferung wartet nicht.
@@ -393,6 +400,10 @@ Umsetzung:
   (`unknown_zone`), Datei bzw. Tabelle werden dann manuell nachgeführt.
 - **Dünne Live-Evidenz:** Der Live-Nachweis kann mangels aktiver Warnung als SKIP enden; die
   Fixture aus dem echten Feed trägt den Kern-Nachweis.
+- **Quelle liefert real erst bei unterstützten Warnarten:** Am 31.10. waren alle echten belgischen
+  Warnungen Nebel oder Küste; beide verwirft der geteilte Mapper bewusst (#1430). Die belgische Quelle
+  liefert daher erst Warnungen, wenn KMI/IRM Wind, Regen, Gewitter, Schnee, Hitze/Kälte o. ä. ausgibt.
+  Die Kern-Tests stützen sich deshalb auf als SYNTH gekennzeichnete Ableitungen mit Typ Wind.
 - **#2696 (bekannt):** Der Live-Test-Selektor ignoriert Nebel-Warnungen; eine reine Nebelwarnung im
   BE-Feed wird vom Live-Selektor deshalb nicht als "gewarntes Gebiet" gewählt. Das betrifft nur den
   Live-Nachweis, nicht die Quelle. Im Abschlusskommentar von #1442 zu nennen.
@@ -425,3 +436,6 @@ Umsetzung:
 
 - 2026-10-31: Initial spec created (Issue #1442 S3c, Analyse-Grundlage
   `docs/context/feat-1442-s3c-meteoalarm-be.md`, Abschnitt "Korrektur Phase 3").
+- 2026-10-31: Test 4 nachgezogen (Phase 6; AC-4-Wortlaut unverändert, verlangt keine echte Probe): alle echten Probe-Warnungen sind Nebel/Küste und
+  werden verworfen (#1430); SYNTH-Ableitungen auf Typ Wind, Nachweis des Verwerfens als eigener Test,
+  Known Limitation ergänzt.
