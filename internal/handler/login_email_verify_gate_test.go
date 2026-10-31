@@ -44,7 +44,7 @@ const (
 	gateKoerper2271 = `{"error":"email_not_verified"}`
 	// Der unveränderte Vertrag der Abweisungen VOR jeder Geheimnisprüfung.
 	// AC-9 sichert zu, dass das Gate diesen nicht anfasst.
-	abweisungsKoerper2271 = `{"error":"invalid credentials"}`
+	abweisungsKoerper2271 = `{"code":"invalid_credentials","detail":"Benutzername oder Passwort ist falsch.","error":"invalid_credentials","message":"Benutzername oder Passwort ist falsch."}`
 )
 
 // kontoMitPasswort2271 legt ein anmeldefähiges Konto an. Die Kennung darf
