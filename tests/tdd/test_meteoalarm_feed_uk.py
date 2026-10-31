@@ -32,7 +32,6 @@ Fixture ``tests/fixtures/meteoalarm_feed/feed_uk_sample.json``: der echte Vollab
 """
 from __future__ import annotations
 
-import copy
 import json
 import time
 from datetime import datetime, timezone

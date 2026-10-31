@@ -12,7 +12,6 @@ from datetime import datetime, timezone
 
 import pytest
 
-from services.official_alerts.meteoalarm import _TYPE_HAZARD_MAP, _leading_int
 from tests.tdd.test_meteoalarm_feed_nordics_live import _aktiv, _punkt_polygon  # noqa: F401
 
 pytestmark = pytest.mark.live
