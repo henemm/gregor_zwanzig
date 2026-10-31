@@ -1,0 +1,5 @@
+{
+	"aktionen.zeit.vor_minuten.one": "vor {count} Min",
+	"aktionen.zeit.vor_minuten.other": "vor {count} Min",
+	"aktionen.zeit.gerade_eben": "gerade eben"
+}

@@ -3,6 +3,7 @@ import { redirect, type Handle } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { verifySession } from '$lib/auth.js';
 import { assertSessionSecretConfigured } from '$lib/sessionSecretGate.js';
+import { resolveLang } from '$lib/i18n/resolveLang.js';
 
 assertSessionSecretConfigured(env.GZ_SESSION_SECRET, env.GZ_TEST_FIXTURE_DIR);
 
@@ -21,7 +22,17 @@ function mandantenKennung(userId: string): string {
 	return createHash('sha256').update(userId).digest('hex').slice(0, 16);
 }
 
-export const handle: Handle = async ({ event, resolve }) => {
+export const handle: Handle = async ({ event, resolve: weiter }) => {
+	// Issue #2647 (i18n S2) — Sprache je Anfrage: Cookie gz_lang > Accept-Language > de.
+	// Fuer Angemeldete ueberschreibt +layout.server.ts sie mit der Profilsprache;
+	// darum liest transformPageChunk `locals.lang` erst beim Ersetzen von %lang%.
+	event.locals.lang = resolveLang({
+		cookie: event.cookies.get('gz_lang'),
+		acceptLanguage: event.request.headers.get('accept-language')
+	});
+	const resolve = (ev: typeof event) =>
+		weiter(ev, { transformPageChunk: ({ html }) => html.replace('%lang%', ev.locals.lang) });
+
 	const publicPaths = ['/login', '/register', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/email-preview-dev', '/magic-link', '/magic-link/verify'];
 	if (publicPaths.includes(event.url.pathname)) {
 		const response = await resolve(event);

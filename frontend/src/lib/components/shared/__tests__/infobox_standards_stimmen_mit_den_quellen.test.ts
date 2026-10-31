@@ -18,7 +18,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import de from '../../../i18n/messages/de.json' with { type: 'json' };
+import { de } from '../../../i18n/messages/de/index.ts';
 import { neuerWiz } from './infoboxSsr.ts';
 import { ladeReportZustand } from '../versand-tab/reportConfigPayload.ts';
 import {

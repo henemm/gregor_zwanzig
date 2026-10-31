@@ -1,0 +1,22 @@
+{
+	"info.wetter-metriken.route": "Kannst du überspringen — Standard: die vom System vorgewählten Wetter-Metriken.",
+	"info.wetter-metriken.vergleich": "Kannst du überspringen — Standard: die vom System vorgewählten Metriken, dazu Stundenverlauf und 3-Tages-Ausblick (beide an).",
+	"info.wertebereiche.route": "Kannst du überspringen — Standard: keine Wertebereiche, im Briefing wird nichts hervorgehoben.",
+	"info.wertebereiche.vergleich": "Kannst du überspringen — Standard: die Wertebereiche werden aus dem Aktivitätsprofil vorbelegt.",
+	"info.alarme.route": "Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen aus. Telegram wirkt erst nach der Verknüpfung.",
+	"info.alarme.vergleich": "Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen aus. Telegram wirkt erst nach der Verknüpfung.",
+	"info.versand.route": "Kannst du überspringen — Standard: E-Mail, Morgen-Briefing um 07:00 Uhr und Abend-Briefing um 18:00 Uhr.",
+	"info.versand.vergleich": "Kannst du überspringen — Standard: E-Mail, Morgen-Briefing um 07:00 Uhr, kein Enddatum.",
+	"info.wegpunkte.route": "Kannst du überspringen — Standard: keine zusätzlichen Wegpunkte.",
+	"tip.wertebereiche": "Ein Wertebereich legt für eine Metrik fest, welche Werte als passend gelten. Werte im Bereich werden im Briefing hervorgehoben.",
+	"tip.kanal_schwelle": "Die Dringlichkeits-Schwelle legt je Kanal fest, ab welcher Stufe (gering, mittel, hoch) eine Meldung über diesen Kanal kommt.",
+	"tip.cape": "CAPE (Gewitterenergie) misst in J/kg, wie viel Energie in der Luft für Gewitter steckt. Der Schwellwert ist ein Richtwert und wird je Wettermodell und Gebiet umgerechnet.",
+	"tip.cooldown": "Der Cooldown ist der Mindestabstand in Minuten zwischen zwei Meldungen derselben Metrik.",
+	"tip.aria.wertebereiche": "Erklärung: Wertebereiche",
+	"tip.aria.kanal_schwelle": "Erklärung: Dringlichkeits-Schwelle",
+	"tip.aria.cape": "Erklärung: CAPE",
+	"tip.aria.cooldown": "Erklärung: Cooldown",
+	"telegram_kurzstil.hinweis_aktiv": "Telegram bekommt denselben kurzen Ein-Zeilen-Text wie SMS, ohne Knöpfe. Inhalt und Werte folgen der SMS-Auswahl im Layout-Reiter; die Telegram-Auswahl gilt nur für das ausführliche Telegram.",
+	"telegram_kurzstil.hinweis_inaktiv": "Erst aktiv, wenn Telegram als Kanal an ist.",
+	"standardwerte.knopf": "Mit Standardwerten speichern"
+}

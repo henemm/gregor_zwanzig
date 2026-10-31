@@ -37,13 +37,13 @@
 	const name = $derived((displayName && displayName.trim()) || userId || '');
 	const sub = $derived(userId && userId !== name ? userId : null);
 
-	const links = [
+	const links = $derived([
 		{ href: '/account#kanaele', label: 'Kanäle & Empfänger', icon: MessageSquare, testid: 'konto-sheet-kanaele' },
 		{ href: '/account', label: 'Einstellungen', icon: SettingsIcon, testid: 'konto-sheet-einstellungen' },
 		{ href: '/account#system-status', label: 'System-Status', icon: MonitorIcon, testid: 'konto-sheet-status' },
 		// Issue #2521 S3 — Hilfeseite.
-		{ href: '/hilfe', label: t('nav.hilfe'), icon: HelpIcon, testid: 'konto-sheet-hilfe' },
-	];
+		{ href: '/hilfe', label: $t('nav.hilfe'), icon: HelpIcon, testid: 'konto-sheet-hilfe' },
+	]);
 </script>
 
 <Sheet {open} {onClose} snap="auto">

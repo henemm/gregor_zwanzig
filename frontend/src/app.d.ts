@@ -4,8 +4,12 @@ declare global {
 		// interface Error {}
 		interface Locals {
 			userId: string;
+			/** Issue #2647 — Sprache dieser Anfrage (hooks.server.ts, Profil im Layout-Loader). */
+			lang: 'de' | 'en';
 		}
-		// interface PageData {}
+		interface PageData {
+			lang: 'de' | 'en';
+		}
 		// interface PageState {}
 		// interface Platform {}
 	}

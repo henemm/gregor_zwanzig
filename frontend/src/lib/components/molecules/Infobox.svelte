@@ -18,7 +18,7 @@
 </script>
 
 {#if key}
-	<aside class="infobox" data-testid="infobox-{reiter}-{context}">{t(key)}</aside>
+	<aside class="infobox" data-testid="infobox-{reiter}-{context}">{$t(key)}</aside>
 {/if}
 
 <style>
