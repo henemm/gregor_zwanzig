@@ -40,6 +40,19 @@ zugleich die Validator-Erwartung (gewollte Kopplung).
   `WARNUNG: X-GZ-Lang fehlt …` auf stderr und im YAML-Log unter `warnings:`.
   A2 setzt `HEADER_PFLICHT = True` in `_mail_lang.py`; dann ist ein fehlender
   Kopf ein Fehler (Exit 1).
+- **Folgearbeit P2–P6 (Pflicht vor der ersten englischen Mail des Pakets):**
+  Folgende Erwartungen sind noch **feste deutsche Texte** in den Validatoren,
+  weil sie nicht zum PV-Schlüsselsatz gehören. Das Renderer-Paket, das den
+  jeweiligen Text zuerst englisch ausgibt, legt ihn im Katalog an und stellt
+  den Validator an derselben Stelle auf `erwartet(key, lang)` um — sonst lehnt
+  der Validator die korrekte englische Mail ab:
+  - `Stand: heute` (Footer P-5) und die Handlungsempfehlungs-Wörter (E-4,
+    `_RECOMMENDATION_WORDS`) in `official_alert_mail_validator.py`;
+  - der Ortskopf `ORT` im Ortsvergleich (`email_spec_validator.py`,
+    `_find_location_hour_table`);
+  - die Compact-Blöcke `== Metriken-Ueberblick ==`, `Report`, `Generated:`
+    (`briefing_mail_validator.py`, `_check_compact_blocks`);
+  - die Pille `Sonne Xh` (`briefing_mail_validator.py`, `_check_metric_plausibility`).
 - **Datei-Modus `--eml PFAD`** (alle vier Validatoren): prüft eine gespeicherte
   Mail statt der IMAP-Mail, Exit-Codes unverändert (0/1/2). Damit laufen die
   Golden-Fixtures `tests/fixtures/mail/*_de.eml` ohne Netz
