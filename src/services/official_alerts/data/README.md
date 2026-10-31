@@ -107,5 +107,42 @@ JavaScript-Anwendung) keine Lizenzangabe zur Geocode-Datei auffindbar; mit dem P
   fehlen in `geocodes.json`. Taucht eine unbekannte Zone im Feed auf, meldet der Drift-Wächter
   (`log_zone_drift`, Service `meteoalarm_feed:FI`, `unknown_zone`); dann `geocodes.json` neu ziehen
   und den Auszug mit denselben Parametern neu bauen.
-- **Verwendung:** `meteoalarm_feed._zones_for_point_fi()` für `covers()` UND `fetch()` von
-  `MeteoAlarmFeedSource("FI")` (Muster DE: eine Zonenfunktion für beide).
+- **Verwendung:** `meteoalarm_feed._zones_for_point("FI", …)` für `covers()` UND `fetch()` von
+  `MeteoAlarmFeedSource("FI")` (Muster DE: eine Zonenfunktion für beide; seit #1442 S3 gemeinsamer
+  Zonenweg mit ES über `_zone_mappers`).
+
+## `meteoalarm_zones_ES.geojson.json` — MeteoAlarm-Warnzonen Spanien (`EMMA_ID`), Issue #1442 S3
+
+Gleiche Quelle und gleiche **ungeklärte Lizenz** wie der FI-Auszug (gebündelt im bestehenden Antrag in
+`docs/specs/data_sources.md`). Der Spanien-Feed (`feeds-spain`) trägt keine Polygone, nur `EMMA_ID`.
+
+- **Herkunft:** MeteoAlarm `geocodes.json`, Google-Drive-Datei-ID `16s24hYHfYQhKMNcP1hpgQmg13Yb8j0hV`,
+  abgerufen am 2026-10-30, 39 256 854 Byte, sha256
+  `0c8fe7b9af4f86c72f1c28bb9cea02f673fee6d45d02681713e6ad3ebd615dd0` (identisch zur FI-Quelle,
+  vor dem Bau geprüft). Eingecheckt ist nur der ES-Auszug (`type` = `EMMA_ID`, `code` mit Präfix `ES`):
+  **233 Zonen** — Festland und Balearen `ES070`–`ES119`, `ES133`–`ES251`, Kanaren `ES120`–`ES132`,
+  Küste/See `ES840`–`ES890` (inkl. Ceuta `ES871`, Melilla `ES872`). `properties.id` = `EMMA_ID`
+  (umgeschrieben aus `code`, der Mapper liest nur `id`), `properties.name` = Name laut `geocodes.json`
+  (unverändert, auch wo die Quelle Umlaute/Akzente verstümmelt). Ergebnis 206 949 Byte, sha256
+  `5fced41799f51e2b38dcb75c61fb26aadac788c0aca915aa5f8c14510ba843a3`.
+- **Bewusst verändert:** Landzonen **um 0,05° aufgeweitet** (`buffer(0.05)`) und mit
+  `simplify(0.005, preserve_topology=True)` vereinfacht; Seezonen `ES840`–`ES890` (`Costa - …`)
+  **unverändert**. Alle Koordinaten auf 4 Nachkommastellen gerundet (ca. 11 m, wie FI). Grund
+  (Messung gegen die Rohgeometrie): Sa Dragonera (39,587/2,319) liegt 0,037° und Port d'Andratx
+  (39,545/2,388) 0,001° außerhalb von `ES117` — beide fielen roh nur in die Seezone `ES874`.
+  Folgen der Aufweitung: Küstenort = Land- UND Seezone; aufgeweitete Landzonen überlappen sich an
+  ihren Grenzen (Lluc 39,822/2,887: roh `ES114`, aufgeweitet zusätzlich `ES115`/`ES116`); im
+  französischen Grenzstreifen trifft z. B. Hendaye `ES233` und Bourg-Madame `ES182`. Jede Warnung
+  zählt trotzdem nur einmal.
+- **Skript-Parameter** (einmaliger Bau, shapely nur dafür, keine Laufzeit-Abhängigkeit):
+  `uv run --no-project --with shapely python -I build_es_zones.py geocodes.json out.json 0.05 0.005 4`
+  (Argumente: Quelle, Ziel, Aufweitung in Grad, `simplify`-Toleranz, Nachkommastellen). Seezone =
+  Nummer 840–890; Ausgabe nach `id` sortiert. Wird die Datei größer als 400 KB, `simplify` erhöhen.
+- **Beleg 1:1-Abgleich:** Live-Abruf `feeds-spain` am 2026-10-30 (97 Warnungen, 1,3 MB) nennt
+  233 verschiedene `EMMA_ID`; Abgleich mit dem Auszug: 0 Feed-Zonen ohne Geometrie, 0 Zonen im
+  Auszug ohne Feed-Bezug. Jede Zone der Fixture `tests/fixtures/meteoalarm_feed/feed_spain_sample.json`
+  ist enthalten (Test AC-14).
+- **Drift:** unbekannte Feed-Zone ⇒ Drift-Wächter (`log_zone_drift`, Service `meteoalarm_feed:ES`,
+  `unknown_zone`); dann `geocodes.json` neu ziehen und mit denselben Parametern neu bauen.
+- **Verwendung:** `meteoalarm_feed._zones_for_point("ES", …)` für `covers()` UND `fetch()` von
+  `MeteoAlarmFeedSource("ES")` (gemeinsamer Zonenweg `_fetch_zones` mit FI).

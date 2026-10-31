@@ -63,11 +63,14 @@ _FEED_PATHS: dict[str, str] = {
     "SE": "/api/v1/warnings/feeds-sweden",
     # Issue #1442 S2: nur EMMA_ID, Zonengeometrie eingecheckt (data/README.md).
     "FI": "/api/v1/warnings/feeds-finland",
+    # Issue #1442 S3: wie FI -- nur EMMA_ID, Zonengeometrie eingecheckt.
+    "ES": "/api/v1/warnings/feeds-spain",
 }
 # Issue #1681: Geocode-Art je Land -- DE ordnet ueber die DWD-``WARNCELLID``
-# zu (1:1 im Feed, traegt die eingecheckte Kreisgeometrie), IT/AT/FI ueber EMMA.
+# zu (1:1 im Feed, traegt die eingecheckte Kreisgeometrie), IT/AT/FI/ES ueber EMMA.
 _GEOCODE_NAME: dict[str, str] = {
     "IT": "EMMA_ID", "AT": "EMMA_ID", "DE": "WARNCELLID", "FI": "EMMA_ID",
+    "ES": "EMMA_ID",
 }
 # Kuesten-/Seezellen (Praefix 501) liegen bewusst nicht in der Kreisgeometrie.
 _DE_COAST_PREFIX = "501"
@@ -357,8 +360,12 @@ _DATA_DIR = Path(__file__).resolve().parent / "data"
 _ch_regions = RegionMapper(_SLF_REGIONS_FILE)
 _nordic_outlines = RegionMapper(_DATA_DIR / "meteoalarm_outlines_nordics.geojson.json")
 _POLYGON_COUNTRIES = ("CH", "NO", "SE")
-# FI (Issue #1442 S2): EMMA_ID-Zonengeometrie aus MeteoAlarm-geocodes.json.
-_fi_zones = RegionMapper(_DATA_DIR / "meteoalarm_zones_FI.geojson.json")
+# Zonenlaender FI (Issue #1442 S2) und ES (S3): EMMA_ID-Zonengeometrie aus
+# MeteoAlarm-geocodes.json, EIN gemeinsamer Zonenweg (data/README.md).
+_zone_mappers: dict[str, RegionMapper] = {
+    country: RegionMapper(_DATA_DIR / f"meteoalarm_zones_{country}.geojson.json")
+    for country in ("FI", "ES")
+}
 # Ausgewerteter Feed (BBoxen, Ringe, Rueckzuege) je Land und Momentaufnahme --
 # haengt per Objekt-Referenz am gecachten Feed und lebt dessen 30-min-TTL mit.
 _polygon_index_memo: dict = {}
@@ -510,13 +517,14 @@ def _covers_polygon(country: str, lat: float, lon: float) -> bool:
     return any(_hit_area(areas, lat, lon) for _alert, areas in entries)
 
 
-def _zones_for_point_fi(lat: float, lon: float) -> set[str]:
-    """Punkt -> ALLE getroffenen FI-``EMMA_ID`` (Kuestenort: Land- UND Seezone)."""
-    return set(_fi_zones.regions_at(lat, lon))
+def _zones_for_point(country: str, lat: float, lon: float) -> set[str]:
+    """Punkt -> ALLE getroffenen ``EMMA_ID`` eines Zonenlands (FI/ES;
+    Kuestenort: Land- UND Seezone)."""
+    return set(_zone_mappers[country].regions_at(lat, lon))
 
 
-def _fi_known_zones() -> set[str]:
-    return {region_id for region_id, _geo, _box in _fi_zones._loaded()}
+def _known_zones(country: str) -> set[str]:
+    return {region_id for region_id, _geo, _box in _zone_mappers[country]._loaded()}
 
 
 class MeteoAlarmFeedSource:
@@ -528,7 +536,7 @@ class MeteoAlarmFeedSource:
     Punkt-in-Polygon, Issue #1442 S1/S2)."""
 
     def __init__(
-        self, country: Literal["IT", "AT", "DE", "CH", "NO", "SE", "FI"],
+        self, country: Literal["IT", "AT", "DE", "CH", "NO", "SE", "FI", "ES"],
     ) -> None:
         self.country = country
 
@@ -571,9 +579,9 @@ class MeteoAlarmFeedSource:
         if self.country in _POLYGON_COUNTRIES:
             # Issue #1442 S1/S2: lokaler Umriss, Fallback gecachte Feed-Polygone.
             return _covers_polygon(self.country, lat, lon)
-        if self.country == "FI":
-            # Issue #1442 S2: dieselbe Zonenfunktion wie fetch() (Muster DE).
-            return bool(_zones_for_point_fi(lat, lon))
+        if self.country in _zone_mappers:
+            # Issue #1442 S2/S3: dieselbe Zonenfunktion wie fetch() (Muster DE).
+            return bool(_zones_for_point(self.country, lat, lon))
         if lookup_department(lat, lon) is not None:
             return False
         return _zone_for_point(lat, lon) is not None
@@ -581,8 +589,8 @@ class MeteoAlarmFeedSource:
     def fetch(self, lat: float, lon: float) -> list[OfficialAlert]:
         if self.country in _POLYGON_COUNTRIES:
             return self._fetch_polygon(lat, lon)
-        if self.country == "FI":
-            return self._fetch_fi(lat, lon)
+        if self.country in _zone_mappers:
+            return self._fetch_zones(self.country, lat, lon)
         if self.country == "AT":
             zone, fetch_failed = _zone_for_point_at(lat, lon)
             if fetch_failed:
@@ -643,16 +651,17 @@ class MeteoAlarmFeedSource:
             return []
         return _alerts_for_point_polygon(feed, lat, lon, self.country)
 
-    def _fetch_fi(self, lat: float, lon: float) -> list[OfficialAlert]:
-        """FI (Spec #1442 S2 Punkt 7): Zonenweg ueber ``EMMA_ID`` wie IT/AT/DE;
-        keine Zone -> nicht zustaendig; unbekannte Feed-Zonen -> Drift-Journal."""
-        zones = _zones_for_point_fi(lat, lon)
+    def _fetch_zones(self, country: str, lat: float, lon: float) -> list[OfficialAlert]:
+        """Zonenlaender FI/ES (Spec #1442 S2 Punkt 7, S3 Punkt 1): Zonenweg
+        ueber ``EMMA_ID`` wie IT/AT/DE; keine Zone -> nicht zustaendig;
+        unbekannte Feed-Zonen -> Drift-Journal (``meteoalarm_feed:<Land>``)."""
+        zones = _zones_for_point(country, lat, lon)
         if not zones:
             warn_egress.mark_not_covered()
             return []
-        feed = _get_cached_feed("FI")
+        feed = _get_cached_feed(country)
         if feed is None:
             warn_egress.mark_fetch_incomplete()
             return []
-        _log_unknown_zone_drift(feed, "FI", _fi_known_zones(), "unknown_zone")
-        return _alerts_for_zone(feed, zones, "FI")
+        _log_unknown_zone_drift(feed, country, _known_zones(country), "unknown_zone")
+        return _alerts_for_zone(feed, zones, country)
