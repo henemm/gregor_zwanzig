@@ -93,7 +93,7 @@ def get_sms_symbols():
 @router.get("/metrics")
 def get_metrics():
     from app.metric_catalog import (
-        SMS_FORMAT_MODE_METRIC_IDS, aggregation_label_de,
+        SMS_FORMAT_MODE_METRIC_IDS, aggregation_label, aggregation_label_de,
         available_aggregations, get_all_metrics,
     )
     metrics = get_all_metrics()
@@ -105,6 +105,12 @@ def get_metrics():
         result[cat].append({
             "id": m.id,
             "label": m.label_de,
+            # Issue #2662: Anzeigenamen je Sprache; `label` bleibt deutsch
+            # fuer bestehende Verbraucher.
+            "label_de": m.label_de,
+            "label_en": m.label_en,
+            "alert_label": m.alert_label,
+            "alert_label_en": m.alert_label_en,
             "unit": m.display_unit if m.display_unit else m.unit,
             "category": m.category,
             "default_enabled": m.default_enabled,
@@ -139,6 +145,7 @@ def get_metrics():
                 {
                     "id": a,
                     "label": aggregation_label_de(a),
+                    "label_en": aggregation_label(a, "en"),
                     "alert_metric": m.alert_metrics.get(a),
                 }
                 for a in available_aggregations(m.id)

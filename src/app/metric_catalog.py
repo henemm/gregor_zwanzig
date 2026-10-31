@@ -100,10 +100,33 @@ class MetricDefinition:
     # Doppelpunkt). CODES (en) und KUERZEL (de) lesen sie zur Laufzeit.
     kuerzel_bedeutung_en: dict[str, str] = field(default_factory=dict)
     kuerzel_bedeutung_de: dict[str, str] = field(default_factory=dict)
+    # Issue #2662 / ADR-0104: englische Anzeigenamen (Klasse 2 "voll" und
+    # "Alarm-Kurzform", ADR-0042). Gesetzt ueber _ENGLISH_NAMES unten; leer
+    # bedeutet Rueckfall auf die deutschen Felder. Token bleiben unberuehrt.
+    label_en: str = ""
+    alert_label_en: str = ""
+    friendly_label_en: str = ""
 
     @property
     def has_friendly_format(self) -> bool:
         return bool(self.friendly_label)
+
+    def label(self, lang: str = "de") -> str:
+        """Voller Anzeigename in ``lang`` (en ohne Eintrag: deutsch)."""
+        return (self.label_en or self.label_de) if lang == "en" else self.label_de
+
+    def alert_label_for(self, lang: str = "de") -> str:
+        """Alarm-Kurzform in ``lang``; en: alert_label_en > label_en > deutsch."""
+        deutsch = self.alert_label or self.label_de
+        if lang == "en":
+            return self.alert_label_en or self.label_en or deutsch
+        return deutsch
+
+    def friendly_label_for(self, lang: str = "de") -> str:
+        """Klartext-/Symbol-Label in ``lang`` (heute sprachneutral)."""
+        if lang == "en":
+            return self.friendly_label_en or self.friendly_label
+        return self.friendly_label
 
 
 # Issue #1468: Auswertung "Beginn des Ereignisses". Bewusst KEIN Eintrag in
@@ -949,6 +972,52 @@ _METRICS = [
     for m in _METRICS
 ]
 
+# Issue #2662: englische Anzeigenamen (Konventionen Epic #2644 Abschnitt 4,
+# Spec i18n_p1_python_kern_metrik_2662.md). Kennung -> (label_en,
+# alert_label_en, friendly_label_en); "" = Rueckfall. Eine Tabelle statt 32
+# Einzeleintraege, damit der Diff gegen die Konventionen 1:1 pruefbar bleibt.
+_ENGLISH_NAMES: dict[str, tuple[str, str, str]] = {
+    "temperature": ("Temperature", "Temp", ""),
+    "temperature_cold": ("Low temperature alert", "Temp", ""),
+    "temperature_night": ("Night low", "", ""),
+    "temperature_day_low": ("Daytime low (walking hours)", "", ""),
+    "temperature_day_high": ("Daytime high (walking hours)", "", ""),
+    "wind_chill": ("Feels-like temperature", "", ""),
+    "wind_chill_night": ("Feels-like night low", "", ""),
+    "wind_chill_day_low": ("Feels-like daytime low (walking hours)", "", ""),
+    "wind_chill_day_high": ("Feels-like daytime high (walking hours)", "", ""),
+    "humidity": ("Humidity", "Humidity", ""),
+    "dewpoint": ("Dew point", "", ""),
+    "wind": ("Wind", "Wind", ""),
+    "gust": ("Wind gusts", "Gusts", ""),
+    "wind_direction": ("Wind direction", "", ""),
+    "precipitation": ("Precipitation", "Precip", ""),
+    "rain_probability": ("Rain probability", "Rain%", ""),
+    "confidence": ("Confidence", "", ""),
+    "thunder": ("Thunderstorm", "Thunder", ""),
+    "cape": ("Thunderstorm energy (CAPE)", "CAPE", ""),
+    "snowfall_limit": ("Snow line", "0° line", ""),
+    "precip_type": ("Precipitation type", "", ""),
+    "cloud_total": ("Cloud cover", "", ""),
+    "cloud_low": ("Low clouds", "", ""),
+    "cloud_mid": ("Mid-level clouds", "", ""),
+    "cloud_high": ("High clouds", "", ""),
+    "visibility": ("Visibility", "Visib", ""),
+    "sunshine": ("Sunshine hours", "", ""),
+    "uv_index": ("UV index", "UV index", ""),
+    "pressure": ("Air pressure", "", ""),
+    "freezing_level": ("Freezing level", "Freezing lvl", ""),
+    "snow_depth": ("Snow depth", "Snow depth", ""),
+    "fresh_snow": ("Fresh snow", "Fresh snow", ""),
+}
+
+_METRICS = [
+    replace(m, label_en=_ENGLISH_NAMES[m.id][0], alert_label_en=_ENGLISH_NAMES[m.id][1],
+            friendly_label_en=_ENGLISH_NAMES[m.id][2])
+    if m.id in _ENGLISH_NAMES else m
+    for m in _METRICS
+]
+
 # Lookup by id
 _METRICS_BY_ID: dict[str, MetricDefinition] = {m.id: m for m in _METRICS}
 
@@ -962,6 +1031,10 @@ _METRICS_BY_COL_KEY: dict[str, MetricDefinition] = {m.col_key: m for m in _METRI
 _AGGREGATION_ORDER: tuple[str, ...] = ("min", "max", "avg", "sum")
 _AGGREGATION_LABELS_DE: dict[str, str] = {
     "min": "Minimum", "max": "Maximum", "avg": "Mittel", "sum": "Summe",
+}
+# Issue #2662: englische Beschriftungen derselben Auswertungen.
+_AGGREGATION_LABELS_EN: dict[str, str] = {
+    "min": "Minimum", "max": "Maximum", "avg": "Average", "sum": "Total",
 }
 
 
@@ -1102,6 +1175,13 @@ def normalize_outlook_metric_formats(stored: object) -> Optional[dict[str, bool]
 def aggregation_label_de(aggregation: object) -> str:
     """Deutsche Beschriftung einer Auswertung (``""`` wenn unbekannt)."""
     return _AGGREGATION_LABELS_DE.get(aggregation, "") if isinstance(aggregation, str) else ""
+
+
+def aggregation_label(aggregation: object, lang: str = "de") -> str:
+    """Beschriftung einer Auswertung in ``lang`` (``""`` wenn unbekannt)."""
+    if lang != "en":
+        return aggregation_label_de(aggregation)
+    return _AGGREGATION_LABELS_EN.get(aggregation, "") if isinstance(aggregation, str) else ""
 
 
 def get_metric(metric_id: str) -> MetricDefinition:
@@ -1507,15 +1587,16 @@ def get_cmp(metric_id: str) -> str:
     return m.cmp if m is not None else ""
 
 
-def get_alert_label(metric_id: str) -> str:
-    """Get the German alert label for a metric (short form for alert renderers).
+def get_alert_label(metric_id: str, lang: str = "de") -> str:
+    """Alert label for a metric (short form for alert renderers) in ``lang``.
 
-    Falls back to label_de if alert_label is empty or metric not found.
+    Falls back to label_de if alert_label is empty; unknown metric -> its id.
+    Issue #2662: ``lang="en"`` via ``MetricDefinition.alert_label_for``.
     """
     m = _METRICS_BY_ID.get(metric_id)
     if m is None:
         return metric_id
-    return m.alert_label or m.label_de
+    return m.alert_label_for(lang)
 
 
 def _format_de_thousand(value: float) -> str:

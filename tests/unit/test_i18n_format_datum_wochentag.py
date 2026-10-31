@@ -6,7 +6,7 @@ die Ausgabe darf nicht von ``LC_ALL``/``locale.setlocale`` abhaengen.
 from __future__ import annotations
 
 import locale
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import pytest
 
@@ -52,8 +52,8 @@ def test_unbekannte_sprache_ist_deutsch():
 
 
 def test_alle_wochentage_und_monate_eindeutig():
-    tage_de = {fmt_weekday(date(2026, 10, 26 + i), "de", kurz=False) for i in range(7)}
-    tage_en = {fmt_weekday(date(2026, 10, 26 + i), "en") for i in range(7)}
+    tage_de = {fmt_weekday(date(2026, 10, 26) + timedelta(days=i), "de", kurz=False) for i in range(7)}
+    tage_en = {fmt_weekday(date(2026, 10, 26) + timedelta(days=i), "en") for i in range(7)}
     assert len(tage_de) == 7 and len(tage_en) == 7
     assert fmt_date(date(2026, 10, 26), "en") == "Mon 26 Oct"
     assert fmt_date(date(2026, 11, 1), "de") == "So 01.11."
