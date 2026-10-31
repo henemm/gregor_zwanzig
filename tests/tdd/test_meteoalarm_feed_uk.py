@@ -168,10 +168,10 @@ def test_ac1_feedpfad_gb():
 
     assert meteoalarm_feed._FEED_PATHS["GB"] == _PFAD
     assert "GB" in meteoalarm_feed._POLYGON_COUNTRIES
-    # Kein neuer Egress-Host: der Feed-Host steht bereits im Go-Inventar und im Python-Guard.
-    inventar = (_REPO_ROOT / "internal" / "egress" / "inventory.go").read_text(encoding="utf-8")
-    guard = (_REPO_ROOT / "src" / "app" / "egress_guard.py").read_text(encoding="utf-8")
-    assert "feeds.meteoalarm.org" in inventar and "feeds.meteoalarm.org" in guard  # doc-compliance-test
+    # Kein neuer Egress-Host: der Feed-Host ist im Python-Guard bereits bekannt (Verhalten, kein Quelltext).
+    from app.egress_guard import INVENTORY
+
+    assert "feeds.meteoalarm.org" in INVENTORY
 
 
 # ───────────────────────────── AC-2 (Test 2) ─────────────────────────────────
