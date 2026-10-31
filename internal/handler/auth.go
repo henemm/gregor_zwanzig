@@ -1354,7 +1354,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 	}
 }
 
-// writeInvalidLanguage: 400 {"error":"invalid_language"} (Issue #2646).
+// writeInvalidLanguage: 400 mit code invalid_language im Fehlerobjekt {code, message} (Issue #2646, #2676).
 func writeInvalidLanguage(w http.ResponseWriter, r *http.Request) {
 	WriteError(w, r, http.StatusBadRequest, "invalid_language", nil)
 }

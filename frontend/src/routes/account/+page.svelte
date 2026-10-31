@@ -17,6 +17,7 @@
 	import { ABMELDE_MERKMAL, merkeAbmeldung, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 	import { isWebAuthnSupported, registerPasskey, deletePasskey, type RegisteredPasskey } from '$lib/passkey';
 	import { profileSaveErrorMessage } from './profileSaveError';
+	import { passwortAendernErrorMessage } from './passwortAendernError';
 	import { lastRunDot } from './schedulerLastRun';
 	import PremiumSmsLinkCard from '$lib/components/account/PremiumSmsLinkCard.svelte';
 	import SpracheAuswahl from '$lib/components/account/SpracheAuswahl.svelte';
@@ -319,12 +320,7 @@
 			confirmNewPassword = '';
 			setTimeout(() => (pwSuccessMsg = null), 4000);
 		} catch (e: unknown) {
-			const body = e as { error?: string; code?: string };
-			if (body?.code === 'wrong_password') {
-				pwErrorMsg = 'Aktuelles Passwort ist falsch';
-			} else {
-				pwErrorMsg = body?.error ?? 'Passwort ändern fehlgeschlagen';
-			}
+			pwErrorMsg = passwortAendernErrorMessage(e);
 		}
 	}
 

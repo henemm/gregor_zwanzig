@@ -573,6 +573,35 @@ func TestPasskeyDeleteCredentialPreservesPassword(t *testing.T) {
 // F002 / Spec error table: DELETE endpoint must enforce the rate limit
 // -----------------------------------------------------------------------------
 
+// Issue #2676 (G2), F003: letzter Passkey eines Kontos ohne Passwort -> 400 mit
+// Code cannot_remove_last_passkey_without_password; der Passkey bleibt erhalten.
+func TestPasskeyDeleteLastPasskeyWithoutPasswordRefused(t *testing.T) {
+	rpID, origin := "localhost", "http://localhost"
+	s := newTestStore(t)
+	wa := passkeytest.NewWebAuthn(t, rpID, origin)
+	cs := NewChallengeStore()
+	if err := s.SaveUser(model.User{ID: "carla", CreatedAt: time.Now()}); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	auth := registerForUser(t, s, wa, cs, "carla")
+	credIDB64 := base64.RawURLEncoding.EncodeToString(auth.CredID)
+
+	w := httptest.NewRecorder()
+	PasskeyDeleteCredentialHandler(s).ServeHTTP(w,
+		authedRequest("DELETE", "/api/auth/passkey/credentials/"+credIDB64, "carla", nil))
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("F003: expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+	if code := fehlerCodeVon(w); code != "cannot_remove_last_passkey_without_password" {
+		t.Errorf("F003: expected code cannot_remove_last_passkey_without_password, got %q", code)
+	}
+	reloaded, err := s.LoadUser("carla")
+	if err != nil || reloaded == nil || len(reloaded.PasskeyCredentials) != 1 {
+		t.Errorf("F003: letzter Passkey muss erhalten bleiben: %v", err)
+	}
+}
+
 func TestPasskeyDeleteRateLimit_Triggers(t *testing.T) {
 	s := newTestStore(t)
 
