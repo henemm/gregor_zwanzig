@@ -11,6 +11,7 @@ import {
 	ROUTE_METRIC_DEFS,
 	ROUTE_CTX_DEFAULTS,
 	buildRoutePool,
+	buildRoutePrefillRows,
 	addRow,
 	removeRow,
 	patchRow,
@@ -1082,5 +1083,76 @@ describe('Issue #1424 AC-4: alter precip_type_dominant-Korridor bleibt beim Spei
 			savedCorridor,
 			'AC-4 FAIL: der alte precip_type_dominant-Korridor wurde beim Speichern veraendert/verworfen'
 		);
+	});
+});
+
+// Issue #2347 S4 (AC-20): Trip-Pendant zu buildComparePrefillRows — beim
+// frischen Trip-Anlegen sind die Wertebereiche der aktiven Wetter-Metriken
+// vorbelegt (Trip-Anlege-Standard laut metric_catalog.py trip_default_rank:
+// temperature, gust, precipitation, freezing_level, ...).
+describe('buildRoutePrefillRows — Trip-Anlegen belegt Wertebereiche vor (#2347 AC-20)', () => {
+	const extraDefs = buildRouteMetricDefsFromCatalog(CATALOG_FIXTURE.metrics);
+	const TRIP_STANDARD = [
+		{ metric_id: 'temperature', enabled: true },
+		{ metric_id: 'wind', enabled: true },
+		{ metric_id: 'gust', enabled: true },
+		{ metric_id: 'precipitation', enabled: true },
+		{ metric_id: 'freezing_level', enabled: true },
+		{ metric_id: 'snowfall_limit', enabled: false },
+		{ metric_id: 'thunder', enabled: true },
+	] as never;
+
+	test('aktive Metriken ⇒ genau ihre Route-Zeilen mit Startwerten und Kontext-Defaults', () => {
+		const rows = buildRoutePrefillRows(TRIP_STANDARD, extraDefs);
+		assert.deepEqual(
+			rows.map((r) => [r.metric, r.min, r.max, r.notify, r.mark]),
+			[
+				['wind_gust', null, 70, true, false],
+				['precipitation_sum', null, 5, true, false],
+				['temperature_min', -5, null, true, false],
+				['temperature_max', null, 28, true, false],
+				['snow_line', 1500, null, true, false],
+			],
+			'Vorbelegung weicht von den aktiven Metriken bzw. deren defaultMin/defaultMax ab'
+		);
+	});
+
+	test('gleich der Zeile, die "+ Metrik" fuer dieselbe Groesse anlegt (kein Parallelcode)', () => {
+		const rows = buildRoutePrefillRows(TRIP_STANDARD, extraDefs);
+		const pool = buildRoutePool([], TRIP_STANDARD, extraDefs);
+		let hand = { rows: pool.rows, poolLeft: pool.poolLeft };
+		for (const r of rows) hand = addRow(hand.rows, hand.poolLeft, r.metric, ROUTE_CTX_DEFAULTS);
+		assert.deepEqual(rows, hand.rows);
+	});
+
+	test('abgewaehlte Metrik ⇒ keine Zeile; Katalog-Zusatzgroessen ⇒ nie vorbelegt', () => {
+		const rows = buildRoutePrefillRows(
+			[{ metric_id: 'gust', enabled: true }, { metric_id: 'temperature', enabled: false }] as never,
+			extraDefs
+		);
+		assert.deepEqual(rows.map((r) => r.metric), ['wind_gust']);
+		const extraIds = new Set(extraDefs.map((d) => d.metric));
+		assert.ok(extraIds.size > 0, 'Fixture liefert keine Zusatzgroessen — Probe waere leer');
+		assert.ok(
+			buildRoutePrefillRows(TRIP_STANDARD, extraDefs).every((r) => !extraIds.has(r.metric)),
+			'Zusatzgroesse aus dem Katalog wurde vorbelegt'
+		);
+	});
+
+	test('noch keine Metrik-Auswahl gemeldet ⇒ leer (Editor wartet statt leer zu melden)', () => {
+		assert.deepEqual(buildRoutePrefillRows(undefined, extraDefs), []);
+		assert.deepEqual(buildRoutePrefillRows([], extraDefs), []);
+	});
+
+	test('Vorbelegung ist speicherbar: Save-Gate "schedule", Payload traegt genau diese Korridore', () => {
+		const rows = buildRoutePrefillRows(TRIP_STANDARD, extraDefs);
+		assert.equal(saveGateDecision(rows), 'schedule');
+		assert.deepEqual(buildCorridorSavePayload(rows, {}).corridors, [
+			{ metric: 'wind_gust', range: [null, 70], notify: true, mark: false },
+			{ metric: 'precipitation_sum', range: [null, 5], notify: true, mark: false },
+			{ metric: 'temperature_min', range: [-5, null], notify: true, mark: false },
+			{ metric: 'temperature_max', range: [null, 28], notify: true, mark: false },
+			{ metric: 'snow_line', range: [1500, null], notify: true, mark: false },
+		]);
 	});
 });

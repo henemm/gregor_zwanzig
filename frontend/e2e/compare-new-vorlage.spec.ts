@@ -1,3 +1,5 @@
+// gz-eigenstaendig: die ?from=-Vorbelegung der Anlege-Seite gilt nur für den Ortsvergleich; /trips/new?from= ist tot (templateTrip wird geladen, aber nie an TripNewEditor gereicht) und bleibt bewusst so (feat_2277_s2c Entscheidung 1, Nebenbefund #1199). Die Cross-User-Prüfung AC-6 bleibt hier (#2347 S4, fallgleich).
+//
 // E2E (Staging) — Issue #2277 Scheibe S2c: /compare/new?from=<id> belegt die Anlage vor.
 // Spec: docs/specs/modules/feat_2277_s2c_compare_from_vorlage.md (AC-2, AC-6, AC-7, AC-8, AC-10, AC-11)
 //

@@ -40,13 +40,18 @@ async function fillRoute(page: Page, name = 'Mobile Test-Trip', date = '2026-07-
 test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 
 	// AC-1: App-Leisten-Kopf mobil, Desktop-Breadcrumb verborgen.
-	test('AC-1: Mobile zeigt App-Leiste mit Speichern, Desktop-Breadcrumb verborgen', async ({ page }) => {
+	// #2347 S4 (AN-9) löst „Speichern sofort sichtbar" ab: der Sticky-Footer ist
+	// da, trägt im 1. Schritt aber die Weiter-Aktion; Speichern erst im Schritt
+	// Alarme (wie cm-mobile-activate im Vergleich).
+	test('AC-1: Mobile zeigt App-Leiste und Sticky-Footer mit Weiter-Aktion, Desktop-Breadcrumb verborgen', async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/trips/new');
 
 		const appbar = page.getByTestId('tn-mobile-appbar');
 		await expect(appbar).toBeVisible();
-		await expect(page.getByTestId('tn-mobile-save')).toBeVisible();
+		await expect(page.getByTestId('tn-mobile-footer')).toBeVisible();
+		await expect(page.getByTestId('tn-mobile-footer').getByTestId('tn-mobile-route-cta')).toBeVisible();
+		await expect(page.getByTestId('tn-mobile-save')).toBeHidden();
 
 		const breadcrumb = page.getByTestId('tn-desktop-breadcrumb');
 		await expect(breadcrumb).toBeHidden();

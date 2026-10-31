@@ -238,7 +238,13 @@ describe('F001: Rueckkanal des Wetter-Metriken-Reiters schaltet den Standardwert
 		assert.equal(typeof e.u.handleWeatherMetricsChange, 'function', 'Messaufbau: handleWeatherMetricsChange fehlt');
 		e.u.handleWeatherMetricsChange([{ metric_id: 'temperature', enabled: true }]);
 		derivedNeu(e);
-		assert.ok(aktiv().every((a) => a === true), 'Meldung des Reiters schaltet den Knopf nicht frei');
+		// #2347 S4 (AC-20, Race): mit aktiver Metrik wartet der Knopf zusaetzlich auf
+		// die Wertebereiche-Vorbelegung (CorridorEditor → onVorbelegungFertig).
+		assert.ok(aktiv().every((a) => a === false), 'Knopf frei, bevor die Wertebereiche vorbelegt sind');
+		assert.equal(typeof e.u.handleVorbelegungFertig, 'function', 'Messaufbau: handleVorbelegungFertig fehlt');
+		e.u.handleVorbelegungFertig();
+		derivedNeu(e);
+		assert.ok(aktiv().every((a) => a === true), 'Meldung des Reiters + Vorbelegung schalten den Knopf nicht frei');
 		await klick();
 		await ruhe();
 		assert.deepEqual(posts, ['/api/trips']);

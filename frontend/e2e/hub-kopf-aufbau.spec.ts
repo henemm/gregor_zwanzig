@@ -434,6 +434,49 @@ for (const kind of HUB_KINDS) {
 	});
 }
 
+// ─── KA-10, KA-11 (#2347 S4): Rückweg vom Hub zur Liste ─────────────────────
+// Ersatz für compare-flow-navigation AC-28 (Desktop-Breadcrumb, mobiler
+// Zurück-Pfeil). Krümel-Beschriftung je kind (Trip „Trips", Vergleich
+// „ORTS-VERGLEICHE"); Zusicherung gleich: Klick führt zur Liste dieser Art.
+const KRUEMEL: Record<HubKind, (page: Page) => ReturnType<Page['locator']>> = {
+	route: (page) => page.getByTestId('trip-detail-breadcrumb-bar').getByRole('link', { name: 'Trips', exact: true }),
+	vergleich: (page) => page.getByRole('link', { name: 'ORTS-VERGLEICHE', exact: true })
+};
+
+for (const kind of HUB_KINDS) {
+	test(`KA-10 (${kind}): Desktop — Breadcrumb-Klick führt zur Liste`, async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const hub = await seedKopf(page, kind);
+		try {
+			await openHub(page, kind, hub.id);
+			const kruemel = KRUEMEL[kind](page).filter({ visible: true }).first();
+			await expect(kruemel, 'KA-10: Breadcrumb zur Liste fehlt').toBeVisible({ timeout: 10_000 });
+			await kruemel.click();
+			await expect.poll(() => new URL(page.url()).pathname, { message: 'KA-10: Breadcrumb führt nicht zur Liste' }).toBe(
+				HUB_SEL[kind].liste.url
+			);
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+
+	test(`KA-11 (${kind}): Mobil — Zurück-Pfeil führt zur Liste`, async ({ page }) => {
+		await page.setViewportSize(MOBIL);
+		const hub = await seedKopf(page, kind);
+		try {
+			await openHub(page, kind, hub.id);
+			const zurueck = page.locator('[aria-label^="Zurück"]:visible').first();
+			await expect(zurueck, 'KA-11: mobiler Zurück-Pfeil fehlt').toBeVisible({ timeout: 10_000 });
+			await zurueck.click();
+			await expect.poll(() => new URL(page.url()).pathname, { message: 'KA-11: Zurück-Pfeil führt nicht zur Liste' }).toBe(
+				HUB_SEL[kind].liste.url
+			);
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+}
+
 // ─── KA-6..KA-9: nur vergleich ─────────────────────────────────────────────
 // Begründung: Eyebrow, Breadcrumb und Orte-Anzahl gehören zum Rahmen des
 // Orts-Vergleichs (compare/[id]/+page.svelte), nicht zum geteilten Kopf; das
@@ -466,6 +509,12 @@ test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 			await expect(page.getByText('Orts-Vergleich · Hub', { exact: true })).toBeHidden();
 			await expect(page.getByText(/Orts-Vergleiche/i).filter({ visible: true }).first()).toBeVisible();
 			await expect(page.getByText('Hub', { exact: true }).filter({ visible: true }).first()).toBeVisible();
+			// #2347 S4, Rumpf-Abgleich compare-hub-fidelity-s8c AC-10: genau ZWEI Krümel —
+			// ein Link „ORTS-VERGLEICHE", kein app-weiter Extra-Krümel „WORKSPACE".
+			const kruemel = page.locator('a.breadcrumb-link:visible');
+			await expect(kruemel, 'KA-7: Breadcrumb hat nicht genau einen Link-Krümel').toHaveCount(1);
+			await expect(kruemel).toHaveText('ORTS-VERGLEICHE');
+			await expect(page.getByText('WORKSPACE', { exact: true }), 'KA-7: Extra-Krümel „WORKSPACE"').toHaveCount(0);
 			await expect(vergleichUnterzeile(page)).toBeVisible();
 		} finally {
 			await hub.aufraeumen();

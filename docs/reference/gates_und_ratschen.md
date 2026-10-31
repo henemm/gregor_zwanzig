@@ -229,7 +229,7 @@ nur mit Begründung im PR.
 ### e2e-Ratsche (umgekehrte Richtung)
 `.github/ci_e2e_specs.txt` ist eine **Positivliste** und darf nur WACHSEN — eine Ausschlussliste würde
 eine grüne Grundmenge voraussetzen, die eine Stichprobenmessung (30,6 % rot) widerlegt hat.
-Stand nach #1771 S3 (2026-08-14): 45 Dateien / 224 Testfälle; **Stand 2026-10-26 (#2347 S1) laut `.github/workflows/ci.yml`: `E2E_MIN_SPECS: 64` Dateien, `E2E_MIN_EXECUTED_HAUPT: 369` Testfälle** (dort ist jeder Zuwachs einzeln kommentiert).
+Stand nach #1771 S3 (2026-08-14): 45 Dateien / 224 Testfälle; **Stand 2026-10-30 (#2347 S4) laut `.github/workflows/ci.yml`: `E2E_MIN_SPECS: 72` Dateien (`grep -c '^e2e/' .github/ci_e2e_specs.txt`), `E2E_MIN_EXECUTED_HAUPT: 609` Testfälle** (per `npx playwright test --list` über die Positivliste ohne `bug-703` gemessen, `Total: 609 tests in 72 files` inkl. `global.setup`; 599 nach Teil A, +8 Ersatzfälle aus Teil D: AN-13, AN-14, AW-5c, SC-1b je kind, +2 aus Teil E: AN-15 je kind; dort ist jeder Zuwachs einzeln kommentiert).
 
 Aufnahme nur nach **Filter A** (strukturell) + **Filter B** (3× hintereinander grün) + **Filter C**
 (die Datei darf beim Laufen keine *versionierte* Datei verändern — 3 Specs schrieben Screenshots ohne
@@ -275,7 +275,17 @@ setzt die Trip/Ortsvergleich-Teilung für E2E-Specs durch, die die Pendant-Sperr
   Scheibenstand (Literal). Rot bei neuem Verstoß außerhalb der
   Liste, bei totem oder inzwischen konformem Eintrag („Eintrag entfernen") und bei Wachstum über
   `ALTLAST_MAX`. Fällt eine Spec weg (z. B. Löschscheibe #2243), muss ihr Eintrag im selben PR raus.
-  #2347 S2–S4 leeren die Liste.
+- **ALTLAST leer (S4, 2026-10-30):** `ALTLAST = frozenset()`, `ALTLAST_MAX = 0`. Acht Altdateien sind
+  gelöscht (Zusicherungen in `hub-anlegen-ablauf`, `hub-liste-seitenrahmen` und den erweiterten
+  `hub-*`-Specs), sechs tragen einen `gz-eigenstaendig:`-Kopf (`compare-new-vorlage`,
+  `issue-1080-compare-new-url`, `compare-layout-tab-dissolution`, `compare-flow-navigation`,
+  `compare-editor-fidelity-s8d`, `compare-hub-fidelity-s8c`). Jede neue Compare-only-Spec ist ab jetzt
+  sofort rot: entweder `HUB_KINDS`-Schleife oder ein Kopf, dessen Begründung **wahr** ist und das
+  Trip-Pendant nennt (ein Kopf ist kein Freibrief; er wird bei jeder Änderung der Datei mitgeprüft).
+- **Dokumentierte Vergleichs-Eigenheit außerhalb des CLAUDE.md-Katalogs:** die Übersicht des
+  Vergleichs-Hubs (Summary-Karten, mobiler Chevron-Stack, Status-Kurzform, Versand-Karte,
+  `CompareTabs.svelte`) hat keinen Gegenpart im Trip-Hub (`trip-detail/HubOverview.svelte`). Ihre Fälle
+  bleiben mit Kopf in `compare-hub-fidelity-s8c`; das Angleichen ist Produktarbeit, Nebenbefund #1199.
 
 Neue Paritäts-Specs nutzen die dünnen Helfer `HubKind`/`HUB_KINDS`/`seedHub`/`openHub`/`hubApiPath`
 (`frontend/e2e/helpers.ts`); Selektor-Unterschiede stehen als `HUB_SEL[kind]` im Spec, nicht im Helfer.
@@ -522,6 +532,20 @@ Plural-Aufruf `tn`/`$tn`/`trn`/`trnFor('k', …)` für `k.one`/`k.other`, oder K
 *Regel-Budget: i18n-Ratsche Frontend — Prüfdatum 2027-01-28, siehe Tabelle unten. Spec:
 `docs/specs/modules/i18n_s4_ratsche_frontend_2649.md`.*
 
+**Go (G5, #2679, seit 2026-10-31).** `internal/i18n/hardcode_guard_test.go` parst (`go/parser`) jede
+Nicht-Test-Datei unter `internal/{handler,mail,notify,store,middleware,resolver}` (ohne `testdata/`,
+Wurzel relativ zur Testdatei) und meldet String-Literale mit Umlaut/`ß`, Umlaut-Entity (`&uuml;` …)
+oder Signalwort (`nicht|fehlt|bitte|hallo|ignoriere|bestaetig*|zurueck*|abgelaufen|fehlgeschlagen`).
+Ausgenommen: Argumente von `log.*`/`slog.*`/`fmt.Errorf`/`errors.New`, Struct-Tags, Importpfade,
+Zeilen mit `// i18n-log` (und die Zeile darunter), Funktionen mit `i18n-log` im Doc-Kommentar.
+Altbestand in `internal/i18n/hardcode_allowlist.json` (Pfade relativ zur Repo-Wurzel, Verzeichnis
+endet auf `/`, sonst exakte Datei); **beide Richtungen rot** wie im Frontend. Weniger als 80
+gescannte Dateien oder ein leeres Verzeichnis bricht mit „Messaufbau leer" ab. Startstand per
+`GZ_I18N_GUARD_PRINT=1` (2026-10-31): 92 Dateien gescannt, 72 Befunde in 16 Dateien, 16 Einträge (nur Einzeldateien, kein Verzeichnis-Präfix).
+
+*Regel-Budget: i18n-Ratsche Go — Prüfdatum 2027-01-28, siehe Tabelle unten. Spec:
+`docs/specs/modules/i18n_g5_ratsche_go_2679.md`.*
+
 ## Aktive Hooks in `.claude/settings.json` — Kurzreferenz (Stand 2026-10-21)
 
 Vollständige Liste der im Repo verdrahteten Hooks. Alle stehen in der geschützten Form
@@ -584,6 +608,7 @@ Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mai
 | Egress-Struktur-Wächter `tests/tdd/test_egress_single_dial_point.py` — `smtplib` (#1412 S3a) und `httpx`-POST (#1412 S3b) nur an den erlaubten Ausgängen (`TelegramOutput._post`, `SevenIoChannelBase._post`), Deckel 3 localhost-Ausnahmen | 2027-01-04 | `seven_io_base.py:171` (`httpx.post` direkt in `SevenIoChannelBase.send`) bei Einführung gefangen und in `_post` verlegt |
 | Compare-Paritäts-Wächter `tests/unit/test_e2e_compare_paritaet_waechter.py` — jede `*compare*.spec.ts` bzw. Compare-Hub-Spec ohne Trip-Gegenstück braucht kind-Schleife oder `gz-eigenstaendig:`-Kopf; Altlastliste nur schrumpfend (#2347 S1, Epic #2345 P6) | 2027-01-24 | Regel 2 fand bei Einführung 2 Specs außerhalb der Compare-Dateinamen (`kanal-grenzen-ortsvergleich.staging.spec.ts`, `versand-tab-vergleich.spec.ts`); fehlende Trip-Cross-User-Schreibprüfung (geschlossen durch `hub-cross-user-write-block.spec.ts`) |
 | i18n-Ratsche Frontend `keine_hartkodierten_nutzertexte.test.ts` + `katalog_schluessel_haben_verwender.test.ts` (Epic #2644, S4) — Allowlist bleibt bis Abschluss von Epic #2644 bestehen und darf nur schrumpfen, danach leer | 2027-01-28 | offen — Startstand 2026-10-31 (`4f386528a`): 115 Dateien mit 1115 Trefferzeilen in 33 Allowlist-Einträgen; Kriterium: ein neuer hartkodierter Nutzertext oder verwaister Katalogschlüssel, der ohne die Ratsche ausgeliefert worden wäre |
+| i18n-Ratsche Go (`internal/i18n/hardcode_guard_test.go`, Allowlist `internal/i18n/hardcode_allowlist.json`, #2679) | 2027-01-28 | Startstand = alle Fundstellen vom Tag der Einführung (2026-10-31: 72 Befunde in 16 Dateien, 16 Einträge (nur Einzeldateien, kein Verzeichnis-Präfix)); Endstand leer nach G2 bis G4 (Epic #2644) |
 
 **Weitere Prüfdaten, die nur im Code stehen** (Abgleich 2026-10-21 per
 `grep -rn "Prüfdatum\|Pruefdatum" tests .claude/hooks`; Fang-Beleg hier nicht erhoben):

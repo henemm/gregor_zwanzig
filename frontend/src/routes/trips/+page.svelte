@@ -6,7 +6,7 @@
 	// gemerkte Stand verworfen werden.
 	import { discardEtag } from '$lib/etagRegistry';
 	import { goto } from '$app/navigation';
-	import { Btn, Input, Eyebrow, Stat } from '$lib/components/atoms';
+	import { Btn, Input, Eyebrow, Stat, PageHeader } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
 	import StatusFilterPills from '$lib/components/molecules/StatusFilterPills.svelte';
@@ -161,14 +161,31 @@
 
 </script>
 
+{#snippet neuerTripMobil()}
+	<Btn href="/trips/new" variant="ghost" size="sm" data-testid="trip-list-new-mobile">+ Neuer Trip</Btn>
+{/snippet}
+
 <div class="space-y-4">
-	<div class="flex items-start justify-between gap-4">
+	<!-- Desktop-Kopf (≥900px unverändert). Steht im DOM VOR dem mobilen Kopf,
+	     damit `h1`/Eyebrow-`.first()` auf Desktop das sichtbare Element trifft
+	     (#2347 S4, Fix F003). -->
+	<div class="hidden desktop:flex items-start justify-between gap-4">
 		<div>
 			<Eyebrow>WORKSPACE · TRIPS</Eyebrow>
 			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px;">Trips</h1>
 			<p class="text-sm text-muted-foreground mt-1">Alle aktiven, geplanten und abgeschlossenen Mehrtages-Trips. Pro Trip kannst du Alerts justieren oder ein Briefing direkt schicken.</p>
 		</div>
 		<Btn variant="accent" onclick={() => goto('/trips/new')}>+ Neuer Trip</Btn>
+	</div>
+
+	<!-- Mobiler Seitenkopf (#2347 S4, HL-1/HL-2/HL-4): gleich gebaut wie die
+	     Ortsvergleich-Liste (routes/compare/+page.svelte) — PageHeader mit
+	     Eyebrow, Titel und „Neu"-Knopf, kurzer Intro-Satz, kompakte Stats. -->
+	<div class="desktop:hidden">
+		<PageHeader eyebrow="Workspace · {trips.length}" title="Trips" right={neuerTripMobil} compact />
+		<div style="font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin: 14px 0">
+			Mehrtages-Trips mit Briefings je Etappe — morgens für heute, abends für morgen.
+		</div>
 	</div>
 
 	{#if trips.length > 0}
@@ -181,6 +198,13 @@
 			<Stat label="Geplant"      value={countGeplant} layout="inline" />
 			<Stat label="Abgeschlossen" value={countFertig} layout="inline" />
 			<Stat label="Drafts"       value={countDraft}   layout="inline" />
+		</div>
+		<!-- Mobile Stats (kompakt, size="sm" wie im Vergleich), vor den Filter-Pillen -->
+		<div class="flex desktop:hidden" style="gap: 20px; padding: 4px 2px 16px; border-bottom: 1px solid var(--g-rule-soft); flex-wrap: wrap;">
+			<Stat label="Aktiv"        value={countAktiv}   layout="inline" size="sm" tone="accent" />
+			<Stat label="Geplant"      value={countGeplant} layout="inline" size="sm" />
+			<Stat label="Abgeschlossen" value={countFertig} layout="inline" size="sm" />
+			<Stat label="Drafts"       value={countDraft}   layout="inline" size="sm" />
 		</div>
 	{/if}
 
@@ -199,9 +223,15 @@
 			<Btn onclick={openCreate} variant="primary">Neuer Trip</Btn>
 		</div>
 	{:else}
-		<div class="relative mb-3 max-w-[380px]">
-			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-			<Input placeholder="Suchen..." class="pl-8 rounded-full" bind:value={search} />
+		<!-- Suche nur Desktop (#2347 S4, HL-3; wie die Ortsvergleich-Liste).
+		     Äußerer Rahmen `hidden desktop:flex` (nicht `desktop:block`): das
+		     Desktop-Raster bleibt das EINZIGE Element mit `.hidden.desktop:block`,
+		     auf das issue-486-trips-overflow.spec.ts strikt zielt (Fix F001). -->
+		<div class="hidden desktop:flex mb-3">
+			<div class="relative w-full max-w-[380px]">
+				<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+				<Input placeholder="Suchen..." class="pl-8 rounded-full" bind:value={search} />
+			</div>
 		</div>
 		{#if refetching}
 			<div class="space-y-3">

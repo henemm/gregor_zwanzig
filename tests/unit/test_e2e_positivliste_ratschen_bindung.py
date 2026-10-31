@@ -95,6 +95,40 @@ def test_positivliste_enthaelt_mandantentrennungs_spec(spec):
         f"{spec} fehlt auf der Positivliste ({len(gelistet)} Eintraege) -- "
         f"gemessen gruen, aber ungelistet bewacht die Mandantentrennung niemand.")
 
+S4_NEU = ("e2e/hub-anlegen-ablauf.spec.ts", "e2e/hub-liste-seitenrahmen.spec.ts")
+S4_RAUS = ("e2e/compare-detail-edit-entry.spec.ts", "e2e/compare-editor-slice1.spec.ts",
+           "e2e/compare-legacy-fields-survive-save.spec.ts")
+S4_BLEIBT = ("e2e/issue-1093-unit.spec.ts",)
+
+
+@pytest.mark.parametrize("spec", S4_NEU + S4_BLEIBT)
+def test_s4_positivliste_enthaelt_die_neuen_und_bleibenden_specs(spec):
+    """#2347 S4 AC-17: die kind-parametrisierten Anlege-/Listen-Specs stehen auf der
+    Positivliste (sonst bewacht sie die CI-Ampel nicht), `issue-1093-unit` bleibt.
+
+    GIVEN die Positivliste im Worktree-Stand (Pfadregel #1409)
+    WHEN sie gelesen wird
+    THEN steht der Eintrag darin und die Datei existiert unter `frontend/`.
+    """
+    assert (REPO / PLAYWRIGHT_CWD / spec).is_file(), f"Spec-Datei fehlt: {spec}"
+    gelistet = _liste_zeilen(POSITIVLISTE.read_text(encoding="utf-8"))
+    assert spec in gelistet, f"{spec} fehlt auf der Positivliste ({len(gelistet)} Eintraege)"
+
+
+@pytest.mark.parametrize("spec", S4_RAUS)
+def test_s4_positivliste_ohne_die_ersetzten_altdateien(spec):
+    """#2347 S4 AC-14/AC-17: die durch hub-anlegen-ablauf (AN) und hub-kopf-bearbeiten
+    (KB-11) bzw. hub-list-menu (LM-11/LM-12) ersetzten Altdateien sind von der Liste.
+
+    GIVEN die Positivliste im Worktree-Stand
+    WHEN sie gelesen wird
+    THEN fehlt der Eintrag -- ein stehen gelassener Name zeigte nach der Loeschung
+         auf keine Datei und liesse den `e2e`-Job an der Existenzpruefung scheitern.
+    """
+    gelistet = _liste_zeilen(POSITIVLISTE.read_text(encoding="utf-8"))
+    assert spec not in gelistet, f"{spec} steht noch auf der Positivliste (S4 ersetzt ihn)"
+
+
 def test_jeder_positivlisten_eintrag_existiert():
     """AC-4 (#2347 S1, Adversary F004): Existenzpruefung fuer ALLE Eintraege.
 

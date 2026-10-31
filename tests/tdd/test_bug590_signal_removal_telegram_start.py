@@ -163,5 +163,5 @@ def test_scheduler_send_report_ignores_signal_silently():
 
 # AC-6/AC-8: Frontend-Quelltext-Checks (CompareTabs.svelte, Step5Versand.svelte)
 # wurden in #754 entfernt — Signal-Entfernung ist durch E2E-Coverage
-# (compare-editor-slice4.spec.ts, issue-617-briefing-channel-chaining.spec.ts)
+# (hub-anlegen-ablauf.spec.ts AN-6, issue-617-briefing-channel-chaining.spec.ts)
 # im Playwright-Testsuite nachgewiesen.

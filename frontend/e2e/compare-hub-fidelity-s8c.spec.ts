@@ -1,8 +1,13 @@
+// gz-eigenstaendig: Übersichts-Panel des Vergleichs-Hubs (Summary-Karten, mobiler Chevron-Stack, Status-Kurzform, Versand-Karte) hat keinen Gegenpart im Trip-Hub — trip-detail/HubOverview.svelte ist ein anderes Markup (Spec feat_2347_s4 Befund 6, Nebenbefund #1199); dazu die Texte des Orte-Tabs. Pendants: hub-tab-bar HT-10 (Stat-Karten), trip-detail-region.
+//
 // E2E (Staging) — Issue #1256 Scheibe S8c: Hub-Fidelity (R2 Layout-Tab-Rahmen
 // + R3 SummaryCards-Copy/Orte-Tab-Rahmen/Breadcrumb/profileLabel/
 // Mobile-Eyebrow/Mobile-Summary-Stack).
 //
 // Spec: docs/specs/modules/feat_1256_s8c_hub_fidelity.md (AC-1..AC-13)
+// #2347 S4 (feat_2347_s4_paritaets_e2e.md): AC-10 (Breadcrumb genau 2 Krümel) →
+// hub-kopf-aufbau KA-7, AC-12 (mobile Eyebrow) → KA-6, AC-11 (Profil-Label
+// „Wandern" in der Unterzeile) → KA-6/KA-7.
 //
 // Ausführen (gegen Staging, aus frontend/, NACH Push+Staging-Deploy):
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
@@ -150,43 +155,6 @@ test.describe('Issue #1256 S8c (AC-7): mobiler Chevron-Summary-Stack', () => {
 	});
 });
 
-test.describe('Issue #1256 S8c (AC-10): Breadcrumb genau 2 Krümel', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1280, height: 900 });
-	});
-
-	test('Breadcrumb zeigt "ORTS-VERGLEICHE / Hub" ohne App-weiten Extra-Krümel', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8c Ort-BC ${suffix}`, 47.4, 11.4);
-		const id = await createPresetWithLocation(page, `E2E S8c Breadcrumb ${suffix}`, locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		const crumb = page.locator('a.breadcrumb-link:visible');
-		await expect(crumb).toHaveCount(1);
-		await expect(crumb).toHaveText('ORTS-VERGLEICHE');
-		await expect(page.getByText('WORKSPACE', { exact: true })).toHaveCount(0);
-	});
-});
-
-test.describe('Issue #1256 S8c (AC-12): mobile Eyebrow im Header', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 390, height: 844 });
-	});
-
-	test('Eyebrow "Orts-Vergleich · Hub" ist über dem Preset-Namen sichtbar', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8c Ort-Eye ${suffix}`, 47.5, 11.5);
-		const id = await createPresetWithLocation(page, `E2E S8c Eyebrow ${suffix}`, locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		await expect(page.getByText('Orts-Vergleich · Hub')).toBeVisible({ timeout: 10_000 });
-	});
-});
-
 // Fix-Loop 1 (F003 HIGH): 5 zuvor fehlende AC-Nachweise ergänzt.
 
 test.describe('Issue #1256 S8c (AC-3): Orte-SummaryCard "+N weitere" bei >3 Orten', () => {
@@ -299,30 +267,5 @@ test.describe('Issue #1256 S8c (AC-9, Copy-Teil): Orte-Tab Desktop-Rahmen', () =
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 		await expect(panel.getByText('Verglichene Orte')).toBeVisible();
 		await expect(panel.getByText('Reihenfolge = Spalten im Briefing · ziehen zum Sortieren')).toBeVisible();
-	});
-});
-
-test.describe('Issue #1256 S8c (AC-11): Desktop-Unterzeile Profil-Label', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1280, height: 900 });
-	});
-
-	test('Unterzeile zeigt "Wandern" statt "wandern"', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8c Ort-Sub ${suffix}`, 46.9, 10.9);
-		const id = await createPresetWithLocation(page, `E2E S8c Unterzeile ${suffix}`, locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		// Seit #2284 S1 (AC-8) gibt es EINEN Kopf für Desktop und Mobil (keine
-		// verborgene Doppel-Kopie mehr). Eingegrenzt wird auf die UNTERZEILE dieses
-		// Kopfs (der Container mit dem Region-Stift), nicht auf den ganzen Kopf:
-		// dort steht auch die Profil-Kachel „Wandern", die den Text immer trägt —
-		// der Test bliebe sonst grün, selbst wenn das Profil-Label fehlt.
-		const desktopHeader = page.locator(
-			'[data-kind="vergleich"] div:has(> [data-testid="compare-hub-region-edit-toggle"])'
-		);
-		await expect(desktopHeader).toContainText('Wandern');
 	});
 });
