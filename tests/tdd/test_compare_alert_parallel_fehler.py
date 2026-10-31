@@ -105,6 +105,66 @@ def test_ac4_ortsfehler_wird_je_ort_gebucht_andere_orte_laufen_weiter(
     assert rand.max_gleichzeitig >= 2, "Abrufe laufen noch nacheinander"
 
 
+def _pruefe_teilausfall_loc2(treffer, buchungen, caplog, uid: str, preset_id: str) -> None:
+    assert treffer_ids(treffer) == ["loc-1", "loc-3"], "die anderen Orte liefern weiter Treffer"
+    assert _je_ort(buchungen, uid, preset_id) == {
+        "loc-1": "ok", "loc-2": "unavailable", "loc-3": "ok"}
+    fehlerzeilen = [r for r in caplog.records
+                    if "Compare-Alert check failed" in r.getMessage()]
+    assert len(fehlerzeilen) == 1 and f"{preset_id}/loc-2" in fehlerzeilen[0].getMessage()
+    assert fehlerzeilen[0].levelno == logging.ERROR
+
+
+def test_ac4_ausnahme_beim_vorbereiten_trifft_nur_den_einen_ort(
+    umgebung, thread_fehler, monkeypatch, caplog, buchungen,
+):
+    """F002: Snapshot-Laden (Phase 1) wirft fuer loc-2 -> nur loc-2 scheitert."""
+    import services.compare_alert as ca
+
+    uid, orte, preset = _aufbau("ac4v", 3)
+    slots_setzen(monkeypatch, "open_meteo", 3)
+    orig_snap = ca.CompareWeatherSnapshotService.load
+
+    def snap(self, preset_id, location_id, *a, **kw):
+        if location_id == "loc-2":
+            raise RuntimeError("Anker unlesbar: loc-2")
+        return orig_snap(self, preset_id, location_id, *a, **kw)
+
+    monkeypatch.setattr(ca.CompareWeatherSnapshotService, "load", snap)
+    rand = WetterRand(verzoegerung={"loc-1": 0.2, "loc-3": 0.1})
+
+    with caplog.at_level(logging.ERROR):
+        treffer = detect(_dienst(uid, rand), preset, orte)
+
+    _pruefe_teilausfall_loc2(treffer, buchungen, caplog, uid, preset["id"])
+    assert sorted(rand.orte_abgerufen()) == ["loc-1", "loc-3"], "loc-2 ohne Abruf"
+
+
+def test_ac4_ausnahme_beim_bewerten_trifft_nur_den_einen_ort(
+    umgebung, thread_fehler, monkeypatch, caplog, buchungen,
+):
+    """F002: Engine-Auswertung (Phase 3) wirft fuer loc-2 -> nur loc-2 scheitert."""
+    import services.compare_alert as ca
+
+    uid, orte, preset = _aufbau("ac4b", 3)
+    slots_setzen(monkeypatch, "open_meteo", 3)
+    orig_eval = ca.DeviationAlertEngine.evaluate
+
+    def evaluate(self, *a, **kw):
+        if kw["fresh"][0].id == "loc-2":
+            raise RuntimeError("Auswertung gescheitert: loc-2")
+        return orig_eval(self, *a, **kw)
+
+    monkeypatch.setattr(ca.DeviationAlertEngine, "evaluate", evaluate)
+    rand = WetterRand(verzoegerung={"loc-1": 0.2, "loc-2": 0.1})
+
+    with caplog.at_level(logging.ERROR):
+        treffer = detect(_dienst(uid, rand), preset, orte)
+
+    _pruefe_teilausfall_loc2(treffer, buchungen, caplog, uid, preset["id"])
+    assert sorted(rand.orte_abgerufen()) == ["loc-1", "loc-2", "loc-3"]
+
+
 # --------------------------------------------------------------------------- #
 # AC-5
 # --------------------------------------------------------------------------- #

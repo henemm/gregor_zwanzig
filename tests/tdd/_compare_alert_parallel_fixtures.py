@@ -253,9 +253,12 @@ class WarnRand:
     """Echte amtliche Quelle: zustaendig fuer alles, je Koordinate steuerbar."""
 
     def __init__(self, *, verzoegerung: Optional[dict] = None, treffpunkt: bool = False,
-                 beim_abruf=None, name: str = "test-1539s6") -> None:
+                 beim_abruf=None, name: str = "test-1539s6", ausfall=()) -> None:
         self._name = name
         self.verzoegerung = dict(verzoegerung or {})  # Schluessel: Breite
+        # Breiten, an denen die Quelle (nach der Verzoegerung) wirft: der Ort
+        # meldet dann Status ``(False, [])`` statt ``(True, [seine Warnung])``.
+        self.ausfall = set(ausfall)
         self.treffpunkt = treffpunkt
         self.beim_abruf = beim_abruf
         self._lock = threading.Lock()
@@ -291,6 +294,8 @@ class WarnRand:
             pause = self.verzoegerung.get(lat, 0.0)
             if pause:
                 time.sleep(pause)
+            if lat in self.ausfall:
+                raise RuntimeError(f"Warnabruf gescheitert: {lat}")
             jetzt = datetime.now(timezone.utc)
             return [OfficialAlert(
                 source=self._name, hazard="wind", level=3, label=f"Sturm {lat}",

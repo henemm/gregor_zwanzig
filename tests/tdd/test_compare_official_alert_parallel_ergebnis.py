@@ -66,9 +66,49 @@ def test_ac6_reihenfolge_und_senken_je_ort_identisch_zum_seriellen_lauf(
     for o in orte:  # jede Abfrage gehoert zu ihrem Ort und zeigt genau dessen Warnung
         (scope, scope_ids, _end, _src, gezeigt), = abfragen[o.id]
         assert (scope, scope_ids, gezeigt) == (o.id, (o.id,), (f"Sturm {o.lat}",))
+    # F001: auch die Quellen-Senke gehoert dem Ort (eigene Warnung, nicht die des
+    # zuletzt fertigen Ortes).
+    assert _quellen_je_ort(parallel[1]) == {
+        o.id: {quelle.name: (True, (f"Sturm {o.lat}",))} for o in orte}
     assert warn_ergebnis(*parallel) == warn_ergebnis(*seriell), "identisch zum seriellen Lauf"
     assert quelle.max_gleichzeitig >= 2, (
         "Warn-Abrufe laufen noch nacheinander (erwartet: fetch_ordered, Provider official_alerts)")
+
+
+def _quellen_je_ort(queries_by_loc: dict) -> dict:
+    """``sources`` je Ort in vergleichbarer Form: Name -> (ok, Warnungs-Labels)."""
+    ergebnis = {}
+    for loc_id, (q,) in queries_by_loc.items():
+        ergebnis[loc_id] = {
+            name: (ok, tuple(a.label for a in alerts))
+            for name, (ok, alerts) in (q.sources or {}).items()
+        }
+    return ergebnis
+
+
+def test_ac6_quellen_senke_je_ort_traegt_genau_den_status_dieses_ortes(
+    umgebung, thread_fehler, monkeypatch,
+):
+    """AC-6 (Fix-Loop F001): jeder Ort bekommt die Quellen-Bilanz SEINES Abrufs.
+
+    Der mittlere Ort meldet einen Quellen-Ausfall, die anderen je eine eigene
+    Warnung. Verzoegerung absteigend: der erste Ort endet zuletzt -- eine
+    gemeinsame Senke liefe ueber ``sink[-1]`` fuer alle Orte auf dessen Bilanz."""
+    orte = neue_orte(3, "ac6q")
+    verz = {orte[0].lat: 0.45, orte[1].lat: 0.25, orte[2].lat: 0.05}  # absteigend
+    slots_setzen(monkeypatch, "official_alerts", 3)
+    quelle = WarnRand(verzoegerung=verz, ausfall={orte[1].lat})
+
+    (raw, queries_by_loc), _jetzt = _lauf(orte, quelle, "ac6q")
+
+    assert quelle.max_gleichzeitig >= 2, "Setup: Abrufe muessen sich ueberlappen"
+    assert _quellen_je_ort(queries_by_loc) == {
+        orte[0].id: {quelle.name: (True, (f"Sturm {orte[0].lat}",))},
+        orte[1].id: {quelle.name: (False, ())},
+        orte[2].id: {quelle.name: (True, (f"Sturm {orte[2].lat}",))},
+    }, "Quellen-Bilanz vermischt zwischen den Orten"
+    assert [(a.label, tuple(ids)) for a, ids in raw] == [
+        (f"Sturm {orte[0].lat}", (orte[0].id,)), (f"Sturm {orte[2].lat}", (orte[2].id,))]
 
 
 def test_ac7_abrufe_ueberlappen_nachweislich_im_worker(umgebung, thread_fehler, monkeypatch):

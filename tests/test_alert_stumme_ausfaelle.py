@@ -8,7 +8,7 @@ internal/scheduler/enrichment_health_test.go).
 Geprüft wird die ECHTE Journaldatei ``<Datenwurzel>/diagnostics/
 enrichment_calls.jsonl`` nach echten Alarmläufen. Ersetzt wird nur die
 Systemgrenze zum Wetteranbieter (``SegmentWeatherService.fetch_segment_weather``
-bzw. die Ort-Auswertung des Vergleichs); die Trennlogik "leer vs. gescheitert"
+bzw. die Wetterquelle des Vergleichs); die Trennlogik "leer vs. gescheitert"
 und das Journalschreiben laufen echt.
 
 Das Journal ist append-only und liegt in der von ``_isolate_data_root``
@@ -261,16 +261,35 @@ def test_ac9_trip_journal_nicht_beschreibbar_aendert_den_lauf_nicht(
 # ───────────────────────────── Ortsvergleich (B2-70) ───────────────────────
 
 
+class _OrtsWetterRand:
+    """Wetterquelle am Anbieter-Rand (Konstruktor-Naht ``weather_source``,
+    #1539 S6): ``kaputter_ort`` wirft, die anderen liefern einen Punkt ohne
+    Anker-Vergleich (kein Treffer)."""
+
+    def __init__(self, kaputter_ort: str | None) -> None:
+        self.kaputter_ort = kaputter_ort
+
+    def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None,
+              target_date=None, tage_ab_ortstag=None, elevation_m=None, *, user_id):
+        from app.models import SegmentWeatherSummary
+        from services.point_weather import PointWeatherData
+
+        if point_id == self.kaputter_ort:
+            raise RuntimeError("Ortsabruf gescheitert")
+        return PointWeatherData(
+            id=point_id, name=point_id, lat=lat, lon=lon, timeseries=None,
+            aggregated=SegmentWeatherSummary(wind_max_kmh=10.0),
+            fetched_at=datetime.now(timezone.utc), provider="test-rand",
+        )
+
+
 def _compare_lauf(monkeypatch, user_id: str, kaputter_ort: str | None):
     from services.compare_alert import CompareAlertService
 
-    class _Dienst(CompareAlertService):
-        def _evaluate_one_location(self, preset_id, location_id, *a, **kw):
-            if location_id == kaputter_ort:
-                raise RuntimeError("Ortsabruf gescheitert")
-            return None
-
-    dienst = _Dienst(settings=settings_email_only(), user_id=user_id)
+    dienst = CompareAlertService(
+        settings=settings_email_only(), user_id=user_id,
+        weather_source=_OrtsWetterRand(kaputter_ort),
+    )
     sent = dienst.check_all_compare_presets()
     return sent, dienst.last_failed_count
 
