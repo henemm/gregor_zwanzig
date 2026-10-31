@@ -64,7 +64,7 @@ def _ohne_ausnahmen(zeilen: list[str]) -> list[str]:
     befehle |= {z.strip() for z in render_commands_plain("vergleich", lang="en").splitlines()}
     out = []
     for z in zeilen:
-        if z in befehle or z == "ORT":
+        if z.strip() in befehle or z == "ORT":
             continue
         for d in _DATEN:
             z = z.replace(d, "")
@@ -103,7 +103,7 @@ def test_ac1_ueberschriften_englisch_aus_dem_katalog():
     for key in ("vergleich.kopf.titel", "vergleich.ausblick.titel",
                 "vergleich.stunden.klartext_titel"):
         assert t(key, "en") in text, key
-    assert f'<html lang="en">' in html
+    assert '<html lang="en">' in html
     assert f"<title>{t('vergleich.kopf.titel_kurz', 'en')}</title>" in html
 
 
@@ -217,7 +217,9 @@ def _zwoelf_orte():
     orte = []
     for i in range(12):
         lr = vorlage[i % 3]
-        ort = replace(lr.location, id=f"ort-{i}", name=f"{lr.location.name} Huette Nummer {i:02d}")
+        # lange Namen, damit zwoelf Ortsbloecke die 4096 Zeichen sprengen
+        name = f"{lr.location.name} Huette Nummer {i:02d} " + "Hochgebirgsstation " * 10
+        ort = replace(lr.location, id=f"ort-{i}", name=name.strip())
         orte.append(replace(lr, location=ort))
     return replace(result, locations=orte)
 

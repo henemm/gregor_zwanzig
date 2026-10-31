@@ -48,11 +48,9 @@ def _d(v):
 
 
 def _vergleich(temp=None, precip=None, **weitere) -> DayComparison:
-    entry = DayComparisonEntry(
-        segment_id=1, temp_min=_d(None), temp_max=_d(temp), wind_max=_d(None),
-        gust_max=_d(None), precip_sum=_d(precip), thunder=_d(None),
-        **{k: _d(v) for k, v in weitere.items()},
-    )
+    felder = {"temp_min": None, "temp_max": temp, "wind_max": None, "gust_max": None,
+              "precip_sum": precip, "thunder": None, **weitere}
+    entry = DayComparisonEntry(segment_id=1, **{k: _d(v) for k, v in felder.items()})
     return DayComparison(entries=[entry])
 
 
@@ -134,14 +132,15 @@ def test_trip_renderer_reichen_lang_an_die_vortag_zeile():
     from output.renderers.trip_report import TripReportFormatter
     from tests.helpers.briefing_html_sprache_fixture import TZ, _segment
 
-    dc = _vergleich(temp=4.0, precip=3.0)
+    dc = _vergleich(temp=6.0, precip=20.0)  # beide ueber der Anzeige-Schwelle
     for lang in ("de", "en"):
         report = TripReportFormatter().format_email(
             [_segment()], "Corsica North", "morning", display_config=build_default_display_config(),
             day_comparison=dc, tz=TZ, lang=lang,
         )
         html, plain = report.email_html, report.email_plain
-        erwartet = _satz(lang, t("vergleich.vortag.hoeher.temperature", lang),
-                         t("vergleich.vortag.hoeher.precipitation", lang))
+        # nach |Delta| sortiert: Niederschlag (20) vor Temperatur (6)
+        erwartet = _satz(lang, t("vergleich.vortag.hoeher.precipitation", lang),
+                         t("vergleich.vortag.hoeher.temperature", lang))
         assert erwartet in html, lang
         assert erwartet in plain, lang

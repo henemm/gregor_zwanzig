@@ -1,1 +1,7 @@
-{}
+{
+  "allgemein.hinweis.gewaehlt_ohne_wert": "… +{count} gewählte Wettergrößen ohne Wert {wo}",
+  "allgemein.hinweis.gewaehlt_ohne_wert.vergleich": "in diesem Vergleich",
+  "allgemein.hinweis.gewaehlt_ohne_wert.ort": "an diesem Ort",
+  "allgemein.hinweis.telegram_limit.vergleich": "… +{count} weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail",
+  "allgemein.hinweis.telegram_limit.route": "… +{count} weitere Wettergrößen nur als Tageswert (Telegram-Limit)"
+}

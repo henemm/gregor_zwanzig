@@ -1475,7 +1475,7 @@ def render_html(
     )
     _day_comparison_line = summarize_day_comparison(
         day_comparison,
-        selected_metrics=_selected_metrics_for_vortag,
+        selected_metrics=_selected_metrics_for_vortag, lang=lang,
     )
 
     # Issue #890 / B1-B3 + AC-5/AC-6: Ein Tageslage-Lead statt zwei Kästen.

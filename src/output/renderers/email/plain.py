@@ -187,7 +187,7 @@ def render_plain(
     )
     _day_comparison_line = summarize_day_comparison(
         day_comparison,
-        selected_metrics=_selected_metrics_for_vortag,
+        selected_metrics=_selected_metrics_for_vortag, lang=lang,
     )
     if _day_comparison_line:
         lines.append(_day_comparison_line)

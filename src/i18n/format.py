@@ -56,6 +56,13 @@ def fmt_date(
     return f"{tag} {d.day:02d}.{d.month:02d}."
 
 
+def fmt_date_numeric(d: date | datetime, lang: Lang) -> str:
+    """Datum mit Jahr: ``29.10.2026`` bzw. ``29 Oct 2026`` (Issue #2666)."""
+    if _sprache(lang) == "en":
+        return f"{d.day} {_MONATE['en'][d.month - 1][:3]} {d.year}"
+    return f"{d.day:02d}.{d.month:02d}.{d.year}"
+
+
 def fmt_time(d: datetime) -> str:
     """``14:30`` in beiden Sprachen."""
     return f"{d.hour:02d}:{d.minute:02d}"
