@@ -134,6 +134,7 @@ class ComparePreviewService:
             profile=profile,
             official_alerts_enabled=preset.get("official_alerts_enabled", True),
             call_source="vergleich",
+            user_id=user_id,  # Issue #2234: Budget beim ausloesenden Nutzer
         )
         return {
             "preset": preset,

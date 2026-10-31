@@ -368,9 +368,22 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
+	// Issue #2163 Punkt 9: Zahlen aus den registrierten Eintraegen, gezaehlt
+	// wie Status() (Eintrag mit Teiljobs = mehrere Zeilen, ohne Meta = eine).
+	entries := s.cron.Entries()
+	lines := 0
+	s.mu.RLock()
+	for _, e := range entries {
+		if metas, ok := s.entryJobsLocked(e.ID); ok {
+			lines += len(metas)
+		} else {
+			lines++
+		}
+	}
+	s.mu.RUnlock()
 	s.cron.Start()
 	s.running.Store(true)
-	log.Printf("[scheduler] Started: 9 cron entries (10 jobs), timezone %s", s.cron.Location())
+	log.Printf("[scheduler] Started: %d cron entries (%d jobs), timezone %s", len(entries), lines, s.cron.Location())
 }
 
 // Stop gracefully shuts down the scheduler and waits for running jobs.

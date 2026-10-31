@@ -2209,7 +2209,7 @@ Issue #1351 Teil 1.)
 
 **Handler:** `api/routers/compare.py` | **Datenquelle:**
 `src/output/renderers/compare_metric_catalog.py` | **Routing:**
-`internal/router/router.go` (generischer `ProxyHandler`, kein `user_id`-Bezug)
+`internal/router/router.go` (generischer `ProxyHandler`, kein `user_id`-Bezug; eine von außen mitgesendete `user_id` wird seit #2163 aus der Query entfernt, bevor an den Python-Core weitergeleitet wird)
 
 ### GET /api/compare/metrics
 

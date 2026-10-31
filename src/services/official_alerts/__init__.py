@@ -65,8 +65,8 @@ register_official_alert_source(MeteoAlarmFeedSource("ES"))
 # Issue #1442 S3a: PT -> NL -> PL direkt NACH ES, VOR DpcSource (gleicher
 # Tie-Break "zuerst registriert gewinnt", #1427 S2). Im Grenzstreifen
 # (Aufweitung 0,05 Grad) kann covers() fuer zwei Laender wahr sein; jeder Feed
-# fuehrt nur Zonen seines Landes, daher keine Doppelanzeige. Belgien (S3c) ist
-# bewusst NICHT registriert (NUTS2-Warnungen ohne Geometrie).
+# fuehrt nur Zonen seines Landes, daher keine Doppelanzeige. Belgien folgt
+# als S3c nach GB (s. unten).
 register_official_alert_source(MeteoAlarmFeedSource("PT"))
 register_official_alert_source(MeteoAlarmFeedSource("NL"))
 register_official_alert_source(MeteoAlarmFeedSource("PL"))
@@ -74,6 +74,9 @@ register_official_alert_source(MeteoAlarmFeedSource("PL"))
 # registriert gewinnt", #1427 S2). Polygonweg wie CH/NO/SE; keine Nationalquelle
 # ueberlappt, an Grenzpunkten (Irland) liefert GB nur Warnungen seiner Feed-Polygone.
 register_official_alert_source(MeteoAlarmFeedSource("GB"))
+# Issue #1442 S3c: BE NACH GB, VOR DpcSource (gleicher Tie-Break). Zonenweg wie
+# NL/PL, NUTS2 per Tabelle zur EMMA-Zone; an der NL-Grenze (Maastricht) gewinnt NL.
+register_official_alert_source(MeteoAlarmFeedSource("BE"))
 register_official_alert_source(DpcSource())
 # Issue #1441 (ADR-0089): Lawinen-Lagebericht als LETZTE Quelle -- eigene
 # Gefahrenart `avalanche_bulletin`, konkurriert mit keiner Bestandsquelle;

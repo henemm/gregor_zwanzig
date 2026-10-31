@@ -242,7 +242,7 @@ class OnsetShiftEvent:
     metric_id: str            # catalog metric_id (NICHT summary_field)
     from_time: str            # "HH:MM" Ortszeit -- Beginn im letzten Stand
     to_time: str              # "HH:MM" Ortszeit -- Beginn im frischen Stand
-    shift_text: str           # "2 h früher" | "2 h später"
+    shift_text: str           # "2 h früher" | "2 h später" (Kurzform, SMS)
     km_from: float
     km_to: float
     segment_id: str | None = None
@@ -260,6 +260,10 @@ class OnsetShiftEvent:
     to_is_past: bool = False
     # Issue #2122: additiv, optional, Muster `AlertEvent.stage_number` (o.).
     stage_number: int | None = None
+    # Issue #2667: additiv, Default `None`. Rohwert der Verschiebung in
+    # Sekunden -- die Langform baut daraus das Wort in der Nutzersprache,
+    # `shift_text` bleibt der deutsche Kurzform-Text (SMS, PO 2026-10-31).
+    shift_seconds: float | None = None
 
 
 @dataclass(frozen=True)
@@ -325,8 +329,12 @@ def over_thr(e: AlertEvent) -> bool:
     return abs(e.value_to - e.value_from) >= e.threshold
 
 
-def side_label(e: AlertEvent) -> str:
-    return "über" if over_thr(e) else "unter"
+def side_label(e: AlertEvent, lang: str = "de") -> str:
+    """Angezeigtes Seitenwort in ``lang`` (Issue #2667); die internen
+    ``cmp``-Werte "über"/"unter" bleiben Katalogwerte, kein Nutzertext."""
+    from i18n import t
+
+    return t("alarm.abweichung.ueber" if over_thr(e) else "alarm.abweichung.unter", lang)
 
 
 def severity(e: AlertEvent) -> float:

@@ -141,3 +141,14 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | gesamte Route / alle Orte | entire route / all locations | SMS-Umfang (`ges.Route`, `alleOrte`) bleibt |
 | Zugang gesperrt | Access closed | Massiv-Namen bleiben |
 | Waldbrand-Gefahr | Wildfire risk | |
+
+## Abweichungs- und Regen-Alarme (#2667)
+
+| Deutsch | Englisch | Hinweis |
+|---|---|---|
+| Ziel (Etappenziel im Alarm) | destination | `🏁 Destination`; derselbe Schlüssel `alarm.segment.ziel` wie im Radar-Validator |
+| stärkste Stunde | peak hour | Zeitpunkt des stärksten Werts |
+| Luftmasse | air mass | Gewitter-Zeile bis „leicht“ (#2176) |
+| Radar-Nowcast | radar nowcast | Badge der Regen-Alarm-Mail |
+| Beginn (Regen-/Gewitter-Beginn) | onset | „Niedersch-Beginn“ = *Precip onset* |
+| Cooldown | cooldown | „höchstens einmal in“ = *at most once in* |

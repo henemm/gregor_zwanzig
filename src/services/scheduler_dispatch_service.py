@@ -838,6 +838,7 @@ def send_one_compare_preset(
             profile=profile,
             official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
             call_source="vergleich",
+            user_id=user_id,  # Issue #2234: Budget beim ausloesenden Nutzer
         )
     except Exception as exc:
         if not weather_failure_as_outcome:

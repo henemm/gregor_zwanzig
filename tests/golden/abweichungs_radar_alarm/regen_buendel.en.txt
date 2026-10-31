@@ -1,0 +1,20 @@
+
+----- betreff -----
+[Innsbruck, Lienz] Rain alert: 2 locations
+----- klartext -----
+Rain alert: 2 locations
+
+Radar nowcast
+
+Innsbruck · Rain in 25 min: from 06:25 · last rain around 07:40 · Moderate rain
+Lienz · Thunderstorm/hail already ongoing: already ongoing · rain until at least 08:10 · Thunderstorm
+
+As of today 06:00 · Source: INCA, Radar (DWD)
+Cooldown: you receive this alert at most once in 90 minutes. Alerts from other sources (official warning/radar) are not affected by this cooldown.
+
+Rain/thunderstorm alert (radar) · INCA
+----- telegram -----
+<b>Innsbruck, Lienz · km 0–12 · Rain in 25 min</b>
+06:25 · last rain around 07:40 · Moderate rain · INCA
+----- sms -----
+Innsbruck: R2.5@6:25@7:40

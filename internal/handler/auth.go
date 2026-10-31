@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -24,6 +25,36 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
+
+// Issue #2163 Punkte 3/4: Nicht-Treffer-Zweige von Login und "Passwort
+// vergessen" vergleichen gegen diesen Dummy-Hash, damit die Antwortzeit nicht
+// verraet, ob ein Konto existiert. Einmal pro Prozess, Cost wie beim Speichern
+// (router.go: bcrypt.DefaultCost), Klartext zufaellig.
+var (
+	dummyHashOnce sync.Once
+	dummyHash     []byte
+)
+
+func dummyPasswordHash() []byte {
+	dummyHashOnce.Do(func() {
+		pw := make([]byte, 32)
+		if _, err := rand.Read(pw); err != nil {
+			log.Printf("auth: dummy hash: random source failed: %v", err)
+		}
+		h, err := bcrypt.GenerateFromPassword([]byte(hex.EncodeToString(pw)), bcrypt.DefaultCost)
+		if err != nil {
+			log.Printf("auth: dummy hash generation failed: %v", err)
+		}
+		dummyHash = h
+	})
+	return dummyHash
+}
+
+// burnDummyCompare fuehrt einen bcrypt-Vergleich gegen den Dummy-Hash aus und
+// verwirft das Ergebnis — er entscheidet NIE ueber die Anmeldung.
+func burnDummyCompare(password string) {
+	_ = bcrypt.CompareHashAndPassword(dummyPasswordHash(), []byte(password))
+}
 
 type authRequest struct {
 	Username string `json:"username"`
@@ -78,6 +109,8 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		// ein Register-Aufruf ohne email gegen einen bereits existierenden User
 		// muss 409 liefern, nicht fälschlich 400 (bricht sonst
 		// scripts/setup-validator-user.sh, das nie ein email-Feld sendet).
+		// Bewusstes Restrisiko (Enumeration, 409): docs/specs/modules/auth_haertung_go_2163.md
+		// "Bewusst nicht geaendert"; ADR-0003, #2147 B1; gebremst per registerLimiter.
 		if s.UserExists(req.Username) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(409)
@@ -133,7 +166,7 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			w.Write([]byte(`{"error":"internal error"}`))
 			return
 		}
-		if taken {
+		if taken { // Restrisiko wie oben (auth_haertung_go_2163.md, ADR-0003, #2147 B1)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(409)
 			w.Write([]byte(`{"error":"email_taken"}`))
@@ -327,6 +360,7 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 		// syntaktisch auffallen.
 		if !store.ValidUserID(req.Username) {
 			log.Printf("login: rejected path-unsafe user id %q", req.Username)
+			burnDummyCompare(req.Password)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(401)
 			w.Write([]byte(`{"error":"invalid credentials"}`))
@@ -336,12 +370,14 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 		user, err := s.LoadUser(req.Username)
 		if err != nil {
 			log.Printf("login: user.json unreadable/corrupt for %s: %v", req.Username, err)
+			burnDummyCompare(req.Password)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(401)
 			w.Write([]byte(`{"error":"invalid credentials"}`))
 			return
 		}
 		if user == nil {
+			burnDummyCompare(req.Password)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(401)
 			w.Write([]byte(`{"error":"invalid credentials"}`))
@@ -349,6 +385,11 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 		}
 
 		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+			// Leerer/kaputter Hash (Passkey-/Google-Konto) scheitert ohne
+			// bcrypt-Arbeit; ein gueltiger Hash mit falschem Passwort ist schon langsam.
+			if !errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+				burnDummyCompare(req.Password)
+			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(401)
 			w.Write([]byte(`{"error":"invalid credentials"}`))
@@ -478,12 +519,14 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 		// Ablehnung keinen unterscheidbaren Fall bekommen.
 		if !store.ValidUserID(req.Username) {
 			log.Printf("password reset: rejected path-unsafe user id %q", req.Username)
+			burnDummyCompare(req.Username)
 			w.Write([]byte(`{"status":"ok"}`))
 			return
 		}
 
 		user, _ := s.LoadUser(req.Username)
 		if user == nil {
+			burnDummyCompare(req.Username)
 			w.Write([]byte(`{"status":"ok"}`))
 			return
 		}

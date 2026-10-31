@@ -96,16 +96,16 @@ def _identity_inputs(nowcast, now_utc: datetime) -> tuple:
     )
 
 
-def _format_cooldown_display(cooldown_minutes: int) -> str:
+def _format_cooldown_display(cooldown_minutes: int, *, lang: str = "de") -> str:
     """Menschenlesbarer Cooldown-Hinweis-Text — Muster
     `radar_alert_service.py::_cooldown_display` (Trip-Radar-Pfad), hier auf
     dem bereits aufgelösten `cooldown_minutes`-Wert des Presets statt eines
     Trip-Objekts (Pflicht-Fix, Staging-Befund: fehlender Cooldown-Hinweis in
-    Compare-Radar-Alarm-Mails)."""
-    if cooldown_minutes % 60 == 0:
-        n = cooldown_minutes // 60
-        return f"{n} Stunde" if n == 1 else f"{n} Stunden"
-    return f"{cooldown_minutes} Minuten"
+    Compare-Radar-Alarm-Mails). Issue #2667: derselbe Baustein wie der
+    Trip-Pfad (`radar_alert_service.cooldown_text`), in ``lang``."""
+    from services.radar_alert_service import cooldown_text
+
+    return cooldown_text(cooldown_minutes, lang=lang)
 
 
 # Issue #2050 S6 (E-1): Ereigniszeit-Ableitung aus dem GETEILTEN Baustein --
