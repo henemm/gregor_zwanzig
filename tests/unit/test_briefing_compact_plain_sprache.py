@@ -275,21 +275,9 @@ def test_ac6_englische_vollmail_traegt_englischen_befehlsblock():
 # --------------------------------------------------------------------------- #
 # AC-3: Validator gegen echte .eml beider Sprachen
 # --------------------------------------------------------------------------- #
-# Blocker (Framework-Datei, nicht in diesem Paket aenderbar): der Validator
-# prueft im Kompakt-Format die feste deutsche Ueberschrift
-# '== Metriken-Ueberblick ==' (``_check_compact_blocks``), unabhaengig von
-# ``X-GZ-Lang``. strict=True: sobald der Validator sprachfaehig ist, wird dieser
-# Test XPASS -> rot und der Marker muss weg.
-_VALIDATOR_KOMPAKT_DEUTSCH = pytest.mark.xfail(
-    strict=True,
-    reason="briefing_mail_validator._check_compact_blocks erwartet fest "
-           "'== Metriken-Ueberblick ==' (Framework-Hook, Patch im PR #2665 beschrieben)",
-)
-
-
 @pytest.mark.parametrize("name", [
     "briefing_compact_de.eml",
-    pytest.param("briefing_compact_en.eml", marks=_VALIDATOR_KOMPAKT_DEUTSCH),
+    "briefing_compact_en.eml",
 ])
 def test_ac3_validator_besteht_kompakt_mail(tmp_path, name):
     lauf, _ = validator_lauf(tmp_path, "briefing_mail_validator", lade(name))
