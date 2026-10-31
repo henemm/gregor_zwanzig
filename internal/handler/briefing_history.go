@@ -48,7 +48,7 @@ func briefingHistory(s *store.Store, w http.ResponseWriter, r *http.Request, kin
 		return
 	}
 	id := chi.URLParam(r, "id")
-	if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+	if bailIf(w, r, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
 		return
 	}
 

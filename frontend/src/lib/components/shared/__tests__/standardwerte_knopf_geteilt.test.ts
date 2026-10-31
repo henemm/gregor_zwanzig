@@ -25,7 +25,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { parse } from 'svelte/compiler';
-import de from '../../../i18n/messages/de.json' with { type: 'json' };
+import { de } from '../../../i18n/messages/de/index.ts';
 import {
 	lade,
 	renderKomponente,

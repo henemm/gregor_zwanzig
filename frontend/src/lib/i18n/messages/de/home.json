@@ -1,0 +1,21 @@
+{
+	"onboarding.willkommen.titel": "Dein Start mit Gregor 20",
+	"onboarding.willkommen.text": "Gregor schickt dir morgens und abends ein Briefing zu deinen Trips und Ortsvergleichen und meldet Alarme, wenn sich das Wetter ändert. Du kannst einen Trip oder einen Ortsvergleich anlegen und vorab eine Testmail an deine bestätigte Adresse senden.",
+	"onboarding.willkommen.testmail": "Testmail senden",
+	"onboarding.willkommen.neuer_trip": "+ Neuer Trip",
+	"onboarding.willkommen.neuer_vergleich": "+ Neuer Vergleich",
+	"onboarding.willkommen.verstanden": "Verstanden",
+	"onboarding.checkliste.titel": "Startklar-Checkliste",
+	"onboarding.checkliste.email": "E-Mail-Adresse bestätigt",
+	"onboarding.checkliste.trip_oder_vergleich": "Mindestens ein Trip oder Ortsvergleich angelegt",
+	"onboarding.checkliste.erstes_briefing": "Erstes Briefing erhalten",
+	"onboarding.checkliste.testmail_gesendet": "Testmail gesendet am",
+	"onboarding.checkliste.testmail_senden": "Testmail senden",
+	"onboarding.checkliste.telegram": "Telegram verknüpft (optional)",
+	"onboarding.checkliste.ausblenden": "Ausblenden",
+	"onboarding.hinweis.sms": "Dein Tarif enthält SMS als Kanal.",
+	"onboarding.hinweis.premium_sms": "Dein Tarif enthält Premium-SMS (Garmin inReach) als Kanal.",
+	"onboarding.testmail.laeuft": "Testmail wird gesendet …",
+	"onboarding.testmail.fehler": "Die Testmail konnte nicht gesendet werden.",
+	"onboarding.checkliste.hilfe": "So funktioniert Gregor"
+}

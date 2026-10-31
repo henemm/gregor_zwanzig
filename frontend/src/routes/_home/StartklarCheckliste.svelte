@@ -32,11 +32,11 @@
 	const hinweise = $derived(tarifHinweise(profil));
 
 	const LABEL: Record<PunktId, () => string> = {
-		email: () => t('onboarding.checkliste.email'),
-		'trip-oder-vergleich': () => t('onboarding.checkliste.trip_oder_vergleich'),
-		'erstes-briefing': () => t('onboarding.checkliste.erstes_briefing'),
-		testmail: () => t('onboarding.checkliste.testmail_gesendet'),
-		telegram: () => t('onboarding.checkliste.telegram')
+		email: () => $t('onboarding.checkliste.email'),
+		'trip-oder-vergleich': () => $t('onboarding.checkliste.trip_oder_vergleich'),
+		'erstes-briefing': () => $t('onboarding.checkliste.erstes_briefing'),
+		testmail: () => $t('onboarding.checkliste.testmail_gesendet'),
+		telegram: () => $t('onboarding.checkliste.telegram')
 	};
 
 	function datum(iso: string | null): string {
@@ -55,9 +55,9 @@
 	style="background: var(--g-card); color: var(--g-ink-2); border: 1px solid var(--g-rule); border-radius: 10px; padding: 18px 22px; margin-bottom: 28px;"
 >
 	<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;">
-		<h2 style="font-size: 16px; font-weight: 600; margin: 0; color: var(--g-ink);">{t('onboarding.checkliste.titel')}</h2>
+		<h2 style="font-size: 16px; font-weight: 600; margin: 0; color: var(--g-ink);">{$t('onboarding.checkliste.titel')}</h2>
 		<Btn variant="quiet" size="sm" data-testid="startklar-ausblenden" onclick={() => onAusblenden?.()}>
-			{t('onboarding.checkliste.ausblenden')}
+			{$t('onboarding.checkliste.ausblenden')}
 		</Btn>
 	</div>
 	<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px;">
@@ -81,22 +81,22 @@
 						data-testid="startklar-testmail-senden"
 						disabled={testmailStatus === 'loading'}
 						onclick={() => onTestmail?.()}
-					>{t('onboarding.checkliste.testmail_senden')}</Btn>
+					>{$t('onboarding.checkliste.testmail_senden')}</Btn>
 				{/if}
 			</li>
 		{/each}
 	</ul>
 	{#if testmailStatus === 'loading'}
-		<p style="margin: 8px 0 0; font-size: 13px; color: var(--g-ink-2);">{t('onboarding.testmail.laeuft')}</p>
+		<p style="margin: 8px 0 0; font-size: 13px; color: var(--g-ink-2);">{$t('onboarding.testmail.laeuft')}</p>
 	{:else if testmailStatus === 'error'}
-		<p role="alert" data-testid="startklar-testmail-fehler" style="margin: 8px 0 0; font-size: 13px; color: var(--g-ink-2);">{testmailFehler ?? t('onboarding.testmail.fehler')}</p>
+		<p role="alert" data-testid="startklar-testmail-fehler" style="margin: 8px 0 0; font-size: 13px; color: var(--g-ink-2);">{testmailFehler ?? $t('onboarding.testmail.fehler')}</p>
 	{/if}
 	{#each hinweise as h (h)}
 		<p data-testid="startklar-hinweis-{h}" style="margin: 10px 0 0; font-size: 13px; color: var(--g-ink-2);">
-			{h === 'sms' ? t('onboarding.hinweis.sms') : t('onboarding.hinweis.premium_sms')}
+			{h === 'sms' ? $t('onboarding.hinweis.sms') : $t('onboarding.hinweis.premium_sms')}
 		</p>
 	{/each}
 	<p style="margin: 12px 0 0; font-size: 13px;">
-		<a href="/hilfe" data-testid="startklar-hilfe" style="color: var(--g-ink); text-decoration: underline;">{t('onboarding.checkliste.hilfe')}</a>
+		<a href="/hilfe" data-testid="startklar-hilfe" style="color: var(--g-ink); text-decoration: underline;">{$t('onboarding.checkliste.hilfe')}</a>
 	</p>
 </section>

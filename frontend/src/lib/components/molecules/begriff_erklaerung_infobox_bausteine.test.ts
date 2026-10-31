@@ -29,7 +29,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import de from '../../i18n/messages/de.json' with { type: 'json' };
+import { de } from '../../i18n/messages/de/index.ts';
 import {
 	COMPONENTS,
 	attribut,

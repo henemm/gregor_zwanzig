@@ -3,7 +3,7 @@
 Spec: docs/specs/modules/onboarding_standardwerte_hilfe.md
 
 Die Hilfeseite ``/hilfe`` fuehrt die Antwort-Befehle als statische Kopie im
-Textkatalog ``frontend/src/lib/i18n/messages/de.json``. Einzige Quelle der
+Textkatalog ``frontend/src/lib/i18n/messages/de/hilfe.json`` (seit #2647). Einzige Quelle der
 Befehle ist ``_COMMAND_SPECS`` in ``src/services/trip_command_processor.py``.
 Dieser Test ruft ``command_rows()`` ECHT auf (Import, kein Quelltext-Lesen) und
 vergleicht die Befehle samt Argumentform mit den Katalogeintraegen. Kommt ein
@@ -32,7 +32,14 @@ import pytest
 from src.services.trip_command_processor import command_rows
 
 KATALOG_DATEI = (
-    Path(__file__).resolve().parent.parent / "frontend" / "src" / "lib" / "i18n" / "messages" / "de.json"
+    Path(__file__).resolve().parent.parent
+    / "frontend"
+    / "src"
+    / "lib"
+    / "i18n"
+    / "messages"
+    / "de"
+    / "hilfe.json"
 )
 _BEFEHL_KEY = re.compile(r"^hilfe\.befehle\.([^.]+)\.befehl$")
 

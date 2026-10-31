@@ -41,6 +41,9 @@ func New(deps Deps) chi.Router {
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
 	r.Use(authmw.AuthMiddleware(deps.Config.SessionSecret, deps.Store))
+	// Issue #2675 (ADR-0104): Sprache einmal je Anfrage in den Kontext —
+	// Nutzer aus dem Auth-Kontext > Cookie gz_lang > Accept-Language > de.
+	r.Use(authmw.Lang(deps.Store))
 
 	// Issue #2155 S1 (ADR-0078): Admin-Menge einmal aus GZ_ADMIN_USER_IDS.
 	admins := config.ParseAdminUserIDs(deps.Config.AdminUserIDs)

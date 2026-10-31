@@ -505,6 +505,33 @@ keinem Modell und nicht in der Fixture steht, fängt das Gate nicht — nur den 
 *Regel-Budget: trip_schema_drift — Prüfdatum 2027-01-03, siehe Tabelle unten. Spec:
 `docs/specs/modules/trip_schema_drift_gate.md`.*
 
+## i18n-Ratschen (Epic #2644)
+
+**Frontend (S4, #2649, seit 2026-10-31).** `frontend/src/lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts`
+scannt jede `*.svelte` unter `frontend/src/` (ohne `__tests__/`, `routes/_design*`,
+`routes/email-preview-dev`) mit dem Test-Hilfsmodul `__tests__/hardcode_scan.ts`: `<script>`,
+`<style>`, Kommentare, `{…}`-Ausdrücke und HTML-Entities entfernen (zeilentreu), dann melden
+(a) Textknoten mit ≥ 2 Buchstaben `[A-Za-zÄÖÜäöüß]`, (b) statische Werte von
+`title|aria-label|placeholder|alt|label` (gemischte Werte mit `{…}` nicht). Altbestand steht in
+`frontend/src/lib/i18n/hardcode_allowlist.json` (Pfade relativ zu `frontend/src/`, Verzeichnis
+endet auf `/`, sonst exakte Datei). **Beide Richtungen rot:** Treffer ohne Eintrag (`Datei:Zeile  "Text"`)
+und Eintrag ohne Treffer — das F-Paket, das einen Bereich migriert, muss seinen Eintrag streichen
+bzw. durch die noch belasteten Unterordner/Dateien ersetzen. Weniger als 150 gescannte Dateien
+bricht mit „Messaufbau leer" ab (gegen vakuum-grün). Startstand per `--messen`
+(2026-10-31, `4f386528a`): 253 Dateien gescannt, 115 mit Treffern, 1115 Trefferzeilen,
+33 Einträge. Nicht erfasst: Texte in `<script>`, sonstige Props (`eyebrow="…"`), `*.ts` (ab #2660).
+Marken-Schriftzüge (`lib/brand/*`, „gregor"/„zwanzig") meldet der Scanner wie jeden Text; sie
+stehen bis zur Entscheidung im zuständigen F-Paket in der Allowlist.
+
+`katalog_schluessel_haben_verwender.test.ts` verlangt für jeden Schlüssel der vereinigten
+`de`-Karte einen Verwender in `frontend/src/` (ohne `__tests__/`, `*.test.ts`, `*.spec.ts`):
+Schlüssel-Literal (deckt `t`/`$t`/`tr`/`trFor` und Zuordnungstabellen wie `infoboxKeys.ts`),
+Plural-Aufruf `tn`/`$tn`/`trn`/`trnFor('k', …)` für `k.one`/`k.other`, oder Kommentar
+`// i18n-dynamic: <präfix>`.
+
+*Regel-Budget: i18n-Ratsche Frontend — Prüfdatum 2027-01-28, siehe Tabelle unten. Spec:
+`docs/specs/modules/i18n_s4_ratsche_frontend_2649.md`.*
+
 ## Aktive Hooks in `.claude/settings.json` — Kurzreferenz (Stand 2026-10-21)
 
 Vollständige Liste der im Repo verdrahteten Hooks. Alle stehen in der geschützten Form
@@ -566,6 +593,7 @@ Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mai
 | Trip-Schema-Drift-Gate `trip_schema_drift` — Test-Paar `tests/test_trip_schema_drift.py` + `internal/model/trip_schema_drift_test.go`, Allowlist `send_premium_sms`/`trip` (#2058) | 2027-01-03 | `suggestion_reason` nur in Python (Go-Editor-Save verwarf es still), bei Einführung geschlossen |
 | Egress-Struktur-Wächter `tests/tdd/test_egress_single_dial_point.py` — `smtplib` (#1412 S3a) und `httpx`-POST (#1412 S3b) nur an den erlaubten Ausgängen (`TelegramOutput._post`, `SevenIoChannelBase._post`), Deckel 3 localhost-Ausnahmen | 2027-01-04 | `seven_io_base.py:171` (`httpx.post` direkt in `SevenIoChannelBase.send`) bei Einführung gefangen und in `_post` verlegt |
 | Compare-Paritäts-Wächter `tests/unit/test_e2e_compare_paritaet_waechter.py` — jede `*compare*.spec.ts` bzw. Compare-Hub-Spec ohne Trip-Gegenstück braucht kind-Schleife oder `gz-eigenstaendig:`-Kopf; Altlastliste nur schrumpfend (#2347 S1, Epic #2345 P6) | 2027-01-24 | Regel 2 fand bei Einführung 2 Specs außerhalb der Compare-Dateinamen (`kanal-grenzen-ortsvergleich.staging.spec.ts`, `versand-tab-vergleich.spec.ts`); fehlende Trip-Cross-User-Schreibprüfung (geschlossen durch `hub-cross-user-write-block.spec.ts`) |
+| i18n-Ratsche Frontend `keine_hartkodierten_nutzertexte.test.ts` + `katalog_schluessel_haben_verwender.test.ts` (Epic #2644, S4) — Allowlist bleibt bis Abschluss von Epic #2644 bestehen und darf nur schrumpfen, danach leer | 2027-01-28 | offen — Startstand 2026-10-31 (`4f386528a`): 115 Dateien mit 1115 Trefferzeilen in 33 Allowlist-Einträgen; Kriterium: ein neuer hartkodierter Nutzertext oder verwaister Katalogschlüssel, der ohne die Ratsche ausgeliefert worden wäre |
 
 **Weitere Prüfdaten, die nur im Code stehen** (Abgleich 2026-10-21 per
 `grep -rn "Prüfdatum\|Pruefdatum" tests .claude/hooks`; Fang-Beleg hier nicht erhoben):

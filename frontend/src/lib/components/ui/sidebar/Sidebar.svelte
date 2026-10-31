@@ -29,14 +29,14 @@
 	let userMenuOpen = $state(false);
 
 	// Nav-Items fest nach JSX BRAND_NAV_ITEMS (brand-kit.jsx Zeile 259–264).
-	const baseNavItems = [
+	const baseNavItems = $derived([
 		{ id: 'home',    href: '/',        label: 'Startseite',     icon: 'home'    },
 		{ id: 'trips',   href: '/trips',   label: 'Meine Trips',    icon: 'trip'    },
 		{ id: 'compare', href: '/compare', label: 'Orts-Vergleich', icon: 'compare' },
 		{ id: 'archive', href: '/archiv',  label: 'Archiv',         icon: 'archive' },
 		// Issue #2521 S3 — Hilfeseite (BottomNav bleibt unveraendert).
-		{ id: 'hilfe',   href: '/hilfe',   label: t('nav.hilfe'),   icon: 'hilfe'   },
-	];
+		{ id: 'hilfe',   href: '/hilfe',   label: $t('nav.hilfe'),   icon: 'hilfe'   },
+	]);
 	// Issue #2155 S4 — Eintrag nur fuer Admins (Komfort; Go bleibt die Sperre).
 	const navItems = $derived(
 		isAdmin

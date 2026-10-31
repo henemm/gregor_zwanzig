@@ -50,7 +50,7 @@
 		type OnboardingProfil
 	} from './_home/onboardingSichtbarkeit.js';
 	import { api } from '$lib/api.js';
-	import { t } from '$lib/i18n/index.js';
+	import { tr } from '$lib/i18n/index.js';
 
 	let { data } = $props();
 
@@ -85,7 +85,7 @@
 	// Klick-Logik liegt testbar in ./_home/onboardingAktionen.ts.
 	const { verstanden, ausblenden, sendeTestmail } = erzeugeOnboardingAktionen({
 		api,
-		t,
+		t: tr,
 		getLokal: () => onbLokal,
 		setLokal: (neu) => (onbLokal = neu),
 		setTestmail: (status, fehler) => {

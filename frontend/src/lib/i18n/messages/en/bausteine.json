@@ -1,0 +1,22 @@
+{
+	"info.wetter-metriken.route": "You can skip this — default: the weather metrics preselected by the system.",
+	"info.wetter-metriken.vergleich": "You can skip this — default: the metrics preselected by the system, plus hourly forecast and 3-day outlook (both on).",
+	"info.wertebereiche.route": "You can skip this — default: no target ranges, nothing is highlighted in the briefing.",
+	"info.wertebereiche.vergleich": "You can skip this — default: the target ranges are prefilled from the activity profile.",
+	"info.alarme.route": "You can skip this — default: alerts by email and Telegram, urgency threshold “low”, official warnings off. Telegram only takes effect once it is linked.",
+	"info.alarme.vergleich": "You can skip this — default: alerts by email and Telegram, urgency threshold “low”, official warnings off. Telegram only takes effect once it is linked.",
+	"info.versand.route": "You can skip this — default: email, morning briefing at 07:00 and evening briefing at 18:00.",
+	"info.versand.vergleich": "You can skip this — default: email, morning briefing at 07:00, no end date.",
+	"info.wegpunkte.route": "You can skip this — default: no additional waypoints.",
+	"tip.wertebereiche": "A target range defines which values of a metric count as suitable. Values within the range are highlighted in the briefing.",
+	"tip.kanal_schwelle": "The urgency threshold defines per channel from which level (low, medium, high) a message is sent through this channel.",
+	"tip.cape": "CAPE (thunderstorm energy) measures in J/kg how much energy for thunderstorms is in the air. The threshold is a guide value and is converted per weather model and area.",
+	"tip.cooldown": "The cooldown is the minimum interval in minutes between two messages for the same metric.",
+	"tip.aria.wertebereiche": "Explanation: target ranges",
+	"tip.aria.kanal_schwelle": "Explanation: urgency threshold",
+	"tip.aria.cape": "Explanation: CAPE",
+	"tip.aria.cooldown": "Explanation: cooldown",
+	"telegram_kurzstil.hinweis_aktiv": "Telegram gets the same short one-line text as SMS, without buttons. Content and values follow the SMS selection in the Layout tab; the Telegram selection only applies to the detailed Telegram message.",
+	"telegram_kurzstil.hinweis_inaktiv": "Only active when Telegram is switched on as a channel.",
+	"standardwerte.knopf": "Save as defaults"
+}

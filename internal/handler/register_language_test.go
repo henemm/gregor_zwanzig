@@ -45,7 +45,8 @@ func TestRegisterMitSpracheEnSpeichertUndSetztCookie(t *testing.T) {
 	langPruefeCookie(t, "AC-5 (Registrierung, https)", w, "en", true)
 }
 
-// AC-4 + AC-5: ohne language -> Feld fehlt, Cookie de (kein Secure bei http).
+// AC-4: ohne language -> Feld fehlt; seit #2675 (G1 AC-6) kein gz_lang, damit
+// die Browser-Vorbelegung des Besuchers erhalten bleibt.
 func TestRegisterOhneSpracheLaesstFeldWeg(t *testing.T) {
 	s := newTestStore(t)
 	calls := onbStubVerificationMail(t)
@@ -59,7 +60,9 @@ func TestRegisterOhneSpracheLaesstFeldWeg(t *testing.T) {
 	if v, ok := onbReadRawUser(t, s, "lang-reg-leer")["language"]; ok {
 		t.Errorf("AC-4: ohne Sprachwahl steht language=%s in user.json, erwartet: Feld fehlt", v)
 	}
-	langPruefeCookie(t, "AC-5 (Registrierung ohne Sprache, http)", w, "de", false)
+	if c := langCookie(w); c != nil {
+		t.Errorf("G1 AC-6 (Registrierung ohne Sprache): gz_lang=%q gesetzt", c.Value)
+	}
 }
 
 // AC-4: "fr" -> 400 invalid_language, kein Konto, Einladung unverbraucht.

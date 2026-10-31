@@ -33,6 +33,8 @@ async function rufe(pfad: string, cookie?: string): Promise<Ergebnis> {
 	const event = {
 		url,
 		locals,
+		// Issue #2647: handle liest Accept-Language aus dem Request und gz_lang aus den Cookies.
+		request: new Request(url),
 		cookies: { get: (n: string) => (n === 'gz_session' ? cookie : undefined) }
 	};
 	const resolve = async () =>

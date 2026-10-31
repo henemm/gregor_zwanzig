@@ -28,7 +28,7 @@ func briefingPreviewTarget(w http.ResponseWriter, r *http.Request, pythonURL, su
 		return "", "", false
 	}
 	id := chi.URLParam(r, "id")
-	if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+	if bailIf(w, r, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
 		return "", "", false
 	}
 	return pythonURL + "/api/briefings/" + id + "/" + suffix, kind, true

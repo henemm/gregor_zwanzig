@@ -5,49 +5,49 @@
 	import Wordmark from '$lib/components/ui/wordmark/Wordmark.svelte';
 	import { t } from '$lib/i18n';
 
-	const bilder = [
-		{ src: t('start.mail.src'), alt: t('start.mail.alt'), caption: t('start.mail.caption') },
-		{ src: t('start.telegram.src'), alt: t('start.telegram.alt'), caption: t('start.telegram.caption') },
-		{ src: t('start.alarm.src'), alt: t('start.alarm.alt'), caption: t('start.alarm.caption') }
-	];
+	const bilder = $derived([
+		{ src: $t('start.mail.src'), alt: $t('start.mail.alt'), caption: $t('start.mail.caption') },
+		{ src: $t('start.telegram.src'), alt: $t('start.telegram.alt'), caption: $t('start.telegram.caption') },
+		{ src: $t('start.alarm.src'), alt: $t('start.alarm.alt'), caption: $t('start.alarm.caption') }
+	]);
 </script>
 
 <svelte:head>
-	<title>{t('start.meta.title')}</title>
-	<meta name="description" content={t('start.meta.description')} />
+	<title>{$t('start.meta.title')}</title>
+	<meta name="description" content={$t('start.meta.description')} />
 </svelte:head>
 
 <main class="start" data-testid="startseite">
 	<Wordmark size="md" />
 
 	<section class="hero">
-		<Eyebrow>{t('start.hero.eyebrow')}</Eyebrow>
-		<h1>{t('start.hero.title')}</h1>
-		<p class="lead">{t('start.hero.lead')}</p>
+		<Eyebrow>{$t('start.hero.eyebrow')}</Eyebrow>
+		<h1>{$t('start.hero.title')}</h1>
+		<p class="lead">{$t('start.hero.lead')}</p>
 		<div class="cta">
-			<Btn variant="primary" size="lg" href="/register">{t('start.cta.register')}</Btn>
-			<Btn variant="outline" size="lg" href="/login">{t('start.cta.login')}</Btn>
+			<Btn variant="primary" size="lg" href="/register">{$t('start.cta.register')}</Btn>
+			<Btn variant="outline" size="lg" href="/login">{$t('start.cta.login')}</Btn>
 		</div>
 	</section>
 
 	<div class="raster">
 		<Card>
-			<SectionH eyebrow={t('start.was.eyebrow')} title={t('start.was.title')} />
-			<p>{t('start.was.text')}</p>
-			<p>{t('start.was.hyperlokal')}</p>
+			<SectionH eyebrow={$t('start.was.eyebrow')} title={$t('start.was.title')} />
+			<p>{$t('start.was.text')}</p>
+			<p>{$t('start.was.hyperlokal')}</p>
 		</Card>
 
 		<Card>
-			<SectionH eyebrow={t('start.ankommt.eyebrow')} title={t('start.ankommt.title')} />
-			<p>{t('start.ankommt.briefing')}</p>
-			<p>{t('start.ankommt.alarm')}</p>
-			<p>{t('start.ankommt.kanaele')}</p>
+			<SectionH eyebrow={$t('start.ankommt.eyebrow')} title={$t('start.ankommt.title')} />
+			<p>{$t('start.ankommt.briefing')}</p>
+			<p>{$t('start.ankommt.alarm')}</p>
+			<p>{$t('start.ankommt.kanaele')}</p>
 		</Card>
 
 		<Card>
-			<SectionH eyebrow={t('start.nutzen.eyebrow')} title={t('start.nutzen.title')} />
-			<p>{t('start.nutzen.empfang')}</p>
-			<p>{t('start.nutzen.entscheidung')}</p>
+			<SectionH eyebrow={$t('start.nutzen.eyebrow')} title={$t('start.nutzen.title')} />
+			<p>{$t('start.nutzen.empfang')}</p>
+			<p>{$t('start.nutzen.entscheidung')}</p>
 		</Card>
 	</div>
 
@@ -59,7 +59,7 @@
 			</Card>
 		{/each}
 	</section>
-	<p class="caption hinweis">{t('start.footer.hinweis')}</p>
+	<p class="caption hinweis">{$t('start.footer.hinweis')}</p>
 </main>
 
 <style>

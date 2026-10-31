@@ -155,6 +155,23 @@ Wortquelle für Trip, Vergleich und Alarme). Spec:
 - Einheiten im Feldnamen: `*_c`, `*_kmh`, `*_mmph`, `*_mm`, `*_pct`, `*_hpa`, `*_jkg`, `*_m`, `*_cm`
 - Provider (Ist-Stand, s. `docs/reference/decision_matrix.md`): `openmeteo` (Standard) | `geosphere` | `brightsky` | `at_direct`/`de_direct`/`fr_direct` (Fallback) — `radar_dpc` seit #1648 ersatzlos entfernt
 
+### Fehlerobjekt `code`/`message` (Issue #2675, ADR-0104)
+
+Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` laufen, haben die Form:
+
+```json
+{"code": "not_found", "message": "Not found.", "error": "not_found", "detail": "Not found."}
+```
+
+- `code`: stabiler Fehlercode in snake_case. Das Frontend übersetzt bekannte Codes selbst, unbekannte zeigt es mit `message`.
+- `message`: Text in der Sprache der Anfrage aus `internal/i18n` (Suchkette `fehler.<code>` → `auth.fehler.<code>` → `konto.fehler.<code>` → `fach.fehler.<code>`, mit optionaler Variante zuerst; ohne Treffer `fehler.unbekannt`).
+- Übergangsfelder: `error` (= `code`, bisherige Clients lesen `error`) und `detail` (= `message` bzw. ein technischer Zusatz).
+- Zusatzfelder je Endpunkt bleiben möglich (z. B. `resource`, `compare_presets`); Header wie `Retry-After` unverändert.
+- **Sprachauflösung** (Middleware `middleware.Lang` direkt nach `AuthMiddleware`): angemeldet gespeicherte Nutzersprache `language` > Cookie `gz_lang` (`de`|`en`, andere Werte ignoriert) > `Accept-Language` (nach `q`, `q=0` ignoriert) > `de`; öffentlich Cookie > `Accept-Language` > `de`.
+- Cookie `gz_lang` setzt Go bei Anmeldung (alle Wege), Registrierung und Profil-Update, aber nur bei gespeicherter Sprache: `Path=/`, `Max-Age=31536000`, `SameSite=Lax`, `Secure` bei https, nicht HttpOnly.
+- Umgestellt sind in G1 die Pfade über `bailIf` (`/api/briefings*`, Teile von `/api/compare/presets/{id}*`). Die übrigen Formen (`{"error":…}`, Form A in 10.1, `AuthMiddleware` 401/503) werden mit G2/G3 vereinheitlicht und hier nachgeführt.
+- Antworten des Python-Cores werden unverändert durchgereicht.
+
 ---
 
 ## 0.5) Endpunkt-Inventar (vollständig, generiert aus `internal/router/router.go`)

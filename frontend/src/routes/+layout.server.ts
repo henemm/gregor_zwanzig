@@ -13,6 +13,8 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 	let isAdmin = false;
 	// Issue #2521 S2 — Onboarding-Felder aus DEMSELBEN Profil-Abruf (fail-closed).
 	let profileJson: Record<string, unknown> | null = null;
+	// Issue #2647 — Sprache: Profil (de/en) > locals.lang (Cookie/Header aus hooks.server.ts).
+	let lang: 'de' | 'en' = locals.lang ?? 'de';
 	if (locals.userId) {
 		const session = cookies.get('gz_session');
 		const profile = await fetch(`${API()}/api/auth/profile`, {
@@ -25,7 +27,9 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		hasPasskey = profile?.has_passkey === true;
 		passkeyPromptDismissed = profile?.passkey_prompt_dismissed === true;
 		isAdmin = profile?.role === 'admin';
+		if (profile?.language === 'de' || profile?.language === 'en') lang = profile.language;
 	}
+	locals.lang = lang;
 
 	return {
 		userId: locals.userId,
@@ -33,6 +37,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
 		hasPasskey,
 		passkeyPromptDismissed,
 		isAdmin,
-		onboarding: onboardingAusProfil(profileJson)
+		onboarding: onboardingAusProfil(profileJson),
+		lang
 	};
 };

@@ -374,7 +374,7 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
-		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+		if bailIf(w, r, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
 			return
 		}
 
@@ -454,7 +454,7 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
-		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+		if bailIf(w, r, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
 			return
 		}
 
@@ -506,7 +506,7 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
-		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+		if bailIf(w, r, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
 			return
 		}
 
@@ -571,7 +571,7 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
-		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+		if bailIf(w, r, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
 			return
 		}
 
