@@ -291,8 +291,9 @@ def test_teilstrecke_mit_km_angabe_und_freier_rest_englisch():
     notices = oa.build_official_alert_notices(None, [(_alarm(), ["2"])], segment_km={"2": (3.0, 8.0)},
                                               lang="en")
     assert t("warnung.satz.nur_route", "en", ort=notices[0].scope_label) in _plain(notices)
-    frei = [replace(notices[0], free_chips=["Segment 1"])]
-    notiz = t("warnung.zeile.route_frei", "en", abschnitte="Segment 1")
+    frei = [replace(notices[0], free_chips=["Segment 1", "Segment 3"])]
+    abschnitte = t("warnung.liste.und", "en", liste="Segment 1", letztes="Segment 3")
+    notiz = t("warnung.zeile.route_frei", "en", abschnitte=abschnitte)
     assert notiz in _plain(frei)
     html = oa.render_official_alert_html(frei, source_label="GeoSphere Austria", stand_at=STAND, tz=TZ,
                                          lang="en")
