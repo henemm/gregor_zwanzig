@@ -460,6 +460,51 @@ def test_telegram_ueberlauf_degeneriert_englisch():
     assert text.endswith("\n" + t("vergleich.telegram.uebersprungen", "en", n=1))
 
 
+def _telegram_orte(namen: list[str]):
+    result = build_result(mit_fehlerort=False)
+    vorlage = result.locations
+    orte = [replace(vorlage[i % 3], location=replace(vorlage[i % 3].location, id=f"o-{i}", name=n))
+            for i, n in enumerate(namen)]
+    return replace(result, locations=orte)
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_telegram_einpassen_genau_am_limit_zaehlt_neun_nicht_zehn(lang):
+    """F001: zwoelf Orte, der dritte Block passt mit dem Hinweis "+9" GENAU auf
+    4096 Zeichen. Mit falsch gezaehltem Hinweis ("+10", ein Zeichen laenger)
+    fiele er heraus und die Nachricht nennte "+10"."""
+    from output.renderers.comparison import render_compare_telegram
+
+    namen = [f"Ort {i:02d} " + "Hochgebirgsstation " * 50 for i in range(12)]
+    drei = render_compare_telegram(_telegram_orte(namen[:3]), lang=lang)
+    hinweis9 = "\n" + t("vergleich.telegram.uebersprungen", lang, n=9)
+    luecke = 4096 - len(drei) - len(hinweis9)
+    assert luecke > 0, "Testaufbau: drei Bloecke muessen unter das Limit passen"
+    namen[2] = namen[2].rstrip() + "x" * (luecke + 1)  # +1: rstrip entfernte ein Leerzeichen
+    text = render_compare_telegram(_telegram_orte(namen), lang=lang)
+    assert len(text) == 4096
+    assert text.endswith(hinweis9), text[-120:]
+
+
+@pytest.mark.parametrize("n", [1, 2])
+def test_telegram_hinweise_singular_plural(n):
+    """F002: englisch Singular bei 1, Plural bei 2; deutsch wortgleich wie vorher."""
+    from output.renderers.comparison import render_compare_telegram
+    from tests.helpers.vergleichs_mail_fixture import KANAL_METRIKEN
+
+    result = build_result(mit_fehlerort=False)
+    en = render_compare_telegram(result, enabled_metrics=KANAL_METRIKEN[:8],
+                                 unresolved_count=n, lang="en").splitlines()
+    de = render_compare_telegram(result, enabled_metrics=KANAL_METRIKEN[:8],
+                                 unresolved_count=n).splitlines()
+    wert = "value" if n == 1 else "values"
+    assert f"   … +{n} selected weather {wert} without data at this location" in en
+    # 8 Groessen, 7 Plaetze: immer genau eine verdraengt -> Singular
+    assert "   … +1 more weather value per location (Telegram limit) — full version by email" in en
+    assert f"   … +{n} gewählte Wettergrößen ohne Wert an diesem Ort" in de
+    assert "   … +1 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail" in de
+
+
 def test_vortag_unbekannte_kennung_faellt_auf_neutrales_wort():
     """Schutz fuer kuenftige Kennungen ohne eigenes Richtungswort."""
     from services.day_comparison import _direction_word

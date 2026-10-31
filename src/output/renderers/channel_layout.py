@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from i18n import Lang, t
+from i18n import Lang, t, tn
 
 if TYPE_CHECKING:  # pragma: no cover - nur fuer Typannotation
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
@@ -98,11 +98,11 @@ def telegram_metric_notice(demoted_count: int, *, context: str, lang: Lang = "de
     Telegram-Nachricht GANZ, im Trip stehen sie unmittelbar darueber in der
     Kurzuebersicht als Tageswert. Ein gemeinsamer Text waere fuer eine der
     beiden Flaechen sachlich falsch. ``lang`` (Issue #2666): Wortlaut aus
-    ``allgemein.hinweis.telegram_limit.*``."""
+    ``allgemein.telegram_limit.*`` (Singular/Plural ueber ``tn``)."""
     if demoted_count <= 0:
         return ""
     form = "vergleich" if context == "vergleich" else "route"
-    return t(f"allgemein.hinweis.telegram_limit.{form}", lang, count=demoted_count)
+    return tn(f"allgemein.telegram_limit.{form}", demoted_count, lang)
 
 
 def selection_gap_notice(count: int, *, scope: str, lang: Lang = "de") -> str:
@@ -112,12 +112,13 @@ def selection_gap_notice(count: int, *, scope: str, lang: Lang = "de") -> str:
     scope='vergleich' -> tabellenweit (E-Mail HTML + Klartext). Leer bei
     ``count <= 0``. Die SMS traegt stattdessen das Kuerzel ``?N``
     (Wire-Vertrag sms_format.md §5b). ``lang`` (Issue #2666): Wortlaut aus
-    ``allgemein.hinweis.gewaehlt_ohne_wert*`` (geteilt Trip/Ortsvergleich)."""
+    ``allgemein.hinweis.gewaehlt_ohne_wert*`` (geteilt Trip/Ortsvergleich,
+    Singular/Plural ueber ``tn``)."""
     if count <= 0:
         return ""
     form = "ort" if scope == "ort" else "vergleich"
     wo = t(f"allgemein.hinweis.gewaehlt_ohne_wert.{form}", lang)
-    return t("allgemein.hinweis.gewaehlt_ohne_wert", lang, count=count, wo=wo)
+    return tn("allgemein.hinweis.gewaehlt_ohne_wert", count, lang, wo=wo)
 
 
 def render_for_channel(

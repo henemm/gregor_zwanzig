@@ -1,7 +1,10 @@
 {
-  "allgemein.hinweis.gewaehlt_ohne_wert": "… +{count} gewählte Wettergrößen ohne Wert {wo}",
+  "allgemein.hinweis.gewaehlt_ohne_wert.one": "… +{count} gewählte Wettergrößen ohne Wert {wo}",
+  "allgemein.hinweis.gewaehlt_ohne_wert.other": "… +{count} gewählte Wettergrößen ohne Wert {wo}",
   "allgemein.hinweis.gewaehlt_ohne_wert.vergleich": "in diesem Vergleich",
   "allgemein.hinweis.gewaehlt_ohne_wert.ort": "an diesem Ort",
-  "allgemein.hinweis.telegram_limit.vergleich": "… +{count} weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail",
-  "allgemein.hinweis.telegram_limit.route": "… +{count} weitere Wettergrößen nur als Tageswert (Telegram-Limit)"
+  "allgemein.telegram_limit.vergleich.one": "… +{count} weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail",
+  "allgemein.telegram_limit.vergleich.other": "… +{count} weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail",
+  "allgemein.telegram_limit.route.one": "… +{count} weitere Wettergrößen nur als Tageswert (Telegram-Limit)",
+  "allgemein.telegram_limit.route.other": "… +{count} weitere Wettergrößen nur als Tageswert (Telegram-Limit)"
 }

@@ -88,7 +88,7 @@ Kufstein
 Brenner
    Error: Zeitueberschreitung beim Abruf
 
-… +1 selected weather values without data in this comparison
+… +1 selected weather value without data in this comparison
 
 HOURLY VIEW
 ---------------
