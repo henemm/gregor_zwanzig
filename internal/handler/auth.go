@@ -18,6 +18,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/mail"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
@@ -200,7 +201,11 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		// für immer nil und die Adresse dauerhaft von Resend-Versand ausgeschlossen.
 		dispatchVerificationMail(s, cfg, req.Username, &user)
 
-		middleware.SetLangCookie(w, r, user.Lang(), cfg.PublicHost)
+		// Issue #2675 (G1 AC-6): nur bei gespeicherter Sprache; ohne Wahl
+		// bleibt die Browser-Vorbelegung (Cookie/Accept-Language) unberuehrt.
+		if user.Language != "" {
+			middleware.SetLangCookie(w, r, i18n.Parse(user.Language), cfg.PublicHost)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(201)
 		json.NewEncoder(w).Encode(map[string]string{"id": req.Username})
@@ -268,13 +273,15 @@ func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request,
 	// Issue #2155 S3 (ADR-0080): gesperrte Konten bekommen keine Sitzung.
 	// Ladefehler => fail-closed. Nach der Credential-Pruefung, damit ein
 	// falsches Passwort weiter 401 liefert (kein Existenz-Leak).
-	if u, err := s.LoadUser(userId); err != nil {
+	u, err := s.LoadUser(userId)
+	if err != nil {
 		log.Printf("session issue: load user failed for %s: %v", userId, err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(500)
 		w.Write([]byte(`{"error":"store_error"}`))
 		return false
-	} else if u != nil && u.Disabled {
+	}
+	if u != nil && u.Disabled {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(403)
 		w.Write([]byte(`{"error":"account_disabled"}`))
@@ -296,6 +303,11 @@ func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request,
 		return false
 	}
 	middleware.SetSessionCookie(w, r, middleware.SignSessionWithID(userId, sessionId, secret), publicHost)
+	// Issue #2675 (G1 AC-6): EINE Stelle fuer alle Anmeldewege (Passwort,
+	// Magic-Link, Passkey, Google) — gz_lang nur bei gespeicherter Sprache.
+	if u != nil && u.Language != "" {
+		middleware.SetLangCookie(w, r, i18n.Parse(u.Language), publicHost)
+	}
 	return true
 }
 
@@ -346,7 +358,6 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 		if !issueSession(w, r, s, req.Username, secret, publicHost) {
 			return
 		}
-		middleware.SetLangCookie(w, r, user.Lang(), publicHost)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"id": req.Username})
@@ -1441,8 +1452,8 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		if sendSmsCode {
 			dispatchSmsVerificationCode(s, cfg, userId, smsCodeTarget)
 		}
-		if update.Language != nil {
-			middleware.SetLangCookie(w, r, user.Lang(), cfg.PublicHost)
+		if user.Language != "" {
+			middleware.SetLangCookie(w, r, i18n.Parse(user.Language), cfg.PublicHost)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -1473,7 +1484,7 @@ func updateLanguageOnly(w http.ResponseWriter, r *http.Request, s *store.Store, 
 		w.Write([]byte(`{"error":"store_error"}`))
 		return
 	}
-	middleware.SetLangCookie(w, r, user.Lang(), cfg.PublicHost)
+	middleware.SetLangCookie(w, r, i18n.Parse(user.Lang()), cfg.PublicHost)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toProfileResponse(user))
 }

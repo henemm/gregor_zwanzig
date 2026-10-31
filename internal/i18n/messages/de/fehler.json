@@ -1,0 +1,14 @@
+{
+  "fehler.not_found": "Nicht gefunden.",
+  "fehler.unauthorized": "Bitte melde dich an.",
+  "fehler.forbidden": "Dafür fehlt dir die Berechtigung.",
+  "fehler.store_error": "Die Daten konnten nicht gespeichert oder geladen werden. Bitte versuche es später erneut.",
+  "fehler.validation_error": "Die Eingabe ist ungültig.",
+  "fehler.bad_request": "Die Anfrage ist ungültig.",
+  "fehler.invalid_request": "Die Anfrage ist ungültig.",
+  "fehler.internal_error": "Interner Fehler. Bitte versuche es später erneut.",
+  "fehler.kind_required": "Briefing-Art fehlt oder ist ungültig (erlaubt: route, vergleich)",
+  "fehler.rate_limit_exceeded": "Zu viele Anfragen. Bitte versuche es später erneut.",
+  "fehler.service_unavailable": "Der Dienst ist gerade nicht verfügbar.",
+  "fehler.unbekannt": "Unbekannter Fehler ({code})."
+}

@@ -217,11 +217,11 @@ func TestErrorBodyDetailAusArgs(t *testing.T) {
 // Ladepruefung: Zeichen, Segmentzahl und Bereichs-Praefix.
 func TestNewCatalogWeistUngueltigeSchluesselAb(t *testing.T) {
 	cases := map[string]string{
-		"Grossbuchstaben":  `{"fach.Gross":"x"}`,
-		"Bindestrich":      `{"fach.a-b":"x"}`,
-		"ein Segment":      `{"fach":"x"}`,
-		"fuenf Segmente":   `{"fach.a.b.c.d":"x"}`,
-		"fremder Bereich":  `{"auth.login":"x"}`,
+		"Grossbuchstaben":   `{"fach.Gross":"x"}`,
+		"Bindestrich":       `{"fach.a-b":"x"}`,
+		"ein Segment":       `{"fach":"x"}`,
+		"fuenf Segmente":    `{"fach.a.b.c.d":"x"}`,
+		"fremder Bereich":   `{"auth.login":"x"}`,
 		"kein flacher Text": `{"fach.a":{"b":"c"}}`,
 	}
 	for name, body := range cases {

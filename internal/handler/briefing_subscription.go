@@ -31,13 +31,14 @@ func writeBriefingKindRequired(w http.ResponseWriter) {
 	writeJSON(w, http.StatusBadRequest, map[string]string{"error": "kind_required"})
 }
 
-// bailIf writes {"error": code} with status and reports true when cond holds
-// — collapses the repeated error/not-found guards below into one call.
-func bailIf(w http.ResponseWriter, cond bool, status int, code string) bool {
+// bailIf schreibt das Fehlerobjekt (WriteError, Issue #2675) mit status und
+// meldet true, wenn cond gilt — fasst die wiederholten Fehler-/Nicht-gefunden-
+// Pruefungen unten in einen Aufruf. Das Alt-Feld error (= code) bleibt.
+func bailIf(w http.ResponseWriter, r *http.Request, cond bool, status int, code string) bool {
 	if !cond {
 		return false
 	}
-	writeJSON(w, status, map[string]string{"error": code})
+	WriteError(w, r, status, code, nil)
 	return true
 }
 
@@ -55,7 +56,7 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
-		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+		if bailIf(w, r, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
 			return
 		}
 
@@ -70,10 +71,10 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 			}
 			defer unlockB()
 			trip, err := s.LoadTrip(id)
-			if bailIf(w, err != nil, http.StatusInternalServerError, "store_error") {
+			if bailIf(w, r, err != nil, http.StatusInternalServerError, "store_error") {
 				return
 			}
-			if bailIf(w, trip == nil, http.StatusNotFound, "not_found") {
+			if bailIf(w, r, trip == nil, http.StatusNotFound, "not_found") {
 				return
 			}
 			trip.Kind = briefingKindRoute
@@ -96,10 +97,10 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 		// Issue #1250 Scheibe 7b: per-Datei-Read ueber die neue Store-API
 		// (kind-Guard inklusive) statt Array-Scan.
 		preset, err := s.LoadComparePreset(id)
-		if bailIf(w, err != nil, http.StatusInternalServerError, "store_error") {
+		if bailIf(w, r, err != nil, http.StatusInternalServerError, "store_error") {
 			return
 		}
-		if bailIf(w, preset == nil, http.StatusNotFound, "not_found") {
+		if bailIf(w, r, preset == nil, http.StatusNotFound, "not_found") {
 			return
 		}
 		preset.Kind = briefingKindVergleich
@@ -114,11 +115,11 @@ func ListBriefingsHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		trips, err := s.LoadTrips()
-		if bailIf(w, err != nil, http.StatusInternalServerError, "store_error") {
+		if bailIf(w, r, err != nil, http.StatusInternalServerError, "store_error") {
 			return
 		}
 		presets, err := s.LoadComparePresets()
-		if bailIf(w, err != nil, http.StatusInternalServerError, "store_error") {
+		if bailIf(w, r, err != nil, http.StatusInternalServerError, "store_error") {
 			return
 		}
 		items := make([]interface{}, 0, len(trips)+len(presets))
@@ -139,13 +140,13 @@ func ListBriefingsHandler(s *store.Store) http.HandlerFunc {
 func CreateBriefingHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bodyBytes, err := io.ReadAll(r.Body)
-		if bailIf(w, err != nil, http.StatusBadRequest, "bad_request") {
+		if bailIf(w, r, err != nil, http.StatusBadRequest, "bad_request") {
 			return
 		}
 		var probe struct {
 			Kind string `json:"kind"`
 		}
-		if err := json.Unmarshal(bodyBytes, &probe); bailIf(w, err != nil || !isValidBriefingKind(probe.Kind), http.StatusBadRequest, "kind_required") {
+		if err := json.Unmarshal(bodyBytes, &probe); bailIf(w, r, err != nil || !isValidBriefingKind(probe.Kind), http.StatusBadRequest, "kind_required") {
 			return
 		}
 		r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
@@ -231,7 +232,7 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
 		// Issue #2140 Scheibe 2: Segment-Pruefung vor dem ersten Store-Aufruf.
-		if bailIf(w, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
+		if bailIf(w, r, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
 			return
 		}
 
@@ -245,21 +246,21 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 		defer unlockB()
 
 		oldFp, fpErr := s.BriefingFingerprint(id)
-		if bailIf(w, fpErr != nil, http.StatusInternalServerError, "store_error") {
+		if bailIf(w, r, fpErr != nil, http.StatusInternalServerError, "store_error") {
 			return
 		}
 
 		patch, err := io.ReadAll(r.Body)
-		if bailIf(w, err != nil, http.StatusBadRequest, "bad_request") {
+		if bailIf(w, r, err != nil, http.StatusBadRequest, "bad_request") {
 			return
 		}
 
 		presets, err := s.LoadComparePresets()
-		if bailIf(w, err != nil, http.StatusInternalServerError, "store_error") {
+		if bailIf(w, r, err != nil, http.StatusInternalServerError, "store_error") {
 			return
 		}
 		idx := findComparePresetIdx(presets, id)
-		if bailIf(w, idx < 0, http.StatusNotFound, "not_found") {
+		if bailIf(w, r, idx < 0, http.StatusNotFound, "not_found") {
 			return
 		}
 		original := presets[idx]
@@ -274,7 +275,7 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 		// (compare_preset.go) -- Server-Feld-Restauration, Legacy-Sentinels
 		// und Normalisierung leben jetzt an EINER Stelle statt zweimal.
 		preset, err := applyComparePresetPatch(original, id, patch, time.Now().UTC())
-		if bailIf(w, err != nil, http.StatusBadRequest, "bad_request") {
+		if bailIf(w, r, err != nil, http.StatusBadRequest, "bad_request") {
 			return
 		}
 		if err := validateComparePreset(preset); err != nil {
@@ -282,7 +283,7 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		// Issue #1250 Scheibe 7b: nur die eigene Datei per-Datei zurueckschreiben.
-		if bailIf(w, s.SaveComparePreset(preset) != nil, http.StatusInternalServerError, "store_error") {
+		if bailIf(w, r, s.SaveComparePreset(preset) != nil, http.StatusInternalServerError, "store_error") {
 			return
 		}
 		newFp, newFpErr := s.BriefingFingerprint(id)
