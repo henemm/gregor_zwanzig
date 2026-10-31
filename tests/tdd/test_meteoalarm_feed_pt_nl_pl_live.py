@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 
 import pytest
 
+from services.official_alerts.meteoalarm import _TYPE_HAZARD_MAP, _leading_int
+
 pytestmark = pytest.mark.live
 
 _PUNKTE = {
@@ -69,6 +71,11 @@ def _aktive_zonen(feed: dict, land: str, jetzt: datetime) -> list:
             level = next((p["value"] for p in info.get("parameter") or []
                           if p.get("valueName") == "awareness_level"), "0")
             if not level.split(";")[0].strip().isdigit() or int(level.split(";")[0]) < 2:
+                continue
+            # #2696: nur Warntypen, die die App auswertet (Nebel u. a. werden verworfen).
+            typ = next((p.get("value") for p in info.get("parameter") or []
+                        if p.get("valueName") == "awareness_type"), None)
+            if _leading_int(typ) not in _TYPE_HAZARD_MAP:
                 continue
             areas = info.get("area") or []
             for area in areas if isinstance(areas, list) else [areas]:

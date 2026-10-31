@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 
 import pytest
 
+from services.official_alerts.meteoalarm import _TYPE_HAZARD_MAP, _leading_int
+
 pytestmark = pytest.mark.live
 
 _FI_PUNKTE = {"FI029": (63.10, 21.62), "FI032": (60.45, 22.27), "FI043": (60.10, 19.94),
@@ -61,7 +63,12 @@ def _aktiv(info: dict, jetzt: datetime) -> bool:
         return False
     level = next((p["value"] for p in info.get("parameter") or []
                   if p.get("valueName") == "awareness_level"), "0")
-    return level.split(";")[0].strip().isdigit() and int(level.split(";")[0]) >= 2
+    if not (level.split(";")[0].strip().isdigit() and int(level.split(";")[0]) >= 2):
+        return False
+    # #2696: nur Warntypen, die die App auswertet (Nebel u. a. werden verworfen).
+    typ = next((p.get("value") for p in info.get("parameter") or []
+                if p.get("valueName") == "awareness_type"), None)
+    return _leading_int(typ) in _TYPE_HAZARD_MAP
 
 
 def _punkt_polygon(feed: dict, jetzt: datetime):
