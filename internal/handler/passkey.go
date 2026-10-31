@@ -471,6 +471,7 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 			return
 		}
 		if s.UserExists(req.Username) {
+			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
 			writeJSONError(w, http.StatusConflict, "user_already_exists")
 			return
 		}
@@ -485,6 +486,7 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 			return
 		}
 		if taken {
+			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
 			writeJSONError(w, http.StatusConflict, "email_taken")
 			return
 		}
@@ -539,6 +541,7 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 
 		// Race protection: username may have been claimed between Begin and Finish.
 		if s.UserExists(entry.UserID) {
+			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
 			writeJSONError(w, http.StatusConflict, "user_already_exists")
 			return
 		}
@@ -557,6 +560,7 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 			return
 		}
 		if taken {
+			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
 			writeJSONError(w, http.StatusConflict, "email_taken")
 			return
 		}
