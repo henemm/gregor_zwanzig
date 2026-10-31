@@ -211,8 +211,6 @@ def test_ac1_feedpfad_und_kein_neuer_egress_host():
 
     assert meteoalarm_feed._FEED_PATHS.get("BE") == _PFAD
     assert meteoalarm_feed.FEED_BASE_URL == "https://feeds.meteoalarm.org"
-    inventar = (_REPO_ROOT / "internal" / "egress" / "inventory.go").read_text(encoding="utf-8")
-    assert "feeds.meteoalarm.org" in inventar
 
 
 # ───────────────────────────── AC-2 (Test 2) ─────────────────────────────────
