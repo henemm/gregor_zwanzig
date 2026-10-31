@@ -1,0 +1,45 @@
+GR20 Nord
+Morning 29.10.2026
+---
+<b>Amtliche Warnung · Segment 1, 🏁 Ziel · Warnstufe ORANGE (2/3)</b>
+🟠 Gewitter · Do 29.10. · 12:00–18:00
+MeteoAlarm
+---
+Kurzübersicht
+T 10.5-14.5@17
+W 17-26@16
+G 27-36@16
+R 0.0-0.2@12
+TH leicht
+VS 15
+FZ 2800
+
+Luftmasse leicht · Sicht gut · 0°C-Grenze 2800 m
+
+Ggü. Vortag: Böen +12.0km/h, Regen +3.5mm, Gewitter +1.0
+---
+Segment 1 · 0.0–8.4 km · ↑850 m ↓250 m
+<pre>
+Zt T    W  G  R   TH   VS FZ
+07 9.0  17 27 0.0 kein 15 2800
+08 10.0 18 28 0.0 kein 15 2800
+09 10.0 19 29 0.0 kein 15 2800
+10 11.0 20 30 0.0 kein 15 2800
+11 11.0 21 31 0.0 kein 15 2800
+12 12.0 22 32 0.2 kein 15 2800
+</pre>
+---
+Ziel · 8.4–14.2 km · ↑850 m ↓250 m
+<pre>
+Zt T    W  G  R   TH     VS FZ
+12 12.0 22 32 0.2 kein   15 2800
+13 12.0 23 33 0.2 leicht 15 2800
+14 13.0 24 34 0.2 leicht 15 2800
+15 13.0 25 35 0.0 leicht 15 2800
+16 14.0 26 36 0.0 kein   15 2800
+</pre>
+---
+Ausblick
+Fr  5.0/15.0°C  R–  NW20.0  ⚡–
+---
+Aktionen
