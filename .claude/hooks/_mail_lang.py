@@ -80,9 +80,15 @@ def _flexibel(literal: str) -> str:
     return r"\s+".join(re.escape(teil) for teil in literal.split(" "))
 
 
+def kern(key: str, lang: str) -> str:
+    """Laengstes festes Textstueck der Vorlage (ohne Platzhalter), z. B.
+    'amtliche Warnungen' aus '{count} amtliche Warnungen'."""
+    stuecke = _PLATZHALTER_RE.sub("\x00", vorlage(key, lang)).split("\x00")
+    return max((s.strip(" ()") for s in stuecke), key=len)
+
+
 def _vorkommen(text: str, key: str, lang: str) -> bool:
-    kern = _PLATZHALTER_RE.split(vorlage(key, lang))[0].strip() or vorlage(key, lang)
-    return re.search(r"(?<!\w)" + re.escape(kern) + r"(?!\w)", text) is not None
+    return re.search(r"(?<!\w)" + re.escape(kern(key, lang)) + r"(?!\w)", text) is not None
 
 
 def widerspruch(text: str, lang: str, keys: list[str]) -> str | None:
@@ -97,7 +103,7 @@ def widerspruch(text: str, lang: str, keys: list[str]) -> str | None:
     fremde = [k for k in verschieden if _vorkommen(text, k, andere)]
     if eigene or not fremde:
         return None
-    belege = ", ".join(repr(marker(k, andere)) for k in fremde[:3])
+    belege = ", ".join(repr(kern(k, andere)) for k in fremde[:3])
     return (
         f"SPRACHE: Kopf X-GZ-Lang: {lang} widerspricht dem Inhalt -- gefunden "
         f"sind Texte der Sprache '{andere}' ({belege}), keiner der Sprache '{lang}'"

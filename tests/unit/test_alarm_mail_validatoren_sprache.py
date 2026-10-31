@@ -82,3 +82,30 @@ def test_ac5_englische_gueltig_zeile_braucht_einen_zeitraum(tmp_path):
     lauf, _ = validator_lauf(tmp_path, "official_alert_mail_validator", eml)
     assert lauf.returncode == 1, lauf.stdout + lauf.stderr
     assert "P-3" in lauf.stdout + lauf.stderr
+
+
+def _modul(name: str):
+    import importlib.util
+    from pathlib import Path
+
+    pfad = Path(__file__).resolve().parents[2] / ".claude" / "hooks" / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(f"{name}_2663", pfad)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_ac7_deutsche_erwartungen_aus_dem_katalog_gleichen_den_bestandskonstanten():
+    """Golden de: die aus dem Katalog gebildeten deutschen Erwartungen sind
+    wortgleich zu den bisherigen Literalen (die Bestandstests lesen diese)."""
+    warn = _modul("official_alert_mail_validator")
+    w = warn._lang_patterns("de")
+    assert w["other_hazard"].pattern == warn._OTHER_HAZARD_RE.pattern
+    assert w["level_word"].pattern == warn._LEVEL_WORD_RE.pattern
+    assert w["validity"].pattern == warn._VALIDITY_RE.pattern
+    assert w["eaws"] == warn._EAWS_WORDS
+
+    radar = _modul("radar_alert_mail_validator")
+    r = radar._lang_patterns("de")
+    assert set(r["intensity"]) == set(radar._INTENSITY_LABELS)
+    assert r["segment"].pattern == radar._SEGMENT_RE.pattern
