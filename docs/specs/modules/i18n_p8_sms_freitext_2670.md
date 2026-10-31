@@ -2,7 +2,7 @@
 entity_id: i18n_p8_sms_freitext_2670
 type: module
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-10-31
 status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2670, python, docs, model-haiku]
@@ -158,6 +158,10 @@ stage_name=_sms_stage_prefix(stage_name or t("sms.etappe.rueckfall", lang)),
 - Annahme: `compact_summary.py` ist in P3 abgedeckt und hat in P8 keinen Eingriff; fehlt dort nach P3 ein `lang`, ist das ein Finding für P3, nicht für P8.
 - Sperr- und Fehlertexte der Kanäle bleiben Betreiber-/Ergebnistexte (deutsch, `# i18n-log`); ihre Nutzersicht regelt `send_outcomes.py` in P9a.
 - Bis P9b sendet das System die SMS weiter deutsch (keine Durchreichung von `lang`).
+- **Nutzerwirkungs-Notiz:** Nach Merge von P8 ändert sich für Nutzer noch nichts. Die Versand-Durchreichung von `lang` gehört zu P9a (#2671, Versand-Schicht) und P9b (#2672, Scheduler); erst danach erreicht ein englischsprachiger Nutzer die englische SMS. P8 liefert nur die Render-Fähigkeit (`lang`-Parameter, Standard `de`).
+- **Reihenfolge der Golden-Dateien:** `tests/golden/sms_sprachen/etappe_rueckfall.de.txt` wird mit dem unveränderten Code erzeugt und committet, bevor `sms_trip.py` umgestellt wird.
+- **Ratsche P11:** Der Entfall des Allowlist-Eintrags wird als Verhaltenstest geprüft (Ratschen-Lauf, kein Lesen von Quelltext), weil `tests/tdd/test_765_backend_hygiene_compliance.py` Quelltext-Lesen verbietet.
+- **Datumsformat:** P8 erzeugt kein Datum im Klartext. Die Ortsvergleich-SMS (`Vergleich 29.10.:`) und Alarm-Token behalten den Dezimalpunkt und das Datumsformat des Tokens; Ausblick-Datum der Mail/Telegram (`Do 30.10.` / `Thu 30 Oct`) ist nicht Teil von P8.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -167,3 +171,4 @@ stage_name=_sms_stage_prefix(stage_name or t("sms.etappe.rueckfall", lang)),
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-10-31: Known Limitations ergänzt (Nutzerwirkungs-Notiz P9a/P9b, Golden-Reihenfolge, Ratsche als Verhaltenstest, Datumsformat); ACs unverändert
