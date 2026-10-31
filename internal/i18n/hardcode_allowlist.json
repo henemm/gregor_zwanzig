@@ -1,0 +1,15 @@
+[
+  "internal/handler/account_delete_code.go",
+  "internal/handler/auth_oauth.go",
+  "internal/handler/briefing_send.go",
+  "internal/handler/etag.go",
+  "internal/handler/location_resolve.go",
+  "internal/handler/quota.go",
+  "internal/handler/schreibsperre.go",
+  "internal/handler/trip.go",
+  "internal/mail/magic.go",
+  "internal/mail/reset.go",
+  "internal/mail/tier_change.go",
+  "internal/mail/verify.go",
+  "internal/resolver/"
+]
