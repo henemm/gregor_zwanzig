@@ -349,9 +349,12 @@ def _official_alert_eml() -> bytes:
                  html=True, plain=plain, mail_type="official-alert")
 
 
-def _radar_alert_eml() -> bytes:
+def _radar_alert_eml(lang: str = "de") -> bytes:
+    """Radar-Alarm-Mail aus dem echten Renderer; ``en`` seit Issue #2667 mit
+    ``render_email(..., lang="en")`` statt Text-Ersetzung."""
     from output.renderers.alert.model import AlertMessage, OnsetEvent
-    from output.renderers.alert.render import render_email
+    from output.renderers.alert.render import render_email, render_subject
+    from services.radar_alert_service import cooldown_text
 
     onset = OnsetEvent(
         onset_minutes=25, onset_time="14:30", km_from=0.0, km_to=8.0, is_convective=False,
@@ -360,11 +363,17 @@ def _radar_alert_eml() -> bytes:
     )
     msg = AlertMessage(
         trip_short="GR20 Golden", stand_at="14:05", events=(onset,),
-        source="Radar (DWD)", cooldown_display="2 Stunden",
+        source="Radar (DWD)",
+        cooldown_display="2 Stunden" if lang == "de" else cooldown_text(120, lang=lang),
     )
-    html, plain = render_email(msg)
-    return _mime("radar_alert", subject="[GR20 Golden] Regen in 25 Min", body=html,
-                 html=True, plain=plain, mail_type="radar-alert")
+    if lang == "de":  # Aufruf wie vor #2667 (Fixture byte-gleich)
+        html, plain = render_email(msg)
+        subject = "[GR20 Golden] Regen in 25 Min"
+    else:
+        html, plain = render_email(msg, lang=lang)
+        subject = render_subject(msg, lang=lang)
+    return _mime("radar_alert", subject=subject, body=html,
+                 html=True, plain=plain, mail_type="radar-alert", lang=lang)
 
 
 _AVALANCHE_BULLETIN = (
@@ -437,6 +446,7 @@ def erzeuge_fixtures() -> list[Path]:
         "briefing_full_en.eml": lambda: _briefing_eml("full", lang="en"),
         "briefing_compact_en.eml": lambda: _briefing_eml("compact", lang="en"),
         "official_alert_de.eml": _official_alert_eml, "radar_alert_de.eml": _radar_alert_eml,
+        "radar_alert_en.eml": lambda: _radar_alert_eml("en"),
     }
     pfade = []
     for name, bau in bauplan.items():

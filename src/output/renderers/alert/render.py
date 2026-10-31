@@ -6,14 +6,16 @@ der Metrik-Registry. Unicode-Pfeile NUR Email/Telegram; SMS rein ASCII/GSM-7.
 from __future__ import annotations
 
 import unicodedata
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from app.metric_catalog import (
     format_metric_value, get_alert_label, get_decimals, get_label_for_field,
     get_metric, get_sms_code,
 )
-from output.metric_format import THUNDER_LABEL_DE, _THUNDER_JE_ORDINAL
+from app.thunder_scale import thunder_label
+from i18n import Lang, fmt_weekday, t, tn
+from output.metric_format import _THUNDER_JE_ORDINAL
 from output.renderers.email.design_tokens import (
     FONT_DATA, FONT_UI, G_ACCENT, G_DANGER, G_INK, G_INK_MUTED, G_SUCCESS,
 )
@@ -47,7 +49,7 @@ def _sorted(msg: AlertMessage) -> list[AlertEvent]:
 _HANDLED_UNITS = {"m", "km", "hPa", "%", "km/h", "°C", "mm"}
 
 
-def _thunder_word(value: float) -> str | None:
+def _thunder_word(value: float, lang: Lang = "de") -> str | None:
     """Uebersetzt einen thunder-Ordinalwert (POSITION auf der Gewitter-
     Leiter) in sein deutsches Wort (Issue #1948 S6). Rundung `round(v, 0)`
     (kaufmaennisch-gerade Bankersrundung), exakt wie bisher (AC-17). Werte
@@ -56,17 +58,17 @@ def _thunder_word(value: float) -> str | None:
     auf 'kein' (AC-13, `_THUNDER_JE_ORDINAL.get(4)` -> `None`)."""
     ordinal = int(round(value, 0))
     level = _THUNDER_JE_ORDINAL.get(ordinal)
-    return THUNDER_LABEL_DE[level] if level is not None else None
+    return thunder_label(level, lang=lang) if level is not None else None
 
 
-def _stufe_unit(value: float) -> str:
+def _stufe_unit(value: float, lang: Lang = "de") -> str:
     """Deutsches Einheitswort fuer einen Stufen-ABSTAND (threshold, |Δ| einer
     Stufenmetrik) -- Singular bei genau 1, sonst Plural (Issue #1948 S6,
     AC-6-Waechter: ein Abstand ist NIE ein Stufenwort)."""
-    return "Stufe" if abs(round(value)) == 1 else "Stufen"
+    return tn("alarm.einheit.stufe", abs(round(value)), lang)
 
 
-def _val_raw(e: AlertEvent, value: float) -> str:
+def _val_raw(e: AlertEvent, value: float, lang: Lang = "de") -> str:
     """Wert MIT Einheit via Katalog, OHNE Stufenwort-Weiche -- gemeinsamer
     Zahlen-Fallback fuer `_val()` (Positionen) und `_val_delta()` (Abstaende,
     Issue #1948 S6).
@@ -80,36 +82,36 @@ def _val_raw(e: AlertEvent, value: float) -> str:
     unit = get_metric(e.metric_id).unit
     rounded = round(value, get_decimals(e.metric_id))
     if unit in _HANDLED_UNITS:
-        return format_metric_value(unit, rounded)
+        return format_metric_value(unit, rounded, lang=lang)
     formatted = str(int(rounded)) if float(rounded).is_integer() else str(rounded)
     return f"{formatted} {unit}".strip()
 
 
-def _val(e: AlertEvent, value: float) -> str:
+def _val(e: AlertEvent, value: float, lang: Lang = "de") -> str:
     """Wert MIT Einheit fuer eine POSITION (value_from/value_to) —
     Email/Telegram/Betreff. Bei Stufenmetriken (`is_level`)
     das deutsche Stufenwort statt der Ordinalzahl (Issue #1948 S6, Leit-
     unterscheidung Positionen vs. Abstaende); Werte ausserhalb 0-3 fallen auf
     die bisherige Zahlform zurueck (AC-13)."""
     if _is_level_metric(e.metric_id):
-        word = _thunder_word(value)
+        word = _thunder_word(value, lang)
         if word is not None:
             return word
-    return _val_raw(e, value)
+    return _val_raw(e, value, lang)
 
 
-def _val_delta(e: AlertEvent, value: float) -> str:
+def _val_delta(e: AlertEvent, value: float, lang: Lang = "de") -> str:
     """Wert MIT Einheit fuer einen ABSTAND (threshold, |Δ|) -- bei
     Stufenmetriken NIE ein Wort, sondern Zahl + 'Stufe(n)' (Issue #1948 S6,
     AC-6-Waechter: 'Schwelle leicht' ist eine sachlich falsche Aussage)."""
     if _is_level_metric(e.metric_id):
         rounded = round(value, get_decimals(e.metric_id))
         formatted = str(int(rounded)) if float(rounded).is_integer() else str(rounded)
-        return f"{formatted} {_stufe_unit(rounded)}"
-    return _val_raw(e, value)
+        return f"{formatted} {_stufe_unit(rounded, lang)}"
+    return _val_raw(e, value, lang)
 
 
-def _num_raw(value: float, decimals: int) -> str:
+def _num_raw(value: float, decimals: int, lang: Lang = "de") -> str:
     """Zahl OHNE Einheit, OHNE Stufenwort-Weiche -- gemeinsamer Zahlen-
     Fallback fuer `_num()` (Positionen) und `_num_delta()` (Abstaende).
 
@@ -122,6 +124,10 @@ def _num_raw(value: float, decimals: int) -> str:
     _val_raw() oben).
     """
     rounded = round(value, decimals)
+    if lang == "en":  # Issue #2667: Dezimalpunkt, Tausender-Komma (ADR-0104 Nr. 6)
+        if float(rounded).is_integer():
+            return f"{int(rounded):,}"
+        return f"{rounded:,.{decimals}f}"
     if float(rounded).is_integer():
         n = int(rounded)
         return f"{n:,}".replace(",", ".") if abs(n) >= 1000 else str(n)
@@ -129,22 +135,22 @@ def _num_raw(value: float, decimals: int) -> str:
     return f"{int_part.replace(',', '.')},{frac_part}"
 
 
-def _num(e: AlertEvent, value: float) -> str:
+def _num(e: AlertEvent, value: float, lang: Lang = "de") -> str:
     """Zahl OHNE Einheit fuer eine POSITION in der Multi-Metrik-Zeile (Issue
     #978) -- bei Stufenmetriken das deutsche Stufenwort statt der Ordinal-
     zahl (Issue #1948 S6, AC-3/AC-4), sonst wie bisher."""
     if _is_level_metric(e.metric_id):
-        word = _thunder_word(value)
+        word = _thunder_word(value, lang)
         if word is not None:
             return word
-    return _num_raw(value, get_decimals(e.metric_id))
+    return _num_raw(value, get_decimals(e.metric_id), lang)
 
 
-def _num_delta(e: AlertEvent, value: float) -> str:
+def _num_delta(e: AlertEvent, value: float, lang: Lang = "de") -> str:
     """Zahl OHNE Einheit fuer einen ABSTAND (threshold, |Δ|) in der Multi-
     Metrik-Zeile -- NIE ein Wort, auch nicht bei Stufenmetriken (Issue #1948
     S6, AC-6-Waechter)."""
-    return _num_raw(value, get_decimals(e.metric_id))
+    return _num_raw(value, get_decimals(e.metric_id), lang)
 
 
 def _unit_suffix(e: AlertEvent) -> str:
@@ -187,12 +193,13 @@ def _is_level_metric(metric_id: str) -> bool:
         return False
 
 
-def _label(e: AlertEvent) -> str:
-    """Kürzel für E-Mail/Telegram/Betreff (#914-Registry, Issue #952)."""
-    return get_alert_label(e.metric_id)
+def _label(e: AlertEvent, lang: Lang = "de") -> str:
+    """Kürzel für E-Mail/Telegram/Betreff (#914-Registry, Issue #952); Issue
+    #2667: Alarm-Kurzform des Registers in ``lang`` (``alert_label_for``)."""
+    return get_alert_label(e.metric_id, lang)
 
 
-def _deviation_label(e: AlertEvent) -> str:
+def _deviation_label(e: AlertEvent, lang: Lang = "de") -> str:
     """Kuerzel der Abweichungs-Alarmzeile -- STUFENABHAENGIG (Issue #2176).
 
     Bleiben VORHER- UND NACHHER-Wert auf "leicht" oder darunter, traegt die Zeile keine Ereignisbehauptung mehr
@@ -209,11 +216,11 @@ def _deviation_label(e: AlertEvent) -> str:
 
         low = thunder_ordinal(ThunderLevel.LOW)
         if max(int(round(e.value_from, 0)), int(round(e.value_to, 0))) <= low:
-            return "Luftmasse"
-    return _label(e)
+            return t("alarm.abweichung.luftmasse", lang)
+    return _label(e, lang)
 
 
-def _location_of(events, location_label: str | None = None) -> str:
+def _location_of(events, location_label: str | None = None, *, lang: Lang = "de") -> str:
     """Ortsangabe einer Ereignismenge (Issue #1744 A1) — Betreff, Mailkoerper
     und Telegram-Langform holen sie ALLE hier, damit eine Mail nicht zwei
     Ortssprachen spricht (AC-6). Die Reihenfolge location_label -> Segment ->
@@ -231,12 +238,12 @@ def _location_of(events, location_label: str | None = None) -> str:
     )
     return format_alert_location(
         location_label, [e.segment_id for e in events], a, b,
-        km_measured=measured,
+        km_measured=measured, lang=lang,
     )
 
 
-def _km_str(msg: AlertMessage) -> str:
-    return _location_of(msg.events, msg.location_label)
+def _km_str(msg: AlertMessage, lang: Lang = "de") -> str:
+    return _location_of(msg.events, msg.location_label, lang=lang)
 
 
 def _stage_prefix(events) -> str:
@@ -273,7 +280,7 @@ def _stage_prefix(events) -> str:
 
 def _time_with_day(
     hhmm: str, day_offset: int = 0, is_past: bool = False,
-    *, past_word: str = "seit",
+    *, past_key: str = "alarm.zeit.seit", lang: Lang = "de",
 ) -> str:
     """Issue #2020 Scheibe 2: DER gemeinsame Tageswort-Baustein — typunabhaengig,
     einer statt zweier.
@@ -288,21 +295,22 @@ def _time_with_day(
     bereits verstrichener Zeitpunkt bekommt stattdessen `past_word`. Das Wort
     ist Sache der Aufrufstelle, weil beide Ereignisarten es verschieden
     sprechen: ein Beginn laeuft "seit 15:00", eine Spitze "war 17:00".
+    Issue #2667: das Wort ist ein Katalogschluessel (``past_key``).
     """
     if day_offset == -1:
-        tag = f"gestern {hhmm}"
+        tag = t("alarm.zeit.gestern", lang, zeit=hhmm)
     elif day_offset < -1:
-        tag = f"vor {-day_offset} Tagen {hhmm}"
+        tag = t("alarm.zeit.vor_tagen", lang, n=-day_offset, zeit=hhmm)
     elif day_offset == 1:
-        tag = f"morgen {hhmm}"
+        tag = t("alarm.zeit.morgen", lang, zeit=hhmm)
     elif day_offset > 1:
-        tag = f"in {day_offset} Tagen {hhmm}"
+        tag = t("alarm.zeit.in_tagen", lang, n=day_offset, zeit=hhmm)
     else:
         tag = hhmm
-    return f"{past_word} {tag}" if is_past else tag
+    return t(past_key, lang, zeit=tag) if is_past else tag
 
 
-def _when_suffix(e: AlertEvent) -> str:
+def _when_suffix(e: AlertEvent, lang: Lang = "de") -> str:
     """Issue #2020 Scheibe 2: der Bedeutungs-Zusatz einer Ereignis-Zeile.
 
     Eine nackte Uhrzeit sagt nicht, WELCHE Groesse sie meint. Fuer
@@ -313,13 +321,13 @@ def _when_suffix(e: AlertEvent) -> str:
     Temperatur keine Aussage).
     """
     if e.remaining_mm is not None:
-        return " · mehr Regen als angekündigt"
+        return " · " + t("alarm.abweichung.mehr_regen", lang)
     if not e.occurred_at:
         return ""
-    return " · stärkste Stunde " + _time_with_day(
+    return " · " + t("alarm.abweichung.staerkste_stunde", lang, zeit=_time_with_day(
         e.occurred_at, e.occurred_day_offset, e.occurred_is_past,
-        past_word="war",
-    )
+        past_key="alarm.zeit.war", lang=lang,
+    ))
 
 
 def _mm(value: float) -> str:
@@ -328,7 +336,7 @@ def _mm(value: float) -> str:
     return f"{max(0.0, value):.0f}"
 
 
-def _precip_rows(e: AlertEvent) -> list[tuple[str, str]]:
+def _precip_rows(e: AlertEvent, lang: Lang = "de") -> list[tuple[str, str]]:
     """Issue #2020 Scheibe 2: die beiden Zeilen, die den Alarm nach vorn
     drehen — was bis jetzt gefallen ist, und was ab jetzt noch kommt.
 
@@ -347,28 +355,23 @@ def _precip_rows(e: AlertEvent) -> list[tuple[str, str]]:
     # die Unterscheidung einebnen, die `_precip_remaining()` aufmacht
     # (unbestimmbar vs. nachweislich nichts mehr).
     gefallen = e.value_to - e.remaining_mm
+    ab_jetzt = t("alarm.niederschlag.ab_jetzt", lang)
     rows = [(
-        "Bis jetzt",
-        f"~{_mm(gefallen)} mm gefallen (angekündigt waren {_mm(e.value_from)})",
+        t("alarm.niederschlag.bis_jetzt", lang),
+        t("alarm.niederschlag.gefallen", lang, mm=_mm(gefallen), angekuendigt=_mm(e.value_from)),
     )]
     if e.remaining_until_time:
-        bis = _time_with_day(e.remaining_until_time, e.remaining_until_day_offset)
-        rows.append((
-            "Ab jetzt",
-            f"noch ~{_mm(e.remaining_mm)} mm, letzter Regen gegen {bis}",
-        ))
+        bis = _time_with_day(e.remaining_until_time, e.remaining_until_day_offset, lang=lang)
+        rows.append((ab_jetzt, t("alarm.niederschlag.noch", lang, mm=_mm(e.remaining_mm), zeit=bis)))
     elif e.window_end_time:
-        ende = _time_with_day(e.window_end_time, e.window_end_day_offset)
-        rows.append((
-            "Ab jetzt",
-            f"kein weiterer Regen bis Tagesende (Fensterende {ende} Ortszeit)",
-        ))
+        ende = _time_with_day(e.window_end_time, e.window_end_day_offset, lang=lang)
+        rows.append((ab_jetzt, t("alarm.niederschlag.fensterende", lang, zeit=ende)))
     else:
-        rows.append(("Ab jetzt", "kein weiterer Regen bis Tagesende"))
+        rows.append((ab_jetzt, t("alarm.niederschlag.kein_weiterer", lang)))
     return rows
 
 
-def _where_when(e: AlertEvent, location_label: str | None = None) -> str:
+def _where_when(e: AlertEvent, location_label: str | None = None, *, lang: Lang = "de") -> str:
     """Ort + Bedeutung/Uhrzeit EINES Ereignisses (Issue #1861).
 
     Issue #2020 Scheibe 2: `location_label` ist NEU und defaultet -- der
@@ -376,7 +379,7 @@ def _where_when(e: AlertEvent, location_label: str | None = None) -> str:
     als `loc_prefix`), der Einzel-Datenblock reicht ihn durch, damit beide
     Zweige denselben Zeit-Baustein benutzen statt zweier Kopien.
     """
-    return _location_of((e,), location_label) + _when_suffix(e)
+    return _location_of((e,), location_label, lang=lang) + _when_suffix(e, lang)
 
 
 def _per_event_where_when(evs) -> bool:
@@ -391,22 +394,22 @@ def _per_event_where_when(evs) -> bool:
     return bool(_renderable_segment_ids([e.segment_id for e in evs]))
 
 
-def _km_str_onset(e: OnsetEvent) -> str:
+def _km_str_onset(e: OnsetEvent, lang: Lang = "de") -> str:
     # Bewusst OHNE `location_label`: `_render_telegram_onset` liest auch im
     # gebuendelten Mehr-Orte-Fall nur `events[0]` (Nebenbefund im Kontext-
     # Dokument) — mit Ortsnamen stuende dort statt "km 0–0" der Name des
     # ERSTEN Ortes, und der Ortsvergleich soll unveraendert bleiben (AC-4).
-    return _location_of((e,))
+    return _location_of((e,), lang=lang)
 
 
 # --- Hagel-Zusaetze (Issue #2205) -------------------------------------------
 
-def _hail_note_suffix(e) -> str:
+def _hail_note_suffix(e, lang: Lang = "de") -> str:
     """Issue #2205: bestehende Hagelaussage (`format_hail_note`) als Zusatz
     ` · Hagel: ja` -- leer bei `None`/`False` (byte-identisch zum Bestand)."""
     from output.metric_format import format_hail_note
 
-    note = format_hail_note(getattr(e, "hail_flag", None))
+    note = format_hail_note(getattr(e, "hail_flag", None), lang=lang)
     return f" · {note}" if note else ""
 
 
@@ -420,26 +423,50 @@ def _sms_hail_suffix(e) -> str:
 # --- Beginn-Verschiebung (Issue #1468, ADR-0013: eigener Render-Vertrag --
 # NIE durch _val()/_num(), sonst stuende "15 h" statt "15:00" im Text) -------
 
-def _onset_shift_where(oe: OnsetShiftEvent) -> str:
+def _onset_shift_where(oe: OnsetShiftEvent, lang: Lang = "de") -> str:
     return format_alert_location(
         oe.location_label, [oe.segment_id], oe.km_from, oe.km_to,
         km_measured=getattr(oe, "km_measured", False),  # Issue #2036
+        lang=lang,
     )
 
 
-def _onset_shift_to(oe: OnsetShiftEvent) -> str:
+def _shift_text(oe: OnsetShiftEvent, lang: Lang = "de") -> str:
+    """Issue #2667: Verschiebungswort der Langform in ``lang``. ``shift_text``
+    bleibt der deutsche Text der Kurzform (SMS unveraendert, PO 2026-10-31)."""
+    if lang == "de" or getattr(oe, "shift_seconds", None) is None:
+        return oe.shift_text
+    from .project import _onset_shift_text
+
+    return _onset_shift_text(oe.shift_seconds, lang=lang)
+
+
+def _onset_shift_to(oe: OnsetShiftEvent, lang: Lang = "de") -> str:
     """Issue #2020 Scheibe 2: die NEUE Beginn-Uhrzeit mit Tagesbezug und
     Vergangenheits-Ausweis. EINE Stelle fuer alle drei Ausgabewege (Klartext,
     HTML-Zeile, Telegram) -- sonst schriebe die Mail "seit 15:00" und die
     HTML-Tabelle daneben weiterhin ein bevorstehend klingendes "15:00"."""
-    return _time_with_day(oe.to_time, oe.to_day_offset, oe.to_is_past)
+    return _time_with_day(oe.to_time, oe.to_day_offset, oe.to_is_past, lang=lang)
 
 
-def _onset_shift_line(oe: OnsetShiftEvent) -> str:
+def _onset_shift_label(oe: OnsetShiftEvent, lang: Lang = "de") -> str:
+    return t("alarm.beginn.label", lang, label=_label(oe, lang))
+
+
+def _onset_shift_line(oe: OnsetShiftEvent, lang: Lang = "de") -> str:
     """Eine Zeile Klartext: Groesse, alte und neue Uhrzeit, Richtungswort."""
     return (
-        f"{_label(oe)}-Beginn: {oe.from_time} → {_onset_shift_to(oe)} "
-        f"({oe.shift_text} · {_onset_shift_where(oe)})"
+        f"{_onset_shift_label(oe, lang)}: {oe.from_time} → {_onset_shift_to(oe, lang)} "
+        f"({_shift_text(oe, lang)} · {_onset_shift_where(oe, lang)})"
+    )
+
+
+def _onset_shift_row(oe: OnsetShiftEvent, first: bool, lang: Lang = "de") -> str:
+    """HTML-Zeile einer Beginn-Verschiebung (eine Bauform fuer beide Mails)."""
+    return _datarow_html(
+        f"{_onset_shift_label(oe, lang)} · {_onset_shift_where(oe, lang)}",
+        f"{oe.from_time} → {_onset_shift_to(oe, lang)} ({_shift_text(oe, lang)})",
+        G_DANGER, first,
     )
 
 
@@ -456,11 +483,11 @@ def _onset_shift_location(msg: AlertMessage) -> str:
     )
 
 
-def _onset_shift_h1(msg: AlertMessage) -> str:
+def _onset_shift_h1(msg: AlertMessage, lang: Lang = "de") -> str:
     n = len(msg.onset_shift_events)
     if n == 1:
-        return f"{_label(msg.onset_shift_events[0])}-Beginn verschiebt sich"
-    return f"{n} Beginn-Zeiten verschieben sich"
+        return t("alarm.beginn.verschiebt", lang, label=_label(msg.onset_shift_events[0], lang))
+    return t("alarm.beginn.mehrere", lang, n=n)
 
 
 def _sms_onset_shift_token(oe: OnsetShiftEvent) -> str:
@@ -473,20 +500,16 @@ def _sms_onset_shift_token(oe: OnsetShiftEvent) -> str:
     return f"{_code(oe)}{oe.to_time} {oe.shift_text}"
 
 
-def _render_email_onset_shift_only(msg: AlertMessage) -> tuple[str, str]:
+def _render_email_onset_shift_only(msg: AlertMessage, lang: Lang = "de") -> tuple[str, str]:
     """Reine Beginn-Verschiebung ohne Wert-Aenderungs-Anteil -- Bauform 1:1
     wie die Wert-Aenderungs-Mail (Issue #1444 S1)."""
-    h1 = _onset_shift_h1(msg)
-    footer = f"Stand: heute {msg.stand_at}"
+    h1 = _onset_shift_h1(msg, lang)
+    footer = t("alarm.mail.stand", lang, stand=msg.stand_at)
     plain = "\n".join(
-        [h1, "", *[_onset_shift_line(oe) for oe in msg.onset_shift_events], "", footer]
+        [h1, "", *[_onset_shift_line(oe, lang) for oe in msg.onset_shift_events], "", footer]
     )
     rows = [
-        _datarow_html(
-            f"{_label(oe)}-Beginn · {_onset_shift_where(oe)}",
-            f"{oe.from_time} → {_onset_shift_to(oe)} ({oe.shift_text})",
-            G_DANGER, i == 0,
-        )
+        _onset_shift_row(oe, i == 0, lang)
         for i, oe in enumerate(msg.onset_shift_events)
     ]
     html = (
@@ -496,7 +519,7 @@ def _render_email_onset_shift_only(msg: AlertMessage) -> tuple[str, str]:
         f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
         "</body></html>"
     )
-    return _with_origin(html, plain, "deviation-alert", "Open-Meteo")
+    return _with_origin(html, plain, "deviation-alert", "Open-Meteo", lang=lang)
 
 
 def _render_sms_onset_shift_only(msg: AlertMessage, limit: int) -> str:
@@ -508,28 +531,47 @@ def _render_sms_onset_shift_only(msg: AlertMessage, limit: int) -> str:
     return body if len(body) <= limit else body[:limit]
 
 
-def _render_subject_onset(msg: AlertMessage) -> str:
+def _onset_kind(e: OnsetEvent, lang: Lang = "de") -> str:
+    """Ereigniswort der Langform: Gewitter oder Regen (Issue #2667)."""
+    key = "alarm.radar.intensitaet.gewitter" if e.is_convective else "alarm.radar.intensitaet.regen"
+    return t(key, lang)
+
+
+def _intensity(e: OnsetEvent, lang: Lang = "de") -> str:
+    """Angezeigte Intensitaet; ``intensity_label`` bleibt der deutsche
+    Vergleichsschluessel (alert_urgency, rain_extent), Issue #2667."""
+    from services import radar_service as radar_service_mod
+
+    return radar_service_mod.intensity_text(e.intensity_label, lang)
+
+
+def _onset_suffixes(e: OnsetEvent, lang: Lang = "de") -> str:
+    """Die additiven Langform-Angaben hinter Beginn bzw. Zeitpunkt -- in
+    Betreff, E-Mail und Telegram dieselbe Kette (#2051, #2050 S4b-2)."""
+    return (
+        f"{_onset_end_suffix(e, lang)}{_onset_reach_suffix(e, lang)}"
+        f"{_onset_sharpness_suffix(e, lang)}{_onset_extent_suffix(e, lang)}"
+        f"{_onset_gap_suffix(e, lang)}{_onset_convective_suffix(e, lang)}"
+    )
+
+
+def _render_subject_onset(msg: AlertMessage, lang: Lang = "de") -> str:
     # Issue #1041 Slice 1a: Sammel-Betreff nur bei MEHR ALS EINEM Event
     # (Bündel-Alarm); Ein-Ort-Fall bleibt byte-identisch (AC-2/AC-5).
     if len(msg.events) > 1:
-        return f"[{msg.trip_short}] Regen-Alarm: {len(msg.events)} Orte"
+        return f"[{msg.trip_short}] {t('alarm.regen.buendel', lang, n=len(msg.events))}"
     e = msg.events[0]
-    label = "Gewitter" if e.is_convective else "Regen"
-    km = _km_str_onset(e)
+    label = _onset_kind(e, lang)
+    km = _km_str_onset(e, lang)
     # Issue #2051 S1: das Ende additiv HINTER der Beginn-Angabe -- ohne
     # behauptbares Ende bleibt der Betreff byte-identisch (AC-19).
     # Issue #2051 S2b: die Ausdehnung als LETZTES Element derselben Kette --
     # ohne Zonen bzw. auf unvermessener Etappe bleibt der Betreff
     # byte-identisch (AC-1).
-    return (
-        f"[{msg.trip_short}] {km} · {label} {_onset_wann_kopf(e)}"
-        f"{_onset_end_suffix(e)}{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
-        # Issue #2050 S4b-2: die beiden Kennzeichnungen als LETZTE Glieder
-        # derselben Kette -- ohne Ausfall bzw. ohne Messluecke bleibt der
-        # Betreff byte-identisch (AC-5/AC-13).
-        f"{_onset_extent_suffix(e)}{_onset_gap_suffix(e)}"
-        f"{_onset_convective_suffix(e)}"
-    )
+    # Issue #2050 S4b-2: die beiden Kennzeichnungen als LETZTE Glieder
+    # derselben Kette -- ohne Ausfall bzw. ohne Messluecke bleibt der
+    # Betreff byte-identisch (AC-5/AC-13).
+    return f"[{msg.trip_short}] {km} · {label} {_onset_wann_kopf(e, lang)}{_onset_suffixes(e, lang)}"
 
 
 def _distinct_source_labels(msg: AlertMessage) -> str:
@@ -544,7 +586,7 @@ def _distinct_source_labels(msg: AlertMessage) -> str:
     return ", ".join(seen)
 
 
-def _onset_time_label(e: OnsetEvent) -> str:
+def _onset_time_label(e: OnsetEvent, lang: Lang = "de") -> str:
     """Issue #2009: eindeutiger Klartext-Tagesbezug fuer den Onset-Zeitpunkt.
 
     `onset_time` ist reines "HH:MM" ohne Datum -- bei einem Onset, der ueber
@@ -557,10 +599,21 @@ def _onset_time_label(e: OnsetEvent) -> str:
     Versatz ungleich null zu "morgen", auch `-1`. `OnsetEvent` kennt kein
     Vergangenheits-Kennzeichen (Radar blickt nach vorn), daher `is_past=False`.
     """
-    return _time_with_day(e.onset_time, e.onset_day_offset)
+    return _time_with_day(e.onset_time, e.onset_day_offset, lang=lang)
 
 
-def _onset_wann_kopf(e: OnsetEvent) -> str:
+_WOCHE = [date(2026, 10, 26) + timedelta(days=i) for i in range(7)]  # Mo..So
+
+
+def _weekday_short(kuerzel: str | None, lang: Lang = "de") -> str | None:
+    """Das Modell traegt das deutsche Kuerzel (SMS unveraendert, PO-Korrektur
+    2026-10-31); die Langform zeigt es in ``lang`` (Issue #2667)."""
+    if lang == "de" or not kuerzel:
+        return kuerzel
+    return {fmt_weekday(d, "de"): fmt_weekday(d, lang) for d in _WOCHE}.get(kuerzel, kuerzel)
+
+
+def _onset_wann_kopf(e: OnsetEvent, lang: Lang = "de") -> str:
     """Kopfzeilen-Form: "in 8 Min" -- oder "laeuft bereits" (Issue #2050 S2b).
 
     EINE Weiche fuer Betreff, E-Mail-H1/-Buendelzeile und Telegram-Kopf: die
@@ -568,7 +621,7 @@ def _onset_wann_kopf(e: OnsetEvent) -> str:
     B-1 an vier Stellen gleichzeitig. Die Ende-Angabe haengt unveraendert
     ueber `_onset_end_suffix()` dahinter."""
     if getattr(e, "already_running", False):
-        return "läuft bereits"
+        return t("alarm.regen.laeuft", lang)
     # Issue #2261 (A-1, B-2): jenseits der Guete-Grenze ist "in 170 Min"
     # nicht lesbar — dann die Uhrzeit mit Tagesbezug in der Form des
     # SMS-Bausteins (`_sms_onset_time`, kein neues Format). Grenze ueber die
@@ -577,30 +630,31 @@ def _onset_wann_kopf(e: OnsetEvent) -> str:
 
     onset = e.onset_minutes
     if onset is not None and onset > radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN:
-        return "ab " + _sms_onset_time(
+        return t("alarm.zeit.ab", lang, zeit=_sms_onset_time(
             e.onset_time, getattr(e, "onset_day_offset", 0),
-            getattr(e, "onset_weekday", None),
-        )
-    return f"in {onset} Min"
+            _weekday_short(getattr(e, "onset_weekday", None), lang),
+        ))
+    return t("alarm.zeit.in_minuten", lang, min=onset)
 
 
-def _onset_wann_zeile(e: OnsetEvent, *, praefix: str = "") -> str:
+def _onset_wann_zeile(e: OnsetEvent, *, ab: bool = False, lang: Lang = "de") -> str:
     """Detailzeilen-Form: der ZEITPUNKT -- oder "laeuft bereits" (#2050 S2b).
 
     Getrennt von `_onset_wann_kopf`, weil die Detailzeile den ZEITPUNKT nennt
     und die Kopfzeile die RESTZEIT; im Laufend-Fall fallen beide zusammen.
 
-    `praefix` gehoert der Aufrufstelle: die E-Mail schreibt "ab 15:40", die
+    `ab` gehoert der Aufrufstelle: die E-Mail schreibt "ab 15:40", die
     Telegram-Langform nennt die Uhrzeit nackt ("15:40"). Ein hier fest
     eingebautes "ab " hat genau diesen Unterschied eingeebnet und
     `test_alert_sms_onset_zeitpunkt::test_ac10` rot gemacht -- im
     Laufend-Fall entfaellt das Praefix mit der Uhrzeit zusammen."""
     if getattr(e, "already_running", False):
-        return "läuft bereits"
-    return f"{praefix}{_onset_time_label(e)}"
+        return t("alarm.regen.laeuft", lang)
+    zeit = _onset_time_label(e, lang)
+    return t("alarm.zeit.ab", lang, zeit=zeit) if ab else zeit
 
 
-def _onset_end_suffix(e: OnsetEvent) -> str:
+def _onset_end_suffix(e: OnsetEvent, lang: Lang = "de") -> str:
     """Issue #2051 S1: Langform-Ende-Angabe als anhaengbares Stueck oder LEER,
     wenn es gar kein Ende gibt (`event_end_time is None` -- kein Beginn
     erkannt, keine Frames; dann faellt die Angabe ersatzlos weg).
@@ -633,13 +687,13 @@ def _onset_end_suffix(e: OnsetEvent) -> str:
     ende = getattr(e, "event_end_time", None)
     if not ende:
         return ""
-    ende = _time_with_day(ende, getattr(e, "event_end_day_offset", 0))
+    ende = _time_with_day(ende, getattr(e, "event_end_day_offset", 0), lang=lang)
     if getattr(e, "event_ongoing_beyond_horizon", False):
-        return f" · Regen mindestens bis {ende}"
-    return f" · letzter Regen gegen {ende}"
+        return " · " + t("alarm.regen.mindestens_bis", lang, zeit=ende)
+    return " · " + t("alarm.regen.letzter", lang, zeit=ende)
 
 
-def _onset_reach_suffix(e: OnsetEvent) -> str:
+def _onset_reach_suffix(e: OnsetEvent, lang: Lang = "de") -> str:
     """Issue #2051 S3: Langform-Reichweiten-Angabe als anhaengbares Stueck
     oder LEER. `source_reach_time` ist bereits `None`, wenn keine
     Reichweite bekannt ist ODER `event_ongoing_beyond_horizon` gesetzt ist
@@ -649,11 +703,11 @@ def _onset_reach_suffix(e: OnsetEvent) -> str:
     reach = getattr(e, "source_reach_time", None)
     if not reach:
         return ""
-    reach = _time_with_day(reach, getattr(e, "source_reach_day_offset", 0))
-    return f" · Radar reicht bis {reach}"
+    reach = _time_with_day(reach, getattr(e, "source_reach_day_offset", 0), lang=lang)
+    return " · " + t("alarm.regen.reichweite", lang, zeit=reach)
 
 
-def _onset_sharpness_suffix(e: OnsetEvent) -> str:
+def _onset_sharpness_suffix(e: OnsetEvent, lang: Lang = "de") -> str:
     """Issue #2051 S3: Langform-Guete-Angabe als anhaengbares Stueck oder
     LEER. `location_sharpness_limit_time` ist bereits `None`, wenn weder
     Beginn noch Ende jenseits der Grenze liegen (E4) -- Entscheidung faellt
@@ -663,12 +717,12 @@ def _onset_sharpness_suffix(e: OnsetEvent) -> str:
     if not limit:
         return ""
     limit = _time_with_day(
-        limit, getattr(e, "location_sharpness_limit_day_offset", 0),
+        limit, getattr(e, "location_sharpness_limit_day_offset", 0), lang=lang,
     )
-    return f" · Ortsangabe ab {limit} unscharf"
+    return " · " + t("alarm.regen.unscharf", lang, zeit=limit)
 
 
-def _onset_extent_suffix(e: OnsetEvent) -> str:
+def _onset_extent_suffix(e: OnsetEvent, lang: Lang = "de") -> str:
     """Issue #2051 S2a: Langform-Ausdehnungs-Angabe als anhaengbares Stueck
     oder LEER (Muster `_onset_end_suffix`).
 
@@ -693,10 +747,10 @@ def _onset_extent_suffix(e: OnsetEvent) -> str:
     spannen = ", ".join(
         f"km {int(round(z.km_from))}-{int(round(z.km_to))}" for z in zonen
     )
-    return f" · Nass {spannen}"
+    return " · " + t("alarm.regen.nass", lang, spannen=spannen)
 
 
-def _onset_convective_suffix(e: OnsetEvent) -> str:
+def _onset_convective_suffix(e: OnsetEvent, lang: Lang = "de") -> str:
     """Issue #2050 S4b-2: Langform-Hinweis auf die AUSGEFALLENE
     Gewitterpruefung als anhaengbares Stueck oder LEER (Muster
     `_onset_sharpness_suffix`).
@@ -710,10 +764,10 @@ def _onset_convective_suffix(e: OnsetEvent) -> str:
     geprueft und bleibt stumm (AC-8)."""
     if getattr(e, "convective_checked", True):
         return ""
-    return " · Gewitter ungeprüft"
+    return " · " + t("alarm.regen.ungeprueft", lang)
 
 
-def _onset_gap_suffix(e: OnsetEvent) -> str:
+def _onset_gap_suffix(e: OnsetEvent, lang: Lang = "de") -> str:
     """Issue #2050 S4b-2: Langform-Hinweis auf die unvollstaendig gemessene
     Ausdehnung als anhaengbares Stueck oder LEER.
 
@@ -729,200 +783,142 @@ def _onset_gap_suffix(e: OnsetEvent) -> str:
         return ""
     if not getattr(e, "gap_km", ()):
         return ""
-    return " · Ausdehnung unvollständig gemessen"
+    return " · " + t("alarm.regen.luecke", lang)
 
 
-def _render_email_onset_multi(msg: AlertMessage) -> tuple[str, str]:
+def _cooldown_text(msg: AlertMessage, lang: Lang = "de") -> str:
+    """Issue #2018 Teil C: der Cooldown haelt nur die jeweils EIGENE Quelle
+    zurueck -- der Zusatz sagt das. Er steht in DERSELBEN Zeile wie der
+    bestehende Satz (Leerzeichen als Fuge): die zeilen-/blockweisen
+    Reihenfolge-Waechter des Mailkoerpers klassifizieren per Substring, eine
+    eigene Zeile wuerde sie kippen. Leer ohne ``cooldown_display``. Issue
+    #2667: EIN Baustein fuer Einzel- und Buendel-Mail."""
+    if not msg.cooldown_display:
+        return ""
+    return t("alarm.regen.cooldown", lang, dauer=msg.cooldown_display,
+             praefix=t("alarm.radar.cooldown_praefix", lang))
+
+
+def _box_html(text: str) -> str:
+    return (
+        f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
+        f"font-family:{FONT_UI};color:{G_INK_MUTED};\">{_esc(text)}</div>"
+    )
+
+
+def _onset_mail(msg: AlertMessage, h1: str, data_rows, footer: str, lang: Lang) -> tuple[str, str]:
+    """Gemeinsame Bauform beider Onset-Mails: Badge, H1, Datenblock,
+    Cooldown- und Nachtrags-Box, Fusszeile (Design-Tokens, #952)."""
+    badge_text = t("alarm.regen.badge", lang)
+    cooldown = _cooldown_text(msg, lang)
+    plain_parts = [h1, "", badge_text, ""] + [f"{k}: {v}" for k, v in data_rows] + ["", footer]
+    if cooldown:
+        plain_parts.append(cooldown)
+    # Issue #2018 (AC-B2): additive Bezugszeile, nur wenn diese Meldung ein
+    # Nachtrag zu einer bereits zugestellten amtlichen Warnung ist -- sonst
+    # unveraendert, ohne Leerzeile.
+    if msg.addendum_reference:
+        plain_parts.append(msg.addendum_reference)
+    rows = [
+        _datarow_html(label_, value, G_INK, i == 0)
+        for i, (label_, value) in enumerate(data_rows)
+    ]
+    html = (
+        "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
+        f"<div style=\"display:inline-block;padding:4px 12px;border-radius:12px;"
+        f"background:{G_ACCENT}1f;color:{G_ACCENT};font-family:{FONT_UI};margin-bottom:12px;\">"
+        f"{_esc(badge_text)}</div>"
+        f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
+        f"<div style=\"border-bottom:1px solid #d8d5c9;\">{''.join(rows)}</div>"
+    )
+    if cooldown:
+        html += _box_html(cooldown)
+    if msg.addendum_reference:  # Issue #2018 (AC-B2), additiv
+        html += _box_html(msg.addendum_reference)
+    html += (
+        f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
+        "</body></html>"
+    )
+    return html, "\n".join(plain_parts)
+
+
+def _render_email_onset_multi(msg: AlertMessage, lang: Lang = "de") -> tuple[str, str]:
     """Bündel-Zweig (Issue #1041 Slice 1a): je Ort eine Zeile mit Onset-Zeit
     und Intensität (Muster `loc_prefix`, render_email:328-333).
 
     Pflicht-Fix (Staging-Befund): additive Cooldown-Zeile analog zum
     Einzel-Onset-Zweig (`_render_email_onset`), nur wenn `msg.cooldown_display`
     gesetzt ist — sonst unverändert (keine leere Zeile/Box)."""
-    h1 = f"Regen-Alarm: {len(msg.events)} Orte"
-    badge_text = "Radar-Nowcast"
+    h1 = t("alarm.regen.buendel", lang, n=len(msg.events))
     data_rows = [
         (
-            f"{e.location_label} · {'Gewitter/Hagel' if e.is_convective else 'Regen'} "
-            f"{_onset_wann_kopf(e)}",
+            f"{e.location_label} · "
+            f"{t('alarm.regen.gewitter_hagel', lang) if e.is_convective else _onset_kind(e, lang)} "
+            f"{_onset_wann_kopf(e, lang)}",
             # Issue #2051 S1: das Ende JE ORT aus dessen eigenem Event -- ein
             # Buendel kann Orte mit verschiedenen Ende-Zeiten tragen. Ohne
             # behauptbares Ende bleibt die Zeile byte-identisch (AC-19).
             # Issue #2051 S2b: dokumentierter No-op -- dieser Zweig laeuft nur
             # ueber den Ortsvergleich-Buendelpfad, der `rain_zones` nie setzt
-            # (S2a AC-15). Angehaengt, damit die sieben Aufrufstellen nicht
-            # schweigend auseinanderlaufen (AC-3).
-            f"{_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)}"
-            f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
-            # Issue #2050 S4b-2: die Kennzeichnungen JE ORT aus dessen eigenem
-            # Event -- ein Buendel kann Orte mit und ohne ausgefallene
-            # Gewitterpruefung tragen (Known Limitation: kein Buendel-Marker).
-            f"{_onset_extent_suffix(e)}{_onset_gap_suffix(e)}"
-            f"{_onset_convective_suffix(e)} · "
-            f"{e.intensity_label}",
+            # (S2a AC-15). Issue #2050 S4b-2: die Kennzeichnungen JE ORT aus
+            # dessen eigenem Event (Known Limitation: kein Buendel-Marker).
+            f"{_onset_wann_zeile(e, ab=True, lang=lang)}{_onset_suffixes(e, lang)} · "
+            f"{_intensity(e, lang)}",
         )
         for e in msg.events
     ]
     # Finding F003: feste "Quelle: Radar (DWD)"-Fußzeile war falsch, sobald
     # gebündelte Orte unterschiedliche Quellen haben (z.B. AROME-FR, INCA) —
     # jetzt die tatsächlich beteiligten, distinct Quell-Labels der Events.
-    footer = f"Stand: heute {msg.stand_at} · Quelle: {_distinct_source_labels(msg)}"
-    cooldown = (
-        # Issue #2018 Teil C: der Cooldown haelt nur die jeweils EIGENE Quelle
-        # zurueck -- der Zusatz sagt das. Er steht in DERSELBEN Zeile wie der
-        # bestehende Satz (Leerzeichen als Fuge): die zeilen-/blockweisen
-        # Reihenfolge-Waechter des Mailkoerpers klassifizieren per Substring,
-        # eine eigene Zeile wuerde sie kippen.
-        f"Cooldown: Du erhältst diese Warnung höchstens einmal in "
-        f"{msg.cooldown_display}. Bei Meldungen aus anderen Quellen "
-        f"(amtliche Warnung/Radar) greift dieser Cooldown nicht."
-        if msg.cooldown_display else ""
+    footer = (
+        f"{t('alarm.mail.stand', lang, stand=msg.stand_at)} · "
+        f"{t('alarm.mail.quelle', lang, quelle=_distinct_source_labels(msg))}"
     )
-    plain_parts = [h1, "", badge_text, ""] + [f"{k}: {v}" for k, v in data_rows] + ["", footer]
-    if cooldown:
-        plain_parts.append(cooldown)
-    # Issue #2018 (AC-B2): additive Bezugszeile, nur wenn diese Meldung ein
-    # Nachtrag zu einer bereits zugestellten amtlichen Warnung ist -- sonst
-    # unveraendert, ohne Leerzeile.
-    if msg.addendum_reference:
-        plain_parts.append(msg.addendum_reference)
-    plain = "\n".join(plain_parts)
-
-    rows = [
-        _datarow_html(label_, value, G_INK, i == 0)
-        for i, (label_, value) in enumerate(data_rows)
-    ]
-    html = (
-        "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
-        f"<div style=\"display:inline-block;padding:4px 12px;border-radius:12px;"
-        f"background:{G_ACCENT}1f;color:{G_ACCENT};font-family:{FONT_UI};margin-bottom:12px;\">"
-        f"{_esc(badge_text)}</div>"
-        f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
-        f"<div style=\"border-bottom:1px solid #d8d5c9;\">{''.join(rows)}</div>"
-    )
-    if cooldown:
-        html += (
-            f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
-            f"font-family:{FONT_UI};color:{G_INK_MUTED};\">{_esc(cooldown)}</div>"
-        )
-    if msg.addendum_reference:  # Issue #2018 (AC-B2), additiv
-        html += (
-            f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
-            f"font-family:{FONT_UI};color:{G_INK_MUTED};\">"
-            f"{_esc(msg.addendum_reference)}</div>"
-        )
-    html += (
-        f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
-        "</body></html>"
-    )
-    return html, plain
+    return _onset_mail(msg, h1, data_rows, footer, lang)
 
 
-def _render_email_onset(msg: AlertMessage) -> tuple[str, str]:
+def _render_email_onset(msg: AlertMessage, lang: Lang = "de") -> tuple[str, str]:
     """Vorbild `render_email`s Deviation-Zweig (Z.185-244) — Badge/H1/Datenblock/
     Cooldown-Box/Fußzeile auf Design-Tokens (Issue #952 reopened)."""
     # Issue #1041 Slice 1a: Bündel-Zweig nur bei MEHR ALS EINEM Event; der
     # Ein-Ort-Fall unten bleibt unverändert byte-identisch (AC-2/AC-5).
     if len(msg.events) > 1:
-        return _render_email_onset_multi(msg)
+        return _render_email_onset_multi(msg, lang)
     e = msg.events[0]
-    label = "Gewitter" if e.is_convective else "Regen"
-    badge_text = "Radar-Nowcast"
-    h1 = f"{label} {_onset_wann_kopf(e)}"
-    km = _km_str_onset(e)
-
+    h1 = f"{_onset_kind(e, lang)} {_onset_wann_kopf(e, lang)}"
+    km = _km_str_onset(e, lang)
     data_rows = [
         # Issue #2051 S1: Beginn und Ende gehoeren in DIESELBE "Wo & wann"-
         # Zeile -- eine eigene Datenzeile nur fuer das Ende waere im
         # Ende-losen Normalfall eine leere Zeile (ADR-0052, Label-Wert-Form).
-        # Issue #2051 S2a: die raeumliche Ausdehnung an DERSELBEN Stelle wie
-        # die uebrigen additiven Angaben dieser Zeile -- ohne Zonen oder auf
-        # unvermessener Etappe bleibt sie byte-identisch (AC-8).
-        ("Wo & wann",
-         f"{km} · {_onset_wann_zeile(e, praefix='ab ')}{_onset_end_suffix(e)}"
-         f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
-         # Issue #2050 S4b-2: der Luecken-Hinweis unmittelbar HINTER der
-         # Ausdehnung, auf die er sich bezieht; der Pruefungs-Hinweis danach.
-         f"{_onset_extent_suffix(e)}{_onset_gap_suffix(e)}"
-         f"{_onset_convective_suffix(e)}"),
-        ("Intensität", e.intensity_label),
-        ("Quelle", e.source_label),
+        # Issue #2051 S2a / #2050 S4b-2: Ausdehnung, Luecken- und
+        # Pruefungs-Hinweis an DERSELBEN Stelle (`_onset_suffixes`).
+        (t("alarm.mail.wo_wann", lang),
+         f"{km} · {_onset_wann_zeile(e, ab=True, lang=lang)}{_onset_suffixes(e, lang)}"),
+        (t("alarm.mail.intensitaet", lang), _intensity(e, lang)),
+        (t("alarm.mail.quelle_label", lang), e.source_label),
     ]
     if e.briefing_context:
-        data_rows.append(("Briefing", e.briefing_context))
-
-    footer = f"Stand: heute {msg.stand_at}"
-    cooldown = (
-        # Issue #2018 Teil C: der Cooldown haelt nur die jeweils EIGENE Quelle
-        # zurueck -- der Zusatz sagt das. Er steht in DERSELBEN Zeile wie der
-        # bestehende Satz (Leerzeichen als Fuge): die zeilen-/blockweisen
-        # Reihenfolge-Waechter des Mailkoerpers klassifizieren per Substring,
-        # eine eigene Zeile wuerde sie kippen.
-        f"Cooldown: Du erhältst diese Warnung höchstens einmal in "
-        f"{msg.cooldown_display}. Bei Meldungen aus anderen Quellen "
-        f"(amtliche Warnung/Radar) greift dieser Cooldown nicht."
-        if msg.cooldown_display else ""
-    )
-
-    plain_parts = [h1, "", badge_text, ""] + [f"{k}: {v}" for k, v in data_rows] + ["", footer]
-    if cooldown:
-        plain_parts.append(cooldown)
-    # Issue #2018 (AC-B2): additive Bezugszeile, nur wenn diese Meldung ein
-    # Nachtrag zu einer bereits zugestellten amtlichen Warnung ist -- sonst
-    # unveraendert, ohne Leerzeile.
-    if msg.addendum_reference:
-        plain_parts.append(msg.addendum_reference)
-    plain = "\n".join(plain_parts)
-
-    rows = [
-        _datarow_html(label_, value, G_INK, i == 0)
-        for i, (label_, value) in enumerate(data_rows)
-    ]
-
-    html = (
-        "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
-        f"<div style=\"display:inline-block;padding:4px 12px;border-radius:12px;"
-        f"background:{G_ACCENT}1f;color:{G_ACCENT};font-family:{FONT_UI};margin-bottom:12px;\">"
-        f"{_esc(badge_text)}</div>"
-        f"<h1 style=\"margin:0 0 12px;font-family:{FONT_UI};color:{G_INK};\">{_esc(h1)}</h1>"
-        f"<div style=\"border-bottom:1px solid #d8d5c9;\">{''.join(rows)}</div>"
-    )
-    if cooldown:
-        html += (
-            f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
-            f"font-family:{FONT_UI};color:{G_INK_MUTED};\">{_esc(cooldown)}</div>"
-        )
-    if msg.addendum_reference:  # Issue #2018 (AC-B2), additiv
-        html += (
-            f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
-            f"font-family:{FONT_UI};color:{G_INK_MUTED};\">"
-            f"{_esc(msg.addendum_reference)}</div>"
-        )
-    html += (
-        f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
-        "</body></html>"
-    )
-    return html, plain
+        data_rows.append((t("alarm.mail.briefing", lang), e.briefing_context))
+    footer = t("alarm.mail.stand", lang, stand=msg.stand_at)
+    return _onset_mail(msg, h1, data_rows, footer, lang)
 
 
-def _render_telegram_onset(msg: AlertMessage) -> str:
+def _render_telegram_onset(msg: AlertMessage, lang: Lang = "de") -> str:
     e = msg.events[0]
-    label = "Gewitter" if e.is_convective else "Regen"
-    km = _km_str_onset(e)
-    first = f"<b>{_esc(f'{msg.trip_short} · {km} · {label} {_onset_wann_kopf(e)}')}</b>"
+    label = _onset_kind(e, lang)
+    km = _km_str_onset(e, lang)
+    first = f"<b>{_esc(f'{msg.trip_short} · {km} · {label} {_onset_wann_kopf(e, lang)}')}</b>"
     # Issue #2051 S1: das Ende additiv HINTER der Beginn-Zeit, vor Intensitaet
     # und Quelle -- ohne behauptbares Ende byte-identisch wie bisher (AC-19).
     # Issue #2051 S2b: die Ausdehnung als LETZTES Suffix der Detailzeile, vor
     # Intensitaet und Quelle -- ohne Zonen byte-identisch wie bisher (AC-2).
+    # Issue #2050 S4b-2: dieselben zwei Kennzeichnungen wie in E-Mail und
+    # Betreff -- Telegram ist kein nachrangiger Kanal (auf dem Pass ist es
+    # der gelesene).
     second = (
-        f"{_onset_wann_zeile(e)}{_onset_end_suffix(e)}"
-        f"{_onset_reach_suffix(e)}{_onset_sharpness_suffix(e)}"
-        # Issue #2050 S4b-2: dieselben zwei Kennzeichnungen wie in E-Mail und
-        # Betreff -- Telegram ist kein nachrangiger Kanal (auf dem Pass ist es
-        # der gelesene).
-        f"{_onset_extent_suffix(e)}{_onset_gap_suffix(e)}"
-        f"{_onset_convective_suffix(e)} · "
-        f"{e.intensity_label} · {e.source_label}"
+        f"{_onset_wann_zeile(e, lang=lang)}{_onset_suffixes(e, lang)} · "
+        f"{_intensity(e, lang)} · {e.source_label}"
     )
     # Issue #2018 (AC-B3): die Bezugszeile steht als EIGENE Zeile zwischen Kopf
     # und Detailtext -- bei `None` bleibt der Text unveraendert.
@@ -1200,31 +1196,31 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     return body if len(body) <= limit else body[:limit]
 
 
-def render_subject(msg: AlertMessage) -> str:
+def render_subject(msg: AlertMessage, *, lang: Lang = "de") -> str:
     if msg.source is not None:
-        return _render_subject_onset(msg)
+        return _render_subject_onset(msg, lang)
     if not msg.events and msg.onset_shift_events:
         # Issue #1468: reine Beginn-Verschiebung ohne Wert-Aenderungs-Anteil.
         oe = msg.onset_shift_events[0]
         mehr = (f" +{len(msg.onset_shift_events) - 1}"
                 if len(msg.onset_shift_events) > 1 else "")
         return (
-            f"[{msg.trip_short}] {_onset_shift_where(oe)} · {_label(oe)}-Beginn "
-            f"{oe.to_time} ({oe.shift_text}){mehr}"
+            f"[{msg.trip_short}] {_onset_shift_where(oe, lang)} · {_onset_shift_label(oe, lang)} "
+            f"{oe.to_time} ({_shift_text(oe, lang)}){mehr}"
         )
     evs = _sorted(msg)
-    km = _km_str(msg)
+    km = _km_str(msg, lang)
     if len(evs) == 1:
         e = evs[0]
         return (
-            f"[{msg.trip_short}] {km} · {arrow(e)} {_deviation_label(e)}: "
-            f"{_val(e, e.value_from)}→{_val(e, e.value_to)}"
+            f"[{msg.trip_short}] {km} · {arrow(e)} {_deviation_label(e, lang)}: "
+            f"{_val(e, e.value_from, lang)}→{_val(e, e.value_to, lang)}"
         )
     # Issue #981: Zähler UND Top-3-Auswahl nur aus über-Schwelle-Events; ohne
     # solche wechselt die Formulierung auf "N Änderungen seit dem Briefing".
     over_evs = [e for e in evs if over_thr(e)]
     if not over_evs:
-        return f"[{msg.trip_short}] {km} · {len(evs)} Änderungen seit dem Briefing"
+        return f"[{msg.trip_short}] {km} · {t('alarm.abweichung.aenderungen', lang, n=len(evs))}"
     n = len(over_evs)
     # Issue #978 (PO-Nachtrag): Top-3-Auswahl UND Anzeige-Reihenfolge sind
     # severity-absteigend (kritischster zuerst), kanal-konsistent mit
@@ -1232,13 +1228,14 @@ def render_subject(msg: AlertMessage) -> str:
     # Issue #1935/#1779 (E5): Einheit immer anhaengen (nicht mehr nur bei
     # '%') -- dieselbe Regel wie im E-Mail-Zweig (AC-11).
     top3 = ", ".join(
-        f"{_deviation_label(e)} {_num(e, e.value_to)}{_unit_suffix(e)}"
+        f"{_deviation_label(e, lang)} {_num(e, e.value_to, lang)}{_unit_suffix(e)}"
         for e in over_evs[:3]
     )
-    return f"[{msg.trip_short}] {km} · {arrow(over_evs[0])} {n} über Schwelle: {top3}"
+    ueber = t("alarm.abweichung.ueber_schwelle", lang, n=n)
+    return f"[{msg.trip_short}] {km} · {arrow(over_evs[0])} {ueber}: {top3}"
 
 
-def _h1(msg: AlertMessage) -> str:
+def _h1(msg: AlertMessage, lang: Lang = "de") -> str:
     """Issue #1948 S6 (AC-9): nennt Von-/Bis-Wert statt der entfallenen
     berechneten Prozent-Änderung -- die inhaltsleere Form 'Gewitter seit dem
     Briefing' (frueherer value_from==0-Sonderfall) entsteht dadurch nicht
@@ -1246,30 +1243,32 @@ def _h1(msg: AlertMessage) -> str:
     evs = _sorted(msg)
     if len(evs) == 1:
         e = evs[0]
-        return f"{_deviation_label(e)} {_val(e, e.value_from)} → {_val(e, e.value_to)} seit dem Briefing"
-    return f"{len(evs)} Werte über der Alarm-Schwelle"
+        return t("alarm.abweichung.h1", lang, label=_deviation_label(e, lang),
+                 von=_val(e, e.value_from, lang), bis=_val(e, e.value_to, lang))
+    return t("alarm.abweichung.h1_mehrere", lang, n=len(evs))
 
 
-def _email_line(e: AlertEvent) -> str:
+def _email_line(e: AlertEvent, lang: Lang = "de") -> str:
+    schwelle = t("alarm.abweichung.schwelle", lang, wert=_val_delta(e, e.threshold, lang))
     return (
-        f"{_deviation_label(e)} · Schwelle {_val_delta(e, e.threshold)} · "
-        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)}"
-        f"{_hail_note_suffix(e)} · "
-        f"Änderung {side_label(e)}"
+        f"{_deviation_label(e, lang)} · {schwelle} · "
+        f"{_val(e, e.value_from, lang)} {arrow(e)} {_val(e, e.value_to, lang)}"
+        f"{_hail_note_suffix(e, lang)} · "
+        f"{t('alarm.abweichung.aenderung', lang, wert=side_label(e, lang))}"
     )
 
 
-def _verdict_single(e: AlertEvent) -> str:
+def _verdict_single(e: AlertEvent, lang: Lang = "de") -> str:
     """Issue #1948 S6 (AC-8): keine berechnete Prozent-Änderung mehr im
     Badge -- nur noch Richtung, Über/Unter-Schwelle-Aussage und der
     tatsaechliche Schwellenwert (Abstand, daher `_val_delta`)."""
-    return (
-        f"{arrow(e)} Änderung {side_label(e)} deiner Alarm-Schwelle "
-        f"({_val_delta(e, e.threshold)})"
-    )
+    return t("alarm.abweichung.urteil", lang, pfeil=arrow(e), seite=side_label(e, lang),
+             schwelle=_val_delta(e, e.threshold, lang))
 
 
-def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[tuple[str, str]]:
+def _datablock_single(
+    e: AlertEvent, location_label: str | None = None, *, lang: Lang = "de",
+) -> list[tuple[str, str]]:
     """3 (label, value)-Zeilen: Wert-Vergleich / Schwellwert-Status / Wo & wann.
 
     Issue #1169: gesetztes `location_label` (Compare-Punkt-Alert) ersetzt die
@@ -1284,27 +1283,28 @@ def _datablock_single(e: AlertEvent, location_label: str | None = None) -> list[
     """
     unit = get_metric(e.metric_id).unit
     row1 = (
-        f"{_deviation_label(e)} · {unit}",
-        f"{_val(e, e.value_from)} {arrow(e)} {_val(e, e.value_to)}"
-        f"{_hail_note_suffix(e)}",  # Issue #2205
+        f"{_deviation_label(e, lang)} · {unit}",
+        f"{_val(e, e.value_from, lang)} {arrow(e)} {_val(e, e.value_to, lang)}"
+        f"{_hail_note_suffix(e, lang)}",  # Issue #2205
     )
     mark ="✓" if not over_thr(e) else "✗"
     row2 = (
-        f"Änderung {_val_delta(e, abs(e.value_to - e.value_from))}",
-        f"{side_label(e)} Alarm-Schwelle {_val_delta(e, e.threshold)} {mark}",
+        t("alarm.abweichung.aenderung", lang, wert=_val_delta(e, abs(e.value_to - e.value_from), lang)),
+        t("alarm.abweichung.seite_schwelle", lang, seite=side_label(e, lang),
+          schwelle=_val_delta(e, e.threshold, lang), mark=mark),
     )
     # Issue #1744 A1 (AC-6): DIESELBE Aufloesung wie im Betreff — vorher stand
     # hier ein dritter, eigener km-Bauer (`_km_str_events`), weshalb der
     # Mailkoerper km sprach, waehrend der Betreff schon Segmente sprach.
     # Issue #2020 Scheibe 2: derselbe Zeit-/Bedeutungs-Baustein wie im
     # Mehr-Ereignis-Zweig (`_where_when`) -- keine zweite Kopie.
-    row3 = ("Wo & wann", _where_when(e, location_label))
+    row3 = (t("alarm.mail.wo_wann", lang), _where_when(e, location_label, lang=lang))
     # Issue #2020 Scheibe 2: Niederschlags-Summen-Ereignisse bekommen die
     # Blickrichtung als eigene Zeilen; alle uebrigen Metriken behalten den
     # Block unveraendert dreizeilig.
     if e.remaining_mm is None:
         return [row1, row2, row3]
-    return [row1, row2, row3, *_precip_rows(e)]
+    return [row1, row2, row3, *_precip_rows(e, lang)]
 
 
 def _datarow_html(
@@ -1332,14 +1332,16 @@ def _datarow_html(
     )
 
 
-def _with_origin(html: str, plain: str, mail_type: str, source: str) -> tuple[str, str]:
+def _with_origin(
+    html: str, plain: str, mail_type: str, source: str, *, lang: Lang = "de",
+) -> tuple[str, str]:
     """Issue #1241/warnmail-Spec AC-5 (Befund 4a): hängt die geteilte
     Herkunfts-Fußzeile an (HTML vor </body>, Plain am Ende) -- Zeile 2 zeigt
     die echte Datenquelle (`source`), nicht mehr den internen Renderer-Pfad."""
     from output.renderers.email.helpers import (
         build_origin_footer, render_origin_footer_html, render_origin_footer_text,
     )
-    footer = build_origin_footer(mail_type, source=source)
+    footer = build_origin_footer(mail_type, source=source, lang=lang)
     html = html.replace(
         "</body></html>", render_origin_footer_html(footer) + "</body></html>",
     )
@@ -1347,19 +1349,24 @@ def _with_origin(html: str, plain: str, mail_type: str, source: str) -> tuple[st
     return html, plain
 
 
-def _hour_lines(e: AlertEvent, modes: dict | None) -> list[str]:
+def _hours_note(e: AlertEvent, lang: Lang = "de") -> str:
+    return t("alarm.abweichung.betroffen", lang, von=e.hours_range[0], bis=e.hours_range[1])
+
+
+def _hour_lines(e: AlertEvent, modes: dict | None, lang: Lang = "de") -> list[str]:
     """Issue #1737: Stundenzeilen `HH:MM | alt → neu` (Klartext/Telegram) plus
     Hinweiszeile bei Kappung. Leer ohne Stundenreihe (Ausgabe unveraendert)."""
     lines = [
         f"{r.time} | " + " → ".join(row_parts(e, r, modes, html=False)) for r in e.hours
     ]
     if lines and e.hours_capped and e.hours_range:
-        lines.append(f"betroffen {e.hours_range[0]}–{e.hours_range[1]}")
+        lines.append(_hours_note(e, lang))
     return lines
 
 
 def _hours_html(
     e: AlertEvent, modes: dict | None, indicators: frozenset = frozenset(),
+    lang: Lang = "de",
 ) -> str:
     """Issue #1737: EIN eigener Zeilenblock je Ereignis (keine gemeinsame
     Tabelle). EINFACH = CSS-Punkte aus `fmt_val`, nie Emoji (#2220)."""
@@ -1374,7 +1381,7 @@ def _hours_html(
         )
         trs.append(f"<tr><td style=\"{td}\">{_esc(r.time)}</td><td style=\"{td}\">{cell}</td></tr>")
     if e.hours_capped and e.hours_range:
-        note = _esc(f"betroffen {e.hours_range[0]}–{e.hours_range[1]}")
+        note = _esc(_hours_note(e, lang))
         trs.append(
             f"<tr><td colspan=\"2\" style=\"padding:2px 0;font-family:{FONT_UI};"
             f"color:{G_INK_MUTED};\">{note}</td></tr>"
@@ -1385,44 +1392,52 @@ def _hours_html(
     )
 
 
-def render_email(msg: AlertMessage) -> tuple[str, str]:
+def _stand_footer(msg: AlertMessage, lang: Lang = "de") -> str:
+    """'Stand: heute HH:MM · verglichen mit …' -- E-Mail und Telegram (#1948 S6)."""
+    referenz = msg.reference_at or t("alarm.mail.letztes_briefing", lang)
+    return (f"{t('alarm.mail.stand', lang, stand=msg.stand_at)} · "
+            f"{t('alarm.mail.verglichen', lang, referenz=referenz)}")
+
+
+def _verdict_multi(msg: AlertMessage, evs, over_count: int, lang: Lang = "de") -> str:
+    if over_count:
+        return t("alarm.abweichung.ueber_schwelle", lang, n=over_count)
+    return t("alarm.abweichung.aenderungen", lang, n=len(evs))
+
+
+def render_email(msg: AlertMessage, *, lang: Lang = "de") -> tuple[str, str]:
     if msg.source is not None:
-        html, plain = _render_email_onset(msg)
+        html, plain = _render_email_onset(msg, lang)
         # AC-5 (Befund 4a): reale Quelle des ersten (fuehrenden) Onset-Events.
         onset_source = getattr(msg.events[0], "source_label", None) or "Open-Meteo"
-        return _with_origin(html, plain, "radar-alert", onset_source)
+        return _with_origin(html, plain, "radar-alert", onset_source, lang=lang)
     if not msg.events and msg.onset_shift_events:
-        return _render_email_onset_shift_only(msg)
+        return _render_email_onset_shift_only(msg, lang)
     evs = _sorted(msg)
-    h1 = _h1(msg)
+    h1 = _h1(msg, lang)
     single = len(evs) == 1
 
     if single:
         e = evs[0]
-        verdict_text = _verdict_single(e)
+        verdict_text = _verdict_single(e, lang)
         # Issue #1170: per-Event `location_label` (gebündelter Mehr-Orte-Alarm)
         # geht dem kollektiven `msg.location_label` vor; für Trip/Einzel-Ort
         # sind beide identisch bzw. beide None (bit-identisch, AC-7).
-        data_rows = _datablock_single(e, e.location_label or msg.location_label)
+        data_rows = _datablock_single(e, e.location_label or msg.location_label, lang=lang)
         # Issue #1916 (AC-1/AC-2): gesetztes `reference_at` ersetzt den
         # generischen Text durch den Referenz-Zeitpunkt der tatsaechlich
         # verglichenen Vergleichsbasis. `None` -> Regressions-Invariante AC-5.
-        footer = (
-            f"Stand: heute {msg.stand_at} · verglichen mit {msg.reference_at}"
-            if msg.reference_at
-            else f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing"
-        )
+        footer = _stand_footer(msg, lang)
         any_over = over_thr(e)
         plain_data = [f"{k}: {v}" for k, v in data_rows]
-        plain_data += _hour_lines(e, msg.format_modes.get("email"))  # Issue #1737
+        plain_data += _hour_lines(e, msg.format_modes.get("email"), lang)  # Issue #1737
     else:
         # Issue #981: Zähler zählt nur über-Schwelle-Events; sind es null,
         # wechselt die Formulierung auf "N Änderungen seit dem Briefing".
         over_count = len([e for e in evs if over_thr(e)])
-        verdict_text = (
-            f"{arrow(evs[0])} {over_count} über Schwelle" if over_count
-            else f"{len(evs)} Änderungen seit dem Briefing"
-        )
+        verdict_text = _verdict_multi(msg, evs, over_count, lang)
+        if over_count:
+            verdict_text = f"{arrow(evs[0])} {verdict_text}"
         # Issue #978: Einheit genau einmal (am letzten Wert), Schwelle ohne
         # Einheit -- ausser bei "%", wo sie zur Unterscheidung mitgefuehrt
         # wird (exaktes Vorbild Design-Vorlage Zeilen 220-233).
@@ -1439,7 +1454,7 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
             # Trip-Fall (location_label immer None) bleibt unverändert (leerer
             # Prefix, AC-7-Invariante).
             loc_prefix = f"{e.location_label} · " if e.location_label else ""
-            where_when = f" · {_where_when(e)}" if with_where_when else ""
+            where_when = f" · {_where_when(e, lang=lang)}" if with_where_when else ""
             if over_thr(e):
                 # Issue #1935/#1779 (E2): dieselbe Ambiguitaet wie E1, nur im
                 # gebuendelten Fall -- Label nennt zusaetzlich zur Schwelle
@@ -1449,42 +1464,40 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
                 if _is_level_metric(e.metric_id):
                     # Issue #1948 S6 (AC-4/AC-6): Abstaende einer Stufen-
                     # metrik sind Zahl + 'Stufe(n)', NIE ein Stufenwort.
-                    delta_suffix = f" {_stufe_unit(delta)}"
-                    schwelle_suffix = f" {_stufe_unit(e.threshold)}"
+                    delta_suffix = f" {_stufe_unit(delta, lang)}"
+                    schwelle_suffix = f" {_stufe_unit(e.threshold, lang)}"
                 else:
                     delta_suffix = schwelle_suffix = " %" if unit == "%" else ""
+                aenderung = f"{_num_delta(e, delta, lang)}{delta_suffix}"
+                schwelle = f"{_num_delta(e, e.threshold, lang)}{schwelle_suffix}"
                 data_rows.append((
-                    f"{loc_prefix}{_deviation_label(e)}{where_when} · "
-                    f"Änderung {_num_delta(e, delta)}{delta_suffix} · "
-                    f"Schwelle {_num_delta(e, e.threshold)}{schwelle_suffix}",
-                    f"{_num(e, e.value_from)} {arrow(e)} {_num(e, e.value_to)}"
-                    f"{unit_suffix}{_hail_note_suffix(e)} {side_label(e)}",
+                    f"{loc_prefix}{_deviation_label(e, lang)}{where_when} · "
+                    f"{t('alarm.abweichung.aenderung', lang, wert=aenderung)} · "
+                    f"{t('alarm.abweichung.schwelle', lang, wert=schwelle)}",
+                    f"{_num(e, e.value_from, lang)} {arrow(e)} {_num(e, e.value_to, lang)}"
+                    f"{unit_suffix}{_hail_note_suffix(e, lang)} {side_label(e, lang)}",
                 ))
             else:
                 # Issue #980: gedämpfte Unter-Schwelle-Zeile — Label OHNE
                 # Schwellen-Zahl, Wert mit neutralem Pfeil, kein über/unter-Suffix
                 # (Design-Vorlage Zeilen 231-234).
                 data_rows.append((
-                    f"{loc_prefix}{_deviation_label(e)}{where_when} · unter Schwelle",
-                    f"{_num(e, e.value_from)} → {_num(e, e.value_to)}{unit_suffix}"
-                    f"{_hail_note_suffix(e)}",
+                    f"{loc_prefix}{_deviation_label(e, lang)}{where_when} · "
+                    f"{t('alarm.abweichung.unter_schwelle', lang)}",
+                    f"{_num(e, e.value_from, lang)} → {_num(e, e.value_to, lang)}{unit_suffix}"
+                    f"{_hail_note_suffix(e, lang)}",
                 ))
-        km = _km_str(msg)
-        footer = (
-            f"Stand: heute {msg.stand_at} · verglichen mit {msg.reference_at} · {km}"
-            if msg.reference_at
-            else f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing · {km}"
-        )
+        footer = f"{_stand_footer(msg, lang)} · {_km_str(msg, lang)}"
         any_over = over_count > 0
         plain_data = []
         for e, (k, v) in zip(evs, data_rows):
             plain_data.append(f"{k}: {v}")
-            plain_data += _hour_lines(e, msg.format_modes.get("email"))  # Issue #1737
+            plain_data += _hour_lines(e, msg.format_modes.get("email"), lang)  # Issue #1737
 
     verdict_bg = G_DANGER if any_over else G_SUCCESS
     # Issue #1468 (PO-Entscheid): Beginn- UND Stufenaenderung werden beide
     # gemeldet, aber im Text DERSELBEN Nachricht zusammengefasst.
-    onset_lines = [_onset_shift_line(oe) for oe in msg.onset_shift_events]
+    onset_lines = [_onset_shift_line(oe, lang) for oe in msg.onset_shift_events]
     plain_parts = [h1, "", verdict_text, ""] + plain_data
     if onset_lines:
         plain_parts += ["", *onset_lines]
@@ -1497,18 +1510,14 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
         for idx, (label, value) in enumerate(data_rows):
             value_color = G_INK if idx != 1 else threshold_status_color
             rows.append(_datarow_html(label, value, value_color, not rows))
-        rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset())))  # Issue #1737
+        rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset()), lang))  # Issue #1737
     else:
         for e, (label, value) in zip(evs, data_rows):
             value_color = G_DANGER if over_thr(e) else G_INK_MUTED
             rows.append(_datarow_html(label, value, value_color, not rows))
-            rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset())))  # Issue #1737
+            rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset()), lang))  # Issue #1737
     for oe in msg.onset_shift_events:
-        rows.append(_datarow_html(
-            f"{_label(oe)}-Beginn · {_onset_shift_where(oe)}",
-            f"{oe.from_time} → {_onset_shift_to(oe)} ({oe.shift_text})",
-            G_DANGER, not rows,
-        ))
+        rows.append(_onset_shift_row(oe, not rows, lang))
 
     html = (
         "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
@@ -1522,36 +1531,33 @@ def render_email(msg: AlertMessage) -> tuple[str, str]:
     )
     # AC-5 (Befund 4a, Known Limitation): kein per-Event-Provider im Modell --
     # fester Fallback "Open-Meteo" (ADR-0029).
-    return _with_origin(html, plain, "deviation-alert", "Open-Meteo")
+    return _with_origin(html, plain, "deviation-alert", "Open-Meteo", lang=lang)
 
 
-def render_telegram(msg: AlertMessage) -> str:
+def render_telegram(msg: AlertMessage, *, lang: Lang = "de") -> str:
     if msg.source is not None:
-        return _render_telegram_onset(msg)
+        return _render_telegram_onset(msg, lang)
     if not msg.events and msg.onset_shift_events:
         # Issue #1468: reine Beginn-Verschiebung.
-        lines = [f"<b>{_esc(f'{msg.trip_short} · {_onset_shift_h1(msg)}')}</b>"]
-        lines += [_onset_shift_line(oe) for oe in msg.onset_shift_events]
+        lines = [f"<b>{_esc(f'{msg.trip_short} · {_onset_shift_h1(msg, lang)}')}</b>"]
+        lines += [_onset_shift_line(oe, lang) for oe in msg.onset_shift_events]
         return "\n".join(lines)
     evs = _sorted(msg)
-    km = _km_str(msg)
+    km = _km_str(msg, lang)
     if len(evs) == 1:
         e = evs[0]
-        verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_deviation_label(e)}"
+        verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_deviation_label(e, lang)}"
         # Issue #2020 Scheibe 2: Telegram traegt DIESELBEN Saetze wie die
         # E-Mail (Kanal-Paritaet) -- vorher fehlte hier jede Zeitangabe, der
         # Kanal konnte den Tagesbezug also gar nicht nennen.
-        lines = [f"<b>{_esc(verdict)}</b>", _email_line(e), _where_when(e)]
+        lines = [f"<b>{_esc(verdict)}</b>", _email_line(e, lang), _where_when(e, lang=lang)]
         if e.remaining_mm is not None:
-            lines += [f"{k}: {v}" for k, v in _precip_rows(e)]
-        lines += [_esc(ln) for ln in _hour_lines(e, msg.format_modes.get("telegram"))]  # Issue #1737
+            lines += [f"{k}: {v}" for k, v in _precip_rows(e, lang)]
+        lines += [_esc(ln) for ln in _hour_lines(e, msg.format_modes.get("telegram"), lang)]  # Issue #1737
     else:
         # Issue #981: Kopfzeilen-Zähler nur über-Schwelle; null → Änderungs-Text.
         over_count = len([e for e in evs if over_thr(e)])
-        verdict = (
-            f"{msg.trip_short} · {km} · {over_count} über Schwelle" if over_count
-            else f"{msg.trip_short} · {km} · {len(evs)} Änderungen seit dem Briefing"
-        )
+        verdict = f"{msg.trip_short} · {km} · {_verdict_multi(msg, evs, over_count, lang)}"
         # Issue #978 (PO-Nachtrag): kein "Schwelle"-Text pro Zeile (steht
         # bereits in der fetten Kopfzeile), keine Einheiten ausser "%";
         # severity-absteigende Reihenfolge, kanal-konsistent mit Betreff/
@@ -1561,29 +1567,24 @@ def render_telegram(msg: AlertMessage) -> str:
         with_where_when = _per_event_where_when(evs)
         # Issue #1935/#1779 (E5): Einheit immer anhaengen (AC-11).
         metric_line = " · ".join(
-            f"{_deviation_label(e)}{f' {_where_when(e)}' if with_where_when else ''} "
-            f"{_num(e, e.value_from)}→{_num(e, e.value_to)}"
-            f"{_unit_suffix(e)}{_hail_note_suffix(e)}"
+            f"{_deviation_label(e, lang)}{f' {_where_when(e, lang=lang)}' if with_where_when else ''} "
+            f"{_num(e, e.value_from, lang)}→{_num(e, e.value_to, lang)}"
+            f"{_unit_suffix(e)}{_hail_note_suffix(e, lang)}"
             for e in evs
         )
         lines = [f"<b>{_esc(verdict)}</b>", metric_line]
         # Issue #1737: je Ereignis ein eigener Stundenblock unter seiner Kopfzeile.
         for e in evs:
-            block = _hour_lines(e, msg.format_modes.get("telegram"))
+            block = _hour_lines(e, msg.format_modes.get("telegram"), lang)
             if block:
-                lines += [_esc(_deviation_label(e)), *[_esc(ln) for ln in block]]
+                lines += [_esc(_deviation_label(e, lang)), *[_esc(ln) for ln in block]]
     # Issue #1468: Beginn-Verschiebungen desselben Laufs anhaengen -- eine
     # Nachricht, nicht zwei.
-    lines += [_onset_shift_line(oe) for oe in msg.onset_shift_events]
+    lines += [_onset_shift_line(oe, lang) for oe in msg.onset_shift_events]
     # Issue #1948 S6 (AC-11): dieselbe Stand-/Vergleichszeile wie die E-Mail
     # -- AUSSCHLIESSLICH hier, niemals in render_sms (AC-12, der Telegram-
     # Kurzstil sendet render_sms()s Text unveraendert weiter).
-    footer = (
-        f"Stand: heute {msg.stand_at} · verglichen mit {msg.reference_at}"
-        if msg.reference_at
-        else f"Stand: heute {msg.stand_at} · verglichen mit dem letzten Briefing"
-    )
-    lines.append(footer)
+    lines.append(_stand_footer(msg, lang))
     return "\n".join(lines)
 
 
@@ -1859,23 +1860,20 @@ def _esc(text: str) -> str:
 
 # Kompat-Shim: alter knapper #816-Abweichungs-Alert (render_deviation_alert),
 # weiter genutzt von 3 Bestandstests; Verhalten unverändert.
-_LEGACY_HEADER = "Wetter ändert sich seit dem Briefing"
-
-
-def _legacy_line(change, segments, *, tz, stage_label=None) -> str:
+def _legacy_line(change, segments, *, tz, stage_label=None, lang: Lang = "de") -> str:
     from output.renderers.email.helpers import build_segment_label
     info = get_label_for_field(change.metric)
     name = info[0] if info else change.metric
     unit = info[2] if info else ""
-    old_fmt = format_metric_value(unit, change.old_value) if info else f"{change.old_value:.1f}"
-    new_fmt = format_metric_value(unit, change.new_value) if info else f"{change.new_value:.1f}"
+    old_fmt = format_metric_value(unit, change.old_value, lang=lang) if info else f"{change.old_value:.1f}"
+    new_fmt = format_metric_value(unit, change.new_value, lang=lang) if info else f"{change.new_value:.1f}"
     seg = build_segment_label(change, segments, tz=tz, stage_label=stage_label)
     return f"{name}  {old_fmt} → {new_fmt}  ({seg})"
 
 
 def render_deviation_alert(
     changes, segments, trip_name, *,
-    tz, stage_label=None, sent_at=None,
+    tz, stage_label=None, sent_at=None, lang: Lang = "de",
 ) -> tuple[str, str]:
     """Kompat: knapper #816-Abweichungs-Alert (html, plain), severity-sortiert.
 
@@ -1885,13 +1883,15 @@ def render_deviation_alert(
     from utils.timezone import local_fmt
     ordered = sorted(changes, key=lambda c: abs(c.delta) / (abs(c.threshold) or 1.0), reverse=True)
     stamp = local_fmt(sent_at or datetime.now(timezone.utc), tz)
-    footer = f"Stand: heute {stamp} · verglichen mit dem letzten Briefing"
-    lines = [_legacy_line(c, segments, tz=tz, stage_label=stage_label) for c in ordered]
-    plain = "\n".join([_LEGACY_HEADER, "", *lines, "", footer])
+    footer = (f"{t('alarm.mail.stand', lang, stand=stamp)} · "
+              f"{t('alarm.mail.verglichen', lang, referenz=t('alarm.mail.letztes_briefing', lang))}")
+    header = t("alarm.abweichung.legacy_kopf", lang)
+    lines = [_legacy_line(c, segments, tz=tz, stage_label=stage_label, lang=lang) for c in ordered]
+    plain = "\n".join([header, "", *lines, "", footer])
     rows = "".join(f"<tr><td style=\"padding:4px 0;\">{_esc(line)}</td></tr>" for line in lines)
     html = (
         "<html><body style=\"font-family:sans-serif;\">"
-        f"<h2 style=\"margin:0 0 12px;\">{_esc(_LEGACY_HEADER)}</h2>"
+        f"<h2 style=\"margin:0 0 12px;\">{_esc(header)}</h2>"
         f"<table style=\"border-collapse:collapse;\">{rows}</table>"
         f"<p style=\"color:#555;margin-top:16px;\">{_esc(footer)}</p>"
         "</body></html>"

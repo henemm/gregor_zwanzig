@@ -1,0 +1,28 @@
+
+----- betreff -----
+[GR20 Golden] Segment 3 · ↑ Gusts: 45 km/h→72 km/h
+----- klartext -----
+Gusts 45 km/h → 72 km/h since the briefing
+
+↑ Change above your alert threshold (20 km/h)
+
+Gusts · km/h: 45 km/h ↑ 72 km/h
+Change 27 km/h: above alert threshold 20 km/h ✗
+Where & when: Segment 3 · peak hour tomorrow 15:00
+14:00 | 40 → 66
+15:00 | 45 → 72
+affected 13:00–18:00
+
+As of today 06:00 · compared with yesterday 17:03
+
+Deviation alert · Open-Meteo
+----- telegram -----
+<b>GR20 Golden · Segment 3 · ↑ Gusts</b>
+Gusts · Threshold 20 km/h · 45 km/h ↑ 72 km/h · Change above
+Segment 3 · peak hour tomorrow 15:00
+14:00 | 40 → 66
+15:00 | 45 → 72
+affected 13:00–18:00
+As of today 06:00 · compared with yesterday 17:03
+----- sms -----
+S3 Seg 3: G45->72@Do15 13-18
