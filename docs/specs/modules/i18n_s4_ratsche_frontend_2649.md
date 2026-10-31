@@ -113,7 +113,7 @@ Ab diesem Paket kann kein neuer deutscher Text mehr am Katalog vorbei in die Obe
 
 - Annahme: Pfad-Präfixe in der Allowlist beziehen sich auf `frontend/src/` und enden bei Verzeichnissen auf `/`. Das Issue F1 nennt `routes/(auth)` und F2 nennt `molecules/Infobox`; diese Pfade gibt es nicht. Maßgeblich ist, was die Messung findet (zum Beispiel `routes/login/` statt `routes/(auth)`).
 - Nicht erfasst (Konventionen): Texte, die in `<script>` stehen, Texte in übergebenen Komponenten-Props außer `title|aria-label|placeholder|alt|label` (zum Beispiel `eyebrow="…"`), gemischte Attributwerte wie `title="Speichern {x}"`, und `*.ts`-Dateien (kommen mit Paket #2660 hinzu).
-- Eigennamen (Marke „Gregor"), reine Zahlen und Einheiten ohne zwei Buchstaben werden nicht gemeldet; Einheiten mit zwei Buchstaben (`km`) sind Treffer und werden bei Bedarf über Ausdrücke `{…}` gesetzt.
+- Eigennamen (Marke „Gregor") werden wie jeder Text gemeldet und stehen in der Allowlist (`lib/brand/`, Entscheidung in einem F-Paket); reine Zahlen und Einheiten ohne zwei Buchstaben werden nicht gemeldet; Einheiten mit zwei Buchstaben (`km`) sind Treffer und werden bei Bedarf über Ausdrücke `{…}` gesetzt.
 - Der Verwender-Test erkennt dynamische Schlüssel nur über den Kommentar; ein Schlüssel, der nur zusammengesetzt wird, ohne Kommentar, gilt als verwaist.
 - Der Schutz „Allowlist darf nur schrumpfen" ist kein Test (der Vergleich mit dem Git-Vorgänger gehört nicht in den Lauf); die Adversary-Prüfung kontrolliert pro Paket, dass der Eintrag nur entfernt oder verfeinert wurde.
 
