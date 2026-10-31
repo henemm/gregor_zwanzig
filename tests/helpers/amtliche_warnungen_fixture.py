@@ -274,3 +274,30 @@ def schreibe(lang: str) -> list[Path]:
 if __name__ == "__main__":
     for p in schreibe(sys.argv[1] if len(sys.argv) > 1 else "de"):
         print(p)
+
+
+EN_FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "mail" / "official_alert_mail_en.eml"
+
+
+def warnmail_eml(lang: str) -> bytes:
+    """Standalone-Warnmail (Muster ``official_alert_de.eml``: Sturm + Gewitter,
+    GeoSphere, gesamte Route) aus dem echten Renderer in ``lang`` ueber
+    ``build_mime_message`` (Kopf ``X-GZ-Lang``)."""
+    from output.renderers.alert import official_alerts as oa
+    from tests.helpers.mail_lang_fixture import _mime
+
+    def _alert_mit(hazard, label):
+        return _alert(source="geosphere_warn", hazard=hazard, level=2, label=label,
+                      valid_from=_zeit(29, 6), valid_to=_zeit(29, 20),
+                      region_label="Hermagor-Pressegger See")
+
+    voll = SimpleNamespace(all_waypoints=[0, 1])
+    notices = oa.build_official_alert_notices(
+        voll, [(_alert_mit("wind_gust", "Sturmwarnung"), ["1", "Ziel"]),
+               (_alert_mit("thunderstorm", "Gewitterwarnung"), ["1", "Ziel"])], lang=lang)
+    kw = dict(source_label="GeoSphere Austria", stand_at=STAND, tz=UTC, lang=lang)
+    html = oa.render_warn_block(notices, variant="standalone", **kw)
+    plain = oa.render_official_alert_mail_plain(notices, **kw)
+    subject = oa.render_official_alert_subject(notices, prefix=PREFIX, tz=UTC, lang=lang)
+    return _mime("official_alert", subject=subject, body=html, html=True, plain=plain,
+                 mail_type="official-alert", lang=lang)
