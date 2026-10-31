@@ -173,6 +173,15 @@ func (s *Store) SetUserOnboardingFlags(id string, onboardingDismissed, checklist
 	})
 }
 
+// SetUserLanguage setzt NUR das Feld language per Merge (Issue #2646):
+// fremde und dem Modell unbekannte Felder bleiben erhalten.
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
+func (s *Store) SetUserLanguage(id, lang string) error {
+	return s.mergeUserJSON(id, func(m map[string]json.RawMessage) {
+		m["language"], _ = json.Marshal(lang)
+	})
+}
+
 // SetUserTestMailSentAt setzt NUR "test_mail_sent_at" per Merge (Issue #2521 S2).
 // gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
 func (s *Store) SetUserTestMailSentAt(id string, at time.Time) error {

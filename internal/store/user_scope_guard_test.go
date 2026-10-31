@@ -96,6 +96,7 @@ var storeMethodRegister = map[string]guardEntry{
 	"SetUserDisabled":         exempt("Kennung als expliziter Parameter id, nicht s.UserID (#2155 S3)"),
 	"SetUserOnboardingFlags":  exempt("Kennung als expliziter Parameter id, nicht s.UserID (#2521 S2)"),
 	"SetUserTestMailSentAt":   exempt("Kennung als expliziter Parameter id, nicht s.UserID (#2521 S2)"),
+	"SetUserLanguage":         exempt("Kennung als expliziter Parameter id, nicht s.UserID (#2646)"),
 	"LoadFirstBriefingAt":     exempt("Kennung als expliziter Parameter id, nicht s.UserID (#2521 S2)"),
 	"SetUserTierAdmin":        exempt("Kennung als expliziter Parameter id, nicht s.UserID (#2155 S3)"),
 	"UserExists":              exempt("Kennung als expliziter Parameter, nicht s.UserID"),

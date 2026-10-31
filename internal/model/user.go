@@ -84,6 +84,27 @@ type User struct {
 	OnboardingDismissed bool       `json:"onboarding_dismissed,omitempty"`
 	ChecklistDismissed  bool       `json:"checklist_dismissed,omitempty"`
 	TestMailSentAt      *time.Time `json:"test_mail_sent_at,omitempty"`
+	// Issue #2646 (i18n S1, ADR-0104) — Nutzersprache "de"|"en". TYPISIERT,
+	// damit sie jeden SaveUser-Schreiber uebersteht; omitempty: Bestandsprofile
+	// ohne Feld laden unveraendert und gelten als deutsch (Lang()).
+	Language string `json:"language,omitempty"`
+}
+
+// Sprachen der Anwendung (ADR-0104): genau diese zwei.
+const (
+	LangDe = "de"
+	LangEn = "en"
+)
+
+// IsValidLanguage prueft strikt (kein Trimmen, kein Grossschreiben, leer ist ungueltig).
+func IsValidLanguage(s string) bool { return s == LangDe || s == LangEn }
+
+// Lang liefert die wirksame Sprache: leer/unbekannt => "de".
+func (u *User) Lang() string {
+	if IsValidLanguage(u.Language) {
+		return u.Language
+	}
+	return LangDe
 }
 
 // MarkOnboardingPending kennzeichnet ein neu angelegtes Konto als "neu

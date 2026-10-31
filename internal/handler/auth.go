@@ -33,6 +33,8 @@ type authRequest struct {
 	IsTestUser bool `json:"is_test_user,omitempty"`
 	// Issue #2519: optionaler Einladungs-Token (Admin-Einladungslink).
 	Invite string `json:"invite,omitempty"`
+	// Issue #2646: optionale Sprachwahl ("de"|"en"); leer = Feld bleibt leer.
+	Language string `json:"language,omitempty"`
 }
 
 // RegisterHandler: offene Registrierung ohne Einladungslinks (Bestandsweg).
@@ -100,6 +102,12 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			w.Write([]byte(`{"error":"invalid_email"}`))
 			return
 		}
+		// Issue #2646: VOR SaveUser und Einladungseinloesung — kein Konto,
+		// keine verbrauchte Einladung bei ungueltiger Sprache.
+		if req.Language != "" && !model.IsValidLanguage(req.Language) {
+			writeInvalidLanguage(w)
+			return
+		}
 
 		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcryptCost)
 		if err != nil {
@@ -138,6 +146,7 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			MailTo:       normalizedEmail,
 			CreatedAt:    time.Now(),
 			IsTestUser:   req.IsTestUser,
+			Language:     req.Language,
 		}
 
 		// Issue #2519: Einladung erst NACH allen Validierungen reservieren (ein
@@ -191,6 +200,7 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		// für immer nil und die Adresse dauerhaft von Resend-Versand ausgeschlossen.
 		dispatchVerificationMail(s, cfg, req.Username, &user)
 
+		middleware.SetLangCookie(w, r, user.Lang(), cfg.PublicHost)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(201)
 		json.NewEncoder(w).Encode(map[string]string{"id": req.Username})
@@ -336,6 +346,7 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 		if !issueSession(w, r, s, req.Username, secret, publicHost) {
 			return
 		}
+		middleware.SetLangCookie(w, r, user.Lang(), publicHost)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"id": req.Username})
@@ -914,6 +925,9 @@ type profileResponse struct {
 	// Issue #2482 — Mengengrenzen je Ressource; null = unbegrenzt
 	// (Admin/Ausnahme-Konto). Wie Role nur in GET /api/auth/profile gesetzt.
 	Quota *profileQuota `json:"quota,omitempty"`
+	// Issue #2646 — wirksame Sprache (u.Lang()), immer vorhanden: ohne
+	// gespeichertes Feld "de", die user.json wird dabei nur gelesen.
+	Language string `json:"language"`
 }
 
 // profileRole leitet die Rolle aus der Admin-Menge ab (Issue #2155 S1).
@@ -995,6 +1009,7 @@ func toProfileResponse(u *model.User) profileResponse {
 		// auseinanderlaufen koennen.
 		SmsVerified:  smsVerifiziert(u),
 		PendingSmsTo: u.PendingSmsTo,
+		Language:     u.Lang(),
 	}
 }
 
@@ -1063,6 +1078,8 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			// Issue #2521 S2 — Dismiss-Flags (nur diese zwei, nie pending/Zeitstempel).
 			OnboardingDismissed *bool `json:"onboarding_dismissed"`
 			ChecklistDismissed  *bool `json:"checklist_dismissed"`
+			// Issue #2646 — Pointer: nur ein gesendeter Wert wird geprueft/uebernommen.
+			Language *string `json:"language"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -1070,10 +1087,21 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			w.Write([]byte(`{"error":"invalid request"}`))
 			return
 		}
+		// Issue #2646: Sprachpruefung VOR jedem Schreibzugriff (strikt).
+		if update.Language != nil && !model.IsValidLanguage(*update.Language) {
+			writeInvalidLanguage(w)
+			return
+		}
+		noOtherField := update.Email == nil && update.DisplayName == nil && update.MailTo == nil &&
+			update.SmsTo == nil && update.TelegramChatID == nil && update.PasskeyPromptDismissed == nil
+		// Nur language: Merge-Setter, kein Adress-/Nummernpfad (keine Mail, kein SMS-Code).
+		if update.Language != nil && noOtherField && update.OnboardingDismissed == nil && update.ChecklistDismissed == nil {
+			updateLanguageOnly(w, r, s, cfg, userId, *update.Language)
+			return
+		}
 
 		if update.OnboardingDismissed != nil || update.ChecklistDismissed != nil {
-			if update.Email == nil && update.DisplayName == nil && update.MailTo == nil &&
-				update.SmsTo == nil && update.TelegramChatID == nil && update.PasskeyPromptDismissed == nil {
+			if noOtherField && update.Language == nil {
 				// Nur Dismiss-Flags: Merge-Setter statt SaveUser (Fremdfelder bleiben).
 				if err := s.SetUserOnboardingFlags(userId, update.OnboardingDismissed, update.ChecklistDismissed); err != nil {
 					w.Header().Set("Content-Type", "application/json")
@@ -1359,6 +1387,10 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		if update.PasskeyPromptDismissed != nil {
 			user.PasskeyPromptDismissed = *update.PasskeyPromptDismissed
 		}
+		// Issue #2646: typisiertes Feld, ueberlebt SaveUser (gemischter PUT).
+		if update.Language != nil {
+			user.Language = *update.Language
+		}
 
 		// Issue #2404: die Mengenbremse greift genau dort, wo eine
 		// Bestaetigungsmail entstuende — Profil-Updates ohne wirksame
@@ -1409,10 +1441,41 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		if sendSmsCode {
 			dispatchSmsVerificationCode(s, cfg, userId, smsCodeTarget)
 		}
+		if update.Language != nil {
+			middleware.SetLangCookie(w, r, user.Lang(), cfg.PublicHost)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(toProfileResponse(user))
 	}
+}
+
+// writeInvalidLanguage: 400 {"error":"invalid_language"} (Issue #2646).
+func writeInvalidLanguage(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	w.Write([]byte(`{"error":"invalid_language"}`))
+}
+
+// updateLanguageOnly: Profil-PUT mit NUR language (Issue #2646) — Merge statt
+// SaveUser, danach frisch laden und Cookie setzen.
+func updateLanguageOnly(w http.ResponseWriter, r *http.Request, s *store.Store, cfg config.Config, userId, lang string) {
+	if err := s.SetUserLanguage(userId, lang); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"store_error"}`))
+		return
+	}
+	user, err := s.LoadUser(userId)
+	if err != nil || user == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(500)
+		w.Write([]byte(`{"error":"store_error"}`))
+		return
+	}
+	middleware.SetLangCookie(w, r, user.Lang(), cfg.PublicHost)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(toProfileResponse(user))
 }
 
 // sendVerificationMailFn ist ein Test-Seam (Issue #1219 F001, PO-Wunsch):
