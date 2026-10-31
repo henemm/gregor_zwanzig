@@ -27,7 +27,8 @@ STAND = "06:00"
 PREFIX = "GR20 Golden"
 UTC = timezone.utc
 FAELLE = ("einzelne_warnung", "gemischte_stufen", "ortsvergleich_nur",
-          "lawinen_lagebericht", "entwarnung", "quelltext_franzoesisch")
+          "lawinen_lagebericht", "entwarnung", "quelltext_franzoesisch",
+          "vergleich_mit_warnungen")
 ORTE = {"o1": "Toulon", "o2": "Hyères", "o3": "Bastia"}
 
 
@@ -211,8 +212,32 @@ def _entwarnung_kanaele(lang):
     return html, txt
 
 
+def vergleich_mit_warnungen():
+    """Ortsvergleich-Golden (#2666) mit amtlichen Warnungen an zwei Orten --
+    geteilter Warn-Block, Warn-Zeilen in Klartext und Telegram, SMS-Marker."""
+    from dataclasses import replace
+
+    from tests.helpers.vergleichs_mail_fixture import build_result
+
+    result = build_result()
+    warnungen = [[meteoalarm_gewitter(), hitze()], [], [waldbrand()]]
+    orte = [replace(loc, official_alerts=w) if loc.error is None else loc
+            for loc, w in zip(result.locations, warnungen + [[]] * len(result.locations))]
+    return replace(result, locations=orte)
+
+
+def _vergleich_kanaele(lang):
+    from tests.helpers.vergleichs_mail_fixture import render_kanaele, render_mail
+
+    result = vergleich_mit_warnungen()
+    html, text = render_mail(lang, result)
+    return [html], [text, *render_kanaele(lang, result)]
+
+
 def render_fall(fall: str, lang: str | None) -> tuple[str, str]:
-    if fall == "entwarnung":
+    if fall == "vergleich_mit_warnungen":
+        html, txt = _vergleich_kanaele(lang)
+    elif fall == "entwarnung":
         html, txt = _entwarnung_kanaele(lang)
     else:
         html, txt = _warn_kanaele(notices_fuer(fall, lang), lang)
@@ -220,12 +245,18 @@ def render_fall(fall: str, lang: str | None) -> tuple[str, str]:
 
 
 def sms_texte(lang: str | None) -> list[str]:
-    """Alle SMS-Ausgaben aller Faelle (der letzte bzw. vorletzte txt-Abschnitt)."""
-    out = []
-    for fall in FAELLE:
-        txt = render_fall(fall, lang)[1].split(TRENNER)
-        out += [txt[4], txt[6]] if fall == "entwarnung" else [txt[3]]
-    return out
+    """Alle SMS-Ausgaben aller Faelle (Position je Fall: ``sms_aus_txt``)."""
+    return [sms for fall in FAELLE for sms in sms_aus_txt(fall, render_fall(fall, lang)[1])]
+
+
+def sms_aus_txt(fall: str, txt: str) -> list[str]:
+    """Die SMS-Abschnitte eines txt-Golden (Position je Fall)."""
+    teile = txt.split(TRENNER)
+    if fall == "entwarnung":
+        return [teile[4], teile[6]]
+    if fall == "vergleich_mit_warnungen":
+        return [teile[-1]]
+    return [teile[3]]
 
 
 def schreibe(lang: str) -> list[Path]:
