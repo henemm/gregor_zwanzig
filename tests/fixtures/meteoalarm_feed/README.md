@@ -503,3 +503,22 @@ CAP-konform ohne `info[]`. Zuordnung der Testorte zu den Zonen: `src/services/of
 - **Referenzzeitpunkte der Tests (UTC):** PT `2026-10-31T22:00Z`, NL `2026-10-31T09:00Z`, PL
   `2026-10-30T06:00Z`.
 - **Drift-Test (`PT999`, `NL999`, `PL9999`)** wird im Test aus dem Fixture abgeleitet, nicht eingecheckt.
+
+## `feed_uk_sample.json` — Vereinigtes Königreich (Issue #1442, Scheibe S3b)
+
+- **Herkunft:** `https://feeds.meteoalarm.org/api/v1/warnings/feeds-united-kingdom` (öffentlich,
+  kontingentfrei). Der UK-Feed trägt nur Polygone (kein Geocode) und nur `en-GB`.
+- **Aufgezeichnet:** 2026-10-31 (Vollabruf, 4 Einträge, 33 KB).
+- **Reale, unveränderte Einträge (4):** Windwarnung gelb Irische See/Westküste (`…61bc9a69.v1.0.W`,
+  26.10. 18:00Z–27.10. 03:00Z), Windwarnung gelb Nordschottland/Shetland (`…011bc9b4.v3.0.W`, echtes
+  `Update`, dessen Vorgänger nicht mehr im Feed stehen, 27.10. 03:00Z–18:00Z) und zwei gelbe
+  Nebelwarnungen (`…cd0a7b87.v1.0.F`, `…fb133494.v1.0.F`; Typ Nebel verwirft der geteilte Mapper
+  bewusst, `meteoalarm._DISCARDED_TYPES`).
+- **Synthetische Einträge (3), Kennung endet auf `.SYNTH-*`** — aus echten Einträgen abgeleitet,
+  weil der Feed sie nicht liefert:
+  - `.SYNTH-UPDATE` — Update zur Nordschottland-Windwarnung (v3), Stufe orange (3) statt gelb, der
+    Vorgänger steht weiter im Feed.
+  - `.SYNTH-CANCEL` — Cancel ohne `info`, `references` auf die Irische-See-Windwarnung (v1).
+  - `.SYNTH-KAPUTT` — an erster Stelle; Windwarnung mit unlesbarem Polygon.
+- **Referenzzeitpunkte der Tests (UTC):** Irische See `2026-10-26T22:00Z`, Nordschottland
+  `2026-10-27T10:00Z`, Nebel `2026-10-31T07:00Z`.
