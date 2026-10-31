@@ -1,3 +1,22 @@
+<script lang="ts" module>
+	import type { MessageKey } from '$lib/i18n';
+
+	/**
+	 * Rohe Zeremonie-Fehler auf einen Katalogschluessel abbilden (Muster: account/+page.svelte).
+	 * Modul-Skript und exportiert, damit der Test die Zuordnung einzeln prueft (Issue #2650, F002).
+	 */
+	export function passkeyFehlertext(e: unknown): MessageKey {
+		const name = (e as { name?: string })?.name;
+		// Abbruch, Zeitueberschreitung und "kein passender Passkey" meldet WebAuthn
+		// ABSICHTLICH als denselben NotAllowedError (Privacy-Design) -- getrennte
+		// Texte dafuer sind strukturell unmoeglich, siehe Spec "Known Limitations".
+		if (name === 'NotAllowedError' || name === 'AbortError') {
+			return 'auth.login.passkey_abgebrochen';
+		}
+		return 'auth.login.passkey_fehlgeschlagen';
+	}
+</script>
+
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
@@ -6,7 +25,7 @@
 	import SprachUmschalter from '$lib/components/ui/SprachUmschalter.svelte';
 	import { abmeldungLiegtVor, raeumeGeraetespeicher, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 	import { isWebAuthnSupported, loginWithPasskey, loginWithDiscoverablePasskey } from '$lib/passkey';
-	import { t, type MessageKey } from '$lib/i18n';
+	import { t } from '$lib/i18n';
 
 	let { form, data }: { form: ActionData; data: { googleEnabled: boolean } } = $props();
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
@@ -99,18 +118,6 @@
 			// (der Nutzer nimmt stattdessen den Knopf), und eine Fehlermeldung fuer
 			// etwas, das der Nutzer nie angestossen hat, waere nur Laerm.
 		}
-	}
-
-	/** Rohe Zeremonie-Fehler auf einen Katalogschluessel abbilden (Muster: account/+page.svelte). */
-	function passkeyFehlertext(e: unknown): MessageKey {
-		const name = (e as { name?: string })?.name;
-		// Abbruch, Zeitueberschreitung und "kein passender Passkey" meldet WebAuthn
-		// ABSICHTLICH als denselben NotAllowedError (Privacy-Design) -- getrennte
-		// Texte dafuer sind strukturell unmoeglich, siehe Spec "Known Limitations".
-		if (name === 'NotAllowedError' || name === 'AbortError') {
-			return 'auth.login.passkey_abgebrochen';
-		}
-		return 'auth.login.passkey_fehlgeschlagen';
 	}
 
 	async function mitPasskeyAnmelden(): Promise<void> {
