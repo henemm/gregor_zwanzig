@@ -57,7 +57,7 @@ async function angemeldeterGast(browser: Browser, kennung: string) {
 	await seite.goto('/login');
 	await seite.fill('input[name="username"]', kennung);
 	await seite.fill('input[name="password"]', PASSWORT);
-	await seite.click('button[type="submit"]');
+	await seite.click('form[action="?/login"] button[type="submit"]');
 	await expect(seite).not.toHaveURL(/\/login/);
 	return { ctx, seite };
 }

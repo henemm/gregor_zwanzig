@@ -110,7 +110,7 @@ test('AC-12/AC-13: Login-Seite erklärt den 403 und bietet den erneuten Versand 
 		await gast.goto('/login');
 		await gast.fill('input[name="username"]', kennung);
 		await gast.fill('input[name="password"]', PASSWORT);
-		await gast.click('button[type="submit"]');
+		await gast.click('form[action="?/login"] button[type="submit"]');
 
 		// AC-12: verständlicher deutscher Hinweis — NICHT der bisherige Text.
 		const hinweis = gast.getByTestId('login-error-email-not-verified');
@@ -148,7 +148,7 @@ test('AC-14: Nach der Registrierung weist die Login-Seite auf die Bestätigungsm
 		await gast.fill('input[name="email"]', `${kennung}@example.com`);
 		await gast.fill('input[name="password"]', PASSWORT);
 		await gast.fill('input[name="confirmPassword"]', PASSWORT);
-		await gast.click('button[type="submit"]');
+		await gast.click('form:not([action="/lang"]) button[type="submit"]');
 
 		await gast.waitForURL(/\/login/);
 		const hinweis = gast.getByTestId('login-registered-hint');
