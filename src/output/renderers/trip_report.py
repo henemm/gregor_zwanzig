@@ -42,6 +42,7 @@ from app.models import (
     WeatherChange,
 )
 from app.profile import ActivityProfile
+from i18n import Lang
 from output.renderers.day_window import display_end_time, resolve_configured_window
 import services.alert_urgency as alert_urgency
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
@@ -89,6 +90,8 @@ class TripReportFormatter:
         has_gap: bool = False,
         undelivered: Optional[list] = None,
         starkregen_hint_text: Optional[str] = None,
+        *,
+        lang: Lang = "de",
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email.
 
@@ -264,6 +267,8 @@ class TripReportFormatter:
             # Ohne den kwarg (Vorschau, Goldens, CLI) unveraendert.
             undelivered=undelivered,
             starkregen_hint_text=starkregen_hint_text,
+            # Issue #2664: Sprache der HTML-Mail (plain/compact folgen in P3).
+            lang=lang,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(

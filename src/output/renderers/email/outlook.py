@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from app.models import SegmentWeatherSummary, ForecastDataPoint
 
 from app.metric_catalog import aggregation_label_de, get_metric
+from i18n import Lang
+from i18n import t as _t
 from output.renderers.email.helpers import format_trend_tokens
 from output.renderers.email.thunder_branch import (
     resolve_thunder_day_branch, thunder_cell_html, thunder_cell_plain,
@@ -81,8 +83,12 @@ def _acc_wort(conf_pct) -> str:
 
 def render_outlook_table(
     rows: list[dict], *, show_acc: bool = True, metrics: Optional[list] = None,
+    lang: Lang = "de",
 ) -> str:
     """Rendert die HTML-Ausblick-Tabelle.
+
+    ``lang`` (Issue #2664): Spaltenkopf ``Tag`` und Gewitter-Stufenwort in
+    Nutzersprache; ohne ``lang`` deutsch (Ortsvergleich bis P4).
 
     ``show_acc=True`` (Trip-Default) ist byte-identisch zum bisherigen
     Inline-Block in ``render_html``. ``show_acc=False`` (Compare) laesst
@@ -157,6 +163,7 @@ def render_outlook_table(
     # #2098 Befund B: die ACC-Kopfzelle gilt fuer BEIDE Zweige -- der Trip
     # laeuft seit #1848 A3 praktisch immer ueber den konfigurierbaren.
     _acc_th = f'<th {_oh_style}>{ACC_LABEL}</th>' if show_acc else ""
+    _tag = _t("mail.ausblick.spalte_tag", lang)
     if metrics is not None:
         from output.renderers.compare_outlook_metric_ids import outlook_columns
 
@@ -175,7 +182,7 @@ def render_outlook_table(
             cell_bg = stage.get("cell_bg") or []
             texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
             if gew_index is not None:
-                texte[gew_index] = thunder_cell_html(format_trend_tokens(stage), stage)
+                texte[gew_index] = thunder_cell_html(format_trend_tokens(stage, lang=lang), stage)
             # #2098 Befund B: ACC HINTER den gewaehlten Spalten -- am
             # `outlook_columns()`/`cells`-Mechanismus vorbei, damit
             # `confidence` nie eine waehlbare Metrik wird (ADR-0005/#710).
@@ -199,7 +206,7 @@ def render_outlook_table(
             '<table cellpadding="0" cellspacing="0" '
             'style="border-collapse:collapse;width:100%;'
             'border-top:2px solid #1d1c1a;">'
-            f'<thead><tr><th {_oh_style}>Tag</th>{head}{_acc_th}</tr></thead>'
+            f'<thead><tr><th {_oh_style}>{_tag}</th>{head}{_acc_th}</tr></thead>'
             f'<tbody>{body}</tbody></table>'
         )
 
@@ -224,7 +231,7 @@ def render_outlook_table(
     )
     outlook_thead = (
         f'<thead><tr>'
-        f'<th {_oh_style}>Tag</th>'
+        f'<th {_oh_style}>{_tag}</th>'
         + "".join(
             f'<th {_oh_style}>{_html.escape(label)}</th>' for label in _pfad1_labels
         )
@@ -243,7 +250,7 @@ def render_outlook_table(
 
     outlook_rows = ""
     for stage in rows:
-        tokens = format_trend_tokens(stage)
+        tokens = format_trend_tokens(stage, lang=lang)
         weekday = stage.get("weekday", "–")
         # F005 (#911): Scheduler schreibt temp_lo/temp_hi (trip_report_scheduler
         # _build_stage_trend). temp_min_c/temp_max_c nur Fallback (Alt-Fixtures).

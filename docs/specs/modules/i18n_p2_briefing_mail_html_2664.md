@@ -2,7 +2,7 @@
 entity_id: i18n_p2_briefing_mail_html_2664
 type: module
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-10-31
 status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2664, python, model-haiku]
@@ -171,6 +171,17 @@ Gleiches in `outlook_legend_pairs` (Z. 597: `m.label_de` → `m.label(lang)`). E
 - **ADR-Nr.:** ADR-0104 (zusätzlich ADR-0042)
 - **Rationale:** Die Mail spricht die Sprache des Nutzers, die Kürzel der Tabellen bleiben Platzform (ADR-0042) und werden in der Legende in der Nutzersprache aufgelöst.
 
+## Umsetzungshinweise (ergänzt 2026-10-31, keine AC-Änderung; Lehren aus P7 #2669)
+
+1. **Golden DE zuerst:** Vor der ersten Codeänderung die fünf `tests/golden/email/*-html.txt` mit dem unveränderten Code neu erzeugen und per `git diff` als byte-gleich belegen (Ausgangsbeweis); erst danach umstellen.
+2. **Eingefrorene Altstände vorab greppen:** vor dem Umstellen nach festen Referenzen auf Mailtexte suchen (`Nacht am Ziel`, `Ausblick · nächste`, `Einheiten:`, `Spalten:`, `Etappe N /`), insbesondere in `tests/test_befehl_antwortzeit.py` samt `tests/fixtures/befehl_antwortzeit/golden_berichte.json` (nutzt `format_trend_tokens`/`_THUNDER_MAP`: bleibt deutsch, da ohne `lang`), `tests/unit/test_thunder_night_addendum*.py`, `tests/unit/test_ziel_segment_anzeige_invarianz.py`, `tests/integration/test_multi_day_trend.py`. Treffer bewusst deutsch belassen, nicht anpassen.
+3. **Ratsche nur als Verhaltenstest:** P11 prüft Allowlist/Treffer per Verhalten, kein Quelltext-Lesen im Test (Hygiene-Test `tests/tdd/test_765_backend_hygiene_compliance.py`).
+4. **Unveränderte Platzformen:** `col_label`, `compact_label`, `sms_code`, Kürzel, Protokoll-Token und die Kurzform für SMS/Telegram sind nie sprachabhängig (ADR-0104, Präzisierung 2026-10-31); nur Legenden/Langnamen folgen `lang`.
+5. **Datumsformat:** In der HTML-Mail stehen bisher nur numerische Stempel (`%d.%m.%Y`, `%H:%M`, 24-h), die unverändert bleiben (siehe Known Limitations). Wo ein Wochentag mit Kurzdatum entsteht, gilt `fmt_date(..., "kurz")`: DE `Do 30.10.`, EN `Thu 30 Oct`; Dezimalpunkt in beiden Sprachen.
+6. **Mail-Gate:** Der Validator `briefing_mail_validator.py` (PV #2663, Kopf `X-GZ-Lang`) gehört in den Umfang (AC-3); das Renderer-Commit-Gate verlangt frisch grüne Modus-Matrix (`test_issue_811_mode_matrix.py` + `test_briefing_modus_matrix_sprachen.py`) und Validator.
+7. **Nutzerwirkung:** Englische Briefing-Mails erreichen Nutzer erst nach P9a/P9b (#2671/#2672), die `lang` aus Scheduler/Versand durchreichen; P2 macht den Renderer und den Versandpfad `send_trip_report` sprachfähig.
+
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-10-31: Umsetzungshinweise ergänzt (Golden-DE-zuerst, Altstand-Grep, Ratsche, Datumsformat, Nutzerwirkung); ACs unverändert

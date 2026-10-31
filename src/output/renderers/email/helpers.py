@@ -34,6 +34,7 @@ from app.models import (
 from utils.geo import degrees_to_compass
 from utils.timezone import local_dt, local_fmt, local_hour
 
+from i18n import Lang, fmt_weekday, t
 from output.metric_format import THUNDER_LABEL_DE
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, display_end_time,
@@ -41,13 +42,6 @@ from output.renderers.day_window import (
 from output.renderers.email.design_tokens import FONT_DATA
 
 logger = logging.getLogger(__name__)
-
-# Issue #121: German weekday names (0=Monday).
-_WEEKDAY_DE = [
-    "Montag", "Dienstag", "Mittwoch", "Donnerstag",
-    "Freitag", "Samstag", "Sonntag",
-]
-
 
 # ----------------------------------------------------------------------
 # Wind-direction helpers
@@ -351,6 +345,7 @@ def build_confidence_hint(
     *,
     now: datetime,
     tz: ZoneInfo,
+    lang: Lang = "de",
 ) -> Optional[str]:
     """Issue #121 / Bug #423: Plain-text hint for low-confidence days.
 
@@ -386,11 +381,11 @@ def build_confidence_hint(
     if not uncertain:
         return None
     first_day = min(uncertain.keys())
-    weekday = _WEEKDAY_DE[first_day.weekday()]
-    return f"Ab {weekday} ist die Vorhersage weniger verlässlich."
+    weekday = fmt_weekday(first_day, lang, kurz=False)
+    return t("mail.hinweis.verlaesslichkeit", lang, wochentag=weekday)
 
 
-def format_units_legend(label_units: list[tuple[str, str]]) -> str:
+def format_units_legend(label_units: list[tuple[str, str]], *, lang: Lang = "de") -> str:
     """Gemeinsamer Legenden-Formatierer (#1237): gruppiert (Spalten-Label,
     Einheit)-Paare zu 'Einheiten: Temp, Feels °C · Wind, Gust km/h'. Einzige
     Quelle fuer die Legenden-Zeile — Trip-Briefing (`build_units_legend`) UND
@@ -404,10 +399,10 @@ def format_units_legend(label_units: list[tuple[str, str]]) -> str:
     if not groups:
         return ""
     parts = [f"{', '.join(labels)} {unit}" for unit, labels in groups.items()]
-    return "Einheiten: " + " · ".join(parts)
+    return t("mail.legende.einheiten", lang, liste=" · ".join(parts))
 
 
-def format_column_legend(label_pairs: list[tuple[str, str]]) -> str:
+def format_column_legend(label_pairs: list[tuple[str, str]], *, lang: Lang = "de") -> str:
     """Gemeinsamer Formatierer der Spalten-Legende (#1472, ADR-0042-Bedingung):
     'Spalten: Thdr = Gewitter · Visib = Sichtweite'.
 
@@ -425,18 +420,18 @@ def format_column_legend(label_pairs: list[tuple[str, str]]) -> str:
     gesehen: set[str] = set()
     for short, long in label_pairs:
         kurz = (short or "").strip()
-        lang = (long or "").strip()
-        if not kurz or not lang:
+        voll = (long or "").strip()
+        if not kurz or not voll:
             continue
-        if kurz.lower() == lang.lower():
+        if kurz.lower() == voll.lower():
             continue
         if kurz in gesehen:
             continue
         gesehen.add(kurz)
-        parts.append(f"{kurz} = {lang}")
+        parts.append(f"{kurz} = {voll}")
     if not parts:
         return ""
-    return "Spalten: " + " · ".join(parts)
+    return t("mail.legende.spalten", lang, liste=" · ".join(parts))
 
 
 # ----------------------------------------------------------------------
@@ -483,13 +478,15 @@ _DEPLOYED_COMMIT = _deployed_commit()
 # (mail_type, mail_format) -> Klartext-Label (Zeile 1). official-alert nutzt
 # zusätzlich context_label (s. build_origin_footer). Werte konsistent zu den
 # X-GZ-Mail-Type-Headern der Caller (notification_service u.a.).
+# Issue #2664: Werte sind Katalogschluessel (``mail.herkunft.*``), der Text
+# entsteht erst in ``build_origin_footer`` in der Sprache des Aufrufers.
 _MAIL_TYPE_LABELS: dict[tuple[str, "str | None"], str] = {
-    ("trip-briefing", "full"): "Etappen-Briefing · Vollversion",
-    ("trip-briefing", "compact"): "Etappen-Briefing · Kompakt",
-    ("compare", None): "Ortsvergleich",
-    ("official-alert", None): "Amtliche Warnung",
-    ("radar-alert", None): "Regen-/Gewitter-Alarm",
-    ("deviation-alert", None): "Abweichungs-Alarm",
+    ("trip-briefing", "full"): "mail.herkunft.trip_voll",
+    ("trip-briefing", "compact"): "mail.herkunft.trip_kompakt",
+    ("compare", None): "mail.herkunft.vergleich",
+    ("official-alert", None): "mail.herkunft.amtliche_warnung",
+    ("radar-alert", None): "mail.herkunft.radar_alarm",
+    ("deviation-alert", None): "mail.herkunft.abweichungs_alarm",
 }
 
 
@@ -499,6 +496,7 @@ def build_origin_footer(
     *,
     source: str,
     context_label: "str | None" = None,
+    lang: Lang = "de",
 ) -> OriginFooter:
     """Baut die zweizeilige Herkunfts-Fußzeile (#1241 SSoT, Zeile-2-Inhalt
     seit warnmail-Spec AC-5/Befund 4a, ADR-0034 geändert).
@@ -510,9 +508,10 @@ def build_origin_footer(
     bestimmt -- Wetter-Provider, amtliche Quelle(n) oder fester Fallback
     „Open-Meteo" nach ADR-0029), NIE mehr Renderer-Pfad + Commit-Hash.
     """
-    label = _MAIL_TYPE_LABELS.get((mail_type, mail_format))
-    if label is None:
-        label = _MAIL_TYPE_LABELS.get((mail_type, None), mail_type)
+    key = _MAIL_TYPE_LABELS.get((mail_type, mail_format))
+    if key is None:
+        key = _MAIL_TYPE_LABELS.get((mail_type, None))
+    label = t(key, lang) if key else mail_type
     if mail_type == "official-alert" and context_label:
         label = f"{context_label} · {label}"
     # Adversary F001 (warnmail, AC-5): `source` kann im Fehlerfall legitim der
@@ -545,7 +544,7 @@ def render_origin_footer_text(footer: OriginFooter) -> str:
     return f"{footer.line1} · {footer.line2}"
 
 
-def build_units_legend(rows: list[dict]) -> str:
+def build_units_legend(rows: list[dict], *, lang: Lang = "de") -> str:
     """Grouped units legend: 'Temp, Feels °C · Wind, Gust km/h'."""
     pairs: list[tuple[str, str]] = []
     for col_key, col_label in visible_cols(rows):
@@ -554,7 +553,7 @@ def build_units_legend(rows: list[dict]) -> str:
         except KeyError:
             continue
         pairs.append((col_label, m.display_unit if m.display_unit else m.unit))
-    return format_units_legend(pairs)
+    return format_units_legend(pairs, lang=lang)
 
 
 # #2136/ADR-0068 (AC-5): Pfad 1 des 3-Tages-Ausblicks (keine Auswahl) zeigt
@@ -572,7 +571,9 @@ OUTLOOK_FIXED_METRIC_IDS = (
 )
 
 
-def outlook_legend_pairs(outlook_metrics: Optional[list]) -> list[tuple[str, str]]:
+def outlook_legend_pairs(
+    outlook_metrics: Optional[list], *, lang: Lang = "de",
+) -> list[tuple[str, str]]:
     """(Kuerzel, Langname)-Paare der im 3-Tages-Ausblick TATSAECHLICH
     sichtbaren Spalten (#2136/ADR-0068, AC-5) -- Pfad 1 (``outlook_metrics is
     None``, feste sechs Groessen) oder Pfad 2 (``outlook_columns()``),
@@ -594,7 +595,7 @@ def outlook_legend_pairs(outlook_metrics: Optional[list]) -> list[tuple[str, str
         except KeyError:
             dropped.append(metric_id)
             continue
-        pairs.append((m.col_label, m.label_de))
+        pairs.append((m.col_label, m.label(lang)))
     if dropped:
         # #2136: Verwerfung protokolliert statt stumm (Referenzmuster der
         # Compare-Aufloeser, vgl. compare_outlook_metric_ids.outlook_columns).
@@ -607,7 +608,7 @@ def outlook_legend_pairs(outlook_metrics: Optional[list]) -> list[tuple[str, str
 
 def build_column_legend(
     rows: list[dict], outlook_metrics: Optional[list] = None, *,
-    outlook_active: bool = False,
+    outlook_active: bool = False, lang: Lang = "de",
 ) -> str:
     """Trip-Weg zur Spalten-Legende (#1472): 'Spalten: Feels = Gefuehlte
     Temperatur · Dew = Taupunkt'.
@@ -635,10 +636,10 @@ def build_column_legend(
     Aufrufer unveraendert."""
     pairs: list[tuple[str, str]] = []
     for col_key, col_label in visible_cols(rows):
-        pairs.append((col_label, get_metric_by_col_key(col_key).label_de))
+        pairs.append((col_label, get_metric_by_col_key(col_key).label(lang)))
     if outlook_active:
-        pairs.extend(outlook_legend_pairs(outlook_metrics))
-    return format_column_legend(pairs)
+        pairs.extend(outlook_legend_pairs(outlook_metrics, lang=lang))
+    return format_column_legend(pairs, lang=lang)
 
 
 # Issue #759: 4-stufiger Ampelpunkt fuer Wind/Boen/Regen/Regenwahrscheinlichkeit.
@@ -762,7 +763,7 @@ _AMPEL_KEY_TO_METRIC_ID = {
 def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             html: bool = False, row: dict | None = None,
             format_modes: dict[str, str] | None = None,
-            indicator_keys: set[str] | None = None) -> str:
+            indicator_keys: set[str] | None = None, lang: Lang = "de") -> str:
     """Format single cell value. Respects per-metric format_mode toggle.
 
     Issue #435: when `format_modes` is provided, the per-column mode wins
@@ -815,18 +816,17 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         # row["_wind_dir_deg"]) — als Doppelring im Ampel-Kreis-Modus, als
         # Textzusatz im Roh-/Text-Modus. Die Gewitterstufe selbst bleibt davon
         # UNBERUEHRT (Spec AC-10).
-        from output.metric_format import (
-            THUNDER_LABEL_DE, format_hail_note, thunder_ampel_band,
-        )
+        from app.thunder_scale import thunder_label
+        from output.metric_format import format_hail_note, thunder_ampel_band
         hail = (row.get("_hail_flag") is True) if row else False
         if mode == "raw" or not html:
             from output.metric_format import thunder_signal_label
-            label = THUNDER_LABEL_DE.get(val, "–")
+            label = thunder_label(val, lang=lang)
             teile = [label]
             signals = row.get("_thunder_signals") if row else None
             if signals:
                 teile.append(", ".join(thunder_signal_label(s) for s in signals))
-            note = format_hail_note(row.get("_hail_flag") if row else None)
+            note = format_hail_note(row.get("_hail_flag") if row else None, lang=lang)
             if note:
                 teile.append(note)
             return " · ".join(teile)
@@ -955,7 +955,21 @@ _THUNDER_MAP = {
 }
 
 
-def format_trend_tokens(stage: dict) -> dict:
+def _thunder_map(lang: Lang) -> dict:
+    """``_THUNDER_MAP`` in ``lang`` (Issue #2664); de ist die Modulkonstante."""
+    if lang != "en":
+        return _THUNDER_MAP
+    from app.thunder_scale import THUNDER_LABEL_EN as w
+
+    return {
+        "NONE": {"word": w[ThunderLevel.NONE], "plain": "⚡–"},
+        **{k: {"word": w[lvl], "plain": f"⚡{w[lvl]}"} for k, lvl in (
+            ("LOW", ThunderLevel.LOW), ("MED", ThunderLevel.MED),
+            ("HIGH", ThunderLevel.HIGH))},
+    }
+
+
+def format_trend_tokens(stage: dict, *, lang: Lang = "de") -> dict:
     """Issue #623/#640: Compute all display tokens for one trend stage.
 
     Single source of truth for trend semantics across HTML, plain-text,
@@ -1031,7 +1045,8 @@ def format_trend_tokens(stage: dict) -> dict:
 
     # Thunder
     thunder = (stage.get("thunder", "NONE") or "NONE").upper()
-    t_data = _THUNDER_MAP.get(thunder, _THUNDER_MAP["NONE"])
+    _tmap = _thunder_map(lang)
+    t_data = _tmap.get(thunder, _tmap["NONE"])
 
     # Issue #640: Time tokens from hourly samples
     hourly_precip = stage.get("hourly_precip") or ()
@@ -1054,7 +1069,9 @@ def format_trend_tokens(stage: dict) -> dict:
     # thunder_label_value() sind seither zahlenmaessig deckungsgleich, s.
     # metric_format.py). Ohne diese Korrektur zeigte der Mail-Trend-Block
     # "mittel", wo tatsaechlich nur "leicht" vorliegt.
-    _TREND_THUNDER_LABELS = {1: "leicht", 2: "mittel", 3: "hoch"}
+    _TREND_THUNDER_LABELS = {
+        1: _tmap["LOW"]["word"], 2: _tmap["MED"]["word"], 3: _tmap["HIGH"]["word"],
+    }
     # Issue #1474b: liest die laengst vorhandene, bisher ignorierte
     # Verdrahtung `sms_threshold_thunder` (outlook.py:409,
     # trip_report_scheduler.py:1433-1443) statt eines fest verdrahteten 1.0.
@@ -1576,6 +1593,7 @@ def _pill_for_metric(
     *,
     tz: "ZoneInfo",
     has_gap: bool = False,
+    lang: Lang = "de",
 ) -> Optional[tuple[str, str]]:
     """Issue #795/RC0+RC5: (text, tone) pill je Metrik, analog SMS ausgeschrieben.
 
@@ -1601,6 +1619,8 @@ def _pill_for_metric(
     # Vollmail-Kachel ist kein Bedienelement mehr (PO 2026-08-11).
     if metric_id in _AGGREGATION_PILL_METRICS:
         dp_field, prefix, decimals = _AGGREGATION_PILL_METRICS[metric_id]
+        if prefix:
+            prefix = t("mail.pille.gefuehlt", lang)
         aggregations = ["min", "max"]
         vals_ts = [(getattr(dp, dp_field, None), dp.ts) for dp in all_dps]
         vals_ts = [(v, ts) for v, ts in vals_ts if v is not None]
@@ -1630,17 +1650,16 @@ def _pill_for_metric(
         max_v = int(max(v for v, _ in vals_ts))
         max_ts = max(vals_ts, key=lambda x: x[0])[1]
         max_hh = local_hour(max_ts, tz)
-        if min_v == max_v:
-            text = f"{min_v}% bewölkt · Max {max_hh:02d}:00"
-        else:
-            text = f"{min_v}–{max_v}% bewölkt · Max {max_hh:02d}:00"
+        wert = f"{min_v}" if min_v == max_v else f"{min_v}–{max_v}"
+        text = t("mail.pille.bewoelkt", lang, wert=wert, zeit=f"{max_hh:02d}:00")
         return (text, _PILL_NEUTRAL_TONE)
 
     if metric_id == "cloud_low":
         vals = [dp.cloud_low_pct for dp in all_dps if dp.cloud_low_pct is not None]
         if not vals:
             return None
-        return (_range_pill("Tiefe Wolken", "%", int(min(vals)), int(max(vals))),
+        return (_range_pill(t("mail.pille.tiefe_wolken", lang), "%",
+                            int(min(vals)), int(max(vals))),
                 _PILL_NEUTRAL_TONE)
 
     if metric_id == "freezing_level":
@@ -1653,11 +1672,9 @@ def _pill_for_metric(
         max_v = int(max(v for v, _ in vals_ts))
         max_ts = max(vals_ts, key=lambda x: x[0])[1]
         max_hh = local_hour(max_ts, tz)
-        if min_v == max_v:
-            text = f"0°-Linie {_fmt_thousands(min_v)} m · Max {max_hh:02d}:00"
-        else:
-            text = (f"0°-Linie {_fmt_thousands(min_v)}–"
-                    f"{_fmt_thousands(max_v)} m · Max {max_hh:02d}:00")
+        wert = (_fmt_thousands(min_v) if min_v == max_v
+                else f"{_fmt_thousands(min_v)}–{_fmt_thousands(max_v)}")
+        text = t("mail.pille.nullgradlinie", lang, wert=wert, zeit=f"{max_hh:02d}:00")
         return (text, _PILL_NEUTRAL_TONE)
 
     if metric_id == "dewpoint":
@@ -1668,7 +1685,8 @@ def _pill_for_metric(
             return None
         min_val, min_ts = min(vals_ts, key=lambda x: x[0])
         min_hh = local_hour(min_ts, tz)
-        return (f"Taupunkt min {min_val:.1f}°C ({min_hh:02d}:00)", _PILL_NEUTRAL_TONE)
+        return (t("mail.pille.taupunkt", lang, wert=f"{min_val:.1f}",
+                  zeit=f"{min_hh:02d}:00"), _PILL_NEUTRAL_TONE)
 
     if metric_id == "uv_index":
         # AC-11: "UV max 2.4 (14:00)"
@@ -1695,7 +1713,8 @@ def _pill_for_metric(
         total = WeatherMetricsService.calculate_sunny_hours(all_dps)
         if not all_dps or total == 0:
             return None
-        return (f"Sonne {format_value('sunshine', total, style='bare')}h",
+        return (t("mail.pille.sonne", lang,
+                  wert=format_value('sunshine', total, style='bare')),
                 _PILL_NEUTRAL_TONE)
 
     # ---- Klasse 1 — Ereignis-Metriken (mit Uhrzeit, Ampel-gefaerbt) ----
@@ -1703,7 +1722,7 @@ def _pill_for_metric(
         # AC-3: ohne Schwelle: "Wind max X km/h (HH:00)"
         # AC-4: mit Schwelle:  "Wind >thr km/h ab HH:00 · max X (HH:00)"
         field = "wind10m_kmh" if metric_id == "wind" else "gust_kmh"
-        label = "Wind" if metric_id == "wind" else "Böen"
+        label = get_metric(metric_id).label(lang)
         vals = [(getattr(dp, field, None), dp.ts) for dp in all_dps]
         vals = [(v, ts) for v, ts in vals if v is not None]
         if not vals:
@@ -1715,8 +1734,8 @@ def _pill_for_metric(
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
         if fp is not None:
             first_hh, pv, pk_hh = fp
-            text = (f"{label} >{int(thr)} km/h ab {first_hh:02d}:00 · "
-                    f"max {int(pv)} ({pk_hh:02d}:00)")
+            text = t("mail.pille.wind_ereignis", lang, label=label, schwelle=int(thr),
+                     ab=f"{first_hh:02d}:00", spitze=int(pv), um=f"{pk_hh:02d}:00")
             return (text, tone)
         # Issue #1331 F001: Keine Schwellenueberschreitung entspricht SMS "-";
         # bei Ziel-Datenluecke keine positive Entwarnung vortaeuschen.
@@ -1741,15 +1760,16 @@ def _pill_for_metric(
         if fp is not None:
             first_hh, _pv, _pk_hh = fp
             total_str = f"{total:.1f}".rstrip("0").rstrip(".")
-            return (f"Regen ab {first_hh:02d}:00 · {total_str} mm", tone)
+            return (t("mail.pille.regen_ab", lang, ab=f"{first_hh:02d}:00",
+                      summe=total_str), tone)
         # Issue #1331 F001: Keine Schwellenueberschreitung entspricht SMS "-";
         # bei Ziel-Datenluecke keine positive Entwarnung vortaeuschen.
         if has_gap:
-            return ("Regen ?", "ampel_yellow")
+            return (t("mail.pille.regen_unbekannt", lang), "ampel_yellow")
         if round(total, 1) > 0:
             total_str = f"{total:.1f}".rstrip("0").rstrip(".")
-            return (f"Regen ges. {total_str} mm", tone)
-        return ("kein Regen", tone)
+            return (t("mail.pille.regen_gesamt", lang, summe=total_str), tone)
+        return (t("mail.pille.kein_regen", lang), tone)
 
     if metric_id == "rain_probability":
         # AC-6: Label "Regen-W.", Format ">thr% ab HH:00 · max X% (HH:00)"
@@ -1764,17 +1784,18 @@ def _pill_for_metric(
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
         if fp is not None:
             first_hh, pv, peak_hh = fp
-            text = (f"Regen-W. >{int(thr)}% ab {first_hh:02d}:00 · "
-                    f"max {int(pv)}% ({peak_hh:02d}:00)")
+            text = t("mail.pille.regenw_ereignis", lang, schwelle=int(thr),
+                     ab=f"{first_hh:02d}:00", spitze=int(pv), um=f"{peak_hh:02d}:00")
             return (text, tone)
         # Issue #1331 F001: Keine Schwellenueberschreitung entspricht SMS "-";
         # bei Ziel-Datenluecke keine positive Entwarnung vortaeuschen.
         if has_gap:
-            return ("Regen-W. ?", "ampel_yellow")
+            return (t("mail.pille.regenw_unbekannt", lang), "ampel_yellow")
         # Kein Schwellenüberschreitung: max-Form
         peak_ts = max(vals, key=lambda x: (x[0], -x[1].timestamp()))[1]
         max_hh = local_hour(peak_ts, tz)
-        return (f"Regen-W. max {int(peak_val)}% ({max_hh:02d}:00)", tone)
+        return (t("mail.pille.regenw_max", lang, spitze=int(peak_val),
+                  um=f"{max_hh:02d}:00"), tone)
 
     if metric_id == "thunder":
         max_lvl = ThunderLevel.NONE
@@ -1813,7 +1834,8 @@ def _pill_for_metric(
             union_of_max_carriers,
         )
         _hail_note = format_hail_note(
-            hail_priority([getattr(dp, "hail_flag", None) for dp in all_dps])
+            hail_priority([getattr(dp, "hail_flag", None) for dp in all_dps]),
+            lang=lang,
         )
         _hail_suffix = f" · {_hail_note}" if _hail_note else ""
         # Issue #1680 S3 (Spec D1): die tragende(n) Zutat(en) DERSELBEN
@@ -1847,7 +1869,8 @@ def _pill_for_metric(
             # Ampelton -- im Klartext, wo Farbe nicht ankommt, war sie damit
             # unsichtbar. Das Wort kommt aus THUNDER_LABEL_DE (SSoT, #1480),
             # nicht aus einer lokalen Wortliste.
-            _stufe = THUNDER_LABEL_DE[max_lvl]
+            from app.thunder_scale import thunder_label
+            _stufe = thunder_label(max_lvl, lang=lang)
             # Issue #2176: bei LOW steht statt der Gewitteransage die
             # Luftmassen-Aussage aus der geteilten Quelle -- herkunftsabhaengig
             # ueber DIESELBE `_traeger`-Liste, die unten den ·-Zusatz speist.
@@ -1860,15 +1883,15 @@ def _pill_for_metric(
                     "lang", _traeger, cape_jkg=peak_dp.cape_jkg,
                 )
             else:
-                _kopf = f"Gewitter {_stufe}"
-            return (f"{_kopf} ab {first_hh:02d}:00 · "
-                    f"stärkste {peak_hh:02d}:00"
-                    f"{_origin_suffix}{_hail_suffix}", _tone)
+                _kopf = t("mail.pille.gewitter_stufe", lang, stufe=_stufe)
+            _satz = t("mail.pille.gewitter_ab", lang, kopf=_kopf,
+                      ab=f"{first_hh:02d}:00", um=f"{peak_hh:02d}:00")
+            return (f"{_satz}{_origin_suffix}{_hail_suffix}", _tone)
         # Issue #1331: Ziel-Datenluecke (Ankunft->19 Uhr unbeobachtet) darf
         # keine positive Entwarnung "kein Gewitter" vortaeuschen.
         if has_gap:
-            return (f"Gewitter ?{_hail_suffix}", "ampel_yellow")
-        return (f"kein Gewitter{_hail_suffix}", "ampel_green")
+            return (t("mail.pille.gewitter_unbekannt", lang) + _hail_suffix, "ampel_yellow")
+        return (t("mail.pille.kein_gewitter", lang) + _hail_suffix, "ampel_green")
 
     if metric_id == "visibility":
         # AC-8: gut → "Sicht min X km (HH:00)" statt "gute Sicht"
@@ -1888,9 +1911,11 @@ def _pill_for_metric(
             first_hh = local_hour(first_ts, tz)
             tone = ampel_stage_tone(
                 min_v, get_metric("visibility").display_thresholds)
-            return (f"Sicht <{thr_km:.0f} km ab {first_hh:02d}:00 · "
-                    f"min {min_km:.1f} km ({min_hh:02d}:00)", tone)
-        return (f"Sicht min {min_km:.1f} km ({min_hh:02d}:00)", "ampel_green")
+            return (t("mail.pille.sicht_ereignis", lang, schwelle=f"{thr_km:.0f}",
+                      ab=f"{first_hh:02d}:00", wert=f"{min_km:.1f}",
+                      um=f"{min_hh:02d}:00"), tone)
+        return (t("mail.pille.sicht_min", lang, wert=f"{min_km:.1f}",
+                  um=f"{min_hh:02d}:00"), "ampel_green")
 
     if metric_id == "humidity":
         # AC-10: unter Schwelle → "Feuchte X–Y% · Max HH:00" statt "Luft trocken"
@@ -1908,15 +1933,15 @@ def _pill_for_metric(
         # 0°-Linie/Taupunkt/Sonne.
         if fp is not None:
             first_hh, pv, peak_hh = fp
-            text = (f"Feuchte >{int(thr)}% ab {first_hh:02d}:00 · "
-                    f"max {int(pv)}% ({peak_hh:02d}:00)")
+            text = t("mail.pille.feuchte_ereignis", lang, schwelle=int(thr),
+                     ab=f"{first_hh:02d}:00", spitze=int(pv), um=f"{peak_hh:02d}:00")
             return (text, _PILL_NEUTRAL_TONE)
         # Unter Schwelle: Bereich + Uhrzeit des Maximums
         min_v = min(v for v, _ in vals)
         max_ts = max(vals, key=lambda x: x[0])[1]
         max_hh = local_hour(max_ts, tz)
-        return (f"Feuchte {min_v:.0f}–{peak_val:.0f}% · Max {max_hh:02d}:00",
-                _PILL_NEUTRAL_TONE)
+        return (t("mail.pille.feuchte_bereich", lang, min=f"{min_v:.0f}",
+                  max=f"{peak_val:.0f}", um=f"{max_hh:02d}:00"), _PILL_NEUTRAL_TONE)
 
     return None
 
@@ -1940,6 +1965,7 @@ def build_metrics_summary_pills(
     has_gap: bool = False,
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
+    lang: Lang = "de",
 ) -> list[tuple[str, str]]:
     """Issue #664/#795: Build one (text, tone) pill per metric from segment data.
 
@@ -2014,7 +2040,7 @@ def build_metrics_summary_pills(
         seen.add(mid)
         dps = window_dps if mid in _DAY_WINDOW_PILL_IDS else hiking_dps
         pill = _pill_for_metric(mid, sms_mention_thresholds, dps, tz=tz,
-                                has_gap=has_gap)
+                                has_gap=has_gap, lang=lang)
         if pill is not None:
             pills.append(pill)
     return pills
