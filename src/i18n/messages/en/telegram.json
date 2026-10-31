@@ -1,1 +1,20 @@
-{}
+{
+  "telegram.kopf.zusammenfassung": "Summary",
+  "telegram.kopf.ausblick": "Outlook",
+  "telegram.kopf.aktionen": "Actions",
+  "telegram.fuss.luftmasse": "Air mass {wort}",
+  "telegram.fuss.sicht": "Visibility {wort}",
+  "telegram.fuss.sicht_gut": "good",
+  "telegram.fuss.sicht_maessig": "fair",
+  "telegram.fuss.sicht_schlecht": "poor",
+  "telegram.fuss.nullgradgrenze": "Freezing level {hoehe} m",
+  "telegram.vortag.zeile": "vs. yesterday: {liste}",
+  "telegram.vortag.label_regen": "Rain",
+  "telegram.vortag.label_boeen": "Gusts",
+  "telegram.vortag.label_gewitter": "Thunderstorm",
+  "telegram.hinweis.unvollstaendig.one": "⚠️ Briefing incomplete — {count} part of the briefing did not arrive. Please request the briefing again shortly.",
+  "telegram.hinweis.unvollstaendig.other": "⚠️ Briefing incomplete — {count} parts of the briefing did not arrive. Please request the briefing again shortly.",
+  "telegram.segment.ziel": "Finish",
+  "telegram.segment.keine_daten": "Seg {id}: no data",
+  "telegram.warnung.praefix": "Official warning"
+}
