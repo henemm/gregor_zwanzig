@@ -723,3 +723,274 @@ export async function openHub(
 	// Vergleich: Reiter zusätzlich anklicken (doppelte Knoten, Muster oeffneVersand).
 	if (kind === 'vergleich' && opts.tab) await reiter.click();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #2347 S4 (Epic #2345, Etappe P6): Anlege-Seite und Listenseite je kind.
+// Spec: docs/specs/modules/feat_2347_s4_paritaets_e2e.md § „Kind-Kontraste".
+//
+// Beide Anlege-Seiten bauen ihre Reiterfolge aus `anlegeKette(kind)` und teilen
+// das Abschluss-Gate `canFinish`; die SELEKTOREN sind aber je Seite verschieden
+// (Befund 2). Diese Tabellen halten nur die Selektor-/Text-Unterschiede — keine
+// Assertions, keine Erwartungswerte aus dem Produkt (Werte stehen fest hier).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Zustand eines Anlege-Reiters, kind-neutral gelesen (Aufrufer pollt). */
+export interface AnlegeReiterZustand {
+	gesperrt: boolean;
+	aktiv: boolean;
+	erledigt: boolean;
+}
+
+const TRIP_ANLEGE_LABEL: Record<string, string> = {
+	route: 'Route',
+	etappen: 'Etappen & GPX',
+	wegpunkte: 'Wegpunkte prüfen',
+	'wetter-metriken': 'Wetter-Metriken',
+	wertebereiche: 'Wertebereiche',
+	alarme: 'Alarme'
+};
+
+export const ANLEGE_SEL: Record<
+	HubKind,
+	{
+		url: string;
+		/** Sammel-Endpunkt des Anlege-POST. */
+		postPfad: string;
+		/** Die fünf Pflicht-Schritte in Reihenfolge (Trip ohne den optionalen Schritt „Wegpunkte prüfen"). */
+		schritte: readonly string[];
+		ersterSchritt: string;
+		punkteSchritt: 'etappen' | 'orte';
+		/** Spec AN-2: „Fortschritt hat genau 5 Segmente" — fester Wert, nicht aus dem Produkt. */
+		fortschrittSegmente: number;
+		reiter: (page: Page, id: string, mobil?: boolean) => Locator;
+		alleReiterMobil: (page: Page) => Locator;
+		zustand: (reiter: Locator) => Promise<AnlegeReiterZustand>;
+		fortschritt: (page: Page) => Locator;
+		fortschrittSegment: (page: Page) => Locator;
+		name: (page: Page, mobil?: boolean) => Locator;
+		weiterErsterSchritt: (page: Page) => Locator;
+		abschluss: (page: Page, mobil?: boolean) => Locator;
+		abschlussLabel: string;
+		abschlussHinweis: string;
+		mobilFooter: (page: Page) => Locator;
+		/** Desktop-Abbruch: Trip „Zurück: Trips" (onCancel, kein Autosave), Vergleich „Abbrechen". */
+		abbrechen: (page: Page) => Locator;
+		/** Inhalt der drei geteilten Schwanz-Schritte (Desktop). */
+		inhalt: Record<'wetter-metriken' | 'wertebereiche' | 'alarme', (page: Page) => Locator>;
+		/**
+		 * Desktop-Weiter-Fuß der Schwanz-Schritte, benannt nach dem ZIEL (AN-15, Alt s8d
+		 * AC-17/AC-18): im Schritt Wetter-Metriken „Wertebereiche festlegen →", im Schritt
+		 * Wertebereiche „Alarme einrichten →". Trip-Kennungen im Zuge von AC-20 nachgetragen
+		 * (TripNewEditor.svelte, Spec „Nachträge Teil E").
+		 */
+		weiterNach: Record<'wertebereiche' | 'alarme', (page: Page) => Locator>;
+		/** Kennungs-Präfix aller Desktop-Weiter-Füße der Art (AN-15: im letzten Schritt keiner sichtbar). */
+		weiterPraefix: string;
+		/** Profil/Aktivität: gültiger Zielwert, verschieden vom Startwert. */
+		profilWert: string;
+	}
+> = {
+	route: {
+		url: '/trips/new',
+		postPfad: '/api/trips',
+		schritte: ['route', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'],
+		ersterSchritt: 'route',
+		punkteSchritt: 'etappen',
+		fortschrittSegmente: 5,
+		// Trip-Reiter: <div role="tab">/<button role="tab"> ohne Kennung (Kind-Kontraste
+		// „AN Reiter-Zustand") — Auswahl über die Beschriftung.
+		reiter: (page, id, mobil = false) =>
+			page
+				.locator(mobil ? '[data-testid="tn-mobile-tabbar"] [role="tab"]' : '.tn-desktop [role="tab"]')
+				.filter({ hasText: new RegExp(`^\\s*${regexEscape(TRIP_ANLEGE_LABEL[id] ?? id)}`) }),
+		alleReiterMobil: (page) => page.locator('[data-testid="tn-mobile-tabbar"] [role="tab"]'),
+		// ARIA: gesperrt ⇔ ⊘ im Namen, aktiv ⇔ aria-selected, erledigt ⇔ ✓ im Namen.
+		zustand: async (reiter) => {
+			const text = (await reiter.textContent()) ?? '';
+			return {
+				gesperrt: text.includes('⊘'),
+				aktiv: (await reiter.getAttribute('aria-selected')) === 'true',
+				erledigt: text.includes('✓')
+			};
+		},
+		// Rein attributive Kennungen, im Zuge von AC-20 nachgetragen (TripNewEditor.svelte,
+		// Fortschrittsbalken `trip-new-progress`/`trip-new-progress-segment`, Spec „AC-20-Nachträge").
+		fortschritt: (page) => page.locator('[data-testid="trip-new-progress"]:visible'),
+		fortschrittSegment: (page) => page.locator('[data-testid="trip-new-progress-segment"]:visible'),
+		name: (page, mobil = false) => page.getByTestId(`trip-new-name-input-${mobil ? 'mobile' : 'desktop'}`),
+		weiterErsterSchritt: (page) => page.getByTestId('trip-new-continue-etappen'),
+		abschluss: (page, mobil = false) => page.getByTestId(mobil ? 'tn-mobile-save' : 'trip-new-save-btn'),
+		abschlussLabel: 'Speichern',
+		abschlussHinweis: 'Alarme einrichten zum Speichern',
+		mobilFooter: (page) => page.getByTestId('tn-mobile-footer'),
+		abbrechen: (page) => page.getByTestId('tn-desktop-breadcrumb').getByRole('button', { name: /^Zurück/ }),
+		inhalt: {
+			'wetter-metriken': (page) => page.locator('.tn-desktop [data-testid="weather-metrics-tab"]'),
+			wertebereiche: (page) => page.locator('.tn-desktop [data-testid="corridor-editor-route"]'),
+			alarme: (page) => page.locator('.tn-desktop [data-testid="alarme-tab"]')
+		},
+		weiterNach: {
+			wertebereiche: (page) => page.locator('.tn-desktop [data-testid="trip-new-continue-wertebereiche"]'),
+			alarme: (page) => page.locator('.tn-desktop [data-testid="trip-new-continue-alarme"]')
+		},
+		weiterPraefix: 'trip-new-continue-',
+		profilWert: 'hochtour'
+	},
+	vergleich: {
+		url: '/compare/new',
+		postPfad: '/api/compare/presets',
+		schritte: ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'],
+		ersterSchritt: 'vergleich',
+		punkteSchritt: 'orte',
+		fortschrittSegmente: 5,
+		reiter: (page, id, mobil = false) =>
+			page.getByTestId(mobil ? `cm-mobile-tab-${id}` : `compare-editor-tab-${id}`),
+		alleReiterMobil: (page) => page.locator('[data-testid^="cm-mobile-tab-"]'),
+		zustand: async (reiter) => ({
+			gesperrt: (await reiter.getAttribute('data-locked')) === 'true',
+			aktiv: (await reiter.getAttribute('data-active')) === 'true',
+			erledigt: (await reiter.getAttribute('data-done')) === 'true'
+		}),
+		fortschritt: (page) => page.locator('[data-testid="compare-editor-progress"]:visible'),
+		fortschrittSegment: (page) => page.locator('[data-testid="compare-editor-progress-segment"]:visible'),
+		name: (page, mobil = false) => page.getByTestId(mobil ? 'compare-editor-name-mobile' : 'compare-editor-name'),
+		weiterErsterSchritt: (page) => page.getByTestId('compare-editor-continue-orte'),
+		abschluss: (page, mobil = false) => page.getByTestId(mobil ? 'cm-mobile-activate' : 'compare-editor-activate'),
+		abschlussLabel: 'Briefing aktivieren',
+		abschlussHinweis: 'Alarme einrichten zum Aktivieren',
+		mobilFooter: (page) => page.getByTestId('cm-mobile-cta'),
+		abbrechen: (page) => page.locator('.cm-desktop').getByRole('link', { name: 'Abbrechen', exact: true }),
+		inhalt: {
+			'wetter-metriken': (page) => page.locator('.cm-desktop [data-testid="weather-metrics-tab-vergleich"]'),
+			wertebereiche: (page) => page.locator('.cm-desktop [data-testid="corridor-editor-vergleich"]'),
+			alarme: (page) => page.locator('.cm-desktop [data-testid="alarme-tab"]')
+		},
+		weiterNach: {
+			wertebereiche: (page) => page.locator('.cm-desktop [data-testid="compare-editor-continue-wertebereiche"]'),
+			alarme: (page) => page.locator('.cm-desktop [data-testid="compare-editor-continue-alarme"]')
+		},
+		weiterPraefix: 'compare-editor-continue-',
+		profilWert: 'wintersport'
+	}
+};
+
+/** Listenseite je kind (HL): Texte fest, Strukturaussagen gemeinsam (Kind-Kontraste „HL Liste"). */
+export const LISTE_SEL: Record<
+	HubKind,
+	{
+		url: string;
+		titel: string;
+		anlegeUrl: string;
+		/** Mobiler „Neu"-Knopf im Seitenkopf (Trip: im Zuge von AC-20 nachgetragen, routes/trips/+page.svelte). */
+		neuMobil: string;
+		/**
+		 * Beschriftung des Desktop-„Neu"-Knopfs im Listenkopf (AN-13). Trip: `<button>` mit
+		 * goto, Vergleich: Link — die Aussage (Klick führt zur Anlege-Seite) ist gleich.
+		 */
+		neuDesktop: string;
+		introKurz: string;
+		introLang: string;
+		suche: string;
+		statLabel: string;
+	}
+> = {
+	route: {
+		url: '/trips',
+		titel: 'Trips',
+		anlegeUrl: '/trips/new',
+		neuMobil: 'trip-list-new-mobile',
+		neuDesktop: '+ Neuer Trip',
+		introKurz: 'Mehrtages-Trips mit Briefings je Etappe — morgens für heute, abends für morgen.',
+		introLang: 'Alle aktiven, geplanten und abgeschlossenen Mehrtages-Trips.',
+		suche: 'Suchen...',
+		statLabel: 'Aktiv'
+	},
+	vergleich: {
+		url: '/compare',
+		titel: 'Orts-Vergleiche',
+		anlegeUrl: '/compare/new',
+		neuMobil: 'compare-list-new-mobile',
+		neuDesktop: '+ Neuer Vergleich',
+		introKurz: 'Ohne Ranking — läuft, bis du stoppst.',
+		introLang: 'Morgen-Briefing für heute, Abend-Briefing für morgen',
+		suche: 'Suchen…',
+		statLabel: 'Aktiv'
+	}
+};
+
+const ANLEGE_GPX = path.resolve('./e2e/fixtures/test-trip.gpx');
+
+export interface AnlegenPflichtOpts {
+	name: string;
+	/** Trip-Pflichtfeld Startdatum (YYYY-MM-DD); Standard: in 7 Tagen. */
+	datum?: string;
+	mobil?: boolean;
+	/** Viewport vor dem Öffnen setzen (Aufrufer mit eigenen Maßen, z. B. 375×812). */
+	viewport?: { width: number; height: number };
+	/** Nur der erste Schritt (Name; Trip zusätzlich Datum) — der Punkte-Schritt bleibt offen. */
+	nurKopf?: boolean;
+	/**
+	 * Vergleich: zu wählende Orte (Standard: zwei frische Test-Orte, Präfix E2E-GZ-).
+	 * Eigene Orte müssen vor dem Aufruf angelegt sein (die Bibliothek lädt beim goto).
+	 */
+	orte?: TestLocation[];
+}
+
+/**
+ * Pflichtangaben der Anlege-Seite je kind (Kind-Kontraste „AN Pflichtangaben"):
+ * Trip = Name + Startdatum, je Etappe eine GPX (`/api/gpx/parse`);
+ * Vergleich = Name, dann zwei Orte aus der Bibliothek.
+ * Herausgehoben aus `tripPflicht` (standardwerte-und-hilfe.spec.ts) — Trip-Verhalten
+ * unverändert. Öffnet die Anlege-Seite selbst; keine Assertions über das Ergebnis.
+ */
+export async function anlegenPflicht(page: Page, kind: HubKind, opts: AnlegenPflichtOpts): Promise<void> {
+	const mobil = opts.mobil ?? false;
+	if (opts.viewport) await page.setViewportSize(opts.viewport);
+	// Vergleich: die Orte-Bibliothek lädt der SSR-Loader von /compare/new
+	// (routes/compare/new/+page.server.ts) genau einmal beim Seitenaufruf — Test-Orte
+	// müssen daher VOR dem goto existieren, sonst stehen sie nie in der Bibliothek.
+	const orte =
+		kind === 'vergleich' && !opts.nurKopf
+			? (opts.orte ?? [
+					await createTestLocation(page.request, { lat: 47.1, lon: 11.2 }),
+					await createTestLocation(page.request, { lat: 47.2, lon: 11.3 })
+				])
+			: [];
+	await page.goto(ANLEGE_SEL[kind].url);
+	if (kind === 'route') {
+		const datum = opts.datum ?? new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+		const leiste = mobil ? page.getByTestId('tn-mobile-tabbar') : page.locator('.tn-desktop');
+		const etappen = leiste.getByRole('tab', { name: /Etappen/ });
+		await expect(async () => {
+			await ANLEGE_SEL.route.name(page, mobil).fill(opts.name);
+			await (mobil ? page.getByTestId('trip-new-date-input') : page.locator('.tn-desktop input[type="date"]')).fill(datum);
+			await expect(etappen).not.toHaveAccessibleName(/⊘/, { timeout: 500 });
+		}).toPass({ timeout: 10_000 });
+		if (opts.nurKopf) return;
+		await etappen.click({ force: mobil });
+		const eingaben = page.locator(`${mobil ? '.tn-mobile' : '.tn-desktop'} input[type="file"][accept=".gpx"]`);
+		await expect(eingaben.first()).toBeAttached();
+		let rest = await eingaben.count();
+		while (rest > 0) {
+			const geparst = page.waitForResponse((r) => r.url().includes('/api/gpx/parse'), { timeout: 30_000 });
+			await eingaben.first().setInputFiles(ANLEGE_GPX);
+			await geparst;
+			rest -= 1;
+			await expect(eingaben).toHaveCount(rest);
+		}
+		return;
+	}
+	await expect(page.getByTestId('compare-editor')).toBeVisible({ timeout: 15_000 });
+	await ANLEGE_SEL.vergleich.name(page, mobil).fill(opts.name);
+	if (opts.nurKopf) return;
+	await ANLEGE_SEL.vergleich.reiter(page, 'orte', mobil).click();
+	if (mobil) {
+		await page.getByTestId('compare-step2-mobile-library-btn').click();
+		for (const ort of orte) await page.getByTestId(`compare-step2-mobile-lib-check-${ort.id}`).click();
+		await page.locator('button[aria-label="Schliessen"]:visible').click();
+		return;
+	}
+	const bibliothek = page.locator('[data-testid="compare-step2-library"]:visible').first();
+	await expect(bibliothek).toBeVisible({ timeout: 10_000 });
+	for (const ort of orte) await bibliothek.getByText(ort.name, { exact: true }).click();
+}

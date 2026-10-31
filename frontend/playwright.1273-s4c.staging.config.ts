@@ -11,7 +11,9 @@ import { defineConfig } from '@playwright/test';
 //
 // Die Versand-Specs (vormals versand-tab-vergleich, compare-hub-briefing-times)
 // sind seit #2347 S3b geteilte hub-versand-*-Specs auf der CI-Positivliste
-// und daher hier NICHT gelistet.
+// und daher hier NICHT gelistet. Ebenso seit #2347 S4 compare-alarm-config
+// (→ hub-versand-aufbau VA-2, hub-alarme-wertprops AW-4) und
+// compare-legacy-fields-survive-save (→ hub-kopf-bearbeiten KB-11): gelöscht.
 const user = process.env.GZ_VALIDATOR_USER ?? 'admin';
 const pass = process.env.GZ_VALIDATOR_PASS ?? 'test1234';
 
@@ -31,8 +33,6 @@ export default defineConfig({
 			name: 'chromium-storagestate',
 			testMatch: [
 				/hub-editor-autosave-user-isolation\.spec\.ts/,
-				/compare-alarm-config\.spec\.ts/,
-				/compare-legacy-fields-survive-save\.spec\.ts/,
 				/layout-tab-vergleich\.spec\.ts/,
 				/issue-718-idealwert-validation\.spec\.ts/
 			],

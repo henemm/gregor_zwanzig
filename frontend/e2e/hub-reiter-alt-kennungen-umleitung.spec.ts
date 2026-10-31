@@ -258,6 +258,28 @@ for (const hub of HUBS) {
 				await expect.poll(() => tabParam(page)).toBe('uebersicht');
 			});
 		}
+
+		// #2347 S4 (feat_2347_s4_paritaets_e2e.md AC-5): Alt compare-flow-navigation
+		// Z. 675-700 und compare-layout-tab-dissolution AC-3 — der aufgelöste Reiter
+		// „Layout" (LEGACY.layout in subscriptionTabs.ts) führt in Wetter-Metriken.
+		test('?tab=layout → ?tab=wetter-metriken, URL bereinigt, kein Layout-Panel', async ({ page }) => {
+			const pfad = await hub.pfad(page);
+			// Rumpf-Abgleich compare-layout-tab-dissolution AC-3: Umleitung ohne Fehlermeldung.
+			const seitenfehler: string[] = [];
+			page.on('pageerror', (err) => seitenfehler.push(String(err)));
+			await page.goto(`${pfad}?tab=layout`);
+
+			await expect(
+				page.locator(`[data-testid="${hub.prefix}-panel-wetter-metriken"]:visible`).first()
+			).toBeVisible({ timeout: 15_000 });
+			await expect(
+				page.locator(`[data-testid="${hub.prefix}-tab-wetter-metriken"]:visible`).first()
+			).toHaveAttribute('aria-selected', 'true');
+			await expect.poll(() => tabParam(page)).toBe('wetter-metriken');
+			await expect(page.locator(`[data-testid="${hub.prefix}-panel-layout"]`)).toHaveCount(0);
+			await expect(page.locator(`[data-testid="${hub.prefix}-panel-uebersicht"]`)).toHaveCount(0);
+			expect(seitenfehler, '?tab=layout: Umleitung mit pageerror').toEqual([]);
+		});
 	});
 }
 

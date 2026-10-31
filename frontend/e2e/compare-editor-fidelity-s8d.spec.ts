@@ -1,8 +1,14 @@
+// gz-eigenstaendig: nur noch Anlege-Fälle des Ortsvergleichs ohne Trip-Pendant — Orte-Tab mobil (AC-6/AC-7), Vergleichs-Profilkachel mit gekürzter Metrik-Zeile (AC-13/AC-14; der Trip wählt die Aktivität per Dropdown, Pendant hub-kopf-bearbeiten KB-3), ⊘-Orte-Gate am Desktop-Fuß (AC-16) und die mobile CTA-Kette mit dem Zwischenstand „noch 1 Ort nötig" (AC-9..AC-12; ein einzelner Ort hat beim Trip kein Gegenstück, Etappen zählen GPX). Wortlaut je Pflichtschritt und gesperrte CTA ohne Namen (AC-8) prüft hub-anlegen-ablauf AN-14 je kind, die Desktop-Weiter-Füße (AC-17/AC-18) AN-15 je kind — #2347 S4 „Nachträge Teil E".
+//
 // E2E (Staging) — Issue #1256 Scheibe S8d: Mobile-Editor-Fidelity
 // (Restliste-Bündel R4 Mobile-Vervollständigung + C1 Desktop-Editor-create
 // Weiter-CTA-Füße).
 //
 // Spec: docs/specs/modules/feat_1256_s8d_mobile_editor_fidelity.md (AC-1..AC-20)
+// #2347 S4 (feat_2347_s4_paritaets_e2e.md): AC-1..AC-5 → hub-liste-seitenrahmen
+// HL-1..HL-5, AC-15 → hub-anlegen-ablauf AN-9 (je kind); AC-8..AC-12 teilweise →
+// AN-14 (Wortlaut je Pflichtschritt, gesperrte CTA ohne Namen, Punkte-Gate),
+// AC-17/AC-18 → AN-15; Rest bleibt hier (Kopfzeile).
 //
 // Ausführen (gegen Staging, aus frontend/, NACH Push+Staging-Deploy):
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
@@ -26,18 +32,9 @@ import { createTestLocation } from './helpers';
 const MOBILE = { width: 390, height: 844 };
 const DESKTOP = { width: 1280, height: 900 };
 
-let createdIds: string[] = [];
 let createdLocationIds: string[] = [];
 
 test.afterEach(async ({ page }) => {
-	for (const id of createdIds) {
-		try {
-			await page.request.delete(`/api/compare/presets/${id}`);
-		} catch {
-			/* Staging-Hygiene: Cleanup-Fehler ist nicht test-kritisch */
-		}
-	}
-	createdIds = [];
 	for (const id of createdLocationIds) {
 		try {
 			await page.request.delete(`/api/locations/${id}`);
@@ -55,156 +52,7 @@ async function createLocation(page: Page, name: string, lat: number, lon: number
 	return loc.id;
 }
 
-async function createPresetWithLocations(page: Page, name: string, locationIds: string[]): Promise<string> {
-	const res = await page.request.post('/api/compare/presets', {
-		data: {
-			name,
-			location_ids: locationIds,
-			schedule: 'daily',
-			profil: 'wandern',
-			hour_from: 7,
-			hour_to: 16,
-			empfaenger: ['urlauber@example.com']
-		}
-	});
-	expect(res.ok(), 'Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
-	const body = await res.json();
-	const id = body.id as string;
-	createdIds.push(id);
-	return id;
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Gruppe A — Mobile-Liste (compare/+page.svelte)
-// ─────────────────────────────────────────────────────────────────────────
-
-// Mobile-Shell S2: kein fixer Balken mehr — Titel/Eyebrow/„Neuer Vergleich"
-// stehen mobil im <PageHeader> der Seite (Rechts-Slot), wie auf der Übersicht.
-test.describe('Issue #1256 S8d (AC-1): mobiler Seitenkopf auf /compare', () => {
-	test('Titel + Eyebrow sichtbar, „Neuer Vergleich" navigiert nach /compare/new; andere Seiten/Desktop unverändert', async ({
-		page
-	}) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8d Ort-List ${suffix}`, 47.05, 11.05);
-		await createPresetWithLocations(page, `E2E S8d List ${suffix}`, [locId]);
-
-		await page.setViewportSize(MOBILE);
-		await page.goto('/compare');
-		await page.waitForLoadState('networkidle');
-
-		const head = page.locator('.desktop\\:hidden [data-slot="page-header"]:visible');
-		await expect(head).toBeVisible();
-		await expect(head.locator('h1')).toHaveText('Orts-Vergleiche');
-		await expect(head).toContainText('Workspace ·');
-		await expect(page.getByTestId('top-app-bar')).toHaveCount(0);
-
-		const neu = page.getByTestId('compare-list-new-mobile');
-		await expect(neu).toBeVisible();
-		await neu.click();
-		await page.waitForURL('**/compare/new');
-
-		// Andere Seite (/trips) traegt keinen Vergleichs-Kopf.
-		await page.goto('/trips');
-		await page.waitForLoadState('networkidle');
-		await expect(page.getByTestId('compare-list-new-mobile')).toHaveCount(0);
-
-		// Desktop-Viewport auf /compare zeigt weiterhin den 32px-Titel.
-		await page.setViewportSize(DESKTOP);
-		await page.goto('/compare');
-		await page.waitForLoadState('networkidle');
-		await expect(page.locator('.hidden.desktop\\:block').getByText('Orts-Vergleiche').first()).toBeVisible();
-	});
-});
-
-test.describe('Issue #1256 S8d (AC-2): kurzer mobiler Intro-Text', () => {
-	test('kurzer Satz sichtbar, langer Desktop-Satz nicht sichtbar', async ({ page }) => {
-		await page.setViewportSize(MOBILE);
-		await page.goto('/compare');
-		await page.waitForLoadState('networkidle');
-
-		await expect(page.getByText('Ohne Ranking — läuft, bis du stoppst.')).toBeVisible();
-		// Fix-Loop 2: der lange Desktop-Satz liegt im `hidden desktop:block`-Zweig
-		// weiterhin im DOM (nur per CSS display:none versteckt) — toHaveCount(0)
-		// prueft DOM-Anwesenheit statt Sichtbarkeit und schlaegt daher faelschlich
-		// fehl. not.toBeVisible() ist die von der Spec geforderte Semantik.
-		await expect(page.getByText('Morgen-Briefing für heute, Abend-Briefing für morgen')).not.toBeVisible();
-	});
-});
-
-test.describe('Issue #1256 S8d (AC-3): Suchfeld nur Desktop', () => {
-	test('mobil kein Suchfeld; Desktop Suchfeld sichtbar und filtert', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8d Ort-Such ${suffix}`, 47.06, 11.06);
-		await createPresetWithLocations(page, `E2E S8d Suchbar ${suffix}`, [locId]);
-
-		await page.setViewportSize(MOBILE);
-		await page.goto('/compare');
-		await page.waitForLoadState('networkidle');
-		// Fix-Loop 2: gleiches Muster wie AC-2 — Desktop-Suchfeld ist per
-		// display:none (`hidden desktop:block`) versteckt, bleibt aber im DOM.
-		await expect(page.getByPlaceholder('Suchen…')).not.toBeVisible();
-
-		await page.setViewportSize(DESKTOP);
-		await page.reload();
-		await page.waitForLoadState('networkidle');
-		const search = page.getByPlaceholder('Suchen…');
-		await expect(search).toBeVisible();
-		await search.fill(`E2E S8d Suchbar ${suffix}`);
-		await expect(page.getByText(`E2E S8d Suchbar ${suffix}`).first()).toBeVisible();
-	});
-});
-
-test.describe('Issue #1256 S8d (AC-4): mobile Stats kompakt (size=sm)', () => {
-	test('Stat-Werte sichtbar; mobile Schriftgröße kleiner als Desktop', async ({ page }) => {
-		await page.setViewportSize(MOBILE);
-		await page.goto('/compare');
-		await page.waitForLoadState('networkidle');
-		await expect(page.locator('.desktop\\:hidden').getByText('Aktiv').first()).toBeVisible();
-		const mobileFontSize = await page
-			.locator('.desktop\\:hidden')
-			.getByText('Aktiv')
-			.first()
-			.evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
-
-		await page.setViewportSize(DESKTOP);
-		await page.reload();
-		await page.waitForLoadState('networkidle');
-		const desktopFontSize = await page
-			.locator('.hidden.desktop\\:block')
-			.getByText('Aktiv')
-			.first()
-			.evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
-
-		expect(mobileFontSize).toBeLessThan(desktopFontSize);
-	});
-});
-
-test.describe('Issue #1256 S8d (AC-5): kompaktes mobiles Content-Padding', () => {
-	test('kein doppeltes Padding, kein horizontaler Overflow', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8d Ort-Pad ${suffix}`, 47.07, 11.07);
-		await createPresetWithLocations(page, `E2E S8d Padding ${suffix}`, [locId]);
-
-		await page.setViewportSize(MOBILE);
-		await page.goto('/compare');
-		await page.waitForLoadState('networkidle');
-
-		const overflow = await page.evaluate(
-			() => (document.scrollingElement?.scrollWidth ?? 0) - window.innerWidth
-		);
-		expect(overflow).toBeLessThanOrEqual(1);
-
-		// Fix-Loop 2: unscoped Selektor traf zuerst top-app-bar-new-compare
-		// (href="/compare/new", ebenfalls in einem .desktop\:hidden-Container,
-		// aber ausserhalb von <main>) statt die erste Kachel — auf <main>
-		// eingrenzen, wo ausschliesslich der mobile Kachel-Stack liegt.
-		const firstTile = page.locator('main .desktop\\:hidden a[href^="/compare/"]').first();
-		await expect(firstTile).toBeVisible();
-		const box = await firstTile.boundingBox();
-		expect(box?.x ?? 0).toBeGreaterThanOrEqual(12);
-		expect(box?.x ?? 0).toBeLessThanOrEqual(20);
-	});
-});
+// Gruppe A (AC-1..AC-5, mobile Liste) → #2347 S4: hub-liste-seitenrahmen HL-1..HL-5 je kind.
 
 // ─────────────────────────────────────────────────────────────────────────
 // Gruppe B — Mobiler Editor
@@ -255,7 +103,7 @@ test.describe('Issue #1256 S8d (AC-6/AC-7): mobiler Orte-Tab dense-Stack', () =>
 	});
 });
 
-test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versand mit Aktivieren im Sticky-Footer', () => {
+test.describe('Issue #1256 S8d (AC-9..AC-12): kontextuelle Floating-CTA + Versand mit Aktivieren im Sticky-Footer', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 	});
@@ -268,19 +116,9 @@ test.describe('Issue #1256 S8d (AC-8..AC-12): kontextuelle Floating-CTA + Versan
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
 
-		// AC-8: leerer Name -> "Name eingeben" disabled. Der Button traegt
-		// tatsaechlich das HTML disabled-Attribut (kein reiner Style-Zustand) —
-		// ein Klick darauf ist per Browser-/Playwright-Actionability nicht
-		// ausfuehrbar und lief bisher in einen 60s-Timeout. Fix-Loop 2: Zustand
-		// nur noch pruefen (disabled + Tab bleibt unveraendert auf "vergleich"),
-		// nicht mehr klicken.
+		// AC-8 (leerer Name ⇒ gesperrte CTA „Name eingeben", Schritt bleibt) →
+		// #2347 S4 Teil E: hub-anlegen-ablauf AN-14 je kind.
 		const cta = page.locator('[data-testid="cm-mobile-cta"]:visible');
-		await expect(cta).toContainText('Name eingeben');
-		await expect(cta.getByRole('button')).toBeDisabled();
-		await expect(page.locator('[data-testid="cm-mobile-tab-vergleich"]:visible')).toHaveAttribute(
-			'data-active',
-			'true'
-		);
 
 		// Name setzen -> "Orte hinzufügen →" aktiv, Klick wechselt zu Orte.
 		// Epic #1301 F3 (#989): eigenständiges Mobile-Namensfeld.
@@ -362,71 +200,14 @@ test.describe('Issue #1256 S8d (AC-13/AC-14): Profil-Häkchen + gekürzte Metrik
 	});
 });
 
-// Mobile-Shell S2: statt App-Leiste traegt der Editor einen <PageHeader back>
-// (Rücksprung + Eyebrow + Reiter-Titel) und den geteilten Sticky-Footer mit
-// „Briefing aktivieren" auf dem Versand-Reiter.
-test.describe('Issue #1256 S8d (AC-15): genau ein Kopf im mobilen Editor', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize(MOBILE);
-	});
-
-	test('kein Aktivieren vor Versand, „Briefing aktivieren" im Footer danach; Zurück navigiert /compare; Titel wechselt mit Tab', async ({
-		page
-	}) => {
-		const suffix = Date.now();
-		const locA = await createLocation(page, `E2E S8d Ort-BarA ${suffix}`, 47.11, 11.11);
-		const locB = await createLocation(page, `E2E S8d Ort-BarB ${suffix}`, 47.12, 11.12);
-
-		await page.goto('/compare/new');
-		await page.waitForLoadState('networkidle');
-
-		const head = page.getByTestId('cm-mobile-head');
-		await expect(head).toHaveCount(1);
-		const titel = head.locator('h1');
-		await expect(titel).toHaveText('Vergleich');
-		await expect(page.getByTestId('top-app-bar')).toHaveCount(0);
-		await expect(page.getByTestId('cm-mobile-activate')).toHaveCount(0);
-
-		// Epic #1301 F3 (#989): eigenständiges Mobile-Namensfeld.
-		await page.getByTestId('compare-editor-name-mobile').fill(`E2E S8d Bar ${suffix}`);
-		await expect(titel).toHaveText('Vergleich');
-		const cta = page.locator('[data-testid="cm-mobile-cta"]:visible');
-		await cta.getByRole('button').click();
-		await expect(titel).toHaveText('Orte');
-
-		await page.getByTestId('compare-step2-mobile-library-btn').click();
-		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locA}"]`).click();
-		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locB}"]`).click();
-		await page.locator('button[aria-label="Schliessen"]:visible').click();
-		// Issue #1743: drei Klicks ab Orte (orte → wetter-metriken → wertebereiche
-		// → alarme); Alarme ist der letzte Schritt, kein Versand-Schritt mehr.
-		await cta.getByRole('button').click();
-		await expect(page.getByTestId('cm-mobile-activate')).toHaveCount(0);
-		await cta.getByRole('button').click();
-		await cta.getByRole('button').click();
-
-		await expect(titel).toHaveText('Alarme');
-		const aktivieren = page.getByTestId('cm-mobile-activate');
-		await expect(aktivieren).toBeVisible();
-		await expect(aktivieren).toHaveText('Briefing aktivieren');
-		await expect(aktivieren).toBeEnabled();
-
-		await head.getByTestId('back-link').click();
-		await page.waitForURL('**/compare');
-
-		// Rück-Navigation zeigt den Listen-Kopf, kein Editor-Kopf haengt nach.
-		await expect(page.getByTestId('cm-mobile-head')).toHaveCount(0);
-		const liste = page.locator('.desktop\\:hidden [data-slot="page-header"]:visible');
-		await expect(liste.locator('h1')).toHaveText('Orts-Vergleiche');
-		await expect(liste).toContainText('Workspace ·');
-	});
-});
+// AC-15 (genau ein Kopf, Titel je Schritt, Aktivieren erst im letzten Schritt im
+// Footer, Zurück ⇒ Liste mit Listen-Kopf) → #2347 S4: hub-anlegen-ablauf AN-9 je kind.
 
 // ─────────────────────────────────────────────────────────────────────────
 // Gruppe C — Desktop-Editor create
 // ─────────────────────────────────────────────────────────────────────────
 
-test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebereiche/Layout', () => {
+test.describe('Issue #1256 S8d (AC-16): Desktop-CTA-Fuß Orte', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 	});
@@ -464,42 +245,8 @@ test.describe('Issue #1256 S8d (AC-16..AC-18): Desktop-CTA-Füße Orte/Wertebere
 		await expect(page.getByTestId('compare-editor-tab-wetter-metriken')).toHaveAttribute('data-active', 'true');
 	});
 
-	// Issue #1258 Scheibe S4 (E1/E2, AC-28): Layout fuehrt jetzt zu "alarme"
-	// (Testid compare-editor-continue-alarme), Alarme fuehrt zu "versand"
-	// (frueher CTA im Alarme-Fuß, compare-editor-continue-versand — seit #1743
-	// entfallen: Alarme ist der letzte Schritt).
-	test('AC-17/AC-18: Wertebereiche → „Alarme einrichten →" → Alarme ist letzter Schritt, Aktivieren frei', async ({
-		page
-	}) => {
-		const suffix = Date.now();
-		const locA = await createLocation(page, `E2E S8d D2-Ort-A ${suffix}`, 47.15, 11.15);
-		const locB = await createLocation(page, `E2E S8d D2-Ort-B ${suffix}`, 47.16, 11.16);
-
-		await page.goto('/compare/new');
-		await page.waitForLoadState('networkidle');
-		await page.getByTestId('compare-editor-name').fill(`E2E S8d Desktop-Layout ${suffix}`);
-		await page.getByTestId('compare-editor-continue-orte').click();
-		await page.getByText(`E2E S8d D2-Ort-A ${suffix}`).click();
-		await page.getByText(`E2E S8d D2-Ort-B ${suffix}`).click();
-		// Epic #1301 F2a: neue Kette Orte → Wetter-Metriken → Wertebereiche.
-		// Orte-Fuß führt zum Metriken-Tab; der Wertebereiche-Fuß
-		// (compare-editor-continue-wertebereiche) sitzt jetzt auf dem Metriken-Tab.
-		await page.getByTestId('compare-editor-continue-wetter-metriken').click();
-		await page.getByTestId('compare-editor-continue-wertebereiche').click();
-
-		// Layout-Schritt entfällt (Reiter per #1360 aufgelöst): der Alarme-Fuß
-		// (compare-editor-continue-alarme) sitzt auf dem Wertebereiche-Tab.
-		const alarmeBtn = page.getByTestId('compare-editor-continue-alarme');
-		await expect(alarmeBtn).toBeVisible();
-		await alarmeBtn.click();
-		await expect(page.getByTestId('compare-editor-tab-alarme')).toHaveAttribute('data-active', 'true');
-
-		// Issue #1743: kein Versand-Schritt mehr — Alarme ist der letzte Schritt,
-		// danach ist „Briefing aktivieren" frei.
-		await expect(page.getByTestId('compare-editor-continue-versand')).toHaveCount(0);
-		await expect(page.getByTestId('compare-editor-tab-versand')).toHaveCount(0);
-		await expect(page.getByTestId('compare-editor-activate')).toBeEnabled();
-	});
+	// AC-17/AC-18 (Desktop-Weiter-Füße Wetter-Metriken ⇒ Wertebereiche ⇒ Alarme, danach
+	// kein weiterer Schritt, Aktivieren frei) → #2347 S4 Teil E: hub-anlegen-ablauf AN-15 je kind.
 });
 
 // Epic #1273 S4c: Die describe-Gruppe „Edit-Modus zeigt keine Create-CTA-Füße"

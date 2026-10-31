@@ -10,6 +10,10 @@
 //   AC-2 Kanal / Schwelle / Kurzstil    → AW-3 (je kind; Kurzstil nur vergleich)
 //   AC-2 Empfindlichkeit/Cooldown/Stille→ AW-4 (je kind)
 //   AC-2 übrige Einstellungen unberührt → AW-5 (je kind)
+// #2347 S4 (feat_2347_s4_paritaets_e2e.md AC-6): AW-3c (drei Kanal-Schwellen +
+// Doppelklick-Variante), AW-5b (Schwelle bleibt nach Kopf-Umbenennung) und AW-5c
+// (Schwelle bleibt nach Amtliche-Warnungen-Geste im selben Reiter, Teil D) —
+// Ersatz für feat-1461-s3b2b-compare-kanal-schwelle.
 //
 // Compare-eigen (Spec AC-2/AC-8): Radar-Alarm `radar_alert_enabled` und
 // Telegram-Kurzstil `display_config.telegram_style` existieren nur im
@@ -21,7 +25,7 @@
 // storageState aus global.setup.ts. Wegwerf-Objekte E2E-GZ-, Aufräumen im finally.
 
 import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
-import { HUB_KINDS, hubApiPath, openHub, seedHub, type HubKind } from './helpers';
+import { HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, type HubKind } from './helpers';
 // #1373 / ADR-0037: `display_config.active_metrics` wird in ZWEI Formen
 // gespeichert (Kurzform und Paar {metric_id, aggregation}). Der Vergleich der
 // Nachbar-Einstellungen im Ortsvergleich läuft deshalb über die
@@ -454,6 +458,150 @@ for (const kind of HUB_KINDS) {
 						nachbarnVorher[key]
 					);
 				}
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+
+		// AW-3c — #2347 S4: Alt feat-1461-s3b2b AC-13 (alle drei Kanal-Schwellen) und
+		// Adversary-Fall „Doppelklick auf zwei verschiedene Stufen". AW-3 prüft nur einen Kanal.
+		test(`AW-3c (${kind}): alle drei Kanal-Schwellen nacheinander, dann Doppelklick auf zwei Stufen ⇒ Reload zeigt genau die zuletzt gesetzten`, async ({
+			page
+		}) => {
+			const hub = await seedHub(page.request, kind, { extra: aw.seed });
+			const soll: Record<string, string> = { telegram: 'HIGH', sms: 'MODERATE', email: 'HIGH' };
+			const stufe = (kanal: string, wert: string) =>
+				page.locator(`[data-testid="alert-channel-threshold-${kanal}-${wert}"]`).first();
+			const gespeichert = async () =>
+				((await stand(page, kind, hub.id)).alert_channel_thresholds as Record<string, string> | undefined) ?? {};
+			try {
+				await oeffneAlarme(page, kind, hub.id);
+				for (const [kanal, wert] of Object.entries(soll)) {
+					await stufe(kanal, wert).click();
+					await expect(stufe(kanal, wert)).toHaveAttribute('aria-pressed', 'true');
+					await warteAufGespeichert(page);
+				}
+				await expect
+					.poll(async () => {
+						const g = await gespeichert();
+						return { telegram: g.telegram, sms: g.sms, email: g.email };
+					}, { timeout: 15_000, message: 'AW-3c FAIL: eine Kanal-Schwelle überschreibt die anderen.' })
+					.toEqual(soll);
+
+				// Doppelklick-Variante: zwei verschiedene Stufen desselben Kanals schnell hintereinander.
+				await stufe('telegram', 'LOW').click();
+				await stufe('telegram', 'MODERATE').click();
+				await warteAufGespeichert(page);
+				const endstand = { ...soll, telegram: 'MODERATE' };
+				await expect
+					.poll(async () => {
+						const g = await gespeichert();
+						return { telegram: g.telegram, sms: g.sms, email: g.email };
+					}, { timeout: 15_000, message: 'AW-3c FAIL: Endzustand nach schnellem Stufenwechsel inkonsistent.' })
+					.toEqual(endstand);
+
+				await oeffneAlarme(page, kind, hub.id);
+				for (const [kanal, wert] of Object.entries(endstand)) {
+					await expect(stufe(kanal, wert), `AW-3c FAIL: ${kanal} zeigt nach dem Neuladen nicht „${wert}".`).toHaveAttribute(
+						'aria-pressed',
+						'true'
+					);
+				}
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+
+		// AW-5b — #2347 S4: Alt feat-1461-s3b2b Adversary „Schwelle setzen, dann andere
+		// Hub-Einstellung ändern ⇒ Schwelle bleibt" (AW-5 prüft die Gegenrichtung).
+		test(`AW-5b (${kind}): Kanal-Schwelle setzen, danach Name im Kopf ändern ⇒ Schwelle bleibt`, async ({ page }) => {
+			const hub = await seedHub(page.request, kind, { extra: aw.seed });
+			const pfad = hubApiPath(kind, hub.id);
+			const { kopf } = HUB_SEL[kind];
+			const neu = `E2E-GZ-AW5b-${Date.now()}`;
+			try {
+				await oeffneAlarme(page, kind, hub.id);
+				await page.locator('[data-testid="alert-channel-threshold-telegram-HIGH"]').first().click();
+				await warteAufGespeichert(page);
+				await expect
+					.poll(async () => ((await stand(page, kind, hub.id)).alert_channel_thresholds as Record<string, string> | undefined)?.telegram, {
+						timeout: 15_000,
+						message: 'Vorbedingung: die Kanal-Schwelle ist gespeichert'
+					})
+					.toBe('HIGH');
+
+				await page.locator(`[data-testid="${kopf}-name-edit-toggle"]:visible`).click();
+				await page.locator(`[data-testid="${kopf}-name-edit"]:visible`).fill(neu);
+				const put = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad, {
+					timeout: 15_000
+				});
+				await page.locator(`[data-testid="${kopf}-name-save"]:visible`).click();
+				expect((await put).ok(), 'AW-5b: Umbenennung scheitert').toBeTruthy();
+
+				const nachher = await stand(page, kind, hub.id);
+				expect(nachher.name).toBe(neu);
+				expect(
+					(nachher.alert_channel_thresholds as Record<string, string> | undefined)?.telegram,
+					'AW-5b FAIL: der Kopf-PUT hat die Kanal-Schwelle zurückgesetzt (Alt-Baseline).'
+				).toBe('HIGH');
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+
+		// AW-5c — #2347 S4 Teil D: Alt feat-1461-s3b2b Adversary „eine Schwelle setzen, dann
+		// eine ANDERE Einstellung im selben Reiter ändern (amtliche Warnungen) — Schwelle
+		// bleibt". AW-5b ändert den Namen im Kopf (anderer Speicherweg); hier derselbe Reiter,
+		// dessen PUT die Kanal-Schwellen beider kinds mitsendet (Vergleich:
+		// alarmeVergleichSpeicherung.ts ALARM_TOP; Trip: alarmeDeliveryPayload.ts, vom
+		// AlarmeTab route immer gesetzt). Ein Snapshot mit Alt-Baseline schickte sms=LOW.
+		test(`AW-5c (${kind}): Kanal-Schwelle setzen, dann Amtliche Warnungen umschalten ⇒ PUT trägt die Schwelle mit, Stand und Anzeige behalten sie`, async ({
+			page
+		}) => {
+			const hub = await seedHub(page.request, kind, { extra: aw.seed });
+			const pfad = hubApiPath(kind, hub.id);
+			const sms = (wert: string) => page.locator(`[data-testid="alert-channel-threshold-sms-${wert}"]`).first();
+			const schwellen = async () =>
+				((await stand(page, kind, hub.id)).alert_channel_thresholds as Record<string, string> | undefined) ?? {};
+			try {
+				await oeffneAlarme(page, kind, hub.id);
+				await sms('HIGH').click();
+				await expect(sms('HIGH')).toHaveAttribute('aria-pressed', 'true');
+				await warteAufGespeichert(page);
+				await expect
+					.poll(async () => (await schwellen()).sms, {
+						timeout: 15_000,
+						message: 'Vorbedingung: die SMS-Schwelle ist gespeichert'
+					})
+					.toBe('HIGH');
+
+				const warVorher = await amtlichSchalter(page).isChecked();
+				const put = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad, {
+					timeout: 15_000
+				});
+				await amtlichSchalter(page).setChecked(!warVorher);
+				const antwort = await put;
+				expect(antwort.ok(), `AW-5c: PUT nach dem Umschalten HTTP ${antwort.status()}`).toBeTruthy();
+				const rumpf = (antwort.request().postDataJSON() ?? {}) as { alert_channel_thresholds?: Record<string, string> };
+				expect(
+					rumpf.alert_channel_thresholds?.sms,
+					'AW-5c FAIL: der PUT der Amtliche-Warnungen-Geste trägt die gesetzte SMS-Schwelle nicht mit (Alt-Baseline oder vergessen).'
+				).toBe('HIGH');
+				await warteAufGespeichert(page);
+
+				const nachher = await stand(page, kind, hub.id);
+				expect(amtlichGespeichert(nachher), 'Vorbedingung: die Amtliche-Warnungen-Geste ist gespeichert').toBe(!warVorher);
+				expect(
+					(nachher.alert_channel_thresholds as Record<string, string> | undefined)?.sms,
+					'AW-5c FAIL: die SMS-Schwelle ist nach der Amtliche-Warnungen-Geste nicht mehr gespeichert.'
+				).toBe('HIGH');
+
+				await oeffneAlarme(page, kind, hub.id);
+				await expect(sms('HIGH'), 'AW-5c FAIL: nach dem Neuladen zeigt SMS nicht „hoch".').toHaveAttribute(
+					'aria-pressed',
+					'true'
+				);
+				await expect(amtlichSchalter(page)).toBeChecked({ checked: !warVorher });
 			} finally {
 				await hub.aufraeumen();
 			}

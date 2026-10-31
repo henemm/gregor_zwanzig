@@ -6,7 +6,8 @@
 //
 // Source-Wächter (Kern-Schicht): prüfen den Soll-Zustand des Markups/der
 // Komponenten-Fähigkeiten. Verhaltensnachweis aus Nutzersicht folgt in
-// Phase 6 per Playwright gegen Staging (frontend/e2e/compare-editor-fidelity-s8d.spec.ts)
+// Phase 6 per Playwright (seit #2347 S4 je kind in frontend/e2e/hub-liste-seitenrahmen.spec.ts
+// HL-1..HL-5; vormals compare-editor-fidelity-s8d.spec.ts AC-1..AC-5)
 // — ROT-Beleg gegen Staging ist für noch-nicht-deployten Stand unmöglich
 // (S4-Lehre, s. compare_hub_fidelity.test.ts Kopf-Kommentar).
 //

@@ -7,7 +7,10 @@ AC-12, AC-16, AC-17, AC-18. AC-9/AC-10 (Go-Persistenz/-Merge) und AC-13/AC-14
 (Anlege-/Hub-Speicherweg) sind NICHT Teil dieser Datei — Go braucht einen
 Overlay-Test (siehe Team-Lead-Auftrag), AC-13/AC-14/AC-15 sind Svelte-
 Oberfläche und in dieser Phase nicht mountbar (ADR-0020), sie gehören in die
-Staging-/Playwright-Verifikation.
+Staging-/Playwright-Verifikation. Seit #2347 S4 (die damalige Playwright-Spec
+feat-1461-s3b2b ist gelöscht) liegen sie je kind in
+``frontend/e2e/hub-alarme-wertprops.spec.ts`` (AW-3, AW-3c, AW-5b, AW-5c) und
+``frontend/e2e/hub-anlegen-ablauf.spec.ts`` (AN-6, AN-10).
 
 RED-Grund heute (gemessen, docs/context/feat-1461-s3b2b-compare-kanal-schwelle.md):
 ``split_by_threshold()`` (aus S3b-2a, bereits fertig) wird an KEINER der drei

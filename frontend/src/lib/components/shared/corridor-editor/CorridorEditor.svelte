@@ -26,7 +26,7 @@
 	} from './wertebereicheVergleichSpeicherung.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import {
-		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
+		buildRoutePool, buildRoutePrefillRows, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
 		saveGateDecision, supportsMark, countEffectiveMarks, type CorridorRowState,
 		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
@@ -57,7 +57,7 @@
 		/** Issue #2276 S6d: der vergleich-Zweig bekommt seinen Stand als WERTPROPS
 		 *  statt aus `getContext('compare-wizard-state')`. Das Buendel baut
 		 *  `compare/corridorPropsAus.ts`; alle drei Vergleichs-Mounts speisen es
-		 *  identisch ein, der route-Zweig laesst es weg. */
+		 *  identisch ein; route nutzt nur `corridors` (#2347 AC-20: Remount-Schutz der Vorbelegung). */
 		corridors?: Corridor[];
 		idealRanges?: Record<string, IdealRange>;
 		/** `null` = nie eingestellt (Vorgabemenge), `[]` = bewusst leer (#1366 F002). */
@@ -69,7 +69,7 @@
 		onCorridorsChange?: (v: Corridor[]) => void;
 		onIdealRangesChange?: (v: Record<string, IdealRange>) => void;
 		onActiveMetricKeysChange?: (v: string[] | null) => void;
-		onMetricAlertLevelsChange?: (v: Record<string, string>) => void;
+		onMetricAlertLevelsChange?: (v: Record<string, string>) => void; /** #2347 S4 (AC-20, Race): route-Anlege-Vorbelegung gelaufen — genau EINMAL, mit oder ohne Zeilen (Standardwerte-Knopf im Trip). */ onVorbelegungFertig?: () => void;
 	}
 	let {
 		context = 'route',
@@ -89,7 +89,7 @@
 		onCorridorsChange,
 		onIdealRangesChange,
 		onActiveMetricKeysChange,
-		onMetricAlertLevelsChange
+		onMetricAlertLevelsChange, onVorbelegungFertig
 	}: Props = $props();
 
 	// Issue #2276 S6d: der Speicherweg braucht eine lebendige, mutierbare
@@ -251,6 +251,32 @@
 		const rebuilt = buildRoutePool(corridorsNow, trip?.display_config?.metrics, routeExtraDefs);
 		poolLeft = rebuilt.poolLeft;
 	});
+
+	// Issue #2347 S4 (AC-20): Trip-Pendant zum Fresh-Create-Prefill des
+	// vergleich-Zweigs (isFreshCompareCreate -> syncToWizard). Nur auf der
+	// Anlege-Seite (createMode, noch keine Korridore) — bestehende Trips bleiben
+	// unberuehrt. Wartet auf BEIDE Ladevorgaenge (Zusatz-Katalog UND die vom
+	// Wetter-Metriken-Reiter gemeldete Auswahl, sonst waere `allowed` leer) und
+	// meldet genau EINMAL nach oben, damit "Trip speichern" die Startwerte auch
+	// ohne Besuch des Reiters mitschickt. `routeExtraDefs` wird nur im
+	// route-Zweig gesetzt — die Bedingung schliesst den vergleich-Zweig aus.
+	let routePrefillDone = false;
+	$effect(() => {
+		if (!createMode || routePrefillDone || routeExtraDefs === null) return;
+		const metrics = trip?.display_config?.metrics;
+		if (!metrics || metrics.length === 0) return;
+		const extra = routeExtraDefs;
+		untrack(() => {
+			routePrefillDone = true;
+			vorbelegen(metrics, extra); onVorbelegungFertig?.(); // #2347 S4 Race: auf JEDEM Ausgang, NACH den Korridoren
+		});
+	});
+	function vorbelegen(metrics: Parameters<typeof buildRoutePrefillRows>[0], extra: RouteMetricDef[]) {
+		if ((trip?.corridors ?? []).length > 0 || (corridors ?? []).length > 0 || rows.length > 0) return;
+		const prefill = buildRoutePrefillRows(metrics, extra); if (prefill.length === 0) return;
+		rows = prefill;
+		if (saveGateDecision(rows) === 'schedule') onCorridorsChange?.(buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors).corridors);
+	}
 
 	const validation = $derived(validateCorridorRows(rows));
 	// Issue #1425 (S2 Teil 2, Scheibe C, AC-3): zaehlt nur Marken, deren Schalter

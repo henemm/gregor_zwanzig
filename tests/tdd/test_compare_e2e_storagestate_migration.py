@@ -4,7 +4,7 @@
 Spec: docs/specs/modules/issue_1321_e2e_storagestate_migration.md
 
 AC-3 (struktureller Teilnachweis). Diese Tests pruefen per Quelltext-
-Introspektion, dass die (seit #2347 S3d vier) betroffenen Playwright-Spec-Dateien das alte
+Introspektion, dass die (seit #2347 S4 zwei) betroffenen Playwright-Spec-Dateien das alte
 Pro-Test-UI-Login-Muster nicht mehr enthalten und die Staging-Config sie
 ausschliesslich im storageState-Projekt referenziert (CLAUDE.md-Ausnahme
 `# doc-compliance-test` fuer Quelltext-Introspektion statt Verhaltensnachweis).
@@ -24,8 +24,9 @@ MIGRATED_FILES = [
     # compare-radar-toggle.spec.ts entfaellt mit #2347 S3d (geteilt als
     # hub-alarme-wertprops AW-2b + hub-konfliktschutz-zwei-kontexte KS-2,
     # Anmeldung per global.setup-storageState).
-    "compare-alarm-config.spec.ts",
-    "compare-legacy-fields-survive-save.spec.ts",
+    # compare-alarm-config.spec.ts und compare-legacy-fields-survive-save.spec.ts
+    # entfallen mit #2347 S4 (geteilt als hub-versand-aufbau VA-2 /
+    # hub-alarme-wertprops AW-4 bzw. hub-kopf-bearbeiten KB-11, global.setup-storageState).
     # versand-tab-vergleich.spec.ts entfaellt mit #2347 S3b (geteilt als
     # hub-versand-aufbau/-speichert-selbst, Anmeldung per global.setup-storageState).
     "layout-tab-vergleich.spec.ts",

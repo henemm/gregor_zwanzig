@@ -1,3 +1,4 @@
+// gz-eigenstaendig: Smart-Import von Orten per URL/Koordinaten im Orte-Schritt der Anlege-Seite; der Trip hat keine Orte, sondern Etappen mit GPX — der Orte-Tab ist die erlaubte Compare-Eigenheit (#2347 S4, fallgleich).
 import { test, expect } from '@playwright/test';
 
 // E2E — Issue #1080: /compare/new — per Smart-Import angelegter Ort bleibt unsichtbar

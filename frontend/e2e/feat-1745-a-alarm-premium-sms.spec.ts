@@ -24,12 +24,12 @@
 // gegen Staging, wo der Code noch nicht liegt. Ausführung gehört zur
 // Staging-Verifikation nach dem Merge.
 //
-// Vorbild/Struktur: feat-1461-s3b2b-compare-kanal-schwelle.spec.ts
+// Vorbild/Struktur: hub-alarme-wertprops.spec.ts (AW-3c, Kanal-Schwellen je kind; #2347 S4)
 //
 // Ausführen (gegen Staging, aus frontend/):
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
 //   npx playwright test --config=playwright.1745-a.staging.config.ts
-// (Die Config selbst legt Phase 6 an — Muster playwright.1461-s3b2b.staging.config.ts,
+// (Die Config selbst legt Phase 6 an — Muster playwright.1273-s4c.staging.config.ts,
 //  Setup-Projekt: e2e/feat-1745-a.staging.setup.ts.)
 
 import { test, expect, type Page } from '@playwright/test';

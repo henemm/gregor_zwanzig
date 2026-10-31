@@ -213,7 +213,7 @@
 			<div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px">
 				<div>
 					<Eyebrow>Workspace · Orts-Vergleiche</Eyebrow>
-					<div style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px">Orts-Vergleiche</div>
+					<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px">Orts-Vergleiche</h1>
 					<div style="font-size: 14px; color: var(--g-ink-3); margin-top: 6px; max-width: 620px">
 						Stehende Monitore: dieselben Orte im Blick. Briefings wie beim Trip —
 						Morgen-Briefing für heute, Abend-Briefing für morgen, zur gewählten

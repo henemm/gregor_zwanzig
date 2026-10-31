@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 // Grundauswahl-Abwahl muss auch einen bereits eigenständigen SMS-Kanal
 // schneiden) gegen Staging. Kein lokaler webServer. Staging steht hinter
 // nginx-Basic-Auth (Validator-Creds) + App-Login (GZ_AUTH_*). Vorbild:
-// playwright.1273-s3.red.config.ts.
+// playwright.1080.staging.config.ts.
 //
 // Liegt bewusst UNTER frontend/e2e/ (nicht frontend/ root): der RED-Phase
 // Edit-Gate blockt Code-Dateien außerhalb der always_allowed_dirs (u.a.

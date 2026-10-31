@@ -46,29 +46,18 @@ PRUEFDATUM = date(2027, 1, 24)
 # und compare-orte-konfliktschutz-zwei-kontexte (gz-eigenstaendig:-Kopf) zerlegt
 # => 28 x Regel 1, 1 x Regel 2 = 29; S3d (2026-10-29): compare-eigener Rest -- 3 Altdateien
 # (radar-toggle, editor-autosave, metric-order) in hub-*-Specs zusammengefuehrt/geloescht,
-# 12 weitere per gz-eigenstaendig:-Kopf konform => 14; darf nur schrumpfen (S4 leert sie).
-ALTLAST: frozenset[str] = frozenset({
-    "compare-alarm-config.spec.ts",
-    "compare-detail-edit-entry.spec.ts",
-    "compare-edit-redirect.spec.ts",
-    "compare-editor-fidelity-s8d.spec.ts",
-    "compare-editor-slice1.spec.ts",
-    "compare-editor-slice4.spec.ts",
-    "compare-flow-navigation.spec.ts",
-    "compare-hub-fidelity-s8c.spec.ts",
-    "compare-layout-tab-dissolution.spec.ts",
-    "compare-legacy-fields-survive-save.spec.ts",
-    "compare-new-vorlage.spec.ts",
-    "feat-1461-s3b2b-compare-kanal-schwelle.spec.ts",
-    "issue-1080-compare-new-url.spec.ts",
-    "issue-1093-compare-layout-crash.spec.ts",
-    # Regel 2: seit S3d kein Eintrag mehr (kanal-grenzen-ortsvergleich traegt den Kopf)
-})
+# 12 weitere per gz-eigenstaendig:-Kopf konform => 14; darf nur schrumpfen.
+# S4 (2026-10-30): ALTLAST leer -- 8 Altdateien geloescht (Zusicherungen in
+# hub-anlegen-ablauf, hub-liste-seitenrahmen und den erweiterten hub-*-Specs),
+# 6 per gz-eigenstaendig:-Kopf konform (compare-new-vorlage, issue-1080-compare-new-url,
+# compare-layout-tab-dissolution, compare-flow-navigation, compare-editor-fidelity-s8d,
+# compare-hub-fidelity-s8c). Jede neue Compare-only-Spec ist ab jetzt sofort rot.
+ALTLAST: frozenset[str] = frozenset()
 # Literal, NICHT len(ALTLAST) -- sonst waechst die Obergrenze mit jedem neuen
 # Eintrag mit und die Pruefung waere vakuum (Adversary F002). Darf nur sinken,
 # und zwar nur im selben Zug wie eine ALTLAST-Streichung: der Wert muss stets
-# gleich len(ALTLAST) sein (#2347 S3a, Adversary F001).
-ALTLAST_MAX = 14
+# gleich len(ALTLAST) sein (#2347 S3a, Adversary F001). Seit S4: 0.
+ALTLAST_MAX = 0
 
 _SCHLEIFE_RE = re.compile(
     r"\bHUB_KINDS\b"
@@ -148,6 +137,21 @@ def test_altlast_obergrenze_entspricht_dem_echten_stand():
         f"ALTLAST hat {len(ALTLAST)} Eintraege, ALTLAST_MAX steht auf {ALTLAST_MAX} "
         f"-- ALTLAST_MAX muss dem echten Stand entsprechen und darf nur zusammen "
         f"mit einer Streichung aus ALTLAST sinken (nie vorab hoeher stehen lassen)")
+
+
+def test_s4_altlast_ist_leer():
+    # #2347 S4 (feat_2347_s4_paritaets_e2e.md AC-16): nach S4 ist jede Compare-Spec
+    # kind-parametrisiert oder traegt einen wahren `gz-eigenstaendig:`-Kopf -- die
+    # Altlast ist leer, es bleibt KEIN Ausnahmeeintrag stehen.
+    assert ALTLAST == frozenset(), (
+        f"ALTLAST hat noch {len(ALTLAST)} Eintraege ({sorted(ALTLAST)}) -- S4 leert die "
+        f"Liste vollstaendig (Zusammenfuehren, Loeschen mit Zielfall oder Kopf)")
+
+
+def test_s4_altlast_max_ist_null():
+    # Literal 0 (AC-16), gleichzeitig mit dem Leeren von ALTLAST -- ein stehen
+    # gelassenes 14 waere stiller Wachstums-Spielraum fuer neue Compare-only-Specs.
+    assert ALTLAST_MAX == 0, f"ALTLAST_MAX steht auf {ALTLAST_MAX}, nach S4 gilt 0"
 
 
 def test_echter_baum_ist_nicht_leer():

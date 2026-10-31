@@ -241,6 +241,82 @@ for (const kind of HUB_KINDS) {
 	});
 }
 
+// ─── HT-11, HT-12 (#2347 S4) ─────────────────────────────────────────────────
+// HT-11: Ersatz für trip-edit „tabs: zurück zu Etappen stellt Inhalt her".
+// HT-12: Ersatz für compare-flow-navigation AC-30 („Bearbeiten →" der Orte-Karte).
+// Seed-Text des Punkte-Panels (aus seedDrei bzw. global.setup.ts) und Sprungknopf
+// der Übersicht je kind (Kind-Kontraste „HT-12 Sprungknopf": Trip HubOverview.svelte:88
+// „Im Editor öffnen →", Vergleich CompareTabs.svelte:841 „Bearbeiten →" auf der
+// Orte-Karte). Die Übersicht ist zweimal implementiert (Spec Befund 6) — nur die
+// Beschriftung unterscheidet sich, die Aussage ist gleich.
+const PUNKTE_TEXT: Record<HubKind, string> = { route: 'Tag 1', vergleich: 'Innsbruck (E2E)' };
+const SPRUNGKNOPF: Record<HubKind, (page: Page) => ReturnType<Page['locator']>> = {
+	route: (page) =>
+		page.locator(`[data-testid="${HUB_SEL.route.panel}-uebersicht"]`).getByRole('button', { name: 'Im Editor öffnen →' }),
+	vergleich: (page) =>
+		page
+			.locator(`[data-testid="${HUB_SEL.vergleich.panel}-uebersicht"] [data-slot="card"]`, { hasText: 'Kandidaten' })
+			.getByRole('button', { name: 'Bearbeiten →' })
+};
+
+for (const kind of HUB_KINDS) {
+	const sel = HUB_SEL[kind];
+
+	test(`HT-11 (${kind}): Desktop — Reiter A → B → A stellt den Inhalt von A wieder her`, async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const hub = await seedDrei(page.request, kind);
+		try {
+			await oeffneDirekt(page, kind, hub.id, sel.punkteReiter);
+			const panelA = page.locator(`[data-testid="${sel.panel}-${sel.punkteReiter}"]:visible`).first();
+			await expect(panelA).toBeVisible({ timeout: 10_000 });
+			await expect(panelA).toContainText(PUNKTE_TEXT[kind]);
+
+			await reiter(page, kind, 'wetter-metriken').first().click();
+			await expect(page.locator(`[data-testid="${sel.panel}-wetter-metriken"]:visible`).first()).toBeVisible({
+				timeout: 10_000
+			});
+			await expect(page.locator(`[data-testid="${sel.panel}-${sel.punkteReiter}"]:visible`)).toHaveCount(0);
+
+			await reiter(page, kind, sel.punkteReiter).first().click();
+			await expect(panelA, 'HT-11: Inhalt von Reiter A nach der Rückkehr nicht wiederhergestellt').toBeVisible({
+				timeout: 10_000
+			});
+			await expect(panelA).toContainText(PUNKTE_TEXT[kind]);
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+
+	test(`HT-12 (${kind}): Desktop — Sprungknopf der Übersicht wechselt den Reiter inline (tab ändert sich, keine volle Navigation)`, async ({
+		page
+	}) => {
+		await page.setViewportSize(DESKTOP);
+		const hub = await seedDrei(page.request, kind);
+		try {
+			await oeffneDirekt(page, kind, hub.id, 'uebersicht');
+			const knopf = SPRUNGKNOPF[kind](page).first();
+			await expect(knopf, 'HT-12: Sprungknopf der Übersicht fehlt').toBeVisible({ timeout: 10_000 });
+			// Marker im window: eine volle Navigation lädt das Dokument neu und verliert ihn.
+			await page.evaluate(() => {
+				(window as unknown as { __gzHt12?: boolean }).__gzHt12 = true;
+			});
+			await knopf.click();
+			await expect.poll(() => new URL(page.url()).searchParams.get('tab'), { message: 'HT-12: tab ändert sich nicht' }).toBe(
+				sel.punkteReiter
+			);
+			await expect(page.locator(`[data-testid="${sel.panel}-${sel.punkteReiter}"]:visible`).first()).toBeVisible({
+				timeout: 10_000
+			});
+			expect(
+				await page.evaluate(() => (window as unknown as { __gzHt12?: boolean }).__gzHt12 === true),
+				'HT-12: der Sprung hat das Dokument neu geladen (volle Navigation)'
+			).toBe(true);
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+}
+
 // HT-10 läuft NUR für den Ortsvergleich (Spec HT-10, compare-eigen): der Inhalt der
 // Übersicht ist kind-eigen — der Trip zeigt dort das Trip-Cockpit (HubOverview),
 // der Vergleich das 4-Kennzahlen-Raster. Altfall Zuordnung Zeile 36.

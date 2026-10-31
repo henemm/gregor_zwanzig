@@ -221,7 +221,8 @@ describe('AC-4: Groessen mit nur einer Auswertung bekommen eine Options-Liste de
 describe('AC-8 (Kern-Proxy): Gruppierung verliert und erfindet keinen einzelnen Auswahl-Schluessel', () => {
 	// Der vollstaendige AC-8-Nachweis (Reihenfolge-Liste zeigt weiterhin zwei
 	// separate, sortierbare Zeilen im DOM) ist ein Rendering-/E2E-Test
-	// (compare-editor-slice4.spec.ts, s. Test-Plan) und bewusst NICHT Teil
+	// (heute e2e/hub-anlegen-ablauf.spec.ts AN-12, #2347 S4; vormals
+	// compare-editor-slice4.spec.ts, s. Test-Plan) und bewusst NICHT Teil
 	// dieser RED-Phase (kein Rendering-Harness in node:test). Diese Kern-Probe
 	// beweist das Fundament dafuer: die Gruppierung ist eine reine
 	// Umsortierung/Zusammenfassung der DARSTELLUNG, kein einzelner
