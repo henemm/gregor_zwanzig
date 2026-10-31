@@ -10,6 +10,8 @@ tags: [premium-sms, garmin, inreach, sms, channel, inbound, reference]
 
 # Premium-SMS-Format (Garmin inReach) — Referenz (Ist-Stand)
 
+> **Hinweis (PO 2026-10-31, ADR-0104):** Die Kurzform (Token-Zeile) von SMS, Premium-SMS und Telegram ist nie sprachabhängig: sie bleibt in jeder Sprache (Konto-Sprache de/en) unverändert und wird nicht übersetzt.
+
 Beschreibt den vierten Kanal **`premium_sms`** (Satellitengerät Garmin inReach, Versand über
 seven.io). Reiner Ist-Stand aus dem Code (Stand 2026-10-21), keine Bewertung. Entscheidungen:
 ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Ortsvergleich), ADR-0022

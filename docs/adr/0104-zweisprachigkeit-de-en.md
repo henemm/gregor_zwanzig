@@ -3,7 +3,7 @@
 - **Status:** Akzeptiert (PO-Entscheidung 2026-10-30)
 - **Datum:** 2026-10-30
 - **Bezug:** Epic #2644, Plan `docs/features/epic-i18n-de-en.md`, Konventionen `docs/features/epic-i18n-de-en-konventionen.md`, Glossar `docs/reference/i18n_glossar.md`; löst die Streichung von #94 (2026-08-04) ab; ergänzt ADR-0042 (Namensform folgt der Platzgrenze), ADR-0095 (Kanal-Parität), ADR-0101 (Read-Modify-Write)
-- **Ergänzt durch:** —
+- **Ergänzt durch:** — (Präzisierung 2026-10-31 unten: Kurzform nie sprachabhängig)
 
 ## Kontext
 
@@ -97,3 +97,19 @@ Katalog statt Paraglide; Ablage als Epic + Sub-Issues + ADR.
   Token-Wächter bleibt; jede Mail-Änderung nimmt Validator **und** beide Sprachen in den
   Umfang; `tests/test_claude_md_budget.py` bei der CLAUDE.md-Zeile beachten; Prüfdatum für die
   Ratschen-Allowlists: leer bis Abschluss von Epic #2644, sonst Nebenbefund.
+
+## Präzisierung 2026-10-31: Die Kurzform bleibt in jeder Sprache unverändert
+
+PO-Korrektur 2026-10-31 (festgehalten als Kommentar im Epic #2644). Sie schärft Nr. 5 nach und
+widerspricht ihr nicht: **Die Kurzform von SMS, Premium-SMS und Telegram-Kurzstil (die Token-Zeile,
+z. B. `E12: W17@15(18@16) WD:SW G22@11(46@16) R- PR- TH:- TH+:H@11 SU12`) bleibt in JEDER Sprache
+unverändert** — auch bei Konto-Sprache `de` und `en`. Sie wird weder übersetzt noch sonst verändert.
+
+- Nr. 5 hatte „SMS-Freitext" als Langform-Kanal genannt, auf den die Nutzersprache wirkt. Das entfällt:
+  Es gibt keine sprachabhängigen Anteile in der SMS-/Premium-SMS-Kurzform. Das Paket P8 (#2670) ist
+  damit gegenstandslos (Spec als `superseded` geführt).
+- Nachweis (Vorher/Nachher-Vergleich): P7 hat die Kurzform nicht berührt, `sms_text` ist byte-identisch.
+  Der Telegram-Kurzstil sendet `report.sms_text` und läuft nie durch `narrow.py`.
+- Inbound (P10, #2673) und Versand-/Orchestrierungsschicht (P9a/P9b, #2671/#2672) schalten die Kurzform
+  nicht sprachabhängig um; sie betreffen nur die Langform-Anteile.
+- Unverändert gültig: Nr. 4 (Token-Wächter), Nr. 5 für Telegram-Normalstil und E-Mail (Nutzersprache).

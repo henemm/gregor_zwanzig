@@ -1,5 +1,7 @@
 # i18n-Glossar Deutsch → Englisch (bindend, ADR-0104, Epic #2644)
 
+> **Hinweis (PO 2026-10-31, ADR-0104):** Die Kurzform (Token-Zeile) von SMS, Premium-SMS und Telegram ist nie sprachabhängig: sie bleibt in jeder Sprache (Konto-Sprache de/en) unverändert und wird nicht übersetzt.
+
 > Stand: 2026-10-30 (freigegeben mit #2645). Regel: **ein** Begriff je Zeile,
 > neue Fachwörter zuerst hier, dann in den Katalog. Einfaches Englisch, Fachbegriffe wo sie
 > der Klarheit dienen. **Verboten:** „Tour"/*tour* (Produktbegriff ist Trip).

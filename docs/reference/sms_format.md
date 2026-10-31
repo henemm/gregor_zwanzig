@@ -15,6 +15,8 @@ tags: [sms, compact, tokens, single-source-of-truth]
 
 # SMS / Kompakt-Format Specification (v2.30)
 
+> **Hinweis (PO 2026-10-31, ADR-0104):** Die Kurzform (Token-Zeile) von SMS, Premium-SMS und Telegram ist nie sprachabhängig: sie bleibt in jeder Sprache (Konto-Sprache de/en) unverändert und wird nicht übersetzt.
+
 **Single Source of Truth** für die kompakte Token-Zeile, die in allen Channels (SMS, Satellit, E-Mail-Header, Push) identisch verwendet wird. Alle anderen Repräsentationen (E-Mail-Body, Tabellen, Push-Titel) leiten sich aus dieser Token-Zeile ab.
 
 > **Korrektur 2026-08-16 (Fix #1887 Scheibe A, v2.28):** Das Wintersport-Kürzel

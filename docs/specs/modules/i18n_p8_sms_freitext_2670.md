@@ -2,11 +2,19 @@
 entity_id: i18n_p8_sms_freitext_2670
 type: module
 created: 2026-10-30
-updated: 2026-10-30
-status: approved
+updated: 2026-10-31
+status: superseded
+superseded_by: "docs/adr/0104-zweisprachigkeit-de-en.md#präzisierung-2026-10-31-die-kurzform-bleibt-in-jeder-sprache-unverändert"
 version: "1.0"
 tags: [i18n, epic-2644, issue-2670, python, docs, model-haiku]
 ---
+
+> ⚠️ **OBSOLET seit 2026-10-31 (superseded durch ADR-0104, Abschnitt „Präzisierung 2026-10-31“).**
+> PO-Korrektur (Kommentar im Epic #2644): Die Kurzform von SMS, Premium-SMS und Telegram bleibt in JEDER
+> Sprache unverändert, auch bei Konto-Sprache de/en. Damit gibt es keinen sprachabhängigen SMS-Freitext
+> mehr; das Paket P8 (#2670) entfällt ersatzlos und wird nicht umgesetzt. Nachweis: Vorher/Nachher-Vergleich,
+> `sms_text` byte-identisch, Telegram-Kurzstil sendet `report.sms_text` und läuft nie durch `narrow.py`.
+> Der Rest dieser Datei bleibt nur als Historie erhalten und ist nicht mehr maßgeblich.
 
 # i18n P8: SMS und Premium-SMS (Klartext-Anteile, Token unverändert, Längen-Wächter)
 
