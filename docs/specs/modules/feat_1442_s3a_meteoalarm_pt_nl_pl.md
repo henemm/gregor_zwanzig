@@ -291,6 +291,11 @@ und im README gekennzeichnet). Testorte (lat, lon):
 - **Latenz:** EUMETNET-Weitergabe mit 5–10 min Verzug; NL-Feed 1,4 MB unkomprimiert je 30 min
   (Rahmen ADR-0074, wie IT/DE).
 - **Entwarnung** nur über Verschwinden bei gesunder Quelle (ADR-0090).
+- **AC-9 gilt für zuordenbare Einträge:** Ein andersförmiger Eintrag, der ein Zonen-Geocode trägt,
+  färbt fremde Abfragen nicht ein (Test 9). Ein Eintrag **ganz ohne** auswertbare Zonenangabe (kein
+  `info[]` als Liste bzw. Liste ohne jedes Geocode, kein `Cancel`) meldet dagegen das ganze Land als
+  „nicht abrufbar" — bewusste Abwägung aus der Gegenprüfung (F003/F005: „lieber einmal zu viel
+  gewarnt"), gilt unverändert auch für IT/AT/DE/FI/ES im geteilten Zonenweg.
 
 ## Out of Scope
 
@@ -317,3 +322,4 @@ und im README gekennzeichnet). Testorte (lat, lon):
 
 - 2026-10-30: Initial spec created (Issue #1442 S3a, Analyse-Grundlage
   `docs/context/feat-1442-s3-rest-eu.md`).
+- 2026-10-31: Validierung — Known Limitation zur Reichweite von AC-9 ergänzt.

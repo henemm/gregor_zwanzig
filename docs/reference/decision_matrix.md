@@ -39,7 +39,7 @@ Direktanbieter `de_direct` (DWD-GRIB2), `eu_direct` (DWD-EU), `geosphere` (Zeitr
 Regelbetrieb nur Gewitter-/Schneesignale liefern, keine Temperatur; die Asymmetrie greift nur beim
 in ADR-0018 bereits abgesicherten Cross-Provider-Totalausfall.
 
-Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm (IT/AT/DE),
+Amtliche Warnquellen (`official_alerts`-Registry: GeoSphere, MeteoAlarm (IT/AT/DE/CH/NO/SE/FI/ES, seit #1442 S3a auch PT/NL/PL; BE und UK bewusst noch nicht),
 DPC, Vigilance, Météo des forêts, Massiv-Sperren, Lawinen-Lagebericht avalanche.report
 (EAWS-Stufen 1–5, #1441, ADR-0089), SLF-Lawinenlagebericht Schweiz (`slf_bulletin`,
 aws.slf.ch/CAAML, #1441 S3, ADR-0091)) sind **nicht** Teil dieser Tabelle —
