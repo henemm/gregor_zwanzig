@@ -884,7 +884,7 @@ def render_official_alert_notice_plain(
         region = a.region_label or t("warnung.zeit.unbekannt", lang)
         region_line = f"{t('warnung.zeile.region', lang)}: {region}"
         if segment_ids:
-            region_line += f" — {format_segment_reference(segment_ids)}"
+            region_line += f" — {format_segment_reference(segment_ids, lang=lang)}"
         lines.append(region_line)
         if a.valid_from and a.valid_to:
             lines.append(
@@ -2518,30 +2518,33 @@ def build_official_alert_notices(
             # gemessene km-Spanne verdraengt die Segmentnummer, sonst bleibt
             # alles wie bisher.
             _span = _measured_km_span(segment_ids, segment_km)
-            if _span is not None:
-                scope_label = format_alert_location(
-                    None, segment_ids, _span[0], _span[1], km_measured=True,
-                )
-            else:
-                scope_label = format_segment_reference(segment_ids) or t("warnung.zeit.unbekannt")
+
+            def _ort(sprache: Lang) -> str:
+                if _span is not None:
+                    return format_alert_location(
+                        None, segment_ids, _span[0], _span[1], km_measured=True, lang=sprache,
+                    )
+                return (format_segment_reference(segment_ids, lang=sprache)
+                        or t("warnung.zeit.unbekannt", sprache))
+
+            scope_label = _ort(lang)
             # #1948 S5: "Seg 4" statt des Kurzcodes "S4" -- dieselbe
             # Ortssprache, die Trip-Briefing und Nowcast-Alarm sprechen
             # (`render._ascii_alert_location`). Das fruehere "nur "-Praefix bei
             # genau einer Warnung entfaellt ersatzlos (Nachtrag N-2): die
             # PO-Zielbild-Tabelle zeigt den Kopf in BEIDEN Faellen ohne "nur".
+            # Issue #2668: die SMS spricht in jeder Sprache die deutsche Form.
             sms_scope = (
-                scope_label.replace("Segment ", "Seg ")
+                _ort("de").replace("Segment ", "Seg ")
                 .replace("–", "-")
                 .replace("🏁 Ziel", "Ziel")
             )
-            if scope_label == t("warnung.zeit.unbekannt"):
-                scope_label = t("warnung.zeit.unbekannt", lang)
         if is_full:
             # Volle Route -> ein sauberer Chip statt format_segment_reference()s
             # "N Segmente"-Verdichtung ab >4 Segmenten (Issue #1216 F005).
             affected = [scope_label]
         elif segment_ids:
-            affected = [format_segment_reference(segment_ids)]
+            affected = [format_segment_reference(segment_ids, lang=lang)]
         else:
             affected = []
         # Befund 1 (#1326a, ADR-0033): die Karte nennt NUR den betroffenen
@@ -2660,7 +2663,7 @@ def build_official_allclear_notices(
     for ac in allclears:
         ids = [str(i) for i in ac.scope_ids]
         if id_to_name is None:
-            scope_label = format_segment_reference(ids) if ids else t("warnung.zeile.route", lang)
+            scope_label = format_segment_reference(ids, lang=lang) if ids else t("warnung.zeile.route", lang)
             sms_label = format_segment_reference(ids) if ids else t("warnung.zeile.route")
             sms_scope = sms_label.replace("Segment ", "Seg ").replace("–", "-").replace("🏁 Ziel", "Ziel")
         else:

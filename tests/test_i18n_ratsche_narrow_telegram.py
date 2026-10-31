@@ -9,8 +9,9 @@ gerendert, und kein Umlaut/ß und kein deutsches Bruchstueck des Katalogs
 
 Ausgenommen sind nur Texte, die geteilte Bausteine anderer Pakete liefern und
 die mit diesen Paketen englisch werden (dann die Ausnahme hier streichen):
-die Warnungs-Bubble (Rahmen P6 #2668) und der Ausblick-Zustandssatz
-(``render_outlook_state_plain``, P3 #2665). Echter Renderer, kein Mock.
+der Ausblick-Zustandssatz (``render_outlook_state_plain``, P3 #2665). Die
+Ausnahme fuer die Warnungs-Bubble ist mit P6 (#2668) gestrichen. Echter
+Renderer, kein Mock.
 """
 from __future__ import annotations
 
@@ -52,8 +53,6 @@ def treffer(texte: list[str]) -> list[str]:
 def _ohne_fremde_bausteine(texts: list[str]) -> list[str]:
     out = []
     for b in texts:
-        if b.startswith("<b>"):
-            continue  # Warnungs-Bubble: Rahmen P6
         if b.startswith("Outlook\n⚠️"):
             b = "Outlook"  # Zustandssatz: P3
         out.append(b)

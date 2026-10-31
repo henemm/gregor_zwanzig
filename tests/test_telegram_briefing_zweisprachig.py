@@ -146,9 +146,12 @@ def test_ac5_warnung_praefix_englisch_eigennamen_unveraendert():
     assert "ORANGE" in warn
     assert "MeteoAlarm" in warn
     de_warn = _golden_de()[_warn_index(_golden_de())]
-    # Eigennamen unveraendert: Umfang (Segment-Bezug) und Behoerde (letzte Zeile);
-    # den Rahmen dazwischen uebersetzt P6 (#2668).
-    assert warn.split(" · ")[1] == de_warn.split(" · ")[1]
+    # Behoerde (letzte Zeile) unveraendert; Rahmen (P6 #2668) und Segment-Bezug
+    # (P5 #2667) in der Sprache des Briefings.
+    from output.renderers.alert.segments import format_segment_reference
+
+    assert warn.split(" · ")[1] == format_segment_reference(["1", "Ziel"], lang="en")
+    assert de_warn.split(" · ")[1] == format_segment_reference(["1", "Ziel"])
     assert warn.splitlines()[-1] == de_warn.splitlines()[-1]
 
 

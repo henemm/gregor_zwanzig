@@ -52,9 +52,18 @@ def englische_zeilen(fall: str) -> list[str]:
 
 
 def _de_fragmente() -> set[str]:
-    """Deutsche Bruchstuecke der warnung.*-Texte, die sich vom Englischen unterscheiden."""
-    de = json.loads((KATALOG / "de" / "warnung.json").read_text(encoding="utf-8"))
-    en = json.loads((KATALOG / "en" / "warnung.json").read_text(encoding="utf-8"))
+    """Deutsche Bruchstuecke der warnung.*-Texte und der Segment-Bezuege
+    (alarm.segment.*, P5 #2667: "Ziel", "Segmente", "Etappe"), die sich vom
+    Englischen unterscheiden."""
+    out: set[str] = set()
+    for bereich, praefix in (("warnung", "warnung."), ("alarm", "alarm.segment.")):
+        de = json.loads((KATALOG / "de" / f"{bereich}.json").read_text(encoding="utf-8"))
+        en = json.loads((KATALOG / "en" / f"{bereich}.json").read_text(encoding="utf-8"))
+        out |= _stuecke({k: v for k, v in de.items() if k.startswith(praefix)}, en)
+    return out
+
+
+def _stuecke(de: dict[str, str], en: dict[str, str]) -> set[str]:
     out: set[str] = set()
     for key, wert in de.items():
         if wert == en.get(key):
@@ -88,6 +97,53 @@ def test_ratsche_englische_ausgabe_ohne_deutsche_rahmentexte(fall):
 def test_ratsche_gegenprobe_deutsch_findet_treffer():
     html, txt = render_fall("gemischte_stufen", "de")
     assert len(treffer(sichtbar(html) + txt.splitlines())) > 15
+
+
+def _segment_ausgabe(lang: str) -> list[str]:
+    """Warn-Mail, Warn-Block und Telegram mit Segment-Bezuegen: Teilstrecke mit
+    Ziel und eine Verdichtung ueber mehr als vier Segmente (ohne SMS)."""
+    from services.official_alerts.models import OfficialAlert
+
+    def _a(hazard, label):
+        return OfficialAlert(source="geosphere_warn", hazard=hazard, level=3, label=label)
+
+    notices = oa.build_official_alert_notices(
+        None, [(_a("wind_gust", "Sturm"), ["2", "Ziel"]),
+               (_a("rain", "Starkregen"), ["1", "2", "3", "4", "5", "6"])], lang=lang)
+    kw = dict(source_label="GeoSphere Austria", tz=TZ, lang=lang)
+    return [*sichtbar(oa.render_warn_block(notices, variant="standalone", stand_at=STAND, **kw)),
+            *sichtbar(oa.render_warn_block(notices, variant="embedded", **kw)),
+            *oa.render_official_alert_mail_plain(notices, stand_at=STAND, **kw).splitlines(),
+            *oa.render_official_alert_telegram(notices, prefix=PREFIX, **kw).splitlines(),
+            *oa.render_official_alert_notice_plain([(n.alert, ["2", "Ziel"]) for n in notices], TZ,
+                                                   lang=lang)]
+
+
+def test_ratsche_segment_bezuege_englisch():
+    """F002: "Ziel"/"Segmente" (Segment-Bezug aus P5) erscheinen nicht in en."""
+    zeilen = _segment_ausgabe("en")
+    assert treffer(zeilen) == []
+    text = "\n".join(zeilen)
+    assert t("alarm.segment.ziel", "en") in text
+    assert t("alarm.segment.anzahl", "en", n=6) in text
+
+
+def test_entwarnung_mit_ziel_englisch_sms_deutsch():
+    from types import SimpleNamespace
+
+    ac = SimpleNamespace(kind="ended", alert=_alarm(), scope_ids=["Ziel"], old_rank=3, new_rank=0,
+                         old_level=3, new_level=0)
+    n = oa.build_official_allclear_notices([ac], lang="en")[0]
+    from output.renderers.alert.segments import format_segment_reference
+
+    assert n.scope_label == format_segment_reference(["Ziel"], lang="en")
+    assert t("alarm.segment.ziel", "en") in n.scope_label
+    assert n.sms_scope == oa.build_official_allclear_notices([ac])[0].sms_scope == t("alarm.segment.ziel", "de")
+
+
+def test_ratsche_segment_bezuege_gegenprobe_deutsch():
+    funde = "\n".join(treffer(_segment_ausgabe("de")))
+    assert "'Ziel'" in funde and "'Segmente'" in funde
 
 
 def _texte(fall: str, lang: str) -> dict[str, str]:
@@ -363,11 +419,15 @@ def test_briefing_mail_warnblock_quelle_englisch():
     from tests.helpers.briefing_html_sprache_fixture import TZ as BTZ, _segment
 
     brand = _alarm("wildfire_risk", 3, "Waldbrand-Gefahr — Stufe 3", source="meteo_forets")
-    seg = replace(_segment(), official_alerts=[brand])
+    basis = _segment()
+    seg = replace(basis, official_alerts=[brand], segment=replace(basis.segment, segment_id="Ziel"))
     report = TripReportFormatter().format_email([seg], "Corsica North", "morning", tz=BTZ, lang="en")
     html = "\n".join(sichtbar(report.email_html))
     assert oa.official_alert_source_label("meteo_forets", lang="en") in html
     assert t("warnung.gefahr.wildfire_risk", "en") in html
+    from output.renderers.alert.segments import format_segment_reference
+
+    assert format_segment_reference(["Ziel"], lang="en") in html.splitlines()
 
 
 def test_briefing_telegram_warnung_voller_umfang_und_quelle_englisch():
