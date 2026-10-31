@@ -66,5 +66,9 @@
   "mail.pille.sicht_ereignis": "Visibility <{schwelle} km from {ab} · min {wert} km ({um})",
   "mail.pille.sicht_min": "Visibility min {wert} km ({um})",
   "mail.pille.feuchte_ereignis": "Humidity >{schwelle}% from {ab} · max {spitze}% ({um})",
-  "mail.pille.feuchte_bereich": "Humidity {min}–{max}% · Max {um}"
+  "mail.pille.feuchte_bereich": "Humidity {min}–{max}% · Max {um}",
+  "mail.profil.wintersport": "WINTER SPORTS · SLOPES",
+  "mail.profil.wandern": "HIKING",
+  "mail.profil.summer_trekking": "ALPINE TREK",
+  "mail.profil.allgemein": "WEATHER BRIEFING"
 }

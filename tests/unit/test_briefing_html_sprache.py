@@ -28,7 +28,8 @@ SIGNALWOERTER = [
     "Wetterlage", "Ankunft", "gesendet", "Metriken", "Trip-Übersicht", "Zeitplan",
     "Gewitter", "Regen", "bewölkt", "Sonne", "Vollversion", "unkritisch", "Gefahr",
     "TAGESLAGE", "MORGEN-BRIEFING", "Temperatur", "Nullgradgrenze", "Tag",
-    "Einheiten", "Böen", "Wetteränderungen",
+    "Wetteränderungen", "WETTER-BRIEFING", "WANDERN", "WINTERSPORT", "verlässlich",
+    "Doppelring", "Hagel", "WECHSELHAFT",
 ]
 WOCHENTAGE_EN = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
@@ -66,6 +67,59 @@ def test_ac1_legende_gewitterstufe_datum_und_fusszeile_englisch():
     assert kopfdatum and kopfdatum.group(1) in WOCHENTAGE_EN, text[:400]
     # Namen bleiben, wie der Nutzer sie vergeben hat.
     assert "Vizzavona → Capannelle" in text and "Corsica North" in text
+
+
+# --------------------------------------------------------------------------- #
+# Adversary F001-F004: jede Beschriftung in der GERENDERTEN Mail geprueft
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("profil,de,en", [
+    (None, "WETTER-BRIEFING", "WEATHER BRIEFING"),
+    ("WINTERSPORT", "WINTERSPORT · PISTE", "WINTER SPORTS · SLOPES"),
+    ("WANDERN", "WANDERN", "HIKING"),
+    ("SUMMER_TREKKING", "ALPINE TOUR", "ALPINE TREK"),
+])
+def test_f001_profil_eyebrow_in_nutzersprache(profil, de, en):
+    from app.profile import ActivityProfile
+
+    p = getattr(ActivityProfile, profil) if profil else None
+    text_en = sichtbarer_text(render_reich("en", profile=p).email_html)
+    text_de = sichtbarer_text(render_reich(profile=p).email_html)
+    assert text_en.startswith(en + "\n"), text_en[:80]
+    assert text_de.startswith(de + "\n"), text_de[:80]
+
+
+def test_f002_hagel_legende_unter_der_tabelle_englisch():
+    html_en = render_reich("en").email_html
+    html_de = render_reich().email_html
+    assert "* Double ring on thunderstorm = hail possible" in sichtbarer_text(html_en)
+    assert "* Doppelring bei Gewitter = Hagel möglich" in sichtbarer_text(html_de)
+    assert "Hail: yes" in sichtbarer_text(html_en)  # Gewitter-Pille
+
+
+def test_f002_hagel_im_roh_modus_als_textzusatz_englisch():
+    from app.metric_catalog import build_default_display_config
+
+    dc = build_default_display_config()
+    for mc in dc.metrics:
+        mc.format_mode, mc.use_friendly_format = "raw", False
+    zellen = re.findall(r'data-label="Thdr">(.*?)</td>', render_reich("en", dc=dc).email_html)
+    assert "medium · Hail: yes" in zellen, zellen
+
+
+def test_f003_verlaesslichkeits_hinweis_in_der_gerenderten_mail():
+    text_en = sichtbarer_text(render_reich("en").email_html)
+    text_de = sichtbarer_text(render_reich().email_html)
+    assert "From Thursday the forecast is less reliable." in text_en
+    assert "Ab Donnerstag ist die Vorhersage weniger verlässlich." in text_de
+
+
+@pytest.mark.parametrize("ausblick", [True, False], ids=["im_ausblick", "ohne_ausblick"])
+def test_f004_stabilitaetswort_in_der_gerenderten_mail(ausblick):
+    text_en = sichtbarer_text(render_reich("en", ausblick=ausblick).email_html)
+    text_de = sichtbarer_text(render_reich(ausblick=ausblick).email_html)
+    assert "Weather pattern: CHANGEABLE — The pattern is in transition." in text_en
+    assert "WECHSELHAFT" not in text_en
+    assert "Wetterlage: WECHSELHAFT — Die Lage ist im Übergang." in text_de
 
 
 def test_ac1_html_element_traegt_englische_sprache():
@@ -180,6 +234,8 @@ def test_ac1_verlaesslichkeits_hinweis_mit_wochentag_in_nutzersprache():
     from tests.helpers.briefing_html_sprache_fixture import TZ, _segment
 
     seg = _segment()
+    for dp in seg.timeseries.data:  # nur die eine unsichere Stunde am Freitag
+        dp.confidence_pct = None
     seg.timeseries.data.append(ForecastDataPoint(
         ts=datetime(2026, 10, 30, 12, 0, tzinfo=timezone.utc), t2m_c=8.0, confidence_pct=40,
     ))

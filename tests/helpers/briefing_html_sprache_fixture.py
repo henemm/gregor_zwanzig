@@ -43,6 +43,10 @@ def _dp(tag: int, stunde: int, *, gewitter=ThunderLevel.NONE, regen=0.0) -> Fore
 def _segment() -> SegmentWeatherData:
     data = [_dp(29, h, gewitter=ThunderLevel.MED if 10 <= h <= 12 else ThunderLevel.NONE,
                 regen=1.5 if h == 11 else 0.0) for h in range(6, 15)]
+    # Hagel in der Gewitterstunde 11 UTC (Doppelring + Hagel-Legende) und eine
+    # unsichere Stunde (Verlaesslichkeits-Hinweis im Mailkopf).
+    data[5].hail_flag = True
+    data[6].confidence_pct = 40
     seg = TripSegment(
         segment_id=1, start_point=GPXPoint(lat=42.10, lon=9.10, elevation_m=900.0),
         end_point=GPXPoint(lat=42.15, lon=9.14, elevation_m=1600.0),
@@ -86,13 +90,16 @@ def _trend() -> list[dict]:
 
 
 def render_reich(lang: str | None = None, *, dc=None, profile=None,
-                 trip_name: str = "Corsica North"):
-    """Rendert das reiche Szenario; ``lang=None`` = Aufruf ohne ``lang``."""
+                 trip_name: str = "Corsica North", ausblick: bool = True):
+    """Rendert das reiche Szenario; ``lang=None`` = Aufruf ohne ``lang``.
+
+    ``ausblick=False``: ohne 3-Tages-Ausblick -- die Stabilitaets-Box steht
+    dann im eigenen Zweig statt im Ausblick-Block."""
     kw = {} if lang is None else {"lang": lang}
     dc = dc or build_default_display_config()
     report = TripReportFormatter().format_email(
         [_segment()], trip_name, "morning", display_config=dc,
-        night_weather=_nacht(), multi_day_trend=_trend(),
+        night_weather=_nacht(), multi_day_trend=_trend() if ausblick else None,
         stage_name="Etappe 2: Vizzavona → Capannelle", stage_total=5,
         stage_stats={"distance_km": 11.0, "ascent_m": 900, "descent_m": 200,
                      "max_elevation_m": 1600},

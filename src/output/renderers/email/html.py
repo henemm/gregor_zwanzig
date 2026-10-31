@@ -1088,7 +1088,7 @@ def render_html(
         _date_str = report_date  # Rückwärtskompatibilität
 
     # Issue #1306: Profil-Signatur (Akzentfarbe/Icon/Eyebrow) — analog plain.py:105.
-    sig = profile_signature(profile)
+    sig = profile_signature(profile, lang=lang)
     profile_eyebrow_html = (
         '<div class="eyebrow" style="margin-bottom:2px;">'
         + sig.icon_html
