@@ -9,6 +9,7 @@ Echte Modellobjekte, echter Renderer-Aufruf, netzfrei, kein Mock.
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -122,22 +123,29 @@ def _display_config() -> UnifiedWeatherDisplayConfig:
     )
 
 
-def build_bubbles(*, trip_name: str = TRIP_NAME, **lang_kwarg: str) -> list:
-    """Bubbles der Golden-Fixture; ``lang`` optional durchgereicht."""
+def build_bubbles(*, trip_name: str = TRIP_NAME, error_segment: bool = False,
+                  **overrides) -> list:
+    """Bubbles der Golden-Fixture; ``lang`` und weitere Renderer-Argumente
+    optional durchgereicht. ``error_segment`` haengt ein Segment 2 mit
+    Provider-Fehler (``has_error``) vor dem Ziel ein."""
     alerts = [_alert()]
-    segments = [
-        _segment(1, (0.0, 8.4), (7, 12), alerts),
-        _segment("Ziel", (8.4, 14.2), (12, 16), alerts),
-    ]
+    segments = [_segment(1, (0.0, 8.4), (7, 12), alerts)]
+    tables = [_rows(range(7, 13))]
+    if error_segment:
+        segments.append(replace(_segment(2, (8.4, 9.0), (12, 12), []),
+                                has_error=True))
+        tables.append([])
+    segments.append(_segment("Ziel", (8.4, 14.2), (12, 16), alerts))
+    tables.append(_rows(range(12, 17)))
+    kwargs = {"multi_day_trend": _trend(date(2026, 10, 30)),
+              "day_comparison": _day_comparison(), **overrides}
     return render_telegram_bubbles(
-        segments=segments, seg_tables=[_rows(range(7, 13)), _rows(range(12, 17))],
-        dc=_display_config(), report_type="morning", tz=TZ, trip_name=trip_name,
-        multi_day_trend=_trend(date(2026, 10, 30)),
-        day_comparison=_day_comparison(), **lang_kwarg,
+        segments=segments, seg_tables=tables, dc=_display_config(),
+        report_type="morning", tz=TZ, trip_name=trip_name, **kwargs,
     )
 
 
-def build_texts(*, trip_name: str = TRIP_NAME, **lang_kwarg: str) -> list[str]:
+def build_texts(*, trip_name: str = TRIP_NAME, **lang_kwarg) -> list[str]:
     """Bubble-Texte der Golden-Fixture."""
     return [b.text for b in build_bubbles(trip_name=trip_name, **lang_kwarg)]
 

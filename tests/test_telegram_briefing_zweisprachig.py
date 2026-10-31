@@ -231,3 +231,38 @@ def test_ac10_ohne_user_id_kein_rueckfall_auf_default_nutzer(zwei_nutzer):
     for kaputt in ("", None):
         assert resolve_user_lang(kaputt) == "de"
     assert "Kurzübersicht" in "\n".join(build_texts(lang=resolve_user_lang("")))
+
+
+# --- Fix-Loop Adversary F001-F003 ------------------------------------------
+
+@pytest.mark.parametrize("lang, soll", [("de", "Seg 2: keine Daten"), ("en", "Seg 2: no data")])
+def test_f001_segment_ohne_daten_in_nutzersprache(lang, soll):
+    texts = build_texts(lang=lang, error_segment=True)
+    assert soll in texts
+    assert t("telegram.segment.keine_daten", lang, id=2) == soll
+
+
+def _stage_mit_stundenwerten() -> dict:
+    from output.tokens.dto import HourlyValue
+    return {"weekday": "Di", "temp_lo": 12, "temp_hi": 15, "precip_mm": 6.0,
+            "wind_dir": "W", "wind_kmh": 45, "thunder": "NONE", "note": None,
+            "hourly_precip": (HourlyValue(hour=10, value=0.6), HourlyValue(hour=15, value=6.0)),
+            "hourly_wind": (HourlyValue(hour=9, value=35.0), HourlyValue(hour=14, value=45.0)),
+            "hourly_gust": (), "hourly_thunder": ()}
+
+
+def test_f002_legacy_ausblick_protokoll_kuerzel_r_w_sprachgleich():
+    zeile = "Di  12/15°C  R0.6@10(6.0@15)  W35@9(45@14)  ⚡–"
+    for lang, kopf in (("de", "Ausblick"), ("en", "Outlook")):
+        assert _outlook_lines([_stage_mit_stundenwerten()], None, lang=lang) == [kopf, zeile]
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_f003_ausblick_zustand_ohne_trend_traegt_kopf_in_nutzersprache(lang):
+    from app.models import OutlookState
+
+    texts = build_texts(lang=lang, multi_day_trend=None,
+                        outlook_state=OutlookState.UNAVAILABLE)
+    ausblick = texts[-2]
+    assert ausblick.split("\n", 1)[0] == t("telegram.kopf.ausblick", lang)
+    assert ausblick.split("\n", 1)[0] == {"de": "Ausblick", "en": "Outlook"}[lang]

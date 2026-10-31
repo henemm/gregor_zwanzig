@@ -210,6 +210,8 @@ parts.append(t("telegram.fuss.sicht", lang, wort=vis_word))
 - Annahme: `report_type.title()` (`Morning`/`Evening`) bleibt in beiden Sprachen unverändert (heute schon englisch).
 - Annahme: Das Live-Skript ist neu, weil `.claude/hooks/e2e_telegram_live.py` nur das Close-Gate (Test-Chat gesetzt) prüft und keine Nachricht sendet.
 - Bis P9a/P9b sendet das System weiter deutsch (keine Durchreichung von `lang`).
+- **Abhängigkeit Kopfdatum (Folgeschritt P4 #2666):** Bei der Umsetzung von P7 lag `fmt_date_numeric` (P4) noch nicht vor. Die Kopfzeile bleibt daher in beiden Sprachen numerisch (`29.10.2026`, `local_fmt(..., "%d.%m.%Y")`). Die englische Form (`29 Oct 2026`) stellt P4 bzw. ein Folgeschritt nach P4 in `render_telegram_bubbles` um; P7 baut keinen eigenen Datumsformatierer. Ebenso stehen bis P4/P6 die Gewitterstufen-Wörter und der Warnungs-Rahmen noch auf Deutsch (AC-5-Rahmen als `xfail(strict=True)` markiert).
+- **Nutzerwirkung erst nach P2–P6 und P9a/P9b (#2671/#2672):** P7 macht den Renderer sprachfähig; englische Telegram-Briefings erreichen Nutzer erst, wenn P9a/P9b `lang` durchreichen und P2–P6 ihre geteilten Bausteine sprachfähig gemacht haben. Der Live-Test AC-7 (`scripts/staging_e2e_telegram_en.py`) folgt dort.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -220,3 +222,4 @@ parts.append(t("telegram.fuss.sicht", lang, wort=vis_word))
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
 - 2026-10-31: AC-8 bis AC-12 ergänzt (Datumsformat, Schlüsselparität, Cross-User, Allowlist, Protokoll-Token)
+- 2026-10-31: Known Limitations um Abhängigkeit Kopfdatum (P4) und Nutzerwirkung erst nach P2–P6/P9a/P9b ergänzt (Adversary F004)
