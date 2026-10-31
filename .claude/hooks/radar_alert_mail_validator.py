@@ -68,6 +68,45 @@ _SEGMENT_RE = re.compile(
 )
 
 
+# Issue #2663: dieselben Erwartungen aus dem Katalog (alarm.*) in der Sprache
+# des Kopfes X-GZ-Lang. Die Modulkonstanten oben bleiben die deutsche Fassung.
+_INTENSITY_KEYS = [
+    "alarm.radar.intensitaet.leicht", "alarm.radar.intensitaet.maessig",
+    "alarm.radar.intensitaet.stark", "alarm.radar.intensitaet.hagel",
+    "alarm.radar.intensitaet.gewitter", "alarm.radar.intensitaet.regen",
+]
+_LANG_MARKER_KEYS = [*_INTENSITY_KEYS, "alarm.radar.cooldown_praefix",
+                     "alarm.segment.etappe", "alarm.segment.ziel"]
+_UMLAUTE = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"})
+
+
+def _ml():
+    """Sprach-Hilfe ``_mail_lang`` (Issue #2663), lazy geladen: das Modul bleibt
+    ohne Hilfsmodul importierbar (Log-Tests kopieren nur diese Datei)."""
+    import _mail_lang
+
+    return _mail_lang
+
+
+def _mit_umschrift(texte: list[str]) -> list[str]:
+    """Texte plus ASCII-Umschrift ('Mäßiger' -> 'Maessiger', Bestandsform)."""
+    return list(dict.fromkeys(t for text in texte for t in (text, text.translate(_UMLAUTE))))
+
+
+def _lang_patterns(lang: str) -> dict:
+    ml = _ml()
+    etappe = ml.vorlage("alarm.segment.etappe", lang).split("{n}")[0].strip()
+    ziel = ml.erwartet("alarm.segment.ziel", lang)
+    return {
+        "intensity": _mit_umschrift([ml.erwartet(k, lang) for k in _INTENSITY_KEYS]),
+        "segment": re.compile(
+            rf"({re.escape(etappe)}\s+\d+|km\s+\d+\s*[–\-]\s*\d+|\bseg\b|\bSegment\b|\b{re.escape(ziel)}\b)",
+            re.IGNORECASE,
+        ),
+        "cooldown": _mit_umschrift([ml.erwartet("alarm.radar.cooldown_praefix", lang)]),
+    }
+
+
 def _part_text(part: Message) -> str:
     """Dekodierter Payload eines Parts (bytes->str, fail-soft)."""
     payload = part.get_payload(decode=True)
@@ -91,7 +130,7 @@ def _extract_body(msg: Message) -> str:
     return _part_text(msg)
 
 
-def validate_message(msg: Message) -> tuple[bool, list[str]]:
+def validate_message(msg: Message, warnungen: list | None = None) -> tuple[bool, list[str]]:
     """Faellt das Urteil ueber ein geparstes email.message.Message-Objekt.
 
     Returnt (ok, errors):
@@ -109,11 +148,23 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
         )
         return True, [info]
 
+    # Issue #2663: Erwartungen in der Sprache des Kopfes X-GZ-Lang.
+    try:
+        lang, hinweise = _ml().mail_lang(msg)
+    except ValueError as exc:
+        return False, [f"SPRACHE: {exc}"]
+    if warnungen is not None:
+        warnungen.extend(hinweise)
+    w = _lang_patterns(lang)
+
     body = _extract_body(msg)
     errors: list[str] = []
+    widerspruch = _ml().widerspruch(body, lang, _LANG_MARKER_KEYS)
+    if widerspruch:
+        errors.append(widerspruch)
 
     # P-1: Segment-Label vorhanden
-    if not _SEGMENT_RE.search(body):
+    if not w["segment"].search(body):
         errors.append(
             "P-1: Kein Segment-Label gefunden (erwartet 'Etappe N', 'km X-Y' o.ae.) "
             f"im Body. Body-Ausschnitt: {body[:120]!r}"
@@ -129,7 +180,7 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
 
     # P-3: Intensitaetsstufe erkennbar
     body_lower = body.lower()
-    found_intensity = any(label.lower() in body_lower for label in _INTENSITY_LABELS)
+    found_intensity = any(label.lower() in body_lower for label in w["intensity"])
     if not found_intensity:
         errors.append(
             "P-3: Keine Intensitaetsstufe erkannt. "
@@ -137,7 +188,7 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
         )
 
     # P-4: Cooldown-Hinweis vorhanden
-    if "höchstens einmal in" not in body and "hoechstens einmal in" not in body:
+    if not any(hinweis in body for hinweis in w["cooldown"]):
         errors.append(
             "P-4: Cooldown-Hinweis ('hoechstens einmal in') fehlt im Body."
         )
@@ -145,7 +196,7 @@ def validate_message(msg: Message) -> tuple[bool, list[str]]:
     return len(errors) == 0, errors
 
 
-def _write_validation_log(success: bool, errors: list) -> None:
+def _write_validation_log(success: bool, errors: list, warnings: list | None = None) -> None:
     """Strukturiertes Validator-Log YAML (fail-soft).
 
     Issue #1282 AC-4: log_dir liegt im shared-repo (git-common-dir via
@@ -176,6 +227,11 @@ def _write_validation_log(success: bool, errors: list) -> None:
         ]
         for err in errors:
             safe = err.replace("'", "''")
+            lines.append(f"  - '{safe}'")
+        # Issue #2663: Warnungen (z. B. fehlender Kopf X-GZ-Lang), auch leer.
+        lines.append("warnings:" if warnings else "warnings: []")
+        for hinweis in warnings or []:
+            safe = hinweis.replace("'", "''")
             lines.append(f"  - '{safe}'")
 
         fd, tmp = tempfile.mkstemp(dir=str(log_dir), suffix=".tmp")
@@ -233,20 +289,33 @@ def fetch_latest_message(max_scan: int = 50) -> Message:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    parser.add_argument("--eml", metavar="PFAD", default=None,
+                        help="Mail aus dieser .eml-Datei pruefen statt per IMAP (#2663)")
+    args = parser.parse_args()
+
     print("=" * 70)
     print("RADAR-ALERT-MAIL-VALIDATOR -- #830")
     print("=" * 70)
     print()
 
+    warnungen: list = []
     try:
-        msg = fetch_latest_message()
-        success, errors = validate_message(msg)
+        if args.eml:  # #2663: Mail aus Datei statt IMAP
+            msg = email.message_from_bytes(Path(args.eml).read_bytes())
+        else:
+            msg = fetch_latest_message()
+        success, errors = validate_message(msg, warnungen=warnungen)
     except Exception as exc:
         print(f"  TECHNISCHER FEHLER: Mail konnte nicht geladen werden: {exc}")
-        _write_validation_log(success=False, errors=[str(exc)])
+        _write_validation_log(success=False, errors=[str(exc)], warnings=warnungen)
         sys.exit(2)
 
-    _write_validation_log(success=success, errors=errors)
+    for hinweis in warnungen:
+        print(f"WARNUNG: {hinweis}", file=sys.stderr)
+    _write_validation_log(success=success, errors=errors, warnings=warnungen)
 
     if success:
         for note in errors:

@@ -10,6 +10,55 @@ falschen Validator auf einen Pfad anzuwenden ist ein Fehler — er kann struktur
 nie bestehen (Dauer-Exit-1) und führt zu falschem „Feature kaputt" oder
 Gate-Erosion.
 
+## 0. Sprache der Mail — Kopf `X-GZ-Lang` (seit #2663, ADR-0104)
+
+`build_mime_message()` setzt in **jeder** Mail (HTML- und Klartext-Zweig, alle
+Mail-Arten inkl. Service-Mails) neben `X-GZ-Mail-Type`/`X-GZ-Format` den Kopf
+`X-GZ-Lang: de|en` — die Sprache des **Inhalts** (`en` nur bei `lang="en"`,
+sonst `de`). Solange ein Renderer noch Deutsch spricht, steht dort `de`.
+
+| Marker-Header | Werte | Gesetzt von | Gelesen von |
+|---|---|---|---|
+| `X-GZ-Mail-Type` | `trip-briefing` · `compare` · `deviation-alert` · `official-alert` · `radar-alert` | `build_mime_message(mail_type=…)` | Dispatch aller vier Validatoren |
+| `X-GZ-Format` | `full` · `compact` | `build_mime_message(mail_format=…)` (nur Trip) | `briefing_mail_validator.py` |
+| `X-GZ-Compare-Hourly-Enabled` | `true` · `false` | `build_mime_message(compare_hourly_enabled=…)` | `email_spec_validator.py` |
+| `X-GZ-Lang` | `de` · `en` | `build_mime_message(lang=…)`, immer | alle vier Validatoren (`.claude/hooks/_mail_lang.py`) |
+
+Die Validatoren lesen den Kopf über `_mail_lang.mail_lang(msg)` und bilden
+ihre Erwartungen (Überschriften, Hinweise, Warn-Wörter, Marker) aus dem
+Python-Katalog `src/i18n` (`mail.*`, `vergleich.*`, `warnung.*`, `alarm.*`) bzw.
+dem Metrik-Register (`label(lang)`, `aggregation_label`) in dieser Sprache —
+nie aus Literalen. Spaltenkürzel (`col_label`) bleiben in beiden Sprachen gleich.
+Ändert ein Renderer einen dieser Texte, ändert er den Katalogeintrag und damit
+zugleich die Validator-Erwartung (gewollte Kopplung).
+
+- **Widerspruch Kopf ↔ Inhalt:** Findet ein Validator keinen Text der
+  Kopfsprache, aber Texte der anderen Sprache, meldet er `SPRACHE: Kopf
+  X-GZ-Lang: <x> widerspricht dem Inhalt …` (Exit 1).
+- **Unbekannter Wert** (z. B. `fr`): `SPRACHE: X-GZ-Lang unbekannt oder fehlt …`, Exit 1.
+- **Übergang (bis A2 #2681):** Kopf fehlt ⇒ Prüfung als `de`, Exit unverändert,
+  `WARNUNG: X-GZ-Lang fehlt …` auf stderr und im YAML-Log unter `warnings:`.
+  A2 setzt `HEADER_PFLICHT = True` in `_mail_lang.py`; dann ist ein fehlender
+  Kopf ein Fehler (Exit 1).
+- **Folgearbeit P2–P6 (Pflicht vor der ersten englischen Mail des Pakets):**
+  Folgende Erwartungen sind noch **feste deutsche Texte** in den Validatoren,
+  weil sie nicht zum PV-Schlüsselsatz gehören. Das Renderer-Paket, das den
+  jeweiligen Text zuerst englisch ausgibt, legt ihn im Katalog an und stellt
+  den Validator an derselben Stelle auf `erwartet(key, lang)` um — sonst lehnt
+  der Validator die korrekte englische Mail ab:
+  - `Stand: heute` (Footer P-5) und die Handlungsempfehlungs-Wörter (E-4,
+    `_RECOMMENDATION_WORDS`) in `official_alert_mail_validator.py`;
+  - der Ortskopf `ORT` im Ortsvergleich (`email_spec_validator.py`,
+    `_find_location_hour_table`);
+  - die Compact-Blöcke `== Metriken-Ueberblick ==`, `Report`, `Generated:`
+    (`briefing_mail_validator.py`, `_check_compact_blocks`);
+  - die Pille `Sonne Xh` (`briefing_mail_validator.py`, `_check_metric_plausibility`).
+- **Datei-Modus `--eml PFAD`** (alle vier Validatoren): prüft eine gespeicherte
+  Mail statt der IMAP-Mail, Exit-Codes unverändert (0/1/2). Damit laufen die
+  Golden-Fixtures `tests/fixtures/mail/*_de.eml` ohne Netz
+  (`tests/unit/test_*_sprache.py`). Der Nachweis für „E2E bestanden" bleibt die
+  echt zugestellte Staging-Mail.
+
 ## 1. `email_spec_validator.py` — Orts-Vergleich-Mail (ZWINGEND)
 
 **Geltungsbereich:** prüft **ausschließlich** den **Orts-Vergleich-Mail**-Pfad, seit
@@ -91,7 +140,7 @@ Erweiterung (`validate_structure(hourly_enabled=...)`, Header-Auswertung in
 **Geltungsbereich:** kanonisches Acceptance-Gate für **Trip-Briefing-Mails**
 (beide Formate: `full` HTML / `compact` Nur-Text seit #722). Dispatcht
 deterministisch über zwei Marker-Header, die `build_mime_message()` setzt:
-`X-GZ-Mail-Type: trip-briefing|compare` und `X-GZ-Format: full|compact`.
+`X-GZ-Mail-Type: trip-briefing|compare` und `X-GZ-Format: full|compact`; die Sprache der Erwartungen (Marker „Nacht am Ziel"/„Night at destination", Ausblick-Spalte „Tag"/„Day", Pille „kein Regen"/„no rain") folgt `X-GZ-Lang` (Abschnitt 0).
 
 ```bash
 uv run python3 .claude/hooks/briefing_mail_validator.py

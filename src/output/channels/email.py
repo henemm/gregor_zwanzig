@@ -315,6 +315,7 @@ def build_mime_message(
     mail_format: str | None = None,
     compare_hourly_enabled: bool | None = None,
     message_id: str | None = None,
+    lang: str | None = None,
 ):
     """Issue #722: Build a MIME message. Pure function, no SMTP side-effects.
 
@@ -330,6 +331,10 @@ def build_mime_message(
 
     Issue #2218 C5-53: genau eine Kopfzeile ``Message-ID`` (uebergeben oder
     selbst erzeugt) -- reiner Zusatz-Header fuer den Zustellnachweis.
+
+    Issue #2663 (ADR-0104): jede Mail traegt ``X-GZ-Lang`` = Sprache des
+    INHALTS (``en`` nur bei ``lang == "en"``, sonst ``de``) -- die Validatoren
+    bilden ihre Erwartungen in dieser Sprache.
     """
     if html:
         msg = MIMEMultipart("alternative")
@@ -373,6 +378,7 @@ def build_mime_message(
             msg["X-GZ-Format"] = mail_format
         if compare_hourly_enabled is not None:
             msg["X-GZ-Compare-Hourly-Enabled"] = "true" if compare_hourly_enabled else "false"
+    msg["X-GZ-Lang"] = "en" if lang == "en" else "de"
     msg["Message-ID"] = message_id or new_message_id()
     return msg
 
@@ -664,6 +670,7 @@ class EmailOutput:
         mail_type: str | None = None,
         mail_format: str | None = None,
         compare_hourly_enabled: bool | None = None,
+        lang: str | None = None,
     ) -> None:
         """
         Send email via SMTP with automatic retry on network errors.
@@ -864,6 +871,7 @@ class EmailOutput:
             mail_format=mail_format,
             compare_hourly_enabled=compare_hourly_enabled,
             message_id=message_ids.get(recipients[0]) if recipients else None,
+            lang=lang,
         )
 
         # Retry logic with exponential backoff

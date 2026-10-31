@@ -48,6 +48,18 @@ _WIND_TOL = 3       # km/h (AC-3)
 _SONNE_TOL_MIN = 5  # min (AC-4)
 
 
+def _ml():
+    """Sprach-Hilfe ``_mail_lang`` (Issue #2663), lazy geladen: das Modul bleibt
+    ohne Hilfsmodul importierbar (Log-Tests kopieren nur diese Datei)."""
+    import _mail_lang
+
+    return _mail_lang
+
+
+# Issue #2663: Schluessel, an denen die Sprache des Inhalts erkennbar ist.
+_LANG_MARKER_KEYS = ["mail.ausblick.spalte_tag", "mail.nacht.am_ziel", "mail.pille.kein_regen"]
+
+
 class RenderUnavailable(Exception):
     """Playwright/Browser fehlt → Exit 2, nicht Exit 1 (technischer Fehler, AC-1)."""
 
@@ -180,7 +192,7 @@ def _table_blocks(html: str) -> list[str]:
     return blocks
 
 
-def _hourly_table_blocks(html: str) -> list[str]:
+def _hourly_table_blocks(html: str, lang: str = "de") -> list[str]:
     """Wie ``_table_blocks``, aber OHNE den 3-Tages-Ausblick (#2136 Folgebug).
 
     Seit #2136/ADR-0068 traegt ``render_outlook_table`` dieselben
@@ -199,10 +211,11 @@ def _hourly_table_blocks(html: str) -> list[str]:
     ``Time``, s. html.py `_render_html_table`). Bloecke ohne th-Zeile
     (leere Tabellen) bleiben erhalten -- kein Filterkriterium.
     """
+    day_label = _ml().erwartet("mail.ausblick.spalte_tag", lang)
     return [
         block
         for block in _table_blocks(html)
-        if not _th_tokens(block) or _th_tokens(block)[0] != "Tag"
+        if not _th_tokens(block) or _th_tokens(block)[0] != day_label
     ]
 
 
@@ -217,7 +230,7 @@ def _mobile_header_tokens(html: str) -> list[str]:
     return []
 
 
-def _column_values(html: str, header_de: str) -> list[float]:
+def _column_values(html: str, header_de: str, lang: str = "de") -> list[float]:
     """Numerische Zellwerte der Spalte mit th-Text == header_de (über th-INDEX).
 
     Mappt NICHT über data-label (kann englisch sein), nur über die Header-Reihe.
@@ -229,7 +242,7 @@ def _column_values(html: str, header_de: str) -> list[float]:
     tabellen mit gleichem Header) behalten so ihr Summenverhalten über Etappen.
     """
     values: list[float] = []
-    for block in _hourly_table_blocks(html):
+    for block in _hourly_table_blocks(html, lang):
         headers = _th_tokens(block)
         try:
             idx = headers.index(header_de)
@@ -245,7 +258,7 @@ def _column_values(html: str, header_de: str) -> list[float]:
     return values
 
 
-def _column_hours_sum(html: str, *header_names: str) -> float | None:
+def _column_hours_sum(html: str, *header_names: str, lang: str = "de") -> float | None:
     """Summe der ‚X.Y h'-Zellen der Spalte (Sonne). None, wenn keine ‚h'-Zahl.
 
     Issue #997: pro <table>-Block gescoped (analog _column_values), damit die
@@ -259,8 +272,8 @@ def _column_hours_sum(html: str, *header_names: str) -> float | None:
     total = 0.0
     found = False
     seen_hours: set[str] = set()
-    night = _night_table_blocks(html)
-    for block in _hourly_table_blocks(html):
+    night = _night_table_blocks(html, lang)
+    for block in _hourly_table_blocks(html, lang):
         if block in night:
             continue
         headers = _th_tokens(block)
@@ -282,26 +295,27 @@ def _column_hours_sum(html: str, *header_names: str) -> float | None:
     return total if found else None
 
 
-def _night_table_blocks(html: str) -> set[str]:
+def _night_table_blocks(html: str, lang: str = "de") -> set[str]:
     """Tabellen der 'Nacht am Ziel'-Sektion (#2104): der Renderer stellt den
     Kopf 'Nacht am Ziel' unmittelbar vor Desktop- UND Mobile-Tabelle."""
     night: set[str] = set()
+    night_marker = _ml().marker("mail.nacht.am_ziel", lang)
     prev_end = 0
     for m in _TABLE_RE.finditer(html):
-        if "Nacht am Ziel" in html[prev_end:m.start()]:
+        if night_marker in html[prev_end:m.start()]:
             night.add(m.group(0))
         prev_end = m.end()
     return night
 
 
-def _column_cells(html: str, *header_names: str) -> list[str]:
+def _column_cells(html: str, *header_names: str, lang: str = "de") -> list[str]:
     """Roh-Zelltexte (Tags gestrippt) der Spalte — für den Emoji-Pfad (#1432).
 
     Gleiche Scoping-Regeln wie _column_values: pro (dedupliziertem)
     <table>-Block, nur Zeilen mit passender Spaltenzahl.
     """
     cells: list[str] = []
-    for block in _hourly_table_blocks(html):
+    for block in _hourly_table_blocks(html, lang):
         headers = _th_tokens(block)
         idx = next((headers.index(h) for h in header_names if h in headers), None)
         if idx is None:
@@ -314,7 +328,7 @@ def _column_cells(html: str, *header_names: str) -> list[str]:
     return cells
 
 
-def _sun_capacity_minutes(html: str, *header_names: str) -> float | None:
+def _sun_capacity_minutes(html: str, *header_names: str, lang: str = "de") -> float | None:
     """Obergrenze plausibler Sonnenminuten aus der Emoji-Sonne-Spalte (#1432).
 
     Im Emoji-Modus trägt die Spalte keine 'X h'-Zahlen; exakt nachrechnen
@@ -326,7 +340,7 @@ def _sun_capacity_minutes(html: str, *header_names: str) -> float | None:
     sonnige DNI-Stunden überdecken) zählen konservativ mit 60 min.
     None, wenn keine Sonne-Spalte gefunden wurde.
     """
-    cells = _column_cells(html, *header_names)
+    cells = _column_cells(html, *header_names, lang=lang)
     if not cells:
         return None
     cap = 0.0
@@ -340,18 +354,18 @@ def _sun_capacity_minutes(html: str, *header_names: str) -> float | None:
     return cap
 
 
-def _column_num_sum(html: str, *header_names: str) -> float | None:
+def _column_num_sum(html: str, *header_names: str, lang: str = "de") -> float | None:
     """Summe numerischer Zellen der Spalte. None, wenn keiner der Header-Namen
     in irgendeiner Tabelle vorkommt.
 
     Issue #997: Der erste vorkommende Header-Name gewinnt (unverändertes
     Verhalten); die Summe läuft über das pro-Tabelle gescopte _column_values.
     """
-    all_headers = [h for block in _hourly_table_blocks(html) for h in _th_tokens(block)]
+    all_headers = [h for block in _hourly_table_blocks(html, lang) for h in _th_tokens(block)]
     name = next((h for h in header_names if h in all_headers), None)
     if name is None:
         return None
-    return sum(_column_values(html, name))
+    return sum(_column_values(html, name, lang))
 
 
 def _pills(html: str) -> list[str]:
@@ -359,7 +373,7 @@ def _pills(html: str) -> list[str]:
     return [_strip_tags(s) for s in _SPAN_RE.findall(html)]
 
 
-def _check_layer_consistency(html: str) -> list[str]:
+def _check_layer_consistency(html: str, lang: str = "de") -> list[str]:
     """AC-3: Pill-Spitzenwert vs. Tabellen-Spalten-Max (Toleranz _WIND_TOL)."""
     errors: list[str] = []
     pill_re = re.compile(
@@ -370,7 +384,7 @@ def _check_layer_consistency(html: str) -> list[str]:
         if not m:
             continue
         label, value = m.group(1), float(m.group(2))
-        col = _column_values(html, label)
+        col = _column_values(html, label, lang)
         if not col:
             continue
         col_max = max(col)
@@ -382,7 +396,7 @@ def _check_layer_consistency(html: str) -> list[str]:
     return errors
 
 
-def _check_metric_plausibility(html: str) -> list[str]:
+def _check_metric_plausibility(html: str, lang: str = "de") -> list[str]:
     """AC-4: Sonne-Pill vs. Σ Sonnenstunden; ‚kein Regen' vs. Regen-Summe."""
     errors: list[str] = []
     for pill in _pills(html):
@@ -390,12 +404,12 @@ def _check_metric_plausibility(html: str) -> list[str]:
         if not m:
             continue
         pill_min = round(float(m.group(1)) * 60)
-        sun_h = _column_hours_sum(html, "Sonne", "Sun")
+        sun_h = _column_hours_sum(html, "Sonne", "Sun", lang=lang)
         if sun_h is None:
             # Emoji-Modus (#1432): keine 'X h'-Zahlen — statt (wie früher)
             # blind zu überspringen, greift die Obergrenzen-Prüfung: mehr
             # Sonnenminuten als sonnenfähige Stundenzeilen kann es nicht geben.
-            cap = _sun_capacity_minutes(html, "Sonne", "Sun")
+            cap = _sun_capacity_minutes(html, "Sonne", "Sun", lang=lang)
             if cap is not None and pill_min > cap + _SONNE_TOL_MIN:
                 errors.append(
                     f"FULL: Sonne-Widerspruch (Emoji-Modus) — Pill {pill_min} "
@@ -409,11 +423,12 @@ def _check_metric_plausibility(html: str) -> list[str]:
             )
 
     overview = " ".join(_pills(html))
-    if "kein Regen" in overview:
-        rain = _column_num_sum(html, "Regen", "Rain")
+    no_rain = _ml().erwartet("mail.pille.kein_regen", lang)
+    if no_rain in overview:
+        rain = _column_num_sum(html, "Regen", "Rain", lang=lang)
         if rain is not None and rain >= 0.1:
             errors.append(
-                f"FULL: ‚kein Regen' widerspricht Tabellen-Summe {rain:g} mm"
+                f"FULL: ‚{no_rain}' widerspricht Tabellen-Summe {rain:g} mm"
             )
     return errors
 
@@ -499,7 +514,7 @@ def _check_rendered(html: str) -> list[str]:
 # --------------------------------------------------------------------------- #
 # Format-spezifische Validierung
 # --------------------------------------------------------------------------- #
-def _validate_full(msg: Message) -> tuple[bool, list[str]]:
+def _validate_full(msg: Message, lang: str = "de") -> tuple[bool, list[str]]:
     errors: list[str] = []
 
     if not msg.is_multipart() or msg.get_content_type() != "multipart/alternative":
@@ -519,12 +534,12 @@ def _validate_full(msg: Message) -> tuple[bool, list[str]]:
     if html and not _has_hourly_table(html):
         errors.append("FULL: keine sequenzielle Stundentabelle (>=2 HH:00-Zeilen) im HTML-Part")
 
-    errors.extend(_check_plausibility(html))
+    errors.extend(_check_plausibility(html, lang))
 
     if html:
         errors.extend(_check_rendered(html))            # AC-1 (kann RenderUnavailable werfen)
-        errors.extend(_check_layer_consistency(html))   # AC-3
-        errors.extend(_check_metric_plausibility(html))  # AC-4
+        errors.extend(_check_layer_consistency(html, lang))   # AC-3
+        errors.extend(_check_metric_plausibility(html, lang))  # AC-4
 
     if not (msg["Subject"] or "").strip():
         errors.append("FULL: Subject ist leer")
@@ -532,7 +547,7 @@ def _validate_full(msg: Message) -> tuple[bool, list[str]]:
     return len(errors) == 0, errors
 
 
-def _check_plausibility(html: str) -> list[str]:
+def _check_plausibility(html: str, lang: str = "de") -> list[str]:
     """Selbst-Konsistenz der Werte (weit kalibriert gegen False-Positives)."""
     errors: list[str] = []
     ranges = _TEMP_RANGE_RE.findall(html)
@@ -544,7 +559,7 @@ def _check_plausibility(html: str) -> list[str]:
     # #974: Der Tagesfenster-Check (06-22) darf die "Nacht am Ziel"-Sektion nicht
     # pruefen — sie zeigt legitim die Stunden von der Ankunft bis 06:00 des
     # Folgetags. Nur der Teil vor dem ersten Marker-Auftreten wird geprueft.
-    night_marker = html.find("Nacht am Ziel")
+    night_marker = html.find(_ml().marker("mail.nacht.am_ziel", lang))
     day_html = html[:night_marker] if night_marker != -1 else html
 
     hours = _distinct_hours(day_html, html=True)
@@ -610,10 +625,14 @@ def _check_compact_blocks(text: str) -> list[str]:
 # --------------------------------------------------------------------------- #
 # Oeffentliche API
 # --------------------------------------------------------------------------- #
-def validate_message(msg: Message, max_bytes: int = _MAX_BYTES_DEFAULT) -> tuple[bool, list[str]]:
+def validate_message(
+    msg: Message, max_bytes: int = _MAX_BYTES_DEFAULT, warnungen: list | None = None,
+) -> tuple[bool, list[str]]:
     """Faellt das Urteil ueber ein geparstes email.message.Message-Objekt.
 
-    Returnt (ok, errors). ok=True/errors=[] bei bestanden.
+    Returnt (ok, errors). ok=True/errors=[] bei bestanden. Issue #2663: die
+    Erwartungen gelten in der Sprache des Kopfes ``X-GZ-Lang``; Warnungen
+    (fehlender Kopf) landen in ``warnungen``, nie in ``errors``.
     """
     mail_type = msg["X-GZ-Mail-Type"]
 
@@ -634,13 +653,26 @@ def validate_message(msg: Message, max_bytes: int = _MAX_BYTES_DEFAULT) -> tuple
     if mail_type != "trip-briefing":
         return False, [f"Unbekannter Mail-Typ '{mail_type}' (erwartet trip-briefing/compare/deviation-alert)"]
 
+    try:
+        lang, hinweise = _ml().mail_lang(msg)
+    except ValueError as exc:
+        return False, [f"SPRACHE: {exc}"]
+    if warnungen is not None:
+        warnungen.extend(hinweise)
+
     mail_format = msg["X-GZ-Format"]
     if mail_format == "full":
-        return _validate_full(msg)
-    if mail_format == "compact":
-        return _validate_compact(msg, max_bytes)
+        ok, errors = _validate_full(msg, lang)
+    elif mail_format == "compact":
+        ok, errors = _validate_compact(msg, max_bytes)
+    else:
+        return False, [f"Unbekanntes Format '{mail_format}' (erwartet full/compact)"]
 
-    return False, [f"Unbekanntes Format '{mail_format}' (erwartet full/compact)"]
+    text = "\n".join(_part_text(p) for p in msg.walk() if p.get_content_maintype() == "text")
+    widerspruch = _ml().widerspruch(text, lang, _LANG_MARKER_KEYS)
+    if widerspruch:
+        return False, [widerspruch, *errors]
+    return ok, errors
 
 
 # --------------------------------------------------------------------------- #
@@ -744,15 +776,16 @@ def run_validation(
     mail_type: str | None = None,
     subject_contains: str | None = None,
     max_scan: int = 50,
+    warnungen: list | None = None,
 ) -> tuple[bool, list[str]]:
     """Holt die (optional gefilterte) Mail und validiert sie."""
     msg = fetch_latest_message(
         mail_type=mail_type, subject_contains=subject_contains, max_scan=max_scan
     )
-    return validate_message(msg, max_bytes)
+    return validate_message(msg, max_bytes, warnungen=warnungen)
 
 
-def _write_validation_log(success: bool, errors: list) -> None:
+def _write_validation_log(success: bool, errors: list, warnings: list | None = None) -> None:
     """Strukturiertes Validator-Log YAML (fail-soft, Vorbild email_spec_validator).
 
     Issue #1282: (C) log_dir liegt im shared-repo (git-common-dir via
@@ -784,6 +817,7 @@ def _write_validation_log(success: bool, errors: list) -> None:
             "passed": bool(success),
             "error_count": len(errors),
             "errors": list(errors),
+            "warnings": list(warnings or []),  # #2663: z. B. fehlender X-GZ-Lang
         }
         if skipped:
             data["skipped"] = True
@@ -808,6 +842,8 @@ def main() -> None:
                         help="Nur Mails waehlen, deren Subject diesen Marker enthaelt (#780)")
     parser.add_argument("--max-scan", type=int, default=50,
                         help="Wie viele neueste Mails maximal scannen (default: 50)")
+    parser.add_argument("--eml", metavar="PFAD", default=None,
+                        help="Mail aus dieser .eml-Datei pruefen statt per IMAP (#2663)")
     args = parser.parse_args()
 
     print("=" * 70)
@@ -815,19 +851,27 @@ def main() -> None:
     print("=" * 70)
     print()
 
+    warnungen: list = []
     try:
-        success, errors = run_validation(
-            args.max_bytes,
-            mail_type=args.mail_type,
-            subject_contains=args.subject_contains,
-            max_scan=args.max_scan,
-        )
+        if args.eml:  # #2663: Mail aus Datei statt IMAP
+            msg = email.message_from_bytes(Path(args.eml).read_bytes())
+            success, errors = validate_message(msg, args.max_bytes, warnungen=warnungen)
+        else:
+            success, errors = run_validation(
+                args.max_bytes,
+                mail_type=args.mail_type,
+                subject_contains=args.subject_contains,
+                max_scan=args.max_scan,
+                warnungen=warnungen,
+            )
     except Exception as e:  # IMAP / technischer Fehler
         print(f"⚠️  TECHNISCHER FEHLER: Mail konnte nicht geladen werden: {e}")
-        _write_validation_log(success=False, errors=[str(e)])
+        _write_validation_log(success=False, errors=[str(e)], warnings=warnungen)
         sys.exit(2)
 
-    _write_validation_log(success=success, errors=errors)
+    for hinweis in warnungen:
+        print(f"WARNUNG: {hinweis}", file=sys.stderr)
+    _write_validation_log(success=success, errors=errors, warnings=warnungen)
 
     if success:
         for note in errors:
