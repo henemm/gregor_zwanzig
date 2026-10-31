@@ -10,6 +10,8 @@ tags: [telegram, channel, renderer, inbound, reference]
 
 # Telegram-Format — Referenz (Ist-Stand)
 
+> **Hinweis (PO 2026-10-31, ADR-0104):** Die Kurzform (Token-Zeile) von SMS, Premium-SMS und Telegram ist nie sprachabhängig: sie bleibt in jeder Sprache (Konto-Sprache de/en) unverändert und wird nicht übersetzt.
+
 Beschreibt, wie der Kanal **Telegram** heute rendert, versendet und Befehle annimmt. Reiner
 Ist-Stand aus dem Code (Stand 2026-10-21), keine Bewertung. Entscheidungen: ADR-0012
 (`parse_mode="HTML"`), ADR-0014 (Multi-Bubble), ADR-0095 (Kanal-Parität). Kürzel-/Token-Vertrag der
