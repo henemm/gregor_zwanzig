@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from app.config import Settings
-from i18n import Lang, t, tn
+from i18n import Lang, tn
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.render import render_email, render_subject
 from utils.timezone import day_offset, local_fmt, tz_for_coords
@@ -25,7 +25,7 @@ def cooldown_text(cooldown_min: int, *, lang: Lang = "de") -> str:
     Singular/Plural, sonst Minuten. Geteilt von Trip- und Ortsvergleich-Radar."""
     if cooldown_min % 60 == 0:
         return tn("alarm.dauer.stunden", cooldown_min // 60, lang)
-    return t("alarm.dauer.minuten", lang, count=cooldown_min)
+    return tn("alarm.dauer.minuten", cooldown_min, lang)  # de .one bleibt "Minuten" (Bestand)
 
 
 def _cooldown_display(trip, *, lang: Lang = "de") -> str:

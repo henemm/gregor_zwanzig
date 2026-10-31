@@ -116,7 +116,7 @@ def intensity_text(label: str, lang: Lang) -> str     # radar_service.py, DE-Kon
 | `alarm.regen.ende_bekannt` | ` · letzter Regen gegen {zeit}` | ` · last rain around {zeit}` | render.py:639 |
 | `alarm.regen.cooldown` | `Cooldown: Du erhältst diese Warnung höchstens einmal in {dauer}. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.` | `Cooldown: you receive this alert at most once every {dauer}. Alerts from other sources (official warning/radar) are not affected by this cooldown.` | render.py:776, 861 |
 | `alarm.dauer.stunden.one` / `.other` | `{count} Stunde` / `{count} Stunden` | `{count} hour` / `{count} hours` | `_cooldown_display`, radar_alert_service.py:27 |
-| `alarm.dauer.minuten.other` | `{count} Minuten` | `{count} minutes` | radar_alert_service.py:28 |
+| `alarm.dauer.minuten.one` / `.other` | `{count} Minuten` / `{count} Minuten` (Bestand) | `{count} minute` / `{count} minutes` | radar_alert_service.py:28 |
 | `alarm.intensitaet.stark` | `Starker Regen` | `Heavy rain` | `INTENSITY_HEAVY`, radar_service.py:171 |
 | `alarm.nachtrag.amtlich` | `Ergänzung zur amtlichen Warnung` | `Addendum to the official warning` | trip_alert.py:2874 (Aufruf P9b) |
 | `alarm.nachtrag.abweichung` | Nachtrag Abweichungs-Alarm | Follow-up deviation alert | P9b |

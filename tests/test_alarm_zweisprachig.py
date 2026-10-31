@@ -215,7 +215,7 @@ def _cooldown(dauer: str) -> str:
 @pytest.mark.parametrize("fall, dauer", [
     ("regen_spaet", tn("alarm.dauer.stunden", 1, "en")),
     ("regen_einzel", tn("alarm.dauer.stunden", 2, "en")),
-    ("regen_buendel", t("alarm.dauer.minuten", "en", count=90)),
+    ("regen_buendel", tn("alarm.dauer.minuten", 90, "en")),
 ])
 def test_ac3_cooldown_satz_englisch(fall, dauer):
     k = render_fall(fall, "en")
@@ -228,7 +228,11 @@ def test_ac3_cooldown_plural_formen():
 
     assert cooldown_text(60, lang="en") == tn("alarm.dauer.stunden", 1, "en") != tn("alarm.dauer.stunden", 2, "en")
     assert cooldown_text(120, lang="en") == tn("alarm.dauer.stunden", 2, "en")
-    assert cooldown_text(90, lang="en") == t("alarm.dauer.minuten", "en", count=90)
+    assert cooldown_text(90, lang="en") == tn("alarm.dauer.minuten", 90, "en")
+    # F001: Singular englisch, deutsch byte-gleich zum Bestand ("1 Minuten")
+    assert cooldown_text(1, lang="en") == tn("alarm.dauer.minuten", 1, "en") != tn("alarm.dauer.minuten", 2, "en")
+    assert cooldown_text(1, lang="en") == "1 minute" and cooldown_text(1) == "1 Minuten"
+    assert _format_cooldown_display(1, lang="en") == "1 minute"
     assert _format_cooldown_display(120, lang="en") == tn("alarm.dauer.stunden", 2, "en")
     assert _format_cooldown_display(120) == "2 Stunden" and cooldown_text(60) == "1 Stunde"
 
