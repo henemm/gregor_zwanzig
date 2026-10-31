@@ -25,6 +25,7 @@ import httpx
 
 from app.config import Settings, resolve_public_url
 from app.loader import LoaderError, get_data_dir, load_all_trips, update_trip
+from services import pending_briefings
 from services.file_lock import LockTimeout
 from services.send_lock import release_send_lock, try_acquire_send_lock
 from utils.pii_masking import mask_addr_for_pii_log
@@ -443,29 +444,17 @@ def _parse_hhmm(value: str) -> Optional[time]:
         return None
 
 
-def _load_pending_entries(path: Path) -> dict:
-    """Issue #1012 Adversary-Fix F001: liest pending_briefings.json robust.
-
-    Fehlende oder kaputte Datei (z.B. abgebrochener Schreibvorgang) liefert ein
-    leeres Schema statt eine ungefangene JSONDecodeError zu werfen, die sonst
-    den kompletten stündlichen Versandlauf VOR dem regulären Versand crasht
-    (HTTP 500, kein Trip bekommt sein Briefing).
-    """
-    if not path.exists():
-        return {"entries": []}
-    try:
-        return json.loads(path.read_text())
-    except (json.JSONDecodeError, OSError) as e:
-        logger.warning(f"Corrupt pending_briefings.json at {path}, ignoring: {e}")
-        return {"entries": []}
+#: Issue #2587: Laden/atomares Schreiben stehen im geteilten Modul
+#: `services.pending_briefings` (ADR-0097). Die alten Namen bleiben aus
+#: diesem Modul importierbar (Bestandstests, State-Datei unten).
+_load_pending_entries = pending_briefings.load_pending_entries
+_write_pending_data = pending_briefings.write_pending_data
 
 
-def _write_pending_data(path: Path, data: dict) -> None:
-    """Atomarer Schreibvorgang (tmp + os.replace) — verhindert eine halb
-    geschriebene Datei bei einem Absturz mitten im Schreibvorgang."""
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    tmp_path.write_text(json.dumps(data, indent=2))
-    os.replace(tmp_path, path)
+def _trip_marker(trip_id) -> "pending_briefings.Match":
+    """Issue #2587: Trip-Vermerk dieses Trips -- Ortsvergleich-Vermerke
+    (``kind == "vergleich"``, kein ``trip_id``) werden nie getroffen."""
+    return lambda e: pending_briefings.is_trip_entry(e) and e.get("trip_id") == trip_id
 
 
 @dataclasses.dataclass
@@ -936,7 +925,9 @@ class TripReportSchedulerService:
             ohne Versand (Lärmschutz #1012) zählen weder noch.
         """
         path = get_data_dir(self._user_id) / "pending_briefings.json"
-        entries = _load_pending_entries(path).get("entries", [])
+        # Issue #2587 (Blocker): nur Trip-Vermerke -- Ortsvergleich-Vermerke in
+        # derselben Datei werden weder gelesen noch veraendert noch geloescht.
+        entries = pending_briefings.entries_matching(path, pending_briefings.is_trip_entry)
         if not entries:
             return 0, 0
 
@@ -998,10 +989,8 @@ class TripReportSchedulerService:
                 # Issue #1662 AC-3: eigener Text — bei einem Versandfehler
                 # waren die Daten nie das Problem, und der Nutzer hat kein
                 # "Vorher", das aktualisiert wuerde. Kein Technikjargon.
-                prefix = (
-                    f"Nachgeliefert — die Zustellung um "
-                    f"{entry.get('slot_hour')}:00 ist fehlgeschlagen"
-                )
+                # Issue #2587: geteilter Baustein mit dem Ortsvergleich.
+                prefix = pending_briefings.dispatch_error_hint(entry.get("slot_hour"))
                 self._remove_pending_marker(trip_id)
                 outcome = self._send_trip_report_outcome(
                     trip, report_type, catchup_prefix=prefix,
@@ -1074,8 +1063,6 @@ class TripReportSchedulerService:
         keine Migration noetig (Go ignoriert unbekannte Felder).
         """
         path = get_data_dir(self._user_id) / "pending_briefings.json"
-        data = _load_pending_entries(path)
-        entries = [e for e in data.get("entries", []) if e.get("trip_id") != trip.id]
         slot_hour = (
             self._get_morning_hour(trip) if report_type == "morning"
             else self._get_evening_hour(trip)
@@ -1091,9 +1078,8 @@ class TripReportSchedulerService:
         }
         if reason is not None:
             marker["reason"] = reason
-        entries.append(marker)
-        data["entries"] = entries
-        _write_pending_data(path, data)
+        # Issue #2587: RMW ueber das geteilte Modul, nur der Trip-Schluessel.
+        pending_briefings.upsert_entry(path, _trip_marker(trip.id), marker)
 
     def _mark_briefing_undelivered(
         self, trip: "Trip", report_type: str, target_date: date, *, on_demand: bool,
@@ -1129,39 +1115,22 @@ class TripReportSchedulerService:
         anderen Bedingung (Segment-Schnittmenge).
         """
         path = get_data_dir(self._user_id) / "pending_briefings.json"
-        if not path.exists():
-            return
-        data = _load_pending_entries(path)
-        rest = [
-            e for e in data.get("entries", [])
-            if not (e.get("trip_id") == trip_id and e.get("reason") == "dispatch_error")
-        ]
-        if len(rest) == len(data.get("entries", [])):
-            return
-        data["entries"] = rest
-        _write_pending_data(path, data)
+        mine = _trip_marker(trip_id)
+        pending_briefings.remove_entries(
+            path, lambda e: mine(e) and e.get("reason") == pending_briefings.DISPATCH_ERROR,
+        )
 
     def _remove_pending_marker(self, trip_id: str) -> None:
-        """Issue #1012 (b2): Entfernt den Nachliefer-Marker eines Trips (RMW)."""
+        """Issue #1012 (b2): Entfernt den Nachliefer-Marker eines Trips (RMW).
+
+        Issue #2587: trifft nur Trip-Vermerke (auch bei ``trip_id is None``)."""
         path = get_data_dir(self._user_id) / "pending_briefings.json"
-        if not path.exists():
-            return
-        data = _load_pending_entries(path)
-        data["entries"] = [
-            e for e in data.get("entries", []) if e.get("trip_id") != trip_id
-        ]
-        _write_pending_data(path, data)
+        pending_briefings.remove_entries(path, _trip_marker(trip_id))
 
     def _bump_pending_marker_attempts(self, trip_id: str) -> None:
         """Issue #1012 (b2, Lärmschutz): attempts += 1, Marker bleibt bestehen."""
         path = get_data_dir(self._user_id) / "pending_briefings.json"
-        if not path.exists():
-            return
-        data = _load_pending_entries(path)
-        for e in data.get("entries", []):
-            if e.get("trip_id") == trip_id:
-                e["attempts"] = e.get("attempts", 0) + 1
-        _write_pending_data(path, data)
+        pending_briefings.bump_attempts(path, _trip_marker(trip_id))
 
     def _get_morning_hour(self, trip: "Trip") -> int:
         """Get configured morning hour for trip (default: 7).

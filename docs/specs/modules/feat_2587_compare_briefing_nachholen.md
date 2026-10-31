@@ -127,7 +127,7 @@ An beiden Stellen wird — **nur bei `not on_demand`** — ein Marker mit der ec
 
 ### 2. Marker löschen
 
-Nach `outcome == "sent"` und `not on_demand`: nur Einträge mit `reason == "dispatch_error"` desselben `(preset_id, report_type)` entfernen.
+Nach `outcome == "sent"` und `not on_demand`: nur Einträge mit `reason == "dispatch_error"` desselben Presets entfernen, und zwar die mit gleichem `report_type` **sowie** die mit gleichem Zieltag (`date`). Letzteres folgt aus AC-9a: das erfolgreiche reguläre Morgen-Briefing für Tag D räumt auch einen offenen Abend-Vermerk für D (Präzisierung bei der Implementierung, siehe Changelog).
 
 ### 3. Nachhol-Schleife (`CompareDispatchStrategy.pre_pass`, nach der Auto-Pause)
 
@@ -136,9 +136,10 @@ Je Compare-Marker (`kind == "vergleich"`) des Nutzers:
 1. Preset fehlt, ist stillgelegt (`is_silenced`) oder `end_date` ist abgelaufen ⇒ Marker verwerfen, nichts senden.
 2. Zieltag vorbei (`briefing_target_day_is_current(date, today=preset_ortstag(preset, locs, now_utc))`) ⇒ Marker verwerfen, nichts senden.
 3. Fällt in dieser Stunde ein regulärer Slot **desselben Presets mit demselben Zieltag** an (`presets_due_for_hour`) ⇒ kein Catch-up; der reguläre Versand ist der „letzte Versuch“, der Marker bleibt bis zu dessen Erfolg bestehen (Trip #1662 AC-5/AC-6). Damit ersetzt das reguläre Morgen-Briefing von Tag D einen offenen Abend-Marker für D. Fällt nur ein Slot mit **anderem** Zieltag an, wird nachgeholt.
-4. Sonst: Marker **vor** dem Senden entfernen (kein Doppelversand bei Absturz), dann senden mit Hinweis „Nachgeliefert — die Zustellung um HH:00 ist fehlgeschlagen“ (HH = `slot_hour`). Scheitert der Nachhol-Versand erneut, schreibt der Fehlerpfad aus Punkt 1 einen frischen Marker.
+4. Sonst: Marker **vor** dem Senden entfernen (kein Doppelversand bei Absturz), dann senden mit Hinweis „Nachgeliefert — die Zustellung um HH:00 ist fehlgeschlagen“ (HH = `slot_hour`). Scheitert der Nachhol-Versand erneut, schreibt der Fehlerpfad aus Punkt 1 einen frischen Marker. Endet der Nachhol-Versand mit `no_weather` (vorübergehend, auch eine durchschlagende Wetter-Ausnahme), wird ebenfalls ein frischer Marker mit den Original-Werten geschrieben, damit die nächste Stunde es erneut versucht, bis der Zieltag verfällt; bei `no_channels` (Konfigurationsfehler) entsteht kein neuer Marker. Dieser `no_weather`-Wiederholungsmarker behält das ursprüngliche `created_at` und erhöht `attempts` um 1, damit er in `briefing_health` ehrlich altert und eine andauernde Wetterstörung nicht kaschiert wird (ADR-0018); der AC-6-Pfad (erneuter Versandfehler) bleibt frisch mit `attempts` 0.
 5. Tagesbezug aus **einer** Zeitabfrage: `tage_ab_ortstag = (date − preset_ortstag(now)).days` (Vertrag #1661). Der Slot (`report_type`) wird aus dem Marker durchgereicht, damit `append_briefing_log` einen Abend-Nachholer nach Mitternacht nicht als „morning“ verbucht.
 6. Zählung wie beim Trip: `sent` ⇒ `_success`, `no_channels` neutral, alles andere ⇒ `_failed`.
+7. Je `(preset_id, date)` wird höchstens **einmal** nachgeholt: Liegen mehrere Compare-Vermerke desselben Presets mit demselben Zieltag vor (z. B. Folgefall von AC-9b), werden alle vor dem Senden entfernt und es geht genau eine Zustellung hinaus; Slot und Hinweis stammen vom Vermerk mit der frühesten `slot_hour`, und scheitert sie, wird ein frischer Vermerk mit dessen Werten geschrieben (AC-9-Grundsatz: eine Zustellung je Zieltag).
 
 ### 4. Hinweis-Transport
 
@@ -233,3 +234,6 @@ Nur E-Mail (HTML + Plain; Compact-ASCII über `_ascii_hint`) und Telegram — wi
 ## Changelog
 
 - 2026-10-31: Initiale Spec (Issue #2587). Löst `dispatch_orchestrator.md:95` und `fix_1662_versandfehler_nachliefern.md:73-77` für den Ortsvergleich ab.
+- 2026-10-31 (Implementierung): §2 präzisiert — ein regulärer Erfolg räumt auch Vermerke desselben Presets mit gleichem Zieltag (AC-9a geht der früheren Formulierung „nur `(preset_id, report_type)`“ vor). §3 Punkt 7 ergänzt — Nachholen je `(preset_id, date)` höchstens einmal, Vertreter ist der Vermerk mit der frühesten `slot_hour` (Orchestrator-Entscheidung zum AC-9b-Folgefall). Hinweis-Text nennt die Stunde zweistellig (`07:00`) für Trip und Ortsvergleich. ACs unverändert.
+- 2026-10-31 (Fix-Loop 1, Adversary F008 + Nebenläufigkeit): §3 Punkt 4 ergänzt — ein Nachholer mit `no_weather` hinterlässt einen frischen Marker (Original-Werte), `no_channels` nicht (Tech-Lead-Entscheidung). Alle Read-Modify-Write-Operationen in `pending_briefings.py` laufen unter einem exklusiven `fcntl.flock` auf `<nutzerordner>/.pending_briefings.lock`, damit sich `trip-reports` und `compare-presets-daily` kein Update überschreiben.
+- 2026-10-31 (Fix-Loop 2, Tech-Lead-Entscheidung): `no_weather`-Wiederholungsmarker behält `created_at` des Originals und zählt `attempts` hoch (ehrliches Altern in `briefing_health`, ADR-0018); AC-6-Pfad unverändert frisch.

@@ -191,6 +191,19 @@ class CompareDispatchStrategy:
             self._presets, self._user_id, self._data_root,
             now_utc, self._all_locations or [],
         )
+        # Issue #2587: danach offene Nachhol-Vermerke des Ortsvergleichs
+        # (Trip-Paritaet #1662); Zaehlung wie beim Trip.
+        from app.loader import load_all_locations
+        from services.scheduler_dispatch_service import process_compare_pending_markers
+
+        if self._all_locations is None:
+            self._all_locations = load_all_locations(user_id=self._user_id)
+        sent, failed = process_compare_pending_markers(
+            self._presets, self._user_id, self._data_root, self._settings,
+            now_utc, self._all_locations, due,
+        )
+        self._success += sent
+        self._failed += failed
 
     def dispatch_one(self, item, now_utc: "datetime | None" = None) -> None:
         # `now_utc` gehoert zur geteilten Strategie-Schnittstelle (Issue #1897,

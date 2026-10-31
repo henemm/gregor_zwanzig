@@ -1,0 +1,81 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/typed-hugging-honey
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 166 items
+
+tests/tdd/test_compare_briefing_nachholen.py ........................... [ 16%]
+......                                                                   [ 19%]
+tests/tdd/test_briefing_anchor_survives_dispatch_failure.py ............ [ 27%]
+.............                                                            [ 34%]
+tests/tdd/test_compare_dispatch_failed_tally.py ......                   [ 38%]
+tests/tdd/test_briefing_slot_faelligkeit_und_alarmsperre.py .........    [ 43%]
+tests/tdd/test_versandpfade_folgen_ortszone.py .................         [ 54%]
+tests/tdd/test_compare_briefing_anchor_survives_dispatch_failure.py ..   [ 55%]
+tests/tdd/test_compare_preset_send.py ...................                [ 66%]
+tests/tdd/test_erfolg_heisst_wirkung_s4b.py ............................ [ 83%]
+...........................                                              [100%]
+
+=============================== warnings summary ===============================
+tests/tdd/test_compare_briefing_nachholen.py: 13 warnings
+tests/tdd/test_compare_dispatch_failed_tally.py: 3 warnings
+tests/tdd/test_compare_preset_send.py: 8 warnings
+  /home/hem/gregor_zwanzig/.claude/worktrees/typed-hugging-honey/src/services/scheduler_dispatch_service.py:518: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+====================== 166 passed, 24 warnings in 28.24s =======================
+=== RUN   TestBriefingHealthExposesAlertAnchorFieldsWithoutIdentifiers
+--- PASS: TestBriefingHealthExposesAlertAnchorFieldsWithoutIdentifiers (0.00s)
+=== RUN   TestBriefingHealthAlertAnchorFieldsNilWithoutRejections
+--- PASS: TestBriefingHealthAlertAnchorFieldsNilWithoutRejections (0.00s)
+=== RUN   TestBriefingHealthExposesDispatchErrorFields
+--- PASS: TestBriefingHealthExposesDispatchErrorFields (0.00s)
+=== RUN   TestBriefingHealthDispatchFieldsNilWithoutFailures
+--- PASS: TestBriefingHealthDispatchFieldsNilWithoutFailures (0.00s)
+=== RUN   TestBriefingHealthCorruptBriefingsByKindAggregatesAcrossUsers
+--- PASS: TestBriefingHealthCorruptBriefingsByKindAggregatesAcrossUsers (0.00s)
+=== RUN   TestBriefingHealthCorruptBriefingsByKindZeroWhenNoFiles
+--- PASS: TestBriefingHealthCorruptBriefingsByKindZeroWhenNoFiles (0.00s)
+=== RUN   TestBriefingHealthNullStateWhenNoMarkers
+--- PASS: TestBriefingHealthNullStateWhenNoMarkers (0.00s)
+=== RUN   TestBriefingHealthAggregatesAcrossTwoUsers
+--- PASS: TestBriefingHealthAggregatesAcrossTwoUsers (0.00s)
+=== RUN   TestBriefingHealthOldestMarkerWins
+--- PASS: TestBriefingHealthOldestMarkerWins (0.00s)
+=== RUN   TestBriefingHealthResponseContainsNoUserIdentifiers
+--- PASS: TestBriefingHealthResponseContainsNoUserIdentifiers (0.00s)
+=== RUN   TestBriefingHealthNullProviderErrorWhenLogMissing
+--- PASS: TestBriefingHealthNullProviderErrorWhenLogMissing (0.00s)
+=== RUN   TestBriefingHealthCountsMarkersWithoutUserJson
+--- PASS: TestBriefingHealthCountsMarkersWithoutUserJson (0.00s)
+=== RUN   TestBriefingHealthProviderErrorStreakGrowsWithDuration
+--- PASS: TestBriefingHealthProviderErrorStreakGrowsWithDuration (0.00s)
+=== RUN   TestBriefingHealthProviderErrorStreakSilentWhenOnlyOld
+--- PASS: TestBriefingHealthProviderErrorStreakSilentWhenOnlyOld (0.00s)
+=== RUN   TestBriefingHealthFourxxIsNotProviderOutage
+--- PASS: TestBriefingHealthFourxxIsNotProviderOutage (0.00s)
+=== RUN   TestBriefingHealthNetworkErrorCountsAsOutage
+--- PASS: TestBriefingHealthNetworkErrorCountsAsOutage (0.00s)
+=== RUN   TestBriefingHealthNightBriefingCountsAsOutage
+--- PASS: TestBriefingHealthNightBriefingCountsAsOutage (0.00s)
+=== RUN   TestBriefingHealthEnrichmentSourceIsNotBriefingOutage
+--- PASS: TestBriefingHealthEnrichmentSourceIsNotBriefingOutage (0.00s)
+=== RUN   TestBriefingHealthExistingFieldsUnchanged
+--- PASS: TestBriefingHealthExistingFieldsUnchanged (0.00s)
+=== RUN   TestBriefingHealthCorruptTripsTotalAggregatesAcrossUsers
+--- PASS: TestBriefingHealthCorruptTripsTotalAggregatesAcrossUsers (0.00s)
+=== RUN   TestBriefingHealthCorruptTripsTotalZeroWhenNoFiles
+--- PASS: TestBriefingHealthCorruptTripsTotalZeroWhenNoFiles (0.00s)
+=== RUN   TestBriefingHealthEndedOutageKeepsCountButClearsStreakField
+--- PASS: TestBriefingHealthEndedOutageKeepsCountButClearsStreakField (0.00s)
+=== RUN   TestBriefingHealthCountsMixedTripAndCompareEntries
+--- PASS: TestBriefingHealthCountsMixedTripAndCompareEntries (0.00s)
+=== RUN   TestStatusEnthaeltEnrichmentHealthAlsGeschwisterVonBriefingHealth
+--- PASS: TestStatusEnthaeltEnrichmentHealthAlsGeschwisterVonBriefingHealth (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/scheduler	0.028s

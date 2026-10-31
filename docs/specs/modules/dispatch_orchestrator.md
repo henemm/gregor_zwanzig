@@ -92,7 +92,7 @@ Divergenzen bleiben strikt in der Strategie gekapselt:
 |---|---|---|
 | `inter_mail_delay` | 2.0s | 0 |
 | `smtp_guard` | True, `(0,0)`-Early-Return + WARNING-Log (#2286) | False (per-Preset, Sendefehler ⇒ `failed`) |
-| `pre_pass` | Catch-up-Marker-Verarbeitung | Auto-Pause-Loop |
+| `pre_pass` | Catch-up-Marker-Verarbeitung | Auto-Pause-Loop, danach Nachhol-Schleife für Compare-Vermerke (`process_compare_pending_markers`, #2587 — löst die frühere Aufteilung „nur Auto-Pause“ ab) |
 | `collect_due` | Morgen/Abend-Sammlung | `presets_due_for_hour` |
 | `dispatch_one` | delegiert an `NotificationService` (E-Mail+SMS+Telegram) | delegiert an `EmailOutput` direkt (E-Mail-only) |
 | `render_config_source` | `resolve_report_render_options(report_config, display_config, report_type)` | `resolve_compare_render_options(preset: dict)` |
@@ -356,3 +356,8 @@ Bestehende Kern-Tests, die ohne Anpassung grün bleiben müssen (Sicherheitsnetz
   zu `no_weather` wird. **Toleranter Lader (AC-5):** der Compare-Dispatch lädt mit
   `load_compare_presets(strict=False)` — eine kaputte Datei in `briefings/` wird mit WARNING
   übersprungen und zählt nicht als `failed`.
+- 2026-10-31: Issue #2587 (`docs/specs/modules/feat_2587_compare_briefing_nachholen.md`).
+  Zeile `pre_pass` abgelöst: Compare = Auto-Pause-Loop, **danach** Nachhol-Schleife für
+  Ortsvergleich-Vermerke (geteiltes Modul `services/pending_briefings.py`, Zählung wie Trip:
+  `sent` ⇒ success, `no_channels` neutral, Rest ⇒ failed). Die zuvor dokumentierte Aufteilung
+  (Trip = Nachholen, Compare = nur Auto-Pause) gilt nicht mehr.

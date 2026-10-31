@@ -62,10 +62,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 ZONE = "Europe/Vienna"
 D = TARGET_DATE  # Zieltag "heute" in Preset-Ortszeit (fest, nie date.today())
 
-#: Hinweis-Text laut Spec (Implementation Details 3.4 / AC-5). Die Stunde wird
-#: tolerant gelesen (07:00 laut AC-5; der Trip baut heute "7:00").
+#: Hinweis-Text laut Spec (Implementation Details 3.4 / AC-5): Wortlaut "07:00"
+#: (zweistellig, Adversary F006 -- vorher tolerant "0?7:00").
 _HINWEIS_RE = re.compile(
-    r"Nachgeliefert (?:—|&mdash;|&#8212;) die Zustellung um 0?7:00 ist fehlgeschlagen"
+    r"Nachgeliefert (?:—|&mdash;|&#8212;) die Zustellung um 07:00 ist fehlgeschlagen"
 )
 
 
@@ -772,6 +772,41 @@ def test_ac9c_regulaerer_slot_mit_anderem_zieltag_wird_zusaetzlich_nachgeholt(au
     assert _vergleich_vermerke(uid) == [], _ablage(uid)
 
 
+def test_ac9_folgefall_mehrere_vermerke_gleicher_zieltag_ergeben_genau_eine_nachholung(aus):
+    """AC-9-Grundsatz, Folgefall aus AC-9b (Orchestrator-Entscheidung, Spec §3).
+
+    GIVEN zwei Vermerke desselben Presets mit demselben Zieltag D (Abend 19:00
+          vom Vortag und Morgen 07:00 von D), um 10:00 an D ist kein Slot faellig.
+    WHEN  der stuendliche Compare-Vorlauf laeuft.
+    THEN  genau EINE Zustellung (Hinweis mit der fruehesten Slot-Stunde 07:00),
+          beide Vermerke sind entfernt.
+    """
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("ac9-dedup"), abend="19:00:00")
+    _ablage_schreiben(uid, [_vermerk(pid, "evening", D, 19), _vermerk(pid, "morning", D, 7)])
+
+    _lauf(uid, _utc(D, 10))
+
+    mails = aus.mit.sendungen("email")
+    assert len(mails) == 1, f"Je Preset und Zieltag hoechstens eine Nachholung: {aus.mit!r}"
+    assert _HINWEIS_RE.match(mails[0]["plain_text_body"] or ""), mails[0]["plain_text_body"][:200]
+    assert _vergleich_vermerke(uid) == [], _ablage(uid)
+
+
+def test_ac9_folgefall_gescheiterte_einzelnachholung_vermerkt_den_fruehesten_slot(aus):
+    """Wie oben, aber der Nachholversand scheitert: genau EIN frischer Vermerk
+    mit den Werten des Vermerks mit der fruehesten Slot-Stunde."""
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("ac9-dedup-fehl"), abend="19:00:00")
+    _ablage_schreiben(uid, [_vermerk(pid, "evening", D, 19), _vermerk(pid, "morning", D, 7)])
+    aus.stoerung.add("email")
+
+    _lauf(uid, _utc(D, 10))
+
+    assert aus.versuche["email"] == 1, f"genau ein Nachholversuch: {aus.versuche!r}"
+    assert _schluessel(uid) == {(pid, "morning", D.isoformat(), 7)}, _ablage(uid)
+
+
 # ═══════════════════════════════ AC-10 ═══════════════════════════════════════
 
 
@@ -940,3 +975,237 @@ def test_ac13_vermerke_nachholen_und_verfall_bleiben_beim_eigenen_nutzer(aus):
         f"AC-13: das Nachholen erreicht nur die Empfaenger von Nutzer 2: {aus.mit!r}"
     )
     assert _vergleich_vermerke(u2) == [], f"Nutzer 2: nachgeholt, Vermerk weg: {_ablage(u2)!r}"
+
+
+# ═════════════════════ Fix-Loop 1 (Adversary F001-F008) ══════════════════════
+
+
+def test_f001_f002_nachholer_zaehlt_im_laufergebnis_sent_failed_no_channels_neutral(aus):
+    """Spec §3 Punkt 6, beobachtet am Rueckgabewert des echten Laufs (sent, failed).
+
+    GIVEN je ein Vermerk um 10:00 an D (kein Slot faellig): (a) Kanal ok,
+          (b) E-Mail gestoert, (c) kein wirksamer Kanal (no_channels).
+    THEN  (a) (1, 0), (b) (0, 1), (c) (0, 0) -- no_channels ist neutral.
+    """
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("f001-ok"))
+    _ablage_schreiben(uid, [_vermerk(pid, "morning", D, 7)])
+    assert tuple(_lauf(uid, _utc(D, 10))) == (1, 0), "F001: erfolgreicher Nachholer = sent+1"
+
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("f001-fehl"))
+    _ablage_schreiben(uid, [_vermerk(pid, "morning", D, 7)])
+    aus.stoerung.add("email")
+    assert tuple(_lauf(uid, _utc(D, 10))) == (0, 1), "F001: gescheiterter Nachholer = failed+1"
+    aus.stoerung.clear()
+
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("f002-ohne-kanal"))
+    hv.profil_ohne_mail_to(uid)
+    _ablage_schreiben(uid, [_vermerk(pid, "morning", D, 7)])
+    assert tuple(_lauf(uid, _utc(D, 10))) == (0, 0), "F002: no_channels zaehlt neutral"
+
+
+def test_f003_abend_nachholer_am_selben_abend_traegt_versatz_eins_bis_zum_anker(aus, monkeypatch):
+    """Spec §3 Punkt 5 (Vertrag #1661), beobachtet dort, wo der Versatz wirkt.
+
+    GIVEN ein Abend-Vermerk (19:00, Zieltag D+1), Nachholen um 20:00 an D
+          (vor Mitternacht Ortszeit, kein Slot faellig).
+    THEN  der Alarm-Anker wird mit ``tage_ab_ortstag == 1`` geschrieben und das
+          zugestellte Briefing gilt D+1.
+    """
+    import services.scheduler_dispatch_service as sds
+
+    anker: list = []
+    monkeypatch.setattr(sds, "_write_compare_alert_snapshots",
+                        lambda pid, locs, uid, preset, tage_ab_ortstag: anker.append(tage_ab_ortstag))
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("f003"), abend="19:00:00")
+    _ablage_schreiben(uid, [_vermerk(pid, "evening", D + timedelta(days=1), 19)])
+
+    _lauf(uid, _utc(D, 20))
+
+    mails = aus.mit.sendungen("email")
+    assert len(mails) == 1 and (D + timedelta(days=1)).strftime("%d.%m.%Y") in mails[0]["subject"], mails
+    assert anker == [1], f"F003: Abend-Nachholer am selben Abend = Versatz 1: {anker!r}"
+
+
+def test_f004_regulaerer_erfolg_raeumt_gleichen_slot_mit_altem_zieltag_aber_keinen_anderen_grund(aus):
+    """Spec §2: Raeumen nach Slot ODER Zieltag, nur ``reason == "dispatch_error"``.
+
+    GIVEN (A, Morgen, D-1, dispatch_error) und (A, Morgen, D, anderer Grund).
+    WHEN  der regulaere Morgen-Versand von A fuer D erfolgreich zustellt.
+    THEN  der alte Versandfehler-Vermerk ist weg, der Vermerk mit anderem Grund bleibt.
+    """
+    from services.scheduler_dispatch_service import _dispatch_due_preset
+    from tests.tdd._compare_kette_fixtures import alle_orte
+
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("f004"))
+    anders = dict(_vermerk(pid, "morning", D, 7), reason="weather_outage")
+    _ablage_schreiben(uid, [_vermerk(pid, "morning", D - timedelta(days=1), 7), anders])
+
+    assert _dispatch_due_preset(
+        preset_laden(uid, pid), D, settings_fuer(uid), uid, str(get_data_root()),
+        alle_orte(uid), tage_ab_ortstag=0,
+    ) is True
+    assert [_kanon(e) for e in _vergleich_vermerke(uid)] == [_kanon(anders)], _ablage(uid)
+
+
+def test_f005_rueckfall_konto_default_bekommt_nie_einen_vermerk(aus):
+    """Spec §1 / CLAUDE.md: nie ``"default"`` als user_id. Gegenprobe mit echtem Nutzer."""
+    from services.scheduler_dispatch_service import _mark_compare_undelivered
+
+    _mark_compare_undelivered("default", "vgl-f005", "morning", D, 7)
+    assert not _pfad("default").exists(), "F005: unter 'default' darf kein Vermerk entstehen"
+
+    uid = _nutzer()
+    _mark_compare_undelivered(uid, "vgl-f005", "morning", D, 7)
+    assert _schluessel(uid) == {("vgl-f005", "morning", D.isoformat(), 7)}, "Gegenprobe"
+
+
+def test_f007_nicht_schreibbare_ablage_verdeckt_den_versandfehler_nicht(aus):
+    """Spec Datenmodell (fail-soft): ein Schreibfehler der Ablage darf den
+    urspruenglichen Versandfehler nicht ersetzen."""
+    from services.scheduler_dispatch_service import send_one_compare_preset
+    from tests.tdd._compare_kette_fixtures import alle_orte
+
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("f007-ablage"))
+    _pfad(uid).mkdir(parents=True)  # Ablage ist ein Ordner -> nicht schreibbar
+    aus.stoerung.add("email")
+    with pytest.raises(RuntimeError, match="Mail-Gateway"):
+        send_one_compare_preset(
+            preset_laden(uid, pid), settings_fuer(uid), uid, str(get_data_root()),
+            all_locations_cache=alle_orte(uid), target_date=D, tage_ab_ortstag=0,
+        )
+
+
+def test_f007_trip_marker_funktion_trifft_keinen_vergleichs_vermerk(aus):
+    """Blocker §5, Filter in ``_trip_marker`` einzeln: ``_remove_pending_marker(None)``
+    (Trip-Eintrag ohne trip_id) darf den Ortsvergleich-Vermerk nicht loeschen."""
+    from services.trip_report_scheduler import TripReportSchedulerService
+
+    uid = _nutzer()
+    vgl = _vermerk("vgl-f007", "morning", D, 7)
+    _ablage_schreiben(uid, [vgl, _trip_vermerk("trip-x")])
+
+    svc = TripReportSchedulerService(settings=settings_fuer(uid), user_id=uid)
+    svc._remove_pending_marker(None)
+    svc._bump_pending_marker_attempts(None)
+    svc._clear_dispatch_error_marker(None)
+
+    assert [_kanon(e) for e in _vergleich_vermerke(uid)] == [_kanon(vgl)], _ablage(uid)
+
+
+def test_f008_nachholer_ohne_wetterdaten_bleibt_vermerkt_ohne_kanal_nicht(aus, monkeypatch):
+    """Tech-Lead-Entscheidung F008 (Spec §3 Punkt 4).
+
+    GIVEN ein Vermerk um 10:00 an D. (a) Der Nachholversand endet mit
+          no_weather (voruebergehend). (b) Er endet mit no_channels.
+    THEN  (a) der Vermerk bleibt mit den Original-Werten; er altert ehrlich
+          (Fix-Loop 2, ADR-0018): ``created_at`` des Originals, ``attempts`` + 1;
+          (b) kein Vermerk (Konfigurationsfehler).
+    """
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("f008-wetter"))
+    alt = "2026-07-01T00:00:00+00:00"
+    _ablage_schreiben(uid, [_vermerk(pid, "morning", D, 7, attempts=2, created_at=alt)])
+    hv.wetter_fehlt_je_ort(monkeypatch)
+    _lauf(uid, _utc(D, 10))
+    assert _schluessel(uid) == {(pid, "morning", D.isoformat(), 7)}, _ablage(uid)
+    v = _vergleich_vermerke(uid)[0]
+    assert (v["attempts"], v["created_at"]) == (3, alt), f"no_weather: altern statt frisch: {v!r}"
+
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("f008-kanal"))
+    hv.profil_ohne_mail_to(uid)
+    _ablage_schreiben(uid, [_vermerk(pid, "morning", D, 7)])
+    _lauf(uid, _utc(D, 10))
+    assert _vergleich_vermerke(uid) == [], _ablage(uid)
+
+
+def test_parallele_schreiber_verlieren_keinen_vermerk(aus):
+    """Nebenlaeufigkeit: trip-reports und compare-presets-daily schreiben dieselbe
+    Ablage. Viele gleichzeitige Upserts verschiedener Schluessel => alle da."""
+    import threading
+
+    from services import pending_briefings as pb
+
+    uid = _nutzer()
+    pfad = pb.pending_path(uid)
+    weg = [_vermerk(f"weg-{i}", "morning", D, 7) for i in range(150)]
+    _ablage_schreiben(uid, [_vermerk("zaehler", "morning", D, 7), *weg])
+    fehler: list = []
+
+    def _schutz(arbeit) -> None:
+        try:
+            arbeit()
+        except Exception as exc:  # noqa: BLE001 -- Fehler ist Pruefgegenstand
+            fehler.append(exc)
+
+    def _upserts(praefix: str) -> None:
+        for i in range(150):
+            pid = f"{praefix}-{i}"
+            pb.upsert_entry(pfad, lambda e, p=pid: e.get("preset_id") == p,
+                            _vermerk(pid, "morning", D, 7))
+
+    def _removes() -> None:
+        for e in weg:
+            pb.remove_entries(pfad, lambda x, p=e["preset_id"]: x.get("preset_id") == p)
+
+    def _bumps() -> None:
+        for _ in range(150):
+            pb.bump_attempts(pfad, lambda x: x.get("preset_id") == "zaehler")
+
+    arbeiten = [lambda: _upserts("t0"), lambda: _upserts("t1"), _removes, _bumps]
+    threads = [threading.Thread(target=_schutz, args=(a,)) for a in arbeiten]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert fehler == [], f"Schreibfehler unter Last: {fehler[:3]!r}"
+    ids = [e["preset_id"] for e in _vergleich_vermerke(uid)]
+    assert sum(i.startswith(("t0-", "t1-")) for i in ids) == 300, "Lost Update bei upsert"
+    assert not any(i.startswith("weg-") for i in ids), "Lost Update bei remove"
+    zaehler = [e for e in _vergleich_vermerke(uid) if e["preset_id"] == "zaehler"]
+    assert [e["attempts"] for e in zaehler] == [150], "Lost Update bei bump"
+
+
+def test_upsert_legt_fehlenden_nutzerordner_an(aus, tmp_path):
+    """Sperre: der Ordner fuer Lock-Datei und Ablage entsteht beim ersten Schreiben."""
+    from services import pending_briefings as pb
+
+    pfad = tmp_path / "neu" / "pending_briefings.json"
+    pb.upsert_entry(pfad, lambda e: False, _vermerk("vgl-neu", "morning", D, 7))
+    assert json.loads(pfad.read_text())["entries"][0]["preset_id"] == "vgl-neu"
+
+
+def test_f009_nachholer_mit_wetter_ausnahme_bleibt_vermerkt(aus, monkeypatch):
+    """F009: die Wetterabfrage WIRFT beim Nachholen (nicht nur Fehler je Ort)
+    -> no_weather, der Vermerk bleibt fuer die naechste Stunde."""
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("f009"))
+    _ablage_schreiben(uid, [_vermerk(pid, "morning", D, 7)])
+    hv.wetter_faellt_ueberall_aus(monkeypatch)
+
+    _lauf(uid, _utc(D, 10))
+
+    assert aus.mit.kanaele == [], aus.mit
+    assert _schluessel(uid) == {(pid, "morning", D.isoformat(), 7)}, _ablage(uid)
+
+
+def test_f010_abend_vermerk_ohne_wetterdaten_behaelt_slot_zieltag_und_stunde(aus, monkeypatch):
+    """F010: no_weather mit einem Abend-Vermerk (Zieltag D+1, 19:00), Nachholen
+    um 20:00 an D -> der Vermerk traegt weiter evening / D+1 / 19."""
+    uid = _nutzer()
+    pid = _vergleich(uid, _pid("f010"), abend="19:00:00")
+    _ablage_schreiben(uid, [_vermerk(pid, "evening", D + timedelta(days=1), 19)])
+    hv.wetter_fehlt_je_ort(monkeypatch)
+
+    _lauf(uid, _utc(D, 20))
+
+    assert _schluessel(uid) == {(pid, "evening", (D + timedelta(days=1)).isoformat(), 19)}, (
+        _ablage(uid)
+    )
