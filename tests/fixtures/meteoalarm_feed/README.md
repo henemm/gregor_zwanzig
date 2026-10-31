@@ -522,3 +522,19 @@ CAP-konform ohne `info[]`. Zuordnung der Testorte zu den Zonen: `src/services/of
   - `.SYNTH-KAPUTT` — an erster Stelle; Windwarnung mit unlesbarem Polygon.
 - **Referenzzeitpunkte der Tests (UTC):** Irische See `2026-10-26T22:00Z`, Nordschottland
   `2026-10-27T10:00Z`, Nebel `2026-10-31T07:00Z`.
+
+## `feed_belgium_sample.json` (Issue #1442, S3c)
+
+- **Herkunft:** `https://feeds.meteoalarm.org/api/v1/warnings/feeds-belgium` (kontingentfreier CAP-Feed).
+- **Aufgezeichnet:** 2026-10-31 (Vollabruf 152 KB / 38 Warnungen, 4 Sprachen `nl-BE`, `fr-BE`, `en-GB`, `de-DE`).
+- **Echte, unveränderte Einträge (6):** Küstenwarnung `…20261024195121.1618968` (nur `NUTS2` BE23, gelb,
+  `coastalevent`) und `…1618969` (BE21); Nebel `…20261031060158.1619001` (BE23), `…1618999` (`EMMA_ID` BE801),
+  `…1619004` (`EMMA_ID` BE004); ein `Update` `…20261031070505.1619011` (`EMMA_ID` BE004, grün).
+  Am Aufzeichnungstag war fast alles Nebel (verwirft der geteilte Mapper bewusst, #1430); auswertbar ist nur die
+  Küstenwarnung, deshalb die synthetischen Ableitungen.
+- **Synthetisch (Kennung `…SYNTH-*`, aus der echten Küstenwarnung 1618968 abgeleitet; nur Kennung, Stufe,
+  Zeitraum 30.10. 01:00 bis 01.11. 23:59 (+01:00) und Gebietskennung geändert, Texte unverändert):**
+  `SYNTH-BE23`, `SYNTH-BE801`, `SYNTH-BE24`, `SYNTH-BE10`, `SYNTH-BE31` (Stufe gelb); `SYNTH-BE004-ORANGE`
+  (`EMMA_ID` BE004, orange); `SYNTH-BE10-UND-BE004` (beide Kennungsarten in einer Fläche); `SYNTH-BE99`
+  (unbekannter NUTS2-Code); `SYNTH-UPD-ALT-BE23` (gelb) + `SYNTH-UPD-NEU-BE23` (`Update`, orange, `references`
+  auf die gelbe); `SYNTH-CANCEL-ALT-BE23` + `SYNTH-CANCEL-BE23` (`Cancel` ohne `info`).

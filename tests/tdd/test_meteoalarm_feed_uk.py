@@ -334,7 +334,7 @@ def test_ac6_text_stammt_aus_en_gb():
 
 def test_ac7_registrierung_gb_nach_pl_vor_dpc():
     """AC-7: in der ECHTEN Registry steht je genau EINE GB-Quelle, in der Reihenfolge PL < GB <
-    ``DpcSource`` (Gewitter-Tie-Break, #1427 S2); Belgien bleibt unregistriert."""
+    ``DpcSource`` (Gewitter-Tie-Break, #1427 S2); Belgien (S3c) folgt nach GB."""
     _assert_pruefling_aus_diesem_baum()
     import services.official_alerts.base as oa_base
     from services.official_alerts import meteoalarm_feed
@@ -350,8 +350,9 @@ def test_ac7_registrierung_gb_nach_pl_vor_dpc():
     dpc = [i for i, s in enumerate(echte) if isinstance(s, DpcSource)]
     assert len(dpc) == 1
     assert pos("PL") < pos("GB") < dpc[0]
-    assert not _quellen_in_registry("BE")
-    assert "BE" not in meteoalarm_feed._FEED_PATHS
+    # S3c: Belgien steht inzwischen NACH GB und VOR ``DpcSource`` (Reihenfolge: test_meteoalarm_feed_be.py).
+    assert pos("GB") < pos("BE") < dpc[0]
+    assert "BE" in meteoalarm_feed._FEED_PATHS
 
 
 def test_ac7_bestehende_laenderpfade_unveraendert():
