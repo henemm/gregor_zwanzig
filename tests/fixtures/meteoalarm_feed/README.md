@@ -448,3 +448,58 @@ NO Ostland `2026-10-25T12:00Z`, NO Lofoten/Bodø-Update `2026-10-25T20:00Z`, NO 
   GR221-Zonen außer ES115 nichts amtlich gewarnt.
 - **Referenzzeitpunkt der Tests:** `2026-10-31T09:00Z`.
 - **Test 7 (unbekannte Zone `ES999`)** wird im Test aus dem Fixture abgeleitet, nicht eingecheckt.
+
+## `feed_{portugal,netherlands,poland}_sample.json` — Issue #1442 S3a
+
+Herkunft: `https://feeds.meteoalarm.org/api/v1/warnings/feeds-portugal` / `-netherlands` / `-poland`
+(IPMA, KNMI, IMGW; kontingentfrei), Vollabrufe 2026-10-30 (PT 5, NL 754, PL 156 Einträge; **kein
+Polygon**, nur `EMMA_ID`; Sprachen Landessprache + `en-GB`). Reale Einträge sind unverändert
+übernommen; synthetische tragen die Kennung `.SYNTH-*`, sind aus einem echten Eintrag desselben Landes
+abgeleitet und gelten 2026-10-30 00:00Z–2026-11-01 23:59Z. Rückzüge (`.SYNTH-*-CANCEL`) sind
+CAP-konform ohne `info[]`. Zuordnung der Testorte zu den Zonen: `src/services/official_alerts/data/README.md`.
+
+- **`feed_portugal_sample.json` (14 Einträge: 5 real, 9 synthetisch).** Real: Azoren `PT001`–`PT003`
+  Regen gelb (abgelaufen), Madeira `PT023`/`PT024` Regen gelb als `Update` (`MD-10-1166`/`-1167`,
+  Vorgänger nicht im Feed). Synthetisch: `.SYNTH-KAPUTT` (erster Eintrag, ohne awareness-Parameter,
+  unlesbarer Beginn, `PT010`; AC-9), `.SYNTH-PT016` (Lissabon, orange, Regen), `.SYNTH-PT009` (Porto,
+  gelb, Wind), `.SYNTH-PT018` (Elvas, gelb, Regen), `.SYNTH-PT021-ALT` + `.SYNTH-PT021-UPDATE` (Faro,
+  gelb → orange per `Update`), `.SYNTH-PT015-AUFGEHOBEN` + `.SYNTH-PT015-CANCEL` (Nazaré),
+  `.SYNTH-PT013-CANCEL-MIT-INFO` (letzter Eintrag; Adversary F001: ein `Cancel` **mit** vollständigem
+  `info[]`, gelb, Wind, Zone `PT013` Coimbra, gültig 30.10. 00:00Z–01.11. 23:59Z, abgeleitet aus dem
+  echten `AZ-10-661`; `references` zeigt auf eine Kennung, die NICHT im Feed steht, damit allein die
+  Regel „ein Rückzug ist nie eine aktive Warnung" ihn unterdrückt). Grund: am Aufzeichnungstag war
+  das Festland ohne Warnung.
+- **`feed_netherlands_sample.json` (32 Einträge: 28 real, 4 synthetisch).** Real: nur Stufe grün
+  (Wind, Schnee/Eis, Gewitter, Nebel) für `NL007`, `NL011`, `NL012`, `NL013`, `NL015`, `NL019`, `NL806`,
+  davon 8 `Update` (`*_C`, Vorgänger nicht im Feed). Synthetisch: `.SYNTH-NL011` (Amsterdam, gelb,
+  Wind; info-Blöcke in der Reihenfolge **`en-GB` vor `nl-NL`**, Adversary F002: in allen echten
+  Einträgen steht `en-GB` zuletzt, eine Sprachwahl „letzter Block" fiele sonst nicht auf),
+  `.SYNTH-NL806` (Waddenzee, gelb, Regen), `.SYNTH-NL012` (Venlo, gelb, Regen),
+  `.SYNTH-NL013` (Baarle-Nassau, orange, Wind).
+- **`feed_poland_sample.json` (15 Einträge: 6 real, 9 synthetisch).** Real: `PL2402` Wind orange
+  (`Update`, abgelaufen 25.10.), Nebel gelb `PL3262`/`PL1210`/`PL1211`/`PL1217` (Zakopane) und Nebel
+  orange `PL803` (alle **Typ 4**). Synthetisch: `.SYNTH-PL1465` (Warschau, gelb, Wind; AC-8-Fall
+  `pl-PL` + `en-GB`), `.SYNTH-PL1261` (Krakau, orange, Regen), `.SYNTH-PL2261` (Danzig, gelb, Regen),
+  `.SYNTH-PL805` (Coastal Zone East, gelb, Wind), `.SYNTH-PL0805` (Słubice, gelb, Regen),
+  `.SYNTH-PL0663-ALT` + `-UPDATE` (Lublin, gelb → orange), `.SYNTH-PL2061-AUFGEHOBEN` + `-CANCEL`
+  (Białystok). Die `pl-PL`-Texte (`description`) der aus dem Nebel-Eintrag abgeleiteten SYNTH-Einträge
+  nennen weiterhin Nebel; ausgewertet wird nur `en-GB`.
+- **Achtung Warnarten:** Der geteilte CAP-Mapper verwirft `awareness_type` 4 (Nebel) und 7
+  (Küstenereignis) bewusst (Issue #1430, `meteoalarm._DISCARDED_TYPES`). Einträge dieser Typen erzeugen
+  in keinem Land eine Warnung. Die echte Nebelwarnung `…2544112.PL1217` (Zakopane) dient deshalb als
+  **Negativprüfung auf echten Daten** (`test_ac1_echte_pl_nebelwarnung_zakopane_wird_verworfen`: keine
+  Warnung, kein Ausfallhinweis).
+- **Abweichung vom RED-Stand (Commit `e3ff2b85e`), korrigiert in Phase 6:** Die SYNTH-Einträge trugen
+  Warnarten, die der Mapper verwirft, und konnten so nie eine Warnung erzeugen: `.SYNTH-NL806` und
+  `.SYNTH-PL805` Typ 7 (Küstenereignis), `.SYNTH-NL013` Typ 4 (Nebel). Korrektur: nur
+  `awareness_type` (alle Sprachen) sowie `en-GB`-`event`/`headline` (PL805 auch `pl-PL`), Stufe, Zone,
+  Kennung, Zeitfenster und Sprachen unverändert. `.SYNTH-NL013` und `.SYNTH-PL805` → `1; Wind`
+  (Vorbild `.SYNTH-ES874`). `.SYNTH-NL806` → `10; Rain` statt Wind: Mit Wind hätte die Seewarnung
+  dieselbe Gefahr und dasselbe Zeitfenster wie `.SYNTH-NL011` (Wind, Noord-Holland) und wäre im
+  Registry-Kollaps #1086 (exakte Dublette je Gefahr) mit ihr verschmolzen; AC-5 (Land + See je
+  einmal) wäre dann nicht prüfbar. Außerdem trug der RED-Stand die Prämisse „Zakopane: echte gelbe
+  Warnung erscheint" (AC-1 und AC-8 PL). Sie ist falsch, weil die Warnung vom Typ Nebel ist. AC-1
+  Zakopane wurde zur Negativprüfung oben, AC-8 PL nutzt jetzt `.SYNTH-PL1465` (Warschau).
+- **Referenzzeitpunkte der Tests (UTC):** PT `2026-10-31T22:00Z`, NL `2026-10-31T09:00Z`, PL
+  `2026-10-30T06:00Z`.
+- **Drift-Test (`PT999`, `NL999`, `PL9999`)** wird im Test aus dem Fixture abgeleitet, nicht eingecheckt.

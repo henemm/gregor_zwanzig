@@ -228,6 +228,13 @@ Die folgenden Quellen sind NICHT genehmigt:
   Die eingecheckte Spanien-Zonengeometrie `meteoalarm_zones_ES.geojson.json` stammt aus derselben
   MeteoAlarm `geocodes.json` wie die FI-Datei; ihre Lizenz wird **gebuendelt mit Finnland** im selben
   Antrag geklaert (nicht neu entschieden), s. `src/services/official_alerts/data/README.md`.
+- Antrag #2, Zeile „Amtliche Warnungen PT/NL/PL" (Issue #1442 S3a): Laenderscope Portugal (IPMA),
+  Niederlande (KNMI), Polen (IMGW) ueber denselben Feed (`feeds-portugal`, `feeds-netherlands`,
+  `feeds-poland`) — PENDING bis zur Spec-Freigabe (`feat_1442_s3a_meteoalarm_pt_nl_pl.md`). Die
+  eingecheckten Zonendateien `meteoalarm_zones_{PT,NL,PL}.geojson.json` stammen aus derselben
+  MeteoAlarm `geocodes.json` wie FI/ES; ihre Lizenz wird **gebuendelt mit Finnland und Spanien** im
+  selben Antrag geklaert (nicht neu entschieden), s. `src/services/official_alerts/data/README.md`.
+  Belgien (S3c) ist nicht Teil dieser Zeile.
 
 ### Genehmigte Antraege
 
@@ -310,6 +317,7 @@ das wird hier nachgeholt. Zugleich wechselt der Bezugsweg.
 | Amtliche Warnungen CH (MeteoSchweiz, Issue #1442 S1) | **PENDING** (Freigabe mit Spec `feat_1442_s1_meteoalarm_ch.md`) | Gleicher Feed-Weg: `feeds.meteoalarm.org/api/v1/warnings/feeds-switzerland`, ohne Auth, kontingentfrei, kein neuer Host. **Kein** Tagesbudget, **kein** EDR (`api.meteoalarm.org`) — beides mit #2266 zurueckgebaut; nur 30-min-Cache (1800 s / 60 s). Zuordnung per Punkt-in-Polygon gegen die Gemeinde-Umrisse des Feeds (kein Geocode), Zustaendigkeit lokal ueber die SLF-Regionspolygone |
 | Amtliche Warnungen NO/SE/FI (MET Norway, SMHI, FMI, Issue #1442 S2) | **PENDING** (Freigabe mit Spec `feat_1442_s2_meteoalarm_nordics.md`) | Gleicher Feed-Weg: `feeds.meteoalarm.org/api/v1/warnings/feeds-norway` / `-sweden` / `-finland`, ohne Auth, kontingentfrei, kein neuer Host, kein Tagesbudget (Ticket-AC-2 gegenstandslos), nur 30-min-Cache (1800 s / 60 s). NO/SE: Punkt-in-Polygon gegen die Feed-Polygone, Zustaendigkeit lokal ueber aufgeweitete Natural-Earth-Landesumrisse (gemeinfrei). FI: `EMMA_ID` gegen eingecheckte MeteoAlarm-Zonengeometrie (`geocodes.json`, Lizenz ungeklaert) — kein Laufzeitzugriff auf FMI |
 | Amtliche Warnungen ES (AEMET, Issue #1442 S3) | **PENDING** (Freigabe mit Spec `feat_1442_s3_meteoalarm_spanien.md`) | Gleicher Feed-Weg: `feeds.meteoalarm.org/api/v1/warnings/feeds-spain`, ohne Auth, kontingentfrei, kein neuer Host, nur 30-min-Cache (1800 s / 60 s). Feed ohne Polygone: `EMMA_ID` gegen eingecheckte Zonengeometrie `meteoalarm_zones_ES.geojson.json` (aus MeteoAlarm `geocodes.json`, Lizenz ungeklaert, gebuendelt mit FI) — kein Laufzeitzugriff auf AEMET |
+| Amtliche Warnungen PT/NL/PL (IPMA, KNMI, IMGW, Issue #1442 S3a) | **PENDING** (Freigabe mit Spec `feat_1442_s3a_meteoalarm_pt_nl_pl.md`) | Gleicher Feed-Weg: `feeds.meteoalarm.org/api/v1/warnings/feeds-portugal` / `-netherlands` / `-poland`, ohne Auth, kontingentfrei, kein neuer Host, nur 30-min-Cache (1800 s / 60 s). Feeds ohne Polygone: `EMMA_ID` gegen eingecheckte Zonengeometrie `meteoalarm_zones_{PT,NL,PL}.geojson.json` (aus MeteoAlarm `geocodes.json`, Lizenz ungeklaert, gebuendelt mit FI/ES) — kein Laufzeitzugriff auf IPMA/KNMI/IMGW |
 | Zonen-Geometrie (Punkt-in-Flaeche) | approved | IT ueber eingecheckte DPC-Zonen, AT ueber die Gemeindenummer aus der ohnehin abgerufenen ZAMG-Antwort — keine zusaetzlichen Abrufe |
 | `api.meteoalarm.org` (EDR-Index, authentifiziert) | **zurueckgebaut** | Mengenbegrenzt und nicht stationaer (durchgelassene Menge sank 138 → 95 → 64). Seit #1445 S3 nicht mehr registriert; mit #2266 zurueckgebaut (EDR-Klasse, Tagesbudget und Egress-Inventar-Eintrag entfernt, Aequivalenz ueber eingefrorene Snapshots im Kern-Test belegt) |
 | CAP-XML / Geometrie-Nachladen (`meteo.fra1.digitaloceanspaces.com`) | **entfallen** | praesigniert, auth-frei, zaehlt nicht gegen ein Kontingent. Wurde nur vom EDR-Weg nachgeladen; mit dessen Rueckbau (#2266) ohne Abruf |
