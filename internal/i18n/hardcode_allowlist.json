@@ -11,5 +11,8 @@
   "internal/mail/reset.go",
   "internal/mail/tier_change.go",
   "internal/mail/verify.go",
-  "internal/resolver/"
+  "internal/resolver/coords.go",
+  "internal/resolver/googlemaps.go",
+  "internal/resolver/komoot.go",
+  "internal/resolver/resolver.go"
 ]

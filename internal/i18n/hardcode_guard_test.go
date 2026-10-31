@@ -13,6 +13,7 @@ package i18n
 
 import (
 	"encoding/json"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -142,12 +143,12 @@ func hgRepoRoot(t *testing.T) string {
 	return filepath.Join(filepath.Dir(self), "..", "..")
 }
 
-func scanRepo(t *testing.T) []finding {
-	t.Helper()
-	root := hgRepoRoot(t)
+// scanTree scannt dirs unter root; Messaufbau leer (Verzeichnis ohne Go-Datei
+// oder weniger als mindest Dateien insgesamt) ist ein Fehler, kein Gruen.
+func scanTree(root string, dirs []string, mindest int) ([]finding, error) {
 	var out []finding
 	dateien := 0
-	for _, dir := range hgScanDirs {
+	for _, dir := range dirs {
 		jeDir := 0
 		err := filepath.WalkDir(filepath.Join(root, dir), func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
@@ -176,15 +177,24 @@ func scanRepo(t *testing.T) []finding {
 			return nil
 		})
 		if err != nil {
-			t.Fatalf("Scan %s: %v", dir, err)
+			return nil, fmt.Errorf("Scan %s: %w", dir, err)
 		}
 		if jeDir == 0 {
-			t.Fatalf("Messaufbau leer: keine Go-Datei in %s", dir)
+			return nil, fmt.Errorf("Messaufbau leer: keine Go-Datei in %s", dir)
 		}
 		dateien += jeDir
 	}
-	if dateien < hgMindestDats {
-		t.Fatalf("Messaufbau leer: nur %d Dateien gescannt (erwartet >= %d)", dateien, hgMindestDats)
+	if dateien < mindest {
+		return nil, fmt.Errorf("Messaufbau leer: nur %d Dateien gescannt (erwartet >= %d)", dateien, mindest)
+	}
+	return out, nil
+}
+
+func scanRepo(t *testing.T) []finding {
+	t.Helper()
+	out, err := scanTree(hgRepoRoot(t), hgScanDirs, hgMindestDats)
+	if err != nil {
+		t.Fatal(err)
 	}
 	return out
 }
@@ -209,35 +219,32 @@ func hgDeckt(eintrag, datei string) bool {
 	return eintrag == datei
 }
 
-func hgUngedeckt(allow []string, befunde []finding) []finding {
-	var out []finding
+// hgPruefe liefert die Meldungen beider Ratschen-Richtungen; der echte Lauf
+// (hgEchterLauf) und der Selbsttest gehen durch dieselbe Routine.
+func hgPruefe(allow []string, befunde []finding) (ungedeckt, veraltet []string) {
 	for _, b := range befunde {
 		gedeckt := false
 		for _, e := range allow {
 			gedeckt = gedeckt || hgDeckt(e, b.File)
 		}
 		if !gedeckt {
-			out = append(out, b)
+			ungedeckt = append(ungedeckt, fmt.Sprintf("%s:%d: %q (Nutzertext über i18n-Katalog/WriteError ausgeben oder Log mit // i18n-log markieren)", b.File, b.Line, b.Text))
 		}
 	}
-	return out
-}
-
-func hgVeraltet(allow []string, befunde []finding) []string {
-	var out []string
 	for _, e := range allow {
 		genutzt := false
 		for _, b := range befunde {
 			genutzt = genutzt || hgDeckt(e, b.File)
 		}
 		if !genutzt {
-			out = append(out, e)
+			veraltet = append(veraltet, "Eintrag veraltet, bitte entfernen: "+e)
 		}
 	}
-	return out
+	return ungedeckt, veraltet
 }
 
-func TestKeineHartkodiertenNutzertexte(t *testing.T) {
+func hgEchterLauf(t *testing.T) (ungedeckt, veraltet []string) {
+	t.Helper()
 	befunde := scanRepo(t)
 	if os.Getenv("GZ_I18N_GUARD_PRINT") == "1" {
 		set := map[string]bool{}
@@ -252,20 +259,56 @@ func TestKeineHartkodiertenNutzertexte(t *testing.T) {
 		j, _ := json.MarshalIndent(dateien, "", "  ")
 		t.Logf("Startstand (%d Befunde):\n%s", len(befunde), j)
 	}
-	for _, b := range hgUngedeckt(loadAllowlist(t), befunde) {
-		t.Errorf("%s:%d: %q (Nutzertext über i18n-Katalog/WriteError ausgeben oder Log mit // i18n-log markieren)", b.File, b.Line, b.Text)
+	return hgPruefe(loadAllowlist(t), befunde)
+}
+
+func TestKeineHartkodiertenNutzertexte(t *testing.T) {
+	if ungedeckt, _ := hgEchterLauf(t); len(ungedeckt) > 0 {
+		t.Error("\n" + strings.Join(ungedeckt, "\n"))
 	}
 }
 
 func TestAllowlistHatKeineVeralteten(t *testing.T) {
-	befunde := []finding{{File: "internal/handler/a.go", Line: 1}, {File: "internal/mail/b.go", Line: 2}}
-	kuenstlich := []string{"internal/handler/a.go", "internal/mail/", "internal/handler/umgestellt.go", "internal/resolver/"}
-	got := hgVeraltet(kuenstlich, befunde)
-	if strings.Join(got, ",") != "internal/handler/umgestellt.go,internal/resolver/" {
-		t.Fatalf("Selbsttest Veraltet-Erkennung: got %v", got)
+	if _, veraltet := hgEchterLauf(t); len(veraltet) > 0 {
+		t.Error("\n" + strings.Join(veraltet, "\n"))
 	}
-	for _, e := range hgVeraltet(loadAllowlist(t), scanRepo(t)) {
-		t.Errorf("Eintrag veraltet, bitte entfernen: %s", e)
+}
+
+// Selbsttest der Allowlist-Pruefung und des Messaufbaus ohne Repo-Dateien.
+func TestWaechterPrueftAllowlistUndMessaufbau(t *testing.T) {
+	befunde := []finding{{File: "internal/handler/a.go", Line: 1, Text: "x"}, {File: "internal/mail/b.go", Line: 2, Text: "y"}, {File: "internal/handler/neu.go", Line: 3, Text: "z"}}
+	allow := []string{"internal/handler/a.go", "internal/mail/", "internal/handler/umgestellt.go", "internal/resolver/"}
+	ungedeckt, veraltet := hgPruefe(allow, befunde)
+	if len(ungedeckt) != 1 || !strings.HasPrefix(ungedeckt[0], "internal/handler/neu.go:3:") {
+		t.Errorf("ungedeckt: got %v", ungedeckt)
+	}
+	if strings.Join(veraltet, "|") != "Eintrag veraltet, bitte entfernen: internal/handler/umgestellt.go|Eintrag veraltet, bitte entfernen: internal/resolver/" {
+		t.Errorf("veraltet: got %v", veraltet)
+	}
+
+	root := t.TempDir()
+	schreib := func(rel, inhalt string) {
+		p := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(inhalt), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	schreib("a/x.go", "package a\nvar s = \"Nicht gefunden\"\n")
+	schreib("a/x_test.go", "package a\nvar t = \"Nicht gefunden\"\n")
+	schreib("a/testdata/y.go", "package a\nvar u = \"Nicht gefunden\"\n")
+	schreib("b/nur_test.go", "package b\nvar v = \"Nicht gefunden\"\n")
+	got, err := scanTree(root, []string{"a"}, 1)
+	if err != nil || len(got) != 1 || got[0].File != "a/x.go" || got[0].Line != 2 {
+		t.Errorf("scanTree: nur a/x.go:2 erwartet (ohne _test.go, ohne testdata/), got %+v, err %v", got, err)
+	}
+	if _, err := scanTree(root, []string{"a"}, 2); err == nil || !strings.Contains(err.Error(), "Messaufbau leer") {
+		t.Errorf("Mindestdateizahl unterschritten: Messaufbau leer erwartet, got %v", err)
+	}
+	if _, err := scanTree(root, []string{"a", "b"}, 1); err == nil || !strings.Contains(err.Error(), "Messaufbau leer: keine Go-Datei in b") {
+		t.Errorf("leeres Verzeichnis: Messaufbau leer erwartet, got %v", err)
 	}
 }
 
