@@ -148,7 +148,7 @@ In `_parse_user` (`loader.py:1204`) wird `language=prefs_data.get("language", "d
 - Annahme: `GET /api/auth/profile` liefert die wirksame Sprache (`de` bei fehlendem Feld), nicht den leeren Rohwert; das erfüllt ADR-0104 Nr. 9 („Nutzer ohne Feld bleiben deutsch") und die AC-Skizze des Issues. Die Konventionen nennen „de/en/leer"; der Leerfall entfällt in der Antwort. Paket #2675 muss einen Nutzer ohne Feld deshalb ebenfalls als `de` behandeln (kein Vorrang für Cookie oder `Accept-Language` bei angemeldeten Nutzern).
 - Annahme: `PUT` akzeptiert nur `de`/`en` in Kleinschreibung; ein leerer Wert setzt die Sprache nicht zurück.
 - Der Cookie `gz_lang` von Login und Registrierung erreicht den Browser nur, wenn das Frontend die Set-Cookie-Header weiterreicht (Login-Action in #2648); die Antwort auf `PUT /api/auth/profile` erreicht den Browser direkt.
-- Im gemischten Request (`language` + `display_name`) läuft das Speichern über das bestehende `SaveUser`, das dem Modell unbekannte Felder verwirft (Bestandsverhalten, nicht durch dieses Paket verursacht). Ein merge-sicheres `SaveUser` ist Folge-Issue.
+- Im gemischten Request (`language` + `display_name`) läuft das Speichern über das bestehende `SaveUser`, das dem Modell unbekannte Felder verwirft (Bestandsverhalten, nicht durch dieses Paket verursacht). Ein merge-sicheres `SaveUser` ist Folge-Issue #2687.
 - Die Python-Auflösung liest die Datei bei jedem Aufruf; ein Zwischenspeicher ist bewusst nicht Teil dieses Pakets (kein globaler Zustand).
 
 ## Architektur-Entscheidung (ADR)
@@ -159,4 +159,4 @@ In `_parse_user` (`loader.py:1204`) wird `language=prefs_data.get("language", "d
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
-- 2026-10-31: AC-3 präzisiert (PO-Entscheidung): Fremdfeld-Erhalt gilt im Nur-`language`-Pfad; im gemischten Request bleiben die Modellfelder erhalten, unbekannte Felder verwirft `SaveUser` wie bisher (merge-sicheres `SaveUser`: Folge-Issue). Testverweis angepasst.
+- 2026-10-31: AC-3 präzisiert (PO-Entscheidung): Fremdfeld-Erhalt gilt im Nur-`language`-Pfad; im gemischten Request bleiben die Modellfelder erhalten, unbekannte Felder verwirft `SaveUser` wie bisher (merge-sicheres `SaveUser`: Folge-Issue #2687). Testverweis angepasst.
