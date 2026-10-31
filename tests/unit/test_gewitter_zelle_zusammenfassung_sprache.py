@@ -90,8 +90,24 @@ def test_ausblick_klartext_fester_zweig_englisch():
 
     text = render_outlook_plain(list(STAGES.values()), lang="en")
     assert text.split("\n")[1] == "Next stages"
-    assert "Thdr ⚡medium@13 (high @15)" in text and "mittel" not in text
+    assert ("Thdr ⚡medium@13 (high @15) · Lightning density, Model runs · Hail: yes"
+            in text), text
+    assert "Thdr light@12" in text and "Thdr ⚡high" in text, text
+    for deutsch in ("mittel", "leicht", "hoch", "Hagel", "Blitzdichte"):
+        assert deutsch not in text, (deutsch, text)
     assert render_outlook_plain(list(STAGES.values())).split("\n")[1] == "Nächste Etappen"
+
+
+@pytest.mark.parametrize("metrics", [None, [{"metric_id": "thunder", "aggregation": "max"}]],
+                         ids=["fester_zweig", "gewaehlte_spalten"])
+def test_ausblick_html_tabelle_englisch(metrics):
+    from output.renderers.email.outlook import render_outlook_table
+
+    html = render_outlook_table(list(STAGES.values()), metrics=metrics, lang="en")
+    assert "medium @13 (high @15) · Lightning density, Model runs · Hail: yes" in html
+    assert "light @12" in html and ">high<" in html and ">light<" in html, html
+    for deutsch in ("mittel", "leicht", ">hoch<", "Hagel", "Blitzdichte"):
+        assert deutsch not in html, deutsch
 
 
 def test_ausblick_acc_wort_englisch():
@@ -190,6 +206,14 @@ def test_zusammenfassung_leicht_und_ende(lang, erwartet):
     satz = _satz(lang, stunden)
     for teil in erwartet:
         assert teil in satz, (teil, satz)
+
+
+@pytest.mark.parametrize("lang,herkunft", [("en", "Lightning density"), ("de", "Blitzdichte")])
+def test_zusammenfassung_herkunft_in_nutzersprache(lang, herkunft):
+    stunden = ([_dp(h) for h in range(6, 9)]
+               + [_dp(9, gewitter=ThunderLevel.MED, signale=["blitzdichte"])]
+               + [_dp(h) for h in range(10, 16)])
+    assert f"9:00–10:00 · {herkunft}" in _satz(lang, stunden)
 
 
 @pytest.mark.parametrize("lang,erwartet", [

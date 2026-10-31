@@ -94,6 +94,8 @@ def test_nicht_zugestellt_englisch_bloecke_gruende_rest():
         assert teil in text, (teil, text)
     html = render_undelivered_html(vorfaelle(), tz=TZ, lang="en")
     assert "FAILED — something went wrong</strong>" in html and "… and 2 more</div>" in html
+    assert "Rain radar · E-Mail, Premium-SMS · Delivery failed</div>" in html
+    assert "Gusts · Telegram · Quiet hours</div>" in html
     ascii_text = render_undelivered_plain(vorfaelle(), tz=TZ, ascii_safe=True, lang="en")
     assert ascii_text.isascii() and "HELD BACK - as you set it up" in ascii_text
 

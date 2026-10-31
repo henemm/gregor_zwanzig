@@ -226,14 +226,12 @@ def render_plain(
     # Issue #721: show_outlook gates the entire outlook block (stability + trend).
     if show_outlook and stability_result is not None and show_stability:
         # Issue #2665: dieselben Schluessel wie HTML (``mail.stabilitaet.*``).
-        _label = stability_result.label
+        # Unbekanntes Label: KeyError wie bisher (HTML-Zweig ebenso).
+        _key = {"STABIL": "stabil", "WECHSELHAFT": "wechselhaft",
+                "FRAGIL": "fragil"}[stability_result.label]
         lines.append("---")
-        lines.append(
-            # i18n-dynamic: mail.stabilitaet.
-            t(f"mail.stabilitaet.{_label.lower()}", lang)
-            if _label in ("STABIL", "WECHSELHAFT", "FRAGIL")
-            else t("mail.stabilitaet.unbekannt", lang, label=_label)
-        )
+        # i18n-dynamic: mail.stabilitaet.
+        lines.append(t(f"mail.stabilitaet.{_key}", lang))
         lines.append("---")
         lines.append("")
 

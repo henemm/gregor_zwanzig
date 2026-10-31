@@ -35,6 +35,7 @@ SIGNALWOERTER = [
     "Anbieter-Fehler", "Gewitter-Vorschau", "Ortsangabe", "Radar reicht", "letzter",
     "Temperatur", "Minimum", "Wetteränderung", "Amtliche", "unter deiner Schwelle",
     "Wiederholung", "Morgen", "leichter", "mäßiger", "möglich", "ab", "bis",
+    "kein", "leicht", "hoch", "niedrig", "Blitzdichte",
 ]
 WOCHENTAGE_EN = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 GOLDEN_STEMS = ["gr20-summer-evening", "gr20-spring-morning", "gr221-mallorca-evening",
@@ -98,6 +99,100 @@ def test_ac1_kompakt_englisch_inhalt_ausblick():
         "Stage briefing - compact - openmeteo",
     ):
         assert erwartet in text, (erwartet, text)
+
+
+def test_ac1_kompakt_gewitterzelle_und_acc_englisch():
+    """Reines "light" ohne T-Praefix, Aggregat-Rueckfall in Nutzersprache."""
+    text = render_briefing("en", email_format="compact").email_plain
+    zeilen = {z.split()[0]: z for z in text.split("\n") if "Thdr" in z}
+    assert "Thdr light@12 " in zeilen["So"], zeilen
+    assert "Thdr Thigh " in zeilen["Mo"] and "Thdr light " in zeilen["Di"], zeilen
+
+
+def test_ac1_klartext_ausblick_englisch_gewitter_hagel_herkunft_acc():
+    text = render_briefing("en", email_format="full").email_plain
+    zeilen = {z.split()[0]: z for z in text.split("\n") if "Thdr" in z and "ACC" in z}
+    assert "Thdr light@12 · Lightning density · Hail: yes" in zeilen["So"], zeilen
+    assert "ACC low" in zeilen["So"] and "ACC very low" in zeilen["Mo"], zeilen
+    assert "Thdr ⚡high " in zeilen["Mo"] and "Thdr light " in zeilen["Di"], zeilen
+
+
+def test_ac1_vollmail_html_hinweise_englisch():
+    html = render_briefing("en", email_format="full").email_html
+    for erwartet in ("Official warnings currently unavailable",
+                     "FAILED — something went wrong", "HELD BACK — as you set it up",
+                     "Rain radar · E-Mail, Premium-SMS · Delivery failed", "… and 2 more",
+                     "light @12 · Lightning density · Hail: yes"):
+        assert erwartet in html, erwartet
+    for deutsch in ("Amtliche Warnungen aktuell", "FEHLGESCHLAGEN", "Versand fehlgeschlagen",
+                    "Blitzdichte", "Hagel: ja"):
+        assert deutsch not in html, deutsch
+    zustand = render_briefing("en", email_format="full", variante="zustand").email_html
+    assert "Next stage is too far ahead (max. 1 day)." in zustand
+    assert "Nächste Etappe liegt" not in zustand
+
+
+def test_ac1_kompakt_unbekannte_stabilitaet_englisch():
+    """Nur die Kompaktform kennt einen Rueckfall fuer unbekannte Labels."""
+    en = render_briefing("en", email_format="compact", stabilitaet="UNBEKANNT").email_plain
+    de = render_briefing("de", email_format="compact", stabilitaet="UNBEKANNT").email_plain
+    assert "Weather pattern: UNBEKANNT" in en and "Wetterlage: UNBEKANNT" not in en
+    assert "Wetterlage: UNBEKANNT" in de
+
+
+def test_ac1_klartext_wetteraenderungen_ueberschrift():
+    from app.models import ChangeSeverity, WeatherChange
+
+    change = WeatherChange(metric="temp_max_c", old_value=18.0, new_value=25.0, delta=7.0,
+                           threshold=5.0, severity=ChangeSeverity.MODERATE,
+                           direction="increase", segment_id="1")
+    en = render_briefing("en", email_format="full", changes=[change]).email_plain
+    de = render_briefing("de", email_format="full", changes=[change]).email_plain
+    assert "━━ Weather changes ━━" in en and "Wetteränderungen" not in en
+    assert "━━ Wetteränderungen ━━" in de
+
+
+def test_ac1_klartext_tabelle_englisch_signale_breite_und_leer():
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+
+    from app.metric_catalog import build_default_display_config
+    from app.models import ForecastDataPoint, ThunderLevel
+    from output.renderers.email.helpers import dp_to_row
+    from output.renderers.email.plain import _render_text_table
+
+    dc = build_default_display_config()
+    dp = ForecastDataPoint(ts=datetime(2026, 10, 29, 9, 0, tzinfo=timezone.utc), t2m_c=9.0,
+                           thunder_level=ThunderLevel.LOW)
+    row = dp_to_row(dp, dc, tz=ZoneInfo("UTC"))
+    row["_thunder_signals"] = ["blitzdichte"]
+    tabelle = _render_text_table([row], friendly_keys=set(), lang="en")
+    kopf, trenner, zeile = tabelle.split("\n")
+    zelle = "light · Lightning density"
+    assert zelle in zeile and "Blitzdichte" not in tabelle, tabelle
+    # Spaltenbreite aus dem ENGLISCHEN Text: Trennstrich exakt Zelle + 1.
+    spalte = kopf.split().index("Thdr")
+    assert len(trenner.split()[spalte]) == len(zelle) + 1, tabelle
+    assert _render_text_table([], friendly_keys=set(), lang="en") == "  (no data)"
+    assert _render_text_table([], friendly_keys=set()) == "  (keine Daten)"
+
+
+def test_ac1_kompakt_fester_ausblick_zweig_englisch():
+    """Altbestand ohne Ausblick-Spalten (``outlook_metrics=None``)."""
+    from app.metric_catalog import build_default_display_config
+    from output.renderers.email.compact import render_compact
+    from tests.helpers.briefing_compact_plain_fixture import trend_reich
+    from tests.helpers.briefing_html_sprache_fixture import TZ, _segment
+
+    text = render_compact(
+        segments=[_segment()], dc=build_default_display_config(), multi_day_trend=trend_reich(),
+        outlook_metrics=None, stability_result=None, tz=TZ, report_type="evening",
+        trip_name="Corsica North", stage_name=None, stage_stats=None, lang="en",
+    )
+    zeilen = {z.split()[0]: z for z in text.split("\n") if z[:2] in ("Fr", "So", "Mo", "Di")}
+    assert zeilen["Fr"].endswith("Tmedium@13 (high @15)"), zeilen
+    assert zeilen["So"].endswith(" light@12") and zeilen["Mo"].endswith(" Thigh"), zeilen
+    assert zeilen["Di"].endswith(" light"), zeilen
 
 
 def test_ac1_kompakt_englisch_inhalt_zustand():
