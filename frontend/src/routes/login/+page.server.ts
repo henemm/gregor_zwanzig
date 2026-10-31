@@ -64,6 +64,17 @@ export const actions = {
 					maxAge: SESSION_MAX_AGE_SECONDS,
 				});
 			}
+			// Issue #2648 — Profilsprache aus der Go-Antwort an den Browser weiterreichen.
+			const lang = setCookie.match(/gz_lang=([^;,]+)/);
+			if (lang) {
+				cookies.set('gz_lang', lang[1], {
+					path: '/',
+					maxAge: 31536000,
+					sameSite: 'lax',
+					secure: env.NODE_ENV === 'production',
+					httpOnly: false,
+				});
+			}
 		}
 
 		// Issue #1006 — nach 401-Redirect zurück zur Ausgangsseite (nur relative Pfade).

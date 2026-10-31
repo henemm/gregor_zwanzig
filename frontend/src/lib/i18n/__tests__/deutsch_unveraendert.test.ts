@@ -22,6 +22,16 @@ const GOLDEN = JSON.parse(
 
 /** Neue Schluessel dieses Pakets (nicht im Bestand). */
 const NEU_IN_S2 = ['aktionen.zeit.vor_minuten.one', 'aktionen.zeit.vor_minuten.other', 'aktionen.zeit.gerade_eben'];
+/** Neue Schluessel spaeterer Pakete (je Paket ein Eintrag, nur ergaenzen). */
+const NEU_IN_FOLGEPAKETEN = [
+	// #2648 (S3) Sprachumschalter und Konto-Sprache
+	'konto.sprache.titel',
+	'konto.sprache.option_de',
+	'konto.sprache.option_en',
+	'konto.sprache.gespeichert',
+	'konto.sprache.fehler',
+	'konto.sprache.umschalter_label'
+];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {
 	assert.equal(Object.keys(GOLDEN).length, 112);
@@ -33,9 +43,9 @@ test('AC-5: jeder Bestandsschluessel ist mit byte-gleichem Wert in der de-Karte'
 	assert.deepEqual(abweichend, []);
 });
 
-test('AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel dieses Pakets', () => {
+test('AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel dieses und der Folgepakete', () => {
 	const extra = Object.keys(de).filter((k) => !(k in GOLDEN)).sort();
-	assert.deepEqual(extra, [...NEU_IN_S2].sort());
+	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_FOLGEPAKETEN].sort());
 });
 
 test('AC-5: trFor(de) und tr() mit Standard-Locale liefern die Bestandstexte unveraendert', () => {

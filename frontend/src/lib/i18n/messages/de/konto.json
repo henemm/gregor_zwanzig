@@ -1,1 +1,8 @@
-{}
+{
+	"konto.sprache.titel": "Sprache / Language",
+	"konto.sprache.option_de": "Deutsch",
+	"konto.sprache.option_en": "English",
+	"konto.sprache.gespeichert": "Sprache gespeichert",
+	"konto.sprache.fehler": "Die Sprache konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
+	"konto.sprache.umschalter_label": "Sprache wählen"
+}

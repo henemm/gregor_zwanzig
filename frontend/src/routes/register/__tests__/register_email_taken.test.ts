@@ -54,7 +54,8 @@ async function registrieren(status: number, koerper: string) {
 	body.set('email', 'belegt-ac15@beispiel.de');
 	body.set('password', 'geheim1234');
 	body.set('confirmPassword', 'geheim1234');
-	const ereignis = { request: new Request('http://localhost/register', { method: 'POST', body }) };
+	// #2648: SvelteKit liefert immer locals (Sprache aus hooks.server.ts).
+	const ereignis = { request: new Request('http://localhost/register', { method: 'POST', body }), locals: { lang: 'de' } };
 	return actions.default(ereignis as unknown as Parameters<typeof actions.default>[0]);
 }
 

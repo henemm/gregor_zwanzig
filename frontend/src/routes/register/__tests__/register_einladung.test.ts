@@ -140,7 +140,8 @@ describe('register Action: invite weiterreichen', () => {
 		body.set('email', 'neuling@example.org');
 		body.set('password', 'geheim1234');
 		body.set('confirmPassword', 'geheim1234');
-		return actions.default({ request: new Request('http://localhost/register', { method: 'POST', body }) });
+		// #2648: SvelteKit liefert immer locals (Sprache aus hooks.server.ts).
+		return actions.default({ request: new Request('http://localhost/register', { method: 'POST', body }), locals: { lang: 'de' } });
 	}
 
 	test('invite landet im JSON-Body an /api/auth/register', async () => {

@@ -42,7 +42,10 @@ const SATZ = 'Hinweise zum Umgang mit deinen Daten: Datenschutz';
 
 function seite(googleEnabled: boolean): string {
 	const { body } = render(Register, { props: { form: null, data: { googleEnabled } } });
-	return body.replace(/<!--[\s\S]*?-->/g, '');
+	// #2648: der Sprachumschalter (eigenes Formular an /lang) gehoert nicht zum Registrierformular.
+	return body
+		.replace(/<!--[\s\S]*?-->/g, '')
+		.replace(/<form\b[^>]*data-testid="sprach-umschalter"[\s\S]*?<\/form>/, '');
 }
 
 /** Alle <p>-Absätze, deren sichtbarer Text den Satz enthält. */

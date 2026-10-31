@@ -33,7 +33,7 @@ export const handle: Handle = async ({ event, resolve: weiter }) => {
 	const resolve = (ev: typeof event) =>
 		weiter(ev, { transformPageChunk: ({ html }) => html.replace('%lang%', ev.locals.lang) });
 
-	const publicPaths = ['/login', '/register', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/email-preview-dev', '/magic-link', '/magic-link/verify'];
+	const publicPaths = ['/login', '/register', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/email-preview-dev', '/magic-link', '/magic-link/verify', '/lang'];
 	if (publicPaths.includes(event.url.pathname)) {
 		const response = await resolve(event);
 		const ct = response.headers.get('content-type') ?? '';
