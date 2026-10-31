@@ -234,7 +234,14 @@ Die folgenden Quellen sind NICHT genehmigt:
   eingecheckten Zonendateien `meteoalarm_zones_{PT,NL,PL}.geojson.json` stammen aus derselben
   MeteoAlarm `geocodes.json` wie FI/ES; ihre Lizenz wird **gebuendelt mit Finnland und Spanien** im
   selben Antrag geklaert (nicht neu entschieden), s. `src/services/official_alerts/data/README.md`.
-  Belgien (S3c) ist nicht Teil dieser Zeile.
+- Antrag #2, Zeile „Amtliche Warnungen BE" (Issue #1442 S3c): Laenderscope Belgien (KMI/IRM) ueber
+  denselben Feed (`feeds-belgium`) — PENDING bis zur Spec-Freigabe (`feat_1442_s3c_meteoalarm_be.md`).
+  Die eingecheckte Zonendatei `meteoalarm_zones_BE.geojson.json` (10 EMMA-Zonen) stammt aus derselben
+  MeteoAlarm `geocodes.json` wie FI/ES/PT/NL/PL; ihre Lizenz wird **gebuendelt** im selben Antrag
+  geklaert (nicht neu entschieden). Der Feed fuehrt ueberwiegend `NUTS2`-Provinzcodes; sie werden ueber
+  eine Zuordnungstabelle NUTS2 → EMMA_ID (Code, keine Geometrie) uebersetzt. **Eurostat GISCO/NUTS
+  wird nicht verwendet** und nicht eingecheckt: die GISCO-Verwaltungsgrenzen sind nur unter der
+  Bedingung nicht-kommerzieller Nutzung freigegeben, das traegt ein Multi-User-Produkt nicht.
 
 ### Genehmigte Antraege
 
@@ -318,6 +325,7 @@ das wird hier nachgeholt. Zugleich wechselt der Bezugsweg.
 | Amtliche Warnungen NO/SE/FI (MET Norway, SMHI, FMI, Issue #1442 S2) | **PENDING** (Freigabe mit Spec `feat_1442_s2_meteoalarm_nordics.md`) | Gleicher Feed-Weg: `feeds.meteoalarm.org/api/v1/warnings/feeds-norway` / `-sweden` / `-finland`, ohne Auth, kontingentfrei, kein neuer Host, kein Tagesbudget (Ticket-AC-2 gegenstandslos), nur 30-min-Cache (1800 s / 60 s). NO/SE: Punkt-in-Polygon gegen die Feed-Polygone, Zustaendigkeit lokal ueber aufgeweitete Natural-Earth-Landesumrisse (gemeinfrei). FI: `EMMA_ID` gegen eingecheckte MeteoAlarm-Zonengeometrie (`geocodes.json`, Lizenz ungeklaert) — kein Laufzeitzugriff auf FMI |
 | Amtliche Warnungen ES (AEMET, Issue #1442 S3) | **PENDING** (Freigabe mit Spec `feat_1442_s3_meteoalarm_spanien.md`) | Gleicher Feed-Weg: `feeds.meteoalarm.org/api/v1/warnings/feeds-spain`, ohne Auth, kontingentfrei, kein neuer Host, nur 30-min-Cache (1800 s / 60 s). Feed ohne Polygone: `EMMA_ID` gegen eingecheckte Zonengeometrie `meteoalarm_zones_ES.geojson.json` (aus MeteoAlarm `geocodes.json`, Lizenz ungeklaert, gebuendelt mit FI) — kein Laufzeitzugriff auf AEMET |
 | Amtliche Warnungen PT/NL/PL (IPMA, KNMI, IMGW, Issue #1442 S3a) | **PENDING** (Freigabe mit Spec `feat_1442_s3a_meteoalarm_pt_nl_pl.md`) | Gleicher Feed-Weg: `feeds.meteoalarm.org/api/v1/warnings/feeds-portugal` / `-netherlands` / `-poland`, ohne Auth, kontingentfrei, kein neuer Host, nur 30-min-Cache (1800 s / 60 s). Feeds ohne Polygone: `EMMA_ID` gegen eingecheckte Zonengeometrie `meteoalarm_zones_{PT,NL,PL}.geojson.json` (aus MeteoAlarm `geocodes.json`, Lizenz ungeklaert, gebuendelt mit FI/ES) — kein Laufzeitzugriff auf IPMA/KNMI/IMGW |
+| Amtliche Warnungen BE (KMI/IRM, Issue #1442 S3c) | **PENDING** (Freigabe mit Spec `feat_1442_s3c_meteoalarm_be.md`) | Gleicher Feed-Weg: `feeds.meteoalarm.org/api/v1/warnings/feeds-belgium`, ohne Auth, kontingentfrei, kein neuer Host, nur 30-min-Cache (1800 s / 60 s). Feed ohne Polygone, Kennungen `EMMA_ID` und `NUTS2` gemischt: NUTS2 per Zuordnungstabelle zur EMMA_ID, dann gegen eingecheckte Zonengeometrie `meteoalarm_zones_BE.geojson.json` (aus MeteoAlarm `geocodes.json`, Lizenz ungeklaert, gebuendelt mit FI/ES/PT/NL/PL). GISCO/NUTS nicht verwendet (nur nicht-kommerzielle Nutzung erlaubt) |
 | Zonen-Geometrie (Punkt-in-Flaeche) | approved | IT ueber eingecheckte DPC-Zonen, AT ueber die Gemeindenummer aus der ohnehin abgerufenen ZAMG-Antwort — keine zusaetzlichen Abrufe |
 | `api.meteoalarm.org` (EDR-Index, authentifiziert) | **zurueckgebaut** | Mengenbegrenzt und nicht stationaer (durchgelassene Menge sank 138 → 95 → 64). Seit #1445 S3 nicht mehr registriert; mit #2266 zurueckgebaut (EDR-Klasse, Tagesbudget und Egress-Inventar-Eintrag entfernt, Aequivalenz ueber eingefrorene Snapshots im Kern-Test belegt) |
 | CAP-XML / Geometrie-Nachladen (`meteo.fra1.digitaloceanspaces.com`) | **entfallen** | praesigniert, auth-frei, zaehlt nicht gegen ein Kontingent. Wurde nur vom EDR-Weg nachgeladen; mit dessen Rueckbau (#2266) ohne Abruf |

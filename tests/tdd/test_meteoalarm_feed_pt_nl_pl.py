@@ -532,7 +532,7 @@ def test_ac10_grenzpaare_genau_eine_warnung_nachbar_still(land, eigen, suffix, n
     """AC-10: GIVEN ein Grenzort und nur das eigene Land fuehrt dort eine Warnung (Nachbarfeed gesund,
     ohne Warnung dort), WHEN mit beiden Landesquellen abgerufen wird, THEN erscheint genau diese
     Warnung einmal, und die Quelle des Nachbarlands liefert weder Warnung noch Ausfallhinweis --
-    weder am Grenzort noch am Nachbarort jenseits der Grenze. Belgien ist nicht registriert."""
+    weder am Grenzort noch am Nachbarort jenseits der Grenze."""
     _assert_pruefling_aus_diesem_baum()
     from services.official_alerts import get_official_alerts_with_status, warn_egress
 
@@ -549,8 +549,7 @@ def test_ac10_grenzpaare_genau_eine_warnung_nachbar_still(land, eigen, suffix, n
     assert unavailable is False
     assert len(list(_quelle(land).fetch(*eigen))) == 1, "Quelle direkt: genau EINE Warnung"
     if not nachbar:
-        assert not _quellen_in_registry("BE"), "Belgien darf nicht registriert sein"
-        return
+        return  # Belgien-Grenze (Baarle-Nassau): Doppelungs-Pruefung in test_meteoalarm_feed_be.py
 
     for punkt in (eigen, nachbar_punkt):
         with warn_egress.observe_fetch_failure() as status:
@@ -632,8 +631,9 @@ def test_ac12_registrierung_pt_nl_pl_nach_es_vor_dpc_ohne_be():
     dpc = [i for i, s in enumerate(echte) if isinstance(s, DpcSource)]
     assert len(dpc) == 1
     assert pos("FI") < pos("ES") < pos("PT") < pos("NL") < pos("PL") < dpc[0]
-    assert not _quellen_in_registry("BE")
-    assert "BE" not in meteoalarm_feed._FEED_PATHS
+    # S3c: Belgien steht inzwischen NACH PL/GB und VOR ``DpcSource`` (test_meteoalarm_feed_be.py).
+    assert pos("NL") < pos("BE") < dpc[0]
+    assert "BE" in meteoalarm_feed._FEED_PATHS
 
 
 def test_ac12_bestehende_laenderpfade_unveraendert():
