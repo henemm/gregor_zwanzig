@@ -429,14 +429,15 @@ def _official_alert_bubble(
     ]
     if not tagged:
         return None
-    notices = build_official_alert_notices(trip, tagged)
+    notices = build_official_alert_notices(trip, tagged, lang=lang)
     if not notices:
         return None
     sources = list(dict.fromkeys(
-        official_alert_source_label(alert.source) for alert, _ in tagged
+        official_alert_source_label(alert.source, lang=lang) for alert, _ in tagged
     ))
     return TelegramBubble(text=render_official_alert_telegram(
         notices, prefix=t("telegram.warnung.praefix", lang), source_label=" · ".join(sources), tz=tz,
+        lang=lang,
     ))
 
 

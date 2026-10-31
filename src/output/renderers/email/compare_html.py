@@ -56,7 +56,7 @@ from utils.timezone import (
     UTC, local_dt, local_hour, local_stamp, location_tz, tz_abbrev,
 )
 from output.renderers.alert.official_alerts import (
-    _LEVEL_WORDS, OfficialAlertNotice, official_alert_source_label,
+    OfficialAlertNotice, _alert_text, _level_word, official_alert_source_label,
     render_official_alerts_html, render_warn_block,
 )
 from services.official_alerts.models import comparable_level
@@ -580,7 +580,8 @@ def _warn_short(alert, lang: Lang = "de") -> tuple[str, str]:
         stufe = alert.native_level if alert.native_level is not None else alert.level
         sev = {1: "info", 2: "caution", 3: "warn", 4: "danger", 5: "danger"}.get(stufe, "danger")
         return t("vergleich.warnchip.lawine_stufe", lang, stufe=stufe), sev
-    return alert.label, "info"
+    # Issue #2668: ausser Deutsch der Anzeige-Titel der amtlichen Warnung (Sprachblock).
+    return _alert_text(alert, lang), "info"
 
 
 def _dedup_alerts(alerts: list) -> list:
@@ -920,7 +921,7 @@ def _render_warn_banner(locations: list[LocationResult], lang: Lang = "de") -> s
                     a.level == leading_alert.level and a.hazard == leading_alert.hazard
                     and comparable_level(a) > comparable_level(leading_alert))):
                 leading_alert, leading_loc = a, loc
-    word = _LEVEL_WORDS.get(leading_alert.level, ("🔴", "ROT"))[1]
+    word = _level_word(leading_alert.level, lang)
     count_line = t("vergleich.warn.hoechste_stufe", lang, stufe=word,
                    ort=leading_loc.location.name)
     if leading_alert.hazard == "avalanche_bulletin":
@@ -950,9 +951,9 @@ def _render_warn_banner(locations: list[LocationResult], lang: Lang = "de") -> s
 
     return render_warn_block(
         notices, variant="embedded",
-        source_label=official_alert_source_label(leading_alert.source),
+        source_label=official_alert_source_label(leading_alert.source, lang=lang),
         source_url=getattr(leading_alert, "url", None), count_line=count_line,
-        tz=location_tz(leading_loc.location),
+        tz=location_tz(leading_loc.location), lang=lang,
     )
 
 
@@ -1175,7 +1176,7 @@ def _render_location_section(
         # Issue #1134: Dedup identischer Warnungen. Issue #1056 v2.0: Badge-
         # Farbe ist amtstreu level-basiert (kein severity_fn mehr).
         strip = render_official_alerts_html(
-            [("", _dedup_alerts(loc.official_alerts))],
+            [("", _dedup_alerts(loc.official_alerts))], lang=lang,
         )
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'

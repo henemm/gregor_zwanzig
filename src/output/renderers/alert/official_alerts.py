@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
+from i18n import Lang, fmt_date, fmt_weekday, t, tn
 from output.tokens.hazard_symbols import (
     HAZARD_ORDER, HAZARD_SMS_SYMBOLS, LEVEL_LETTERS, LEVELLESS_HAZARDS,
     MIN_SMS_LEVEL, NUMERIC_LEVEL_HAZARDS, sms_symbol_for,
@@ -40,12 +41,26 @@ if TYPE_CHECKING:
 # Das Emoji wird ausschliesslich vom Telegram-Renderer emittiert
 # (render_official_alert_telegram); alle E-Mail-/SMS-/Subject-Pfade nutzen nur
 # das Wort ([1]). Issue #1222: der Plain-Notice-Pfad laesst das Emoji weg.
-_LEVEL_WORDS: dict[int, tuple[str, str]] = {
-    1: ("🟢", "GRÜN"),
-    2: ("🟡", "GELB"),
-    3: ("🟠", "ORANGE"),
-    4: ("🔴", "ROT"),
+# Issue #2668: das Wort steht im Katalog (`_LEVEL_KEYS`, `_level_word(level,
+# lang)`); `_LEVEL_WORDS` bleibt die deutsche Sicht fuer Bestandsimporteure.
+_LEVEL_KEYS: dict[int, tuple[str, str]] = {
+    1: ("🟢", "warnung.stufe.gruen"),
+    2: ("🟡", "warnung.stufe.gelb"),
+    3: ("🟠", "warnung.stufe.orange"),
+    4: ("🔴", "warnung.stufe.rot"),
 }
+_LEVEL_WORDS: dict[int, tuple[str, str]] = {
+    level: (emoji, t(key, "de")) for level, (emoji, key) in _LEVEL_KEYS.items()
+}
+
+
+def _level_word(level: int, lang: Lang = "de") -> str:
+    """Stufenwort in ``lang``; unbekannte Stufe -> ROT (Bestand)."""
+    return t(_LEVEL_KEYS.get(level, _LEVEL_KEYS[4])[1], lang)
+
+
+def _level_emoji(level: int) -> str:
+    return _LEVEL_KEYS.get(level, _LEVEL_KEYS[4])[0]
 
 # Position "N/3" auf der Warnstufen-Leiter GELB->ORANGE->ROT (Issue #1216).
 # Issue #1441: Stufe 1 explizit ausserhalb der Leiter (0); die EAWS-Stufe 5
@@ -58,20 +73,31 @@ _LEVEL_POSITION: dict[int, int] = {1: 0, 2: 1, 3: 2, 4: 3}
 # Output, die Farbe kommt ausschliesslich ueber Inline-Style-Tokens, AC-13).
 _LEVEL_CLASS: dict[int, str] = {1: "gruen", 2: "gelb", 3: "orange", 4: "rot"}
 
-# Positions-Wort fuer den `.stufe-hint` (Design-Vorlage, AC-8).
-_LEVEL_POSITION_WORD: dict[int, str] = {1: "niedrigste", 2: "mittlere", 3: "höchste"}
+# Positions-Wort fuer den `.stufe-hint` (Design-Vorlage, AC-8); Issue #2668:
+# Katalogschluessel, Position 0 (ausserhalb der Leiter) -> "niedrigste".
+_LEVEL_POSITION_KEYS: dict[int, str] = {
+    1: "warnung.stufe.position.niedrigste", 2: "warnung.stufe.position.mittlere",
+    3: "warnung.stufe.position.hoechste",
+}
 
-# hazard -> deutsches Anzeige-Label, Issue #1216 Spec-Tabelle.
-_HAZARD_LABELS: dict[str, str] = {
-    "extreme_heat": "Hitze",
-    "thunderstorm": "Gewitter",
-    "extreme_cold": "Kälte",
-    "wind_gust": "Sturm",
-    "rain": "Starkregen",
-    "snow": "Schneefall",
-    "avalanche": "Lawine",
-    "black_ice": "Glatteis",
-    "access_ban": "Zugang gesperrt",
+
+def _position_word(pos: int, lang: Lang = "de") -> str:
+    return t(_LEVEL_POSITION_KEYS.get(pos, _LEVEL_POSITION_KEYS[1]), lang)
+
+
+# hazard -> Anzeige-Label, Issue #1216 Spec-Tabelle. Issue #2668: der Text steht
+# im Katalog `warnung.gefahr.<hazard>`; `_HAZARD_LABELS` ist die deutsche Sicht
+# (Bestandsimporteure, Dedup-Heuristik), `_hazard_word(hazard, lang)` die Anzeige.
+_HAZARD_KEYS: tuple[str, ...] = (
+    "extreme_heat",
+    "thunderstorm",
+    "extreme_cold",
+    "wind_gust",
+    "rain",
+    "snow",
+    "avalanche",
+    "black_ice",
+    "access_ban",
     # Adversary F004 (HIGH, #1239 Nachzug Runde 2): "wildfire_risk" (Quelle
     # meteo_forets.py, Label "Waldbrand-Gefahr — Stufe N") fehlte hier -- ohne
     # Mapping fiel `_hazard_display` auf den ROHEN Quell-Label zurueck,
@@ -79,14 +105,20 @@ _HAZARD_LABELS: dict[str, str] = {
     # Doppel-Stufe-Symptome (Standalone-Titel, Betreff, embedded Detail-Banner,
     # Compare-Aggregat-Banner) -- die vier Anzeige-Stellen waren nur Symptome
     # dieser einen fehlenden Zeile.
-    "wildfire_risk": "Waldbrand-Gefahr",
+    "wildfire_risk",
     # Issue #1427 S1: MeteoAlarm-Typen 11/12/13 (flood/flooding/rain-flood)
     # bzw. DPC Idrogeo/Idraulico -- Hochwasser- und Erdrutschwarnungen.
-    "flood": "Hochwasser/Erdrutsch",
+    "flood",
     # Issue #1441 (ADR-0089): amtlicher Lawinen-Lagebericht (EAWS 1-5), neben
     # der MeteoAlarm-Lawinenwarnung "avalanche" (Awareness 1-4).
-    "avalanche_bulletin": "Lawinenstufe",
-}
+    "avalanche_bulletin",
+)
+_HAZARD_LABELS: dict[str, str] = {h: t(f"warnung.gefahr.{h}", "de") for h in _HAZARD_KEYS}
+
+
+def _hazard_word(hazard: str, lang: Lang = "de") -> str | None:
+    """Typ-Wort der Gefahrenart in ``lang``; ``None`` fuer unbekannte Gefahrenarten."""
+    return t(f"warnung.gefahr.{hazard}", lang) if hazard in _HAZARD_LABELS else None
 
 # hazard -> (Anzeige, SMS-Kuerzel). Issue #1318 Abschnitt 1b: die Anzeige-Labels
 # bleiben deutsch, das SMS-Kuerzel kommt aus dem EINZIGEN Katalog
@@ -110,10 +142,10 @@ _SOURCE_LABELS: dict[str, str] = {
     "dwd": "DWD",
     "dwd_warn": "DWD",
     # Waldbrand-Gefahrenstufen von Météo-France (services/official_alerts/meteo_forets.py).
-    "meteo_forets": "Météo-France (Waldbrand)",
+    "meteo_forets": t("warnung.quelle.waldbrand", "de"),
     # Präfektur-Zugangssperren einzelner Wander-Massive bei akuter Waldbrandgefahr
     # (services/official_alerts/massif_closure.py, Quelle risque-prevention-incendie.fr).
-    "massif_closure": "Präfektur (Zugangssperre)",
+    "massif_closure": t("warnung.quelle.zugangssperre", "de"),
     # MeteoAlarm-Feed feeds.meteoalarm.org (Österreich, Italien, Deutschland;
     # Issue #1445, EDR-Weg mit #2266 zurückgebaut).
     "meteoalarm": "MeteoAlarm",
@@ -129,30 +161,39 @@ _SOURCE_LABELS: dict[str, str] = {
     # Issue #1441 S2: Registry-Namen (Melde-Gedaechtnis `source`) -- eine reine
     # Entwarnungs-Mail nennt die Quelle ueber diesen Namen.
     "meteoalarm_feed": "MeteoAlarm",
-    "avalanche_report": "Lawinenwarndienste, avalanche.report",
+    "avalanche_report": t("warnung.quelle.lawinendienste", "de"),
     # Issue #1441 S3 (Antrag #7): SLF -- Registry-Name UND jede Region
     # `slf_bulletin:CH-xxxx` (Aufloesung ueber den Praefix, `_PREFIX_LABELS`).
     "slf_bulletin": "WSL-Institut für Schnee- und Lawinenforschung SLF",
+}
+# Issue #2668: Quellen mit beschreibendem Zusatz (Katalog); Behoerdennamen bleiben.
+_SOURCE_KEYS: dict[str, str] = {
+    "meteo_forets": "warnung.quelle.waldbrand",
+    "massif_closure": "warnung.quelle.zugangssperre",
+    "avalanche_report": "warnung.quelle.lawinendienste",
 }
 # Quellen, deren Regions-Kennungen ueber den Praefix vor dem ersten ":" aufgeloest werden.
 _PREFIX_LABELS: frozenset[str] = frozenset({"slf_bulletin"})
 # Issue #1441 S3 (Antrag #7, Auflage): Hinweis auf die Massgeblichkeit des
 # Originalberichts -- nur Langform (Mail, Telegram), nie SMS/Kurzform.
 _AUTHORITY_NOTES: dict[str, str] = {
-    "slf_bulletin": "Maßgeblich ist der Originalbericht des SLF.",
+    "slf_bulletin": "warnung.hinweis.massgeblich_slf",
 }
 
-# Issue #1441: EAWS-Woerter und Lawinenprobleme -- Wortlaut des Warndienstes,
-# nur Daten, keine Handlungsempfehlung. Unbekannter Code -> der Code selbst.
-_EAWS_WORDS: dict[int, str] = {1: "gering", 2: "mäßig", 3: "erheblich", 4: "groß", 5: "sehr groß"}
-AVALANCHE_PROBLEM_NAMES_DE: dict[str, str] = {
-    "new_snow": "Neuschnee", "wind_slab": "Triebschnee", "persistent_weak_layers": "Altschnee",
-    "wet_snow": "Nassschnee", "gliding_snow": "Gleitschnee", "cornices": "Wechten",
-    "no_distinct_avalanche_problem": "kein ausgeprägtes Lawinenproblem",
-    "favourable_situation": "günstige Situation",
-}
-_ELEVATION_WORDS: dict[str, str] = {"above": "oberhalb", "below": "unterhalb"}
-_TIME_OF_DAY_WORDS: dict[str, str] = {"earlier": "vormittags", "later": "nachmittags"}
+# Issue #1441: EAWS-Woerter (`warnung.eaws.1`-`5`) und Lawinenprobleme -- Wortlaut
+# des Warndienstes, nur Daten, keine Handlungsempfehlung. Unbekannter Code -> der
+# Code selbst. Issue #2668: alle Woerter im Katalog.
+_EAWS_LEVELS: frozenset[int] = frozenset({1, 2, 3, 4, 5})
+_AVALANCHE_PROBLEMS: frozenset[str] = frozenset({
+    "new_snow", "wind_slab", "persistent_weak_layers", "wet_snow", "gliding_snow", "cornices",
+    "no_distinct_avalanche_problem", "favourable_situation",
+})
+_ELEVATION_DIRECTIONS: frozenset[str] = frozenset({"above", "below"})
+_TIMES_OF_DAY: frozenset[str] = frozenset({"earlier", "later"})
+# Waldgrenze ist ein Datenwert des Parsers (`caaml.elevation_from_problems`).
+_TREELINE = "Waldgrenze"
+# Issue #2668: Sprachen mit Namen im Katalog (Quelltext-Hinweis); sonst der Code.
+_SPRACH_CODES: frozenset[str] = frozenset({"fr", "it", "sl", "hr", "es", "de", "en"})
 
 
 def _is_eaws(alert: "OfficialAlert") -> bool:
@@ -167,37 +208,48 @@ def _rank(alert: "OfficialAlert") -> int:
     return comparable_level(alert)
 
 
-def avalanche_bulletin_text(alert: "OfficialAlert") -> str:
+def avalanche_bulletin_text(alert: "OfficialAlert", *, lang: Lang = "de") -> str:
     """Zentraler Text des Lageberichts, z. B. "Lawinenstufe 4 (groß) oberhalb
     Waldgrenze · Triebschnee" (Stufe, Hoehe, Tageszeit, Probleme -- woertlich)."""
     level = _rank(alert)
     # Issue #1441 S3: amtliche Feinstufe ("3-"/"3+") nur in der Langform.
-    text = f"Lawinenstufe {level}{alert.level_modifier or ''}"
-    if level in _EAWS_WORDS:
-        text += f" ({_EAWS_WORDS[level]})"
-    if alert.elevation_value and alert.elevation_direction in _ELEVATION_WORDS:
-        unit = "" if alert.elevation_value == "Waldgrenze" else " m"
-        text += f" {_ELEVATION_WORDS[alert.elevation_direction]} {alert.elevation_value}{unit}"
-    if alert.time_of_day in _TIME_OF_DAY_WORDS:
-        text += f" ({_TIME_OF_DAY_WORDS[alert.time_of_day]})"
+    stufe = f"{level}{alert.level_modifier or ''}"
+    if level in _EAWS_LEVELS:
+        text = t("warnung.lawine.stufe", lang, n=stufe, wort=t(f"warnung.eaws.{level}", lang))
+    else:
+        text = f"{t('warnung.gefahr.avalanche_bulletin', lang)} {stufe}"
+    if alert.elevation_value and alert.elevation_direction in _ELEVATION_DIRECTIONS:
+        wert = (t("warnung.hoehe.waldgrenze", lang) if alert.elevation_value == _TREELINE
+                else f"{alert.elevation_value} m")
+        text += f" {t(f'warnung.hoehe.{alert.elevation_direction}', lang)} {wert}"
+    if alert.time_of_day in _TIMES_OF_DAY:
+        text += f" ({t(f'warnung.tageszeit.{alert.time_of_day}', lang)})"
     if alert.problems:
-        text += " · " + ", ".join(AVALANCHE_PROBLEM_NAMES_DE.get(c, c) for c in alert.problems)
+        text += " · " + ", ".join(
+            t(f"warnung.problem.{c}", lang) if c in _AVALANCHE_PROBLEMS else c for c in alert.problems
+        )
     return text
 
 
-def _alert_text(alert: "OfficialAlert") -> str:
-    """Badge-/Plain-Text: Lagebericht ueber den zentralen Helfer, sonst `label`."""
-    return avalanche_bulletin_text(alert) if _is_eaws(alert) else alert.label
+def _alert_text(alert: "OfficialAlert", lang: Lang = "de") -> str:
+    """Badge-/Plain-Text: Lagebericht ueber den zentralen Helfer, sonst `label`.
+    Issue #2668: ausser Deutsch der Anzeige-Titel (`label` ist deutsche Kennung)."""
+    if _is_eaws(alert):
+        return avalanche_bulletin_text(alert, lang=lang)
+    return alert.label if lang == "de" else _display_label(alert, lang=lang)
 
 
-def official_alert_source_label(source: str | None) -> str:
+def official_alert_source_label(source: str | None, *, lang: Lang = "de") -> str:
     """source-Kennung -> menschenlesbarer Anzeigename der amtlichen Quelle
     (Issue #1216 AC-7). Exakte Treffer zuerst, dann Substring-Heuristik fuer
     Varianten (`geosphere_*`, `*vigilance*`, `dwd_*`). Unbekannte Quelle ->
-    der rohe `source`-String (nie ein falscher hartkodierter Fremd-Absender)."""
+    der rohe `source`-String (nie ein falscher hartkodierter Fremd-Absender).
+    Issue #2668: beschreibende Zusaetze in ``lang``, Behoerdennamen bleiben."""
     if not source:
-        return "Amtliche Quelle"
+        return t("warnung.quelle.amtlich", lang)
     key = source.lower()
+    if key in _SOURCE_KEYS:
+        return t(_SOURCE_KEYS[key], lang)
     if key in _SOURCE_LABELS:
         return _SOURCE_LABELS[key]
     prefix = key.split(":", 1)[0]
@@ -212,11 +264,25 @@ def official_alert_source_label(source: str | None) -> str:
     return source
 
 
-def official_alert_authority_notes(alerts: "list[OfficialAlert]") -> list[str]:
+def _sprachname(code: str, lang: Lang) -> str:
+    return t(f"warnung.sprache.{code}", lang) if code in _SPRACH_CODES else code.upper()
+
+
+def official_alert_authority_notes(alerts: "list[OfficialAlert]", *, lang: Lang = "de") -> list[str]:
     """Massgeblichkeits-Saetze der beteiligten Quellen (Issue #1441 S3),
-    je Quelle einmal, in Reihenfolge der Warnungen."""
-    notes = (_AUTHORITY_NOTES.get(str(a.source or "").split(":", 1)[0]) for a in alerts)
-    return list(dict.fromkeys(n for n in notes if n))
+    je Quelle einmal, in Reihenfolge der Warnungen.
+
+    Issue #2668: ausser in Deutsch (byte-gleich) zusaetzlich der Hinweis auf
+    die Quellsprache, wenn der ANGEZEIGTE Titel Behoerdentext einer anderen
+    Sprache ist (nicht das Katalog-Typ-Wort). Nur Langform, nie SMS."""
+    keys = (_AUTHORITY_NOTES.get(str(a.source or "").split(":", 1)[0]) for a in alerts)
+    notes = [t(k, lang) for k in keys if k]
+    if lang != "de":
+        for a in alerts:
+            code = _display_parts(a, lang)[1]
+            if code and code != lang:
+                notes.append(t("warnung.hinweis.quelltext_sprache", lang, sprache=_sprachname(code, lang)))
+    return list(dict.fromkeys(notes))
 
 
 @dataclass(frozen=True)
@@ -271,6 +337,7 @@ def render_official_alerts_html(
     entries: list[tuple[str, list["OfficialAlert"]]],
     *,
     segment_refs: dict | None = None,
+    lang: Lang = "de",
 ) -> str:
     """Badges fuer amtliche Warnungen (div/span, kein <table>).
 
@@ -306,7 +373,7 @@ def render_official_alerts_html(
     for label, alerts in entries:
         for alert in alerts:
             color = _level_colors.get(alert.level, G_ALERT_L4)
-            alert_label = _html.escape(_alert_text(alert))
+            alert_label = _html.escape(_alert_text(alert, lang))
             prefix_html = ""
             if label and label != alert.label:
                 name = _html.escape(label)
@@ -325,7 +392,7 @@ def render_official_alerts_html(
             # "unbekannt"-Platzhalter (AC-7).
             time_suffix = ""
             if alert.valid_from and alert.valid_to:
-                time_suffix = f" · {_html.escape(_format_validity(alert))}"
+                time_suffix = f" · {_html.escape(_format_validity(alert, lang=lang))}"
             badges.append(
                 f'<div style="background:{G_PAPER};border-left:4px solid {color};'
                 f'padding:8px 16px;margin:8px 20px;border-radius:4px;'
@@ -336,7 +403,9 @@ def render_official_alerts_html(
     return "".join(badges)
 
 
-def render_official_alerts_plain(entries: list[tuple[str, list["OfficialAlert"]]]) -> list[str]:
+def render_official_alerts_plain(
+    entries: list[tuple[str, list["OfficialAlert"]]], *, lang: Lang = "de",
+) -> list[str]:
     """Reproduziert das alte `comparison.py`-Plain-Format exakt: eine Zeile
     je Alert, "Amtliche Warnung: {label}" — der Aufrufer haengt Ortsnamen
     bzw. Praefixe (z.B. "   ⚠️ ") selbst davor.
@@ -352,8 +421,8 @@ def render_official_alerts_plain(entries: list[tuple[str, list["OfficialAlert"]]
         for alert in alerts:
             suffix = ""
             if alert.valid_from and alert.valid_to:
-                suffix = f" ({_format_validity(alert)})"
-            lines.append(f"Amtliche Warnung: {_alert_text(alert)}{suffix}")
+                suffix = f" ({_format_validity(alert, lang=lang)})"
+            lines.append(f"{t('mail.herkunft.amtliche_warnung', lang)}: {_alert_text(alert, lang)}{suffix}")
     return lines
 
 
@@ -775,7 +844,7 @@ def _bundle_by_hazard_level(
 
 
 def render_official_alert_notice_plain(
-    alerts: list[tuple["OfficialAlert", list[str]]], tz: "ZoneInfo",
+    alerts: list[tuple["OfficialAlert", list[str]]], tz: "ZoneInfo", *, lang: Lang = "de",
 ) -> list[str]:
     """Standalone-Alert-Format (Issue #1172/#1200): dedupliziert die Warnungen
     (dedupe_official_alerts) und rendert pro echter Warnung einen Block mit
@@ -809,16 +878,18 @@ def render_official_alert_notice_plain(
         # gesperrt — {Massiv}", Vigilance "Extreme Hitze") unveraendert --
         # nur ein voellig eigenstaendiges Roh-Label wird durch das Typ-Wort
         # ersetzt (s. `_display_label`-Docstring Fall (d)).
-        word = _LEVEL_WORDS.get(a.level, ("🔴", "ROT"))[1]
+        word = _level_word(a.level, lang)
+        titel = _display_label(a, lang=lang)
         # Issue #1441: der Lagebericht traegt seine Stufe im Wortlaut, kein Ampelwort.
-        lines.append(_display_label(a) if _is_eaws(a) else f"{word} — {_display_label(a)}")
-        region_line = f"Region: {a.region_label or 'unbekannt'}"
+        lines.append(titel if _is_eaws(a) else f"{word} — {titel}")
+        region = a.region_label or t("warnung.zeit.unbekannt", lang)
+        region_line = f"{t('warnung.zeile.region', lang)}: {region}"
         if segment_ids:
             region_line += f" — {format_segment_reference(segment_ids)}"
         lines.append(region_line)
         if a.valid_from and a.valid_to:
             lines.append(
-                f"Gültig: {local_fmt(a.valid_from, tz, fmt)} – "
+                f"{t('warnung.gueltig', lang)}: {local_fmt(a.valid_from, tz, fmt)} – "
                 f"{local_fmt(a.valid_to, tz, fmt)}"
             )
         # sonst: keine "Gültig:"-Zeile (AC-7) -- kein Platzhalter "unbekannt".
@@ -854,12 +925,12 @@ def collect_trip_alert_entries(
 # Praesentations-Renderer + Aufbau-Helfer fuer den Trip-Standalone-Alarm.
 # ---------------------------------------------------------------------------
 
-def _hazard_display(alert: "OfficialAlert") -> tuple[str, str]:
+def _hazard_display(alert: "OfficialAlert", lang: Lang = "de") -> tuple[str, str]:
     """hazard -> (Anzeige, SMS-Kuerzel); unbekannt -> (label, erste 2 ASCII-
-    Grossbuchstaben aus hazard)."""
+    Grossbuchstaben aus hazard). Issue #2668: Anzeige in ``lang``, Kuerzel nie."""
     mapped = _HAZARD_DISPLAY.get(alert.hazard)
     if mapped:
-        return mapped
+        return _hazard_word(alert.hazard, lang) or mapped[0], mapped[1]
     # Kuerzel-Fallback kommt aus der geteilten Quelle, damit Trip-Briefing-SMS
     # und Standalone-Warn-SMS fuer denselben unbekannten hazard nie divergieren.
     return alert.label, sms_symbol_for(alert.hazard)
@@ -871,7 +942,7 @@ def _hazard_display(alert: "OfficialAlert") -> tuple[str, str]:
 _SOURCE_LEVEL_SUFFIX = re.compile(r"\s*[—–-]\s*Stufe\s*\d+\s*$")
 
 
-def _display_label(alert: "OfficialAlert") -> str:
+def _display_label(alert: "OfficialAlert", *, lang: Lang = "de") -> str:
     """Anzeige-Titel einer Warnung (Issue #1238 AC-4, geteilte Quelle fuer
     Betreff `_typ_tag`, Standalone-Warn-Titel `_standalone_warn_type_html` und
     embedded WarnBlock): der reichere Quell-Label ERSETZT das normalisierte
@@ -900,9 +971,48 @@ def _display_label(alert: "OfficialAlert") -> str:
     Stufenwort in derselben Nachricht steht. NUR hier, am Anzeige-Ort -- nie am
     Roh-Label der Quelle oder am Dedup-Schluessel (Regress-Schutz gegen
     #1172/#1200/#1217/#1218, die beide ausschliesslich `alert.label`
-    unveraendert nutzen)."""
+    unveraendert nutzen).
+
+    Issue #2668: ``lang`` waehlt den Titel erst beim Darstellen (Cache ist
+    nutzeruebergreifend); Deutsch bleibt die Logik oben, byte-gleich."""
+    return _display_parts(alert, lang)[0]
+
+
+def _label_for_lang(alert: "OfficialAlert", lang: Lang) -> tuple[str, str]:
+    """(Text, Sprachcode) des Sprachblocks fuer ``lang`` (Issue #2668): ``en``
+    nimmt den en-Block, sonst den de-Block, sonst `label` (Sprache
+    `label_lang`); ``de`` nimmt den de-Block, sonst `label`."""
+    bloecke = dict(alert.label_by_lang)
+    for code in (("en", "de") if lang == "en" else ("de",)):
+        if bloecke.get(code):
+            return bloecke[code], code
+    return alert.label, alert.label_lang
+
+
+def _display_parts(alert: "OfficialAlert", lang: Lang = "de") -> tuple[str, str]:
+    """(Anzeige-Titel, Sprache des darin gezeigten Behoerdentexts oder "").
+    Die Sprache speist den Quelltext-Hinweis (`official_alert_authority_notes`)."""
     if _is_eaws(alert):
-        return avalanche_bulletin_text(alert)  # Issue #1441: Wortlaut statt Leiter
+        return avalanche_bulletin_text(alert, lang=lang), ""  # Issue #1441: Wortlaut statt Leiter
+    if lang != "en":
+        return _display_label_de(alert), ""
+    typ, _sms = _hazard_display(alert, "en")
+    text, code = _label_for_lang(alert, "en")
+    text = _SOURCE_LEVEL_SUFFIX.sub("", text or "")
+    if "—" in text:
+        # Behoerdentext bekannter Sprache bleibt wortlich (Hinweis nennt die
+        # Sprache); interne deutsche Kennungen ("Zugang gesperrt — Massiv")
+        # bekommen das englische Typ-Wort, das Detail ist ein Eigenname.
+        if code:
+            return text, code
+        return f"{typ} — {text.split('—', 1)[1].strip()}", ""
+    if code == "en" and typ.lower() in text.lower():
+        return text, code
+    return typ, ""
+
+
+def _display_label_de(alert: "OfficialAlert") -> str:
+    """Bestandslogik des deutschen Titels (Faelle a-d, s. `_display_label`)."""
     typ, _sms = _hazard_display(alert)
     label = alert.label
     if label == typ or not label:
@@ -917,29 +1027,29 @@ def _display_label(alert: "OfficialAlert") -> str:
 
 
 def _de_weekday_short(dt: datetime) -> str:
-    """DE-Wochentagskuerzel {Mo..So} statt locale-abhaengigem '%a' ('Fri')."""
-    return _DE_WEEKDAYS[dt.weekday()]
+    """DE-Wochentagskuerzel {Mo..So} statt locale-abhaengigem '%a' ('Fri').
+    Duenner Wrapper (Issue #2668) bis P9b `trip_alert.py` umstellt."""
+    return fmt_weekday(dt, "de")
 
 
-def _format_validity(alert: "OfficialAlert", tz: "ZoneInfo | None" = None) -> str:
+def _format_validity(
+    alert: "OfficialAlert", tz: "ZoneInfo | None" = None, *, lang: Lang = "de",
+) -> str:
     """'Fr 10.07. · ganztägig' bzw. 'Sa 11.07. · 15:00–21:00'; fehlende Zeiten
     -> 'unbekannt'. Tagesübergang (F006): 'Fr 10.07. · 22:00 – Sa 11.07. 03:00'
-    -- beide Daten erscheinen, damit das Ende nicht vor dem Beginn scheint."""
+    -- beide Daten erscheinen, damit das Ende nicht vor dem Beginn scheint.
+    Issue #2668: Datum ueber `fmt_date` (de 'Fr 10.07.', en 'Fri 10 Jul')."""
     if not alert.valid_from or not alert.valid_to:
-        return "unbekannt"
+        return t("warnung.zeit.unbekannt", lang)
     vf = alert.valid_from.astimezone(tz) if tz else alert.valid_from
     vt = alert.valid_to.astimezone(tz) if tz else alert.valid_to
-    tag, date_str = _de_weekday_short(vf), vf.strftime("%d.%m.")
+    tag_datum = fmt_date(vf, lang)
     if vf.date() != vt.date():
-        tag_to, date_str_to = _de_weekday_short(vt), vt.strftime("%d.%m.")
-        return (
-            f"{tag} {date_str} · {vf.strftime('%H:%M')} – "
-            f"{tag_to} {date_str_to} {vt.strftime('%H:%M')}"
-        )
+        return f"{tag_datum} · {vf.strftime('%H:%M')} – {fmt_date(vt, lang)} {vt.strftime('%H:%M')}"
     allday = (vf.hour, vf.minute, vt.hour, vt.minute) == (0, 0, 23, 59)
     if allday:
-        return f"{tag} {date_str} · ganztägig"
-    return f"{tag} {date_str} · {vf.strftime('%H:%M')}–{vt.strftime('%H:%M')}"
+        return f"{tag_datum} · {t('warnung.zeit.ganztaegig', lang)}"
+    return f"{tag_datum} · {vf.strftime('%H:%M')}–{vt.strftime('%H:%M')}"
 
 
 def _sort_notices(notices: list["OfficialAlertNotice"]) -> list["OfficialAlertNotice"]:
@@ -951,18 +1061,20 @@ def _sort_notices(notices: list["OfficialAlertNotice"]) -> list["OfficialAlertNo
     )
 
 
-def _typ_tag(notice: "OfficialAlertNotice", tz: "ZoneInfo | None" = None) -> str:
+def _typ_tag(
+    notice: "OfficialAlertNotice", tz: "ZoneInfo | None" = None, *, lang: Lang = "de",
+) -> str:
     # Titel-Logik: `_display_label` (geteilte Quelle, #1238 AC-4).
     #
     # `tz` (#1233 Nebenbefund AC-12): der Wochentag MUSS dieselbe tz-aware
     # Quelle nutzen wie `_format_validity` im Body -- sonst zeigt der Betreff
     # bei einem Gueltigkeitsbeginn kurz vor Mitternacht einen anderen Wochentag
     # als der Body (Bug: Betreff "(Sa)" roh-UTC vs. Body "So" lokalisiert).
-    display = _display_label(notice.alert)
+    display = _display_label(notice.alert, lang=lang)
     if notice.alert.valid_from is None:
         return display
     vf = notice.alert.valid_from.astimezone(tz) if tz else notice.alert.valid_from
-    return f"{display} ({_de_weekday_short(vf)})"
+    return f"{display} ({fmt_weekday(vf, lang)})"
 
 
 # Issue #1239 (AC-15/AC-17): ab wie vielen betroffenen Orten die Reichweite als
@@ -972,7 +1084,7 @@ _SCOPE_MAX_NAMES = 2
 _SUBJECT_MAX_WARNINGS = 2
 
 
-def _scope_display(notice: "OfficialAlertNotice") -> str:
+def _scope_display(notice: "OfficialAlertNotice", lang: Lang = "de") -> str:
     """Reichweite fuer Betreff/Ueberschrift (Issue #1239 AC-15/AC-16/AC-17):
     ab drei betroffenen Orten eine Mengenangabe statt der vollstaendigen
     Namensliste, die den Betreff unlesbar lang macht. Bei 1-2 Orten bleiben die
@@ -987,18 +1099,28 @@ def _scope_display(notice: "OfficialAlertNotice") -> str:
     Feld) faellt sie auf die reine Anzahl zurueck."""
     if notice.scope_kind != "locations":
         return notice.scope_label
-    if notice.scope_label in ("alle Orte", "gesamte Route"):
+    if _full_scope_kind(notice.scope_label):
         return notice.scope_label
     count = len(notice.affected_chips)
     if count > _SCOPE_MAX_NAMES:
         if notice.scope_total:
-            return f"{count} von {notice.scope_total} Orten"
-        return f"{count} Orte"
+            return t("vergleich.warn.n_von_m_orten", lang, n=count, gesamt=notice.scope_total)
+        return t("warnung.umfang.anzahl_orte", lang, count=count)
     return notice.scope_label
+
+
+def _full_scope_kind(scope_label: str) -> str:
+    """"route"/"orte", wenn `scope_label` der volle Umfang ist (in jeder
+    Sprache, Issue #2668: die Notice traegt den Text in Builder-Sprache), sonst ""."""
+    for art, key in (("route", "warnung.umfang.gesamte_route"), ("orte", "warnung.umfang.alle_orte")):
+        if scope_label in (t(key, "de"), t(key, "en")):
+            return art
+    return ""
 
 
 def render_official_alert_subject(
     notices: list["OfficialAlertNotice"], *, prefix: str, tz: "ZoneInfo | None" = None,
+    lang: Lang = "de",
 ) -> str:
     """'[{prefix}] {reichweite} · {Stufe(n)} {Typ (Tag)} + …' — reichweite und
     Stufen-Reihenfolge folgen der fuehrenden (hoechsten) Warnung.
@@ -1044,21 +1166,22 @@ def render_official_alert_subject(
     # bit-identisch (kein Suffix, gleiche Trennzeichen).
     shown = ordered[:_SUBJECT_MAX_WARNINGS]
     omitted = len(ordered) - len(shown)
-    more = f" +{omitted} weitere" if omitted > 0 else ""
+    more = f" {t('warnung.kopf.weitere', lang, count=omitted)}" if omitted > 0 else ""
     if uniform and not any(_is_eaws(n.alert) for n in ordered):
-        _emoji, word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
-        body = f"{word} " + " + ".join(_typ_tag(n, tz) for n in shown)
+        word = _level_word(leading.alert.level, lang)
+        body = f"{word} " + " + ".join(_typ_tag(n, tz, lang=lang) for n in shown)
     else:
         # Issue #1441: der Lagebericht steht ohne Ampelwort (Stufe im Wortlaut).
         body = " + ".join(
-            _typ_tag(n, tz) if _is_eaws(n.alert)
-            else f"{_LEVEL_WORDS.get(n.alert.level, ('🔴', 'ROT'))[1]} {_typ_tag(n, tz)}"
+            _typ_tag(n, tz, lang=lang) if _is_eaws(n.alert)
+            else f"{_level_word(n.alert.level, lang)} {_typ_tag(n, tz, lang=lang)}"
             for n in shown
         )
     if not _uniform_scope(ordered):
-        scope_text = "mehrere Orte" if leading.scope_kind == "locations" else "mehrere Segmente"
+        mehrere = "orte" if leading.scope_kind == "locations" else "segmente"
+        scope_text = t(f"warnung.umfang.mehrere_{mehrere}", lang)
     else:
-        scope_text = _scope_display(leading)
+        scope_text = _scope_display(leading, lang)
     return f"[{prefix}] {scope_text} · {body}{more}"
 
 
@@ -1070,15 +1193,16 @@ def _hex_to_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r},{g},{b},{alpha})"
 
 
-def _join_de(items: list[str]) -> str:
-    """Deutsche Aufzaehlung: 'A' / 'A und B' / 'A, B und C' (Spec Slice B
-    Punkt 2, dedupliziert Wiederholungen bei gleicher Reihenfolge)."""
+def _join_de(items: list[str], lang: Lang = "de") -> str:
+    """Aufzaehlung: 'A' / 'A und B' / 'A, B und C' (Spec Slice B Punkt 2,
+    dedupliziert Wiederholungen bei gleicher Reihenfolge); Issue #2668: das
+    Bindewort aus dem Katalog ('A, B and C')."""
     deduped = list(dict.fromkeys(items))
     if not deduped:
         return ""
     if len(deduped) == 1:
         return deduped[0]
-    return ", ".join(deduped[:-1]) + " und " + deduped[-1]
+    return t("warnung.liste.und", lang, liste=", ".join(deduped[:-1]), letztes=deduped[-1])
 
 
 def _standalone_chip_html(label: str, *, active: bool) -> str:
@@ -1106,14 +1230,14 @@ def _standalone_chip_html(label: str, *, active: bool) -> str:
 
 def _standalone_verdict_html(
     n_count: int, leading_level: int, leading_word: str, uniform: bool,
-    level_colors: dict[int, str], font_mono: str,
+    level_colors: dict[int, str], font_mono: str, lang: Lang = "de",
 ) -> str:
     """`.verdict`-Pill (AC-6): farbiger `.dot` + Anzahl, bei gemischten Stufen
     zusaetzlich '· höchste Stufe {WORT}'."""
     color = level_colors.get(leading_level, level_colors[4])
     css_class = _LEVEL_CLASS.get(leading_level, "rot")
     tint = _hex_to_rgba(color, 0.16)
-    text = _verdict_text(n_count, leading_word, uniform)
+    text = _verdict_text(n_count, leading_word, uniform, lang)
     dot = (
         f'<span class="dot {css_class}" style="width:12px;height:12px;'
         f'border-radius:999px;background:{color};'
@@ -1128,33 +1252,35 @@ def _standalone_verdict_html(
     )
 
 
-def _headline_text(ordered: list["OfficialAlertNotice"], uniform: bool) -> str:
+def _headline_text(
+    ordered: list["OfficialAlertNotice"], uniform: bool, lang: Lang = "de",
+) -> str:
     """Kernaussage der Ueberschrift als Klartext -- gemeinsame Quelle fuer das
     HTML (escaped, `_standalone_headline_html`) und den Klartext-Teil der Mail
     (#1744 A2, AC-13). Regeln unveraendert, siehe dort."""
     types = []
     for n in ordered:
-        typ = _display_label(n.alert)
+        typ = _display_label(n.alert, lang=lang)
         if not uniform and not _is_eaws(n.alert):
-            _e, lw = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
-            typ = f"{typ} ({lw})"
+            typ = f"{typ} ({_level_word(n.alert.level, lang)})"
         types.append(typ)
-    text = _join_de(types)
+    text = _join_de(types, lang)
     if _uniform_scope(ordered) and not _scope_matches_sole_chip(ordered[0]):
-        return f"{text} für {_scope_display(ordered[0])} gemeldet."
-    return f"{text} gemeldet."
+        return t("warnung.kopf.gemeldet_fuer", lang, typen=text, umfang=_scope_display(ordered[0], lang))
+    return t("warnung.kopf.gemeldet", lang, typen=text)
 
 
-def _verdict_text(n_count: int, leading_word: str, uniform: bool) -> str:
+def _verdict_text(n_count: int, leading_word: str, uniform: bool, lang: Lang = "de") -> str:
     """Kennzeichen-Text '{N} amtliche Warnung(en)' (+ Hoechststufe bei
     gemischten Stufen) -- geteilt von Verdict-Pille und Klartext-Teil."""
-    word = "amtliche Warnung" if n_count == 1 else "amtliche Warnungen"
     # Issue #1441: leeres `leading_word` = fuehrender Lagebericht, kein Ampelwort.
-    extra = "" if uniform or not leading_word else f" · höchste Stufe {leading_word}"
-    return f"{n_count} {word}{extra}"
+    extra = "" if uniform or not leading_word else f" · {t('warnung.kopf.hoechste_stufe', lang)} {leading_word}"
+    return f"{tn('warnung.verdict', n_count, lang)}{extra}"
 
 
-def _standalone_headline_html(ordered: list["OfficialAlertNotice"], uniform: bool) -> str:
+def _standalone_headline_html(
+    ordered: list["OfficialAlertNotice"], uniform: bool, lang: Lang = "de",
+) -> str:
     """`.body-h1` (AC-7): deterministische Template-Headline '{Typen} für
     {scope} gemeldet.'. Bei gemischten Stufen traegt jeder Typ zusaetzlich
     sein Stufen-Wort in Klammern (Design-Vorlage Beispiel C). Inline-CSS 1:1
@@ -1188,11 +1314,13 @@ def _standalone_headline_html(ordered: list["OfficialAlertNotice"], uniform: boo
     )
     # #1744 A2: EINE Textquelle fuer HTML und Klartext (`_headline_text`), hier
     # escaped -- die Regeln (F006/F007, Scope-Nennung) stehen dort.
-    text = _html.escape(_headline_text(ordered, uniform))
+    text = _html.escape(_headline_text(ordered, uniform, lang))
     return f'<div class="body-h1" style="{style}">{text}</div>'
 
 
-def _standalone_ladder_html(active_level: int, level_colors: dict[int, str]) -> str:
+def _standalone_ladder_html(
+    active_level: int, level_colors: dict[int, str], lang: Lang = "de",
+) -> str:
     """`.stufe-line` (uniforme Stufe, AC-8): GELB->ORANGE->ROT-Leiter mit
     aktiver Stufe (`.on`) + Positions-Hinweis ('niedrigste/mittlere/höchste
     von drei'). Inline-CSS 1:1 aus der Vorlage (F002); die aktive Stufe
@@ -1200,9 +1328,10 @@ def _standalone_ladder_html(active_level: int, level_colors: dict[int, str]) -> 
     from output.renderers.email.design_tokens import FONT_DATA, G_INK_FAINT
 
     pos = _LEVEL_POSITION.get(active_level, 0)
-    hint = f"{_LEVEL_POSITION_WORD.get(pos, 'niedrigste')} von drei"
+    hint = _html.escape(t("warnung.stufe.von_drei", lang, position=_position_word(pos, lang)))
     spans = []
-    for i, (lvl, word) in enumerate(((2, "GELB"), (3, "ORANGE"), (4, "ROT"))):
+    for i, lvl in enumerate((2, 3, 4)):
+        word = _html.escape(_level_word(lvl, lang))
         active = lvl == active_level
         css_class = ("on " + _LEVEL_CLASS[lvl]) if active else _LEVEL_CLASS[lvl]
         dot = (
@@ -1234,7 +1363,7 @@ def _standalone_ladder_html(active_level: int, level_colors: dict[int, str]) -> 
         f'flex-wrap:wrap;margin:0 0 18px;">'
         f'<span class="stufe-cap" style="font-family:{FONT_DATA};font-size:11px;'
         f'letter-spacing:.08em;text-transform:uppercase;color:{G_INK_FAINT};'
-        f'font-weight:600;">Warnstufe</span>'
+        f'font-weight:600;">{_html.escape(t("warnung.kopf.warnstufe", lang))}</span>'
         f'<span class="stufe" style="display:inline-flex;align-items:stretch;'
         f'border:1px solid #d8d3c2;border-radius:999px;overflow:hidden;">'
         f'{"".join(spans)}</span>'
@@ -1243,7 +1372,7 @@ def _standalone_ladder_html(active_level: int, level_colors: dict[int, str]) -> 
     )
 
 
-def _standalone_bars_meter_html(level: int, color: str) -> str:
+def _standalone_bars_meter_html(level: int, color: str, lang: Lang = "de") -> str:
     """`.meter`-Baustein je Warnung bei gemischten Stufen (AC-9/AC-13): 3
     `<i>`-Balken, `pos` davon in Bestands-Token-Farbe gefuellt, Rest leer.
     Inline-CSS 1:1 aus der Vorlage (F002), inkl. der bisher fehlenden
@@ -1251,7 +1380,7 @@ def _standalone_bars_meter_html(level: int, color: str) -> str:
     from output.renderers.email.design_tokens import FONT_DATA
 
     pos = _LEVEL_POSITION.get(level, 0)
-    _emoji, word = _LEVEL_WORDS.get(level, ("🔴", "ROT"))
+    word = _html.escape(_level_word(level, lang))
     bar_base = (
         "width:8px;height:8px;border-radius:999px;"
         "box-shadow:inset 0 0 0 1px rgba(26,26,24,.20);"
@@ -1274,7 +1403,7 @@ def _standalone_bars_meter_html(level: int, color: str) -> str:
     )
 
 
-def _standalone_warn_type_html(notice: "OfficialAlertNotice") -> str:
+def _standalone_warn_type_html(notice: "OfficialAlertNotice", lang: Lang = "de") -> str:
     """Warn-Titel der Standalone-Zeile, bereits HTML-escaped (Issue #1238):
 
     - AC-4: der reichere Quell-Label ERSETZT das Typ-Wort (geteilte Quelle
@@ -1285,7 +1414,7 @@ def _standalone_warn_type_html(notice: "OfficialAlertNotice") -> str:
       Stufen-Wort steht ("ORANGE · 2/3"). Adversary F002: die Suffix-Bereinigung
       sitzt in `_display_label` selbst (geteilt fuer alle drei Anzeige-Orte),
       hier also implizit."""
-    return _html.escape(_display_label(notice.alert))
+    return _html.escape(_display_label(notice.alert, lang=lang))
 
 
 #: Datenzeile der Standalone-Warn-Mail: `(Label, Klartext-Wert, HTML-Wert|None)`.
@@ -1313,21 +1442,21 @@ def _standalone_datarow_html(
     return _datarow_html(f"{label}:", value, G_INK, first, value_html=value_html)
 
 
-def _standalone_type_row(notice: "OfficialAlertNotice") -> _DataRow:
+def _standalone_type_row(notice: "OfficialAlertNotice", lang: Lang = "de") -> _DataRow:
     """Datenzeile "Gefahr". Der Wert traegt die `.type`-Beschriftung -- die
     Detail-Fidelity aus `_display_label` (#1238 AC-4/AC-6) bleibt damit an
     derselben Stelle pruefbar wie vor dem Umbau."""
     from output.renderers.email.design_tokens import G_INK
 
-    typ = _standalone_warn_type_html(notice)  # bereits escaped
+    typ = _standalone_warn_type_html(notice, lang)  # bereits escaped
     return (
-        "Gefahr", _display_label(notice.alert),
+        t("warnung.zeile.gefahr", lang), _display_label(notice.alert, lang=lang),
         f'<span class="type" style="font-weight:600;color:{G_INK};">{typ}</span>',
     )
 
 
 def _standalone_fact_rows(
-    notice: "OfficialAlertNotice", tz: "ZoneInfo | None",
+    notice: "OfficialAlertNotice", tz: "ZoneInfo | None", lang: Lang = "de",
 ) -> list[_DataRow]:
     """Die uebrigen Fakten EINER Warnung als Datenzeilen (Grid UND Stacked):
 
@@ -1339,11 +1468,11 @@ def _standalone_fact_rows(
       "Route" im Trip-Pfad (unveraendert)."""
     rows: list[_DataRow] = []
     if notice.alert.valid_from and notice.alert.valid_to:
-        rows.append(("Gültig", _format_validity(notice.alert, tz), None))
+        rows.append((t("warnung.gueltig", lang), _format_validity(notice.alert, tz, lang=lang), None))
     chips = "".join(_standalone_chip_html(c, active=True) for c in notice.affected_chips)
     chips += "".join(_standalone_chip_html(c, active=False) for c in notice.free_chips)
-    scope_key = "Orte" if notice.scope_kind == "locations" else "Route"
-    rows.append((scope_key, _join_de(list(notice.affected_chips)), chips or None))
+    scope_key = t("warnung.zeile.orte" if notice.scope_kind == "locations" else "warnung.zeile.route", lang)
+    rows.append((scope_key, _join_de(list(notice.affected_chips), lang), chips or None))
     return rows
 
 
@@ -1358,7 +1487,7 @@ def _standalone_facts_html(rows: list[_DataRow], note: str) -> str:
     return f'<div class="facts" style="font-size:14px;line-height:1.5;">{zeilen}{note}</div>'
 
 
-def _standalone_route_note_html(notice: "OfficialAlertNotice") -> str:
+def _standalone_route_note_html(notice: "OfficialAlertNotice", lang: Lang = "de") -> str:
     """`.route-note` unter den Datenzeilen: nennt die freie Reststrecke, wenn
     es eine gibt (ADR-0033 unberuehrt -- freie Chips werden nur im Trip-Pfad
     mit Teilstrecke gesetzt)."""
@@ -1368,16 +1497,13 @@ def _standalone_route_note_html(notice: "OfficialAlertNotice") -> str:
 
     return (
         f'<div class="route-note" style="font-size:12.5px;color:{G_INK_FAINT};'
-        f'margin-top:7px;">{_html.escape(_route_note_text(notice))}</div>'
+        f'margin-top:7px;">{_html.escape(_route_note_text(notice, lang))}</div>'
     )
 
 
-def _route_note_text(notice: "OfficialAlertNotice") -> str:
+def _route_note_text(notice: "OfficialAlertNotice", lang: Lang = "de") -> str:
     """Klartext der `.route-note` -- geteilt von HTML und Klartext-Teil."""
-    return (
-        "übrige Strecke frei — keine amtliche Warnung für "
-        f"{_join_de(list(notice.free_chips))}"
-    )
+    return t("warnung.zeile.route_frei", lang, abschnitte=_join_de(list(notice.free_chips), lang))
 
 
 def _standalone_row_border_style(first: bool) -> str:
@@ -1390,6 +1516,7 @@ def _standalone_row_border_style(first: bool) -> str:
 
 def _standalone_warn_grid_html(
     notice: "OfficialAlertNotice", tz: "ZoneInfo | None", *, first: bool = True,
+    lang: Lang = "de",
 ) -> str:
     """`.warn`-Zeile bei uniformer Stufe: Gefahrenart, Gueltigkeit und
     Route-Chips als Datenzeilen (#1744 A2, AC-8) -- vor A2 ein zweispaltiges
@@ -1397,16 +1524,17 @@ def _standalone_warn_grid_html(
     durchgestrichen, die `.route-note` bleibt darunter (ADR-0033 unberuehrt).
     `first`: jede Zeile ausser der ersten traegt `border-top` als Inline-Ersatz
     fuer den Geschwister-Selektor `.warn + .warn`."""
-    rows = [_standalone_type_row(notice)] + _standalone_fact_rows(notice, tz)
+    rows = [_standalone_type_row(notice, lang)] + _standalone_fact_rows(notice, tz, lang)
     return (
         f'<div class="warn" style="display:block;padding:14px 16px;'
         f'{_standalone_row_border_style(first)}">'
-        f'{_standalone_facts_html(rows, _standalone_route_note_html(notice))}</div>'
+        f'{_standalone_facts_html(rows, _standalone_route_note_html(notice, lang))}</div>'
     )
 
 
 def _standalone_warn_stacked_html(
     notice: "OfficialAlertNotice", tz: "ZoneInfo | None", color: str, *, first: bool = True,
+    lang: Lang = "de",
 ) -> str:
     """`.warn.stacked` (gemischte Stufen, Design 'Beispiel C', AC-9): eigenes
     Eskalations-Meter + Typ im `.whead`, darunter die Fakten als Datenzeilen
@@ -1416,10 +1544,10 @@ def _standalone_warn_stacked_html(
     (Fix-Loop-Nachzug): siehe `_standalone_warn_grid_html`."""
     from output.renderers.email.design_tokens import G_INK
 
-    typ = _standalone_warn_type_html(notice)
+    typ = _standalone_warn_type_html(notice, lang)
     # Issue #1441: der Lagebericht nennt seine Stufe im Titel -- keine n/3-Leiter.
-    meter = "" if _is_eaws(notice.alert) else _standalone_bars_meter_html(notice.alert.level, color)
-    facts = _standalone_facts_html(_standalone_fact_rows(notice, tz), "")
+    meter = "" if _is_eaws(notice.alert) else _standalone_bars_meter_html(notice.alert.level, color, lang)
+    facts = _standalone_facts_html(_standalone_fact_rows(notice, tz, lang), "")
     return (
         f'<div class="warn stacked" style="display:block;padding:14px 16px;'
         f'{_standalone_row_border_style(first)}">'
@@ -1465,7 +1593,9 @@ def _scope_matches_sole_chip(notice: "OfficialAlertNotice") -> bool:
     return len(notice.affected_chips) == 1 and notice.scope_label == notice.affected_chips[0]
 
 
-def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool) -> str:
+def _standalone_src_sentence(
+    ordered: list["OfficialAlertNotice"], uniform: bool, lang: Lang = "de",
+) -> str:
     """Prosaischer Scope-Satz des `.src`-Bausteins (Spec Slice B Punkt 6) --
     deterministisches Template, keine freie Prosa (bereits HTML-escaped).
 
@@ -1474,10 +1604,7 @@ def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool
     Umfaenge, verweist ein neutraler Satz auf die Einzelangaben oben. AC-10:
     bei einheitlichem Umfang bleibt der Satz unveraendert."""
     if not _uniform_scope(ordered):
-        return (
-            "Die Warnungen betreffen unterschiedliche Bereiche — der jeweils "
-            "betroffene Umfang steht bei jeder Warnung oben."
-        )
+        return _html.escape(t("warnung.satz.unterschiedlich", lang))
     if not uniform:
         leading = ordered[0]
         # Adversary-Nachzug (gleiche Fehlerklasse wie F007, proaktiv mitgefixt):
@@ -1485,29 +1612,28 @@ def _standalone_src_sentence(ordered: list["OfficialAlertNotice"], uniform: bool
         # widerspricht dieser Satz demselben Massiv-Titel, der direkt darueber
         # im Warn-Titel steht ("Zugang gesperrt" hier vs. "Zugang eingeschränkt
         # — Monts Toulonnais" im Titel).
-        typ = _display_label(leading.alert)
-        _e, word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
-        word_part = "" if _is_eaws(leading.alert) else f" ({word})"
-        return (
-            f"Das {_html.escape(typ)}{word_part} ist die kritischere Warnung "
-            "und steht deshalb oben."
-        )
+        typ = _display_label(leading.alert, lang=lang)
+        word_part = "" if _is_eaws(leading.alert) else f" ({_level_word(leading.alert.level, lang)})"
+        return _html.escape(t("warnung.satz.kritischer", lang, typ=f"{typ}{word_part}"))
     leading = ordered[0]
     scope = leading.scope_label
-    scope_html = _html.escape(scope)
-    if scope in ("gesamte Route", "alle Orte"):
-        subject = "Die Warnung deckt" if len(ordered) == 1 else "Alle Warnungen decken"
-        return f"{subject} die {scope_html} ab."
+    voll = _full_scope_kind(scope)
+    if voll:
+        return _html.escape(t(f"warnung.satz.deckt_{voll}.{'one' if len(ordered) == 1 else 'other'}", lang))
     if _scope_matches_sole_chip(leading):
         # Befund 1 (#1326a, ADR-0033): der betroffene Umfang steht bereits als
         # Chip im Fakten-Feld -- keine zweite Nennung in Prosa.
         return ""
     # Nebenbefund (#1238): der Compare-`scope_label` traegt bei einem einzelnen
     # Ort bereits "nur X" -> ohne diese Bereinigung entstand "Betrifft nur nur
-    # Toulon". Das "nur" gehoert genau einmal in den Satz.
-    core = scope_html[4:] if scope_html.startswith("nur ") else scope_html
-    rest = "nicht alle Orte" if leading.scope_kind == "locations" else "nicht die gesamte Route"
-    return f"Betrifft nur {core}, {rest}."
+    # Toulon". Das "nur" gehoert genau einmal in den Satz (jede Sprache).
+    for sprache in ("de", "en"):
+        praefix = t("warnung.umfang.nur", sprache, ort="")
+        if scope.startswith(praefix):
+            scope = scope[len(praefix):]
+            break
+    key = "warnung.satz.nur_orte" if leading.scope_kind == "locations" else "warnung.satz.nur_route"
+    return _html.escape(t(key, lang, ort=scope))
 
 
 def _standalone_src_value(
@@ -1538,7 +1664,7 @@ def _standalone_src_value(
 
 def _standalone_src_html(
     ordered: list["OfficialAlertNotice"], source_label: str, uniform: bool,
-    ink_muted: str,
+    ink_muted: str, lang: Lang = "de",
 ) -> str:
     """Quelle als DATENZEILE innerhalb des Datenzeilen-Blocks (#1744 A2, AC-8)
     -- bis A2 eine eigene getoente `.src`-Box UNTER der Warn-Karte, also ein
@@ -1555,9 +1681,9 @@ def _standalone_src_html(
     steht als `.scope-note` unter der Zeile, statt in die rechtsbuendige
     Wert-Zelle gequetscht zu werden."""
     zeile = _standalone_datarow_html(
-        "Quelle", _standalone_src_value(ordered, source_label), first=False,
+        t("warnung.quelle", lang), _standalone_src_value(ordered, source_label), first=False,
     )
-    sentence = _standalone_src_sentence(ordered, uniform)
+    sentence = _standalone_src_sentence(ordered, uniform, lang)
     note = (
         f'<div class="scope-note" style="font-size:12.5px;color:{ink_muted};'
         f'margin-top:7px;">{sentence}</div>' if sentence else ""
@@ -1565,10 +1691,20 @@ def _standalone_src_html(
     return f'<div style="padding:0 16px 12px;">{zeile}{note}</div>'
 
 
+def _stand_abgerufen(stand_at: str, quelle: str, lang: Lang, *, html: bool = False) -> str:
+    """Fusszeile 'Stand: heute HH:MM · abgerufen bei {Quelle}' (Issue #2668:
+    Katalog). ``html=True``: Texte escaped, ``quelle`` ist bereits Markup."""
+    stand = t("warnung.zeile.stand", lang, zeit=stand_at)
+    abgerufen = t("warnung.abgerufen_bei", lang)
+    if html:
+        stand, abgerufen = _html.escape(stand), _html.escape(abgerufen)
+    return f"{stand} · {abgerufen} {quelle}"
+
+
 def render_official_alert_html(
     notices: list["OfficialAlertNotice"], *, source_label: str, stand_at: str, tz: "ZoneInfo",
     context_label: str | None = None, source_url: str | None = None,
-    allclear_html: str = "",
+    allclear_html: str = "", lang: Lang = "de",
 ) -> str:
     """E-Mail-HTML auf dem SOLL-Design (#1233 Slice B, „Alert · Amtliche
     Warnung"): Verdict-Pill, deterministische Headline, Warnstufen-Leiter
@@ -1593,26 +1729,26 @@ def render_official_alert_html(
     ordered = _sort_notices(notices)
     uniform = len({n.alert.level for n in ordered}) == 1
     leading_level = ordered[0].alert.level
-    _emoji, leading_word = _LEVEL_WORDS.get(leading_level, ("🔴", "ROT"))
+    leading_word = _level_word(leading_level, lang)
     if _is_eaws(ordered[0].alert):
         leading_word = ""  # Issue #1441: kein Ampelwort fuer den Lagebericht
 
     verdict = _standalone_verdict_html(
-        len(ordered), leading_level, leading_word, uniform, level_colors, FONT_DATA,
+        len(ordered), leading_level, leading_word, uniform, level_colors, FONT_DATA, lang,
     )
-    headline = _standalone_headline_html(ordered, uniform)
+    headline = _standalone_headline_html(ordered, uniform, lang)
     with_ladder = uniform and not any(_is_eaws(n.alert) for n in ordered)
-    ladder = _standalone_ladder_html(leading_level, level_colors) if with_ladder else ""
+    ladder = _standalone_ladder_html(leading_level, level_colors, lang) if with_ladder else ""
 
     if uniform:
         warns = "".join(
-            _standalone_warn_grid_html(n, tz, first=(i == 0))
+            _standalone_warn_grid_html(n, tz, first=(i == 0), lang=lang)
             for i, n in enumerate(ordered)
         )
     else:
         warns = "".join(
             _standalone_warn_stacked_html(
-                n, tz, level_colors.get(n.alert.level, G_ALERT_L4), first=(i == 0),
+                n, tz, level_colors.get(n.alert.level, G_ALERT_L4), first=(i == 0), lang=lang,
             )
             for i, n in enumerate(ordered)
         )
@@ -1620,7 +1756,7 @@ def render_official_alert_html(
     # als eigener Baustein darunter -- beide Alarm-Mailtypen tragen damit
     # dieselbe Bausteinfolge (Kennzeichen, Ueberschrift, [Skala,] Datenzeilen,
     # [Sperrzeit,] Stand, Herkunft).
-    src = _standalone_src_html(ordered, source_label, uniform, G_INK_MUTED)
+    src = _standalone_src_html(ordered, source_label, uniform, G_INK_MUTED, lang)
     warns_block = (
         f'<div class="warns" style="border:1px solid #d8d3c2;border-radius:6px;'
         f'overflow:hidden;margin:4px 0 16px;">{warns}{src}</div>'
@@ -1634,9 +1770,8 @@ def render_official_alert_html(
     )
     footer = (
         f'<p class="body-foot" style="font-size:13.5px;color:{G_INK_FAINT};'
-        f'margin:18px 0 0;">Stand: heute {_html.escape(stand_at)} · '
-        f'abgerufen bei {abgerufen}</p>'
-    ) + _authority_note_html(ordered)
+        f'margin:18px 0 0;">{_stand_abgerufen(stand_at, abgerufen, lang, html=True)}</p>'
+    ) + _authority_note_html(ordered, lang)
     # Issue #1241/warnmail-Spec AC-5 (Befund 4a): Herkunfts-Fußzeile mit
     # Kontext (Trip-Name bzw. „Ortsvergleich") -- Zeile 2 zeigt die echte
     # Quelle (`source_label`, ggf. nach AC-4 mehrfach), nicht den Renderer-Pfad.
@@ -1644,7 +1779,7 @@ def render_official_alert_html(
         build_origin_footer, render_origin_footer_html,
     )
     origin = render_origin_footer_html(build_origin_footer(
-        "official-alert", source=source_label, context_label=context_label,
+        "official-alert", source=source_label, context_label=context_label, lang=lang,
     ))
     return (
         f'<html><body style="font-family:{FONT_UI};color:{G_INK};">'
@@ -1655,7 +1790,7 @@ def render_official_alert_html(
 def render_official_alert_mail_plain(
     notices: list["OfficialAlertNotice"], *, source_label: str, stand_at: str,
     tz: "ZoneInfo", context_label: str | None = None, source_url: str | None = None,
-    allclear_lines: list[str] | None = None,
+    allclear_lines: list[str] | None = None, lang: Lang = "de",
 ) -> str:
     """Klartext-Teil der eigenstaendigen amtlichen Warn-Mail (#1744 A2, AC-13).
 
@@ -1680,37 +1815,38 @@ def render_official_alert_mail_plain(
     ordered = _sort_notices(notices)
     uniform = len({n.alert.level for n in ordered}) == 1
     leading_level = ordered[0].alert.level
-    _emoji, leading_word = _LEVEL_WORDS.get(leading_level, ("🔴", "ROT"))
+    leading_word = _level_word(leading_level, lang)
     if _is_eaws(ordered[0].alert):
         leading_word = ""  # Issue #1441: kein Ampelwort fuer den Lagebericht
 
     zeilen = [
-        _headline_text(ordered, uniform),
+        _headline_text(ordered, uniform, lang),
         "",
-        _verdict_text(len(ordered), leading_word, uniform),
+        _verdict_text(len(ordered), leading_word, uniform, lang),
         "",
     ]
+    warnstufe = t("warnung.kopf.warnstufe", lang)
     if uniform and not any(_is_eaws(n.alert) for n in ordered):
         # Gegenstueck der Warnstufen-Leiter: die Skala traegt eine Einordnung,
         # die eine blosse Wortangabe verliert (AC-9) -- im Klartext als
         # Datenzeile, weil es dort keine Leiter gibt.
         pos = _LEVEL_POSITION.get(leading_level, 0)
-        hint = _LEVEL_POSITION_WORD.get(pos, "niedrigste")
-        zeilen.append(
-            f"Warnstufe: {leading_word} ({hint} von drei) — Skala GELB · ORANGE · ROT"
-        )
+        hinweis = t("warnung.stufe.von_drei", lang, position=_position_word(pos, lang))
+        stufen = " · ".join(_level_word(lvl, lang) for lvl in (2, 3, 4))
+        zeilen.append(f"{warnstufe}: " + t("warnung.zeile.skala", lang, wort=leading_word,
+                                           hinweis=hinweis, stufen=stufen))
     for n in ordered:
         rows: list[_DataRow] = []
         if not uniform and not _is_eaws(n.alert):
-            _e, word = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
-            rows.append(("Warnstufe", f"{word} · {_LEVEL_POSITION.get(n.alert.level, 0)}/3", None))
-        rows.append(_standalone_type_row(n))
-        rows.extend(_standalone_fact_rows(n, tz))
+            word = _level_word(n.alert.level, lang)
+            rows.append((warnstufe, f"{word} · {_LEVEL_POSITION.get(n.alert.level, 0)}/3", None))
+        rows.append(_standalone_type_row(n, lang))
+        rows.extend(_standalone_fact_rows(n, tz, lang))
         zeilen.extend(f"{label}: {value}" for label, value, _h in rows)
         if n.free_chips:
-            zeilen.append(_route_note_text(n))
-    zeilen.append(f"Quelle: {_standalone_src_value(ordered, source_label)}")
-    sentence = _standalone_src_sentence(ordered, uniform)
+            zeilen.append(_route_note_text(n, lang))
+    zeilen.append(f"{t('warnung.quelle', lang)}: {_standalone_src_value(ordered, source_label)}")
+    sentence = _standalone_src_sentence(ordered, uniform, lang)
     if sentence:
         # `_standalone_src_sentence` liefert bereits escapetes HTML (geteilt mit
         # der Datenzeile) -- im Klartext gehoert der rohe Satz hin.
@@ -1720,11 +1856,11 @@ def render_official_alert_mail_plain(
     link = f" → {source_url}" if source_url else ""
     zeilen.extend([
         "",
-        f"Stand: heute {stand_at} · abgerufen bei {source_label}{link}",
-        *official_alert_authority_notes([n.alert for n in ordered]),
+        _stand_abgerufen(stand_at, f"{source_label}{link}", lang),
+        *official_alert_authority_notes([n.alert for n in ordered], lang=lang),
         "",
         render_origin_footer_text(build_origin_footer(
-            "official-alert", source=source_label, context_label=context_label,
+            "official-alert", source=source_label, context_label=context_label, lang=lang,
         )),
     ])
     return "\n".join(zeilen)
@@ -1775,18 +1911,34 @@ def _source_link_html(source_label: str, source_url: str | None, style: str) -> 
     return f'<span class="wb-src" style="{style}">{_html.escape(source_label)}</span>'
 
 
-def _authority_note_html(ordered: list["OfficialAlertNotice"]) -> str:
+def _authority_note_html(ordered: list["OfficialAlertNotice"], lang: Lang = "de") -> str:
     """Massgeblichkeits-Satz (Issue #1441 S3) als Fusszeile des Warn-Blocks."""
-    notes = official_alert_authority_notes([n.alert for n in ordered])
+    notes = official_alert_authority_notes([n.alert for n in ordered], lang=lang)
     if not notes:
         return ""
     return (f'<div class="wb-authority" style="font-size:12px;color:#6b6962;margin-top:4px;">'
             f'{_html.escape(" ".join(notes))}</div>')
 
 
+def _embedded_count(ordered: list["OfficialAlertNotice"], uniform: bool, lang: Lang) -> str:
+    """Count-Zeile des eingebetteten WarnBlocks ('2 aktiv · Stufe ORANGE (2/3)')."""
+    n = len(ordered)
+    leading_level = ordered[0].alert.level
+    if any(_is_eaws(nt.alert) for nt in ordered):
+        # Issue #1441: keine Awareness-Leiter fuer die EAWS-Skala -- die Stufe
+        # steht im Wortlaut jeder Warnung.
+        return t("warnung.block.aktiv", lang, count=n)
+    word = _level_word(leading_level, lang)
+    if uniform:
+        pos = _LEVEL_POSITION.get(leading_level, 0)
+        return t("warnung.block.aktiv_stufe", lang, count=n, wort=word, position=pos)
+    return t("warnung.block.aktiv_hoechste", lang, count=n, wort=word)
+
+
 def _render_warn_block_embedded(
     notices: list["OfficialAlertNotice"], *, source_label: str,
     source_url: str | None, tz: "ZoneInfo | None", count_line: str | None,
+    lang: Lang = "de",
 ) -> str:
     """Kompakter, eingebetteter WarnBlock (`.wb`-Struktur der Design-Vorlage,
     Issue #1216): Severity-Dot, Eyebrow „Amtliche Warnung", Count-Zeile,
@@ -1811,21 +1963,8 @@ def _render_warn_block_embedded(
     ordered = _sort_notices(notices)
     uniform = len({n.alert.level for n in ordered}) == 1
     leading_level = ordered[0].alert.level
-    _emoji, leading_word = _LEVEL_WORDS.get(leading_level, ("🔴", "ROT"))
     leading_color = level_colors.get(leading_level, G_ALERT_L4)
-    n = len(ordered)
-
-    if count_line is not None:
-        count = count_line
-    elif any(_is_eaws(nt.alert) for nt in ordered):
-        # Issue #1441: keine Awareness-Leiter fuer die EAWS-Skala -- die Stufe
-        # steht im Wortlaut jeder Warnung.
-        count = f"{n} aktiv"
-    elif uniform:
-        pos = _LEVEL_POSITION.get(leading_level, 0)
-        count = f"{n} aktiv · Stufe {leading_word} ({pos}/3)"
-    else:
-        count = f"{n} aktiv · höchste Stufe {leading_word}"
+    count = count_line if count_line is not None else _embedded_count(ordered, uniform, lang)
 
     src_style = (
         "margin-left:auto;font-family:'JetBrains Mono',monospace;"
@@ -1835,7 +1974,7 @@ def _render_warn_block_embedded(
 
     items = []
     for nt in ordered:
-        typ, _sms = _hazard_display(nt.alert)
+        typ, _sms = _hazard_display(nt.alert, lang)
         # F001 (#1216): Typ-Wort vs. voller Roh-Label haengt am Banner-KONTEXT.
         if count_line is not None:
             # Aggregat-/Summary-Banner (Ortsvergleich, Orts-Scope): zeigt
@@ -1874,11 +2013,11 @@ def _render_warn_block_embedded(
             # Stufenwort bei gemischten Stufen bereits im `lvl`-Span links
             # daneben steht (bei uniformer Stufe steht sie im `count_line`-Kopf
             # des ganzen Blocks).
-            type_display = _display_label(nt.alert)
+            type_display = _display_label(nt.alert, lang=lang)
         if uniform or _is_eaws(nt.alert):
             meter, lvl = "", ""
         else:
-            _e, lw = _LEVEL_WORDS.get(nt.alert.level, ("🔴", "ROT"))
+            lw = _html.escape(_level_word(nt.alert.level, lang))
             pos = _LEVEL_POSITION.get(nt.alert.level, 0)
             item_color = level_colors.get(nt.alert.level, G_ALERT_L4)
             meter = _embedded_meter_html(nt.alert.level, item_color)
@@ -1896,7 +2035,7 @@ def _render_warn_block_embedded(
             when = (
                 f'<span class="wb-when" style="font-family:\'JetBrains Mono\','
                 f'monospace;font-size:12px;color:#6b6962;margin-right:8px;">'
-                f'{_format_validity(nt.alert, tz)}</span>'
+                f'{_html.escape(_format_validity(nt.alert, tz, lang=lang))}</span>'
             )
         # F001 (Adversary, HIGH, #1135 Nachbesserung): der Embedded-Renderer
         # (Trip-Briefing-Pfad) nannte bisher nur die Segment-/Umfang-Chips,
@@ -1944,13 +2083,14 @@ def _render_warn_block_embedded(
         f'<div class="wb-head" style="margin-bottom:10px;">'
         f'{dot}<span class="wb-ey" style="font-family:\'JetBrains Mono\','
         f'monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;'
-        f'font-weight:700;color:{leading_color};">Amtliche Warnung</span> '
+        f'font-weight:700;color:{leading_color};">'
+        f'{_html.escape(t("mail.herkunft.amtliche_warnung", lang))}</span> '
         f'<span class="wb-count" style="font-family:\'JetBrains Mono\',monospace;'
         f'font-size:11px;font-weight:600;color:{leading_color};margin-left:9px;">'
         f'{_html.escape(count)}</span> {src_html}'
         f'</div>'
         f'<div class="wb-list">{"".join(items)}</div>'
-        f'{_authority_note_html(ordered)}'
+        f'{_authority_note_html(ordered, lang)}'
         f'</div></div>'
     )
 
@@ -1959,7 +2099,7 @@ def render_warn_block(
     notices: list["OfficialAlertNotice"], *, variant: str, source_label: str,
     source_url: str | None = None, stand_at: str | None = None,
     tz: "ZoneInfo | None" = None, count_line: str | None = None,
-    context_label: str | None = None, allclear_html: str = "",
+    context_label: str | None = None, allclear_html: str = "", lang: Lang = "de",
 ) -> str:
     """Geteilter WarnBlock-Renderer (Issue #1216). EIN Baustein fuer alle drei
     Mail-Flaechen (Trip-Briefing, Ortsvergleich, Standalone-Alarm), einziger
@@ -1979,18 +2119,19 @@ def render_warn_block(
         return render_official_alert_html(
             notices, source_label=source_label, stand_at=stand_at or "", tz=tz,
             context_label=context_label, source_url=source_url, allclear_html=allclear_html,
+            lang=lang,
         )
     if variant == "embedded":
         return _render_warn_block_embedded(
             notices, source_label=source_label, source_url=source_url,
-            tz=tz, count_line=count_line,
+            tz=tz, count_line=count_line, lang=lang,
         )
     raise ValueError(f"Unbekannte WarnBlock-variant: {variant!r}")
 
 
 def render_official_alert_telegram(
     notices: list["OfficialAlertNotice"], *, prefix: str, source_label: str,
-    tz: "ZoneInfo | None" = None, show_scope: bool = True,
+    tz: "ZoneInfo | None" = None, show_scope: bool = True, lang: Lang = "de",
 ) -> str:
     """Fette erste Zeile + je Warnung eine Zeile, hoechste Stufe zuerst.
 
@@ -2033,29 +2174,30 @@ def render_official_alert_telegram(
     uniform = len({n.alert.level for n in ordered}) == 1
     uniform_scope = _uniform_scope(ordered)
     leading = ordered[0]
-    _emoji, leading_word = _LEVEL_WORDS.get(leading.alert.level, ("🔴", "ROT"))
+    leading_word = _level_word(leading.alert.level, lang)
     pos = _LEVEL_POSITION.get(leading.alert.level, 0)
-    kind = "Warnstufe" if uniform else "höchste Stufe"
+    kind = t("warnung.kopf.warnstufe" if uniform else "warnung.kopf.hoechste_stufe", lang)
     scope_part = f"{leading.scope_label} · " if (show_scope and uniform_scope) else ""
     head = f"{prefix} · {scope_part}{kind} {leading_word} ({pos}/3)"
     if _is_eaws(leading.alert):
         # Issue #1441: Lagebericht-Stufe statt Awareness-Leiter im Kopf.
-        head = (f"{prefix} · {scope_part}Lawinenstufe {_rank(leading.alert)}"
-                f"{leading.alert.level_modifier or ''}")
+        head = (f"{prefix} · {scope_part}{t('warnung.gefahr.avalanche_bulletin', lang)} "
+                f"{_rank(leading.alert)}{leading.alert.level_modifier or ''}")
     lines = [f"<b>{_html.escape(head)}</b>"]
     for n in ordered:
-        emoji, _word = _LEVEL_WORDS.get(n.alert.level, ("🔴", "ROT"))
+        emoji = _level_emoji(n.alert.level)
         scope = "" if (not show_scope or uniform_scope) else f" · {_html.escape(n.scope_label)}"
-        body = _html.escape(_display_label(n.alert))
+        body = _html.escape(_display_label(n.alert, lang=lang))
         if n.alert.valid_from and n.alert.valid_to:
-            body = f"{body} · {_html.escape(_format_validity(n.alert, tz))}"
+            body = f"{body} · {_html.escape(_format_validity(n.alert, tz, lang=lang))}"
         lines.append(f"{emoji} {body}{scope}")
     lines.append(_html.escape(source_label))
     # Issue #1441 (CC BY 4.0): Link zum Bulletin des Warndienstes.
     for n in ordered:
         if _is_eaws(n.alert) and n.alert.url:
             lines.append(_html.escape(n.alert.url))
-    lines.extend(_html.escape(t) for t in official_alert_authority_notes([n.alert for n in ordered]))
+    notes = official_alert_authority_notes([n.alert for n in ordered], lang=lang)
+    lines.extend(_html.escape(note) for note in notes)
     return "\n".join(lines)
 
 
@@ -2335,7 +2477,7 @@ def _measured_km_span(
 def build_official_alert_notices(
     trip: "Trip | None", tagged_alerts: list[tuple["OfficialAlert", list[str]]],
     segment_km: dict[str, tuple[float, float]] | None = None,
-    stage_number: int | None = None,
+    stage_number: int | None = None, *, lang: Lang = "de",
 ) -> list["OfficialAlertNotice"]:
     """Baut die `OfficialAlertNotice`-DTOs fuer den Trip-Standalone-Alarm
     (Issue #1216): dedupliziert via `dedupe_official_alerts`, leitet
@@ -2368,8 +2510,10 @@ def build_official_alert_notices(
         is_full = bool(all_ids) and (
             set(segment_ids) >= set(all_ids) or len(all_ids) <= 1
         )
+        # Issue #2668: `scope_label`/Chips in ``lang``; `sms_scope` bleibt in
+        # jeder Sprache der bisherige Wert (PO-Korrektur 2026-10-31).
         if is_full:
-            scope_label, sms_scope = "gesamte Route", "ges.Route"
+            scope_label, sms_scope = t("warnung.umfang.gesamte_route", lang), "ges.Route"
         else:
             # Issue #2036: dieselbe Aufloesung wie jeder andere Alarm -- die
             # gemessene km-Spanne verdraengt die Segmentnummer, sonst bleibt
@@ -2380,7 +2524,7 @@ def build_official_alert_notices(
                     None, segment_ids, _span[0], _span[1], km_measured=True,
                 )
             else:
-                scope_label = format_segment_reference(segment_ids) or "unbekannt"
+                scope_label = format_segment_reference(segment_ids) or t("warnung.zeit.unbekannt")
             # #1948 S5: "Seg 4" statt des Kurzcodes "S4" -- dieselbe
             # Ortssprache, die Trip-Briefing und Nowcast-Alarm sprechen
             # (`render._ascii_alert_location`). Das fruehere "nur "-Praefix bei
@@ -2391,10 +2535,12 @@ def build_official_alert_notices(
                 .replace("–", "-")
                 .replace("🏁 Ziel", "Ziel")
             )
+            if scope_label == t("warnung.zeit.unbekannt"):
+                scope_label = t("warnung.zeit.unbekannt", lang)
         if is_full:
             # Volle Route -> ein sauberer Chip statt format_segment_reference()s
             # "N Segmente"-Verdichtung ab >4 Segmenten (Issue #1216 F005).
-            affected = ["gesamte Route"]
+            affected = [scope_label]
         elif segment_ids:
             affected = [format_segment_reference(segment_ids)]
         else:
@@ -2424,7 +2570,7 @@ def build_official_alert_notices(
 
 def build_compare_official_alert_notices(
     all_location_ids: list[str], id_to_name: dict[str, str],
-    tagged_alerts: list[tuple["OfficialAlert", list[str]]],
+    tagged_alerts: list[tuple["OfficialAlert", list[str]]], *, lang: Lang = "de",
 ) -> list["OfficialAlertNotice"]:
     """Baut die `OfficialAlertNotice`-DTOs fuer den Compare-Standalone-Alarm
     (Issue #1216 Slice 2a): dedupliziert via `dedupe_official_alerts`, leitet
@@ -2448,14 +2594,17 @@ def build_compare_official_alert_notices(
         affected_ordered_ids = [i for i in all_location_ids if i in affected_set]
         affected = list(dict.fromkeys(id_to_name.get(i, i) for i in affected_ordered_ids))
         is_full = bool(all_set) and affected_set >= all_set
+        # Issue #2668: `scope_label` in ``lang``; `sms_scope` in jeder Sprache
+        # der bisherige (deutsche) Wert (PO-Korrektur 2026-10-31).
+        unbekannt = t("warnung.zeit.unbekannt")
         if is_full:
-            scope_label, sms_scope = "alle Orte", "alleOrte"
+            scope_label, sms_scope = t("warnung.umfang.alle_orte", lang), "alleOrte"
         elif len(affected) == 1:
-            scope_label = f"nur {affected[0]}"
-            sms_scope = f"nur {affected[0].replace(' ', '')}"
+            scope_label = t("warnung.umfang.nur", lang, ort=affected[0])
+            sms_scope = t("warnung.umfang.nur", ort=affected[0].replace(" ", ""))
         else:
-            scope_label = ", ".join(affected) if affected else "unbekannt"
-            sms_scope = scope_label.replace(" ", "").replace(",", "+") or "unbekannt"
+            scope_label = ", ".join(affected) if affected else t("warnung.zeit.unbekannt", lang)
+            sms_scope = (", ".join(affected) or unbekannt).replace(" ", "").replace(",", "+") or unbekannt
         # Issue #1238 AC-12: der Ortsvergleich zeigt NUR die betroffenen Orte
         # als Chips -- keine durchgestrichenen freien Orte und kein "übrige
         # Strecke frei"-Hinweistext (der gehoert zur Trip-Route, nicht zu einer
@@ -2503,22 +2652,25 @@ class OfficialAllClearNotice:
 
 
 def build_official_allclear_notices(
-    allclears: list, id_to_name: dict | None = None,
+    allclears: list, id_to_name: dict | None = None, *, lang: Lang = "de",
 ) -> list[OfficialAllClearNotice]:
     """Trip (``id_to_name=None``): ``scope_ids`` sind Segment-IDs; Ortsvergleich:
-    Orts-IDs, aufgeloest ueber ``id_to_name``."""
+    Orts-IDs, aufgeloest ueber ``id_to_name``. Issue #2668: Anzeige-Texte in
+    ``lang``, `sms_scope` in jeder Sprache wie bisher (PO-Korrektur 2026-10-31)."""
     notices = []
     for ac in allclears:
         ids = [str(i) for i in ac.scope_ids]
         if id_to_name is None:
-            scope_label = format_segment_reference(ids) if ids else "Route"
-            sms_scope = scope_label.replace("Segment ", "Seg ").replace("–", "-").replace("🏁 Ziel", "Ziel")
+            scope_label = format_segment_reference(ids) if ids else t("warnung.zeile.route", lang)
+            sms_label = format_segment_reference(ids) if ids else t("warnung.zeile.route")
+            sms_scope = sms_label.replace("Segment ", "Seg ").replace("–", "-").replace("🏁 Ziel", "Ziel")
         else:
-            scope_label = ", ".join(dict.fromkeys(id_to_name.get(i, i) for i in ids)) or "Ort"
-            sms_scope = scope_label.replace(" ", "").replace(",", "+")
+            namen = ", ".join(dict.fromkeys(id_to_name.get(i, i) for i in ids))
+            scope_label = namen or t("warnung.umfang.ort", lang)
+            sms_scope = (namen or t("warnung.umfang.ort")).replace(" ", "").replace(",", "+")
         a = ac.alert
         notices.append(OfficialAllClearNotice(
-            kind=ac.kind, hazard=a.hazard, hazard_label=_HAZARD_LABELS.get(a.hazard, a.label),
+            kind=ac.kind, hazard=a.hazard, hazard_label=_hazard_word(a.hazard, lang) or a.label,
             region=a.region_label or a.dedup_id or "", scope_label=scope_label,
             sms_scope=sms_scope, old_rank=int(ac.old_rank), new_rank=int(ac.new_rank),
             old_level=int(ac.old_level), new_level=int(ac.new_level), source=a.source,
@@ -2526,44 +2678,55 @@ def build_official_allclear_notices(
     return notices
 
 
-def _allclear_transition(n: OfficialAllClearNotice) -> str:
-    return f"Stufe {n.old_rank} → beendet" if n.kind == "ended" else f"Stufe {n.old_rank} → {n.new_rank}"
+def _allclear_label(n: OfficialAllClearNotice, lang: Lang) -> str:
+    """Gefahr der Entwarnung: Deutsch der Builder-Wert (byte-gleich), sonst das
+    Typ-Wort in ``lang`` (die Notice kann in anderer Sprache gebaut sein)."""
+    return n.hazard_label if lang == "de" else (_hazard_word(n.hazard, lang) or n.hazard_label)
 
 
-def official_allclear_lines(allclears: list[OfficialAllClearNotice]) -> list[str]:
+def _allclear_transition(n: OfficialAllClearNotice, lang: Lang = "de") -> str:
+    neu = t("warnung.entwarnung.beendet", lang) if n.kind == "ended" else n.new_rank
+    return t("warnung.entwarnung.uebergang", lang, alt=n.old_rank, neu=neu)
+
+
+def official_allclear_lines(allclears: list[OfficialAllClearNotice], *, lang: Lang = "de") -> list[str]:
     """Je Entwarnung eine Datenzeile: Gefahr · Region · Ort: Übergang."""
     lines = []
     for n in allclears:
-        parts = [n.hazard_label] + [p for p in (n.region, n.scope_label) if p and p != n.hazard_label]
-        lines.append(f"{' · '.join(parts)}: {_allclear_transition(n)}")
+        label = _allclear_label(n, lang)
+        parts = [label] + [p for p in (n.region, n.scope_label) if p and p != label]
+        lines.append(f"{' · '.join(parts)}: {_allclear_transition(n, lang)}")
     return lines
 
 
-def render_official_allclear_subject_part(allclears: list[OfficialAllClearNotice]) -> str:
+def render_official_allclear_subject_part(
+    allclears: list[OfficialAllClearNotice], *, lang: Lang = "de",
+) -> str:
     first = allclears[0]
-    trans = "beendet" if first.kind == "ended" else f"{first.old_rank}→{first.new_rank}"
-    more = f" +{len(allclears) - 1} weitere" if len(allclears) > 1 else ""
-    return f"Entwarnung {first.hazard_label} {trans}{more}"
+    trans = t("warnung.entwarnung.beendet", lang) if first.kind == "ended" else f"{first.old_rank}→{first.new_rank}"
+    more = f" {t('warnung.kopf.weitere', lang, count=len(allclears) - 1)}" if len(allclears) > 1 else ""
+    return t("warnung.entwarnung.betreff", lang, gefahr=_allclear_label(first, lang), uebergang=trans) + more
 
 
-def render_official_allclear_html(allclears: list[OfficialAllClearNotice]) -> str:
+def render_official_allclear_html(allclears: list[OfficialAllClearNotice], *, lang: Lang = "de") -> str:
     """Eigener Abschnitt "Entwarnung" (nach den Warnungen)."""
     if not allclears:
         return ""
     rows = "".join(
         f'<p style="margin:4px 0;font-size:15px;">{_html.escape(line)}</p>'
-        for line in official_allclear_lines(allclears)
+        for line in official_allclear_lines(allclears, lang=lang)
     )
     return (
         '<div class="entwarnung" style="border:1px solid #d8d3c2;border-radius:6px;'
         'padding:10px 16px;margin:4px 0 16px;">'
-        f'<h2 style="font-size:17px;margin:0 0 6px;">Entwarnung</h2>{rows}</div>'
+        f'<h2 style="font-size:17px;margin:0 0 6px;">'
+        f'{_html.escape(t("warnung.entwarnung.wort", lang))}</h2>{rows}</div>'
     )
 
 
 def render_official_allclear_mail_html(
     allclears: list[OfficialAllClearNotice], *, stand_at: str, source_label: str,
-    context_label: str | None = None,
+    context_label: str | None = None, lang: Lang = "de",
 ) -> str:
     """Vollstaendige Mail, wenn der Lauf NUR Entwarnungen traegt."""
     from output.renderers.email.design_tokens import FONT_UI, G_INK, G_INK_FAINT
@@ -2571,42 +2734,47 @@ def render_official_allclear_mail_html(
 
     footer = (
         f'<p class="body-foot" style="font-size:13.5px;color:{G_INK_FAINT};margin:18px 0 0;">'
-        f'Stand: heute {_html.escape(stand_at)} · abgerufen bei {_html.escape(source_label)}</p>'
+        f'{_stand_abgerufen(stand_at, _html.escape(source_label), lang, html=True)}</p>'
     )
     origin = render_origin_footer_html(build_origin_footer(
-        "official-alert", source=source_label, context_label=context_label,
+        "official-alert", source=source_label, context_label=context_label, lang=lang,
     ))
     return (
         f'<html><body style="font-family:{FONT_UI};color:{G_INK};">'
-        f'{render_official_allclear_html(allclears)}{footer}{origin}</body></html>'
+        f'{render_official_allclear_html(allclears, lang=lang)}{footer}{origin}</body></html>'
     )
 
 
-def render_official_allclear_plain(allclears: list[OfficialAllClearNotice]) -> list[str]:
-    return ["", "Entwarnung", *official_allclear_lines(allclears)] if allclears else []
+def render_official_allclear_plain(
+    allclears: list[OfficialAllClearNotice], *, lang: Lang = "de",
+) -> list[str]:
+    if not allclears:
+        return []
+    return ["", t("warnung.entwarnung.wort", lang), *official_allclear_lines(allclears, lang=lang)]
 
 
 def render_official_allclear_mail_plain(
     allclears: list[OfficialAllClearNotice], *, stand_at: str, source_label: str,
-    context_label: str | None = None,
+    context_label: str | None = None, lang: Lang = "de",
 ) -> str:
     from output.renderers.email.helpers import build_origin_footer, render_origin_footer_text
 
-    zeilen = render_official_allclear_plain(allclears)[1:]
-    zeilen += ["", f"Stand: heute {stand_at} · abgerufen bei {source_label}", "",
+    zeilen = render_official_allclear_plain(allclears, lang=lang)[1:]
+    zeilen += ["", _stand_abgerufen(stand_at, source_label, lang), "",
                render_origin_footer_text(build_origin_footer(
-                   "official-alert", source=source_label, context_label=context_label,
+                   "official-alert", source=source_label, context_label=context_label, lang=lang,
                ))]
     return "\n".join(zeilen)
 
 
 def render_official_allclear_telegram(
-    allclears: list[OfficialAllClearNotice], *, prefix: str | None = None,
+    allclears: list[OfficialAllClearNotice], *, prefix: str | None = None, lang: Lang = "de",
 ) -> str:
     """Telegram-Abschnitt; mit ``prefix`` als eigenstaendige Nachricht."""
-    head = f"{prefix} · Entwarnung" if prefix else "Entwarnung"
+    wort = t("warnung.entwarnung.wort", lang)
+    head = f"{prefix} · {wort}" if prefix else wort
     lines = [f"<b>{_html.escape(head)}</b>"]
-    lines += [_html.escape(line) for line in official_allclear_lines(allclears)]
+    lines += [_html.escape(line) for line in official_allclear_lines(allclears, lang=lang)]
     return "\n".join(lines)
 
 

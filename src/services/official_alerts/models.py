@@ -58,6 +58,12 @@ class OfficialAlert:
     # Issue #1441 S3 (SLF): amtliche Feinstufe "-"/"+" (``subdivision``), nur fuer
     # die Langform (Mail, Telegram). Vergleiche nutzen weiter nur `native_level`.
     level_modifier: Optional[str] = None
+    # Issue #2668 (ADR-0104): alle Sprachbloecke der Quelle als (Sprachcode,
+    # Text), Sprachcode klein und zweistellig; `label_lang` = Sprache von
+    # `label`. Die Wahl nach Nutzersprache faellt erst beim Darstellen (die
+    # Warnungen liegen nutzeruebergreifend im Cache); `label` bleibt Kennung.
+    label_by_lang: tuple[tuple[str, str], ...] = ()
+    label_lang: str = ""
 
 
 def comparable_level(alert: OfficialAlert) -> int:

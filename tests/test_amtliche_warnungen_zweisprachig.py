@@ -31,6 +31,8 @@ KATALOG = Path(__file__).resolve().parents[1] / "src" / "i18n" / "messages"
 _EIGENNAMEN = (*ORTE.values(), "Météo-France", "WSL-Institut für Schnee- und Lawinenforschung SLF",
                "Innsbruck-Land", "Golden-Vergleich", "Zeitueberschreitung beim Abruf",
                "Ort Brenner nicht erreichbar")
+# Fremde Pakete im Ortsvergleich-Fall: Antwort-Kommandos (P10, #2673).
+_FREMDE_ZEILEN = ("Vergleich für", "Briefings für", "Kürzel-Bedeutungen", "alle Kanäle senden")
 
 
 def sichtbar(html: str) -> list[str]:
@@ -68,6 +70,8 @@ def treffer(zeilen: list[str]) -> list[str]:
     fragmente = _de_fragmente()
     funde = []
     for zeile in zeilen:
+        if any(f in zeile for f in _FREMDE_ZEILEN):
+            continue
         rest = zeile
         for name in _EIGENNAMEN:
             rest = rest.replace(name, "")
@@ -181,7 +185,10 @@ def test_ortsvergleich_mail_und_telegram_reichen_die_sprache_durch():
     Warn-Telegram folgen der Mail-Sprache; die SMS bleibt."""
     html, txt = _vergleich("en")
     zeile = f"{t('mail.herkunft.amtliche_warnung', 'en')}: {t('warnung.gefahr.wildfire_risk', 'en')}"
-    assert zeile in txt and zeile in html
+    assert zeile in txt
+    assert t("warnung.gefahr.wildfire_risk", "en") in html.splitlines()
+    assert "Moderate thunderstorm warning" in html.splitlines()
+    assert oa.official_alert_source_label("meteo_forets", lang="en") in txt
     assert f"{t('warnung.kopf.warnstufe', 'en')} {t('warnung.stufe.orange', 'en')} (2/3)" in txt
     assert t("mail.herkunft.amtliche_warnung", "en") in html.splitlines()
     assert "Moderate thunderstorm warning" in txt

@@ -273,7 +273,7 @@ def render_comparison_text(
 
         # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
         # gemeinsamer Renderer statt Copy-Paste).
-        for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)]):
+        for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)], lang=lang):
             lines.append(f"   ⚠️ {line}")
 
         lines.append("")
@@ -833,14 +833,14 @@ def render_compare_telegram(
         _min_level = alert_urgency.min_official_level_for_threshold("LOW")
         filtered = [a for a in loc_result.official_alerts if a.level >= _min_level]
         if filtered:
-            notices = build_official_alert_notices(None, [(a, []) for a in filtered])
+            notices = build_official_alert_notices(None, [(a, []) for a in filtered], lang=lang)
             sources = list(dict.fromkeys(
-                official_alert_source_label(a.source) for a in filtered
+                official_alert_source_label(a.source, lang=lang) for a in filtered
             ))
             warn_text = render_official_alert_telegram(
                 notices, prefix=loc_result.location.name,
                 source_label=" · ".join(sources), show_scope=False,
-                tz=location_tz(loc_result.location),
+                tz=location_tz(loc_result.location), lang=lang,
             )
             block.append(f"   {warn_text}")
         blocks.append(block)

@@ -254,7 +254,7 @@ def render_plain(
     _alert_entries = collect_trip_alert_entries(segments)
     if _alert_entries:
         lines.append(f"━━ {t('mail.warnungen.ueberschrift', lang)} ━━")
-        for _line in render_official_alerts_plain(_alert_entries):
+        for _line in render_official_alerts_plain(_alert_entries, lang=lang):
             lines.append(f"  ⚠️ {_line}")
         lines.append("")
 

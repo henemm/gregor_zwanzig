@@ -1609,8 +1609,8 @@ def render_html(
         _leading = max((a for a, _, _ in _deduped), key=lambda a: a.level)
         warn_block_html = render_warn_block(
             _warn_notices, variant="embedded",
-            source_label=official_alert_source_label(_leading.source),
-            source_url=getattr(_leading, "url", None), tz=tz,
+            source_label=official_alert_source_label(_leading.source, lang=lang),
+            source_url=getattr(_leading, "url", None), tz=tz, lang=lang,
         )
     else:
         warn_block_html = ""
