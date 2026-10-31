@@ -7,7 +7,9 @@
 // Richtungen sind rot (Treffer ohne Eintrag UND Eintrag ohne Treffer).
 // Spec: docs/specs/modules/i18n_s4_ratsche_frontend_2649.md
 //
-// Startstand (Messung): siehe MESSUNG unten; erzeugt mit
+// Startstand (Messung 2026-10-31 auf origin/main 4f386528a + RED-Commit 5ef721c15):
+// 253 gescannte Svelte-Dateien, 115 mit Treffern, 1115 Trefferzeilen,
+// 33 Allowlist-Eintraege. Erzeugt mit
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
 //     src/lib/i18n/__tests__/hardcode_scan.ts --messen
 //
