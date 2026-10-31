@@ -1,0 +1,50 @@
+◯ WEATHER BRIEFING
+GR20 - Morning Report
+GR20 E1
+11.07.2026
+
+GR20 E1: 17–18°C, feels 11–12°C, ⛅, heavy rain max 8:00, moderate wind 17 km/h, gusts up to 70 km/h from 8:00, ⚡ possible 4:00–13:00
+
+━━ Metrics overview ━━
+  17–18°C · Max 12:00
+  feels 11.2–12.0°C · Max 12:00
+  Wind >10 km/h from 04:00 · max 17 (12:00)
+  Wind gusts >20 km/h from 04:00 · max 70 (08:00)
+  Rain from 08:00 · 18.5 mm
+  Thunderstorm medium from 04:00 · strongest 04:00
+  50% cloud cover · Max 08:00
+  Sun 2.5h
+
+━━ Segment 1: km 0.0–0.0 | 08:00–12:00 | ↑400m → 1200m ━━
+  Time   Temp   Feels   Wind   Gust   Rain   Thdr     SnowL   Cloud   Sun   TmpMin 
+  -----  -----  ------  -----  -----  -----  -------  ------  ------  ----  -------
+  08     16.8   11.2    15     70     18.5   medium   –       ⛅       –     16.8   
+  09     17.1   11.4    16     37     0.0    medium   –       ⛅       –     17.1   
+  10     17.4   11.6    16     38     0.0    medium   –       ⛅       –     17.4   
+  11     17.7   11.8    16     39     0.0    medium   –       ⛅       –     17.7   
+  12     18.0   12.0    17     40     0.0    medium   –       ⛅       –     18.0   
+
+
+── Reply commands ──
+  HEUTE                – Wetter der heutigen Etappe
+  MORGEN               – Wetter der morgigen Etappe
+  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)
+  GEWITTER             – Gewittergefahr heutige Etappe
+  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke
+  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)
+  STATUS               – Heute und kommende Etappen
+  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
+  SKIP                 – Nächstes Briefing überspringen
+  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben
+  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)
+
+Units: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
+Columns: Temp = Temperature · TmpMin = Low temperature alert · Feels = Feels-like temperature · Gust = Wind gusts · Rain = Precipitation · Thdr = Thunderstorm · SnowL = Snow line · Cloud = Cloud cover · Sun = Sunshine hours
+------------------------------------------------------------
+Generated: 2026-04-28 12:00 UTC
+Data: openmeteo (arome_france)
+Stage briefing · full version · openmeteo

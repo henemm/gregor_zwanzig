@@ -571,7 +571,7 @@ def _check_plausibility(html: str, lang: str = "de") -> list[str]:
     return errors
 
 
-def _validate_compact(msg: Message, max_bytes: int) -> tuple[bool, list[str]]:
+def _validate_compact(msg: Message, max_bytes: int, lang: str = "de") -> tuple[bool, list[str]]:
     errors: list[str] = []
 
     if msg.is_multipart() or msg.get_content_type() != "text/plain":
@@ -600,12 +600,12 @@ def _validate_compact(msg: Message, max_bytes: int) -> tuple[bool, list[str]]:
     if _has_hourly_table_plain(text):
         errors.append("COMPACT: enthaelt sequenzielle Stundentabelle (>=2 HH:00-Zeilen) — verboten")
 
-    errors.extend(_check_compact_blocks(text))
+    errors.extend(_check_compact_blocks(text, lang))
 
     return len(errors) == 0, errors
 
 
-def _check_compact_blocks(text: str) -> list[str]:
+def _check_compact_blocks(text: str, lang: str = "de") -> list[str]:
     """Pflichtbloecke (HART): Kopf, Metriken-Ueberblick, Footer.
 
     Ausblick (Wetterlage:/Naechste Etappen) ist OPTIONAL — render_compact()
@@ -615,8 +615,9 @@ def _check_compact_blocks(text: str) -> list[str]:
     errors: list[str] = []
     if not (" - " in text and "Report" in text):
         errors.append("COMPACT: Kopf-Zeile (Trip - ... Report) fehlt")
-    if "== Metriken-Ueberblick ==" not in text:
-        errors.append("COMPACT: Block '== Metriken-Ueberblick ==' fehlt")
+    pille = "== " + _ml().erwartet("mail.pille.ueberschrift", lang).replace("Ü", "Ue") + " =="
+    if pille not in text:
+        errors.append(f"COMPACT: Block '{pille}' fehlt")
     if "----" not in text or "Generated:" not in text:
         errors.append("COMPACT: Footer (Trennlinie + Generated:) fehlt")
     return errors
@@ -664,7 +665,7 @@ def validate_message(
     if mail_format == "full":
         ok, errors = _validate_full(msg, lang)
     elif mail_format == "compact":
-        ok, errors = _validate_compact(msg, max_bytes)
+        ok, errors = _validate_compact(msg, max_bytes, lang)
     else:
         return False, [f"Unbekanntes Format '{mail_format}' (erwartet full/compact)"]
 

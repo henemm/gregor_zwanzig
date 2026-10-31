@@ -117,6 +117,9 @@ def sichtbarer_text(html: str) -> str:
 
 
 def ohne_spaetere_pakete(text: str) -> str:
-    """Schneidet Tageslage-Satz (P3) und Antwort-Kommandos (P3/P10) heraus."""
+    """Schneidet Tageslage-Satz und Antwort-Kommandos heraus. Seit P3 (#2665)
+    sind Tageslage und Kopf/Hinweis des Befehlsblocks englisch; die
+    Befehlszeilen (``command_rows``) stellt P10 (#2673) um."""
     text = re.sub(r"DAY SUMMARY\n.*?\n(?=Metrics overview)", "", text, flags=re.S)
-    return re.sub(r"Antwort-Kommandos\n.*?\n(?=RISK)", "", text, flags=re.S)
+    return re.sub(r"(?:Antwort-Kommandos|Reply commands)\n.*?\n(?=RISK)", "", text,
+                  flags=re.S)

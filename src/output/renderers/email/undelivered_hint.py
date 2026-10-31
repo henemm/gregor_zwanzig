@@ -27,11 +27,15 @@ import html as _html
 from typing import TYPE_CHECKING, Optional, Sequence
 from zoneinfo import ZoneInfo
 
+from i18n import Lang, t
+
 if TYPE_CHECKING:
     from services.alert_log import UndeliveredIncident
 
-HEADING_FAILED = "FEHLGESCHLAGEN — da ist etwas schiefgegangen"
-HEADING_WITHHELD = "ZURÜCKGEHALTEN — so hast du es eingestellt"
+# Deutsche Referenzwerte (Bestandstests importieren sie); die Renderer holen
+# die Texte sprachabhaengig ueber ``_heading``/``_reason_label`` (#2665).
+HEADING_FAILED = t("mail.undelivered.kopf_fehlgeschlagen", "de")
+HEADING_WITHHELD = t("mail.undelivered.kopf_zurueckgehalten", "de")
 
 # PO-Entscheidung 2026-08-05, angepasst 2026-08-15 (#1750 E6): hoechstens
 # fuenf Zeilen, jetzt JE BLOCK statt fuer die Gesamtliste ausgewertet.
@@ -45,28 +49,22 @@ _CHANNEL_LABELS = {
 # O2 aus #1459 + die beiden Premium-SMS-Sperrcodes aus #1701 (#1750 B1).
 # `channel_disabled` fehlt bewusst — ein abgeschalteter Kanal ist kein
 # Vorfall und erreicht diesen Baustein gar nicht erst.
-_REASON_LABELS = {
-    "delivery_failed": "Versand fehlgeschlagen",
-    "quiet_hours": "Stille Stunden",
-    "daily_limit": "Tageslimit",
-    "cooldown": "Cooldown",
-    "below_channel_threshold": "unter deiner Schwelle",
-    "premium_sms_no_reply_address": "keine Rückadresse gelernt",
-    "premium_sms_reply_address_stale": "Rückadresse veraltet",
-    # #2050 S3b: Doppel-Alarm-Guard (#818) — dieselbe Größe desselben
-    # Abschnitts wurde eben schon gemeldet.
-    "double_alert_guard": "Wiederholung derselben Meldung",
-    # #2050 S4a: die Wetterquelle war nicht erreichbar — ohne Beschriftung
-    # stuende der rohe Code in der Mail.
-    "data_unavailable": "Wetterdaten nicht verfügbar",
-    # #2050 S4c: der Abweichungs-Zweig entdoppelt jetzt an derselben
-    # quellenuebergreifenden Ereignis-Identitaet wie Radar/amtlich (analog
-    # `double_alert_guard`) — ohne eigenen Eintrag fiele der Grund auf
-    # "Versand fehlgeschlagen" zurueck, wo bewusst entdoppelt wurde.
-    "event_duplicate": "bereits als anderes Ereignis gemeldet",
-    # #2050 Sz.12: der Wächter war blind (Untergrund steht im Protokoll).
-    "no_reference_basis": "Kein Alarm möglich: keine gültige Vergleichsbasis",
-}
+# #2050 S3b: Doppel-Alarm-Guard (#818) — dieselbe Größe desselben Abschnitts
+# wurde eben schon gemeldet. #2050 S4a: `data_unavailable` — die Wetterquelle
+# war nicht erreichbar (ohne Beschriftung stuende der rohe Code in der Mail).
+# #2050 S4c: `event_duplicate` — der Abweichungs-Zweig entdoppelt an derselben
+# quellenuebergreifenden Ereignis-Identitaet wie Radar/amtlich. #2050 Sz.12:
+# `no_reference_basis` — der Wächter war blind.
+# Issue #2665: Texte im Katalog (``mail.undelivered.grund.<code>``); das Dict
+# bleibt der deutsche Referenzwert fuer Bestandstests.
+_REASON_CODES = (
+    "delivery_failed", "quiet_hours", "daily_limit", "cooldown",
+    "below_channel_threshold", "premium_sms_no_reply_address",
+    "premium_sms_reply_address_stale", "double_alert_guard", "data_unavailable",
+    "event_duplicate", "no_reference_basis",
+)
+# i18n-dynamic: mail.undelivered.grund.
+_REASON_LABELS = {code: t(f"mail.undelivered.grund.{code}", "de") for code in _REASON_CODES}
 
 # #1750 E2: Einsortierung je Grund in einen der zwei Bloecke. Ein Vorfall mit
 # mehreren Gruenden zaehlt als "failed", sobald EINER seiner Gruende
@@ -96,11 +94,25 @@ _REASON_BLOCK = {
     "no_reference_basis": "failed",
 }
 
-_TRIGGER_LABELS = {
-    "official_alert": "Amtliche Warnung",
-    "nowcast": "Regenradar",
-    "forecast_change": "Wetteränderung",
-}
+_TRIGGER_CODES = ("official_alert", "nowcast", "forecast_change")
+# i18n-dynamic: mail.undelivered.ausloeser.
+_TRIGGER_LABELS = {c: t(f"mail.undelivered.ausloeser.{c}", "de") for c in _TRIGGER_CODES}
+
+
+def _trigger_label(code: str, lang: Lang) -> str:
+    if code in _TRIGGER_CODES:
+        return t(f"mail.undelivered.ausloeser.{code}", lang)
+    return t("mail.undelivered.ausloeser.alarm", lang)
+
+
+def _reason_label(code: str, lang: Lang) -> str:
+    """Grund in ``lang``; ein unbekannter Code erscheint wie bisher roh."""
+    return t(f"mail.undelivered.grund.{code}", lang) if code in _REASON_LABELS else code
+
+
+def _heading(block: str, lang: Lang) -> str:
+    key = "kopf_fehlgeschlagen" if block == "failed" else "kopf_zurueckgehalten"
+    return t(f"mail.undelivered.{key}", lang)
 
 
 def has_undelivered(incidents: Optional[Sequence]) -> bool:
@@ -109,7 +121,7 @@ def has_undelivered(incidents: Optional[Sequence]) -> bool:
     return bool(incidents)
 
 
-def _subject(inc: "UndeliveredIncident") -> str:
+def _subject(inc: "UndeliveredIncident", lang: Lang = "de") -> str:
     """Worum es ging, in Worten aus dem Register.
 
     Ordinale Groessen erscheinen nie als Zahl (#1503/#1474) — das Protokoll
@@ -121,13 +133,13 @@ def _subject(inc: "UndeliveredIncident") -> str:
     if inc.metrics:
         namen = []
         for metric_id, _aggregation in inc.metrics:
-            label = get_alert_label(str(metric_id))
+            label = get_alert_label(str(metric_id), lang)
             if label not in namen:
                 namen.append(label)
         return ", ".join(namen)
     if inc.hazards or inc.trigger == "official_alert":
-        return _TRIGGER_LABELS["official_alert"]
-    return _TRIGGER_LABELS.get(inc.trigger, "Alarm")
+        return _trigger_label("official_alert", lang)
+    return _trigger_label(inc.trigger, lang)
 
 
 def _incident_block(inc: "UndeliveredIncident") -> str:
@@ -173,8 +185,8 @@ def _kanaele(inc: "UndeliveredIncident") -> str:
     return ", ".join(_CHANNEL_LABELS.get(c, c) for c in inc.channels)
 
 
-def _gruende(inc: "UndeliveredIncident") -> str:
-    return ", ".join(_REASON_LABELS.get(r, r) for r in inc.reasons)
+def _gruende(inc: "UndeliveredIncident", lang: Lang = "de") -> str:
+    return ", ".join(_reason_label(r, lang) for r in inc.reasons)
 
 
 def _zeitspanne(alt, neu, tz: ZoneInfo) -> str:
@@ -189,7 +201,7 @@ def _zeitspanne(alt, neu, tz: ZoneInfo) -> str:
     return f"{start}–{ende}"
 
 
-def _row(gruppe: Sequence, tz: ZoneInfo) -> str:
+def _row(gruppe: Sequence, tz: ZoneInfo, lang: Lang = "de") -> str:
     """Eine Zeile ohne "nicht zugestellt", ohne Klammern um den Grund (E3):
     ``{wann} · {worum} · {kanaele} · {grund}``, bei ``n > 1``
     ``{spanne} · {worum} ({n}×) · {kanaele} · {grund}`` (E5)."""
@@ -198,29 +210,31 @@ def _row(gruppe: Sequence, tz: ZoneInfo) -> str:
     fuehrend = gruppe[0]
     if len(gruppe) == 1:
         wann = local_fmt(fuehrend.at, tz, "%d.%m. %H:%M")
-        worum = _subject(fuehrend)
+        worum = _subject(fuehrend, lang)
     else:
         zeitpunkte = [inc.at for inc in gruppe]
         wann = _zeitspanne(min(zeitpunkte), max(zeitpunkte), tz)
-        worum = f"{_subject(fuehrend)} ({len(gruppe)}×)"
-    return f"{wann} · {worum} · {_kanaele(fuehrend)} · {_gruende(fuehrend)}"
+        worum = f"{_subject(fuehrend, lang)} ({len(gruppe)}×)"
+    return f"{wann} · {worum} · {_kanaele(fuehrend)} · {_gruende(fuehrend, lang)}"
 
 
-def _rest_hinweis(anzahl: int) -> str:
-    return f"und {anzahl} weitere"
+def _rest_hinweis(anzahl: int, lang: Lang = "de") -> str:
+    return t("mail.undelivered.rest", lang, count=anzahl)
 
 
-def _rows_and_rest(incidents: Sequence, tz: ZoneInfo) -> tuple[list[str], int]:
+def _rows_and_rest(
+    incidents: Sequence, tz: ZoneInfo, lang: Lang = "de",
+) -> tuple[list[str], int]:
     """Zeilen (nach E5-Gruppierung, gedeckelt auf ``MAX_LINES_PER_BLOCK``)
     plus Anzahl der dadurch verdraengten Zeilen (E6, JE BLOCK)."""
     gruppen = _group(incidents)
     gezeigt = gruppen[:MAX_LINES_PER_BLOCK]
     verdraengt = gruppen[MAX_LINES_PER_BLOCK:]
-    return [_row(g, tz) for g in gezeigt], len(verdraengt)
+    return [_row(g, tz, lang) for g in gezeigt], len(verdraengt)
 
 
 def render_undelivered_plain(
-    incidents: Sequence, *, tz: ZoneInfo, ascii_safe: bool = False,
+    incidents: Sequence, *, tz: ZoneInfo, ascii_safe: bool = False, lang: Lang = "de",
 ) -> str:
     """Klartext-Fassung: FEHLGESCHLAGEN vor ZURUECKGEHALTEN (#1750), jeder
     Block nur wenn er Vorfaelle hat. ``ascii_safe=True`` (compact.py) liefert
@@ -232,13 +246,14 @@ def render_undelivered_plain(
 
     failed, withheld = _split_blocks(incidents)
     bloecke: list[list[str]] = []
-    for heading, teil in ((HEADING_FAILED, failed), (HEADING_WITHHELD, withheld)):
+    for heading, teil in ((_heading("failed", lang), failed),
+                          (_heading("withheld", lang), withheld)):
         if not teil:
             continue
-        zeilen, rest = _rows_and_rest(teil, tz)
+        zeilen, rest = _rows_and_rest(teil, tz, lang)
         block = [heading] + [f"  {z}" for z in zeilen]
         if rest > 0:
-            block.append(f"  … {_rest_hinweis(rest)}")
+            block.append(f"  … {_rest_hinweis(rest, lang)}")
         bloecke.append(block)
 
     ausgabe: list[str] = []
@@ -256,12 +271,12 @@ def render_undelivered_plain(
 
 def _render_block_html(
     heading: str, incidents: Sequence, tz: ZoneInfo, *,
-    bg: str, border: str, ink: str, font: str,
+    bg: str, border: str, ink: str, font: str, lang: Lang = "de",
 ) -> str:
     """Jede Vorfall-Zeile ist ein eigenes Element (wie ``render_undelivered_html``
     vor #1750) -- die 4px Abstand je Zeile tragen zur Lesbarkeit unter
     Zeitdruck bei (Design-Leitprinzip)."""
-    zeilen, rest = _rows_and_rest(incidents, tz)
+    zeilen, rest = _rows_and_rest(incidents, tz, lang)
     inhalt = "".join(
         f'<div style="margin:4px 0 0 0;color:{ink};font-size:13px;">'
         f'{_html.escape(z)}</div>'
@@ -270,7 +285,7 @@ def _render_block_html(
     if rest > 0:
         inhalt += (
             f'<div style="margin:4px 0 0 0;color:{ink};font-size:13px;">'
-            f'… {_rest_hinweis(rest)}</div>'
+            f'… {_rest_hinweis(rest, lang)}</div>'
         )
     return (
         f'<div style="background:{bg};border-left:4px solid {border};'
@@ -281,7 +296,9 @@ def _render_block_html(
     )
 
 
-def render_undelivered_html(incidents: Sequence, *, tz: ZoneInfo) -> str:
+def render_undelivered_html(
+    incidents: Sequence, *, tz: ZoneInfo, lang: Lang = "de",
+) -> str:
     """Zwei Kaesten (#1750): FEHLGESCHLAGEN bleibt der bestehende
     Danger-Kasten (``G_BOX_DANGER_BG``/``G_DANGER``), ZURUECKGEHALTEN nutzt
     das bereits vorhandene neutrale Tokenpaar ``G_BOX_INFO_BG``/``G_INFO``
@@ -295,12 +312,12 @@ def render_undelivered_html(incidents: Sequence, *, tz: ZoneInfo) -> str:
     teile = []
     if failed:
         teile.append(_render_block_html(
-            HEADING_FAILED, failed, tz,
-            bg=G_BOX_DANGER_BG, border=G_DANGER, ink=G_INK, font=FONT_UI,
+            _heading("failed", lang), failed, tz,
+            bg=G_BOX_DANGER_BG, border=G_DANGER, ink=G_INK, font=FONT_UI, lang=lang,
         ))
     if withheld:
         teile.append(_render_block_html(
-            HEADING_WITHHELD, withheld, tz,
-            bg=G_BOX_INFO_BG, border=G_INFO, ink=G_INK, font=FONT_UI,
+            _heading("withheld", lang), withheld, tz,
+            bg=G_BOX_INFO_BG, border=G_INFO, ink=G_INK, font=FONT_UI, lang=lang,
         ))
     return "".join(teile)

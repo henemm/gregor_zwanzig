@@ -42,6 +42,10 @@
 | Ausblick (3 Tage) | outlook (3-day) | |
 | Legende | legend | |
 | Hinweis | note | |
+| Wetterlage | weather pattern | Stabilitäts-Satz „Wetterlage: STABIL" = *Weather pattern: STABLE* (#2665) |
+| Ersatzquelle / Ersatzmodell | backup source / backup model | Herkunfts-Vertretung; Quellennamen bleiben (#2665) |
+| Antwort-Kommandos | reply commands | Kopf des Befehlsblocks; Befehlswörter selbst siehe P10 (#2665) |
+| nicht zugestellt: FEHLGESCHLAGEN / ZURÜCKGEHALTEN | FAILED / HELD BACK | Blöcke im Briefing (#2665) |
 | Totalausfall | complete outage | Provider-Ausfall-Meldung |
 | Kontingent | quota | SMS-Kontingent = *SMS quota* |
 | Premium-SMS | Premium SMS | Kanalname, bleibt; Zusatz *(inReach)* |

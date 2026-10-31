@@ -1,0 +1,19 @@
+WINTERSPORT - PISTE
+Arlberg Winter - Morning Report
+Arlberg
+11.07.2026
+
+== Metriken-Ueberblick ==
+  17-19C - Max 15:00
+  gef. 11.6-12.6C - Max 15:00
+  Wind >10 km/h ab 04:00 - max 18 (15:00)
+  !!! Boeen >20 km/h ab 04:00 - max 110 (10:00)
+  kein Regen
+  kein Gewitter
+  50% bewoelkt - Max 10:00
+  Sonne 3.0h
+
+----------------------------------------
+Generated: 2026-04-28 12:00 UTC
+Data: openmeteo (arome_france)
+Etappen-Briefing - Kompakt - openmeteo

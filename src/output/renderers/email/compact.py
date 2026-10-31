@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.models import SegmentWeatherData, UnifiedWeatherDisplayConfig
+from i18n import Lang, t
 from utils.ascii_fold import fold_ascii
 from utils.timezone import local_fmt
 
@@ -82,7 +83,7 @@ def _severity_prefix(tone: str) -> str:
     return ""
 
 
-def _compact_thunder_field(tok: dict, stage: dict) -> str:
+def _compact_thunder_field(tok: dict, stage: dict, lang: Lang = "de") -> str:
     """Gewitterspalte der Kompakt-Ausblick-Zeile (#1671).
 
     Nutzt denselben Entscheidungs-Helfer wie ``render_outlook_plain()`` und
@@ -100,23 +101,23 @@ def _compact_thunder_field(tok: dict, stage: dict) -> str:
     stehen (Bestands-Tests und Lesbarkeit der Zeile), traegt aber keine
     eigene Formatierung mehr.
     """
-    return thunder_cell_compact(tok, stage)
+    return thunder_cell_compact(tok, stage, lang=lang)
 
 
-_STABILITY_TEXTS = {
-    "STABIL": (
-        "Wetterlage: STABIL - Die Grosswetterlage ist stabil. "
-        "Prognosen fuer die naechsten Etappen sind verlaesslich."
-    ),
-    "WECHSELHAFT": (
-        "Wetterlage: WECHSELHAFT - Die Lage ist im Uebergang. "
-        "Prognosen ab Tag 3 mit Vorsicht behandeln."
-    ),
-    "FRAGIL": (
-        "Wetterlage: FRAGIL - Schnelle Frontverlagerung moeglich. "
-        "Prognosen ab Tag 2 konservativ planen."
-    ),
-}
+# Issue #2665: dieselben Schluessel wie Klartext/HTML (``mail.stabilitaet.*``);
+# ``_ascii`` faltet "—"/Umlaute -- fuer Deutsch exakt der fruehere Kompakt-Text.
+_STABILITY_LABELS = ("STABIL", "WECHSELHAFT", "FRAGIL")
+
+
+def _stability_text(label: str, lang: Lang) -> str:
+    if label in _STABILITY_LABELS:
+        # i18n-dynamic: mail.stabilitaet.
+        return _ascii(t(f"mail.stabilitaet.{label.lower()}", lang))
+    return _ascii(t("mail.stabilitaet.unbekannt", lang, label=label))
+
+
+def _naechste_etappen(lang: Lang) -> str:
+    return _ascii(t("mail.ausblick.naechste_etappen", lang))
 
 
 def render_compact(
@@ -143,6 +144,7 @@ def render_compact(
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     trip_metrics_altbestand: bool = True,
     undelivered: Optional[list] = None,
+    lang: Lang = "de",
     **_ignored,
 ) -> str:
     """Render compact plain-text e-mail body. Pure function.
@@ -150,7 +152,7 @@ def render_compact(
     Ignores all baustein-toggles; always shows header + metrics + outlook + footer.
     Returns ASCII-only string (str.isascii() == True guaranteed).
     """
-    sig = profile_signature(profile)
+    sig = profile_signature(profile, lang=lang)
 
     # --- Defensive Guard: leere Segment-Liste ---
     if not segments:
@@ -205,10 +207,10 @@ def render_compact(
         segments, metric_ids, sms_mention_thresholds, tz=tz,
         night_weather=night_weather, has_gap=has_gap,
         day_window_start_hour=day_window_start_hour,
-        day_window_end_hour=day_window_end_hour,
+        day_window_end_hour=day_window_end_hour, lang=lang,
     ) if metric_ids else []
     if pills:
-        lines.append("== Metriken-Ueberblick ==")
+        lines.append(f"== {_ascii(t('mail.pille.ueberschrift', lang))} ==")
         for label, tone in pills:
             # Issue #795/AC-10: dezentes ASCII-Schwerezeichen aus der Ampelstufe
             # statt rohem [AMPEL_*]/[TONE]-Marker (gruen→kein, gelb→!, orange→!!,
@@ -222,7 +224,7 @@ def render_compact(
     # (Sicherheitsrelevanz, gemeinsamer Renderer, Epic #1073 Punkt 6).
     _alert_entries = collect_trip_alert_entries(segments)
     if _alert_entries:
-        lines.append("== Warnungen ==")
+        lines.append(f"== {t('mail.kompakt.warnungen', lang)} ==")
         for _line in render_official_alerts_plain(_alert_entries):
             lines.append(_ascii(f"  ! {_line}"))
         lines.append("")
@@ -231,21 +233,17 @@ def render_compact(
     # echten Warnungen, ASCII-Praefix "!!", nur bei gesetztem Ausfall-Flag.
     if any_official_alerts_unavailable(segments):
         lines.append(_ascii(
-            f"  {render_official_alerts_unavailable_plain(ascii_safe=True)}"
+            f"  {render_official_alerts_unavailable_plain(ascii_safe=True, lang=lang)}"
         ))
         lines.append("")
 
     # --- Ausblick: Grosswetterlage + Naechste Etappen ---
     if stability_result is not None:
-        stab_text = _STABILITY_TEXTS.get(
-            stability_result.label,
-            f"Wetterlage: {stability_result.label}",
-        )
-        lines.append(stab_text)
+        lines.append(_stability_text(stability_result.label, lang))
         lines.append("")
 
     confidence_hint = build_confidence_hint(
-        segments, now=datetime.now(tz), tz=tz
+        segments, now=datetime.now(tz), tz=tz, lang=lang,
     )
     if confidence_hint:
         lines.append(_ascii(confidence_hint))
@@ -257,7 +255,7 @@ def render_compact(
     # unveraendert in die bisherigen Zweige.
     if outlook_metrics != []:
         if multi_day_trend:
-            lines.append("Naechste Etappen")
+            lines.append(_naechste_etappen(lang))
             if outlook_metrics is not None:
                 # Label-Wert-Muster wie render_outlook_plain() (outlook.py:333)
                 # -- kein drittes Format. Bei 1..N frei gewaehlten Spalten
@@ -275,7 +273,7 @@ def render_compact(
                              for i in range(len(columns))]
                     if gew_index is not None:
                         texte[gew_index] = _compact_thunder_field(
-                            format_trend_tokens(stage), stage,
+                            format_trend_tokens(stage, lang=lang), stage, lang,
                         )
                     values = "  ".join(
                         f"{c['label']} {texte[i]}" for i, c in enumerate(columns)
@@ -283,10 +281,10 @@ def render_compact(
                     lines.append(_ascii(f"{weekday:<3} {values}".rstrip()))
             else:
                 for stage in multi_day_trend:
-                    tok = format_trend_tokens(stage)
+                    tok = format_trend_tokens(stage, lang=lang)
                     weekday = stage.get("weekday", "")
                     name = stage.get("name", "")
-                    thunder_field = _compact_thunder_field(tok, stage)
+                    thunder_field = _compact_thunder_field(tok, stage, lang)
                     line = (
                         f"{weekday:<3} {name:<26} {tok['temp_str']:<8} "
                         f"{tok['precip_str']:<5} {tok['wind_str']:<5} {thunder_field}"
@@ -296,9 +294,9 @@ def render_compact(
         elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
             # Fix #1486: benannter Zustand statt stiller Leerstelle. ascii_safe,
             # weil der Compact-Body durchgaengig ASCII ist ("!!" statt "⚠️").
-            lines.append("Naechste Etappen")
+            lines.append(_naechste_etappen(lang))
             lines.append(_ascii(render_outlook_state_plain(
-                outlook_state, outlook_horizon_days, ascii_safe=True,
+                outlook_state, outlook_horizon_days, ascii_safe=True, lang=lang,
             )))
             lines.append("")
 
@@ -306,7 +304,7 @@ def render_compact(
     # zeigt denselben Abschnitt (AC-9), ascii_safe wie der uebrige Body.
     if has_undelivered(undelivered):
         lines.append(_ascii(render_undelivered_plain(
-            undelivered, tz=tz, ascii_safe=True,
+            undelivered, tz=tz, ascii_safe=True, lang=lang,
         )))
         lines.append("")
 
@@ -321,14 +319,14 @@ def render_compact(
     # Vollversion und Telegram, aus dem geteilten Modul (R6). Steht VOR
     # _ascii(), das Umlaute faltet. Segmentauswahl GETEILT ueber alle vier
     # Ausgaben (`select_fallback_meta`) — sie durchsucht alle Etappen.
-    lines.extend(build_fallback_lines(select_fallback_meta(segments)))
+    lines.extend(build_fallback_lines(select_fallback_meta(segments), lang=lang))
 
     # Issue #1241/warnmail-Spec AC-5 (Befund 4a): Herkunfts-Fußzeile VOR
     # _ascii() (faltet '·' → '-', kurz halten wegen 2048-Byte-Limit des
     # Compact-Validators) -- Zeile 2 zeigt die echte Datenquelle
     # (`segments[0].provider`), nicht mehr den internen Renderer-Pfad.
     lines.append(render_origin_footer_text(build_origin_footer(
-        "trip-briefing", "compact", source=segments[0].provider,
+        "trip-briefing", "compact", source=segments[0].provider, lang=lang,
     )))
 
     body = "\n".join(lines)

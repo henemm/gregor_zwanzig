@@ -1420,7 +1420,7 @@ def render_html(
         trend_html = (
             f'<div style="background:{G_HEADER_BG};padding:16px 28px;">'
             + _eyebrow(t("mail.ausblick.eyebrow", lang))
-            + render_outlook_state_html(outlook_state, outlook_horizon_days)
+            + render_outlook_state_html(outlook_state, outlook_horizon_days, lang=lang)
             + "</div>"
         )
 
@@ -1619,7 +1619,7 @@ def render_html(
     # den echten Warnungen (erscheint auch, wenn keine Alerts vorliegen). Nur bei
     # gesetztem Flag -> Byte-Gleichheit im "keine Warnungen, alle Quellen ok"-Fall.
     if any_official_alerts_unavailable(segments):
-        warn_block_html += render_official_alerts_unavailable_html()
+        warn_block_html += render_official_alerts_unavailable_html(lang=lang)
 
     # Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad) — bereits
     # als fertig formatierte Zeile vom Scheduler ermittelt (Guards/Fetch dort).
@@ -1630,7 +1630,7 @@ def render_html(
     # erreicht hat — am Ende des Briefings, geteilter Baustein mit dem
     # Ortsvergleich. Ohne Vorfaelle leer -> HTML byte-identisch wie bisher.
     undelivered_html = (
-        render_undelivered_html(undelivered, tz=tz)
+        render_undelivered_html(undelivered, tz=tz, lang=lang)
         if has_undelivered(undelivered) else ""
     )
 
@@ -1755,7 +1755,7 @@ def render_html(
         {thunder_html}
         {trend_html}{undelivered_html}
 
-        {render_commands_html("route")}
+        {render_commands_html("route", lang=lang)}
 
         {risk_legend_html}
         {footer_html}
