@@ -2,7 +2,7 @@
 entity_id: i18n_s1_sprachfeld_nutzer_2646
 type: module
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-10-31
 status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2646, go, python, model-sonnet]
@@ -127,8 +127,8 @@ In `_parse_user` (`loader.py:1204`) wird `language=prefs_data.get("language", "d
 - **AC-2:** Given ein angemeldeter Nutzer / When er `PUT /api/auth/profile` mit `{"language":"fr"}` (oder `""`, `"EN"`) sendet / Then antwortet die API mit 400 und `{"error":"invalid_language"}`, und seine `user.json` ist byte-identisch zu vorher.
   - Test: internal/handler/profile_language_test.go — drei ungültige Werte, je Dateibytes vor/nach vergleichen.
 
-- **AC-3:** Given eine `user.json` mit `display_name`, `mail_to` und einem dem Modell unbekannten Zusatzfeld / When der Nutzer nur `{"language":"en"}` sendet bzw. `language` zusammen mit `display_name` / Then enthält die Datei danach `"language":"en"`, alle übrigen Felder (auch das unbekannte) bleiben erhalten, und es wird weder eine Bestätigungsmail noch ein SMS-Code ausgelöst.
-  - Test: internal/handler/profile_language_test.go — Datei vor/nach als JSON-Objekte vergleichen; Versand-Naht (`sendVerificationMailFn`) zählt Aufrufe, erwartet 0.
+- **AC-3:** Given eine `user.json` mit `display_name`, `mail_to` und einem dem Modell unbekannten Zusatzfeld / When der Nutzer nur `{"language":"en"}` sendet / Then enthält die Datei danach `"language":"en"` und alle übrigen Felder (auch das unbekannte) bleiben erhalten; When er `language` zusammen mit `display_name` sendet / Then enthält die Datei `"language":"en"` und den neuen `display_name`, alle übrigen Modellfelder bleiben erhalten, ein dem Modell unbekanntes Feld verwirft das bestehende `SaveUser` wie bisher; in beiden Fällen wird weder eine Bestätigungsmail noch ein SMS-Code ausgelöst.
+  - Test: internal/handler/profile_language_test.go — `TestProfilePutNurSpracheMergtUndSetztCookie` (Nur-`language`-Pfad, inkl. unbekanntem Feld) und `TestProfilePutSpracheMitAnzeigenameMergt` (gemischter Request, Modellfelder); Datei vor/nach als JSON-Objekte vergleichen; Versand-Naht (`sendVerificationMailFn`) zählt Aufrufe, erwartet 0.
 
 - **AC-4:** Given eine Registrierung / When `language` mit `en` mitgeschickt wird / Then enthält die neue `user.json` `"language":"en"`; ohne `language` fehlt das Feld; mit `"fr"` antwortet die API 400 `invalid_language`, es entsteht kein Konto und ein mitgesendeter Einladungstoken bleibt unverbraucht.
   - Test: internal/handler/register_language_test.go — drei Registrierungen gegen Temp-Store, Existenz und Inhalt der `user.json`, Einladungsstatus.
@@ -148,6 +148,7 @@ In `_parse_user` (`loader.py:1204`) wird `language=prefs_data.get("language", "d
 - Annahme: `GET /api/auth/profile` liefert die wirksame Sprache (`de` bei fehlendem Feld), nicht den leeren Rohwert; das erfüllt ADR-0104 Nr. 9 („Nutzer ohne Feld bleiben deutsch") und die AC-Skizze des Issues. Die Konventionen nennen „de/en/leer"; der Leerfall entfällt in der Antwort. Paket #2675 muss einen Nutzer ohne Feld deshalb ebenfalls als `de` behandeln (kein Vorrang für Cookie oder `Accept-Language` bei angemeldeten Nutzern).
 - Annahme: `PUT` akzeptiert nur `de`/`en` in Kleinschreibung; ein leerer Wert setzt die Sprache nicht zurück.
 - Der Cookie `gz_lang` von Login und Registrierung erreicht den Browser nur, wenn das Frontend die Set-Cookie-Header weiterreicht (Login-Action in #2648); die Antwort auf `PUT /api/auth/profile` erreicht den Browser direkt.
+- Im gemischten Request (`language` + `display_name`) läuft das Speichern über das bestehende `SaveUser`, das dem Modell unbekannte Felder verwirft (Bestandsverhalten, nicht durch dieses Paket verursacht). Ein merge-sicheres `SaveUser` ist Folge-Issue.
 - Die Python-Auflösung liest die Datei bei jedem Aufruf; ein Zwischenspeicher ist bewusst nicht Teil dieses Pakets (kein globaler Zustand).
 
 ## Architektur-Entscheidung (ADR)
@@ -158,3 +159,4 @@ In `_parse_user` (`loader.py:1204`) wird `language=prefs_data.get("language", "d
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-10-31: AC-3 präzisiert (PO-Entscheidung): Fremdfeld-Erhalt gilt im Nur-`language`-Pfad; im gemischten Request bleiben die Modellfelder erhalten, unbekannte Felder verwirft `SaveUser` wie bisher (merge-sicheres `SaveUser`: Folge-Issue). Testverweis angepasst.
