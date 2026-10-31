@@ -15,7 +15,10 @@ from datetime import date
 import pytest
 
 from i18n import fmt_date
-from tests.helpers.mail_lang_fixture import als_englisch, lade, mailtext, mit_kopf, validator_lauf
+from tests.helpers.mail_lang_fixture import (
+    als_englisch, bearbeite, entwarnungen, gewitter_alarm, lade, lawinen_alarm, mailtext,
+    mit_kopf, validator_lauf, warn_mail_de,
+)
 
 WARNUNG = [
     "warnung.verdict.one", "warnung.verdict.other", "warnung.gueltig", "warnung.quelle",
@@ -109,3 +112,91 @@ def test_ac7_deutsche_erwartungen_aus_dem_katalog_gleichen_den_bestandskonstante
     r = radar._lang_patterns("de")
     assert set(r["intensity"]) == set(radar._INTENSITY_LABELS)
     assert r["segment"].pattern == radar._SEGMENT_RE.pattern
+
+
+# ---------------------------------------------------------------------------
+# Adversary F001/F005: jede sprachabhaengige Erwartung wird in einer
+# englischen Mail einzeln wirksam -- Lawinen-Lagebericht, gemischte Mail,
+# Entwarnung (Stufe 3 -> 1, -> beendet), Radar mit Etappen-Bezug.
+# ---------------------------------------------------------------------------
+LAWINE = [*WARNUNG, "warnung.lawine.stufe", *(f"warnung.eaws.{i}" for i in range(1, 6))]
+ENTWARNUNG = ["warnung.entwarnung.wort", "warnung.entwarnung.uebergang",
+              "warnung.entwarnung.beendet", "warnung.gefahr.extreme_heat", *WARNUNG]
+DATEN = {fmt_date(date(2026, m, t), "de"): fmt_date(date(2026, m, t), "en")
+         for m, t in ((2, 19), (2, 20), (10, 29))}
+OFFICIAL = "official_alert_mail_validator"
+
+
+def _ohne_stufen_traeger(text: str) -> str:
+    """Leiter/Meter und Farbwoerter entfernen (Muster F012 im Bestandstest)."""
+    text = (text.replace('class="warn stacked"', 'class="warn"').replace('class="meter ', 'class="x ')
+            .replace('class="stufe-line"', 'class="x"'))
+    for wort in ("YELLOW", "ORANGE", "RED"):
+        text = text.replace(wort, "")
+    return text
+
+
+def test_f001_englischer_lawinen_lagebericht_besteht(tmp_path):
+    """'Avalanche level 4 (high)': Stufen-Wortlaut und EAWS-Wort in en. Faellt
+    die Erwartung auf de zurueck, fehlt der Lagebericht (S-2/P-2) bzw. passt
+    das EAWS-Wort nicht (P-2b)."""
+    eml = als_englisch(warn_mail_de([lawinen_alarm()]), LAWINE, DATEN)
+    assert "Avalanche level 4 (high)" in mailtext(eml)
+    lauf, _ = validator_lauf(tmp_path, OFFICIAL, eml)
+    assert lauf.returncode == 0, lauf.stdout + lauf.stderr
+
+
+def test_f001_falsches_englisches_eaws_wort_faellt(tmp_path):
+    eml = als_englisch(warn_mail_de([lawinen_alarm()]), LAWINE, DATEN)
+    eml = bearbeite(eml, lambda t: t.replace("Avalanche level 4 (high)", "Avalanche level 4 (moderate)"))
+    lauf, _ = validator_lauf(tmp_path, OFFICIAL, eml)
+    assert lauf.returncode == 1, lauf.stdout + lauf.stderr
+    assert "P-2b" in lauf.stdout + lauf.stderr
+
+
+def test_f001_gemischte_englische_mail_besteht_ueber_englisches_farbwort(tmp_path):
+    """Gewitter (YELLOW) + Lawine: P-2 findet die Warnstufe nur als 'YELLOW'."""
+    eml = als_englisch(warn_mail_de([gewitter_alarm(), lawinen_alarm()]), LAWINE, DATEN)
+    text = mailtext(eml)
+    assert "YELLOW" in text and "GELB" not in text and "ORANGE" not in text
+    lauf, _ = validator_lauf(tmp_path, OFFICIAL, eml)
+    assert lauf.returncode == 0, lauf.stdout + lauf.stderr
+
+
+def test_f001_gemischte_englische_mail_ohne_stufentraeger_faellt(tmp_path):
+    """F012 in en: das Typ-Wort 'Thunderstorm' verhindert die Lawinen-Lockerung."""
+    eml = als_englisch(warn_mail_de([gewitter_alarm(), lawinen_alarm()]), LAWINE, DATEN)
+    eml = bearbeite(eml, _ohne_stufen_traeger)
+    assert "Thunderstorm" in mailtext(eml)
+    lauf, _ = validator_lauf(tmp_path, OFFICIAL, eml)
+    assert lauf.returncode == 1, lauf.stdout + lauf.stderr
+    assert "S-2" in lauf.stdout + lauf.stderr
+
+
+def test_f001_englische_entwarnung_besteht(tmp_path):
+    """'All clear', 'Level 3 → 1' und 'Level 3 → ended' in Text und Betreff."""
+    eml = als_englisch(warn_mail_de([], entwarnungen()), ENTWARNUNG, DATEN)
+    text = mailtext(eml)
+    assert "All clear" in text and "Level 3 → 1" in text and "Level 3 → ended" in text
+    lauf, _ = validator_lauf(tmp_path, OFFICIAL, eml)
+    assert lauf.returncode == 0, lauf.stdout + lauf.stderr
+
+
+def test_f001_englische_entwarnung_ohne_absenkung_faellt(tmp_path):
+    eml = als_englisch(warn_mail_de([], entwarnungen()), ENTWARNUNG, DATEN)
+    eml = bearbeite(eml, lambda t: t.replace("Level 3 → 1", "Level 3 → 3"))
+    lauf, _ = validator_lauf(tmp_path, OFFICIAL, eml)
+    assert lauf.returncode == 1, lauf.stdout + lauf.stderr
+    assert "E-3" in lauf.stdout + lauf.stderr
+
+
+def test_f005_radar_mit_englischem_etappen_bezug_besteht(tmp_path):
+    """Ortsangabe 'Stage 3' (Katalog alarm.segment.etappe) ist der EINZIGE
+    Ortsbezug der Mail -- P-1 muss sie in en erkennen. (Der Renderer schreibt
+    heute 'Segment N'/'🏁 Ziel'; die Etappen-Form ist Bestand des Musters und
+    wird hier per String-Ersetzung am echten Output eingesetzt.)"""
+    eml = als_englisch(lade("radar_alert_de.eml"), RADAR, {"🏁 Ziel": "Stage 3"})
+    text = mailtext(eml)
+    assert "Stage 3" in text and "Destination" not in text and "Segment" not in text
+    lauf, _ = validator_lauf(tmp_path, "radar_alert_mail_validator", eml)
+    assert lauf.returncode == 0, lauf.stdout + lauf.stderr

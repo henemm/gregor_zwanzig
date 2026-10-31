@@ -13,7 +13,7 @@ from __future__ import annotations
 import yaml
 
 from tests.helpers.mail_lang_fixture import (
-    als_englisch, lade, mailtext, mit_kopf, validator_lauf, vergleich_zeilen_en,
+    als_englisch, bearbeite, lade, mailtext, mit_kopf, validator_lauf, vergleich_zeilen_en,
 )
 
 VALIDATOR = "email_spec_validator"
@@ -81,3 +81,32 @@ def test_ac7_deutsche_fixture_besteht_ohne_warnung(tmp_path):
     assert lauf.returncode == 0, lauf.stdout + lauf.stderr
     assert "WARNUNG" not in lauf.stderr
     assert _log(log_dir)["warnings"] == []
+
+
+def _ohne_erste_stunde(stunde: str):
+    """Entfernt im echten Output die erste Stundenzeile ``stunde`` (eine ORT-Tabelle)."""
+    import re
+
+    zeile = re.compile(r"<tr[^>]*>\s*<td[^>]*>" + stunde + r"</td>.*?</tr>", re.DOTALL)
+    return lambda text: zeile.sub("", text, count=1)
+
+
+def test_f004_englische_stundentabelle_wird_auf_vollstaendigkeit_geprueft(tmp_path):
+    """Adversary F004: die Stundentabelle wird in en ueber die Spalte 'Time'
+    gefunden -- eine fehlende Stunde faellt auf (validate_hourly_table)."""
+    eml = bearbeite(_englisch(), _ohne_erste_stunde("12"))
+    assert "Time" in mailtext(eml)
+    lauf, _ = validator_lauf(tmp_path, VALIDATOR, eml)
+    assert lauf.returncode == 1, lauf.stdout + lauf.stderr
+    assert "STUNDEN-TABELLE" in lauf.stdout and "fehlende Stunden: 12" in lauf.stdout
+
+
+def test_f004_englische_ueberblickszeile_wird_auf_format_geprueft(tmp_path):
+    """Adversary F004: falsches Format ('10 °C', Wert im Bereich) in der
+    englischen Zeile 'Temperature Maximum' faellt (validate_format)."""
+    eml = als_englisch(lade("compare_de.eml"), SCHLUESSEL,
+                       {**vergleich_zeilen_en(), ">10°C<": ">10 °C<"})
+    lauf, _ = validator_lauf(tmp_path, VALIDATOR, eml)
+    assert lauf.returncode == 1, lauf.stdout + lauf.stderr
+    assert "FORMAT: 'Temperature Maximum'" in lauf.stdout
+    assert "PLAUSIBILIT" not in lauf.stdout

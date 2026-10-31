@@ -19,6 +19,7 @@ from __future__ import annotations
 import email
 import re
 from email import policy
+from email.header import Header, decode_header, make_header
 from email.message import Message
 from pathlib import Path
 
@@ -75,7 +76,20 @@ def als_englisch(eml_bytes: bytes, schluessel: list[str], zusatz: dict[str, str]
         neu = ersetze_texte(text, schluessel, zusatz)
         charset = "us-ascii" if neu.isascii() and part.get_content_charset() == "us-ascii" else "utf-8"
         _setze_text(part, neu, charset)
+    betreff = str(make_header(decode_header(msg.get("Subject", ""))))
+    msg.replace_header("Subject", str(Header(ersetze_texte(betreff, schluessel, zusatz), "utf-8")))
     setze_kopf(msg, "en")
+    return msg.as_bytes()
+
+
+def bearbeite(eml_bytes: bytes, fn) -> bytes:
+    """Wendet ``fn(text) -> text`` auf jeden Text-Teil an (Verfaelschung per
+    String-Ersetzung am echten Render-Output, Kopfzeilen bleiben)."""
+    msg = email.message_from_bytes(eml_bytes, policy=policy.compat32)
+    for part in msg.walk():
+        if part.get_content_maintype() == "text":
+            text = part.get_payload(decode=True).decode(part.get_content_charset() or "utf-8")
+            _setze_text(part, fn(text), part.get_content_charset() or "utf-8")
     return msg.as_bytes()
 
 
@@ -214,7 +228,7 @@ def _compare_eml() -> bytes:
                  plain=None, mail_type="compare", compare_hourly_enabled=True)
 
 
-def _briefing_eml(email_format: str) -> bytes:
+def _briefing_eml(email_format: str, *, roh: bool = False, regen_mm: float = 0.0) -> bytes:
     from datetime import datetime, timezone
     from zoneinfo import ZoneInfo
 
@@ -230,11 +244,15 @@ def _briefing_eml(email_format: str) -> bytes:
     tz = ZoneInfo("Europe/Paris")
     utc = timezone.utc
     dc = build_default_display_config()
+    if roh:  # Roh-Modus: Zahlen statt Ampelpunkte (Muster test_issue_811_mode_matrix)
+        for mc in dc.metrics:
+            mc.format_mode, mc.use_friendly_format = "raw", False
 
-    def _dp(tag: int, stunde: int) -> ForecastDataPoint:
+    def _dp(tag: int, stunde: int, regen: float = 0.0) -> ForecastDataPoint:
         return ForecastDataPoint(
             ts=datetime(2026, 10, tag, stunde, 0, tzinfo=utc), t2m_c=11.0 + stunde % 5,
-            wind10m_kmh=14.0, gust_kmh=28.0, precip_1h_mm=0.0, pop_pct=10,
+            wind10m_kmh=14.0, gust_kmh=28.0, precip_1h_mm=regen,
+            pop_pct=10,
             cloud_total_pct=30, thunder_level=ThunderLevel.NONE, wind_chill_c=9.0,
             visibility_m=25000.0, wmo_code=1, is_day=1 if 7 <= stunde <= 16 else 0,
             dni_wm2=500.0 if 7 <= stunde <= 16 else 0.0,
@@ -270,7 +288,10 @@ def _briefing_eml(email_format: str) -> bytes:
     ]
     html, plain = render_email(
         TokenLine(trip_name="GR20 Golden", report_type="evening", stage_name="Etappe 3"),
-        segments=[seg_data], seg_tables=[[dp_to_row(dp, dc, tz=tz) for dp in tag_dps]],
+        segments=[seg_data],
+        # regen_mm wirkt nur auf die Tabellenzeilen: Pille (Zeitreihe) und Tabelle
+        # widersprechen sich dann -- genau der Fall der Regen-Summen-Pruefung.
+        seg_tables=[[dp_to_row(_dp(29, h, regen_mm), dc, tz=tz) for h in range(7, 12)]],
         display_config=dc, night_rows=[dp_to_row(dp, dc, tz=tz) for dp in nacht_dps],
         multi_day_trend=trend, tz=tz, friendly_keys=set(), email_format=email_format,
         sent_at=datetime(2026, 10, 29, 4, 0, tzinfo=utc), stage_name="Etappe 3",
@@ -282,6 +303,11 @@ def _briefing_eml(email_format: str) -> bytes:
     return _mime("briefing_compact", subject="[GR20 Golden] Etappe 3 - Evening Report",
                  body=plain, html=False, plain=None, mail_type="trip-briefing",
                  mail_format="compact")
+
+
+def briefing_mail_de(email_format: str = "full", **kw) -> bytes:
+    """Trip-Briefing aus dem echten Renderer (``roh``/``regen_mm`` variierbar)."""
+    return _briefing_eml(email_format, **kw)
 
 
 def _official_alert_eml() -> bytes:
@@ -330,6 +356,67 @@ def _radar_alert_eml() -> bytes:
     html, plain = render_email(msg)
     return _mime("radar_alert", subject="[GR20 Golden] Regen in 25 Min", body=html,
                  html=True, plain=plain, mail_type="radar-alert")
+
+
+_AVALANCHE_BULLETIN = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "avalanche_report" / "bulletins"
+    / "2026-02-20_AT-07_de_CAAMLv6.json"
+)
+
+
+def lawinen_alarm():
+    """Echter Parser auf das aufgezeichnete Bulletin (Lawinenstufe 4, 'groß')."""
+    import json
+
+    from services.official_alerts.avalanche_report import parse_region_alert
+
+    doc = json.loads(_AVALANCHE_BULLETIN.read_text(encoding="utf-8"))
+    return parse_region_alert(doc, "AT-07-25", source="avalanche_report:AT-07")
+
+
+def gewitter_alarm():
+    """GeoSphere-Gewitterwarnung mit kurzem Typ-Wort 'Gewitter' (Stufe 2)."""
+    from datetime import datetime, timezone
+
+    from services.official_alerts.models import OfficialAlert
+
+    utc = timezone.utc
+    return OfficialAlert(
+        source="geosphere_warn", hazard="thunderstorm", level=2, label="Gewitter",
+        valid_from=datetime(2026, 10, 29, 12, 0, tzinfo=utc),
+        valid_to=datetime(2026, 10, 29, 20, 0, tzinfo=utc), region_label="Stubai",
+    )
+
+
+def entwarnungen():
+    """Zwei Entwarnungen: Gewitter Stufe 3 -> 1 und Hitze Stufe 3 -> beendet."""
+    from output.renderers.alert.official_alerts import OfficialAllClearNotice
+
+    return [
+        OfficialAllClearNotice("lowered", "thunderstorm", "Gewitter", "Innsbruck-Land",
+                               "Segment 1", "Seg 1", 3, 1, 3, 1, "geosphere_warn"),
+        OfficialAllClearNotice("ended", "extreme_heat", "Hitze", "Innsbruck-Land",
+                               "Segment 1", "Seg 1", 3, 0, 3, 0, "geosphere_warn"),
+    ]
+
+
+def warn_mail_de(alarme: list, allclear: list | None = None) -> bytes:
+    """Amtliche Warn-/Entwarnungs-Mail aus dem echten Versandpfad-Renderer
+    (``notification_service._official_*``) ueber ``build_mime_message``."""
+    from zoneinfo import ZoneInfo
+
+    from output.renderers.alert import official_alerts as oa
+    from services import notification_service as ns
+
+    tz = ZoneInfo("Europe/Vienna")
+    dto = oa.build_official_alert_notices(None, [(a, ["1"]) for a in alarme]) if alarme else []
+    ac = allclear or []
+    html, plain = ns._official_mail_bodies(
+        dto, ac, source_label=ns._official_allclear_source_label(dto, ac), source_url=None,
+        stand_at="06:00", tz=tz, context_label="GR20 Golden",
+    )
+    return _mime("official_alert_mix", subject=ns._official_subject(dto, ac, prefix="GR20 Golden", tz=tz),
+                 body=html, html=True, plain=plain, mail_type="official-alert")
 
 
 def erzeuge_fixtures() -> list[Path]:
