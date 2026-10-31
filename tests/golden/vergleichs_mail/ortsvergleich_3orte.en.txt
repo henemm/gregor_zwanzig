@@ -1,0 +1,155 @@
+LOCATION COMPARISON
+========================
+Date: Thursday, 29 Oct 2026
+Created: 29 Oct 2026 05:00 (CET)
+
+--------------------------------------------------
+Innsbruck
+   Temperature Maximum: 11°C
+   Wind: 26 km/h
+   Temperature Minimum: 2°C
+   Wind gusts: 38 km/h
+   Wind direction: -
+   Feels-like temperature Minimum: -
+   Feels-like temperature Maximum: -
+   Low clouds: -
+   Mid-level clouds: -
+   High clouds: -
+   Precipitation: 2.4 mm
+   Rain probability: 70%
+   Thunderstorm: —
+   UV index: 4
+   Visibility: 10.0 km
+   Freezing level: 2400 m
+   Humidity: 72%
+   Dew point: 1°C
+   Air pressure: 1012 hPa
+   Precipitation type: Rain
+   Snow line: 2100 m
+   Sunshine hours: 4.0h
+   Cloud cover: 45%
+   Snow depth: -
+   Fresh snow: -
+
+Lienz
+   Temperature Maximum: 12°C
+   Wind: 26 km/h
+   Temperature Minimum: 3°C
+   Wind gusts: 39 km/h
+   Wind direction: -
+   Feels-like temperature Minimum: -
+   Feels-like temperature Maximum: -
+   Low clouds: -
+   Mid-level clouds: -
+   High clouds: -
+   Precipitation: 5.4 mm
+   Rain probability: 70%
+   Thunderstorm: medium · CAPE, Lightning density · Hail: yes
+   UV index: 4
+   Visibility: 10.0 km
+   Freezing level: 2450 m
+   Humidity: 72%
+   Dew point: 2°C
+   Air pressure: 1013 hPa
+   Precipitation type: Rain
+   Snow line: 2150 m
+   Sunshine hours: 5.0h
+   Cloud cover: 45%
+   Snow depth: -
+   Fresh snow: -
+
+Kufstein
+   Temperature Maximum: 13°C
+   Wind: 26 km/h
+   Temperature Minimum: 4°C
+   Wind gusts: 40 km/h
+   Wind direction: -
+   Feels-like temperature Minimum: -
+   Feels-like temperature Maximum: -
+   Low clouds: -
+   Mid-level clouds: -
+   High clouds: -
+   Precipitation: 8.4 mm
+   Rain probability: 70%
+   Thunderstorm: —
+   UV index: 4
+   Visibility: 10.0 km
+   Freezing level: 2500 m
+   Humidity: 72%
+   Dew point: 3°C
+   Air pressure: 1014 hPa
+   Precipitation type: Mixed precipitation
+   Snow line: 2200 m
+   Sunshine hours: 6.0h
+   Cloud cover: 45%
+   Snow depth: -
+   Fresh snow: -
+
+Brenner
+   Error: Zeitueberschreitung beim Abruf
+
+… +1 selected weather value without data in this comparison
+
+HOURLY VIEW
+---------------
+Innsbruck (CET)
+   08:00  Temp 6°  Feels 3°  Humid 68  Dew 1  Wind 18  Gust 30  Rain ·  Rain% 15%  Thdr —  SnowL 2100  PType —  Cloud 54  CldLow 18  CldMid 28  CldHi 13  Visib 14.0  UV 4  Press 1012  0°Line 2400  SnowH –  NewSn –
+   09:00  Temp 6°  Feels 3°  Humid 69  Dew 1  Wind 19  Gust 31  Rain ·  Rain% 15%  Thdr —  SnowL 2100  PType —  Cloud 57  CldLow 19  CldMid 29  CldHi 14  Visib 13.5  UV 2  Press 1012  0°Line 2400  SnowH –  NewSn –
+   10:00  Temp 7°  Feels 3°  Humid 70  Dew 1  Wind 20  Gust 32  Rain ·  Rain% 15%  Thdr —  SnowL 2100  PType —  Cloud 60  CldLow 20  CldMid 30  CldHi 15  Visib 13.0  UV 3  Press 1012  0°Line 2400  SnowH –  NewSn –
+   11:00  Temp 8°  Feels 3°  Humid 71  Dew 1  Wind 21  Gust 33  Rain ·  Rain% 15%  Thdr —  SnowL 2100  PType —  Cloud 63  CldLow 21  CldMid 31  CldHi 16  Visib 12.5  UV 4  Press 1012  0°Line 2400  SnowH –  NewSn –
+   12:00  Temp 8°  Feels 3°  Humid 72  Dew 1  Wind 22  Gust 34  Rain ·  Rain% 15%  Thdr —  SnowL 2100  PType —  Cloud 66  CldLow 22  CldMid 32  CldHi 17  Visib 12.0  UV 2  Press 1012  0°Line 2400  SnowH –  NewSn –
+   13:00  Temp 8°  Feels 3°  Humid 73  Dew 1  Wind 23  Gust 35  Rain 0.8  Rain% 70%  Thdr —  SnowL 2100  PType Rain  Cloud 69  CldLow 23  CldMid 33  CldHi 18  Visib 11.5  UV 3  Press 1012  0°Line 2400  SnowH –  NewSn –
+   14:00  Temp 9°  Feels 3°  Humid 74  Dew 1  Wind 24  Gust 36  Rain 0.8  Rain% 70%  Thdr —  SnowL 2100  PType Rain  Cloud 72  CldLow 24  CldMid 34  CldHi 19  Visib 11.0  UV 4  Press 1012  0°Line 2400  SnowH –  NewSn –
+   15:00  Temp 10°  Feels 3°  Humid 75  Dew 1  Wind 25  Gust 37  Rain 0.8  Rain% 70%  Thdr —  SnowL 2100  PType Rain  Cloud 75  CldLow 25  CldMid 35  CldHi 20  Visib 10.5  UV 2  Press 1012  0°Line 2400  SnowH –  NewSn –
+   16:00  Temp 10°  Feels 3°  Humid 76  Dew 1  Wind 26  Gust 38  Rain ·  Rain% 15%  Thdr —  SnowL 2100  PType —  Cloud 78  CldLow 26  CldMid 36  CldHi 21  Visib 10.0  UV 3  Press 1012  0°Line 2400  SnowH –  NewSn –
+3-day outlook
+Fri Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
+Sat Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
+Sun Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
+
+Lienz (CET)
+   08:00  Temp 7°  Feels 4°  Humid 68  Dew 2  Wind 18  Gust 35  Rain ·  Rain% 15%  Thdr —  SnowL 2150  PType —  Cloud 54  CldLow 18  CldMid 28  CldHi 13  Visib 14.0  UV 4  Press 1013  0°Line 2450  SnowH –  NewSn –
+   09:00  Temp 8°  Feels 4°  Humid 69  Dew 2  Wind 19  Gust 36  Rain ·  Rain% 15%  Thdr —  SnowL 2150  PType —  Cloud 57  CldLow 19  CldMid 29  CldHi 14  Visib 13.5  UV 2  Press 1013  0°Line 2450  SnowH –  NewSn –
+   10:00  Temp 8°  Feels 4°  Humid 70  Dew 2  Wind 20  Gust 37  Rain ·  Rain% 15%  Thdr —  SnowL 2150  PType —  Cloud 60  CldLow 20  CldMid 30  CldHi 15  Visib 13.0  UV 3  Press 1013  0°Line 2450  SnowH –  NewSn –
+   11:00  Temp 8°  Feels 4°  Humid 71  Dew 2  Wind 21  Gust 38  Rain ·  Rain% 15%  Thdr —  SnowL 2150  PType —  Cloud 63  CldLow 21  CldMid 31  CldHi 16  Visib 12.5  UV 4  Press 1013  0°Line 2450  SnowH –  NewSn –
+   12:00  Temp 9°  Feels 4°  Humid 72  Dew 2  Wind 22  Gust 39  Rain ·  Rain% 15%  Thdr —  SnowL 2150  PType —  Cloud 66  CldLow 22  CldMid 32  CldHi 17  Visib 12.0  UV 2  Press 1013  0°Line 2450  SnowH –  NewSn –
+   13:00  Temp 10°  Feels 4°  Humid 73  Dew 2  Wind 23  Gust 40  Rain 1.8  Rain% 70%  Thdr —  SnowL 2150  PType Rain  Cloud 69  CldLow 23  CldMid 33  CldHi 18  Visib 11.5  UV 3  Press 1013  0°Line 2450  SnowH –  NewSn –
+   14:00  Temp 10°  Feels 4°  Humid 74  Dew 2  Wind 24  Gust 41  Rain 1.8  Rain% 70%  Thdr medium · CAPE, Lightning density · Hail: yes  SnowL 2150  PType Rain  Cloud 72  CldLow 24  CldMid 34  CldHi 19  Visib 11.0  UV 4  Press 1013  0°Line 2450  SnowH –  NewSn –
+   15:00  Temp 10°  Feels 4°  Humid 75  Dew 2  Wind 25  Gust 42  Rain 1.8  Rain% 70%  Thdr light · CAPE, Lightning density · Hail: yes  SnowL 2150  PType Rain  Cloud 75  CldLow 25  CldMid 35  CldHi 20  Visib 10.5  UV 2  Press 1013  0°Line 2450  SnowH –  NewSn –
+   16:00  Temp 11°  Feels 4°  Humid 76  Dew 2  Wind 26  Gust 43  Rain ·  Rain% 15%  Thdr —  SnowL 2150  PType —  Cloud 78  CldLow 26  CldMid 36  CldHi 21  Visib 10.0  UV 3  Press 1013  0°Line 2450  SnowH –  NewSn –
+3-day outlook
+Fri Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
+Sat Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
+Sun Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
+
+Kufstein (CET)
+   08:00  Temp 8°  Feels 5°  Humid 68  Dew 3  Wind 18  Gust 40  Rain ·  Rain% 15%  Thdr —  SnowL 2200  PType —  Cloud 54  CldLow 18  CldMid 28  CldHi 13  Visib 14.0  UV 4  Press 1014  0°Line 2500  SnowH –  NewSn –
+   09:00  Temp 8°  Feels 5°  Humid 69  Dew 3  Wind 19  Gust 41  Rain ·  Rain% 15%  Thdr —  SnowL 2200  PType —  Cloud 57  CldLow 19  CldMid 29  CldHi 14  Visib 13.5  UV 2  Press 1014  0°Line 2500  SnowH –  NewSn –
+   10:00  Temp 9°  Feels 5°  Humid 70  Dew 3  Wind 20  Gust 42  Rain ·  Rain% 15%  Thdr —  SnowL 2200  PType —  Cloud 60  CldLow 20  CldMid 30  CldHi 15  Visib 13.0  UV 3  Press 1014  0°Line 2500  SnowH –  NewSn –
+   11:00  Temp 10°  Feels 5°  Humid 71  Dew 3  Wind 21  Gust 43  Rain ·  Rain% 15%  Thdr —  SnowL 2200  PType —  Cloud 63  CldLow 21  CldMid 31  CldHi 16  Visib 12.5  UV 4  Press 1014  0°Line 2500  SnowH –  NewSn –
+   12:00  Temp 10°  Feels 5°  Humid 72  Dew 3  Wind 22  Gust 44  Rain ·  Rain% 15%  Thdr —  SnowL 2200  PType —  Cloud 66  CldLow 22  CldMid 32  CldHi 17  Visib 12.0  UV 2  Press 1014  0°Line 2500  SnowH –  NewSn –
+   13:00  Temp 10°  Feels 5°  Humid 73  Dew 3  Wind 23  Gust 45  Rain 2.8  Rain% 70%  Thdr —  SnowL 2200  PType Snow  Cloud 69  CldLow 23  CldMid 33  CldHi 18  Visib 11.5  UV 3  Press 1014  0°Line 2500  SnowH –  NewSn –
+   14:00  Temp 11°  Feels 5°  Humid 74  Dew 3  Wind 24  Gust 46  Rain 2.8  Rain% 70%  Thdr —  SnowL 2200  PType Mixed precipitation  Cloud 72  CldLow 24  CldMid 34  CldHi 19  Visib 11.0  UV 4  Press 1014  0°Line 2500  SnowH –  NewSn –
+   15:00  Temp 12°  Feels 5°  Humid 75  Dew 3  Wind 25  Gust 47  Rain 2.8  Rain% 70%  Thdr —  SnowL 2200  PType Mixed precipitation  Cloud 75  CldLow 25  CldMid 35  CldHi 20  Visib 10.5  UV 2  Press 1014  0°Line 2500  SnowH –  NewSn –
+   16:00  Temp 12°  Feels 5°  Humid 76  Dew 3  Wind 26  Gust 48  Rain ·  Rain% 15%  Thdr —  SnowL 2200  PType —  Cloud 78  CldLow 26  CldMid 36  CldHi 21  Visib 10.0  UV 3  Press 1014  0°Line 2500  SnowH –  NewSn –
+3-day outlook
+   ⚠️ Forecast currently unavailable.
+
+Units: Temp, Feels, Dew °C · Humid, Rain%, Cloud, CldLow, CldMid, CldHi % · Wind, Gust km/h · Rain mm · SnowL, 0°Line m · Visib km · Press hPa · SnowH, NewSn cm
+Columns: Temp = Temperature · Feels = Feels-like temperature · Humid = Humidity · Dew = Dew point · Gust = Wind gusts · Rain = Precipitation · Rain% = Rain probability · Thdr = Thunderstorm · SnowL = Snow line · PType = Precipitation type · Cloud = Cloud cover · CldLow = Low clouds · CldMid = Mid-level clouds · CldHi = High clouds · Visib = Visibility · UV = UV index · Press = Air pressure · 0°Line = Freezing level · SnowH = Snow depth · NewSn = Fresh snow
+
+HELD BACK — as you set it up
+  28.10. 18:30 · Wind · SMS · Quiet hours
+
+
+── Reply commands ──
+  HEUTE                – Vergleich für heute jetzt senden
+  MORGEN               – Vergleich für morgen jetzt senden
+  PAUSE                – Briefings für Dauer unterbrechen
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  REPORT               – Vergleich jetzt an alle Kanäle senden
+
+---
+Gregor Zwanzig

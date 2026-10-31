@@ -55,6 +55,9 @@
 | Stufe (Alarm/Warnung) | level | Warnstufe = *warning level* |
 | Schwelle | threshold | |
 | Aktivitätsprofil | activity profile | Werte: *general*, *hiking*, *mountaineering*, … (Register prüfen) |
+| Stundenverlauf | hourly view | Abschnitt im Ortsvergleich; Abschnittskopf „STUNDEN" = *HOURLY* (#2666) |
+| Abo | subscription | „Dieses Abo" = *This subscription*, „Abo bearbeiten" = *Edit subscription* (#2666) |
+| Übersicht | overview | Abschnittskopf „ÜBERSICHT" = *OVERVIEW* (#2666) |
 
 ## Wettergrößen (volle Form, ADR-0042 Klasse 2 „voll")
 

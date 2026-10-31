@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+from i18n import Lang, t
+
 if TYPE_CHECKING:
     from app.models import SegmentWeatherData, ThunderLevel
 
@@ -43,24 +45,26 @@ _METRIC_ID_TO_ENTRY_ATTR: Dict[str, str] = {
     "pressure": "pressure_avg",
 }
 
-# Richtungs-Wörter pro metric_id (höherer Wert → [0], niedrigerer → [1])
-_DIRECTION_WORDS: Dict[str, tuple[str, str]] = {
-    "wind": ("windiger", "ruhiger"),
-    "gust": ("böiger", "ruhiger"),
-    "precipitation": ("nasser", "trockener"),
-    "temperature": ("wärmer", "kälter"),
-    "wind_chill": ("gefühlt wärmer", "gefühlt kälter"),
-    "thunder": ("Gewittergefahr", "kein Gewitter mehr"),
-    "cloud_total": ("bewölkter", "sonniger"),
-    "rain_probability": ("höhere Regenwahrscheinlichkeit", "geringere Regenwahrscheinlichkeit"),
-    "uv_index": ("höherer UV", "niedrigerer UV"),
-    "sunshine": ("sonniger", "weniger Sonne"),
-    "visibility": ("bessere Sicht", "schlechtere Sicht"),
-    "dewpoint": ("feuchter", "trockener"),
-    "freezing_level": ("höhere Nullgradgrenze", "niedrigere Nullgradgrenze"),
-    "humidity": ("feuchter", "trockener"),
-    "pressure": ("höherer Luftdruck", "niedrigerer Luftdruck"),
-}
+# Richtungs-Wörter pro metric_id: Katalog ``vergleich.vortag.hoeher.<id>`` (höherer
+# Wert) bzw. ``vergleich.vortag.tiefer.<id>`` (Issue #2666, vorher _DIRECTION_WORDS).
+_DIRECTION_METRICS: frozenset[str] = frozenset({
+    "wind", "gust", "precipitation", "temperature", "wind_chill", "thunder",
+    "cloud_total", "rain_probability", "uv_index", "sunshine", "visibility",
+    "dewpoint", "freezing_level", "humidity", "pressure",
+})
+
+
+def _direction_word(metric_id: str, higher: bool, lang: Lang) -> str:
+    if metric_id not in _DIRECTION_METRICS:
+        return t("vergleich.vortag.anders", lang)
+    return t(f"vergleich.vortag.{'hoeher' if higher else 'tiefer'}.{metric_id}", lang)
+
+
+def _summary_sentence(words: List[str], lang: Lang) -> str:
+    """``heute A als gestern`` / ``A und B`` / ``A, B und C``."""
+    und = f" {t('vergleich.vortag.und', lang)} "
+    joined = und.join(words) if len(words) <= 2 else ", ".join(words[:-1]) + und + words[-1]
+    return t("vergleich.vortag.zusammenfassung", lang, woerter=joined)
 
 
 class ComparisonDirection(str, Enum):
@@ -157,8 +161,9 @@ def summarize_day_comparison(
     comparison: Optional["DayComparison"],
     *,
     selected_metrics: Optional[List[str]] = None,
+    lang: Lang = "de",
 ) -> str:
-    """Issue #790: Natursprachliche Vortag-Einordnungszeile.
+    """Issue #790: Natursprachliche Vortag-Einordnungszeile (``lang``: #2666).
 
     selected_metrics=None  → Backward-Compat (AC-4): temp_max + precip, ohne Schwellen.
     selected_metrics=[]    → Issue #1394 (T3): bewusste Leerauswahl (Fall B)
@@ -181,14 +186,14 @@ def summarize_day_comparison(
         return ""
 
     if selected_metrics is None:
-        return _summarize_legacy(comparison)
+        return _summarize_legacy(comparison, lang)
     if not selected_metrics:
         return ""
 
-    return _summarize_metric_driven(comparison, selected_metrics)
+    return _summarize_metric_driven(comparison, selected_metrics, lang)
 
 
-def _summarize_legacy(comparison: "DayComparison") -> str:
+def _summarize_legacy(comparison: "DayComparison", lang: Lang = "de") -> str:
     """Backward-Compat (AC-4): exakt bisherige temp+precip-Logik."""
     temp_deltas = [
         e.temp_max.delta for e in comparison.entries
@@ -199,35 +204,22 @@ def _summarize_legacy(comparison: "DayComparison") -> str:
         if e.precip_sum.delta is not None
     ]
 
-    temp_word: Optional[str] = None
+    temp_word: Optional[str] = None  # None = keine Daten oder ähnlich temperiert
     if temp_deltas:
         avg_temp = sum(temp_deltas) / len(temp_deltas)
-        if avg_temp > 1.5:
-            temp_word = "wärmer"
-        elif avg_temp < -1.5:
-            temp_word = "kälter"
-        else:
-            temp_word = "ähnlich temperiert"
+        if abs(avg_temp) > 1.5:
+            temp_word = _direction_word("temperature", avg_temp > 0, lang)
 
     rain_word: Optional[str] = None
     if precip_deltas:
         sum_precip = sum(precip_deltas)
-        if sum_precip > 1.0:
-            rain_word = "nasser"
-        elif sum_precip < -1.0:
-            rain_word = "trockener"
+        if abs(sum_precip) > 1.0:
+            rain_word = _direction_word("precipitation", sum_precip > 0, lang)
 
-    temp_neutral = temp_word in (None, "ähnlich temperiert")
-    rain_neutral = rain_word is None
-
-    if temp_neutral and rain_neutral:
-        return "Vergleich zum Vortag: heute ähnliches Wetter wie gestern"
-
-    if not temp_neutral and not rain_neutral:
-        return f"Vergleich zum Vortag: heute {temp_word} und {rain_word} als gestern"
-
-    only_word = temp_word if not temp_neutral else rain_word
-    return f"Vergleich zum Vortag: heute {only_word} als gestern"
+    words = [w for w in (temp_word, rain_word) if w is not None]
+    if not words:
+        return t("vergleich.vortag.aehnlich", lang)
+    return _summary_sentence(words, lang)
 
 
 _SALIENCE_FACTOR = 0.6
@@ -269,6 +261,7 @@ def _get_threshold(metric_id: str) -> float:
 def _summarize_metric_driven(
     comparison: "DayComparison",
     selected_metrics: List[str],
+    lang: Lang = "de",
 ) -> str:
     """AC-3: metrik-getriebenes, relevanz-gefiltertes Summary."""
     # Durchschnittsdelta pro Metrik über alle Segmente berechnen
@@ -310,16 +303,9 @@ def _summarize_metric_driven(
     salient = salient[:6]
 
     if not salient:
-        return "Vergleich zum Vortag: heute ähnliches Wetter wie gestern"
+        return t("vergleich.vortag.aehnlich", lang)
 
-    parts: List[str] = []
-    for mid, avg in salient:
-        words = _DIRECTION_WORDS.get(mid, ("anders", "anders"))
-        word = words[0] if avg > 0 else words[1]
-        parts.append(word)
-
-    joined = " und ".join(parts) if len(parts) <= 2 else ", ".join(parts[:-1]) + " und " + parts[-1]
-    return f"Vergleich zum Vortag: heute {joined} als gestern"
+    return _summary_sentence([_direction_word(mid, avg > 0, lang) for mid, avg in salient], lang)
 
 
 def _direction(delta: float, key: str) -> ComparisonDirection:
