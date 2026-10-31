@@ -143,7 +143,7 @@ def resolve_thunder_day_branch(tok: dict, stage: dict) -> str:
 # hineinliest, nimmt dort eine fremde Entscheidung zurueck.
 
 def _tagesteil(tok: dict, stage: dict, *, praefix: str, mit_uhrzeit: bool,
-               mit_herkunft: bool, lang: str = "de") -> str:
+               mit_herkunft: bool, lang: str) -> str:
     """Der Tagesteil der Gewitter-Zelle -- EINE Zweigwahl fuer alle vier
     Ausgabeorte, nur die Schreibweise unterscheidet sich.
 
@@ -246,8 +246,10 @@ def thunder_cell_telegram(tok: dict, stage: dict) -> str:
     ohne ausgeschriebene Uhrzeit, plus Herkunft."""
     branch = resolve_thunder_day_branch(tok, stage)
     if branch != "day":
+        # Issue #2665: Telegram-Kurzform bleibt sprachunabhaengig deutsch --
+        # ausdruecklich, nicht ueber den Default von ``_tagesteil``.
         return _tagesteil(tok, stage, praefix="⚡", mit_uhrzeit=False,
-                          mit_herkunft=False)
+                          mit_herkunft=False, lang="de")
     # Issue #2176: eigener Bauweg (roher Token) -- dieselbe ⚡-Regel wie in
     # `_tagesteil`, sonst bliebe das Ereignis-Symbol genau hier stehen.
     _token = tok.get("thunder_day_token", "-")

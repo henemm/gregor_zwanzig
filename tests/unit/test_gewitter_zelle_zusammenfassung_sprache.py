@@ -85,6 +85,24 @@ def test_gewitter_zelle_ohne_lang_bleibt_deutsch(name):
         assert thunder_cell_telegram(tok, stage) == "⚡mittel@13(hoch@15) · Blitzdichte, Modellläufe"
 
 
+@pytest.mark.parametrize("lang", ["de", "en"])
+@pytest.mark.parametrize("stufe,erwartet", [("LOW", "leicht"), ("MED", "⚡mittel"),
+                                            ("HIGH", "⚡hoch")])
+def test_telegram_zelle_ohne_stundenreihe_bleibt_deutsch(lang, stufe, erwartet):
+    """Telegram-Kurzform ist sprachunabhaengig (Glossar-Hinweis ADR-0104):
+    auch mit englischen Tokens liefert der Aggregat-Rueckfall das deutsche Wort."""
+    from output.renderers.email.helpers import format_trend_tokens
+    from output.renderers.email.thunder_branch import thunder_cell_telegram
+
+    stage = {"weekday": "Fr", "thunder": stufe}
+    tok = format_trend_tokens(stage)
+    assert thunder_cell_telegram(tok, stage) == erwartet
+    # Selbst wenn ein Aufrufer englische Tokens hereinreicht, bleibt das
+    # Stufenwort deutsch -- es kommt nicht aus ``tok`` sondern aus der Kurzform.
+    if stufe == "LOW":
+        assert thunder_cell_telegram(format_trend_tokens(stage, lang=lang), stage) == "leicht"
+
+
 def test_ausblick_klartext_fester_zweig_englisch():
     from output.renderers.email.outlook import render_outlook_plain
 
