@@ -453,6 +453,17 @@ REGISTERED_LISTS["metric_catalog.SMS_MULTI_SYMBOLS_BY_METRIC"] = RegisteredList(
     ort="src/app/metric_catalog.py:778",
 )
 
+# Issue #2662 (ADR-0104): englische Anzeigenamen je Groesse. Teil des Registers
+# selbst (per ``dataclasses.replace`` in ``_METRICS`` eingetragen), deshalb
+# registriert statt freigestellt. Vollstaendigkeit gilt fuer ALLE 32
+# ``_METRICS``-Eintraege (auch ``selectable=False``): jede Groesse braucht ein
+# ``label_en`` (AC-4, test_metric_catalog_englische_namen.py), keine Ausnahme.
+REGISTERED_LISTS["metric_catalog._ENGLISH_NAMES"] = RegisteredList(
+    ist=_registriere("src/app/metric_catalog.py", "_ENGLISH_NAMES", "schluessel").ist,
+    ort=_registriere("src/app/metric_catalog.py", "_ENGLISH_NAMES", "schluessel").ort,
+    soll_vollstaendig=lambda: {m.id for m in _METRICS},
+)
+
 def _ort_passt(fund: Fundstelle, ort: str) -> bool:
     """Schuetzt gegen gleiche Modulnamen in verschiedenen Verzeichnissen."""
     return fund.datei.resolve().as_posix().endswith(ort.rsplit(":", 1)[0])
