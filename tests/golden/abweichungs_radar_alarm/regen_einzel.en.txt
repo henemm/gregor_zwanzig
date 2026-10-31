@@ -1,0 +1,21 @@
+
+----- betreff -----
+[GR20 Golden] km 0-12 · Rain in 25 min · rain until at least tomorrow 00:40 · radar covers until 08:55 · location is imprecise from 07:30 · Wet km 2-4, km 9-11 · extent only partly measured · thunderstorm check not done
+----- klartext -----
+Rain in 25 min
+
+Radar nowcast
+
+Where & when: km 0-12 · from 06:25 · rain until at least tomorrow 00:40 · radar covers until 08:55 · location is imprecise from 07:30 · Wet km 2-4, km 9-11 · extent only partly measured · thunderstorm check not done
+Intensity: Heavy rain
+Source: Radar (DWD)
+
+As of today 06:00
+Cooldown: you receive this alert at most once in 2 hours. Alerts from other sources (official warning/radar) are not affected by this cooldown.
+
+Rain/thunderstorm alert (radar) · Radar (DWD)
+----- telegram -----
+<b>GR20 Golden · km 0-12 · Rain in 25 min</b>
+06:25 · rain until at least tomorrow 00:40 · radar covers until 08:55 · location is imprecise from 07:30 · Wet km 2-4, km 9-11 · extent only partly measured · thunderstorm check not done · Heavy rain · Radar (DWD)
+----- sms -----
+S5 km 0-12: R#2.5@6:25 >@Fr0:40? km2-4,9-11>

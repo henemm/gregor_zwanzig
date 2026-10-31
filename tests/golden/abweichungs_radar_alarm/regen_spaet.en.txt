@@ -1,0 +1,21 @@
+
+----- betreff -----
+[GR20 Golden] Segment 2 · Thunderstorm from Fri15:40 · last rain around tomorrow 17:10 · radar covers until 09:00
+----- klartext -----
+Thunderstorm from Fri15:40
+
+Radar nowcast
+
+Where & when: Segment 2 · from tomorrow 15:40 · last rain around tomorrow 17:10 · radar covers until 09:00
+Intensity: Heavy hail/thunderstorm
+Source: Radar (DWD)
+
+As of today 06:00
+Cooldown: you receive this alert at most once in 1 hour. Alerts from other sources (official warning/radar) are not affected by this cooldown.
+
+Rain/thunderstorm alert (radar) · Radar (DWD)
+----- telegram -----
+<b>GR20 Golden · Segment 2 · Thunderstorm from Fri15:40</b>
+tomorrow 15:40 · last rain around tomorrow 17:10 · radar covers until 09:00 · Heavy hail/thunderstorm · Radar (DWD)
+----- sms -----
+Seg 2: TH@Fr15:40@Fr17:10 R2.5
