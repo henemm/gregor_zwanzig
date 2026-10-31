@@ -1604,7 +1604,9 @@ def _format_de_thousand(value: float) -> str:
     return f"{int(round(value)):,}".replace(",", ".")
 
 
-def format_metric_value(unit: str, value: float, *, signed: bool = False) -> str:
+def format_metric_value(
+    unit: str, value: float, *, signed: bool = False, lang: str = "de",
+) -> str:
     """
     Einheits-spezifische DE-Formatierung mit Tausender-Trenner.
 
@@ -1617,14 +1619,18 @@ def format_metric_value(unit: str, value: float, *, signed: bool = False) -> str
     signed=True präfixt '+' bei positiven Werten (Delta-Darstellung),
     Unicode-Minus '−' (U+2212) bei negativen Werten.
     signed=False: negative Werte bei m/km/hPa/%/km/h ebenfalls Unicode-Minus.
+
+    Issue #2667: ``lang="en"`` mit Tausender-Komma und Dezimalpunkt
+    (ADR-0104 Nr. 6); ``de`` bleibt byte-gleich.
     """
     abs_v = abs(value)
+    en = lang == "en"
     if unit in ("m", "km", "hPa"):
-        formatted = _format_de_thousand(abs_v)
+        formatted = f"{int(round(abs_v)):,}" if en else _format_de_thousand(abs_v)
     elif unit in ("%", "km/h"):
         formatted = f"{int(round(abs_v))}"
     elif unit in ("°C", "mm"):
-        formatted = f"{abs_v:.1f}".replace(".", ",")
+        formatted = f"{abs_v:.1f}" if en else f"{abs_v:.1f}".replace(".", ",")
     else:
         return str(value)
 

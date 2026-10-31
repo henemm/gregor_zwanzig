@@ -2,9 +2,9 @@
 entity_id: i18n_p5_abweichungs_radar_alarme_2667
 type: module
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-10-31
 status: approved
-version: "1.0"
+version: "1.1"
 tags: [i18n, epic-2644, issue-2667, python, model-haiku]
 ---
 
@@ -16,9 +16,11 @@ tags: [i18n, epic-2644, issue-2667, python, model-haiku]
 
 - [x] Approved (PO-Freigabe 2026-10-30)
 
+> **PO-Korrektur 2026-10-31** (ADR-0104 „Präzisierung 2026-10-31“, `docs/features/epic-i18n-de-en.md`, hat Vorrang vor dem Rest dieser Spec): SMS (`render_sms`, `_ADDENDUM_SMS_PREFIX`), Premium-SMS und die kurze Telegram-Tokenform bleiben in **jeder** Sprache exakt wie bisher. Kein `lang` an `render_sms`, keine Katalogschlüssel für den SMS-Text (`alarm.sms.nachtrag_praefix` entfällt), SMS-Ausgabe byte-gleich in de und en — auch das Wochentagskürzel (`@Do15` bleibt). Das Modell trägt deshalb weiter die deutschen Kurzform-Werte (`occurred_weekday`, `onset_weekday`, `shift_text`); die Langform übersetzt sie beim Rendern (Wochentag über `fmt_weekday`, Verschiebung über das neue Feld `OnsetShiftEvent.shift_seconds`). Zweisprachig werden Betreff, E-Mail und der lange Alarm-Telegram-Text (`render_telegram`, `_render_telegram_onset`).
+
 ## Purpose
 
-Wer Englisch als Konto-Sprache gewählt hat, bekommt Abweichungs-Alarme (Wetter ändert sich seit dem Briefing) und Regen-/Radar-Alarme in Betreff, E-Mail, Telegram und SMS/Premium-SMS auf Englisch: Sätze, Wochentage (`Thu`), Tageswörter (`yesterday`, `tomorrow`), Cooldown-Hinweis und die Alarm-Kurzform der Wettergrößen (`Gusts` statt `Böen`). Alle vier Kanäle sagen dasselbe in derselben Sprache (ADR-0095, Alarm-Parität #1701). Die deutsche Ausgabe bleibt byte-gleich; SMS-Kürzel und Zahlen-Token ändern sich nicht.
+Wer Englisch als Konto-Sprache gewählt hat, bekommt Abweichungs-Alarme (Wetter ändert sich seit dem Briefing) und Regen-/Radar-Alarme in Betreff, E-Mail, Telegram und SMS/Premium-SMS in Betreff, E-Mail und Telegram auf Englisch: Sätze, Wochentage (`Thu`), Tageswörter (`yesterday`, `tomorrow`), Cooldown-Hinweis und die Alarm-Kurzform der Wettergrößen (`Gusts` statt `Böen`). Alle vier Kanäle sagen dasselbe (ADR-0095, Alarm-Parität #1701). Die deutsche Ausgabe bleibt byte-gleich; der SMS-Text ist in jeder Sprache byte-gleich zu heute (PO-Korrektur 2026-10-31).
 
 ## Source
 
@@ -49,8 +51,8 @@ Wer Englisch als Konto-Sprache gewählt hat, bekommt Abweichungs-Alarme (Wetter 
 | `src/app/metric_catalog.py` | MODIFY | NUR falls P2/P3 es nicht schon getan haben (vorher Grep `lang` in `format_metric_value`): `format_metric_value(unit, value, *, signed=False, lang="de")`; `en` mit Dezimalpunkt und Tausender-Komma |
 | `src/services/weather_change_detection.py`, `deviation_alert_engine.py`, `alert_state.py`, `alert_gate.py`, `compare_alert.py`, `compare_alert_channels.py`, `compare_alert_guard.py` | unverändert (Log-Kommentare) | geprüft 2026-10-30: keine Nutzertexte, nur Kommentare und `logger`-Meldungen; Log-Zeilen mit Umlaut/Signalwort erhalten den Zeilenkommentar `# i18n-log` (Text bleibt deutsch) |
 | `src/i18n/messages/de/alarm.json`, `src/i18n/messages/en/alarm.json` | MODIFY | Neue Schlüssel `alarm.*` (nur diese Bereichsdateien anfassen) |
-| `.claude/hooks/radar_alert_mail_validator.py` | MODIFY | `_INTENSITY_LABELS` (Zeile 39), `_SEGMENT_RE` (65), Cooldown-Prüfung P-4 (140) aus `t(key, lang)`; `lang` aus `X-GZ-Lang` (PV-Gerüst) |
-| `tests/fixtures/mail/radar_alert_mail_en.eml` | CREATE | Englische Beispiel-Mail aus dem Renderer-Pfad |
+| `.claude/hooks/radar_alert_mail_validator.py` | unverändert | seit PV #2663 sprachfähig (`alarm.radar.*`, `alarm.segment.*` aus dem Katalog, `lang` aus `X-GZ-Lang`); der Renderer benutzt dieselben Schlüssel |
+| `tests/fixtures/mail/radar_alert_en.eml` | CREATE | Englische Beispiel-Mail aus dem Renderer-Pfad |
 | `tests/golden/abweichungs_radar_alarm/*.de.txt`, `*.de.html`, `*.en.txt`, `*.en.html` | CREATE | Golden `de` VOR der Umstellung (Abweichung Wind, Abweichung Mehrfach, Regen-Alarm Einzelort, Regen-Alarm Bündel, Nachtrag), Referenz `en` |
 | `tests/golden/test_alarm_golden.py` | CREATE | Byte-Vergleich `de` (vier Kanäle) |
 | `tests/test_alarm_zweisprachig.py` | CREATE | Verhaltenstests der ACs |
@@ -119,8 +121,8 @@ def intensity_text(label: str, lang: Lang) -> str     # radar_service.py, DE-Kon
 | `alarm.nachtrag.amtlich` | `Ergänzung zur amtlichen Warnung` | `Addendum to the official warning` | trip_alert.py:2874 (Aufruf P9b) |
 | `alarm.nachtrag.abweichung` | Nachtrag Abweichungs-Alarm | Follow-up deviation alert | P9b |
 | `alarm.nachtrag.von` | Nachtrag von {zeit} | Follow-up from {zeit} | P9b |
-| `alarm.sms.nachtrag_praefix` | `Erg ` | `Add ` | `_ADDENDUM_SMS_PREFIX`, render.py:1680 |
-| `alarm.ort.ziel` | `🏁 Ziel` | `🏁 Finish` | `format_segment_reference`, segments.py:71 |
+| ~~`alarm.sms.nachtrag_praefix`~~ | entfällt (PO-Korrektur 2026-10-31: SMS unverändert) | | |
+| `alarm.segment.ziel` (Bestand aus PV #2663) | `Ziel` | `Destination` | `format_segment_reference` setzt `🏁 {ziel}`; der Radar-Validator liest denselben Schlüssel |
 
 Weitere Schlüssel nach demselben Muster: die übrigen `INTENSITY_*`-Stufen (`Starker Hagel/Gewitter` -> `Heavy hail/storm`, `Gewitter` -> `Thunderstorm`, `Mäßiger Regen` -> `Moderate rain`, `Leichter Regen` -> `Light rain`, `Kein Niederschlag` -> `No precipitation`), Beginn-Verschiebung (`{label}-Beginn verschiebt sich` -> `{label} onset is shifting`, `{n} Beginn-Zeiten verschieben sich` -> `{n} onset times are shifting`, `{betrag} h früher/später` -> `{betrag} h earlier/later`), `Gewitter ungeprüft` -> `thunderstorm check not done`, `Ausdehnung unvollständig gemessen` -> `extent only partly measured`, `Radar reicht bis {zeit}` -> `radar covers until {zeit}`, `Ortsangabe ab {zeit} unscharf` -> `location is imprecise from {zeit}`, `betroffen {von}–{bis}` -> `affected {von}–{bis}`, `Bis jetzt`/`Ab jetzt` -> `So far`/`From now`, `Segment {liste}` -> `Segment {liste}`, `{n} Segmente` -> `{n} segments`, `Wetter ändert sich seit dem Briefing` -> `Weather is changing since the briefing`, `unter Schwelle` -> `below threshold`, `Änderung` -> `Change`, `Schwelle` -> `Threshold`, `über`/`unter` (aus `side_label`) -> `above`/`below`.
 
@@ -196,13 +198,13 @@ return f"{cooldown_min} Minuten"
 - **AC-3:** Given ein Regen-Alarm (Einzelort und Bündel aus zwei Orten) bei Sprache `en` und einem Cooldown von 60, 120 und 90 Minuten / When E-Mail, Telegram und SMS gerendert werden / Then stehen `1 hour`, `2 hours` und `90 minutes` im Cooldown-Satz, die Intensität lautet `Heavy rain`, und das Bündel heißt `Rain alert: 2 locations`.
   - Test: tests/test_alarm_zweisprachig.py — Plural-Fälle über `tn`, Bündel-Betreff, Intensität über `intensity_text`.
 
-- **AC-4:** Given Sprache `en` / When die SMS eines Abweichungs- und eines Regen-Alarms mit Tagesversatz gerendert wird / Then ist die Token-Folge (Kürzel, Zahlen, `->`, `@`, `Rest`) identisch zur deutschen SMS desselben Ereignisses, nur das Wochentagskürzel unterscheidet sich (`Thu` statt `Do`), und die Länge liegt bei höchstens 140 Zeichen.
-  - Test: tests/test_alarm_zweisprachig.py — vergleicht die Token-Folge nach Entfernen des Wochentagskürzels und prüft die Länge, auch bei Kürzung durch das Limit.
+- **AC-4:** Given Sprache `en` / When die SMS eines Abweichungs- und eines Regen-Alarms mit Tagesversatz gerendert wird / Then ist der SMS-Text in jeder Sprache byte-gleich zu heute (PO-Korrektur 2026-10-31; auch das Wochentagskürzel `Do` bleibt), und die Länge liegt bei höchstens 140 Zeichen.
+  - Test: tests/test_alarm_zweisprachig.py — vergleicht die SMS aller Golden-Fälle in `de`/`en` byte-genau mit der deutschen Golden-SMS und prüft die Länge, auch bei Kürzung durch das Limit.
 
 - **AC-5:** Given Sprache `en` und die Intensitäts-Konstanten des Radar-Dienstes / When die Dringlichkeit eines Regen-Alarms berechnet wird / Then bleibt das Ergebnis von `urgency_from_radar` für `de` und `en` gleich (die Logik hängt nicht an der angezeigten Sprache), und `format_now_text(..., englisch=True)` liefert unverändert den bisherigen Kurzform-Text.
   - Test: tests/test_alarm_intensitaet_logik_unveraendert.py — Dringlichkeit für alle fünf Intensitätsstufen in beiden Sprachen; Byte-Vergleich des Kurzform-Textes.
 
-- **AC-6:** Given die Beispiel-Mails `radar_alert_mail_en.eml` (Header `X-GZ-Lang: en`) und die deutsche Radar-Alarm-Mail (Header `de`) / When `radar_alert_mail_validator.py` läuft / Then endet jeder Lauf mit Exit 0; mit vertauschtem Header (englischer Inhalt, Header `de`) endet er mit Exit ungleich 0.
+- **AC-6:** Given die Beispiel-Mails `radar_alert_en.eml` (Header `X-GZ-Lang: en`) und die deutsche Radar-Alarm-Mail (Header `de`) / When `radar_alert_mail_validator.py` läuft / Then endet jeder Lauf mit Exit 0; mit vertauschtem Header (englischer Inhalt, Header `de`) endet er mit Exit ungleich 0.
   - Test: tests/test_alarm_validator_zweisprachig.py — ruft `validate_message` auf beiden Fixtures und dem Fehlfall auf.
 
 - **AC-7:** Given zwei aufeinanderfolgende Render-Aufrufe für zwei Nutzer, erst `en`, dann `de`, mit derselben Fixture / When die Ergebnisse verglichen werden / Then ist das zweite Ergebnis byte-gleich zur Golden-`de`-Ausgabe (kein Zustand zwischen Nutzern), und das erste enthält keinen deutschen Katalogtext.
@@ -213,7 +215,10 @@ return f"{cooldown_min} Minuten"
 - `trip_alert.py` (Wochentag Zeilen 2704-2733, Nachtrag-Bezug Zeilen 2871-2880) und `notification_service.py` rufen die Renderer erst mit P9a/P9b mit `lang` auf; bis dahin sendet das System weiter deutsch. Die Schlüssel `alarm.nachtrag.*` legt dieses Paket an.
 - Amtliche Warnungen (`official_alerts.py`) sind P6; die Ergänzung „zur amtlichen Warnung“ ist nur der Bezugssatz, nicht der Warntext.
 - Annahme: `OnsetEvent.intensity_label` bleibt die deutsche Konstante als Vergleichsschlüssel; die Anzeige übersetzt `intensity_text`. Eine Umstellung der Konstanten selbst würde `alert_urgency.py` und `rain_extent.py` brechen.
-- Annahme: Das Wochentagskürzel folgt auch in der SMS/Premium-SMS der Nutzersprache (`Thu15`, ein Zeichen länger als `Do15`); die bestehende Kürzungslogik hält das Limit. Kürzel und Zahlen bleiben.
+- ~~Annahme: Das Wochentagskürzel folgt auch in der SMS/Premium-SMS der Nutzersprache.~~ Überholt durch PO-Korrektur 2026-10-31: die SMS bleibt in jeder Sprache unverändert (`Do15`).
+- Die Langform eines Abweichungs-Alarms nennt keinen Wochentag, sondern Tageswörter (`tomorrow 15:00`); der Wochentag `Thu`/`Fri` erscheint in der Langform nur in der Regen-Alarm-Kopfzeile jenseits der Güte-Grenze (`from Fri15:40`). AC-1 prüft den Wochentag deshalb dort.
+- `format_now_text` (Klartext-Zweig) bleibt unverändert: einziger Aufrufer ist der Inbound-Befehl `/jetzt` (P10 #2673), kein Alarm-Pfad.
+- `render_deviation_alert` (Kompat-Shim, nur Bestandstests): Kopf, Fußzeile und Zahlen folgen `lang`; Metrikname und Segment-Bezug (`build_segment_label`, E-Mail-Helfer) bleiben deutsch.
 - Annahme: `format_metric_value` wird nur ergänzt, wenn P2/P3 es nicht schon sprachfähig gemacht haben; der Default `de` bleibt byte-gleich.
 - Annahme: `src/utils/timezone.py::format_reference_at` gehört wegen `reference_at` im Alarm-Modell zu diesem Paket.
 - Annahme: `_stage_prefix` (`S5 `) bleibt (Kürzel, in beiden Sprachen verständlich).
@@ -227,3 +232,4 @@ return f"{cooldown_min} Minuten"
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-10-31: PO-Korrektur (SMS in jeder Sprache unverändert): AC-4 angepasst, `alarm.sms.nachtrag_praefix` gestrichen; Ziel-Wort aus Bestandsschlüssel `alarm.segment.ziel` (Validator-Gleichlauf).

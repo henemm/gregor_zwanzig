@@ -157,20 +157,23 @@ def tz_abbrev(dt: datetime, tz: ZoneInfo) -> str:
 
 def format_reference_at(
     fetched_at: datetime, tz: ZoneInfo, *, now: Optional[datetime] = None,
+    lang: str = "de",
 ) -> str:
     """Referenz-Zeitpunkt einer Vergleichsbasis lesbar formatiert (Issue #1916
     AC-1/AC-2): reine Uhrzeit, solange der Anker vom selben Ortstag stammt,
     sonst mit explizitem Tagesbezug ("gestern HH:MM Uhr") — eine nackte
     Uhrzeit waere sonst mehrdeutig, sobald der Anker von einem anderen
-    Kalendertag stammt."""
+    Kalendertag stammt. Issue #2667: Tageswort in ``lang``."""
+    from i18n import t
+
     now = now or datetime.now(timezone.utc)
     time_str = local_fmt(fetched_at, tz)
     day_diff = (local_dt(now, tz).date() - local_dt(fetched_at, tz).date()).days
     if day_diff <= 0:
         return time_str
     if day_diff == 1:
-        return f"gestern {time_str} Uhr"
-    return f"vor {day_diff} Tagen {time_str} Uhr"
+        return t("alarm.zeit.gestern_uhr", lang, zeit=time_str)
+    return t("alarm.zeit.vor_tagen_uhr", lang, n=day_diff, zeit=time_str)
 
 
 def local_stamp(dt: datetime, tz: ZoneInfo, fmt: str = "%H:%M") -> str:

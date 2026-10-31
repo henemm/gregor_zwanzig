@@ -8,6 +8,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from app.config import Settings
+from i18n import Lang, t, tn
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.render import render_email, render_subject
 from utils.timezone import day_offset, local_fmt, tz_for_coords
@@ -19,13 +20,18 @@ def _segment_label(active) -> str:
     return f"Etappe {seg_id}" if seg_id is not None else "Etappe 1"
 
 
-def _cooldown_display(trip) -> str:
+def cooldown_text(cooldown_min: int, *, lang: Lang = "de") -> str:
+    """Cooldown-Dauer lesbar in ``lang`` (Issue #2667): volle Stunden mit
+    Singular/Plural, sonst Minuten. Geteilt von Trip- und Ortsvergleich-Radar."""
+    if cooldown_min % 60 == 0:
+        return tn("alarm.dauer.stunden", cooldown_min // 60, lang)
+    return t("alarm.dauer.minuten", lang, count=cooldown_min)
+
+
+def _cooldown_display(trip, *, lang: Lang = "de") -> str:
     """Format alert cooldown for human readers."""
     cooldown_min = getattr(trip, "alert_cooldown_minutes", None) or 120
-    if cooldown_min % 60 == 0:
-        n = cooldown_min // 60
-        return f"{n} Stunde" if n == 1 else f"{n} Stunden"
-    return f"{cooldown_min} Minuten"
+    return cooldown_text(cooldown_min, lang=lang)
 
 
 def build_onset_alert_message(
@@ -36,6 +42,8 @@ def build_onset_alert_message(
     intensity_label: str,
     source_label: str,
     is_convective: bool = False,
+    *,
+    lang: Lang = "de",
 ) -> AlertMessage:
     """Build a canonical AlertMessage for a radar/onset alert.
 
@@ -78,7 +86,7 @@ def build_onset_alert_message(
         stand_at=stand_at,
         events=(onset_ev,),
         source=source_label,
-        cooldown_display=_cooldown_display(trip),
+        cooldown_display=_cooldown_display(trip, lang=lang),
     )
 
 
