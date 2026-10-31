@@ -199,6 +199,8 @@ Nach dem Push gegen `https://staging.gregor20.henemm.com`: Login mit gültigem K
 - Passkey-Login-Begin verrät Passkey-Besitz (nicht-discoverable WebAuthn).
 - Die Timing-Angleichung ist eine Näherung: Die Tests sichern nur eine Untergrenze zu, keine Gleichheit mit dem Treffer-Zweig. Netzwerk-Jitter und Speicherzugriff bleiben messbar.
 - Bei `en`-Nutzern gelten die Antworten wie bisher; die i18n-Fehlertexte aus #2676 sind nicht berührt.
+- **Abgetrennt (Abtrennregel aus Scope/Estimated Scope angewendet am 2026-10-31, Test-LoC 1443 > 450):** Punkt 7 (Webhook-Secrets über `config.Config`, AC-15..AC-18) ist NICHT Teil dieser Scheibe, sondern Folgescheibe #2715 (fertiger Stand gesichert im Branch `feat-2163-s1b-webhook-config`). Die Webhooks lesen ihre Secrets bis dahin weiterhin per `os.Getenv`. AC-19 gilt für diese Scheibe nur für die Teile Login/Passwort-vergessen.
+- Die tatsächlichen Testdateien heißen abweichend von der Tabelle im Test Plan: `proxy_user_id_strip_test.go` (handler), `proxy_user_id_two_users_test.go` (router), `startup_log_counts_test.go`, `auth_dummy_hash_test.go`, `register_conflict_characterization_test.go`.
 - #2163 bleibt nach dieser Scheibe **offen** (Scheibe 2: Python-Pfadbauten ohne `VALID_USER_ID_RE`, `.env.tpl`). PR-Text daher „Refs #2163", nie „Closes".
 
 ## Architektur-Entscheidung (ADR)
@@ -209,3 +211,4 @@ Nach dem Push gegen `https://staging.gregor20.henemm.com`: Login mit gültigem K
 ## Changelog
 
 - 2026-10-31: Initial spec created (Scheibe 1 von #2163)
+- 2026-10-31: Abtrennregel angewendet: Punkt 7 (AC-15..AC-18, Webhook-Secrets über `config.Config`) → Folgescheibe #2715, Branch `feat-2163-s1b-webhook-config`. Umgesetzt in Scheibe 1: Timing-Angleichung Login/Passwort-vergessen, `user_id`-Strip im `ProxyHandler`, korrekte Scheduler-Startzahlen. Testdateinamen weichen von der Tabelle ab (siehe Known Limitations).

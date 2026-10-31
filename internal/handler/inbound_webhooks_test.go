@@ -33,8 +33,9 @@ package handler
 // Verifikation eine andere Form (z. B. X-Signature-HMAC), ist DIESER Test
 // bewusst mit anzupassen -- nicht den Handler an den Test.
 //
-// Werte (SEVEN_WEBHOOK_*, STALWART_WEBHOOK_*) kommen seit #2163 als
-// Config-Parameter in den Handler, nicht mehr aus der Umgebung.
+// Env: SEVEN_WEBHOOK_PATH_SECRET, SEVEN_WEBHOOK_SIGNING_KEY,
+//      STALWART_WEBHOOK_PATH_SECRET, STALWART_WEBHOOK_SECRET.
+// Kein t.Parallel() (t.Setenv).
 //
 // Der Scheduler zeigt auf einen httptest-"Python-Core", der Aufrufe zaehlt. Er
 // antwortet mit processed=1, damit der Kick keine Nachversuche (3/8 s) macht.
@@ -232,21 +233,17 @@ type smsAufbau struct {
 func neuerSMSAufbau(t *testing.T, jetzt func(fix sevenFixture) time.Time) *smsAufbau {
 	t.Helper()
 	fix := ladeSevenFixture(t)
+	t.Setenv("SEVEN_WEBHOOK_PATH_SECRET", fix.pfadSecret(t))
+	t.Setenv("SEVEN_WEBHOOK_SIGNING_KEY", fix.SigningKey)
 	core := neuerZaehlenderCore(t)
 	sched := neuerSchedulerFuer(t, core)
 	uhr := fix.zeit(t)
 	if jetzt != nil {
 		uhr = jetzt(fix)
 	}
-	r := smsRouter(sched, fix.PublicHost, fix.pfadSecret(t), fix.SigningKey, uhr)
-	return &smsAufbau{fix: fix, core: core, sched: sched, router: r}
-}
-
-// smsRouter haengt den Handler mit den Config-Werten (Issue #2163) an die echte Route.
-func smsRouter(sched *scheduler.Scheduler, host, pfad, key string, uhr time.Time) http.Handler {
 	r := chi.NewRouter()
-	r.Post("/api/webhooks/sms/{secret}", InboundSMSWebhook(sched, host, pfad, key, func() time.Time { return uhr }))
-	return r
+	r.Post("/api/webhooks/sms/{secret}", InboundSMSWebhook(sched, fix.PublicHost, func() time.Time { return uhr }))
+	return &smsAufbau{fix: fix, core: core, sched: sched, router: r}
 }
 
 // anfrage baut die aufgezeichnete Anfrage nach; mutate darf sie veraendern.
@@ -421,13 +418,7 @@ func TestSMSWebhook_503_EnvFehlt(t *testing.T) {
 	for _, fehlend := range []string{"SEVEN_WEBHOOK_PATH_SECRET", "SEVEN_WEBHOOK_SIGNING_KEY"} {
 		t.Run("ohne "+fehlend, func(t *testing.T) {
 			a := neuerSMSAufbau(t, nil)
-			pfad, key := a.fix.pfadSecret(t), a.fix.SigningKey
-			if fehlend == "SEVEN_WEBHOOK_PATH_SECRET" {
-				pfad = ""
-			} else {
-				key = ""
-			}
-			a.router = smsRouter(a.sched, a.fix.PublicHost, pfad, key, a.fix.zeit(t))
+			t.Setenv(fehlend, "")
 
 			rr := a.senden(a.anfrage(a.fix.pfadSecret(t), a.fix.Body, nil))
 
@@ -464,16 +455,13 @@ type mailAufbau struct {
 
 func neuerMailAufbau(t *testing.T) *mailAufbau {
 	t.Helper()
+	t.Setenv("STALWART_WEBHOOK_PATH_SECRET", mailPfadSecret)
+	t.Setenv("STALWART_WEBHOOK_SECRET", mailBearer)
 	core := neuerZaehlenderCore(t)
 	sched := neuerSchedulerFuer(t, core)
-	return &mailAufbau{core: core, sched: sched, router: mailRouter(sched, mailPfadSecret, mailBearer)}
-}
-
-// mailRouter haengt den Handler mit den Config-Werten (Issue #2163) an die echte Route.
-func mailRouter(sched *scheduler.Scheduler, pfad, bearer string) http.Handler {
 	r := chi.NewRouter()
-	r.Post("/api/webhooks/mail/{secret}", InboundMailWebhook(sched, pfad, bearer))
-	return r
+	r.Post("/api/webhooks/mail/{secret}", InboundMailWebhook(sched))
+	return &mailAufbau{core: core, sched: sched, router: r}
 }
 
 func (m *mailAufbau) senden(pfadSecret, authHeader string) *httptest.ResponseRecorder {
@@ -542,13 +530,7 @@ func TestMailWebhook_503_EnvFehlt(t *testing.T) {
 	for _, fehlend := range []string{"STALWART_WEBHOOK_PATH_SECRET", "STALWART_WEBHOOK_SECRET"} {
 		t.Run("ohne "+fehlend, func(t *testing.T) {
 			m := neuerMailAufbau(t)
-			pfad, bearer := mailPfadSecret, mailBearer
-			if fehlend == "STALWART_WEBHOOK_PATH_SECRET" {
-				pfad = ""
-			} else {
-				bearer = ""
-			}
-			m.router = mailRouter(m.sched, pfad, bearer)
+			t.Setenv(fehlend, "")
 
 			rr := m.senden(mailPfadSecret, "Bearer "+mailBearer)
 

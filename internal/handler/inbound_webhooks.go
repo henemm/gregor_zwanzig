@@ -23,6 +23,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -94,10 +95,11 @@ func webhookAccept(w http.ResponseWriter, sched *scheduler.Scheduler, jobID stri
 
 // InboundSMSWebhook ist der seven.io-sms_mo-Weckruf. publicHost bildet die
 // signierte URL (publicHost + Pfad), nie r.URL/Host-Header; now ist die Uhr.
-// pathSecret/signingKey kommen aus config.Config (Issue #2163, leer = 503).
-func InboundSMSWebhook(sched *scheduler.Scheduler, publicHost, pathSecret, signingKey string, now func() time.Time) http.HandlerFunc {
+func InboundSMSWebhook(sched *scheduler.Scheduler, publicHost string, now func() time.Time) http.HandlerFunc {
 	nonces := &nonceCache{}
 	return func(w http.ResponseWriter, r *http.Request) {
+		pathSecret := os.Getenv("SEVEN_WEBHOOK_PATH_SECRET")
+		signingKey := os.Getenv("SEVEN_WEBHOOK_SIGNING_KEY")
 		if pathSecret == "" || signingKey == "" {
 			http.Error(w, "webhook not configured", http.StatusServiceUnavailable)
 			return
@@ -141,9 +143,10 @@ func sevenRequestValid(r *http.Request, body []byte, key, fullURL string, now ti
 
 // InboundMailWebhook ist der Stalwart-Mail-Eingangs-Weckruf: Pfad-Secret plus
 // "Authorization: Bearer <STALWART_WEBHOOK_SECRET>".
-// pathSecret/bearer kommen aus config.Config (Issue #2163, leer = 503).
-func InboundMailWebhook(sched *scheduler.Scheduler, pathSecret, bearer string) http.HandlerFunc {
+func InboundMailWebhook(sched *scheduler.Scheduler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		pathSecret := os.Getenv("STALWART_WEBHOOK_PATH_SECRET")
+		bearer := os.Getenv("STALWART_WEBHOOK_SECRET")
 		if pathSecret == "" || bearer == "" {
 			http.Error(w, "webhook not configured", http.StatusServiceUnavailable)
 			return

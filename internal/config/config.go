@@ -58,15 +58,6 @@ type Config struct {
 	GoogleClientSecret      string `envconfig:"GOOGLE_CLIENT_SECRET" default:""`
 	GoogleRedirectURL       string `envconfig:"GOOGLE_REDIRECT_URL" default:""`
 	PublicHost              string `envconfig:"PUBLIC_HOST" default:"https://gregor20.henemm.com"`
-	// Issue #2163 Punkt 7: Webhook-Secrets zentral statt per os.Getenv. Tag =
-	// unpraefixierter Name (envconfig liest GZ_<NAME>, dann <NAME>); leer =
-	// nicht konfiguriert, die Route antwortet dann fail-closed 503.
-	TelegramWebhookSecret     string `envconfig:"TELEGRAM_WEBHOOK_SECRET" default:""`
-	TelegramBotUsername       string `envconfig:"TELEGRAM_BOT_USERNAME" default:""`
-	SevenWebhookPathSecret    string `envconfig:"SEVEN_WEBHOOK_PATH_SECRET" default:""`
-	SevenWebhookSigningKey    string `envconfig:"SEVEN_WEBHOOK_SIGNING_KEY" default:""`
-	StalwartWebhookPathSecret string `envconfig:"STALWART_WEBHOOK_PATH_SECRET" default:""`
-	StalwartWebhookSecret     string `envconfig:"STALWART_WEBHOOK_SECRET" default:""`
 	// Issue #1071 — PO-Benachrichtigung bei Level-Änderungs-Anträgen.
 	// Präfix "GZ" via envconfig.Process → Env-Var GZ_PO_EMAIL.
 	PoEmail        string `envconfig:"PO_EMAIL" default:"gregor_zwanzig@henemm.com"`

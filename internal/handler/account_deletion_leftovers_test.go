@@ -665,6 +665,7 @@ func TestKontoLoeschen_TokenStoreNichtPersistierbar_500OrdnerBleibtWiederholbar(
 // --- AC-14: atomares save() mit Fehlerrueckgabe ---------------------------------
 
 func TestTelegramLink_SpeicherfehlerLiefert500StattNieGespeichertemToken(t *testing.T) {
+	t.Setenv("TELEGRAM_BOT_USERNAME", "gregor_test_bot")
 	s := newTestStore(t)
 	mustSaveUser(t, s, model.User{ID: "anna", CreatedAt: time.Now()})
 	ts := NewTelegramTokenStore(s.DataDir)
@@ -676,7 +677,7 @@ func TestTelegramLink_SpeicherfehlerLiefert500StattNieGespeichertemToken(t *test
 	req := httptest.NewRequest(http.MethodGet, "/api/auth/telegram-link", nil)
 	req = req.WithContext(middleware.ContextWithUserID(req.Context(), "anna"))
 	w := httptest.NewRecorder()
-	GetTelegramLinkHandler(s, ts, "gregor_test_bot").ServeHTTP(w, req)
+	GetTelegramLinkHandler(s, ts).ServeHTTP(w, req)
 
 	if w.Code != 500 {
 		t.Fatalf("expected 500 bei Speicherfehler, got %d: %s", w.Code, w.Body.String())
@@ -822,6 +823,7 @@ func TestTelegramConnect_LaedtNutzerErstUnterDemMutex(t *testing.T) {
 // darf den Nutzer erst UNTER telegramConnectMu laden. Sonst schreibt er nach
 // der Kaskade noch einen Token fuer den geloeschten Nutzer auf die Platte.
 func TestTelegramLink_LaedtNutzerErstUnterDemMutex(t *testing.T) {
+	t.Setenv("TELEGRAM_BOT_USERNAME", "gregor_test_bot")
 	s := telegramConnectTestStore(t)
 	passwortKonto(t, s, "anna", "anna@beispiel.de")
 	passwortKonto(t, s, "bert", "bert@beispiel.de")
@@ -842,7 +844,7 @@ func TestTelegramLink_LaedtNutzerErstUnterDemMutex(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/auth/telegram-link", nil)
 		req = req.WithContext(middleware.ContextWithUserID(req.Context(), "anna"))
 		rr := httptest.NewRecorder()
-		GetTelegramLinkHandler(s, ts, "gregor_test_bot")(rr, req)
+		GetTelegramLinkHandler(s, ts)(rr, req)
 		done <- rr
 	}()
 
@@ -880,6 +882,7 @@ func TestTelegramLink_LaedtNutzerErstUnterDemMutex(t *testing.T) {
 // zwischen Laden und Token-Schreiben durch. Der Test haelt ts.mu, damit der
 // Request in IssueToken steht, und prueft, dass er den Mutex dabei haelt.
 func TestTelegramLink_HaeltMutexUeberTokenAusgabe(t *testing.T) {
+	t.Setenv("TELEGRAM_BOT_USERNAME", "gregor_test_bot")
 	s := telegramConnectTestStore(t)
 	passwortKonto(t, s, "anna", "anna@beispiel.de")
 	ts := NewTelegramTokenStore(t.TempDir())
@@ -897,7 +900,7 @@ func TestTelegramLink_HaeltMutexUeberTokenAusgabe(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/auth/telegram-link", nil)
 		req = req.WithContext(middleware.ContextWithUserID(req.Context(), "anna"))
 		rr := httptest.NewRecorder()
-		GetTelegramLinkHandler(s, ts, "gregor_test_bot")(rr, req)
+		GetTelegramLinkHandler(s, ts)(rr, req)
 		done <- rr
 	}()
 	time.Sleep(200 * time.Millisecond) // Request steht in IssueToken an ts.mu

@@ -189,14 +189,14 @@ func (s *TelegramTokenStore) ResolveAndDelete(token string) (pendingTelegramToke
 
 // GetTelegramLinkHandler — GET /api/auth/telegram-link
 // Generates a one-time deep-link token (24h TTL) for the authenticated user.
-// botUsername ist config.TelegramBotUsername (Issue #2163).
-func GetTelegramLinkHandler(s *store.Store, ts *TelegramTokenStore, botUsername string) http.HandlerFunc {
+func GetTelegramLinkHandler(s *store.Store, ts *TelegramTokenStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
+		botUsername := os.Getenv("TELEGRAM_BOT_USERNAME")
 		if botUsername == "" {
 			http.Error(w, "TELEGRAM_BOT_USERNAME not configured", http.StatusInternalServerError)
 			return
