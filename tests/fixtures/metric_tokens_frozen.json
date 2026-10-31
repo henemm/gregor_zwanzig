@@ -1,0 +1,162 @@
+{
+  "cape": {
+    "col_label": "CAPE",
+    "compact_label": "CP",
+    "sms_code": "CP"
+  },
+  "cloud_high": {
+    "col_label": "CldHi",
+    "compact_label": "CH",
+    "sms_code": "CH"
+  },
+  "cloud_low": {
+    "col_label": "CldLow",
+    "compact_label": "CL",
+    "sms_code": "CL"
+  },
+  "cloud_mid": {
+    "col_label": "CldMid",
+    "compact_label": "CM",
+    "sms_code": "CM"
+  },
+  "cloud_total": {
+    "col_label": "Cloud",
+    "compact_label": "CT",
+    "sms_code": "CT"
+  },
+  "confidence": {
+    "col_label": "Conf",
+    "compact_label": "Conf",
+    "sms_code": ""
+  },
+  "dewpoint": {
+    "col_label": "Dew",
+    "compact_label": "DP",
+    "sms_code": "DP"
+  },
+  "freezing_level": {
+    "col_label": "0°Line",
+    "compact_label": "FZ",
+    "sms_code": "FZ"
+  },
+  "fresh_snow": {
+    "col_label": "NewSn",
+    "compact_label": "NS24+",
+    "sms_code": "NS"
+  },
+  "gust": {
+    "col_label": "Gust",
+    "compact_label": "G",
+    "sms_code": "G"
+  },
+  "humidity": {
+    "col_label": "Humid",
+    "compact_label": "HU",
+    "sms_code": "HU"
+  },
+  "precip_type": {
+    "col_label": "PType",
+    "compact_label": "PT",
+    "sms_code": "PT"
+  },
+  "precipitation": {
+    "col_label": "Rain",
+    "compact_label": "R",
+    "sms_code": "R"
+  },
+  "pressure": {
+    "col_label": "Press",
+    "compact_label": "HP",
+    "sms_code": "HP"
+  },
+  "rain_probability": {
+    "col_label": "Rain%",
+    "compact_label": "PR",
+    "sms_code": "PR"
+  },
+  "snow_depth": {
+    "col_label": "SnowH",
+    "compact_label": "SD",
+    "sms_code": "SD"
+  },
+  "snowfall_limit": {
+    "col_label": "SnowL",
+    "compact_label": "SL",
+    "sms_code": "SL"
+  },
+  "sunshine": {
+    "col_label": "Sun",
+    "compact_label": "SU",
+    "sms_code": "SU"
+  },
+  "temperature": {
+    "col_label": "Temp",
+    "compact_label": "T",
+    "sms_code": "T"
+  },
+  "temperature_cold": {
+    "col_label": "TmpMin",
+    "compact_label": "TN",
+    "sms_code": "T"
+  },
+  "temperature_day_high": {
+    "col_label": "DayMax",
+    "compact_label": "D",
+    "sms_code": ""
+  },
+  "temperature_day_low": {
+    "col_label": "DayMin",
+    "compact_label": "L",
+    "sms_code": "L"
+  },
+  "temperature_night": {
+    "col_label": "Night",
+    "compact_label": "N",
+    "sms_code": ""
+  },
+  "thunder": {
+    "col_label": "Thdr",
+    "compact_label": "TH",
+    "sms_code": "TH"
+  },
+  "uv_index": {
+    "col_label": "UV",
+    "compact_label": "UV",
+    "sms_code": "UV"
+  },
+  "visibility": {
+    "col_label": "Visib",
+    "compact_label": "VS",
+    "sms_code": "VS"
+  },
+  "wind": {
+    "col_label": "Wind",
+    "compact_label": "W",
+    "sms_code": "W"
+  },
+  "wind_chill": {
+    "col_label": "Feels",
+    "compact_label": "TF",
+    "sms_code": "TF"
+  },
+  "wind_chill_day_high": {
+    "col_label": "DayMaxF",
+    "compact_label": "FD",
+    "sms_code": "FD"
+  },
+  "wind_chill_day_low": {
+    "col_label": "DayMinF",
+    "compact_label": "FL",
+    "sms_code": "FL"
+  },
+  "wind_chill_night": {
+    "col_label": "NightF",
+    "compact_label": "FN",
+    "sms_code": "FN"
+  },
+  "wind_direction": {
+    "col_label": "WDir",
+    "compact_label": "WD",
+    "sms_code": "WD"
+  }
+}
