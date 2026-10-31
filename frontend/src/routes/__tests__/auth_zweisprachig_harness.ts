@@ -69,35 +69,33 @@ export function sichtbarerText(html: string): string {
 	return `${text} ${attribute}`.replace(/\s+/g, ' ').trim();
 }
 
-/** Platzhalter `{name}` einsetzen; unbekannte bleiben stehen. */
-function einsetzen(vorlage: string, params: Record<string, string>): string {
-	return vorlage.replace(/\{([a-z0-9_]+)\}/g, (roh, name: string) => params[name] ?? roh);
-}
-
 // Erlaubt sind Eigenname/Markenschriftzug (Wordmark: „gregor.zwanzig“, Zeile
 // „V0.20 · WETTER-BRIEFING") und der Sprachumschalter „DE | EN". Der Schriftzug
 // gehoert der gemeinsamen Marken-Komponente, nicht den Auth-Routen (Known Limitations #2650).
 const ERLAUBT = new Set(['Gregor', 'Zwanzig', 'gregor', 'zwanzig', 'WETTER', 'BRIEFING', 'DE', 'EN']);
 
+// Deutsche Funktionswoerter, die im englischen Text nie vorkommen (Restwort-Netz
+// neben dem Katalogvergleich). Bewusst ohne Woerter, die auch Englisch sind (in, an, or).
+const DEUTSCHE_FUNKTIONSWOERTER = ['der', 'die', 'das', 'den', 'dem', 'und', 'ist', 'nicht', 'bitte', 'du', 'dein', 'deine', 'mit', 'für', 'ein', 'eine', 'wurde', 'sind'];
+
+const woerter = (text: string): string[] => text.match(/[A-Za-zÄÖÜäöüß]{2,}/g) ?? [];
+
 /**
- * Restwort-Pruefung (AC-1/AC-3): entfernt aus dem sichtbaren Text jeden englischen
- * `auth.*`-Katalogwert (mit eingesetzten Platzhaltern) und liefert, was danach an
- * Woertern uebrig bleibt. Leere Liste = kein deutsches Restwort. `erlaubt` nennt
- * dynamische Werte (z. B. das Einladungs-Level), die nicht aus dem Katalog kommen.
+ * Restwort-Pruefung (AC-1/AC-3) per Katalog-Differenz (Adversary #2650 F001): ein
+ * sichtbares Wort ist ein Restwort, wenn es ein deutsches `auth.*`-Katalogwort ist
+ * oder ein deutsches Funktionswort, und NICHT im englischen `auth.*`-Katalog
+ * vorkommt. Der englische Katalog wird nicht mehr vom Text abgezogen.
+ * `erlaubt` nennt dynamische Werte, die nicht aus dem Katalog kommen.
  */
-export function restwoerter(html: string, params: Record<string, string> = {}, erlaubt: string[] = []): string[] {
-	let rest = sichtbarerText(html);
-	const werte = Object.entries(KATALOG_EN)
-		.filter(([schluessel]) => schluessel.startsWith('auth.'))
-		.map(([, wert]) => einsetzen(wert, params))
-		.sort((a, b) => b.length - a.length);
-	// Nur ganze Wörter entfernen: der Katalogwert „or“ darf nicht in „gregor“ treffen.
-	for (const wert of werte) {
-		const muster = new RegExp(`(?<![\\p{L}\\p{N}])${wert.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'gu');
-		rest = rest.replace(muster, ' ');
-	}
+export function restwoerter(html: string, erlaubt: string[] = []): string[] {
+	const auth = (katalog: Record<string, string>) =>
+		Object.entries(katalog)
+			.filter(([schluessel]) => schluessel.startsWith('auth.'))
+			.map(([, wert]) => wert);
+	const deutsch = new Set([...auth(KATALOG_DE).flatMap(woerter), ...DEUTSCHE_FUNKTIONSWOERTER]);
+	const englisch = new Set(auth(KATALOG_EN).flatMap(woerter));
 	const frei = new Set([...ERLAUBT, ...erlaubt]);
-	return (rest.match(/[A-Za-zÄÖÜäöüß]{2,}/g) ?? []).filter((wort) => !frei.has(wort));
+	return woerter(sichtbarerText(html)).filter((wort) => deutsch.has(wort) && !englisch.has(wort) && !frei.has(wort));
 }
 
 // ─── Golden-Fixtures (deutsche Ausgabe vor der Umstellung) ───────────────────

@@ -149,7 +149,7 @@ describe('#2650 AC-3 — /register in Sprache en: alle Einladungszustände ohne 
 
 	test('AC-3_gueltige_einladung_zeigt_level_als_platzhalter', async () => {
 		const html = await registerSeite({ status: 'valid', token: 't1', tier: 'free' }, null, 'en');
-		assert.deepEqual(restwoerter(html, { level: TIER_LABEL_FREE }, [TIER_LABEL_FREE]), []);
+		assert.deepEqual(restwoerter(html, [TIER_LABEL_FREE]), []);
 		assert.ok(
 			sichtbarerText(html).includes(trFor('en', 'auth.register.einladung_gueltig', { level: TIER_LABEL_FREE })),
 			'AC-3: der Einladungshinweis mit Level fehlt in en'
