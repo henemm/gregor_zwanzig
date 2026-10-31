@@ -67,6 +67,30 @@ Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com 
   Mariehamn. Finnland nutzt stattdessen die Zonengeometrie unten (Land + See).
 - **Verwendung:** `meteoalarm_feed._in_outline()` für `MeteoAlarmFeedSource("NO"/"SE")`.
 
+## `meteoalarm_outlines_uk.geojson.json` — Landesumriss Vereinigtes Königreich, Issue #1442 S3b
+
+Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com (**gemeinfrei**).
+
+- **Herkunft:** dieselbe ZIP wie der Nordics-Umriss
+  (`https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_countries.zip`, Natural Earth
+  **5.1.1**), erneut abgerufen am 2026-10-31, sha256 identisch
+  (`ce1ac7036499a0edd641fbc093cd209a98f96a49d2eca8480aaacad35138a7f6`) — zur Laufzeit wird nichts
+  nachgeladen.
+- **Umfang:** ein Feature, `properties.id` = `GB` (Auswahl `ADM0_A3` = `GBR`), `MultiPolygon`
+  `[lon, lat]`, 4 Nachkommastellen. Enthalten: England, Schottland, Wales, **Nordirland** und alle
+  Inseln des `GBR`-Datensatzes (Shetland, Orkney, Hebriden, St Kilda, Scilly); kein
+  Schwerpunkt-Filter wie bei den Nordics.
+- **Bewusst verändert:** vereinigt, **um 0,1° aufgeweitet** (shapely `buffer(0.1)`), dann
+  `simplify(0.01)`. Zweck: `covers()` lieber zu groß als zu klein (Küste, Inseln). Gemessen: London,
+  Edinburgh, Lerwick, Kirkwall, Stornoway, Belfast, Cardiff, Inverness, Holyhead, Penzance, Oxford,
+  Manchester innen; Dublin, Letterkenny, Paris, Calais, Douglas und St Helier außen. Der Puffer reicht
+  an der irischen Grenze einige Kilometer nach Irland (z. B. Dundalk innen) — Folge höchstens ein
+  Abruf mit „keine Warnung", weil `fetch()` nur die Feed-Polygone des UK-Feeds auswertet.
+- **Nicht abgedeckt:** die **Kanalinseln** (Jersey, Guernsey) und die **Isle of Man** sind in Natural
+  Earth eigene `ADM0`-Einheiten (nicht `GBR`) und bewusst nicht enthalten. Irland (IE) ist nicht im
+  Scope.
+- **Verwendung:** `meteoalarm_feed._in_outline()` für `MeteoAlarmFeedSource("GB")`.
+
 ## `meteoalarm_zones_FI.geojson.json` — MeteoAlarm-Warnzonen Finnland (`EMMA_ID`), Issue #1442 S2
 
 Zonengeometrie: EUMETNET-MeteoAlarm, Datei `geocodes.json` (offizielle Zuordnung `EMMA_ID` →
