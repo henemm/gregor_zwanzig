@@ -223,7 +223,7 @@ describe('AC-11 (Mutations-Gegenprobe e): Kurzstil-`disabled` folgt dem ALARM-Te
 // Schalter kommt aus dem Textkatalog, nennt die SMS-Auswahl und die Geltung
 // der Telegram-Auswahl nur fuer das ausfuehrliche Telegram; identisch in
 // beiden Kontexten. Disabled-Text bleibt unveraendert.
-const { t } = await import(pathToFileURL(join(FRONTEND_SSR, 'src/lib/i18n/index.ts')).href);
+const { tr } = await import(pathToFileURL(join(FRONTEND_SSR, 'src/lib/i18n/index.ts')).href);
 const ToggleSsr = (
 	await import(pathToFileURL(join(FRONTEND_SSR, 'src/lib/components/shared/TelegramKurzstilToggle.svelte')).href)
 ).default;
@@ -237,7 +237,7 @@ function renderToggle(context: 'route' | 'vergleich', disabled: boolean): string
 describe('#2455 AC-1/AC-2: Hinweis am Kurzstil-Schalter', () => {
 	for (const ctx of ['route', 'vergleich'] as const) {
 		test(`AC-1 (${ctx}): Hinweis nennt SMS-Auswahl und Geltung nur fuer ausfuehrliches Telegram`, () => {
-			const hint = t('telegram_kurzstil.hinweis_aktiv');
+			const hint = tr('telegram_kurzstil.hinweis_aktiv');
 			assert.match(hint, /SMS-Auswahl im Layout-Reiter/);
 			assert.match(hint, /nur für das ausführliche Telegram/);
 			const html = renderToggle(ctx, false);
@@ -246,11 +246,11 @@ describe('#2455 AC-1/AC-2: Hinweis am Kurzstil-Schalter', () => {
 			assert.ok(!/Tour/.test(hint));
 		});
 		test(`AC-2 (${ctx}): disabled-Hinweis unveraendert`, () => {
-			const hint = t('telegram_kurzstil.hinweis_inaktiv');
+			const hint = tr('telegram_kurzstil.hinweis_inaktiv');
 			assert.equal(hint, 'Erst aktiv, wenn Telegram als Kanal an ist.');
 			const html = renderToggle(ctx, true);
 			assert.ok(html.includes(hint));
-			assert.ok(!html.includes(t('telegram_kurzstil.hinweis_aktiv')));
+			assert.ok(!html.includes(tr('telegram_kurzstil.hinweis_aktiv')));
 		});
 	}
 });

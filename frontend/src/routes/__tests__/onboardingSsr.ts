@@ -5,7 +5,7 @@
 
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
@@ -35,14 +35,14 @@ export async function ladeKomponente(datei: string): Promise<any | null> {
 
 export const Page = (await import(pathToFileURL(path.join(ROUTES, '+page.svelte')).href)).default;
 
-export const KATALOG = JSON.parse(
-	readFileSync(path.join(FRONTEND, 'src/lib/i18n/messages/de.json'), 'utf-8')
-) as Record<string, string>;
+// Vereinigte deutsche Katalogkarte (Issue #2647: Bereichsdateien statt de.json).
+export const KATALOG = (await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/messages/de/index.ts')).href))
+	.de as Record<string, string>;
 
 /** Katalogwert, der fuer den Test existieren MUSS. */
 export function text(key: string): string {
 	const v = KATALOG[key];
-	assert.ok(typeof v === 'string' && v.trim().length > 0, `Katalogschluessel ${key} fehlt oder ist leer (de.json)`);
+	assert.ok(typeof v === 'string' && v.trim().length > 0, `Katalogschluessel ${key} fehlt oder ist leer (messages/de/)`);
 	return v;
 }
 

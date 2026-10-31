@@ -29,7 +29,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import de from '../messages/de.json' with { type: 'json' };
+import { de } from '../messages/de/index.ts';
 
 const katalog = de as Record<string, string>;
 

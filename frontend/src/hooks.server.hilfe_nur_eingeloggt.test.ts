@@ -33,9 +33,12 @@ function cookieFuer(userId: string): string {
 
 async function rufe(pfad: string, cookie?: string): Promise<{ status: number; location?: string; aufgeloest: boolean }> {
 	let aufgeloest = false;
+	const url = new URL(`http://localhost${pfad}`);
 	const event = {
-		url: new URL(`http://localhost${pfad}`),
+		url,
 		locals: {},
+		// Issue #2647: handle liest Accept-Language aus dem Request und gz_lang aus den Cookies.
+		request: new Request(url),
 		cookies: { get: (n: string) => (n === 'gz_session' ? cookie : undefined) }
 	};
 	const resolve = async () => {

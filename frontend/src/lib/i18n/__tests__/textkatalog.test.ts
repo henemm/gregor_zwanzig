@@ -11,8 +11,8 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { t } from '../index.ts';
-import de from '../messages/de.json' with { type: 'json' };
+import { tr } from '../index.ts';
+import { de } from '../messages/de/index.ts';
 import { ARIA_WORT, BEGRIFFE, INFO_TEXTE, TIP_TEXTE } from '../../components/shared/__tests__/infoboxTexte.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,11 +21,11 @@ const katalog = de as Record<string, string>;
 const startKeys = Object.keys(katalog).filter((k) => k.startsWith('start.'));
 const alleText = startKeys.map((k) => katalog[k]).join('\n');
 
-test('AC-8: t() liefert den Katalogwert; unbekannter Schluessel ist ein Typfehler', () => {
-	assert.equal(t('start.hero.title'), katalog['start.hero.title']);
-	assert.ok(t('start.hero.title').length > 0);
+test('AC-8: tr() liefert den Katalogwert; unbekannter Schluessel ist ein Typfehler', () => {
+	assert.equal(tr('start.hero.title'), katalog['start.hero.title']);
+	assert.ok(tr('start.hero.title').length > 0);
 	// @ts-expect-error unbekannter Schluessel darf nicht kompilieren
-	void (() => t('start.unbekannt'));
+	void (() => tr('start.unbekannt'));
 });
 
 test('AC-1: hyperlokale Vorhersage fuer Trip-Zeitraum und Ortsvergleich, morgens/abends + Alarme', () => {
@@ -89,7 +89,7 @@ test('AC-10: Fliesstext-Token (--g-ink-2) hat >= 4.5:1 auf --g-card', () => {
 test('AC-8/AC-10: Startseite.svelte nutzt t(), importiert Atoms, hat keinen deutschen Fliesstext im Markup', () => {
 	const src = readFileSync(join(frontend, 'src', 'routes', '_start', 'Startseite.svelte'), 'utf-8');
 	assert.match(src, /\$lib\/components\/atoms/);
-	assert.match(src, /\bt\(/);
+	assert.match(src, /\$t\(/);
 	const markup = src.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<style[\s\S]*?<\/style>/g, '');
 	const ohneAusdruecke = markup.replace(/\{[^{}]*\}/g, '').replace(/<!--[\s\S]*?-->/g, '');
 	const text = ohneAusdruecke.replace(/<[^>]*>/g, ' ').trim();
@@ -107,8 +107,8 @@ test('AC-10: Layout blendet Chrome auf / fuer Ausgeloggte aus; Loader/Seite verz
 // doc-compliance-test
 test('F001: Links zeigen exakt auf /register und /login', () => {
 	const src = readFileSync(join(frontend, 'src', 'routes', '_start', 'Startseite.svelte'), 'utf-8');
-	assert.match(src, /href="\/register"[^>]*>\{t\('start\.cta\.register'\)\}/);
-	assert.match(src, /href="\/login"[^>]*>\{t\('start\.cta\.login'\)\}/);
+	assert.match(src, /href="\/register"[^>]*>\{\$t\('start\.cta\.register'\)\}/);
+	assert.match(src, /href="\/login"[^>]*>\{\$t\('start\.cta\.login'\)\}/);
 });
 
 // doc-compliance-test
@@ -116,7 +116,7 @@ test('F002: jedes img traegt den Katalog-Alt-Text', () => {
 	const src = readFileSync(join(frontend, 'src', 'routes', '_start', 'Startseite.svelte'), 'utf-8');
 	assert.match(src, /<img src=\{b\.src\} alt=\{b\.alt\}/);
 	for (const n of ['mail', 'telegram', 'alarm']) {
-		assert.match(src, new RegExp(`alt: t\\('start\\.${n}\\.alt'\\)`));
+		assert.match(src, new RegExp(`alt: \\$t\\('start\\.${n}\\.alt'\\)`));
 	}
 });
 
