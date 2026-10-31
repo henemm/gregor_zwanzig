@@ -94,8 +94,10 @@ nur Sprache `en-GB`.
    Punkt-in-Feed-Polygon in `fetch()`. Irland (IE) liegt außerhalb des Umrisses und ist nicht im
    Scope; Nordirland ist enthalten.
 4. **Warnungen.** `fetch()` wie CH/NO/SE: Punkt-in-Polygon gegen die Warngebiete, Höhenband
-   ignoriert, `Update` und `Cancel` ersetzen ihre Vorgänger über `_referenced_ids`, ein unlesbares
-   Polygon markiert den Abruf mit `mark_fetch_incomplete()`. Entwarnung nur über Verschwinden
+   ignoriert, `Update` und `Cancel` ersetzen ihre Vorgänger über `_referenced_ids`. Enthält der
+   Feed keinen einzigen Eintrag mit lesbarem Polygon, markiert das den Abruf mit
+   `mark_fetch_incomplete()`; ein einzelner kaputter Eintrag unter lesbaren färbt nicht jeden Ort
+   als Ausfall (geteilte Polygonregel wie S1/S2). Entwarnung nur über Verschwinden
    (ADR-0090).
 5. **Sprache.** Der Feed führt nur `en-GB`. Der Mapper nimmt `de*`, sonst `en*` und liefert `en-GB`;
    kein Code nötig, per Test belegt.
@@ -133,8 +135,9 @@ Stornoway/Hebriden (58.21, -6.39), Belfast (54.60, -5.93), Cardiff (51.48, -3.18
 - [ ] Test 3 (Treffer): Ort innerhalb eines Warn-Polygons der Probe ⇒ genau diese Warnung mit Stufe,
   Ereignisart und Zeitraum; Ort außerhalb aller Polygone ⇒ leere Liste, `unavailable=False`.
 - [ ] Test 4 (Update/Cancel): `Cancel` ⇒ nicht aktiv; `Update` ersetzt den Vorgänger ⇒ genau einmal.
-- [ ] Test 5 (unlesbares Polygon): ein Eintrag mit kaputtem Polygon ⇒ `mark_fetch_incomplete()`,
-  `unavailable=True`.
+- [ ] Test 5 (unlesbares Polygon): Feed ohne einen einzigen lesbaren Polygon-Eintrag ⇒
+  `mark_fetch_incomplete()`, keine Warnung, `unavailable=True`; ein einzelner kaputter Eintrag unter
+  lesbaren ⇒ gewarnter Ort behält seine Warnung, ruhiger Ort bleibt ruhig, beide `unavailable=False`.
 - [ ] Test 6 (Sprache): Probe nur mit `en-GB` ⇒ Text aus `en-GB`, nicht leer.
 - [ ] Test 7 (Registry): `GB` ist nach PL und vor `DpcSource` registriert; kein neuer Egress-Host.
 - [ ] Test 8 (Umrissdatei): `meteoalarm_outlines_uk.geojson.json` ist nicht leer, trägt
@@ -171,9 +174,11 @@ Stornoway/Hebriden (58.21, -6.39), Belfast (54.60, -5.93), Cardiff (51.48, -3.18
   die aktualisierte genau einmal, ohne die ersetzte Fassung zusätzlich.
   - Test: Test 4.
 
-- **AC-5:** Given ein Warn-Eintrag des UK-Feeds hat ein unlesbares Polygon, When die Warnungen für
-  einen UK-Punkt abgerufen werden, Then meldet das Ergebnis „amtliche Warnungen aktuell nicht
-  abrufbar" (`mark_fetch_incomplete`) statt fälschlich eine warnungsfreie Lage zu zeigen.
+- **AC-5:** Given der UK-Feed enthält keinen einzigen Warn-Eintrag mit lesbarem Polygon, When die
+  Warnungen für einen UK-Punkt abgerufen werden, Then meldet das Ergebnis „amtliche Warnungen
+  aktuell nicht abrufbar" (`mark_fetch_incomplete`) statt fälschlich eine warnungsfreie Lage zu
+  zeigen; Given nur ein einzelner Eintrag ist unlesbar und andere sind lesbar, Then behalten
+  gewarnte Orte ihre Warnung und kein Ort wird als Ausfall gemeldet (wie S2).
   - Test: Test 5.
 
 - **AC-6:** Given der UK-Feed führt nur Texte in `en-GB`, When die Warnung ausgegeben wird, Then ist

@@ -274,17 +274,48 @@ def test_ac4_update_ersetzt_vorgaenger_genau_einmal():
 
 # ───────────────────────────── AC-5 (Test 5) ─────────────────────────────────
 
-def test_ac5_unlesbares_polygon_meldet_nicht_abrufbar():
-    """AC-5: GIVEN ein Eintrag mit unlesbarem Polygon, WHEN die Warnungen fuer einen UK-Punkt
-    abgerufen werden, THEN ``unavailable=True`` (``mark_fetch_incomplete``) statt warnungsfrei.
-    Kontrolle: ohne den kaputten Eintrag ist Manchester ruhig und verfuegbar."""
+def _alle_polygone_unlesbar(feed: dict) -> dict:
+    """Jedes Gebiet jedes Eintrags bekommt ein unlesbares Polygon (Muster: Nordics AC-3)."""
+    for w in feed["warnings"]:
+        for info in w["alert"].get("info") or []:
+            ar = info.get("area") or []
+            for area in (ar if isinstance(ar, list) else [ar]):
+                area["polygon"] = ["nicht,lesbar x,y"]
+    return feed
+
+
+def test_ac5_feed_ohne_lesbares_polygon_meldet_nicht_abrufbar():
+    """AC-5: GIVEN der UK-Feed enthaelt KEINEN einzigen Eintrag mit lesbarem Polygon, WHEN die
+    Warnungen fuer einen UK-Punkt abgerufen werden, THEN ``alerts == []`` und ``unavailable=True``
+    (``mark_fetch_incomplete``) statt warnungsfrei -- geteilte Polygonregel wie CH/NO/SE.
+    Kontrolle: ohne kaputte Polygone ist Manchester ruhig und verfuegbar."""
     _assert_pruefling_aus_diesem_baum()
     assert _quelle().covers(*MANCHESTER) is True
     _, unavailable_ohne = _abruf(MANCHESTER, NOW_NORD, feed=_real_und_synth())
     assert unavailable_ohne is False
 
-    _, unavailable = _abruf(MANCHESTER, NOW_NORD, feed=_real_und_synth("KAPUTT"))
+    alerts, unavailable = _abruf(MANCHESTER, NOW_NORD,
+                                 feed=_alle_polygone_unlesbar(_real_und_synth()))
+    assert alerts == []
     assert unavailable is True
+
+
+def test_ac5_einzelner_kaputter_eintrag_faerbt_nicht_jeden_ort_als_ausfall():
+    """AC-5 (Gegenrichtung, wie S2): GIVEN EIN Eintrag mit unlesbarem Polygon (``SYNTH-KAPUTT``)
+    unter lesbaren Eintraegen, WHEN abgerufen wird, THEN behaelt ein gewarnter Punkt seine Warnung
+    und ein ruhiger Punkt bleibt ruhig -- beide ``unavailable=False``."""
+    _assert_pruefling_aus_diesem_baum()
+    feed = _real_und_synth("KAPUTT")
+    assert any(w["alert"]["identifier"].endswith(".SYNTH-KAPUTT") for w in feed["warnings"]), \
+        "Aufbau: der kaputte Eintrag muss im Feed stehen"
+
+    alerts, unavailable = _abruf(INVERNESS, NOW_NORD, feed=feed)
+    assert len(alerts) == 1, f"Inverness muss seine Warnung behalten: {alerts}"
+    assert unavailable is False
+
+    alerts, unavailable = _abruf(MANCHESTER, NOW_NORD, feed=_real_und_synth("KAPUTT"))
+    assert alerts == []
+    assert unavailable is False
 
 
 # ───────────────────────────── AC-6 (Test 6) ─────────────────────────────────

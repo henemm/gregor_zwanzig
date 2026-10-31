@@ -70,6 +70,10 @@ register_official_alert_source(MeteoAlarmFeedSource("ES"))
 register_official_alert_source(MeteoAlarmFeedSource("PT"))
 register_official_alert_source(MeteoAlarmFeedSource("NL"))
 register_official_alert_source(MeteoAlarmFeedSource("PL"))
+# Issue #1442 S3b: GB direkt NACH PL, VOR DpcSource (gleicher Tie-Break "zuerst
+# registriert gewinnt", #1427 S2). Polygonweg wie CH/NO/SE; keine Nationalquelle
+# ueberlappt, an Grenzpunkten (Irland) liefert GB nur Warnungen seiner Feed-Polygone.
+register_official_alert_source(MeteoAlarmFeedSource("GB"))
 register_official_alert_source(DpcSource())
 # Issue #1441 (ADR-0089): Lawinen-Lagebericht als LETZTE Quelle -- eigene
 # Gefahrenart `avalanche_bulletin`, konkurriert mit keiner Bestandsquelle;

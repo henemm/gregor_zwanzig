@@ -70,6 +70,8 @@ _FEED_PATHS: dict[str, str] = {
     "PT": "/api/v1/warnings/feeds-portugal",
     "NL": "/api/v1/warnings/feeds-netherlands",
     "PL": "/api/v1/warnings/feeds-poland",
+    # Issue #1442 S3b: wie CH/NO/SE -- nur Polygone, kein Geocode.
+    "GB": "/api/v1/warnings/feeds-united-kingdom",
 }
 # Issue #1681: Geocode-Art je Land -- DE ordnet ueber die DWD-``WARNCELLID``
 # zu (1:1 im Feed, traegt die eingecheckte Kreisgeometrie), alle anderen
@@ -384,7 +386,9 @@ def _alerts_for_zone(
 _DATA_DIR = Path(__file__).resolve().parent / "data"
 _ch_regions = RegionMapper(_SLF_REGIONS_FILE)
 _nordic_outlines = RegionMapper(_DATA_DIR / "meteoalarm_outlines_nordics.geojson.json")
-_POLYGON_COUNTRIES = ("CH", "NO", "SE")
+# Issue #1442 S3b: GB ueber einen eigenen aufgeweiteten Umriss (inkl. Nordirland).
+_uk_outline = RegionMapper(_DATA_DIR / "meteoalarm_outlines_uk.geojson.json")
+_POLYGON_COUNTRIES = ("CH", "NO", "SE", "GB")
 # Zonenlaender FI (Issue #1442 S2), ES (S3) und PT/NL/PL (S3a): EMMA_ID-
 # Zonengeometrie aus MeteoAlarm-geocodes.json, EIN gemeinsamer Zonenweg
 # (data/README.md).
@@ -526,9 +530,11 @@ def _cached_feed_without_network(country: str) -> Optional[dict]:
 
 
 def _in_outline(country: str, lat: float, lon: float) -> bool:
-    """CH: SLF-Regionen; NO/SE: aufgeweiteter Landesumriss (lieber zu gross)."""
+    """CH: SLF-Regionen; NO/SE/GB: aufgeweiteter Landesumriss (lieber zu gross)."""
     if country == "CH":
         return bool(_ch_regions.regions_at(lat, lon))
+    if country == "GB":
+        return country in _uk_outline.regions_at(lat, lon)
     return country in _nordic_outlines.regions_at(lat, lon)
 
 
@@ -559,11 +565,13 @@ class MeteoAlarmFeedSource:
     ``"meteoalarm"`` (Spec Implementation Details Punkt 8): nur der interne
     Abrufweg aendert sich. Ein Code, eine Instanz je Land ueber den
     Konstruktor-Parameter ``country`` (IT/AT/DE eigene Zonenaufloesung,
-    FI/ES/PT/NL/PL gemeinsamer Zonenweg, CH/NO/SE Punkt-in-Polygon)."""
+    FI/ES/PT/NL/PL gemeinsamer Zonenweg, CH/NO/SE/GB Punkt-in-Polygon)."""
 
     def __init__(
         self,
-        country: Literal["IT", "AT", "DE", "CH", "NO", "SE", "FI", "ES", "PT", "NL", "PL"],
+        country: Literal[
+            "IT", "AT", "DE", "CH", "NO", "SE", "FI", "ES", "PT", "NL", "PL", "GB"
+        ],
     ) -> None:
         self.country = country
 
