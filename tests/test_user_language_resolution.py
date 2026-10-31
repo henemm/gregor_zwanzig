@@ -76,3 +76,9 @@ def test_ac6_ohne_data_dir_gilt_die_konfigurierte_datenwurzel(
     assert resolve_user_lang("anna") == "en"
     assert resolve_user_lang("bert") == "de"
     assert resolve_user_lang("../bob") == "de"
+
+
+def test_ac6_kennung_mit_zeilenumbruch_bleibt_deutsch(tmp_path: Path) -> None:
+    # F001: re.match mit "$" akzeptiert ein abschliessendes "\n" -- fullmatch nicht.
+    _schreibe(tmp_path, "bob\n", json.dumps({"id": "bob", "language": "en"}))
+    assert resolve_user_lang("bob\n", data_dir=tmp_path) == "de"
