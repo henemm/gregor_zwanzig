@@ -1,0 +1,23 @@
+
+----- betreff -----
+[GR20 Golden] 🏁 Destination · Rain in 25 min
+----- klartext -----
+Rain in 25 min
+
+Radar nowcast
+
+Where & when: 🏁 Destination · from 06:25
+Intensity: Heavy rain
+Source: Radar (DWD)
+
+As of today 06:00
+Cooldown: you receive this alert at most once in 150 minutes. Alerts from other sources (official warning/radar) are not affected by this cooldown.
+Addendum to the official warning
+
+Rain/thunderstorm alert (radar) · Radar (DWD)
+----- telegram -----
+<b>GR20 Golden · 🏁 Destination · Rain in 25 min</b>
+Addendum to the official warning
+06:25 · Heavy rain · Radar (DWD)
+----- sms -----
+Erg Ziel: R2.5@6:25

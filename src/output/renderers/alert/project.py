@@ -209,16 +209,20 @@ def _fmt_onset_at(epoch_seconds: float, tz) -> str:
     return local_fmt(datetime.fromtimestamp(epoch_seconds, timezone.utc), tz)
 
 
-def _onset_shift_text(delta_seconds: float) -> str:
+def _onset_shift_text(delta_seconds: float, *, lang: str = "de") -> str:
     """Verschiebung als WORT, nicht als Vorzeichen: "2 h früher"/"2 h später".
 
     Positives Delta heisst spaeter (der Beginn wandert nach hinten). Der
     Betrag steht ohne Vorzeichen -- die Richtung traegt das Wort.
     """
+    from i18n import t
+
     stunden = abs(delta_seconds) / 3600.0
-    betrag = (f"{stunden:.0f}" if abs(stunden - round(stunden)) < 0.05
-              else f"{stunden:.1f}".replace(".", ","))
-    return f"{betrag} h {'später' if delta_seconds > 0 else 'früher'}"
+    betrag = f"{stunden:.0f}" if abs(stunden - round(stunden)) < 0.05 else f"{stunden:.1f}"
+    if lang != "en":  # Issue #2667: Dezimalpunkt nur englisch (ADR-0104 Nr. 6)
+        betrag = betrag.replace(".", ",")
+    key = "alarm.beginn.spaeter" if delta_seconds > 0 else "alarm.beginn.frueher"
+    return t(key, lang, betrag=betrag)
 
 
 def _to_onset_shift_event(
@@ -236,6 +240,7 @@ def _to_onset_shift_event(
         from_time=_fmt_onset_at(ch.old_value, tz),
         to_time=_fmt_onset_at(ch.new_value, tz),
         shift_text=_onset_shift_text(ch.delta),
+        shift_seconds=ch.delta,  # Issue #2667: Langform in Nutzersprache
         km_from=km_from, km_to=km_to,
         segment_id=segment_id, location_label=location_label,
         km_measured=km_measured,  # Issue #2036

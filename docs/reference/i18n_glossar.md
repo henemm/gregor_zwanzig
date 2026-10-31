@@ -124,3 +124,14 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | PAUSE | PAUSE | |
 | STRECKE | ROUTE | |
 | KUERZEL | CODES | heute schon so (#2417) |
+
+## Abweichungs- und Regen-Alarme (#2667)
+
+| Deutsch | Englisch | Hinweis |
+|---|---|---|
+| Ziel (Etappenziel im Alarm) | destination | `🏁 Destination`; derselbe Schlüssel `alarm.segment.ziel` wie im Radar-Validator |
+| stärkste Stunde | peak hour | Zeitpunkt des stärksten Werts |
+| Luftmasse | air mass | Gewitter-Zeile bis „leicht“ (#2176) |
+| Radar-Nowcast | radar nowcast | Badge der Regen-Alarm-Mail |
+| Beginn (Regen-/Gewitter-Beginn) | onset | „Niedersch-Beginn“ = *Precip onset* |
+| Cooldown | cooldown | „höchstens einmal in“ = *at most once in* |
