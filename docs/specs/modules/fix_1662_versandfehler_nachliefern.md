@@ -56,7 +56,7 @@ zieht den Scope daraus.
 | `notification_service.send_trip_report` | function | Kanal-Reihenfolge E-Mail → SMS → Telegram; alle drei Kanäle werden jetzt fehlertolerant, eine Ausnahme entsteht nur noch anhand der Zustellbilanz am Funktionsende |
 | ADR-0018 | decision | Nicht-Kaschieren-Invariante — diese Scheibe erfüllt eine dort bereits vermerkte Folgepflicht, ändert die Entscheidung selbst nicht |
 | `fix_1629_briefing_anker_versandfehler` | module | direkte Vorgänger-Spec; liefert den Anker- und Diagnose-Mechanismus, an den hier angeknüpft wird |
-| `dispatch_orchestrator.md:95` | module | dokumentierte, PO-getragene Divergenz `pre_pass` Trip (Catch-up) vs. Compare (Auto-Pause) — bleibt in dieser Scheibe unverändert bestehen |
+| `dispatch_orchestrator.md:95` | module | ~~dokumentierte, PO-getragene Divergenz `pre_pass` Trip (Catch-up) vs. Compare (Auto-Pause) — bleibt in dieser Scheibe unverändert bestehen~~ **Abgelöst durch #2587** (`feat_2587_compare_briefing_nachholen.md`): Compare-`pre_pass` = Auto-Pause, danach Nachhol-Schleife |
 
 ## Estimated Scope
 
@@ -70,11 +70,14 @@ zieht den Scope daraus.
 - **Teilzustellung im Empfänger-Guard** (`src/output/channels/email.py`) — ein blockierter
   Empfänger reißt weiterhin alle mit. Eigene Scheibe. Nebenbefund: für Trip-Briefings ist `mail_to`
   einwertig (`src/app/config.py:122`), das betrifft also vor allem den Ortsvergleich.
-- **Nachhol-Mechanik für den Ortsvergleich** — dort existiert bis heute kein
+- **Abgelöst durch #2587** (`docs/specs/modules/feat_2587_compare_briefing_nachholen.md`): der
+  Ortsvergleich hat jetzt eine eigene Nachhol-Schleife über das geteilte Modul
+  `services/pending_briefings.py`; die Trip-ACs dieser Spec gelten unverändert. Ursprünglicher
+  Wortlaut: ~~**Nachhol-Mechanik für den Ortsvergleich** — dort existierte bis dahin kein
   Pending-Marker-Mechanismus (`CompareDispatchStrategy.pre_pass` macht nur Auto-Pause). Diese
   Scheibe erweitert bewusst nur den bestehenden Trip-Mechanismus; die Vormerk-Entscheidung selbst
   liegt trotzdem im geteilten Baustein, damit ein künftiger Compare-Nachhol-Mechanismus sie
-  wiederverwenden kann.
+  wiederverwenden kann.~~
 - **Die Ursache des Guard-Fehlschlags vom 07./08.08.** selbst (warum ein Empfänger an zwei Slots
   keinem Nutzerprofil zugeordnet werden konnte) — ungeklärt, eigenes Thema.
 - **Zwei Infrastruktur-Nacharbeiten**, gehen per MQ-Nachricht an `infra`, kein Python-Defekt: (a)
@@ -421,3 +424,9 @@ Logik nötig. **Nicht** in `tests/tdd/test_issue_1012_no_data_guard.py` ablegen 
   formuliert („kein einziger konfigurierter Kanal hat zugestellt"), die ursprünglichen
   Implementation Details erfüllten sie nur unvollständig. Zusätzlich eine Known Limitation zur
   Diagnose-Spur ergänzt, die weiterhin nur den Ausnahme-Weg abdeckt.
+- 2026-10-31: Issue #2587 löst die Compare-Ausklammerung (Abschnitt „Nicht in dieser Scheibe“,
+  Dependency-Zeile `dispatch_orchestrator.md:95`) ab. Die Marker-Operationen liegen jetzt im
+  geteilten Modul `services/pending_briefings.py`, die Trip-Methoden delegieren mit unveränderter
+  Signatur und treffen nur Trip-Einträge (kein `kind` oder `kind == "route"`). Der Hinweis
+  „Nachgeliefert — die Zustellung um HH:00 ist fehlgeschlagen“ nennt die Stunde jetzt zweistellig
+  (`07:00`, gemeinsamer Baustein mit dem Ortsvergleich). Trip-ACs unverändert.

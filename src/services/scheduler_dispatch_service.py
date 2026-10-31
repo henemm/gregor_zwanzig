@@ -190,6 +190,216 @@ def _dispatch_due_preset(
         return False
 
 
+# ---------------------------------------------------------------------------
+# Issue #2587: Nachhol-Vermerke fuer den Ortsvergleich (Trip-Paritaet #1662)
+# ---------------------------------------------------------------------------
+
+
+def _compare_slot(preset: dict, tage_ab_ortstag: int, report_type: str | None,
+                  slot_hour: int | None) -> tuple[str, int | None]:
+    """Slot (``morning``/``evening``) und Slot-Stunde eines Versands.
+
+    Ein Nachholversand reicht beides aus dem Vermerk durch (sonst gaelte ein
+    Abend-Nachholer nach Mitternacht als ``morning``, AC-8); der regulaere
+    Versand leitet sie aus dem Versatz und den Preset-Slots ab.
+    """
+    from services.compare_slot_scheduler import resolve_preset_slots
+
+    rt = report_type or ("evening" if tage_ab_ortstag else "morning")
+    if slot_hour is None:
+        try:
+            slots = resolve_preset_slots(preset)
+            slot_hour = (slots.evening_time if rt == "evening" else slots.morning_time).hour
+        except (ValueError, TypeError):
+            slot_hour = None
+    return rt, slot_hour
+
+
+def _mark_compare_undelivered(user_id: str, preset_id: str, report_type: str,
+                              target_date: date, slot_hour: int | None,
+                              retry_of: dict | None = None) -> None:
+    """Vermerkt einen vollstaendig gescheiterten Zeitplan-Versand (AC-1/AC-2).
+
+    ``retry_of`` (nur no_weather-Wiederholung, F008): ``created_at`` des
+    Originals bleibt, ``attempts`` + 1 -- der Vermerk altert ehrlich (ADR-0018).
+
+    Nur fuer echte Nutzer -- nie unter einem Rueckfall-Konto. Ein neuer
+    Fehlschlag ersetzt den Vermerk desselben ``(preset_id, report_type)``
+    (frischer ``created_at``, ``attempts`` 0, AC-6). Fail-soft: ein
+    Schreibfehler darf den urspruenglichen Versandfehler nicht ueberdecken.
+    """
+    from datetime import timezone as _tz
+
+    from services import pending_briefings as pb
+
+    if not user_id or user_id == "default" or not preset_id:
+        return
+    marker = {
+        "kind": pb.KIND_VERGLEICH, "preset_id": preset_id, "report_type": report_type,
+        "date": target_date.isoformat(), "slot_hour": slot_hour,
+        "reason": pb.DISPATCH_ERROR, "failed_segment_ids": [], "attempts": 0,
+        "created_at": _datetime.now(_tz.utc).isoformat(),
+    }
+    if retry_of is not None:
+        marker["created_at"] = retry_of.get("created_at") or marker["created_at"]
+        marker["attempts"] = int(retry_of.get("attempts") or 0) + 1
+    try:
+        pb.upsert_entry(pb.pending_path(user_id), lambda e: pb.is_compare_entry(e)
+                        and e.get("preset_id") == preset_id
+                        and e.get("report_type") == report_type, marker)
+    except Exception:
+        logger.warning("Nachhol-Vermerk fuer Preset %s nicht schreibbar", preset_id,
+                       exc_info=True)
+
+
+def _clear_compare_dispatch_error(user_id: str, preset_id: str, report_type: str,
+                                  target_date: date) -> None:
+    """Regulaerer Erfolg raeumt die Versandfehler-Vermerke dieses Presets mit
+    gleichem Slot ODER gleichem Zieltag (AC-11, AC-9a). Fail-soft."""
+    from services import pending_briefings as pb
+
+    tag = target_date.isoformat()
+
+    def _match(e: dict) -> bool:
+        return (pb.is_compare_entry(e) and e.get("preset_id") == preset_id
+                and e.get("reason") == pb.DISPATCH_ERROR
+                and (e.get("report_type") == report_type or e.get("date") == tag))
+
+    try:
+        pb.remove_entries(pb.pending_path(user_id), _match)
+    except Exception:
+        logger.warning("Nachhol-Vermerk fuer Preset %s nicht raeumbar", preset_id,
+                       exc_info=True)
+
+
+def _apply_catchup_hint(settings: Settings, user_id: str, hint: str | None,
+                        html_body: str, text_body: str, telegram_text: str):
+    """Stellt den Nachhol-Hinweis ueber den geteilten Praefix-Baustein des
+    Trips voran (E-Mail HTML/Plain, Telegram; SMS bewusst nicht)."""
+    if not hint:
+        return html_body, text_body, telegram_text
+    from types import SimpleNamespace
+
+    from services.notification_service import NotificationService
+
+    report = SimpleNamespace(email_html=html_body, email_plain=text_body,
+                             telegram_bubbles=[telegram_text] if telegram_text else [])
+    NotificationService(settings, user_id)._prepend_hint(report, hint)
+    tg = report.telegram_bubbles[0] if report.telegram_bubbles else telegram_text
+    return report.email_html, report.email_plain, tg
+
+
+def _compare_marker_groups(user_id: str) -> dict:
+    """Ortsvergleich-Vermerke des Nutzers, gruppiert je ``(preset_id, date)``.
+
+    Je Preset und Zieltag wird hoechstens EINMAL nachgeholt (AC-9-Grundsatz:
+    eine Zustellung je Zieltag); Vertreter ist der Vermerk mit der fruehesten
+    ``slot_hour`` (erstes Element jeder Gruppe).
+    """
+    from services import pending_briefings as pb
+
+    groups: dict = {}
+    for e in pb.entries_matching(pb.pending_path(user_id), pb.is_compare_entry):
+        groups.setdefault((e.get("preset_id"), e.get("date")), []).append(e)
+    for members in groups.values():
+        members.sort(key=lambda e: e.get("slot_hour") if isinstance(e.get("slot_hour"), int) else 99)
+    return groups
+
+
+def _catchup_verdict(preset: dict | None, tag: str, ortstag: date | None,
+                     due_keys: set) -> str:
+    """``drop`` (verwerfen ohne Versand), ``wait`` (regulaerer Slot desselben
+    Presets mit gleichem Zieltag ist jetzt faellig) oder ``send``."""
+    from services.alert_briefing_anchor import briefing_target_day_is_current
+    from services.compare_alert_guard import is_silenced
+
+    if preset is None or ortstag is None or is_silenced(preset, ohne_end_date=True):
+        return "drop"  # AC-10: geloescht/stillgelegt
+    end_date = preset.get("end_date")
+    try:
+        if end_date and date.fromisoformat(end_date) < ortstag:
+            return "drop"  # AC-10: abgelaufen (Ortstag, ADR-0044)
+    except (TypeError, ValueError):
+        return "drop"  # korrupt -> der Slot-Scheduler sendet es ebenfalls nie
+    if not briefing_target_day_is_current(tag, today=ortstag):
+        return "drop"  # AC-7: Zieltag in Ortszeit vorbei
+    if (preset.get("id"), tag) in due_keys:
+        return "wait"  # AC-9: der regulaere Versand ist der letzte Versuch
+    return "send"
+
+
+def _send_catchup(preset: dict, marker: dict, ortstag: date, settings: Settings,
+                  user_id: str, data_root: str, all_locations: list) -> str:
+    """Ein Nachholversand mit den Werten des Vermerks; liefert den Ausgang.
+
+    Scheitert er vollstaendig, schreibt der Fehlerpfad in
+    ``send_one_compare_preset`` einen frischen Vermerk (AC-6).
+    """
+    from services import pending_briefings as pb
+
+    target = date.fromisoformat(marker["date"])
+    try:
+        send_one_compare_preset(
+            preset, settings, user_id, data_root, all_locations_cache=all_locations,
+            # Tagesbezug aus EINER Zeitabfrage (Vertrag #1661).
+            target_date=target, tage_ab_ortstag=(target - ortstag).days,
+            report_type=marker.get("report_type"), slot_hour=marker.get("slot_hour"),
+            catchup_hint=pb.dispatch_error_hint(marker.get("slot_hour")),
+            weather_failure_as_outcome=True,
+        )
+        return "sent"
+    except SendOutcomeError as e:
+        if e.code == "no_weather":  # F008: voruebergehend -> naechste Stunde erneut
+            _mark_compare_undelivered(user_id, preset.get("id", ""), marker.get("report_type"),
+                                      target, marker.get("slot_hour"), retry_of=marker)
+        return e.code
+    except Exception as e:
+        logger.error("Compare-Nachholversand %s gescheitert: %s", preset.get("id", "?"), e)
+        return "error"
+
+
+def process_compare_pending_markers(
+    presets: list, user_id: str, data_root: str, settings: Settings,
+    now_utc: _datetime, all_locations: list, due: list,
+) -> tuple[int, int]:
+    """Issue #2587: Nachhol-Schleife des Ortsvergleichs (``pre_pass``).
+
+    Returns ``(sent, failed)`` -- ``no_channels`` zaehlt neutral (Trip-Paritaet).
+    """
+    from services import pending_briefings as pb
+    from services.compare_slot_scheduler import preset_ortstag
+
+    groups = _compare_marker_groups(user_id)
+    if not groups:
+        return 0, 0
+    by_preset = {p.get("id"): p for p in presets}
+    by_loc = {loc.id: loc for loc in all_locations}
+    due_keys = {(item[0].get("id"), item[1].isoformat()) for item in due}
+    sent = failed = 0
+    for (pid, tag), members in groups.items():
+        preset = by_preset.get(pid)
+        try:
+            ortstag = preset_ortstag(preset, by_loc, now_utc) if preset else None
+            verdict = _catchup_verdict(preset, tag, ortstag, due_keys)
+            if verdict == "wait":
+                continue
+            # Vor dem Senden entfernen (kein Doppelversand bei Absturz, AC-6).
+            pb.remove_entries(pb.pending_path(user_id), lambda e, p=pid, t=tag: (
+                pb.is_compare_entry(e) and e.get("preset_id") == p and e.get("date") == t))
+            if verdict == "drop":
+                continue
+            outcome = _send_catchup(preset, members[0], ortstag, settings, user_id,
+                                    data_root, all_locations)
+        except Exception:
+            report_unit_failure("Compare-Nachholen", str(pid))
+            outcome = "error"
+        if outcome == "sent":
+            sent += 1
+        elif outcome != "no_channels":
+            failed += 1
+    return sent, failed
+
+
 def run_compare_presets_daily(
     user_id: str,
     data_root: str | None = None,
@@ -474,8 +684,18 @@ def send_one_compare_preset(
     weather_failure_as_outcome: bool = False,
     restrict_to_channel: str | None = None,
     orte_ohne_wetter: list | None = None,
+    report_type: str | None = None,
+    slot_hour: int | None = None,
+    catchup_hint: str | None = None,
 ) -> tuple:
     """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
+
+    Issue #2587: ``report_type``/``slot_hour``/``catchup_hint`` setzt nur der
+    Nachholversand (Werte aus dem Vermerk, Hinweis „Nachgeliefert — …");
+    ``None`` = Ableitung wie bisher. Ein vollstaendig gescheiterter
+    Zeitplan-Versand (Ausnahme oder ``channels_unreachable``, nie
+    ``on_demand``) hinterlaesst einen Nachhol-Vermerk, ein regulaerer Erfolg
+    raeumt ihn.
 
     Gemeinsame Versandlogik fuer Daily-Loop und Einzelversand (#627).
     `target_date` (#1232 Scheibe 2a): der absolute Zieltag (Betreff,
@@ -593,6 +813,8 @@ def send_one_compare_preset(
         zone = first_resolvable_tz(locations, context_label=f"Preset {preset_id}")
         target_date = local_dt(_datetime.now(_timezone.utc), zone).date()
         tage_ab_ortstag = 0
+    # Issue #2587: Slot + Stunde fuer Vermerk und Versand-Historie.
+    report_type, slot_hour = _compare_slot(preset, tage_ab_ortstag, report_type, slot_hour)
 
     profil_str = preset.get("profil", "").lower()
     profile = _parse_activity_profile(profil_str)
@@ -730,6 +952,10 @@ def send_one_compare_preset(
                 preset_name=name,
                 unresolved_count=opts.unresolved_by_channel.get("telegram", 0),
             )
+        # Issue #2587: Nachhol-Hinweis (nur Nachholversand), geteilter Baustein.
+        html_body, text_body, _telegram_text = _apply_catchup_hint(
+            settings, user_id, catchup_hint, html_body, text_body, _telegram_text,
+        )
         send_result = NotificationService(settings, user_id).send_compare_report(
             subject=subject,
             html_body=html_body,
@@ -752,6 +978,8 @@ def send_one_compare_preset(
         record_briefing_dispatch_failure(
             user_id=user_id, kind="vergleich", entity_id=preset_id, error=exc,
         )
+        if not on_demand:  # Issue #2587 AC-1/AC-3: nur der Zeitplan-Versand
+            _mark_compare_undelivered(user_id, preset_id, report_type, target_date, slot_hour)
         _anchor_and_reset()
         raise
 
@@ -771,16 +999,20 @@ def send_one_compare_preset(
             user_id=user_id, kind="vergleich", entity_id=preset_id,
             error=SendOutcomeError(outcome),
         )
+        _mark_compare_undelivered(user_id, preset_id, report_type, target_date, slot_hour)
     if outcome != "sent":
         raise SendOutcomeError(outcome)
+    if not on_demand:  # Issue #2587 AC-11/AC-9a
+        _clear_compare_dispatch_error(user_id, preset_id, report_type, target_date)
 
     # Issue #2281 (AC-1): Versand-Historie -- derselbe Schreib-Helfer wie der
-    # Trip; Kanaele = tatsaechlich zugestellte, Slot aus dem Versatz.
+    # Trip; Kanaele = tatsaechlich zugestellte. Slot: aus dem Versatz bzw.
+    # beim Nachholer aus dem Vermerk (Issue #2587 AC-8).
     from services.briefing_log import append_briefing_log
 
     append_briefing_log(
         user_id, "compare", preset_id,
-        "evening" if tage_ab_ortstag else "morning",
+        report_type,
         send_result.sent_channels, on_demand,
         mask_addr_for_pii_log(default_to)
         if default_to and "email" in send_result.sent_channels else None,
