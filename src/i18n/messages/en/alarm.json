@@ -1,1 +1,11 @@
-{}
+{
+  "alarm.radar.intensitaet.leicht": "Light rain",
+  "alarm.radar.intensitaet.maessig": "Moderate rain",
+  "alarm.radar.intensitaet.stark": "Heavy rain",
+  "alarm.radar.intensitaet.hagel": "Heavy hail",
+  "alarm.radar.intensitaet.gewitter": "Thunderstorm",
+  "alarm.radar.intensitaet.regen": "Rain",
+  "alarm.radar.cooldown_praefix": "at most once in",
+  "alarm.segment.etappe": "Stage {n}",
+  "alarm.segment.ziel": "Destination"
+}

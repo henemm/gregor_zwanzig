@@ -1,1 +1,11 @@
-{}
+{
+  "alarm.radar.intensitaet.leicht": "Leichter Regen",
+  "alarm.radar.intensitaet.maessig": "Mäßiger Regen",
+  "alarm.radar.intensitaet.stark": "Starker Regen",
+  "alarm.radar.intensitaet.hagel": "Starker Hagel",
+  "alarm.radar.intensitaet.gewitter": "Gewitter",
+  "alarm.radar.intensitaet.regen": "Regen",
+  "alarm.radar.cooldown_praefix": "höchstens einmal in",
+  "alarm.segment.etappe": "Etappe {n}",
+  "alarm.segment.ziel": "Ziel"
+}

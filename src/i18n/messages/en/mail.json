@@ -1,1 +1,5 @@
-{}
+{
+  "mail.ausblick.spalte_tag": "Day",
+  "mail.nacht.am_ziel": "Night at destination ({hoehe}m)",
+  "mail.pille.kein_regen": "no rain"
+}
