@@ -44,3 +44,17 @@ def test_englische_referenz_byte_gleich(rig):
     text = alle_texte(rig, "en")
     _schreiben("en", text)
     assert text.encode("utf-8") == golden_pfad("en").read_bytes()
+
+
+@pytest.mark.parametrize("html", [True, False], ids=["html", "plain"])
+@pytest.mark.parametrize("kw,soll", [
+    ({}, "de"), ({"lang": "de"}, "de"), ({"lang": "en"}, "en"),
+    ({"lang": "fr"}, "de"), ({"lang": None}, "de"),
+])
+def test_kopf_x_gz_lang_in_beiden_zweigen(html, kw, soll):
+    """AC-3: der Kopf steht immer genau einmal, nur ``de`` oder ``en``."""
+    from output.channels.email import build_mime_message
+
+    msg = build_mime_message("Betreff", "<p>Text</p>" if html else "Text", "a@henemm.com",
+                             "b@henemm.com", None, html, None, **kw)
+    assert msg.get_all("X-GZ-Lang") == [soll]

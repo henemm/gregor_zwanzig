@@ -141,9 +141,9 @@ def trip(user_id: str):
     etappe = Stage(
         id="S3", name="Etappe 3", date=START.date(),
         waypoints=[
-            Waypoint(id="W1", name="Start", lat=42.2, lon=9.05, elevation_m=400,
+            Waypoint(id="W1", name="Calenzana", lat=42.2, lon=9.05, elevation_m=400,
                      arrival_calculated="09:00"),
-            Waypoint(id="W2", name="Ziel", lat=42.25, lon=9.09, elevation_m=1200,
+            Waypoint(id="W2", name="Ortu", lat=42.25, lon=9.09, elevation_m=1200,
                      arrival_calculated="13:00"),
         ],
     )

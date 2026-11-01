@@ -32,13 +32,14 @@ from tests.helpers.versand_fixture import TZ, anfrage, nutzer_anlegen, rig_start
 
 KATALOG = Path(__file__).resolve().parents[1] / "src" / "i18n" / "messages"
 # Daten des Aufrufers / Eigennamen (keine Renderertexte).
-_DATEN = ("Etappe 3", "GR20", "Hyeres", "Cote", "Sturm", "Start", "Ziel",
-          "GeoSphere Austria", "Calenzana")
+_DATEN = ("Etappe 3", "GR20", "Hyeres", "Toulon", "Cote", "Orages", "Calenzana", "Ortu")
 # Fremdes Paket: Antwort-Kommando-Block im Briefing (Inbound, P10 #2673).
 _FREMDE_ZEILEN = ("Wetter der heutigen Etappe", "Wetter der morgigen Etappe",
                   "Nowcast Regen/Gewitter", "Gewittergefahr heutige Etappe",
                   "Regen-Ereignisfl", "Etappen um N Tage", "Briefings für Dauer",
                   "Nächstes Briefing", "Kürzel-Bedeutungen", "Briefing jetzt senden")
+_BEFEHLE = {"HEUTE", "MORGEN", "JETZT", "GEWITTER", "STRECKE", "RUHETAG", "PAUSE", "SKIP",
+            "KUERZEL", "REPORT"}  # Befehlswoerter (P10), z. B. als Telegram-Knopf
 
 
 @pytest.fixture
@@ -59,7 +60,7 @@ def _fragmente() -> set[str]:
     for wert in de.values():
         for teil in re.split(r"\{[a-z_]+\}", wert):
             teil = teil.strip(" :—–·.,;!?()[]+-/|%°⚠️")
-            if len(teil) >= 4 and teil not in en_alle and not teil.isupper():
+            if len(teil) >= 4 and teil not in en_alle:
                 out.add(teil)
     return out
 
@@ -71,8 +72,9 @@ def deutsch(text: str) -> list[str]:
     for d in _DATEN:
         text = text.replace(d, "<daten>")
     zeilen = [z for z in text.splitlines()
-              if z.strip() and not any(f in z for f in _FREMDE_ZEILEN)]
-    return [z for z in zeilen if re.search(r"[äöüÄÖÜß]", z)
+              if z.strip() and not any(f in z for f in _FREMDE_ZEILEN)
+              and z.split()[0] not in _BEFEHLE]
+    return [z for z in zeilen if re.search(r"[äöüÄÖÜß]|\bOrt\b", z)
             or any(re.search(rf"(?<![A-Za-z]){re.escape(f)}(?![a-z])", z) for f in _FRAGMENTE)]
 
 
@@ -99,10 +101,17 @@ def _telegramme(rig) -> str:
                      for p in rig.angenommen["telegram"])
 
 
-def _warnung(level: int = 2):
+def _warnung(level: int = 2, source: str = "meteo_forets"):
+    """Quelle mit sprachabhaengigem Anzeigenamen (``Météo-France (Waldbrand)``)."""
     from services.official_alerts.models import OfficialAlert
 
-    return OfficialAlert(source="geosphere_warn", hazard="wind_gust", level=level, label="Sturm")
+    return OfficialAlert(source=source, hazard="thunderstorm", level=level, label="Orages")
+
+
+def _entwarnungen(*ziele: list[str]) -> list:
+    """Je Ziel eine Entwarnung 3 -> 1 (Quelle mit sprachabhaengigem Namen)."""
+    return [SimpleNamespace(kind="lowered", alert=_warnung(1, "massif_closure"), scope_ids=z,
+                            old_rank=3, new_rank=1, old_level=3, new_level=1) for z in ziele]
 
 
 # ------------------------------------------------------------ Versandfaelle
@@ -123,13 +132,34 @@ def _briefing_kompakt(rig, dienst, uid, lang):
 def _amtlich_trip(rig, dienst, uid, lang):
     from tests.helpers.versand_fixture import trip
 
-    dienst.send_official_alert(trip(uid), [(_warnung(), ["1"])], {"email", "telegram"})
+    dienst.send_official_alert(trip(uid), [(_warnung(), ["1", "Ziel"])], {"email", "telegram"},
+                               allclears=_entwarnungen(["Ziel"]))
+
+
+def _entwarnung_trip(rig, dienst, uid, lang):
+    from tests.helpers.versand_fixture import trip
+
+    dienst.send_official_alert(trip(uid), [], {"email", "telegram"},
+                               allclears=_entwarnungen(["1"], []))
 
 
 def _amtlich_vergleich(rig, dienst, uid, lang):
     ort = SimpleNamespace(id="loc-1", name="Hyeres", lat=43.12, lon=6.13, timezone="Europe/Paris")
     dienst.send_multi_location_official_alert(
-        "Cote", [ort], [(_warnung(3), ["loc-1"])], {"email", "telegram"})
+        "Cote", [ort], [(_warnung(3), ["loc-1"])], {"email", "telegram"})  # nur Warnung
+
+
+def _entwarnung_vergleich(rig, dienst, uid, lang):
+    orte = [SimpleNamespace(id=f"loc-{i}", name=n, lat=43.12, lon=6.13, timezone="Europe/Paris")
+            for i, n in ((1, "Hyeres"), (2, "Toulon"))]
+    dienst.send_multi_location_official_alert(
+        "Cote", orte, [], {"email", "telegram"}, allclears=_entwarnungen(["loc-1"], ["loc-2"]))
+
+
+def _entwarnung_vergleich_ohne_ort(rig, dienst, uid, lang):
+    ort = SimpleNamespace(id="loc-1", name="Hyeres", lat=43.12, lon=6.13, timezone="Europe/Paris")
+    dienst.send_multi_location_official_alert(
+        "Cote", [ort], [(_warnung(3), ["loc-1"])], {"email"}, allclears=_entwarnungen([]))
 
 
 def _abweichung(rig, dienst, uid, lang):
@@ -138,7 +168,27 @@ def _abweichung(rig, dienst, uid, lang):
     dienst._dispatch_alert_message(
         alert_msg=nachricht("abweichung_wind", lang),  # Referenzzeit kommt vom Aufrufer (P9b)
         effective_channels={"email", "telegram"},
-        official_notices=[(_warnung(), ["3"])], alert_tz=TZ)
+        official_notices=[(_warnung(), ["3", "Ziel"])], alert_tz=TZ)
+
+
+def _abweichung_vergleich(rig, dienst, uid, lang):
+    """Ortsvergleich-Abweichung: eine Telegram-Sprechblase je Ort."""
+    from datetime import datetime, timezone
+
+    from app.models import ChangeSeverity, SegmentWeatherSummary, WeatherChange
+    from services.point_weather import PointWeatherData
+
+    zeit = datetime(2026, 10, 29, 13, 0, tzinfo=timezone.utc)
+    entities = []
+    for name in ("Hyeres", "Toulon"):
+        punkt = PointWeatherData(id=name.lower(), name=name, lat=43.12, lon=6.13, timeseries=None,
+                                 aggregated=SegmentWeatherSummary(), fetched_at=zeit,
+                                 provider="openmeteo")
+        wechsel = WeatherChange(metric="gust_max_kmh", old_value=40.0, new_value=75.0, delta=35.0,
+                                threshold=20.0, severity=ChangeSeverity.MAJOR,
+                                direction="increase", occurred_at=zeit)
+        entities.append((name, [punkt], [wechsel]))
+    dienst.send_multi_location_deviation_alert(entities, {"email", "telegram"})
 
 
 def _vergleich_briefing(rig, dienst, uid, lang):
@@ -151,7 +201,10 @@ def _vergleich_briefing(rig, dienst, uid, lang):
 FAELLE = {
     "briefing_voll": _briefing_voll, "briefing_kompakt": _briefing_kompakt,
     "amtlich_trip": _amtlich_trip, "amtlich_vergleich": _amtlich_vergleich,
-    "abweichung": _abweichung, "vergleich_briefing": _vergleich_briefing,
+    "entwarnung_trip": _entwarnung_trip, "entwarnung_vergleich": _entwarnung_vergleich,
+    "entwarnung_vergleich_ohne_ort": _entwarnung_vergleich_ohne_ort,
+    "abweichung": _abweichung, "abweichung_vergleich": _abweichung_vergleich,
+    "vergleich_briefing": _vergleich_briefing,
 }
 
 
