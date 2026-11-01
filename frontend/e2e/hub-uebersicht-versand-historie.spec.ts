@@ -54,7 +54,16 @@ let ortA: string | undefined;
 test.beforeAll(async ({ browser }) => {
 	ctxA = await browser.newContext();
 	ortA = (await createTestLocation(ctxA.request, { name: `E2E-GZ-2682-A-${Date.now()}`, lat: 47.3, lon: 11.4 })).id;
-	hubsA.set('route', await seedHub(ctxA.request, 'route'));
+	// VH-3 versendet echt: der Seed-Trip (Etappe 2027-08-01) liegt außerhalb jeder
+	// Vorhersage ⇒ 422 no_weather. Deshalb Etappe MORGEN, zur Laufzeit berechnet.
+	const morgen = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+	const wp = (id: string, lat: number, elevation_m: number) => ({ id, name: id, lat, lon: 9.0, elevation_m });
+	hubsA.set(
+		'route',
+		await seedHub(ctxA.request, 'route', {
+			extra: { stages: [{ id: 's1', name: 'Tag 1', date: morgen, waypoints: [wp('a', 42.0, 800), wp('b', 42.04, 1200)] }] }
+		})
+	);
 	hubsA.set('vergleich', await seedHub(ctxA.request, 'vergleich', { extra: { location_ids: [ortA] } }));
 
 	// Nutzer B ausdrücklich OHNE storageState (sonst erbte er den Admin-Cookie).
