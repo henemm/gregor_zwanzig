@@ -40,6 +40,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { ladeSvelte, komponenten, importe, attrKurz, bedingungen } from './__tests__/aktionsmodellAst.ts';
+import { umgebungFuer, werte } from './__tests__/svelteInstanzPruefstand.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // shared -> components -> lib -> src -> frontend
@@ -55,6 +56,8 @@ const BAUSTEIN = path.join(COMPONENTS, 'shared/BriefingHistory.svelte');
 const HELFER = path.join(COMPONENTS, 'shared/briefingHistory.ts');
 const TRIP_HUB = path.join(COMPONENTS, 'trip-detail/HubOverview.svelte');
 const CMP_HUB = path.join(COMPONENTS, 'compare/CompareTabs.svelte');
+const TRIP_TABS = path.join(COMPONENTS, 'trip-detail/TripTabs.svelte');
+const UEBERSICHT = path.join(COMPONENTS, 'shared/hub-uebersicht/HubUebersicht.svelte');
 const DIALOG = path.join(COMPONENTS, 'briefing-history/BriefingHistoryDialog.svelte');
 
 async function bausteinLaden(): Promise<any> {
@@ -71,35 +74,20 @@ function einbettungen(datei: string) {
 	return { ast, imp, embeds: komponenten(ast, 'BriefingHistory') };
 }
 
+// Issue #2682: die Historie steht im geteilten Übersichts-Baustein shared/hub-uebersicht/HubUebersicht.svelte
+// (kind={context}, id = Trip- bzw. Vergleichs-Kennung); beide Hubs binden ihn im Reiter Übersicht ein.
 describe('AC-2 (a): beide Hubs binden den GETEILTEN Baustein ein', () => {
-	test('Trip-Hub HubOverview: BriefingHistory aus shared/, kind="route", id={trip.id}', () => {
-		const { imp, embeds } = einbettungen(TRIP_HUB);
-		assert.ok(imp, 'HubOverview importiert BriefingHistory nicht (RED).');
+	test('Übersichts-Baustein: BriefingHistory aus shared/, kind={context}, mobil UND Desktop', () => {
+		const { ast, imp, embeds } = einbettungen(UEBERSICHT);
+		assert.ok(imp, 'HubUebersicht importiert BriefingHistory nicht.');
 		assert.match(imp.quelle, /(^|\/)shared\/BriefingHistory\.svelte$/, `Importquelle ist nicht der geteilte Baustein: ${imp.quelle}`);
-		assert.ok(embeds.length >= 1, 'HubOverview bettet <BriefingHistory> nicht ein (RED).');
-		for (const e of embeds) {
-			assert.equal(attrKurz(e, 'kind'), '"route"', 'Trip-Hub muss kind="route" übergeben.');
-			assert.equal(attrKurz(e, 'id'), 'trip.id', 'Trip-Hub muss id={trip.id} übergeben.');
-		}
-	});
-
-	test('Ortsvergleich-Hub CompareTabs: BriefingHistory aus shared/, kind="vergleich", id={preset.id}, Reiter Übersicht mobil UND Desktop', () => {
-		const { ast, imp, embeds } = einbettungen(CMP_HUB);
-		assert.ok(imp, 'CompareTabs importiert BriefingHistory nicht (RED).');
-		assert.match(imp.quelle, /(^|\/)shared\/BriefingHistory\.svelte$/, `Importquelle ist nicht der geteilte Baustein: ${imp.quelle}`);
-		assert.ok(embeds.length >= 1, 'CompareTabs bettet <BriefingHistory> nicht ein (RED).');
-
+		assert.equal(embeds.length, 1, 'HubUebersicht bettet <BriefingHistory> nicht genau einmal ein.');
 		const mobil: boolean[] = [];
 		const desktop: boolean[] = [];
 		for (const e of embeds) {
-			assert.equal(attrKurz(e, 'kind'), '"vergleich"', 'Compare-Hub muss kind="vergleich" übergeben.');
-			assert.equal(attrKurz(e, 'id'), 'preset.id', 'Compare-Hub muss id={preset.id} übergeben.');
+			assert.equal(attrKurz(e, 'kind'), 'context', 'Baustein muss kind={context} übergeben.');
 			const b = bedingungen(ast.fragment, e);
 			assert.ok(b, 'Einbettung ist nicht erreichbar.');
-			assert.ok(
-				b.includes('activeTab === "uebersicht"'),
-				`Einbettung steht nicht im Reiter Übersicht: ${JSON.stringify(b)}`
-			);
 			const mob = b.filter((x) => x.includes('isMobileViewport'));
 			if (mob.length === 0) {
 				mobil.push(true);
@@ -109,6 +97,38 @@ describe('AC-2 (a): beide Hubs binden den GETEILTEN Baustein ein', () => {
 		}
 		assert.ok(mobil.length > 0, 'Kein Pfad zeigt die Historie MOBIL (isMobileViewport).');
 		assert.ok(desktop.length > 0, 'Kein Pfad zeigt die Historie auf dem DESKTOP (!isMobileViewport).');
+	});
+
+	test('Übersichts-Baustein: id der Historie = trip.id (route) bzw. preset.id (vergleich)', async () => {
+		const leer = { trip: undefined, preset: undefined, status: undefined, orte: undefined, saveController: undefined, onJump: undefined, children: undefined };
+		const r = await umgebungFuer(UEBERSICHT, { ...leer, context: 'route', trip: { id: 't-7', stages: [] } }, { jsAlsTs: true });
+		const v = await umgebungFuer(UEBERSICHT, { ...leer, context: 'vergleich', preset: { id: 'cmp-3', location_ids: [] } }, { jsAlsTs: true });
+		const e = komponenten(r.ast, 'BriefingHistory')[0];
+		const idAusdruck = attrKurz(e, 'id') ?? '';
+		assert.equal(werte(idAusdruck, r.u), 't-7', 'Trip-Übersicht übergibt nicht id={trip.id}');
+		assert.equal(werte(idAusdruck, v.u), 'cmp-3', 'Vergleichs-Übersicht übergibt nicht id={preset.id}');
+	});
+
+	test('Trip-Hub: TripTabs bindet die Übersicht mit context="route" im Reiter Übersicht ein; HubOverview lädt keine eigene Historie', () => {
+		const ast = ladeSvelte(TRIP_TABS);
+		const e = komponenten(ast, 'HubUebersicht');
+		assert.equal(e.length, 1, 'TripTabs bindet HubUebersicht nicht genau einmal ein.');
+		assert.equal(attrKurz(e[0], 'context'), '"route"');
+		assert.equal(attrKurz(e[0], 'trip'), 'trip');
+		const b = bedingungen(ast.fragment, e[0]) ?? [];
+		assert.ok(b.some((x) => x.includes('"uebersicht"')), `Einbindung steht nicht im Reiter Übersicht: ${JSON.stringify(b)}`);
+		assert.equal(komponenten(ladeSvelte(TRIP_HUB), 'BriefingHistory').length, 0, 'HubOverview bettet die Historie zusätzlich ein (zwei Abrufe, AC-12).');
+	});
+
+	test('Ortsvergleich-Hub: CompareTabs bindet die Übersicht mit context="vergleich" im Reiter Übersicht ein', () => {
+		const ast = ladeSvelte(CMP_HUB);
+		const e = komponenten(ast, 'HubUebersicht');
+		assert.equal(e.length, 1, 'CompareTabs bindet HubUebersicht nicht genau einmal ein.');
+		assert.equal(attrKurz(e[0], 'context'), '"vergleich"');
+		assert.equal(attrKurz(e[0], 'preset'), 'preset');
+		const b = bedingungen(ast.fragment, e[0]);
+		assert.ok(b && b.includes('activeTab === "uebersicht"'), `Einbindung steht nicht im Reiter Übersicht: ${JSON.stringify(b)}`);
+		assert.equal(komponenten(ast, 'BriefingHistory').length, 0, 'CompareTabs bettet die Historie zusätzlich ein (zwei Abrufe, AC-12).');
 	});
 
 	test('der verwaiste Dialog briefing-history/BriefingHistoryDialog.svelte existiert nicht mehr', () => {

@@ -236,3 +236,53 @@ def test_konformer_altlast_eintrag_ist_rot():
     befunde = pruefe_compare_specs({"compare-alt.spec.ts": SCHLEIFE_NEU},
                                    frozenset({"compare-alt.spec.ts"}))
     assert len(befunde) == 1 and "inzwischen konform" in befunde[0]
+
+
+# ─── #2682 (AC-17): Hub-Uebersicht geteilt => s8c und HT-10 laufen fuer beide Arten ──
+# Spec docs/specs/modules/feat_2682_hub_uebersicht_geteilt.md: die Uebersicht ist
+# seit #2682 EIN Baustein (shared/hub-uebersicht/). Die bisherige Ausnahme
+# (`gz-eigenstaendig:`-Kopf in compare-hub-fidelity-s8c, Begruendung „kein Gegenpart
+# im Trip-Hub") ist damit unwahr; s8c muss per HUB_KINDS-SCHLEIFE beide Arten pruefen
+# -- ein blosser Import von HUB_KINDS reicht nicht. Mutation: Kopf wieder eintragen
+# oder Schleife entfernen => rot.
+
+S8C = "compare-hub-fidelity-s8c.spec.ts"
+TAB_BAR = "hub-tab-bar.spec.ts"
+_HUB_KINDS_SCHLEIFE_RE = re.compile(r"for\s*\(\s*const\s+(\w+)\s+of\s+HUB_KINDS\s*\)")
+
+
+def _e2e(name: str) -> str:
+    pfad = E2E_DIR / name
+    assert pfad.is_file(), f"E2E-Spec fehlt: {pfad}"
+    return pfad.read_text(encoding="utf-8")
+
+
+def test_2682_s8c_traegt_keinen_eigenstaendig_kopf_mehr():
+    begruendung = _kopf_begruendung(_e2e(S8C))
+    assert begruendung is None, (
+        f"{S8C} traegt noch einen `{MARKER}`-Kopf ({begruendung[:80]!r}…) -- seit #2682 hat "
+        f"die Uebersicht einen Trip-Gegenpart (shared/hub-uebersicht/), der Kopf ist unwahr")
+
+
+def test_2682_s8c_prueft_beide_arten_per_hub_kinds_schleife():
+    text = _e2e(S8C)
+    schleifen = _HUB_KINDS_SCHLEIFE_RE.findall(text)
+    assert schleifen, (
+        f"{S8C} hat keine `for (const kind of HUB_KINDS)`-Schleife -- die Uebersichts-"
+        f"Faelle muessen fuer Trip UND Ortsvergleich laufen (AC-17)")
+    assert "from './helpers'" in text and "HUB_KINDS" in text.split("from './helpers'")[0], (
+        f"{S8C} importiert HUB_KINDS nicht aus ./helpers")
+
+
+def test_2682_ht10_laeuft_fuer_beide_arten():
+    text = _e2e(TAB_BAR)
+    assert "HT-10 (vergleich)" not in text, (
+        f"{TAB_BAR}: HT-10 ist noch fest auf den Ortsvergleich eingetragen (AC-17)")
+    assert re.search(r"test\(\s*`HT-10 \(\$\{\w+\}\)", text), (
+        f"{TAB_BAR}: HT-10 ist nicht je kind parametrisiert (`HT-10 (${{kind}})`)")
+
+
+def test_2682_hub_kinds_schleifen_regel_selbsttest():
+    # Gegenprobe der Erkennung: Import allein ist keine Schleife.
+    assert _HUB_KINDS_SCHLEIFE_RE.search("for (const kind of HUB_KINDS) {}")
+    assert not _HUB_KINDS_SCHLEIFE_RE.search("import { HUB_KINDS } from './helpers';")

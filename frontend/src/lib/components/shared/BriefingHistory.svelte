@@ -9,19 +9,26 @@
 		type BriefingHistoryEntry,
 		type BriefingHistoryKind
 	} from './briefingHistory.ts';
+	import type { BriefingHistoryLader } from './briefingHistoryLader.svelte.ts';
 
 	interface Props {
 		id: string;
 		kind: BriefingHistoryKind;
 		/** Gesetzt => direkt rendern, kein Abruf. */
 		entries?: BriefingHistoryEntry[];
+		/** Issue #2682: gesetzt => Liste aus diesem Lader (EIN Abruf, geteilt mit „Zuletzt raus"). */
+		lader?: BriefingHistoryLader;
 	}
 
-	let { id, kind, entries = undefined }: Props = $props();
+	let { id, kind, entries = undefined, lader = undefined }: Props = $props();
 
-	let geladen = $state<BriefingHistoryEntry[]>([]);
-	let loading = $state(false);
-	let error = $state<string | null>(null);
+	let eigeneGeladen = $state<BriefingHistoryEntry[]>([]);
+	let eigenLoading = $state(false);
+	let eigenError = $state<string | null>(null);
+	const FEHLERTEXT = 'Versand-Historie konnte nicht geladen werden.';
+	const geladen = $derived(lader ? lader.eintraege : eigeneGeladen);
+	const loading = $derived(lader ? lader.zustand === 'laedt' : eigenLoading);
+	const error = $derived(lader ? (lader.zustand === 'fehler' ? FEHLERTEXT : null) : eigenError);
 
 	const SLOT_LABELS: Record<string, string> = { morning: 'Morgen', evening: 'Abend' };
 
@@ -33,21 +40,21 @@
 	}
 
 	$effect(() => {
-		if (entries !== undefined || !id) return;
+		if (entries !== undefined || lader || !id) return;
 		const angefragt = id;
-		loading = true;
-		error = null;
+		eigenLoading = true;
+		eigenError = null;
 		api
 			.get<BriefingHistoryEntry[]>(briefingHistoryUrl(id, kind))
 			.then((data) => {
 				if (angefragt !== id) return; // Stale-Guard
-				geladen = data ?? [];
-				loading = false;
+				eigeneGeladen = data ?? [];
+				eigenLoading = false;
 			})
 			.catch(() => {
 				if (angefragt !== id) return;
-				error = 'Versand-Historie konnte nicht geladen werden.';
-				loading = false;
+				eigenError = FEHLERTEXT;
+				eigenLoading = false;
 			});
 	});
 

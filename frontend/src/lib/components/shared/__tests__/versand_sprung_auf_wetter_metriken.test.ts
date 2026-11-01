@@ -31,7 +31,7 @@ import { register } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { umgebungFuer, werte, ohneTypen, type Knoten } from './svelteInstanzPruefstand.ts';
+import { umgebungFuer, werte, ohneTypen, findeKomponenten, attributAusdruck, type Knoten } from './svelteInstanzPruefstand.ts';
 import { vollerVergleich } from './goMergeServerPruefstand.ts';
 import { resolveTab } from '../subscriptionTabs.ts';
 
@@ -41,6 +41,7 @@ const SRC = join(FRONTEND, 'src');
 const HUB_OVERVIEW = join(SRC, 'lib/components/trip-detail/HubOverview.svelte');
 const TRIP_HUB = join(SRC, 'lib/components/trip-detail/TripTabs.svelte');
 const VERGLEICH_HUB = join(SRC, 'lib/components/compare/CompareTabs.svelte');
+const HUB_UEBERSICHT = join(SRC, 'lib/components/shared/hub-uebersicht/HubUebersicht.svelte');
 const VERGLEICH_SEITE = join(SRC, 'routes/compare/[id]/+page.svelte');
 const HOME = join(SRC, 'routes/+page.svelte');
 
@@ -161,10 +162,14 @@ describe('#1743 AC-6: „Zeitplan bearbeiten →" der Trip-Uebersicht oeffnet ?t
 
 // ── AC-25: Versand-Spruenge im Vergleichs-Hub ───────────────────────────────────
 
+// #2682: die Übersicht ist der geteilte Baustein HubUebersicht (context="vergleich"), den CompareTabs
+// mit `onJump={handleValueChange}` einbindet. Gemessen wird wie beim Trip (AC-6) in zwei Schritten:
+// der ECHTE onclick des Knopfs im Baustein (Sprung-Argumente aufgezeichnet), dann der ECHTE
+// `handleValueChange` von CompareTabs mit genau diesen Argumenten — geprueft wird die geschriebene Adresse.
 describe('#1743 AC-25: Versand-Spruenge im Ortsvergleich-Hub landen auf ?tab=wetter-metriken#versand', () => {
-	test('„Bearbeiten →" (Briefing-Zeitplan) und jede Knopf-Zeile, die heute auf Versand sprang, schreiben wetter-metriken#versand', async () => {
+	async function vergleichsHub() {
 		adresszeile('/compare/c-1', 'uebersicht');
-		const hub = await umgebungFuer(
+		return umgebungFuer(
 			VERGLEICH_HUB,
 			{
 				initialTab: 'uebersicht',
@@ -176,58 +181,108 @@ describe('#1743 AC-25: Versand-Spruenge im Ortsvergleich-Hub landen auf ?tab=wet
 			},
 			{ jsAlsTs: true }
 		);
-		// Knoepfe mit testid des Versand-Sprungs (Desktop) — gefunden ueber testid, ausgeloest ueber onclick.
-		const versandKnoepfe: Knoten[] = [];
-		besuche(hub.ast.fragment, (n) => {
-			if (n.type === 'RegularElement' && n.name === 'button' && attributText(n, 'data-testid') === 'compare-hub-versand-edit')
-				versandKnoepfe.push(n);
-		});
+	}
+
+	test('CompareTabs reicht seinen echten Reiterwechsel als onJump an den Baustein', async () => {
+		const hub = await vergleichsHub();
+		const e = findeKomponenten(hub.ast, 'HubUebersicht');
+		assert.equal(e.length, 1, 'CompareTabs bindet HubUebersicht nicht genau einmal ein');
+		assert.equal(attributAusdruck(e[0], hub.quelle, 'onJump'), 'handleValueChange');
+	});
+
+	test('„Bearbeiten →" (Briefing-Zeitplan) der Versand-Karte schreibt wetter-metriken#versand', async () => {
+		const spruenge: unknown[][] = [];
+		const hu = await umgebungFuer(
+			HUB_UEBERSICHT,
+			{ ...OHNE_PROPS, context: 'vergleich', preset: vollerVergleich('c-1'), orte: [], onJump: (...a: unknown[]) => spruenge.push(a) },
+			{ jsAlsTs: true }
+		);
+		// Knopf mit testid des Versand-Sprungs (Desktop) — gefunden ueber den AUSGEWERTETEN testid-Ausdruck.
+		const versandKnoepfe = sprungKnoepfe(hu).filter((s) => s.testid === 'compare-hub-versand-edit');
 		assert.equal(versandKnoepfe.length, 1, 'Vorbedingung: Knopf compare-hub-versand-edit vorhanden');
+		(versandKnoepfe[0].ausloesen as () => void)();
+		assert.equal(spruenge.length, 1, JSON.stringify(spruenge));
+
+		const hub = await vergleichsHub();
 		hub.u.activeTab = 'uebersicht';
 		schreibungen = [];
-		await (werte(onclick(versandKnoepfe[0], hub.quelle), hub.u) as () => Promise<void>)();
+		await (hub.u.handleValueChange as (...a: unknown[]) => Promise<void>)(...spruenge[0]);
 		assert.equal(hub.u.activeTab, 'wetter-metriken');
 		assert.equal(schreibungen.length, 1, JSON.stringify(schreibungen));
 		assert.equal(ziel(schreibungen[0]).searchParams.get('tab'), 'wetter-metriken', schreibungen[0]);
 		assert.equal(ziel(schreibungen[0]).hash, '#versand', schreibungen[0]);
 	});
 
-	test('jeder Reiter-Sprungknopf des Hubs (Desktop und Mobil-Zeilen) schreibt eine Kennung ohne Legacy-Umweg', async () => {
-		adresszeile('/compare/c-1', 'uebersicht');
-		const hub = await umgebungFuer(
-			VERGLEICH_HUB,
+	test('jeder Reiter-Sprungknopf der Übersicht (Desktop und Mobil-Zeilen) schreibt eine Kennung ohne Legacy-Umweg', async () => {
+		const spruenge: unknown[][] = [];
+		const hu = await umgebungFuer(
+			HUB_UEBERSICHT,
 			{
-				initialTab: 'uebersicht',
+				...OHNE_PROPS,
+				context: 'vergleich',
 				preset: vollerVergleich('c-1'),
-				locations: [],
-				orteCount: 3,
-				goto: gotoAufzeichnung,
-				page: { url: new URL('http://localhost/compare/c-1?tab=uebersicht') }
+				orte: [{ rank: 1, loc: { id: 'l1', name: 'A' } }],
+				onJump: (...a: unknown[]) => spruenge.push(a)
 			},
 			{ jsAlsTs: true }
 		);
-		const springer: Knoten[] = [];
-		besuche(hub.ast.fragment, (n) => {
-			const istKnopf =
-				(n.type === 'RegularElement' && n.name === 'button') || (n.type === 'Component' && n.name === 'Btn');
-			const a = istKnopf && ((n.attributes ?? []) as Knoten[]).find((x) => x.type === 'Attribute' && x.name === 'onclick');
-			// ausgewaehlt werden die Knoepfe, deren onclick den Reiterwechsel des Hubs ruft
-			if (a && a.value?.type === 'ExpressionTag' && hub.quelle.slice(a.value.expression.start, a.value.expression.end).includes('handleValueChange'))
-				springer.push(n);
-		});
-		assert.ok(springer.length >= 3, `Messaufbau: Sprungknoepfe nicht gefunden (${springer.length})`);
+		const springer = sprungKnoepfe(hu);
+		assert.ok(springer.length >= 6, `Messaufbau: Sprungknoepfe nicht gefunden (${springer.length})`);
+		const hub = await vergleichsHub();
 		for (const k of springer) {
+			spruenge.length = 0;
+			(k.ausloesen as () => void)();
+			assert.equal(spruenge.length, 1, `Knopf „${k.text}" springt nicht genau einmal`);
 			hub.u.activeTab = 'uebersicht';
 			schreibungen = [];
-			await (werte(onclick(k, hub.quelle), hub.u) as () => Promise<void>)();
+			await (hub.u.handleValueChange as (...a: unknown[]) => Promise<void>)(...spruenge[0]);
+			assert.ok(schreibungen.length > 0, `Knopf „${k.text}": keine Adresse geschrieben`);
 			for (const s of schreibungen) {
 				const tab = ziel(s).searchParams.get('tab');
-				assert.equal(resolveTab('vergleich', tab).legacy, false, `Knopf „${text(k)}" → ${s}: Legacy-Kennung`);
-				assert.equal(resolveTab('vergleich', tab).known, true, `Knopf „${text(k)}" → ${s}: unbekannte Kennung`);
+				assert.equal(resolveTab('vergleich', tab).legacy, false, `Knopf „${k.text}" → ${s}: Legacy-Kennung`);
+				assert.equal(resolveTab('vergleich', tab).known, true, `Knopf „${k.text}" → ${s}: unbekannte Kennung`);
 			}
 		}
 	});
 });
+
+/** Nicht gesetzte Props des Bausteins (die Saat muss jeden Bezeichner kennen). */
+const OHNE_PROPS = { trip: undefined, status: undefined, saveController: undefined, children: undefined };
+
+/** Alle Knoepfe des Bausteins, deren onclick `springe(...)` ruft — je {#each}-Eintrag einmal
+ *  ausgewertet (die Schleifenvariable wird an den echten Eintrag gebunden). */
+function sprungKnoepfe(hu: { ast: Knoten; quelle: string; u: Knoten }): Array<{ text: string; testid: unknown; ausloesen: unknown }> {
+	const treffer: Array<{ text: string; testid: unknown; ausloesen: unknown }> = [];
+	function lauf(n: unknown, umgebung: Knoten): void {
+		if (n === null || typeof n !== 'object') return;
+		if (Array.isArray(n)) return void n.forEach((k) => lauf(k, umgebung));
+		const k = n as Knoten;
+		if (k.type === 'EachBlock') {
+			const eintraege = werte(ohneTypen(hu.quelle, k.expression), umgebung) as unknown[];
+			eintraege.forEach((e, i) => {
+				const u2 = Object.assign(Object.create(umgebung), { [k.context.name]: e });
+				if (k.index) u2[k.index] = i;
+				lauf(k.body, u2);
+			});
+			return;
+		}
+		// {#if}-Zweige: beide werden besucht (mobil UND Desktop).
+		const a = k.type === 'RegularElement' && k.name === 'button'
+			? ((k.attributes ?? []) as Knoten[]).find((x) => x.type === 'Attribute' && x.name === 'onclick')
+			: undefined;
+		if (a && a.value?.type === 'ExpressionTag' && hu.quelle.slice(a.value.expression.start, a.value.expression.end).includes('springe')) {
+			const t = ((k.attributes ?? []) as Knoten[]).find((x) => x.type === 'Attribute' && x.name === 'data-testid');
+			treffer.push({
+				text: text(k),
+				testid: t?.value?.type === 'ExpressionTag' ? werte(ohneTypen(hu.quelle, t.value.expression), umgebung) : attributText(k, 'data-testid'),
+				ausloesen: werte(onclick(k, hu.quelle), umgebung)
+			});
+		}
+		for (const key of Object.keys(k)) if (key !== 'parent' && key !== 'loc') lauf(k[key], umgebung);
+	}
+	lauf(hu.ast.fragment, hu.u);
+	return treffer;
+}
 
 // ── AC-24: „Setup abschliessen" ──────────────────────────────────────────────
 
@@ -302,5 +357,10 @@ describe('#1743 AC-28: HubOverview (gerendert) und CompareTabs ohne Vorschau-Spr
 	test('CompareTabs: kein Knopf „Vorschau prüfen →"', async () => {
 		const { ast } = await umgebungFuer(VERGLEICH_HUB, { preset: vollerVergleich('c-1'), locations: [], orteCount: 3 }, { jsAlsTs: true });
 		assert.deepEqual(knoepfeMitText(ast, 'Vorschau prüfen').map(text), []);
+	});
+
+	test('#2682 HubUebersicht (Übersicht beider Hubs): kein Knopf „Vorschau prüfen →"/„Vorschau öffnen"', async () => {
+		const { ast } = await umgebungFuer(HUB_UEBERSICHT, { ...OHNE_PROPS, context: 'vergleich', preset: vollerVergleich('c-1'), orte: [] }, { jsAlsTs: true });
+		assert.deepEqual(knoepfeMitText(ast, 'Vorschau').map(text), []);
 	});
 });

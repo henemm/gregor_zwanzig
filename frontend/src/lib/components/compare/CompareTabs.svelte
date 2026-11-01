@@ -11,26 +11,17 @@
 	//
 	// Spec: docs/specs/modules/issue_517_compare_hub.md
 
-	import { Dot, Pill, Btn, Eyebrow, Card, SectionH } from '$lib/components/atoms';
+	import { Dot, Pill, Btn, Card, SectionH } from '$lib/components/atoms';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	// Issue #1743: Wetter-Metriken und Versand in EINEM geteilten Baustein (Anker #versand).
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
-	import BriefingHistory from '$lib/components/shared/BriefingHistory.svelte';
+	// Issue #2682: die Übersicht ist der geteilte Baustein (context="vergleich").
+	import HubUebersicht from '$lib/components/shared/hub-uebersicht/HubUebersicht.svelte';
 	// SaveStatus-Typ/Helper (der Chip selbst kommt seit #2284 S2 vom SubscriptionHeader).
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { extractMessage } from '$lib/stores/saveStatusStore.svelte';
 	import { merkeNutzlast, wendeNutzlastAn } from '$lib/stores/nutzlastStand';
-	import {
-		deriveStatusWithScheduleOverride,
-		presetBriefingTimesLabel,
-		formatLastSent,
-		channelNamesLabel,
-		presetProfileLabel,
-		STATUS_MAP
-	} from '$lib/components/compare/subscriptionHelpers.js';
-	// Issue #1969 (AC-23/AC-24): nächster Versand = Backend-Wert, keine eigene Rechnung.
-	import { formatNextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
-	import { erstelleNaechstesBriefingLader } from '../shared/versand-tab/naechstesBriefingLader.svelte.ts';
+	import { deriveStatusWithScheduleOverride, STATUS_MAP } from '$lib/components/compare/subscriptionHelpers.js';
 	import type { ComparePreset, Location, Group } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { onMount } from 'svelte';
@@ -161,10 +152,10 @@
 		}))
 	);
 
-	// Issue #1256 Scheibe 8 (AC-22): Viewport-Weiche fuer den Monitoring-
-	// Streifen (Desktop-5-Stat-Leiste vs. mobiles 4-Stat-2×2) und den
+	// Issue #1256 Scheibe 8 (AC-22): Viewport-Weiche fuer den Orte-Rahmen und den
 	// Idealwerte-Tab (CorridorEditor vs. CorridorEditorMobile) — Muster
-	// TripTabs.svelte:117-124.
+	// TripTabs.svelte:117-124. Die Weiche der Übersicht lebt seit #2682 im
+	// geteilten Baustein shared/hub-uebersicht/HubUebersicht.svelte.
 	let isMobileViewport = $state(false);
 	onMount(() => {
 		const mq = window.matchMedia('(max-width: 899px)');
@@ -200,32 +191,10 @@
 	const status = $derived(deriveStatusWithScheduleOverride(preset, localSchedule));
 	const statusInfo = $derived(STATUS_MAP[status]);
 
-	// Issue #1229 Fix-Loop 1 (F001/F002): "Nächster Versand" aus dem berechneten
-	// Zeitstempel ableiten statt aus dem Rhythmus-Label (presetScheduleLabel enthält
-	// einen rohen hour_from–hour_to-Bereich, den AC-4 im Versand-Tab verbietet).
-	// Issue #1969 (AC-23/AC-24): Backend-Wert aus GET /api/next-briefings statt
-	// deriveNextSend. Neu geladen nach jedem erfolgreichen Speichern des Hubs
-	// (`savedAt`, auch Pausieren/Aktivieren); Laufnummer gegen veraltete Antworten.
-	const naechstesBriefing = erstelleNaechstesBriefingLader(
-		() => ({ context: 'vergleich', id: preset?.id, neuLaden: saveController?.savedAt }),
-		(p) => api.get(p)
-	);
-	const nextSendText = $derived(formatNextBriefing(naechstesBriefing.wert, 'vergleich'));
-	const versandSummaryText = $derived(
-		`Briefings ${presetBriefingTimesLabel(preset)} · nächster Versand ${nextSendText}.`
-	);
-
-	// Issue #1256 Scheibe 3 AC-6: Kanal-Namen statt Kanal-Anzahl in der
-	// Übersicht-"Kanäle"-Stat (Soll: screen-compare-detail.jsx:147-150).
-	const channelsLabel = $derived(channelNamesLabel(preset));
-
-	// Issue #1256 S8c (AC-4): SummaryCard-Titel "Keine Kanäle" statt "—"
-	// (Soll: screen-compare-detail.jsx:169) — abweichender Leerfall von channelsLabel.
-
-	// Issue #1256 S8c (AC-6/AC-7): lesbares Profil-Label statt rohem preset.profil
-	// (Soll: JSX:163) — Fallback auf den rohen Wert, falls das Mapping leer
-	// zurueckgibt (unbekanntes Profil, kein leerer Titel).
-	const profileLabel = $derived(presetProfileLabel(preset.profil) || preset.profil);
+	// Issue #2682: „Nächster Versand" (Issue #1969, Backend-Wert, neu geladen nach jedem
+	// erfolgreichen Speichern ueber `saveController.savedAt`), Kanal-Namen, Profil-Label und
+	// Briefing-Zeiten der Übersicht leitet der geteilte Baustein HubUebersicht ab
+	// (shared/hub-uebersicht/hubUebersichtModell.ts).
 
 	// Issue #1256 Scheibe 6 Fix-Loop 2 (F005, Adversary CRITICAL): EINE lokale,
 	// mutable Read-Modify-Write-Baseline fuer BEIDE S6-Speicherpfade (Orte +
@@ -576,12 +545,6 @@
 		});
 	});
 
-	const idealRanges = $derived(
-		preset.display_config?.ideal_ranges as
-			| Record<string, { min: number; max: number; unit?: string }>
-			| undefined
-	);
-
 	// Issue #1360 (Scheibe S1a von Epic #1372): CHANNEL_COLS/channels/
 	// layoutLocationNames/layoutChipNamesFor sind ersatzlos entfallen. Sie
 	// speisten ausschliesslich die Karte "Übersicht pro Kanal" des aufgeloesten
@@ -710,174 +673,17 @@
 
 	{#if activeTab === 'uebersicht'}
 		<div data-testid="compare-detail-panel-uebersicht">
-			<div style="display: flex; flex-direction: column; gap: 22px">
-				<!-- Monitoring-Streifen — Issue #1256 Scheibe 8 (AC-22): mobil 4-Stat-2×2
-				     statt 5-Stat-Desktop-Leiste (Soll: screen-compare-detail-mobile.jsx:79-85) -->
-				{#if isMobileViewport}
-					<div data-testid="compare-detail-monitoring-mobile" class="hub-mobile-grid">
-						<Card padding={14}>
-							<div class="hub-mobile-stat-label">Status</div>
-							<div class="hub-mobile-stat-value">
-								<!-- Issue #1256 S8c (AC-8): Kurzform statt Langform (Soll: screen-compare-detail-mobile.jsx:81). -->
-								{#if status === 'active'}
-									<span class="hub-mobile-stat-inline"><Dot tone="good" size={7}/>Läuft autom.</span>
-								{:else if status === 'draft'}
-									<span class="hub-mobile-stat-inline"><Dot tone="neutral" size={7}/>Entwurf</span>
-								{:else}
-									<span class="hub-mobile-stat-inline"><Dot tone="neutral" size={7}/>Pausiert</span>
-								{/if}
-							</div>
-						</Card>
-						<Card padding={14}>
-							<div class="hub-mobile-stat-label">Nächster Versand</div>
-							<div class="hub-mobile-stat-value">{nextSendText}</div>
-						</Card>
-						<Card padding={14}>
-							<div class="hub-mobile-stat-label">Zuletzt raus</div>
-							<div class="hub-mobile-stat-value">{formatLastSent(preset.letzter_versand)}</div>
-						</Card>
-						<Card padding={14}>
-							<div class="hub-mobile-stat-label">Kanäle</div>
-							<div class="hub-mobile-stat-value" data-testid="compare-detail-stat-kanaele-mobile">
-								{#if channelsLabel === '—'}
-									—
-								{:else}
-									<span class="hub-mobile-stat-inline"><Dot tone="good" size={7}/>{channelsLabel}</span>
-								{/if}
-							</div>
-						</Card>
-					</div>
-				{:else}
-				<Card padding={0} style="overflow: hidden">
-					<div style="padding: 18px 24px; display: flex; align-items: center; gap: 40px; flex-wrap: wrap">
-						<!-- Status -->
-						<div>
-							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Status</div>
-							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">
-								{#if status === 'active'}
-									<span style="display: inline-flex; align-items: center; gap: 7px"><Dot tone="good" size={7}/> Läuft automatisch</span>
-								{:else if status === 'draft'}
-									<span style="display: inline-flex; align-items: center; gap: 7px"><Dot tone="neutral" size={7}/> Entwurf · nicht aktiv</span>
-								{:else}
-									<span style="display: inline-flex; align-items: center; gap: 7px"><Dot tone="neutral" size={7}/> Pausiert</span>
-								{/if}
-							</div>
-						</div>
-						<!-- Nächster Versand -->
-						<div>
-							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Nächster Versand</div>
-							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{nextSendText}</div>
-						</div>
-						<!-- Briefings -->
-						<div>
-							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Briefings</div>
-							<div data-testid="compare-detail-stat-briefings" style="font-size: 14px; color: var(--g-ink); font-weight: 500">{presetBriefingTimesLabel(preset)}</div>
-						</div>
-						<!-- Zuletzt raus -->
-						<div>
-							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Zuletzt raus</div>
-							<div style="font-size: 14px; color: var(--g-ink); font-weight: 500">{formatLastSent(preset.letzter_versand)}</div>
-						</div>
-						<!-- Kanäle — Issue #1256 Scheibe 3 AC-6: Namen statt Anzahl (Soll: screen-compare-detail.jsx:147-150) -->
-						<div>
-							<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">Kanäle</div>
-							<div data-testid="compare-detail-stat-kanaele" style="font-size: 14px; color: var(--g-ink); font-weight: 500">
-								{#if channelsLabel === '—'}
-									—
-								{:else}
-									<span style="display: inline-flex; align-items: center; gap: 7px">
-										<Dot tone="good" size={7}/>
-										{channelsLabel}
-									</span>
-								{/if}
-							</div>
-						</div>
-					</div>
-				</Card>
-				{/if}
-
-				<!-- 2×2 SummaryCard-Grid (Desktop) / Chevron-Summary-Stack (Mobil) —
-				     Issue #1256 S8c (AC-3..AC-7, Soll Mobil:
-				     screen-compare-detail-mobile.jsx:87-93,276-293). -->
-				{#snippet summaryChevron()}
-					<span class="hub-summary-row-chevron" aria-hidden="true">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-					</span>
-				{/snippet}
-				{#if isMobileViewport}
-					<div class="hub-summary-stack-mobile" data-testid="compare-detail-summary-mobile">
-						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('orte')}>
-							<span class="hub-summary-row-body">
-								<span class="hub-summary-row-eyebrow">Orte</span>
-								<span class="hub-summary-row-title">{resolvedLocations.length} Kandidaten</span>
-								<span class="hub-summary-row-desc">{resolvedLocations.slice(0, 2).map(({loc}) => loc?.name ?? '—').join(' · ')}{resolvedLocations.length > 2 ? ` +${resolvedLocations.length - 2}` : ''}</span>
-							</span>
-							{@render summaryChevron()}
-						</button>
-						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('wertebereiche')}>
-							<span class="hub-summary-row-body">
-								<span class="hub-summary-row-eyebrow">Wertebereiche</span>
-								<span class="hub-summary-row-title">{profileLabel}</span>
-								<span class="hub-summary-row-desc">{Object.keys(idealRanges ?? {}).length} Metriken · Markierung, kein Score</span>
-							</span>
-							{@render summaryChevron()}
-						</button>
-						<!-- Issue #1360: Übersichts-Zeile "Layout" entfaellt — sie sprang auf
-						     den aufgeloesten Reiter und behauptete eine Orts-Kappung je Kanal. -->
-						<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={() => handleValueChange('wetter-metriken', 'versand')}>
-							<span class="hub-summary-row-body">
-								<span class="hub-summary-row-eyebrow">Versand</span>
-								<span class="hub-summary-row-title">{status === 'draft' ? 'Nicht geplant' : presetBriefingTimesLabel(preset)}</span>
-								<span class="hub-summary-row-desc">{status === 'draft' ? 'Aktivierung offen' : `Briefings ${presetBriefingTimesLabel(preset)}`}</span>
-							</span>
-							{@render summaryChevron()}
-						</button>
-					</div>
-				{:else}
-				<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
-					<Card padding={20} style="display: flex; flex-direction: column">
-						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
-							<Eyebrow>Orte</Eyebrow>
-							<button onclick={() => handleValueChange('orte')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
-						</div>
-						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{preset.location_ids.length} Kandidaten</div>
-						<!-- Issue #1256 S8c (AC-3): "+N weitere" bei >3 Orten (Soll: jsx:159). -->
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{resolvedLocations.slice(0, 3).map(({loc}) => loc?.name ?? '—').join(' · ')}{resolvedLocations.length > 3 ? ` +${resolvedLocations.length - 3} weitere` : ''}</div>
-					</Card>
-
-					<Card padding={20} style="display: flex; flex-direction: column">
-						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
-							<Eyebrow>Wertebereiche</Eyebrow>
-							<button onclick={() => handleValueChange('wertebereiche')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
-						</div>
-						<!-- Issue #1256 S8c (AC-6): presetProfileLabel statt rohem preset.profil. -->
-						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{profileLabel}</div>
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{Object.keys(idealRanges ?? {}).length} Metriken mit Idealbereich — im Briefing pro Wert markiert. Kein Score, kein Ranking.</div>
-					</Card>
-
-					<!-- Issue #1360 (AC-4): Karte "Layout pro Kanal" entfaellt. Sie sprang auf
-					     den aufgeloesten Reiter und behauptete "Engere Kanäle zeigen
-					     automatisch weniger Spalten" — im Ortsvergleich unwahr: alle drei
-					     Kanaele geben ALLE Orte aus. -->
-
-					<Card padding={20} style="display: flex; flex-direction: column">
-						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
-							<Eyebrow>Versand</Eyebrow>
-							<button data-testid="compare-hub-versand-edit" onclick={() => handleValueChange('wetter-metriken', 'versand')} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
-						</div>
-						<!-- Issue #1256 S8c (AC-5): Draft-Sonderfall (Soll: jsx:175-177). -->
-						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{status === 'draft' ? 'Noch nicht geplant' : presetBriefingTimesLabel(preset)}</div>
-						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{status === 'draft' ? 'Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen.' : versandSummaryText}</div>
-					</Card>
-				</div>
-				{/if}
-
-				<!-- Issue #2281: Versand-Historie, geteilter Baustein mit dem Trip-Hub
-				     (mobil und Desktop). -->
-				<BriefingHistory id={preset.id} kind="vergleich" />
-				<!-- Issue #1743: Verifikations-Hinweis mit „Vorschau prüfen →" entfaellt
-				     (Briefing-Vorschau ersatzlos zurueckgebaut, PO-Entscheid 2026-10-22). -->
-			</div>
+			<!-- Issue #2682: geteilter Baustein (Kennzahlen, Orte-/Wertebereiche-/Versand-Karten bzw.
+			     mobile Pfeil-Zeilen, Versand-Historie). `status` traegt das lokale Pausieren/
+			     Aktivieren, `orte` die aufgeloesten Orte dieser Sitzung. -->
+			<HubUebersicht
+				context="vergleich"
+				{preset}
+				{status}
+				orte={resolvedLocations}
+				{saveController}
+				onJump={handleValueChange}
+			/>
 		</div>
 	{/if}
 
@@ -1160,31 +966,6 @@
 		background: var(--g-accent-tint);
 	}
 
-	/* Issue #1256 Scheibe 8 (AC-22) — mobiler 4-Stat-2×2-Monitoring-Block */
-	.hub-mobile-grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 12px;
-	}
-	.hub-mobile-stat-label {
-		font-size: 11px;
-		color: var(--g-ink-4);
-		letter-spacing: 0.16em;
-		text-transform: uppercase;
-		margin-bottom: 5px;
-		font-family: var(--g-font-mono);
-	}
-	.hub-mobile-stat-value {
-		font-size: 14px;
-		color: var(--g-ink);
-		font-weight: 500;
-	}
-	.hub-mobile-stat-inline {
-		display: inline-flex;
-		align-items: center;
-		gap: 7px;
-	}
-
 	/* Issue #1256 S8c — Layout-/Orte-Tab Section-Hint (AC-1/AC-2/AC-9). */
 	.hub-section-hint {
 		font-family: var(--g-font-mono);
@@ -1200,64 +981,5 @@
 	   wird und dort den Scope-Hash dieser Komponente nicht traegt (#1272). */
 	:global(.hub-orte-list) {
 		border-bottom: 1px solid var(--g-rule-soft);
-	}
-
-	/* Issue #1256 S8c (AC-7) — mobiler Chevron-Summary-Stack (Soll:
-	   screen-compare-detail-mobile.jsx:276-293). */
-	.hub-summary-stack-mobile {
-		background: var(--g-card);
-		border: 1px solid var(--g-rule);
-		border-radius: var(--g-r-3, 10px);
-		overflow: hidden;
-	}
-	.hub-summary-row-mobile {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		width: 100%;
-		text-align: left;
-		padding: 13px 14px;
-		background: transparent;
-		border: none;
-		border-top: 1px solid var(--g-rule-soft);
-		cursor: pointer;
-	}
-	.hub-summary-stack-mobile .hub-summary-row-mobile:first-child {
-		border-top: none;
-	}
-	.hub-summary-row-body {
-		flex: 1;
-		min-width: 0;
-	}
-	.hub-summary-row-eyebrow {
-		display: block;
-		font-family: var(--g-font-mono);
-		font-size: 11px;
-		color: var(--g-ink-4);
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		margin-bottom: 3px;
-	}
-	.hub-summary-row-title {
-		display: block;
-		font-size: 14.5px;
-		font-weight: 600;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.hub-summary-row-desc {
-		display: block;
-		font-size: 12px;
-		color: var(--g-ink-3);
-		margin-top: 2px;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.hub-summary-row-chevron {
-		flex-shrink: 0;
-		color: var(--g-ink-4);
-		display: flex;
 	}
 </style>

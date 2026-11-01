@@ -1,269 +1,286 @@
-// gz-eigenstaendig: Übersichts-Panel des Vergleichs-Hubs (Summary-Karten, mobiler Chevron-Stack, Status-Kurzform, Versand-Karte) hat keinen Gegenpart im Trip-Hub — trip-detail/HubOverview.svelte ist ein anderes Markup (Spec feat_2347_s4 Befund 6, Nebenbefund #1199); dazu die Texte des Orte-Tabs. Pendants: hub-tab-bar HT-10 (Stat-Karten), trip-detail-region.
+// E2E (Staging) — Hub-Übersicht für BEIDE Arten (Trip und Ortsvergleich) per
+// Schleife über HUB_KINDS. Herkunft: Issue #1256 Scheibe S8c (Hub-Fidelity der
+// Vergleichs-Übersicht); seit Issue #2682 (Epic #2345) ist die Übersicht EIN
+// geteilter Baustein (shared/hub-uebersicht/HubUebersicht.svelte, context=
+// "route"|"vergleich") — der frühere `gz-eigenstaendig`-Kopf („kein Gegenpart im
+// Trip-Hub") ist damit entfallen (AC-17, tests/unit/test_e2e_compare_paritaet_waechter.py).
 //
-// E2E (Staging) — Issue #1256 Scheibe S8c: Hub-Fidelity (R2 Layout-Tab-Rahmen
-// + R3 SummaryCards-Copy/Orte-Tab-Rahmen/Breadcrumb/profileLabel/
-// Mobile-Eyebrow/Mobile-Summary-Stack).
+// Specs: docs/specs/modules/feat_2682_hub_uebersicht_geteilt.md (AC-1, AC-2, AC-3,
+//        AC-5, AC-8, AC-11, AC-13), docs/specs/modules/feat_1256_s8c_hub_fidelity.md
 //
-// Spec: docs/specs/modules/feat_1256_s8c_hub_fidelity.md (AC-1..AC-13)
-// #2347 S4 (feat_2347_s4_paritaets_e2e.md): AC-10 (Breadcrumb genau 2 Krümel) →
-// hub-kopf-aufbau KA-7, AC-12 (mobile Eyebrow) → KA-6, AC-11 (Profil-Label
-// „Wandern" in der Unterzeile) → KA-6/KA-7.
+// Kind-Kontraste (nur dort, wo die Spec sie ausweist):
+//   - testids: Vergleich behält `compare-*`, Trip bekommt `hub-uebersicht-*`
+//     (Spec „Stabile testids"; Tabelle UE unten, keine Assertions darin).
+//   - mobile Pfeil-Zeilen: Vergleich Orte · Wertebereiche · Versand (3), Trip nur
+//     Versand (1) — Orte/Wertebereiche-Karten sind Vergleichs-Hauptfläche
+//     (Spec Entscheidung 1, AC-2).
+//   - Status: Vergleich „Läuft autom." (mobil) / „Läuft automatisch" (Desktop);
+//     Trip wortgleich zum Status-Badge im Trip-Kopf (Entscheidung 2, AC-5).
+//   - Orte-Karte („+N weitere") und Orte-Reiter-Texte sind compare-eigen
+//     (CLAUDE.md-Katalog: Orte-Reiter), eigener Block am Ende.
+//
+// Korrektur gegenüber dem Altstand (gemessen am Code, nicht abgeschwächt): der
+// mobile Stapel hat seit #1360 KEINE Zeile „Layout" mehr (3 statt 4 Zeilen), der
+// Draft-Text lautet „Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand
+// festlegen." (#1743), „Reihenfolge nach Priorität." steht nicht in der Übersicht.
 //
 // Ausführen (gegen Staging, aus frontend/, NACH Push+Staging-Deploy):
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
 //   npx playwright test --config=playwright.1256-s8c.staging.config.ts
 //
-// Muster: hub-list-menu.spec.ts (vormals S8-Suite, #2347 S2) — echte Klickpfade
-// statt goto() wo ein Klick gefordert ist, eindeutige Testdaten-Namen mit
-// Date.now()-Suffix, afterEach-Cleanup. storageState-Login-Muster (kein
-// per-Test-Login — s. reference_staging_e2e_storagestate_login_rate_limit,
-// 429-Rate-Limit).
+// storageState-Login (Setup-Projekt), kein per-Test-Login (429-Rate-Limit).
+// Eigene Orte je Lauf (der Staging-Setup legt keine Seed-Orte an).
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation } from './helpers';
+import { createTestLocation, HUB_KINDS, HUB_SEL, openHub, seedHub, type HubKind, type SeededHub } from './helpers';
 
-let createdIds: string[] = [];
-let createdLocationIds: string[] = [];
+const DESKTOP = { width: 1280, height: 900 };
+const MOBIL = { width: 390, height: 844 };
+
+/** Selektor-Tabelle der Übersicht je kind (reine Konstanten, keine Assertions). */
+const UE: Record<
+	HubKind,
+	{
+		statKanaele: string;
+		statKanaeleMobil: string;
+		statBriefings: string;
+		versandEdit: string;
+		raster: string;
+		stapel: string;
+		pfeilZeilen: readonly string[];
+	}
+> = {
+	route: {
+		statKanaele: 'hub-uebersicht-stat-kanaele',
+		statKanaeleMobil: 'hub-uebersicht-stat-kanaele-mobile',
+		statBriefings: 'hub-uebersicht-stat-briefings',
+		versandEdit: 'hub-uebersicht-versand-edit',
+		raster: 'hub-uebersicht-monitoring-mobile',
+		stapel: 'hub-uebersicht-summary-mobile',
+		pfeilZeilen: ['Versand']
+	},
+	vergleich: {
+		statKanaele: 'compare-detail-stat-kanaele',
+		statKanaeleMobil: 'compare-detail-stat-kanaele-mobile',
+		statBriefings: 'compare-detail-stat-briefings',
+		versandEdit: 'compare-hub-versand-edit',
+		raster: 'compare-detail-monitoring-mobile',
+		stapel: 'compare-detail-summary-mobile',
+		pfeilZeilen: ['Orte', 'Wertebereiche', 'Versand']
+	}
+};
+
+let hubs: SeededHub[] = [];
+let orte: string[] = [];
 
 test.afterEach(async ({ page }) => {
-	for (const id of createdIds) {
-		try {
-			await page.request.delete(`/api/compare/presets/${id}`);
-		} catch {
-			/* Staging-Hygiene: Cleanup-Fehler ist nicht test-kritisch */
-		}
-	}
-	createdIds = [];
-	for (const id of createdLocationIds) {
-		try {
-			await page.request.delete(`/api/locations/${id}`);
-		} catch {
-			/* Staging-Hygiene: Cleanup-Fehler ist nicht test-kritisch */
-		}
-	}
-	createdLocationIds = [];
+	for (const hub of hubs) await hub.aufraeumen().catch(() => {});
+	hubs = [];
+	for (const id of orte) await page.request.delete(`/api/locations/${id}`).catch(() => {});
+	orte = [];
 });
 
-async function createLocation(page: Page, name: string, lat: number, lon: number): Promise<string> {
-	// #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts).
-	const loc = await createTestLocation(page.request, { name, lat, lon });
-	createdLocationIds.push(loc.id);
+async function ort(page: Page, name: string, lat: number): Promise<string> {
+	const loc = await createTestLocation(page.request, { name, lat, lon: 11.4 });
+	orte.push(loc.id);
 	return loc.id;
 }
 
-// Preset mit einem Ort, Profil "wandern" (AC-6-Beleg "Wandern") und Kanal
-// Email (Empfänger mit "@", AC-4-Beleg "Email" statt hartem Key).
-async function createPresetWithLocation(page: Page, name: string, locationId: string): Promise<string> {
-	return createPresetWithLocations(page, name, [locationId]);
+/** Aktiver Hub je kind: Trip mit datierter Etappe, Vergleich mit Name + einem eigenen Ort. */
+async function aktiverHub(page: Page, kind: HubKind, extra: Record<string, unknown> = {}): Promise<SeededHub> {
+	const basis =
+		kind === 'vergleich'
+			? { location_ids: [await ort(page, `E2E-GZ-2682 Ort ${Date.now()}`, 47.2)], profil: 'wandern' }
+			: {};
+	const hub = await seedHub(page.request, kind, { extra: { ...basis, ...extra } });
+	hubs.push(hub);
+	return hub;
 }
 
-// Fix-Loop 1 (F003, AC-3): Preset mit mehreren Orten (für den "+N weitere"-Beleg).
-async function createPresetWithLocations(page: Page, name: string, locationIds: string[]): Promise<string> {
-	const res = await page.request.post('/api/compare/presets', {
-		data: {
-			name,
-			location_ids: locationIds,
-			schedule: 'daily',
-			profil: 'wandern',
-			hour_from: 7,
-			hour_to: 16,
-			empfaenger: ['urlauber@example.com']
-		}
-	});
-	expect(res.ok(), 'Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
-	const body = await res.json();
-	const id = body.id as string;
-	createdIds.push(id);
-	return id;
+/** Entwurf je kind: Trip ohne datierte Etappe (deriveTripStatus ⇒ draft), Vergleich ohne Ort. */
+async function entwurfHub(page: Page, kind: HubKind): Promise<SeededHub> {
+	const extra =
+		kind === 'route'
+			? { stages: [{ id: 's1', name: 'Tag 1', waypoints: [{ id: 'a', name: 'a', lat: 42.0, lon: 9.0, elevation_m: 800 }] }] }
+			: { location_ids: [] };
+	const hub = await seedHub(page.request, kind, { extra });
+	hubs.push(hub);
+	return hub;
 }
 
-// Fix-Loop 1 (F003, AC-5/AC-8): Draft-Preset ohne Ort — deriveStatusFromPreset()
-// liefert 'draft', sobald location_ids leer ist (subscriptionHelpers.ts:66).
-async function createDraftPreset(page: Page, name: string): Promise<string> {
-	const res = await page.request.post('/api/compare/presets', {
-		data: {
-			name,
-			location_ids: [],
-			schedule: 'daily',
-			profil: 'wandern',
-			hour_from: 7,
-			hour_to: 16,
-			empfaenger: []
-		}
+const uebersicht = (page: Page, kind: HubKind) =>
+	page.locator(`[data-testid="${HUB_SEL[kind].panel}-uebersicht"]:visible`).first();
+
+for (const kind of HUB_KINDS) {
+	const ue = UE[kind];
+
+	test.describe(`Hub-Übersicht (${kind}) — Desktop`, () => {
+		test.beforeEach(async ({ page }) => {
+			await page.setViewportSize(DESKTOP);
+		});
+
+		test(`UE-1 (${kind}): Kennzahlen-Leiste mit fünf Kennzahlen, Kanäle- und Briefings-Wert vorhanden (AC-1, AC-13)`, async ({ page }) => {
+			const hub = await aktiverHub(page, kind);
+			await openHub(page, kind, hub.id);
+			const p = uebersicht(page, kind);
+			await expect(p).toBeVisible({ timeout: 10_000 });
+			for (const label of ['Status', 'Nächster Versand', 'Briefings', 'Zuletzt raus', 'Kanäle']) {
+				await expect(p.getByText(label, { exact: true }).first(), `Kennzahl „${label}" fehlt`).toBeVisible();
+			}
+			await expect(page.locator(`[data-testid="${ue.statKanaele}"]:visible`)).toHaveCount(1);
+			await expect(page.locator(`[data-testid="${ue.statBriefings}"]:visible`)).toHaveCount(1);
+			await expect(page.locator(`[data-testid="${ue.statKanaele}"]:visible`)).toContainText(/E-?Mail/i);
+		});
+
+		test(`UE-2 (${kind}): Status-Kennzahl (AC-3/AC-5)`, async ({ page }) => {
+			const hub = await aktiverHub(page, kind);
+			await openHub(page, kind, hub.id);
+			const p = uebersicht(page, kind);
+			await expect(p).toBeVisible({ timeout: 10_000 });
+			if (kind === 'vergleich') {
+				await expect(p.getByText('Läuft automatisch')).toBeVisible();
+			} else {
+				// Trip: wortgleich zum Badge im Trip-Kopf (kein zweites Vokabular).
+				const badge = page.getByTestId('trip-detail-status-badge').first();
+				await expect(badge).toBeVisible({ timeout: 10_000 });
+				const text = (await badge.innerText()).trim();
+				expect(text.length, 'Badge-Text leer').toBeGreaterThan(0);
+				await expect(p.getByText(text, { exact: true }).first()).toBeVisible();
+			}
+		});
+
+		test(`UE-3 (${kind}): Versand-Karte „Bearbeiten →" springt in Wetter-Metriken › Versand (AC-8)`, async ({ page }) => {
+			const hub = await aktiverHub(page, kind);
+			await openHub(page, kind, hub.id);
+			await expect(uebersicht(page, kind)).toBeVisible({ timeout: 10_000 });
+			const knopf = page.locator(`[data-testid="${ue.versandEdit}"]:visible`);
+			await expect(knopf).toHaveCount(1);
+			await expect(knopf).toHaveText('Bearbeiten →');
+			await knopf.click();
+			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-wetter-metriken"]:visible`).first()).toBeVisible({
+				timeout: 10_000
+			});
+			await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeInViewport({ timeout: 10_000 });
+			await expect.poll(() => new URL(page.url()).hash).toBe('#versand');
+		});
+
+		test(`UE-4 (${kind}): Entwurf ⇒ Versand-Karte „Noch nicht geplant" (AC-8, S8c AC-5)`, async ({ page }) => {
+			const hub = await entwurfHub(page, kind);
+			await openHub(page, kind, hub.id);
+			const p = uebersicht(page, kind);
+			await expect(p).toBeVisible({ timeout: 10_000 });
+			await expect(p.getByText('Noch nicht geplant')).toBeVisible();
+			if (kind === 'vergleich') {
+				await expect(p.getByText('Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen.')).toBeVisible();
+			}
+		});
+
+		test(`UE-5 (${kind}): aktiver Hub ⇒ Versand-Karte nennt Zeiten statt „Noch nicht geplant"`, async ({ page }) => {
+			const hub = await aktiverHub(page, kind);
+			await openHub(page, kind, hub.id);
+			const p = uebersicht(page, kind);
+			await expect(p).toBeVisible({ timeout: 10_000 });
+			await expect(p.getByText('Noch nicht geplant')).toHaveCount(0);
+			// Seed (helpers.seedRumpf): Morgen 06:00 aktiv.
+			await expect(page.locator(`[data-testid="${ue.statBriefings}"]:visible`)).toContainText('06:00');
+		});
+
+		test(`UE-6 (${kind}): Versand-Historie unter der Hauptfläche, keine Alerts-Attrappe (AC-11, AC-13)`, async ({ page }) => {
+			const hub = await aktiverHub(page, kind);
+			await openHub(page, kind, hub.id);
+			const p = uebersicht(page, kind);
+			await expect(p).toBeVisible({ timeout: 10_000 });
+			await expect(p.locator(`[data-testid="briefing-history"][data-kind="${kind}"]`)).toHaveCount(1);
+			await expect(p.getByText('Keine aktuellen Alerts.')).toHaveCount(0);
+			await expect(p.getByRole('button', { name: 'Alle Alerts →' })).toHaveCount(0);
+		});
 	});
-	expect(res.ok(), 'Draft-Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
-	const body = await res.json();
-	const id = body.id as string;
-	createdIds.push(id);
-	return id;
+
+	test.describe(`Hub-Übersicht (${kind}) — mobil 390×844`, () => {
+		test.beforeEach(async ({ page }) => {
+			await page.setViewportSize(MOBIL);
+		});
+
+		test(`UE-7 (${kind}): 2×2-Raster mit vier Kennzahlen, ohne Briefings (AC-2, S8c AC-22)`, async ({ page }) => {
+			const hub = await aktiverHub(page, kind);
+			await openHub(page, kind, hub.id);
+			const raster = page.locator(`[data-testid="${ue.raster}"]:visible`);
+			await expect(raster).toBeVisible({ timeout: 10_000 });
+			await expect(raster.locator('[data-slot="card"]')).toHaveCount(4);
+			for (const label of ['Status', 'Nächster Versand', 'Zuletzt raus', 'Kanäle']) await expect(raster).toContainText(label);
+			await expect(raster).not.toContainText('Briefings');
+			await expect(page.locator(`[data-testid="${ue.statBriefings}"]`)).toHaveCount(0);
+			await expect(page.locator(`[data-testid="${ue.statKanaeleMobil}"]:visible`)).toHaveCount(1);
+		});
+
+		test(`UE-8 (${kind}): Pfeil-Zeilen-Stapel; Versand-Zeile springt in Wetter-Metriken (AC-2, S8c AC-7)`, async ({ page }) => {
+			const hub = await aktiverHub(page, kind);
+			await openHub(page, kind, hub.id);
+			const stapel = page.locator(`[data-testid="${ue.stapel}"]:visible`);
+			await expect(stapel).toBeVisible({ timeout: 10_000 });
+			const zeilen = stapel.locator('[data-testid="hub-summary-row-mobile"]');
+			await expect(zeilen).toHaveCount(ue.pfeilZeilen.length);
+			for (const [i, eyebrow] of ue.pfeilZeilen.entries()) await expect(zeilen.nth(i)).toContainText(eyebrow);
+			await zeilen.nth(ue.pfeilZeilen.indexOf('Versand')).click();
+			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-wetter-metriken"]:visible`).first()).toBeVisible({
+				timeout: 10_000
+			});
+			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-uebersicht"]`)).toHaveCount(0);
+		});
+
+		test(`UE-9 (${kind}): Status-Kurzform im Raster (S8c AC-8, AC-5)`, async ({ page }) => {
+			const hub = await aktiverHub(page, kind);
+			await openHub(page, kind, hub.id);
+			const raster = page.locator(`[data-testid="${ue.raster}"]:visible`);
+			await expect(raster).toBeVisible({ timeout: 10_000 });
+			if (kind === 'vergleich') {
+				await expect(raster.getByText('Läuft autom.', { exact: true })).toBeVisible();
+			} else {
+				const text = (await page.getByTestId('trip-detail-status-badge').first().innerText()).trim();
+				await expect(raster.getByText(text, { exact: true })).toBeVisible();
+			}
+		});
+
+		test(`UE-10 (${kind}): Entwurf ⇒ Status-Kurzform „Entwurf" im Raster`, async ({ page }) => {
+			const hub = await entwurfHub(page, kind);
+			await openHub(page, kind, hub.id);
+			const raster = page.locator(`[data-testid="${ue.raster}"]:visible`);
+			await expect(raster).toBeVisible({ timeout: 10_000 });
+			await expect(raster.getByText('Entwurf', { exact: true })).toBeVisible();
+		});
+	});
 }
 
-// AC-1/AC-2 (Layout-Tab Desktop-/Mobil-Rahmen) GELOESCHT (#2287-Nachbarschaft):
-// der Hub-Layout-Reiter ist per #1360 aufgeloest, und die hier geprueften Texte
-// ("Übersicht pro Kanal", "Telegram · max 8", "Renderer kappt je Kanal",
-// "Spalten pro Kanal") sind seither ausdruecklich VERBOTENE Aussagen
-// (compare-layout-tab-dissolution.spec.ts, FORBIDDEN_CLAIMS / AC-4).
+// ─── compare-eigen: Orte-Karte und Orte-Reiter (CLAUDE.md-Katalog: Orte-Reiter) ──
 
-test.describe('Issue #1256 S8c (AC-4/AC-6): SummaryCard-Texte auf der Übersicht (Desktop)', () => {
+test.describe('Ortsvergleich: Orte-Karte und Orte-Reiter (compare-eigen)', () => {
 	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1280, height: 900 });
+		await page.setViewportSize(DESKTOP);
 	});
 
-	test('Layout-Karte zeigt Kanal-Label statt hartem Key, Wertebereiche-Karte zeigt "Wandern"', async ({
-		page
-	}) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8c Ort-Sum ${suffix}`, 47.2, 11.2);
-		const id = await createPresetWithLocation(page, `E2E S8c Summary ${suffix}`, locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		const panel = page.locator('[data-testid="compare-detail-panel-uebersicht"]');
-		await expect(panel).toBeVisible({ timeout: 10_000 });
-		await expect(panel.getByText('Email').first()).toBeVisible();
-		await expect(panel.getByText('Wandern')).toBeVisible();
-		await expect(panel.getByText('Reihenfolge nach Priorität.')).toBeVisible();
-	});
-});
-
-test.describe('Issue #1256 S8c (AC-7): mobiler Chevron-Summary-Stack', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 390, height: 844 });
+	test('S8c AC-3/AC-4/AC-6: vier Orte ⇒ „4 Kandidaten" und „+1 weitere"; Profil „Wandern", Kanal „Email"', async ({ page }) => {
+		const s = Date.now();
+		const ids = [
+			await ort(page, `E2E-GZ-2682 4a ${s}`, 47.61),
+			await ort(page, `E2E-GZ-2682 4b ${s}`, 47.62),
+			await ort(page, `E2E-GZ-2682 4c ${s}`, 47.63),
+			await ort(page, `E2E-GZ-2682 4d ${s}`, 47.64)
+		];
+		const hub = await seedHub(page.request, 'vergleich', { extra: { location_ids: ids, profil: 'wandern' } });
+		hubs.push(hub);
+		await openHub(page, 'vergleich', hub.id);
+		const p = uebersicht(page, 'vergleich');
+		await expect(p).toBeVisible({ timeout: 10_000 });
+		await expect(p.getByText('4 Kandidaten')).toBeVisible();
+		await expect(p.getByText('+1 weitere')).toBeVisible();
+		await expect(p.getByText('Wandern').first()).toBeVisible();
+		await expect(page.locator('[data-testid="compare-detail-stat-kanaele"]:visible')).toContainText('Email');
 	});
 
-	test('4 Chevron-Zeilen statt 2×2-Grid; Klick auf "Orte" wechselt sichtbar den Tab', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8c Ort-Chev ${suffix}`, 47.3, 11.3);
-		const id = await createPresetWithLocation(page, `E2E S8c Chevron ${suffix}`, locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		const stack = page.locator('[data-testid="compare-detail-summary-mobile"]');
-		await expect(stack).toBeVisible({ timeout: 10_000 });
-		const rows = stack.locator('[data-testid="hub-summary-row-mobile"]');
-		await expect(rows).toHaveCount(4);
-		await expect(rows.nth(0)).toContainText('Orte');
-		await expect(rows.nth(1)).toContainText('Wertebereiche');
-		await expect(rows.nth(2)).toContainText('Layout');
-		await expect(rows.nth(3)).toContainText('Versand');
-
-		await rows.nth(0).click();
-		await expect(page.locator('[data-testid="compare-detail-panel-orte"]')).toBeVisible({ timeout: 10_000 });
-		await expect(page.locator('[data-testid="compare-detail-panel-uebersicht"]')).toHaveCount(0);
-	});
-});
-
-// Fix-Loop 1 (F003 HIGH): 5 zuvor fehlende AC-Nachweise ergänzt.
-
-test.describe('Issue #1256 S8c (AC-3): Orte-SummaryCard "+N weitere" bei >3 Orten', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1280, height: 900 });
-	});
-
-	test('4 Orte → Orte-Karte zeigt "+1 weitere"', async ({ page }) => {
-		const suffix = Date.now();
-		const locIds = await Promise.all([
-			createLocation(page, `E2E S8c Ort-4a ${suffix}`, 47.61, 11.61),
-			createLocation(page, `E2E S8c Ort-4b ${suffix}`, 47.62, 11.62),
-			createLocation(page, `E2E S8c Ort-4c ${suffix}`, 47.63, 11.63),
-			createLocation(page, `E2E S8c Ort-4d ${suffix}`, 47.64, 11.64)
-		]);
-		const id = await createPresetWithLocations(page, `E2E S8c VierOrte ${suffix}`, locIds);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		const panel = page.locator('[data-testid="compare-detail-panel-uebersicht"]');
-		await expect(panel).toBeVisible({ timeout: 10_000 });
-		await expect(panel.getByText('+1 weitere')).toBeVisible();
-	});
-});
-
-test.describe('Issue #1256 S8c (AC-5): Versand-SummaryCard Draft-Sonderfall', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1280, height: 900 });
-	});
-
-	test('frisch angelegtes Draft-Preset zeigt "Noch nicht geplant" + Festlegen-Copy', async ({ page }) => {
-		const suffix = Date.now();
-		const id = await createDraftPreset(page, `E2E S8c Draft-Versand ${suffix}`);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		const panel = page.locator('[data-testid="compare-detail-panel-uebersicht"]');
-		await expect(panel).toBeVisible({ timeout: 10_000 });
-		await expect(panel.getByText('Noch nicht geplant')).toBeVisible();
-		await expect(panel.getByText('Briefing-Uhrzeiten im Tab Versand festlegen.')).toBeVisible();
-	});
-
-	test('aktiviertes Preset zeigt weiterhin die Zeiten-Copy statt des Draft-Texts', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8c Ort-Aktiv ${suffix}`, 47.7, 11.7);
-		const id = await createPresetWithLocation(page, `E2E S8c Aktiv-Versand ${suffix}`, locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		const panel = page.locator('[data-testid="compare-detail-panel-uebersicht"]');
-		await expect(panel).toBeVisible({ timeout: 10_000 });
-		await expect(panel.getByText('Noch nicht geplant')).toHaveCount(0);
-		// Nicht auf "nächster Versand" allein matchen — das trifft (case-
-		// insensitiv) auch die Monitoring-Stat-Überschrift "Nächster Versand"
-		// im selben Panel (Strict-Mode-Kollision, Staging-Befund). Regex grenzt
-		// auf die Versand-Karten-Copy ein ("Briefings ... · nächster Versand ...").
-		await expect(panel.getByText(/Briefings .*· nächster Versand/)).toBeVisible();
-	});
-});
-
-test.describe('Issue #1256 S8c (AC-8): mobile Status-Kurzform', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 390, height: 844 });
-	});
-
-	test('Draft-Preset zeigt Status-Stat exakt "Entwurf"', async ({ page }) => {
-		const suffix = Date.now();
-		const id = await createDraftPreset(page, `E2E S8c Draft-Status ${suffix}`);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		const monitoring = page.locator('[data-testid="compare-detail-monitoring-mobile"]');
-		await expect(monitoring).toBeVisible({ timeout: 10_000 });
-		await expect(monitoring.getByText('Entwurf', { exact: true })).toBeVisible();
-	});
-
-	test('aktives Preset zeigt Status-Stat exakt "Läuft autom."', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8c Ort-Status ${suffix}`, 47.8, 11.8);
-		const id = await createPresetWithLocation(page, `E2E S8c Aktiv-Status ${suffix}`, locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-
-		const monitoring = page.locator('[data-testid="compare-detail-monitoring-mobile"]');
-		await expect(monitoring).toBeVisible({ timeout: 10_000 });
-		await expect(monitoring.getByText('Läuft autom.', { exact: true })).toBeVisible();
-	});
-});
-
-test.describe('Issue #1256 S8c (AC-9, Copy-Teil): Orte-Tab Desktop-Rahmen', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1280, height: 900 });
-	});
-
-	test('Header "Verglichene Orte" + Desktop-Sortier-Hint sind sichtbar', async ({ page }) => {
-		const suffix = Date.now();
-		const locId = await createLocation(page, `E2E S8c Ort-Orte ${suffix}`, 47.9, 11.9);
-		const id = await createPresetWithLocation(page, `E2E S8c Orte-Tab ${suffix}`, locId);
-
-		await page.goto(`/compare/${id}`);
-		await page.waitForLoadState('networkidle');
-		await page.locator('[data-testid="compare-detail-tab-orte"]').click();
-
-		const panel = page.locator('[data-testid="compare-detail-panel-orte"]');
+	test('S8c AC-9: Orte-Reiter zeigt „Verglichene Orte" und den Desktop-Sortier-Hinweis', async ({ page }) => {
+		const hub = await aktiverHub(page, 'vergleich');
+		await openHub(page, 'vergleich', hub.id, { tab: 'orte' });
+		const panel = page.locator('[data-testid="compare-detail-panel-orte"]:visible').first();
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 		await expect(panel.getByText('Verglichene Orte')).toBeVisible();
 		await expect(panel.getByText('Reihenfolge = Spalten im Briefing · ziehen zum Sortieren')).toBeVisible();

@@ -8,9 +8,13 @@
 // AC-22 der entfernten mobilen Compare-Sammelspec; Zuordnung alt → neu:
 // Spec-Tabelle Zeilen 1-5, 36-38, 44-49.
 //
-// Kind-eigene Zweige NUR dort, wo die Spec sie ausweist: HT-8 (Optik-Werte je Art)
-// und HT-10 (Übersicht-Inhalt des Ortsvergleichs). Selektor-Unterschiede kommen
-// aus HUB_SEL[kind] (helpers.ts); Seed-Besonderheiten stehen hier im Spec.
+// Kind-eigene Zweige NUR dort, wo die Spec sie ausweist: HT-8 (Optik-Werte je Art).
+// HT-10 (Kennzahlen-Raster der Übersicht) läuft seit Issue #2682 für BEIDE Arten —
+// die Übersicht ist ein geteilter Baustein (shared/hub-uebersicht/, Spec
+// feat_2682_hub_uebersicht_geteilt.md AC-2/AC-17); nur die testids unterscheiden
+// sich (Tabelle RASTER). HT-13 (#2682 AC-11): kein „Alle Alerts →" in der Übersicht.
+// Selektor-Unterschiede kommen aus HUB_SEL[kind] (helpers.ts); Seed-Besonderheiten
+// stehen hier im Spec.
 //
 // Kein fester Schlaf, kein networkidle: gewartet wird auf sichtbare Elemente und
 // Attribute. Anmeldung über den storageState aus global.setup.ts (Admin-Sitzung).
@@ -246,9 +250,10 @@ for (const kind of HUB_KINDS) {
 // HT-12: Ersatz für compare-flow-navigation AC-30 („Bearbeiten →" der Orte-Karte).
 // Seed-Text des Punkte-Panels (aus seedDrei bzw. global.setup.ts) und Sprungknopf
 // der Übersicht je kind (Kind-Kontraste „HT-12 Sprungknopf": Trip HubOverview.svelte:88
-// „Im Editor öffnen →", Vergleich CompareTabs.svelte:841 „Bearbeiten →" auf der
-// Orte-Karte). Die Übersicht ist zweimal implementiert (Spec Befund 6) — nur die
-// Beschriftung unterscheidet sich, die Aussage ist gleich.
+// „Im Editor öffnen →", Vergleich shared/hub-uebersicht/HubUebersicht.svelte „Bearbeiten →" auf der
+// Orte-Karte). Die Sprungziele gehören zur context-eigenen Hauptfläche (Etappen bzw.
+// Orte, #2682 Entscheidung 1) — nur die Beschriftung unterscheidet sich, die Aussage
+// ist gleich. Ein Sprungknopf „Alle Alerts →" existiert in KEINER Art mehr (HT-13).
 const PUNKTE_TEXT: Record<HubKind, string> = { route: 'Tag 1', vergleich: 'Innsbruck (E2E)' };
 const SPRUNGKNOPF: Record<HubKind, (page: Page) => ReturnType<Page['locator']>> = {
 	route: (page) =>
@@ -317,29 +322,60 @@ for (const kind of HUB_KINDS) {
 	});
 }
 
-// HT-10 läuft NUR für den Ortsvergleich (Spec HT-10, compare-eigen): der Inhalt der
-// Übersicht ist kind-eigen — der Trip zeigt dort das Trip-Cockpit (HubOverview),
-// der Vergleich das 4-Kennzahlen-Raster. Altfall Zuordnung Zeile 36.
-test('HT-10 (vergleich): Mobil — Übersicht zeigt genau 4 Stat-Karten im 2×2-Raster, kein „Briefings"-Stat', async ({
-	page
-}) => {
-	const kind: HubKind = 'vergleich';
-	await page.setViewportSize(MOBIL);
-	const hub = await seedHub(page.request, kind);
-	try {
-		await oeffneDirekt(page, kind, hub.id, 'uebersicht');
+// HT-10 (#2682, AC-2/AC-17): das Kennzahlen-Raster der Übersicht ist EIN geteilter
+// Baustein (shared/hub-uebersicht/) — beide Arten zeigen mobil dieselben vier
+// Kennzahlen im 2×2-Raster. Nur die testids folgen dem Präfix je Art (Spec „Stabile
+// testids": Vergleich compare-*, Trip hub-uebersicht-*). Altfall Zuordnung Zeile 36.
+const RASTER: Record<HubKind, { raster: string; statBriefings: string }> = {
+	route: { raster: 'hub-uebersicht-monitoring-mobile', statBriefings: 'hub-uebersicht-stat-briefings' },
+	vergleich: { raster: 'compare-detail-monitoring-mobile', statBriefings: 'compare-detail-stat-briefings' }
+};
 
-		const monitoring = page.locator('[data-testid="compare-detail-monitoring-mobile"]:visible');
-		await expect(monitoring).toBeVisible({ timeout: 10_000 });
-		await expect(monitoring.locator('[data-slot="card"]')).toHaveCount(4);
-		await expect(monitoring).toContainText('Status');
-		await expect(monitoring).toContainText('Nächster Versand');
-		await expect(monitoring).toContainText('Zuletzt raus');
-		await expect(monitoring).toContainText('Kanäle');
-		await expect(monitoring).not.toContainText('Briefings');
-		// Die Desktop-exklusive Briefings-Stat existiert im mobilen DOM-Baum gar nicht.
-		await expect(page.locator('[data-testid="compare-detail-stat-briefings"]')).toHaveCount(0);
-	} finally {
-		await hub.aufraeumen();
-	}
-});
+for (const kind of HUB_KINDS) {
+	test(`HT-10 (${kind}): Mobil — Übersicht zeigt genau 4 Stat-Karten im 2×2-Raster, kein „Briefings"-Stat`, async ({
+		page
+	}) => {
+		await page.setViewportSize(MOBIL);
+		const hub = await seedHub(page.request, kind);
+		try {
+			await oeffneDirekt(page, kind, hub.id, 'uebersicht');
+
+			const monitoring = page.locator(`[data-testid="${RASTER[kind].raster}"]:visible`);
+			await expect(monitoring).toBeVisible({ timeout: 10_000 });
+			await expect(monitoring.locator('[data-slot="card"]')).toHaveCount(4);
+			await expect(monitoring).toContainText('Status');
+			await expect(monitoring).toContainText('Nächster Versand');
+			await expect(monitoring).toContainText('Zuletzt raus');
+			await expect(monitoring).toContainText('Kanäle');
+			await expect(monitoring).not.toContainText('Briefings');
+			// Die Desktop-exklusive Briefings-Stat existiert im mobilen DOM-Baum gar nicht.
+			await expect(page.locator(`[data-testid="${RASTER[kind].statBriefings}"]`)).toHaveCount(0);
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+
+	// HT-13 (#2682 AC-11): die Alerts-Attrappe („Alerts (letzte 7 Tage)", Festtext,
+	// Knopf „Alle Alerts →") ist entfernt; die Alarme bleiben über den Reiter erreichbar.
+	test(`HT-13 (${kind}): Desktop — Übersicht ohne „Alle Alerts →", Reiter Alarme öffnet sich per Klick`, async ({
+		page
+	}) => {
+		await page.setViewportSize(DESKTOP);
+		const hub = await seedHub(page.request, kind);
+		try {
+			await oeffneDirekt(page, kind, hub.id, 'uebersicht');
+			const uebersicht = page.locator(`[data-testid="${HUB_SEL[kind].panel}-uebersicht"]:visible`).first();
+			await expect(uebersicht).toBeVisible({ timeout: 10_000 });
+			await expect(uebersicht.getByRole('button', { name: 'Alle Alerts →' })).toHaveCount(0);
+			await expect(uebersicht.getByText('Keine aktuellen Alerts.')).toHaveCount(0);
+			await expect(uebersicht.getByText('Alerts (letzte 7 Tage)')).toHaveCount(0);
+
+			await reiter(page, kind, 'alarme').first().click();
+			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-alarme"]:visible`).first()).toBeVisible({
+				timeout: 10_000
+			});
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+}

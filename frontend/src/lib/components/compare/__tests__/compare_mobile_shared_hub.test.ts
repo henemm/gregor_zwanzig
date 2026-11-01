@@ -35,11 +35,16 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { register } from 'node:module';
 import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC = resolve(HERE, '../../../..');
+// #2682: das Modell der Übersicht wird echt geladen (endungslose Importe der Helfer).
+register(pathToFileURL(resolve(SRC, '..', 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(resolve(SRC, '..') + '/').href);
+const HUB_UEBERSICHT = resolve(SRC, 'lib/components/shared/hub-uebersicht/HubUebersicht.svelte');
+const MODELL = resolve(SRC, 'lib/components/shared/hub-uebersicht/hubUebersichtModell.ts');
 
 const HUB_PAGE = resolve(SRC, 'routes/compare/[id]/+page.svelte');
 const TABS = resolve(SRC, 'lib/components/compare/CompareTabs.svelte');
@@ -62,38 +67,49 @@ describe('AC-22 — mobiler Hub: geteilte CompareTabs mit 4-Stat-2×2 statt Besp
 		);
 	});
 
-	test('CompareTabs hat eine Viewport-Weiche (matchMedia, Muster TripTabs.svelte:117-124)', () => {
-		const src = readFileSync(TABS, 'utf-8');
-		assert.match(
-			src,
-			/matchMedia\(\s*['"`]\(max-width:\s*899px\)['"`]\s*\)/,
-			'CompareTabs.svelte hat keine isMobileViewport-Mechanik — der Monitoring-Streifen ' +
-				'kann nicht zwischen Desktop-5-Stat-Leiste und mobilem 2×2 umschalten'
-		);
-	});
+	// Issue #2682: der Monitoring-Streifen liegt im geteilten Baustein HubUebersicht — die Weiche
+	// steht dort; CompareTabs behält seine eigene fuer Orte-Rahmen/Wertebereiche (Fall unten).
+	for (const [name, datei] of [
+		['CompareTabs', TABS],
+		['HubUebersicht (Übersicht, #2682)', HUB_UEBERSICHT]
+	] as const) {
+		test(`${name} hat eine Viewport-Weiche (matchMedia, Muster TripTabs.svelte:117-124)`, () => {
+			const src = readFileSync(datei, 'utf-8');
+			assert.match(
+				src,
+				/matchMedia\(\s*['"`]\(max-width:\s*899px\)['"`]\s*\)/,
+				`${name} hat keine isMobileViewport-Mechanik — der Monitoring-Streifen ` +
+					'kann nicht zwischen Desktop-5-Stat-Leiste und mobilem 2×2 umschalten'
+			);
+		});
+	}
 
-	test('mobiler Monitoring-Zweig zeigt GENAU die 4 Soll-Stats (ohne „Briefings")', () => {
-		const src = readFileSync(TABS, 'utf-8');
-		const startMarker = 'data-testid="compare-detail-monitoring-mobile"';
+	test('mobiler Monitoring-Zweig zeigt GENAU die 4 Soll-Stats (ohne „Briefings")', async () => {
+		// #2682: das Raster rendert die mobilen Kennzahlen des Modells; ihre Etiketten werden
+		// am echten Ableiter gemessen (Vergleich), nicht mehr als Literale im Markup.
+		const src = readFileSync(HUB_UEBERSICHT, 'utf-8');
+		const startMarker = 'data-testid={modell.rasterTestid}';
 		const start = src.indexOf(startMarker);
 		assert.ok(
 			start > -1,
-			'Mobiler Monitoring-Block (data-testid="compare-detail-monitoring-mobile") fehlt — ' +
+			'Mobiler Monitoring-Block (data-testid={modell.rasterTestid}) fehlt in HubUebersicht — ' +
 				'Soll: 2×2-Grid mit 4 Stats (screen-compare-detail-mobile.jsx:79-85)'
 		);
-		// Blockende: nächstes schließendes Grid — pragmatisch: die 1200 Zeichen
-		// nach dem Marker müssen die 4 Soll-Labels tragen, „Briefings" gehört
-		// NICHT dazu (bleibt Desktop-only, 5. Stat der Desktop-Leiste).
-		const block = src.slice(start, start + 1200);
-		for (const label of ['Status', 'Nächster Versand', 'Zuletzt raus', 'Kanäle']) {
-			assert.ok(
-				block.includes(label),
-				`Mobiler Monitoring-Block ohne Stat „${label}" (Soll: screen-compare-detail-mobile.jsx:81-84)`
-			);
-		}
-		assert.ok(
-			!block.includes('Briefings'),
-			'Mobiler Monitoring-Block enthält „Briefings" — das Soll-2×2 hat GENAU 4 Stats, ' +
+		const block = src.slice(start, start + 600);
+		assert.match(block, /\{#each mobileKennzahlen as k/, 'das Raster rendert nicht die mobilen Kennzahlen');
+		assert.match(src, /mobileKennzahlen = \$derived\(modell\.kennzahlen\.filter\(\(k\) => k\.mobil\)\)/);
+		const { deriveVergleichKennzahlen } = await import(pathToFileURL(MODELL).href);
+		const m = deriveVergleichKennzahlen(
+			{ id: 'c', name: 'V', location_ids: ['l1'], schedule: 'daily', profil: 'wandern' },
+			'active',
+			undefined,
+			[{ rank: 1, loc: { id: 'l1', name: 'A' } }]
+		);
+		const labels = m.kennzahlen.filter((k: { mobil: boolean }) => k.mobil).map((k: { label: string }) => k.label);
+		assert.deepEqual(
+			labels,
+			['Status', 'Nächster Versand', 'Zuletzt raus', 'Kanäle'],
+			'Mobiler Monitoring-Block: das Soll-2×2 hat GENAU diese 4 Stats, ' +
 				'Briefings-Zeiten bleiben der Desktop-Leiste vorbehalten'
 		);
 	});
