@@ -1,0 +1,263 @@
+----- vergleich.betreff -----
+Wetter-Vergleich: Tirol (29.10.2026)
+----- versandfehler.07 -----
+Nachgeliefert — die Zustellung um 07:00 ist fehlgeschlagen
+----- versandfehler.unlesbar -----
+Nachgeliefert — die Zustellung um x:00 ist fehlgeschlagen
+----- servicefehler.rumpf -----
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600&family=JetBrains+Mono:wght@400&display=swap"><style>body { margin:0; padding:0; background:#f6f4ee; font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color:#1a1a18; }.container { max-width:640px; margin:0 auto; padding:24px; }.heading { border-bottom:2px solid #c45a2a; color:#c45a2a; padding-bottom:8px; margin:0 0 16px 0; font-size:20px; }.meta { background:#edeae1; padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:14px; }.error-block { border-left:4px solid #b33a2a; background:#edeae1; padding:12px 16px; margin:16px 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; white-space:pre-wrap; }.footer { background:#1a1a18; color:#ffffff; padding:16px 24px; text-align:center; font-size:12px; }.footer a { color:#ffffff; text-decoration:underline; }</style></head><body><div class="container"><h2 class="heading">Service-Benachrichtigung</h2><div class="meta"><strong>Trip:</strong> GR20<br><strong>Report:</strong> Morning<br><strong>Problem:</strong> Wetterdaten konnten nicht abgerufen werden.</div><p><strong>Betroffene Segmente:</strong></p><div class="error-block">  - Segment 2: HTTP 503</div><p style="font-size:13px; color:#5c5a52;">Diese E-Mail wurde automatisch gesendet, weil Ihr Trip nur SMS aktiviert hat und Anbieter-Fehler aufgetreten sind.</p></div><div class="footer" style="background:#1a1a18; color:#ffffff;">Gregor Zwanzig &mdash; automatischer Wetter-Service</div></body></html>
+----- nachlieferung.komplett.ergebnis -----
+(1, 0)
+----- nachlieferung.komplett.betreff -----
+[GR20] Etappe 1 — Morgen
+----- nachlieferung.komplett.header -----
+de
+----- nachlieferung.komplett.mail -----
+Nachgeliefert — der Wetterdienst war um 6:00 nicht erreichbar
+----- nachlieferung.komplett.telegram -----
+Nachgeliefert — der Wetterdienst war um 6:00 nicht erreichbar
+----- nachlieferung.komplett.sms -----
+E1: TF- W15@4 G22@4 R- CT:SCT@4 VS9.0@4 SU16 SD5
+----- nachlieferung.vollstaendig.ergebnis -----
+(1, 0)
+----- nachlieferung.vollstaendig.betreff -----
+[GR20] Etappe 1 — Morgen
+----- nachlieferung.vollstaendig.header -----
+de
+----- nachlieferung.vollstaendig.mail -----
+Aktualisiert — jetzt mit vollständigen Daten
+----- nachlieferung.vollstaendig.telegram -----
+Aktualisiert — jetzt mit vollständigen Daten
+----- nachlieferung.vollstaendig.sms -----
+E1: TF- W15@4 G22@4 R- CT:SCT@4 VS9.0@4 SU16 SD5
+----- nachlieferung.unvollstaendig.ergebnis -----
+(1, 0)
+----- nachlieferung.unvollstaendig.betreff -----
+[GR20] Etappe 1 — Morgen
+----- nachlieferung.unvollstaendig.header -----
+de
+----- nachlieferung.unvollstaendig.mail -----
+Aktualisiert — weiterhin unvollständig, Details im Hinweis
+----- nachlieferung.unvollstaendig.telegram -----
+Aktualisiert — weiterhin unvollständig, Details im Hinweis
+----- nachlieferung.unvollstaendig.sms -----
+E1: TF? W15@4 G22@4 R? CT:SCT@4 VS9.0@4 SU9 SD5
+----- nachlieferung.versandfehler.ergebnis -----
+(1, 0)
+----- nachlieferung.versandfehler.betreff -----
+[GR20] Etappe 1 — Morgen
+----- nachlieferung.versandfehler.header -----
+de
+----- nachlieferung.versandfehler.mail -----
+Nachgeliefert — die Zustellung um 06:00 ist fehlgeschlagen
+----- nachlieferung.versandfehler.telegram -----
+Nachgeliefert — die Zustellung um 06:00 ist fehlgeschlagen
+----- nachlieferung.versandfehler.sms -----
+E1: TF- W15@4 G22@4 R- CT:SCT@4 VS9.0@4 SU16 SD5
+----- ausfall.ausgang -----
+no_weather
+----- ausfall.betreff -----
+[GR20] Wetterdaten nicht verfügbar
+----- ausfall.header -----
+de
+----- ausfall.mail -----
+Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.
+----- ausfall.telegram -----
+[[GR20] Wetterdaten nicht verfügbar]
+
+Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.
+----- ausfall.sms -----
+Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.
+----- teilausfall.ausgang -----
+sent
+----- teilausfall.betreff -----
+[GR20] Etappe 1 — Morgen
+----- teilausfall.header -----
+de
+----- teilausfall.mail -----
+Hinweis: Für folgende Abschnitte liegen aktuell keine Wetterdaten vor (Segment Ziel) — eine Aktualisierung wird nachgeliefert.
+----- teilausfall.telegram -----
+Hinweis: Für folgende Abschnitte liegen aktuell keine Wetterdaten vor (Segment Ziel) — eine Aktualisierung wird nachgeliefert.
+----- teilausfall.sms -----
+E1: D2/2 TF? FD?/? W15@4 G22@4 R? TH:? TH+:- SL2200 CT:SCT@4 SU9
+----- servicefehler.betreff -----
+[GR20] Wetterdaten nicht verfuegbar
+----- servicefehler.header -----
+de
+----- gewitter.tag -----
+29.10.2026: Gewitter möglich ab 10:00 · CAPE, lightning · Hagel: ja, nachts starkes Gewitter ab 02:00 · Hagel: ja
+----- gewitter.leicht -----
+29.10.2026: Instabile Luftmasse (leicht) ab 11:00 · CAPE
+----- gewitter.kein -----
+29.10.2026: Kein Gewitter erwartet
+----- nacht.leicht -----
+, nachts schwaches Signal (leicht) ab 03:00
+----- nacht.mittel -----
+, nachts mittleres Gewitter ab 01:00 · Hagel: ja
+----- trend_notiz.hoch -----
+Gewitter möglich · Regen 9 mm · Böen bis 50 km/h
+----- trend_notiz.leicht -----
+Schwaches Signal (leicht)
+----- trend_notiz.ruhig -----
+None
+----- vergleich.betreff -----
+Wetter-Vergleich: Tirol (29.10.2026)
+----- vergleich.header -----
+de
+----- vergleich.mail -----
+ORTS-VERGLEICH
+========================
+Datum: Thursday, 29.10.2026
+Erstellt: 29.10.2026 05:00 (CET)
+
+--------------------------------------------------
+Innsbruck
+   Temperatur Maximum: 14°C
+   Wind: 12 km/h
+   Temperatur Minimum: 4°C
+   Böen: 25 km/h
+   Windrichtung: -
+   Gefühlte Temperatur Minimum: -
+   Gefühlte Temperatur Maximum: -
+   Tiefe Wolken: -
+   Mittelhohe Wolken: -
+   Hohe Wolken: -
+   Niederschlag: 0.6 mm
+   Regenwahrscheinlichkeit: 20%
+   Gewitter: —
+   UV-Index: 2
+   Sichtweite: 9.0 km
+   Nullgradgrenze: -
+   Luftfeuchtigkeit: -
+   Taupunkt: -
+   Luftdruck: -
+   Niederschlagsart: -
+   Schneefallgrenze: -
+   Sonnenstunden: 4.0h
+   Bewölkung: 40%
+   Schneehöhe: -
+   Neuschnee: -
+
+Stubai
+   Temperatur Maximum: 14°C
+   Wind: 12 km/h
+   Temperatur Minimum: 4°C
+   Böen: 25 km/h
+   Windrichtung: -
+   Gefühlte Temperatur Minimum: -
+   Gefühlte Temperatur Maximum: -
+   Tiefe Wolken: -
+   Mittelhohe Wolken: -
+   Hohe Wolken: -
+   Niederschlag: 0.6 mm
+   Regenwahrscheinlichkeit: 20%
+   Gewitter: —
+   UV-Index: 2
+   Sichtweite: 9.0 km
+   Nullgradgrenze: -
+   Luftfeuchtigkeit: -
+   Taupunkt: -
+   Luftdruck: -
+   Niederschlagsart: -
+   Schneefallgrenze: -
+   Sonnenstunden: 4.0h
+   Bewölkung: 40%
+   Schneehöhe: -
+   Neuschnee: -
+
+Zillertal
+   Temperatur Maximum: 14°C
+   Wind: 12 km/h
+   Temperatur Minimum: 4°C
+   Böen: 25 km/h
+   Windrichtung: -
+   Gefühlte Temperatur Minimum: -
+   Gefühlte Temperatur Maximum: -
+   Tiefe Wolken: -
+   Mittelhohe Wolken: -
+   Hohe Wolken: -
+   Niederschlag: 0.6 mm
+   Regenwahrscheinlichkeit: 20%
+   Gewitter: —
+   UV-Index: 2
+   Sichtweite: 9.0 km
+   Nullgradgrenze: -
+   Luftfeuchtigkeit: -
+   Taupunkt: -
+   Luftdruck: -
+   Niederschlagsart: -
+   Schneefallgrenze: -
+   Sonnenstunden: 4.0h
+   Bewölkung: 40%
+   Schneehöhe: -
+   Neuschnee: -
+
+
+── Antwort-Kommandos ──
+  HEUTE                – Vergleich für heute jetzt senden
+  MORGEN               – Vergleich für morgen jetzt senden
+  PAUSE                – Briefings für Dauer unterbrechen
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  REPORT               – Vergleich jetzt an alle Kanäle senden
+
+---
+Gregor Zwanzig
+----- vergleich.telegram -----
+ORTS-VERGLEICH — Tirol
+Datum: 29.10.2026
+
+Innsbruck
+   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
+   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+Stubai
+   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
+   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+Zillertal
+   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
+   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+----- vergleich.sms -----
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+----- vergleich_nachgeholt.betreff -----
+Wetter-Vergleich: Tirol (29.10.2026)
+----- vergleich_nachgeholt.header -----
+de
+----- vergleich_nachgeholt.mail -----
+Nachgeliefert — die Zustellung um 06:00 ist fehlgeschlagen
+----- vergleich_nachgeholt.telegram -----
+Nachgeliefert — die Zustellung um 06:00 ist fehlgeschlagen
+----- vergleich_nachgeholt.sms -----
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+----- vergleich_kurzform.betreff -----
+Wetter-Vergleich: Tirol (29.10.2026)
+----- vergleich_kurzform.header -----
+de
+----- vergleich_kurzform.mail -----
+ORTS-VERGLEICH
+========================
+Datum: Thursday, 29.10.2026
+Erstellt: 29.10.2026 05:00 (CET)
+----- vergleich_kurzform.telegram -----
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+----- vergleich_kurzform.sms -----
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+----- alarm.gesendet -----
+1
+----- alarm.0.betreff -----
+[S3 Nowcast-Trip] Segment 1 · Gewitter in 20 Min · Regen mindestens bis 12:45
+----- alarm.0.rumpf -----
+Gewitter in 20 Min
+
+Radar-Nowcast
+
+Wo & wann: Segment 1 · ab 12:20 · Regen mindestens bis 12:45
+Intensität: gewitter
+Quelle: Radar (DWD)
+Briefing: nicht angekündigt
+
+Stand: heute 12:00
+Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.
+Ergänzung zur amtlichen Warnung von 11:35
+
+Regen-/Gewitter-Alarm · Radar (DWD)
