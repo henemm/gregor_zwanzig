@@ -31,12 +31,30 @@ START = datetime(2026, 10, 29, 7, 0, tzinfo=timezone.utc)
 NUTZER = {"de": "golden-de", "en": "golden-en"}
 
 
+def rig_starten(monkeypatch):
+    """``KanalRig`` (vier Kanaele am Draht); ``Settings()`` (Test-Versand)
+    zeigt per Umgebung auf dieselbe SMTP-Gegenstelle. Aufrufer stoppt ihn."""
+    from app.config import Settings
+    from tests.helpers.kanal_fake_transporte import KanalRig
+
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+    for key, wert in {
+        "GZ_ENV": "production", "GZ_IS_TEST_MODE": "false",
+        "GZ_SMTP_HOST": "smtp.rig-2671.test", "GZ_SMTP_PORT": "2525",
+        "GZ_SMTP_USER": "rig", "GZ_SMTP_PASS": "rig",
+        "GZ_MAIL_FROM": "gregor_zwanzig@henemm.com", "GZ_MAIL_TO": "gregor-test@henemm.com",
+    }.items():
+        monkeypatch.setenv(key, wert)
+    return KanalRig(monkeypatch)
+
+
 def golden_pfad(lang: str) -> Path:
     return GOLDEN_DIR / f"betreffe.{lang}.txt"
 
 
 def _kw(lang: str | None) -> dict:
-    return {} if lang in (None, "de") else {"lang": lang}
+    """``lang=None`` = Bestandsaufruf ohne Parameter (Golden vor #2671)."""
+    return {} if lang is None else {"lang": lang}
 
 
 # --------------------------------------------------------------- Nutzer
@@ -289,10 +307,11 @@ def sperr_texte(user_id_unbestaetigt: str) -> list[tuple[str, str]]:
 
 def alle_texte(rig, lang: str) -> str:
     uid = NUTZER[lang]
+    rein = None if lang == "de" else lang  # reine Funktionen: de als Bestandsaufruf
     nutzer_anlegen(uid, lang)
     nutzer_anlegen(f"{uid}-offen", lang, bestaetigt=False)
     paare = (
-        betreffe(lang) + fehlertexte(lang) + briefing_texte(rig, uid)
+        betreffe(rein) + fehlertexte(rein) + briefing_texte(rig, uid)
         + service_fehler_betreff(rig, uid) + ausfall_texte(rig, uid)
         + alarm_sms_hinweis(rig, uid) + testversand_texte(rig, uid)
         + sperr_texte(f"{uid}-offen")
