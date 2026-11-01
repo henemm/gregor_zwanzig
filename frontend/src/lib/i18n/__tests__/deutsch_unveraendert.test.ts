@@ -285,6 +285,9 @@ const NEU_IN_FOLGEPAKETEN = [
 	'fehler.code.core_unavailable',
 	'fehler.code.nothing_to_set',
 	'fehler.code.proxy_error',
+	// #2651 (F2) Leerzustand des Cockpits (Bestandskonten): home.json
+	'onboarding.leer.titel',
+	'onboarding.leer.beschreibung',
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {

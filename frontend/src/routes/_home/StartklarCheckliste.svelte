@@ -1,7 +1,8 @@
 <script lang="ts">
 	// Issue #2521 S2 — Startklar-Checkliste. Zeigt den Stand (drei Pflichtpunkte,
 	// zwei Info-Punkte); ob sie erscheint, entscheidet onboardingSichtbarkeit.ts.
-	import { t } from '$lib/i18n/index.js';
+	import { t, locale } from '$lib/i18n/index.js';
+	import { fmtDateNumeric } from '$lib/i18n/format.js';
 	import { Btn } from '$lib/components/atoms';
 	import {
 		checklistePunkte,
@@ -39,14 +40,10 @@
 		telegram: () => $t('onboarding.checkliste.telegram')
 	};
 
+	// #2651 (F2): Datum in der Sprache der Anfrage (de 30.10.2026, en 30 Oct 2026).
 	function datum(iso: string | null): string {
 		if (!iso) return '';
-		return new Date(iso).toLocaleDateString('de-DE', {
-			timeZone: 'Europe/Berlin',
-			day: '2-digit',
-			month: '2-digit',
-			year: 'numeric'
-		});
+		return fmtDateNumeric(new Date(iso), $locale);
 	}
 </script>
 

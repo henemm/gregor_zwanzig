@@ -180,3 +180,98 @@ def test_bot_commands_enthalten_startdatum_startdate_report_und_halten_bot_api_r
         assert re.fullmatch(r"[a-z0-9_]{1,32}", name), name
         assert 0 < len(beschreibung) <= 256, name
     assert len(eintraege) < 100
+
+
+# ── #2651 (i18n F2, AC-4): englische Befehlstabelle der Hilfeseite ───────────
+# ``messages/en/hilfe.json`` zeigt die Befehlswoerter, die der Bot auf Englisch
+# versteht (``wort_en`` aus ``_COMMAND_SPECS``, #2417). Echter Aufruf von
+# ``command_rows()`` und ``bare_keywords()``; ``_COMMAND_SPECS`` nur gelesen.
+# Spec: docs/specs/modules/i18n_f2_hilfe_infobox_2651.md
+
+from src.services.trip_command_processor import _COMMAND_SPECS, bare_keywords  # noqa: E402
+
+KATALOG_DATEI_EN = KATALOG_DATEI.parent.parent / "en" / "hilfe.json"
+
+
+def _katalog_en() -> dict[str, str]:
+    with KATALOG_DATEI_EN.open(encoding="utf-8") as f:
+        return json.load(f)
+
+
+def englisch_soll() -> dict[str, str]:
+    """``{<wort>: <englischer Befehl>}`` aus ``_COMMAND_SPECS`` fuer die Trip-Befehle:
+    ``wort_en`` in Grossschrift plus die Argumentform von ``command_rows()``
+    (``JJJJ-MM-TT`` <-> ``YYYY-MM-DD``)."""
+    de_arg = {befehl.split()[0]: befehl.partition(" ")[2] for befehl, _ in command_rows()}
+    soll = {}
+    for s in _COMMAND_SPECS:
+        if "route" not in s.kinds:
+            continue
+        arg = de_arg[s.wort.upper()].replace("JJJJ-MM-TT", "YYYY-MM-DD")
+        soll[s.wort] = f"{s.wort_en.upper()} {arg}".strip()
+    return soll
+
+
+def drift_en(katalog_en: dict[str, str]) -> list[str]:
+    """Fehler der englischen Befehlstabelle; leer = kein Drift."""
+    fehler = []
+    ist = katalog_befehle(katalog_en)
+    soll = englisch_soll()
+    if set(ist) != set(soll):
+        fehler.append(f"Schluessel: nur Katalog {sorted(set(ist) - set(soll))}, nur Quelle {sorted(set(soll) - set(ist))}")
+    erkannt = bare_keywords()
+    for wort, befehl in ist.items():
+        if soll.get(wort) != befehl:
+            fehler.append(f"{wort}: Katalog {befehl!r} != Quelle {soll.get(wort)!r}")
+        if befehl.split()[0].lower() not in erkannt:
+            fehler.append(f"{wort}: {befehl.split()[0]!r} ist kein vom Bot erkanntes Alleinwort")
+    return fehler
+
+
+def test_englische_befehle_entsprechen_wort_en_und_sind_erkannt():
+    """AC-4: jeder englische Befehl = wort_en.upper() + Argumentform, erkanntes Alleinwort."""
+    assert drift_en(_katalog_en()) == []
+
+
+def test_englische_befehle_gleich_command_rows_en():
+    """Gleiche Tabelle wie die englische Langform-Hilfe des Bots (#2673)."""
+    ist = set(katalog_befehle(_katalog_en()).values())
+    assert ist == {befehl for befehl, _ in command_rows("route", lang="en")}
+
+
+def test_englische_befehle_harte_literale():
+    """Spec-Tabelle als harte Literale (nicht aus der Quelle abgeleitet)."""
+    befehle = katalog_befehle(_katalog_en())
+    assert befehle["startdatum"] == "STARTDATE YYYY-MM-DD"
+    assert befehle["ruhetag"] == "RESTDAY [N]"
+    assert befehle["weiter"] == "RESUME"
+    assert befehle["gewitter"] == "STORMS"
+    assert befehle["report"] == "REPORT [morning / evening]"
+
+
+def test_deutsche_tabelle_unveraendert_gleich_command_rows():
+    """AC-4: die deutsche Tabelle bleibt exakt command_rows() (de)."""
+    assert set(katalog_befehle(_katalog()).values()) == {befehl for befehl, _ in command_rows()}
+
+
+def test_englische_texte_nennen_keinen_alias():
+    """ABBRUCH/NOW/HELP/CODES-Hinweise entfallen in en; CANCEL wird nicht beworben."""
+    katalog = _katalog_en()
+    texte = [katalog[f"hilfe.befehle.{w}.text"] for w in katalog_befehle(katalog)]
+    assert [t for t in texte if re.search(r"ABBRUCH|CANCEL|\(also ", t)] == []
+
+
+@pytest.mark.parametrize("art", ["erfunden", "deutsch", "argument", "fehlt"])
+def test_gegenprobe_englischer_drift_wird_erkannt(art: str):
+    """Negativfall: ein erfundener, deutscher oder falsch argumentierter Befehl ist rot."""
+    kat = {f"hilfe.befehle.{w}.befehl": b for w, b in englisch_soll().items()}
+    assert drift_en(kat) == []
+    if art == "erfunden":
+        kat["hilfe.befehle.heute.befehl"] = "NOWADAYS"
+    elif art == "deutsch":
+        kat["hilfe.befehle.heute.befehl"] = "HEUTE"
+    elif art == "argument":
+        kat["hilfe.befehle.startdatum.befehl"] = "STARTDATE JJJJ-MM-TT"
+    else:
+        del kat["hilfe.befehle.heute.befehl"]
+    assert drift_en(kat)

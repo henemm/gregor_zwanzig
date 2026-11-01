@@ -104,7 +104,8 @@ describe('AC-17: gerenderte Texte stammen vollstaendig aus dem Katalog', () => {
 		}
 	});
 	test('Gegenprobe: ein hart codierter Text wird erkannt', () => {
-		let rest = sichtbar('<p>Willkommen bei Gregor 20</p>');
+		// #2651: „Willkommen bei Gregor 20“ ist seit F2 Katalogtext (onboarding.leer.titel).
+		let rest = sichtbar('<p>Hart codierter Hinweis ohne Katalog</p>');
 		for (const w of Object.entries(KATALOG).filter(([k]) => k.startsWith('onboarding.')).map(([, v]) => v)) {
 			if (w.trim()) rest = rest.split(w).join(' ');
 		}
