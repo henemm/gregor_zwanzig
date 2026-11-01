@@ -12,7 +12,7 @@ import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, relative, sep, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export type Treffer = { zeile: number; art: 'text' | 'attribut'; text: string };
+export type Treffer = { zeile: number; art: 'text' | 'attribut' | 'literal'; text: string };
 export type DateiErgebnis = { pfad: string; treffer: Treffer[] };
 export type Pruefung = { ohneEintrag: string[]; eintraegeOhneTreffer: string[] };
 
@@ -98,6 +98,88 @@ export function scanneMarkup(quelltext: string): Treffer[] {
 	return treffer.sort((a, b) => a.index - b.index).map((x) => x.t);
 }
 
+// ── TypeScript (ab F11, #2660): String-Literale in lib/utils, lib/stores, lib/api.ts ──
+
+const TS_SIGNAL = /[äöüÄÖÜß]|\b(?:nicht|bitte|fehlgeschlagen|gespeichert)\b/i;
+const LOG_MARKER = /\/\/\s*i18n-log\s*$/;
+// Nach diesen Zeichen bzw. Schluesselwoertern beginnt ein `/` ein Regex-Literal.
+const VOR_REGEX = /(?:^|[(,=:[!&|?{};+\-*%<>~^]|\b(?:return|typeof|case|in|of|void|delete|throw))\s*$/;
+
+/** Ende eines Regex-Literals ab `/` an Position `i` (Klassen und Escapes beachtet). */
+function regexEnde(q: string, i: number): number {
+	let klasse = false;
+	for (let j = i + 1; j < q.length; j++) {
+		const c = q[j];
+		if (c === '\\') j++;
+		else if (c === '[') klasse = true;
+		else if (c === ']') klasse = false;
+		else if (c === '/' && !klasse) return j + 1;
+		else if (c === '\n') return j;
+	}
+	return q.length;
+}
+
+/** Alle String-Literale (statische Teile von Template-Literalen einzeln) ohne Kommentare. */
+export function tsLiterale(q: string): { index: number; text: string }[] {
+	const aus: { index: number; text: string }[] = [];
+	const vorlagen: number[] = []; // Klammertiefe je offenem `${`
+	let code = '';
+	let i = 0;
+	const vorlageLesen = (start: number): number => {
+		let j = start;
+		for (; j < q.length; j++) {
+			if (q[j] === '\\') j++;
+			else if (q[j] === '`') break;
+			else if (q[j] === '$' && q[j + 1] === '{') break;
+		}
+		aus.push({ index: start, text: q.slice(start, j) });
+		if (q[j] === '$') {
+			vorlagen.push(0);
+			return j + 2;
+		}
+		return j + 1;
+	};
+	while (i < q.length) {
+		const c = q[i];
+		const n = q[i + 1];
+		if (c === '/' && n === '/') i = q.indexOf('\n', i) < 0 ? q.length : q.indexOf('\n', i);
+		else if (c === '/' && n === '*') i = q.indexOf('*/', i + 2) < 0 ? q.length : q.indexOf('*/', i + 2) + 2;
+		else if (c === '/' && VOR_REGEX.test(code)) i = regexEnde(q, i);
+		else if (c === '"' || c === "'") {
+			const ende = stringEnde(q, i);
+			aus.push({ index: i + 1, text: q.slice(i + 1, ende - 1) });
+			i = ende;
+		} else if (c === '`') i = vorlageLesen(i + 1);
+		else if (c === '}' && vorlagen.length > 0 && vorlagen[vorlagen.length - 1] === 0) {
+			vorlagen.pop();
+			i = vorlageLesen(i + 1);
+		} else {
+			if (vorlagen.length > 0 && c === '{') vorlagen[vorlagen.length - 1]++;
+			if (vorlagen.length > 0 && c === '}') vorlagen[vorlagen.length - 1]--;
+			if (!/\s/.test(c)) code = (code + c).slice(-12);
+			i++;
+		}
+		if (c === '"' || c === "'" || c === '`' || c === '}') code = (code + 'x').slice(-12);
+	}
+	return aus;
+}
+
+/** String-Literale mit Umlaut/ß oder Signalwort; Zeilen mit `// i18n-log` sind ausgenommen. */
+export function scanneTs(quelltext: string): Treffer[] {
+	const zeilen = quelltext.split('\n');
+	return tsLiterale(quelltext)
+		.filter((l) => TS_SIGNAL.test(l.text))
+		.map((l) => ({ zeile: zeileBei(quelltext, l.index), art: 'literal' as const, text: l.text.trim() }))
+		.filter((t) => !LOG_MARKER.test(zeilen[t.zeile - 1] ?? ''));
+}
+
+/** TypeScript-Pfade der Ratsche (relativ zu frontend/src/). */
+export function wirdGescanntTs(pfad: string): boolean {
+	if (!pfad.endsWith('.ts') || pfad.endsWith('.d.ts') || /\.(test|spec)\.ts$/.test(pfad)) return false;
+	if (pfad.split('/').includes('__tests__')) return false;
+	return pfad === 'lib/api.ts' || pfad.startsWith('lib/utils/') || pfad.startsWith('lib/stores/');
+}
+
 /** Pfad relativ zu frontend/src/ mit Schraegstrichen. */
 export function wirdGescannt(pfad: string): boolean {
 	return (
@@ -124,12 +206,15 @@ function svelteDateien(wurzel: string, verzeichnis = wurzel): string[] {
 	return dateien;
 }
 
-/** Alle gescannten Svelte-Dateien unter `wurzel` (auch ohne Treffer), sortiert. */
+/** Alle gescannten Svelte- und TS-Dateien unter `wurzel` (auch ohne Treffer), sortiert. */
 export function scanneVerzeichnis(wurzel: string): DateiErgebnis[] {
 	return svelteDateien(wurzel)
-		.filter(wirdGescannt)
+		.filter((pfad) => wirdGescannt(pfad) || wirdGescanntTs(pfad))
 		.sort()
-		.map((pfad) => ({ pfad, treffer: scanneMarkup(readFileSync(join(wurzel, pfad), 'utf8')) }));
+		.map((pfad) => {
+			const quelle = readFileSync(join(wurzel, pfad), 'utf8');
+			return { pfad, treffer: pfad.endsWith('.ts') ? scanneTs(quelle) : scanneMarkup(quelle) };
+		});
 }
 
 function deckt(eintrag: string, pfad: string): boolean {

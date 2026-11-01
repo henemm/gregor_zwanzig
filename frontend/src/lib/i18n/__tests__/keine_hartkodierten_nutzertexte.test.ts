@@ -17,7 +17,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -26,6 +26,9 @@ import {
 	wirdGescannt,
 	pruefeGegenAllowlist,
 	pruefeVerzeichnis,
+	scanneTs,
+	scanneVerzeichnis,
+	wirdGescanntTs,
 	MINDEST_DATEIEN
 } from './hardcode_scan.ts';
 
@@ -176,5 +179,88 @@ describe('Messaufbau (AC-4)', () => {
 
 	test('Mindestzahl ist nicht abgesenkt', () => {
 		assert.equal(MINDEST_DATEIEN, 150);
+	});
+});
+
+// Issue #2660 (i18n F11): Erweiterung auf *.ts in lib/utils, lib/stores, lib/api.ts.
+// Spec: docs/specs/modules/i18n_f11_bausteine_ts_2660.md (AC-6)
+describe('TypeScript-Ratsche (F11, AC-6)', () => {
+	const BEISPIEL = [
+		"// Kommentar mit Umlaut: Änderung nicht gespeichert",
+		"/* Block: bitte nicht melden */",
+		"export const A = 'Änderung gespeichert';",
+		'export const B = "bitte erneut versuchen";',
+		'export const C = `Versand ${n} fehlgeschlagen: HTTP ${s}`;',
+		"console.error('Fehler beim Laden fehlgeschlagen'); // i18n-log",
+		"export const D = 'ok', E = 'Nicht', F = 'nichtig';",
+		"const re = /[äöü]'nicht'/g;",
+		"export const G = `a${'Größe'}b`;"
+	].join('\n');
+
+	test('Selbsttest an einer temporaeren Beispiel-Datei: Treffer mit Datei:Zeile, i18n-log und Kommentare ausgenommen', () => {
+		const ordner = mkdtempSync(join(tmpdir(), 'hardcode-ts-'));
+		try {
+			const datei = join(ordner, 'beispiel.ts');
+			writeFileSync(datei, BEISPIEL);
+			const treffer = scanneTs(readFileSync(datei, 'utf8'));
+			assert.deepEqual(
+				treffer.map((t) => [t.zeile, t.text]),
+				[
+					[3, 'Änderung gespeichert'],
+					[4, 'bitte erneut versuchen'],
+					[5, 'fehlgeschlagen: HTTP'],
+					[7, 'Nicht'],
+					[9, 'Größe']
+				]
+			);
+			const pfad = 'lib/utils/beispiel_2660.ts';
+			const ergebnis = pruefeGegenAllowlist([{ pfad, treffer }], ALLOWLIST);
+			assert.equal(ergebnis.ohneEintrag[0], `${pfad}:3  "Änderung gespeichert"`);
+			assert.equal(ergebnis.ohneEintrag.length, 5);
+		} finally {
+			rmSync(ordner, { recursive: true, force: true });
+		}
+	});
+
+	test('mit // i18n-log am Zeilenende bleibt die Zeile gruen', () => {
+		assert.deepEqual(scanneTs("throw new Error('Fassung passt nicht'); // i18n-log"), []);
+		assert.equal(scanneTs("throw new Error('Fassung passt nicht');").length, 1);
+	});
+
+	test('Pfadauswahl: utils, stores (auch .svelte.ts) und api.ts; keine Tests, keine .d.ts', () => {
+		for (const pfad of ['lib/api.ts', 'lib/utils/sendOutcome.ts', 'lib/stores/saveStatusStore.svelte.ts', 'lib/utils/sub/x.ts']) {
+			assert.equal(wirdGescanntTs(pfad), true, pfad);
+		}
+		for (const pfad of [
+			'lib/utils/sendOutcome.test.ts',
+			'lib/utils/__tests__/x.ts',
+			'lib/stores/typen.d.ts',
+			'lib/i18n/index.ts',
+			'lib/apiHelfer.ts',
+			'lib/components/shared/x.ts'
+		]) {
+			assert.equal(wirdGescanntTs(pfad), false, pfad);
+		}
+	});
+
+	test('echter Quellbaum: TS-Dateien werden tatsaechlich gescannt (Messaufbau nicht leer)', () => {
+		const ts = scanneVerzeichnis(SRC).filter((e) => e.pfad.endsWith('.ts'));
+		assert.ok(ts.length >= 25, `nur ${ts.length} TS-Dateien gescannt`);
+		assert.ok(ts.some((e) => e.pfad === 'lib/api.ts'));
+		assert.ok(ts.some((e) => e.pfad === 'lib/stores/saveStatusStore.svelte.ts'));
+	});
+
+	test('Allowlist enthaelt die acht F11-Praefixe nicht mehr', () => {
+		const F11 = [
+			'lib/components/ui/',
+			'lib/components/molecules/',
+			'lib/components/organisms/',
+			'lib/components/atoms/',
+			'lib/components/mobile/',
+			'lib/utils/',
+			'lib/stores/',
+			'lib/api.ts'
+		];
+		assert.deepEqual(ALLOWLIST.filter((a) => F11.includes(a)), []);
 	});
 });
