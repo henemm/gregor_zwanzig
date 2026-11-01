@@ -2,9 +2,9 @@
 entity_id: i18n_p9b_scheduler_orchestrierung_2672
 type: module
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-01
 status: approved
-version: "1.0"
+version: "1.1"
 tags: [i18n, epic-2644, issue-2672, python, model-haiku]
 ---
 
@@ -15,6 +15,16 @@ tags: [i18n, epic-2644, issue-2672, python, model-haiku]
 ## Approval
 
 - [x] Approved (PO-Freigabe 2026-10-30)
+
+## PO-Korrektur 2026-10-31 (ADR-0104 Präzisierung, Vorrang vor dieser Spec)
+
+SMS, Premium-SMS und die Telegram-Kurzform (Token-Zeile, `compact_label`, `sms_code`, `col_label`, Kürzel) bleiben in **jeder** Sprache exakt wie bisher; `render_sms*`, `format_sms`, `render_compare_sms` und die Premium-SMS bekommen **kein** `lang`. Jeder Text dieser Spec wurde dagegen geprüft:
+
+- **AC-2:** der SMS-Text (und die Telegram-Kurzform, die den SMS-Text sendet) ist für `en` byte-gleich zu `de`; nur E-Mail, Telegram-Langform, Betreff und `X-GZ-Lang` folgen der Nutzersprache.
+- **AC-3:** die Ausfall-Meldung geht per E-Mail und Telegram englisch hinaus, per SMS unverändert deutsch (wie P9a).
+- **AC-5:** das Wochentagskürzel im **SMS-Token** bleibt `Do` (nicht `Thu`). `trip_alert` trägt weiter das deutsche Kürzel im Modell (`_de_weekday_short` bleibt); die Langform übersetzt es seit P5 im Renderer (`_weekday_short`). Die Vorgabe „`_de_weekday_short` durch `fmt_weekday(..., self._lang)`“ entfällt.
+- Nachlieferungs-/Teilausfall-Hinweise werden wie bisher nur E-Mail und Telegram vorangestellt (die SMS bekommt keinen Hinweis), sie sind also nicht betroffen.
+- Tests: SMS `en` byte-gleich `de` in AC-1, AC-2, AC-3, AC-4 und in der englischen Golden-Referenz.
 
 ## Purpose
 
@@ -210,6 +220,16 @@ if _identity_gate.addendum_reported_at is not None:
 - **AC-6:** Given Sprache `de` / When Nachlieferungs-Präfixe, Teilausfall-Hinweis, Ortsvergleich-Betreff, Nachtrag-Bezug und Cooldown-Anzeige erzeugt werden / Then ist jede Ausgabe byte-gleich zu den vorab eingecheckten `*.de.txt`-Dateien.
   - Test: tests/golden/test_scheduler_texte_golden.py — Byte-Vergleich je Text.
 
+## Umsetzungsnotizen (v1.1, 2026-11-01)
+
+- `NotificationService(..., lang=self._lang)` trägt die Sprache; `TripReportRequest` bekommt **kein** eigenes `lang`-Feld (eine zweite Quelle derselben Größe wäre die Drift-Falle).
+- Cooldown-Anzeige über den geteilten Baustein `radar_alert_service.cooldown_text(..., lang)` (P5), damit Trip und Ortsvergleich denselben Text haben. Englisch lautet der Satz laut P5-Katalog „… at most once in 2 hours …“ (Glossar: Cooldown).
+- Zusätzlich betroffen (Restposten P9a, PR #2718): `notification_service.py` (Kopf des Ortsvergleich-Briefings und Service-Fehler-Mail jetzt = Nutzersprache, Rumpf `build_service_error_email_html(..., lang)` übersetzt), `pending_briefings.dispatch_error_hint(..., lang)` (Nachhol-Hinweis nach Versandfehler, Trip und Ortsvergleich), `day_window.format_night_addendum(..., lang)` (Nacht-Halbsatz der Gewitter-Vorschau, parallele Satzteile wie `thunder_scale`), `send_outcomes.InvalidPresetError` + `api/routers/briefings_send.py` (`invalid_preset`-Grund per Katalogschlüssel `versand.grund.orte_geloescht`), `compare_preset_access.notification_service_for_preset(..., lang)`, `radar_service.intensity_text` (klein geschriebenes Trip-Label findet seinen Schlüssel).
+- Weitere eigene Texte: `versand.scheduler.zustellung_fehlgeschlagen`, `versand.scheduler.trend_*` (Trend-Notiz des Ausblicks), `versand.servicefehler.*`, `alarm.nachtrag.von`, `alarm.kontext.*` (Briefing-Kontext des Radar-Alarms). Ausblick-Wochentag über `fmt_weekday(..., lang)`, Datum der Gewitter-Vorschau über `fmt_date_numeric(..., lang)`.
+- Der Ortsvergleich-Nachholer liest die Sprache einmal je Nutzer und Lauf (`process_compare_pending_markers`) und reicht sie an Hinweis und `send_one_compare_preset(..., lang=...)`.
+- Die Allowlist `tests/fixtures/i18n_python_allowlist.json` existiert noch nicht; P11 legt sie ohne die Dateien dieses Pakets an.
+- `email_spec_validator.py` besteht eine englische Ortsvergleich-Mail (Kopf `X-GZ-Lang: en`) offline ohne Änderung; der Orts-Kopf `ORT` ist in beiden Sprachen gleich.
+
 ## Known Limitations
 
 - Annahme: Die Sprache wird beim Anlegen des Dienstobjekts gelesen; ändert ein Nutzer sie während eines Laufs, gilt sie ab dem nächsten Lauf. Das ist bewusst (ein Zustand je Lauf und Nutzer, keine zweite Lesestelle).
@@ -227,3 +247,4 @@ if _identity_gate.addendum_reported_at is not None:
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-11-01: v1.1 – PO-Korrektur 2026-10-31 eingearbeitet (SMS/Premium-SMS/Kurzform unverändert), Umsetzungsnotizen und Restposten aus P9a

@@ -33,6 +33,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Iterator
 
+from i18n import Lang, t
+
 logger = logging.getLogger("pending_briefings")
 
 PENDING_FILENAME = "pending_briefings.json"
@@ -156,7 +158,7 @@ def bump_attempts(path: Path, match: Match) -> None:
         write_pending_data(path, data)
 
 
-def dispatch_error_hint(slot_hour) -> str:
+def dispatch_error_hint(slot_hour, *, lang: Lang = "de") -> str:
     """Nachhol-Hinweis nach Versandfehler (#1662 AC-3, #2587 AC-5).
 
     EIN Text fuer Trip und Ortsvergleich. Stunde zweistellig (``07:00``,
@@ -167,4 +169,4 @@ def dispatch_error_hint(slot_hour) -> str:
         stunde = f"{int(slot_hour):02d}:00"
     except (TypeError, ValueError):
         stunde = f"{slot_hour}:00"
-    return f"Nachgeliefert — die Zustellung um {stunde} ist fehlgeschlagen"
+    return t("versand.scheduler.zustellung_fehlgeschlagen", lang, stunde=stunde)

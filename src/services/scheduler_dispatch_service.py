@@ -11,6 +11,8 @@ from datetime import date, datetime as _datetime
 from pathlib import Path
 
 from app.config import Settings
+from i18n import Lang, resolve_user_lang, t
+from i18n.format import fmt_date_numeric
 from app.loader import (
     VALID_ENTITY_ID_RE,
     LoaderError,
@@ -23,7 +25,7 @@ from app.loader import (
 from services.alert_check_state import report_unit_failure
 from services.file_lock import LockTimeout, locked_json_rmw
 from services.send_lock import release_send_lock, try_acquire_send_lock
-from services.send_outcomes import SendOutcomeError, outcome_from_result
+from services.send_outcomes import InvalidPresetError, SendOutcomeError, outcome_from_result
 from utils.pii_masking import mask_addr_for_pii_log
 from services.alert_briefing_anchor import (
     record_briefing_dispatch_failure,
@@ -273,7 +275,7 @@ def _clear_compare_dispatch_error(user_id: str, preset_id: str, report_type: str
 
 
 def _apply_catchup_hint(settings: Settings, user_id: str, hint: str | None,
-                        html_body: str, text_body: str, telegram_text: str):
+                        html_body: str, text_body: str, telegram_text: str, *, lang: Lang):
     """Stellt den Nachhol-Hinweis ueber den geteilten Praefix-Baustein des
     Trips voran (E-Mail HTML/Plain, Telegram; SMS bewusst nicht)."""
     if not hint:
@@ -284,7 +286,7 @@ def _apply_catchup_hint(settings: Settings, user_id: str, hint: str | None,
 
     report = SimpleNamespace(email_html=html_body, email_plain=text_body,
                              telegram_bubbles=[telegram_text] if telegram_text else [])
-    NotificationService(settings, user_id)._prepend_hint(report, hint)
+    NotificationService(settings, user_id, lang=lang)._prepend_hint(report, hint)
     tg = report.telegram_bubbles[0] if report.telegram_bubbles else telegram_text
     return report.email_html, report.email_plain, tg
 
@@ -329,7 +331,7 @@ def _catchup_verdict(preset: dict | None, tag: str, ortstag: date | None,
 
 
 def _send_catchup(preset: dict, marker: dict, ortstag: date, settings: Settings,
-                  user_id: str, data_root: str, all_locations: list) -> str:
+                  user_id: str, data_root: str, all_locations: list, *, lang: Lang) -> str:
     """Ein Nachholversand mit den Werten des Vermerks; liefert den Ausgang.
 
     Scheitert er vollstaendig, schreibt der Fehlerpfad in
@@ -344,8 +346,8 @@ def _send_catchup(preset: dict, marker: dict, ortstag: date, settings: Settings,
             # Tagesbezug aus EINER Zeitabfrage (Vertrag #1661).
             target_date=target, tage_ab_ortstag=(target - ortstag).days,
             report_type=marker.get("report_type"), slot_hour=marker.get("slot_hour"),
-            catchup_hint=pb.dispatch_error_hint(marker.get("slot_hour")),
-            weather_failure_as_outcome=True,
+            catchup_hint=pb.dispatch_error_hint(marker.get("slot_hour"), lang=lang),
+            weather_failure_as_outcome=True, lang=lang,
         )
         return "sent"
     except SendOutcomeError as e:
@@ -372,6 +374,7 @@ def process_compare_pending_markers(
     groups = _compare_marker_groups(user_id)
     if not groups:
         return 0, 0
+    lang = resolve_user_lang(user_id)  # Issue #2672: einmal je Nutzer und Lauf
     by_preset = {p.get("id"): p for p in presets}
     by_loc = {loc.id: loc for loc in all_locations}
     due_keys = {(item[0].get("id"), item[1].isoformat()) for item in due}
@@ -389,7 +392,7 @@ def process_compare_pending_markers(
             if verdict == "drop":
                 continue
             outcome = _send_catchup(preset, members[0], ortstag, settings, user_id,
-                                    data_root, all_locations)
+                                    data_root, all_locations, lang=lang)
         except Exception:
             report_unit_failure("Compare-Nachholen", str(pid))
             outcome = "error"
@@ -608,7 +611,7 @@ def resume_compare_preset(
     return "not_found"
 
 
-def build_compare_preset_subject(name: str, target_date: date) -> str:
+def build_compare_preset_subject(name: str, target_date: date, *, lang: Lang = "de") -> str:
     """Baut den Mail-Betreff fuer einen Compare-Preset-Versand (pure Funktion).
 
     Adversary-Fund F001 (#1232 Scheibe 2a): Das Betreff-Datum MUSS
@@ -617,7 +620,8 @@ def build_compare_preset_subject(name: str, target_date: date) -> str:
     ("Datum: morgen"). Als eigene pure Funktion extrahiert, damit sie ohne
     Netz/Mail-Versand deterministisch testbar ist.
     """
-    return f"Wetter-Vergleich: {name} ({target_date.strftime('%d.%m.%Y')})"
+    return t("versand.scheduler.vergleich_betreff", lang, name=name,
+             datum=fmt_date_numeric(target_date, lang))
 
 
 def _effective_compare_briefing_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
@@ -687,6 +691,7 @@ def send_one_compare_preset(
     report_type: str | None = None,
     slot_hour: int | None = None,
     catchup_hint: str | None = None,
+    lang: Lang | None = None,
 ) -> tuple:
     """Fuehrt den Versand fuer ein einzelnes Compare-Preset durch.
 
@@ -720,6 +725,9 @@ def send_one_compare_preset(
     E-Mail wirksam ist: ohne ``mail_to`` faellt E-Mail aus der wirksamen Menge.
     ``weather_failure_as_outcome`` (nur Handversand): eine Ausnahme des
     Wetterlaufs wird zu ``no_weather``; ohne Opt-in (Cron) propagiert sie.
+    ``lang`` (Issue #2672): Sprache des Nutzers, sonst EINMAL hier aus
+    ``user.json`` gelesen; Inhalt, Betreff, Hinweis und ``X-GZ-Lang`` folgen ihr
+    (SMS bleibt sprachunabhaengig, PO-Korrektur 2026-10-31).
     Ein Fehler an JEDEM Ort ist seit #2286 (AC-4, ADR-0018) in BEIDEN Pfaden
     ``no_weather`` -- keine Mail aus lauter Fehlerzellen, der Cron zaehlt den
     Preset als ``failed``.
@@ -752,6 +760,7 @@ def send_one_compare_preset(
 
     preset_id = preset.get("id", "")
     location_ids = preset.get("location_ids") or []
+    lang = lang or resolve_user_lang(user_id)
 
     # Empfaenger-Check: Issue #1452 — ausschliesslich die Konto-Settings des
     # Nutzers, `preset.empfaenger` ist inert (kein Preset-Override mehr).
@@ -782,10 +791,8 @@ def send_one_compare_preset(
     # (konfigurierte Orts-Reihenfolge), nicht über die Cache-Reihenfolge.
     locations = order_locations_by_ids(all_locations_cache, location_ids)
     if not locations:
-        raise ValueError(
-            f"Ortsvergleich '{preset_id}' verweist auf gelöschte Orte. "
-            f"Ersetze die Orte im Ortsvergleich. (Orte {location_ids} nicht aufloesbar)"
-        )
+        raise InvalidPresetError("versand.grund.orte_geloescht",
+                                 preset_id=preset_id, orte=location_ids)
     # #2216: Teilverlust sichtbar machen (Versand laeuft mit den uebrigen Orten).
     fehlende_orte = _missing_location_ids(locations, location_ids)
     if fehlende_orte:
@@ -856,7 +863,7 @@ def send_one_compare_preset(
     top_ort = result.locations[0].location.name if result.locations else None
 
     name = preset.get("name", preset_id)
-    subject = build_compare_preset_subject(name, target_date)
+    subject = build_compare_preset_subject(name, target_date, lang=lang)
     # Issue #1209 (Scheibe B): Render-Optionen ausschliesslich ueber den
     # Resolver aufloesen, statt inline aus dem rohen Preset-Dict zu lesen.
     opts = resolve_compare_render_options(preset)
@@ -891,6 +898,7 @@ def send_one_compare_preset(
         outlook_metric_formats=opts.outlook_metric_formats,
         # Issue #1405 S3: unmappbare Auswahl sichtbar, nicht nur im Log.
         unresolved_count=opts.unresolved_by_channel.get("email", 0),
+        lang=lang,
     )
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt
     # gemeldeten Stand). Best-effort: ein fehlgeschlagener Snapshot-Write darf
@@ -952,12 +960,13 @@ def send_one_compare_preset(
                 enabled_metrics=opts.enabled_metrics_by_channel["telegram"],
                 preset_name=name,
                 unresolved_count=opts.unresolved_by_channel.get("telegram", 0),
+                lang=lang,
             )
         # Issue #2587: Nachhol-Hinweis (nur Nachholversand), geteilter Baustein.
         html_body, text_body, _telegram_text = _apply_catchup_hint(
-            settings, user_id, catchup_hint, html_body, text_body, _telegram_text,
+            settings, user_id, catchup_hint, html_body, text_body, _telegram_text, lang=lang,
         )
-        send_result = NotificationService(settings, user_id).send_compare_report(
+        send_result = NotificationService(settings, user_id, lang=lang).send_compare_report(
             subject=subject,
             html_body=html_body,
             text_body=text_body,

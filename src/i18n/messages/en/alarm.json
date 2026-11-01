@@ -76,5 +76,9 @@
   "alarm.segment.liste": "Segment {liste}",
   "alarm.segment.anzahl": "{n} segments",
   "alarm.nachtrag.amtlich": "Addendum to the official warning",
-  "alarm.nachtrag.abweichung": "Addendum to the reported weather deviation"
+  "alarm.nachtrag.abweichung": "Addendum to the reported weather deviation",
+  "alarm.nachtrag.von": " from {zeit}",
+  "alarm.kontext.akut": "already announced — now acute",
+  "alarm.kontext.angekuendigt": "already announced",
+  "alarm.kontext.nicht_angekuendigt": "not announced"
 }
