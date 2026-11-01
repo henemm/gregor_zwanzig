@@ -236,14 +236,19 @@ def _set_smtp_env(monkeypatch) -> None:
 # ---------------------------------------------------------------------------
 
 class TestTotalFailureVisible:
-    def test_run_returns_sent_failed_tuple_on_total_failure(self, dispatch_env):
+    def test_run_returns_sent_failed_tuple_on_total_failure(self, dispatch_env, monkeypatch):
         """AC-1 (Funktionsebene): Given alle faelligen Presets scheitern /
         When run_compare_presets_daily laeuft / Then (sent, failed) == (0, 2).
 
         RED: Rueckgabe ist heute `int 0` — der 100%-Ausfall ist von einem
-        leeren Lauf nicht unterscheidbar."""
+        leeren Lauf nicht unterscheidbar.
+
+        Issue #1777 (AC-11): ``no_channels`` zaehlt neutral. Der Nutzer hat
+        deshalb einen Empfaenger (``mail_to``), damit die Presets an der
+        gemeinten Ursache scheitern -- dem nicht aufloesbaren Ort."""
         from services.scheduler_dispatch_service import run_compare_presets_daily
 
+        _set_smtp_env(monkeypatch)
         data_root, user_id = dispatch_env
         _write_presets(data_root, user_id, [
             _broken_preset("cp-fail-1", ["loc-missing-a"]),
@@ -260,18 +265,22 @@ class TestTotalFailureVisible:
         )
 
     def test_endpoint_reports_partial_and_failed_on_total_failure(
-        self, dispatch_env,
+        self, dispatch_env, monkeypatch,
     ):
         """AC-1 (Endpoint): Given alle faelligen Presets scheitern / When der
         Scheduler POST /api/scheduler/compare-presets-daily aufruft / Then
         NICHT mehr status="ok", sondern status="partial" mit failed=2, count=0.
 
         RED: heute liefert der Endpoint {"status":"ok","count":0} ohne jeden
-        Hinweis auf den Ausfall (Prod-Journal 2026-07-16: 133/133)."""
+        Hinweis auf den Ausfall (Prod-Journal 2026-07-16: 133/133).
+
+        Issue #1777 (AC-11): mit Empfaenger, damit der fehlende Ort scheitert
+        und nicht das neutral zaehlende ``no_channels``."""
         from fastapi.testclient import TestClient
 
         from api.main import app
 
+        _set_smtp_env(monkeypatch)
         data_root, user_id = dispatch_env
         _write_presets(data_root, user_id, [
             _broken_preset("cp-fail-1", ["loc-missing-a"]),

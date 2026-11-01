@@ -47,7 +47,8 @@ from services.alert_briefing_anchor import (
     write_anchor_and_reset_memory,
 )
 from services.alert_check_state import report_unit_failure
-from services.briefing_slots import BriefingSlotStore
+from services.briefing_slots import (  # noqa: F401  (Re-Export, #1777)
+    NACHHOL_FENSTER_STUNDEN, VERMERK_AUSGAENGE, BriefingSlotStore, fenster_offen)
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest, abschnitt_id
 from services.user_tier import (
@@ -101,14 +102,8 @@ _TRANSIENT_FETCH_ERROR_MARKERS = (
     "502", "503", "504", "timeout", "timed out", "overloaded",
 )
 
-# Issue #1725: Ausgaenge, die den Slot fuer diesen Ortstag abschliessen.
-# `channels_unreachable` fehlt bewusst -- dort hat per Definition
-# (`sent = bool(sent_channels)`) niemand etwas bekommen, das ist der einzige
-# beabsichtigte Nachholfall. `no_weather` steht dagegen drin: ohne Vermerk
-# gaebe es eine stuendliche "keine Daten"-Mail plus stuendlichen vollen
-# Wetterabruf gegen das Kontingent (#1329), waehrend der #1012-Pending-Marker
-# die Nachlieferung bereits abdeckt.
-VERMERK_AUSGAENGE = frozenset({"sent", "no_stage", "no_weather", "no_channels"})
+# Issue #1725: VERMERK_AUSGAENGE/NACHHOL_FENSTER_STUNDEN seit #1777 geteilt in
+# `services.briefing_slots` (oben re-exportiert).
 
 # Issue #2422 S3 (AC-6): Ausgang eines per `skip_next` uebersprungenen Slots.
 # Bewusst NICHT in VERMERK_AUSGAENGE -- das sind Ausgaenge eines
@@ -116,18 +111,6 @@ VERMERK_AUSGAENGE = frozenset({"sent", "no_stage", "no_weather", "no_channels"})
 # ab (`is_recorded*` zaehlt jeden gesetzten Ausgang): sonst kaeme das
 # uebersprungene Briefing im naechsten Stundentakt des Nachhol-Fensters doch.
 AUSGANG_UEBERSPRUNGEN = "skipped"
-
-# Issue #1725: Breite des Faelligkeitsfensters in Ortsstunden.
-# `konfigurierte_stunde <= ortsstunde < konfigurierte_stunde + 3`. Drei
-# Stunden decken den an Umstellungstagen ausfallenden Cron-Tick (1 Stunde,
-# `robfig/cron/v3`) mit Reserve fuer einen gescheiterten, nicht wiederholten
-# HTTP-Post (`scheduler.triggerEndpointForUser`). Eine Deckelung am Tagesende ist nicht
-# noetig: fuer Slot 22 sind es die Ortsstunden 22 und 23, ab Ortsmitternacht
-# wechselt der Ortstag und `0 >= 22` ist falsch. Die Alternative „bis
-# Tagesende" wurde verworfen, weil sie neu angelegte oder aus `paused_until`
-# zurueckkehrende Trips RUECKWIRKEND feuern liesse (AC-10) --
-# `_get_active_trips` prueft nur die Etappe, nicht das Anlagedatum.
-NACHHOL_FENSTER_STUNDEN = 3
 
 
 def _is_transient_fetch_error(exc: Exception) -> bool:
@@ -355,8 +338,7 @@ def trip_slot_aktiv_am_ortstag(trip: "Trip", report_type: str, ortstag: date) ->
 def nachhol_fenster_offen(trip: "Trip", report_type: str, vor_ort: datetime) -> bool:
     """Faelligkeits-Fenster (Issue #1725): ``stunde <= ortsstunde < stunde +
     NACHHOL_FENSTER_STUNDEN`` — EINE Fassung fuer Sammellauf und Praedikat."""
-    stunde = _slot_stunde(trip, report_type)
-    return stunde <= vor_ort.hour < stunde + NACHHOL_FENSTER_STUNDEN
+    return fenster_offen(_slot_stunde(trip, report_type), vor_ort.hour)
 
 
 def _slot_faellig_vor_ort(

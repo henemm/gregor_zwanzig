@@ -175,7 +175,33 @@ class CompareDispatchStrategy:
         due = presets_due_for_hour(presets, by_id, now_utc)
         # Issue #2217: gescheiterte Faelligkeitspruefungen zaehlen als failed.
         self._failed += len(getattr(due, "failed_ids", ()))
-        return due
+        return self._ohne_vermerk(due, by_id, now_utc)
+
+    def _ohne_vermerk(self, due: list, by_id: dict, now_utc: "datetime") -> list:
+        """Issue #1777: Vermerk-Filter (``is_recorded_or_claimed``) in der
+        Sammelphase, NACH der Aktiv-Pruefung (Pruefort = Wirkort)."""
+        from services.alert_check_state import report_unit_failure
+        from services.briefing_slots import compare_slot_store
+        from services.compare_slot_scheduler import DueList
+        from services.scheduler_dispatch_service import _compare_slot, compare_vermerk_schluessel
+
+        store = compare_slot_store(self._user_id)
+        store.repair_if_corrupt(moment=now_utc)  # #2231: VOR der Schleife
+        offen = DueList()
+        offen.failed_ids = list(getattr(due, "failed_ids", ()))
+        for item in due:
+            preset, _zieltag, versatz = item
+            try:
+                slot = _compare_slot(preset, versatz, None, None)[0]
+                schluessel = compare_vermerk_schluessel(preset, by_id, now_utc, slot)
+                if store.is_recorded_or_claimed(*schluessel, moment=now_utc):
+                    continue
+                offen.append(item)
+            except Exception:
+                # Issue #2217: ein kaputtes Preset haelt die uebrigen nicht auf.
+                report_unit_failure("Compare-Briefing-Vermerk", str(preset.get("id", "?")))
+                self._failed += 1
+        return offen
 
     def pre_pass(self, now_utc: "datetime", due: list) -> None:
         # Issue #1250 Scheibe 3 (AC-10/AC-11/AC-12): Auto-Pause fuer Presets
@@ -206,9 +232,10 @@ class CompareDispatchStrategy:
         self._failed += failed
 
     def dispatch_one(self, item, now_utc: "datetime | None" = None) -> None:
-        # `now_utc` gehoert zur geteilten Strategie-Schnittstelle (Issue #1897,
-        # Trip-Seite). Der Compare-Pfad traegt seinen Tagesbezug bereits im
-        # `item` (`target_date`, `tage_ab_ortstag`) und braucht ihn nicht.
+        # `now_utc` gehoert zur geteilten Strategie-Schnittstelle (Issue #1897).
+        # Issue #1777: er ist der Lauf-Zeitpunkt fuer Schluessel-Ortstag und
+        # Claim-Alter des Vermerks (Default jetzt); der Tagesbezug des Inhalts
+        # bleibt im `item` (`target_date`, `tage_ab_ortstag`).
         from app.loader import load_all_locations
         from services.scheduler_dispatch_service import _dispatch_due_preset
 
@@ -223,15 +250,17 @@ class CompareDispatchStrategy:
         # Lazy: erst laden, wenn ein faelliges Preset zu verarbeiten ist (#649).
         if self._all_locations is None:
             self._all_locations = load_all_locations(user_id=self._user_id)
-        if _dispatch_due_preset(
+        ausgang = _dispatch_due_preset(
             preset, target_date, self._settings, self._user_id, self._data_root,
-            self._all_locations, tage_ab_ortstag=tage_ab_ortstag,
-        ):
+            self._all_locations, tage_ab_ortstag=tage_ab_ortstag, now_utc=now_utc,
+        )
+        # Issue #1777: Zaehlung nach Ausgang (Trip-Paritaet #2218); `None`
+        # (kein Versuch) und `no_channels` neutral, sonst -- auch "error" -- failed.
+        if ausgang == "sent":
             self._success += 1
+        elif ausgang is None or ausgang == "no_channels":
+            pass
         else:
-            # Issue #1290 (E1): _dispatch_due_preset faengt bereits jede
-            # Exception (ValueError/Exception) und liefert False; Fehler-
-            # Isolation bleibt UNVERAENDERT (kein Abbruch der Schleife).
             self._failed += 1
 
     def result(self) -> tuple[int, int]:

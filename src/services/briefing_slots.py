@@ -50,7 +50,21 @@ LOCK_TIMEOUT_SECONDS = file_lock.LOCK_TIMEOUT_SECONDS
 CLAIM_TTL = 900  # Sekunden (15 min)
 
 _STATE_FILENAME = "briefing_slots.json"
+COMPARE_STATE_FILENAME = "briefing_slots_compare.json"  # Issue #1777, Variante B
 _LOCK_SUFFIX = ".lock"
+
+# Geteilt von Trip und Ortsvergleich (#1777); Begruendung Spec fix_1725:
+# Ausgaenge, die den Slot abschliessen (`channels_unreachable` bewusst nicht:
+# niemand bekam etwas; `no_weather` deckt der Nachhol-Vermerk), und Fenster-
+# breite in Ortsstunden (deckt den an Umstellungstagen ausfallenden Cron-Tick,
+# kein Ueberlauf ueber Ortsmitternacht).
+VERMERK_AUSGAENGE = frozenset({"sent", "no_stage", "no_weather", "no_channels"})
+NACHHOL_FENSTER_STUNDEN = 3
+
+
+def fenster_offen(slot_stunde: int, ortsstunde: int) -> bool:
+    """Das geteilte Faelligkeits-Fenster (#1725, #1777), Konstante zur LAUFZEIT."""
+    return slot_stunde <= ortsstunde < slot_stunde + NACHHOL_FENSTER_STUNDEN
 _BRIEFING_LOG_FILENAME = "briefing_log.json"
 _REBUILT_MARKER = "rebuilt_from_log_at"
 
@@ -105,14 +119,19 @@ class BriefingSlotStore:
     heutigen Slot.
     """
 
-    def __init__(self, user_id: str, data_dir: Optional[Path] = None) -> None:
+    def __init__(self, user_id: str, data_dir: Optional[Path] = None, *,
+                 filename: str = _STATE_FILENAME, entity_type: str = "trip",
+                 id_key: str = "trip_id") -> None:
+        """#1777: Parameter fuer den Ortsvergleich; Defaults = Trip (byte-gleich)."""
         self._user_id = user_id
         if data_dir is not None:
             self._dir = Path(data_dir)
         else:
             from app.loader import get_data_dir
             self._dir = get_data_dir(user_id)
-        self._path = self._dir / _STATE_FILENAME
+        self._path = self._dir / filename
+        self._entity_type = entity_type
+        self._id_key = id_key
 
     # --- Oeffentliche Schnittstelle (Spec „Schnittstelle") ---
 
@@ -140,6 +159,14 @@ class BriefingSlotStore:
         if eintrag is not None and eintrag.get("outcome") is not None:
             return True
         return self._log_bezeugt_versand(trip_id, slot, local_day, zone, data)
+
+    def outcome_of(self, trip_id: str, slot: str, local_day: date) -> Optional[str]:
+        """#1777: gesetzter Ausgang (``None`` = keiner/unlesbar), rein lesend."""
+        data = self._load()
+        if data is _UNREADABLE:
+            return None
+        eintrag = self._find(data, trip_id, slot, local_day)
+        return None if eintrag is None else eintrag.get("outcome")
 
     def is_recorded_or_claimed(
         self, trip_id: str, slot: str, local_day: date,
@@ -325,9 +352,8 @@ class BriefingSlotStore:
 
     # --- Schluessel ---
 
-    @staticmethod
     def _eintrag(
-        trip_id: str, slot: str, local_day: date, outcome: Optional[str],
+        self, trip_id: str, slot: str, local_day: date, outcome: Optional[str],
         moment: Optional[datetime] = None,
     ) -> dict:
         """``moment`` ist der Lauf-Zeitpunkt (Issue #1897): ``recorded_at``
@@ -336,20 +362,19 @@ class BriefingSlotStore:
         wo der Ausgang die Frist ohnehin beendet) bleibt es bei der Systemuhr.
         """
         return {
-            "trip_id": trip_id,
+            self._id_key: trip_id,
             "slot": slot,
             "local_day": local_day.isoformat(),
             "recorded_at": (moment or datetime.now(tz=timezone.utc)).isoformat(),
             "outcome": outcome,
         }
 
-    @staticmethod
-    def _passt(eintrag: object, trip_id: str, slot: str, local_day: date) -> bool:
+    def _passt(self, eintrag: object, trip_id: str, slot: str, local_day: date) -> bool:
         """Alle DREI Glieder muessen stimmen — je eines weggelassen faellt ein
         anderer Nutzer, ein anderer Slot oder der Folgetag mit heraus."""
         return (
             isinstance(eintrag, dict)
-            and eintrag.get("trip_id") == trip_id
+            and eintrag.get(self._id_key) == trip_id
             and eintrag.get("slot") == slot
             and eintrag.get("local_day") == local_day.isoformat()
         )
@@ -429,11 +454,7 @@ class BriefingSlotStore:
         for eintrag in data.get("entries", []):
             if not isinstance(eintrag, dict):
                 continue
-            # #2281 AC-5: nur Trip-Eintraege (Altbestand ohne Typ = Trip) --
-            # ein Ortsvergleich mit gleicher ID nimmt dem Trip kein Briefing.
-            if eintrag.get("entity_type") not in (None, "trip"):
-                continue
-            if eintrag.get("trip_id") != trip_id or eintrag.get("kind") != slot:
+            if not self._log_eintrag_passt(eintrag, trip_id, slot):
                 continue
             if eintrag.get("on_demand") is True:
                 # Issue #1725 (Adversary F004/F006): ein angefordertes Briefing
@@ -451,6 +472,18 @@ class BriefingSlotStore:
             if local_dt(sent_at, zone or UTC).date() == local_day:
                 return True
         return False
+
+    def _log_eintrag_passt(self, eintrag: dict, entity_id: str, slot: str) -> bool:
+        if eintrag.get("kind") != slot:
+            return False
+        if self._entity_type == "trip":
+            # #2281 AC-5: nur Trip-Eintraege (Altbestand ohne Typ = Trip) --
+            # ein Ortsvergleich mit gleicher ID nimmt dem Trip kein Briefing.
+            return (eintrag.get("entity_type") in (None, "trip")
+                    and eintrag.get("trip_id") == entity_id)
+        # #1777: sonst nur der eigene Typ (nie Trip/Altbestand ohne Typ).
+        return (eintrag.get("entity_type") == self._entity_type
+                and eintrag.get("entity_id") == entity_id)
 
     @staticmethod
     def _parse(raw: object) -> Optional[datetime]:
@@ -534,3 +567,9 @@ class BriefingSlotStore:
                 fcntl.flock(fd, fcntl.LOCK_UN)
         finally:
             os.close(fd)
+
+
+def compare_slot_store(user_id: str, data_dir: Optional[Path] = None) -> BriefingSlotStore:
+    """#1777: DIE Fabrik des Ortsvergleich-Vermerks (alle Aufrufer)."""
+    return BriefingSlotStore(user_id, data_dir, filename=COMPARE_STATE_FILENAME,
+                             entity_type="compare", id_key="preset_id")

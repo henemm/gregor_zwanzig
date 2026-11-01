@@ -65,11 +65,12 @@ RED-Charakter je Test steht im Docstring:
 ``Mutations-Waechter`` = heute nur ueber eine Zusatz-Zusicherung rot, sein
 Wert liegt in der Verfaelschung, die er nach GREEN faengt.
 """
+# ruff: noqa: F811  (pytest-Fixtures werden importiert und als Parameter benutzt)
 from __future__ import annotations
 
 import fcntl
 import os
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 
 import pytest
 
@@ -603,11 +604,13 @@ def test_ac16_ohne_schreibsperre_wird_nicht_gesendet(naht, monkeypatch):
     fd = os.open(str(ordner / f"{COMPARE_SLOTS}.lock"), os.O_CREAT | os.O_RDWR, 0o644)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX)
-        lauf(uid, utc_zu(PARIS, D, H))
+        gesperrt = lauf(uid, utc_zu(PARIS, D, H))
     finally:
         fcntl.flock(fd, fcntl.LOCK_UN)
         os.close(fd)
 
+    # Adversary F004: kein Versandversuch ist weder Erfolg noch Fehlschlag.
+    assert tuple(gesperrt) == (0, 0), f"Sperre nicht erhalten => (0, 0), kam {gesperrt}"
     assert naht.versuche == [], (
         "Ohne Sperre kein wirksamer Vermerk — dann darf NICHT gesendet werden, "
         f"sonst droht der Doppelversand (Premium-SMS): {naht.versuche}"
@@ -808,3 +811,133 @@ def test_ac23_trip_und_vergleich_gleicher_kennung_beruehren_einander_nicht(naht)
         compare_vermerke(uid)
     )
     assert trip_pfad.read_bytes() == trip_stand, "briefing_slots.json muss byte-gleich bleiben"
+
+
+# ═══════════════════ Fix-Loop 1 (Adversary F001-F004) ═══════════════════════
+
+
+def test_f001_abend_marker_nach_ortsmitternacht_wird_nach_zustellung_verworfen(naht):
+    """AC-14 / F001: Given der Abend-Slot (18:00) ist an D mit ``sent``
+    vermerkt, ein Nachhol-Vermerk (``evening``, Zieltag D+1) blieb ungeraeumt /
+    When der Lauf nach Ortsmitternacht (00:30, Ortstag D+1) laeuft / Then
+    verwirft der Nachholer den Marker ohne Versand.
+
+    Der Abend-Slot gehoert zum Ortstag D, sein Marker traegt den Zieltag D+1.
+    Nach GREEN rot bei: Nachholer-Schluessel ohne ``zieltag`` bzw. Abend-
+    Versatz 0 (dann wird unter D+1 gesucht, nichts gefunden, doppelt gesendet).
+    """
+    uid = nutzer()
+    pid = _paris_vergleich(uid, "vgl-f001", morgen=None, abend="18:00:00")
+    morgen = D + timedelta(days=1)
+    compare_vermerk_schreiben(uid, [compare_vermerk(pid, "evening", D, "sent")])
+    nachhol_vermerk_schreiben(uid, pid, "evening", morgen, 18)
+
+    lauf(uid, utc_zu(PARIS, morgen, 0, 30))
+
+    assert naht.versuche == [], f"Abend bereits zugestellt, kein Nachhol-Doppel: {naht.versuche}"
+    assert nachhol_vermerke(uid) == [], nachhol_vermerke(uid)
+
+
+@pytest.mark.parametrize("fall", ["anderer_vergleich", "anderer_slot"])
+def test_f002_rollout_log_eines_anderen_vergleichs_oder_slots_blockiert_nicht(naht, fall):
+    """AC-9 / F002: Given Rollout (keine Compare-Datei) und ein regulaerer
+    Log-Eintrag des heutigen Ortstags, der aber zu einem ANDEREN Vergleich bzw.
+    zum ANDEREN Slot (``evening``) gehoert / When der Morgen-Slot faellig ist /
+    Then wird er versendet.
+
+    Nach GREEN rot bei: ``entity_id``- bzw. ``kind``-Pruefung der Ableitung
+    entfernt (dann faellt das Briefing still aus).
+    """
+    uid = nutzer()
+    pid = _paris_vergleich(uid, "vgl-f002")
+    sent_at = utc_zu(PARIS, D, 6, 10)
+    eintrag = {
+        "anderer_vergleich": compare_log_eintrag("vgl-fremd", "morning", sent_at),
+        "anderer_slot": compare_log_eintrag(pid, "evening", sent_at),
+    }[fall]
+    briefing_log_schreiben(uid, [eintrag])
+
+    lauf(uid, utc_zu(PARIS, D, H))
+
+    assert naht.regulaer() == [(pid, "morning")], f"{fall}: {naht.versuche}"
+
+
+def _lebendiger_claim(uid: str, pid: str, moment: datetime) -> None:
+    compare_vermerk_schreiben(uid, [compare_vermerk(
+        pid, "morning", D, None, recorded_at=moment - timedelta(minutes=1),
+    )])
+
+
+def test_f003a_lebendiger_claim_wird_nicht_gesammelt_verwaister_schon():
+    """F003(a): Given ein Vermerk OHNE Ausgang (Versand eines parallelen Laufs)
+    / When die Sammelphase laeuft / Then ist der Slot nicht faellig, solange
+    der Claim lebt; ein verwaister Claim (aelter als ``CLAIM_TTL``) bringt ihn
+    zurueck.
+
+    Gemessen an der echten Sammelphase ``CompareDispatchStrategy.collect_due``.
+    Nach GREEN rot bei: Sammelfilter ``is_recorded`` statt
+    ``is_recorded_or_claimed``.
+    """
+    from app.config import Settings
+    from services.dispatch_orchestrator import CompareDispatchStrategy
+
+    jetzt = utc_zu(PARIS, D, H, 30)
+    lebt, verwaist = nutzer(), nutzer()
+    for uid in (lebt, verwaist):
+        _paris_vergleich(uid, "vgl-f003a")
+    _lebendiger_claim(lebt, "vgl-f003a", jetzt)
+    compare_vermerk_schreiben(verwaist, [compare_vermerk(
+        "vgl-f003a", "morning", D, None,
+        recorded_at=jetzt - timedelta(seconds=briefing_slots.CLAIM_TTL + 60),
+    )])
+
+    def gesammelt(uid: str) -> list:
+        strategie = CompareDispatchStrategy(Settings(), uid, str(get_data_root()))
+        return [item[0].get("id") for item in strategie.collect_due(jetzt)]
+
+    assert gesammelt(lebt) == [], "Lebendiger Claim: der Versand laeuft bereits"
+    assert gesammelt(verwaist) == ["vgl-f003a"], "Verwaister Claim: Slot ist wieder offen"
+
+
+def test_f003b_lebendiger_claim_und_nachhol_marker_ergeben_keinen_zweitversand(naht):
+    """F003(b) / AC-15: Given ein paralleler Lauf versendet den Slot gerade
+    (lebendiger Claim) und fuer denselben Slot/Zieltag liegt ein Nachhol-
+    Vermerk vor / When ein zweiter Lauf (z. B. ``?hour=``-Ausloeser) startet /
+    Then sendet weder der Sammellauf noch der Nachholer — der Marker wartet.
+
+    Nach GREEN rot bei: Nachholer ohne Claim-Blick (dann ``send`` neben dem
+    laufenden Versand => Doppelbriefing).
+    """
+    uid = nutzer()
+    pid = _paris_vergleich(uid, "vgl-f003b")
+    jetzt = utc_zu(PARIS, D, H, 30)
+    _lebendiger_claim(uid, pid, jetzt)
+    nachhol_vermerk_schreiben(uid, pid, "morning", D, H)
+
+    lauf(uid, jetzt)
+
+    assert naht.versuche == [], f"Der laufende Versand ist der einzige: {naht.versuche}"
+    assert [m.get("preset_id") for m in nachhol_vermerke(uid)] == [pid], (
+        f"Der Marker wartet (nicht verworfen): {nachhol_vermerke(uid)!r}"
+    )
+
+
+def test_f003c_unlesbarer_vermerk_wird_repariert_und_der_vergleich_versendet(naht):
+    """F003(c) / #2231: Given ``briefing_slots_compare.json`` ist unlesbar /
+    When der Lauf startet / Then wird die Datei beiseitegelegt und neu
+    angelegt, der faellige Vergleich versendet und vermerkt (kein Dauerausfall).
+
+    Nach GREEN rot bei: ``repair_if_corrupt`` vor der Sammelschleife entfernt
+    (dann filtert „unlesbar => erledigt" jeden Slot dauerhaft).
+    """
+    uid = nutzer()
+    pid = _paris_vergleich(uid, "vgl-f003c")
+    pfad = get_data_dir(uid) / COMPARE_SLOTS
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    pfad.write_text("{kaputt", encoding="utf-8")
+
+    lauf(uid, utc_zu(PARIS, D, H))
+
+    assert naht.regulaer() == [(pid, "morning")], naht.versuche
+    assert abgeschlossene_vermerke(uid) == {(pid, "morning", D.isoformat(), "sent")}
+    assert list(pfad.parent.glob(f"{COMPARE_SLOTS}.corrupt-*")), "Original beiseitegelegt"
