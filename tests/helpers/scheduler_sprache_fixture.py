@@ -66,10 +66,43 @@ def wetter(monkeypatch, tmp_path: Path, art: str) -> None:
     ziel.mkdir(exist_ok=True)
     if art == "teil":
         shutil.copy(FIXTURES / "innsbruck.json", ziel / "innsbruck.json")
+    if art == "sturm":
+        _sturm_fixture(ziel / "innsbruck.json")
     monkeypatch.setenv("GZ_TEST_FIXTURE_DIR", str(ziel))
     from services.weather_cache import reset_shared_weather_cache_for_tests
 
     reset_shared_weather_cache_for_tests()
+
+
+def _sturm_fixture(ziel: Path) -> None:
+    """Aufgezeichnete Innsbruck-Reihe mit Sturm, Regen und mittlerem Gewitter
+    von 10 bis 15 Uhr UTC jedes Tages (Trend-Notiz und Gewitter-Vorschau)."""
+    daten = json.loads((FIXTURES / "innsbruck.json").read_text())
+    for i, p in enumerate(daten["data"]):
+        p.update(wind10m_kmh=50, gust_kmh=75, precip_1h_mm=1.0)
+        p["thunder_level"] = "MED" if 10 <= i % 24 <= 15 else "NONE"
+    ziel.write_text(json.dumps(daten))
+
+
+def trip_mehrtaegig(user_id: str, tage: int = 3):
+    """Trip mit je einer Etappe ab ``TAG`` (fuer Ausblick und Gewitter-Vorschau)."""
+    from datetime import timedelta
+
+    from app.loader import save_trip
+    from app.trip import Stage, TimeWindow, Trip, Waypoint
+
+    etappen = []
+    for i in range(tage):
+        wps = [Waypoint(id=f"G{j}", name=f"W{j}", lat=INNSBRUCK[0], lon=INNSBRUCK[1],
+                        elevation_m=600 + 50 * j,
+                        time_window=TimeWindow(start=time(9 + 3 * j, 0), end=time(9 + 3 * j, 0)))
+               for j in range(2)]
+        etappen.append(Stage(id=f"T{i}", name=f"Etappe {i}", date=TAG + timedelta(days=i),
+                             start_time=time(9, 0), waypoints=wps))
+    trip = Trip(id=f"trip-lang-{user_id}", name="GR20", stages=etappen,
+                official_alerts_enabled=False)
+    save_trip(trip, user_id=user_id)
+    return trip
 
 
 def trip_anlegen(user_id: str, coords: list[tuple[float, float]], *, sms: bool = True):
@@ -299,19 +332,30 @@ def vergleich_preset(user_id: str, *, telegram_stil: str | None = None) -> dict:
     return preset
 
 
-def vergleich_senden(rig, user_id: str, *, catchup: bool = False, **preset_kw) -> dict:
+def _vergleich_orte() -> list:
     from app.user import SavedLocation
-    from services import pending_briefings as pb
-    from services.scheduler_dispatch_service import send_one_compare_preset
 
-    orte = [SavedLocation(id=i, name=n, lat=la, lon=lo, elevation_m=600)
+    return [SavedLocation(id=i, name=n, lat=la, lon=lo, elevation_m=600)
             for i, n, la, lo in VERGLEICH_ORTE]
+
+
+def vergleich_senden(rig, user_id: str, *, catchup: bool = False, **preset_kw) -> dict:
+    """Handversand (``send_one_compare_preset``) bzw. mit ``catchup`` der
+    echte Nachholweg: Vermerk um 6 Uhr, dann ``process_compare_pending_markers``."""
+    from services import scheduler_dispatch_service as sds
+
+    preset = vergleich_preset(user_id, **preset_kw)
     rig.zaehler_leeren()
-    send_one_compare_preset(
-        vergleich_preset(user_id, **preset_kw), rig.settings(), user_id, "",
-        all_locations_cache=orte, target_date=TAG, tage_ab_ortstag=0, on_demand=True,
-        catchup_hint=pb.dispatch_error_hint(6) if catchup else None,
-    )
+    if catchup:
+        sds._mark_compare_undelivered(user_id, preset["id"], "morning", TAG, 6)
+        sds.process_compare_pending_markers(
+            [preset], user_id, "", rig.settings(), JETZT, _vergleich_orte(), [],
+        )
+    else:
+        sds.send_one_compare_preset(
+            preset, rig.settings(), user_id, "", all_locations_cache=_vergleich_orte(),
+            target_date=TAG, tage_ab_ortstag=0, on_demand=True,
+        )
     return kanaele(rig)
 
 
@@ -334,10 +378,14 @@ class _KonvektiveFrames:
                            is_convective=True)]
 
 
-def radar_alarm(user_id: str, lang: str | None) -> list[tuple[str, str]]:
+def radar_alarm(user_id: str, lang: str | None, *, cooldown: int = 120,
+                angekuendigt: bool = False) -> list[tuple[str, str]]:
     """Trip-Radar-Alarm (Cooldown 120 Min) als Nachtrag zu einer amtlichen
     Warnung von 11:35 -- ``TripAlertService`` dieses Nutzers, Mail ueber die
-    ``mail_sink``-Naht. Aufrufer friert die Uhr auf ``ALARM_JETZT`` ein."""
+    ``mail_sink``-Naht. Aufrufer friert die Uhr auf ``ALARM_JETZT`` ein.
+
+    ``angekuendigt``: das letzte Briefing nannte Regen zum Beginn (Unterklasse
+    am Lesezugriff auf den Briefing-Stand, die Entscheidung bleibt echt)."""
     from datetime import timedelta
 
     from services.alert_gate import record_event_identity
@@ -355,10 +403,16 @@ def radar_alarm(user_id: str, lang: str | None) -> list[tuple[str, str]]:
         window_end=ALARM_JETZT + timedelta(hours=3), now=ALARM_JETZT - timedelta(minutes=25),
     )
     von, bis = ng.quiet_window_elsewhere(zone=ng.TRIP_ZONE)
-    ng.save_trip(ng.make_trip(trip_id, cooldown_minutes=120, quiet_from=von, quiet_to=bis,
+    ng.save_trip(ng.make_trip(trip_id, cooldown_minutes=cooldown, quiet_from=von, quiet_to=bis,
                               stage_date=ALARM_JETZT.date()), user_id)
     post: list[tuple[str, str]] = []
-    svc = TripAlertService(
+
+    class _Angekuendigt(TripAlertService):
+        def _briefing_precip_for_onset(self, *args, **kwargs):
+            return 2.0
+
+    klasse = _Angekuendigt if angekuendigt else TripAlertService
+    svc = klasse(
         settings=ng.settings_email_only(), throttle_hours=0, user_id=user_id,
         radar_service=ng.radar_service(_KonvektiveFrames()),
         mail_sink=lambda subject, body: post.append((subject, body)),
