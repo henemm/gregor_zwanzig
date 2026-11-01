@@ -9,24 +9,26 @@
 // Kontoseite, kein zweites Modul daneben. Der Schluessel ist der Fehlercode,
 // nicht der Status: `rate_limit_exceeded` kommt mit 429, die uebrigen mit 400,
 // und diese Kenntnis muss nicht doppelt gepflegt werden.
-const FEHLERTEXTE: Record<string, string> = {
-	invalid_sms_number:
-		'Die Handynummer muss im internationalen Format stehen, z. B. +49151234567.',
-	invalid_code:
-		'Der Code stimmt nicht. Gültig ist immer nur der zuletzt angeforderte Code — ältere verfallen, sobald du einen neuen anforderst oder die Nummer änderst.',
-	code_expired: 'Der Bestätigungscode ist abgelaufen — bitte einen neuen anfordern.',
-	sms_not_allowed: 'SMS gibt es ab Level Standard — bitte den Tarif prüfen.',
-	no_number: 'Es ist keine Handynummer hinterlegt.',
-	rate_limit_exceeded: 'Zu viele Anfragen — bitte später noch einmal versuchen.'
+// Issue #2653 (i18n F4): die Saetze stehen im Katalog (konto.fehler.<code>) und
+// kommen in der aktuellen Sprache (tr liest `locale` beim Aufruf).
+import { tr, type MessageKey } from '../../lib/i18n/index.ts';
+
+const FEHLERTEXTE: Record<string, MessageKey> = {
+	invalid_sms_number: 'konto.fehler.invalid_sms_number',
+	invalid_code: 'konto.fehler.invalid_code',
+	code_expired: 'konto.fehler.code_expired',
+	sms_not_allowed: 'konto.fehler.sms_not_allowed',
+	no_number: 'konto.fehler.no_number',
+	rate_limit_exceeded: 'konto.fehler.rate_limit_exceeded'
 };
 
 export function profileSaveErrorMessage(status: number, body: unknown): string {
 	const b = (body ?? {}) as { detail?: string; error?: string };
 	if (status === 409 && b.error === 'email_taken') {
-		return 'Diese E-Mail-Adresse wird bereits von einem anderen Konto verwendet.';
+		return tr('konto.fehler.email_taken');
 	}
 	if (b.error && FEHLERTEXTE[b.error]) {
-		return FEHLERTEXTE[b.error];
+		return tr(FEHLERTEXTE[b.error]);
 	}
-	return b.detail ?? b.error ?? 'Speichern fehlgeschlagen';
+	return b.detail ?? b.error ?? tr('konto.fehler.speichern_fehlgeschlagen');
 }

@@ -4,6 +4,7 @@
 	import RouteIcon from '@lucide/svelte/icons/route';
 	import GitCompare from '@lucide/svelte/icons/git-compare';
 	import ArchiveIcon from '@lucide/svelte/icons/archive';
+	import { t } from '$lib/i18n';
 
 	// Issue #373 — additive mobile-shell-Props (backward-compatible, Default
 	// undefined; ohne sie laeuft die route-basierte #267-Aktiv-Logik unveraendert).
@@ -29,12 +30,13 @@
 		kontoOpen = false
 	}: Props = $props();
 
-	const navItems = [
-		{ href: '/',          id: 'home',    label: 'Übersicht', icon: LayoutDashboard, testid: 'bottom-nav-item-home'     },
-		{ href: '/trips',     id: 'trips',   label: 'Trips',    icon: RouteIcon,       testid: 'bottom-nav-item-trips'    },
-		{ href: '/compare',   id: 'compare', label: 'Vergleich', icon: GitCompare,      testid: 'bottom-nav-item-compare'  },
-		{ href: '/archiv',    id: 'archive', label: 'Archiv',    icon: ArchiveIcon,     testid: 'bottom-nav-item-archive'   },
-	];
+	// Issue #2653 (i18n F4): $derived, damit die Labels dem Sprachwechsel folgen.
+	const navItems = $derived([
+		{ href: '/',          id: 'home',    label: $t('nav.unten.uebersicht'),   icon: LayoutDashboard, testid: 'bottom-nav-item-home'     },
+		{ href: '/trips',     id: 'trips',   label: $t('listen.trips.titel'),     icon: RouteIcon,       testid: 'bottom-nav-item-trips'    },
+		{ href: '/compare',   id: 'compare', label: $t('nav.unten.vergleich'),    icon: GitCompare,      testid: 'bottom-nav-item-compare'  },
+		{ href: '/archiv',    id: 'archive', label: $t('nav.hauptmenue.archiv'),  icon: ArchiveIcon,     testid: 'bottom-nav-item-archive'   },
+	]);
 </script>
 
 <!-- Schwebende Glas-Leiste im iOS-27-Stil: Geometrie und Glas kommen
@@ -70,7 +72,7 @@
 			type="button"
 			data-testid="konto-kreis"
 			class="konto-kreis nav-glass"
-			aria-label="Konto"
+			aria-label={$t('nav.konto')}
 			aria-haspopup="dialog"
 			aria-expanded={kontoOpen}
 			onclick={onKonto}

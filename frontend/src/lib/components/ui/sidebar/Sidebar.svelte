@@ -30,17 +30,17 @@
 
 	// Nav-Items fest nach JSX BRAND_NAV_ITEMS (brand-kit.jsx Zeile 259–264).
 	const baseNavItems = $derived([
-		{ id: 'home',    href: '/',        label: 'Startseite',     icon: 'home'    },
-		{ id: 'trips',   href: '/trips',   label: 'Meine Trips',    icon: 'trip'    },
-		{ id: 'compare', href: '/compare', label: 'Orts-Vergleich', icon: 'compare' },
-		{ id: 'archive', href: '/archiv',  label: 'Archiv',         icon: 'archive' },
+		{ id: 'home',    href: '/',        label: $t('nav.hauptmenue.startseite'),  icon: 'home'    },
+		{ id: 'trips',   href: '/trips',   label: $t('nav.hauptmenue.meine_trips'), icon: 'trip'    },
+		{ id: 'compare', href: '/compare', label: $t('nav.hauptmenue.vergleich'),   icon: 'compare' },
+		{ id: 'archive', href: '/archiv',  label: $t('nav.hauptmenue.archiv'),      icon: 'archive' },
 		// Issue #2521 S3 — Hilfeseite (BottomNav bleibt unveraendert).
 		{ id: 'hilfe',   href: '/hilfe',   label: $t('nav.hilfe'),   icon: 'hilfe'   },
 	]);
 	// Issue #2155 S4 — Eintrag nur fuer Admins (Komfort; Go bleibt die Sperre).
 	const navItems = $derived(
 		isAdmin
-			? [...baseNavItems, { id: 'admin', href: '/admin', label: 'Admin', icon: 'admin' }]
+			? [...baseNavItems, { id: 'admin', href: '/admin', label: $t('nav.admin'), icon: 'admin' }]
 			: baseNavItems
 	);
 
@@ -181,7 +181,7 @@
 					onclick={() => { closeUserMenu(); }}
 				>
 					<UserIcon class="size-4 opacity-70" />
-					Konto
+					{$t('nav.konto')}
 				</a>
 				<a
 					href="/account#system-status"
@@ -189,7 +189,7 @@
 					onclick={() => { closeUserMenu(); }}
 				>
 					<MonitorIcon class="size-4 opacity-70" />
-					System-Status
+					{$t('nav.system_status')}
 				</a>
 				<button
 					onclick={() => { ontoggleDark(); closeUserMenu(); }}
@@ -197,17 +197,17 @@
 				>
 					{#if darkMode}
 						<SunIcon class="size-4 opacity-70" />
-						Light Mode
+						{$t('nav.hell')}
 					{:else}
 						<MoonIcon class="size-4 opacity-70" />
-						Dark Mode
+						{$t('nav.dunkel')}
 					{/if}
 				</button>
 				<div class="my-1 h-px bg-border"></div>
 				<form method="POST" action="/logout">
 					<button type="submit" class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 transition-colors">
 						<LogOut class="size-4 opacity-70" />
-						Abmelden
+						{$t('nav.abmelden')}
 					</button>
 				</form>
 			</div>

@@ -10,6 +10,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Btn } from '$lib/components/atoms';
 	import type { UserTier } from '$lib/types';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		tier: UserTier | undefined;
@@ -36,9 +37,9 @@
 
 <Card.Root data-testid="premium-sms-link-card">
 	<Card.Header>
-		<Card.Title>Premium-SMS-Verknüpfungscode</Card.Title>
+		<Card.Title>{$t('konto.kopplung.titel')}</Card.Title>
 		<Card.Description>
-			Verbindet dein Garmin-inReach-Gerät sicher mit deinem Konto.
+			{$t('konto.kopplung.beschreibung')}
 		</Card.Description>
 	</Card.Header>
 	<Card.Content class="space-y-3">
@@ -50,7 +51,7 @@
 				disabled={busy}
 				onclick={onGenerateOrRenewClick}
 			>
-				Code erzeugen
+				{$t('konto.kopplung.erzeugen')}
 			</Btn>
 		{:else}
 			<Btn
@@ -60,7 +61,7 @@
 				disabled={busy}
 				onclick={onGenerateOrRenewClick}
 			>
-				Code erneuern
+				{$t('konto.kopplung.erneuern')}
 			</Btn>
 		{/if}
 
@@ -68,7 +69,7 @@
 			<div data-testid="premium-sms-link-code-value" class="text-sm">
 				<code class="font-mono">{codeValue}</code>
 				<p class="mt-1 text-xs text-muted-foreground">
-					Dieser Code wird nicht erneut angezeigt — notiere ihn jetzt.
+					{$t('konto.kopplung.einmalig')}
 				</p>
 			</div>
 		{/if}
@@ -76,7 +77,7 @@
 		{#if showRenewConfirm}
 			<div class="space-y-2 text-sm">
 				<p>
-					Ein bestehender Verknüpfungscode wird beim Erneuern ungültig. Fortfahren?
+					{$t('konto.kopplung.erneuern_frage')}
 				</p>
 				<div class="flex gap-2">
 					<Btn
@@ -85,7 +86,7 @@
 						size="sm"
 						onclick={onDialogConfirm}
 					>
-						Bestätigen
+						{$t('konto.kopplung.bestaetigen')}
 					</Btn>
 					<Btn
 						data-testid="premium-sms-link-renew-cancel"
@@ -93,7 +94,7 @@
 						size="sm"
 						onclick={onDialogCancel}
 					>
-						Abbrechen
+						{$t('aktionen.abbrechen')}
 					</Btn>
 				</div>
 			</div>

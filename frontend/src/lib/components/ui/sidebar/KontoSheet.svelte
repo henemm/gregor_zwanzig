@@ -38,23 +38,23 @@
 	const sub = $derived(userId && userId !== name ? userId : null);
 
 	const links = $derived([
-		{ href: '/account#kanaele', label: 'Kanäle & Empfänger', icon: MessageSquare, testid: 'konto-sheet-kanaele' },
-		{ href: '/account', label: 'Einstellungen', icon: SettingsIcon, testid: 'konto-sheet-einstellungen' },
-		{ href: '/account#system-status', label: 'System-Status', icon: MonitorIcon, testid: 'konto-sheet-status' },
+		{ href: '/account#kanaele', label: $t('nav.konto_sheet.kanaele_empfaenger'), icon: MessageSquare, testid: 'konto-sheet-kanaele' },
+		{ href: '/account', label: $t('nav.konto_sheet.einstellungen'), icon: SettingsIcon, testid: 'konto-sheet-einstellungen' },
+		{ href: '/account#system-status', label: $t('nav.system_status'), icon: MonitorIcon, testid: 'konto-sheet-status' },
 		// Issue #2521 S3 — Hilfeseite.
 		{ href: '/hilfe', label: $t('nav.hilfe'), icon: HelpIcon, testid: 'konto-sheet-hilfe' },
 	]);
 </script>
 
 <Sheet {open} {onClose} snap="auto">
-	<div data-testid="konto-sheet" role="dialog" aria-label="Konto" class="konto">
+	<div data-testid="konto-sheet" role="dialog" aria-label={$t('nav.konto')} class="konto">
 		<div class="konto__kopf">
 			<span class="konto__avatar mono" aria-hidden="true">{initials}</span>
 			<div class="konto__name">
 				<div data-testid="konto-sheet-name">{name}</div>
 				{#if sub}<div class="mono konto__sub">{sub}</div>{/if}
 			</div>
-			<button type="button" class="konto__close" aria-label="Schließen" onclick={onClose}>
+			<button type="button" class="konto__close" aria-label={$t('nav.konto_sheet.schliessen')} onclick={onClose}>
 				<XIcon class="size-[18px]" />
 			</button>
 		</div>
@@ -69,29 +69,29 @@
 			{/each}
 			<div class="konto__zeile" data-testid="konto-sheet-dark">
 				<MoonIcon class="size-[22px] shrink-0" />
-				<span class="konto__label">Dunkles Design</span>
-				<Switch checked={darkMode} size="lg" tone="accent" aria-label="Dunkles Design" onchange={ontoggleDark} />
+				<span class="konto__label">{$t('nav.konto_sheet.dunkles_design')}</span>
+				<Switch checked={darkMode} size="lg" tone="accent" aria-label={$t('nav.konto_sheet.dunkles_design')} onchange={ontoggleDark} />
 			</div>
 			{#if isAdmin}
 				<a href="/admin" data-testid="konto-sheet-admin" class="konto__zeile" onclick={onClose}>
 					<ShieldIcon class="size-[22px] shrink-0" />
-					<span class="konto__label">Admin</span>
+					<span class="konto__label">{$t('nav.admin')}</span>
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
 				</a>
 			{/if}
 			<a href="/account#datenexport" data-testid="konto-sheet-export" class="konto__zeile" onclick={onClose}>
 				<DownloadIcon class="size-[22px] shrink-0" />
-				<span class="konto__label">Datenexport</span>
+				<span class="konto__label">{$t('nav.konto_sheet.datenexport')}</span>
 				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
 			</a>
 		</div>
 
 		<div class="konto__fuss">
-			<span class="mono konto__version">V0.20 · Wetter-Briefing</span>
+			<span class="mono konto__version">{$t('nav.konto_sheet.version')}</span>
 			<form method="POST" action="/logout">
 				<button type="submit" data-testid="konto-sheet-logout" class="konto__logout">
 					<LogOut class="size-[18px]" />
-					Abmelden
+					{$t('nav.abmelden')}
 				</button>
 			</form>
 		</div>

@@ -30,7 +30,17 @@
 	import { shouldShowSmsUsageRow } from '$lib/utils/smsDailyUsageHelpers';
 	import { countActive, formatQuotaUsage } from '$lib/utils/mengenQuoteHelpers';
 	import type { ProfileQuota } from '$lib/types';
+	// Issue #2653 (i18n F4): alle Texte aus dem Katalog (konto.*, nav.*); Sprache = data.lang
+	// des angemeldeten Nutzers (Store `locale`, gesetzt von +layout.svelte).
+	import { t, tn, locale, type MessageKey } from '$lib/i18n';
+	import { fmtRelativeMinutes } from '$lib/i18n/format';
+	import { deleteErrorText } from './deleteErrorText';
+	import { textTeile } from './textTeile';
 	let { data } = $props();
+
+	// Kanalnamen sind Eigennamen (ADR-0104, Spec F4 Nr. 5) und stehen nicht im Katalog.
+	const KANAL = { email: 'E-Mail', telegram: 'Telegram', sms: 'SMS', premiumSms: 'Premium-SMS' } as const;
+	const SMS_BEISPIEL = '+49XXXXXXXXXX';
 
 	// Issue #2482: Tarif-Grenzen aus dem Profil; fehlt das Feld, bleibt die Anzeige bei "x".
 	const quota = $derived(data.profile?.quota as ProfileQuota | undefined);
@@ -101,7 +111,7 @@
 			linkCodeValue = res.code;
 			linkCodeExists = true;
 		} catch (e: unknown) {
-			linkCodeErrorMsg = errorMessageFrom(e, 'Code-Vorgang fehlgeschlagen');
+			linkCodeErrorMsg = errorMessageFrom(e, $t('konto.kopplung.fehlgeschlagen'));
 		} finally {
 			linkCodeBusy = false;
 		}
@@ -166,11 +176,11 @@
 		} catch (e: unknown) {
 			const body = e as { error?: string };
 			if (body?.error === 'already_current_tier') {
-				tierChangeError = 'Dieses Level ist bereits aktiv';
+				tierChangeError = $t('konto.level.bereits_aktiv');
 			} else if (body?.error === 'invalid_tier') {
-				tierChangeError = 'Ungültiges Level';
+				tierChangeError = $t('konto.level.ungueltig');
 			} else {
-				tierChangeError = body?.error ?? 'Antrag fehlgeschlagen';
+				tierChangeError = body?.error ?? $t('konto.level.antrag_fehlgeschlagen');
 			}
 			tierChangeStatus = 'error';
 		}
@@ -196,7 +206,7 @@
 			editName = '';
 		} catch (e: unknown) {
 			const body = e as { error?: string };
-			presetError = body?.error ?? 'Umbenennen fehlgeschlagen';
+			presetError = body?.error ?? $t('konto.wetter_profile.umbenennen_fehler');
 		}
 	}
 
@@ -213,7 +223,7 @@
 			presets = removePreset(presets, p.id);
 		} catch (e: unknown) {
 			const body = e as { error?: string };
-			presetError = body?.error ?? 'Löschen fehlgeschlagen';
+			presetError = body?.error ?? $t('konto.aktion.loeschen_fehlgeschlagen');
 		}
 	}
 
@@ -289,7 +299,7 @@
 			}
 		} catch (e: unknown) {
 			const body = e as { detail?: string; error?: string };
-			testError[channel] = body?.detail ?? body?.error ?? 'Senden fehlgeschlagen';
+			testError[channel] = body?.detail ?? body?.error ?? $t('konto.aktion.senden_fehlgeschlagen');
 			testStatus[channel] = 'error';
 		}
 	}
@@ -305,7 +315,7 @@
 		pwErrorMsg = null;
 
 		if (newPassword !== confirmNewPassword) {
-			pwErrorMsg = 'Die neuen Passwörter stimmen nicht überein';
+			pwErrorMsg = $t('konto.passwort.ungleich');
 			return;
 		}
 
@@ -314,7 +324,7 @@
 				old_password: oldPassword,
 				new_password: newPassword,
 			});
-			pwSuccessMsg = 'Passwort geändert';
+			pwSuccessMsg = $t('konto.passwort.geaendert');
 			oldPassword = '';
 			newPassword = '';
 			confirmNewPassword = '';
@@ -327,7 +337,8 @@
 	function formatDate(iso: string | null | undefined): string {
 		if (!iso) return '—';
 		try {
-			return new Date(iso).toLocaleDateString('de-AT', {
+			// Deutsch wie bisher `de-AT`, Englisch `en-GB` (Spec F4, A2).
+			return new Date(iso).toLocaleDateString($locale === 'en' ? 'en-GB' : 'de-AT', {
 				year: 'numeric',
 				month: '2-digit',
 				day: '2-digit',
@@ -343,14 +354,14 @@
 	 * neutraler Platzhalter — namenlos darf keine Zeile bleiben.
 	 */
 	function passkeyTitel(pk: RegisteredPasskey): string {
-		return pk.label?.trim() || pk.authenticator_name?.trim() || 'Unbenannter Passkey';
+		return pk.label?.trim() || pk.authenticator_name?.trim() || $t('konto.passkey.unbenannt');
 	}
 
-	/** Rohe Zeremonie-Fehler in verstaendliches Deutsch uebersetzen. */
+	/** Rohe Zeremonie-Fehler in einen verstaendlichen Satz der Nutzersprache uebersetzen. */
 	function passkeyFehlertext(e: unknown, ersatz: string): string {
 		const name = (e as { name?: string })?.name;
 		if (name === 'NotAllowedError' || name === 'AbortError' || name === 'TimeoutError') {
-			return 'Das Anlegen wurde abgebrochen oder hat zu lange gedauert. Bitte versuche es noch einmal.';
+			return $t('konto.passkey.abgebrochen');
 		}
 		return ersatz;
 	}
@@ -367,13 +378,10 @@
 			passkeyLabel = '';
 			// Liste aus dem Server-Stand nachziehen statt die Seite neu zu laden.
 			await invalidateAll();
-			passkeySuccessMsg = 'Passkey angelegt';
+			passkeySuccessMsg = $t('konto.passkey.angelegt');
 			setTimeout(() => (passkeySuccessMsg = null), 4000);
 		} catch (e: unknown) {
-			passkeyErrorMsg = passkeyFehlertext(
-				e,
-				'Der Passkey konnte nicht angelegt werden. Bitte versuche es noch einmal.'
-			);
+			passkeyErrorMsg = passkeyFehlertext(e, $t('konto.passkey.anlegen_fehler'));
 		} finally {
 			passkeyBusy = false;
 			showPasskeyDialog = false;
@@ -394,10 +402,10 @@
 		try {
 			await deletePasskey(id);
 			await invalidateAll();
-			passkeySuccessMsg = 'Passkey entfernt';
+			passkeySuccessMsg = $t('konto.passkey.entfernt');
 			setTimeout(() => (passkeySuccessMsg = null), 4000);
 		} catch {
-			passkeyErrorMsg = 'Der Passkey konnte nicht entfernt werden. Bitte versuche es noch einmal.';
+			passkeyErrorMsg = $t('konto.passkey.entfernen_fehler');
 		}
 	}
 
@@ -410,7 +418,7 @@
 				mail_to: mailTo,
 				sms_to: smsTo,
 			});
-			successMsg = 'Profil gespeichert';
+			successMsg = $t('konto.profil.gespeichert');
 			setTimeout(() => (successMsg = null), 4000);
 			// Issue #2147 Scheibe B2: eine Adressaenderung eines bestaetigten
 			// Kontos steht danach als ausstehend im Profil — neu laden, damit
@@ -461,15 +469,16 @@
 
 	// --- System-Status helpers (migrated from settings) ---
 
+	// Issue #2653: `vor 3 Min` | `3 min ago` (fmtRelativeMinutes, auch „gerade eben"),
+	// Stunden und Tage als Plural aus dem Katalog.
 	function timeAgo(iso: string): string {
 		const diff = Date.now() - new Date(iso).getTime();
 		const mins = Math.floor(diff / 60000);
-		if (mins < 1) return 'gerade eben';
-		if (mins < 60) return `vor ${mins} Min`;
+		if (mins < 60) return fmtRelativeMinutes(mins, $locale);
 		const hours = Math.floor(mins / 60);
-		if (hours < 24) return `vor ${hours} Std`;
+		if (hours < 24) return $tn('konto.zeit.vor_stunden', hours);
 		const days = Math.floor(hours / 24);
-		return `vor ${days} Tag${days > 1 ? 'en' : ''}`;
+		return $tn('konto.zeit.vor_tagen', days);
 	}
 
 	// Issue #1727 S5e: Die Seite wird serverseitig vorgerendert und der Node-Prozess
@@ -487,8 +496,8 @@
 			? 'GeoSphere (Alpen)' : 'OpenMeteo';
 	}
 
-	const userJobs: Record<string, string> = {
-		trip_reports_hourly: 'Trip-Checks',
+	const userJobs: Record<string, MessageKey> = {
+		trip_reports_hourly: 'konto.job.trip_checks',
 	};
 
 	// Issue #2160 (ADR-0081): Löschen nur mit frischem Nachweis — Passwort
@@ -501,18 +510,7 @@
 	let deleteCodeSent = $state(false);
 	let deleteDialogMsg = $state<string | null>(null);
 
-	const DELETE_ERROR_TEXT: Record<string, string> = {
-		reauth_required: 'Bitte Passwort oder Lösch-Code eingeben.',
-		wrong_password: 'Das Passwort ist falsch.',
-		invalid_code: 'Der Code ist falsch, abgelaufen oder bereits benutzt.',
-		rate_limit_exceeded: 'Zu viele Versuche. Bitte warte einige Minuten.',
-		mail_failed: 'Der Code konnte nicht verschickt werden. Bitte später erneut versuchen.',
-	};
-
-	function deleteErrorText(e: unknown, fallback: string): string {
-		const body = e as { detail?: string; error?: string };
-		return (body?.error && DELETE_ERROR_TEXT[body.error]) || body?.detail || body?.error || fallback;
-	}
+	// Fehlertexte beim Loeschen: deleteErrorText.ts (konto.fehler.*).
 
 	function deleteAccount() {
 		deletePassword = '';
@@ -529,7 +527,7 @@
 			await api.post('/api/auth/account/delete-code', {});
 			deleteCodeSent = true;
 		} catch (e: unknown) {
-			deleteDialogMsg = deleteErrorText(e, 'Code-Versand fehlgeschlagen');
+			deleteDialogMsg = deleteErrorText(e, $t('konto.loeschen.code_versand_fehlgeschlagen'));
 		} finally {
 			deleteBusy = false;
 		}
@@ -549,7 +547,7 @@
 		} catch (e: unknown) {
 			const err = e as { status?: number };
 			if (err?.status !== 401) vergissAbmeldung();
-			deleteDialogMsg = deleteErrorText(e, 'Löschen fehlgeschlagen');
+			deleteDialogMsg = deleteErrorText(e, $t('konto.aktion.loeschen_fehlgeschlagen'));
 		} finally {
 			deleteBusy = false;
 		}
@@ -588,7 +586,7 @@
 			// Umleitung wider Erwarten aus, faengt das Zeitfenster des Merkers den
 			// Fall (AC-20).
 			if (body?.status !== 401) vergissAbmeldung();
-			logoutAllErrorMsg = body?.detail ?? body?.error ?? 'Abmelden fehlgeschlagen';
+			logoutAllErrorMsg = body?.detail ?? body?.error ?? $t('konto.anmeldungen.fehlgeschlagen');
 		}
 	}
 
@@ -601,7 +599,7 @@
 			await downloadUserDataExport();
 		} catch (e: unknown) {
 			const body = e as { detail?: string; error?: string; message?: string };
-			exportErrorMsg = body?.detail ?? body?.error ?? body?.message ?? 'Download fehlgeschlagen';
+			exportErrorMsg = body?.detail ?? body?.error ?? body?.message ?? $t('konto.daten.fehlgeschlagen');
 		} finally {
 			exportBusy = false;
 		}
@@ -609,7 +607,7 @@
 </script>
 
 <div class="space-y-6">
-	<h1 class="text-2xl font-bold">Mein Konto</h1>
+	<h1 class="text-2xl font-bold">{$t('konto.titel')}</h1>
 
 	{#if successMsg}
 		<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
@@ -625,27 +623,27 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Profil</Card.Title>
+			<Card.Title>{$t('konto.profil.titel')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="grid gap-1">
-				<span class="text-sm font-medium text-muted-foreground">Benutzername</span>
+				<span class="text-sm font-medium text-muted-foreground">{$t('konto.profil.benutzername')}</span>
 				<span class="text-sm">{data.profile?.id ?? '—'}</span>
 			</div>
 			<div class="space-y-2">
-				<label for="displayName" class="text-sm font-medium">Anzeigename</label>
+				<label for="displayName" class="text-sm font-medium">{$t('konto.profil.anzeigename')}</label>
 				<input
 					id="displayName"
 					name="display_name"
 					type="text"
 					maxlength="50"
 					bind:value={displayName}
-					placeholder={data.profile?.id ?? 'Anzeigename'}
+					placeholder={data.profile?.id ?? $t('konto.profil.anzeigename')}
 					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
 			</div>
 			<div class="grid gap-1">
-				<span class="text-sm font-medium text-muted-foreground">Mitglied seit</span>
+				<span class="text-sm font-medium text-muted-foreground">{$t('konto.profil.mitglied_seit')}</span>
 				<span class="text-sm">{formatDate(data.profile?.created_at)}</span>
 			</div>
 		</Card.Content>
@@ -656,19 +654,19 @@
 
 	<Card.Root id="kanaele">
 		<Card.Header>
-			<Card.Title>Kanäle</Card.Title>
-			<Card.Description>Wohin sollen deine Wetter-Reports gesendet werden?</Card.Description>
+			<Card.Title>{$t('konto.kanaele.titel')}</Card.Title>
+			<Card.Description>{$t('konto.kanaele.beschreibung')}</Card.Description>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="space-y-2">
-				<label for="mailTo" class="text-sm font-medium">E-Mail für Reports</label>
+				<label for="mailTo" class="text-sm font-medium">{$t('konto.kanaele.mail_label')}</label>
 				<div class="flex items-center gap-2">
 					<input
 						id="mailTo"
 						name="mail_to"
 						type="email"
 						bind:value={mailTo}
-						placeholder="z.B. dein@email.com"
+						placeholder={$t('konto.kanaele.mail_platzhalter')}
 						class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					/>
 					{#if mailTo}
@@ -677,12 +675,12 @@
 							disabled={testStatus.email === 'loading'}
 							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-blue-600 hover:underline disabled:opacity-50"
 						>
-							{testStatus.email === 'loading' ? '...' : 'Test senden'}
+							{testStatus.email === 'loading' ? '...' : $t('konto.aktion.test_senden')}
 						</button>
 					{/if}
 				</div>
 				{#if testStatus.email === 'ok'}
-					<span class="text-sm text-green-600">Gesendet</span>
+					<span class="text-sm text-green-600">{$t('konto.aktion.gesendet')}</span>
 				{/if}
 				{#if testStatus.email === 'error'}
 					<span class="text-sm text-red-600">{testError.email}</span>
@@ -693,38 +691,37 @@
 						class="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
 					>
 						<p>
-							Bestätigung ausstehend für <strong>{data.profile.pending_contact_address}</strong> — bis dahin
-							gehen Mails weiter an <strong>{data.profile.mail_to || data.profile.email}</strong>.
-						</p>
+								{#each textTeile($t('konto.adresse.ausstehend')) as teil}{#if teil.platzhalter === 'neu'}<strong>{data.profile.pending_contact_address}</strong>{:else if teil.platzhalter === 'alt'}<strong>{data.profile.mail_to || data.profile.email}</strong>{:else}{teil.text}{/if}{/each}
+							</p>
 						<button
 							type="button"
 							onclick={resendVerification}
 							disabled={resendStatus === 'loading'}
 							class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
 						>
-							Bestätigungsmail erneut senden
+							{$t('konto.adresse.mail_erneut')}
 						</button>
 						{#if resendStatus === 'ok'}
-							<span class="text-sm text-green-700">Bestätigungsmail verschickt</span>
+							<span class="text-sm text-green-700">{$t('konto.adresse.mail_verschickt')}</span>
 						{/if}
 						{#if resendStatus === 'error'}
-							<span class="text-sm text-red-700">Senden fehlgeschlagen</span>
+							<span class="text-sm text-red-700">{$t('konto.aktion.senden_fehlgeschlagen')}</span>
 						{/if}
 					</div>
 				{/if}
 			</div>
 
 			<div class="space-y-2">
-				<label for="smsTo" class="block text-sm font-medium">Handynummer (SMS)</label>
+				<label for="smsTo" class="block text-sm font-medium">{$t('konto.sms.label')}</label>
 				<input
 					id="smsTo"
 					name="sms_to"
 					type="tel"
 					bind:value={smsTo}
-					placeholder="+49XXXXXXXXXX"
+					placeholder={SMS_BEISPIEL}
 					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
-				<p class="mt-1 text-xs text-gray-500">Internationales Format, z.B. +49151XXXXXXXX</p>
+				<p class="mt-1 text-xs text-gray-500">{$t('konto.sms.format_hinweis')}</p>
 				<!-- Issue #2406 (AC-13): solange die Nummer nicht per Code bewiesen ist,
 				     geht an sie keine SMS raus (Sperre in config.py). Der Hinweis macht
 				     das sichtbar und traegt den einzigen Weg heraus. -->
@@ -734,16 +731,15 @@
 						class="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
 					>
 						<p>
-							Bestätigung ausstehend für <strong>{smsZuBestaetigen}</strong> — bis dahin geht an
-							diese Nummer keine SMS. Den per SMS zugestellten Code hier eintragen:
-						</p>
+								{#each textTeile($t('konto.sms.ausstehend')) as teil}{#if teil.platzhalter === 'nummer'}<strong>{smsZuBestaetigen}</strong>{:else}{teil.text}{/if}{/each}
+							</p>
 						<input
 							data-testid="sms-code-input"
 							name="sms_code"
 							inputmode="numeric"
 							autocomplete="one-time-code"
 							bind:value={smsCode}
-							placeholder="6-stelliger Code"
+							placeholder={$t('konto.sms.code_platzhalter')}
 							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
 						/>
 						<div class="flex flex-wrap items-center gap-4">
@@ -753,7 +749,7 @@
 								disabled={smsVerifyStatus === 'loading'}
 								class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
 							>
-								Code bestätigen
+								{$t('konto.sms.code_bestaetigen')}
 							</button>
 							<button
 								type="button"
@@ -761,11 +757,11 @@
 								disabled={smsResendStatus === 'loading'}
 								class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
 							>
-								Code erneut senden
+								{$t('konto.sms.code_erneut')}
 							</button>
 						</div>
 						{#if smsResendStatus === 'ok'}
-							<span class="text-sm text-green-700">Neuer Code verschickt</span>
+							<span class="text-sm text-green-700">{$t('konto.sms.code_verschickt')}</span>
 						{/if}
 						{#if smsVerifyError}
 							<span class="text-sm text-red-700">{smsVerifyError}</span>
@@ -775,38 +771,38 @@
 			</div>
 
 			<div class="space-y-2">
-				<label class="text-sm font-medium">Telegram</label>
+				<label class="text-sm font-medium">{KANAL.telegram}</label>
 				{#if telegramConnected}
 					<div class="flex items-center gap-3">
-						<span class="text-sm text-green-700">Verbunden ({telegramChatIdSuffix})</span>
+						<span class="text-sm text-green-700">{$t('konto.telegram.verbunden', { suffix: telegramChatIdSuffix })}</span>
 						<button
 							onclick={() => sendTest('telegram')}
 							disabled={testStatus.telegram === 'loading'}
 							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-blue-600 hover:underline disabled:opacity-50"
 						>
-							{testStatus.telegram === 'loading' ? '...' : 'Test senden'}
+							{testStatus.telegram === 'loading' ? '...' : $t('konto.aktion.test_senden')}
 						</button>
 						<button
 							onclick={disconnectTelegram}
 							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-destructive hover:underline"
 						>
-							Trennen
+							{$t('konto.telegram.trennen')}
 						</button>
 					</div>
 				{:else}
 					<div class="flex items-center gap-3">
-						<span class="text-sm text-muted-foreground">Nicht verbunden</span>
+						<span class="text-sm text-muted-foreground">{$t('konto.telegram.nicht_verbunden')}</span>
 						<button
 							onclick={connectTelegram}
 							disabled={telegramConnecting}
 							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-blue-600 hover:underline disabled:opacity-50"
 						>
-							{telegramConnecting ? 'Warte auf Verbindung…' : 'Mit Telegram verbinden'}
+							{telegramConnecting ? $t('konto.telegram.warte') : $t('konto.telegram.verbinden')}
 						</button>
 					</div>
 				{/if}
 				{#if testStatus.telegram === 'ok'}
-					<span class="text-sm text-green-600">Gesendet</span>
+					<span class="text-sm text-green-600">{$t('konto.aktion.gesendet')}</span>
 				{/if}
 				{#if testStatus.telegram === 'error'}
 					<span class="text-sm text-red-600">{testError.telegram}</span>
@@ -817,7 +813,7 @@
 				onclick={save}
 				class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				Speichern
+				{$t('konto.aktion.speichern')}
 			</button>
 		</Card.Content>
 	</Card.Root>
@@ -840,7 +836,7 @@
 	<!-- Issue #2246 — Passkeys verwalten -->
 	<Card.Root data-testid="passkeys-card">
 		<Card.Header>
-			<Card.Title>Passkeys</Card.Title>
+			<Card.Title>{$t('konto.passkey.titel')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			{#if passkeySuccessMsg}
@@ -859,8 +855,7 @@
 
 			{#if passkeys.length === 0}
 				<p data-testid="passkey-empty" class="text-sm text-muted-foreground">
-					Du hast noch keinen Passkey. Mit einem Passkey meldest du dich per Face ID, Touch ID,
-					Windows Hello oder Sicherheitsschlüssel an — ohne Passwort.
+					{$t('konto.passkey.leer')}
 				</p>
 			{:else}
 				<ul class="space-y-2">
@@ -875,11 +870,11 @@
 									<span class="block text-sm text-muted-foreground">{pk.authenticator_name}</span>
 								{/if}
 								<span class="block text-sm text-muted-foreground">
-									Angelegt am {formatDate(pk.created_at)}
+									{$t('konto.passkey.angelegt_am', { datum: formatDate(pk.created_at) })}
 								</span>
 								{#if pk.last_used_at}
 									<span data-testid="passkey-last-used" class="block text-sm text-muted-foreground">
-										Zuletzt verwendet am {formatDate(pk.last_used_at)}
+										{$t('konto.passkey.zuletzt_verwendet', { datum: formatDate(pk.last_used_at) })}
 									</span>
 								{/if}
 							</div>
@@ -888,7 +883,7 @@
 								class="shrink-0 inline-flex items-center gap-1 min-h-[44px] text-sm text-destructive hover:underline"
 							>
 								<Trash2Icon class="h-4 w-4" aria-hidden="true" />
-								Löschen
+								{$t('konto.aktion.loeschen')}
 							</button>
 						</li>
 					{/each}
@@ -897,12 +892,11 @@
 
 			{#if passkeySupported === true}
 				<Btn onclick={() => (showPasskeyDialog = true)} disabled={passkeyBusy}>
-					Passkey hinzufügen
+					{$t('konto.passkey.hinzufuegen')}
 				</Btn>
 			{:else if passkeySupported === false}
 				<p data-testid="passkey-unsupported" class="text-sm text-muted-foreground">
-					Dieser Browser oder dieses Gerät unterstützt Passkeys nicht. Melde dich mit einem anderen
-					Gerät an, um hier einen Passkey anzulegen.
+					{$t('konto.passkey.nicht_unterstuetzt')}
 				</p>
 			{/if}
 		</Card.Content>
@@ -910,11 +904,11 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Passwort ändern</Card.Title>
+			<Card.Title>{$t('konto.passwort.titel')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			<div class="space-y-2">
-				<label for="oldPassword" class="text-sm font-medium">Aktuelles Passwort</label>
+				<label for="oldPassword" class="text-sm font-medium">{$t('konto.passwort.aktuell')}</label>
 				<input
 					id="oldPassword"
 					type="password"
@@ -924,7 +918,7 @@
 			</div>
 
 			<div class="space-y-2">
-				<label for="newPassword" class="text-sm font-medium">Neues Passwort</label>
+				<label for="newPassword" class="text-sm font-medium">{$t('konto.passwort.neu')}</label>
 				<input
 					id="newPassword"
 					type="password"
@@ -934,7 +928,7 @@
 			</div>
 
 			<div class="space-y-2">
-				<label for="confirmNewPassword" class="text-sm font-medium">Neues Passwort bestätigen</label>
+				<label for="confirmNewPassword" class="text-sm font-medium">{$t('konto.passwort.neu_bestaetigen')}</label>
 				<input
 					id="confirmNewPassword"
 					type="password"
@@ -959,7 +953,7 @@
 				onclick={changePassword}
 				class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				Passwort ändern
+				{$t('konto.passwort.titel')}
 			</button>
 		</Card.Content>
 	</Card.Root>
@@ -967,13 +961,13 @@
 	<!-- Issue #344 — Wetter-Profile (User-MetricPresets) -->
 	<Card.Root data-testid="wetter-profile-card">
 		<Card.Header>
-			<Card.Title>Wetter-Profile</Card.Title>
-			<Card.Description>Deine gespeicherten Metrik-Auswahlen</Card.Description>
+			<Card.Title>{$t('konto.wetter_profile.titel')}</Card.Title>
+			<Card.Description>{$t('konto.wetter_profile.beschreibung')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			{#if isEmpty(presets)}
 				<p data-testid="wetter-profile-empty" class="text-sm text-muted-foreground">
-					Du hast noch keine Wetter-Profile angelegt. Speichere ein Profil im Trip-Wetter-Tab.
+					{$t('konto.wetter_profile.leer')}
 				</p>
 			{:else}
 				<div class="space-y-2">
@@ -989,14 +983,14 @@
 								<div class="flex items-center gap-1">
 									<button
 										onclick={() => saveRename(p.id)}
-										aria-label="Speichern"
+										aria-label={$t('konto.aktion.speichern')}
 										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
 									>
 										<CheckIcon class="h-4 w-4" />
 									</button>
 									<button
 										onclick={cancelEdit}
-										aria-label="Abbrechen"
+										aria-label={$t('aktionen.abbrechen')}
 										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
 									>
 										<XIcon class="h-4 w-4" />
@@ -1007,12 +1001,12 @@
 								<div class="flex items-center gap-2">
 									<Badge variant="secondary" data-testid="wetter-profile-count-{p.id}">{metricCountLabel(p)}</Badge>
 									{#if showDefaultBadge(p)}
-										<Badge variant="secondary" data-testid="wetter-profile-default-{p.id}">Standard</Badge>
+										<Badge variant="secondary" data-testid="wetter-profile-default-{p.id}">{$t('konto.wetter_profile.standard')}</Badge>
 									{/if}
 									<button
 										data-testid="wetter-profile-edit-{p.id}"
 										onclick={() => startEdit(p)}
-										aria-label="Umbenennen"
+										aria-label={$t('konto.wetter_profile.umbenennen')}
 										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
 									>
 										<PencilIcon class="h-4 w-4" />
@@ -1020,7 +1014,7 @@
 									<button
 										data-testid="wetter-profile-delete-{p.id}"
 										onclick={() => deletePreset(p)}
-										aria-label="Löschen"
+										aria-label={$t('konto.aktion.loeschen')}
 										class="inline-flex h-9 w-9 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
 									>
 										<Trash2Icon class="h-4 w-4" />
@@ -1042,11 +1036,11 @@
 		<!-- Card: Deine Reports -->
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Deine Reports</Card.Title>
+				<Card.Title>{$t('konto.reports.titel')}</Card.Title>
 			</Card.Header>
 			<Card.Content>
 				{#if data.scheduler === null}
-					<p class="text-sm text-muted-foreground">Report-Zeitplan nicht verfügbar.</p>
+					<p class="text-sm text-muted-foreground">{$t('konto.reports.nicht_verfuegbar')}</p>
 				{:else if data.scheduler?.jobs && data.scheduler.jobs.length > 0}
 					<div class="space-y-3">
 						{#each data.scheduler.jobs.filter((j: any) => j.id in userJobs) as job}
@@ -1060,20 +1054,20 @@
 										class:bg-slate-500={dot === 'neutral'}
 										class:bg-gray-300={dot === 'none'}
 									></span>
-									<span class="font-medium">{userJobs[job.id]}</span>
+									<span class="font-medium">{$t(userJobs[job.id])}</span>
 								</div>
 								<div class="flex items-center gap-4 text-sm text-muted-foreground">
-									<span>Nächste Prüfung: {imBrowser ? formatNextRun(job.next_run) : '—'}</span>
-									<span>Zuletzt: {job.last_run?.time ? timeAgo(job.last_run.time) : '—'}</span>
+									<span>{$t('konto.reports.naechste_pruefung', { zeit: imBrowser ? formatNextRun(job.next_run) : '—' })}</span>
+									<span>{$t('konto.reports.zuletzt', { zeit: job.last_run?.time ? timeAgo(job.last_run.time) : '—' })}</span>
 								</div>
 							</div>
 							{#if job.last_run?.status === 'error'}
-								<p class="ml-4 text-sm text-destructive">Letzter Lauf fehlgeschlagen{job.last_run?.error ? `: ${job.last_run.error}` : ''}</p>
+								<p class="ml-4 text-sm text-destructive">{job.last_run?.error ? $t('konto.reports.lauf_fehlgeschlagen_mit', { fehler: job.last_run.error }) : $t('konto.reports.lauf_fehlgeschlagen')}</p>
 							{/if}
 						{/each}
 					</div>
 				{:else}
-					<p class="text-sm text-muted-foreground">Keine Reports konfiguriert.</p>
+					<p class="text-sm text-muted-foreground">{$t('konto.reports.keine')}</p>
 				{/if}
 			</Card.Content>
 		</Card.Root>
@@ -1081,21 +1075,21 @@
 		<!-- Card: Dein Account -->
 		<Card.Root data-testid="account-section">
 			<Card.Header>
-				<Card.Title>Dein Account</Card.Title>
+				<Card.Title>{$t('konto.account.titel')}</Card.Title>
 			</Card.Header>
 			<Card.Content>
 				<!-- Nutzerlevel (Issue #1068) — immer sichtbar -->
 				<div data-testid="tier" class="mb-4">
-					<p class="text-sm font-medium mb-2">Level</p>
+					<p class="text-sm font-medium mb-2">{$t('konto.level.titel')}</p>
 					<Badge variant="secondary">{tierLabel(data.profile?.tier)}</Badge>
 				</div>
 
 				<!-- Level-Wechsel beantragen (Issue #1071) -->
 				<div data-testid="tier-change" class="mb-4">
-					<p class="text-sm font-medium mb-2">Level-Wechsel beantragen</p>
+					<p class="text-sm font-medium mb-2">{$t('konto.level.wechsel_titel')}</p>
 					{#if pendingTier}
 						<p data-testid="tier-change-pending" class="text-sm text-muted-foreground mb-2">
-							Level-Wechsel zu <span class="font-medium">{tierLabel(pendingTier)}</span> beantragt — wird vom Betreiber geprüft.
+							{#each textTeile($t('konto.level.ausstehend')) as teil}{#if teil.platzhalter === 'level'}<span class="font-medium">{tierLabel(pendingTier)}</span>{:else}{teil.text}{/if}{/each}
 						</p>
 						{#if tierNotNotified}
 							<p
@@ -1103,8 +1097,7 @@
 								role="alert"
 								class="text-sm font-medium text-destructive border border-destructive rounded-md px-3 py-2 mb-2"
 							>
-								Der Antrag ist gespeichert, aber der Betreiber wurde nicht benachrichtigt. Bitte
-								melde dich beim Betreiber, sonst bleibt der Antrag womöglich unbemerkt.
+								{$t('konto.level.nicht_benachrichtigt')}
 							</p>
 						{/if}
 					{/if}
@@ -1125,11 +1118,11 @@
 							disabled={tierChangeStatus === 'loading'}
 							onclick={requestTierChange}
 						>
-							{tierChangeStatus === 'loading' ? 'Wird gesendet…' : 'Antrag stellen'}
+							{tierChangeStatus === 'loading' ? $t('konto.level.wird_gesendet') : $t('konto.level.antrag_stellen')}
 						</Btn>
 					</div>
 					{#if tierChangeStatus === 'ok' && tierChangeNotified}
-						<p class="text-sm text-green-600 mt-2">Antrag gesendet</p>
+						<p class="text-sm text-green-600 mt-2">{$t('konto.level.antrag_gesendet')}</p>
 					{/if}
 					{#if tierChangeStatus === 'error' && tierChangeError}
 						<p class="text-sm text-destructive mt-2">{tierChangeError}</p>
@@ -1139,15 +1132,15 @@
 				<!-- Zähler mit Tarif-Grenzen "x von N" (Issue #2482); unbegrenzt: nur "x" -->
 				<div class="space-y-2 mb-4" data-testid="mengen-quote">
 					<div class="flex items-center justify-between text-sm">
-						<span>Aktive Trips</span>
+						<span>{$t('konto.menge.aktive_trips')}</span>
 						<a href="/trips" class="g-link-tap font-medium hover:underline" data-testid="quota-trips">{formatQuotaUsage(countActive(data.trips), quota?.trips)}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
-						<span>Aktive Vergleiche</span>
+						<span>{$t('konto.menge.aktive_vergleiche')}</span>
 						<a href="/compare" class="g-link-tap font-medium hover:underline" data-testid="quota-compare-presets">{formatQuotaUsage(countActive(data.comparePresets), quota?.compare_presets)}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
-						<span>Locations</span>
+						<span>{$t('konto.menge.locations')}</span>
 						<a href="/locations" class="g-link-tap font-medium hover:underline" data-testid="quota-locations">{formatQuotaUsage(Array.isArray(data.locations) ? data.locations.length : 0, quota?.locations)}</a>
 					</div>
 				</div>
@@ -1155,34 +1148,32 @@
 				<!-- SMS-/Premium-SMS-Tageskontingent (Issue #2412 S4b) -->
 				{#if data.smsDailyUsage && (shouldShowSmsUsageRow(data.smsDailyUsage.sms?.limit) || shouldShowSmsUsageRow(data.smsDailyUsage.premium_sms?.limit))}
 					<div data-testid="sms-daily-usage" class="mb-4">
-						<p class="text-sm font-medium mb-2">SMS-Kontingent (heute)</p>
+						<p class="text-sm font-medium mb-2">{$t('konto.kontingent.titel')}</p>
 						{#if shouldShowSmsUsageRow(data.smsDailyUsage.sms?.limit)}
 							<div class="flex items-center justify-between text-sm">
-								<span>SMS</span>
+								<span>{KANAL.sms}</span>
 								<span class="font-medium">
-									{data.smsDailyUsage.sms.used} von {data.smsDailyUsage.sms.limit}
+									{$t('konto.menge.von', { anzahl: data.smsDailyUsage.sms.used, grenze: data.smsDailyUsage.sms.limit })}
 								</span>
 							</div>
 							<p class="text-xs text-muted-foreground mb-2">
-								davon max. {data.smsDailyUsage.sms.limit - data.smsDailyUsage.sms.reserve} Briefings,
-								{data.smsDailyUsage.sms.reserve} Alarm-Reserve
+								{$t('konto.kontingent.davon', { briefings: data.smsDailyUsage.sms.limit - data.smsDailyUsage.sms.reserve, reserve: data.smsDailyUsage.sms.reserve })}
 							</p>
 						{/if}
 						{#if shouldShowSmsUsageRow(data.smsDailyUsage.premium_sms?.limit)}
 							<div class="flex items-center justify-between text-sm">
-								<span>Premium-SMS</span>
+								<span>{KANAL.premiumSms}</span>
 								<span class="font-medium">
 									{#if data.smsDailyUsage.premium_sms.used > data.smsDailyUsage.premium_sms.limit}
-										{data.smsDailyUsage.premium_sms.limit} von {data.smsDailyUsage.premium_sms.limit}
-										(+{data.smsDailyUsage.premium_sms.used - data.smsDailyUsage.premium_sms.limit} Antworten)
+										{$t('konto.menge.von', { anzahl: data.smsDailyUsage.premium_sms.limit, grenze: data.smsDailyUsage.premium_sms.limit })}
+										{$tn('konto.kontingent.antworten', data.smsDailyUsage.premium_sms.used - data.smsDailyUsage.premium_sms.limit)}
 									{:else}
-										{data.smsDailyUsage.premium_sms.used} von {data.smsDailyUsage.premium_sms.limit}
+										{$t('konto.menge.von', { anzahl: data.smsDailyUsage.premium_sms.used, grenze: data.smsDailyUsage.premium_sms.limit })}
 									{/if}
 								</span>
 							</div>
 							<p class="text-xs text-muted-foreground">
-								davon max. {data.smsDailyUsage.premium_sms.limit - data.smsDailyUsage.premium_sms.reserve} Briefings,
-								{data.smsDailyUsage.premium_sms.reserve} Alarm-Reserve
+								{$t('konto.kontingent.davon', { briefings: data.smsDailyUsage.premium_sms.limit - data.smsDailyUsage.premium_sms.reserve, reserve: data.smsDailyUsage.premium_sms.reserve })}
 							</p>
 						{/if}
 					</div>
@@ -1190,26 +1181,26 @@
 
 				<!-- Benachrichtigungskanäle -->
 				<div data-testid="channels" class="mb-4">
-					<p class="text-sm font-medium mb-2">Benachrichtigungen</p>
+					<p class="text-sm font-medium mb-2">{$t('konto.benachrichtigung.titel')}</p>
 					{#if data.profile && (data.profile.mail_to || data.profile.telegram_chat_id)}
 						<div class="flex flex-wrap gap-2">
 							{#if data.profile.mail_to}
-								<Badge variant="secondary">E-Mail: {data.profile.mail_to}</Badge>
+								<Badge variant="secondary">{KANAL.email}: {data.profile.mail_to}</Badge>
 							{/if}
 							{#if data.profile.telegram_chat_id}
-								<Badge variant="secondary">Telegram: ...{data.profile.telegram_chat_id.slice(-3)}</Badge>
+								<Badge variant="secondary">{KANAL.telegram}: ...{data.profile.telegram_chat_id.slice(-3)}</Badge>
 							{/if}
 						</div>
 					{:else}
 						<p class="text-sm text-muted-foreground">
-							Keine Benachrichtigungen konfiguriert — <a href="/account" class="underline hover:text-foreground">einrichten</a>
+							{#each textTeile($t('konto.benachrichtigung.keine')) as teil}{#if teil.platzhalter === 'link'}<a href="/account" class="underline hover:text-foreground">{$t('konto.benachrichtigung.einrichten')}</a>{:else}{teil.text}{/if}{/each}
 						</p>
 					{/if}
 				</div>
 
 				<!-- Wetter-Modelle -->
 				<div data-testid="weather-models">
-					<p class="text-sm font-medium mb-2">Wetter-Modelle</p>
+					<p class="text-sm font-medium mb-2">{$t('konto.modelle.titel')}</p>
 					{#if data.locations.length > 0}
 						<div class="space-y-1">
 							{#each data.locations as loc}
@@ -1220,7 +1211,7 @@
 						</div>
 					{:else}
 						<p class="text-sm text-muted-foreground">
-							Noch keine Locations angelegt — <a href="/locations" class="underline hover:text-foreground">anlegen</a>
+							{#each textTeile($t('konto.modelle.keine')) as teil}{#if teil.platzhalter === 'link'}<a href="/locations" class="underline hover:text-foreground">{$t('konto.modelle.anlegen')}</a>{:else}{teil.text}{/if}{/each}
 						</p>
 					{/if}
 				</div>
@@ -1230,22 +1221,22 @@
 		<!-- Card: Verfügbarkeit -->
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Verfügbarkeit</Card.Title>
+				<Card.Title>{$t('konto.status.titel')}</Card.Title>
 			</Card.Header>
 			<Card.Content>
 				<div class="flex items-center gap-2">
 					{#if data.health === null}
 						<span class="inline-block size-3 rounded-full bg-red-500"></span>
-						<span class="font-medium">Nicht erreichbar</span>
+						<span class="font-medium">{$t('konto.status.nicht_erreichbar')}</span>
 					{:else if data.health.status === 'ok'}
 						<span class="inline-block size-3 rounded-full bg-green-500"></span>
-						<span class="font-medium">System läuft</span>
+						<span class="font-medium">{$t('konto.status.laeuft')}</span>
 					{:else if data.health.status === 'degraded'}
 						<span class="inline-block size-3 rounded-full bg-yellow-500"></span>
-						<span class="font-medium">Eingeschränkt</span>
+						<span class="font-medium">{$t('konto.status.eingeschraenkt')}</span>
 					{:else}
 						<span class="inline-block size-3 rounded-full bg-red-500"></span>
-						<span class="font-medium">Nicht erreichbar</span>
+						<span class="font-medium">{$t('konto.status.nicht_erreichbar')}</span>
 					{/if}
 				</div>
 				{#if data.health?.version}
@@ -1258,19 +1249,19 @@
 	<!-- Wetter-Templates Card -->
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Wetter-Templates</Card.Title>
-			<Card.Description>Systemweite Report-Vorlagen (nur lesend)</Card.Description>
+			<Card.Title>{$t('konto.templates.titel')}</Card.Title>
+			<Card.Description>{$t('konto.templates.beschreibung')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			{#if !data.templates || data.templates.length === 0}
-				<p class="text-sm text-muted-foreground">Keine Templates verfügbar.</p>
+				<p class="text-sm text-muted-foreground">{$t('konto.templates.keine')}</p>
 			{:else}
 				<div class="space-y-2">
 					{#each data.templates as tpl}
 						<div class="flex items-center justify-between text-sm">
 							<span class="font-medium">{tpl.label ?? tpl.name ?? tpl.id}</span>
 							{#if tpl.metrics}
-								<Badge variant="secondary">{tpl.metrics.length} Metriken</Badge>
+								<Badge variant="secondary">{$tn('konto.metriken', tpl.metrics.length)}</Badge>
 							{:else if tpl.description ?? tpl.type}
 								<span class="text-muted-foreground">{tpl.description ?? tpl.type}</span>
 							{/if}
@@ -1283,15 +1274,13 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Anmeldungen</Card.Title>
+			<Card.Title>{$t('konto.anmeldungen.titel')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<p class="mb-4 text-sm text-muted-foreground">
-				Deine Anmeldung bleibt bestehen, bis du dich abmeldest. Hast du ein Gerät verloren,
-				kannst du hier alle Anmeldungen auf einmal beenden — auch die auf Geräten, die du
-				gerade nicht zur Hand hast.
+				{$t('konto.anmeldungen.text')}
 			</p>
-			<Btn variant="outline" onclick={logoutAllDevices}>Auf allen Geräten abmelden</Btn>
+			<Btn variant="outline" onclick={logoutAllDevices}>{$t('konto.anmeldungen.alle_abmelden')}</Btn>
 			{#if logoutAllErrorMsg}
 				<p class="mt-2 text-sm text-red-600">{logoutAllErrorMsg}</p>
 			{/if}
@@ -1304,13 +1293,11 @@
 	-->
 	<Card.Root id="datenexport" data-testid="data-export-card">
 		<Card.Header>
-			<Card.Title>Deine Daten</Card.Title>
+			<Card.Title>{$t('konto.daten.titel')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<p class="mb-4 text-sm text-muted-foreground">
-				Du kannst jederzeit alles herunterladen, was zu deinem Konto gespeichert ist — Orte,
-				Trips, Vergleiche, Einstellungen und die Versand-Protokolle. Du bekommst ein
-				ZIP-Archiv; Anmelde-Merkmale und technische Fehlersuch-Protokolle sind nicht dabei.
+				{$t('konto.daten.text')}
 			</p>
 			<Btn
 				variant="outline"
@@ -1318,7 +1305,7 @@
 				disabled={exportBusy}
 				onclick={exportiereMeineDaten}
 			>
-				{exportBusy ? 'Archiv wird erstellt …' : 'Daten herunterladen'}
+				{exportBusy ? $t('konto.daten.wird_erstellt') : $t('konto.daten.herunterladen')}
 			</Btn>
 			{#if exportErrorMsg}
 				<p class="mt-2 text-sm text-red-600" data-testid="data-export-error">{exportErrorMsg}</p>
@@ -1328,17 +1315,17 @@
 
 	<Card.Root class="border-red-200" data-testid="danger-zone-card">
 		<Card.Header>
-			<Card.Title class="text-red-700">Gefahrenzone</Card.Title>
+			<Card.Title class="text-red-700">{$t('konto.loeschen.zone_titel')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<p class="mb-4 text-sm text-muted-foreground">
-				Das Löschen deines Accounts ist unwiderruflich. Alle deine Daten werden permanent gelöscht.
+				{$t('konto.loeschen.zone_text')}
 			</p>
 			<button
 				onclick={deleteAccount}
 				class="inline-flex h-10 items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white ring-offset-background hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
 			>
-				Account löschen
+				{$t('konto.loeschen.titel')}
 			</button>
 		</Card.Content>
 	</Card.Root>
@@ -1350,14 +1337,14 @@
 	>
 		<Dialog.Content>
 			<Dialog.Header>
-				<Dialog.Title>Profil löschen</Dialog.Title>
+				<Dialog.Title>{$t('konto.wetter_profile.loeschen_titel')}</Dialog.Title>
 				<Dialog.Description>
-					Möchtest du „{deletePresetTarget?.name}" wirklich löschen?
+					{$t('konto.wetter_profile.loeschen_frage', { name: deletePresetTarget?.name ?? '' })}
 				</Dialog.Description>
 			</Dialog.Header>
 			<Dialog.Footer>
-				<Btn variant="outline" onclick={() => (deletePresetTarget = null)}>Abbrechen</Btn>
-				<Btn variant="destructive" onclick={confirmDeletePreset}>Löschen</Btn>
+				<Btn variant="outline" onclick={() => (deletePresetTarget = null)}>{$t('aktionen.abbrechen')}</Btn>
+				<Btn variant="destructive" onclick={confirmDeletePreset}>{$t('konto.aktion.loeschen')}</Btn>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
@@ -1369,21 +1356,19 @@
 	>
 		<Dialog.Content>
 			<Dialog.Header>
-				<Dialog.Title>Passkey löschen</Dialog.Title>
+				<Dialog.Title>{$t('konto.passkey.loeschen_titel')}</Dialog.Title>
 				<Dialog.Description>
-					Möchtest du „{deletePasskeyTarget ? passkeyTitel(deletePasskeyTarget) : ''}" wirklich
-					löschen? Du kannst dich dann mit diesem Gerät nicht mehr ohne Passwort anmelden und musst
-					den Passkey bei Bedarf neu anlegen.
+					{$t('konto.passkey.loeschen_frage', { name: deletePasskeyTarget ? passkeyTitel(deletePasskeyTarget) : '' })}
 				</Dialog.Description>
 			</Dialog.Header>
 			<Dialog.Footer>
 				<Btn
 					variant="outline"
 					data-testid="passkey-delete-cancel"
-					onclick={() => (deletePasskeyTarget = null)}>Abbrechen</Btn
+					onclick={() => (deletePasskeyTarget = null)}>{$t('aktionen.abbrechen')}</Btn
 				>
 				<Btn variant="destructive" data-testid="passkey-delete-confirm" onclick={confirmDeletePasskey}
-					>Löschen</Btn
+					>{$t('konto.aktion.loeschen')}</Btn
 				>
 			</Dialog.Footer>
 		</Dialog.Content>
@@ -1411,14 +1396,13 @@
 			showCloseButton={!passkeyBusy}
 		>
 			<Dialog.Header>
-				<Dialog.Title>Passkey hinzufügen</Dialog.Title>
+				<Dialog.Title>{$t('konto.passkey.hinzufuegen')}</Dialog.Title>
 				<Dialog.Description>
-					Vergib eine Bezeichnung, damit du diesen Passkey später wiedererkennst — das ist
-					freiwillig. Danach bestätigst du die Erstellung an deinem Gerät.
+					{$t('konto.passkey.dialog_text')}
 				</Dialog.Description>
 			</Dialog.Header>
 			<div class="space-y-2">
-				<label for="passkeyLabel" class="text-sm font-medium">Bezeichnung (optional)</label>
+				<label for="passkeyLabel" class="text-sm font-medium">{$t('konto.passkey.bezeichnung')}</label>
 				<input
 					id="passkeyLabel"
 					data-testid="passkey-label-input"
@@ -1431,16 +1415,15 @@
 			</div>
 			{#if passkeyBusy}
 				<p data-testid="passkey-create-pending" class="text-sm text-muted-foreground">
-					Bestätige das Anlegen jetzt an deinem Gerät — per Face ID, Touch ID, Windows Hello oder
-					Sicherheitsschlüssel. Dieses Fenster bleibt so lange offen.
+					{$t('konto.passkey.warte')}
 				</p>
 			{/if}
 			<Dialog.Footer>
 				<Btn variant="outline" disabled={passkeyBusy} onclick={() => (showPasskeyDialog = false)}>
-					Abbrechen
+					{$t('aktionen.abbrechen')}
 				</Btn>
 				<Btn data-testid="passkey-create-confirm" disabled={passkeyBusy} onclick={createPasskey}>
-					Anlegen
+					{$t('konto.passkey.anlegen')}
 				</Btn>
 			</Dialog.Footer>
 		</Dialog.Content>
@@ -1453,15 +1436,14 @@
 	>
 		<Dialog.Content>
 			<Dialog.Header>
-				<Dialog.Title>Auf allen Geräten abmelden</Dialog.Title>
+				<Dialog.Title>{$t('konto.anmeldungen.alle_abmelden')}</Dialog.Title>
 				<Dialog.Description>
-					Alle Anmeldungen werden beendet, auch die auf diesem Gerät. Zum Weiterarbeiten
-					musst du dich neu anmelden.
+					{$t('konto.anmeldungen.dialog_text')}
 				</Dialog.Description>
 			</Dialog.Header>
 			<Dialog.Footer>
-				<Btn variant="outline" onclick={() => (showLogoutAllDialog = false)}>Abbrechen</Btn>
-				<Btn variant="destructive" onclick={confirmLogoutAllDevices}>Abmelden</Btn>
+				<Btn variant="outline" onclick={() => (showLogoutAllDialog = false)}>{$t('aktionen.abbrechen')}</Btn>
+				<Btn variant="destructive" onclick={confirmLogoutAllDevices}>{$t('nav.abmelden')}</Btn>
 			</Dialog.Footer>
 		</Dialog.Content>
 	</Dialog.Root>
@@ -1473,16 +1455,15 @@
 	>
 		<Dialog.Content>
 			<Dialog.Header>
-				<Dialog.Title>Account löschen</Dialog.Title>
+				<Dialog.Title>{$t('konto.loeschen.titel')}</Dialog.Title>
 				<Dialog.Description>
-					Bist du sicher? Alle deine Daten werden unwiderruflich gelöscht. Bestätige die
-					Löschung {deleteHasPassword ? 'mit deinem Passwort oder ' : 'mit '}einem Code per E-Mail.
+					{deleteHasPassword ? $t('konto.loeschen.frage_mit_passwort') : $t('konto.loeschen.frage_ohne_passwort')}
 				</Dialog.Description>
 			</Dialog.Header>
 			<div class="space-y-4">
 				{#if deleteHasPassword}
 					<div class="space-y-2">
-						<label for="deletePassword" class="text-sm font-medium">Passwort</label>
+						<label for="deletePassword" class="text-sm font-medium">{$t('konto.loeschen.passwort')}</label>
 						<input
 							id="deletePassword"
 							type="password"
@@ -1501,12 +1482,12 @@
 						disabled={deleteBusy}
 						onclick={requestDeleteCode}
 					>
-						Code an {deleteCodeAddress} senden
+						{$t('konto.loeschen.code_senden', { adresse: deleteCodeAddress })}
 					</Btn>
 					{#if deleteCodeSent}
-						<p class="text-sm">Code verschickt — er ist 15 Minuten gültig.</p>
+						<p class="text-sm">{$t('konto.loeschen.code_verschickt')}</p>
 					{/if}
-					<label for="deleteCode" class="block text-sm font-medium">Lösch-Code</label>
+					<label for="deleteCode" class="block text-sm font-medium">{$t('konto.loeschen.code')}</label>
 					<input
 						id="deleteCode"
 						type="text"
@@ -1523,14 +1504,14 @@
 				{/if}
 			</div>
 			<Dialog.Footer>
-				<Btn variant="outline" onclick={() => (showDeleteAccountDialog = false)}>Abbrechen</Btn>
+				<Btn variant="outline" onclick={() => (showDeleteAccountDialog = false)}>{$t('aktionen.abbrechen')}</Btn>
 				<Btn
 					variant="destructive"
 					data-testid="delete-account-confirm"
 					disabled={deleteBusy || (!deletePassword && deleteCode.trim() === '')}
 					onclick={confirmDeleteAccount}
 				>
-					Account löschen
+					{$t('konto.loeschen.titel')}
 				</Btn>
 			</Dialog.Footer>
 		</Dialog.Content>
