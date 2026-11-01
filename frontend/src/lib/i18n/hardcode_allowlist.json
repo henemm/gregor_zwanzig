@@ -16,7 +16,6 @@
 	"lib/components/ui/sidebar/",
 	"lib/utils/alertMetricLabels.ts",
 	"routes/+layout.svelte",
-	"routes/_home/EmptyKachel.svelte",
 	"routes/account/",
 	"routes/admin/",
 	"routes/compare/[id]/",
