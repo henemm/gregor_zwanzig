@@ -32,7 +32,7 @@
 
 import { build, files, version } from '$service-worker';
 import { ansichtVon, DATEN_ENDUNG } from './lib/pwa/ansicht.ts';
-import { STAND_ELEMENT_ID, STAND_STIL, standKurz, standZeile } from './lib/pwa/standText.ts';
+import { STAND_ELEMENT_ID, STAND_STIL, standKurz, standSpracheAusHtml, standZeile } from './lib/pwa/standText.ts';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
@@ -251,7 +251,7 @@ function maskiere(text: string): string {
 function standEinschreiben(html: string, zeit: Date): string {
 	const zeile =
 		`<div id="${STAND_ELEMENT_ID}" data-testid="offline-stand" role="status" ` +
-		`style="${STAND_STIL}">${maskiere(standZeile(zeit))}</div>`;
+		`style="${STAND_STIL}">${maskiere(standZeile(zeit, standSpracheAusHtml(html)))}</div>`;
 	return html.replace(STAND_MARKE, zeile);
 }
 
@@ -418,6 +418,8 @@ async function offlineUebersicht(): Promise<Response> {
 	const roh = await grundlage.text();
 
 	const eintraege = (await indexLesen()).sort((a, b) => b.stand.localeCompare(a.stand));
+	// #2652: Sprache aus <html lang> des abgelegten Offline-Dokuments (Fallback de).
+	const lang = standSpracheAusHtml(roh);
 	const liste = eintraege.length
 		? '<ul class="liste">' +
 			eintraege
@@ -425,7 +427,7 @@ async function offlineUebersicht(): Promise<Response> {
 					(e) =>
 						`<li data-testid="offline-uebersicht-eintrag">` +
 						`<a href="${maskiere(e.pfad)}">${maskiere(e.titel)}</a>` +
-						`<span class="stand">${maskiere(standKurz(new Date(e.stand)))}</span></li>`
+						`<span class="stand">${maskiere(standKurz(new Date(e.stand), lang))}</span></li>`
 				)
 				.join('') +
 			'</ul>'

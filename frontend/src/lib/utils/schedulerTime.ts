@@ -7,11 +7,19 @@
 // Frontend). Frueher stand hier fest `Europe/Vienna`. Damit die Zahl eindeutig
 // bleibt, traegt die Ausgabe in beiden Faellen ein Zonenkuerzel.
 
+import { get } from 'svelte/store';
+import { locale, tr, type Lang } from '../i18n/index.ts';
+import { fmtDate } from '../i18n/format.ts';
+
 // Vor dieser Grenze ist ein Zeitstempel kein Termin, sondern ein Nullwert:
 // die Go-API liefert fuer nie gelaufene Jobs `0001-01-01T00:00:00Z` (#1329).
 // Die Grenze liegt am Jahr, nicht bei `getTime() <= 0` — sonst rutschten
 // Zeitpunkte zwischen 1970 und heute durch, die ebenso wenig ein Termin sind.
 const PLAUSIBLES_MINDESTJAHR = 2000;
+
+// #2652 (i18n F3): Wortlaut aus dem Katalog; Locale-Kennung je Sprache
+// (de-AT wie bisher, en-GB mit 24 h). Fernzeit englisch: `Fri 30 Oct, 14:30 CET`.
+const INTL: Record<Lang, string> = { de: 'de-AT', en: 'en-GB' };
 
 export function formatNextRun(iso: string | null | undefined): string {
 	if (!iso) return '—';
@@ -19,7 +27,8 @@ export function formatNextRun(iso: string | null | undefined): string {
 		const date = new Date(iso);
 		if (date.getFullYear() < PLAUSIBLES_MINDESTJAHR) return '—';
 		const now = new Date();
-		const time = date.toLocaleString('de-AT', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+		const lang = get(locale);
+		const time = date.toLocaleString(INTL[lang], { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
 
 		// Der Tagesvergleich liest `now`/`date` direkt aus. Frueher lief er ueber
 		// `new Date(x.toLocaleString('en-US'))` — mit fester Wiener Zone eine echte
@@ -32,8 +41,9 @@ export function formatNextRun(iso: string | null | undefined): string {
 		const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 		const diffDays = Math.round((targetDate.getTime() - todayDate.getTime()) / 86400000);
 
-		if (diffDays === 0) return `heute um ${time}`;
-		if (diffDays === 1) return `morgen um ${time}`;
+		if (diffDays === 0) return tr('home.zeit.heute_um', { zeit: time });
+		if (diffDays === 1) return tr('home.zeit.morgen_um', { zeit: time });
+		if (lang === 'en') return `${fmtDate(date, 'en', 'kurz')}, ${time}`;
 		return date.toLocaleString('de-AT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
 	} catch { return iso; }
 }

@@ -12,7 +12,9 @@
 // Browsers, sondern aus der Meldung des Workers, der die Antwort tatsaechlich
 // ausgeliefert hat (`GZ_STAND`).
 
+import { get } from 'svelte/store';
 import { verbindung } from '$lib/stores/verbindung.svelte';
+import { locale } from '../i18n/index.ts';
 import { STAND_ELEMENT_ID, STAND_STIL, standZeile } from './standText.ts';
 
 /** Zuletzt gemeldeter Stand je Pfad. `null` = live aus dem Netz geliefert. */
@@ -67,7 +69,7 @@ export function standAnwenden(): void {
 		if (pfad !== startPfad) zeige(null);
 	} else {
 		const stand = staende.get(pfad) ?? null;
-		zeige(stand ? standZeile(new Date(stand)) : null);
+		zeige(stand ? standZeile(new Date(stand), get(locale)) : null);
 	}
 	verbindung.ausSpeicher = dokumentAusSpeicher();
 }
