@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import type { Actions, PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
 import { SESSION_MAX_AGE_SECONDS } from '$lib/auth.js';
+import { trFor } from '$lib/i18n/index.js';
 
 
 export const load: PageServerLoad = async ({ url }) => {
@@ -10,13 +11,13 @@ export const load: PageServerLoad = async ({ url }) => {
 };
 
 export const actions = {
-	default: async ({ request, cookies }) => {
+	default: async ({ request, cookies, locals }) => {
 		const data = await request.formData();
 		const email = data.get('email')?.toString() ?? '';
 		const code = data.get('code')?.toString() ?? '';
 
 		if (!email || !code) {
-			return fail(400, { error: 'E-Mail und Code erforderlich', email });
+			return fail(400, { error: trFor(locals.lang, 'auth.code.fehler_pflicht'), email });
 		}
 
 		const clientIP = request.headers.get('x-real-ip') ?? '';
@@ -30,8 +31,8 @@ export const actions = {
 			const body = await resp.json().catch(() => ({}));
 			const msg =
 				body.error === 'max_attempts_exceeded'
-					? 'Zu viele Fehlversuche. Bitte fordere einen neuen Code an.'
-					: 'Ungültiger oder abgelaufener Code.';
+					? trFor(locals.lang, 'auth.code.fehler_zu_viele')
+					: trFor(locals.lang, 'auth.code.fehler_ungueltig');
 			return fail(400, { error: msg, email });
 		}
 

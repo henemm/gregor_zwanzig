@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types.js';
+import { trFor } from '$lib/i18n/index.js';
 // Dynamischer statt statischer Import: der `node --test`-Loader
 // (test-lib-hooks.mjs) mappt `$lib/server/*.js`-Spezifizierer aktuell nicht
 // auf die tatsächliche `.ts`-Datei zurück (pre-existing gap, reproduzierbar
@@ -15,13 +16,13 @@ export const load: PageServerLoad = async ({ url }) => {
 };
 
 export const actions = {
-	default: async ({ request }) => {
+	default: async ({ request, locals }) => {
 		const data = await request.formData();
 		const user = data.get('user')?.toString() ?? '';
 		const token = data.get('token')?.toString() ?? '';
 
 		if (!user || !token) {
-			return fail(400, { error: 'Ungültiger Bestätigungslink.', user, token });
+			return fail(400, { error: trFor(locals.lang, 'auth.bestaetigen.fehler_ungueltig_link'), user, token });
 		}
 
 		const { apiBase: API } = await import('$lib/server/apiBase.js');
@@ -39,15 +40,15 @@ export const actions = {
 			// Meldung statt des rohen Codes.
 			if (body.error === 'address_taken') {
 				return fail(409, {
-					error: 'Diese Adresse gehört inzwischen zu einem anderen Konto. Bitte ändere deine Adresse im Konto erneut.',
+					error: trFor(locals.lang, 'auth.bestaetigen.fehler_adresse_vergeben'),
 					user,
 					token,
 				});
 			}
 			const msg =
 				body.code === 'token_expired'
-					? 'Der Bestätigungslink ist abgelaufen. Bitte ändere deine Adresse erneut, um einen neuen Link zu erhalten.'
-					: 'Der Bestätigungslink ist ungültig oder wurde bereits verwendet.';
+					? trFor(locals.lang, 'auth.bestaetigen.fehler_abgelaufen')
+					: trFor(locals.lang, 'auth.bestaetigen.fehler_ungueltig');
 			return fail(400, { error: msg, user, token });
 		}
 

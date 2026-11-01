@@ -1,15 +1,16 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { trFor } from '$lib/i18n/index.js';
 
 
 export const actions = {
-	default: async ({ request }) => {
+	default: async ({ request, locals }) => {
 		const data = await request.formData();
 		const username = data.get('username')?.toString() ?? '';
 
 		if (!username) {
-			return fail(400, { error: 'Username required', username });
+			return fail(400, { error: trFor(locals.lang, 'auth.forgot.fehler_benutzername'), username });
 		}
 
 		const clientIP = request.headers.get('x-real-ip') ?? '';

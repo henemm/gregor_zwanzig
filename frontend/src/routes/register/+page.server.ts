@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import type { Actions, PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { trFor } from '$lib/i18n/index.js';
 
 
 export type InviteState =
@@ -53,7 +54,7 @@ export const actions = {
 		const invite = data.get('invite')?.toString() ?? '';
 
 		if (password !== confirmPassword) {
-			return fail(400, { error: 'Passwörter stimmen nicht überein', username, email });
+			return fail(400, { error: trFor(locals.lang, 'auth.register.passwoerter_ungleich'), username, email });
 		}
 
 		const clientIP = request.headers.get('x-real-ip') ?? '';
@@ -69,7 +70,7 @@ export const actions = {
 		}
 
 		if (resp.status === 429) {
-			return fail(429, { error: 'Zu viele Versuche — bitte in einigen Minuten erneut versuchen.', username, email });
+			return fail(429, { error: trFor(locals.lang, 'auth.fehler.zu_viele_versuche'), username, email });
 		}
 		if (resp.status === 409) {
 			// Issue #2147 Scheibe B1 (AC-15): "email_taken" ist ein Adress-, kein
@@ -78,13 +79,12 @@ export const actions = {
 			const body = await resp.json().catch(() => ({}) as { error?: string });
 			if (body?.error === 'email_taken') {
 				return fail(409, {
-					error:
-						"Diese E-Mail-Adresse gehört bereits zu einem Konto. Melde dich an – bei Bedarf über 'Passwort vergessen' oder den Anmeldelink per E-Mail.",
+					error: trFor(locals.lang, 'auth.register.email_vergeben'),
 					username,
 					email,
 				});
 			}
-			return fail(409, { error: 'Benutzername bereits vergeben', username, email });
+			return fail(409, { error: trFor(locals.lang, 'auth.register.benutzername_vergeben'), username, email });
 		}
 		if (resp.status === 400) {
 			// Issue #1226: Backend liefert bei ungültiger E-Mail den eigenen
@@ -93,20 +93,20 @@ export const actions = {
 			const body = await resp.json().catch(() => ({}) as { error?: string });
 			if (body?.error === 'invite_invalid') {
 				return fail(400, {
-					error: 'Die Einladung ist nicht (mehr) gültig. Lade die Seite ohne Einladungslink neu, um dich normal zu registrieren.',
+					error: trFor(locals.lang, 'auth.register.fehler_einladung_ungueltig'),
 					username,
 					email,
 				});
 			}
 			if (body?.error === 'invalid_email') {
-				return fail(400, { error: 'Bitte eine gültige E-Mail-Adresse angeben', username, email });
+				return fail(400, { error: trFor(locals.lang, 'auth.register.fehler_email_ungueltig'), username, email });
 			}
 			return fail(400, {
-				error: 'Benutzername (3–50 Zeichen), E-Mail und Passwort (mind. 8 Zeichen) erforderlich',
+				error: trFor(locals.lang, 'auth.register.fehler_pflichtfelder'),
 				username,
 				email,
 			});
 		}
-		return fail(500, { error: 'Registrierung fehlgeschlagen', username, email });
+		return fail(500, { error: trFor(locals.lang, 'auth.register.fehler_allgemein'), username, email });
 	},
 } satisfies Actions;

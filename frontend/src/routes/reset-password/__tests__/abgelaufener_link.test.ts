@@ -46,7 +46,7 @@ async function einreichen(antwort: { status: number; koerper: string }): Promise
 	form.set('token', 'abc123');
 	form.set('new_password', 'neues-passwort-1');
 	const request = new Request('http://localhost/reset-password', { method: 'POST', body: form });
-	const ergebnis = (await actions.default({ request } as never)) as { data?: { error?: string } };
+	const ergebnis = (await actions.default({ request, locals: { lang: 'de' } } as never)) as { data?: { error?: string } };
 	return ergebnis.data?.error ?? '';
 }
 

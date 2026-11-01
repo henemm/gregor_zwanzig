@@ -4,6 +4,7 @@
 
 	import { TIER_LABELS } from '$lib/admin';
 	import type { UserTier } from '$lib/types';
+	import { t } from '$lib/i18n';
 
 	let {
 		form,
@@ -25,8 +26,8 @@
 	<div class="w-full max-w-sm space-y-6 p-6">
 		<div class="flex justify-end"><SprachUmschalter /></div>
 		<div class="space-y-2 text-center">
-			<h1 class="text-2xl font-bold">Konto erstellen</h1>
-			<p class="text-muted-foreground text-sm">Benutzerdaten eingeben</p>
+			<h1 class="text-2xl font-bold">{$t('auth.register.titel')}</h1>
+			<p class="text-muted-foreground text-sm">{$t('auth.register.untertitel')}</p>
 		</div>
 
 		{#if form?.error}
@@ -37,15 +38,15 @@
 
 		{#if invite.status === 'valid'}
 			<div data-testid="register-invite-hint" class="rounded-md border border-input bg-muted p-3 text-sm">
-				Du wurdest eingeladen — Level: {tierLabel}
+				{$t('auth.register.einladung_gueltig', { level: tierLabel })}
 			</div>
 		{:else if invite.status === 'unknown'}
 			<div data-testid="register-invite-hint" class="rounded-md border border-input bg-muted p-3 text-sm">
-				Einladung konnte gerade nicht geprüft werden — du kannst dich trotzdem registrieren, die Einladung wird beim Absenden geprüft
+				{$t('auth.register.einladung_unbekannt')}
 			</div>
 		{:else if invite.status === 'invalid'}
 			<div data-testid="register-invite-hint" class="rounded-md border border-input bg-muted p-3 text-sm">
-				Einladung nicht (mehr) gültig, normale Registrierung weiter möglich
+				{$t('auth.register.einladung_ungueltig')}
 			</div>
 		{/if}
 
@@ -54,7 +55,7 @@
 				<input type="hidden" name="invite" value={invite.token} />
 			{/if}
 			<div class="space-y-2">
-				<label for="username" class="text-sm font-medium">Benutzername</label>
+				<label for="username" class="text-sm font-medium">{$t('auth.feld.benutzername')}</label>
 				<input
 					id="username"
 					name="username"
@@ -66,7 +67,7 @@
 			</div>
 
 			<div class="space-y-2">
-				<label for="email" class="text-sm font-medium">E-Mail</label>
+				<label for="email" class="text-sm font-medium">{$t('auth.feld.email')}</label>
 					<input
 						id="email"
 						name="email"
@@ -78,7 +79,7 @@
 				</div>
 
 				<div class="space-y-2">
-					<label for="password" class="text-sm font-medium">Passwort</label>
+					<label for="password" class="text-sm font-medium">{$t('auth.feld.passwort')}</label>
 				<input
 					id="password"
 					name="password"
@@ -89,7 +90,7 @@
 			</div>
 
 			<div class="space-y-2">
-				<label for="confirmPassword" class="text-sm font-medium">Passwort bestätigen</label>
+				<label for="confirmPassword" class="text-sm font-medium">{$t('auth.register.passwort_bestaetigen')}</label>
 				<input
 					id="confirmPassword"
 					name="confirmPassword"
@@ -103,7 +104,7 @@
 				type="submit"
 				class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground ring-offset-background hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				Konto erstellen
+				{$t('auth.register.titel')}
 			</button>
 		</form>
 		<!-- Issue #2268 (AC-8/AC-9) — Hinweissatz als Geschwister NACH dem Formular
@@ -112,11 +113,11 @@
 		     Wort. KEINE Zustimmungs-Checkbox (#2269 gestrichen): Rechtsgrundlage
 		     ist Art. 6 Abs. 1 lit. b DSGVO. -->
 		<p class="text-center text-xs text-muted-foreground">
-			Hinweise zum Umgang mit deinen Daten: <a
+			{$t('auth.register.datenschutz_hinweis')} <a
 				href="https://www.henemm.com/legal/gregor-zwanzig/privacy-policy/"
 				target="_blank"
 				rel="noopener noreferrer"
-				class="underline hover:no-underline">Datenschutz</a
+				class="underline hover:no-underline">{$t('auth.register.datenschutz_link')}</a
 			>
 		</p>
 		{#if data.googleEnabled && invite.status === 'none'}
@@ -125,18 +126,18 @@
 					<span class="w-full border-t border-input"></span>
 				</div>
 				<div class="relative flex justify-center text-xs uppercase">
-					<span class="bg-background px-2 text-muted-foreground">oder</span>
+					<span class="bg-background px-2 text-muted-foreground">{$t('auth.oder')}</span>
 				</div>
 			</div>
 			<a
 				href="/api/auth/google/init"
 				class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
-				Mit Google registrieren
+				{$t('auth.register.google_knopf')}
 			</a>
 		{/if}
 		<a href="/login" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
-			Bereits registriert? Anmelden
+			{$t('auth.register.zu_login')}
 		</a>
 	</div>
 </div>

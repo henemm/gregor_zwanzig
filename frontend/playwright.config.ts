@@ -24,6 +24,9 @@ export default defineConfig({
 	use: {
 		baseURL: 'http://localhost:4173',
 		headless: true,
+		// Epic #2644: ohne angemeldeten Nutzer folgt die Sprache dem Browser
+		// (Accept-Language). Die Pruefungen erwarten deutsche Texte, also Deutsch fest.
+		locale: 'de-DE',
 		// Diagnose im Runner; Artefakt nur bei Fehlschlag hochgeladen (ci.yml).
 		trace: process.env.CI ? 'retain-on-failure' : 'off',
 	},
