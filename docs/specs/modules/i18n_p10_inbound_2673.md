@@ -265,6 +265,8 @@ Plural-Beispiel `:2683-2686` (`tage_wort` und die Zeile `Ruhetag eingetragen: +N
 - Antwortmail auf einen E-Mail-Befehl trägt `X-GZ-Lang` = Inhaltssprache (`NotificationService.send_command_reply_email(..., lang=)`).
 - Langform `en`: `KUERZEL` antwortet mit `codes_text(True)`, `JETZT` mit dem vorhandenen englischen Nowcast-Text, `STRECKE` per E-Mail mit englischer Intensität.
 - Ohne Ziel (unbekanntes Wort am Telegram-Eingang) gibt es keinen Kurzstil: der Fehlertext folgt der Kontosprache; für `en` entfällt der Zusatz `English: send HELP`.
+- **Tech-Lead-Entscheid F001 (Gegenprüfung PR #2725):** `ABBRUCH`/`CANCEL` gelten nur, wenn sie die ganze Befehlszeile sind (ggf. mit `/` davor, Satzzeichen oder Leerraum), nie als erstes Wort eines Satzes (`Cancel my rest day please`, `Abbruch der Pause bitte` → unbekannter Befehl, kein STOP) — auf allen Eingangskanälen. Das betrifft auch den Telegram-Draht, der `abbruch …` bisher über `_VALID_COMMANDS` als STOP ausführte. `STOP` bleibt unverändert (auch mit Folgetext).
+- Zurück-Knopf der Stundentabelle (`⬅️ /heute`, `⬅️ /morgen`) über `inbound.knopf.zurueck_<tag>`; `callback_data` unverändert.
 - Nicht in diesem Paket: `ACTIONS_BUBBLE_BUTTONS` (Aktionen-Knöpfe des Telegram-Briefings, von `narrow.py`/P7 genutzt) und `BOT_COMMANDS` bleiben deutsch.
 
 ## Architektur-Entscheidung (ADR)

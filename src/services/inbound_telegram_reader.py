@@ -30,6 +30,7 @@ from services.trip_command_processor import (
     TripCommandProcessor,
     befehl_markieren,
     befehl_messung,
+    ganzzeilen_befehl,
     _BARE_KEYWORD_MAP,
     _erste_zeile,
     _erstes_wort,
@@ -732,6 +733,14 @@ class InboundTelegramReader:
         # koennte z.B. eine Distanzangabe verstuemmelt werden).
         key = _ohne_satzzeichen_am_wortende(parts[0])
         value = parts[1].strip() if len(parts) > 1 else None
+
+        # #2673 F001: ABBRUCH/CANCEL nur als ganze Zeile -- als erstes Wort
+        # eines Satzes ("abbruch der pause bitte") kein Befehl.
+        ganz = ganzzeilen_befehl(first_line)
+        if ganz is not None:
+            return ganz, None
+        if key in ("abbruch", "cancel"):
+            return None, None
 
         # Bare keyword → resolve via shared _BARE_KEYWORD_MAP (channel-agnostic)
         if key in _BARE_KEYWORD_MAP:

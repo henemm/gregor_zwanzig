@@ -34,8 +34,7 @@ PAKET_MODULE = ("trip_command_processor", "inbound_telegram_reader", "inbound_sm
                 "inbound_email_reader", "trip_selection")
 #: Nutzerdaten der Fixture (Trip-, Vergleichs-, Etappennamen, Eingaben).
 _DATEN = ("Golden Trip", "Golden Vergleich", "Zweiter Vergleich", "Innsbruck - Stubai",
-          "Stubai - Neustift", "Neustift - Elfer", "Gibtsnicht", "'abends'", "/heute",
-          "/morgen")
+          "Stubai - Neustift", "Neustift - Elfer", "Gibtsnicht", "'abends'")
 #: Textstellen, die bewusst deutsch bleiben (kein Konto = keine Sprache).
 _NUR_DEUTSCH = ("inbound.telegram.registrierung.", "inbound.telegram.verbunden.",
                 "inbound.telegram.konflikt.")

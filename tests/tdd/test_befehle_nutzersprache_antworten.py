@@ -202,3 +202,139 @@ def test_ac7_befehlsblock_englisch_und_deutsch_byte_gleich():
     assert "STARTDATE YYYY-MM-DD" in zeilen and "STARTDATUM JJJJ-MM-TT" not in zeilen
     block = render_commands_plain("vergleich", lang="en")
     assert "Send the comparison to all channels now" in block and "HEUTE" not in block
+
+
+@freeze_time(FEST)
+def test_f003_en_konto_normale_antwortmail_traegt_x_gz_lang_en(netz):
+    """Der regulaere Antwortweg (nicht nur der Fehlerweg) setzt den Kopf."""
+    uid = "p10-f003-en"
+    nutzer_anlegen(uid, "en")
+    trip_anlegen(uid)
+    (mail,) = email_texte(netz, basis_settings(), uid, "STATUS")
+    assert "Stage 2: Stubai - Neustift" in mail
+    assert "X-GZ-Lang: en" in netz.emails[-1]["raw"]
+
+
+# ------------------------------------------------- F004: weitere en-Pfade
+
+
+def _knoepfe(eintraege) -> list[dict]:
+    return [k for e in eintraege for reihe in (e["payload"].get("reply_markup") or {})
+            .get("inline_keyboard", []) for k in reihe]
+
+
+def _tg(netz, uid, text):
+    vorher = len(netz.telegram_inhalte())
+    texte = telegram_texte(netz, basis_settings(), uid, text)
+    return "\n".join(texte), _knoepfe(netz.telegram_inhalte()[vorher:])
+
+
+def _knopf(netz, uid, callback):
+    from tests.helpers.inbound_sprache_fixture import _nutzer
+    from tests.tdd._befehl_e2e_fixtures import klicke_telegram_knopf
+
+    vorher = len(netz.telegram_inhalte())
+    klicke_telegram_knopf(basis_settings(), _nutzer(uid), callback)
+    neu = netz.telegram_inhalte()[vorher:]
+    return "\n".join(e["payload"].get("text", "") for e in neu), _knoepfe(neu)
+
+
+def _fall_glance(netz, uid):
+    trip_anlegen(uid)
+    text, knoepfe = _tg(netz, uid, "/s")
+    return text, knoepfe, ["📋 Timeline today", "📋 Timeline tomorrow"], ["Glance — today"]
+
+
+def _fall_tag_knoepfe(netz, uid):
+    trip_anlegen(uid)
+    text, knoepfe = _tg(netz, uid, "MORGEN")
+    return text, knoepfe, ["⏱ Hours", "⛈ Thunder", "🌧 Rain"], ["No stage planned"]
+
+
+def _fall_stunden_zurueck(netz, uid):
+    trip_anlegen(uid)
+    text, knoepfe = _knopf(netz, uid, "dd_hours_today")
+    return text, knoepfe, ["⬅️ Today"], ["Hours · Today"]
+
+
+def _fall_act_pause_mehrdeutig(netz, uid):
+    from tests.helpers.inbound_sprache_fixture import vergleich_anlegen
+
+    trip_anlegen(uid)
+    vergleich_anlegen(uid)
+    text, knoepfe = _knopf(netz, uid, "act_pause")
+    return text, knoepfe, [], ["Ambiguous:", "(comparison)", "Reply with name"]
+
+
+def _fall_knopf_nur_trip(netz, uid):
+    from tests.helpers.inbound_sprache_fixture import vergleich_anlegen
+
+    vergleich_anlegen(uid)
+    text, knoepfe = _knopf(netz, uid, "tl_today")
+    return text, knoepfe, [], ["No active trip. This command only works for trips"]
+
+
+def _fall_namensgleich_mehrdeutig(netz, uid):
+    from tests.helpers.inbound_sprache_fixture import TRIP_NAME, vergleich_anlegen
+
+    trip_anlegen(uid)
+    vergleich_anlegen(uid, TRIP_NAME)
+    (mail,) = email_texte(netz, basis_settings(), uid, "PAUSE")
+    return mail, [], [], ["[Ambiguous]", "Ambiguous:", "(Trip)", "(comparison)"]
+
+
+def _fall_niederschlagsart(netz, uid):
+    trip_anlegen(uid)
+    text, knoepfe = _tg(netz, uid, "PType")
+    return text, knoepfe, ["⬅️ Back"], ["Precipitation type — hourly view", "  rain"]
+
+
+def _fall_strecke_mail(netz, uid):
+    trip_anlegen(uid)
+    (mail,) = email_texte(netz, basis_settings(), uid, "STRECKE")
+    return mail, [], [], ["[[Golden Trip] No distance data]", "No distance data for today's stage"]
+
+
+def _fall_strecke_telegram(netz, uid):
+    trip_anlegen(uid)
+    text, knoepfe = _tg(netz, uid, "STRECKE")
+    return text, knoepfe, [], ["[[Golden Trip] No distance data]", "No distance data for today's stage"]
+
+
+def _fall_jetzt(netz, uid):
+    trip_anlegen(uid)
+    text, knoepfe = _tg(netz, uid, "JETZT")
+    return text, knoepfe, [], ["[Golden Trip] Nowcast]"]
+
+
+def _fall_vergleich_ablehnung(netz, uid):
+    from tests.helpers.inbound_sprache_fixture import VERGLEICH_NAME, vergleich_anlegen
+
+    vergleich_anlegen(uid)
+    text, knoepfe = _tg(netz, uid, f"{VERGLEICH_NAME} GEWITTER")
+    return text, knoepfe, [], ["Command not available",
+                               "'storms' is not available for location comparisons."]
+
+
+_F004 = {f.__name__.removeprefix("_fall_"): f for f in (
+    _fall_glance, _fall_tag_knoepfe, _fall_stunden_zurueck, _fall_act_pause_mehrdeutig,
+    _fall_knopf_nur_trip, _fall_namensgleich_mehrdeutig, _fall_niederschlagsart,
+    _fall_strecke_mail, _fall_strecke_telegram, _fall_jetzt, _fall_vergleich_ablehnung)}
+
+
+@freeze_time(FEST)
+@pytest.mark.parametrize("fall", list(_F004))
+def test_f004_en_konto_weitere_pfade_englisch(netz, fall):
+    """en-Konto ueber den echten Eingang: Text und Knopf-Beschriftungen
+    englisch, ohne deutsches Signalwort; ``callback_data`` unveraendert."""
+    uid = f"p10-f004-{fall.replace('_', '-')}"
+    nutzer_anlegen(uid, "en")
+    text, knoepfe, soll_knoepfe, soll_text = _F004[fall](netz, uid)
+    for stueck in soll_text:
+        assert stueck in text, (stueck, text)
+    beschriftungen = [k["text"] for k in knoepfe]
+    for k in soll_knoepfe:
+        assert k in beschriftungen, (k, beschriftungen)
+    assert not DEUTSCH.search(text.replace("Golden Vergleich", "")), text
+    assert not any(DEUTSCH.search(b) or b in ("⬅️ Zurück", "⬅️ /heute", "⬅️ /morgen")
+                   for b in beschriftungen), beschriftungen

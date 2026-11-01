@@ -132,3 +132,17 @@ def test_ac4_kuerzel_bedeutung_englisch_und_positivkontrolle_email(netz):
     # Positivkontrolle: dieselbe Nachricht per E-Mail unterscheidet sich.
     assert antworten["de"][1] != antworten["en"][1]
     assert "Etappe 2" in antworten["de"][1] and "Stage 2" in antworten["en"][1]
+
+
+@freeze_time(FEST)
+def test_ac4_strecke_ohne_kilometrierung_kurzstil_wie_bisher(netz):
+    """STRECKE ohne vermessene Etappe im Telegram-Kurzstil: Betreff und Text
+    sind fuer de und en die bisherige englische Kurzform (vorher der
+    en-Zweig des ``_t``-Paars, woertlich)."""
+    alt = ("[[Golden Trip] No distance data]\n\n"
+           "No distance data for today's stage - no route info possible.")
+    for lang in ("de", "en"):
+        uid = f"p10-kurz-strecke-{lang}"
+        nutzer_anlegen(uid, lang)
+        trip_anlegen(uid, stil="kurzform")
+        assert telegram_texte(netz, basis_settings(), uid, "STRECKE") == [alt], lang

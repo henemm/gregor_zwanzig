@@ -332,9 +332,21 @@ _COMMAND_SPECS: tuple[_Befehl, ...] = (
 _BARE_KEYWORD_MAP.update({
     s.wort_en: _BARE_KEYWORD_MAP.get(s.wort, s.wort) for s in _COMMAND_SPECS
 })
-# #2673 (Glossar): ABBRUCH/CANCEL auch als Alleinwort -- Alias von STOP, keine
-# eigene Zeile in _COMMAND_SPECS (die Hilfe nennt sie in der Beschreibung).
-_BARE_KEYWORD_MAP.update({"abbruch": "abbruch", "cancel": "abbruch"})
+# #2673 (Glossar, Tech-Lead-Entscheid F001): ABBRUCH/CANCEL -- Alias von STOP,
+# keine eigene Zeile in _COMMAND_SPECS -- gelten NUR als ganze Befehlszeile
+# ("Cancel", "/abbruch", "CANCEL!"), nie als erstes Wort eines Satzes
+# ("Cancel my rest day please"). STOP bleibt unveraendert in _BARE_KEYWORD_MAP.
+_NUR_ALS_GANZE_ZEILE = {"abbruch": "abbruch", "cancel": "abbruch"}
+
+
+def ganzzeilen_befehl(zeile: str) -> Optional[str]:
+    """Interner Schluessel, wenn ``zeile`` (ohne Zitat-/Slash-Praefix,
+    unsichtbare Zeichen und Satzzeichen am Ende) GENAU ein Nur-ganze-Zeile-
+    Wort ist, sonst ``None``."""
+    teile = _ohne_praefix(zeile).split()
+    if len(teile) != 1:
+        return None
+    return _NUR_ALS_GANZE_ZEILE.get(_bereinigtes_bare_keyword(teile[0]).lower())
 
 
 def _argumentform(s: _Befehl, lang: Lang) -> str:
@@ -1374,6 +1386,9 @@ class TripCommandProcessor:
             if internal is not None:
                 rest = parts[1].strip() if len(parts) > 1 else None
                 return internal, rest or None
+        ganz = ganzzeilen_befehl(first_line)
+        if ganz is not None:
+            return ganz, None
         return None, None
 
     # -----------------------------------------------------------------------
@@ -1990,9 +2005,10 @@ class TripCommandProcessor:
 
         from_time, hours, today_date, tz = self._day_window(trip, day_token, received_at)
         if day_token == "today":
-            back_btn, back_cb, label = "⬅️ /heute", "heute", self._m("antwort.tag.heute")
+            back_cb, label = "heute", self._m("antwort.tag.heute")
         else:
-            back_btn, back_cb, label = "⬅️ /morgen", "morgen", self._m("antwort.tag.morgen")
+            back_cb, label = "morgen", self._m("antwort.tag.morgen")
+        back_btn = self._ml(f"knopf.zurueck_{back_cb}")  # callback_data bleibt
 
         # Issue #2010: dieselbe abgeleitete Quelle wie `_thunder_fmt` statt
         # einer eigenen Verzweigung mit eigenen Woertern. #2417: englisch die

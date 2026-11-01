@@ -157,6 +157,8 @@
   "inbound.niederschlagsart.mixed": "sleet",
   "inbound.niederschlagsart.freezing_rain": "freezing rain",
   "inbound.knopf.zurueck": "⬅️ Back",
+  "inbound.knopf.zurueck_heute": "⬅️ Today",
+  "inbound.knopf.zurueck_morgen": "⬅️ Tomorrow",
   "inbound.knopf.timeline_heute": "📋 Timeline today",
   "inbound.knopf.timeline_morgen": "📋 Timeline tomorrow",
   "inbound.knopf.stunden": "⏱ Hours",

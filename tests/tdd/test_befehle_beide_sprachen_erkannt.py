@@ -142,3 +142,49 @@ def test_ac5_wort_der_anderen_sprache_wirkt_und_antwortet_in_kontosprache(
     else:
         assert trip.report_config.enabled is True
         assert [s.date for s in trip.stages][-1] == date(2026, 10, 31)
+
+
+# ------------------------------------------- F001: ABBRUCH/CANCEL nur ganz
+
+_GANZ = ("CANCEL", "cancel", "Cancel!", "/abbruch", "ABBRUCH.", "  Abbruch  ")
+_SATZ = ("Cancel my rest day please", "Abbruch der Pause bitte", "cancel 2", "/abbruch jetzt")
+
+
+@pytest.mark.parametrize("text", _GANZ)
+def test_f001_abbruch_cancel_als_ganze_zeile_ist_stop(text):
+    from services.inbound_telegram_reader import InboundTelegramReader
+    from services.trip_command_processor import TripCommandProcessor
+
+    assert TripCommandProcessor()._parse_command(text) == ("abbruch", None)
+    assert InboundTelegramReader()._command_body(text)[0] == "abbruch"
+
+
+@pytest.mark.parametrize("text", _SATZ)
+def test_f001_abbruch_cancel_im_satz_bleibt_unbekannt(text):
+    from services.inbound_telegram_reader import InboundTelegramReader
+    from services.trip_command_processor import TripCommandProcessor
+
+    assert TripCommandProcessor()._parse_command(text) == (None, None)
+    assert InboundTelegramReader()._command_body(text) == (None, None)
+
+
+def test_f001_stop_verhalten_unveraendert():
+    from services.trip_command_processor import TripCommandProcessor
+
+    assert TripCommandProcessor()._parse_command("STOP") == ("abbruch", None)
+    assert TripCommandProcessor()._parse_command("stop jetzt") == ("abbruch", "jetzt")
+
+
+@freeze_time(FEST)
+@pytest.mark.parametrize("kanal", ["email", "telegram", "premium_sms"])
+@pytest.mark.parametrize("konto", ["de", "en"])
+@pytest.mark.parametrize("satz", ["Cancel my rest day please", "Abbruch der Pause bitte"])
+def test_f001_satz_mit_abbruch_cancel_stoppt_nichts(netz, kanal, konto, satz):
+    uid = f"p10-f001-{konto}-{kanal}-{satz.split()[0]}".replace("_", "").lower()
+    nutzer_anlegen(uid, konto)
+    trip_anlegen(uid)
+    antwort = _senden(netz, kanal, uid, satz)
+    assert _trip(uid).report_config.enabled is True
+    for nicht in ("deaktiviert", "turned off"):
+        assert nicht not in antwort, antwort
+    assert "nknown command" in antwort or "Unbekannter Befehl" in antwort, antwort
