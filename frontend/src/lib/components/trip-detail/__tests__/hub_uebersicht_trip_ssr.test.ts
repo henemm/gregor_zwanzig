@@ -228,6 +228,32 @@ describe('AC-10: Zeile „Alert-Trigger" zeigt die Alert-Kanaele des Trips', () 
 	});
 });
 
+// ── (a) HubOverview: Alert-Trigger nur aktiv mit Wetter-Alarm-Quelle (AC-15) ─
+//
+// ReportLine zeigt „aktiv" ueber die Punktfarbe: aktive Alarm-Zeile var(--g-accent),
+// inaktiv var(--g-rule). Gelesen wird der background des Punkts vor dem Etikett.
+
+function punktfarbeDerZeile(html: string, label: 'Morgen-Briefing' | 'Abend-Briefing' | 'Alert-Trigger'): string {
+	const a = html.indexOf(`>${label}</span>`);
+	assert.notEqual(a, -1, `Messaufbau: Zeile „${label}" fehlt in „Briefings laufen"`);
+	const davor = html.slice(0, a);
+	const b = davor.lastIndexOf('background:');
+	assert.notEqual(b, -1, `Messaufbau: kein Punkt vor „${label}"`);
+	return davor.slice(b + 'background:'.length).split(';')[0].trim();
+}
+
+describe('AC-15: Zeile „Alert-Trigger" ist nicht fest aktiv', () => {
+	test('Trip ohne jede Wetter-Alarm-Quelle ⇒ Alarm-Zeile inaktiv (var(--g-rule))', () => {
+		const html = hubOverview(trip({ alert_on_changes: false }, { alert_rules: [], display_config: {} }));
+		assert.equal(punktfarbeDerZeile(html, 'Alert-Trigger'), 'var(--g-rule)', 'Alarm-Zeile zeigt „aktiv" ohne Datenquelle');
+	});
+
+	test('Trip mit alert_preset ⇒ Alarm-Zeile aktiv (var(--g-accent))', () => {
+		const html = hubOverview(trip({ alert_on_changes: false }, { display_config: { alert_preset: 'standard' } }));
+		assert.equal(punktfarbeDerZeile(html, 'Alert-Trigger'), 'var(--g-accent)');
+	});
+});
+
 // ── (b) ChannelDot: vierter Kanal ───────────────────────────────────────────
 
 describe('ChannelDot kennt Premium-SMS (ADR-0095: vier Kanaele gleichrangig)', () => {

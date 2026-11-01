@@ -5,7 +5,7 @@
 	import ReportLine from './ReportLine.svelte';
 	import type { Trip } from '$lib/types';
 	// Issue #2682: echte Briefing-/Alert-Kanäle (EINE Regel mit der Kanäle-Kennzahl der Übersicht).
-	import { tripAlertKanaele, tripBriefingKanaele } from '../shared/hub-uebersicht/hubUebersichtModell.ts';
+	import { tripAlertKanaele, tripBriefingKanaele, tripWetterAlarmAktiv } from '../shared/hub-uebersicht/hubUebersichtModell.ts';
 	import { fetchStageRisk, type StageRisk } from '$lib/utils/stageRisk';
 	// Feature #1435 Etappe E3a: Wetter-Metriken-Block. `metricsCatalog` kommt
 	// ausschließlich als Prop aus der Server-Naht (+page.server.ts) — kein
@@ -49,6 +49,8 @@
 	// Issue #2682 (AC-9/AC-10): tatsaechlich eingestellte Kanaele statt fester Liste.
 	const briefingKanaele = $derived(tripBriefingKanaele(trip));
 	const alertKanaele = $derived(tripAlertKanaele(trip));
+	// AC-15: Alarm-Zeile nur aktiv, wenn der Trip eine Wetter-Alarm-Quelle hat.
+	const wetterAlarmAktiv = $derived(tripWetterAlarmAktiv(trip));
 
 	const metricsState = $derived(
 		metricsCatalog ? resolveTripMetricsOverviewState(trip.display_config?.metrics, metricsCatalog) : null
@@ -143,7 +145,7 @@
 			<Eyebrow style="margin-bottom: 10px;">Briefings laufen</Eyebrow>
 			<ReportLine kind="morning" time={morgenZeit} channels={briefingKanaele} active={reportSlotAktiv(trip.report_config, 'morning')} />
 			<ReportLine kind="evening" time={abendZeit} channels={briefingKanaele} active={reportSlotAktiv(trip.report_config, 'evening')} />
-			<ReportLine kind="alert" time="bei Δ" channels={alertKanaele} active alert />
+			<ReportLine kind="alert" time="bei Δ" channels={alertKanaele} active={wetterAlarmAktiv} alert />
 			<div style="margin-top: 12px;">
 				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken', 'versand')}>Zeitplan bearbeiten →</Btn>
 			</div>

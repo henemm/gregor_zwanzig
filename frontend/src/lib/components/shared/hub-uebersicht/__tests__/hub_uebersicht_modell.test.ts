@@ -222,6 +222,58 @@ describe('AC-9: Kanal-Kennzahl des Trips folgt report_config.send_*', () => {
 	});
 });
 
+// ── Alarm-Zeile „bei Δ": aktiv nur mit Wetter-Alarm-Quelle (AC-15) ──────────
+//
+// Spiegel der Backend-Regel src/services/trip_alert.py (has_preset /
+// has_metric_levels / has_active_rules + report_config.alert_on_changes, Z. ~686-705
+// und ~1186-1218); fehlendes alert_on_changes liest src/app/loader.py als True.
+// Amtliche Warnungen (official_*) zaehlen NICHT — die Zeile heisst „bei Δ".
+
+describe('AC-15: tripWetterAlarmAktiv folgt der Backend-Regel (kein fest „aktiv")', () => {
+	const AUS = { alert_on_changes: false };
+	const aktiv = async (t: any) => {
+		const m = await ladeModell();
+		assert.equal(typeof m.tripWetterAlarmAktiv, 'function', 'tripWetterAlarmAktiv(trip) fehlt im Modell');
+		return m.tripWetterAlarmAktiv(t);
+	};
+
+	test('alle Quellen aus ⇒ false', async () => {
+		assert.equal(await aktiv(trip(AUS)), false);
+	});
+
+	test('kein report_config, keine Quelle ⇒ false', async () => {
+		assert.equal(await aktiv(trip({}, { report_config: undefined })), false);
+	});
+
+	test('alert_on_changes=true ⇒ true', async () => {
+		assert.equal(await aktiv(trip({ alert_on_changes: true })), true);
+	});
+
+	test('report_config ohne alert_on_changes ⇒ true (Backend-Default beim Laden)', async () => {
+		assert.equal(await aktiv(trip({})), true);
+	});
+
+	test('alert_preset gesetzt ⇒ true; alert_preset "deaktiviert" ⇒ false', async () => {
+		assert.equal(await aktiv(trip(AUS, { display_config: { alert_preset: 'standard' } })), true);
+		assert.equal(await aktiv(trip(AUS, { display_config: { alert_preset: 'deaktiviert' } })), false);
+	});
+
+	test('metric_alert_levels nicht leer ⇒ true; leer ⇒ false', async () => {
+		assert.equal(await aktiv(trip(AUS, { display_config: { metric_alert_levels: { wind: 'standard' } } })), true);
+		assert.equal(await aktiv(trip(AUS, { display_config: { metric_alert_levels: {} } })), false);
+	});
+
+	test('Regel enabled=true ⇒ true; nur Regeln mit enabled=false ⇒ false', async () => {
+		const regel = (enabled: boolean) => ({ id: 'r', kind: 'delta', metric: 'wind_change', threshold: 20, severity: 'warning', enabled });
+		assert.equal(await aktiv(trip(AUS, { alert_rules: [regel(false), regel(true)] })), true);
+		assert.equal(await aktiv(trip(AUS, { alert_rules: [regel(false)] })), false);
+	});
+
+	test('amtliche Warnungen zaehlen nicht als Wetter-Alarm', async () => {
+		assert.equal(await aktiv(trip(AUS, { official_warnings: { enabled: true } })), false);
+	});
+});
+
 // ── Umfang Desktop 5 / mobil 4 (Entscheidung 7) ─────────────────────────────
 
 describe('Entscheidung 7: Desktop fuenf, mobil vier Kennzahlen — fuer beide Arten', () => {

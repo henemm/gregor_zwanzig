@@ -127,6 +127,20 @@ export function tripAlertKanaele(trip: Trip): Kanal[] {
 	return (['email', 'telegram', 'sms', 'premium_sms'] as const).filter((k) => ac[k] === true);
 }
 
+/** Hat der Trip Wetter-Änderungs-Alarme („bei Δ")? Spiegel der Backend-Regel
+ *  (src/services/trip_alert.py has_preset/has_metric_levels/has_active_rules +
+ *  report_config.alert_on_changes; fehlendes Feld lädt src/app/loader.py als True).
+ *  Amtliche Warnungen zählen nicht. */
+export function tripWetterAlarmAktiv(trip: Trip): boolean {
+	const dc = trip.display_config;
+	const hatPreset = !!dc?.alert_preset && dc.alert_preset !== 'deaktiviert';
+	const hatStufen = !!dc?.metric_alert_levels && Object.keys(dc.metric_alert_levels).length > 0;
+	const hatRegel = (trip.alert_rules ?? []).some((r) => r.enabled);
+	const rc = trip.report_config;
+	const beiAenderung = !!rc && (rc.alert_on_changes === undefined ? true : !!rc.alert_on_changes);
+	return hatPreset || hatStufen || hatRegel || beiAenderung;
+}
+
 /** Slot-Stunde als „HH:00" — der Versand nutzt nur die Stunde (Default 7/18 wie der Scheduler). */
 export function slotStunde(raw: string | undefined, standardStunde: number): string {
 	const m = /^(\d{1,2}):/.exec(raw ?? '');
