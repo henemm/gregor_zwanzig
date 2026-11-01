@@ -256,7 +256,9 @@ def _fragmente() -> set[str]:
 
 def treffer(text: str) -> list[str]:
     frags = _fragmente()
-    bloecke = [b for b in text.split("----- ") if b and not b.split(" ", 1)[0].endswith("sms")]
+    # SMS: PO-Korrektur 2026-10-31; Service-Fehler-Mail: Rumpf bis #2672 deutsch.
+    bloecke = [b for b in text.split("----- ") if b
+               and not b.split(" ", 1)[0].endswith("sms") and not b.startswith("servicefehler.")]
     out = []
     for block in bloecke:
         for daten in _DATEN:

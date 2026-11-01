@@ -75,9 +75,9 @@ Test preview for Stage on 29 Oct 2026
 ----- ohne_etappe.hinweis_telegram -----
 Test preview for Stage on 29 Oct 2026
 ----- servicefehler.betreff -----
-[GR20] Weather data unavailable
+[GR20] Wetterdaten nicht verfuegbar
 ----- servicefehler.header -----
-en
+de
 ----- ausfall.betreff -----
 [GR20] Weather data unavailable
 ----- ausfall.header -----

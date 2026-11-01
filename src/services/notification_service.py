@@ -1537,7 +1537,9 @@ class NotificationService:
                     to=recipients,
                     compare_hourly_enabled=compare_hourly_enabled,
                     mail_type="compare",  # Issue #1124: X-GZ-Mail-Type
-                    lang=self._lang,  # Issue #2671: X-GZ-Lang
+                    # X-GZ-Lang = Sprache des INHALTS: der Ortsvergleich wird bis
+                    # P9b (#2672) in scheduler_dispatch_service deutsch gerendert.
+                    lang="de",
                 )
             sent_channels.append("email")
 
@@ -2478,14 +2480,16 @@ class NotificationService:
             for e in request.failed_segments
             if e.segment is not None
         )
-        subject = t("versand.betreff.wetterdaten_fehlen_ascii", self._lang, trip=request.trip.name)
+        # Rumpf (build_service_error_email_html) ist noch deutsch: Betreff und
+        # X-GZ-Lang bleiben bis zur Umstellung des Rumpfs (#2672) deutsch.
+        subject = t("versand.betreff.wetterdaten_fehlen_ascii", "de", trip=request.trip.name)
         body = build_service_error_email_html(
             trip_name=request.trip.name,
             report_type=request.report_type,
             error_lines=error_lines,
         )
         try:
-            EmailOutput(self._settings).send(subject=subject, body=body, html=True, lang=self._lang)
+            EmailOutput(self._settings).send(subject=subject, body=body, html=True, lang="de")
             logger.info(f"Service error email sent for {request.trip.name}")
         except Exception as e:
             logger.error(f"Failed to send service error email: {e}")

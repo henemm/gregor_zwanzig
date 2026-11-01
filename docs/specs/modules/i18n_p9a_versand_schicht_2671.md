@@ -206,7 +206,7 @@ def error_body(code: str, *, lang: Lang = "de", **values: str) -> tuple[int, dic
 - Annahme: `SEND_OUTCOMES` hält jetzt Katalogschlüssel statt Text; weil der Router nur auf Mitgliedschaft prüft, ändert sich dort nichts. Tests, die den deutschen Text direkt aus `SEND_OUTCOMES` lesen, werden auf `error_body(code, lang="de", ...)` umgestellt (Grep in `tests/` zuerst).
 - Annahme: Betreiber- und Sperrgrund-Texte der Kanäle (`ChannelBlockedError`, `OutputError`) bleiben deutsch; ihre Nutzersicht entsteht über `reason_code` und `send_outcomes`.
 - PO-Korrektur 2026-10-31 (ADR-0104 Präzisierung, hat Vorrang vor Version 1.0): Es gibt keinen englischen SMS-Hinweis; `_AMTL_HINWEIS_SMS_TOKEN` bleibt in jeder Sprache `+ amtl. Warnung s. E-Mail/Telegram`.
-- Bis P9b (#2672) rendern `scheduler_dispatch_service` (Ortsvergleich-Inhalt) und `trip_report_scheduler` (Nachlieferungs-/Teilausfall-Präfixe) noch deutsch; `NotificationService` liest die Sprache aber schon aus `user_id`. Ein Ortsvergleich-Briefing eines `en`-Nutzers trägt bis dahin `X-GZ-Lang: en` bei deutschem Inhalt.
+- Bis P9b (#2672) rendern `scheduler_dispatch_service` (Ortsvergleich-Inhalt) und `trip_report_scheduler` (Nachlieferungs-/Teilausfall-Präfixe) noch deutsch; `NotificationService` liest die Sprache aber schon aus `user_id`. Der Kopf `X-GZ-Lang` folgt der Sprache des Inhalts: das Ortsvergleich-Briefing (`send_compare_report`) und die Service-Fehler-Mail (Rumpf `build_service_error_email_html`, samt Betreff) bleiben bis P9b (#2672) `de`.
 - Die Antworten auf Befehle (Inbound) und die übrigen `api/routers/**`-Meldungen sind P10 und P11.
 - Admin-Mails an den Betreiber bleiben deutsch (Epic-Abgrenzung).
 

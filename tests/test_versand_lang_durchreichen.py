@@ -204,7 +204,6 @@ FAELLE = {
     "entwarnung_trip": _entwarnung_trip, "entwarnung_vergleich": _entwarnung_vergleich,
     "entwarnung_vergleich_ohne_ort": _entwarnung_vergleich_ohne_ort,
     "abweichung": _abweichung, "abweichung_vergleich": _abweichung_vergleich,
-    "vergleich_briefing": _vergleich_briefing,
 }
 
 
@@ -226,7 +225,7 @@ def test_englische_ausgabe_ohne_deutsch_und_mit_kopf(rig, fall):
     assert reste == [], (fall, reste)
 
 
-@pytest.mark.parametrize("fall", [f for f in FAELLE if f != "vergleich_briefing"])
+@pytest.mark.parametrize("fall", list(FAELLE))
 def test_gegenprobe_deutsche_ausgabe_findet_deutsch(rig, fall):
     mails, telegramme = _lauf(rig, fall, "de")
     assert [m[2] for m in mails] == ["de"] * len(mails)
@@ -268,3 +267,26 @@ def test_briefing_sms_premium_und_kurzstil_in_en_wie_de(rig):
                        [p["text"] for p in rig.angenommen["telegram"]])
     assert len(texte["de"][0]) == 2 and len(texte["de"][1]) == 1
     assert texte["en"] == texte["de"]
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_ortsvergleich_briefing_kopf_ist_sprache_des_inhalts(rig, lang):
+    """Bis P9b (#2672) rendert scheduler_dispatch_service den Ortsvergleich deutsch:
+    der Kopf sagt deshalb fuer jeden Nutzer ``de`` (kein Fehlalarm, keine Mischmail)."""
+    uid = f"vgl-{lang}"
+    nutzer_anlegen(uid, lang)
+    rig.zaehler_leeren()
+    _vergleich_briefing(rig, NotificationService(rig.settings(), uid), uid, lang)
+    assert [m[2] for m in _mails(rig)] == ["de"]
+
+
+def test_servicefehler_mail_betreff_und_kopf_wie_rumpf_deutsch(rig):
+    """Rumpf der Service-Fehler-Mail ist noch deutsch: Betreff + Kopf ebenso."""
+    from tests.helpers.versand_fixture import service_fehler_betreff
+
+    nutzer_anlegen("svc-en", "en")
+    werte = dict(service_fehler_betreff(rig, "svc-en"))
+    assert werte == {"servicefehler.betreff": "[GR20] Wetterdaten nicht verfuegbar",
+                     "servicefehler.header": "de"}
+    _betreff, text, _ = _mails(rig)[-1]
+    assert "Wetterdaten konnten nicht abgerufen werden" in text
