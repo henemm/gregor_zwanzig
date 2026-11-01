@@ -250,10 +250,21 @@ class CompareDispatchStrategy:
         # Lazy: erst laden, wenn ein faelliges Preset zu verarbeiten ist (#649).
         if self._all_locations is None:
             self._all_locations = load_all_locations(user_id=self._user_id)
-        ausgang = _dispatch_due_preset(
-            preset, target_date, self._settings, self._user_id, self._data_root,
-            self._all_locations, tage_ab_ortstag=tage_ab_ortstag, now_utc=now_utc,
-        )
+        try:
+            ausgang = _dispatch_due_preset(
+                preset, target_date, self._settings, self._user_id, self._data_root,
+                self._all_locations, tage_ab_ortstag=tage_ab_ortstag, now_utc=now_utc,
+            )
+        except Exception as e:
+            # #2217 (Trip-Paritaet): Vermerk-Speicherfehler isolieren. KEIN
+            # release -- warf erst record_outcome, ging der Versand schon raus.
+            from services.alert_check_state import report_unit_failure
+
+            preset_id = str(preset.get("id", "?"))
+            report_unit_failure("Compare-Briefing-Vermerk", preset_id)
+            logger.error("Failed compare preset %s: %s", preset_id, e)
+            self._failed += 1
+            return
         # Issue #1777: Zaehlung nach Ausgang (Trip-Paritaet #2218); `None`
         # (kein Versuch) und `no_channels` neutral, sonst -- auch "error" -- failed.
         if ausgang == "sent":

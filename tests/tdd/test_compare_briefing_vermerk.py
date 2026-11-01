@@ -664,6 +664,51 @@ def test_ac17_ausnahme_nimmt_die_reservierung_zurueck_und_isoliert(naht, ausnahm
     )
 
 
+@pytest.mark.parametrize("methode", ["reserve", "record_outcome"])
+def test_ac17_speicherfehler_im_vermerk_isoliert_den_vergleich(naht, monkeypatch, methode):
+    """AC-17 (#2217): Given zwei Vergleiche, der Vermerk-Speicher wirft NUR fuer
+    einen davon einen ``OSError`` (in ``reserve`` bzw. ``record_outcome``) /
+    When der Lauf endet / Then wirft der Lauf nicht, der andere Vergleich wird
+    zugestellt und das Ergebnis ist (sent, failed) == (1, 1).
+
+    Fehlerinjektion an der echten Naht (``BriefingSlotStore``): ein echter
+    Dateisystemfehler traefe beide Vergleiche, weil der Speicher eine Datei je
+    Nutzer ist. RED-Charakter: Fehlernachweis — heute bricht der OSError den
+    ganzen Compare-Lauf des Nutzers ab. Nach GREEN rot bei: try/except in
+    ``CompareDispatchStrategy.dispatch_one`` entfernt.
+    """
+    uid = nutzer()
+    ort_anlegen(uid, "ort-paris", KORSIKA)
+    vergleich_ablegen(uid, "vgl-ac17-a-kaputt", orte=["ort-paris"])
+    vergleich_ablegen(uid, "vgl-ac17-b-ok", orte=["ort-paris"])
+
+    original = getattr(briefing_slots.BriefingSlotStore, methode)
+
+    def kaputt_fuer_einen(self, trip_id, *args, **kwargs):
+        if trip_id == "vgl-ac17-a-kaputt":
+            raise OSError("Vermerk-Speicher nicht schreibbar")
+        return original(self, trip_id, *args, **kwargs)
+
+    monkeypatch.setattr(briefing_slots.BriefingSlotStore, methode, kaputt_fuer_einen)
+
+    ergebnis = lauf(uid, utc_zu(PARIS, D, H))
+
+    assert tuple(ergebnis) == (1, 1), f"(sent, failed): {ergebnis}"
+    assert ("vgl-ac17-b-ok", "morning") in naht.regulaer(), (
+        f"Der intakte Vergleich muss zugestellt werden: {naht.versuche}"
+    )
+    if methode == "record_outcome":
+        # Versand war schon raus: der Claim bleibt stehen (kein release),
+        # sonst oeffnete der Fehler den Slot fuer einen Doppelversand.
+        # H:10 liegt innerhalb CLAIM_TTL (15 min): danach greift die Uebernahme
+        # verwaister Claims, die in Produktion briefing_log.json abfaengt --
+        # die Naht ersetzt aber den Versand samt Log-Eintrag.
+        lauf(uid, utc_zu(PARIS, D, H, 10))
+        assert sorted(naht.regulaer()) == [
+            ("vgl-ac17-a-kaputt", "morning"), ("vgl-ac17-b-ok", "morning"),
+        ], f"Kein Doppelversand nach record_outcome-Fehler: {naht.versuche}"
+
+
 # ═══════════════════════════════ AC-21 ═══════════════════════════════════════
 
 
