@@ -22,6 +22,8 @@ import shutil
 from datetime import datetime, time, timezone
 from pathlib import Path
 
+from freezegun import freeze_time
+
 REPO = Path(__file__).resolve().parents[2]
 GOLDEN_DIR = REPO / "tests" / "golden" / "scheduler_texte"
 FIXTURES = REPO / "fixtures" / "openmeteo"
@@ -408,6 +410,7 @@ class _KonvektiveFrames:
                            is_convective=True)]
 
 
+@freeze_time(ALARM_JETZT)  # gestellte Uhr um Bau, Speichern und Pruefung (#2242)
 def radar_alarm(user_id: str, lang: str | None, *, cooldown: int = 120,
                 angekuendigt: bool = False) -> list[tuple[str, str]]:
     """Trip-Radar-Alarm (Cooldown 120 Min) als Nachtrag zu einer amtlichen
@@ -497,8 +500,6 @@ def _mail_paare(name: str, k: dict, *, absatz: bool) -> list[tuple[str, str]]:
 
 def alle_texte(rig, monkeypatch, tmp_path, lang: str) -> str:
     """Alle Faelle fuer ``golden-<lang>``; jede Gruppe mit frischem Nutzer."""
-    from freezegun import freeze_time
-
     rein = None if lang == "de" else lang
     paare: list[tuple[str, str]] = list(reine_texte(rein))
     with freeze_time(JETZT):
