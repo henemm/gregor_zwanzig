@@ -16,8 +16,10 @@
 		tierSelectValueAfter,
 		inviteStatusText,
 		createInvite,
-		revokeInvite
+		revokeInvite,
+		adminLocale
 	} from '$lib/admin';
+	import { t } from '$lib/i18n';
 	import type { AdminInvite, AdminUser, UserTier } from '$lib/types';
 
 	let { data } = $props();
@@ -83,11 +85,11 @@
 
 	function formatTime(iso: string): string {
 		const d = new Date(iso);
-		return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('de-DE');
+		return Number.isNaN(d.getTime()) ? iso : d.toLocaleString(adminLocale());
 	}
 
 	function lastRun(u: AdminUser): string {
-		if (!u.last_trip_report_run) return 'kein Lauf';
+		if (!u.last_trip_report_run) return $t('admin.nutzer.kein_lauf');
 		return `${formatTime(u.last_trip_report_run.time)} (${u.last_trip_report_run.status})`;
 	}
 
@@ -131,14 +133,14 @@
 </script>
 
 <div class="mx-auto max-w-5xl space-y-4" data-testid="admin-page">
-	<PageHeader eyebrow="Verwaltung" title="Admin" sub="Nutzer, Tier und Kontosperre" />
+	<PageHeader eyebrow={$t('admin.kopf.eyebrow')} title={$t('nav.admin')} sub={$t('admin.kopf.sub')} />
 
 	<Card data-testid="admin-invites">
 		<div class="space-y-3">
-			<div class="font-semibold">Einladungen</div>
+			<div class="font-semibold">{$t('admin.einladung.titel')}</div>
 			<form data-testid="admin-invite-form" class="flex flex-wrap items-end gap-2" onsubmit={onCreateInvite}>
 				<label class="text-sm">
-					Level
+					{$t('konto.level.titel')}
 					<select
 						data-testid="admin-invite-tier"
 						value={inviteTier}
@@ -151,7 +153,7 @@
 					</select>
 				</label>
 				<label class="text-sm">
-					Notiz
+					{$t('admin.einladung.notiz')}
 					<input
 						data-testid="admin-invite-note"
 						type="text"
@@ -160,7 +162,7 @@
 						class="h-9 rounded-md border border-input bg-background px-3 text-sm"
 					/>
 				</label>
-				<Btn type="submit" disabled={inviteBusy} data-testid="admin-invite-create">Einladung erstellen</Btn>
+				<Btn type="submit" disabled={inviteBusy} data-testid="admin-invite-create">{$t('admin.einladung.erstellen')}</Btn>
 			</form>
 			{#if inviteError}
 				<p data-testid="admin-invite-error" role="alert" class="text-sm font-semibold" style="color: var(--g-danger);">{inviteError}</p>
@@ -170,9 +172,9 @@
 					<div class="mono break-all" data-testid="admin-invite-link">{createdLink}</div>
 					<div class="flex items-center gap-2">
 						<Btn variant="outline" type="button" data-testid="admin-invite-copy" onclick={onCopyLink}>
-							{copied ? 'Kopiert' : 'Link kopieren'}
+							{copied ? $t('admin.einladung.kopiert') : $t('admin.einladung.link_kopieren')}
 						</Btn>
-						<span style="color: var(--g-ink-2);">Nur jetzt sichtbar — danach nicht mehr abrufbar.</span>
+						<span style="color: var(--g-ink-2);">{$t('admin.einladung.nur_jetzt')}</span>
 					</div>
 				</div>
 			{/if}
@@ -183,12 +185,12 @@
 					class="flex flex-wrap items-center justify-between gap-2 border-t pt-2 text-sm"
 				>
 					<div>
-						<strong>{inv.note || '(ohne Notiz)'}</strong>
-						<span class="mono text-xs"> · {tierLabel(inv.tier)} · erstellt {formatTime(inv.created_at)}</span>
+						<strong>{inv.note || $t('admin.einladung.ohne_notiz')}</strong>
+						<span class="mono text-xs"> · {tierLabel(inv.tier)} · {$t('admin.einladung.erstellt', { zeit: formatTime(inv.created_at) })}</span>
 						<div data-testid="admin-invite-status">{inviteStatusText(inv)}</div>
 					</div>
 					{#if inv.status === 'open'}
-						<Btn variant="outline" data-testid="admin-invite-revoke" onclick={makeAskRevoke(inv)}>Widerrufen</Btn>
+						<Btn variant="outline" data-testid="admin-invite-revoke" onclick={makeAskRevoke(inv)}>{$t('admin.einladung.widerrufen')}</Btn>
 					{/if}
 				</div>
 			{/each}
@@ -201,30 +203,30 @@
 				<div class="min-w-0 space-y-1">
 					<div class="font-semibold">
 						{u.display_name || u.id}
-						{#if u.is_test_user}<span class="mono text-xs">· Testnutzer</span>{/if}
+						{#if u.is_test_user}<span class="mono text-xs">· {$t('admin.nutzer.testnutzer')}</span>{/if}
 						{#if u.disabled}
-							<span data-testid="admin-disabled-badge" class="mono text-xs font-semibold" style="color: var(--g-danger);">· gesperrt</span>
+							<span data-testid="admin-disabled-badge" class="mono text-xs font-semibold" style="color: var(--g-danger);">· {$t('admin.nutzer.gesperrt')}</span>
 						{/if}
 					</div>
 					<div class="mono text-xs" style="color: var(--g-ink-2);">{u.id} · {u.email}</div>
-					<div class="text-sm">Tier: <strong>{tierLabel(u.tier)}</strong></div>
+					<div class="text-sm">{$t('admin.nutzer.tier')} <strong>{tierLabel(u.tier)}</strong></div>
 					{#if u.requested_tier}
 						<div
 							data-testid="admin-open-request"
 							class="inline-block rounded-md px-2 py-1 text-sm font-semibold"
 							style="background: rgba(196,90,42,0.12); color: var(--g-accent-deep);"
 						>
-							Offener Antrag: {tierLabel(u.requested_tier)}
-							{#if u.requested_at}(seit {formatTime(u.requested_at)}){/if}
+							{$t('admin.nutzer.offener_antrag', { level: tierLabel(u.requested_tier) })}
+							{#if u.requested_at}{$t('admin.nutzer.seit', { zeit: formatTime(u.requested_at) })}{/if}
 						</div>
 					{/if}
-					<div class="text-sm" style="color: var(--g-ink-2);">Letzter Trip-Report: {lastRun(u)}</div>
-					<div class="text-sm" style="color: var(--g-ink-2);">Verbrauch heute (Open-Meteo): <strong data-testid="admin-user-verbrauch">{u.open_meteo_calls_today ?? 0}</strong></div>
+					<div class="text-sm" style="color: var(--g-ink-2);">{$t('admin.nutzer.letzter_report', { lauf: lastRun(u) })}</div>
+					<div class="text-sm" style="color: var(--g-ink-2);">{$t('admin.nutzer.verbrauch')} <strong data-testid="admin-user-verbrauch">{u.open_meteo_calls_today ?? 0}</strong></div>
 				</div>
 				<div class="flex flex-wrap items-center gap-2">
 					<select
 						data-testid="admin-tier-select"
-						aria-label="Tier von {u.display_name || u.id}"
+						aria-label={$t('admin.nutzer.tier_von', { name: u.display_name || u.id })}
 						value={u.tier}
 						disabled={busy[u.id]}
 						onchange={makeTierHandler(u)}
@@ -236,7 +238,7 @@
 					</select>
 					{#if u.disabled}
 						<Btn variant="outline" data-testid="admin-enable-btn" disabled={busy[u.id]} onclick={makeEnable(u)}>
-							Entsperren
+							{$t('admin.nutzer.entsperren')}
 						</Btn>
 					{:else}
 						<Btn
@@ -245,7 +247,7 @@
 							disabled={disableBlocked(u.id, data.selfId, busy[u.id])}
 							onclick={makeAskDisable(u)}
 						>
-							Sperren
+							{$t('admin.nutzer.sperren')}
 						</Btn>
 					{/if}
 				</div>
@@ -259,9 +261,9 @@
 
 <ConfirmDialog
 	open={confirmId !== null}
-	title="Konto sperren?"
-	description="{confirmUser?.display_name || confirmUser?.id || ''} wird gesperrt; alle Sitzungen dieses Kontos enden sofort."
-	confirmLabel="Sperren"
+	title={$t('admin.nutzer.sperren_titel')}
+	description={$t('admin.nutzer.sperren_text', { name: confirmUser?.display_name || confirmUser?.id || '' })}
+	confirmLabel={$t('admin.nutzer.sperren')}
 	confirmVariant="destructive"
 	data-testid="admin-confirm-dialog"
 	confirmTestid="admin-confirm-disable"
@@ -275,9 +277,9 @@
 
 <ConfirmDialog
 	open={revokeId !== null}
-	title="Einladung widerrufen?"
-	description="Der Link kann danach nicht mehr zum Registrieren benutzt werden."
-	confirmLabel="Widerrufen"
+	title={$t('admin.einladung.widerrufen_titel')}
+	description={$t('admin.einladung.widerrufen_text')}
+	confirmLabel={$t('admin.einladung.widerrufen')}
 	confirmVariant="destructive"
 	data-testid="admin-invite-confirm-dialog"
 	confirmTestid="admin-invite-confirm-revoke"

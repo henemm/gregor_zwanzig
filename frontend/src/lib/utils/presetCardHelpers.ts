@@ -6,10 +6,11 @@
 // Der Typ-Import nutzt die .ts-Endung (node:test-Konvention), nicht den $lib-Alias.
 
 import type { MetricPreset } from '../types.ts';
+import { trn } from '../i18n/index.ts';
 
 /** Label mit Metrik-Anzahl; robust gegen fehlende metrics-Liste (Backend-Compat). */
 export function metricCountLabel(p: MetricPreset): string {
-	return `${p.metrics?.length ?? 0} Metriken`;
+	return trn('konto.metriken', p.metrics?.length ?? 0);
 }
 
 /** „Standard"-Markierung nur bei explizitem is_default === true. */

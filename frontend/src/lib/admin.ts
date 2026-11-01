@@ -1,5 +1,7 @@
 // Issue #2155 S4 — reine Helfer der Admin-Seite (ohne Svelte-Umgebung testbar).
 import type { AdminInvite, AdminUser, UserTier } from '$lib/types';
+import { locale, tr } from './i18n/index.ts';
+import { get } from 'svelte/store';
 
 /** Zentrale Tier-Bezeichnungen (Konto-Seite und Admin-Seite). */
 export const TIER_LABELS: Record<UserTier, string> = {
@@ -10,13 +12,13 @@ export const TIER_LABELS: Record<UserTier, string> = {
 
 /** Klartext je Fehlerfall der Admin-API; nie der rohe Fehlercode. */
 export function adminErrorText(status: number, code?: string): string {
-	if (status === 403) return 'Keine Berechtigung';
-	if (status === 404) return 'Nutzer nicht gefunden';
+	if (status === 403) return tr('admin.fehler.keine_berechtigung');
+	if (status === 404) return tr('admin.fehler.nutzer_nicht_gefunden');
 	if (status === 409 && code === 'cannot_disable_self') {
-		return 'Das eigene Konto kann nicht gesperrt werden';
+		return tr('admin.fehler.selbst_sperren');
 	}
-	if (status === 400) return 'Ungültige Eingabe';
-	return 'Aktion fehlgeschlagen. Bitte erneut versuchen.';
+	if (status === 400) return tr('admin.fehler.ungueltig');
+	return tr('admin.fehler.fehlgeschlagen');
 }
 
 /** Ersetzt nur die Zeile mit gleicher ID; Eingabe bleibt unveraendert. */
@@ -100,25 +102,30 @@ export async function sendAdminUpdate(
 
 // ─── Issue #2519: Einladungslinks ────────────────────────────────────────────
 
+/** Datumsformat der Admin-Seite: Deutsch wie bisher `de-DE`, Englisch `en-GB` (Spec F4, A2). */
+export function adminLocale(): string {
+	return get(locale) === 'en' ? 'en-GB' : 'de-DE';
+}
+
 function formatDate(iso: string | null): string {
 	if (!iso) return '';
 	const d = new Date(iso);
-	return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('de-DE');
+	return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(adminLocale());
 }
 
 /** Statustext je Einladung: Offen / Benutzt von <Name> am <Datum> / Widerrufen am <Datum>. */
 export function inviteStatusText(inv: AdminInvite): string {
-	if (inv.status === 'used') return `Benutzt von ${inv.used_by} am ${formatDate(inv.used_at)}`;
-	if (inv.status === 'revoked') return `Widerrufen am ${formatDate(inv.revoked_at)}`;
-	return 'Offen';
+	if (inv.status === 'used') return tr('admin.einladung.status_benutzt', { name: inv.used_by, datum: formatDate(inv.used_at) });
+	if (inv.status === 'revoked') return tr('admin.einladung.status_widerrufen', { datum: formatDate(inv.revoked_at) });
+	return tr('admin.einladung.status_offen');
 }
 
 function inviteErrorText(status: number, code?: string): string {
-	if (status === 403) return 'Keine Berechtigung';
-	if (status === 404) return 'Einladung nicht gefunden';
-	if (status === 409 && code === 'invite_used') return 'Die Einladung wurde bereits benutzt';
-	if (status === 400) return 'Ungültige Eingabe (Level oder Notiz über 200 Zeichen)';
-	return 'Aktion fehlgeschlagen. Bitte erneut versuchen.';
+	if (status === 403) return tr('admin.fehler.keine_berechtigung');
+	if (status === 404) return tr('admin.fehler.einladung_nicht_gefunden');
+	if (status === 409 && code === 'invite_used') return tr('admin.fehler.einladung_benutzt');
+	if (status === 400) return tr('admin.fehler.einladung_ungueltig');
+	return tr('admin.fehler.fehlgeschlagen');
 }
 
 export type InviteCreateResult =

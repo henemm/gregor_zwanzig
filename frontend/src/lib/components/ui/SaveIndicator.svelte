@@ -3,6 +3,9 @@
 	// Renders a compact, high-contrast save-state label in the TripHeader and CompareEditor.
 	// Prop: controller — eine SaveStatus-Instanz (nie global singleton — AC-6).
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	// Issue #2653 (i18n F4): Zustandstexte aus dem Katalog (nav.*); die Uhrzeit
+	// bleibt ein eigenes <span class="save-time"> (Spec A1).
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		controller: SaveStatus;
@@ -28,25 +31,25 @@
 >
 	{#if controller.state === 'idle'}
 		<span class="save-indicator__icon" aria-hidden="true">✓</span>
-		<span>Gespeichert</span>
+		<span>{$t('nav.gespeichert')}</span>
 		{#if controller.savedAt}
 			<span class="save-time">{formatTime(controller.savedAt)}</span>
 		{/if}
 	{:else if controller.state === 'dirty'}
 		<span class="save-indicator__icon" aria-hidden="true">●</span>
-		<span>Nicht gespeichert</span>
+		<span>{$t('nav.nicht_gespeichert')}</span>
 	{:else if controller.state === 'saving'}
 		<span class="save-indicator__spinner" aria-hidden="true"></span>
-		<span>Speichere …</span>
+		<span>{$t('nav.speichere')}</span>
 	{:else if controller.state === 'conflict'}
 		<span class="save-indicator__icon" aria-hidden="true">!</span>
-		<span>{controller.error ?? 'Konflikt beim Speichern'}</span>
+		<span>{controller.error ?? $t('nav.konflikt')}</span>
 		<button type="button" class="save-indicator__retry" onclick={() => controller.retryConflict()}>
-			Nochmal speichern
+			{$t('nav.nochmal_speichern')}
 		</button>
 	{:else if controller.state === 'error'}
 		<span class="save-indicator__icon" aria-hidden="true">!</span>
-		<span>Fehler beim Speichern{controller.error ? ': ' + controller.error : ''}</span>
+		<span>{controller.error ? $t('nav.speicherfehler_mit', { fehler: controller.error }) : $t('nav.speicherfehler')}</span>
 	{/if}
 </span>
 

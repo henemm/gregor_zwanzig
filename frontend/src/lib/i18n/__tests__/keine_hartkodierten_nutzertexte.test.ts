@@ -274,6 +274,26 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		}
 	});
 
+	// Issue #2653 (i18n F4, AC-7): Konto, Admin, Navigation und Speicher-Anzeige.
+	test('F4: kein Allowlist-Eintrag deckt Konto, Admin, Sidebar/BottomNav/KontoSheet oder SaveIndicator', () => {
+		const F4 = [
+			'routes/account/+page.svelte',
+			'routes/admin/+page.svelte',
+			'lib/components/account/PremiumSmsLinkCard.svelte',
+			'lib/components/ui/sidebar/Sidebar.svelte',
+			'lib/components/ui/sidebar/BottomNav.svelte',
+			'lib/components/ui/sidebar/KontoSheet.svelte',
+			'lib/components/ui/SaveIndicator.svelte',
+			'lib/admin.ts'
+		];
+		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
+		assert.deepEqual(F4.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
+		for (const alt of ['routes/account/', 'routes/admin/', 'lib/components/account/', 'lib/components/ui/sidebar/', 'lib/components/ui/SaveIndicator.svelte'])
+			assert.ok(!ALLOWLIST.includes(alt), alt);
+		const treffer = scanneVerzeichnis(SRC).filter((e) => F4.includes(e.pfad) && e.treffer.length > 0);
+		assert.deepEqual(treffer.map((e) => e.pfad), []);
+	});
+
 	test('Allowlist enthaelt die acht F11-Praefixe nicht mehr', () => {
 		const F11 = [
 			'lib/components/ui/',
