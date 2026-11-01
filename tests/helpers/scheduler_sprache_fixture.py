@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import shutil
-from datetime import date, datetime, time, timezone
+from datetime import datetime, time, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -249,7 +249,7 @@ def gewitter_zeilen(rig, user_id: str, kw: dict) -> list[tuple[str, str]]:
         "thunder": "HIGH",
         "hourly_thunder": tuple(_hv(h, ThunderLevel.MED if h < 15 else ThunderLevel.NONE)
                                 for h in range(10, 17)),
-        "hourly_thunder_signals": tuple((h, ThunderLevel.MED, ("cape", "lightning"))
+        "hourly_thunder_signals": tuple((h, ThunderLevel.MED, ("cape", "blitzdichte"))
                                         for h in range(10, 15)),
         "hourly_hail": (12,),
     }
@@ -266,6 +266,36 @@ def gewitter_zeilen(rig, user_id: str, kw: dict) -> list[tuple[str, str]]:
                        ("ruhig", ("NONE", 0.0, 10))):
         texte.append((f"trend_notiz.{name}", str(trs._trend_note(*args, **kw))))
     return texte
+
+
+def gewitter_abruf(rig, user_id: str) -> dict:
+    """Gewitter-Vorschau ueber den ABRUF-Weg (``_build_thunder_forecast``):
+    Folgetag mit mittlerem Gewitter 10-14 UTC (Herkunft Blitzdichte, Hagel um
+    12) und starkem Nachtgewitter um 02 UTC mit Hagel."""
+    from datetime import timedelta
+
+    from app.models import (
+        ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider, SegmentWeatherData,
+        ThunderLevel,
+    )
+    from services.trip_segments import convert_trip_to_segments
+    from utils.timezone import tz_for_coords
+
+    morgen = datetime(2026, 10, 30, 0, 0, tzinfo=timezone.utc)
+    punkte = [ForecastDataPoint(ts=morgen + timedelta(hours=2), thunder_level=ThunderLevel.HIGH,
+                                hail_flag=True)]
+    punkte += [ForecastDataPoint(ts=morgen + timedelta(hours=h), thunder_level=ThunderLevel.MED,
+                                 thunder_level_signals=["blitzdichte"], hail_flag=(h == 12))
+               for h in range(10, 15)]
+    trip = trip_anlegen(user_id, [INNSBRUCK, INNSBRUCK])
+    seg = convert_trip_to_segments(trip, TAG)[0]
+    sw = SegmentWeatherData(
+        segment=seg, timeseries=NormalizedTimeseries(
+            meta=ForecastMeta(provider=Provider.OPENMETEO, model="test", grid_res_km=1.0),
+            data=punkte),
+        aggregated=None, fetched_at=JETZT, provider="openmeteo")
+    return scheduler(rig, user_id)._build_thunder_forecast(
+        [sw], TAG, tz_for_coords(*INNSBRUCK))
 
 
 def _hv(stunde: int, stufe):
@@ -433,6 +463,21 @@ def _sprache_setzen(user_id: str, lang: str) -> None:
     pfad.write_text(json.dumps(profil))
 
 
+def vergleich_vorschau(user_id: str) -> dict:
+    """Vorschau aller Kanaele (``ComparePreviewService``) mit Preset und Orten
+    aus der Ablage dieses Nutzers."""
+    from app.loader import get_data_dir, save_location
+    from services.compare_preview_service import ComparePreviewService
+    from tests.helpers.compare_briefings import write_compare_briefings
+
+    for ort in _vergleich_orte():
+        save_location(ort, user_id=user_id)
+    preset = vergleich_preset(user_id)
+    write_compare_briefings(get_data_dir(user_id), [preset])
+    return ComparePreviewService().render_all_channels(preset["id"], user_id=user_id,
+                                                       target_date=TAG)
+
+
 # -------------------------------------------------------------- Sammlung
 
 
@@ -481,6 +526,9 @@ def alle_texte(rig, monkeypatch, tmp_path, lang: str) -> str:
         uid = f"golden-{lang}-gewitter"
         nutzer_anlegen(uid, lang)
         paare += gewitter_zeilen(rig, uid, _kw(rein))
+        abruf = gewitter_abruf(rig, uid)
+        paare += [(f"gewitter_abruf.{k}", f"{v['date']}: {v['text']}")
+                  for k, v in sorted(abruf.items()) if k.startswith("+")]
         vergleich_engine(monkeypatch)
         uid = f"golden-{lang}-vergleich"
         nutzer_anlegen(uid, lang)
@@ -489,6 +537,8 @@ def alle_texte(rig, monkeypatch, tmp_path, lang: str) -> str:
                              absatz=True)
         paare += _mail_paare("vergleich_kurzform",
                              vergleich_senden(rig, uid, telegram_stil="kurzform"), absatz=True)
+        vorschau = vergleich_vorschau(uid)
+        paare += [(f"vorschau.{k}", vorschau[k]) for k in ("subject", "telegram", "sms")]
     with freeze_time(ALARM_JETZT):
         paare += radar_alarm(f"golden-{lang}-alarm", lang)
     return "".join(f"----- {k} -----\n{v}\n" for k, v in paare)

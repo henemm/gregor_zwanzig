@@ -85,7 +85,7 @@ E1: D2/2 TF? FD?/? W15@4 G22@4 R? TH:? TH+:- SL2200 CT:SCT@4 SU9
 ----- servicefehler.header -----
 de
 ----- gewitter.tag -----
-29.10.2026: Gewitter möglich ab 10:00 · CAPE, lightning · Hagel: ja, nachts starkes Gewitter ab 02:00 · Hagel: ja
+29.10.2026: Gewitter möglich ab 10:00 · CAPE, Blitzdichte · Hagel: ja, nachts starkes Gewitter ab 02:00 · Hagel: ja
 ----- gewitter.leicht -----
 29.10.2026: Instabile Luftmasse (leicht) ab 11:00 · CAPE
 ----- gewitter.kein -----
@@ -100,6 +100,8 @@ Gewitter möglich · Regen 9 mm · Böen bis 50 km/h
 Schwaches Signal (leicht)
 ----- trend_notiz.ruhig -----
 None
+----- gewitter_abruf.+1 -----
+30.10.2026: Gewitter möglich ab 11:00 · Blitzdichte · Hagel: ja, nachts starkes Gewitter ab 03:00 · Hagel: ja
 ----- vergleich.betreff -----
 Wetter-Vergleich: Tirol (29.10.2026)
 ----- vergleich.header -----
@@ -241,6 +243,23 @@ Erstellt: 29.10.2026 05:00 (CET)
 ----- vergleich_kurzform.telegram -----
 Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
 ----- vergleich_kurzform.sms -----
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+----- vorschau.subject -----
+Wetter-Vergleich: Tirol (29.10.2026)
+----- vorschau.telegram -----
+ORTS-VERGLEICH — Tirol
+Datum: 29.10.2026
+
+Innsbruck
+   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
+   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+Stubai
+   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
+   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+Zillertal
+   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
+   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+----- vorschau.sms -----
 Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
 ----- alarm.gesendet -----
 1
