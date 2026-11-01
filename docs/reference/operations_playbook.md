@@ -160,6 +160,8 @@ Genau daran blockierte das Gate am 2026-08-08 **jede** Frontend-Auslieferung.
 Seed-Konto an — bereits existierende Nutzerordner unter `data/users/` bleiben davon unberührt.
 Gesetzt wird sie aktuell nur in `frontend/e2e/ci-stack.sh` (Wert `admin`, aus `ci.yml`).
 
+**`.env.tpl` (#2163, 2026-11-01):** listet alle 21 Secret-Namen als Kommentarzeilen („1Password-Eintrag noch anzulegen"). Wer ein neues Secret in Code oder Deploy einführt, trägt den Namen dort ein; die Drift-Ratsche `tests/unit/test_env_tpl_secret_drift.py` schlägt sonst an.
+
 Der Staging-Pfad steht als Modul-Attribut `e2e_frontend_browser_gate.STAGING_ENV_PATH`
 und ist per Umgebungsvariable **`GZ_STAGING_ENV_PATH`** überschreibbar. Rangfolge:
 bereits gesetzte Umgebungsvariable > Staging-`.env` (nur bei Staging-Ziel) >
