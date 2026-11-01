@@ -66,8 +66,9 @@ def nutzer_anlegen(user_id: str, lang: str | None, *, chat_id: str = "") -> None
     (ordner / "user.json").write_text(json.dumps(profil), encoding="utf-8")
 
 
-def trip_anlegen(user_id: str, name: str = TRIP_NAME):
-    """Trip mit drei Etappen und Stunden-Snapshot (fester Tag 29.10.2026)."""
+def trip_anlegen(user_id: str, name: str = TRIP_NAME, *, stil: str = "rich"):
+    """Trip mit drei Etappen und Stunden-Snapshot (fester Tag 29.10.2026);
+    ``stil="kurzform"`` = Telegram-Kurzstil (#2417)."""
     from app.loader import load_all_trips, save_trip
     from app.models import TripReportConfig
     from app.trip import Stage, Trip, Waypoint
@@ -76,7 +77,7 @@ def trip_anlegen(user_id: str, name: str = TRIP_NAME):
     from tests.tdd._befehl_e2e_fixtures import INNSBRUCK_LON as LON
     from tests.tdd._befehl_e2e_fixtures import _segment_fuer_stage
 
-    trip_id = f"{user_id}-trip"
+    trip_id = f"{user_id}-trip" if name == TRIP_NAME else f"{user_id}-{abs(hash(name))}"
     tage = ((date(2026, 10, 28), "Innsbruck - Stubai"),
             (date(2026, 10, 29), "Stubai - Neustift"),
             (date(2026, 10, 31), "Neustift - Elfer"))
@@ -93,7 +94,7 @@ def trip_anlegen(user_id: str, name: str = TRIP_NAME):
         report_config=TripReportConfig(
             trip_id=trip_id, send_email=True, send_sms=False,
             send_premium_sms=True, send_telegram=True,
-            day_window_start_hour=0, day_window_end_hour=23,
+            day_window_start_hour=0, day_window_end_hour=23, telegram_style=stil,
         ),
     ), user_id)
     trip = next(t for t in load_all_trips(user_id) if t.id == trip_id)
