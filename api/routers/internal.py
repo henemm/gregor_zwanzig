@@ -228,7 +228,7 @@ def next_briefings(
     (#2346 ergaenzt ``last_briefing``).
     """
     from app.loader import compare_preset_to_dict, load_all_locations, load_compare_presets
-    from services.briefing_slots import BriefingSlotStore
+    from services.briefing_slots import BriefingSlotStore, compare_slot_store
     from services.next_briefing import next_compare_briefing, next_trip_briefing
 
     jetzt = datetime.now(timezone.utc)
@@ -243,11 +243,12 @@ def next_briefings(
             _je_objekt(trips, trip.id, lambda: next_trip_briefing(trip, jetzt, store))
     if not nur_trip:
         orte = {loc.id: loc for loc in load_all_locations(user_id)}
+        vermerk = compare_slot_store(user_id)  # Issue #1777: nur gelesen
         for preset in load_compare_presets(user_id=user_id, strict=False):
             if nur_preset and preset.id != preset_id:
                 continue
             _je_objekt(compare, preset.id, lambda: next_compare_briefing(
-                compare_preset_to_dict(preset), orte, jetzt,
+                compare_preset_to_dict(preset), orte, jetzt, slot_store=vermerk,
             ))
     _letzte_einfuegen(user_id, trips, compare)
     return {"trips": trips, "compare": compare}

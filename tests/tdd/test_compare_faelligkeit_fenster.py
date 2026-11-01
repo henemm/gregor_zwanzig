@@ -38,6 +38,7 @@ Schnittstellen-Annahmen fuer GREEN (zusaetzlich zu test_compare_briefing_vermerk
    Trip; ``api/routers/internal.py`` uebergibt den Compare-Speicher des
    anfragenden Nutzers.
 """
+# ruff: noqa: F811  (pytest-Fixtures werden importiert und als Parameter benutzt)
 from __future__ import annotations
 
 import json
@@ -45,7 +46,6 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from app.loader import get_data_dir
 from services import briefing_slots
 from tests.tdd._compare_slot_vermerk_fixtures import (  # noqa: F401  (Fixtures)
     KORSIKA,
@@ -450,3 +450,57 @@ def test_ac20_anzeige_naechstes_briefing_folgt_fenster_und_vermerk_des_nutzers()
     assert (ra.get("local_date"), ra.get("local_time"), ra.get("slot"), ra.get("overdue")) == (
         "2026-10-23", "18:00", "evening", None,
     ), f"A (Morgen-Slot vermerkt): naechster Termin ist der Abend-Slot: {ra!r}"
+
+
+# ═══════════════════ Fix-Loop 1 (Adversary F005, F006) ══════════════════════
+
+
+def test_f005_unbekannter_ausgang_sperrt_den_slot_auch_im_fenster(naht):
+    """F005 (Ausgangs-Abbildung, Trip-Paritaet #2231): Given der Versand endet
+    mit einem UNBEKANNTEN Ausgangs-Code / When der Lauf endet / Then ist der
+    Slot mit diesem Code vermerkt (gesperrt), zaehlt als failed, und der Lauf
+    in H+1 (im Fenster) versucht es NICHT erneut.
+
+    Nach GREEN rot bei: unbekannter Ausgang -> ``release`` (dann stuendliche
+    Mehrfachversuche an alle Kanaele).
+    """
+    uid = nutzer()
+    pid = _paris_vergleich(uid, "vgl-f005")
+    naht.standard = "voellig_neuer_code"
+
+    ergebnis = lauf(uid, utc_zu(PARIS, D, 7))
+    naht.standard = "sent"
+    lauf(uid, utc_zu(PARIS, D, 8))
+
+    assert tuple(ergebnis) == (0, 1), ergebnis
+    assert abgeschlossene_vermerke(uid) == {(pid, "morning", D.isoformat(), "voellig_neuer_code")}
+    assert naht.regulaer() == [(pid, "morning")], f"Kein zweiter Versuch in H+1: {naht.versuche}"
+
+
+def test_f006_anzeige_ueberspringt_einen_kuenftigen_bereits_vermerkten_slot(tmp_path):
+    """F006 / AC-20: Given der heutige 07:00-Slot ist schon vermerkt (z. B.
+    manueller ``?hour=7``-Ausloeser), es ist 06:30 Ortszeit / When die Anzeige
+    „Naechstes Briefing" abgeleitet wird / Then nennt sie den Abend-Slot 18:00,
+    nicht das 07:00-Briefing, das nicht mehr kommt.
+
+    Echter Compare-Speicher in ``tmp_path``. Nach GREEN rot bei: Suchschleife
+    ohne Vermerk-Blick (``store=`` entfernt).
+    """
+    from app.user import SavedLocation
+    from services.briefing_slots import compare_slot_store
+    from services.next_briefing import next_compare_briefing
+
+    orte = {"o": SavedLocation(id="o", name="o", lat=KORSIKA[0], lon=KORSIKA[1], elevation_m=800)}
+    preset = {
+        "id": "vgl-f006", "kind": "vergleich", "schedule": "daily", "weekday": None,
+        "location_ids": ["o"], "morning_enabled": True, "morning_time": "07:00:00",
+        "evening_enabled": True, "evening_time": "18:00:00",
+    }
+    store = compare_slot_store("f006", data_dir=tmp_path)
+    store.record_outcome("vgl-f006", "morning", D, "sent")
+
+    r = next_compare_briefing(preset, orte, utc_zu(PARIS, D, 6, 30), slot_store=store)
+
+    assert (r.get("local_date"), r.get("local_time"), r.get("slot")) == (
+        D.isoformat(), "18:00", "evening",
+    ), r
