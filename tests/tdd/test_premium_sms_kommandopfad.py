@@ -276,7 +276,7 @@ def _aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
             self._s = settings
 
         def send(self, subject, body, html=True, plain_text_body=None, to=None,
-                 mail_type=None, mail_format=None, compare_hourly_enabled=None):
+                 mail_type=None, mail_format=None, compare_hourly_enabled=None, lang="de"):
             ziel = to if to else self._s.mail_to
             _buchen("email", ziel if isinstance(ziel, str) else list(ziel)[0],
                     subject, body)

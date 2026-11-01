@@ -1,0 +1,110 @@
+----- betreff.morgen_gewitter -----
+[GR20] Etappe 3 — Morning — Thunderstorm D13 W30 G55
+----- betreff.abend_kaelte -----
+[GR20] Etappe 3 — Evening — Cold D13 W30 G55
+----- betreff.update_ohne_risiko -----
+[GR20] Etappe 3 — Update — D13 W30 G55
+----- betreff.abend_ohne_token -----
+[GR20] Etappe 3 — Evening
+----- betreff.sturm -----
+[GR20] E1 — Morning — Storm
+----- betreff.hitze -----
+[GR20] E1 — Morning — Heat
+----- betreff.regen -----
+[GR20] E1 — Evening — Rain
+----- betreff.schnee -----
+[GR20] E1 — Evening — Snow
+----- betreff.wind -----
+[GR20] E1 — Evening — Wind
+----- betreff.unbekanntes_risiko -----
+[GR20] E1 — Morning — Fog
+----- betreff.unbekannter_typ -----
+[GR20] E1 — compare
+----- betreff.kuerzung -----
+[GR20] Etappe 3: Refuge d'Ortu di u Piobbu — Morning — Thunderstorm D13 W30
+----- betreff.kuerzung_lang -----
+Etappe 3: Refuge d'Ortu di u Piobbu nach Refuge de Carrozzu — Evening — Cold
+----- fehler.kind_required -----
+400 kind_required Briefing kind is missing or invalid (allowed: route, vergleich)
+----- fehler.not_found -----
+404 not_found Briefing trip-42 not found
+----- fehler.already_in_progress -----
+409 already_in_progress Delivery is already in progress — please wait
+----- fehler.no_stage -----
+422 no_stage No briefing for morning — no stage data for the current date
+----- fehler.no_weather -----
+422 no_weather No briefing sent — no weather data available
+----- fehler.no_channels -----
+422 no_channels No briefing sent — no delivery channel active (email, Telegram and SMS are all disabled)
+----- fehler.channels_unreachable -----
+422 channels_unreachable No briefing sent — delivery channel configured but not ready (channel technically unreachable)
+----- fehler.invalid_report_type -----
+422 invalid_report_type Invalid report type morning (allowed: morning, evening)
+----- fehler.smtp_not_configured -----
+422 smtp_not_configured Email delivery (SMTP) is not set up for this user
+----- fehler.invalid_preset -----
+422 invalid_preset Location comparison cannot be sent: keine Orte
+----- fehler.send_failed -----
+500 send_failed Delivery failed — internal error, please try again later
+----- briefing.betreff -----
+[GR20] Etappe 3 — Morning
+----- briefing.header -----
+en
+----- test_vorschau.betreff -----
+[TEST] [GR20] Etappe 3 — Morning
+----- test_vorschau.header -----
+en
+----- test_vorschau.hinweis_mail -----
+Test preview for Etappe 3 on 29 Oct 2026
+----- test_vorschau.hinweis_telegram -----
+Test preview for Etappe 3 on 29 Oct 2026
+----- auf_anfrage.betreff -----
+[GR20] Etappe 3 — Morning
+----- auf_anfrage.header -----
+en
+----- auf_anfrage.hinweis_mail -----
+Briefing on request for Etappe 3 on 29 Oct 2026
+----- auf_anfrage.hinweis_telegram -----
+Briefing on request for Etappe 3 on 29 Oct 2026
+----- ohne_etappe.betreff -----
+[TEST] [GR20] 29.10.2026 — Morning
+----- ohne_etappe.header -----
+en
+----- ohne_etappe.hinweis_mail -----
+Test preview for Stage on 29 Oct 2026
+----- ohne_etappe.hinweis_telegram -----
+Test preview for Stage on 29 Oct 2026
+----- servicefehler.betreff -----
+[GR20] Weather data unavailable
+----- servicefehler.header -----
+en
+----- ausfall.betreff -----
+[GR20] Weather data unavailable
+----- ausfall.header -----
+en
+----- ausfall.mail -----
+Weather service currently unavailable — we keep trying and will deliver the briefing as soon as data is available.
+----- ausfall.telegram -----
+[[GR20] Weather data unavailable]
+
+Weather service currently unavailable — we keep trying and will deliver the briefing as soon as data is available.
+----- ausfall.sms -----
+Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.
+----- ausfall.premium_sms -----
+Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.
+----- alarm.sms -----
+S3 Seg 3: G45->72@Do15 13-18 + amtl. Warnung s. E-Mail/Telegram
+----- alarm.premium_sms -----
+S3 Seg 3: G45->72@Do15 13-18 + amtl. Warnung s. E-Mail/Telegram
+----- test.ergebnis -----
+{"status": "ok"}
+----- test.betreff -----
+Gregor 20 — Test message
+----- test.text -----
+Your channel works.
+----- test.header -----
+en
+----- test.kanal_unbekannt -----
+Unknown channel: fax
+----- test.mail_gesperrt -----
+The test email was not sent: your account has no confirmed email address. Please confirm your address in your profile first.

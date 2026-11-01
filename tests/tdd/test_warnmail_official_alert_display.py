@@ -668,7 +668,7 @@ class _CapturingEmailOutput:
         self.settings = settings
 
     def send(self, subject, body, html=True, plain_text_body=None, to=None,
-              mail_type=None, mail_format=None, compare_hourly_enabled=None):
+              mail_type=None, mail_format=None, compare_hourly_enabled=None, lang="de"):
         _CAPTURED.append({"subject": subject, "body": body})
 
 

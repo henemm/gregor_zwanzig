@@ -79,7 +79,7 @@ def _email_aufzeichner_installieren(monkeypatch) -> list[dict]:
             self._s = settings
 
         def send(self, subject, body, html=True, plain_text_body=None, to=None,
-                 mail_type=None, mail_format=None, compare_hourly_enabled=None):
+                 mail_type=None, mail_format=None, compare_hourly_enabled=None, lang="de"):
             ziel = to if to else self._s.mail_to
             aufzeichnungen.append({"empfaenger": ziel, "subject": subject})
 
