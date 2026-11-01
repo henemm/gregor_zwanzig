@@ -345,7 +345,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"*/15 * * * *", s.alertChecks, "alert_checks", "Alert Checks (every 15 min)", nil},
 		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)", nil},
 		// Issue #637: inbound_telegram_poll entfernt — Telegram-Eingang läuft jetzt
-		// push-basiert über den Webhook (POST /api/webhooks/telegram/{secret}).
+		// push-basiert über den Webhook (POST /api/webhooks/telegram/inbound, #1814).
 		// Issue #1628 S0 / #2261 A-2 S2: 5-Min-Takt mit Offset 3 (Minuten 3, 8,
 		// ... 58) -- kollidiert nie mit den */5-/*/15-Jobs und :00, weicht der
 		// Open-Meteo-Lastspitze :00/:30 aus. NUR diese zwei Radar-Jobs.

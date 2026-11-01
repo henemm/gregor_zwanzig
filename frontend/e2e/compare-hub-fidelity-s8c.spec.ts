@@ -143,7 +143,10 @@ for (const kind of HUB_KINDS) {
 				// Trip: wortgleich zum Badge im Trip-Kopf (kein zweites Vokabular).
 				const badge = page.getByTestId('trip-detail-status-badge').first();
 				await expect(badge).toBeVisible({ timeout: 10_000 });
-				const text = (await badge.innerText()).trim();
+				// textContent statt innerText: das Pill-Badge schreibt per CSS gross
+				// (app.css [data-slot="pill"] text-transform: uppercase) — innerText
+				// liefert „GEPLANT", der DOM-Wortlaut ist „Geplant".
+				const text = ((await badge.textContent()) ?? '').trim();
 				expect(text.length, 'Badge-Text leer').toBeGreaterThan(0);
 				await expect(p.getByText(text, { exact: true }).first()).toBeVisible();
 			}
@@ -236,7 +239,9 @@ for (const kind of HUB_KINDS) {
 			if (kind === 'vergleich') {
 				await expect(raster.getByText('Läuft autom.', { exact: true })).toBeVisible();
 			} else {
-				const text = (await page.getByTestId('trip-detail-status-badge').first().innerText()).trim();
+				// textContent statt innerText (CSS-uppercase des Pill-Badges, s. UE-2).
+				const text = ((await page.getByTestId('trip-detail-status-badge').first().textContent()) ?? '').trim();
+				expect(text.length, 'Badge-Text leer').toBeGreaterThan(0);
 				await expect(raster.getByText(text, { exact: true })).toBeVisible();
 			}
 		});

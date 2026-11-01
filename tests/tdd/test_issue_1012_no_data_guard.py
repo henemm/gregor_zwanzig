@@ -424,13 +424,25 @@ def test_trip_reports_endpoint_returns_partial_status(tmp_path, monkeypatch):
     _make_user(user_id)
     monkeypatch.setenv("GZ_TEST_FIXTURE_DIR", _partial_fixture_dir(tmp_path))
 
-    _make_trip(user_id, "tdd-1012-ac4b-fail-trip", name_fail, date.today(),
-               [_STUBAI, _STUBAI])
-    _make_trip(user_id, "tdd-1012-ac4b-ok-trip", name_ok, date.today(),
-               [_INNSBRUCK, _INNSBRUCK])
+    # Endpunkt rechnet am Ortstag der Trip-Koordinaten (#2314), nicht am Prozesstag.
+    from tests.helpers.ortstag import ortstag
+
+    # F001: ohne `at` nimmt der Endpunkt die Wanduhr, der Trip waere nur in
+    # seiner Berichtsstunde faellig. Gepinnt wird 07:00 Ortszeit am HEUTIGEN
+    # Ortstag (wie der Schwester-Test AC-4) -- kein fester Kalendertag, weil
+    # der Briefing-Aufbau den Zieltag weiter aus der Wanduhr am Ort liest
+    # (trip_report_scheduler._generate_report).
+    jetzt = _zeitpunkt_fuer_ortsstunde(7)
+    _make_trip(user_id, "tdd-1012-ac4b-fail-trip", name_fail,
+               ortstag(*_STUBAI, now_utc=jetzt), [_STUBAI, _STUBAI])
+    _make_trip(user_id, "tdd-1012-ac4b-ok-trip", name_ok,
+               ortstag(*_INNSBRUCK, now_utc=jetzt), [_INNSBRUCK, _INNSBRUCK])
 
     client = TestClient(app)
-    resp = client.post(f"/api/scheduler/trip-reports?hour=7&user_id={user_id}")
+    resp = client.post(
+        "/api/scheduler/trip-reports",
+        params={"at": jetzt.isoformat(), "user_id": user_id},
+    )
 
     assert resp.status_code == 200
     data = resp.json()

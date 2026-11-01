@@ -173,11 +173,9 @@ func New(deps Deps) chi.Router {
 	// Issue #637: Telegram Inbound Webhook (public, secret-header-protected).
 	// Issue #1814: registrierte URL ist die statische Route /inbound (kein Secret
 	// im Pfad); Auth-Traeger ist allein der Header X-Telegram-Bot-Api-Secret-Token.
-	// Die {secret}-Route bleibt nur als Uebergang, bis beide Umgebungen neu
-	// registriert sind (Folge-Scheibe entfernt sie).
+	// Die fruehere Route mit Secret im Pfad ist entfernt (#1814 Scheibe 2).
 	telegramWebhook := handler.TelegramWebhookHandler(deps.Config.PythonCoreURL, deps.Config.TelegramWebhookSecret)
 	r.Post("/api/webhooks/telegram/inbound", telegramWebhook)
-	r.Post("/api/webhooks/telegram/{secret}", telegramWebhook)
 	// Issue #2439: Push-Eingang fuer Befehle (SMS seven.io, Mail Stalwart) --
 	// oeffentlich, secret-/signaturgeschuetzt, weckt nur den Poll-Job (ADR-0088).
 	r.Post("/api/webhooks/sms/{secret}", handler.InboundSMSWebhook(deps.Scheduler, deps.Config.PublicHost,
