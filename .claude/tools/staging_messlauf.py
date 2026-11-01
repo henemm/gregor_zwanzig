@@ -76,7 +76,7 @@ KORSIKA_ABSTAND = timedelta(seconds=630)         # Meteo-France-Cache-TTL 600 + 
 ANTWORT_WARTEN_S = 360
 TELEGRAM_TAKT_S = 3
 TELEGRAM_VERSUCHE = ANTWORT_WARTEN_S // TELEGRAM_TAKT_S  # Wartegrenze wie Mail, nie die Messschwelle
-WEBHOOK_PFAD = "/api/webhooks/telegram/messlauf"  # Pfadsegment wird nicht geprueft, nie das Secret
+WEBHOOK_PFAD = "/api/webhooks/telegram/inbound"  # einzige Webhook-Route (#1814), Secret nur im Header
 
 
 class Befund(Exception):

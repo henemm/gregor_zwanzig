@@ -13,9 +13,9 @@ Telegram  --POST-->  Go (öffentlich)                         -->  Python Core (
 - **Registrierte URL** ist `/api/webhooks/telegram/inbound` — ohne Secret im Pfad (#1814).
 - **Einziger Auth-Träger** ist der HTTP-Header `X-Telegram-Bot-Api-Secret-Token`
   (== ENV `TELEGRAM_WEBHOOK_SECRET` des Go-Prozesses). Der URL-Pfad wird nie gelesen.
-- **Übergang:** Die Alt-Route `/api/webhooks/telegram/{secret}` nimmt bis zur
-  Neuregistrierung beider Umgebungen weiter Updates an; sie wird danach entfernt und das
-  Secret rotiert (altes Secret lag im Pfad und steht ggf. in Logs).
+- Die frühere Route mit Secret im Pfad ist entfernt (#1814 Scheibe 2); andere Segmente
+  unter `/api/webhooks/telegram/` werden nicht zugestellt. Das Secret wird danach rotiert
+  (altes Secret lag im Pfad und steht ggf. in Logs).
 - Go antwortet Telegram **sofort 200** (fire-and-forget Forwarding) → kein Retry-Sturm.
 - Python dedupliziert `update_id` (in-memory Seen-Set) → keine Doppelausführung.
 

@@ -9,8 +9,7 @@ package handler
 //
 // Einziger Auth-Träger ist der HTTP-Header X-Telegram-Bot-Api-Secret-Token
 // (Konstantzeit-Vergleich gegen TELEGRAM_WEBHOOK_SECRET). Der URL-Pfad wird
-// nie gelesen. Die Alt-Route /api/webhooks/telegram/{secret} ist nur noch ein
-// Übergang bis zur Neuregistrierung beider Umgebungen und fällt danach weg.
+// nie gelesen. Die frühere Route mit Secret im Pfad ist entfernt (#1814 Scheibe 2).
 //
 // Spec: docs/specs/modules/telegram_webhook_inbound.md,
 // docs/specs/modules/fix_1814_telegram_webhook_secret_nicht_im_pfad.md

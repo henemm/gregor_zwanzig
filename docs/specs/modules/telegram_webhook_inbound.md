@@ -23,7 +23,7 @@ weiterreicht. Ergebnis: Antwortzeit ~1 s statt bis zu 30 s, kein Dauer-Polling.
 
 ## Source
 
-- **Go-Handler (öffentlich):** `internal/handler/telegram_webhook.go` (neu) — Route `POST /api/webhooks/telegram/inbound` (seit #1814; `{secret}`-Route nur Übergang)
+- **Go-Handler (öffentlich):** `internal/handler/telegram_webhook.go` (neu) — Route `POST /api/webhooks/telegram/inbound` (seit #1814 die einzige Route; Alt-Route `{secret}` seit Scheibe 2 (#1814) entfernt)
 - **Go-Route-Registrierung:** `cmd/server/main.go`
 - **Go-Auth-Exemption:** `internal/middleware/auth.go`
 - **Go-Scheduler-Cleanup:** `internal/scheduler/scheduler.go` (Job `inbound_telegram_poll` entfernen)
@@ -55,13 +55,13 @@ weiterreicht. Ergebnis: Antwortzeit ~1 s statt bis zu 30 s, kein Dauer-Polling.
 
 - Neuer ENV `TELEGRAM_WEBHOOK_SECRET` (Go-Prozess).
 - **Secret-Validierung über HTTP-Header `X-Telegram-Bot-Api-Secret-Token`** (Tech-Lead-Abweichung von der Ticket-Vorgabe „Secret in URL" — verhindert Secret-Leak in Nginx-Access-Logs). `setWebhook` wird mit `secret_token=<TELEGRAM_WEBHOOK_SECRET>` registriert; Telegram sendet den Header bei jedem Request.
-- **Seit #1814:** registrierte URL ist `POST /api/webhooks/telegram/inbound` (kein Secret im Pfad). Der Header ist der **einzige** Auth-Träger. Die Alt-Route `/api/webhooks/telegram/{secret}` bleibt nur als Übergang bis zur Neuregistrierung beider Umgebungen (Spec `fix_1814_telegram_webhook_secret_nicht_im_pfad.md`).
+- **Seit #1814:** registrierte URL ist `POST /api/webhooks/telegram/inbound` (kein Secret im Pfad). Der Header ist der **einzige** Auth-Träger. Die frühere Route mit Secret im Pfad ist entfernt (#1814 Scheibe 2, Spec `fix_1814_s2_telegram_alt_route_entfernen.md`).
 - **Staging-Isolation:** Eigener Test-Bot-Token auf Staging (Webhook-Exklusivität: ein Bot = eine URL). ENV-getrennt `TELEGRAM_BOT_TOKEN` Prod vs. Staging.
 
 ### 2. Go Gateway (öffentlicher Eingang)
 
 ```
-POST /api/webhooks/telegram/inbound   (#1814; Übergang: /api/webhooks/telegram/{secret}, gleicher Handler)
+POST /api/webhooks/telegram/inbound   (#1814; Alt-Route {secret} seit Scheibe 2 entfernt)
   1. Header X-Telegram-Bot-Api-Secret-Token == TELEGRAM_WEBHOOK_SECRET? Nein → 403 (+ Zähler erhöhen)
   2. ENV nicht gesetzt → 503 (fail-closed, kein offener Endpoint ohne Secret)
   3. Body (rohes JSON) an PythonCoreURL + /api/internal/telegram-webhook POSTen
@@ -102,14 +102,14 @@ POST /api/internal/telegram-webhook
 
 ## Expected Behavior
 
-- **Input:** HTTP POST von Telegram an `/api/webhooks/telegram/inbound` (Übergang: `/{secret}`) mit Update-JSON + Secret-Header.
+- **Input:** HTTP POST von Telegram an `/api/webhooks/telegram/inbound` (einzige Route; Alt-Route `/{secret}` seit Scheibe 2 (#1814) entfernt) mit Update-JSON + Secret-Header.
 - **Output:** Sofort `200 OK` an Telegram; Nutzer erhält Befehlsantwort via Telegram (z.B. „status").
 - **Side effects:** chat_id-scoped Trip-Daten gelesen/geändert (Befehl), Bestätigungsnachricht gesendet, High-Watermark fortgeschrieben.
 
 ## Acceptance Criteria
 
 **AC-1:** Sichere Endpoint-Freigabe
-Given der öffentliche Go-Endpoint `/api/webhooks/telegram/{secret}`, When ein POST mit korrektem Header `X-Telegram-Bot-Api-Secret-Token` eingeht, Then wird es mit `200 OK` akzeptiert; bei fehlendem/falschem Header antwortet der Endpoint `403 Forbidden` und verarbeitet nichts.
+Given der öffentliche Go-Endpoint `/api/webhooks/telegram/inbound`, When ein POST mit korrektem Header `X-Telegram-Bot-Api-Secret-Token` eingeht, Then wird es mit `200 OK` akzeptiert; bei fehlendem/falschem Header antwortet der Endpoint `403 Forbidden` und verarbeitet nichts.
 - Test: Echter HTTP-POST gegen die laufende Go-API mit (a) korrektem Header → 200 + Forwarding erfolgt, (b) falschem Header → 403 + kein Forwarding an Python.
 
 **AC-2:** Nahtlose Befehls-Weiterleitung

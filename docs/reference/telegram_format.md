@@ -51,7 +51,7 @@ entfernt, #637/#1369).
 
 - **Weg:** Telegram → `POST /api/webhooks/telegram/inbound` (Go, öffentlich; einziger
   Auth-Träger ist der Header `X-Telegram-Bot-Api-Secret-Token`, kein Secret im Pfad, #1814;
-  die Alt-Route `/api/webhooks/telegram/{secret}` besteht nur als Übergang) →
+  die frühere Route mit Secret im Pfad ist entfernt) →
   `POST /api/internal/telegram-webhook` (Python, Dedupe über `update_id`) →
   `InboundTelegramReader._process_update`.
 - **Nutzerzuordnung:** über die Chat-ID (`lookup_user_by_telegram_chat_id`), nie Fallback auf
