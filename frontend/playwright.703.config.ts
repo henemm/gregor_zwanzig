@@ -10,6 +10,9 @@ export default defineConfig({
 		baseURL: process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com',
 		headless: true,
 		ignoreHTTPSErrors: true,
+		// Epic #2644: die Sprache folgt dem Browser (Accept-Language). Der Test prueft
+		// die deutschen Fehlertexte, also feste Browser-Sprache Deutsch.
+		locale: 'de-DE',
 	},
 	projects: [
 		{
