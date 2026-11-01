@@ -41,6 +41,7 @@ except ImportError as _gz_exc:
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -808,7 +809,7 @@ def test_thunderstorm_mail_without_ladder_fails_with_hazard_word_trip_name(monke
     faellt mit Trip "PROBE Sturmtrip" weiter an S-2 (Namens-Entfernung darf das
     Typwort der Warnkarte nicht mitentfernen)."""
     mod = _load_validator_module()
-    _msg, html, plain = _zugestellte_mail(monkeypatch, [_gewitter_alert()], trip_name="PROBE Sturmtrip")
+    msg, html, plain = _zugestellte_mail(monkeypatch, [_gewitter_alert()], trip_name="PROBE Sturmtrip")
     assert 'class="stufe-line"' in html, "Testaufbau: Gewittermail ohne Leiter gerendert"
     lawine = f"{_STUFE4_ECHT} oberhalb Waldgrenze · Lawinenwarndienst Tirol, avalanche.report"
 
@@ -816,6 +817,44 @@ def test_thunderstorm_mail_without_ladder_fails_with_hazard_word_trip_name(monke
     html_kaputt = html_kaputt.replace("</body>", f"<p>{lawine}</p></body>", 1)
     plain_kaputt = _ohne_farbwoerter(plain) + "\n" + lawine + "\n"
 
-    ok, errors = mod.validate_message(_build_real_official_alert_message(html_kaputt, plain_kaputt))
+    # F001: Betreff des echten Trip-Pfads ("[PROBE Sturmtrip] ..."), damit die
+    # Namens-Entfernung tatsaechlich greift.
+    kaputt = _build_real_official_alert_message(html_kaputt, plain_kaputt)
+    kaputt.replace_header("Subject", msg["Subject"])
+    assert mod._decoded_subject(kaputt).startswith("[PROBE Sturmtrip]"), "Testaufbau: Betreff"
+
+    ok, errors = mod.validate_message(kaputt)
+    assert ok is False, f"Gewittermail ohne Leiter muss fallen, errors={errors}"
+    assert any(e.startswith("S-2") for e in errors), f"Erwartet S-2-Befund: {errors}"
+
+
+def test_thunderstorm_mail_named_like_hazard_keeps_card_label(monkeypatch):
+    """#2560 F002: heisst der Trip exakt wie die Gefahrenart ("Gewitter"), darf
+    nur der Fusszeilen-Name ("Gewitter · Amtliche Warnung", letzte Fundstelle)
+    entfernt werden, nie das Karten-Label "Gewitter · Fr 20.02. · ..." (Badge-
+    Format aus `_format_validity`). Gewittermail ohne Leiter/Farbwoerter +
+    Lawinentext muss weiter an S-2 fallen."""
+    mod = _load_validator_module()
+    msg, html, plain = _zugestellte_mail(monkeypatch, [_gewitter_alert("Gewitter")], trip_name="Gewitter")
+    assert "Gewitter · Amtliche Warnung" in html and "Gewitter · Amtliche Warnung" in plain, \
+        "Testaufbau: Fusszeilen-Name fehlt"
+    lawine = f"{_STUFE4_ECHT} oberhalb Waldgrenze · Lawinenwarndienst Tirol, avalanche.report"
+    badge = "Gewitter · Fr 20.02. · 13:00–21:00"
+
+    # Das Typ-Wort steht nur noch im Karten-Label (Badge-Format) und im Fuss.
+    html_kaputt = _ohne_farbwoerter(html.replace('class="stufe-line"', 'class="x"'))
+    html_kaputt = re.sub(r"Gewitter(?! · )", "", html_kaputt)
+    html_kaputt = re.sub(r"(<body[^>]*>)", rf"\1<div>{badge}</div>", html_kaputt, count=1)
+    html_kaputt = html_kaputt.replace("</body>", f"<p>{lawine}</p></body>", 1)
+    plain_kaputt = badge + "\n" + re.sub(r"Gewitter(?! · )", "", _ohne_farbwoerter(plain))
+    plain_kaputt += "\n" + lawine + "\n"
+    assert html_kaputt.index(badge) < html_kaputt.index("Gewitter · Amtliche Warnung"), \
+        "Testaufbau: Karten-Label muss vor dem Fusszeilen-Namen stehen"
+
+    kaputt = _build_real_official_alert_message(html_kaputt, plain_kaputt)
+    kaputt.replace_header("Subject", msg["Subject"])
+    assert mod._decoded_subject(kaputt).startswith("[Gewitter]"), "Testaufbau: Betreff"
+
+    ok, errors = mod.validate_message(kaputt)
     assert ok is False, f"Gewittermail ohne Leiter muss fallen, errors={errors}"
     assert any(e.startswith("S-2") for e in errors), f"Erwartet S-2-Befund: {errors}"
