@@ -23,13 +23,7 @@
 	"routes/admin/",
 	"routes/archiv/",
 	"routes/compare/",
-	"routes/forgot-password/",
 	"routes/gpx-upload/",
 	"routes/locations/",
-	"routes/login/",
-	"routes/magic-link/",
-	"routes/register/",
-	"routes/reset-password/",
-	"routes/trips/",
-	"routes/verify-email/"
+	"routes/trips/"
 ]

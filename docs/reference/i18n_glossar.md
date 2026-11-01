@@ -100,6 +100,14 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | E-Mail | Email |
 | Hilfe | Help |
 | Testmail | Test email |
+| Konto erstellen | Create account |
+| Anmeldelink | sign-in link |
+| E-Mail-Code | email code |
+| Bestätigungslink | confirmation link |
+| Bestätigungsmail | confirmation email |
+| Einladung | invitation |
+| Reset-Link | reset link |
+| Datenschutz | Privacy policy |
 
 ## Zeit und Format (ADR-0104 Nr. 6)
 
