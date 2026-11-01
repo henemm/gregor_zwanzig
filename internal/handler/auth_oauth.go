@@ -41,13 +41,13 @@ func buildGoogleOAuthConfigWithEndpoint(cfg *config.Config, endpoint oauth2.Endp
 func GoogleOAuthInitHandler(cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if cfg.GoogleClientID == "" {
-			http.Error(w, `{"error":"google_oauth_not_configured"}`, http.StatusNotImplemented)
+			WriteError(w, r, http.StatusNotImplemented, "google_oauth_not_configured", nil)
 			return
 		}
 
 		stateBytes := make([]byte, 16)
 		if _, err := rand.Read(stateBytes); err != nil {
-			http.Error(w, `{"error":"internal_error"}`, http.StatusInternalServerError)
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 		state := hex.EncodeToString(stateBytes)
@@ -83,7 +83,7 @@ func GoogleOAuthCallbackHandlerWithEndpoints(cfg *config.Config, s *store.Store,
 func googleOAuthCallbackHandlerInternal(cfg *config.Config, s *store.Store, userinfoURL string, endpoint oauth2.Endpoint) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if cfg.GoogleClientID == "" {
-			http.Error(w, `{"error":"google_oauth_not_configured"}`, http.StatusNotImplemented)
+			WriteError(w, r, http.StatusNotImplemented, "google_oauth_not_configured", nil)
 			return
 		}
 

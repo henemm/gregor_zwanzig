@@ -45,7 +45,7 @@ export const actions = {
 				});
 			}
 			const msg =
-				body.error === 'token expired'
+				body.code === 'token_expired'
 					? 'Der Bestätigungslink ist abgelaufen. Bitte ändere deine Adresse erneut, um einen neuen Link zu erhalten.'
 					: 'Der Bestätigungslink ist ungültig oder wurde bereits verwendet.';
 			return fail(400, { error: msg, user, token });

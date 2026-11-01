@@ -1,1 +1,16 @@
-{}
+{
+  "konto.fehler.already_current_tier": "Du hast dieses Level bereits.",
+  "konto.fehler.cannot_disable_self": "Du kannst dein eigenes Konto nicht sperren.",
+  "konto.fehler.code_expired": "Der Code ist abgelaufen. Fordere einen neuen Code an.",
+  "konto.fehler.invalid_code": "Der Code ist ungültig.",
+  "konto.fehler.invalid_display_name": "Der Anzeigename ist ungültig (höchstens 50 Zeichen, keine Steuerzeichen).",
+  "konto.fehler.invalid_language": "Die Sprache ist ungültig. Erlaubt sind de und en.",
+  "konto.fehler.invalid_sms_number": "Die SMS-Nummer ist ungültig. Bitte im Format +491701234567 angeben.",
+  "konto.fehler.invalid_tier": "Das gewünschte Level ist ungültig.",
+  "konto.fehler.invite_used": "Die Einladung wurde bereits verwendet.",
+  "konto.fehler.mail_failed": "Die E-Mail konnte nicht versendet werden.",
+  "konto.fehler.no_number": "Für dieses Konto ist keine SMS-Nummer hinterlegt.",
+  "konto.fehler.note_too_long": "Die Notiz ist zu lang.",
+  "konto.fehler.sms_not_allowed": "Für dieses Konto ist keine SMS-Bestätigung möglich.",
+  "konto.fehler.wrong_password": "Das Passwort ist falsch."
+}

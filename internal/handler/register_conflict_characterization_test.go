@@ -44,8 +44,8 @@ func TestRegisterKonto_VergebenerNameUndEmail_409Unveraendert_AC1(t *testing.T) 
 		body     string
 		wantBody string
 	}{
-		{"Name vergeben", `{"username":"vergeben","password":"geheim123","email":"neu@example.com"}`, `{"error":"user already exists"}`},
-		{"E-Mail vergeben", `{"username":"neuername","password":"geheim123","email":"belegt@example.com"}`, `{"error":"email_taken"}`},
+		{"Name vergeben", `{"username":"vergeben","password":"geheim123","email":"neu@example.com"}`, "{\"code\":\"user_already_exists\",\"detail\":\"Dieser Benutzername ist bereits vergeben.\",\"error\":\"user_already_exists\",\"message\":\"Dieser Benutzername ist bereits vergeben.\"}\n"},
+		{"E-Mail vergeben", `{"username":"neuername","password":"geheim123","email":"belegt@example.com"}`, "{\"code\":\"email_taken\",\"detail\":\"Diese E-Mail-Adresse wird bereits verwendet.\",\"error\":\"email_taken\",\"message\":\"Diese E-Mail-Adresse wird bereits verwendet.\"}\n"},
 	}
 	for _, f := range faelle {
 		f := f
@@ -78,8 +78,8 @@ func TestRegisterPasskeyBegin_VergebenerNameUndEmail_409Unveraendert_AC1(t *test
 		body     string
 		wantBody string
 	}{
-		{"Name vergeben", `{"username":"vergeben","email":"neu@example.com"}`, "{\"error\":\"user_already_exists\"}\n"},
-		{"E-Mail vergeben", `{"username":"neuername","email":"belegt@example.com"}`, "{\"error\":\"email_taken\"}\n"},
+		{"Name vergeben", `{"username":"vergeben","email":"neu@example.com"}`, "{\"code\":\"user_already_exists\",\"detail\":\"Dieser Benutzername ist bereits vergeben.\",\"error\":\"user_already_exists\",\"message\":\"Dieser Benutzername ist bereits vergeben.\"}\n"},
+		{"E-Mail vergeben", `{"username":"neuername","email":"belegt@example.com"}`, "{\"code\":\"email_taken\",\"detail\":\"Diese E-Mail-Adresse wird bereits verwendet.\",\"error\":\"email_taken\",\"message\":\"Diese E-Mail-Adresse wird bereits verwendet.\"}\n"},
 	}
 	for _, f := range faelle {
 		f := f

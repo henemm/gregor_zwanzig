@@ -203,8 +203,8 @@ func TestRegistrierungKennungskonfliktHatVorrangVorAdresskonflikt_AC4(t *testing
 	if w.Code != http.StatusConflict {
 		t.Fatalf("AC-4: erwartet 409, bekommen %d: %s", w.Code, w.Body.String())
 	}
-	if !strings.Contains(w.Body.String(), "user already exists") {
-		t.Errorf("AC-4: erwartet Kennungs-Konflikt (user already exists), bekommen: %s", w.Body.String())
+	if !strings.Contains(w.Body.String(), "user_already_exists") {
+		t.Errorf("AC-4: erwartet Kennungs-Konflikt (user_already_exists), bekommen: %s", w.Body.String())
 	}
 	if strings.Contains(w.Body.String(), "email_taken") {
 		t.Errorf("AC-4: darf NICHT email_taken melden, bekommen: %s", w.Body.String())

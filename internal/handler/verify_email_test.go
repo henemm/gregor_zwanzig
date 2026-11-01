@@ -121,7 +121,7 @@ func TestVerifyEmailHandler_ValidToken_VerifiesAndDeletesToken_AC1(t *testing.T)
 	}
 }
 
-// AC-2: abgelaufener Token → 400 token expired, EmailVerifiedAt bleibt nil, Token bleibt.
+// AC-2: abgelaufener Token → 400 token_expired, EmailVerifiedAt bleibt nil, Token bleibt.
 func TestVerifyEmailHandler_ExpiredToken_Returns400AndKeepsState_AC2(t *testing.T) {
 	s := newTestStore(t)
 	seedVerifyEmailUser(t, s, "bea")
@@ -133,8 +133,8 @@ func TestVerifyEmailHandler_ExpiredToken_Returns400AndKeepsState_AC2(t *testing.
 	if w.Code != 400 {
 		t.Fatalf("AC-2: expected 400, got %d", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "token expired") {
-		t.Errorf("AC-2: expected 'token expired' error, got %s", w.Body.String())
+	if !strings.Contains(w.Body.String(), "token_expired") {
+		t.Errorf("AC-2: expected 'token_expired' error, got %s", w.Body.String())
 	}
 	user, _ := s.LoadUser("bea")
 	if user.EmailVerifiedAt != nil {
@@ -146,7 +146,7 @@ func TestVerifyEmailHandler_ExpiredToken_Returns400AndKeepsState_AC2(t *testing.
 	}
 }
 
-// AC-3: falscher Klartext-Token → 400 invalid token, keine Zustandsänderung.
+// AC-3: falscher Klartext-Token → 400 invalid_token, keine Zustandsänderung.
 func TestVerifyEmailHandler_WrongToken_Returns400AndKeepsState_AC3(t *testing.T) {
 	s := newTestStore(t)
 	seedVerifyEmailUser(t, s, "carl")
@@ -158,8 +158,8 @@ func TestVerifyEmailHandler_WrongToken_Returns400AndKeepsState_AC3(t *testing.T)
 	if w.Code != 400 {
 		t.Fatalf("AC-3: expected 400, got %d", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "invalid token") {
-		t.Errorf("AC-3: expected 'invalid token' error, got %s", w.Body.String())
+	if !strings.Contains(w.Body.String(), "invalid_token") {
+		t.Errorf("AC-3: expected 'invalid_token' error, got %s", w.Body.String())
 	}
 	user, _ := s.LoadUser("carl")
 	if user.EmailVerifiedAt != nil {
@@ -171,7 +171,7 @@ func TestVerifyEmailHandler_WrongToken_Returns400AndKeepsState_AC3(t *testing.T)
 	}
 }
 
-// AC-4: kein Token für user → 400 invalid token.
+// AC-4: kein Token für user → 400 invalid_token.
 func TestVerifyEmailHandler_NoTokenExists_Returns400_AC4(t *testing.T) {
 	s := newTestStore(t)
 	seedVerifyEmailUser(t, s, "dana")
@@ -182,8 +182,8 @@ func TestVerifyEmailHandler_NoTokenExists_Returns400_AC4(t *testing.T) {
 	if w.Code != 400 {
 		t.Fatalf("AC-4: expected 400, got %d", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "invalid token") {
-		t.Errorf("AC-4: expected 'invalid token' error, got %s", w.Body.String())
+	if !strings.Contains(w.Body.String(), "invalid_token") {
+		t.Errorf("AC-4: expected 'invalid_token' error, got %s", w.Body.String())
 	}
 }
 
@@ -250,7 +250,7 @@ func TestVerifyEmailHandler_PublicRoute_NotBlockedByAuthMiddleware_AC7(t *testin
 	}
 }
 
-// AC-8: leerer Body / fehlendes Feld → 400 invalid request, ohne Store-Zugriff.
+// AC-8: leerer Body / fehlendes Feld → 400 invalid_request, ohne Store-Zugriff.
 func TestVerifyEmailHandler_EmptyOrIncompleteBody_Returns400_AC8(t *testing.T) {
 	s := newTestStore(t)
 	h := VerifyEmailHandler(s)
@@ -260,8 +260,8 @@ func TestVerifyEmailHandler_EmptyOrIncompleteBody_Returns400_AC8(t *testing.T) {
 		if w.Code != 400 {
 			t.Errorf("AC-8: body %q expected 400, got %d", body, w.Code)
 		}
-		if !strings.Contains(w.Body.String(), "invalid request") {
-			t.Errorf("AC-8: body %q expected 'invalid request' error, got %s", body, w.Body.String())
+		if !strings.Contains(w.Body.String(), "invalid_request") {
+			t.Errorf("AC-8: body %q expected 'invalid_request' error, got %s", body, w.Body.String())
 		}
 	}
 }

@@ -10,5 +10,8 @@
   "fehler.kind_required": "Briefing kind is missing or invalid (allowed: route, vergleich)",
   "fehler.rate_limit_exceeded": "Too many requests. Please try again later.",
   "fehler.service_unavailable": "The service is currently unavailable.",
-  "fehler.unbekannt": "Unknown error ({code})."
+  "fehler.unbekannt": "Unknown error ({code}).",
+  "fehler.core_unavailable": "The core service is not reachable right now. Please try again later.",
+  "fehler.nothing_to_set": "No fields to set were given.",
+  "fehler.proxy_error": "The service did not respond. Please try again later."
 }

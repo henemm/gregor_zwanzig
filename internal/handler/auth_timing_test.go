@@ -64,7 +64,7 @@ func timedRun(h http.Handler, path, body string) (*httptest.ResponseRecorder, ti
 // Code (origin/main 7b8a62fb7). Body ohne abschliessenden Zeilenumbruch
 // (auth.go schreibt per w.Write, nicht per json.Encoder).
 const (
-	wantLoginRejectBody  = `{"error":"invalid credentials"}`
+	wantLoginRejectBody  = `{"code":"invalid_credentials","detail":"Benutzername oder Passwort ist falsch.","error":"invalid_credentials","message":"Benutzername oder Passwort ist falsch."}` + "\n"
 	wantForgotNeutralBod = `{"status":"ok"}`
 )
 

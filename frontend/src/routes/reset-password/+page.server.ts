@@ -34,7 +34,7 @@ export const actions = {
 
 		if (!resp.ok) {
 			const body = await resp.json().catch(() => ({}));
-			const msg = body.error === 'token expired' ? 'Token abgelaufen' : 'Ungültiger Token';
+			const msg = body.code === 'token_expired' ? 'Token abgelaufen' : 'Ungültiger Token';
 			return fail(400, { error: msg, username, token });
 		}
 

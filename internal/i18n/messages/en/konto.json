@@ -1,1 +1,16 @@
-{}
+{
+  "konto.fehler.already_current_tier": "You already have this level.",
+  "konto.fehler.cannot_disable_self": "You cannot disable your own account.",
+  "konto.fehler.code_expired": "The code has expired. Request a new code.",
+  "konto.fehler.invalid_code": "The code is invalid.",
+  "konto.fehler.invalid_display_name": "The display name is invalid (at most 50 characters, no control characters).",
+  "konto.fehler.invalid_language": "The language is invalid. Allowed values are de and en.",
+  "konto.fehler.invalid_sms_number": "The SMS number is invalid. Please use the format +491701234567.",
+  "konto.fehler.invalid_tier": "The requested level is invalid.",
+  "konto.fehler.invite_used": "The invitation has already been used.",
+  "konto.fehler.mail_failed": "The email could not be sent.",
+  "konto.fehler.no_number": "No SMS number is set for this account.",
+  "konto.fehler.note_too_long": "The note is too long.",
+  "konto.fehler.sms_not_allowed": "SMS verification is not possible for this account.",
+  "konto.fehler.wrong_password": "The password is incorrect."
+}

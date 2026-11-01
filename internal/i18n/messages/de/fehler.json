@@ -10,5 +10,8 @@
   "fehler.kind_required": "Briefing-Art fehlt oder ist ungültig (erlaubt: route, vergleich)",
   "fehler.rate_limit_exceeded": "Zu viele Anfragen. Bitte versuche es später erneut.",
   "fehler.service_unavailable": "Der Dienst ist gerade nicht verfügbar.",
-  "fehler.unbekannt": "Unbekannter Fehler ({code})."
+  "fehler.unbekannt": "Unbekannter Fehler ({code}).",
+  "fehler.core_unavailable": "Der Kern-Dienst ist gerade nicht erreichbar. Bitte versuche es später erneut.",
+  "fehler.nothing_to_set": "Es wurden keine Felder zum Setzen angegeben.",
+  "fehler.proxy_error": "Der Dienst antwortet nicht. Bitte versuche es später erneut."
 }

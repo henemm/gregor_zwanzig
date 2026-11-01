@@ -39,13 +39,6 @@ const challengeTTL = 5 * time.Minute
 // buffer while preventing memory-exhaustion via oversized POSTs (F004).
 const maxWebAuthnBodyBytes = 64 * 1024
 
-// writeJSONError writes a JSON error body `{"error":"<code>"}` with the given status.
-func writeJSONError(w http.ResponseWriter, status int, code string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]string{"error": code})
-}
-
 // PasskeyRegisterBeginHandler starts a new WebAuthn registration ceremony for
 // the currently-authenticated user. The challenge is persisted in the
 // challenge store for 5 minutes; the client must POST the resulting
@@ -54,18 +47,18 @@ func PasskeyRegisterBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Chal
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
-			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 		user, err := s.LoadUser(userID)
 		if err != nil || user == nil {
-			writeJSONError(w, http.StatusNotFound, "not_found")
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
 		creation, sessionData, err := wa.BeginRegistration(user)
 		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "webauthn_begin_failed")
+			WriteError(w, r, http.StatusInternalServerError, "webauthn_begin_failed", nil)
 			return
 		}
 
@@ -88,7 +81,7 @@ func PasskeyRegisterFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Cha
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
-			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 
@@ -99,7 +92,7 @@ func PasskeyRegisterFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Cha
 		// label and feed it to the WebAuthn parser.
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid_body")
+			WriteError(w, r, http.StatusBadRequest, "invalid_body", nil)
 			return
 		}
 
@@ -110,30 +103,30 @@ func PasskeyRegisterFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Cha
 
 		parsedResponse, err := protocol.ParseCredentialCreationResponseBody(bytes.NewReader(bodyBytes))
 		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "attestation_invalid")
+			WriteError(w, r, http.StatusBadRequest, "attestation_invalid", nil)
 			return
 		}
 
 		challenge := parsedResponse.Response.CollectedClientData.Challenge
 		entry, ok := cs.Take(challenge)
 		if !ok {
-			writeJSONError(w, http.StatusBadRequest, "challenge_expired_or_missing")
+			WriteError(w, r, http.StatusBadRequest, "challenge_expired_or_missing", nil)
 			return
 		}
 		if entry.UserID != userID {
-			writeJSONError(w, http.StatusBadRequest, "user_mismatch")
+			WriteError(w, r, http.StatusBadRequest, "user_mismatch", nil)
 			return
 		}
 
 		user, err := s.LoadUser(userID)
 		if err != nil || user == nil {
-			writeJSONError(w, http.StatusNotFound, "not_found")
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
 		credential, err := wa.CreateCredential(user, entry.SessionData, parsedResponse)
 		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "attestation_invalid")
+			WriteError(w, r, http.StatusBadRequest, "attestation_invalid", nil)
 			return
 		}
 
@@ -150,7 +143,7 @@ func PasskeyRegisterFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Cha
 		user.PasskeyCredentials = append(user.PasskeyCredentials, newCred)
 
 		if err := s.SaveUser(*user); err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "store_error")
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -174,19 +167,19 @@ func PasskeyLoginBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challen
 			Username string `json:"username"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Username == "" {
-			writeJSONError(w, http.StatusBadRequest, "invalid_request")
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
 		user, err := s.LoadUser(req.Username)
 		if err != nil || user == nil || len(user.PasskeyCredentials) == 0 {
-			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
 		assertion, sessionData, err := wa.BeginLogin(user)
 		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "webauthn_begin_failed")
+			WriteError(w, r, http.StatusInternalServerError, "webauthn_begin_failed", nil)
 			return
 		}
 
@@ -212,7 +205,7 @@ func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challe
 
 		parsedResponse, err := protocol.ParseCredentialRequestResponseBody(r.Body)
 		if err != nil {
-			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
@@ -225,19 +218,19 @@ func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challe
 		challenge := parsedResponse.Response.CollectedClientData.Challenge
 		entry, ok := cs.Take(challenge)
 		if !ok {
-			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
 		user, err := s.LoadUser(entry.UserID)
 		if err != nil || user == nil {
-			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
 		credential, err := wa.ValidateLogin(user, entry.SessionData, parsedResponse)
 		if err != nil {
-			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
@@ -252,7 +245,7 @@ func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challe
 			}
 		}
 		if err := s.SaveUser(*user); err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "store_error")
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -275,7 +268,7 @@ func PasskeyLoginDiscoverableBeginHandler(wa *webauthn.WebAuthn, cs *ChallengeSt
 		// top-level JSON — required for the browser to render the inline picker.
 		assertion, sessionData, err := wa.BeginDiscoverableMediatedLogin(protocol.MediationConditional)
 		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "begin_failed")
+			WriteError(w, r, http.StatusInternalServerError, "begin_failed", nil)
 			return
 		}
 
@@ -306,7 +299,7 @@ func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn
 
 		parsedResponse, err := protocol.ParseCredentialRequestResponseBody(r.Body)
 		if err != nil {
-			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
@@ -316,7 +309,7 @@ func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn
 		challenge := parsedResponse.Response.CollectedClientData.Challenge
 		entry, ok := cs.Take(challenge)
 		if !ok {
-			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
@@ -331,13 +324,13 @@ func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn
 
 		user, credential, err := wa.ValidatePasskeyLogin(discoverableHandler, entry.SessionData, parsedResponse)
 		if err != nil || user == nil || credential == nil {
-			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
 		mu, ok := user.(*model.User)
 		if !ok {
-			writeJSONError(w, http.StatusUnauthorized, "invalid_credentials")
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
@@ -352,7 +345,7 @@ func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn
 			}
 		}
 		if err := s.SaveUser(*mu); err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "store_error")
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -374,7 +367,7 @@ func PasskeyDeleteCredentialHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
-			writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 
@@ -386,25 +379,25 @@ func PasskeyDeleteCredentialHandler(s *store.Store) http.HandlerFunc {
 			credIDB64 = lastPathSegment(r.URL.Path)
 		}
 		if credIDB64 == "" {
-			writeJSONError(w, http.StatusBadRequest, "missing_credential_id")
+			WriteError(w, r, http.StatusBadRequest, "missing_credential_id", nil)
 			return
 		}
 		credID, err := base64.RawURLEncoding.DecodeString(credIDB64)
 		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid_credential_id")
+			WriteError(w, r, http.StatusBadRequest, "invalid_credential_id", nil)
 			return
 		}
 
 		user, err := s.LoadUser(userID)
 		if err != nil || user == nil {
-			writeJSONError(w, http.StatusNotFound, "not_found")
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
 		// Lock-out protection: refuse to delete the last passkey of a
 		// password-less user (defensive — V1 always has a PasswordHash).
 		if user.PasswordHash == "" && len(user.PasskeyCredentials) <= 1 {
-			writeJSONError(w, http.StatusBadRequest, "cannot_remove_last_passkey_without_password")
+			WriteError(w, r, http.StatusBadRequest, "cannot_remove_last_passkey_without_password", nil)
 			return
 		}
 
@@ -417,7 +410,7 @@ func PasskeyDeleteCredentialHandler(s *store.Store) http.HandlerFunc {
 		user.PasskeyCredentials = filtered
 
 		if err := s.SaveUser(*user); err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "store_error")
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -459,20 +452,20 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 			Email    string `json:"email"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid_request")
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 		if len(req.Username) < 3 || len(req.Username) > 50 || !validUsernameRe.MatchString(req.Username) {
-			writeJSONError(w, http.StatusBadRequest, "validation_failed")
+			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 			return
 		}
 		if !strings.Contains(req.Email, "@") {
-			writeJSONError(w, http.StatusBadRequest, "validation_failed")
+			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 			return
 		}
 		if s.UserExists(req.Username) {
 			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
-			writeJSONError(w, http.StatusConflict, "user_already_exists")
+			WriteError(w, r, http.StatusConflict, "user_already_exists", nil)
 			return
 		}
 
@@ -482,12 +475,12 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 		taken, err := s.IsAddressTakenByOtherAccount(req.Email, "")
 		if err != nil {
 			log.Printf("passkey register public begin: address uniqueness check failed: %v", err)
-			writeJSONError(w, http.StatusInternalServerError, "internal_error")
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 		if taken {
 			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
-			writeJSONError(w, http.StatusConflict, "email_taken")
+			WriteError(w, r, http.StatusConflict, "email_taken", nil)
 			return
 		}
 
@@ -497,7 +490,7 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 		creation, sessionData, err := wa.BeginRegistration(tempUser,
 			webauthn.WithResidentKeyRequirement(protocol.ResidentKeyRequirementRequired))
 		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "webauthn_begin_failed")
+			WriteError(w, r, http.StatusInternalServerError, "webauthn_begin_failed", nil)
 			return
 		}
 
@@ -522,27 +515,27 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "invalid_body")
+			WriteError(w, r, http.StatusBadRequest, "invalid_body", nil)
 			return
 		}
 
 		parsedResponse, err := protocol.ParseCredentialCreationResponseBody(bytes.NewReader(bodyBytes))
 		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "attestation_invalid")
+			WriteError(w, r, http.StatusBadRequest, "attestation_invalid", nil)
 			return
 		}
 
 		challenge := parsedResponse.Response.CollectedClientData.Challenge
 		entry, ok := cs.Take(challenge)
 		if !ok {
-			writeJSONError(w, http.StatusBadRequest, "challenge_expired_or_missing")
+			WriteError(w, r, http.StatusBadRequest, "challenge_expired_or_missing", nil)
 			return
 		}
 
 		// Race protection: username may have been claimed between Begin and Finish.
 		if s.UserExists(entry.UserID) {
 			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
-			writeJSONError(w, http.StatusConflict, "user_already_exists")
+			WriteError(w, r, http.StatusConflict, "user_already_exists", nil)
 			return
 		}
 
@@ -556,19 +549,19 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		taken, err := s.IsAddressTakenByOtherAccount(normalizedEmail, "")
 		if err != nil {
 			log.Printf("passkey register public finish: address uniqueness check failed: %v", err)
-			writeJSONError(w, http.StatusInternalServerError, "internal_error")
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 		if taken {
 			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
-			writeJSONError(w, http.StatusConflict, "email_taken")
+			WriteError(w, r, http.StatusConflict, "email_taken", nil)
 			return
 		}
 
 		tempUser := &model.User{ID: entry.UserID}
 		credential, err := wa.CreateCredential(tempUser, entry.SessionData, parsedResponse)
 		if err != nil {
-			writeJSONError(w, http.StatusBadRequest, "attestation_invalid")
+			WriteError(w, r, http.StatusBadRequest, "attestation_invalid", nil)
 			return
 		}
 
@@ -590,7 +583,7 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		}
 		model.MarkOnboardingPending(&newUser)
 		if err := s.SaveUser(newUser); err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "store_error")
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		s.ProvisionUserDirs(entry.UserID)
