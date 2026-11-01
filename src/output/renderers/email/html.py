@@ -308,160 +308,6 @@ def _render_email_stat(
     )
 
 
-def _render_mobile_hour_list(
-    rows: list[dict],
-    *,
-    friendly_keys: set[str],
-    allowed_col_keys: Optional[set[str]] = None,
-    format_modes: Optional[dict[str, str]] = None,
-    indicator_keys: Optional[set[str]] = None,
-) -> str:
-    """JSX EmailHourList — two-line mobile view per hour (AC-5).
-
-    Hauptzeile: Zeit · Glyph · Temp · gefühlte Temp · Risk-Dot
-    Detailzeile: Wind · Regen · ggf. Gw · Sicht · UV · 0°
-    """
-    if not rows:
-        return ""
-    items = []
-    for i, r in enumerate(rows):
-        time_val = r.get("time", "")
-        temp_raw = r.get("temperature") or r.get("t2m_c") or ""
-        feels_raw = r.get("wind_chill") or r.get("wind_chill_c") or ""
-        wind_raw = r.get("wind") or r.get("wind10m_kmh") or 0
-        gust_raw = r.get("gust") or r.get("gust_kmh") or 0
-        precip_raw = r.get("precipitation") or r.get("precip_1h_mm") or 0
-        rain_pct = r.get("rain_probability") or r.get("pop_pct") or 0
-        thunder_pct = r.get("thunder") or r.get("thunder_pct") or 0
-        vis_raw = r.get("visibility") or r.get("visibility_m") or 0
-        uv_raw = r.get("uv_index") or 0
-        fl_raw = r.get("freezing_level") or r.get("freezing_level_m") or 0
-
-        def _num(v) -> float:
-            if isinstance(v, (int, float)):
-                return float(v)
-            try:
-                return float(str(v).replace(",", ".").strip("°CkmhW%/"))
-            except (ValueError, TypeError):
-                return 0.0
-
-        wind_kmh = _num(wind_raw)
-        gust_kmh = _num(gust_raw)
-        precip_mm = _num(precip_raw)
-        rain_pct_val = _num(rain_pct)
-        vis_raw_num = _num(vis_raw)
-        vis_km = vis_raw_num / 1000 if vis_raw_num > 100 else vis_raw_num
-        thunder_val = _num(thunder_pct)
-
-        wind_high = wind_kmh > 20 or gust_kmh > 30
-        precip_high = precip_mm > 1 or rain_pct_val > 50
-        vis_low = 0 < vis_km < 2
-        has_thunder = thunder_val > 0
-
-        cloud_val = _num(r.get("cloud_cover") or r.get("cloud_total_pct") or 0)
-        if precip_mm > 0.3:
-            glyph, glyph_color = "☂", "#4a7ab8"
-        elif cloud_val > 75:
-            glyph, glyph_color = "☁", "#9a958a"
-        elif cloud_val > 35:
-            glyph, glyph_color = "⛅", "#c4a05a"
-        else:
-            glyph, glyph_color = "☼", "#d99a2a"
-
-        risk_level = str(r.get("risk", "ok")).lower()
-        risk_color = {"ok": "#15803d", "watch": "#c2410c", "risk": "#b91c1c"}.get(
-            risk_level, "#c8c4b8"
-        )
-        row_bg = (
-            "rgba(194,65,12,0.04)" if risk_level == "watch"
-            else "rgba(185,28,28,0.05)" if risk_level == "risk"
-            else "transparent"
-        )
-
-        temp_str = f"{_num(temp_raw):.1f}°" if temp_raw else ""
-        feels_str = f"(gef. {_num(feels_raw):.1f}°)" if feels_raw else ""
-        wind_str = f"{wind_kmh:.0f}/{gust_kmh:.0f}"
-        wind_dir = r.get("wind_direction") or ""
-        precip_str = f"{precip_mm:.1f} mm" if precip_mm > 0 else "–"
-        vis_str = f"{vis_km:.1f} km" if vis_km > 0 else "–"
-        uv_str = f"{_num(uv_raw):.1f}" if uv_raw else "–"
-        fl_num = _num(fl_raw)
-        fl_str = f"{int(fl_num):,}".replace(",", ".") if fl_num else "–"
-
-        wind_color = "#c2410c" if wind_high else "#1d1c1a"
-        wind_weight = "700" if wind_high else "500"
-        precip_color = "#0e6fb8" if precip_high else "#1d1c1a"
-        precip_weight = "700" if precip_high else "500"
-        vis_color = "#c2410c" if vis_low else "#1d1c1a"
-        vis_weight = "700" if vis_low else "500"
-
-        border_bottom = "border-bottom:1px solid #f0ece1;" if i < len(rows) - 1 else ""
-
-        thunder_span = ""
-        if has_thunder:
-            thunder_span = (
-                f'<span>'
-                f'<span style="color:#9a978d;">Gw </span>'
-                f'<span style="color:#b91c1c;font-weight:700;">{thunder_val:.0f}%</span>'
-                f'</span>'
-            )
-
-        wind_dir_span = (
-            f'<span style="color:#9a978d;"> {wind_dir}</span>' if wind_dir else ""
-        )
-
-        items.append(
-            f'<div class="detail-row" style="display:flex;flex-direction:column;gap:4px;'
-            f'padding:10px 12px;{border_bottom}background:{row_bg};">'
-            f'<div style="display:flex;align-items:center;gap:10px;">'
-            f'<span style="font-family:{FONT_DATA};font-size:13px;font-weight:700;'
-            f'color:#1d1c1a;width:26px;">{time_val}</span>'
-            f'<span style="color:{glyph_color};font-size:14px;font-weight:700;'
-            f'width:14px;text-align:center;">{glyph}</span>'
-            f'<span style="font-family:{FONT_DATA};font-size:14px;font-weight:600;'
-            f'color:#1d1c1a;font-variant-numeric:tabular-nums;">{temp_str}</span>'
-            f'<span style="font-family:{FONT_DATA};font-size:11px;color:#9a978d;">{feels_str}</span>'
-            f'<span style="flex:1;"></span>'
-            f'{_risk_dot(risk_color)}'
-            f'</div>'
-            f'<div style="display:flex;flex-wrap:wrap;gap:2px 10px;padding-left:36px;'
-            f'font-family:{FONT_DATA};font-size:11px;color:#6b6962;'
-            f'font-variant-numeric:tabular-nums;">'
-            f'<span>'
-            f'<span style="color:#9a978d;">Wind </span>'
-            f'<span style="color:{wind_color};font-weight:{wind_weight};">{wind_str}</span>'
-            f'{wind_dir_span}'
-            f'</span>'
-            f'<span>'
-            f'<span style="color:#9a978d;">Regen </span>'
-            f'<span style="color:{precip_color};font-weight:{precip_weight};">{precip_str}</span>'
-            f'<span style="color:#9a978d;"> ({int(rain_pct_val)}%)</span>'
-            f'</span>'
-            f'{thunder_span}'
-            f'<span>'
-            f'<span style="color:#9a978d;">Sicht </span>'
-            f'<span style="color:{vis_color};font-weight:{vis_weight};">{vis_str}</span>'
-            f'</span>'
-            f'<span>'
-            f'<span style="color:#9a978d;">UV </span>'
-            f'<span style="color:#1d1c1a;">{uv_str}</span>'
-            f'</span>'
-            f'<span>'
-            f'<span style="color:#9a978d;">0° </span>'
-            f'<span style="color:#1d1c1a;">{fl_str} m</span>'
-            f'</span>'
-            f'</div>'
-            f'</div>'
-        )
-
-    return (
-        '<div class="mobile-hour-list" style="margin-top:12px;'
-        'border:1px solid #e6e1d3;background:#fff;">'
-        + "".join(items)
-        + "</div>"
-    )
-
-
 def _render_footer(
     *,
     segments: list,
@@ -668,6 +514,10 @@ def _render_html_table(
     cols = visible_cols(rows)
     if allowed_col_keys is not None:
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
+        if not cols:
+            # #2210 C3-41: abgewaehlt heisst abgewaehlt (#1405 S3), wie
+            # _render_mobile_compact_rows -- kein leeres Time/Risk-Geruest.
+            return ""
     # AC-3 (#911): Spalten in konfigurierter Metrik-Reihenfolge (col_order aus dc.metrics).
     # Zeit/Temp-Leitspalten bleiben vorn; col_order definiert nur die Metrik-Spalten-Reihenfolge.
     if col_order:

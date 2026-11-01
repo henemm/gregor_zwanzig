@@ -493,3 +493,4 @@ vollständig — B1 kann seinen Teil der Golden-Diffs bereits isoliert zeigen.
   Punkt 1 (Zell-Tönung) und Punkt 2 (`_row_risk`) sowie „Known Limitations"
   entsprechend nachgezogen. Details:
   `docs/specs/modules/fix_1418_gewitter_risikopunkt.md`
+- 2026-11-01: `_render_mobile_hour_list` (html.py) war toter Code ohne Aufrufer; Funktion mit #2210 zurückgebaut (Spec `fix_2210_mail_renderfehler.md`). Der historische Text oben bleibt unverändert.

@@ -1530,7 +1530,13 @@ def format_temp_span(min_v: float, max_v: float, *, decimals: int) -> str:
     Rundung) faellt auf den Einzelwert zusammen.
     """
     lo, hi = f"{min_v:.{decimals}f}", f"{max_v:.{decimals}f}"
-    return f"{lo}°C" if lo == hi else f"{lo}–{hi}°C"
+    if lo == hi:
+        return f"{lo}°C"
+    # #2210 C2-79: bei negativem ANGEZEIGTEM Wert "bis" statt Gedankenstrich,
+    # sonst laufen "–" und "-" zusammen ("-12–-4°C"). "-0" zaehlt nicht.
+    if any(v.startswith("-") and v.strip("-0.") for v in (lo, hi)):
+        return f"{lo} bis {hi}°C"
+    return f"{lo}–{hi}°C"
 
 
 def _aggregation_pill_text(

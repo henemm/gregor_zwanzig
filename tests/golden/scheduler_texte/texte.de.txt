@@ -109,7 +109,7 @@ de
 ----- vergleich.mail -----
 ORTS-VERGLEICH
 ========================
-Datum: Thursday, 29.10.2026
+Datum: Donnerstag, 29.10.2026
 Erstellt: 29.10.2026 05:00 (CET)
 
 --------------------------------------------------
@@ -238,7 +238,7 @@ de
 ----- vergleich_kurzform.mail -----
 ORTS-VERGLEICH
 ========================
-Datum: Thursday, 29.10.2026
+Datum: Donnerstag, 29.10.2026
 Erstellt: 29.10.2026 05:00 (CET)
 ----- vergleich_kurzform.telegram -----
 Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2

@@ -179,3 +179,4 @@ SMS/Telegram/Premium-SMS PR-Token (builder.py + metrics.py):
   `_render_mobile_compact_rows`/`fmt_val`-Pipeline ist bereits None-sicher. Spec behandelt jetzt
   ausschließlich den `PR`-Token (SMS/Telegram/Premium-SMS), einzige verbliebene AC neu als AC-1
   nummeriert, Scope-Schätzung entsprechend deutlich reduziert.
+- 2026-11-01: `_render_mobile_hour_list` (html.py) war toter Code ohne Aufrufer; Funktion mit #2210 zurückgebaut (Spec `fix_2210_mail_renderfehler.md`). Der historische Text oben bleibt unverändert.

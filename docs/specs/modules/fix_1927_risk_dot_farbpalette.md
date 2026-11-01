@@ -191,3 +191,4 @@ explizit bei der Spec-Freigabe** (ggf. Korrektur auf `yellow`, falls gewünscht)
 ## Changelog
 
 - 2026-08-17: Initial spec created (Issue #1927)
+- 2026-11-01: `_render_mobile_hour_list` (html.py) war toter Code ohne Aufrufer; Funktion mit #2210 zurückgebaut (Spec `fix_2210_mail_renderfehler.md`). Der historische Text oben bleibt unverändert.
