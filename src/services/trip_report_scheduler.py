@@ -49,7 +49,7 @@ from services.alert_briefing_anchor import (
 from services.alert_check_state import report_unit_failure
 from services.briefing_slots import BriefingSlotStore
 from services.day_comparison import DayComparison
-from services.notification_service import NotificationService, TripReportRequest
+from services.notification_service import NotificationService, TripReportRequest, abschnitt_id
 from services.user_tier import (
     premium_sms_allowed, resolve_restricted_channel_flags, sms_allowed,
 )
@@ -414,13 +414,6 @@ def _trend_note(
     if wind_kmh > 40:
         notes.append(t("versand.scheduler.trend_boeen", lang, kmh=wind_kmh))
     return " · ".join(notes) if notes else None
-
-
-def _abschnitt_id(segment_data, lang: Lang) -> str:
-    """Kennung eines Abschnitts im Teilausfall-Hinweis; das Ziel-Segment
-    (``"Ziel"``) heisst in ``lang`` wie im Alarm (Issue #2672)."""
-    seg_id = str(segment_data.segment.segment_id)
-    return t("alarm.segment.ziel", lang) if seg_id == "Ziel" else seg_id
 
 
 def _night_thunder_hours(night_weather, fc_date: date, to_local):
@@ -1757,7 +1750,7 @@ class TripReportSchedulerService:
         elif error_segments:
             # Teilausfall unterhalb der Schwelle: Hinweis statt Rückhalten.
             missing = ", ".join(
-                t("versand.scheduler.abschnitt", self._lang, id=_abschnitt_id(s, self._lang))
+                t("versand.scheduler.abschnitt", self._lang, id=abschnitt_id(s, self._lang))
                 for s in error_segments
             )
             partial_outage_hint = t(

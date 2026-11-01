@@ -93,6 +93,19 @@ def test_servicefehler_mail_rumpf_betreff_und_kopf_in_einer_sprache(rig, monkeyp
     for key in ("titel", "problem", "segmente", "grund", "fusszeile"):
         assert t(f"versand.servicefehler.{key}", "en") in _html_text(roh)
     assert "Wetterdaten" not in _html_text(roh)
+    # F001: das ausgefallene Ziel-Segment heisst wie im Teilausfall-Hinweis.
+    ziel = t("versand.scheduler.abschnitt", "en", id=t("alarm.segment.ziel", "en"))
+    assert f"  - {ziel}: " in _html_text(roh)
+    assert "Segment Ziel" not in _html_text(roh)
+
+
+def test_servicefehler_mail_ziel_segment_deutsch_unveraendert(rig, monkeypatch, tmp_path):
+    """Gegenprobe zu F001: deutsch bleibt die Zeile ``  - Segment Ziel: …``."""
+    with freeze_time(fx.JETZT):
+        fx.nutzer_anlegen("golden-de", "de")
+        s = fx.servicefehler(rig, monkeypatch, tmp_path, "golden-de")
+    roh = next(r for r in s["roh"] if "Wetterdaten nicht verfuegbar" in r)
+    assert "  - Segment Ziel: " in _html_text(roh)
 
 
 def _html_text(roh: str) -> str:

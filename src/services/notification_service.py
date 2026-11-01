@@ -326,6 +326,14 @@ class RadarAlertRequest:
     segment_date: date | None = None
 
 
+def abschnitt_id(segment_data, lang: Lang) -> str:
+    """Kennung eines Abschnitts in Nutzertexten (Teilausfall-Hinweis,
+    Service-Fehler-Mail); das Ziel-Segment (``"Ziel"``) heisst in ``lang`` wie
+    im Alarm (Issue #2672)."""
+    seg_id = str(segment_data.segment.segment_id)
+    return t("alarm.segment.ziel", lang) if seg_id == "Ziel" else seg_id
+
+
 def build_service_error_email_html(
     trip_name: str, report_type: str, error_lines: str, *, lang: Lang = "de",
 ) -> str:
@@ -2478,7 +2486,8 @@ class NotificationService:
         if not is_sms_only or not self._settings.can_send_email():
             return True
         error_lines = "\n".join(
-            f"  - Segment {e.segment.segment_id}: {e.error_message}"
+            "  - " + t("versand.scheduler.abschnitt", self._lang, id=abschnitt_id(e, self._lang))
+            + f": {e.error_message}"
             for e in request.failed_segments
             if e.segment is not None
         )
