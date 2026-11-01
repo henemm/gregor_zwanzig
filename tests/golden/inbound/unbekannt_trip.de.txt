@@ -1,0 +1,5 @@
+[Unbekannter Befehl]
+
+Befehlsformat: ### key: value
+Verfügbar: HEUTE, MORGEN, JETZT, GEWITTER, STRECKE, RUHETAG, STATUS, PAUSE, SKIP, STOP, WEITER, HILFE, KUERZEL, STARTDATUM, REPORT
+Wetter-Größen im Stundenverlauf: Kürzel senden (HILFE zeigt alle).

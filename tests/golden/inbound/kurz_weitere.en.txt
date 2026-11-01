@@ -1,0 +1,170 @@
+----- unbekannt_schluessel -----
+[[Golden Trip] Unknown command]
+
+Unknown command.
+Commands: TODAY, TOMORROW, NOW, STORMS, ROUTE, RESTDAY, STATUS, PAUSE, SKIP, STOP, RESUME, HELP, CODES, STARTDATE, REPORT
+Weather codes: send a code (CODES lists them).
+----- morgen -----
+[[Golden Trip] Tomorrow]
+
+Tomorrow (30.10.2026): no stage planned
+----- glance -----
+[[Golden Trip] Glance]
+
+Glance - today & tomorrow
+
+today (29.10): T 12/12C, wind 18 km/h, rain 7.2mm, storms mid
+tomorrow (30.10): no stage planned.
+----- gewitter -----
+[[Golden Trip] Storms today]
+
+Storm risk today (29.10): mid
+----- metrik_temp -----
+[[Golden Trip] T]
+
+T 12@5-16
+----- metrik_uv -----
+[[Golden Trip] UV]
+
+UV no data
+----- stunden -----
+[[Golden Trip] Hours Today]
+
+📅 Hours · Today (29.10)
+
+05  12°C    18km/h   0.4mm  mid
+06  12°C    18km/h   0.4mm  mid
+07  12°C    18km/h   0.4mm  mid
+08  12°C    18km/h   0.4mm  mid
+09  12°C    18km/h   0.4mm  mid
+10  12°C    18km/h   0.4mm  mid
+11  12°C    18km/h   0.4mm  mid
+12  12°C    18km/h   0.4mm  mid
+13  12°C    18km/h   0.4mm  mid
+14  12°C    18km/h   0.4mm  mid
+15  12°C    18km/h   0.4mm  mid
+16  12°C    18km/h   0.4mm  mid
+----- report_typ -----
+[[Golden Trip] Ungueltiger Report-Typ]
+
+Report-Typ 'abends' unbekannt. Erlaubt: morning, evening
+----- hilfe_vergleich -----
+[Help]
+
+Commands (German works too):
+TODAY - today
+TOMORROW - tomorrow
+PAUSE - no briefings until RESUME
+RESUME - restart briefings
+CODES - code meanings
+REPORT - all
+----- vergleich_status -----
+[[Golden Vergleich] Command not available]
+
+'status' is not available for location comparisons.
+----- vergleich_pause -----
+[[Golden Vergleich] Comparison paused]
+
+Comparison 'Golden Vergleich' paused until you send RESUME. A given duration is ignored.
+----- vergleich_weiter -----
+[[Golden Vergleich] Comparison resumed]
+
+Comparison 'Golden Vergleich' active again.
+----- pause_ungueltig -----
+[[Golden Trip] PAUSE: Ungültige Dauer]
+
+'xx' ist keine gültige Dauer.
+Beispiele: PAUSE 2d (2 Tage) oder PAUSE 12h (12 Stunden).
+----- pause_null -----
+[[Golden Trip] PAUSE: Dauer muss > 0 sein]
+
+Die Pause-Dauer muss größer als 0 sein.
+Beispiele: PAUSE 2d (2 Tage) oder PAUSE 12h (12 Stunden).
+----- skip -----
+[[Golden Trip] Next briefing skipped]
+
+The next briefing for 'Golden Trip' will be skipped.
+After that the schedule runs as usual.
+----- tg_hilfe -----
+[Help]
+
+Commands (German works too):
+TODAY - today's stage weather
+TOMORROW - tomorrow's stage weather
+NOW - rain/storm next 2h
+STORMS - storm risk today
+ROUTE km - rain areas ahead
+RESTDAY n - shift stages n days
+STATUS - today + next stages
+PAUSE 2D - no briefings 2 days/12H
+SKIP - skip next briefing
+STOP - end briefings
+RESUME - restart briefings
+CODES - code meanings
+STARTDATE date - move start
+REPORT evening - send now
+Send a code (e.g. R) for its values.
+----- tg_status -----
+[[Golden Trip] Status]
+
+Status: Golden Trip
+
+  29.10.2026 - Stage 2: Stubai - Neustift
+  31.10.2026 - Stage 3: Neustift - Elfer
+----- tg_timeline -----
+[[Golden Trip] Timeline today]
+
+📋 Timeline · Today (29.10)
+
+🕐 23:59 · 900 m
+   🌡 12–12 °C  💨 18 km/h  🌧 7.2 mm  ⛈ mid
+----- tg_stunden -----
+[[Golden Trip] Hours Today]
+
+📅 Hours · Today (29.10)
+
+05  12°C    18km/h   0.4mm  mid
+06  12°C    18km/h   0.4mm  mid
+07  12°C    18km/h   0.4mm  mid
+08  12°C    18km/h   0.4mm  mid
+09  12°C    18km/h   0.4mm  mid
+10  12°C    18km/h   0.4mm  mid
+11  12°C    18km/h   0.4mm  mid
+12  12°C    18km/h   0.4mm  mid
+13  12°C    18km/h   0.4mm  mid
+14  12°C    18km/h   0.4mm  mid
+15  12°C    18km/h   0.4mm  mid
+16  12°C    18km/h   0.4mm  mid
+----- tg_drilldown -----
+[[Golden Trip] TH]
+
+TH M@5-16
+----- tg_unbekannt -----
+[Unknown command]
+
+Unknown command.
+Commands: TODAY, TOMORROW, NOW, STORMS, ROUTE, RESTDAY, STATUS, PAUSE, SKIP, STOP, RESUME, HELP, CODES, STARTDATE, REPORT
+Weather codes: send a code (CODES lists them).
+----- ruhetag -----
+[[Golden Trip] Rest day confirmed]
+
+Rest day added: +1 day.
+
+Shifted stages:
+  Stage 3: Neustift - Elfer: 31.10.2026 -> 01.11.2026
+
+Next briefing comes as scheduled.
+----- startdatum_fehlt -----
+[[Golden Trip] Fehlendes Datum]
+
+Please give a date: STARTDATE YYYY-MM-DD
+----- stop -----
+[[Golden Trip] Trip ended]
+
+Briefings for 'Golden Trip' turned off. Safe trip home!
+----- mehrdeutig -----
+Ambiguous: Golden Trip (Trip), Golden Vergleich (comparison), Zweiter Vergleich (comparison). Reply with name, e.g. 'Golden Trip pause'.
+----- kein_kandidat -----
+No active trip or location comparison found.
+----- kein_aktives -----
+No active trip. This command only works for trips, not for location comparisons.

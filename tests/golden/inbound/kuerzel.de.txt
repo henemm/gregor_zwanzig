@@ -1,0 +1,7 @@
+[Kürzel]
+
+Kürzel
+Wetter: T Temperatur, D Tageshöchstwert, N Nacht, L Tagestiefstwert, TF gefühlt, FD/FL/FN = D/L/N gefühlt, R Regen mm, PR Regenwahrscheinlichkeit %, TH Gewitter, TH+ Gewitter Folge-Etappe, W Wind km/h, G Böen, WD Windrichtung, HU Luftfeuchte, DP Taupunkt, CP Gewitterenergie, PT Niederschlagsart, SL Schneefallgrenze m, NS24+ Neuschnee 24h, CT/CL/CM/CH Bewölkung gesamt/tief/mittel/hoch, VS Sicht, SU Sonnenstunden, UV UV-Index, HP Luftdruck, FZ Nullgradgrenze m.
+Weitere: SD Schneehöhe, C Vorhersage-Verlässlichkeit, Z:/MAX/M: Brandzonen/Höchststufe/Massive.
+Format: E4 Etappe 4, 23@5 über der Schwelle ab 5 Uhr, (24@7) Spitze, D13/27 Tiefst/Höchst, +HL Hagel, - nichts, ? keine Daten.
+Warnungen nach !: TS Gewitter, FO Hochwasser, RA Starkregen, WG Wind, SN Schnee, AW Lawine, AV Lawinenstufe, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H niedrig/mittel/hoch. VR:VT: Météo-France-Risiko Regen/Gewitter. X? keine Warndaten.
